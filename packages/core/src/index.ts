@@ -7,6 +7,7 @@
  */
 
 export * from "./contract.js";
+export * from "./transitions.js";
 export * from "./errors.js";
 export * from "./parser.js";
 export * from "./validators.js";

@@ -16,6 +16,8 @@ export * from "./discovery.js";
 export * from "./state.js";
 export * from "./receipts.js";
 export * from "./index-file.js";
+export * from "./mutate.js";
+export * from "./transition.js";
 export * from "./evaluators.js";
 export * from "./gate.js";
 export * from "./simulate.js";

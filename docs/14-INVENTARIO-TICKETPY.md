@@ -246,11 +246,32 @@ trabajo.
 ```
 
 **La cabecera nombra el comando que lo genera**, así que el reemplazo tiene que decidir qué dice
-ahí. Y hay un defecto real que conviene no copiar: si `index.md` **no existe**, tanto `index`
-como `index --check` fallan con código 2 (`La ruta canónica solicitada no existe.`), porque la
-comprobación de ruta corre antes que la escritura. **El comando no puede regenerar el índice
-desde cero**, que es justo lo que un índice derivado debería poder hacer siempre. La suite no lo
-cubre y el registro real tiene el archivo, por eso nunca apareció.
+ahí.
+
+#### El defecto del índice, medido
+
+Si `index.md` **no existe**, la referencia no puede regenerarlo: comprueba la ruta antes de
+escribirla. Hasta aquí, lo que ya decía el inventario. Lo que apareció al ejecutar la prueba
+diferencial es peor: **`refresh_index` corre después de `atomic_write`, así que toda mutación en
+un registro sin índice escribe el ticket y después falla** con código 2 y «La ruta canónica
+solicitada no existe.».
+
+Medido, sobre un registro sin `index.md`:
+
+```
+$ python3 tools/agentic/ticket.py transition --id BUGFIX-… --entity ticket --to approved
+Error: La ruta canónica solicitada no existe.
+exit: 2
+$ grep -m1 ^workflow_status docs/tickets/2026/BUGFIX-…/ticket.md
+workflow_status: approved
+```
+
+Una mutación confirmada reportada como fallo: quien mire el código de salida cree que no pasó
+nada, y el ticket ya se movió. La suite de la referencia no lo detecta porque **copia `index.md`
+al fixture** en cada caso; el registro real lo tiene, así que nunca apareció.
+
+El harness **crea el índice**: un índice derivado tiene que poder reconstruirse desde cero, es lo
+único que se le pide. Es una divergencia deliberada y está fijada por un test que la documenta.
 
 ### 4.3 El visor
 

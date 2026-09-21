@@ -10,6 +10,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 
 import {
+  type ParsedTicket,
+  EXIT_AMBIGUOUS,
   EXIT_SCHEMA,
   MutationLock,
   SCHEMA_VERSION,
@@ -162,6 +164,94 @@ export function listActive(paths: RegistryPaths): CommandResult {
     (row) => `${row.id} | ${row.workflow} | ${row.module} | ${row.title}`,
   );
   return ok(lines.join("\n") + "\n");
+}
+
+/**
+ * `resume`: imprime el contexto de un ticket para retomar el trabajo.
+ *
+ * Está portado de la referencia (`cmd_resume` + `_print_resume`) porque los
+ * agentes lo invocan: la skill del orquestador lo usa para retomar sin leer el
+ * ticket entero. El formato de siete líneas se conserva literal, y también la
+ * decisión de diseño que lo hace interesante: **sin `--id` y con más de un
+ * ticket activo no elige**. Devuelve `EXIT_AMBIGUOUS` y pide que se indique uno.
+ * Un comando que adivina cuál querías es peor que uno que pregunta.
+ */
+export function resumeTicket(
+  paths: RegistryPaths,
+  id: string | undefined,
+): CommandResult {
+  if (id !== undefined) {
+    const ticket = findTicket(paths, id);
+    if (ticket === undefined) {
+      return error("La ruta canónica solicitada no existe.");
+    }
+    const failure = validationError(ticket, id);
+    if (failure !== undefined) return error(failure.message, failure.exitCode);
+    return ok(renderResume(parseTicket(ticket.text)));
+  }
+
+  const activos = activosOrdenados(paths);
+  if ("error" in activos) return activos.error;
+
+  if (activos.rows.length === 0) {
+    return ok("No hay tickets activos para reanudar.\n");
+  }
+  if (activos.rows.length > 1) {
+    return {
+      stdout: "",
+      stderr:
+        `Hay varios tickets activos (${activos.rows.map((fila) => fila.id).join(", ")}); ` +
+        "indique uno con --id.",
+      exitCode: EXIT_AMBIGUOUS,
+    };
+  }
+  return ok(renderResume(activos.rows[0]?.document as ParsedTicket));
+}
+
+/** El bloque de siete líneas de `resume`. */
+function renderResume(document: ParsedTicket): string {
+  const { fields } = document;
+  return (
+    [
+      `Ticket: ${fields.id}`,
+      `Título: ${fields.title}`,
+      `Tipo/Módulo: ${fields.type} / ${fields.module}`,
+      `Workflow: ${fields.workflow_status}`,
+      `QA: ${fields.qa_status}`,
+      `Release: ${fields.release_status}`,
+      `Puntos: ${(document.blocks.Puntos ?? []).length}`,
+    ].join("\n") + "\n"
+  );
+}
+
+/** Los tickets activos, ordenados por `created` y luego por `id`. */
+function activosOrdenados(
+  paths: RegistryPaths,
+): { rows: { id: string; document: ParsedTicket }[] } | { error: CommandResult } {
+  let tickets: LocatedTicket[];
+  try {
+    tickets = findAllTickets(paths);
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return { error: error(failure.message, failure.exitCode) };
+  }
+
+  const rows: { id: string; document: ParsedTicket; created: string }[] = [];
+  for (const ticket of tickets) {
+    const failure = validationError(ticket, ticket.id);
+    if (failure !== undefined) {
+      return { error: error(failure.message, failure.exitCode) };
+    }
+    const document = parseTicket(ticket.text);
+    if (document.fields.workflow_status === "closed") continue;
+    rows.push({ id: document.fields.id, document, created: document.fields.created });
+  }
+
+  rows.sort((a, b) => {
+    if (a.created !== b.created) return a.created < b.created ? -1 : 1;
+    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+  });
+  return { rows };
 }
 
 /** `show`: imprime un resumen legible de un ticket. */

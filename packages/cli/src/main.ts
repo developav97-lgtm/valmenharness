@@ -22,6 +22,7 @@ import {
   showTicket,
   syncProject,
   validateAll,
+  resumeTicket,
   validateOne,
 } from "./commands.js";
 import {
@@ -33,6 +34,7 @@ import {
   simulateGate,
 } from "@valmen/engine";
 import { type ServerContext, createMissionControl, defaultContext, loadStatics } from "@valmen/server";
+import { type Entity, transition } from "@valmen/engine";
 
 const USAGE = `valmen — harness agéntico
 
@@ -41,7 +43,9 @@ Uso: valmen <comando> [opciones]
 Comandos:
   validate --all            Valida todos los tickets del registro.
   validate --id <ID>        Valida un ticket concreto.
-  list                      Lista los tickets no cerrados.
+  active                    Lista los tickets no cerrados (alias: list).
+  resume [--id <ID>]        Imprime el contexto para retomar un ticket.
+                            Sin --id y con varios activos, no elige: pide uno.
   show <ID>                 Muestra el resumen de un ticket.
   index [--check]           Regenera el índice, o comprueba que esté al día.
   migrate [--dry-run]       Lleva el registro al esquema vigente.
@@ -49,6 +53,12 @@ Comandos:
   adopt [--dry-run]         Incorpora el harness a un proyecto existente.
   gate <gate> --id <ID>     Evalúa un gate contra un ticket.
       --evaluator <id>      auto (por defecto) · command · jev · llm-judge
+  transition --id <ID> --entity <entidad> --to <estado>
+                            Mueve el estado de un ticket, un punto o una release.
+      --point-id <POINT>    Obligatorio con --entity point.
+      --reason <texto>      Solo al reabrir un ticket no publicado, o al
+                            declarar terminal un punto.
+      --version <SemVer>    Solo con --entity release.
   serve [--port <n>]        Mission Control en 127.0.0.1.
   simulate <gate>           Calibra un gate sobre el registro histórico.
       --limit <n>           Evalúa solo los primeros n sujetos.
@@ -91,6 +101,12 @@ const VALUE_OPTIONS = [
   "--limit",
   "--evaluator",
   "--port",
+  // `transition` mueve el estado de una entidad, y sus banderas llevan valor.
+  "--entity",
+  "--to",
+  "--point-id",
+  "--reason",
+  "--version",
 ] as const;
 
 /** Error de uso: se reporta con el código de esquema, como el CLI de referencia. */
@@ -176,6 +192,59 @@ export function parseArgs(argv: readonly string[]): Options {
 }
 
 /** Resuelve las rutas del registro a partir de las opciones. */
+/** El valor de texto de una bandera, si la hay. */
+function flag(flags: Readonly<Record<string, string | true>>, name: string): string | undefined {
+  const valor = flags[name];
+  return typeof valor === "string" ? valor : undefined;
+}
+
+/**
+ * `transition`: traduce banderas a una petición del motor.
+ *
+ * La validación de las banderas obligatorias vive aquí y no en el motor porque
+ * es de la superficie: el motor recibe una petición bien formada. Los mensajes
+ * son los de la referencia, para que un script que hoy los compare siga
+ * funcionando.
+ */
+export function runTransition(
+  paths: RegistryPaths,
+  flags: Readonly<Record<string, string | true>>,
+): CommandResult {
+  const ticketId = flag(flags, "id");
+  const entity = flag(flags, "entity");
+  const to = flag(flags, "to");
+
+  if (ticketId === undefined) {
+    return { stdout: "", stderr: "transition requiere --id.", exitCode: EXIT_SCHEMA };
+  }
+  if (entity !== "ticket" && entity !== "point" && entity !== "release") {
+    return {
+      stdout: "",
+      stderr: `--entity debe ser ticket, point o release, no "${entity ?? ""}".`,
+      exitCode: EXIT_SCHEMA,
+    };
+  }
+  if (to === undefined) {
+    return { stdout: "", stderr: "transition requiere --to.", exitCode: EXIT_SCHEMA };
+  }
+
+  try {
+    const outcome = transition({
+      paths,
+      ticketId,
+      entity: entity as Entity,
+      to,
+      pointId: flag(flags, "point-id"),
+      reason: flag(flags, "reason"),
+      version: flag(flags, "version"),
+    });
+    return { stdout: `${outcome.details}\n`, stderr: "", exitCode: 0 };
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return { stdout: "", stderr: failure.message, exitCode: failure.exitCode };
+  }
+}
+
 export function resolvePaths(options: Options): RegistryPaths {
   const base = options.legacyLayout
     ? legacyPaths(options.root)
@@ -205,6 +274,14 @@ export function dispatch(options: Options): CommandResult {
     };
   }
 
+  if (command === "transition") {
+    return {
+      stdout: "",
+      stderr:
+        "El comando transition escribe en el registro; use `runTransition` o la línea de comandos.",
+      exitCode: EXIT_SCHEMA,
+    };
+  }
   if (options.version) return { stdout: "0.0.1\n", stderr: "", exitCode: 0 };
   if (options.help || command === undefined) {
     return {
@@ -238,8 +315,18 @@ export function dispatch(options: Options): CommandResult {
       };
     }
 
+    case "active":
     case "list":
+      // `active` es el nombre que usan las skills del proyecto; `list` es el que
+      // el harness publicó primero. La salida es la misma, así que mantener los
+      // dos no cuesta nada y evita romper a quien ya lo usaba.
       return listActive(paths);
+
+    case "resume": {
+      const rawId = options.flags["id"];
+      const id = typeof rawId === "string" ? rawId : undefined;
+      return resumeTicket(paths, id);
+    }
 
     case "show": {
       const id = rest[0];
@@ -405,6 +492,8 @@ export async function run(argv: readonly string[]): Promise<number> {
           result = { stdout: "", stderr: "", exitCode: 0 };
         }
       }
+    } else if (command === "transition") {
+      result = runTransition(resolvePaths(options), options.flags);
     } else if (command === "gate") {
       const gateId = rest[0];
       const rawId = options.flags["id"];
@@ -464,7 +553,11 @@ export async function run(argv: readonly string[]): Promise<number> {
 
     const final = result ?? { stdout: "", stderr: "", exitCode: EXIT_SCHEMA };
     if (final.stdout !== "") process.stdout.write(final.stdout);
-    if (final.stderr !== "") process.stderr.write(`${final.stderr}\n`);
+    // El prefijo `Error: ` se añade **aquí**, en el borde del proceso, y no en
+    // cada comando. Es donde lo añade la implementación de referencia
+    // (`main`, L2162), y tenerlo en un solo sitio evita la incoherencia que
+    // había: una excepción salía con prefijo y un fallo devuelto, sin él.
+    if (final.stderr !== "") process.stderr.write(`Error: ${final.stderr}\n`);
     return final.exitCode;
   } catch (caught) {
     const failure = toFailure(caught);
