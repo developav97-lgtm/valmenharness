@@ -90,7 +90,7 @@ modelo.
 
 ```bash
 npm run typecheck   # tsc estricto
-npm run test        # 96 tests
+npm run test        # 186 tests
 ```
 
 ## Estructura
@@ -99,6 +99,8 @@ npm run test        # 96 tests
 packages/
   core/          Dominio puro: contrato, parser, validador, migración, fs.
   adapter/       Proyección de .valmen/ a AGENTS.md y adopción de proyectos.
+  gate/          Motor de decisión y recibos. Lógica pura, sin red.
+  gate-jev/      Evaluador con TypeSafe Jev, detrás del mismo contrato.
   cli/           Superficie de comandos.
 tests/
   fixtures/      57 tickets reales, para las suites de equivalencia y migración
@@ -117,7 +119,23 @@ valmen migrate          # lleva el registro al esquema vigente
 valmen sync             # proyecta .valmen/ a AGENTS.md
 valmen validate --all   # valida el registro
 valmen index --check    # detecta un índice desactualizado (para CI)
+valmen gate plan --id BUGFIX-POS-ALGO-20260921    # evalúa el plan y emite recibo
 ```
+
+### Gates automáticos
+
+El gate no le pregunta a un modelo si aprueba algo: le pide **hechos
+verificables** y el código decide con umbrales.
+
+```bash
+valmen gate plan --id <TICKET> --dry-run   # evalúa sin escribir el recibo
+```
+
+`approve` sale con 0; `block` y `review` con 3. Cada evaluación deja un recibo
+append-only en `.valmen/receipts/` con el contexto congelado, las probabilidades,
+la versión exacta del modelo y el coste medido.
+
+Un gate de 7 proposiciones cuesta **~$0.00006** y tarda menos de un segundo.
 
 `adopt` y `sync --check` son los dos comandos pensados para usarse primero:
 el primero no escribe nada que el usuario no pueda revisar, y el segundo no

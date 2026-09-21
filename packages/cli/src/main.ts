@@ -22,6 +22,7 @@ import {
   validateOne,
 } from "./commands.js";
 import { type RegistryPaths, defaultPaths, legacyPaths } from "./discovery.js";
+import { runGate } from "./gate.js";
 
 const USAGE = `valmen — harness agéntico
 
@@ -36,6 +37,7 @@ Comandos:
   migrate [--dry-run]       Lleva el registro al esquema vigente.
   sync [--check]            Proyecta .valmen/ a AGENTS.md.
   adopt [--dry-run]         Incorpora el harness a un proyecto existente.
+  gate <gate> --id <ID>     Evalúa un gate contra un ticket.
 
 Opciones globales:
   --root <ruta>             Raíz del proyecto (por defecto: el directorio actual).
@@ -169,6 +171,17 @@ export function resolvePaths(options: Options): RegistryPaths {
 export function dispatch(options: Options): CommandResult {
   const [command, ...rest] = options.positionals;
 
+  // `gate` es el único comando que habla con un proveedor externo, así que es
+  // asíncrono. Se detecta aquí para dar un error claro en vez de devolver un
+  // resultado vacío si alguien lo invoca por esta vía síncrona.
+  if (command === "gate") {
+    return {
+      stdout: "",
+      stderr: "El comando gate es asíncrono; use `runGate` o la línea de comandos.",
+      exitCode: EXIT_SCHEMA,
+    };
+  }
+
   if (options.version) return { stdout: "0.0.1\n", stderr: "", exitCode: 0 };
   if (options.help || command === undefined) {
     return {
@@ -246,8 +259,14 @@ export function dispatch(options: Options): CommandResult {
   }
 }
 
-/** Ejecuta el CLI y devuelve el código de salida. */
-export function run(argv: readonly string[]): number {
+/**
+ * Ejecuta el CLI y devuelve el código de salida.
+ *
+ * Es asíncrono porque `gate` consulta a un proveedor externo. Los demás
+ * comandos son síncronos por ser puramente locales, así que se despachan sin
+ * `await` y el coste es nulo.
+ */
+export async function run(argv: readonly string[]): Promise<number> {
   let options: Options;
   try {
     options = parseArgs(argv);
@@ -260,7 +279,37 @@ export function run(argv: readonly string[]): number {
   }
 
   try {
-    const result = dispatch(options);
+    const [command, ...rest] = options.positionals;
+    let result: CommandResult;
+
+    if (command === "gate") {
+      const gateId = rest[0];
+      const rawId = options.flags["id"];
+      const ticketId = typeof rawId === "string" ? rawId : undefined;
+
+      if (gateId === undefined) {
+        result = {
+          stdout: "",
+          stderr: "gate requiere un identificador de gate.",
+          exitCode: EXIT_SCHEMA,
+        };
+      } else if (ticketId === undefined) {
+        result = {
+          stdout: "",
+          stderr: "gate requiere --id <TICKET-ID>.",
+          exitCode: EXIT_SCHEMA,
+        };
+      } else {
+        result = await runGate(resolvePaths(options), {
+          gateId,
+          ticketId,
+          dryRun: options.flags["dry-run"] === true,
+        });
+      }
+    } else {
+      result = dispatch(options);
+    }
+
     if (result.stdout !== "") process.stdout.write(result.stdout);
     if (result.stderr !== "") process.stderr.write(`${result.stderr}\n`);
     return result.exitCode;
@@ -271,4 +320,15 @@ export function run(argv: readonly string[]): number {
   }
 }
 
-process.exitCode = run(process.argv.slice(2));
+// El código de salida se fija cuando la promesa se resuelve. Asignarlo de
+// forma síncrona con una promesa pendiente haría que el proceso terminara con 0
+// sin haber evaluado nada.
+run(process.argv.slice(2)).then(
+  (code) => {
+    process.exitCode = code;
+  },
+  (error: unknown) => {
+    process.stderr.write(`Error inesperado: ${String(error)}\n`);
+    process.exitCode = 1;
+  },
+);

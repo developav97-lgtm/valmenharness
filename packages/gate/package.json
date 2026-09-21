@@ -1,0 +1,14 @@
+{
+  "name": "@valmen/gate",
+  "version": "0.0.1",
+  "description": "Motor de decisión de gates: el modelo responde proposiciones, el código decide.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
+  "files": ["dist", "README.md"],
+  "engines": { "node": ">=22" },
+  "dependencies": { "@valmen/core": "0.0.1" },
+  "scripts": { "build": "tsc -p tsconfig.json" }
+}

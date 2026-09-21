@@ -12,6 +12,12 @@
     },
     {
       "path": "../adapter"
+    },
+    {
+      "path": "../gate"
+    },
+    {
+      "path": "../gate-jev"
     }
   ],
   "include": [

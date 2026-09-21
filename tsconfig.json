@@ -23,7 +23,9 @@
     "rootDir": ".",
     "paths": {
       "@valmen/core": ["./packages/core/src/index.ts"],
-      "@valmen/adapter": ["./packages/adapter/src/index.ts"]
+      "@valmen/adapter": ["./packages/adapter/src/index.ts"],
+      "@valmen/gate": ["./packages/gate/src/index.ts"],
+      "@valmen/gate-jev": ["./packages/gate-jev/src/index.ts"]
     }
   },
   "references": [{ "path": "./packages/core" }],
