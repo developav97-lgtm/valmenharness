@@ -11,6 +11,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { EXIT_SCHEMA, TicketError, toFailure } from "@valmen/core";
 import { gateById } from "@valmen/gate";
+import { gateRoutingFor } from "@valmen/adapter";
 
 import {
   type CommandResult,
@@ -436,11 +437,25 @@ export async function run(argv: readonly string[]): Promise<number> {
           };
           throw new Error("__handled__");
         }
-        result = await runGate(resolvePaths(options), {
+        // El modelo lo decide el routing del proyecto, igual que en la app: si
+        // el botón y el comando usaran modelos distintos, el recibo de una
+        // aprobación no describiría la otra.
+        const rutas = resolvePaths(options);
+        const routing = gateRoutingFor(rutas.root);
+
+        result = await runGate(rutas, {
           gateId,
           ticketId,
           dryRun: options.flags["dry-run"] === true,
           ...(evaluator === undefined ? {} : { evaluator }),
+          ...(routing.evaluatorModel === ""
+            ? {}
+            : { model: routing.evaluatorModel }),
+          ...(routing.probabilistic ? {} : { semantic: "llm-judge" as const }),
+          ...(routing.evaluatorEffort === "auto"
+            ? {}
+            : { effort: routing.evaluatorEffort }),
+          ...(routing.judgeModel === "" ? {} : { judgeModel: routing.judgeModel }),
         });
       }
     } else {

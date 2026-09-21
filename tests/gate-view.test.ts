@@ -261,6 +261,28 @@ describe("ejecutar un gate desde la interfaz", () => {
     expect(resultado.error).toContain("No se llamó al evaluador");
   });
 
+  it("un fallo del evaluador no devuelve el recibo anterior como si fuera nuevo", async () => {
+    // Primero una evaluación que sí decide y escribe recibo.
+    const primera = await runTicketGate(PATHS(), TICKET, "plan", {
+      jev: evaluator(0.95),
+    });
+    expect(primera.ok).toBe(true);
+    expect(primera.receipt?.outcome).toBe("approve");
+
+    // Después una que falla. El identificador de un recibo es determinista por
+    // día y gate, así que "el último recibo del gate" es el de antes: devolverlo
+    // mostraría una aprobación vieja como recién emitida.
+    const fallida = await runTicketGate(PATHS(), TICKET, "plan", {
+      jev: (async () => {
+        throw new Error("el proveedor no responde");
+      }) as unknown as typeof import("../packages/gate-jev/src/index.js").evaluateWithJev,
+    });
+
+    expect(fallida.ok).toBe(false);
+    expect(fallida.receipt).toBeNull();
+    expect(fallida.error).toContain("no pudo completar");
+  });
+
   it("no evalúa un gate que no aplica al estado del ticket", async () => {
     const resultado = await runTicketGate(PATHS(), TICKET, "analysis", {
       jev: evaluator(0.95),

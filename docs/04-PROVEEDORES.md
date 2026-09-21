@@ -304,6 +304,33 @@ Si el usuario cambia `gate-evaluator` a un modelo de chat, el motor lo acepta, *
 JSON Schema de salida** y aplica el mismo contrato de umbrales sobre campos estructurados.
 La calidad baja, el sistema sigue funcionando, y el recibo registra el cambio.
 
+#### 4.4bis Qué se midió al cambiar el evaluador, y por qué el aviso es concreto
+
+Un gate de 14 proposiciones (el gate de plan sobre un ticket con seis criterios de
+aceptación), evaluado por las dos vías:
+
+| Evaluador                     | Esfuerzo | Duración real | Coste     | Resultado |
+| ----------------------------- | -------- | ------------- | --------- | --------- |
+| Jev 1.13                      | —        | **0,8 s**     | $0,000158 | block     |
+| `deepseek-v4-flash` como juez | auto     | **> 90 s**    | —         | timeout   |
+| `deepseek-v4-flash` como juez | low      | **36,2 s**    | $0,000730 | block     |
+
+Dos cosas que salieron de esta medición:
+
+1. **Con razonamiento por defecto, el juez no termina.** 3 480 tokens de salida, casi todos
+   de razonamiento, y el límite de 90 s se agota leyendo el cuerpo. La pantalla de modelos
+   advierte de esto al elegir un modelo de chat, en vez de dejar que el usuario lo descubra
+   en mitad de un gate.
+2. **La latencia del recibo estaba mal medida.** Se calculaba al recibir las **cabeceras**
+   —`fetch` resuelve ahí— y no al terminar de leer el cuerpo. En Jev la diferencia es de
+   milisegundos y no se notaba; en un modelo que razona, el recibo decía 3 s cuando habían
+   pasado 36. Corregido, y el timeout durante la lectura ahora se reporta con su límite en
+   vez de como un error de transporte sin explicación.
+
+**Jev cuesta 4,6 veces menos y tarda 45 veces menos** en el mismo gate, y además emite
+probabilidades en vez de texto. Eso es lo que justifica que sea el valor por defecto en los
+tres presets.
+
 ## 5. Esfuerzo de razonamiento
 
 El esfuerzo es una capacidad **del modelo exacto**, no del provider. El motor valida antes

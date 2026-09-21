@@ -35,6 +35,7 @@ import {
   withHumanDecision,
 } from "@valmen/gate";
 import { parseTicket } from "@valmen/core";
+import { gateRouting } from "./routing.js";
 import {
   type EvaluatorId,
   type RegistryPaths,
@@ -73,6 +74,18 @@ export interface GateCard {
   readonly hasCommandChecks: boolean;
   /** Umbrales vigentes. */
   readonly policy: { readonly approveAt: number; readonly blockAt: number };
+  /**
+   * El modelo que se usará y de dónde salió.
+   *
+   * Sin esto, cambiar el preset y no ver efecto es indistinguible de un override
+   * olvidado en `.valmen/routing.yaml`.
+   */
+  readonly routing: {
+    readonly model: string;
+    readonly effort: string;
+    readonly source: string;
+    readonly probabilistic: boolean;
+  };
 }
 
 /** Una proposición evaluada, tal como se muestra. */
@@ -220,6 +233,8 @@ export function listGateCards(
     workflow = "";
   }
 
+  const routing = gateRouting(paths.root);
+
   return Object.values(GATES).map((definicion) => ({
     id: definicion.id,
     title: definicion.title,
@@ -233,6 +248,12 @@ export function listGateCards(
     propositionCount: propositionCounts.get(definicion.id) ?? 0,
     hasCommandChecks: (definicion.commandChecks?.length ?? 0) > 0,
     policy: definicion.policy,
+    routing: {
+      model: routing.evaluatorModel,
+      effort: routing.evaluatorEffort,
+      source: routing.source,
+      probabilistic: routing.probabilistic,
+    },
   }));
 }
 
@@ -250,8 +271,9 @@ export interface GateRunOutcome {
 /** Opciones de una ejecución desde la interfaz. */
 export interface GateRunRequest {
   readonly evaluator?: EvaluatorId;
-  /** Inyectable para que las pruebas no salgan a la red. */
+  /** Inyectables para que las pruebas no salgan a la red. */
   readonly jev?: Parameters<typeof runGate>[1]["jev"];
+  readonly judge?: Parameters<typeof runGate>[1]["judge"];
   readonly now?: () => Date;
   readonly receiptId?: string;
 }
@@ -269,24 +291,47 @@ export async function runTicketGate(
   gateId: string,
   request: GateRunRequest = {},
 ): Promise<GateRunOutcome> {
+  // El modelo lo decide el routing del proyecto. Si el rol `gate-evaluator`
+  // apunta a un modelo de chat, el evaluador semántico pasa a ser un juez —y el
+  // recibo lo dirá—; si apunta a Jev, se mantienen las probabilidades.
+  const routing = gateRouting(paths.root);
+
+  // Se cuentan las líneas antes de evaluar. Sin esto, una evaluación que falla
+  // devolvería **el recibo anterior** como si fuera el resultado: el identificador
+  // de un recibo es determinista por día y gate, así que "el último recibo del
+  // gate" puede ser de hace una hora. Mostrar una decisión vieja como recién
+  // tomada es la mentira más cara que puede decir esta pantalla.
+  const lineasAntes = readReceipts(paths, ticketId).length;
+
   const result = await runGate(paths, {
     gateId,
     ticketId,
     ...(request.evaluator === undefined ? {} : { evaluator: request.evaluator }),
     ...(request.jev === undefined ? {} : { jev: request.jev }),
+    ...(request.judge === undefined ? {} : { judge: request.judge }),
     ...(request.now === undefined ? {} : { now: request.now }),
     ...(request.receiptId === undefined ? {} : { receiptId: request.receiptId }),
+    ...(routing.evaluatorModel === ""
+      ? {}
+      : { model: routing.evaluatorModel }),
+    ...(routing.probabilistic ? {} : { semantic: "llm-judge" as const }),
+    ...(routing.evaluatorEffort === "auto"
+      ? {}
+      : { effort: routing.evaluatorEffort }),
+    ...(routing.judgeModel === "" ? {} : { judgeModel: routing.judgeModel }),
   });
 
   const actual = await currentStateHash(paths, ticketId);
-  const recibos = currentReceipts(readReceipts(paths, ticketId)).filter(
-    (recibo) => recibo.gate === gateId,
-  );
-  const ultimo = recibos[0];
+  const todas = readReceipts(paths, ticketId);
+  const seAnexo = todas.length > lineasAntes;
 
-  if (result.exitCode !== 0 && ultimo === undefined) {
-    // Bloqueo por checks mecánicos o error de precondición: no hay recibo que
-    // mostrar, pero el motivo viene del motor y se muestra tal cual.
+  // El recibo de esta ejecución es el último del gate, y solo vale si se acaba
+  // de anexar. Si no se anexó nada, la evaluación no llegó a decidir.
+  const ultimo = currentReceipts(todas).find((recibo) => recibo.gate === gateId);
+
+  if (!seAnexo || ultimo === undefined) {
+    // Bloqueo por checks mecánicos, precondición incumplida o fallo del
+    // evaluador: no hay decisión nueva, y el motivo viene del motor tal cual.
     return {
       ok: false,
       report: result.stdout,
@@ -302,10 +347,7 @@ export async function runTicketGate(
     report: result.stdout,
     error: result.stderr,
     exitCode: result.exitCode,
-    receipt:
-      ultimo === undefined
-        ? null
-        : { ...projectReceipt(ultimo, actual), report: result.stdout },
+    receipt: { ...projectReceipt(ultimo, actual), report: result.stdout },
     tickets: listGateCards(paths, ticketId),
   };
 }

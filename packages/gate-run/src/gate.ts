@@ -55,6 +55,18 @@ export interface GateRunOptions {
   /** Comandos asociados a proposiciones, para el evaluador determinista. */
   readonly checks?: readonly CommandCheck[];
   /**
+   * Modelos resueltos por el routing del proyecto.
+   *
+   * Vienen de fuera y no se leen aquí: el motor no sabe de configuración. Quien
+   * llama —el CLI o Mission Control— resuelve el rol y pasa el modelo, así que
+   * el recibo registra exactamente el que se usó.
+   */
+  readonly model?: string;
+  readonly effort?: "auto" | "low" | "medium" | "high";
+  readonly judgeModel?: string;
+  /** Evaluador semántico preferido por el routing del proyecto. */
+  readonly semantic?: "jev" | "llm-judge";
+  /**
    * Evaluador semántico inyectable, para pruebas.
    *
    * El nombre coincide con el del orquestador para que un mock se pueda pasar
@@ -62,6 +74,8 @@ export interface GateRunOptions {
    * silenciosamente convierte un test en una ilusión.
    */
   readonly jev?: typeof evaluateWithJev;
+  /** Juez de chat inyectable, por la misma razón que `jev`. */
+  readonly judge?: typeof import("@valmen/gate-llm-judge").evaluateWithJudge;
   readonly now?: () => Date;
   readonly receiptId?: string;
 }
@@ -154,6 +168,15 @@ export async function runGate(
         ? {}
         : { evaluator: options.evaluator }),
       ...(options.jev === undefined ? {} : { jev: options.jev }),
+      ...(options.judge === undefined ? {} : { judge: options.judge }),
+      ...(options.model === undefined ? {} : { model: options.model }),
+      ...(options.effort === undefined ? {} : { effort: options.effort }),
+      ...(options.judgeModel === undefined
+        ? {}
+        : { judgeModel: options.judgeModel }),
+      ...(options.semantic === undefined
+        ? {}
+        : { semantic: options.semantic }),
       sessionId: `${options.ticketId}:${options.gateId}`,
     });
   } catch (caught) {

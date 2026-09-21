@@ -51,6 +51,16 @@ import {
   writeConfig,
 } from "./config.js";
 import {
+  type RoutingState,
+  checkRouting,
+  fetchCatalog,
+  hasRouting,
+  readRouting,
+  resetCatalogCache,
+  routingFromForm,
+  writeRouting,
+} from "./routing.js";
+import {
   type TicketFilters,
   filterTickets,
   listTickets,
@@ -91,6 +101,7 @@ export interface ServerContext {
    * convierte una prueba en una ilusión.
    */
   readonly jev?: NonNullable<Parameters<typeof runTicketGate>[3]>["jev"];
+  readonly judge?: NonNullable<Parameters<typeof runTicketGate>[3]>["judge"];
   /** Módulos estáticos a servir, por ruta. */
   readonly statics?: Readonly<
     Record<string, { readonly body: string; readonly type: string }>
@@ -232,6 +243,7 @@ export async function handleApi(
           ? {}
           : { evaluator: evaluador }),
         ...(context.jev === undefined ? {} : { jev: context.jev }),
+        ...(context.judge === undefined ? {} : { judge: context.judge }),
       },
     );
 
@@ -332,6 +344,100 @@ export async function handleApi(
         path: configPath(context.root),
       },
     };
+  }
+
+  // GET /api/routing  — roles, preset activo y catálogo de modelos
+  if (method === "GET" && path === "/api/routing") {
+    // `?refresh=1` fuerza volver a consultar el catálogo: la caché es de una
+    // hora, y un modelo recién publicado no debería exigir reiniciar la app.
+    if (query.get("refresh") === "1") resetCatalogCache();
+    return {
+      status: 200,
+      body: {
+        routing: readRouting(context.root),
+        adopted: hasRouting(context.root),
+        catalog: await fetchCatalog(context.fetchImpl ?? fetch),
+      },
+    };
+  }
+
+  // POST /api/routing/check  — analiza un texto y muestra la resolución
+  if (method === "POST" && path === "/api/routing/check") {
+    const datos = body as { text?: unknown };
+    if (typeof datos.text !== "string") {
+      return { status: 400, body: { error: "Falta el campo `text`." } };
+    }
+    return { status: 200, body: { routing: checkRouting(context.root, datos.text) } };
+  }
+
+  // PUT /api/routing  — guarda solo si el texto parsea
+  if (method === "PUT" && path === "/api/routing") {
+    const datos = body as {
+      preset?: unknown;
+      roles?: unknown;
+      text?: unknown;
+    };
+
+    // Dos formas de guardar: el formulario manda `preset` y `roles`, y el
+    // editor de texto manda `text`. El formulario se convierte a texto **con la
+    // misma función que usa el CLI para escribir el archivo**, así que las dos
+    // vías producen exactamente el mismo formato.
+    let texto: string;
+    if (typeof datos.text === "string") {
+      texto = datos.text;
+    } else if (typeof datos.preset === "string" && typeof datos.roles === "object" && datos.roles !== null) {
+      try {
+        texto = routingFromForm({
+          preset: datos.preset,
+          roles: datos.roles as Record<
+            string,
+            { provider?: string; model?: string; effort?: "auto" | "low" | "medium" | "high" }
+          >,
+        });
+      } catch (caught) {
+        return {
+          status: 400,
+          body: { error: caught instanceof Error ? caught.message : String(caught) },
+        };
+      }
+    } else {
+      return {
+        status: 400,
+        body: { error: "Se espera `text`, o bien `preset` y `roles`." },
+      };
+    }
+
+    const resultado: RoutingState & { written: boolean } = writeRouting(
+      context.root,
+      texto,
+    );
+    return { status: 200, body: { routing: resultado, text: texto } };
+  }
+
+  // POST /api/routing/preview  — el texto que produciría el formulario
+  if (method === "POST" && path === "/api/routing/preview") {
+    const datos = body as { preset?: unknown; roles?: unknown };
+    if (typeof datos.preset !== "string" || typeof datos.roles !== "object" || datos.roles === null) {
+      return { status: 400, body: { error: "Se esperan `preset` y `roles`." } };
+    }
+    try {
+      const texto = routingFromForm({
+        preset: datos.preset,
+        roles: datos.roles as Record<
+          string,
+          { provider?: string; model?: string; effort?: "auto" | "low" | "medium" | "high" }
+        >,
+      });
+      return {
+        status: 200,
+        body: { text: texto, routing: checkRouting(context.root, texto) },
+      };
+    } catch (caught) {
+      return {
+        status: 400,
+        body: { error: caught instanceof Error ? caught.message : String(caught) },
+      };
+    }
   }
 
   // POST /api/config/sync  — regenera los archivos proyectados

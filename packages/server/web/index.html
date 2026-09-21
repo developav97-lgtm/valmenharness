@@ -198,6 +198,19 @@
       .diff .add { background: rgba(63, 185, 80, 0.12); color: var(--ok); }
       .diff .remove { background: rgba(248, 81, 73, 0.12); color: var(--error); }
       .diff .same { color: var(--tenue); }
+      /* ── Modelos: routing por rol ─────────────────────────────────────── */
+      .roles td { vertical-align: top; }
+      .roles select, .roles input { min-width: 0; width: 100%; }
+      .roles .rol { font-family: var(--mono); font-size: 12px; }
+      .roles .descripcion { font-size: 12px; color: var(--tenue); }
+      .presets { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+      .presets button[aria-pressed="true"] { border-color: var(--acento); color: var(--acento); }
+      .presets + .resultado { margin-bottom: 18px; }
+      .sin-consumidor { font-size: 11px; color: var(--tenue); font-style: italic; }
+      .aviso-jev {
+        background: rgba(79, 140, 255, 0.10); border: 1px solid var(--acento);
+        border-radius: 6px; padding: 10px 12px; font-size: 13px; margin: 14px 0;
+      }
       .error-parser { background: rgba(248, 81, 73, 0.12); border: 1px solid var(--error);
         color: var(--error); border-radius: 6px; padding: 10px 12px; font-family: var(--mono);
         font-size: 12px; white-space: pre-wrap; margin-bottom: 16px; }
@@ -211,6 +224,7 @@
       <h1>ValmenHarness</h1>
       <nav>
         <a href="#/tickets" data-vista="tickets">Tickets</a>
+        <a href="#/modelos" data-vista="modelos">Modelos</a>
         <a href="#/configuracion" data-vista="configuracion">Configuración</a>
         <a href="#/proveedores" data-vista="proveedores">Proveedores</a>
       </nav>
@@ -815,6 +829,279 @@
         mostrar(partes[0][0], partes[0][1], barraSecciones.querySelector("button"));
       }
 
+      // ── Vista: modelos (routing por rol) ──────────────────────────────────
+
+      /**
+       * Qué modelo usa cada rol, y de dónde salió.
+       *
+       * La columna "origen" es la que hace útil la pantalla: sin ella, cambiar
+       * el preset y no ver efecto es indistinguible de un override olvidado en
+       * `.valmen/routing.yaml`. Y los roles que el harness todavía no ejecuta se
+       * marcan como declarados: prometer que un modelo se usa para algo que no
+       * existe sería una mentira cómoda.
+       */
+      async function vistaModelos() {
+        const cont = $("contenido");
+        cont.textContent = "";
+
+        const datos = await api("GET", "/api/routing");
+        const guardado = datos.routing;
+
+        // El modelo de cada rol tal como está ahora: se compara con lo que el
+        // usuario elija para saber si hay algo que guardar.
+        const eleccion = {};
+        for (const rol of guardado.roles) {
+          eleccion[rol.role] = { model: rol.model, effort: rol.effort, source: rol.source };
+        }
+        let preset = guardado.preset === "" ? "balanced" : guardado.preset;
+        let textoPrevio = guardado.text;
+
+        const nota = el("div", undefined, "nota");
+        nota.append(
+          el("strong", "El modelo por rol decide dónde se gasta el dinero. "),
+          el("span", "Los roles de razonamiento son caros y poco frecuentes; los de ejecución son baratos y se repiten. Cambiar el preset cambia las trece decisiones de una vez."),
+        );
+        cont.append(nota, el("h2", "Preset"));
+
+        const presets = el("div", undefined, "presets");
+        const explicacion = el("div", undefined, "resultado");
+        const botonesPreset = new Map();
+        for (const p of guardado.presets) {
+          const boton = el("button", p.id);
+          boton.addEventListener("click", () => {
+            preset = p.id;
+            // Elegir un preset no reescribe lo que el proyecto ya decidió: los
+            // overrides se quedan, y la columna de origen lo dirá.
+            for (const boton of botonesPreset.values()) boton.setAttribute("aria-pressed", "false");
+            boton.setAttribute("aria-pressed", "true");
+            explicacion.textContent = p.description;
+            void refrescar();
+          });
+          botonesPreset.set(p.id, boton);
+          presets.append(boton);
+        }
+        for (const [id, boton] of botonesPreset) {
+          boton.setAttribute("aria-pressed", String(id === preset));
+          if (id === preset) {
+            explicacion.textContent =
+              guardado.presets.find((p) => p.id === id)?.description ?? "";
+          }
+        }
+        cont.append(presets, explicacion);
+
+        // El catálogo: de dónde salen los modelos que se pueden elegir.
+        const origenCatalogo = el(
+          "div",
+          datos.catalog.source === "openrouter"
+            ? `Catálogo de OpenRouter: ${datos.catalog.detail}. Jev se añade aparte porque vive en el endpoint de Decisions, no en el de chat.`
+            : `Se usa la lista de los presets: ${datos.catalog.detail}. Los identificadores están verificados contra el catálogo real de OpenRouter.`,
+          "resultado",
+        );
+        cont.append(origenCatalogo);
+
+        cont.append(el("h2", "Modelo por rol"));
+
+        const tabla = el("table", undefined, "roles");
+        const thead = el("thead");
+        const filaCabecera = el("tr");
+        for (const columna of ["Rol", "Modelo", "Esfuerzo", "Origen", ""]) {
+          filaCabecera.append(el("th", columna));
+        }
+        thead.append(filaCabecera);
+        const tbody = el("tbody");
+
+        const modeloSelect = (rol) => {
+          const sel = document.createElement("select");
+          const actual = eleccion[rol.role].model;
+          // El valor actual primero: si el proyecto declaró un modelo que no
+          // está en el catálogo, tiene que seguir siendo visible.
+          const vistos = new Set();
+          if (actual !== "") {
+            sel.append(new Option(actual, actual));
+            vistos.add(actual);
+          }
+          for (const modelo of datos.catalog.models) {
+            if (vistos.has(modelo.id)) continue;
+            vistos.add(modelo.id);
+            const precio =
+              modelo.promptUsd === null
+                ? ""
+                : ` · $${(modelo.promptUsd * 1_000_000).toFixed(2)}/M entrada`;
+            sel.append(new Option(`${modelo.name}${precio}`, modelo.id));
+          }
+          sel.value = actual;
+          sel.addEventListener("change", () => {
+            eleccion[rol.role].model = sel.value;
+            explicitos.add(rol.role);
+            void refrescar();
+          });
+          return sel;
+        };
+
+        const esfuerzoSelect = (rol) => {
+          const sel = document.createElement("select");
+          for (const valor of ["auto", "low", "medium", "high"]) {
+            sel.append(new Option(valor, valor));
+          }
+          sel.value = eleccion[rol.role].effort;
+          sel.addEventListener("change", () => {
+            eleccion[rol.role].effort = sel.value;
+            explicitos.add(rol.role);
+            void refrescar();
+          });
+          return sel;
+        };
+
+        for (const rol of guardado.roles) {
+          const tr = el("tr");
+
+          const celdaRol = el("td");
+          celdaRol.append(
+            el("div", rol.role, "rol"),
+            el("div", rol.description, "descripcion"),
+          );
+          if (rol.consumer === null) {
+            celdaRol.append(el("div", "declarado: todavía no lo ejecuta nada", "sin-consumidor"));
+          }
+          tr.append(celdaRol);
+
+          const celdaModelo = el("td");
+          celdaModelo.append(modeloSelect(rol));
+          tr.append(celdaModelo);
+
+          const celdaEsfuerzo = el("td");
+          celdaEsfuerzo.append(esfuerzoSelect(rol));
+          tr.append(celdaEsfuerzo);
+
+          const ORIGEN = {
+            proyecto: "definido en este proyecto",
+            preset: `del preset ${preset}`,
+            sistema: "valor del sistema",
+            "sin-asignar": "sin asignar",
+          };
+          const celdaOrigen = el("td");
+          celdaOrigen.append(el("span", ORIGEN[rol.source] ?? rol.source, "resultado"));
+          if (rol.consumer !== null) {
+            celdaOrigen.append(el("div", rol.consumer, "sin-consumidor"));
+          }
+          tr.append(celdaOrigen);
+
+          tr.append(el("td"));
+          tbody.append(tr);
+        }
+
+        tabla.append(thead, tbody);
+        cont.append(tabla);
+
+        // El aviso que evita perder la reproducibilidad sin enterarse.
+        const avisoJev = el("div", undefined, "aviso-jev");
+        cont.append(avisoJev);
+
+        cont.append(el("h2", "Diferencias antes de guardar"));
+        const diff = el("div", undefined, "diff");
+        const error = el("div", undefined, "error-parser");
+        error.hidden = true;
+        const salida = el("div", undefined, "resultado");
+        const guardar = el("button", "Guardar el routing", "principal");
+        guardar.disabled = true;
+        const acciones = el("div", undefined, "acciones");
+        acciones.style.justifyContent = "flex-start";
+        acciones.style.marginTop = "14px";
+        acciones.append(salida, guardar);
+        cont.append(diff, error, acciones);
+
+        /**
+         * Los roles que se escriben en el archivo.
+         *
+         * Solo los explícitos: los que ya estaban definidos en el proyecto y los
+         * que el usuario acaba de tocar. Escribir los trece haría creer que el
+         * proyecto decidió sobre los trece, y cambiar el preset dejaría de tener
+         * efecto sin que nadie entendiera por qué.
+         */
+        const explicitos = new Set(
+          guardado.roles.filter((rol) => rol.source === "proyecto").map((rol) => rol.role),
+        );
+        const rolesDelFormulario = () => {
+          const roles = {};
+          for (const rol of guardado.roles) {
+            if (!explicitos.has(rol.role)) continue;
+            roles[rol.role] = {
+              model: eleccion[rol.role].model,
+              effort: eleccion[rol.role].effort,
+            };
+          }
+          return roles;
+        };
+
+        const refrescar = async () => {
+          try {
+            const previsualizacion = await api("POST", "/api/routing/preview", {
+              preset,
+              roles: rolesDelFormulario(),
+            });
+            const estado = previsualizacion.routing;
+
+            error.hidden = estado.ok;
+            error.textContent = estado.ok ? "" : estado.error;
+
+            diff.textContent = "";
+            const cambios = estado.diff.filter((linea) => linea.kind !== "same");
+            if (cambios.length === 0) {
+              diff.append(el("div", "Sin cambios respecto de lo guardado.", "same"));
+            } else {
+              for (const linea of estado.diff) {
+                diff.append(
+                  el(
+                    "div",
+                    `${linea.kind === "add" ? "+" : linea.kind === "remove" ? "-" : " "} ${linea.text}`,
+                    linea.kind,
+                  ),
+                );
+              }
+            }
+
+            const evaluador = estado.roles.find((r) => r.role === "gate-evaluator");
+            // El aviso lleva números medidos, no adjetivos: en el mismo gate de
+            // 14 proposiciones, Jev tarda 0,8 s y cuesta $0,000158; un modelo de
+            // chat con razonamiento por defecto **no termina** en 90 s.
+            avisoJev.textContent =
+              evaluador !== undefined && evaluador.probabilistic
+                ? "El evaluador de gates usa Jev: emite probabilidades calibradas y el código compara contra umbrales. Medido en un gate de 14 proposiciones: 0,8 s y $0,000158."
+                : "⚠ El evaluador de gates está configurado con un modelo de chat. El gate sigue funcionando, pero pasa a ser un juez que interpreta texto: pierde la calibración y dos ejecuciones del mismo ticket pueden no coincidir. Medido: 36 s y $0,00073 con esfuerzo bajo, y más de 90 s —el límite— con el razonamiento por defecto. Si eliges esta vía, pon el esfuerzo en «low».";
+
+            guardar.disabled = !estado.ok || cambios.length === 0;
+            guardar.textContent = cambios.length === 0 ? "Sin cambios" : "Guardar el routing";
+            textoPrevio = previsualizacion.text;
+          } catch (fallo) {
+            salida.className = "resultado error";
+            salida.textContent = fallo.message;
+          }
+        };
+
+        guardar.addEventListener("click", async () => {
+          guardar.disabled = true;
+          try {
+            const r = await api("PUT", "/api/routing", { text: textoPrevio });
+            if (r.routing.written) {
+              salida.className = "resultado ok";
+              salida.textContent = "Guardado.";
+              guardado.text = r.text;
+              // Se recarga la vista: los orígenes cambian de "preset" a
+              // "proyecto", y esa es justamente la información que importa.
+              await vistaModelos();
+            } else {
+              salida.className = "resultado error";
+              salida.textContent = r.routing.error;
+            }
+          } catch (fallo) {
+            salida.className = "resultado error";
+            salida.textContent = fallo.message;
+          }
+        });
+
+        await refrescar();
+      }
+
       // ── Vista: configuración ──────────────────────────────────────────────
 
       /**
@@ -1187,6 +1474,7 @@
 
         try {
           if (nombre === "ticket" && parametro !== undefined) await vistaTicket(parametro);
+          else if (nombre === "modelos") await vistaModelos();
           else if (nombre === "configuracion") await vistaConfiguracion();
           else if (nombre === "proveedores") await vistaProveedores();
           else await vistaTickets();

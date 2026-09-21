@@ -224,6 +224,14 @@ export interface JudgeOptions {
   readonly propositions: readonly Proposition[];
   readonly state: unknown;
   readonly model?: string;
+  /**
+   * Esfuerzo de razonamiento, tal como lo define el proveedor.
+   *
+   * `auto` no envía el campo: es la ausencia de preferencia, no una preferencia
+   * por el valor medio. Verificado contra el endpoint real: un modelo que no
+   * razona ignora el campo, y uno que sí lo gasta en razonar antes de responder.
+   */
+  readonly effort?: "auto" | "low" | "medium" | "high";
   readonly apiKey?: string;
   readonly signal?: AbortSignal;
   readonly fetchImpl?: typeof fetch;
@@ -280,6 +288,9 @@ export async function evaluateWithJudge(
       body: JSON.stringify({
         model,
         temperature: options.temperature ?? 0,
+        ...(options.effort === undefined || options.effort === "auto"
+          ? {}
+          : { reasoning: { effort: options.effort } }),
         messages: [
           { role: "system", content: systemPrompt() },
           {
@@ -309,8 +320,23 @@ export async function evaluateWithJudge(
     );
   }
 
+  // La latencia se mide después de leer el cuerpo: `fetch` resuelve al recibir
+  // las cabeceras, y en un modelo que razona el cuerpo puede tardar treinta veces
+  // más. Medir antes registraba en el recibo una duración que no era la real.
+  let text: string;
+  try {
+    text = await response.text();
+  } catch (caught) {
+    const detail = caught instanceof Error ? caught.message : String(caught);
+    const esTimeout = /abort|timeout/i.test(detail);
+    throw new JudgeError(
+      esTimeout
+        ? `El juez superó el tiempo máximo de ${options.timeoutMs ?? 90_000} ms mientras se leía la respuesta.`
+        : `Fallo al leer la respuesta: ${detail}`,
+      esTimeout ? "TIMEOUT" : "TRANSPORT",
+    );
+  }
   const latencyMs = Date.now() - started;
-  const text = await response.text();
 
   if (!response.ok) {
     const code =

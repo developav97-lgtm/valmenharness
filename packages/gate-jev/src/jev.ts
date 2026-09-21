@@ -224,8 +224,23 @@ export async function evaluateWithJev(
     throw new EvaluatorError(`Fallo de transporte: ${detail}`, "TRANSPORT");
   }
 
+  // La latencia se mide **después** de leer el cuerpo, no después de recibir las
+  // cabeceras: `fetch` resuelve en cuanto llegan las cabeceras, y el cuerpo puede
+  // tardar mucho más. Medir antes registraba en el recibo una duración que no era
+  // la de la evaluación.
+  let text: string;
+  try {
+    text = await response.text();
+  } catch (caught) {
+    const detail = caught instanceof Error ? caught.message : String(caught);
+    throw new EvaluatorError(
+      /abort|timeout/i.test(detail)
+        ? `El evaluador superó el tiempo máximo mientras se leía la respuesta: ${detail}`
+        : `Fallo al leer la respuesta del evaluador: ${detail}`,
+      "TRANSPORT",
+    );
+  }
   const latencyMs = Date.now() - started;
-  const text = await response.text();
 
   if (!response.ok) {
     const code =

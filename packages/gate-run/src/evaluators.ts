@@ -64,6 +64,22 @@ export interface SelectOptions {
   readonly evaluator?: EvaluatorId;
   readonly sessionId?: string;
   readonly apiKey?: string;
+  /** Modelo del rol `gate-evaluator`, resuelto por el routing del proyecto. */
+  readonly model?: string;
+  /** Esfuerzo de razonamiento del rol. `auto` no envía preferencia. */
+  readonly effort?: "auto" | "low" | "medium" | "high";
+  /** Modelo del rol `gate-judge`, para la degradación desde Jev. */
+  readonly judgeModel?: string;
+  /**
+   * Evaluador semántico preferido, si el gate necesita juicio.
+   *
+   * Viene del routing: si el rol `gate-evaluator` apunta a un modelo de chat, el
+   * evaluador semántico es un juez, no Jev. **No** salta el orden "el código
+   * primero": un gate que se resuelve con comandos se sigue resolviendo con
+   * comandos, porque esa decisión no es de calidad sino de coste y de
+   * confiabilidad.
+   */
+  readonly semantic?: "jev" | "llm-judge";
   /** Inyectables para pruebas. */
   readonly jev?: typeof evaluateWithJev;
   readonly judge?: typeof evaluateWithJudge;
@@ -89,6 +105,7 @@ export function chooseEvaluator(options: {
   readonly gate: GateDefinition;
   readonly checks?: readonly CommandCheck[];
   readonly evaluator?: EvaluatorId;
+  readonly semantic?: "jev" | "llm-judge";
 }): Exclude<EvaluatorId, "auto"> {
   const checks = options.checks ?? [];
   const pedido = options.evaluator ?? "auto";
@@ -114,7 +131,7 @@ export function chooseEvaluator(options: {
   );
   if (fijas.length > 0 && isFullyMechanical(fijas, checks)) return "command";
   if (fijas.length === 0 && checks.length > 0) return "command";
-  return "jev";
+  return options.semantic ?? "jev";
 }
 
 /**
@@ -134,6 +151,7 @@ export async function evaluateGate(
     ...(options.evaluator === undefined
       ? {}
       : { evaluator: options.evaluator }),
+    ...(options.semantic === undefined ? {} : { semantic: options.semantic }),
   });
 
   // Un evaluador semántico necesita al menos una proposición que responder. Si
@@ -179,7 +197,7 @@ export async function evaluateGate(
     };
   }
 
-  const semantico = chosen === "command" ? "jev" : chosen;
+  const semantico = chosen === "command" ? (options.semantic ?? "jev") : chosen;
   const parcial = await runSemantic(semantico, {
     ...options,
     gate: { ...options.gate, propositions: pendientes },
@@ -209,6 +227,8 @@ async function runSemantic(
       propositions: options.gate.propositions,
       state: options.state,
       ...(options.apiKey === undefined ? {} : { apiKey: options.apiKey }),
+      ...(options.model === undefined ? {} : { model: options.model }),
+      ...(options.effort === undefined ? {} : { effort: options.effort }),
     });
     return {
       evaluator: "llm-judge",
@@ -228,6 +248,7 @@ async function runSemantic(
       ...(options.sessionId === undefined
         ? {}
         : { sessionId: options.sessionId }),
+      ...(options.model === undefined ? {} : { model: options.model }),
     });
     return {
       evaluator: "jev",
@@ -248,6 +269,8 @@ async function runSemantic(
       propositions: options.gate.propositions,
       state: options.state,
       ...(options.apiKey === undefined ? {} : { apiKey: options.apiKey }),
+      ...(options.judgeModel === undefined ? {} : { model: options.judgeModel }),
+      ...(options.effort === undefined ? {} : { effort: options.effort }),
     });
     return {
       evaluator: "llm-judge",

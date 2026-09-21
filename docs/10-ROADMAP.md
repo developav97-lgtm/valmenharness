@@ -88,7 +88,7 @@ Ver [`06-CONTROL-APP.md`](06-CONTROL-APP.md).
 | 4.2bis  | Vista de features                                     | Una feature con su spec, sus deltas y los tickets que la implementan                                |
 | 4.3     | Vista de gate en revisión                             | **Verificado**: recibo congelado, proposición por proposición, aviso de recibo obsoleto, y la decisión humana anexada sin reescribir el veredicto |
 | 4.4     | Configuración editable                                | Formulario y texto crudo, con diff antes de guardar                                                |
-| 4.5     | Routing de modelos                                    | Selección de modelo y esfuerzo por rol, con el preset activo                                       |
+| 4.5     | Routing de modelos                                    | **Verificado**: tres presets, resolución con origen visible, y el modelo llega a la llamada real    |
 | 4.6     | Chat de configuración                                 | Propone cambios; nunca escribe directo                                                             |
 | **4.7** | **Configuración de proveedores y claves en la app** ⚠ | **Verificado**: agregar, probar antes de guardar, reemplazar y borrar desde la interfaz. Ver abajo |
 
