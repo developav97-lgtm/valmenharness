@@ -533,6 +533,17 @@ export async function probeProvider(
     readonly env?: NodeJS.ProcessEnv;
     readonly fetchImpl?: typeof fetch;
     readonly timeoutMs?: number;
+    /**
+     * La clave a probar, cuando todavía no está guardada.
+     *
+     * Se pasa **como valor** y no como variable de entorno. Antes se fingía una
+     * variable inventando su nombre en un mapa aparte, y ese mapa se
+     * desincronizó del catálogo en cuanto opencode se separó en Go y Zen: la
+     * clave no llegaba a la petición, el proveedor respondía 401 y el mensaje
+     * culpaba a la credencial del usuario. Una clave que se va a probar no
+     * necesita parecer una variable de entorno.
+     */
+    readonly apiKey?: string;
   } = {},
 ): Promise<{
   readonly ok: boolean;
@@ -562,11 +573,14 @@ export async function probeProvider(
   const inicio = Date.now();
 
   // La credencial se resuelve sin exponerla: se pasa como cabecera y nada más.
-  const clave = resolveForProbe(
-    spec,
-    options.filePath ?? credentialsPath(),
-    options.env ?? process.env,
-  );
+  // Si viene una para probar, gana: es la que el usuario acaba de pegar.
+  const clave =
+    options.apiKey ??
+    resolveForProbe(
+      spec,
+      options.filePath ?? credentialsPath(),
+      options.env ?? process.env,
+    );
 
   const headers: Record<string, string> = {};
   if (clave !== null && clave !== "")

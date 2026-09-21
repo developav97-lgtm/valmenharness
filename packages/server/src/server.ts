@@ -684,8 +684,11 @@ export async function handleApi(
       // pantalla, no en la mitad de un gate.
       const prueba = await probeProvider(id, {
         filePath: context.credentialsFile,
-        // La clave nueva se prueba antes de escribirla, sin pasar por el archivo.
-        env: { ...context.env, ...envFor(id, datos.apiKey) },
+        // La clave nueva se prueba antes de escribirla, sin pasar por el archivo,
+        // y se pasa **como valor**: fingir una variable de entorno obligaba a
+        // mantener un mapa de nombres paralelo al catálogo, y ese mapa se
+        // desincronizó en cuanto opencode se separó en Go y Zen.
+        apiKey: datos.apiKey,
         ...(context.fetchImpl === undefined
           ? {}
           : { fetchImpl: context.fetchImpl }),
@@ -749,18 +752,6 @@ export async function handleApi(
 }
 
 /** Construye el entorno para probar una clave sin escribirla en el archivo. */
-function envFor(id: string, apiKey: string): Record<string, string> {
-  const variables: Record<string, string> = {
-    openrouter: "OPENROUTER_API_KEY",
-    deepseek: "DEEPSEEK_API_KEY",
-    moonshot: "MOONSHOT_API_KEY",
-    zhipu: "ZHIPU_API_KEY",
-    qwen: "QWEN_API_KEY",
-  };
-  const nombre = variables[id];
-  return nombre === undefined ? {} : { [nombre]: apiKey };
-}
-
 /** Tipos MIME de los archivos que sirve la interfaz. */
 const MIME: Readonly<Record<string, string>> = {
   ".html": "text/html; charset=utf-8",
