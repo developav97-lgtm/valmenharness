@@ -182,6 +182,11 @@ export function createTicket(request: CreateRequest): string {
   validateDocument(documento, { expectedId: id });
 
   return MutationLock.run(paths.root, () => {
+    // El registro puede no existir todavía: es el primer ticket de un proyecto
+    // recién adoptado, que es exactamente el caso normal. Se crea antes de
+    // comprobarlo, porque la comprobación de ruta exige que exista y el
+    // inventario del registro (`allDocuments`) también.
+    mkdirSync(ticketsPath(paths), { recursive: true });
     ensureSecurePath(paths.root, ticketsPath(paths));
     // Un ticket hermano roto impediría generar el índice, así que se comprueba
     // antes de añadir uno nuevo.

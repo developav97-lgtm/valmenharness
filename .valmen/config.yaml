@@ -1,0 +1,16 @@
+# Configuración del harness en este proyecto.
+#
+# Generado por `valmen adopt`. Revise y ajuste lo que corresponda:
+# el harness solo escribió lo que pudo comprobar en el disco.
+
+name: ValmenHarness
+tickets-dir: tickets
+
+# Dependencias clave detectadas. No son una regla: son un punto de partida
+# para escribir `.valmen/rules/stack.md`.
+#   typescript 5.7.2  (package.json)
+
+# Gates del proyecto. Empiezan sin configurar a propósito: el modo por
+# defecto de un gate es humano, y automatizarlo es una decisión que se toma
+# con evidencia, no al adoptar.
+gates: []

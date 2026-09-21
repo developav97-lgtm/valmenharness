@@ -56,9 +56,41 @@ export function legacyPaths(root: string): RegistryPaths {
  * registro vacío en un proyecto adoptado.
  */
 export function chooseTicketsDir(root: string): string {
-  if (existsSync(join(root, "docs", "tickets"))) return "docs/tickets";
-  if (existsSync(join(root, "tickets"))) return "tickets";
+  const anterior = join(root, "docs", "tickets");
+  const nuevo = join(root, "tickets");
+
+  // Primero se busca **dónde hay tickets**, y solo después dónde hay un
+  // directorio. La diferencia importa: un `docs/tickets` vacío —creado por error
+  // o dejado por una prueba— desviaba el registro al layout anterior en silencio,
+  // y el harness mostraba un registro vacío con los tickets a la vista.
+  if (contieneTickets(anterior)) return "docs/tickets";
+  if (contieneTickets(nuevo)) return "tickets";
+
+  if (existsSync(anterior)) return "docs/tickets";
+  if (existsSync(nuevo)) return "tickets";
   return "tickets";
+}
+
+/** `true` si el directorio tiene al menos un `ticket.md` en su segundo nivel. */
+function contieneTickets(base: string): boolean {
+  let anios: string[];
+  try {
+    anios = readdirSync(base);
+  } catch {
+    return false;
+  }
+  for (const anio of anios) {
+    let ids: string[];
+    try {
+      ids = readdirSync(join(base, anio));
+    } catch {
+      continue;
+    }
+    for (const id of ids) {
+      if (existsSync(join(base, anio, id, "ticket.md"))) return true;
+    }
+  }
+  return false;
 }
 
 /**

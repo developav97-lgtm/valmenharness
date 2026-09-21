@@ -28,6 +28,7 @@ import {
   readList,
 } from "../packages/adapter/src/index.js";
 import { chooseTicketsDir } from "../packages/engine/src/discovery.js";
+import { writeFixtureTicket } from "./helpers/fixtures.js";
 import { adoptProject, syncProject } from "../packages/cli/src/commands.js";
 
 let lab: string;
@@ -132,11 +133,30 @@ describe("detección de configuración preexistente", () => {
 describe("elección del registro", () => {
   it("prefiere docs/tickets si ya existe, para no obligar a mover el registro", () => {
     mkdirSync(join(lab, "docs", "tickets"), { recursive: true });
+    // Un `docs/tickets` con tickets dentro gana, aunque el layout nuevo exista.
     expect(chooseTicketsDir(lab)).toBe("docs/tickets");
   });
 
   it("usa tickets/ cuando el proyecto no tiene registro", () => {
     expect(chooseTicketsDir(lab)).toBe("tickets");
+  });
+
+  it("un directorio vacío no desvía el registro al layout anterior", () => {
+    // Pasó de verdad: un `docs/tickets` vacío, dejado por una prueba, hacía que
+    // el harness creyera que el registro era el anterior y mostrara una lista
+    // vacía con los tickets a la vista.
+    mkdirSync(join(lab, "docs", "tickets"), { recursive: true });
+    writeFixtureTicket(lab, { id: "BUGFIX-A-B-20260921" });
+    expect(chooseTicketsDir(lab)).toBe("tickets");
+
+    // Y si el que tiene tickets es el anterior, gana el anterior.
+    mkdirSync(join(lab, "docs", "tickets", "2026", "BUGFIX-C-D-20260921"), { recursive: true });
+    writeFileSync(
+      join(lab, "docs", "tickets", "2026", "BUGFIX-C-D-20260921", "ticket.md"),
+      "---\n",
+      "utf8",
+    );
+    expect(chooseTicketsDir(lab)).toBe("docs/tickets");
   });
 });
 
