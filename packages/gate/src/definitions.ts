@@ -47,6 +47,7 @@ export const PLAN_GATE: GateDefinition = {
     {
       id: "cubre_todos_los_criterios",
       kind: "noul",
+      description: "El plan cubre todos los criterios de aceptación",
       weight: 3,
       instructions:
         "`plan` describe pasos que, si se ejecutan, satisfacen todos los criterios " +
@@ -59,6 +60,7 @@ export const PLAN_GATE: GateDefinition = {
     {
       id: "corresponde_a_la_investigacion",
       kind: "noul",
+      description: "El plan responde a lo que dice el diagnóstico",
       weight: 2,
       instructions:
         "Los archivos y componentes que `plan` propone modificar son los mismos que " +
@@ -75,6 +77,9 @@ export const PLAN_GATE: GateDefinition = {
       // se midió un 0.37 sobre un plan cuyos pasos sí nombran archivo y acción.
       id: "pasos_ejecutables",
       kind: "noul",
+      // Lo que se lee en el recibo: sin esto, la proposición aparece
+      // solo por su identificador y hay que ir al gate para saber qué pregunta.
+      description: "Los pasos son ejecutables tal como están escritos",
       instructions:
         "Cada paso de `plan` nombra un archivo, un comando o una acción concreta.",
       criteria: {
@@ -85,6 +90,9 @@ export const PLAN_GATE: GateDefinition = {
     {
       id: "criterios_verificables",
       kind: "noul",
+      // Lo que se lee en el recibo: sin esto, la proposición aparece
+      // solo por su identificador y hay que ir al gate para saber qué pregunta.
+      description: "Los criterios se pueden comprobar sin interpretarlos",
       instructions:
         "Cada criterio de `criterios` puede comprobarse con una observación o una prueba.",
       criteria: {
@@ -95,6 +103,9 @@ export const PLAN_GATE: GateDefinition = {
     {
       id: "compatibilidad_hacia_atras",
       kind: "noul",
+      // Lo que se lee en el recibo: sin esto, la proposición aparece
+      // solo por su identificador y hay que ir al gate para saber qué pregunta.
+      description: "El cambio no rompe lo que ya funcionaba",
       instructions:
         "`plan` preserva el comportamiento para los datos y clientes ya existentes.",
       criteria: {
@@ -105,6 +116,9 @@ export const PLAN_GATE: GateDefinition = {
     {
       id: "rollback_suficiente",
       kind: "noul",
+      // Lo que se lee en el recibo: sin esto, la proposición aparece
+      // solo por su identificador y hay que ir al gate para saber qué pregunta.
+      description: "El rollback deshace el cambio por completo",
       instructions:
         "`plan` describe cómo revertir el cambio si falla, de forma proporcional al riesgo.",
       criteria: {
@@ -115,6 +129,7 @@ export const PLAN_GATE: GateDefinition = {
     {
       id: "clasificacion",
       kind: "choice",
+      description: "Qué le falta al plan para poder aprobarse",
       instructions: "El plan, ¿qué le falta para poder aprobarse?",
       criteria: {
         completo: "Cubre alcance, pasos, criterios y rollback.",
@@ -143,6 +158,7 @@ export const PLAN_GATE: GateDefinition = {
       // Descriptiva: informa el recibo, no veta.
       id: "hay_archivos_afectados",
       kind: "noul",
+      description: "El plan nombra los archivos que va a tocar",
       verdict: false,
       instructions: "`plan` nombra los archivos concretos que va a modificar.",
     },
@@ -178,6 +194,7 @@ export const ANALYSIS_GATE: GateDefinition = {
     {
       id: "diagnostico_explica_el_sintoma",
       kind: "noul",
+      description: "El diagnóstico explica por qué ocurre el síntoma",
       weight: 3,
       instructions:
         "La causa descrita en `investigacion` explica el síntoma reportado en `solicitud`. " +
@@ -190,6 +207,9 @@ export const ANALYSIS_GATE: GateDefinition = {
     {
       id: "causa_especifica",
       kind: "noul",
+      // Lo que se lee en el recibo: sin esto, la proposición aparece
+      // solo por su identificador y hay que ir al gate para saber qué pregunta.
+      description: "La causa es concreta y verificable, no una hipótesis vaga",
       instructions: "`investigacion` nombra una causa concreta y verificable.",
       criteria: {
         yes: "La causa está identificada y es comprobable en el código.",
@@ -199,6 +219,9 @@ export const ANALYSIS_GATE: GateDefinition = {
     {
       id: "nombra_archivos_reales",
       kind: "noul",
+      // Lo que se lee en el recibo: sin esto, la proposición aparece
+      // solo por su identificador y hay que ir al gate para saber qué pregunta.
+      description: "Los archivos que nombra son los del síntoma",
       instructions:
         "Los archivos que `investigacion` cita son los que contendrían el comportamiento " +
         "descrito, según lo que el propio texto explica del sistema.",
@@ -206,6 +229,9 @@ export const ANALYSIS_GATE: GateDefinition = {
     {
       id: "riesgos_cubren_impactos",
       kind: "noul",
+      // Lo que se lee en el recibo: sin esto, la proposición aparece
+      // solo por su identificador y hay que ir al gate para saber qué pregunta.
+      description: "Los riesgos cubren los impactos declarados",
       instructions:
         "`investigacion` declara el efecto del cambio sobre otros consumidores del mismo " +
         "componente o endpoint.",
@@ -213,6 +239,7 @@ export const ANALYSIS_GATE: GateDefinition = {
     {
       id: "clasificacion",
       kind: "choice",
+      description: "En qué estado está la investigación",
       instructions: "¿Cuál es el estado de la investigación?",
       criteria: {
         completa: "Identifica causa, archivos, flujo y riesgos.",

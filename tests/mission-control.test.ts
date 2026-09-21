@@ -140,10 +140,32 @@ describe("listProviders", () => {
     expect(ollama?.source).toBe("none");
   });
 
-  it("sin archivo, todos los de API key aparecen sin configurar", () => {
+  it("sin archivo, los de API key aparecen sin configurar", () => {
     const estados = listProviders(archivo, {});
-    const conClave = estados.filter((p) => p.auth === "api-key");
-    expect(conClave.every((p) => !p.configured)).toBe(true);
+    // Se excluye el que además declara un token del CLI: ese puede estar
+    // configurado por la sesión del CLI aunque no haya clave pegada.
+    const soloClave = estados.filter(
+      (p) => p.auth === "api-key" && p.tokenSource === undefined,
+    );
+    expect(soloClave.length).toBeGreaterThan(0);
+    expect(soloClave.every((p) => !p.configured)).toBe(true);
+  });
+
+  it("un proveedor con clave y con token del CLI admite las dos vías", () => {
+    // opencode zen se configura pegando la clave, y además sirve el token que
+    // opencode ya tenga guardado. Antes estaba declarado solo como suscripción,
+    // y eso dejaba la clave sin forma de agregarse desde la app.
+    const opencode = listProviders(archivo, {}).find((p) => p.id === "opencode");
+    expect(opencode?.auth).toBe("api-key");
+    expect(opencode?.probeable).toBe(true);
+    expect(opencode?.tokenSource).toBeDefined();
+
+    // Y con la clave en el entorno, gana la clave.
+    const conClave = listProviders(archivo, { OPENCODE_API_KEY: "sk-zen-123" }).find(
+      (p) => p.id === "opencode",
+    );
+    expect(conClave?.source).toBe("environment");
+    expect(conClave?.keyLength).toBe(10);
   });
 });
 

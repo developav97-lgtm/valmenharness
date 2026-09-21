@@ -35,6 +35,18 @@ export interface NoulProposition {
   readonly kind: "noul";
   /** La proposición, completa y autocontenida. */
   readonly instructions: string;
+  /**
+   * Qué se está juzgando, en las palabras del sujeto.
+   *
+   * La etiqueta de una proposición evaluada es su identificador con el valor
+   * —`criterio_03=0.43`—, y eso dice el número pero no el asunto: para saber qué
+   * criterio es el tres hay que ir a leer el ticket. Esta descripción viaja al
+   * recibo para que la pantalla pueda decir **qué** se evaluó y no solo cuánto.
+   *
+   * Es opcional porque las proposiciones fijas de un gate ya se explican con su
+   * `instructions`, que se escribe una vez y no varía por sujeto.
+   */
+  readonly description?: string;
   /** Descripción de los dos polos, para desambiguar. */
   readonly criteria?: { readonly yes: string; readonly no: string };
   /** Peso relativo en la decisión. Por defecto 1. */
@@ -61,6 +73,8 @@ export interface ChoiceProposition {
   readonly id: string;
   readonly kind: "choice";
   readonly instructions: string;
+  /** Qué se está juzgando, en palabras del sujeto. Ver `NoulProposition`. */
+  readonly description?: string;
   /** Nombre de la opción → descripción que la separa de las demás. */
   readonly criteria: Readonly<Record<string, string>>;
   /**
@@ -80,6 +94,8 @@ export interface ScoreProposition {
   readonly id: string;
   readonly kind: "score";
   readonly instructions: string;
+  /** Qué se está juzgando, en palabras del sujeto. Ver `NoulProposition`. */
+  readonly description?: string;
   /** Niveles ordenados de menor a mayor. El índice es la posición. */
   readonly criteria: readonly string[];
   /**
@@ -190,6 +206,13 @@ export interface EvaluatedProposition {
   readonly weight: number;
   /** El valor que se comparó contra los umbrales. */
   readonly value: number;
+  /**
+   * Qué se juzgó, cuando la proposición lo declara.
+   *
+   * Es lo que permite leer el recibo sin el ticket delante: `criterio_03` en
+   * banda de revisión no dice nada, y «Buscar "999" no devuelve resultados» sí.
+   */
+  readonly description?: string;
   /** Cómo se llamaba ese valor, para el recibo. */
   readonly label: string;
   readonly inBand: boolean;
@@ -371,6 +394,9 @@ function evaluateNoul(
     return {
       id: proposition.id,
       kind: "noul",
+      ...(proposition.description === undefined
+        ? {}
+        : { description: proposition.description }),
       weight,
       value,
       label: `${proposition.id}=${formatted}`,
@@ -385,6 +411,9 @@ function evaluateNoul(
     return {
       id: proposition.id,
       kind: "noul",
+      ...(proposition.description === undefined
+        ? {}
+        : { description: proposition.description }),
       weight,
       value,
       label: `${proposition.id}=${formatted}`,
@@ -398,6 +427,9 @@ function evaluateNoul(
   return {
     id: proposition.id,
     kind: "noul",
+    ...(proposition.description === undefined
+      ? {}
+      : { description: proposition.description }),
     weight,
     value,
     label: `${proposition.id}=${formatted}`,

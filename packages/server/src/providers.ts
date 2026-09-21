@@ -39,7 +39,22 @@ export interface ProviderSpec {
    * Se prueba contra un endpoint real y no con un `ping`: una clave mal pegada
    * tiene que fallar en la pantalla, no en la mitad de un gate.
    */
-  readonly probe?: { readonly url: string; readonly expect: number };
+  /**
+   * Cómo comprobar que una credencial sirve.
+   *
+   * Hay proveedores cuyo listado de modelos es **público**: responde 200 con
+   * cualquier clave, incluida una inventada. Probar contra ese endpoint diría
+   * «todo bien» con una clave mal pegada, que es justo lo que la prueba existe
+   * para evitar. Para esos, la prueba es una petición mínima al endpoint que sí
+   * exige credencial: una clave mala da 401 y no cuesta nada, y una buena cuesta
+   * una fracción de céntimo.
+   */
+  readonly probe?: {
+    readonly url: string;
+    readonly expect: number;
+    readonly method?: "GET" | "POST";
+    readonly body?: unknown;
+  };
   /** Dónde vive el token, para los proveedores de suscripción. */
   readonly tokenSource?: string;
   /** Nombre de la variable de entorno que también se acepta. */
@@ -53,7 +68,14 @@ export interface ProviderSpec {
  * mano**: el harness lee el token y nunca lo reescribe, para no pelearse por el
  * mismo refresh token con la herramienta dueña.
  */
-export const PROVIDERS: readonly ProviderSpec[] = [
+/** Una entrada del catálogo: lo que se declara más lo que se deriva. */
+export interface ProviderEntry extends ProviderSpec {
+  readonly probeable: boolean;
+  readonly probeHost: string | null;
+}
+
+/** El catálogo tal como se declara: sin lo que se puede derivar de él. */
+const CATALOGO: readonly ProviderSpec[] = [
   {
     id: "openrouter",
     name: "OpenRouter",
@@ -108,9 +130,27 @@ export const PROVIDERS: readonly ProviderSpec[] = [
   },
   {
     id: "opencode",
-    name: "opencode",
-    auth: "subscription",
+    name: "opencode zen",
+    // Zen es una pasarela con clave propia —se saca de opencode.ai/auth y se
+    // pega como cualquier otra—, no solo el token de la sesión del CLI. Estaba
+    // declarado como suscripción y eso impedía agregar la clave desde la app.
+    auth: "api-key",
     envVar: "OPENCODE_API_KEY",
+    // El listado de modelos de Zen es público —responde 200 con basura— así que
+    // la prueba es una petición mínima, que sí distingue una clave buena de una
+    // mala con un 401.
+    probe: {
+      url: "https://opencode.ai/zen/v1/chat/completions",
+      expect: 200,
+      method: "POST",
+      body: {
+        model: "deepseek-v4-flash",
+        max_tokens: 1,
+        messages: [{ role: "user", content: "ok" }],
+      },
+    },
+    // El token del CLI sigue sirviendo como origen alternativo: quien ya tenga
+    // opencode autenticado no tiene que pegar nada.
     tokenSource: "~/.local/share/opencode/auth.json",
   },
   {
@@ -137,6 +177,16 @@ export interface ProviderStatus {
   /** El campo del archivo tiene el nombre anterior. Se informa, no se corrige. */
   readonly legacyFieldName: boolean;
   readonly tokenSource?: string;
+  /**
+   * `true` si el proveedor declara un endpoint contra el que probar la clave.
+   *
+   * Un proveedor de suscripción no lo tiene: su credencial es el token que ya
+   * vive en el CLI, y no hay URL a la que preguntar. Ofrecer un botón que
+   * siempre falla es peor que no ofrecerlo, porque parece un error del usuario.
+   */
+  readonly probeable: boolean;
+  /** El host contra el que se prueba, para que se sepa qué se va a tocar. */
+  readonly probeHost: string | null;
 }
 
 /** Ruta del archivo de credenciales. */
@@ -198,6 +248,19 @@ function readKeyFromFile(
 }
 
 /**
+ * El catálogo, con lo que se deriva de cada declaración.
+ *
+ * Se calcula una vez en lugar de repetirlo en cada entrada: `probeable` y
+ * `probeHost` son propiedades del endpoint declarado, no datos que alguien tenga
+ * que acordarse de mantener en sincronía.
+ */
+export const PROVIDERS: readonly ProviderEntry[] = CATALOGO.map((spec) => ({
+  ...spec,
+  probeable: spec.probe !== undefined,
+  probeHost: spec.probe === undefined ? null : new URL(spec.probe.url).host,
+}));
+
+/**
  * Estado de todos los proveedores.
  *
  * Devuelve el estado, **nunca el valor**. La longitud se incluye a propósito:
@@ -236,7 +299,7 @@ export function listProviders(
       };
     }
 
-    if (spec.auth === "subscription" && spec.tokenSource !== undefined) {
+    if (spec.tokenSource !== undefined) {
       const expandido = spec.tokenSource.replace(/^~/, homedir());
       let existe = false;
       try {
@@ -477,11 +540,15 @@ export async function probeProvider(
   const headers: Record<string, string> = {};
   if (clave !== null && clave !== "")
     headers["Authorization"] = `Bearer ${clave}`;
+  if (spec.probe.body !== undefined) headers["Content-Type"] = "application/json";
 
   try {
     const respuesta = await fetchImpl(spec.probe.url, {
-      method: "GET",
+      method: spec.probe.method ?? "GET",
       headers,
+      ...(spec.probe.body === undefined
+        ? {}
+        : { body: JSON.stringify(spec.probe.body) }),
       signal: AbortSignal.timeout(options.timeoutMs ?? 15_000),
     });
     const latencia = Date.now() - inicio;

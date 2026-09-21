@@ -160,7 +160,8 @@
       }
       .proposiciones { margin-top: 14px; }
       .proposiciones td { padding: 8px 10px; font-size: 13px; }
-      .proposiciones .etiqueta-proposicion { font-family: var(--mono); font-size: 12px; }
+      .proposiciones .etiqueta-proposicion { font-family: var(--mono); font-size: 11px; color: var(--tenue); }
+      .proposiciones .criterio-texto { font-size: 13px; margin-bottom: 2px; }
       /* La barra hace visible lo que decide: el número y los dos umbrales. */
       .barra { position: relative; width: 150px; height: 8px; border-radius: 4px; background: var(--fondo); border: 1px solid var(--borde); }
       .barra .relleno { position: absolute; inset: 0 auto 0 0; border-radius: 3px; background: var(--tenue); }
@@ -505,7 +506,21 @@
         const tbody = el("tbody");
         for (const p of recibo.propositions) {
           const tr = el("tr");
-          tr.append(el("td", p.label || p.id, "etiqueta-proposicion"));
+
+          // Lo que se juzgó va primero y en su texto: `criterio_03` en banda de
+          // revisión no dice nada, y el criterio que representa sí. Debajo queda
+          // el identificador con su valor, que es lo que hace falta para
+          // rastrearlo en el recibo.
+          const celdaProposicion = el("td");
+          if (p.description) {
+            celdaProposicion.append(
+              el("div", p.description, "criterio-texto"),
+              el("div", p.label || p.id, "etiqueta-proposicion"),
+            );
+          } else {
+            celdaProposicion.append(el("div", p.label || p.id, "etiqueta-proposicion"));
+          }
+          tr.append(celdaProposicion);
           tr.append(el("td", p.value.toFixed(3), "cifra"));
 
           const celdaBarra = el("td");
@@ -559,6 +574,19 @@
           );
         }
 
+        // Un renglón que explique la banda antes de la tabla: sin él, «en banda
+        // media» es una palabra que hay que interpretar.
+        if (recibo.propositions.some((p) => p.mark === "review")) {
+          cont.append(
+            el(
+              "div",
+              `Ninguna proposición llegó a los umbrales: por debajo de ${gate.policy.blockAt} bloquea, ` +
+                `a partir de ${gate.policy.approveAt} aprueba, y lo que cae en medio es lo que tienes que decidir tú. ` +
+                "Las que aparecen como «descriptiva» se registran pero no vetan.",
+              "resultado",
+            ),
+          );
+        }
         cont.append(tablaProposiciones(recibo, gate.policy), listaChecks(recibo.mechanicalChecks));
 
         const pie = el("div", undefined, "pie-recibo");
@@ -1599,14 +1627,28 @@
           celdaEstado.append(salida);
           tr.append(celdaEstado);
 
-          tr.append(el("td", origen(p), "resultado"));
+          const celdaOrigen = el("td");
+          celdaOrigen.append(el("div", origen(p), "resultado"));
+          if (p.probeable && p.probeHost) {
+            celdaOrigen.append(el("div", `se prueba contra ${p.probeHost}`, "resultado"));
+          }
+          tr.append(celdaOrigen);
 
           const celdaAcciones = el("td");
           const acciones = el("div", undefined, "acciones");
 
-          const probar = el("button", "Probar");
-          probar.addEventListener("click", () => void probarConexion(p, salida, probar));
-          acciones.append(probar);
+          // Un proveedor de suscripción no tiene endpoint: su credencial es el
+          // token que ya vive en el CLI. Un botón que siempre falla parece un
+          // error del usuario, así que en su lugar se dice qué usa.
+          if (p.probeable) {
+            const probar = el("button", "Probar");
+            probar.title = `Se prueba contra ${p.probeHost}`;
+            probar.addEventListener("click", () => void probarConexion(p, salida, probar));
+            acciones.append(probar);
+          } else if (p.tokenSource) {
+            salida.className = "resultado";
+            salida.textContent = `Se usa el token de ${p.tokenSource}; no hay endpoint que probar.`;
+          }
 
           if (p.auth === "api-key") {
             const configurar = el("button", p.configured ? "Reemplazar" : "Configurar", p.configured ? "" : "principal");

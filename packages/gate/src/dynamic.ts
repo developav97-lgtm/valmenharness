@@ -54,6 +54,9 @@ export function criterionProposition(
     // Cada criterio pesa igual: el gate exige que todos se cumplan, así que un
     // peso mayor en uno daría a entender que hay criterios opcionales.
     weight: 1,
+    // El texto del criterio viaja al recibo: es lo que la pantalla muestra para
+    // que un `criterio_03` en banda de revisión se pueda leer sin abrir el ticket.
+    description: criterion,
     instructions: `Existe en \`plan\` al menos un paso que satisface este criterio: "${criterion}"`,
     criteria: {
       yes: "Hay al menos un paso del plan que lo satisface.",
