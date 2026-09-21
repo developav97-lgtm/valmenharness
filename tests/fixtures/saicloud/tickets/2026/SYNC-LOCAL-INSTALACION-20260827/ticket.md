@@ -159,7 +159,7 @@ Organizar la documentación y el flujo para instalar SaiOpenCloud desde cero en 
 - Comandos para el PO:
   1. En el repositorio: `cd LocalTools/saisetup && go test ./... && GOOS=windows GOARCH=amd64 go build -o /tmp/saisetup.exe ./cmd/saisetup`.
   2. En el servidor de pruebas, dentro de la carpeta de trabajo: `docker compose config`, `docker compose pull`, `docker compose up -d`, `docker compose ps`, `docker compose images` y `docker compose logs sync_worker --tail=200`.
-  3. Para sync: consultar el schema con `AdminClient.objects.filter(is_offline_sync_enabled=True)` y ejecutar el GET contra `https://SCHEMA_REAL.saiopen.cloud/api/sync/receive/` como está descrito en `docs/local/INSTALACION_Y_ACTUALIZACION.md`.
+  3. Para sync: consultar el schema con `AdminClient.objects.filter(is_offline_sync_enabled=True)` y ejecutar el GET contra `https://<TENANT>.<DOMINIO>/api/sync/receive/` como está descrito en `docs/local/INSTALACION_Y_ACTUALIZACION.md`.
 - Directorio de ejecución: `LocalTools/saisetup` para pruebas Go; carpeta de trabajo del servidor local para Compose/SaiSetup.
 - Resultado esperado: las pruebas Go pasan; el build Windows termina sin error; el Compose muestra cuatro imágenes de Docker Hub, las descarga con `pull`, los seis servicios quedan `running` y el GET de diagnóstico devuelve `405` JSON desde gunicorn. La cola se conserva sin borrados.
 - Validaciones manuales: instalación limpia en entorno de prueba, conectividad LAN, bootstrap de tenant de prueba, actualización cambiando solo `SAIOPEN_VERSION` y rollback restaurando Compose/.env sin eliminar volúmenes.

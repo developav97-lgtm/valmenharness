@@ -23,7 +23,7 @@ released_in: null
 
 ## Solicitud original
 
-Hallazgo del PO (2026-09-17) durante el diagnostico del incidente de carga infinita en next.saiopencloud.co: el GET que hace AuthService.refreshUserRecord a api/users/2/ viaja sin Authorization y el backend respondio con datos; AdmUserView (BackEnd/ModAdmin/views/settings.py) no declara permission_classes y el default de DRF es AllowAny, con JWTAuthentication que retorna None cuando falta el header. Solicitud: registrar como deuda de seguridad con diagnostico, alcance, plan y aprobacion del PO; no implementar sin gate.
+Hallazgo del PO (2026-09-17) durante el diagnostico del incidente de carga infinita en next.<DOMINIO_ALT>: el GET que hace AuthService.refreshUserRecord a api/users/2/ viaja sin Authorization y el backend respondio con datos; AdmUserView (BackEnd/ModAdmin/views/settings.py) no declara permission_classes y el default de DRF es AllowAny, con JWTAuthentication que retorna None cuando falta el header. Solicitud: registrar como deuda de seguridad con diagnostico, alcance, plan y aprobacion del PO; no implementar sin gate.
 
 ## Descripción funcional
 

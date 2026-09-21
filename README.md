@@ -82,6 +82,12 @@ Los tests corren contra un fixture de 57 tickets reales incluido en el repositor
 requieren red ni claves de API**: el motor es determinista y se prueba sin llamar a ningún
 modelo.
 
+> **Sobre el fixture.** Son 57 tickets de un proyecto en producción, con la estructura
+> íntegra —15 secciones, 7 bloques JSON, 1.851 eventos, 137 puntos— y los datos
+> identificables sustituidos: subdominios de tenants, rutas locales y nombres de clientes.
+> La forma es la real, que es lo que hace útil la suite de equivalencia; el contenido
+> sensible, no.
+
 ```bash
 npm run typecheck   # tsc estricto
 npm run test        # 96 tests

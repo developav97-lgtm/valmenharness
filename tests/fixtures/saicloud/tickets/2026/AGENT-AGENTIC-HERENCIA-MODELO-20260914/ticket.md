@@ -76,7 +76,7 @@ Mantener Terra con esfuerzo medio como valor predeterminado del proyecto, pero p
 
 ## Pruebas
 
-- Comandos para el PO: `codex --strict-config -C /Users/juanandrade/Desktop/ValMenTech/10-Proyectos/SaiOpenCloud exec --help` y `rg -n '^(model|model_reasoning_effort|default_subagent_model|default_subagent_reasoning_effort)\\s*=' .codex/config.toml .codex/agents --glob '*.toml'`.
+- Comandos para el PO: `codex --strict-config -C <PROYECTO> exec --help` y `rg -n '^(model|model_reasoning_effort|default_subagent_model|default_subagent_reasoning_effort)\\s*=' .codex/config.toml .codex/agents --glob '*.toml'`.
 - Directorio de ejecución: raíz de SaiOpenCloud.
 - Resultado esperado: Codex acepta la configuración; la búsqueda devuelve únicamente `model` y `model_reasoning_effort` en el nivel raíz de `.codex/config.toml`, sin overrides dentro de `[agents]` ni perfiles activos.
 - Validaciones manuales: abrir una sesión nueva sin cambiar el selector y confirmar Terra/medio; abrir otra con Sol/alto o Astra/alto, solicitar un subagente y comprobar en sus detalles que heredó ambos valores.

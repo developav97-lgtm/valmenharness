@@ -96,7 +96,7 @@ Cambiar send_invoice_electronic para reportar la propina (order.other) y el domi
 ## Pruebas
 
 - Comandos para el PO: desde `BackEnd/`, `./.venv/bin/python manage.py test ModPos.tests.test_send_invoice.SendInvoiceElectronicBagTaxTests --keepdb --verbosity 1` y `./.venv/bin/python manage.py check`.
-- Directorio de ejecución: `/Users/juanandrade/Desktop/ValMenTech/10-Proyectos/SaiOpenCloud/BackEnd`.
+- Directorio de ejecución: `<PROYECTO>/BackEnd`.
 - Resultado esperado: las cuatro pruebas dirigidas pasan; los payloads cumplen los criterios y `check` termina sin errores.
 - Validaciones manuales: en habilitación del proveedor, emitir una factura de prueba para cada escenario (sin cargos, propina, domicilio, ambos), revisar payload registrado, respuesta de aceptación y XML/PDF resultante.
 - Requisitos de ambiente o datos: tenant de habilitación, resolución y certificado de pruebas operativos, cliente de prueba y autorización del proveedor para usar los cuatro documentos no productivos.

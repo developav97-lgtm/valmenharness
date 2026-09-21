@@ -34,7 +34,7 @@ Crear en Next/SaiOpenCloud una ruta Angular de consulta de errores para cada ten
 
 ## Diagnóstico
 
-- Archivos y flujo investigados: `FrontEnd/src/app/common/services/general.service.ts` arma las llamadas contra `https://{tenant}.saiopen.cloud/` usando el tenant de la sesión, aunque la SPA se cargue desde Next/dev. `BackEnd/ModRestaurant/views/functions.py` genera referencias ORD y usa logging de consola. `BackEnd/SaiOpenCloud/settings.py` no persiste errores en base de datos. La ruta raíz Angular permite crear una sección independiente de los módulos operativos.
+- Archivos y flujo investigados: `FrontEnd/src/app/common/services/general.service.ts` arma las llamadas contra `https://{tenant}.<DOMINIO>/` usando el tenant de la sesión, aunque la SPA se cargue desde Next/dev. `BackEnd/ModRestaurant/views/functions.py` genera referencias ORD y usa logging de consola. `BackEnd/SaiOpenCloud/settings.py` no persiste errores en base de datos. La ruta raíz Angular permite crear una sección independiente de los módulos operativos.
 - Causa raíz o hipótesis: la única trazabilidad depende de la infraestructura y de retenciones/rutas de logging que no son accesibles ni confiables como interfaz para operación. No existe un contrato de error persistente y tenant-scoped.
 - Riesgos y compatibilidad: como cualquier usuario autenticado podrá ver el historial, cada evento debe contener solo texto seguro y clasificación controlada; nunca traceback, consultas, cuerpos HTTP, tokens, datos personales ni valores de configuración. La lectura y la escritura deben ejecutarse en el schema tenant ya establecido por la petición; no puede haber consulta multi-tenant.
 - Impactos de sync, migración, Docker o despliegue: se agrega un modelo y migración por tenant. No cambia OfflineSync, SincSaiCloud, WebSocket, Docker ni autenticación. La migración requiere compatibilidad, backup, canario y rollback definidos antes de implementar.
@@ -122,7 +122,7 @@ Crear en Next/SaiOpenCloud una ruta Angular de consulta de errores para cada ten
 - Comandos para el PO:
   - Desde `BackEnd/`: `./.venv/bin/python manage.py test ModAdmin.tests.test_operational_errors ModRestaurant.tests.test_create_update_order_errors --keepdb --verbosity 1`
   - Desde `FrontEnd/`: `npm run build -- --configuration development`
-  - Tras publicar en Dev y aplicar la migración canario: iniciar sesión en un tenant canario y abrir `https://next.saiopencloud.co/#/admin/logs/errors`; buscar la referencia generada por una falla controlada de guardado.
+  - Tras publicar en Dev y aplicar la migración canario: iniciar sesión en un tenant canario y abrir `https://next.<DOMINIO_ALT>/#/admin/logs/errors`; buscar la referencia generada por una falla controlada de guardado.
 - Directorio de ejecución: `BackEnd/` para Django y `FrontEnd/` para Angular.
 - Resultado esperado: la suite confirma persistencia, búsqueda, sanitización, no duplicación y regresión del guardado; el build Angular finaliza correctamente. En Dev, la búsqueda muestra únicamente fecha, módulo, acción, causa y recomendación segura del tenant activo.
 - Validaciones manuales: en un tenant canario, generar un fallo controlado de backend, copiar la referencia y buscarla en `#/admin/logs/errors`; confirmar con un segundo tenant que no puede verla y que el detalle es operativo, sin información técnica cruda.

@@ -23,14 +23,14 @@ released_in: 6.2.5
 
 ## Solicitud original
 
-Necesito reemplazar la distribución manual por Drive de los paquetes ZIP de los servicios Go de sincronización y comandas. Se requiere una pantalla pública de descargas accesible sin iniciar sesión, con la misma ruta en dev.saiopencloud.co y next.saiopencloud.co, donde dev muestre versiones de desarrollo y next únicamente versiones entregadas/estables. Desde Super Admin, personal interno debe poder cargar y publicar cada ZIP, seleccionando canal desarrollo o estable. Se usaría un bucket S3 compartido con prefijos separados por canal. La descarga debe ser libre; la carga y publicación deben permanecer protegidas.
+Necesito reemplazar la distribución manual por Drive de los paquetes ZIP de los servicios Go de sincronización y comandas. Se requiere una pantalla pública de descargas accesible sin iniciar sesión, con la misma ruta en dev.<DOMINIO_ALT> y next.<DOMINIO_ALT>, donde dev muestre versiones de desarrollo y next únicamente versiones entregadas/estables. Desde Super Admin, personal interno debe poder cargar y publicar cada ZIP, seleccionando canal desarrollo o estable. Se usaría un bucket S3 compartido con prefijos separados por canal. La descarga debe ser libre; la carga y publicación deben permanecer protegidas.
 
 ## Descripción funcional
 
 - Alcance: sustituir la entrega manual por Drive de paquetes ZIP de `saiopensync` y `saicomanda` por un catálogo público de Agentes Locales. El diseño admite el agente existente `saiprint` sin requerir que se publique en la primera entrega. Incluye registro/carga interna, catálogo público, descarga y promoción de canales; no cambia el protocolo, escucha, instalación ni actualización automática de los agentes Go.
 - Usuario o rol afectado: cualquier visitante puede consultar y descargar los artefactos publicados; únicamente superusuarios de ValMenTech pueden cargar, publicar, retirar o promover una versión desde la aplicación Angular Super Admin.
 - Comportamiento actual: los ZIP se generan localmente con los `Makefile` de cada agente y se entregan manualmente por Drive.
-- Comportamiento esperado: la ruta pública Angular `/local-agents` está disponible sin sesión en `dev.saiopencloud.co` y `next.saiopencloud.co`. El despliegue `dev` muestra el canal `development`; `next` muestra exclusivamente `stable`. Super Admin permite crear borradores, cargar ZIPs, verificar su SHA-256, publicar y promover el mismo artefacto sin sobrescribir una versión existente.
+- Comportamiento esperado: la ruta pública Angular `/local-agents` está disponible sin sesión en `dev.<DOMINIO_ALT>` y `next.<DOMINIO_ALT>`. El despliegue `dev` muestra el canal `development`; `next` muestra exclusivamente `stable`. Super Admin permite crear borradores, cargar ZIPs, verificar su SHA-256, publicar y promover el mismo artefacto sin sobrescribir una versión existente.
 
 ## Diagnóstico
 
@@ -169,7 +169,7 @@ Necesito reemplazar la distribución manual por Drive de los paquetes ZIP de los
     "id": "QA-001",
     "date": "2026-09-10",
     "build_reference": "commit:ac2cd8068177d7714d5161240bfaaaf601fb9a45",
-    "environment": "dev.saiopen.cloud",
+    "environment": "dev.<DOMINIO>",
     "result": "pending",
     "findings": [],
     "correction": null,
@@ -189,7 +189,7 @@ Necesito reemplazar la distribución manual por Drive de los paquetes ZIP de los
     "id": "QA-003",
     "date": "2026-09-10",
     "build_reference": "commit:aaebab12dbedc49c6ad1128cf58a92ea7dfd4e55",
-    "environment": "dev.saiopen.cloud",
+    "environment": "dev.<DOMINIO>",
     "result": "pending",
     "findings": [],
     "correction": null,

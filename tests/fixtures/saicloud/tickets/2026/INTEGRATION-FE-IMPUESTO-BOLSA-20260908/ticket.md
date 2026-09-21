@@ -99,7 +99,7 @@ Se requiere ajustar el envío electrónico del ítem de bolsa plástica, ya impl
 ## Pruebas
 
 - Comandos para el PO: Desde `BackEnd/`, ejecutar `./.venv/bin/python manage.py test ModPos.tests.test_send_invoice.SendInvoiceElectronicBagTaxTests --keepdb`.
-- Directorio de ejecución: `/Users/juanandrade/Desktop/ValMenTech/10-Proyectos/SaiOpenCloud/BackEnd`; ambiente autorizado del proveedor para el canario.
+- Directorio de ejecución: `<PROYECTO>/BackEnd`; ambiente autorizado del proveedor para el canario.
 - Resultado esperado: La prueba pasa y el payload de factura mixta conserva el producto normal con precio 1000, transmite BOLSA con precio 0 y `salestax` IMPBOLSA/código 22/valor 36.5 para dos unidades, con total 1226.5.
 - Validaciones manuales: Crear una orden con producto normal y dos bolsas; revisar detalle, `salestax`, subtotal, total y aceptación/respuesta electrónica. Repetir con una factura sin bolsas.
 - Requisitos de ambiente o datos: Tenant de prueba con producto `is_bag_tax=True`, impuesto de tipo 9 configurado y credenciales/ambiente de facturación electrónica ya autorizados por el PO; no registrar credenciales en este ticket.
