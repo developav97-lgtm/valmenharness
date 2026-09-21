@@ -18,6 +18,12 @@
     },
     {
       "path": "../gate-jev"
+    },
+    {
+      "path": "../gate-command"
+    },
+    {
+      "path": "../gate-llm-judge"
     }
   ],
   "include": [

@@ -17,12 +17,9 @@
  *
  * Ver docs/03-GATES.md y docs/99-REFERENCIAS.md §1.
  */
-import { readFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
-
 import type { Proposition, PropositionAnswer } from "@valmen/gate";
 import { GateDefinitionError } from "@valmen/gate";
+import { CredentialError, resolveApiKey } from "@valmen/credentials";
 
 /** Endpoint de la API de Decisions. No es la API de chat. */
 export const DECISIONS_ENDPOINT = "https://openrouter.ai/api/alpha/decisions";
@@ -55,82 +52,6 @@ export class EvaluatorError extends Error {
     this.name = "EvaluatorError";
     this.code = code;
   }
-}
-
-/**
- * Resuelve la API key de OpenRouter.
- *
- * Orden: la variable de entorno primero, y si no está, el archivo de
- * credenciales. La variable gana porque permite una prueba puntual sin escribir
- * el secreto en disco.
- *
- * El valor **nunca** se registra, se imprime ni se incluye en un mensaje de
- * error. Un diagnóstico que filtra la credencial que intentaba leer es peor que
- * no tener diagnóstico.
- */
-export function resolveApiKey(env: NodeJS.ProcessEnv = process.env): string {
-  const fromEnv = env["OPENROUTER_API_KEY"];
-  if (typeof fromEnv === "string" && fromEnv.trim() !== "")
-    return fromEnv.trim();
-
-  const credentialsPath = join(homedir(), ".valmen", ".credentials.yaml");
-  let text: string;
-  try {
-    text = readFileSync(credentialsPath, "utf8");
-  } catch {
-    throw new EvaluatorError(
-      "No hay API key de OpenRouter. Exporte OPENROUTER_API_KEY o ponga la clave " +
-        `en ${credentialsPath}.`,
-      "CREDENTIAL_MISSING",
-    );
-  }
-
-  // Análisis deliberadamente simple: se busca el bloque del proveedor y su
-  // campo `api-key`. No se usa el parser de configuración porque este archivo
-  // contiene secretos y no debe pasar por estructuras que puedan acabar en un
-  // mensaje de error.
-  const openrouter = /openrouter:\s*\n((?:[ \t]+.*\n)*)/.exec(text);
-  if (openrouter === null) {
-    throw new EvaluatorError(
-      "El archivo de credenciales no tiene un bloque `openrouter`.",
-      "CREDENTIAL_MISSING",
-    );
-  }
-
-  // Se aceptan los dos nombres de campo. `api-key` es el correcto, pero una
-  // versión anterior de la plantilla se llamaba `api-key-env` y sugería una
-  // indirección que no existía; hay archivos en uso con ese nombre y con el
-  // valor literal dentro, así que rechazarlos sería romper una configuración
-  // válida por un detalle de nomenclatura ya corregido.
-  const block = openrouter[1] as string;
-  const key = /^[ \t]+api-key(?:-env)?:[ \t]*["']?([^"'\n]+)["']?[ \t]*$/m.exec(
-    block,
-  );
-  const value = key?.[1]?.trim();
-
-  if (value === undefined || value === "") {
-    const tieneCampo = /^[ \t]+api-key(?:-env)?:/m.test(block);
-    throw new EvaluatorError(
-      tieneCampo
-        ? "El bloque `openrouter` del archivo de credenciales tiene el campo de clave vacío."
-        : "El bloque `openrouter` del archivo de credenciales no declara `api-key`.",
-      "CREDENTIAL_MISSING",
-    );
-  }
-
-  // Un nombre de variable de entorno pegado por descuido no es una clave: si el
-  // valor parece un identificador en mayúsculas, se avisa en vez de enviarlo y
-  // recibir un 401 confuso.
-  if (/^[A-Z][A-Z0-9_]{6,}$/.test(value)) {
-    throw new EvaluatorError(
-      `El campo de clave del bloque \`openrouter\` contiene "${value}", que parece el ` +
-        "NOMBRE de una variable de entorno y no una clave. Ponga el valor literal " +
-        "(empieza por sk-or-v1-) o exporte esa variable.",
-      "CREDENTIAL_MISSING",
-    );
-  }
-
-  return value;
 }
 
 /** Traduce una proposición al formato de pregunta de la API. */
@@ -263,7 +184,7 @@ export interface EvaluateOptions {
 export async function evaluateWithJev(
   options: EvaluateOptions,
 ): Promise<JevEvaluation> {
-  const apiKey = options.apiKey ?? resolveApiKey();
+  const apiKey = options.apiKey ?? resolveApiKeyFromCredentials();
   const fetchImpl = options.fetchImpl ?? fetch;
   const model = options.model ?? DEFAULT_JEV_MODEL;
 
@@ -386,4 +307,16 @@ export function applicablePropositions(
   propositions: readonly Proposition[],
 ): Proposition[] {
   return propositions.filter((proposition) => proposition.when === undefined);
+}
+
+/** Resuelve la credencial y la traduce al error propio de este evaluador. */
+function resolveApiKeyFromCredentials(): string {
+  try {
+    return resolveApiKey("openrouter");
+  } catch (caught) {
+    if (caught instanceof CredentialError) {
+      throw new EvaluatorError(caught.message, "CREDENTIAL_MISSING");
+    }
+    throw caught;
+  }
 }

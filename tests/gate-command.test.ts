@@ -87,7 +87,13 @@ function evaluator(
   }) as unknown as typeof import("../packages/gate-jev/src/index.js").evaluateWithJev;
 }
 
-/** Las ocho proposiciones del gate de plan resueltas a un valor. */
+/**
+ * Las proposiciones **fijas** del gate de plan resueltas a un valor.
+ *
+ * Ojo: las proposiciones por criterio se generan aparte y son las que emiten
+ * veredicto. Un test que quiera una aprobación debe darles un valor alto con el
+ * segundo parámetro de `evaluator`.
+ */
 function allPropositions(
   value: number,
   clasificacion = "completo",
@@ -109,7 +115,7 @@ describe("los tres resultados", () => {
     const result = await runGate(PATHS(), {
       gateId: "plan",
       ticketId: TICKET,
-      evaluate: evaluator(allPropositions(0.95)),
+      jev: evaluator(allPropositions(0.95), 1.0),
       dryRun: true,
     });
     expect(result.exitCode).toBe(0);
@@ -120,7 +126,7 @@ describe("los tres resultados", () => {
     const result = await runGate(PATHS(), {
       gateId: "plan",
       ticketId: TICKET,
-      evaluate: evaluator(allPropositions(0.95, "completo"), 0.5),
+      jev: evaluator(allPropositions(0.95, "completo"), 0.5),
       dryRun: true,
     });
     expect(result.stdout).toContain("RESULTADO: REVIEW");
@@ -135,7 +141,7 @@ describe("los tres resultados", () => {
       ticketId: TICKET,
       // Un criterio de aceptación claramente incumplido. Las dimensiones fijas
       // ya no votan: su veredicto lo dan las proposiciones atómicas.
-      evaluate: evaluator(allPropositions(0.95), 0.03),
+      jev: evaluator(allPropositions(0.95), 0.03),
       dryRun: true,
     });
     expect(result.stdout).toContain("RESULTADO: BLOCK");
@@ -172,7 +178,7 @@ describe("los tres resultados", () => {
     const result = await runGate(PATHS(), {
       gateId: "plan",
       ticketId: TICKET,
-      evaluate: evaluador,
+      jev: evaluador,
       dryRun: true,
     });
 
@@ -213,7 +219,7 @@ describe("los tres resultados", () => {
     const result = await runGate(PATHS(), {
       gateId: "plan",
       ticketId: TICKET,
-      evaluate: evaluador,
+      jev: evaluador,
       dryRun: true,
     });
 
@@ -229,7 +235,7 @@ describe("checks mecánicos", () => {
     const result = await runGate(PATHS(), {
       gateId: "plan",
       ticketId: TICKET,
-      evaluate: evaluator(allPropositions(0.95)),
+      jev: evaluator(allPropositions(0.95), 1.0),
       dryRun: true,
     });
     expect(result.stdout).toContain("Checks mecánicos");
@@ -262,7 +268,7 @@ describe("checks mecánicos", () => {
     const result = await runGate(PATHS(), {
       gateId: "plan",
       ticketId: TICKET,
-      evaluate: espia,
+      jev: espia,
       dryRun: true,
     });
 
@@ -279,7 +285,7 @@ describe("el recibo", () => {
     const result = await runGate(PATHS(), {
       gateId: "plan",
       ticketId: TICKET,
-      evaluate: evaluator(allPropositions(0.95)),
+      jev: evaluator(allPropositions(0.95), 1.0),
       now: () => new Date("2026-09-21T15:04:22Z"),
     });
     expect(result.exitCode).toBe(0);
@@ -299,7 +305,7 @@ describe("el recibo", () => {
     await runGate(PATHS(), {
       gateId: "plan",
       ticketId: TICKET,
-      evaluate: evaluator(allPropositions(0.95)),
+      jev: evaluator(allPropositions(0.95), 1.0),
     });
     const receipt = readReceipts(lab, TICKET)[0];
     expect(receipt?.stateHash).toMatch(/^sha256:[0-9a-f]{64}$/);
@@ -310,7 +316,7 @@ describe("el recibo", () => {
     await runGate(PATHS(), {
       gateId: "plan",
       ticketId: TICKET,
-      evaluate: evaluator(allPropositions(0.95)),
+      jev: evaluator(allPropositions(0.95), 1.0),
     });
     const receipt = readReceipts(lab, TICKET)[0];
     // El alias no sirve: un cambio de resultados tiene que poder atribuirse al
@@ -321,16 +327,17 @@ describe("el recibo", () => {
   });
 
   it("es append-only: dos evaluaciones dejan dos recibos", async () => {
-    const evaluar = evaluator(allPropositions(0.95));
+    // Primera evaluación: criterios fuera de banda, así que aprueba.
+    const evaluar = evaluator(allPropositions(0.95), 1.0);
     await runGate(PATHS(), {
       gateId: "plan",
       ticketId: TICKET,
-      evaluate: evaluar,
+      jev: evaluar,
     });
     await runGate(PATHS(), {
       gateId: "plan",
       ticketId: TICKET,
-      evaluate: evaluator(allPropositions(0.95), 0.5),
+      jev: evaluator(allPropositions(0.95), 0.5),
       receiptId: "GR-0002",
     });
 
@@ -344,7 +351,7 @@ describe("el recibo", () => {
     await runGate(PATHS(), {
       gateId: "plan",
       ticketId: TICKET,
-      evaluate: evaluator(allPropositions(0.95, "completo"), 0.4),
+      jev: evaluator(allPropositions(0.95, "completo"), 0.4),
     });
     const receipt = readReceipts(lab, TICKET)[0];
     expect(receipt?.escalatedTo).toBe("human");
@@ -355,7 +362,7 @@ describe("el recibo", () => {
     await runGate(PATHS(), {
       gateId: "plan",
       ticketId: TICKET,
-      evaluate: evaluator(allPropositions(0.95)),
+      jev: evaluator(allPropositions(0.95), 1.0),
       dryRun: true,
     });
     expect(existsSync(join(lab, ".valmen", "receipts"))).toBe(false);
@@ -368,7 +375,7 @@ describe("errores", () => {
     const result = await runGate(PATHS(), {
       gateId: "inventado",
       ticketId: TICKET,
-      evaluate: evaluator(allPropositions(0.95)),
+      jev: evaluator(allPropositions(0.95), 1.0),
       dryRun: true,
     });
     expect(result.exitCode).toBe(2);
@@ -379,7 +386,7 @@ describe("errores", () => {
     const result = await runGate(PATHS(), {
       gateId: "plan",
       ticketId: "BUGFIX-POS-NO-EXISTE-20260101",
-      evaluate: evaluator(allPropositions(0.95)),
+      jev: evaluator(allPropositions(0.95), 1.0),
       dryRun: true,
     });
     expect(result.exitCode).toBe(2);
@@ -394,7 +401,7 @@ describe("errores", () => {
     const result = await runGate(PATHS(), {
       gateId: "plan",
       ticketId: TICKET,
-      evaluate: falla,
+      jev: falla,
       dryRun: true,
     });
     // Fail-closed: un evaluador caído no puede producir una aprobación.
@@ -427,7 +434,7 @@ describe("precondición de estado", () => {
     const result = await runGate(PATHS(), {
       gateId: "plan",
       ticketId: "BUGFIX-POS-YA-CERRADO-20260921",
-      evaluate: espia,
+      jev: espia,
       dryRun: true,
     });
 
@@ -442,7 +449,7 @@ describe("precondición de estado", () => {
     const result = await runGate(PATHS(), {
       gateId: "analysis",
       ticketId: TICKET,
-      evaluate: evaluator(allPropositions(0.95)),
+      jev: evaluator(allPropositions(0.95), 1.0),
       dryRun: true,
     });
     expect(result.exitCode).toBe(3);

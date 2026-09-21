@@ -6,18 +6,6 @@
     "composite": true,
     "tsBuildInfoFile": "./dist/.tsbuildinfo"
   },
-  "references": [
-    {
-      "path": "../core"
-    },
-    {
-      "path": "../gate"
-    },
-    {
-      "path": "../credentials"
-    }
-  ],
-  "include": [
-    "src/**/*.ts"
-  ]
+  "references": [{ "path": "../core" }, { "path": "../gate" }],
+  "include": ["src/**/*.ts"]
 }

@@ -127,6 +127,23 @@ export interface GateDefinition {
   readonly propositions: readonly Proposition[];
   readonly policy: GatePolicy;
   readonly mechanicalChecks: readonly MechanicalCheck[];
+  /**
+   * Comandos que responden proposiciones de forma determinista.
+   *
+   * Las proposiciones que aparecen aquí se resuelven ejecutando un comando y
+   * **no se le preguntan a ningún modelo**. Es la aplicación de la regla "lo
+   * decidible en código se decide en código", y es lo que hace que un gate
+   * mixto gaste una sola llamada con las proposiciones que sí necesitan juicio.
+   */
+  readonly commandChecks?: readonly {
+    readonly propositionId: string;
+    readonly command: string;
+    readonly args?: readonly string[];
+    readonly cwd?: string;
+    readonly expectExitCode?: number;
+    readonly timeoutMs?: number;
+    readonly description: string;
+  }[];
 }
 
 /** Efecto declarado de una respuesta. */

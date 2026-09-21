@@ -90,7 +90,7 @@ modelo.
 
 ```bash
 npm run typecheck   # tsc estricto
-npm run test        # 186 tests
+npm run test        # 221 tests
 ```
 
 ## Estructura
@@ -100,7 +100,10 @@ packages/
   core/          Dominio puro: contrato, parser, validador, migración, fs.
   adapter/       Proyección de .valmen/ a AGENTS.md y adopción de proyectos.
   gate/          Motor de decisión y recibos. Lógica pura, sin red.
-  gate-jev/      Evaluador con TypeSafe Jev, detrás del mismo contrato.
+  gate-command/  Evaluador determinista por comando. Sin coste, sin red.
+  gate-jev/      Evaluador con TypeSafe Jev: probabilidades calibradas.
+  gate-llm-judge/ Evaluador con un modelo de chat, como alternativa.
+  credentials/   Resolución de credenciales, en un solo lugar.
   cli/           Superficie de comandos.
 tests/
   fixtures/      57 tickets reales, para las suites de equivalencia y migración
@@ -134,6 +137,17 @@ valmen gate plan --id <TICKET> --dry-run   # evalúa sin escribir el recibo
 `approve` sale con 0; `block` y `review` con 3. Cada evaluación deja un recibo
 append-only en `.valmen/receipts/` con el contexto congelado, las probabilidades,
 la versión exacta del modelo y el coste medido.
+
+**Tres evaluadores, elegidos por lo que el gate necesita:**
+
+| Evaluador   | Cuándo                                        | Coste    | Latencia |
+| ----------- | --------------------------------------------- | -------- | -------- |
+| `command`   | todas las proposiciones tienen un comando     | **$0**   | ~50 ms   |
+| `jev`       | hace falta juicio semántico · **por defecto** | $0.00007 | <1 s     |
+| `llm-judge` | cuando Jev no está disponible                 | $0.0009  | 1–30 s   |
+
+La selección es automática y aplica el orden que ahorra dinero: **lo decidible en
+código se decide en código**. `--evaluator` fuerza uno concreto.
 
 Un gate de 7 proposiciones cuesta **~$0.00006** y tarda menos de un segundo.
 

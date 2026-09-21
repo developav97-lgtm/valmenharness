@@ -15,6 +15,15 @@
     },
     {
       "path": "./packages/gate-jev"
+    },
+    {
+      "path": "./packages/gate-command"
+    },
+    {
+      "path": "./packages/gate-llm-judge"
+    },
+    {
+      "path": "./packages/credentials"
     }
   ]
 }

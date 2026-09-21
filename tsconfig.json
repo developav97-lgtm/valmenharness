@@ -25,7 +25,10 @@
       "@valmen/core": ["./packages/core/src/index.ts"],
       "@valmen/adapter": ["./packages/adapter/src/index.ts"],
       "@valmen/gate": ["./packages/gate/src/index.ts"],
-      "@valmen/gate-jev": ["./packages/gate-jev/src/index.ts"]
+      "@valmen/gate-jev": ["./packages/gate-jev/src/index.ts"],
+      "@valmen/credentials": ["./packages/credentials/src/index.ts"],
+      "@valmen/gate-command": ["./packages/gate-command/src/index.ts"],
+      "@valmen/gate-llm-judge": ["./packages/gate-llm-judge/src/index.ts"]
     }
   },
   "references": [{ "path": "./packages/core" }],

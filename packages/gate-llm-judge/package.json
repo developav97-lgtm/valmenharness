@@ -1,12 +1,9 @@
 {
-  "name": "@valmen/cli",
+  "name": "@valmen/gate-llm-judge",
   "version": "0.0.1",
-  "description": "Superficie de comandos del harness: validate, list, show, index.",
+  "description": "Evaluador de gates con un modelo de chat y salida estructurada.",
   "license": "MIT",
   "type": "module",
-  "bin": {
-    "valmen": "./dist/main.js"
-  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -24,11 +21,8 @@
   },
   "dependencies": {
     "@valmen/core": "0.0.1",
-    "@valmen/adapter": "0.0.1",
     "@valmen/gate": "0.0.1",
-    "@valmen/gate-jev": "0.0.1",
-    "@valmen/gate-command": "0.0.1",
-    "@valmen/gate-llm-judge": "0.0.1"
+    "@valmen/credentials": "0.0.1"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json"

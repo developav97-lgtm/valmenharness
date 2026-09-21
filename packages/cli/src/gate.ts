@@ -39,6 +39,8 @@ import {
   weightedMean,
 } from "@valmen/gate";
 import { evaluateWithJev } from "@valmen/gate-jev";
+import { type CommandCheck } from "@valmen/gate-command";
+import { type EvaluatorId, evaluateGate } from "./evaluators.js";
 
 import type { CommandResult } from "./commands.js";
 import { type RegistryPaths, findTicket } from "./discovery.js";
@@ -111,8 +113,18 @@ export interface GateRunOptions {
   readonly ticketId: string;
   /** Solo evalúa e informa; no escribe el recibo. */
   readonly dryRun?: boolean;
-  /** Inyectable para pruebas. */
-  readonly evaluate?: typeof evaluateWithJev;
+  /** Evaluador a usar. `auto` elige por las capacidades del gate. */
+  readonly evaluator?: EvaluatorId;
+  /** Comandos asociados a proposiciones, para el evaluador determinista. */
+  readonly checks?: readonly CommandCheck[];
+  /**
+   * Evaluador semántico inyectable, para pruebas.
+   *
+   * El nombre coincide con el del orquestador para que un mock se pueda pasar
+   * tal cual: un parámetro con otro nombre que el orquestador ignora
+   * silenciosamente convierte un test en una ilusión.
+   */
+  readonly jev?: typeof evaluateWithJev;
   readonly now?: () => Date;
   readonly receiptId?: string;
 }
@@ -122,7 +134,6 @@ export async function runGate(
   paths: RegistryPaths,
   options: GateRunOptions,
 ): Promise<CommandResult> {
-  const evaluate = options.evaluate ?? evaluateWithJev;
   const now = options.now ?? (() => new Date());
 
   let definition;
@@ -193,11 +204,19 @@ export async function runGate(
     };
   }
 
+  // El evaluador se elige por capacidades: si todas las proposiciones tienen un
+  // comando, se resuelve sin llamar a ningún modelo.
   let evaluation;
   try {
-    evaluation = await evaluate({
-      propositions: gate.propositions,
+    evaluation = await evaluateGate({
+      gate,
       state,
+      root: paths.root,
+      ...(options.checks === undefined ? {} : { checks: options.checks }),
+      ...(options.evaluator === undefined
+        ? {}
+        : { evaluator: options.evaluator }),
+      ...(options.jev === undefined ? {} : { jev: options.jev }),
       sessionId: `${options.ticketId}:${options.gateId}`,
     });
   } catch (caught) {
@@ -266,7 +285,12 @@ export async function runGate(
     );
   }
 
-  lines.push("", "  Evaluación (modelo, una sola llamada)");
+  const etiquetaEvaluador = {
+    command: "checks deterministas, sin coste",
+    jev: "Jev, probabilidades tipadas",
+    "llm-judge": "modelo de chat con salida estructurada",
+  }[evaluation.evaluator];
+  lines.push("", `  Evaluación (${etiquetaEvaluador})`);
   for (const item of decision.propositions) {
     const marca = item.inBand
       ? "⚠"
@@ -303,10 +327,11 @@ export async function runGate(
   lines.push(
     "",
     "  Recibo",
+    `    evaluador          ${evaluation.evaluator}`,
     `    estado congelado   ${receipt.stateHash.slice(0, 23)}…`,
     `    gate               ${receipt.gateHash.slice(0, 23)}…`,
-    `    modelo             ${evaluation.model.resolvedVersion}`,
-    `    coste              $${evaluation.usage.costUsd.toFixed(6)}`,
+    `    modelo             ${evaluation.model?.resolvedVersion ?? "— (decisión en código)"}`,
+    `    coste              $${(evaluation.usage?.costUsd ?? 0).toFixed(6)}`,
     `    latencia           ${evaluation.latencyMs} ms`,
   );
 

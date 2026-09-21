@@ -40,6 +40,7 @@ Comandos:
   sync [--check]            Proyecta .valmen/ a AGENTS.md.
   adopt [--dry-run]         Incorpora el harness a un proyecto existente.
   gate <gate> --id <ID>     Evalúa un gate contra un ticket.
+      --evaluator <id>      auto (por defecto) · command · jev · llm-judge
   simulate <gate>           Calibra un gate sobre el registro histórico.
       --limit <n>           Evalúa solo los primeros n sujetos.
       --json                Informe en JSON en vez de tabla.
@@ -74,7 +75,13 @@ interface Options {
 }
 
 /** Opciones que consumen un valor. */
-const VALUE_OPTIONS = ["--root", "--tickets", "--id", "--limit"] as const;
+const VALUE_OPTIONS = [
+  "--root",
+  "--tickets",
+  "--id",
+  "--limit",
+  "--evaluator",
+] as const;
 
 /** Error de uso: se reporta con el código de esquema, como el CLI de referencia. */
 class UsageError extends Error {}
@@ -353,10 +360,25 @@ export async function run(argv: readonly string[]): Promise<number> {
           exitCode: EXIT_SCHEMA,
         };
       } else {
+        const rawEvaluator = options.flags["evaluator"];
+        const evaluator =
+          typeof rawEvaluator === "string" &&
+          ["auto", "command", "jev", "llm-judge"].includes(rawEvaluator)
+            ? (rawEvaluator as "auto" | "command" | "jev" | "llm-judge")
+            : undefined;
+        if (typeof rawEvaluator === "string" && evaluator === undefined) {
+          result = {
+            stdout: "",
+            stderr: `Evaluador desconocido: "${rawEvaluator}". Use auto, command, jev o llm-judge.`,
+            exitCode: EXIT_SCHEMA,
+          };
+          throw new Error("__handled__");
+        }
         result = await runGate(resolvePaths(options), {
           gateId,
           ticketId,
           dryRun: options.flags["dry-run"] === true,
+          ...(evaluator === undefined ? {} : { evaluator }),
         });
       }
     } else {

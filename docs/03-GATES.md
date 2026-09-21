@@ -507,6 +507,47 @@ proposición FIJA que causa alguna revisión:  ninguna
 fija manda un ticket a revisión. Eso es exactamente lo que se buscaba: el gate discute si se
 cumplió lo que el ticket prometió, no si el plan tiene la forma que a alguien le gusta.
 
+#### Los tres evaluadores, medidos sobre el mismo ticket
+
+El mismo gate, el mismo ticket, tres evaluadores:
+
+|                    | Jev                    | llm-judge          | command         |
+| ------------------ | ---------------------- | ------------------ | --------------- |
+| Resultado          | REVIEW                 | **BLOCK**          | APPROVE         |
+| Criterio que falla | —                      | `criterio_03=0.00` | —               |
+| Latencia           | 838 ms                 | **28 600 ms**      | 47 ms           |
+| Coste              | $0.000066              | **$0.000875**      | **$0**          |
+| Salida             | probabilidad 0.44–0.97 | booleano 0 o 1     | certeza binaria |
+
+Y el `llm-judge` encontró algo que Jev no:
+
+`criterio_03` es _"Buscar 999 no devuelve resultados"_. Es un criterio de **verificación**, no de
+implementación: describe cómo se comprueba el resultado, no qué hay que construir. Ningún paso
+de un plan puede "satisfacerlo" literalmente, y el juez —más literal— lo marcó como
+incumplido.
+
+**Eso es un hallazgo sobre el formato de los criterios, no sobre el evaluador.** Un ticket
+mezcla criterios de implementación y de verificación en la misma lista, y el gate los trata
+igual. La consecuencia práctica: la expansión por criterio debe distinguir unos de otros, o
+marcar los de verificación como descriptivos.
+
+Queda como trabajo pendiente y documentado. Es el tipo de cosa que solo aparece cuando se
+evalúa el mismo artefacto con dos instrumentos distintos y se comparan.
+
+#### Diferencias que hay que tener presentes al elegir evaluador
+
+|                       | Jev                                   | llm-judge                                               |
+| --------------------- | ------------------------------------- | ------------------------------------------------------- |
+| Fundamento            | modelo entrenado para decidir         | instrucción en el prompt                                |
+| Banda de revisión     | umbrales sobre probabilidad calibrada | casi no se usa: el modelo no expresa duda con un número |
+| Coste por proposición | $0.000008                             | ~$0.0001                                                |
+| Latencia              | < 1 s                                 | hasta 30 s                                              |
+| Cuándo usarlo         | por defecto                           | cuando Jev no está disponible                           |
+
+Por eso `jev` es el evaluador por defecto y `llm-judge` es la alternativa declarada, no un
+equivalente. El recibo registra cuál se usó, porque una decisión tomada con un juez de chat es
+más débil que una tomada con probabilidades calibradas y quien la lea tiene que poder saberlo.
+
 #### Lo que esto cambió en el diseño, en resumen
 
 El hallazgo central de la calibración:

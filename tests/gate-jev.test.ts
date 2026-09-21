@@ -19,8 +19,13 @@ import {
   DECISIONS_ENDPOINT,
   EvaluatorError,
   evaluateWithJev,
-  resolveApiKey,
 } from "../packages/gate-jev/src/index.js";
+// El resolver de credenciales se movió a un paquete compartido, para que una
+// clave configurada funcione igual con cualquier evaluador.
+import {
+  CredentialError,
+  resolveApiKey,
+} from "../packages/credentials/src/index.js";
 
 /** Una respuesta bien formada del endpoint, como la que devuelve de verdad. */
 function goodResponse(): Response {
@@ -457,7 +462,7 @@ describe("resolución de la credencial", () => {
 
   it("prefiere la variable de entorno", () => {
     // Permite una prueba puntual sin escribir el secreto en disco.
-    const key = resolveApiKey({
+    const key = resolveApiKey("openrouter", {
       OPENROUTER_API_KEY: "desde-el-entorno",
     } as NodeJS.ProcessEnv);
     expect(key).toBe("desde-el-entorno");
@@ -468,13 +473,13 @@ describe("resolución de la credencial", () => {
     // es que no se devuelva la cadena vacía como si fuera una clave: o se
     // resuelve del archivo, o se falla con un código claro.
     let resultado: string | null = null;
-    let error: EvaluatorError | null = null;
+    let error: CredentialError | null = null;
     try {
-      resultado = resolveApiKey({
+      resultado = resolveApiKey("openrouter", {
         OPENROUTER_API_KEY: "   ",
       } as NodeJS.ProcessEnv);
     } catch (caught) {
-      error = caught as EvaluatorError;
+      error = caught as CredentialError;
     }
 
     if (resultado !== null) {
@@ -506,7 +511,7 @@ describe("resolución de la credencial", () => {
     process.env["HOME"] = home;
     try {
       // `resolveApiKey` con un entorno sin la variable debe caer al archivo.
-      const key = resolveApiKey({} as NodeJS.ProcessEnv);
+      const key = resolveApiKey("openrouter", {} as NodeJS.ProcessEnv);
       expect(key).toBe("sk-or-v1-del-archivo");
     } finally {
       if (original === undefined) delete process.env["HOME"];
@@ -517,10 +522,10 @@ describe("resolución de la credencial", () => {
   it("falla con un mensaje útil si no hay credencial en ningún sitio", () => {
     const error = (() => {
       try {
-        resolveApiKey({} as NodeJS.ProcessEnv);
+        resolveApiKey("openrouter", {} as NodeJS.ProcessEnv);
         return null;
       } catch (caught) {
-        return caught as EvaluatorError;
+        return caught as CredentialError;
       }
     })();
     // En la máquina de quien ejecuta los tests puede existir un archivo de
@@ -548,14 +553,14 @@ describe("compatibilidad del campo de credencial", () => {
   });
 
   /** Escribe un archivo de credenciales y resuelve la clave con HOME sustituido. */
-  function withCredentials(content: string): string | EvaluatorError {
+  function withCredentials(content: string): string | CredentialError {
     writeFileSync(join(home, ".valmen", ".credentials.yaml"), content, "utf8");
     const original = process.env["HOME"];
     process.env["HOME"] = home;
     try {
-      return resolveApiKey({} as NodeJS.ProcessEnv);
+      return resolveApiKey("openrouter", {} as NodeJS.ProcessEnv);
     } catch (caught) {
-      return caught as EvaluatorError;
+      return caught as CredentialError;
     } finally {
       if (original === undefined) delete process.env["HOME"];
       else process.env["HOME"] = original;
@@ -604,9 +609,9 @@ describe("compatibilidad del campo de credencial", () => {
         "",
       ].join("\n"),
     );
-    expect(result).toBeInstanceOf(EvaluatorError);
-    expect((result as EvaluatorError).code).toBe("CREDENTIAL_MISSING");
-    expect((result as EvaluatorError).message).toContain(
+    expect(result).toBeInstanceOf(CredentialError);
+    expect((result as CredentialError).code).toBe("CREDENTIAL_MISSING");
+    expect((result as CredentialError).message).toContain(
       "NOMBRE de una variable",
     );
   });
@@ -617,7 +622,9 @@ describe("compatibilidad del campo de credencial", () => {
         "\n",
       ),
     );
-    expect((vacio as EvaluatorError).message).toContain("campo de clave vacío");
+    expect((vacio as CredentialError).message).toContain(
+      "campo de clave vacío",
+    );
 
     const ausente = withCredentials(
       [
@@ -628,7 +635,7 @@ describe("compatibilidad del campo de credencial", () => {
         "",
       ].join("\n"),
     );
-    expect((ausente as EvaluatorError).message).toContain("no declara");
+    expect((ausente as CredentialError).message).toContain("no declara");
   });
 
   it("lee el bloque correcto aunque otros proveedores tengan claves", () => {
