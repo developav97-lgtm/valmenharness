@@ -151,21 +151,29 @@ describe("listProviders", () => {
     expect(soloClave.every((p) => !p.configured)).toBe(true);
   });
 
-  it("un proveedor con clave y con token del CLI admite las dos vías", () => {
-    // opencode zen se configura pegando la clave, y además sirve el token que
-    // opencode ya tenga guardado. Antes estaba declarado solo como suscripción,
-    // y eso dejaba la clave sin forma de agregarse desde la app.
-    const opencode = listProviders(archivo, {}).find((p) => p.id === "opencode");
-    expect(opencode?.auth).toBe("api-key");
-    expect(opencode?.probeable).toBe(true);
-    expect(opencode?.tokenSource).toBeDefined();
+  it("Go y Zen son dos proveedores distintos, y los dos aceptan clave", () => {
+    // Go y Zen son productos distintos de opencode: suscripción contra consumo,
+    // con bases de URL y catálogos distintos. Estaban fundidos en uno solo, y
+    // eso hacía que un usuario de Go viera un proveedor que no era el suyo.
+    const estados = listProviders(archivo, {});
+    const go = estados.find((p) => p.id === "opencode-go");
+    const zen = estados.find((p) => p.id === "opencode-zen");
 
-    // Y con la clave en el entorno, gana la clave.
-    const conClave = listProviders(archivo, { OPENCODE_API_KEY: "sk-zen-123" }).find(
-      (p) => p.id === "opencode",
+    for (const proveedor of [go, zen]) {
+      expect(proveedor?.auth).toBe("api-key");
+      expect(proveedor?.probeable).toBe(true);
+      expect(proveedor?.tokenSource).toBeDefined();
+    }
+    // Bases distintas: confundirlas mandaría las peticiones al catálogo ajeno.
+    expect(go?.probeHost).toBe("opencode.ai");
+    expect(zen?.probeHost).toBe("opencode.ai");
+
+    // Y con la clave en el entorno, gana la clave sobre el token del CLI.
+    const conClave = listProviders(archivo, { OPENCODE_GO_API_KEY: "sk-go-12345" }).find(
+      (p) => p.id === "opencode-go",
     );
     expect(conClave?.source).toBe("environment");
-    expect(conClave?.keyLength).toBe(10);
+    expect(conClave?.keyLength).toBe(11);
   });
 });
 

@@ -129,16 +129,35 @@ const CATALOGO: readonly ProviderSpec[] = [
     tokenSource: "~/.codex/auth.json",
   },
   {
-    id: "opencode",
-    name: "opencode zen",
-    // Zen es una pasarela con clave propia —se saca de opencode.ai/auth y se
-    // pega como cualquier otra—, no solo el token de la sesión del CLI. Estaba
-    // declarado como suscripción y eso impedía agregar la clave desde la app.
+    // Go y Zen son **dos productos distintos** de opencode, con bases de URL
+    // distintas y catálogos distintos. Confundirlos daba un proveedor que
+    // parecía configurado y no servía para lo que el usuario tenía.
+    //
+    // Go: suscripción de 10 $/mes, modelos abiertos de código, 38 modelos, sin
+    // Jev. La clave se saca de opencode.ai/auth igual que la de Zen.
+    id: "opencode-go",
+    name: "opencode Go (suscripción)",
     auth: "api-key",
-    envVar: "OPENCODE_API_KEY",
-    // El listado de modelos de Zen es público —responde 200 con basura— así que
-    // la prueba es una petición mínima, que sí distingue una clave buena de una
-    // mala con un 401.
+    envVar: "OPENCODE_GO_API_KEY",
+    probe: {
+      url: "https://opencode.ai/zen/go/v1/chat/completions",
+      expect: 200,
+      method: "POST",
+      body: {
+        model: "glm-5.3-flash",
+        max_tokens: 1,
+        messages: [{ role: "user", content: "ok" }],
+      },
+    },
+    tokenSource: "~/.local/share/opencode/auth.json",
+  },
+  {
+    // Zen: pasarela por consumo, 75 modelos, y **sí incluye Jev** en
+    // `/zen/v1/systemone`, que es lo que evalúa los gates de este harness.
+    id: "opencode-zen",
+    name: "opencode Zen (consumo)",
+    auth: "api-key",
+    envVar: "OPENCODE_ZEN_API_KEY",
     probe: {
       url: "https://opencode.ai/zen/v1/chat/completions",
       expect: 200,
@@ -149,8 +168,6 @@ const CATALOGO: readonly ProviderSpec[] = [
         messages: [{ role: "user", content: "ok" }],
       },
     },
-    // El token del CLI sigue sirviendo como origen alternativo: quien ya tenga
-    // opencode autenticado no tiene que pegar nada.
     tokenSource: "~/.local/share/opencode/auth.json",
   },
   {

@@ -38,7 +38,13 @@ import {
   validateDocument,
 } from "@valmen/core";
 
-import { type LocatedTicket, type RegistryPaths, findAllTickets, indexPath } from "./discovery.js";
+import {
+  type LocatedTicket,
+  type RegistryPaths,
+  findAllTickets,
+  findTicket,
+  indexPath,
+} from "./discovery.js";
 import { renderIndex } from "./index-file.js";
 
 /** Un ticket del registro, ya leído y validado. */
@@ -159,6 +165,42 @@ export function finalizeMutation(request: MutationRequest): MutationResult {
   refreshIndex(paths);
 
   return { text: nuevo, document: nuevoDocumento, date };
+}
+
+/**
+ * Anexa un evento al historial de un ticket, sin tocar nada más.
+ *
+ * Existe porque hay decisiones que **no** son transiciones de estado y aun así
+ * tienen que quedar en el ticket: aprobar o rechazar un gate es una decisión
+ * sobre el artefacto, no un movimiento de la máquina de estados, y quien vaya a
+ * corregir el plan necesita leer el motivo donde lee todo lo demás.
+ *
+ * Pasa por `finalizeMutation`, así que hereda las garantías: el registro entero
+ * se valida antes de escribir, el texto resultante se revalida, y la escritura
+ * es atómica.
+ */
+export function appendEvent(
+  paths: RegistryPaths,
+  ticketId: string,
+  action: string,
+  details: string,
+  now?: () => Date,
+): void {
+  const located = findTicket(paths, ticketId);
+  if (located === undefined) {
+    fail("La ruta canónica solicitada no existe.");
+  }
+  const document = readAndValidate(paths, located);
+
+  finalizeMutation({
+    paths,
+    located,
+    document,
+    text: document.text,
+    action,
+    details,
+    ...(now === undefined ? {} : { now }),
+  });
 }
 
 /**

@@ -39,6 +39,7 @@ import { gateRouting } from "./routing.js";
 import {
   type EvaluatorId,
   type RegistryPaths,
+  appendEvent,
   appendReceipt,
   buildGateState,
   currentReceipts,
@@ -447,6 +448,35 @@ export function recordHumanDecision(
   }
 
   appendReceipt(paths, ticketId, conDecision);
+
+  // La decisión se anexa también **al ticket**, no solo al recibo.
+  //
+  // Un rechazo es una petición de corrección, y quien la va a ejecutar lee el
+  // ticket: si el motivo viviera únicamente en `.valmen/receipts/`, el bucle
+  // quedaría abierto a medias —la decisión registrada y la corrección sin
+  // encargo—. Aprobar se anota por la misma razón: el historial del ticket cuenta
+  // lo que pasó con su plan, y una aprobación también es parte de eso.
+  try {
+    appendEvent(
+      paths,
+      ticketId,
+      input.decision === "approve" ? "gate-approved" : "gate-rejected",
+      input.decision === "approve"
+        ? `Gate ${vigente.gate} aprobado por ${input.actor.trim()}${input.reason.trim() === "" ? "." : `: ${input.reason.trim()}`}`
+        : `Gate ${vigente.gate} rechazado por ${input.actor.trim()}${input.reason.trim() === "" ? "." : `: ${input.reason.trim()}`}`,
+    );
+  } catch (caught) {
+    // La decisión ya está en el recibo, que es donde no se puede perder. Si el
+    // ticket no se pudo anotar —porque el registro cambió debajo—, se dice, en
+    // vez de devolver un éxito que no lo es del todo.
+    return {
+      ok: true,
+      error: `La decisión quedó registrada, pero no se pudo anotar en el ticket: ${
+        caught instanceof Error ? caught.message : String(caught)
+      }`,
+      receipt: null,
+    };
+  }
 
   const ticket = findTicket(paths, ticketId);
   let actual: string | null = null;
