@@ -26,7 +26,7 @@
     "@valmen/core": "0.0.1",
     "@valmen/adapter": "0.0.1",
     "@valmen/gate": "0.0.1",
-    "@valmen/gate-run": "0.0.1",
+    "@valmen/engine": "0.0.1",
     "@valmen/gate-jev": "0.0.1",
     "@valmen/gate-command": "0.0.1",
     "@valmen/gate-llm-judge": "0.0.1",

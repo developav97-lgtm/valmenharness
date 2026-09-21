@@ -547,7 +547,7 @@ Se empezó por ahí a propósito, y no por el stack completo:
 | Historial de rutas con `#` | Cada ticket tiene URL propia y se puede recargar o compartir sin configurar el servidor.                                                                 |
 
 El punto 1 es el que importa: **la interfaz no tiene lógica de negocio**. Llama a la API,
-y la API llama al mismo `@valmen/gate-run` que el CLI. La prueba está en la pantalla: el
+y la API llama al mismo `@valmen/engine` que el CLI. La prueba está en la pantalla: el
 desplegable "Ver el informe del CLI" muestra el texto que devolvió el motor, no una
 versión re-renderizada.
 

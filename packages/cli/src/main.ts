@@ -31,7 +31,7 @@ import {
   renderSimulation,
   runGate,
   simulateGate,
-} from "@valmen/gate-run";
+} from "@valmen/engine";
 import { type ServerContext, createMissionControl, defaultContext, loadStatics } from "@valmen/server";
 
 const USAGE = `valmen — harness agéntico

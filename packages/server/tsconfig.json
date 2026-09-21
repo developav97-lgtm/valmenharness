@@ -14,7 +14,7 @@
       "path": "../adapter"
     },
     {
-      "path": "../gate-run"
+      "path": "../engine"
     }
   ],
   "include": ["src/**/*.ts"]

@@ -23,7 +23,7 @@ import {
 import { readFileSync } from "node:fs";
 import { extname } from "node:path";
 
-import { type RegistryPaths, choosePaths } from "@valmen/gate-run";
+import { type RegistryPaths, choosePaths } from "@valmen/engine";
 
 import {
   type ProviderStatus,

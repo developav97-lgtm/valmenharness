@@ -1,5 +1,5 @@
 /**
- * @valmen/gate-run — ejecución de gates.
+ * @valmen/engine — ejecución de gates.
  *
  * Esta capa une las piezas: localiza el ticket en disco, congela el estado que
  * verá el evaluador, elige el evaluador por capacidades, aplica los checks
@@ -15,6 +15,7 @@ export * from "./result.js";
 export * from "./discovery.js";
 export * from "./state.js";
 export * from "./receipts.js";
+export * from "./index-file.js";
 export * from "./evaluators.js";
 export * from "./gate.js";
 export * from "./simulate.js";

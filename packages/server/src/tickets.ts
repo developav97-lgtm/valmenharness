@@ -15,7 +15,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 
 import { type ParsedTicket, parseTicket, validateDocument } from "@valmen/core";
-import { type RegistryPaths, ticketsPath } from "@valmen/gate-run";
+import { type RegistryPaths, ticketsPath } from "@valmen/engine";
 
 /** Una fila de la lista de tickets. */
 export interface TicketRow {

@@ -30,7 +30,7 @@ import {
   chooseEvaluator,
   evaluateGate,
   explainChoice,
-} from "../packages/gate-run/src/evaluators.js";
+} from "../packages/engine/src/evaluators.js";
 
 let lab: string;
 

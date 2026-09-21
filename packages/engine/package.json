@@ -1,7 +1,7 @@
 {
-  "name": "@valmen/gate-run",
+  "name": "@valmen/engine",
   "version": "0.0.1",
-  "description": "Ejecuta un gate contra un ticket: congela el estado, elige evaluador y emite el recibo.",
+  "description": "El motor del registro: descubrimiento, estado congelado, índice, recibos y mutaciones de ticket.",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",

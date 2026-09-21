@@ -27,7 +27,7 @@ import {
   proposeConfig,
   readList,
 } from "../packages/adapter/src/index.js";
-import { chooseTicketsDir } from "../packages/gate-run/src/discovery.js";
+import { chooseTicketsDir } from "../packages/engine/src/discovery.js";
 import { adoptProject, syncProject } from "../packages/cli/src/commands.js";
 
 let lab: string;

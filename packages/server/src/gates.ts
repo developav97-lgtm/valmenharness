@@ -46,7 +46,7 @@ import {
   readReceipts,
   runGate,
   runMechanicalChecks,
-} from "@valmen/gate-run";
+} from "@valmen/engine";
 
 /** Un gate disponible para un ticket, con lo que el código ya sabe de él. */
 export interface GateCard {

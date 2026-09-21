@@ -40,8 +40,8 @@ import {
   findTicket,
   indexPath,
   ticketsPath,
-} from "@valmen/gate-run";
-import { isIndexCurrent, renderIndex } from "./index-file.js";
+} from "@valmen/engine";
+import { isIndexCurrent, renderIndex } from "@valmen/engine";
 
 /**
  * Resultado de un comando: qué escribir y con qué código salir.
