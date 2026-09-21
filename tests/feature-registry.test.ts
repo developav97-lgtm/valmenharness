@@ -13,11 +13,11 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { EXIT_HISTORY, EXIT_SCHEMA } from "../packages/core/src/errors.js";
+import { parseFeatureFrontmatter } from "../packages/core/src/feature.js";
 import {
   createFeature,
   featurePath,
   listFeatures,
-  parseFeatureFrontmatter,
   readFeature,
 } from "../packages/engine/src/features.js";
 import {

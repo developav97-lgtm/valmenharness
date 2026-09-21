@@ -82,6 +82,57 @@ export const FEATURE_FRONTMATTER_FIELDS = [
   "updated",
 ] as const;
 
+/** El bloque de frontmatter, con el cuerpo ya separado. */
+const FEATURE_FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
+/** Una línea `clave: valor` del frontmatter de una feature. */
+const FEATURE_LINE_RE = /^([a-z_]+): ?(.*)$/;
+
+/**
+ * Lee el frontmatter de una feature.
+ *
+ * No reutiliza `parseFrontmatter`, que es el del ticket: aquel exige las 18
+ * claves **y su orden**, y una feature tiene seis. Compartir el parser obligaría
+ * a relajarlo para los dos, que es exactamente como se pierden las garantías del
+ * ticket.
+ *
+ * Rechaza un campo ajeno igual que rechaza uno que falte: un `workflow_status`
+ * colado en una feature significa que alguien copió un ticket, y callarlo deja
+ * un archivo que dice dos cosas distintas según quién lo lea.
+ */
+export function parseFeatureFrontmatter(text: string): Record<string, string> {
+  const bloque = FEATURE_FRONTMATTER_RE.exec(text);
+  if (bloque === null) {
+    fail("feature.md debe empezar con frontmatter delimitado por ---.");
+  }
+
+  const campos: Record<string, string> = {};
+  for (const linea of (bloque[1] ?? "").split(/\r?\n/)) {
+    const match = FEATURE_LINE_RE.exec(linea);
+    if (match === null) {
+      fail("El frontmatter de la feature solo admite líneas clave: valor.");
+    }
+    const clave = match[1] as string;
+    if (!(FEATURE_FRONTMATTER_FIELDS as readonly string[]).includes(clave)) {
+      fail(
+        `El campo de frontmatter "${clave}" no pertenece a la feature. ` +
+          `Los válidos son: ${FEATURE_FRONTMATTER_FIELDS.join(", ")}.`,
+      );
+    }
+    if (Object.hasOwn(campos, clave)) {
+      fail(`El campo de frontmatter "${clave}" está duplicado.`);
+    }
+    campos[clave] = match[2] as string;
+  }
+
+  const faltan = FEATURE_FRONTMATTER_FIELDS.filter(
+    (clave) => !Object.hasOwn(campos, clave),
+  );
+  if (faltan.length > 0) {
+    fail(`A la feature le faltan campos: ${faltan.join(", ")}.`);
+  }
+  return campos;
+}
+
 /**
  * Un identificador de feature: minúsculas, dígitos y guiones.
  *

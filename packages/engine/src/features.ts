@@ -26,11 +26,11 @@ import { join } from "node:path";
 
 import {
   EXIT_HISTORY,
-  FEATURE_FRONTMATTER_FIELDS,
   FEATURE_TEMPLATE,
   SCHEMA_VERSION,
   atomicWrite,
   fail,
+  parseFeatureFrontmatter,
   today,
   validateFeatureFields,
 } from "@valmen/core";
@@ -69,49 +69,6 @@ export interface FeatureRow {
 export interface ReadFeature {
   readonly row: FeatureRow;
   readonly text: string;
-}
-
-/** El frontmatter de una feature, que no es el del ticket. */
-const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
-const LINEA_RE = /^([a-z_]+): ?(.*)$/;
-
-/**
- * Lee el frontmatter de una feature.
- *
- * No reutiliza `parseFrontmatter` de `core`: aquel valida las 18 claves del
- * ticket **y su orden**, y una feature tiene seis. Compartir el parser obligaría
- * a relajarlo para los dos, que es como se pierden las garantías del ticket.
- */
-export function parseFeatureFrontmatter(text: string): Record<string, string> {
-  const bloque = FRONTMATTER_RE.exec(text);
-  if (bloque === null) {
-    fail("feature.md debe empezar con frontmatter delimitado por ---.");
-  }
-
-  const campos: Record<string, string> = {};
-  for (const linea of (bloque[1] ?? "").split(/\r?\n/)) {
-    const match = LINEA_RE.exec(linea);
-    if (match === null) {
-      fail("El frontmatter de la feature solo admite líneas clave: valor.");
-    }
-    const clave = match[1] as string;
-    if (!(FEATURE_FRONTMATTER_FIELDS as readonly string[]).includes(clave)) {
-      fail(
-        `El campo de frontmatter "${clave}" no pertenece a la feature. ` +
-          `Los válidos son: ${FEATURE_FRONTMATTER_FIELDS.join(", ")}.`,
-      );
-    }
-    if (Object.hasOwn(campos, clave)) {
-      fail(`El campo de frontmatter "${clave}" está duplicado.`);
-    }
-    campos[clave] = match[2] as string;
-  }
-
-  const faltan = FEATURE_FRONTMATTER_FIELDS.filter((clave) => !Object.hasOwn(campos, clave));
-  if (faltan.length > 0) {
-    fail(`A la feature le faltan campos: ${faltan.join(", ")}.`);
-  }
-  return campos;
 }
 
 /** Los directorios de features, ordenados por nombre. */
