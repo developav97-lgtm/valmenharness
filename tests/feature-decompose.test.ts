@@ -22,9 +22,13 @@ import {
   parseTicketsYaml,
   renderTicketsYaml,
 } from "../packages/core/src/index.js";
-import { decomposeFeature } from "../packages/engine/src/decompose.js";
-import { parseRequirements, readRequirements } from "../packages/engine/src/spec.js";
-import { advanceFeature, createFeature } from "../packages/engine/src/features.js";
+import {
+  advanceFeature,
+  createFeature,
+  decomposeFeature,
+  parseRequirements,
+  readRequirements,
+} from "../packages/engine/src/index.js";
 
 const temporales: string[] = [];
 
@@ -254,6 +258,49 @@ describe("parseTicketsYaml", () => {
   it("la ida y vuelta no cambia un byte", () => {
     const documento = parseTicketsYaml(valido, requisitos);
     expect(renderTicketsYaml(documento)).toBe(valido);
+  });
+
+  it("la ida y vuelta aguanta valores que YAML leería mal sin comillas", () => {
+    // La propiedad que importa: lo que se escribe tiene que releerse **igual**.
+    // Un `goal` con dos puntos, un `#`, un guion inicial o comillas dentro es
+    // donde un escritor descuidado produce un archivo que dice otra cosa.
+    const difficiles = [
+      "Núcleo: modelo y API",
+      "#1 del backlog",
+      "- algo que parece una lista",
+      'Con "comillas" dentro',
+      "Termina en dos puntos:",
+      "  espacios al principio",
+      "espacios al final  ",
+      "una sola ' comilla",
+      "vacío después de esto: # comentario",
+      "100% de cobertura",
+      "@mención",
+    ];
+    for (const goal of difficiles) {
+      const documento = {
+        feature: "modulo-inventario",
+        origin: null,
+        decomposition: {
+          sprints: [
+            {
+              id: "S1",
+              goal,
+              tickets: [{ id: "FEATURE-INVENTARIO-MODELO-20260921", title: goal }],
+            },
+          ],
+          coverage: [
+            { requirement: "R-INV-001", coveredBy: ["FEATURE-INVENTARIO-MODELO-20260921"] },
+            { requirement: "R-INV-002", coveredBy: ["FEATURE-INVENTARIO-MODELO-20260921"] },
+          ],
+          gaps: [],
+        },
+      };
+      const yaml = renderTicketsYaml(documento);
+      const releido = parseTicketsYaml(yaml, requisitos);
+      expect(releido.decomposition.sprints[0]!.goal).toBe(goal);
+      expect(renderTicketsYaml(releido)).toBe(yaml);
+    }
   });
 
   it("rechaza un requisito que no está en la spec", () => {
@@ -496,12 +543,49 @@ describe("advanceFeature", () => {
     expect(fila.updated).toBe("2026-09-21");
   });
 
-  it("rechaza una transición que la máquina no permite", () => {
+  it("recorre el camino legal y lo declara", () => {
     const root = proyecto();
     createFeature({ root, id: "modulo-inventario", title: "Módulo" });
-    // De draft a decomposed no se salta: falta la spec.
+    advanceFeature({ root, slug: "modulo-inventario", to: "specified" });
+    // `specified -> decomposed` se salta el diseño, así que la máquina lo
+    // prohíbe. El camino pasa por `planned`, y quien llama puede decirlo.
+    const fila = advanceFeature({ root, slug: "modulo-inventario", to: "decomposed" });
+    expect(fila.state).toBe("decomposed");
+    expect(fila.via).toEqual(["planned"]);
+  });
+
+  it("no escribe los estados intermedios: una sola escritura", () => {
+    const root = proyecto();
+    createFeature({ root, id: "modulo-inventario", title: "Módulo" });
+    advanceFeature({ root, slug: "modulo-inventario", to: "specified" });
+    const antes = readFileSync(
+      join(root, ".valmen", "features", "modulo-inventario", "feature.md"),
+      "utf8",
+    );
+    advanceFeature({ root, slug: "modulo-inventario", to: "decomposed" });
+    const despues = readFileSync(
+      join(root, ".valmen", "features", "modulo-inventario", "feature.md"),
+      "utf8",
+    );
+    // Las dos escrituras son el mismo día, así que `updated` no cambia y lo
+    // único distinto es el estado. Nada de `planned` a la vista: la feature
+    // nunca estuvo ahí.
+    const cambiadas = antes
+      .split("\n")
+      .filter((linea, indice) => linea !== despues.split("\n")[indice]);
+    expect(cambiadas).toEqual(["state: specified"]);
+    expect(despues).not.toContain("planned");
+  });
+
+  it("rechaza un destino inalcanzable", () => {
+    const root = proyecto();
+    createFeature({ root, id: "modulo-inventario", title: "Módulo" });
+    for (const estado of ["specified", "planned", "decomposed", "in_progress", "complete", "archived"]) {
+      advanceFeature({ root, slug: "modulo-inventario", to: estado });
+    }
+    // `archived` es terminal: no hay camino de vuelta.
     expect(() =>
-      advanceFeature({ root, slug: "modulo-inventario", to: "decomposed" }),
+      advanceFeature({ root, slug: "modulo-inventario", to: "draft" }),
     ).toThrowError(/no permitida/);
   });
 

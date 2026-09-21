@@ -269,13 +269,33 @@ export function parseTicketsYaml(
   return { feature, origin, decomposition };
 }
 
-/** Un texto que YAML leería mal si se escribe sin comillas. */
+/**
+ * Un texto, escrito de forma que se relea igual.
+ *
+ * Hay valores que YAML leería mal sin comillas: los que llevan `:`, `#`, una
+ * coma, un corchete, un `%` al principio, o espacios en los extremos. Esos van
+ * entrecomillados, y la elección de comilla no es indiferente:
+ *
+ * - **Comillas simples** cuando el valor lleva comillas dobles. En YAML, dentro
+ *   de comillas simples no hay escapes: el texto va literal y una comilla simple
+ *   se escribe doblada. Es la única forma de que un `Con "comillas" dentro`
+ *   vuelva intacto, porque `"Con \"comillas\" dentro"` exige que el lector
+ *   desescape, y el de este proyecto no lo hace.
+ * - **Comillas dobles** cuando lleva comilla simple o una barra invertida, donde
+ *   el valor no tiene comillas dobles que escapar.
+ *
+ * Un valor que no necesita comillas no las lleva: el archivo se lee mejor.
+ */
 function escalar(valor: string): string {
   if (valor === "") return '""';
-  if (/^[\s]|[\s]$|[:#{}[\],&*?|>!%@`"']/.test(valor) || /^[-?]/.test(valor)) {
+  const necesita =
+    /^[\s]|[\s]$|[:#{}[\],&*?|>!%@`"']/.test(valor) || /^[-?]/.test(valor);
+  if (!necesita) return valor;
+  if (valor.includes('"')) return `'${valor.replace(/'/g, "''")}'`;
+  if (valor.includes("'") || valor.includes("\\")) {
     return `"${valor.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
   }
-  return valor;
+  return `"${valor}"`;
 }
 
 /**

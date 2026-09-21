@@ -26,12 +26,13 @@ import { join } from "node:path";
 
 import {
   EXIT_HISTORY,
+  EXIT_INVARIANT,
   FEATURE_TEMPLATE,
   MutationLock,
   SCHEMA_VERSION,
-  assertFeatureTransition,
   atomicWrite,
   fail,
+  nextFeatureStates,
   parseFeatureFrontmatter,
   today,
   validateFeatureFields,
@@ -65,6 +66,14 @@ export interface FeatureRow {
   readonly artifacts: FeatureArtifacts;
   /** `null` si la feature es válida; el mensaje de error si no lo es. */
   readonly invalid: string | null;
+  /**
+   * Los estados por los que se pasó para llegar aquí, si hubo alguno.
+   *
+   * Lo escribe `advanceFeature` y no el archivo: la feature no estuvo en esos
+   * estados —se escribió una sola vez—, pero quien llama tiene que poder decir
+   * que el camino pasó por ellos.
+   */
+  readonly via?: readonly string[];
 }
 
 /** Una feature leída: su fila y el texto completo del brief. */
@@ -265,9 +274,12 @@ export function advanceFeature(request: AdvanceFeatureRequest): FeatureRow {
     fail(`La feature "${slug}" no es válida: ${leida.row.invalid}`);
   }
 
-  assertFeatureTransition(leida.row.state, to);
-
+  const camino = featureTransitionPath(leida.row.state, to);
   const date = today(request.now?.() ?? new Date());
+
+  // Una sola escritura con el estado final. Recorrer los pasos intermedios
+  // escribiendo cada uno dejaría el registro con estados por los que la feature
+  // nunca estuvo, y un lector que mire a mitad vería algo que nadie pidió.
   let texto = reemplazarCampo(leida.text, "state", to);
   texto = reemplazarCampo(texto, "updated", date);
 
@@ -295,5 +307,42 @@ export function advanceFeature(request: AdvanceFeatureRequest): FeatureRow {
     ...leida.row,
     state: to,
     updated: date,
+    // Para que quien llama pueda decir por dónde pasó, si pasó por algún lado.
+    ...(camino.length > 1 ? { via: camino.slice(1, -1) } : {}),
   };
+}
+
+/**
+ * El camino más corto entre dos estados, o falla si no hay ninguno.
+ *
+ * Existe porque la máquina prohíbe saltos, y con razón: `specified → decomposed`
+ * se saltaría el diseño. Pero un comando que sabe que la descomposición implica
+ * haber pasado por `planned` puede recorrer el tramo en nombre del usuario en vez
+ * de obligarlo a dos comandos para escribir un estado intermedio del que no va a
+ * hacer nada.
+ *
+ * Es una búsqueda en anchura sobre una máquina de ocho estados: el camino más
+ * corto es también el que menos pasos inventa, y no hay nada que optimizar.
+ */
+export function featureTransitionPath(from: string, to: string): string[] {
+  if (from === to) return [from];
+  const visitados = new Set<string>([from]);
+  const cola: string[][] = [[from]];
+
+  while (cola.length > 0) {
+    const camino = cola.shift() as string[];
+    const ultimo = camino[camino.length - 1] as string;
+    for (const siguiente of nextFeatureStates(ultimo)) {
+      if (visitados.has(siguiente)) continue;
+      const extendido = [...camino, siguiente];
+      if (siguiente === to) return extendido;
+      visitados.add(siguiente);
+      cola.push(extendido);
+    }
+  }
+
+  fail(
+    `Transición de feature ${from} -> ${to} no permitida.`,
+    EXIT_INVARIANT,
+  );
 }

@@ -322,3 +322,65 @@ export function parseYamlSubset(text: string, options: YamlOptions = {}): YamlVa
   return parseBlock(lines, 0, (lines[0] as Line).indent, nombre, clave, mensaje)
     .value;
 }
+
+/**
+ * El bloque de una clave de primer nivel, como texto.
+ *
+ * Devuelve las líneas indentadas que siguen a `clave:` y nada más: ni la propia
+ * clave, ni las claves hermanas. Es lo que hace falta para leer un archivo del
+ * que no se quiere una estructura sino **el texto de una sección**, y para el que
+ * un parser completo sería la respuesta equivocada —el archivo de credenciales
+ * contiene secretos y no debe pasar por estructuras que puedan acabar en un
+ * mensaje de error—.
+ *
+ * Existe por un fallo concreto: con una expresión regular y el ancla `^[ \t]*`,
+ * buscar `opencode-go` encontraba el bloque de `opencode`, porque la `o` final
+ * encajaba como un `[ \t]*` vacío y `-go:` como el resto del nombre. Y sin fijar
+ * la indentación, el bloque seguía leyendo las claves hermanas de después. Las
+ * dos cosas se arreglan contando columnas, que es lo que hace esto.
+ *
+ * Un archivo indentado por completo —con `providers:` en la columna cero— se lee
+ * buscando en cualquier profundidad: el primer nivel que aparezca es el que manda.
+ */
+export function yamlBlockOf(text: string, key: string): string | null {
+  const lineas = text.split(/\r?\n/);
+  const clave = new RegExp(`^([ \\t]*)${key}:[ \\t]*(?:#.*)?$`);
+  for (let index = 0; index < lineas.length; index += 1) {
+    const match = clave.exec(lineas[index] as string);
+    if (match === null) continue;
+
+    const indent = (match[1] as string).length;
+    const cuerpo: string[] = [];
+    for (let otra = index + 1; otra < lineas.length; otra += 1) {
+      const linea = lineas[otra] as string;
+      if (linea.trim() === "") break;
+      const sangria = linea.length - linea.trimStart().length;
+      if (sangria <= indent) break;
+      cuerpo.push(linea);
+    }
+    return cuerpo.length === 0 ? null : cuerpo.join("\n");
+  }
+  return null;
+}
+
+/**
+ * El valor de un campo dentro de un bloque.
+ *
+ * Acepta `clave: valor`, con comillas opcionales. Devuelve `null` si el campo no
+ * está o está vacío, que para quien lee una credencial son el mismo caso: no hay
+ * valor.
+ *
+ * `patron` es una expresión regular y no un nombre literal porque hay campos que
+ * se aceptan con dos nombres: `api-key` es el correcto y `api-key-env` es el de
+ * una versión anterior de la plantilla, con el valor literal dentro. Rechazar el
+ * segundo rompería configuraciones válidas por un detalle de nomenclatura ya
+ * corregido.
+ */
+export function yamlFieldOf(block: string, patron: string): string | null {
+  const match = new RegExp(
+    `^[ \\t]+(?:${patron}):[ \\t]*["']?([^"'\\n]*)["']?[ \\t]*$`,
+    "m",
+  ).exec(block);
+  const valor = match?.[1]?.trim();
+  return valor === undefined || valor === "" ? null : valor;
+}

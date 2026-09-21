@@ -30,7 +30,59 @@ export function credentialsPath(home: string = homedir()): string {
 }
 
 /**
- * Resuelve la API key de un proveedor.
+ * El bloque de un proveedor, como texto.
+ *
+ * Este paquete no depende de `@valmen/core` a propósito: lee un archivo de
+ * secretos y no debe arrastrar el parser de configuración ni nada que pueda
+ * acabar volcando un valor en un mensaje. Por eso la lectura vive aquí, y por eso
+ * hay un test que comprueba que coincide con la de `core` sobre el mismo archivo:
+ * dos implementaciones que tienen que dar lo mismo necesitan que algo lo afirme.
+ *
+ * Se cuentan columnas y no se usa una expresión regular, y las dos razones están
+ * medidas. Con el ancla `^[ \t]*${id}:` a secas, buscar `opencode-go` encontraba
+ * el bloque de `opencode` —la `o` final encajaba como un `[ \t]*` vacío y `-go:`
+ * como el resto del nombre—, así que se leía la clave de otro proveedor. Y sin
+ * fijar la indentación, el bloque seguía leyendo las claves hermanas de después:
+ * el de `codex` se llevaba también `opencode` y `opencode-go`.
+ */
+export function blockOf(text: string, id: string): string | null {
+  const lineas = text.split(/\r?\n/);
+  const clave = new RegExp(`^([ \\t]*)${id}:[ \\t]*(?:#.*)?$`);
+  for (let index = 0; index < lineas.length; index += 1) {
+    const match = clave.exec(lineas[index] as string);
+    if (match === null) continue;
+
+    const indent = (match[1] as string).length;
+    const cuerpo: string[] = [];
+    for (let otra = index + 1; otra < lineas.length; otra += 1) {
+      const linea = lineas[otra] as string;
+      if (linea.trim() === "") break;
+      if (linea.length - linea.trimStart().length <= indent) break;
+      cuerpo.push(linea);
+    }
+    return cuerpo.length === 0 ? null : cuerpo.join("\n");
+  }
+  return null;
+}
+
+/**
+ * El valor de un campo del bloque.
+ *
+ * `patron` es una expresión regular porque hay campos con dos nombres: `api-key`
+ * es el correcto y `api-key-env` el de una plantilla anterior, con el valor
+ * literal dentro. Rechazar el segundo rompería configuraciones válidas por un
+ * detalle de nomenclatura ya corregido.
+ */
+export function fieldOf(block: string, patron: string): string | null {
+  const match = new RegExp(
+    `^[ \\t]+(?:${patron}):[ \\t]*["']?([^"'\\n]*)["']?[ \\t]*$`,
+    "m",
+  ).exec(block);
+  const valor = match?.[1]?.trim();
+  return valor === undefined || valor === "" ? null : valor;
+}
+
+/** Resuelve la API key de un proveedor.
  *
  * Orden: la variable de entorno primero —permite una prueba puntual sin
  * escribir el secreto en disco— y si no está, el archivo de credenciales.
@@ -61,31 +113,20 @@ export function resolveApiKey(
     );
   }
 
-  // El proveedor está indentado bajo `providers:`, así que el ancla admite
-  // espacios iniciales. Exigir la columna cero haría que el bloque nunca se
-  // encontrara en el archivo que genera la plantilla.
-  const bloque = new RegExp(
-    `^[ \\t]*${provider}:[ \\t]*\\n((?:[ \\t]+.*\\n)*)`,
-    "m",
-  ).exec(texto);
+  // El bloque se busca a cualquier profundidad: el archivo tiene los proveedores
+  // bajo `providers:` y las suscripciones bajo `subscriptions:`, y las dos son
+  // fuentes válidas de una credencial. Antes solo se leía `providers:` y una
+  // suscripción con clave —`opencode-go`— quedaba invisible.
+  const bloque = blockOf(texto, provider);
   if (bloque === null) {
     throw new CredentialError(
       `El archivo de credenciales no tiene un bloque \`${provider}\`.`,
     );
   }
 
-  // Se aceptan los dos nombres de campo. `api-key` es el correcto, pero una
-  // versión anterior de la plantilla se llamaba `api-key-env` y sugería una
-  // indirección que no existía; hay archivos en uso con ese nombre y el valor
-  // literal dentro, así que rechazarlos rompería una configuración válida por un
-  // detalle de nomenclatura ya corregido.
-  const campo = bloque[1] as string;
-  const clave =
-    /^[ \t]+api-key(?:-env)?:[ \t]*["']?([^"'\n]+)["']?[ \t]*$/m.exec(campo);
-  const valor = clave?.[1]?.trim();
-
-  if (valor === undefined || valor === "") {
-    const tieneCampo = /^[ \t]+api-key(?:-env)?:/m.test(campo);
+  const valor = fieldOf(bloque, "api-key(?:-env)?");
+  if (valor === null) {
+    const tieneCampo = /^[ \t]+api-key(?:-env)?:/m.test(bloque);
     throw new CredentialError(
       tieneCampo
         ? `El bloque \`${provider}\` del archivo de credenciales tiene el campo de clave vacío.`

@@ -25,6 +25,8 @@ import {
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
+import { yamlBlockOf, yamlFieldOf } from "@valmen/core";
+
 /** Cómo se autentica un proveedor. */
 export type AuthKind = "api-key" | "subscription" | "none";
 
@@ -240,21 +242,6 @@ function readCredentialsFile(path: string): string {
 }
 
 /**
- * Extrae el bloque de un proveedor.
- *
- * El proveedor está indentado bajo `providers:`, así que el ancla admite
- * espacios iniciales. Exigir la columna cero haría que el bloque nunca se
- * encontrara en el archivo que genera la plantilla.
- */
-function providerBlock(text: string, id: string): string | null {
-  const match = new RegExp(
-    `^[ \\t]*${id}:[ \\t]*\\n((?:[ \\t]+.*\\n?)*)`,
-    "m",
-  ).exec(text);
-  return match === null ? null : (match[1] as string);
-}
-
-/**
  * Lee la clave de un proveedor desde el archivo.
  *
  * Acepta los dos nombres de campo: `api-key` es el correcto, pero una versión
@@ -265,20 +252,21 @@ function readKeyFromFile(
   text: string,
   id: string,
 ): { value: string; legacyField: boolean } | null {
-  const block = providerBlock(text, id);
+  // El bloque se busca con el lector compartido de `core`, que fija la
+  // indentación: con una expresión regular y el ancla `^[ \t]*`, buscar
+  // `opencode-go` encontraba el bloque de `opencode` —la `o` final encajaba como
+  // un `[ \t]*` vacío y `-go:` como el resto del nombre—, así que la pantalla
+  // mostraba el estado de otro proveedor.
+  const block = yamlBlockOf(text, id);
   if (block === null) return null;
 
-  const moderno = /^[ \t]+api-key:[ \t]*["']?([^"'\n]+)["']?[ \t]*$/m.exec(
-    block,
-  );
-  if (moderno !== null)
-    return { value: moderno[1]!.trim(), legacyField: false };
+  // `api-key-env` es el nombre de una plantilla anterior, con el valor literal
+  // dentro. Se acepta para no romper una configuración válida por nomenclatura.
+  const moderno = yamlFieldOf(block, "api-key");
+  if (moderno !== null) return { value: moderno, legacyField: false };
 
-  const anterior = /^[ \t]+api-key-env:[ \t]*["']?([^"'\n]+)["']?[ \t]*$/m.exec(
-    block,
-  );
-  if (anterior !== null)
-    return { value: anterior[1]!.trim(), legacyField: true };
+  const anterior = yamlFieldOf(block, "api-key-env");
+  if (anterior !== null) return { value: anterior, legacyField: true };
 
   return null;
 }
