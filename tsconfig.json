@@ -9,6 +9,7 @@
     "noImplicitOverride": true,
     "noFallthroughCasesInSwitch": true,
     "exactOptionalPropertyTypes": true,
+    "useUnknownInCatchVariables": true,
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
     "declaration": true,
@@ -19,7 +20,11 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "outDir": "dist",
-    "rootDir": "."
+    "rootDir": ".",
+    "paths": {
+      "@valmen/core": ["./packages/core/src/index.ts"]
+    }
   },
+  "references": [{ "path": "./packages/core" }],
   "exclude": ["node_modules", "dist", "**/dist"]
 }

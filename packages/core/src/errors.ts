@@ -45,3 +45,24 @@ export class TicketError extends Error {
 export function fail(message: string, exitCode: number = EXIT_SCHEMA): never {
   throw new TicketError(message, exitCode);
 }
+
+/**
+ * Extrae el mensaje y el código de salida de un valor capturado.
+ *
+ * Con `useUnknownInCatchVariables` activado, todo `catch` recibe `unknown`. En
+ * vez de dispersar conversiones por el código, los llamadores usan esto y
+ * obtienen un mensaje presentable y un código correcto para cualquier cosa que
+ * se haya lanzado.
+ */
+export function toFailure(caught: unknown): {
+  message: string;
+  exitCode: number;
+} {
+  if (caught instanceof TicketError) {
+    return { message: caught.message, exitCode: caught.exitCode };
+  }
+  if (caught instanceof Error) {
+    return { message: caught.message, exitCode: EXIT_SCHEMA };
+  }
+  return { message: String(caught), exitCode: EXIT_SCHEMA };
+}
