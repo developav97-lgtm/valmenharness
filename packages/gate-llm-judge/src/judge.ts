@@ -534,8 +534,18 @@ export async function evaluateWithJudge(
   try {
     juicio = JSON.parse(content) as typeof juicio;
   } catch {
+    // Se incluye la forma de lo que llegó: sin esto, «el contenido no es JSON»
+    // no distingue entre una respuesta vacía, una en prosa y un `tool_calls` que
+    // el lector no supo encontrar —que fue exactamente el caso al cambiar de vía.
+    const mensaje = (
+      JSON.parse(text) as {
+        choices?: { message?: Record<string, unknown> }[];
+      }
+    ).choices?.[0]?.message;
     throw new JudgeError(
-      "El juez no respetó el esquema: el contenido no es JSON. " +
+      `El juez no respetó el esquema: el contenido no es JSON. ` +
+        `El mensaje traía las claves [${Object.keys(mensaje ?? {}).join(", ")}] ` +
+        `y el contenido era ${JSON.stringify(content)?.slice(0, 120) ?? "nada"}. ` +
         "Un juez que no respeta el formato no puede decidir un gate.",
       "MALFORMED_RESPONSE",
     );
