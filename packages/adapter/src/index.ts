@@ -11,3 +11,4 @@ export * from "./config.js";
 export * from "./templates.js";
 export * from "./project.js";
 export * from "./adopt.js";
+export * from "./agents.js";

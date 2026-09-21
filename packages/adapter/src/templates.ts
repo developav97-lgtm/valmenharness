@@ -158,3 +158,24 @@ export function generatedHeader(
   ];
   return lines.join("\n") + "\n";
 }
+
+/**
+ * Encabezado de un archivo generado en formato TOML.
+ *
+ * TOML comenta con `#`, no con `<!-- -->`. Emitir un comentario HTML en un
+ * archivo `.toml` produce un archivo que ninguna herramienta puede leer, y el
+ * error aparece lejos de su causa: en el runtime del agente, no en el generador.
+ */
+export function generatedHeaderToml(
+  version: string,
+  sources: readonly string[],
+): string {
+  const lines = [
+    `# GENERADO POR valmen v${version} — NO EDITAR A MANO`,
+    "# fuente:",
+    ...sources.map((source) => `#   ${source}`),
+    "# regenerar: valmen sync",
+    "# verificar:  valmen sync --check",
+  ];
+  return lines.join("\n") + "\n";
+}

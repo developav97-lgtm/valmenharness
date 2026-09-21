@@ -17,13 +17,17 @@ import {
   atomicWrite,
   migrateTicketText,
   parseTicket,
+  readIfExists,
   toFailure,
   today as todayIso,
   validateDocument,
 } from "@valmen/core";
 import {
   type ProjectModel,
+  type RenderedFile,
   adoptPlan,
+  readAgents,
+  renderAllAgents,
   chooseTicketsDir,
   loadProjectModel,
   profileProject,
@@ -374,56 +378,101 @@ export function syncProject(
   check: boolean,
 ): CommandResult {
   let model: ProjectModel;
+  let agents;
   try {
     model = loadProjectModel(root, projectName);
+    agents = readAgents(root);
   } catch (caught) {
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);
   }
 
-  const expected = projectAgentsMd(model);
-  const target = join(root, "AGENTS.md");
-  const onDisk = existsSync(target) ? readFileSync(target, "utf8") : null;
+  // El documento y los agentes salen del mismo modelo, así que se proyectan
+  // juntos: un `AGENTS.md` actualizado con agentes viejos sería incoherente.
+  const sources = [
+    ".valmen/config.yaml",
+    ...model.rules.map((rule) => rule.source),
+    ...agents.map((agent) => `.valmen/agents/${agent.id}.md`),
+  ];
 
-  if (check) {
-    if (onDisk === null) {
-      return error(
-        "No existe AGENTS.md; ejecute `valmen sync` para generarlo.",
-      );
-    }
-    if (onDisk !== expected) {
-      return error(
-        "AGENTS.md está desactualizado o fue editado a mano; ejecute `valmen sync`.",
-      );
-    }
-    return ok("AGENTS.md actualizado.\n");
+  let projected: RenderedFile[];
+  try {
+    projected = [
+      { path: "AGENTS.md", content: projectAgentsMd(model) },
+      ...renderAllAgents(agents, sources),
+    ];
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
   }
 
-  atomicWrite(target, expected);
+  const byRuntime = {
+    codex: projected.filter((file) => file.path.startsWith(".codex/")).length,
+    opencode: projected.filter((file) => file.path.startsWith(".opencode/"))
+      .length,
+    claude: projected.filter((file) => file.path.startsWith(".claude/")).length,
+  };
 
-  const sources = model.rules.length;
-  return ok(
-    [
-      "Sincronización",
-      `  AGENTS.md regenerado  (${sources} archivo(s) de reglas del proyecto)`,
-      sources === 0
-        ? "  Añada reglas en .valmen/rules/ para que se incluyan."
-        : "  Fuente: .valmen/config.yaml + .valmen/rules/*.md",
-    ].join("\n") + "\n",
-  );
+  if (check) {
+    const stale: string[] = [];
+    for (const file of projected) {
+      const onDisk = readIfExists(join(root, file.path));
+      if (onDisk === null) stale.push(`${file.path} (falta)`);
+      else if (onDisk !== file.content) stale.push(file.path);
+    }
+
+    if (stale.length > 0) {
+      return error(
+        `Hay ${stale.length} archivo(s) generados desactualizados o editados a mano; ` +
+          `ejecute \`valmen sync\`: ${stale.join(", ")}`,
+      );
+    }
+    return ok("Archivos generados al día.\n");
+  }
+
+  for (const file of projected) {
+    atomicWrite(join(root, file.path), file.content);
+  }
+
+  const lines = [
+    "Sincronización",
+    `  AGENTS.md                (${model.rules.length} archivo(s) de reglas del proyecto)`,
+  ];
+
+  if (agents.length > 0) {
+    lines.push(
+      `  agentes proyectados      ${agents.length}`,
+      `    .codex/agents/         ${byRuntime.codex} archivos TOML`,
+      `    .opencode/agents/      ${byRuntime.opencode} archivos Markdown`,
+      `    .claude/agents/        ${byRuntime.claude} archivos Markdown`,
+    );
+  } else {
+    lines.push(
+      "  agentes                  ninguno",
+      "    Añada definiciones en .valmen/agents/<id>.md para proyectarlas.",
+    );
+  }
+
+  if (model.rules.length === 0) {
+    lines.push(
+      "  Añada reglas en .valmen/rules/ para que se incluyan en AGENTS.md.",
+    );
+  }
+
+  return ok(lines.join("\n") + "\n");
 }
 
 /**
  * `adopt`: incorpora el harness a un proyecto que ya existe.
  *
  * Regla dura: **nada se borra y nada se mueve sin que el usuario lo vea**. La
- * adopción crea `.valmen/` y `AGENTS.md`; todo lo demás queda intacto y solo se
- * reporta.
+ * adopción crea `.valmen/` y reporta lo que encuentra; todo lo demás queda
+ * intacto.
  *
  * No llama a ningún modelo. El perfil del proyecto se deriva de los manifiestos
  * y de la estructura de directorios, porque es información que el código puede
- * leer con exactitud. Un modelo se reserva para lo que el código no puede
- * decidir, y clasificar reglas en prosa es un paso posterior y explícito.
+ * leer con exactitud. Clasificar reglas en prosa es un paso posterior y
+ * explícito del usuario.
  *
  * Con `--dry-run` informa sin escribir.
  */
@@ -452,7 +501,7 @@ export function adoptProject(
     "",
     "Perfil del proyecto",
     `  nombre            ${profile.name}`,
-    `  registro          ${ticketsDir}${existsSync(join(root, ticketsDir)) ? "" : "  (se creará al usar el harness)"}`,
+    `  registro          ${ticketsDir}`,
   ];
 
   if (profile.detectedFiles.length > 0) {
@@ -525,15 +574,18 @@ export function adoptProject(
 
   atomicWrite(plan.configPath, config);
   mkdirSync(plan.rulesDir, { recursive: true });
+  mkdirSync(join(root, ".valmen", "agents"), { recursive: true });
 
   lines.push(
     `  ${relative(root, plan.rulesDir)}/`,
+    `  .valmen/agents/`,
     "",
-    "Reglas del proyecto",
+    "Reglas y agentes del proyecto",
     "  El harness no puede separar por sí solo lo que es regla de dominio de lo",
     "  que es flujo de trabajo. Cree archivos en .valmen/rules/ con lo que",
     "  describa ESTE sistema —stack, invariantes de negocio, políticas— y",
-    "  ejecute `valmen sync` para que se incluyan en AGENTS.md.",
+    "  definiciones en .valmen/agents/ para sus agentes.",
+    "  Después, `valmen sync` los proyecta a AGENTS.md y a cada runtime.",
   );
 
   if (existsSync(plan.agentsPath)) {

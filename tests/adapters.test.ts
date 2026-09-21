@@ -246,11 +246,12 @@ describe("comando sync", () => {
 
     const written = syncProject(lab, "Demo", false);
     expect(written.exitCode).toBe(0);
-    expect(written.stdout).toContain("AGENTS.md regenerado");
+    expect(written.stdout).toContain("AGENTS.md");
+    expect(written.stdout).toContain("Sincronización");
 
     const checked = syncProject(lab, "Demo", true);
     expect(checked.exitCode).toBe(0);
-    expect(checked.stdout).toBe("AGENTS.md actualizado.\n");
+    expect(checked.stdout).toBe("Archivos generados al día.\n");
   });
 
   it("detecta que alguien editó el archivo generado a mano", () => {
@@ -266,14 +267,14 @@ describe("comando sync", () => {
 
     const checked = syncProject(lab, "Demo", true);
     expect(checked.exitCode).toBe(2);
-    expect(checked.stderr).toContain("editado a mano");
+    expect(checked.stderr).toContain("editados a mano");
   });
 
   it("detecta que falta el archivo generado", () => {
     scaffold({}, "name: Demo\n");
     const checked = syncProject(lab, "Demo", true);
     expect(checked.exitCode).toBe(2);
-    expect(checked.stderr).toContain("No existe AGENTS.md");
+    expect(checked.stderr).toContain("AGENTS.md (falta)");
   });
 
   it("detecta que una regla del proyecto cambió y el archivo quedó viejo", () => {
