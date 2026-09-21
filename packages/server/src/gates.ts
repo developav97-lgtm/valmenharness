@@ -353,6 +353,62 @@ export async function runTicketGate(
   };
 }
 
+/**
+ * Una corrección pendiente: un gate que una persona rechazó.
+ *
+ * El rechazo es un encargo, y hasta ahora vivía en el recibo y en el historial
+ * del ticket, donde solo lo encontraba quien supiera buscarlo. Esto lo saca a la
+ * superficie: qué se rechazó, quién, cuándo y por qué.
+ */
+export interface PendingCorrection {
+  readonly gate: string;
+  readonly receiptId: string;
+  readonly actor: string;
+  readonly reason: string;
+  readonly decidedAt: string;
+  /** Cuántas veces se ha rechazado este gate, contando esta. */
+  readonly rejections: number;
+  /**
+   * `true` cuando ya se gastó el reintento correctivo.
+   *
+   * El diseño pide **exactamente un** reintento: el autor corrige una vez y
+   * vuelve a evaluarse. Si el segundo intento también se rechaza, insistir es un
+   * bucle, y un bucle con una persona esperando es peor que parar y pedirle que
+   * decida.
+   */
+  readonly retryExhausted: boolean;
+}
+
+/** Las correcciones pendientes de un ticket, por gate. */
+export function pendingCorrections(
+  paths: RegistryPaths,
+  ticketId: string,
+): PendingCorrection[] {
+  const historial = readReceipts(paths, ticketId);
+
+  return currentReceipts(historial)
+    .filter((recibo) => recibo.humanDecision?.decision === "reject")
+    .map((recibo) => {
+      const rechazos = historial.filter(
+        (linea) =>
+          linea.gate === recibo.gate &&
+          linea.humanDecision?.decision === "reject",
+      );
+      const humana = recibo.humanDecision as NonNullable<
+        GateReceipt["humanDecision"]
+      >;
+      return {
+        gate: recibo.gate,
+        receiptId: recibo.id,
+        actor: humana.actor,
+        reason: humana.reason,
+        decidedAt: humana.decidedAt,
+        rejections: rechazos.length,
+        retryExhausted: rechazos.length >= 2,
+      };
+    });
+}
+
 /** Los recibos vigentes de un ticket, del más nuevo al más viejo. */
 export function listGateDecisions(
   paths: RegistryPaths,

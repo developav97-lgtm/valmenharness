@@ -38,6 +38,7 @@ import {
   type GateRunOutcome,
   listGateCards,
   listGateDecisions,
+  pendingCorrections,
   recordHumanDecision,
   runTicketGate,
 } from "./gates.js";
@@ -213,7 +214,11 @@ export async function handleApi(
     }
     return {
       status: 200,
-      body: { gates: tarjetas, decisions: listGateDecisions(paths, id) },
+      body: {
+        gates: tarjetas,
+        decisions: listGateDecisions(paths, id),
+        corrections: pendingCorrections(paths, id),
+      },
     };
   }
 

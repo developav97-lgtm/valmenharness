@@ -4,7 +4,7 @@ id: IMPROVEMENT-TICKETS-PORTAR-NOVEDADES-20260921
 title: Portar el reporte Markdown del visor a Mission Control
 type: IMPROVEMENT
 module: TICKETS
-workflow_status: planned
+workflow_status: approved
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -43,18 +43,20 @@ El visor anterior ofrecía un reporte Markdown descargable de los tickets cerrad
 
 - Gate no exigible: es una capacidad acotada de la interfaz, sin impacto de sincronización, migración ni despliegue, y el registro ya expone los campos que el reporte necesita.
 - Pasos ordenados:
-  1. Añadir a `packages/server/src/tickets.ts` una función que filtre por rango de fecha de cierre y proyecte los campos funcionales del último cierre.
-  2. Exponer `GET /api/tickets/report?from=&to=` que devuelva `text/markdown`.
-  3. Añadir el botón de descarga y los dos campos de fecha en la vista de tickets.
-  4. Escribir el test que compara el reporte con el que producía el visor sobre los 57 tickets reales.
-- Rollback: quitar la ruta y el botón; no toca ningún dato.
+  1. Añadir en `packages/server/src/tickets.ts` una función que filtre los tickets cerrados por rango de fecha de cierre, **inclusivo en los dos extremos**, y proyecte los campos funcionales del último cierre. La fecha se compara como texto `YYYY-MM-DD`, que ordena igual que la fecha.
+  2. Validar el rango antes de proyectar: si `from` es posterior a `to`, responder 400 con el motivo; si el rango no tiene tickets, devolver un reporte válido que lo dice, nunca un archivo vacío ni un error.
+  3. Exponer `GET /api/tickets/report?from=&to=` que devuelva `text/markdown`, con el mismo formato de secciones que el visor anterior: un apartado por ticket, con «Se atendió» y «Se realizó».
+  4. Añadir en la vista de tickets los dos campos de fecha, con el rango de los últimos 30 días por defecto, y el botón de descarga que apunta a esa ruta.
+  5. Escribir el test que compara el reporte generado con el que producía el visor sobre los 57 tickets reales, y los tres casos de borde: rango vacío, extremos inclusivos y rango invertido.
+- Rollback: quitar la ruta y el botón; no toca ningún dato y no hay migración que deshacer.
 
 ## Criterios de aceptación
 
-- [ ] Elegir un rango de fechas y descargar un Markdown con un apartado por ticket cerrado.
-- [ ] El reporte incluye «Se atendió» y «Se realizó», tomados del último cierre.
-- [ ] Un rango sin tickets produce un reporte válido que lo dice, no un archivo vacío.
-- [ ] El rango es inclusivo en los dos extremos y se rechaza si el inicio es posterior al fin.
+- [ ] Elegir un rango de fechas de cierre y descargar un Markdown con un apartado por cada ticket cerrado dentro del rango.
+- [ ] El reporte incluye «Se atendió» y «Se realizó», tomados del resumen funcional del último cierre de cada ticket.
+- [ ] Un rango sin tickets devuelve un reporte válido que lo dice explícitamente, no un archivo vacío ni un error.
+- [ ] El rango es inclusivo en los dos extremos: un ticket cerrado exactamente el día `from` y otro exactamente el día `to` aparecen los dos.
+- [ ] Un rango con `from` posterior a `to` se rechaza con un mensaje que explica el motivo, sin generar archivo.
 
 ## Puntos
 
@@ -131,6 +133,22 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-09-21",
+    "action": "gate-rejected",
+    "actor": "cli",
+    "details": "Gate plan rechazado por Juan Andrade: El plan no dice nada del rango vacío ni de los límites inclusivos de la fecha."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-09-21",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
   }
 ]
 ```
