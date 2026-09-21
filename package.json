@@ -1,0 +1,41 @@
+{
+  "name": "valmenharness",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Harness agéntico empresarial: motor determinista de estado, especificaciones y gates configurables para proyectos con desarrollo agéntico.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/valmentech/valmenharness.git"
+  },
+  "keywords": [
+    "agentic",
+    "harness",
+    "workflow",
+    "spec-driven-development",
+    "ai-agents",
+    "tickets",
+    "gates"
+  ]
+}

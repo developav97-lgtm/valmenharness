@@ -1,0 +1,15 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Estado derivado del harness: siempre reconstruible con `valmen index`.
+.valmen/state/
+
+# Secretos: nunca versionar credenciales ni configuración local.
+.env
+.env.local
+*.local.yaml
+
+# macOS
+.DS_Store

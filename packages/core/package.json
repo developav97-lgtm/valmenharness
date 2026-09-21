@@ -1,0 +1,25 @@
+{
+  "name": "@valmen/core",
+  "version": "0.0.1",
+  "description": "Dominio puro del harness: contrato del ticket, parser y validador. Sin I/O de red y sin dependencias externas.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  }
+}
