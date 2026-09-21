@@ -34,10 +34,11 @@ duplica:
 | **Migración de tickets a v2** — no toca el historial append-only, idempotente                          | Implementado y verificado                          |
 | **Proyección a `AGENTS.md`** — `.valmen/` es la fuente única                                           | Implementado y verificado                          |
 | **Adopción de un proyecto existente** — perfila, no borra nada                                         | Implementado y verificado                          |
+| **Gates con tres evaluadores** — `command`, `jev` y `llm-judge` detrás de un mismo contrato             | Implementado y verificado                          |
+| **Calibración del gate de plan** — 57 tickets reales, $0.0074, 25% de aprobación                       | Verificado contra el endpoint real                 |
+| **Adaptadores por agente** — `.codex/`, `.claude/`, `.opencode/` desde una sola fuente                  | Implementado y verificado                          |
+| **Mission Control** — vista de tickets y alta de claves de proveedor desde la app                       | Implementado y verificado                          |
 | **Spec-Driven Development** — features con spec, deltas RFC 2119, descomposición en tickets            | Diseñado                                           |
-| **Gates automáticos con TypeSafe Jev** — probabilidades tipadas, umbrales en código                    | Diseñado                                           |
-| **Adaptadores por agente** — `.codex/`, `.claude/`, `.opencode/`                                       | Diseñado                                           |
-| **Mission Control** — app web local                                                                    | Diseñado                                           |
 
 ## La tesis
 

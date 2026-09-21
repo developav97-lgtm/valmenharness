@@ -30,6 +30,13 @@ import {
   probeProvider,
   updateCredentials,
 } from "./providers.js";
+import {
+  type TicketFilters,
+  filterTickets,
+  listTickets,
+  readTicket,
+  summarize,
+} from "./tickets.js";
 
 /** Versión de la API. Un cliente que no la entienda debe fallar, no adivinar. */
 export const API_VERSION = 1;
@@ -89,8 +96,10 @@ export async function handleApi(
   path: string,
   body: unknown,
   context: ServerContext,
+  search?: URLSearchParams,
 ): Promise<ApiResponse> {
   const partes = path.split("/").filter((part) => part !== "");
+  const query = search ?? new URLSearchParams();
 
   // GET /api/health
   if (method === "GET" && path === "/api/health") {
@@ -98,6 +107,36 @@ export async function handleApi(
       status: 200,
       body: { apiVersion: API_VERSION, root: context.root, ok: true },
     };
+  }
+
+  // GET /api/tickets?workflow=&type=&module=&q=&open=&invalid=&limit=
+  if (method === "GET" && partes.length === 2 && partes[0] === "api" && partes[1] === "tickets") {
+    const params = query ?? new URLSearchParams();
+    const filas = listTickets(context.root);
+    const filtros: TicketFilters = {
+      ...(params.get("workflow") === null ? {} : { workflowStatus: params.get("workflow") as string }),
+      ...(params.get("type") === null ? {} : { type: params.get("type") as string }),
+      ...(params.get("module") === null ? {} : { module: params.get("module") as string }),
+      ...(params.get("q") === null ? {} : { query: params.get("q") as string }),
+      ...(params.get("open") === "1" ? { onlyOpen: true } : {}),
+      ...(params.get("invalid") === "1" ? { onlyInvalid: true } : {}),
+      ...(params.get("limit") === null
+        ? {}
+        : { limit: Number.parseInt(params.get("limit") as string, 10) }),
+    };
+    return {
+      status: 200,
+      body: { summary: summarize(filas), tickets: filterTickets(filas, filtros) },
+    };
+  }
+
+  // GET /api/tickets/:id
+  if (method === "GET" && partes.length === 3 && partes[0] === "api" && partes[1] === "tickets") {
+    const detalle = readTicket(context.root, partes[2] as string);
+    if (detalle === null) {
+      return { status: 404, body: { error: `No existe el ticket "${partes[2]}".` } };
+    }
+    return { status: 200, body: detalle };
   }
 
   // GET /api/providers
@@ -263,7 +302,7 @@ async function handleRequest(
       if (method === "PUT" || method === "POST") {
         body = await readJson(request);
       }
-      const resultado = await handleApi(method, url.pathname, body, context);
+      const resultado = await handleApi(method, url.pathname, body, context, url.searchParams);
       send(
         response,
         resultado.status,

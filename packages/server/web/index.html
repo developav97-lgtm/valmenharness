@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ValmenHarness · Mission Control</title>
     <style>
-      /* Sin framework: el objetivo de esta pantalla es funcionar, y una hoja de
-         estilos propia se lee entera en un minuto. */
+      /* Sin framework y sin paso de compilación: esta interfaz tiene que
+         arrancar con el servidor, y su objetivo es mostrar el estado, no
+         impresionar. Una hoja propia se lee entera en un minuto. */
       :root {
         --fondo: #0f1115;
         --panel: #171a21;
@@ -22,41 +23,37 @@
       }
       * { box-sizing: border-box; }
       body {
-        margin: 0;
-        background: var(--fondo);
-        color: var(--texto);
+        margin: 0; background: var(--fondo); color: var(--texto);
         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
       }
       header {
-        display: flex;
-        align-items: baseline;
-        gap: 12px;
-        padding: 18px 24px;
-        border-bottom: 1px solid var(--borde);
-        background: var(--panel);
+        display: flex; align-items: baseline; gap: 20px;
+        padding: 0 24px; border-bottom: 1px solid var(--borde); background: var(--panel);
       }
-      header h1 { font-size: 16px; margin: 0; font-weight: 600; }
-      header .raiz { color: var(--tenue); font-family: var(--mono); font-size: 12px; }
-      main { max-width: 1000px; margin: 0 auto; padding: 24px; }
+      header h1 { font-size: 15px; margin: 0; font-weight: 600; padding: 16px 0; }
+      nav { display: flex; gap: 4px; }
+      nav a {
+        color: var(--tenue); text-decoration: none; font-size: 14px;
+        padding: 16px 12px; border-bottom: 2px solid transparent;
+      }
+      nav a:hover { color: var(--texto); }
+      nav a[aria-current="page"] { color: var(--texto); border-bottom-color: var(--acento); }
+      header .raiz { margin-left: auto; color: var(--tenue); font-family: var(--mono); font-size: 12px; }
+      main { max-width: 1180px; margin: 0 auto; padding: 24px; }
       h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--tenue); margin: 0 0 12px; }
       .nota {
-        background: var(--panel-alto);
-        border: 1px solid var(--borde);
-        border-left: 3px solid var(--acento);
-        border-radius: 6px;
-        padding: 12px 16px;
-        margin-bottom: 24px;
-        color: var(--tenue);
-        font-size: 13px;
+        background: var(--panel-alto); border: 1px solid var(--borde); border-left: 3px solid var(--acento);
+        border-radius: 6px; padding: 12px 16px; margin-bottom: 24px; color: var(--tenue); font-size: 13px;
       }
       .nota strong { color: var(--texto); }
       table { width: 100%; border-collapse: collapse; }
       th {
         text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
         color: var(--tenue); font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--borde);
+        white-space: nowrap;
       }
       td { padding: 10px; border-bottom: 1px solid var(--borde); vertical-align: middle; }
-      tr:hover td { background: var(--panel); }
+      tbody tr:hover td { background: var(--panel); }
       .nombre { font-weight: 500; }
       .id { font-family: var(--mono); font-size: 11px; color: var(--tenue); }
       .punto { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 7px; }
@@ -73,19 +70,37 @@
       button:disabled { opacity: 0.45; cursor: default; }
       button.principal { background: var(--acento); border-color: var(--acento); color: #fff; }
       button.peligro:hover:not(:disabled) { border-color: var(--error); color: var(--error); }
+      button.enlace { background: none; border: none; color: var(--acento); padding: 0; }
       .resultado { font-size: 12px; color: var(--tenue); }
       .resultado.ok { color: var(--ok); }
       .resultado.error { color: var(--error); }
+      .etiqueta {
+        display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 10px;
+        border: 1px solid var(--borde); color: var(--tenue); font-family: var(--mono);
+      }
+      .etiqueta.critico { border-color: var(--alerta); color: var(--alerta); }
+      .etiqueta.roto { border-color: var(--error); color: var(--error); }
+      .filtros { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
+      .filtros input, .filtros select {
+        font: inherit; font-size: 13px; padding: 6px 10px; border-radius: 6px;
+        background: var(--panel); color: var(--texto); border: 1px solid var(--borde);
+      }
+      .filtros input:focus, .filtros select:focus { outline: none; border-color: var(--acento); }
+      .tarjetas { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 24px; }
+      .tarjeta { background: var(--panel); border: 1px solid var(--borde); border-radius: 8px; padding: 14px 16px; }
+      .tarjeta .valor { font-size: 24px; font-weight: 600; }
+      .tarjeta .rotulo { font-size: 12px; color: var(--tenue); }
       dialog {
         background: var(--panel); color: var(--texto); border: 1px solid var(--borde);
         border-radius: 10px; padding: 0; max-width: 520px; width: calc(100% - 32px);
       }
+      dialog.ancho { max-width: 820px; }
       dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
       .dialogo { padding: 20px 24px; }
       .dialogo h3 { margin: 0 0 4px; font-size: 16px; }
       .dialogo p { margin: 0 0 16px; color: var(--tenue); font-size: 13px; }
       label { display: block; font-size: 12px; color: var(--tenue); margin-bottom: 6px; }
-      input {
+      input[type="password"], input[type="text"] {
         width: 100%; font: inherit; font-family: var(--mono); font-size: 13px;
         padding: 9px 11px; border-radius: 6px; background: var(--fondo);
         color: var(--texto); border: 1px solid var(--borde);
@@ -93,46 +108,32 @@
       input:focus { outline: none; border-color: var(--acento); }
       .aviso { font-size: 12px; color: var(--tenue); margin-top: 8px; }
       .pie { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
-      code { font-family: var(--mono); font-size: 12px; background: var(--fondo); padding: 1px 5px; border-radius: 3px; }
+      pre {
+        background: var(--fondo); border: 1px solid var(--borde); border-radius: 6px;
+        padding: 12px; overflow: auto; font-family: var(--mono); font-size: 12px;
+        max-height: 60vh; white-space: pre-wrap; word-break: break-word;
+      }
+      .secciones { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+      .secciones button { font-size: 12px; }
+      .secciones button[aria-pressed="true"] { border-color: var(--acento); color: var(--acento); }
       .vacio { color: var(--tenue); text-align: center; padding: 40px; }
     </style>
   </head>
   <body>
     <header>
       <h1>ValmenHarness</h1>
-      <span class="raiz" id="raiz">cargando…</span>
+      <nav>
+        <a href="#/tickets" data-vista="tickets">Tickets</a>
+        <a href="#/proveedores" data-vista="proveedores">Proveedores</a>
+      </nav>
+      <span class="raiz" id="raiz"></span>
     </header>
 
-    <main>
-      <div class="nota">
-        <strong>Las claves se prueban antes de guardarse.</strong> Si la conexión falla no se
-        escribe nada, así que una clave mal pegada falla aquí y no en la mitad de un gate.
-        Después de guardarla no se vuelve a mostrar: solo se puede reemplazar.
-        <br /><br />
-        Los proveedores de <strong>suscripción</strong> leen el token del CLI que ya los
-        autenticó. No se pegan a mano, para no crear un segundo origen de verdad que se
-        desincronice en el primer refresco.
-      </div>
-
-      <h2>Proveedores</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Proveedor</th>
-            <th>Autenticación</th>
-            <th>Estado</th>
-            <th>Origen</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="filas"></tbody>
-      </table>
-      <div id="vacio" class="vacio" hidden>No hay proveedores declarados.</div>
-    </main>
+    <main id="contenido"></main>
 
     <dialog id="dialogo">
       <div class="dialogo">
-        <h3 id="titulo">Configurar</h3>
+        <h3 id="titulo"></h3>
         <p id="ayuda"></p>
         <label for="clave">Clave</label>
         <input id="clave" type="password" autocomplete="off" spellcheck="false" placeholder="sk-…" />
@@ -144,13 +145,24 @@
       </div>
     </dialog>
 
+    <dialog id="detalle" class="ancho">
+      <div class="dialogo">
+        <h3 id="detalle-titulo"></h3>
+        <p id="detalle-meta"></p>
+        <div class="secciones" id="detalle-secciones"></div>
+        <pre id="detalle-cuerpo"></pre>
+        <div class="pie">
+          <button id="detalle-abrir">Abrir el archivo</button>
+          <button id="detalle-cerrar" class="principal">Cerrar</button>
+        </div>
+      </div>
+    </dialog>
+
     <script type="module">
-      // La interfaz no sabe nada del harness: solo llama a la API y muestra lo
-      // que devuelve. Toda la lógica vive en el motor, así que un botón y un
-      // comando de terminal no pueden divergir.
+      // La interfaz no sabe nada del harness: llama a la API y muestra lo que
+      // devuelve. Toda la lógica vive en el motor, así que un botón y un comando
+      // de terminal no pueden divergir.
       const $ = (id) => document.getElementById(id);
-      let proveedores = [];
-      let proveedorActual = null;
 
       /** Llama a la API y devuelve el cuerpo, o lanza con el mensaje del servidor. */
       async function api(method, ruta, cuerpo) {
@@ -160,103 +172,304 @@
           body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
         });
         const datos = await respuesta.json();
-        if (!respuesta.ok) {
-          const error = new Error(datos.error ?? `HTTP ${respuesta.status}`);
-          error.datos = datos;
-          throw error;
-        }
+        if (!respuesta.ok) throw new Error(datos.error ?? `HTTP ${respuesta.status}`);
         return datos;
       }
 
-      /** Texto del origen de la credencial. */
-      function origen(p) {
-        if (p.source === "environment") return "variable de entorno";
-        if (p.source === "credentials-file") return "archivo de credenciales";
-        if (p.source === "cli") return "token del CLI";
-        if (p.source === "none" && p.configured) return "no requiere";
-        return "—";
+      /** Crea un elemento con texto. Nunca se usa innerHTML con datos del registro. */
+      function el(tag, texto, clase) {
+        const nodo = document.createElement(tag);
+        if (texto !== undefined) nodo.textContent = texto;
+        if (clase !== undefined) nodo.className = clase;
+        return nodo;
       }
 
-      /** Estado legible de un proveedor. */
-      function estado(p) {
-        if (!p.configured) return { clase: "no", texto: "sin configurar" };
-        if (p.source === "none") return { clase: "ok", texto: "local" };
-        const largo = p.keyLength === null ? "" : ` · ${p.keyLength} caracteres`;
-        return { clase: "ok", texto: `configurada${largo}` };
+      // ── Vista: tickets ────────────────────────────────────────────────────
+
+      const filtros = { q: "", workflow: "", type: "", open: false, invalid: false };
+
+      async function vistaTickets() {
+        const cont = $("contenido");
+        cont.textContent = "";
+
+        const params = new URLSearchParams();
+        if (filtros.q !== "") params.set("q", filtros.q);
+        if (filtros.workflow !== "") params.set("workflow", filtros.workflow);
+        if (filtros.type !== "") params.set("type", filtros.type);
+        if (filtros.open) params.set("open", "1");
+        if (filtros.invalid) params.set("invalid", "1");
+
+        const datos = await api("GET", `/api/tickets?${params.toString()}`);
+        const r = datos.summary;
+
+        // Tarjetas de resumen: es lo que responde "¿qué está pasando?" sin leer
+        // la tabla.
+        const tarjetas = el("div", undefined, "tarjetas");
+        const metricas = [
+          ["Tickets", r.total],
+          ["En curso", r.total - (r.byWorkflow.closed ?? 0)],
+          ["Cerrados", r.byWorkflow.closed ?? 0],
+          ["Con puntos abiertos", r.withOpenPoints],
+          ["Impacto crítico", r.criticalImpacts],
+        ];
+        if (r.invalid > 0) metricas.push(["Inválidos", r.invalid]);
+        for (const [rotulo, valor] of metricas) {
+          const tarjeta = el("div", undefined, "tarjeta");
+          tarjeta.append(el("div", String(valor), "valor"), el("div", rotulo, "rotulo"));
+          tarjetas.append(tarjeta);
+        }
+        cont.append(tarjetas);
+
+        // Filtros.
+        const barra = el("div", undefined, "filtros");
+        const busqueda = document.createElement("input");
+        busqueda.type = "text";
+        busqueda.placeholder = "Buscar por id, título o módulo…";
+        busqueda.value = filtros.q;
+        busqueda.style.minWidth = "280px";
+        let temporizador;
+        busqueda.addEventListener("input", () => {
+          clearTimeout(temporizador);
+          temporizador = setTimeout(() => {
+            filtros.q = busqueda.value;
+            void vistaTickets();
+          }, 250);
+        });
+        barra.append(busqueda);
+
+        const selector = (etiqueta, clave, valores, actual) => {
+          const sel = document.createElement("select");
+          sel.append(new Option(etiqueta, ""));
+          for (const v of valores) sel.append(new Option(v, v));
+          sel.value = actual;
+          sel.addEventListener("change", () => {
+            filtros[clave] = sel.value;
+            void vistaTickets();
+          });
+          return sel;
+        };
+        barra.append(
+          selector("Todos los estados", "workflow", Object.keys(r.byWorkflow).sort(), filtros.workflow),
+          selector("Todos los tipos", "type", Object.keys(r.byType).sort(), filtros.type),
+        );
+
+        const casilla = (texto, clave) => {
+          const label = el("label");
+          label.style.display = "flex";
+          label.style.alignItems = "center";
+          label.style.gap = "6px";
+          label.style.margin = "0";
+          const input = document.createElement("input");
+          input.type = "checkbox";
+          input.checked = filtros[clave];
+          input.addEventListener("change", () => {
+            filtros[clave] = input.checked;
+            void vistaTickets();
+          });
+          label.append(input, el("span", texto));
+          return label;
+        };
+        barra.append(casilla("Solo abiertos", "open"), casilla("Solo inválidos", "invalid"));
+        cont.append(barra);
+
+        if (datos.tickets.length === 0) {
+          cont.append(el("div", "Ningún ticket coincide con los filtros.", "vacio"));
+          return;
+        }
+
+        const tabla = el("table");
+        const thead = el("thead");
+        const filaCabecera = el("tr");
+        for (const columna of ["Ticket", "Tipo", "Estado", "QA", "Release", "Puntos", "Actualizado", ""]) {
+          filaCabecera.append(el("th", columna));
+        }
+        thead.append(filaCabecera);
+        const tbody = el("tbody");
+
+        for (const t of datos.tickets) {
+          const tr = el("tr");
+
+          const celdaId = el("td");
+          celdaId.append(el("div", t.title, "nombre"), el("div", t.id, "id"));
+          tr.append(celdaId);
+
+          const celdaTipo = el("td");
+          celdaTipo.append(el("span", `${t.type} · ${t.module}`, "etiqueta"));
+          tr.append(celdaTipo);
+
+          const celdaEstado = el("td");
+          celdaEstado.append(el("span", t.workflowStatus));
+          if (t.criticalImpacts.length > 0) {
+            const critico = el("div");
+            critico.append(el("span", t.criticalImpacts.join(" · "), "etiqueta critico"));
+            celdaEstado.append(critico);
+          }
+          if (t.invalid !== null) {
+            const roto = el("div");
+            roto.append(el("span", "inválido", "etiqueta roto"));
+            celdaEstado.append(roto);
+          }
+          tr.append(celdaEstado);
+
+          tr.append(el("td", t.qaStatus));
+          tr.append(el("td", t.releaseStatus));
+
+          const celdaPuntos = el("td");
+          celdaPuntos.textContent =
+            t.totalPoints === 0 ? "—" : `${t.totalPoints - t.openPoints}/${t.totalPoints}`;
+          if (t.openPoints > 0) celdaPuntos.style.color = "var(--alerta)";
+          tr.append(celdaPuntos);
+
+          tr.append(el("td", t.updated, "id"));
+
+          const celdaAcciones = el("td");
+          const ver = el("button", "Ver", "enlace");
+          ver.addEventListener("click", () => void verDetalle(t.id));
+          celdaAcciones.append(ver);
+          tr.append(celdaAcciones);
+
+          tbody.append(tr);
+        }
+
+        tabla.append(thead, tbody);
+        cont.append(tabla);
       }
 
-      function pintar() {
-        const filas = $("filas");
-        filas.textContent = "";
-        $("vacio").hidden = proveedores.length > 0;
+      /** Muestra el detalle de un ticket, sección por sección. */
+      async function verDetalle(id) {
+        const t = await api("GET", `/api/tickets/${id}`);
+        $("detalle-titulo").textContent = t.title;
+        $("detalle-meta").textContent =
+          `${t.id} · ${t.type} · ${t.module} · ${t.workflowStatus} · QA ${t.qaStatus} · ${t.releaseStatus}` +
+          (t.invalid !== null ? ` · INVÁLIDO: ${t.invalid}` : "");
+
+        const partes = [
+          ["Solicitud", t.request],
+          ["Descripción funcional", t.sections["Descripción funcional"]],
+          ["Diagnóstico", t.sections["Diagnóstico"]],
+          ["Plan", t.sections["Plan"]],
+          ["Criterios de aceptación", t.sections["Criterios de aceptación"]],
+          ["Implementación", t.sections["Implementación"]],
+          ["Pruebas", t.sections["Pruebas"]],
+          ["Release", t.sections["Release"]],
+        ];
+        const bloques = [
+          [`Puntos (${t.points.length})`, t.points],
+          [`QA (${t.qa.length})`, t.qa],
+          [`Evidencia (${t.evidence.length})`, t.evidence],
+          [`Retests (${t.retests.length})`, t.retests],
+          [`Cierre (${t.closures.length})`, t.closures],
+          [`Eventos (${t.events.length})`, t.events],
+          [`Consumo de IA (${t.usage.length})`, t.usage],
+        ];
+
+        const barra = $("detalle-secciones");
+        barra.textContent = "";
+        const cuerpo = $("detalle-cuerpo");
+
+        const mostrar = (etiqueta, valor) => {
+          for (const boton of barra.querySelectorAll("button")) {
+            boton.setAttribute("aria-pressed", String(boton.textContent === etiqueta));
+          }
+          cuerpo.textContent =
+            typeof valor === "string" ? (valor.trim() === "" ? "(vacío)" : valor) : JSON.stringify(valor, null, 2);
+        };
+
+        for (const [etiqueta, valor] of [...partes, ...bloques]) {
+          const boton = el("button", etiqueta);
+          boton.setAttribute("aria-pressed", "false");
+          boton.addEventListener("click", () => mostrar(etiqueta, valor));
+          barra.append(boton);
+        }
+
+        mostrar(partes[0][0], partes[0][1]);
+        $("detalle").showModal();
+      }
+
+      // ── Vista: proveedores ────────────────────────────────────────────────
+
+      let proveedores = [];
+      let proveedorActual = null;
+
+      const origen = (p) =>
+        p.source === "environment" ? "variable de entorno"
+        : p.source === "credentials-file" ? "archivo de credenciales"
+        : p.source === "cli" ? "token del CLI"
+        : p.source === "none" && p.configured ? "no requiere"
+        : "—";
+
+      async function vistaProveedores() {
+        const cont = $("contenido");
+        cont.textContent = "";
+
+        const nota = el("div", undefined, "nota");
+        nota.append(
+          el("strong", "Las claves se prueban antes de guardarse. "),
+          el("span", "Si la conexión falla no se escribe nada, así que una clave mal pegada falla aquí y no en la mitad de un gate. Después de guardarla no se vuelve a mostrar: solo se puede reemplazar."),
+        );
+        cont.append(nota, el("h2", "Proveedores"));
+
+        const datos = await api("GET", "/api/providers");
+        proveedores = datos.providers;
+
+        const tabla = el("table");
+        const thead = el("thead");
+        const filaCabecera = el("tr");
+        for (const columna of ["Proveedor", "Autenticación", "Estado", "Origen", ""]) {
+          filaCabecera.append(el("th", columna));
+        }
+        thead.append(filaCabecera);
+        const tbody = el("tbody");
 
         for (const p of proveedores) {
-          const e = estado(p);
-          const tr = document.createElement("tr");
+          const tr = el("tr");
 
-          const celdaNombre = document.createElement("td");
-          const punto = document.createElement("span");
-          punto.className = `punto ${e.clase}`;
-          const nombre = document.createElement("span");
-          nombre.className = "nombre";
-          nombre.textContent = p.name;
-          const id = document.createElement("div");
-          id.className = "id";
-          id.textContent = p.id;
-          celdaNombre.append(punto, nombre, id);
+          const celdaNombre = el("td");
+          const punto = el("span", undefined, `punto ${p.configured ? "ok" : "no"}`);
+          celdaNombre.append(punto, el("span", p.name, "nombre"), el("div", p.id, "id"));
+          tr.append(celdaNombre);
 
-          const celdaAuth = document.createElement("td");
-          celdaAuth.textContent = p.auth === "api-key" ? "API key" : p.auth === "subscription" ? "suscripción" : "ninguna";
+          tr.append(el("td", p.auth === "api-key" ? "API key" : p.auth === "subscription" ? "suscripción" : "ninguna"));
 
-          const celdaEstado = document.createElement("td");
-          const texto = document.createElement("div");
-          texto.textContent = e.texto;
-          celdaEstado.append(texto);
+          const celdaEstado = el("td");
+          celdaEstado.append(
+            el("div", p.configured ? (p.source === "none" ? "local" : `configurada${p.keyLength === null ? "" : ` · ${p.keyLength} caracteres`}`) : "sin configurar"),
+          );
           if (p.legacyFieldName) {
-            const legado = document.createElement("div");
-            legado.className = "resultado";
-            legado.textContent = "campo con el nombre anterior; se normaliza al reescribir";
-            celdaEstado.append(legado);
+            celdaEstado.append(el("div", "campo con el nombre anterior; se normaliza al reescribir", "resultado"));
           }
-          const resultado = document.createElement("div");
-          resultado.className = "resultado";
-          resultado.dataset.id = p.id;
-          celdaEstado.append(resultado);
+          const salida = el("div", undefined, "resultado");
+          salida.dataset.id = p.id;
+          celdaEstado.append(salida);
+          tr.append(celdaEstado);
 
-          const celdaOrigen = document.createElement("td");
-          celdaOrigen.className = "resultado";
-          celdaOrigen.textContent = origen(p);
+          tr.append(el("td", origen(p), "resultado"));
 
-          const celdaAcciones = document.createElement("td");
-          const acciones = document.createElement("div");
-          acciones.className = "acciones";
+          const celdaAcciones = el("td");
+          const acciones = el("div", undefined, "acciones");
 
-          const probar = document.createElement("button");
-          probar.textContent = "Probar";
-          probar.addEventListener("click", () => void probarConexion(p, resultado, probar));
-
+          const probar = el("button", "Probar");
+          probar.addEventListener("click", () => void probarConexion(p, salida, probar));
           acciones.append(probar);
 
           if (p.auth === "api-key") {
-            const configurar = document.createElement("button");
-            configurar.textContent = p.configured ? "Reemplazar" : "Configurar";
-            configurar.className = p.configured ? "" : "principal";
+            const configurar = el("button", p.configured ? "Reemplazar" : "Configurar", p.configured ? "" : "principal");
             configurar.addEventListener("click", () => abrirDialogo(p));
             acciones.append(configurar);
           }
-
           if (p.configured && p.auth === "api-key" && p.source === "credentials-file") {
-            const borrar = document.createElement("button");
-            borrar.className = "peligro";
-            borrar.textContent = "Borrar";
+            const borrar = el("button", "Borrar", "peligro");
             borrar.addEventListener("click", () => void borrarClave(p, borrar));
             acciones.append(borrar);
           }
 
           celdaAcciones.append(acciones);
-          tr.append(celdaNombre, celdaAuth, celdaEstado, celdaOrigen, celdaAcciones);
-          filas.append(tr);
+          tr.append(celdaAcciones);
+          tbody.append(tr);
         }
+
+        tabla.append(thead, tbody);
+        cont.append(tabla);
       }
 
       async function probarConexion(p, salida, boton) {
@@ -278,11 +491,11 @@
       function abrirDialogo(p) {
         proveedorActual = p;
         $("titulo").textContent = `Configurar ${p.name}`;
-        $("ayuda").textContent = `La clave se prueba contra el endpoint del proveedor antes de guardarse.`;
+        $("ayuda").textContent = "La clave se prueba contra el endpoint del proveedor antes de guardarse.";
         $("clave").value = "";
         $("aviso").textContent =
           p.source === "environment"
-            ? `Ahora mismo se está usando la variable de entorno ${p.envVar}, que tiene prioridad sobre el archivo.`
+            ? `Ahora mismo se usa la variable de entorno ${p.envVar}, que tiene prioridad sobre el archivo.`
             : "";
         $("dialogo").showModal();
         $("clave").focus();
@@ -299,9 +512,10 @@
         boton.textContent = "Probando…";
         try {
           const r = await api("PUT", `/api/providers/${proveedorActual.id}/credential`, { apiKey: clave });
+          const id = proveedorActual.id;
           $("dialogo").close();
-          await cargar();
-          const salida = document.querySelector(`.resultado[data-id="${proveedorActual.id}"]`);
+          await vistaProveedores();
+          const salida = document.querySelector(`.resultado[data-id="${id}"]`);
           if (salida) {
             salida.className = "resultado ok";
             salida.textContent = `${r.probe.detail} · ${r.probe.latencyMs} ms`;
@@ -319,19 +533,31 @@
         boton.disabled = true;
         try {
           await api("DELETE", `/api/providers/${p.id}/credential`);
-          await cargar();
+          await vistaProveedores();
         } catch (error) {
           alert(error.message);
           boton.disabled = false;
         }
       }
 
-      async function cargar() {
-        const salud = await api("GET", "/api/health");
-        $("raiz").textContent = salud.root;
-        const datos = await api("GET", "/api/providers");
-        proveedores = datos.providers;
-        pintar();
+      // ── Enrutado ──────────────────────────────────────────────────────────
+
+      const VISTAS = { tickets: vistaTickets, proveedores: vistaProveedores };
+
+      async function navegar() {
+        const nombre = (location.hash.replace(/^#\//, "") || "tickets").split("?")[0];
+        const vista = VISTAS[nombre] ?? vistaTickets;
+        for (const enlace of document.querySelectorAll("nav a")) {
+          if (enlace.dataset.vista === nombre) enlace.setAttribute("aria-current", "page");
+          else enlace.removeAttribute("aria-current");
+        }
+        try {
+          await vista();
+        } catch (error) {
+          const cont = $("contenido");
+          cont.textContent = "";
+          cont.append(el("div", `No se pudo cargar la vista: ${error.message}`, "vacio"));
+        }
       }
 
       $("cancelar").addEventListener("click", () => $("dialogo").close());
@@ -339,8 +565,20 @@
       $("clave").addEventListener("keydown", (e) => {
         if (e.key === "Enter") void guardar();
       });
+      $("detalle-cerrar").addEventListener("click", () => $("detalle").close());
+      $("detalle-abrir").addEventListener("click", () => {
+        const meta = $("detalle-meta").textContent ?? "";
+        const ruta = meta.split(" · ")[0];
+        void api("GET", "/api/health").then((salud) => {
+          alert(`Archivo del ticket:\n${salud.root}/tickets/**/${ruta}/ticket.md`);
+        });
+      });
+      window.addEventListener("hashchange", () => void navegar());
 
-      void cargar();
+      void api("GET", "/api/health").then((salud) => {
+        $("raiz").textContent = salud.root;
+      });
+      void navegar();
     </script>
   </body>
 </html>

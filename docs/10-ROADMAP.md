@@ -84,7 +84,8 @@ Ver [`06-CONTROL-APP.md`](06-CONTROL-APP.md).
 | #       | Entregable                                            | Criterio de aceptación                                                                             |
 | ------- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
 | 4.1     | `valmen serve`                                        | **Verificado**: escucha solo en `127.0.0.1`, sin lógica de negocio propia                          |
-| 4.2     | Vistas de tickets y features                          | Estado en vivo, sin recargar                                                                       |
+| 4.2     | Vista de tickets                                      | **Verificado**: los 57 tickets del fixture, con los mismos filtros que el visor anterior            |
+| 4.2bis  | Vista de features                                     | Una feature con su spec, sus deltas y los tickets que la implementan                                |
 | 4.3     | Vista de gate en revisión                             | Muestra el estado congelado y las probabilidades; permite aprobar o rechazar                       |
 | 4.4     | Configuración editable                                | Formulario y texto crudo, con diff antes de guardar                                                |
 | 4.5     | Routing de modelos                                    | Selección de modelo y esfuerzo por rol, con el preset activo                                       |

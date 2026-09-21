@@ -7,7 +7,7 @@
  * todos los comandos sean testeables sin capturar la salida del proceso.
  */
 import { basename, dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { EXIT_SCHEMA, TicketError, toFailure } from "@valmen/core";
 import { gateById } from "@valmen/gate";
@@ -84,6 +84,7 @@ const VALUE_OPTIONS = [
   "--id",
   "--limit",
   "--evaluator",
+  "--port",
 ] as const;
 
 /** Error de uso: se reporta con el código de esquema, como el CLI de referencia. */
@@ -452,15 +453,34 @@ export async function run(argv: readonly string[]): Promise<number> {
   }
 }
 
-// El código de salida se fija cuando la promesa se resuelve. Asignarlo de
-// forma síncrona con una promesa pendiente haría que el proceso terminara con 0
-// sin haber evaluado nada.
-run(process.argv.slice(2)).then(
-  (code) => {
-    process.exitCode = code;
-  },
-  (error: unknown) => {
-    process.stderr.write(`Error inesperado: ${String(error)}\n`);
-    process.exitCode = 1;
-  },
-);
+/**
+ * `true` si este módulo se está ejecutando como programa principal.
+ *
+ * Importar `main.ts` para probar `parseArgs` no debe ejecutar el CLI. Sin esta
+ * guarda, un test que solo quiere analizar argumentos lanza el comando entero,
+ * imprime la ayuda y fija un código de salida: el módulo se vuelve intestable.
+ */
+function isMainModule(): boolean {
+  const entry = process.argv[1];
+  if (entry === undefined) return false;
+  try {
+    return import.meta.url === pathToFileURL(entry).href;
+  } catch {
+    return false;
+  }
+}
+
+if (isMainModule()) {
+  // El código de salida se fija cuando la promesa se resuelve. Asignarlo de
+  // forma síncrona con una promesa pendiente haría que el proceso terminara con
+  // 0 sin haber evaluado nada.
+  void run(process.argv.slice(2)).then(
+    (code) => {
+      process.exitCode = code;
+    },
+    (error: unknown) => {
+      process.stderr.write(`Error inesperado: ${String(error)}\n`);
+      process.exitCode = 1;
+    },
+  );
+}
