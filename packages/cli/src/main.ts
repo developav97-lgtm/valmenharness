@@ -9,7 +9,7 @@
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { EXIT_SCHEMA, TicketError, toFailure } from "@valmen/core";
+import { EXIT_INVARIANT, EXIT_SCHEMA, TicketError, toFailure } from "@valmen/core";
 import { gateById } from "@valmen/gate";
 import { gateRoutingFor } from "@valmen/adapter";
 
@@ -33,7 +33,13 @@ import {
   runGate,
   simulateGate,
 } from "@valmen/engine";
-import { type ServerContext, createMissionControl, defaultContext, loadStatics } from "@valmen/server";
+import {
+  type ServerContext,
+  createMissionControl,
+  defaultContext,
+  loadStatics,
+  recordHumanDecision,
+} from "@valmen/server";
 import {
   type Entity,
   addAiUsage,
@@ -85,6 +91,9 @@ Comandos:
                             Anexa un intento de cierre. No cierra el ticket.
   add-ai-usage --id <ID> --source <s> --confidence <high|medium|low>
                             Anexa consumo de IA. El resto de campos son opcionales.
+  gate-decide --id <ID> --receipt <GR-…> --decision <approve|reject> --actor <nombre>
+                            Registra la decisión humana sobre un gate escalado.
+      --reason <texto>      Queda en el recibo y en el historial del ticket.
   transition --id <ID> --entity <entidad> --to <estado>
                             Mueve el estado de un ticket, un punto o una release.
       --point-id <POINT>    Obligatorio con --entity point.
@@ -168,6 +177,9 @@ const VALUE_OPTIONS = [
   "--qa-status",
   "--release-impact",
   "--qa-waiver-reason",
+  "--receipt",
+  "--decision",
+  "--actor",
   "--tickets",
   "--type",
   "--module",
@@ -257,6 +269,58 @@ export function parseArgs(argv: readonly string[]): Options {
 }
 
 /** Resuelve las rutas del registro a partir de las opciones. */
+/**
+ * `gate decide`: registra la decisión de una persona sobre un gate escalado.
+ *
+ * Faltaba, y su ausencia dejaba el trabajo a medias en las dos direcciones: la
+ * decisión humana solo se podía tomar en la app y la transición solo en el CLI.
+ * Quien trabaja en la terminal no podía cerrar un gate.
+ */
+export function runGateDecide(
+  paths: RegistryPaths,
+  flags: Readonly<Record<string, string | true>>,
+): CommandResult {
+  const ticketId = flag(flags, "id");
+  const receiptId = flag(flags, "receipt");
+  const decision = flag(flags, "decision");
+  const actor = flag(flags, "actor");
+
+  const falta = (nombre: string): CommandResult => ({
+    stdout: "",
+    stderr:
+      `gate decide requiere --${nombre}. ` +
+      "Una decisión humana sin ese dato no es auditable.",
+    exitCode: EXIT_SCHEMA,
+  });
+
+  if (ticketId === undefined) return falta("id");
+  if (receiptId === undefined) return falta("receipt");
+  if (decision !== "approve" && decision !== "reject") {
+    return {
+      stdout: "",
+      stderr: "gate decide requiere --decision approve o --decision reject.",
+      exitCode: EXIT_SCHEMA,
+    };
+  }
+  if (actor === undefined || actor.trim() === "") return falta("actor");
+
+  const resultado = recordHumanDecision(paths, ticketId, receiptId, {
+    decision,
+    actor,
+    reason: flag(flags, "reason") ?? "",
+  });
+
+  if (!resultado.ok) {
+    return { stdout: "", stderr: resultado.error, exitCode: EXIT_INVARIANT };
+  }
+  return {
+    stdout: `Decisión registrada en ${receiptId}: ${decision} por ${actor.trim()}.
+`,
+    stderr: resultado.error === "" ? "" : resultado.error,
+    exitCode: 0,
+  };
+}
+
 /** Los comandos que anexan datos a un ticket. */
 const ESCRITURA = new Set([
   "create",
@@ -736,6 +800,8 @@ export async function run(argv: readonly string[]): Promise<number> {
           result = { stdout: "", stderr: "", exitCode: 0 };
         }
       }
+    } else if (command === "gate-decide") {
+      result = runGateDecide(resolvePaths(options), options.flags);
     } else if (command === "transition") {
       result = runTransition(resolvePaths(options), options.flags);
     } else if (command !== undefined && ESCRITURA.has(command)) {

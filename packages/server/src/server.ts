@@ -23,7 +23,8 @@ import {
 import { readFileSync } from "node:fs";
 import { extname } from "node:path";
 
-import { type RegistryPaths, choosePaths } from "@valmen/engine";
+import { type RegistryPaths, choosePaths, findTicket, transition } from "@valmen/engine";
+import { type JsonObject, nextStates, parseTicket, toFailure } from "@valmen/core";
 
 import {
   type ProviderStatus,
@@ -141,6 +142,37 @@ async function readJson(request: IncomingMessage): Promise<unknown> {
   return JSON.parse(Buffer.concat(chunks).toString("utf8")) as unknown;
 }
 
+/**
+ * Los estados a los que puede ir un ticket, sus puntos y su release.
+ *
+ * Devuelve `null` para el ticket entero si no se puede leer: un ticket ilegible
+ * no tiene transiciones, y fingir que las tiene ofrecería botones que fallan.
+ */
+function transitionsOf(
+  paths: RegistryPaths,
+  id: string,
+): {
+  readonly ticket: readonly string[];
+  readonly release: readonly string[];
+  readonly points: readonly { readonly id: string; readonly to: readonly string[] }[];
+} | null {
+  const located = findTicket(paths, id);
+  if (located === undefined) return null;
+  try {
+    const document = parseTicket(located.text);
+    return {
+      ticket: nextStates("ticket", document.fields.workflow_status),
+      release: nextStates("release", document.fields.release_status),
+      points: (document.blocks.Puntos ?? []).map((punto: JsonObject) => ({
+        id: String(punto.id),
+        to: nextStates("point", String(punto.status)),
+      })),
+    };
+  } catch {
+    return null;
+  }
+}
+
 /** Proveedor tal como lo devuelve la API. Nunca incluye el valor de la clave. */
 type ProviderDto = ProviderStatus;
 
@@ -218,8 +250,66 @@ export async function handleApi(
         gates: tarjetas,
         decisions: listGateDecisions(paths, id),
         corrections: pendingCorrections(paths, id),
+        // Los estados a los que el ticket puede ir **hoy**, según la tabla.
+        // Los calcula el servidor porque la tabla es del contrato: si la
+        // interfaz los dedujera por su cuenta, un cambio en la máquina de
+        // estados dejaría a la app ofreciendo movimientos ilegales.
+        transitions: transitionsOf(paths, id),
       },
     };
+  }
+
+  // POST /api/tickets/:id/transition
+  if (
+    method === "POST" &&
+    partes.length === 4 &&
+    partes[0] === "api" &&
+    partes[1] === "tickets" &&
+    partes[3] === "transition"
+  ) {
+    const id = partes[2] as string;
+    const datos = body as {
+      entity?: unknown;
+      to?: unknown;
+      pointId?: unknown;
+      reason?: unknown;
+      version?: unknown;
+    };
+
+    if (
+      datos.entity !== "ticket" &&
+      datos.entity !== "point" &&
+      datos.entity !== "release"
+    ) {
+      return {
+        status: 400,
+        body: { error: "`entity` debe ser ticket, point o release." },
+      };
+    }
+    if (typeof datos.to !== "string" || datos.to === "") {
+      return { status: 400, body: { error: "Falta `to`." } };
+    }
+
+    try {
+      const resultado = transition({
+        paths,
+        ticketId: id,
+        entity: datos.entity,
+        to: datos.to,
+        ...(typeof datos.pointId === "string" ? { pointId: datos.pointId } : {}),
+        ...(typeof datos.reason === "string" ? { reason: datos.reason } : {}),
+        ...(typeof datos.version === "string" ? { version: datos.version } : {}),
+      });
+      return { status: 200, body: { ok: true, details: resultado.details } };
+    } catch (caught) {
+      // El motor explica por qué no se puede —transición ilegal, precondición
+      // incumplida— y ese mensaje es el que hay que mostrar.
+      const fallo = toFailure(caught);
+      return {
+        status: 409,
+        body: { ok: false, error: fallo.message, exitCode: fallo.exitCode },
+      };
+    }
   }
 
   // POST /api/tickets/:id/gates/:gateId/run
