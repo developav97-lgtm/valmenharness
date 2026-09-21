@@ -123,11 +123,16 @@ el artefacto sería dibujar una lista vacía.
 
 ### Fase 5 — Features grandes y procesos (2–3 semanas)
 
-**Empieza por las transiciones de estado.** Son lo que falta para que la Fase 4 cumpla su
-criterio: avanzar un ticket (`planned → approved`, `in_progress → closed`) desde la app,
-escribiendo el evento en el bloque append-only y refrescando el índice. Tiene sus propias
-invariantes —un solo escritor, historial intacto, coherencia del validador— y por eso es una
-pieza y no un botón.
+**Las transiciones ya están hechas, y con ellas el camino de escritura completo.** El
+inventario de la implementación de referencia está en
+[`14-INVENTARIO-TICKETPY.md`](14-INVENTARIO-TICKETPY.md), y los catorce comandos están
+portados y verificados con una prueba diferencial de 48 casos que compara los dos CLI sobre
+dos copias del mismo registro, byte a byte.
+
+Lo que queda de esa migración antes de borrar `ticket.py` del proyecto real: el reporte
+Markdown del visor, `release_notes.py` con su artefacto de novedades, y **la decisión de si
+esos dos se absorben o se declaran como procesos del proyecto**. Después, el dogfooding sobre
+`SaiOpenCloud` en lugar de sobre este repositorio.
 
 Criterio de aceptación: el módulo de inventario especificado, descompuesto en tickets con
 sprints, y con los dos primeros tickets implementados a través del harness.
