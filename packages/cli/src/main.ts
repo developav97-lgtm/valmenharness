@@ -14,6 +14,7 @@ import {
   type CommandResult,
   buildIndex,
   listActive,
+  adoptProject,
   migrateRegistry,
   showTicket,
   syncProject,
@@ -34,6 +35,7 @@ Comandos:
   index [--check]           Regenera el índice, o comprueba que esté al día.
   migrate [--dry-run]       Lleva el registro al esquema vigente.
   sync [--check]            Proyecta .valmen/ a AGENTS.md.
+  adopt [--dry-run]         Incorpora el harness a un proyecto existente.
 
 Opciones globales:
   --root <ruta>             Raíz del proyecto (por defecto: el directorio actual).
@@ -220,6 +222,11 @@ export function dispatch(options: Options): CommandResult {
 
     case "migrate":
       return migrateRegistry(paths, {
+        dryRun: options.flags["dry-run"] === true,
+      });
+
+    case "adopt":
+      return adoptProject(options.root, basename(options.root), {
         dryRun: options.flags["dry-run"] === true,
       });
 

@@ -140,6 +140,23 @@ function parseBlock(
     }
 
     const rest = line.text.slice(colon + 1).trim();
+
+    // Lista o mapa vacío en línea: `gates: []` y `budgets: {}`.
+    //
+    // Sin este caso, `[]` se interpretaría como el texto "[]", que es un valor
+    // con contenido. El efecto sería silencioso: `gates: []` haría que el
+    // documento generado anunciara gates configurados que no existen.
+    if (rest === "[]") {
+      map[key] = [];
+      index += 1;
+      continue;
+    }
+    if (rest === "{}") {
+      map[key] = {};
+      index += 1;
+      continue;
+    }
+
     if (rest !== "") {
       map[key] = parseScalar(rest);
       index += 1;

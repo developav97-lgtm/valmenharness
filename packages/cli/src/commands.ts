@@ -7,7 +7,7 @@
  * sin cambios. Ver docs/09-MIGRACION-SAICLOUD.md.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, relative } from "node:path";
 
 import {
   EXIT_SCHEMA,
@@ -23,8 +23,12 @@ import {
 } from "@valmen/core";
 import {
   type ProjectModel,
+  adoptPlan,
+  chooseTicketsDir,
   loadProjectModel,
+  profileProject,
   projectAgentsMd,
+  proposeConfig,
 } from "@valmen/adapter";
 
 import {
@@ -407,4 +411,138 @@ export function syncProject(
         : "  Fuente: .valmen/config.yaml + .valmen/rules/*.md",
     ].join("\n") + "\n",
   );
+}
+
+/**
+ * `adopt`: incorpora el harness a un proyecto que ya existe.
+ *
+ * Regla dura: **nada se borra y nada se mueve sin que el usuario lo vea**. La
+ * adopción crea `.valmen/` y `AGENTS.md`; todo lo demás queda intacto y solo se
+ * reporta.
+ *
+ * No llama a ningún modelo. El perfil del proyecto se deriva de los manifiestos
+ * y de la estructura de directorios, porque es información que el código puede
+ * leer con exactitud. Un modelo se reserva para lo que el código no puede
+ * decidir, y clasificar reglas en prosa es un paso posterior y explícito.
+ *
+ * Con `--dry-run` informa sin escribir.
+ */
+export function adoptProject(
+  root: string,
+  projectName: string,
+  options: { dryRun?: boolean } = {},
+): CommandResult {
+  const dryRun = options.dryRun === true;
+
+  let profile;
+  try {
+    profile = profileProject(root, projectName);
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+
+  const ticketsDir = chooseTicketsDir(root);
+  const plan = adoptPlan(root);
+  const config = proposeConfig(profile, ticketsDir);
+  const alreadyAdopted = existsSync(plan.configPath);
+
+  const lines: string[] = [
+    dryRun ? "Adopción (simulación)" : "Adopción",
+    "",
+    "Perfil del proyecto",
+    `  nombre            ${profile.name}`,
+    `  registro          ${ticketsDir}${existsSync(join(root, ticketsDir)) ? "" : "  (se creará al usar el harness)"}`,
+  ];
+
+  if (profile.detectedFiles.length > 0) {
+    lines.push(
+      "",
+      `  Manifiestos detectados (${profile.detectedFiles.length}):`,
+    );
+    for (const file of profile.detectedFiles) {
+      lines.push(`    ${file.path}  — ${file.kind}`);
+    }
+  }
+
+  if (profile.dependencies.length > 0) {
+    lines.push("", `  Dependencias clave (${profile.dependencies.length}):`);
+    for (const dependency of profile.dependencies.slice(0, 12)) {
+      lines.push(`    ${dependency.name} ${dependency.version}`);
+    }
+    if (profile.dependencies.length > 12) {
+      lines.push(`    … y ${profile.dependencies.length - 12} más`);
+    }
+  }
+
+  if (profile.capabilities.length > 0) {
+    lines.push("", `  Capacidades: ${profile.capabilities.join(", ")}`);
+  }
+
+  if (profile.legacyConfigs.length > 0) {
+    lines.push("", "Configuración agéntica preexistente (NO se toca):");
+    for (const legacy of profile.legacyConfigs) {
+      const note = legacy.selfDeclaredLegacy
+        ? "  [ya marcada como legado]"
+        : "";
+      lines.push(`    ${legacy.path}  — ${legacy.kind}${note}`);
+    }
+    lines.push(
+      "",
+      "  La adopción no borra ni reordena nada de esto. Si alguna de sus reglas",
+      "  describe el dominio del proyecto, cópiela a .valmen/rules/ y quedará",
+      "  incluida en AGENTS.md.",
+    );
+  }
+
+  lines.push("", "Se creará:", `  ${relative(root, plan.configPath)}`);
+
+  if (alreadyAdopted) {
+    lines.push(
+      "",
+      "  Ya existe una configuración. La adopción NO la sobrescribe:",
+      "  revise el contenido propuesto y fusiónelo a mano si le sirve.",
+      "",
+      "Configuración propuesta (extracto):",
+      ...config
+        .split("\n")
+        .slice(0, 12)
+        .map((line) => `  ${line}`),
+    );
+    return ok(lines.join("\n") + "\n");
+  }
+
+  if (dryRun) {
+    lines.push(
+      "",
+      "Configuración propuesta:",
+      ...config.split("\n").map((line) => `  ${line}`),
+      "",
+      "  Ejecute sin --dry-run para aplicarlo.",
+    );
+    return ok(lines.join("\n") + "\n");
+  }
+
+  atomicWrite(plan.configPath, config);
+  mkdirSync(plan.rulesDir, { recursive: true });
+
+  lines.push(
+    `  ${relative(root, plan.rulesDir)}/`,
+    "",
+    "Reglas del proyecto",
+    "  El harness no puede separar por sí solo lo que es regla de dominio de lo",
+    "  que es flujo de trabajo. Cree archivos en .valmen/rules/ con lo que",
+    "  describa ESTE sistema —stack, invariantes de negocio, políticas— y",
+    "  ejecute `valmen sync` para que se incluyan en AGENTS.md.",
+  );
+
+  if (existsSync(plan.agentsPath)) {
+    lines.push(
+      "",
+      "  Existe un AGENTS.md previo. `valmen sync` lo reemplazará por el generado,",
+      "  así que conserve su contenido en .valmen/rules/ antes de sincronizar.",
+    );
+  }
+
+  return ok(lines.join("\n") + "\n");
 }
