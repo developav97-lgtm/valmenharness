@@ -105,6 +105,11 @@ Comandos:
   feature show <slug>       Muestra el brief y los artefactos de una feature.
   feature new <slug> --title <t>
                             Crea una feature en draft, en .valmen/features/.
+  feature decompose <slug>  Propone el grafo de tickets con el modelo del rol
+                            architect y escribe tickets.yaml. Pasa a decomposed.
+      --dry-run             Muestra la descomposición sin escribirla.
+      --model <id>          Sobrescribe el modelo del rol architect.
+      --provider <id>       Sobrescribe el proveedor.
   serve [--port <n>]        Mission Control en 127.0.0.1.
   simulate <gate>           Calibra un gate sobre el registro histórico.
       --limit <n>           Evalúa solo los primeros n sujetos.
@@ -186,6 +191,7 @@ const VALUE_OPTIONS = [
   "--decision",
   "--actor",
   "--tickets",
+  "--provider",
   "--type",
   "--module",
   "--request",
@@ -674,9 +680,15 @@ export function dispatch(options: Options): CommandResult {
       );
 
     case "feature":
-      // `feature <sub> [args]`: se despacha en su propio módulo, que conoce el
-      // registro de features y este archivo no tiene por qué.
-      return runFeature(options.root, rest, options.flags);
+      // `feature <sub> [args]` es asíncrono —`decompose` habla con un
+      // proveedor—, así que se despacha en `run` y no aquí. Los subcomandos de
+      // solo lectura siguen entrando por esta vía.
+      return {
+        stdout: "",
+        stderr:
+          "El comando feature es asíncrono; use la línea de comandos.",
+        exitCode: EXIT_SCHEMA,
+      };
 
     default:
       return {
@@ -810,6 +822,8 @@ export async function run(argv: readonly string[]): Promise<number> {
           result = { stdout: "", stderr: "", exitCode: 0 };
         }
       }
+    } else if (command === "feature") {
+      result = await runFeature(options.root, rest, options.flags);
     } else if (command === "gate-decide") {
       result = runGateDecide(resolvePaths(options), options.flags);
     } else if (command === "transition") {

@@ -10,11 +10,17 @@
  * comando aparte, porque cuesta una llamada a un modelo y este no.
  */
 import { EXIT_SCHEMA, toFailure } from "@valmen/core";
+import { architectRoutingFor } from "@valmen/adapter";
+import { callChat } from "@valmen/credentials";
 import {
   type FeatureRow,
+  advanceFeature,
   createFeature,
+  decomposeFeature,
+  decompositionPrompt,
   listFeatures,
   readFeature,
+  renderDecomposition,
 } from "@valmen/engine";
 
 import type { CommandResult } from "./commands.js";
@@ -154,17 +160,171 @@ export function featureNew(
 }
 
 /**
+ * `feature decompose`: el grafo de tickets, propuesto por el modelo `architect`.
+ *
+ * Es el único comando del CLI que le pide a un modelo que **escriba** un artefacto
+ * del registro, así que es el que más comprueba: los requisitos salen de la spec
+ * y no del modelo, la respuesta se reescribe desde la estructura validada, y el
+ * `tickets.yaml` resultante se relee con el mismo parser que leería un archivo
+ * escrito a mano. Si algo no cuadra, no se escribe nada.
+ *
+ * El modelo es el del rol `architect` del routing, y es **a propósito** distinto
+ * del que evalúa los gates: un modelo revisándose a sí mismo no revisa nada.
+ */
+async function featureDecompose(
+  root: string,
+  slug: string | undefined,
+  flags: Readonly<Record<string, string | true>>,
+): Promise<CommandResult> {
+  if (slug === undefined) {
+    return error("feature decompose requiere un slug.", EXIT_SCHEMA);
+  }
+
+  const routing = architectRoutingFor(root);
+  if (routing.model === "") {
+    return error(
+      "No hay modelo para el rol architect. Configúralo en Mission Control " +
+        "(Routing de modelos) o en .valmen/routing.yaml.",
+      EXIT_SCHEMA,
+    );
+  }
+
+  const dryRun = flags["dry-run"] === true;
+  const rawModel = flags["model"];
+  const modelo = typeof rawModel === "string" ? rawModel : routing.model;
+  const rawProvider = flags["provider"];
+  const proveedor =
+    typeof rawProvider === "string" ? rawProvider : routing.provider;
+
+  try {
+    const resultado = await decomposeFeature({
+      root,
+      slug,
+      write: !dryRun,
+      callModel: async (entrada) => {
+        const respuesta = await callChat({
+          provider: proveedor,
+          model: modelo,
+          // El presupuesto de salida es generoso a propósito: un modelo que
+          // razona gasta tokens pensando **antes** de escribir, y con un límite
+          // bajo devuelve contenido vacío con HTTP 200. Medido con K3.
+          maxTokens: 16_000,
+          effort: routing.effort,
+          messages: [
+            { role: "system", content: SISTEMA_DESCOMPOSICION },
+            { role: "user", content: decompositionPrompt(entrada) },
+          ],
+          structured: {
+            name: "feature_decomposition",
+            description: "El grafo de tickets de la feature.",
+            schema: ESQUEMA_DESCOMPOSICION,
+          },
+        });
+        return {
+          proposal: JSON.parse(respuesta.content) as unknown,
+          decomposer: {
+            provider: proveedor,
+            model: respuesta.model,
+            ...(respuesta.usage.costUsd === null
+              ? {}
+              : { costUsd: respuesta.usage.costUsd }),
+          },
+        };
+      },
+    });
+
+    if (!dryRun) {
+      advanceFeature({ root, slug, to: "decomposed" });
+    }
+    return ok(renderDecomposition(resultado));
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/** El mensaje de sistema del descomponedor. */
+const SISTEMA_DESCOMPOSICION = [
+  "Eres un arquitecto de software que descompone una especificación en tickets",
+  "de implementación.",
+  "",
+  "Reglas:",
+  "1. Cada requisito de la spec tiene que quedar cubierto por al menos un ticket.",
+  "   Es la regla dura: un requisito sin cobertura invalida la descomposición.",
+  "2. No inventes requisitos. La cobertura usa exactamente los identificadores que",
+  "   se te dan.",
+  "3. Un ticket no puede estar en dos sprints, y `depends_on` solo puede mencionar",
+  "   tickets que existan en el grafo. Sin ciclos.",
+  "4. Un ticket es una unidad revisable: si toca más de un módulo o excede unas",
+  "   pocas horas de trabajo, divídelo.",
+  "5. El identificador es `<TIPO>-<MODULO>-<DESC>-<YYYYMMDD>`, en mayúsculas.",
+  "",
+  "Responde solo con el grafo, en la forma que se te pide.",
+].join("\n");
+
+/** La forma exacta de la respuesta, para los proveedores que no la imponen. */
+const ESQUEMA_DESCOMPOSICION = {
+  type: "object",
+  properties: {
+    sprints: {
+      type: "array",
+      description: "Los tramos entregables, en orden.",
+      items: {
+        type: "object",
+        properties: {
+          id: { type: "string", description: "S1, S2…" },
+          goal: { type: "string", description: "Qué se entrega en este tramo." },
+          tickets: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                id: { type: "string" },
+                title: { type: "string" },
+                depends_on: {
+                  type: "array",
+                  items: { type: "string" },
+                },
+              },
+              required: ["id", "title", "depends_on"],
+              additionalProperties: false,
+            },
+          },
+        },
+        required: ["id", "goal", "tickets"],
+        additionalProperties: false,
+      },
+    },
+    coverage: {
+      type: "array",
+      description: "Qué ticket cubre qué requisito. Uno por requisito.",
+      items: {
+        type: "object",
+        properties: {
+          requirement: { type: "string", description: "R-XXX-NNN de la spec." },
+          covered_by: { type: "array", items: { type: "string" } },
+        },
+        required: ["requirement", "covered_by"],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ["sprints", "coverage"],
+  additionalProperties: false,
+} as const;
+
+/**
  * `feature <subcomando>`: el despachador.
  *
  * Se despacha aquí y no en el `switch` de `main.ts` porque la forma es
  * `feature <sub> [args]`, y meterlo en el switch obligaría a que `main.ts`
- * supiera de features.
+ * supiera de features. Es asíncrono porque `decompose` habla con un proveedor.
  */
-export function runFeature(
+export async function runFeature(
   root: string,
   args: readonly string[],
   flags: Readonly<Record<string, string | true>>,
-): CommandResult {
+): Promise<CommandResult> {
   const [sub, ...resto] = args;
   const rawTitle = flags["title"];
   const title = typeof rawTitle === "string" ? rawTitle : undefined;
@@ -176,14 +336,16 @@ export function runFeature(
       return featureShow(root, resto[0]);
     case "new":
       return featureNew(root, resto[0], title);
+    case "decompose":
+      return featureDecompose(root, resto[0], flags);
     case undefined:
       return error(
-        "feature requiere un subcomando: new, show o list.",
+        "feature requiere un subcomando: new, show, list o decompose.",
         EXIT_SCHEMA,
       );
     default:
       return error(
-        `Subcomando de feature desconocido: ${sub}. Use new, show o list.`,
+        `Subcomando de feature desconocido: ${sub}. Use new, show, list o decompose.`,
         EXIT_SCHEMA,
       );
   }

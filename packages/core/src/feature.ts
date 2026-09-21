@@ -176,16 +176,58 @@ export interface CoverageEntry {
   readonly coveredBy: readonly string[];
 }
 
+/**
+ * Un ticket hijo de una feature, tal como aparece en un sprint.
+ *
+ * La forma corta —`- FEATURE-INVENTARIO-API-20260921`, solo el identificador— se
+ * sigue admitiendo porque escribir el mapa completo para un ticket sin
+ * dependencias es ruido. Las dos formas se normalizan antes de usarlas, así que
+ * el resto del motor ve una sola.
+ */
+export type FeatureTicket = string | {
+  readonly id: string;
+  readonly title?: string;
+  /** Los tickets que tienen que estar cerrados antes de empezar este. */
+  readonly dependsOn?: readonly string[];
+};
+
+/** Un ticket hijo, ya normalizado. */
+export interface NormalizedTicket {
+  readonly id: string;
+  readonly title: string;
+  readonly dependsOn: readonly string[];
+  /** El sprint al que pertenece. */
+  readonly sprint: string;
+}
+
 /** Lo que el `tickets.yaml` declara. */
 export interface FeatureDecomposition {
   readonly sprints: readonly {
     readonly id: string;
     readonly goal: string;
-    readonly tickets: readonly string[];
+    readonly tickets: readonly FeatureTicket[];
   }[];
   readonly coverage: readonly CoverageEntry[];
   /** Los huecos declarados. Para pasar la compuerta tiene que estar vacío. */
   readonly gaps: readonly string[];
+}
+
+/** Todos los tickets de la descomposición, en el orden en que se declararon. */
+export function decompositionTickets(
+  decomposition: FeatureDecomposition,
+): NormalizedTicket[] {
+  return decomposition.sprints.flatMap((sprint) =>
+    sprint.tickets.map((ticket) =>
+      typeof ticket === "string"
+        ? { id: ticket, title: "", dependsOn: [], sprint: sprint.id }
+        : {
+            id: ticket.id,
+            title: ticket.title ?? "",
+            dependsOn: [...(ticket.dependsOn ?? [])],
+            sprint: sprint.id,
+          },
+    ),
+  );
 }
 
 /** Un hueco de cobertura: un requisito que ningún ticket cubre. */
@@ -210,7 +252,7 @@ export function coverageGaps(
     decomposition.coverage.map((entrada) => [entrada.requirement, entrada.coveredBy]),
   );
   const enSprints = new Set(
-    decomposition.sprints.flatMap((sprint) => [...sprint.tickets]),
+    decompositionTickets(decomposition).map((ticket) => ticket.id),
   );
 
   const huecos: CoverageGap[] = [];
@@ -267,6 +309,82 @@ export function assertDecompositionComplete(
       ". Cada requisito necesita al menos un ticket en un sprint.",
     EXIT_INVARIANT,
   );
+}
+
+/**
+ * Los ciclos del grafo de dependencias.
+ *
+ * Devuelve cada ciclo como la lista de identificadores que lo forman. Se listan
+ * **todos** y no el primero: quien tiene que arreglarlo necesita ver el grafo
+ * entero de un vistazo, y arreglar un ciclo para descubrir el siguiente cuesta
+ * otra vuelta.
+ *
+ * Un ticket que no existe cuenta como ciclo. `dependsOn: [ALGO-QUE-NO-ESTA]` no
+ * es una dependencia pendiente: es un error de escritura que, si se ignora,
+ * produce un grafo que dice estar bien y un sprint que nunca arranca.
+ */
+export function dependencyCycles(
+  decomposition: FeatureDecomposition,
+): string[][] {
+  const tickets = decompositionTickets(decomposition);
+  const porId = new Map(tickets.map((ticket) => [ticket.id, ticket]));
+
+  const ciclos: string[][] = [];
+  const vistos = new Set<string>();
+  const enCamino = new Set<string>();
+  const camino: string[] = [];
+
+  const visitar = (id: string): void => {
+    if (enCamino.has(id)) {
+      // El ciclo es el tramo del camino que va desde la primera aparición.
+      ciclos.push([...camino.slice(camino.indexOf(id)), id]);
+      return;
+    }
+    if (vistos.has(id)) return;
+
+    vistos.add(id);
+    enCamino.add(id);
+    camino.push(id);
+
+    const ticket = porId.get(id);
+    if (ticket === undefined) {
+      // Una dependencia que no existe: se reporta como un ciclo de un solo
+      // elemento, que es lo que es —un ticket que se espera a sí mismo—.
+      ciclos.push([id, id]);
+    } else {
+      for (const dependencia of ticket.dependsOn) visitar(dependencia);
+    }
+
+    camino.pop();
+    enCamino.delete(id);
+  };
+
+  for (const ticket of tickets) visitar(ticket.id);
+  return ciclos;
+}
+
+/**
+ * La compuerta mecánica completa.
+ *
+ * Cobertura y grafo, en ese orden: sin cobertura no importa si el grafo está
+ * bien, porque la descomposición no responde a la spec. Se comprueban las dos y
+ * se reportan juntas, para no obligar a dos vueltas.
+ */
+export function assertDecomposable(
+  requirements: readonly FeatureRequirement[],
+  decomposition: FeatureDecomposition,
+): void {
+  const ciclos = dependencyCycles(decomposition);
+  if (ciclos.length > 0) {
+    fail(
+      "No se puede pasar a decomposed: el grafo de dependencias tiene " +
+        `${ciclos.length} ciclo(s): ` +
+        ciclos.map((ciclo) => ciclo.join(" → ")).join("; ") +
+        ".",
+      EXIT_INVARIANT,
+    );
+  }
+  assertDecompositionComplete(requirements, decomposition);
 }
 
 // ── Validación del documento ────────────────────────────────────────────────

@@ -373,6 +373,34 @@ export function gateRoutingFor(root: string): GateRouting {
 }
 
 /**
+ * El modelo que descompone una feature en tickets.
+ *
+ * Es el rol `architect`, y se resuelve aparte del evaluador porque **no puede ser
+ * el mismo modelo**: la compuerta de descomposición existe para revisar lo que
+ * escribió el descomponedor, y un modelo revisándose a sí mismo no revisa nada.
+ * Ver `docs/02-MOTOR.md` §5.
+ */
+export interface ArchitectRouting {
+  readonly provider: string;
+  readonly model: string;
+  readonly effort: Effort;
+  /** De dónde salió el modelo. */
+  readonly source: RouteSource;
+}
+
+/** Resuelve el modelo que usará la descomposición en este proyecto. */
+export function architectRoutingFor(root: string): ArchitectRouting {
+  const rutas = resolveRouting(readProjectRouting(root));
+  const arquitecto = rutas.find((ruta) => ruta.role === "architect");
+  return {
+    provider: arquitecto?.provider ?? DEFAULT_PROVIDER,
+    model: arquitecto?.model ?? "",
+    effort: arquitecto?.effort ?? "auto",
+    source: arquitecto?.source ?? "sistema",
+  };
+}
+
+/**
  * Genera el contenido de `.valmen/routing.yaml`.
  *
  * Lo que escribe la interfaz es exactamente esto, así que el archivo queda

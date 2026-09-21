@@ -7,3 +7,4 @@
 
 export * from "./credentials.js";
 export * from "./endpoints.js";
+export * from "./chat.js";

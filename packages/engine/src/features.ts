@@ -27,7 +27,9 @@ import { join } from "node:path";
 import {
   EXIT_HISTORY,
   FEATURE_TEMPLATE,
+  MutationLock,
   SCHEMA_VERSION,
+  assertFeatureTransition,
   atomicWrite,
   fail,
   parseFeatureFrontmatter,
@@ -229,4 +231,69 @@ function reemplazarCampo(text: string, clave: string, valor: string): string {
     fail(`La plantilla de feature no tiene el campo ${clave} exactamente una vez.`);
   }
   return text.replace(patron, `${clave}: ${valor}`);
+}
+
+/** Lo que hace falta para mover el estado de una feature. */
+export interface AdvanceFeatureRequest {
+  readonly root: string;
+  readonly slug: string;
+  readonly to: string;
+  readonly now?: (() => Date) | undefined;
+  /** Se ejecuta con el lock tomado, antes de escribir. Para lo que va junto. */
+  readonly alongside?: (() => void) | undefined;
+}
+
+/**
+ * Mueve el estado de una feature y actualiza `updated`.
+ *
+ * Se toma el lock del registro de features para toda la operación, igual que en
+ * los tickets, y por la misma razón: dos comandos solapados —un hook y una
+ * ejecución manual— dejarían un estado intermedio que nadie escribió.
+ *
+ * La transición se comprueba **antes** de tocar el disco, así que un movimiento
+ * ilegal no deja el archivo a medio escribir. Y el texto nuevo se revalida antes
+ * de guardarlo: si el reemplazo rompiera el frontmatter, el error sale aquí y no
+ * en el siguiente comando que lea la feature.
+ */
+export function advanceFeature(request: AdvanceFeatureRequest): FeatureRow {
+  const { root, slug, to } = request;
+  const leida = readFeature(root, slug);
+  if (leida === null) {
+    fail(`No existe la feature "${slug}" en .valmen/features/.`);
+  }
+  if (leida.row.invalid !== null) {
+    fail(`La feature "${slug}" no es válida: ${leida.row.invalid}`);
+  }
+
+  assertFeatureTransition(leida.row.state, to);
+
+  const date = today(request.now?.() ?? new Date());
+  let texto = reemplazarCampo(leida.text, "state", to);
+  texto = reemplazarCampo(texto, "updated", date);
+
+  const campos = parseFeatureFrontmatter(texto);
+  validateFeatureFields({
+    id: campos["id"] as string,
+    title: campos["title"] as string,
+    state: campos["state"] as string,
+    created: campos["created"] as string,
+    updated: campos["updated"] as string,
+  });
+
+  const lock = MutationLock.acquire(featuresDir(root));
+  try {
+    // Lo que tenga que ir en la misma sección crítica —el `tickets.yaml` de una
+    // descomposición, por ejemplo— va aquí: escribirlo antes de tomar el lock
+    // dejaría un grafo sin el estado que lo anuncia.
+    request.alongside?.();
+    atomicWrite(featurePath(root, slug), texto);
+  } finally {
+    lock.release();
+  }
+
+  return {
+    ...leida.row,
+    state: to,
+    updated: date,
+  };
 }
