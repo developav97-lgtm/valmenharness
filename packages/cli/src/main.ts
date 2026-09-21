@@ -6,7 +6,8 @@
  * devuelve un `CommandResult` en vez de escribir directamente, lo que hace que
  * todos los comandos sean testeables sin capturar la salida del proceso.
  */
-import { basename, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { EXIT_SCHEMA, TicketError, toFailure } from "@valmen/core";
 import { gateById } from "@valmen/gate";
@@ -25,6 +26,7 @@ import {
 import { type RegistryPaths, defaultPaths, legacyPaths } from "./discovery.js";
 import { runGate } from "./gate.js";
 import { renderSimulation, simulateGate } from "./simulate.js";
+import { type ServerContext, createMissionControl, defaultContext, loadStatics } from "@valmen/server";
 
 const USAGE = `valmen — harness agéntico
 
@@ -41,6 +43,7 @@ Comandos:
   adopt [--dry-run]         Incorpora el harness a un proyecto existente.
   gate <gate> --id <ID>     Evalúa un gate contra un ticket.
       --evaluator <id>      auto (por defecto) · command · jev · llm-judge
+  serve [--port <n>]        Mission Control en 127.0.0.1.
   simulate <gate>           Calibra un gate sobre el registro histórico.
       --limit <n>           Evalúa solo los primeros n sujetos.
       --json                Informe en JSON en vez de tabla.
@@ -294,6 +297,59 @@ export async function run(argv: readonly string[]): Promise<number> {
   try {
     const [command, ...rest] = options.positionals;
     let result: CommandResult | undefined;
+
+    if (command === "serve") {
+      const rawPort = options.flags["port"];
+      const puerto = typeof rawPort === "string" ? Number.parseInt(rawPort, 10) : 4173;
+      // La interfaz se publica junto al código compilado, en `dist/web`. Se
+      // resuelve desde la ubicación de este archivo y no desde el directorio de
+      // trabajo: el servidor debe arrancar igual desde cualquier carpeta.
+      const raizWeb = join(dirname(fileURLToPath(import.meta.url)), "web");
+      let statics: ServerContext["statics"];
+      try {
+        statics = loadStatics(raizWeb, ["index.html"]);
+      } catch (caught) {
+        const failure = toFailure(caught);
+        result = {
+          stdout: "",
+          stderr:
+            `No se encontró la interfaz en ${raizWeb}. ` +
+            "Ejecute `npm run build` para generarla.",
+          exitCode: EXIT_SCHEMA,
+        };
+        process.stderr.write(`${result.stderr}\n`);
+        return result.exitCode;
+      }
+
+      const contexto: ServerContext = { ...defaultContext(options.root), statics };
+      const servidor = createMissionControl(contexto);
+      const puertoFinal = Number.isNaN(puerto) ? 4173 : puerto;
+
+      await new Promise<void>((resolve, reject) => {
+        servidor.once("error", reject);
+        // Solo en la interfaz de loopback: la frontera de confianza es la
+        // máquina, igual que en cualquier herramienta que maneja credenciales.
+        servidor.listen(puertoFinal, "127.0.0.1", resolve);
+      });
+
+      process.stdout.write(
+        [
+          "Mission Control",
+          `  http://127.0.0.1:${puertoFinal}`,
+          `  raíz del proyecto   ${options.root}`,
+          "",
+          "  Escucha solo en 127.0.0.1. Detenlo con Ctrl-C.",
+          "",
+        ].join("\n"),
+      );
+
+      await new Promise<void>((resolve) => {
+        process.once("SIGINT", resolve);
+        process.once("SIGTERM", resolve);
+      });
+      servidor.close();
+      return 0;
+    }
 
     if (command === "simulate") {
       const gateId = rest[0];

@@ -29,14 +29,14 @@ migración manual de configuración entre agentes.
 
 Recordatorio de [`00-VISION.md` §8](00-VISION.md#8-principio-de-crecimiento-el-harness-sube-de-nivel):
 
-| Nivel | Capacidad | Fase que lo alcanza |
-|---|---|---|
-| **0** | Registro: tickets y features en archivos, gates humanos | **Fase 1** ✅ MVP |
-| **1** | Config unificada y proyectada; gates automáticos con Jev | Fase 2–3 |
-| **2** | Descomposición de features grandes; procesos encadenables | Fase 5 |
-| **3** | Verificación de implementación; criterios de aceptación como tests | Fase 5–6 |
-| **4** | Semi-autonomía: tickets de bajo riesgo de punta a punta | Fase 6 |
-| **5** | Aprendizaje: presets y umbrales ajustados por evidencia | Fase 6+ |
+| Nivel | Capacidad                                                          | Fase que lo alcanza |
+| ----- | ------------------------------------------------------------------ | ------------------- |
+| **0** | Registro: tickets y features en archivos, gates humanos            | **Fase 1** ✅ MVP   |
+| **1** | Config unificada y proyectada; gates automáticos con Jev           | Fase 2–3            |
+| **2** | Descomposición de features grandes; procesos encadenables          | Fase 5              |
+| **3** | Verificación de implementación; criterios de aceptación como tests | Fase 5–6            |
+| **4** | Semi-autonomía: tickets de bajo riesgo de punta a punta            | Fase 6              |
+| **5** | Aprendizaje: presets y umbrales ajustados por evidencia            | Fase 6+             |
 
 ## 3. Fases en detalle
 
@@ -44,14 +44,14 @@ Recordatorio de [`00-VISION.md` §8](00-VISION.md#8-principio-de-crecimiento-el-
 
 Antes de escribir el motor, la infraestructura del propio producto.
 
-| Entregable | Detalle |
-|---|---|
-| Monorepo | pnpm workspaces + Turborepo + TypeScript estricto |
-| CI propio | lint, typecheck, test, build en cada PR |
-| Corpus determinista | `bench/journeys/` — el motor se prueba **sin llamar a ningún modelo** |
-| Contratos versionados | Los esquemas Zod se publican como JSON Schema con semver |
-| Documentación de paquete | Plantilla fija: Resumen / Uso / Contrato / Limitaciones |
-| Toolchain | Node 22+, sin dependencias en el camino crítico |
+| Entregable               | Detalle                                                               |
+| ------------------------ | --------------------------------------------------------------------- |
+| Monorepo                 | pnpm workspaces + Turborepo + TypeScript estricto                     |
+| CI propio                | lint, typecheck, test, build en cada PR                               |
+| Corpus determinista      | `bench/journeys/` — el motor se prueba **sin llamar a ningún modelo** |
+| Contratos versionados    | Los esquemas Zod se publican como JSON Schema con semver              |
+| Documentación de paquete | Plantilla fija: Resumen / Uso / Contrato / Limitaciones               |
+| Toolchain                | Node 22+, sin dependencias en el camino crítico                       |
 
 **Decisión deliberada:** empezar por el corpus de pruebas, no por el código. Un harness que
 no se puede probar sin gastar tokens es un harness que no se puede refactorizar.
@@ -81,28 +81,28 @@ con la decisión humana en ≥90% y hay **cero falsos aprobados** en tickets de 
 
 Ver [`06-CONTROL-APP.md`](06-CONTROL-APP.md).
 
-| # | Entregable | Criterio de aceptación |
-|---|---|---|
-| 4.1 | `valmen serve` | App en `127.0.0.1`, sin lógica de negocio propia: llama al mismo motor que el CLI |
-| 4.2 | Vistas de tickets y features | Estado en vivo, sin recargar |
-| 4.3 | Vista de gate en revisión | Muestra el estado congelado y las probabilidades; permite aprobar o rechazar |
-| 4.4 | Configuración editable | Formulario y texto crudo, con diff antes de guardar |
-| 4.5 | Routing de modelos | Selección de modelo y esfuerzo por rol, con el preset activo |
-| 4.6 | Chat de configuración | Propone cambios; nunca escribe directo |
-| **4.7** | **Configuración de proveedores y claves en la app** ⚠ | Ver abajo |
+| #       | Entregable                                            | Criterio de aceptación                                                                             |
+| ------- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| 4.1     | `valmen serve`                                        | **Verificado**: escucha solo en `127.0.0.1`, sin lógica de negocio propia                          |
+| 4.2     | Vistas de tickets y features                          | Estado en vivo, sin recargar                                                                       |
+| 4.3     | Vista de gate en revisión                             | Muestra el estado congelado y las probabilidades; permite aprobar o rechazar                       |
+| 4.4     | Configuración editable                                | Formulario y texto crudo, con diff antes de guardar                                                |
+| 4.5     | Routing de modelos                                    | Selección de modelo y esfuerzo por rol, con el preset activo                                       |
+| 4.6     | Chat de configuración                                 | Propone cambios; nunca escribe directo                                                             |
+| **4.7** | **Configuración de proveedores y claves en la app** ⚠ | **Verificado**: agregar, probar antes de guardar, reemplazar y borrar desde la interfaz. Ver abajo |
 
 **El 4.7 es un requisito explícito del usuario y es bloqueante.** Sin él, la Fase 4 no está
 terminada: cada prueba de proveedor seguiría exigiendo abrir un archivo y exportar una
 variable de entorno.
 
-| Requisito del 4.7 | Por qué |
-|---|---|
-| Agregar un proveedor y pegar su clave desde la UI | Nadie debería saber que existe un `.credentials.yaml` |
-| **Probar la conexión antes de guardar** | Una clave mal pegada debe fallar en la pantalla, no en la mitad de un gate |
-| Nunca volver a mostrar la clave guardada | El campo se vacía al guardar y solo se puede reemplazar |
-| Botón de rotación | Rotar no debe exigir recordar dónde vive el archivo |
-| Distinguir suscripción de API key | Un token de plan (Claude, Codex, opencode) se lee del CLI; no se pega |
-| Escribir en `~/.valmen/.credentials.yaml` con `chmod 600` | La app es una interfaz sobre el archivo, no un almacén paralelo |
+| Requisito del 4.7                                         | Por qué                                                                    |
+| --------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Agregar un proveedor y pegar su clave desde la UI         | Nadie debería saber que existe un `.credentials.yaml`                      |
+| **Probar la conexión antes de guardar**                   | Una clave mal pegada debe fallar en la pantalla, no en la mitad de un gate |
+| Nunca volver a mostrar la clave guardada                  | El campo se vacía al guardar y solo se puede reemplazar                    |
+| Botón de rotación                                         | Rotar no debe exigir recordar dónde vive el archivo                        |
+| Distinguir suscripción de API key                         | Un token de plan (Claude, Codex, opencode) se lee del CLI; no se pega      |
+| Escribir en `~/.valmen/.credentials.yaml` con `chmod 600` | La app es una interfaz sobre el archivo, no un almacén paralelo            |
 
 Detalle completo en [`06-CONTROL-APP.md` §2.6bis](06-CONTROL-APP.md).
 
@@ -123,28 +123,28 @@ mejoras propuestas.
 
 Prioridad estricta. Cada paquete se termina antes de empezar el siguiente.
 
-| # | Paquete | Fase | Por qué en este orden |
-|---|---|---|---|
-| 1 | `@valmen/core` | 0–1 | Dominio puro, cero I/O. Todo depende de él. |
-| 2 | `@valmen/fs` | 1 | Escritura atómica. Si esto está mal, todo lo demás corrompe datos. |
-| 3 | `@valmen/engine` | 1 | Orquesta core + fs. |
-| 4 | `@valmen/cli` | 1 | Superficie. Hace el motor usable. |
-| 5 | `@valmen/compat-ticketpy` | 1 | Adaptador de coexistencia. Reduce el riesgo de la migración. |
-| 6 | `@valmen/adopt` | 2 | Análisis de proyecto y clasificación de reglas. |
-| 7 | `@valmen/adapter-generic` | 2 | `AGENTS.md` + skills. Cubre 16 agentes con poco código. |
-| 8 | `@valmen/adapter-codex` | 2 | TOML, subagentes, hooks. |
-| 9 | `@valmen/adapter-opencode` | 2 | Markdown, permisos, plugins. |
-| 10 | `@valmen/adapter-claude` | 2 | Markdown, hooks en settings. |
-| 11 | `@valmen/gate` + `@valmen/gate-jev` | 3 | El seam antes del provider. |
-| 12 | `@valmen/providers` + `@valmen/routing` | 3 | Necesario para los gates y para todo lo demás. |
-| 13 | `@valmen/mcp` | 3 | Expone el motor a los agentes. |
-| 14 | `@valmen/server` | 4 | API HTTP + SSE. |
-| 15 | `@valmen/web` | 4 | Mission Control. |
-| 16 | `@valmen/feature` (en core) | 5 | Spec, descomposición, grafo. |
-| 17 | `@valmen/plugins` | 5 | Loader y contratos. |
-| 18 | `plugins/deploy`, `plugins/manuals` | 5 | Los dos procesos que pediste. |
-| 19 | `plugins/codegraph` | 5 | Integración MCP. |
-| 20 | `plugins/memory`, `plugins/hermes` | 6 | Autonomía y móvil. |
+| #   | Paquete                                 | Fase | Por qué en este orden                                              |
+| --- | --------------------------------------- | ---- | ------------------------------------------------------------------ |
+| 1   | `@valmen/core`                          | 0–1  | Dominio puro, cero I/O. Todo depende de él.                        |
+| 2   | `@valmen/fs`                            | 1    | Escritura atómica. Si esto está mal, todo lo demás corrompe datos. |
+| 3   | `@valmen/engine`                        | 1    | Orquesta core + fs.                                                |
+| 4   | `@valmen/cli`                           | 1    | Superficie. Hace el motor usable.                                  |
+| 5   | `@valmen/compat-ticketpy`               | 1    | Adaptador de coexistencia. Reduce el riesgo de la migración.       |
+| 6   | `@valmen/adopt`                         | 2    | Análisis de proyecto y clasificación de reglas.                    |
+| 7   | `@valmen/adapter-generic`               | 2    | `AGENTS.md` + skills. Cubre 16 agentes con poco código.            |
+| 8   | `@valmen/adapter-codex`                 | 2    | TOML, subagentes, hooks.                                           |
+| 9   | `@valmen/adapter-opencode`              | 2    | Markdown, permisos, plugins.                                       |
+| 10  | `@valmen/adapter-claude`                | 2    | Markdown, hooks en settings.                                       |
+| 11  | `@valmen/gate` + `@valmen/gate-jev`     | 3    | El seam antes del provider.                                        |
+| 12  | `@valmen/providers` + `@valmen/routing` | 3    | Necesario para los gates y para todo lo demás.                     |
+| 13  | `@valmen/mcp`                           | 3    | Expone el motor a los agentes.                                     |
+| 14  | `@valmen/server`                        | 4    | API HTTP + SSE.                                                    |
+| 15  | `@valmen/web`                           | 4    | Mission Control.                                                   |
+| 16  | `@valmen/feature` (en core)             | 5    | Spec, descomposición, grafo.                                       |
+| 17  | `@valmen/plugins`                       | 5    | Loader y contratos.                                                |
+| 18  | `plugins/deploy`, `plugins/manuals`     | 5    | Los dos procesos que pediste.                                      |
+| 19  | `plugins/codegraph`                     | 5    | Integración MCP.                                                   |
+| 20  | `plugins/memory`, `plugins/hermes`      | 6    | Autonomía y móvil.                                                 |
 
 **Son 20 paquetes, no 200.** Lección de DSH: la granularidad agresiva paga solo con su
 escala. Se parte un paquete cuando duela, no antes.
@@ -164,15 +164,15 @@ Estas bloquean el inicio. Ver [`11-OPEN-QUESTIONS.md`](11-OPEN-QUESTIONS.md):
 
 Números honestos para el MVP (Fases 0–2):
 
-| Rubro | Estimación |
-|---|---|
-| Código del motor | ~6.000–9.000 líneas TS (core + fs + engine + cli + compat) |
-| Adaptadores | ~1.500–2.500 líneas |
-| `adopt` | ~1.200–1.800 líneas |
-| Tests | ~4.000–6.000 líneas (proporción alta a propósito) |
-| Documentación | Los documentos de este repositorio, más la de paquete |
-| Esfuerzo | 3–5 semanas de una persona a tiempo completo |
-| Costo de tokens para construirlo | ~$80–250 (el propio harness no se usa todavía) |
+| Rubro                            | Estimación                                                 |
+| -------------------------------- | ---------------------------------------------------------- |
+| Código del motor                 | ~6.000–9.000 líneas TS (core + fs + engine + cli + compat) |
+| Adaptadores                      | ~1.500–2.500 líneas                                        |
+| `adopt`                          | ~1.200–1.800 líneas                                        |
+| Tests                            | ~4.000–6.000 líneas (proporción alta a propósito)          |
+| Documentación                    | Los documentos de este repositorio, más la de paquete      |
+| Esfuerzo                         | 3–5 semanas de una persona a tiempo completo               |
+| Costo de tokens para construirlo | ~$80–250 (el propio harness no se usa todavía)             |
 
 Si lo construimos con agentes (que es lo lógico, dado el proyecto), el costo de tokens para
 las Fases 0–2 está en ese rango, y baja para fases posteriores porque el harness se empieza
@@ -182,15 +182,15 @@ a usar a sí mismo.
 
 Medir, no opinar:
 
-| Métrica | Cómo se mide | Objetivo |
-|---|---|---|
-| Eliminación de config duplicada | Archivos editados a mano por cambio | 3 → 0 |
-| Tiempo de adopción de un proyecto nuevo | `valmen adopt` en un repo no visto | < 30 min |
-| Precisión del gate automático | `valmen gate simulate --last 30` | ≥ 98% para promover a `auto` |
-| Falsos aprobados en gates críticos | Recibos con revisión humana posterior | **0** |
-| Costo por ticket | `valmen usage report` | < $1.00 en el percentil 50 |
-| Costo de gates | `valmen usage report --role gate-evaluator` | < 0.5% del total |
-| Tickets cerrados por semana | `valmen usage report` | crecimiento sostenido |
-| Tiempo humano por ticket | Gates que requieren humano | 4 → 1 |
-| Uso del modo headless | Tickets ejecutados sin intervención | Fase 6, >20% del backlog |
-| Adopción por otro proyecto de ValMenTech | Proyectos con `.valmen/` | ≥3 al final de la Fase 6 |
+| Métrica                                  | Cómo se mide                                | Objetivo                     |
+| ---------------------------------------- | ------------------------------------------- | ---------------------------- |
+| Eliminación de config duplicada          | Archivos editados a mano por cambio         | 3 → 0                        |
+| Tiempo de adopción de un proyecto nuevo  | `valmen adopt` en un repo no visto          | < 30 min                     |
+| Precisión del gate automático            | `valmen gate simulate --last 30`            | ≥ 98% para promover a `auto` |
+| Falsos aprobados en gates críticos       | Recibos con revisión humana posterior       | **0**                        |
+| Costo por ticket                         | `valmen usage report`                       | < $1.00 en el percentil 50   |
+| Costo de gates                           | `valmen usage report --role gate-evaluator` | < 0.5% del total             |
+| Tickets cerrados por semana              | `valmen usage report`                       | crecimiento sostenido        |
+| Tiempo humano por ticket                 | Gates que requieren humano                  | 4 → 1                        |
+| Uso del modo headless                    | Tickets ejecutados sin intervención         | Fase 6, >20% del backlog     |
+| Adopción por otro proyecto de ValMenTech | Proyectos con `.valmen/`                    | ≥3 al final de la Fase 6     |

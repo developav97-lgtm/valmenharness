@@ -24,6 +24,9 @@
     },
     {
       "path": "../gate-llm-judge"
+    },
+    {
+      "path": "../server"
     }
   ],
   "include": [

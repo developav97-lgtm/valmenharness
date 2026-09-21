@@ -90,7 +90,7 @@ modelo.
 
 ```bash
 npm run typecheck   # tsc estricto
-npm run test        # 221 tests
+npm run test        # 248 tests
 ```
 
 ## Estructura
@@ -104,6 +104,7 @@ packages/
   gate-jev/      Evaluador con TypeSafe Jev: probabilidades calibradas.
   gate-llm-judge/ Evaluador con un modelo de chat, como alternativa.
   credentials/   Resolución de credenciales, en un solo lugar.
+  server/        Mission Control: servidor local y pantalla de proveedores.
   cli/           Superficie de comandos.
 tests/
   fixtures/      57 tickets reales, para las suites de equivalencia y migración
@@ -123,7 +124,30 @@ valmen sync             # proyecta .valmen/ a AGENTS.md
 valmen validate --all   # valida el registro
 valmen index --check    # detecta un índice desactualizado (para CI)
 valmen gate plan --id BUGFIX-POS-ALGO-20260921    # evalúa el plan y emite recibo
+valmen serve                                       # Mission Control en 127.0.0.1
 ```
+
+### Mission Control
+
+```bash
+valmen serve                # → http://127.0.0.1:4173
+```
+
+El servidor **no tiene lógica de negocio**: cada endpoint llama al mismo motor
+que el CLI. Si un botón de la interfaz y un comando pudieran divergir, lo que se
+ve en pantalla sería una mentira.
+
+La primera pantalla es la **configuración de proveedores**, y resuelve un problema
+concreto: configurar una clave no debería exigir editar un archivo ni exportar una
+variable.
+
+- **Se prueba antes de guardar.** Una clave mal pegada falla en la pantalla, no en
+  la mitad de un gate. Si la prueba falla no se escribe nada.
+- **La clave nunca se vuelve a mostrar.** El estado informa si está configurada y
+  cuánto mide —para notar una clave truncada— pero no su valor.
+- **Los proveedores de suscripción no se pegan a mano**: se lee el token del CLI
+  que ya los autenticó, para no crear un segundo origen de verdad.
+- El archivo de credenciales queda con permisos `600` y conserva sus comentarios.
 
 ### Gates automáticos
 

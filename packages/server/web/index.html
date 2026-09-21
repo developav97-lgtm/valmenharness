@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ValmenHarness · Mission Control</title>
+    <style>
+      /* Sin framework: el objetivo de esta pantalla es funcionar, y una hoja de
+         estilos propia se lee entera en un minuto. */
+      :root {
+        --fondo: #0f1115;
+        --panel: #171a21;
+        --panel-alto: #1e222b;
+        --borde: #2a2f3a;
+        --texto: #e6e8ee;
+        --tenue: #8b93a7;
+        --acento: #4f8cff;
+        --ok: #3fb950;
+        --alerta: #d29922;
+        --error: #f85149;
+        --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--fondo);
+        color: var(--texto);
+        font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      header {
+        display: flex;
+        align-items: baseline;
+        gap: 12px;
+        padding: 18px 24px;
+        border-bottom: 1px solid var(--borde);
+        background: var(--panel);
+      }
+      header h1 { font-size: 16px; margin: 0; font-weight: 600; }
+      header .raiz { color: var(--tenue); font-family: var(--mono); font-size: 12px; }
+      main { max-width: 1000px; margin: 0 auto; padding: 24px; }
+      h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--tenue); margin: 0 0 12px; }
+      .nota {
+        background: var(--panel-alto);
+        border: 1px solid var(--borde);
+        border-left: 3px solid var(--acento);
+        border-radius: 6px;
+        padding: 12px 16px;
+        margin-bottom: 24px;
+        color: var(--tenue);
+        font-size: 13px;
+      }
+      .nota strong { color: var(--texto); }
+      table { width: 100%; border-collapse: collapse; }
+      th {
+        text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+        color: var(--tenue); font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--borde);
+      }
+      td { padding: 10px; border-bottom: 1px solid var(--borde); vertical-align: middle; }
+      tr:hover td { background: var(--panel); }
+      .nombre { font-weight: 500; }
+      .id { font-family: var(--mono); font-size: 11px; color: var(--tenue); }
+      .punto { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 7px; }
+      .punto.ok { background: var(--ok); }
+      .punto.no { background: var(--tenue); opacity: 0.4; }
+      .punto.error { background: var(--error); }
+      .punto.alerta { background: var(--alerta); }
+      .acciones { display: flex; gap: 8px; justify-content: flex-end; }
+      button {
+        font: inherit; font-size: 13px; padding: 5px 12px; border-radius: 5px; cursor: pointer;
+        background: var(--panel-alto); color: var(--texto); border: 1px solid var(--borde);
+      }
+      button:hover:not(:disabled) { border-color: var(--acento); }
+      button:disabled { opacity: 0.45; cursor: default; }
+      button.principal { background: var(--acento); border-color: var(--acento); color: #fff; }
+      button.peligro:hover:not(:disabled) { border-color: var(--error); color: var(--error); }
+      .resultado { font-size: 12px; color: var(--tenue); }
+      .resultado.ok { color: var(--ok); }
+      .resultado.error { color: var(--error); }
+      dialog {
+        background: var(--panel); color: var(--texto); border: 1px solid var(--borde);
+        border-radius: 10px; padding: 0; max-width: 520px; width: calc(100% - 32px);
+      }
+      dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
+      .dialogo { padding: 20px 24px; }
+      .dialogo h3 { margin: 0 0 4px; font-size: 16px; }
+      .dialogo p { margin: 0 0 16px; color: var(--tenue); font-size: 13px; }
+      label { display: block; font-size: 12px; color: var(--tenue); margin-bottom: 6px; }
+      input {
+        width: 100%; font: inherit; font-family: var(--mono); font-size: 13px;
+        padding: 9px 11px; border-radius: 6px; background: var(--fondo);
+        color: var(--texto); border: 1px solid var(--borde);
+      }
+      input:focus { outline: none; border-color: var(--acento); }
+      .aviso { font-size: 12px; color: var(--tenue); margin-top: 8px; }
+      .pie { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+      code { font-family: var(--mono); font-size: 12px; background: var(--fondo); padding: 1px 5px; border-radius: 3px; }
+      .vacio { color: var(--tenue); text-align: center; padding: 40px; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>ValmenHarness</h1>
+      <span class="raiz" id="raiz">cargando…</span>
+    </header>
+
+    <main>
+      <div class="nota">
+        <strong>Las claves se prueban antes de guardarse.</strong> Si la conexión falla no se
+        escribe nada, así que una clave mal pegada falla aquí y no en la mitad de un gate.
+        Después de guardarla no se vuelve a mostrar: solo se puede reemplazar.
+        <br /><br />
+        Los proveedores de <strong>suscripción</strong> leen el token del CLI que ya los
+        autenticó. No se pegan a mano, para no crear un segundo origen de verdad que se
+        desincronice en el primer refresco.
+      </div>
+
+      <h2>Proveedores</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Proveedor</th>
+            <th>Autenticación</th>
+            <th>Estado</th>
+            <th>Origen</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="filas"></tbody>
+      </table>
+      <div id="vacio" class="vacio" hidden>No hay proveedores declarados.</div>
+    </main>
+
+    <dialog id="dialogo">
+      <div class="dialogo">
+        <h3 id="titulo">Configurar</h3>
+        <p id="ayuda"></p>
+        <label for="clave">Clave</label>
+        <input id="clave" type="password" autocomplete="off" spellcheck="false" placeholder="sk-…" />
+        <div class="aviso" id="aviso"></div>
+        <div class="pie">
+          <button id="cancelar">Cancelar</button>
+          <button id="guardar" class="principal">Probar y guardar</button>
+        </div>
+      </div>
+    </dialog>
+
+    <script type="module">
+      // La interfaz no sabe nada del harness: solo llama a la API y muestra lo
+      // que devuelve. Toda la lógica vive en el motor, así que un botón y un
+      // comando de terminal no pueden divergir.
+      const $ = (id) => document.getElementById(id);
+      let proveedores = [];
+      let proveedorActual = null;
+
+      /** Llama a la API y devuelve el cuerpo, o lanza con el mensaje del servidor. */
+      async function api(method, ruta, cuerpo) {
+        const respuesta = await fetch(ruta, {
+          method,
+          headers: cuerpo === undefined ? {} : { "Content-Type": "application/json" },
+          body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
+        });
+        const datos = await respuesta.json();
+        if (!respuesta.ok) {
+          const error = new Error(datos.error ?? `HTTP ${respuesta.status}`);
+          error.datos = datos;
+          throw error;
+        }
+        return datos;
+      }
+
+      /** Texto del origen de la credencial. */
+      function origen(p) {
+        if (p.source === "environment") return "variable de entorno";
+        if (p.source === "credentials-file") return "archivo de credenciales";
+        if (p.source === "cli") return "token del CLI";
+        if (p.source === "none" && p.configured) return "no requiere";
+        return "—";
+      }
+
+      /** Estado legible de un proveedor. */
+      function estado(p) {
+        if (!p.configured) return { clase: "no", texto: "sin configurar" };
+        if (p.source === "none") return { clase: "ok", texto: "local" };
+        const largo = p.keyLength === null ? "" : ` · ${p.keyLength} caracteres`;
+        return { clase: "ok", texto: `configurada${largo}` };
+      }
+
+      function pintar() {
+        const filas = $("filas");
+        filas.textContent = "";
+        $("vacio").hidden = proveedores.length > 0;
+
+        for (const p of proveedores) {
+          const e = estado(p);
+          const tr = document.createElement("tr");
+
+          const celdaNombre = document.createElement("td");
+          const punto = document.createElement("span");
+          punto.className = `punto ${e.clase}`;
+          const nombre = document.createElement("span");
+          nombre.className = "nombre";
+          nombre.textContent = p.name;
+          const id = document.createElement("div");
+          id.className = "id";
+          id.textContent = p.id;
+          celdaNombre.append(punto, nombre, id);
+
+          const celdaAuth = document.createElement("td");
+          celdaAuth.textContent = p.auth === "api-key" ? "API key" : p.auth === "subscription" ? "suscripción" : "ninguna";
+
+          const celdaEstado = document.createElement("td");
+          const texto = document.createElement("div");
+          texto.textContent = e.texto;
+          celdaEstado.append(texto);
+          if (p.legacyFieldName) {
+            const legado = document.createElement("div");
+            legado.className = "resultado";
+            legado.textContent = "campo con el nombre anterior; se normaliza al reescribir";
+            celdaEstado.append(legado);
+          }
+          const resultado = document.createElement("div");
+          resultado.className = "resultado";
+          resultado.dataset.id = p.id;
+          celdaEstado.append(resultado);
+
+          const celdaOrigen = document.createElement("td");
+          celdaOrigen.className = "resultado";
+          celdaOrigen.textContent = origen(p);
+
+          const celdaAcciones = document.createElement("td");
+          const acciones = document.createElement("div");
+          acciones.className = "acciones";
+
+          const probar = document.createElement("button");
+          probar.textContent = "Probar";
+          probar.addEventListener("click", () => void probarConexion(p, resultado, probar));
+
+          acciones.append(probar);
+
+          if (p.auth === "api-key") {
+            const configurar = document.createElement("button");
+            configurar.textContent = p.configured ? "Reemplazar" : "Configurar";
+            configurar.className = p.configured ? "" : "principal";
+            configurar.addEventListener("click", () => abrirDialogo(p));
+            acciones.append(configurar);
+          }
+
+          if (p.configured && p.auth === "api-key" && p.source === "credentials-file") {
+            const borrar = document.createElement("button");
+            borrar.className = "peligro";
+            borrar.textContent = "Borrar";
+            borrar.addEventListener("click", () => void borrarClave(p, borrar));
+            acciones.append(borrar);
+          }
+
+          celdaAcciones.append(acciones);
+          tr.append(celdaNombre, celdaAuth, celdaEstado, celdaOrigen, celdaAcciones);
+          filas.append(tr);
+        }
+      }
+
+      async function probarConexion(p, salida, boton) {
+        boton.disabled = true;
+        salida.className = "resultado";
+        salida.textContent = "probando…";
+        try {
+          const r = await api("POST", `/api/providers/${p.id}/probe`);
+          salida.className = `resultado ${r.ok ? "ok" : "error"}`;
+          salida.textContent = `${r.detail} · ${r.latencyMs} ms`;
+        } catch (error) {
+          salida.className = "resultado error";
+          salida.textContent = error.message;
+        } finally {
+          boton.disabled = false;
+        }
+      }
+
+      function abrirDialogo(p) {
+        proveedorActual = p;
+        $("titulo").textContent = `Configurar ${p.name}`;
+        $("ayuda").textContent = `La clave se prueba contra el endpoint del proveedor antes de guardarse.`;
+        $("clave").value = "";
+        $("aviso").textContent =
+          p.source === "environment"
+            ? `Ahora mismo se está usando la variable de entorno ${p.envVar}, que tiene prioridad sobre el archivo.`
+            : "";
+        $("dialogo").showModal();
+        $("clave").focus();
+      }
+
+      async function guardar() {
+        const clave = $("clave").value.trim();
+        if (clave === "") {
+          $("aviso").textContent = "Escribe la clave antes de guardar.";
+          return;
+        }
+        const boton = $("guardar");
+        boton.disabled = true;
+        boton.textContent = "Probando…";
+        try {
+          const r = await api("PUT", `/api/providers/${proveedorActual.id}/credential`, { apiKey: clave });
+          $("dialogo").close();
+          await cargar();
+          const salida = document.querySelector(`.resultado[data-id="${proveedorActual.id}"]`);
+          if (salida) {
+            salida.className = "resultado ok";
+            salida.textContent = `${r.probe.detail} · ${r.probe.latencyMs} ms`;
+          }
+        } catch (error) {
+          $("aviso").textContent = error.message;
+        } finally {
+          boton.disabled = false;
+          boton.textContent = "Probar y guardar";
+        }
+      }
+
+      async function borrarClave(p, boton) {
+        if (!confirm(`¿Borrar la clave de ${p.name}? Dejará de estar disponible para los gates.`)) return;
+        boton.disabled = true;
+        try {
+          await api("DELETE", `/api/providers/${p.id}/credential`);
+          await cargar();
+        } catch (error) {
+          alert(error.message);
+          boton.disabled = false;
+        }
+      }
+
+      async function cargar() {
+        const salud = await api("GET", "/api/health");
+        $("raiz").textContent = salud.root;
+        const datos = await api("GET", "/api/providers");
+        proveedores = datos.providers;
+        pintar();
+      }
+
+      $("cancelar").addEventListener("click", () => $("dialogo").close());
+      $("guardar").addEventListener("click", () => void guardar());
+      $("clave").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") void guardar();
+      });
+
+      void cargar();
+    </script>
+  </body>
+</html>

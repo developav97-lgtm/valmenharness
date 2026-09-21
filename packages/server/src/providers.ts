@@ -1,0 +1,530 @@
+/**
+ * Lectura y escritura del archivo de credenciales.
+ *
+ * Este archivo contiene secretos en claro, así que impone tres reglas que no se
+ * negocian:
+ *
+ * 1. **El valor de una clave nunca sale de este módulo.** `listProviders`
+ *    devuelve si está configurada y cuánto mide; nunca la clave. Una pantalla
+ *    que puede mostrar una clave es una pantalla que puede filtrarla.
+ * 2. **Se escribe con permisos 600 y de forma atómica.** Un archivo a medias es
+ *    un archivo que el harness no puede leer, y un archivo legible por otros es
+ *    un secreto expuesto.
+ * 3. **Nunca se registra.** Ni en un mensaje de error, ni en un log, ni en la
+ *    salida de la API.
+ *
+ * Ver docs/06-CONTROL-APP.md §2.6bis.
+ */
+import {
+  chmodSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  writeFileSync,
+} from "node:fs";
+import { homedir } from "node:os";
+import { dirname, join } from "node:path";
+
+/** Cómo se autentica un proveedor. */
+export type AuthKind = "api-key" | "subscription" | "none";
+
+/** Un proveedor conocido por el harness. */
+export interface ProviderSpec {
+  readonly id: string;
+  readonly name: string;
+  readonly auth: AuthKind;
+  /**
+   * Endpoint con el que se comprueba la conectividad.
+   *
+   * Se prueba contra un endpoint real y no con un `ping`: una clave mal pegada
+   * tiene que fallar en la pantalla, no en la mitad de un gate.
+   */
+  readonly probe?: { readonly url: string; readonly expect: number };
+  /** Dónde vive el token, para los proveedores de suscripción. */
+  readonly tokenSource?: string;
+  /** Nombre de la variable de entorno que también se acepta. */
+  readonly envVar: string;
+}
+
+/**
+ * Catálogo de proveedores.
+ *
+ * Los de suscripción se leen del CLI que ya los autenticó y **no se pegan a
+ * mano**: el harness lee el token y nunca lo reescribe, para no pelearse por el
+ * mismo refresh token con la herramienta dueña.
+ */
+export const PROVIDERS: readonly ProviderSpec[] = [
+  {
+    id: "openrouter",
+    name: "OpenRouter",
+    auth: "api-key",
+    envVar: "OPENROUTER_API_KEY",
+    probe: { url: "https://openrouter.ai/api/v1/key", expect: 200 },
+  },
+  {
+    id: "deepseek",
+    name: "DeepSeek",
+    auth: "api-key",
+    envVar: "DEEPSEEK_API_KEY",
+    probe: { url: "https://api.deepseek.com/v1/models", expect: 200 },
+  },
+  {
+    id: "moonshot",
+    name: "Moonshot (Kimi)",
+    auth: "api-key",
+    envVar: "MOONSHOT_API_KEY",
+    probe: { url: "https://api.moonshot.cn/v1/models", expect: 200 },
+  },
+  {
+    id: "zhipu",
+    name: "Zhipu (GLM)",
+    auth: "api-key",
+    envVar: "ZHIPU_API_KEY",
+    probe: { url: "https://open.bigmodel.cn/api/paas/v4/models", expect: 200 },
+  },
+  {
+    id: "qwen",
+    name: "Qwen (Alibaba)",
+    auth: "api-key",
+    envVar: "QWEN_API_KEY",
+    probe: {
+      url: "https://dashscope.aliyuncs.com/compatible-mode/v1/models",
+      expect: 200,
+    },
+  },
+  {
+    id: "claude-code",
+    name: "Claude Code",
+    auth: "subscription",
+    envVar: "ANTHROPIC_API_KEY",
+    tokenSource: "~/.claude/.credentials.json",
+  },
+  {
+    id: "codex",
+    name: "Codex",
+    auth: "subscription",
+    envVar: "OPENAI_API_KEY",
+    tokenSource: "~/.codex/auth.json",
+  },
+  {
+    id: "opencode",
+    name: "opencode",
+    auth: "subscription",
+    envVar: "OPENCODE_API_KEY",
+    tokenSource: "~/.local/share/opencode/auth.json",
+  },
+  {
+    id: "ollama",
+    name: "Ollama (local)",
+    auth: "none",
+    envVar: "OLLAMA_HOST",
+    probe: { url: "http://127.0.0.1:11434/api/tags", expect: 200 },
+  },
+];
+
+/** Estado de un proveedor, tal como lo ve la interfaz. */
+export interface ProviderStatus {
+  readonly id: string;
+  readonly name: string;
+  readonly auth: AuthKind;
+  readonly envVar: string;
+  /** `true` si hay una clave resoluble. */
+  readonly configured: boolean;
+  /** De dónde salió la credencial. Nunca el valor. */
+  readonly source: "environment" | "credentials-file" | "cli" | "none";
+  /** Longitud de la clave, para que el usuario note si pegó algo truncado. */
+  readonly keyLength: number | null;
+  /** El campo del archivo tiene el nombre anterior. Se informa, no se corrige. */
+  readonly legacyFieldName: boolean;
+  readonly tokenSource?: string;
+}
+
+/** Ruta del archivo de credenciales. */
+export function credentialsPath(home: string = homedir()): string {
+  return join(home, ".valmen", ".credentials.yaml");
+}
+
+/** Lee el archivo, o cadena vacía si no existe. */
+function readCredentialsFile(path: string): string {
+  try {
+    return readFileSync(path, "utf8");
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Extrae el bloque de un proveedor.
+ *
+ * El proveedor está indentado bajo `providers:`, así que el ancla admite
+ * espacios iniciales. Exigir la columna cero haría que el bloque nunca se
+ * encontrara en el archivo que genera la plantilla.
+ */
+function providerBlock(text: string, id: string): string | null {
+  const match = new RegExp(
+    `^[ \\t]*${id}:[ \\t]*\\n((?:[ \\t]+.*\\n?)*)`,
+    "m",
+  ).exec(text);
+  return match === null ? null : (match[1] as string);
+}
+
+/**
+ * Lee la clave de un proveedor desde el archivo.
+ *
+ * Acepta los dos nombres de campo: `api-key` es el correcto, pero una versión
+ * anterior de la plantilla se llamaba `api-key-env` y hay archivos en uso con
+ * ese nombre y el valor literal dentro.
+ */
+function readKeyFromFile(
+  text: string,
+  id: string,
+): { value: string; legacyField: boolean } | null {
+  const block = providerBlock(text, id);
+  if (block === null) return null;
+
+  const moderno = /^[ \t]+api-key:[ \t]*["']?([^"'\n]+)["']?[ \t]*$/m.exec(
+    block,
+  );
+  if (moderno !== null)
+    return { value: moderno[1]!.trim(), legacyField: false };
+
+  const anterior = /^[ \t]+api-key-env:[ \t]*["']?([^"'\n]+)["']?[ \t]*$/m.exec(
+    block,
+  );
+  if (anterior !== null)
+    return { value: anterior[1]!.trim(), legacyField: true };
+
+  return null;
+}
+
+/**
+ * Estado de todos los proveedores.
+ *
+ * Devuelve el estado, **nunca el valor**. La longitud se incluye a propósito:
+ * permite que el usuario note que pegó una cadena truncada sin que la interfaz
+ * tenga que conocer la clave.
+ */
+export function listProviders(
+  filePath: string = credentialsPath(),
+  env: NodeJS.ProcessEnv = process.env,
+): ProviderStatus[] {
+  const text = readCredentialsFile(filePath);
+
+  return PROVIDERS.map((spec): ProviderStatus => {
+    const desdeEntorno = env[spec.envVar];
+    const enEntorno =
+      typeof desdeEntorno === "string" && desdeEntorno.trim() !== "";
+    const enArchivo = readKeyFromFile(text, spec.id);
+
+    if (enEntorno) {
+      return {
+        ...spec,
+        configured: true,
+        source: "environment",
+        keyLength: (desdeEntorno as string).trim().length,
+        legacyFieldName: false,
+      };
+    }
+
+    if (enArchivo !== null) {
+      return {
+        ...spec,
+        configured: true,
+        source: "credentials-file",
+        keyLength: enArchivo.value.length,
+        legacyFieldName: enArchivo.legacyField,
+      };
+    }
+
+    if (spec.auth === "subscription" && spec.tokenSource !== undefined) {
+      const expandido = spec.tokenSource.replace(/^~/, homedir());
+      let existe = false;
+      try {
+        existe = readFileSync(expandido, "utf8").length > 0;
+      } catch {
+        existe = false;
+      }
+      return {
+        ...spec,
+        configured: existe,
+        source: existe ? "cli" : "none",
+        keyLength: null,
+        legacyFieldName: false,
+      };
+    }
+
+    if (spec.auth === "none") {
+      // Un proveedor local sin credencial está disponible por definición: que
+      // esté corriendo o no lo dice la prueba de conexión.
+      return {
+        ...spec,
+        configured: true,
+        source: "none",
+        keyLength: null,
+        legacyFieldName: false,
+      };
+    }
+
+    return {
+      ...spec,
+      configured: false,
+      source: "none",
+      keyLength: null,
+      legacyFieldName: false,
+    };
+  });
+}
+
+/** Cambios que se aplican al archivo de credenciales. */
+export interface CredentialUpdate {
+  readonly provider: string;
+  /** Clave nueva. Cadena vacía borra la entrada. */
+  readonly apiKey: string;
+}
+
+/**
+ * Aplica cambios al archivo de credenciales.
+ *
+ * Reescribe el archivo completo preservando los comentarios y el orden, porque
+ * el archivo lo mantiene una persona y perder sus comentarios sería perder su
+ * documentación.
+ *
+ * Escribe en un temporal del mismo directorio y renombra: un archivo a medias
+ * es un archivo que el harness no puede leer, y con secretos dentro.
+ */
+export function updateCredentials(
+  updates: readonly CredentialUpdate[],
+  filePath: string = credentialsPath(),
+): { readonly written: readonly string[]; readonly path: string } {
+  const existente = readCredentialsFile(filePath);
+  let texto = existente === "" ? esqueleto() : existente;
+  const escritos: string[] = [];
+
+  for (const update of updates) {
+    const spec = PROVIDERS.find((provider) => provider.id === update.provider);
+    if (spec === undefined) {
+      throw new Error(`Proveedor desconocido: "${update.provider}".`);
+    }
+    if (spec.auth === "subscription") {
+      // Un token de suscripción se lee del CLI. Pegarlo a mano crearía un
+      // segundo origen de verdad que se desincroniza en el primer refresh.
+      throw new Error(
+        `"${spec.name}" se autentica con su suscripción: el harness lee el token ` +
+          `del CLI (${spec.tokenSource}). No se pega a mano.`,
+      );
+    }
+
+    texto = upsertKey(texto, update.provider, update.apiKey);
+    escritos.push(update.provider);
+  }
+
+  mkdirSync(dirname(filePath), { recursive: true });
+  const temporal = `${filePath}.${process.pid}.tmp`;
+  // El temporal se crea ya con permisos 600: crearlo abierto y cerrarlo después
+  // deja una ventana en la que el secreto es legible por otros.
+  writeFileSync(temporal, texto, { encoding: "utf8", mode: 0o600 });
+  chmodSync(temporal, 0o600);
+  renameSync(temporal, filePath);
+  chmodSync(filePath, 0o600);
+
+  return { written: escritos, path: filePath };
+}
+
+/** Esqueleto del archivo, para cuando no existe. */
+function esqueleto(): string {
+  return [
+    "# Credenciales de ValmenHarness.",
+    "#",
+    "# Este archivo contiene secretos en claro. Permisos 600, nunca se versiona.",
+    "# Lo mantiene la app (`valmen serve` → Configuración → Proveedores).",
+    "",
+    "version: 1",
+    "",
+    "providers:",
+    "",
+  ].join("\n");
+}
+
+/**
+ * Pone o reemplaza la clave de un proveedor dentro del texto.
+ *
+ * Se trabaja sobre líneas en vez de con un parser de YAML completo: el archivo
+ * contiene secretos y no debe pasar por estructuras que puedan acabar en un
+ * mensaje de error. Además, reescribirlo con un parser perdería los
+ * comentarios.
+ */
+function upsertKey(text: string, provider: string, apiKey: string): string {
+  const lineas = text.split("\n");
+  const valor = apiKey.trim();
+
+  // Localiza el bloque del proveedor.
+  let inicio = -1;
+  for (let i = 0; i < lineas.length; i += 1) {
+    if (new RegExp(`^[ \\t]*${provider}:[ \\t]*$`).test(lineas[i] as string)) {
+      inicio = i;
+      break;
+    }
+  }
+
+  if (inicio === -1) {
+    // El proveedor no está declarado: se añade al final, indentado.
+    if (valor !== "") {
+      lineas.push(`  ${provider}:`, `    api-key: "${valor}"`);
+    }
+    return lineas.join("\n");
+  }
+
+  // Encuentra el fin del bloque: la primera línea con indentación menor o igual.
+  const indentacion =
+    (lineas[inicio] as string).length -
+    (lineas[inicio] as string).trimStart().length;
+  let fin = inicio + 1;
+  while (fin < lineas.length) {
+    const linea = lineas[fin] as string;
+    if (linea.trim() === "") break;
+    const suya = linea.length - linea.trimStart().length;
+    if (suya <= indentacion) break;
+    fin += 1;
+  }
+
+  // Localiza el campo de clave **sin modificar el arreglo todavía**.
+  //
+  // Buscarlo y borrarlo en el mismo recorrido introduce un error sutil: al
+  // quitar una línea, las siguientes se desplazan y el índice deja de ser
+  // válido para el resto del bloque. Se localiza primero y se modifica después.
+  let indiceClave = -1;
+  for (let i = inicio + 1; i < fin; i += 1) {
+    if (/^[ \t]+api-key(?:-env)?:/.test(lineas[i] as string)) {
+      indiceClave = i;
+      break;
+    }
+  }
+
+  if (valor === "") {
+    // Borrar: se quita la línea del campo y, si el bloque queda vacío, también
+    // su cabecera. Dejar una cabecera sin contenido ensuciaría el archivo.
+    if (indiceClave !== -1) lineas.splice(indiceClave, 1);
+    const bloqueVacio = lineas
+      .slice(inicio + 1, fin - (indiceClave === -1 ? 0 : 1))
+      .every((linea) => (linea as string).trim() === "");
+    if (bloqueVacio) {
+      const cabecera = lineas[inicio] as string;
+      const indentacionCabecera = cabecera.length - cabecera.trimStart().length;
+      if (indentacionCabecera > 0) lineas.splice(inicio, 1);
+    }
+    return lineas.join("\n");
+  }
+
+  if (indiceClave === -1) {
+    lineas.splice(inicio + 1, 0, `    api-key: "${valor}"`);
+  } else {
+    // Se normaliza al nombre correcto: el valor se está escribiendo ahora, así
+    // que no hay razón para conservar el nombre anterior.
+    lineas[indiceClave] = `    api-key: "${valor}"`;
+  }
+
+  return lineas.join("\n");
+}
+
+/**
+ * Prueba la conectividad de un proveedor.
+ *
+ * Usa la credencial resuelta para hacer una llamada real. Una clave mal pegada
+ * tiene que fallar **aquí**, en la pantalla, y no en la mitad de un gate.
+ */
+export async function probeProvider(
+  id: string,
+  options: {
+    readonly filePath?: string;
+    readonly env?: NodeJS.ProcessEnv;
+    readonly fetchImpl?: typeof fetch;
+    readonly timeoutMs?: number;
+  } = {},
+): Promise<{
+  readonly ok: boolean;
+  readonly status: number | null;
+  readonly detail: string;
+  readonly latencyMs: number;
+}> {
+  const spec = PROVIDERS.find((provider) => provider.id === id);
+  if (spec === undefined) {
+    return {
+      ok: false,
+      status: null,
+      detail: `Proveedor desconocido: "${id}".`,
+      latencyMs: 0,
+    };
+  }
+  if (spec.probe === undefined) {
+    return {
+      ok: false,
+      status: null,
+      detail: `"${spec.name}" no declara un endpoint de prueba.`,
+      latencyMs: 0,
+    };
+  }
+
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const inicio = Date.now();
+
+  // La credencial se resuelve sin exponerla: se pasa como cabecera y nada más.
+  const clave = resolveForProbe(
+    spec,
+    options.filePath ?? credentialsPath(),
+    options.env ?? process.env,
+  );
+
+  const headers: Record<string, string> = {};
+  if (clave !== null && clave !== "")
+    headers["Authorization"] = `Bearer ${clave}`;
+
+  try {
+    const respuesta = await fetchImpl(spec.probe.url, {
+      method: "GET",
+      headers,
+      signal: AbortSignal.timeout(options.timeoutMs ?? 15_000),
+    });
+    const latencia = Date.now() - inicio;
+    const ok = respuesta.status === spec.probe.expect;
+
+    // El detalle nunca incluye la respuesta completa: podría contener la clave
+    // reflejada por un proveedor mal implementado.
+    return {
+      ok,
+      status: respuesta.status,
+      detail: ok
+        ? `Conexión verificada (HTTP ${respuesta.status}).`
+        : `El proveedor respondió HTTP ${respuesta.status}${
+            respuesta.status === 401 || respuesta.status === 403
+              ? ": la credencial no es válida o no tiene permisos."
+              : "."
+          }`,
+      latencyMs: latencia,
+    };
+  } catch (caught) {
+    const detalle = caught instanceof Error ? caught.message : String(caught);
+    const esTimeout = /abort|timeout/i.test(detalle);
+    return {
+      ok: false,
+      status: null,
+      detail: esTimeout
+        ? `Sin respuesta en ${options.timeoutMs ?? 15_000} ms.`
+        : `No se pudo conectar: ${detalle}`,
+      latencyMs: Date.now() - inicio,
+    };
+  }
+}
+
+/** Resuelve la clave de un proveedor para una prueba, o `null` si no aplica. */
+function resolveForProbe(
+  spec: ProviderSpec,
+  filePath: string,
+  env: NodeJS.ProcessEnv,
+): string | null {
+  const desdeEntorno = env[spec.envVar];
+  if (typeof desdeEntorno === "string" && desdeEntorno.trim() !== "") {
+    return desdeEntorno.trim();
+  }
+  const enArchivo = readKeyFromFile(readCredentialsFile(filePath), spec.id);
+  return enArchivo?.value ?? null;
+}

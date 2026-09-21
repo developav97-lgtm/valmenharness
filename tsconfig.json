@@ -27,6 +27,7 @@
       "@valmen/gate": ["./packages/gate/src/index.ts"],
       "@valmen/gate-jev": ["./packages/gate-jev/src/index.ts"],
       "@valmen/credentials": ["./packages/credentials/src/index.ts"],
+      "@valmen/server": ["./packages/server/src/index.ts"],
       "@valmen/gate-command": ["./packages/gate-command/src/index.ts"],
       "@valmen/gate-llm-judge": ["./packages/gate-llm-judge/src/index.ts"]
     }
