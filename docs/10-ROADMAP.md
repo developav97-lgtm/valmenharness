@@ -81,7 +81,33 @@ con la decisión humana en ≥90% y hay **cero falsos aprobados** en tickets de 
 
 Ver [`06-CONTROL-APP.md`](06-CONTROL-APP.md).
 
-Criterio de aceptación: un día completo de trabajo operado sin abrir la terminal.
+| # | Entregable | Criterio de aceptación |
+|---|---|---|
+| 4.1 | `valmen serve` | App en `127.0.0.1`, sin lógica de negocio propia: llama al mismo motor que el CLI |
+| 4.2 | Vistas de tickets y features | Estado en vivo, sin recargar |
+| 4.3 | Vista de gate en revisión | Muestra el estado congelado y las probabilidades; permite aprobar o rechazar |
+| 4.4 | Configuración editable | Formulario y texto crudo, con diff antes de guardar |
+| 4.5 | Routing de modelos | Selección de modelo y esfuerzo por rol, con el preset activo |
+| 4.6 | Chat de configuración | Propone cambios; nunca escribe directo |
+| **4.7** | **Configuración de proveedores y claves en la app** ⚠ | Ver abajo |
+
+**El 4.7 es un requisito explícito del usuario y es bloqueante.** Sin él, la Fase 4 no está
+terminada: cada prueba de proveedor seguiría exigiendo abrir un archivo y exportar una
+variable de entorno.
+
+| Requisito del 4.7 | Por qué |
+|---|---|
+| Agregar un proveedor y pegar su clave desde la UI | Nadie debería saber que existe un `.credentials.yaml` |
+| **Probar la conexión antes de guardar** | Una clave mal pegada debe fallar en la pantalla, no en la mitad de un gate |
+| Nunca volver a mostrar la clave guardada | El campo se vacía al guardar y solo se puede reemplazar |
+| Botón de rotación | Rotar no debe exigir recordar dónde vive el archivo |
+| Distinguir suscripción de API key | Un token de plan (Claude, Codex, opencode) se lee del CLI; no se pega |
+| Escribir en `~/.valmen/.credentials.yaml` con `chmod 600` | La app es una interfaz sobre el archivo, no un almacén paralelo |
+
+Detalle completo en [`06-CONTROL-APP.md` §2.6bis](06-CONTROL-APP.md).
+
+Criterio de aceptación de la fase: **un día completo de trabajo operado sin abrir la
+terminal, y una clave de proveedor agregada, probada y rotada desde la app.**
 
 ### Fase 5 — Features grandes y procesos (2–3 semanas)
 

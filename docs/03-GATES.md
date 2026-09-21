@@ -405,6 +405,146 @@ Mientras eso no esté hecho, el gate de plan está en modo `hybrid` y su resulta
 usarse para bloquear trabajo**. Un gate mal calibrado que manda todo a revisión humana es
 seguro pero inútil, y el diseño lo dice: es un cuello de botella, no un control.
 
+### 5.1quater La calibración medida: se descompone, y el resto mejora
+
+La calibración se ejecutó con `valmen gate simulate` sobre los 57 tickets reales, más dos
+experimentos controlados. Los números cambiaron el diseño de los gates.
+
+#### Medición 1 — el gate completo sobre 57 tickets
+
+|                 |              |
+| --------------- | ------------ |
+| Aprobaciones    | **0**        |
+| Bloqueos        | 1            |
+| Revisión humana | **56 (98%)** |
+| Coste           | $0.006       |
+
+Un gate que manda el 98% a revisión **no es un control, es un cuello de botella.** Y el patrón
+por proposición señaló la causa:
+
+```
+proposición                       mín    máx   media  banda  discrim
+cubre_todos_los_criterios        0.05   0.92   0.71   53/57   0.87
+corresponde_a_la_investigacion   0.14   0.92   0.65   54/57   0.78
+pasos_ejecutables                0.29   0.87   0.62   57/57   0.58
+```
+
+Dispersión alta, pero **casi todo dentro de la banda**. El modelo sí distingue casos, pero
+nunca se compromete. Eso es ambigüedad en el enunciado, no duda real.
+
+#### Medición 2 — ¿el problema es preguntar cosas que el código puede contar?
+
+Hipótesis: las proposiciones **estructurales** ("¿los pasos nombran un archivo?") son
+contables en código y un modelo probabilístico las responde peor que un script.
+
+**La hipótesis era falsa, y el resultado fue instructivo** (20 tickets, $0.0015):
+
+| Proposición                                  | ≥0.9  | ≤0.1  | banda  |
+| -------------------------------------------- | ----- | ----- | ------ |
+| `pasos_nombran_archivo` (estructural)        | **9** | **4** | 7      |
+| `plan_corresponde_investigacion` (semántica) | 3     | 0     | 17     |
+| `plan_cubre_criterios` (semántica)           | 0     | 1     | **19** |
+
+La estructural **discrimina mejor** que las semánticas. El problema no era que fuera
+estructural: era que las otras dos son **compuestas**.
+
+#### Medición 3 — la que resolvió el problema
+
+`"¿el plan cubre todos los criterios?"` mezcla N criterios en un solo juicio. Partirla en una
+proposición por criterio, 15 tickets y 69 preguntas atómicas, $0.00095:
+
+| Enfoque                               | media | ≥0.9   | ≤0.1 | banda        |
+| ------------------------------------- | ----- | ------ | ---- | ------------ |
+| **Compuesto** (1 pregunta por ticket) | 0.59  | **0**  | 1    | **14 de 15** |
+| **Atómico** (N preguntas por ticket)  | 0.83  | **43** | 1    | 25 de 69     |
+
+Una pregunta compuesta acierta el **7%** de las veces. Las atómicas, el **62%**.
+
+#### La regla que sale de esto
+
+> **Ninguna proposición debe abarcar más de un criterio.**
+
+Y no es un hallazgo nuestro: la documentación de TypeSafe lo dice con estas palabras —
+_"If the question you would require extended reasoning or weighs multiple independent
+factors, decompose it. Ask each factor as a separate question, then combine the results with
+logic in your code."_
+
+Lo que confirma el diseño es **dónde** se combina: en el código, no en el prompt. El motor
+recibe N probabilidades y decide con umbrales; no le pide al modelo que sintetice.
+
+#### Corrección aplicada
+
+La cláusula de falsedad salió de `instructions` y pasó a `criteria.false`. Ponerla en el
+enunciado —_"un paso que solo dice 'ajustar' sin objeto concreto hace falsa esta
+proposición"_— metía el vocabulario del incumplimiento dentro de la pregunta. Efecto medido:
+`pasos_ejecutables` pasó de **0.37 a 0.75** de media.
+
+#### Medición 4 — el resultado después de las dos correcciones
+
+Implementadas la descomposición por criterio y la separación entre proposiciones que emiten
+veredicto y las que solo describen, sobre los mismos 57 tickets:
+
+|                 | Antes        | Después      |
+| --------------- | ------------ | ------------ |
+| Aprobaciones    | **0**        | **14 (25%)** |
+| Bloqueos        | 1            | 2 (4%)       |
+| Revisión humana | **56 (98%)** | 41 (72%)     |
+
+Y el cambio de fondo está en **qué** causa cada revisión:
+
+```
+proposición que causa la revisión        veces de 41
+  criterio_02                                22
+  criterio_04                                15
+  criterio_03                                13
+  criterio_01                                12
+  …
+
+proposición FIJA que causa alguna revisión:  ninguna
+```
+
+**Todas las revisiones las causan proposiciones por criterio de aceptación.** Ninguna dimensión
+fija manda un ticket a revisión. Eso es exactamente lo que se buscaba: el gate discute si se
+cumplió lo que el ticket prometió, no si el plan tiene la forma que a alguien le gusta.
+
+#### Lo que esto cambió en el diseño, en resumen
+
+El hallazgo central de la calibración:
+
+> **Una proposición que pregunta algo inaplicable al sujeto no mide calidad: mide la ausencia
+> de una respuesta que nunca se pidió.**
+
+Se manifestó tres veces con formas distintas:
+
+1. Un gate evaluado sobre un ticket que ya pasó la transición → precondición de estado.
+2. Una observación verdadera ("el plan no menciona Kubernetes") tratada como criterio → `verdict: false`.
+3. Una dimensión que no aplica a un bugfix de bajo riesgo → descriptiva cuando hay criterios.
+
+Las tres son el mismo error: **confundir una medición con un veredicto.**
+
+#### Estado y límites, con honestidad
+
+El gate de plan permanece en modo **`hybrid`**. Un 72% de revisión sobre tickets históricos
+sigue siendo alto, y hay dos razones legítimas para que lo sea:
+
+1. Los tickets históricos se escribieron cuando el contrato no exigía lo que el gate ahora
+   pregunta. Un plan de 2026-05 no nombraba archivos porque no era necesario entonces.
+2. El 0.90 como umbral de aprobación es exigente para una probabilidad. **No se baja para
+   obtener más aprobaciones**: eso escondería el problema. Si hay que ajustarlo, se ajusta con
+   la coincidencia medida contra decisiones humanas, y esa medición todavía no existe porque
+   ningún ticket histórico tiene un recibo de gate.
+
+Lo que sí está verificado: el gate **discrimina** (25% aprueba, 4% bloquea, 72% duda) en vez de
+mandar todo a revisión. Antes no servía para nada; ahora sirve para lo que debe servir, que es
+señalar el trabajo que necesita una mirada.
+
+#### Próximo paso para promoverlo a `auto`
+
+1. Correr el gate en modo `hybrid` sobre tickets **nuevos** durante un mes, con el humano
+   decidiendo cada revisión.
+2. Medir la coincidencia: de las veces que el gate dijo `approve`, ¿cuántas el humano aprobó?
+3. Promover a `auto` solo para tickets de riesgo `low` cuando la coincidencia supere el 98%.
+
 ### 5.2 Calibración: la banda media es información
 
 Después de unas semanas de tráfico real:

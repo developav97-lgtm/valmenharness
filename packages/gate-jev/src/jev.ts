@@ -103,7 +103,9 @@ export function resolveApiKey(env: NodeJS.ProcessEnv = process.env): string {
   // valor literal dentro, así que rechazarlos sería romper una configuración
   // válida por un detalle de nomenclatura ya corregido.
   const block = openrouter[1] as string;
-  const key = /^[ \t]+api-key(?:-env)?:[ \t]*["']?([^"'\n]+)["']?[ \t]*$/m.exec(block);
+  const key = /^[ \t]+api-key(?:-env)?:[ \t]*["']?([^"'\n]+)["']?[ \t]*$/m.exec(
+    block,
+  );
   const value = key?.[1]?.trim();
 
   if (value === undefined || value === "") {

@@ -12,34 +12,8 @@
  *
  * Ver docs/03-GATES.md §8 para la tabla de gates del pipeline.
  */
-import type { MechanicalCheck, Proposition } from "@valmen/gate";
-import { DEFAULT_POLICY } from "@valmen/gate";
-
-/** Un gate declarado. */
-export interface GateDefinition {
-  readonly id: string;
-  readonly title: string;
-  /** Transición del pipeline que protege. */
-  readonly transition: string;
-  /** Humano, automático, o híbrido: automático primero y humano si duda. */
-  readonly mode: "human" | "auto" | "hybrid";
-  /**
-   * Estados del ticket en los que este gate tiene sentido.
-   *
-   * Sin esta comprobación, evaluar un gate sobre un sujeto que ya pasó la
-   * transición produce un veredicto sin significado. Se descubrió evaluando el
-   * gate de plan sobre un ticket ya cerrado y publicado: el resultado fue un
-   * `review` con todas las proposiciones en banda media, que parece una señal
-   * sobre el ticket cuando en realidad era una señal sobre el uso incorrecto.
-   *
-   * Un gate no debe dar una respuesta plausible a una pregunta que no aplica.
-   */
-  readonly appliesTo: readonly string[];
-  readonly propositions: readonly Proposition[];
-  readonly policy: typeof DEFAULT_POLICY;
-  /** Checks que decide el código, sin llamar a ningún modelo. */
-  readonly mechanicalChecks: readonly MechanicalCheck[];
-}
+import type { GateDefinition, MechanicalCheck, Proposition } from "./decide.js";
+import { DEFAULT_POLICY } from "./decide.js";
 
 /**
  * Gate de plan: `planned → approved`.
@@ -58,8 +32,16 @@ export const PLAN_GATE: GateDefinition = {
   appliesTo: ["planned"],
   policy: DEFAULT_POLICY,
   mechanicalChecks: [
-    { id: "criterios_presentes", description: "El ticket tiene criterios de aceptación.", result: "skip" },
-    { id: "rollback_si_critico", description: "Un ticket de riesgo alto declara rollback.", result: "skip" },
+    {
+      id: "criterios_presentes",
+      description: "El ticket tiene criterios de aceptación.",
+      result: "skip",
+    },
+    {
+      id: "rollback_si_critico",
+      description: "Un ticket de riesgo alto declara rollback.",
+      result: "skip",
+    },
   ],
   propositions: [
     {
@@ -87,33 +69,48 @@ export const PLAN_GATE: GateDefinition = {
       },
     },
     {
+      // La cláusula de falsedad vive en `criteria.false`, no dentro de
+      // `instructions`. Ponerla en el enunciado mete el vocabulario del
+      // incumplimiento en la pregunta y arrastra la probabilidad hacia abajo:
+      // se midió un 0.37 sobre un plan cuyos pasos sí nombran archivo y acción.
       id: "pasos_ejecutables",
       kind: "noul",
       instructions:
-        "Cada paso de `plan` nombra un archivo, un comando o una acción concreta y " +
-        "verificable. Un paso que solo dice 'ajustar', 'revisar' o 'mejorar' sin objeto " +
-        "concreto hace falsa esta proposición.",
+        "Cada paso de `plan` nombra un archivo, un comando o una acción concreta.",
+      criteria: {
+        yes: "Todos los pasos nombran un archivo, un comando o una acción concreta.",
+        no: "Al menos un paso dice solo 'ajustar', 'revisar' o 'mejorar' sin objeto concreto.",
+      },
     },
     {
       id: "criterios_verificables",
       kind: "noul",
       instructions:
-        "Cada criterio de `criterios` puede comprobarse con una observación, un comando o " +
-        "una prueba. Un criterio subjetivo como 'funciona bien' hace falsa esta proposición.",
+        "Cada criterio de `criterios` puede comprobarse con una observación o una prueba.",
+      criteria: {
+        yes: "Todos los criterios son observables o ejecutables.",
+        no: "Al menos un criterio es subjetivo, como 'funciona bien' o 'queda mejor'.",
+      },
     },
     {
       id: "compatibilidad_hacia_atras",
       kind: "noul",
       instructions:
-        "`plan` preserva el comportamiento para los datos y clientes ya existentes, según " +
-        "lo que `investigacion` describe del sistema actual.",
+        "`plan` preserva el comportamiento para los datos y clientes ya existentes.",
+      criteria: {
+        yes: "El plan mantiene el comportamiento actual para los consumidores existentes.",
+        no: "El plan cambia el comportamiento de un consumidor existente sin declararlo.",
+      },
     },
     {
       id: "rollback_suficiente",
       kind: "noul",
       instructions:
-        "`plan` describe cómo revertir el cambio si falla, y ese procedimiento es " +
-        "proporcional al riesgo declarado en `investigacion`.",
+        "`plan` describe cómo revertir el cambio si falla, de forma proporcional al riesgo.",
+      criteria: {
+        yes: "El plan describe un procedimiento concreto para revertir el cambio.",
+        no: "El plan no describe cómo revertir, o el procedimiento no es aplicable.",
+      },
     },
     {
       id: "clasificacion",
@@ -121,15 +118,25 @@ export const PLAN_GATE: GateDefinition = {
       instructions: "El plan, ¿qué le falta para poder aprobarse?",
       criteria: {
         completo: "Cubre alcance, pasos, criterios y rollback.",
-        falta_analisis: "Propone pasos sin haber identificado la causa o el punto de cambio.",
+        falta_analisis:
+          "Propone pasos sin haber identificado la causa o el punto de cambio.",
         falta_alcance: "No cubre todo lo que la solicitud pide.",
         falta_evidencia: "No define cómo se va a probar el resultado.",
       },
       effects: {
         completo: { outcome: "approve", reason: "el plan está completo" },
-        falta_analisis: { outcome: "block", reason: "el plan no parte de un diagnóstico" },
-        falta_alcance: { outcome: "block", reason: "el plan no cubre el alcance pedido" },
-        falta_evidencia: { outcome: "review", reason: "el plan no define cómo se prueba" },
+        falta_analisis: {
+          outcome: "block",
+          reason: "el plan no parte de un diagnóstico",
+        },
+        falta_alcance: {
+          outcome: "block",
+          reason: "el plan no cubre el alcance pedido",
+        },
+        falta_evidencia: {
+          outcome: "review",
+          reason: "el plan no define cómo se prueba",
+        },
       },
     },
     {
@@ -156,8 +163,16 @@ export const ANALYSIS_GATE: GateDefinition = {
   appliesTo: ["analyzed"],
   policy: DEFAULT_POLICY,
   mechanicalChecks: [
-    { id: "solicitud_preservada", description: "La solicitud original se conservó.", result: "skip" },
-    { id: "archivos_existen", description: "Los archivos citados existen.", result: "skip" },
+    {
+      id: "solicitud_preservada",
+      description: "La solicitud original se conservó.",
+      result: "skip",
+    },
+    {
+      id: "archivos_existen",
+      description: "Los archivos citados existen.",
+      result: "skip",
+    },
   ],
   propositions: [
     {
@@ -175,8 +190,11 @@ export const ANALYSIS_GATE: GateDefinition = {
     {
       id: "causa_especifica",
       kind: "noul",
-      instructions:
-        "`investigacion` nombra una causa concreta y verificable, no una hipótesis vaga.",
+      instructions: "`investigacion` nombra una causa concreta y verificable.",
+      criteria: {
+        yes: "La causa está identificada y es comprobable en el código.",
+        no: "Solo hay una hipótesis vaga, sin causa identificada.",
+      },
     },
     {
       id: "nombra_archivos_reales",
@@ -203,9 +221,15 @@ export const ANALYSIS_GATE: GateDefinition = {
         falta_impacto: "No analiza el efecto sobre otros consumidores.",
       },
       effects: {
-        completa: { outcome: "approve", reason: "la investigación está completa" },
+        completa: {
+          outcome: "approve",
+          reason: "la investigación está completa",
+        },
         falta_causa: { outcome: "block", reason: "no hay causa identificada" },
-        falta_archivos: { outcome: "block", reason: "no se sabe dónde intervenir" },
+        falta_archivos: {
+          outcome: "block",
+          reason: "no se sabe dónde intervenir",
+        },
         falta_impacto: { outcome: "review", reason: "no se evaluó el impacto" },
       },
     },

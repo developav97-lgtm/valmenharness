@@ -99,6 +99,36 @@ export interface ScoreProposition {
 export type Proposition =
   NoulProposition | ChoiceProposition | ScoreProposition;
 
+/** Un check que decide el código, sin llamar a ningún modelo. */
+export interface MechanicalCheck {
+  readonly id: string;
+  readonly description: string;
+  readonly result: "pass" | "fail" | "warn" | "skip";
+  readonly detail?: string;
+}
+
+/**
+ * Un gate declarado.
+ *
+ * `appliesTo` es la precondición de estado. Existe porque un gate no debe dar
+ * una respuesta plausible a una pregunta que no aplica: se descubrió evaluando
+ * el gate de plan sobre un ticket ya cerrado y publicado, donde el resultado
+ * parecía una señal sobre el ticket y era una señal sobre el uso.
+ */
+export interface GateDefinition {
+  readonly id: string;
+  readonly title: string;
+  /** Transición del pipeline que protege. */
+  readonly transition: string;
+  /** Humano, automático, o híbrido: automático primero y humano si duda. */
+  readonly mode: "human" | "auto" | "hybrid";
+  /** Estados del ticket en los que este gate tiene sentido. */
+  readonly appliesTo: readonly string[];
+  readonly propositions: readonly Proposition[];
+  readonly policy: GatePolicy;
+  readonly mechanicalChecks: readonly MechanicalCheck[];
+}
+
 /** Efecto declarado de una respuesta. */
 export interface GateEffect {
   readonly outcome: GateOutcome;

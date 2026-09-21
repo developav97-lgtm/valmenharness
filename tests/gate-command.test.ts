@@ -47,13 +47,33 @@ const PATHS = (): { root: string; ticketsDir: string } => ({
 /** Un evaluador simulado con las probabilidades que se le indiquen. */
 function evaluator(
   values: Record<string, number | string>,
+  /**
+   * Valor para las proposiciones atómicas por criterio.
+   *
+   * Son las que emiten veredicto desde que las dimensiones fijas pasaron a ser
+   * descriptivas, así que un test que quiera provocar una revisión o un bloqueo
+   * debe apuntar aquí.
+   */
+  criteriaValue = 0.95,
 ): typeof import("../packages/gate-jev/src/index.js").evaluateWithJev {
-  return (async () => {
-    const answers = Object.entries(values).map(([id, value]) =>
-      typeof value === "string"
-        ? { id, kind: "choice" as const, choice: value, confidence: 0.95 }
-        : { id, kind: "noul" as const, value },
-    );
+  return (async (options: { propositions?: readonly { id: string }[] }) => {
+    // El gate se expande con una proposición por criterio de aceptación, así que
+    // el evaluador debe responderlas también. Se aceptan con el valor por
+    // defecto salvo que el test pida otra cosa: el propósito de estos tests es
+    // el flujo del comando, no la calibración.
+    const extra = (options?.propositions ?? [])
+      .map((proposition) => proposition.id)
+      .filter((id) => !(id in values))
+      .map((id) => ({ id, kind: "noul" as const, value: criteriaValue }));
+
+    const answers = [
+      ...Object.entries(values).map(([id, value]) =>
+        typeof value === "string"
+          ? { id, kind: "choice" as const, choice: value, confidence: 0.95 }
+          : { id, kind: "noul" as const, value },
+      ),
+      ...extra,
+    ];
     return {
       answers,
       model: {
@@ -100,7 +120,7 @@ describe("los tres resultados", () => {
     const result = await runGate(PATHS(), {
       gateId: "plan",
       ticketId: TICKET,
-      evaluate: evaluator(allPropositions(0.95, "falta_evidencia")),
+      evaluate: evaluator(allPropositions(0.95, "completo"), 0.5),
       dryRun: true,
     });
     expect(result.stdout).toContain("RESULTADO: REVIEW");
@@ -113,31 +133,94 @@ describe("los tres resultados", () => {
     const result = await runGate(PATHS(), {
       gateId: "plan",
       ticketId: TICKET,
-      evaluate: evaluator({
-        ...allPropositions(0.95),
-        cubre_todos_los_criterios: 0.04,
-      }),
+      // Un criterio de aceptación claramente incumplido. Las dimensiones fijas
+      // ya no votan: su veredicto lo dan las proposiciones atómicas.
+      evaluate: evaluator(allPropositions(0.95), 0.03),
       dryRun: true,
     });
     expect(result.stdout).toContain("RESULTADO: BLOCK");
-    expect(result.stdout).toContain("cubre_todos_los_criterios=0.04");
+    expect(result.stdout).toContain("criterio_01=0.03");
     expect(result.exitCode).not.toBe(0);
   });
 
-  it("no aprueba aunque la media ponderada sea alta", async () => {
-    // Una proposición con peso 3 en 0.04 hunde la media, pero el caso que
-    // importa es el contrario: que una media alta no rescate un criterio
-    // incumplido.
+  it("un criterio incumplido bloquea, vía proposición atómica", async () => {
+    // La expansión por criterio es lo que permite señalar *cuál* falta, en vez
+    // de devolver un juicio compuesto ambiguo.
+    // El evaluador debe respetar el tipo de cada proposición: una elección no se
+    // responde con una probabilidad, y el motor rechaza la respuesta si no
+    // coincide con lo declarado.
+    const evaluador = (async (options: {
+      propositions?: readonly { id: string; kind: string }[];
+    }) => ({
+      answers: (options?.propositions ?? []).map((proposition) =>
+        proposition.kind === "choice"
+          ? {
+              id: proposition.id,
+              kind: "choice" as const,
+              choice: "completo",
+              confidence: 0.95,
+            }
+          : proposition.id === "criterio_02"
+            ? { id: proposition.id, kind: "noul" as const, value: 0.03 }
+            : { id: proposition.id, kind: "noul" as const, value: 0.96 },
+      ),
+      model: { provider: "openrouter", model: "m", resolvedVersion: "r" },
+      usage: { inputTokens: 1, outputTokens: 1, costUsd: 0 },
+      latencyMs: 1,
+    })) as unknown as typeof import("../packages/gate-jev/src/index.js").evaluateWithJev;
+
     const result = await runGate(PATHS(), {
       gateId: "plan",
       ticketId: TICKET,
-      evaluate: evaluator({
-        ...allPropositions(1.0),
-        rollback_suficiente: 0.0,
-      }),
+      evaluate: evaluador,
       dryRun: true,
     });
+
+    expect(result.stdout).toContain(
+      "4 criterio(s) desplegados como proposiciones atómicas",
+    );
     expect(result.stdout).toContain("RESULTADO: BLOCK");
+    expect(result.stdout).toContain("criterio_02=0.03");
+  });
+
+  it("no aprueba aunque la media ponderada sea alta", async () => {
+    // Tres criterios perfectos y uno incumplido. La media es alta —0.75 solo
+    // contando los criterios— y el gate debe bloquear igual: promediar permite
+    // que un criterio claramente incumplido quede compensado por otros que van
+    // bien, y un gate no debe poder aprobar con un criterio en contra.
+    const evaluador = (async (options: {
+      propositions?: readonly { id: string; kind: string }[];
+    }) => ({
+      answers: (options?.propositions ?? []).map((proposition) =>
+        proposition.kind === "choice"
+          ? {
+              id: proposition.id,
+              kind: "choice" as const,
+              choice: "completo",
+              confidence: 0.95,
+            }
+          : {
+              id: proposition.id,
+              kind: "noul" as const,
+              value: proposition.id === "criterio_04" ? 0.0 : 1.0,
+            },
+      ),
+      model: { provider: "openrouter", model: "m", resolvedVersion: "r" },
+      usage: { inputTokens: 1, outputTokens: 1, costUsd: 0 },
+      latencyMs: 1,
+    })) as unknown as typeof import("../packages/gate-jev/src/index.js").evaluateWithJev;
+
+    const result = await runGate(PATHS(), {
+      gateId: "plan",
+      ticketId: TICKET,
+      evaluate: evaluador,
+      dryRun: true,
+    });
+
+    expect(result.stdout).toContain("RESULTADO: BLOCK");
+    expect(result.stdout).toContain("criterio_04=0.00");
+    // Los otros tres aprobaron, y aun así no alcanza.
+    expect(result.stdout).toContain("criterio_01=1.00");
   });
 });
 
@@ -247,7 +330,7 @@ describe("el recibo", () => {
     await runGate(PATHS(), {
       gateId: "plan",
       ticketId: TICKET,
-      evaluate: evaluator(allPropositions(0.3)),
+      evaluate: evaluator(allPropositions(0.95), 0.5),
       receiptId: "GR-0002",
     });
 
@@ -261,7 +344,7 @@ describe("el recibo", () => {
     await runGate(PATHS(), {
       gateId: "plan",
       ticketId: TICKET,
-      evaluate: evaluator(allPropositions(0.95, "falta_evidencia")),
+      evaluate: evaluator(allPropositions(0.95, "completo"), 0.4),
     });
     const receipt = readReceipts(lab, TICKET)[0];
     expect(receipt?.escalatedTo).toBe("human");

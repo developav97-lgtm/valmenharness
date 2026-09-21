@@ -9,6 +9,7 @@
 import { basename, resolve } from "node:path";
 
 import { EXIT_SCHEMA, TicketError, toFailure } from "@valmen/core";
+import { gateById } from "@valmen/gate";
 
 import {
   type CommandResult,
@@ -23,6 +24,7 @@ import {
 } from "./commands.js";
 import { type RegistryPaths, defaultPaths, legacyPaths } from "./discovery.js";
 import { runGate } from "./gate.js";
+import { renderSimulation, simulateGate } from "./simulate.js";
 
 const USAGE = `valmen — harness agéntico
 
@@ -38,6 +40,9 @@ Comandos:
   sync [--check]            Proyecta .valmen/ a AGENTS.md.
   adopt [--dry-run]         Incorpora el harness a un proyecto existente.
   gate <gate> --id <ID>     Evalúa un gate contra un ticket.
+  simulate <gate>           Calibra un gate sobre el registro histórico.
+      --limit <n>           Evalúa solo los primeros n sujetos.
+      --json                Informe en JSON en vez de tabla.
 
 Opciones globales:
   --root <ruta>             Raíz del proyecto (por defecto: el directorio actual).
@@ -69,7 +74,7 @@ interface Options {
 }
 
 /** Opciones que consumen un valor. */
-const VALUE_OPTIONS = ["--root", "--tickets", "--id"] as const;
+const VALUE_OPTIONS = ["--root", "--tickets", "--id", "--limit"] as const;
 
 /** Error de uso: se reporta con el código de esquema, como el CLI de referencia. */
 class UsageError extends Error {}
@@ -177,7 +182,8 @@ export function dispatch(options: Options): CommandResult {
   if (command === "gate") {
     return {
       stdout: "",
-      stderr: "El comando gate es asíncrono; use `runGate` o la línea de comandos.",
+      stderr:
+        "El comando gate es asíncrono; use `runGate` o la línea de comandos.",
       exitCode: EXIT_SCHEMA,
     };
   }
@@ -280,9 +286,56 @@ export async function run(argv: readonly string[]): Promise<number> {
 
   try {
     const [command, ...rest] = options.positionals;
-    let result: CommandResult;
+    let result: CommandResult | undefined;
 
-    if (command === "gate") {
+    if (command === "simulate") {
+      const gateId = rest[0];
+      if (gateId === undefined) {
+        result = {
+          stdout: "",
+          stderr: "simulate requiere un identificador de gate.",
+          exitCode: EXIT_SCHEMA,
+        };
+      } else {
+        let definition;
+        try {
+          definition = gateById(gateId);
+        } catch (caught) {
+          const failure = toFailure(caught);
+          result = {
+            stdout: "",
+            stderr: failure.message,
+            exitCode: EXIT_SCHEMA,
+          };
+          definition = null;
+        }
+        if (definition !== null && definition !== undefined) {
+          const rawLimit = options.flags["limit"];
+          const limit =
+            typeof rawLimit === "string"
+              ? Number.parseInt(rawLimit, 10)
+              : undefined;
+          const report = await simulateGate(resolvePaths(options), {
+            gate: definition,
+            ...(limit === undefined || Number.isNaN(limit) ? {} : { limit }),
+            onProgress: (done, total) => {
+              if (done % 5 === 0) process.stderr.write(`  ${done}/${total}\r`);
+            },
+          });
+          process.stderr.write("            \r");
+          result = {
+            stdout:
+              options.flags["json"] === true
+                ? JSON.stringify(report, null, 2) + "\n"
+                : renderSimulation(report, definition.policy),
+            stderr: "",
+            exitCode: 0,
+          };
+        } else if (result === undefined) {
+          result = { stdout: "", stderr: "", exitCode: 0 };
+        }
+      }
+    } else if (command === "gate") {
       const gateId = rest[0];
       const rawId = options.flags["id"];
       const ticketId = typeof rawId === "string" ? rawId : undefined;
@@ -310,9 +363,10 @@ export async function run(argv: readonly string[]): Promise<number> {
       result = dispatch(options);
     }
 
-    if (result.stdout !== "") process.stdout.write(result.stdout);
-    if (result.stderr !== "") process.stderr.write(`${result.stderr}\n`);
-    return result.exitCode;
+    const final = result ?? { stdout: "", stderr: "", exitCode: EXIT_SCHEMA };
+    if (final.stdout !== "") process.stdout.write(final.stdout);
+    if (final.stderr !== "") process.stderr.write(`${final.stderr}\n`);
+    return final.exitCode;
   } catch (caught) {
     const failure = toFailure(caught);
     process.stderr.write(`Error: ${failure.message}\n`);

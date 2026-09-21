@@ -19,20 +19,13 @@ import { SCHEMA_VERSION } from "@valmen/core";
 import type {
   GateDecision,
   GatePolicy,
-  PropositionAnswer,
+  MechanicalCheck,
   Proposition,
+  PropositionAnswer,
 } from "./decide.js";
 
 /** Versión del formato del recibo. */
 export const RECEIPT_VERSION = 1;
-
-/** Un check mecánico y su resultado. */
-export interface MechanicalCheck {
-  readonly id: string;
-  readonly description: string;
-  readonly result: "pass" | "fail" | "warn" | "skip";
-  readonly detail?: string;
-}
 
 /** Qué modelo evaluó, con su versión concreta resuelta. */
 export interface ModelIdentity {

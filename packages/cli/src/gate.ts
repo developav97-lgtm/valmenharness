@@ -32,7 +32,9 @@ import {
   type PropositionAnswer,
   buildReceipt,
   decide,
+  extractCriteria,
   gateById,
+  gateFor,
   summarizeReceipt,
   weightedMean,
 } from "@valmen/gate";
@@ -173,6 +175,12 @@ export async function runGate(
     return { stdout: "", stderr: failure.message, exitCode: failure.exitCode };
   }
 
+  // El gate se expande con el sujeto: una proposición por criterio de
+  // aceptación, en vez de una pregunta compuesta que el evaluador no sabe
+  // responder. Medido: la compuesta acierta el 7%, las atómicas el 62%.
+  const criteria = extractCriteria(state["criterios"] ?? "");
+  const gate = gateFor(definition, { criteria });
+
   // Un check mecánico fallido bloquea sin gastar una llamada al modelo.
   const fallidos = checks.filter((check) => check.result === "fail");
   if (fallidos.length > 0) {
@@ -188,7 +196,7 @@ export async function runGate(
   let evaluation;
   try {
     evaluation = await evaluate({
-      propositions: definition.propositions,
+      propositions: gate.propositions,
       state,
       sessionId: `${options.ticketId}:${options.gateId}`,
     });
@@ -208,9 +216,9 @@ export async function runGate(
   let decision: GateDecision;
   try {
     decision = decide(
-      definition.propositions,
+      gate.propositions,
       evaluation.answers,
-      definition.policy as GatePolicy,
+      gate.policy as GatePolicy,
     );
   } catch (caught) {
     const failure = toFailure(caught);
@@ -245,6 +253,9 @@ export async function runGate(
 
   const lines: string[] = [
     `Gate ${definition.id} — ${options.ticketId}`,
+    criteria.length > 0
+      ? `  ${criteria.length} criterio(s) desplegados como proposiciones atómicas`
+      : "  El ticket no declara criterios; el gate se evalúa sin expansión",
     "",
     "  Checks mecánicos (código, sin coste)",
   ];
