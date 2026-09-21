@@ -235,6 +235,19 @@ export function extraHeaders(providerId: string): Readonly<Record<string, string
   return transportById(providerId).headers ?? {};
 }
 
+/**
+ * Cómo pide este proveedor una salida estructurada.
+ *
+ * Por defecto `json-schema`, que es lo que el harness usa y lo que OpenRouter
+ * acepta. Un proveedor que no lo soporte lo declara y recibe el esquema en el
+ * prompt.
+ */
+export function structuredOutputOf(
+  providerId: string,
+): "json-schema" | "json-object" {
+  return transportById(providerId).structuredOutput ?? "json-schema";
+}
+
 /** Todos los proveedores con su dialecto por defecto, para la interfaz. */
 export function listTransports(): readonly {
   readonly id: string;

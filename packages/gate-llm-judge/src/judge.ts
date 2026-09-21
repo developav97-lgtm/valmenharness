@@ -33,6 +33,7 @@ import {
   extraHeaders,
   resolveApiKey,
   resolveChatEndpoint,
+  structuredOutputOf,
 } from "@valmen/credentials";
 
 /**
@@ -156,7 +157,67 @@ function buildSchema(
  * pide un juicio sin instrucciones explícitas tiende a responder que todo está
  * bien.
  */
-function systemPrompt(): string {
+/**
+ * La forma exacta de la respuesta, escrita para el modelo.
+ *
+ * Cuando el proveedor no acepta un `json_schema`, el esquema viaja en el prompt.
+ * Y ahí **volcar el JSON Schema no funciona**: medido contra DeepSeek, el modelo
+ * devuelve algo con otra forma y el juez no puede leer ni una respuesta. Lo que
+ * sí funciona es decirle la forma concreta —una clave por proposición, qué lleva
+ * dentro, y que no lo envuelva en nada— porque es lo que el modelo tiene que
+ * escribir, no la definición de lo que es válido.
+ */
+function formaExplicita(schema: unknown): string[] {
+  const propiedades = (schema as { properties?: Record<string, unknown> })
+    .properties;
+  if (propiedades === undefined) return ["Responde solo con el JSON del esquema."];
+
+  const lineas = [
+    "Responde con **un solo objeto JSON**, sin envolverlo en otra clave, cuyas",
+    "claves sean exactamente estos identificadores y ninguna más:",
+    "",
+    "{",
+  ];
+  const ids = Object.keys(propiedades);
+  ids.forEach((id, indice) => {
+    const cuerpo = propiedades[id] as {
+      properties?: Record<string, unknown>;
+    };
+    const esEleccion = cuerpo.properties?.["choice"] !== undefined;
+    const coma = indice === ids.length - 1 ? "" : ",";
+    lineas.push(
+      esEleccion
+        ? `  ${JSON.stringify(id)}: { "choice": "<una de las opciones>", "confidence": 0.0, "reason": "una frase" }${coma}`
+        : `  ${JSON.stringify(id)}: { "holds": true, "confidence": 0.0, "reason": "una frase" }${coma}`,
+    );
+  });
+  lineas.push(
+    "}",
+    "",
+    "Cada clave lleva `confidence` entre 0 y 1, y `reason` en una frase.",
+    "",
+    // Medido: DeepSeek tradujo `holds` a `cumple` porque la conversación está en",
+    // español. El nombre de la clave es parte del contrato, no una descripción,
+    // así que hay que decir que es literal.
+    // Y un ejemplo relleno, porque un modelo copia lo que ve mejor de lo que
+    // obedece lo que lee: pedirle `holds` en español produjo `cumple` tres veces
+    // seguidas, con la instrucción explícita de no traducirlo delante.
+    "",
+    "Así se ve una respuesta correcta, con el primer identificador:",
+    "",
+    "{",
+    `  ${JSON.stringify(ids[0])}: { "holds": true, "confidence": 0.9, "reason": "el plan lo cubre en el paso 2" }`,
+    "}",
+    "",
+    "Fíjate en que la clave es `holds`, en inglés. No la traduzcas.",
+  );
+  return lineas;
+}
+
+function systemPrompt(schemaEnPrompt?: unknown): string {
+  const esquema =
+    schemaEnPrompt === undefined ? [] : ["", ...formaExplicita(schemaEnPrompt)];
+
   return [
     "Eres un evaluador de artefactos de ingeniería. Recibes un estado en JSON y una",
     "lista de proposiciones. Para cada proposición respondes si se cumple en ese estado.",
@@ -169,6 +230,7 @@ function systemPrompt(): string {
     "   la confianza para parecer útil.",
     "4. No propongas mejoras ni comentes fuera de lo que la proposición pregunta.",
     "5. Responde solo con el JSON del esquema.",
+    ...esquema,
   ].join("\n");
 }
 
@@ -279,6 +341,11 @@ export async function evaluateWithJudge(
   // esté implementado falla aquí, antes de gastar una llamada.
   const endpoint = resolveChatEndpoint(proveedor, model);
   const extra = extraHeaders(proveedor);
+  // Pedir la salida estructurada como el proveedor sepa: OpenRouter acepta un
+  // `json_schema` y lo hace cumplir; DeepSeek lo rechaza con un 400 y solo
+  // admite `json_object`, así que el esquema viaja en el prompt. Verificado con
+  // una llamada real a cada uno.
+  const dialecto = structuredOutputOf(proveedor);
 
   if (options.propositions.length === 0) {
     throw new GateDefinitionError(
@@ -301,6 +368,7 @@ export async function evaluateWithJudge(
   }
 
   const schema = buildSchema(options.propositions);
+  const esquemaEnPrompt = dialecto === "json-schema" ? undefined : schema;
   const started = Date.now();
   let response: Response;
 
@@ -325,10 +393,13 @@ export async function evaluateWithJudge(
             content: userPrompt(options.state, options.propositions),
           },
         ],
-        response_format: {
-          type: "json_schema",
-          json_schema: { name: "gate_judgement", strict: true, schema },
-        },
+        response_format:
+          dialecto === "json-schema"
+            ? {
+                type: "json_schema",
+                json_schema: { name: "gate_judgement", strict: true, schema },
+              }
+            : { type: "json_object" },
       }),
       signal:
         options.signal ?? AbortSignal.timeout(options.timeoutMs ?? 90_000),
@@ -435,8 +506,14 @@ export async function evaluateWithJudge(
       );
     });
   if (faltantes.length > 0) {
+    // Se incluye lo que el modelo devolvió, recortado: un diagnóstico que dice
+    // «no respondió correctamente» y no muestra la respuesta obliga a
+    // reproducir la llamada a mano para saber qué pasó. La primera clave suele
+    // bastar para ver si envolvió el objeto o cambió los nombres.
+    const primeras = Object.keys(juicio).slice(0, 6).join(", ");
     throw new JudgeError(
-      `El juez no respondió correctamente: ${faltantes.join(", ")}`,
+      `El juez no respondió correctamente: ${faltantes.join(", ")}. ` +
+        `Devolvió las claves [${primeras}]: ${content.slice(0, 300)}`,
       "MISSING_ANSWER",
     );
   }
