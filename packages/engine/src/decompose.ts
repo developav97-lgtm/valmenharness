@@ -115,10 +115,15 @@ function leerFeature(root: string, slug: string): { row: FeatureRow; text: strin
     fail(`La feature "${slug}" no es válida: ${leida.row.invalid}`);
   }
   if (!ESTADOS_DESCOMPONIBLES.includes(leida.row.state)) {
+    // El mensaje nombra el archivo y no un comando, porque el comando que
+    // escribiría la spec todavía no existe: `valmen feature spec` está en la fase
+    // siguiente. Un error que manda a ejecutar algo inexistente es peor que uno
+    // que dice qué falta.
     fail(
       `La feature "${slug}" está en ${leida.row.state} y no se puede descomponer ` +
-        `desde ahí. Hace falta una spec (${ESTADOS_DESCOMPONIBLES.join(" o ")}). ` +
-        "Pasa antes por `valmen feature spec`.",
+        "desde ahí. Hace falta la spec: escribe " +
+        `.valmen/features/${slug}/spec/<dominio>/spec.md con sus requisitos en ` +
+        `RFC 2119, y pasa la feature a ${ESTADOS_DESCOMPONIBLES.join(" o ")}.`,
       EXIT_INVARIANT,
     );
   }
