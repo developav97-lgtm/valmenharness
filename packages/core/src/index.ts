@@ -12,6 +12,7 @@ export * from "./parser.js";
 export * from "./validators.js";
 export * from "./blocks.js";
 export * from "./validate.js";
+export * from "./json.js";
 export * from "./edit.js";
 export * from "./migrate.js";
 export * from "./fs.js";

@@ -9,6 +9,7 @@ import { fail } from "./errors.js";
 import { FRONTMATTER_BLOCK_RE, FRONTMATTER_LINE_RE } from "./contract.js";
 import type { JsonObject } from "./parser.js";
 import { isSafePlainScalar } from "./parser.js";
+import { formatJsonBlock } from "./json.js";
 
 /**
  * Escapa un valor para usarlo como reemplazo literal.
@@ -125,10 +126,14 @@ export function replaceBlock(
     );
   }
 
-  // `JSON.stringify` con dos espacios replica el `indent=2` del contrato, y el
-  // reemplazo por función evita que un `$` en el contenido se interprete como
-  // patrón.
-  const rendered = JSON.stringify(entries, null, 2);
+  // La serialización replica `json.dumps(ensure_ascii=False, indent=2)` de la
+  // implementación de referencia, incluidas las reglas de los flotantes: el
+  // bloque se reescribe entero, así que una diferencia de formato no cambiaría
+  // una entrada, reformatearía todas las demás.
+  //
+  // El reemplazo por función evita además que un `$` en el contenido se
+  // interprete como patrón.
+  const rendered = formatJsonBlock(entries);
   return text.replace(
     pattern,
     (_match, head: string, _body: string, tail: string) =>
