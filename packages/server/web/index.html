@@ -198,6 +198,29 @@
       .diff .add { background: rgba(63, 185, 80, 0.12); color: var(--ok); }
       .diff .remove { background: rgba(248, 81, 73, 0.12); color: var(--error); }
       .diff .same { color: var(--tenue); }
+      /* ── Configurar por chat ──────────────────────────────────────────── */
+      .conversacion { display: flex; flex-direction: column; gap: 14px; margin-bottom: 18px; }
+      .turno { border: 1px solid var(--borde); border-radius: 8px; padding: 14px 16px; background: var(--panel); }
+      .turno.tuyo { background: var(--panel-alto); }
+      .turno .quien { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--tenue); margin-bottom: 6px; }
+      .turno .texto { white-space: pre-wrap; }
+      .propuesta { border: 1px solid var(--borde); border-radius: 8px; padding: 14px 16px; margin-top: 12px; background: var(--fondo); }
+      .propuesta h4 { margin: 0 0 4px; font-size: 14px; font-family: var(--mono); }
+      .propuesta .motivo { font-size: 13px; color: var(--tenue); margin-bottom: 10px; }
+      .propuesta.invalida { border-color: var(--error); }
+      .propuesta.sensible { border-color: var(--alerta); }
+      .confirmacion { margin-top: 10px; }
+      .confirmacion code { font-family: var(--mono); color: var(--alerta); }
+      .confirmacion input { margin-top: 6px; font-family: var(--mono); }
+      textarea {
+        width: 100%; min-height: 76px; resize: vertical; font: inherit; font-size: 14px;
+        padding: 10px 12px; border-radius: 8px; background: var(--fondo);
+        color: var(--texto); border: 1px solid var(--borde);
+      }
+      textarea:focus { outline: none; border-color: var(--acento); }
+      .ejemplos { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+      .ejemplos button { font-size: 12px; }
+
       /* ── Modelos: routing por rol ─────────────────────────────────────── */
       .roles td { vertical-align: top; }
       .roles select, .roles input { min-width: 0; width: 100%; }
@@ -224,6 +247,7 @@
       <h1>ValmenHarness</h1>
       <nav>
         <a href="#/tickets" data-vista="tickets">Tickets</a>
+        <a href="#/configurar" data-vista="configurar">Configurar</a>
         <a href="#/modelos" data-vista="modelos">Modelos</a>
         <a href="#/configuracion" data-vista="configuracion">Configuración</a>
         <a href="#/proveedores" data-vista="proveedores">Proveedores</a>
@@ -827,6 +851,220 @@
 
         cont.append(barraSecciones, cuerpo);
         mostrar(partes[0][0], partes[0][1], barraSecciones.querySelector("button"));
+      }
+
+      // ── Vista: configurar por chat ────────────────────────────────────────
+
+      /**
+       * El chat de configuración.
+       *
+       * El modelo propone y el humano dispone: nada se escribe hasta que el
+       * usuario pulsa «Aplicar», y un cambio sensible exige además escribir una
+       * frase exacta. La frase no es ceremonia: un `confirm: true` es un clic, y
+       * un clic no es una decisión deliberada.
+       */
+      async function vistaConfigurar() {
+        const cont = $("contenido");
+        cont.textContent = "";
+
+        const conversacion = el("div", undefined, "conversacion");
+        const entrada = document.createElement("textarea");
+        entrada.placeholder = "Describe el cambio: «que los tickets de tipo DOCS no pidan aprobación de plan»…";
+        entrada.setAttribute("aria-label", "Qué quieres configurar");
+
+        const enviar = el("button", "Proponer cambios", "principal");
+        const salida = el("div", undefined, "resultado");
+        const acciones = el("div", undefined, "acciones");
+        acciones.style.justifyContent = "flex-start";
+        acciones.style.marginTop = "10px";
+
+        const nota = el("div", undefined, "nota");
+        nota.append(
+          el("strong", "El modelo propone; tú dispones. "),
+          el("span", "Nada se escribe hasta que lo apruebas. El diff lo calcula el código comparando textos, la validez la decide el parser real, y los cambios que amplían la autoridad automática del sistema piden una confirmación escrita aparte."),
+        );
+        cont.append(nota, el("h2", "Configurar por chat"), conversacion);
+
+        // Tres ejemplos reales: un chat vacío no dice qué se puede pedir.
+        const ejemplos = el("div", undefined, "ejemplos");
+        for (const ejemplo of [
+          "Declara el gate de plan para este proyecto.",
+          "Pasa el routing a económico, pero deja el arquitecto en un modelo fuerte.",
+          "Añade un comentario al principio de la configuración explicando qué es esto.",
+        ]) {
+          const boton = el("button", ejemplo);
+          boton.addEventListener("click", () => {
+            entrada.value = ejemplo;
+            entrada.focus();
+          });
+          ejemplos.append(boton);
+        }
+
+        acciones.append(salida, enviar);
+        cont.append(entrada, acciones, ejemplos);
+
+        const burbuja = (quien, texto, clase) => {
+          const turno = el("div", undefined, `turno ${clase}`);
+          turno.append(el("div", quien, "quien"), el("div", texto, "texto"));
+          conversacion.append(turno);
+          return turno;
+        };
+
+        /** Aplica los cambios aprobados y recarga la vista. */
+        const aplicar = async (cambios, boton) => {
+          boton.disabled = true;
+          try {
+            const r = await api("POST", "/api/chat/config/apply", { changes: cambios });
+            if (r.ok) {
+              await navegar();
+              return;
+            }
+            salida.className = "resultado error";
+            salida.textContent = r.error || "No se aplicó nada.";
+            boton.disabled = false;
+          } catch (fallo) {
+            salida.className = "resultado error";
+            salida.textContent = fallo.message;
+            boton.disabled = false;
+          }
+        };
+
+        enviar.addEventListener("click", async () => {
+          const mensaje = entrada.value.trim();
+          if (mensaje === "") {
+            salida.className = "resultado error";
+            salida.textContent = "Escribe qué quieres cambiar.";
+            return;
+          }
+
+          burbuja("Tú", mensaje, "tuyo");
+          entrada.value = "";
+          enviar.disabled = true;
+          salida.className = "resultado";
+          salida.textContent = "pensando…";
+
+          try {
+            const propuesta = await api("POST", "/api/chat/config", { message: mensaje });
+            salida.textContent = "";
+
+            if (!propuesta.ok) {
+              burbuja("Configurador", propuesta.error, "");
+              return;
+            }
+
+            const turno = burbuja(
+              "Configurador",
+              `${propuesta.summary}\n\n${propuesta.changes.length === 0 ? "No hace falta cambiar ningún archivo." : `${propuesta.changes.length} archivo(s) cambiarían.`} · ${propuesta.model} · $${(propuesta.usage?.costUsd ?? 0).toFixed(6)} · ${propuesta.latencyMs} ms`,
+              "",
+            );
+
+            const pendientes = [];
+            for (const cambio of propuesta.changes) {
+              const caja = el("div", undefined, `propuesta ${cambio.ok ? "" : "invalida"} ${cambio.sensitive ? "sensible" : ""}`);
+              caja.append(el("h4", cambio.label), el("div", cambio.reason, "motivo"));
+
+              if (!cambio.ok) {
+                caja.append(el("div", cambio.error, "error-parser"));
+              } else if (cambio.unchanged) {
+                caja.append(el("div", "Sin cambios respecto de lo guardado.", "resultado"));
+              } else {
+                const diff = el("div", undefined, "diff");
+                for (const linea of cambio.diff) {
+                  diff.append(
+                    el(
+                      "div",
+                      `${linea.kind === "add" ? "+" : linea.kind === "remove" ? "-" : " "} ${linea.text}`,
+                      linea.kind,
+                    ),
+                  );
+                }
+                caja.append(diff);
+              }
+
+              const filaAcciones = el("div", undefined, "acciones");
+              filaAcciones.style.justifyContent = "flex-start";
+              filaAcciones.style.marginTop = "10px";
+
+              const entradaConfirmacion = document.createElement("input");
+              if (cambio.sensitive && cambio.ok && !cambio.unchanged) {
+                const aviso = el("div", undefined, "confirmacion");
+                aviso.append(
+                  el("div", `⚠ Requiere confirmación: ${cambio.sensitiveReason}`, "resultado error"),
+                  el("div", undefined, "resultado"),
+                );
+                aviso.lastChild.append(
+                  el("span", "Escribe "),
+                  el("code", cambio.confirmation),
+                  el("span", " para confirmarlo."),
+                );
+                entradaConfirmacion.type = "text";
+                entradaConfirmacion.placeholder = "Frase de confirmación";
+                aviso.append(entradaConfirmacion);
+                caja.append(aviso);
+              }
+
+              const aplicarEste = el("button", cambio.sensitive ? "Confirmar y aplicar" : "Aplicar", "principal");
+              aplicarEste.disabled = !cambio.ok || cambio.unchanged;
+              aplicarEste.addEventListener("click", () => {
+                const peticion = { file: cambio.file, text: cambio.text };
+                if (cambio.sensitive) peticion.confirm = entradaConfirmacion.value.trim();
+                void aplicar([peticion], aplicarEste);
+              });
+              filaAcciones.append(aplicarEste);
+              caja.append(filaAcciones);
+
+              if (cambio.ok && !cambio.unchanged) {
+                pendientes.push({
+                  file: cambio.file,
+                  text: cambio.text,
+                  ...(cambio.sensitive
+                    ? { confirm: cambio.confirmation }
+                    : {}),
+                });
+              }
+              turno.append(caja);
+            }
+
+            // Aplicar todo respeta las confirmaciones: las sensibles solo entran
+            // si el usuario escribió su frase, y el servidor lo vuelve a exigir.
+            if (pendientes.length > 1) {
+              const todo = el("button", "Aplicar todo");
+              todo.style.marginTop = "10px";
+              todo.addEventListener("click", () => {
+                const confirmadas = [];
+                for (const pendiente of pendientes) {
+                  if (pendiente.confirm === undefined) {
+                    confirmadas.push({ file: pendiente.file, text: pendiente.text });
+                    continue;
+                  }
+                  const caja = [...turno.querySelectorAll(".propuesta")].find((nodo) =>
+                    nodo.querySelector("h4")?.textContent ===
+                    (pendiente.file === "config" ? ".valmen/config.yaml" : ".valmen/routing.yaml"),
+                  );
+                  const escrita = caja?.querySelector("input")?.value.trim();
+                  if (escrita === pendiente.confirm) {
+                    confirmadas.push({
+                      file: pendiente.file,
+                      text: pendiente.text,
+                      confirm: escrita,
+                    });
+                  }
+                }
+                void aplicar(confirmadas, todo);
+              });
+              turno.append(todo);
+            }
+          } catch (fallo) {
+            salida.className = "resultado error";
+            salida.textContent = fallo.message;
+          } finally {
+            enviar.disabled = false;
+          }
+        });
+
+        entrada.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) void enviar.click();
+        });
       }
 
       // ── Vista: modelos (routing por rol) ──────────────────────────────────
@@ -1474,6 +1712,7 @@
 
         try {
           if (nombre === "ticket" && parametro !== undefined) await vistaTicket(parametro);
+          else if (nombre === "configurar") await vistaConfigurar();
           else if (nombre === "modelos") await vistaModelos();
           else if (nombre === "configuracion") await vistaConfiguracion();
           else if (nombre === "proveedores") await vistaProveedores();

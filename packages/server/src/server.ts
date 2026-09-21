@@ -42,6 +42,12 @@ import {
   runTicketGate,
 } from "./gates.js";
 import {
+  type ApplyRequest,
+  ConfigChatError,
+  applyChanges,
+  proposeConfigChange,
+} from "./chat.js";
+import {
   type ConfigState,
   checkConfig,
   configPath,
@@ -438,6 +444,85 @@ export async function handleApi(
         body: { error: caught instanceof Error ? caught.message : String(caught) },
       };
     }
+  }
+
+  // POST /api/chat/config  — propone cambios; **nunca** escribe
+  if (method === "POST" && path === "/api/chat/config") {
+    const datos = body as { message?: unknown };
+    if (typeof datos.message !== "string" || datos.message.trim() === "") {
+      return { status: 400, body: { error: "Falta el mensaje." } };
+    }
+
+    // El modelo lo decide el routing, como todo lo demás: el rol `orchestrator`
+    // por defecto, que hasta ahora estaba declarado sin consumidor.
+    const rutas = readRouting(context.root);
+    const orquestador = rutas.roles.find((ruta) => ruta.role === "orchestrator");
+
+    try {
+      const propuesta = await proposeConfigChange(context.root, {
+        message: datos.message,
+        ...(orquestador?.model === undefined || orquestador.model === ""
+          ? {}
+          : { model: orquestador.model }),
+        ...(orquestador?.effort === undefined
+          ? {}
+          : { effort: orquestador.effort }),
+        ...(context.fetchImpl === undefined
+          ? {}
+          : { fetchImpl: context.fetchImpl }),
+      });
+      return { status: 200, body: propuesta };
+    } catch (caught) {
+      // Un fallo del configurador no es un fallo del servidor: la pantalla lo
+      // muestra donde el usuario escribió.
+      return {
+        status: 200,
+        body: {
+          ok: false,
+          error:
+            caught instanceof ConfigChatError
+              ? caught.message
+              : caught instanceof Error
+                ? caught.message
+                : String(caught),
+          code: caught instanceof ConfigChatError ? caught.code : "ERROR",
+          summary: "",
+          changes: [],
+          model: "",
+          usage: null,
+          latencyMs: 0,
+        },
+      };
+    }
+  }
+
+  // POST /api/chat/config/apply  — escribe lo que el usuario aprobó
+  if (method === "POST" && path === "/api/chat/config/apply") {
+    const datos = body as { changes?: unknown };
+    if (!Array.isArray(datos.changes)) {
+      return { status: 400, body: { error: "Falta `changes`." } };
+    }
+
+    const cambios: ApplyRequest[] = [];
+    for (const crudo of datos.changes) {
+      const item = crudo as { file?: unknown; text?: unknown; confirm?: unknown };
+      if (item.file !== "config" && item.file !== "routing") {
+        return {
+          status: 400,
+          body: { error: "Cada cambio debe declarar `file`: config o routing." },
+        };
+      }
+      if (typeof item.text !== "string") {
+        return { status: 400, body: { error: "Cada cambio debe traer su `text`." } };
+      }
+      cambios.push({
+        file: item.file,
+        text: item.text,
+        ...(typeof item.confirm === "string" ? { confirm: item.confirm } : {}),
+      });
+    }
+
+    return { status: 200, body: applyChanges(context.root, cambios) };
   }
 
   // POST /api/config/sync  — regenera los archivos proyectados

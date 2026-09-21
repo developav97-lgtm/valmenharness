@@ -448,6 +448,38 @@ inaceptable. Tres reglas:
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
+#### 3.2bis Lo que quedó implementado, y qué falta
+
+El chat existe en la ruta `#/configurar`, contra el rol `orchestrator` del routing. La
+primera prueba real, sobre un proyecto de laboratorio:
+
+> «Declara el gate de plan para este proyecto y añade un comentario arriba explicando que el
+> harness vive aquí.»
+
+`claude-sonnet-5` · 7,0 s · $0,006334 · un archivo propuesto, comentarios existentes
+intactos, gate declarado, y **cero bytes escritos** hasta que el usuario confirmó.
+
+Las tres reglas de §3.1, una por una:
+
+| Regla                                        | Estado                                                                                                      |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| 1. El agente propone, el humano dispone      | **Implementada.** El modelo devuelve textos completos; el que escribe es el usuario.                        |
+| 2. Ciertos cambios piden confirmación aparte | **Implementada.** La frase la genera el código, no el modelo.                                               |
+| 3. Todo cambio es un ticket `CHORE`          | **Pendiente.** Requiere escribir tickets desde la app, que llega con las transiciones. La pantalla lo dice. |
+
+Dos decisiones que se tomaron al implementarla y conviene que queden escritas:
+
+- **La sensibilidad la decide el código.** Se compara el antes y el después: si cambia el
+  modelo del rol `gate-evaluator`, si cambia el preset, o si aparece o cambia `gates` o
+  `budgets`, el cambio es sensible. Preguntarle al modelo si su propio cambio es peligroso
+  sería preguntarle a la parte interesada.
+- **El diff lo calcula el código.** El modelo no describe sus cambios: los hace, y el diff
+  sale de comparar textos. Una descripción puede ser convincente y falsa; un diff no.
+
+Lo que el chat **no** hace todavía: tocar los archivos de `gates/` y `processes/` (que no
+existen como artefactos separados; los gates viven en el código), ni escribir el ticket
+`CHORE`. El alcance declarado en §3.3 sigue siendo el destino.
+
 ### 3.3 Alcance del agente de configuración
 
 Puede configurar:

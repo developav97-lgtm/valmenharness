@@ -40,6 +40,7 @@ duplica:
 | **Adaptadores por agente** — `.codex/`, `.claude/`, `.opencode/` desde una sola fuente                  | Implementado y verificado                          |
 | **Mission Control** — tickets, gate en revisión, configuración y proveedores desde la app                 | Implementado y verificado                          |
 | **Routing por rol** — tres presets, trece roles, y el modelo llega a la llamada real                     | Implementado y verificado                          |
+| **Chat de configuración** — el modelo propone, el código valida, el humano dispone                       | Verificado contra el modelo real                   |
 | **Spec-Driven Development** — features con spec, deltas RFC 2119, descomposición en tickets            | Diseñado                                           |
 
 ## La tesis

@@ -89,7 +89,7 @@ Ver [`06-CONTROL-APP.md`](06-CONTROL-APP.md).
 | 4.3     | Vista de gate en revisión                             | **Verificado**: recibo congelado, proposición por proposición, aviso de recibo obsoleto, y la decisión humana anexada sin reescribir el veredicto |
 | 4.4     | Configuración editable                                | Formulario y texto crudo, con diff antes de guardar                                                |
 | 4.5     | Routing de modelos                                    | **Verificado**: tres presets, resolución con origen visible, y el modelo llega a la llamada real    |
-| 4.6     | Chat de configuración                                 | Propone cambios; nunca escribe directo                                                             |
+| 4.6     | Chat de configuración                                 | **Verificado contra el modelo real**: propone con diff, valida con el parser, y exige confirmación escrita para los cambios sensibles |
 | **4.7** | **Configuración de proveedores y claves en la app** ⚠ | **Verificado**: agregar, probar antes de guardar, reemplazar y borrar desde la interfaz. Ver abajo |
 
 **El 4.7 es un requisito explícito del usuario y es bloqueante.** Sin él, la Fase 4 no está
