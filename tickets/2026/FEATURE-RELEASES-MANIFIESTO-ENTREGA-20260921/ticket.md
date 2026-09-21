@@ -4,7 +4,7 @@ id: FEATURE-RELEASES-MANIFIESTO-ENTREGA-20260921
 title: Manifiesto de entrega y proceso de novedades por proyecto
 type: FEATURE
 module: RELEASES
-workflow_status: planned
+workflow_status: approved
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -41,7 +41,7 @@ El harness debe producir un manifiesto de entrega por versión —qué tickets e
 
 ## Plan
 
-- Gate no exigible: es una capacidad nueva, sin impacto de sincronización, migración ni despliegue, y no cambia nada de lo que hoy funciona.
+- Gate de plan y aprobación: aprobado explícitamente por el PO (gate de plan).
 - Pasos ordenados:
   1. Añadir en `packages/engine` una función que construya el manifiesto de entrega: versión, fecha, y por cada ticket el identificador, el tipo, el módulo, el título y el resumen funcional del último cierre. Falla si algún ticket no está cerrado.
   2. Escribirlo en `.valmen/deliveries/<versión>.json`, versionado, con la misma serialización que los bloques para que sea reproducible byte a byte.
@@ -133,6 +133,14 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-09-21",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
   }
 ]
 ```
