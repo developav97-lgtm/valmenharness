@@ -27,9 +27,21 @@
  */
 import type { Proposition, PropositionAnswer } from "@valmen/gate";
 import { GateDefinitionError } from "@valmen/gate";
-import { CredentialError, resolveApiKey } from "@valmen/credentials";
+import {
+  CredentialError,
+  DEFAULT_PROVIDER,
+  extraHeaders,
+  resolveApiKey,
+  resolveChatEndpoint,
+} from "@valmen/credentials";
 
-/** Endpoint de chat de OpenRouter. Distinto del de Decisions. */
+/**
+ * Endpoint de chat por defecto.
+ *
+ * Se conserva el nombre y el valor por compatibilidad, pero ya no es el único:
+ * el endpoint real sale del catálogo de transporte, según el proveedor que diga
+ * el routing. Ver `@valmen/credentials/endpoints`.
+ */
 export const CHAT_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
 
 /**
@@ -232,6 +244,14 @@ export interface JudgeOptions {
    * razona ignora el campo, y uno que sí lo gasta en razonar antes de responder.
    */
   readonly effort?: "auto" | "low" | "medium" | "high";
+  /**
+   * Proveedor por el que hablar.
+   *
+   * Sin él se usa OpenRouter, que es lo que hacía antes de que el routing
+   * pudiera elegir. Con él, la clave y el endpoint salen del catálogo: es lo que
+   * hace que una suscripción o una clave directa sirvan de algo.
+   */
+  readonly provider?: string;
   readonly apiKey?: string;
   readonly signal?: AbortSignal;
   readonly fetchImpl?: typeof fetch;
@@ -253,6 +273,12 @@ export async function evaluateWithJudge(
 ): Promise<JudgeEvaluation> {
   const fetchImpl = options.fetchImpl ?? fetch;
   const model = options.model ?? DEFAULT_JUDGE_MODEL;
+  const proveedor = options.provider ?? DEFAULT_PROVIDER;
+
+  // El endpoint y las cabeceras salen del catálogo. Un modelo cuyo dialecto no
+  // esté implementado falla aquí, antes de gastar una llamada.
+  const endpoint = resolveChatEndpoint(proveedor, model);
+  const extra = extraHeaders(proveedor);
 
   if (options.propositions.length === 0) {
     throw new GateDefinitionError(
@@ -265,7 +291,7 @@ export async function evaluateWithJudge(
   let apiKey = options.apiKey;
   if (apiKey === undefined) {
     try {
-      apiKey = resolveApiKey("openrouter");
+      apiKey = resolveApiKey(proveedor);
     } catch (caught) {
       if (caught instanceof CredentialError) {
         throw new JudgeError(caught.message, "CREDENTIAL_MISSING");
@@ -279,11 +305,12 @@ export async function evaluateWithJudge(
   let response: Response;
 
   try {
-    response = await fetchImpl(CHAT_ENDPOINT, {
+    response = await fetchImpl(endpoint.url, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
+        ...extra,
       },
       body: JSON.stringify({
         model,

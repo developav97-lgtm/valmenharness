@@ -1,0 +1,297 @@
+/**
+ * Contrato del ticket — constantes extraídas del CLI de referencia.
+ *
+ * Cada valor de este archivo está verificado contra `tools/agentic/ticket.py`
+ * de SaiOpenCloud. No se inventó ninguno: ver
+ * docs/09-MIGRACION-SAICLOUD.md §2bis.2ter.
+ */
+/**
+ * Los 18 campos de frontmatter, **en orden exacto**.
+ *
+ * El validador de referencia compara la tupla completa de claves contra esta
+ * lista, así que el orden es parte del contrato: reordenar el frontmatter de un
+ * ticket existente lo invalida.
+ */
+export const FRONTMATTER_FIELDS = [
+    "schema_version",
+    "id",
+    "title",
+    "type",
+    "module",
+    "workflow_status",
+    "qa_status",
+    "release_status",
+    "user_visible",
+    "sync_impact",
+    "migration_impact",
+    "docker_impact",
+    "risk_level",
+    "created",
+    "updated",
+    "related_ticket",
+    "target_release",
+    "released_in",
+];
+/**
+ * Versión del esquema que escribe este motor.
+ *
+ * La migración desde el esquema 1 (el de `ticket.py`) es una operación
+ * explícita e idempotente que solo reescribe el frontmatter: los bloques JSON
+ * append-only de un ticket **nunca** se tocan. Ver Q16 en
+ * docs/11-OPEN-QUESTIONS.md.
+ */
+export const SCHEMA_VERSION = "2";
+/** Versión del esquema anterior, la que escribe `ticket.py`. */
+export const LEGACY_SCHEMA_VERSION = "1";
+/**
+ * Las 15 secciones Markdown, **en orden canónico**.
+ *
+ * El parser busca `Solicitud original` primero y luego exige que la secuencia
+ * de encabezados que sigue sea exactamente `SECTIONS[1:]`. Una sección extra,
+ * faltante o fuera de orden falla.
+ */
+export const SECTIONS = [
+    "Solicitud original",
+    "Descripción funcional",
+    "Diagnóstico",
+    "Plan",
+    "Criterios de aceptación",
+    "Puntos",
+    "Implementación",
+    "Pruebas",
+    "QA",
+    "Evidencia",
+    "Retests",
+    "Cierre",
+    "Consumo de IA",
+    "Release",
+    "Eventos",
+];
+/**
+ * Las 7 secciones que contienen exactamente un bloque JSON *fenced*.
+ *
+ * Cada una debe tener **exactamente uno**: cero o dos fallan.
+ */
+export const STRUCTURED_SECTIONS = [
+    "Puntos",
+    "QA",
+    "Evidencia",
+    "Retests",
+    "Cierre",
+    "Consumo de IA",
+    "Eventos",
+];
+export const TICKET_TYPES = [
+    "FEATURE",
+    "BUGFIX",
+    "IMPROVEMENT",
+    "SYNC",
+    "INTEGRATION",
+    "AGENT",
+    "SECURITY",
+    "CLAUDIO",
+    "CHORE",
+    "DOCS",
+];
+/**
+ * Tipos que añade el esquema 2 respecto al 1.
+ *
+ * `CHORE` cubre el mantenimiento interno y `DOCS` la documentación: trabajo que
+ * antes se atendía en modo directo y por eso no quedaba registrado en ningún
+ * lado. Ambos son opcionales en los gates de plan.
+ */
+export const V2_ONLY_TICKET_TYPES = ["CHORE", "DOCS"];
+export const RISK_LEVELS = ["low", "normal", "high", "critical"];
+export const SEVERITIES = ["low", "normal", "high", "critical"];
+export const WORKFLOW_STATES = [
+    "intake",
+    "analyzed",
+    "planned",
+    "approved",
+    "in_progress",
+    "blocked",
+    "awaiting_user_tests",
+    "in_qa",
+    "changes_requested",
+    "qa_approved",
+    "closed",
+];
+/**
+ * Estados desde los que se puede entrar y salir de `blocked`.
+ *
+ * `blocked` es una adición del esquema 2: el esquema 1 obligaba a usar
+ * `changes_requested` para dependencias externas que no eran cambios, lo que
+ * ensuciaba la semántica del estado.
+ */
+export const BLOCKED_EXITS = [
+    "analyzed",
+    "planned",
+    "approved",
+    "in_progress",
+];
+export const QA_STATES = ["pending", "in_qa", "approved", "waived"];
+export const RELEASE_STATES = [
+    "not_applicable",
+    "unreleased",
+    "planned",
+    "released",
+];
+export const POINT_STATES = [
+    "open",
+    "analyzed",
+    "in_progress",
+    "awaiting_retest",
+    "verified",
+    "closed",
+    "not_reproducible",
+    "deferred",
+    "duplicate",
+];
+/**
+ * Estados terminales de un punto. Exigen `terminal_reason` no vacío.
+ */
+export const TERMINAL_POINT_STATES = [
+    "not_reproducible",
+    "deferred",
+    "duplicate",
+];
+/**
+ * Estados que impiden que el ticket pase a `qa_approved`.
+ *
+ * Nótese que **`verified` NO está aquí**, y eso es deliberado en el contrato
+ * original: un punto verificado no bloquea la aprobación de QA. Es la causa de
+ * que 55 de los 137 puntos históricos quedaran en `verified` sin cerrarse.
+ * Ver docs/09-MIGRACION-SAICLOUD.md §2bis.2quater.
+ */
+export const BLOCKING_POINT_STATES = [
+    "open",
+    "analyzed",
+    "in_progress",
+    "awaiting_retest",
+];
+/**
+ * Máximo de puntos por ticket.
+ *
+ * El límite es por funcionalidad, no por hallazgo: una lista de hallazgos de la
+ * misma funcionalidad permanece en un único ticket.
+ */
+export const MAX_POINTS = 20;
+/** Máximo de niveles en una escala `score` de un evaluador tipo Jev. */
+export const MAX_SCORE_LEVELS = 10;
+/**
+ * Enum cerrado de tipos de evidencia.
+ *
+ * **Por qué existe.** En el esquema 1, `evidence.kind` era el único campo del
+ * contrato sin validar, y derivó a 30 valores distintos en 177 entradas:
+ * `automated`×58, `automated_test`×15, `test`×12 y `automated-test`×4 convivían
+ * como si fueran cosas distintas. Cualquier reporte que agrupara por `kind` daba
+ * un número silenciosamente incorrecto.
+ *
+ * Los valores históricos **no se reescriben**: se normalizan al agregar, con la
+ * tabla de `legacyEvidenceKinds`.
+ */
+export const EVIDENCE_KINDS = [
+    "automated-test",
+    "manual-test",
+    "code-inspection",
+    "build",
+    "deployment",
+    "user-report",
+    "runtime-log",
+    "static-analysis",
+];
+/**
+ * Vía de escape para tipos de evidencia que el enum no cubre.
+ *
+ * Obliga a un prefijo `x-` para que sea evidente en los datos que es una
+ * extensión y no un valor canónico mal escrito.
+ */
+export const CUSTOM_EVIDENCE_KIND_RE = /^x-[a-z0-9-]+$/;
+/**
+ * Normalización de los 30 valores históricos a los 8 canónicos.
+ *
+ * Se aplica **solo al agregar y reportar**, nunca al escribir: los tickets
+ * existentes conservan su `kind` original. Ver el análisis en
+ * docs/09-MIGRACION-SAICLOUD.md §2bis.3.
+ */
+export const LEGACY_EVIDENCE_KINDS = {
+    automated: "automated-test",
+    automated_test: "automated-test",
+    "automated-test": "automated-test",
+    test: "automated-test",
+    "automated-build": "build",
+    build: "build",
+    build_verification: "build",
+    "dry-run": "deployment",
+    canary: "deployment",
+    workflow_run: "deployment",
+    infrastructure_readonly: "deployment",
+    "infrastructure-readonly": "deployment",
+    manual: "manual-test",
+    "manual-test": "manual-test",
+    user_report: "user-report",
+    "user-report": "user-report",
+    user_validation: "user-report",
+    user_test: "user-report",
+    "user-test": "user-report",
+    "user-validation": "user-report",
+    "user-validation-reference-correction": "user-report",
+    manual_report: "user-report",
+    code: "code-inspection",
+    "code-inspection": "code-inspection",
+    source_review: "code-inspection",
+    "source-review": "code-inspection",
+    review: "code-inspection",
+    source_diagnosis: "code-inspection",
+    manual_diagnosis: "code-inspection",
+    analysis: "static-analysis",
+    static_check: "static-analysis",
+    static_validation: "static-analysis",
+    runtime_log: "runtime-log",
+    verification: "manual-test",
+    implementation: "code-inspection",
+};
+/**
+ * Normaliza un `kind` de evidencia, sea canónico o histórico.
+ *
+ * Devuelve `undefined` si el valor no es canónico ni está en la tabla, lo que
+ * permite reportarlo como desconocido en vez de contarlo mal.
+ */
+export function normalizeEvidenceKind(kind) {
+    if (EVIDENCE_KINDS.includes(kind)) {
+        return kind;
+    }
+    return LEGACY_EVIDENCE_KINDS[kind];
+}
+// ── Patrones ────────────────────────────────────────────────────────────────
+/**
+ * `<TIPO>-<MODULO>-<DESCRIPCION>-<YYYYMMDD>`
+ *
+ * El módulo es `[A-Z0-9]+` (un solo segmento); la descripción admite segmentos
+ * separados por guiones.
+ */
+export const ID_RE = /^(FEATURE|BUGFIX|IMPROVEMENT|SYNC|INTEGRATION|AGENT|SECURITY|CLAUDIO|CHORE|DOCS)-([A-Z0-9]+)-([A-Z0-9]+(?:-[A-Z0-9]+)*)-(\d{8})$/;
+export const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+export const SEMVER_RE = /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/;
+export const BUILD_REFERENCE_RE = /^(?:commit:[0-9a-f]{40}|worktree:sha256:[0-9a-f]{64})$/;
+/** Una línea de frontmatter: `clave: valor`, con clave en minúsculas. */
+export const FRONTMATTER_LINE_RE = /^([a-z_]+): ([^\r\n]*)$/;
+/**
+ * Apertura del frontmatter: `---`, contenido, `---` y salto de línea.
+ *
+ * Solo se admite `\n`: un archivo con CRLF no abre el frontmatter.
+ */
+export const FRONTMATTER_BLOCK_RE = /^---\n([\s\S]*?)\n---\n/;
+/** Prefijos de identificadores monótonos por sección estructurada. */
+export const ID_PREFIXES = {
+    Puntos: "POINT",
+    QA: "QA",
+    Evidencia: "EVIDENCE",
+    Retests: "RETEST",
+    Cierre: "CLOSE",
+    "Consumo de IA": "CONSUMO",
+    Eventos: "EVENT",
+};
+/** Ancho de relleno de los identificadores monótonos: `POINT-001`. */
+export const ID_PAD = 3;
+//# sourceMappingURL=contract.js.map

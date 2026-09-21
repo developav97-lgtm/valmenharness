@@ -66,6 +66,8 @@ export interface SelectOptions {
   readonly apiKey?: string;
   /** Modelo del rol `gate-evaluator`, resuelto por el routing del proyecto. */
   readonly model?: string;
+  /** Proveedor por el que hablar. Sin él, OpenRouter. */
+  readonly provider?: string;
   /** Esfuerzo de razonamiento del rol. `auto` no envía preferencia. */
   readonly effort?: "auto" | "low" | "medium" | "high";
   /** Modelo del rol `gate-judge`, para la degradación desde Jev. */
@@ -228,6 +230,7 @@ async function runSemantic(
       state: options.state,
       ...(options.apiKey === undefined ? {} : { apiKey: options.apiKey }),
       ...(options.model === undefined ? {} : { model: options.model }),
+      ...(options.provider === undefined ? {} : { provider: options.provider }),
       ...(options.effort === undefined ? {} : { effort: options.effort }),
     });
     return {

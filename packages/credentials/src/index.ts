@@ -6,3 +6,4 @@
  */
 
 export * from "./credentials.js";
+export * from "./endpoints.js";

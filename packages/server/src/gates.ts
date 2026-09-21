@@ -315,6 +315,9 @@ export async function runTicketGate(
     ...(routing.evaluatorModel === ""
       ? {}
       : { model: routing.evaluatorModel }),
+    ...(routing.evaluatorProvider === ""
+      ? {}
+      : { provider: routing.evaluatorProvider }),
     ...(routing.probabilistic ? {} : { semantic: "llm-judge" as const }),
     ...(routing.evaluatorEffort === "auto"
       ? {}

@@ -38,6 +38,9 @@ export const EFFORTS: readonly Effort[] = ["auto", "low", "medium", "high"];
 /** Modelo que usa el evaluador de gates por defecto. */
 export const DEFAULT_GATE_EVALUATOR = "typesafe/jev-1.13";
 
+/** Proveedor por defecto del evaluador: el mismo que usa el harness por defecto. */
+const DEFAULT_PROVIDER = "openrouter";
+
 /** Modelo que usa el juez de chat por defecto. */
 export const DEFAULT_GATE_JUDGE = "deepseek/deepseek-v4-flash";
 
@@ -342,6 +345,8 @@ export function readProjectRouting(root: string): Routing {
  */
 export interface GateRouting {
   readonly evaluatorModel: string;
+  /** Por dónde hablar: el `provider` del rol, no solo el modelo. */
+  readonly evaluatorProvider: string;
   readonly evaluatorEffort: Effort;
   /** Modelo del rol `gate-judge`, para la caída desde Jev. */
   readonly judgeModel: string;
@@ -359,6 +364,7 @@ export function gateRoutingFor(root: string): GateRouting {
 
   return {
     evaluatorModel: evaluador?.model ?? DEFAULT_GATE_EVALUATOR,
+    evaluatorProvider: evaluador?.provider ?? DEFAULT_PROVIDER,
     evaluatorEffort: evaluador?.effort ?? "auto",
     judgeModel: juez?.model ?? "",
     probabilistic: evaluador?.probabilistic ?? true,

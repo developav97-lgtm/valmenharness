@@ -62,6 +62,8 @@ export interface GateRunOptions {
    * el recibo registra exactamente el que se usó.
    */
   readonly model?: string;
+  /** Proveedor por el que hablar. Sin él, OpenRouter. */
+  readonly provider?: string;
   readonly effort?: "auto" | "low" | "medium" | "high";
   readonly judgeModel?: string;
   /** Evaluador semántico preferido por el routing del proyecto. */
@@ -170,6 +172,7 @@ export async function runGate(
       ...(options.jev === undefined ? {} : { jev: options.jev }),
       ...(options.judge === undefined ? {} : { judge: options.judge }),
       ...(options.model === undefined ? {} : { model: options.model }),
+      ...(options.provider === undefined ? {} : { provider: options.provider }),
       ...(options.effort === undefined ? {} : { effort: options.effort }),
       ...(options.judgeModel === undefined
         ? {}
