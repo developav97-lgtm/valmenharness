@@ -81,16 +81,16 @@ con la decisión humana en ≥90% y hay **cero falsos aprobados** en tickets de 
 
 Ver [`06-CONTROL-APP.md`](06-CONTROL-APP.md).
 
-| #       | Entregable                                            | Criterio de aceptación                                                                             |
-| ------- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| 4.1     | `valmen serve`                                        | **Verificado**: escucha solo en `127.0.0.1`, sin lógica de negocio propia                          |
-| 4.2     | Vista de tickets                                      | **Verificado**: los 57 tickets del fixture, con los mismos filtros que el visor anterior            |
-| 4.2bis  | Vista de features                                     | Una feature con su spec, sus deltas y los tickets que la implementan                                |
-| 4.3     | Vista de gate en revisión                             | **Verificado**: recibo congelado, proposición por proposición, aviso de recibo obsoleto, y la decisión humana anexada sin reescribir el veredicto |
-| 4.4     | Configuración editable                                | Formulario y texto crudo, con diff antes de guardar                                                |
-| 4.5     | Routing de modelos                                    | **Verificado**: tres presets, resolución con origen visible, y el modelo llega a la llamada real    |
-| 4.6     | Chat de configuración                                 | **Verificado contra el modelo real**: propone con diff, valida con el parser, y exige confirmación escrita para los cambios sensibles |
-| **4.7** | **Configuración de proveedores y claves en la app** ⚠ | **Verificado**: agregar, probar antes de guardar, reemplazar y borrar desde la interfaz. Ver abajo |
+| #       | Entregable                                            | Criterio de aceptación                                                                                                                                     |
+| ------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 4.1     | `valmen serve`                                        | **Verificado**: escucha solo en `127.0.0.1`, sin lógica de negocio propia                                                                                  |
+| 4.2     | Vista de tickets                                      | **Verificado**: los 57 tickets del fixture, con los mismos filtros que el visor anterior                                                                   |
+| 4.2bis  | Vista de features                                     | Una feature con su spec, sus deltas y los tickets que la implementan                                                                                       |
+| 4.3     | Vista de gate en revisión                             | **Verificado**: recibo congelado, proposición por proposición, aviso de recibo obsoleto, y la decisión humana anexada sin reescribir el veredicto          |
+| 4.4     | Configuración editable                                | **Verificado**: texto crudo con los comentarios intactos, error del parser con su línea, diff antes de guardar, y sin guardar nunca un texto que no parsea |
+| 4.5     | Routing de modelos                                    | **Verificado**: tres presets, resolución con origen visible, y el modelo llega a la llamada real                                                           |
+| 4.6     | Chat de configuración                                 | **Verificado contra el modelo real**: propone con diff, valida con el parser, y exige confirmación escrita para los cambios sensibles                      |
+| **4.7** | **Configuración de proveedores y claves en la app** ⚠ | **Verificado**: agregar, probar antes de guardar, reemplazar y borrar desde la interfaz. Ver abajo                                                         |
 
 **El 4.7 es un requisito explícito del usuario y es bloqueante.** Sin él, la Fase 4 no está
 terminada: cada prueba de proveedor seguiría exigiendo abrir un archivo y exportar una
@@ -110,11 +110,24 @@ Detalle completo en [`06-CONTROL-APP.md` §2.6bis](06-CONTROL-APP.md).
 Criterio de aceptación de la fase: **un día completo de trabajo operado sin abrir la
 terminal, y una clave de proveedor agregada, probada y rotada desde la app.**
 
+**Estado de ese criterio: la mitad está cumplida, y la otra mitad no.** La clave se agrega,
+se prueba antes de guardar, se reemplaza y se borra desde la app; la configuración, el
+routing y los archivos generados también. Lo que falta es **avanzar el estado de un
+ticket**: un gate se puede aprobar desde la pantalla, pero el ticket no se mueve, porque un
+gate no cambia estados por su cuenta y la transición todavía no existe como operación. Un
+día de trabajo sin terminal necesita esa pieza, y es lo primero de la Fase 5.
+
 **La vista de features (4.2bis) se mueve a la Fase 5.** Una feature es un objeto del
 Spec-Driven Development, y ese formato todavía no existe: construir la pantalla antes que
 el artefacto sería dibujar una lista vacía.
 
 ### Fase 5 — Features grandes y procesos (2–3 semanas)
+
+**Empieza por las transiciones de estado.** Son lo que falta para que la Fase 4 cumpla su
+criterio: avanzar un ticket (`planned → approved`, `in_progress → closed`) desde la app,
+escribiendo el evento en el bloque append-only y refrescando el índice. Tiene sus propias
+invariantes —un solo escritor, historial intacto, coherencia del validador— y por eso es una
+pieza y no un botón.
 
 Criterio de aceptación: el módulo de inventario especificado, descompuesto en tickets con
 sprints, y con los dos primeros tickets implementados a través del harness.
@@ -154,16 +167,19 @@ Prioridad estricta. Cada paquete se termina antes de empezar el siguiente.
 **Son 20 paquetes, no 200.** Lección de DSH: la granularidad agresiva paga solo con su
 escala. Se parte un paquete cuando duela, no antes.
 
-## 5. Decisiones que hay que tomar antes de la Fase 1
+## 5. Decisiones que bloqueaban la Fase 1
 
-Estas bloquean el inicio. Ver [`11-OPEN-QUESTIONS.md`](11-OPEN-QUESTIONS.md):
+Estas bloqueaban el inicio. Están todas resueltas, y se dejan escritas porque una decisión
+sin registro se vuelve a discutir:
 
-1. Nombre definitivo del producto y del comando CLI.
-2. Licencia (¿interno, MIT, propietario?).
-3. Repositorio (¿nuevo repo privado, o dentro de ValMenTech?).
-4. ¿Se publica en npm público o en un registro privado?
-5. ¿Quién más trabaja en esto además de ti?
-6. ¿El adaptador de compatibilidad con `ticket.py` es requisito o preferencia?
+| #   | Decisión                       | Resuelta como                                                  |
+| --- | ------------------------------ | -------------------------------------------------------------- |
+| 1   | Nombre del producto y del CLI  | `ValmenHarness`, comando `valmen`, configuración en `.valmen/` |
+| 2   | Licencia                       | MIT                                                            |
+| 3   | Repositorio                    | Público, `github.com/developav97-lgtm/valmenharness`           |
+| 4   | Publicación en npm             | Público, sin registro privado                                  |
+| 5   | Quién más trabaja en esto      | Una persona; el diseño asume ese tamaño y no lo simula         |
+| 6   | Compatibilidad con `ticket.py` | **No hay convivencia**: el harness lo reemplaza directamente   |
 
 ## 6. Presupuesto de construcción
 
