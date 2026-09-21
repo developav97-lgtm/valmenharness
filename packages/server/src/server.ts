@@ -20,10 +20,16 @@ import {
   type Server,
   type ServerResponse,
 } from "node:http";
-import { readFileSync } from "node:fs";
-import { extname } from "node:path";
+import { type FSWatcher, readFileSync, watch } from "node:fs";
+import { extname, join } from "node:path";
 
-import { type RegistryPaths, choosePaths, findTicket, transition } from "@valmen/engine";
+import {
+  type RegistryPaths,
+  choosePaths,
+  findTicket,
+  ticketsPath,
+  transition,
+} from "@valmen/engine";
 import { type JsonObject, nextStates, parseTicket, toFailure } from "@valmen/core";
 
 import {
@@ -774,11 +780,80 @@ function serveStatic(path: string, context: ServerContext): ApiResponse | null {
   };
 }
 
+/**
+ * Clientes suscritos a los cambios del registro.
+ *
+ * El estado de Mission Control vive en disco, no en memoria del servidor: el CLI,
+ * un agente o un editor pueden cambiarlo en cualquier momento. Empujar el aviso
+ * es lo que hace que la pantalla deje de ser una foto.
+ */
+const suscriptores = new Set<ServerResponse>();
+
+/** Avisa a todos los suscriptores de que algo cambió. */
+function broadcast(): void {
+  for (const cliente of suscriptores) {
+    try {
+      cliente.write('data: {"kind":"changed"}\n\n');
+    } catch {
+      suscriptores.delete(cliente);
+    }
+  }
+}
+
+/**
+ * Vigila lo que puede cambiar el estado que la pantalla muestra.
+ *
+ * Se vigilan los dos sitios que importan —el registro de tickets y `.valmen/`,
+ * donde viven los recibos, la configuración y el routing— y **no** la raíz del
+ * proyecto: un `fs.watch` recursivo sobre el repositorio entero incluiría
+ * `node_modules`, y cada instalación dispararía un refresco.
+ *
+ * Los avisos se agrupan: una mutación del harness escribe el ticket, el índice y
+ * el recibo en milisegundos, y tres eventos seguidos harían que la pantalla se
+ * redibujara tres veces.
+ */
+function vigilar(context: ServerContext, paths: RegistryPaths): () => void {
+  const objetivos = [ticketsPath(paths), join(context.root, ".valmen")];
+  const vigías: FSWatcher[] = [];
+  let pendiente: NodeJS.Timeout | null = null;
+
+  for (const objetivo of objetivos) {
+    try {
+      vigías.push(
+        watch(objetivo, { recursive: true }, () => {
+          if (pendiente !== null) clearTimeout(pendiente);
+          pendiente = setTimeout(() => {
+            pendiente = null;
+            broadcast();
+          }, 250);
+        }),
+      );
+    } catch {
+      // Un directorio que todavía no existe no es un error: el registro se crea
+      // en el primer ticket y `.valmen/` al adoptar. La pantalla simplemente no
+      // se actualizará sola hasta que existan, y eso se ve al recargar.
+    }
+  }
+
+  return () => {
+    if (pendiente !== null) clearTimeout(pendiente);
+    for (const vigía of vigías) vigía.close();
+  };
+}
+
 /** Crea el servidor HTTP. */
 export function createMissionControl(context: ServerContext): Server {
-  return createServer((request, response) => {
+  const paths = context.paths ?? choosePaths(context.root);
+  const cerrarVigías = vigilar(context, paths);
+
+  const server = createServer((request, response) => {
     void handleRequest(request, response, context);
   });
+
+  // Un proceso que vigila el disco no termina solo: hay que soltar los vigías
+  // cuando el servidor se cierra, o `valmen serve` no se apagaría nunca.
+  server.on("close", cerrarVigías);
+  return server;
 }
 
 async function handleRequest(
@@ -788,6 +863,34 @@ async function handleRequest(
 ): Promise<void> {
   const url = new URL(request.url ?? "/", "http://127.0.0.1");
   const method = request.method ?? "GET";
+
+  // El flujo de eventos no es una respuesta con cuerpo y fin: se queda abierto.
+  // Por eso se atiende antes del despacho normal, que siempre responde y cierra.
+  if (url.pathname === "/api/events") {
+    response.writeHead(200, {
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-store",
+      Connection: "keep-alive",
+    });
+    // Sin latido, un proxy o el propio navegador pueden cerrar la conexión por
+    // inactividad, y la pantalla dejaría de actualizarse en silencio.
+    response.write("retry: 3000\n\n");
+    suscriptores.add(response);
+
+    const latido = setInterval(() => {
+      try {
+        response.write(": latido\n\n");
+      } catch {
+        suscriptores.delete(response);
+      }
+    }, 25_000);
+
+    request.on("close", () => {
+      clearInterval(latido);
+      suscriptores.delete(response);
+    });
+    return;
+  }
 
   try {
     if (url.pathname.startsWith("/api/")) {

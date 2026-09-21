@@ -38,7 +38,9 @@
       }
       nav a:hover { color: var(--texto); }
       nav a[aria-current="page"] { color: var(--texto); border-bottom-color: var(--acento); }
-      header .raiz { margin-left: auto; color: var(--tenue); font-family: var(--mono); font-size: 12px; }
+      header .raiz { color: var(--tenue); font-family: var(--mono); font-size: 12px; }
+      header .raiz:first-of-type { margin-left: auto; }
+      #actualizado { color: var(--ok); }
       main { max-width: 1180px; margin: 0 auto; padding: 24px; }
       h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--tenue); margin: 0 0 12px; }
       h3 { font-size: 15px; margin: 0; }
@@ -265,6 +267,7 @@
         <a href="#/configuracion" data-vista="configuracion">Configuración</a>
         <a href="#/proveedores" data-vista="proveedores">Proveedores</a>
       </nav>
+      <span class="raiz" id="actualizado"></span>
       <span class="raiz" id="raiz"></span>
     </header>
 
@@ -292,6 +295,15 @@
 
       /** Llama a la API y devuelve el cuerpo, o lanza con el mensaje del servidor. */
       async function api(method, ruta, cuerpo) {
+        if (method !== "GET") ocupado = true;
+        try {
+          return await enviar(method, ruta, cuerpo);
+        } finally {
+          if (method !== "GET") ocupado = false;
+        }
+      }
+
+      async function enviar(method, ruta, cuerpo) {
         const respuesta = await fetch(ruta, {
           method,
           headers: cuerpo === undefined ? {} : { "Content-Type": "application/json" },
@@ -1845,6 +1857,58 @@
         }
       }
 
+      // ── Estado en vivo ────────────────────────────────────────────────────
+
+      /**
+       * El servidor avisa cuando algo cambia en disco, y la vista se rehace.
+       *
+       * Dos cosas que **no** se hacen, y son deliberadas:
+       *
+       * 1. No se refresca mientras hay un diálogo abierto o alguien está
+       *    escribiendo. Perder lo que se está a medio escribir es peor que ver
+       *    un dato un segundo viejo.
+       * 2. No se refresca mientras hay una petición en vuelo lanzada por el
+       *    usuario: mover el estado y repintar a la vez daría una pantalla que
+       *    parpadea justo cuando se acaba de pulsar un botón.
+       */
+      let refrescoPendiente = null;
+      let ocupado = false;
+
+      function puedeRefrescar() {
+        if (ocupado) return false;
+        if (document.querySelector("dialog[open]") !== null) return false;
+        const foco = document.activeElement;
+        if (foco === null) return true;
+        return !["INPUT", "TEXTAREA", "SELECT"].includes(foco.tagName);
+      }
+
+      function conectarEventos() {
+        const eventos = new EventSource("/api/events");
+        eventos.onmessage = () => {
+          if (!puedeRefrescar()) return;
+          clearTimeout(refrescoPendiente);
+          // Un margen corto: una mutación escribe el ticket, el índice y el
+          // recibo en milisegundos, y sin él la vista se reharía tres veces.
+          refrescoPendiente = setTimeout(() => {
+            marcarActualizado();
+            void navegar();
+          }, 300);
+        };
+      }
+
+      function marcarActualizado() {
+        const marca = $("actualizado");
+        if (marca === null) return;
+        const ahora = new Date();
+        marca.textContent =
+          "actualizado " +
+          String(ahora.getHours()).padStart(2, "0") +
+          ":" +
+          String(ahora.getMinutes()).padStart(2, "0") +
+          ":" +
+          String(ahora.getSeconds()).padStart(2, "0");
+      }
+
       // ── Enrutado ──────────────────────────────────────────────────────────
 
       async function navegar() {
@@ -1883,6 +1947,7 @@
       void api("GET", "/api/health").then((salud) => {
         $("raiz").textContent = salud.root;
       });
+      conectarEventos();
       void navegar();
     </script>
   </body>
