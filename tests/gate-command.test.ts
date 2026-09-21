@@ -7,8 +7,8 @@
  * accidente y que el recibo sea auditable.
  */
 import {
-  cpSync,
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -21,15 +21,18 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { runGate, readReceipts } from "../packages/cli/src/gate.js";
 import type { JevEvaluation } from "../packages/gate-jev/src/index.js";
+import { writeFixtureTicket } from "./helpers/fixtures.js";
 
-const FIXTURE = join(import.meta.dirname, "fixtures", "saicloud", "tickets");
-const TICKET = "BUGFIX-POS-REPORTE-Z-SUCURSAL-20260907";
+// El gate de plan tiene precondición de estado y los 57 tickets reales están
+// cerrados, así que el sujeto se construye: un ticket válido en `planned`.
+const TICKET = "BUGFIX-POS-FILTRO-ORDENES-20260921";
 
 let lab: string;
 
 beforeEach(() => {
   lab = mkdtempSync(join(tmpdir(), "valmen-gate-"));
-  cpSync(FIXTURE, join(lab, "tickets"), { recursive: true });
+  mkdirSync(join(lab, "tickets"), { recursive: true });
+  writeFixtureTicket(lab, { id: TICKET });
 });
 
 afterEach(() => {
@@ -152,8 +155,9 @@ describe("checks mecánicos", () => {
   });
 
   it("no llama al evaluador si un check mecánico falla", async () => {
-    // Lo que un script puede decidir no se le pregunta a un modelo: es una
-    // decisión de coste y de confiabilidad, no de elegancia.
+    // Un ticket de riesgo alto sin rollback: el check debe fallar y no se debe
+    // gastar una llamada al modelo.
+    writeFixtureTicket(lab, { id: TICKET, riskLevel: "high" });
     let llamado = false;
     const espia = (async () => {
       llamado = true;
@@ -314,5 +318,51 @@ describe("errores", () => {
     expect(result.exitCode).not.toBe(0);
     expect(result.stdout).not.toContain("APPROVE");
     expect(result.stderr).toContain("no pudo completar");
+  });
+});
+
+describe("precondición de estado", () => {
+  it("rechaza evaluar un gate sobre un ticket que ya pasó la transición", async () => {
+    // Se descubrió evaluando el gate de plan sobre un ticket cerrado y
+    // publicado: el resultado fue un `review` con todo en banda media, que
+    // parece una señal sobre el ticket cuando era una señal sobre el uso.
+    // Un gate no debe dar una respuesta plausible a una pregunta que no aplica.
+    writeFixtureTicket(lab, {
+      id: "BUGFIX-POS-YA-CERRADO-20260921",
+      workflowStatus: "closed",
+      releaseStatus: "released",
+      targetRelease: "1.42.0",
+      releasedIn: "1.42.0",
+    });
+
+    let llamado = false;
+    const espia = (async () => {
+      llamado = true;
+      throw new Error("no debería haberse llamado");
+    }) as unknown as typeof import("../packages/gate-jev/src/index.js").evaluateWithJev;
+
+    const result = await runGate(PATHS(), {
+      gateId: "plan",
+      ticketId: "BUGFIX-POS-YA-CERRADO-20260921",
+      evaluate: espia,
+      dryRun: true,
+    });
+
+    expect(llamado).toBe(false);
+    expect(result.exitCode).toBe(3);
+    expect(result.stderr).toContain("solo aplica a un ticket en `planned`");
+    expect(result.stderr).toContain("está en `closed`");
+    expect(result.stderr).toContain("veredicto sin significado");
+  });
+
+  it("el gate de análisis solo aplica a un ticket en analyzed", async () => {
+    const result = await runGate(PATHS(), {
+      gateId: "analysis",
+      ticketId: TICKET,
+      evaluate: evaluator(allPropositions(0.95)),
+      dryRun: true,
+    });
+    expect(result.exitCode).toBe(3);
+    expect(result.stderr).toContain("solo aplica a un ticket en `analyzed`");
   });
 });

@@ -364,6 +364,47 @@ Es la diferencia central entre este diseño y preguntarle a un modelo de chat si
 bien": un chat tiende a responder que sí; esto devolvió una probabilidad que obliga a mirar.
 Y como el idioma no afecta el resultado, los gates se pueden escribir en español.
 
+### 5.1ter Segunda ejecución en vivo: la calibración está pendiente, y se nota
+
+Se evaluó el gate de plan sobre un ticket en `planned` con un plan detallado —cuatro
+criterios, tres pasos que nombran archivo y acción, rollback explícito— y el resultado fue:
+
+```
+cubre_todos_los_criterios       0.44
+corresponde_a_la_investigacion  0.24
+pasos_ejecutables               0.72
+criterios_verificables          0.86
+compatibilidad_hacia_atras      0.85
+rollback_suficiente             0.91  ✓
+clasificacion                   completo
+```
+
+**Este plan está bastante bien escrito y el gate lo suspendió.** Eso es un problema de
+calibración, no una virtud del gate.
+
+Dos hipótesis, y la segunda es la más probable:
+
+1. Las proposiciones evalúan dimensiones distintas, y una de ellas no aplica a un `BUGFIX`
+   de bajo riesgo. Preguntar por la compatibilidad hacia atrás de un cambio de una línea en
+   un filtro de lectura es una pregunta que el modelo no puede responder con confianza.
+2. **Las proposiciones incluyen la cláusula que define el falso.** `"Un paso que solo dice
+'ajustar', 'revisar' o 'mejorar' sin objeto concreto hace falsa esta proposición"` es una
+   aclaración útil para un humano, pero puede estar inclinando al modelo hacia el "no" al
+   poner el vocabulario del incumplimiento dentro de la pregunta.
+
+**Qué hacer, en orden:**
+
+1. Reescribir las proposiciones poniendo la cláusula de falsedad en `criteria.false` en vez
+   de dentro de `instructions`. La API tiene un campo para eso y es exactamente su propósito.
+2. Ejecutar `valmen gate simulate` sobre tickets históricos para medir la coincidencia con
+   las decisiones humanas reales.
+3. Ajustar la redacción hasta que las probabilidades se separen. **No bajar los umbrales**:
+   eso escondería el problema en vez de resolverlo.
+
+Mientras eso no esté hecho, el gate de plan está en modo `hybrid` y su resultado **no debe
+usarse para bloquear trabajo**. Un gate mal calibrado que manda todo a revisión humana es
+seguro pero inútil, y el diseño lo dice: es un cuello de botella, no un control.
+
 ### 5.2 Calibración: la banda media es información
 
 Después de unas semanas de tráfico real:

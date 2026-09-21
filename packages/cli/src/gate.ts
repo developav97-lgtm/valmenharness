@@ -140,6 +140,29 @@ export async function runGate(
     };
   }
 
+  // El gate solo aplica a ciertos estados. Comprobarlo antes de gastar una
+  // llamada evita dos problemas: pagar por un veredicto sin significado, y
+  // presentar ese veredicto como si dijera algo sobre el ticket.
+  let workflow: string;
+  try {
+    workflow = parseTicket(ticket.text).fields.workflow_status;
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return { stdout: "", stderr: failure.message, exitCode: failure.exitCode };
+  }
+
+  if (!definition.appliesTo.includes(workflow)) {
+    return {
+      stdout: "",
+      stderr:
+        `El gate ${definition.id} protege la transición ${definition.transition} y solo ` +
+        `aplica a un ticket en ${definition.appliesTo.map((estado) => `\`${estado}\``).join(" o ")}. ` +
+        `El ticket ${options.ticketId} está en \`${workflow}\`. ` +
+        "Evaluarlo aquí produciría un veredicto sin significado.",
+      exitCode: EXIT_INVARIANT,
+    };
+  }
+
   let state: Record<string, string>;
   let checks: MechanicalCheck[];
   try {

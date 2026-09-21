@@ -23,6 +23,18 @@ export interface GateDefinition {
   readonly transition: string;
   /** Humano, automático, o híbrido: automático primero y humano si duda. */
   readonly mode: "human" | "auto" | "hybrid";
+  /**
+   * Estados del ticket en los que este gate tiene sentido.
+   *
+   * Sin esta comprobación, evaluar un gate sobre un sujeto que ya pasó la
+   * transición produce un veredicto sin significado. Se descubrió evaluando el
+   * gate de plan sobre un ticket ya cerrado y publicado: el resultado fue un
+   * `review` con todas las proposiciones en banda media, que parece una señal
+   * sobre el ticket cuando en realidad era una señal sobre el uso incorrecto.
+   *
+   * Un gate no debe dar una respuesta plausible a una pregunta que no aplica.
+   */
+  readonly appliesTo: readonly string[];
   readonly propositions: readonly Proposition[];
   readonly policy: typeof DEFAULT_POLICY;
   /** Checks que decide el código, sin llamar a ningún modelo. */
@@ -41,6 +53,9 @@ export const PLAN_GATE: GateDefinition = {
   title: "Validación del plan de un ticket",
   transition: "planned → approved",
   mode: "hybrid",
+  // Solo tiene sentido antes de que la transición ocurra. Un ticket ya aprobado
+  // o cerrado pasó por aquí, y volver a evaluarlo mide otra cosa.
+  appliesTo: ["planned"],
   policy: DEFAULT_POLICY,
   mechanicalChecks: [
     { id: "criterios_presentes", description: "El ticket tiene criterios de aceptación.", result: "skip" },
@@ -138,6 +153,7 @@ export const ANALYSIS_GATE: GateDefinition = {
   title: "Validación del diagnóstico de un ticket",
   transition: "analyzed → planned",
   mode: "hybrid",
+  appliesTo: ["analyzed"],
   policy: DEFAULT_POLICY,
   mechanicalChecks: [
     { id: "solicitud_preservada", description: "La solicitud original se conservó.", result: "skip" },

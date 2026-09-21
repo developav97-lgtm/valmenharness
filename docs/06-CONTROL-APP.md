@@ -1,12 +1,12 @@
 # 06 — Mission Control: la app de control
 
-El pedido: *"quiero que hagamos una app de control, puede ser con node o lo que me
+El pedido: _"quiero que hagamos una app de control, puede ser con node o lo que me
 recomiendes. La idea sería que corriera como este harness de deepseek que corre en
 localhost y que aquí tengamos la app web de control: que podamos ver la configuración,
 cambiarla manualmente o por chat, que lleve sus conversaciones, poder ver los tickets,
 revisarlos y demás, ver estados como si fuera un mission control bien bonito y moderno.
 También se puedan configurar los proveedores, poder ejecutar selección de modelos y
-esfuerzo o automático según el proceso."*
+esfuerzo o automático según el proceso."_
 
 ## 1. Decisión de arquitectura
 
@@ -19,13 +19,13 @@ valmen serve --port 4173 --open
 
 Razones de esta forma y no una app de escritorio:
 
-| Criterio | Web en localhost | Escritorio (Electron/Tauri) |
-|---|---|---|
-| Reutiliza el motor | Sí, mismo proceso Node | Necesita IPC o un sidecar |
-| Acceso desde el celular | Sí (en la red local o por túnel) | No |
-| Actualización | Un `npm i -g valmen@latest` | Rebuild y firma por plataforma |
-| Superficie de código | Una | Una por SO |
-| `localhost` como frontera de confianza | Sí, igual que DSH | Igual |
+| Criterio                               | Web en localhost                 | Escritorio (Electron/Tauri)    |
+| -------------------------------------- | -------------------------------- | ------------------------------ |
+| Reutiliza el motor                     | Sí, mismo proceso Node           | Necesita IPC o un sidecar      |
+| Acceso desde el celular                | Sí (en la red local o por túnel) | No                             |
+| Actualización                          | Un `npm i -g valmen@latest`      | Rebuild y firma por plataforma |
+| Superficie de código                   | Una                              | Una por SO                     |
+| `localhost` como frontera de confianza | Sí, igual que DSH                | Igual                          |
 
 Se adopta la misma frontera de confianza que DSH: el servidor escucha **solo en
 `127.0.0.1`**, y expone el estado con un token de proceso convertido en cookie firmada. Para
@@ -281,6 +281,44 @@ crudo, con un diff antes de guardar.
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
+### 2.6bis Requisito: la configuración de proveedores vive en la app, no en archivos
+
+**Requisito explícito del usuario**, y con razón: _"me parece tedioso tener que agregar las
+API keys por allá y que toque estar ejecutando comandos. Eso debería poder cambiarse desde la
+app web: ir a Configuración → Proveedores y actualizar ahí."_
+
+El flujo objetivo, sin tocar un archivo ni un comando:
+
+```
+Configuración → Proveedores → [ + Agregar proveedor ]
+
+  Proveedor    [ OpenRouter            ▾ ]
+  Clave        [ ••••••••••••••••••••  ]  [ Probar conexión ]
+  Estado       ● verificada · 446 modelos · $0.00 este mes
+
+  Proveedor    [ DeepSeek              ▾ ]
+  Clave        [ ••••••••••••••••••••  ]  [ Probar conexión ]
+  Estado       ○ sin verificar
+```
+
+Lo que la pantalla debe hacer bien:
+
+| Requisito                                                     | Por qué                                                                     |
+| ------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| **Probar conexión** antes de guardar                          | Una clave mal pegada debe fallar en la pantalla, no en la mitad de un gate. |
+| **Nunca mostrar la clave** después de guardarla               | El campo se vacía al guardar y solo se puede reemplazar, no leer.           |
+| **Botón de rotación**                                         | Rotar una clave no debería requerir recordar dónde vive el archivo.         |
+| **Distinguir suscripción de API key**                         | Un token de plan (Claude, Codex, opencode) se lee del CLI; no se pega.      |
+| **Verificar contra el endpoint real**                         | El estado de OpenRouter se prueba con una llamada, no con un `ping`.        |
+| **Escribir en `~/.valmen/.credentials.yaml` con `chmod 600`** | La app es una interfaz sobre el archivo, no un almacén paralelo.            |
+
+**Consecuencia de diseño:** el archivo de credenciales deja de ser la superficie de uso y pasa
+a ser un detalle de implementación. Nadie debería tener que saber que existe.
+
+Esta pantalla es requisito de la **Fase 4 (Mission Control)** y es la primera que hay que
+construir, porque sin ella cada prueba de proveedor exige abrir un archivo y exportar una
+variable.
+
 ### 2.7 Proveedores y modelos
 
 ```
@@ -321,8 +359,8 @@ crudo, con un diff antes de guardar.
 
 ## 3. El agente de configuración por chat
 
-Este es el requisito más ambicioso del pedido: *"que se pueda configurar por medio de texto
-como aquí en el chat, diciéndole al llm principal que quiere y que lo configure"*.
+Este es el requisito más ambicioso del pedido: _"que se pueda configurar por medio de texto
+como aquí en el chat, diciéndole al llm principal que quiere y que lo configure"_.
 
 ### 3.1 El problema de seguridad, resuelto primero
 
@@ -330,7 +368,7 @@ Un agente que edita su propia configuración puede ampliar su propia autoridad. 
 inaceptable. Tres reglas:
 
 1. **El agente propone, el humano dispone.** Nunca escribe configuración directamente.
-   Genera un *change set* (un diff en memoria) que se muestra y se aprueba.
+   Genera un _change set_ (un diff en memoria) que se muestra y se aprueba.
 2. **Ciertos cambios requieren una segunda confirmación explícita**, aunque el humano ya
    haya aprobado el diff: cambiar un gate de `human` a `auto`, cambiar el evaluador de un
    gate, modificar presupuestos, habilitar un proveedor nuevo, o tocar permisos.
@@ -468,8 +506,8 @@ Escenario real: la web abierta, un agente por CLI trabajando, y un proceso en ba
 
 ## 5. Integración con Hermes (control desde el celular)
 
-El pedido: *"mirar integraciones con hermes agent para poder tener control desde el celular
-o que se integren funcionalidades entre los dos"*.
+El pedido: _"mirar integraciones con hermes agent para poder tener control desde el celular
+o que se integren funcionalidades entre los dos"_.
 
 ### 5.1 Qué es Hermes realmente (verificado)
 
@@ -480,15 +518,15 @@ Signal, SMS, Matrix, entre otras.
 
 Detalles relevantes para la integración:
 
-| Aspecto | Cómo funciona |
-|---|---|
-| Secretos | `~/.hermes/.env` (separado de la configuración) |
-| Configuración | `~/.hermes/config.yaml` |
-| Proveedores | Múltiples, incluido OpenRouter con `OPENROUTER_API_KEY` |
-| Routing de proveedor | `provider_routing: { sort: price\|throughput\|latency, data_collection: deny }` |
-| Fallback | `fallback_providers:` — cadena que cambia de modelo a mitad de sesión sin perder contexto |
-| **Modelos auxiliares** | `auxiliary: { title, vision, compression }` → modelos baratos para tareas laterales |
-| Router de costo | `openrouter/pareto-code` con `min_coding_score` — el más barato que supere el umbral |
+| Aspecto                | Cómo funciona                                                                             |
+| ---------------------- | ----------------------------------------------------------------------------------------- |
+| Secretos               | `~/.hermes/.env` (separado de la configuración)                                           |
+| Configuración          | `~/.hermes/config.yaml`                                                                   |
+| Proveedores            | Múltiples, incluido OpenRouter con `OPENROUTER_API_KEY`                                   |
+| Routing de proveedor   | `provider_routing: { sort: price\|throughput\|latency, data_collection: deny }`           |
+| Fallback               | `fallback_providers:` — cadena que cambia de modelo a mitad de sesión sin perder contexto |
+| **Modelos auxiliares** | `auxiliary: { title, vision, compression }` → modelos baratos para tareas laterales       |
+| Router de costo        | `openrouter/pareto-code` con `min_coding_score` — el más barato que supere el umbral      |
 
 **La consecuencia de diseño más importante:** no hay que construir un gateway de mensajería.
 Hermes ya tiene 21+. Lo que hay que construir es el **puente MCP** para que Hermes pueda
@@ -571,7 +609,7 @@ Componentes:
 
 1. **`valmen mcp`** — servidor MCP que expone el motor: `ticket_list`, `ticket_show`,
    `feature_status`, `gate_list_pending`, `gate_approve`, `gate_reject`, `usage_report`,
-   `process_run`. Es lo que permite que *cualquier* cliente MCP (Hermes, Claude, Codex,
+   `process_run`. Es lo que permite que _cualquier_ cliente MCP (Hermes, Claude, Codex,
    opencode, Cursor) consulte y opere el harness.
 2. **`@valmen/plugin-hermes`** — dos capacidades:
    - **Salida:** envía la notificación del gate a Hermes, que la distribuye por el canal
@@ -585,15 +623,15 @@ Componentes:
    ```yaml
    hermes:
      enabled: true
-     endpoint: http://127.0.0.1:PORT/hermes   # o el que use tu instancia
+     endpoint: http://127.0.0.1:PORT/hermes # o el que use tu instancia
      notify_on:
-       gate_review:       [telegram]
-       gate_blocked:      [telegram]
-       budget_soft:       [telegram]
-       process_failed:    [telegram]
-       run_completed:     []                  # silencioso; solo en el Mission Control
+       gate_review: [telegram]
+       gate_blocked: [telegram]
+       budget_soft: [telegram]
+       process_failed: [telegram]
+       run_completed: [] # silencioso; solo en el Mission Control
      approval:
-       allowed_risk: [low, normal]            # NUNCA high ni critical
+       allowed_risk: [low, normal] # NUNCA high ni critical
        token_ttl: 24h
        single_use: true
    ```
@@ -606,16 +644,16 @@ Componentes:
 
 ### 5.4 Qué se delega a Hermes y qué no
 
-| Tarea | ¿Hermes? | Razón |
-|---|---|---|
-| Consultar estado de tickets y features | **Sí** | Read-only, valor alto desde el celular. |
-| Aprobar/rechazar gates de riesgo bajo | **Sí** | Desbloquea el flujo sin abrir el portátil. |
-| Recibir notificaciones de bloqueos y fallos | **Sí** | Convierte un bloqueo silencioso en uno visible. |
-| Lanzar un proceso desde el celular | **Sí, con gate** | `valmen process run` exige que el proceso sea de riesgo bajo o medio. |
-| Aprobar un deploy | **No** | Frase literal desde la máquina. Regla dura. |
-| Editar configuración | **No** | Requiere ver el diff; el chat de configuración vive en la app. |
-| Ejecutar código | **No** | El harness no es un sandbox remoto. |
-| Ser el canal de mensajería | **Sí, es su rol** | En lugar de que el harness integre Telegram, Slack y WhatsApp por separado. |
+| Tarea                                       | ¿Hermes?          | Razón                                                                       |
+| ------------------------------------------- | ----------------- | --------------------------------------------------------------------------- |
+| Consultar estado de tickets y features      | **Sí**            | Read-only, valor alto desde el celular.                                     |
+| Aprobar/rechazar gates de riesgo bajo       | **Sí**            | Desbloquea el flujo sin abrir el portátil.                                  |
+| Recibir notificaciones de bloqueos y fallos | **Sí**            | Convierte un bloqueo silencioso en uno visible.                             |
+| Lanzar un proceso desde el celular          | **Sí, con gate**  | `valmen process run` exige que el proceso sea de riesgo bajo o medio.       |
+| Aprobar un deploy                           | **No**            | Frase literal desde la máquina. Regla dura.                                 |
+| Editar configuración                        | **No**            | Requiere ver el diff; el chat de configuración vive en la app.              |
+| Ejecutar código                             | **No**            | El harness no es un sandbox remoto.                                         |
+| Ser el canal de mensajería                  | **Sí, es su rol** | En lugar de que el harness integre Telegram, Slack y WhatsApp por separado. |
 
 ### 5.5 Lo que gana el harness al no reimplementar mensajería
 
@@ -625,7 +663,7 @@ Al delegar el transporte en Hermes, el harness evita construir y mantener integr
 
 ```ts
 interface NotificationChannel {
-  readonly id: string;                    // 'hermes' | 'telegram-direct' | 'webhook' | 'email'
+  readonly id: string; // 'hermes' | 'telegram-direct' | 'webhook' | 'email'
   notify(payload: GateNotification): Promise<DeliveryReceipt>;
 }
 ```
