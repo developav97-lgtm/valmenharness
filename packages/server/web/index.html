@@ -1735,9 +1735,17 @@
           tr.append(el("td", p.auth === "api-key" ? "API key" : p.auth === "subscription" ? "suscripción" : "ninguna"));
 
           const celdaEstado = el("td");
-          celdaEstado.append(
-            el("div", p.configured ? (p.source === "none" ? "local" : `configurada${p.keyLength === null ? "" : ` · ${p.keyLength} caracteres`}`) : "sin configurar"),
-          );
+          // «Configurada» y «detectada» no son lo mismo, y confundirlas hace que
+          // alguien crea que hizo algo que no hizo: Codex aparece en verde
+          // porque su CLI ya tenía sesión, no porque nadie lo configurara aquí.
+          const estado = !p.configured
+            ? "sin configurar"
+            : p.source === "none"
+              ? "local"
+              : p.source === "cli"
+                ? "detectada en el CLI"
+                : `configurada${p.keyLength === null ? "" : ` · ${p.keyLength} caracteres`}`;
+          celdaEstado.append(el("div", estado));
           if (p.legacyFieldName) {
             celdaEstado.append(el("div", "campo con el nombre anterior; se normaliza al reescribir", "resultado"));
           }
@@ -1766,7 +1774,9 @@
             acciones.append(probar);
           } else if (p.tokenSource) {
             salida.className = "resultado";
-            salida.textContent = `Se usa el token de ${p.tokenSource}; no hay endpoint que probar.`;
+            salida.textContent = p.configured
+              ? `Detectada en ${p.tokenSource}. No hay endpoint que probar.`
+              : `No se encontró ${p.tokenSource}. Inicia sesión con el CLI de ${p.name} y vuelve a recargar.`;
           }
 
           if (p.auth === "api-key") {

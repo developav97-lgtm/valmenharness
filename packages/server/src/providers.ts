@@ -176,6 +176,8 @@ const CATALOGO: readonly ProviderSpec[] = [
       url: "https://opencode.ai/zen/v1/chat/completions",
       expect: 200,
       method: "POST",
+      // La misma cabecera que Go: es la misma pasarela y el mismo requisito.
+      headers: { "x-opencode-session": "valmenharness" },
       body: {
         model: "deepseek-v4-flash",
         max_tokens: 1,
@@ -304,6 +306,9 @@ export function listProviders(
 ): ProviderStatus[] {
   const text = readCredentialsFile(filePath);
 
+  // Los que se pueden usar primero. La pantalla es una lista de acción: lo que
+  // está sin configurar es lo que hay que hacer, y enterrarlo bajo ocho filas
+  // verdes obliga a buscarlo.
   return PROVIDERS.map((spec): ProviderStatus => {
     const desdeEntorno = env[spec.envVar];
     const enEntorno =
@@ -347,6 +352,12 @@ export function listProviders(
       };
     }
 
+    /**
+     * Un proveedor local sin credencial está disponible por definición.
+     *
+     * Su estado no es «configurado»: nadie lo configuró. Es «local», y lo que
+     * importa —si está corriendo— lo dice la prueba de conexión.
+     */
     if (spec.auth === "none") {
       // Un proveedor local sin credencial está disponible por definición: que
       // esté corriendo o no lo dice la prueba de conexión.
@@ -366,6 +377,11 @@ export function listProviders(
       keyLength: null,
       legacyFieldName: false,
     };
+  }).sort((a, b) => {
+    // Utilizables primero; dentro de cada grupo, el orden del catálogo, que va
+    // de los proveedores generales a los locales.
+    if (a.configured !== b.configured) return a.configured ? -1 : 1;
+    return 0;
   });
 }
 
@@ -602,18 +618,39 @@ export async function probeProvider(
     const latencia = Date.now() - inicio;
     const ok = respuesta.status === spec.probe.expect;
 
-    // El detalle nunca incluye la respuesta completa: podría contener la clave
-    // reflejada por un proveedor mal implementado.
+    // Lo que dijo el proveedor, recortado. Parafrasearlo fue un error repetido:
+    // «la credencial no es válida o no tiene permisos» tapaba la diferencia
+    // entre una clave mala, un modelo que la cuenta no incluye y una cabecera
+    // que falta — tres cosas que se arreglan distinto.
+    let cuerpo = "";
+    try {
+      cuerpo = (await respuesta.text()).slice(0, 200).replace(/\s+/g, " ").trim();
+    } catch {
+      cuerpo = "";
+    }
+    // La credencial se tacha antes de mostrar nada. Un proveedor puede
+    // devolverla reflejada en su error —algunos lo hacen—, y el detalle viaja a
+    // la pantalla y al registro. Mostrar el mensaje del proveedor no puede
+    // costar la clave del usuario.
+    if (clave !== null && clave !== "") {
+      cuerpo = cuerpo.split(clave).join("***");
+    }
+
+    // Nunca se devuelve la respuesta entera sin recortar: podría contener la
+    // clave reflejada por un proveedor mal implementado.
     return {
       ok,
       status: respuesta.status,
       detail: ok
         ? `Conexión verificada (HTTP ${respuesta.status}).`
-        : `El proveedor respondió HTTP ${respuesta.status}${
-            respuesta.status === 401 || respuesta.status === 403
+        : // Con el cuerpo del proveedor delante, la interpretación sobra: se
+          // añade solo cuando no dijo nada.
+          `El proveedor respondió HTTP ${respuesta.status}` +
+          (cuerpo !== ""
+            ? `: ${cuerpo}`
+            : respuesta.status === 401 || respuesta.status === 403
               ? ": la credencial no es válida o no tiene permisos."
-              : "."
-          }`,
+              : "."),
       latencyMs: latencia,
     };
   } catch (caught) {

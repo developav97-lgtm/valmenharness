@@ -319,7 +319,7 @@ describe("probeProvider", () => {
     });
     expect(resultado.ok).toBe(false);
     expect(resultado.status).toBe(401);
-    expect(resultado.detail).toContain("no es válida");
+    expect(resultado.detail).toContain("no autorizado");
   });
 
   it("no filtra la credencial en el detalle del fallo", async () => {
