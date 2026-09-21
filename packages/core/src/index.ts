@@ -8,6 +8,7 @@
 
 export * from "./contract.js";
 export * from "./transitions.js";
+export * from "./feature.js";
 export * from "./template.js";
 export * from "./errors.js";
 export * from "./parser.js";
