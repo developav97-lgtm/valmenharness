@@ -180,11 +180,14 @@ const CATALOGO: readonly ProviderSpec[] = [
       headers: { "x-opencode-session": "valmenharness" },
       body: {
         model: "deepseek-v4-flash",
-        max_tokens: 1,
+        max_tokens: 16,
         messages: [{ role: "user", content: "ok" }],
       },
     },
-    tokenSource: "~/.local/share/opencode/auth.json",
+    // **Sin** `tokenSource`. Lo tenía, heredado de Go, y era una suposición:
+    // iniciar sesión en el CLI de opencode es una credencial de Go, no de Zen.
+    // Zen se configura con su clave o no se configura, y darlo por detectado
+    // hacía que la pantalla dijera que estaba listo cuando no lo estaba.
   },
   {
     id: "ollama",
@@ -378,10 +381,19 @@ export function listProviders(
       legacyFieldName: false,
     };
   }).sort((a, b) => {
-    // Utilizables primero; dentro de cada grupo, el orden del catálogo, que va
-    // de los proveedores generales a los locales.
+    // Utilizables primero: lo que falta es lo que hay que hacer.
     if (a.configured !== b.configured) return a.configured ? -1 : 1;
-    return 0;
+
+    // Y dentro de cada grupo, por forma de autenticación: primero lo que se
+    // configura pegando una clave, después lo que depende de una sesión del CLI,
+    // y al final lo que no necesita credencial. No es alfabético: es el orden en
+    // que un usuario puede hacer algo con cada uno.
+    const orden: Record<AuthKind, number> = {
+      "api-key": 0,
+      subscription: 1,
+      none: 2,
+    };
+    return orden[a.auth] - orden[b.auth];
   });
 }
 

@@ -162,8 +162,14 @@ describe("listProviders", () => {
     for (const proveedor of [go, zen]) {
       expect(proveedor?.auth).toBe("api-key");
       expect(proveedor?.probeable).toBe(true);
-      expect(proveedor?.tokenSource).toBeDefined();
     }
+
+    // Solo Go hereda la sesión del CLI: iniciar sesión en opencode es una
+    // credencial de la suscripción, no de la pasarela por consumo. Zen se
+    // configura con su clave o se queda sin configurar, y darlo por detectado
+    // hacía que la pantalla lo diera por listo sin estarlo.
+    expect(go?.tokenSource).toBeDefined();
+    expect(zen?.tokenSource).toBeUndefined();
     // Bases distintas: confundirlas mandaría las peticiones al catálogo ajeno.
     expect(go?.probeHost).toBe("opencode.ai");
     expect(zen?.probeHost).toBe("opencode.ai");
