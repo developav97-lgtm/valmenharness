@@ -7,13 +7,18 @@
  * sin cambios. Ver docs/09-MIGRACION-SAICLOUD.md.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { dirname, join } from "node:path";
 
 import {
   EXIT_SCHEMA,
+  MutationLock,
+  SCHEMA_VERSION,
   TicketError,
+  atomicWrite,
+  migrateTicketText,
   parseTicket,
   toFailure,
+  today as todayIso,
   validateDocument,
 } from "@valmen/core";
 
@@ -23,6 +28,7 @@ import {
   findAllTickets,
   findTicket,
   indexPath,
+  ticketsPath,
 } from "./discovery.js";
 import { isIndexCurrent, renderIndex } from "./index-file.js";
 
@@ -217,3 +223,126 @@ export function buildIndex(
   writeFileSync(target, content, "utf8");
   return ok("Índice reconstruido.\n");
 }
+
+/** Una línea del informe de migración. */
+interface MigrationOutcome {
+  readonly id: string;
+  readonly relativePath: string;
+  readonly migrated: boolean;
+  readonly reason: string;
+  readonly text: string;
+}
+
+/**
+ * `migrate`: lleva el registro al esquema vigente.
+ *
+ * Tres garantías, en este orden:
+ *
+ * 1. **Se valida todo antes de escribir nada.** Si un solo ticket del registro
+ *    es inválido, no se migra ninguno. Una migración a medias dejaría el
+ *    registro en dos esquemas a la vez.
+ * 2. **Solo se reescribe el frontmatter.** Los bloques JSON append-only —los
+ *    1.851 eventos, los 137 puntos, los ciclos de QA— se conservan byte a byte.
+ *    Reescribir el historial para adaptarlo a un vocabulario nuevo destruiría
+ *    la trazabilidad, que es el activo del sistema.
+ * 3. **Es idempotente.** Migrar dos veces no cambia nada la segunda vez, ni
+ *    reescribe `updated`: eso ensuciaría el historial en cada ejecución.
+ *
+ * Con `dryRun` no escribe y devuelve el mismo informe.
+ */
+export function migrateRegistry(
+  paths: RegistryPaths,
+  options: { dryRun?: boolean; today?: string } = {},
+): CommandResult {
+  const referenceDate = options.today ?? todayIso();
+  const dryRun = options.dryRun === true;
+
+  return MutationLock.run(ticketsPath(paths), () => {
+    let tickets: LocatedTicket[];
+    try {
+      tickets = findAllTickets(paths);
+    } catch (caught) {
+      const failure = toFailure(caught);
+      return error(failure.message, failure.exitCode);
+    }
+
+    // Paso 1: validar la colección completa antes de tocar el disco.
+    const invalid: string[] = [];
+    for (const ticket of tickets) {
+      const failure = validationError(ticket);
+      if (failure !== undefined) {
+        invalid.push(`${ticket.relativePath}: ${failure.message}`);
+      }
+    }
+    if (invalid.length > 0) {
+      return error(
+        `Se encontraron ${invalid.length} ticket(s) inválidos; no se migró nada: ` +
+          invalid.join("; "),
+      );
+    }
+
+    // Paso 2: planificar. Nada se escribe todavía.
+    const outcomes: MigrationOutcome[] = [];
+    const kindsSeen = new Set<string>();
+    for (const ticket of tickets) {
+      const { text, plan } = migrateTicketText(ticket.text, referenceDate, {
+        expectedId: ticket.id,
+      });
+      for (const kind of plan.nonCanonicalEvidenceKinds) kindsSeen.add(kind);
+      outcomes.push({
+        id: ticket.id,
+        relativePath: ticket.relativePath,
+        migrated: plan.needed,
+        reason: plan.reason,
+        text,
+      });
+    }
+
+    const pending = outcomes.filter((outcome) => outcome.migrated);
+
+    // Paso 3: escribir solo si se pidió y hay algo que hacer.
+    if (!dryRun) {
+      for (const outcome of pending) {
+        atomicWrite(join(paths.root, outcome.relativePath), outcome.text);
+      }
+      if (pending.length > 0) {
+        atomicWrite(
+          indexPath(paths),
+          renderIndex(paths, findAllTickets(paths)),
+        );
+      }
+    }
+
+    const lines: string[] = [
+      dryRun ? "Migración (simulación)" : "Migración",
+      `  tickets revisados:  ${outcomes.length}`,
+      `  ${dryRun ? "a migrar:" : "tickets migrados:"}${" ".repeat(dryRun ? 11 : 3)}${pending.length}`,
+      `  ya en el esquema:   ${outcomes.length - pending.length}`,
+    ];
+
+    if (kindsSeen.size > 0) {
+      lines.push(
+        "",
+        `  Tipos de evidencia fuera del enum canónico: ${kindsSeen.size}`,
+        `    ${[...kindsSeen].sort().join(", ")}`,
+        "    No se reescriben: el ticket conserva su valor original y la",
+        "    normalización se aplica al agregar. Ver LEGACY_EVIDENCE_KINDS.",
+      );
+    }
+
+    if (pending.length > 0) {
+      lines.push("", "  Detalle:");
+      for (const outcome of pending) {
+        lines.push(`    ${outcome.id}  (${outcome.reason})`);
+      }
+    }
+
+    if (dryRun && pending.length > 0) {
+      lines.push("", "  Ejecute sin --dry-run para aplicarlo.");
+    }
+
+    return ok(lines.join("\n") + "\n");
+  });
+}
+
+export { SCHEMA_VERSION };

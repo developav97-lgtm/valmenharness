@@ -14,6 +14,7 @@ import {
   type CommandResult,
   buildIndex,
   listActive,
+  migrateRegistry,
   showTicket,
   validateAll,
   validateOne,
@@ -30,6 +31,7 @@ Comandos:
   list                      Lista los tickets no cerrados.
   show <ID>                 Muestra el resumen de un ticket.
   index [--check]           Regenera el índice, o comprueba que esté al día.
+  migrate [--dry-run]       Lleva el registro al esquema vigente.
 
 Opciones globales:
   --root <ruta>             Raíz del proyecto (por defecto: el directorio actual).
@@ -213,6 +215,11 @@ export function dispatch(options: Options): CommandResult {
 
     case "index":
       return buildIndex(paths, options.flags["check"] === true);
+
+    case "migrate":
+      return migrateRegistry(paths, {
+        dryRun: options.flags["dry-run"] === true,
+      });
 
     default:
       return {
