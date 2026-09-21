@@ -428,6 +428,24 @@ definir`, `a definir`, `por completar`). Es lógica de dominio real, no una comp
 | `resume`                                 | **Falta**                                                                                                 |
 | El visor                                 | **Reemplazado** por Mission Control                                                                       |
 
+## 8bis. Estado del reemplazo
+
+| Pieza                                   | Estado                                                     |
+| --------------------------------------- | ---------------------------------------------------------- |
+| Parser, validador, coherencia           | Portado y verificado contra los 57 tickets                 |
+| Serialización de bloques                | Portada, incluida la regla de flotantes de Python          |
+| Las tres tablas de transición           | Portadas, más las aristas de `blocked` del esquema 2       |
+| `transition` (ticket, punto, release)   | Portado y verificado                                       |
+| `create`                                | Portado; diverge solo en `schema_version`                  |
+| Los siete comandos de anexado           | Portados y verificados                                     |
+| `release-publish`                       | Portado y verificado, con la verificación de git           |
+| `validate`, `index`, `active`, `resume` | Portados y verificados                                     |
+| El visor                                | Reemplazado por Mission Control, salvo el reporte Markdown |
+| **Prueba diferencial**                  | **48 casos**, los dos CLI sobre dos copias, byte a byte    |
+
+Lo que **no** está portado y hay que decidir si se porta: el reporte Markdown del visor, y
+`release_notes.py` con su artefacto de novedades.
+
 ## 9. Cómo se verifica el reemplazo
 
 **Prueba diferencial byte a byte contra la implementación de referencia.** Es la única forma

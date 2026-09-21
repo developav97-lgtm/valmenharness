@@ -21,6 +21,7 @@ export * from "./transition.js";
 export * from "./references.js";
 export * from "./append.js";
 export * from "./create.js";
+export * from "./release.js";
 export * from "./evaluators.js";
 export * from "./gate.js";
 export * from "./simulate.js";

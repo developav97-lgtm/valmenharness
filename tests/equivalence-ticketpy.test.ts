@@ -100,6 +100,33 @@ function valmen(raiz: string, args: readonly string[]) {
   };
 }
 
+/**
+ * Reemplaza el cuerpo de una sección, sin depender de la prosa de la plantilla.
+ *
+ * Sustituir frases concretas ataría estos tests al texto exacto de la plantilla
+ * del proyecto, y cambiarían de significado el día que alguien reescriba una
+ * sección. Lo que se está preparando es el **estado** del sujeto, no su prosa.
+ */
+function conSeccion(texto: string, seccion: string, cuerpo: string): string {
+  const patron = new RegExp(`(^## ${seccion}\\n\\n)[\\s\\S]*?(?=\\n## )`, "m");
+  if (!patron.test(texto)) {
+    throw new Error(`La plantilla no tiene la sección ${seccion}.`);
+  }
+  return texto.replace(patron, `$1${cuerpo}\n`);
+}
+
+/**
+ * La plantilla canónica de la referencia.
+ *
+ * Se copia al laboratorio para que las dos implementaciones partan del **mismo
+ * texto**: sin eso, la comparación mediría la diferencia entre dos plantillas,
+ * que no es lo que se está probando.
+ */
+function plantillaDeReferencia(): string {
+  const raiz = dirname(dirname(dirname(REFERENCIA)));
+  return join(raiz, "docs", "agentic", "templates", "ticket.template.md");
+}
+
 /** El ticket tal como quedó en disco. */
 function ticket(raiz: string): string {
   return readFileSync(join(raiz, "docs", "tickets", "2026", TICKET, "ticket.md"), "utf8");
@@ -616,19 +643,6 @@ describe.skipIf(!disponible)("equivalencia con ticket.py", () => {
     const SOLICITUD =
       "Cuando entro al listado de órdenes me devuelve todo de una vez y se cuelga.";
 
-    /**
-     * El repositorio de la referencia, derivado de la ruta a su CLI.
-     *
-     * La plantilla canónica vive en `docs/agentic/templates/`, y el test la copia
-     * para que las dos implementaciones partan del **mismo texto**: sin eso, la
-     * comparación mediría la diferencia entre dos plantillas, que no es lo que se
-     * está probando.
-     */
-    function plantillaDeReferencia(): string {
-      const raiz = dirname(dirname(dirname(REFERENCIA)));
-      return join(raiz, "docs", "agentic", "templates", "ticket.template.md");
-    }
-
     function crearLaboratorioDeAlta(): string {
       const raiz = mkdtempSync(join(tmpdir(), "valmen-alta-"));
       mkdirSync(join(raiz, "docs", "tickets"), { recursive: true });
@@ -849,6 +863,209 @@ describe.skipIf(!disponible)("equivalencia con ticket.py", () => {
           "--functional-summary", "F", "--qa-status", "maybe", "--release-impact", "R"],
         "qa-status inválido",
       );
+    });
+  });
+
+  // ── Publicación de releases ──────────────────────────────────────────────
+  describe("`release-publish`", () => {
+    /**
+     * Un repositorio con `production`, un tag anotado sobre su tip y un ticket
+     * cerrado cuya implementación menciona ese commit.
+     *
+     * El cierre se hace **con la referencia** para los dos lados: producir el
+     * ticket cerrado con el harness lo dejaría en el esquema 2, que la referencia
+     * no sabe leer, y el fallo mediría eso en vez de la publicación.
+     */
+    function laboratorioDeRelease(): { raiz: string; commit: string } {
+      const raiz = mkdtempSync(join(tmpdir(), "valmen-release-"));
+      mkdirSync(join(raiz, "docs", "tickets"), { recursive: true });
+      spawnSync("git", ["init", "-q", "-b", "production", "."], { cwd: raiz });
+      spawnSync("git", ["config", "user.email", "prueba@valmen.local"], { cwd: raiz });
+      spawnSync("git", ["config", "user.name", "Prueba"], { cwd: raiz });
+
+      writeFileSync(join(raiz, "app.txt"), "contenido\n");
+      spawnSync("git", ["add", "."], { cwd: raiz });
+      // Fechas fijas: el SHA de un commit depende de su marca de tiempo, y dos
+      // laboratorios creados en segundos distintos producirían SHA distintos. Eso
+      // haría fallar la comparación por una diferencia que no tiene nada que ver
+      // con lo que se está probando: el commit que el ticket menciona.
+      const cuando = { GIT_AUTHOR_DATE: "2026-09-21T00:00:00Z", GIT_COMMITTER_DATE: "2026-09-21T00:00:00Z" };
+      spawnSync("git", ["commit", "-q", "-m", "trabajo"], {
+        cwd: raiz,
+        env: { ...process.env, ...cuando },
+      });
+      const commit = spawnSync("git", ["rev-parse", "HEAD"], { cwd: raiz, encoding: "utf8" })
+        .stdout.trim();
+
+      // El índice tiene que existir **antes** de crear: la referencia comprueba
+      // la ruta del índice al final de cada mutación, así que sin él hasta un
+      // alta falla después de escribir el archivo.
+      writeFileSync(join(raiz, "docs", "tickets", "index.md"), "# Índice de tickets\n");
+
+      // Y la plantilla, que la referencia lee de su ruta del proyecto.
+      mkdirSync(join(raiz, "docs", "agentic", "templates"), { recursive: true });
+      writeFileSync(
+        join(raiz, "docs", "agentic", "templates", "ticket.template.md"),
+        readFileSync(plantillaDeReferencia(), "utf8"),
+      );
+
+      // El ticket, creado y cerrado con la referencia: es el sujeto que las dos
+      // implementaciones van a publicar.
+      const alta = referencia(raiz, [
+        "create", "--id", TICKET, "--title", "El filtro no encuentra por número parcial",
+        "--type", "BUGFIX", "--module", "POS", "--request", "No encuentra la orden.",
+      ]);
+      expect(alta.code, `alta con la referencia: ${alta.stderr}`).toBe(0);
+      const ruta = join(raiz, "docs", "tickets", "2026", TICKET, "ticket.md");
+      let texto = readFileSync(ruta, "utf8");
+      texto = conSeccion(
+        texto,
+        "Plan",
+        [
+          "- Gate de plan y aprobación del PO: aprobado explícitamente por el PO (gate de plan).",
+          "- Pasos ordenados:",
+          "  1. Cambiar el `lookup_expr` del filtro de número a `icontains`.",
+          "  2. Añadir una prueba de búsqueda parcial.",
+          "  3. Verificar que el número exacto sigue encontrando.",
+          "- Rollback: revertir el cambio de una línea.",
+        ].join("\n"),
+      );
+      texto = conSeccion(
+        texto,
+        "Pruebas",
+        "- Resultado comunicado por el PO: probado en la sucursal con el PO delante.",
+      );
+      texto = conSeccion(texto, "Implementación", `Commit ${commit}.`);
+      writeFileSync(ruta, texto, "utf8");
+
+      const pasos: readonly (readonly string[])[] = [
+        ["transition", "--id", TICKET, "--entity", "ticket", "--to", "analyzed"],
+        ["transition", "--id", TICKET, "--entity", "ticket", "--to", "planned"],
+        ["transition", "--id", TICKET, "--entity", "ticket", "--to", "approved"],
+        ["transition", "--id", TICKET, "--entity", "ticket", "--to", "in_progress"],
+        ["transition", "--id", TICKET, "--entity", "ticket", "--to", "awaiting_user_tests"],
+        ["transition", "--id", TICKET, "--entity", "ticket", "--to", "in_qa"],
+        ["qa-start", "--id", TICKET, "--environment", "staging",
+          "--build-reference", `commit:${commit}`],
+        ["qa-close", "--id", TICKET, "--result", "approved", "--po-confirmation", "PO"],
+        ["transition", "--id", TICKET, "--entity", "ticket", "--to", "qa_approved"],
+        ["close-attempt", "--id", TICKET, "--technical-summary", "T",
+          "--functional-summary", "F", "--qa-status", "approved", "--release-impact", "R"],
+        ["transition", "--id", TICKET, "--entity", "ticket", "--to", "closed"],
+      ];
+      for (const paso of pasos) {
+        const resultado = referencia(raiz, paso as string[]);
+        expect(resultado.code, `cierre con la referencia: ${paso[0]} ${paso[3] ?? ""}`).toBe(0);
+      }
+
+      // El tag se crea después del último commit, así que apunta al tip de
+      // production: el commit documental del ticket no se hace, que es como
+      // trabaja el flujo real.
+      spawnSync("git", ["tag", "-a", "v6.3.0", "-m", "release"], { cwd: raiz });
+      return { raiz, commit };
+    }
+
+    const args = ["release-publish", "--version", "6.3.0", "--tickets", TICKET];
+
+    it("publica y deja el mismo ticket byte a byte", () => {
+      const a = laboratorioDeRelease();
+      const b = laboratorioDeRelease();
+      try {
+        const suyo = referencia(a.raiz, args);
+        const mio = valmen(b.raiz, args);
+
+        expect(mio.code, mio.stderr).toBe(suyo.code);
+        expect(mio.stdout).toBe(suyo.stdout);
+        expect(ticket(b.raiz)).toBe(ticket(a.raiz));
+        expect(ticket(b.raiz)).toContain("release_status: released");
+        expect(ticket(b.raiz)).toContain("target_release: 6.3.0");
+        expect(ticket(b.raiz)).toContain("released_in: 6.3.0");
+      } finally {
+        rmSync(a.raiz, { recursive: true, force: true });
+        rmSync(b.raiz, { recursive: true, force: true });
+      }
+    });
+
+    it("sin tag anotado se rechaza igual, y no escribe nada", () => {
+      const a = laboratorioDeRelease();
+      const b = laboratorioDeRelease();
+      try {
+        for (const raiz of [a.raiz, b.raiz]) {
+          spawnSync("git", ["tag", "-d", "v6.3.0"], { cwd: raiz });
+          spawnSync("git", ["tag", "v6.3.0"], { cwd: raiz });
+        }
+        const antes = ticket(b.raiz);
+
+        const suyo = referencia(a.raiz, args);
+        const mio = valmen(b.raiz, args);
+
+        expect(mio.code, mio.stderr).toBe(suyo.code);
+        expect(mio.code).toBe(5);
+        expect(mio.stderr).toBe(suyo.stderr);
+        expect(ticket(b.raiz)).toBe(antes);
+      } finally {
+        rmSync(a.raiz, { recursive: true, force: true });
+        rmSync(b.raiz, { recursive: true, force: true });
+      }
+    });
+
+    it("una versión con prefijo `v` se rechaza igual", () => {
+      const a = laboratorioDeRelease();
+      const b = laboratorioDeRelease();
+      try {
+        const malo = ["release-publish", "--version", "v6.3.0", "--tickets", TICKET];
+        const suyo = referencia(a.raiz, malo);
+        const mio = valmen(b.raiz, malo);
+        expect(mio.code).toBe(suyo.code);
+        expect(mio.stderr).toBe(suyo.stderr);
+      } finally {
+        rmSync(a.raiz, { recursive: true, force: true });
+        rmSync(b.raiz, { recursive: true, force: true });
+      }
+    });
+
+    it("una lista con IDs duplicados se rechaza igual", () => {
+      const a = laboratorioDeRelease();
+      const b = laboratorioDeRelease();
+      try {
+        const malo = [
+          "release-publish", "--version", "6.3.0",
+          "--tickets", `${TICKET},${TICKET}`,
+        ];
+        const suyo = referencia(a.raiz, malo);
+        const mio = valmen(b.raiz, malo);
+        expect(mio.code).toBe(suyo.code);
+        expect(mio.stderr).toBe(suyo.stderr);
+      } finally {
+        rmSync(a.raiz, { recursive: true, force: true });
+        rmSync(b.raiz, { recursive: true, force: true });
+      }
+    });
+
+    it("un ticket cuya implementación no está en el tag se rechaza igual", () => {
+      const a = laboratorioDeRelease();
+      const b = laboratorioDeRelease();
+      try {
+        // Un commit que existe pero no es ancestro del tag: se avanza production
+        // después de etiquetar, así que el tag deja de apuntar al tip.
+        for (const raiz of [a.raiz, b.raiz]) {
+          writeFileSync(join(raiz, "otro.txt"), "más trabajo\n");
+          spawnSync("git", ["add", "."], { cwd: raiz });
+          spawnSync("git", ["commit", "-q", "-m", "trabajo posterior"], { cwd: raiz });
+        }
+        const antes = ticket(b.raiz);
+
+        const suyo = referencia(a.raiz, args);
+        const mio = valmen(b.raiz, args);
+
+        expect(mio.code, mio.stderr).toBe(suyo.code);
+        expect(mio.code).toBe(5);
+        expect(mio.stderr).toBe(suyo.stderr);
+        expect(ticket(b.raiz)).toBe(antes);
+      } finally {
+        rmSync(a.raiz, { recursive: true, force: true });
+        rmSync(b.raiz, { recursive: true, force: true });
+      }
     });
   });
 

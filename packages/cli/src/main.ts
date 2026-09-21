@@ -42,6 +42,7 @@ import {
   addRetest,
   closeAttempt,
   createTicket,
+  releasePublish,
   qaClose,
   qaStart,
   transition,
@@ -66,6 +67,9 @@ Comandos:
       --evaluator <id>      auto (por defecto) · command · jev · llm-judge
   create --id <ID> --title <t> --type <TIPO> --module <MODULO> --request <texto>
                             Crea un ticket desde la plantilla, en intake.
+  release-publish --version <SemVer> --tickets <ID1,ID2>
+                            Registra la publicación. Exige el tag anotado sobre
+                            production y que cada ticket esté cerrado.
   add-point --id <ID> --title <t> --severity <s> --actual <a> --expected <e>
                             Anexa el siguiente POINT-NNN, en estado abierto.
   qa-start --id <ID> --environment <e> --build-reference <ref>
@@ -94,7 +98,9 @@ Comandos:
 
 Opciones globales:
   --root <ruta>             Raíz del proyecto (por defecto: el directorio actual).
-  --tickets <ruta>          Directorio del registro, relativo a la raíz.
+  --tickets-dir <ruta>      Directorio del registro, relativo a la raíz.
+                            (Se llamaba --tickets; el nombre cambió porque
+                            release-publish usa --tickets para la lista de IDs.)
   --legacy-layout           Usa docs/tickets/ en vez de tickets/.
   -h, --help                Muestra esta ayuda.
   --version                 Muestra la versión.
@@ -124,7 +130,7 @@ interface Options {
 /** Opciones que consumen un valor. */
 const VALUE_OPTIONS = [
   "--root",
-  "--tickets",
+  "--tickets-dir",
   "--id",
   "--limit",
   "--evaluator",
@@ -162,6 +168,7 @@ const VALUE_OPTIONS = [
   "--qa-status",
   "--release-impact",
   "--qa-waiver-reason",
+  "--tickets",
   "--type",
   "--module",
   "--request",
@@ -217,7 +224,7 @@ export function parseArgs(argv: readonly string[]): Options {
         inlineValue = next;
       }
       if (name === "--root") root = inlineValue;
-      else if (name === "--tickets") ticketsDir = inlineValue;
+      else if (name === "--tickets-dir") ticketsDir = inlineValue;
       else flags[name.slice(2)] = inlineValue;
       continue;
     }
@@ -253,6 +260,7 @@ export function parseArgs(argv: readonly string[]): Options {
 /** Los comandos que anexan datos a un ticket. */
 const ESCRITURA = new Set([
   "create",
+  "release-publish",
   "add-point",
   "qa-start",
   "qa-close",
@@ -274,14 +282,31 @@ export function runAppend(
   paths: RegistryPaths,
   flags: Readonly<Record<string, string | true>>,
 ): CommandResult {
+  // `release-publish` es el único que no opera sobre un ticket: recibe una lista
+  // con `--tickets`, y exigirle `--id` lo haría inalcanzable.
   const ticketId = flag(flags, "id");
-  if (ticketId === undefined) {
+  if (ticketId === undefined && command !== "release-publish") {
     return {
       stdout: "",
       stderr: `${command} requiere --id.`,
       exitCode: EXIT_SCHEMA,
     };
   }
+
+  /**
+   * El identificador, ya comprobado.
+   *
+   * `release-publish` no lo lleva, así que el compilador no puede garantizar que
+   * exista; los comandos que sí lo llevan lo piden por aquí.
+   */
+  const identificador = (): string => {
+    if (ticketId === undefined) {
+      throw Object.assign(new Error(`${command} requiere --id.`), {
+        exitCode: EXIT_SCHEMA,
+      });
+    }
+    return ticketId;
+  };
 
   const obligatoria = (nombre: string): string => {
     const valor = flag(flags, nombre);
@@ -300,7 +325,7 @@ export function runAppend(
       case "create":
         salida = createTicket({
           paths,
-          id: ticketId,
+          id: identificador(),
           title: obligatoria("title"),
           type: obligatoria("type"),
           module: obligatoria("module"),
@@ -308,10 +333,18 @@ export function runAppend(
         });
         break;
 
+      case "release-publish":
+        salida = releasePublish({
+          paths,
+          version: obligatoria("version"),
+          tickets: obligatoria("tickets"),
+        });
+        break;
+
       case "add-point":
         salida = addPoint({
           paths,
-          ticketId,
+          ticketId: identificador(),
           title: obligatoria("title"),
           severity: obligatoria("severity"),
           actual: obligatoria("actual"),
@@ -322,7 +355,7 @@ export function runAppend(
       case "qa-start":
         salida = qaStart({
           paths,
-          ticketId,
+          ticketId: identificador(),
           environment: flag(flags, "environment"),
           buildReference: flag(flags, "build-reference"),
         });
@@ -331,7 +364,7 @@ export function runAppend(
       case "qa-close":
         salida = qaClose({
           paths,
-          ticketId,
+          ticketId: identificador(),
           result: obligatoria("result"),
           poConfirmation: flag(flags, "po-confirmation"),
         });
@@ -340,7 +373,7 @@ export function runAppend(
       case "add-evidence":
         salida = addEvidence({
           paths,
-          ticketId,
+          ticketId: identificador(),
           kind: obligatoria("kind"),
           description: obligatoria("description"),
           reference: flag(flags, "reference"),
@@ -351,7 +384,7 @@ export function runAppend(
       case "add-retest":
         salida = addRetest({
           paths,
-          ticketId,
+          ticketId: identificador(),
           pointId: obligatoria("point-id"),
           result: obligatoria("result"),
           poConfirmation: flag(flags, "po-confirmation"),
@@ -361,7 +394,7 @@ export function runAppend(
       case "close-attempt":
         salida = closeAttempt({
           paths,
-          ticketId,
+          ticketId: identificador(),
           technicalSummary: obligatoria("technical-summary"),
           functionalSummary: obligatoria("functional-summary"),
           qaStatus: obligatoria("qa-status"),
@@ -374,7 +407,7 @@ export function runAppend(
       case "add-ai-usage":
         salida = addAiUsage({
           paths,
-          ticketId,
+          ticketId: identificador(),
           source: obligatoria("source"),
           confidence: obligatoria("confidence"),
           sessionReference: flag(flags, "session-reference"),
