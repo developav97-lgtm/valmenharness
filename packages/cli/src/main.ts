@@ -6,7 +6,7 @@
  * devuelve un `CommandResult` en vez de escribir directamente, lo que hace que
  * todos los comandos sean testeables sin capturar la salida del proceso.
  */
-import { resolve } from "node:path";
+import { basename, resolve } from "node:path";
 
 import { EXIT_SCHEMA, TicketError, toFailure } from "@valmen/core";
 
@@ -16,6 +16,7 @@ import {
   listActive,
   migrateRegistry,
   showTicket,
+  syncProject,
   validateAll,
   validateOne,
 } from "./commands.js";
@@ -32,6 +33,7 @@ Comandos:
   show <ID>                 Muestra el resumen de un ticket.
   index [--check]           Regenera el índice, o comprueba que esté al día.
   migrate [--dry-run]       Lleva el registro al esquema vigente.
+  sync [--check]            Proyecta .valmen/ a AGENTS.md.
 
 Opciones globales:
   --root <ruta>             Raíz del proyecto (por defecto: el directorio actual).
@@ -220,6 +222,13 @@ export function dispatch(options: Options): CommandResult {
       return migrateRegistry(paths, {
         dryRun: options.flags["dry-run"] === true,
       });
+
+    case "sync":
+      return syncProject(
+        options.root,
+        basename(options.root),
+        options.flags["check"] === true,
+      );
 
     default:
       return {

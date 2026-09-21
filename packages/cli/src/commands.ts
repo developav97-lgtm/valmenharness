@@ -21,6 +21,11 @@ import {
   today as todayIso,
   validateDocument,
 } from "@valmen/core";
+import {
+  type ProjectModel,
+  loadProjectModel,
+  projectAgentsMd,
+} from "@valmen/adapter";
 
 import {
   type LocatedTicket,
@@ -346,3 +351,60 @@ export function migrateRegistry(
 }
 
 export { SCHEMA_VERSION };
+
+/**
+ * `sync`: proyecta `.valmen/` a los archivos que leen los agentes.
+ *
+ * El valor está en la **fuente única**: `AGENTS.md` deja de ser un archivo que
+ * alguien edita a mano y pasa a ser una proyección. Cuando el harness evoluciona
+ * —una regla nueva, un estado nuevo— el documento mejora sin que el proyecto
+ * toque nada.
+ *
+ * Con `--check` no escribe: compara lo que hay en disco con lo que se generaría
+ * y falla si difieren. Es el modo para integración continua, porque detecta una
+ * edición a mano del archivo generado sin modificar el repositorio.
+ */
+export function syncProject(
+  root: string,
+  projectName: string,
+  check: boolean,
+): CommandResult {
+  let model: ProjectModel;
+  try {
+    model = loadProjectModel(root, projectName);
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+
+  const expected = projectAgentsMd(model);
+  const target = join(root, "AGENTS.md");
+  const onDisk = existsSync(target) ? readFileSync(target, "utf8") : null;
+
+  if (check) {
+    if (onDisk === null) {
+      return error(
+        "No existe AGENTS.md; ejecute `valmen sync` para generarlo.",
+      );
+    }
+    if (onDisk !== expected) {
+      return error(
+        "AGENTS.md está desactualizado o fue editado a mano; ejecute `valmen sync`.",
+      );
+    }
+    return ok("AGENTS.md actualizado.\n");
+  }
+
+  atomicWrite(target, expected);
+
+  const sources = model.rules.length;
+  return ok(
+    [
+      "Sincronización",
+      `  AGENTS.md regenerado  (${sources} archivo(s) de reglas del proyecto)`,
+      sources === 0
+        ? "  Añada reglas en .valmen/rules/ para que se incluyan."
+        : "  Fuente: .valmen/config.yaml + .valmen/rules/*.md",
+    ].join("\n") + "\n",
+  );
+}

@@ -22,7 +22,8 @@
     "outDir": "dist",
     "rootDir": ".",
     "paths": {
-      "@valmen/core": ["./packages/core/src/index.ts"]
+      "@valmen/core": ["./packages/core/src/index.ts"],
+      "@valmen/adapter": ["./packages/adapter/src/index.ts"]
     }
   },
   "references": [{ "path": "./packages/core" }],
