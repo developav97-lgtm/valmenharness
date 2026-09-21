@@ -494,11 +494,24 @@ divergencias que se proponen, cada una con su razón:
 3. **¿La plantilla se copia al adoptar o se lee de `docs/agentic/templates/`?** Copiarla
    deja el proyecto con una plantilla propia que puede divergir; leerla de donde está hoy
    mantiene la dependencia con el layout viejo.
-4. **¿`release_notes.py` se absorbe o se deja como está?** Es el primer caso real del pedido
-   «scripts y procesos invocables como herramientas y encadenables». Absorberlo significa que
-   el harness genera el artefacto de novedades; dejarlo significa que la cadena queda a
-   medias y el orden («novedades antes de publicar») sigue viviendo en la cabeza de quien
-   opera o en un documento.
+4. **¿`release_notes.py` se absorbe o se deja como está?** **Decidido: no se absorbe, y el
+   harness gana una base genérica de entrega.** El razonamiento es del responsable del
+   proyecto: en SaiOpenCloud el artefacto es un JSON que carga el menú principal del frontend,
+   y otro proyecto entregará otra cosa —un changelog, una nota en un wiki, un paquete—. Meter
+   esa ruta dentro del harness lo ataría a un cliente.
+
+   La forma acordada son **dos capas**:
+
+   - **El harness produce un manifiesto de entrega**: la versión, la fecha, los tickets
+     incluidos y, por cada uno, el resumen funcional de su último cierre. Es la parte que
+     sirve a cualquier proyecto, y es dato, no presentación.
+   - **El proyecto declara el proceso** que consume ese manifiesto y produce su artefacto.
+     En SaiOpenCloud, un paso que lee el manifiesto y escribe
+     `FrontEnd/src/assets/releases/<versión>.json`. En otro proyecto, otro paso.
+
+   Así el orden que hoy vive en la cabeza de quien opera —«novedades **antes** de publicar»,
+   porque el artefacto exige `release_status: unreleased`— pasa a ser parte del proceso
+   declarado, que es donde se puede verificar.
 5. **¿La verificación de git se generaliza?** Hoy `release-publish` sabe de `production`, de
    tags anotados y de ancestría. Eso es política de SaiOpenCloud, no del harness. La pregunta
    es si se convierte en un proceso declarado en `.valmen/processes/` —con sus pasos y sus
