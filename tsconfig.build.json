@@ -23,6 +23,9 @@
       "path": "./packages/gate-llm-judge"
     },
     {
+      "path": "./packages/gate-run"
+    },
+    {
       "path": "./packages/credentials"
     },
     {

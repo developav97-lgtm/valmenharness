@@ -31,7 +31,7 @@ import {
 } from "@valmen/gate";
 import { evaluateWithJev } from "@valmen/gate-jev";
 
-import type { CommandResult } from "./commands.js";
+import type { RunnerResult } from "./result.js";
 import {
   type LocatedTicket,
   type RegistryPaths,

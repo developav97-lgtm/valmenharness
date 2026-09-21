@@ -42,7 +42,7 @@ import { evaluateWithJev } from "@valmen/gate-jev";
 import { type CommandCheck } from "@valmen/gate-command";
 import { type EvaluatorId, evaluateGate } from "./evaluators.js";
 
-import type { CommandResult } from "./commands.js";
+import type { RunnerResult } from "./result.js";
 import { type RegistryPaths, findTicket } from "./discovery.js";
 
 /** Secciones del ticket que se envían al evaluador, según lo que declare el gate. */
@@ -133,7 +133,7 @@ export interface GateRunOptions {
 export async function runGate(
   paths: RegistryPaths,
   options: GateRunOptions,
-): Promise<CommandResult> {
+): Promise<RunnerResult> {
   const now = options.now ?? (() => new Date());
 
   let definition;

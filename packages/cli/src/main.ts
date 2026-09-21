@@ -23,9 +23,14 @@ import {
   validateAll,
   validateOne,
 } from "./commands.js";
-import { type RegistryPaths, defaultPaths, legacyPaths } from "./discovery.js";
-import { runGate } from "./gate.js";
-import { renderSimulation, simulateGate } from "./simulate.js";
+import {
+  type RegistryPaths,
+  defaultPaths,
+  legacyPaths,
+  renderSimulation,
+  runGate,
+  simulateGate,
+} from "@valmen/gate-run";
 import { type ServerContext, createMissionControl, defaultContext, loadStatics } from "@valmen/server";
 
 const USAGE = `valmen — harness agéntico

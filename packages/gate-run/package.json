@@ -1,12 +1,9 @@
 {
-  "name": "@valmen/cli",
+  "name": "@valmen/gate-run",
   "version": "0.0.1",
-  "description": "Superficie de comandos del harness: validate, list, show, index.",
+  "description": "Ejecuta un gate contra un ticket: congela el estado, elige evaluador y emite el recibo.",
   "license": "MIT",
   "type": "module",
-  "bin": {
-    "valmen": "./dist/main.js"
-  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -24,15 +21,12 @@
   },
   "dependencies": {
     "@valmen/core": "0.0.1",
-    "@valmen/adapter": "0.0.1",
     "@valmen/gate": "0.0.1",
-    "@valmen/gate-run": "0.0.1",
-    "@valmen/gate-jev": "0.0.1",
     "@valmen/gate-command": "0.0.1",
-    "@valmen/gate-llm-judge": "0.0.1",
-    "@valmen/server": "0.0.1"
+    "@valmen/gate-jev": "0.0.1",
+    "@valmen/gate-llm-judge": "0.0.1"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json && node ../../scripts/copy-web.mjs"
+    "build": "tsc -p tsconfig.json"
   }
 }

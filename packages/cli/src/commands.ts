@@ -38,19 +38,22 @@ import {
 import {
   type LocatedTicket,
   type RegistryPaths,
+  type RunnerResult,
   findAllTickets,
   findTicket,
   indexPath,
   ticketsPath,
-} from "./discovery.js";
+} from "@valmen/gate-run";
 import { isIndexCurrent, renderIndex } from "./index-file.js";
 
-/** Resultado de un comando: qué escribir y con qué código salir. */
-export interface CommandResult {
-  readonly stdout: string;
-  readonly stderr: string;
-  readonly exitCode: number;
-}
+/**
+ * Resultado de un comando: qué escribir y con qué código salir.
+ *
+ * Es el mismo tipo que devuelve el motor de gates. Tener dos definiciones
+ * idénticas permitiría que una cambiara sin la otra y que el servidor dejara de
+ * entender lo que el CLI produce.
+ */
+export type CommandResult = RunnerResult;
 
 /** Escribe en stdout y termina con éxito. */
 function ok(stdout: string): CommandResult {

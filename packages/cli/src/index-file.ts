@@ -7,8 +7,8 @@
  */
 import { TICKET_TYPES } from "@valmen/core";
 
-import type { LocatedTicket, RegistryPaths } from "./discovery.js";
-import { toRelative } from "./discovery.js";
+import type { LocatedTicket, RegistryPaths } from "@valmen/gate-run";
+import { toRelative } from "@valmen/gate-run";
 
 /** Una fila del índice, con lo mínimo para localizar y clasificar el ticket. */
 interface IndexRow {

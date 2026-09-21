@@ -19,7 +19,7 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { runGate, readReceipts } from "../packages/cli/src/gate.js";
+import { runGate, readReceipts } from "../packages/gate-run/src/gate.js";
 import type { JevEvaluation } from "../packages/gate-jev/src/index.js";
 import { writeFixtureTicket } from "./helpers/fixtures.js";
 

@@ -11,9 +11,6 @@
       "path": "../core"
     },
     {
-      "path": "../adapter"
-    },
-    {
       "path": "../gate"
     },
     {
@@ -24,12 +21,6 @@
     },
     {
       "path": "../gate-llm-judge"
-    },
-    {
-      "path": "../gate-run"
-    },
-    {
-      "path": "../server"
     }
   ],
   "include": [
