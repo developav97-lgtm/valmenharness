@@ -262,3 +262,45 @@ export function validateFeatureFields(fields: FeatureFields): void {
     }
   }
 }
+
+/**
+ * La plantilla de una feature.
+ *
+ * Igual que la del ticket, vive aquí y el proyecto la puede adaptar: qué se
+ * espera que diga «Restricciones» depende de cómo trabaje cada equipo. La
+ * **estructura** —el frontmatter, las secciones y los artefactos— es el contrato.
+ *
+ * Las secciones del brief son las cuatro que el diseño exige para salir de
+ * `draft`: problema, objetivo, alcance y restricciones. Están vacías a propósito:
+ * una plantilla con texto de relleno se aprueba sin leerlo.
+ */
+export const FEATURE_TEMPLATE = `---
+schema_version: 2
+id: TYPE-SLUG
+title: Título de la feature
+state: draft
+created: YYYY-MM-DD
+updated: YYYY-MM-DD
+---
+
+# Título de la feature
+
+## Problema
+
+<!-- Qué duele hoy y a quién. Sin esto no hay forma de saber si la feature sirvió. -->
+
+## Objetivo
+
+## Alcance
+
+- Dentro:
+- Fuera:
+
+## Restricciones
+
+## Artefactos
+
+- \`spec/<dominio>/spec.md\` — requisitos RFC 2119 y escenarios.
+- \`design.md\` — alternativas y decisión técnica.
+- \`tickets.yaml\` — el grafo: sprints, cobertura y huecos.
+- \`verify.md\` — la evidencia, al completar.`

@@ -25,6 +25,7 @@ import {
   resumeTicket,
   validateOne,
 } from "./commands.js";
+import { runFeature } from "./features.js";
 import {
   type RegistryPaths,
   defaultPaths,
@@ -100,6 +101,10 @@ Comandos:
       --reason <texto>      Solo al reabrir un ticket no publicado, o al
                             declarar terminal un punto.
       --version <SemVer>    Solo con --entity release.
+  feature list              Lista las features del proyecto.
+  feature show <slug>       Muestra el brief y los artefactos de una feature.
+  feature new <slug> --title <t>
+                            Crea una feature en draft, en .valmen/features/.
   serve [--port <n>]        Mission Control en 127.0.0.1.
   simulate <gate>           Calibra un gate sobre el registro histórico.
       --limit <n>           Evalúa solo los primeros n sujetos.
@@ -667,6 +672,11 @@ export function dispatch(options: Options): CommandResult {
         basename(options.root),
         options.flags["check"] === true,
       );
+
+    case "feature":
+      // `feature <sub> [args]`: se despacha en su propio módulo, que conoce el
+      // registro de features y este archivo no tiene por qué.
+      return runFeature(options.root, rest, options.flags);
 
     default:
       return {
