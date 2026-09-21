@@ -29,6 +29,12 @@ import {
 } from "../packages/server/src/tickets.js";
 import { handleApi } from "../packages/server/src/server.js";
 
+/** Rutas del registro del laboratorio. El laboratorio usa el layout nuevo. */
+const PATHS = (): { root: string; ticketsDir: string } => ({
+  root: lab,
+  ticketsDir: "tickets",
+});
+
 const FIXTURE = join(import.meta.dirname, "fixtures", "saicloud", "tickets");
 
 let lab: string;
@@ -48,13 +54,13 @@ const UN_TICKET = "BUGFIX-POS-REPORTE-Z-SUCURSAL-20260907";
 
 describe("proyección del registro", () => {
   it("lee los 57 tickets reales", () => {
-    const filas = listTickets(lab);
+    const filas = listTickets(PATHS());
     expect(filas).toHaveLength(57);
     expect(filas.every((fila) => fila.invalid === null)).toBe(true);
   });
 
   it("deriva el resumen de las filas", () => {
-    const resumen = summarize(listTickets(lab));
+    const resumen = summarize(listTickets(PATHS()));
     expect(resumen.total).toBe(57);
     // Los 57 están cerrados en el fixture.
     expect(resumen.byWorkflow["closed"]).toBe(57);
@@ -65,8 +71,8 @@ describe("proyección del registro", () => {
   });
 
   it("cuenta los impactos críticos declarados", () => {
-    const resumen = summarize(listTickets(lab));
-    const conImpacto = listTickets(lab).filter((fila) => fila.criticalImpacts.length > 0);
+    const resumen = summarize(listTickets(PATHS()));
+    const conImpacto = listTickets(PATHS()).filter((fila) => fila.criticalImpacts.length > 0);
     expect(resumen.criticalImpacts).toBe(conImpacto.length);
     // Cada impacto informado es uno de los tres del contrato.
     for (const fila of conImpacto) {
@@ -78,7 +84,7 @@ describe("proyección del registro", () => {
 
   it("ordena del más reciente al más antiguo", () => {
     // Lo que se está trabajando ahora es lo que primero se quiere ver.
-    const filas = filterTickets(listTickets(lab), {});
+    const filas = filterTickets(listTickets(PATHS()), {});
     for (let i = 1; i < filas.length; i += 1) {
       expect((filas[i - 1] as { updated: string }).updated >= (filas[i] as { updated: string }).updated).toBe(
         true,
@@ -95,7 +101,7 @@ describe("proyección del registro", () => {
       "utf8",
     );
 
-    const filas = listTickets(lab);
+    const filas = listTickets(PATHS());
     expect(filas).toHaveLength(57);
     const roto = filas.find((fila) => fila.id === UN_TICKET);
     expect(roto?.invalid).toContain("risk_level no pertenece al esquema");
@@ -107,7 +113,7 @@ describe("proyección del registro", () => {
   it("un ticket con frontmatter ilegible no rompe la lista", () => {
     const ruta = join(lab, "tickets", "2026", UN_TICKET, "ticket.md");
     writeFileSync(ruta, "esto no es un ticket", "utf8");
-    const filas = listTickets(lab);
+    const filas = listTickets(PATHS());
     expect(filas).toHaveLength(57);
     expect(filas.find((fila) => fila.id === UN_TICKET)?.invalid).toBeTruthy();
   });
@@ -117,7 +123,7 @@ describe("proyección del registro", () => {
 
 describe("detalle de un ticket", () => {
   it("devuelve las secciones, los bloques y la solicitud", () => {
-    const detalle = readTicket(lab, UN_TICKET);
+    const detalle = readTicket(PATHS(), UN_TICKET);
     expect(detalle).not.toBeNull();
     expect(detalle?.title).toBe("El reporte Z mezcla cierres de sucursales");
     expect(Object.keys(detalle?.sections ?? {})).toHaveLength(15);
@@ -127,7 +133,7 @@ describe("detalle de un ticket", () => {
   });
 
   it("devuelve null si el ticket no existe", () => {
-    expect(readTicket(lab, "BUGFIX-POS-NO-EXISTE-20260101")).toBeNull();
+    expect(readTicket(PATHS(), "BUGFIX-POS-NO-EXISTE-20260101")).toBeNull();
   });
 
   it("muestra un ticket inválido con su error", () => {
@@ -137,7 +143,7 @@ describe("detalle de un ticket", () => {
       readFileSync(ruta, "utf8").replace(/^qa_status: .*$/m, "qa_status: inventado"),
       "utf8",
     );
-    const detalle = readTicket(lab, UN_TICKET);
+    const detalle = readTicket(PATHS(), UN_TICKET);
     // El usuario necesita ver qué tiene el ticket, no un error genérico.
     expect(detalle?.invalid).toContain("qa_status no pertenece al esquema");
     expect(detalle?.sections).toBeDefined();
@@ -147,7 +153,7 @@ describe("detalle de un ticket", () => {
 // ── Filtros ─────────────────────────────────────────────────────────────────
 
 describe("filtros", () => {
-  const filas = (): ReturnType<typeof listTickets> => listTickets(lab);
+  const filas = (): ReturnType<typeof listTickets> => listTickets(PATHS());
 
   it("filtra por tipo", () => {
     const sync = filterTickets(filas(), { type: "SYNC" });
@@ -193,7 +199,7 @@ describe("filtros", () => {
     expect(filterTickets(filas(), { onlyInvalid: true })).toHaveLength(0);
     const ruta = join(lab, "tickets", "2026", UN_TICKET, "ticket.md");
     writeFileSync(ruta, "roto", "utf8");
-    expect(filterTickets(listTickets(lab), { onlyInvalid: true })).toHaveLength(1);
+    expect(filterTickets(listTickets(PATHS()), { onlyInvalid: true })).toHaveLength(1);
   });
 
   it("respeta el límite", () => {
@@ -289,7 +295,7 @@ describe("lo que el visor anterior ofrecía sigue disponible", () => {
   it("los campos funcionales del cierre se conservan en el detalle", () => {
     // El visor anterior mostraba problema, solución y relevancia para el
     // usuario, tomados del cierre. Mission Control los expone en crudo.
-    const detalle = readTicket(lab, UN_TICKET);
+    const detalle = readTicket(PATHS(), UN_TICKET);
     expect(detalle?.closures.length).toBeGreaterThan(0);
     const cierre = detalle?.closures.at(-1) as Record<string, unknown>;
     expect(typeof cierre["functional_summary"]).toBe("string");
@@ -300,7 +306,7 @@ describe("lo que el visor anterior ofrecía sigue disponible", () => {
   it("la lista cubre todo el ciclo, no solo los cerrados", () => {
     // Es la diferencia con el visor anterior: durante el trabajo importa qué
     // está en curso y qué espera una decisión.
-    const resumen = summarize(listTickets(lab));
+    const resumen = summarize(listTickets(PATHS()));
     const todosLosEstados = Object.keys(resumen.byWorkflow);
     expect(todosLosEstados.length).toBeGreaterThan(0);
     // El resumen informa cada estado presente, no solo `closed`.

@@ -37,6 +37,7 @@ import {
   type RegistryPaths,
   findAllTickets,
 } from "./discovery.js";
+import { buildGateState } from "./state.js";
 
 /** Lo que se midió para un ticket. */
 export interface SimulatedTicket {
@@ -82,21 +83,6 @@ export interface SimulationReport {
   readonly propositions: readonly PropositionStats[];
   readonly tickets: readonly SimulatedTicket[];
   readonly errors: readonly { id: string; message: string }[];
-}
-
-/** Construye el estado que se envía al evaluador, igual que en una evaluación real. */
-function buildState(text: string): Record<string, string> {
-  const { sections, fields } = parseTicket(text);
-  return {
-    id: fields.id,
-    tipo: fields.type,
-    modulo: fields.module,
-    riesgo: fields.risk_level,
-    solicitud: sections["Solicitud original"].trim(),
-    investigacion: sections["Diagnóstico"].trim(),
-    plan: sections["Plan"].trim(),
-    criterios: sections["Criterios de aceptación"].trim(),
-  };
 }
 
 /** Calcula la estadística de cada proposición a lo largo de la simulación. */
@@ -192,7 +178,7 @@ export async function simulateGate(
     let state: Record<string, string>;
     let workflow: string;
     try {
-      state = buildState(ticket.text);
+      state = buildGateState(ticket.text);
       workflow = parseTicket(ticket.text).fields.workflow_status;
     } catch (caught) {
       errors.push({ id: ticket.id, message: toFailure(caught).message });

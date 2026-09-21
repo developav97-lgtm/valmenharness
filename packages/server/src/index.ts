@@ -8,4 +8,5 @@
 
 export * from "./providers.js";
 export * from "./tickets.js";
+export * from "./gates.js";
 export * from "./server.js";

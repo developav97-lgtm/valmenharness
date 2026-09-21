@@ -23,6 +23,8 @@ import {
 import { readFileSync } from "node:fs";
 import { extname } from "node:path";
 
+import { type RegistryPaths, choosePaths } from "@valmen/gate-run";
+
 import {
   type ProviderStatus,
   credentialsPath,
@@ -30,6 +32,15 @@ import {
   probeProvider,
   updateCredentials,
 } from "./providers.js";
+import {
+  type GateCard,
+  type GateDecisionView,
+  type GateRunOutcome,
+  listGateCards,
+  listGateDecisions,
+  recordHumanDecision,
+  runTicketGate,
+} from "./gates.js";
 import {
   type TicketFilters,
   filterTickets,
@@ -51,10 +62,26 @@ interface ApiResponse {
 export interface ServerContext {
   /** Raíz del proyecto sobre la que opera la interfaz. */
   readonly root: string;
+  /**
+   * Rutas del registro de tickets.
+   *
+   * Si no se indica, se detecta el layout del proyecto. Está hardcodeado en
+   * ningún sitio a propósito: el registro de un proyecto adoptado vive en
+   * `docs/tickets` y la interfaz tiene que mostrar ese, no uno vacío.
+   */
+  readonly paths?: RegistryPaths;
   readonly credentialsFile: string;
   readonly env: NodeJS.ProcessEnv;
   /** Inyectable para que las pruebas no salgan a la red. */
   readonly fetchImpl?: typeof fetch;
+  /**
+   * Evaluador semántico inyectable, para probar la pantalla de gates sin red.
+   *
+   * El nombre coincide con el del motor para que un mock se pueda pasar tal
+   * cual: un parámetro con otro nombre que el motor ignora en silencio
+   * convierte una prueba en una ilusión.
+   */
+  readonly jev?: NonNullable<Parameters<typeof runTicketGate>[3]>["jev"];
   /** Módulos estáticos a servir, por ruta. */
   readonly statics?: Readonly<
     Record<string, { readonly body: string; readonly type: string }>
@@ -63,7 +90,12 @@ export interface ServerContext {
 
 /** Construye el contexto por defecto. */
 export function defaultContext(root: string): ServerContext {
-  return { root, credentialsFile: credentialsPath(), env: process.env };
+  return {
+    root,
+    paths: choosePaths(root),
+    credentialsFile: credentialsPath(),
+    env: process.env,
+  };
 }
 
 /** Lee el cuerpo de una petición como JSON, con un límite razonable. */
@@ -100,6 +132,7 @@ export async function handleApi(
 ): Promise<ApiResponse> {
   const partes = path.split("/").filter((part) => part !== "");
   const query = search ?? new URLSearchParams();
+  const paths = context.paths ?? choosePaths(context.root);
 
   // GET /api/health
   if (method === "GET" && path === "/api/health") {
@@ -112,7 +145,7 @@ export async function handleApi(
   // GET /api/tickets?workflow=&type=&module=&q=&open=&invalid=&limit=
   if (method === "GET" && partes.length === 2 && partes[0] === "api" && partes[1] === "tickets") {
     const params = query ?? new URLSearchParams();
-    const filas = listTickets(context.root);
+    const filas = listTickets(paths);
     const filtros: TicketFilters = {
       ...(params.get("workflow") === null ? {} : { workflowStatus: params.get("workflow") as string }),
       ...(params.get("type") === null ? {} : { type: params.get("type") as string }),
@@ -132,11 +165,113 @@ export async function handleApi(
 
   // GET /api/tickets/:id
   if (method === "GET" && partes.length === 3 && partes[0] === "api" && partes[1] === "tickets") {
-    const detalle = readTicket(context.root, partes[2] as string);
+    const detalle = readTicket(paths, partes[2] as string);
     if (detalle === null) {
       return { status: 404, body: { error: `No existe el ticket "${partes[2]}".` } };
     }
     return { status: 200, body: detalle };
+  }
+
+  // GET /api/tickets/:id/gates
+  if (
+    method === "GET" &&
+    partes.length === 4 &&
+    partes[0] === "api" &&
+    partes[1] === "tickets" &&
+    partes[3] === "gates"
+  ) {
+    const id = partes[2] as string;
+    const tarjetas = listGateCards(paths, id);
+    if (tarjetas === null) {
+      return { status: 404, body: { error: `No existe el ticket "${id}".` } };
+    }
+    return {
+      status: 200,
+      body: { gates: tarjetas, decisions: listGateDecisions(paths, id) },
+    };
+  }
+
+  // POST /api/tickets/:id/gates/:gateId/run
+  if (
+    method === "POST" &&
+    partes.length === 6 &&
+    partes[0] === "api" &&
+    partes[1] === "tickets" &&
+    partes[3] === "gates" &&
+    partes[5] === "run"
+  ) {
+    const id = partes[2] as string;
+    const gateId = partes[4] as string;
+    const datos = body as { evaluator?: unknown };
+    const evaluador = datos.evaluator;
+    if (
+      evaluador !== undefined &&
+      evaluador !== "auto" &&
+      evaluador !== "command" &&
+      evaluador !== "jev" &&
+      evaluador !== "llm-judge"
+    ) {
+      return { status: 400, body: { error: `Evaluador desconocido: ${String(evaluador)}.` } };
+    }
+
+    const resultado: GateRunOutcome = await runTicketGate(
+      paths,
+      id,
+      gateId,
+      {
+        ...(evaluador === undefined || evaluador === "auto"
+          ? {}
+          : { evaluator: evaluador }),
+        ...(context.jev === undefined ? {} : { jev: context.jev }),
+      },
+    );
+
+    // Un bloqueo por checks mecánicos es un resultado, no un error del servidor:
+    // se devuelve 200 con el motivo para que la pantalla lo explique.
+    return { status: 200, body: resultado };
+  }
+
+  // POST /api/tickets/:id/gates/:receiptId/decision
+  if (
+    method === "POST" &&
+    partes.length === 6 &&
+    partes[0] === "api" &&
+    partes[1] === "tickets" &&
+    partes[3] === "gates" &&
+    partes[5] === "decision"
+  ) {
+    const id = partes[2] as string;
+    const receiptId = partes[4] as string;
+    const datos = body as {
+      decision?: unknown;
+      actor?: unknown;
+      reason?: unknown;
+      channel?: unknown;
+    };
+
+    if (datos.decision !== "approve" && datos.decision !== "reject") {
+      return {
+        status: 400,
+        body: { error: "La decisión debe ser `approve` o `reject`." },
+      };
+    }
+    if (typeof datos.actor !== "string" || datos.actor.trim() === "") {
+      return {
+        status: 400,
+        body: { error: "Falta `actor`: una decisión humana necesita responsable." },
+      };
+    }
+
+    const resultado = recordHumanDecision(paths, id, receiptId, {
+      decision: datos.decision,
+      actor: datos.actor,
+      reason: typeof datos.reason === "string" ? datos.reason : "",
+      ...(typeof datos.channel === "string" ? { channel: datos.channel } : {}),
+    });
+
+    return resultado.ok
+      ? { status: 200, body: resultado }
+      : { status: 409, body: resultado };
   }
 
   // GET /api/providers

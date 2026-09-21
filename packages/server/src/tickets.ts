@@ -15,6 +15,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 
 import { type ParsedTicket, parseTicket, validateDocument } from "@valmen/core";
+import { type RegistryPaths, ticketsPath } from "@valmen/gate-run";
 
 /** Una fila de la lista de tickets. */
 export interface TicketRow {
@@ -62,9 +63,16 @@ const IMPACTOS_CRITICOS = [
   "docker_impact",
 ] as const;
 
-/** Recorre el registro y devuelve la ruta de cada `ticket.md`, ordenada. */
-function ticketFiles(root: string): { id: string; path: string; relativePath: string }[] {
-  const base = join(root, "tickets");
+/**
+ * Recorre el registro y devuelve la ruta de cada `ticket.md`, ordenada.
+ *
+ * El directorio no está fijo: un proyecto adoptado tiene el registro en
+ * `docs/tickets`. Con `tickets/` hardcodeado, la interfaz mostraba el registro
+ * vacío sobre el proyecto real, que es la peor forma de fallar —parece que no
+ * hay nada que hacer.
+ */
+function ticketFiles(paths: RegistryPaths): { id: string; path: string; relativePath: string }[] {
+  const base = ticketsPath(paths);
   const encontrados: { id: string; path: string; relativePath: string }[] = [];
 
   let anios: string[];
@@ -91,7 +99,7 @@ function ticketFiles(root: string): { id: string; path: string; relativePath: st
       encontrados.push({
         id,
         path: ruta,
-        relativePath: relative(root, ruta).split(sep).join("/"),
+        relativePath: relative(paths.root, ruta).split(sep).join("/"),
       });
     }
   }
@@ -136,8 +144,8 @@ function toRow(id: string, parsed: ParsedTicket, relativePath: string): TicketRo
  * con un ticket roto es precisamente lo que hay que ver, y esconderlo dejaría
  * al usuario con la lista aparentemente completa.
  */
-export function listTickets(root: string): TicketRow[] {
-  return ticketFiles(root).map(({ id, path, relativePath }) => {
+export function listTickets(paths: RegistryPaths): TicketRow[] {
+  return ticketFiles(paths).map(({ id, path, relativePath }) => {
     const text = readFileSync(path, "utf8");
     try {
       const parsed = parseTicket(text);
@@ -175,8 +183,8 @@ export function listTickets(root: string): TicketRow[] {
 }
 
 /** Lee el detalle de un ticket. Devuelve `null` si no existe. */
-export function readTicket(root: string, id: string): TicketDetail | null {
-  const encontrado = ticketFiles(root).find((ticket) => ticket.id === id);
+export function readTicket(paths: RegistryPaths, id: string): TicketDetail | null {
+  const encontrado = ticketFiles(paths).find((ticket) => ticket.id === id);
   if (encontrado === undefined) return null;
 
   const text = readFileSync(encontrado.path, "utf8");

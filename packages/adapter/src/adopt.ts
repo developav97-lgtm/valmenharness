@@ -362,15 +362,3 @@ export function adoptPlan(root: string): AdoptPlan {
     agentsPath: join(root, "AGENTS.md"),
   };
 }
-
-/**
- * Elige el directorio del registro.
- *
- * Se prefiere `docs/tickets` si ya existe: un proyecto adoptado no debe tener
- * que mover su registro para empezar a usar el harness.
- */
-export function chooseTicketsDir(root: string): string {
-  if (existsSync(join(root, "docs", "tickets"))) return "docs/tickets";
-  if (existsSync(join(root, "tickets"))) return "tickets";
-  return "tickets";
-}

@@ -86,7 +86,7 @@ Ver [`06-CONTROL-APP.md`](06-CONTROL-APP.md).
 | 4.1     | `valmen serve`                                        | **Verificado**: escucha solo en `127.0.0.1`, sin lógica de negocio propia                          |
 | 4.2     | Vista de tickets                                      | **Verificado**: los 57 tickets del fixture, con los mismos filtros que el visor anterior            |
 | 4.2bis  | Vista de features                                     | Una feature con su spec, sus deltas y los tickets que la implementan                                |
-| 4.3     | Vista de gate en revisión                             | Muestra el estado congelado y las probabilidades; permite aprobar o rechazar                       |
+| 4.3     | Vista de gate en revisión                             | **Verificado**: recibo congelado, proposición por proposición, aviso de recibo obsoleto, y la decisión humana anexada sin reescribir el veredicto |
 | 4.4     | Configuración editable                                | Formulario y texto crudo, con diff antes de guardar                                                |
 | 4.5     | Routing de modelos                                    | Selección de modelo y esfuerzo por rol, con el preset activo                                       |
 | 4.6     | Chat de configuración                                 | Propone cambios; nunca escribe directo                                                             |
@@ -109,6 +109,10 @@ Detalle completo en [`06-CONTROL-APP.md` §2.6bis](06-CONTROL-APP.md).
 
 Criterio de aceptación de la fase: **un día completo de trabajo operado sin abrir la
 terminal, y una clave de proveedor agregada, probada y rotada desde la app.**
+
+**La vista de features (4.2bis) se mueve a la Fase 5.** Una feature es un objeto del
+Spec-Driven Development, y ese formato todavía no existe: construir la pantalla antes que
+el artefacto sería dibujar una lista vacía.
 
 ### Fase 5 — Features grandes y procesos (2–3 semanas)
 

@@ -208,7 +208,30 @@ Muestra **exactamente** lo que vio el modelo, con las probabilidades, y permite 
 
 El "↻ Devolver al agente" cierra el bucle: el motivo se anexa al ticket y el agente
 reintenta. **Exactamente un reintento correctivo**, como en el patrón gatekeeper: si el
-segundo intento vuelve a fallar, el sistema para y no entra en bucle.
+segundo intento falla, el sistema para y no entra en bucle.
+
+#### 2.4bis Lo que quedó implementado, y en qué se diferencia del mockup
+
+La pantalla existe y es la ruta `#/ticket/<id>`. Tres diferencias con el dibujo de arriba,
+todas decididas al implementarla:
+
+| Diferencia                                                            | Por qué                                                                                                                                    |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Los checks mecánicos van **primero**                                  | Si un check falla, el gate bloquea sin llamar al modelo. Mostrarlos antes de evaluar convierte un gasto inútil en una explicación.         |
+| El veredicto del evaluador **no se sustituye** por la decisión humana | Se anexa una línea nueva al registro. Que el modelo dudara y una persona aprobara es el dato que permite calibrar el gate.                 |
+| Falta "↻ Devolver al agente"                                          | Requiere escritura sobre el ticket desde la app, y un gate no cambia estados. Llegará con la transición, que tiene su propia autorización. |
+
+Dos cosas que el mockup no pedía y que resultaron ser las más importantes:
+
+1. **El aviso de recibo obsoleto.** El recibo congela el hash del estado que vio el
+   evaluador. Si el ticket cambió después, la pantalla lo dice en amarillo: una aprobación
+   de un artefacto que ya no existe no es una aprobación, y presentarla como vigente es el
+   error más caro que puede cometer esta pantalla.
+2. **El informe del CLI, entero, en un desplegable.** El botón y el comando devuelven el
+   mismo texto. No es una comodidad: es la prueba visible de que no hay dos caminos.
+
+La barra de cada proposición marca los dos umbrales. "En banda media" es una palabra; ver
+dónde cayó el número entre 0.10 y 0.90 es la razón por la que llegó a una persona.
 
 ### 2.5 Conversaciones
 
@@ -475,6 +498,30 @@ ni alterar el contrato de gates humanos obligatorios (deploy, release, security,
 │  └─────────────────────────────────────────────────────────────────────┘  │
 └───────────────────────────────────────────────────────────────────────────┘
 ```
+
+#### 4.0bis Lo que se construyó, y por qué no es el diagrama de arriba
+
+El diagrama describe el destino. Lo que existe hoy es un `node:http` sin dependencias, con
+la API en `/api/*` y **una sola página HTML** sin paso de compilación
+(`packages/server/web/index.html`), servida por `valmen serve`.
+
+Se empezó por ahí a propósito, y no por el stack completo:
+
+| Decisión                   | Razón                                                                                                                                                    |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sin framework de cliente   | El valor de esta fase está en que la pantalla **no pueda divergir** del motor. Un `fetch` y `textContent` no divergen; un estado de React duplicado, sí. |
+| Sin paso de compilación    | `valmen serve` tiene que arrancar en el proyecto del usuario sin un `npm install` de 300 MB.                                                             |
+| Sin SSE todavía            | La actualización en vivo importa cuando hay agentes trabajando en paralelo. Con un operador mirando, recargar la vista es suficiente y no miente.        |
+| Historial de rutas con `#` | Cada ticket tiene URL propia y se puede recargar o compartir sin configurar el servidor.                                                                 |
+
+El punto 1 es el que importa: **la interfaz no tiene lógica de negocio**. Llama a la API,
+y la API llama al mismo `@valmen/gate-run` que el CLI. La prueba está en la pantalla: el
+desplegable "Ver el informe del CLI" muestra el texto que devolvió el motor, no una
+versión re-renderizada.
+
+El stack del diagrama sigue siendo el destino si la app crece —varias pantallas, plugins,
+actualización en vivo—, pero migrar a React antes de tener la lógica habría sido construir
+la carcasa primero.
 
 **Punto clave de diseño:** la app web **no tiene lógica de negocio**. Todos los
 controladores llaman al motor. Esto garantiza que lo que ves en la web y lo que hace el

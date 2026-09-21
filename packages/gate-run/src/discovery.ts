@@ -8,7 +8,7 @@
  * Las rutas son configurables porque un proyecto adoptado puede tener el
  * registro en `docs/tickets/` y un proyecto nuevo en `tickets/`.
  */
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 
 import { EXIT_SCHEMA, fail } from "@valmen/core";
@@ -43,6 +43,32 @@ export function defaultPaths(root: string): RegistryPaths {
 /** Rutas del layout anterior, el que usa un proyecto adoptado sin migrar. */
 export function legacyPaths(root: string): RegistryPaths {
   return { root, ticketsDir: "docs/tickets" };
+}
+
+/**
+ * Elige el directorio del registro mirando el proyecto.
+ *
+ * Se prefiere `docs/tickets` si ya existe: un proyecto adoptado no debe tener que
+ * mover su registro para empezar a usar el harness. Vive aquí, y no en el
+ * adaptador, porque es una decisión sobre el registro —el adaptador proyecta
+ * configuración a archivos de agentes y no tiene por qué saber dónde viven los
+ * tickets—. Mission Control la usa para no hardcodear `tickets/` y mostrar el
+ * registro vacío en un proyecto adoptado.
+ */
+export function chooseTicketsDir(root: string): string {
+  if (existsSync(join(root, "docs", "tickets"))) return "docs/tickets";
+  if (existsSync(join(root, "tickets"))) return "tickets";
+  return "tickets";
+}
+
+/**
+ * Rutas del registro para un proyecto, detectando el layout.
+ *
+ * Es lo que permite que `valmen serve` funcione sobre un proyecto adoptado sin
+ * que nadie tenga que recordar `--legacy-layout`.
+ */
+export function choosePaths(root: string): RegistryPaths {
+  return { root, ticketsDir: chooseTicketsDir(root) };
 }
 
 /** Ruta absoluta del directorio de tickets. */

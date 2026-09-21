@@ -41,11 +41,13 @@
       header .raiz { margin-left: auto; color: var(--tenue); font-family: var(--mono); font-size: 12px; }
       main { max-width: 1180px; margin: 0 auto; padding: 24px; }
       h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--tenue); margin: 0 0 12px; }
+      h3 { font-size: 15px; margin: 0; }
       .nota {
         background: var(--panel-alto); border: 1px solid var(--borde); border-left: 3px solid var(--acento);
         border-radius: 6px; padding: 12px 16px; margin-bottom: 24px; color: var(--tenue); font-size: 13px;
       }
       .nota strong { color: var(--texto); }
+      .nota.alerta { border-left-color: var(--alerta); }
       table { width: 100%; border-collapse: collapse; }
       th {
         text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
@@ -61,7 +63,7 @@
       .punto.no { background: var(--tenue); opacity: 0.4; }
       .punto.error { background: var(--error); }
       .punto.alerta { background: var(--alerta); }
-      .acciones { display: flex; gap: 8px; justify-content: flex-end; }
+      .acciones { display: flex; gap: 8px; justify-content: flex-end; align-items: center; }
       button {
         font: inherit; font-size: 13px; padding: 5px 12px; border-radius: 5px; cursor: pointer;
         background: var(--panel-alto); color: var(--texto); border: 1px solid var(--borde);
@@ -80,12 +82,17 @@
       }
       .etiqueta.critico { border-color: var(--alerta); color: var(--alerta); }
       .etiqueta.roto { border-color: var(--error); color: var(--error); }
+      .etiqueta.aprueba { border-color: var(--ok); color: var(--ok); }
+      .etiqueta.bloquea { border-color: var(--error); color: var(--error); }
+      .etiqueta.revisa { border-color: var(--alerta); color: var(--alerta); }
       .filtros { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
-      .filtros input, .filtros select {
+      .filtros input, .filtros select, select, input[type="text"] {
         font: inherit; font-size: 13px; padding: 6px 10px; border-radius: 6px;
         background: var(--panel); color: var(--texto); border: 1px solid var(--borde);
       }
-      .filtros input:focus, .filtros select:focus { outline: none; border-color: var(--acento); }
+      .filtros input:focus, .filtros select:focus, select:focus, input:focus {
+        outline: none; border-color: var(--acento);
+      }
       .tarjetas { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 24px; }
       .tarjeta { background: var(--panel); border: 1px solid var(--borde); border-radius: 8px; padding: 14px 16px; }
       .tarjeta .valor { font-size: 24px; font-weight: 600; }
@@ -94,7 +101,6 @@
         background: var(--panel); color: var(--texto); border: 1px solid var(--borde);
         border-radius: 10px; padding: 0; max-width: 520px; width: calc(100% - 32px);
       }
-      dialog.ancho { max-width: 820px; }
       dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
       .dialogo { padding: 20px 24px; }
       .dialogo h3 { margin: 0 0 4px; font-size: 16px; }
@@ -105,7 +111,6 @@
         padding: 9px 11px; border-radius: 6px; background: var(--fondo);
         color: var(--texto); border: 1px solid var(--borde);
       }
-      input:focus { outline: none; border-color: var(--acento); }
       .aviso { font-size: 12px; color: var(--tenue); margin-top: 8px; }
       .pie { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
       pre {
@@ -117,6 +122,65 @@
       .secciones button { font-size: 12px; }
       .secciones button[aria-pressed="true"] { border-color: var(--acento); color: var(--acento); }
       .vacio { color: var(--tenue); text-align: center; padding: 40px; }
+
+      /* ── Ticket: cabecera y gates ─────────────────────────────────────── */
+      .volver { font-size: 13px; margin-bottom: 14px; display: inline-block; }
+      .cabecera-ticket { margin-bottom: 22px; }
+      .cabecera-ticket h2 { font-size: 20px; text-transform: none; letter-spacing: 0; color: var(--texto); margin-bottom: 6px; }
+      .cabecera-ticket .meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+      .ruta { font-family: var(--mono); font-size: 12px; color: var(--tenue); margin-top: 8px; }
+      .gate {
+        background: var(--panel); border: 1px solid var(--borde); border-radius: 8px;
+        padding: 16px 18px; margin-bottom: 16px;
+      }
+      .gate-cabecera { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 4px; }
+      .gate-meta { font-size: 12px; color: var(--tenue); margin-bottom: 12px; }
+      .checks { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; }
+      .check { font-size: 12px; display: flex; gap: 8px; align-items: baseline; }
+      .check .marca { font-family: var(--mono); width: 12px; }
+      .check .marca.pass { color: var(--ok); }
+      .check .marca.fail { color: var(--error); }
+      .check .marca.warn { color: var(--alerta); }
+      .check .marca.skip { color: var(--tenue); }
+      .check .detalle { color: var(--tenue); }
+      .gate .acciones { justify-content: flex-start; }
+      .veredicto {
+        display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+        padding: 12px 14px; border-radius: 6px; background: var(--panel-alto);
+        border: 1px solid var(--borde); margin-top: 14px;
+      }
+      .veredicto .salida { font-family: var(--mono); font-size: 13px; font-weight: 600; }
+      .veredicto .salida.approve { color: var(--ok); }
+      .veredicto .salida.block { color: var(--error); }
+      .veredicto .salida.review { color: var(--alerta); }
+      .veredicto .motivo { font-size: 13px; color: var(--tenue); flex: 1 1 320px; }
+      .obsoleto {
+        background: rgba(210, 153, 34, 0.12); border: 1px solid var(--alerta); color: var(--alerta);
+        border-radius: 6px; padding: 10px 12px; font-size: 13px; margin-top: 12px;
+      }
+      .proposiciones { margin-top: 14px; }
+      .proposiciones td { padding: 8px 10px; font-size: 13px; }
+      .proposiciones .etiqueta-proposicion { font-family: var(--mono); font-size: 12px; }
+      /* La barra hace visible lo que decide: el número y los dos umbrales. */
+      .barra { position: relative; width: 150px; height: 8px; border-radius: 4px; background: var(--fondo); border: 1px solid var(--borde); }
+      .barra .relleno { position: absolute; inset: 0 auto 0 0; border-radius: 3px; background: var(--tenue); }
+      .barra .relleno.approve { background: var(--ok); }
+      .barra .relleno.block { background: var(--error); }
+      .barra .relleno.review { background: var(--alerta); }
+      .barra .corte { position: absolute; top: -2px; bottom: -2px; width: 1px; background: var(--tenue); opacity: 0.7; }
+      .cifra { font-family: var(--mono); font-size: 12px; color: var(--tenue); }
+      .descriptiva { color: var(--tenue); font-style: italic; }
+      .pie-recibo { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--tenue); margin-top: 12px; }
+      .pie-recibo code { font-family: var(--mono); color: var(--texto); }
+      .responsable { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; }
+      .responsable label { margin: 0; white-space: nowrap; }
+      .decision-humana { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--borde); }
+      .decision-humana .quien { font-size: 13px; }
+      .decision-humana .quien strong { color: var(--texto); }
+      .historial { font-size: 12px; color: var(--tenue); margin-top: 10px; }
+      details { margin-top: 12px; }
+      summary { font-size: 12px; color: var(--tenue); cursor: pointer; }
+      summary:hover { color: var(--texto); }
     </style>
   </head>
   <body>
@@ -141,19 +205,6 @@
         <div class="pie">
           <button id="cancelar">Cancelar</button>
           <button id="guardar" class="principal">Probar y guardar</button>
-        </div>
-      </div>
-    </dialog>
-
-    <dialog id="detalle" class="ancho">
-      <div class="dialogo">
-        <h3 id="detalle-titulo"></h3>
-        <p id="detalle-meta"></p>
-        <div class="secciones" id="detalle-secciones"></div>
-        <pre id="detalle-cuerpo"></pre>
-        <div class="pie">
-          <button id="detalle-abrir">Abrir el archivo</button>
-          <button id="detalle-cerrar" class="principal">Cerrar</button>
         </div>
       </div>
     </dialog>
@@ -183,6 +234,13 @@
         if (clase !== undefined) nodo.className = clase;
         return nodo;
       }
+
+      /** El responsable de las decisiones humanas: se recuerda entre visitas. */
+      let responsable = localStorage.getItem("valmen.actor") ?? "";
+      const guardarResponsable = (valor) => {
+        responsable = valor;
+        localStorage.setItem("valmen.actor", valor);
+      };
 
       // ── Vista: tickets ────────────────────────────────────────────────────
 
@@ -324,7 +382,9 @@
 
           const celdaAcciones = el("td");
           const ver = el("button", "Ver", "enlace");
-          ver.addEventListener("click", () => void verDetalle(t.id));
+          ver.addEventListener("click", () => {
+            location.hash = `#/ticket/${t.id}`;
+          });
           celdaAcciones.append(ver);
           tr.append(celdaAcciones);
 
@@ -335,13 +395,356 @@
         cont.append(tabla);
       }
 
-      /** Muestra el detalle de un ticket, sección por sección. */
-      async function verDetalle(id) {
+      // ── Vista: un ticket, con sus gates ───────────────────────────────────
+
+      /** Los colores y el nombre legible de cada tipo de proposición. */
+      const MODALIDAD = { human: "humano", auto: "automático", hybrid: "híbrido" };
+      const MARCA = { pass: "✓", fail: "✗", warn: "!", skip: "·" };
+
+      /** Una barra con el valor y los dos umbrales: hace visible la decisión. */
+      function barraValor(valor, mark, policy) {
+        const barra = el("div", undefined, "barra");
+        const relleno = el("div", undefined, `relleno ${mark}`);
+        relleno.style.width = `${Math.max(0, Math.min(1, valor)) * 100}%`;
+        barra.append(relleno);
+        for (const corte of [policy.blockAt, policy.approveAt]) {
+          const marca = el("div", undefined, "corte");
+          marca.style.left = `${corte * 100}%`;
+          barra.append(marca);
+        }
+        return barra;
+      }
+
+      /** Los checks que decide el código, sin coste y antes de evaluar. */
+      function listaChecks(checks) {
+        const lista = el("div", undefined, "checks");
+        for (const check of checks) {
+          const fila = el("div", undefined, "check");
+          fila.append(
+            el("span", MARCA[check.result] ?? "·", `marca ${check.result}`),
+            el("span", check.id),
+            el("span", check.detail ?? "", "detalle"),
+          );
+          lista.append(fila);
+        }
+        return lista;
+      }
+
+      /** Las proposiciones evaluadas, con la probabilidad que se comparó. */
+      function tablaProposiciones(recibo, policy) {
+        const tabla = el("table", undefined, "proposiciones");
+        const thead = el("thead");
+        const fila = el("tr");
+        for (const columna of ["Proposición", "Valor", "", "Umbral", "Resultado"]) {
+          fila.append(el("th", columna));
+        }
+        thead.append(fila);
+
+        const tbody = el("tbody");
+        for (const p of recibo.propositions) {
+          const tr = el("tr");
+          tr.append(el("td", p.label || p.id, "etiqueta-proposicion"));
+          tr.append(el("td", p.value.toFixed(3), "cifra"));
+
+          const celdaBarra = el("td");
+          celdaBarra.append(barraValor(p.value, p.mark, policy));
+          tr.append(celdaBarra);
+
+          tr.append(
+            el("td", p.verdict ? `${policy.approveAt} / ${policy.blockAt}` : "no veta", "cifra"),
+          );
+
+          const celdaResultado = el("td");
+          const texto = {
+            approve: "aprueba",
+            block: "bloquea",
+            review: "en banda media",
+            descriptive: "descriptiva",
+          }[p.mark];
+          celdaResultado.append(
+            el("span", texto, p.mark === "descriptive" ? "descriptiva" : "etiqueta"),
+          );
+          if (p.reason) celdaResultado.append(el("div", p.reason, "resultado"));
+          tr.append(celdaResultado);
+
+          tbody.append(tr);
+        }
+        tabla.append(thead, tbody);
+        return tabla;
+      }
+
+      /** La decisión vigente de un gate, con todo lo que la hace auditable. */
+      function bloqueDecision(recibo, gate, ticketId, alDecidir) {
+        const cont = el("div");
+
+        const veredicto = el("div", undefined, "veredicto");
+        veredicto.append(
+          el("span", recibo.outcome.toUpperCase(), `salida ${recibo.outcome}`),
+          el("span", recibo.reason, "motivo"),
+          el("span", recibo.actor, "etiqueta"),
+        );
+        cont.append(veredicto);
+
+        // Una aprobación de un estado que ya no existe no es una aprobación.
+        if (recibo.stale) {
+          cont.append(
+            el(
+              "div",
+              "El ticket cambió desde que se emitió este recibo. La decisión es sobre el " +
+                "estado congelado, no sobre el ticket actual: hay que volver a evaluar.",
+              "obsoleto",
+            ),
+          );
+        }
+
+        cont.append(tablaProposiciones(recibo, gate.policy), listaChecks(recibo.mechanicalChecks));
+
+        const pie = el("div", undefined, "pie-recibo");
+        pie.append(
+          el("span", undefined, `media ponderada ${recibo.weightedMean.toFixed(3)}`),
+          el("span", undefined, `evaluador ${recibo.model?.resolvedVersion ?? "— (decisión en código)"}`),
+          el("span", undefined, `coste $${(recibo.usage?.costUsd ?? 0).toFixed(6)}`),
+          el("span", undefined, `${recibo.latencyMs ?? 0} ms`),
+          el("span", undefined, `congelado ${recibo.stateHash.slice(0, 23)}…`),
+        );
+        cont.append(pie);
+
+        // La decisión humana.
+        if (recibo.humanDecision !== null) {
+          const humana = el("div", undefined, "decision-humana");
+          const quien = el("div", undefined, "quien");
+          quien.append(
+            el("strong", recibo.humanDecision.actor),
+            el("span", ` ${recibo.humanDecision.decision === "approve" ? "aprobó" : "rechazó"} · ${recibo.humanDecision.decidedAt}`),
+          );
+          humana.append(quien);
+          if (recibo.humanDecision.reason) {
+            humana.append(el("div", recibo.humanDecision.reason, "resultado"));
+          }
+          cont.append(humana);
+        } else if (recibo.escalatedTo === "human") {
+          const humana = el("div", undefined, "decision-humana");
+          humana.append(
+            el("div", "El evaluador no alcanzó ninguno de los dos umbrales: la decisión es de una persona.", "resultado"),
+          );
+
+          const acciones = el("div", undefined, "acciones");
+          acciones.style.justifyContent = "flex-start";
+          acciones.style.marginTop = "10px";
+
+          const motivo = document.createElement("input");
+          motivo.type = "text";
+          motivo.placeholder = "Motivo de la decisión";
+          motivo.style.flex = "1 1 260px";
+
+          const aprobar = el("button", "Aprobar", "principal");
+          const rechazar = el("button", "Rechazar", "peligro");
+          const decidir = async (decision, boton) => {
+            if (responsable.trim() === "") {
+              alert("Escribe el responsable antes de decidir: una decisión humana sin nombre no es auditable.");
+              return;
+            }
+            boton.disabled = true;
+            try {
+              await api("POST", `/api/tickets/${ticketId}/gates/${recibo.gate}/${recibo.receiptId}/decision`, {
+                decision,
+                actor: responsable,
+                reason: motivo.value,
+              });
+              await alDecidir();
+            } catch (error) {
+              alert(error.message);
+              boton.disabled = false;
+            }
+          };
+          aprobar.addEventListener("click", () => void decidir("approve", aprobar));
+          rechazar.addEventListener("click", () => void decidir("reject", rechazar));
+
+          acciones.append(motivo, aprobar, rechazar);
+          humana.append(acciones);
+          cont.append(humana);
+        }
+
+        const detalles = el("details");
+        detalles.append(el("summary", "Ver el informe del CLI, tal cual"));
+        const pre = el("pre", recibo.report || "(el informe solo se guarda al evaluar desde la interfaz)");
+        detalles.append(pre);
+        cont.append(detalles);
+
+        return cont;
+      }
+
+      /** Una tarjeta de gate: lo que ya sabe el código y lo que se puede hacer. */
+      function tarjetaGate(gate, decisiones, recargar) {
+        const cont = el("section", undefined, "gate");
+
+        const cabecera = el("div", undefined, "gate-cabecera");
+        cabecera.append(
+          el("h3", `${gate.id} — ${gate.title}`),
+          el("span", MODALIDAD[gate.mode], "etiqueta"),
+          el("span", gate.transition, "etiqueta"),
+          gate.applies
+            ? el("span", "aplica", "etiqueta aprueba")
+            : el("span", `no aplica en ${gate.workflowStatus || "un ticket ilegible"}`, "etiqueta"),
+        );
+        cont.append(cabecera);
+
+        cont.append(
+          el(
+            "div",
+            `Umbrales: aprueba ≥ ${gate.policy.approveAt} · bloquea ≤ ${gate.policy.blockAt} · ` +
+              `${gate.propositionCount} proposición(es)` +
+              (gate.blockedByCode ? " · el código ya sabe que va a bloquear" : ""),
+            "gate-meta",
+          ),
+        );
+
+        const vigente = decisiones.find((d) => d.gate === gate.id);
+        // Los checks se muestran antes de evaluar; después van dentro del
+        // recibo, donde son parte de la auditoría y no un duplicado.
+        if (vigente === undefined) cont.append(listaChecks(gate.mechanicalChecks));
+
+        const acciones = el("div", undefined, "acciones");
+        const salida = el("div", undefined, "resultado");
+        salida.style.marginRight = "auto";
+
+        // Solo se ofrecen los evaluadores que pueden decidir **este** gate. Un
+        // desplegable con una opción que siempre falla es una trampa.
+        const evaluador = document.createElement("select");
+        const opciones = [
+          ["auto", gate.hasCommandChecks ? "evaluador automático (código primero)" : "evaluador automático"],
+          ["jev", "Jev (probabilidades)"],
+          ["llm-judge", "modelo de chat"],
+        ];
+        if (gate.hasCommandChecks) opciones.push(["command", "solo checks deterministas"]);
+        for (const [valor, etiqueta] of opciones) {
+          evaluador.append(new Option(etiqueta, valor));
+        }
+
+        const evaluar = el("button", "Evaluar", gate.applies && !gate.blockedByCode ? "principal" : "");
+        evaluar.disabled = !gate.applies || gate.blockedByCode;
+        evaluar.addEventListener("click", async () => {
+          evaluar.disabled = true;
+          salida.className = "resultado";
+          salida.textContent = "evaluando…";
+          try {
+            const r = await api("POST", `/api/tickets/${gate.ticketId}/gates/${gate.id}/run`, {
+              evaluator: evaluador.value,
+            });
+            if (!r.ok) {
+              salida.className = "resultado error";
+              salida.textContent = r.error;
+            }
+            await recargar();
+          } catch (error) {
+            salida.className = "resultado error";
+            salida.textContent = error.message;
+          } finally {
+            evaluar.disabled = false;
+          }
+        });
+
+        acciones.append(salida, evaluador, evaluar);
+        cont.append(acciones);
+
+        if (vigente !== undefined) {
+          cont.append(bloqueDecision(vigente, gate, gate.ticketId, recargar));
+          const anteriores = decisiones.filter((d) => d.gate === gate.id).length - 1;
+          if (anteriores > 0) {
+            cont.append(
+              el("div", `${anteriores} recibo(s) anterior(es) en el registro append-only`, "historial"),
+            );
+          }
+        } else {
+          cont.append(el("div", "Sin evaluar todavía.", "resultado"));
+        }
+
+        return cont;
+      }
+
+      /** El detalle de un ticket, con la pantalla de gates delante. */
+      async function vistaTicket(id) {
+        const cont = $("contenido");
+        cont.textContent = "";
+
         const t = await api("GET", `/api/tickets/${id}`);
-        $("detalle-titulo").textContent = t.title;
-        $("detalle-meta").textContent =
-          `${t.id} · ${t.type} · ${t.module} · ${t.workflowStatus} · QA ${t.qaStatus} · ${t.releaseStatus}` +
-          (t.invalid !== null ? ` · INVÁLIDO: ${t.invalid}` : "");
+
+        const volver = el("a", "← Todos los tickets", "volver enlace");
+        volver.href = "#/tickets";
+        cont.append(volver);
+
+        const cabecera = el("div", undefined, "cabecera-ticket");
+        cabecera.append(el("h2", t.title));
+        const meta = el("div", undefined, "meta");
+        meta.append(
+          el("span", t.id, "id"),
+          el("span", `${t.type} · ${t.module}`, "etiqueta"),
+          el("span", t.workflowStatus, "etiqueta"),
+          el("span", `QA ${t.qaStatus}`, "etiqueta"),
+          el("span", t.releaseStatus, "etiqueta"),
+        );
+        if (t.riskLevel !== "normal") {
+          meta.append(el("span", `riesgo ${t.riskLevel}`, "etiqueta critico"));
+        }
+        if (t.criticalImpacts.length > 0) {
+          meta.append(el("span", t.criticalImpacts.join(" · "), "etiqueta critico"));
+        }
+        if (t.invalid !== null) {
+          meta.append(el("span", "inválido", "etiqueta roto"));
+        }
+        cabecera.append(meta, el("div", t.path, "ruta"));
+        cont.append(cabecera);
+
+        if (t.invalid !== null) {
+          const nota = el("div", undefined, "nota alerta");
+          nota.append(el("strong", "El ticket no valida. "), el("span", t.invalid));
+          cont.append(nota);
+        }
+
+        // ── Gates ──
+        cont.append(el("h2", "Gates"));
+
+        const barraResponsable = el("div", undefined, "responsable");
+        const etiquetaResponsable = el("label", "Responsable de las decisiones");
+        etiquetaResponsable.htmlFor = "responsable";
+        const entradaResponsable = document.createElement("input");
+        entradaResponsable.type = "text";
+        entradaResponsable.id = "responsable";
+        entradaResponsable.placeholder = "Tu nombre";
+        entradaResponsable.value = responsable;
+        entradaResponsable.style.maxWidth = "260px";
+        entradaResponsable.addEventListener("change", () => guardarResponsable(entradaResponsable.value));
+        const ayudaResponsable = el(
+          "span",
+          "Se registra en el recibo junto a la decisión: aprobar sin nombre no es auditable.",
+          "resultado",
+        );
+        barraResponsable.append(etiquetaResponsable, entradaResponsable, ayudaResponsable);
+        cont.append(barraResponsable);
+
+        const zonaGates = el("div");
+        cont.append(zonaGates);
+
+        const cargarGates = async () => {
+          const datos = await api("GET", `/api/tickets/${id}/gates`);
+          zonaGates.textContent = "";
+          for (const gate of datos.gates) {
+            zonaGates.append(
+              tarjetaGate(
+                { ...gate, ticketId: id },
+                datos.decisions,
+                async () => {
+                  guardarResponsable(entradaResponsable.value);
+                  await cargarGates();
+                },
+              ),
+            );
+          }
+        };
+        await cargarGates();
+
+        // ── Contenido del ticket ──
+        cont.append(el("h2", "Contenido"));
 
         const partes = [
           ["Solicitud", t.request],
@@ -363,27 +766,29 @@
           [`Consumo de IA (${t.usage.length})`, t.usage],
         ];
 
-        const barra = $("detalle-secciones");
-        barra.textContent = "";
-        const cuerpo = $("detalle-cuerpo");
-
-        const mostrar = (etiqueta, valor) => {
-          for (const boton of barra.querySelectorAll("button")) {
-            boton.setAttribute("aria-pressed", String(boton.textContent === etiqueta));
+        const barraSecciones = el("div", undefined, "secciones");
+        const cuerpo = el("pre");
+        const mostrar = (etiqueta, valor, boton) => {
+          for (const otro of barraSecciones.querySelectorAll("button")) {
+            otro.setAttribute("aria-pressed", String(otro === boton));
           }
           cuerpo.textContent =
-            typeof valor === "string" ? (valor.trim() === "" ? "(vacío)" : valor) : JSON.stringify(valor, null, 2);
+            typeof valor === "string"
+              ? valor.trim() === ""
+                ? "(vacío)"
+                : valor
+              : JSON.stringify(valor, null, 2);
         };
 
         for (const [etiqueta, valor] of [...partes, ...bloques]) {
           const boton = el("button", etiqueta);
           boton.setAttribute("aria-pressed", "false");
-          boton.addEventListener("click", () => mostrar(etiqueta, valor));
-          barra.append(boton);
+          boton.addEventListener("click", () => mostrar(etiqueta, valor, boton));
+          barraSecciones.append(boton);
         }
 
-        mostrar(partes[0][0], partes[0][1]);
-        $("detalle").showModal();
+        cont.append(barraSecciones, cuerpo);
+        mostrar(partes[0][0], partes[0][1], barraSecciones.querySelector("button"));
       }
 
       // ── Vista: proveedores ────────────────────────────────────────────────
@@ -542,17 +947,22 @@
 
       // ── Enrutado ──────────────────────────────────────────────────────────
 
-      const VISTAS = { tickets: vistaTickets, proveedores: vistaProveedores };
-
       async function navegar() {
-        const nombre = (location.hash.replace(/^#\//, "") || "tickets").split("?")[0];
-        const vista = VISTAS[nombre] ?? vistaTickets;
+        const ruta = location.hash.replace(/^#\//, "") || "tickets";
+        const [nombre, parametro] = ruta.split("/");
+
         for (const enlace of document.querySelectorAll("nav a")) {
-          if (enlace.dataset.vista === nombre) enlace.setAttribute("aria-current", "page");
+          // Un ticket pertenece a la vista de tickets: la pestaña sigue marcada
+          // para que la navegación no parezca perderse al abrir uno.
+          const activa = enlace.dataset.vista === nombre || (nombre === "ticket" && enlace.dataset.vista === "tickets");
+          if (activa) enlace.setAttribute("aria-current", "page");
           else enlace.removeAttribute("aria-current");
         }
+
         try {
-          await vista();
+          if (nombre === "ticket" && parametro !== undefined) await vistaTicket(parametro);
+          else if (nombre === "proveedores") await vistaProveedores();
+          else await vistaTickets();
         } catch (error) {
           const cont = $("contenido");
           cont.textContent = "";
@@ -564,14 +974,6 @@
       $("guardar").addEventListener("click", () => void guardar());
       $("clave").addEventListener("keydown", (e) => {
         if (e.key === "Enter") void guardar();
-      });
-      $("detalle-cerrar").addEventListener("click", () => $("detalle").close());
-      $("detalle-abrir").addEventListener("click", () => {
-        const meta = $("detalle-meta").textContent ?? "";
-        const ruta = meta.split(" · ")[0];
-        void api("GET", "/api/health").then((salud) => {
-          alert(`Archivo del ticket:\n${salud.root}/tickets/**/${ruta}/ticket.md`);
-        });
       });
       window.addEventListener("hashchange", () => void navegar());
 

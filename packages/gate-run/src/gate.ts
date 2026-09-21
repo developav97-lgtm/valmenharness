@@ -15,9 +15,6 @@
  * ticket**: entrega el recibo y deja la decisión pendiente. Un gate no cambia
  * estados por su cuenta.
  */
-import { readFileSync, appendFileSync, mkdirSync } from "node:fs";
-import { dirname, join } from "node:path";
-
 import {
   EXIT_INVARIANT,
   TicketError,
@@ -44,68 +41,8 @@ import { type EvaluatorId, evaluateGate } from "./evaluators.js";
 
 import type { RunnerResult } from "./result.js";
 import { type RegistryPaths, findTicket } from "./discovery.js";
-
-/** Secciones del ticket que se envían al evaluador, según lo que declare el gate. */
-function buildState(text: string): Record<string, string> {
-  const { sections, fields } = parseTicket(text);
-  return {
-    id: fields.id,
-    tipo: fields.type,
-    modulo: fields.module,
-    riesgo: fields.risk_level,
-    solicitud: sections["Solicitud original"].trim(),
-    investigacion: sections["Diagnóstico"].trim(),
-    plan: sections["Plan"].trim(),
-    criterios: sections["Criterios de aceptación"].trim(),
-  };
-}
-
-/**
- * Ejecuta los checks que decide el código.
- *
- * Se ejecutan **antes** de llamar a ningún modelo: lo que un script puede
- * decidir no se le pregunta a un modelo. Es una decisión de coste y de
- * confiabilidad, no de elegancia.
- */
-function runMechanicalChecks(text: string): MechanicalCheck[] {
-  const { sections, blocks, fields } = parseTicket(text);
-  const checks: MechanicalCheck[] = [];
-
-  const criterios = sections["Criterios de aceptación"].trim();
-  const items = criterios
-    .split("\n")
-    .filter((line) => /^\s*[-*]\s+\[/.test(line));
-  checks.push({
-    id: "criterios_presentes",
-    description: "El ticket declara criterios de aceptación verificables.",
-    result: items.length > 0 ? "pass" : "fail",
-    detail: `${items.length} criterio(s)`,
-  });
-
-  const riesgoCritico =
-    fields.risk_level === "high" || fields.risk_level === "critical";
-  const plan = sections["Plan"].toLowerCase();
-  checks.push({
-    id: "rollback_si_critico",
-    description: "Un ticket de riesgo alto o crítico declara rollback.",
-    result: !riesgoCritico
-      ? "skip"
-      : plan.includes("rollback") || plan.includes("revertir")
-        ? "pass"
-        : "fail",
-    detail: riesgoCritico ? `riesgo ${fields.risk_level}` : "riesgo no crítico",
-  });
-
-  checks.push({
-    id: "impactos_declarados",
-    description:
-      "Los impactos de sync, migración y contenedores están declarados.",
-    result: "pass",
-    detail: `${blocks.Puntos.length} punto(s) registrados`,
-  });
-
-  return checks;
-}
+import { buildGateState, runMechanicalChecks } from "./state.js";
+import { appendReceipt } from "./receipts.js";
 
 /** Opciones de una evaluación de gate. */
 export interface GateRunOptions {
@@ -179,7 +116,7 @@ export async function runGate(
   let state: Record<string, string>;
   let checks: MechanicalCheck[];
   try {
-    state = buildState(ticket.text);
+    state = buildGateState(ticket.text);
     checks = runMechanicalChecks(ticket.text);
   } catch (caught) {
     const failure = toFailure(caught);
@@ -336,17 +273,11 @@ export async function runGate(
   );
 
   if (options.dryRun !== true) {
-    const receiptPath = join(
-      paths.root,
-      ".valmen",
-      "receipts",
-      `${options.ticketId}.jsonl`,
-    );
+    let receiptPath: string;
     try {
-      mkdirSync(dirname(receiptPath), { recursive: true });
       // Append-only: un recibo emitido no se modifica nunca. La decisión humana
       // se anexa como una línea nueva, no reescribiendo la anterior.
-      appendFileSync(receiptPath, `${JSON.stringify(receipt)}\n`, "utf8");
+      receiptPath = appendReceipt(paths, options.ticketId, receipt);
       lines.push(
         "",
         `  Recibo anexado: ${receiptPath.replace(`${paths.root}/`, "")}`,
@@ -369,21 +300,6 @@ export async function runGate(
   const exitCode = decision.outcome === "approve" ? 0 : EXIT_INVARIANT;
 
   return { stdout: lines.join("\n") + "\n", stderr: "", exitCode };
-}
-
-/** Lee los recibos anexados de un ticket. */
-export function readReceipts(root: string, ticketId: string): GateReceipt[] {
-  const path = join(root, ".valmen", "receipts", `${ticketId}.jsonl`);
-  let text: string;
-  try {
-    text = readFileSync(path, "utf8");
-  } catch {
-    return [];
-  }
-  return text
-    .split("\n")
-    .filter((line) => line.trim() !== "")
-    .map((line) => JSON.parse(line) as GateReceipt);
 }
 
 export { TicketError };

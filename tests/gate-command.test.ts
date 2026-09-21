@@ -19,7 +19,8 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { runGate, readReceipts } from "../packages/gate-run/src/gate.js";
+import { runGate } from "../packages/gate-run/src/gate.js";
+import { readReceipts } from "../packages/gate-run/src/receipts.js";
 import type { JevEvaluation } from "../packages/gate-jev/src/index.js";
 import { writeFixtureTicket } from "./helpers/fixtures.js";
 
@@ -290,7 +291,7 @@ describe("el recibo", () => {
     });
     expect(result.exitCode).toBe(0);
 
-    const receipts = readReceipts(lab, TICKET);
+    const receipts = readReceipts(PATHS(), TICKET);
     expect(receipts).toHaveLength(1);
 
     const receipt = receipts[0];
@@ -307,7 +308,7 @@ describe("el recibo", () => {
       ticketId: TICKET,
       jev: evaluator(allPropositions(0.95), 1.0),
     });
-    const receipt = readReceipts(lab, TICKET)[0];
+    const receipt = readReceipts(PATHS(), TICKET)[0];
     expect(receipt?.stateHash).toMatch(/^sha256:[0-9a-f]{64}$/);
     expect(receipt?.gateHash).toMatch(/^sha256:[0-9a-f]{64}$/);
   });
@@ -318,7 +319,7 @@ describe("el recibo", () => {
       ticketId: TICKET,
       jev: evaluator(allPropositions(0.95), 1.0),
     });
-    const receipt = readReceipts(lab, TICKET)[0];
+    const receipt = readReceipts(PATHS(), TICKET)[0];
     // El alias no sirve: un cambio de resultados tiene que poder atribuirse al
     // modelo o al artefacto.
     expect(receipt?.model?.resolvedVersion).toBe("typesafe/jev-1.13-20260917");
@@ -341,7 +342,7 @@ describe("el recibo", () => {
       receiptId: "GR-0002",
     });
 
-    const receipts = readReceipts(lab, TICKET);
+    const receipts = readReceipts(PATHS(), TICKET);
     expect(receipts).toHaveLength(2);
     expect(receipts[0]?.outcome).toBe("approve");
     expect(receipts[1]?.outcome).toBe("review");
@@ -353,7 +354,7 @@ describe("el recibo", () => {
       ticketId: TICKET,
       jev: evaluator(allPropositions(0.95, "completo"), 0.4),
     });
-    const receipt = readReceipts(lab, TICKET)[0];
+    const receipt = readReceipts(PATHS(), TICKET)[0];
     expect(receipt?.escalatedTo).toBe("human");
     expect(receipt?.humanDecision).toBeNull();
   });
@@ -366,7 +367,7 @@ describe("el recibo", () => {
       dryRun: true,
     });
     expect(existsSync(join(lab, ".valmen", "receipts"))).toBe(false);
-    expect(readReceipts(lab, TICKET)).toEqual([]);
+    expect(readReceipts(PATHS(), TICKET)).toEqual([]);
   });
 });
 
