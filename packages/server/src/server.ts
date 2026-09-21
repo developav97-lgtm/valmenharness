@@ -696,7 +696,12 @@ export async function handleApi(
           status: 422,
           body: {
             error:
-              "La clave no superó la prueba de conexión; no se guardó nada.",
+              "La clave no superó la prueba de conexión; no se guardó nada. " +
+              // El motivo va en el mensaje: sin él, «no superó la prueba» no
+              // distingue una clave mala de un modelo que el proveedor no
+              // reconoce, de una cabecera que falta o de un endpoint mal
+              // declarado, y las cuatro se arreglan de forma distinta.
+              `Respondió: ${prueba.detail}`,
             probe: prueba,
           },
         };

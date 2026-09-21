@@ -54,6 +54,16 @@ export interface ProviderSpec {
     readonly expect: number;
     readonly method?: "GET" | "POST";
     readonly body?: unknown;
+    /**
+     * Cabeceras que el proveedor exige además de la credencial.
+     *
+     * opencode Go pide un identificador de sesión estable para poder enrutar y
+     * cachear, y avisa de que los clientes que no lo mandan son problemáticos.
+     * El transporte lo declara por su lado (`@valmen/credentials`); aquí se
+     * declara otra vez porque la prueba es un llamador distinto y no comparte
+     * esa ruta.
+     */
+    readonly headers?: Readonly<Record<string, string>>;
   };
   /** Dónde vive el token, para los proveedores de suscripción. */
   readonly tokenSource?: string;
@@ -143,9 +153,13 @@ const CATALOGO: readonly ProviderSpec[] = [
       url: "https://opencode.ai/zen/go/v1/chat/completions",
       expect: 200,
       method: "POST",
+      headers: { "x-opencode-session": "valmenharness" },
       body: {
         model: "glm-5.3-flash",
-        max_tokens: 1,
+        // No se pide un token: algunos proveedores rechazan `max_tokens: 1` por
+        // debajo de su mínimo, y entonces la prueba falla por una razón que no
+        // tiene nada que ver con la clave.
+        max_tokens: 16,
         messages: [{ role: "user", content: "ok" }],
       },
     },
@@ -558,6 +572,9 @@ export async function probeProvider(
   if (clave !== null && clave !== "")
     headers["Authorization"] = `Bearer ${clave}`;
   if (spec.probe.body !== undefined) headers["Content-Type"] = "application/json";
+  for (const [nombre, valor] of Object.entries(spec.probe.headers ?? {})) {
+    headers[nombre] = valor;
+  }
 
   try {
     const respuesta = await fetchImpl(spec.probe.url, {
