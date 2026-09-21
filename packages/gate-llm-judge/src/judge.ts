@@ -214,9 +214,17 @@ function formaExplicita(schema: unknown): string[] {
   return lineas;
 }
 
-function systemPrompt(schemaEnPrompt?: unknown): string {
-  const esquema =
-    schemaEnPrompt === undefined ? [] : ["", ...formaExplicita(schemaEnPrompt)];
+function systemPrompt(porHerramienta = false): string {
+  // El cierre del prompt tiene que coincidir con la vía que se use: pedir «solo
+  // el JSON» mientras el cuerpo fuerza una llamada a herramienta deja al modelo
+  // eligiendo, y contestó en prosa.
+  const esquema = porHerramienta
+    ? [
+        "",
+        "Responde **llamando a la herramienta `gate_judgement`**, con un objeto",
+        "que tenga una clave por cada proposición. No contestes con texto.",
+      ]
+    : ["", "Responde solo con el JSON del esquema."];
 
   return [
     "Eres un evaluador de artefactos de ingeniería. Recibes un estado en JSON y una",
@@ -229,7 +237,6 @@ function systemPrompt(schemaEnPrompt?: unknown): string {
     "3. Usa `confidence` baja cuando el estado sea ambiguo o incompleto. No infles",
     "   la confianza para parecer útil.",
     "4. No propongas mejoras ni comentes fuera de lo que la proposición pregunta.",
-    "5. Responde solo con el JSON del esquema.",
     ...esquema,
   ].join("\n");
 }
@@ -368,7 +375,7 @@ export async function evaluateWithJudge(
   }
 
   const schema = buildSchema(options.propositions);
-  const esquemaEnPrompt = dialecto === "json-schema" ? undefined : schema;
+  const porHerramienta = dialecto !== "json-schema";
   const started = Date.now();
   let response: Response;
 
@@ -393,13 +400,41 @@ export async function evaluateWithJudge(
             content: userPrompt(options.state, options.propositions),
           },
         ],
-        response_format:
-          dialecto === "json-schema"
-            ? {
+        // Dos formas de pedir la misma respuesta, según lo que el proveedor
+        // sepa imponer. Medido contra los dos:
+        //
+        // - OpenRouter acepta `json_schema` y lo hace cumplir.
+        // - DeepSeek lo rechaza con un 400, y con `json_object` **no impone
+        //   nada**: devolvía `cumple` en vez de `holds` por estar la
+        //   conversación en español, y ni la instrucción explícita ni un ejemplo
+        //   relleno lo cambiaron. Con `tools` + `tool_choice` sí: el esquema se
+        //   impone del lado del servidor y las claves salen como se pidieron.
+        //
+        // Por eso el dialecto sin esquema usa la vía de herramienta y no
+        // `json_object`, que era la suposición razonable y resultó falsa.
+        ...(dialecto === "json-schema"
+          ? {
+              response_format: {
                 type: "json_schema",
                 json_schema: { name: "gate_judgement", strict: true, schema },
-              }
-            : { type: "json_object" },
+              },
+            }
+          : {
+              tools: [
+                {
+                  type: "function",
+                  function: {
+                    name: "gate_judgement",
+                    description: "El juicio de cada proposición.",
+                    parameters: schema,
+                  },
+                },
+              ],
+              tool_choice: {
+                type: "function",
+                function: { name: "gate_judgement" },
+              },
+            }),
       }),
       signal:
         options.signal ?? AbortSignal.timeout(options.timeoutMs ?? 90_000),
@@ -463,7 +498,14 @@ export async function evaluateWithJudge(
 
   const data = payload as {
     model?: string;
-    choices?: { message?: { content?: string } }[];
+    choices?: {
+      message?: {
+        content?: string;
+        tool_calls?: {
+          function?: { name?: string; arguments?: string };
+        }[];
+      };
+    }[];
     usage?: {
       prompt_tokens?: number;
       completion_tokens?: number;
@@ -471,7 +513,13 @@ export async function evaluateWithJudge(
     };
   };
 
-  const content = data.choices?.[0]?.message?.content;
+  // El contenido llega en `content` por la vía del esquema y en
+  // `tool_calls[0].function.arguments` por la de herramienta. Se aceptan las dos
+  // y se prefiere la herramienta cuando está, porque es la que el proveedor
+  // eligió para responder.
+  const mensaje = data.choices?.[0]?.message;
+  const content =
+    mensaje?.tool_calls?.[0]?.function?.arguments ?? mensaje?.content;
   if (typeof content !== "string") {
     throw new JudgeError(
       "La respuesta del juez no trae contenido.",
