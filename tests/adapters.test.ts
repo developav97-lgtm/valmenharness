@@ -132,6 +132,23 @@ describe("análisis de config.yaml", () => {
     expect(parseConfig("\n# solo un comentario\n")).toEqual({});
   });
 
+  it("rechaza una colección en línea en vez de leerla como texto", () => {
+    // `gates: [plan, analysis]` es YAML normal. Interpretarlo como el texto
+    // "[plan, analysis]" haría que el documento generado anunciara un gate con
+    // ese nombre: un valor con contenido donde no lo hay.
+    expect(() => parseConfig("gates: [plan, analysis]\n")).toThrow(
+      /colección en línea/,
+    );
+    expect(() => parseConfig("budgets: {a: 1}\n")).toThrow(/colección en línea/);
+    // Las formas vacías siguen admitidas: son las que escribe el harness.
+    expect(parseConfig("gates: []\n").gates).toEqual([]);
+    expect(parseConfig("budgets: {}\n").budgets).toEqual({});
+    // Un texto que solo empieza por corchete no se confunde con una colección.
+    expect(parseConfig("description: [beta] es la versión\n").description).toBe(
+      "[beta] es la versión",
+    );
+  });
+
   it("usa el valor por defecto cuando la clave no está", () => {
     const config = parseConfig("name: uno\n");
     expect(readString(config, "description", "sin descripción")).toBe(

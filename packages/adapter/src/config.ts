@@ -157,6 +157,25 @@ function parseBlock(
       continue;
     }
 
+    // Una colección en línea distinta de `[]` y `{}` se **rechaza**.
+    //
+    // Sin esto, `gates: [plan, analysis]` —YAML perfectamente normal— se
+    // interpretaría como el texto "[plan, analysis]", y el documento generado
+    // anunciaría un gate llamado así. Es el mismo fallo silencioso que el caso
+    // `[]` de arriba, y la razón de que este parser prefiera no arrancar a
+    // arrancar con una configuración distinta de la que se escribió.
+    if (
+      rest.length >= 2 &&
+      ((rest.startsWith("[") && rest.endsWith("]")) ||
+        (rest.startsWith("{") && rest.endsWith("}")))
+    ) {
+      fail(
+        `config.yaml línea ${line.number}: "${rest}" es una colección en línea y ` +
+          "no se admite. Escríbela como lista de bloques:\n" +
+          `  ${key}:\n    - elemento`,
+      );
+    }
+
     if (rest !== "") {
       map[key] = parseScalar(rest);
       index += 1;

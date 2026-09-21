@@ -42,6 +42,15 @@ import {
   runTicketGate,
 } from "./gates.js";
 import {
+  type ConfigState,
+  checkConfig,
+  configPath,
+  projectionImpact,
+  readConfigText,
+  syncProjections,
+  writeConfig,
+} from "./config.js";
+import {
   type TicketFilters,
   filterTickets,
   listTickets,
@@ -272,6 +281,69 @@ export async function handleApi(
     return resultado.ok
       ? { status: 200, body: resultado }
       : { status: 409, body: resultado };
+  }
+
+  // GET /api/config
+  if (method === "GET" && path === "/api/config") {
+    const estado = checkConfig(context.root, readConfigText(context.root));
+    return {
+      status: 200,
+      body: { config: estado, impact: projectionImpact(context.root, estado.text) },
+    };
+  }
+
+  // POST /api/config/check  — analiza y muestra el efecto, sin escribir
+  if (method === "POST" && path === "/api/config/check") {
+    const datos = body as { text?: unknown };
+    if (typeof datos.text !== "string") {
+      return { status: 400, body: { error: "Falta el campo `text`." } };
+    }
+    const estado: ConfigState = checkConfig(context.root, datos.text);
+    return {
+      status: 200,
+      body: {
+        config: estado,
+        impact: estado.ok ? projectionImpact(context.root, datos.text) : null,
+      },
+    };
+  }
+
+  // PUT /api/config  — guarda solo si el texto parsea
+  if (method === "PUT" && path === "/api/config") {
+    const datos = body as { text?: unknown };
+    if (typeof datos.text !== "string") {
+      return { status: 400, body: { error: "Falta el campo `text`." } };
+    }
+    const resultado = writeConfig(context.root, datos.text);
+    if (!resultado.written) {
+      // No es un error del servidor: el archivo no se tocó y el motivo es del
+      // texto. Se devuelve 200 con `written: false` para que la pantalla lo
+      // explique donde el usuario está mirando.
+      return {
+        status: 200,
+        body: { config: resultado, impact: null, path: configPath(context.root) },
+      };
+    }
+    return {
+      status: 200,
+      body: {
+        config: checkConfig(context.root, readConfigText(context.root)),
+        impact: projectionImpact(context.root, resultado.text),
+        path: configPath(context.root),
+      },
+    };
+  }
+
+  // POST /api/config/sync  — regenera los archivos proyectados
+  if (method === "POST" && path === "/api/config/sync") {
+    const resultado = syncProjections(context.root);
+    return {
+      status: 200,
+      body: {
+        ...resultado,
+        impact: projectionImpact(context.root, readConfigText(context.root)),
+      },
+    };
   }
 
   // GET /api/providers

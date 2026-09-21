@@ -87,15 +87,27 @@ export function readRules(root: string): RuleFile[] {
     }));
 }
 
-/** Construye el modelo del proyecto leyendo `.valmen/`. */
+/**
+ * Construye el modelo del proyecto leyendo `.valmen/`.
+ *
+ * `configText` permite proyectar un texto que **todavía no está en disco**. Es
+ * lo que usa Mission Control para mostrar el efecto de un cambio de
+ * configuración antes de guardarlo, y existe aquí, y no en el servidor, porque
+ * el valor por defecto de cada campo y la forma de interpretarlo son parte de la
+ * proyección: una segunda derivación en el servidor podría mostrar un
+ * `AGENTS.md` que después no es el que se genera.
+ */
 export function loadProjectModel(
   root: string,
   projectName: string,
+  configText?: string,
 ): ProjectModel {
   const configPath = join(root, ".valmen", "config.yaml");
   let config: ConfigMap = {};
   try {
-    config = parseConfig(readFileSync(configPath, "utf8"));
+    config = parseConfig(
+      configText ?? readFileSync(configPath, "utf8"),
+    );
   } catch (error) {
     // Un config inválido no debe degradarse a "sin configuración": el usuario
     // creería que su archivo se aplicó cuando no fue así.

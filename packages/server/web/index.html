@@ -178,6 +178,29 @@
       .decision-humana .quien { font-size: 13px; }
       .decision-humana .quien strong { color: var(--texto); }
       .historial { font-size: 12px; color: var(--tenue); margin-top: 10px; }
+
+      /* ── Configuración: editor y diferencias ──────────────────────────── */
+      .editor { width: 100%; min-height: 320px; resize: vertical; font-family: var(--mono);
+        font-size: 13px; line-height: 1.6; padding: 14px; border-radius: 8px;
+        background: var(--fondo); color: var(--texto); border: 1px solid var(--borde); }
+      .editor:focus { outline: none; border-color: var(--acento); }
+      .editor.mal { border-color: var(--error); }
+      .interpretacion { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 12px; margin: 16px 0; }
+      .interpretacion .campo { background: var(--panel); border: 1px solid var(--borde);
+        border-radius: 8px; padding: 12px 14px; }
+      .interpretacion .rotulo { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+        color: var(--tenue); }
+      .interpretacion .valor { font-family: var(--mono); font-size: 13px; margin-top: 4px; word-break: break-word; }
+      .diff { font-family: var(--mono); font-size: 12px; border: 1px solid var(--borde);
+        border-radius: 8px; overflow: hidden; margin-bottom: 16px; }
+      .diff div { padding: 2px 12px; white-space: pre-wrap; word-break: break-word; }
+      .diff .add { background: rgba(63, 185, 80, 0.12); color: var(--ok); }
+      .diff .remove { background: rgba(248, 81, 73, 0.12); color: var(--error); }
+      .diff .same { color: var(--tenue); }
+      .error-parser { background: rgba(248, 81, 73, 0.12); border: 1px solid var(--error);
+        color: var(--error); border-radius: 6px; padding: 10px 12px; font-family: var(--mono);
+        font-size: 12px; white-space: pre-wrap; margin-bottom: 16px; }
       details { margin-top: 12px; }
       summary { font-size: 12px; color: var(--tenue); cursor: pointer; }
       summary:hover { color: var(--texto); }
@@ -188,6 +211,7 @@
       <h1>ValmenHarness</h1>
       <nav>
         <a href="#/tickets" data-vista="tickets">Tickets</a>
+        <a href="#/configuracion" data-vista="configuracion">Configuración</a>
         <a href="#/proveedores" data-vista="proveedores">Proveedores</a>
       </nav>
       <span class="raiz" id="raiz"></span>
@@ -791,6 +815,208 @@
         mostrar(partes[0][0], partes[0][1], barraSecciones.querySelector("button"));
       }
 
+      // ── Vista: configuración ──────────────────────────────────────────────
+
+      /**
+       * El editor de `.valmen/config.yaml`.
+       *
+       * El texto es la fuente y se edita en crudo, así que los comentarios
+       * sobreviven. Antes de guardar se muestra qué entendió el harness y qué
+       * archivos generados quedan desactualizados: sin eso, el usuario tendría
+       * que saber que `AGENTS.md` se genera, que es justo el conocimiento que la
+       * app debe evitar exigir.
+       */
+      async function vistaConfiguracion() {
+        const cont = $("contenido");
+        cont.textContent = "";
+
+        const datos = await api("GET", "/api/config");
+        const estadoInicial = datos.config;
+
+        const nota = el("div", undefined, "nota");
+        nota.append(
+          el("strong", "Se guarda solo si el harness puede leerlo. "),
+          el("span", "El formato admite un subconjunto de YAML: escalares, listas de bloque y mapas por indentación. Si algo no encaja, se dice aquí y el archivo no se toca."),
+        );
+        cont.append(nota, el("h2", "Configuración del proyecto"));
+        cont.append(el("div", estadoInicial.path, "ruta"));
+
+        const editor = document.createElement("textarea");
+        editor.className = "editor";
+        editor.spellcheck = false;
+        editor.value = estadoInicial.text;
+        editor.setAttribute("aria-label", "Contenido de .valmen/config.yaml");
+
+        // El panel de interpretación: lo que el harness entendió del texto.
+        const interpretacion = el("div", undefined, "interpretacion");
+        const diff = el("div", undefined, "diff");
+        const error = el("div", undefined, "error-parser");
+        error.hidden = true;
+
+        const guardar = el("button", "Guardar los cambios", "principal");
+        guardar.disabled = true;
+        const regenerar = el("button", "Regenerar");
+        regenerar.hidden = true;
+        const salida = el("div", undefined, "resultado");
+        salida.style.marginRight = "auto";
+
+        let ultimo = null;
+
+        const campo = (rotulo, valor) => {
+          const caja = el("div", undefined, "campo");
+          caja.append(el("div", rotulo, "rotulo"), el("div", valor, "valor"));
+          return caja;
+        };
+
+        const pintar = (respuesta) => {
+          const { config, impact } = respuesta;
+
+          error.hidden = config.ok;
+          error.textContent = config.ok ? "" : config.error;
+          editor.classList.toggle("mal", !config.ok);
+
+          interpretacion.textContent = "";
+          if (config.summary !== null) {
+            const s = config.summary;
+            interpretacion.append(
+              campo("nombre", s.name),
+              campo("registro de tickets", s.ticketsDir === "" ? "(por defecto)" : s.ticketsDir),
+              campo("gates declarados", s.gates.length === 0 ? "ninguno" : s.gates.join(", ")),
+              campo("claves", s.keys.join(", ")),
+            );
+            if (!s.adopted) {
+              interpretacion.append(
+                campo("adopción", "el archivo todavía no existe"),
+              );
+            }
+          }
+
+          diff.textContent = "";
+          const cambios = config.diff.filter((linea) => linea.kind !== "same");
+          if (cambios.length === 0) {
+            diff.append(el("div", "Sin cambios respecto de lo guardado.", "same"));
+          } else {
+            for (const linea of config.diff) {
+              diff.append(
+                el(
+                  "div",
+                  `${linea.kind === "add" ? "+" : linea.kind === "remove" ? "-" : " "} ${linea.text}`,
+                  linea.kind,
+                ),
+              );
+            }
+          }
+
+          // El aviso que evita la trampa de editar el archivo generado: se dice
+          // aquí, antes de guardar, y no en un documento aparte.
+          if (config.ok && impact !== null && impact.stale > 0) {
+            const aviso = el("div", undefined, "same");
+            aviso.append(
+              el(
+                "div",
+                impact.stale === 1
+                  ? `Quedará 1 archivo generado desactualizado: ${impact.files.filter((f) => f.stale).map((f) => f.path).join(", ")}.`
+                  : `Quedarán ${impact.stale} archivos generados desactualizados: ${impact.files.filter((f) => f.stale).map((f) => f.path).join(", ")}.`,
+              ),
+              el(
+                "div",
+                impact.files.every((f) => f.path === "AGENTS.md")
+                  ? "Es un archivo generado: editarlo a mano se pierde en la siguiente sincronización."
+                  : "Son archivos generados: editarlos a mano se pierde en la siguiente sincronización.",
+              ),
+            );
+            diff.append(aviso);
+            regenerar.hidden = false;
+            regenerar.textContent =
+              impact.stale === 1
+                ? "Regenerar 1 archivo"
+                : `Regenerar ${impact.stale} archivos`;
+          } else {
+            regenerar.hidden = true;
+          }
+
+          ultimo = config;
+          guardar.disabled = !config.ok || cambios.length === 0;
+          guardar.textContent =
+            cambios.length === 0 ? "Sin cambios" : "Guardar los cambios";
+        };
+
+        let temporizador;
+        const analizar = () => {
+          clearTimeout(temporizador);
+          temporizador = setTimeout(async () => {
+            try {
+              pintar(await api("POST", "/api/config/check", { text: editor.value }));
+            } catch (fallo) {
+              salida.className = "resultado error";
+              salida.textContent = fallo.message;
+            }
+          }, 250);
+        };
+        editor.addEventListener("input", analizar);
+
+        guardar.addEventListener("click", async () => {
+          guardar.disabled = true;
+          salida.className = "resultado";
+          salida.textContent = "guardando…";
+          try {
+            const r = await api("PUT", "/api/config", { text: editor.value });
+            pintar(r);
+            if (r.config.written) {
+              salida.className = "resultado ok";
+              salida.textContent = "Guardado.";
+            } else {
+              salida.className = "resultado error";
+              salida.textContent = "No se guardó: el texto no es válido.";
+            }
+          } catch (fallo) {
+            salida.className = "resultado error";
+            salida.textContent = fallo.message;
+            // La petición falló, así que el botón vuelve a estar disponible
+            // según lo que se sepa del texto; no se deja deshabilitado.
+            guardar.disabled = ultimo?.ok !== true;
+          }
+        });
+
+        // Regenerar existe para que nadie tenga que saber que `AGENTS.md` es un
+        // archivo derivado. Se hace con la misma proyección que `valmen sync`.
+        regenerar.addEventListener("click", async () => {
+          regenerar.disabled = true;
+          salida.className = "resultado";
+          salida.textContent = "regenerando…";
+          try {
+            const r = await api("POST", "/api/config/sync");
+            // Se repinta con el estado que devuelve el servidor: el aviso de
+            // archivos pendientes desaparece porque ya no queda ninguno.
+            pintar(await api("GET", "/api/config"));
+            if (r.ok) {
+              salida.className = "resultado ok";
+              salida.textContent =
+                r.written.length === 0
+                  ? "Ya estaba al día."
+                  : `Regenerados: ${r.written.join(", ")}.`;
+            } else {
+              salida.className = "resultado error";
+              salida.textContent = r.error;
+            }
+          } catch (fallo) {
+            salida.className = "resultado error";
+            salida.textContent = fallo.message;
+          } finally {
+            regenerar.disabled = false;
+          }
+        });
+
+        const acciones = el("div", undefined, "acciones");
+        acciones.style.justifyContent = "flex-start";
+        acciones.style.marginTop = "14px";
+        acciones.append(salida, regenerar, guardar);
+
+        cont.append(editor, error, el("h2", "Lo que el harness entiende"), interpretacion);
+        cont.append(el("h2", "Diferencias antes de guardar"), diff, acciones);
+        pintar(datos);
+      }
+
       // ── Vista: proveedores ────────────────────────────────────────────────
 
       let proveedores = [];
@@ -961,6 +1187,7 @@
 
         try {
           if (nombre === "ticket" && parametro !== undefined) await vistaTicket(parametro);
+          else if (nombre === "configuracion") await vistaConfiguracion();
           else if (nombre === "proveedores") await vistaProveedores();
           else await vistaTickets();
         } catch (error) {

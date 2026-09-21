@@ -23,14 +23,11 @@ import {
   validateDocument,
 } from "@valmen/core";
 import {
-  type ProjectModel,
-  type RenderedFile,
+  type Projection,
   adoptPlan,
-  readAgents,
-  renderAllAgents,
   loadProjectModel,
   profileProject,
-  projectAgentsMd,
+  projectFiles,
   proposeConfig,
 } from "@valmen/adapter";
 
@@ -380,41 +377,18 @@ export function syncProject(
   projectName: string,
   check: boolean,
 ): CommandResult {
-  let model: ProjectModel;
-  let agents;
+  // La proyección se calcula con la misma función que usa Mission Control: si el
+  // botón y el comando generaran archivos distintos, la comparación de frescura
+  // daría un resultado distinto según quién la ejecute.
+  let proyeccion: Projection;
   try {
-    model = loadProjectModel(root, projectName);
-    agents = readAgents(root);
+    proyeccion = projectFiles(root, projectName);
   } catch (caught) {
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);
   }
 
-  // El documento y los agentes salen del mismo modelo, así que se proyectan
-  // juntos: un `AGENTS.md` actualizado con agentes viejos sería incoherente.
-  const sources = [
-    ".valmen/config.yaml",
-    ...model.rules.map((rule) => rule.source),
-    ...agents.map((agent) => `.valmen/agents/${agent.id}.md`),
-  ];
-
-  let projected: RenderedFile[];
-  try {
-    projected = [
-      { path: "AGENTS.md", content: projectAgentsMd(model) },
-      ...renderAllAgents(agents, sources),
-    ];
-  } catch (caught) {
-    const failure = toFailure(caught);
-    return error(failure.message, failure.exitCode);
-  }
-
-  const byRuntime = {
-    codex: projected.filter((file) => file.path.startsWith(".codex/")).length,
-    opencode: projected.filter((file) => file.path.startsWith(".opencode/"))
-      .length,
-    claude: projected.filter((file) => file.path.startsWith(".claude/")).length,
-  };
+  const { files: projected, byRuntime } = proyeccion;
 
   if (check) {
     const stale: string[] = [];
@@ -437,14 +411,16 @@ export function syncProject(
     atomicWrite(join(root, file.path), file.content);
   }
 
+  const agentesProyectados = projected.length - 1;
+
   const lines = [
     "Sincronización",
-    `  AGENTS.md                (${model.rules.length} archivo(s) de reglas del proyecto)`,
+    `  AGENTS.md                (${proyeccion.ruleCount} archivo(s) de reglas del proyecto)`,
   ];
 
-  if (agents.length > 0) {
+  if (agentesProyectados > 0) {
     lines.push(
-      `  agentes proyectados      ${agents.length}`,
+      `  agentes proyectados      ${agentesProyectados}`,
       `    .codex/agents/         ${byRuntime.codex} archivos TOML`,
       `    .opencode/agents/      ${byRuntime.opencode} archivos Markdown`,
       `    .claude/agents/        ${byRuntime.claude} archivos Markdown`,
@@ -456,7 +432,7 @@ export function syncProject(
     );
   }
 
-  if (model.rules.length === 0) {
+  if (proyeccion.ruleCount === 0) {
     lines.push(
       "  Añada reglas en .valmen/rules/ para que se incluyan en AGENTS.md.",
     );

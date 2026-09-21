@@ -10,6 +10,7 @@
   "files": ["dist", "README.md"],
   "engines": { "node": ">=22" },
   "dependencies": {
+    "@valmen/adapter": "0.0.1",
     "@valmen/core": "0.0.1",
     "@valmen/gate": "0.0.1",
     "@valmen/gate-run": "0.0.1"
