@@ -34,7 +34,18 @@ import {
   simulateGate,
 } from "@valmen/engine";
 import { type ServerContext, createMissionControl, defaultContext, loadStatics } from "@valmen/server";
-import { type Entity, transition } from "@valmen/engine";
+import {
+  type Entity,
+  addAiUsage,
+  addEvidence,
+  addPoint,
+  addRetest,
+  closeAttempt,
+  createTicket,
+  qaClose,
+  qaStart,
+  transition,
+} from "@valmen/engine";
 
 const USAGE = `valmen — harness agéntico
 
@@ -53,6 +64,23 @@ Comandos:
   adopt [--dry-run]         Incorpora el harness a un proyecto existente.
   gate <gate> --id <ID>     Evalúa un gate contra un ticket.
       --evaluator <id>      auto (por defecto) · command · jev · llm-judge
+  create --id <ID> --title <t> --type <TIPO> --module <MODULO> --request <texto>
+                            Crea un ticket desde la plantilla, en intake.
+  add-point --id <ID> --title <t> --severity <s> --actual <a> --expected <e>
+                            Anexa el siguiente POINT-NNN, en estado abierto.
+  qa-start --id <ID> --environment <e> --build-reference <ref>
+                            Abre un ciclo QA. Exige el ticket en in_qa.
+  qa-close --id <ID> --result <r>
+                            Cierra el ciclo abierto. --po-confirmation si aprueba.
+  add-evidence --id <ID> --kind <k> --description <d>
+                            Anexa evidencia. --reference y --point-id opcionales.
+  add-retest --id <ID> --point-id <P> --result <r>
+                            Anexa un retest y mueve el punto según el resultado.
+  close-attempt --id <ID> --technical-summary <t> --functional-summary <f>
+                --qa-status <approved|waived> --release-impact <r>
+                            Anexa un intento de cierre. No cierra el ticket.
+  add-ai-usage --id <ID> --source <s> --confidence <high|medium|low>
+                            Anexa consumo de IA. El resto de campos son opcionales.
   transition --id <ID> --entity <entidad> --to <estado>
                             Mueve el estado de un ticket, un punto o una release.
       --point-id <POINT>    Obligatorio con --entity point.
@@ -107,6 +135,36 @@ const VALUE_OPTIONS = [
   "--point-id",
   "--reason",
   "--version",
+  // Comandos de anexado.
+  "--title",
+  "--severity",
+  "--actual",
+  "--expected",
+  "--kind",
+  "--description",
+  "--reference",
+  "--source",
+  "--confidence",
+  "--session-reference",
+  "--model",
+  "--reasoning-effort",
+  "--input-tokens",
+  "--output-tokens",
+  "--total-tokens",
+  "--estimated-cost-usd",
+  "--notes",
+  "--environment",
+  "--build-reference",
+  "--result",
+  "--po-confirmation",
+  "--technical-summary",
+  "--functional-summary",
+  "--qa-status",
+  "--release-impact",
+  "--qa-waiver-reason",
+  "--type",
+  "--module",
+  "--request",
 ] as const;
 
 /** Error de uso: se reporta con el código de esquema, como el CLI de referencia. */
@@ -192,6 +250,159 @@ export function parseArgs(argv: readonly string[]): Options {
 }
 
 /** Resuelve las rutas del registro a partir de las opciones. */
+/** Los comandos que anexan datos a un ticket. */
+const ESCRITURA = new Set([
+  "create",
+  "add-point",
+  "qa-start",
+  "qa-close",
+  "add-evidence",
+  "add-retest",
+  "close-attempt",
+  "add-ai-usage",
+]);
+
+/**
+ * Los comandos de anexado, traducidos a peticiones del motor.
+ *
+ * La validación de las banderas obligatorias vive aquí, en la superficie: el
+ * motor recibe una petición bien formada y sus errores son del contrato. La
+ * separación importa porque el servidor llama al mismo motor sin pasar por aquí.
+ */
+export function runAppend(
+  command: string,
+  paths: RegistryPaths,
+  flags: Readonly<Record<string, string | true>>,
+): CommandResult {
+  const ticketId = flag(flags, "id");
+  if (ticketId === undefined) {
+    return {
+      stdout: "",
+      stderr: `${command} requiere --id.`,
+      exitCode: EXIT_SCHEMA,
+    };
+  }
+
+  const obligatoria = (nombre: string): string => {
+    const valor = flag(flags, nombre);
+    if (valor === undefined) {
+      throw Object.assign(new Error(`${command} requiere --${nombre}.`), {
+        exitCode: EXIT_SCHEMA,
+      });
+    }
+    return valor;
+  };
+
+  try {
+    let salida: string;
+
+    switch (command) {
+      case "create":
+        salida = createTicket({
+          paths,
+          id: ticketId,
+          title: obligatoria("title"),
+          type: obligatoria("type"),
+          module: obligatoria("module"),
+          request: obligatoria("request"),
+        });
+        break;
+
+      case "add-point":
+        salida = addPoint({
+          paths,
+          ticketId,
+          title: obligatoria("title"),
+          severity: obligatoria("severity"),
+          actual: obligatoria("actual"),
+          expected: obligatoria("expected"),
+        });
+        break;
+
+      case "qa-start":
+        salida = qaStart({
+          paths,
+          ticketId,
+          environment: flag(flags, "environment"),
+          buildReference: flag(flags, "build-reference"),
+        });
+        break;
+
+      case "qa-close":
+        salida = qaClose({
+          paths,
+          ticketId,
+          result: obligatoria("result"),
+          poConfirmation: flag(flags, "po-confirmation"),
+        });
+        break;
+
+      case "add-evidence":
+        salida = addEvidence({
+          paths,
+          ticketId,
+          kind: obligatoria("kind"),
+          description: obligatoria("description"),
+          reference: flag(flags, "reference"),
+          pointId: flag(flags, "point-id"),
+        });
+        break;
+
+      case "add-retest":
+        salida = addRetest({
+          paths,
+          ticketId,
+          pointId: obligatoria("point-id"),
+          result: obligatoria("result"),
+          poConfirmation: flag(flags, "po-confirmation"),
+        });
+        break;
+
+      case "close-attempt":
+        salida = closeAttempt({
+          paths,
+          ticketId,
+          technicalSummary: obligatoria("technical-summary"),
+          functionalSummary: obligatoria("functional-summary"),
+          qaStatus: obligatoria("qa-status"),
+          releaseImpact: obligatoria("release-impact"),
+          qaWaiverReason: flag(flags, "qa-waiver-reason"),
+          poConfirmation: flag(flags, "po-confirmation"),
+        });
+        break;
+
+      case "add-ai-usage":
+        salida = addAiUsage({
+          paths,
+          ticketId,
+          source: obligatoria("source"),
+          confidence: obligatoria("confidence"),
+          sessionReference: flag(flags, "session-reference"),
+          model: flag(flags, "model"),
+          reasoningEffort: flag(flags, "reasoning-effort"),
+          inputTokens: flag(flags, "input-tokens"),
+          outputTokens: flag(flags, "output-tokens"),
+          totalTokens: flag(flags, "total-tokens"),
+          estimatedCostUsd: flag(flags, "estimated-cost-usd"),
+          notes: flag(flags, "notes"),
+        });
+        break;
+
+      default:
+        return {
+          stdout: "",
+          stderr: `Comando de escritura desconocido: ${command}.`,
+          exitCode: EXIT_SCHEMA,
+        };
+    }
+
+    return { stdout: `${salida}\n`, stderr: "", exitCode: 0 };
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return { stdout: "", stderr: failure.message, exitCode: failure.exitCode };
+  }
+}
+
 /** El valor de texto de una bandera, si la hay. */
 function flag(flags: Readonly<Record<string, string | true>>, name: string): string | undefined {
   const valor = flags[name];
@@ -494,6 +705,8 @@ export async function run(argv: readonly string[]): Promise<number> {
       }
     } else if (command === "transition") {
       result = runTransition(resolvePaths(options), options.flags);
+    } else if (command !== undefined && ESCRITURA.has(command)) {
+      result = runAppend(command, resolvePaths(options), options.flags);
     } else if (command === "gate") {
       const gateId = rest[0];
       const rawId = options.flags["id"];

@@ -31,7 +31,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -473,6 +473,382 @@ describe.skipIf(!disponible)("equivalencia con ticket.py", () => {
         ],
       ];
       compararSecuencia(pasos, "released_in incoherente");
+    });
+  });
+
+  // ── El ciclo de vida completo ────────────────────────────────────────────
+  describe("el ciclo de vida de un ticket, paso a paso", () => {
+    /** El SHA que se usa como referencia de build. Solo se valida su forma. */
+    const COMMIT = "0123456789abcdef0123456789abcdef01234567";
+
+    /**
+     * Escribe el resultado del PO en `Pruebas`, que es lo que exige `in_qa`.
+     *
+     * Se aplica igual a las dos copias: es preparación del sujeto, no parte de
+     * lo que se está comparando.
+     */
+    function prepararPruebas(raiz: string): void {
+      const ruta = join(raiz, "docs", "tickets", "2026", TICKET, "ticket.md");
+      const texto = readFileSync(ruta, "utf8").replace(
+        "Pendiente de ejecución.",
+        "Resultado PO: probado en la sucursal con el PO delante.",
+      );
+      writeFileSync(ruta, texto, "utf8");
+    }
+
+    it("de punta a punta: punto, evidencia, QA, retest, cierre y release", () => {
+      const a = crearLaboratorio();
+      const b = crearLaboratorio();
+      try {
+        prepararPruebas(a);
+        prepararPruebas(b);
+
+        const id = ["--id", TICKET];
+        const pasos: readonly (readonly string[])[] = [
+          // El punto recorre su propia máquina hasta quedar listo para el retest.
+          ["add-point", ...id, "--title", "El listado no pagina", "--severity", "normal",
+            "--actual", "devuelve todo", "--expected", "devuelve 20"],
+          ["transition", ...id, "--entity", "point", "--point-id", "POINT-001", "--to", "analyzed"],
+          ["transition", ...id, "--entity", "point", "--point-id", "POINT-001", "--to", "in_progress"],
+          ["transition", ...id, "--entity", "point", "--point-id", "POINT-001", "--to", "awaiting_retest"],
+          ["add-evidence", ...id, "--kind", "prueba", "--description", "Captura del listado paginado",
+            "--reference", `commit:${COMMIT}`, "--point-id", "POINT-001"],
+          // El ticket avanza hasta QA.
+          ["transition", ...id, "--entity", "ticket", "--to", "approved"],
+          ["transition", ...id, "--entity", "ticket", "--to", "in_progress"],
+          ["transition", ...id, "--entity", "ticket", "--to", "awaiting_user_tests"],
+          ["transition", ...id, "--entity", "ticket", "--to", "in_qa"],
+          ["qa-start", ...id, "--environment", "staging", "--build-reference", `commit:${COMMIT}`],
+          ["add-retest", ...id, "--point-id", "POINT-001", "--result", "approved",
+            "--po-confirmation", "Confirmado por el PO"],
+          ["qa-close", ...id, "--result", "approved", "--po-confirmation", "Aprobado por el PO"],
+          ["transition", ...id, "--entity", "ticket", "--to", "qa_approved"],
+          ["close-attempt", ...id,
+            "--technical-summary", "Se cambió el lookup del filtro.",
+            "--functional-summary", "El listado pagina de veinte en veinte.",
+            "--qa-status", "approved",
+            "--release-impact", "Entra en la próxima release."],
+          ["transition", ...id, "--entity", "ticket", "--to", "closed"],
+          // El consumo se registra incluso con el ticket cerrado.
+          ["add-ai-usage", ...id, "--source", "cli", "--confidence", "high",
+            "--model", "deepseek/deepseek-v4-flash", "--input-tokens", "751",
+            "--output-tokens", "115", "--estimated-cost-usd", "0.0000315"],
+          // Y la release se publica.
+          ["transition", ...id, "--entity", "release", "--to", "planned", "--version", "6.3.0"],
+          ["transition", ...id, "--entity", "release", "--to", "released", "--version", "6.3.0"],
+        ];
+
+        for (const [indice, paso] of pasos.entries()) {
+          const suyo = referencia(a, paso as string[]);
+          const mio = valmen(b, paso as string[]);
+          const etiqueta = `paso ${indice + 1}: ${paso[0]}`;
+
+          expect(mio.code, `código · ${etiqueta}`).toBe(suyo.code);
+          expect(mio.stderr, `stderr · ${etiqueta}`).toBe(suyo.stderr);
+          expect(mio.stdout, `stdout · ${etiqueta}`).toBe(suyo.stdout);
+          expect(ticket(b), `ticket · ${etiqueta}`).toBe(ticket(a));
+        }
+
+        // Y el resultado final es el que se esperaba, para que un fallo de los
+        // dos lados a la vez no pase como equivalencia.
+        const final = ticket(b);
+        expect(final).toContain("workflow_status: closed");
+        expect(final).toContain("release_status: released");
+        expect(final).toContain("released_in: 6.3.0");
+        expect(final).toContain('"status": "verified"');
+        expect(final).toContain('"id": "CONSUMO-001"');
+        // Python escribe los costes por debajo de 1e-4 en notación científica,
+        // y el harness lo replica: es la razón de que exista `formatPythonNumber`.
+        expect(final).toContain('"estimated_cost_usd": 3.15e-05');
+      } finally {
+        rmSync(a, { recursive: true, force: true });
+        rmSync(b, { recursive: true, force: true });
+      }
+    });
+
+    it("la reapertura de un ticket cerrado y no publicado", () => {
+      const a = crearLaboratorio();
+      const b = crearLaboratorio();
+      try {
+        prepararPruebas(a);
+        prepararPruebas(b);
+        const id = ["--id", TICKET];
+        const pasos: readonly (readonly string[])[] = [
+          ["transition", ...id, "--entity", "ticket", "--to", "approved"],
+          ["transition", ...id, "--entity", "ticket", "--to", "in_progress"],
+          ["transition", ...id, "--entity", "ticket", "--to", "awaiting_user_tests"],
+          ["transition", ...id, "--entity", "ticket", "--to", "in_qa"],
+          ["qa-start", ...id, "--environment", "staging",
+            "--build-reference", `commit:${"a".repeat(40)}`],
+          ["qa-close", ...id, "--result", "approved", "--po-confirmation", "Aprobado"],
+          ["transition", ...id, "--entity", "ticket", "--to", "qa_approved"],
+          ["close-attempt", ...id, "--technical-summary", "T", "--functional-summary", "F",
+            "--qa-status", "approved", "--release-impact", "R"],
+          ["transition", ...id, "--entity", "ticket", "--to", "closed"],
+          // El hallazgo posterior: reabre, anexa dos ciclos QA y pide motivo.
+          ["transition", ...id, "--entity", "ticket", "--to", "changes_requested",
+            "--reason", "El PO encontró un caso sin cubrir."],
+        ];
+
+        for (const [indice, paso] of pasos.entries()) {
+          const suyo = referencia(a, paso as string[]);
+          const mio = valmen(b, paso as string[]);
+          const etiqueta = `paso ${indice + 1}: ${paso[0]} ${paso[7] ?? ""}`;
+          expect(mio.code, `código · ${etiqueta}`).toBe(suyo.code);
+          expect(mio.stderr, `stderr · ${etiqueta}`).toBe(suyo.stderr);
+          expect(ticket(b), `ticket · ${etiqueta}`).toBe(ticket(a));
+        }
+
+        const final = ticket(b);
+        expect(final).toContain("workflow_status: changes_requested");
+        expect(final).toContain("qa_status: pending");
+        expect(final).toContain("Reapertura por hallazgo");
+      } finally {
+        rmSync(a, { recursive: true, force: true });
+        rmSync(b, { recursive: true, force: true });
+      }
+    });
+  });
+
+  // ── Alta de tickets ──────────────────────────────────────────────────────
+  describe("`create`", () => {
+    const NUEVO = "BUGFIX-POS-PAGINACION-20260921";
+    const SOLICITUD =
+      "Cuando entro al listado de órdenes me devuelve todo de una vez y se cuelga.";
+
+    /**
+     * El repositorio de la referencia, derivado de la ruta a su CLI.
+     *
+     * La plantilla canónica vive en `docs/agentic/templates/`, y el test la copia
+     * para que las dos implementaciones partan del **mismo texto**: sin eso, la
+     * comparación mediría la diferencia entre dos plantillas, que no es lo que se
+     * está probando.
+     */
+    function plantillaDeReferencia(): string {
+      const raiz = dirname(dirname(dirname(REFERENCIA)));
+      return join(raiz, "docs", "agentic", "templates", "ticket.template.md");
+    }
+
+    function crearLaboratorioDeAlta(): string {
+      const raiz = mkdtempSync(join(tmpdir(), "valmen-alta-"));
+      mkdirSync(join(raiz, "docs", "tickets"), { recursive: true });
+      mkdirSync(join(raiz, "docs", "agentic", "templates"), { recursive: true });
+      mkdirSync(join(raiz, ".valmen", "templates"), { recursive: true });
+      spawnSync("git", ["init", "-q", "."], { cwd: raiz });
+      writeFileSync(join(raiz, "docs", "tickets", "index.md"), "# Índice de tickets\n");
+
+      const plantilla = readFileSync(plantillaDeReferencia(), "utf8");
+      // La misma plantilla en los dos sitios: donde la lee la referencia y donde
+      // la lee el harness.
+      writeFileSync(join(raiz, "docs", "agentic", "templates", "ticket.template.md"), plantilla);
+      writeFileSync(join(raiz, ".valmen", "templates", "ticket.md"), plantilla);
+      return raiz;
+    }
+
+    const args = [
+      "create", "--id", NUEVO, "--title", "El listado no pagina",
+      "--type", "BUGFIX", "--module", "POS", "--request", SOLICITUD,
+    ];
+
+    it("produce el mismo ticket salvo la versión de esquema", () => {
+      const a = crearLaboratorioDeAlta();
+      const b = crearLaboratorioDeAlta();
+      try {
+        const suyo = referencia(a, args);
+        const mio = valmen(b, args);
+        expect(mio.code).toBe(suyo.code);
+        expect(mio.stdout).toBe(suyo.stdout);
+
+        const leer = (raiz: string): string =>
+          readFileSync(join(raiz, "docs", "tickets", "2026", NUEVO, "ticket.md"), "utf8");
+
+        // **Divergencia declarada, y es la única.** El harness escribe el esquema
+        // 2 y la referencia el 1. Normalizada esa línea, el resto del ticket es
+        // idéntico byte a byte: mismas secciones, mismos bloques, misma fecha,
+        // mismo evento.
+        expect(leer(a)).toContain("schema_version: 1");
+        expect(leer(b)).toContain("schema_version: 2");
+        expect(leer(b).replace("schema_version: 2", "schema_version: 1")).toBe(leer(a));
+      } finally {
+        rmSync(a, { recursive: true, force: true });
+        rmSync(b, { recursive: true, force: true });
+      }
+    });
+
+    it("la solicitud se conserva literal, con sus saltos de línea", () => {
+      const raiz = crearLaboratorioDeAlta();
+      try {
+        const larga = "Primera línea.\n\nSegunda línea, con coma, y acentos: ñáé.";
+        const mio = valmen(raiz, [
+          "create", "--id", NUEVO, "--title", "T", "--type", "BUGFIX",
+          "--module", "POS", "--request", larga,
+        ]);
+        expect(mio.code).toBe(0);
+        const texto = readFileSync(
+          join(raiz, "docs", "tickets", "2026", NUEVO, "ticket.md"),
+          "utf8",
+        );
+        expect(texto).toContain(larga);
+      } finally {
+        rmSync(raiz, { recursive: true, force: true });
+      }
+    });
+
+    it("un ID que no coincide con el tipo se rechaza igual", () => {
+      const raiz = crearLaboratorioDeAlta();
+      try {
+        const suyo = referencia(raiz, [
+          "create", "--id", NUEVO, "--title", "T", "--type", "FEATURE",
+          "--module", "POS", "--request", "R",
+        ]);
+        const mio = valmen(raiz, [
+          "create", "--id", NUEVO, "--title", "T", "--type", "FEATURE",
+          "--module", "POS", "--request", "R",
+        ]);
+        expect(mio.code).toBe(suyo.code);
+        expect(mio.stderr).toBe(suyo.stderr);
+      } finally {
+        rmSync(raiz, { recursive: true, force: true });
+      }
+    });
+
+    it("un módulo que no coincide con el ID se rechaza igual", () => {
+      const raiz = crearLaboratorioDeAlta();
+      try {
+        const argumentos = [
+          "create", "--id", NUEVO, "--title", "T", "--type", "BUGFIX",
+          "--module", "VENTAS", "--request", "R",
+        ];
+        const suyo = referencia(raiz, argumentos);
+        const mio = valmen(raiz, argumentos);
+        expect(mio.code).toBe(suyo.code);
+        expect(mio.stderr).toBe(suyo.stderr);
+      } finally {
+        rmSync(raiz, { recursive: true, force: true });
+      }
+    });
+
+    it("crear dos veces el mismo ID se rechaza con el código de historial", () => {
+      // Cada implementación hace su propia secuencia sobre su propia copia: si
+      // el harness creara primero, la referencia leería un ticket del esquema 2
+      // y fallaría al validar la colección, que no es lo que se está probando.
+      const a = crearLaboratorioDeAlta();
+      const b = crearLaboratorioDeAlta();
+      try {
+        expect(referencia(a, args).code).toBe(0);
+        expect(valmen(b, args).code).toBe(0);
+
+        const suyo = referencia(a, args);
+        const mio = valmen(b, args);
+
+        expect(mio.code).toBe(suyo.code);
+        expect(mio.code).toBe(4);
+        expect(mio.stderr).toBe(suyo.stderr);
+      } finally {
+        rmSync(a, { recursive: true, force: true });
+        rmSync(b, { recursive: true, force: true });
+      }
+    });
+  });
+
+  // ── Los comandos de anexado, uno por uno ─────────────────────────────────
+  describe("los comandos de anexado", () => {
+    it("`add-point` con severidad inválida se rechaza igual", () => {
+      comparar(
+        ["add-point", "--id", TICKET, "--title", "T", "--severity", "urgentísimo",
+          "--actual", "A", "--expected", "E"],
+        "severidad inválida",
+      );
+    });
+
+    it("`add-point` con título multilínea se rechaza igual", () => {
+      comparar(
+        ["add-point", "--id", TICKET, "--title", "T\ncon salto", "--severity", "normal",
+          "--actual", "A", "--expected", "E"],
+        "título con salto",
+      );
+    });
+
+    it("`add-evidence` con una referencia mal formada se rechaza igual", () => {
+      comparar(
+        ["add-evidence", "--id", TICKET, "--kind", "log", "--description", "D",
+          "--reference", "commit:ABCDEF"],
+        "referencia en mayúsculas",
+      );
+    });
+
+    it("`add-evidence` sobre un punto inexistente se rechaza igual", () => {
+      comparar(
+        ["add-evidence", "--id", TICKET, "--kind", "log", "--description", "D",
+          "--point-id", "POINT-004"],
+        "punto inexistente",
+      );
+    });
+
+    it("`add-ai-usage` con confianza inválida se rechaza igual", () => {
+      comparar(
+        ["add-ai-usage", "--id", TICKET, "--source", "cli", "--confidence", "altísima"],
+        "confianza inválida",
+      );
+    });
+
+    it("`add-ai-usage` con coste exponencial se rechaza igual", () => {
+      comparar(
+        ["add-ai-usage", "--id", TICKET, "--source", "cli", "--confidence", "high",
+          "--estimated-cost-usd", "1e3"],
+        "coste exponencial",
+      );
+    });
+
+    it("`add-ai-usage` con tokens negativos se rechaza igual", () => {
+      comparar(
+        ["add-ai-usage", "--id", TICKET, "--source", "cli", "--confidence", "high",
+          "--input-tokens", "-5"],
+        "tokens negativos",
+      );
+    });
+
+    it("`qa-start` fuera de `in_qa` se rechaza igual", () => {
+      comparar(
+        ["qa-start", "--id", TICKET, "--environment", "staging",
+          "--build-reference", `commit:${"a".repeat(40)}`],
+        "qa-start fuera de in_qa",
+      );
+    });
+
+    it("`qa-start` sin ambiente se rechaza igual", () => {
+      comparar(["qa-start", "--id", TICKET], "qa-start sin banderas");
+    });
+
+    it("`qa-close` sin ciclo abierto se rechaza igual", () => {
+      comparar(
+        ["qa-close", "--id", TICKET, "--result", "approved", "--po-confirmation", "PO"],
+        "qa-close sin ciclo",
+      );
+    });
+
+    it("`add-retest` fuera de `in_qa` se rechaza igual", () => {
+      comparar(
+        ["add-retest", "--id", TICKET, "--point-id", "POINT-001", "--result", "approved",
+          "--po-confirmation", "PO"],
+        "retest fuera de in_qa",
+      );
+    });
+
+    it("`close-attempt` con QA no aprobada se rechaza igual", () => {
+      comparar(
+        ["close-attempt", "--id", TICKET, "--technical-summary", "T",
+          "--functional-summary", "F", "--qa-status", "waived", "--release-impact", "R"],
+        "cierre sin exención",
+      );
+    });
+
+    it("`close-attempt` con `qa-status` fuera del esquema se rechaza igual", () => {
+      comparar(
+        ["close-attempt", "--id", TICKET, "--technical-summary", "T",
+          "--functional-summary", "F", "--qa-status", "maybe", "--release-impact", "R"],
+        "qa-status inválido",
+      );
     });
   });
 

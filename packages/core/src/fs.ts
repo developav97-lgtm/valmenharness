@@ -18,6 +18,7 @@
 import {
   closeSync,
   fsyncSync,
+  lstatSync,
   mkdirSync,
   openSync,
   readFileSync,
@@ -28,7 +29,7 @@ import {
   writeSync,
   constants,
 } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 import { EXIT_HISTORY, fail } from "@valmen/core";
 
@@ -40,6 +41,58 @@ const LOCK_ATTEMPTS = 100;
 
 /** Espera entre intentos, en milisegundos. */
 const LOCK_RETRY_MS = 10;
+
+/**
+ * Comprueba que una ruta es segura antes de leerla o escribirla.
+ *
+ * Rechaza dos cosas, y las dos importan en un registro auditable:
+ *
+ * 1. **Escapes de la raíz.** Una ruta que se sale del proyecto escribiría fuera
+ *    del repositorio, y el historial dejaría de ser verificable.
+ * 2. **Enlaces simbólicos en cualquier componente.** Un enlace permitiría que un
+ *    ticket apunte a un archivo de fuera y rompería la misma garantía por otra
+ *    vía, incluido un enlace roto —que es justo el caso que una comprobación de
+ *    existencia se salta—.
+ *
+ * `allowMissing` existe para el caso de crear: la ruta del destino todavía no
+ * existe, y comprobar su existencia impediría escribir. En ese caso se detiene
+ * en el primer componente ausente, **y eso es una limitación conocida**: los
+ * componentes más profundos no se comprueban contra enlaces simbólicos porque no
+ * se pueden inspeccionar sin que existan.
+ */
+export function ensureSecurePath(
+  root: string,
+  path: string,
+  options: { readonly allowMissing?: boolean } = {},
+): void {
+  const absoluteRoot = resolve(root);
+  const absolutePath = resolve(path);
+
+  const relativa = relative(absoluteRoot, absolutePath);
+  if (relativa.startsWith("..") || isAbsolute(relativa)) {
+    fail("La ruta solicitada escapa de la raíz autorizada.");
+  }
+  if (relativa === "") return;
+
+  let actual = absoluteRoot;
+  const partes = relativa.split(sep);
+  for (const [indice, parte] of partes.entries()) {
+    actual = join(actual, parte);
+    let info;
+    try {
+      info = lstatSync(actual);
+    } catch {
+      if (options.allowMissing === true) return;
+      fail("La ruta canónica solicitada no existe.");
+    }
+    if (info.isSymbolicLink()) {
+      fail("Se rechazó una ruta que contiene un enlace simbólico.");
+    }
+    if (indice < partes.length - 1 && !info.isDirectory()) {
+      fail("Un componente intermedio de la ruta no es un directorio.");
+    }
+  }
+}
 
 /**
  * Escribe un archivo de forma atómica.
