@@ -1,0 +1,14 @@
+# Routing de modelos por rol de workflow.
+#
+# Generado desde Mission Control. Los comentarios escritos a mano en este
+# archivo se pierden al guardarlo desde la aplicación: para conservarlos,
+# edítalo con un editor de texto y no desde la interfaz.
+
+preset: quality
+# Máxima calidad. Para trabajo crítico o cuando el coste no importa.
+
+roles:
+  explorer:
+    provider: opencode-go
+    model: glm-5.3
+    effort: low

@@ -5,5 +5,9 @@ coverage/
 tickets/
 tests/fixtures/
 docs/
+
+# La interfaz es un activo con un `<script>` inline: reformatearla mete ruido en
+# el diff y puede romper la extracción del guion. Se revisa a ojo.
+packages/server/web/
 package-lock.json
 *.md

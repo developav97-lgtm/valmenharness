@@ -367,6 +367,21 @@
         padding: 40px;
       }
 
+      /* ── Barra de guardado, fija mientras se edita ────────────────────── */
+      /* El botón de guardar estaba al final de una tabla de trece roles, y no se
+         encontraba. Una barra fija dice que hay cambios pendientes y los guarda
+         sin obligar a recorrer la página. */
+      .barra-guardado {
+        position: sticky; bottom: 0; z-index: 30;
+        display: flex; gap: 12px; align-items: center;
+        padding: 12px 16px; margin-top: 18px;
+        background: var(--panel-alto); border: 1px solid var(--borde);
+        border-radius: 8px;
+      }
+      .barra-guardado .cuenta { font-size: 13px; color: var(--tenue); flex: 1; }
+      .barra-guardado .cuenta.pendiente { color: var(--alerta); }
+      .barra-guardado .resultado { flex: 1; }
+
       /* ── Selector de modelo en dos niveles ────────────────────────────── */
       /* Proveedor y modelo, con el modelo en un desplegable que se puede
          escribir: una lista de cientos de modelos sin búsqueda es una lista que
@@ -3317,13 +3332,15 @@
         const diff = el("div", undefined, "diff");
         const error = el("div", undefined, "error-parser");
         error.hidden = true;
-        const salida = el("div", undefined, "resultado");
+        const salida = el("div", "resultado");
+        // La barra va **fija** al pie de la vista: el botón estaba al final de la
+        // tabla y no se encontraba. Dice cuántos cambios hay pendientes, que es lo
+        // que hacía falta saber sin bajar.
+        const cuenta = el("div", "", "cuenta");
         const guardar = el("button", "Guardar el routing", "principal");
         guardar.disabled = true;
-        const acciones = el("div", undefined, "acciones");
-        acciones.style.justifyContent = "flex-start";
-        acciones.style.marginTop = "14px";
-        acciones.append(salida, guardar);
+        const acciones = el("div", undefined, "barra-guardado");
+        acciones.append(cuenta, salida, guardar);
         cont.append(diff, error, acciones);
 
         /**
@@ -3389,6 +3406,13 @@
             guardar.disabled = !estado.ok || cambios.length === 0;
             guardar.textContent =
               cambios.length === 0 ? "Sin cambios" : "Guardar el routing";
+            // La cuenta de la barra fija: es lo que dice si hay algo pendiente sin
+            // tener que bajar hasta el botón.
+            cuenta.className = cambios.length === 0 ? "cuenta" : "cuenta pendiente";
+            cuenta.textContent =
+              cambios.length === 0
+                ? "Todo guardado."
+                : `${cambios.length} cambio(s) sin guardar.`;
             textoPrevio = previsualizacion.text;
           } catch (fallo) {
             salida.className = "resultado error";
