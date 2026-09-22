@@ -44,11 +44,11 @@ import { EXIT_REFERENCE } from "@valmen/core";
  * listados que nadie va a leer.
  */
 function isTracked(root: string, relativePath: string): boolean {
-  const resultado = spawnSync(
-    "git",
-    ["ls-files", "--error-unmatch", "--", relativePath],
-    { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
-  );
+  const resultado = spawnSync("git", ["ls-files", "--error-unmatch", "--", relativePath], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
   return resultado.status === 0;
 }
 
@@ -94,10 +94,7 @@ export function declaredFunctionalFiles(
         );
       }
       if (partes[0] === "docs" && partes[1] === "tickets") {
-        fail(
-          "affected_files no puede incluir el historial de tickets.",
-          EXIT_REFERENCE,
-        );
+        fail("affected_files no puede incluir el historial de tickets.", EXIT_REFERENCE);
       }
       declarados.add(partes.join("/"));
     }
@@ -121,10 +118,7 @@ export function calculateWorktreeReference(
 ): string {
   const archivos = declaredFunctionalFiles(document, ticketPath, root);
   if (archivos.length === 0) {
-    fail(
-      "No hay archivos funcionales declarados para calcular el hash.",
-      EXIT_REFERENCE,
-    );
+    fail("No hay archivos funcionales declarados para calcular el hash.", EXIT_REFERENCE);
   }
 
   const hash = createHash("sha256");

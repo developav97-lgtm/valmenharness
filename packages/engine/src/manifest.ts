@@ -186,7 +186,9 @@ export function parseTicketList(valor: string): string[] {
   if (ids.length === 0) {
     fail("--tickets requiere al menos un ID explícito.", EXIT_SCHEMA);
   }
-  const repetidos = [...new Set(ids.filter((id) => ids.indexOf(id) !== ids.lastIndexOf(id)))];
+  const repetidos = [
+    ...new Set(ids.filter((id) => ids.indexOf(id) !== ids.lastIndexOf(id))),
+  ];
   if (repetidos.length > 0) {
     fail(
       `La lista de tickets contiene ID duplicado: ${repetidos.join(", ")}.`,

@@ -98,7 +98,9 @@ function components(id: string): {
   const anio = (compact as string).slice(0, 4);
   const mes = Number.parseInt((compact as string).slice(4, 6), 10);
   const dia = Number.parseInt((compact as string).slice(6, 8), 10);
-  const fecha = new Date(`${anio}-${String(mes).padStart(2, "0")}-${String(dia).padStart(2, "0")}T00:00:00Z`);
+  const fecha = new Date(
+    `${anio}-${String(mes).padStart(2, "0")}-${String(dia).padStart(2, "0")}T00:00:00Z`,
+  );
   if (
     Number.isNaN(fecha.getTime()) ||
     fecha.getUTCFullYear() !== Number(anio) ||

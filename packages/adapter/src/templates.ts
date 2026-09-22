@@ -144,10 +144,7 @@ autocommits.
 `;
 
 /** Encabezado de un archivo generado, con la fuente y el comando de regeneración. */
-export function generatedHeader(
-  version: string,
-  sources: readonly string[],
-): string {
+export function generatedHeader(version: string, sources: readonly string[]): string {
   const lines = [
     "<!-- GENERADO POR valmen — NO EDITAR A MANO -->",
     `<!-- valmen v${version} -->`,
@@ -166,10 +163,7 @@ export function generatedHeader(
  * archivo `.toml` produce un archivo que ninguna herramienta puede leer, y el
  * error aparece lejos de su causa: en el runtime del agente, no en el generador.
  */
-export function generatedHeaderToml(
-  version: string,
-  sources: readonly string[],
-): string {
+export function generatedHeaderToml(version: string, sources: readonly string[]): string {
   const lines = [
     `# GENERADO POR valmen v${version} — NO EDITAR A MANO`,
     "# fuente:",

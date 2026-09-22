@@ -47,10 +47,7 @@ function fail(message: string): never {
 
 /** Los dialectos que el harness sabe —o sabrá— hablar. */
 export type Protocol =
-  | "openai-chat"
-  | "anthropic-messages"
-  | "openai-responses"
-  | "opencode-models";
+  "openai-chat" | "anthropic-messages" | "openai-responses" | "opencode-models";
 
 /** Un destino concreto al que mandar una petición. */
 export interface HttpEndpoint {
@@ -240,10 +237,7 @@ export function transportById(id: string): Transport {
  * **falla aquí**, con el dialecto en el mensaje, en vez de mandar una petición
  * con la forma equivocada.
  */
-export function resolveChatEndpoint(
-  providerId: string,
-  model: string,
-): HttpEndpoint {
+export function resolveChatEndpoint(providerId: string, model: string): HttpEndpoint {
   const transport = transportById(providerId);
   const protocol = protocolFor(transport, model);
 
@@ -280,9 +274,7 @@ export function extraHeaders(providerId: string): Readonly<Record<string, string
  * acepta. Un proveedor que no lo soporte lo declara y recibe el esquema en el
  * prompt.
  */
-export function structuredOutputOf(
-  providerId: string,
-): "json-schema" | "json-object" {
+export function structuredOutputOf(providerId: string): "json-schema" | "json-object" {
   return transportById(providerId).structuredOutput ?? "json-schema";
 }
 

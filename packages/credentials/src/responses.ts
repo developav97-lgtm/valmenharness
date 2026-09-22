@@ -78,9 +78,11 @@ export function textFromEvents(eventos: readonly SseEvent[]): string {
 }
 
 /** El uso de tokens, si el stream lo informa. */
-export function usageFromEvents(
-  eventos: readonly SseEvent[],
-): { inputTokens: number; outputTokens: number; costUsd: number | null } {
+export function usageFromEvents(eventos: readonly SseEvent[]): {
+  inputTokens: number;
+  outputTokens: number;
+  costUsd: number | null;
+} {
   const vacio = { inputTokens: 0, outputTokens: 0, costUsd: null };
   const completado = eventos.find(({ event }) => event === "response.completed");
   if (completado === undefined) return vacio;
@@ -104,7 +106,10 @@ export function usageFromEvents(
 export function errorFromEvents(eventos: readonly SseEvent[]): string | null {
   for (const { event, data } of eventos) {
     if (event !== "response.failed" && event !== "error") continue;
-    const detalle = (data as { response?: { error?: { message?: unknown } }; message?: unknown });
+    const detalle = data as {
+      response?: { error?: { message?: unknown } };
+      message?: unknown;
+    };
     const mensaje = detalle.response?.error?.message ?? detalle.message;
     if (typeof mensaje === "string" && mensaje.trim() !== "") return mensaje;
     return "El proveedor reportó un fallo sin detalle.";
@@ -180,9 +185,7 @@ export async function callResponses(
     const detalle = caught instanceof Error ? caught.message : String(caught);
     const esTimeout = /abort|timeout/i.test(detalle);
     throw new ChatError(
-      esTimeout
-        ? "La llamada superó el tiempo máximo."
-        : `Fallo de transporte: ${detalle}`,
+      esTimeout ? "La llamada superó el tiempo máximo." : `Fallo de transporte: ${detalle}`,
       esTimeout ? "TIMEOUT" : "TRANSPORT",
     );
   }

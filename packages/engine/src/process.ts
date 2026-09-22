@@ -89,9 +89,7 @@ export function loadProcesses(root: string): LoadedProcess[] {
     } catch (caught) {
       // El nombre del archivo da el identificador cuando el YAML no lo declara:
       // sin eso, un archivo roto no tendría ni con qué listarse.
-      const nombre = relativa
-        .replace(/^\.valmen\/processes\//, "")
-        .replace(/\.ya?ml$/, "");
+      const nombre = relativa.replace(/^\.valmen\/processes\//, "").replace(/\.ya?ml$/, "");
       return {
         definition: {
           id: nombre,
@@ -358,7 +356,10 @@ export interface RunProcessRequest {
    */
   readonly resume?: ProcessRunState | undefined;
   /** Inyectable para las pruebas: no ejecuta nada y devuelve lo que recibió. */
-  readonly runCommand?: (comando: string, cwd: string) => { status: number; stdout: string; stderr: string };
+  readonly runCommand?: (
+    comando: string,
+    cwd: string,
+  ) => { status: number; stdout: string; stderr: string };
 }
 
 /** Recorta la salida y lo dice, en vez de cortarla en silencio. */
@@ -419,7 +420,8 @@ export function evaluateWhen(
       EXIT_SCHEMA,
     );
   }
-  const iguales = (valores[variable as string] as string) === substitute(derecha as string, valores);
+  const iguales =
+    (valores[variable as string] as string) === substitute(derecha as string, valores);
   return operador === "==" ? iguales : !iguales;
 }
 
@@ -439,7 +441,8 @@ export function runProcess(request: RunProcessRequest): ProcessRun {
   const { definition } = requireProcess(root, id);
   const valores = resolveParams(definition, request.params);
   const correr =
-    request.runCommand ?? ((comando: string, cwd: string) => ejecutar(comando, cwd, maximo));
+    request.runCommand ??
+    ((comando: string, cwd: string) => ejecutar(comando, cwd, maximo));
 
   // Al retomar, los pasos que ya constan no se repiten: se dan por hechos y se
   // sigue desde el pendiente. Es la diferencia entre retomar un despliegue y
@@ -495,7 +498,12 @@ export function runProcess(request: RunProcessRequest): ProcessRun {
 
     registrados.push({
       id: paso.id,
-      status: resultado.status === "skipped" ? "skipped" : resultado.status === "ok" ? "ok" : "failed",
+      status:
+        resultado.status === "skipped"
+          ? "skipped"
+          : resultado.status === "ok"
+            ? "ok"
+            : "failed",
       at: ahora(),
       detail: resultado.detail,
     });
@@ -552,7 +560,10 @@ function ejecutarPaso(contexto: {
   paso: ProcessStep;
   valores: Readonly<Record<string, string>>;
   root: string;
-  correr: (comando: string, cwd: string) => { status: number; stdout: string; stderr: string };
+  correr: (
+    comando: string,
+    cwd: string,
+  ) => { status: number; stdout: string; stderr: string };
   onStep?: ((outcome: StepOutcome) => void) | undefined;
   maxOutputBytes: number;
   maxDepth: number;
@@ -666,8 +677,12 @@ function ejecutarPaso(contexto: {
       exitCode: anidado.ok ? 0 : 1,
       latencyMs: Date.now() - inicio,
       stdout: "",
-      stderr: fallidos.map((resultado) => `${resultado.id}: ${resultado.stderr}`).join("\n"),
-      reason: anidado.ok ? null : `El sub-proceso falló en: ${fallidos.map((f) => f.id).join(", ")}`,
+      stderr: fallidos
+        .map((resultado) => `${resultado.id}: ${resultado.stderr}`)
+        .join("\n"),
+      reason: anidado.ok
+        ? null
+        : `El sub-proceso falló en: ${fallidos.map((f) => f.id).join(", ")}`,
     });
   }
 
@@ -695,7 +710,10 @@ function encadenar(contexto: {
   valores: Readonly<Record<string, string>>;
   resultados: StepOutcome[];
   request: RunProcessRequest;
-  correr: (comando: string, cwd: string) => { status: number; stdout: string; stderr: string };
+  correr: (
+    comando: string,
+    cwd: string,
+  ) => { status: number; stdout: string; stderr: string };
   maximo: number;
 }): void {
   for (const siguiente of contexto.definition.onSuccess) {
@@ -705,15 +723,16 @@ function encadenar(contexto: {
       // Se reenvían los mismos valores, que es lo que hace útil el encadenado:
       // `on_success: [generar-changelog]` recibe la versión que se acaba de usar.
       params: filtrarParams(contexto.root, siguiente, contexto.valores),
-      ...(contexto.request.onStep === undefined
-        ? {}
-        : { onStep: contexto.request.onStep }),
+      ...(contexto.request.onStep === undefined ? {} : { onStep: contexto.request.onStep }),
       maxOutputBytes: contexto.maximo,
       maxDepth: contexto.request.maxDepth ?? 8,
       runCommand: contexto.correr,
     });
     contexto.resultados.push(
-      ...anidado.steps.map((resultado) => ({ ...resultado, id: `${siguiente}.${resultado.id}` })),
+      ...anidado.steps.map((resultado) => ({
+        ...resultado,
+        id: `${siguiente}.${resultado.id}`,
+      })),
     );
   }
 }
@@ -758,8 +777,10 @@ export function renderProcessRun(run: ProcessRun): string {
   // alguien que vuelva a desplegar para ver un error.
   for (const paso of run.steps) {
     if (paso.status !== "failed") continue;
-    if (paso.stdout.trim() !== "") lineas.push(`— ${paso.id} stdout —`, paso.stdout.trimEnd());
-    if (paso.stderr.trim() !== "") lineas.push(`— ${paso.id} stderr —`, paso.stderr.trimEnd());
+    if (paso.stdout.trim() !== "")
+      lineas.push(`— ${paso.id} stdout —`, paso.stdout.trimEnd());
+    if (paso.stderr.trim() !== "")
+      lineas.push(`— ${paso.id} stderr —`, paso.stderr.trimEnd());
   }
   return lineas.join("\n") + "\n";
 }

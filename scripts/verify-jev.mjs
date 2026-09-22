@@ -138,7 +138,11 @@ for (const id of Object.keys(questions)) {
   if (answers[id] === undefined) problemas.push(`falta la respuesta de ${id}`);
 }
 
-for (const id of ["cubre_todos_los_criterios", "covers_all_criteria_en", "plan_menciona_kubernetes"]) {
+for (const id of [
+  "cubre_todos_los_criterios",
+  "covers_all_criteria_en",
+  "plan_menciona_kubernetes",
+]) {
   const valor = answers[id]?.noul;
   if (typeof valor !== "number") {
     problemas.push(`${id}: noul no es un número (${JSON.stringify(answers[id])})`);
@@ -173,7 +177,9 @@ console.log("");
 console.log("  Proposiciones");
 console.log(`    cubre_todos_los_criterios   (es)  ${n("cubre_todos_los_criterios")}`);
 console.log(`    covers_all_criteria_en      (en)  ${n("covers_all_criteria_en")}`);
-console.log(`    plan_menciona_kubernetes    (falso esperado)  ${n("plan_menciona_kubernetes")}`);
+console.log(
+  `    plan_menciona_kubernetes    (falso esperado)  ${n("plan_menciona_kubernetes")}`,
+);
 console.log(
   `    clasificacion               ${eleccion?.choice ?? "—"}` +
     `  (confianza ${eleccion?.confidence?.toFixed?.(3) ?? "—"})`,
@@ -216,4 +222,6 @@ if (problemas.length > 0) {
   process.exit(1);
 }
 
-console.log("  Sin problemas. El contrato de Jev queda verificado contra el endpoint real.");
+console.log(
+  "  Sin problemas. El contrato de Jev queda verificado contra el endpoint real.",
+);

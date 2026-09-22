@@ -126,9 +126,7 @@ describe("parseRequirements", () => {
       "### Requirement: R-INV-001 — El sistema DEBE registrar",
       "### Requirement: R-INV-001 — El sistema DEBE consultar",
     ].join("\n");
-    expect(() => parseRequirements(spec, "inventario", "spec.md")).toThrowError(
-      /repetido/,
-    );
+    expect(() => parseRequirements(spec, "inventario", "spec.md")).toThrowError(/repetido/);
   });
 
   it("rechaza un requisito sin enunciado", () => {
@@ -151,10 +149,7 @@ describe("parseRequirements", () => {
         `### Requirement: ${id} — El sistema DEBE hacer algo\n`,
       );
     }
-    const requisitos = readRequirements(
-      spec,
-      ".valmen/features/modulo-inventario",
-    );
+    const requisitos = readRequirements(spec, ".valmen/features/modulo-inventario");
     expect(requisitos.map((r) => r.id)).toEqual(["R-INV-001", "R-REP-001"]);
     expect(requisitos[0]!.source).toBe(
       ".valmen/features/modulo-inventario/spec/inventario/spec.md",
@@ -197,8 +192,14 @@ describe("dependencyCycles", () => {
           id: "S1",
           goal: "uno",
           tickets: [
-            { id: "FEATURE-INVENTARIO-A-20260921", dependsOn: ["FEATURE-INVENTARIO-B-20260921"] },
-            { id: "FEATURE-INVENTARIO-B-20260921", dependsOn: ["FEATURE-INVENTARIO-A-20260921"] },
+            {
+              id: "FEATURE-INVENTARIO-A-20260921",
+              dependsOn: ["FEATURE-INVENTARIO-B-20260921"],
+            },
+            {
+              id: "FEATURE-INVENTARIO-B-20260921",
+              dependsOn: ["FEATURE-INVENTARIO-A-20260921"],
+            },
           ],
         },
       ],
@@ -363,15 +364,13 @@ gaps: []
     );
     expect(() => parseTicketsYaml(malo, requisitos)).toThrowError(/no tiene tickets/);
   });
-
 });
 
 describe("decomposeFeature", () => {
   const decomposer = { provider: "opencode-go", model: "kimi-k3" };
 
   /** Un `callModel` que devuelve la propuesta pedida. */
-  const modelo = (proposal: unknown) =>
-    async () => ({ proposal, decomposer });
+  const modelo = (proposal: unknown) => async () => ({ proposal, decomposer });
 
   it("escribe el grafo y pasa la feature a decomposed", async () => {
     const root = featureConSpec(proyecto());
@@ -580,7 +579,14 @@ describe("advanceFeature", () => {
   it("rechaza un destino inalcanzable", () => {
     const root = proyecto();
     createFeature({ root, id: "modulo-inventario", title: "Módulo" });
-    for (const estado of ["specified", "planned", "decomposed", "in_progress", "complete", "archived"]) {
+    for (const estado of [
+      "specified",
+      "planned",
+      "decomposed",
+      "in_progress",
+      "complete",
+      "archived",
+    ]) {
       advanceFeature({ root, slug: "modulo-inventario", to: estado });
     }
     // `archived` es terminal: no hay camino de vuelta.

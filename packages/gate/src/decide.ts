@@ -112,8 +112,7 @@ export interface ScoreProposition {
 }
 
 /** Cualquier proposición de un gate. */
-export type Proposition =
-  NoulProposition | ChoiceProposition | ScoreProposition;
+export type Proposition = NoulProposition | ChoiceProposition | ScoreProposition;
 
 /** Un check que decide el código, sin llamar a ningún modelo. */
 export interface MechanicalCheck {
@@ -249,15 +248,8 @@ export function validatePolicy(policy: GatePolicy): void {
     ["approveAt", approveAt],
     ["blockAt", blockAt],
   ] as const) {
-    if (
-      typeof valor !== "number" ||
-      !Number.isFinite(valor) ||
-      valor < 0 ||
-      valor > 1
-    ) {
-      throw new GateDefinitionError(
-        `${nombre} debe ser un número entre 0 y 1.`,
-      );
+    if (typeof valor !== "number" || !Number.isFinite(valor) || valor < 0 || valor > 1) {
+      throw new GateDefinitionError(`${nombre} debe ser un número entre 0 y 1.`);
     }
   }
   if (blockAt >= approveAt) {
@@ -557,9 +549,6 @@ export function weightedMean(decision: GateDecision): {
   const nouls = decision.propositions.filter((item) => item.kind === "noul");
   const totalWeight = nouls.reduce((sum, item) => sum + item.weight, 0);
   if (totalWeight === 0) return { mean: 0, totalWeight: 0 };
-  const weighted = nouls.reduce(
-    (sum, item) => sum + item.value * item.weight,
-    0,
-  );
+  const weighted = nouls.reduce((sum, item) => sum + item.value * item.weight, 0);
   return { mean: weighted / totalWeight, totalWeight };
 }

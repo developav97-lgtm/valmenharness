@@ -341,8 +341,5 @@ export function featureTransitionPath(from: string, to: string): string[] {
     }
   }
 
-  fail(
-    `Transición de feature ${from} -> ${to} no permitida.`,
-    EXIT_INVARIANT,
-  );
+  fail(`Transición de feature ${from} -> ${to} no permitida.`, EXIT_INVARIANT);
 }

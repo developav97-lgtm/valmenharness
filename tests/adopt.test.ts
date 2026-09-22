@@ -79,9 +79,7 @@ describe("detección del perfil", () => {
     scaffoldRealProject();
     const profile = profileProject(lab, "Demo");
 
-    const versions = new Map(
-      profile.dependencies.map((d) => [d.name, d.version]),
-    );
+    const versions = new Map(profile.dependencies.map((d) => [d.name, d.version]));
     expect(versions.get("django")).toBe("5.2.1");
     expect(versions.get("django-tenants")).toBe("3.10.1");
     expect(versions.get("@angular/core")).toBe("14.3.0");
@@ -92,9 +90,7 @@ describe("detección del perfil", () => {
     // deduplicar, cada dependencia se contaría dos veces.
     scaffoldRealProject();
     const profile = profileProject(lab, "Demo");
-    const djangoCount = profile.dependencies.filter(
-      (d) => d.name === "django",
-    ).length;
+    const djangoCount = profile.dependencies.filter((d) => d.name === "django").length;
     expect(djangoCount).toBe(1);
   });
 
@@ -150,7 +146,9 @@ describe("elección del registro", () => {
     expect(chooseTicketsDir(lab)).toBe("tickets");
 
     // Y si el que tiene tickets es el anterior, gana el anterior.
-    mkdirSync(join(lab, "docs", "tickets", "2026", "BUGFIX-C-D-20260921"), { recursive: true });
+    mkdirSync(join(lab, "docs", "tickets", "2026", "BUGFIX-C-D-20260921"), {
+      recursive: true,
+    });
     writeFileSync(
       join(lab, "docs", "tickets", "2026", "BUGFIX-C-D-20260921", "ticket.md"),
       "---\n",
@@ -173,9 +171,7 @@ describe("configuración propuesta", () => {
 
     // Las dependencias se listan como comentario, no como configuración
     // efectiva: son un punto de partida, no una regla.
-    const dependencyLine = config
-      .split("\n")
-      .find((line) => line.includes("django 5.2.1"));
+    const dependencyLine = config.split("\n").find((line) => line.includes("django 5.2.1"));
     expect(dependencyLine?.trimStart().startsWith("#")).toBe(true);
   });
 
@@ -203,9 +199,7 @@ describe("comando adopt", () => {
 
     // Nada preexistente se modificó: ni el AGENTS.md viejo ni el legado.
     expect(readFileSync(join(lab, "AGENTS.md"), "utf8")).toBe(agentsBefore);
-    expect(readFileSync(join(lab, "CLAUDE.md"), "utf8")).toContain(
-      "Documento legado",
-    );
+    expect(readFileSync(join(lab, "CLAUDE.md"), "utf8")).toContain("Documento legado");
   });
 
   it("avisa de que sync reemplazará el AGENTS.md previo", () => {
@@ -225,11 +219,7 @@ describe("comando adopt", () => {
 
   it("no sobrescribe una configuración ya existente", () => {
     mkdirSync(join(lab, ".valmen"), { recursive: true });
-    writeFileSync(
-      join(lab, ".valmen", "config.yaml"),
-      "name: Original\n",
-      "utf8",
-    );
+    writeFileSync(join(lab, ".valmen", "config.yaml"), "name: Original\n", "utf8");
 
     const result = adoptProject(lab, "Demo");
     expect(result.exitCode).toBe(0);

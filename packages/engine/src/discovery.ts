@@ -185,20 +185,13 @@ export function findAllTickets(paths: RegistryPaths): LocatedTicket[] {
   }
 
   found.sort((a, b) =>
-    a.relativePath < b.relativePath
-      ? -1
-      : a.relativePath > b.relativePath
-        ? 1
-        : 0,
+    a.relativePath < b.relativePath ? -1 : a.relativePath > b.relativePath ? 1 : 0,
   );
   return found;
 }
 
 /** Localiza un ticket por identificador. */
-export function findTicket(
-  paths: RegistryPaths,
-  id: string,
-): LocatedTicket | undefined {
+export function findTicket(paths: RegistryPaths, id: string): LocatedTicket | undefined {
   const year = id.slice(-8, -4);
   const file = join(ticketsPath(paths), year, id, "ticket.md");
   assertNoSymlink(paths, file);

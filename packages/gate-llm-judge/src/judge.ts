@@ -93,9 +93,7 @@ export interface JudgeEvaluation {
  * `strict: true` obliga al proveedor a respetar el esquema. Sin eso, un modelo
  * puede devolver prosa alrededor del JSON y el parseo falla en el peor momento.
  */
-function buildSchema(
-  propositions: readonly Proposition[],
-): Record<string, unknown> {
+function buildSchema(propositions: readonly Proposition[]): Record<string, unknown> {
   const properties: Record<string, unknown> = {};
   for (const proposition of propositions) {
     // Una elección no se puede responder con un booleano: el motor rechaza una
@@ -157,63 +155,6 @@ function buildSchema(
  * pide un juicio sin instrucciones explícitas tiende a responder que todo está
  * bien.
  */
-/**
- * La forma exacta de la respuesta, escrita para el modelo.
- *
- * Cuando el proveedor no acepta un `json_schema`, el esquema viaja en el prompt.
- * Y ahí **volcar el JSON Schema no funciona**: medido contra DeepSeek, el modelo
- * devuelve algo con otra forma y el juez no puede leer ni una respuesta. Lo que
- * sí funciona es decirle la forma concreta —una clave por proposición, qué lleva
- * dentro, y que no lo envuelva en nada— porque es lo que el modelo tiene que
- * escribir, no la definición de lo que es válido.
- */
-function formaExplicita(schema: unknown): string[] {
-  const propiedades = (schema as { properties?: Record<string, unknown> })
-    .properties;
-  if (propiedades === undefined) return ["Responde solo con el JSON del esquema."];
-
-  const lineas = [
-    "Responde con **un solo objeto JSON**, sin envolverlo en otra clave, cuyas",
-    "claves sean exactamente estos identificadores y ninguna más:",
-    "",
-    "{",
-  ];
-  const ids = Object.keys(propiedades);
-  ids.forEach((id, indice) => {
-    const cuerpo = propiedades[id] as {
-      properties?: Record<string, unknown>;
-    };
-    const esEleccion = cuerpo.properties?.["choice"] !== undefined;
-    const coma = indice === ids.length - 1 ? "" : ",";
-    lineas.push(
-      esEleccion
-        ? `  ${JSON.stringify(id)}: { "choice": "<una de las opciones>", "confidence": 0.0, "reason": "una frase" }${coma}`
-        : `  ${JSON.stringify(id)}: { "holds": true, "confidence": 0.0, "reason": "una frase" }${coma}`,
-    );
-  });
-  lineas.push(
-    "}",
-    "",
-    "Cada clave lleva `confidence` entre 0 y 1, y `reason` en una frase.",
-    "",
-    // Medido: DeepSeek tradujo `holds` a `cumple` porque la conversación está en",
-    // español. El nombre de la clave es parte del contrato, no una descripción,
-    // así que hay que decir que es literal.
-    // Y un ejemplo relleno, porque un modelo copia lo que ve mejor de lo que
-    // obedece lo que lee: pedirle `holds` en español produjo `cumple` tres veces
-    // seguidas, con la instrucción explícita de no traducirlo delante.
-    "",
-    "Así se ve una respuesta correcta, con el primer identificador:",
-    "",
-    "{",
-    `  ${JSON.stringify(ids[0])}: { "holds": true, "confidence": 0.9, "reason": "el plan lo cubre en el paso 2" }`,
-    "}",
-    "",
-    "Fíjate en que la clave es `holds`, en inglés. No la traduzcas.",
-  );
-  return lineas;
-}
-
 function systemPrompt(porHerramienta = false): string {
   // El cierre del prompt tiene que coincidir con la vía que se use: pedir «solo
   // el JSON» mientras el cuerpo fuerza una llamada a herramienta deja al modelo
@@ -242,10 +183,7 @@ function systemPrompt(porHerramienta = false): string {
 }
 
 /** Construye el mensaje de usuario con el estado y las proposiciones. */
-function userPrompt(
-  state: unknown,
-  propositions: readonly Proposition[],
-): string {
+function userPrompt(state: unknown, propositions: readonly Proposition[]): string {
   const preguntas = propositions.map((proposition) => {
     const partes = [
       `- id: ${proposition.id}`,
@@ -257,9 +195,7 @@ function userPrompt(
     }
     if (proposition.kind === "choice") {
       partes.push("  responde con una de estas opciones:");
-      for (const [opcion, descripcion] of Object.entries(
-        proposition.criteria,
-      )) {
+      for (const [opcion, descripcion] of Object.entries(proposition.criteria)) {
         partes.push(`    ${opcion}: ${descripcion}`);
       }
     }
@@ -291,10 +227,7 @@ function userPrompt(
  * La confianza se escala sobre una banda de 0.7 para que un modelo que responde
  * "sí, pero no estoy seguro" no apruebe por accidente.
  */
-export function confidenceToProbability(
-  holds: boolean,
-  confidence: number,
-): number {
+export function confidenceToProbability(holds: boolean, confidence: number): number {
   const acotada = Math.min(1, Math.max(0, confidence));
   if (holds) return 0.3 + 0.7 * acotada;
   return 0.3 * (1 - acotada);
@@ -337,9 +270,7 @@ export interface JudgeOptions {
 }
 
 /** Evalúa proposiciones con un modelo de chat. */
-export async function evaluateWithJudge(
-  options: JudgeOptions,
-): Promise<JudgeEvaluation> {
+export async function evaluateWithJudge(options: JudgeOptions): Promise<JudgeEvaluation> {
   const fetchImpl = options.fetchImpl ?? fetch;
   const model = options.model ?? DEFAULT_JUDGE_MODEL;
   const proveedor = options.provider ?? DEFAULT_PROVIDER;
@@ -355,9 +286,7 @@ export async function evaluateWithJudge(
   const dialecto = structuredOutputOf(proveedor);
 
   if (options.propositions.length === 0) {
-    throw new GateDefinitionError(
-      "Un gate debe declarar al menos una proposición.",
-    );
+    throw new GateDefinitionError("Un gate debe declarar al menos una proposición.");
   }
 
   // La credencial se resuelve con el mismo código que usa Jev, para que una
@@ -375,7 +304,6 @@ export async function evaluateWithJudge(
   }
 
   const schema = buildSchema(options.propositions);
-  const porHerramienta = dialecto !== "json-schema";
   const started = Date.now();
   let response: Response;
 
@@ -436,8 +364,7 @@ export async function evaluateWithJudge(
               },
             }),
       }),
-      signal:
-        options.signal ?? AbortSignal.timeout(options.timeoutMs ?? 90_000),
+      signal: options.signal ?? AbortSignal.timeout(options.timeoutMs ?? 90_000),
     });
   } catch (caught) {
     const detail = caught instanceof Error ? caught.message : String(caught);
@@ -490,10 +417,7 @@ export async function evaluateWithJudge(
   try {
     payload = JSON.parse(text) as unknown;
   } catch {
-    throw new JudgeError(
-      "La respuesta del juez no es JSON.",
-      "MALFORMED_RESPONSE",
-    );
+    throw new JudgeError("La respuesta del juez no es JSON.", "MALFORMED_RESPONSE");
   }
 
   const data = payload as {
@@ -518,19 +442,12 @@ export async function evaluateWithJudge(
   // y se prefiere la herramienta cuando está, porque es la que el proveedor
   // eligió para responder.
   const mensaje = data.choices?.[0]?.message;
-  const content =
-    mensaje?.tool_calls?.[0]?.function?.arguments ?? mensaje?.content;
+  const content = mensaje?.tool_calls?.[0]?.function?.arguments ?? mensaje?.content;
   if (typeof content !== "string") {
-    throw new JudgeError(
-      "La respuesta del juez no trae contenido.",
-      "MALFORMED_RESPONSE",
-    );
+    throw new JudgeError("La respuesta del juez no trae contenido.", "MALFORMED_RESPONSE");
   }
 
-  let juicio: Record<
-    string,
-    { holds?: unknown; confidence?: unknown; reason?: unknown }
-  >;
+  let juicio: Record<string, { holds?: unknown; confidence?: unknown; reason?: unknown }>;
   try {
     juicio = JSON.parse(content) as typeof juicio;
   } catch {
@@ -582,8 +499,7 @@ export async function evaluateWithJudge(
       choice?: string;
       confidence?: number;
     };
-    const confianza =
-      typeof respuesta.confidence === "number" ? respuesta.confidence : 0.5;
+    const confianza = typeof respuesta.confidence === "number" ? respuesta.confidence : 0.5;
 
     if (proposition.kind === "choice" && typeof respuesta.choice === "string") {
       return {

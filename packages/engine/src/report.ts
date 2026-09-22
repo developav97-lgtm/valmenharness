@@ -242,7 +242,9 @@ export function parseReportDate(valor: string, bandera: string): string {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(valor)) {
     fail(`${bandera} debe usar YYYY-MM-DD.`, EXIT_SCHEMA);
   }
-  const [anio, mes, dia] = valor.split("-").map((parte) => Number.parseInt(parte as string, 10));
+  const [anio, mes, dia] = valor
+    .split("-")
+    .map((parte) => Number.parseInt(parte as string, 10));
   const fecha = new Date(Date.UTC(anio as number, (mes as number) - 1, dia as number));
   if (
     fecha.getUTCFullYear() !== anio ||
@@ -259,9 +261,7 @@ export function defaultReportRange(now: Date = new Date()): {
   desde: string;
   hasta: string;
 } {
-  const hasta = new Date(
-    Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()),
-  );
+  const hasta = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
   const desde = new Date(hasta);
   desde.setUTCDate(desde.getUTCDate() - 29);
   const iso = (fecha: Date): string => fecha.toISOString().slice(0, 10);
@@ -288,7 +288,12 @@ export function filterReport(
       // Se busca sobre el texto funcional visible —título, problema, solución y
       // rol— y no sobre el ticket entero: un resultado que sale por una línea del
       // plan no es interpretable en un reporte para comunicar.
-      const texto = [entrada.title, entrada.problem, entrada.solution, entrada.userRelevance ?? ""]
+      const texto = [
+        entrada.title,
+        entrada.problem,
+        entrada.solution,
+        entrada.userRelevance ?? "",
+      ]
         .join(" ")
         .toLowerCase();
       if (!texto.includes(consulta)) return false;

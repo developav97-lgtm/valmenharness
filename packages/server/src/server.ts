@@ -37,7 +37,6 @@ import {
 import { type JsonObject, nextStates, parseTicket, toFailure } from "@valmen/core";
 
 import {
-  type ProviderStatus,
   credentialsPath,
   listProviderModels,
   listProviders,
@@ -46,8 +45,6 @@ import {
   updateCredentials,
 } from "./providers.js";
 import {
-  type GateCard,
-  type GateDecisionView,
   type GateRunOutcome,
   listGateCards,
   listGateDecisions,
@@ -89,11 +86,7 @@ import {
   readTicket,
   summarize,
 } from "./tickets.js";
-import {
-  listFeatureRows,
-  readFeatureDetail,
-  summarizeFeatures,
-} from "./features.js";
+import { listFeatureRows, readFeatureDetail, summarizeFeatures } from "./features.js";
 
 /** Versión de la API. Un cliente que no la entienda debe fallar, no adivinar. */
 export const API_VERSION = 1;
@@ -153,8 +146,7 @@ async function readJson(request: IncomingMessage): Promise<unknown> {
     const buffer = chunk as Buffer;
     total += buffer.length;
     // Un cuerpo enorme en un endpoint local es un error, no un caso a soportar.
-    if (total > 64 * 1024)
-      throw new Error("El cuerpo de la petición es demasiado grande.");
+    if (total > 64 * 1024) throw new Error("El cuerpo de la petición es demasiado grande.");
     chunks.push(buffer);
   }
   if (total === 0) return {};
@@ -198,9 +190,6 @@ function valorDeQuery(query: URLSearchParams, nombre: string): string | undefine
   return valor === null || valor === "" ? undefined : valor;
 }
 
-/** Proveedor tal como lo devuelve la API. Nunca incluye el valor de la clave. */
-type ProviderDto = ProviderStatus;
-
 /**
  * Enrutado de la API.
  *
@@ -227,11 +216,18 @@ export async function handleApi(
   }
 
   // GET /api/tickets?workflow=&type=&module=&q=&open=&invalid=&limit=
-  if (method === "GET" && partes.length === 2 && partes[0] === "api" && partes[1] === "tickets") {
+  if (
+    method === "GET" &&
+    partes.length === 2 &&
+    partes[0] === "api" &&
+    partes[1] === "tickets"
+  ) {
     const params = query ?? new URLSearchParams();
     const filas = listTickets(paths);
     const filtros: TicketFilters = {
-      ...(params.get("workflow") === null ? {} : { workflowStatus: params.get("workflow") as string }),
+      ...(params.get("workflow") === null
+        ? {}
+        : { workflowStatus: params.get("workflow") as string }),
       ...(params.get("type") === null ? {} : { type: params.get("type") as string }),
       ...(params.get("module") === null ? {} : { module: params.get("module") as string }),
       ...(params.get("q") === null ? {} : { query: params.get("q") as string }),
@@ -403,7 +399,12 @@ export async function handleApi(
   }
 
   // GET /api/tickets/:id
-  if (method === "GET" && partes.length === 3 && partes[0] === "api" && partes[1] === "tickets") {
+  if (
+    method === "GET" &&
+    partes.length === 3 &&
+    partes[0] === "api" &&
+    partes[1] === "tickets"
+  ) {
     const detalle = readTicket(paths, partes[2] as string);
     if (detalle === null) {
       return { status: 404, body: { error: `No existe el ticket "${partes[2]}".` } };
@@ -512,24 +513,20 @@ export async function handleApi(
       evaluador !== "jev" &&
       evaluador !== "llm-judge"
     ) {
-      return { status: 400, body: { error: `Evaluador desconocido: ${String(evaluador)}.` } };
+      return {
+        status: 400,
+        body: { error: `Evaluador desconocido: ${String(evaluador)}.` },
+      };
     }
 
-    const resultado: GateRunOutcome = await runTicketGate(
-      paths,
-      id,
-      gateId,
-      {
-        ...(evaluador === undefined || evaluador === "auto"
-          ? {}
-          : { evaluator: evaluador }),
-        ...(context.jev === undefined ? {} : { jev: context.jev }),
-        ...(context.judge === undefined ? {} : { judge: context.judge }),
-        // El archivo del servidor, no el del `$HOME`: es el que el usuario
-        // configuró en la pantalla, y la evaluación tiene que usar ese.
-        credentialsFile: context.credentialsFile,
-      },
-    );
+    const resultado: GateRunOutcome = await runTicketGate(paths, id, gateId, {
+      ...(evaluador === undefined || evaluador === "auto" ? {} : { evaluator: evaluador }),
+      ...(context.jev === undefined ? {} : { jev: context.jev }),
+      ...(context.judge === undefined ? {} : { judge: context.judge }),
+      // El archivo del servidor, no el del `$HOME`: es el que el usuario
+      // configuró en la pantalla, y la evaluación tiene que usar ese.
+      credentialsFile: context.credentialsFile,
+    });
 
     // Un bloqueo por checks mecánicos es un resultado, no un error del servidor:
     // se devuelve 200 con el motivo para que la pantalla lo explique.
@@ -669,13 +666,21 @@ export async function handleApi(
     let texto: string;
     if (typeof datos.text === "string") {
       texto = datos.text;
-    } else if (typeof datos.preset === "string" && typeof datos.roles === "object" && datos.roles !== null) {
+    } else if (
+      typeof datos.preset === "string" &&
+      typeof datos.roles === "object" &&
+      datos.roles !== null
+    ) {
       try {
         texto = routingFromForm({
           preset: datos.preset,
           roles: datos.roles as Record<
             string,
-            { provider?: string; model?: string; effort?: "auto" | "low" | "medium" | "high" }
+            {
+              provider?: string;
+              model?: string;
+              effort?: "auto" | "low" | "medium" | "high";
+            }
           >,
         });
       } catch (caught) {
@@ -701,7 +706,11 @@ export async function handleApi(
   // POST /api/routing/preview  — el texto que produciría el formulario
   if (method === "POST" && path === "/api/routing/preview") {
     const datos = body as { preset?: unknown; roles?: unknown };
-    if (typeof datos.preset !== "string" || typeof datos.roles !== "object" || datos.roles === null) {
+    if (
+      typeof datos.preset !== "string" ||
+      typeof datos.roles !== "object" ||
+      datos.roles === null
+    ) {
       return { status: 400, body: { error: "Se esperan `preset` y `roles`." } };
     }
     try {
@@ -745,12 +754,8 @@ export async function handleApi(
         ...(orquestador?.model === undefined || orquestador.model === ""
           ? {}
           : { model: orquestador.model }),
-        ...(orquestador?.effort === undefined
-          ? {}
-          : { effort: orquestador.effort }),
-        ...(context.fetchImpl === undefined
-          ? {}
-          : { fetchImpl: context.fetchImpl }),
+        ...(orquestador?.effort === undefined ? {} : { effort: orquestador.effort }),
+        ...(context.fetchImpl === undefined ? {} : { fetchImpl: context.fetchImpl }),
       });
       return { status: 200, body: propuesta };
     } catch (caught) {
@@ -838,9 +843,7 @@ export async function handleApi(
     const resultado = await probeProvider(id, {
       filePath: context.credentialsFile,
       env: context.env,
-      ...(context.fetchImpl === undefined
-        ? {}
-        : { fetchImpl: context.fetchImpl }),
+      ...(context.fetchImpl === undefined ? {} : { fetchImpl: context.fetchImpl }),
     });
     return { status: 200, body: resultado };
   }
@@ -869,9 +872,7 @@ export async function handleApi(
         // mantener un mapa de nombres paralelo al catálogo, y ese mapa se
         // desincronizó en cuanto opencode se separó en Go y Zen.
         apiKey: datos.apiKey,
-        ...(context.fetchImpl === undefined
-          ? {}
-          : { fetchImpl: context.fetchImpl }),
+        ...(context.fetchImpl === undefined ? {} : { fetchImpl: context.fetchImpl }),
       });
 
       if (!prueba.ok) {
@@ -1074,13 +1075,14 @@ async function handleRequest(
       if (method === "PUT" || method === "POST") {
         body = await readJson(request);
       }
-      const resultado = await handleApi(method, url.pathname, body, context, url.searchParams);
-      send(
-        response,
-        resultado.status,
-        resultado.body,
-        "application/json; charset=utf-8",
+      const resultado = await handleApi(
+        method,
+        url.pathname,
+        body,
+        context,
+        url.searchParams,
       );
+      send(response, resultado.status, resultado.body, "application/json; charset=utf-8");
       return;
     }
 
@@ -1112,9 +1114,7 @@ function send(
   raw = false,
 ): void {
   const texto =
-    raw || typeof body === "string"
-      ? String(body)
-      : JSON.stringify(body, null, 2);
+    raw || typeof body === "string" ? String(body) : JSON.stringify(body, null, 2);
   response.writeHead(status, {
     "Content-Type": type,
     // Una herramienta local no debe ser embebible ni filtrable por un tercero.
@@ -1141,10 +1141,4 @@ export function loadStatics(
   return mapa;
 }
 
-export {
-  credentialsPath,
-  listProviders,
-  probeProvider,
-  updateCredentials,
-  MIME,
-};
+export { credentialsPath, listProviders, probeProvider, updateCredentials, MIME };

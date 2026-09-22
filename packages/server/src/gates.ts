@@ -207,10 +207,7 @@ async function currentStateHash(
  * listar los gates: se devuelven sin checks, y la pantalla ya muestra que el
  * ticket es inválido.
  */
-export function listGateCards(
-  paths: RegistryPaths,
-  ticketId: string,
-): GateCard[] | null {
+export function listGateCards(paths: RegistryPaths, ticketId: string): GateCard[] | null {
   const ticket = findTicket(paths, ticketId);
   if (ticket === undefined) return null;
 
@@ -331,16 +328,10 @@ export async function runTicketGate(
     ...(request.judge === undefined ? {} : { judge: request.judge }),
     ...(request.now === undefined ? {} : { now: request.now }),
     ...(request.receiptId === undefined ? {} : { receiptId: request.receiptId }),
-    ...(routing.evaluatorModel === ""
-      ? {}
-      : { model: routing.evaluatorModel }),
-    ...(routing.evaluatorProvider === ""
-      ? {}
-      : { provider: routing.evaluatorProvider }),
+    ...(routing.evaluatorModel === "" ? {} : { model: routing.evaluatorModel }),
+    ...(routing.evaluatorProvider === "" ? {} : { provider: routing.evaluatorProvider }),
     ...(routing.probabilistic ? {} : { semantic: "llm-judge" as const }),
-    ...(routing.evaluatorEffort === "auto"
-      ? {}
-      : { effort: routing.evaluatorEffort }),
+    ...(routing.evaluatorEffort === "auto" ? {} : { effort: routing.evaluatorEffort }),
     ...(routing.judgeModel === "" ? {} : { judgeModel: routing.judgeModel }),
   });
 
@@ -412,13 +403,9 @@ export function pendingCorrections(
     .filter((recibo) => recibo.humanDecision?.decision === "reject")
     .map((recibo) => {
       const rechazos = historial.filter(
-        (linea) =>
-          linea.gate === recibo.gate &&
-          linea.humanDecision?.decision === "reject",
+        (linea) => linea.gate === recibo.gate && linea.humanDecision?.decision === "reject",
       );
-      const humana = recibo.humanDecision as NonNullable<
-        GateReceipt["humanDecision"]
-      >;
+      const humana = recibo.humanDecision as NonNullable<GateReceipt["humanDecision"]>;
       return {
         gate: recibo.gate,
         receiptId: recibo.id,
@@ -486,9 +473,7 @@ export function recordHumanDecision(
   input: HumanDecisionInput,
 ): HumanDecisionOutcome {
   const recibos = readReceipts(paths, ticketId);
-  const vigente = currentReceipts(recibos).find(
-    (recibo) => recibo.id === receiptId,
-  );
+  const vigente = currentReceipts(recibos).find((recibo) => recibo.id === receiptId);
 
   if (vigente === undefined) {
     return {

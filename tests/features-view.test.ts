@@ -80,16 +80,23 @@ function escribirSpec(slug: string, dominio: string, texto: string): void {
  * `sprints:`, así que los tests comprobaban la proyección de un archivo mal
  * formado sin que se notara.
  */
-function escribirGrafo(slug: string, bloques: {
-  sprints: string[];
-  coverage: string[];
-  gaps?: string[];
-}): void {
+function escribirGrafo(
+  slug: string,
+  bloques: {
+    sprints: string[];
+    coverage: string[];
+    gaps?: string[];
+  },
+): void {
   const lineas = [`feature: ${slug}`, "sprints:", ...bloques.sprints];
   // Una lista vacía se escribe `coverage: []`, no `coverage:` con un `[]`
   // indentado debajo: lo segundo es un elemento de lista que dice «[]», y el
   // parser lo rechaza con razón.
-  lineas.push(...(bloques.coverage.length === 0 ? ["coverage: []"] : ["coverage:", ...bloques.coverage]));
+  lineas.push(
+    ...(bloques.coverage.length === 0
+      ? ["coverage: []"]
+      : ["coverage:", ...bloques.coverage]),
+  );
   lineas.push(
     ...(bloques.gaps === undefined || bloques.gaps.length === 0
       ? ["gaps: []"]
@@ -155,9 +162,7 @@ describe("listFeatureRows", () => {
     escribirGrafo("modulo-inventario", {
       sprints: sprint("S1", "Modelo", [
         ...ticket("FEATURE-INV-MODELO-20260921", "Modelo"),
-        ...ticket("FEATURE-INV-SALDO-20260921", "Saldo", [
-          "FEATURE-INV-MODELO-20260921",
-        ]),
+        ...ticket("FEATURE-INV-SALDO-20260921", "Saldo", ["FEATURE-INV-MODELO-20260921"]),
       ]),
       coverage: [
         ...cobertura("R-INV-001", ["FEATURE-INV-MODELO-20260921"]),
@@ -244,9 +249,7 @@ describe("readFeatureDetail", () => {
     escribirGrafo("modulo-inventario", {
       sprints: sprint("S1", "Modelo", [
         ...ticket("FEATURE-INV-MODELO-20260921", "Modelo"),
-        ...ticket("FEATURE-INV-SALDO-20260921", "Saldo", [
-          "FEATURE-INV-MODELO-20260921",
-        ]),
+        ...ticket("FEATURE-INV-SALDO-20260921", "Saldo", ["FEATURE-INV-MODELO-20260921"]),
       ]),
       coverage: [
         ...cobertura("R-INV-001", ["FEATURE-INV-MODELO-20260921"]),
@@ -288,7 +291,10 @@ describe("readFeatureDetail", () => {
     // vacía que parece «no hay nada».
     escribirFeature("modulo-inventario");
     escribirSpec("modulo-inventario", "inventario", SPEC_DOS_REQUISITOS);
-    writeFileSync(join(carpeta("modulo-inventario"), "tickets.yaml"), "feature: modulo-inventario\n");
+    writeFileSync(
+      join(carpeta("modulo-inventario"), "tickets.yaml"),
+      "feature: modulo-inventario\n",
+    );
 
     const detalle = readFeatureDetail(lab, "modulo-inventario")!;
     expect(detalle.decomposition).toBeNull();

@@ -186,7 +186,9 @@ describe("parseProcess", () => {
   });
 
   it("rechaza un tipo de paso que no existe", () => {
-    const texto = ["id: x", "steps:", "  - id: uno", "    kind: magia", "    run: a"].join("\n");
+    const texto = ["id: x", "steps:", "  - id: uno", "    kind: magia", "    run: a"].join(
+      "\n",
+    );
     expect(() => parseProcess(texto)).toThrowError(/no existe/);
   });
 
@@ -230,15 +232,20 @@ describe("parseProcess", () => {
       "    run: a",
       "    params: { algo: 1 }",
     ].join("\n");
-    expect(() => parseProcess(texto)).toThrowError(/Los parámetros son para los sub-procesos/);
+    expect(() => parseProcess(texto)).toThrowError(
+      /Los parámetros son para los sub-procesos/,
+    );
   });
 
   it("lee `on_success` en sus dos formas", () => {
     const base = ["steps:", "  - id: uno", "    kind: command", "    run: a"].join("\n");
-    expect(parseProcess(`id: x\non_success: [a, b]\n${base}`).onSuccess).toEqual(["a", "b"]);
-    expect(parseProcess(`id: x\non_success:\n  run_process: [c]\n${base}`).onSuccess).toEqual([
-      "c",
+    expect(parseProcess(`id: x\non_success: [a, b]\n${base}`).onSuccess).toEqual([
+      "a",
+      "b",
     ]);
+    expect(
+      parseProcess(`id: x\non_success:\n  run_process: [c]\n${base}`).onSuccess,
+    ).toEqual(["c"]);
   });
 });
 
@@ -257,7 +264,9 @@ describe("validateProcess", () => {
     // Declararlo y no ejecutarlo es honesto mientras el error lo diga;
     // saltárselo en silencio reportaría éxito sin hacer el trabajo.
     const proceso = parseProcess(
-      ["id: padre", "steps:", "  - id: uno", "    kind: agent", "    agent: escritor"].join("\n"),
+      ["id: padre", "steps:", "  - id: uno", "    kind: agent", "    agent: escritor"].join(
+        "\n",
+      ),
     );
     expect(() => validateProcess(proceso, catalogo(["padre"]))).toThrowError(
       /todavía no ejecuta ese tipo/,
@@ -333,7 +342,9 @@ describe("validateProcess", () => {
       ].join("\n"),
     );
     const padre = parseProcess(
-      ["id: padre", "steps:", "  - id: uno", "    kind: process", "    process: hijo"].join("\n"),
+      ["id: padre", "steps:", "  - id: uno", "    kind: process", "    process: hijo"].join(
+        "\n",
+      ),
     );
     const definiciones = new Map([
       ["hijo", hijo],
@@ -380,8 +391,16 @@ describe("processCycle", () => {
   const proceso = (id: string, target: string | null): ProcessDefinition =>
     parseProcess(
       target === null
-        ? ["id: " + id, "steps:", "  - id: uno", "    kind: command", "    run: a"].join("\n")
-        : ["id: " + id, "steps:", "  - id: uno", "    kind: process", `    process: ${target}`].join("\n"),
+        ? ["id: " + id, "steps:", "  - id: uno", "    kind: command", "    run: a"].join(
+            "\n",
+          )
+        : [
+            "id: " + id,
+            "steps:",
+            "  - id: uno",
+            "    kind: process",
+            `    process: ${target}`,
+          ].join("\n"),
     );
 
   it("no encuentra ciclo en una cadena lineal", () => {
@@ -451,9 +470,9 @@ describe("evaluateWhen", () => {
   });
 
   it("sustituye antes de comparar", () => {
-    expect(evaluateWhen("modulo == {esperado}", { ...valores, esperado: "inventario" })).toBe(
-      true,
-    );
+    expect(
+      evaluateWhen("modulo == {esperado}", { ...valores, esperado: "inventario" }),
+    ).toBe(true);
   });
 
   it("rechaza una condición que no se entiende", () => {
@@ -487,11 +506,15 @@ describe("resolveParams", () => {
   });
 
   it("rechaza un obligatorio que falta", () => {
-    expect(() => resolveParams(definicion, {})).toThrowError(/requiere el parámetro "version"/);
+    expect(() => resolveParams(definicion, {})).toThrowError(
+      /requiere el parámetro "version"/,
+    );
   });
 
   it("rechaza un valor que no cumple el patrón", () => {
-    expect(() => resolveParams(definicion, { version: "1.2" })).toThrowError(/no cumple su patrón/);
+    expect(() => resolveParams(definicion, { version: "1.2" })).toThrowError(
+      /no cumple su patrón/,
+    );
   });
 
   it("rechaza un número que no lo es", () => {
@@ -501,9 +524,9 @@ describe("resolveParams", () => {
   });
 
   it("rechaza un booleano que no lo es", () => {
-    expect(() =>
-      resolveParams(definicion, { version: "1.2.3", migra: "si" }),
-    ).toThrowError(/debe ser true o false/);
+    expect(() => resolveParams(definicion, { version: "1.2.3", migra: "si" })).toThrowError(
+      /debe ser true o false/,
+    );
   });
 
   it("rechaza un parámetro que el proceso no declara", () => {
@@ -652,7 +675,12 @@ describe("runProcess", () => {
     );
 
     const comandos: string[] = [];
-    runProcess({ root: lab, id: "condicional", params: {}, runCommand: simulador(comandos) });
+    runProcess({
+      root: lab,
+      id: "condicional",
+      params: {},
+      runCommand: simulador(comandos),
+    });
     expect(comandos).toEqual(["migra todo"]);
   });
 
@@ -726,7 +754,9 @@ describe("runProcess", () => {
   it("un sub-proceso que falla detiene al padre", () => {
     escribirProceso(
       "hijo",
-      ["steps:", "  - id: manual", "    kind: command", "    run: falla el manual"].join("\n"),
+      ["steps:", "  - id: manual", "    kind: command", "    run: falla el manual"].join(
+        "\n",
+      ),
     );
     escribirProceso(
       "padre",
@@ -799,7 +829,10 @@ describe("runProcess", () => {
   });
 
   it("rechaza un proceso que no existe y nombra los que hay", () => {
-    escribirProceso("otro", ["steps:", "  - id: uno", "    kind: command", "    run: a"].join("\n"));
+    escribirProceso(
+      "otro",
+      ["steps:", "  - id: uno", "    kind: command", "    run: a"].join("\n"),
+    );
     expect(() =>
       runProcess({ root: lab, id: "fantasma", params: {}, runCommand: simulador() }),
     ).toThrowError(/"fantasma".*otro/s);
@@ -814,7 +847,7 @@ describe("runProcess", () => {
         "steps:",
         "  - id: eco",
         "    kind: command",
-        '    run: node -e "process.stdout.write(\'hola desde el shell\')"',
+        "    run: node -e \"process.stdout.write('hola desde el shell')\"",
         "  - id: sale-mal",
         "    kind: check",
         '    run: node -e "process.exit(4)"',
@@ -848,7 +881,10 @@ describe("loadProcesses", () => {
     // Se valida todo el proyecto y no solo el proceso pedido: un sub-proceso roto
     // no impide que el padre corra hasta que llega a él, y para entonces ya hizo
     // la mitad del trabajo.
-    escribirProceso("bueno", ["steps:", "  - id: uno", "    kind: command", "    run: a"].join("\n"));
+    escribirProceso(
+      "bueno",
+      ["steps:", "  - id: uno", "    kind: command", "    run: a"].join("\n"),
+    );
     escribirProceso("roto", "steps:\n  - id: uno\n    kind: magia\n");
     expect(() => requireProcess(lab, "bueno")).toThrowError(/roto\.yaml no se puede leer/);
   });
@@ -858,9 +894,7 @@ describe("loadProcesses", () => {
 
 describe("valmen process", () => {
   const correr = (...args: string[]) =>
-    dispatch(
-      parseArgs(["--root", lab, "--tickets-dir", "tickets", "process", ...args]),
-    );
+    dispatch(parseArgs(["--root", lab, "--tickets-dir", "tickets", "process", ...args]));
 
   it("list muestra los procesos y sus parámetros", () => {
     escribirProceso(
@@ -956,7 +990,7 @@ describe("valmen process", () => {
         "steps:",
         "  - id: malo",
         "    kind: command",
-        '    run: node -e "process.stderr.write(\'no se pudo\'); process.exit(3)"',
+        "    run: node -e \"process.stderr.write('no se pudo'); process.exit(3)\"",
       ].join("\n"),
     );
     const r = correr("run", "rompe");
@@ -1015,7 +1049,7 @@ describe("valmen process", () => {
         "steps:",
         "  - id: imprimir",
         "    kind: command",
-        '    run: node -e "process.stdout.write(process.argv.slice(1).join(\',\'))" {version} {tickets}',
+        "    run: node -e \"process.stdout.write(process.argv.slice(1).join(','))\" {version} {tickets}",
       ].join("\n"),
     );
     const r = correr("run", "dos", "--set", "version=1.2.3;tickets=A,B");
@@ -1065,7 +1099,9 @@ describe("lo que el YAML tuvo que aprender", () => {
   });
 
   it("lee una lista en línea y ya no la trata como texto", () => {
-    expect(parseYamlSubset("g: [a, b]\n", { fileName: "t.yaml" })).toEqual({ g: ["a", "b"] });
+    expect(parseYamlSubset("g: [a, b]\n", { fileName: "t.yaml" })).toEqual({
+      g: ["a", "b"],
+    });
     expect(parseYamlSubset("g: []\n", { fileName: "t.yaml" })).toEqual({ g: [] });
   });
 

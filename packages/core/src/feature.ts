@@ -56,18 +56,17 @@ export type FeatureState = (typeof FEATURE_STATES)[number];
  * esa arista, la única salida sería retroceder a mano por el frontmatter, que es
  * justo lo que el contrato existe para impedir.
  */
-export const FEATURE_TRANSITIONS: Readonly<
-  Record<FeatureState, readonly FeatureState[]>
-> = {
-  draft: ["specified", "blocked"],
-  specified: ["planned", "blocked"],
-  planned: ["decomposed", "blocked"],
-  decomposed: ["in_progress", "planned", "blocked"],
-  in_progress: ["complete", "blocked"],
-  complete: ["archived", "blocked"],
-  archived: [],
-  blocked: ["draft", "specified", "planned", "decomposed", "in_progress", "complete"],
-};
+export const FEATURE_TRANSITIONS: Readonly<Record<FeatureState, readonly FeatureState[]>> =
+  {
+    draft: ["specified", "blocked"],
+    specified: ["planned", "blocked"],
+    planned: ["decomposed", "blocked"],
+    decomposed: ["in_progress", "planned", "blocked"],
+    in_progress: ["complete", "blocked"],
+    complete: ["archived", "blocked"],
+    archived: [],
+    blocked: ["draft", "specified", "planned", "decomposed", "in_progress", "complete"],
+  };
 
 /** El estado del que se puede entrar y salir de `blocked`. */
 export const FEATURE_BLOCKED_EXITS = FEATURE_TRANSITIONS.blocked;
@@ -144,9 +143,7 @@ export const FEATURE_ID_RE = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 
 /** Una transición de feature. */
 export function canTransitionFeature(from: string, to: string): boolean {
-  return (FEATURE_TRANSITIONS[from as FeatureState] ?? []).includes(
-    to as FeatureState,
-  );
+  return (FEATURE_TRANSITIONS[from as FeatureState] ?? []).includes(to as FeatureState);
 }
 
 /** Los destinos legales desde un estado. */
@@ -184,12 +181,14 @@ export interface CoverageEntry {
  * dependencias es ruido. Las dos formas se normalizan antes de usarlas, así que
  * el resto del motor ve una sola.
  */
-export type FeatureTicket = string | {
-  readonly id: string;
-  readonly title?: string;
-  /** Los tickets que tienen que estar cerrados antes de empezar este. */
-  readonly dependsOn?: readonly string[];
-};
+export type FeatureTicket =
+  | string
+  | {
+      readonly id: string;
+      readonly title?: string;
+      /** Los tickets que tienen que estar cerrados antes de empezar este. */
+      readonly dependsOn?: readonly string[];
+    };
 
 /** Un ticket hijo, ya normalizado. */
 export interface NormalizedTicket {
@@ -251,9 +250,7 @@ export function coverageGaps(
   const porRequisito = new Map(
     decomposition.coverage.map((entrada) => [entrada.requirement, entrada.coveredBy]),
   );
-  const enSprints = new Set(
-    decompositionTickets(decomposition).map((ticket) => ticket.id),
-  );
+  const enSprints = new Set(decompositionTickets(decomposition).map((ticket) => ticket.id));
 
   const huecos: CoverageGap[] = [];
   for (const requisito of requirements) {
@@ -323,9 +320,7 @@ export function assertDecompositionComplete(
  * es una dependencia pendiente: es un error de escritura que, si se ignora,
  * produce un grafo que dice estar bien y un sprint que nunca arranca.
  */
-export function dependencyCycles(
-  decomposition: FeatureDecomposition,
-): string[][] {
+export function dependencyCycles(decomposition: FeatureDecomposition): string[][] {
   const tickets = decompositionTickets(decomposition);
   const porId = new Map(tickets.map((ticket) => [ticket.id, ticket]));
 
@@ -472,4 +467,4 @@ updated: YYYY-MM-DD
 - \`spec/<dominio>/spec.md\` — requisitos RFC 2119 y escenarios.
 - \`design.md\` — alternativas y decisión técnica.
 - \`tickets.yaml\` — el grafo: sprints, cobertura y huecos.
-- \`verify.md\` — la evidencia, al completar.`
+- \`verify.md\` — la evidencia, al completar.`;

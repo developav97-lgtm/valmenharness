@@ -131,9 +131,7 @@ function parseRequirements(text: string, source: string): DetectedDependency[] {
   for (const rawLine of text.split(/\r?\n/)) {
     const line = rawLine.trim();
     if (line === "" || line.startsWith("#") || line.startsWith("-")) continue;
-    const match = /^([A-Za-z0-9._-]+)\s*(?:==|>=|~=|===)\s*([^\s;#]+)/.exec(
-      line,
-    );
+    const match = /^([A-Za-z0-9._-]+)\s*(?:==|>=|~=|===)\s*([^\s;#]+)/.exec(line);
     if (match === null) continue;
     const name = (match[1] as string).toLowerCase();
     if (!KNOWN_DEPENDENCIES.includes(name)) continue;
@@ -159,15 +157,12 @@ function parsePackageJson(text: string, source: string): DetectedDependency[] {
   for (const section of sections) {
     const dependencies = record[section];
     if (typeof dependencies !== "object" || dependencies === null) continue;
-    for (const [name, version] of Object.entries(
-      dependencies as Record<string, unknown>,
-    )) {
+    for (const [name, version] of Object.entries(dependencies as Record<string, unknown>)) {
       const key = name.toLowerCase();
       if (!KNOWN_DEPENDENCIES.includes(key)) continue;
       found.push({
         name: key,
-        version:
-          typeof version === "string" ? version.replace(/^[\^~]/, "") : "?",
+        version: typeof version === "string" ? version.replace(/^[\^~]/, "") : "?",
         source,
       });
     }
@@ -210,8 +205,7 @@ export function detectFiles(root: string): {
       if (seen.has(identity)) continue;
       seen.add(identity);
 
-      const relative =
-        directory === "" ? manifest.file : `${directory}/${manifest.file}`;
+      const relative = directory === "" ? manifest.file : `${directory}/${manifest.file}`;
       files.push({ path: relative, kind: manifest.kind });
 
       const text = readOrNull(absolute);
@@ -241,9 +235,7 @@ export function detectLegacyConfigs(root: string): LegacyConfig[] {
     if (statSync(absolute).isFile()) {
       const head = (readOrNull(absolute) ?? "").slice(0, 800).toLowerCase();
       selfDeclaredLegacy =
-        head.includes("legado") ||
-        head.includes("legacy") ||
-        head.includes("deprecat");
+        head.includes("legado") || head.includes("legacy") || head.includes("deprecat");
     }
 
     found.push({
@@ -265,16 +257,13 @@ export function profileProject(root: string, name: string): ProjectProfile {
   if (
     files.some(
       (file) =>
-        file.path.endsWith("docker-compose.yml") ||
-        file.path.endsWith("Dockerfile"),
+        file.path.endsWith("docker-compose.yml") || file.path.endsWith("Dockerfile"),
     )
   ) {
     capabilities.push("contenedores");
   }
-  if (existsSync(join(root, ".github", "workflows")))
-    capabilities.push("GitHub Actions");
-  if (files.some((file) => file.path.includes("buildspec")))
-    capabilities.push("CodeBuild");
+  if (existsSync(join(root, ".github", "workflows"))) capabilities.push("GitHub Actions");
+  if (files.some((file) => file.path.includes("buildspec"))) capabilities.push("CodeBuild");
   if (existsSync(join(root, ".codegraph"))) capabilities.push("CodeGraph");
   if (
     existsSync(join(root, "migrations")) ||
@@ -299,10 +288,7 @@ export function profileProject(root: string, name: string): ProjectProfile {
  * sería peor que una mínima, porque el usuario creería que el harness sabe algo
  * que en realidad no comprobó.
  */
-export function proposeConfig(
-  profile: ProjectProfile,
-  ticketsDir: string,
-): string {
+export function proposeConfig(profile: ProjectProfile, ticketsDir: string): string {
   const lines = [
     "# Configuración del harness en este proyecto.",
     "#",
@@ -320,17 +306,14 @@ export function proposeConfig(
       "# para escribir `.valmen/rules/stack.md`.",
     );
     for (const dependency of profile.dependencies) {
-      lines.push(
-        `#   ${dependency.name} ${dependency.version}  (${dependency.source})`,
-      );
+      lines.push(`#   ${dependency.name} ${dependency.version}  (${dependency.source})`);
     }
     lines.push("");
   }
 
   if (profile.capabilities.length > 0) {
     lines.push("# Capacidades detectadas:");
-    for (const capability of profile.capabilities)
-      lines.push(`#   ${capability}`);
+    for (const capability of profile.capabilities) lines.push(`#   ${capability}`);
     lines.push("");
   }
 

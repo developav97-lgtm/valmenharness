@@ -36,13 +36,9 @@ import {
   PLACEHOLDERS,
   PLACEHOLDERS_WITH_DASH,
   isPlaceholder,
-  isPrintable,
   requireList,
   rstripChars,
   validateIsoDate,
-  validateNullableText,
-  validateSequential,
-  validateText,
   validateTitle,
 } from "./validators.js";
 import { isSafePlainScalar } from "./parser.js";
@@ -71,12 +67,7 @@ const APPROVED_OR_LATER = [
 ] as const;
 
 /** Estados que exigen un resultado de pruebas del PO registrado. */
-const QA_REQUIRED_STATES = [
-  "in_qa",
-  "changes_requested",
-  "qa_approved",
-  "closed",
-] as const;
+const QA_REQUIRED_STATES = ["in_qa", "changes_requested", "qa_approved", "closed"] as const;
 
 /** Contexto que el core necesita del proyecto, sin tocar el sistema de archivos. */
 export interface ValidationContext {
@@ -192,10 +183,7 @@ export function hasPlanGate(ticket: ParsedTicket): boolean {
   for (const normalized of normalizedLines) {
     const match = /gate no exigible\s*:\s*(.+)/.exec(normalized);
     if (match === null) continue;
-    const reason = rstripChars(
-      (match[1] as string).trim(),
-      " .;:-",
-    ).toLowerCase();
+    const reason = rstripChars((match[1] as string).trim(), " .;:-").toLowerCase();
     if (reason === "") continue;
     if (isPlaceholder(reason, PLACEHOLDERS_WITH_DASH)) continue;
     return true;
@@ -212,16 +200,11 @@ export function hasRecordedUserTestOutcome(ticket: ParsedTicket): boolean {
   const outcomeRe =
     /(?:resultado(?: comunicado)?(?: (?:del|por el))? po|omisi[oó]n expl[ií]cita(?: (?:y )?documentada)?(?: de pruebas)?(?: (?:del|por el))? po)\s*:\s*(.+)/i;
 
-  for (const rawLine of meaningfulMarkdown(ticket.sections.Pruebas).split(
-    "\n",
-  )) {
+  for (const rawLine of meaningfulMarkdown(ticket.sections.Pruebas).split("\n")) {
     const line = stripListMarker(rawLine).trim();
     const match = outcomeRe.exec(line);
     if (match === null) continue;
-    const outcome = rstripChars(
-      (match[1] as string).trim(),
-      " .;:-",
-    ).toLowerCase();
+    const outcome = rstripChars((match[1] as string).trim(), " .;:-").toLowerCase();
     if (isPlaceholder(outcome, PLACEHOLDERS_WITH_DASH)) continue;
     return true;
   }
@@ -286,9 +269,7 @@ export function validateHistoryCoherence(ticket: ParsedTicket): void {
     recorded.length === declared.length &&
     recorded.every((id, index) => id === declared[index]);
   if (!matches) {
-    fail(
-      "La lista de puntos no coincide con los eventos históricos de creación.",
-    );
+    fail("La lista de puntos no coincide con los eventos históricos de creación.");
   }
 
   // Evidencia agrupada por punto, en orden de aparición.
@@ -310,8 +291,8 @@ export function validateHistoryCoherence(ticket: ParsedTicket): void {
   }
 
   const qaStartIds = new Set(
-    ticket.blocks.QA.filter((entry) => entry["result"] === "pending").map(
-      (entry) => String(entry["id"]),
+    ticket.blocks.QA.filter((entry) => entry["result"] === "pending").map((entry) =>
+      String(entry["id"]),
     ),
   );
 
@@ -323,9 +304,7 @@ export function validateHistoryCoherence(ticket: ParsedTicket): void {
     const actualEvidence = evidenceByPoint.get(pointId) ?? [];
     const evidenceMatches =
       (declaredEvidence as unknown[]).length === actualEvidence.length &&
-      (declaredEvidence as unknown[]).every(
-        (id, index) => id === actualEvidence[index],
-      );
+      (declaredEvidence as unknown[]).every((id, index) => id === actualEvidence[index]);
     if (!evidenceMatches) {
       fail(`${pointId}.evidence no coincide con el historial de Evidencia.`);
     }
@@ -355,9 +334,7 @@ export function validateHistoryCoherence(ticket: ParsedTicket): void {
         typeof last["po_confirmation"] === "string" &&
         last["po_confirmation"].trim() !== "";
       if (!confirmed) {
-        fail(
-          `${pointId} requiere un retest aprobado y confirmado antes de verificarse.`,
-        );
+        fail(`${pointId} requiere un retest aprobado y confirmado antes de verificarse.`);
       }
     }
   }
@@ -414,9 +391,7 @@ export function validateDocument(
   // R2 — forma del id.
   const idMatch = ID_RE.exec(fields.id);
   if (idMatch === null) {
-    fail(
-      "El ID no cumple <TIPO>-<MODULO>-<DESCRIPCION>-<YYYYMMDD> con segmentos seguros.",
-    );
+    fail("El ID no cumple <TIPO>-<MODULO>-<DESCRIPCION>-<YYYYMMDD> con segmentos seguros.");
   }
   const [, idType, idModule, , compactDate] = idMatch as unknown as [
     string,
@@ -457,9 +432,7 @@ export function validateDocument(
   }
 
   // R9–R11 — estados.
-  if (
-    !(WORKFLOW_STATES as readonly string[]).includes(fields.workflow_status)
-  ) {
+  if (!(WORKFLOW_STATES as readonly string[]).includes(fields.workflow_status)) {
     fail("workflow_status no pertenece al esquema.");
   }
   if (!(QA_STATES as readonly string[]).includes(fields.qa_status)) {
@@ -512,11 +485,7 @@ export function validateDocument(
   }
 
   // R17–R22 — coherencia del estado de release.
-  const {
-    release_status: release,
-    target_release: target,
-    released_in: released,
-  } = fields;
+  const { release_status: release, target_release: target, released_in: released } = fields;
   if (release === "planned" && (target === "null" || released !== "null")) {
     fail("release planned requiere target_release y no admite released_in.");
   }
@@ -526,10 +495,7 @@ export function validateDocument(
   if (release === "released" && target !== released) {
     fail("released_in debe coincidir con target_release.");
   }
-  if (
-    release === "not_applicable" &&
-    (target !== "null" || released !== "null")
-  ) {
+  if (release === "not_applicable" && (target !== "null" || released !== "null")) {
     fail("release not_applicable exige versiones null.");
   }
   if (release === "unreleased" && released !== "null") {
@@ -541,25 +507,17 @@ export function validateDocument(
 
   // R23 — el workflow exige los artefactos que promete.
   const workflow = fields.workflow_status;
-  const plannedOrLater = (PLANNED_OR_LATER as readonly string[]).includes(
-    workflow,
-  );
-  const approvedOrLater = (APPROVED_OR_LATER as readonly string[]).includes(
-    workflow,
-  );
+  const plannedOrLater = (PLANNED_OR_LATER as readonly string[]).includes(workflow);
+  const approvedOrLater = (APPROVED_OR_LATER as readonly string[]).includes(workflow);
 
   if (plannedOrLater && !hasSubstantivePlan(ticket.sections.Plan)) {
     fail("El workflow requiere un plan real, no placeholders vacíos.");
   }
   if (approvedOrLater && !hasPlanGate(ticket)) {
-    fail(
-      "El workflow requiere aprobación explícita o razón de gate no exigible.",
-    );
+    fail("El workflow requiere aprobación explícita o razón de gate no exigible.");
   }
   if (approvedOrLater && !hasStructuredPlan(ticket.sections.Plan)) {
-    fail(
-      "El workflow requiere un plan proporcional estructurado con pasos reales.",
-    );
+    fail("El workflow requiere un plan proporcional estructurado con pasos reales.");
   }
   if (
     (QA_REQUIRED_STATES as readonly string[]).includes(workflow) &&
@@ -589,21 +547,14 @@ export function validateDocument(
     if (fields.qa_status !== "approved" && fields.qa_status !== "waived") {
       fail("qa_approved y closed requieren QA aprobada o eximida.");
     }
-    if (
-      fields.qa_status === "approved" &&
-      !hasApprovedQaCycle(ticket.blocks.QA)
-    ) {
-      fail(
-        "QA aprobada requiere un ciclo QA cerrado y confirmación explícita del PO.",
-      );
+    if (fields.qa_status === "approved" && !hasApprovedQaCycle(ticket.blocks.QA)) {
+      fail("QA aprobada requiere un ciclo QA cerrado y confirmación explícita del PO.");
     }
     if (fields.qa_status === "waived" && !hasValidQaWaiver(ticket)) {
       fail("QA eximida requiere motivo y confirmación explícita del PO.");
     }
     const blocking = points.filter((point) =>
-      (BLOCKING_POINT_STATES as readonly string[]).includes(
-        String(point["status"]),
-      ),
+      (BLOCKING_POINT_STATES as readonly string[]).includes(String(point["status"])),
     );
     if (blocking.length > 0) {
       fail("Hay puntos bloqueantes y el ticket no puede aprobar QA.");

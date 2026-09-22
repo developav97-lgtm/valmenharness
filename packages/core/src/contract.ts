@@ -146,12 +146,7 @@ export type WorkflowState = (typeof WORKFLOW_STATES)[number];
  * `changes_requested` para dependencias externas que no eran cambios, lo que
  * ensuciaba la semántica del estado.
  */
-export const BLOCKED_EXITS = [
-  "analyzed",
-  "planned",
-  "approved",
-  "in_progress",
-] as const;
+export const BLOCKED_EXITS = ["analyzed", "planned", "approved", "in_progress"] as const;
 
 export const QA_STATES = ["pending", "in_qa", "approved", "waived"] as const;
 export type QaState = (typeof QA_STATES)[number];
@@ -182,11 +177,7 @@ export type PointState = (typeof POINT_STATES)[number];
 /**
  * Estados terminales de un punto. Exigen `terminal_reason` no vacío.
  */
-export const TERMINAL_POINT_STATES = [
-  "not_reproducible",
-  "deferred",
-  "duplicate",
-] as const;
+export const TERMINAL_POINT_STATES = ["not_reproducible", "deferred", "duplicate"] as const;
 
 /**
  * Estados que impiden que el ticket pase a `qa_approved`.
@@ -318,8 +309,7 @@ export const ID_RE =
 
 export const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 export const SEMVER_RE = /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/;
-export const BUILD_REFERENCE_RE =
-  /^(?:commit:[0-9a-f]{40}|worktree:sha256:[0-9a-f]{64})$/;
+export const BUILD_REFERENCE_RE = /^(?:commit:[0-9a-f]{40}|worktree:sha256:[0-9a-f]{64})$/;
 
 /** Una línea de frontmatter: `clave: valor`, con clave en minúsculas. */
 export const FRONTMATTER_LINE_RE = /^([a-z_]+): ([^\r\n]*)$/;

@@ -23,13 +23,7 @@ import {
   EXIT_SCHEMA,
 } from "../packages/core/src/errors.js";
 
-const FIXTURES = join(
-  import.meta.dirname,
-  "fixtures",
-  "saicloud",
-  "tickets",
-  "2026",
-);
+const FIXTURES = join(import.meta.dirname, "fixtures", "saicloud", "tickets", "2026");
 
 const VALID_ID = "BUGFIX-ADMIN-USUARIOS-CAJAS-SUCURSAL-20260828";
 
@@ -49,9 +43,7 @@ function expectFailure(
   } catch (error) {
     captured = error;
   }
-  expect(captured, "se esperaba un fallo de validación").toBeInstanceOf(
-    TicketError,
-  );
+  expect(captured, "se esperaba un fallo de validación").toBeInstanceOf(TicketError);
   const error = captured as TicketError;
   expect(error.message).toBe(message);
   expect(error.exitCode).toBe(exitCode);
@@ -192,8 +184,7 @@ describe("el validador rechaza lo mismo que el CLI de referencia", () => {
       .replace(/^id: (.*)$/m, "schema_version: $1")
       .replace(
         /^__TMP__$/m,
-        (_match, offset) =>
-          `id: ${/^schema_version: (.*)$/m.exec(text)?.[1] ?? ""}`,
+        () => `id: ${/^schema_version: (.*)$/m.exec(text)?.[1] ?? ""}`,
       );
     let captured: unknown;
     try {
@@ -244,9 +235,7 @@ describe("el validador rechaza lo mismo que el CLI de referencia", () => {
       "$1\nsin bloque json\n\n",
     );
     expect(() => parseTicket(text)).toThrow(
-      new TicketError(
-        "La sección QA debe contener exactamente un bloque JSON fenced.",
-      ),
+      new TicketError("La sección QA debe contener exactamente un bloque JSON fenced."),
     );
   });
 
@@ -292,12 +281,8 @@ describe("reglas de plan y gate", () => {
       "$1\n- TBD\n- pendiente\n\n",
     );
     // El ticket base está en `closed`, así que el workflow exige plan real.
-    expect(() =>
-      validateDocument(parseTicket(text), { expectedId: VALID_ID }),
-    ).toThrow(
-      new TicketError(
-        "El workflow requiere un plan real, no placeholders vacíos.",
-      ),
+    expect(() => validateDocument(parseTicket(text), { expectedId: VALID_ID })).toThrow(
+      new TicketError("El workflow requiere un plan real, no placeholders vacíos."),
     );
   });
 });

@@ -105,8 +105,7 @@ function toAnswer(proposition: Proposition, raw: unknown): PropositionAnswer {
   }
   const answer = raw as Record<string, unknown>;
   const probabilities =
-    typeof answer["probabilities"] === "object" &&
-    answer["probabilities"] !== null
+    typeof answer["probabilities"] === "object" && answer["probabilities"] !== null
       ? (answer["probabilities"] as Record<string, number>)
       : undefined;
 
@@ -181,17 +180,13 @@ export interface EvaluateOptions {
  * respuesta" y seguir, porque una respuesta ausente tratada como aprobación es
  * exactamente el fallo que el sistema existe para evitar.
  */
-export async function evaluateWithJev(
-  options: EvaluateOptions,
-): Promise<JevEvaluation> {
+export async function evaluateWithJev(options: EvaluateOptions): Promise<JevEvaluation> {
   const apiKey = options.apiKey ?? resolveApiKeyFromCredentials();
   const fetchImpl = options.fetchImpl ?? fetch;
   const model = options.model ?? DEFAULT_JEV_MODEL;
 
   if (options.propositions.length === 0) {
-    throw new GateDefinitionError(
-      "Un gate debe declarar al menos una proposición.",
-    );
+    throw new GateDefinitionError("Un gate debe declarar al menos una proposición.");
   }
 
   const questions: Record<string, unknown> = {};

@@ -260,10 +260,7 @@ describe("checks mecánicos", () => {
     const text = readFileSync(ticketPath, "utf8");
     // Se eliminan las dos palabras que el check reconoce como declaración de
     // rollback, para que el check falle de verdad.
-    const sinRollback = text.replace(
-      /rollback|revertir/gi,
-      "deshacer-sin-plan",
-    );
+    const sinRollback = text.replace(/rollback|revertir/gi, "deshacer-sin-plan");
     writeFileSync(ticketPath, sinRollback, "utf8");
 
     const result = await runGate(PATHS(), {

@@ -47,12 +47,7 @@ import {
   readConfigText,
   writeConfig,
 } from "./config.js";
-import {
-  checkRouting,
-  readRoutingText,
-  routingPath,
-  writeRouting,
-} from "./routing.js";
+import { checkRouting, readRoutingText, routingPath, writeRouting } from "./routing.js";
 
 /** Endpoint de chat de OpenRouter. */
 const CHAT_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
@@ -145,7 +140,8 @@ function sensibilidad(
     let antesRouting: Routing;
     let despuesRouting: Routing;
     try {
-      antesRouting = antes.trim() === "" ? { preset: "balanced", roles: {} } : parseRouting(antes);
+      antesRouting =
+        antes.trim() === "" ? { preset: "balanced", roles: {} } : parseRouting(antes);
       despuesRouting = parseRouting(despues);
     } catch {
       return nada;
@@ -194,8 +190,7 @@ function sensibilidad(
     return {
       sensitive: true,
       reason: `Cambia \`${clave}\`, que es una decisión de autoridad o de gasto, no de forma.`,
-      confirmation:
-        clave === "gates" ? CONFIRMACION.gate : CONFIRMACION.presupuesto,
+      confirmation: clave === "gates" ? CONFIRMACION.gate : CONFIRMACION.presupuesto,
     };
   }
   void root;
@@ -294,10 +289,7 @@ function readContent(payload: unknown): { content: string; usage: ChatProposal["
   };
   const contenido = data.choices?.[0]?.message?.content;
   if (typeof contenido !== "string" || contenido.trim() === "") {
-    throw new ConfigChatError(
-      "El modelo no devolvió ninguna propuesta.",
-      "EMPTY",
-    );
+    throw new ConfigChatError("El modelo no devolvió ninguna propuesta.", "EMPTY");
   }
   return {
     content: contenido,
@@ -405,10 +397,7 @@ export async function proposeConfigChange(
   try {
     propuesta = JSON.parse(content) as { summary?: unknown; changes?: unknown };
   } catch {
-    throw new ConfigChatError(
-      "La propuesta del modelo no es JSON válido.",
-      "MALFORMED",
-    );
+    throw new ConfigChatError("La propuesta del modelo no es JSON válido.", "MALFORMED");
   }
 
   return {
@@ -441,9 +430,7 @@ function normalizar(root: string, changes: unknown): ChatChange[] {
     const file = item.file;
     const antes = file === "config" ? readConfigText(root) : readRoutingText(root);
     const estado =
-      file === "config"
-        ? checkConfig(root, item.text)
-        : checkRouting(root, item.text);
+      file === "config" ? checkConfig(root, item.text) : checkRouting(root, item.text);
 
     const sens = sensibilidad(file, antes, item.text, root);
 

@@ -16,7 +16,14 @@
  * 4. **Aprobar sin responsable no cuenta.** Un gate que se aprueba sin dejar
  *    rastro no es un gate.
  */
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -40,7 +47,10 @@ beforeEach(() => {
   lab = mkdtempSync(join(tmpdir(), "valmen-gate-proc-"));
   mkdirSync(join(lab, ".valmen", "processes"), { recursive: true });
   mkdirSync(join(lab, ".valmen", "gates"), { recursive: true });
-  writeFileSync(join(lab, ".valmen", "gates", "deploy.yaml"), "id: deploy\ntitle: Aprobación\n");
+  writeFileSync(
+    join(lab, ".valmen", "gates", "deploy.yaml"),
+    "id: deploy\ntitle: Aprobación\n",
+  );
 });
 
 afterEach(() => {
@@ -124,7 +134,12 @@ describe("un gate sin aprobar detiene el proceso", () => {
 
   it("deja una corrida esperando, con el paso pendiente", () => {
     escribirProceso();
-    runProcess({ root: lab, id: "deploy", params: { version: "1.2.3" }, runCommand: simulador() });
+    runProcess({
+      root: lab,
+      id: "deploy",
+      params: { version: "1.2.3" },
+      runCommand: simulador(),
+    });
 
     const detenidas = waitingRuns(lab);
     expect(detenidas).toHaveLength(1);
@@ -154,14 +169,18 @@ describe("un gate sin aprobar detiene el proceso", () => {
     escribirProceso();
     writeFileSync(
       join(lab, ".valmen", "processes", "post.yaml"),
-      ["id: post", "steps:", "  - id: aviso", "    kind: command", `    run: ${comando("avisar")}`].join(
-        "\n",
-      ),
+      [
+        "id: post",
+        "steps:",
+        "  - id: aviso",
+        "    kind: command",
+        `    run: ${comando("avisar")}`,
+      ].join("\n"),
     );
-    const conExito = readFileSync(join(lab, ".valmen", "processes", "deploy.yaml"), "utf8").replace(
-      "id: deploy\n",
-      "id: deploy\non_success: [post]\n",
-    );
+    const conExito = readFileSync(
+      join(lab, ".valmen", "processes", "deploy.yaml"),
+      "utf8",
+    ).replace("id: deploy\n", "id: deploy\non_success: [post]\n");
     writeFileSync(join(lab, ".valmen", "processes", "deploy.yaml"), conExito);
 
     const comandos: string[] = [];
@@ -229,7 +248,12 @@ describe("retomar una corrida", () => {
 
   it("deja constancia de todos los pasos, los de antes y los de después", () => {
     escribirProceso();
-    runProcess({ root: lab, id: "deploy", params: { version: "1.2.3" }, runCommand: simulador() });
+    runProcess({
+      root: lab,
+      id: "deploy",
+      params: { version: "1.2.3" },
+      runCommand: simulador(),
+    });
     approveGate(lab, "deploy", "Juan Andrade", "");
     const estado = waitingRuns(lab)[0]!;
     const corrida = runProcess({
@@ -254,7 +278,12 @@ describe("retomar una corrida", () => {
 
   it("si el gate sigue sin aprobar, vuelve a esperar", () => {
     escribirProceso();
-    runProcess({ root: lab, id: "deploy", params: { version: "1.2.3" }, runCommand: simulador() });
+    runProcess({
+      root: lab,
+      id: "deploy",
+      params: { version: "1.2.3" },
+      runCommand: simulador(),
+    });
     const estado = waitingRuns(lab)[0]!;
 
     const otra = runProcess({
@@ -291,7 +320,9 @@ describe("retomar una corrida", () => {
       id: "rompe",
       params: { version: "1" },
       runCommand: (comando) =>
-        comando === "falla-a-proposito" ? { status: 1, stdout: "", stderr: "no" } : { status: 0, stdout: "", stderr: "" },
+        comando === "falla-a-proposito"
+          ? { status: 1, stdout: "", stderr: "no" }
+          : { status: 0, stdout: "", stderr: "" },
     });
     expect(corrida.ok).toBe(false);
     // Un fallo que no se retoma no deja estado: solo se persiste lo que hay que

@@ -28,7 +28,6 @@ import {
 import {
   type Projection,
   adoptPlan,
-  loadProjectModel,
   profileProject,
   projectFiles,
   proposeConfig,
@@ -129,9 +128,7 @@ export function validateAll(paths: RegistryPaths): CommandResult {
 
   if (failures.length > 0) {
     const count = failures.length;
-    return error(
-      `Se encontraron ${count} ticket(s) inválidos: ${failures.join("; ")}`,
-    );
+    return error(`Se encontraron ${count} ticket(s) inválidos: ${failures.join("; ")}`);
   }
 
   return ok(`Tickets válidos: ${tickets.length}\n`);
@@ -195,10 +192,7 @@ export function listActive(paths: RegistryPaths): CommandResult {
  * ticket activo no elige**. Devuelve `EXIT_AMBIGUOUS` y pide que se indique uno.
  * Un comando que adivina cuál querías es peor que uno que pregunta.
  */
-export function resumeTicket(
-  paths: RegistryPaths,
-  id: string | undefined,
-): CommandResult {
+export function resumeTicket(paths: RegistryPaths, id: string | undefined): CommandResult {
   if (id !== undefined) {
     const ticket = findTicket(paths, id);
     if (ticket === undefined) {
@@ -286,11 +280,10 @@ export function showTicket(paths: RegistryPaths, id: string): CommandResult {
 
   const parsed = parseTicket(ticket.text);
   const { fields } = parsed;
-  const blocking = parsed.blocks.Puntos.filter(
-    (point: Record<string, unknown>) =>
-      ["open", "analyzed", "in_progress", "awaiting_retest"].includes(
-        String(point["status"]),
-      ),
+  const blocking = parsed.blocks.Puntos.filter((point: Record<string, unknown>) =>
+    ["open", "analyzed", "in_progress", "awaiting_retest"].includes(
+      String(point["status"]),
+    ),
   );
 
   const lines = [
@@ -315,10 +308,7 @@ export function showTicket(paths: RegistryPaths, id: string): CommandResult {
  * continua, porque detecta un índice que alguien olvidó regenerar sin
  * modificar el repositorio.
  */
-export function buildIndex(
-  paths: RegistryPaths,
-  check: boolean,
-): CommandResult {
+export function buildIndex(paths: RegistryPaths, check: boolean): CommandResult {
   let tickets: LocatedTicket[];
   try {
     tickets = findAllTickets(paths);
@@ -428,10 +418,7 @@ export function migrateRegistry(
         atomicWrite(join(paths.root, outcome.relativePath), outcome.text);
       }
       if (pending.length > 0) {
-        atomicWrite(
-          indexPath(paths),
-          renderIndex(paths, findAllTickets(paths)),
-        );
+        atomicWrite(indexPath(paths), renderIndex(paths, findAllTickets(paths)));
       }
     }
 
@@ -542,9 +529,7 @@ export function syncProject(
   }
 
   if (proyeccion.ruleCount === 0) {
-    lines.push(
-      "  Añada reglas en .valmen/rules/ para que se incluyan en AGENTS.md.",
-    );
+    lines.push("  Añada reglas en .valmen/rules/ para que se incluyan en AGENTS.md.");
   }
 
   return ok(lines.join("\n") + "\n");
@@ -593,10 +578,7 @@ export function adoptProject(
   ];
 
   if (profile.detectedFiles.length > 0) {
-    lines.push(
-      "",
-      `  Manifiestos detectados (${profile.detectedFiles.length}):`,
-    );
+    lines.push("", `  Manifiestos detectados (${profile.detectedFiles.length}):`);
     for (const file of profile.detectedFiles) {
       lines.push(`    ${file.path}  — ${file.kind}`);
     }
@@ -619,9 +601,7 @@ export function adoptProject(
   if (profile.legacyConfigs.length > 0) {
     lines.push("", "Configuración agéntica preexistente (NO se toca):");
     for (const legacy of profile.legacyConfigs) {
-      const note = legacy.selfDeclaredLegacy
-        ? "  [ya marcada como legado]"
-        : "";
+      const note = legacy.selfDeclaredLegacy ? "  [ya marcada como legado]" : "";
       lines.push(`    ${legacy.path}  — ${legacy.kind}${note}`);
     }
     lines.push(
@@ -709,9 +689,13 @@ export function reportClosed(
     const rawDesde = flags["desde"];
     const rawHasta = flags["hasta"];
     const desde =
-      typeof rawDesde === "string" ? parseReportDate(rawDesde, "--desde") : porDefecto.desde;
+      typeof rawDesde === "string"
+        ? parseReportDate(rawDesde, "--desde")
+        : porDefecto.desde;
     const hasta =
-      typeof rawHasta === "string" ? parseReportDate(rawHasta, "--hasta") : porDefecto.hasta;
+      typeof rawHasta === "string"
+        ? parseReportDate(rawHasta, "--hasta")
+        : porDefecto.hasta;
 
     if (desde > hasta) {
       return error("--desde no puede ser posterior a --hasta.", EXIT_SCHEMA);
@@ -723,9 +707,7 @@ export function reportClosed(
       desde,
       hasta,
       ...(typeof rawType === "string" && rawType !== "" ? { type: rawType } : {}),
-      ...(typeof rawQuery === "string" && rawQuery !== ""
-        ? { query: rawQuery }
-        : {}),
+      ...(typeof rawQuery === "string" && rawQuery !== "" ? { query: rawQuery } : {}),
     });
 
     return ok(renderReport(entradas, desde, hasta));
@@ -755,7 +737,10 @@ export function deliverManifest(
     return error("deliver-manifest requiere --version.", EXIT_SCHEMA);
   }
   if (typeof rawTickets !== "string") {
-    return error("deliver-manifest requiere --tickets con la lista explícita.", EXIT_SCHEMA);
+    return error(
+      "deliver-manifest requiere --tickets con la lista explícita.",
+      EXIT_SCHEMA,
+    );
   }
 
   try {
@@ -787,9 +772,7 @@ export function deliverManifest(
 export function listProcesses(root: string): CommandResult {
   const cargados = loadProcesses(root);
   if (cargados.length === 0) {
-    return ok(
-      "No hay procesos declarados. Viven en .valmen/processes/<id>.yaml\n",
-    );
+    return ok("No hay procesos declarados. Viven en .valmen/processes/<id>.yaml\n");
   }
 
   const ancho = Math.max(...cargados.map((c) => c.definition.id.length), 2);
@@ -1076,7 +1059,8 @@ export function listProcessRuns(root: string): CommandResult {
     ...corridas.filter((corrida) => corrida.status !== "waiting"),
   ];
   const lineas = ordenadas.map((corrida) => {
-    const pendiente = corrida.pendingStep === null ? "" : ` · esperando en ${corrida.pendingStep}`;
+    const pendiente =
+      corrida.pendingStep === null ? "" : ` · esperando en ${corrida.pendingStep}`;
     const hechos = corrida.steps.filter((paso) => paso.status === "ok").length;
     return (
       `${corrida.runId} | ${corrida.status} | ${corrida.processId} | ` +
@@ -1192,10 +1176,7 @@ export function resumeProcessRun(
 }
 
 /** `process abandon`: una corrida detenida deja de poder retomarse. */
-export function abandonProcessRun(
-  root: string,
-  runId: string | undefined,
-): CommandResult {
+export function abandonProcessRun(root: string, runId: string | undefined): CommandResult {
   if (runId === undefined) {
     return error("process abandon requiere el identificador de la corrida.", EXIT_SCHEMA);
   }

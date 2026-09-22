@@ -257,19 +257,14 @@ describe("evaluador por comando", () => {
       { propositionId: "p2", command: "true", args: [], description: "b" },
     ];
     expect(isFullyMechanical([NOUL, ELECCION], completo)).toBe(true);
-    expect(isFullyMechanical([NOUL, ELECCION], completo.slice(0, 1))).toBe(
-      false,
-    );
+    expect(isFullyMechanical([NOUL, ELECCION], completo.slice(0, 1))).toBe(false);
   });
 });
 
 // ── Evaluador con juez de chat ──────────────────────────────────────────────
 
 /** Respuesta del endpoint de chat con el contenido indicado. */
-function chatResponse(
-  content: unknown,
-  model = "proveedor/modelo-v1",
-): Response {
+function chatResponse(content: unknown, model = "proveedor/modelo-v1"): Response {
   return new Response(
     JSON.stringify({
       model,
@@ -392,15 +387,11 @@ describe("selección del evaluador", () => {
       { propositionId: "p1", command: "true", args: [], description: "a" },
       { propositionId: "p2", command: "true", args: [], description: "b" },
     ];
-    expect(chooseEvaluator({ gate: gate([NOUL, ELECCION]), checks })).toBe(
-      "command",
-    );
+    expect(chooseEvaluator({ gate: gate([NOUL, ELECCION]), checks })).toBe("command");
   });
 
   it("elige Jev cuando hay proposiciones sin comando", () => {
-    expect(chooseEvaluator({ gate: gate([NOUL, ELECCION]), checks: [] })).toBe(
-      "jev",
-    );
+    expect(chooseEvaluator({ gate: gate([NOUL, ELECCION]), checks: [] })).toBe("jev");
   });
 
   it("no deja que las proposiciones por criterio impidan elegir el comando", () => {
@@ -438,9 +429,7 @@ describe("selección del evaluador", () => {
     expect(
       explainChoice({
         gate: gate([NOUL]),
-        checks: [
-          { propositionId: "p1", command: "true", args: [], description: "a" },
-        ],
+        checks: [{ propositionId: "p1", command: "true", args: [], description: "a" }],
       }),
     ).toContain("command");
     expect(
@@ -451,9 +440,7 @@ describe("selección del evaluador", () => {
 
 describe("orquestador", () => {
   it("no llama a ningún modelo si los comandos cubren el gate", async () => {
-    const props: Proposition[] = [
-      { id: "p1", kind: "noul", instructions: "x" },
-    ];
+    const props: Proposition[] = [{ id: "p1", kind: "noul", instructions: "x" }];
     let llamado = false;
     const jevFalso = (async () => {
       llamado = true;
@@ -464,9 +451,7 @@ describe("orquestador", () => {
       gate: gate(props),
       state: {},
       root: lab,
-      checks: [
-        { propositionId: "p1", command: "true", args: [], description: "pasa" },
-      ],
+      checks: [{ propositionId: "p1", command: "true", args: [], description: "pasa" }],
       evaluator: "command",
       jev: jevFalso,
     });
@@ -485,9 +470,7 @@ describe("orquestador", () => {
       { id: "p2", kind: "noul", instructions: "semántica" },
     ];
     let recibidas: string[] = [];
-    const jevFalso = (async (o: {
-      propositions: readonly { id: string }[];
-    }) => {
+    const jevFalso = (async (o: { propositions: readonly { id: string }[] }) => {
       recibidas = o.propositions.map((p) => p.id);
       return {
         answers: [{ id: "p2", kind: "noul" as const, value: 0.95 }],
@@ -519,9 +502,7 @@ describe("orquestador", () => {
   });
 
   it("degrada de Jev a juez solo cuando Jev no está disponible", async () => {
-    const props: Proposition[] = [
-      { id: "p1", kind: "noul", instructions: "x" },
-    ];
+    const props: Proposition[] = [{ id: "p1", kind: "noul", instructions: "x" }];
     const jevCaido = (async () => {
       throw Object.assign(new Error("HTTP 503"), { code: "SERVER" });
     }) as never;
@@ -544,9 +525,7 @@ describe("orquestador", () => {
 
   it("NO degrada si Jev falla por credencial: eso hay que verlo", async () => {
     // Degradar taparía un problema de configuración con un evaluador más débil.
-    const props: Proposition[] = [
-      { id: "p1", kind: "noul", instructions: "x" },
-    ];
+    const props: Proposition[] = [{ id: "p1", kind: "noul", instructions: "x" }];
     const jevSinClave = (async () => {
       throw Object.assign(new Error("falta la clave"), {
         code: "CREDENTIAL_MISSING",
@@ -567,9 +546,7 @@ describe("orquestador", () => {
   });
 
   it("falla si un check no se puede ejecutar en vez de contar la proposición como falsa", async () => {
-    const props: Proposition[] = [
-      { id: "p1", kind: "noul", instructions: "x" },
-    ];
+    const props: Proposition[] = [{ id: "p1", kind: "noul", instructions: "x" }];
     await expect(
       evaluateGate({
         gate: gate(props),

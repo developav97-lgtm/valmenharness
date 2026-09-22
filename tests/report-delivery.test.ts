@@ -99,8 +99,9 @@ describe("closedTickets", () => {
       "utf8",
     );
     const cierre = /## Cierre\n.*?```json\n(.*?)\n```/s.exec(texto)![1] as string;
-    const resumen = (JSON.parse(cierre) as { functional_summary: string }[]).at(-1)!
-      .functional_summary;
+    const resumen = (JSON.parse(cierre) as { functional_summary: string }[]).at(
+      -1,
+    )!.functional_summary;
     expect(entrada.solution).toBe(resumen.trim());
   });
 
@@ -146,9 +147,9 @@ describe("closedTickets", () => {
   it("un registro sin directorio de tickets devuelve vacío, no falla", () => {
     // Pedir el reporte de un proyecto sin registro es una pregunta legítima, y su
     // respuesta es «no hubo cierres», no «no se encontró el directorio».
-    expect(
-      closedTickets({ root: join(lab, "no-existe"), ticketsDir: "tickets" }),
-    ).toEqual([]);
+    expect(closedTickets({ root: join(lab, "no-existe"), ticketsDir: "tickets" })).toEqual(
+      [],
+    );
   });
 });
 
@@ -452,9 +453,7 @@ describe("parseTicketList", () => {
   });
 
   it("rechaza un duplicado", () => {
-    expect(() => parseTicketList(`${ENTREGABLE},${ENTREGABLE}`)).toThrowError(
-      /duplicado/,
-    );
+    expect(() => parseTicketList(`${ENTREGABLE},${ENTREGABLE}`)).toThrowError(/duplicado/);
   });
 
   it("rechaza un identificador mal formado", () => {
@@ -508,8 +507,7 @@ describe("los comandos del CLI", () => {
         "2026-09-30",
       ]),
     );
-    const cuenta = (salida: string): number =>
-      (salida.match(/^## /gm) ?? []).length;
+    const cuenta = (salida: string): number => (salida.match(/^## /gm) ?? []).length;
 
     expect(conFiltro.exitCode).toBe(0);
     expect(cuenta(conFiltro.stdout)).toBe(4);
@@ -580,8 +578,6 @@ describe("GET /api/report", () => {
     );
     expect(r.status).toBe(200);
     expect((r.body as { count: number }).count).toBe(0);
-    expect((r.body as { markdown: string }).markdown).toContain(
-      "No hubo tickets cerrados",
-    );
+    expect((r.body as { markdown: string }).markdown).toContain("No hubo tickets cerrados");
   });
 });

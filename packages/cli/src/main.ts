@@ -9,7 +9,7 @@
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { EXIT_INVARIANT, EXIT_SCHEMA, TicketError, toFailure } from "@valmen/core";
+import { EXIT_INVARIANT, EXIT_SCHEMA, toFailure } from "@valmen/core";
 import { gateById } from "@valmen/gate";
 import { gateRoutingFor } from "@valmen/adapter";
 
@@ -270,8 +270,7 @@ export function parseArgs(argv: readonly string[]): Options {
 
     const equals = arg.indexOf("=");
     const name = equals === -1 ? arg : arg.slice(0, equals);
-    let inlineValue: string | undefined =
-      equals === -1 ? undefined : arg.slice(equals + 1);
+    let inlineValue: string | undefined = equals === -1 ? undefined : arg.slice(equals + 1);
 
     // Opciones que consumen un valor: `--root X` o `--root=X`.
     if (valueOptions.has(name)) {
@@ -549,7 +548,10 @@ export function runAppend(
 }
 
 /** El valor de texto de una bandera, si la hay. */
-function flag(flags: Readonly<Record<string, string | true>>, name: string): string | undefined {
+function flag(
+  flags: Readonly<Record<string, string | true>>,
+  name: string,
+): string | undefined {
   const valor = flags[name];
   return typeof valor === "string" ? valor : undefined;
 }
@@ -624,8 +626,7 @@ export function dispatch(options: Options): CommandResult {
   if (command === "gate") {
     return {
       stdout: "",
-      stderr:
-        "El comando gate es asíncrono; use `runGate` o la línea de comandos.",
+      stderr: "El comando gate es asíncrono; use `runGate` o la línea de comandos.",
       exitCode: EXIT_SCHEMA,
     };
   }
@@ -732,8 +733,7 @@ export function dispatch(options: Options): CommandResult {
       // solo lectura siguen entrando por esta vía.
       return {
         stdout: "",
-        stderr:
-          "El comando feature es asíncrono; use la línea de comandos.",
+        stderr: "El comando feature es asíncrono; use la línea de comandos.",
         exitCode: EXIT_SCHEMA,
       };
 
@@ -779,8 +779,9 @@ export async function run(argv: readonly string[]): Promise<number> {
       let statics: ServerContext["statics"];
       try {
         statics = loadStatics(raizWeb, ["index.html"]);
-      } catch (caught) {
-        const failure = toFailure(caught);
+      } catch {
+        // El error crudo de `loadStatics` habla de rutas; este dice qué hacer. Se
+        // descarta a propósito, y por eso el `catch` no liga la excepción.
         result = {
           stdout: "",
           stderr:
@@ -846,9 +847,7 @@ export async function run(argv: readonly string[]): Promise<number> {
         if (definition !== null && definition !== undefined) {
           const rawLimit = options.flags["limit"];
           const limit =
-            typeof rawLimit === "string"
-              ? Number.parseInt(rawLimit, 10)
-              : undefined;
+            typeof rawLimit === "string" ? Number.parseInt(rawLimit, 10) : undefined;
           const report = await simulateGate(resolvePaths(options), {
             gate: definition,
             ...(limit === undefined || Number.isNaN(limit) ? {} : { limit }),
@@ -920,9 +919,7 @@ export async function run(argv: readonly string[]): Promise<number> {
           ticketId,
           dryRun: options.flags["dry-run"] === true,
           ...(evaluator === undefined ? {} : { evaluator }),
-          ...(routing.evaluatorModel === ""
-            ? {}
-            : { model: routing.evaluatorModel }),
+          ...(routing.evaluatorModel === "" ? {} : { model: routing.evaluatorModel }),
           ...(routing.evaluatorProvider === ""
             ? {}
             : { provider: routing.evaluatorProvider }),

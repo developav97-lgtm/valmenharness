@@ -16,13 +16,7 @@ import { parseTicket } from "../packages/core/src/parser.js";
 import { validateDocument } from "../packages/core/src/validate.js";
 import { TicketError } from "../packages/core/src/errors.js";
 
-const FIXTURE_ROOT = join(
-  import.meta.dirname,
-  "fixtures",
-  "saicloud",
-  "tickets",
-  "2026",
-);
+const FIXTURE_ROOT = join(import.meta.dirname, "fixtures", "saicloud", "tickets", "2026");
 
 function ticketIds(): string[] {
   return readdirSync(FIXTURE_ROOT)
@@ -57,9 +51,7 @@ describe("equivalencia del validador sobre los 57 tickets reales", () => {
 
     expect(
       failures.length,
-      failures.length === 0
-        ? ""
-        : `\n${failures.length} tickets rechazados:\n${detail}`,
+      failures.length === 0 ? "" : `\n${failures.length} tickets rechazados:\n${detail}`,
     ).toBe(0);
   });
 

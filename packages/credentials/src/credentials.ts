@@ -109,10 +109,7 @@ export function resolveApiKey(
   // chat funcionaba en la máquina del desarrollador —donde el archivo existe— y
   // fallaba en el CI, que es la peor forma de tener un test verde.
   const ruta =
-    filePath ??
-    credentialsPath(
-      typeof env["HOME"] === "string" ? env["HOME"] : homedir(),
-    );
+    filePath ?? credentialsPath(typeof env["HOME"] === "string" ? env["HOME"] : homedir());
   let texto: string;
   try {
     texto = readFileSync(ruta, "utf8");

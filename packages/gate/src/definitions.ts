@@ -12,7 +12,7 @@
  *
  * Ver docs/03-GATES.md §8 para la tabla de gates del pipeline.
  */
-import type { GateDefinition, MechanicalCheck, Proposition } from "./decide.js";
+import type { GateDefinition } from "./decide.js";
 import { DEFAULT_POLICY } from "./decide.js";
 
 /**

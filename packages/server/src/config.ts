@@ -75,11 +75,7 @@ export interface ConfigDiffLine {
 }
 
 /** Resume un texto de configuración ya analizado. */
-function summarize(
-  config: ConfigMap,
-  root: string,
-  adopted: boolean,
-): ConfigSummary {
+function summarize(config: ConfigMap, root: string, adopted: boolean): ConfigSummary {
   return {
     name: readString(config, "name", basename(root)),
     description: readString(config, "description", ""),
@@ -98,10 +94,7 @@ function summarize(
  * leería como si se hubiera reescrito entera. Sobre un archivo de este tamaño el
  * coste es despreciable.
  */
-export function diffLines(
-  before: string,
-  after: string,
-): ConfigDiffLine[] {
+export function diffLines(before: string, after: string): ConfigDiffLine[] {
   const a = before.split("\n");
   const b = after.split("\n");
 
@@ -130,8 +123,7 @@ export function diffLines(
       i += 1;
       j += 1;
     } else if (
-      ((lcs[i + 1] as number[])[j] as number) >=
-      ((lcs[i] as number[])[j + 1] as number)
+      ((lcs[i + 1] as number[])[j] as number) >= ((lcs[i] as number[])[j + 1] as number)
     ) {
       salida.push({ kind: "remove", text: a[i] as string });
       i += 1;
@@ -185,11 +177,7 @@ export function checkConfig(root: string, text: string): ConfigState {
   let error = "";
 
   try {
-    summary = summarize(
-      parseConfig(text),
-      root,
-      existsSync(configPath(root)),
-    );
+    summary = summarize(parseConfig(text), root, existsSync(configPath(root)));
   } catch (caught) {
     error = toFailure(caught).message;
   }
@@ -251,10 +239,7 @@ export interface ProjectionImpact {
  * de cada runtime, y avisar solo del primero dejaría los otros obsoletos en
  * silencio.
  */
-export function projectionImpact(
-  root: string,
-  text: string,
-): ProjectionImpact | null {
+export function projectionImpact(root: string, text: string): ProjectionImpact | null {
   let proyectados: readonly ProjectedFile[];
   try {
     proyectados = projectFiles(root, basename(root), text).files;
@@ -361,10 +346,7 @@ function comoMapa(valor: unknown): ConfigMap | null {
  * de su suscripción, y una lista curada dentro del código estaría desactualizada
  * el mes siguiente. Ver `.valmen/config.yaml`.
  */
-export function readProviderCandidates(
-  config: ConfigMap,
-  provider: string,
-): string[] {
+export function readProviderCandidates(config: ConfigMap, provider: string): string[] {
   const providers = comoMapa(config["providers"]);
   if (providers === null) return [];
   const entrada = providers[provider];

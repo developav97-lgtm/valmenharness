@@ -115,8 +115,17 @@ describe("el estado `blocked` del esquema 2", () => {
       expect(TICKET_TRANSITIONS[estado as WorkflowState]).toBeDefined();
     }
     const esquema2: WorkflowState[] = [
-      "intake", "analyzed", "planned", "approved", "in_progress", "blocked",
-      "awaiting_user_tests", "in_qa", "changes_requested", "qa_approved", "closed",
+      "intake",
+      "analyzed",
+      "planned",
+      "approved",
+      "in_progress",
+      "blocked",
+      "awaiting_user_tests",
+      "in_qa",
+      "changes_requested",
+      "qa_approved",
+      "closed",
     ];
     expect(Object.keys(TICKET_TRANSITIONS).sort()).toEqual([...esquema2].sort());
   });
@@ -139,7 +148,12 @@ describe("las aristas que no existen", () => {
   });
 
   it("un punto no vuelve atrás desde un terminal", () => {
-    const terminales: PointState[] = ["not_reproducible", "deferred", "duplicate", "closed"];
+    const terminales: PointState[] = [
+      "not_reproducible",
+      "deferred",
+      "duplicate",
+      "closed",
+    ];
     for (const estado of terminales) {
       expect(isTerminal("point", estado), estado).toBe(true);
     }
@@ -188,9 +202,7 @@ describe("el error de una transición ilegal", () => {
       } catch (error) {
         mensaje = (error as Error).message;
       }
-      expect(mensaje).toBe(
-        `Transición de ${nombre} inexistente -> tampoco no permitida.`,
-      );
+      expect(mensaje).toBe(`Transición de ${nombre} inexistente -> tampoco no permitida.`);
     }
   });
 

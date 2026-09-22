@@ -22,10 +22,7 @@ import {
 } from "../packages/gate-jev/src/index.js";
 // El resolver de credenciales se movió a un paquete compartido, para que una
 // clave configurada funcione igual con cualquier evaluador.
-import {
-  CredentialError,
-  resolveApiKey,
-} from "../packages/credentials/src/index.js";
+import { CredentialError, resolveApiKey } from "../packages/credentials/src/index.js";
 
 /** Una respuesta bien formada del endpoint, como la que devuelve de verdad. */
 function goodResponse(): Response {
@@ -64,10 +61,7 @@ function capture(response: Response | (() => Response)): {
     body: Record<string, unknown>;
     headers: Record<string, string>;
   }[] = [];
-  const fetchImpl = (async (
-    url: string | URL | Request,
-    init?: RequestInit,
-  ) => {
+  const fetchImpl = (async (url: string | URL | Request, init?: RequestInit) => {
     calls.push({
       url: String(url),
       body: JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>,
@@ -191,19 +185,12 @@ describe("traducción al contrato de la API", () => {
       Record<string, unknown>
     >;
     // Una escala es un arreglo ordenado de menor a mayor, no un mapa.
-    expect(questions["riesgo"]?.["criteria"]).toEqual([
-      "trivial",
-      "bajo",
-      "medio",
-      "alto",
-    ]);
+    expect(questions["riesgo"]?.["criteria"]).toEqual(["trivial", "bajo", "medio", "alto"]);
   });
 
   it("omite `criteria` en `noul` cuando no se declararon los polos", async () => {
     const { fetchImpl, calls } = capture(goodResponse());
-    const simple: Proposition[] = [
-      { id: "cubre", kind: "noul", instructions: "x" },
-    ];
+    const simple: Proposition[] = [{ id: "cubre", kind: "noul", instructions: "x" }];
     await evaluateWithJev({
       propositions: simple,
       state: STATE,
@@ -364,9 +351,7 @@ describe("fallos: nunca aprueba por accidente", () => {
   });
 
   it("clasifica un 401 como error de autenticación", async () => {
-    const { fetchImpl } = capture(
-      new Response("no autorizado", { status: 401 }),
-    );
+    const { fetchImpl } = capture(new Response("no autorizado", { status: 401 }));
     const error = await evaluateWithJev({
       propositions: PROPOSITIONS,
       state: STATE,
@@ -431,9 +416,7 @@ describe("la credencial nunca se filtra", () => {
   it("NO aparece en el mensaje de un error de autenticación", async () => {
     // Un diagnóstico que filtra la credencial que intentaba leer es peor que no
     // tener diagnóstico.
-    const { fetchImpl } = capture(
-      new Response("no autorizado", { status: 401 }),
-    );
+    const { fetchImpl } = capture(new Response("no autorizado", { status: 401 }));
     const error = (await evaluateWithJev({
       propositions: PROPOSITIONS,
       state: STATE,
@@ -620,29 +603,17 @@ describe("compatibilidad del campo de credencial", () => {
     );
     expect(result).toBeInstanceOf(CredentialError);
     expect((result as CredentialError).code).toBe("CREDENTIAL_MISSING");
-    expect((result as CredentialError).message).toContain(
-      "NOMBRE de una variable",
-    );
+    expect((result as CredentialError).message).toContain("NOMBRE de una variable");
   });
 
   it("distingue un campo vacío de un campo ausente", () => {
     const vacio = withCredentials(
-      ["version: 1", "providers:", "  openrouter:", '    api-key: ""', ""].join(
-        "\n",
-      ),
+      ["version: 1", "providers:", "  openrouter:", '    api-key: ""', ""].join("\n"),
     );
-    expect((vacio as CredentialError).message).toContain(
-      "campo de clave vacío",
-    );
+    expect((vacio as CredentialError).message).toContain("campo de clave vacío");
 
     const ausente = withCredentials(
-      [
-        "version: 1",
-        "providers:",
-        "  openrouter:",
-        "    otra-cosa: x",
-        "",
-      ].join("\n"),
+      ["version: 1", "providers:", "  openrouter:", "    otra-cosa: x", ""].join("\n"),
     );
     expect((ausente as CredentialError).message).toContain("no declara");
   });

@@ -52,8 +52,7 @@ export function runMechanicalChecks(text: string): MechanicalCheck[] {
     detail: `${items.length} criterio(s)`,
   });
 
-  const riesgoCritico =
-    fields.risk_level === "high" || fields.risk_level === "critical";
+  const riesgoCritico = fields.risk_level === "high" || fields.risk_level === "critical";
   const plan = sections["Plan"].toLowerCase();
   checks.push({
     id: "rollback_si_critico",
@@ -68,8 +67,7 @@ export function runMechanicalChecks(text: string): MechanicalCheck[] {
 
   checks.push({
     id: "impactos_declarados",
-    description:
-      "Los impactos de sync, migración y contenedores están declarados.",
+    description: "Los impactos de sync, migración y contenedores están declarados.",
     result: "pass",
     detail: `${blocks.Puntos.length} punto(s) registrados`,
   });

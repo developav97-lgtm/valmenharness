@@ -143,16 +143,12 @@ export function chooseEvaluator(options: {
  * y se informa. Un fallo de credencial o de contrato no se degrada: significan
  * que hay algo mal configurado y hay que verlo, no taparlo.
  */
-export async function evaluateGate(
-  options: SelectOptions,
-): Promise<EvaluationOutcome> {
+export async function evaluateGate(options: SelectOptions): Promise<EvaluationOutcome> {
   const checks = options.checks ?? options.gate.commandChecks ?? [];
   const chosen = chooseEvaluator({
     gate: options.gate,
     checks,
-    ...(options.evaluator === undefined
-      ? {}
-      : { evaluator: options.evaluator }),
+    ...(options.evaluator === undefined ? {} : { evaluator: options.evaluator }),
     ...(options.semantic === undefined ? {} : { semantic: options.semantic }),
   });
 
@@ -212,8 +208,7 @@ export async function evaluateGate(
     answers: [...outcome.answers, ...parcial.answers],
     model: parcial.model,
     usage: parcial.usage,
-    latencyMs:
-      parcial.latencyMs + outcome.results.reduce((t, r) => t + r.durationMs, 0),
+    latencyMs: parcial.latencyMs + outcome.results.reduce((t, r) => t + r.durationMs, 0),
     commandResults: outcome.results,
   };
 }
@@ -248,9 +243,7 @@ async function runSemantic(
       propositions: options.gate.propositions,
       state: options.state,
       ...(options.apiKey === undefined ? {} : { apiKey: options.apiKey }),
-      ...(options.sessionId === undefined
-        ? {}
-        : { sessionId: options.sessionId }),
+      ...(options.sessionId === undefined ? {} : { sessionId: options.sessionId }),
       ...(options.model === undefined ? {} : { model: options.model }),
     });
     return {

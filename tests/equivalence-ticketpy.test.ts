@@ -156,10 +156,7 @@ function comparar(args: readonly string[], etiqueta: string): void {
 }
 
 /** Ejecuta el mismo comando sobre una copia ya preparada, y compara el resto. */
-function compararSecuencia(
-  pasos: readonly (readonly string[])[],
-  etiqueta: string,
-): void {
+function compararSecuencia(pasos: readonly (readonly string[])[], etiqueta: string): void {
   const a = crearLaboratorio();
   const b = crearLaboratorio();
   try {
@@ -197,7 +194,10 @@ describe.skipIf(!disponible)("equivalencia con ticket.py", () => {
 
     it("`validate --id` sobre un ticket roto: mismo rechazo, mensaje de esquema 2", () => {
       const ruta = join(lab, "docs", "tickets", "2026", TICKET, "ticket.md");
-      const roto = readFileSync(ruta, "utf8").replace("schema_version: 1", "schema_version: 9");
+      const roto = readFileSync(ruta, "utf8").replace(
+        "schema_version: 1",
+        "schema_version: 9",
+      );
       // Se escribe con Node, no con `sh`: escapar el texto dentro de una línea de
       // shell es una fuente de fallos que no aporta nada a la comparación.
       writeFileSync(ruta, roto, "utf8");
@@ -230,7 +230,15 @@ describe.skipIf(!disponible)("equivalencia con ticket.py", () => {
       try {
         rmSync(join(a, "docs", "tickets", "index.md"));
         rmSync(join(b, "docs", "tickets", "index.md"));
-        const args = ["transition", "--id", TICKET, "--entity", "ticket", "--to", "approved"];
+        const args = [
+          "transition",
+          "--id",
+          TICKET,
+          "--entity",
+          "ticket",
+          "--to",
+          "approved",
+        ];
 
         const suyo = referencia(a, args);
         const mio = valmen(b, args);
@@ -255,9 +263,13 @@ describe.skipIf(!disponible)("equivalencia con ticket.py", () => {
     function registroReal(): string {
       const raiz = mkdtempSync(join(tmpdir(), "valmen-real-"));
       mkdirSync(join(raiz, "docs"), { recursive: true });
-      cpSync(join(import.meta.dirname, "fixtures", "saicloud", "tickets"), join(raiz, "docs", "tickets"), {
-        recursive: true,
-      });
+      cpSync(
+        join(import.meta.dirname, "fixtures", "saicloud", "tickets"),
+        join(raiz, "docs", "tickets"),
+        {
+          recursive: true,
+        },
+      );
       spawnSync("git", ["init", "-q", "."], { cwd: raiz });
       return raiz;
     }
@@ -308,7 +320,10 @@ describe.skipIf(!disponible)("equivalencia con ticket.py", () => {
       try {
         const suyo = referencia(raiz, ["index"]);
         expect(suyo.code).toBe(0);
-        const indiceReferencia = readFileSync(join(raiz, "docs", "tickets", "index.md"), "utf8");
+        const indiceReferencia = readFileSync(
+          join(raiz, "docs", "tickets", "index.md"),
+          "utf8",
+        );
 
         const mio = valmen(raiz, ["index"]);
         expect(mio.code).toBe(0);
@@ -317,8 +332,7 @@ describe.skipIf(!disponible)("equivalencia con ticket.py", () => {
         // **Divergencia declarada**: la cabecera nombra el comando que genera el
         // índice, así que la primera línea de la cita cambia. La tabla —que es
         // lo que un lector usa— tiene que ser idéntica.
-        const tabla = (texto: string): string =>
-          texto.slice(texto.indexOf("| Fecha |"));
+        const tabla = (texto: string): string => texto.slice(texto.indexOf("| Fecha |"));
         expect(tabla(indiceMio)).toBe(tabla(indiceReferencia));
         expect(indiceMio).toContain("valmen index");
       } finally {
@@ -339,8 +353,15 @@ describe.skipIf(!disponible)("equivalencia con ticket.py", () => {
     it("`--reason` fuera de una reapertura se rechaza igual", () => {
       comparar(
         [
-          "transition", "--id", TICKET, "--entity", "ticket", "--to", "planned",
-          "--reason", "porque sí",
+          "transition",
+          "--id",
+          TICKET,
+          "--entity",
+          "ticket",
+          "--to",
+          "planned",
+          "--reason",
+          "porque sí",
         ],
         "--reason indebido",
       );
@@ -349,8 +370,15 @@ describe.skipIf(!disponible)("equivalencia con ticket.py", () => {
     it("`--point-id` con una transición de ticket se rechaza igual", () => {
       comparar(
         [
-          "transition", "--id", TICKET, "--entity", "ticket", "--to", "planned",
-          "--point-id", "POINT-001",
+          "transition",
+          "--id",
+          TICKET,
+          "--entity",
+          "ticket",
+          "--to",
+          "planned",
+          "--point-id",
+          "POINT-001",
         ],
         "--point-id indebido",
       );
@@ -359,8 +387,15 @@ describe.skipIf(!disponible)("equivalencia con ticket.py", () => {
     it("`--version` con una transición de ticket se rechaza igual", () => {
       comparar(
         [
-          "transition", "--id", TICKET, "--entity", "ticket", "--to", "planned",
-          "--version", "9.9.9",
+          "transition",
+          "--id",
+          TICKET,
+          "--entity",
+          "ticket",
+          "--to",
+          "planned",
+          "--version",
+          "9.9.9",
         ],
         "--version indebida",
       );
@@ -389,7 +424,15 @@ describe.skipIf(!disponible)("equivalencia con ticket.py", () => {
           ]);
         }
 
-        const args = ["transition", "--id", TICKET, "--entity", "ticket", "--to", "approved"];
+        const args = [
+          "transition",
+          "--id",
+          TICKET,
+          "--entity",
+          "ticket",
+          "--to",
+          "approved",
+        ];
         const suyo = referencia(a, args);
         const mio = valmen(b, args);
         expect(mio.code).toBe(suyo.code);
@@ -424,7 +467,15 @@ describe.skipIf(!disponible)("equivalencia con ticket.py", () => {
       const a = crearLaboratorio();
       const b = crearLaboratorio();
       try {
-        const args = ["transition", "--id", TICKET, "--entity", "ticket", "--to", "approved"];
+        const args = [
+          "transition",
+          "--id",
+          TICKET,
+          "--entity",
+          "ticket",
+          "--to",
+          "approved",
+        ];
         referencia(a, args);
         valmen(b, args);
 
@@ -455,8 +506,15 @@ describe.skipIf(!disponible)("equivalencia con ticket.py", () => {
     it("`not_applicable` con versiones no nulas se rechaza igual", () => {
       comparar(
         [
-          "transition", "--id", TICKET, "--entity", "release",
-          "--to", "not_applicable", "--version", "1.2.3",
+          "transition",
+          "--id",
+          TICKET,
+          "--entity",
+          "release",
+          "--to",
+          "not_applicable",
+          "--version",
+          "1.2.3",
         ],
         "not_applicable con versión",
       );
@@ -465,8 +523,15 @@ describe.skipIf(!disponible)("equivalencia con ticket.py", () => {
     it("`unreleased -> planned` escribe la versión y coincide", () => {
       comparar(
         [
-          "transition", "--id", TICKET, "--entity", "release",
-          "--to", "planned", "--version", "6.3.0",
+          "transition",
+          "--id",
+          TICKET,
+          "--entity",
+          "release",
+          "--to",
+          "planned",
+          "--version",
+          "6.3.0",
         ],
         "release planned",
       );
@@ -476,12 +541,26 @@ describe.skipIf(!disponible)("equivalencia con ticket.py", () => {
       compararSecuencia(
         [
           [
-            "transition", "--id", TICKET, "--entity", "release",
-            "--to", "planned", "--version", "6.3.0",
+            "transition",
+            "--id",
+            TICKET,
+            "--entity",
+            "release",
+            "--to",
+            "planned",
+            "--version",
+            "6.3.0",
           ],
           [
-            "transition", "--id", TICKET, "--entity", "release",
-            "--to", "released", "--version", "6.3.0",
+            "transition",
+            "--id",
+            TICKET,
+            "--entity",
+            "release",
+            "--to",
+            "released",
+            "--version",
+            "6.3.0",
           ],
         ],
         "release hasta released",
@@ -491,12 +570,26 @@ describe.skipIf(!disponible)("equivalencia con ticket.py", () => {
     it("`released_in` distinto de `target_release` se rechaza igual", () => {
       const pasos = [
         [
-          "transition", "--id", TICKET, "--entity", "release",
-          "--to", "planned", "--version", "6.3.0",
+          "transition",
+          "--id",
+          TICKET,
+          "--entity",
+          "release",
+          "--to",
+          "planned",
+          "--version",
+          "6.3.0",
         ],
         [
-          "transition", "--id", TICKET, "--entity", "release",
-          "--to", "released", "--version", "6.4.0",
+          "transition",
+          "--id",
+          TICKET,
+          "--entity",
+          "release",
+          "--to",
+          "released",
+          "--version",
+          "6.4.0",
         ],
       ];
       compararSecuencia(pasos, "released_in incoherente");
@@ -533,36 +626,143 @@ describe.skipIf(!disponible)("equivalencia con ticket.py", () => {
         const id = ["--id", TICKET];
         const pasos: readonly (readonly string[])[] = [
           // El punto recorre su propia máquina hasta quedar listo para el retest.
-          ["add-point", ...id, "--title", "El listado no pagina", "--severity", "normal",
-            "--actual", "devuelve todo", "--expected", "devuelve 20"],
-          ["transition", ...id, "--entity", "point", "--point-id", "POINT-001", "--to", "analyzed"],
-          ["transition", ...id, "--entity", "point", "--point-id", "POINT-001", "--to", "in_progress"],
-          ["transition", ...id, "--entity", "point", "--point-id", "POINT-001", "--to", "awaiting_retest"],
-          ["add-evidence", ...id, "--kind", "prueba", "--description", "Captura del listado paginado",
-            "--reference", `commit:${COMMIT}`, "--point-id", "POINT-001"],
+          [
+            "add-point",
+            ...id,
+            "--title",
+            "El listado no pagina",
+            "--severity",
+            "normal",
+            "--actual",
+            "devuelve todo",
+            "--expected",
+            "devuelve 20",
+          ],
+          [
+            "transition",
+            ...id,
+            "--entity",
+            "point",
+            "--point-id",
+            "POINT-001",
+            "--to",
+            "analyzed",
+          ],
+          [
+            "transition",
+            ...id,
+            "--entity",
+            "point",
+            "--point-id",
+            "POINT-001",
+            "--to",
+            "in_progress",
+          ],
+          [
+            "transition",
+            ...id,
+            "--entity",
+            "point",
+            "--point-id",
+            "POINT-001",
+            "--to",
+            "awaiting_retest",
+          ],
+          [
+            "add-evidence",
+            ...id,
+            "--kind",
+            "prueba",
+            "--description",
+            "Captura del listado paginado",
+            "--reference",
+            `commit:${COMMIT}`,
+            "--point-id",
+            "POINT-001",
+          ],
           // El ticket avanza hasta QA.
           ["transition", ...id, "--entity", "ticket", "--to", "approved"],
           ["transition", ...id, "--entity", "ticket", "--to", "in_progress"],
           ["transition", ...id, "--entity", "ticket", "--to", "awaiting_user_tests"],
           ["transition", ...id, "--entity", "ticket", "--to", "in_qa"],
-          ["qa-start", ...id, "--environment", "staging", "--build-reference", `commit:${COMMIT}`],
-          ["add-retest", ...id, "--point-id", "POINT-001", "--result", "approved",
-            "--po-confirmation", "Confirmado por el PO"],
-          ["qa-close", ...id, "--result", "approved", "--po-confirmation", "Aprobado por el PO"],
+          [
+            "qa-start",
+            ...id,
+            "--environment",
+            "staging",
+            "--build-reference",
+            `commit:${COMMIT}`,
+          ],
+          [
+            "add-retest",
+            ...id,
+            "--point-id",
+            "POINT-001",
+            "--result",
+            "approved",
+            "--po-confirmation",
+            "Confirmado por el PO",
+          ],
+          [
+            "qa-close",
+            ...id,
+            "--result",
+            "approved",
+            "--po-confirmation",
+            "Aprobado por el PO",
+          ],
           ["transition", ...id, "--entity", "ticket", "--to", "qa_approved"],
-          ["close-attempt", ...id,
-            "--technical-summary", "Se cambió el lookup del filtro.",
-            "--functional-summary", "El listado pagina de veinte en veinte.",
-            "--qa-status", "approved",
-            "--release-impact", "Entra en la próxima release."],
+          [
+            "close-attempt",
+            ...id,
+            "--technical-summary",
+            "Se cambió el lookup del filtro.",
+            "--functional-summary",
+            "El listado pagina de veinte en veinte.",
+            "--qa-status",
+            "approved",
+            "--release-impact",
+            "Entra en la próxima release.",
+          ],
           ["transition", ...id, "--entity", "ticket", "--to", "closed"],
           // El consumo se registra incluso con el ticket cerrado.
-          ["add-ai-usage", ...id, "--source", "cli", "--confidence", "high",
-            "--model", "deepseek/deepseek-v4-flash", "--input-tokens", "751",
-            "--output-tokens", "115", "--estimated-cost-usd", "0.0000315"],
+          [
+            "add-ai-usage",
+            ...id,
+            "--source",
+            "cli",
+            "--confidence",
+            "high",
+            "--model",
+            "deepseek/deepseek-v4-flash",
+            "--input-tokens",
+            "751",
+            "--output-tokens",
+            "115",
+            "--estimated-cost-usd",
+            "0.0000315",
+          ],
           // Y la release se publica.
-          ["transition", ...id, "--entity", "release", "--to", "planned", "--version", "6.3.0"],
-          ["transition", ...id, "--entity", "release", "--to", "released", "--version", "6.3.0"],
+          [
+            "transition",
+            ...id,
+            "--entity",
+            "release",
+            "--to",
+            "planned",
+            "--version",
+            "6.3.0",
+          ],
+          [
+            "transition",
+            ...id,
+            "--entity",
+            "release",
+            "--to",
+            "released",
+            "--version",
+            "6.3.0",
+          ],
         ];
 
         for (const [indice, paso] of pasos.entries()) {
@@ -605,16 +805,40 @@ describe.skipIf(!disponible)("equivalencia con ticket.py", () => {
           ["transition", ...id, "--entity", "ticket", "--to", "in_progress"],
           ["transition", ...id, "--entity", "ticket", "--to", "awaiting_user_tests"],
           ["transition", ...id, "--entity", "ticket", "--to", "in_qa"],
-          ["qa-start", ...id, "--environment", "staging",
-            "--build-reference", `commit:${"a".repeat(40)}`],
+          [
+            "qa-start",
+            ...id,
+            "--environment",
+            "staging",
+            "--build-reference",
+            `commit:${"a".repeat(40)}`,
+          ],
           ["qa-close", ...id, "--result", "approved", "--po-confirmation", "Aprobado"],
           ["transition", ...id, "--entity", "ticket", "--to", "qa_approved"],
-          ["close-attempt", ...id, "--technical-summary", "T", "--functional-summary", "F",
-            "--qa-status", "approved", "--release-impact", "R"],
+          [
+            "close-attempt",
+            ...id,
+            "--technical-summary",
+            "T",
+            "--functional-summary",
+            "F",
+            "--qa-status",
+            "approved",
+            "--release-impact",
+            "R",
+          ],
           ["transition", ...id, "--entity", "ticket", "--to", "closed"],
           // El hallazgo posterior: reabre, anexa dos ciclos QA y pide motivo.
-          ["transition", ...id, "--entity", "ticket", "--to", "changes_requested",
-            "--reason", "El PO encontró un caso sin cubrir."],
+          [
+            "transition",
+            ...id,
+            "--entity",
+            "ticket",
+            "--to",
+            "changes_requested",
+            "--reason",
+            "El PO encontró un caso sin cubrir.",
+          ],
         ];
 
         for (const [indice, paso] of pasos.entries()) {
@@ -654,14 +878,26 @@ describe.skipIf(!disponible)("equivalencia con ticket.py", () => {
       const plantilla = readFileSync(plantillaDeReferencia(), "utf8");
       // La misma plantilla en los dos sitios: donde la lee la referencia y donde
       // la lee el harness.
-      writeFileSync(join(raiz, "docs", "agentic", "templates", "ticket.template.md"), plantilla);
+      writeFileSync(
+        join(raiz, "docs", "agentic", "templates", "ticket.template.md"),
+        plantilla,
+      );
       writeFileSync(join(raiz, ".valmen", "templates", "ticket.md"), plantilla);
       return raiz;
     }
 
     const args = [
-      "create", "--id", NUEVO, "--title", "El listado no pagina",
-      "--type", "BUGFIX", "--module", "POS", "--request", SOLICITUD,
+      "create",
+      "--id",
+      NUEVO,
+      "--title",
+      "El listado no pagina",
+      "--type",
+      "BUGFIX",
+      "--module",
+      "POS",
+      "--request",
+      SOLICITUD,
     ];
 
     it("produce el mismo ticket salvo la versión de esquema", () => {
@@ -694,8 +930,17 @@ describe.skipIf(!disponible)("equivalencia con ticket.py", () => {
       try {
         const larga = "Primera línea.\n\nSegunda línea, con coma, y acentos: ñáé.";
         const mio = valmen(raiz, [
-          "create", "--id", NUEVO, "--title", "T", "--type", "BUGFIX",
-          "--module", "POS", "--request", larga,
+          "create",
+          "--id",
+          NUEVO,
+          "--title",
+          "T",
+          "--type",
+          "BUGFIX",
+          "--module",
+          "POS",
+          "--request",
+          larga,
         ]);
         expect(mio.code).toBe(0);
         const texto = readFileSync(
@@ -712,12 +957,30 @@ describe.skipIf(!disponible)("equivalencia con ticket.py", () => {
       const raiz = crearLaboratorioDeAlta();
       try {
         const suyo = referencia(raiz, [
-          "create", "--id", NUEVO, "--title", "T", "--type", "FEATURE",
-          "--module", "POS", "--request", "R",
+          "create",
+          "--id",
+          NUEVO,
+          "--title",
+          "T",
+          "--type",
+          "FEATURE",
+          "--module",
+          "POS",
+          "--request",
+          "R",
         ]);
         const mio = valmen(raiz, [
-          "create", "--id", NUEVO, "--title", "T", "--type", "FEATURE",
-          "--module", "POS", "--request", "R",
+          "create",
+          "--id",
+          NUEVO,
+          "--title",
+          "T",
+          "--type",
+          "FEATURE",
+          "--module",
+          "POS",
+          "--request",
+          "R",
         ]);
         expect(mio.code).toBe(suyo.code);
         expect(mio.stderr).toBe(suyo.stderr);
@@ -730,8 +993,17 @@ describe.skipIf(!disponible)("equivalencia con ticket.py", () => {
       const raiz = crearLaboratorioDeAlta();
       try {
         const argumentos = [
-          "create", "--id", NUEVO, "--title", "T", "--type", "BUGFIX",
-          "--module", "VENTAS", "--request", "R",
+          "create",
+          "--id",
+          NUEVO,
+          "--title",
+          "T",
+          "--type",
+          "BUGFIX",
+          "--module",
+          "VENTAS",
+          "--request",
+          "R",
         ];
         const suyo = referencia(raiz, argumentos);
         const mio = valmen(raiz, argumentos);
@@ -769,32 +1041,72 @@ describe.skipIf(!disponible)("equivalencia con ticket.py", () => {
   describe("los comandos de anexado", () => {
     it("`add-point` con severidad inválida se rechaza igual", () => {
       comparar(
-        ["add-point", "--id", TICKET, "--title", "T", "--severity", "urgentísimo",
-          "--actual", "A", "--expected", "E"],
+        [
+          "add-point",
+          "--id",
+          TICKET,
+          "--title",
+          "T",
+          "--severity",
+          "urgentísimo",
+          "--actual",
+          "A",
+          "--expected",
+          "E",
+        ],
         "severidad inválida",
       );
     });
 
     it("`add-point` con título multilínea se rechaza igual", () => {
       comparar(
-        ["add-point", "--id", TICKET, "--title", "T\ncon salto", "--severity", "normal",
-          "--actual", "A", "--expected", "E"],
+        [
+          "add-point",
+          "--id",
+          TICKET,
+          "--title",
+          "T\ncon salto",
+          "--severity",
+          "normal",
+          "--actual",
+          "A",
+          "--expected",
+          "E",
+        ],
         "título con salto",
       );
     });
 
     it("`add-evidence` con una referencia mal formada se rechaza igual", () => {
       comparar(
-        ["add-evidence", "--id", TICKET, "--kind", "log", "--description", "D",
-          "--reference", "commit:ABCDEF"],
+        [
+          "add-evidence",
+          "--id",
+          TICKET,
+          "--kind",
+          "log",
+          "--description",
+          "D",
+          "--reference",
+          "commit:ABCDEF",
+        ],
         "referencia en mayúsculas",
       );
     });
 
     it("`add-evidence` sobre un punto inexistente se rechaza igual", () => {
       comparar(
-        ["add-evidence", "--id", TICKET, "--kind", "log", "--description", "D",
-          "--point-id", "POINT-004"],
+        [
+          "add-evidence",
+          "--id",
+          TICKET,
+          "--kind",
+          "log",
+          "--description",
+          "D",
+          "--point-id",
+          "POINT-004",
+        ],
         "punto inexistente",
       );
     });
@@ -808,24 +1120,49 @@ describe.skipIf(!disponible)("equivalencia con ticket.py", () => {
 
     it("`add-ai-usage` con coste exponencial se rechaza igual", () => {
       comparar(
-        ["add-ai-usage", "--id", TICKET, "--source", "cli", "--confidence", "high",
-          "--estimated-cost-usd", "1e3"],
+        [
+          "add-ai-usage",
+          "--id",
+          TICKET,
+          "--source",
+          "cli",
+          "--confidence",
+          "high",
+          "--estimated-cost-usd",
+          "1e3",
+        ],
         "coste exponencial",
       );
     });
 
     it("`add-ai-usage` con tokens negativos se rechaza igual", () => {
       comparar(
-        ["add-ai-usage", "--id", TICKET, "--source", "cli", "--confidence", "high",
-          "--input-tokens", "-5"],
+        [
+          "add-ai-usage",
+          "--id",
+          TICKET,
+          "--source",
+          "cli",
+          "--confidence",
+          "high",
+          "--input-tokens",
+          "-5",
+        ],
         "tokens negativos",
       );
     });
 
     it("`qa-start` fuera de `in_qa` se rechaza igual", () => {
       comparar(
-        ["qa-start", "--id", TICKET, "--environment", "staging",
-          "--build-reference", `commit:${"a".repeat(40)}`],
+        [
+          "qa-start",
+          "--id",
+          TICKET,
+          "--environment",
+          "staging",
+          "--build-reference",
+          `commit:${"a".repeat(40)}`,
+        ],
         "qa-start fuera de in_qa",
       );
     });
@@ -843,24 +1180,55 @@ describe.skipIf(!disponible)("equivalencia con ticket.py", () => {
 
     it("`add-retest` fuera de `in_qa` se rechaza igual", () => {
       comparar(
-        ["add-retest", "--id", TICKET, "--point-id", "POINT-001", "--result", "approved",
-          "--po-confirmation", "PO"],
+        [
+          "add-retest",
+          "--id",
+          TICKET,
+          "--point-id",
+          "POINT-001",
+          "--result",
+          "approved",
+          "--po-confirmation",
+          "PO",
+        ],
         "retest fuera de in_qa",
       );
     });
 
     it("`close-attempt` con QA no aprobada se rechaza igual", () => {
       comparar(
-        ["close-attempt", "--id", TICKET, "--technical-summary", "T",
-          "--functional-summary", "F", "--qa-status", "waived", "--release-impact", "R"],
+        [
+          "close-attempt",
+          "--id",
+          TICKET,
+          "--technical-summary",
+          "T",
+          "--functional-summary",
+          "F",
+          "--qa-status",
+          "waived",
+          "--release-impact",
+          "R",
+        ],
         "cierre sin exención",
       );
     });
 
     it("`close-attempt` con `qa-status` fuera del esquema se rechaza igual", () => {
       comparar(
-        ["close-attempt", "--id", TICKET, "--technical-summary", "T",
-          "--functional-summary", "F", "--qa-status", "maybe", "--release-impact", "R"],
+        [
+          "close-attempt",
+          "--id",
+          TICKET,
+          "--technical-summary",
+          "T",
+          "--functional-summary",
+          "F",
+          "--qa-status",
+          "maybe",
+          "--release-impact",
+          "R",
+        ],
         "qa-status inválido",
       );
     });
@@ -889,13 +1257,18 @@ describe.skipIf(!disponible)("equivalencia con ticket.py", () => {
       // laboratorios creados en segundos distintos producirían SHA distintos. Eso
       // haría fallar la comparación por una diferencia que no tiene nada que ver
       // con lo que se está probando: el commit que el ticket menciona.
-      const cuando = { GIT_AUTHOR_DATE: "2026-09-21T00:00:00Z", GIT_COMMITTER_DATE: "2026-09-21T00:00:00Z" };
+      const cuando = {
+        GIT_AUTHOR_DATE: "2026-09-21T00:00:00Z",
+        GIT_COMMITTER_DATE: "2026-09-21T00:00:00Z",
+      };
       spawnSync("git", ["commit", "-q", "-m", "trabajo"], {
         cwd: raiz,
         env: { ...process.env, ...cuando },
       });
-      const commit = spawnSync("git", ["rev-parse", "HEAD"], { cwd: raiz, encoding: "utf8" })
-        .stdout.trim();
+      const commit = spawnSync("git", ["rev-parse", "HEAD"], {
+        cwd: raiz,
+        encoding: "utf8",
+      }).stdout.trim();
 
       // El índice tiene que existir **antes** de crear: la referencia comprueba
       // la ruta del índice al final de cada mutación, así que sin él hasta un
@@ -912,8 +1285,17 @@ describe.skipIf(!disponible)("equivalencia con ticket.py", () => {
       // El ticket, creado y cerrado con la referencia: es el sujeto que las dos
       // implementaciones van a publicar.
       const alta = referencia(raiz, [
-        "create", "--id", TICKET, "--title", "El filtro no encuentra por número parcial",
-        "--type", "BUGFIX", "--module", "POS", "--request", "No encuentra la orden.",
+        "create",
+        "--id",
+        TICKET,
+        "--title",
+        "El filtro no encuentra por número parcial",
+        "--type",
+        "BUGFIX",
+        "--module",
+        "POS",
+        "--request",
+        "No encuentra la orden.",
       ]);
       expect(alta.code, `alta con la referencia: ${alta.stderr}`).toBe(0);
       const ruta = join(raiz, "docs", "tickets", "2026", TICKET, "ticket.md");
@@ -945,17 +1327,38 @@ describe.skipIf(!disponible)("equivalencia con ticket.py", () => {
         ["transition", "--id", TICKET, "--entity", "ticket", "--to", "in_progress"],
         ["transition", "--id", TICKET, "--entity", "ticket", "--to", "awaiting_user_tests"],
         ["transition", "--id", TICKET, "--entity", "ticket", "--to", "in_qa"],
-        ["qa-start", "--id", TICKET, "--environment", "staging",
-          "--build-reference", `commit:${commit}`],
+        [
+          "qa-start",
+          "--id",
+          TICKET,
+          "--environment",
+          "staging",
+          "--build-reference",
+          `commit:${commit}`,
+        ],
         ["qa-close", "--id", TICKET, "--result", "approved", "--po-confirmation", "PO"],
         ["transition", "--id", TICKET, "--entity", "ticket", "--to", "qa_approved"],
-        ["close-attempt", "--id", TICKET, "--technical-summary", "T",
-          "--functional-summary", "F", "--qa-status", "approved", "--release-impact", "R"],
+        [
+          "close-attempt",
+          "--id",
+          TICKET,
+          "--technical-summary",
+          "T",
+          "--functional-summary",
+          "F",
+          "--qa-status",
+          "approved",
+          "--release-impact",
+          "R",
+        ],
         ["transition", "--id", TICKET, "--entity", "ticket", "--to", "closed"],
       ];
       for (const paso of pasos) {
         const resultado = referencia(raiz, paso as string[]);
-        expect(resultado.code, `cierre con la referencia: ${paso[0]} ${paso[3] ?? ""}`).toBe(0);
+        expect(
+          resultado.code,
+          `cierre con la referencia: ${paso[0]} ${paso[3] ?? ""}`,
+        ).toBe(0);
       }
 
       // El tag se crea después del último commit, así que apunta al tip de
@@ -1029,8 +1432,11 @@ describe.skipIf(!disponible)("equivalencia con ticket.py", () => {
       const b = laboratorioDeRelease();
       try {
         const malo = [
-          "release-publish", "--version", "6.3.0",
-          "--tickets", `${TICKET},${TICKET}`,
+          "release-publish",
+          "--version",
+          "6.3.0",
+          "--tickets",
+          `${TICKET},${TICKET}`,
         ];
         const suyo = referencia(a.raiz, malo);
         const mio = valmen(b.raiz, malo);
@@ -1081,8 +1487,15 @@ describe.skipIf(!disponible)("equivalencia con ticket.py", () => {
     it("un punto inexistente se rechaza igual", () => {
       comparar(
         [
-          "transition", "--id", TICKET, "--entity", "point", "--to", "analyzed",
-          "--point-id", "POINT-009",
+          "transition",
+          "--id",
+          TICKET,
+          "--entity",
+          "point",
+          "--to",
+          "analyzed",
+          "--point-id",
+          "POINT-009",
         ],
         "punto inexistente",
       );
@@ -1091,8 +1504,17 @@ describe.skipIf(!disponible)("equivalencia con ticket.py", () => {
     it("`--version` con una transición de punto se rechaza igual", () => {
       comparar(
         [
-          "transition", "--id", TICKET, "--entity", "point", "--to", "analyzed",
-          "--point-id", "POINT-001", "--version", "1.0.0",
+          "transition",
+          "--id",
+          TICKET,
+          "--entity",
+          "point",
+          "--to",
+          "analyzed",
+          "--point-id",
+          "POINT-001",
+          "--version",
+          "1.0.0",
         ],
         "--version en punto",
       );

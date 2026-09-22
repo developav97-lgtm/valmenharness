@@ -20,13 +20,7 @@ import {
   STRUCTURED_SECTIONS,
 } from "../packages/core/src/contract.js";
 
-const FIXTURE_ROOT = join(
-  import.meta.dirname,
-  "fixtures",
-  "saicloud",
-  "tickets",
-  "2026",
-);
+const FIXTURE_ROOT = join(import.meta.dirname, "fixtures", "saicloud", "tickets", "2026");
 
 /** Los 57 directorios de ticket del fixture, ordenados. */
 function ticketIds(): string[] {

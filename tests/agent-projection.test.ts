@@ -61,18 +61,14 @@ describe("proyección a Codex (TOML)", () => {
     // archivo que ninguna herramienta puede leer, y el error aparece en el
     // runtime del agente, lejos del generador. Este caso se coló una vez.
     for (const agent of agents) {
-      const file = renderCodexAgent(agent, [
-        ".valmen/agents/" + agent.id + ".md",
-      ]);
+      const file = renderCodexAgent(agent, [".valmen/agents/" + agent.id + ".md"]);
       expect(file.path).toBe(`.codex/agents/${agent.id}.toml`);
       expect(file.content).not.toContain("<!--");
 
       // Las claves obligatorias que Codex espera encontrar.
       expect(file.content).toMatch(/^name = ".*"$/m);
       expect(file.content).toMatch(/^description = ".*"$/m);
-      expect(file.content).toMatch(
-        /^sandbox_mode = "(read-only|workspace-write)"$/m,
-      );
+      expect(file.content).toMatch(/^sandbox_mode = "(read-only|workspace-write)"$/m);
       expect(file.content).toContain('developer_instructions = """');
     }
   });
@@ -139,12 +135,8 @@ describe("proyección a opencode y Claude (Markdown)", () => {
   it("cada runtime escribe en su propio directorio", () => {
     const paths = renderAllAgents(agents, []).map((file) => file.path);
     expect(paths.filter((path) => path.startsWith(".codex/"))).toHaveLength(12);
-    expect(paths.filter((path) => path.startsWith(".opencode/"))).toHaveLength(
-      12,
-    );
-    expect(paths.filter((path) => path.startsWith(".claude/"))).toHaveLength(
-      12,
-    );
+    expect(paths.filter((path) => path.startsWith(".opencode/"))).toHaveLength(12);
+    expect(paths.filter((path) => path.startsWith(".claude/"))).toHaveLength(12);
     // Ninguna ruta se escribe dos veces: un archivo con dos dueños es un
     // archivo que alguien va a pisar.
     expect(new Set(paths).size).toBe(paths.length);

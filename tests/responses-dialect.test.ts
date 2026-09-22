@@ -89,7 +89,8 @@ describe("parseSse", () => {
 
   it("ignora un evento cuyo data no es JSON en vez de romper la lectura", () => {
     // Perder un evento que no se entiende es mejor que perder la respuesta.
-    const texto = "event: response.output_text.delta\ndata: {roto\n\n" +
+    const texto =
+      "event: response.output_text.delta\ndata: {roto\n\n" +
       sse([{ event: "response.output_text.delta", data: { delta: "hola" } }]);
     const eventos = parseSse(texto);
     expect(eventos).toHaveLength(1);
@@ -97,7 +98,7 @@ describe("parseSse", () => {
   });
 
   it("ignora las líneas que no son evento ni dato", () => {
-    const texto = ": un comentario\nevent: x\ndata: {\"a\":1}\n\n";
+    const texto = ': un comentario\nevent: x\ndata: {"a":1}\n\n';
     expect(parseSse(texto)).toHaveLength(1);
   });
 });
@@ -190,7 +191,10 @@ describe("callResponses", () => {
   it("arma el cuerpo del dialecto y devuelve el texto", async () => {
     let visto: { url: string; cuerpo: Record<string, unknown> } | null = null;
     const fetchFalso = (async (url: string, init: { body: string }) => {
-      visto = { url: String(url), cuerpo: JSON.parse(init.body) as Record<string, unknown> };
+      visto = {
+        url: String(url),
+        cuerpo: JSON.parse(init.body) as Record<string, unknown>,
+      };
       return new Response(exito, { status: 200 });
     }) as unknown as typeof fetch;
 
@@ -264,7 +268,12 @@ describe("callResponses", () => {
   it("un fallo dentro del stream no se da por bueno", async () => {
     const fetchFalso = (async () =>
       new Response(
-        sse([{ event: "response.failed", data: { response: { error: { message: "sin cuota" } } } }]),
+        sse([
+          {
+            event: "response.failed",
+            data: { response: { error: { message: "sin cuota" } } },
+          },
+        ]),
         { status: 200 },
       )) as unknown as typeof fetch;
 
@@ -312,15 +321,27 @@ describe("resolveChatEndpoint", () => {
   it("todos los modelos de codex van por el mismo dialecto", () => {
     // Se declara en el proveedor y no por prefijo: un modelo que no encajara en
     // ninguna regla acabaría mandado a la ruta de chat.
-    for (const modelo of ["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna", "gpt-6-astra", "raro"]) {
-      expect(resolveChatEndpoint("codex", modelo).protocol, modelo).toBe("openai-responses");
+    for (const modelo of [
+      "gpt-5.6-sol",
+      "gpt-5.6-terra",
+      "gpt-5.6-luna",
+      "gpt-6-astra",
+      "raro",
+    ]) {
+      expect(resolveChatEndpoint("codex", modelo).protocol, modelo).toBe(
+        "openai-responses",
+      );
     }
   });
 
   it("los `gpt-*` de otros proveedores siguen por chat", () => {
     // El prefijo engaña: el mismo `gpt-*` habla distinto según quién lo sirva.
-    expect(resolveChatEndpoint("openrouter", "openai/gpt-5.4").protocol).toBe("openai-chat");
-    expect(resolveChatEndpoint("opencode-go", "gpt-5.6-luna").protocol).toBe("openai-responses");
+    expect(resolveChatEndpoint("openrouter", "openai/gpt-5.4").protocol).toBe(
+      "openai-chat",
+    );
+    expect(resolveChatEndpoint("opencode-go", "gpt-5.6-luna").protocol).toBe(
+      "openai-responses",
+    );
   });
 });
 
@@ -342,7 +363,10 @@ describe("accountIdFromToken", () => {
 
 describe("readCodexCredential", () => {
   it("lee el token y la cuenta", () => {
-    const casa = escribirAuth({ auth_mode: "chatgpt", tokens: { access_token: tokenFalso("cuenta-1") } });
+    const casa = escribirAuth({
+      auth_mode: "chatgpt",
+      tokens: { access_token: tokenFalso("cuenta-1") },
+    });
     const credencial = readCodexCredential(casa);
     expect(credencial.accessToken).toBe(tokenFalso("cuenta-1"));
     expect(credencial.accountId).toBe("cuenta-1");
@@ -351,12 +375,18 @@ describe("readCodexCredential", () => {
   it("lo lee del disco en cada llamada, porque el CLI lo refresca", () => {
     // Una copia en memoria sobreviviría al refresco del CLI y empezaría a dar 401
     // sin que nada hubiera cambiado.
-    const casa = escribirAuth({ auth_mode: "chatgpt", tokens: { access_token: tokenFalso("vieja") } });
+    const casa = escribirAuth({
+      auth_mode: "chatgpt",
+      tokens: { access_token: tokenFalso("vieja") },
+    });
     expect(readCodexCredential(casa).accountId).toBe("vieja");
 
     writeFileSync(
       join(casa, ".codex", "auth.json"),
-      JSON.stringify({ auth_mode: "chatgpt", tokens: { access_token: tokenFalso("nueva") } }),
+      JSON.stringify({
+        auth_mode: "chatgpt",
+        tokens: { access_token: tokenFalso("nueva") },
+      }),
     );
     expect(readCodexCredential(casa).accountId).toBe("nueva");
   });
@@ -383,7 +413,10 @@ describe("readCodexCredential", () => {
   it("sin la cuenta en el token lo explica", () => {
     // El backend pide la cuenta en una cabecera: sin ella la petición falla, y un
     // fallo del proveedor no diría que hay que volver a iniciar sesión.
-    const casa = escribirAuth({ auth_mode: "chatgpt", tokens: { access_token: tokenFalso(null) } });
+    const casa = escribirAuth({
+      auth_mode: "chatgpt",
+      tokens: { access_token: tokenFalso(null) },
+    });
     expect(() => readCodexCredential(casa)).toThrowError(/no declara la cuenta/);
   });
 

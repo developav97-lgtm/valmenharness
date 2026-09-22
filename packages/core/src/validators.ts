@@ -96,11 +96,7 @@ export function validateIsoDate(value: unknown, label: string): void {
   if (typeof value !== "string" || !DATE_RE.test(value)) {
     fail(`${label} debe usar YYYY-MM-DD.`);
   }
-  const [yearText, monthText, dayText] = value.split("-") as [
-    string,
-    string,
-    string,
-  ];
+  const [yearText, monthText, dayText] = value.split("-") as [string, string, string];
   const year = Number(yearText);
   const month = Number(monthText);
   const day = Number(dayText);
@@ -125,10 +121,7 @@ export function validateNullableText(value: unknown, label: string): void {
 }
 
 /** `null` o entero no negativo. Rechaza booleanos y flotantes. */
-export function validateNullableNonNegativeInteger(
-  value: unknown,
-  label: string,
-): void {
+export function validateNullableNonNegativeInteger(value: unknown, label: string): void {
   if (value === null) return;
   if (
     typeof value === "boolean" ||
@@ -141,10 +134,7 @@ export function validateNullableNonNegativeInteger(
 }
 
 /** `null` o número no negativo y finito. */
-export function validateNullableNonNegativeNumber(
-  value: unknown,
-  label: string,
-): void {
+export function validateNullableNonNegativeNumber(value: unknown, label: string): void {
   if (value === null) return;
   if (
     typeof value === "boolean" ||
@@ -187,10 +177,7 @@ export function requireExactKeys(
 ): void {
   const expected = new Set(keys);
   const actual = Object.keys(item);
-  if (
-    actual.length !== expected.size ||
-    actual.some((key) => !expected.has(key))
-  ) {
+  if (actual.length !== expected.size || actual.some((key) => !expected.has(key))) {
     fail(`${label} no contiene las claves exactas del esquema.`);
   }
 }
@@ -222,9 +209,7 @@ export function validateSequential(
     actual.length === expected.length &&
     actual.every((id, index) => id === expected[index]);
   if (!matches) {
-    fail(
-      `Los IDs de ${label} deben ser únicos, monótonos y conservar su orden.`,
-    );
+    fail(`Los IDs de ${label} deben ser únicos, monótonos y conservar su orden.`);
   }
 }
 

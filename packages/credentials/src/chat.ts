@@ -91,12 +91,13 @@ export interface ChatOptions {
  * Casi todos leen una clave del archivo del harness o de una variable de entorno.
  * `codex` no: usa tokens OAuth de su propio CLI, en su propio archivo, y se leen
  * en cada llamada porque su CLI los refresca por su cuenta.
+ *
+ * Aquí se lee del `$HOME` a propósito: quien llama es el CLI, que corre en la
+ * máquina del usuario. El servidor no pasa por aquí —tiene su propio archivo en el
+ * contexto y lo resuelve en el borde—, así que no hay un segundo camino que pueda
+ * discrepar.
  */
-function resolveCredentialFor(
-  proveedor: string,
-  options: ChatOptions,
-  extra: Readonly<Record<string, string>>,
-): string {
+function resolveCredentialFor(proveedor: string): string {
   if (transportById(proveedor).credential === "codex") {
     try {
       return readCodexCredential().accessToken;
@@ -149,7 +150,7 @@ export async function callChat(options: ChatOptions): Promise<ChatResult> {
   // camino: un proveedor de suscripción no tiene clave en el archivo del harness,
   // así que resolverla después hacía que codex fallara buscando una que nunca iba
   // a estar.
-  const apiKey = options.apiKey ?? resolveCredentialFor(proveedor, options, extra);
+  const apiKey = options.apiKey ?? resolveCredentialFor(proveedor);
 
   // El dialecto no lo elige quien llama: lo dice el endpoint, que lo saca del
   // catálogo de transporte. Un `gpt-*` de codex va por `/responses` con streaming
@@ -160,7 +161,9 @@ export async function callChat(options: ChatOptions): Promise<ChatResult> {
         url: endpoint.url,
         headers: {
           ...extra,
-          ...(apiKey === null || apiKey === "" ? {} : { Authorization: `Bearer ${apiKey}` }),
+          ...(apiKey === null || apiKey === ""
+            ? {}
+            : { Authorization: `Bearer ${apiKey}` }),
         },
         model: options.model,
         messages: options.messages,
@@ -193,9 +196,7 @@ export async function callChat(options: ChatOptions): Promise<ChatResult> {
       body: JSON.stringify({
         model: options.model,
         temperature: options.temperature ?? 0,
-        ...(options.maxTokens === undefined
-          ? {}
-          : { max_tokens: options.maxTokens }),
+        ...(options.maxTokens === undefined ? {} : { max_tokens: options.maxTokens }),
         ...(options.effort === undefined || options.effort === "auto"
           ? {}
           : { reasoning: { effort: options.effort } }),
@@ -232,8 +233,7 @@ export async function callChat(options: ChatOptions): Promise<ChatResult> {
                 },
               }),
       }),
-      signal:
-        options.signal ?? AbortSignal.timeout(options.timeoutMs ?? 90_000),
+      signal: options.signal ?? AbortSignal.timeout(options.timeoutMs ?? 90_000),
     });
   } catch (caught) {
     const detail = caught instanceof Error ? caught.message : String(caught);
@@ -286,10 +286,7 @@ export async function callChat(options: ChatOptions): Promise<ChatResult> {
   try {
     payload = JSON.parse(text) as unknown;
   } catch {
-    throw new ChatError(
-      `La respuesta de ${proveedor} no es JSON.`,
-      "MALFORMED_RESPONSE",
-    );
+    throw new ChatError(`La respuesta de ${proveedor} no es JSON.`, "MALFORMED_RESPONSE");
   }
 
   const data = payload as {

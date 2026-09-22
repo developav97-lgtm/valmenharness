@@ -141,9 +141,7 @@ describe("la compuerta de descomposición", () => {
     // El enunciado viaja con el identificador: `R-INV-003` no dice nada solo.
     expect(huecos[0]?.statement).toContain("CSV");
 
-    expect(() => assertDecompositionComplete(REQUISITOS, incompleta)).toThrow(
-      /R-INV-003/,
-    );
+    expect(() => assertDecompositionComplete(REQUISITOS, incompleta)).toThrow(/R-INV-003/);
   });
 
   it("un ticket fantasma no cubre nada", () => {
@@ -229,9 +227,16 @@ describe("los campos de una feature", () => {
   });
 
   it("los ocho estados del diseño están declarados", () => {
-    expect([...FEATURE_STATES].sort()).toEqual(
-      ["archived", "blocked", "complete", "decomposed", "draft", "in_progress", "planned", "specified"],
-    );
+    expect([...FEATURE_STATES].sort()).toEqual([
+      "archived",
+      "blocked",
+      "complete",
+      "decomposed",
+      "draft",
+      "in_progress",
+      "planned",
+      "specified",
+    ]);
     for (const estado of FEATURE_STATES) {
       expect(FEATURE_TRANSITIONS[estado], estado).toBeDefined();
     }

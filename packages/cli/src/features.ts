@@ -96,10 +96,7 @@ export function featureShow(root: string, slug: string | undefined): CommandResu
   }
 
   if (leida === null) {
-    return error(
-      `No existe la feature "${slug}" en .valmen/features/.`,
-      EXIT_SCHEMA,
-    );
+    return error(`No existe la feature "${slug}" en .valmen/features/.`, EXIT_SCHEMA);
   }
 
   const { row, text } = leida;
@@ -125,9 +122,7 @@ export function featureShow(root: string, slug: string | undefined): CommandResu
     `estado: ${row.state}`,
     `creada: ${row.created} · actualizada: ${row.updated}`,
     "artefactos:",
-    ...rutas.map(
-      ([nombre, ruta, hecho]) => `  ${hecho ? "✓" : "·"} ${ruta}  (${nombre})`,
-    ),
+    ...rutas.map(([nombre, ruta, hecho]) => `  ${hecho ? "✓" : "·"} ${ruta}  (${nombre})`),
   ].join("\n");
 
   return ok(`${cabecera}\n\n${text.trimEnd()}\n`);
@@ -193,8 +188,7 @@ async function featureDecompose(
   const rawModel = flags["model"];
   const modelo = typeof rawModel === "string" ? rawModel : routing.model;
   const rawProvider = flags["provider"];
-  const proveedor =
-    typeof rawProvider === "string" ? rawProvider : routing.provider;
+  const proveedor = typeof rawProvider === "string" ? rawProvider : routing.provider;
 
   try {
     const resultado = await decomposeFeature({

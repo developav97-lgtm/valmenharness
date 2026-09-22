@@ -26,7 +26,11 @@ export interface Projection {
   /** Archivos que son fuente de la proyección, para el encabezado generado. */
   readonly sources: readonly string[];
   /** Cuántos archivos se generan por runtime de agente. */
-  readonly byRuntime: { readonly codex: number; readonly opencode: number; readonly claude: number };
+  readonly byRuntime: {
+    readonly codex: number;
+    readonly opencode: number;
+    readonly claude: number;
+  };
   /** Cuántas reglas del proyecto entraron en `AGENTS.md`. */
   readonly ruleCount: number;
 }

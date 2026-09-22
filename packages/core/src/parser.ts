@@ -32,9 +32,7 @@ export interface ParsedTicket {
   /** Cuerpo de cada una de las 15 secciones, sin el encabezado. */
   readonly sections: Readonly<Record<SectionName, string>>;
   /** Arreglo de objetos de cada sección estructurada. */
-  readonly blocks: Readonly<
-    Record<StructuredSectionName, readonly JsonObject[]>
-  >;
+  readonly blocks: Readonly<Record<StructuredSectionName, readonly JsonObject[]>>;
 }
 
 /**
@@ -50,8 +48,7 @@ export function isSafePlainScalar(value: string): boolean {
     if ((character.codePointAt(0) ?? 0) < 32) return false;
   }
   const first = value[0];
-  if (first !== undefined && "-?:,[]{}#&*!|>'\"%@`".includes(first))
-    return false;
+  if (first !== undefined && "-?:,[]{}#&*!|>'\"%@`".includes(first)) return false;
   if (value.includes(": ") || value.includes(" #")) return false;
   return true;
 }
@@ -71,9 +68,7 @@ export function parseFrontmatter(text: string): {
 } {
   const match = FRONTMATTER_BLOCK_RE.exec(text);
   if (match === null) {
-    fail(
-      "ticket.md debe iniciar con frontmatter restringido delimitado por ---. ",
-    );
+    fail("ticket.md debe iniciar con frontmatter restringido delimitado por ---. ");
   }
 
   const block = match[1] ?? "";
@@ -93,9 +88,7 @@ export function parseFrontmatter(text: string): {
       fail(`El campo de frontmatter ${key} está duplicado.`);
     }
     if (!isSafePlainScalar(value)) {
-      fail(
-        "El frontmatter contiene un valor que no es un escalar plain seguro.",
-      );
+      fail("El frontmatter contiene un valor que no es un escalar plain seguro.");
     }
     keys.push(key);
     fields[key] = value;
@@ -107,9 +100,7 @@ export function parseFrontmatter(text: string): {
     keys.length !== FRONTMATTER_FIELDS.length ||
     keys.some((key, index) => key !== FRONTMATTER_FIELDS[index])
   ) {
-    fail(
-      "El frontmatter no contiene las claves exactas en el orden del esquema 1.",
-    );
+    fail("El frontmatter no contiene las claves exactas en el orden del esquema 1.");
   }
 
   return {
@@ -185,9 +176,7 @@ export function parseSections(
   }
 
   if (canonical === null || descriptionStart < 0) {
-    fail(
-      "Las secciones Markdown faltan, sobran o no conservan el orden canónico.",
-    );
+    fail("Las secciones Markdown faltan, sobran o no conservan el orden canónico.");
   }
 
   const sections: Record<string, string> = {};
@@ -251,10 +240,7 @@ function hasDuplicateKeys(source: string): boolean {
   let index = 0;
 
   const isWhitespace = (character: string | undefined): boolean =>
-    character === " " ||
-    character === "\t" ||
-    character === "\n" ||
-    character === "\r";
+    character === " " || character === "\t" || character === "\n" || character === "\r";
 
   while (index < source.length) {
     const character = source[index];
@@ -326,13 +312,9 @@ export function parseBlocks(
   const blocks: Record<string, JsonObject[]> = {};
 
   for (const name of STRUCTURED_SECTIONS) {
-    const matches = [
-      ...sections[name].matchAll(/^```json\n([\s\S]*?)\n```[ \t]*$/gm),
-    ];
+    const matches = [...sections[name].matchAll(/^```json\n([\s\S]*?)\n```[ \t]*$/gm)];
     if (matches.length !== 1) {
-      fail(
-        `La sección ${name} debe contener exactamente un bloque JSON fenced.`,
-      );
+      fail(`La sección ${name} debe contener exactamente un bloque JSON fenced.`);
     }
 
     const source = matches[0]?.[1] ?? "";

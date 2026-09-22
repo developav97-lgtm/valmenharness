@@ -19,7 +19,6 @@
  * Ver docs/04-PROVEEDORES.md §4 y §5.
  */
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 
 import {
   type Effort,
@@ -139,9 +138,7 @@ export function presetModels(): CatalogModel[] {
 }
 
 /** Consulta el catálogo público de OpenRouter. No necesita clave. */
-export async function fetchCatalog(
-  fetchImpl: typeof fetch = fetch,
-): Promise<ModelCatalog> {
+export async function fetchCatalog(fetchImpl: typeof fetch = fetch): Promise<ModelCatalog> {
   if (cache !== null && Date.now() - cache.at < CACHE_MS) {
     return cache.catalog;
   }
@@ -166,8 +163,9 @@ export async function fetchCatalog(
       }[];
     };
     const models = (datos.data ?? [])
-      .filter((modelo): modelo is { id: string; name?: string; pricing?: { prompt?: string } } =>
-        typeof modelo.id === "string" && modelo.id !== "",
+      .filter(
+        (modelo): modelo is { id: string; name?: string; pricing?: { prompt?: string } } =>
+          typeof modelo.id === "string" && modelo.id !== "",
       )
       .map((modelo) => ({
         id: modelo.id,

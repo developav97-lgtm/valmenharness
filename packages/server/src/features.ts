@@ -138,7 +138,10 @@ function leerDirectorio(ruta: string): string[] {
 }
 
 /** Los requisitos de una feature, con las specs de las que salieron. */
-function requisitosDe(root: string, slug: string): {
+function requisitosDe(
+  root: string,
+  slug: string,
+): {
   specs: ReturnType<typeof readSpecs>;
   requirements: LocatedRequirement[];
 } {
@@ -199,8 +202,7 @@ function toRow(root: string, fila: FeatureRow): FeatureListRow {
         const vista = previewTicketsYaml(yaml, reqs);
         if (vista !== null) {
           tickets = decompositionTickets(vista.document.decomposition).length;
-          gaps =
-            vista.gaps.length + vista.document.decomposition.gaps.length;
+          gaps = vista.gaps.length + vista.document.decomposition.gaps.length;
         }
       }
     } catch {
@@ -233,9 +235,7 @@ export function listFeatureRows(root: string): FeatureListRow[] {
 }
 
 /** Resumen del registro de features. */
-export function summarizeFeatures(
-  rows: readonly FeatureListRow[],
-): FeatureSummary {
+export function summarizeFeatures(rows: readonly FeatureListRow[]): FeatureSummary {
   const byState: Record<string, number> = {};
   for (const row of rows) byState[row.state] = (byState[row.state] ?? 0) + 1;
   return {
@@ -253,10 +253,7 @@ export function summarizeFeatures(
  * Una feature inválida se devuelve igual, con su error: es lo que hay que ver
  * para arreglarla.
  */
-export function readFeatureDetail(
-  root: string,
-  slug: string,
-): FeatureDetail | null {
+export function readFeatureDetail(root: string, slug: string): FeatureDetail | null {
   const leida = readFeature(root, slug);
   if (leida === null) return null;
 
@@ -301,8 +298,7 @@ export function readFeatureDetail(
             return {
               id,
               title: typeof ticket === "string" ? "" : (ticket.title ?? ""),
-              dependsOn:
-                typeof ticket === "string" ? [] : [...(ticket.dependsOn ?? [])],
+              dependsOn: typeof ticket === "string" ? [] : [...(ticket.dependsOn ?? [])],
               exists: existentes.has(id),
               state: existentes.get(id) ?? null,
             };
@@ -330,9 +326,7 @@ export function readFeatureDetail(
     }
   }
 
-  const cubre = new Map(
-    decomposition?.requirements.map((r) => [r.id, r.coveredBy]) ?? [],
-  );
+  const cubre = new Map(decomposition?.requirements.map((r) => [r.id, r.coveredBy]) ?? []);
 
   return {
     ...base,
@@ -363,10 +357,7 @@ export function readFeatureDetail(
  * descomposición: si la pantalla calculara los suyos, un cambio en cómo se leen
  * las specs haría que el botón y el comando discreparan.
  */
-export function requirementsOf(
-  root: string,
-  slug: string,
-): readonly FeatureRequirement[] {
+export function requirementsOf(root: string, slug: string): readonly FeatureRequirement[] {
   return requisitosDe(root, slug).requirements;
 }
 

@@ -8,13 +8,7 @@
  *
  * Ver docs/07-ADAPTADORES.md.
  */
-import {
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -39,8 +33,7 @@ function captureFailure(
   } catch (caught) {
     const error = caught as { message?: unknown; exitCode?: unknown };
     return {
-      message:
-        typeof error.message === "string" ? error.message : String(caught),
+      message: typeof error.message === "string" ? error.message : String(caught),
       exitCode: typeof error.exitCode === "number" ? error.exitCode : -1,
     };
   }
@@ -93,9 +86,7 @@ describe("análisis de config.yaml", () => {
   });
 
   it("ignora los comentarios al final de una línea", () => {
-    const config = parseConfig(
-      "name: SaiOpenCloud  # el producto\ngates: []\n",
-    );
+    const config = parseConfig("name: SaiOpenCloud  # el producto\ngates: []\n");
     expect(readString(config, "name", "")).toBe("SaiOpenCloud");
   });
 
@@ -110,9 +101,7 @@ describe("análisis de config.yaml", () => {
     // `dist`, así que hay dos identidades de la misma clase. El mensaje y el
     // código de salida son lo que un consumidor ve.
     const failure = captureFailure(() => parseConfig("name: uno\nname: dos\n"));
-    expect(failure?.message).toBe(
-      'config.yaml línea 2: la clave "name" está duplicada.',
-    );
+    expect(failure?.message).toBe('config.yaml línea 2: la clave "name" está duplicada.');
     expect(failure?.exitCode).toBe(2);
   });
 
@@ -122,9 +111,7 @@ describe("análisis de config.yaml", () => {
 
   it("falla ante una indentación inconsistente", () => {
     const failure = captureFailure(() => parseConfig("a:\n  b: 1\n   c: 2\n"));
-    expect(failure?.message).toBe(
-      "config.yaml línea 3: indentación inesperada.",
-    );
+    expect(failure?.message).toBe("config.yaml línea 3: indentación inesperada.");
     expect(failure?.exitCode).toBe(2);
   });
 
@@ -137,10 +124,7 @@ describe("análisis de config.yaml", () => {
     // "[plan, analysis]" haría que el documento generado anunciara un gate con
     // ese nombre: un valor con contenido donde no lo hay. Antes se rechazaba;
     // ahora se interpreta, que es lo que espera quien lo escribe.
-    expect(parseConfig("gates: [plan, analysis]\n").gates).toEqual([
-      "plan",
-      "analysis",
-    ]);
+    expect(parseConfig("gates: [plan, analysis]\n").gates).toEqual(["plan", "analysis"]);
     expect(parseConfig("budgets: {a: 1}\n").budgets).toEqual({ a: "1" });
     // Las formas vacías siguen admitidas: son las que escribe el harness.
     expect(parseConfig("gates: []\n").gates).toEqual([]);
@@ -161,9 +145,7 @@ describe("análisis de config.yaml", () => {
 
   it("usa el valor por defecto cuando la clave no está", () => {
     const config = parseConfig("name: uno\n");
-    expect(readString(config, "description", "sin descripción")).toBe(
-      "sin descripción",
-    );
+    expect(readString(config, "description", "sin descripción")).toBe("sin descripción");
     expect(readList(config, "gates", ["intake"])).toEqual(["intake"]);
   });
 });
@@ -209,8 +191,8 @@ describe("proyección a AGENTS.md", () => {
     );
     const output = projectAgentsMd(loadProjectModel(lab, "Demo"));
 
-    const positions = ["## Primero", "## Segundo", "## Tercero"].map(
-      (heading) => output.indexOf(heading),
+    const positions = ["## Primero", "## Segundo", "## Tercero"].map((heading) =>
+      output.indexOf(heading),
     );
     expect(positions.every((position) => position > 0)).toBe(true);
     // El orden de los archivos manda, y el proyecto lo controla renombrándolos.
@@ -228,9 +210,7 @@ describe("proyección a AGENTS.md", () => {
     // Las secciones que hacen útil el documento para un agente nuevo.
     expect(output).toContain("Autorización antes de acción");
     expect(output).toContain("Acciones que nunca se automatizan");
-    expect(output.toLowerCase()).toContain(
-      "los bloques append-only no se reescriben",
-    );
+    expect(output.toLowerCase()).toContain("los bloques append-only no se reescriben");
   });
 
   it("avisa cuando el proyecto no declara reglas propias", () => {
@@ -240,10 +220,7 @@ describe("proyección a AGENTS.md", () => {
   });
 
   it("refleja los gates y el registro declarados en la configuración", () => {
-    scaffold(
-      {},
-      "name: Demo\ntickets-dir: docs/tickets\ngates:\n  - plan\n  - qa\n",
-    );
+    scaffold({}, "name: Demo\ntickets-dir: docs/tickets\ngates:\n  - plan\n  - qa\n");
     const output = projectAgentsMd(loadProjectModel(lab, "Demo"));
     expect(output).toContain("## Gates configurados");
     expect(output).toContain("- `plan`");
@@ -286,11 +263,7 @@ describe("comando sync", () => {
     syncProject(lab, "Demo", false);
 
     const target = join(lab, "AGENTS.md");
-    writeFileSync(
-      target,
-      readFileSync(target, "utf8") + "\nnota añadida a mano\n",
-      "utf8",
-    );
+    writeFileSync(target, readFileSync(target, "utf8") + "\nnota añadida a mano\n", "utf8");
 
     const checked = syncProject(lab, "Demo", true);
     expect(checked.exitCode).toBe(2);

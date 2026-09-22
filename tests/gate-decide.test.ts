@@ -17,7 +17,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   DEFAULT_POLICY,
-  type GatePolicy,
   type Proposition,
   type PropositionAnswer,
   GateDefinitionError,
@@ -125,9 +124,7 @@ describe("reproduce la llamada real a Jev", () => {
         ? { ...proposition, verdict: true }
         : proposition,
     );
-    expect(decide(sinMarca, REAL_ANSWERS, DEFAULT_POLICY).outcome).toBe(
-      "block",
-    );
+    expect(decide(sinMarca, REAL_ANSWERS, DEFAULT_POLICY).outcome).toBe("block");
   });
 
   it("explica el motivo con las probabilidades, no con una opinión", () => {
@@ -139,12 +136,8 @@ describe("reproduce la llamada real a Jev", () => {
 // ── Umbrales ────────────────────────────────────────────────────────────────
 
 describe("umbrales", () => {
-  const noul = (value: number): PropositionAnswer[] => [
-    { id: "p", kind: "noul", value },
-  ];
-  const unaProposicion: Proposition[] = [
-    { id: "p", kind: "noul", instructions: "x" },
-  ];
+  const noul = (value: number): PropositionAnswer[] => [{ id: "p", kind: "noul", value }];
+  const unaProposicion: Proposition[] = [{ id: "p", kind: "noul", instructions: "x" }];
 
   it("aprueba en o por encima del umbral", () => {
     expect(decide(unaProposicion, noul(0.9)).outcome).toBe("approve");
@@ -158,9 +151,7 @@ describe("umbrales", () => {
 
   it("manda a revisión la banda intermedia", () => {
     for (const value of [0.11, 0.5, 0.75, 0.89]) {
-      expect(decide(unaProposicion, noul(value)).outcome, String(value)).toBe(
-        "review",
-      );
+      expect(decide(unaProposicion, noul(value)).outcome, String(value)).toBe("review");
     }
   });
 
@@ -253,19 +244,16 @@ describe("proposiciones de elección", () => {
 
   it("aplica el efecto declarado de la opción", () => {
     expect(
-      decide(eleccion, [
-        { id: "clasificacion", kind: "choice", choice: "completo" },
-      ]).outcome,
+      decide(eleccion, [{ id: "clasificacion", kind: "choice", choice: "completo" }])
+        .outcome,
     ).toBe("approve");
     expect(
-      decide(eleccion, [
-        { id: "clasificacion", kind: "choice", choice: "falta_alcance" },
-      ]).outcome,
+      decide(eleccion, [{ id: "clasificacion", kind: "choice", choice: "falta_alcance" }])
+        .outcome,
     ).toBe("block");
     expect(
-      decide(eleccion, [
-        { id: "clasificacion", kind: "choice", choice: "falta_pruebas" },
-      ]).outcome,
+      decide(eleccion, [{ id: "clasificacion", kind: "choice", choice: "falta_pruebas" }])
+        .outcome,
     ).toBe("review");
   });
 
@@ -290,9 +278,7 @@ describe("proposiciones de elección", () => {
 
   it("rechaza una opción que el gate no declaró", () => {
     expect(() =>
-      decide(eleccion, [
-        { id: "clasificacion", kind: "choice", choice: "inventada" },
-      ]),
+      decide(eleccion, [{ id: "clasificacion", kind: "choice", choice: "inventada" }]),
     ).toThrow("no está entre las declaradas");
   });
 });
@@ -317,27 +303,25 @@ describe("proposiciones de escala", () => {
   ];
 
   it("usa el nivel correspondiente a la posición", () => {
-    expect(
-      decide(escala, [{ id: "riesgo", kind: "score", score: 1 }]).outcome,
-    ).toBe("approve");
-    expect(
-      decide(escala, [{ id: "riesgo", kind: "score", score: 2 }]).outcome,
-    ).toBe("review");
-    expect(
-      decide(escala, [{ id: "riesgo", kind: "score", score: 4 }]).outcome,
-    ).toBe("block");
+    expect(decide(escala, [{ id: "riesgo", kind: "score", score: 1 }]).outcome).toBe(
+      "approve",
+    );
+    expect(decide(escala, [{ id: "riesgo", kind: "score", score: 2 }]).outcome).toBe(
+      "review",
+    );
+    expect(decide(escala, [{ id: "riesgo", kind: "score", score: 4 }]).outcome).toBe(
+      "block",
+    );
   });
 
   it("una posición entre dos niveles se juzga por el nivel inferior", () => {
     // Jev devuelve un número, no un índice: 2.4 es posible. Se lee con las
     // reglas del nivel 2, que es la lectura conservadora.
-    expect(
-      decide(escala, [{ id: "riesgo", kind: "score", score: 2.4 }]).outcome,
-    ).toBe("review");
+    expect(decide(escala, [{ id: "riesgo", kind: "score", score: 2.4 }]).outcome).toBe(
+      "review",
+    );
     // 3.9 se juzga como nivel 3 (bloquea), no como 4.
-    const decision = decide(escala, [
-      { id: "riesgo", kind: "score", score: 3.9 },
-    ]);
+    const decision = decide(escala, [{ id: "riesgo", kind: "score", score: 3.9 }]);
     expect(decision.outcome).toBe("block");
     expect(decision.reason).toContain("riesgo alto");
   });
@@ -353,18 +337,16 @@ describe("información incompleta", () => {
     ];
     // Un gate no puede decidir con información parcial: si faltara una respuesta
     // y se ignorara, el gate aprobaría sin haber evaluado todo.
-    expect(() =>
-      decide(propositions, [{ id: "a", kind: "noul", value: 0.99 }]),
-    ).toThrow('El evaluador no respondió la proposición "b"');
+    expect(() => decide(propositions, [{ id: "a", kind: "noul", value: 0.99 }])).toThrow(
+      'El evaluador no respondió la proposición "b"',
+    );
   });
 
   it("rechaza una probabilidad fuera de rango", () => {
-    const propositions: Proposition[] = [
-      { id: "a", kind: "noul", instructions: "a" },
-    ];
-    expect(() =>
-      decide(propositions, [{ id: "a", kind: "noul", value: 1.5 }]),
-    ).toThrow(GateDefinitionError);
+    const propositions: Proposition[] = [{ id: "a", kind: "noul", instructions: "a" }];
+    expect(() => decide(propositions, [{ id: "a", kind: "noul", value: 1.5 }])).toThrow(
+      GateDefinitionError,
+    );
     // Una respuesta sin `value` es lo que el caso representa, y el contrato la
     // prohíbe: se construye con el tipo declarado y sin el campo, en vez de
     // escribirlo como `undefined`, que con `exactOptionalPropertyTypes` ni
@@ -423,17 +405,13 @@ describe("recibos", () => {
   });
 
   it("el hash del estado cambia si cambia el artefacto", () => {
-    expect(hashState(state)).not.toBe(
-      hashState({ ...state, plan: "otro plan" }),
-    );
+    expect(hashState(state)).not.toBe(hashState({ ...state, plan: "otro plan" }));
   });
 
   it("el hash del gate detecta que cambió el gate, no el artefacto", () => {
     // Sin este campo, un cambio de resultados sería ambiguo: ¿cambió el ticket
     // o cambió la definición del gate?
-    const otro: Proposition[] = [
-      { id: "p", kind: "noul", instructions: "distinta" },
-    ];
+    const otro: Proposition[] = [{ id: "p", kind: "noul", instructions: "distinta" }];
     expect(hashGate(REAL_PROPOSITIONS, DEFAULT_POLICY)).not.toBe(
       hashGate(otro, DEFAULT_POLICY),
     );

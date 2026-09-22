@@ -209,7 +209,10 @@ describe("guardar la configuración", () => {
   });
 
   it("avisa de qué archivos generados quedan desactualizados", () => {
-    const impacto = projectionImpact(lab, CONFIG.replace("name: SaiOpenCloud", "name: Otro"));
+    const impacto = projectionImpact(
+      lab,
+      CONFIG.replace("name: SaiOpenCloud", "name: Otro"),
+    );
     expect(impacto?.files).toEqual([{ path: "AGENTS.md", stale: true }]);
     expect(impacto?.stale).toBe(1);
     expect(impacto?.changesAgentsMd).toBe(true);
@@ -312,7 +315,10 @@ describe("la API de configuración", () => {
     const texto = CONFIG.replace("tickets-dir: docs/tickets", "tickets-dir: tickets");
     const respuesta = await handleApi("PUT", "/api/config", { text: texto }, context());
     expect(respuesta.status).toBe(200);
-    expect((respuesta.body as { config: { summary: { ticketsDir: string } } }).config.summary.ticketsDir).toBe("tickets");
+    expect(
+      (respuesta.body as { config: { summary: { ticketsDir: string } } }).config.summary
+        .ticketsDir,
+    ).toBe("tickets");
   });
 
   it("no guarda cuando el texto no parsea, y lo informa", async () => {

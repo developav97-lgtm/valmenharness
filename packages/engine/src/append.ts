@@ -144,10 +144,7 @@ export function addPoint(request: AddPointRequest): string {
     const pointId = nextPointId(contexto.document);
 
     if (puntos.length >= 20 || pointId === "POINT-021") {
-      fail(
-        "El ticket ya alcanzó el máximo de veinte puntos.",
-        EXIT_INVARIANT,
-      );
+      fail("El ticket ya alcanzó el máximo de veinte puntos.", EXIT_INVARIANT);
     }
 
     // El orden de las claves es el del contrato: `id` primero, y los cuatro
@@ -296,10 +293,8 @@ export function addAiUsage(request: AddAiUsageRequest): string {
 
   // Los textos opcionales se validan con la etiqueta derivada del nombre de la
   // bandera, para que el error diga `reasoning-effort` y no `reasoningEffort`.
-  const opcional = (
-    valor: string | undefined,
-    label: string,
-  ): string | null => (valor === undefined ? null : validateText(valor, label));
+  const opcional = (valor: string | undefined, label: string): string | null =>
+    valor === undefined ? null : validateText(valor, label);
 
   const sessionReference = opcional(request.sessionReference, "session-reference");
   const model = opcional(request.model, "model");
@@ -311,9 +306,9 @@ export function addAiUsage(request: AddAiUsageRequest): string {
   const estimatedCostUsd = costoOpcional(request.estimatedCostUsd);
 
   return conTicket(request.paths, request.ticketId, request.now, (contexto) => {
-    const consumo = (contexto.document.blocks["Consumo de IA"] ?? []).map(
-      (entrada) => ({ ...entrada }),
-    );
+    const consumo = (contexto.document.blocks["Consumo de IA"] ?? []).map((entrada) => ({
+      ...entrada,
+    }));
     const id = nextId(consumo, "CONSUMO");
 
     // El orden es el de la referencia, con `id` **al final**: el bloque se
@@ -356,19 +351,13 @@ export interface QaStartRequest {
 
 export function qaStart(request: QaStartRequest): string {
   if (request.environment === undefined || request.buildReference === undefined) {
-    fail(
-      "qa-start requiere --environment y --build-reference trazables.",
-      EXIT_INVARIANT,
-    );
+    fail("qa-start requiere --environment y --build-reference trazables.", EXIT_INVARIANT);
   }
   const environment = validateText(request.environment, "environment");
 
   return conTicket(request.paths, request.ticketId, request.now, (contexto) => {
     if (contexto.document.fields.workflow_status !== "in_qa") {
-      fail(
-        "qa-start solo se permite cuando el ticket está in_qa.",
-        EXIT_INVARIANT,
-      );
+      fail("qa-start solo se permite cuando el ticket está in_qa.", EXIT_INVARIANT);
     }
 
     const qa = (contexto.document.blocks.QA ?? []).map((entrada) => ({ ...entrada }));
@@ -428,10 +417,7 @@ export function qaClose(request: QaCloseRequest): string {
       ? null
       : validateText(request.poConfirmation, "po-confirmation");
   if (result === "approved" && poConfirmation === null) {
-    fail(
-      "La aprobación QA requiere confirmación explícita del PO.",
-      EXIT_INVARIANT,
-    );
+    fail("La aprobación QA requiere confirmación explícita del PO.", EXIT_INVARIANT);
   }
 
   return conTicket(request.paths, request.ticketId, request.now, (contexto) => {
@@ -509,18 +495,12 @@ export function addRetest(request: AddRetestRequest): string {
       ? null
       : validateText(request.poConfirmation, "po-confirmation");
   if (result === "approved" && poConfirmation === null) {
-    fail(
-      "Un retest aprobado requiere confirmación explícita del PO.",
-      EXIT_INVARIANT,
-    );
+    fail("Un retest aprobado requiere confirmación explícita del PO.", EXIT_INVARIANT);
   }
 
   return conTicket(request.paths, request.ticketId, request.now, (contexto) => {
     if (contexto.document.fields.workflow_status !== "in_qa") {
-      fail(
-        "add-retest solo se permite cuando el ticket está in_qa.",
-        EXIT_INVARIANT,
-      );
+      fail("add-retest solo se permite cuando el ticket está in_qa.", EXIT_INVARIANT);
     }
 
     const qa = contexto.document.blocks.QA ?? [];
@@ -537,10 +517,7 @@ export function addRetest(request: AddRetestRequest): string {
       fail("El retest referencia un punto inexistente.", EXIT_INVARIANT);
     }
     if (punto.status !== "awaiting_retest") {
-      fail(
-        "El punto debe estar awaiting_retest para registrar un retest.",
-        EXIT_INVARIANT,
-      );
+      fail("El punto debe estar awaiting_retest para registrar un retest.", EXIT_INVARIANT);
     }
 
     const retests = (contexto.document.blocks.Retests ?? []).map((entrada) => ({
@@ -613,10 +590,7 @@ export function closeAttempt(request: CloseAttemptRequest): string {
       : validateText(request.poConfirmation, "po-confirmation");
 
   if (qaStatus === "waived" && (qaWaiverReason === null || poConfirmation === null)) {
-    fail(
-      "La exención QA requiere motivo y confirmación explícita del PO.",
-      EXIT_INVARIANT,
-    );
+    fail("La exención QA requiere motivo y confirmación explícita del PO.", EXIT_INVARIANT);
   }
 
   return conTicket(request.paths, request.ticketId, request.now, (contexto) => {
@@ -632,16 +606,10 @@ export function closeAttempt(request: CloseAttemptRequest): string {
       }
     } else {
       if (workflow !== "in_qa" && workflow !== "qa_approved") {
-        fail(
-          "La exención QA solo se registra desde in_qa o qa_approved.",
-          EXIT_INVARIANT,
-        );
+        fail("La exención QA solo se registra desde in_qa o qa_approved.", EXIT_INVARIANT);
       }
       if (qa.length % 2 !== 0) {
-        fail(
-          "No se puede eximir QA mientras exista un ciclo abierto.",
-          EXIT_INVARIANT,
-        );
+        fail("No se puede eximir QA mientras exista un ciclo abierto.", EXIT_INVARIANT);
       }
     }
 

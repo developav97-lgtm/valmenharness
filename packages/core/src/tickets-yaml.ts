@@ -349,8 +349,7 @@ export function parseTicketsYaml(
  */
 function escalar(valor: string): string {
   if (valor === "") return '""';
-  const necesita =
-    /^[\s]|[\s]$|[:#{}[\],&*?|>!%@`"']/.test(valor) || /^[-?]/.test(valor);
+  const necesita = /^[\s]|[\s]$|[:#{}[\],&*?|>!%@`"']/.test(valor) || /^[-?]/.test(valor);
   if (!necesita) return valor;
   if (valor.includes('"')) return `'${valor.replace(/'/g, "''")}'`;
   if (valor.includes("'") || valor.includes("\\")) {

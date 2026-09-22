@@ -15,13 +15,7 @@
  *
  * Ver docs/06-CONTROL-APP.md §2.6bis.
  */
-import {
-  chmodSync,
-  mkdirSync,
-  readFileSync,
-  renameSync,
-  writeFileSync,
-} from "node:fs";
+import { chmodSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -375,8 +369,7 @@ export function listProviders(
   // verdes obliga a buscarlo.
   return PROVIDERS.map((spec): ProviderStatus => {
     const desdeEntorno = env[spec.envVar];
-    const enEntorno =
-      typeof desdeEntorno === "string" && desdeEntorno.trim() !== "";
+    const enEntorno = typeof desdeEntorno === "string" && desdeEntorno.trim() !== "";
     const enArchivo = readKeyFromFile(text, spec.id);
 
     if (enEntorno) {
@@ -559,8 +552,7 @@ function upsertKey(text: string, provider: string, apiKey: string): string {
 
   // Encuentra el fin del bloque: la primera línea con indentación menor o igual.
   const indentacion =
-    (lineas[inicio] as string).length -
-    (lineas[inicio] as string).trimStart().length;
+    (lineas[inicio] as string).length - (lineas[inicio] as string).trimStart().length;
   let fin = inicio + 1;
   while (fin < lineas.length) {
     const linea = lineas[fin] as string;
@@ -678,9 +670,7 @@ export async function probeProvider(
     const respuesta = await fetchImpl(spec.probe.url, {
       method: spec.probe.method ?? "GET",
       headers,
-      ...(spec.probe.body === undefined
-        ? {}
-        : { body: JSON.stringify(spec.probe.body) }),
+      ...(spec.probe.body === undefined ? {} : { body: JSON.stringify(spec.probe.body) }),
       signal: AbortSignal.timeout(options.timeoutMs ?? 15_000),
     });
     const latencia = Date.now() - inicio;
@@ -769,10 +759,7 @@ function resolveForProbe(
  * puede declarar en el catálogo: el `chatgpt-account-id` de codex viaja **dentro**
  * del token, así que se saca de él en cada llamada.
  */
-function headersFor(
-  spec: ProviderSpec,
-  clave: string | null,
-): Record<string, string> {
+function headersFor(spec: ProviderSpec, clave: string | null): Record<string, string> {
   const headers: Record<string, string> = {};
   if (clave !== null && clave !== "") headers["Authorization"] = `Bearer ${clave}`;
 
@@ -837,11 +824,17 @@ export async function listProviderModels(
       readonly configured: readonly string[];
       readonly source: "publicado" | "declarado" | "ambos";
     }
-  | { readonly ok: false; readonly error: string; readonly models: readonly ProviderModel[] }
+  | {
+      readonly ok: false;
+      readonly error: string;
+      readonly models: readonly ProviderModel[];
+    }
   | null
 > {
   const spec = PROVIDERS.find((provider) => provider.id === id);
-  const declarados = (options.candidates ?? []).map((modelo) => modelo.trim()).filter((m) => m !== "");
+  const declarados = (options.candidates ?? [])
+    .map((modelo) => modelo.trim())
+    .filter((m) => m !== "");
 
   // Un proveedor que no está en el catálogo y uno que no publica su lista acaban
   // en el mismo sitio —no hay URL que pedir—, salvo que el proyecto haya
@@ -1017,13 +1010,28 @@ export async function testProviderModel(
     readonly fetchImpl?: typeof fetch;
     readonly timeoutMs?: number;
   } = {},
-): Promise<{ readonly ok: boolean; readonly status: number | null; readonly detail: string; readonly latencyMs: number }> {
+): Promise<{
+  readonly ok: boolean;
+  readonly status: number | null;
+  readonly detail: string;
+  readonly latencyMs: number;
+}> {
   const spec = PROVIDERS.find((provider) => provider.id === id);
   if (spec === undefined) {
-    return { ok: false, status: null, detail: `Proveedor desconocido: "${id}".`, latencyMs: 0 };
+    return {
+      ok: false,
+      status: null,
+      detail: `Proveedor desconocido: "${id}".`,
+      latencyMs: 0,
+    };
   }
   if (model.trim() === "") {
-    return { ok: false, status: null, detail: "Falta el identificador del modelo.", latencyMs: 0 };
+    return {
+      ok: false,
+      status: null,
+      detail: "Falta el identificador del modelo.",
+      latencyMs: 0,
+    };
   }
   if (spec.probe === undefined || spec.probe.method !== "POST") {
     // Sin un endpoint de chat no hay nada que probar. Se dice en vez de devolver
@@ -1061,7 +1069,11 @@ export async function testProviderModel(
           ...base,
           model,
           input: [
-            { type: "message", role: "user", content: [{ type: "input_text", text: "ok" }] },
+            {
+              type: "message",
+              role: "user",
+              content: [{ type: "input_text", text: "ok" }],
+            },
           ],
         }
       : { ...base, model, max_tokens: 16, messages: [{ role: "user", content: "ok" }] };

@@ -15,16 +15,10 @@
  * ticket**: entrega el recibo y deja la decisión pendiente. Un gate no cambia
  * estados por su cuenta.
  */
-import {
-  EXIT_INVARIANT,
-  TicketError,
-  parseTicket,
-  toFailure,
-} from "@valmen/core";
+import { EXIT_INVARIANT, TicketError, parseTicket, toFailure } from "@valmen/core";
 import {
   type GateDecision,
   type GatePolicy,
-  type GateReceipt,
   type MechanicalCheck,
   type PropositionAnswer,
   buildReceipt,
@@ -166,20 +160,14 @@ export async function runGate(
       state,
       root: paths.root,
       ...(options.checks === undefined ? {} : { checks: options.checks }),
-      ...(options.evaluator === undefined
-        ? {}
-        : { evaluator: options.evaluator }),
+      ...(options.evaluator === undefined ? {} : { evaluator: options.evaluator }),
       ...(options.jev === undefined ? {} : { jev: options.jev }),
       ...(options.judge === undefined ? {} : { judge: options.judge }),
       ...(options.model === undefined ? {} : { model: options.model }),
       ...(options.provider === undefined ? {} : { provider: options.provider }),
       ...(options.effort === undefined ? {} : { effort: options.effort }),
-      ...(options.judgeModel === undefined
-        ? {}
-        : { judgeModel: options.judgeModel }),
-      ...(options.semantic === undefined
-        ? {}
-        : { semantic: options.semantic }),
+      ...(options.judgeModel === undefined ? {} : { judgeModel: options.judgeModel }),
+      ...(options.semantic === undefined ? {} : { semantic: options.semantic }),
       sessionId: `${options.ticketId}:${options.gateId}`,
     });
   } catch (caught) {
@@ -197,11 +185,7 @@ export async function runGate(
   // proceso y deja al usuario sin saber qué pasó.
   let decision: GateDecision;
   try {
-    decision = decide(
-      gate.propositions,
-      evaluation.answers,
-      gate.policy as GatePolicy,
-    );
+    decision = decide(gate.propositions, evaluation.answers, gate.policy as GatePolicy);
   } catch (caught) {
     const failure = toFailure(caught);
     return {
@@ -243,9 +227,7 @@ export async function runGate(
   ];
   for (const check of checks) {
     const marca = { pass: "✓", fail: "✗", warn: "!", skip: "·" }[check.result];
-    lines.push(
-      `    ${marca}  ${check.id.padEnd(22)} ${check.detail ?? ""}`.trimEnd(),
-    );
+    lines.push(`    ${marca}  ${check.id.padEnd(22)} ${check.detail ?? ""}`.trimEnd());
   }
 
   const etiquetaEvaluador = {
@@ -262,10 +244,7 @@ export async function runGate(
           ? "✓"
           : "✗"
         : "·";
-    const peso =
-      item.kind === "noul" && item.weight !== 1
-        ? `  (peso ${item.weight})`
-        : "";
+    const peso = item.kind === "noul" && item.weight !== 1 ? `  (peso ${item.weight})` : "";
     lines.push(
       `    ${marca}  ${item.label.padEnd(38)} ${item.verdict ? "" : "descriptiva"}${peso}`.trimEnd(),
     );
@@ -304,10 +283,7 @@ export async function runGate(
       // Append-only: un recibo emitido no se modifica nunca. La decisión humana
       // se anexa como una línea nueva, no reescribiendo la anterior.
       receiptPath = appendReceipt(paths, options.ticketId, receipt);
-      lines.push(
-        "",
-        `  Recibo anexado: ${receiptPath.replace(`${paths.root}/`, "")}`,
-      );
+      lines.push("", `  Recibo anexado: ${receiptPath.replace(`${paths.root}/`, "")}`);
       lines.push(`  ${summarizeReceipt(receipt)}`);
     } catch (caught) {
       const failure = toFailure(caught);

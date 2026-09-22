@@ -42,9 +42,7 @@ export function formatPythonNumber(value: number): string {
     // El contrato ya rechaza `Infinity` y `NaN`; llegar aquí sería un fallo de
     // programación, no un dato del usuario, y escribir `Infinity` produciría un
     // bloque que el propio validador rechaza.
-    throw new Error(
-      `No se puede serializar un número no finito: ${String(value)}.`,
-    );
+    throw new Error(`No se puede serializar un número no finito: ${String(value)}.`);
   }
 
   if (Number.isInteger(value)) return String(value);
@@ -52,10 +50,7 @@ export function formatPythonNumber(value: number): string {
   // Los dígitos significativos se toman de la representación exponencial de
   // JavaScript, que es la más corta que reconstruye el mismo número: la misma
   // propiedad que garantiza `repr` en Python.
-  const [mantissa, exponente] = value.toExponential().split("e") as [
-    string,
-    string,
-  ];
+  const [mantissa, exponente] = value.toExponential().split("e") as [string, string];
   const exp = Number(exponente);
 
   if (exp < -4 || exp >= 16) {
@@ -99,9 +94,7 @@ function render(value: unknown, depth: number, indent: number): string {
 
   if (Array.isArray(value)) {
     if (value.length === 0) return "[]";
-    const items = value.map(
-      (item) => `${sangria}${render(item, depth + 1, indent)}`,
-    );
+    const items = value.map((item) => `${sangria}${render(item, depth + 1, indent)}`);
     return `[\n${items.join(",\n")}\n${cierre}]`;
   }
 

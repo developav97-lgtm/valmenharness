@@ -11,7 +11,6 @@
  * 4. **Un token de suscripción no se pega a mano.**
  */
 import {
-  chmodSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -30,10 +29,7 @@ import {
   probeProvider,
   updateCredentials,
 } from "../packages/server/src/providers.js";
-import {
-  type ServerContext,
-  handleApi,
-} from "../packages/server/src/server.js";
+import { type ServerContext, handleApi } from "../packages/server/src/server.js";
 
 let lab: string;
 let archivo: string;
@@ -106,9 +102,7 @@ describe("listProviders", () => {
     // Se informa, no se corrige en silencio: reescribir el archivo sin que el
     // usuario lo pida sería modificar un archivo que mantiene a mano.
     escribirCredenciales(ARCHIVO_BASE);
-    const deepseek = listProviders(archivo, {}).find(
-      (p) => p.id === "deepseek",
-    );
+    const deepseek = listProviders(archivo, {}).find((p) => p.id === "deepseek");
     expect(deepseek?.configured).toBe(true);
     expect(deepseek?.legacyFieldName).toBe(true);
   });
@@ -127,9 +121,7 @@ describe("listProviders", () => {
     escribirCredenciales(ARCHIVO_BASE);
     const estados = listProviders(archivo, { OPENROUTER_API_KEY: "   " });
     // Definida pero en blanco no es una credencial.
-    expect(estados.find((p) => p.id === "openrouter")?.source).toBe(
-      "credentials-file",
-    );
+    expect(estados.find((p) => p.id === "openrouter")?.source).toBe("credentials-file");
   });
 
   it("un proveedor local sin credencial está disponible por definición", () => {
@@ -187,10 +179,7 @@ describe("listProviders", () => {
 
 describe("updateCredentials", () => {
   it("escribe la clave con permisos 600", () => {
-    updateCredentials(
-      [{ provider: "openrouter", apiKey: "sk-or-v1-nueva" }],
-      archivo,
-    );
+    updateCredentials([{ provider: "openrouter", apiKey: "sk-or-v1-nueva" }], archivo);
     // Un archivo legible por otros es un secreto expuesto.
     const modo = statSync(archivo).mode & 0o777;
     expect(modo).toBe(0o600);
@@ -217,10 +206,7 @@ describe("updateCredentials", () => {
     // El valor se está escribiendo ahora, así que no hay razón para conservar
     // el nombre anterior.
     escribirCredenciales(ARCHIVO_BASE);
-    updateCredentials(
-      [{ provider: "deepseek", apiKey: "sk-nueva-deepseek" }],
-      archivo,
-    );
+    updateCredentials([{ provider: "deepseek", apiKey: "sk-nueva-deepseek" }], archivo);
     const texto = readFileSync(archivo, "utf8");
     expect(texto).not.toContain("api-key-env");
     expect(texto).toContain('api-key: "sk-nueva-deepseek"');
@@ -228,10 +214,7 @@ describe("updateCredentials", () => {
 
   it("añade un proveedor que no estaba declarado", () => {
     escribirCredenciales(ARCHIVO_BASE);
-    updateCredentials(
-      [{ provider: "moonshot", apiKey: "sk-moonshot-nueva" }],
-      archivo,
-    );
+    updateCredentials([{ provider: "moonshot", apiKey: "sk-moonshot-nueva" }], archivo);
     const estados = listProviders(archivo, {});
     expect(estados.find((p) => p.id === "moonshot")?.configured).toBe(true);
   });
@@ -239,9 +222,9 @@ describe("updateCredentials", () => {
   it("con clave vacía, borra la entrada", () => {
     escribirCredenciales(ARCHIVO_BASE);
     updateCredentials([{ provider: "openrouter", apiKey: "" }], archivo);
-    expect(
-      listProviders(archivo, {}).find((p) => p.id === "openrouter")?.configured,
-    ).toBe(false);
+    expect(listProviders(archivo, {}).find((p) => p.id === "openrouter")?.configured).toBe(
+      false,
+    );
     // Y el resto sigue intacto.
     expect(readFileSync(archivo, "utf8")).toContain("sk-una-clave-deepseek");
   });
@@ -250,10 +233,7 @@ describe("updateCredentials", () => {
     // Un token de plan se lee del CLI. Pegarlo crearía un segundo origen de
     // verdad que se desincroniza en el primer refresco.
     expect(() =>
-      updateCredentials(
-        [{ provider: "claude-code", apiKey: "un-token" }],
-        archivo,
-      ),
+      updateCredentials([{ provider: "claude-code", apiKey: "un-token" }], archivo),
     ).toThrow("se autentica con su suscripción");
   });
 
@@ -264,20 +244,14 @@ describe("updateCredentials", () => {
   });
 
   it("crea el archivo si no existe, ya con permisos 600", () => {
-    updateCredentials(
-      [{ provider: "openrouter", apiKey: "sk-or-v1-primera" }],
-      archivo,
-    );
+    updateCredentials([{ provider: "openrouter", apiKey: "sk-or-v1-primera" }], archivo);
     expect(statSync(archivo).mode & 0o777).toBe(0o600);
     expect(readFileSync(archivo, "utf8")).toContain("providers:");
   });
 
   it("no deja ningún temporal detrás", () => {
     escribirCredenciales(ARCHIVO_BASE);
-    updateCredentials(
-      [{ provider: "openrouter", apiKey: "sk-or-v1-x" }],
-      archivo,
-    );
+    updateCredentials([{ provider: "openrouter", apiKey: "sk-or-v1-x" }], archivo);
     const sobrantes = readFileSync(archivo, "utf8");
     expect(sobrantes).not.toContain(".tmp");
     expect(statSync(archivo).isFile()).toBe(true);
@@ -332,12 +306,9 @@ describe("probeProvider", () => {
     escribirCredenciales(ARCHIVO_BASE);
     // Un proveedor mal implementado podría reflejar la clave en su respuesta.
     const fetchImpl = (async () =>
-      new Response(
-        "tu clave sk-or-v1-una-clave-de-prueba-larga-0123456789 es inválida",
-        {
-          status: 401,
-        },
-      )) as unknown as typeof fetch;
+      new Response("tu clave sk-or-v1-una-clave-de-prueba-larga-0123456789 es inválida", {
+        status: 401,
+      })) as unknown as typeof fetch;
 
     const resultado = await probeProvider("openrouter", {
       filePath: archivo,
@@ -366,9 +337,7 @@ describe("probeProvider", () => {
   it("informa si un proveedor no declara endpoint de prueba", async () => {
     // Todos los proveedores de API key deben declararlo: sin endpoint, el
     // botón de probar no puede cumplir su función.
-    const sinProbe = PROVIDERS.filter(
-      (p) => p.auth === "api-key" && p.probe === undefined,
-    );
+    const sinProbe = PROVIDERS.filter((p) => p.auth === "api-key" && p.probe === undefined);
     expect(sinProbe).toEqual([]);
   });
 });
@@ -449,9 +418,9 @@ describe("la API de Mission Control", () => {
       contexto(),
     );
     expect(r.status).toBe(200);
-    expect(
-      listProviders(archivo, {}).find((p) => p.id === "openrouter")?.configured,
-    ).toBe(false);
+    expect(listProviders(archivo, {}).find((p) => p.id === "openrouter")?.configured).toBe(
+      false,
+    );
   });
 
   it("devuelve 404 con un mensaje útil en una ruta desconocida", async () => {
@@ -497,7 +466,9 @@ describe("GET /api/providers/:id/models", () => {
     );
 
     expect(r.status).toBe(200);
-    const cuerpo = r.body as { models: { id: string; name: string; promptUsd: number | null }[] };
+    const cuerpo = r.body as {
+      models: { id: string; name: string; promptUsd: number | null }[];
+    };
     // Los identificadores vacíos se descartan, y el nombre cae al identificador
     // cuando el proveedor no lo trae: una fila sin nombre no se puede elegir.
     expect(cuerpo.models.map((m) => m.id)).toEqual([
@@ -689,7 +660,9 @@ describe("POST /api/providers/:id/models/test", () => {
     escribirCredenciales(ARCHIVO_BASE);
     const fetchFalso = (async () =>
       new Response(
-        JSON.stringify({ error: { message: "Upstream request failed: Model is unavailable." } }),
+        JSON.stringify({
+          error: { message: "Upstream request failed: Model is unavailable." },
+        }),
         { status: 400 },
       )) as unknown as typeof fetch;
 
@@ -725,7 +698,12 @@ describe("POST /api/providers/:id/models/test", () => {
 
   it("exige el modelo", async () => {
     escribirCredenciales(ARCHIVO_BASE);
-    const r = await handleApi("POST", "/api/providers/deepseek/models/test", {}, contexto());
+    const r = await handleApi(
+      "POST",
+      "/api/providers/deepseek/models/test",
+      {},
+      contexto(),
+    );
     expect(r.status).toBe(400);
   });
 });
@@ -777,7 +755,14 @@ describe("los modelos declarados por el proyecto", () => {
     mkdirSync(join(lab, ".valmen"), { recursive: true });
     writeFileSync(
       join(lab, ".valmen", "config.yaml"),
-      ["name: Prueba", "providers:", "  inventado:", "    candidates:", "      - uno", ""].join("\n"),
+      [
+        "name: Prueba",
+        "providers:",
+        "  inventado:",
+        "    candidates:",
+        "      - uno",
+        "",
+      ].join("\n"),
     );
     const r = await handleApi("GET", "/api/providers/inventado/models", {}, contexto());
     expect(r.status).toBe(200);
@@ -791,7 +776,14 @@ describe("los modelos declarados por el proyecto", () => {
     mkdirSync(join(lab, ".valmen"), { recursive: true });
     writeFileSync(
       join(lab, ".valmen", "config.yaml"),
-      ["name: Prueba", "providers:", "  deepseek:", "    candidates:", "      - el-mio", ""].join("\n"),
+      [
+        "name: Prueba",
+        "providers:",
+        "  deepseek:",
+        "    candidates:",
+        "      - el-mio",
+        "",
+      ].join("\n"),
     );
     const fetchFalso = (async () =>
       new Response(JSON.stringify({ data: [{ id: "deepseek-v4-pro" }] }), {
@@ -816,7 +808,14 @@ describe("los modelos declarados por el proyecto", () => {
     mkdirSync(join(lab, ".valmen"), { recursive: true });
     writeFileSync(
       join(lab, ".valmen", "config.yaml"),
-      ["name: Prueba", "providers:", "  deepseek:", "    candidates:", "      - el-mio", ""].join("\n"),
+      [
+        "name: Prueba",
+        "providers:",
+        "  deepseek:",
+        "    candidates:",
+        "      - el-mio",
+        "",
+      ].join("\n"),
     );
     const fetchFalso = (async () =>
       new Response("boom", { status: 500 })) as unknown as typeof fetch;
@@ -828,7 +827,9 @@ describe("los modelos declarados por el proyecto", () => {
       contexto({ fetchImpl: fetchFalso }),
     );
     expect(r.status).toBe(502);
-    expect((r.body as { models: { id: string }[] }).models.map((m) => m.id)).toEqual(["el-mio"]);
+    expect((r.body as { models: { id: string }[] }).models.map((m) => m.id)).toEqual([
+      "el-mio",
+    ]);
   });
 
   it("sin lista publicada ni declarada, dice dónde declararla", async () => {

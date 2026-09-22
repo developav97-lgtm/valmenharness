@@ -51,21 +51,20 @@ export type TransitionEntity = "ticket" | "point" | "release";
  * el ticket sigue sin publicarse. Es la única arista que vuelve hacia atrás, y
  * existe porque un hallazgo posterior al cierre es un caso real y frecuente.
  */
-export const TICKET_TRANSITIONS: Readonly<
-  Record<WorkflowState, readonly WorkflowState[]>
-> = {
-  intake: ["analyzed"],
-  analyzed: ["planned", "blocked"],
-  planned: ["approved", "blocked"],
-  approved: ["in_progress", "blocked"],
-  in_progress: ["awaiting_user_tests", "blocked"],
-  blocked: BLOCKED_EXITS,
-  awaiting_user_tests: ["in_qa"],
-  in_qa: ["changes_requested", "qa_approved"],
-  changes_requested: ["in_progress"],
-  qa_approved: ["closed"],
-  closed: ["changes_requested"],
-};
+export const TICKET_TRANSITIONS: Readonly<Record<WorkflowState, readonly WorkflowState[]>> =
+  {
+    intake: ["analyzed"],
+    analyzed: ["planned", "blocked"],
+    planned: ["approved", "blocked"],
+    approved: ["in_progress", "blocked"],
+    in_progress: ["awaiting_user_tests", "blocked"],
+    blocked: BLOCKED_EXITS,
+    awaiting_user_tests: ["in_qa"],
+    in_qa: ["changes_requested", "qa_approved"],
+    changes_requested: ["in_progress"],
+    qa_approved: ["closed"],
+    closed: ["changes_requested"],
+  };
 
 /**
  * Transiciones de release.
@@ -73,14 +72,13 @@ export const TICKET_TRANSITIONS: Readonly<
  * `released` y `not_applicable` son terminales: una release publicada no se
  * despublica, y un ticket que no se publica no se arrepiente.
  */
-export const RELEASE_TRANSITIONS: Readonly<
-  Record<ReleaseState, readonly ReleaseState[]>
-> = {
-  unreleased: ["planned", "not_applicable"],
-  planned: ["released"],
-  released: [],
-  not_applicable: [],
-};
+export const RELEASE_TRANSITIONS: Readonly<Record<ReleaseState, readonly ReleaseState[]>> =
+  {
+    unreleased: ["planned", "not_applicable"],
+    planned: ["released"],
+    released: [],
+    not_applicable: [],
+  };
 
 /**
  * Transiciones de punto.
@@ -89,9 +87,7 @@ export const RELEASE_TRANSITIONS: Readonly<
  * `verified` es el único camino a `closed`. Nótese que `closed` **no** está en
  * `TERMINAL_POINT_STATES`: es terminal en la máquina y no exige motivo.
  */
-export const POINT_TRANSITIONS: Readonly<
-  Record<PointState, readonly PointState[]>
-> = {
+export const POINT_TRANSITIONS: Readonly<Record<PointState, readonly PointState[]>> = {
   open: ["analyzed", ...TERMINAL_POINT_STATES],
   analyzed: ["in_progress", ...TERMINAL_POINT_STATES],
   in_progress: ["awaiting_retest", ...TERMINAL_POINT_STATES],
@@ -113,19 +109,12 @@ export const TRANSITIONS: Readonly<
 };
 
 /** Los destinos legales desde un estado. Vacío si el estado es terminal. */
-export function nextStates(
-  entity: TransitionEntity,
-  from: string,
-): readonly string[] {
+export function nextStates(entity: TransitionEntity, from: string): readonly string[] {
   return TRANSITIONS[entity][from] ?? [];
 }
 
 /** `true` si el movimiento es legal según la tabla. */
-export function canTransition(
-  entity: TransitionEntity,
-  from: string,
-  to: string,
-): boolean {
+export function canTransition(entity: TransitionEntity, from: string, to: string): boolean {
   return nextStates(entity, from).includes(to);
 }
 
@@ -148,14 +137,7 @@ const NOMBRE: Record<TransitionEntity, string> = {
  * alguien escribe `--to aprobado`, el error dice `aprobado`, que es lo que
  * necesita ver para corregirlo.
  */
-export function assertTransition(
-  entity: TransitionEntity,
-  from: string,
-  to: string,
-): void {
+export function assertTransition(entity: TransitionEntity, from: string, to: string): void {
   if (canTransition(entity, from, to)) return;
-  fail(
-    `Transición de ${NOMBRE[entity]} ${from} -> ${to} no permitida.`,
-    EXIT_INVARIANT,
-  );
+  fail(`Transición de ${NOMBRE[entity]} ${from} -> ${to} no permitida.`, EXIT_INVARIANT);
 }

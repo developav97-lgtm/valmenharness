@@ -31,12 +31,7 @@ import {
 } from "@valmen/gate";
 import { evaluateWithJev } from "@valmen/gate-jev";
 
-import type { RunnerResult } from "./result.js";
-import {
-  type LocatedTicket,
-  type RegistryPaths,
-  findAllTickets,
-} from "./discovery.js";
+import { type LocatedTicket, type RegistryPaths, findAllTickets } from "./discovery.js";
 import { buildGateState } from "./state.js";
 
 /** Lo que se midió para un ticket. */
@@ -88,7 +83,6 @@ export interface SimulationReport {
 /** Calcula la estadística de cada proposición a lo largo de la simulación. */
 export function summarizePropositions(
   tickets: readonly SimulatedTicket[],
-  policy: GatePolicy,
 ): PropositionStats[] {
   const byId = new Map<
     string,
@@ -114,8 +108,7 @@ export function summarizePropositions(
   return [...byId.entries()]
     .map(([id, entry]) => {
       const values = entry.values;
-      const mean =
-        values.reduce((sum, value) => sum + value, 0) / values.length;
+      const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
       // La discriminación es la dispersión: una proposición cuyos valores están
       // todos pegados al mismo número no distingue un caso bueno de uno malo.
       const min = Math.min(...values);
@@ -164,8 +157,7 @@ export async function simulateGate(
   } catch {
     todos = [];
   }
-  const selected =
-    options.limit === undefined ? todos : todos.slice(0, options.limit);
+  const selected = options.limit === undefined ? todos : todos.slice(0, options.limit);
 
   const tickets: SimulatedTicket[] = [];
   const errors: { id: string; message: string }[] = [];
@@ -206,11 +198,7 @@ export async function simulateGate(
 
     let decision: GateDecision;
     try {
-      decision = decide(
-        expanded.propositions,
-        evaluation.answers,
-        expanded.policy,
-      );
+      decision = decide(expanded.propositions, evaluation.answers, expanded.policy);
     } catch (caught) {
       errors.push({ id: ticket.id, message: toFailure(caught).message });
       continue;
@@ -237,17 +225,14 @@ export async function simulateGate(
     outcomes,
     totalCostUsd,
     meanLatencyMs: tickets.length === 0 ? 0 : totalLatency / tickets.length,
-    propositions: summarizePropositions(tickets, gate.policy),
+    propositions: summarizePropositions(tickets),
     tickets,
     errors,
   };
 }
 
 /** Formatea el informe de una simulación. */
-export function renderSimulation(
-  report: SimulationReport,
-  policy: GatePolicy,
-): string {
+export function renderSimulation(report: SimulationReport, policy: GatePolicy): string {
   const lines: string[] = [
     `Simulación del gate ${report.gate}`,
     "",
@@ -266,9 +251,7 @@ export function renderSimulation(
     const count = report.outcomes[outcome] ?? 0;
     const pct = ((count / total) * 100).toFixed(0).padStart(3);
     const barra = "█".repeat(Math.round((count / total) * 30));
-    lines.push(
-      `    ${outcome.padEnd(8)} ${String(count).padStart(3)}  ${pct}%  ${barra}`,
-    );
+    lines.push(`    ${outcome.padEnd(8)} ${String(count).padStart(3)}  ${pct}%  ${barra}`);
   }
 
   lines.push("", "  Discriminación por proposición (menor = menos útil)");
@@ -283,9 +266,7 @@ export function renderSimulation(
   }
 
   // Diagnóstico: qué hacer con lo medido.
-  const planas = report.propositions.filter(
-    (stat) => stat.discrimination < 0.2,
-  );
+  const planas = report.propositions.filter((stat) => stat.discrimination < 0.2);
   const siempreEnBanda = report.propositions.filter(
     (stat) => stat.samples > 0 && stat.inBand / stat.samples > 0.8,
   );
@@ -296,9 +277,7 @@ export function renderSimulation(
   } else if (planas.length > 0) {
     lines.push(
       `    ⚠ ${planas.length} proposición(es) casi no discriminan (dispersión < 0.20):`,
-      ...planas.map(
-        (stat) => `        ${stat.id}  (${stat.discrimination.toFixed(2)})`,
-      ),
+      ...planas.map((stat) => `        ${stat.id}  (${stat.discrimination.toFixed(2)})`),
       "      Una proposición que da el mismo valor en todos los casos no aporta",
       "      información a la decisión y solo añade coste.",
     );

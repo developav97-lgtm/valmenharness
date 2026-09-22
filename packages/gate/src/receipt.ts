@@ -112,8 +112,7 @@ export interface HumanDecision {
  * de las respuestas es parte del contrato del gate.
  */
 export function stableStringify(value: unknown): string {
-  if (value === null || typeof value !== "object")
-    return JSON.stringify(value) ?? "null";
+  if (value === null || typeof value !== "object") return JSON.stringify(value) ?? "null";
   if (Array.isArray(value)) {
     return `[${value.map((item) => stableStringify(item)).join(",")}]`;
   }
@@ -131,10 +130,7 @@ export function hashState(state: unknown): string {
 }
 
 /** Calcula el hash de la definición de un gate. */
-export function hashGate(
-  propositions: readonly Proposition[],
-  policy: GatePolicy,
-): string {
+export function hashGate(propositions: readonly Proposition[], policy: GatePolicy): string {
   return `sha256:${createHash("sha256")
     .update(stableStringify({ propositions, policy }))
     .digest("hex")}`;
@@ -194,33 +190,23 @@ export function buildReceipt(input: ReceiptInput): GateReceipt {
  * decisión humana se añade, nunca reemplaza el veredicto del evaluador, porque
  * saber que el modelo dudó y una persona aprobó es información, no ruido.
  */
-export function withHumanDecision(
-  receipt: GateReceipt,
-  human: HumanDecision,
-): GateReceipt {
+export function withHumanDecision(receipt: GateReceipt, human: HumanDecision): GateReceipt {
   if (receipt.escalatedTo !== "human") {
     throw new Error(
       `El recibo ${receipt.id} no fue escalado a una persona y no admite una decisión humana.`,
     );
   }
   if (receipt.humanDecision !== null) {
-    throw new Error(
-      `El recibo ${receipt.id} ya tiene una decisión humana registrada.`,
-    );
+    throw new Error(`El recibo ${receipt.id} ya tiene una decisión humana registrada.`);
   }
   return { ...receipt, humanDecision: human };
 }
 
 /** Línea compacta del recibo, para el registro de actividad. */
 export function summarizeReceipt(receipt: GateReceipt): string {
-  const partes = [
-    receipt.gate.padEnd(12),
-    receipt.outcome.padEnd(8),
-    receipt.subject.id,
-  ];
+  const partes = [receipt.gate.padEnd(12), receipt.outcome.padEnd(8), receipt.subject.id];
   if (receipt.model !== null) partes.push(receipt.model.resolvedVersion);
-  if (receipt.usage !== null)
-    partes.push(`$${receipt.usage.costUsd.toFixed(6)}`);
+  if (receipt.usage !== null) partes.push(`$${receipt.usage.costUsd.toFixed(6)}`);
   if (receipt.escalatedTo !== null) partes.push("→ humano");
   return partes.join("  ");
 }

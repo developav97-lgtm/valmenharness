@@ -38,13 +38,7 @@ import { EXIT_SCHEMA, fail } from "./errors.js";
 import { type YamlMap, type YamlValue, parseYamlSubset } from "./yaml.js";
 
 /** Lo que un paso puede hacer. */
-export const STEP_KINDS = [
-  "command",
-  "check",
-  "gate",
-  "process",
-  "agent",
-] as const;
+export const STEP_KINDS = ["command", "check", "gate", "process", "agent"] as const;
 
 export type StepKind = (typeof STEP_KINDS)[number];
 
@@ -136,7 +130,11 @@ function textoOpcional(valor: YamlValue | undefined): string | null {
 }
 
 /** Un booleano escrito como `true` o `false`. */
-function booleano(valor: YamlValue | undefined, donde: string, porDefecto: boolean): boolean {
+function booleano(
+  valor: YamlValue | undefined,
+  donde: string,
+  porDefecto: boolean,
+): boolean {
   if (valor === undefined || valor === "") return porDefecto;
   if (valor === "true") return true;
   if (valor === "false") return false;
@@ -193,8 +191,7 @@ function leerParametros(valor: YamlValue | undefined): ProcessParam[] {
     }
     // Un parámetro puede declararse en forma corta —`version: { … }`— o como el
     // tipo a secas: `version: string`.
-    const mapa: YamlMap =
-      typeof bruto === "string" ? { type: bruto } : (bruto as YamlMap);
+    const mapa: YamlMap = typeof bruto === "string" ? { type: bruto } : (bruto as YamlMap);
     if (Array.isArray(mapa)) {
       fail(`process: params.${nombre} debe ser un mapa o un tipo.`, EXIT_SCHEMA);
     }
@@ -263,19 +260,15 @@ function leerPaso(valor: YamlValue, indice: number): ProcessStep {
       ? "abort"
       : texto(onFailureBruto, `${donde}.on_failure`);
   if (!(ON_FAILURE as readonly string[]).includes(onFailure)) {
-    fail(
-      `process: ${donde}.on_failure debe ser ${ON_FAILURE.join(", ")}.`,
-      EXIT_SCHEMA,
-    );
+    fail(`process: ${donde}.on_failure debe ser ${ON_FAILURE.join(", ")}.`, EXIT_SCHEMA);
   }
 
   // El destino depende del tipo, y exigir el correcto es lo que impide que un
   // `kind: process` sin `process:` se cargue y no haga nada.
-  const run = kind === "command" || kind === "check" ? texto(valor["run"], `${donde}.run`) : null;
+  const run =
+    kind === "command" || kind === "check" ? texto(valor["run"], `${donde}.run`) : null;
   const target =
-    kind === "process" || kind === "gate"
-      ? texto(valor[kind], `${donde}.${kind}`)
-      : null;
+    kind === "process" || kind === "gate" ? texto(valor[kind], `${donde}.${kind}`) : null;
 
   return {
     id,

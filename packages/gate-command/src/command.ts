@@ -101,8 +101,7 @@ export function runCommandCheck(
 
   try {
     stdout = execFileSync(check.command, [...(check.args ?? [])], {
-      cwd:
-        check.cwd === undefined ? options.root : `${options.root}/${check.cwd}`,
+      cwd: check.cwd === undefined ? options.root : `${options.root}/${check.cwd}`,
       encoding: "utf8",
       timeout: check.timeoutMs ?? 30_000,
       // La salida puede ser grande: se acota lo que se guarda.

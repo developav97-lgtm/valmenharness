@@ -17,7 +17,7 @@
  * 4. **El orden "el código primero" no se rompe por configuración.** Un gate que
  *    se resuelve con comandos se sigue resolviendo con comandos.
  */
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -131,7 +131,13 @@ describe("la resolución de un rol", () => {
   it("el override del proyecto gana sobre el preset, y lo dice", () => {
     const rutas = resolveRouting({
       preset: "economy",
-      roles: { implementer: { provider: "openrouter", model: "anthropic/claude-opus-4.6", effort: "high" } },
+      roles: {
+        implementer: {
+          provider: "openrouter",
+          model: "anthropic/claude-opus-4.6",
+          effort: "high",
+        },
+      },
     });
     const implementer = rutas.find((ruta) => ruta.role === "implementer");
     expect(implementer?.source).toBe("proyecto");
@@ -145,9 +151,17 @@ describe("la resolución de un rol", () => {
 
     const conJuez = resolveRouting({
       preset: "balanced",
-      roles: { "gate-evaluator": { provider: "openrouter", model: "deepseek/deepseek-v4-flash", effort: "auto" } },
+      roles: {
+        "gate-evaluator": {
+          provider: "openrouter",
+          model: "deepseek/deepseek-v4-flash",
+          effort: "auto",
+        },
+      },
     });
-    expect(conJuez.find((ruta) => ruta.role === "gate-evaluator")?.probabilistic).toBe(false);
+    expect(conJuez.find((ruta) => ruta.role === "gate-evaluator")?.probabilistic).toBe(
+      false,
+    );
   });
 });
 
@@ -164,9 +178,9 @@ describe("el archivo de routing", () => {
   });
 
   it("rechaza un rol que no existe en vez de guardarlo en silencio", () => {
-    expect(() => parseRouting("preset: balanced\nroles:\n  architecto:\n    model: x\n")).toThrow(
-      /no es un rol conocido/,
-    );
+    expect(() =>
+      parseRouting("preset: balanced\nroles:\n  architecto:\n    model: x\n"),
+    ).toThrow(/no es un rol conocido/);
   });
 
   it("rechaza un preset inexistente", () => {
@@ -175,7 +189,9 @@ describe("el archivo de routing", () => {
 
   it("rechaza un esfuerzo inválido", () => {
     expect(() =>
-      parseRouting("preset: balanced\nroles:\n  critic:\n    model: x\n    effort: muchísimo\n"),
+      parseRouting(
+        "preset: balanced\nroles:\n  critic:\n    model: x\n    effort: muchísimo\n",
+      ),
     ).toThrow(/esfuerzo/);
   });
 
@@ -204,7 +220,13 @@ describe("el archivo de routing", () => {
   it("el render y el parser son inversos", () => {
     const routing = {
       preset: "balanced",
-      roles: { critic: { provider: "openrouter", model: "moonshotai/kimi-k3", effort: "high" as const } },
+      roles: {
+        critic: {
+          provider: "openrouter",
+          model: "moonshotai/kimi-k3",
+          effort: "high" as const,
+        },
+      },
     };
     expect(parseRouting(renderRouting(routing))).toEqual(routing);
   });
@@ -245,26 +267,35 @@ describe("el catálogo de modelos", () => {
   });
 
   it("añade Jev, que no está en el catálogo de chat", async () => {
-    const catalogo = await fetchCatalog((async () =>
-      new Response(
-        JSON.stringify({
-          data: [
-            { id: "deepseek/deepseek-v4-flash", name: "DeepSeek V4 Flash", pricing: { prompt: "0.00000004" } },
-            { id: "anthropic/claude-opus-4.6", name: "Claude Opus 4.6", pricing: { prompt: "0.00001" } },
-          ],
-        }),
-        { status: 200 },
-      )) as unknown as typeof fetch);
+    const catalogo = await fetchCatalog(
+      (async () =>
+        new Response(
+          JSON.stringify({
+            data: [
+              {
+                id: "deepseek/deepseek-v4-flash",
+                name: "DeepSeek V4 Flash",
+                pricing: { prompt: "0.00000004" },
+              },
+              {
+                id: "anthropic/claude-opus-4.6",
+                name: "Claude Opus 4.6",
+                pricing: { prompt: "0.00001" },
+              },
+            ],
+          }),
+          { status: 200 },
+        )) as unknown as typeof fetch,
+    );
 
     expect(catalogo.source).toBe("openrouter");
     const jev = catalogo.models.find((modelo) => modelo.id === "typesafe/jev-1.13");
     expect(jev?.probabilistic).toBe(true);
     // Y va primero: es lo que alguien viene a buscar al abrir esta pantalla.
     expect(catalogo.models[0]?.id).toBe("typesafe/jev-1.13");
-    expect(catalogo.models.find((m) => m.id === "deepseek/deepseek-v4-flash")?.promptUsd).toBeCloseTo(
-      0.00000004,
-      12,
-    );
+    expect(
+      catalogo.models.find((m) => m.id === "deepseek/deepseek-v4-flash")?.promptUsd,
+    ).toBeCloseTo(0.00000004, 12);
   });
 
   it("la lista local incluye todos los modelos de los presets", () => {
@@ -292,7 +323,9 @@ describe("el routing llega a la ejecución del gate", () => {
       lab,
       routingFromForm({
         preset: "balanced",
-        roles: { "gate-evaluator": { model: "deepseek/deepseek-v4-flash", effort: "medium" } },
+        roles: {
+          "gate-evaluator": { model: "deepseek/deepseek-v4-flash", effort: "medium" },
+        },
       }),
     );
     const routing = gateRouting(lab);
@@ -321,7 +354,9 @@ describe("el routing llega a la ejecución del gate", () => {
       lab,
       routingFromForm({
         preset: "balanced",
-        roles: { "gate-evaluator": { model: "deepseek/deepseek-v4-flash", effort: "auto" } },
+        roles: {
+          "gate-evaluator": { model: "deepseek/deepseek-v4-flash", effort: "auto" },
+        },
       }),
     );
 
@@ -384,7 +419,9 @@ describe("el routing llega a la ejecución del gate", () => {
       lab,
       routingFromForm({
         preset: "balanced",
-        roles: { "gate-evaluator": { model: "deepseek/deepseek-v4-flash", effort: "auto" } },
+        roles: {
+          "gate-evaluator": { model: "deepseek/deepseek-v4-flash", effort: "auto" },
+        },
       }),
     );
 
@@ -451,7 +488,10 @@ describe("la API de routing", () => {
     const respuesta = await handleApi(
       "PUT",
       "/api/routing",
-      { preset: "quality", roles: { critic: { model: "anthropic/claude-opus-4.6", effort: "high" } } },
+      {
+        preset: "quality",
+        roles: { critic: { model: "anthropic/claude-opus-4.6", effort: "high" } },
+      },
       context(),
     );
     expect(respuesta.status).toBe(200);
@@ -468,12 +508,18 @@ describe("la API de routing", () => {
       context(),
     );
     expect(respuesta.status).toBe(200);
-    expect((respuesta.body as { routing: { written: boolean } }).routing.written).toBe(false);
+    expect((respuesta.body as { routing: { written: boolean } }).routing.written).toBe(
+      false,
+    );
   });
 
   it("rechaza un formulario sin preset", async () => {
-    expect((await handleApi("PUT", "/api/routing", { roles: {} }, context())).status).toBe(400);
-    expect((await handleApi("POST", "/api/routing/preview", {}, context())).status).toBe(400);
+    expect((await handleApi("PUT", "/api/routing", { roles: {} }, context())).status).toBe(
+      400,
+    );
+    expect((await handleApi("POST", "/api/routing/preview", {}, context())).status).toBe(
+      400,
+    );
   });
 
   it("rechaza un rol desconocido en el formulario en vez de ignorarlo", async () => {
@@ -504,7 +550,9 @@ describe("el proveedor viaja con el modelo", () => {
   it("guarda el proveedor y el modelo", () => {
     const texto = routingFromForm({
       preset: "balanced",
-      roles: { architect: { provider: "deepseek", model: "deepseek-v4-pro", effort: "high" } },
+      roles: {
+        architect: { provider: "deepseek", model: "deepseek-v4-pro", effort: "high" },
+      },
     });
     expect(texto).toContain("provider: deepseek");
     expect(texto).toContain("model: deepseek-v4-pro");

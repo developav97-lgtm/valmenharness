@@ -32,10 +32,7 @@ export function receiptsPath(paths: RegistryPaths, ticketId: string): string {
  * exactamente lo que hay que ver, y descartarlo dejaría la historia
  * aparentemente completa.
  */
-export function readReceipts(
-  paths: RegistryPaths,
-  ticketId: string,
-): GateReceipt[] {
+export function readReceipts(paths: RegistryPaths, ticketId: string): GateReceipt[] {
   let text: string;
   try {
     text = readFileSync(receiptsPath(paths, ticketId), "utf8");
@@ -56,9 +53,7 @@ export function readReceipts(
  * el orden del registro es cronológico y invertirlo no debe depender de en qué
  * línea quedó la decisión humana.
  */
-export function currentReceipts(
-  receipts: readonly GateReceipt[],
-): GateReceipt[] {
+export function currentReceipts(receipts: readonly GateReceipt[]): GateReceipt[] {
   const porId = new Map<string, GateReceipt>();
   for (const recibo of receipts) porId.set(recibo.id, recibo);
   return [...porId.values()].reverse();

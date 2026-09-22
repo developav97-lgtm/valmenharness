@@ -110,12 +110,7 @@ export function validatePoints(points: readonly JsonObject[]): void {
       fail(`${id} usa una severidad no permitida.`);
     }
 
-    for (const key of [
-      "evidence",
-      "affected_files",
-      "tests",
-      "qa_cycles",
-    ] as const) {
+    for (const key of ["evidence", "affected_files", "tests", "qa_cycles"] as const) {
       requireStringList(point[key], `${id}.${key}`);
     }
 
@@ -131,17 +126,13 @@ export function validatePoints(points: readonly JsonObject[]): void {
     }
 
     const terminalReason = point["terminal_reason"];
-    const isTerminal = (TERMINAL_POINT_STATES as readonly string[]).includes(
-      status,
-    );
+    const isTerminal = (TERMINAL_POINT_STATES as readonly string[]).includes(status);
     if (isTerminal) {
       if (typeof terminalReason !== "string" || terminalReason.trim() === "") {
         fail(`${id} requiere terminal_reason.`);
       }
     } else if (terminalReason !== null) {
-      fail(
-        `${id} no puede conservar terminal_reason fuera de un estado terminal.`,
-      );
+      fail(`${id} no puede conservar terminal_reason fuera de un estado terminal.`);
     }
 
     const related = point["related_ticket"];
@@ -209,11 +200,7 @@ export function validateQa(entries: readonly JsonObject[]): void {
       validateReference(buildReference, `${id}.build_reference`);
     }
 
-    for (const key of [
-      "environment",
-      "correction",
-      "po_confirmation",
-    ] as const) {
+    for (const key of ["environment", "correction", "po_confirmation"] as const) {
       validateNullableText(entry[key], `${id}.${key}`);
     }
 
@@ -415,11 +402,7 @@ export function validateAiUsage(entries: readonly JsonObject[]): void {
       validateNullableText(entry[key], `${id}.${key}`);
     }
 
-    for (const key of [
-      "input_tokens",
-      "output_tokens",
-      "total_tokens",
-    ] as const) {
+    for (const key of ["input_tokens", "output_tokens", "total_tokens"] as const) {
       validateNullableNonNegativeInteger(entry[key], `${id}.${key}`);
     }
 
@@ -434,10 +417,7 @@ export function validateAiUsage(entries: readonly JsonObject[]): void {
     }
 
     const confidence = entry["confidence"];
-    if (
-      typeof confidence !== "string" ||
-      !CONFIDENCE_LEVELS.includes(confidence)
-    ) {
+    if (typeof confidence !== "string" || !CONFIDENCE_LEVELS.includes(confidence)) {
       fail(`${id}.confidence debe ser high, medium o low.`);
     }
   }
@@ -449,11 +429,7 @@ export function validateEvents(entries: readonly JsonObject[]): void {
 
   for (const entry of entries) {
     const id = entryId(entry, "EVENT");
-    requireExactKeys(
-      entry,
-      ["kind", "id", "date", "action", "actor", "details"],
-      id,
-    );
+    requireExactKeys(entry, ["kind", "id", "date", "action", "actor", "details"], id);
 
     if (entry["kind"] !== "ticket-event") {
       fail(`${id}.kind debe ser ticket-event.`);
@@ -477,9 +453,7 @@ export function validateEvents(entries: readonly JsonObject[]): void {
  * El evento `point-added` debe identificar el punto con el formato exacto
  * `Se agregó POINT-NNN.`, incluido el punto final.
  */
-export function pointIdsRecordedInEvents(
-  events: readonly JsonObject[],
-): string[] {
+export function pointIdsRecordedInEvents(events: readonly JsonObject[]): string[] {
   const ids: string[] = [];
   for (const event of events) {
     if (event["action"] !== "point-added") continue;

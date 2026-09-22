@@ -1,1 +1,48 @@
-{"model": "deepseek-chat", "temperature": 0, "messages": [{"role": "system", "content": "Eres un evaluador. Responde llamando a la herramienta."}, {"role": "user", "content": "Estado: el plan describe la paginación en dos pasos y cubre el rango vacío. Evalúa."}], "tools": [{"type": "function", "function": {"name": "gate_judgement", "description": "El juicio de cada proposición.", "parameters": {"type": "object", "properties": {"criterio_01": {"type": "object", "properties": {"holds": {"type": "boolean"}, "confidence": {"type": "number"}, "reason": {"type": "string"}}, "required": ["holds", "confidence", "reason"]}, "clasificacion": {"type": "object", "properties": {"choice": {"type": "string", "enum": ["completo", "falta_alcance"]}, "confidence": {"type": "number"}, "reason": {"type": "string"}}, "required": ["choice", "confidence", "reason"]}}, "required": ["criterio_01", "clasificacion"]}}}], "tool_choice": {"type": "function", "function": {"name": "gate_judgement"}}}
+{
+  "model": "deepseek-chat",
+  "temperature": 0,
+  "messages": [
+    {
+      "role": "system",
+      "content": "Eres un evaluador. Responde llamando a la herramienta."
+    },
+    {
+      "role": "user",
+      "content": "Estado: el plan describe la paginación en dos pasos y cubre el rango vacío. Evalúa."
+    }
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "gate_judgement",
+        "description": "El juicio de cada proposición.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "criterio_01": {
+              "type": "object",
+              "properties": {
+                "holds": { "type": "boolean" },
+                "confidence": { "type": "number" },
+                "reason": { "type": "string" }
+              },
+              "required": ["holds", "confidence", "reason"]
+            },
+            "clasificacion": {
+              "type": "object",
+              "properties": {
+                "choice": { "type": "string", "enum": ["completo", "falta_alcance"] },
+                "confidence": { "type": "number" },
+                "reason": { "type": "string" }
+              },
+              "required": ["choice", "confidence", "reason"]
+            }
+          },
+          "required": ["criterio_01", "clasificacion"]
+        }
+      }
+    }
+  ],
+  "tool_choice": { "type": "function", "function": { "name": "gate_judgement" } }
+}

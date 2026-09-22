@@ -75,7 +75,13 @@ function conCredencial(): void {
   const ruta = join(lab, ".valmen", ".credentials.yaml");
   writeFileSync(
     ruta,
-    ["version: 1", "providers:", "  openrouter:", '    api-key: "sk-or-v1-de-prueba"', ""].join("\n"),
+    [
+      "version: 1",
+      "providers:",
+      "  openrouter:",
+      '    api-key: "sk-or-v1-de-prueba"',
+      "",
+    ].join("\n"),
     { encoding: "utf8", mode: 0o600 },
   );
 }
@@ -135,7 +141,9 @@ describe("una propuesta de cambio", () => {
   it("no escribe nada: el archivo queda igual", async () => {
     await proponer({
       summary: "Cambiar el nombre.",
-      changes: [{ file: "config", text: CONFIG.replace("SaiOpenCloud", "Otro"), reason: "…" }],
+      changes: [
+        { file: "config", text: CONFIG.replace("SaiOpenCloud", "Otro"), reason: "…" },
+      ],
     });
     expect(readFileSync(configPath(lab), "utf8")).toBe(CONFIG);
   });
@@ -181,7 +189,8 @@ describe("una propuesta de cambio", () => {
       proposeConfigChange(lab, {
         message: "x",
         apiKey: "sk-de-prueba",
-        fetchImpl: (async () => new Response("{}", { status: 401 })) as unknown as typeof fetch,
+        fetchImpl: (async () =>
+          new Response("{}", { status: 401 })) as unknown as typeof fetch,
       }),
     ).rejects.toThrow(/HTTP 401/);
   });
@@ -204,7 +213,8 @@ describe("una propuesta de cambio", () => {
 
 describe("los cambios sensibles", () => {
   it("cambiar el evaluador de gates exige confirmación, y explica por qué", async () => {
-    const routing = "preset: balanced\nroles:\n  gate-evaluator:\n    provider: openrouter\n    model: deepseek/deepseek-v4-flash\n    effort: auto\n";
+    const routing =
+      "preset: balanced\nroles:\n  gate-evaluator:\n    provider: openrouter\n    model: deepseek/deepseek-v4-flash\n    effort: auto\n";
     const resultado = await proponer({
       summary: "Usar un juez de chat.",
       changes: [{ file: "routing", text: routing, reason: "…" }],
@@ -249,7 +259,11 @@ describe("los cambios sensibles", () => {
     const resultado = await proponer({
       summary: "Declarar gates.",
       changes: [
-        { file: "config", text: CONFIG.replace("gates: []", "gates:\n  - plan"), reason: "…" },
+        {
+          file: "config",
+          text: CONFIG.replace("gates: []", "gates:\n  - plan"),
+          reason: "…",
+        },
       ],
     });
     expect(resultado.changes[0]?.sensitive).toBe(true);
@@ -259,7 +273,9 @@ describe("los cambios sensibles", () => {
   it("cambiar el nombre del proyecto no es sensible", async () => {
     const resultado = await proponer({
       summary: "Renombrar.",
-      changes: [{ file: "config", text: CONFIG.replace("SaiOpenCloud", "Otro"), reason: "…" }],
+      changes: [
+        { file: "config", text: CONFIG.replace("SaiOpenCloud", "Otro"), reason: "…" },
+      ],
     });
     expect(resultado.changes[0]?.sensitive).toBe(false);
   });
@@ -290,9 +306,7 @@ describe("aplicar una propuesta", () => {
 
   it("un booleano no es una confirmación", () => {
     const texto = CONFIG.replace("gates: []", "gates:\n  - plan");
-    const resultado = applyChanges(lab, [
-      { file: "config", text: texto, confirm: "true" },
-    ]);
+    const resultado = applyChanges(lab, [{ file: "config", text: texto, confirm: "true" }]);
     expect(resultado.ok).toBe(false);
     expect(readConfigText(lab)).toBe(CONFIG);
   });
@@ -350,10 +364,19 @@ describe("la API del chat", () => {
       "POST",
       "/api/chat/config",
       { message: "quiero declarar el gate de plan" },
-      { ...context(), fetchImpl: proveedor({
-        summary: "Declarar el gate de plan.",
-        changes: [{ file: "config", text: CONFIG.replace("gates: []", "gates:\n  - plan"), reason: "…" }],
-      }) },
+      {
+        ...context(),
+        fetchImpl: proveedor({
+          summary: "Declarar el gate de plan.",
+          changes: [
+            {
+              file: "config",
+              text: CONFIG.replace("gates: []", "gates:\n  - plan"),
+              reason: "…",
+            },
+          ],
+        }),
+      },
     );
     expect(respuesta.status).toBe(200);
     const cuerpo = respuesta.body as { ok: boolean; changes: { sensitive: boolean }[] };
@@ -370,7 +393,8 @@ describe("la API del chat", () => {
       { message: "x" },
       {
         ...context(),
-        fetchImpl: (async () => new Response("{}", { status: 500 })) as unknown as typeof fetch,
+        fetchImpl: (async () =>
+          new Response("{}", { status: 500 })) as unknown as typeof fetch,
       },
     );
     expect(respuesta.status).toBe(200);
@@ -415,7 +439,8 @@ describe("la API del chat", () => {
 
   it("rechaza un cambio sin archivo o sin texto", async () => {
     expect(
-      (await handleApi("POST", "/api/chat/config/apply", { changes: [{}] }, context())).status,
+      (await handleApi("POST", "/api/chat/config/apply", { changes: [{}] }, context()))
+        .status,
     ).toBe(400);
     expect(
       (
@@ -427,6 +452,8 @@ describe("la API del chat", () => {
         )
       ).status,
     ).toBe(400);
-    expect((await handleApi("POST", "/api/chat/config/apply", {}, context())).status).toBe(400);
+    expect((await handleApi("POST", "/api/chat/config/apply", {}, context())).status).toBe(
+      400,
+    );
   });
 });

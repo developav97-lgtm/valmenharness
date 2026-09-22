@@ -20,11 +20,7 @@ import {
   listFeatures,
   readFeature,
 } from "../packages/engine/src/features.js";
-import {
-  featureList,
-  featureNew,
-  featureShow,
-} from "../packages/cli/src/features.js";
+import { featureList, featureNew, featureShow } from "../packages/cli/src/features.js";
 
 const temporales: string[] = [];
 
@@ -203,17 +199,13 @@ describe("valmen feature", () => {
 
     const lista = featureList(root);
     expect(lista.exitCode).toBe(0);
-    expect(lista.stdout).toBe(
-      "modulo-inventario | draft | — | Módulo de inventario\n",
-    );
+    expect(lista.stdout).toBe("modulo-inventario | draft | — | Módulo de inventario\n");
   });
 
   it("new exige slug y título", () => {
     const root = proyecto();
     expect(featureNew(root, undefined, "Módulo").exitCode).toBe(EXIT_SCHEMA);
-    expect(featureNew(root, "modulo-inventario", undefined).exitCode).toBe(
-      EXIT_SCHEMA,
-    );
+    expect(featureNew(root, "modulo-inventario", undefined).exitCode).toBe(EXIT_SCHEMA);
     expect(featureNew(root, "modulo-inventario", "  ").exitCode).toBe(EXIT_SCHEMA);
   });
 

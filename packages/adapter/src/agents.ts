@@ -57,9 +57,7 @@ function splitAgentFrontmatter(text: string): {
 } {
   const match = AGENT_FRONTMATTER_RE.exec(text);
   if (match === null) {
-    fail(
-      "Un agente de .valmen/agents/ debe iniciar con frontmatter delimitado por ---.",
-    );
+    fail("Un agente de .valmen/agents/ debe iniciar con frontmatter delimitado por ---.");
   }
 
   const fields = new Map<string, string>();
@@ -67,9 +65,7 @@ function splitAgentFrontmatter(text: string): {
     if (line.trim() === "") continue;
     const field = AGENT_LINE_RE.exec(line);
     if (field === null) {
-      fail(
-        "El frontmatter de un agente solo admite líneas clave: valor en una línea.",
-      );
+      fail("El frontmatter de un agente solo admite líneas clave: valor en una línea.");
     }
     const key = field[1] as string;
     if (fields.has(key)) fail(`El campo ${key} del agente está duplicado.`);
@@ -80,11 +76,7 @@ function splitAgentFrontmatter(text: string): {
 }
 
 /** Interpreta un valor booleano del frontmatter. */
-function readBoolean(
-  fields: Map<string, string>,
-  key: string,
-  fallback: boolean,
-): boolean {
+function readBoolean(fields: Map<string, string>, key: string, fallback: boolean): boolean {
   const value = fields.get(key);
   if (value === undefined || value === "") return fallback;
   if (value === "true") return true;
@@ -143,10 +135,7 @@ export function readAgents(root: string): AgentDefinition[] {
   }
 
   return names
-    .filter(
-      (name) =>
-        name.endsWith(".md") && statSync(join(directory, name)).isFile(),
-    )
+    .filter((name) => name.endsWith(".md") && statSync(join(directory, name)).isFile())
     .sort()
     .map((name) => {
       const id = name.replace(/\.md$/, "");
@@ -247,11 +236,7 @@ export function renderClaudeAgent(
 export type AgentRuntime = "codex" | "opencode" | "claude";
 
 /** Todos los runtimes soportados, en orden estable. */
-export const AGENT_RUNTIMES: readonly AgentRuntime[] = [
-  "codex",
-  "opencode",
-  "claude",
-];
+export const AGENT_RUNTIMES: readonly AgentRuntime[] = ["codex", "opencode", "claude"];
 
 /**
  * Proyecta todos los agentes a todos los runtimes.
@@ -267,8 +252,7 @@ export function renderAllAgents(
   for (const runtime of AGENT_RUNTIMES) {
     for (const agent of agents) {
       if (runtime === "codex") files.push(renderCodexAgent(agent, sources));
-      else if (runtime === "opencode")
-        files.push(renderOpencodeAgent(agent, sources));
+      else if (runtime === "opencode") files.push(renderOpencodeAgent(agent, sources));
       else files.push(renderClaudeAgent(agent, sources));
     }
   }

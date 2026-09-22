@@ -30,9 +30,7 @@ export const MAX_CRITERIA_PROPOSITIONS = 12;
 export function extractCriteria(section: string): string[] {
   return section
     .split("\n")
-    .map((line) =>
-      line.replace(/^\s*(?:[-*+]\s+\[[ xX]\]|\d+[.)]|[-*+]\s+)\s*/, "").trim(),
-    )
+    .map((line) => line.replace(/^\s*(?:[-*+]\s+\[[ xX]\]|\d+[.)]|[-*+]\s+)\s*/, "").trim())
     .filter((line) => line.length >= 12)
     .slice(0, MAX_CRITERIA_PROPOSITIONS);
 }
@@ -44,10 +42,7 @@ export function extractCriteria(section: string): string[] {
  * criterio entre comillas evita que el modelo tenga que inferir a cuál se
  * refiere entre todos los del ticket.
  */
-export function criterionProposition(
-  index: number,
-  criterion: string,
-): Proposition {
+export function criterionProposition(index: number, criterion: string): Proposition {
   return {
     id: `criterio_${String(index + 1).padStart(2, "0")}`,
     kind: "noul",
@@ -100,9 +95,7 @@ export function expandGate(
   // ausencia de una respuesta que nunca se pidió. Se conservan como
   // descriptivas porque su valor es informativo y queda en el recibo.
   const propositions = gate.propositions.map((proposition) =>
-    proposition.verdict === false
-      ? proposition
-      : { ...proposition, verdict: false },
+    proposition.verdict === false ? proposition : { ...proposition, verdict: false },
   );
 
   return {
@@ -118,24 +111,16 @@ export interface GateContext {
 }
 
 /** Obtiene un gate expandido con el contexto del sujeto. */
-export function gateFor(
-  gate: GateDefinition,
-  context: GateContext,
-): GateDefinition {
+export function gateFor(gate: GateDefinition, context: GateContext): GateDefinition {
   return expandGate(gate, context);
 }
 
 /** Resumen legible de qué proposiciones aporta la expansión. */
-export function describeExpansion(
-  base: GateDefinition,
-  expanded: GateDefinition,
-): string {
+export function describeExpansion(base: GateDefinition, expanded: GateDefinition): string {
   const nuevas = expanded.propositions.filter(
-    (proposition) =>
-      !base.propositions.some((item) => item.id === proposition.id),
+    (proposition) => !base.propositions.some((item) => item.id === proposition.id),
   );
-  if (nuevas.length === 0)
-    return "sin expansión: el sujeto no declara criterios";
+  if (nuevas.length === 0) return "sin expansión: el sujeto no declara criterios";
   return `${nuevas.length} proposición(es) por criterio, más ${base.propositions.length} fijas`;
 }
 

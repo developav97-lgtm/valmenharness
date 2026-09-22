@@ -63,9 +63,7 @@ function structuredBlocks(text: string): Record<string, unknown[]> {
   const { blocks } = parseTicket(text);
   const snapshot: Record<string, unknown[]> = {};
   for (const section of STRUCTURED_SECTIONS) {
-    snapshot[section] = JSON.parse(
-      JSON.stringify(blocks[section]),
-    ) as unknown[];
+    snapshot[section] = JSON.parse(JSON.stringify(blocks[section])) as unknown[];
   }
   return snapshot;
 }
@@ -91,10 +89,7 @@ describe("migrate: propiedades", () => {
 
   it("NO toca los bloques JSON append-only", () => {
     const before = new Map(
-      ticketFiles().map((file) => [
-        file,
-        structuredBlocks(readFileSync(file, "utf8")),
-      ]),
+      ticketFiles().map((file) => [file, structuredBlocks(readFileSync(file, "utf8"))]),
     );
 
     migrateRegistry(PATHS(), { today: FIXED_TODAY });
@@ -144,9 +139,7 @@ describe("migrate: propiedades", () => {
   });
 
   it("con --dry-run informa pero no escribe", () => {
-    const before = new Map(
-      ticketFiles().map((file) => [file, readFileSync(file, "utf8")]),
-    );
+    const before = new Map(ticketFiles().map((file) => [file, readFileSync(file, "utf8")]));
 
     const result = migrateRegistry(PATHS(), {
       dryRun: true,
@@ -166,15 +159,10 @@ describe("migrate: propiedades", () => {
     const victim = files[0] as string;
     writeFileSync(
       victim,
-      readFileSync(victim, "utf8").replace(
-        /^risk_level: .*$/m,
-        "risk_level: gravisimo",
-      ),
+      readFileSync(victim, "utf8").replace(/^risk_level: .*$/m, "risk_level: gravisimo"),
       "utf8",
     );
-    const snapshot = new Map(
-      files.map((file) => [file, readFileSync(file, "utf8")]),
-    );
+    const snapshot = new Map(files.map((file) => [file, readFileSync(file, "utf8")]));
 
     const result = migrateRegistry(PATHS(), { today: FIXED_TODAY });
 
@@ -206,10 +194,7 @@ describe("migrate: propiedades", () => {
     // un valor que el motor no sabe clasificar y debe señalar.
     writeFileSync(
       file,
-      readFileSync(file, "utf8").replace(
-        /"kind": "automated"/,
-        '"kind": "inventado"',
-      ),
+      readFileSync(file, "utf8").replace(/"kind": "automated"/, '"kind": "inventado"'),
       "utf8",
     );
 

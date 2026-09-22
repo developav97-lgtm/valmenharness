@@ -68,10 +68,7 @@ export function allDocuments(paths: RegistryPaths): RegistryDocument[] {
 }
 
 /** Parsea y valida un ticket ya localizado. */
-export function readAndValidate(
-  paths: RegistryPaths,
-  ticket: LocatedTicket,
-): ParsedTicket {
+export function readAndValidate(paths: RegistryPaths, ticket: LocatedTicket): ParsedTicket {
   const document = parseTicket(ticket.text);
   validateDocument(document, {
     expectedId: ticket.id,

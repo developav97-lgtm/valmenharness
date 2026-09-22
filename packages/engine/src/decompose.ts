@@ -25,7 +25,6 @@ import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import {
-  type FeatureDecomposition,
   type FeatureRequirement,
   type TicketsDocument,
   EXIT_INVARIANT,
@@ -36,7 +35,7 @@ import {
   renderTicketsYaml,
 } from "@valmen/core";
 
-import { type FeatureRow, featurePath, readFeature } from "./features.js";
+import { type FeatureRow, readFeature } from "./features.js";
 import { readRequirements } from "./spec.js";
 
 /** El estado del que se puede descomponer. */
@@ -226,10 +225,7 @@ export async function decomposeFeature(
   const { row, text: brief } = leerFeature(root, slug);
 
   const specDir = join(root, ".valmen", "features", slug, "spec");
-  const requisitos = readRequirements(
-    specDir,
-    `.valmen/features/${slug}`,
-  );
+  const requisitos = readRequirements(specDir, `.valmen/features/${slug}`);
   if (requisitos.length === 0) {
     fail(
       `La feature "${slug}" no tiene requisitos en spec/. La descomposición se ` +
@@ -255,9 +251,7 @@ export async function decomposeFeature(
   // aquí y no tres sprints después.
   const document = parseTicketsYaml(yaml, requisitos);
   if (document.feature !== slug) {
-    fail(
-      `El grafo dice pertenecer a "${document.feature}" y no a "${slug}".`,
-    );
+    fail(`El grafo dice pertenecer a "${document.feature}" y no a "${slug}".`);
   }
   assertDecomposable(requisitos, document.decomposition);
 
@@ -294,9 +288,7 @@ export function renderDecomposition(result: DecomposeResult): string {
     }),
     `${document.decomposition.coverage.length} requisito(s) cubierto(s).`,
     `Modelo: ${decomposer.provider}/${decomposer.model}` +
-      (decomposer.costUsd === undefined
-        ? ""
-        : ` · $${decomposer.costUsd.toFixed(6)}`),
+      (decomposer.costUsd === undefined ? "" : ` · $${decomposer.costUsd.toFixed(6)}`),
     result.written
       ? `Escrito en ${result.path}.`
       : `Sin escribir (--dry-run). Habría quedado en ${result.path}.`,

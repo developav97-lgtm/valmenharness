@@ -29,14 +29,6 @@ export interface FixtureTicketOptions {
   readonly releasedIn?: string;
 }
 
-const SECCIONES_VACIAS = [
-  "Puntos",
-  "QA",
-  "Evidencia",
-  "Retests",
-  "Cierre",
-  "Consumo de IA",
-];
 
 /**
  * Construye el texto de un ticket válido en el estado pedido.
@@ -80,8 +72,7 @@ export function renderFixtureTicket(options: FixtureTicketOptions): string {
   // Las secciones deben emitirse en el orden canónico exacto: el parser exige
   // que la secuencia de encabezados sea idéntica a la del contrato, así que un
   // generador que las agrupe por tipo produce un ticket que no parsea.
-  const vacio = (seccion: string): string =>
-    `## ${seccion}\n\n\`\`\`json\n[]\n\`\`\`\n`;
+  const vacio = (seccion: string): string => `## ${seccion}\n\n\`\`\`json\n[]\n\`\`\`\n`;
 
   return `---
 schema_version: 1
@@ -170,17 +161,10 @@ Sin publicar todavía.
  * El año del directorio se toma de los cuatro dígitos finales del id, que es lo
  * que el contrato espera.
  */
-export function writeFixtureTicket(
-  root: string,
-  options: FixtureTicketOptions,
-): string {
+export function writeFixtureTicket(root: string, options: FixtureTicketOptions): string {
   const year = options.id.slice(-8, -4);
   const directory = join(root, "tickets", year, options.id);
   mkdirSync(directory, { recursive: true });
-  writeFileSync(
-    join(directory, "ticket.md"),
-    renderFixtureTicket(options),
-    "utf8",
-  );
+  writeFileSync(join(directory, "ticket.md"), renderFixtureTicket(options), "utf8");
   return options.id;
 }

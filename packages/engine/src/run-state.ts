@@ -244,7 +244,9 @@ export function readApprovals(root: string): GateApproval[] {
  */
 export function gateApproved(root: string, gate: string): GateApproval | null {
   const aprobaciones = readApprovals(root).filter((entrada) => entrada.gate === gate);
-  return aprobaciones.length === 0 ? null : (aprobaciones[aprobaciones.length - 1] as GateApproval);
+  return aprobaciones.length === 0
+    ? null
+    : (aprobaciones[aprobaciones.length - 1] as GateApproval);
 }
 
 /**
@@ -261,10 +263,7 @@ export function approveGate(
   ahora: Date = new Date(),
 ): GateApproval {
   if (actor.trim() === "") {
-    fail(
-      "Aprobar un gate necesita un responsable: falta --actor.",
-      EXIT_SCHEMA,
-    );
+    fail("Aprobar un gate necesita un responsable: falta --actor.", EXIT_SCHEMA);
   }
   const aprobacion: GateApproval = {
     gate,

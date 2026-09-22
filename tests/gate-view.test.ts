@@ -17,13 +17,7 @@
  *    eliminaría la razón de tener recibos.
  * 4. **Aprobar no avanza el ticket.** Un gate no cambia estados.
  */
-import {
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -68,15 +62,13 @@ afterEach(() => {
 function evaluator(
   criteriaValue: number,
 ): typeof import("../packages/gate-jev/src/index.js").evaluateWithJev {
-  return (async (
-    options: {
-      propositions?: readonly {
-        id: string;
-        kind?: string;
-        criteria?: Readonly<Record<string, string>> | readonly string[];
-      }[];
-    },
-  ) => {
+  return (async (options: {
+    propositions?: readonly {
+      id: string;
+      kind?: string;
+      criteria?: Readonly<Record<string, string>> | readonly string[];
+    }[];
+  }) => {
     const answers = (options?.propositions ?? []).map((proposition) => {
       if (proposition.kind === "choice") {
         const opciones = Object.keys(proposition.criteria ?? {});
@@ -143,8 +135,7 @@ describe("qué gates aplican a un ticket", () => {
     // El ticket del laboratorio declara cuatro criterios y es de riesgo normal.
     expect(plan?.blockedByCode).toBe(false);
     expect(
-      plan?.mechanicalChecks.find((check) => check.id === "criterios_presentes")
-        ?.result,
+      plan?.mechanicalChecks.find((check) => check.id === "criterios_presentes")?.result,
     ).toBe("pass");
   });
 
@@ -158,16 +149,12 @@ describe("qué gates aplican a un ticket", () => {
       "utf8",
     );
 
-    const plan = listGateCards(PATHS(), TICKET)?.find(
-      (tarjeta) => tarjeta.id === "plan",
-    );
+    const plan = listGateCards(PATHS(), TICKET)?.find((tarjeta) => tarjeta.id === "plan");
     expect(plan?.blockedByCode).toBe(true);
   });
 
   it("cuenta las proposiciones contando la expansión por criterio", () => {
-    const plan = listGateCards(PATHS(), TICKET)?.find(
-      (tarjeta) => tarjeta.id === "plan",
-    );
+    const plan = listGateCards(PATHS(), TICKET)?.find((tarjeta) => tarjeta.id === "plan");
     // Cuatro criterios de aceptación en el ticket del laboratorio, más las
     // proposiciones fijas del gate.
     expect(plan?.propositionCount).toBeGreaterThan(4);
@@ -206,9 +193,7 @@ describe("ejecutar un gate desde la interfaz", () => {
     // con la marca que la interfaz muestra, decidida aquí.
     for (const proposicion of recibo?.propositions ?? []) {
       expect(typeof proposicion.value).toBe("number");
-      expect(["approve", "block", "review", "descriptive"]).toContain(
-        proposicion.mark,
-      );
+      expect(["approve", "block", "review", "descriptive"]).toContain(proposicion.mark);
     }
     expect(recibo?.model?.resolvedVersion).toBe("typesafe/jev-1.13-20260917");
     expect(recibo?.usage?.costUsd).toBeCloseTo(0.000031542, 9);
@@ -321,10 +306,7 @@ describe("la decisión humana", () => {
 
   it("se anexa como línea nueva y no reescribe el veredicto del modelo", async () => {
     const receiptId = await enRevision();
-    const antes = readFileSync(
-      join(lab, ".valmen", "receipts", `${TICKET}.jsonl`),
-      "utf8",
-    )
+    const antes = readFileSync(join(lab, ".valmen", "receipts", `${TICKET}.jsonl`), "utf8")
       .trim()
       .split("\n");
     expect(antes).toHaveLength(1);
@@ -347,9 +329,7 @@ describe("la decisión humana", () => {
     expect(despues).toHaveLength(2);
     expect(JSON.parse(despues[0] as string).humanDecision).toBeNull();
     expect(JSON.parse(despues[0] as string).outcome).toBe("review");
-    expect(JSON.parse(despues[1] as string).humanDecision.decision).toBe(
-      "approve",
-    );
+    expect(JSON.parse(despues[1] as string).humanDecision.decision).toBe("approve");
   });
 
   it("la versión vigente del recibo es la que tiene la decisión", async () => {
@@ -419,10 +399,7 @@ describe("la decisión humana", () => {
       reason: "Aprobado.",
     });
 
-    const ticket = readFileSync(
-      join(lab, "tickets", "2026", TICKET, "ticket.md"),
-      "utf8",
-    );
+    const ticket = readFileSync(join(lab, "tickets", "2026", TICKET, "ticket.md"), "utf8");
     expect(ticket).toContain("workflow_status: planned");
   });
 
@@ -441,21 +418,13 @@ describe("la decisión humana", () => {
 
 describe("la API de gates", () => {
   it("lista los gates y los recibos del ticket", async () => {
-    const respuesta = await handleApi(
-      "GET",
-      `/api/tickets/${TICKET}/gates`,
-      {},
-      context(),
-    );
+    const respuesta = await handleApi("GET", `/api/tickets/${TICKET}/gates`, {}, context());
     expect(respuesta.status).toBe(200);
     const cuerpo = respuesta.body as {
       gates: { id: string }[];
       decisions: unknown[];
     };
-    expect(cuerpo.gates.map((gate) => gate.id).sort()).toEqual([
-      "analysis",
-      "plan",
-    ]);
+    expect(cuerpo.gates.map((gate) => gate.id).sort()).toEqual(["analysis", "plan"]);
     expect(cuerpo.decisions).toEqual([]);
   });
 
@@ -504,9 +473,8 @@ describe("la API de gates", () => {
       {},
       { ...context(), jev: evaluator(0.5) },
     );
-    const recibo = (
-      ejecucion.body as { receipt: { receiptId: string; outcome: string } }
-    ).receipt;
+    const recibo = (ejecucion.body as { receipt: { receiptId: string; outcome: string } })
+      .receipt;
     expect(recibo.outcome).toBe("review");
 
     const decision = await handleApi(
@@ -521,8 +489,8 @@ describe("la API de gates", () => {
     );
     expect(decision.status).toBe(200);
     expect(
-      (decision.body as { receipt: { humanDecision: { actor: string } } })
-        .receipt.humanDecision.actor,
+      (decision.body as { receipt: { humanDecision: { actor: string } } }).receipt
+        .humanDecision.actor,
     ).toBe("Juan Andrade");
   });
 
@@ -607,7 +575,6 @@ describe("un proyecto con el registro en docs/tickets", () => {
   });
 });
 
-
 describe("la credencial de un gate sale del archivo del servidor", () => {
   /**
    * El fallo que esto fija: la evaluación de un gate resolvía la clave del
@@ -633,9 +600,12 @@ describe("la credencial de un gate sale del archivo del servidor", () => {
       { mode: 0o600 },
     );
 
-    const { apiKeyWithPrecedence } = await import("../packages/credentials/src/credentials.js");
+    const { apiKeyWithPrecedence } =
+      await import("../packages/credentials/src/credentials.js");
     // El archivo del servidor gana sobre el del `$HOME`, que es el fallo.
-    expect(apiKeyWithPrecedence("openrouter", archivo, {})).toBe("sk-or-v1-la-del-servidor");
+    expect(apiKeyWithPrecedence("openrouter", archivo, {})).toBe(
+      "sk-or-v1-la-del-servidor",
+    );
     // Y la variable de entorno sigue ganando sobre el archivo, como siempre.
     expect(
       apiKeyWithPrecedence("openrouter", archivo, { OPENROUTER_API_KEY: "sk-de-entorno" }),
@@ -647,14 +617,19 @@ describe("la credencial de un gate sale del archivo del servidor", () => {
 
   it("no inventa una clave para un proveedor que no está en el archivo", async () => {
     const { apiKeyFromText } = await import("../packages/credentials/src/credentials.js");
-    expect(apiKeyFromText("providers:\n  deepseek:\n    api-key: sk-otra\n", "openrouter")).toBeNull();
+    expect(
+      apiKeyFromText("providers:\n  deepseek:\n    api-key: sk-otra\n", "openrouter"),
+    ).toBeNull();
   });
 
   it("rechaza un nombre de variable pegado por descuido", async () => {
     // Mandarlo daría un 401 que no explica que el problema es el valor.
     const { apiKeyFromText } = await import("../packages/credentials/src/credentials.js");
     expect(
-      apiKeyFromText("providers:\n  openrouter:\n    api-key: OPENROUTER_API_KEY\n", "openrouter"),
+      apiKeyFromText(
+        "providers:\n  openrouter:\n    api-key: OPENROUTER_API_KEY\n",
+        "openrouter",
+      ),
     ).toBeNull();
   });
 });

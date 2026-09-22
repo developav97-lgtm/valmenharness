@@ -53,10 +53,7 @@ function evidenceKinds(ticket: ParsedTicket): string[] {
  * No escribe nada. Permite mostrar el plan antes de aplicarlo y calcular el
  * informe sin tocar el registro.
  */
-export function planMigration(
-  ticket: ParsedTicket,
-  today: string,
-): MigrationPlan {
+export function planMigration(ticket: ParsedTicket, today: string): MigrationPlan {
   const updates: Record<string, string> = {};
   const reasons: string[] = [];
 
@@ -126,10 +123,7 @@ export function migrateTicketText(
  * Se expone aparte porque el comando de migración lo usa para verificar el
  * archivo ya escrito, no solo el texto en memoria.
  */
-export function assertValidAfterMigration(
-  text: string,
-  expectedId: string,
-): void {
+export function assertValidAfterMigration(text: string, expectedId: string): void {
   const parsed = parseTicket(text);
   validateDocument(parsed, { expectedId });
   if (parsed.fields.schema_version !== SCHEMA_VERSION) {

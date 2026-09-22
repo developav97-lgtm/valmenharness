@@ -75,10 +75,7 @@ export function readRules(root: string): RuleFile[] {
   }
 
   return names
-    .filter(
-      (name) =>
-        name.endsWith(".md") && statSync(join(directory, name)).isFile(),
-    )
+    .filter((name) => name.endsWith(".md") && statSync(join(directory, name)).isFile())
     .sort()
     .map((name) => ({
       name: name.replace(/\.md$/, ""),
@@ -105,9 +102,7 @@ export function loadProjectModel(
   const configPath = join(root, ".valmen", "config.yaml");
   let config: ConfigMap = {};
   try {
-    config = parseConfig(
-      configText ?? readFileSync(configPath, "utf8"),
-    );
+    config = parseConfig(configText ?? readFileSync(configPath, "utf8"));
   } catch (error) {
     // Un config inválido no debe degradarse a "sin configuración": el usuario
     // creería que su archivo se aplicó cuando no fue así.
@@ -161,17 +156,12 @@ function demoteTitle(content: string): string {
  * texto. Esa propiedad es la que hace posible `valmen sync --check`.
  */
 export function projectAgentsMd(model: ProjectModel): string {
-  const sources = [
-    ".valmen/config.yaml",
-    ...model.rules.map((rule) => rule.source),
-  ];
+  const sources = [".valmen/config.yaml", ...model.rules.map((rule) => rule.source)];
 
   const parts: string[] = [generatedHeader(ADAPTER_VERSION, sources)];
 
   const title =
-    model.description === ""
-      ? model.name
-      : `${model.name} — ${model.description}`;
+    model.description === "" ? model.name : `${model.name} — ${model.description}`;
   parts.push(`# ${title}\n`);
 
   if (model.rules.length === 0) {

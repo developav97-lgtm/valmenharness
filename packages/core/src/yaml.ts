@@ -96,11 +96,7 @@ function stripComment(raw: string): string {
 }
 
 /** Convierte el texto en líneas significativas con su indentación. */
-function significantLines(
-  text: string,
-  nombre: string,
-  permitir: RegExp | null,
-): Line[] {
+function significantLines(text: string, nombre: string, permitir: RegExp | null): Line[] {
   const lines: Line[] = [];
   text.split(/\r?\n/).forEach((raw, index) => {
     const permitido = permitir?.test(raw) === true;
@@ -141,7 +137,7 @@ interface BlockContext {
 }
 
 function parseBlock(contexto: BlockContext): { value: YamlValue; next: number } {
-  const { lines, start, indent } = contexto;
+  const { lines, start } = contexto;
   const first = lines[start];
   if (first === undefined) return { value: {}, next: start };
   if (first.text.startsWith("- ")) return parseSequence(contexto);

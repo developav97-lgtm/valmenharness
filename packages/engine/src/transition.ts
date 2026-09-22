@@ -67,11 +67,7 @@ export interface TransitionOutcome {
 }
 
 /** Una entrada del bloque `QA`, con las claves del contrato. */
-function qaEntry(
-  id: string,
-  date: string,
-  values: Partial<JsonObject>,
-): JsonObject {
+function qaEntry(id: string, date: string, values: Partial<JsonObject>): JsonObject {
   return {
     id,
     date,
@@ -98,7 +94,7 @@ function nextId(entries: readonly JsonObject[], prefix: string): string {
  * distintas.
  */
 export function transition(request: TransitionRequest): TransitionOutcome {
-  const { paths, ticketId, entity, to } = request;
+  const { paths, ticketId, entity } = request;
 
   return MutationLock.run(paths.root, () => {
     const located = findTicket(paths, ticketId);
@@ -107,9 +103,7 @@ export function transition(request: TransitionRequest): TransitionOutcome {
     }
 
     const document = readAndValidate(paths, located);
-    const date = new Date(request.now?.() ?? new Date())
-      .toISOString()
-      .slice(0, 10);
+    const date = new Date(request.now?.() ?? new Date()).toISOString().slice(0, 10);
 
     const plan =
       entity === "ticket"
@@ -184,18 +178,12 @@ function applyTicket(
     }
     motivo = validateText(reason ?? null, "reason");
   } else if (reason !== undefined) {
-    fail(
-      "--reason solo aplica al reabrir un ticket cerrado no publicado.",
-      EXIT_INVARIANT,
-    );
+    fail("--reason solo aplica al reabrir un ticket cerrado no publicado.", EXIT_INVARIANT);
   }
 
   // Las precondiciones del destino, en el orden de la referencia.
   if (to === "planned" && !hasSubstantivePlan(document.sections.Plan ?? "")) {
-    fail(
-      "No se puede marcar planned con placeholders o un plan vacío.",
-      EXIT_INVARIANT,
-    );
+    fail("No se puede marcar planned con placeholders o un plan vacío.", EXIT_INVARIANT);
   }
   if (to === "approved" && !hasPlanGate(document)) {
     fail(
@@ -223,10 +211,7 @@ function applyTicket(
       qa.length === 0 ||
       (ultimo?.result !== "changes_requested" && ultimo?.result !== "failed")
     ) {
-      fail(
-        "changes_requested requiere un ciclo QA cerrado con hallazgos.",
-        EXIT_INVARIANT,
-      );
+      fail("changes_requested requiere un ciclo QA cerrado con hallazgos.", EXIT_INVARIANT);
     }
   }
 
@@ -262,19 +247,13 @@ function applyTicket(
       fail("closed requiere QA aprobada o eximida.", EXIT_INVARIANT);
     }
     if (qaStatus === "approved" && !hasApprovedQaCycle(document.blocks.QA ?? [])) {
-      fail(
-        "closed requiere un ciclo QA aprobado y confirmado.",
-        EXIT_INVARIANT,
-      );
+      fail("closed requiere un ciclo QA aprobado y confirmado.", EXIT_INVARIANT);
     }
     const cierreCoherente = (document.blocks.Cierre ?? []).some(
       (entrada) => entrada.qa_status === qaStatus,
     );
     if (!cierreCoherente) {
-      fail(
-        "closed requiere un intento de cierre coherente con QA.",
-        EXIT_INVARIANT,
-      );
+      fail("closed requiere un intento de cierre coherente con QA.", EXIT_INVARIANT);
     }
   }
 
@@ -319,10 +298,7 @@ function applyTicket(
 
 // ── Release ─────────────────────────────────────────────────────────────────
 
-function applyRelease(
-  document: ParsedTicket,
-  request: TransitionRequest,
-): Plan {
+function applyRelease(document: ParsedTicket, request: TransitionRequest): Plan {
   assertNoExtraFlags(request);
   const { to, version } = request;
   const current = document.fields.release_status;
@@ -333,24 +309,19 @@ function applyRelease(
 
   if (to === "planned") {
     if (version === undefined || !SEMVER_RE.test(version)) {
-      fail(
-        "release planned requiere --version SemVer sin prefijo v.",
-        EXIT_INVARIANT,
-      );
+      fail("release planned requiere --version SemVer sin prefijo v.", EXIT_INVARIANT);
     }
     text = replaceFrontmatterField(text, "target_release", version);
   } else if (to === "released") {
     const target = document.fields.target_release;
-    const elegida = version !== undefined && version !== ""
-      ? version
-      : target !== "null"
-        ? target
-        : undefined;
+    const elegida =
+      version !== undefined && version !== ""
+        ? version
+        : target !== "null"
+          ? target
+          : undefined;
     if (elegida === undefined || !SEMVER_RE.test(elegida)) {
-      fail(
-        "release released requiere una versión SemVer objetivo.",
-        EXIT_INVARIANT,
-      );
+      fail("release released requiere una versión SemVer objetivo.", EXIT_INVARIANT);
     }
     if (target === "null" || elegida !== target) {
       fail("released_in debe coincidir con target_release.", EXIT_INVARIANT);
@@ -367,8 +338,7 @@ function applyRelease(
 
   if (
     to === "not_applicable" &&
-    (document.fields.target_release !== "null" ||
-      document.fields.released_in !== "null")
+    (document.fields.target_release !== "null" || document.fields.released_in !== "null")
   ) {
     fail("not_applicable exige target_release y released_in null.", EXIT_INVARIANT);
   }
@@ -403,10 +373,7 @@ function applyPoint(document: ParsedTicket, request: TransitionRequest): Plan {
   if (esTerminal) {
     const motivo = reason === undefined ? "" : validateText(reason, "reason");
     if (motivo === "") {
-      fail(
-        "Los estados terminales del punto requieren --reason.",
-        EXIT_INVARIANT,
-      );
+      fail("Los estados terminales del punto requieren --reason.", EXIT_INVARIANT);
     }
     punto.terminal_reason = motivo;
   } else if (reason !== undefined) {
@@ -418,15 +385,8 @@ function applyPoint(document: ParsedTicket, request: TransitionRequest): Plan {
       (entrada) => entrada.point_id === pointId,
     );
     const ultimo = retests[retests.length - 1];
-    if (
-      retests.length === 0 ||
-      ultimo?.result !== "approved" ||
-      !ultimo?.po_confirmation
-    ) {
-      fail(
-        "verified requiere un retest aprobado y confirmado por el PO.",
-        EXIT_INVARIANT,
-      );
+    if (retests.length === 0 || ultimo?.result !== "approved" || !ultimo?.po_confirmation) {
+      fail("verified requiere un retest aprobado y confirmado por el PO.", EXIT_INVARIANT);
     }
   }
 
@@ -434,4 +394,3 @@ function applyPoint(document: ParsedTicket, request: TransitionRequest): Plan {
   const text = replaceBlock(document.text, "Puntos", puntos);
   return { text, details: `${pointId}: ${current} -> ${to}.` };
 }
-

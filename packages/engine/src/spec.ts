@@ -69,9 +69,7 @@ const HEADING_RE = new RegExp(
   `^###\\s+Requirement:\\s*(${ID_PATTERN})\\s*(?:—|-|:)\\s*(.+?)\\s*$`,
 );
 /** `### Requirement: R-INV-001` sin enunciado. */
-const HEADING_SIN_TITULO_RE = new RegExp(
-  `^###\\s+Requirement:\\s*(${ID_PATTERN})\\s*$`,
-);
+const HEADING_SIN_TITULO_RE = new RegExp(`^###\\s+Requirement:\\s*(${ID_PATTERN})\\s*$`);
 
 /**
  * Extrae los requisitos de un texto de spec.
@@ -97,10 +95,7 @@ export function parseRequirements(
     if (vistos.has(id)) {
       // Dos requisitos con el mismo identificador hacen que la cobertura cubra
       // uno y deje el otro suelto, sin que nada lo diga.
-      fail(
-        `${source} línea ${numero}: el requisito ${id} está repetido.`,
-        EXIT_SCHEMA,
-      );
+      fail(`${source} línea ${numero}: el requisito ${id} está repetido.`, EXIT_SCHEMA);
     }
     vistos.add(id);
 

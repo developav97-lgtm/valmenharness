@@ -57,11 +57,7 @@ export interface TicketDetail extends TicketRow {
 const ESTADOS_PUNTO_ABIERTOS = ["open", "analyzed", "in_progress", "awaiting_retest"];
 
 /** Impactos que elevan el gate, según el contrato del ticket. */
-const IMPACTOS_CRITICOS = [
-  "sync_impact",
-  "migration_impact",
-  "docker_impact",
-] as const;
+const IMPACTOS_CRITICOS = ["sync_impact", "migration_impact", "docker_impact"] as const;
 
 /**
  * Recorre el registro y devuelve la ruta de cada `ticket.md`, ordenada.
@@ -71,7 +67,9 @@ const IMPACTOS_CRITICOS = [
  * vacío sobre el proyecto real, que es la peor forma de fallar —parece que no
  * hay nada que hacer.
  */
-function ticketFiles(paths: RegistryPaths): { id: string; path: string; relativePath: string }[] {
+function ticketFiles(
+  paths: RegistryPaths,
+): { id: string; path: string; relativePath: string }[] {
   const base = ticketsPath(paths);
   const encontrados: { id: string; path: string; relativePath: string }[] = [];
 
@@ -274,7 +272,10 @@ export function filterTickets(
   const consulta = (filters.query ?? "").trim().toLowerCase();
 
   const filtradas = rows.filter((row) => {
-    if (filters.workflowStatus !== undefined && row.workflowStatus !== filters.workflowStatus) {
+    if (
+      filters.workflowStatus !== undefined &&
+      row.workflowStatus !== filters.workflowStatus
+    ) {
       return false;
     }
     if (filters.type !== undefined && row.type !== filters.type) return false;

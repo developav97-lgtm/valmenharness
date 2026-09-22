@@ -53,9 +53,7 @@ describe("list", () => {
 describe("validate --id", () => {
   it("acepta un ticket concreto y lo anuncia", () => {
     const result = validateOne(PATHS, "BUGFIX-POS-REPORTE-Z-SUCURSAL-20260907");
-    expect(result.stdout).toBe(
-      "Ticket válido: BUGFIX-POS-REPORTE-Z-SUCURSAL-20260907\n",
-    );
+    expect(result.stdout).toBe("Ticket válido: BUGFIX-POS-REPORTE-Z-SUCURSAL-20260907\n");
     expect(result.exitCode).toBe(0);
   });
 
@@ -70,9 +68,7 @@ describe("show", () => {
   it("imprime el resumen de un ticket real", () => {
     const result = showTicket(PATHS, "BUGFIX-POS-REPORTE-Z-SUCURSAL-20260907");
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain(
-      "Ticket:   BUGFIX-POS-REPORTE-Z-SUCURSAL-20260907",
-    );
+    expect(result.stdout).toContain("Ticket:   BUGFIX-POS-REPORTE-Z-SUCURSAL-20260907");
     expect(result.stdout).toContain("Workflow: closed");
     expect(result.stdout).toContain("QA:       approved");
     expect(result.stdout).toContain("Release:  released");

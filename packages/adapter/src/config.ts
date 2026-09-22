@@ -41,11 +41,7 @@ export function parseConfig(text: string): ConfigMap {
 }
 
 /** Lee un valor de texto de la configuración, o el valor por defecto. */
-export function readString(
-  config: ConfigMap,
-  key: string,
-  fallback: string,
-): string {
+export function readString(config: ConfigMap, key: string, fallback: string): string {
   const value = config[key];
   if (value === undefined) return fallback;
   if (typeof value !== "string") {

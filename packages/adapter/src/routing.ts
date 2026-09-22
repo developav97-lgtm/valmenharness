@@ -65,12 +65,28 @@ export interface RoleSpec {
  * verificación y mecánicos.
  */
 export const ROLES: readonly RoleSpec[] = [
-  { id: "orchestrator", description: "Coordina, clasifica y decide a quién delegar", consumer: null },
+  {
+    id: "orchestrator",
+    description: "Coordina, clasifica y decide a quién delegar",
+    consumer: null,
+  },
   { id: "spec-author", description: "Escribe specs y briefs de feature", consumer: null },
-  { id: "architect", description: "Diseño técnico y descomposición en tickets", consumer: null },
-  { id: "critic", description: "Revisión adversarial de un candidato congelado", consumer: null },
+  {
+    id: "architect",
+    description: "Diseño técnico y descomposición en tickets",
+    consumer: null,
+  },
+  {
+    id: "critic",
+    description: "Revisión adversarial de un candidato congelado",
+    consumer: null,
+  },
   { id: "explorer", description: "Exploración de código en solo lectura", consumer: null },
-  { id: "implementer", description: "Escribe el código según el plan aprobado", consumer: null },
+  {
+    id: "implementer",
+    description: "Escribe el código según el plan aprobado",
+    consumer: null,
+  },
   { id: "test-author", description: "Escribe y actualiza pruebas", consumer: null },
   { id: "doc-writer", description: "Documentación y manuales", consumer: null },
   {
@@ -83,9 +99,21 @@ export const ROLES: readonly RoleSpec[] = [
     description: "Resuelve un gate cuando Jev no está disponible",
     consumer: "valmen gate --evaluator llm-judge",
   },
-  { id: "verifier", description: "Verifica la implementación contra los criterios", consumer: null },
-  { id: "classifier", description: "Clasifica tipo, módulo y riesgo de una solicitud", consumer: null },
-  { id: "summarizer", description: "Resume para el reporte diario o semanal", consumer: null },
+  {
+    id: "verifier",
+    description: "Verifica la implementación contra los criterios",
+    consumer: null,
+  },
+  {
+    id: "classifier",
+    description: "Clasifica tipo, módulo y riesgo de una solicitud",
+    consumer: null,
+  },
+  {
+    id: "summarizer",
+    description: "Resume para el reporte diario o semanal",
+    consumer: null,
+  },
 ];
 
 /** Un modelo asignado a un rol. */
@@ -115,34 +143,111 @@ export const PRESETS: readonly Preset[] = [
     id: "quality",
     description: "Máxima calidad. Para trabajo crítico o cuando el coste no importa.",
     roles: {
-      orchestrator: { provider: "openrouter", model: "openai/gpt-5.6-luna-pro", effort: "high" },
-      "spec-author": { provider: "openrouter", model: "anthropic/claude-opus-4.6", effort: "high" },
-      architect: { provider: "openrouter", model: "anthropic/claude-opus-4.6", effort: "high" },
-      critic: { provider: "openrouter", model: "anthropic/claude-opus-4.6", effort: "high" },
-      explorer: { provider: "openrouter", model: "anthropic/claude-sonnet-5", effort: "medium" },
-      implementer: { provider: "openrouter", model: "anthropic/claude-sonnet-5", effort: "high" },
-      "test-author": { provider: "openrouter", model: "anthropic/claude-sonnet-5", effort: "medium" },
-      "doc-writer": { provider: "openrouter", model: "anthropic/claude-sonnet-5", effort: "medium" },
-      "gate-evaluator": { provider: "openrouter", model: DEFAULT_GATE_EVALUATOR, effort: "auto" },
-      "gate-judge": { provider: "openrouter", model: "anthropic/claude-opus-4.6", effort: "high" },
-      verifier: { provider: "openrouter", model: "anthropic/claude-opus-4.6", effort: "high" },
+      orchestrator: {
+        provider: "openrouter",
+        model: "openai/gpt-5.6-luna-pro",
+        effort: "high",
+      },
+      "spec-author": {
+        provider: "openrouter",
+        model: "anthropic/claude-opus-4.6",
+        effort: "high",
+      },
+      architect: {
+        provider: "openrouter",
+        model: "anthropic/claude-opus-4.6",
+        effort: "high",
+      },
+      critic: {
+        provider: "openrouter",
+        model: "anthropic/claude-opus-4.6",
+        effort: "high",
+      },
+      explorer: {
+        provider: "openrouter",
+        model: "anthropic/claude-sonnet-5",
+        effort: "medium",
+      },
+      implementer: {
+        provider: "openrouter",
+        model: "anthropic/claude-sonnet-5",
+        effort: "high",
+      },
+      "test-author": {
+        provider: "openrouter",
+        model: "anthropic/claude-sonnet-5",
+        effort: "medium",
+      },
+      "doc-writer": {
+        provider: "openrouter",
+        model: "anthropic/claude-sonnet-5",
+        effort: "medium",
+      },
+      "gate-evaluator": {
+        provider: "openrouter",
+        model: DEFAULT_GATE_EVALUATOR,
+        effort: "auto",
+      },
+      "gate-judge": {
+        provider: "openrouter",
+        model: "anthropic/claude-opus-4.6",
+        effort: "high",
+      },
+      verifier: {
+        provider: "openrouter",
+        model: "anthropic/claude-opus-4.6",
+        effort: "high",
+      },
       classifier: { provider: "openrouter", model: "z-ai/glm-5.3-flash", effort: "auto" },
       summarizer: { provider: "openrouter", model: "z-ai/glm-5.3-flash", effort: "auto" },
     },
   },
   {
     id: "balanced",
-    description: "El equilibrio por defecto: razonamiento caro donde decide, ejecución barata donde repite.",
+    description:
+      "El equilibrio por defecto: razonamiento caro donde decide, ejecución barata donde repite.",
     roles: {
-      orchestrator: { provider: "openrouter", model: "anthropic/claude-sonnet-5", effort: "medium" },
-      "spec-author": { provider: "openrouter", model: "anthropic/claude-sonnet-5", effort: "medium" },
-      architect: { provider: "openrouter", model: "anthropic/claude-sonnet-5", effort: "high" },
-      critic: { provider: "openrouter", model: "anthropic/claude-sonnet-5", effort: "high" },
+      orchestrator: {
+        provider: "openrouter",
+        model: "anthropic/claude-sonnet-5",
+        effort: "medium",
+      },
+      "spec-author": {
+        provider: "openrouter",
+        model: "anthropic/claude-sonnet-5",
+        effort: "medium",
+      },
+      architect: {
+        provider: "openrouter",
+        model: "anthropic/claude-sonnet-5",
+        effort: "high",
+      },
+      critic: {
+        provider: "openrouter",
+        model: "anthropic/claude-sonnet-5",
+        effort: "high",
+      },
       explorer: { provider: "openrouter", model: "z-ai/glm-5.3-flash", effort: "auto" },
-      implementer: { provider: "openrouter", model: "deepseek/deepseek-v4-flash", effort: "auto" },
-      "test-author": { provider: "openrouter", model: "deepseek/deepseek-v4-flash", effort: "auto" },
-      "doc-writer": { provider: "openrouter", model: "deepseek/deepseek-v4-flash", effort: "auto" },
-      "gate-evaluator": { provider: "openrouter", model: DEFAULT_GATE_EVALUATOR, effort: "auto" },
+      implementer: {
+        provider: "openrouter",
+        model: "deepseek/deepseek-v4-flash",
+        effort: "auto",
+      },
+      "test-author": {
+        provider: "openrouter",
+        model: "deepseek/deepseek-v4-flash",
+        effort: "auto",
+      },
+      "doc-writer": {
+        provider: "openrouter",
+        model: "deepseek/deepseek-v4-flash",
+        effort: "auto",
+      },
+      "gate-evaluator": {
+        provider: "openrouter",
+        model: DEFAULT_GATE_EVALUATOR,
+        effort: "auto",
+      },
       "gate-judge": { provider: "openrouter", model: DEFAULT_GATE_JUDGE, effort: "medium" },
       verifier: { provider: "openrouter", model: "moonshotai/kimi-k3", effort: "medium" },
       classifier: { provider: "openrouter", model: "z-ai/glm-5.3-flash", effort: "auto" },
@@ -151,21 +256,54 @@ export const PRESETS: readonly Preset[] = [
   },
   {
     id: "economy",
-    description: "Lo más barato que sigue funcionando. Para volumen alto y trabajo repetitivo.",
+    description:
+      "Lo más barato que sigue funcionando. Para volumen alto y trabajo repetitivo.",
     roles: {
-      orchestrator: { provider: "openrouter", model: "deepseek/deepseek-v4-flash", effort: "medium" },
-      "spec-author": { provider: "openrouter", model: "deepseek/deepseek-v4-flash", effort: "medium" },
-      architect: { provider: "openrouter", model: "deepseek/deepseek-v4-flash", effort: "medium" },
+      orchestrator: {
+        provider: "openrouter",
+        model: "deepseek/deepseek-v4-flash",
+        effort: "medium",
+      },
+      "spec-author": {
+        provider: "openrouter",
+        model: "deepseek/deepseek-v4-flash",
+        effort: "medium",
+      },
+      architect: {
+        provider: "openrouter",
+        model: "deepseek/deepseek-v4-flash",
+        effort: "medium",
+      },
       critic: { provider: "openrouter", model: "moonshotai/kimi-k3", effort: "medium" },
       explorer: { provider: "openrouter", model: "z-ai/glm-5.3-flash", effort: "auto" },
       implementer: { provider: "openrouter", model: "z-ai/glm-5.3-flash", effort: "auto" },
-      "test-author": { provider: "openrouter", model: "z-ai/glm-5.3-flash", effort: "auto" },
+      "test-author": {
+        provider: "openrouter",
+        model: "z-ai/glm-5.3-flash",
+        effort: "auto",
+      },
       "doc-writer": { provider: "openrouter", model: "z-ai/glm-5.3-flash", effort: "auto" },
-      "gate-evaluator": { provider: "openrouter", model: DEFAULT_GATE_EVALUATOR, effort: "auto" },
+      "gate-evaluator": {
+        provider: "openrouter",
+        model: DEFAULT_GATE_EVALUATOR,
+        effort: "auto",
+      },
       "gate-judge": { provider: "openrouter", model: DEFAULT_GATE_JUDGE, effort: "medium" },
-      verifier: { provider: "openrouter", model: "deepseek/deepseek-v4-flash", effort: "medium" },
-      classifier: { provider: "openrouter", model: "deepseek/deepseek-v4-flash", effort: "auto" },
-      summarizer: { provider: "openrouter", model: "deepseek/deepseek-v4-flash", effort: "auto" },
+      verifier: {
+        provider: "openrouter",
+        model: "deepseek/deepseek-v4-flash",
+        effort: "medium",
+      },
+      classifier: {
+        provider: "openrouter",
+        model: "deepseek/deepseek-v4-flash",
+        effort: "auto",
+      },
+      summarizer: {
+        provider: "openrouter",
+        model: "deepseek/deepseek-v4-flash",
+        effort: "auto",
+      },
     },
   },
 ];
@@ -274,7 +412,11 @@ export function resolveRouting(routing: Routing): ResolvedRoute[] {
     // sin él, un preset sin ese rol dejaría el gate sin modelo.
     const delSistema =
       spec.id === "gate-evaluator"
-        ? { provider: "openrouter", model: DEFAULT_GATE_EVALUATOR, effort: "auto" as Effort }
+        ? {
+            provider: "openrouter",
+            model: DEFAULT_GATE_EVALUATOR,
+            effort: "auto" as Effort,
+          }
         : spec.id === "gate-judge"
           ? { provider: "openrouter", model: DEFAULT_GATE_JUDGE, effort: "auto" as Effort }
           : undefined;
@@ -298,8 +440,7 @@ export function resolveRouting(routing: Routing): ResolvedRoute[] {
       effort: elegido?.effort ?? "auto",
       source,
       probabilistic:
-        spec.id === "gate-evaluator" &&
-        (elegido?.model ?? "").startsWith("typesafe/"),
+        spec.id === "gate-evaluator" && (elegido?.model ?? "").startsWith("typesafe/"),
     };
   });
 }

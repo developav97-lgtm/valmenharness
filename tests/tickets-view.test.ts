@@ -15,7 +15,14 @@
  * 3. **Los filtros filtran de verdad**, y la búsqueda no entra en los bloques
  *    JSON, donde los resultados no serían interpretables en una lista.
  */
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -72,7 +79,9 @@ describe("proyección del registro", () => {
 
   it("cuenta los impactos críticos declarados", () => {
     const resumen = summarize(listTickets(PATHS()));
-    const conImpacto = listTickets(PATHS()).filter((fila) => fila.criticalImpacts.length > 0);
+    const conImpacto = listTickets(PATHS()).filter(
+      (fila) => fila.criticalImpacts.length > 0,
+    );
     expect(resumen.criticalImpacts).toBe(conImpacto.length);
     // Cada impacto informado es uno de los tres del contrato.
     for (const fila of conImpacto) {
@@ -86,9 +95,10 @@ describe("proyección del registro", () => {
     // Lo que se está trabajando ahora es lo que primero se quiere ver.
     const filas = filterTickets(listTickets(PATHS()), {});
     for (let i = 1; i < filas.length; i += 1) {
-      expect((filas[i - 1] as { updated: string }).updated >= (filas[i] as { updated: string }).updated).toBe(
-        true,
-      );
+      expect(
+        (filas[i - 1] as { updated: string }).updated >=
+          (filas[i] as { updated: string }).updated,
+      ).toBe(true);
     }
   });
 
@@ -208,16 +218,20 @@ describe("filtros", () => {
 
   it("combina filtros", () => {
     const resultado = filterTickets(filas(), { type: "SYNC", module: "OFFLINESYNC" });
-    expect(resultado.every((fila) => fila.type === "SYNC" && fila.module === "OFFLINESYNC")).toBe(
-      true,
-    );
+    expect(
+      resultado.every((fila) => fila.type === "SYNC" && fila.module === "OFFLINESYNC"),
+    ).toBe(true);
   });
 });
 
 // ── La API ──────────────────────────────────────────────────────────────────
 
 describe("endpoints de tickets", () => {
-  const contexto = (): { root: string; credentialsFile: string; env: NodeJS.ProcessEnv } => ({
+  const contexto = (): {
+    root: string;
+    credentialsFile: string;
+    env: NodeJS.ProcessEnv;
+  } => ({
     root: lab,
     credentialsFile: join(lab, ".valmen", ".credentials.yaml"),
     env: {},
@@ -251,7 +265,12 @@ describe("endpoints de tickets", () => {
   });
 
   it("un ticket inexistente devuelve 404 con el identificador", async () => {
-    const r = await handleApi("GET", "/api/tickets/BUGFIX-POS-NO-EXISTE-20260101", {}, contexto());
+    const r = await handleApi(
+      "GET",
+      "/api/tickets/BUGFIX-POS-NO-EXISTE-20260101",
+      {},
+      contexto(),
+    );
     expect(r.status).toBe(404);
     expect((r.body as { error: string }).error).toContain("NO-EXISTE");
   });
@@ -260,11 +279,16 @@ describe("endpoints de tickets", () => {
     const vacio = mkdtempSync(join(tmpdir(), "valmen-vacio-"));
     mkdirSync(join(vacio, "tickets"), { recursive: true });
     try {
-      const r = await handleApi("GET", "/api/tickets", {}, {
-        root: vacio,
-        credentialsFile: join(vacio, ".valmen", ".credentials.yaml"),
-        env: {},
-      });
+      const r = await handleApi(
+        "GET",
+        "/api/tickets",
+        {},
+        {
+          root: vacio,
+          credentialsFile: join(vacio, ".valmen", ".credentials.yaml"),
+          env: {},
+        },
+      );
       expect(r.status).toBe(200);
       expect((r.body as { summary: { total: number } }).summary.total).toBe(0);
     } finally {
@@ -276,11 +300,16 @@ describe("endpoints de tickets", () => {
     // Un proyecto sin tickets todavía es un caso normal, no un fallo.
     const sinRegistro = mkdtempSync(join(tmpdir(), "valmen-sin-"));
     try {
-      const r = await handleApi("GET", "/api/tickets", {}, {
-        root: sinRegistro,
-        credentialsFile: join(sinRegistro, ".valmen", ".credentials.yaml"),
-        env: {},
-      });
+      const r = await handleApi(
+        "GET",
+        "/api/tickets",
+        {},
+        {
+          root: sinRegistro,
+          credentialsFile: join(sinRegistro, ".valmen", ".credentials.yaml"),
+          env: {},
+        },
+      );
       expect(r.status).toBe(200);
       expect((r.body as { tickets: unknown[] }).tickets).toHaveLength(0);
     } finally {

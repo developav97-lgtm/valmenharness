@@ -18,18 +18,9 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { parseTicket } from "../packages/core/src/parser.js";
-import {
-  EVIDENCE_KINDS,
-  normalizeEvidenceKind,
-} from "../packages/core/src/contract.js";
+import { EVIDENCE_KINDS, normalizeEvidenceKind } from "../packages/core/src/contract.js";
 
-const FIXTURE_ROOT = join(
-  import.meta.dirname,
-  "fixtures",
-  "saicloud",
-  "tickets",
-  "2026",
-);
+const FIXTURE_ROOT = join(import.meta.dirname, "fixtures", "saicloud", "tickets", "2026");
 
 /** Recolecta todos los `kind` de evidencia del fixture, con su frecuencia. */
 function observedKinds(): Map<string, number> {
@@ -88,22 +79,12 @@ describe("normalización de tipos de evidencia", () => {
   it("colapsa las variantes que el esquema 1 dejó dispersas", () => {
     // Los cuatro nombres de "prueba automatizada" que convivían en producción.
     const variants = ["automated", "automated_test", "automated-test", "test"];
-    const normalized = new Set(
-      variants.map((variant) => normalizeEvidenceKind(variant)),
-    );
+    const normalized = new Set(variants.map((variant) => normalizeEvidenceKind(variant)));
     expect([...normalized]).toEqual(["automated-test"]);
 
     // Y las variantes de revisión de código.
-    const reviews = [
-      "code",
-      "code-inspection",
-      "source_review",
-      "source-review",
-      "review",
-    ];
-    expect(
-      new Set(reviews.map((kind) => normalizeEvidenceKind(kind))).size,
-    ).toBe(1);
+    const reviews = ["code", "code-inspection", "source_review", "source-review", "review"];
+    expect(new Set(reviews.map((kind) => normalizeEvidenceKind(kind))).size).toBe(1);
   });
 
   it("cubre todos los valores que aparecen en los tickets reales", () => {

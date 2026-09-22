@@ -59,10 +59,7 @@ function git(root: string, args: readonly string[]): string {
     stdio: ["ignore", "pipe", "pipe"],
   });
   if (resultado.status !== 0) {
-    fail(
-      "No se pudo verificar la referencia Git local de la release.",
-      EXIT_REFERENCE,
-    );
+    fail("No se pudo verificar la referencia Git local de la release.", EXIT_REFERENCE);
   }
   return (resultado.stdout ?? "").trim();
 }
@@ -123,11 +120,10 @@ function belongsToRelease(
     });
     if (existe.status !== 0) continue;
 
-    const ancestro = spawnSync(
-      "git",
-      ["merge-base", "--is-ancestor", sha, releaseCommit],
-      { cwd: root, stdio: ["ignore", "pipe", "pipe"] },
-    );
+    const ancestro = spawnSync("git", ["merge-base", "--is-ancestor", sha, releaseCommit], {
+      cwd: root,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
     if (ancestro.status === 0) return true;
   }
   return false;
@@ -171,10 +167,7 @@ export function releasePublish(request: ReleasePublishRequest): string {
   const { paths } = request;
   const version = validateText(request.version, "version");
   if (!SEMVER_RE.test(version)) {
-    fail(
-      "--version debe usar SemVer MAJOR.MINOR.PATCH sin prefijo v.",
-      EXIT_SCHEMA,
-    );
+    fail("--version debe usar SemVer MAJOR.MINOR.PATCH sin prefijo v.", EXIT_SCHEMA);
   }
   const identifiers = releaseTicketIds(request.tickets);
   const date = today(request.now?.() ?? new Date());
@@ -183,10 +176,7 @@ export function releasePublish(request: ReleasePublishRequest): string {
     const releaseCommit = releaseTagCommit(paths.root, version);
     const produccion = productionCommit(paths.root);
     if (releaseCommit !== produccion) {
-      fail(
-        "El tag de release no apunta al commit actual de production.",
-        EXIT_REFERENCE,
-      );
+      fail("El tag de release no apunta al commit actual de production.", EXIT_REFERENCE);
     }
 
     // Se cargan y validan **todos** los tickets antes de comprobar nada más: el
@@ -226,10 +216,22 @@ export function releasePublish(request: ReleasePublishRequest): string {
       // nunca se haya escrito en el frontmatter.
       const eventos = [...(document.blocks.Eventos ?? [])] as JsonObject[];
       eventos.push(
-        newEvent(eventos, "release-transition", "Release: unreleased -> planned.", "cli", date),
+        newEvent(
+          eventos,
+          "release-transition",
+          "Release: unreleased -> planned.",
+          "cli",
+          date,
+        ),
       );
       eventos.push(
-        newEvent(eventos, "release-transition", "Release: planned -> released.", "cli", date),
+        newEvent(
+          eventos,
+          "release-transition",
+          "Release: planned -> released.",
+          "cli",
+          date,
+        ),
       );
 
       let texto = replaceBlock(document.text, "Eventos", eventos);

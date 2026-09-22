@@ -20,9 +20,6 @@ import { formatJsonBlock } from "./json.js";
  * La forma segura de insertar texto literal es una función de reemplazo, que
  * no interpreta patrones.
  */
-function literal(value: string): () => string {
-  return () => value;
-}
 
 /**
  * Reemplaza el valor de una clave del frontmatter.
@@ -30,11 +27,7 @@ function literal(value: string): () => string {
  * Solo actúa dentro del bloque de frontmatter, no en el cuerpo: una sección de
  * Markdown puede contener legítimamente una línea que empiece por `updated: `.
  */
-export function replaceFrontmatterField(
-  text: string,
-  key: string,
-  value: string,
-): string {
+export function replaceFrontmatterField(text: string, key: string, value: string): string {
   if (!isSafePlainScalar(value)) {
     fail(`El valor de ${key} no es un escalar plain seguro.`);
   }
@@ -121,9 +114,7 @@ export function replaceBlock(
   );
 
   if (!pattern.test(text)) {
-    fail(
-      `No se pudo actualizar el bloque ${section}; el documento no es canónico.`,
-    );
+    fail(`No se pudo actualizar el bloque ${section}; el documento no es canónico.`);
   }
 
   // La serialización replica `json.dumps(ensure_ascii=False, indent=2)` de la
@@ -136,8 +127,7 @@ export function replaceBlock(
   const rendered = formatJsonBlock(entries);
   return text.replace(
     pattern,
-    (_match, head: string, _body: string, tail: string) =>
-      `${head}${rendered}${tail}`,
+    (_match, head: string, _body: string, tail: string) => `${head}${rendered}${tail}`,
   );
 }
 
