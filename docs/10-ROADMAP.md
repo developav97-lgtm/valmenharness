@@ -85,7 +85,7 @@ Ver [`06-CONTROL-APP.md`](06-CONTROL-APP.md).
 | ------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 4.1     | `valmen serve`                                        | **Verificado**: escucha solo en `127.0.0.1`, sin lógica de negocio propia                                                                                  |
 | 4.2     | Vista de tickets                                      | **Verificado**: los 57 tickets del fixture, con los mismos filtros que el visor anterior                                                                   |
-| 4.2bis  | Vista de features                                     | Una feature con su spec, sus deltas y los tickets que la implementan                                                                                       |
+| 4.2bis  | Vista de features                                     | **Verificado**: una feature con su spec, su cobertura y los tickets que la implementan, con los huecos a la vista                                          |
 | 4.3     | Vista de gate en revisión                             | **Verificado**: recibo congelado, proposición por proposición, aviso de recibo obsoleto, y la decisión humana anexada sin reescribir el veredicto          |
 | 4.4     | Configuración editable                                | **Verificado**: texto crudo con los comentarios intactos, error del parser con su línea, diff antes de guardar, y sin guardar nunca un texto que no parsea |
 | 4.5     | Routing de modelos                                    | **Verificado**: tres presets, resolución con origen visible, y el modelo llega a la llamada real                                                           |
@@ -129,13 +129,20 @@ inventario de la implementación de referencia está en
 portados y verificados con una prueba diferencial de 48 casos que compara los dos CLI sobre
 dos copias del mismo registro, byte a byte.
 
+**El ciclo de una feature está completo**: brief, spec, descomposición con gate de
+cobertura, y su vista en Mission Control. `valmen feature new|show|list` escribe y lee el
+registro; `valmen feature decompose` le pide el grafo al rol `architect` y lo escribe solo si
+pasa la compuerta —cero requisitos sin cubrir, cero ciclos, ningún ticket en dos sprints—; y
+la pantalla muestra el hueco con el enunciado del requisito, no un «inválido» genérico.
+
 Lo que queda de esa migración antes de borrar `ticket.py` del proyecto real: el reporte
 Markdown del visor, `release_notes.py` con su artefacto de novedades, y **la decisión de si
 esos dos se absorben o se declaran como procesos del proyecto**. Después, el dogfooding sobre
 `SaiOpenCloud` en lugar de sobre este repositorio.
 
 Criterio de aceptación: el módulo de inventario especificado, descompuesto en tickets con
-sprints, y con los dos primeros tickets implementados a través del harness.
+sprints, y con los dos primeros tickets implementados a través del harness. **La primera
+mitad está hecha y probada contra un proveedor real; la segunda es el dogfooding.**
 
 ### Fase 6 — Autonomía, memoria y observabilidad (continuo)
 

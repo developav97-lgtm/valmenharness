@@ -81,6 +81,11 @@ import {
   readTicket,
   summarize,
 } from "./tickets.js";
+import {
+  listFeatureRows,
+  readFeatureDetail,
+  summarizeFeatures,
+} from "./features.js";
 
 /** Versión de la API. Un cliente que no la entienda debe fallar, no adivinar. */
 export const API_VERSION = 1;
@@ -226,6 +231,37 @@ export async function handleApi(
       status: 200,
       body: { summary: summarize(filas), tickets: filterTickets(filas, filtros) },
     };
+  }
+
+  // GET /api/features
+  if (
+    method === "GET" &&
+    partes.length === 2 &&
+    partes[0] === "api" &&
+    partes[1] === "features"
+  ) {
+    const filas = listFeatureRows(context.root);
+    return {
+      status: 200,
+      body: { summary: summarizeFeatures(filas), features: filas },
+    };
+  }
+
+  // GET /api/features/:slug
+  if (
+    method === "GET" &&
+    partes.length === 3 &&
+    partes[0] === "api" &&
+    partes[1] === "features"
+  ) {
+    const detalle = readFeatureDetail(context.root, partes[2] as string);
+    if (detalle === null) {
+      return {
+        status: 404,
+        body: { error: `No existe la feature "${partes[2]}".` },
+      };
+    }
+    return { status: 200, body: detalle };
   }
 
   // GET /api/tickets/:id

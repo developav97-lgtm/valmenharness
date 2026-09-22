@@ -150,6 +150,38 @@ function exigirNormativo(
   return titulo;
 }
 
+/**
+ * Lee las specs de una feature con su texto.
+ *
+ * La interfaz necesita el texto además de los requisitos: sin él no puede
+ * mostrar la spec, y volver a leer el archivo por su cuenta sería una segunda
+ * forma de encontrar specs que se rompería en cuanto cambie la disposición de las
+ * carpetas.
+ */
+export function readSpecs(
+  specDir: string,
+  prefijo: string,
+): { domain: string; source: string; text: string; requirements: LocatedRequirement[] }[] {
+  const specs = [];
+  for (const dominio of specDomains(specDir)) {
+    const ruta = join(specDir, dominio, "spec.md");
+    let texto: string;
+    try {
+      texto = readFileSync(ruta, "utf8");
+    } catch {
+      continue;
+    }
+    const source = `${prefijo}/spec/${dominio}/spec.md`;
+    specs.push({
+      domain: dominio,
+      source,
+      text: texto,
+      requirements: parseRequirements(texto, dominio, source),
+    });
+  }
+  return specs;
+}
+
 /** Los dominios de una feature: las carpetas bajo `spec/`. */
 export function specDomains(specDir: string): string[] {
   let entradas: string[];

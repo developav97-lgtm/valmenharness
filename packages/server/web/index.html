@@ -125,6 +125,32 @@
       .secciones button[aria-pressed="true"] { border-color: var(--acento); color: var(--acento); }
       .vacio { color: var(--tenue); text-align: center; padding: 40px; }
 
+      /* ── Features ─────────────────────────────────────────────────────── */
+      a.enlace { color: var(--acento); text-decoration: none; }
+      a.enlace:hover { text-decoration: underline; }
+      /* Los cuatro artefactos de una feature, siempre visibles: la pregunta
+         «¿en qué punto está?» se responde mirando, no abriendo. */
+      .artefactos { display: flex; gap: 4px; font-family: var(--mono); font-size: 11px; }
+      .artefactos span { color: var(--borde); }
+      .artefactos span.hecho { color: var(--ok); }
+      .sprint { border: 1px solid var(--borde); border-radius: 8px; background: var(--panel); margin-bottom: 14px; }
+      .sprint > header {
+        display: flex; gap: 10px; align-items: baseline; padding: 12px 16px;
+        border-bottom: 1px solid var(--borde); background: none;
+      }
+      .sprint > header .id { font-family: var(--mono); font-size: 12px; color: var(--acento); }
+      .sprint > header h3 { font-size: 14px; font-weight: 500; }
+      .sprint table { border: none; }
+      .sprint td { border-bottom: 1px solid var(--borde); }
+      .sprint tr:last-child td { border-bottom: none; }
+      /* Un ticket del grafo que todavía no existe en el registro. Se marca para
+         que la diferencia entre «planeado» y «escrito» no se pierda. */
+      tr.planeado td { opacity: 0.55; }
+      .depende { font-family: var(--mono); font-size: 11px; color: var(--tenue); }
+      .huecos { border-left: 3px solid var(--error); }
+      .huecos .fila { display: flex; gap: 10px; align-items: baseline; padding: 6px 0; font-size: 13px; }
+      .huecos .fila + .fila { border-top: 1px solid var(--borde); }
+
       /* ── Ticket: cabecera y gates ─────────────────────────────────────── */
       .volver { font-size: 13px; margin-bottom: 14px; display: inline-block; }
       .cabecera-ticket { margin-bottom: 22px; }
@@ -262,6 +288,7 @@
       <h1>ValmenHarness</h1>
       <nav>
         <a href="#/tickets" data-vista="tickets">Tickets</a>
+        <a href="#/features" data-vista="features">Features</a>
         <a href="#/configurar" data-vista="configurar">Configurar</a>
         <a href="#/modelos" data-vista="modelos">Modelos</a>
         <a href="#/configuracion" data-vista="configuracion">Configuración</a>
@@ -480,6 +507,465 @@
 
         tabla.append(thead, tbody);
         cont.append(tabla);
+      }
+
+
+      // ── Vista: features ───────────────────────────────────────────────────
+      //
+      // Una feature es lo que no cabe en un ticket: un módulo con varias
+      // pantallas, reportes y configuración. La vista responde tres preguntas y
+      // en ese orden: ¿en qué punto está?, ¿qué requisitos quedan sin cubrir? y
+      // ¿qué tickets la componen?
+
+      /** Los cuatro artefactos con su marca, en el orden en que se escriben. */
+      function marcasArtefactos(f) {
+        const caja = el("div", undefined, "artefactos");
+        const partes = [
+          ["spec", f.hasSpec],
+          ["diseño", f.hasDesign],
+          ["tickets", f.hasDecomposition],
+          ["verificar", f.hasVerify],
+        ];
+        for (const [nombre, hecho] of partes) {
+          caja.append(el("span", `${hecho ? "✓" : "·"} ${nombre}`, hecho ? "hecho" : ""));
+        }
+        return caja;
+      }
+
+      async function vistaFeatures() {
+        const cont = $("contenido");
+        cont.textContent = "";
+
+        const datos = await api("GET", "/api/features");
+        const r = datos.summary;
+
+        const tarjetas = el("div", undefined, "tarjetas");
+        const metricas = [
+          ["Features", r.total],
+          ["Descompuestas", r.decomposed],
+          ["Con huecos", r.withGaps],
+        ];
+        if (r.invalid > 0) metricas.push(["Inválidas", r.invalid]);
+        for (const [rotulo, valor] of metricas) {
+          const tarjeta = el("div", undefined, "tarjeta");
+          tarjeta.append(el("div", String(valor), "valor"), el("div", rotulo, "rotulo"));
+          tarjetas.append(tarjeta);
+        }
+        cont.append(tarjetas);
+
+        if (datos.features.length === 0) {
+          const vacio = el("div", undefined, "vacio");
+          vacio.append(
+            el("div", "No hay features en este proyecto."),
+            el(
+              "div",
+              "Una feature es trabajo que excede un ticket: spec, diseño y varios tickets hijos.",
+              "resultado",
+            ),
+            el("div", "Se crea con: valmen feature new <slug> --title <título>", "ruta"),
+          );
+          cont.append(vacio);
+          return;
+        }
+
+        const tabla = el("table");
+        const thead = el("thead");
+        const filaCabecera = el("tr");
+        for (const columna of ["Feature", "Estado", "Artefactos", "Requisitos", "Tickets", "Huecos", "Actualizada", ""]) {
+          filaCabecera.append(el("th", columna));
+        }
+        thead.append(filaCabecera);
+
+        const tbody = el("tbody");
+        for (const f of datos.features) {
+          const tr = el("tr");
+
+          const celdaNombre = el("td");
+          celdaNombre.append(el("div", f.title, "nombre"), el("div", f.id, "id"));
+          tr.append(celdaNombre);
+
+          const celdaEstado = el("td");
+          celdaEstado.append(el("span", f.state));
+          if (f.invalid !== null) {
+            const roto = el("div");
+            roto.append(el("span", "inválida", "etiqueta roto"));
+            celdaEstado.append(roto);
+          }
+          tr.append(celdaEstado);
+
+          const celdaArtefactos = el("td");
+          celdaArtefactos.append(marcasArtefactos(f));
+          tr.append(celdaArtefactos);
+
+          tr.append(el("td", f.requirements === 0 ? "—" : String(f.requirements), "id"));
+
+          const celdaTickets = el("td");
+          celdaTickets.textContent = f.hasDecomposition ? String(f.tickets) : "—";
+          celdaTickets.className = "id";
+          tr.append(celdaTickets);
+
+          // Los huecos van en rojo y no en «inválida»: una feature con la
+          // cobertura incompleta no está rota, está a medio descomponer, y son
+          // dos cosas distintas que hay que poder distinguir de un vistazo.
+          const celdaHuecos = el("td");
+          if (f.gaps > 0) {
+            celdaHuecos.append(el("span", `${f.gaps} sin cubrir`, "etiqueta roto"));
+          } else if (f.hasDecomposition) {
+            celdaHuecos.append(el("span", "completa", "etiqueta aprueba"));
+          } else {
+            celdaHuecos.textContent = "—";
+          }
+          tr.append(celdaHuecos);
+
+          tr.append(el("td", f.updated, "id"));
+
+          const celdaAcciones = el("td");
+          const ver = el("button", "Ver", "enlace");
+          ver.addEventListener("click", () => {
+            location.hash = `#/feature/${f.id}`;
+          });
+          celdaAcciones.append(ver);
+          tr.append(celdaAcciones);
+
+          tbody.append(tr);
+        }
+
+        tabla.append(thead, tbody);
+        cont.append(tabla);
+      }
+
+      // ── Vista: una feature, con su grafo y su cobertura ───────────────────
+
+      /** Una sección colapsable con texto en crudo. */
+      function bloqueCrudo(titulo, texto, abierto) {
+        const detalle = document.createElement("details");
+        if (abierto) detalle.open = true;
+        detalle.append(el("summary", titulo));
+        detalle.append(el("pre", texto));
+        return detalle;
+      }
+
+      /** La tabla de requisitos, con quién lo cubre y en qué estado está. */
+      function tablaRequisitos(requisitos, ticketsPorId) {
+        const tabla = el("table");
+        const thead = el("thead");
+        const fila = el("tr");
+        for (const columna of ["Requisito", "Cubierto por", "Estado"]) {
+          fila.append(el("th", columna));
+        }
+        thead.append(fila);
+
+        const tbody = el("tbody");
+        for (const req of requisitos) {
+          const tr = el("tr");
+
+          const celda = el("td");
+          celda.append(el("div", req.statement), el("div", `${req.id} · ${req.domain}`, "id"));
+          tr.append(celda);
+
+          const celdaCubre = el("td");
+          if (req.coveredBy.length === 0) {
+            celdaCubre.append(el("span", "ninguno", "etiqueta roto"));
+          } else {
+            for (const id of req.coveredBy) {
+              const linea = el("div");
+              linea.append(el("span", id, "id"));
+              if (!ticketsPorId.has(id)) {
+                // Un `covered_by` que apunta a un ticket que no está en ningún
+                // sprint cubre lo mismo que ninguno, y el motor lo trata así.
+                linea.append(el("span", " fuera del grafo", "etiqueta roto"));
+              }
+              celdaCubre.append(linea);
+            }
+          }
+          tr.append(celdaCubre);
+
+          const celdaEstado = el("td");
+          if (req.coveredBy.length === 0) {
+            celdaEstado.append(el("span", "sin cubrir", "etiqueta roto"));
+          } else {
+            const estados = req.coveredBy
+              .filter((id) => ticketsPorId.has(id))
+              .map((id) => ticketsPorId.get(id));
+            if (estados.length === 0) {
+              celdaEstado.append(el("span", "no escrito", "etiqueta"));
+            } else if (estados.every((e) => e === "closed")) {
+              celdaEstado.append(el("span", "cerrado", "etiqueta aprueba"));
+            } else {
+              celdaEstado.append(el("span", "en curso", "etiqueta"));
+            }
+          }
+          tr.append(celdaEstado);
+
+          tbody.append(tr);
+        }
+
+        tabla.append(thead, tbody);
+        return tabla;
+      }
+
+      async function vistaFeature(slug) {
+        const cont = $("contenido");
+        cont.textContent = "";
+
+        const f = await api("GET", `/api/features/${slug}`);
+
+        const volver = el("a", "← Todas las features", "volver enlace");
+        volver.href = "#/features";
+        cont.append(volver);
+
+        const cabecera = el("div", undefined, "cabecera-ticket");
+        cabecera.append(el("h2", f.title));
+        const meta = el("div", undefined, "meta");
+        meta.append(el("span", f.id, "id"), el("span", f.state, "etiqueta"));
+        if (f.invalid !== null) meta.append(el("span", "inválida", "etiqueta roto"));
+        cabecera.append(meta, marcasArtefactos(f), el("div", f.path, "ruta"));
+        cont.append(cabecera);
+
+        if (f.invalid !== null) {
+          const nota = el("div", undefined, "nota alerta");
+          nota.append(el("strong", "La feature no valida. "), el("span", f.invalid));
+          cont.append(nota);
+        }
+
+        // ── Huecos de cobertura ──
+        //
+        // Va antes que nada operativo a propósito: es lo que impide empezar a
+        // trabajar, y enterrarlo bajo tres tablas obliga a buscarlo.
+        const huecos = f.decomposition === null ? [] : f.decomposition.gaps;
+        if (f.decompositionError !== null) {
+          const nota = el("div", undefined, "nota alerta");
+          nota.append(
+            el("strong", "El tickets.yaml no se puede leer. "),
+            el("span", f.decompositionError, "resultado error"),
+          );
+          cont.append(nota);
+        }
+        if (huecos.length > 0) {
+          const caja = el("div", undefined, "nota alerta huecos");
+          caja.append(
+            el(
+              "strong",
+              `${huecos.length} requisito(s) sin ticket que los cubra. `,
+            ),
+            el(
+              "span",
+              "La compuerta de descomposición no pasa con huecos: cada requisito necesita al menos un ticket en un sprint.",
+            ),
+          );
+          for (const hueco of huecos) {
+            const fila = el("div", undefined, "fila");
+            fila.append(
+              el("span", hueco.requirement || "declarado", "id"),
+              el("span", hueco.statement),
+            );
+            caja.append(fila);
+          }
+          cont.append(caja);
+        }
+        if (f.cycles.length > 0) {
+          const nota = el("div", undefined, "nota alerta");
+          nota.append(el("strong", "El grafo de dependencias tiene ciclos. "));
+          for (const ciclo of f.cycles) {
+            nota.append(el("div", ciclo.join(" → "), "id"));
+          }
+          cont.append(nota);
+        }
+
+        // El estado de cada ticket del grafo, para saber qué está escrito ya.
+        const ticketsPorId = new Map();
+        for (const sprint of f.decomposition?.sprints ?? []) {
+          for (const t of sprint.tickets) ticketsPorId.set(t.id, t.state);
+        }
+
+        // ── Pestañas ──
+        const barra = el("div", undefined, "secciones");
+        const zona = el("div");
+        const pestanas = [
+          ["Resumen", () => panelResumen(f)],
+          ["Requisitos", () => panelRequisitos(f)],
+          ["Grafo", () => panelGrafo(f)],
+          ["Brief", () => bloqueCrudo("feature.md", f.brief, true)],
+        ];
+        if (f.design !== null) pestanas.push(["Diseño", () => bloqueCrudo("design.md", f.design)]);
+        if (f.ticketsYaml !== null) {
+          pestanas.push(["tickets.yaml", () => bloqueCrudo("tickets.yaml", f.ticketsYaml, true)]);
+        }
+        for (const spec of f.specs) {
+          pestanas.push([`spec · ${spec.domain}`, () => bloqueCrudo(spec.source, spec.text)]);
+        }
+
+        const pintar = (indice) => {
+          zona.textContent = "";
+          zona.append(pestanas[indice][1]());
+          for (const [i, boton] of [...barra.children].entries()) {
+            boton.setAttribute("aria-pressed", String(i === indice));
+          }
+        };
+        pestanas.forEach(([nombre], indice) => {
+          const boton = el("button", nombre);
+          boton.addEventListener("click", () => pintar(indice));
+          barra.append(boton);
+        });
+        cont.append(barra, zona);
+        pintar(0);
+      }
+
+      /** El resumen: qué hay, quién lo generó y en qué punto está. */
+      function panelResumen(f) {
+        const caja = el("div");
+
+        const tabla = el("table");
+        const tbody = el("tbody");
+        const fila = (rotulo, valor) => {
+          const tr = el("tr");
+          tr.append(el("td", rotulo, "id"), el("td", valor));
+          tbody.append(tr);
+        };
+        fila("Estado", f.state);
+        fila("Creada", f.created);
+        fila("Actualizada", f.updated);
+        fila(
+          "Requisitos",
+          f.requirements === 0
+            ? "La spec no declara requisitos todavía."
+            : `${f.requirements} en ${f.specs.length} dominio(s)`,
+        );
+        fila(
+          "Tickets",
+          f.hasDecomposition ? `${f.tickets} en ${f.decomposition?.sprints.length ?? 0} sprint(s)` : "Sin descomponer",
+        );
+        if (f.decomposition?.origin) {
+          fila("Descompuesta por", `${f.decomposition.origin.provider}/${f.decomposition.origin.model}`);
+        }
+        tabla.append(tbody);
+        caja.append(tabla);
+
+        if (!f.hasDecomposition && f.requirements > 0) {
+          const nota = el("div", undefined, "nota");
+          nota.append(
+            el("strong", "Se puede descomponer. "),
+            el(
+              "span",
+              "Genera el grafo de tickets con: valmen feature decompose " + f.id,
+              "resultado",
+            ),
+          );
+          caja.append(nota);
+        }
+        if (f.requirements === 0) {
+          const nota = el("div", undefined, "nota");
+          nota.append(
+            el("strong", "Falta la spec. "),
+            el(
+              "span",
+              `Escribe .valmen/features/${f.id}/spec/<dominio>/spec.md con requisitos en RFC 2119: "### Requirement: R-XXX-001 — El sistema DEBE …".`,
+              "resultado",
+            ),
+          );
+          caja.append(nota);
+        }
+        return caja;
+      }
+
+      /** Los requisitos, con la cobertura declarada y el estado real. */
+      function panelRequisitos(f) {
+        const caja = el("div");
+        const requisitos = f.specs.flatMap((spec) => spec.requirements);
+
+        if (requisitos.length === 0) {
+          caja.append(el("div", "La spec no declara requisitos.", "vacio"));
+          return caja;
+        }
+
+        const ticketsPorId = new Map();
+        for (const sprint of f.decomposition?.sprints ?? []) {
+          for (const t of sprint.tickets) ticketsPorId.set(t.id, t.state);
+        }
+
+        caja.append(tablaRequisitos(requisitos, ticketsPorId));
+
+        if (f.decomposition === null) {
+          caja.append(
+            el(
+              "div",
+              "Sin tickets.yaml no hay cobertura declarada: la columna «Cubierto por» está vacía por eso, no porque falte trabajo.",
+              "nota",
+            ),
+          );
+        }
+        return caja;
+      }
+
+      /** El grafo: sprints, tickets, dependencias y quién existe ya. */
+      function panelGrafo(f) {
+        const caja = el("div");
+
+        if (f.decomposition === null) {
+          caja.append(
+            el(
+              "div",
+              f.decompositionError ?? "Todavía no hay descomposición.",
+              "vacio",
+            ),
+          );
+          return caja;
+        }
+
+        for (const sprint of f.decomposition.sprints) {
+          const cajaSprint = el("div", undefined, "sprint");
+          const cabecera = el("header");
+          cabecera.append(el("span", sprint.id, "id"), el("h3", sprint.goal));
+          cajaSprint.append(cabecera);
+
+          const tabla = el("table");
+          const thead = el("thead");
+          const fila = el("tr");
+          for (const columna of ["Ticket", "Estado", "Depende de"]) fila.append(el("th", columna));
+          thead.append(fila);
+
+          const tbody = el("tbody");
+          for (const t of sprint.tickets) {
+            // Un ticket del grafo que aún no está en el registro se atenúa: la
+            // diferencia entre «planeado» y «escrito» es lo que se mira aquí.
+            const tr = el("tr", undefined, t.exists ? "" : "planeado");
+
+            const celda = el("td");
+            celda.append(el("div", t.title || "(sin título)"), el("div", t.id, "id"));
+            tr.append(celda);
+
+            const celdaEstado = el("td");
+            celdaEstado.append(
+              t.exists ? el("span", t.state, "etiqueta") : el("span", "por crear", "etiqueta"),
+            );
+            tr.append(celdaEstado);
+
+            const celdaDeps = el("td");
+            celdaDeps.append(
+              el("span", t.dependsOn.length === 0 ? "—" : t.dependsOn.join(", "), "depende"),
+            );
+            tr.append(celdaDeps);
+
+            tbody.append(tr);
+          }
+
+          tabla.append(thead, tbody);
+          cajaSprint.append(tabla);
+          caja.append(cajaSprint);
+        }
+
+        const creados = [...(f.decomposition?.sprints ?? [])]
+          .flatMap((s) => s.tickets)
+          .filter((t) => t.exists).length;
+        const total = [...(f.decomposition?.sprints ?? [])].flatMap((s) => s.tickets).length;
+        caja.append(
+          el(
+            "div",
+            `${creados} de ${total} ticket(s) del grafo existen ya en el registro. Los atenuados están planeados y todavía no escritos.`,
+            "nota",
+          ),
+        );
+        return caja;
       }
 
       // ── Vista: un ticket, con sus gates ───────────────────────────────────
@@ -1928,17 +2414,22 @@
         for (const enlace of document.querySelectorAll("nav a")) {
           // Un ticket pertenece a la vista de tickets: la pestaña sigue marcada
           // para que la navegación no parezca perderse al abrir uno.
-          const activa = enlace.dataset.vista === nombre || (nombre === "ticket" && enlace.dataset.vista === "tickets");
+          const activa =
+            enlace.dataset.vista === nombre ||
+            (nombre === "ticket" && enlace.dataset.vista === "tickets") ||
+            (nombre === "feature" && enlace.dataset.vista === "features");
           if (activa) enlace.setAttribute("aria-current", "page");
           else enlace.removeAttribute("aria-current");
         }
 
         try {
           if (nombre === "ticket" && parametro !== undefined) await vistaTicket(parametro);
+          else if (nombre === "feature" && parametro !== undefined) await vistaFeature(parametro);
           else if (nombre === "configurar") await vistaConfigurar();
           else if (nombre === "modelos") await vistaModelos();
           else if (nombre === "configuracion") await vistaConfiguracion();
           else if (nombre === "proveedores") await vistaProveedores();
+          else if (nombre === "features") await vistaFeatures();
           else await vistaTickets();
         } catch (error) {
           const cont = $("contenido");

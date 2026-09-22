@@ -56,6 +56,67 @@ export interface TicketsDocument {
   readonly decomposition: FeatureDecomposition;
 }
 
+/**
+ * Lee un `tickets.yaml` sin comprobar la cobertura.
+ *
+ * Es la vía de **solo lectura**, para la interfaz: un grafo que no cubre la spec
+ * es exactamente lo que el usuario necesita ver, y `parseTicketsYaml` lo rechaza
+ * porque su trabajo es impedir que se firme. El de la pantalla es mostrarlo con
+ * el hueco a la vista.
+ *
+ * El hueco se devuelve calculado —no se esconde— y `null` cuando el documento no
+ * se puede ni leer: un archivo con la forma rota es un error que hay que decir,
+ * no una lista vacía que parece «no hay nada».
+ */
+export function previewTicketsYaml(
+  text: string,
+  requirements: readonly FeatureRequirement[],
+): { document: TicketsDocument; gaps: ReturnType<typeof coverageGaps> } | null {
+  try {
+    const raiz = parseYamlSubset(text, {
+      fileName: "tickets.yaml",
+      key: /^[a-z][a-z0-9_]*$/,
+      keyMessage: "no es válida (minúsculas, dígitos y guiones bajos).",
+    });
+    if (typeof raiz === "string" || Array.isArray(raiz)) return null;
+
+    const feature = comoTexto(raiz["feature"], "feature");
+    const origin = leerOrigen(raiz["generated_by"]);
+
+    const sprints = comoLista(raiz["sprints"], "sprints").map((crudo, indice) => {
+      const donde = `sprints[${indice}]`;
+      const mapa = comoMapa(crudo, donde);
+      return {
+        id: comoTexto(mapa["id"], `${donde}.id`),
+        goal: comoTexto(mapa["goal"], `${donde}.goal`),
+        tickets: comoLista(mapa["tickets"], `${donde}.tickets`).map((ticket, pos) =>
+          leerTicket(ticket, `${donde}.tickets[${pos}]`),
+        ),
+      };
+    });
+
+    const coverage = comoLista(raiz["coverage"], "coverage").map((crudo, indice) => {
+      const donde = `coverage[${indice}]`;
+      const mapa = comoMapa(crudo, donde);
+      return {
+        requirement: comoTexto(mapa["requirement"], `${donde}.requirement`),
+        coveredBy: comoTextos(mapa["covered_by"], `${donde}.covered_by`),
+      };
+    });
+
+    const gaps = comoTextos(raiz["gaps"] ?? [], "gaps");
+    const decomposition: FeatureDecomposition = { sprints, coverage, gaps };
+    return {
+      document: { feature, origin, decomposition },
+      gaps: coverageGaps(requirements, decomposition),
+    };
+  } catch {
+    // Un documento que no se puede leer no se explica aquí: `parseTicketsYaml`
+    // es quien tiene el mensaje bueno, y la pantalla lo pide por su cuenta.
+    return null;
+  }
+}
+
 /** Un fallo de forma en el `tickets.yaml`. */
 function malo(mensaje: string): never {
   fail(`tickets.yaml: ${mensaje}`, EXIT_SCHEMA);
