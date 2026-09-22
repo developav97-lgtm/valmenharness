@@ -607,3 +607,54 @@ describe("un proyecto con el registro en docs/tickets", () => {
   });
 });
 
+
+describe("la credencial de un gate sale del archivo del servidor", () => {
+  /**
+   * El fallo que esto fija: la evaluación de un gate resolvía la clave del
+   * `$HOME`, no del archivo que el servidor tiene configurado. Un harness
+   * apuntando a otro archivo evaluaba con **la clave del usuario que corriera el
+   * servidor**, y sin decirlo.
+   *
+   * Es el mismo fallo que tenía el chat, y se arregla en el mismo sitio: en el
+   * borde, donde el archivo se conoce.
+   */
+  it("usa la clave del archivo indicado", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "valmen-cred-gate-"));
+    const archivo = join(dir, ".credentials.yaml");
+    writeFileSync(
+      archivo,
+      [
+        "version: 1",
+        "providers:",
+        "  openrouter:",
+        '    api-key: "sk-or-v1-la-del-servidor"',
+        "",
+      ].join("\n"),
+      { mode: 0o600 },
+    );
+
+    const { apiKeyWithPrecedence } = await import("../packages/credentials/src/credentials.js");
+    // El archivo del servidor gana sobre el del `$HOME`, que es el fallo.
+    expect(apiKeyWithPrecedence("openrouter", archivo, {})).toBe("sk-or-v1-la-del-servidor");
+    // Y la variable de entorno sigue ganando sobre el archivo, como siempre.
+    expect(
+      apiKeyWithPrecedence("openrouter", archivo, { OPENROUTER_API_KEY: "sk-de-entorno" }),
+    ).toBe("sk-de-entorno");
+    // Sin archivo, no hay clave: quien llama decide qué hacer.
+    expect(apiKeyWithPrecedence("openrouter", undefined, {})).toBeNull();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("no inventa una clave para un proveedor que no está en el archivo", async () => {
+    const { apiKeyFromText } = await import("../packages/credentials/src/credentials.js");
+    expect(apiKeyFromText("providers:\n  deepseek:\n    api-key: sk-otra\n", "openrouter")).toBeNull();
+  });
+
+  it("rechaza un nombre de variable pegado por descuido", async () => {
+    // Mandarlo daría un 401 que no explica que el problema es el valor.
+    const { apiKeyFromText } = await import("../packages/credentials/src/credentials.js");
+    expect(
+      apiKeyFromText("providers:\n  openrouter:\n    api-key: OPENROUTER_API_KEY\n", "openrouter"),
+    ).toBeNull();
+  });
+});

@@ -169,3 +169,54 @@ export function hasApiKey(
     return false;
   }
 }
+
+/**
+ * La clave de un proveedor, leída de un texto ya cargado.
+ *
+ * Existe para que quien **ya tiene** el archivo delante pueda resolver la clave
+ * sin volver a leerlo y sin depender de dónde esté. Es lo que necesita el
+ * servidor: conoce su archivo de credenciales y hasta ahora no podía usarlo, así
+ * que la evaluación de un gate leía el del `$HOME` y usaba la clave del usuario
+ * que corriera el servidor **en silencio**.
+ *
+ * Devuelve `null` si el proveedor no está en el archivo. Un archivo que no está no
+ * es un error aquí: quien llama decide si eso lo resuelve por otra vía.
+ */
+export function apiKeyFromText(text: string, provider = "openrouter"): string | null {
+  const bloque = blockOf(text, provider);
+  if (bloque === null) return null;
+  const valor = fieldOf(bloque, "api-key(?:-env)?");
+  if (valor === null) return null;
+  // Un nombre de variable de entorno pegado por descuido no es una clave; se
+  // rechaza igual que en `resolveApiKey`, para no mandarlo y recibir un 401.
+  if (/^[A-Z][A-Z0-9_]{6,}$/.test(valor)) return null;
+  return valor;
+}
+
+/**
+ * La precedencia de siempre —entorno, después archivo— con el archivo explícito.
+ *
+ * Es la regla que aplica `resolveApiKey`, pero para quien tiene el archivo en la
+ * mano. Sin esto, cada llamador la reimplementa y una de las copias se olvida de
+ * que el entorno va primero.
+ */
+export function apiKeyWithPrecedence(
+  provider: string,
+  filePath: string | undefined,
+  env: NodeJS.ProcessEnv = process.env,
+  leer: (ruta: string) => string = (ruta) => {
+    try {
+      return readFileSync(ruta, "utf8");
+    } catch {
+      return "";
+    }
+  },
+): string | null {
+  const variable = `${provider.toUpperCase().replace(/-/g, "_")}_API_KEY`;
+  const desdeEntorno = env[variable];
+  if (typeof desdeEntorno === "string" && desdeEntorno.trim() !== "") {
+    return desdeEntorno.trim();
+  }
+  if (filePath === undefined) return null;
+  return apiKeyFromText(leer(filePath), provider);
+}

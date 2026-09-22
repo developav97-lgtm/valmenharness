@@ -35,6 +35,7 @@ import {
   withHumanDecision,
 } from "@valmen/gate";
 import { parseTicket } from "@valmen/core";
+import { apiKeyWithPrecedence } from "@valmen/credentials";
 import { gateRouting } from "./routing.js";
 import {
   type EvaluatorId,
@@ -277,6 +278,13 @@ export interface GateRunRequest {
   readonly judge?: Parameters<typeof runGate>[1]["judge"];
   readonly now?: () => Date;
   readonly receiptId?: string;
+  /**
+   * El archivo de credenciales del servidor.
+   *
+   * Sin esto, la evaluación lee el del `$HOME` y usa una clave que puede no ser
+   * la que el servidor tiene configurada.
+   */
+  readonly credentialsFile?: string;
 }
 
 /**
@@ -304,9 +312,20 @@ export async function runTicketGate(
   // tomada es la mentira más cara que puede decir esta pantalla.
   const lineasAntes = readReceipts(paths, ticketId).length;
 
+  // La credencial se resuelve **aquí**, con el archivo de este servidor. Antes se
+  // dejaba a los evaluadores, que leían el del `$HOME`: un harness apuntando a
+  // otro archivo de credenciales evaluaba los gates con la clave del usuario que
+  // corriera el servidor, y sin decirlo.
+  //
+  // Se resuelve para el proveedor del evaluador y solo si hay archivo: sin él,
+  // cada evaluador resuelve por su cuenta como siempre —la variable de entorno
+  // primero— y nada cambia para quien usa la configuración por defecto.
+  const apiKey = apiKeyWithPrecedence(routing.evaluatorProvider, request.credentialsFile);
+
   const result = await runGate(paths, {
     gateId,
     ticketId,
+    ...(apiKey === null ? {} : { apiKey }),
     ...(request.evaluator === undefined ? {} : { evaluator: request.evaluator }),
     ...(request.jev === undefined ? {} : { jev: request.jev }),
     ...(request.judge === undefined ? {} : { judge: request.judge }),

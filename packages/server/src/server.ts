@@ -525,6 +525,9 @@ export async function handleApi(
           : { evaluator: evaluador }),
         ...(context.jev === undefined ? {} : { jev: context.jev }),
         ...(context.judge === undefined ? {} : { judge: context.judge }),
+        // El archivo del servidor, no el del `$HOME`: es el que el usuario
+        // configuró en la pantalla, y la evaluación tiene que usar ese.
+        credentialsFile: context.credentialsFile,
       },
     );
 
