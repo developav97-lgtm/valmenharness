@@ -41,7 +41,7 @@ ownership"` vs `"Los permisos de la herramienta no sustituyen ownership"`). Mult
 ├── config.yaml                 ─┐
 ├── rules/*.md                   │
 ├── skills/*/SKILL.md            │   FUENTE ÚNICA
-├── agents/*.md                  │   (lo único que se escribe a mano)
+├── agents/*.md                  │   (lo que se escribe a mano)
 ├── gates/*.yaml                 │
 ├── processes/*.yaml            ─┘
 │
@@ -249,28 +249,53 @@ secciones y presupuesto, se sabe cuándo hay que sacar algo a una skill.
 
 ## 7. Skills compartidas entre agentes
 
-SaiOpenCloud ya tiene la idea correcta (`.agents/skills/` compartido por Codex y opencode).
-El harness la generaliza:
+**Implementado.** La fuente es `.valmen/skills/<id>/SKILL.md`, con el formato del estándar
+—un directorio por skill, `SKILL.md` dentro— para que la misma carpeta se pueda leer tal cual
+desde el cliente sin pasar por la proyección. `valmen sync` la proyecta a las tres rutas que
+los clientes buscan de verdad:
 
-```yaml
-# .valmen/config.yaml
-skills:
-  install_to:
-    claude:   { path: .claude/skills,   layout: bundle }   # <name>/SKILL.md
-    codex:    { path: .agents/skills,   layout: bundle }
-    opencode: { path: .opencode/skills, layout: bundle }
-    generic:  { path: .agents/skills,   layout: bundle }
-```
+| Runtime | Ruta | Quién la lee |
+|---|---|---|
+| opencode | `.opencode/skills/<id>/SKILL.md` | opencode |
+| claude | `.claude/skills/<id>/SKILL.md` | Claude Code, y opencode también |
+| codex | `.codex/skills/<id>/SKILL.md` | Codex |
 
-Opciones por adaptador:
+El contenido se **copia**, no se enlaza. El diseño original de esta sección proponía
+symlinks con `mode: copy` como alternativa; se descartó por dos razones concretas: un enlace
+simbólico dentro de un repositorio versionado apunta a una ruta absoluta de una máquina, y
+buena parte de las herramientas que leen estos archivos no los siguen. Copiar hace que la
+proyección sea determinista y que `valmen sync --check` pueda comparar bytes, que es lo que
+detecta una edición a mano.
 
-- `layout: bundle` → copia/symlink `<name>/SKILL.md`
-- `layout: flat` → `<name>.md` (algunos agentes lo prefieren)
-- `mode: symlink` (default) → enlaces al `.valmen/skills/`, cero duplicación
-- `mode: copy` → copia real (necesario en Windows o si el agente no sigue symlinks)
+### Dos trampas del formato, las dos silenciosas
 
-**Advertencia documentada:** los symlinks en Windows requieren permisos o modo desarrollador.
-El manual de instalación lo dice, y `valmen doctor` detecta el problema y sugiere `copy`.
+Las dos se comprueban **al proyectar**, que es donde el error se puede explicar, y no al
+usar, que es donde ya no:
+
+- El `name` del frontmatter tiene que coincidir con el nombre del directorio. Los tres
+  clientes descartan la skill que no coincide **sin ningún error**: para el agente,
+  simplemente no existe.
+- El frontmatter tiene que ser lo primero del archivo. Por eso la marca de «generado» va al
+  **final** y no delante: un comentario previo rompería el frontmatter y la skill dejaría de
+  cargarse, con el motivo en el generador y no en el cliente.
+
+### El stack no va dentro
+
+Una skill del harness **no nombra tecnologías**: las versiones, los servicios y las
+convenciones salen de `.valmen/rules/stack.md` del proyecto. Sin eso, la misma tabla de
+«qué debe quedar resuelto antes de implementar según el impacto» viviría copiada en cada
+proyecto y divergiría en todos. Hay una prueba que lo impide: recorre las skills publicadas
+con el harness y falla si alguna nombra una tecnología concreta.
+
+Lo que **no** es genérico se queda en el proyecto: rutas, servicios, versiones y políticas
+de dominio van a las reglas del proyecto, que es lo que compone `AGENTS.md`.
+
+### Skills preexistentes
+
+`valmen adopt` **no borra ni reordena** las skills que ya existan en `.agents/skills/`,
+`.opencode/skills/` o `.claude/skills/`. Las detecta y las informa. Durante una adopción
+conviven con las del harness, que es deliberado: permite comparar antes de retirar las
+viejas, y ninguna se pierde.
 
 ## 8. Hooks y validaciones mecánicas
 
