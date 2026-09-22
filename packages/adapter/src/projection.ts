@@ -13,6 +13,7 @@
  */
 import { readAgents, renderAllAgents } from "./agents.js";
 import { loadProjectModel, projectAgentsMd } from "./project.js";
+import { readSkills, renderAllSkills } from "./skills.js";
 
 /** Un archivo generado, con su ruta relativa a la raíz. */
 export interface ProjectedFile {
@@ -33,6 +34,17 @@ export interface Projection {
   };
   /** Cuántas reglas del proyecto entraron en `AGENTS.md`. */
   readonly ruleCount: number;
+  /**
+   * Los conteos, por separado.
+   *
+   * `byRuntime` cuenta por prefijo de ruta y por eso mezcla agentes con skills:
+   * los dos viven bajo `.codex/`, `.opencode/` y `.claude/`. Sirve para saber
+   * cuántos archivos toca cada runtime, pero **no** para informar de cuántos
+   * agentes se proyectaron, que es lo que se muestra. Confundirlos dio un
+   * «agentes proyectados» que incluía las skills.
+   */
+  readonly agentCount: number;
+  readonly skillCount: number;
 }
 
 /**
@@ -52,18 +64,22 @@ export function projectFiles(
 ): Projection {
   const model = loadProjectModel(root, projectName, configText);
   const agents = readAgents(root);
+  const skills = readSkills(root);
 
-  // El documento y los agentes salen del mismo modelo, así que se proyectan
-  // juntos: un `AGENTS.md` actualizado con agentes viejos sería incoherente.
+  // El documento, los agentes y las skills salen del mismo modelo, así que se
+  // proyectan juntos: un `AGENTS.md` actualizado con agentes viejos sería
+  // incoherente, y una skill que contradijera la regla del proyecto también.
   const sources = [
     ".valmen/config.yaml",
     ...model.rules.map((rule) => rule.source),
     ...agents.map((agent) => `.valmen/agents/${agent.id}.md`),
+    ...skills.map((skill) => `.valmen/skills/${skill.id}/SKILL.md`),
   ];
 
   const files: ProjectedFile[] = [
     { path: "AGENTS.md", content: projectAgentsMd(model) },
     ...renderAllAgents(agents, sources),
+    ...renderAllSkills(skills),
   ];
 
   return {
@@ -75,5 +91,7 @@ export function projectFiles(
       claude: files.filter((file) => file.path.startsWith(".claude/")).length,
     },
     ruleCount: model.rules.length,
+    agentCount: agents.length,
+    skillCount: skills.length,
   };
 }

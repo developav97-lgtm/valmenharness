@@ -511,26 +511,34 @@ export function syncProject(
     atomicWrite(join(root, file.path), file.content);
   }
 
-  const agentesProyectados = projected.length - 1;
-
   const lines = [
     "Sincronización",
     `  AGENTS.md                (${proyeccion.ruleCount} archivo(s) de reglas del proyecto)`,
   ];
 
-  if (agentesProyectados > 0) {
-    lines.push(
-      `  agentes proyectados      ${agentesProyectados}`,
-      `    .codex/agents/         ${byRuntime.codex} archivos TOML`,
-      `    .opencode/agents/      ${byRuntime.opencode} archivos Markdown`,
-      `    .claude/agents/        ${byRuntime.claude} archivos Markdown`,
-    );
+  if (proyeccion.agentCount > 0) {
+    lines.push(`  agentes proyectados      ${proyeccion.agentCount}`);
   } else {
     lines.push(
       "  agentes                  ninguno",
       "    Añada definiciones en .valmen/agents/<id>.md para proyectarlas.",
     );
   }
+
+  if (proyeccion.skillCount > 0) {
+    lines.push(`  skills proyectadas       ${proyeccion.skillCount}`);
+  } else {
+    lines.push(
+      "  skills                   ninguna",
+      "    Añada definiciones en .valmen/skills/<id>/SKILL.md para proyectarlas.",
+    );
+  }
+
+  lines.push(
+    `    .codex/                ${byRuntime.codex} archivo(s)`,
+    `    .opencode/             ${byRuntime.opencode} archivo(s)`,
+    `    .claude/               ${byRuntime.claude} archivo(s)`,
+  );
 
   if (proyeccion.ruleCount === 0) {
     lines.push("  Añada reglas en .valmen/rules/ para que se incluyan en AGENTS.md.");

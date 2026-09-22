@@ -14,6 +14,14 @@ coverage/
 # macOS
 .DS_Store
 
-# La configuración de opencode lleva rutas absolutas de esta máquina: el
-# ejecutable del servidor MCP. Se genera con `valmen mcp --install`.
+# Lo que produce `valmen sync`: la proyección de .valmen/ a los archivos que leen
+# los agentes. La fuente es .valmen/ y esto se regenera; versionarlo obligaría a
+# revisar dos veces el mismo contenido y a mantener las dos copias de acuerdo.
+# Se comprueba con `valmen sync --check`.
+.codex/
+.opencode/
+.claude/
+
+# La configuración de opencode la genera `valmen mcp --install` y cada proyecto
+# decide si la versiona. Aquí es configuración del entorno de trabajo.
 opencode.json
