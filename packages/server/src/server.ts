@@ -41,7 +41,7 @@ import {
 } from "@valmen/engine";
 import { type JsonObject, nextStates, parseTicket, toFailure } from "@valmen/core";
 import { architectRoutingFor } from "@valmen/adapter";
-import { callChat } from "@valmen/credentials";
+import { apiKeyWithPrecedence, callChat } from "@valmen/credentials";
 
 import {
   credentialsPath,
@@ -498,6 +498,25 @@ export async function handleApi(
     }
     const escribir = datos.dryRun !== true;
 
+    // La credencial se resuelve con el archivo de **este** servidor. Sin esto,
+    // `callChat` leía el del `$HOME` y la descomposición usaba una clave que el
+    // servidor no tenía configurada.
+    const proveedor =
+      typeof datos.provider === "string" && datos.provider !== ""
+        ? datos.provider
+        : arquitecto.provider;
+    const apiKey = apiKeyWithPrecedence(proveedor, context.credentialsFile, context.env);
+    if (apiKey === null) {
+      return {
+        status: 400,
+        body: {
+          error:
+            `No hay credencial para ${proveedor}. Configúrala en Proveedores antes de ` +
+            "descomponer.",
+        },
+      };
+    }
+
     try {
       const resultado = await decomposeFeature({
         root: context.root,
@@ -505,6 +524,7 @@ export async function handleApi(
         write: escribir,
         callModel: async (entrada) => {
           const respuesta = await callChat({
+            apiKey,
             // El `fetchImpl` del contexto, sin el cual las pruebas de esta ruta
             // salen a la red de verdad y tardan trece segundos en fallar.
             ...(context.fetchImpl === undefined ? {} : { fetchImpl: context.fetchImpl }),

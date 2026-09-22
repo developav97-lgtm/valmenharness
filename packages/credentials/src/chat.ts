@@ -80,6 +80,14 @@ export interface ChatOptions {
   readonly maxTokens?: number;
   readonly temperature?: number;
   readonly timeoutMs?: number;
+  /**
+   * La clave, ya resuelta.
+   *
+   * Quien la tenga —el servidor, con su archivo en el contexto— la pasa; quien no,
+   * la deja y se resuelve del `$HOME`, que es lo correcto para el CLI. Es el mismo
+   * reparto que en la evaluación de un gate, y evita que el servidor lea el archivo
+   * del usuario sin decirlo.
+   */
   readonly apiKey?: string;
   readonly fetchImpl?: typeof fetch;
   readonly signal?: AbortSignal;
