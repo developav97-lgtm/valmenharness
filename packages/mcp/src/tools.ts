@@ -453,9 +453,17 @@ export async function callTool(
         if (informe.isError) return informe;
         return bien(
           informe.text +
-            "\nLa compuerta **no** movió el ticket. Si el veredicto es de aprobación, el " +
-            "paso siguiente es `mover_ticket`; si quedó en revisión, la decisión es de " +
-            "una persona y no hay herramienta que la sustituya.",
+            "\nLa compuerta **no** movió el ticket. Según el veredicto:\n" +
+            "  · `APPROVE` → `mover_ticket` al estado siguiente. Si el estado siguiente " +
+            "es `approved`, el motor lo va a rechazar aunque la compuerta haya aprobado: " +
+            "esa transición exige además la **aprobación explícita de una persona** " +
+            "registrada en `## Plan`. Una compuerta aprobada no es un ticket aprobado, y " +
+            "ninguna herramienta sustituye esa firma. Pídela y regístrala con la frase " +
+            "literal de quien aprueba.\n" +
+            "  · `REVIEW` → la decisión es de una persona. Llévale el motivo del informe; " +
+            "no hay herramienta que la sustituya.\n" +
+            "  · `BLOCK` → hay algo que corregir. El motivo dice qué proposición y con " +
+            "qué valor; corrige el artefacto y vuelve a evaluar.",
         );
       }
 
