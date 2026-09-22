@@ -85,6 +85,23 @@ interface Transport {
   /** Cabeceras que el proveedor exige además de la credencial. */
   readonly headers?: Readonly<Record<string, string>>;
   /**
+   * De dónde sale la credencial, cuando no es una clave del harness.
+   *
+   * `codex` no tiene clave: usa tokens OAuth de su CLI, en su propio archivo, y su
+   * backend pide además una cabecera con la cuenta. Se declara aquí y no se adivina
+   * por el identificador del proveedor, que sería una lista de casos particulares
+   * escondida en el código.
+   */
+  readonly credential?: "codex";
+  /**
+   * El dialecto del proveedor entero, cuando no es el de chat.
+   *
+   * Se declara para que **ningún** modelo de este proveedor caiga en el dialecto
+   * por defecto: en codex todos van por `/responses`, y un prefijo que no
+   * estuviera en `notDefault` acabaría mandado a `/chat/completions`.
+   */
+  readonly protocol?: Protocol;
+  /**
    * Cómo pide este proveedor una salida estructurada.
    *
    * **Medido, no supuesto**: DeepSeek directo responde
@@ -140,6 +157,18 @@ export const TRANSPORTS: readonly Transport[] = [
     defaultProtocol: "openai-chat",
   },
   {
+    // Codex es una suscripción de ChatGPT y **sí tiene API**: `/responses` con
+    // streaming obligatorio, y su catálogo en `chatgpt.com/backend-api/codex`.
+    // Se creía que su token no servía contra la API de OpenAI; era una suposición.
+    id: "codex",
+    name: "Codex (suscripción)",
+    baseUrl: "https://chatgpt.com/backend-api/codex",
+    defaultProtocol: "openai-responses",
+    protocol: "openai-responses",
+    credential: "codex",
+    headers: { originator: "codex_cli_rs" },
+  },
+  {
     id: "opencode-go",
     name: "opencode Go",
     baseUrl: "https://opencode.ai/zen/go/v1",
@@ -184,6 +213,9 @@ export const DEFAULT_PROVIDER = "openrouter";
 
 /** El dialecto de un modelo dentro de un proveedor. */
 export function protocolFor(transport: Transport, model: string): Protocol {
+  // El dialecto del proveedor manda sobre el del modelo: en codex no hay modelos
+  // de chat, así que una regla por prefijo dejaría fuera a los que no encajen.
+  if (transport.protocol !== undefined) return transport.protocol;
   for (const regla of transport.notDefault ?? []) {
     if (model.toLowerCase().startsWith(regla.prefix)) return regla.protocol;
   }
@@ -215,11 +247,17 @@ export function resolveChatEndpoint(
   const transport = transportById(providerId);
   const protocol = protocolFor(transport, model);
 
+  // Dos dialectos, y cada uno tiene su ruta. Los demás siguen sin implementarse, y
+  // decirlo es mejor que mandar la petición a la ruta equivocada: el proveedor
+  // respondería un error que no habla del dialecto.
+  if (protocol === "openai-responses") {
+    return { provider: transport.id, protocol, url: `${transport.baseUrl}/responses` };
+  }
   if (protocol !== "openai-chat") {
     fail(
       `El modelo "${model}" de ${transport.name} habla el dialecto "${protocol}", ` +
-        `y el harness todavía solo habla "openai-chat". Elige un modelo de chat de ese ` +
-        "proveedor, o usa el proveedor que ya funciona para ese modelo.",
+        "y el harness todavía no lo implementa. Elige un modelo que hable " +
+        '"openai-chat" o "openai-responses".',
     );
   }
 

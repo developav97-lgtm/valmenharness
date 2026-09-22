@@ -13,12 +13,15 @@
  * `holds`—. Escribir eso una vez y que lo usen los tres es la diferencia entre
  * arreglarlo en un sitio y arreglarlo en tres. Ver `scripts/probe-deepseek-tools.md`.
  */
+import { CodexCredentialError, readCodexCredential } from "./codex.js";
 import { CredentialError, resolveApiKey } from "./credentials.js";
+import { callResponses } from "./responses.js";
 import {
   DEFAULT_PROVIDER,
   extraHeaders,
   resolveChatEndpoint,
   structuredOutputOf,
+  transportById,
 } from "./endpoints.js";
 
 /** Un mensaje del historial. */
@@ -28,7 +31,7 @@ export interface ChatMessage {
 }
 
 /** Qué pedirle al proveedor sobre la forma de la respuesta. */
-export type OutputDialect = "json-schema" | "tool-call" | "text";
+export type OutputDialect = "json-schema" | "tool-call" | "text" | "openai-responses";
 
 /** Cómo se pide la salida estructurada, según lo que el proveedor sepa imponer. */
 export interface StructuredRequest {
@@ -82,6 +85,39 @@ export interface ChatOptions {
   readonly signal?: AbortSignal;
 }
 
+/**
+ * La credencial del proveedor, con sus dos formas.
+ *
+ * Casi todos leen una clave del archivo del harness o de una variable de entorno.
+ * `codex` no: usa tokens OAuth de su propio CLI, en su propio archivo, y se leen
+ * en cada llamada porque su CLI los refresca por su cuenta.
+ */
+function resolveCredentialFor(
+  proveedor: string,
+  options: ChatOptions,
+  extra: Readonly<Record<string, string>>,
+): string {
+  if (transportById(proveedor).credential === "codex") {
+    try {
+      return readCodexCredential().accessToken;
+    } catch (caught) {
+      if (caught instanceof CodexCredentialError) {
+        throw new ChatError(caught.message, "CREDENTIAL_MISSING");
+      }
+      throw caught;
+    }
+  }
+
+  try {
+    return resolveApiKey(proveedor);
+  } catch (caught) {
+    if (caught instanceof CredentialError) {
+      throw new ChatError(caught.message, "CREDENTIAL_MISSING");
+    }
+    throw caught;
+  }
+}
+
 /** Un fallo de la llamada. El mensaje nunca lleva la credencial. */
 export class ChatError extends Error {
   readonly code: string;
@@ -108,24 +144,40 @@ export async function callChat(options: ChatOptions): Promise<ChatResult> {
   // esté implementado falla aquí, antes de gastar una llamada.
   const endpoint = resolveChatEndpoint(proveedor, options.model);
   const extra = extraHeaders(proveedor);
+
+  // La credencial se resuelve **antes** que el dialecto, y no dentro de cada
+  // camino: un proveedor de suscripción no tiene clave en el archivo del harness,
+  // así que resolverla después hacía que codex fallara buscando una que nunca iba
+  // a estar.
+  const apiKey = options.apiKey ?? resolveCredentialFor(proveedor, options, extra);
+
+  // El dialecto no lo elige quien llama: lo dice el endpoint, que lo saca del
+  // catálogo de transporte. Un `gpt-*` de codex va por `/responses` con streaming
+  // obligatorio, y mandarlo por `/chat/completions` responde 404.
+  if (endpoint.protocol === "openai-responses") {
+    return callResponses(
+      {
+        url: endpoint.url,
+        headers: {
+          ...extra,
+          ...(apiKey === null || apiKey === "" ? {} : { Authorization: `Bearer ${apiKey}` }),
+        },
+        model: options.model,
+        messages: options.messages,
+        maxTokens: options.maxTokens,
+        effort: options.effort,
+        signal: options.signal ?? AbortSignal.timeout(options.timeoutMs ?? 90_000),
+      },
+      fetchImpl,
+    );
+  }
+
   const dialect: OutputDialect =
     options.structured === undefined
       ? "text"
       : structuredOutputOf(proveedor) === "json-schema"
         ? "json-schema"
         : "tool-call";
-
-  let apiKey = options.apiKey;
-  if (apiKey === undefined) {
-    try {
-      apiKey = resolveApiKey(proveedor);
-    } catch (caught) {
-      if (caught instanceof CredentialError) {
-        throw new ChatError(caught.message, "CREDENTIAL_MISSING");
-      }
-      throw caught;
-    }
-  }
 
   const started = Date.now();
   let response: Response;

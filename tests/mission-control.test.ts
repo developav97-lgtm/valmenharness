@@ -534,12 +534,12 @@ describe("GET /api/providers/:id/models", () => {
   it("dice 501 si el proveedor no publica su lista ni el proyecto la declara", async () => {
     // Y no un desplegable vacío: el mensaje dice dónde declararla.
     //
-    // El caso era `opencode-go`, y se creía que no publicaba catálogo. **Sí lo
-    // publica**: `/zen/go/v1/models` responde 200, y con credencial devuelve los
-    // 33 modelos que la cuenta puede usar. La suposición dejaba sin desplegable a
-    // un proveedor con 33 modelos.
+    // Se probaba con `codex` y con `opencode-go`, y **los dos resultaron publicar
+    // catálogo**. Se comprobó ejecutando: `opencode.ai/zen/go/v1/models` y
+    // `chatgpt.com/backend-api/codex/models` responden 200. Las dos suposiciones
+    // dejaban sin desplegable a proveedores que sí lo tienen.
     escribirCredenciales(ARCHIVO_BASE);
-    const r = await handleApi("GET", "/api/providers/codex/models", {}, contexto());
+    const r = await handleApi("GET", "/api/providers/inventado/models", {}, contexto());
     expect(r.status).toBe(501);
     expect((r.body as { error: string }).error).toMatch(/no publica su lista de modelos/);
   });
@@ -633,8 +633,8 @@ describe("GET /api/providers/:id/models", () => {
     // suposición, y su endpoint responde 200 sin credencial.
     expect(cuerpo.providers.find((p) => p.id === "opencode-go")?.listable).toBe(true);
     expect(cuerpo.providers.find((p) => p.id === "opencode-zen")?.listable).toBe(true);
-    // Y codex no la publica: su lista es la que declare el proyecto.
-    expect(cuerpo.providers.find((p) => p.id === "codex")?.listable).toBe(false);
+    // Y codex también, contra su propio backend. Se creyó que no tenía API.
+    expect(cuerpo.providers.find((p) => p.id === "codex")?.listable).toBe(true);
   });
 
   it("declara si se puede comprobar un modelo concreto", async () => {
@@ -644,9 +644,12 @@ describe("GET /api/providers/:id/models", () => {
     const r = await handleApi("GET", "/api/providers", {}, contexto());
     const cuerpo = r.body as { providers: { id: string; testable: boolean }[] };
     expect(cuerpo.providers.find((p) => p.id === "opencode-go")?.testable).toBe(true);
-    // codex funciona por su CLI y su token de suscripción no sirve contra la API
-    // de OpenAI, así que no hay endpoint contra el que probar.
-    expect(cuerpo.providers.find((p) => p.id === "codex")?.testable).toBe(false);
+    // Y codex también: su endpoint de respuestas acepta una petición mínima, y es
+    // el proveedor donde más falta hace —sus identificadores se escriben a mano—.
+    expect(cuerpo.providers.find((p) => p.id === "codex")?.testable).toBe(true);
+    // Ollama comprueba su conexión con un `GET /api/tags`, que no sirve para
+    // probar un modelo: hace falta poder mandarle uno en el cuerpo.
+    expect(cuerpo.providers.find((p) => p.id === "ollama")?.testable).toBe(false);
   });
 });
 
@@ -728,10 +731,11 @@ describe("POST /api/providers/:id/models/test", () => {
 });
 
 describe("los modelos declarados por el proyecto", () => {
-  it("salen en la lista de un proveedor que no publica catálogo", async () => {
+  it("salen en la lista aunque el proveedor publique la suya", async () => {
     escribirCredenciales(ARCHIVO_BASE);
-    // codex no publica su lista de modelos, así que sin esto el selector solo
-    // ofrece escribir el identificador a mano.
+    // Con codex publicando su catálogo, los candidatos ya no son la única fuente,
+    // pero siguen sirviendo para lo que se declararon: subir arriba lo que se usa,
+    // y poder usar un modelo que el catálogo no lista pero el endpoint acepta.
     mkdirSync(join(lab, ".valmen"), { recursive: true });
     writeFileSync(
       join(lab, ".valmen", "config.yaml"),
@@ -745,12 +749,41 @@ describe("los modelos declarados por el proyecto", () => {
         "",
       ].join("\n"),
     );
+    const fetchFalso = (async () =>
+      new Response(
+        JSON.stringify({ models: [{ slug: "gpt-5.5", display_name: "GPT-5.5" }] }),
+        { status: 200 },
+      )) as unknown as typeof fetch;
 
-    const r = await handleApi("GET", "/api/providers/codex/models", {}, contexto());
+    const r = await handleApi(
+      "GET",
+      "/api/providers/codex/models",
+      {},
+      contexto({ fetchImpl: fetchFalso }),
+    );
+    expect(r.status).toBe(200);
+    const cuerpo = r.body as { models: { id: string }[]; source: string };
+    expect(cuerpo.source).toBe("ambos");
+    // Los declarados primero, y el publicado después.
+    expect(cuerpo.models.map((m) => m.id)).toEqual([
+      "gpt-5.6-sol",
+      "gpt-5.6-terra",
+      "gpt-5.5",
+    ]);
+  });
+
+  it("un proveedor que no publica usa solo los declarados", async () => {
+    escribirCredenciales(ARCHIVO_BASE);
+    mkdirSync(join(lab, ".valmen"), { recursive: true });
+    writeFileSync(
+      join(lab, ".valmen", "config.yaml"),
+      ["name: Prueba", "providers:", "  inventado:", "    candidates:", "      - uno", ""].join("\n"),
+    );
+    const r = await handleApi("GET", "/api/providers/inventado/models", {}, contexto());
     expect(r.status).toBe(200);
     const cuerpo = r.body as { models: { id: string }[]; source: string };
     expect(cuerpo.source).toBe("declarado");
-    expect(cuerpo.models.map((m) => m.id)).toEqual(["gpt-5.6-sol", "gpt-5.6-terra"]);
+    expect(cuerpo.models.map((m) => m.id)).toEqual(["uno"]);
   });
 
   it("se suman a los publicados, y van primero", async () => {
@@ -800,9 +833,9 @@ describe("los modelos declarados por el proyecto", () => {
 
   it("sin lista publicada ni declarada, dice dónde declararla", async () => {
     escribirCredenciales(ARCHIVO_BASE);
-    const r = await handleApi("GET", "/api/providers/codex/models", {}, contexto());
+    const r = await handleApi("GET", "/api/providers/inventado/models", {}, contexto());
     expect(r.status).toBe(501);
-    expect((r.body as { error: string }).error).toContain("providers.codex.candidates");
+    expect((r.body as { error: string }).error).toContain("providers.inventado.candidates");
   });
 
   it("un config.yaml roto no rompe el listado", async () => {

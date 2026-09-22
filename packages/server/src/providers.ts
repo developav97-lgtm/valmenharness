@@ -26,6 +26,7 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
 import { yamlBlockOf, yamlFieldOf } from "@valmen/core";
+import { type Protocol, readCodexCredential } from "@valmen/credentials";
 
 /** Cómo se autentica un proveedor. */
 export type AuthKind = "api-key" | "subscription" | "none";
@@ -72,6 +73,22 @@ export interface ProviderSpec {
    * que falla al abrirse, que es peor que no ofrecerlo.
    */
   readonly modelsUrl?: string;
+  /**
+   * Qué credencial usa, cuando no es una clave del archivo del harness.
+   *
+   * `codex` guarda tokens OAuth en el suyo, con una cabecera de cuenta que hay que
+   * mandar. Se declara por nombre para que quien resuelva la credencial sepa que
+   * este proveedor no se lee como los demás.
+   */
+  readonly credential?: "codex";
+  /**
+   * El dialecto del proveedor, cuando no es el de chat.
+   *
+   * Se declara aquí y no se deduce del modelo porque el prefijo engaña: un
+   * `gpt-*` de OpenRouter habla `openai-chat` y el mismo `gpt-*` de codex habla
+   * `openai-responses`.
+   */
+  readonly protocol?: Protocol;
   /** Dónde vive el token, para los proveedores de suscripción. */
   readonly tokenSource?: string;
   /** Nombre de la variable de entorno que también se acepta. */
@@ -94,10 +111,15 @@ export interface ProviderEntry extends ProviderSpec {
   /**
    * `true` si se puede comprobar un modelo concreto contra el proveedor.
    *
-   * Hace falta un endpoint de chat al que pedirle una respuesta mínima. `codex`
-   * no lo tiene: funciona por su CLI y su token de suscripción no sirve contra la
-   * API de OpenAI. La interfaz **no ofrece** el botón donde no puede funcionar, en
-   * vez de ofrecer uno que siempre falla.
+   * Hace falta un endpoint al que pedirle una respuesta mínima. Todos los
+   * declarados lo tienen, así que hoy es `true` en todos; el campo existe porque
+   * la interfaz **no debe ofrecer** el botón donde no pueda funcionar, y eso hay
+   * que poder decirlo sin cambiarla.
+   *
+   * Nació de una suposición equivocada: se creyó que `codex` no tenía endpoint
+   * —«su token no sirve contra la API de OpenAI»— y se comprobó que sí lo tiene,
+   * en `chatgpt.com/backend-api/codex`. La consecuencia era un botón ausente en el
+   * único proveedor cuyos identificadores el usuario escribe a mano.
    */
   readonly testable: boolean;
 }
@@ -155,11 +177,30 @@ const CATALOGO: readonly ProviderSpec[] = [
     tokenSource: "~/.claude/.credentials.json",
   },
   {
+    // Codex es una suscripción de ChatGPT, y **sí tiene API**: su catálogo está en
+    // `chatgpt.com/backend-api/codex/models` y su endpoint de respuestas en
+    // `/responses`. Se creía que su token no servía contra la API de OpenAI, y era
+    // una suposición: se comprobó con el token real que los dos responden 200.
+    //
+    // Habla `openai-responses`, no `openai-chat`, así que su prueba y su llamada
+    // van por `/responses` con streaming obligatorio.
     id: "codex",
-    name: "Codex",
+    name: "Codex (suscripción)",
     auth: "subscription",
     envVar: "OPENAI_API_KEY",
     tokenSource: "~/.codex/auth.json",
+    credential: "codex",
+    modelsUrl: "https://chatgpt.com/backend-api/codex/models?client_version=1.0.0",
+    protocol: "openai-responses",
+    probe: {
+      url: "https://chatgpt.com/backend-api/codex/responses",
+      expect: 200,
+      method: "POST",
+      // El dialecto exige streaming; el cuerpo se completa en la prueba con el
+      // modelo que se quiera comprobar.
+      body: { stream: true, store: false, instructions: "ok" },
+      headers: { originator: "codex_cli_rs" },
+    },
   },
   {
     // Go y Zen son **dos productos distintos** de opencode, con bases de URL
@@ -630,13 +671,8 @@ export async function probeProvider(
       options.env ?? process.env,
     );
 
-  const headers: Record<string, string> = {};
-  if (clave !== null && clave !== "")
-    headers["Authorization"] = `Bearer ${clave}`;
+  const headers = headersFor(spec, clave);
   if (spec.probe.body !== undefined) headers["Content-Type"] = "application/json";
-  for (const [nombre, valor] of Object.entries(spec.probe.headers ?? {})) {
-    headers[nombre] = valor;
-  }
 
   try {
     const respuesta = await fetchImpl(spec.probe.url, {
@@ -705,12 +741,55 @@ function resolveForProbe(
   filePath: string,
   env: NodeJS.ProcessEnv,
 ): string | null {
+  // Codex no lee una clave del archivo del harness: lee tokens OAuth del suyo, que
+  // caducan y que su CLI refresca. Por eso se leen **en cada llamada**.
+  if (spec.credential === "codex") {
+    try {
+      return readCodexCredential().accessToken;
+    } catch {
+      // Un error de credencial no se convierte en una excepción aquí: quien llama
+      // decide qué hacer sin ella, y el archivo de codex puede no existir en una
+      // máquina que nunca lo usó.
+      return null;
+    }
+  }
+
   const desdeEntorno = env[spec.envVar];
   if (typeof desdeEntorno === "string" && desdeEntorno.trim() !== "") {
     return desdeEntorno.trim();
   }
   const enArchivo = readKeyFromFile(readCredentialsFile(filePath), spec.id);
   return enArchivo?.value ?? null;
+}
+
+/**
+ * Las cabeceras con las que se habla a un proveedor.
+ *
+ * Además de la credencial, algunos exigen cabeceras propias, y una de ellas no se
+ * puede declarar en el catálogo: el `chatgpt-account-id` de codex viaja **dentro**
+ * del token, así que se saca de él en cada llamada.
+ */
+function headersFor(
+  spec: ProviderSpec,
+  clave: string | null,
+): Record<string, string> {
+  const headers: Record<string, string> = {};
+  if (clave !== null && clave !== "") headers["Authorization"] = `Bearer ${clave}`;
+
+  if (spec.credential === "codex") {
+    try {
+      const { accountId } = readCodexCredential();
+      if (accountId !== "") headers["chatgpt-account-id"] = accountId;
+    } catch {
+      // Sin cuenta, la petición fallará con el error del proveedor, que es más
+      // informativo que uno inventado aquí.
+    }
+  }
+
+  for (const [nombre, valor] of Object.entries(spec.probe?.headers ?? {})) {
+    headers[nombre] = valor;
+  }
+  return headers;
 }
 
 /** Un modelo, como lo devuelve el proveedor. */
@@ -784,8 +863,7 @@ export async function listProviderModels(
     options.env ?? process.env,
   );
 
-  const headers: Record<string, string> = {};
-  if (clave !== null && clave !== "") headers["Authorization"] = `Bearer ${clave}`;
+  const headers = headersFor(spec, clave);
 
   // La credencial **cambia la respuesta**, y conviene saberlo antes de sospechar
   // del código: medido contra opencode Go, sin credencial devuelve 40 modelos y
@@ -877,8 +955,18 @@ function extraerModelos(datos: unknown): ProviderModel[] | null {
     .map((crudo): ProviderModel | null => {
       if (typeof crudo === "string") return { id: crudo, name: crudo, promptUsd: null };
       if (typeof crudo !== "object" || crudo === null) return null;
-      const modelo = crudo as { id?: unknown; name?: unknown; pricing?: { prompt?: unknown } };
-      const id = typeof modelo.id === "string" ? modelo.id : null;
+      // El identificador se llama `id` en la convención de OpenAI y `slug` en el
+      // catálogo de codex. Se aceptan los dos: son el mismo dato con dos nombres,
+      // y exigir uno dejaría el desplegable de codex vacío sin decir por qué.
+      const modelo = crudo as {
+        id?: unknown;
+        slug?: unknown;
+        name?: unknown;
+        display_name?: unknown;
+        pricing?: { prompt?: unknown };
+      };
+      const brutoId = typeof modelo.id === "string" ? modelo.id : modelo.slug;
+      const id = typeof brutoId === "string" ? brutoId : null;
       if (id === null || id === "") return null;
 
       // El precio llega como texto en OpenRouter y como número en otros. Se
@@ -892,11 +980,12 @@ function extraerModelos(datos: unknown): ProviderModel[] | null {
             ? Number(bruto)
             : null;
 
-      return {
-        id,
-        name: typeof modelo.name === "string" && modelo.name !== "" ? modelo.name : id,
-        promptUsd: precio,
-      };
+      // El nombre también cambia de sitio: `display_name` en codex, `name` en los
+      // demás. `GPT-5.6-Terra` se lee mejor que `gpt-5.6-terra`, y la lista se lee.
+      const nombre = [modelo.name, modelo.display_name].find(
+        (valor): valor is string => typeof valor === "string" && valor !== "",
+      );
+      return { id, name: nombre ?? id, promptUsd: precio };
     })
     .filter((modelo): modelo is ProviderModel => modelo !== null)
     .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
@@ -953,22 +1042,29 @@ export async function testProviderModel(
     options.filePath ?? credentialsPath(),
     options.env ?? process.env,
   );
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (clave !== null && clave !== "") headers["Authorization"] = `Bearer ${clave}`;
-  for (const [nombre, valor] of Object.entries(spec.probe.headers ?? {})) {
-    headers[nombre] = valor;
-  }
+  const headers = headersFor(spec, clave);
+  headers["Content-Type"] = "application/json";
 
   // El cuerpo de la prueba del proveedor, con el modelo que se quiere comprobar.
   // `max_tokens` bajo a propósito: no se quiere una respuesta, se quiere saber si
   // la acepta.
-  const cuerpo = {
-    ...(typeof spec.probe.body === "object" && spec.probe.body !== null
+  // El cuerpo base es el de la prueba del proveedor, y el dialecto decide cómo se
+  // pide: `openai-responses` no acepta `max_tokens` ni `messages`, y con `input`
+  // en texto suelto responde 400.
+  const base =
+    typeof spec.probe.body === "object" && spec.probe.body !== null
       ? (spec.probe.body as Record<string, unknown>)
-      : {}),
-    model,
-    max_tokens: 16,
-  };
+      : {};
+  const cuerpo =
+    spec.protocol === "openai-responses"
+      ? {
+          ...base,
+          model,
+          input: [
+            { type: "message", role: "user", content: [{ type: "input_text", text: "ok" }] },
+          ],
+        }
+      : { ...base, model, max_tokens: 16, messages: [{ role: "user", content: "ok" }] };
 
   const inicio = Date.now();
   let respuesta: Response;
