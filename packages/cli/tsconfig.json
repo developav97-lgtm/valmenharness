@@ -32,7 +32,5 @@
       "path": "../server"
     }
   ],
-  "include": [
-    "src/**/*.ts"
-  ]
+  "include": ["src/**/*.ts"]
 }

@@ -21,293 +21,980 @@
         --error: #f85149;
         --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
       }
-      * { box-sizing: border-box; }
+      * {
+        box-sizing: border-box;
+      }
       body {
-        margin: 0; background: var(--fondo); color: var(--texto);
-        font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+        margin: 0;
+        background: var(--fondo);
+        color: var(--texto);
+        font:
+          15px/1.5 system-ui,
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
       }
       header {
-        display: flex; align-items: baseline; gap: 20px;
-        padding: 0 24px; border-bottom: 1px solid var(--borde); background: var(--panel);
+        display: flex;
+        align-items: baseline;
+        gap: 20px;
+        padding: 0 24px;
+        border-bottom: 1px solid var(--borde);
+        background: var(--panel);
       }
-      header h1 { font-size: 15px; margin: 0; font-weight: 600; padding: 16px 0; }
-      nav { display: flex; gap: 4px; }
+      header h1 {
+        font-size: 15px;
+        margin: 0;
+        font-weight: 600;
+        padding: 16px 0;
+      }
+      nav {
+        display: flex;
+        gap: 4px;
+      }
       nav a {
-        color: var(--tenue); text-decoration: none; font-size: 14px;
-        padding: 16px 12px; border-bottom: 2px solid transparent;
+        color: var(--tenue);
+        text-decoration: none;
+        font-size: 14px;
+        padding: 16px 12px;
+        border-bottom: 2px solid transparent;
       }
-      nav a:hover { color: var(--texto); }
-      nav a[aria-current="page"] { color: var(--texto); border-bottom-color: var(--acento); }
-      header .raiz { color: var(--tenue); font-family: var(--mono); font-size: 12px; }
-      header .raiz:first-of-type { margin-left: auto; }
-      #actualizado { color: var(--ok); }
-      main { max-width: 1180px; margin: 0 auto; padding: 24px; }
-      h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--tenue); margin: 0 0 12px; }
-      h3 { font-size: 15px; margin: 0; }
+      nav a:hover {
+        color: var(--texto);
+      }
+      nav a[aria-current="page"] {
+        color: var(--texto);
+        border-bottom-color: var(--acento);
+      }
+      header .raiz {
+        color: var(--tenue);
+        font-family: var(--mono);
+        font-size: 12px;
+      }
+      header .raiz:first-of-type {
+        margin-left: auto;
+      }
+      #actualizado {
+        color: var(--ok);
+      }
+      main {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+      h2 {
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--tenue);
+        margin: 0 0 12px;
+      }
+      h3 {
+        font-size: 15px;
+        margin: 0;
+      }
       .nota {
-        background: var(--panel-alto); border: 1px solid var(--borde); border-left: 3px solid var(--acento);
-        border-radius: 6px; padding: 12px 16px; margin-bottom: 24px; color: var(--tenue); font-size: 13px;
+        background: var(--panel-alto);
+        border: 1px solid var(--borde);
+        border-left: 3px solid var(--acento);
+        border-radius: 6px;
+        padding: 12px 16px;
+        margin-bottom: 24px;
+        color: var(--tenue);
+        font-size: 13px;
       }
-      .nota strong { color: var(--texto); }
-      .nota.alerta { border-left-color: var(--alerta); }
-      table { width: 100%; border-collapse: collapse; }
+      .nota strong {
+        color: var(--texto);
+      }
+      .nota.alerta {
+        border-left-color: var(--alerta);
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
       th {
-        text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
-        color: var(--tenue); font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--borde);
+        text-align: left;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--tenue);
+        font-weight: 600;
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--borde);
         white-space: nowrap;
       }
-      td { padding: 10px; border-bottom: 1px solid var(--borde); vertical-align: middle; }
-      tbody tr:hover td { background: var(--panel); }
-      .nombre { font-weight: 500; }
-      .id { font-family: var(--mono); font-size: 11px; color: var(--tenue); }
-      .punto { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 7px; }
-      .punto.ok { background: var(--ok); }
-      .punto.no { background: var(--tenue); opacity: 0.4; }
-      .punto.error { background: var(--error); }
-      .punto.alerta { background: var(--alerta); }
-      .acciones { display: flex; gap: 8px; justify-content: flex-end; align-items: center; }
+      td {
+        padding: 10px;
+        border-bottom: 1px solid var(--borde);
+        vertical-align: middle;
+      }
+      tbody tr:hover td {
+        background: var(--panel);
+      }
+      .nombre {
+        font-weight: 500;
+      }
+      .id {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--tenue);
+      }
+      .punto {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 7px;
+      }
+      .punto.ok {
+        background: var(--ok);
+      }
+      .punto.no {
+        background: var(--tenue);
+        opacity: 0.4;
+      }
+      .punto.error {
+        background: var(--error);
+      }
+      .punto.alerta {
+        background: var(--alerta);
+      }
+      .acciones {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+        align-items: center;
+      }
       button {
-        font: inherit; font-size: 13px; padding: 5px 12px; border-radius: 5px; cursor: pointer;
-        background: var(--panel-alto); color: var(--texto); border: 1px solid var(--borde);
+        font: inherit;
+        font-size: 13px;
+        padding: 5px 12px;
+        border-radius: 5px;
+        cursor: pointer;
+        background: var(--panel-alto);
+        color: var(--texto);
+        border: 1px solid var(--borde);
       }
-      button:hover:not(:disabled) { border-color: var(--acento); }
-      button:disabled { opacity: 0.45; cursor: default; }
-      button.principal { background: var(--acento); border-color: var(--acento); color: #fff; }
-      button.peligro:hover:not(:disabled) { border-color: var(--error); color: var(--error); }
-      button.enlace { background: none; border: none; color: var(--acento); padding: 0; }
-      .resultado { font-size: 12px; color: var(--tenue); }
-      .resultado.ok { color: var(--ok); }
-      .resultado.error { color: var(--error); }
+      button:hover:not(:disabled) {
+        border-color: var(--acento);
+      }
+      button:disabled {
+        opacity: 0.45;
+        cursor: default;
+      }
+      button.principal {
+        background: var(--acento);
+        border-color: var(--acento);
+        color: #fff;
+      }
+      button.peligro:hover:not(:disabled) {
+        border-color: var(--error);
+        color: var(--error);
+      }
+      button.enlace {
+        background: none;
+        border: none;
+        color: var(--acento);
+        padding: 0;
+      }
+      .resultado {
+        font-size: 12px;
+        color: var(--tenue);
+      }
+      .resultado.ok {
+        color: var(--ok);
+      }
+      .resultado.error {
+        color: var(--error);
+      }
       .etiqueta {
-        display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 10px;
-        border: 1px solid var(--borde); color: var(--tenue); font-family: var(--mono);
+        display: inline-block;
+        font-size: 11px;
+        padding: 1px 7px;
+        border-radius: 10px;
+        border: 1px solid var(--borde);
+        color: var(--tenue);
+        font-family: var(--mono);
       }
-      .etiqueta.critico { border-color: var(--alerta); color: var(--alerta); }
-      .etiqueta.roto { border-color: var(--error); color: var(--error); }
-      .etiqueta.aprueba { border-color: var(--ok); color: var(--ok); }
-      .etiqueta.bloquea { border-color: var(--error); color: var(--error); }
-      .etiqueta.revisa { border-color: var(--alerta); color: var(--alerta); }
-      .filtros { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
-      .filtros input, .filtros select, select, input[type="text"] {
-        font: inherit; font-size: 13px; padding: 6px 10px; border-radius: 6px;
-        background: var(--panel); color: var(--texto); border: 1px solid var(--borde);
+      .etiqueta.critico {
+        border-color: var(--alerta);
+        color: var(--alerta);
       }
-      .filtros input:focus, .filtros select:focus, select:focus, input:focus {
-        outline: none; border-color: var(--acento);
+      .etiqueta.roto {
+        border-color: var(--error);
+        color: var(--error);
       }
-      .tarjetas { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 24px; }
-      .tarjeta { background: var(--panel); border: 1px solid var(--borde); border-radius: 8px; padding: 14px 16px; }
-      .tarjeta .valor { font-size: 24px; font-weight: 600; }
-      .tarjeta .rotulo { font-size: 12px; color: var(--tenue); }
+      .etiqueta.aprueba {
+        border-color: var(--ok);
+        color: var(--ok);
+      }
+      .etiqueta.bloquea {
+        border-color: var(--error);
+        color: var(--error);
+      }
+      .etiqueta.revisa {
+        border-color: var(--alerta);
+        color: var(--alerta);
+      }
+      .filtros {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+        align-items: center;
+      }
+      .filtros input,
+      .filtros select,
+      select,
+      input[type="text"] {
+        font: inherit;
+        font-size: 13px;
+        padding: 6px 10px;
+        border-radius: 6px;
+        background: var(--panel);
+        color: var(--texto);
+        border: 1px solid var(--borde);
+      }
+      .filtros input:focus,
+      .filtros select:focus,
+      select:focus,
+      input:focus {
+        outline: none;
+        border-color: var(--acento);
+      }
+      .tarjetas {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+      .tarjeta {
+        background: var(--panel);
+        border: 1px solid var(--borde);
+        border-radius: 8px;
+        padding: 14px 16px;
+      }
+      .tarjeta .valor {
+        font-size: 24px;
+        font-weight: 600;
+      }
+      .tarjeta .rotulo {
+        font-size: 12px;
+        color: var(--tenue);
+      }
       dialog {
-        background: var(--panel); color: var(--texto); border: 1px solid var(--borde);
-        border-radius: 10px; padding: 0; max-width: 520px; width: calc(100% - 32px);
+        background: var(--panel);
+        color: var(--texto);
+        border: 1px solid var(--borde);
+        border-radius: 10px;
+        padding: 0;
+        max-width: 520px;
+        width: calc(100% - 32px);
       }
-      dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
-      .dialogo { padding: 20px 24px; }
-      .dialogo h3 { margin: 0 0 4px; font-size: 16px; }
-      .dialogo p { margin: 0 0 16px; color: var(--tenue); font-size: 13px; }
-      label { display: block; font-size: 12px; color: var(--tenue); margin-bottom: 6px; }
-      input[type="password"], input[type="text"] {
-        width: 100%; font: inherit; font-family: var(--mono); font-size: 13px;
-        padding: 9px 11px; border-radius: 6px; background: var(--fondo);
-        color: var(--texto); border: 1px solid var(--borde);
+      dialog::backdrop {
+        background: rgba(0, 0, 0, 0.6);
       }
-      .aviso { font-size: 12px; color: var(--tenue); margin-top: 8px; }
-      .pie { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+      .dialogo {
+        padding: 20px 24px;
+      }
+      .dialogo h3 {
+        margin: 0 0 4px;
+        font-size: 16px;
+      }
+      .dialogo p {
+        margin: 0 0 16px;
+        color: var(--tenue);
+        font-size: 13px;
+      }
+      label {
+        display: block;
+        font-size: 12px;
+        color: var(--tenue);
+        margin-bottom: 6px;
+      }
+      input[type="password"],
+      input[type="text"] {
+        width: 100%;
+        font: inherit;
+        font-family: var(--mono);
+        font-size: 13px;
+        padding: 9px 11px;
+        border-radius: 6px;
+        background: var(--fondo);
+        color: var(--texto);
+        border: 1px solid var(--borde);
+      }
+      .aviso {
+        font-size: 12px;
+        color: var(--tenue);
+        margin-top: 8px;
+      }
+      .pie {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+        margin-top: 20px;
+      }
       pre {
-        background: var(--fondo); border: 1px solid var(--borde); border-radius: 6px;
-        padding: 12px; overflow: auto; font-family: var(--mono); font-size: 12px;
-        max-height: 60vh; white-space: pre-wrap; word-break: break-word;
+        background: var(--fondo);
+        border: 1px solid var(--borde);
+        border-radius: 6px;
+        padding: 12px;
+        overflow: auto;
+        font-family: var(--mono);
+        font-size: 12px;
+        max-height: 60vh;
+        white-space: pre-wrap;
+        word-break: break-word;
       }
-      .secciones { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
-      .secciones button { font-size: 12px; }
-      .secciones button[aria-pressed="true"] { border-color: var(--acento); color: var(--acento); }
-      .vacio { color: var(--tenue); text-align: center; padding: 40px; }
+      .secciones {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-bottom: 14px;
+      }
+      .secciones button {
+        font-size: 12px;
+      }
+      .secciones button[aria-pressed="true"] {
+        border-color: var(--acento);
+        color: var(--acento);
+      }
+      .vacio {
+        color: var(--tenue);
+        text-align: center;
+        padding: 40px;
+      }
 
       /* ── Selector de modelo en dos niveles ────────────────────────────── */
       /* Proveedor y modelo, con el modelo en un desplegable que se puede
          escribir: una lista de cientos de modelos sin búsqueda es una lista que
          nadie recorre, y un `select` no deja teclear. */
-      .par-modelo { display: flex; gap: 8px; align-items: center; }
-      .par-modelo select { max-width: 150px; }
-      .par-modelo .caja-modelo { position: relative; flex: 1; min-width: 220px; }
-      .par-modelo input { width: 100%; font-family: var(--mono); font-size: 12px; }
+      .par-modelo {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .par-modelo select {
+        max-width: 150px;
+      }
+      .par-modelo .caja-modelo {
+        position: relative;
+        flex: 1;
+        min-width: 220px;
+      }
+      .par-modelo input {
+        width: 100%;
+        font-family: var(--mono);
+        font-size: 12px;
+      }
       .lista-modelos {
-        position: absolute; z-index: 20; left: 0; right: 0; top: 100%;
-        max-height: 260px; overflow: auto; background: var(--panel-alto);
-        border: 1px solid var(--borde); border-radius: 6px; margin-top: 2px;
+        position: absolute;
+        z-index: 20;
+        left: 0;
+        right: 0;
+        top: 100%;
+        max-height: 260px;
+        overflow: auto;
+        background: var(--panel-alto);
+        border: 1px solid var(--borde);
+        border-radius: 6px;
+        margin-top: 2px;
       }
       .lista-modelos div {
-        padding: 6px 10px; font-size: 12px; cursor: pointer;
-        font-family: var(--mono); white-space: nowrap; overflow: hidden;
+        padding: 6px 10px;
+        font-size: 12px;
+        cursor: pointer;
+        font-family: var(--mono);
+        white-space: nowrap;
+        overflow: hidden;
         text-overflow: ellipsis;
       }
-      .lista-modelos div:hover, .lista-modelos div.marcado { background: var(--panel); }
-      .lista-modelos .nombre { font-family: inherit; color: var(--tenue); }
-      .lista-modelos .vacio { cursor: default; color: var(--tenue); padding: 10px; }
-      .cargando-modelos { font-size: 12px; color: var(--tenue); }
-      .selector-modelo { display: flex; flex-direction: column; gap: 6px; }
-      .pie-modelo { display: flex; gap: 8px; align-items: baseline; }
-      .pie-modelo button { font-size: 12px; }
-      .pie-modelo .resultado { flex: 1; word-break: break-word; }
+      .lista-modelos div:hover,
+      .lista-modelos div.marcado {
+        background: var(--panel);
+      }
+      .lista-modelos .nombre {
+        font-family: inherit;
+        color: var(--tenue);
+      }
+      .lista-modelos .vacio {
+        cursor: default;
+        color: var(--tenue);
+        padding: 10px;
+      }
+      .cargando-modelos {
+        font-size: 12px;
+        color: var(--tenue);
+      }
+      .selector-modelo {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .pie-modelo {
+        display: flex;
+        gap: 8px;
+        align-items: baseline;
+      }
+      .pie-modelo button {
+        font-size: 12px;
+      }
+      .pie-modelo .resultado {
+        flex: 1;
+        word-break: break-word;
+      }
 
       /* ── Features ─────────────────────────────────────────────────────── */
-      a.enlace { color: var(--acento); text-decoration: none; }
-      a.enlace:hover { text-decoration: underline; }
+      a.enlace {
+        color: var(--acento);
+        text-decoration: none;
+      }
+      a.enlace:hover {
+        text-decoration: underline;
+      }
       /* Los cuatro artefactos de una feature, siempre visibles: la pregunta
          «¿en qué punto está?» se responde mirando, no abriendo. */
-      .artefactos { display: flex; gap: 4px; font-family: var(--mono); font-size: 11px; }
-      .artefactos span { color: var(--borde); }
-      .artefactos span.hecho { color: var(--ok); }
-      .sprint { border: 1px solid var(--borde); border-radius: 8px; background: var(--panel); margin-bottom: 14px; }
-      .sprint > header {
-        display: flex; gap: 10px; align-items: baseline; padding: 12px 16px;
-        border-bottom: 1px solid var(--borde); background: none;
+      .artefactos {
+        display: flex;
+        gap: 4px;
+        font-family: var(--mono);
+        font-size: 11px;
       }
-      .sprint > header .id { font-family: var(--mono); font-size: 12px; color: var(--acento); }
-      .sprint > header h3 { font-size: 14px; font-weight: 500; }
-      .sprint table { border: none; }
-      .sprint td { border-bottom: 1px solid var(--borde); }
-      .sprint tr:last-child td { border-bottom: none; }
+      .artefactos span {
+        color: var(--borde);
+      }
+      .artefactos span.hecho {
+        color: var(--ok);
+      }
+      .sprint {
+        border: 1px solid var(--borde);
+        border-radius: 8px;
+        background: var(--panel);
+        margin-bottom: 14px;
+      }
+      .sprint > header {
+        display: flex;
+        gap: 10px;
+        align-items: baseline;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--borde);
+        background: none;
+      }
+      .sprint > header .id {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--acento);
+      }
+      .sprint > header h3 {
+        font-size: 14px;
+        font-weight: 500;
+      }
+      .sprint table {
+        border: none;
+      }
+      .sprint td {
+        border-bottom: 1px solid var(--borde);
+      }
+      .sprint tr:last-child td {
+        border-bottom: none;
+      }
       /* Un ticket del grafo que todavía no existe en el registro. Se marca para
          que la diferencia entre «planeado» y «escrito» no se pierda. */
-      tr.planeado td { opacity: 0.55; }
-      .depende { font-family: var(--mono); font-size: 11px; color: var(--tenue); }
-      .huecos { border-left: 3px solid var(--error); }
-      .huecos .fila { display: flex; gap: 10px; align-items: baseline; padding: 6px 0; font-size: 13px; }
-      .huecos .fila + .fila { border-top: 1px solid var(--borde); }
+      tr.planeado td {
+        opacity: 0.55;
+      }
+      .depende {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--tenue);
+      }
+      .huecos {
+        border-left: 3px solid var(--error);
+      }
+      .huecos .fila {
+        display: flex;
+        gap: 10px;
+        align-items: baseline;
+        padding: 6px 0;
+        font-size: 13px;
+      }
+      .huecos .fila + .fila {
+        border-top: 1px solid var(--borde);
+      }
 
       /* ── Ticket: cabecera y gates ─────────────────────────────────────── */
-      .volver { font-size: 13px; margin-bottom: 14px; display: inline-block; }
-      .cabecera-ticket { margin-bottom: 22px; }
-      .cabecera-ticket h2 { font-size: 20px; text-transform: none; letter-spacing: 0; color: var(--texto); margin-bottom: 6px; }
-      .cabecera-ticket .meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
-      .ruta { font-family: var(--mono); font-size: 12px; color: var(--tenue); margin-top: 8px; }
+      .volver {
+        font-size: 13px;
+        margin-bottom: 14px;
+        display: inline-block;
+      }
+      .cabecera-ticket {
+        margin-bottom: 22px;
+      }
+      .cabecera-ticket h2 {
+        font-size: 20px;
+        text-transform: none;
+        letter-spacing: 0;
+        color: var(--texto);
+        margin-bottom: 6px;
+      }
+      .cabecera-ticket .meta {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+        margin-top: 8px;
+      }
+      .ruta {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--tenue);
+        margin-top: 8px;
+      }
       .gate {
-        background: var(--panel); border: 1px solid var(--borde); border-radius: 8px;
-        padding: 16px 18px; margin-bottom: 16px;
+        background: var(--panel);
+        border: 1px solid var(--borde);
+        border-radius: 8px;
+        padding: 16px 18px;
+        margin-bottom: 16px;
       }
-      .gate-cabecera { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 4px; }
-      .gate-meta { font-size: 12px; color: var(--tenue); margin-bottom: 12px; }
-      .checks { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; }
-      .check { font-size: 12px; display: flex; gap: 8px; align-items: baseline; }
-      .check .marca { font-family: var(--mono); width: 12px; }
-      .check .marca.pass { color: var(--ok); }
-      .check .marca.fail { color: var(--error); }
-      .check .marca.warn { color: var(--alerta); }
-      .check .marca.skip { color: var(--tenue); }
-      .check .detalle { color: var(--tenue); }
-      .gate .acciones { justify-content: flex-start; }
+      .gate-cabecera {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-bottom: 4px;
+      }
+      .gate-meta {
+        font-size: 12px;
+        color: var(--tenue);
+        margin-bottom: 12px;
+      }
+      .checks {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-bottom: 14px;
+      }
+      .check {
+        font-size: 12px;
+        display: flex;
+        gap: 8px;
+        align-items: baseline;
+      }
+      .check .marca {
+        font-family: var(--mono);
+        width: 12px;
+      }
+      .check .marca.pass {
+        color: var(--ok);
+      }
+      .check .marca.fail {
+        color: var(--error);
+      }
+      .check .marca.warn {
+        color: var(--alerta);
+      }
+      .check .marca.skip {
+        color: var(--tenue);
+      }
+      .check .detalle {
+        color: var(--tenue);
+      }
+      .gate .acciones {
+        justify-content: flex-start;
+      }
       .veredicto {
-        display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
-        padding: 12px 14px; border-radius: 6px; background: var(--panel-alto);
-        border: 1px solid var(--borde); margin-top: 14px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+        padding: 12px 14px;
+        border-radius: 6px;
+        background: var(--panel-alto);
+        border: 1px solid var(--borde);
+        margin-top: 14px;
       }
-      .veredicto .salida { font-family: var(--mono); font-size: 13px; font-weight: 600; }
-      .veredicto .salida.approve { color: var(--ok); }
-      .veredicto .salida.block { color: var(--error); }
-      .veredicto .salida.review { color: var(--alerta); }
-      .veredicto .motivo { font-size: 13px; color: var(--tenue); flex: 1 1 320px; }
+      .veredicto .salida {
+        font-family: var(--mono);
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .veredicto .salida.approve {
+        color: var(--ok);
+      }
+      .veredicto .salida.block {
+        color: var(--error);
+      }
+      .veredicto .salida.review {
+        color: var(--alerta);
+      }
+      .veredicto .motivo {
+        font-size: 13px;
+        color: var(--tenue);
+        flex: 1 1 320px;
+      }
       .obsoleto {
-        background: rgba(210, 153, 34, 0.12); border: 1px solid var(--alerta); color: var(--alerta);
-        border-radius: 6px; padding: 10px 12px; font-size: 13px; margin-top: 12px;
+        background: rgba(210, 153, 34, 0.12);
+        border: 1px solid var(--alerta);
+        color: var(--alerta);
+        border-radius: 6px;
+        padding: 10px 12px;
+        font-size: 13px;
+        margin-top: 12px;
       }
-      .proposiciones { margin-top: 14px; }
-      .proposiciones td { padding: 8px 10px; font-size: 13px; }
-      .proposiciones .etiqueta-proposicion { font-family: var(--mono); font-size: 11px; color: var(--tenue); }
-      .proposiciones .criterio-texto { font-size: 13px; margin-bottom: 2px; }
+      .proposiciones {
+        margin-top: 14px;
+      }
+      .proposiciones td {
+        padding: 8px 10px;
+        font-size: 13px;
+      }
+      .proposiciones .etiqueta-proposicion {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--tenue);
+      }
+      .proposiciones .criterio-texto {
+        font-size: 13px;
+        margin-bottom: 2px;
+      }
       /* La barra hace visible lo que decide: el número y los dos umbrales. */
-      .barra { position: relative; width: 150px; height: 8px; border-radius: 4px; background: var(--fondo); border: 1px solid var(--borde); }
-      .barra .relleno { position: absolute; inset: 0 auto 0 0; border-radius: 3px; background: var(--tenue); }
-      .barra .relleno.approve { background: var(--ok); }
-      .barra .relleno.block { background: var(--error); }
-      .barra .relleno.review { background: var(--alerta); }
-      .barra .corte { position: absolute; top: -2px; bottom: -2px; width: 1px; background: var(--tenue); opacity: 0.7; }
-      .cifra { font-family: var(--mono); font-size: 12px; color: var(--tenue); }
-      .descriptiva { color: var(--tenue); font-style: italic; }
-      .pie-recibo { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--tenue); margin-top: 12px; }
-      .pie-recibo code { font-family: var(--mono); color: var(--texto); }
-      .transiciones { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
-      .transicion { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-      .transicion .resultado { min-width: 150px; }
+      .barra {
+        position: relative;
+        width: 150px;
+        height: 8px;
+        border-radius: 4px;
+        background: var(--fondo);
+        border: 1px solid var(--borde);
+      }
+      .barra .relleno {
+        position: absolute;
+        inset: 0 auto 0 0;
+        border-radius: 3px;
+        background: var(--tenue);
+      }
+      .barra .relleno.approve {
+        background: var(--ok);
+      }
+      .barra .relleno.block {
+        background: var(--error);
+      }
+      .barra .relleno.review {
+        background: var(--alerta);
+      }
+      .barra .corte {
+        position: absolute;
+        top: -2px;
+        bottom: -2px;
+        width: 1px;
+        background: var(--tenue);
+        opacity: 0.7;
+      }
+      .cifra {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--tenue);
+      }
+      .descriptiva {
+        color: var(--tenue);
+        font-style: italic;
+      }
+      .pie-recibo {
+        display: flex;
+        gap: 14px;
+        flex-wrap: wrap;
+        font-size: 12px;
+        color: var(--tenue);
+        margin-top: 12px;
+      }
+      .pie-recibo code {
+        font-family: var(--mono);
+        color: var(--texto);
+      }
+      .transiciones {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 24px;
+      }
+      .transicion {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .transicion .resultado {
+        min-width: 150px;
+      }
       .correccion {
-        background: rgba(210, 153, 34, 0.12); border: 1px solid var(--alerta);
-        border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;
+        background: rgba(210, 153, 34, 0.12);
+        border: 1px solid var(--alerta);
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin-bottom: 16px;
       }
-      .correccion-titulo { font-weight: 600; color: var(--alerta); margin-bottom: 4px; }
+      .correccion-titulo {
+        font-weight: 600;
+        color: var(--alerta);
+        margin-bottom: 4px;
+      }
       .correccion-motivo {
-        font-size: 13px; margin-top: 8px; padding-left: 12px;
-        border-left: 2px solid var(--borde); white-space: pre-wrap;
+        font-size: 13px;
+        margin-top: 8px;
+        padding-left: 12px;
+        border-left: 2px solid var(--borde);
+        white-space: pre-wrap;
       }
-      .responsable { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; }
-      .responsable label { margin: 0; white-space: nowrap; }
-      .decision-humana { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--borde); }
-      .decision-humana .quien { font-size: 13px; }
-      .decision-humana .quien strong { color: var(--texto); }
-      .historial { font-size: 12px; color: var(--tenue); margin-top: 10px; }
+      .responsable {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 14px;
+      }
+      .responsable label {
+        margin: 0;
+        white-space: nowrap;
+      }
+      .decision-humana {
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid var(--borde);
+      }
+      .decision-humana .quien {
+        font-size: 13px;
+      }
+      .decision-humana .quien strong {
+        color: var(--texto);
+      }
+      .historial {
+        font-size: 12px;
+        color: var(--tenue);
+        margin-top: 10px;
+      }
 
       /* ── Configuración: editor y diferencias ──────────────────────────── */
-      .editor { width: 100%; min-height: 320px; resize: vertical; font-family: var(--mono);
-        font-size: 13px; line-height: 1.6; padding: 14px; border-radius: 8px;
-        background: var(--fondo); color: var(--texto); border: 1px solid var(--borde); }
-      .editor:focus { outline: none; border-color: var(--acento); }
-      .editor.mal { border-color: var(--error); }
-      .interpretacion { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        gap: 12px; margin: 16px 0; }
-      .interpretacion .campo { background: var(--panel); border: 1px solid var(--borde);
-        border-radius: 8px; padding: 12px 14px; }
-      .interpretacion .rotulo { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
-        color: var(--tenue); }
-      .interpretacion .valor { font-family: var(--mono); font-size: 13px; margin-top: 4px; word-break: break-word; }
-      .diff { font-family: var(--mono); font-size: 12px; border: 1px solid var(--borde);
-        border-radius: 8px; overflow: hidden; margin-bottom: 16px; }
-      .diff div { padding: 2px 12px; white-space: pre-wrap; word-break: break-word; }
-      .diff .add { background: rgba(63, 185, 80, 0.12); color: var(--ok); }
-      .diff .remove { background: rgba(248, 81, 73, 0.12); color: var(--error); }
-      .diff .same { color: var(--tenue); }
-      /* ── Configurar por chat ──────────────────────────────────────────── */
-      .conversacion { display: flex; flex-direction: column; gap: 14px; margin-bottom: 18px; }
-      .turno { border: 1px solid var(--borde); border-radius: 8px; padding: 14px 16px; background: var(--panel); }
-      .turno.tuyo { background: var(--panel-alto); }
-      .turno .quien { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--tenue); margin-bottom: 6px; }
-      .turno .texto { white-space: pre-wrap; }
-      .propuesta { border: 1px solid var(--borde); border-radius: 8px; padding: 14px 16px; margin-top: 12px; background: var(--fondo); }
-      .propuesta h4 { margin: 0 0 4px; font-size: 14px; font-family: var(--mono); }
-      .propuesta .motivo { font-size: 13px; color: var(--tenue); margin-bottom: 10px; }
-      .propuesta.invalida { border-color: var(--error); }
-      .propuesta.sensible { border-color: var(--alerta); }
-      .confirmacion { margin-top: 10px; }
-      .confirmacion code { font-family: var(--mono); color: var(--alerta); }
-      .confirmacion input { margin-top: 6px; font-family: var(--mono); }
-      textarea {
-        width: 100%; min-height: 76px; resize: vertical; font: inherit; font-size: 14px;
-        padding: 10px 12px; border-radius: 8px; background: var(--fondo);
-        color: var(--texto); border: 1px solid var(--borde);
+      .editor {
+        width: 100%;
+        min-height: 320px;
+        resize: vertical;
+        font-family: var(--mono);
+        font-size: 13px;
+        line-height: 1.6;
+        padding: 14px;
+        border-radius: 8px;
+        background: var(--fondo);
+        color: var(--texto);
+        border: 1px solid var(--borde);
       }
-      textarea:focus { outline: none; border-color: var(--acento); }
-      .ejemplos { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-      .ejemplos button { font-size: 12px; }
+      .editor:focus {
+        outline: none;
+        border-color: var(--acento);
+      }
+      .editor.mal {
+        border-color: var(--error);
+      }
+      .interpretacion {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 12px;
+        margin: 16px 0;
+      }
+      .interpretacion .campo {
+        background: var(--panel);
+        border: 1px solid var(--borde);
+        border-radius: 8px;
+        padding: 12px 14px;
+      }
+      .interpretacion .rotulo {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--tenue);
+      }
+      .interpretacion .valor {
+        font-family: var(--mono);
+        font-size: 13px;
+        margin-top: 4px;
+        word-break: break-word;
+      }
+      .diff {
+        font-family: var(--mono);
+        font-size: 12px;
+        border: 1px solid var(--borde);
+        border-radius: 8px;
+        overflow: hidden;
+        margin-bottom: 16px;
+      }
+      .diff div {
+        padding: 2px 12px;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .diff .add {
+        background: rgba(63, 185, 80, 0.12);
+        color: var(--ok);
+      }
+      .diff .remove {
+        background: rgba(248, 81, 73, 0.12);
+        color: var(--error);
+      }
+      .diff .same {
+        color: var(--tenue);
+      }
+      /* ── Configurar por chat ──────────────────────────────────────────── */
+      .conversacion {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        margin-bottom: 18px;
+      }
+      .turno {
+        border: 1px solid var(--borde);
+        border-radius: 8px;
+        padding: 14px 16px;
+        background: var(--panel);
+      }
+      .turno.tuyo {
+        background: var(--panel-alto);
+      }
+      .turno .quien {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--tenue);
+        margin-bottom: 6px;
+      }
+      .turno .texto {
+        white-space: pre-wrap;
+      }
+      .propuesta {
+        border: 1px solid var(--borde);
+        border-radius: 8px;
+        padding: 14px 16px;
+        margin-top: 12px;
+        background: var(--fondo);
+      }
+      .propuesta h4 {
+        margin: 0 0 4px;
+        font-size: 14px;
+        font-family: var(--mono);
+      }
+      .propuesta .motivo {
+        font-size: 13px;
+        color: var(--tenue);
+        margin-bottom: 10px;
+      }
+      .propuesta.invalida {
+        border-color: var(--error);
+      }
+      .propuesta.sensible {
+        border-color: var(--alerta);
+      }
+      .confirmacion {
+        margin-top: 10px;
+      }
+      .confirmacion code {
+        font-family: var(--mono);
+        color: var(--alerta);
+      }
+      .confirmacion input {
+        margin-top: 6px;
+        font-family: var(--mono);
+      }
+      textarea {
+        width: 100%;
+        min-height: 76px;
+        resize: vertical;
+        font: inherit;
+        font-size: 14px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        background: var(--fondo);
+        color: var(--texto);
+        border: 1px solid var(--borde);
+      }
+      textarea:focus {
+        outline: none;
+        border-color: var(--acento);
+      }
+      .ejemplos {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 10px;
+      }
+      .ejemplos button {
+        font-size: 12px;
+      }
 
       /* ── Modelos: routing por rol ─────────────────────────────────────── */
-      .roles td { vertical-align: top; }
-      .roles select, .roles input { min-width: 0; width: 100%; }
-      .roles .rol { font-family: var(--mono); font-size: 12px; }
-      .roles .descripcion { font-size: 12px; color: var(--tenue); }
-      .presets { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
-      .presets button[aria-pressed="true"] { border-color: var(--acento); color: var(--acento); }
-      .presets + .resultado { margin-bottom: 18px; }
-      .sin-consumidor { font-size: 11px; color: var(--tenue); font-style: italic; }
-      .aviso-jev {
-        background: rgba(79, 140, 255, 0.10); border: 1px solid var(--acento);
-        border-radius: 6px; padding: 10px 12px; font-size: 13px; margin: 14px 0;
+      .roles td {
+        vertical-align: top;
       }
-      .error-parser { background: rgba(248, 81, 73, 0.12); border: 1px solid var(--error);
-        color: var(--error); border-radius: 6px; padding: 10px 12px; font-family: var(--mono);
-        font-size: 12px; white-space: pre-wrap; margin-bottom: 16px; }
-      details { margin-top: 12px; }
-      summary { font-size: 12px; color: var(--tenue); cursor: pointer; }
-      summary:hover { color: var(--texto); }
+      .roles select,
+      .roles input {
+        min-width: 0;
+        width: 100%;
+      }
+      .roles .rol {
+        font-family: var(--mono);
+        font-size: 12px;
+      }
+      .roles .descripcion {
+        font-size: 12px;
+        color: var(--tenue);
+      }
+      .presets {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 8px;
+      }
+      .presets button[aria-pressed="true"] {
+        border-color: var(--acento);
+        color: var(--acento);
+      }
+      .presets + .resultado {
+        margin-bottom: 18px;
+      }
+      .sin-consumidor {
+        font-size: 11px;
+        color: var(--tenue);
+        font-style: italic;
+      }
+      .aviso-jev {
+        background: rgba(79, 140, 255, 0.1);
+        border: 1px solid var(--acento);
+        border-radius: 6px;
+        padding: 10px 12px;
+        font-size: 13px;
+        margin: 14px 0;
+      }
+      .error-parser {
+        background: rgba(248, 81, 73, 0.12);
+        border: 1px solid var(--error);
+        color: var(--error);
+        border-radius: 6px;
+        padding: 10px 12px;
+        font-family: var(--mono);
+        font-size: 12px;
+        white-space: pre-wrap;
+        margin-bottom: 16px;
+      }
+      details {
+        margin-top: 12px;
+      }
+      summary {
+        font-size: 12px;
+        color: var(--tenue);
+        cursor: pointer;
+      }
+      summary:hover {
+        color: var(--texto);
+      }
     </style>
   </head>
   <body>
@@ -332,7 +1019,13 @@
         <h3 id="titulo"></h3>
         <p id="ayuda"></p>
         <label for="clave">Clave</label>
-        <input id="clave" type="password" autocomplete="off" spellcheck="false" placeholder="sk-…" />
+        <input
+          id="clave"
+          type="password"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="sk-…"
+        />
         <div class="aviso" id="aviso"></div>
         <div class="pie">
           <button id="cancelar">Cancelar</button>
@@ -448,7 +1141,12 @@
           return sel;
         };
         barra.append(
-          selector("Todos los estados", "workflow", Object.keys(r.byWorkflow).sort(), filtros.workflow),
+          selector(
+            "Todos los estados",
+            "workflow",
+            Object.keys(r.byWorkflow).sort(),
+            filtros.workflow,
+          ),
           selector("Todos los tipos", "type", Object.keys(r.byType).sort(), filtros.type),
         );
 
@@ -468,7 +1166,10 @@
           label.append(input, el("span", texto));
           return label;
         };
-        barra.append(casilla("Solo abiertos", "open"), casilla("Solo inválidos", "invalid"));
+        barra.append(
+          casilla("Solo abiertos", "open"),
+          casilla("Solo inválidos", "invalid"),
+        );
 
         // El reporte es lo único del visor anterior que la pantalla no cubría, y
         // se descarga desde aquí en vez de componerse en el navegador: el texto y
@@ -489,7 +1190,16 @@
         const tabla = el("table");
         const thead = el("thead");
         const filaCabecera = el("tr");
-        for (const columna of ["Ticket", "Tipo", "Estado", "QA", "Release", "Puntos", "Actualizado", ""]) {
+        for (const columna of [
+          "Ticket",
+          "Tipo",
+          "Estado",
+          "QA",
+          "Release",
+          "Puntos",
+          "Actualizado",
+          "",
+        ]) {
           filaCabecera.append(el("th", columna));
         }
         thead.append(filaCabecera);
@@ -545,7 +1255,6 @@
         tabla.append(thead, tbody);
         cont.append(tabla);
       }
-
 
       // ── Vista: features ───────────────────────────────────────────────────
       //
@@ -608,7 +1317,16 @@
         const tabla = el("table");
         const thead = el("thead");
         const filaCabecera = el("tr");
-        for (const columna of ["Feature", "Estado", "Artefactos", "Requisitos", "Tickets", "Huecos", "Actualizada", ""]) {
+        for (const columna of [
+          "Feature",
+          "Estado",
+          "Artefactos",
+          "Requisitos",
+          "Tickets",
+          "Huecos",
+          "Actualizada",
+          "",
+        ]) {
           filaCabecera.append(el("th", columna));
         }
         thead.append(filaCabecera);
@@ -697,7 +1415,10 @@
           const tr = el("tr");
 
           const celda = el("td");
-          celda.append(el("div", req.statement), el("div", `${req.id} · ${req.domain}`, "id"));
+          celda.append(
+            el("div", req.statement),
+            el("div", `${req.id} · ${req.domain}`, "id"),
+          );
           tr.append(celda);
 
           const celdaCubre = el("td");
@@ -781,10 +1502,7 @@
         if (huecos.length > 0) {
           const caja = el("div", undefined, "nota alerta huecos");
           caja.append(
-            el(
-              "strong",
-              `${huecos.length} requisito(s) sin ticket que los cubra. `,
-            ),
+            el("strong", `${huecos.length} requisito(s) sin ticket que los cubra. `),
             el(
               "span",
               "La compuerta de descomposición no pasa con huecos: cada requisito necesita al menos un ticket en un sprint.",
@@ -824,12 +1542,19 @@
           ["Grafo", () => panelGrafo(f)],
           ["Brief", () => bloqueCrudo("feature.md", f.brief, true)],
         ];
-        if (f.design !== null) pestanas.push(["Diseño", () => bloqueCrudo("design.md", f.design)]);
+        if (f.design !== null)
+          pestanas.push(["Diseño", () => bloqueCrudo("design.md", f.design)]);
         if (f.ticketsYaml !== null) {
-          pestanas.push(["tickets.yaml", () => bloqueCrudo("tickets.yaml", f.ticketsYaml, true)]);
+          pestanas.push([
+            "tickets.yaml",
+            () => bloqueCrudo("tickets.yaml", f.ticketsYaml, true),
+          ]);
         }
         for (const spec of f.specs) {
-          pestanas.push([`spec · ${spec.domain}`, () => bloqueCrudo(spec.source, spec.text)]);
+          pestanas.push([
+            `spec · ${spec.domain}`,
+            () => bloqueCrudo(spec.source, spec.text),
+          ]);
         }
 
         const pintar = (indice) => {
@@ -870,10 +1595,15 @@
         );
         fila(
           "Tickets",
-          f.hasDecomposition ? `${f.tickets} en ${f.decomposition?.sprints.length ?? 0} sprint(s)` : "Sin descomponer",
+          f.hasDecomposition
+            ? `${f.tickets} en ${f.decomposition?.sprints.length ?? 0} sprint(s)`
+            : "Sin descomponer",
         );
         if (f.decomposition?.origin) {
-          fila("Descompuesta por", `${f.decomposition.origin.provider}/${f.decomposition.origin.model}`);
+          fila(
+            "Descompuesta por",
+            `${f.decomposition.origin.provider}/${f.decomposition.origin.model}`,
+          );
         }
         tabla.append(tbody);
         caja.append(tabla);
@@ -940,11 +1670,7 @@
 
         if (f.decomposition === null) {
           caja.append(
-            el(
-              "div",
-              f.decompositionError ?? "Todavía no hay descomposición.",
-              "vacio",
-            ),
+            el("div", f.decompositionError ?? "Todavía no hay descomposición.", "vacio"),
           );
           return caja;
         }
@@ -958,7 +1684,8 @@
           const tabla = el("table");
           const thead = el("thead");
           const fila = el("tr");
-          for (const columna of ["Ticket", "Estado", "Depende de"]) fila.append(el("th", columna));
+          for (const columna of ["Ticket", "Estado", "Depende de"])
+            fila.append(el("th", columna));
           thead.append(fila);
 
           const tbody = el("tbody");
@@ -973,13 +1700,19 @@
 
             const celdaEstado = el("td");
             celdaEstado.append(
-              t.exists ? el("span", t.state, "etiqueta") : el("span", "por crear", "etiqueta"),
+              t.exists
+                ? el("span", t.state, "etiqueta")
+                : el("span", "por crear", "etiqueta"),
             );
             tr.append(celdaEstado);
 
             const celdaDeps = el("td");
             celdaDeps.append(
-              el("span", t.dependsOn.length === 0 ? "—" : t.dependsOn.join(", "), "depende"),
+              el(
+                "span",
+                t.dependsOn.length === 0 ? "—" : t.dependsOn.join(", "),
+                "depende",
+              ),
             );
             tr.append(celdaDeps);
 
@@ -994,7 +1727,9 @@
         const creados = [...(f.decomposition?.sprints ?? [])]
           .flatMap((s) => s.tickets)
           .filter((t) => t.exists).length;
-        const total = [...(f.decomposition?.sprints ?? [])].flatMap((s) => s.tickets).length;
+        const total = [...(f.decomposition?.sprints ?? [])].flatMap(
+          (s) => s.tickets,
+        ).length;
         caja.append(
           el(
             "div",
@@ -1093,7 +1828,11 @@
           tr.append(celdaBarra);
 
           tr.append(
-            el("td", p.verdict ? `${policy.approveAt} / ${policy.blockAt}` : "no veta", "cifra"),
+            el(
+              "td",
+              p.verdict ? `${policy.approveAt} / ${policy.blockAt}` : "no veta",
+              "cifra",
+            ),
           );
 
           const celdaResultado = el("td");
@@ -1152,12 +1891,19 @@
             ),
           );
         }
-        cont.append(tablaProposiciones(recibo, gate.policy), listaChecks(recibo.mechanicalChecks));
+        cont.append(
+          tablaProposiciones(recibo, gate.policy),
+          listaChecks(recibo.mechanicalChecks),
+        );
 
         const pie = el("div", undefined, "pie-recibo");
         pie.append(
           el("span", undefined, `media ponderada ${recibo.weightedMean.toFixed(3)}`),
-          el("span", undefined, `evaluador ${recibo.model?.resolvedVersion ?? "— (decisión en código)"}`),
+          el(
+            "span",
+            undefined,
+            `evaluador ${recibo.model?.resolvedVersion ?? "— (decisión en código)"}`,
+          ),
           el("span", undefined, `coste $${(recibo.usage?.costUsd ?? 0).toFixed(6)}`),
           el("span", undefined, `${recibo.latencyMs ?? 0} ms`),
           el("span", undefined, `congelado ${recibo.stateHash.slice(0, 23)}…`),
@@ -1170,7 +1916,10 @@
           const quien = el("div", undefined, "quien");
           quien.append(
             el("strong", recibo.humanDecision.actor),
-            el("span", ` ${recibo.humanDecision.decision === "approve" ? "aprobó" : "rechazó"} · ${recibo.humanDecision.decidedAt}`),
+            el(
+              "span",
+              ` ${recibo.humanDecision.decision === "approve" ? "aprobó" : "rechazó"} · ${recibo.humanDecision.decidedAt}`,
+            ),
           );
           humana.append(quien);
           if (recibo.humanDecision.reason) {
@@ -1180,7 +1929,11 @@
         } else if (recibo.escalatedTo === "human") {
           const humana = el("div", undefined, "decision-humana");
           humana.append(
-            el("div", "El evaluador no alcanzó ninguno de los dos umbrales: la decisión es de una persona.", "resultado"),
+            el(
+              "div",
+              "El evaluador no alcanzó ninguno de los dos umbrales: la decisión es de una persona.",
+              "resultado",
+            ),
           );
 
           const acciones = el("div", undefined, "acciones");
@@ -1196,16 +1949,22 @@
           const rechazar = el("button", "Rechazar", "peligro");
           const decidir = async (decision, boton) => {
             if (responsable.trim() === "") {
-              alert("Escribe el responsable antes de decidir: una decisión humana sin nombre no es auditable.");
+              alert(
+                "Escribe el responsable antes de decidir: una decisión humana sin nombre no es auditable.",
+              );
               return;
             }
             boton.disabled = true;
             try {
-              await api("POST", `/api/tickets/${ticketId}/gates/${recibo.gate}/${recibo.receiptId}/decision`, {
-                decision,
-                actor: responsable,
-                reason: motivo.value,
-              });
+              await api(
+                "POST",
+                `/api/tickets/${ticketId}/gates/${recibo.gate}/${recibo.receiptId}/decision`,
+                {
+                  decision,
+                  actor: responsable,
+                  reason: motivo.value,
+                },
+              );
               await alDecidir();
             } catch (error) {
               alert(error.message);
@@ -1222,7 +1981,10 @@
 
         const detalles = el("details");
         detalles.append(el("summary", "Ver el informe del CLI, tal cual"));
-        const pre = el("pre", recibo.report || "(el informe solo se guarda al evaluar desde la interfaz)");
+        const pre = el(
+          "pre",
+          recibo.report || "(el informe solo se guarda al evaluar desde la interfaz)",
+        );
         detalles.append(pre);
         cont.append(detalles);
 
@@ -1240,7 +2002,11 @@
           el("span", gate.transition, "etiqueta"),
           gate.applies
             ? el("span", "aplica", "etiqueta aprueba")
-            : el("span", `no aplica en ${gate.workflowStatus || "un ticket ilegible"}`, "etiqueta"),
+            : el(
+                "span",
+                `no aplica en ${gate.workflowStatus || "un ticket ilegible"}`,
+                "etiqueta",
+              ),
         );
         cont.append(cabecera);
 
@@ -1267,7 +2033,12 @@
         // desplegable con una opción que siempre falla es una trampa.
         const evaluador = document.createElement("select");
         const opciones = [
-          ["auto", gate.hasCommandChecks ? "evaluador automático (código primero)" : "evaluador automático"],
+          [
+            "auto",
+            gate.hasCommandChecks
+              ? "evaluador automático (código primero)"
+              : "evaluador automático",
+          ],
           ["jev", "Jev (probabilidades)"],
           ["llm-judge", "modelo de chat"],
         ];
@@ -1276,16 +2047,24 @@
           evaluador.append(new Option(etiqueta, valor));
         }
 
-        const evaluar = el("button", "Evaluar", gate.applies && !gate.blockedByCode ? "principal" : "");
+        const evaluar = el(
+          "button",
+          "Evaluar",
+          gate.applies && !gate.blockedByCode ? "principal" : "",
+        );
         evaluar.disabled = !gate.applies || gate.blockedByCode;
         evaluar.addEventListener("click", async () => {
           evaluar.disabled = true;
           salida.className = "resultado";
           salida.textContent = "evaluando…";
           try {
-            const r = await api("POST", `/api/tickets/${gate.ticketId}/gates/${gate.id}/run`, {
-              evaluator: evaluador.value,
-            });
+            const r = await api(
+              "POST",
+              `/api/tickets/${gate.ticketId}/gates/${gate.id}/run`,
+              {
+                evaluator: evaluador.value,
+              },
+            );
             if (!r.ok) {
               salida.className = "resultado error";
               salida.textContent = r.error;
@@ -1307,7 +2086,11 @@
           const anteriores = decisiones.filter((d) => d.gate === gate.id).length - 1;
           if (anteriores > 0) {
             cont.append(
-              el("div", `${anteriores} recibo(s) anterior(es) en el registro append-only`, "historial"),
+              el(
+                "div",
+                `${anteriores} recibo(s) anterior(es) en el registro append-only`,
+                "historial",
+              ),
             );
           }
         } else {
@@ -1368,7 +2151,9 @@
         entradaResponsable.placeholder = "Tu nombre";
         entradaResponsable.value = responsable;
         entradaResponsable.style.maxWidth = "260px";
-        entradaResponsable.addEventListener("change", () => guardarResponsable(entradaResponsable.value));
+        entradaResponsable.addEventListener("change", () =>
+          guardarResponsable(entradaResponsable.value),
+        );
         const ayudaResponsable = el(
           "span",
           "Se registra en el recibo junto a la decisión: aprobar sin nombre no es auditable.",
@@ -1404,7 +2189,10 @@
                     "span",
                     " — el autor ya corrigió una vez y volvió a rechazarse. Decide tú: aprobar, o cambiar el plan a mano.",
                   )
-                : el("span", " — el motivo está en el historial del ticket, listo para corregir."),
+                : el(
+                    "span",
+                    " — el motivo está en el historial del ticket, listo para corregir.",
+                  ),
             );
             caja.append(quien);
             if (c.reason) caja.append(el("div", c.reason, "correccion-motivo"));
@@ -1418,14 +2206,10 @@
           pintarCorrecciones(datos.corrections ?? []);
           for (const gate of datos.gates) {
             zonaGates.append(
-              tarjetaGate(
-                { ...gate, ticketId: id },
-                datos.decisions,
-                async () => {
-                  guardarResponsable(entradaResponsable.value);
-                  await cargarGates();
-                },
-              ),
+              tarjetaGate({ ...gate, ticketId: id }, datos.decisions, async () => {
+                guardarResponsable(entradaResponsable.value);
+                await cargarGates();
+              }),
             );
           }
         };
@@ -1557,7 +2341,8 @@
 
         const conversacion = el("div", undefined, "conversacion");
         const entrada = document.createElement("textarea");
-        entrada.placeholder = "Describe el cambio: «que los tickets de tipo DOCS no pidan aprobación de plan»…";
+        entrada.placeholder =
+          "Describe el cambio: «que los tickets de tipo DOCS no pidan aprobación de plan»…";
         entrada.setAttribute("aria-label", "Qué quieres configurar");
 
         const enviar = el("button", "Proponer cambios", "principal");
@@ -1569,7 +2354,10 @@
         const nota = el("div", undefined, "nota");
         nota.append(
           el("strong", "El modelo propone; tú dispones. "),
-          el("span", "Nada se escribe hasta que lo apruebas. El diff lo calcula el código comparando textos, la validez la decide el parser real, y los cambios que amplían la autoridad automática del sistema piden una confirmación escrita aparte."),
+          el(
+            "span",
+            "Nada se escribe hasta que lo apruebas. El diff lo calcula el código comparando textos, la validez la decide el parser real, y los cambios que amplían la autoridad automática del sistema piden una confirmación escrita aparte.",
+          ),
         );
         cont.append(nota, el("h2", "Configurar por chat"), conversacion);
 
@@ -1648,7 +2436,11 @@
 
             const pendientes = [];
             for (const cambio of propuesta.changes) {
-              const caja = el("div", undefined, `propuesta ${cambio.ok ? "" : "invalida"} ${cambio.sensitive ? "sensible" : ""}`);
+              const caja = el(
+                "div",
+                undefined,
+                `propuesta ${cambio.ok ? "" : "invalida"} ${cambio.sensitive ? "sensible" : ""}`,
+              );
               caja.append(el("h4", cambio.label), el("div", cambio.reason, "motivo"));
 
               if (!cambio.ok) {
@@ -1677,7 +2469,11 @@
               if (cambio.sensitive && cambio.ok && !cambio.unchanged) {
                 const aviso = el("div", undefined, "confirmacion");
                 aviso.append(
-                  el("div", `⚠ Requiere confirmación: ${cambio.sensitiveReason}`, "resultado error"),
+                  el(
+                    "div",
+                    `⚠ Requiere confirmación: ${cambio.sensitiveReason}`,
+                    "resultado error",
+                  ),
                   el("div", undefined, "resultado"),
                 );
                 aviso.lastChild.append(
@@ -1691,7 +2487,11 @@
                 caja.append(aviso);
               }
 
-              const aplicarEste = el("button", cambio.sensitive ? "Confirmar y aplicar" : "Aplicar", "principal");
+              const aplicarEste = el(
+                "button",
+                cambio.sensitive ? "Confirmar y aplicar" : "Aplicar",
+                "principal",
+              );
               aplicarEste.disabled = !cambio.ok || cambio.unchanged;
               aplicarEste.addEventListener("click", () => {
                 const peticion = { file: cambio.file, text: cambio.text };
@@ -1705,9 +2505,7 @@
                 pendientes.push({
                   file: cambio.file,
                   text: cambio.text,
-                  ...(cambio.sensitive
-                    ? { confirm: cambio.confirmation }
-                    : {}),
+                  ...(cambio.sensitive ? { confirm: cambio.confirmation } : {}),
                 });
               }
               turno.append(caja);
@@ -1725,9 +2523,12 @@
                     confirmadas.push({ file: pendiente.file, text: pendiente.text });
                     continue;
                   }
-                  const caja = [...turno.querySelectorAll(".propuesta")].find((nodo) =>
-                    nodo.querySelector("h4")?.textContent ===
-                    (pendiente.file === "config" ? ".valmen/config.yaml" : ".valmen/routing.yaml"),
+                  const caja = [...turno.querySelectorAll(".propuesta")].find(
+                    (nodo) =>
+                      nodo.querySelector("h4")?.textContent ===
+                      (pendiente.file === "config"
+                        ? ".valmen/config.yaml"
+                        : ".valmen/routing.yaml"),
                   );
                   const escrita = caja?.querySelector("input")?.value.trim();
                   if (escrita === pendiente.confirm) {
@@ -1838,7 +2639,8 @@
         const entradaProveedor = catalog.get(provider);
         const sePuedeProbar = entradaProveedor?.provider.testable === true;
         const probar = el("button", "Probar");
-        probar.title = "Pide una respuesta mínima al proveedor. Cuesta una fracción de céntimo.";
+        probar.title =
+          "Pide una respuesta mínima al proveedor. Cuesta una fracción de céntimo.";
         const resultadoPrueba = el("span", "", "resultado");
         probar.addEventListener("click", async () => {
           const modelo = entradaModelo.value.trim();
@@ -2020,7 +2822,10 @@
         const nota = el("div", undefined, "nota");
         nota.append(
           el("strong", "El modelo por rol decide dónde se gasta el dinero. "),
-          el("span", "Los roles de razonamiento son caros y poco frecuentes; los de ejecución son baratos y se repiten. Cambiar el preset cambia las trece decisiones de una vez."),
+          el(
+            "span",
+            "Los roles de razonamiento son caros y poco frecuentes; los de ejecución son baratos y se repiten. Cambiar el preset cambia las trece decisiones de una vez.",
+          ),
         );
         cont.append(nota, el("h2", "Preset"));
 
@@ -2033,7 +2838,8 @@
             preset = p.id;
             // Elegir un preset no reescribe lo que el proyecto ya decidió: los
             // overrides se quedan, y la columna de origen lo dirá.
-            for (const boton of botonesPreset.values()) boton.setAttribute("aria-pressed", "false");
+            for (const boton of botonesPreset.values())
+              boton.setAttribute("aria-pressed", "false");
             boton.setAttribute("aria-pressed", "true");
             explicacion.textContent = p.description;
             void refrescar();
@@ -2128,7 +2934,9 @@
             el("div", rol.description, "descripcion"),
           );
           if (rol.consumer === null) {
-            celdaRol.append(el("div", "declarado: todavía no lo ejecuta nada", "sin-consumidor"));
+            celdaRol.append(
+              el("div", "declarado: todavía no lo ejecuta nada", "sin-consumidor"),
+            );
           }
           tr.append(celdaRol);
 
@@ -2238,7 +3046,8 @@
                 : "⚠ El evaluador de gates está configurado con un modelo de chat. El gate sigue funcionando, pero pasa a ser un juez que interpreta texto: pierde la calibración y dos ejecuciones del mismo ticket pueden no coincidir. Medido: 36 s y $0,00073 con esfuerzo bajo, y más de 90 s —el límite— con el razonamiento por defecto. Si eliges esta vía, pon el esfuerzo en «low».";
 
             guardar.disabled = !estado.ok || cambios.length === 0;
-            guardar.textContent = cambios.length === 0 ? "Sin cambios" : "Guardar el routing";
+            guardar.textContent =
+              cambios.length === 0 ? "Sin cambios" : "Guardar el routing";
             textoPrevio = previsualizacion.text;
           } catch (fallo) {
             salida.className = "resultado error";
@@ -2291,7 +3100,10 @@
         const nota = el("div", undefined, "nota");
         nota.append(
           el("strong", "Se guarda solo si el harness puede leerlo. "),
-          el("span", "El formato admite un subconjunto de YAML: escalares, listas de bloque y mapas por indentación. Si algo no encaja, se dice aquí y el archivo no se toca."),
+          el(
+            "span",
+            "El formato admite un subconjunto de YAML: escalares, listas de bloque y mapas por indentación. Si algo no encaja, se dice aquí y el archivo no se toca.",
+          ),
         );
         cont.append(nota, el("h2", "Configuración del proyecto"));
         cont.append(el("div", estadoInicial.path, "ruta"));
@@ -2335,14 +3147,18 @@
             const s = config.summary;
             interpretacion.append(
               campo("nombre", s.name),
-              campo("registro de tickets", s.ticketsDir === "" ? "(por defecto)" : s.ticketsDir),
-              campo("gates declarados", s.gates.length === 0 ? "ninguno" : s.gates.join(", ")),
+              campo(
+                "registro de tickets",
+                s.ticketsDir === "" ? "(por defecto)" : s.ticketsDir,
+              ),
+              campo(
+                "gates declarados",
+                s.gates.length === 0 ? "ninguno" : s.gates.join(", "),
+              ),
               campo("claves", s.keys.join(", ")),
             );
             if (!s.adopted) {
-              interpretacion.append(
-                campo("adopción", "el archivo todavía no existe"),
-              );
+              interpretacion.append(campo("adopción", "el archivo todavía no existe"));
             }
           }
 
@@ -2370,8 +3186,14 @@
               el(
                 "div",
                 impact.stale === 1
-                  ? `Quedará 1 archivo generado desactualizado: ${impact.files.filter((f) => f.stale).map((f) => f.path).join(", ")}.`
-                  : `Quedarán ${impact.stale} archivos generados desactualizados: ${impact.files.filter((f) => f.stale).map((f) => f.path).join(", ")}.`,
+                  ? `Quedará 1 archivo generado desactualizado: ${impact.files
+                      .filter((f) => f.stale)
+                      .map((f) => f.path)
+                      .join(", ")}.`
+                  : `Quedarán ${impact.stale} archivos generados desactualizados: ${impact.files
+                      .filter((f) => f.stale)
+                      .map((f) => f.path)
+                      .join(", ")}.`,
               ),
               el(
                 "div",
@@ -2478,11 +3300,15 @@
       let proveedorActual = null;
 
       const origen = (p) =>
-        p.source === "environment" ? "variable de entorno"
-        : p.source === "credentials-file" ? "archivo de credenciales"
-        : p.source === "cli" ? "token del CLI"
-        : p.source === "none" && p.configured ? "no requiere"
-        : "—";
+        p.source === "environment"
+          ? "variable de entorno"
+          : p.source === "credentials-file"
+            ? "archivo de credenciales"
+            : p.source === "cli"
+              ? "token del CLI"
+              : p.source === "none" && p.configured
+                ? "no requiere"
+                : "—";
 
       async function vistaProveedores() {
         const cont = $("contenido");
@@ -2491,7 +3317,10 @@
         const nota = el("div", undefined, "nota");
         nota.append(
           el("strong", "Las claves se prueban antes de guardarse. "),
-          el("span", "Si la conexión falla no se escribe nada, así que una clave mal pegada falla aquí y no en la mitad de un gate. Después de guardarla no se vuelve a mostrar: solo se puede reemplazar."),
+          el(
+            "span",
+            "Si la conexión falla no se escribe nada, así que una clave mal pegada falla aquí y no en la mitad de un gate. Después de guardarla no se vuelve a mostrar: solo se puede reemplazar.",
+          ),
         );
         cont.append(nota, el("h2", "Proveedores"));
 
@@ -2515,7 +3344,16 @@
           celdaNombre.append(punto, el("span", p.name, "nombre"), el("div", p.id, "id"));
           tr.append(celdaNombre);
 
-          tr.append(el("td", p.auth === "api-key" ? "API key" : p.auth === "subscription" ? "suscripción" : "ninguna"));
+          tr.append(
+            el(
+              "td",
+              p.auth === "api-key"
+                ? "API key"
+                : p.auth === "subscription"
+                  ? "suscripción"
+                  : "ninguna",
+            ),
+          );
 
           const celdaEstado = el("td");
           // «Configurada» y «detectada» no son lo mismo, y confundirlas hace que
@@ -2530,7 +3368,13 @@
                 : `configurada${p.keyLength === null ? "" : ` · ${p.keyLength} caracteres`}`;
           celdaEstado.append(el("div", estado));
           if (p.legacyFieldName) {
-            celdaEstado.append(el("div", "campo con el nombre anterior; se normaliza al reescribir", "resultado"));
+            celdaEstado.append(
+              el(
+                "div",
+                "campo con el nombre anterior; se normaliza al reescribir",
+                "resultado",
+              ),
+            );
           }
           const salida = el("div", undefined, "resultado");
           salida.dataset.id = p.id;
@@ -2563,7 +3407,11 @@
           }
 
           if (p.auth === "api-key") {
-            const configurar = el("button", p.configured ? "Reemplazar" : "Configurar", p.configured ? "" : "principal");
+            const configurar = el(
+              "button",
+              p.configured ? "Reemplazar" : "Configurar",
+              p.configured ? "" : "principal",
+            );
             configurar.addEventListener("click", () => abrirDialogo(p));
             acciones.append(configurar);
           }
@@ -2601,7 +3449,8 @@
       function abrirDialogo(p) {
         proveedorActual = p;
         $("titulo").textContent = `Configurar ${p.name}`;
-        $("ayuda").textContent = "La clave se prueba contra el endpoint del proveedor antes de guardarse.";
+        $("ayuda").textContent =
+          "La clave se prueba contra el endpoint del proveedor antes de guardarse.";
         $("clave").value = "";
         $("aviso").textContent =
           p.source === "environment"
@@ -2621,7 +3470,9 @@
         boton.disabled = true;
         boton.textContent = "Probando…";
         try {
-          const r = await api("PUT", `/api/providers/${proveedorActual.id}/credential`, { apiKey: clave });
+          const r = await api("PUT", `/api/providers/${proveedorActual.id}/credential`, {
+            apiKey: clave,
+          });
           const id = proveedorActual.id;
           // La lista de proveedores usables acaba de cambiar, así que el catálogo
           // de modelos cacheado ya no vale: un proveedor recién configurado tiene
@@ -2643,7 +3494,12 @@
       }
 
       async function borrarClave(p, boton) {
-        if (!confirm(`¿Borrar la clave de ${p.name}? Dejará de estar disponible para los gates.`)) return;
+        if (
+          !confirm(
+            `¿Borrar la clave de ${p.name}? Dejará de estar disponible para los gates.`,
+          )
+        )
+          return;
         boton.disabled = true;
         try {
           await api("DELETE", `/api/providers/${p.id}/credential`);
@@ -2726,7 +3582,8 @@
 
         try {
           if (nombre === "ticket" && parametro !== undefined) await vistaTicket(parametro);
-          else if (nombre === "feature" && parametro !== undefined) await vistaFeature(parametro);
+          else if (nombre === "feature" && parametro !== undefined)
+            await vistaFeature(parametro);
           else if (nombre === "configurar") await vistaConfigurar();
           else if (nombre === "modelos") await vistaModelos();
           else if (nombre === "configuracion") await vistaConfiguracion();

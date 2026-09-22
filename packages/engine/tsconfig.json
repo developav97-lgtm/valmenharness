@@ -23,7 +23,5 @@
       "path": "../gate-llm-judge"
     }
   ],
-  "include": [
-    "src/**/*.ts"
-  ]
+  "include": ["src/**/*.ts"]
 }

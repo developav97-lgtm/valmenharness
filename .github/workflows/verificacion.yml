@@ -42,6 +42,16 @@ jobs:
       - name: Tipos de todo, tests incluidos
         run: npm run typecheck
 
+      # El lint va después del typecheck porque comprueba lo que el compilador no
+      # ve: una promesa sin esperar, un `any` colado, una `Promise` dentro de un
+      # `forEach`. Pocas reglas a propósito — ver `eslint.config.js`.
+      - name: Lint
+        run: npm run lint
+
+      # El formato, para que nadie tenga que discutirlo en una revisión.
+      - name: Formato
+        run: npm run format:check
+
       # La suite no necesita red ni credenciales: los gates que consultan a un
       # proveedor están desactivados por defecto y la prueba diferencial contra
       # `ticket.py` se activa con `VALMEN_REFERENCE_TICKET_PY`.

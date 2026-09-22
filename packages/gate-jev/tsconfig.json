@@ -17,7 +17,5 @@
       "path": "../credentials"
     }
   ],
-  "include": [
-    "src/**/*.ts"
-  ]
+  "include": ["src/**/*.ts"]
 }

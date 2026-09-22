@@ -1,0 +1,9 @@
+node_modules/
+dist/
+coverage/
+.valmen/state/
+tickets/
+tests/fixtures/
+docs/
+package-lock.json
+*.md

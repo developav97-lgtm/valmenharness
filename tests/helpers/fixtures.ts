@@ -29,7 +29,6 @@ export interface FixtureTicketOptions {
   readonly releasedIn?: string;
 }
 
-
 /**
  * Construye el texto de un ticket válido en el estado pedido.
  *
