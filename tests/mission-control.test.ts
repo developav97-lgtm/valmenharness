@@ -460,3 +460,152 @@ describe("la API de Mission Control", () => {
     expect((r.body as { error: string }).error).toContain("/api/inventado");
   });
 });
+
+// ── La lista de modelos por proveedor ───────────────────────────────────────
+
+describe("GET /api/providers/:id/models", () => {
+  /**
+   * Lo que hace posible el selector de dos niveles.
+   *
+   * Elegir un modelo de otro proveedor era imposible desde la pantalla: la lista
+   * que se ofrecía era la de OpenRouter y nada más. Ahora cada proveedor publica
+   * la suya, y la pantalla no la inventa: un proveedor que no la publique lo dice.
+   */
+  it("devuelve la lista del proveedor, normalizada", async () => {
+    escribirCredenciales(ARCHIVO_BASE);
+    const visto: string[] = [];
+    const fetchFalso = (async (url: string) => {
+      visto.push(String(url));
+      return new Response(
+        JSON.stringify({
+          data: [
+            { id: "deepseek-v4-pro", name: "DeepSeek V4 Pro" },
+            { id: "deepseek-flash" },
+            { id: "", name: "sin id" },
+            "deepseek-plano",
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }) as unknown as typeof fetch;
+
+    const r = await handleApi(
+      "GET",
+      "/api/providers/deepseek/models",
+      {},
+      contexto({ fetchImpl: fetchFalso }),
+    );
+
+    expect(r.status).toBe(200);
+    const cuerpo = r.body as { models: { id: string; name: string; promptUsd: number | null }[] };
+    // Los identificadores vacíos se descartan, y el nombre cae al identificador
+    // cuando el proveedor no lo trae: una fila sin nombre no se puede elegir.
+    expect(cuerpo.models.map((m) => m.id)).toEqual([
+      "deepseek-flash",
+      "deepseek-plano",
+      "deepseek-v4-pro",
+    ]);
+    expect(cuerpo.models.find((m) => m.id === "deepseek-v4-pro")?.name).toBe(
+      "DeepSeek V4 Pro",
+    );
+    expect(cuerpo.models.find((m) => m.id === "deepseek-flash")?.name).toBe(
+      "deepseek-flash",
+    );
+  });
+
+  it("lee el precio cuando el proveedor lo publica", async () => {
+    escribirCredenciales(ARCHIVO_BASE);
+    const fetchFalso = (async () =>
+      new Response(
+        JSON.stringify({ data: [{ id: "caro", pricing: { prompt: "0.000003" } }] }),
+        { status: 200 },
+      )) as unknown as typeof fetch;
+
+    const r = await handleApi(
+      "GET",
+      "/api/providers/openrouter/models",
+      {},
+      contexto({ fetchImpl: fetchFalso }),
+    );
+    const cuerpo = r.body as { models: { promptUsd: number | null }[] };
+    expect(cuerpo.models[0]?.promptUsd).toBe(0.000003);
+  });
+
+  it("dice 501 si el proveedor no publica su lista", async () => {
+    // Y no un desplegable vacío: la pantalla ofrece escribir el identificador, que
+    // es lo honesto.
+    escribirCredenciales(ARCHIVO_BASE);
+    const r = await handleApi("GET", "/api/providers/opencode-go/models", {}, contexto());
+    expect(r.status).toBe(501);
+    expect((r.body as { error: string }).error).toMatch(/no publica su lista de modelos/);
+  });
+
+  it("dice 502 con lo que respondió el proveedor", async () => {
+    escribirCredenciales(ARCHIVO_BASE);
+    const fetchFalso = (async () =>
+      new Response("Insufficient balance", { status: 402 })) as unknown as typeof fetch;
+
+    const r = await handleApi(
+      "GET",
+      "/api/providers/deepseek/models",
+      {},
+      contexto({ fetchImpl: fetchFalso }),
+    );
+    expect(r.status).toBe(502);
+    // El cuerpo del proveedor viaja tal cual: «Insufficient balance» no es «sin
+    // conexión», y se arreglan distinto.
+    expect((r.body as { error: string }).error).toContain("Insufficient balance");
+  });
+
+  it("tacha la credencial si el proveedor la refleja en su error", async () => {
+    escribirCredenciales(ARCHIVO_BASE);
+    const clave = /api-key: "([^"]+)"/.exec(ARCHIVO_BASE)?.[1] as string;
+    const fetchFalso = (async () =>
+      new Response(`invalid key ${clave}`, { status: 401 })) as unknown as typeof fetch;
+
+    const r = await handleApi(
+      "GET",
+      "/api/providers/openrouter/models",
+      {},
+      contexto({ fetchImpl: fetchFalso }),
+    );
+    const error = (r.body as { error: string }).error;
+    expect(error).not.toContain(clave);
+    expect(error).toContain("***");
+  });
+
+  it("un fallo de transporte no es un 200 con la lista vacía", async () => {
+    escribirCredenciales(ARCHIVO_BASE);
+    const fetchFalso = (async () => {
+      throw new Error("fetch failed");
+    }) as unknown as typeof fetch;
+
+    const r = await handleApi(
+      "GET",
+      "/api/providers/ollama/models",
+      {},
+      contexto({ fetchImpl: fetchFalso }),
+    );
+    expect(r.status).toBe(502);
+    expect((r.body as { error: string }).error).toMatch(/No se pudo consultar/);
+  });
+
+  it("un proveedor desconocido lo dice con su nombre", async () => {
+    escribirCredenciales(ARCHIVO_BASE);
+    const r = await handleApi("GET", "/api/providers/inventado/models", {}, contexto());
+    // Un proveedor que no está en el catálogo no tiene `modelsUrl`, así que la
+    // ruta devuelve 501 y el cuerpo explica cuál no publica nada. Distinguirlo de
+    // «no existe» importa poco aquí y confundirlos importaría: el mensaje nombra
+    // el proveedor.
+    expect(r.status).toBe(501);
+    expect((r.body as { error: string }).error).toContain("inventado");
+  });
+
+  it("el estado del proveedor declara si publica su lista", async () => {
+    escribirCredenciales(ARCHIVO_BASE);
+    const r = await handleApi("GET", "/api/providers", {}, contexto());
+    const cuerpo = r.body as { providers: { id: string; listable: boolean }[] };
+    expect(cuerpo.providers.find((p) => p.id === "openrouter")?.listable).toBe(true);
+    expect(cuerpo.providers.find((p) => p.id === "opencode-go")?.listable).toBe(false);
+  });
+});

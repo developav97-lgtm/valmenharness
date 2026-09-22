@@ -125,6 +125,29 @@
       .secciones button[aria-pressed="true"] { border-color: var(--acento); color: var(--acento); }
       .vacio { color: var(--tenue); text-align: center; padding: 40px; }
 
+      /* ── Selector de modelo en dos niveles ────────────────────────────── */
+      /* Proveedor y modelo, con el modelo en un desplegable que se puede
+         escribir: una lista de cientos de modelos sin búsqueda es una lista que
+         nadie recorre, y un `select` no deja teclear. */
+      .par-modelo { display: flex; gap: 8px; align-items: center; }
+      .par-modelo select { max-width: 150px; }
+      .par-modelo .caja-modelo { position: relative; flex: 1; min-width: 220px; }
+      .par-modelo input { width: 100%; font-family: var(--mono); font-size: 12px; }
+      .lista-modelos {
+        position: absolute; z-index: 20; left: 0; right: 0; top: 100%;
+        max-height: 260px; overflow: auto; background: var(--panel-alto);
+        border: 1px solid var(--borde); border-radius: 6px; margin-top: 2px;
+      }
+      .lista-modelos div {
+        padding: 6px 10px; font-size: 12px; cursor: pointer;
+        font-family: var(--mono); white-space: nowrap; overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .lista-modelos div:hover, .lista-modelos div.marcado { background: var(--panel); }
+      .lista-modelos .nombre { font-family: inherit; color: var(--tenue); }
+      .lista-modelos .vacio { cursor: default; color: var(--tenue); padding: 10px; }
+      .cargando-modelos { font-size: 12px; color: var(--tenue); }
+
       /* ── Features ─────────────────────────────────────────────────────── */
       a.enlace { color: var(--acento); text-decoration: none; }
       a.enlace:hover { text-decoration: underline; }
@@ -1728,6 +1751,178 @@
         });
       }
 
+      // ── El catálogo de modelos por proveedor ─────────────────────────────
+      //
+      // Se pide una vez por sesión y se recuerda: los proveedores configurados no
+      // cambian mientras se navega, y volver a pedir cientos de modelos cada vez
+      // que se abre la vista haría que el selector tardara en aparecer.
+      //
+      // Se piden **todos los configurados**, no solo el elegido, para que el
+      // desplegable de proveedor no tenga que ir a la red al cambiar: el coste es
+      // el mismo y el cambio es instantáneo.
+      let cacheModelos = null;
+
+      async function catalogoDeModelos() {
+        if (cacheModelos !== null) return cacheModelos;
+
+        const { providers } = await api("GET", "/api/providers");
+        // Solo los que se pueden usar. Un proveedor sin credencial en la lista es
+        // una fila que no lleva a ninguna parte.
+        const usables = providers.filter((p) => p.configured);
+
+        const entradas = await Promise.all(
+          usables.map(async (p) => {
+            if (!p.listable) {
+              // No publica su lista: se elige escribiendo el identificador, y eso
+              // se dice en vez de ofrecer un desplegable vacío.
+              return [p.id, { provider: p, models: null, error: null }];
+            }
+            try {
+              const r = await api("GET", `/api/providers/${p.id}/models`);
+              return [p.id, { provider: p, models: r.models, error: null }];
+            } catch (fallo) {
+              return [p.id, { provider: p, models: null, error: fallo.message }];
+            }
+          }),
+        );
+
+        cacheModelos = new Map(entradas);
+        return cacheModelos;
+      }
+
+      /**
+       * El selector de modelo: proveedor a la izquierda, modelo a la derecha.
+       *
+       * Devuelve el nodo y avisa por `alElegir`. El modelo se puede **escribir**
+       * además de elegir: la lista de un proveedor tiene cientos de entradas, y un
+       * `select` obliga a recorrerlas. Un identificador que no esté en la lista se
+       * acepta igual —el catálogo de un proveedor no siempre incluye lo que su
+       * endpoint acepta— y eso es del usuario.
+       */
+      function selectorDeModelo({ provider, model, onProvider, onModel, catalog }) {
+        const caja = el("div", undefined, "par-modelo");
+
+        const selProveedor = document.createElement("select");
+        for (const [id, entrada] of catalog) {
+          const punto = entrada.models === null ? " ·" : "";
+          selProveedor.append(new Option(`${entrada.provider.name}${punto}`, id));
+        }
+        // El proveedor guardado puede no estar entre los configurados —una clave
+        // retirada, un routing escrito a mano—. Se añade para que el valor actual
+        // siga siendo visible en vez de cambiar solo al abrir la pantalla.
+        if (provider !== "" && !catalog.has(provider)) {
+          selProveedor.append(new Option(`${provider} (sin credencial)`, provider));
+        }
+        selProveedor.value = provider;
+
+        const cajaModelo = el("div", undefined, "caja-modelo");
+        const entradaModelo = document.createElement("input");
+        entradaModelo.type = "text";
+        entradaModelo.value = model;
+        entradaModelo.placeholder = "identificador del modelo";
+        entradaModelo.spellcheck = false;
+        entryAutoComplete(entradaModelo, cajaModelo, () => catalog.get(selProveedor.value));
+        cajaModelo.append(entradaModelo);
+
+        selProveedor.addEventListener("change", () => {
+          // Al cambiar de proveedor, el modelo anterior casi nunca existe en el
+          // nuevo. Se deja vacío en vez de arrastrar un identificador que el
+          // proveedor va a rechazar.
+          entradaModelo.value = "";
+          onProvider(selProveedor.value);
+          onModel("");
+        });
+
+        entradaModelo.addEventListener("input", () => onModel(entradaModelo.value));
+
+        caja.append(selProveedor, cajaModelo);
+        return caja;
+      }
+
+      /**
+       * El desplegable de sugerencias de un campo de texto.
+       *
+       * Se despliega al enfocar y filtra al escribir, por identificador y por
+       * nombre. Se cierra al elegir, al salir del campo y con Escape; y **no** se
+       * cierra al hacer clic dentro, que es el fallo clásico de un desplegable
+       * hecho a mano.
+       */
+      function entryAutoComplete(entrada, contenedor, obtener) {
+        const lista = el("div", undefined, "lista-modelos");
+        lista.hidden = true;
+        contenedor.append(lista);
+
+        const pintar = () => {
+          const entrada_ = obtener();
+          lista.textContent = "";
+
+          if (entrada_ === undefined) return;
+          if (entrada_.models === null) {
+            lista.append(
+              el(
+                "div",
+                entrada_.error ??
+                  `${entrada_.provider.name} no publica su lista: escribe el identificador.`,
+                "vacio",
+              ),
+            );
+            lista.hidden = false;
+            return;
+          }
+
+          const consulta = entrada.value.trim().toLowerCase();
+          const coincidencias = entrada_.models
+            .filter(
+              (m) =>
+                consulta === "" ||
+                m.id.toLowerCase().includes(consulta) ||
+                m.name.toLowerCase().includes(consulta),
+            )
+            .slice(0, 60);
+
+          if (coincidencias.length === 0) {
+            lista.append(el("div", "Sin coincidencias en este proveedor.", "vacio"));
+          } else {
+            for (const m of coincidencias) {
+              const fila = el("div");
+              fila.append(
+                el("span", m.id),
+                el(
+                  "span",
+                  m.promptUsd === null
+                    ? `  ${m.name}`
+                    : `  ${m.name} · $${(m.promptUsd * 1_000_000).toFixed(2)}/M`,
+                  "nombre",
+                ),
+              );
+              // `mousedown` y no `click`: el `blur` del campo dispara antes que
+              // el `click`, y el desplegable se cerraría sin elegir nada.
+              fila.addEventListener("mousedown", (evento) => {
+                evento.preventDefault();
+                entrada.value = m.id;
+                lista.hidden = true;
+                entrada.dispatchEvent(new Event("input"));
+              });
+              lista.append(fila);
+            }
+          }
+          lista.hidden = false;
+        };
+
+        entrada.addEventListener("focus", pintar);
+        entrada.addEventListener("input", pintar);
+        entrada.addEventListener("blur", () => {
+          // Con retardo, para que el `mousedown` de una sugerencia alcance a
+          // correr antes de que la lista desaparezca.
+          setTimeout(() => {
+            lista.hidden = true;
+          }, 120);
+        });
+        entrada.addEventListener("keydown", (evento) => {
+          if (evento.key === "Escape") lista.hidden = true;
+        });
+      }
+
       // ── Vista: modelos (routing por rol) ──────────────────────────────────
 
       /**
@@ -1750,8 +1945,17 @@
         // usuario elija para saber si hay algo que guardar.
         const eleccion = {};
         for (const rol of guardado.roles) {
-          eleccion[rol.role] = { model: rol.model, effort: rol.effort, source: rol.source };
+          eleccion[rol.role] = {
+            provider: rol.provider,
+            model: rol.model,
+            effort: rol.effort,
+            source: rol.source,
+          };
         }
+
+        // Los proveedores con su lista de modelos. Se pide aquí y no al cambiar de
+        // proveedor para que el desplegable de la izquierda sea instantáneo.
+        const catalogo = await catalogoDeModelos();
         let preset = guardado.preset === "" ? "balanced" : guardado.preset;
         let textoPrevio = guardado.text;
 
@@ -1788,12 +1992,20 @@
         }
         cont.append(presets, explicacion);
 
-        // El catálogo: de dónde salen los modelos que se pueden elegir.
+        // De dónde sale cada lista. Se dice porque un desplegable corto sin
+        // explicación parece un fallo, y lo que pasa es que ese proveedor no
+        // publica sus modelos o no respondió.
+        const sinLista = [...catalogo.values()].filter((e) => e.models === null);
+        const conError = sinLista.filter((e) => e.error !== null);
         const origenCatalogo = el(
           "div",
-          datos.catalog.source === "openrouter"
-            ? `Catálogo de OpenRouter: ${datos.catalog.detail}. Jev se añade aparte porque vive en el endpoint de Decisions, no en el de chat.`
-            : `Se usa la lista de los presets: ${datos.catalog.detail}. Los identificadores están verificados contra el catálogo real de OpenRouter.`,
+          `${catalogo.size} proveedor(es) configurado(s). ` +
+            (sinLista.length === 0
+              ? "Todos publican su lista de modelos."
+              : `Sin lista: ${sinLista.map((e) => e.provider.name).join(", ")}. En esos, el modelo se escribe.`) +
+            (conError.length === 0
+              ? ""
+              : ` No respondieron: ${conError.map((e) => `${e.provider.name} (${e.error})`).join("; ")}.`),
           "resultado",
         );
         cont.append(origenCatalogo);
@@ -1809,33 +2021,31 @@
         thead.append(filaCabecera);
         const tbody = el("tbody");
 
-        const modeloSelect = (rol) => {
-          const sel = document.createElement("select");
-          const actual = eleccion[rol.role].model;
-          // El valor actual primero: si el proyecto declaró un modelo que no
-          // está en el catálogo, tiene que seguir siendo visible.
-          const vistos = new Set();
-          if (actual !== "") {
-            sel.append(new Option(actual, actual));
-            vistos.add(actual);
-          }
-          for (const modelo of datos.catalog.models) {
-            if (vistos.has(modelo.id)) continue;
-            vistos.add(modelo.id);
-            const precio =
-              modelo.promptUsd === null
-                ? ""
-                : ` · $${(modelo.promptUsd * 1_000_000).toFixed(2)}/M entrada`;
-            sel.append(new Option(`${modelo.name}${precio}`, modelo.id));
-          }
-          sel.value = actual;
-          sel.addEventListener("change", () => {
-            eleccion[rol.role].model = sel.value;
-            explicitos.add(rol.role);
-            void refrescar();
+        /**
+         * El selector de un rol: proveedor y modelo.
+         *
+         * Antes era una sola lista con el catálogo de OpenRouter, así que elegir
+         * un modelo de otro proveedor era imposible desde la pantalla: había que
+         * editar el YAML. Y el proveedor viaja con el modelo porque los dos son la
+         * decisión —el mismo identificador puede existir en dos y no ser el
+         * mismo modelo—.
+         */
+        const modeloSelect = (rol) =>
+          selectorDeModelo({
+            provider: eleccion[rol.role].provider,
+            model: eleccion[rol.role].model,
+            catalog: catalogo,
+            onProvider: (id) => {
+              eleccion[rol.role].provider = id;
+              explicitos.add(rol.role);
+              void refrescar();
+            },
+            onModel: (id) => {
+              eleccion[rol.role].model = id;
+              explicitos.add(rol.role);
+              void refrescar();
+            },
           });
-          return sel;
-        };
 
         const esfuerzoSelect = (rol) => {
           const sel = document.createElement("select");
@@ -1925,6 +2135,7 @@
           for (const rol of guardado.roles) {
             if (!explicitos.has(rol.role)) continue;
             roles[rol.role] = {
+              provider: eleccion[rol.role].provider,
               model: eleccion[rol.role].model,
               effort: eleccion[rol.role].effort,
             };
@@ -2354,6 +2565,10 @@
         try {
           const r = await api("PUT", `/api/providers/${proveedorActual.id}/credential`, { apiKey: clave });
           const id = proveedorActual.id;
+          // La lista de proveedores usables acaba de cambiar, así que el catálogo
+          // de modelos cacheado ya no vale: un proveedor recién configurado tiene
+          // que aparecer en el selector sin recargar la página.
+          cacheModelos = null;
           $("dialogo").close();
           await vistaProveedores();
           const salida = document.querySelector(`.resultado[data-id="${id}"]`);
@@ -2374,6 +2589,7 @@
         boton.disabled = true;
         try {
           await api("DELETE", `/api/providers/${p.id}/credential`);
+          cacheModelos = null;
           await vistaProveedores();
         } catch (error) {
           alert(error.message);

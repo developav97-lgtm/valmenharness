@@ -39,6 +39,7 @@ import { type JsonObject, nextStates, parseTicket, toFailure } from "@valmen/cor
 import {
   type ProviderStatus,
   credentialsPath,
+  listProviderModels,
   listProviders,
   probeProvider,
   updateCredentials,
@@ -241,6 +242,42 @@ export async function handleApi(
       status: 200,
       body: { summary: summarize(filas), tickets: filterTickets(filas, filtros) },
     };
+  }
+
+  // GET /api/providers/:id/models
+  //
+  // La lista de modelos de un proveedor, para el selector de dos niveles y para
+  // los conjuntos —heredoc, args—. Se pide al proveedor y no se inventa: uno que
+  // no la publique devuelve 501 y la pantalla ofrece escribir el identificador,
+  // que es más honesto que un desplegable que falla al abrirse.
+  if (
+    method === "GET" &&
+    partes.length === 4 &&
+    partes[0] === "api" &&
+    partes[1] === "providers" &&
+    partes[3] === "models"
+  ) {
+    const id = partes[2] as string;
+    const resultado = await listProviderModels(id, {
+      filePath: context.credentialsFile,
+      env: context.env,
+      ...(context.fetchImpl === undefined ? {} : { fetchImpl: context.fetchImpl }),
+    });
+    if (resultado === null) {
+      return {
+        status: 501,
+        body: {
+          error:
+            `"${id}" no publica su lista de modelos. Escribe el identificador ` +
+            "a mano.",
+          models: [],
+        },
+      };
+    }
+    if (!resultado.ok) {
+      return { status: 502, body: { error: resultado.error, models: [] } };
+    }
+    return { status: 200, body: { models: resultado.models } };
   }
 
   // GET /api/features

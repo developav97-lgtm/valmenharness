@@ -36,13 +36,10 @@ export interface ProviderSpec {
   readonly name: string;
   readonly auth: AuthKind;
   /**
-   * Endpoint con el que se comprueba la conectividad.
+   * Cómo comprobar que una credencial sirve.
    *
    * Se prueba contra un endpoint real y no con un `ping`: una clave mal pegada
    * tiene que fallar en la pantalla, no en la mitad de un gate.
-   */
-  /**
-   * Cómo comprobar que una credencial sirve.
    *
    * Hay proveedores cuyo listado de modelos es **público**: responde 200 con
    * cualquier clave, incluida una inventada. Probar contra ese endpoint diría
@@ -67,6 +64,14 @@ export interface ProviderSpec {
      */
     readonly headers?: Readonly<Record<string, string>>;
   };
+  /**
+   * De dónde se puede pedir la lista de modelos, si el proveedor la publica.
+   *
+   * No todos la tienen, y no es un defecto: los que no la declaran se eligen
+   * escribiendo el identificador. Inventar una URL para ellos daría un selector
+   * que falla al abrirse, que es peor que no ofrecerlo.
+   */
+  readonly modelsUrl?: string;
   /** Dónde vive el token, para los proveedores de suscripción. */
   readonly tokenSource?: string;
   /** Nombre de la variable de entorno que también se acepta. */
@@ -84,12 +89,15 @@ export interface ProviderSpec {
 export interface ProviderEntry extends ProviderSpec {
   readonly probeable: boolean;
   readonly probeHost: string | null;
+  /** `true` si el proveedor publica su lista de modelos. */
+  readonly listable: boolean;
 }
 
 /** El catálogo tal como se declara: sin lo que se puede derivar de él. */
 const CATALOGO: readonly ProviderSpec[] = [
   {
     id: "openrouter",
+    modelsUrl: "https://openrouter.ai/api/v1/models",
     name: "OpenRouter",
     auth: "api-key",
     envVar: "OPENROUTER_API_KEY",
@@ -97,6 +105,7 @@ const CATALOGO: readonly ProviderSpec[] = [
   },
   {
     id: "deepseek",
+    modelsUrl: "https://api.deepseek.com/v1/models",
     name: "DeepSeek",
     auth: "api-key",
     envVar: "DEEPSEEK_API_KEY",
@@ -104,6 +113,7 @@ const CATALOGO: readonly ProviderSpec[] = [
   },
   {
     id: "moonshot",
+    modelsUrl: "https://api.moonshot.cn/v1/models",
     name: "Moonshot (Kimi)",
     auth: "api-key",
     envVar: "MOONSHOT_API_KEY",
@@ -111,6 +121,7 @@ const CATALOGO: readonly ProviderSpec[] = [
   },
   {
     id: "zhipu",
+    modelsUrl: "https://open.bigmodel.cn/api/paas/v4/models",
     name: "Zhipu (GLM)",
     auth: "api-key",
     envVar: "ZHIPU_API_KEY",
@@ -118,6 +129,7 @@ const CATALOGO: readonly ProviderSpec[] = [
   },
   {
     id: "qwen",
+    modelsUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1/models",
     name: "Qwen (Alibaba)",
     auth: "api-key",
     envVar: "QWEN_API_KEY",
@@ -193,6 +205,7 @@ const CATALOGO: readonly ProviderSpec[] = [
   },
   {
     id: "ollama",
+    modelsUrl: "http://127.0.0.1:11434/v1/models",
     name: "Ollama (local)",
     auth: "none",
     envVar: "OLLAMA_HOST",
@@ -282,6 +295,7 @@ export const PROVIDERS: readonly ProviderEntry[] = CATALOGO.map((spec) => ({
   ...spec,
   probeable: spec.probe !== undefined,
   probeHost: spec.probe === undefined ? null : new URL(spec.probe.url).host,
+  listable: spec.modelsUrl !== undefined,
 }));
 
 /**
@@ -679,4 +693,137 @@ function resolveForProbe(
   }
   const enArchivo = readKeyFromFile(readCredentialsFile(filePath), spec.id);
   return enArchivo?.value ?? null;
+}
+
+/** Un modelo, como lo devuelve el proveedor. */
+export interface ProviderModel {
+  readonly id: string;
+  readonly name: string;
+  /** Precio de entrada por token, si el proveedor lo publica. */
+  readonly promptUsd: number | null;
+}
+
+/**
+ * Pide al proveedor su lista de modelos.
+ *
+ * Cada proveedor la publica a su manera, así que se aceptan las dos formas que
+ * existen en la práctica: la de OpenAI —`{ data: [{ id }] }`— y la de opencode
+ * —`{ models: [{ id }] }`—, más una lista pelada. Lo que no se hace es inventar:
+ * un proveedor sin `modelsUrl` devuelve `null` y la pantalla ofrece escribir el
+ * identificador, que es lo honesto.
+ *
+ * El nombre se conserva cuando lo trae: `deepseek-chat` dice menos que «DeepSeek
+ * Chat», y la lista se lee.
+ */
+export async function listProviderModels(
+  id: string,
+  options: {
+    readonly filePath?: string;
+    readonly env?: NodeJS.ProcessEnv;
+    readonly fetchImpl?: typeof fetch;
+    readonly timeoutMs?: number;
+  } = {},
+): Promise<
+  | { readonly ok: true; readonly models: readonly ProviderModel[] }
+  | { readonly ok: false; readonly error: string }
+  | null
+> {
+  const spec = PROVIDERS.find((provider) => provider.id === id);
+  // Un proveedor que no está en el catálogo y uno que no publica su lista acaban
+  // en el mismo sitio —no hay URL que pedir—, y el mensaje los nombra a los dos.
+  if (spec === undefined || spec.modelsUrl === undefined) return null;
+
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const clave = resolveForProbe(
+    spec,
+    options.filePath ?? credentialsPath(),
+    options.env ?? process.env,
+  );
+
+  const headers: Record<string, string> = {};
+  if (clave !== null && clave !== "") headers["Authorization"] = `Bearer ${clave}`;
+
+  let texto: string;
+  try {
+    const respuesta = await fetchImpl(spec.modelsUrl, {
+      headers,
+      signal: AbortSignal.timeout(options.timeoutMs ?? 15_000),
+    });
+    texto = await respuesta.text();
+    if (!respuesta.ok) {
+      // El cuerpo del proveedor, recortado y con la clave tachada: es lo que
+      // distingue «la clave no sirve» de «esta cuenta no incluye modelos».
+      const cuerpo = texto.slice(0, 200).replace(/\s+/g, " ").trim();
+      const limpio =
+        clave === null || clave === "" ? cuerpo : cuerpo.split(clave).join("***");
+      return {
+        ok: false,
+        error: `El proveedor respondió HTTP ${respuesta.status}${limpio === "" ? "." : `: ${limpio}`}`,
+      };
+    }
+  } catch (caught) {
+    const detalle = caught instanceof Error ? caught.message : String(caught);
+    return {
+      ok: false,
+      error: /abort|timeout/i.test(detalle)
+        ? `El proveedor superó el tiempo máximo de ${options.timeoutMs ?? 15_000} ms.`
+        : `No se pudo consultar la lista de modelos: ${detalle}`,
+    };
+  }
+
+  let datos: unknown;
+  try {
+    datos = JSON.parse(texto) as unknown;
+  } catch {
+    return { ok: false, error: "La lista de modelos del proveedor no es JSON." };
+  }
+
+  const lista = extraerModelos(datos);
+  if (lista === null) {
+    return {
+      ok: false,
+      error:
+        "La lista de modelos del proveedor no tiene una forma conocida: ni " +
+        "`data`, ni `models`, ni una lista.",
+    };
+  }
+  return { ok: true, models: lista };
+}
+
+/** Saca la lista de modelos de las formas que se usan de verdad. */
+function extraerModelos(datos: unknown): ProviderModel[] | null {
+  const crudos = Array.isArray(datos)
+    ? datos
+    : typeof datos === "object" && datos !== null
+      ? ((datos as { data?: unknown }).data ?? (datos as { models?: unknown }).models)
+      : null;
+  if (!Array.isArray(crudos)) return null;
+
+  return crudos
+    .map((crudo): ProviderModel | null => {
+      if (typeof crudo === "string") return { id: crudo, name: crudo, promptUsd: null };
+      if (typeof crudo !== "object" || crudo === null) return null;
+      const modelo = crudo as { id?: unknown; name?: unknown; pricing?: { prompt?: unknown } };
+      const id = typeof modelo.id === "string" ? modelo.id : null;
+      if (id === null || id === "") return null;
+
+      // El precio llega como texto en OpenRouter y como número en otros. Se
+      // acepta lo que se pueda leer y se deja en `null` lo que no: un precio
+      // inventado es peor que ninguno.
+      const bruto = modelo.pricing?.prompt;
+      const precio =
+        typeof bruto === "number"
+          ? bruto
+          : typeof bruto === "string" && bruto.trim() !== "" && !Number.isNaN(Number(bruto))
+            ? Number(bruto)
+            : null;
+
+      return {
+        id,
+        name: typeof modelo.name === "string" && modelo.name !== "" ? modelo.name : id,
+        promptUsd: precio,
+      };
+    })
+    .filter((modelo): modelo is ProviderModel => modelo !== null)
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 }

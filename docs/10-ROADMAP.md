@@ -146,9 +146,12 @@ Lo que queda es del lado del proyecto: repuntar las tres skills de `.agents/` a 
 reescribir `docs/tickets/README.md`, y borrar el visor de Python con sus lanzadores. Eso va
 con el dogfooding sobre `SaiOpenCloud`, porque se edita allí y no aquí.
 
-**Falta el motor de procesos** (§7 de `02-MOTOR.md`): es lo que convierte el manifiesto en el
-artefacto del proyecto y lo que encadena la actualización de manuales al despliegue. Es la
-pieza siguiente de esta fase.
+**El motor de procesos está hecho** (`valmen process list|show|run`): pasos declarativos con
+sustitución estricta, sub-procesos encadenados, condiciones, `continue_on_failure` y evidencia
+por paso. Es lo que convierte el manifiesto de entrega en el artefacto del proyecto y lo que
+encadena la actualización de manuales al despliegue. `kind: gate` y `kind: agent` están en el
+contrato y el motor los rechaza con un mensaje que lo dice: un gate necesita la pantalla de
+decisión y un agente necesita el bucle de un runtime.
 
 Criterio de aceptación: el módulo de inventario especificado, descompuesto en tickets con
 sprints, y con los dos primeros tickets implementados a través del harness. **La primera

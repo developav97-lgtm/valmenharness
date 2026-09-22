@@ -490,3 +490,43 @@ describe("la API de routing", () => {
     expect(escrito).not.toContain("architecto");
   });
 });
+
+describe("el proveedor viaja con el modelo", () => {
+  /**
+   * Lo que hace posible elegir un modelo de otro proveedor desde la pantalla.
+   *
+   * Antes la lista que se ofrecía era la de OpenRouter y el proveedor no se
+   * enviaba, así que un modelo de DeepSeek elegido en la interfaz se guardaba con
+   * `provider: openrouter` y fallaba al usarse. El mismo identificador puede
+   * existir en dos proveedores y no ser el mismo modelo, así que los dos van
+   * juntos o no va ninguno.
+   */
+  it("guarda el proveedor y el modelo", () => {
+    const texto = routingFromForm({
+      preset: "balanced",
+      roles: { architect: { provider: "deepseek", model: "deepseek-v4-pro", effort: "high" } },
+    });
+    expect(texto).toContain("provider: deepseek");
+    expect(texto).toContain("model: deepseek-v4-pro");
+  });
+
+  it("sin modelo no escribe nada, aunque haya proveedor", () => {
+    // Aplicar el proveedor solo reusaría el modelo del preset con otro
+    // proveedor, que es peor que no hacer nada: el registro afirmaría una
+    // combinación que nadie eligió. La pantalla enseña la diferencia antes de
+    // guardar, así que el usuario ve que no se aplicó.
+    const texto = routingFromForm({
+      preset: "balanced",
+      roles: { architect: { provider: "deepseek", model: "" } },
+    });
+    expect(texto).not.toContain("deepseek");
+  });
+
+  it("sin proveedor usa el de por defecto", () => {
+    const texto = routingFromForm({
+      preset: "balanced",
+      roles: { architect: { model: "anthropic/claude-opus-4.6" } },
+    });
+    expect(texto).toContain("provider: openrouter");
+  });
+});
