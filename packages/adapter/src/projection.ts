@@ -11,9 +11,46 @@
  * lo genere, que es exactamente lo que una proyección determinista existe para
  * impedir.
  */
+import { fail } from "@valmen/core";
+
+import { type ConfigMap, readList } from "./config.js";
 import { readAgents, renderAllAgents } from "./agents.js";
 import { loadProjectModel, projectAgentsMd } from "./project.js";
-import { readSkills, renderAllSkills } from "./skills.js";
+import {
+  type SkillRuntime,
+  RUNTIME_DIRS,
+  SKILL_RUNTIME_IDS,
+  readSkills,
+  renderAllSkills,
+} from "./skills.js";
+
+/**
+ * Los runtimes a los que este proyecto quiere proyectar.
+ *
+ * Sin declararlos, se proyecta a todos: es lo que espera quien adopta el harness
+ * sin saber todavía con qué agentes va a trabajar, y no rompe nada. Un valor que
+ * no corresponda a un runtime conocido **falla** en vez de ignorarse: un nombre
+ * mal escrito que se descarta en silencio deja al usuario sin los archivos que
+ * pidió y sin ninguna señal de por qué.
+ */
+function readRuntimes(config: ConfigMap): readonly SkillRuntime[] {
+  const declarados = readList(config, "runtimes", SKILL_RUNTIME_IDS);
+  if (declarados.length === 0) {
+    fail(
+      'config.yaml: "runtimes" no puede estar vacío; quite la clave para proyectar a todos.',
+    );
+  }
+
+  return declarados.map((nombre) => {
+    if (!SKILL_RUNTIME_IDS.includes(nombre as SkillRuntime)) {
+      fail(
+        `config.yaml: "${nombre}" no es un runtime conocido. ` +
+          `Los que hay: ${SKILL_RUNTIME_IDS.join(", ")}.`,
+      );
+    }
+    return nombre as SkillRuntime;
+  });
+}
 
 /** Un archivo generado, con su ruta relativa a la raíz. */
 export interface ProjectedFile {
@@ -66,6 +103,15 @@ export function projectFiles(
   const agents = readAgents(root);
   const skills = readSkills(root);
 
+  // A qué runtimes se proyecta. Un proyecto que trabaja con un solo agente puede
+  // declararlo y no recibir los archivos de los otros tres: mantener
+  // configuraciones que nadie lee es ruido que se revisa en cada `git status`, y
+  // en el caso de `.claude/` puede llegar a ser mucho ruido —el proyecto que
+  // originó el harness tenía 235 MB de legado ahí dentro.
+  const runtimes = readRuntimes(model.config);
+  const enAlcance = (path: string): boolean =>
+    runtimes.some((runtime) => path.startsWith(RUNTIME_DIRS[runtime]));
+
   // El documento, los agentes y las skills salen del mismo modelo, así que se
   // proyectan juntos: un `AGENTS.md` actualizado con agentes viejos sería
   // incoherente, y una skill que contradijera la regla del proyecto también.
@@ -78,8 +124,8 @@ export function projectFiles(
 
   const files: ProjectedFile[] = [
     { path: "AGENTS.md", content: projectAgentsMd(model) },
-    ...renderAllAgents(agents, sources),
-    ...renderAllSkills(skills),
+    ...renderAllAgents(agents, sources).filter((file) => enAlcance(file.path)),
+    ...renderAllSkills(skills).filter((file) => enAlcance(file.path)),
   ];
 
   return {

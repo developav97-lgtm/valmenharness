@@ -17,6 +17,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   loadProjectModel,
   parseConfig,
+  projectFiles,
   projectAgentsMd,
   readList,
   readString,
@@ -298,5 +299,82 @@ describe("comando sync", () => {
     expect(result.stderr).toContain("duplicada");
     // No debe haberse escrito nada: un config roto no se degrada a "sin config".
     expect(() => readFileSync(join(lab, "AGENTS.md"), "utf8")).toThrow();
+  });
+});
+
+/**
+ * Los runtimes a los que se proyecta.
+ *
+ * Un proyecto que trabaja con un solo agente no debería recibir los archivos de
+ * los otros: mantener configuraciones que nadie lee es ruido en cada `git
+ * status`, y en el caso de `.claude/` puede ser mucho ruido.
+ */
+describe("proyección por runtime", () => {
+  /** Un proyecto con una skill y un agente, para ver qué runtimes los reciben. */
+  function scaffoldCompleto(config: string): void {
+    scaffold({ "10-stack.md": "# Stack\n" }, config);
+    mkdirSync(join(lab, ".valmen", "skills", "revision"), { recursive: true });
+    writeFileSync(
+      join(lab, ".valmen", "skills", "revision", "SKILL.md"),
+      "---\nname: revision\ndescription: Revisa.\n---\n\nRevisa esto.\n",
+      "utf8",
+    );
+    mkdirSync(join(lab, ".valmen", "agents"), { recursive: true });
+    writeFileSync(
+      join(lab, ".valmen", "agents", "planner.md"),
+      "---\ndescription: Planea.\n---\n\nPlanea esto.\n",
+      "utf8",
+    );
+  }
+
+  /** Las rutas generadas, sin `AGENTS.md`. */
+  function rutas(lab: string): string[] {
+    const model = loadProjectModel(lab, "Demo");
+    return projectFiles(lab, model.name)
+      .files.map((file) => file.path)
+      .filter((path) => path !== "AGENTS.md")
+      .sort();
+  }
+
+  it("proyecta a los tres runtimes cuando el proyecto no declara ninguno", () => {
+    scaffoldCompleto("name: Demo\n");
+    const generadas = rutas(lab);
+    expect(generadas.filter((path) => path.startsWith(".opencode/"))).toHaveLength(2);
+    expect(generadas.filter((path) => path.startsWith(".claude/"))).toHaveLength(2);
+    expect(generadas.filter((path) => path.startsWith(".codex/"))).toHaveLength(2);
+  });
+
+  it("proyecta solo a los declarados", () => {
+    scaffoldCompleto("name: Demo\nruntimes:\n  - opencode\n");
+    const generadas = rutas(lab);
+    expect(generadas).toEqual([
+      ".opencode/agents/planner.md",
+      ".opencode/skills/revision/SKILL.md",
+    ]);
+  });
+
+  it("admite más de uno", () => {
+    scaffoldCompleto("name: Demo\nruntimes: [opencode, claude]\n");
+    const generadas = rutas(lab);
+    expect(generadas.some((path) => path.startsWith(".codex/"))).toBe(false);
+    expect(generadas.some((path) => path.startsWith(".claude/"))).toBe(true);
+    expect(generadas.some((path) => path.startsWith(".opencode/"))).toBe(true);
+  });
+
+  it("falla ante un runtime desconocido en vez de ignorarlo", () => {
+    // Un nombre mal escrito que se descarta en silencio deja al usuario sin los
+    // archivos que pidió y sin ninguna señal de por qué.
+    scaffoldCompleto("name: Demo\nruntimes:\n  - opencode\n  - cursor\n");
+    const result = syncProject(lab, "Demo", false);
+    expect(result.exitCode).toBe(2);
+    expect(result.stderr).toContain("cursor");
+    expect(result.stderr).toContain("no es un runtime conocido");
+  });
+
+  it("falla ante una lista vacía, que no proyectaría nada", () => {
+    scaffoldCompleto("name: Demo\nruntimes: []\n");
+    const result = syncProject(lab, "Demo", false);
+    expect(result.exitCode).toBe(2);
+    expect(result.stderr).toContain("no puede estar vacío");
   });
 });

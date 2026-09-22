@@ -56,6 +56,21 @@ export const SKILL_RUNTIMES = {
   codex: ".codex/skills",
 } as const;
 
+/**
+ * El directorio raíz de cada runtime.
+ *
+ * Es lo que decide si un archivo entra en la proyección, y por eso es el
+ * directorio y no el subdirectorio: bajo `.opencode/` viven los agentes y las
+ * skills, así que filtrar por `.opencode/skills` dejaba a los agentes fuera. El
+ * fallo era silencioso —la proyección salía sin agentes y sin ningún error— y por
+ * eso el prefijo se declara aparte de la ruta de las skills.
+ */
+export const RUNTIME_DIRS = {
+  opencode: ".opencode/",
+  claude: ".claude/",
+  codex: ".codex/",
+} as const;
+
 /** Un runtime de proyección de skills. */
 export type SkillRuntime = keyof typeof SKILL_RUNTIMES;
 
