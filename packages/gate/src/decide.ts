@@ -140,6 +140,27 @@ export interface GateDefinition {
   /** Estados del ticket en los que este gate tiene sentido. */
   readonly appliesTo: readonly string[];
   readonly propositions: readonly Proposition[];
+  /**
+   * `true` si los criterios de aceptación del sujeto se despliegan como
+   * proposiciones atómicas **de este gate**.
+   *
+   * Es una decisión semántica de cada compuerta, no una regla general, y costó
+   * tres tickets reales descubrirlo. La proposición por criterio pregunta «existe
+   * en `## Plan` al menos un paso que satisface este criterio», y al expandir, las
+   * proposiciones atómicas **pasan a dar el veredicto** y las fijas quedan
+   * descriptivas.
+   *
+   * En el gate de plan eso es exactamente lo que se quiere: evalúa el plan, y el
+   * plan es lo que tiene que cubrir los criterios. En el de **análisis** es un
+   * sinsentido: protege `analyzed → planned`, así que el plan es justo lo que
+   * todavía no existe. Los criterios puntuaban 0,03 —«ningún paso del plan lo
+   * satisface», literalmente cierto y completamente inútil— y arrastraban a
+   * bloqueo un diagnóstico que puntuaba 0,94 en todas sus dimensiones propias.
+   *
+   * Un gate que evalúa un artefacto que aún no existe no mide calidad: mide la
+   * ausencia de algo que nadie pidió todavía.
+   */
+  readonly criteriaPropositions?: boolean;
   readonly policy: GatePolicy;
   readonly mechanicalChecks: readonly MechanicalCheck[];
   /**

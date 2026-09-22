@@ -63,16 +63,22 @@ export function criterionProposition(index: number, criterion: string): Proposit
 /**
  * Expande un gate con las proposiciones derivadas del sujeto.
  *
- * Sustituye la proposición compuesta de criterios por una por criterio. Si el
- * ticket no declara criterios, el gate se devuelve sin cambios: es preferible
- * que falle el check mecánico de criterios presentes a que el gate evalúe una
- * lista vacía y apruebe por vacuidad.
+ * Sustituye la proposición compuesta de criterios por una por criterio, **en los
+ * gates que lo declaran**. Si el ticket no declara criterios, el gate se devuelve
+ * sin cambios: es preferible que falle el check mecánico de criterios presentes a
+ * que el gate evalúe una lista vacía y apruebe por vacuidad.
  */
 export function expandGate(
   gate: GateDefinition,
   context: { readonly criteria: readonly string[] },
 ): GateDefinition {
   if (context.criteria.length === 0) return gate;
+
+  // La expansión no es una regla general: la declara el gate. Un gate que evalúa
+  // un artefacto que todavía no existe —el de análisis, que protege
+  // `analyzed → planned`— no puede preguntar por pasos del plan, porque el plan
+  // es justo lo que ese estado precede. Ver `GateDefinition.criteriaPropositions`.
+  if (gate.criteriaPropositions !== true) return gate;
 
   const atomicas = context.criteria.map((criterion, index) =>
     criterionProposition(index, criterion),

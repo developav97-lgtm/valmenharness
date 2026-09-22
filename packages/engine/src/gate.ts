@@ -227,11 +227,19 @@ export async function runGate(
     decidedAt: now().toISOString(),
   });
 
+  // Se informa de lo que de verdad se evaluó. Antes decía «N criterio(s)
+  // desplegados» siempre que el ticket declarara criterios, aunque el gate no
+  // los desplegara: el informe afirmaba algo que el recibo contradecía, y el
+  // recibo es el que tiene la evidencia.
+  const expandido = gate.propositions.length !== definition.propositions.length;
   const lines: string[] = [
     `Gate ${definition.id} — ${options.ticketId}`,
-    criteria.length > 0
-      ? `  ${criteria.length} criterio(s) desplegados como proposiciones atómicas`
-      : "  El ticket no declara criterios; el gate se evalúa sin expansión",
+    !expandido
+      ? definition.criteriaPropositions === true || criteria.length === 0
+        ? "  El ticket no declara criterios; el gate se evalúa sin expansión"
+        : `  Los ${criteria.length} criterio(s) no se despliegan en esta compuerta ` +
+          `(${definition.title.toLowerCase()}), sino en la que evalúa el plan`
+      : `  ${criteria.length} criterio(s) desplegados como proposiciones atómicas`,
     "",
     "  Checks mecánicos (código, sin coste)",
   ];

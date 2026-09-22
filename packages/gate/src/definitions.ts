@@ -27,6 +27,11 @@ export const PLAN_GATE: GateDefinition = {
   title: "Validación del plan de un ticket",
   transition: "planned → approved",
   mode: "hybrid",
+  // Este gate evalúa el plan, y el plan es lo que tiene que cubrir los criterios
+  // de aceptación: una proposición por criterio es exactamente la pregunta que
+  // hay que hacer. El de análisis no las despliega porque protege el estado
+  // anterior, donde el plan todavía no existe.
+  criteriaPropositions: true,
   // Solo tiene sentido antes de que la transición ocurra. Un ticket ya aprobado
   // o cerrado pasó por aquí, y volver a evaluarlo mide otra cosa.
   appliesTo: ["planned"],
@@ -176,6 +181,13 @@ export const ANALYSIS_GATE: GateDefinition = {
   title: "Validación del diagnóstico de un ticket",
   transition: "analyzed → planned",
   mode: "hybrid",
+  // **No** despliega los criterios como proposiciones, y es deliberado. La
+  // proposición por criterio pregunta por pasos en `## Plan`, y este gate protege
+  // `analyzed → planned`: el plan es justo lo que ese estado precede, así que las
+  // cuatro criterios puntuaban 0,03 y bloqueaban un diagnóstico que puntuaba 0,94
+  // en sus propias dimensiones. Lo que este gate evalúa es el diagnóstico, y eso
+  // es lo que preguntan sus proposiciones fijas.
+  criteriaPropositions: false,
   appliesTo: ["analyzed"],
   policy: DEFAULT_POLICY,
   mechanicalChecks: [

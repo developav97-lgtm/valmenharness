@@ -489,3 +489,69 @@ describe("precondición de estado", () => {
     expect(result.stderr).toContain("solo aplica a un ticket en `analyzed`");
   });
 });
+
+/**
+ * Qué compuerta despliega los criterios de aceptación.
+ *
+ * La proposición por criterio pregunta «existe en `## Plan` al menos un paso que
+ * satisface este criterio». Eso es exactamente lo que hay que preguntar en la
+ * compuerta de plan, que evalúa el plan. En la de **análisis** es un sinsentido:
+ * protege `analyzed → planned`, así que el plan es justo lo que ese estado
+ * precede.
+ *
+ * Costó tres tickets reales creados desde opencode. En el tercero, un diagnóstico
+ * que puntuaba 0,93-0,96 en todas sus dimensiones propias quedaba **bloqueado**
+ * por cuatro criterios que puntuaban 0,03 —«ningún paso del plan lo satisface»,
+ * literalmente cierto y completamente inútil—. El agente lo detectó, investigó el
+ * motor y lo reportó con honestidad.
+ */
+describe("la expansión por criterios es de la compuerta, no una regla general", () => {
+  it("el gate de análisis no despliega criterios y decide por el diagnóstico", async () => {
+    writeFixtureTicket(lab, { id: TICKET, workflowStatus: "analyzed" });
+
+    // `clasificacion` se llama distinto en cada gate: «completa» en el de
+    // análisis, «completo» en el de plan. Darle la del plan hace fallar el
+    // contrato del gate, y el fallo no dice que el problema sea el valor.
+    const result = await runGate(PATHS(), {
+      gateId: "analysis",
+      ticketId: TICKET,
+      jev: evaluator(allPropositions(0.95, "completa"), 1.0),
+      dryRun: true,
+    });
+
+    // El informe dice la verdad: no se desplegaron aquí.
+    expect(result.stdout).not.toContain("criterio(s) desplegados");
+    expect(result.stdout).toContain("no se despliegan en esta compuerta");
+    // Y no aparece ninguna proposición por criterio.
+    expect(result.stdout).not.toContain("criterio_01");
+  });
+
+  it("el gate de plan sí los despliega, porque evalúa el artefacto que debe cubrirlos", async () => {
+    writeFixtureTicket(lab, { id: TICKET, workflowStatus: "planned" });
+
+    const result = await runGate(PATHS(), {
+      gateId: "plan",
+      ticketId: TICKET,
+      jev: evaluator(allPropositions(0.95), 1.0),
+      dryRun: true,
+    });
+
+    expect(result.stdout).toContain("criterio(s) desplegados como proposiciones atómicas");
+  });
+
+  it("sin criterios declarados ninguna de las dos expande, y el check lo dice", async () => {
+    // Un ticket sin criterios no se puede evaluar: el hueco lo ve el check
+    // mecánico, que es determinista y no gasta una llamada.
+    writeFixtureTicket(lab, { id: TICKET, workflowStatus: "analyzed", criterios: "- [ ]" });
+
+    const result = await runGate(PATHS(), {
+      gateId: "analysis",
+      ticketId: TICKET,
+      jev: evaluator(allPropositions(0.95, "completa"), 1.0),
+      dryRun: true,
+    });
+
+    expect(result.exitCode).toBe(3);
+    expect(result.stderr).toContain("criterios_presentes");
+  });
+});
