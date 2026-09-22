@@ -47,7 +47,7 @@ Antes de escribir el motor, la infraestructura del propio producto.
 | Entregable               | Detalle                                                               |
 | ------------------------ | --------------------------------------------------------------------- |
 | Monorepo                 | pnpm workspaces + Turborepo + TypeScript estricto                     |
-| CI propio                | lint, typecheck, test, build en cada PR                               |
+| CI propio                | lint, typecheck, formato y test en cada push y PR                     |
 | Corpus determinista      | `bench/journeys/` — el motor se prueba **sin llamar a ningún modelo** |
 | Contratos versionados    | Los esquemas Zod se publican como JSON Schema con semver              |
 | Documentación de paquete | Plantilla fija: Resumen / Uso / Contrato / Limitaciones               |
@@ -74,8 +74,27 @@ Criterio de aceptación: `valmen sync` reproduce `AGENTS.md`, los 12 agentes de 
 
 Ver [`03-GATES.md`](03-GATES.md) para el diseño completo.
 
-Criterio de aceptación: sobre los últimos 30 tickets cerrados, el gate automático coincide
-con la decisión humana en ≥90% y hay **cero falsos aprobados** en tickets de impacto crítico.
+**El motor está hecho y verificado contra el proveedor real**: las proposiciones se evalúan,
+el código compara contra umbrales, la banda de revisión escala a humano, y cada decisión deja
+un recibo con la evidencia, las respuestas y el coste. `valmen simulate <gate>` mide el
+comportamiento de un gate sobre el registro histórico.
+
+**Criterio de aceptación: el estudio de calibración no está hecho.** Sobre los últimos 30
+tickets cerrados, el veredicto automático tiene que coincidir con la decisión humana en ≥90%
+y tener **cero falsos aprobados** en tickets de impacto crítico.
+
+Dos cosas que hay que resolver antes de poder declararlo, y conviene escribirlas aquí porque
+no son obvias:
+
+1. **`simulate` mide, no compara.** Informa la distribución de cada proposición —cuántas
+   aprobaron, cuántas bloquearon, cuántas cayeron en banda— y el coste. No guarda el
+   veredicto humano del ticket, así que hoy **no puede calcular la coincidencia**. La
+   comparación hay que construirla: el registro sí tiene el resultado humano, porque un
+   ticket cerrado pasó por QA y por el PO.
+2. **`closed` no es «el humano aprobó el plan».** Los 57 tickets están cerrados, y eso dice
+   que terminaron, no que su plan fuera bueno. Un gate de plan corrido sobre tickets ya
+   cerrados mide con un sesgo optimista: solo se ven los planes que llegaron al final. Para
+   que el número signifique algo hacen falta tickets en `planned`, no cerrados.
 
 ### Fase 4 — Mission Control (2–3 semanas)
 
@@ -110,12 +129,16 @@ Detalle completo en [`06-CONTROL-APP.md` §2.6bis](06-CONTROL-APP.md).
 Criterio de aceptación de la fase: **un día completo de trabajo operado sin abrir la
 terminal, y una clave de proveedor agregada, probada y rotada desde la app.**
 
-**Estado de ese criterio: la mitad está cumplida, y la otra mitad no.** La clave se agrega,
-se prueba antes de guardar, se reemplaza y se borra desde la app; la configuración, el
-routing y los archivos generados también. Lo que falta es **avanzar el estado de un
-ticket**: un gate se puede aprobar desde la pantalla, pero el ticket no se mueve, porque un
-gate no cambia estados por su cuenta y la transición todavía no existe como operación. Un
-día de trabajo sin terminal necesita esa pieza, y es lo primero de la Fase 5.
+**Estado de ese criterio: cumplido.** La clave se agrega, se prueba antes de guardar, se
+reemplaza y se borra desde la app; la configuración, el routing y los archivos generados
+también; y **el estado de un ticket se mueve desde la pantalla**, porque la transición existe
+como operación (`POST /api/tickets/:id/transition`) con los destinos legales que calcula el
+servidor a partir de la tabla del contrato. Aprobar un gate sigue sin mover el ticket por su
+cuenta —eso es deliberado— y la pantalla ofrece la transición por separado.
+
+Lo que **no** está cubierto todavía es la vista de features en la misma medida que la de
+tickets: la feature tiene lista, detalle, cobertura y grafo, y no tiene botones para mover su
+estado ni para lanzar su descomposición desde ahí.
 
 **La vista de features (4.2bis) se movió a la Fase 5**, y ya está hecha: la lista, el detalle
 con la cobertura y el grafo contrastado con el registro. El motivo del traslado sigue en pie
@@ -149,9 +172,16 @@ con el dogfooding sobre `SaiOpenCloud`, porque se edita allí y no aquí.
 **El motor de procesos está hecho** (`valmen process list|show|run`): pasos declarativos con
 sustitución estricta, sub-procesos encadenados, condiciones, `continue_on_failure` y evidencia
 por paso. Es lo que convierte el manifiesto de entrega en el artefacto del proyecto y lo que
-encadena la actualización de manuales al despliegue. `kind: gate` y `kind: agent` están en el
-contrato y el motor los rechaza con un mensaje que lo dice: un gate necesita la pantalla de
-decisión y un agente necesita el bucle de un runtime.
+encadena la actualización de manuales al despliegue.
+
+**Y los gates humanos de un proceso también**: un paso `kind: gate` **detiene el proceso** y
+lo deja retomable; `valmen process approve` registra quién aprueba y `process resume` sigue
+**desde donde quedó**, sin repetir los pasos ya ejecutados —`git tag` dos veces no es
+idempotente—. `process runs`, `show-run` y `abandon` completan el ciclo.
+
+`kind: agent` sigue fuera del motor: necesita el bucle de un runtime —lanzar un agente, leer
+su salida, decidir si hizo lo que se le pidió— y el motor lo rechaza con un mensaje que lo
+dice.
 
 Criterio de aceptación: el módulo de inventario especificado, descompuesto en tickets con
 sprints, y con los dos primeros tickets implementados a través del harness. **La primera
