@@ -967,6 +967,98 @@
         line-height: 1.5;
       }
 
+      /* ── Un documento, no un muro ────────────────────────────────────────
+         El plan de un ticket tiene títulos, pasos numerados con subpasos y código
+         en línea. Como `<pre>` se lee como una pared; aquí se lee como documento.
+         La medida de línea es lo que más cambia la lectura: a todo el ancho de la
+         pantalla, el ojo pierde el renglón al volver. */
+      .md {
+        max-width: 78ch;
+        font-size: 14px;
+        line-height: 1.65;
+      }
+      .md > *:first-child {
+        margin-top: 0;
+      }
+      .md > *:last-child {
+        margin-bottom: 0;
+      }
+      .md p {
+        margin: 0 0 12px;
+      }
+      .md-titulo {
+        margin: 20px 0 8px;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--texto);
+      }
+      h4.md-titulo {
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--tenue);
+      }
+      .md-lista {
+        margin: 0 0 12px;
+        padding-left: 22px;
+      }
+      .md-lista li {
+        margin-bottom: 8px;
+      }
+      .md-lista li::marker {
+        color: var(--tenue);
+      }
+      /* Una lista anidada es el detalle de un paso: se separa un poco y se apaga,
+         para que el paso siga leyéndose como la unidad. */
+      .md-lista .md-lista {
+        margin: 8px 0 4px;
+      }
+      .md-codigo {
+        font-family: var(--mono);
+        font-size: 12.5px;
+        background: color-mix(in srgb, var(--acento) 12%, transparent);
+        border: 1px solid color-mix(in srgb, var(--acento) 22%, transparent);
+        border-radius: 4px;
+        padding: 1px 5px;
+        word-break: break-word;
+      }
+      .md-bloque {
+        font-family: var(--mono);
+        font-size: 12.5px;
+        background: var(--fondo);
+        border: 1px solid var(--borde);
+        border-radius: 6px;
+        padding: 10px 12px;
+        overflow-x: auto;
+        margin: 0 0 12px;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .md a {
+        color: var(--acento);
+      }
+      .seccion-ticket {
+        position: relative;
+      }
+      .seccion-pie {
+        margin-top: 12px;
+        padding-top: 10px;
+        border-top: 1px solid var(--borde);
+      }
+      .seccion-pie button {
+        font-size: 11px;
+        color: var(--tenue);
+        background: none;
+        border: 1px solid var(--borde);
+        border-radius: 6px;
+        padding: 4px 9px;
+        cursor: pointer;
+      }
+      .seccion-pie button:hover {
+        color: var(--texto);
+        border-color: var(--acento);
+      }
+
       /* Línea de tiempo del ticket. El fallo se marca en la fila entera y no en una
          palabra: lo que hay que ver de un vistazo es dónde se corrigió, porque eso
          es trabajo que costó dinero. */
@@ -2794,23 +2886,35 @@
         // solicitud y las pruebas arrancan plegados, que es lo que devuelve la
         // pantalla al tamaño de una lectura.
         const solicitud = acordeon("Solicitud original");
-        solicitud.cuerpo.append(el("pre", t.request.trim() === "" ? "(vacía)" : t.request));
+        solicitud.cuerpo.append(
+          t.request.trim() === ""
+            ? el("div", "(vacía)", "vacio")
+            : seccionDeTicket(t.request),
+        );
         cont.append(solicitud.caja);
 
         const descripcion = acordeon("Descripción funcional");
         descripcion.cuerpo.append(
-          el("pre", (t.sections["Descripción funcional"] ?? "").trim() || "(vacía)"),
+          (t.sections["Descripción funcional"] ?? "").trim() === ""
+            ? el("div", "(vacía)", "vacio")
+            : seccionDeTicket(t.sections["Descripción funcional"]),
         );
         cont.append(descripcion.caja);
 
         const diagnostico = acordeon("Diagnóstico", t.sections["Diagnóstico"] ? "" : "vacío", true);
         diagnostico.cuerpo.append(
-          el("pre", (t.sections["Diagnóstico"] ?? "").trim() || "(vacío)"),
+          (t.sections["Diagnóstico"] ?? "").trim() === ""
+            ? el("div", "(vacío)", "vacio")
+            : seccionDeTicket(t.sections["Diagnóstico"]),
         );
         cont.append(diagnostico.caja);
 
         const plan = acordeon("Plan", t.sections["Plan"] ? "" : "vacío");
-        plan.cuerpo.append(el("pre", (t.sections["Plan"] ?? "").trim() || "(vacío)"));
+        plan.cuerpo.append(
+          (t.sections["Plan"] ?? "").trim() === ""
+            ? el("div", "(vacío)", "vacio")
+            : seccionDeTicket(t.sections["Plan"]),
+        );
         cont.append(plan.caja);
 
         // Los criterios se cuentan y se pintan como lista: son la lista contra la
@@ -2838,12 +2942,18 @@
 
         const implementacion = acordeon("Implementación");
         implementacion.cuerpo.append(
-          el("pre", (t.sections["Implementación"] ?? "").trim() || "(vacía)"),
+          (t.sections["Implementación"] ?? "").trim() === ""
+            ? el("div", "(vacía)", "vacio")
+            : seccionDeTicket(t.sections["Implementación"]),
         );
         cont.append(implementacion.caja);
 
         const pruebas = acordeon("Pruebas");
-        pruebas.cuerpo.append(el("pre", (t.sections["Pruebas"] ?? "").trim() || "(vacía)"));
+        pruebas.cuerpo.append(
+          (t.sections["Pruebas"] ?? "").trim() === ""
+            ? el("div", "(vacía)", "vacio")
+            : seccionDeTicket(t.sections["Pruebas"]),
+        );
         cont.append(pruebas.caja);
 
         // ── Línea de tiempo y coste ──
@@ -2914,7 +3024,9 @@
 
         const release = acordeon("Release");
         release.cuerpo.append(
-          el("pre", (t.sections["Release"] ?? "").trim() || "(vacía)"),
+          (t.sections["Release"] ?? "").trim() === ""
+            ? el("div", "(vacía)", "vacio")
+            : seccionDeTicket(t.sections["Release"]),
         );
         cont.append(release.caja);
       }
@@ -3182,6 +3294,252 @@
           el("span", String(e.id ?? ""), "ruta"),
         );
         caja.append(cabecera, el("div", String(e.details ?? ""), "tarjeta-dato-nota"));
+        return caja;
+      }
+
+      /**
+       * El texto de una sección, como documento y no como muro.
+       *
+       * El plan de un ticket es un documento: títulos, pasos numerados, viñetas
+       * anidadas y código en línea. En un `<pre>` se lee como una pared de texto y
+       * hay que recorrerla entera para encontrar un paso. Esto lo interpreta.
+       *
+       * Lo que entiende es lo que los tickets usan de verdad —se contó sobre los 62
+       * del registro: títulos, viñetas, listas numeradas, bloques y código en
+       * línea, y negrita—, no un subconjunto de Markdown por si acaso. Tablas y
+       * citas no aparecen en ninguna sección, así que no se inventan.
+       *
+       * **Se construyen nodos, no se inyecta HTML.** El texto viene de un archivo
+       * del repositorio, y renderizar Markdown como HTML crudo es la vía clásica
+       * de inyección: un ticket con `<script>` en el plan se ejecutaría al abrirlo.
+       * Con nodos, el contenido es texto y nunca código.
+       */
+      function renderMarkdown(texto) {
+        const SECCIONES = new Set([
+          "Solicitud original",
+          "Descripción funcional",
+          "Diagnóstico",
+          "Plan",
+          "Criterios de aceptación",
+          "Puntos",
+          "Implementación",
+          "Pruebas",
+          "QA",
+          "Evidencia",
+          "Retests",
+          "Cierre",
+          "Consumo de IA",
+          "Release",
+          "Eventos",
+        ]);
+
+        /** El formato dentro de una línea: negrita, código y enlaces. */
+        const enLinea = (destino, linea) => {
+          // El orden importa: primero el código, para que un `**` dentro de un
+          // fragmento de código no se interprete como negrita.
+          const PARTES = /(`[^`]+`)|(\*\*[^*]+\*\*)|(\[([^\]]+)\]\(([^)]+)\))/g;
+          let ultimo = 0;
+          let coincidencia;
+          while ((coincidencia = PARTES.exec(linea)) !== null) {
+            if (coincidencia.index > ultimo) {
+              destino.append(document.createTextNode(linea.slice(ultimo, coincidencia.index)));
+            }
+            const [todo, codigo, negrita, , textoEnlace, url] = coincidencia;
+            if (codigo !== undefined) {
+              destino.append(el("code", codigo.slice(1, -1), "md-codigo"));
+            } else if (negrita !== undefined) {
+              destino.append(el("strong", negrita.slice(2, -2)));
+            } else if (textoEnlace !== undefined) {
+              // Solo se enlaza lo que es navegable. Un `javascript:` en un ticket
+              // ejecutaría código al hacer clic, y un ticket no es de fiar por
+              // estar en el repositorio.
+              if (/^https?:\/\//.test(url ?? "")) {
+                const enlace = el("a", textoEnlace);
+                enlace.href = url;
+                enlace.rel = "noreferrer noopener";
+                enlace.target = "_blank";
+                destino.append(enlace);
+              } else {
+                destino.append(document.createTextNode(textoEnlace));
+              }
+            }
+            ultimo = coincidencia.index + todo.length;
+          }
+          if (ultimo < linea.length) {
+            destino.append(document.createTextNode(linea.slice(ultimo)));
+          }
+          return destino;
+        };
+
+        const contenedor = el("div", undefined, "md");
+        const lineas = String(texto ?? "").split("\n");
+        let i = 0;
+        let lista = null;
+        let profundidad = 0;
+        /**
+         * La lista de cada nivel, del 0 al actual.
+         *
+         * Subir de nivel caminando por `parentNode` parecía más simple y era un
+         * error: basta con que un nodo no tenga el padre enlazado —como en un DOM
+         * de prueba— para que el bucle no termine y la pestaña se quede sin
+         * memoria. Con la pila, subir es quitar elementos, y no depende de nada.
+         */
+        const pila = [];
+        /**
+         * El último elemento de lista pintado, sea del tipo que sea.
+         *
+         * Hace falta porque el tipo de lista cambia dentro del mismo nivel: el plan
+         * es una lista de viñetas y su tercer punto es una lista **numerada** de
+         * pasos. Sin esto, esa lista numerada se creaba en el contenedor y los siete
+         * pasos aparecían como hermanos del alcance y del gate, no como su contenido.
+         */
+        let ultimoItem = null;
+
+        const cerrarLista = () => {
+          lista = null;
+          profundidad = 0;
+          pila.length = 0;
+          ultimoItem = null;
+        };
+
+        // Cada vuelta tiene que consumir al menos una línea. Este contador lo
+        // comprueba: un bucle que no avanza cuelga la pestaña con «sin memoria»,
+        // que no dice nada, en vez de fallar donde está el problema. Costó
+        // encontrarlo una vez —faltaba un `i += 1` en la rama de los títulos— y no
+        // vuelve a costar lo mismo.
+        let vueltas = 0;
+        while (i < lineas.length) {
+          vueltas += 1;
+          if (vueltas > lineas.length * 4 + 16) {
+            throw new Error(
+              `El intérprete de Markdown no avanza en la línea ${i}: ${JSON.stringify(lineas[i])}`,
+            );
+          }
+          const linea = lineas[i];
+          const limpia = linea.trim();
+
+          if (limpia === "") {
+            cerrarLista();
+            i += 1;
+            continue;
+          }
+
+          // Bloque de código: se copia tal cual, sin interpretar nada dentro.
+          if (limpia.startsWith("```")) {
+            cerrarLista();
+            const cuerpo = [];
+            i += 1;
+            while (i < lineas.length && !lineas[i].trim().startsWith("```")) {
+              cuerpo.push(lineas[i]);
+              i += 1;
+            }
+            i += 1;
+            contenedor.append(el("pre", cuerpo.join("\n"), "md-bloque"));
+            continue;
+          }
+
+          const titulo = /^(#{1,6})\s+(.*)$/.exec(limpia);
+          if (titulo !== null) {
+            cerrarLista();
+            const nivel = (titulo[1] ?? "").length;
+            // Un título de sección dentro de una sección se sube un nivel: el
+            // documento empieza en `## Plan`, y sus propios `##` son subsecciones.
+            const etiqueta = SECCIONES.has((titulo[2] ?? "").trim())
+              ? "h4"
+              : `h${Math.min(nivel + 2, 6)}`;
+            contenedor.append(enLinea(el(etiqueta, undefined, "md-titulo"), titulo[2] ?? ""));
+            i += 1;
+            continue;
+          }
+
+          const vinetas = /^(\s*)[-*+]\s+(.*)$/.exec(linea);
+          const numeradas = /^(\s*)(\d+)[.)]\s+(.*)$/.exec(linea);
+          if (vinetas !== null || numeradas !== null) {
+            const sangria = Math.floor(((vinetas ?? numeradas)[1] ?? "").length / 2);
+            const textoItem = vinetas !== null ? vinetas[2] : (numeradas[3] ?? "");
+            const ordenada = numeradas !== null;
+
+            const anidada = sangria > profundidad && ultimoItem !== null;
+
+            if (lista === null || anidada || ordenada !== lista.ordenada) {
+              const nueva = el(ordenada ? "ol" : "ul", undefined, "md-lista");
+
+              if (anidada) {
+                // Un nivel más: la lista va **dentro** del último elemento, que es
+                // lo que hace que el paso 3 con sus subpasos se lea como un paso
+                // con subpasos y no como una lista plana.
+                ultimoItem.append(nueva);
+                pila.push(nueva);
+              } else {
+                // Nivel de raíz, o vuelta a un nivel anterior: se descartan los
+                // niveles de más y la lista cuelga de donde toque.
+                while (pila.length > sangria + 1) pila.pop();
+                const destino = pila[pila.length - 1];
+                if (destino === undefined) contenedor.append(nueva);
+                else destino.append(nueva);
+                pila.length = sangria + 1;
+                pila[sangria] = nueva;
+              }
+              lista = { nodo: nueva, ordenada };
+            }
+            profundidad = sangria;
+
+            const item = enLinea(el("li"), textoItem);
+            lista.nodo.append(item);
+            ultimoItem = item;
+            i += 1;
+            continue;
+          }
+
+          // Párrafo: se juntan las líneas seguidas, porque en Markdown un salto
+          // simple no separa párrafos y tratarlas sueltas partiría las frases.
+          cerrarLista();
+          const parrafo = [limpia];
+          i += 1;
+          while (i < lineas.length) {
+            const siguiente = lineas[i].trim();
+            if (
+              siguiente === "" ||
+              siguiente.startsWith("```") ||
+              /^#{1,6}\s/.test(siguiente) ||
+              /^\s*[-*+]\s+/.test(lineas[i]) ||
+              /^\s*\d+[.)]\s+/.test(lineas[i])
+            ) {
+              break;
+            }
+            parrafo.push(siguiente);
+            i += 1;
+          }
+          contenedor.append(enLinea(el("p"), parrafo.join(" ")));
+        }
+
+        return contenedor;
+      }
+
+      /**
+       * Una sección del ticket: documento interpretado, con su texto original a un
+       * clic.
+       *
+       * El original no es un adorno: es lo que hizo el agente, y cuando algo se lee
+       * raro hay que poder comprobarlo sin abrir el archivo.
+       */
+      function seccionDeTicket(texto) {
+        const caja = el("div", undefined, "seccion-ticket");
+        const cuerpo = el("div");
+        cuerpo.append(renderMarkdown(texto));
+        caja.append(cuerpo);
+
+        const pie = el("div", undefined, "seccion-pie");
+        const alternar = el("button", "Ver el texto original");
+        const crudo = el("pre", texto, "md-bloque");
+        crudo.hidden = true;
+        alternar.addEventListener("click", () => {
+          crudo.hidden = !crudo.hidden;
+          cuerpo.hidden = !crudo.hidden;
+          alternar.textContent = crudo.hidden ? "Ver el texto original" : "Ver el documento";
+        });
+        pie.append(alternar);
+        caja.append(crudo, pie);
         return caja;
       }
 

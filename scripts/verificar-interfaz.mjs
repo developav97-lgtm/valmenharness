@@ -30,7 +30,10 @@ import { tmpdir } from "node:os";
 /** El DOM mínimo: un nodo real, no un objeto que tolera todo. */
 class Nodo {
   constructor(tag = "div") {
+    // Un nodo de texto se distingue por `nodeName`, como en el DOM real: buscar
+    // `tagName` para encontrarlos deja el texto fuera y el recuento sale a cero.
     this.tagName = String(tag).toUpperCase();
+    this.nodeName = tag === "#text" ? "#text" : this.tagName;
     this.children = [];
     this.dataset = {};
     this.style = {};
@@ -66,9 +69,14 @@ class Nodo {
     this._texto = String(valor);
   }
   append(...nodos) {
-    for (const nodo of nodos) if (nodo) this.children.push(nodo);
+    for (const nodo of nodos) {
+      if (!nodo) continue;
+      nodo.parentNode = this;
+      this.children.push(nodo);
+    }
   }
   appendChild(nodo) {
+    nodo.parentNode = this;
     this.children.push(nodo);
     return nodo;
   }
@@ -194,6 +202,7 @@ function respuesta(ruta) {
 /** Recorre el árbol y devuelve todo el texto y las clases que contiene. */
 function textoDe(nodo, acumulado = []) {
   if (!nodo || typeof nodo !== "object") return acumulado;
+  if (nodo.nodeName === "#text") return acumulado.push(String(nodo._texto ?? ""));
   if (nodo._texto) acumulado.push(String(nodo._texto));
   if (nodo.className) acumulado.push(String(nodo.className));
   for (const hijo of nodo.children ?? []) textoDe(hijo, acumulado);
@@ -220,6 +229,11 @@ export async function ejecutarInterfaz(rutaHtml) {
       return porId.get(id);
     },
     createElement: (tag) => new Nodo(tag),
+    createTextNode: (texto) => {
+      const nodo = new Nodo("#text");
+      nodo._texto = String(texto);
+      return nodo;
+    },
     querySelector: () => null,
     querySelectorAll: () => [],
     addEventListener: () => {},
@@ -260,7 +274,15 @@ export async function ejecutarInterfaz(rutaHtml) {
   // tarde, y sin él la vista del ticket no se ejecuta —que es justo lo que este
   // arnés tiene que recorrer.
   const destino = join(tmpdir(), `valmen-interfaz-${process.pid}.mjs`);
-  writeFileSync(destino, `globalThis.location.hash = "#/ticket/${TICKET.id}";\n` + codigo);
+  // El intérprete de Markdown se expone además de ejecutar la vista: el resto se
+  // comprueba por lo que pinta, pero un documento hay que interpretarlo para saber
+  // si se lee.
+  writeFileSync(
+    destino,
+    `globalThis.location.hash = "#/ticket/${TICKET.id}";\n` +
+      codigo +
+      "\nglobalThis.RENDER_MARKDOWN = renderMarkdown;\n",
+  );
 
   await import(pathToFileURL(destino).href);
   for (let i = 0; i < 50; i += 1) await new Promise((r) => setImmediate(r));
@@ -269,6 +291,7 @@ export async function ejecutarInterfaz(rutaHtml) {
     contenido: porId.get("contenido"),
     texto: textoDe(porId.get("contenido")).join(" | "),
     fallos,
+    render: globalThis.RENDER_MARKDOWN,
   };
 }
 
