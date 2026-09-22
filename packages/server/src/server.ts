@@ -94,6 +94,13 @@ import {
   summarize,
 } from "./tickets.js";
 import { listFeatureRows, readFeatureDetail, summarizeFeatures } from "./features.js";
+import {
+  approveGate,
+  listGateRows,
+  listProcessRows,
+  listRunRows,
+  summarizeProcesses,
+} from "./processes.js";
 
 /** Versión de la API. Un cliente que no la entienda debe fallar, no adivinar. */
 export const API_VERSION = 1;
@@ -341,6 +348,72 @@ export async function handleApi(
     return { status: 200, body: resultado };
   }
 
+  // GET /api/processes
+  if (
+    method === "GET" &&
+    partes.length === 2 &&
+    partes[0] === "api" &&
+    partes[1] === "processes"
+  ) {
+    const procesos = listProcessRows(context.root);
+    const corridas = listRunRows(context.root);
+    const gates = listGateRows(context.root);
+    return {
+      status: 200,
+      body: {
+        summary: summarizeProcesses(procesos, corridas, gates),
+        processes: procesos,
+        runs: corridas,
+        gates,
+      },
+    };
+  }
+
+  // POST /api/processes/gates/:gate/approve
+  //
+  // Aprueba un gate de proceso. No retoma nada: decidir y continuar son dos actos
+  // distintos, y juntarlos haría que aprobar tuviera efectos que quien aprueba no
+  // ve. Retomar es `valmen process resume`.
+  if (
+    method === "POST" &&
+    partes.length === 5 &&
+    partes[0] === "api" &&
+    partes[1] === "processes" &&
+    partes[2] === "gates" &&
+    partes[4] === "approve"
+  ) {
+    const gate = partes[3] as string;
+    const datos = body as { actor?: unknown; reason?: unknown };
+    const actor = typeof datos.actor === "string" ? datos.actor.trim() : "";
+    if (actor === "") {
+      return {
+        status: 400,
+        body: { error: "Aprobar un gate necesita un responsable: falta `actor`." },
+      };
+    }
+    try {
+      const aprobacion = approveGate(
+        context.root,
+        gate,
+        actor,
+        typeof datos.reason === "string" ? datos.reason : "",
+      );
+      return {
+        status: 200,
+        body: {
+          ok: true,
+          gate,
+          actor: aprobacion.actor,
+          at: aprobacion.at,
+          details: `Gate "${gate}" aprobado por ${aprobacion.actor}.`,
+        },
+      };
+    } catch (caught) {
+      const failure = toFailure(caught);
+      return { status: 400, body: { error: failure.message } };
+    }
+  }
+
   // GET /api/features
   if (
     method === "GET" &&
@@ -410,7 +483,9 @@ export async function handleApi(
     const datos = body as { dryRun?: unknown; model?: unknown; provider?: unknown };
     const arquitecto = architectRoutingFor(context.root);
     const modelo =
-      typeof datos.model === "string" && datos.model !== "" ? datos.model : arquitecto.model;
+      typeof datos.model === "string" && datos.model !== ""
+        ? datos.model
+        : arquitecto.model;
     if (modelo === "") {
       return {
         status: 400,
@@ -460,7 +535,9 @@ export async function handleApi(
                   ? datos.provider
                   : arquitecto.provider,
               model: respuesta.model,
-              ...(respuesta.usage.costUsd === null ? {} : { costUsd: respuesta.usage.costUsd }),
+              ...(respuesta.usage.costUsd === null
+                ? {}
+                : { costUsd: respuesta.usage.costUsd }),
             },
           };
         },

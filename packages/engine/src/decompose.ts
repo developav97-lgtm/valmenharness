@@ -400,4 +400,3 @@ export const ESQUEMA_DESCOMPOSICION = {
   required: ["sprints", "coverage"],
   additionalProperties: false,
 } as const;
-

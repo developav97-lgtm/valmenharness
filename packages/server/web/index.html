@@ -448,10 +448,17 @@
 
       /* ── Features ─────────────────────────────────────────────────────── */
       .acciones-feature {
-        display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
-        margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--borde);
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+        margin-top: 16px;
+        padding-top: 14px;
+        border-top: 1px solid var(--borde);
       }
-      .acciones-feature button { font-size: 12px; }
+      .acciones-feature button {
+        font-size: 12px;
+      }
       a.enlace {
         color: var(--acento);
         text-decoration: none;
@@ -1008,6 +1015,7 @@
       <nav>
         <a href="#/tickets" data-vista="tickets">Tickets</a>
         <a href="#/features" data-vista="features">Features</a>
+        <a href="#/procesos" data-vista="procesos">Procesos</a>
         <a href="#/configurar" data-vista="configurar">Configurar</a>
         <a href="#/modelos" data-vista="modelos">Modelos</a>
         <a href="#/configuracion" data-vista="configuracion">Configuración</a>
@@ -1509,7 +1517,8 @@
         boton.disabled = true;
         boton.textContent = "Descomponiendo…";
         salida.className = "resultado resultado-feature";
-        salida.textContent = "Consultando al modelo del rol architect. Puede tardar un minuto.";
+        salida.textContent =
+          "Consultando al modelo del rol architect. Puede tardar un minuto.";
         try {
           const r = await api("POST", `/api/features/${slug}/decompose`, {});
           if (!r.ok) {
@@ -1690,7 +1699,10 @@
           const boton = el("button", "Descomponer", "principal");
           boton.title =
             "Pide el grafo de tickets al modelo del rol architect. Cuesta una llamada.";
-          boton.addEventListener("click", () => void descomponerFeature(f.id, boton, salida));
+          boton.addEventListener(
+            "click",
+            () => void descomponerFeature(f.id, boton, salida),
+          );
           acciones.append(boton);
         }
         if (f.requirements === 0) {
@@ -2423,6 +2435,235 @@
 
         cont.append(barraSecciones, cuerpo);
         mostrar(partes[0][0], partes[0][1], barraSecciones.querySelector("button"));
+      }
+
+      // ── Vista: procesos ───────────────────────────────────────────────────
+      //
+      // Responde a la pregunta que un proceso detenido deja abierta: «¿hay algo
+      // que hacer?». Las corridas esperando van primero, y el gate se aprueba
+      // desde aquí —que es lo que obligaba a abrir la terminal—.
+
+      /** El responsable de aprobar un gate: se recuerda entre visitas. */
+      function responsableDeAprobacion() {
+        return responsable;
+      }
+
+      async function aprobarGate(gate, boton, salida) {
+        const actor = responsableDeAprobacion();
+        if (actor.trim() === "") {
+          salida.className = "resultado error";
+          salida.textContent =
+            "Falta el responsable. Escríbelo en el campo de arriba: aprobar sin nombre no es auditable.";
+          return;
+        }
+        boton.disabled = true;
+        boton.textContent = "Aprobando…";
+        try {
+          const r = await api("POST", `/api/processes/gates/${gate}/approve`, { actor });
+          salida.className = "resultado ok";
+          // Se dice que aprobar no retoma: es la confusión natural, y mejor
+          // deshacerla aquí que dejar a alguien esperando a que el proceso siga.
+          salida.textContent =
+            `${r.details} El proceso **no** continúa solo: retómalo con ` +
+            "`valmen process resume` (o desde la terminal) cuando quieras seguir.";
+          await vistaProcesos();
+        } catch (fallo) {
+          salida.className = "resultado error";
+          salida.textContent = fallo.message;
+        } finally {
+          boton.disabled = false;
+          boton.textContent = "Aprobar";
+        }
+      }
+
+      async function vistaProcesos() {
+        const cont = $("contenido");
+        cont.textContent = "";
+
+        const datos = await api("GET", "/api/processes");
+        const r = datos.summary;
+
+        const tarjetas = el("div", undefined, "tarjetas");
+        const metricas = [
+          ["Procesos", r.processes],
+          ["Detenidos", r.waiting],
+          ["Gates sin aprobar", r.gatesPending],
+          ["Corridas", r.runs],
+        ];
+        if (r.invalid > 0) metricas.push(["Inválidos", r.invalid]);
+        for (const [rotulo, valor] of metricas) {
+          const tarjeta = el("div", undefined, "tarjeta");
+          tarjeta.append(el("div", String(valor), "valor"), el("div", rotulo, "rotulo"));
+          tarjetas.append(tarjeta);
+        }
+        cont.append(tarjetas);
+
+        // El responsable, para poder aprobar. Mismo campo y misma memoria que en la
+        // vista de un ticket: es la misma persona decidiendo.
+        const barraResponsable = el("div", undefined, "responsable");
+        const etiquetaResponsable = el("label", "Responsable de las aprobaciones");
+        etiquetaResponsable.htmlFor = "responsable-procesos";
+        const entradaResponsable = document.createElement("input");
+        entradaResponsable.type = "text";
+        entradaResponsable.id = "responsable-procesos";
+        entradaResponsable.placeholder = "Tu nombre";
+        entradaResponsable.value = responsable;
+        entradaResponsable.style.maxWidth = "260px";
+        entradaResponsable.addEventListener("change", () =>
+          guardarResponsable(entradaResponsable.value),
+        );
+        barraResponsable.append(
+          etiquetaResponsable,
+          entradaResponsable,
+          el("span", "Queda registrado con cada aprobación.", "resultado"),
+        );
+        cont.append(barraResponsable);
+
+        if (datos.processes.length === 0) {
+          const vacio = el("div", undefined, "vacio");
+          vacio.append(
+            el("div", "No hay procesos declarados."),
+            el(
+              "div",
+              "Un proceso es un paso a paso encadenable: desplegar, actualizar manuales, publicar.",
+              "resultado",
+            ),
+            el("div", "Viven en .valmen/processes/<id>.yaml", "ruta"),
+          );
+          cont.append(vacio);
+          return;
+        }
+
+        // ── Gates: lo que espera una decisión ──
+        if (datos.gates.length > 0) {
+          cont.append(el("h2", "Gates de proceso"));
+          const tabla = el("table");
+          const thead = el("thead");
+          const fila = el("tr");
+          for (const columna of ["Gate", "Proceso", "Estado", "Aprobado por", ""]) {
+            fila.append(el("th", columna));
+          }
+          thead.append(fila);
+
+          const tbody = el("tbody");
+          for (const gate of datos.gates) {
+            const tr = el("tr");
+
+            const celda = el("td");
+            celda.append(el("div", gate.gate, "nombre"));
+            if (gate.reason) celda.append(el("div", gate.reason, "descripcion"));
+            tr.append(celda);
+
+            tr.append(el("td", gate.processId, "id"));
+
+            const celdaEstado = el("td");
+            if (gate.approvedBy === null) {
+              celdaEstado.append(el("span", "sin aprobar", "etiqueta critico"));
+            } else {
+              celdaEstado.append(el("span", "aprobado", "etiqueta aprueba"));
+            }
+            tr.append(celdaEstado);
+
+            tr.append(el("td", gate.approvedBy ?? "—", "descripcion"));
+
+            const celdaAcciones = el("td");
+            const salida = el("div", "resultado");
+            if (gate.approvedBy === null) {
+              const boton = el("button", "Aprobar");
+              boton.addEventListener(
+                "click",
+                () => void aprobarGate(gate.gate, boton, salida),
+              );
+              celdaAcciones.append(boton, salida);
+            }
+            tr.append(celdaAcciones);
+
+            tbody.append(tr);
+          }
+          tabla.append(thead, tbody);
+          cont.append(tabla);
+        }
+
+        // ── Corridas: las detenidas primero ──
+        cont.append(el("h2", "Corridas"));
+        if (datos.runs.length === 0) {
+          cont.append(el("div", "Ninguna corrida registrada todavía.", "resultado"));
+        } else {
+          const tabla = el("table");
+          const thead = el("thead");
+          const fila = el("tr");
+          for (const columna of ["Corrida", "Proceso", "Estado", "Pasos", "Actualizada"]) {
+            fila.append(el("th", columna));
+          }
+          thead.append(fila);
+
+          const tbody = el("tbody");
+          for (const corrida of datos.runs) {
+            const tr = el("tr", undefined, corrida.status === "waiting" ? "planeado" : "");
+
+            const celda = el("td");
+            celda.append(el("div", corrida.runId, "id"));
+            if (corrida.pendingStep !== null) {
+              celda.append(el("div", `esperando en ${corrida.pendingStep}`, "descripcion"));
+            } else if (corrida.reason !== null) {
+              celda.append(el("div", corrida.reason, "descripcion"));
+            }
+            tr.append(celda);
+
+            tr.append(el("td", corrida.processId, "id"));
+
+            const celdaEstado = el("td");
+            const CLASE = {
+              waiting: "critico",
+              failed: "roto",
+              completed: "aprueba",
+              abandoned: "",
+            };
+            celdaEstado.append(
+              el("span", corrida.status, `etiqueta ${CLASE[corrida.status] ?? ""}`),
+            );
+            tr.append(celdaEstado);
+
+            const hechos = corrida.steps.filter((paso) => paso.status === "ok").length;
+            tr.append(el("td", `${hechos}/${corrida.steps.length}`, "id"));
+            tr.append(el("td", corrida.updatedAt.slice(0, 19).replace("T", " "), "id"));
+
+            tbody.append(tr);
+          }
+          tabla.append(thead, tbody);
+          cont.append(tabla);
+        }
+
+        // ── Procesos declarados ──
+        cont.append(el("h2", "Procesos"));
+        const tabla = el("table");
+        const thead = el("thead");
+        const fila = el("tr");
+        for (const columna of ["Proceso", "Pasos", "Parámetros", "Gates", "Archivo"]) {
+          fila.append(el("th", columna));
+        }
+        thead.append(fila);
+
+        const tbody = el("tbody");
+        for (const proceso of datos.processes) {
+          const tr = el("tr");
+
+          const celda = el("td");
+          celda.append(el("div", proceso.title, "nombre"), el("div", proceso.id, "id"));
+          if (proceso.invalid !== null) {
+            celda.append(el("div", proceso.invalid, "descripcion"));
+          }
+          tr.append(celda);
+
+          tr.append(el("td", String(proceso.steps), "id"));
+          tr.append(el("td", proceso.params.join(", ") || "—", "descripcion"));
+          tr.append(el("td", proceso.gates.join(", ") || "—", "descripcion"));
+          tr.append(el("td", proceso.path, "ruta"));
+
+          tbody.append(tr);
+        }
+        tabla.append(thead, tbody);
+        cont.append(tabla);
       }
 
       // ── Vista: configurar por chat ────────────────────────────────────────
@@ -3689,6 +3930,7 @@
           else if (nombre === "configuracion") await vistaConfiguracion();
           else if (nombre === "proveedores") await vistaProveedores();
           else if (nombre === "features") await vistaFeatures();
+          else if (nombre === "procesos") await vistaProcesos();
           else await vistaTickets();
         } catch (error) {
           const cont = $("contenido");

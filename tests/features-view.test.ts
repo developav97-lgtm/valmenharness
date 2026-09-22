@@ -464,7 +464,9 @@ describe("POST /api/features/:slug/decompose", () => {
     mkdirSync(join(lab, ".valmen"), { recursive: true });
     writeFileSync(
       join(lab, ".valmen", ".credentials.yaml"),
-      ["version: 1", "providers:", "  opencode-go:", '    api-key: "de-prueba"', ""].join("\n"),
+      ["version: 1", "providers:", "  opencode-go:", '    api-key: "de-prueba"', ""].join(
+        "\n",
+      ),
       { mode: 0o600 },
     );
   }
@@ -582,7 +584,9 @@ describe("POST /api/features/:slug/decompose", () => {
     // Ni error del servidor ni archivo: el motivo se muestra donde se pidió.
     expect(r.status).toBe(200);
     expect((r.body as { ok: boolean }).ok).toBe(false);
-    expect((r.body as { error: string }).error).toMatch(/sin ticket que los cubra|de la spec sin ticket/);
+    expect((r.body as { error: string }).error).toMatch(
+      /sin ticket que los cubra|de la spec sin ticket/,
+    );
     expect(existsSync(join(carpeta("modulo-inventario"), "tickets.yaml"))).toBe(false);
   });
 
