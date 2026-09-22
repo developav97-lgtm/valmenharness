@@ -109,6 +109,7 @@ packages/
   gate-llm-judge/ Evaluador con un modelo de chat, como alternativa.
   credentials/   Resolución de credenciales, en un solo lugar.
   server/        Mission Control: servidor local y pantalla de proveedores.
+  mcp/           Servidor MCP: el harness al alcance de un agente.
   cli/           Superficie de comandos.
 tests/
   fixtures/      57 tickets reales, para las suites de equivalencia y migración
@@ -129,7 +130,25 @@ valmen validate --all   # valida el registro
 valmen index --check    # detecta un índice desactualizado (para CI)
 valmen gate plan --id BUGFIX-POS-ALGO-20260921    # evalúa el plan y emite recibo
 valmen serve                                       # Mission Control en 127.0.0.1
+valmen mcp --install                               # el harness, al alcance del agente
 ```
+
+### Desde el agente, sin terminal
+
+```bash
+valmen mcp --install   # declara el servidor MCP en opencode.json del proyecto
+```
+
+A partir de ahí, el flujo no empieza en una consola: se le describe un problema al
+agente y el agente crea el ticket, escribe el diagnóstico, valida contra el
+contrato, evalúa la compuerta y mueve el estado. Ocho herramientas, y todas
+llaman al mismo motor que el CLI —dos implementaciones podrían dar dos veredictos
+sobre el mismo ticket, que es justo lo que el harness existe para impedir.
+
+**Lo que no hay también es el diseño:** no existe herramienta para aprobar una
+compuerta. La aprobación es de una persona, y un agente que pudiera dársela
+convertiría el control en un trámite. Un agente recorre
+`intake → analyzed → planned` y no puede cruzar a `approved`.
 
 ### Mission Control
 
