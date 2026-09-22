@@ -244,6 +244,41 @@ describe("checks mecánicos", () => {
     expect(result.stdout).toContain("rollback_si_critico");
   });
 
+  it("la casilla vacía de la plantilla no cuenta como criterio", async () => {
+    // El fallo real: la plantilla del ticket trae `- [ ]` listo para escribir, y
+    // el check contaba como criterio cualquier línea que empezara por `- [`. Un
+    // ticket con la sección sin rellenar pasaba con «1 criterio(s)», la compuerta
+    // no tenía nada que evaluar y **aprobaba sin evaluar nada**. Ocurrió en el
+    // segundo ticket real creado desde opencode: llegó a `analyzed` con el plan y
+    // los criterios en blanco.
+    writeFixtureTicket(lab, { id: TICKET, workflowStatus: "analyzed", criterios: "- [ ]" });
+
+    const result = await runGate(PATHS(), {
+      gateId: "analysis",
+      ticketId: TICKET,
+      jev: evaluator(allPropositions(0.95), 1.0),
+      dryRun: true,
+    });
+
+    // Falla antes de gastar nada: el hueco se ve en el código, no en un modelo.
+    expect(result.exitCode).toBe(3);
+    expect(result.stderr).toContain("criterios_presentes");
+    expect(result.stderr).toContain("Checks mecánicos fallidos");
+    expect(result.stderr).toContain("No se llamó al evaluador");
+  });
+
+  it("una casilla marcada pero vacía tampoco", async () => {
+    writeFixtureTicket(lab, { id: TICKET, workflowStatus: "analyzed", criterios: "- [x]" });
+    const result = await runGate(PATHS(), {
+      gateId: "analysis",
+      ticketId: TICKET,
+      jev: evaluator(allPropositions(0.95), 1.0),
+      dryRun: true,
+    });
+    expect(result.exitCode).toBe(3);
+    expect(result.stderr).toContain("Checks mecánicos fallidos");
+  });
+
   it("no llama al evaluador si un check mecánico falla", async () => {
     // Un ticket de riesgo alto sin rollback: el check debe fallar y no se debe
     // gastar una llamada al modelo.

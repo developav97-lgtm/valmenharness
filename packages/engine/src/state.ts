@@ -39,17 +39,41 @@ export function buildGateState(text: string): Record<string, string> {
  * Un check fallido bloquea sin gastar una llamada, así que la interfaz puede
  * mostrarlos antes de evaluar y decir por qué un gate va a bloquear.
  */
+/**
+ * `true` si la línea es un criterio de aceptación **con texto**.
+ *
+ * La distinción importa y costó un fallo real: la plantilla del ticket trae la
+ * casilla vacía —`- [ ]`— lista para escribir, y contar las líneas que empiezan
+ * por `- [` la daba por criterio. Un ticket con la sección sin rellenar pasaba el
+ * check mecánico con «1 criterio(s)», la compuerta no tenía nada que evaluar y
+ * **aprobaba sin evaluar nada**: el hueco quedaba en el registro como si estuviera
+ * analizado.
+ *
+ * Una casilla marcada pero vacía es exactamente igual de vacía que una sin marcar,
+ * así que las dos cuentan como «sin criterio». El texto de un criterio no empieza
+ * por `[`, así que una casilla anidada tampoco se confunde con contenido.
+ */
+function tieneCriterioReal(linea: string): boolean {
+  const match = /^\s*[-*]\s+\[[^\]]*\]\s*(.*)$/.exec(linea);
+  if (match === null) return false;
+  const texto = (match[1] as string).trim();
+  return texto !== "" && !texto.startsWith("[");
+}
+
 export function runMechanicalChecks(text: string): MechanicalCheck[] {
   const { sections, blocks, fields } = parseTicket(text);
   const checks: MechanicalCheck[] = [];
 
   const criterios = sections["Criterios de aceptación"].trim();
-  const items = criterios.split("\n").filter((line) => /^\s*[-*]\s+\[/.test(line));
+  const items = criterios.split("\n").filter(tieneCriterioReal);
   checks.push({
     id: "criterios_presentes",
     description: "El ticket declara criterios de aceptación verificables.",
     result: items.length > 0 ? "pass" : "fail",
-    detail: `${items.length} criterio(s)`,
+    detail:
+      items.length > 0
+        ? `${items.length} criterio(s)`
+        : "ninguno; la plantilla deja la casilla vacía y hay que escribir el criterio",
   });
 
   const riesgoCritico = fields.risk_level === "high" || fields.risk_level === "critical";

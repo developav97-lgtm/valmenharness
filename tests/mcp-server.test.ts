@@ -64,6 +64,26 @@ async function crear(): Promise<string> {
   return join(lab, "tickets", "2026", ID, "ticket.md");
 }
 
+/**
+ * Escribe un criterio de aceptación real en el ticket.
+ *
+ * Hace falta porque la plantilla deja la casilla vacía y el check mecánico la
+ * rechaza —con razón: un ticket sin criterios no se puede evaluar—. Un test que
+ * quiera llegar al evaluador tiene que declarar el sujeto que el evaluador
+ * necesita, igual que un ticket de verdad.
+ */
+function escribirCriterio(ruta: string, criterio: string): void {
+  const texto = readFileSync(ruta, "utf8");
+  writeFileSync(
+    ruta,
+    texto.replace(
+      /## Criterios de aceptación\n\n- \[ \]/,
+      `## Criterios de aceptación\n\n- [ ] ${criterio}`,
+    ),
+    "utf8",
+  );
+}
+
 /** Un evaluador semántico falso que aprueba todo lo que se le pregunte. */
 function evaluadorQueAprueba(valor = 0.95): NonNullable<ToolContext["jev"]> {
   // La opción que aprueba se llama distinto en cada gate —`completa` en el de
@@ -303,7 +323,8 @@ describe("evaluar una compuerta", () => {
   });
 
   it("un evaluador determinista sin checks declarados lo dice, en vez de fingir un veredicto", async () => {
-    await crear();
+    const ruta = await crear();
+    escribirCriterio(ruta, 'Buscar "104" devuelve la orden "1042".');
     await callTool(contexto, "mover_ticket", { id: ID, to: "analyzed" });
 
     const resultado = await callTool(contexto, "evaluar_compuerta", {
@@ -319,7 +340,8 @@ describe("evaluar una compuerta", () => {
   });
 
   it("escribe el recibo y devuelve el veredicto cuando el evaluador responde", async () => {
-    await crear();
+    const ruta = await crear();
+    escribirCriterio(ruta, 'Buscar "104" devuelve la orden "1042".');
     await callTool(contexto, "mover_ticket", { id: ID, to: "analyzed" });
 
     // Se inyecta el evaluador semántico: probar esto de verdad costaría una
@@ -354,7 +376,8 @@ describe("evaluar una compuerta", () => {
     // y el error vacío. La herramienta devolvía ese error vacío, así que el
     // agente recibía un fallo **sin texto**: sin veredicto, sin motivo y sin
     // nada que contarle a quien preguntaba. Pasó en el primer ticket real.
-    await crear();
+    const ruta = await crear();
+    escribirCriterio(ruta, 'Buscar "104" devuelve la orden "1042".');
     await callTool(contexto, "mover_ticket", { id: ID, to: "analyzed" });
 
     const resultado = await callTool(conEvaluadorFalso(0.5), "evaluar_compuerta", {
@@ -382,7 +405,8 @@ describe("evaluar una compuerta", () => {
   });
 
   it("no mueve el ticket aunque el veredicto sea de aprobación", async () => {
-    await crear();
+    const ruta = await crear();
+    escribirCriterio(ruta, 'Buscar "104" devuelve la orden "1042".');
     await callTool(contexto, "mover_ticket", { id: ID, to: "analyzed" });
 
     await callTool(conEvaluadorFalso(), "evaluar_compuerta", { gate: "analysis", id: ID });
