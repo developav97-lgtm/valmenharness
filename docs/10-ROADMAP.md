@@ -198,9 +198,15 @@ decidir si el trabajo está hecho. Lo que sabe es qué hay que hacer y con qué 
 es lo que le pasa. Un paso de agente sin `runtime:` no se ejecuta, y se dice al cargar en vez
 de detenerse a mitad.
 
-Criterio de aceptación: el módulo de inventario especificado, descompuesto en tickets con
-sprints, y con los dos primeros tickets implementados a través del harness. **La primera
-mitad está hecha y probada contra un proveedor real; la segunda es el dogfooding.**
+Lo que queda de la fase, y es **una sola cosa**: el dogfooding. El criterio de aceptación
+pide «el módulo de inventario especificado, descompuesto en tickets con sprints, y con los dos
+primeros tickets implementados a través del harness». La primera mitad está hecha y probada
+contra un proveedor real; la segunda se hace sobre un proyecto, no aquí.
+
+**Diferido por decisión del responsable**, con el motivo escrito: el piloto sobre SaiOpenCloud
+va al final, cuando el harness esté completo, para no descubrir a mitad de camino que falta una
+pieza. Por eso la fase se declara cerrada del lado del harness y la fase 6 —que es continua por
+diseño— puede empezar sin ella.
 
 ### Fase 6 — Autonomía, memoria y observabilidad (continuo)
 
