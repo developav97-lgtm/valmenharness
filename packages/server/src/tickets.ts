@@ -255,6 +255,15 @@ export interface TicketFilters {
   readonly query?: string;
   readonly onlyOpen?: boolean;
   readonly onlyInvalid?: boolean;
+  /**
+   * Solo los que declaran algún impacto crítico.
+   *
+   * Es lo que hace que la tarjeta «Impacto crítico» del resumen sirva para algo:
+   * sin filtro, muestra un número que obliga a buscarlos a mano en la tabla.
+   */
+  readonly onlyCritical?: boolean;
+  /** Solo los que tienen puntos abiertos. Igual que el anterior, para su tarjeta. */
+  readonly onlyWithOpenPoints?: boolean;
   readonly limit?: number;
 }
 
@@ -282,6 +291,8 @@ export function filterTickets(
     if (filters.module !== undefined && row.module !== filters.module) return false;
     if (filters.onlyOpen === true && row.workflowStatus === "closed") return false;
     if (filters.onlyInvalid === true && row.invalid === null) return false;
+    if (filters.onlyCritical === true && row.criticalImpacts.length === 0) return false;
+    if (filters.onlyWithOpenPoints === true && row.openPoints === 0) return false;
     if (consulta !== "") {
       const texto = `${row.id} ${row.title} ${row.module} ${row.type}`.toLowerCase();
       if (!texto.includes(consulta)) return false;

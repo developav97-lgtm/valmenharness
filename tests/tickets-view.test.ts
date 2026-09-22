@@ -212,6 +212,60 @@ describe("filtros", () => {
     expect(filterTickets(listTickets(PATHS()), { onlyInvalid: true })).toHaveLength(1);
   });
 
+  it("solo con impacto crítico", () => {
+    // Es el filtro que hace útil la tarjeta «Impacto crítico» del resumen: sin él,
+    // la tarjeta muestra un número que obliga a buscar sus tickets a mano.
+    const todos = filas();
+    const criticos = filterTickets(todos, { onlyCritical: true });
+    expect(criticos.length).toBeGreaterThan(0);
+    expect(criticos.every((f) => f.criticalImpacts.length > 0)).toBe(true);
+    expect(criticos.length).toBeLessThan(todos.length);
+  });
+
+  it("solo con puntos abiertos", () => {
+    const conPuntos = filterTickets(filas(), { onlyWithOpenPoints: true });
+    expect(conPuntos.every((f) => f.openPoints > 0)).toBe(true);
+  });
+
+  it("los filtros de conjunto se combinan con los de campo", () => {
+    const todos = filas();
+    // `module` no puede ser el nombre de una variable en un módulo ES: TypeScript
+    // la resuelve al objeto `Module` y el tipo deja de ser texto.
+    const moduloBuscado = todos.find((f) => f.criticalImpacts.length > 0)?.module ?? "";
+    const combinado = filterTickets(todos, {
+      onlyCritical: true,
+      module: moduloBuscado,
+    });
+    expect(
+      combinado.every((f) => f.module === moduloBuscado && f.criticalImpacts.length > 0),
+    ).toBe(true);
+  });
+
+  it("el endpoint acepta los dos filtros nuevos", async () => {
+    // El filtro y su parámetro son dos sitios que tienen que decir lo mismo: un
+    // filtro implementado y no expuesto es un filtro que la pantalla no puede usar.
+    const criticos = await handleApi(
+      "GET",
+      "/api/tickets",
+      {},
+      { root: lab, credentialsFile: join(lab, ".valmen", ".credentials.yaml"), env: {} },
+      new URLSearchParams("critical=1"),
+    );
+    const cuerpo = criticos.body as { tickets: { criticalImpacts: string[] }[] };
+    expect(cuerpo.tickets.length).toBeGreaterThan(0);
+    expect(cuerpo.tickets.every((t) => t.criticalImpacts.length > 0)).toBe(true);
+
+    const conPuntos = await handleApi(
+      "GET",
+      "/api/tickets",
+      {},
+      { root: lab, credentialsFile: join(lab, ".valmen", ".credentials.yaml"), env: {} },
+      new URLSearchParams("con-puntos=1"),
+    );
+    const otro = conPuntos.body as { tickets: { openPoints: number }[] };
+    expect(otro.tickets.every((t) => t.openPoints > 0)).toBe(true);
+  });
+
   it("respeta el límite", () => {
     expect(filterTickets(filas(), { limit: 5 })).toHaveLength(5);
   });

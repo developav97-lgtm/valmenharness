@@ -730,6 +730,243 @@
         font-style: italic;
       }
 
+      /* Resumen de la vista de tickets. Las tarjetas que filtran se distinguen de
+         la que solo informa: si todas parecieran igual de pulsables, la mitad no
+         haría nada al hacer clic. */
+      .tarjeta {
+        font: inherit;
+        color: inherit;
+        text-align: left;
+      }
+      button.tarjeta {
+        cursor: pointer;
+        transition: border-color 0.12s ease;
+      }
+      button.tarjeta:hover {
+        border-color: var(--acento);
+      }
+      button.tarjeta.aplicada {
+        border-color: var(--acento);
+        background: color-mix(in srgb, var(--acento) 14%, var(--panel));
+      }
+      button.tarjeta.aplicada .rotulo {
+        color: var(--acento);
+      }
+      button.tarjeta.aplicada .rotulo::after {
+        content: " ✕";
+        font-size: 10px;
+      }
+      .filtros-aplicados {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 4px 0 12px;
+        flex-wrap: wrap;
+      }
+      .filtros-aplicados button {
+        padding: 4px 10px;
+        font-size: 12px;
+      }
+
+      /* ── Estado del ticket ──────────────────────────────────────────────
+         La tira de avance responde "¿por dónde va?" de un golpe. Los pasos
+         cumplidos se apagan para que el actual destaque sin competir. */
+      .estado-ticket {
+        border: 1px solid var(--borde);
+        background: var(--panel);
+        border-radius: 10px;
+        padding: 14px 16px;
+        margin: 4px 0 18px;
+      }
+      .estado-tira {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+      }
+      .estado-paso {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 5px 10px;
+        border: 1px solid var(--borde);
+        border-radius: 999px;
+        opacity: 0.55;
+      }
+      .estado-paso.hecho,
+      .estado-paso.actual {
+        opacity: 1;
+      }
+      .estado-paso.hecho {
+        border-color: color-mix(in srgb, var(--ok) 45%, var(--borde));
+      }
+      .estado-paso.actual {
+        border-color: var(--acento);
+        background: color-mix(in srgb, var(--acento) 16%, transparent);
+      }
+      .estado-paso.bloqueado {
+        opacity: 1;
+        border-color: var(--error);
+        background: color-mix(in srgb, var(--error) 12%, transparent);
+      }
+      .estado-numero {
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--tenue);
+      }
+      .estado-rotulo {
+        font-size: 12px;
+      }
+      .estado-chips {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 9px;
+        border: 1px solid var(--borde);
+        border-radius: 999px;
+        font-size: 11px;
+      }
+      .chip-rotulo {
+        color: var(--tenue);
+      }
+      .chip-valor {
+        font-family: var(--mono);
+      }
+      .chip.activo {
+        border-color: var(--acento);
+      }
+      .chip.bueno {
+        border-color: color-mix(in srgb, var(--ok) 50%, var(--borde));
+      }
+      .chip.bueno .chip-valor {
+        color: var(--ok);
+      }
+      .chip.malo {
+        border-color: color-mix(in srgb, var(--error) 50%, var(--borde));
+      }
+      .chip.malo .chip-valor {
+        color: var(--error);
+      }
+
+      /* Historial de compuertas: una tira de veredictos, con la fecha y el actor
+         en el título para no llenar la pantalla de metadatos. */
+      .historial-gates {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .chip-gate {
+        display: inline-flex;
+        gap: 5px;
+        padding: 3px 9px;
+        border: 1px solid var(--borde);
+        border-radius: 999px;
+        font-size: 11px;
+        cursor: help;
+      }
+      .chip-gate.approve {
+        border-color: color-mix(in srgb, var(--ok) 50%, var(--borde));
+        color: var(--ok);
+      }
+      .chip-gate.block {
+        border-color: color-mix(in srgb, var(--error) 50%, var(--borde));
+        color: var(--error);
+      }
+      .chip-gate.review {
+        border-color: color-mix(in srgb, var(--alerta) 50%, var(--borde));
+        color: var(--alerta);
+      }
+      .chip-gate.obsoleto {
+        opacity: 0.5;
+        text-decoration: line-through;
+      }
+
+      /* ── Acordeones ────────────────────────────────────────────────────── */
+      .acordeon {
+        border: 1px solid var(--borde);
+        border-radius: 10px;
+        background: var(--panel);
+        margin-bottom: 8px;
+        overflow: hidden;
+      }
+      .acordeon > summary {
+        cursor: pointer;
+        padding: 11px 14px;
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        list-style: none;
+        user-select: none;
+      }
+      .acordeon > summary::-webkit-details-marker {
+        display: none;
+      }
+      .acordeon > summary::before {
+        content: "▸";
+        color: var(--tenue);
+        font-size: 11px;
+      }
+      .acordeon[open] > summary::before {
+        content: "▾";
+      }
+      .acordeon > summary:hover {
+        background: var(--panel-alto);
+      }
+      .acordeon-titulo {
+        font-weight: 600;
+        font-size: 13px;
+      }
+      .acordeon-resumen {
+        color: var(--tenue);
+        font-size: 12px;
+        font-family: var(--mono);
+      }
+      .acordeon-cuerpo {
+        padding: 0 14px 14px;
+        border-top: 1px solid var(--borde);
+        padding-top: 12px;
+      }
+
+      /* ── Tarjetas de registro ──────────────────────────────────────────── */
+      .tarjetas-datos {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .tarjeta-dato {
+        border: 1px solid var(--borde);
+        border-left: 3px solid var(--borde);
+        border-radius: 8px;
+        background: var(--panel-alto);
+        padding: 10px 12px;
+      }
+      .tarjeta-dato-cabecera {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+        margin-bottom: 6px;
+      }
+      .tarjeta-dato-nota {
+        font-size: 12px;
+        color: var(--tenue);
+        line-height: 1.5;
+      }
+      .lista-criterios {
+        margin: 0;
+        padding-left: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
       /* Línea de tiempo del ticket. El fallo se marca en la fila entera y no en una
          palabra: lo que hay que ver de un vistazo es dónde se corrigió, porque eso
          es trabajo que costó dinero. */
@@ -1122,7 +1359,18 @@
 
       // ── Vista: tickets ────────────────────────────────────────────────────
 
-      const filtros = { q: "", workflow: "", type: "", open: false, invalid: false };
+      // La vista inicial responde «¿qué hay que hacer?», así que arranca filtrando
+      // los que están en curso. Ver los 62 —cerrados incluidos— obligaba a filtrar
+      // a mano cada vez para llegar a lo que de verdad se está trabajando.
+      const filtros = {
+        q: "",
+        workflow: "",
+        type: "",
+        open: true,
+        invalid: false,
+        critical: false,
+        conPuntos: false,
+      };
 
       async function vistaTickets() {
         const cont = $("contenido");
@@ -1134,27 +1382,126 @@
         if (filtros.type !== "") params.set("type", filtros.type);
         if (filtros.open) params.set("open", "1");
         if (filtros.invalid) params.set("invalid", "1");
+        if (filtros.critical) params.set("critical", "1");
+        if (filtros.conPuntos) params.set("con-puntos", "1");
 
         const datos = await api("GET", `/api/tickets?${params.toString()}`);
         const r = datos.summary;
 
-        // Tarjetas de resumen: es lo que responde "¿qué está pasando?" sin leer
-        // la tabla.
+        // Tarjetas de resumen: es lo que responde "¿qué está pasando?" sin leer la
+        // tabla. **Y filtran**: un número que obliga a buscar sus tickets a mano es
+        // un número a medias. La que está aplicada se marca, y volver a pulsarla la
+        // quita, para que nunca haya una tarjeta de la que no se pueda salir.
         const tarjetas = el("div", undefined, "tarjetas");
+
+        /** Aplica un filtro y repinta. Volver a pulsar el activo lo quita. */
+        const alternar = (clave) => {
+          const estaba = filtros[clave];
+          // Los filtros de conjunto son excluyentes entre sí: «en curso» y
+          // «cerrados» a la vez no devuelven nada, y ese vacío se lee como un
+          // fallo en vez de como dos filtros contradictorios.
+          filtros.workflow = "";
+          filtros.open = false;
+          filtros.critical = false;
+          filtros.conPuntos = false;
+          filtros[clave] = !estaba;
+          void vistaTickets();
+        };
+
         const metricas = [
-          ["Tickets", r.total],
-          ["En curso", r.total - (r.byWorkflow.closed ?? 0)],
-          ["Cerrados", r.byWorkflow.closed ?? 0],
-          ["Con puntos abiertos", r.withOpenPoints],
-          ["Impacto crítico", r.criticalImpacts],
+          { rotulo: "Tickets", valor: r.total, filtro: null },
+          {
+            rotulo: "En curso",
+            valor: r.total - (r.byWorkflow.closed ?? 0),
+            filtro: "open",
+          },
+          {
+            rotulo: "Cerrados",
+            valor: r.byWorkflow.closed ?? 0,
+            filtro: "workflow:closed",
+          },
+          {
+            rotulo: "Con puntos abiertos",
+            valor: r.withOpenPoints,
+            filtro: "conPuntos",
+          },
+          {
+            rotulo: "Impacto crítico",
+            valor: r.criticalImpacts,
+            filtro: "critical",
+          },
         ];
-        if (r.invalid > 0) metricas.push(["Inválidos", r.invalid]);
-        for (const [rotulo, valor] of metricas) {
-          const tarjeta = el("div", undefined, "tarjeta");
-          tarjeta.append(el("div", String(valor), "valor"), el("div", rotulo, "rotulo"));
+        if (r.invalid > 0) {
+          metricas.push({ rotulo: "Inválidos", valor: r.invalid, filtro: "invalid" });
+        }
+
+        for (const metrica of metricas) {
+          const aplicada =
+            metrica.filtro === null
+              ? false
+              : metrica.filtro.startsWith("workflow:")
+                ? filtros.workflow === metrica.filtro.slice("workflow:".length)
+                : filtros[metrica.filtro] === true;
+
+          // Una tarjeta sin filtro es un dato, no un botón: no se puede pulsar
+          // algo que no lleva a ninguna parte.
+          const tarjeta = el(
+            metrica.filtro === null ? "div" : "button",
+            undefined,
+            `tarjeta${aplicada ? " aplicada" : ""}`,
+          );
+          tarjeta.append(
+            el("div", String(metrica.valor), "valor"),
+            el("div", metrica.rotulo, "rotulo"),
+          );
+          if (metrica.filtro !== null) {
+            tarjeta.type = "button";
+            tarjeta.setAttribute("aria-pressed", String(aplicada));
+            tarjeta.title = aplicada ? "Quitar este filtro" : "Filtrar por esto";
+            if (metrica.filtro.startsWith("workflow:")) {
+              const estado = metrica.filtro.slice("workflow:".length);
+              tarjeta.addEventListener("click", () => {
+                const estaba = filtros.workflow === estado;
+                filtros.workflow = estaba ? "" : estado;
+                filtros.open = false;
+                filtros.critical = false;
+                filtros.conPuntos = false;
+                void vistaTickets();
+              });
+            } else {
+              tarjeta.addEventListener("click", () => alternar(metrica.filtro));
+            }
+          }
           tarjetas.append(tarjeta);
         }
         cont.append(tarjetas);
+
+        // Se dice qué se está viendo. Con filtros aplicados, una tabla corta sin
+        // explicación se lee como que no hay nada.
+        const aplicados = [];
+        if (filtros.open) aplicados.push("en curso");
+        if (filtros.workflow !== "") aplicados.push(filtros.workflow);
+        if (filtros.critical) aplicados.push("con impacto crítico");
+        if (filtros.conPuntos) aplicados.push("con puntos abiertos");
+        if (filtros.invalid) aplicados.push("inválidos");
+        if (filtros.type !== "") aplicados.push(filtros.type);
+        if (aplicados.length > 0) {
+          const linea = el("div", undefined, "filtros-aplicados");
+          linea.append(el("span", `Mostrando: ${aplicados.join(" · ")}`, "resultado"));
+          const limpiar = el("button", "Ver todos");
+          limpiar.addEventListener("click", () => {
+            filtros.q = "";
+            filtros.workflow = "";
+            filtros.type = "";
+            filtros.open = false;
+            filtros.invalid = false;
+            filtros.critical = false;
+            filtros.conPuntos = false;
+            void vistaTickets();
+          });
+          linea.append(limpiar);
+          cont.append(linea);
+        }
 
         // Filtros.
         const barra = el("div", undefined, "filtros");
@@ -2254,27 +2601,27 @@
         volver.href = "#/tickets";
         cont.append(volver);
 
+        const PUNTOS_ABIERTOS = ["open", "analyzed", "in_progress", "awaiting_retest"];
+        const abiertos = t.points.filter((p) =>
+          PUNTOS_ABIERTOS.includes(String(p.status)),
+        ).length;
+
         const cabecera = el("div", undefined, "cabecera-ticket");
         cabecera.append(el("h2", t.title));
         const meta = el("div", undefined, "meta");
         meta.append(
           el("span", t.id, "id"),
           el("span", `${t.type} · ${t.module}`, "etiqueta"),
-          el("span", t.workflowStatus, "etiqueta"),
-          el("span", `QA ${t.qaStatus}`, "etiqueta"),
-          el("span", t.releaseStatus, "etiqueta"),
+          el("span", `creado ${t.created}`, "etiqueta"),
         );
-        if (t.riskLevel !== "normal") {
-          meta.append(el("span", `riesgo ${t.riskLevel}`, "etiqueta critico"));
-        }
-        if (t.criticalImpacts.length > 0) {
-          meta.append(el("span", t.criticalImpacts.join(" · "), "etiqueta critico"));
-        }
         if (t.invalid !== null) {
           meta.append(el("span", "inválido", "etiqueta roto"));
         }
         cabecera.append(meta, el("div", t.path, "ruta"));
         cont.append(cabecera);
+
+        // El estado primero, y visual: es lo que se viene a mirar.
+        cont.append(tiraDeEstado(t, abiertos));
 
         if (t.invalid !== null) {
           const nota = el("div", undefined, "nota alerta");
@@ -2305,11 +2652,23 @@
         barraResponsable.append(etiquetaResponsable, entradaResponsable, ayudaResponsable);
         cont.append(barraResponsable);
 
+        // ── Lo que pide acción, primero ──
+        //
+        // Antes, para ver un gate pendiente había que pasar por la cabecera, el
+        // diagnóstico, el plan y la línea de tiempo: lo urgente quedaba debajo de
+        // lo informativo. Ahora el orden del documento es el orden en que se
+        // necesita.
+        const acordeonGates = acordeon("Compuertas", undefined, true);
+        cont.append(acordeonGates.caja);
+
         const zonaGates = el("div");
-        cont.append(zonaGates);
+        acordeonGates.cuerpo.append(zonaGates);
 
         const zonaCorrecciones = el("div");
-        cont.append(zonaCorrecciones);
+        acordeonGates.cuerpo.append(zonaCorrecciones);
+
+        const acordeonHistorial = acordeon("Historial de decisiones");
+        cont.append(acordeonHistorial.caja);
 
         const pintarCorrecciones = (correcciones) => {
           zonaCorrecciones.textContent = "";
@@ -2346,6 +2705,8 @@
         const cargarGates = async () => {
           const datos = await api("GET", `/api/tickets/${id}/gates`);
           zonaGates.textContent = "";
+          acordeonHistorial.cuerpo.textContent = "";
+          acordeonHistorial.cuerpo.append(tiraDeDecisiones(datos.decisions ?? []));
           pintarCorrecciones(datos.corrections ?? []);
           for (const gate of datos.gates) {
             zonaGates.append(
@@ -2362,16 +2723,22 @@
         // Los estados los calcula el servidor desde la tabla del contrato. Aquí
         // solo se pintan: ofrecer un movimiento que la tabla no permite sería
         // ofrecer un botón que falla.
+        const acordeonTransiciones = acordeon("Avanzar el estado", undefined, true);
+        cont.append(acordeonTransiciones.caja);
         const zonaTransiciones = el("div");
-        cont.append(zonaTransiciones);
+        acordeonTransiciones.cuerpo.append(zonaTransiciones);
 
         const cargarTransiciones = async () => {
           const datos = await api("GET", `/api/tickets/${id}/gates`);
           zonaTransiciones.textContent = "";
           const t = datos.transitions;
-          if (t === null) return;
+          if (t === null) {
+            zonaTransiciones.append(
+              el("div", "Todos los movimientos de este ticket están hechos.", "resultado"),
+            );
+            return;
+          }
 
-          cont.append(el("h2", "Avanzar el estado"));
           const caja = el("div", undefined, "transiciones");
 
           const fila = (etiqueta, desde, destinos, entidad, pointId) => {
@@ -2409,7 +2776,7 @@
           };
 
           const salidaTransicion = el("div", undefined, "resultado");
-          caja.append(fila("Ticket", t ? "→" : "", t.ticket, "ticket"));
+          caja.append(fila("Ticket", "→", t.ticket, "ticket"));
           caja.append(fila("Release", "→", t.release, "release"));
           for (const punto of t.points) {
             if (punto.to.length === 0) continue;
@@ -2420,196 +2787,362 @@
         };
         await cargarTransiciones();
 
-        // ── Contenido del ticket ──
-        cont.append(el("h2", "Contenido"));
+        // ── Contenido, en acordeones ──
+        //
+        // Cada artefacto se abre cuando se necesita. El diagnóstico arranca
+        // abierto porque es lo que más se relee cuando algo va mal; el plan, la
+        // solicitud y las pruebas arrancan plegados, que es lo que devuelve la
+        // pantalla al tamaño de una lectura.
+        const solicitud = acordeon("Solicitud original");
+        solicitud.cuerpo.append(el("pre", t.request.trim() === "" ? "(vacía)" : t.request));
+        cont.append(solicitud.caja);
 
-        const partes = [
-          ["Solicitud", t.request],
-          ["Descripción funcional", t.sections["Descripción funcional"]],
-          ["Diagnóstico", t.sections["Diagnóstico"]],
-          ["Plan", t.sections["Plan"]],
-          ["Criterios de aceptación", t.sections["Criterios de aceptación"]],
-          ["Implementación", t.sections["Implementación"]],
-          ["Pruebas", t.sections["Pruebas"]],
-          ["Release", t.sections["Release"]],
-        ];
-        const bloques = [
-          [`Puntos (${t.points.length})`, t.points],
-          [`QA (${t.qa.length})`, t.qa],
-          [`Evidencia (${t.evidence.length})`, t.evidence],
-          [`Retests (${t.retests.length})`, t.retests],
-          [`Cierre (${t.closures.length})`, t.closures],
-          [`Eventos (${t.events.length})`, t.events],
-          [`Consumo de IA (${t.usage.length})`, t.usage],
-        ];
+        const descripcion = acordeon("Descripción funcional");
+        descripcion.cuerpo.append(
+          el("pre", (t.sections["Descripción funcional"] ?? "").trim() || "(vacía)"),
+        );
+        cont.append(descripcion.caja);
 
-        cont.append(el("h2", "Línea de tiempo y coste"));
+        const diagnostico = acordeon("Diagnóstico", t.sections["Diagnóstico"] ? "" : "vacío", true);
+        diagnostico.cuerpo.append(
+          el("pre", (t.sections["Diagnóstico"] ?? "").trim() || "(vacío)"),
+        );
+        cont.append(diagnostico.caja);
+
+        const plan = acordeon("Plan", t.sections["Plan"] ? "" : "vacío");
+        plan.cuerpo.append(el("pre", (t.sections["Plan"] ?? "").trim() || "(vacío)"));
+        cont.append(plan.caja);
+
+        // Los criterios se cuentan y se pintan como lista: son la lista contra la
+        // que el plan se mide, y en texto plano un `- [ ]` no se distingue de una
+        // nota.
+        const criterios = (t.sections["Criterios de aceptación"] ?? "")
+          .split("\n")
+          .map((linea) => /^\s*[-*]\s+\[[ xX]\]\s*(.*)$/.exec(linea))
+          .filter((m) => m !== null && (m[1] ?? "").trim() !== "")
+          .map((m) => m[1].trim());
+        const acordeonCriterios = acordeon(
+          "Criterios de aceptación",
+          `${criterios.length}`,
+        );
+        if (criterios.length === 0) {
+          acordeonCriterios.cuerpo.append(
+            el("div", "El ticket no declara criterios de aceptación.", "vacio"),
+          );
+        } else {
+          const lista = el("ul", undefined, "lista-criterios");
+          for (const criterio of criterios) lista.append(el("li", criterio));
+          acordeonCriterios.cuerpo.append(lista);
+        }
+        cont.append(acordeonCriterios.caja);
+
+        const implementacion = acordeon("Implementación");
+        implementacion.cuerpo.append(
+          el("pre", (t.sections["Implementación"] ?? "").trim() || "(vacía)"),
+        );
+        cont.append(implementacion.caja);
+
+        const pruebas = acordeon("Pruebas");
+        pruebas.cuerpo.append(el("pre", (t.sections["Pruebas"] ?? "").trim() || "(vacía)"));
+        cont.append(pruebas.caja);
+
+        // ── Línea de tiempo y coste ──
+        const acordeonLinea = acordeon("Línea de tiempo y coste");
+        cont.append(acordeonLinea.caja);
         const zonaLinea = el("div");
         zonaLinea.append(el("div", "Leyendo la contabilidad del cliente…", "vacio"));
-        cont.append(zonaLinea);
+        acordeonLinea.cuerpo.append(zonaLinea);
         void pintarLineaDeTiempo(id).then((nodo) => {
           if (nodo === null) return;
           zonaLinea.textContent = "";
           zonaLinea.append(nodo);
         });
 
-        const barraSecciones = el("div", undefined, "secciones");
-        const cuerpo = el("pre");
-        const mostrar = (etiqueta, valor, boton) => {
-          for (const otro of barraSecciones.querySelectorAll("button")) {
-            otro.setAttribute("aria-pressed", String(otro === boton));
-          }
-          cuerpo.textContent =
-            typeof valor === "string"
-              ? valor.trim() === ""
-                ? "(vacío)"
-                : valor
-              : JSON.stringify(valor, null, 2);
-        };
-
-        for (const [etiqueta, valor] of [...partes, ...bloques]) {
-          const boton = el("button", etiqueta);
-          boton.setAttribute("aria-pressed", "false");
-          boton.addEventListener("click", () => mostrar(etiqueta, valor, boton));
-          barraSecciones.append(boton);
-        }
-
-        cont.append(barraSecciones, cuerpo);
-        mostrar(partes[0][0], partes[0][1], barraSecciones.querySelector("button"));
-      }
-
-      // ── Línea de tiempo del ticket ────────────────────────────────────────
-      //
-      // Responde a una pregunta que el registro no contestaba: quién intervino,
-      // con qué modelo y a qué coste. Los recibos de compuerta traen el coste
-      // porque el harness evaluó y lo sabe de primera mano; el trabajo del agente
-      // —explorar, escribir, corregir— no estaba en ninguna parte.
-      //
-      // El dato se **lee** de la contabilidad que el cliente ya escribe, no se le
-      // pregunta al modelo: un agente que reporta su propio gasto puede reportar
-      // de menos y no habría forma de notarlo.
-      //
-      // El desglose importa más de lo que parece: en el primer ticket medido, dos
-      // tercios del gasto se fueron en explorar el código y no en el harness. Sin
-      // esta vista, ese dinero era invisible.
-      async function pintarLineaDeTiempo(id) {
-        let datos;
-        try {
-          datos = await api("GET", `/api/timeline?ticket=${encodeURIComponent(id)}`);
-        } catch {
-          return null;
-        }
-        if (datos.available !== true) {
-          return el(
-            "div",
-            `Sin datos de consumo: ${datos.reason ?? "no se encontró la contabilidad del cliente."}`,
-            "nota",
-          );
-        }
-
-        const zona = el("div");
-
-        const total = datos.desglose.harnessUsd + datos.desglose.exploracionUsd;
-        const resumen = el("div", undefined, "meta");
-        resumen.append(
-          el("span", `coste $${total.toFixed(6)}`, "etiqueta"),
-          el("span", `harness $${datos.desglose.harnessUsd.toFixed(6)}`, "etiqueta"),
-          el("span", `exploración $${datos.desglose.exploracionUsd.toFixed(6)}`, "etiqueta"),
-          el("span", `${datos.intervenciones.length} intervención(es)`, "etiqueta"),
-        );
-        zona.append(
-          el(
-            "div",
-            "Harness es lo que costó llamar a las herramientas del registro; " +
-              "exploración es leer, buscar y editar. Es el mismo gasto de la sesión, repartido.",
-            "resultado",
-          ),
-          resumen,
-        );
-
-        if (datos.intervenciones.length === 0) {
-          zona.append(el("div", "Esta sesión no llamó a ninguna herramienta del registro.", "vacio"));
-          return zona;
-        }
-
-        const tabla = el("table", undefined, "tabla-intervenciones");
-        const cab = el("tr");
-        for (const titulo of ["hora", "herramienta", "resultado", "agente", "modelo", "coste"]) {
-          cab.append(el("th", titulo));
-        }
-        tabla.append(cab);
-
-        for (const i of datos.intervenciones) {
-          const hora = new Date(i.at);
-          const fila = el("tr");
-          if (i.failed) fila.className = "fallo";
-
-          fila.append(
-            el(
-              "td",
-              `${String(hora.getHours()).padStart(2, "0")}:${String(hora.getMinutes()).padStart(2, "0")}:${String(hora.getSeconds()).padStart(2, "0")}`,
-              "cifra",
-            ),
-            el("td", i.tool, "id"),
-            el("td", i.failed ? "falló" : i.status),
-            el("td", i.agent),
-            el("td", `${i.provider}/${i.model}`, "ruta"),
-            el("td", `$${i.costUsd.toFixed(6)}`, "cifra"),
-          );
-          tabla.append(fila);
-        }
-
-        zona.append(tabla);
-
-        // Un fallo seguido de un reintento es una corrección, y contarlas es lo que
-        // convierte la tabla en información: dice cuánto costó entenderse con el
-        // agente, que es un número que nadie tiene.
-        const fallos = datos.intervenciones.filter((i) => i.failed).length;
-        if (fallos > 0) {
-          zona.append(
-            el(
-              "div",
-              fallos === 1
-                ? "1 intervención falló y se reintentó."
-                : `${fallos} intervenciones fallaron y se reintentaron.`,
-              "resultado",
-            ),
-          );
-        }
-
-        zona.append(
-          el(
-            "div",
-            `Leído de ${datos.source}. Corresponde a las sesiones de este proyecto: si el ticket ` +
-              "se trabajó en más de una, el total de arriba las suma.",
-            "ruta",
-          ),
-        );
-
-        // Guardar la foto es lo que hace que el ticket se pueda auditar meses
-        // después, cuando la contabilidad del cliente ya no esté. Vive aquí y no
-        // en la terminal porque es una decisión sobre el registro, no una
-        // operación de mantenimiento.
-        const guardar = el("button", "Guardar en el ticket", "principal");
-        const aviso = el("div", undefined, "resultado");
-        const pie = el("div", undefined, "responsable");
-        pie.append(guardar, aviso);
-        zona.append(pie);
-
-        guardar.addEventListener("click", async () => {
-          guardar.disabled = true;
-          aviso.textContent = "Guardando…";
+        // Guardar el consumo vive con los datos que describe, no al final de todo:
+        // es una decisión sobre el registro, y estaba a media pantalla de su tabla.
+        const pieConsumo = el("div", undefined, "responsable");
+        const guardarConsumo = el("button", "Guardar el consumo en el ticket");
+        const avisoConsumo = el("div", undefined, "resultado");
+        pieConsumo.append(guardarConsumo, avisoConsumo);
+        acordeonLinea.cuerpo.append(pieConsumo);
+        guardarConsumo.addEventListener("click", async () => {
+          guardarConsumo.disabled = true;
+          avisoConsumo.className = "resultado";
+          avisoConsumo.textContent = "Guardando…";
           try {
             const r = await api("POST", `/api/tickets/${encodeURIComponent(id)}/consumo`);
-            aviso.textContent = `${r.entradas.join(", ")} — ${r.detalle}`;
-          } catch (error) {
-            aviso.textContent = error.message;
+            avisoConsumo.className = "resultado ok";
+            avisoConsumo.textContent = `${r.entradas.join(", ")} — ${r.detalle}`;
+          } catch (fallo) {
+            avisoConsumo.className = "resultado error";
+            avisoConsumo.textContent = fallo.message;
           } finally {
-            guardar.disabled = false;
+            guardarConsumo.disabled = false;
           }
         });
 
-        return zona;
+        // ── Registros, como tarjetas ──
+        const acordeonConsumo = acordeon("Consumo de IA", `${t.usage.length}`);
+        acordeonConsumo.cuerpo.append(
+          tarjetasDe(t.usage, tarjetaConsumo, "El consumo no se ha registrado todavía."),
+        );
+        cont.append(acordeonConsumo.caja);
+
+        const acordeonEventos = acordeon("Eventos", `${t.events.length}`);
+        acordeonEventos.cuerpo.append(
+          tarjetasDe(t.events.slice().reverse(), tarjetaEvento, "Sin eventos registrados."),
+        );
+        cont.append(acordeonEventos.caja);
+
+        // Los puntos y los ciclos de QA son registros con forma propia, y su
+        // detalle importa: van como tarjetas de datos genéricas para no inventar
+        // una forma por bloque ni dejar un JSON en pantalla.
+        const bloques = [
+          ["Puntos", t.points],
+          ["QA", t.qa],
+          ["Evidencia", t.evidence],
+          ["Retests", t.retests],
+          ["Cierre", t.closures],
+        ];
+        for (const [titulo, items] of bloques) {
+          const caja = acordeon(titulo, `${items.length}`);
+          caja.cuerpo.append(
+            tarjetasDe(items, tarjetaDato, `Sin registros en ${titulo.toLowerCase()}.`),
+          );
+          cont.append(caja.caja);
+        }
+
+        const release = acordeon("Release");
+        release.cuerpo.append(
+          el("pre", (t.sections["Release"] ?? "").trim() || "(vacía)"),
+        );
+        cont.append(release.caja);
+      }
+
+      // ── Piezas de la vista de ticket ──────────────────────────────────────
+      //
+      // Un acordeón por artefacto. El problema que resuelve: con el diagnóstico,
+      // el plan y la línea de tiempo desplegados, para leer el ticket había que
+      // bajar media pantalla cada vez. Plegado, el ticket se lee de un vistazo y
+      // cada cosa se abre cuando se necesita.
+      function acordeon(titulo, resumen, abierto = false) {
+        const caja = el("details", undefined, "acordeon");
+        if (abierto) caja.open = true;
+        const cabecera = el("summary");
+        cabecera.append(el("span", titulo, "acordeon-titulo"));
+        if (resumen !== undefined && resumen !== "") {
+          cabecera.append(el("span", resumen, "acordeon-resumen"));
+        }
+        const cuerpo = el("div", undefined, "acordeon-cuerpo");
+        caja.append(cabecera, cuerpo);
+        return { caja, cuerpo };
+      }
+
+      /** Un chip de estado, con su color por significado. */
+      function chip(rotulo, valor, tono = "") {
+        const nodo = el("span", undefined, `chip${tono === "" ? "" : ` ${tono}`}`);
+        nodo.append(el("span", rotulo, "chip-rotulo"), el("span", valor, "chip-valor"));
+        return nodo;
+      }
+
+      /**
+       * El estado del ticket, en una tira.
+       *
+       * Antes el estado aparecía en la cabecera entre otros cuatro datos, todos
+       * iguales: para saber si un ticket está esperando pruebas había que leer una
+       * línea de metadatos. Aquí el avance se ve de un golpe, y lo que está
+       * bloqueado se marca.
+       */
+      function tiraDeEstado(t, puntosAbiertos) {
+        const CADENA = [
+          ["intake", "Alta"],
+          ["analyzed", "Analizado"],
+          ["planned", "Plan"],
+          ["approved", "Aprobado"],
+          ["in_progress", "En curso"],
+          ["awaiting_user_tests", "Pruebas"],
+          ["in_qa", "QA"],
+          ["qa_approved", "QA ok"],
+          ["closed", "Cerrado"],
+        ];
+        const actual = CADENA.findIndex(([estado]) => estado === t.workflowStatus);
+        const bloqueado = t.workflowStatus === "blocked";
+
+        const tira = el("div", undefined, "estado-tira");
+        CADENA.forEach(([, rotulo], indice) => {
+          const paso = el("div", undefined, "estado-paso");
+          if (bloqueado) paso.className += " bloqueado";
+          else if (indice < actual) paso.className += " hecho";
+          else if (indice === actual) paso.className += " actual";
+          paso.append(el("div", String(indice + 1), "estado-numero"), el("div", rotulo, "estado-rotulo"));
+          tira.append(paso);
+        });
+
+        const chips = el("div", undefined, "estado-chips");
+        chips.append(
+          chip("workflow", bloqueado ? "bloqueado" : t.workflowStatus, bloqueado ? "malo" : "activo"),
+          chip("QA", t.qaStatus, t.qaStatus === "approved" ? "bueno" : ""),
+          chip("release", t.releaseStatus, t.releaseStatus === "released" ? "bueno" : ""),
+          chip("riesgo", t.riskLevel, t.riskLevel === "normal" ? "" : "malo"),
+          chip("puntos abiertos", String(puntosAbiertos), puntosAbiertos > 0 ? "malo" : "bueno"),
+        );
+        if (t.criticalImpacts.length > 0) {
+          chips.append(chip("impacto", t.criticalImpacts.join(", "), "malo"));
+        }
+
+        const caja = el("div", undefined, "estado-ticket");
+        caja.append(tira, chips);
+        if (bloqueado) {
+          caja.append(
+            el(
+              "div",
+              "El ticket está bloqueado: revise el motivo en el historial antes de moverlo.",
+              "resultado error",
+            ),
+          );
+        }
+        return caja;
+      }
+
+      /** El historial de decisiones de las compuertas, en una tira. */
+      function tiraDeDecisiones(decisions) {
+        if (decisions.length === 0) {
+          return el("div", "Sin compuertas evaluadas todavía.", "resultado");
+        }
+        const tira = el("div", undefined, "historial-gates");
+        for (const d of decisions) {
+          const nodo = el("span", undefined, `chip-gate ${d.outcome}${d.stale ? " obsoleto" : ""}`);
+          nodo.append(
+            el("span", `${d.gate}: `, "chip-rotulo"),
+            el("span", d.outcome, "chip-valor"),
+          );
+          if (d.stale) nodo.append(el("span", " (obsoleto)", "chip-rotulo"));
+          nodo.title =
+            `${d.receiptId} · ${d.actor} · ${d.decidedAt.slice(0, 16).replace("T", " ")}` +
+            (d.humanDecision === null || d.humanDecision === undefined
+              ? ""
+              : ` · decidido por ${d.humanDecision.actor}`);
+          tira.append(nodo);
+        }
+        return tira;
+      }
+
+      /** Un `## Consumo de IA` como tarjeta, no como JSON. */
+      function tarjetaConsumo(u) {
+        const caja = el("div", undefined, "tarjeta-dato");
+        const cabecera = el("div", undefined, "tarjeta-dato-cabecera");
+        cabecera.append(
+          el("span", String(u.id ?? ""), "id"),
+          el("span", String(u.model ?? "(sin modelo)"), "etiqueta"),
+          el("span", `$${Number(u.estimated_cost_usd ?? 0).toFixed(6)}`, "cifra"),
+        );
+        // La confianza no es un detalle: dice si el dato es un registro o una
+        // estimación de quien lo escribió.
+        const tono = u.confidence === "high" ? "bueno" : u.confidence === "low" ? "malo" : "";
+        cabecera.append(el("span", `confianza ${u.confidence ?? "?"}`, `etiqueta ${tono}`));
+        caja.append(cabecera);
+        if (u.notes !== null && u.notes !== undefined && String(u.notes) !== "") {
+          caja.append(el("div", String(u.notes), "tarjeta-dato-nota"));
+        }
+        const cifras = el("div", undefined, "meta");
+        for (const [rotulo, valor] of [
+          ["entrada", u.input_tokens],
+          ["salida", u.output_tokens],
+          ["total", u.total_tokens],
+        ]) {
+          if (valor === null || valor === undefined) continue;
+          cifras.append(el("span", `${rotulo} ${Number(valor).toLocaleString("es-CO")}`, "etiqueta"));
+        }
+        caja.append(cifras);
+        if (u.session_reference) {
+          caja.append(el("div", `sesión ${u.session_reference}`, "ruta"));
+        }
+        return caja;
+      }
+
+      /** Un evento como tarjeta, no como JSON. */
+      function tarjetaEvento(e) {
+        const caja = el("div", undefined, "tarjeta-dato");
+        const cabecera = el("div", undefined, "tarjeta-dato-cabecera");
+        cabecera.append(
+          el("span", String(e.date ?? ""), "cifra"),
+          el("span", String(e.action ?? ""), "etiqueta"),
+          el("span", String(e.actor ?? ""), "resultado"),
+          el("span", String(e.id ?? ""), "ruta"),
+        );
+        caja.append(cabecera, el("div", String(e.details ?? ""), "tarjeta-dato-nota"));
+        return caja;
+      }
+
+      /**
+       * Un registro cualquiera como tarjeta.
+       *
+       * Los bloques del ticket —puntos, QA, evidencia, retests, cierre— tienen
+       * forma propia y cambiante, así que en vez de inventar una tarjeta por
+       * bloque se pinta la forma del dato: los campos cortos como etiquetas y los
+       * largos como texto. Lo que **no** se hace es volcar el JSON: un arreglo
+       * crudo en pantalla obliga a leerlo como lo lee una máquina.
+       */
+      function tarjetaDato(registro) {
+        const caja = el("div", undefined, "tarjeta-dato");
+        const cabecera = el("div", undefined, "tarjeta-dato-cabecera");
+
+        // Los campos que identifican van arriba y en orden fijo.
+        const IDENTIDAD = ["id", "date", "status", "severity", "result", "action", "actor"];
+        const usados = new Set();
+        for (const clave of IDENTIDAD) {
+          const valor = registro[clave];
+          if (valor === undefined || valor === null || valor === "") continue;
+          usados.add(clave);
+          const tono =
+            clave === "status" || clave === "result"
+              ? ["closed", "verified", "approved", "passed", "ok"].includes(String(valor))
+                ? "bueno"
+                : ["open", "blocked", "failed", "rejected"].includes(String(valor))
+                  ? "malo"
+                  : ""
+              : clave === "severity" && String(valor) !== "normal"
+                ? "malo"
+                : "";
+          cabecera.append(
+            el(
+              "span",
+              clave === "id" ? String(valor) : `${clave} ${String(valor)}`,
+              clave === "id" ? "id" : `etiqueta ${tono}`.trim(),
+            ),
+          );
+        }
+        caja.append(cabecera);
+
+        // El resto del registro, campo por campo.
+        for (const [clave, valor] of Object.entries(registro)) {
+          if (usados.has(clave) || clave === "kind") continue;
+          if (valor === null || valor === undefined || valor === "") continue;
+
+          if (Array.isArray(valor)) {
+            if (valor.length === 0) continue;
+            // Un arreglo de objetos anidados se resume con su conteo: el detalle
+            // completo de un bloque dentro de otro no se lee, se busca.
+            caja.append(
+              el("div", `${clave}: ${valor.length} elemento(s)`, "tarjeta-dato-nota"),
+            );
+            continue;
+          }
+          if (typeof valor === "object") {
+            caja.append(el("div", `${clave}: ${JSON.stringify(valor)}`, "tarjeta-dato-nota"));
+            continue;
+          }
+          caja.append(el("div", `${clave}: ${String(valor)}`, "tarjeta-dato-nota"));
+        }
+        return caja;
+      }
+
+      /** Una lista de tarjetas, con su estado vacío dicho. */
+      function tarjetasDe(items, construir, vacio) {
+        if (items.length === 0) return el("div", vacio, "vacio");
+        const caja = el("div", undefined, "tarjetas-datos");
+        for (const item of items) caja.append(construir(item));
+        return caja;
       }
 
       // ── Vista: procesos ───────────────────────────────────────────────────

@@ -248,6 +248,8 @@ export async function handleApi(
       ...(params.get("q") === null ? {} : { query: params.get("q") as string }),
       ...(params.get("open") === "1" ? { onlyOpen: true } : {}),
       ...(params.get("invalid") === "1" ? { onlyInvalid: true } : {}),
+      ...(params.get("critical") === "1" ? { onlyCritical: true } : {}),
+      ...(params.get("con-puntos") === "1" ? { onlyWithOpenPoints: true } : {}),
       ...(params.get("limit") === null
         ? {}
         : { limit: Number.parseInt(params.get("limit") as string, 10) }),
