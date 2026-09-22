@@ -65,7 +65,7 @@ async function crear(): Promise<string> {
 }
 
 /** Un evaluador semántico falso que aprueba todo lo que se le pregunte. */
-function evaluadorQueAprueba(): NonNullable<ToolContext["jev"]> {
+function evaluadorQueAprueba(valor = 0.95): NonNullable<ToolContext["jev"]> {
   // La opción que aprueba se llama distinto en cada gate —`completa` en el de
   // análisis, `completo` en el de plan—, así que se elige por la forma del id y
   // no por el valor: lo que estos tests afirman es la herramienta, no el gate.
@@ -74,7 +74,7 @@ function evaluadorQueAprueba(): NonNullable<ToolContext["jev"]> {
     answers: (options.propositions ?? []).map((proposition) => {
       const eleccion = porId[proposition.id];
       return eleccion === undefined
-        ? { id: proposition.id, kind: "noul" as const, value: 0.95, rationale: "falso" }
+        ? { id: proposition.id, kind: "noul" as const, value: valor, rationale: "falso" }
         : {
             id: proposition.id,
             kind: "choice" as const,
@@ -93,10 +93,10 @@ function evaluadorQueAprueba(): NonNullable<ToolContext["jev"]> {
 }
 
 /** El contexto con el evaluador inyectado y una fecha fija. */
-function conEvaluadorFalso(): ToolContext {
+function conEvaluadorFalso(valor = 0.95): ToolContext {
   return {
     ...contexto,
-    jev: evaluadorQueAprueba(),
+    jev: evaluadorQueAprueba(valor),
     now: () => new Date("2026-09-22T12:00:00Z"),
   };
 }
@@ -346,6 +346,39 @@ describe("evaluar una compuerta", () => {
     // El recibo guarda el estado que vio el evaluador, para que la decisión se
     // pueda auditar después sin reconstruir nada.
     expect(String(recibo["stateHash"]).length).toBeGreaterThan(0);
+  });
+
+  it("devuelve el informe cuando el gate bloquea, en vez de un error vacío", async () => {
+    // El fallo real que motivó esta prueba: el gate devolvía el código 3 —que
+    // significa «bloquea», no «se rompió»— con el informe completo en la salida
+    // y el error vacío. La herramienta devolvía ese error vacío, así que el
+    // agente recibía un fallo **sin texto**: sin veredicto, sin motivo y sin
+    // nada que contarle a quien preguntaba. Pasó en el primer ticket real.
+    await crear();
+    await callTool(contexto, "mover_ticket", { id: ID, to: "analyzed" });
+
+    const resultado = await callTool(conEvaluadorFalso(0.5), "evaluar_compuerta", {
+      gate: "analysis",
+      id: ID,
+    });
+
+    // Media probabilidad cae en la banda de revisión: la compuerta no aprueba,
+    // que no es lo mismo que fallar.
+    expect(resultado.text).not.toBe("");
+    expect(resultado.text).toContain("RESULTADO");
+    expect(resultado.text).toContain("REVIEW");
+    // Y se conserva la señal del código de salida, para un agente que ramifique.
+    expect(resultado.text).toContain("[código de salida 3");
+  });
+
+  it("no disfraza de éxito un fallo de verdad", async () => {
+    // El otro lado de la misma regla: un error con mensaje sigue siendo error.
+    const resultado = await callTool(contexto, "evaluar_compuerta", {
+      gate: "plan",
+      id: "NO-EXISTE-XX-20260101",
+    });
+    expect(resultado.isError).toBe(true);
+    expect(resultado.text).not.toBe("");
   });
 
   it("no mueve el ticket aunque el veredicto sea de aprobación", async () => {

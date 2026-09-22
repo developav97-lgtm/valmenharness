@@ -196,7 +196,12 @@ export const TOOLS: readonly ToolDefinition[] = [
       "aprobado, bloqueado, o en revisión humana. **No mueve el estado del ticket** — " +
       "un gate no cambia estados, esa es la regla — y no sustituye a la decisión de una " +
       "persona cuando el veredicto cae en la banda de revisión. Cuesta una llamada al " +
-      "evaluador configurado en el routing del proyecto.",
+      "evaluador configurado en el routing del proyecto.\n\n" +
+      "**El ticket tiene que estar ya en el estado que la compuerta protege**, porque " +
+      "cada una evalúa un artefacto terminado: `analysis` exige el ticket en `analyzed` " +
+      "(con el diagnóstico escrito) y `plan` lo exige en `planned` (con el plan escrito). " +
+      "Si se evalúa antes, se rechaza y no se gasta nada. La secuencia es: escribir la " +
+      "sección, `validar_ticket`, `mover_ticket` al estado, y entonces evaluar.",
     inputSchema: {
       type: "object",
       properties: {
@@ -280,19 +285,52 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
 ];
 
+/**
+ * El `CommandResult` del motor, traducido a resultado de herramienta.
+ *
+ * Un código distinto de cero **no siempre es un fallo**, y confundirlos costó un
+ * fallo real en producción: el gate de análisis devolvía `3` con el informe
+ * completo en `stdout` y el `stderr` vacío —el 3 significa «bloquea», no «se
+ * rompió»—, y esta función devolvía el `stderr` vacío como resultado. El agente
+ * recibía un error sin texto y se quedaba sin el informe, sin el veredicto y sin
+ * poder explicarle nada a quien preguntaba.
+ *
+ * La regla ahora es la del motor: **si hay algo que leer, se devuelve**. Un
+ * `stderr` con contenido es un fallo de verdad —dice qué salió mal y con qué
+ * código—; un `stderr` vacío con salida en `stdout` es un resultado que además
+ * trae una señal en el código de salida, y esa señal se conserva por escrito para
+ * que un agente que ramifique por ella la vea.
+ */
+function delMotor(resultado: {
+  stdout: string;
+  stderr: string;
+  exitCode: number;
+}): ToolResult {
+  if (resultado.stderr.trim() !== "") return mal(resultado.stderr);
+
+  const texto = resultado.stdout.trim();
+  if (texto === "") {
+    return mal(
+      `La operación terminó con el código ${resultado.exitCode} y sin ningún mensaje. ` +
+        "Es un fallo del harness: no hay nada que el agente pueda corregir por su cuenta.",
+    );
+  }
+
+  if (resultado.exitCode === 0) return bien(texto);
+
+  return bien(
+    `${texto}\n\n[código de salida ${resultado.exitCode}: la operación no aprobó. ` +
+      "El informe de arriba es el resultado, no un fallo del harness.]",
+  );
+}
+
 /** El `CommandResult` del CLI, traducido a resultado de herramienta. */
 function delCli(resultado: {
   stdout: string;
   stderr: string;
   exitCode: number;
 }): ToolResult {
-  return resultado.exitCode === 0
-    ? bien(resultado.stdout === "" ? "(sin salida)" : resultado.stdout)
-    : mal(
-        resultado.stderr === ""
-          ? `Falló con código ${resultado.exitCode}.`
-          : resultado.stderr,
-      );
+  return delMotor(resultado);
 }
 
 /** Ejecuta una herramienta por nombre. */
@@ -402,9 +440,13 @@ export async function callTool(
           ...(routing.judgeModel === "" ? {} : { judgeModel: routing.judgeModel }),
         });
 
-        if (resultado.exitCode !== 0) return mal(resultado.stderr);
+        // El veredicto no cambia el estado del ticket —esa es la regla—, así que
+        // el informe se devuelve tal cual venga: aprobado, bloqueado o en
+        // revisión. Un `review` no es un fallo de la herramienta.
+        const informe = delMotor(resultado);
+        if (informe.isError) return informe;
         return bien(
-          resultado.stdout +
+          informe.text +
             "\nLa compuerta **no** movió el ticket. Si el veredicto es de aprobación, el " +
             "paso siguiente es `mover_ticket`; si quedó en revisión, la decisión es de " +
             "una persona y no hay herramienta que la sustituya.",
