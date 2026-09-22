@@ -122,10 +122,12 @@ describe("una propuesta de cambio", () => {
   it("marca como inválida una propuesta que no parsea", async () => {
     const resultado = await proponer({
       summary: "Romper el archivo.",
-      changes: [{ file: "config", text: "name: [a, b]\n", reason: "…" }],
+      // Una colección en línea que no cierra: el archivo no parsea, y el error
+      // dice dónde. Antes bastaba con `[a, b]`, que ahora se interpreta.
+      changes: [{ file: "config", text: "name: [a, 'b\n", reason: "…" }],
     });
     expect(resultado.changes[0]?.ok).toBe(false);
-    expect(resultado.changes[0]?.error).toContain("colección en línea");
+    expect(resultado.changes[0]?.error).toContain("abre una colección y no la cierra");
     // Y sigue siendo visible: se muestra el error, no se descarta en silencio.
     expect(resultado.changes).toHaveLength(1);
   });

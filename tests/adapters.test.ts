@@ -132,20 +132,30 @@ describe("análisis de config.yaml", () => {
     expect(parseConfig("\n# solo un comentario\n")).toEqual({});
   });
 
-  it("rechaza una colección en línea en vez de leerla como texto", () => {
-    // `gates: [plan, analysis]` es YAML normal. Interpretarlo como el texto
+  it("interpreta una colección en línea y no la lee como texto", () => {
+    // `gates: [plan, analysis]` es YAML normal. Leerlo como el texto
     // "[plan, analysis]" haría que el documento generado anunciara un gate con
-    // ese nombre: un valor con contenido donde no lo hay.
-    expect(() => parseConfig("gates: [plan, analysis]\n")).toThrow(
-      /colección en línea/,
-    );
-    expect(() => parseConfig("budgets: {a: 1}\n")).toThrow(/colección en línea/);
+    // ese nombre: un valor con contenido donde no lo hay. Antes se rechazaba;
+    // ahora se interpreta, que es lo que espera quien lo escribe.
+    expect(parseConfig("gates: [plan, analysis]\n").gates).toEqual([
+      "plan",
+      "analysis",
+    ]);
+    expect(parseConfig("budgets: {a: 1}\n").budgets).toEqual({ a: "1" });
     // Las formas vacías siguen admitidas: son las que escribe el harness.
     expect(parseConfig("gates: []\n").gates).toEqual([]);
     expect(parseConfig("budgets: {}\n").budgets).toEqual({});
     // Un texto que solo empieza por corchete no se confunde con una colección.
     expect(parseConfig("description: [beta] es la versión\n").description).toBe(
       "[beta] es la versión",
+    );
+  });
+
+  it("rechaza una colección en línea que no cierra", () => {
+    // El error que queda: algo que parece una colección y no se puede leer. Se
+    // dice la línea y la clave en vez de leer un valor distinto del escrito.
+    expect(() => parseConfig("gates: [plan, 'analysis\n")).toThrow(
+      /abre una colección y no la cierra/,
     );
   });
 

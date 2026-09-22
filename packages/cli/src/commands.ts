@@ -12,6 +12,7 @@ import { dirname, join, relative } from "node:path";
 import {
   type ParsedTicket,
   EXIT_AMBIGUOUS,
+  EXIT_INVARIANT,
   EXIT_SCHEMA,
   MutationLock,
   SCHEMA_VERSION,
@@ -38,6 +39,9 @@ import {
   type RegistryPaths,
   type RunnerResult,
   buildManifest,
+  loadProcesses,
+  requireProcess,
+  runProcess,
   chooseTicketsDir,
   closedTickets,
   defaultReportRange,
@@ -760,6 +764,236 @@ export function deliverManifest(
       write: flags["dry-run"] !== true,
     });
     return ok(renderManifest(resultado));
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/**
+ * `process list`: los procesos declarados por el proyecto.
+ *
+ * Un proceso que no se puede leer **se lista con su error**, igual que un ticket
+ * o una feature: un archivo con un error de tipeo que desaparece de la lista hace
+ * creer que el proceso no existe, y entonces alguien lo escribe otra vez.
+ */
+export function listProcesses(root: string): CommandResult {
+  const cargados = loadProcesses(root);
+  if (cargados.length === 0) {
+    return ok(
+      "No hay procesos declarados. Viven en .valmen/processes/<id>.yaml\n",
+    );
+  }
+
+  const ancho = Math.max(...cargados.map((c) => c.definition.id.length), 2);
+  const lineas = cargados.map((cargado) => {
+    if (cargado.invalid !== null) {
+      return `${cargado.definition.id.padEnd(ancho)} | inválido | ${cargado.invalid}`;
+    }
+    const { definition } = cargado;
+    const params = definition.params.map((param) => param.name).join(", ");
+    return (
+      `${definition.id.padEnd(ancho)} | ${definition.steps.length} paso(s) | ` +
+      `${definition.title}${params === "" ? "" : `  [${params}]`}`
+    );
+  });
+  return ok(lineas.join("\n") + "\n");
+}
+
+/** `process show`: los pasos de un proceso, con lo que hace cada uno. */
+export function showProcess(root: string, id: string | undefined): CommandResult {
+  if (id === undefined) {
+    return error("process show requiere un identificador.", EXIT_SCHEMA);
+  }
+
+  let cargado;
+  try {
+    cargado = requireProcess(root, id);
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+
+  const { definition, path } = cargado;
+  const lineas = [
+    `${definition.id} — ${definition.title}`,
+    ...(definition.description === "" ? [] : [definition.description]),
+    `archivo: ${path}`,
+  ];
+
+  if (definition.params.length > 0) {
+    lineas.push("", "Parámetros:");
+    for (const param of definition.params) {
+      const obligatorio = param.required ? "obligatorio" : "opcional";
+      const extra = [
+        param.pattern === null ? null : `patrón ${param.pattern}`,
+        param.default === null ? null : `por defecto ${param.default}`,
+      ].filter((parte): parte is string => parte !== null);
+      lineas.push(
+        `  ${param.name} (${param.type}, ${obligatorio})` +
+          (extra.length === 0 ? "" : ` — ${extra.join(" · ")}`),
+      );
+    }
+  }
+
+  lineas.push("", "Pasos:");
+  for (const paso of definition.steps) {
+    lineas.push(`  ${paso.id} — ${paso.title}  [${paso.kind}]`);
+    if (paso.run !== null) lineas.push(`      ${paso.run}`);
+    if (paso.target !== null) lineas.push(`      → ${paso.target}`);
+    if (paso.when !== null) lineas.push(`      solo si ${paso.when}`);
+    if (paso.continueOnFailure) {
+      lineas.push("      un fallo aquí no detiene el proceso");
+    }
+  }
+
+  if (definition.produces.length > 0) {
+    lineas.push("", `Produce: ${definition.produces.join(", ")}`);
+  }
+  if (definition.onSuccess.length > 0) {
+    lineas.push(`Al terminar bien: ${definition.onSuccess.join(", ")}`);
+  }
+
+  return ok(lineas.join("\n") + "\n");
+}
+
+/**
+ * Las banderas que son del comando y no del proceso.
+ *
+ * `--set` es la forma sin colisión; las demás son del CLI y llegarían aquí
+ * heredadas. Todo lo que no esté en esta lista tiene que ser un parámetro que el
+ * proceso declare, o se rechaza: una bandera aceptada y descartada en silencio es
+ * exactamente lo que hace que un proceso publique lo que no era.
+ */
+const BANDERAS_PROPIAS = new Set([
+  "set",
+  "root",
+  "tickets-dir",
+  "legacy-layout",
+  "help",
+  "dry-run",
+]);
+
+/**
+ * `process run`: ejecuta un proceso.
+ *
+ * Los parámetros llegan como `--param nombre=valor` o `--nombre valor`. La
+ * segunda forma es la cómoda y la que se escribe en la terminal; la primera
+ * existe porque un proceso puede declarar un parámetro que choque con una bandera
+ * del CLI —`--version` es la queja obvia— y sin una forma sin colisión ese proceso
+ * sería inejecutable.
+ *
+ * Los pasos se imprimen **mientras corren**, no al final: un proceso que actualiza
+ * manuales tarda minutos, y no ver nada durante ese rato hace pensar que se colgó.
+ */
+export function runProcessCommand(
+  root: string,
+  id: string | undefined,
+  flags: Readonly<Record<string, string | true>>,
+): CommandResult {
+  if (id === undefined) {
+    return error("process run requiere un identificador.", EXIT_SCHEMA);
+  }
+
+  const params: Record<string, string> = {};
+  for (const [clave, valor] of Object.entries(flags)) {
+    // `--set nombre=valor` es la forma sin colisión; el resto de banderas del CLI
+    // se ignoran aquí y se recuperan abajo por nombre de parámetro.
+    if (clave === "set") {
+      // Se separa por `;` si lo hay, y si no por `,`. El `;` es el que hace falta
+      // cuando el valor lleva comas —una lista de tickets, sin ir más lejos—:
+      // partir siempre por coma convertiría `tickets=A,B` en un parámetro llamado
+      // `B` sin valor, que es un error legítimo y a la vez imposible de adivinar
+      // desde el mensaje.
+      const crudo = String(valor);
+      const trozos = crudo.includes(";") ? crudo.split(";") : crudo.split(",");
+      for (const trozo of trozos) {
+        if (trozo.trim() === "") continue;
+        const igual = trozo.indexOf("=");
+        if (igual <= 0) {
+          return error(
+            `--set espera nombre=valor, y llegó "${trozo}". ` +
+              "Para un valor con comas, separa los parámetros con `;`: " +
+              '--set "a=1;b=x,y".',
+            EXIT_SCHEMA,
+          );
+        }
+        params[trozo.slice(0, igual).trim()] = trozo.slice(igual + 1);
+      }
+    }
+  }
+
+  // Y los parámetros que el proceso declara, tomados de las banderas del CLI.
+  let definicion;
+  try {
+    definicion = requireProcess(root, id).definition;
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+
+  const declarados = new Set(definicion.params.map((param) => param.name));
+  for (const param of definicion.params) {
+    if (Object.hasOwn(params, param.name)) continue;
+    const bruto = flags[param.name];
+    if (typeof bruto === "string") params[param.name] = bruto;
+  }
+
+  // Y una bandera que no es del comando ni un parámetro del proceso se rechaza.
+  // Aceptarla en silencio era el fallo clásico: `--veersión 1.2.3` con una tilde
+  // de más arrancaba el proceso **sin** la versión, y como el proceso podía tener
+  // un valor por defecto, seguía adelante y publicaba lo que no era.
+  for (const clave of Object.keys(flags)) {
+    if (BANDERAS_PROPIAS.has(clave)) continue;
+    if (declarados.has(clave)) continue;
+    return error(
+      `El proceso "${id}" no declara el parámetro "--${clave}". Los suyos son: ` +
+        `${[...declarados].sort().join(", ") || "(ninguno)"}.`,
+      EXIT_SCHEMA,
+    );
+  }
+
+  try {
+    const corrida = runProcess({
+      root,
+      id,
+      params,
+      // La salida se escribe al vuelo: el proceso puede tardar, y el resultado
+      // final no sirve para saber por dónde va.
+      onStep: (paso) => {
+        const marca = paso.status === "ok" ? "✓" : paso.status === "failed" ? "✗" : "·";
+        const extra =
+          paso.status === "skipped"
+            ? ` — ${paso.reason ?? "salteado"}`
+            : paso.latencyMs > 0
+              ? ` (${paso.latencyMs} ms)`
+              : "";
+        process.stdout.write(`${marca} ${paso.id} — ${paso.title}${extra}\n`);
+      },
+    });
+
+    if (!corrida.ok) {
+      const fallidos = corrida.steps.filter((paso) => paso.status === "failed");
+      const detalle = fallidos
+        .map((paso) => {
+          const salida = [paso.stdout.trim(), paso.stderr.trim()]
+            .filter((parte) => parte !== "")
+            .join("\n");
+          return `✗ ${paso.id} (${paso.detail}) salió con ${paso.exitCode}\n${salida}`;
+        })
+        .join("\n");
+      return {
+        stdout: "",
+        stderr:
+          `El proceso "${id}" se detuvo en ${fallidos.map((paso) => paso.id).join(", ")}.\n` +
+          detalle,
+        exitCode: EXIT_INVARIANT,
+      };
+    }
+
+    return ok(
+      `Proceso ${corrida.id}: ${corrida.steps.length} paso(s) en ${corrida.durationMs} ms.\n`,
+    );
   } catch (caught) {
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);

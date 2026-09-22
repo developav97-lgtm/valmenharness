@@ -28,6 +28,7 @@ import {
   validateOne,
 } from "./commands.js";
 import { runFeature } from "./features.js";
+import { runProcess } from "./process.js";
 import {
   type RegistryPaths,
   defaultPaths,
@@ -123,6 +124,11 @@ Comandos:
                             cerrado, visible al usuario y sin publicar.
       --released-at <fecha> Por defecto, hoy.
       --dry-run             Muestra el manifiesto sin escribirlo.
+  process list              Lista los procesos declarados en .valmen/processes/.
+  process show <id>         Muestra los pasos y los parámetros de un proceso.
+  process run <id>          Ejecuta un proceso.
+      --set n=v[,n=v]       Parámetros del proceso. También --<nombre> <valor>,
+                            salvo que choque con una bandera del CLI.
   serve [--port <n>]        Mission Control en 127.0.0.1.
   simulate <gate>           Calibra un gate sobre el registro histórico.
       --limit <n>           Evalúa solo los primeros n sujetos.
@@ -207,6 +213,7 @@ const VALUE_OPTIONS = [
   "--desde",
   "--hasta",
   "--q",
+  "--set",
   "--released-at",
   "--provider",
   "--type",
@@ -684,6 +691,10 @@ export function dispatch(options: Options): CommandResult {
 
     case "deliver-manifest":
       return deliverManifest(paths, options.flags);
+
+    case "process":
+      // `process <sub> [args]`: su propio módulo, como `feature`.
+      return runProcess(options.root, rest, options.flags);
 
     case "migrate":
       return migrateRegistry(paths, {
