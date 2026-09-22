@@ -14,7 +14,16 @@
 import { EXIT_SCHEMA } from "@valmen/core";
 
 import type { CommandResult } from "./commands.js";
-import { listProcesses, runProcessCommand, showProcess } from "./commands.js";
+import {
+  abandonProcessRun,
+  approveProcessGate,
+  listProcessRuns,
+  listProcesses,
+  resumeProcessRun,
+  runProcessCommand,
+  showProcess,
+  showProcessRun,
+} from "./commands.js";
 
 /** Falla con el mensaje y el código que corresponde. */
 function error(stderr: string, exitCode: number): CommandResult {
@@ -35,11 +44,29 @@ export function runProcess(
       return showProcess(root, resto[0]);
     case "run":
       return runProcessCommand(root, resto[0], flags);
+    // El ciclo de un proceso que se detiene en un gate: aprobar, ver qué hay
+    // detenido, retomar y abandonar. Son cuatro actos distintos a propósito:
+    // aprobar no retoma —quien aprueba no tiene por qué continuar— y retomar no
+    // aprueba.
+    case "approve":
+      return approveProcessGate(root, resto[0], flags);
+    case "runs":
+      return listProcessRuns(root);
+    case "show-run":
+      return showProcessRun(root, resto[0]);
+    case "resume":
+      return resumeProcessRun(root, resto[0], flags);
+    case "abandon":
+      return abandonProcessRun(root, resto[0]);
     case undefined:
-      return error("process requiere un subcomando: list, show o run.", EXIT_SCHEMA);
+      return error(
+        "process requiere un subcomando: list, show, run, approve, runs, show-run, resume o abandon.",
+        EXIT_SCHEMA,
+      );
     default:
       return error(
-        `Subcomando de process desconocido: ${sub}. Use list, show o run.`,
+        `Subcomando de process desconocido: ${sub}. Use list, show, run, approve, ` +
+          "runs, show-run, resume o abandon.",
         EXIT_SCHEMA,
       );
   }

@@ -34,6 +34,14 @@ import {
   validateProcess,
 } from "@valmen/core";
 
+import {
+  type ProcessRunState,
+  type RunStepState,
+  gateApproved,
+  newRunId,
+  writeRun,
+} from "./run-state.js";
+
 /** Dónde viven los procesos de un proyecto. */
 export function processesDir(root: string): string {
   return join(root, ".valmen", "processes");
@@ -284,7 +292,7 @@ export interface StepOutcome {
   readonly kind: string;
   /** El comando ya sustituido, o el proceso invocado. */
   readonly detail: string;
-  readonly status: "ok" | "failed" | "skipped";
+  readonly status: "ok" | "failed" | "skipped" | "waiting";
   readonly exitCode: number | null;
   readonly latencyMs: number;
   readonly stdout: string;
@@ -300,6 +308,15 @@ export interface ProcessRun {
   readonly steps: readonly StepOutcome[];
   /** `true` si todos los pasos que bloquean salieron bien. */
   readonly ok: boolean;
+  /**
+   * `true` si el proceso se detuvo esperando que una persona apruebe un gate.
+   *
+   * No es un fallo: es un proceso a medias a propósito, y quien lo mira tiene que
+   * poder distinguirlo para saber si hay algo que hacer.
+   */
+  readonly waiting: boolean;
+  /** La corrida persistida, si el proceso se detuvo. */
+  readonly state: ProcessRunState | null;
   readonly durationMs: number;
 }
 
@@ -324,6 +341,22 @@ export interface RunProcessRequest {
    * vuelve al principio— se corta aquí.
    */
   readonly depth?: number;
+  /**
+   * Qué hacer con un gate que nadie aprobó todavía.
+   *
+   * `wait` —lo normal— detiene el proceso y guarda su estado para retomarlo.
+   * `skip` lo saltea, que es útil para ensayar un proceso sin aprobaciones; se
+   * declara explícitamente porque un gate que se saltea en silencio no es un gate.
+   */
+  readonly onGate?: "wait" | "skip";
+  /**
+   * Retomar una corrida detenida.
+   *
+   * Se pasa el estado guardado y el motor **sigue desde el paso pendiente**: los
+   * anteriores no se repiten, y consta cuáles fueron. Repetir un `git tag` no es
+   * idempotente y publicar dos veces es peor.
+   */
+  readonly resume?: ProcessRunState | undefined;
   /** Inyectable para las pruebas: no ejecuta nada y devuelve lo que recibió. */
   readonly runCommand?: (comando: string, cwd: string) => { status: number; stdout: string; stderr: string };
 }
@@ -405,12 +438,37 @@ export function runProcess(request: RunProcessRequest): ProcessRun {
   const inicio = Date.now();
   const { definition } = requireProcess(root, id);
   const valores = resolveParams(definition, request.params);
-  const correr = request.runCommand ?? ((comando: string, cwd: string) => ejecutar(comando, cwd, maximo));
+  const correr =
+    request.runCommand ?? ((comando: string, cwd: string) => ejecutar(comando, cwd, maximo));
 
+  // Al retomar, los pasos que ya constan no se repiten: se dan por hechos y se
+  // sigue desde el pendiente. Es la diferencia entre retomar un despliegue y
+  // volver a desplegarlo.
+  const hechos = new Set(
+    (request.resume?.steps ?? [])
+      .filter((paso) => paso.status === "ok" || paso.status === "skipped")
+      .map((paso) => paso.id),
+  );
+  const pendiente = request.resume?.pendingStep ?? null;
   const resultados: StepOutcome[] = [];
+  const registrados: RunStepState[] = [...(request.resume?.steps ?? [])];
+  const ahora = (): string => new Date().toISOString();
+
   let ok = true;
+  let waiting = false;
+  let detenidoEn: string | null = null;
+  let motivo: string | null = null;
+  // Al retomar, se saltea todo hasta el paso pendiente. Sin esto, un `git tag` ya
+  // ejecutado volvería a correr.
+  let alcanzado = pendiente === null;
 
   for (const paso of definition.steps) {
+    if (!alcanzado) {
+      if (paso.id !== pendiente) continue;
+      alcanzado = true;
+    }
+    if (hechos.has(paso.id)) continue;
+
     const resultado = ejecutarPaso({
       paso,
       valores,
@@ -420,11 +478,27 @@ export function runProcess(request: RunProcessRequest): ProcessRun {
       maxOutputBytes: maximo,
       maxDepth: request.maxDepth ?? 8,
       profundidad: request.depth ?? 0,
-      // Los pasos del hijo entran **antes** que el paso que los invoca, que es el
+      onGate: request.onGate ?? "wait",
+      // Los pasos del hijo entran **antes** que el paso que lo invoca, que es el
       // orden en que corrieron.
       expandir: (outcomes) => resultados.push(...outcomes),
     });
     resultados.push(resultado);
+
+    // Un gate sin aprobar no es un fallo: detiene el proceso y se guarda dónde.
+    if (resultado.status === "waiting") {
+      waiting = true;
+      detenidoEn = paso.id;
+      motivo = resultado.reason;
+      break;
+    }
+
+    registrados.push({
+      id: paso.id,
+      status: resultado.status === "skipped" ? "skipped" : resultado.status === "ok" ? "ok" : "failed",
+      at: ahora(),
+      detail: resultado.detail,
+    });
 
     if (resultado.status === "failed" && !paso.continueOnFailure) {
       ok = false;
@@ -439,8 +513,27 @@ export function runProcess(request: RunProcessRequest): ProcessRun {
     }
   }
 
-  if (ok) {
+  if (ok && !waiting) {
     encadenar({ root, definition, valores, resultados, request, correr, maximo });
+  }
+
+  // Solo se persiste lo que tiene algo que persistir: un proceso que termina bien
+  // o que falla no necesita estado, y dejar un archivo por cada corrida llenaría
+  // el proyecto de basura. Lo que se guarda es lo que hay que **retomar**.
+  let state: ProcessRunState | null = null;
+  if (waiting || request.resume !== undefined) {
+    state = {
+      runId: request.resume?.runId ?? newRunId(definition.id),
+      processId: definition.id,
+      params: valores,
+      status: waiting ? "waiting" : ok ? "completed" : "failed",
+      pendingStep: detenidoEn,
+      steps: registrados,
+      startedAt: request.resume?.startedAt ?? ahora(),
+      updatedAt: ahora(),
+      reason: motivo,
+    };
+    writeRun(root, state);
   }
 
   return {
@@ -448,6 +541,8 @@ export function runProcess(request: RunProcessRequest): ProcessRun {
     params: valores,
     steps: resultados,
     ok,
+    waiting,
+    state,
     durationMs: Date.now() - inicio,
   };
 }
@@ -462,6 +557,8 @@ function ejecutarPaso(contexto: {
   maxOutputBytes: number;
   maxDepth: number;
   profundidad: number;
+  /** Qué hacer con un gate que nadie aprobó. */
+  onGate: "wait" | "skip";
   /** Dónde meter los pasos de un sub-proceso, para que se vean en el resumen. */
   expandir?: ((outcomes: readonly StepOutcome[]) => void) | undefined;
 }): StepOutcome {
@@ -489,6 +586,35 @@ function ejecutarPaso(contexto: {
       stdout: "",
       stderr: "",
       reason: `La condición no se cumple: ${substitute(paso.when, valores)}`,
+    });
+  }
+
+  if (paso.kind === "gate" && paso.target !== null) {
+    // Un gate no ejecuta nada: **espera**. El proceso se detiene aquí y se retoma
+    // cuando alguien aprueba, que es lo que un gate humano significa.
+    //
+    // Se comprueba si ya está aprobado en el registro de gates del proyecto: así
+    // retomar un proceso cuyo gate se aprobó mientras tanto no vuelve a pedirlo.
+    const aprobado = gateApproved(root, paso.target);
+    const estado: StepOutcome["status"] =
+      aprobado !== null ? "ok" : contexto.onGate === "wait" ? "waiting" : "skipped";
+    return anunciar({
+      id: base.id,
+      title: base.title,
+      kind: base.kind,
+      detail: paso.target,
+      status: estado,
+      exitCode: aprobado === null ? null : 0,
+      latencyMs: 0,
+      stdout: "",
+      stderr: "",
+      reason:
+        aprobado !== null
+          ? `El gate "${paso.target}" está aprobado por ${aprobado.actor}.`
+          : estado === "waiting"
+            ? `El gate "${paso.target}" no está aprobado. El proceso queda esperando: ` +
+              "apruébalo con `valmen process approve` y retómalo con `process resume`."
+            : `El gate "${paso.target}" no está aprobado y se pidió no esperar.`,
     });
   }
 

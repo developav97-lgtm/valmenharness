@@ -49,14 +49,17 @@ export const STEP_KINDS = [
 export type StepKind = (typeof STEP_KINDS)[number];
 
 /**
- * Los tipos que el motor sabe ejecutar hoy.
+ * Los tipos que el motor sabe ejecutar.
  *
- * `gate` y `agent` están en el contrato y no en el motor: un gate humano necesita
- * la pantalla de decisión, y un paso de agente necesita el bucle de un runtime.
- * Declararlos y no ejecutarlos es honesto mientras el error diga eso; ejecutarlos
- * a medias sería peor. Ver `docs/02-MOTOR.md` §7.
+ * `gate` se ejecuta **esperando**: el proceso se detiene en ese paso y se retoma
+ * cuando alguien aprueba. No ejecuta nada por su cuenta, que es exactamente lo que
+ * un gate humano significa.
+ *
+ * `agent` sigue fuera: necesita el bucle de un runtime —lanzar un agente, leer su
+ * salida, decidir si hizo lo que se le pidió—, y ejecutarlo a medias sería peor
+ * que rechazarlo con un mensaje que lo dice. Ver `docs/02-MOTOR.md` §7.
  */
-export const STEP_KINDS_EJECUTABLES = ["command", "check", "process"] as const;
+export const STEP_KINDS_EJECUTABLES = ["command", "check", "process", "gate"] as const;
 
 /** Qué hacer cuando un paso falla. */
 export const ON_FAILURE = ["abort", "continue", "ask"] as const;
@@ -408,13 +411,7 @@ export function validateProcess(
   const gates = new Set(catalog.gates);
 
   for (const paso of process.steps) {
-    // `gate` sí se comprueba —contra los gates declarados— y no se ejecuta. Por
-    // eso queda fuera de esta lista: decir «el motor no ejecuta gate» cuando la
-    // comprobación que importa es si el gate existe manda a arreglar lo que no es.
-    if (
-      paso.kind !== "gate" &&
-      !(STEP_KINDS_EJECUTABLES as readonly string[]).includes(paso.kind)
-    ) {
+    if (!(STEP_KINDS_EJECUTABLES as readonly string[]).includes(paso.kind)) {
       fail(
         `El paso "${paso.id}" de ${process.id} es de tipo ${paso.kind}, y el motor ` +
           `todavía no ejecuta ese tipo. Los que ejecuta son: ` +

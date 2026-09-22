@@ -1049,7 +1049,9 @@ describe("valmen process", () => {
   it("sin subcomando dice cuáles hay", () => {
     const r = correr();
     expect(r.exitCode).toBe(2);
-    expect(r.stderr).toMatch(/list, show o run/);
+    // Y los nombra todos: el ciclo de un gate añadió cuatro subcomandos, y un
+    // mensaje que solo dijera los tres primeros dejaría el resto sin descubrir.
+    expect(r.stderr).toMatch(/list, show, run, approve, runs, show-run, resume o abandon/);
   });
 });
 

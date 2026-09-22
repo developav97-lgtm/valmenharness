@@ -126,9 +126,20 @@ Comandos:
       --dry-run             Muestra el manifiesto sin escribirlo.
   process list              Lista los procesos declarados en .valmen/processes/.
   process show <id>         Muestra los pasos y los parámetros de un proceso.
-  process run <id>          Ejecuta un proceso.
+  process run <id>          Ejecuta un proceso. Se detiene en un gate sin aprobar.
       --set n=v[,n=v]       Parámetros del proceso. También --<nombre> <valor>,
                             salvo que choque con una bandera del CLI.
+      --skip-gates          No espera en los gates: los saltea. Para ensayar.
+  process approve <gate> --actor <nombre>
+                            Aprueba un gate de proceso. No retoma nada por sí solo.
+      --reason <texto>      Queda registrado con la aprobación.
+  process runs              Las corridas, con las detenidas primero.
+  process show-run <corrida>
+                            El detalle de una corrida.
+  process resume [corrida]  Retoma una corrida detenida **desde donde quedó**: los
+                            pasos ya ejecutados no se repiten.
+      --skip-gates          Saltea los gates que sigan sin aprobar.
+  process abandon <corrida> Deja de poder retomarla. No deshace lo ya ejecutado.
   serve [--port <n>]        Mission Control en 127.0.0.1.
   simulate <gate>           Calibra un gate sobre el registro histórico.
       --limit <n>           Evalúa solo los primeros n sujetos.
@@ -214,6 +225,8 @@ const VALUE_OPTIONS = [
   "--hasta",
   "--q",
   "--set",
+  "--actor",
+  "--run",
   "--released-at",
   "--provider",
   "--type",

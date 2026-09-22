@@ -27,6 +27,7 @@ export * from "./decompose.js";
 export * from "./report.js";
 export * from "./manifest.js";
 export * from "./process.js";
+export * from "./run-state.js";
 export * from "./release.js";
 export * from "./evaluators.js";
 export * from "./gate.js";

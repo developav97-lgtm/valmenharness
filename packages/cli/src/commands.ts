@@ -37,9 +37,16 @@ import {
 import {
   type LocatedTicket,
   type RegistryPaths,
+  type ProcessRunState,
   type RunnerResult,
+  abandonRun,
+  approveGate,
   buildManifest,
+  listRuns,
   loadProcesses,
+  readRun,
+  renderRun,
+  waitingRuns,
   requireProcess,
   runProcess,
   chooseTicketsDir,
@@ -872,6 +879,10 @@ const BANDERAS_PROPIAS = new Set([
   "legacy-layout",
   "help",
   "dry-run",
+  "skip-gates",
+  "actor",
+  "reason",
+  "run",
 ]);
 
 /**
@@ -958,6 +969,10 @@ export function runProcessCommand(
       root,
       id,
       params,
+      // `--skip-gates` saltea los gates sin aprobar. Es para ensayar un proceso
+      // sin aprobaciones, y se declara explícitamente: un gate que se saltea en
+      // silencio no es un gate.
+      onGate: flags["skip-gates"] === true ? "skip" : "wait",
       // La salida se escribe al vuelo: el proceso puede tardar, y el resultado
       // final no sirve para saber por dónde va.
       onStep: (paso) => {
@@ -971,6 +986,19 @@ export function runProcessCommand(
         process.stdout.write(`${marca} ${paso.id} — ${paso.title}${extra}\n`);
       },
     });
+
+    // Un proceso detenido en un gate **no es un fallo**: es un proceso a medias a
+    // propósito, y confundirlos haría que nadie supiera si hay algo que hacer.
+    if (corrida.waiting) {
+      return {
+        stdout: "",
+        stderr:
+          `El proceso "${id}" se detuvo esperando: ` +
+          `${corrida.state?.reason ?? "un gate sin aprobar"}\n` +
+          `Corrida: ${corrida.state?.runId ?? "(sin identificar)"}\n`,
+        exitCode: EXIT_INVARIANT,
+      };
+    }
 
     if (!corrida.ok) {
       const fallidos = corrida.steps.filter((paso) => paso.status === "failed");
@@ -993,6 +1021,189 @@ export function runProcessCommand(
 
     return ok(
       `Proceso ${corrida.id}: ${corrida.steps.length} paso(s) en ${corrida.durationMs} ms.\n`,
+    );
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/**
+ * `process approve`: registra que un gate de proceso se aprobó.
+ *
+ * El responsable es obligatorio por la misma razón que en un gate de ticket:
+ * aprobar sin nombre no es auditable. Y la aprobación **no** retoma el proceso:
+ * son dos actos distintos —decidir y continuar—, y juntarlos haría que aprobar
+ * tuviera efectos que quien aprueba no ve.
+ */
+export function approveProcessGate(
+  root: string,
+  gate: string | undefined,
+  flags: Readonly<Record<string, string | true>>,
+): CommandResult {
+  if (gate === undefined) {
+    return error("process approve requiere el nombre del gate.", EXIT_SCHEMA);
+  }
+  try {
+    const rawActor = flags["actor"];
+    const rawReason = flags["reason"];
+    const aprobacion = approveGate(
+      root,
+      gate,
+      typeof rawActor === "string" ? rawActor : "",
+      typeof rawReason === "string" ? rawReason : "",
+    );
+    return ok(
+      `Gate "${gate}" aprobado por ${aprobacion.actor} el ${aprobacion.at}.\n` +
+        "Los procesos detenidos en él se pueden retomar con: valmen process resume <corrida>\n",
+    );
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/** `process runs`: las corridas del proyecto, con las detenidas primero. */
+export function listProcessRuns(root: string): CommandResult {
+  const corridas = listRuns(root);
+  if (corridas.length === 0) {
+    return ok("No hay corridas registradas.\n");
+  }
+
+  // Las detenidas primero: son las únicas sobre las que hay algo que hacer.
+  const ordenadas = [
+    ...corridas.filter((corrida) => corrida.status === "waiting"),
+    ...corridas.filter((corrida) => corrida.status !== "waiting"),
+  ];
+  const lineas = ordenadas.map((corrida) => {
+    const pendiente = corrida.pendingStep === null ? "" : ` · esperando en ${corrida.pendingStep}`;
+    const hechos = corrida.steps.filter((paso) => paso.status === "ok").length;
+    return (
+      `${corrida.runId} | ${corrida.status} | ${corrida.processId} | ` +
+      `${hechos}/${corrida.steps.length} paso(s)${pendiente}`
+    );
+  });
+  return ok(lineas.join("\n") + "\n");
+}
+
+/** `process show-run`: el detalle de una corrida. */
+export function showProcessRun(root: string, runId: string | undefined): CommandResult {
+  if (runId === undefined) {
+    return error("process show-run requiere el identificador de la corrida.", EXIT_SCHEMA);
+  }
+  const corrida = readRun(root, runId);
+  if (corrida === null) {
+    return error(`No existe la corrida "${runId}".`, EXIT_SCHEMA);
+  }
+  return ok(renderRun(corrida));
+}
+
+/**
+ * `process resume`: retoma una corrida detenida.
+ *
+ * **No repite los pasos que ya constan**: sigue desde el pendiente. Es la
+ * diferencia entre retomar un despliegue y volver a desplegarlo, y por eso el
+ * estado se guarda antes de detenerse.
+ */
+export function resumeProcessRun(
+  root: string,
+  runId: string | undefined,
+  flags: Readonly<Record<string, string | true>>,
+): CommandResult {
+  // Sin identificador se retoma la única detenida, y si hay varias se pide cuál:
+  // elegir por alguien es cómo se retoma el proceso equivocado.
+  let estado: ProcessRunState | null;
+  if (runId === undefined) {
+    const detenidas = waitingRuns(root);
+    if (detenidas.length === 0) {
+      // Se distingue «no hay ninguna» de «la que pediste no se retoma»: sin esta
+      // comprobación, retomar una abandonada por su identificador daba un error
+      // que hablaba de otra cosa.
+      return error("No hay ninguna corrida detenida que retomar.", EXIT_SCHEMA);
+    }
+    if (detenidas.length > 1) {
+      return error(
+        `Hay ${detenidas.length} corridas detenidas (${detenidas
+          .map((corrida) => corrida.runId)
+          .join(", ")}); indica cuál con un identificador.`,
+        EXIT_AMBIGUOUS,
+      );
+    }
+    estado = detenidas[0] ?? null;
+    if (estado === null) {
+      return error("No hay ninguna corrida detenida que retomar.", EXIT_SCHEMA);
+    }
+  } else {
+    estado = readRun(root, runId);
+    if (estado === null) {
+      return error(`No existe la corrida "${runId}".`, EXIT_SCHEMA);
+    }
+  }
+  if (estado.status !== "waiting" && estado.status !== "failed") {
+    return error(
+      `La corrida "${estado.runId}" está en ${estado.status} y no se retoma.`,
+      EXIT_INVARIANT,
+    );
+  }
+
+  try {
+    const corridaEjecutada = runProcess({
+      root,
+      id: estado.processId,
+      params: estado.params,
+      resume: estado,
+      onGate: flags["skip-gates"] === true ? "skip" : "wait",
+      onStep: (paso) => {
+        const marca =
+          paso.status === "ok"
+            ? "✓"
+            : paso.status === "failed"
+              ? "✗"
+              : paso.status === "waiting"
+                ? "⏸"
+                : "·";
+        const extra =
+          paso.status === "skipped" || paso.status === "waiting"
+            ? ` — ${paso.reason ?? ""}`
+            : paso.latencyMs > 0
+              ? ` (${paso.latencyMs} ms)`
+              : "";
+        process.stdout.write(`${marca} ${paso.id} — ${paso.title}${extra}\n`);
+      },
+    });
+
+    if (corridaEjecutada.waiting) {
+      return {
+        stdout: "",
+        stderr:
+          `El proceso "${estado.processId}" volvió a detenerse: ` +
+          `${corridaEjecutada.state?.reason ?? "esperando un gate"}\n`,
+        exitCode: EXIT_INVARIANT,
+      };
+    }
+    if (!corridaEjecutada.ok) {
+      return error(`El proceso "${estado.processId}" se detuvo otra vez.`, EXIT_INVARIANT);
+    }
+    return ok(`Corrida ${estado.runId} terminada en ${corridaEjecutada.durationMs} ms.\n`);
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/** `process abandon`: una corrida detenida deja de poder retomarse. */
+export function abandonProcessRun(
+  root: string,
+  runId: string | undefined,
+): CommandResult {
+  if (runId === undefined) {
+    return error("process abandon requiere el identificador de la corrida.", EXIT_SCHEMA);
+  }
+  try {
+    const corrida = abandonRun(root, runId);
+    return ok(
+      `Corrida ${corrida.runId} abandonada. Sus pasos ya ejecutados no se deshacen: ` +
+        "lo que hizo, hecho está.\n",
     );
   } catch (caught) {
     const failure = toFailure(caught);
