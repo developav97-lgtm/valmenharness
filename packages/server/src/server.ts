@@ -678,6 +678,9 @@ export async function handleApi(
     try {
       const propuesta = await proposeConfigChange(context.root, {
         message: datos.message,
+        // El archivo del contexto, no el del `$HOME`: el servidor sabe cuál usa y
+        // la clave tiene que salir de ahí.
+        credentialsFile: context.credentialsFile,
         ...(orquestador?.model === undefined || orquestador.model === ""
           ? {}
           : { model: orquestador.model }),

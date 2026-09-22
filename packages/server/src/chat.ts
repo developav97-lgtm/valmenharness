@@ -273,6 +273,13 @@ export interface ProposeOptions {
   readonly model?: string;
   readonly effort?: "auto" | "low" | "medium" | "high";
   readonly apiKey?: string;
+  /**
+   * El archivo de credenciales del proyecto.
+   *
+   * Sin esto se leía el del `$HOME`, que es el del usuario que corre el servidor
+   * y no el que el servidor tiene configurado. Ver `resolveApiKey`.
+   */
+  readonly credentialsFile?: string;
   readonly timeoutMs?: number;
   readonly fetchImpl?: typeof fetch;
   /** Inyectable para las pruebas. */
@@ -318,7 +325,7 @@ export async function proposeConfigChange(
   let apiKey = options.apiKey;
   if (apiKey === undefined) {
     try {
-      apiKey = resolveApiKey("openrouter");
+      apiKey = resolveApiKey("openrouter", process.env, options.credentialsFile);
     } catch (caught) {
       if (caught instanceof CredentialError) {
         throw new ConfigChatError(caught.message, "CREDENTIAL_MISSING");

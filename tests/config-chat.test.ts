@@ -60,6 +60,27 @@ function context() {
 }
 
 /**
+ * Deja una credencial en el archivo del laboratorio.
+ *
+ * Los tests inyectan un `fetch` falso, así que la clave no se usa para nada —
+ * pero **se resuelve antes de llamar**, y sin ninguna el chat falla con «no hay
+ * API key». Eso hacía que estos tests dependieran de que la máquina tuviera
+ * `~/.valmen/.credentials.yaml`: pasaban en la del desarrollador y fallaban en
+ * el CI, que es la peor forma de tener un test verde.
+ *
+ * El valor es inventado a propósito: si alguna vez llegara a usarse de verdad, se
+ * quiere un 401 y no una llamada real a la API de nadie.
+ */
+function conCredencial(): void {
+  const ruta = join(lab, ".valmen", ".credentials.yaml");
+  writeFileSync(
+    ruta,
+    ["version: 1", "providers:", "  openrouter:", '    api-key: "sk-or-v1-de-prueba"', ""].join("\n"),
+    { encoding: "utf8", mode: 0o600 },
+  );
+}
+
+/**
  * Un configurador simulado.
  *
  * Devuelve la respuesta de chat con la propuesta que el test decida, envuelta
@@ -324,6 +345,7 @@ describe("aplicar una propuesta", () => {
 
 describe("la API del chat", () => {
   it("propone sin escribir", async () => {
+    conCredencial();
     const respuesta = await handleApi(
       "POST",
       "/api/chat/config",
@@ -341,6 +363,7 @@ describe("la API del chat", () => {
   });
 
   it("un fallo del configurador se devuelve como propuesta fallida, no como error 500", async () => {
+    conCredencial();
     const respuesta = await handleApi(
       "POST",
       "/api/chat/config",

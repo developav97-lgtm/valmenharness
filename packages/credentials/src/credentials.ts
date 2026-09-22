@@ -94,6 +94,7 @@ export function fieldOf(block: string, patron: string): string | null {
 export function resolveApiKey(
   provider = "openrouter",
   env: NodeJS.ProcessEnv = process.env,
+  filePath?: string,
 ): string {
   const nombreVariable = `${provider.toUpperCase().replace(/-/g, "_")}_API_KEY`;
   const desdeEntorno = env[nombreVariable];
@@ -101,9 +102,17 @@ export function resolveApiKey(
     return desdeEntorno.trim();
   }
 
-  const ruta = credentialsPath(
-    typeof env["HOME"] === "string" ? env["HOME"] : homedir(),
-  );
+  // El archivo se puede indicar, y eso no es una comodidad de las pruebas: el
+  // servidor tiene un archivo de credenciales en su contexto, y sin esta vía lo
+  // ignoraba y leía el del `$HOME`. El efecto era que un harness apuntando a otro
+  // archivo usaba la clave del usuario, y que ninguna prueba podía aislarse: el
+  // chat funcionaba en la máquina del desarrollador —donde el archivo existe— y
+  // fallaba en el CI, que es la peor forma de tener un test verde.
+  const ruta =
+    filePath ??
+    credentialsPath(
+      typeof env["HOME"] === "string" ? env["HOME"] : homedir(),
+    );
   let texto: string;
   try {
     texto = readFileSync(ruta, "utf8");
