@@ -58,6 +58,15 @@ export interface GateRunOptions {
   readonly model?: string;
   /** Proveedor por el que hablar. Sin él, OpenRouter. */
   readonly provider?: string;
+  /**
+   * La clave ya resuelta por quien llama.
+   *
+   * Se acepta y se **reenvía** al evaluador porque el motor no lee credenciales:
+   * quien tiene el archivo es el proceso que arranca —el CLI, Mission Control,
+   * el servidor MCP—, y sin esta vía cada evaluador resolvía por su cuenta
+   * contra el `$HOME`, que puede ser el de otro usuario.
+   */
+  readonly apiKey?: string;
   readonly effort?: "auto" | "low" | "medium" | "high";
   readonly judgeModel?: string;
   /** Evaluador semántico preferido por el routing del proyecto. */
@@ -165,6 +174,7 @@ export async function runGate(
       ...(options.judge === undefined ? {} : { judge: options.judge }),
       ...(options.model === undefined ? {} : { model: options.model }),
       ...(options.provider === undefined ? {} : { provider: options.provider }),
+      ...(options.apiKey === undefined ? {} : { apiKey: options.apiKey }),
       ...(options.effort === undefined ? {} : { effort: options.effort }),
       ...(options.judgeModel === undefined ? {} : { judgeModel: options.judgeModel }),
       ...(options.semantic === undefined ? {} : { semantic: options.semantic }),

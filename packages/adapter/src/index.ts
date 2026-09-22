@@ -14,3 +14,4 @@ export * from "./projection.js";
 export * from "./adopt.js";
 export * from "./routing.js";
 export * from "./agents.js";
+export * from "./mcp.js";

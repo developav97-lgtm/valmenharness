@@ -1,13 +1,21 @@
+#!/usr/bin/env node
 /**
  * Punto de entrada del CLI `valmen`.
+ *
+ * Lleva shebang porque es el ejecutable que se publica como `valmen`: sin él, el
+ * archivo solo se puede lanzar con `node main.js` y un enlace en el `PATH` —que
+ * es como se instala un binario— no arranca. TypeScript lo elimina al compilar
+ * salvo que se le pida conservarlo, y esa diferencia no se nota hasta que
+ * alguien intenta usarlo desde otra carpeta.
  *
  * El análisis de argumentos es propio y deliberadamente pequeño: el camino
  * crítico del harness no debe depender de un framework de CLI. Cada comando
  * devuelve un `CommandResult` en vez de escribir directamente, lo que hace que
  * todos los comandos sean testeables sin capturar la salida del proceso.
  */
+import { realpathSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 
 import { EXIT_INVARIANT, EXIT_SCHEMA, toFailure } from "@valmen/core";
 import { resolveApiKeyWithFile } from "@valmen/credentials";
@@ -30,6 +38,7 @@ import {
   validateOne,
 } from "./commands.js";
 import { runFeature } from "./features.js";
+import { mcpCommand } from "./mcp.js";
 import { runProcess } from "./process.js";
 import {
   type RegistryPaths,
@@ -868,7 +877,21 @@ export async function run(argv: readonly string[]): Promise<number> {
       return 0;
     }
 
-    if (command === "simulate") {
+    if (command === "mcp") {
+      // El ejecutable del servidor se deduce del que está corriendo: en una
+      // instalación global y en el repositorio de desarrollo las rutas no tienen
+      // nada que ver, y escribir una a mano deja la otra rota.
+      result = mcpCommand({
+        root: options.root,
+        // La ruta de **invocación**, no la del módulo: con un binario
+        // enlazado en el `PATH`, la del módulo es la del repositorio y
+        // escribirla en la configuración la ataría a esta máquina.
+        cliEntry: process.argv[1] ?? fileURLToPath(import.meta.url),
+        install: options.flags["install"] === true,
+        global: options.flags["global"] === true,
+        json: options.flags["json"] === true,
+      });
+    } else if (command === "simulate") {
       const gateId = rest[0];
       if (gateId === undefined) {
         result = {
@@ -1029,12 +1052,18 @@ export async function run(argv: readonly string[]): Promise<number> {
  * Importar `main.ts` para probar `parseArgs` no debe ejecutar el CLI. Sin esta
  * guarda, un test que solo quiere analizar argumentos lanza el comando entero,
  * imprime la ayuda y fija un código de salida: el módulo se vuelve intestable.
+ *
+ * La comparación se hace sobre rutas **reales**, no sobre el texto. Un binario
+ * instalado en el `PATH` se alcanza por un enlace simbólico: `import.meta.url`
+ * trae la ruta resuelta y `process.argv[1]` la del enlace, así que compararlas
+ * en crudo da `false` y el proceso termina con éxito **sin hacer nada**. Es un
+ * fallo silencioso y por eso conviene que la comparación sea la correcta.
  */
 function isMainModule(): boolean {
   const entry = process.argv[1];
   if (entry === undefined) return false;
   try {
-    return import.meta.url === pathToFileURL(entry).href;
+    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(entry);
   } catch {
     return false;
   }

@@ -451,18 +451,30 @@ confiar. Y es lo que hace posible el ajuste continuo de umbrales y presets basad
 
 ### C4. Servidor MCP bidireccional de primera clase
 
-**Qué es.** Ya está en el diseño (`valmen mcp`), pero conviene explicitarlo como producto: que
-**cualquier** agente compatible con MCP pueda operar el harness.
+**Estado: construido en su primera mitad.** El servidor existe (`@valmen/mcp`, ejecutable
+`valmen-mcp`), habla el protocolo por stdio sin dependencias, y `valmen mcp --install` lo
+declara en opencode y entrega el fragmento de codex. Las ocho herramientas implementadas
+—y lo que deliberadamente **no** se expone— están en `docs/02-MOTOR.md` §10.
 
-| Herramienta MCP | Qué hace |
-|---|---|
-| `valmen_ticket_list/show/create/transition` | Ciclo de vida del ticket |
-| `valmen_feature_status/decompose` | Features |
-| `valmen_gate_list_pending/approve/reject` | Gates |
-| `valmen_process_run/status` | Procesos |
-| `valmen_usage_report` | Costos |
-| `valmen_memory_search/save` | Memoria |
-| `valmen_drift_check` | Drift de artefactos |
+**Lo que falta para cerrar C4** es la segunda mitad: que el harness también sea *cliente*
+MCP —hablar con CodeGraph y con Hermes— y las herramientas que dependen de trabajo que
+todavía no existe.
+
+| Herramienta MCP | Qué hace | Estado |
+|---|---|---|
+| `crear_ticket`, `ver_ticket`, `listar_tickets`, `validar_ticket` | Ciclo de vida del ticket | **Hecho** |
+| `mover_ticket`, `reanudar_ticket` | Estado y contexto para retomar | **Hecho** |
+| `evaluar_compuerta`, `simular_compuerta` | Gates y calibración | **Hecho** |
+| `descomponer_feature` | Features | Falta: expone `decomposeFeature` |
+| `process_run` / `process_status` | Procesos | Falta: expone `runProcess` |
+| `usage_report` | Costos | Falta: `valmen usage report` no existe |
+| `memory_search` / `memory_save` | Memoria | Fase 6 |
+| `drift_check` | Drift de artefactos | Falta |
+
+**`gate_approve` / `gate_reject` no se van a exponer.** Estaban en esta tabla y se
+descartaron a propósito: la aprobación de un gate es una decisión humana, y un agente que
+pudiera tomarla convertiría el control en un trámite. La decisión vive en Mission Control y
+en `valmen gate-decide`.
 
 **Por qué importa.** Es el mecanismo que hace que el harness sea verdaderamente agnóstico:
 funciona desde Claude, Codex, opencode, Cursor, Hermes o cualquier cliente MCP presente y

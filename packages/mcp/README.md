@@ -1,0 +1,78 @@
+# @valmen/mcp
+
+El harness al alcance de un agente. Este paquete es el servidor MCP que permite que
+**opencode, codex o Claude Code** creen tickets, los validen, evalúen compuertas y muevan su
+estado **sin que nadie escriba un comando**.
+
+## Resumen
+
+Un servidor MCP es un proceso que un agente lanza como hijo y con el que habla JSON-RPC 2.0
+por stdin y stdout. Este implementa los tres métodos que un cliente usa de verdad
+—`initialize`, `tools/list` y `tools/call`— **sin ninguna dependencia**: el camino crítico del
+harness se ejecuta dentro de la herramienta de otra persona, y no debería poder romperse
+porque cambió una dependencia transitiva.
+
+El ejecutable es `valmen-mcp`.
+
+## Uso
+
+```bash
+# Lo que hay que declarar en cada agente, sin escribir nada
+valmen mcp
+
+# Lo escribe en la configuración del proyecto (opencode.json), conservando
+# los servidores MCP que ya estuvieran declarados
+valmen mcp --install
+
+# Añade además la sección al config.toml global de codex
+valmen mcp --global
+
+# Comprobar que arranca, sin hablar el protocolo
+valmen-mcp --check
+```
+
+La entrada que se declara **no lleva rutas absolutas**: el ejecutable se resuelve por el
+`PATH` y el directorio de trabajo es `"."`, el del propio archivo de configuración. Un archivo
+versionado con la ruta de una máquina no arranca en ninguna otra, y el síntoma —«la
+herramienta no existe»— no dice por qué.
+
+## Contrato
+
+Las ocho herramientas. Ninguna es una segunda implementación: las de lectura llaman a las
+mismas funciones que el CLI, y las de escritura al mismo motor.
+
+| Herramienta              | Qué hace                                              |
+| ------------------------ | ----------------------------------------------------- |
+| `crear_ticket`           | Alta en `intake`; devuelve la ruta del archivo        |
+| `ver_ticket`             | Resumen del ticket: frontmatter, secciones y bloques  |
+| `listar_tickets`         | Tickets no cerrados                                   |
+| `validar_ticket`         | Contrato del ticket; sin `id`, todo el registro       |
+| `evaluar_compuerta`      | Evalúa un gate y escribe el recibo                    |
+| `mover_ticket`           | Aplica la tabla de estados del contrato               |
+| `reanudar_ticket`        | Contexto para retomar trabajo empezado                |
+| `simular_compuerta`      | Mide un gate sobre el histórico, para calibrar        |
+
+Todas aceptan un `root` opcional que gana sobre el directorio de trabajo, para una sesión que
+trabaje sobre dos repositorios.
+
+**Un fallo de herramienta es un resultado, no un error de protocolo.** El agente recibe
+`isError: true` con el mensaje del motor —«Falta `type`, y es obligatorio»— y puede corregir.
+Un error JSON-RPC lo dejaría sin el motivo.
+
+## Limitaciones
+
+**No hay herramienta para aprobar una compuerta, y no es un olvido.** La aprobación es una
+decisión humana: vive en Mission Control y en `valmen gate-decide`. Un agente que pudiera
+aprobarse a sí mismo convertiría el control en un trámite.
+
+Tampoco hay forma de saltar la tabla de estados. Un agente puede recorrer
+`intake → analyzed → planned` y **no puede cruzar** a `approved`: el motor exige la línea de
+aprobación explícita del PO en el plan, y la plantilla la deja vacía.
+
+Falta la segunda mitad de C4 —el harness como *cliente* MCP— y las herramientas que dependen
+de trabajo que todavía no existe (`descomponer_feature`, `process_run`, `usage_report`,
+`memory_*`, `drift_check`). Ver `docs/12-FUNCIONALIDADES-PROXIMAS.md`.
+
+**Nada escribe en stdout salvo el protocolo.** Un `console.log` perdido o un aviso de Node
+rompen la sesión del agente de una forma que después nadie sabe explicar; los diagnósticos van
+a stderr, que el cliente sí muestra.

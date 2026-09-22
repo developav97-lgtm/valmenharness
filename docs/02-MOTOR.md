@@ -514,9 +514,87 @@ valmen usage report [--ticket <id>] [--feature <slug>]
 
 # Servicios
 valmen serve                      # Mission Control en localhost
-valmen mcp                        # servidor MCP para los agentes
+valmen mcp                        # qué declarar en cada agente (no arranca nada)
+valmen mcp --install              # lo escribe en la config del proyecto
 valmen index                      # reconstruir el estado derivado
 ```
 
 Todos los comandos que mutan aceptan `--json` y `--dry-run`. Esto es lo que permite que
 los agentes y la GUI usen la misma superficie que tú.
+
+---
+
+## 10. El servidor MCP: el flujo sin terminal
+
+`valmen mcp` **no arranca el servidor**: imprime lo que hay que declarar en cada agente y,
+con `--install`, lo escribe. El servidor es `valmen-mcp`, un proceso aparte que el agente
+lanza como hijo y con el que habla JSON-RPC por stdin y stdout.
+
+Existe porque el flujo no puede empezar en una terminal. Quien reporta un problema habla
+con su agente —opencode, codex, Claude Code—, y el agente necesita poder dar de alta el
+ticket, validarlo, evaluar la compuerta y mover el estado. Sin esto, cada ticket empieza
+con alguien copiando un comando.
+
+### Las ocho herramientas
+
+| Herramienta | Qué hace | Reutiliza |
+|---|---|---|
+| `crear_ticket` | Alta en `intake`, devuelve la ruta del archivo | `createTicket` |
+| `ver_ticket` | Resumen del ticket: frontmatter, secciones, bloques | `valmen show` |
+| `listar_tickets` | Tickets no cerrados | `valmen list` |
+| `validar_ticket` | Contrato del ticket; sin `id`, todo el registro | `valmen validate` |
+| `evaluar_compuerta` | Evalúa un gate y escribe el recibo | `runGate` |
+| `mover_ticket` | Aplica la tabla de estados | `transition` |
+| `reanudar_ticket` | Contexto para retomar trabajo empezado | `valmen resume` |
+| `simular_compuerta` | Mide un gate sobre el histórico, para calibrar | `simulateGate` |
+
+Las herramientas **no son una segunda implementación**: las de lectura llaman literalmente
+a las funciones de `@valmen/cli`, y las de escritura al mismo motor. Si el agente creara un
+ticket de una forma y el comando de otra, el registro dejaría de ser el mismo registro — que
+es justo lo que el harness existe para impedir.
+
+### Lo que **no** hay, y por qué
+
+**No hay herramienta para aprobar una compuerta.** El diseño original de
+`docs/12-FUNCIONALIDADES-PROXIMAS.md` (§C4) listaba `valmen_gate_approve/reject`; no está, y
+no es un olvido. Un gate puede *prepararse* automáticamente, pero la aprobación es de una
+persona: es la primera regla de acciones que nunca se automatizan. Un agente que pudiera
+aprobarse a sí mismo convertiría el control en un trámite, y el recibo registraría como
+decisión humana algo que ninguna persona decidió.
+
+Tampoco hay herramienta para saltar la tabla de estados: `mover_ticket` la aplica, y un
+salto ilegal se rechaza con el motivo. Un agente puede recorrer el camino legal completo
+—`intake → analyzed → planned`— y **no puede cruzar** a `approved`, porque el motor exige
+la línea de aprobación explícita del PO en el plan y la plantilla la deja vacía.
+
+### La raíz del proyecto
+
+El servidor resuelve el registro por su **directorio de trabajo**, y los dos runtimes lo
+fijan al proyecto al lanzarlo. Por eso la entrada que se declara **no lleva `--root`**:
+grabar la raíz de un proyecto haría que la misma configuración dejara de valer en cualquier
+otro. En el `config.toml` de codex —que es único para todos los proyectos de una persona—
+sería directamente un error: todas las sesiones escribirían en el registro del primer
+proyecto registrado.
+
+Cada herramienta acepta un `root` en sus argumentos, que gana sobre todo lo demás. Es la
+salida para el caso raro: una sesión que trabaja sobre dos repositorios.
+
+### Diagnóstico
+
+El primer fallo de un servidor MCP es que el cliente no lo encuentra, y desde dentro del
+agente eso se ve como «la herramienta no existe». Por eso hay una autocomprobación que no
+habla el protocolo:
+
+```bash
+valmen-mcp --check
+# servidor:    valmen 0.0.1
+# raíz:        /proyectos/tienda
+# registro:    tickets
+# credenciales: /proyectos/tienda/.valmen/.credentials.yaml
+# herramientas: 8
+```
+
+Y una regla que no se puede romper: **nada escribe en stdout salvo el protocolo**. Un
+`console.log` perdido o un aviso de Node rompen la sesión del agente de una forma que
+después nadie sabe explicar. Todos los diagnósticos van a stderr, que el cliente sí muestra.
+

@@ -13,3 +13,7 @@ coverage/
 
 # macOS
 .DS_Store
+
+# La configuración de opencode lleva rutas absolutas de esta máquina: el
+# ejecutable del servidor MCP. Se genera con `valmen mcp --install`.
+opencode.json

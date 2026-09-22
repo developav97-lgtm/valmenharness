@@ -38,6 +38,13 @@ Recordatorio de [`00-VISION.md` §8](00-VISION.md#8-principio-de-crecimiento-el-
 | **4** | Semi-autonomía: tickets de bajo riesgo de punta a punta            | Fase 6              |
 | **5** | Aprendizaje: presets y umbrales ajustados por evidencia            | Fase 6+             |
 
+**Estado de las fases, en corto.** Las fases 0 a 4 están cerradas, cada una con su criterio
+de aceptación cumplido y escrito en su sección. De la 3 queda una salvedad que no es código:
+la medición de calibración existe, el número todavía no se cumple y se sabe por qué —hacen
+falta planes aprobados por personas contra los que comparar—. De la 5 falta el dogfooding,
+que es del lado del proyecto y no de aquí. La 6 no ha empezado. Y la pieza que cerraba el
+flujo —el servidor MCP— está hecha: ver §Fase 5.
+
 ## 3. Fases en detalle
 
 ### Fase 0 — Fundación (1 semana)
@@ -202,6 +209,15 @@ Lo que queda de la fase, y es **una sola cosa**: el dogfooding. El criterio de a
 pide «el módulo de inventario especificado, descompuesto en tickets con sprints, y con los dos
 primeros tickets implementados a través del harness». La primera mitad está hecha y probada
 contra un proveedor real; la segunda se hace sobre un proyecto, no aquí.
+
+**El servidor MCP cierra la última pieza que faltaba del flujo.** Era el hueco que hacía que
+el harness no se pudiera usar sin terminal: un agente podía leer el registro pero no
+escribirlo, así que cada ticket empezaba con alguien copiando un comando. Ahora
+`valmen mcp --install` declara `@valmen/mcp` en el proyecto y el agente —opencode, codex—
+crea el ticket, lo valida, evalúa la compuerta y mueve el estado por sí mismo. Las ocho
+herramientas y, sobre todo, lo que **no** expone —no hay forma de aprobar una compuerta desde
+un agente— están en [`02-MOTOR.md` §10](02-MOTOR.md). Es la primera mitad de C4; la segunda,
+el harness como *cliente* MCP, sigue pendiente.
 
 **Diferido por decisión del responsable**, con el motivo escrito: el piloto sobre SaiOpenCloud
 va al final, cuando el harness esté completo, para no descubrir a mitad de camino que falta una

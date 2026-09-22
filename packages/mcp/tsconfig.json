@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "composite": true,
+    "tsBuildInfoFile": "./dist/.tsbuildinfo"
+  },
+  "references": [
+    { "path": "../core" },
+    { "path": "../adapter" },
+    { "path": "../credentials" },
+    { "path": "../gate" },
+    { "path": "../engine" },
+    { "path": "../cli" }
+  ],
+  "include": ["src/**/*.ts"]
+}
