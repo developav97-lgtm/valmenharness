@@ -80,13 +80,31 @@ afterEach(() => {
 // ── El catálogo de roles y presets ──────────────────────────────────────────
 
 describe("el catálogo de roles", () => {
-  it("declara consumidor solo donde el harness lo ejecuta de verdad", () => {
-    const conConsumidor = ROLES.filter((rol) => rol.consumer !== null).map((rol) => rol.id);
-    expect(conConsumidor).toEqual(["gate-evaluator", "gate-judge"]);
-    // Los demás existen en el contrato y se pueden configurar, pero la interfaz
-    // tiene que poder decir que todavía no los ejecuta nadie.
-    expect(ROLES.length).toBeGreaterThan(conConsumidor.length);
+  it("todos los roles declarados tienen quién los ejecute", () => {
+    // La regla que se aprendió a golpes: un rol declarado sin consumidor es peor
+    // que un rol ausente. La pantalla lo mostraba con selectores y botón de
+    // probar, y el trabajo real lo ejecutaba el agente con su propio modelo.
+    //
+    // Los nueve que estaban en esa situación —`spec-author`, `architect`,
+    // `critic`, `explorer`, `implementer`, `test-author`, `doc-writer`,
+    // `verifier`, `classifier` y `summarizer`— se retiraron del contrato y de los
+    // presets. Este test impide que vuelvan por descuido.
+    expect(ROLES.every((rol) => rol.consumer !== null && rol.consumer !== "")).toBe(true);
+    expect(ROLES.map((rol) => rol.id)).toEqual([
+      "gate-evaluator",
+      "gate-judge",
+      "orchestrator",
+    ]);
     expect(ROLES.every((rol) => rol.description !== "")).toBe(true);
+  });
+
+  it("los presets solo asignan modelos a los roles que se ejecutan", () => {
+    const declarados = new Set(ROLES.map((rol) => rol.id));
+    for (const preset of PRESETS) {
+      for (const rol of Object.keys(preset.roles)) {
+        expect(declarados.has(rol)).toBe(true);
+      }
+    }
   });
 
   it("los presets cubren todos los roles y usan esfuerzos válidos", () => {
@@ -123,26 +141,26 @@ describe("el catálogo de roles", () => {
 describe("la resolución de un rol", () => {
   it("sin override, el modelo viene del preset", () => {
     const rutas = resolveRouting({ preset: "economy", roles: {} });
-    const implementer = rutas.find((ruta) => ruta.role === "implementer");
-    expect(implementer?.source).toBe("preset");
-    expect(implementer?.model).toBe("z-ai/glm-5.3-flash");
+    const orquestador = rutas.find((ruta) => ruta.role === "orchestrator");
+    expect(orquestador?.source).toBe("preset");
+    expect(orquestador?.model).toBe("z-ai/glm-5.3-flash");
   });
 
   it("el override del proyecto gana sobre el preset, y lo dice", () => {
     const rutas = resolveRouting({
       preset: "economy",
       roles: {
-        implementer: {
+        orchestrator: {
           provider: "openrouter",
           model: "anthropic/claude-opus-4.6",
           effort: "high",
         },
       },
     });
-    const implementer = rutas.find((ruta) => ruta.role === "implementer");
-    expect(implementer?.source).toBe("proyecto");
-    expect(implementer?.model).toBe("anthropic/claude-opus-4.6");
-    expect(implementer?.effort).toBe("high");
+    const orquestador = rutas.find((ruta) => ruta.role === "orchestrator");
+    expect(orquestador?.source).toBe("proyecto");
+    expect(orquestador?.model).toBe("anthropic/claude-opus-4.6");
+    expect(orquestador?.effort).toBe("high");
   });
 
   it("marca el rol del evaluador según emita probabilidades o texto", () => {
@@ -170,16 +188,16 @@ describe("la resolución de un rol", () => {
 describe("el archivo de routing", () => {
   it("acepta la forma corta y la larga", () => {
     const routing = parseRouting(
-      "preset: economy\nroles:\n  architect: anthropic/claude-opus-4.6\n  critic:\n    model: moonshotai/kimi-k3\n    effort: high\n",
+      "preset: economy\nroles:\n  orchestrator: anthropic/claude-opus-4.6\n  gate-judge:\n    model: moonshotai/kimi-k3\n    effort: high\n",
     );
     expect(routing.preset).toBe("economy");
-    expect(routing.roles.architect?.model).toBe("anthropic/claude-opus-4.6");
-    expect(routing.roles.critic?.effort).toBe("high");
+    expect(routing.roles.orchestrator?.model).toBe("anthropic/claude-opus-4.6");
+    expect(routing.roles["gate-judge"]?.effort).toBe("high");
   });
 
   it("rechaza un rol que no existe en vez de guardarlo en silencio", () => {
     expect(() =>
-      parseRouting("preset: balanced\nroles:\n  architecto:\n    model: x\n"),
+      parseRouting("preset: balanced\nroles:\n  orquestador:\n    model: x\n"),
     ).toThrow(/no es un rol conocido/);
   });
 
@@ -190,7 +208,7 @@ describe("el archivo de routing", () => {
   it("rechaza un esfuerzo inválido", () => {
     expect(() =>
       parseRouting(
-        "preset: balanced\nroles:\n  critic:\n    model: x\n    effort: muchísimo\n",
+        "preset: balanced\nroles:\n  gate-judge:\n    model: x\n    effort: muchísimo\n",
       ),
     ).toThrow(/esfuerzo/);
   });
@@ -199,29 +217,37 @@ describe("el archivo de routing", () => {
     const estado = readRouting(lab);
     expect(estado.ok).toBe(true);
     expect(estado.text).toBe("");
-    expect(estado.roles.find((ruta) => ruta.role === "architect")?.source).toBe("preset");
+    expect(estado.roles.find((ruta) => ruta.role === "orchestrator")?.source).toBe(
+      "preset",
+    );
   });
 
   it("lo que escribe el formulario es lo que lee el parser", () => {
+    // Un rol con modelo se escribe; uno sin modelo no, porque escribir un rol
+    // vacío lo dejaría configurado en nada y el preset dejaría de aportar su
+    // valor. Se usa `gate-evaluator` para el rol con modelo porque es el que más
+    // importa que llegue bien: es el que decide las compuertas.
     const texto = routingFromForm({
       preset: "quality",
       roles: {
-        architect: { model: "anthropic/claude-opus-4.6", effort: "high" },
-        implementer: { model: "" }, // sin modelo: no se escribe
+        "gate-evaluator": { model: "anthropic/claude-opus-4.6", effort: "high" },
+        "gate-judge": { model: "" }, // sin modelo: no se escribe
       },
     });
     expect(texto).toContain("preset: quality");
-    expect(texto).not.toContain("implementer");
+    expect(texto).toContain("gate-evaluator");
+    expect(texto).not.toContain("gate-judge:");
+
     const routing = parseRouting(texto);
-    expect(routing.roles.architect?.effort).toBe("high");
-    expect(routing.roles.implementer).toBeUndefined();
+    expect(routing.roles["gate-evaluator"]?.effort).toBe("high");
+    expect(routing.roles["gate-judge"]).toBeUndefined();
   });
 
   it("el render y el parser son inversos", () => {
     const routing = {
       preset: "balanced",
       roles: {
-        critic: {
+        "gate-judge": {
           provider: "openrouter",
           model: "moonshotai/kimi-k3",
           effort: "high" as const,
@@ -241,16 +267,16 @@ describe("el archivo de routing", () => {
   it("guarda y relee el routing del proyecto", () => {
     const texto = routingFromForm({
       preset: "economy",
-      roles: { architect: { model: "anthropic/claude-opus-4.6", effort: "high" } },
+      roles: { orchestrator: { model: "anthropic/claude-opus-4.6", effort: "high" } },
     });
     expect(writeRouting(lab, texto).written).toBe(true);
 
     const estado = checkRouting(lab, readFileSync(routingPath(lab), "utf8"));
     expect(estado.ok).toBe(true);
     expect(estado.preset).toBe("economy");
-    const architect = estado.roles.find((ruta) => ruta.role === "architect");
-    expect(architect?.source).toBe("proyecto");
-    expect(architect?.model).toBe("anthropic/claude-opus-4.6");
+    const orquestador = estado.roles.find((ruta) => ruta.role === "orchestrator");
+    expect(orquestador?.source).toBe("proyecto");
+    expect(orquestador?.model).toBe("anthropic/claude-opus-4.6");
   });
 });
 
@@ -469,7 +495,7 @@ describe("la API de routing", () => {
       "/api/routing/preview",
       {
         preset: "economy",
-        roles: { architect: { model: "anthropic/claude-opus-4.6", effort: "high" } },
+        roles: { orchestrator: { model: "anthropic/claude-opus-4.6", effort: "high" } },
       },
       context(),
     );
@@ -490,7 +516,7 @@ describe("la API de routing", () => {
       "/api/routing",
       {
         preset: "quality",
-        roles: { critic: { model: "anthropic/claude-opus-4.6", effort: "high" } },
+        roles: { "gate-judge": { model: "anthropic/claude-opus-4.6", effort: "high" } },
       },
       context(),
     );
@@ -526,14 +552,14 @@ describe("la API de routing", () => {
     const respuesta = await handleApi(
       "PUT",
       "/api/routing",
-      { preset: "balanced", roles: { architecto: { model: "x" } } },
+      { preset: "balanced", roles: { orquestador: { model: "x" } } },
       context(),
     );
     // El rol desconocido se ignora al construir el texto —solo se escriben los
     // roles del contrato—, así que la respuesta es un texto sin ese rol.
     expect(respuesta.status).toBe(200);
     const escrito = readFileSync(routingPath(lab), "utf8");
-    expect(escrito).not.toContain("architecto");
+    expect(escrito).not.toContain("orquestador");
   });
 });
 
@@ -551,7 +577,7 @@ describe("el proveedor viaja con el modelo", () => {
     const texto = routingFromForm({
       preset: "balanced",
       roles: {
-        architect: { provider: "deepseek", model: "deepseek-v4-pro", effort: "high" },
+        orchestrator: { provider: "deepseek", model: "deepseek-v4-pro", effort: "high" },
       },
     });
     expect(texto).toContain("provider: deepseek");
@@ -565,7 +591,7 @@ describe("el proveedor viaja con el modelo", () => {
     // guardar, así que el usuario ve que no se aplicó.
     const texto = routingFromForm({
       preset: "balanced",
-      roles: { architect: { provider: "deepseek", model: "" } },
+      roles: { orchestrator: { provider: "deepseek", model: "" } },
     });
     expect(texto).not.toContain("deepseek");
   });
@@ -573,7 +599,7 @@ describe("el proveedor viaja con el modelo", () => {
   it("sin proveedor usa el de por defecto", () => {
     const texto = routingFromForm({
       preset: "balanced",
-      roles: { architect: { model: "anthropic/claude-opus-4.6" } },
+      roles: { orchestrator: { model: "anthropic/claude-opus-4.6" } },
     });
     expect(texto).toContain("provider: openrouter");
   });

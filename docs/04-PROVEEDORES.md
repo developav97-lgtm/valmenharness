@@ -189,40 +189,41 @@ Eso es exactamente un sistema de routing **por rol de workflow**.
 
 ### 4.1 Definición de roles
 
+**Tres roles, y los tres se ejecutan.** La lista tuvo trece y se recortó a tres
+después de comprobar cuáles tenían quién los consumiera de verdad: el harness los
+declaraba, la pantalla los mostraba con selectores y botón de probar, y el trabajo
+real lo ejecutaba el agente con su propio modelo. Una lista de trece roles donde
+diez no hacen nada es peor que una de tres: parece configuración activa.
+
 ```yaml
 # .valmen/routing.yaml
 roles:
-  # ── Roles de razonamiento (caros, poco frecuentes) ──
-  orchestrator:      "Coordina, clasifica, decide a quién delegar"
-  spec-author:       "Escribe specs y briefs de feature"
-  architect:         "Diseño técnico y descomposición en tickets"
-  critic:            "Revisión adversarial de un candidato congelado"
-
-  # ── Roles de ejecución (baratos, frecuentes) ──
-  explorer:          "Exploración read-only de código"
-  implementer:       "Escribe el código según el plan aprobado"
-  test-author:       "Escribe y actualiza pruebas"
-  doc-writer:        "Documentación y manuales"
-
-  # ── Roles de verificación (deterministas primero) ──
-  gate-evaluator:    "Evalúa proposiciones de gate. DEFAULT: Jev"
-  gate-judge:        "Revisión con explicación cuando Jev duda"
-  verifier:          "Verifica implementación contra criterios"
-
-  # ── Roles mecánicos (baratísimos) ──
-  classifier:        "Clasifica tipo, módulo y riesgo de una solicitud"
-  summarizer:        "Resume para el reporte diario/semanal"
+  # ── Los que el harness ejecuta ──
+  gate-evaluator:    "Responde las proposiciones de un gate.       valmen gate"
+  gate-judge:        "Resuelve un gate cuando Jev no puede decidir.  valmen gate --evaluator llm-judge"
+  orchestrator:      "Propone cambios de configuración.            POST /api/chat/config"
 ```
+
+**Los otros diez roles no se configuran aquí, y el motivo es estructural: el
+harness no es un runtime de agentes.** Declara el proceso, guarda el estado y
+evalúa compuertas, y solo puede elegir el modelo de lo que él mismo ejecuta. Explorar,
+escribir y editar lo hace opencode, con su propia configuración de modelos; el
+harness le dice **qué** hay que hacer y **con qué evidencia**, no con qué modelo.
+
+Un rol declarado sin consumidor no es documentación de intención: es una promesa
+que la interfaz no puede cumplir. Por eso se retiraron `spec-author`, `architect`,
+`critic`, `explorer`, `implementer`, `test-author`, `doc-writer`, `verifier`,
+`classifier` y `summarizer`, y hay una prueba que impide que vuelvan por descuido.
 
 ### 4.2 Resolución en cuatro capas
 
 El modelo de un rol se resuelve con precedencia, y **la capa más específica gana**:
 
 ```
-1. Override de sesión          valmen process run deploy --model architect=kimi/k2
+1. Override de sesión          valmen process run deploy --model gate-evaluator=kimi/k2
 2. Override por proceso        .valmen/processes/deploy.yaml → steps[].model
-3. Override por proyecto       .valmen/routing.yaml → roles.architect
-4. Preset global               ~/.valmen/models/presets.yaml → presets[activo].architect
+3. Override por proyecto       .valmen/routing.yaml → roles.gate-evaluator
+4. Preset global               ~/.valmen/models/presets.yaml → presets[activo].gate-evaluator
 5. Default del sistema         (tabla de abajo)
 ```
 
@@ -232,57 +233,42 @@ Un preset es un conjunto coherente de decisiones. El usuario cambia una palabra 
 todo el perfil de costo/calidad.
 
 ```yaml
-# ~/.valmen/models/presets.yaml
+# Los presets que trae el harness, tal como están en packages/adapter/src/routing.ts
 presets:
   quality:
-    description: "Máxima calidad. Para trabajo crítico o cuando el costo no importa."
-    orchestrator:   { provider: openrouter, model: anthropic/claude-opus-4.6, effort: high }
-    spec-author:    { provider: openrouter, model: anthropic/claude-opus-4.6, effort: high }
-    architect:      { provider: openrouter, model: anthropic/claude-opus-4.6, effort: high }
-    critic:         { provider: openrouter, model: anthropic/claude-opus-4.6, effort: high }
-    implementer:    { provider: openrouter, model: anthropic/claude-sonnet-4.6, effort: medium }
-    gate-evaluator: { provider: jev, model: typesafe/jev-1.13 }
+    description: "Máxima calidad. Para trabajo crítico o cuando el coste no importa."
+    orchestrator:   { provider: openrouter, model: openai/gpt-5.6-luna-pro, effort: high }
+    gate-evaluator: { provider: openrouter, model: typesafe/jev-1.13, effort: auto }
+    gate-judge:     { provider: openrouter, model: anthropic/claude-opus-4.6, effort: high }
 
   balanced:                                   # DEFAULT
-    description: "El punto medio. Modelo fuerte para pensar, barato para ejecutar."
-    orchestrator:   { provider: openrouter, model: anthropic/claude-opus-4.6, effort: medium }
-    spec-author:    { provider: openrouter, model: anthropic/claude-opus-4.6, effort: medium }
-    architect:      { provider: openrouter, model: anthropic/claude-opus-4.6, effort: high }
-    critic:         { provider: openrouter, model: deepseek/deepseek-v3.2, effort: high }
-    implementer:    { provider: openrouter, model: deepseek/deepseek-v4-flash }
-    test-author:    { provider: openrouter, model: deepseek/deepseek-v4-flash }
-    explorer:       { provider: openrouter, model: z-ai/glm-4.7-flash }
-    classifier:     { provider: openrouter, model: openai/gpt-oss-20b }
-    doc-writer:     { provider: openrouter, model: deepseek/deepseek-v4-flash }
-    gate-evaluator: { provider: jev, model: typesafe/jev-1.13 }
-    gate-judge:     { provider: openrouter, model: deepseek/deepseek-v3.2, effort: medium }
+    description: "El equilibrio por defecto: razonamiento caro donde decide, ejecución barata donde repite."
+    orchestrator:   { provider: openrouter, model: moonshotai/kimi-k3, effort: medium }
+    gate-evaluator: { provider: openrouter, model: typesafe/jev-1.13, effort: auto }
+    gate-judge:     { provider: openrouter, model: deepseek/deepseek-v4-flash, effort: medium }
 
   economy:
-    description: "Costo mínimo. Todo lo posible en modelos baratos o locales."
-    orchestrator:   { provider: openrouter, model: deepseek/deepseek-v4-flash }
-    architect:      { provider: openrouter, model: deepseek/deepseek-v3.2, effort: high }
-    implementer:    { provider: openrouter, model: deepseek/deepseek-v4-flash }
-    explorer:       { provider: ollama, model: qwen3-coder:30b }     # local, $0
-    classifier:     { provider: ollama, model: qwen3:4b }            # local, $0
-    gate-evaluator: { provider: jev, model: typesafe/jev-1.13 }      # $0.00003
-    gate-judge:     { provider: openrouter, model: qwen/qwen3-30b-a3b-instruct-2507 }
+    description: "Lo más barato que sigue funcionando. Para volumen alto y trabajo repetitivo."
+    orchestrator:   { provider: openrouter, model: z-ai/glm-5.3-flash, effort: auto }
+    gate-evaluator: { provider: openrouter, model: typesafe/jev-1.13, effort: auto }
+    gate-judge:     { provider: openrouter, model: deepseek/deepseek-v4-flash, effort: medium }
 
   chino:                                      # alternativo: stack no-EE.UU.
-    description: "Modelos chinos de primera línea. Costo bajo, calidad alta."
-    orchestrator:   { provider: moonshot, model: kimi-k3 }
-    architect:      { provider: moonshot, model: kimi-k3, effort: high }
-    implementer:    { provider: zhipu, model: glm-4.7 }
-    explorer:       { provider: qwen, model: qwen3-coder-480b }
-    gate-evaluator: { provider: jev, model: typesafe/jev-1.13 }
+    description: "Modelos chinos de primera línea. Coste bajo, calidad alta."
+    orchestrator:   { provider: moonshot, model: kimi-k3, effort: medium }
+    gate-evaluator: { provider: openrouter, model: typesafe/jev-1.13, effort: auto }
+    gate-judge:     { provider: moonshot, model: kimi-k3, effort: medium }
 
-  subscription:                               # sin costo por token
+  subscription:                               # sin coste por token
     description: "Usa los planes que ya pagas. Sin facturación por uso."
     orchestrator:   { provider: claude-code, model: opus }
-    architect:      { provider: claude-code, model: opus }
-    implementer:    { provider: codex, model: gpt-5.6-terra, effort: medium }
-    explorer:       { provider: opencode-zen, model: default }
-    gate-evaluator: { provider: jev, model: typesafe/jev-1.13 }   # Jev no tiene plan
+    gate-evaluator: { provider: openrouter, model: typesafe/jev-1.13, effort: auto }
+    gate-judge:     { provider: codex, model: gpt-5.6-terra, effort: medium }
 ```
+
+Estos dos últimos son ejemplos de lo que un proyecto puede escribir, no presets que
+vengan incluidos: los tres que trae el harness están arriba, y solo cubren los roles
+que el harness ejecuta.
 
 ### 4.4 El rol `gate-evaluator` es especial
 
@@ -297,7 +283,6 @@ gate-evaluator:
     parsear. Cuesta $0.00003 por verificación, con respuesta en <600 ms.
   override: allowed          # el usuario puede cambiarlo, pero ve esta explicación
   fallback: gate-judge       # si Jev no está disponible
-  never: [implementer, orchestrator]   # Jev no puede ser un agente: no emite tool calls
 ```
 
 Si el usuario cambia `gate-evaluator` a un modelo de chat, el motor lo acepta, **exige un
@@ -348,6 +333,13 @@ effort_policy:
 
 `effort: auto` es lo que pediste como *"automático según el proceso"*: el motor conoce el rol
 y mide el tamaño del input, y elige dentro del rango que el rol permite.
+
+> **No implementado.** La regla de `auto` que elige según el tamaño del input es
+> diseño, no código: hoy `auto` significa «no enviar preferencia de esfuerzo» y el
+> valor lo decide el proveedor. La tabla de rangos describe la intención para los
+> roles que se retiraron, así que se conserva como referencia de qué se pensó, no
+> como contrato vigente. El único rol donde el esfuerzo importa hoy es
+> `gate-evaluator`, y su valor sale del routing.
 
 | Rol | Rango permitido | Regla de `auto` |
 |---|---|---|
@@ -402,6 +394,11 @@ Con `confidence: high` porque es medido, no estimado. Eso mejora un campo que ho
 esquema admite con `low`.
 
 ### 6.3 Reporte de costo
+
+> **No implementado.** `valmen usage report` no existe todavía. Lo que sí existe es
+> la **línea de tiempo por ticket** en Mission Control y el bloque `## Consumo de IA`
+> del ticket, que registran el consumo real de una sesión de agente leyéndolo de la
+> contabilidad del cliente. El reporte agregado por mes y por rol es lo que falta.
 
 ```bash
 valmen usage report --month 2026-09

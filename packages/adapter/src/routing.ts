@@ -59,36 +59,22 @@ export interface RoleSpec {
 }
 
 /**
- * Los roles del workflow.
+ * Los roles que el harness **ejecuta**.
  *
- * El orden es el de docs/04-PROVEEDORES.md §4.1: razonamiento, ejecución,
- * verificación y mecánicos.
+ * Solo están los que tienen quién los consuma. Los otros nueve —`spec-author`,
+ * `architect`, `critic`, `explorer`, `implementer`, `test-author`, `doc-writer`,
+ * `verifier`, `classifier` y `summarizer`— se retiraron de aquí y de los presets
+ * después de comprobar que **nadie los leía**: el harness los declaraba, la
+ * pantalla los mostraba con selectores y botón de probar, y el trabajo real lo
+ * ejecutaba el agente con su propio modelo. Una lista de doce roles donde nueve no
+ * hacen nada es peor que una de tres: parece configuración activa.
+ *
+ * La razón de fondo es estructural y conviene tenerla escrita: **el harness no es
+ * un runtime de agentes**. Declara el proceso, guarda el estado y evalúa
+ * compuertas, y solo puede elegir el modelo de lo que él mismo ejecuta. El modelo
+ * con el que trabaja opencode se configura en opencode.
  */
 export const ROLES: readonly RoleSpec[] = [
-  {
-    id: "orchestrator",
-    description: "Coordina, clasifica y decide a quién delegar",
-    consumer: null,
-  },
-  { id: "spec-author", description: "Escribe specs y briefs de feature", consumer: null },
-  {
-    id: "architect",
-    description: "Diseño técnico y descomposición en tickets",
-    consumer: null,
-  },
-  {
-    id: "critic",
-    description: "Revisión adversarial de un candidato congelado",
-    consumer: null,
-  },
-  { id: "explorer", description: "Exploración de código en solo lectura", consumer: null },
-  {
-    id: "implementer",
-    description: "Escribe el código según el plan aprobado",
-    consumer: null,
-  },
-  { id: "test-author", description: "Escribe y actualiza pruebas", consumer: null },
-  { id: "doc-writer", description: "Documentación y manuales", consumer: null },
   {
     id: "gate-evaluator",
     description: "Responde las proposiciones de un gate",
@@ -96,23 +82,13 @@ export const ROLES: readonly RoleSpec[] = [
   },
   {
     id: "gate-judge",
-    description: "Resuelve un gate cuando Jev no está disponible",
+    description: "Resuelve un gate cuando Jev no puede decidir",
     consumer: "valmen gate --evaluator llm-judge",
   },
   {
-    id: "verifier",
-    description: "Verifica la implementación contra los criterios",
-    consumer: null,
-  },
-  {
-    id: "classifier",
-    description: "Clasifica tipo, módulo y riesgo de una solicitud",
-    consumer: null,
-  },
-  {
-    id: "summarizer",
-    description: "Resume para el reporte diario o semanal",
-    consumer: null,
+    id: "orchestrator",
+    description: "Propone cambios de configuración en el chat de Mission Control",
+    consumer: "POST /api/chat/config",
   },
 ];
 
@@ -148,41 +124,6 @@ export const PRESETS: readonly Preset[] = [
         model: "openai/gpt-5.6-luna-pro",
         effort: "high",
       },
-      "spec-author": {
-        provider: "openrouter",
-        model: "anthropic/claude-opus-4.6",
-        effort: "high",
-      },
-      architect: {
-        provider: "openrouter",
-        model: "anthropic/claude-opus-4.6",
-        effort: "high",
-      },
-      critic: {
-        provider: "openrouter",
-        model: "anthropic/claude-opus-4.6",
-        effort: "high",
-      },
-      explorer: {
-        provider: "openrouter",
-        model: "anthropic/claude-sonnet-5",
-        effort: "medium",
-      },
-      implementer: {
-        provider: "openrouter",
-        model: "anthropic/claude-sonnet-5",
-        effort: "high",
-      },
-      "test-author": {
-        provider: "openrouter",
-        model: "anthropic/claude-sonnet-5",
-        effort: "medium",
-      },
-      "doc-writer": {
-        provider: "openrouter",
-        model: "anthropic/claude-sonnet-5",
-        effort: "medium",
-      },
       "gate-evaluator": {
         provider: "openrouter",
         model: DEFAULT_GATE_EVALUATOR,
@@ -193,13 +134,6 @@ export const PRESETS: readonly Preset[] = [
         model: "anthropic/claude-opus-4.6",
         effort: "high",
       },
-      verifier: {
-        provider: "openrouter",
-        model: "anthropic/claude-opus-4.6",
-        effort: "high",
-      },
-      classifier: { provider: "openrouter", model: "z-ai/glm-5.3-flash", effort: "auto" },
-      summarizer: { provider: "openrouter", model: "z-ai/glm-5.3-flash", effort: "auto" },
     },
   },
   {
@@ -209,39 +143,8 @@ export const PRESETS: readonly Preset[] = [
     roles: {
       orchestrator: {
         provider: "openrouter",
-        model: "anthropic/claude-sonnet-5",
+        model: "moonshotai/kimi-k3",
         effort: "medium",
-      },
-      "spec-author": {
-        provider: "openrouter",
-        model: "anthropic/claude-sonnet-5",
-        effort: "medium",
-      },
-      architect: {
-        provider: "openrouter",
-        model: "anthropic/claude-sonnet-5",
-        effort: "high",
-      },
-      critic: {
-        provider: "openrouter",
-        model: "anthropic/claude-sonnet-5",
-        effort: "high",
-      },
-      explorer: { provider: "openrouter", model: "z-ai/glm-5.3-flash", effort: "auto" },
-      implementer: {
-        provider: "openrouter",
-        model: "deepseek/deepseek-v4-flash",
-        effort: "auto",
-      },
-      "test-author": {
-        provider: "openrouter",
-        model: "deepseek/deepseek-v4-flash",
-        effort: "auto",
-      },
-      "doc-writer": {
-        provider: "openrouter",
-        model: "deepseek/deepseek-v4-flash",
-        effort: "auto",
       },
       "gate-evaluator": {
         provider: "openrouter",
@@ -249,9 +152,6 @@ export const PRESETS: readonly Preset[] = [
         effort: "auto",
       },
       "gate-judge": { provider: "openrouter", model: DEFAULT_GATE_JUDGE, effort: "medium" },
-      verifier: { provider: "openrouter", model: "moonshotai/kimi-k3", effort: "medium" },
-      classifier: { provider: "openrouter", model: "z-ai/glm-5.3-flash", effort: "auto" },
-      summarizer: { provider: "openrouter", model: "z-ai/glm-5.3-flash", effort: "auto" },
     },
   },
   {
@@ -259,51 +159,13 @@ export const PRESETS: readonly Preset[] = [
     description:
       "Lo más barato que sigue funcionando. Para volumen alto y trabajo repetitivo.",
     roles: {
-      orchestrator: {
-        provider: "openrouter",
-        model: "deepseek/deepseek-v4-flash",
-        effort: "medium",
-      },
-      "spec-author": {
-        provider: "openrouter",
-        model: "deepseek/deepseek-v4-flash",
-        effort: "medium",
-      },
-      architect: {
-        provider: "openrouter",
-        model: "deepseek/deepseek-v4-flash",
-        effort: "medium",
-      },
-      critic: { provider: "openrouter", model: "moonshotai/kimi-k3", effort: "medium" },
-      explorer: { provider: "openrouter", model: "z-ai/glm-5.3-flash", effort: "auto" },
-      implementer: { provider: "openrouter", model: "z-ai/glm-5.3-flash", effort: "auto" },
-      "test-author": {
-        provider: "openrouter",
-        model: "z-ai/glm-5.3-flash",
-        effort: "auto",
-      },
-      "doc-writer": { provider: "openrouter", model: "z-ai/glm-5.3-flash", effort: "auto" },
+      orchestrator: { provider: "openrouter", model: "z-ai/glm-5.3-flash", effort: "auto" },
       "gate-evaluator": {
         provider: "openrouter",
         model: DEFAULT_GATE_EVALUATOR,
         effort: "auto",
       },
       "gate-judge": { provider: "openrouter", model: DEFAULT_GATE_JUDGE, effort: "medium" },
-      verifier: {
-        provider: "openrouter",
-        model: "deepseek/deepseek-v4-flash",
-        effort: "medium",
-      },
-      classifier: {
-        provider: "openrouter",
-        model: "deepseek/deepseek-v4-flash",
-        effort: "auto",
-      },
-      summarizer: {
-        provider: "openrouter",
-        model: "deepseek/deepseek-v4-flash",
-        effort: "auto",
-      },
     },
   },
 ];

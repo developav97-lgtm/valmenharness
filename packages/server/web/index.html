@@ -3337,10 +3337,15 @@
 
         const nota = el("div", undefined, "nota");
         nota.append(
-          el("strong", "El modelo por rol decide dónde se gasta el dinero. "),
+          el("strong", "Aquí solo se configuran los modelos que el harness ejecuta. "),
           el(
             "span",
-            "Los roles de razonamiento son caros y poco frecuentes; los de ejecución son baratos y se repiten. Cambiar el preset cambia las trece decisiones de una vez.",
+            "Son tres, y los tres son compuertas y coordinación: el evaluador que " +
+              "responde las proposiciones del gate, el juez al que se cae cuando el " +
+              "evaluador no puede decidir, y el que propone cambios de configuración " +
+              "en el chat. El modelo con el que trabaja el agente —explorar, escribir, " +
+              "editar— lo elige opencode con su propia configuración: el harness no es " +
+              "un runtime de agentes y no puede imponerle el suyo.",
           ),
         );
         cont.append(nota, el("h2", "Preset"));
