@@ -94,6 +94,7 @@ import {
   summarize,
 } from "./tickets.js";
 import { listFeatureRows, readFeatureDetail, summarizeFeatures } from "./features.js";
+import { guardarFotoEnTicket, leerLineaDeTiempo } from "./timeline.js";
 import {
   approveGate,
   listGateRows,
@@ -592,6 +593,39 @@ export async function handleApi(
     return { status: 200, body: detalle };
   }
 
+  // GET /api/timeline?ticket=&directory=
+  //
+  // Quién intervino, con qué modelo y a qué coste. El dato se **lee** de la
+  // contabilidad que el cliente de agentes ya escribe en su propia base —opencode
+  // guarda coste por mensaje, tokens, proveedor, modelo y agente—, y no se le
+  // pregunta al modelo: un agente que reporta su propio gasto puede reportar de
+  // menos y no habría forma de notarlo.
+  //
+  // `available: false` es distinto de una línea de tiempo vacía: significa que no
+  // hay base que leer, y la pantalla tiene que poder decir «no hay datos» en vez de
+  // mostrar un cero que se lee como «no costó nada».
+  if (method === "GET" && path === "/api/timeline") {
+    const ticket = valorDeQuery(query, "ticket");
+    const directory = valorDeQuery(query, "directory") ?? paths.root;
+    const linea = leerLineaDeTiempo(directory, {
+      ...(ticket === undefined ? {} : { ticketId: ticket }),
+    });
+
+    return {
+      status: 200,
+      body:
+        linea === null
+          ? {
+              available: false,
+              directory,
+              reason:
+                "No se encontró la contabilidad de opencode. Sin ella no hay forma " +
+                "de saber qué modelo intervino ni cuánto costó.",
+            }
+          : { available: true, directory, ...linea },
+    };
+  }
+
   // GET /api/report?desde=&hasta=&type=&q=
   //
   // El reporte en Markdown, el mismo que produce `valmen report`. Es lo único
@@ -663,6 +697,48 @@ export async function handleApi(
         // interfaz los dedujera por su cuenta, un cambio en la máquina de
         // estados dejaría a la app ofreciendo movimientos ilegales.
         transitions: transitionsOf(paths, id),
+      },
+    };
+  }
+
+  // POST /api/tickets/:id/consumo
+  //
+  // Guarda en el ticket una foto del consumo de sus sesiones. Es la mitad durable
+  // de la línea de tiempo: la pantalla la muestra en vivo, pero un ticket tiene
+  // que poder auditarse meses después, y para entonces la contabilidad del cliente
+  // puede no existir.
+  //
+  // Va en el bloque `## Consumo de IA`, que es append-only: guardar dos veces deja
+  // dos registros y no reescribe el primero.
+  if (
+    method === "POST" &&
+    partes.length === 4 &&
+    partes[0] === "api" &&
+    partes[1] === "tickets" &&
+    partes[3] === "consumo"
+  ) {
+    const id = partes[2] as string;
+    const foto = guardarFotoEnTicket(paths, id);
+
+    if (foto === null) {
+      return {
+        status: 409,
+        body: {
+          error:
+            "No hay consumo que registrar para este ticket: no se encontró la " +
+            "contabilidad del cliente, o ninguna de sus sesiones lo trabajó.",
+        },
+      };
+    }
+
+    return {
+      status: 200,
+      body: {
+        entradas: foto.entradas,
+        detalle: foto.detalle,
+        // Se recarga la vista desde el cliente: el ticket cambió y el bloque de
+        // consumo tiene que reflejarlo sin recargar la página a mano.
+        ticket: readTicket(paths, id),
       },
     };
   }

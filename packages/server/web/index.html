@@ -729,6 +729,22 @@
         color: var(--tenue);
         font-style: italic;
       }
+
+      /* Línea de tiempo del ticket. El fallo se marca en la fila entera y no en una
+         palabra: lo que hay que ver de un vistazo es dónde se corrigió, porque eso
+         es trabajo que costó dinero. */
+      .tabla-intervenciones td:first-child,
+      .tabla-intervenciones th:first-child {
+        width: 1%;
+        white-space: nowrap;
+      }
+      .tabla-intervenciones tr.fallo td {
+        background: color-mix(in srgb, var(--error) 12%, transparent);
+      }
+      .tabla-intervenciones tr.fallo td:nth-child(3) {
+        color: var(--error);
+        font-weight: 600;
+      }
       .pie-recibo {
         display: flex;
         gap: 14px;
@@ -2427,6 +2443,16 @@
           [`Consumo de IA (${t.usage.length})`, t.usage],
         ];
 
+        cont.append(el("h2", "Línea de tiempo y coste"));
+        const zonaLinea = el("div");
+        zonaLinea.append(el("div", "Leyendo la contabilidad del cliente…", "vacio"));
+        cont.append(zonaLinea);
+        void pintarLineaDeTiempo(id).then((nodo) => {
+          if (nodo === null) return;
+          zonaLinea.textContent = "";
+          zonaLinea.append(nodo);
+        });
+
         const barraSecciones = el("div", undefined, "secciones");
         const cuerpo = el("pre");
         const mostrar = (etiqueta, valor, boton) => {
@@ -2450,6 +2476,140 @@
 
         cont.append(barraSecciones, cuerpo);
         mostrar(partes[0][0], partes[0][1], barraSecciones.querySelector("button"));
+      }
+
+      // ── Línea de tiempo del ticket ────────────────────────────────────────
+      //
+      // Responde a una pregunta que el registro no contestaba: quién intervino,
+      // con qué modelo y a qué coste. Los recibos de compuerta traen el coste
+      // porque el harness evaluó y lo sabe de primera mano; el trabajo del agente
+      // —explorar, escribir, corregir— no estaba en ninguna parte.
+      //
+      // El dato se **lee** de la contabilidad que el cliente ya escribe, no se le
+      // pregunta al modelo: un agente que reporta su propio gasto puede reportar
+      // de menos y no habría forma de notarlo.
+      //
+      // El desglose importa más de lo que parece: en el primer ticket medido, dos
+      // tercios del gasto se fueron en explorar el código y no en el harness. Sin
+      // esta vista, ese dinero era invisible.
+      async function pintarLineaDeTiempo(id) {
+        let datos;
+        try {
+          datos = await api("GET", `/api/timeline?ticket=${encodeURIComponent(id)}`);
+        } catch {
+          return null;
+        }
+        if (datos.available !== true) {
+          return el(
+            "div",
+            `Sin datos de consumo: ${datos.reason ?? "no se encontró la contabilidad del cliente."}`,
+            "nota",
+          );
+        }
+
+        const zona = el("div");
+
+        const total = datos.desglose.harnessUsd + datos.desglose.exploracionUsd;
+        const resumen = el("div", undefined, "meta");
+        resumen.append(
+          el("span", `coste $${total.toFixed(6)}`, "etiqueta"),
+          el("span", `harness $${datos.desglose.harnessUsd.toFixed(6)}`, "etiqueta"),
+          el("span", `exploración $${datos.desglose.exploracionUsd.toFixed(6)}`, "etiqueta"),
+          el("span", `${datos.intervenciones.length} intervención(es)`, "etiqueta"),
+        );
+        zona.append(
+          el(
+            "div",
+            "Harness es lo que costó llamar a las herramientas del registro; " +
+              "exploración es leer, buscar y editar. Es el mismo gasto de la sesión, repartido.",
+            "resultado",
+          ),
+          resumen,
+        );
+
+        if (datos.intervenciones.length === 0) {
+          zona.append(el("div", "Esta sesión no llamó a ninguna herramienta del registro.", "vacio"));
+          return zona;
+        }
+
+        const tabla = el("table", undefined, "tabla-intervenciones");
+        const cab = el("tr");
+        for (const titulo of ["hora", "herramienta", "resultado", "agente", "modelo", "coste"]) {
+          cab.append(el("th", titulo));
+        }
+        tabla.append(cab);
+
+        for (const i of datos.intervenciones) {
+          const hora = new Date(i.at);
+          const fila = el("tr");
+          if (i.failed) fila.className = "fallo";
+
+          fila.append(
+            el(
+              "td",
+              `${String(hora.getHours()).padStart(2, "0")}:${String(hora.getMinutes()).padStart(2, "0")}:${String(hora.getSeconds()).padStart(2, "0")}`,
+              "cifra",
+            ),
+            el("td", i.tool, "id"),
+            el("td", i.failed ? "falló" : i.status),
+            el("td", i.agent),
+            el("td", `${i.provider}/${i.model}`, "ruta"),
+            el("td", `$${i.costUsd.toFixed(6)}`, "cifra"),
+          );
+          tabla.append(fila);
+        }
+
+        zona.append(tabla);
+
+        // Un fallo seguido de un reintento es una corrección, y contarlas es lo que
+        // convierte la tabla en información: dice cuánto costó entenderse con el
+        // agente, que es un número que nadie tiene.
+        const fallos = datos.intervenciones.filter((i) => i.failed).length;
+        if (fallos > 0) {
+          zona.append(
+            el(
+              "div",
+              fallos === 1
+                ? "1 intervención falló y se reintentó."
+                : `${fallos} intervenciones fallaron y se reintentaron.`,
+              "resultado",
+            ),
+          );
+        }
+
+        zona.append(
+          el(
+            "div",
+            `Leído de ${datos.source}. Corresponde a las sesiones de este proyecto: si el ticket ` +
+              "se trabajó en más de una, el total de arriba las suma.",
+            "ruta",
+          ),
+        );
+
+        // Guardar la foto es lo que hace que el ticket se pueda auditar meses
+        // después, cuando la contabilidad del cliente ya no esté. Vive aquí y no
+        // en la terminal porque es una decisión sobre el registro, no una
+        // operación de mantenimiento.
+        const guardar = el("button", "Guardar en el ticket", "principal");
+        const aviso = el("div", undefined, "resultado");
+        const pie = el("div", undefined, "responsable");
+        pie.append(guardar, aviso);
+        zona.append(pie);
+
+        guardar.addEventListener("click", async () => {
+          guardar.disabled = true;
+          aviso.textContent = "Guardando…";
+          try {
+            const r = await api("POST", `/api/tickets/${encodeURIComponent(id)}/consumo`);
+            aviso.textContent = `${r.entradas.join(", ")} — ${r.detalle}`;
+          } catch (error) {
+            aviso.textContent = error.message;
+          } finally {
+            guardar.disabled = false;
+          }
+        });
+
+        return zona;
       }
 
       // ── Vista: procesos ───────────────────────────────────────────────────
