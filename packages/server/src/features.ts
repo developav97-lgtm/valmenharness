@@ -21,6 +21,7 @@ import {
   type FeatureRequirement,
   decompositionTickets,
   dependencyCycles,
+  nextFeatureStates,
   parseTicketsYaml,
   previewTicketsYaml,
 } from "@valmen/core";
@@ -117,6 +118,14 @@ export interface FeatureDetail extends FeatureListRow {
   readonly decompositionError: string | null;
   /** Ciclos del grafo de dependencias. Vacío si no hay. */
   readonly cycles: readonly (readonly string[])[];
+  /**
+   * Los estados a los que la feature puede ir **hoy**, según la tabla.
+   *
+   * Los calcula el servidor porque la máquina de estados es del contrato: si la
+   * interfaz los dedujera por su cuenta, un cambio en la tabla dejaría a la
+   * pantalla ofreciendo movimientos ilegales.
+   */
+  readonly transitions: readonly string[];
 }
 
 /** Lee un archivo de texto, o `null` si no está. */
@@ -347,6 +356,9 @@ export function readFeatureDetail(root: string, slug: string): FeatureDetail | n
     decomposition,
     decompositionError,
     cycles,
+    // De `blocked` se sale a cualquier estado no terminal, y eso incluye volver al
+    // que tenía: la tabla no guarda de dónde se entró, así que se ofrecen todos.
+    transitions: nextFeatureStates(leida.row.state),
   };
 }
 

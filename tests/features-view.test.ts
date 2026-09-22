@@ -13,7 +13,7 @@
  * 3. **Una feature que no valida no se oculta**, igual que un ticket.
  * 4. **La proyección no inventa**: todo sale del brief, de la spec o del grafo.
  */
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -337,10 +337,14 @@ describe("readFeatureDetail", () => {
 });
 
 describe("endpoints de features", () => {
-  const contexto = () => ({
+  const contexto = (overrides = {}) => ({
     root: lab,
-    credentialsFile: join(lab, "credenciales.yaml"),
+    // El mismo archivo que escribe `conCredencial`. Apuntar a otro hacía que la
+    // resolución cayera al `$HOME`, y las pruebas salían a la red de verdad: trece
+    // segundos por test y un resultado que no era el del caso.
+    credentialsFile: join(lab, ".valmen", ".credentials.yaml"),
     env: {},
+    ...overrides,
   });
 
   it("GET /api/features devuelve el resumen y la lista", async () => {
@@ -373,5 +377,235 @@ describe("endpoints de features", () => {
     const r = await handleApi("GET", "/api/features", {}, contexto());
     expect(r.status).toBe(200);
     expect((r.body as { features: unknown[] }).features).toEqual([]);
+  });
+});
+
+// ── Mover el estado y descomponer desde la pantalla ─────────────────────────
+
+describe("POST /api/features/:slug/transition", () => {
+  const contexto = (overrides = {}) => ({
+    root: lab,
+    // El mismo archivo que escribe `conCredencial`. Apuntar a otro hacía que la
+    // resolución cayera al `$HOME`, y las pruebas salían a la red de verdad: trece
+    // segundos por test y un resultado que no era el del caso.
+    credentialsFile: join(lab, ".valmen", ".credentials.yaml"),
+    env: {},
+    ...overrides,
+  });
+
+  it("el detalle trae los destinos legales", async () => {
+    // Los calcula el servidor porque la máquina de estados es del contrato: si la
+    // interfaz los dedujera, un cambio en la tabla dejaría a la pantalla ofreciendo
+    // movimientos ilegales.
+    escribirFeature("modulo-inventario", "draft");
+    const r = await handleApi("GET", "/api/features/modulo-inventario", {}, contexto());
+    const cuerpo = r.body as { transitions: string[] };
+    expect(cuerpo.transitions).toContain("specified");
+    expect(cuerpo.transitions).not.toContain("archived");
+  });
+
+  it("mueve el estado y dice por dónde pasó", async () => {
+    escribirFeature("modulo-inventario", "specified");
+    // `specified → archived` se salta el diseño, así que la máquina no lo permite
+    // de un salto: el camino pasa por `planned` y `complete`.
+    const r = await handleApi(
+      "POST",
+      "/api/features/modulo-inventario/transition",
+      { to: "archived" },
+      contexto(),
+    );
+    expect(r.status).toBe(200);
+    const cuerpo = r.body as { ok: boolean; state: string; via: string[] };
+    expect(cuerpo.ok).toBe(true);
+    expect(cuerpo.state).toBe("archived");
+    // El camino entero, no solo el final: `specified → planned → decomposed →
+    // in_progress → complete → archived`. Se comprueba completo porque el registro
+    // tiene que decir por dónde pasó, y un camino truncado sería una mentira útil.
+    expect(cuerpo.via).toEqual(["planned", "decomposed", "in_progress", "complete"]);
+  });
+
+  it("un destino inalcanzable no se acepta", async () => {
+    escribirFeature("modulo-inventario", "archived");
+    const r = await handleApi(
+      "POST",
+      "/api/features/modulo-inventario/transition",
+      { to: "draft" },
+      contexto(),
+    );
+    expect(r.status).toBe(400);
+    expect((r.body as { error: string }).error).toMatch(/no permitida/);
+  });
+
+  it("exige el destino", async () => {
+    escribirFeature("modulo-inventario");
+    const r = await handleApi(
+      "POST",
+      "/api/features/modulo-inventario/transition",
+      {},
+      contexto(),
+    );
+    expect(r.status).toBe(400);
+  });
+});
+
+describe("POST /api/features/:slug/decompose", () => {
+  const contexto = (overrides = {}) => ({
+    root: lab,
+    // El mismo archivo que escribe `conCredencial`. Apuntar a otro hacía que la
+    // resolución cayera al `$HOME`, y las pruebas salían a la red de verdad: trece
+    // segundos por test y un resultado que no era el del caso.
+    credentialsFile: join(lab, ".valmen", ".credentials.yaml"),
+    env: {},
+    ...overrides,
+  });
+
+  /** Una credencial: el chat la resuelve antes de llamar aunque el fetch sea falso. */
+  function conCredencial(): void {
+    mkdirSync(join(lab, ".valmen"), { recursive: true });
+    writeFileSync(
+      join(lab, ".valmen", ".credentials.yaml"),
+      ["version: 1", "providers:", "  opencode-go:", '    api-key: "de-prueba"', ""].join("\n"),
+      { mode: 0o600 },
+    );
+  }
+
+  /** El grafo que devolvería el modelo. */
+  const PROPUESTA = {
+    sprints: [
+      {
+        id: "S1",
+        goal: "Modelo de datos",
+        tickets: [
+          {
+            id: "FEATURE-INVENTARIO-MODELO-20260921",
+            title: "Modelo",
+            depends_on: [],
+          },
+        ],
+      },
+    ],
+    coverage: [
+      { requirement: "R-INV-001", covered_by: ["FEATURE-INVENTARIO-MODELO-20260921"] },
+      { requirement: "R-INV-002", covered_by: ["FEATURE-INVENTARIO-MODELO-20260921"] },
+    ],
+  };
+
+  it("descompone con el modelo del rol architect y escribe el archivo", async () => {
+    escribirFeature("modulo-inventario", "planned");
+    escribirSpec("modulo-inventario", "inventario", SPEC_DOS_REQUISITOS);
+    conCredencial();
+
+    const visto: { url: string; modelo: string | undefined }[] = [];
+    const fetchFalso = (async (url: string, init: { body: string }) => {
+      // Se recoge y se comprueba **después**: un `expect` dentro del fetch falso
+      // lanza antes de guardar, y entonces la aserción de fuera lee `undefined` y
+      // el fallo que se ve no es el que pasó.
+      const cuerpo = JSON.parse(init.body) as { model?: string };
+      visto.push({ url: String(url), modelo: cuerpo.model });
+      return new Response(
+        JSON.stringify({
+          choices: [{ message: { content: JSON.stringify(PROPUESTA) } }],
+          usage: { prompt_tokens: 10, completion_tokens: 5, cost: 0.001 },
+        }),
+        { status: 200 },
+      );
+    }) as unknown as typeof fetch;
+
+    const r = await handleApi(
+      "POST",
+      "/api/features/modulo-inventario/decompose",
+      { provider: "opencode-go", model: "kimi-k3" },
+      contexto({ fetchImpl: fetchFalso }),
+    );
+
+    expect(r.status).toBe(200);
+    const cuerpo = r.body as { ok: boolean; written: boolean; document: unknown };
+    expect(cuerpo.ok).toBe(true);
+    expect(cuerpo.written).toBe(true);
+    // Va al endpoint de chat del proveedor, con el modelo pedido, y no a otro sitio.
+    expect(visto[0]?.url).toContain("chat/completions");
+    expect(visto[0]?.modelo).toBe("kimi-k3");
+    // Y el archivo existe.
+    expect(existsSync(join(carpeta("modulo-inventario"), "tickets.yaml"))).toBe(true);
+  });
+
+  it("deja la feature en decomposed", async () => {
+    escribirFeature("modulo-inventario", "planned");
+    escribirSpec("modulo-inventario", "inventario", SPEC_DOS_REQUISITOS);
+    conCredencial();
+    const fetchFalso = (async () =>
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: JSON.stringify(PROPUESTA) } }],
+          usage: {},
+        }),
+        { status: 200 },
+      )) as unknown as typeof fetch;
+
+    await handleApi(
+      "POST",
+      "/api/features/modulo-inventario/decompose",
+      { provider: "opencode-go", model: "kimi-k3" },
+      contexto({ fetchImpl: fetchFalso }),
+    );
+
+    const detalle = await handleApi(
+      "GET",
+      "/api/features/modulo-inventario",
+      {},
+      contexto(),
+    );
+    expect((detalle.body as { state: string }).state).toBe("decomposed");
+  });
+
+  it("una descomposición que no cubre todo no escribe nada", async () => {
+    escribirFeature("modulo-inventario", "planned");
+    escribirSpec("modulo-inventario", "inventario", SPEC_DOS_REQUISITOS);
+    conCredencial();
+    const incompleta = { ...PROPUESTA, coverage: [PROPUESTA.coverage[0]] };
+    const fetchFalso = (async () =>
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: JSON.stringify(incompleta) } }],
+          usage: {},
+        }),
+        { status: 200 },
+      )) as unknown as typeof fetch;
+
+    const r = await handleApi(
+      "POST",
+      "/api/features/modulo-inventario/decompose",
+      { provider: "opencode-go", model: "kimi-k3" },
+      contexto({ fetchImpl: fetchFalso }),
+    );
+
+    // Ni error del servidor ni archivo: el motivo se muestra donde se pidió.
+    expect(r.status).toBe(200);
+    expect((r.body as { ok: boolean }).ok).toBe(false);
+    expect((r.body as { error: string }).error).toMatch(/sin ticket que los cubra|de la spec sin ticket/);
+    expect(existsSync(join(carpeta("modulo-inventario"), "tickets.yaml"))).toBe(false);
+  });
+
+  it("con `dryRun` no escribe", async () => {
+    escribirFeature("modulo-inventario", "planned");
+    escribirSpec("modulo-inventario", "inventario", SPEC_DOS_REQUISITOS);
+    conCredencial();
+    const fetchFalso = (async () =>
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: JSON.stringify(PROPUESTA) } }],
+          usage: {},
+        }),
+        { status: 200 },
+      )) as unknown as typeof fetch;
+
+    const r = await handleApi(
+      "POST",
+      "/api/features/modulo-inventario/decompose",
+      { provider: "opencode-go", model: "kimi-k3", dryRun: true },
+      contexto({ fetchImpl: fetchFalso }),
+    );
+    expect((r.body as { written: boolean }).written).toBe(false);
+    expect(existsSync(join(carpeta("modulo-inventario"), "tickets.yaml"))).toBe(false);
   });
 });

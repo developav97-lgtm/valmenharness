@@ -447,6 +447,11 @@
       }
 
       /* ── Features ─────────────────────────────────────────────────────── */
+      .acciones-feature {
+        display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+        margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--borde);
+      }
+      .acciones-feature button { font-size: 12px; }
       a.enlace {
         color: var(--acento);
         text-decoration: none;
@@ -1462,6 +1467,71 @@
         return tabla;
       }
 
+      /** Los estados a los que una feature puede ir hoy, según el contrato. */
+      async function transicionesDeFeature(slug) {
+        const f = await api("GET", `/api/features/${slug}`);
+        return f;
+      }
+
+      /**
+       * Mueve el estado de una feature.
+       *
+       * Los destinos vienen del servidor, que los saca de la tabla del contrato:
+       * si la interfaz los dedujera, un cambio en la máquina de estados dejaría a
+       * la pantalla ofreciendo movimientos ilegales.
+       */
+      async function moverFeature(slug, to) {
+        try {
+          const r = await api("POST", `/api/features/${slug}/transition`, { to });
+          await vistaFeature(slug);
+          const salida = document.querySelector(".resultado-feature");
+          if (salida) {
+            salida.className = "resultado ok resultado-feature";
+            salida.textContent = r.details;
+          }
+        } catch (fallo) {
+          const salida = document.querySelector(".resultado-feature");
+          if (salida) {
+            salida.className = "resultado error resultado-feature";
+            salida.textContent = fallo.message;
+          }
+        }
+      }
+
+      /**
+       * Descompone una feature y muestra el grafo.
+       *
+       * Es el paso que más valor tiene de esta vista y el único que obligaba a
+       * abrir la terminal para completar el ciclo. Se avisa de lo que cuesta antes
+       * de pulsar: una llamada al modelo del rol `architect`.
+       */
+      async function descomponerFeature(slug, boton, salida) {
+        boton.disabled = true;
+        boton.textContent = "Descomponiendo…";
+        salida.className = "resultado resultado-feature";
+        salida.textContent = "Consultando al modelo del rol architect. Puede tardar un minuto.";
+        try {
+          const r = await api("POST", `/api/features/${slug}/decompose`, {});
+          if (!r.ok) {
+            salida.className = "resultado error resultado-feature";
+            salida.textContent = r.error;
+            return;
+          }
+          salida.className = "resultado ok resultado-feature";
+          salida.textContent =
+            `Descomposición escrita: ${r.document.decomposition.sprints.length} sprint(s), ` +
+            `${r.document.decomposition.coverage.length} requisito(s) cubierto(s). ` +
+            `Modelo: ${r.decomposer.provider}/${r.decomposer.model}`;
+          await vistaFeature(slug);
+        } catch (fallo) {
+          salida.className = "resultado error resultado-feature";
+          salida.textContent = fallo.message;
+        } finally {
+          boton.disabled = false;
+          boton.textContent = "Descomponer";
+        }
+      }
+
       async function vistaFeature(slug) {
         const cont = $("contenido");
         cont.textContent = "";
@@ -1608,17 +1678,47 @@
         tabla.append(tbody);
         caja.append(tabla);
 
+        // ── Acciones ──
+        //
+        // Mover el estado y descomponer, desde aquí. Es lo que cierra el ciclo sin
+        // abrir la terminal, y descomponer es el paso que más valor tiene: es el
+        // que convierte la spec en trabajo.
+        const acciones = el("div", undefined, "acciones-feature");
+        const salida = el("div", "resultado resultado-feature");
+
         if (!f.hasDecomposition && f.requirements > 0) {
-          const nota = el("div", undefined, "nota");
-          nota.append(
-            el("strong", "Se puede descomponer. "),
+          const boton = el("button", "Descomponer", "principal");
+          boton.title =
+            "Pide el grafo de tickets al modelo del rol architect. Cuesta una llamada.";
+          boton.addEventListener("click", () => void descomponerFeature(f.id, boton, salida));
+          acciones.append(boton);
+        }
+        if (f.requirements === 0) {
+          acciones.append(
             el(
               "span",
-              "Genera el grafo de tickets con: valmen feature decompose " + f.id,
+              `Falta la spec: escribe .valmen/features/${f.id}/spec/<dominio>/spec.md con ` +
+                'requisitos en RFC 2119 — "### Requirement: R-XXX-001 — El sistema DEBE …".',
               "resultado",
             ),
           );
-          caja.append(nota);
+        }
+
+        // Los movimientos legales, con el estado actual fuera: ofrecer el que ya
+        // se tiene es ofrecer un botón que no hace nada.
+        const destinos = (f.transitions ?? []).filter((estado) => estado !== f.state);
+        if (destinos.length > 0) {
+          const etiqueta = el("span", "Mover a:", "resultado");
+          acciones.append(etiqueta);
+          for (const destino of destinos) {
+            const boton = el("button", destino);
+            boton.addEventListener("click", () => void moverFeature(f.id, destino));
+            acciones.append(boton);
+          }
+        }
+
+        if (acciones.children.length > 0) {
+          caja.append(acciones, salida);
         }
         if (f.requirements === 0) {
           const nota = el("div", undefined, "nota");

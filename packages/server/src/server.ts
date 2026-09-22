@@ -25,8 +25,13 @@ import { extname, join } from "node:path";
 
 import {
   type RegistryPaths,
+  ESQUEMA_DESCOMPOSICION,
+  SISTEMA_DESCOMPOSICION,
+  advanceFeature,
   choosePaths,
   closedTickets,
+  decomposeFeature,
+  decompositionPrompt,
   defaultReportRange,
   filterReport,
   findTicket,
@@ -35,6 +40,8 @@ import {
   transition,
 } from "@valmen/engine";
 import { type JsonObject, nextStates, parseTicket, toFailure } from "@valmen/core";
+import { architectRoutingFor } from "@valmen/adapter";
+import { callChat } from "@valmen/credentials";
 
 import {
   credentialsPath,
@@ -346,6 +353,129 @@ export async function handleApi(
       status: 200,
       body: { summary: summarizeFeatures(filas), features: filas },
     };
+  }
+
+  // POST /api/features/:slug/transition
+  //
+  // Mueve el estado de una feature. Igual que con un ticket, los destinos los
+  // calcula el servidor a partir de la tabla del contrato: si la interfaz los
+  // dedujera por su cuenta, un cambio en la máquina de estados dejaría a la app
+  // ofreciendo movimientos ilegales.
+  if (
+    method === "POST" &&
+    partes.length === 4 &&
+    partes[0] === "api" &&
+    partes[1] === "features" &&
+    partes[3] === "transition"
+  ) {
+    const slug = partes[2] as string;
+    const to = (body as { to?: unknown }).to;
+    if (typeof to !== "string" || to === "") {
+      return { status: 400, body: { error: "Falta `to`." } };
+    }
+    try {
+      const fila = advanceFeature({ root: context.root, slug, to });
+      return {
+        status: 200,
+        body: {
+          ok: true,
+          state: fila.state,
+          via: fila.via ?? [],
+          details:
+            `La feature ${slug} pasó a ${fila.state}` +
+            (fila.via === undefined || fila.via.length === 0
+              ? "."
+              : `, pasando por ${fila.via.join(" → ")}.`),
+        },
+      };
+    } catch (caught) {
+      const failure = toFailure(caught);
+      return { status: 400, body: { error: failure.message } };
+    }
+  }
+
+  // POST /api/features/:slug/decompose
+  //
+  // Descompone una feature desde la pantalla, con el modelo del rol `architect`.
+  // Es el paso que más valor tiene de la vista de features y el único que obligaba
+  // a abrir la terminal para completar el ciclo.
+  if (
+    method === "POST" &&
+    partes.length === 4 &&
+    partes[0] === "api" &&
+    partes[1] === "features" &&
+    partes[3] === "decompose"
+  ) {
+    const slug = partes[2] as string;
+    const datos = body as { dryRun?: unknown; model?: unknown; provider?: unknown };
+    const arquitecto = architectRoutingFor(context.root);
+    const modelo =
+      typeof datos.model === "string" && datos.model !== "" ? datos.model : arquitecto.model;
+    if (modelo === "") {
+      return {
+        status: 400,
+        body: {
+          error:
+            "No hay modelo para el rol architect. Configúralo en Modelos o en " +
+            ".valmen/routing.yaml.",
+        },
+      };
+    }
+    const escribir = datos.dryRun !== true;
+
+    try {
+      const resultado = await decomposeFeature({
+        root: context.root,
+        slug,
+        write: escribir,
+        callModel: async (entrada) => {
+          const respuesta = await callChat({
+            // El `fetchImpl` del contexto, sin el cual las pruebas de esta ruta
+            // salen a la red de verdad y tardan trece segundos en fallar.
+            ...(context.fetchImpl === undefined ? {} : { fetchImpl: context.fetchImpl }),
+            provider:
+              typeof datos.provider === "string" && datos.provider !== ""
+                ? datos.provider
+                : arquitecto.provider,
+            model: modelo,
+            // El presupuesto de salida es generoso porque un modelo que razona
+            // gasta tokens pensando **antes** de escribir.
+            maxTokens: 16_000,
+            effort: arquitecto.effort,
+            messages: [
+              { role: "system", content: SISTEMA_DESCOMPOSICION },
+              { role: "user", content: decompositionPrompt(entrada) },
+            ],
+            structured: {
+              name: "feature_decomposition",
+              description: "El grafo de tickets de la feature.",
+              schema: ESQUEMA_DESCOMPOSICION,
+            },
+          });
+          return {
+            proposal: JSON.parse(respuesta.content) as unknown,
+            decomposer: {
+              provider:
+                typeof datos.provider === "string" && datos.provider !== ""
+                  ? datos.provider
+                  : arquitecto.provider,
+              model: respuesta.model,
+              ...(respuesta.usage.costUsd === null ? {} : { costUsd: respuesta.usage.costUsd }),
+            },
+          };
+        },
+      });
+
+      if (escribir) {
+        advanceFeature({ root: context.root, slug, to: "decomposed" });
+      }
+      return { status: 200, body: { ok: true, ...resultado } };
+    } catch (caught) {
+      const failure = toFailure(caught);
+      // Una descomposición que no pasa la compuerta no es un fallo del servidor:
+      // la pantalla muestra el motivo donde se pidió.
+      return { status: 200, body: { ok: false, error: failure.message } };
+    }
   }
 
   // GET /api/features/:slug

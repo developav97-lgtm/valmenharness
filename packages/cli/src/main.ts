@@ -10,6 +10,7 @@ import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { EXIT_INVARIANT, EXIT_SCHEMA, toFailure } from "@valmen/core";
+import { resolveApiKeyWithFile } from "@valmen/credentials";
 import { gateById } from "@valmen/gate";
 import { gateRoutingFor } from "@valmen/adapter";
 
@@ -151,6 +152,7 @@ Opciones globales:
                             (Se llamaba --tickets; el nombre cambió porque
                             release-publish usa --tickets para la lista de IDs.)
   --legacy-layout           Usa docs/tickets/ en vez de tickets/.
+  --credentials <ruta>      Archivo de credenciales. Por defecto, el del $HOME.
   -h, --help                Muestra esta ayuda.
   --version                 Muestra la versión.
 
@@ -227,6 +229,7 @@ const VALUE_OPTIONS = [
   "--set",
   "--actor",
   "--run",
+  "--credentials",
   "--released-at",
   "--provider",
   "--type",
@@ -914,10 +917,32 @@ export async function run(argv: readonly string[]): Promise<number> {
         const rutas = resolvePaths(options);
         const routing = gateRoutingFor(rutas.root);
 
-        result = await runGate(rutas, {
+        // La credencial se resuelve aquí, en el borde, con el archivo que el
+        // usuario indique. Sin `--credentials` es el del `$HOME`, que es lo normal
+        // para un CLI; con él, un proyecto puede tener el suyo y el comando y la
+        // app dejan de poder discrepar.
+        const archivoCredenciales =
+          typeof options.flags["credentials"] === "string"
+            ? options.flags["credentials"]
+            : undefined;
+        let apiKey: string | undefined;
+        try {
+          apiKey = resolveApiKeyWithFile(
+            routing.evaluatorProvider === "" ? "openrouter" : routing.evaluatorProvider,
+            archivoCredenciales,
+          );
+        } catch (caught) {
+          // Un fallo de credencial no se silencia: el evaluador daría el mismo
+          // error más tarde y con menos contexto.
+          const failure = toFailure(caught);
+          result = { stdout: "", stderr: failure.message, exitCode: failure.exitCode };
+        }
+
+        result ??= await runGate(rutas, {
           gateId,
           ticketId,
           dryRun: options.flags["dry-run"] === true,
+          ...(apiKey === undefined ? {} : { apiKey }),
           ...(evaluator === undefined ? {} : { evaluator }),
           ...(routing.evaluatorModel === "" ? {} : { model: routing.evaluatorModel }),
           ...(routing.evaluatorProvider === ""

@@ -217,3 +217,25 @@ export function apiKeyWithPrecedence(
   if (filePath === undefined) return null;
   return apiKeyFromText(leer(filePath), provider);
 }
+
+/**
+ * La clave de un proveedor, con la precedencia completa.
+ *
+ * Es la regla de `resolveApiKey` con el archivo **opcional**: si se indica uno, se
+ * usa; si no, el del `$HOME`. Un solo sitio decide el orden —variable de entorno,
+ * archivo indicado, archivo por defecto— para que el CLI, el servidor y la lista
+ * de modelos no puedan discrepar. Esa discrepancia ya ocurrió tres veces en este
+ * proyecto: el chat, la evaluación de un gate y el catálogo leían sitios distintos.
+ */
+export function resolveApiKeyWithFile(
+  provider = "openrouter",
+  filePath?: string,
+  env: NodeJS.ProcessEnv = process.env,
+): string {
+  const explicit = apiKeyWithPrecedence(provider, filePath, env);
+  if (explicit !== null) return explicit;
+  // Sin archivo indicado o sin la clave dentro, se cae a la resolución de siempre,
+  // que es la que da el mensaje de error bueno: dice qué variable exportar y en qué
+  // ruta poner la clave.
+  return resolveApiKey(provider, env, filePath);
+}

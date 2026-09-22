@@ -14,6 +14,8 @@ import { architectRoutingFor } from "@valmen/adapter";
 import { callChat } from "@valmen/credentials";
 import {
   type FeatureRow,
+  ESQUEMA_DESCOMPOSICION,
+  SISTEMA_DESCOMPOSICION,
   advanceFeature,
   createFeature,
   decomposeFeature,
@@ -236,76 +238,6 @@ async function featureDecompose(
     return error(failure.message, failure.exitCode);
   }
 }
-
-/** El mensaje de sistema del descomponedor. */
-const SISTEMA_DESCOMPOSICION = [
-  "Eres un arquitecto de software que descompone una especificación en tickets",
-  "de implementación.",
-  "",
-  "Reglas:",
-  "1. Cada requisito de la spec tiene que quedar cubierto por al menos un ticket.",
-  "   Es la regla dura: un requisito sin cobertura invalida la descomposición.",
-  "2. No inventes requisitos. La cobertura usa exactamente los identificadores que",
-  "   se te dan.",
-  "3. Un ticket no puede estar en dos sprints, y `depends_on` solo puede mencionar",
-  "   tickets que existan en el grafo. Sin ciclos.",
-  "4. Un ticket es una unidad revisable: si toca más de un módulo o excede unas",
-  "   pocas horas de trabajo, divídelo.",
-  "5. El identificador es `<TIPO>-<MODULO>-<DESC>-<YYYYMMDD>`, en mayúsculas.",
-  "",
-  "Responde solo con el grafo, en la forma que se te pide.",
-].join("\n");
-
-/** La forma exacta de la respuesta, para los proveedores que no la imponen. */
-const ESQUEMA_DESCOMPOSICION = {
-  type: "object",
-  properties: {
-    sprints: {
-      type: "array",
-      description: "Los tramos entregables, en orden.",
-      items: {
-        type: "object",
-        properties: {
-          id: { type: "string", description: "S1, S2…" },
-          goal: { type: "string", description: "Qué se entrega en este tramo." },
-          tickets: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                id: { type: "string" },
-                title: { type: "string" },
-                depends_on: {
-                  type: "array",
-                  items: { type: "string" },
-                },
-              },
-              required: ["id", "title", "depends_on"],
-              additionalProperties: false,
-            },
-          },
-        },
-        required: ["id", "goal", "tickets"],
-        additionalProperties: false,
-      },
-    },
-    coverage: {
-      type: "array",
-      description: "Qué ticket cubre qué requisito. Uno por requisito.",
-      items: {
-        type: "object",
-        properties: {
-          requirement: { type: "string", description: "R-XXX-NNN de la spec." },
-          covered_by: { type: "array", items: { type: "string" } },
-        },
-        required: ["requirement", "covered_by"],
-        additionalProperties: false,
-      },
-    },
-  },
-  required: ["sprints", "coverage"],
-  additionalProperties: false,
-} as const;
 
 /**
  * `feature <subcomando>`: el despachador.

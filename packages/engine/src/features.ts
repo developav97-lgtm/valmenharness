@@ -334,6 +334,11 @@ export function featureTransitionPath(from: string, to: string): string[] {
     const ultimo = camino[camino.length - 1] as string;
     for (const siguiente of nextFeatureStates(ultimo)) {
       if (visitados.has(siguiente)) continue;
+      // `blocked` no es un paso intermedio: es un estado de espera, y decir que la
+      // feature estuvo bloqueada cuando nadie la bloqueó sería falso en el
+      // registro. Se puede ir a él a propósito —con su propio comando—, pero un
+      // camino automático no lo atraviesa.
+      if (siguiente === "blocked" && to !== "blocked") continue;
       const extendido = [...camino, siguiente];
       if (siguiente === to) return extendido;
       visitados.add(siguiente);
