@@ -2919,6 +2919,117 @@
         cont.append(release.caja);
       }
 
+      // ── Línea de tiempo del ticket ────────────────────────────────────────
+      //
+      // Responde a una pregunta que el registro no contestaba: quién intervino,
+      // con qué modelo y a qué coste. Los recibos de compuerta traen el coste
+      // porque el harness evaluó y lo sabe de primera mano; el trabajo del agente
+      // —explorar, escribir, corregir— no estaba en ninguna parte.
+      //
+      // El dato se **lee** de la contabilidad que el cliente ya escribe, no se le
+      // pregunta al modelo: un agente que reporta su propio gasto puede reportar
+      // de menos y no habría forma de notarlo.
+      //
+      // El desglose importa más de lo que parece: en el primer ticket medido, dos
+      // tercios del gasto se fueron en explorar el código y no en el harness. Sin
+      // esta vista, ese dinero era invisible.
+      async function pintarLineaDeTiempo(id) {
+        let datos;
+        try {
+          datos = await api("GET", `/api/timeline?ticket=${encodeURIComponent(id)}`);
+        } catch {
+          return null;
+        }
+        if (datos.available !== true) {
+          return el(
+            "div",
+            `Sin datos de consumo: ${datos.reason ?? "no se encontró la contabilidad del cliente."}`,
+            "nota",
+          );
+        }
+
+        const zona = el("div");
+
+        const total = datos.desglose.harnessUsd + datos.desglose.exploracionUsd;
+        const resumen = el("div", undefined, "meta");
+        resumen.append(
+          el("span", `coste $${total.toFixed(6)}`, "etiqueta"),
+          el("span", `harness $${datos.desglose.harnessUsd.toFixed(6)}`, "etiqueta"),
+          el("span", `exploración $${datos.desglose.exploracionUsd.toFixed(6)}`, "etiqueta"),
+          el("span", `${datos.intervenciones.length} intervención(es)`, "etiqueta"),
+        );
+        zona.append(
+          el(
+            "div",
+            "Harness es lo que costó llamar a las herramientas del registro; " +
+              "exploración es leer, buscar y editar. Es el mismo gasto de la sesión, repartido.",
+            "resultado",
+          ),
+          resumen,
+        );
+
+        if (datos.intervenciones.length === 0) {
+          zona.append(el("div", "Esta sesión no llamó a ninguna herramienta del registro.", "vacio"));
+          return zona;
+        }
+
+        const tabla = el("table", undefined, "tabla-intervenciones");
+        const cab = el("tr");
+        for (const titulo of ["hora", "herramienta", "resultado", "agente", "modelo", "coste"]) {
+          cab.append(el("th", titulo));
+        }
+        tabla.append(cab);
+
+        for (const i of datos.intervenciones) {
+          const hora = new Date(i.at);
+          const fila = el("tr");
+          if (i.failed) fila.className = "fallo";
+
+          fila.append(
+            el(
+              "td",
+              `${String(hora.getHours()).padStart(2, "0")}:${String(hora.getMinutes()).padStart(2, "0")}:${String(hora.getSeconds()).padStart(2, "0")}`,
+              "cifra",
+            ),
+            el("td", i.tool, "id"),
+            el("td", i.failed ? "falló" : i.status),
+            el("td", i.agent),
+            el("td", `${i.provider}/${i.model}`, "ruta"),
+            el("td", `$${i.costUsd.toFixed(6)}`, "cifra"),
+          );
+          tabla.append(fila);
+        }
+
+        zona.append(tabla);
+
+        // Un fallo seguido de un reintento es una corrección, y contarlas es lo que
+        // convierte la tabla en información: dice cuánto costó entenderse con el
+        // agente, que es un número que nadie tiene.
+        const fallos = datos.intervenciones.filter((i) => i.failed).length;
+        if (fallos > 0) {
+          zona.append(
+            el(
+              "div",
+              fallos === 1
+                ? "1 intervención falló y se reintentó."
+                : `${fallos} intervenciones fallaron y se reintentaron.`,
+              "resultado",
+            ),
+          );
+        }
+
+        zona.append(
+          el(
+            "div",
+            `Leído de ${datos.source}. Corresponde a las sesiones de este proyecto: si el ticket ` +
+              "se trabajó en más de una, el total de arriba las suma.",
+            "ruta",
+          ),
+        );
+
+        return zona;
+      }
+
       // ── Piezas de la vista de ticket ──────────────────────────────────────
       //
       // Un acordeón por artefacto. El problema que resuelve: con el diagnóstico,

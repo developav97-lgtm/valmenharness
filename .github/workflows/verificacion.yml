@@ -64,6 +64,13 @@ jobs:
           node packages/cli/dist/main.js sync
           node packages/cli/dist/main.js sync --check
 
+      # La interfaz se **ejecuta**, además de compilarse: el módulo vive dentro de
+      # un HTML que ningún test cubría, y así se cazó un identificador perdido que
+      # llegó al navegador. El test de la suite ya lo hace, pero se corre aquí
+      # también para que su salida quede en el registro de la CI con el motivo.
+      - name: La interfaz se ejecuta
+        run: node scripts/verificar-interfaz.mjs
+
       # La suite no necesita red ni credenciales: los gates que consultan a un
       # proveedor están desactivados por defecto y la prueba diferencial contra
       # `ticket.py` se activa con `VALMEN_REFERENCE_TICKET_PY`.
