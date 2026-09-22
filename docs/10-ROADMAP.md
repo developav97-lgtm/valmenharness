@@ -191,9 +191,12 @@ lo deja retomable; `valmen process approve` registra quién aprueba y `process r
 **desde donde quedó**, sin repetir los pasos ya ejecutados —`git tag` dos veces no es
 idempotente—. `process runs`, `show-run` y `abandon` completan el ciclo.
 
-`kind: agent` sigue fuera del motor: necesita el bucle de un runtime —lanzar un agente, leer
-su salida, decidir si hizo lo que se le pidió— y el motor lo rechaza con un mensaje que lo
-dice.
+**Y los pasos de agente también**: `kind: agent` delega en el runtime que el proceso declara
+—`runtime: dsh --profile headless`, o el que sea—, con las instrucciones ya sustituidas. El
+harness no es un runtime de agentes: no tiene bucle, ni contexto, ni forma de leer un diff y
+decidir si el trabajo está hecho. Lo que sabe es qué hay que hacer y con qué evidencia, y eso
+es lo que le pasa. Un paso de agente sin `runtime:` no se ejecuta, y se dice al cargar en vez
+de detenerse a mitad.
 
 Criterio de aceptación: el módulo de inventario especificado, descompuesto en tickets con
 sprints, y con los dos primeros tickets implementados a través del harness. **La primera

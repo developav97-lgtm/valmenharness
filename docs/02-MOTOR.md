@@ -391,6 +391,42 @@ steps:
 produces: [docs/manuales/usuario-final/**]
 ```
 
+### El paso de agente: el harness delega, no ejecuta
+
+Un `kind: agent` **no** lo ejecuta el harness. El harness no tiene bucle, ni contexto de
+conversación, ni forma de leer un diff y decidir si el trabajo está hecho: eso es un runtime,
+y hay varios. Lo que el harness sabe es qué hay que hacer, con qué instrucciones y qué
+evidencia exigir.
+
+De ahí la forma que quedó:
+
+```yaml
+- id: escribir
+  title: Escribir o corregir los manuales
+  kind: agent
+  runtime: dsh --profile headless      # con qué se ejecuta
+  model_role: implementer              # qué rol del routing elige el modelo
+  instructions: >
+    Documenta las pantallas del módulo {modulo}. Lee el .component.ts y el .html
+    completos antes de escribir una línea.
+```
+
+Las instrucciones van **como un argumento** del runtime, ya sustituidas y protegidas del
+shell: una instrucción con comillas dobles —«cita textual del código»— llegaría partida sin
+protegerlas.
+
+Tres decisiones que están en el código con su porqué:
+
+| Decisión | Por qué |
+|---|---|
+| El `runtime` se declara y no se elige | Elegirlo el harness sería decidir por el proyecto qué modelo y qué agente usa. No hay un runtime por defecto |
+| Un agente sin `runtime:` no se ejecuta, y se dice **al cargar** | Un proceso que se detiene a mitad deja trabajo hecho y a medias; el error tiene que salir antes de empezar |
+| Dos pasos no comparten runtime | Compartirlo les pisaría el contexto, que es la parte del trabajo que no se ve |
+
+`model_role` se lee y se conserva en el contrato, y todavía no viaja al runtime: cada runtime
+elige su modelo a su manera —`dsh` por perfil, `codex` por su `config.toml`—, así que
+traducirlo es trabajo de cada adaptador y no del motor.
+
 ### Motor de plantillas de proceso
 
 Los procesos usan variables (`{version}`, `{tickets}`, `{slug}`) resueltas desde los

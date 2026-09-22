@@ -49,11 +49,19 @@ export type StepKind = (typeof STEP_KINDS)[number];
  * cuando alguien aprueba. No ejecuta nada por su cuenta, que es exactamente lo que
  * un gate humano significa.
  *
- * `agent` sigue fuera: necesita el bucle de un runtime —lanzar un agente, leer su
- * salida, decidir si hizo lo que se le pidió—, y ejecutarlo a medias sería peor
- * que rechazarlo con un mensaje que lo dice. Ver `docs/02-MOTOR.md` §7.
+ * `agent` se ejecuta **delegando** en un runtime que el proceso declara. El harness
+ * no es un runtime de agentes: no tiene bucle, ni contexto, ni forma de leer un
+ * diff y decidir si el trabajo está hecho. Lo que sí sabe es qué hay que hacer, con
+ * qué instrucciones y qué evidencia exigir — y eso es lo que le pasa al runtime.
+ * Ver `docs/02-MOTOR.md` §7.
  */
-export const STEP_KINDS_EJECUTABLES = ["command", "check", "process", "gate"] as const;
+export const STEP_KINDS_EJECUTABLES = [
+  "command",
+  "check",
+  "process",
+  "gate",
+  "agent",
+] as const;
 
 /** Qué hacer cuando un paso falla. */
 export const ON_FAILURE = ["abort", "continue", "ask"] as const;
@@ -83,6 +91,23 @@ export interface ProcessStep {
   readonly run: string | null;
   /** El proceso o el gate al que se refiere, según el tipo. */
   readonly target: string | null;
+  /**
+   * El runtime que ejecuta un paso de agente: el ejecutable y sus argumentos.
+   *
+   * Se declara y no se elige aquí porque el harness no tiene uno propio. El
+   * resultado de las instrucciones se pasa como **un argumento**: `dsh --profile
+   * headless "{prompt}"`. Un runtime que necesite el prompt por otro sitio se
+   * adapta con un comando que lo lea.
+   *
+   * Sin `runtime`, un paso de agente **no se sabe ejecutar** y el proceso se
+   * detiene antes de empezar: inventar un runtime sería decidir por el proyecto
+   * qué modelo y qué agente usa.
+   */
+  readonly runtime: string | null;
+  /** Qué rol del routing elige el modelo de este paso. */
+  readonly modelRole: string | null;
+  /** Las instrucciones, ya como texto, con sus variables. */
+  readonly instructions: string | null;
   /** Los parámetros con los que se invoca el sub-proceso. */
   readonly params: Readonly<Record<string, string>>;
   readonly onFailure: OnFailure;
@@ -270,12 +295,20 @@ function leerPaso(valor: YamlValue, indice: number): ProcessStep {
   const target =
     kind === "process" || kind === "gate" ? texto(valor[kind], `${donde}.${kind}`) : null;
 
+  // Un agente necesita instrucciones: sin ellas el runtime no tiene nada que hacer.
+  const instructions =
+    kind === "agent" ? texto(valor["instructions"], `${donde}.instructions`) : null;
+  const runtime = kind === "agent" ? textoOpcional(valor["runtime"]) : null;
+
   return {
     id,
     title: textoOpcional(valor["title"]) ?? id,
     kind: kind as StepKind,
     run,
     target,
+    runtime,
+    modelRole: kind === "agent" ? textoOpcional(valor["model_role"]) : null,
+    instructions,
     params: leerParams(valor["params"], `${donde}.params`),
     onFailure: onFailure as OnFailure,
     continueOnFailure: booleano(
@@ -402,6 +435,7 @@ export function validateProcess(
 ): void {
   const procesos = new Set(catalog.processes);
   const gates = new Set(catalog.gates);
+  const procesoDeRuntime = new Map<string, string>();
 
   for (const paso of process.steps) {
     if (!(STEP_KINDS_EJECUTABLES as readonly string[]).includes(paso.kind)) {
@@ -425,6 +459,28 @@ export function validateProcess(
           `está declarado.`,
         EXIT_SCHEMA,
       );
+    }
+    // Un paso de agente sin runtime no se puede ejecutar, y decirlo al cargar es la
+    // diferencia entre un error y un proceso que se detiene a mitad.
+    if (paso.kind === "agent" && paso.runtime === null) {
+      fail(
+        `El paso "${paso.id}" de ${process.id} es de tipo agent y no declara ` +
+          "`runtime:`. El harness no trae uno propio: hay que decir con qué se " +
+          "ejecuta, por ejemplo `runtime: dsh --profile headless`.",
+        EXIT_SCHEMA,
+      );
+    }
+    if (paso.kind === "agent" && paso.runtime !== null) {
+      const dueno = procesoDeRuntime.get(paso.runtime);
+      if (dueno !== undefined && dueno !== paso.id) {
+        fail(
+          `Los pasos "${dueno}" y "${paso.id}" de ${process.id} declaran el mismo ` +
+            `runtime ("${paso.runtime}") con instrucciones distintas. Compartirlo les ` +
+            "pisaría el contexto, que es la parte del trabajo que no se ve.",
+          EXIT_SCHEMA,
+        );
+      }
+      procesoDeRuntime.set(paso.runtime, paso.id);
     }
     if (paso.kind === "process" && paso.target === process.id) {
       fail(

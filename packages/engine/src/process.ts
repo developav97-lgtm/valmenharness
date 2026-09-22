@@ -116,6 +116,25 @@ export function processCatalog(root: string): Map<string, ProcessDefinition> {
   return catalogo;
 }
 
+/**
+ * Los parámetros que declara un proceso, leídos sin validar el resto.
+ *
+ * Existe porque el analizador de argumentos del CLI necesita saber **antes** de
+ * analizar qué banderas consumen un valor: `--modulo inventario` no está en la
+ * lista de opciones del CLI, así que sin esto se lee como una bandera booleana y
+ * `inventario` queda como argumento suelto. El resultado era un proceso que pedía
+ * un parámetro que sí se le había pasado.
+ *
+ * Devuelve una lista vacía si el proceso no existe o no se puede leer: quien llama
+ * está analizando argumentos, y el error bueno lo dará el motor al ejecutar.
+ */
+export function declaredParamNames(root: string, id: string): string[] {
+  const cargado = loadProcesses(root).find((entrada) => entrada.definition.id === id);
+  return cargado === undefined || cargado.invalid !== null
+    ? []
+    : cargado.definition.params.map((param) => param.name);
+}
+
 /** Los gates declarados por el proyecto: los archivos de `.valmen/gates/`. */
 function declaredGates(root: string): string[] {
   const base = join(root, ".valmen", "gates");
@@ -597,6 +616,41 @@ function ejecutarPaso(contexto: {
       stdout: "",
       stderr: "",
       reason: `La condición no se cumple: ${substitute(paso.when, valores)}`,
+    });
+  }
+
+  if (paso.kind === "agent" && paso.instructions !== null) {
+    // El harness **no** es un runtime de agentes: no tiene bucle, ni contexto, ni
+    // forma de leer un diff y decidir si el trabajo está hecho. Lo que sabe es qué
+    // hay que hacer y con qué instrucciones, y eso es lo que le pasa al runtime que
+    // el proceso declara.
+    //
+    // Las instrucciones van como **un argumento**: las comillas simples las protegen
+    // del shell, y una instrucción con comillas dobles —lo normal— llegaría partida
+    // sin ellas.
+    const runtime = substitute(paso.runtime ?? "", valores);
+    const instrucciones = substitute(paso.instructions, valores);
+    const comando = `${runtime} '${instrucciones.replace(/'/g, `'\\''`)}'`;
+
+    const inicio = Date.now();
+    const resultado = contexto.correr(comando, root);
+    const latencia = Date.now() - inicio;
+
+    return anunciar({
+      id: base.id,
+      title: base.title,
+      kind: base.kind,
+      // El detalle dice el **runtime**, no las instrucciones enteras: se guarda en
+      // el estado de la corrida, y un prompt largo lo haría ilegible. Las
+      // instrucciones viven en el proceso, que es donde se leen.
+      detail: runtime,
+      status: resultado.status === 0 ? "ok" : "failed",
+      exitCode: resultado.status,
+      latencyMs: latencia,
+      stdout: resultado.stdout,
+      stderr: resultado.stderr,
+      reason:
+        resultado.status === 0 ? null : `El runtime salió con código ${resultado.status}.`,
     });
   }
 

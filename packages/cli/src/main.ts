@@ -35,6 +35,7 @@ import {
   type RegistryPaths,
   defaultPaths,
   legacyPaths,
+  declaredParamNames,
   renderSimulation,
   runGate,
   simulateGate,
@@ -251,8 +252,18 @@ class UsageError extends Error {}
  * `--clave=valor`. Un valor que empieza por `--` se rechaza como valor para no
  * tragarse la opción siguiente por error.
  */
-export function parseArgs(argv: readonly string[]): Options {
-  const valueOptions = new Set<string>(VALUE_OPTIONS);
+export function parseArgs(
+  argv: readonly string[],
+  /**
+   * Opciones que consumen un valor además de las del CLI.
+   *
+   * Las usa `process run`: los parámetros de un proceso no están en la lista fija,
+   * así que `--modulo inventario` se leería como una bandera booleana y el valor
+   * quedaría suelto.
+   */
+  extraValueOptions: readonly string[] = [],
+): Options {
+  const valueOptions = new Set<string>([...VALUE_OPTIONS, ...extraValueOptions]);
 
   let root = process.cwd();
   let ticketsDir: string | undefined;
@@ -373,6 +384,33 @@ export function runGateDecide(
     stderr: resultado.error === "" ? "" : resultado.error,
     exitCode: 0,
   };
+}
+
+/**
+ * Qué banderas consumen un valor para el `process run` de esta línea de comandos.
+ *
+ * Se mira el `--root` crudo —el único que decide dónde está el proceso— y se leen
+ * sus parámetros declarados. Sin esto, `--modulo inventario` se analiza como una
+ * bandera booleana porque `--modulo` no está en la lista fija del CLI, el valor
+ * queda suelto y el motor se queja de que falta un parámetro que sí se pasó.
+ */
+function valorDeParametrosDeProceso(argv: readonly string[]): string[] {
+  const posicion = argv.findIndex((arg) => arg === "process");
+  if (posicion === -1 || argv[posicion + 1] !== "run") return [];
+  const id = argv[posicion + 2];
+  if (id === undefined || id.startsWith("--")) return [];
+
+  const raizCruda = argv.findIndex((arg) => arg === "--root");
+  const raiz = raizCruda === -1 ? process.cwd() : (argv[raizCruda + 1] ?? process.cwd());
+  try {
+    // Con los guiones: `parseArgs` compara el nombre tal como se escribe —`--modulo`—,
+    // no el nombre del parámetro.
+    return declaredParamNames(raiz, id).map((nombre) => `--${nombre}`);
+  } catch {
+    // Un proceso que no se puede leer no impide analizar los argumentos: el error
+    // bueno lo da el motor, con el catálogo delante.
+    return [];
+  }
 }
 
 /** Los comandos que anexan datos a un ticket. */
@@ -763,7 +801,7 @@ export function dispatch(options: Options): CommandResult {
 export async function run(argv: readonly string[]): Promise<number> {
   let options: Options;
   try {
-    options = parseArgs(argv);
+    options = parseArgs(argv, valorDeParametrosDeProceso(argv));
   } catch (caught) {
     if (caught instanceof UsageError) {
       process.stderr.write(`Error: ${caught.message}\n`);

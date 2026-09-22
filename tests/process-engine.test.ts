@@ -260,16 +260,49 @@ describe("validateProcess", () => {
   const conPaso = (paso: string): ProcessDefinition =>
     parseProcess(["id: padre", "steps:", `  - id: uno`, `    ${paso}`].join("\n"));
 
-  it("rechaza un tipo que el motor todavía no ejecuta", () => {
-    // Declararlo y no ejecutarlo es honesto mientras el error lo diga;
-    // saltárselo en silencio reportaría éxito sin hacer el trabajo.
+  it("un agente exige instrucciones", () => {
+    // Sin ellas el runtime no tiene nada que hacer, y decirlo al cargar es la
+    // diferencia entre un error y un proceso que se detiene a mitad.
+    expect(() =>
+      parseProcess(["id: padre", "steps:", "  - id: uno", "    kind: agent"].join("\n")),
+    ).toThrowError(/instructions debe ser un texto/);
+  });
+
+  it("un agente exige runtime, y lo dice al cargar", () => {
+    // El harness no trae uno propio: hay que decir con qué se ejecuta. Inventarlo
+    // sería decidir por el proyecto qué modelo y qué agente usa.
     const proceso = parseProcess(
-      ["id: padre", "steps:", "  - id: uno", "    kind: agent", "    agent: escritor"].join(
-        "\n",
-      ),
+      [
+        "id: padre",
+        "steps:",
+        "  - id: uno",
+        "    kind: agent",
+        "    instructions: escribe los manuales",
+      ].join("\n"),
     );
     expect(() => validateProcess(proceso, catalogo(["padre"]))).toThrowError(
-      /todavía no ejecuta ese tipo/,
+      /no declara\s+`runtime:`/,
+    );
+  });
+
+  it("dos pasos no pueden compartir runtime", () => {
+    // Compartirlo les pisaría el contexto, que es la parte del trabajo que no se ve.
+    const proceso = parseProcess(
+      [
+        "id: padre",
+        "steps:",
+        "  - id: uno",
+        "    kind: agent",
+        "    instructions: primero",
+        "    runtime: dsh --profile headless",
+        "  - id: dos",
+        "    kind: agent",
+        "    instructions: segundo",
+        "    runtime: dsh --profile headless",
+      ].join("\n"),
+    );
+    expect(() => validateProcess(proceso, catalogo(["padre"]))).toThrowError(
+      /el mismo\s+runtime/,
     );
   });
 
@@ -1115,5 +1148,107 @@ describe("lo que el YAML tuvo que aprender", () => {
     expect(() => parseYamlSubset("g: [a, 'b\n", { fileName: "t.yaml" })).toThrowError(
       /abre una colección y no la cierra/,
     );
+  });
+});
+
+describe("los pasos de agente", () => {
+  /**
+   * El harness no es un runtime de agentes: no tiene bucle, ni contexto, ni forma
+   * de leer un diff y decidir si el trabajo está hecho. Lo que sabe es qué hay que
+   * hacer y con qué instrucciones, y eso es lo que le pasa al runtime que el
+   * proceso declara.
+   */
+  function escribirAgente(instructions: string, runtime: string): void {
+    escribirProceso(
+      "manuales",
+      [
+        "params:",
+        "  modulo: { type: string, required: true }",
+        "steps:",
+        "  - id: escribir",
+        "    title: Escribir los manuales",
+        "    kind: agent",
+        `    runtime: ${runtime}`,
+        `    instructions: ${instructions}`,
+      ].join("\n"),
+    );
+  }
+
+  it("delega en el runtime con las instrucciones sustituidas", () => {
+    escribirAgente("Documenta {modulo} sin inventar.", "mi-runtime --headless");
+    const comandos: string[] = [];
+    const corrida = runProcess({
+      root: lab,
+      id: "manuales",
+      params: { modulo: "inventario" },
+      runCommand: simulador(comandos),
+    });
+
+    expect(corrida.ok).toBe(true);
+    expect(comandos).toHaveLength(1);
+    expect(comandos[0]).toContain("mi-runtime --headless");
+    expect(comandos[0]).toContain("Documenta inventario sin inventar.");
+  });
+
+  it("protege las instrucciones del shell", () => {
+    // Una instrucción lleva comillas dobles —«cita textual del código»— y llegaría
+    // partida sin protegerla. Las simples no se interpretan dentro de comillas
+    // simples, y por eso se cierran y se reabren al escapar una.
+    escribirAgente('Busca la "cita textual" y no la dejes fuera.', "runtime");
+    const comandos: string[] = [];
+    runProcess({
+      root: lab,
+      id: "manuales",
+      params: { modulo: "x" },
+      runCommand: simulador(comandos),
+    });
+
+    // Las comillas dobles llegan **dentro** del argumento, no como sintaxis.
+    expect(comandos[0]).toContain('"cita textual"');
+    expect(comandos[0]?.startsWith("runtime '")).toBe(true);
+  });
+
+  it("una instrucción con comilla simple no rompe el comando", () => {
+    escribirAgente("No uses 'esto' tal cual.", "runtime");
+    const comandos: string[] = [];
+    runProcess({
+      root: lab,
+      id: "manuales",
+      params: { modulo: "x" },
+      runCommand: simulador(comandos),
+    });
+    // El escape clásico: cerrar, escapar, reabrir.
+    expect(comandos[0]).toContain("'\\''");
+  });
+
+  it("un runtime que falla detiene el proceso", () => {
+    escribirAgente("haz algo", "runtime-que-falla");
+    const corrida = runProcess({
+      root: lab,
+      id: "manuales",
+      params: { modulo: "x" },
+      runCommand: (comando) =>
+        comando.startsWith("runtime-que-falla")
+          ? { status: 1, stdout: "", stderr: "el agente no pudo" }
+          : { status: 0, stdout: "", stderr: "" },
+    });
+    expect(corrida.ok).toBe(false);
+    expect(corrida.steps[0]?.stderr).toContain("el agente no pudo");
+  });
+
+  it("el detalle dice el runtime, no las instrucciones enteras", () => {
+    // El detalle se guarda en el estado de la corrida: un prompt largo lo haría
+    // ilegible. Las instrucciones viven en el proceso, que es donde se leen.
+    escribirAgente(
+      "una instrucción bastante larga que no debería caber aquí",
+      "mi-runtime",
+    );
+    const corrida = runProcess({
+      root: lab,
+      id: "manuales",
+      params: { modulo: "x" },
+      runCommand: simulador(),
+    });
+    expect(corrida.steps[0]?.detail).toBe("mi-runtime");
   });
 });
