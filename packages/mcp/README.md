@@ -36,6 +36,25 @@ La entrada que se declara **no lleva rutas absolutas**: el ejecutable se resuelv
 versionado con la ruta de una máquina no arranca en ninguna otra, y el síntoma —«la
 herramienta no existe»— no dice por qué.
 
+### La trampa del `PATH`, que es el primer fallo real
+
+Una aplicación de escritorio lanzada desde el Finder **no hereda el `PATH` de tu shell**: en
+macOS recibe `/usr/bin:/bin:/usr/sbin:/sbin`. Los directorios donde la gente instala binarios
+—`~/.local/bin`, `/opt/homebrew/bin`— no están ahí, así que un `valmen-mcp` perfectamente
+instalado no se encuentra, y el agente se queda sin herramientas sin dar ningún error que lo
+explique.
+
+Se comprueba en un segundo, y conviene hacerlo antes de culpar al agente:
+
+```bash
+# El PATH que ve de verdad una app del Finder
+env -i PATH="$(tr '\n' ':' < /etc/paths)" sh -c 'command -v valmen-mcp'
+```
+
+Si no imprime nada, hay que instalar el ejecutable en `/usr/local/bin` —el único directorio
+escribible por el usuario que está en ese `PATH`— o abrir el agente desde una terminal, que
+sí le pasa el `PATH` completo.
+
 ## Contrato
 
 Las ocho herramientas. Ninguna es una segunda implementación: las de lectura llaman a las
