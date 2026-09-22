@@ -15,6 +15,8 @@
  *   $ python3 tools/agentic/ticket.py index --check
  *   Índice actualizado.                       (exit 0)
  */
+import { cpSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -152,5 +154,36 @@ describe("dispatch", () => {
     expect(dispatch(legacy).stderr).toContain(
       "No se encontró el directorio de tickets: docs/tickets",
     );
+  });
+
+  it("detecta el registro donde está, sin banderas", () => {
+    // El CLI resolvía el registro con `defaultPaths` mientras Mission Control y
+    // el servidor MCP usaban `choosePaths`, que sí detecta. Sobre un proyecto
+    // adoptado con el registro en `docs/tickets` eso significaba que **todos**
+    // los comandos fallaban hasta que alguien recordara `--legacy-layout`, y que
+    // el CLI y la app discreparan sobre dónde está el registro.
+    const lab = mkdtempSync(join(tmpdir(), "valmen-layout-"));
+    try {
+      cpSync(PATHS.root, lab, { recursive: true });
+      // Se mueve el registro a la ubicación heredada: es el layout del proyecto
+      // que originó el harness.
+      mkdirSync(join(lab, "docs"), { recursive: true });
+      cpSync(join(lab, "tickets"), join(lab, "docs", "tickets"), { recursive: true });
+      rmSync(join(lab, "tickets"), { recursive: true, force: true });
+
+      const detectado = dispatch(parseArgs(["validate", "--all", "--root", lab]));
+      expect(detectado.exitCode).toBe(0);
+      expect(detectado.stdout).toContain("Tickets válidos: 57");
+
+      // Y la bandera explícita sigue ganando sobre la detección.
+      const forzado = dispatch(
+        parseArgs(["validate", "--all", "--root", lab, "--tickets-dir", "no-existe"]),
+      );
+      expect(forzado.stderr).toContain(
+        "No se encontró el directorio de tickets: no-existe",
+      );
+    } finally {
+      rmSync(lab, { recursive: true, force: true });
+    }
   });
 });

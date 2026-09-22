@@ -42,7 +42,7 @@ import { mcpCommand } from "./mcp.js";
 import { runProcess } from "./process.js";
 import {
   type RegistryPaths,
-  defaultPaths,
+  choosePaths,
   legacyPaths,
   declaredParamNames,
   renderSimulation,
@@ -657,13 +657,25 @@ export function runTransition(
   }
 }
 
+/**
+ * Resuelve el registro sobre el que va a trabajar el comando.
+ *
+ * El orden es: `--tickets-dir` explícito gana; si no, `--legacy-layout` fuerza el
+ * layout anterior; si no, se **detecta** dónde hay tickets.
+ *
+ * La detección es la parte que importa y la que faltaba. Mission Control y el
+ * servidor MCP la usaban desde el principio —`choosePaths`—, pero el CLI se
+ * quedó en `defaultPaths`, así que sobre un proyecto adoptado con el registro en
+ * `docs/tickets` **todos** los comandos fallaban con «No se encontró el
+ * directorio de tickets: tickets» hasta que alguien recordara la bandera. En un
+ * proyecto real eso es fricción en cada comando, y peor: la app y el CLI
+ * discreparem sobre dónde está el registro.
+ */
 export function resolvePaths(options: Options): RegistryPaths {
-  const base = options.legacyLayout
-    ? legacyPaths(options.root)
-    : defaultPaths(options.root);
-  return options.ticketsDir === undefined
-    ? base
-    : { root: options.root, ticketsDir: options.ticketsDir };
+  if (options.ticketsDir !== undefined) {
+    return { root: options.root, ticketsDir: options.ticketsDir };
+  }
+  return options.legacyLayout ? legacyPaths(options.root) : choosePaths(options.root);
 }
 
 /**
