@@ -52,6 +52,18 @@ jobs:
       - name: Formato
         run: npm run format:check
 
+      # La proyección de `.valmen/` a los archivos que leen los agentes tiene que
+      # ser **determinista**, y eso solo se puede comprobar generándola. No está
+      # en la suite porque la suite no puede: los archivos proyectados no se
+      # versionan, así que en un clon limpio no existen y un test sobre ellos
+      # estaría midiendo el estado del disco de quien lo escribe, no el código.
+      #
+      # Aquí sí existen, porque el paso anterior los acaba de construir.
+      - name: La proyección está al día
+        run: |
+          node packages/cli/dist/main.js sync
+          node packages/cli/dist/main.js sync --check
+
       # La suite no necesita red ni credenciales: los gates que consultan a un
       # proveedor están desactivados por defecto y la prueba diferencial contra
       # `ticket.py` se activa con `VALMEN_REFERENCE_TICKET_PY`.

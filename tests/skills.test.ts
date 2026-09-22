@@ -18,7 +18,7 @@
  * el mismo `.valmen/skills/` produce los mismos bytes, y las tres rutas que los
  * clientes leen de verdad reciben el archivo.
  */
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -227,15 +227,5 @@ describe("las skills que se publican con el harness", () => {
     // Las de proceso y las de desarrollo sí; una skill que no depende del stack
     // no tiene por qué citarlo, pero el conjunto tiene que hacerlo.
     expect(conReglas.length).toBeGreaterThanOrEqual(6);
-  });
-});
-
-describe("lo que se proyecta en este repositorio", () => {
-  it("está al día: el archivo en disco coincide con lo que se generaría", () => {
-    const raiz = join(import.meta.dirname, "..");
-    for (const archivo of renderAllSkills(readSkills(raiz))) {
-      const enDisco = readFileSync(join(raiz, archivo.path), "utf8");
-      expect(enDisco).toBe(archivo.content);
-    }
   });
 });
