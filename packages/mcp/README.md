@@ -39,21 +39,28 @@ herramienta no existe»— no dice por qué.
 ### La trampa del `PATH`, que es el primer fallo real
 
 Una aplicación de escritorio lanzada desde el Finder **no hereda el `PATH` de tu shell**: en
-macOS recibe `/usr/bin:/bin:/usr/sbin:/sbin`. Los directorios donde la gente instala binarios
-—`~/.local/bin`, `/opt/homebrew/bin`— no están ahí, así que un `valmen-mcp` perfectamente
-instalado no se encuentra, y el agente se queda sin herramientas sin dar ningún error que lo
-explique.
+macOS recibe los directorios de `/etc/paths`, que son `/usr/local/bin`, `/usr/bin`, `/bin`,
+`/usr/sbin` y `/sbin`. Los sitios donde la gente instala binarios —`~/.local/bin`,
+`/opt/homebrew/bin`— no están ahí, así que un `valmen-mcp` perfectamente instalado no se
+encuentra, y el agente se queda sin herramientas sin dar ningún error que lo explique.
 
 Se comprueba en un segundo, y conviene hacerlo antes de culpar al agente:
 
 ```bash
-# El PATH que ve de verdad una app del Finder
+# El PATH que ve una app del Finder
 env -i PATH="$(tr '\n' ':' < /etc/paths)" sh -c 'command -v valmen-mcp'
 ```
 
-Si no imprime nada, hay que instalar el ejecutable en `/usr/local/bin` —el único directorio
-escribible por el usuario que está en ese `PATH`— o abrir el agente desde una terminal, que
-sí le pasa el `PATH` completo.
+En un Mac con Homebrew, `/opt/homebrew/bin` **sí** está en el `PATH` que recibe la app
+—aunque no en `/etc/paths`— y es escribible por el usuario, así que es el sitio correcto:
+
+```bash
+ln -sf "$(command -v valmen)"     /opt/homebrew/bin/valmen
+ln -sf "$(command -v valmen-mcp)" /opt/homebrew/bin/valmen-mcp
+```
+
+En Linux, `/usr/local/bin` con `sudo`. Y abrir el agente desde una terminal también vale,
+porque ahí sí hereda el `PATH` completo.
 
 ## Contrato
 
