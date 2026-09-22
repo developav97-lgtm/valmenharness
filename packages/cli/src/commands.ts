@@ -38,12 +38,16 @@ import {
   type RegistryPaths,
   type ProcessRunState,
   type RunnerResult,
+  type SimulationReport,
   abandonRun,
   approveGate,
   buildManifest,
+  calibrate,
+  humanReferences,
   listRuns,
   loadProcesses,
   readRun,
+  renderCalibration,
   renderRun,
   waitingRuns,
   requireProcess,
@@ -1190,4 +1194,29 @@ export function abandonProcessRun(root: string, runId: string | undefined): Comm
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);
   }
+}
+
+/**
+ * `simulate --calibrate`: compara el gate con lo que decidieron las personas.
+ *
+ * El criterio de aceptación de la Fase 3 pide una coincidencia medida, y hasta
+ * ahora no había forma de calcularla. Se pide con una bandera y no por defecto: la
+ * comparación necesita evaluar los 57 tickets, y eso cuesta una llamada por
+ * proposición y por ticket. Quien quiera el número lo pide a sabiendas.
+ */
+export function calibrateReport(
+  paths: RegistryPaths,
+  gate: string,
+  simulación: SimulationReport,
+): CommandResult {
+  const referencias = humanReferences(paths);
+  const informe = calibrate(
+    gate,
+    simulación.tickets.map((ticket) => ({
+      id: ticket.id,
+      outcome: ticket.decision.outcome,
+    })),
+    referencias,
+  );
+  return ok(renderCalibration(informe));
 }

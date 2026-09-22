@@ -17,6 +17,7 @@ import { gateRoutingFor } from "@valmen/adapter";
 import {
   type CommandResult,
   buildIndex,
+  calibrateReport,
   deliverManifest,
   listActive,
   adoptProject,
@@ -142,9 +143,12 @@ Comandos:
       --skip-gates          Saltea los gates que sigan sin aprobar.
   process abandon <corrida> Deja de poder retomarla. No deshace lo ya ejecutado.
   serve [--port <n>]        Mission Control en 127.0.0.1.
-  simulate <gate>           Calibra un gate sobre el registro histórico.
+  simulate <gate>           Mide un gate sobre el registro histórico.
       --limit <n>           Evalúa solo los primeros n sujetos.
       --json                Informe en JSON en vez de tabla.
+      --calibrate           Compara el veredicto del gate con el que registraron
+                            las personas en los ciclos de QA. Cuesta una
+                            evaluación completa: se pide a sabiendas.
 
 Opciones globales:
   --root <ruta>             Raíz del proyecto (por defecto: el directorio actual).
@@ -859,14 +863,21 @@ export async function run(argv: readonly string[]): Promise<number> {
             },
           });
           process.stderr.write("            \r");
-          result = {
-            stdout:
-              options.flags["json"] === true
-                ? JSON.stringify(report, null, 2) + "\n"
-                : renderSimulation(report, definition.policy),
-            stderr: "",
-            exitCode: 0,
-          };
+
+          // `--calibrate` compara lo que decidió el gate con lo que decidieron
+          // las personas. Se pide a sabiendas porque evalúa todo el registro.
+          if (options.flags["calibrate"] === true) {
+            result = calibrateReport(resolvePaths(options), gateId, report);
+          } else {
+            result = {
+              stdout:
+                options.flags["json"] === true
+                  ? JSON.stringify(report, null, 2) + "\n"
+                  : renderSimulation(report, definition.policy),
+              stderr: "",
+              exitCode: 0,
+            };
+          }
         } else if (result === undefined) {
           result = { stdout: "", stderr: "", exitCode: 0 };
         }

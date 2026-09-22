@@ -79,22 +79,34 @@ el código compara contra umbrales, la banda de revisión escala a humano, y cad
 un recibo con la evidencia, las respuestas y el coste. `valmen simulate <gate>` mide el
 comportamiento de un gate sobre el registro histórico.
 
-**Criterio de aceptación: el estudio de calibración no está hecho.** Sobre los últimos 30
-tickets cerrados, el veredicto automático tiene que coincidir con la decisión humana en ≥90%
-y tener **cero falsos aprobados** en tickets de impacto crítico.
+**Criterio de aceptación: la medición ya existe; el número todavía no lo cumple, y se sabe
+por qué.** `valmen simulate <gate> --calibrate` compara el veredicto del gate con el que
+registraron las personas y dice si cumple los dos umbrales —≥90% de coincidencia y cero
+falsos aprobados en impacto crítico— o cuántos aciertos faltan.
 
-Dos cosas que hay que resolver antes de poder declararlo, y conviene escribirlas aquí porque
-no son obvias:
+De dónde sale el veredicto humano: **de los ciclos de QA**, no del estado. Un ticket `closed`
+dice que terminó, no que su plan fuera bueno; un ciclo con `changes_requested` es alguien
+diciendo «esto no está bien» con su fecha y su corrección. Los tickets sin ciclos cerrados
+quedan como `unknown` y no cuentan ni como acierto ni como fallo.
 
-1. **`simulate` mide, no compara.** Informa la distribución de cada proposición —cuántas
-   aprobaron, cuántas bloquearon, cuántas cayeron en banda— y el coste. No guarda el
-   veredicto humano del ticket, así que hoy **no puede calcular la coincidencia**. La
-   comparación hay que construirla: el registro sí tiene el resultado humano, porque un
-   ticket cerrado pasó por QA y por el PO.
-2. **`closed` no es «el humano aprobó el plan».** Los 57 tickets están cerrados, y eso dice
-   que terminaron, no que su plan fuera bueno. Un gate de plan corrido sobre tickets ya
-   cerrados mide con un sesgo optimista: solo se ven los planes que llegaron al final. Para
-   que el número signifique algo hacen falta tickets en `planned`, no cerrados.
+Medido sobre el fixture, con `--limit 8`: **50% de coincidencia sobre 2 decididos, y 6 de 8
+en banda de revisión.** Y ahí está el motivo, que es el que se sospechaba:
+
+**El gate de plan se está midiendo sobre tickets que ya pasaron por `planned`.** Su
+precondición de estado no se cumple, así que el evaluador ve un artefacto cerrado y no un
+plan esperando aprobación: de ahí que casi todo caiga en revisión. El conjunto de
+calibración real necesita **tickets en `planned`**, y el registro no los tiene porque todos
+terminaron.
+
+Lo que falta, entonces, no es instrumentación sino datos: un conjunto de planes en su estado
+de aprobación con su veredicto humano. Se puede construir de dos formas, y ninguna es trabajo
+de código:
+
+1. **Hacia adelante**: el registro que se genere con el harness ya guarda las dos cosas, así
+   que la calibración se vuelve medible sola en unas semanas de uso.
+2. **Hacia atrás**: correr el gate de plan sobre los tickets históricos **congelados en su
+   estado `planned`**, si el historial de eventos permite reconstruirlo. El bloque de eventos
+   guarda las transiciones con su fecha, así que probablemente sí.
 
 ### Fase 4 — Mission Control (2–3 semanas)
 
