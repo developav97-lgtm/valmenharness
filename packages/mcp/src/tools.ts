@@ -358,8 +358,14 @@ export async function callTool(
         const destino = findTicket(paths, texto(args, "id") as string);
         return bien(
           `${alta}\narchivo: ${destino?.absolutePath ?? "(no se pudo localizar)"}\n\n` +
-            "Siguiente paso: escribe el diagnóstico en `## Diagnóstico`, llama a " +
-            "`validar_ticket` y después a `evaluar_compuerta` con `analysis`.",
+            "Siguiente paso, en este orden:\n" +
+            "  1. Escribe el diagnóstico en `## Diagnóstico` **y los criterios de " +
+            "aceptación con texto** en `## Criterios de aceptación`. La plantilla deja " +
+            "la casilla vacía y sin criterios la compuerta no evalúa nada: los rechaza " +
+            "el check mecánico, que es determinista y no cuesta.\n" +
+            "  2. `validar_ticket`.\n" +
+            "  3. `mover_ticket` a `analyzed`. La compuerta solo aplica en ese estado.\n" +
+            "  4. `evaluar_compuerta` con `analysis`.",
         );
       }
 
