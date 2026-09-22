@@ -91,6 +91,15 @@ export interface ProviderEntry extends ProviderSpec {
   readonly probeHost: string | null;
   /** `true` si el proveedor publica su lista de modelos. */
   readonly listable: boolean;
+  /**
+   * `true` si se puede comprobar un modelo concreto contra el proveedor.
+   *
+   * Hace falta un endpoint de chat al que pedirle una respuesta mínima. `codex`
+   * no lo tiene: funciona por su CLI y su token de suscripción no sirve contra la
+   * API de OpenAI. La interfaz **no ofrece** el botón donde no puede funcionar, en
+   * vez de ofrecer uno que siempre falla.
+   */
+  readonly testable: boolean;
 }
 
 /** El catálogo tal como se declara: sin lo que se puede derivar de él. */
@@ -160,6 +169,10 @@ const CATALOGO: readonly ProviderSpec[] = [
     // Go: suscripción de 10 $/mes, modelos abiertos de código, 38 modelos, sin
     // Jev. La clave se saca de opencode.ai/auth igual que la de Zen.
     id: "opencode-go",
+    // Publica su catálogo en `/models`, y es **público**: responde 200
+    // sin credencial. Se declaró como no disponible por suposición, y era
+    // falso: los modelos quedaban sin desplegable y había que escribirlos.
+    modelsUrl: "https://opencode.ai/zen/go/v1/models",
     name: "opencode Go (suscripción)",
     auth: "api-key",
     envVar: "OPENCODE_GO_API_KEY",
@@ -183,6 +196,10 @@ const CATALOGO: readonly ProviderSpec[] = [
     // Zen: pasarela por consumo, 75 modelos, y **sí incluye Jev** en
     // `/zen/v1/systemone`, que es lo que evalúa los gates de este harness.
     id: "opencode-zen",
+    // Publica su catálogo en `/models`, y es **público**: responde 200
+    // sin credencial. Se declaró como no disponible por suposición, y era
+    // falso: los modelos quedaban sin desplegable y había que escribirlos.
+    modelsUrl: "https://opencode.ai/zen/v1/models",
     name: "opencode Zen (consumo)",
     auth: "api-key",
     envVar: "OPENCODE_ZEN_API_KEY",
@@ -296,6 +313,7 @@ export const PROVIDERS: readonly ProviderEntry[] = CATALOGO.map((spec) => ({
   probeable: spec.probe !== undefined,
   probeHost: spec.probe === undefined ? null : new URL(spec.probe.url).host,
   listable: spec.modelsUrl !== undefined,
+  testable: spec.probe?.method === "POST",
 }));
 
 /**
@@ -722,16 +740,42 @@ export async function listProviderModels(
     readonly env?: NodeJS.ProcessEnv;
     readonly fetchImpl?: typeof fetch;
     readonly timeoutMs?: number;
+    /**
+     * Los modelos que el proyecto declara para este proveedor.
+     *
+     * Entran **además** de los publicados, y no en su lugar: un proveedor sin
+     * catálogo público —codex— se queda solo con estos, y uno que sí lo publica
+     * gana la posibilidad de usar un modelo que su catálogo no lista pero su
+     * endpoint acepta.
+     */
+    readonly candidates?: readonly string[];
   } = {},
 ): Promise<
-  | { readonly ok: true; readonly models: readonly ProviderModel[] }
-  | { readonly ok: false; readonly error: string }
+  | {
+      readonly ok: true;
+      readonly models: readonly ProviderModel[];
+      /** Los declarados por el proyecto que el proveedor no publica. */
+      readonly configured: readonly string[];
+      readonly source: "publicado" | "declarado" | "ambos";
+    }
+  | { readonly ok: false; readonly error: string; readonly models: readonly ProviderModel[] }
   | null
 > {
   const spec = PROVIDERS.find((provider) => provider.id === id);
+  const declarados = (options.candidates ?? []).map((modelo) => modelo.trim()).filter((m) => m !== "");
+
   // Un proveedor que no está en el catálogo y uno que no publica su lista acaban
-  // en el mismo sitio —no hay URL que pedir—, y el mensaje los nombra a los dos.
-  if (spec === undefined || spec.modelsUrl === undefined) return null;
+  // en el mismo sitio —no hay URL que pedir—, salvo que el proyecto haya
+  // declarado modelos: entonces esos son toda la lista.
+  if (spec === undefined || spec.modelsUrl === undefined) {
+    if (declarados.length === 0) return null;
+    return {
+      ok: true,
+      models: declarados.map((modelo) => ({ id: modelo, name: modelo, promptUsd: null })),
+      configured: declarados,
+      source: "declarado",
+    };
+  }
 
   const fetchImpl = options.fetchImpl ?? fetch;
   const clave = resolveForProbe(
@@ -743,6 +787,12 @@ export async function listProviderModels(
   const headers: Record<string, string> = {};
   if (clave !== null && clave !== "") headers["Authorization"] = `Bearer ${clave}`;
 
+  // La credencial **cambia la respuesta**, y conviene saberlo antes de sospechar
+  // del código: medido contra opencode Go, sin credencial devuelve 40 modelos y
+  // con ella 33. Los siete que desaparecen son los que la cuenta no puede usar
+  // —`kimi-k2.5`, `glm-5`, `grok-4.5` y cuatro más—, y ofrecerlos daría un
+  // desplegable lleno de modelos que responden «Model is unavailable». Es la
+  // lista correcta: la de lo que se puede usar.
   let texto: string;
   try {
     const respuesta = await fetchImpl(spec.modelsUrl, {
@@ -759,6 +809,9 @@ export async function listProviderModels(
       return {
         ok: false,
         error: `El proveedor respondió HTTP ${respuesta.status}${limpio === "" ? "." : `: ${limpio}`}`,
+        // Lo declarado se devuelve igual: que el catálogo falle no invalida la
+        // lista que el usuario escribió, y sin ella el selector quedaría vacío.
+        models: declarados.map((modelo) => ({ id: modelo, name: modelo, promptUsd: null })),
       };
     }
   } catch (caught) {
@@ -768,6 +821,7 @@ export async function listProviderModels(
       error: /abort|timeout/i.test(detalle)
         ? `El proveedor superó el tiempo máximo de ${options.timeoutMs ?? 15_000} ms.`
         : `No se pudo consultar la lista de modelos: ${detalle}`,
+      models: declarados.map((modelo) => ({ id: modelo, name: modelo, promptUsd: null })),
     };
   }
 
@@ -775,19 +829,39 @@ export async function listProviderModels(
   try {
     datos = JSON.parse(texto) as unknown;
   } catch {
-    return { ok: false, error: "La lista de modelos del proveedor no es JSON." };
+    return {
+      ok: false,
+      error: "La lista de modelos del proveedor no es JSON.",
+      models: declarados.map((modelo) => ({ id: modelo, name: modelo, promptUsd: null })),
+    };
   }
 
-  const lista = extraerModelos(datos);
-  if (lista === null) {
+  const publicados = extraerModelos(datos);
+  if (publicados === null) {
     return {
       ok: false,
       error:
         "La lista de modelos del proveedor no tiene una forma conocida: ni " +
         "`data`, ni `models`, ni una lista.",
+      models: declarados.map((modelo) => ({ id: modelo, name: modelo, promptUsd: null })),
     };
   }
-  return { ok: true, models: lista };
+
+  // Los declarados primero: son los que el usuario eligió, y buscarlos en una
+  // lista de 76 no debería costar un desplazamiento.
+  const yaEstan = new Set(publicados.map((modelo) => modelo.id));
+  const soloDeclarados = declarados.filter((modelo) => !yaEstan.has(modelo));
+  const models = [
+    ...soloDeclarados.map((modelo) => ({ id: modelo, name: modelo, promptUsd: null })),
+    ...publicados,
+  ];
+
+  return {
+    ok: true,
+    models,
+    configured: soloDeclarados,
+    source: soloDeclarados.length === 0 ? "publicado" : "ambos",
+  };
 }
 
 /** Saca la lista de modelos de las formas que se usan de verdad. */
@@ -826,4 +900,116 @@ function extraerModelos(datos: unknown): ProviderModel[] | null {
     })
     .filter((modelo): modelo is ProviderModel => modelo !== null)
     .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+}
+
+/**
+ * Comprueba que un modelo concreto responde con la credencial configurada.
+ *
+ * Existe porque el identificador de un modelo es donde más fácil se escribe mal y
+ * donde peor se descubre: un `gpt-5.6-terrra` con una erre de más pasa la
+ * configuración, se guarda, y falla en mitad de un gate o de una descomposición
+ * con un error del proveedor que no dice qué se escribió mal.
+ *
+ * Se prueba con una petición mínima al endpoint de chat, que es el que se va a
+ * usar de verdad, y con la misma credencial. La respuesta **no se interpreta**:
+ * lo que importa es si el proveedor acepta o rechaza la pareja credencial+modelo,
+ * y su mensaje viaja tal cual porque es el que distingue «modelo inexistente» de
+ * «sin saldo» o «sin permisos».
+ *
+ * Lo que cuesta: la petición pide un token, así que el gasto es del orden de una
+ * milésima de céntimo. Se dice en la interfaz antes de pulsar.
+ */
+export async function testProviderModel(
+  id: string,
+  model: string,
+  options: {
+    readonly filePath?: string;
+    readonly env?: NodeJS.ProcessEnv;
+    readonly fetchImpl?: typeof fetch;
+    readonly timeoutMs?: number;
+  } = {},
+): Promise<{ readonly ok: boolean; readonly status: number | null; readonly detail: string; readonly latencyMs: number }> {
+  const spec = PROVIDERS.find((provider) => provider.id === id);
+  if (spec === undefined) {
+    return { ok: false, status: null, detail: `Proveedor desconocido: "${id}".`, latencyMs: 0 };
+  }
+  if (model.trim() === "") {
+    return { ok: false, status: null, detail: "Falta el identificador del modelo.", latencyMs: 0 };
+  }
+  if (spec.probe === undefined || spec.probe.method !== "POST") {
+    // Sin un endpoint de chat no hay nada que probar. Se dice en vez de devolver
+    // un «ok» que no comprobó nada.
+    return {
+      ok: false,
+      status: null,
+      detail: `"${spec.name}" no declara un endpoint de chat con el que probar un modelo.`,
+      latencyMs: 0,
+    };
+  }
+
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const clave = resolveForProbe(
+    spec,
+    options.filePath ?? credentialsPath(),
+    options.env ?? process.env,
+  );
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (clave !== null && clave !== "") headers["Authorization"] = `Bearer ${clave}`;
+  for (const [nombre, valor] of Object.entries(spec.probe.headers ?? {})) {
+    headers[nombre] = valor;
+  }
+
+  // El cuerpo de la prueba del proveedor, con el modelo que se quiere comprobar.
+  // `max_tokens` bajo a propósito: no se quiere una respuesta, se quiere saber si
+  // la acepta.
+  const cuerpo = {
+    ...(typeof spec.probe.body === "object" && spec.probe.body !== null
+      ? (spec.probe.body as Record<string, unknown>)
+      : {}),
+    model,
+    max_tokens: 16,
+  };
+
+  const inicio = Date.now();
+  let respuesta: Response;
+  try {
+    respuesta = await fetchImpl(spec.probe.url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(cuerpo),
+      signal: AbortSignal.timeout(options.timeoutMs ?? 45_000),
+    });
+  } catch (caught) {
+    const detalle = caught instanceof Error ? caught.message : String(caught);
+    return {
+      ok: false,
+      status: null,
+      detail: /abort|timeout/i.test(detalle)
+        ? `La prueba superó el tiempo máximo de ${options.timeoutMs ?? 45_000} ms.`
+        : `Fallo de transporte: ${detalle}`,
+      latencyMs: Date.now() - inicio,
+    };
+  }
+  const latencyMs = Date.now() - inicio;
+
+  let texto = "";
+  try {
+    texto = (await respuesta.text()).slice(0, 300).replace(/\s+/g, " ").trim();
+  } catch {
+    texto = "";
+  }
+  // La credencial se tacha: un proveedor puede devolverla reflejada en su error.
+  if (clave !== null && clave !== "") texto = texto.split(clave).join("***");
+
+  return {
+    ok: respuesta.status === spec.probe.expect,
+    status: respuesta.status,
+    detail:
+      respuesta.status === spec.probe.expect
+        ? `${spec.name} acepta "${model}" (HTTP ${respuesta.status}).`
+        : // El mensaje del proveedor, sin parafrasear: «Model is unavailable» no
+          // es «la credencial no vale», y se arreglan distinto.
+          `${spec.name} respondió HTTP ${respuesta.status}${texto === "" ? "." : `: ${texto}`}`,
+    latencyMs,
+  };
 }

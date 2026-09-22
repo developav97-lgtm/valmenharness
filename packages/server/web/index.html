@@ -147,6 +147,10 @@
       .lista-modelos .nombre { font-family: inherit; color: var(--tenue); }
       .lista-modelos .vacio { cursor: default; color: var(--tenue); padding: 10px; }
       .cargando-modelos { font-size: 12px; color: var(--tenue); }
+      .selector-modelo { display: flex; flex-direction: column; gap: 6px; }
+      .pie-modelo { display: flex; gap: 8px; align-items: baseline; }
+      .pie-modelo button { font-size: 12px; }
+      .pie-modelo .resultado { flex: 1; word-break: break-word; }
 
       /* ── Features ─────────────────────────────────────────────────────── */
       a.enlace { color: var(--acento); text-decoration: none; }
@@ -1824,6 +1828,46 @@
         entryAutoComplete(entradaModelo, cajaModelo, () => catalog.get(selProveedor.value));
         cajaModelo.append(entradaModelo);
 
+        // Probar el modelo antes de guardarlo. Un identificador mal escrito pasa
+        // la configuración, se guarda, y falla en mitad de un gate con un error
+        // del proveedor que no dice qué se escribió mal; esto lo dice antes.
+        //
+        // El botón no se ofrece donde no puede funcionar: `codex` no tiene
+        // endpoint de chat —funciona por su CLI y su token no sirve contra la API
+        // de OpenAI—, así que un botón ahí sería un botón que siempre falla.
+        const entradaProveedor = catalog.get(provider);
+        const sePuedeProbar = entradaProveedor?.provider.testable === true;
+        const probar = el("button", "Probar");
+        probar.title = "Pide una respuesta mínima al proveedor. Cuesta una fracción de céntimo.";
+        const resultadoPrueba = el("span", "", "resultado");
+        probar.addEventListener("click", async () => {
+          const modelo = entradaModelo.value.trim();
+          if (modelo === "") {
+            resultadoPrueba.className = "resultado error";
+            resultadoPrueba.textContent = "Escribe el modelo primero.";
+            return;
+          }
+          probar.disabled = true;
+          probar.textContent = "Probando…";
+          resultadoPrueba.className = "resultado";
+          resultadoPrueba.textContent = "";
+          try {
+            const r = await api(
+              "POST",
+              `/api/providers/${selProveedor.value}/models/test`,
+              { model: modelo },
+            );
+            resultadoPrueba.className = r.ok ? "resultado ok" : "resultado error";
+            resultadoPrueba.textContent = `${r.detail} · ${r.latencyMs} ms`;
+          } catch (fallo) {
+            resultadoPrueba.className = "resultado error";
+            resultadoPrueba.textContent = fallo.message;
+          } finally {
+            probar.disabled = false;
+            probar.textContent = "Probar";
+          }
+        });
+
         selProveedor.addEventListener("change", () => {
           // Al cambiar de proveedor, el modelo anterior casi nunca existe en el
           // nuevo. Se deja vacío en vez de arrastrar un identificador que el
@@ -1836,7 +1880,21 @@
         entradaModelo.addEventListener("input", () => onModel(entradaModelo.value));
 
         caja.append(selProveedor, cajaModelo);
-        return caja;
+
+        // El botón y su resultado, en su propia fila: el resultado de una prueba
+        // puede ser largo —el mensaje del proveedor— y comprimirlo junto al
+        // campo deja el identificador ilegible.
+        const pie = el("div", undefined, "pie-modelo");
+        if (sePuedeProbar) {
+          pie.append(probar, resultadoPrueba);
+        } else {
+          // Y se dice por qué, en vez de dejar la duda de si falta algo.
+          resultadoPrueba.textContent =
+            "Sin prueba automática: este proveedor no expone un endpoint de chat. Comprueba el modelo usándolo.";
+        }
+        const contenedor = el("div", undefined, "selector-modelo");
+        contenedor.append(caja, pie);
+        return contenedor;
       }
 
       /**

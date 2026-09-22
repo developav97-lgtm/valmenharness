@@ -340,6 +340,19 @@ export function proposeConfig(
     "# con evidencia, no al adoptar.",
     "gates: []",
     "",
+    "# Modelos que este proyecto quiere tener a mano en el selector, por proveedor.",
+    "#",
+    "# Hace falta para los proveedores que no publican su catálogo —codex no lo",
+    "# publica—, y sirve además para subir arriba los que se usan de verdad. El",
+    "# identificador tiene que ser el que acepta el proveedor: se comprueba con el",
+    "# botón «Probar» de Mission Control antes de fiarse.",
+    "#",
+    "# providers:",
+    "#   codex:",
+    "#     candidates:",
+    "#       - gpt-5.6-terra",
+    "#       - gpt-5.6-sol",
+    "",
   );
 
   return lines.join("\n");

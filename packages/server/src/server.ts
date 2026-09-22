@@ -42,6 +42,7 @@ import {
   listProviderModels,
   listProviders,
   probeProvider,
+  testProviderModel,
   updateCredentials,
 } from "./providers.js";
 import {
@@ -65,7 +66,9 @@ import {
   checkConfig,
   configPath,
   projectionImpact,
+  readConfig,
   readConfigText,
+  readProviderCandidates,
   syncProjections,
   writeConfig,
 } from "./config.js";
@@ -258,9 +261,14 @@ export async function handleApi(
     partes[3] === "models"
   ) {
     const id = partes[2] as string;
+    // Lo declarado en `config.yaml` entra además de lo que el proveedor publique.
+    // Es lo que hace usable un proveedor sin catálogo —codex— y lo que permite
+    // usar un modelo que el catálogo no lista pero el endpoint acepta.
+    const candidatos = readProviderCandidates(readConfig(context.root), id);
     const resultado = await listProviderModels(id, {
       filePath: context.credentialsFile,
       env: context.env,
+      candidates: candidatos,
       ...(context.fetchImpl === undefined ? {} : { fetchImpl: context.fetchImpl }),
     });
     if (resultado === null) {
@@ -268,16 +276,66 @@ export async function handleApi(
         status: 501,
         body: {
           error:
-            `"${id}" no publica su lista de modelos. Escribe el identificador ` +
-            "a mano.",
+            `"${id}" no publica su lista de modelos y el proyecto no declara ` +
+            "ninguno. Escríbelos en `.valmen/config.yaml`, bajo " +
+            `\`providers.${id}.candidates\`, y aparecerán aquí para elegirlos.`,
           models: [],
+          hint: "declara candidates en config.yaml",
         },
       };
     }
     if (!resultado.ok) {
-      return { status: 502, body: { error: resultado.error, models: [] } };
+      // 502 con lo declarado incluido: que el catálogo falle no vacía la lista
+      // que el usuario escribió.
+      return {
+        status: 502,
+        body: {
+          error: resultado.error,
+          models: resultado.models,
+          ...(resultado.models.length === 0
+            ? {}
+            : { note: "La lista de abajo es la que declara el proyecto." }),
+        },
+      };
     }
-    return { status: 200, body: { models: resultado.models } };
+    return {
+      status: 200,
+      body: {
+        models: resultado.models,
+        configured: resultado.configured,
+        source: resultado.source,
+      },
+    };
+  }
+
+  // POST /api/providers/:id/models/test
+  //
+  // Prueba que un identificador de modelo responda con la credencial configurada.
+  // Es lo que convierte el selector en algo en lo que se puede confiar: un
+  // `gpt-5.6-terrra` con una erre de más pasa la configuración, se guarda, y
+  // falla en mitad de un gate con un error del proveedor que no dice qué se
+  // escribió mal.
+  if (
+    method === "POST" &&
+    partes.length === 5 &&
+    partes[0] === "api" &&
+    partes[1] === "providers" &&
+    partes[3] === "models" &&
+    partes[4] === "test"
+  ) {
+    const id = partes[2] as string;
+    const modelo = (body as { model?: unknown }).model;
+    if (typeof modelo !== "string" || modelo.trim() === "") {
+      return { status: 400, body: { error: "Falta `model`." } };
+    }
+    const resultado = await testProviderModel(id, modelo, {
+      filePath: context.credentialsFile,
+      env: context.env,
+      ...(context.fetchImpl === undefined ? {} : { fetchImpl: context.fetchImpl }),
+    });
+    // Un modelo rechazado no es un error del servidor: la pantalla lo muestra
+    // donde el usuario escribió, igual que hace con una clave que no conecta.
+    return { status: 200, body: resultado };
   }
 
   // GET /api/features

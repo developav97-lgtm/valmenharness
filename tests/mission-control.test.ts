@@ -531,13 +531,36 @@ describe("GET /api/providers/:id/models", () => {
     expect(cuerpo.models[0]?.promptUsd).toBe(0.000003);
   });
 
-  it("dice 501 si el proveedor no publica su lista", async () => {
-    // Y no un desplegable vacío: la pantalla ofrece escribir el identificador, que
-    // es lo honesto.
+  it("dice 501 si el proveedor no publica su lista ni el proyecto la declara", async () => {
+    // Y no un desplegable vacío: el mensaje dice dónde declararla.
+    //
+    // El caso era `opencode-go`, y se creía que no publicaba catálogo. **Sí lo
+    // publica**: `/zen/go/v1/models` responde 200, y con credencial devuelve los
+    // 33 modelos que la cuenta puede usar. La suposición dejaba sin desplegable a
+    // un proveedor con 33 modelos.
     escribirCredenciales(ARCHIVO_BASE);
-    const r = await handleApi("GET", "/api/providers/opencode-go/models", {}, contexto());
+    const r = await handleApi("GET", "/api/providers/codex/models", {}, contexto());
     expect(r.status).toBe(501);
     expect((r.body as { error: string }).error).toMatch(/no publica su lista de modelos/);
+  });
+
+  it("los dos proveedores de opencode sí publican su catálogo", async () => {
+    escribirCredenciales(ARCHIVO_BASE);
+    const fetchFalso = (async () =>
+      new Response(JSON.stringify({ data: [{ id: "kimi-k3" }] }), {
+        status: 200,
+      })) as unknown as typeof fetch;
+
+    for (const id of ["opencode-go", "opencode-zen"]) {
+      const r = await handleApi(
+        "GET",
+        `/api/providers/${id}/models`,
+        {},
+        contexto({ fetchImpl: fetchFalso }),
+      );
+      expect(r.status, id).toBe(200);
+      expect((r.body as { models: { id: string }[] }).models[0]?.id, id).toBe("kimi-k3");
+    }
   });
 
   it("dice 502 con lo que respondió el proveedor", async () => {
@@ -606,6 +629,190 @@ describe("GET /api/providers/:id/models", () => {
     const r = await handleApi("GET", "/api/providers", {}, contexto());
     const cuerpo = r.body as { providers: { id: string; listable: boolean }[] };
     expect(cuerpo.providers.find((p) => p.id === "openrouter")?.listable).toBe(true);
-    expect(cuerpo.providers.find((p) => p.id === "opencode-go")?.listable).toBe(false);
+    // Los dos de opencode también: se declararon como no disponibles por
+    // suposición, y su endpoint responde 200 sin credencial.
+    expect(cuerpo.providers.find((p) => p.id === "opencode-go")?.listable).toBe(true);
+    expect(cuerpo.providers.find((p) => p.id === "opencode-zen")?.listable).toBe(true);
+    // Y codex no la publica: su lista es la que declare el proyecto.
+    expect(cuerpo.providers.find((p) => p.id === "codex")?.listable).toBe(false);
+  });
+
+  it("declara si se puede comprobar un modelo concreto", async () => {
+    // La interfaz no ofrece el botón donde no puede funcionar: un botón que
+    // siempre falla es peor que no tenerlo.
+    escribirCredenciales(ARCHIVO_BASE);
+    const r = await handleApi("GET", "/api/providers", {}, contexto());
+    const cuerpo = r.body as { providers: { id: string; testable: boolean }[] };
+    expect(cuerpo.providers.find((p) => p.id === "opencode-go")?.testable).toBe(true);
+    // codex funciona por su CLI y su token de suscripción no sirve contra la API
+    // de OpenAI, así que no hay endpoint contra el que probar.
+    expect(cuerpo.providers.find((p) => p.id === "codex")?.testable).toBe(false);
+  });
+});
+
+// ── Probar un modelo antes de guardarlo ─────────────────────────────────────
+
+describe("POST /api/providers/:id/models/test", () => {
+  /**
+   * El identificador de un modelo es donde más fácil se escribe mal y donde peor
+   * se descubre: un `gpt-5.6-terrra` con una erre de más pasa la configuración,
+   * se guarda, y falla en mitad de un gate con un error que no dice qué se
+   * escribió mal.
+   */
+  it("acepta un modelo que responde", async () => {
+    escribirCredenciales(ARCHIVO_BASE);
+    const visto: { url: string; body: string }[] = [];
+    const fetchFalso = (async (url: string, init: { body?: string }) => {
+      visto.push({ url: String(url), body: String(init.body) });
+      return new Response(JSON.stringify({ choices: [] }), { status: 200 });
+    }) as unknown as typeof fetch;
+
+    const r = await handleApi(
+      "POST",
+      "/api/providers/opencode-go/models/test",
+      { model: "kimi-k3" },
+      contexto({ fetchImpl: fetchFalso }),
+    );
+
+    expect(r.status).toBe(200);
+    expect((r.body as { ok: boolean }).ok).toBe(true);
+    // Se prueba contra el endpoint de **chat** y con el modelo pedido: probar
+    // contra el listado diría que sí a cualquier cosa.
+    expect(visto[0]?.url).toContain("chat/completions");
+    expect(JSON.parse(visto[0]!.body).model).toBe("kimi-k3");
+  });
+
+  it("rechaza un modelo que el proveedor no conoce, y muestra su mensaje", async () => {
+    escribirCredenciales(ARCHIVO_BASE);
+    const fetchFalso = (async () =>
+      new Response(
+        JSON.stringify({ error: { message: "Upstream request failed: Model is unavailable." } }),
+        { status: 400 },
+      )) as unknown as typeof fetch;
+
+    const r = await handleApi(
+      "POST",
+      "/api/providers/opencode-go/models/test",
+      { model: "kimi-k3-mal" },
+      contexto({ fetchImpl: fetchFalso }),
+    );
+
+    // Un modelo rechazado no es un error del servidor: la pantalla lo muestra
+    // donde el usuario escribió.
+    expect(r.status).toBe(200);
+    const cuerpo = r.body as { ok: boolean; detail: string };
+    expect(cuerpo.ok).toBe(false);
+    expect(cuerpo.detail).toContain("Model is unavailable");
+  });
+
+  it("tacha la credencial si el proveedor la refleja", async () => {
+    escribirCredenciales(ARCHIVO_BASE);
+    const clave = /api-key: "([^"]+)"/.exec(ARCHIVO_BASE)?.[1] as string;
+    const fetchFalso = (async () =>
+      new Response(`bad key ${clave}`, { status: 401 })) as unknown as typeof fetch;
+
+    const r = await handleApi(
+      "POST",
+      "/api/providers/openrouter/models/test",
+      { model: "x" },
+      contexto({ fetchImpl: fetchFalso }),
+    );
+    expect((r.body as { detail: string }).detail).not.toContain(clave);
+  });
+
+  it("exige el modelo", async () => {
+    escribirCredenciales(ARCHIVO_BASE);
+    const r = await handleApi("POST", "/api/providers/deepseek/models/test", {}, contexto());
+    expect(r.status).toBe(400);
+  });
+});
+
+describe("los modelos declarados por el proyecto", () => {
+  it("salen en la lista de un proveedor que no publica catálogo", async () => {
+    escribirCredenciales(ARCHIVO_BASE);
+    // codex no publica su lista de modelos, así que sin esto el selector solo
+    // ofrece escribir el identificador a mano.
+    mkdirSync(join(lab, ".valmen"), { recursive: true });
+    writeFileSync(
+      join(lab, ".valmen", "config.yaml"),
+      [
+        "name: Prueba",
+        "providers:",
+        "  codex:",
+        "    candidates:",
+        "      - gpt-5.6-sol",
+        "      - gpt-5.6-terra",
+        "",
+      ].join("\n"),
+    );
+
+    const r = await handleApi("GET", "/api/providers/codex/models", {}, contexto());
+    expect(r.status).toBe(200);
+    const cuerpo = r.body as { models: { id: string }[]; source: string };
+    expect(cuerpo.source).toBe("declarado");
+    expect(cuerpo.models.map((m) => m.id)).toEqual(["gpt-5.6-sol", "gpt-5.6-terra"]);
+  });
+
+  it("se suman a los publicados, y van primero", async () => {
+    escribirCredenciales(ARCHIVO_BASE);
+    mkdirSync(join(lab, ".valmen"), { recursive: true });
+    writeFileSync(
+      join(lab, ".valmen", "config.yaml"),
+      ["name: Prueba", "providers:", "  deepseek:", "    candidates:", "      - el-mio", ""].join("\n"),
+    );
+    const fetchFalso = (async () =>
+      new Response(JSON.stringify({ data: [{ id: "deepseek-v4-pro" }] }), {
+        status: 200,
+      })) as unknown as typeof fetch;
+
+    const r = await handleApi(
+      "GET",
+      "/api/providers/deepseek/models",
+      {},
+      contexto({ fetchImpl: fetchFalso }),
+    );
+    const cuerpo = r.body as { models: { id: string }[]; source: string };
+    // Primero los declarados: son los que el usuario eligió, y buscarlos en una
+    // lista de decenas no debería costar un desplazamiento.
+    expect(cuerpo.models.map((m) => m.id)).toEqual(["el-mio", "deepseek-v4-pro"]);
+    expect(cuerpo.source).toBe("ambos");
+  });
+
+  it("un catálogo que falla no vacía la lista declarada", async () => {
+    escribirCredenciales(ARCHIVO_BASE);
+    mkdirSync(join(lab, ".valmen"), { recursive: true });
+    writeFileSync(
+      join(lab, ".valmen", "config.yaml"),
+      ["name: Prueba", "providers:", "  deepseek:", "    candidates:", "      - el-mio", ""].join("\n"),
+    );
+    const fetchFalso = (async () =>
+      new Response("boom", { status: 500 })) as unknown as typeof fetch;
+
+    const r = await handleApi(
+      "GET",
+      "/api/providers/deepseek/models",
+      {},
+      contexto({ fetchImpl: fetchFalso }),
+    );
+    expect(r.status).toBe(502);
+    expect((r.body as { models: { id: string }[] }).models.map((m) => m.id)).toEqual(["el-mio"]);
+  });
+
+  it("sin lista publicada ni declarada, dice dónde declararla", async () => {
+    escribirCredenciales(ARCHIVO_BASE);
+    const r = await handleApi("GET", "/api/providers/codex/models", {}, contexto());
+    expect(r.status).toBe(501);
+    expect((r.body as { error: string }).error).toContain("providers.codex.candidates");
+  });
+
+  it("un config.yaml roto no rompe el listado", async () => {
+    escribirCredenciales(ARCHIVO_BASE);
+    mkdirSync(join(lab, ".valmen"), { recursive: true });
+    writeFileSync(join(lab, ".valmen", "config.yaml"), "name: [sin cerrar\n");
+
+    const r = await handleApi("GET", "/api/providers/opencode-go/models", {}, contexto());
+    // El error del config tiene su sitio, que es el editor de configuración.
+    // Convertirlo en un fallo del listado escondería el problema real.
+    expect(r.status).toBe(200);
   });
 });

@@ -30,7 +30,7 @@ import {
   readList,
   readString,
 } from "@valmen/adapter";
-import { atomicWrite, toFailure } from "@valmen/core";
+import { atomicWrite, fail, toFailure } from "@valmen/core";
 
 /** Ruta del archivo de configuración del proyecto. */
 export function configPath(root: string): string {
@@ -157,6 +157,24 @@ export function readConfigText(root: string): string {
     return readFileSync(configPath(root), "utf8");
   } catch {
     return "";
+  }
+}
+
+/**
+ * La configuración guardada, ya analizada.
+ *
+ * Un archivo que no parsea devuelve un mapa vacío en vez de fallar: quien pregunta
+ * es el listado de modelos, y un `config.yaml` roto ya tiene su error donde se
+ * edita. Convertirlo en un fallo del listado escondería el problema real detrás
+ * de otro.
+ */
+export function readConfig(root: string): ConfigMap {
+  const texto = readConfigText(root);
+  if (texto.trim() === "") return {};
+  try {
+    return parseConfig(texto);
+  } catch {
+    return {};
   }
 }
 
@@ -316,4 +334,59 @@ export function syncProjections(root: string): SyncOutcome {
   }
 
   return { ok: true, error: "", written, unchanged };
+}
+
+/** Un valor de la configuración como mapa, o `null` si no lo es. */
+function comoMapa(valor: unknown): ConfigMap | null {
+  if (valor === undefined) return null;
+  if (typeof valor === "string" || Array.isArray(valor)) return null;
+  return valor as ConfigMap;
+}
+
+/**
+ * Los modelos que el usuario declara para un proveedor.
+ *
+ * Existe porque algunos proveedores **no publican su catálogo** —codex es el
+ * caso— y sin esto el selector solo ofrece escribir el identificador a mano, que
+ * es donde se cometen los errores de tipeo que después fallan en mitad de un
+ * gate. Declararlos aquí los convierte en una lista de la que elegir.
+ *
+ * ```yaml
+ * providers:
+ *   codex:
+ *     candidates: [gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna, gpt-6-astra]
+ * ```
+ *
+ * Es del proyecto y no del harness a propósito: qué modelos usa alguien depende
+ * de su suscripción, y una lista curada dentro del código estaría desactualizada
+ * el mes siguiente. Ver `.valmen/config.yaml`.
+ */
+export function readProviderCandidates(
+  config: ConfigMap,
+  provider: string,
+): string[] {
+  const providers = comoMapa(config["providers"]);
+  if (providers === null) return [];
+  const entrada = providers[provider];
+  if (entrada === undefined) return [];
+  if (typeof entrada === "string" || Array.isArray(entrada)) {
+    fail(`config.yaml: "providers.${provider}" debe ser un mapa.`);
+  }
+  const candidatos = entrada["candidates"];
+  if (candidatos === undefined) return [];
+  return readList({ candidates: candidatos }, "candidates", []).filter(
+    (modelo) => modelo.trim() !== "",
+  );
+}
+
+/** Los modelos declarados para cada proveedor, con su nombre. */
+export function allProviderCandidates(
+  config: ConfigMap,
+): { readonly provider: string; readonly models: readonly string[] }[] {
+  const providers = comoMapa(config["providers"]);
+  if (providers === null) return [];
+  return Object.keys(providers)
+    .sort()
+    .map((provider) => ({ provider, models: readProviderCandidates(config, provider) }))
+    .filter((entrada) => entrada.models.length > 0);
 }

@@ -14,3 +14,19 @@ tickets-dir: tickets
 # defecto de un gate es humano, y automatizarlo es una decisión que se toma
 # con evidencia, no al adoptar.
 gates: []
+# Modelos que este proyecto quiere tener a mano en el selector, por proveedor.
+#
+# Hace falta para los proveedores que **no publican su catálogo** —codex no lo
+# publica— y sirve además para subir arriba los que se usan de verdad, porque en
+# una lista de 76 buscarlos cada vez es el trabajo que esto evita.
+#
+# El identificador tiene que ser el que acepta el proveedor. Se comprueba con el
+# botón «Probar» de Mission Control antes de fiarse: uno mal escrito pasa la
+# configuración y falla después, en mitad de un gate.
+providers:
+  codex:
+    candidates:
+      - gpt-5.6-sol
+      - gpt-5.6-terra
+      - gpt-5.6-luna
+      - gpt-6-astra
