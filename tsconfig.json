@@ -32,6 +32,5 @@
       "@valmen/gate-llm-judge": ["./packages/gate-llm-judge/src/index.ts"]
     }
   },
-  "references": [{ "path": "./packages/core" }],
   "exclude": ["node_modules", "dist", "**/dist"]
 }

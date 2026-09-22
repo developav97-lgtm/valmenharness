@@ -99,6 +99,15 @@ const PROPOSITIONS: Proposition[] = [
     kind: "score",
     instructions: "Riesgo del cambio.",
     criteria: ["trivial", "bajo", "medio", "alto"],
+    // `levels` no es decorativo: es lo que traduce una posición de la escala a un
+    // veredicto, y sin él `decide` manda el gate a revisión. El fixture lo
+    // omitía, así que describía una proposición que el contrato no admite.
+    levels: {
+      0: { outcome: "approve" },
+      1: { outcome: "approve" },
+      2: { outcome: "review" },
+      3: { outcome: "block" },
+    },
   },
 ];
 

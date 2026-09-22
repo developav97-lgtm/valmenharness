@@ -1,0 +1,49 @@
+# Verificación del harness.
+#
+# Existe por un motivo concreto: el tipo de `npm run build` **no compila los
+# tests** —cada paquete incluye solo `src/**/*.ts`—, así que los tests quedaron
+# fuera del compilador y nueve errores de tipos se acumularon allí sin que nada
+# los viera. `vitest` tampoco los ve: borra los tipos antes de ejecutar.
+#
+# Este flujo corre el typecheck completo, que sí incluye los tests, y la suite.
+# Sin él, el sistema de tipos protege el código de producción y nada más, que es
+# justo la mitad que se rompe al escribir un test con prisa.
+name: verificación
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # `npm ci` y no `npm install`: instala exactamente lo que dice el lockfile.
+      # Un CI que resuelve versiones nuevas cada vez avisa de fallos que no son
+      # del código.
+      - run: npm ci
+
+      # El typecheck va primero porque es el que más se olvida, y su salida
+      # nombra el archivo y la línea: un fallo aquí se arregla sin abrir nada.
+      #
+      # **Construye lo que necesita**, y eso no es un detalle de estilo: el
+      # `--noEmit` sobre un proyecto compuesto exige que los proyectos
+      # referenciados ya estén construidos, así que sin este orden la
+      # comprobación falla en un clon limpio con un TS6305 que no habla del
+      # código. Medido: sin construir, 17 errores; construyendo, 0.
+      - name: Tipos de todo, tests incluidos
+        run: npm run typecheck
+
+      # La suite no necesita red ni credenciales: los gates que consultan a un
+      # proveedor están desactivados por defecto y la prueba diferencial contra
+      # `ticket.py` se activa con `VALMEN_REFERENCE_TICKET_PY`.
+      - name: Pruebas
+        run: npm test

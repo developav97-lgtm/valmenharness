@@ -365,9 +365,12 @@ describe("información incompleta", () => {
     expect(() =>
       decide(propositions, [{ id: "a", kind: "noul", value: 1.5 }]),
     ).toThrow(GateDefinitionError);
-    expect(() =>
-      decide(propositions, [{ id: "a", kind: "noul", value: undefined }]),
-    ).toThrow(GateDefinitionError);
+    // Una respuesta sin `value` es lo que el caso representa, y el contrato la
+    // prohíbe: se construye con el tipo declarado y sin el campo, en vez de
+    // escribirlo como `undefined`, que con `exactOptionalPropertyTypes` ni
+    // siquiera es la misma cosa.
+    const sinValor = [{ id: "a", kind: "noul" }] as unknown as PropositionAnswer[];
+    expect(() => decide(propositions, sinValor)).toThrow(GateDefinitionError);
   });
 });
 
@@ -455,6 +458,9 @@ describe("recibos", () => {
   it("no escala cuando aprueba o bloquea", () => {
     const aprobado = buildReceipt({
       ...receipt,
+      // El recibo guarda el **hash** del estado, no el estado: al reconstruir uno
+      // hay que volver a pasarlo.
+      state,
       id: "GR-0002",
       decision: decide(
         [{ id: "a", kind: "noul", instructions: "a" }],
@@ -502,6 +508,7 @@ describe("recibos", () => {
   it("no admite decisión humana en un recibo que no se escaló", () => {
     const aprobado = buildReceipt({
       ...receipt,
+      state,
       id: "GR-0003",
       decision: decide(
         [{ id: "a", kind: "noul", instructions: "a" }],

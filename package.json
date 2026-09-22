@@ -12,10 +12,11 @@
     "packages/*"
   ],
   "scripts": {
+    "clean": "rm -rf packages/*/dist .tsbuildinfo packages/*/*.tsbuildinfo",
     "build": "tsc --build tsconfig.build.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --build tsconfig.build.json --dry && tsc --noEmit -p tsconfig.json",
+    "typecheck": "npm run build && tsc --noEmit -p tsconfig.json",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check ."

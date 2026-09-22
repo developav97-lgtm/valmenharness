@@ -600,12 +600,21 @@ describe("códigos de salida", () => {
   it("una feature sin spec sale con invariante, no con esquema", async () => {
     const root = proyecto();
     createFeature({ root, id: "modulo-inventario", title: "Módulo" });
-    const error = await decomposeFeature({
-      root,
-      slug: "modulo-inventario",
-      callModel: async () => ({ proposal: PROPUESTA, decomposer: {} as never }),
-    }).catch((caught: unknown) => caught as { exitCode: number });
-    expect(error.exitCode).toBe(EXIT_INVARIANT);
+    // El `catch` devuelve un tipo distinto del de la promesa, así que se captura
+    // y se comprueba aparte: `.catch(...)` deja una unión que después hay que
+    // estrechar, y el `as` que hacía falta para eso escondía justo el campo que
+    // se quería mirar.
+    let capturado: unknown;
+    try {
+      await decomposeFeature({
+        root,
+        slug: "modulo-inventario",
+        callModel: async () => ({ proposal: PROPUESTA, decomposer: {} as never }),
+      });
+    } catch (caught) {
+      capturado = caught;
+    }
+    expect((capturado as { exitCode: number }).exitCode).toBe(EXIT_INVARIANT);
   });
 
   it("un tickets.yaml mal formado sale con esquema", () => {

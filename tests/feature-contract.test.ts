@@ -30,8 +30,18 @@ const REQUISITOS: FeatureRequirement[] = [
 ];
 
 /** Una descomposición completa: los tres requisitos cubiertos por tickets reales. */
-function completa(): FeatureDecomposition {
+/**
+ * Una descomposición completa.
+ *
+ * `parcial` permite quitarle una parte sin mutarla: el contrato declara los
+ * campos `readonly`, y mutarlos en un test es exactamente lo que el tipo impide.
+ * Un `as` para saltárselo compila, pero entonces el test deja de comprobar lo que
+ * dice comprobar —que el motor detecta el hueco— y pasa a comprobar que un objeto
+ * mutado a la fuerza sigue mutado.
+ */
+function completa(parcial: Partial<FeatureDecomposition> = {}): FeatureDecomposition {
   return {
+    ...parcial,
     sprints: [
       {
         id: "S1",
@@ -44,12 +54,12 @@ function completa(): FeatureDecomposition {
         tickets: ["FEATURE-INVENTARIO-REPORTES-20260921"],
       },
     ],
-    coverage: [
+    coverage: parcial.coverage ?? [
       { requirement: "R-INV-001", coveredBy: ["FEATURE-INVENTARIO-MODELO-20260921"] },
       { requirement: "R-INV-002", coveredBy: ["FEATURE-INVENTARIO-API-20260921"] },
       { requirement: "R-INV-003", coveredBy: ["FEATURE-INVENTARIO-REPORTES-20260921"] },
     ],
-    gaps: [],
+    gaps: parcial.gaps ?? [],
   };
 }
 
@@ -123,8 +133,7 @@ describe("la compuerta de descomposición", () => {
   });
 
   it("un requisito sin cobertura la bloquea, y dice cuál y qué pide", () => {
-    const incompleta = completa();
-    incompleta.coverage.pop();
+    const incompleta = completa({ coverage: completa().coverage.slice(0, 2) });
 
     const huecos = coverageGaps(REQUISITOS, incompleta);
     expect(huecos).toHaveLength(1);
@@ -140,10 +149,16 @@ describe("la compuerta de descomposición", () => {
   it("un ticket fantasma no cubre nada", () => {
     // La cobertura dice que lo cubre, pero ese ticket no está en ningún sprint:
     // cubre lo mismo que ninguno, y el motor lo detecta.
-    const fantasma = completa();
-    (fantasma.coverage[2] as { coveredBy: string[] }).coveredBy = [
-      "FEATURE-INVENTARIO-INVENTADO-20260921",
-    ];
+    const cobertura = completa().coverage;
+    const fantasma = completa({
+      coverage: [
+        ...cobertura.slice(0, 2),
+        {
+          requirement: "R-INV-003",
+          coveredBy: ["FEATURE-INVENTARIO-INVENTADO-20260921"],
+        },
+      ],
+    });
 
     const huecos = coverageGaps(REQUISITOS, fantasma);
     expect(huecos).toHaveLength(1);
@@ -151,8 +166,7 @@ describe("la compuerta de descomposición", () => {
   });
 
   it("declarar un hueco no es cubrirlo", () => {
-    const conHueco = completa();
-    (conHueco as { gaps: string[] }).gaps = ["Falta el exportable a PDF"];
+    const conHueco = completa({ gaps: ["Falta el exportable a PDF"] });
     expect(() => assertDecompositionComplete(REQUISITOS, conHueco)).toThrow(
       /huecos declarados: Falta el exportable a PDF/,
     );
@@ -163,8 +177,7 @@ describe("la compuerta de descomposición", () => {
   });
 
   it("el error explica la regla, no solo que falló", () => {
-    const incompleta = completa();
-    incompleta.coverage.pop();
+    const incompleta = completa({ coverage: completa().coverage.slice(0, 2) });
     let mensaje = "";
     try {
       assertDecompositionComplete(REQUISITOS, incompleta);
