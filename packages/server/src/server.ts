@@ -26,7 +26,11 @@ import { extname, join } from "node:path";
 import {
   type RegistryPaths,
   choosePaths,
+  closedTickets,
+  defaultReportRange,
+  filterReport,
   findTicket,
+  renderReport,
   ticketsPath,
   transition,
 } from "@valmen/engine";
@@ -184,6 +188,12 @@ function transitionsOf(
   }
 }
 
+/** Un valor de la query, o `undefined` si no está o viene vacío. */
+function valorDeQuery(query: URLSearchParams, nombre: string): string | undefined {
+  const valor = query.get(nombre);
+  return valor === null || valor === "" ? undefined : valor;
+}
+
 /** Proveedor tal como lo devuelve la API. Nunca incluye el valor de la clave. */
 type ProviderDto = ProviderStatus;
 
@@ -262,6 +272,39 @@ export async function handleApi(
       };
     }
     return { status: 200, body: detalle };
+  }
+
+  // GET /api/report?desde=&hasta=&type=&q=
+  //
+  // El reporte en Markdown, el mismo que produce `valmen report`. Es lo único
+  // del visor anterior que la pantalla no cubría, y tiene que salir de aquí y no
+  // de la interfaz: si el botón y el comando compusieran el texto por su cuenta,
+  // el reporte que se pega en un correo podría no ser el que dice el CLI.
+  if (method === "GET" && path === "/api/report") {
+    const porDefecto = defaultReportRange();
+    const desde = valorDeQuery(query, "desde") ?? porDefecto.desde;
+    const hasta = valorDeQuery(query, "hasta") ?? porDefecto.hasta;
+    const type = valorDeQuery(query, "type");
+    const q = valorDeQuery(query, "q");
+
+    const entradas = filterReport(closedTickets(paths), {
+      desde,
+      hasta,
+      ...(type === undefined ? {} : { type }),
+      ...(q === undefined ? {} : { query: q }),
+    });
+
+    return {
+      status: 200,
+      body: {
+        markdown: renderReport(entradas, desde, hasta),
+        count: entradas.length,
+        range: { from: desde, to: hasta },
+        // El nombre del archivo lo decide el servidor para que el botón y un
+        // `curl` produzcan el mismo artefacto con el mismo nombre.
+        filename: `tickets-cerrados-${desde}-a-${hasta}.md`,
+      },
+    };
   }
 
   // GET /api/tickets/:id

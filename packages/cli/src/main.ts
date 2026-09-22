@@ -16,9 +16,11 @@ import { gateRoutingFor } from "@valmen/adapter";
 import {
   type CommandResult,
   buildIndex,
+  deliverManifest,
   listActive,
   adoptProject,
   migrateRegistry,
+  reportClosed,
   showTicket,
   syncProject,
   validateAll,
@@ -110,6 +112,17 @@ Comandos:
       --dry-run             Muestra la descomposición sin escribirla.
       --model <id>          Sobrescribe el modelo del rol architect.
       --provider <id>       Sobrescribe el proveedor.
+  report                    Reporte Markdown de los tickets cerrados.
+      --desde <YYYY-MM-DD>  Por defecto, hace 30 días.
+      --hasta <YYYY-MM-DD>  Por defecto, hoy. El rango es por fecha de CIERRE.
+      --type <TIPO>         Filtra por tipo de ticket.
+      --q <texto>           Busca en título, problema, solución y rol afectado.
+  deliver-manifest --version <SemVer> --tickets <ID1,ID2>
+                            Escribe el manifiesto de entrega en
+                            .valmen/deliveries/<versión>.json. Exige cada ticket
+                            cerrado, visible al usuario y sin publicar.
+      --released-at <fecha> Por defecto, hoy.
+      --dry-run             Muestra el manifiesto sin escribirlo.
   serve [--port <n>]        Mission Control en 127.0.0.1.
   simulate <gate>           Calibra un gate sobre el registro histórico.
       --limit <n>           Evalúa solo los primeros n sujetos.
@@ -191,6 +204,10 @@ const VALUE_OPTIONS = [
   "--decision",
   "--actor",
   "--tickets",
+  "--desde",
+  "--hasta",
+  "--q",
+  "--released-at",
   "--provider",
   "--type",
   "--module",
@@ -661,6 +678,12 @@ export function dispatch(options: Options): CommandResult {
 
     case "index":
       return buildIndex(paths, options.flags["check"] === true);
+
+    case "report":
+      return reportClosed(paths, options.flags);
+
+    case "deliver-manifest":
+      return deliverManifest(paths, options.flags);
 
     case "migrate":
       return migrateRegistry(paths, {

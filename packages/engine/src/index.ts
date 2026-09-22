@@ -24,6 +24,8 @@ export * from "./create.js";
 export * from "./features.js";
 export * from "./spec.js";
 export * from "./decompose.js";
+export * from "./report.js";
+export * from "./manifest.js";
 export * from "./release.js";
 export * from "./evaluators.js";
 export * from "./gate.js";

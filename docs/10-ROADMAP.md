@@ -117,9 +117,10 @@ ticket**: un gate se puede aprobar desde la pantalla, pero el ticket no se mueve
 gate no cambia estados por su cuenta y la transición todavía no existe como operación. Un
 día de trabajo sin terminal necesita esa pieza, y es lo primero de la Fase 5.
 
-**La vista de features (4.2bis) se mueve a la Fase 5.** Una feature es un objeto del
-Spec-Driven Development, y ese formato todavía no existe: construir la pantalla antes que
-el artefacto sería dibujar una lista vacía.
+**La vista de features (4.2bis) se movió a la Fase 5**, y ya está hecha: la lista, el detalle
+con la cobertura y el grafo contrastado con el registro. El motivo del traslado sigue en pie
+y se cumplió: una feature es un objeto del Spec-Driven Development, y construir la pantalla
+antes que el artefacto habría sido dibujar una lista vacía.
 
 ### Fase 5 — Features grandes y procesos (2–3 semanas)
 
@@ -135,10 +136,19 @@ registro; `valmen feature decompose` le pide el grafo al rol `architect` y lo es
 pasa la compuerta —cero requisitos sin cubrir, cero ciclos, ningún ticket en dos sprints—; y
 la pantalla muestra el hueco con el enunciado del requisito, no un «inválido» genérico.
 
-Lo que queda de esa migración antes de borrar `ticket.py` del proyecto real: el reporte
-Markdown del visor, `release_notes.py` con su artefacto de novedades, y **la decisión de si
-esos dos se absorben o se declaran como procesos del proyecto**. Después, el dogfooding sobre
-`SaiOpenCloud` en lugar de sobre este repositorio.
+**El reemplazo de `ticket.py` está completo del lado del harness.** El reporte Markdown del
+visor es `valmen report`, con sus filtros y su rango por defecto; `release_notes.py` no se
+absorbe —ataría el harness al JSON de un cliente— y en su lugar hay un **manifiesto de
+entrega** (`valmen deliver-manifest`) que produce el dato, más el compromiso de que el
+proyecto declare el proceso que lo convierte en su artefacto.
+
+Lo que queda es del lado del proyecto: repuntar las tres skills de `.agents/` a `valmen`,
+reescribir `docs/tickets/README.md`, y borrar el visor de Python con sus lanzadores. Eso va
+con el dogfooding sobre `SaiOpenCloud`, porque se edita allí y no aquí.
+
+**Falta el motor de procesos** (§7 de `02-MOTOR.md`): es lo que convierte el manifiesto en el
+artefacto del proyecto y lo que encadena la actualización de manuales al despliegue. Es la
+pieza siguiente de esta fase.
 
 Criterio de aceptación: el módulo de inventario especificado, descompuesto en tickets con
 sprints, y con los dos primeros tickets implementados a través del harness. **La primera

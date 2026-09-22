@@ -37,10 +37,18 @@ import {
   type LocatedTicket,
   type RegistryPaths,
   type RunnerResult,
+  buildManifest,
   chooseTicketsDir,
+  closedTickets,
+  defaultReportRange,
   findAllTickets,
+  filterReport,
   findTicket,
   indexPath,
+  parseReportDate,
+  parseTicketList,
+  renderManifest,
+  renderReport,
   ticketsPath,
 } from "@valmen/engine";
 import { isIndexCurrent, renderIndex } from "@valmen/engine";
@@ -666,4 +674,94 @@ export function adoptProject(
   }
 
   return ok(lines.join("\n") + "\n");
+}
+
+/**
+ * `report`: el reporte Markdown de tickets cerrados.
+ *
+ * Es lo único del visor de Python que Mission Control no cubría, y no es
+ * cosmético: la pantalla muestra una lista, y el reporte es lo que se pega en un
+ * correo. Se escribe en stdout y no en un archivo a propósito: quien lo quiere
+ * guardar redirige, y así el comando no decide por nadie dónde va.
+ *
+ * El rango por defecto son los últimos treinta días, como el visor. Las fechas
+ * son **de cierre**, no de creación ni de última edición: el informe agrupa por
+ * cuándo se terminó el trabajo.
+ */
+export function reportClosed(
+  paths: RegistryPaths,
+  flags: Readonly<Record<string, string | true>>,
+  now: Date = new Date(),
+): CommandResult {
+  try {
+    const porDefecto = defaultReportRange(now);
+    const rawDesde = flags["desde"];
+    const rawHasta = flags["hasta"];
+    const desde =
+      typeof rawDesde === "string" ? parseReportDate(rawDesde, "--desde") : porDefecto.desde;
+    const hasta =
+      typeof rawHasta === "string" ? parseReportDate(rawHasta, "--hasta") : porDefecto.hasta;
+
+    if (desde > hasta) {
+      return error("--desde no puede ser posterior a --hasta.", EXIT_SCHEMA);
+    }
+
+    const rawType = flags["type"];
+    const rawQuery = flags["q"];
+    const entradas = filterReport(closedTickets(paths), {
+      desde,
+      hasta,
+      ...(typeof rawType === "string" && rawType !== "" ? { type: rawType } : {}),
+      ...(typeof rawQuery === "string" && rawQuery !== ""
+        ? { query: rawQuery }
+        : {}),
+    });
+
+    return ok(renderReport(entradas, desde, hasta));
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/**
+ * `deliver-manifest`: el manifiesto de entrega de una versión.
+ *
+ * La parte genérica de lo que hacía `release_notes.py`: qué versión, cuándo y qué
+ * cambios, con el resumen funcional de cada cierre. **No escribe el artefacto del
+ * proyecto** —el JSON del menú, el changelog, lo que sea—: eso lo declara el
+ * proyecto como proceso, porque la presentación de un cliente no pertenece al
+ * harness. Ver `docs/02-MOTOR.md` §7 y la decisión 4 del inventario.
+ */
+export function deliverManifest(
+  paths: RegistryPaths,
+  flags: Readonly<Record<string, string | true>>,
+  now: Date = new Date(),
+): CommandResult {
+  const rawVersion = flags["version"];
+  const rawTickets = flags["tickets"];
+  if (typeof rawVersion !== "string") {
+    return error("deliver-manifest requiere --version.", EXIT_SCHEMA);
+  }
+  if (typeof rawTickets !== "string") {
+    return error("deliver-manifest requiere --tickets con la lista explícita.", EXIT_SCHEMA);
+  }
+
+  try {
+    const rawFecha = flags["released-at"];
+    const releasedAt =
+      typeof rawFecha === "string" ? rawFecha : now.toISOString().slice(0, 10);
+
+    const resultado = buildManifest({
+      paths,
+      version: rawVersion,
+      tickets: parseTicketList(rawTickets),
+      releasedAt,
+      write: flags["dry-run"] !== true,
+    });
+    return ok(renderManifest(resultado));
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
 }

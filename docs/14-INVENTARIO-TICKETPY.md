@@ -440,11 +440,24 @@ definir`, `a definir`, `por completar`). Es lógica de dominio real, no una comp
 | Los siete comandos de anexado           | Portados y verificados                                     |
 | `release-publish`                       | Portado y verificado, con la verificación de git           |
 | `validate`, `index`, `active`, `resume` | Portados y verificados                                     |
-| El visor                                | Reemplazado por Mission Control, salvo el reporte Markdown |
+| El visor                                | Reemplazado por Mission Control, y su reporte Markdown por `valmen report` |
+| `release_notes.py`                      | Reemplazado por el manifiesto de entrega (`valmen deliver-manifest`) |
 | **Prueba diferencial**                  | **48 casos**, los dos CLI sobre dos copias, byte a byte    |
 
-Lo que **no** está portado y hay que decidir si se porta: el reporte Markdown del visor, y
-`release_notes.py` con su artefacto de novedades.
+**El reporte Markdown está portado** como `valmen report`, con los mismos filtros que el
+visor —rango de cierre, tipo y texto libre— y su rango por defecto de treinta días. La
+extracción del «Se atendió» conserva las tres caídas del original: comportamiento actual,
+alcance, solicitud original. Mission Control ofrece el mismo documento con un botón, y lo
+sirve el servidor para que el botón y el comando no puedan divergir.
+
+**`release_notes.py` no se absorbe**, según la decisión 4 de §11: el harness produce un
+**manifiesto de entrega** —versión, fecha, y por cada ticket el resumen funcional de su
+último cierre— y el proyecto declara el proceso que lo convierte en su artefacto. En
+SaiOpenCloud, un paso que lee el manifiesto y escribe su JSON; en otro proyecto, otro paso.
+
+Lo que **no** está hecho de §1: las tres skills de `.agents/` siguen invocando `ticket.py`, y
+`docs/tickets/README.md` sigue documentando el CLI viejo. Van con el piloto, porque se editan
+en el proyecto y no aquí.
 
 ## 9. Cómo se verifica el reemplazo
 

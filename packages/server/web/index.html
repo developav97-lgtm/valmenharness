@@ -442,6 +442,16 @@
           return label;
         };
         barra.append(casilla("Solo abiertos", "open"), casilla("Solo inválidos", "invalid"));
+
+        // El reporte es lo único del visor anterior que la pantalla no cubría, y
+        // se descarga desde aquí en vez de componerse en el navegador: el texto y
+        // el nombre del archivo los produce el servidor, así que el botón y
+        // `valmen report` dan exactamente el mismo documento.
+        const botonReporte = el("button", "Reporte de cierres");
+        botonReporte.title =
+          "Markdown de los tickets cerrados en los últimos 30 días, listo para pegar.";
+        botonReporte.addEventListener("click", () => void descargarReporte());
+        barra.append(botonReporte);
         cont.append(barra);
 
         if (datos.tickets.length === 0) {
@@ -966,6 +976,24 @@
           ),
         );
         return caja;
+      }
+
+      /**
+       * Descarga el reporte Markdown.
+       *
+       * Se pide el texto a la API y se arma el archivo en el navegador con un
+       * `Blob`: un enlace directo a `/api/report` abriría el Markdown en una
+       * pestaña, que es lo contrario de lo que se quiere —pegarlo en un correo—.
+       */
+      async function descargarReporte() {
+        const datos = await api("GET", "/api/report");
+        const blob = new Blob([datos.markdown], { type: "text/markdown;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const enlace = document.createElement("a");
+        enlace.href = url;
+        enlace.download = datos.filename;
+        enlace.click();
+        URL.revokeObjectURL(url);
       }
 
       // ── Vista: un ticket, con sus gates ───────────────────────────────────
