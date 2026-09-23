@@ -35,6 +35,9 @@ import {
   readSpecs,
   ticketsPath,
 } from "@valmen/engine";
+// El estado del registro vive en el propio servidor: es el mismo que alimenta la
+// vista de tickets, y tenerlo una sola vez evita que las dos vistas discrepen.
+import { listTickets } from "./tickets.js";
 
 /** Una fila de la lista de features. */
 export interface FeatureListRow {
@@ -53,6 +56,16 @@ export interface FeatureListRow {
   readonly tickets: number;
   /** Requisitos sin cubrir, más los huecos declarados. */
   readonly gaps: number;
+  /**
+   * Cuántos de sus tickets están cerrados, de los que declara el grafo.
+   *
+   * Es lo que convierte la lista de features en una vista de conjunto: sin esto se
+   * ve que una feature está «descompuesta» y nada más, y la pregunta que se hace
+   * de verdad —«¿por dónde va?»— obliga a abrir los tickets uno a uno. Los
+   * identificadores del grafo se cruzan con el registro, que es la fuente de
+   * verdad del estado.
+   */
+  readonly closedTickets: number;
   /** `null` si la feature es válida; el mensaje si no lo es. */
   readonly invalid: string | null;
   /** Ruta relativa del brief, para el enlace al archivo. */
@@ -197,10 +210,15 @@ function ticketsExistentes(root: string): Map<string, string> {
 }
 
 /** Una fila a partir de la del motor, completando lo que la lista necesita. */
-function toRow(root: string, fila: FeatureRow): FeatureListRow {
+function toRow(
+  root: string,
+  fila: FeatureRow,
+  estadoDeTickets: ReadonlyMap<string, string>,
+): FeatureListRow {
   let requirements = 0;
   let tickets = 0;
   let gaps = 0;
+  let cerrados = 0;
 
   if (fila.invalid === null) {
     try {
@@ -210,8 +228,16 @@ function toRow(root: string, fila: FeatureRow): FeatureListRow {
       if (yaml !== null) {
         const vista = previewTicketsYaml(yaml, reqs);
         if (vista !== null) {
-          tickets = decompositionTickets(vista.document.decomposition).length;
+          const delGrafo = decompositionTickets(vista.document.decomposition);
+          tickets = delGrafo.length;
           gaps = vista.gaps.length + vista.document.decomposition.gaps.length;
+          // Se cruza con el registro: el grafo declara qué tickets deberían
+          // existir, y el registro dice en qué estado está cada uno. Un
+          // identificador del grafo sin ticket en el registro no cuenta como
+          // cerrado —no existe— y por eso no se cuenta tampoco como abierto.
+          cerrados = delGrafo.filter(
+            (ticket) => estadoDeTickets.get(ticket.id) === "closed",
+          ).length;
         }
       }
     } catch {
@@ -233,14 +259,31 @@ function toRow(root: string, fila: FeatureRow): FeatureListRow {
     requirements,
     tickets,
     gaps,
+    closedTickets: cerrados,
     invalid: fila.invalid,
     path: `.valmen/features/${fila.id}/feature.md`,
   };
 }
 
 /** Lista las features del proyecto, con lo que hace falta para priorizar. */
+/**
+ * El estado de cada ticket del registro, por identificador.
+ *
+ * `listTickets` recorre y parsea todos los tickets del proyecto. Se pide una vez y
+ * se reparte: llamarlo dentro del bucle de features lo repetiría por cada una.
+ */
+function estadoDeTickets(root: string): ReadonlyMap<string, string> {
+  return new Map(
+    listTickets({ root, ticketsDir: choosePaths(root).ticketsDir }).map((t) => [
+      t.id,
+      t.workflowStatus,
+    ]),
+  );
+}
+
 export function listFeatureRows(root: string): FeatureListRow[] {
-  return listFeatures(root).map((fila) => toRow(root, fila));
+  const estado = estadoDeTickets(root);
+  return listFeatures(root).map((fila) => toRow(root, fila, estado));
 }
 
 /** Resumen del registro de features. */
@@ -267,7 +310,7 @@ export function readFeatureDetail(root: string, slug: string): FeatureDetail | n
   if (leida === null) return null;
 
   const carpeta = join(featuresDir(root), slug);
-  const base = toRow(root, leida.row);
+  const base = toRow(root, leida.row, estadoDeTickets(root));
 
   const { specs, requirements } = requisitosDe(root, slug);
   const design = leerSiExiste(carpeta, "design.md");

@@ -304,8 +304,44 @@ export interface TicketFilters {
    * de los dos es «el correcto» sin saber qué se está contando.
    */
   readonly dateField?: "updated" | "created" | "closedOn";
+  /**
+   * Por qué columna ordenar.
+   *
+   * `updated` por defecto —lo que se tocó hace menos va primero—, que es lo que se
+   * espera de una lista de trabajo. El resto existe para poder mirar la misma lista
+   * por otro criterio sin exportarla.
+   */
+  readonly sortBy?:
+    | "updated"
+    | "created"
+    | "closedOn"
+    | "id"
+    | "type"
+    | "module"
+    | "workflowStatus"
+    | "qaStatus"
+    | "releaseStatus"
+    | "openPoints"
+    | "riskLevel";
+  /** `desc` por defecto en las fechas y los números, `asc` en el texto. */
+  readonly sortDir?: "asc" | "desc";
   readonly limit?: number;
 }
+
+/** Las columnas por las que se puede ordenar, para no aceptar cualquiera. */
+export const CAMPOS_ORDENABLES = [
+  "updated",
+  "created",
+  "closedOn",
+  "id",
+  "type",
+  "module",
+  "workflowStatus",
+  "qaStatus",
+  "releaseStatus",
+  "openPoints",
+  "riskLevel",
+] as const;
 
 /**
  * Aplica los filtros.
@@ -352,10 +388,30 @@ export function filterTickets(
     return true;
   });
 
-  // El orden es del más reciente al más antiguo: lo que se está trabajando
-  // ahora es lo que primero se quiere ver.
+  // El orden por defecto es del más reciente al más antiguo: lo que se está
+  // trabajando ahora es lo que primero se quiere ver. Se puede cambiar por
+  // columna, y el desempate es siempre el identificador —descendente, para que lo
+  // nuevo quede arriba— porque sin un desempate estable dos tickets con la misma
+  // fecha cambian de sitio entre recargas y la lista parece moverse sola.
+  const campo = filters.sortBy ?? "updated";
+  // El sentido por defecto depende del campo: en una fecha o un conteo se espera
+  // lo mayor primero; en un texto, el orden alfabético.
+  const porDefecto = ["updated", "created", "closedOn", "openPoints"].includes(campo)
+    ? "desc"
+    : "asc";
+  const sentido = filters.sortDir ?? porDefecto;
+  const signo = sentido === "asc" ? 1 : -1;
+
   filtradas.sort((a, b) => {
-    if (a.updated !== b.updated) return a.updated < b.updated ? 1 : -1;
+    const uno = a[campo];
+    const otro = b[campo];
+    // Una fecha de cierre ausente —un ticket abierto— va al final en los dos
+    // sentidos: no es «la más antigua», es que no aplica.
+    if (campo === "closedOn") {
+      if (uno === null && otro !== null) return 1;
+      if (uno !== null && otro === null) return -1;
+    }
+    if (uno !== otro) return (uno ?? "") < (otro ?? "") ? -signo : signo;
     return a.id < b.id ? 1 : -1;
   });
 

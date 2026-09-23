@@ -768,6 +768,51 @@
         font-size: 12px;
       }
 
+      /* Cabecera ordenable. El botón hereda el aspecto del `th` y solo se nota al
+         pasar por encima: una cabecera llena de botones con borde compite con la
+         tabla, que es lo que se viene a leer. */
+      th button {
+        font: inherit;
+        color: inherit;
+        background: none;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        text-transform: inherit;
+        letter-spacing: inherit;
+      }
+      th button:hover {
+        color: var(--texto);
+      }
+      th button.orden-activo {
+        color: var(--acento);
+      }
+      .orden-flecha {
+        font-size: 11px;
+      }
+
+      /* Progreso de una feature. La barra es estrecha a propósito: da el golpe de
+         vista y la cifra de al lado da el dato. */
+      .progreso {
+        width: 90px;
+        height: 6px;
+        background: var(--borde);
+        border-radius: 999px;
+        overflow: hidden;
+        margin-bottom: 4px;
+      }
+      .progreso-relleno {
+        height: 100%;
+        background: var(--acento);
+        border-radius: 999px;
+      }
+      .progreso-relleno.completo {
+        background: var(--ok);
+      }
+
       /* Rango de fechas. Va en su propia línea dentro de la barra de filtros: con
          los dos campos, el selector y los cinco atajos, compartir línea con la
          búsqueda dejaba todo apretado y sin jerarquía. */
@@ -837,6 +882,14 @@
         border: 1px solid var(--borde);
         border-radius: 999px;
         opacity: 0.55;
+        font: inherit;
+        color: inherit;
+        background: none;
+        cursor: pointer;
+      }
+      .estado-paso:hover {
+        opacity: 1;
+        border-color: var(--acento);
       }
       .estado-paso.hecho,
       .estado-paso.actual {
@@ -1513,6 +1566,10 @@
         // de una lista de trabajo. El reporte de cierres cambia a `closedOn`, que
         // es la fecha del cierre y no la de la última edición.
         fecha: "updated",
+        // Lo que se tocó hace menos va primero, que es lo que se espera de una
+        // lista de trabajo.
+        orden: "updated",
+        sentido: "desc",
       };
 
       async function vistaTickets() {
@@ -1530,6 +1587,8 @@
         if (filtros.desde !== "") params.set("desde", filtros.desde);
         if (filtros.hasta !== "") params.set("hasta", filtros.hasta);
         if (filtros.desde !== "" || filtros.hasta !== "") params.set("fecha", filtros.fecha);
+        if (filtros.orden !== "updated") params.set("orden", filtros.orden);
+        if (filtros.sentido !== "desc") params.set("sentido", filtros.sentido);
 
         const datos = await api("GET", `/api/tickets?${params.toString()}`);
         const r = datos.summary;
@@ -1840,18 +1899,56 @@
         const tabla = el("table");
         const thead = el("thead");
         const filaCabecera = el("tr");
-        for (const columna of [
-          "Ticket",
-          "Tipo",
-          "Estado",
-          "QA",
-          "Release",
-          "Puntos",
-          "Actualizado",
-          "",
-        ]) {
-          filaCabecera.append(el("th", columna));
-        }
+
+        /**
+         * Una columna de la cabecera. Si tiene campo, ordena al pulsarla.
+         *
+         * Pulsar la columna que ya ordena **invierte** el sentido; pulsar otra
+         * empieza por el sentido que se espera de ese campo —lo más reciente
+         * primero en una fecha, alfabético en un texto—, porque empezar siempre
+         * por ascendente obliga a pulsar dos veces para ver lo de hoy.
+         */
+        const columnaOrdenable = (titulo, campo, ayuda) => {
+          const celda = el("th");
+          if (campo === null) {
+            celda.append(el("span", titulo));
+            return celda;
+          }
+
+          const activa = filtros.orden === campo;
+          const boton = el("button", undefined, activa ? "orden-activo" : "");
+          boton.append(el("span", titulo));
+          if (activa) {
+            boton.append(el("span", filtros.sentido === "asc" ? "↑" : "↓", "orden-flecha"));
+          }
+          boton.title = ayuda;
+          boton.addEventListener("click", () => {
+            if (filtros.orden === campo) {
+              filtros.sentido = filtros.sentido === "asc" ? "desc" : "asc";
+            } else {
+              filtros.orden = campo;
+              filtros.sentido = ["updated", "created", "closedOn", "openPoints"].includes(
+                campo,
+              )
+                ? "desc"
+                : "asc";
+            }
+            void vistaTickets();
+          });
+          celda.append(boton);
+          return celda;
+        };
+
+        filaCabecera.append(
+          columnaOrdenable("Ticket", "id", "Ordenar por identificador"),
+          columnaOrdenable("Tipo", "type", "Ordenar por tipo"),
+          columnaOrdenable("Estado", "workflowStatus", "Ordenar por estado"),
+          columnaOrdenable("QA", "qaStatus", "Ordenar por estado de QA"),
+          columnaOrdenable("Release", "releaseStatus", "Ordenar por estado de release"),
+          columnaOrdenable("Puntos", "openPoints", "Ordenar por puntos abiertos"),
+          columnaOrdenable("Actualizado", "updated", "Ordenar por última edición"),
+          el("th", ""),
+        );
         thead.append(filaCabecera);
         const tbody = el("tbody");
 
@@ -1936,10 +2033,17 @@
         const r = datos.summary;
 
         const tarjetas = el("div", undefined, "tarjetas");
+        // El progreso del conjunto, sumando todas las features: es la primera
+        // pregunta de una vista de conjunto y antes había que deducirla.
+        const totalTickets = datos.features.reduce((suma, f) => suma + f.tickets, 0);
+        const cerrados = datos.features.reduce((suma, f) => suma + f.closedTickets, 0);
+
         const metricas = [
           ["Features", r.total],
           ["Descompuestas", r.decomposed],
           ["Con huecos", r.withGaps],
+          ["Tickets de features", totalTickets],
+          ["De esos, cerrados", cerrados],
         ];
         if (r.invalid > 0) metricas.push(["Inválidas", r.invalid]);
         for (const [rotulo, valor] of metricas) {
@@ -1972,7 +2076,7 @@
           "Estado",
           "Artefactos",
           "Requisitos",
-          "Tickets",
+          "Progreso",
           "Huecos",
           "Actualizada",
           "",
@@ -2004,10 +2108,19 @@
 
           tr.append(el("td", f.requirements === 0 ? "—" : String(f.requirements), "id"));
 
-          const celdaTickets = el("td");
-          celdaTickets.textContent = f.hasDecomposition ? String(f.tickets) : "—";
-          celdaTickets.className = "id";
-          tr.append(celdaTickets);
+          // El progreso es lo que convierte la lista en una vista de conjunto:
+          // sin él se ve que una feature está «descompuesta» y la pregunta que se
+          // hace de verdad —«¿por dónde va?»— obliga a abrir los tickets uno a uno.
+          const celdaProgreso = el("td");
+          if (!f.hasDecomposition || f.tickets === 0) {
+            celdaProgreso.textContent = "—";
+          } else {
+            celdaProgreso.append(
+              barraDeProgreso(f.closedTickets, f.tickets),
+              el("div", `${f.closedTickets} de ${f.tickets} cerrados`, "resultado"),
+            );
+          }
+          tr.append(celdaProgreso);
 
           // Los huecos van en rojo y no en «inválida»: una feature con la
           // cobertura incompleta no está rota, está a medio descomponer, y son
@@ -3344,6 +3457,24 @@
       }
 
       /**
+       * Lleva a la lista filtrada por un estado.
+       *
+       * El filtro de la lista es estado del módulo, y la navegación por hash no
+       * recarga la página: se toca el filtro y se navega, así que la lista aparece
+       * ya filtrada en vez de mostrar todo y dejar que el usuario lo ponga.
+       */
+      function irAListaConEstado(estado) {
+        filtros.workflow = estado;
+        // Los otros filtros de conjunto se apagan: «en curso» y «cerrados» a la vez
+        // no devuelven nada, y una tabla vacía se lee como un fallo.
+        filtros.open = false;
+        filtros.critical = false;
+        filtros.conPuntos = false;
+        location.hash = "#/tickets";
+        void vistaTickets();
+      }
+
+      /**
        * El estado del ticket, en una tira.
        *
        * Antes el estado aparecía en la cabecera entre otros cuatro datos, todos
@@ -3367,12 +3498,24 @@
         const bloqueado = t.workflowStatus === "blocked";
 
         const tira = el("div", undefined, "estado-tira");
-        CADENA.forEach(([, rotulo], indice) => {
-          const paso = el("div", undefined, "estado-paso");
+        CADENA.forEach(([estado], indice) => {
+          const rotulo = CADENA[indice]?.[1] ?? "";
+          // Cada paso lleva a la lista filtrada por ese estado. Es lo que convierte
+          // el estado de un dato en una navegación: «¿qué hay en pruebas?» deja de
+          // ser una pregunta que se responde a mano.
+          const paso = el("button", undefined, "estado-paso");
+          paso.type = "button";
+          paso.title = `Ver los tickets en ${rotulo.toLowerCase()}`;
           if (bloqueado) paso.className += " bloqueado";
           else if (indice < actual) paso.className += " hecho";
           else if (indice === actual) paso.className += " actual";
-          paso.append(el("div", String(indice + 1), "estado-numero"), el("div", rotulo, "estado-rotulo"));
+          paso.append(
+            el("div", String(indice + 1), "estado-numero"),
+            el("div", rotulo, "estado-rotulo"),
+          );
+          paso.addEventListener("click", () => {
+            irAListaConEstado(estado);
+          });
           tira.append(paso);
         });
 

@@ -87,6 +87,7 @@ import {
   writeRouting,
 } from "./routing.js";
 import {
+  CAMPOS_ORDENABLES,
   type TicketFilters,
   filterTickets,
   listTickets,
@@ -256,6 +257,16 @@ export async function handleApi(
       // vez de propagarse: el filtro caería a `updated` sin decirlo.
       ...(["updated", "created", "closedOn"].includes(params.get("fecha") ?? "")
         ? { dateField: params.get("fecha") as "updated" | "created" | "closedOn" }
+        : {}),
+      // Solo las columnas que el motor conoce: un nombre inventado se ignora en vez
+      // de ordenar por algo que la lista no muestra.
+      ...(CAMPOS_ORDENABLES.includes(
+        params.get("orden") as (typeof CAMPOS_ORDENABLES)[number],
+      )
+        ? { sortBy: params.get("orden") as (typeof CAMPOS_ORDENABLES)[number] }
+        : {}),
+      ...(params.get("sentido") === "asc" || params.get("sentido") === "desc"
+        ? { sortDir: params.get("sentido") as "asc" | "desc" }
         : {}),
       ...(params.get("limit") === null
         ? {}
