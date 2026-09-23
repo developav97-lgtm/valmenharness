@@ -536,24 +536,31 @@ con su agente —opencode, codex, Claude Code—, y el agente necesita poder dar
 ticket, validarlo, evaluar la compuerta y mover el estado. Sin esto, cada ticket empieza
 con alguien copiando un comando.
 
-### Las diez herramientas
+### Las quince herramientas
 
 | Herramienta | Qué hace | Reutiliza |
 |---|---|---|
 | `crear_ticket` | Alta en `intake`, devuelve la ruta del archivo | `createTicket` |
 | `ver_ticket` | Resumen del ticket: frontmatter, secciones, bloques | `valmen show` |
-| `listar_tickets` | Tickets activos, con filtros por estado, tipo, módulo, texto y rango de fechas | `listTickets` + `filterTickets` |
-| `anotar_punto` | Registra un hallazgo cuando se descubre, con `actual` y `expected` separados | `addPoint` |
-| `anotar_evidencia` | Registra la prueba de algo hecho, y la enlaza al punto que la originó | `addEvidence` |
+| `listar_tickets` | Filtros por estado, tipo, módulo, texto, puntos, impacto y fechas | `listTickets` + `filterTickets` |
 | `validar_ticket` | Contrato del ticket; sin `id`, todo el registro | `valmen validate` |
-| `evaluar_compuerta` | Evalúa un gate y escribe el recibo | `runGate` |
-| `mover_ticket` | Aplica la tabla de estados | `transition` |
+| `mover_ticket` | Aplica la tabla de estados, y reabre un cerrado con su motivo | `transition` |
+| `anotar_punto` | Un hallazgo, con `actual` y `expected` separados | `addPoint` |
+| `mover_punto` | El ciclo del punto, independiente del ticket | `transition` |
+| `anotar_evidencia` | La prueba de algo hecho, enlazada al punto que la originó | `addEvidence` |
 | `reanudar_ticket` | Contexto para retomar trabajo empezado | `valmen resume` |
+| `evaluar_compuerta` | Evalúa un gate y escribe el recibo | `runGate` |
 | `simular_compuerta` | Mide un gate sobre el histórico, para calibrar | `simulateGate` |
+| `iniciar_qa` | Abre el ciclo con su ambiente y su referencia de build | `qaStart` |
+| `anotar_retest` | El resultado de retestar un punto | `addRetest` |
+| `cerrar_qa` | Cierra el ciclo: hallazgos, o la aprobación con la frase del PO | `qaClose` |
+| `preparar_cierre` | Los dos resúmenes y el impacto de release | `closeAttempt` |
 
-Quedan fuera a propósito las que **deciden**: aprobar una compuerta, cerrar un ciclo de QA con
-veredicto del PO, publicar una release. Un agente puede prepararlas y anotar el resultado que
-una persona le dio; no puede dártelo.
+**El ciclo entero se recorre sin terminal**: alta, plan, compuertas, implementación con sus
+hallazgos y su evidencia, prueba del PO, ciclo de QA, cierre. Y las dos únicas cosas que el
+agente no puede hacer solo son las que no debe: **aprobar** —ni una compuerta ni un QA— y
+**reabrir un ticket ya publicado**, que el motor rechaza porque una release publicada no se
+despublica.
 
 Anotar consumo de IA tampoco está, y no por olvido: el coste real vive en la base de datos de
 opencode, y un modelo que declara lo que gastó lo está estimando. Ese dato lo escribe quien lo
@@ -627,7 +634,7 @@ valmen-mcp --check
 # raíz:        /proyectos/tienda
 # registro:    tickets
 # credenciales: /proyectos/tienda/.valmen/.credentials.yaml
-# herramientas: 10
+# herramientas: 15
 #   - crear_ticket(id, title, type, module, request): Crear un ticket
 #   - ver_ticket(id): Ver un ticket
 #   - listar_tickets(): Listar tickets

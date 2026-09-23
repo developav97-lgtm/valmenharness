@@ -64,29 +64,34 @@ porque ahí sí hereda el `PATH` completo.
 
 ## Contrato
 
-Las diez herramientas. Ninguna es una segunda implementación: las de lectura llaman a las
+Las quince herramientas. Ninguna es una segunda implementación: las de lectura llaman a las
 mismas funciones que el CLI, y las de escritura al mismo motor.
 
-| Herramienta              | Qué hace                                              |
-| ------------------------ | ----------------------------------------------------- |
-| `crear_ticket`           | Alta en `intake`; devuelve la ruta del archivo        |
-| `ver_ticket`             | Resumen del ticket: frontmatter, secciones y bloques  |
-| `listar_tickets`         | Tickets activos, con filtros por estado, tipo, módulo, texto y fechas |
-| `anotar_punto`           | Un hallazgo, con `actual` y `expected` separados      |
-| `anotar_evidencia`       | La prueba de algo hecho, enlazada a su punto          |
-| `validar_ticket`         | Contrato del ticket; sin `id`, todo el registro       |
-| `evaluar_compuerta`      | Evalúa un gate y escribe el recibo                    |
-| `mover_ticket`           | Aplica la tabla de estados del contrato               |
-| `reanudar_ticket`        | Contexto para retomar trabajo empezado                |
-| `simular_compuerta`      | Mide un gate sobre el histórico, para calibrar        |
+| Herramienta         | Qué hace                                                          |
+| ------------------- | ----------------------------------------------------------------- |
+| `crear_ticket`      | Alta en `intake`; devuelve la ruta del archivo                    |
+| `ver_ticket`        | Resumen del ticket: frontmatter, secciones y bloques              |
+| `listar_tickets`    | Filtra por estado, tipo, módulo, texto, puntos, impacto y fechas  |
+| `validar_ticket`    | Contrato del ticket; sin `id`, todo el registro                   |
+| `mover_ticket`      | Aplica la tabla de estados, y reabre un cerrado con su motivo     |
+| `anotar_punto`      | Un hallazgo, con `actual` y `expected` separados                  |
+| `mover_punto`       | El ciclo del punto: analizado, en curso, por retestar, verificado |
+| `anotar_evidencia`  | La prueba de algo hecho, enlazada a su punto                      |
+| `reanudar_ticket`   | Contexto para retomar trabajo empezado                            |
+| `evaluar_compuerta` | Evalúa un gate y escribe el recibo                                |
+| `simular_compuerta` | Mide un gate sobre el histórico, para calibrar                    |
+| `iniciar_qa`        | Abre el ciclo con su ambiente y la referencia de lo probado       |
+| `anotar_retest`     | El resultado de retestar un punto                                 |
+| `cerrar_qa`         | Cierra el ciclo: hallazgos, o la aprobación con la frase del PO   |
+| `preparar_cierre`   | Los dos resúmenes y el impacto de release, antes de cerrar        |
 
 Todas aceptan un `root` opcional que gana sobre el directorio de trabajo, para una sesión que
 trabaje sobre dos repositorios. Se declara en todos los esquemas, no solo se lee: un argumento
 que el servidor acepta pero el esquema no declara lo rechaza cualquier cliente que valide
 antes de llamar.
 
-**El resultado es texto, y en dos casos además dato.** `ver_ticket` y `evaluar_compuerta`
-devuelven `structuredContent` junto al informe, para que un agente ramifique por estado o por
+**El resultado es texto, y en tres casos además dato.** `ver_ticket`, `listar_tickets` y
+`evaluar_compuerta` devuelven `structuredContent` junto al informe, para que un agente ramifique por estado o por
 veredicto sin interpretar prosa. Donde el dato **ya existe en disco** y se lee tal cual —el
 frontmatter con el `parseTicket` del motor, el recibo recién anexado a `.valmen/receipts/`— se
 declara `outputSchema`; donde habría que inventar una segunda representación del texto, no.

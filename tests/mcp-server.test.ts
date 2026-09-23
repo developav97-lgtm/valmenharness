@@ -139,18 +139,27 @@ describe("el catálogo de herramientas", () => {
     expect(nombres.some((nombre) => /aprob|approve|decid|decide/.test(nombre))).toBe(false);
   });
 
-  it("declara las diez herramientas, cada una con descripción y esquema", () => {
+  it("declara las quince herramientas, cada una con descripción y esquema", () => {
+    // El orden es el de la lectura: alta, consulta, validación, movimiento,
+    // anotación, compuertas, y al final el ciclo de QA y el cierre. Estaba
+    // intercalado por historia —cada herramienta nueva entraba donde se pudiera—
+    // y leer el catálogo costaba más de lo que debería.
     expect(TOOLS.map((tool) => tool.name)).toEqual([
       "crear_ticket",
       "ver_ticket",
       "listar_tickets",
-      "anotar_punto",
-      "anotar_evidencia",
       "validar_ticket",
-      "evaluar_compuerta",
       "mover_ticket",
+      "anotar_punto",
+      "mover_punto",
+      "anotar_evidencia",
       "reanudar_ticket",
+      "evaluar_compuerta",
       "simular_compuerta",
+      "iniciar_qa",
+      "anotar_retest",
+      "cerrar_qa",
+      "preparar_cierre",
     ]);
     for (const tool of TOOLS) {
       expect(tool.description.length).toBeGreaterThan(40);
@@ -836,5 +845,335 @@ describe("la lista avisa de lo que está a medias", () => {
 
     const resultado = await callTool(contexto, "listar_tickets", {});
     expect(resultado.text).toContain("1 punto(s) abierto(s)");
+  });
+});
+
+// ── El ciclo entero, sin terminal ───────────────────────────────────────────
+
+describe("el ciclo entero del ticket", () => {
+  const SHA = "a".repeat(40);
+
+  /**
+   * Un evaluador falso que aprueba, con el vocabulario de cada compuerta.
+   *
+   * Las dos usan una proposición `clasificacion`, pero no comparten las
+   * opciones: la de análisis aprueba con `completa` y la de plan con `completo`.
+   * Un evaluador que contestara lo mismo en las dos haría fallar la segunda, y el
+   * fallo se leería como si el ciclo estuviera roto.
+   */
+  function evaluadorQueApruebaCon(eleccion: string): NonNullable<ToolContext["jev"]> {
+    return async (options: { propositions?: readonly { id: string }[] }) => ({
+      answers: (options.propositions ?? []).map((proposition) =>
+        proposition.id === "clasificacion"
+          ? {
+              id: proposition.id,
+              kind: "choice" as const,
+              choice: eleccion,
+              rationale: "falso",
+            }
+          : { id: proposition.id, kind: "noul" as const, value: 0.95, rationale: "falso" },
+      ),
+      model: {
+        provider: "falso",
+        model: "para-pruebas",
+        resolvedVersion: "falso/para-pruebas@0",
+      },
+      usage: { inputTokens: 0, outputTokens: 0, costUsd: 0 },
+      latencyMs: 1,
+    });
+  }
+
+  /** El paso, con el nombre y el mensaje del motor si falla. */
+  async function paso(
+    ctx: ToolContext,
+    nombre: string,
+    args: Record<string, unknown>,
+  ): Promise<void> {
+    const resultado = await callTool(ctx, nombre, args);
+    expect(resultado.isError, `${nombre}: ${resultado.text}`).toBe(false);
+  }
+
+  /**
+   * Escribe una sección del ticket.
+   *
+   * Es lo que hace el agente con su editor: las secciones son prosa, y una
+   * herramienta que las escribiera sería una herramienta que redacta el
+   * diagnóstico en vez de una que obliga a investigarlo.
+   */
+  function escribir(ruta: string, seccion: string, contenido: string): void {
+    const texto = readFileSync(ruta, "utf8");
+    const patron = new RegExp(`(## ${seccion}\\n\\n)[\\s\\S]*?(?=\\n## )`);
+    if (!patron.test(texto)) throw new Error(`El ticket no tiene la sección ${seccion}.`);
+    writeFileSync(ruta, texto.replace(patron, `$1${contenido}\n`), "utf8");
+  }
+
+  /** Lo mínimo que un ticket necesita para poder aprobarse. */
+  function escribirContenido(ruta: string): void {
+    escribir(
+      ruta,
+      "Diagnóstico",
+      [
+        "- Archivos y flujo investigados: `BackEnd/pos/filters.py` define `OrderFilter.number` con `lookup_expr='exact'`; el ViewSet de órdenes lo aplica al listado.",
+        "- Causa raíz o hipótesis: el lookup es exacto cuando la pantalla documenta búsqueda parcial, así que el backend descarta las coincidencias parciales.",
+        "- Riesgos y compatibilidad: ampliar el conjunto de resultados. Un cliente que consulte el número exacto sigue recibiendo su resultado.",
+        "- Impactos de sync, migración, Docker o despliegue: ninguno.",
+      ].join("\n"),
+    );
+    escribir(
+      ruta,
+      "Plan",
+      [
+        "- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).",
+        "- Pasos ordenados:",
+        "  1. Cambiar en `BackEnd/pos/filters.py` el `lookup_expr` de `number` de `exact` a `icontains`.",
+        "  2. Añadir en `BackEnd/pos/tests/test_filters.py` una prueba de búsqueda parcial.",
+        "- Rollback: revertir el cambio de una línea y retirar la prueba añadida.",
+      ].join("\n"),
+    );
+    escribir(
+      ruta,
+      "Criterios de aceptación",
+      '- [ ] Buscar "104" devuelve la orden "1042".\n- [ ] Buscar "999" no devuelve resultados.',
+    );
+  }
+
+  /** El ticket implementado y con el resultado del PO registrado: listo para QA. */
+  async function hastaInQa(): Promise<string> {
+    const ruta = await crear();
+    escribirContenido(ruta);
+    await paso(contexto, "validar_ticket", { id: ID });
+    await paso(contexto, "mover_ticket", { id: ID, to: "analyzed" });
+    await paso(contexto, "mover_ticket", { id: ID, to: "planned" });
+    await paso(contexto, "mover_ticket", { id: ID, to: "approved" });
+    await paso(contexto, "mover_ticket", { id: ID, to: "in_progress" });
+    escribir(ruta, "Pruebas", "- Resultado del PO: probado en la sucursal y conforme.");
+    await paso(contexto, "mover_ticket", { id: ID, to: "awaiting_user_tests" });
+    await paso(contexto, "mover_ticket", { id: ID, to: "in_qa" });
+    return ruta;
+  }
+
+  /** El ticket cerrado con QA aprobada, que es el estado del que se reabre. */
+  async function hastaCerrado(): Promise<string> {
+    const ruta = await hastaInQa();
+    await paso(contexto, "iniciar_qa", {
+      id: ID,
+      ambiente: "local, macOS, Node 24",
+      referencia: `commit:${SHA}`,
+    });
+    await paso(contexto, "cerrar_qa", {
+      id: ID,
+      resultado: "approved",
+      confirmacion_po: "Conforme",
+    });
+    await paso(contexto, "mover_ticket", { id: ID, to: "qa_approved" });
+    await paso(contexto, "preparar_cierre", {
+      id: ID,
+      resumen_tecnico: "El lookup pasó de exacto a parcial.",
+      resumen_funcional: "El cajero encuentra la orden escribiendo parte del número.",
+      qa: "approved",
+      impacto_release: "Queda unreleased hasta el próximo despliegue.",
+    });
+    await paso(contexto, "mover_ticket", { id: ID, to: "closed" });
+    return ruta;
+  }
+
+  it("llega de `intake` a `closed` sin pasar por la terminal", async () => {
+    const ruta = await crear();
+    escribirContenido(ruta);
+
+    // Planificar y aprobar: cada compuerta con su vocabulario, y la aprobación
+    // que ya está escrita en el plan por quien la dio.
+    await paso(contexto, "validar_ticket", { id: ID });
+    await paso(contexto, "mover_ticket", { id: ID, to: "analyzed" });
+    await paso(
+      { paths: contexto.paths, jev: evaluadorQueApruebaCon("completa") },
+      "evaluar_compuerta",
+      { gate: "analysis", id: ID },
+    );
+    await paso(contexto, "mover_ticket", { id: ID, to: "planned" });
+    await paso(
+      { paths: contexto.paths, jev: evaluadorQueApruebaCon("completo") },
+      "evaluar_compuerta",
+      { gate: "plan", id: ID },
+    );
+    await paso(contexto, "mover_ticket", { id: ID, to: "approved" });
+    await paso(contexto, "mover_ticket", { id: ID, to: "in_progress" });
+
+    // El trabajo: un hallazgo, su evidencia, y el punto recorriendo su ciclo.
+    await paso(contexto, "anotar_punto", {
+      id: ID,
+      title: "El listado ignora las sucursales inactivas",
+      severity: "high",
+      actual: "Con el filtro `999` el endpoint contesta 200 y una lista vacía.",
+      expected: "Debe devolver la orden 1042.",
+    });
+    await paso(contexto, "anotar_evidencia", {
+      id: ID,
+      kind: "automated-test",
+      description: "`npx vitest run tests/filtros.test.ts`: 12 pruebas, todas en verde.",
+      punto: "POINT-001",
+    });
+    for (const estado of ["analyzed", "in_progress", "awaiting_retest"]) {
+      await paso(contexto, "mover_punto", { id: ID, punto: "POINT-001", to: estado });
+    }
+
+    escribir(
+      ruta,
+      "Pruebas",
+      "- Resultado del PO: lo probé en la sucursal y ahora encuentra por número parcial.",
+    );
+    await paso(contexto, "mover_ticket", { id: ID, to: "awaiting_user_tests" });
+    await paso(contexto, "mover_ticket", { id: ID, to: "in_qa" });
+
+    // El ciclo de QA: se abre, se retestea el punto y se cierra con la frase de
+    // quien aprobó. Ninguna de las tres la decide el agente.
+    await paso(contexto, "iniciar_qa", {
+      id: ID,
+      ambiente: "local, macOS, Node 24, datos de la sucursal 3",
+      referencia: `commit:${SHA}`,
+    });
+    await paso(contexto, "anotar_retest", {
+      id: ID,
+      punto: "POINT-001",
+      resultado: "approved",
+      confirmacion_po: "Sí, ya lo probé y quedó bien",
+    });
+    await paso(contexto, "mover_punto", { id: ID, punto: "POINT-001", to: "closed" });
+    await paso(contexto, "cerrar_qa", {
+      id: ID,
+      resultado: "approved",
+      confirmacion_po: "Aprobado, quedó bien",
+    });
+    await paso(contexto, "mover_ticket", { id: ID, to: "qa_approved" });
+    await paso(contexto, "preparar_cierre", {
+      id: ID,
+      resumen_tecnico: "El lookup pasó de exacto a parcial.",
+      resumen_funcional: "El cajero encuentra la orden escribiendo parte del número.",
+      qa: "approved",
+      impacto_release: "Queda unreleased hasta el próximo despliegue.",
+    });
+    await paso(contexto, "mover_ticket", { id: ID, to: "closed" });
+
+    // El registro, que es lo que queda cuando la conversación se pierde.
+    const ticket = parseTicket(readFileSync(ruta, "utf8"));
+    expect(ticket.fields.workflow_status).toBe("closed");
+    expect(ticket.fields.qa_status).toBe("approved");
+    expect(ticket.blocks.QA).toHaveLength(2);
+    expect(ticket.blocks.Retests).toHaveLength(1);
+    expect(ticket.blocks.Cierre).toHaveLength(1);
+    const puntos = ticket.blocks.Puntos as readonly Record<string, unknown>[];
+    expect(puntos[0]?.["status"]).toBe("closed");
+  });
+
+  it("reabrir un ticket cerrado exige decir qué apareció", async () => {
+    const ruta = await hastaCerrado();
+
+    // Sin motivo no se reabre: la arista hacia atrás existe para registrar un
+    // hallazgo, y un hallazgo sin texto no se puede retomar después.
+    const sinMotivo = await callTool(contexto, "mover_ticket", {
+      id: ID,
+      to: "changes_requested",
+    });
+    expect(sinMotivo.isError).toBe(true);
+    expect(sinMotivo.text).toContain("reason");
+
+    const conMotivo = await callTool(contexto, "mover_ticket", {
+      id: ID,
+      to: "changes_requested",
+      motivo: "Apareció un caso que el ticket no documentaba: sucursales inactivas.",
+    });
+    expect(conMotivo.isError).toBe(false);
+    const ticket = parseTicket(readFileSync(ruta, "utf8"));
+    expect(ticket.fields.workflow_status).toBe("changes_requested");
+  });
+
+  it("un ticket ya publicado no se reabre: el ciclo termina y empieza otro", async () => {
+    // La regla del responsable, y la del motor: una release publicada no se
+    // despublica, así que un hallazgo posterior va a un ticket nuevo.
+    const ruta = await hastaCerrado();
+    const publicado = readFileSync(ruta, "utf8")
+      .replace("release_status: unreleased", "release_status: released")
+      .replace("released_in: null", "released_in: 1.0.0")
+      .replace("target_release: null", "target_release: 1.0.0");
+    writeFileSync(ruta, publicado, "utf8");
+
+    const resultado = await callTool(contexto, "mover_ticket", {
+      id: ID,
+      to: "changes_requested",
+      motivo: "Un hallazgo posterior al despliegue.",
+    });
+    expect(resultado.isError).toBe(true);
+    expect(resultado.text).toContain("unreleased");
+  });
+
+  it("la aprobación de QA exige las palabras de quien aprobó", async () => {
+    await hastaInQa();
+    const resultado = await callTool(contexto, "cerrar_qa", {
+      id: ID,
+      resultado: "approved",
+    });
+    expect(resultado.isError).toBe(true);
+    expect(resultado.text).toContain("confirmación explícita del PO");
+  });
+
+  it("un ciclo de QA no se abre fuera de `in_qa`, ni sin saber qué se probó", async () => {
+    const ruta = await crear();
+    escribirContenido(ruta);
+    await paso(contexto, "mover_ticket", { id: ID, to: "analyzed" });
+    await paso(contexto, "mover_ticket", { id: ID, to: "planned" });
+    await paso(contexto, "mover_ticket", { id: ID, to: "approved" });
+    await paso(contexto, "mover_ticket", { id: ID, to: "in_progress" });
+
+    // Fuera de `in_qa` no hay ciclo que abrir, y el motivo lo dice el motor.
+    const fuera = await callTool(contexto, "iniciar_qa", {
+      id: ID,
+      ambiente: "local",
+      referencia: `commit:${SHA}`,
+    });
+    expect(fuera.isError).toBe(true);
+    expect(fuera.text).toContain("in_qa");
+
+    // Y una referencia que no dice qué código se probó no vale.
+    const suelta = await callTool(contexto, "iniciar_qa", {
+      id: ID,
+      ambiente: "local",
+      referencia: "mi máquina",
+    });
+    expect(suelta.isError).toBe(true);
+  });
+
+  it("un punto terminal exige motivo, y un salto imposible se rechaza", async () => {
+    await crear();
+    await paso(contexto, "anotar_punto", {
+      id: ID,
+      title: "Un hallazgo",
+      severity: "low",
+      actual: "Pasa esto.",
+      expected: "Debería pasar lo otro.",
+    });
+
+    // `verified` no se puede forzar: exige un retest aprobado y confirmado.
+    const salto = await callTool(contexto, "mover_punto", {
+      id: ID,
+      punto: "POINT-001",
+      to: "verified",
+    });
+    expect(salto.isError).toBe(true);
+
+    const sinMotivo = await callTool(contexto, "mover_punto", {
+      id: ID,
+      punto: "POINT-001",
+      to: "not_reproducible",
+    });
+    expect(sinMotivo.isError).toBe(true);
+    expect(sinMotivo.text).toContain("reason");
+
+    const conMotivo = await callTool(contexto, "mover_punto", {
+      id: ID,
+      punto: "POINT-001",
+      to: "not_reproducible",
+      motivo: "El caso que describía ya no se reproduce con los datos actuales.",
+    });
+    expect(conMotivo.isError).toBe(false);
   });
 });

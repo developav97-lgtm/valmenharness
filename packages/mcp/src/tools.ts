@@ -26,6 +26,7 @@ import { existsSync } from "node:fs";
 
 import {
   EVIDENCE_KINDS,
+  POINT_STATES,
   SEVERITIES,
   TICKET_TYPES,
   WORKFLOW_STATES,
@@ -39,10 +40,14 @@ import {
   type TicketRow,
   addEvidence,
   addPoint,
+  addRetest,
+  closeAttempt,
   createTicket,
   filterTickets,
   findTicket,
   listTickets,
+  qaClose,
+  qaStart,
   readReceipts,
   runGate,
   simulateGate,
@@ -321,6 +326,52 @@ export const TOOLS: readonly ToolDefinition[] = [
     },
   },
   {
+    name: "validar_ticket",
+    title: "Validar un ticket",
+    description:
+      "Comprueba el ticket contra el contrato y devuelve el error exacto si no lo " +
+      "cumple. Es determinista y no cuesta nada, así que hay que llamarlo **antes** de " +
+      "evaluar una compuerta: una compuerta sobre un ticket inválido gasta una llamada " +
+      "y su veredicto no dice nada.",
+    inputSchema: conRoot({
+      properties: {
+        id: {
+          type: "string",
+          description: "Identificador del ticket. Sin él se validan todos.",
+        },
+      },
+    }),
+  },
+  {
+    name: "mover_ticket",
+    title: "Mover el estado de un ticket",
+    description:
+      "Mueve el estado de un ticket según la tabla del contrato. Los movimientos " +
+      "legales los decide el motor, no quien llama: un salto que la máquina no permite " +
+      "se rechaza con el motivo. Mover un ticket **no** lo aprueba: para entrar a " +
+      "`approved` tiene que existir antes la aprobación de una persona registrada.",
+    inputSchema: conRoot({
+      properties: {
+        id: { type: "string" },
+        to: {
+          type: "string",
+          description:
+            "Estado destino: intake → analyzed → planned → approved → in_progress → " +
+            "awaiting_user_tests → in_qa → qa_approved → closed.",
+        },
+        motivo: {
+          type: "string",
+          description:
+            "Por qué se reabre. **Obligatorio** para volver de `closed` a " +
+            "`changes_requested` —la única arista hacia atrás, y solo mientras el ticket " +
+            "siga `unreleased`: una release publicada no se despublica— y rechazado en " +
+            "cualquier otro movimiento, donde no significa nada.",
+        },
+      },
+      required: ["id", "to"],
+    }),
+  },
+  {
     name: "anotar_punto",
     title: "Anotar un hallazgo en el ticket",
     description:
@@ -349,6 +400,32 @@ export const TOOLS: readonly ToolDefinition[] = [
         expected: { type: "string", description: "Lo que debía pasar." },
       },
       required: ["id", "title", "severity", "actual", "expected"],
+    }),
+  },
+  {
+    name: "mover_punto",
+    title: "Mover un punto por su máquina de estados",
+    description:
+      "Un punto tiene su propio ciclo, independiente del ticket: `open → analyzed → " +
+      "in_progress → awaiting_retest → verified → closed`. No se cierra porque se " +
+      "corrigió, se cierra cuando el retest lo confirma — y por eso `verified` no se " +
+      "puede forzar: el motor exige un retest aprobado y confirmado por el PO. Los tres " +
+      "estados terminales —`not_reproducible`, `deferred`, `duplicate`— están para no " +
+      "dejar un punto abierto para siempre, y exigen `motivo`: sin él el registro dice " +
+      "que algo se descartó sin decir por qué.",
+    inputSchema: conRoot({
+      properties: {
+        id: { type: "string", description: "Identificador del ticket." },
+        punto: { type: "string", description: "Identificador del punto, `POINT-001`." },
+        to: { type: "string", enum: [...POINT_STATES], description: "Estado destino." },
+        motivo: {
+          type: "string",
+          description:
+            "Por qué se descarta. **Obligatorio** en los estados terminales y rechazado " +
+            "en el resto: un motivo en un punto que sigue vivo no significa nada.",
+        },
+      },
+      required: ["id", "punto", "to"],
     }),
   },
   {
@@ -400,20 +477,15 @@ export const TOOLS: readonly ToolDefinition[] = [
     }),
   },
   {
-    name: "validar_ticket",
-    title: "Validar un ticket",
+    name: "reanudar_ticket",
+    title: "Reanudar un ticket",
     description:
-      "Comprueba el ticket contra el contrato y devuelve el error exacto si no lo " +
-      "cumple. Es determinista y no cuesta nada, así que hay que llamarlo **antes** de " +
-      "evaluar una compuerta: una compuerta sobre un ticket inválido gasta una llamada " +
-      "y su veredicto no dice nada.",
+      "Devuelve el contexto de un ticket para retomar trabajo ya empezado: estado, QA, " +
+      "release y cuántos puntos hay. Es lo primero que conviene llamar al empezar una " +
+      "sesión sobre algo en curso. Sin `id`, si hay más de un ticket activo **no " +
+      "elige**: devuelve la lista y hay que decidir cuál.",
     inputSchema: conRoot({
-      properties: {
-        id: {
-          type: "string",
-          description: "Identificador del ticket. Sin él se validan todos.",
-        },
-      },
+      properties: { id: { type: "string" } },
     }),
   },
   {
@@ -470,39 +542,6 @@ export const TOOLS: readonly ToolDefinition[] = [
     },
   },
   {
-    name: "mover_ticket",
-    title: "Mover el estado de un ticket",
-    description:
-      "Mueve el estado de un ticket según la tabla del contrato. Los movimientos " +
-      "legales los decide el motor, no quien llama: un salto que la máquina no permite " +
-      "se rechaza con el motivo. Mover un ticket **no** lo aprueba: para entrar a " +
-      "`approved` tiene que existir antes la aprobación de una persona registrada.",
-    inputSchema: conRoot({
-      properties: {
-        id: { type: "string" },
-        to: {
-          type: "string",
-          description:
-            "Estado destino: intake → analyzed → planned → approved → in_progress → " +
-            "awaiting_user_tests → in_qa → qa_approved → closed.",
-        },
-      },
-      required: ["id", "to"],
-    }),
-  },
-  {
-    name: "reanudar_ticket",
-    title: "Reanudar un ticket",
-    description:
-      "Devuelve el contexto de un ticket para retomar trabajo ya empezado: estado, QA, " +
-      "release y cuántos puntos hay. Es lo primero que conviene llamar al empezar una " +
-      "sesión sobre algo en curso. Sin `id`, si hay más de un ticket activo **no " +
-      "elige**: devuelve la lista y hay que decidir cuál.",
-    inputSchema: conRoot({
-      properties: { id: { type: "string" } },
-    }),
-  },
-  {
     name: "simular_compuerta",
     title: "Medir una compuerta sobre el histórico",
     description:
@@ -519,6 +558,138 @@ export const TOOLS: readonly ToolDefinition[] = [
         },
       },
       required: ["gate"],
+    }),
+  },
+  {
+    name: "iniciar_qa",
+    title: "Abrir un ciclo de QA",
+    description:
+      "Abre el ciclo de QA de un ticket que está `in_qa`, con el ambiente y la referencia " +
+      "de lo que se va a probar. Los dos son obligatorios y trazables porque el ciclo no " +
+      "se puede cerrar sin ellos: «lo probé en mi máquina» no es un ambiente, y una " +
+      "prueba sin referencia no dice qué código se probó. Se abre una vez y se cierra una " +
+      "vez, en ese orden.",
+    inputSchema: conRoot({
+      properties: {
+        id: { type: "string", description: "Identificador del ticket." },
+        ambiente: {
+          type: "string",
+          description: "Dónde se prueba: sistema, versión, datos. Concreto y repetible.",
+        },
+        referencia: {
+          type: "string",
+          description:
+            "Qué se prueba, con la forma que exige el contrato: `commit:<sha40>`, o " +
+            "`worktree:sha256:<sha256>`, o la palabra `worktree` para que la calcule el " +
+            "motor sobre los archivos que declaren los puntos. Esa última exige que " +
+            "alguno los declare —si ninguno lo hace, falla y hay que usar un commit—, " +
+            "así que lo normal es probar lo ya commiteado.",
+        },
+      },
+      required: ["id", "ambiente", "referencia"],
+    }),
+  },
+  {
+    name: "anotar_retest",
+    title: "Anotar el resultado de un retest",
+    description:
+      "Registra el retest de un punto dentro del ciclo de QA abierto. El punto tiene que " +
+      "estar `awaiting_retest`. Un resultado `approved` lo mueve a `verified` y exige la " +
+      "confirmación literal de quien lo aprobó; un hallazgo lo devuelve a `in_progress`. " +
+      "`pending` no mueve el punto: deja constancia de que se retestó sin veredicto " +
+      "todavía, que es distinto de no haberlo probado.",
+    inputSchema: conRoot({
+      properties: {
+        id: { type: "string", description: "Identificador del ticket." },
+        punto: { type: "string", description: "Identificador del punto, `POINT-001`." },
+        resultado: {
+          type: "string",
+          enum: ["pending", "approved", "changes_requested", "failed"],
+          description: "Quién retestó no se declara aparte: va en la confirmación.",
+        },
+        confirmacion_po: {
+          type: "string",
+          description:
+            "Las palabras literales de quien aprobó el retest. **Obligatoria** si el " +
+            "resultado es `approved`, y no la escribas vos: si no la tenés, el retest " +
+            "todavía no está aprobado.",
+        },
+      },
+      required: ["id", "punto", "resultado"],
+    }),
+  },
+  {
+    name: "cerrar_qa",
+    title: "Cerrar el ciclo de QA",
+    description:
+      "Cierra el ciclo abierto con su resultado. `changes_requested` y `failed` son " +
+      "hallazgos, y lo que se encontró va **además** como punto con `anotar_punto`: el " +
+      "ciclo registra el veredicto, el punto registra el defecto. `approved` es el " +
+      "veredicto de que el ticket quedó bien y no lo emite un agente — exige " +
+      "`confirmacion_po` con las palabras literales de quien aprobó. Si no tenés esa " +
+      "frase, la aprobación no ocurrió: pedila, no la escribas.",
+    inputSchema: conRoot({
+      properties: {
+        id: { type: "string", description: "Identificador del ticket." },
+        resultado: {
+          type: "string",
+          enum: ["approved", "changes_requested", "failed"],
+          description: "Veredicto del ciclo.",
+        },
+        confirmacion_po: {
+          type: "string",
+          description:
+            "Las palabras literales de quien aprobó. **Obligatoria** con `approved`.",
+        },
+      },
+      required: ["id", "resultado"],
+    }),
+  },
+  {
+    name: "preparar_cierre",
+    title: "Registrar el intento de cierre",
+    description:
+      "Escribe el intento de cierre: los dos resúmenes, el estado de QA y el impacto de " +
+      "release. Es lo que habilita `mover_ticket` a `closed`, y no lo sustituye — el " +
+      "motor exige además que el cierre sea coherente con QA. Los resúmenes son para " +
+      "quien lea el ticket dentro de un año: dicen qué cambió y qué gana quien lo usa, no " +
+      "qué archivos se tocaron. `qa: waived` exime la prueba y por eso exige motivo y " +
+      "confirmación literal del PO.",
+    inputSchema: conRoot({
+      properties: {
+        id: { type: "string", description: "Identificador del ticket." },
+        resumen_tecnico: {
+          type: "string",
+          description: "Qué se cambió y cómo, en términos de quien mantiene el código.",
+        },
+        resumen_funcional: {
+          type: "string",
+          description: "Qué gana quien usa el sistema, en sus términos.",
+        },
+        qa: {
+          type: "string",
+          enum: ["approved", "waived"],
+          description:
+            "`approved` cuando hay ciclo cerrado y confirmado; `waived` para eximir la " +
+            "prueba, que es una decisión de la persona y no del agente.",
+        },
+        impacto_release: {
+          type: "string",
+          description:
+            "Qué pasa con la release: si queda `unreleased` o entra en cuál. Es lo que " +
+            "después decide si el ticket se puede reabrir.",
+        },
+        motivo_exencion: {
+          type: "string",
+          description: "Por qué se exime la prueba. **Obligatorio** con `qa: waived`.",
+        },
+        confirmacion_po: {
+          type: "string",
+          description:
+            "Las palabras literales de quien autoriza. **Obligatoria** con `qa: waived`.",
+        },
+      },
+      required: ["id", "resumen_tecnico", "resumen_funcional", "qa", "impacto_release"],
     }),
   },
 ];
@@ -836,6 +1007,73 @@ export async function callTool(
         return bien(salida);
       }
 
+      case "mover_punto": {
+        const movimiento = transition({
+          paths,
+          ticketId: texto(args, "id") as string,
+          entity: "point",
+          to: texto(args, "to") as string,
+          pointId: texto(args, "punto") as string,
+          reason: texto(args, "motivo", false),
+        });
+        return bien(movimiento.details);
+      }
+
+      case "iniciar_qa": {
+        const salida = qaStart({
+          paths,
+          ticketId: texto(args, "id") as string,
+          environment: texto(args, "ambiente") as string,
+          buildReference: texto(args, "referencia") as string,
+          now: contexto.now,
+        });
+        return bien(
+          `${salida}\nEl ciclo queda abierto: se cierra con \`cerrar_qa\`, y un ciclo ` +
+            "abierto impide mover el ticket o eximir la prueba.",
+        );
+      }
+
+      case "anotar_retest": {
+        const salida = addRetest({
+          paths,
+          ticketId: texto(args, "id") as string,
+          pointId: texto(args, "punto") as string,
+          result: texto(args, "resultado") as string,
+          poConfirmation: texto(args, "confirmacion_po", false),
+          now: contexto.now,
+        });
+        return bien(salida);
+      }
+
+      case "cerrar_qa": {
+        const salida = qaClose({
+          paths,
+          ticketId: texto(args, "id") as string,
+          result: texto(args, "resultado") as string,
+          poConfirmation: texto(args, "confirmacion_po", false),
+          now: contexto.now,
+        });
+        return bien(salida);
+      }
+
+      case "preparar_cierre": {
+        const salida = closeAttempt({
+          paths,
+          ticketId: texto(args, "id") as string,
+          technicalSummary: texto(args, "resumen_tecnico") as string,
+          functionalSummary: texto(args, "resumen_funcional") as string,
+          qaStatus: texto(args, "qa") as string,
+          releaseImpact: texto(args, "impacto_release") as string,
+          qaWaiverReason: texto(args, "motivo_exencion", false),
+          poConfirmation: texto(args, "confirmacion_po", false),
+          now: contexto.now,
+        });
+        return bien(
+          `${salida}\nEl cierre queda preparado. \`mover_ticket\` a \`closed\` lo aplica, ` +
+            "y el motor va a exigir que sea coherente con QA.",
+        );
+      }
+
       case "validar_ticket": {
         const id = texto(args, "id", false);
         return delCli(id === undefined ? validateAll(paths) : validateOne(paths, id));
@@ -855,6 +1093,7 @@ export async function callTool(
           ticketId: texto(args, "id") as string,
           entity: "ticket",
           to: texto(args, "to") as string,
+          reason: texto(args, "motivo", false),
         });
         return bien(movimiento.details);
       }
