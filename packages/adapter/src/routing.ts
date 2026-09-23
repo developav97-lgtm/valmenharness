@@ -212,22 +212,71 @@ export interface ResolvedRoute {
   readonly probabilistic: boolean;
 }
 
-/** Analiza `.valmen/routing.yaml`. */
+/** Lo que sale de analizar el archivo, con o sin tolerancia. */
+export interface RoutingAnalizado {
+  readonly routing: Routing;
+  /**
+   * Los roles que el archivo declara y el harness ya no ejecuta.
+   *
+   * Solo se llena en la lectura tolerante. En la estricta, el primero de ellos
+   * detiene el análisis: no hay nada que devolver.
+   */
+  readonly retirados: readonly string[];
+}
+
+/**
+ * Analiza `.valmen/routing.yaml`.
+ *
+ * **Rechaza un rol que no existe, y eso es deliberado**: guardarlo en silencio
+ * haría creer que el proyecto configuró algo que nadie lee. Pero el mensaje tiene
+ * que decir **qué hacer** —el caso que lo motivó es un archivo escrito cuando el
+ * harness declaraba doce roles, con una clave que después se retiró, y el rechazo
+ * detiene *todas* las compuertas del proyecto—.
+ */
 export function parseRouting(text: string): Routing {
+  return analizarRouting(text, false).routing;
+}
+
+/**
+ * La misma lectura, pero devolviendo los roles retirados en vez de fallar.
+ *
+ * Existe por una razón concreta y no para relajar el rechazo: **el error que se
+ * quiere corregir es el que impide leer el archivo**. Una migración que tuviera
+ * que arreglar un `routing.yaml` viejo no podría ni abrirlo con `parseRouting`,
+ * así que necesita una lectura que tolere para poder reescribirlo. Quien lea el
+ * archivo para *usarlo* sigue pasando por `parseRouting` y sigue recibiendo el
+ * rechazo.
+ */
+export function parseRoutingTolerante(text: string): RoutingAnalizado {
+  return analizarRouting(text, true);
+}
+
+/** El análisis, en los dos modos. Uno solo, para que no puedan discrepar. */
+function analizarRouting(text: string, tolerante: boolean): RoutingAnalizado {
   const config: ConfigMap = parseConfig(text);
   const preset = readString(config, "preset", DEFAULT_PRESET);
   // Se valida aquí y no al usarlo: un preset inexistente es un error del
-  // archivo, y decirlo al leerlo señala la línea que hay que corregir.
+  // archivo, y decirlo al leerlo señala la línea que hay que corregir. Un preset
+  // retirado no se tolera ni migrando: sin preset no hay de dónde resolver los
+  // roles, y adivinar uno sería peor que decirlo.
   presetById(preset);
 
   const rolesConfig = readMap(config, "roles");
   const roles: Record<string, Partial<RoleRoute>> = {};
+  const retirados: string[] = [];
 
   for (const [role, valor] of Object.entries(rolesConfig)) {
     if (!ROLES.some((spec) => spec.id === role)) {
+      if (tolerante) {
+        retirados.push(role);
+        continue;
+      }
       fail(
-        `routing.yaml: "${role}" no es un rol conocido. ` +
-          `Los roles son: ${ROLES.map((spec) => spec.id).join(", ")}.`,
+        `routing.yaml: "${role}" no es un rol del harness. ` +
+          `Los roles vigentes son: ${ROLES.map((spec) => spec.id).join(", ")}. ` +
+          `Comprueba que esté bien escrito; y si viene de una versión anterior, ` +
+          `bórralo de .valmen/routing.yaml — los roles retirados no se ejecutan, ` +
+          `así que la clave no hace nada y solo impide leer el resto del archivo.`,
       );
     }
     if (typeof valor === "string") {
@@ -252,7 +301,7 @@ export function parseRouting(text: string): Routing {
     };
   }
 
-  return { preset, roles };
+  return { routing: { preset, roles }, retirados };
 }
 
 /**

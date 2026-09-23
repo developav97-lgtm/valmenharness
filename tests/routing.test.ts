@@ -28,6 +28,7 @@ import {
   PRESETS,
   ROLES,
   parseRouting,
+  parseRoutingTolerante,
   renderRouting,
   resolveRouting,
 } from "../packages/adapter/src/index.js";
@@ -196,9 +197,48 @@ describe("el archivo de routing", () => {
   });
 
   it("rechaza un rol que no existe en vez de guardarlo en silencio", () => {
-    expect(() =>
-      parseRouting("preset: balanced\nroles:\n  orquestador:\n    model: x\n"),
-    ).toThrow(/no es un rol conocido/);
+    // El rechazo es deliberado: guardar una clave que nadie lee haría creer que
+    // el proyecto configuró algo. Pero el mensaje tiene que decir qué hacer,
+    // porque este error detiene todas las compuertas del proyecto: un
+    // `routing.yaml` de una versión anterior —cuando el harness declaraba doce
+    // roles— dejaba el CLI sin poder evaluar nada, con un texto que enumeraba los
+    // roles vigentes y nada más.
+    let mensaje = "";
+    try {
+      parseRouting("preset: balanced\nroles:\n  orquestador:\n    model: x\n");
+    } catch (caught) {
+      mensaje = caught instanceof Error ? caught.message : String(caught);
+    }
+    expect(mensaje).toMatch(/no es un rol del harness/);
+    // Nombra el rol culpable, no solo el archivo.
+    expect(mensaje).toContain("orquestador");
+    // Y dice la salida: borrar la clave.
+    expect(mensaje).toContain("bórralo de .valmen/routing.yaml");
+  });
+
+  it("la lectura tolerante devuelve los retirados aparte, sin relajar el rechazo", () => {
+    // Las dos lecturas conviven a propósito y hacen cosas distintas. La estricta
+    // es la que usa el harness para trabajar: sigue rechazando. La tolerante
+    // existe porque **el error que se quiere corregir es el que impide leer el
+    // archivo**: una migración no podría ni abrirlo con la estricta.
+    const texto =
+      "preset: balanced\nroles:\n  explorer:\n    model: x\n  gate-judge:\n    model: y\n";
+
+    expect(() => parseRouting(texto)).toThrow(/no es un rol del harness/);
+
+    const { routing, retirados } = parseRoutingTolerante(texto);
+    expect(retirados).toEqual(["explorer"]);
+    expect(routing.roles["gate-judge"]?.model).toBe("y");
+    expect(routing.roles["explorer"]).toBeUndefined();
+  });
+
+  it("la lectura tolerante tampoco se traga un preset inexistente", () => {
+    // Tolerar un rol retirado es posible porque sobra; tolerar un preset
+    // inexistente no, porque sin preset no hay de dónde resolver los roles y
+    // adivinar uno sería peor que decirlo.
+    expect(() => parseRoutingTolerante("preset: carisimo\nroles: {}\n")).toThrow(
+      /Preset desconocido/,
+    );
   });
 
   it("rechaza un preset inexistente", () => {

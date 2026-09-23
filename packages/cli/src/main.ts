@@ -82,7 +82,8 @@ Comandos:
                             Sin --id y con varios activos, no elige: pide uno.
   show <ID>                 Muestra el resumen de un ticket.
   index [--check]           Regenera el índice, o comprueba que esté al día.
-  migrate [--dry-run]       Lleva el registro al esquema vigente.
+  migrate [--dry-run]       Lleva el registro al esquema vigente y limpia del
+                            routing los roles que el harness ya no ejecuta.
   sync [--check]            Proyecta .valmen/ a AGENTS.md.
   adopt [--dry-run]         Incorpora el harness a un proyecto existente.
   gate <gate> --id <ID>     Evalúa un gate contra un ticket.

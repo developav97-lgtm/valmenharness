@@ -28,9 +28,12 @@ import {
 import {
   type Projection,
   adoptPlan,
+  parseRoutingTolerante,
   profileProject,
   projectFiles,
   proposeConfig,
+  renderRouting,
+  routingPath,
 } from "@valmen/adapter";
 
 import {
@@ -366,6 +369,45 @@ interface MigrationOutcome {
  *
  * Con `dryRun` no escribe y devuelve el mismo informe.
  */
+/**
+ * El archivo de routing, al vocabulario vigente de roles.
+ *
+ * Existe porque el registro de tickets tenía migración desde el principio y la
+ * configuración del proyecto no tenía ninguna, y el vocabulario de roles se
+ * encogió una vez —de trece a tres— sin que nada reescribiera los archivos ya
+ * escritos. El resultado era un `routing.yaml` con una clave retirada que detenía
+ * **todas** las compuertas del proyecto, con un error que señalaba el rol y no el
+ * archivo viejo.
+ *
+ * Se reescribe con `renderRouting`, que es el escritor canónico: el archivo queda
+ * en la forma que produce el propio harness, no en una inventada aquí. Y no se
+ * toca si no hay nada retirado, porque reescribir un archivo sano perdería los
+ * comentarios de quien lo editó a mano sin ganar nada.
+ */
+function migrateRouting(
+  root: string,
+  dryRun: boolean,
+): { readonly retirados: readonly string[]; readonly escrito: boolean } {
+  const ruta = routingPath(root);
+  if (!existsSync(ruta)) return { retirados: [], escrito: false };
+
+  let texto: string;
+  try {
+    texto = readFileSync(ruta, "utf8");
+  } catch {
+    // Un archivo que no se puede leer no es una migración fallida: es un archivo
+    // que no está. El error bueno lo dará quien lo use para evaluar.
+    return { retirados: [], escrito: false };
+  }
+  if (texto.trim() === "") return { retirados: [], escrito: false };
+
+  const { routing, retirados } = parseRoutingTolerante(texto);
+  if (retirados.length === 0) return { retirados: [], escrito: false };
+
+  if (!dryRun) atomicWrite(ruta, renderRouting(routing));
+  return { retirados, escrito: !dryRun };
+}
+
 export function migrateRegistry(
   paths: RegistryPaths,
   options: { dryRun?: boolean; today?: string } = {},
@@ -450,7 +492,23 @@ export function migrateRegistry(
       }
     }
 
-    if (dryRun && pending.length > 0) {
+    // El routing se revisa siempre, incluso cuando no hay un solo ticket que
+    // migrar: el vocabulario de roles es otra cosa que también envejece, y una
+    // clave retirada ahí detiene las compuertas del proyecto entero.
+    const routing = migrateRouting(paths.root, dryRun);
+
+    if (routing.retirados.length > 0) {
+      lines.push(
+        "",
+        `  Roles retirados en .valmen/routing.yaml: ${routing.retirados.length}`,
+        `    ${routing.retirados.join(", ")}`,
+        routing.escrito
+          ? "    El archivo se reescribió sin ellos."
+          : "    Sin escribir todavía: quedan fuera cuando se aplique la migración.",
+      );
+    }
+
+    if (dryRun && (pending.length > 0 || routing.retirados.length > 0)) {
       lines.push("", "  Ejecute sin --dry-run para aplicarlo.");
     }
 

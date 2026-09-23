@@ -478,6 +478,7 @@ archivo de gate, con su umbral. Ver [`03-GATES.md`](03-GATES.md).
 valmen init                       # crear .valmen/ en un proyecto nuevo
 valmen adopt [--from claude|codex|auto]   # importar config existente
 valmen sync                       # regenerar AGENTS.md / .codex / .claude / .opencode
+valmen migrate [--dry-run]        # registro y routing al vocabulario vigente
 valmen doctor                     # diagnóstico read-only del setup
 valmen config get|set|edit        # configuración
 valmen config chat "..."          # configurar en lenguaje natural (con preview)

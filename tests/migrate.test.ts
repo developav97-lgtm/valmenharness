@@ -12,6 +12,8 @@
  */
 import {
   cpSync,
+  existsSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
@@ -225,5 +227,74 @@ describe("migrate: contenido del frontmatter", () => {
       if (key === "schema_version" || key === "updated") continue;
       expect(after[key], key).toBe(before[key]);
     }
+  });
+});
+
+/**
+ * La migración de la configuración del proyecto.
+ *
+ * El registro de tickets tenía migración desde el principio; el archivo de
+ * routing no tenía ninguna, y su vocabulario de roles se encogió una vez —de
+ * trece a tres— sin que nada reescribiera los archivos ya escritos. El resultado
+ * era un `routing.yaml` con una clave retirada que detenía **todas** las
+ * compuertas del proyecto, con un error que señalaba el rol y no el archivo viejo.
+ */
+describe("la migración del routing", () => {
+  const routing = (): string => join(lab, ".valmen", "routing.yaml");
+
+  const CON_RETIRADO =
+    "preset: quality\n\nroles:\n" +
+    "  explorer:\n    provider: opencode-go\n    model: glm-5.3\n    effort: low\n" +
+    "  gate-judge:\n    model: moonshotai/kimi-k3\n    effort: high\n";
+
+  function escribirRouting(texto: string): void {
+    mkdirSync(join(lab, ".valmen"), { recursive: true });
+    writeFileSync(routing(), texto, "utf8");
+  }
+
+  it("saca del archivo los roles que el harness ya no ejecuta, y conserva el resto", () => {
+    escribirRouting(CON_RETIRADO);
+
+    const resultado = migrateRegistry(PATHS(), { today: FIXED_TODAY });
+
+    expect(resultado.exitCode).toBe(0);
+    expect(resultado.stdout).toContain("Roles retirados en .valmen/routing.yaml: 1");
+    expect(resultado.stdout).toContain("explorer");
+
+    const despues = readFileSync(routing(), "utf8");
+    expect(despues).not.toContain("explorer");
+    // No se lleva por delante lo que sí vale: el preset y el rol vigente con su
+    // modelo. Una migración que arregla una clave borrando la configuración de al
+    // lado es peor que el defecto.
+    expect(despues).toContain("preset: quality");
+    expect(despues).toContain("moonshotai/kimi-k3");
+  });
+
+  it("con `--dry-run` lo anuncia y no escribe: una simulación que escribe no es una simulación", () => {
+    escribirRouting(CON_RETIRADO);
+
+    const resultado = migrateRegistry(PATHS(), { dryRun: true, today: FIXED_TODAY });
+
+    expect(resultado.stdout).toContain("Sin escribir todavía");
+    expect(resultado.stdout).toContain("Ejecute sin --dry-run");
+    expect(readFileSync(routing(), "utf8")).toContain("explorer");
+  });
+
+  it("no reescribe un archivo sano, para no perder los comentarios de quien lo editó a mano", () => {
+    const sano =
+      "# lo que decidí yo\npreset: balanced\n\nroles:\n  gate-judge:\n    model: x\n";
+    escribirRouting(sano);
+
+    const resultado = migrateRegistry(PATHS(), { today: FIXED_TODAY });
+
+    expect(resultado.stdout).not.toContain("Roles retirados");
+    expect(readFileSync(routing(), "utf8")).toBe(sano);
+  });
+
+  it("un proyecto sin routing no se inventa uno", () => {
+    const resultado = migrateRegistry(PATHS(), { today: FIXED_TODAY });
+
+    expect(resultado.exitCode).toBe(0);
+    expect(existsSync(routing())).toBe(false);
   });
 });
