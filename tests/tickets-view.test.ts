@@ -33,7 +33,7 @@ import {
   listTickets,
   readTicket,
   summarize,
-} from "../packages/server/src/tickets.js";
+} from "../packages/engine/src/tickets.js";
 import { writeFixtureTicket } from "./helpers/fixtures.js";
 import { handleApi } from "../packages/server/src/server.js";
 

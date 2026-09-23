@@ -34,8 +34,14 @@ import {
   decompositionPrompt,
   defaultReportRange,
   filterReport,
+  CAMPOS_ORDENABLES,
+  type TicketFilters,
+  filterTickets,
   findTicket,
+  listTickets,
+  readTicket,
   renderReport,
+  summarize,
   ticketsPath,
   transition,
 } from "@valmen/engine";
@@ -86,14 +92,6 @@ import {
   routingFromForm,
   writeRouting,
 } from "./routing.js";
-import {
-  CAMPOS_ORDENABLES,
-  type TicketFilters,
-  filterTickets,
-  listTickets,
-  readTicket,
-  summarize,
-} from "./tickets.js";
 import { listFeatureRows, readFeatureDetail, summarizeFeatures } from "./features.js";
 import { guardarFotoEnTicket, leerLineaDeTiempo } from "./timeline.js";
 import {

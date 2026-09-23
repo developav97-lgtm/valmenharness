@@ -10,7 +10,6 @@ export * from "./providers.js";
 export * from "./chat.js";
 export * from "./config.js";
 export * from "./routing.js";
-export * from "./tickets.js";
 export * from "./features.js";
 export * from "./processes.js";
 export * from "./gates.js";

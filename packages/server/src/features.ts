@@ -32,12 +32,10 @@ import {
   listFeatures,
   readFeature,
   choosePaths,
+  listTickets,
   readSpecs,
   ticketsPath,
 } from "@valmen/engine";
-// El estado del registro vive en el propio servidor: es el mismo que alimenta la
-// vista de tickets, y tenerlo una sola vez evita que las dos vistas discrepen.
-import { listTickets } from "./tickets.js";
 
 /** Una fila de la lista de features. */
 export interface FeatureListRow {

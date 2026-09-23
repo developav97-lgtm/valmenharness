@@ -1,13 +1,22 @@
 /**
- * Proyección de tickets para la interfaz.
+ * El registro leído como filas: la vista que consumen las tres puertas.
  *
  * El visor que reemplaza mostraba solo los tickets cerrados. Mission Control
  * necesita **todo el ciclo**: qué está en curso, qué espera una decisión y qué
  * está bloqueado son las preguntas que importan durante el trabajo, no después.
  *
- * Igual que el resto de Mission Control, esto no tiene lógica de negocio: lee el
- * registro con el mismo motor que el CLI, proyecta y devuelve. No calcula
- * estados, no valida reglas y no muta nada.
+ * Nació dentro del servidor y vivía ahí por accidente: no tiene nada de HTTP ni
+ * de interfaz —lee el registro, lo proyecta y devuelve filas—, y el servidor solo
+ * era quien primero lo necesitó. Está aquí porque **el motor es el dueño del
+ * registro**, y cualquier puerta que quiera leerlo —la pantalla, el CLI, el
+ * servidor MCP— tiene que obtener la misma respuesta. Con la proyección en el
+ * servidor, el MCP habría tenido que depender de la aplicación HTTP para saber
+ * qué tickets hay, que es como decir que para leer un archivo hay que levantar un
+ * servidor web.
+ *
+ * Igual que antes: esto no tiene lógica de negocio. Lee con el mismo parser que
+ * el resto del motor, proyecta y devuelve. No calcula estados, no valida reglas y
+ * no muta nada.
  *
  * Ver docs/06-CONTROL-APP.md §2.2.
  */
@@ -15,7 +24,8 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 
 import { type ParsedTicket, parseTicket, validateDocument } from "@valmen/core";
-import { type RegistryPaths, ticketsPath } from "@valmen/engine";
+
+import { type RegistryPaths, ticketsPath } from "./discovery.js";
 
 /** Una fila de la lista de tickets. */
 export interface TicketRow {
