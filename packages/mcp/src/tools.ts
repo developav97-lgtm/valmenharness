@@ -73,7 +73,6 @@ import {
   reportClosed,
   resumeTicket,
   scanPendingSecretsCommand,
-  usageCommand,
   runProcessCommand,
   showProcess,
   showProcessRun,
