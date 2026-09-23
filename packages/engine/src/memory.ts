@@ -348,9 +348,13 @@ export function renderHits(hits: readonly MemoryHit[], consulta: string): string
   ];
   for (const hit of hits) {
     const { entry } = hit;
-    const referencia = `${entry.id === null ? "" : `${entry.id} · `}${
-      entry.date ?? "sin fecha"
-    }`;
+    // El estado se muestra porque una decisión supersedida sigue siendo
+    // conocimiento —y a veces el más útil, porque explica por qué se cambió de
+    // rumbo—, pero tiene que verse que lo está al primer renglón. La antigüedad de
+    // un documento no lo invalida: lo invalida que su propia entrada lo diga.
+    const referencia =
+      `${entry.id === null ? "" : `${entry.id} · `}${entry.date ?? "sin fecha"}` +
+      (entry.status === null ? "" : ` · ${entry.status}`);
     lineas.push(`  [${entry.kind}] ${referencia}`);
     lineas.push(`  ${entry.title}`);
     // Un extracto, no el cuerpo entero: lo que hay que decidir es si vale la pena

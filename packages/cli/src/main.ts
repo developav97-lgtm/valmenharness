@@ -71,7 +71,7 @@ import {
   transition,
 } from "@valmen/engine";
 
-const USAGE = `valmen — harness agéntico
+export const USAGE = `valmen — harness agéntico
 
 Uso: valmen <comando> [opciones]
 
@@ -206,7 +206,7 @@ interface Options {
 }
 
 /** Opciones que consumen un valor. */
-const VALUE_OPTIONS = [
+export const VALUE_OPTIONS = [
   "--root",
   "--tickets-dir",
   "--id",
@@ -254,6 +254,12 @@ const VALUE_OPTIONS = [
   "--hasta",
   "--q",
   "--set",
+  // `memory` y los anexados que se agregaron después. Una bandera que consume
+  // valor y no está acá se lee como booleana y su valor queda como argumento
+  // suelto: el comando corre con la mitad de lo que se le pidió y sin decir nada.
+  "--limite",
+  "--body",
+  "--files",
   "--actor",
   "--run",
   "--credentials",

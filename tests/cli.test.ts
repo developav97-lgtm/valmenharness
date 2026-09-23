@@ -21,7 +21,7 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { dispatch, parseArgs } from "../packages/cli/src/main.js";
+import { USAGE, VALUE_OPTIONS, dispatch, parseArgs } from "../packages/cli/src/main.js";
 import {
   buildIndex,
   listActive,
@@ -185,5 +185,36 @@ describe("dispatch", () => {
     } finally {
       rmSync(lab, { recursive: true, force: true });
     }
+  });
+});
+
+describe("las banderas que consumen valor", () => {
+  it("todas las que la ayuda documenta con `<valor>` están declaradas", () => {
+    // La clase de error que esta prueba existe para cazar: una bandera nueva que
+    // consume valor y no se registra se lee como booleana, y su valor queda como
+    // argumento suelto. El comando corre con la mitad de lo que se le pidió y sin
+    // decir nada — pasó tres veces, con `--files`, `--body` y `--limite`.
+    const documentadas = [...USAGE.matchAll(/--([a-z][a-z-]*)\s+</g)].map(
+      (match) => `--${match[1] as string}`,
+    );
+
+    expect(documentadas.length).toBeGreaterThan(20);
+    expect(
+      documentadas.filter((bandera) => !VALUE_OPTIONS.includes(bandera as never)),
+    ).toEqual([]);
+  });
+
+  it("una bandera documentada con valor llega como texto, no como `true`", () => {
+    const opciones = parseArgs([
+      "--root",
+      "/proyecto",
+      "memory",
+      "search",
+      "consulta",
+      "--limite",
+      "3",
+    ]);
+    expect(opciones.flags["limite"]).toBe("3");
+    expect(opciones.positionals).toEqual(["memory", "search", "consulta"]);
   });
 });

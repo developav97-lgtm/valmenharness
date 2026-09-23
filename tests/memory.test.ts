@@ -193,6 +193,16 @@ describe("la búsqueda", () => {
     expect(renderHits(hits, "kubernetes terraform")).toContain("Sin resultados");
   });
 
+  it("muestra el estado declarado, para que una decisión supersedida se vea", () => {
+    // El documento gestiona su propia obsolescencia con `**Estado:**`, y quien lee
+    // el resultado tiene que poder verlo sin abrir el archivo.
+    const texto = renderHits(
+      searchMemory(memoria(), "sesión se pierde al recargar", 1),
+      "x",
+    );
+    expect(texto).toContain("Resuelto");
+  });
+
   it("el informe ubica cada resultado en su archivo y su línea", () => {
     const texto = renderHits(searchMemory(memoria(), "bulk_create", 1), "bulk_create");
     // La línea del encabezado, que es lo que hay que abrir.
