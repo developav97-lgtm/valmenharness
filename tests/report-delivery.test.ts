@@ -41,6 +41,7 @@ import {
   parseReportDate,
   parseTicketList,
   renderManifest,
+  type ReportEntry,
   renderReport,
 } from "@valmen/engine";
 
@@ -187,6 +188,8 @@ describe("renderReport", () => {
           problem: "Solo el número exacto.",
           solution: "Se cambió el lookup.",
           userRelevance: "cajero",
+          releaseStatus: "unreleased",
+          releasedIn: null,
         },
       ],
       "2026-09-01",
@@ -195,6 +198,39 @@ describe("renderReport", () => {
     expect(texto).toContain("## El filtro no encuentra");
     expect(texto).toContain("**Se atendió:** Solo el número exacto.");
     expect(texto).toContain("**Se realizó:** Se cambió el lookup.");
+  });
+
+  it("dice cuántos de los cerrados llegaron a una versión", () => {
+    // «Seis cerrados» y «seis entregados» no son lo mismo, y el título solo dice
+    // lo primero: sin esta línea, quien lee entiende entregado donde dice
+    // cerrado, que es el error que el propio harness llama clásico.
+    const entrada = (released: boolean): ReportEntry => ({
+      ticketId: "BUGFIX-POS-UNO-20260910",
+      title: "El filtro no encuentra",
+      type: "BUGFIX",
+      module: "POS",
+      closedOn: "2026-09-10",
+      problem: "Solo el número exacto.",
+      solution: "Se cambió el lookup.",
+      userRelevance: "cajero",
+      releaseStatus: released ? "released" : "unreleased",
+      releasedIn: released ? "6.3.0" : null,
+    });
+
+    const mixto = renderReport(
+      [entrada(true), entrada(false), entrada(false)],
+      "2026-09-01",
+      "2026-09-30",
+    );
+    expect(mixto).toContain("> 3 cerrados · 1 publicado · 2 sin publicar");
+
+    // Y se marca lo que falta, no lo que ya está: un informe donde todo salió se
+    // lee de corrido.
+    expect(mixto.match(/\*\*Sin entregar:\*\*/g)).toHaveLength(2);
+
+    const todo = renderReport([entrada(true)], "2026-09-01", "2026-09-30");
+    expect(todo).toContain("> 1 cerrado · 1 publicado · 0 sin publicar");
+    expect(todo).not.toContain("Sin entregar");
   });
 
   it("el reporte real de los 57 tickets no tiene huecos", () => {

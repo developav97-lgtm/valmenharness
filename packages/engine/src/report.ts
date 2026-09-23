@@ -49,6 +49,17 @@ export interface ReportEntry {
   readonly solution: string;
   /** El rol afectado, si la descripción funcional lo declara. */
   readonly userRelevance: string | null;
+  /**
+   * Si el trabajo llegó a una versión publicada.
+   *
+   * Va en el informe porque «cerrado» y «publicado» son dos cosas distintas —el
+   * propio `AGENTS.md` llama a confundirlas el error clásico— y el informe las
+   * confundía: quien lo lee entiende «entregado» donde dice «cerrado». Un cierre
+   * sin publicar es trabajo terminado que todavía no llegó a nadie.
+   */
+  readonly releaseStatus: string;
+  /** La versión en la que salió, si salió. */
+  readonly releasedIn: string | null;
 }
 
 /**
@@ -139,6 +150,11 @@ export function toReportEntry(document: ParsedTicket): ReportEntry | null {
     plainSection(document.sections["Solicitud original"] ?? "") ??
     PENDING_INFORMATION;
 
+  // El frontmatter guarda los ausentes como la cadena `null`, que es lo que el
+  // contrato escribe: distinguirla de una versión de verdad es lo que evita
+  // imprimir «publicado en null».
+  const releasedIn = document.fields.released_in;
+
   return {
     ticketId: document.fields.id,
     title: document.fields.title,
@@ -148,6 +164,8 @@ export function toReportEntry(document: ParsedTicket): ReportEntry | null {
     problem: problema,
     solution: resumen,
     userRelevance: labelValue(funcional, "Usuario o rol afectado"),
+    releaseStatus: document.fields.release_status,
+    releasedIn: releasedIn === "" || releasedIn === "null" ? null : releasedIn,
   };
 }
 
@@ -228,13 +246,41 @@ export function renderReport(
   if (entradas.length === 0) {
     return `${cabecera}\n_No hubo tickets cerrados en este rango._\n`;
   }
+
+  // La línea que faltaba. «Seis cerrados» y «seis entregados» no son lo mismo, y
+  // el título solo dice lo primero: quien lee el informe tiene que poder saber
+  // cuánto de esto llegó a una versión sin abrir los tickets uno por uno.
+  const publicados = entradas.filter(
+    (entrada) => entrada.releaseStatus === "released",
+  ).length;
+  const sinPublicar = entradas.length - publicados;
+  const resumen =
+    `> ${contados(entradas.length, "cerrado", "cerrados")} · ` +
+    `${contados(publicados, "publicado", "publicados")} · ` +
+    `${sinPublicar} sin publicar\n`;
+
   const bloques = entradas.map(
     (entrada) =>
       `## ${entrada.title}\n\n` +
       `**Se atendió:** ${entrada.problem}\n\n` +
-      `**Se realizó:** ${entrada.solution}\n`,
+      `**Se realizó:** ${entrada.solution}\n` +
+      // Se marca la excepción y no lo esperado: un informe donde todo salió se lee
+      // de corrido, y uno donde algo quedó sin entregar lo dice en cada renglón
+      // que importa.
+      (entrada.releaseStatus === "released"
+        ? ""
+        : "\n**Sin entregar:** el trabajo está cerrado y todavía no salió en una versión.\n"),
   );
-  return `${cabecera}\n${bloques.join("\n")}`;
+  return `${cabecera}\n${resumen}\n${bloques.join("\n")}`;
+}
+
+/**
+ * Un número con su palabra en singular o plural.
+ *
+ * En un informe que lee gente de afuera, «1 cerrado(s)» se lee como un descuido.
+ */
+function contados(n: number, singular: string, plural: string): string {
+  return `${n} ${n === 1 ? singular : plural}`;
 }
 
 /** Una fecha `YYYY-MM-DD` del argumento, o falla diciendo cuál. */
