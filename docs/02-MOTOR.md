@@ -545,7 +545,7 @@ con alguien copiando un comando.
 | `listar_tickets` | Filtros por estado, tipo, módulo, texto, puntos, impacto y fechas | `listTickets` + `filterTickets` |
 | `validar_ticket` | Contrato del ticket; sin `id`, todo el registro | `valmen validate` |
 | `mover_ticket` | Aplica la tabla de estados, y reabre un cerrado con su motivo | `transition` |
-| `anotar_punto` | Un hallazgo, con `actual` y `expected` separados | `addPoint` |
+| `anotar_punto` | Un hallazgo, con `actual` y `expected` separados, y los archivos que toca | `addPoint` |
 | `mover_punto` | El ciclo del punto, independiente del ticket | `transition` |
 | `anotar_evidencia` | La prueba de algo hecho, enlazada al punto que la originó | `addEvidence` |
 | `reanudar_ticket` | Contexto para retomar trabajo empezado | `valmen resume` |

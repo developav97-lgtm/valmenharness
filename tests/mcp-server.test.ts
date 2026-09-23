@@ -34,6 +34,8 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { spawnSync } from "node:child_process";
+
 import { parseTicket } from "../packages/core/src/index.js";
 import { writeFixtureTicket } from "./helpers/fixtures.js";
 import { TOOLS, callTool } from "../packages/mcp/src/tools.js";
@@ -850,133 +852,133 @@ describe("la lista avisa de lo que está a medias", () => {
 
 // ── El ciclo entero, sin terminal ───────────────────────────────────────────
 
+const SHA = "a".repeat(40);
+
+/**
+ * Un evaluador falso que aprueba, con el vocabulario de cada compuerta.
+ *
+ * Las dos usan una proposición `clasificacion`, pero no comparten las
+ * opciones: la de análisis aprueba con `completa` y la de plan con `completo`.
+ * Un evaluador que contestara lo mismo en las dos haría fallar la segunda, y el
+ * fallo se leería como si el ciclo estuviera roto.
+ */
+function evaluadorQueApruebaCon(eleccion: string): NonNullable<ToolContext["jev"]> {
+  return async (options: { propositions?: readonly { id: string }[] }) => ({
+    answers: (options.propositions ?? []).map((proposition) =>
+      proposition.id === "clasificacion"
+        ? {
+            id: proposition.id,
+            kind: "choice" as const,
+            choice: eleccion,
+            rationale: "falso",
+          }
+        : { id: proposition.id, kind: "noul" as const, value: 0.95, rationale: "falso" },
+    ),
+    model: {
+      provider: "falso",
+      model: "para-pruebas",
+      resolvedVersion: "falso/para-pruebas@0",
+    },
+    usage: { inputTokens: 0, outputTokens: 0, costUsd: 0 },
+    latencyMs: 1,
+  });
+}
+
+/** El paso, con el nombre y el mensaje del motor si falla. */
+async function paso(
+  ctx: ToolContext,
+  nombre: string,
+  args: Record<string, unknown>,
+): Promise<void> {
+  const resultado = await callTool(ctx, nombre, args);
+  expect(resultado.isError, `${nombre}: ${resultado.text}`).toBe(false);
+}
+
+/**
+ * Escribe una sección del ticket.
+ *
+ * Es lo que hace el agente con su editor: las secciones son prosa, y una
+ * herramienta que las escribiera sería una herramienta que redacta el
+ * diagnóstico en vez de una que obliga a investigarlo.
+ */
+function escribir(ruta: string, seccion: string, contenido: string): void {
+  const texto = readFileSync(ruta, "utf8");
+  const patron = new RegExp(`(## ${seccion}\\n\\n)[\\s\\S]*?(?=\\n## )`);
+  if (!patron.test(texto)) throw new Error(`El ticket no tiene la sección ${seccion}.`);
+  writeFileSync(ruta, texto.replace(patron, `$1${contenido}\n`), "utf8");
+}
+
+/** Lo mínimo que un ticket necesita para poder aprobarse. */
+function escribirContenido(ruta: string): void {
+  escribir(
+    ruta,
+    "Diagnóstico",
+    [
+      "- Archivos y flujo investigados: `BackEnd/pos/filters.py` define `OrderFilter.number` con `lookup_expr='exact'`; el ViewSet de órdenes lo aplica al listado.",
+      "- Causa raíz o hipótesis: el lookup es exacto cuando la pantalla documenta búsqueda parcial, así que el backend descarta las coincidencias parciales.",
+      "- Riesgos y compatibilidad: ampliar el conjunto de resultados. Un cliente que consulte el número exacto sigue recibiendo su resultado.",
+      "- Impactos de sync, migración, Docker o despliegue: ninguno.",
+    ].join("\n"),
+  );
+  escribir(
+    ruta,
+    "Plan",
+    [
+      "- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).",
+      "- Pasos ordenados:",
+      "  1. Cambiar en `BackEnd/pos/filters.py` el `lookup_expr` de `number` de `exact` a `icontains`.",
+      "  2. Añadir en `BackEnd/pos/tests/test_filters.py` una prueba de búsqueda parcial.",
+      "- Rollback: revertir el cambio de una línea y retirar la prueba añadida.",
+    ].join("\n"),
+  );
+  escribir(
+    ruta,
+    "Criterios de aceptación",
+    '- [ ] Buscar "104" devuelve la orden "1042".\n- [ ] Buscar "999" no devuelve resultados.',
+  );
+}
+
+/** El ticket implementado y con el resultado del PO registrado: listo para QA. */
+async function hastaInQa(): Promise<string> {
+  const ruta = await crear();
+  escribirContenido(ruta);
+  await paso(contexto, "validar_ticket", { id: ID });
+  await paso(contexto, "mover_ticket", { id: ID, to: "analyzed" });
+  await paso(contexto, "mover_ticket", { id: ID, to: "planned" });
+  await paso(contexto, "mover_ticket", { id: ID, to: "approved" });
+  await paso(contexto, "mover_ticket", { id: ID, to: "in_progress" });
+  escribir(ruta, "Pruebas", "- Resultado del PO: probado en la sucursal y conforme.");
+  await paso(contexto, "mover_ticket", { id: ID, to: "awaiting_user_tests" });
+  await paso(contexto, "mover_ticket", { id: ID, to: "in_qa" });
+  return ruta;
+}
+
+/** El ticket cerrado con QA aprobada, que es el estado del que se reabre. */
+async function hastaCerrado(): Promise<string> {
+  const ruta = await hastaInQa();
+  await paso(contexto, "iniciar_qa", {
+    id: ID,
+    ambiente: "local, macOS, Node 24",
+    referencia: `commit:${SHA}`,
+  });
+  await paso(contexto, "cerrar_qa", {
+    id: ID,
+    resultado: "approved",
+    confirmacion_po: "Conforme",
+  });
+  await paso(contexto, "mover_ticket", { id: ID, to: "qa_approved" });
+  await paso(contexto, "preparar_cierre", {
+    id: ID,
+    resumen_tecnico: "El lookup pasó de exacto a parcial.",
+    resumen_funcional: "El cajero encuentra la orden escribiendo parte del número.",
+    qa: "approved",
+    impacto_release: "Queda unreleased hasta el próximo despliegue.",
+  });
+  await paso(contexto, "mover_ticket", { id: ID, to: "closed" });
+  return ruta;
+}
+
 describe("el ciclo entero del ticket", () => {
-  const SHA = "a".repeat(40);
-
-  /**
-   * Un evaluador falso que aprueba, con el vocabulario de cada compuerta.
-   *
-   * Las dos usan una proposición `clasificacion`, pero no comparten las
-   * opciones: la de análisis aprueba con `completa` y la de plan con `completo`.
-   * Un evaluador que contestara lo mismo en las dos haría fallar la segunda, y el
-   * fallo se leería como si el ciclo estuviera roto.
-   */
-  function evaluadorQueApruebaCon(eleccion: string): NonNullable<ToolContext["jev"]> {
-    return async (options: { propositions?: readonly { id: string }[] }) => ({
-      answers: (options.propositions ?? []).map((proposition) =>
-        proposition.id === "clasificacion"
-          ? {
-              id: proposition.id,
-              kind: "choice" as const,
-              choice: eleccion,
-              rationale: "falso",
-            }
-          : { id: proposition.id, kind: "noul" as const, value: 0.95, rationale: "falso" },
-      ),
-      model: {
-        provider: "falso",
-        model: "para-pruebas",
-        resolvedVersion: "falso/para-pruebas@0",
-      },
-      usage: { inputTokens: 0, outputTokens: 0, costUsd: 0 },
-      latencyMs: 1,
-    });
-  }
-
-  /** El paso, con el nombre y el mensaje del motor si falla. */
-  async function paso(
-    ctx: ToolContext,
-    nombre: string,
-    args: Record<string, unknown>,
-  ): Promise<void> {
-    const resultado = await callTool(ctx, nombre, args);
-    expect(resultado.isError, `${nombre}: ${resultado.text}`).toBe(false);
-  }
-
-  /**
-   * Escribe una sección del ticket.
-   *
-   * Es lo que hace el agente con su editor: las secciones son prosa, y una
-   * herramienta que las escribiera sería una herramienta que redacta el
-   * diagnóstico en vez de una que obliga a investigarlo.
-   */
-  function escribir(ruta: string, seccion: string, contenido: string): void {
-    const texto = readFileSync(ruta, "utf8");
-    const patron = new RegExp(`(## ${seccion}\\n\\n)[\\s\\S]*?(?=\\n## )`);
-    if (!patron.test(texto)) throw new Error(`El ticket no tiene la sección ${seccion}.`);
-    writeFileSync(ruta, texto.replace(patron, `$1${contenido}\n`), "utf8");
-  }
-
-  /** Lo mínimo que un ticket necesita para poder aprobarse. */
-  function escribirContenido(ruta: string): void {
-    escribir(
-      ruta,
-      "Diagnóstico",
-      [
-        "- Archivos y flujo investigados: `BackEnd/pos/filters.py` define `OrderFilter.number` con `lookup_expr='exact'`; el ViewSet de órdenes lo aplica al listado.",
-        "- Causa raíz o hipótesis: el lookup es exacto cuando la pantalla documenta búsqueda parcial, así que el backend descarta las coincidencias parciales.",
-        "- Riesgos y compatibilidad: ampliar el conjunto de resultados. Un cliente que consulte el número exacto sigue recibiendo su resultado.",
-        "- Impactos de sync, migración, Docker o despliegue: ninguno.",
-      ].join("\n"),
-    );
-    escribir(
-      ruta,
-      "Plan",
-      [
-        "- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).",
-        "- Pasos ordenados:",
-        "  1. Cambiar en `BackEnd/pos/filters.py` el `lookup_expr` de `number` de `exact` a `icontains`.",
-        "  2. Añadir en `BackEnd/pos/tests/test_filters.py` una prueba de búsqueda parcial.",
-        "- Rollback: revertir el cambio de una línea y retirar la prueba añadida.",
-      ].join("\n"),
-    );
-    escribir(
-      ruta,
-      "Criterios de aceptación",
-      '- [ ] Buscar "104" devuelve la orden "1042".\n- [ ] Buscar "999" no devuelve resultados.',
-    );
-  }
-
-  /** El ticket implementado y con el resultado del PO registrado: listo para QA. */
-  async function hastaInQa(): Promise<string> {
-    const ruta = await crear();
-    escribirContenido(ruta);
-    await paso(contexto, "validar_ticket", { id: ID });
-    await paso(contexto, "mover_ticket", { id: ID, to: "analyzed" });
-    await paso(contexto, "mover_ticket", { id: ID, to: "planned" });
-    await paso(contexto, "mover_ticket", { id: ID, to: "approved" });
-    await paso(contexto, "mover_ticket", { id: ID, to: "in_progress" });
-    escribir(ruta, "Pruebas", "- Resultado del PO: probado en la sucursal y conforme.");
-    await paso(contexto, "mover_ticket", { id: ID, to: "awaiting_user_tests" });
-    await paso(contexto, "mover_ticket", { id: ID, to: "in_qa" });
-    return ruta;
-  }
-
-  /** El ticket cerrado con QA aprobada, que es el estado del que se reabre. */
-  async function hastaCerrado(): Promise<string> {
-    const ruta = await hastaInQa();
-    await paso(contexto, "iniciar_qa", {
-      id: ID,
-      ambiente: "local, macOS, Node 24",
-      referencia: `commit:${SHA}`,
-    });
-    await paso(contexto, "cerrar_qa", {
-      id: ID,
-      resultado: "approved",
-      confirmacion_po: "Conforme",
-    });
-    await paso(contexto, "mover_ticket", { id: ID, to: "qa_approved" });
-    await paso(contexto, "preparar_cierre", {
-      id: ID,
-      resumen_tecnico: "El lookup pasó de exacto a parcial.",
-      resumen_funcional: "El cajero encuentra la orden escribiendo parte del número.",
-      qa: "approved",
-      impacto_release: "Queda unreleased hasta el próximo despliegue.",
-    });
-    await paso(contexto, "mover_ticket", { id: ID, to: "closed" });
-    return ruta;
-  }
-
   it("llega de `intake` a `closed` sin pasar por la terminal", async () => {
     const ruta = await crear();
     escribirContenido(ruta);
@@ -1175,5 +1177,73 @@ describe("el ciclo entero del ticket", () => {
       motivo: "El caso que describía ya no se reproduce con los datos actuales.",
     });
     expect(conMotivo.isError).toBe(false);
+  });
+});
+
+// ── Los archivos del punto ──────────────────────────────────────────────────
+
+describe("los archivos que declara un punto", () => {
+  /** Un laboratorio versionado: el hash de `worktree` exige que git los conozca. */
+  function versionar(): void {
+    for (const args of [
+      ["init", "-q", "."],
+      ["config", "user.email", "prueba@valmen.local"],
+      ["config", "user.name", "Prueba"],
+    ]) {
+      spawnSync("git", args, { cwd: lab, stdio: "ignore" });
+    }
+  }
+
+  function archivo(relativa: string, contenido: string): void {
+    mkdirSync(join(lab, relativa, ".."), { recursive: true });
+    writeFileSync(join(lab, relativa), contenido, "utf8");
+  }
+
+  it("los guarda en el punto, y con ellos la referencia sin commitear se calcula", async () => {
+    versionar();
+    archivo("BackEnd/pos/filters.py", "lookup_expr = 'icontains'\n");
+    spawnSync("git", ["add", "."], { cwd: lab, stdio: "ignore" });
+
+    // El punto se anota con el ticket ya en `in_qa`, que es cuando el hash se
+    // pide: lo que entra en él es lo que los puntos declaren en ese momento.
+    const ruta = await hastaInQa();
+    await paso(contexto, "anotar_punto", {
+      id: ID,
+      title: "El listado ignora las sucursales inactivas",
+      severity: "high",
+      actual: "Con el filtro `999` devuelve una lista vacía.",
+      expected: "Debe devolver la orden 1042.",
+      archivos: ["BackEnd/pos/filters.py"],
+    });
+
+    const ticket = parseTicket(readFileSync(ruta, "utf8"));
+    const puntos = ticket.blocks.Puntos as readonly Record<string, unknown>[];
+    expect(puntos[0]?.["affected_files"]).toEqual(["BackEnd/pos/filters.py"]);
+
+    // El hash describe el contenido de esos archivos, así que existe aunque el
+    // trabajo no sea todavía un commit — que es para lo que estaba.
+    await paso(contexto, "iniciar_qa", {
+      id: ID,
+      ambiente: "local, macOS, Node 24",
+      referencia: "worktree",
+    });
+    const conQa = parseTicket(readFileSync(ruta, "utf8"));
+    const ciclos = conQa.blocks.QA as readonly Record<string, unknown>[];
+    expect(ciclos[0]?.["build_reference"]).toMatch(/^worktree:sha256:[0-9a-f]{64}$/);
+  });
+
+  it("rechaza una ruta que el contrato no admite, con el motivo", async () => {
+    await crear();
+    const resultado = await callTool(contexto, "anotar_punto", {
+      id: ID,
+      title: "Un hallazgo",
+      severity: "low",
+      actual: "Pasa esto.",
+      expected: "Debería pasar lo otro.",
+      archivos: ["/etc/passwd"],
+    });
+
+    expect(resultado.isError).toBe(true);
+    expect(resultado.text).toContain("no canónica");
   });
 });

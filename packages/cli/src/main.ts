@@ -95,6 +95,7 @@ Comandos:
                             production y que cada ticket esté cerrado.
   add-point --id <ID> --title <t> --severity <s> --actual <a> --expected <e>
                             Anexa el siguiente POINT-NNN, en estado abierto.
+      --files <a,b>         Archivos que el punto toca, relativos a la raíz.
   qa-start --id <ID> --environment <e> --build-reference <ref>
                             Abre un ciclo QA. Exige el ticket en in_qa.
   qa-close --id <ID> --result <r>
@@ -507,7 +508,10 @@ export function runAppend(
         });
         break;
 
-      case "add-point":
+      case "add-point": {
+        // Los archivos van separados por comas y son opcionales, pero no
+        // decorativos: son los que entran en el hash de `worktree`.
+        const archivos = flag(flags, "files");
         salida = addPoint({
           paths,
           ticketId: identificador(),
@@ -515,8 +519,16 @@ export function runAppend(
           severity: obligatoria("severity"),
           actual: obligatoria("actual"),
           expected: obligatoria("expected"),
+          affectedFiles:
+            archivos === undefined
+              ? []
+              : archivos
+                  .split(",")
+                  .map((ruta) => ruta.trim())
+                  .filter((ruta) => ruta !== ""),
         });
         break;
+      }
 
       case "qa-start":
         salida = qaStart({

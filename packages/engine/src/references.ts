@@ -60,6 +60,44 @@ function isTracked(root: string, relativePath: string): boolean {
  * trabajo, no el registro. Incluir el historial de tickets tendría el mismo
  * problema un nivel más arriba.
  */
+/**
+ * Valida una ruta funcional declarada y devuelve su forma canónica.
+ *
+ * Está extraída porque la regla tiene dos puertas: el hash la comprueba al
+ * calcularse y el alta de un punto la comprueba al declararse. Dos copias de la
+ * misma regla se separan, y la que se separa es siempre la que deja pasar algo.
+ */
+export function validateFunctionalFile(
+  crudo: unknown,
+  ticketPath: string,
+  root: string,
+): string {
+  if (typeof crudo !== "string") {
+    fail("affected_files solo admite rutas relativas.", EXIT_REFERENCE);
+  }
+  const partes = crudo.split("/");
+  if (
+    isAbsolute(crudo) ||
+    crudo === "" ||
+    partes.includes("..") ||
+    partes.includes(".") ||
+    partes.includes(".git") ||
+    crudo.includes("\\")
+  ) {
+    fail("affected_files contiene una ruta no canónica.", EXIT_REFERENCE);
+  }
+  if (join(root, ...partes) === ticketPath) {
+    fail(
+      "affected_files no puede incluir ticket.md; el hash solo cubre archivos funcionales.",
+      EXIT_REFERENCE,
+    );
+  }
+  if (partes[0] === "docs" && partes[1] === "tickets") {
+    fail("affected_files no puede incluir el historial de tickets.", EXIT_REFERENCE);
+  }
+  return partes.join("/");
+}
+
 export function declaredFunctionalFiles(
   document: ParsedTicket,
   ticketPath: string,
@@ -73,30 +111,7 @@ export function declaredFunctionalFiles(
       fail("affected_files solo admite rutas relativas.", EXIT_REFERENCE);
     }
     for (const crudo of archivos) {
-      if (typeof crudo !== "string") {
-        fail("affected_files solo admite rutas relativas.", EXIT_REFERENCE);
-      }
-      const partes = crudo.split("/");
-      if (
-        isAbsolute(crudo) ||
-        crudo === "" ||
-        partes.includes("..") ||
-        partes.includes(".") ||
-        partes.includes(".git") ||
-        crudo.includes("\\")
-      ) {
-        fail("affected_files contiene una ruta no canónica.", EXIT_REFERENCE);
-      }
-      if (join(root, ...partes) === ticketPath) {
-        fail(
-          "affected_files no puede incluir ticket.md; el hash solo cubre archivos funcionales.",
-          EXIT_REFERENCE,
-        );
-      }
-      if (partes[0] === "docs" && partes[1] === "tickets") {
-        fail("affected_files no puede incluir el historial de tickets.", EXIT_REFERENCE);
-      }
-      declarados.add(partes.join("/"));
+      declarados.add(validateFunctionalFile(crudo, ticketPath, root));
     }
   }
 

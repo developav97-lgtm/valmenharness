@@ -74,7 +74,7 @@ mismas funciones que el CLI, y las de escritura al mismo motor.
 | `listar_tickets`    | Filtra por estado, tipo, módulo, texto, puntos, impacto y fechas  |
 | `validar_ticket`    | Contrato del ticket; sin `id`, todo el registro                   |
 | `mover_ticket`      | Aplica la tabla de estados, y reabre un cerrado con su motivo     |
-| `anotar_punto`      | Un hallazgo, con `actual` y `expected` separados                  |
+| `anotar_punto`      | Un hallazgo, con `actual` y `expected` separados, y sus archivos   |
 | `mover_punto`       | El ciclo del punto: analizado, en curso, por retestar, verificado |
 | `anotar_evidencia`  | La prueba de algo hecho, enlazada a su punto                      |
 | `reanudar_ticket`   | Contexto para retomar trabajo empezado                            |

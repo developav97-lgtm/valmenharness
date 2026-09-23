@@ -37,7 +37,7 @@ import {
 
 import { type RegistryPaths, findTicket } from "./discovery.js";
 import { finalizeMutation, readAndValidate } from "./mutate.js";
-import { resolveReference } from "./references.js";
+import { resolveReference, validateFunctionalFile } from "./references.js";
 
 /** El estado de un ticket, tal como lo ve un comando de anexado. */
 interface Contexto {
@@ -125,6 +125,14 @@ export interface AddPointRequest {
   readonly severity: string;
   readonly actual: string;
   readonly expected: string;
+  /**
+   * Los archivos que este punto toca, relativos a la raíz del proyecto.
+   *
+   * No son decorativos: son los que entran en el hash de `worktree`, y por eso
+   * sin ellos una referencia sin commitear no se puede calcular. Se declaran al
+   * anotar el hallazgo porque es cuando se sabe dónde está.
+   */
+  readonly affectedFiles?: readonly string[] | undefined;
   readonly now?: (() => Date) | undefined;
 }
 
@@ -149,6 +157,17 @@ export function addPoint(request: AddPointRequest): string {
 
     // El orden de las claves es el del contrato: `id` primero, y los cuatro
     // campos que el comando no puede llenar, vacíos explícitos.
+    // Las rutas se validan aquí y no en el borde: la regla es del contrato, y un
+    // archivo mal declarado no rompe el alta —rompe el hash de `worktree`, mucho
+    // después y en otro comando—.
+    const afectados = [
+      ...new Set(
+        (request.affectedFiles ?? []).map((crudo) =>
+          validateFunctionalFile(crudo, contexto.ticketPath, contexto.paths.root),
+        ),
+      ),
+    ];
+
     puntos.push({
       id: pointId,
       title,
@@ -157,7 +176,7 @@ export function addPoint(request: AddPointRequest): string {
       actual,
       expected,
       evidence: [],
-      affected_files: [],
+      affected_files: afectados,
       diagnosis: null,
       solution: null,
       tests: [],

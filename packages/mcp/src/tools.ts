@@ -398,6 +398,16 @@ export const TOOLS: readonly ToolDefinition[] = [
             "y la línea. Un hallazgo sin el dato concreto no se puede reproducir.",
         },
         expected: { type: "string", description: "Lo que debía pasar." },
+        archivos: {
+          type: "array",
+          items: { type: "string" },
+          description:
+            "Los archivos que este hallazgo toca, relativos a la raíz del proyecto " +
+            "(`BackEnd/pos/filters.py`). No son decorativos: son los que entran en el " +
+            "hash de `worktree` que la referencia de QA puede usar, así que sin ellos " +
+            "una prueba sobre trabajo sin commitear no se puede referenciar. Se " +
+            "declaran al anotar porque es cuando se sabe dónde está.",
+        },
       },
       required: ["id", "title", "severity", "actual", "expected"],
     }),
@@ -581,9 +591,10 @@ export const TOOLS: readonly ToolDefinition[] = [
           description:
             "Qué se prueba, con la forma que exige el contrato: `commit:<sha40>`, o " +
             "`worktree:sha256:<sha256>`, o la palabra `worktree` para que la calcule el " +
-            "motor sobre los archivos que declaren los puntos. Esa última exige que " +
-            "alguno los declare —si ninguno lo hace, falla y hay que usar un commit—, " +
-            "así que lo normal es probar lo ya commiteado.",
+            "motor sobre los archivos que declaren los puntos. Esa última es la " +
+            "referencia del trabajo que todavía no es un commit, y exige dos cosas: que " +
+            "algún punto declare `archivos`, y que git los conozca. Con el trabajo ya " +
+            "commiteado, el commit es más directo.",
         },
       },
       required: ["id", "ambiente", "referencia"],
@@ -979,6 +990,7 @@ export async function callTool(
       }
 
       case "anotar_punto": {
+        const crudos = args["archivos"];
         const salida = addPoint({
           paths,
           ticketId: texto(args, "id") as string,
@@ -986,6 +998,9 @@ export async function callTool(
           severity: texto(args, "severity") as string,
           actual: texto(args, "actual") as string,
           expected: texto(args, "expected") as string,
+          affectedFiles: Array.isArray(crudos)
+            ? crudos.filter((ruta): ruta is string => typeof ruta === "string")
+            : [],
           now: contexto.now,
         });
         return bien(
