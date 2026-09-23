@@ -237,7 +237,16 @@ $ valmen gate run qa-mechanical --subject FEATURE-INVENTARIO-API-20260921
 criterios que sí se pueden automatizar se automatizan; los que no, se marcan explícitamente
 como manuales en vez de quedar ambiguos.
 
-**Esfuerzo:** 2 semanas. Es el salto al Nivel 3 de capacidad.
+**Estado: hecho.** Los criterios se anotan con `<!-- test: … -->` o `<!-- verify: manual -->`,
+el gate `qa-mechanical` corre lo declarado —sin gastar una llamada— y la entrega no avanza sin
+su recibo. El comando se compara contra los prefijos que el proyecto autoriza en
+`test-commands`, y un criterio sin anotación detiene el gate. Ver `docs/03-GATES.md` §5.1sexies.
+
+Lo que queda del impulso original es la **generación** de tests a partir del criterio: hoy el
+test lo escribe alguien y el criterio lo referencia; escribir el esqueleto del test desde el
+criterio es otro trabajo, y más riesgoso.
+
+**Esfuerzo original:** 2 semanas.
 
 ---
 

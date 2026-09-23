@@ -15,21 +15,30 @@
  * ticket**: entrega el recibo y deja la decisión pendiente. Un gate no cambia
  * estados por su cuenta.
  */
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import {
   EXIT_INVARIANT,
+  type YamlMap,
+  type YamlValue,
+  parseYamlSubset,
   TicketError,
   declaredImpactIds,
   parseTicket,
   toFailure,
 } from "@valmen/core";
 import {
+  type CommandCheckSpec,
+  type CriterionSpec,
   type GateDecision,
   type GatePolicy,
   type MechanicalCheck,
   type PropositionAnswer,
   buildReceipt,
+  commandChecksFor,
   decide,
-  extractCriteria,
+  extractCriteriaSpecs,
   gateById,
   gateFor,
   summarizeReceipt,
@@ -92,6 +101,86 @@ export interface GateRunOptions {
 }
 
 /** Ejecuta un gate y devuelve el recibo con el informe. */
+/**
+ * Los prefijos de comando que el proyecto autoriza a correr como verificación.
+ *
+ * Vive en `.valmen/config.yaml` y no en el ticket, y esa es la decisión que hace
+ * segura la función: **el comando sale del ticket, y el ticket lo escribe quien el
+ * gate tiene que controlar**. Sin una lista de prefijos, escribir un criterio
+ * sería escribir una orden arbitraria que el gate ejecuta después, y un agente
+ * podría ampliar su propia autoridad a través del artefacto que se le pide
+ * evaluar. Con la lista, lo máximo que consigue es apuntar a un test que falla.
+ */
+export function testCommands(root: string): string[] {
+  let texto: string;
+  try {
+    texto = readFileSync(join(root, ".valmen", "config.yaml"), "utf8");
+  } catch {
+    return [];
+  }
+
+  let documento: YamlValue;
+  try {
+    documento = parseYamlSubset(texto, { fileName: ".valmen/config.yaml" });
+  } catch {
+    // Un `config.yaml` que no parsea no es un fallo de este gate: `valmen sync`
+    // lo reporta donde corresponde. Acá, sin lista, no se corre nada.
+    return [];
+  }
+
+  if (typeof documento !== "object" || Array.isArray(documento)) return [];
+  const lista = (documento as YamlMap)["test-commands"];
+  if (!Array.isArray(lista)) return [];
+  return lista.filter((entrada): entrada is string => typeof entrada === "string");
+}
+
+/**
+ * Comprueba que cada criterio diga cómo se verifica.
+ *
+ * Devuelve el mensaje del problema, o `null` si se puede correr. Se hace acá y no
+ * como check mecánico general porque el requisito es de **este** gate: los
+ * criterios de un ticket en `analyzed` no tienen por qué declarar todavía cómo se
+ * prueban, y exigírselo ahí frenaría el trabajo por algo que corresponde más
+ * adelante.
+ */
+function revisarCriteriosVerificables(
+  criteria: readonly CriterionSpec[],
+  root: string,
+): string | null {
+  const sinDeclarar = criteria.filter(
+    (criterio) => criterio.command === null && !criterio.manual,
+  );
+  if (sinDeclarar.length > 0) {
+    return (
+      `${sinDeclarar.length} criterio(s) no declaran cómo se verifican:\n` +
+      sinDeclarar.map((criterio) => `  · ${criterio.text}`).join("\n") +
+      "\nAgregue debajo de cada uno `<!-- test: <comando> -->` o " +
+      "`<!-- verify: manual -->`. Un criterio sin ninguna de las dos cosas deja la " +
+      "verificación a la interpretación de quien lo lea, y se resuelve a favor de " +
+      "«seguramente está bien».\n"
+    );
+  }
+
+  // Todos manuales: no hay nada que correr. **No es un fallo** —una pantalla que
+  // hay que mirar no se automatiza— y el gate lo dice con un `review` en vez de
+  // aprobar por vacuidad, que es lo que haría un gate sin proposiciones.
+  const conTest = criteria.filter((criterio) => criterio.command !== null);
+  if (conTest.length === 0) return null;
+
+  if (testCommands(root).length === 0) {
+    return (
+      "El proyecto no declara qué comandos puede correr como verificación.\n" +
+      "Agregue a `.valmen/config.yaml`:\n\n" +
+      "  test-commands:\n" +
+      "    - npx vitest run\n\n" +
+      "Sin esa lista no se ejecuta nada desde un ticket, y es a propósito: el comando " +
+      "sale del ticket, y el ticket lo escribe quien el gate controla.\n"
+    );
+  }
+
+  return null;
+}
+
 export async function runGate(
   paths: RegistryPaths,
   options: GateRunOptions,
@@ -150,11 +239,50 @@ export async function runGate(
     return { stdout: "", stderr: failure.message, exitCode: failure.exitCode };
   }
 
+  // El gate mecánico no le pregunta nada a nadie: corre lo que los criterios
+  // declaran. Antes de correr nada se comprueba que se pueda —cada criterio tiene
+  // que decir cómo se verifica, y el comando tiene que estar entre los que el
+  // proyecto autoriza—, porque un gate que corre lo que le escriben en el ticket
+  // sería un gate que obedece al artefacto que evalúa.
+  if (definition.commandPropositions === true) {
+    const problema = revisarCriteriosVerificables(
+      extractCriteriaSpecs(state["criterios"] ?? ""),
+      paths.root,
+    );
+    if (problema !== null) {
+      return { stdout: "", stderr: problema, exitCode: EXIT_INVARIANT };
+    }
+  }
+
   // El gate se expande con el sujeto: una proposición por criterio de aceptación
   // y una por impacto declarado, en vez de preguntas compuestas que el evaluador
   // no sabe responder. Medido: la compuesta acierta el 7%, las atómicas el 62%.
-  const criteria = extractCriteria(state["criterios"] ?? "");
+  const criteria = extractCriteriaSpecs(state["criterios"] ?? "");
   const gate = gateFor(definition, { criteria, impacts });
+
+  // Los comandos que responden las proposiciones del gate mecánico. Se arman
+  // después de la comprobación previa, así que acá ya se sabe que hay al menos uno
+  // y que todos están autorizados.
+  let comandos: readonly CommandCheckSpec[] = [];
+  if (definition.commandPropositions === true) {
+    const { checks: generados, refused } = commandChecksFor(
+      criteria,
+      testCommands(paths.root),
+    );
+    if (refused.length > 0) {
+      return {
+        stdout: "",
+        stderr:
+          `El proyecto no autoriza ${refused.length === 1 ? "este comando" : "estos comandos"}:\n` +
+          refused.map((linea) => `  ${linea}`).join("\n") +
+          "\nAgregue el prefijo a `test-commands` en `.valmen/config.yaml`, o cambie el " +
+          "criterio. Un comando que el proyecto no declaró no se ejecuta desde un ticket: " +
+          "el ticket lo escribe quien el gate controla.\n",
+        exitCode: EXIT_INVARIANT,
+      };
+    }
+    comandos = generados;
+  }
 
   // Un check mecánico fallido bloquea sin gastar una llamada al modelo.
   const fallidos = checks.filter((check) => check.result === "fail");
@@ -168,49 +296,83 @@ export async function runGate(
     };
   }
 
-  // El evaluador se elige por capacidades: si todas las proposiciones tienen un
-  // comando, se resuelve sin llamar a ningún modelo.
-  let evaluation;
-  try {
-    evaluation = await evaluateGate({
-      gate,
-      state,
-      root: paths.root,
-      ...(options.checks === undefined ? {} : { checks: options.checks }),
-      ...(options.evaluator === undefined ? {} : { evaluator: options.evaluator }),
-      ...(options.jev === undefined ? {} : { jev: options.jev }),
-      ...(options.judge === undefined ? {} : { judge: options.judge }),
-      ...(options.model === undefined ? {} : { model: options.model }),
-      ...(options.provider === undefined ? {} : { provider: options.provider }),
-      ...(options.apiKey === undefined ? {} : { apiKey: options.apiKey }),
-      ...(options.effort === undefined ? {} : { effort: options.effort }),
-      ...(options.judgeModel === undefined ? {} : { judgeModel: options.judgeModel }),
-      ...(options.semantic === undefined ? {} : { semantic: options.semantic }),
-      sessionId: `${options.ticketId}:${options.gateId}`,
-    });
-  } catch (caught) {
-    const failure = toFailure(caught);
-    return {
-      stdout: "",
-      stderr: `El evaluador no pudo completar la evaluación: ${failure.message}`,
-      exitCode: failure.exitCode,
-    };
-  }
+  // Un gate mecánico cuyos criterios se verifican todos a mano no tiene nada que
+  // correr. No se llama a nadie —preguntarle a un modelo por un gate sin
+  // proposiciones sería gastar una llamada para que conteste nada— y tampoco se
+  // aprueba: **un gate sin proposiciones que aprueba es el defecto que este
+  // proyecto ya pagó una vez**, cuando una sección de criterios vacía pasaba como
+  // «1 criterio(s)» y la compuerta aprobaba sin evaluar nada. El veredicto es
+  // `review`, que es la verdad: lo verifican las personas, en el estado siguiente.
+  const soloManual = definition.commandPropositions === true && comandos.length === 0;
 
-  // `decide` lanza si el evaluador no respondió alguna proposición o si una
-  // respuesta no cumple el contrato. Se captura aquí para devolver un error
-  // presentable: una excepción sin capturar en la capa de comando revienta el
-  // proceso y deja al usuario sin saber qué pasó.
   let decision: GateDecision;
-  try {
-    decision = decide(gate.propositions, evaluation.answers, gate.policy as GatePolicy);
-  } catch (caught) {
-    const failure = toFailure(caught);
-    return {
-      stdout: "",
-      stderr: `La evaluación no cumple el contrato del gate: ${failure.message}`,
-      exitCode: failure.exitCode,
+  let evaluation;
+
+  if (soloManual) {
+    evaluation = {
+      evaluator: "command" as const,
+      answers: [],
+      model: null,
+      usage: null,
+      latencyMs: 0,
     };
+    decision = {
+      outcome: "review",
+      reason:
+        `los ${criteria.length} criterio(s) se verifican a mano: ` +
+        "los prueba el responsable en el estado siguiente",
+      actor: "engine",
+      propositions: [],
+      blocking: [],
+      inBand: [],
+    };
+  } else {
+    // El evaluador se elige por capacidades: si todas las proposiciones tienen un
+    // comando, se resuelve sin llamar a ningún modelo.
+    try {
+      evaluation = await evaluateGate({
+        gate,
+        state,
+        root: paths.root,
+        ...(options.checks !== undefined
+          ? { checks: options.checks }
+          : comandos.length === 0
+            ? {}
+            : { checks: comandos }),
+        ...(options.evaluator === undefined ? {} : { evaluator: options.evaluator }),
+        ...(options.jev === undefined ? {} : { jev: options.jev }),
+        ...(options.judge === undefined ? {} : { judge: options.judge }),
+        ...(options.model === undefined ? {} : { model: options.model }),
+        ...(options.provider === undefined ? {} : { provider: options.provider }),
+        ...(options.apiKey === undefined ? {} : { apiKey: options.apiKey }),
+        ...(options.effort === undefined ? {} : { effort: options.effort }),
+        ...(options.judgeModel === undefined ? {} : { judgeModel: options.judgeModel }),
+        ...(options.semantic === undefined ? {} : { semantic: options.semantic }),
+        sessionId: `${options.ticketId}:${options.gateId}`,
+      });
+    } catch (caught) {
+      const failure = toFailure(caught);
+      return {
+        stdout: "",
+        stderr: `El evaluador no pudo completar la evaluación: ${failure.message}`,
+        exitCode: failure.exitCode,
+      };
+    }
+
+    // `decide` lanza si el evaluador no respondió alguna proposición o si una
+    // respuesta no cumple el contrato. Se captura aquí para devolver un error
+    // presentable: una excepción sin capturar en la capa de comando revienta el
+    // proceso y deja al usuario sin saber qué pasó.
+    try {
+      decision = decide(gate.propositions, evaluation.answers, gate.policy as GatePolicy);
+    } catch (caught) {
+      const failure = toFailure(caught);
+      return {
+        stdout: "",
+        stderr: `La evaluación no cumple el contrato del gate: ${failure.message}`,
+        exitCode: failure.exitCode,
+      };
+    }
   }
 
   const receipt = buildReceipt({
@@ -277,8 +439,13 @@ export async function runGate(
           ? "✓"
           : "✗";
     const peso = item.kind === "noul" && item.weight !== 1 ? `  (peso ${item.weight})` : "";
+    // La descripción va al final y **además** del identificador, no en su lugar:
+    // el recibo tiene que poder leerse sin el ticket delante —`criterio_03=0.00` no
+    // dice nada, y «Buscar "999" no devuelve resultados» sí—, y el identificador es
+    // lo que se cita después, en una conversación o en otro recibo.
+    const descripcion = item.description === undefined ? "" : `  ${item.description}`;
     lines.push(
-      `    ${marca}  ${item.label.padEnd(38)} ${item.verdict ? "" : "descriptiva"}${peso}`.trimEnd(),
+      `    ${marca}  ${item.label.padEnd(38)} ${item.verdict ? "" : "descriptiva"}${peso}${descripcion}`.trimEnd(),
     );
   }
 

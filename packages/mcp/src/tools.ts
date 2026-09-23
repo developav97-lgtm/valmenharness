@@ -539,7 +539,7 @@ export const TOOLS: readonly ToolDefinition[] = [
           description:
             "Compuerta a evaluar. `analysis` valida el diagnóstico y protege " +
             "`analyzed → planned`; `plan` valida el plan y protege `planned → approved`.",
-          enum: ["analysis", "plan"],
+          enum: ["analysis", "plan", "qa-mechanical"],
         },
         id: { type: "string", description: "Identificador del ticket." },
         evaluator: {
@@ -580,7 +580,7 @@ export const TOOLS: readonly ToolDefinition[] = [
       "concreto. Cuesta una llamada por ticket evaluado.",
     inputSchema: conRoot({
       properties: {
-        gate: { type: "string", enum: ["analysis", "plan"] },
+        gate: { type: "string", enum: ["analysis", "plan", "qa-mechanical"] },
         limit: {
           type: "number",
           description: "Evalúa solo los primeros n tickets. Sin él, todos.",
@@ -712,7 +712,7 @@ export const TOOLS: readonly ToolDefinition[] = [
       properties: {
         gate: {
           type: "string",
-          enum: ["analysis", "plan"],
+          enum: ["analysis", "plan", "qa-mechanical"],
           description: "Compuerta a medir.",
         },
         limite: {

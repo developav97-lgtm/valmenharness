@@ -28,7 +28,7 @@ import {
   type GateReceipt,
   type MechanicalCheck,
   GATES,
-  extractCriteria,
+  extractCriteriaSpecs,
   gateFor,
   hashState,
   weightedMean,
@@ -231,7 +231,7 @@ export function listGateCards(paths: RegistryPaths, ticketId: string): GateCard[
     const parsed = parseTicket(ticket.text);
     workflow = parsed.fields.workflow_status;
     checks = runMechanicalChecks(ticket.text);
-    const criteria = extractCriteria(parsed.sections["Criterios de aceptación"]);
+    const criteria = extractCriteriaSpecs(parsed.sections["Criterios de aceptación"]);
     propositionCounts = new Map(
       Object.values(GATES).map((definicion) => [
         definicion.id,

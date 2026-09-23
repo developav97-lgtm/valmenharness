@@ -627,6 +627,41 @@ Además, los impactos viajan en el **estado** que ve el evaluador, no solo en la
 modelo que responde por los criterios tiene que saber que ese cambio toca la base de datos, o
 contesta lo mismo que para un bugfix.
 
+### 5.1sexies Lo que ya está escrito no se pregunta
+
+El gate `qa-mechanical` es el único del harness que no le pregunta nada a nadie. Sus
+proposiciones son los criterios de aceptación que declaran su test, y las contesta el
+comando:
+
+```markdown
+- [ ] El endpoint rechaza cantidades negativas con HTTP 400
+      <!-- test: python BackEnd/manage.py test ModInventory -->
+- [ ] La pantalla muestra el saldo actualizado
+      <!-- verify: manual -->
+```
+
+Tres decisiones lo sostienen:
+
+1. **El comando sale del ticket, y solo corre si el proyecto lo autorizó.** Los prefijos
+   permitidos viven en `test-commands` (`.valmen/config.yaml`) y se comparan por palabra
+   completa. Sin esa lista, escribir un criterio sería escribir una orden arbitraria que el
+   gate ejecuta después, y el agente podría ampliar su propia autoridad a través del
+   artefacto que el gate tiene que controlar. Con la lista, lo máximo que consigue es
+   apuntar a un test que falla.
+2. **Un criterio que no declara cómo se verifica detiene el gate.** La ambigüedad se
+   resuelve sola a favor de «seguramente está bien», y por eso se exige la declaración: es
+   una línea, y `verify: manual` cuenta. Declarar manual no hace verificable un criterio:
+   lo hace **explícito**.
+3. **Todos manuales no aprueba: da revisión.** Un gate sin proposiciones que aprueba es el
+   defecto que este proyecto ya pagó una vez —una sección de criterios vacía pasaba como «1
+   criterio(s)» y la compuerta aprobaba sin evaluar nada—. Si no hay nada que correr, el
+   veredicto lo dice.
+
+**La entrega exige el recibo.** `in_progress → awaiting_user_tests` no avanza sin un recibo
+de este gate, y el recibo tiene que ser del **estado actual** del ticket: lleva el hash de lo
+que se congeló, así que si alguien toca el plan después de correr los tests, lo que se probó
+ya no es lo que se entrega y hay que volver a correrlo.
+
 ### 5.2 Calibración: la banda media es información
 
 Después de unas semanas de tráfico real:
@@ -781,7 +816,7 @@ Es el objeto que hace auditable todo el sistema. Se escribe **append-only** en
 | `analysis`        | `analyzed → planned`                | hybrid           | La investigación identifica archivos reales, causa raíz o hipótesis falsable, y declara los impactos de forma coherente con el frontmatter. |
 | `plan`            | `planned → approved`                | hybrid           | Cobertura de criterios, correspondencia con la investigación, pasos ejecutables, rollback, compatibilidad, y una proposición por cada impacto declarado. |
 | `pre-apply`       | `approved → in_progress`            | auto             | Existe plan aprobado si el tipo lo exige. Existe el ticket antes de la primera escritura.                          |
-| `qa-mechanical`   | `in_progress → awaiting_user_tests` | auto             | Los tests declarados corren y pasan. `git diff --check` limpio. Sin secretos en el diff.                           |
+| `qa-mechanical`   | `in_progress → awaiting_user_tests` | auto             | Los criterios que declaran su test corren y pasan. Cada criterio declara cómo se verifica, y la entrega exige el recibo. |
 | `qa`              | `in_qa → qa_approved`               | human            | QA funcional. Heredado de SaiOpenCloud: sin puntos abiertos.                                                       |
 | `review`          | tras `in_progress`                  | hybrid           | Revisión adversarial acotada. Un solo ciclo correctivo.                                                            |
 | `close`           | `qa_approved → closed`              | hybrid           | Cierre técnico + funcional + release_status + evidencia.                                                           |

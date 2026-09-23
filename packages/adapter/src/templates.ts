@@ -97,6 +97,25 @@ mecánico, automático o humano.
 verificables y el código decide. Cada decisión deja un recibo con la evidencia
 que vio el evaluador, sus respuestas y su coste.
 
+### Cómo se verifica un criterio
+
+Cada criterio de aceptación declara **cómo se verifica**, en un comentario debajo:
+
+\`\`\`markdown
+- [ ] El endpoint rechaza cantidades negativas con HTTP 400
+      <!-- test: python BackEnd/manage.py test ModInventory -->
+- [ ] La pantalla muestra el saldo actualizado
+      <!-- verify: manual -->
+\`\`\`
+
+El gate \`qa-mechanical\` corre los declarados antes de que el ticket pase a las
+pruebas del responsable, y la entrega no avanza sin ese recibo. Los comandos
+permitidos los declara el proyecto en \`test-commands\` (\`.valmen/config.yaml\`), y
+el prefijo se compara por palabra completa. Un criterio sin anotación detiene el
+gate: la ambigüedad se resuelve sola a favor de «seguramente está bien», y un
+criterio que solo verifica una persona se marca \`verify: manual\` —que es una
+declaración, no una omisión—.
+
 ### Acciones que nunca se automatizan
 
 | Acción | Por qué |

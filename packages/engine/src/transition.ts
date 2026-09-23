@@ -43,8 +43,12 @@ import {
   validateText,
 } from "@valmen/core";
 
+import { hashState } from "@valmen/gate";
+
 import { type RegistryPaths, findTicket } from "./discovery.js";
 import { finalizeMutation, readAndValidate } from "./mutate.js";
+import { readReceipts } from "./receipts.js";
+import { buildGateState } from "./state.js";
 
 /** Las entidades que se pueden mover. */
 export type Entity = "ticket" | "point" | "release";
@@ -151,6 +155,52 @@ function assertNoExtraFlags(request: TransitionRequest): void {
   }
 }
 
+/**
+ * La entrega exige que lo declarado se haya corrido.
+ *
+ * `in_progress → awaiting_user_tests` es el momento en que el trabajo pasa a
+ * manos de una persona, y hasta ahora pasaba con la palabra de quien lo hizo. Lo
+ * que se exige acá no es una opinión: es **el recibo** de haber corrido los
+ * criterios que declaran su test, sobre el estado actual del ticket.
+ *
+ * Las dos comprobaciones importan y por razones distintas. Que falte el recibo
+ * significa que nadie corrió nada; que el recibo sea viejo —su hash de estado no
+ * coincide con el ticket de ahora— significa que **lo que se probó no es lo que se
+ * entrega**, y ese es el caso que un recibo sin hash dejaría pasar en silencio.
+ */
+function exigirVerificacionMecanica(document: ParsedTicket, paths: RegistryPaths): void {
+  const recibos = readReceipts(paths, document.fields.id).filter(
+    (recibo) => recibo.gate === "qa-mechanical",
+  );
+  const ultimo = recibos[recibos.length - 1];
+
+  if (ultimo === undefined) {
+    fail(
+      "La entrega requiere correr la verificación mecánica de los criterios:\n" +
+        `  valmen gate qa-mechanical --id ${document.fields.id}\n` +
+        "Sin eso, los criterios que declaran un test no se ejecutaron, y quien prueba " +
+        "recibe trabajo que puede estar fallando.",
+      EXIT_INVARIANT,
+    );
+  }
+
+  if (ultimo.stateHash !== hashState(buildGateState(document.text))) {
+    fail(
+      "La verificación mecánica es anterior al último cambio del ticket: lo que se " +
+        "probó no es lo que se está entregando. Vuelva a correrla.",
+      EXIT_INVARIANT,
+    );
+  }
+
+  if (ultimo.outcome === "block") {
+    fail(
+      `La verificación mecánica bloqueó: ${ultimo.reason}. Corrija lo que falla y ` +
+        "vuelva a correrla.",
+      EXIT_INVARIANT,
+    );
+  }
+}
+
 // ── Ticket ──────────────────────────────────────────────────────────────────
 
 function applyTicket(
@@ -197,6 +247,10 @@ function applyTicket(
       EXIT_INVARIANT,
     );
   }
+  if (to === "awaiting_user_tests") {
+    exigirVerificacionMecanica(document, request.paths);
+  }
+
   if (to === "in_qa" && !hasRecordedUserTestOutcome(document)) {
     fail(
       "in_qa requiere resultado del PO u omisión explícita documentada en Pruebas.",

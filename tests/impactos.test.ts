@@ -262,7 +262,9 @@ describe("los impactos llegan al evaluador", () => {
     // La garantía de que esto no cambió lo que ya funcionaba: el identificador
     // del gate expandido por criterios es el mismo de antes.
     const expandido = gateFor(PLAN_GATE, {
-      criteria: ['Buscar "104" devuelve la orden "1042".'],
+      criteria: [
+        { text: 'Buscar "104" devuelve la orden "1042".', command: null, manual: true },
+      ],
       impacts: [],
     });
 
@@ -278,7 +280,9 @@ describe("los impactos llegan al evaluador", () => {
 
   it("los dos despliegues conviven y cada uno aporta lo suyo", () => {
     const expandido = gateFor(PLAN_GATE, {
-      criteria: ['Buscar "104" devuelve la orden "1042".'],
+      criteria: [
+        { text: 'Buscar "104" devuelve la orden "1042".', command: null, manual: true },
+      ],
       impacts: ["migration_impact"],
     });
 

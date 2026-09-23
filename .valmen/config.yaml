@@ -14,6 +14,16 @@ tickets-dir: tickets
 # defecto de un gate es humano, y automatizarlo es una decisión que se toma
 # con evidencia, no al adoptar.
 gates: []
+
+# Los comandos que el gate mecánico puede ejecutar como verificación.
+#
+# Los criterios de un ticket declaran su test (`<!-- test: … -->`), y el comando
+# sale del ticket —que lo escribe quien el gate tiene que controlar—, así que solo
+# se ejecuta lo que empiece con uno de estos prefijos. Sin la lista, un criterio
+# sería una orden arbitraria que el gate obedece.
+test-commands:
+  - npx vitest run
+  - node
 # Modelos que este proyecto quiere tener a mano en el selector, por proveedor.
 #
 # Van **primero** en el desplegable. Sirven para dos cosas: subir arriba los que

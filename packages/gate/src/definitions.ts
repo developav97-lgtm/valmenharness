@@ -279,9 +279,49 @@ export const ANALYSIS_GATE: GateDefinition = {
 };
 
 /** Todos los gates declarados, por identificador. */
+/**
+ * El gate mecánico: lo que ya está escrito no se pregunta.
+ *
+ * Protege el paso de «implementado» a «listo para que lo pruebe el PO», y su
+ * único trabajo es correr los criterios que declaran su test. Es el gate más
+ * barato del harness —no gasta una llamada— y el que evita el desperdicio más
+ * caro: que alguien se siente a probar algo que ya falla.
+ *
+ * Los criterios que declaran `verify: manual` no entran: los verifica una persona,
+ * y el estado al que este gate da paso es exactamente donde lo hace. Un criterio
+ * que no declara ninguna de las dos cosas detiene el gate antes de correr nada,
+ * porque la ambigüedad se resuelve sola a favor de «seguramente está bien».
+ */
+export const QA_MECHANICAL_GATE: GateDefinition = {
+  id: "qa-mechanical",
+  title: "Verificación mecánica antes de entregar",
+  transition: "in_progress → awaiting_user_tests",
+  mode: "auto",
+  criteriaPropositions: false,
+  // Sus proposiciones son los criterios con test, y las contesta el comando.
+  commandPropositions: true,
+  appliesTo: ["in_progress"],
+  policy: DEFAULT_POLICY,
+  mechanicalChecks: [
+    {
+      id: "criterios_presentes",
+      description: "El ticket tiene criterios de aceptación.",
+      result: "skip",
+    },
+    {
+      id: "sin_secretos",
+      description: "El ticket no expone credenciales.",
+      result: "skip",
+    },
+  ],
+  // Sin proposiciones fijas: todo lo que este gate decide sale de correr algo.
+  propositions: [],
+};
+
 export const GATES: Readonly<Record<string, GateDefinition>> = {
   analysis: ANALYSIS_GATE,
   plan: PLAN_GATE,
+  "qa-mechanical": QA_MECHANICAL_GATE,
 };
 
 /** Obtiene un gate por identificador. */

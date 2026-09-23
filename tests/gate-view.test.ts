@@ -424,7 +424,13 @@ describe("la API de gates", () => {
       gates: { id: string }[];
       decisions: unknown[];
     };
-    expect(cuerpo.gates.map((gate) => gate.id).sort()).toEqual(["analysis", "plan"]);
+    // El mecánico se sumó a los dos semánticos: protege la entrega, y sus
+    // proposiciones las contesta un comando en vez de un modelo.
+    expect(cuerpo.gates.map((gate) => gate.id).sort()).toEqual([
+      "analysis",
+      "plan",
+      "qa-mechanical",
+    ]);
     expect(cuerpo.decisions).toEqual([]);
   });
 

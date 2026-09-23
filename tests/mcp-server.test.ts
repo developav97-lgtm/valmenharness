@@ -56,6 +56,16 @@ let contexto: ToolContext;
 beforeEach(() => {
   lab = mkdtempSync(join(tmpdir(), "valmen-mcp-"));
   contexto = { paths: pathsFor(lab), credentialsFile: undefined };
+
+  // El proyecto declara qué comandos puede ejecutar como verificación: sin esa
+  // lista, el gate mecánico no corre nada —el comando sale del ticket, y el
+  // ticket lo escribe quien el gate controla—.
+  mkdirSync(join(lab, ".valmen"), { recursive: true });
+  writeFileSync(
+    join(lab, ".valmen", "config.yaml"),
+    "name: Laboratorio\ntest-commands:\n  - node\n",
+    "utf8",
+  );
 });
 
 afterEach(() => {
@@ -973,7 +983,10 @@ function escribirContenido(ruta: string): void {
   escribir(
     ruta,
     "Criterios de aceptación",
-    '- [ ] Buscar "104" devuelve la orden "1042".\n- [ ] Buscar "999" no devuelve resultados.',
+    '- [ ] Buscar "104" devuelve la orden "1042".\n' +
+      "      <!-- verify: manual -->\n" +
+      '- [ ] Buscar "999" no devuelve resultados.\n' +
+      "      <!-- verify: manual -->",
   );
 }
 
@@ -987,6 +1000,9 @@ async function hastaInQa(): Promise<string> {
   await paso(contexto, "mover_ticket", { id: ID, to: "approved" });
   await paso(contexto, "mover_ticket", { id: ID, to: "in_progress" });
   escribir(ruta, "Pruebas", "- Resultado del PO: probado en la sucursal y conforme.");
+  // La verificación mecánica es precondición de la entrega. Acá los criterios
+  // declaran verificación manual, así que el gate no corre nada y deja constancia.
+  await paso(contexto, "evaluar_compuerta", { gate: "qa-mechanical", id: ID });
   await paso(contexto, "mover_ticket", { id: ID, to: "awaiting_user_tests" });
   await paso(contexto, "mover_ticket", { id: ID, to: "in_qa" });
   return ruta;
@@ -1057,6 +1073,19 @@ describe("el ciclo entero del ticket", () => {
     for (const estado of ["analyzed", "in_progress", "awaiting_retest"]) {
       await paso(contexto, "mover_punto", { id: ID, punto: "POINT-001", to: estado });
     }
+
+    // La entrega exige la verificación mecánica, y acá uno de los criterios
+    // declara un test de verdad —uno que corre y pasa—, así que el camino que se
+    // recorre es el de los comandos y no el de los criterios manuales.
+    escribir(
+      ruta,
+      "Criterios de aceptación",
+      '- [ ] Buscar "104" devuelve la orden "1042".\n' +
+        '      <!-- test: node -e "process.exit(0)" -->\n' +
+        '- [ ] Buscar "999" no devuelve resultados.\n' +
+        "      <!-- verify: manual -->",
+    );
+    await paso(contexto, "evaluar_compuerta", { gate: "qa-mechanical", id: ID });
 
     escribir(
       ruta,

@@ -170,6 +170,16 @@ export interface GateDefinition {
    * evaluador, así que un plan que ignoraba la migración se aprobaba igual.
    */
   readonly impactPropositions?: boolean;
+  /**
+   * Si sus proposiciones son los criterios que declaran un `test:`, y las
+   * responde el comando en vez de un modelo.
+   *
+   * Es la bandera de los gates mecánicos: un criterio que ya tiene su test escrito
+   * no necesita que nadie opine sobre si pasa. El comando se comprueba además
+   * contra los prefijos que el proyecto autoriza, porque el comando sale del
+   * ticket y el ticket lo escribe quien el gate tiene que controlar.
+   */
+  readonly commandPropositions?: boolean;
   readonly policy: GatePolicy;
   readonly mechanicalChecks: readonly MechanicalCheck[];
   /**
@@ -180,15 +190,18 @@ export interface GateDefinition {
    * decidible en código se decide en código", y es lo que hace que un gate
    * mixto gaste una sola llamada con las proposiciones que sí necesitan juicio.
    */
-  readonly commandChecks?: readonly {
-    readonly propositionId: string;
-    readonly command: string;
-    readonly args?: readonly string[];
-    readonly cwd?: string;
-    readonly expectExitCode?: number;
-    readonly timeoutMs?: number;
-    readonly description: string;
-  }[];
+  readonly commandChecks?: readonly CommandCheckSpec[];
+}
+
+/** Un comando que responde una proposición sin preguntarle a ningún modelo. */
+export interface CommandCheckSpec {
+  readonly propositionId: string;
+  readonly command: string;
+  readonly args?: readonly string[];
+  readonly cwd?: string;
+  readonly expectExitCode?: number;
+  readonly timeoutMs?: number;
+  readonly description: string;
 }
 
 /** Efecto declarado de una respuesta. */

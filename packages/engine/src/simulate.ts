@@ -25,7 +25,7 @@ import {
   type GateDefinition,
   buildReceipt,
   decide,
-  extractCriteria,
+  extractCriteriaSpecs,
   gateFor,
   weightedMean,
 } from "@valmen/gate";
@@ -184,7 +184,7 @@ export async function simulateGate(
     // criterio. Simular el gate sin expandir mediría algo distinto de lo que
     // corre en producción.
     const expanded = gateFor(gate, {
-      criteria: extractCriteria(state["criterios"] ?? ""),
+      criteria: extractCriteriaSpecs(state["criterios"] ?? ""),
       impacts,
     });
 
