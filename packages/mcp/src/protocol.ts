@@ -33,6 +33,20 @@ export interface ToolDefinition {
   readonly title: string;
   readonly description: string;
   readonly inputSchema: Record<string, unknown>;
+  /**
+   * El esquema del contenido estructurado, cuando la herramienta lo devuelve.
+   *
+   * **No todas lo tienen, y eso es la decisión de diseño de este archivo.** El
+   * protocolo exige que una herramienta que declara `outputSchema` devuelva
+   * siempre `structuredContent` que lo cumpla, así que declararlo es prometer una
+   * forma estable. Aquí solo se promete donde la fuente **ya es un dato canónico
+   * en disco** —el recibo que el motor acaba de escribir, el frontmatter que el
+   * parser de `@valmen/core` ya lee— y nunca donde habría que inventar una
+   * segunda representación del texto que la herramienta ya devuelve. Dos
+   * representaciones del mismo hecho se desincronizan, y la que se desincroniza
+   * es siempre la que nadie mira.
+   */
+  readonly outputSchema?: Record<string, unknown>;
 }
 
 /** Lo que devuelve una herramienta. */
@@ -40,6 +54,15 @@ export interface ToolResult {
   readonly text: string;
   /** `true` si el comando falló. El agente lo lee y corrige. */
   readonly isError: boolean;
+  /**
+   * El mismo resultado, como dato.
+   *
+   * Va **además** del texto, nunca en su lugar: el texto es el informe del motor
+   * —que dice qué falta y con qué código de salida— y el dato es para que el
+   * agente ramifique sin tener que interpretar prosa. Cuando está, `tools/call` lo
+   * emite como `structuredContent`.
+   */
+  readonly data?: Record<string, unknown>;
 }
 
 /** El catálogo que un servidor concreto expone. */
@@ -123,6 +146,29 @@ export function serveStdio(catalogo: ToolCatalog): Promise<void> {
   });
 }
 
+/**
+ * Arma la respuesta de `tools/call` a partir del resultado de una herramienta.
+ *
+ * Está separada de `atender` para que se pueda probar: la alternativa era
+ * afirmar sobre `stdout`, que es el canal del protocolo y el sitio donde una
+ * prueba se vuelve frágil —basta un mensaje de aviso de Node para que deje de
+ * medir lo que dice medir.
+ */
+export function respuestaDeHerramienta(resultado: ToolResult): Record<string, unknown> {
+  const respuesta: Record<string, unknown> = {
+    content: [{ type: "text", text: resultado.text }],
+    // Un fallo de la herramienta es un **resultado**, no un error de protocolo:
+    // el agente tiene que poder leerlo para corregir. Un error JSON-RPC aquí
+    // dejaría al modelo sin el motivo.
+    isError: resultado.isError,
+  };
+  // `structuredContent` solo cuando la herramienta devolvió dato. Emitirlo vacío
+  // en las que no lo tienen sería prometer una forma que nadie llenó, y el
+  // cliente la validaría contra un `outputSchema` que no existe.
+  if (resultado.data !== undefined) respuesta["structuredContent"] = resultado.data;
+  return respuesta;
+}
+
 /** Atiende un método del protocolo. */
 async function atender(peticion: Peticion, catalogo: ToolCatalog): Promise<unknown> {
   switch (peticion.method) {
@@ -167,13 +213,7 @@ async function atender(peticion: Peticion, catalogo: ToolCatalog): Promise<unkno
           : {};
 
       const resultado = await catalogo.call(nombre, argumentos);
-      return {
-        content: [{ type: "text", text: resultado.text }],
-        // Un fallo de la herramienta es un **resultado**, no un error de protocolo:
-        // el agente tiene que poder leerlo para corregir. Un error JSON-RPC aquí
-        // dejaría al modelo sin el motivo.
-        isError: resultado.isError,
-      };
+      return respuestaDeHerramienta(resultado);
     }
 
     default:

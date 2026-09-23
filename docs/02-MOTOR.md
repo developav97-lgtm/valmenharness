@@ -553,6 +553,30 @@ a las funciones de `@valmen/cli`, y las de escritura al mismo motor. Si el agent
 ticket de una forma y el comando de otra, el registro dejaría de ser el mismo registro — que
 es justo lo que el harness existe para impedir.
 
+### Qué declara cada herramienta
+
+**`root` va en las ocho, y es opcional.** Es la salida para la sesión que trabaja sobre dos
+repositorios: gana sobre el directorio de trabajo con el que se lanzó el servidor. Que
+estuviera prometido aquí, leído en `main.ts` y **ausente de los ocho esquemas** fue un defecto
+durante toda la construcción del servidor: como todos declaran `additionalProperties: false`,
+un cliente que validara el esquema rechazaba el argumento antes de llamar, y desde dentro del
+agente eso se ve como «no puedo apuntar a otro proyecto». Ahora los esquemas se arman con una
+función que lo inyecta, así que una herramienta no puede quedar sin admitirlo por olvido.
+
+**El resultado es texto, y en dos casos además dato.** El texto es el informe del motor —dice
+qué falta y con qué código de salida, y parafrasearlo le quitaría al agente lo que necesita
+para corregir—. `ver_ticket` y `evaluar_compuerta` devuelven **además** `structuredContent`,
+para que el agente ramifique por estado o por veredicto sin interpretar prosa.
+
+El criterio de cuándo se declara `outputSchema` es una sola frase: **solo donde la fuente ya
+es un dato canónico en disco.** En `ver_ticket` es el frontmatter, leído con el mismo
+`parseTicket` de `@valmen/core` que usa el motor; en `evaluar_compuerta` es el recibo que el
+motor acaba de anexar a `.valmen/receipts/`. En ningún caso se construye una proyección nueva
+del texto: dos representaciones del mismo hecho se desincronizan, y la que se desincroniza es
+siempre la que nadie mira. Las otras seis devuelven solo texto, y el test afirma la lista
+exacta —`["ver_ticket", "evaluar_compuerta"]`— para que una herramienta nueva no lo decida por
+costumbre.
+
 ### Lo que **no** hay, y por qué
 
 **No hay herramienta para aprobar una compuerta.** El diseño original de
@@ -592,7 +616,15 @@ valmen-mcp --check
 # registro:    tickets
 # credenciales: /proyectos/tienda/.valmen/.credentials.yaml
 # herramientas: 8
+#   - crear_ticket(id, title, type, module, request): Crear un ticket
+#   - ver_ticket(id): Ver un ticket
+#   - listar_tickets(): Listar tickets activos
+#   …
 ```
+
+Cada herramienta va con **sus argumentos obligatorios** y no solo con su título: cuando el
+agente dice que no puede llamar a algo, la diferencia entre «no la ve» y «la ve y le falta un
+argumento» es la diferencia entre revisar la configuración del cliente y revisar la llamada.
 
 Y una regla que no se puede romper: **nada escribe en stdout salvo el protocolo**. Un
 `console.log` perdido o un aviso de Node rompen la sesión del agente de una forma que

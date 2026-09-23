@@ -35,7 +35,13 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { TOOLS, callTool } from "../packages/mcp/src/tools.js";
 import type { ToolContext } from "../packages/mcp/src/tools.js";
-import { credentialsFor, parseOptions, pathsFor } from "../packages/mcp/src/main.js";
+import {
+  credentialsFor,
+  describe as describirServidor,
+  parseOptions,
+  pathsFor,
+} from "../packages/mcp/src/main.js";
+import { respuestaDeHerramienta } from "../packages/mcp/src/protocol.js";
 
 const ID = "BUGFIX-POS-FILTRO-PARCIAL-20260922";
 
@@ -147,14 +153,48 @@ describe("el catálogo de herramientas", () => {
     }
   });
 
-  it("declara `root` opcional en todas, para que una sesión pueda apuntar a otro proyecto", () => {
+  it("declara `root` en los ocho esquemas, para que una sesión pueda apuntar a otro proyecto", () => {
+    // Este test se llamaba así desde antes y **no comprobaba esto**: miraba
+    // `additionalProperties` y pasaba en verde con el argumento sin declarar, que
+    // es justo lo que decía cubrir. El `root` se leía en `main.ts` y no estaba en
+    // ningún esquema, así que un cliente que validara rechazaba la llamada y el
+    // agente concluía que no podía trabajar sobre otro repositorio. Un test cuyo
+    // nombre afirma más de lo que hace es peor que no tenerlo.
     for (const tool of TOOLS) {
       const propiedades = tool.inputSchema["properties"] as
         Record<string, unknown> | undefined;
-      // Las que no llevan argumentos no lo declaran; el resto sí lo admiten.
-      if (Object.keys(propiedades ?? {}).length > 0) {
-        expect(tool.inputSchema["additionalProperties"]).toBe(false);
+      expect(propiedades, `${tool.name} no declara properties`).toBeDefined();
+      expect(
+        Object.prototype.hasOwnProperty.call(propiedades ?? {}, "root"),
+        `${tool.name} no declara root`,
+      ).toBe(true);
+    }
+  });
+
+  it("`root` es opcional en las ocho: volverlo obligatorio rompería a los clientes de hoy", () => {
+    for (const tool of TOOLS) {
+      const requeridos = tool.inputSchema["required"];
+      if (Array.isArray(requeridos)) {
+        expect(requeridos, `${tool.name} exige root`).not.toContain("root");
       }
+    }
+  });
+
+  it("solo declara `outputSchema` donde la fuente ya es un dato en disco", () => {
+    // El criterio, afirmado sobre el catálogo y no sobre la intención: devolver
+    // contenido estructurado obliga a prometer una forma estable, y solo se
+    // promete donde el dato **ya existe** —el frontmatter del ticket y el recibo
+    // de la compuerta—, nunca donde habría que inventar una segunda
+    // representación del texto que la herramienta ya devuelve.
+    const conEsquema = TOOLS.filter((t) => t.outputSchema !== undefined).map((t) => t.name);
+    expect(conEsquema).toEqual(["ver_ticket", "evaluar_compuerta"]);
+  });
+
+  it("los esquemas de salida están cerrados, para que la forma prometida sea una sola", () => {
+    for (const tool of TOOLS) {
+      if (tool.outputSchema === undefined) continue;
+      expect(tool.outputSchema["type"]).toBe("object");
+      expect(tool.outputSchema["additionalProperties"]).toBe(false);
     }
   });
 });
@@ -420,7 +460,83 @@ describe("evaluar una compuerta", () => {
   });
 });
 
+describe("el contenido estructurado", () => {
+  it("`ver_ticket` devuelve el frontmatter como dato, con el parser del motor", async () => {
+    await crear();
+    const resultado = await callTool(contexto, "ver_ticket", { id: ID });
+
+    expect(resultado.isError).toBe(false);
+    expect(resultado.data).toBeDefined();
+    expect(resultado.data?.["id"]).toBe(ID);
+    expect(String(resultado.data?.["ruta"])).toContain(join("tickets", "2026", ID));
+
+    // Los valores van tal cual están en disco. Si se normalizaran aquí habría dos
+    // lecturas del mismo contrato, y la que se desincroniza es siempre la que
+    // nadie mira.
+    const campos = resultado.data?.["campos"] as Record<string, unknown>;
+    expect(campos["workflow_status"]).toBe("intake");
+    expect(campos["type"]).toBe("BUGFIX");
+  });
+
+  it("`evaluar_compuerta` devuelve el recibo que acaba de anexar, sin interpretar el informe", async () => {
+    const ruta = await crear();
+    escribirCriterio(ruta, 'Buscar "104" devuelve la orden "1042".');
+    await callTool(contexto, "mover_ticket", { id: ID, to: "analyzed" });
+
+    const resultado = await callTool(conEvaluadorFalso(), "evaluar_compuerta", {
+      gate: "analysis",
+      id: ID,
+    });
+
+    // El veredicto se lee del dato: un agente que ramifica por `outcome` no
+    // debería tener que buscar la palabra en una tabla de texto.
+    const recibo = resultado.data?.["recibo"] as Record<string, unknown> | null;
+    expect(recibo).not.toBeNull();
+    expect(recibo?.["gate"]).toBe("analysis");
+    expect(recibo?.["subject"]).toMatchObject({ type: "ticket", id: ID });
+  });
+
+  it("las que no declaran `outputSchema` no devuelven dato", async () => {
+    // El otro lado del criterio: mandar `structuredContent` sin esquema sería
+    // entregar un objeto que el cliente no puede validar contra nada.
+    await crear();
+    const resultado = await callTool(contexto, "listar_tickets", {});
+    expect(resultado.isError).toBe(false);
+    expect(resultado.data).toBeUndefined();
+  });
+
+  it("`tools/call` emite `structuredContent` cuando hay dato, y lo omite cuando no", () => {
+    const conDato = respuestaDeHerramienta({
+      text: "informe",
+      isError: false,
+      data: { a: 1 },
+    });
+    expect(conDato["structuredContent"]).toEqual({ a: 1 });
+    // El texto no se pierde: el informe del motor dice qué falta y con qué código
+    // de salida, y el dato es para ramificar. Uno no sustituye al otro.
+    expect(conDato["content"]).toEqual([{ type: "text", text: "informe" }]);
+
+    const sinDato = respuestaDeHerramienta({ text: "informe", isError: false });
+    expect("structuredContent" in sinDato).toBe(false);
+  });
+});
+
 describe("el arranque del servidor", () => {
+  it("la autocomprobación nombra los argumentos obligatorios de cada herramienta", () => {
+    // La diferencia entre «no veo la herramienta» y «la veo y le falta un
+    // argumento» es la diferencia entre revisar el cliente y revisar la llamada.
+    // Adivinarla cuesta más que imprimirla.
+    const salida = describirServidor({
+      root: lab,
+      credentialsFile: undefined,
+      check: true,
+    });
+    expect(salida).toContain("crear_ticket(id, title, type, module, request)");
+    expect(salida).toContain("evaluar_compuerta(gate, id)");
+    // Las que no exigen nada se ven sin argumentos, y eso también informa.
+    expect(salida).toContain("listar_tickets()");
+  });
+
   it("toma la raíz del argumento y resuelve la ruta del registro", () => {
     const opciones = parseOptions(["--root", lab], "/otro/sitio");
     expect(opciones.root).toBe(lab);

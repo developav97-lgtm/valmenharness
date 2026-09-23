@@ -79,7 +79,18 @@ mismas funciones que el CLI, y las de escritura al mismo motor.
 | `simular_compuerta`      | Mide un gate sobre el histórico, para calibrar        |
 
 Todas aceptan un `root` opcional que gana sobre el directorio de trabajo, para una sesión que
-trabaje sobre dos repositorios.
+trabaje sobre dos repositorios. Se declara en los ocho esquemas, no solo se lee: un argumento
+que el servidor acepta pero el esquema no declara lo rechaza cualquier cliente que valide
+antes de llamar.
+
+**El resultado es texto, y en dos casos además dato.** `ver_ticket` y `evaluar_compuerta`
+devuelven `structuredContent` junto al informe, para que un agente ramifique por estado o por
+veredicto sin interpretar prosa. Donde el dato **ya existe en disco** y se lee tal cual —el
+frontmatter con el `parseTicket` del motor, el recibo recién anexado a `.valmen/receipts/`— se
+declara `outputSchema`; donde habría que inventar una segunda representación del texto, no.
+Dos formas del mismo hecho se desincronizan, y la que se desincroniza es siempre la que nadie
+mira. El test afirma la lista exacta de las que lo tienen, para que una herramienta nueva no lo
+decida por costumbre.
 
 **Un fallo de herramienta es un resultado, no un error de protocolo.** El agente recibe
 `isError: true` con el mensaje del motor —«Falta `type`, y es obligatorio»— y puede corregir.

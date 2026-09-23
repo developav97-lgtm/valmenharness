@@ -24,11 +24,12 @@
  */
 import { existsSync } from "node:fs";
 
-import { toFailure } from "@valmen/core";
+import { parseTicket, toFailure } from "@valmen/core";
 import {
   type RegistryPaths,
   createTicket,
   findTicket,
+  readReceipts,
   runGate,
   simulateGate,
   ticketsPath,
@@ -74,8 +75,16 @@ export interface ToolContext {
   readonly now?: (() => Date) | undefined;
 }
 
-function bien(texto: string): ToolResult {
-  return { text: texto.trimEnd(), isError: false };
+function bien(texto: string, data?: Record<string, unknown>): ToolResult {
+  return {
+    text: texto.trimEnd(),
+    isError: false,
+    // Con la forma que exige `exactOptionalPropertyTypes`: una propiedad
+    // opcional no se asigna `undefined`, se omite. Un `data: undefined` explícito
+    // y una ausencia no son lo mismo para el protocolo, que decide con la
+    // presencia del campo si emite `structuredContent`.
+    ...(data === undefined ? {} : { data }),
+  };
 }
 
 function mal(texto: string): ToolResult {
@@ -94,6 +103,43 @@ function texto(
   return undefined;
 }
 
+/**
+ * El argumento que permite apuntar a otro proyecto.
+ *
+ * Se declara aquí y se inyecta en los ocho esquemas con `conRoot`, en vez de
+ * repetirlo ocho veces. La repetición no era solo ruido: el `root` se leía en
+ * `main.ts` desde el principio y **no estaba declarado en ninguno de los ocho**,
+ * así que un cliente que validara el esquema lo rechazaba antes de llamar y el
+ * agente concluía que no podía trabajar sobre otro repositorio. Un texto copiado
+ * ocho veces se desincroniza; una función que lo inyecta, no.
+ */
+const ROOT = {
+  type: "string",
+  description:
+    "Raíz del proyecto sobre el que operar. Existe para la sesión que trabaja " +
+    "sobre dos repositorios a la vez: gana sobre el directorio de trabajo con el " +
+    "que se lanzó el servidor. En el caso normal no hace falta.",
+} as const;
+
+/**
+ * Arma el esquema de entrada de una herramienta.
+ *
+ * `additionalProperties: false` y `root` viven aquí, en un solo sitio: una
+ * herramienta no puede quedar sin admitir otro proyecto por olvido, porque no
+ * hay forma de declararla sin pasar por esta función.
+ */
+function conRoot(esquema: {
+  readonly properties: Record<string, unknown>;
+  readonly required?: readonly string[];
+}): Record<string, unknown> {
+  return {
+    type: "object",
+    properties: { ...esquema.properties, root: ROOT },
+    ...(esquema.required === undefined ? {} : { required: [...esquema.required] }),
+    additionalProperties: false,
+  };
+}
+
 /** El catálogo de herramientas. */
 export const TOOLS: readonly ToolDefinition[] = [
   {
@@ -106,8 +152,7 @@ export const TOOLS: readonly ToolDefinition[] = [
       "explorar código, que no dejan registro. Devuelve la ruta del archivo, que hay " +
       "que rellenar con el diagnóstico antes de evaluar la compuerta de análisis. El " +
       "identificador no se inventa: `<TIPO>-<MODULO>-<DESC>-<YYYYMMDD>`.",
-    inputSchema: {
-      type: "object",
+    inputSchema: conRoot({
       properties: {
         id: {
           type: "string",
@@ -143,8 +188,7 @@ export const TOOLS: readonly ToolDefinition[] = [
         },
       },
       required: ["id", "title", "type", "module", "request"],
-      additionalProperties: false,
-    },
+    }),
   },
   {
     name: "ver_ticket",
@@ -153,11 +197,31 @@ export const TOOLS: readonly ToolDefinition[] = [
       "Devuelve el resumen del ticket: frontmatter, secciones y bloques. Es lo que hay " +
       "que leer antes de escribir el diagnóstico o el plan, y lo que dice si la " +
       "compuerta ya se evaluó. No lo confundas con el archivo: para editar secciones " +
-      "se abre la ruta que devuelve `crear_ticket`.",
-    inputSchema: {
-      type: "object",
+      "se abre la ruta que devuelve `crear_ticket`. El frontmatter va **además** como " +
+      "dato, para ramificar por estado sin interpretar prosa.",
+    inputSchema: conRoot({
       properties: { id: { type: "string", description: "Identificador del ticket." } },
       required: ["id"],
+    }),
+    // Esta es una de las dos herramientas con `outputSchema`, y la razón es la
+    // del archivo entero: el frontmatter no se proyecta aquí, se lee con el
+    // **mismo** `parseTicket` de `@valmen/core` que usa el motor. No hay una
+    // segunda lectura del contrato que pueda discrepar de la primera.
+    outputSchema: {
+      type: "object",
+      properties: {
+        id: { type: "string", description: "Identificador del ticket." },
+        ruta: {
+          type: "string",
+          description: "Ruta absoluta del `ticket.md`, para abrirlo y editarlo.",
+        },
+        campos: {
+          type: "object",
+          description:
+            "Los campos del frontmatter, tal cual están en disco y sin normalizar.",
+        },
+      },
+      required: ["id", "ruta", "campos"],
       additionalProperties: false,
     },
   },
@@ -167,7 +231,7 @@ export const TOOLS: readonly ToolDefinition[] = [
     description:
       "Lista los tickets no cerrados, con su estado, su módulo y su título. Sirve para " +
       "saber qué hay en curso antes de crear uno nuevo y para no duplicar trabajo.",
-    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    inputSchema: conRoot({ properties: {} }),
   },
   {
     name: "validar_ticket",
@@ -177,16 +241,14 @@ export const TOOLS: readonly ToolDefinition[] = [
       "cumple. Es determinista y no cuesta nada, así que hay que llamarlo **antes** de " +
       "evaluar una compuerta: una compuerta sobre un ticket inválido gasta una llamada " +
       "y su veredicto no dice nada.",
-    inputSchema: {
-      type: "object",
+    inputSchema: conRoot({
       properties: {
         id: {
           type: "string",
           description: "Identificador del ticket. Sin él se validan todos.",
         },
       },
-      additionalProperties: false,
-    },
+    }),
   },
   {
     name: "evaluar_compuerta",
@@ -196,14 +258,14 @@ export const TOOLS: readonly ToolDefinition[] = [
       "aprobado, bloqueado, o en revisión humana. **No mueve el estado del ticket** — " +
       "un gate no cambia estados, esa es la regla — y no sustituye a la decisión de una " +
       "persona cuando el veredicto cae en la banda de revisión. Cuesta una llamada al " +
-      "evaluador configurado en el routing del proyecto.\n\n" +
+      "evaluador configurado en el routing del proyecto. El recibo va **además** como " +
+      "dato, así que el veredicto se puede leer sin interpretar el informe.\n\n" +
       "**El ticket tiene que estar ya en el estado que la compuerta protege**, porque " +
       "cada una evalúa un artefacto terminado: `analysis` exige el ticket en `analyzed` " +
       "(con el diagnóstico escrito) y `plan` lo exige en `planned` (con el plan escrito). " +
       "Si se evalúa antes, se rechaza y no se gasta nada. La secuencia es: escribir la " +
       "sección, `validar_ticket`, `mover_ticket` al estado, y entonces evaluar.",
-    inputSchema: {
-      type: "object",
+    inputSchema: conRoot({
       properties: {
         gate: {
           type: "string",
@@ -222,6 +284,22 @@ export const TOOLS: readonly ToolDefinition[] = [
         },
       },
       required: ["gate", "id"],
+    }),
+    // El recibo ya está en disco: el motor lo acaba de anexar. Devolverlo es
+    // leerlo, no construir una segunda forma del veredicto. `null` cuando no se
+    // pudo leer, y entonces el texto dice por qué — una forma estable no puede
+    // depender de que el archivo esté donde se espera.
+    outputSchema: {
+      type: "object",
+      properties: {
+        recibo: {
+          type: ["object", "null"],
+          description:
+            "El recibo que el motor acaba de anexar a `.valmen/receipts/`, con su " +
+            "veredicto, sus proposiciones y su coste. `null` si no se pudo leer.",
+        },
+      },
+      required: ["recibo"],
       additionalProperties: false,
     },
   },
@@ -233,8 +311,7 @@ export const TOOLS: readonly ToolDefinition[] = [
       "legales los decide el motor, no quien llama: un salto que la máquina no permite " +
       "se rechaza con el motivo. Mover un ticket **no** lo aprueba: para entrar a " +
       "`approved` tiene que existir antes la aprobación de una persona registrada.",
-    inputSchema: {
-      type: "object",
+    inputSchema: conRoot({
       properties: {
         id: { type: "string" },
         to: {
@@ -245,8 +322,7 @@ export const TOOLS: readonly ToolDefinition[] = [
         },
       },
       required: ["id", "to"],
-      additionalProperties: false,
-    },
+    }),
   },
   {
     name: "reanudar_ticket",
@@ -256,11 +332,9 @@ export const TOOLS: readonly ToolDefinition[] = [
       "release y cuántos puntos hay. Es lo primero que conviene llamar al empezar una " +
       "sesión sobre algo en curso. Sin `id`, si hay más de un ticket activo **no " +
       "elige**: devuelve la lista y hay que decidir cuál.",
-    inputSchema: {
-      type: "object",
+    inputSchema: conRoot({
       properties: { id: { type: "string" } },
-      additionalProperties: false,
-    },
+    }),
   },
   {
     name: "simular_compuerta",
@@ -270,8 +344,7 @@ export const TOOLS: readonly ToolDefinition[] = [
       "sus proposiciones y el coste. Sirve para **calibrar** —ver si una proposición " +
       "discrimina o si el gate manda todo a revisión—, no para decidir sobre un ticket " +
       "concreto. Cuesta una llamada por ticket evaluado.",
-    inputSchema: {
-      type: "object",
+    inputSchema: conRoot({
       properties: {
         gate: { type: "string", enum: ["analysis", "plan"] },
         limit: {
@@ -280,8 +353,7 @@ export const TOOLS: readonly ToolDefinition[] = [
         },
       },
       required: ["gate"],
-      additionalProperties: false,
-    },
+    }),
   },
 ];
 
@@ -369,8 +441,31 @@ export async function callTool(
         );
       }
 
-      case "ver_ticket":
-        return delCli(showTicket(paths, texto(args, "id") as string));
+      case "ver_ticket": {
+        const id = texto(args, "id") as string;
+        const informe = delCli(showTicket(paths, id));
+        // Si el resumen falló, la herramienta es un error y el protocolo no pide
+        // contenido estructurado. Devolver `data` igualmente obligaría a inventar
+        // una forma para un ticket que no se pudo leer.
+        if (informe.isError) return informe;
+
+        const ubicado = findTicket(paths, id);
+        if (ubicado === undefined) {
+          return mal(
+            `El ticket ${id} no está en el registro, aunque el resumen se pudo ` +
+              "construir. Es una incoherencia del registro: revísalo antes de seguir.",
+          );
+        }
+
+        // El mismo parser que usa el motor. Los valores van tal cual están en
+        // disco: aquí no se normaliza ni se reinterpreta nada.
+        const parseado = parseTicket(ubicado.text);
+        return bien(informe.text, {
+          id,
+          ruta: ubicado.absolutePath,
+          campos: { ...parseado.fields },
+        });
+      }
 
       case "listar_tickets": {
         // Un registro que todavía no existe no es un error: es un proyecto
@@ -451,6 +546,13 @@ export async function callTool(
         // revisión. Un `review` no es un fallo de la herramienta.
         const informe = delMotor(resultado);
         if (informe.isError) return informe;
+
+        // El recibo que se acaba de anexar, leído de donde el motor lo escribió.
+        // Es la última línea del registro, que es append-only y cronológico: no
+        // hay que adivinar cuál es el vigente.
+        const recibos = readReceipts(paths, id);
+        const ultimo = recibos[recibos.length - 1];
+
         return bien(
           informe.text +
             "\nLa compuerta **no** movió el ticket. Según el veredicto:\n" +
@@ -464,6 +566,7 @@ export async function callTool(
             "no hay herramienta que la sustituya.\n" +
             "  · `BLOCK` → hay algo que corregir. El motivo dice qué proposición y con " +
             "qué valor; corrige el artefacto y vuelve a evaluar.",
+          { recibo: ultimo === undefined ? null : { ...ultimo } },
         );
       }
 

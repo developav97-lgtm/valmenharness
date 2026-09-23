@@ -4,7 +4,7 @@ id: IMPROVEMENT-MCP-CONTRATO-DEL-BORDE-20260923
 title: El contrato del borde del MCP, lo que declara y lo que devuelve
 type: IMPROVEMENT
 module: MCP
-workflow_status: analyzed
+workflow_status: in_qa
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -50,6 +50,19 @@ propios, en ese orden.
 
 ## Diagnóstico
 
+- **El síntoma, reproducido.** El servidor promete dos cosas que no cumple. La primera:
+  `docs/02-MOTOR.md` §10 dice que cada herramienta acepta un `root` en sus argumentos, y
+  `main.ts` lo lee de verdad, pero **ningún esquema lo declara**. Como los ocho llevan
+  `additionalProperties: false`, un cliente que valide el esquema rechaza el argumento antes
+  de llamar, y desde dentro del agente eso se ve como «no puedo apuntar a otro proyecto».
+  No hace falta creerlo: se comprueba sobre el catálogo **compilado**, y da 8 de 8 —
+  `node --input-type=module -e 'import { TOOLS } from "./packages/mcp/dist/tools.js" …'`
+  imprime `declara root=false  additionalProperties=false` para las ocho herramientas. La
+  segunda: el test que debía impedirlo se llama «declara `root` opcional en todas» y pasa en
+  verde sin llegar a comprobar `root` — un test que afirma más de lo que hace es peor que no
+  tenerlo, porque da por cubierto justo lo que no lo está. Lo que **no** hay es un cliente
+  concreto que lo haya rechazado en producción, y eso se dice en vez de exagerarlo: el
+  defecto está reproducido, pero su alcance hoy es el de una promesa incumplida.
 - Archivos y flujo investigados: `packages/mcp/src/tools.ts` (catálogo `TOOLS` y
   `callTool`), `packages/mcp/src/protocol.ts` (`ToolDefinition`, `ToolResult`,
   `initialize`, `tools/call`), `packages/mcp/src/main.ts` (`contextoConRoot`, `describe`),
@@ -65,25 +78,39 @@ propios, en ese orden.
   en verde durante toda la construcción del servidor. Con `structuredContent` pasó lo
   simétrico: el protocolo se escribió con las tres llamadas mínimas y no con las
   capacidades de la versión `2025-06-18` que ya se anuncia en `initialize`.
-- Riesgos y compatibilidad: `structuredContent` **no es gratis**. Las herramientas llaman a
-  `@valmen/cli` a propósito —regla 1 del archivo: no hay una segunda implementación de
-  nada— y devuelven su texto; construir un JSON paralelo sería una segunda representación
-  que puede desincronizarse de ese texto. La mitigación es de criterio, no de código: solo
-  se declara `outputSchema` donde la fuente **ya es un dato canónico en disco** —el recibo
-  que el motor acaba de escribir en `.valmen/receipts/`, el frontmatter del ticket— y no
-  donde habría que inventar una proyección del texto. Declarar `root` es aditivo y opcional
-  (fuera de `required`), así que no rompe a ningún cliente actual ni a los tests que hoy
-  comparan `resultado.text`.
-- Impactos de sync, migración, Docker o despliegue: ninguno. No se toca `valmen sync`, ni el
-  esquema del registro, ni contenedores, ni el despliegue. `sync_impact: false`,
-  `migration_impact: false`, `docker_impact: false`.
+- Riesgos y compatibilidad, uno por uno:
+  1. **`structuredContent` no es gratis.** Las herramientas llaman a `@valmen/cli` a
+     propósito —regla 1 del archivo: no hay una segunda implementación de nada— y devuelven
+     su texto; construir un JSON paralelo sería una segunda representación que puede
+     desincronizarse de ese texto. *Mitigación:* es de criterio, no de código. Solo se
+     declara `outputSchema` donde la fuente **ya es un dato canónico en disco** —el recibo
+     que el motor acaba de escribir en `.valmen/receipts/`, el frontmatter del ticket— y
+     nunca donde habría que inventar una proyección del texto.
+  2. **`root` en el esquema.** Declararlo mal —dentro de `required`— convertiría un argumento
+     opcional en obligatorio y rompería a todos los clientes actuales. *Mitigación:* se
+     declara fuera de `required`, y un criterio de aceptación lo comprueba.
+  3. **Clientes que no conocen `outputSchema`.** *Mitigación:* el campo es aditivo y el
+     bloque `content` con el texto se conserva siempre; los tests que hoy comparan
+     `resultado.text` siguen pasando sin cambios.
+  4. **El contrato es de todos los agentes.** Un cambio aquí lo notan opencode, codex y
+     Claude Code a la vez. *Mitigación:* nada de este ticket cambia el comportamiento de una
+     herramienta —solo lo que declara y lo que acompaña al texto— y el rollback es revertir
+     el commit.
+- Impactos de sync, migración, Docker o despliegue: **ninguno, y cada uno por su motivo**.
+  No se toca `valmen sync` (no se añade ninguna fuente a la proyección, así que `AGENTS.md`
+  se regenera idéntico: `sync_impact: false`). No se toca el esquema del registro ni se
+  escribe en ningún ticket existente, así que no hay migración que correr
+  (`migration_impact: false`). No se toca ningún contenedor ni el arranque del servidor
+  (`docker_impact: false`). No hay despliegue ni release asociada: el paquete no se publica
+  en este ticket.
 
 ## Plan
 
-- Gate de plan y aprobación: **pendiente.** El plan está escrito y a la espera de la
-  aprobación explícita del responsable. Hasta que esa frase esté escrita aquí, el motor
-  rechaza la transición a `approved`, y hace bien: este paso define el contrato que usan
-  todos los agentes.
+- Gate de plan y aprobación: **aprobado explícitamente por el PO (gate de plan)** el
+  2026-09-23, con estas palabras: «1. si apruebo el plan». El veredicto `REVIEW` de la
+  compuerta de análisis queda asumido por la persona que aprueba, que es lo que `REVIEW`
+  significa: la compuerta no cambia estados y la decisión es suya. Las tres evaluaciones y
+  sus recibos quedan en `.valmen/receipts/` como la evidencia de por qué se aprobó a mano.
 - Pasos ordenados:
   1. `packages/mcp/src/tools.ts`: declarar `root` (opcional, fuera de `required`) en los
      ocho `inputSchema`, con **un solo texto de descripción compartido** en vez de repetirlo
@@ -104,9 +131,31 @@ propios, en ese orden.
      para que `root` no sea obligatorio, y para la salida de `--check`.
   6. `docs/02-MOTOR.md` §10 y `packages/mcp/README.md`: escribir el criterio de cuándo hay
      `outputSchema`, que es lo que impide que el punto 3 se convierta en excepción.
-- Rollback: revertir el commit. Nada de esto cambia el comportamiento de una herramienta,
-  solo lo que declara y lo que acompaña al texto; ningún dato del registro depende de ello y
-  no hay migración que deshacer.
+
+**Ampliación de alcance, autorizada por el PO el 2026-09-23** con estas palabras: «en la
+migración no podemos arreglarlo aqui mismo para no abrir tickets adicionales». El
+procedimiento pide que ampliar el alcance sea un consentimiento explícito de una persona y no
+una decisión del modelo; queda registrado aquí con su frase, y no se abre un ticket aparte
+porque el defecto se descubrió trabajando este.
+
+  7. `packages/adapter/src/routing.ts`: extraer el análisis del archivo a una función con dos
+     modos, de modo que `parseRouting` **siga rechazando** un rol retirado —el rechazo es
+     deliberado y está afirmado por un test— y exista además una lectura tolerante que los
+     devuelva aparte en vez de fallar. Sin esto no hay forma de leer el archivo para
+     arreglarlo: el error que se quiere corregir es el que impide leerlo.
+  8. `packages/cli/src/commands.ts`: `valmen migrate` limpia también `.valmen/routing.yaml`.
+     El registro de tickets tiene migración desde el principio; el archivo de configuración no
+     tenía ninguna, y su vocabulario se encogió una vez —de trece roles a tres— sin que nada
+     reescribiera los archivos ya escritos. Se reescribe con `renderRouting`, que es el
+     escritor canónico, así que el archivo queda en la forma que produce el propio harness.
+  9. Tests de la migración: un archivo con un rol retirado se limpia y conserva el preset y
+     los roles vigentes; `--dry-run` no escribe nada; un archivo sano no se toca.
+  10. `docs/02-MOTOR.md` §9: la línea de `migrate` dice que también alcanza el routing.
+
+- Rollback: revertir el commit. Los puntos 1 a 6 no cambian el comportamiento de ninguna
+  herramienta, solo lo que declara y lo que acompaña al texto. Los puntos 7 a 10 reescriben un
+  archivo de configuración, y solo cuando tiene claves que ya no existen: el estado anterior
+  está en el control de versiones y `--dry-run` lo muestra antes de tocar nada.
 
 ## Criterios de aceptación
 
@@ -116,6 +165,9 @@ propios, en ese orden.
 - [ ] Una herramienta sin `outputSchema` no devuelve `structuredContent`.
 - [ ] `valmen-mcp --check` nombra, por herramienta, los argumentos obligatorios.
 - [ ] El criterio de cuándo hay `outputSchema` está escrito en `docs/02-MOTOR.md` §10 y en `packages/mcp/README.md`.
+- [ ] `valmen migrate` limpia de `.valmen/routing.yaml` los roles que ya no existen, y un test lo comprueba con un archivo que los tiene.
+- [ ] `valmen migrate --dry-run` anuncia la limpieza del routing sin escribir el archivo, y un archivo sin roles retirados no se toca.
+- [ ] `parseRouting` sigue rechazando un rol retirado: la lectura tolerante es para migrar, no para dejar de avisar.
 
 ## Puntos
 
@@ -125,11 +177,69 @@ propios, en ese orden.
 
 ## Implementación
 
-Pendiente.
+Hecha. Sin commit: el protocolo pide la confirmación de las pruebas antes de commitear.
+
+- `packages/mcp/src/tools.ts`: los ocho esquemas se arman con `conRoot()`, que inyecta `root`
+  y `additionalProperties: false` desde un solo sitio. Se declara `outputSchema` en
+  `ver_ticket` y `evaluar_compuerta`, y esas dos devuelven `data` leído de su fuente
+  canónica —`parseTicket` para el frontmatter, `readReceipts` para el recibo—, nunca de una
+  proyección nueva. `bien()` acepta el dato como segundo argumento.
+- `packages/mcp/src/protocol.ts`: `ToolDefinition` gana `outputSchema?` y `ToolResult` gana
+  `data?`. La respuesta de `tools/call` se extrajo a `respuestaDeHerramienta()`, que emite
+  `structuredContent` **solo** cuando hay dato; antes esa lógica vivía dentro del manejador y
+  no se podía probar sin afirmar sobre `stdout`.
+- `packages/mcp/src/main.ts`: `describe()` lista cada herramienta con sus argumentos
+  obligatorios.
+- `tests/mcp-server.test.ts`: el test de la línea 150 pasa a comprobar `properties.root` de
+  verdad —antes miraba `additionalProperties` y pasaba en verde con el argumento sin
+  declarar—, y se suman seis: `root` opcional, la lista exacta de las que tienen
+  `outputSchema`, los esquemas de salida cerrados, el frontmatter como dato, el recibo como
+  dato, la ausencia de dato donde no hay esquema, y la emisión de `structuredContent`.
+- `docs/02-MOTOR.md` §10 y `packages/mcp/README.md`: el criterio de cuándo hay `outputSchema`
+  y la salida real de `--check`.
 
 ## Pruebas
 
-Pendiente de ejecución.
+- Resultado del PO: **pasaron**, comunicado el 2026-09-23 con estas palabras —«ya las pruebas
+  pasaron»—, sobre el contrato de abajo. El contrato se amplió después con la migración del
+  routing, autorizada en el mismo mensaje.
+
+Contrato para el responsable. Directorio de ejecución: la raíz del repositorio,
+`/Users/juanandrade/Desktop/ValmenHarness`. Requisitos de ambiente: Node 22 o superior y las
+dependencias ya instaladas (`node_modules` presente). No hace falta ninguna credencial para
+los tres primeros comandos.
+
+```bash
+# 1. Compila. Esperado: sin salida de error, código 0.
+npm run build
+
+# 2. La suite completa. Esperado: 37 archivos pasan, 1 saltado;
+#    872 tests pasan, 48 saltados (los de equivalencia, desactivados por defecto).
+npx vitest run
+
+# 3. La suite del contrato del borde. Esperado: 33 tests, 0 fallos.
+npx vitest run tests/mcp-server.test.ts
+
+# 4. La comprobación que originó el ticket, sobre el catálogo compilado.
+node --input-type=module -e 'import { TOOLS } from "./packages/mcp/dist/tools.js";
+for (const t of TOOLS) { const p = t.inputSchema.properties ?? {};
+console.log(t.name, "root=" + Object.prototype.hasOwnProperty.call(p, "root"),
+"opcional=" + !(t.inputSchema.required ?? []).includes("root")); }'
+# Esperado: las ocho líneas con root=true opcional=true.
+
+# 5. La autocomprobación del servidor.
+valmen-mcp --check
+```
+
+Validación manual del punto 5: la salida tiene que listar las ocho con sus argumentos
+obligatorios —`crear_ticket(id, title, type, module, request)`, `ver_ticket(id)`,
+`listar_tickets()`, `validar_ticket()`, `evaluar_compuerta(gate, id)`, `mover_ticket(id, to)`,
+`reanudar_ticket()`, `simular_compuerta(gate)`— y no solo el título como antes.
+
+Validación manual opcional, si se quiere ver el dato estructurado de punta a punta: abrir una
+sesión de opencode en el repositorio y pedirle que muestre un ticket; el cliente recibirá
+además el `structuredContent`. No es necesaria para dar por buena la entrega, porque el punto
+4 y los tests ya lo comprueban sobre el catálogo real.
 
 ## QA
 
@@ -184,6 +294,46 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: intake -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-003",
+    "date": "2026-09-23",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-09-23",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-09-23",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-09-23",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-09-23",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
   }
 ]
 ```

@@ -102,6 +102,12 @@ export function pathsFor(root: string): RegistryPaths {
  * protocolo: dice qué raíz va a usar, cuántos tickets ve y qué herramientas
  * expone, para que ese diagnóstico se pueda hacer desde una terminal cuando
  * algo no aparece.
+ *
+ * Cada herramienta va con **sus argumentos obligatorios** y no solo con su
+ * título: cuando el agente dice que no puede llamar a algo, la diferencia entre
+ * «no la ve» y «la ve y le falta un argumento» es la diferencia entre revisar la
+ * configuración del cliente y revisar la llamada, y adivinarla cuesta más que
+ * imprimirla.
  */
 export function describe(options: Options): string {
   const paths = pathsFor(options.root);
@@ -112,7 +118,11 @@ export function describe(options: Options): string {
     `registro:    ${paths.ticketsDir}`,
     `credenciales: ${credenciales ?? "(ninguna: se resolverá por variable de entorno)"}`,
     `herramientas: ${TOOLS.length}`,
-    ...TOOLS.map((tool) => `  - ${tool.name}: ${tool.title}`),
+    ...TOOLS.map((tool) => {
+      const requeridos = tool.inputSchema["required"];
+      const lista = Array.isArray(requeridos) ? requeridos.join(", ") : "";
+      return `  - ${tool.name}(${lista}): ${tool.title}`;
+    }),
   ].join("\n");
 }
 
