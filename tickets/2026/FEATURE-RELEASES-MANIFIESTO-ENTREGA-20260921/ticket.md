@@ -4,8 +4,8 @@ id: FEATURE-RELEASES-MANIFIESTO-ENTREGA-20260921
 title: Manifiesto de entrega y proceso de novedades por proyecto
 type: FEATURE
 module: RELEASES
-workflow_status: approved
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -13,7 +13,7 @@ migration_impact: false
 docker_impact: false
 risk_level: normal
 created: 2026-09-21
-updated: 2026-09-21
+updated: 2026-09-23
 related_ticket: null
 target_release: null
 released_in: null
@@ -70,12 +70,48 @@ Pendiente.
 
 ## Pruebas
 
-Pendiente de ejecución.
+El trabajo se implementó y quedó verificado por la suite automática desde entonces; lo que
+faltaba era recorrer el registro, que es lo que este cierre pone al día.
+
+- Comando: `npx vitest run`, desde la raíz del repositorio. Resultado: 37 archivos de prueba
+  pasan, 872 pruebas en verde (48 saltadas, las de equivalencia contra `ticket.py`, que están
+  desactivadas por defecto).
+- Comando: `npx vitest run tests/report-delivery.test.ts`. Resultado: 43 pruebas en verde, que
+  cubren los cinco criterios de aceptación de este ticket.
+- Validación manual del manifiesto: no ejecutada. Ver la omisión de abajo.
+- Omisión explícita documentada de pruebas por el PO: el 2026-09-23 el responsable indicó
+  cerrar los tickets que quedaron abiertos de la sesión del 21 de septiembre, con estas
+  palabras —«con lo que me dices de esos tickets viejos si cierras»—, sin una pasada de
+  aceptación manual sobre la aplicación. El motivo de la omisión es que el trabajo está en el
+  árbol y verificado por la suite, y el ticket llevaba dos días en `approved` sin que nadie lo
+  moviera. La omisión es de la **prueba manual**, no de la verificación: lo que no hay es una
+  persona que haya abierto Mission Control a comprobarlo.
 
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-09-23",
+    "build_reference": "commit:379f130c882d48b03fdd6bdd6c12817e960864f4",
+    "environment": "local, macOS, Node 22+, sin despliegue",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-09-23",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "instrucción explícita del responsable del 2026-09-23: cerrar los tickets viejos de la sesión del 21 de septiembre"
+  }
+]
 ```
 
 ## Evidencia
@@ -93,7 +129,19 @@ Pendiente de ejecución.
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-09-23",
+    "technical_summary": "Manifiesto de entrega por versión en .valmen/deliveries/<versión>.json, escrito desde el motor (packages/engine/src/release.ts) y expuesto como valmen deliver-manifest. Rechaza cualquier ticket que no esté cerrado, visible al usuario y sin publicar. El formato de proceso se declara en .valmen/processes/ y el proceso de ejemplo deja escrito que las novedades van antes de publicar.",
+    "functional_summary": "Cada versión tiene su manifiesto: qué tickets entraron, con el resumen funcional del último cierre de cada uno. El proyecto declara el proceso que lo convierte en su propio artefacto, así que el orden —novedades antes de publicar— deja de vivir en la cabeza de quien opera.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "none"
+  }
+]
 ```
 
 ## Consumo de IA
@@ -141,6 +189,70 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-09-23",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-09-23",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-09-23",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-09-23",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-09-23",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-09-23",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-09-23",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-09-23",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```

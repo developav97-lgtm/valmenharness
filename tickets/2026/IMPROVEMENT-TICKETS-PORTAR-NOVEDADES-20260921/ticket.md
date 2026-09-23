@@ -4,8 +4,8 @@ id: IMPROVEMENT-TICKETS-PORTAR-NOVEDADES-20260921
 title: Portar el reporte Markdown del visor a Mission Control
 type: IMPROVEMENT
 module: TICKETS
-workflow_status: approved
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -13,7 +13,7 @@ migration_impact: false
 docker_impact: false
 risk_level: normal
 created: 2026-09-21
-updated: 2026-09-21
+updated: 2026-09-23
 related_ticket: null
 target_release: null
 released_in: null
@@ -70,12 +70,51 @@ Pendiente.
 
 ## Pruebas
 
-Pendiente de ejecución.
+El trabajo entró en el commit `379f130` —«El reporte de cierres y el manifiesto de entrega»—
+y quedó cubierto por la suite desde entonces; lo que faltaba era recorrer el registro, que es
+lo que este cierre pone al día.
+
+- Comando: `npx vitest run`, desde la raíz del repositorio. Resultado: 37 archivos de prueba
+  pasan, 872 pruebas en verde (48 saltadas, las de equivalencia contra `ticket.py`, que están
+  desactivadas por defecto).
+- Comando: `npx vitest run tests/report-delivery.test.ts`. Resultado: 43 pruebas en verde. Las
+  que cubren los criterios de este ticket, con su nombre: «el rango es inclusivo en los dos
+  extremos», «un rango sin cierres no es un error» y «escribe el encabezado con el rango en
+  palabras».
+- Validación manual del reporte descargado desde Mission Control: no ejecutada. Ver la omisión.
+- Omisión explícita documentada de pruebas por el PO: el 2026-09-23 el responsable indicó
+  cerrar los tickets que quedaron abiertos de la sesión del 21 de septiembre, con estas
+  palabras —«con lo que me dices de esos tickets viejos si cierras»—, sin una pasada de
+  aceptación manual sobre la aplicación. El motivo de la omisión es que el trabajo está en el
+  árbol y verificado por la suite, y el ticket llevaba dos días en `approved` sin que nadie lo
+  moviera. La omisión es de la **prueba manual**, no de la verificación: lo que no hay es una
+  persona que haya abierto Mission Control y descargado el archivo.
 
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-09-23",
+    "build_reference": "commit:379f130c882d48b03fdd6bdd6c12817e960864f4",
+    "environment": "local, macOS, Node 22+, sin despliegue",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-09-23",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "instrucción explícita del responsable del 2026-09-23: cerrar los tickets viejos de la sesión del 21 de septiembre"
+  }
+]
 ```
 
 ## Evidencia
@@ -93,7 +132,19 @@ Pendiente de ejecución.
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-09-23",
+    "technical_summary": "El reporte de cierres vive en el motor (packages/engine/src/report.ts) y se expone por el CLI (valmen report) y por la API del servidor (GET /api/report), que es lo que consume la vista de tickets de Mission Control. El rango se compara como texto —el formato del contrato ordena igual que las fechas— y es inclusivo en los dos extremos; un from posterior a to se rechaza antes de escribir nada.",
+    "functional_summary": "Se puede elegir un rango de fechas de cierre y descargar un Markdown con un apartado por ticket cerrado, con «Se atendió» y «Se realizó» tomados del resumen funcional del último cierre. Un rango sin cierres devuelve un reporte que lo dice, no un archivo vacío ni un error: el visor de Python ya no hace falta para esto.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "none"
+  }
+]
 ```
 
 ## Consumo de IA
@@ -149,6 +200,70 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-09-23",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-09-23",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-09-23",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-09-23",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-09-23",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-09-23",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-09-23",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-09-23",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```

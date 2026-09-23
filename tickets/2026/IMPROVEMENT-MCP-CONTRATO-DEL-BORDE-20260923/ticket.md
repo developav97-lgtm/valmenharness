@@ -4,7 +4,7 @@ id: IMPROVEMENT-MCP-CONTRATO-DEL-BORDE-20260923
 title: El contrato del borde del MCP, lo que declara y lo que devuelve
 type: IMPROVEMENT
 module: MCP
-workflow_status: in_qa
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -198,6 +198,24 @@ Hecha. Sin commit: el protocolo pide la confirmación de las pruebas antes de co
 - `docs/02-MOTOR.md` §10 y `packages/mcp/README.md`: el criterio de cuándo hay `outputSchema`
   y la salida real de `--check`.
 
+**Segunda parte, la migración del routing** (commit `2e35eec` la primera; esta va aparte):
+
+- `packages/adapter/src/routing.ts`: el análisis del archivo se extrajo a `analizarRouting`,
+  con dos modos. `parseRouting` **sigue rechazando** un rol retirado —el rechazo es deliberado
+  y está afirmado por un test— y `parseRoutingTolerante` devuelve los retirados aparte. Existe
+  porque **el error que se quiere corregir es el que impide leer el archivo**: una migración no
+  podría ni abrirlo con la estricta. Un preset inexistente no se tolera en ninguno de los dos
+  modos: sin preset no hay de dónde resolver los roles, y adivinar uno sería peor que decirlo.
+- `packages/cli/src/commands.ts`: `migrateRouting()` corre dentro de `valmen migrate`. Reescribe
+  con `renderRouting`, el escritor canónico, y **no toca un archivo sano**, porque reescribirlo
+  perdería los comentarios de quien lo editó a mano sin ganar nada. Respeta `--dry-run`.
+- `tests/migrate.test.ts`: cuatro pruebas —limpia y conserva el preset y los roles vigentes,
+  `--dry-run` no escribe, un archivo sano no se toca, un proyecto sin routing no se inventa
+  uno—. `tests/routing.test.ts`: dos más, que las dos lecturas conviven y que la tolerante
+  tampoco se traga un preset inexistente.
+- `packages/cli/src/main.ts` y `docs/02-MOTOR.md` §9: la ayuda del comando dice que `migrate`
+  alcanza también el routing.
+
 ## Pruebas
 
 - Resultado del PO: **pasaron**, comunicado el 2026-09-23 con estas palabras —«ya las pruebas
@@ -214,7 +232,7 @@ los tres primeros comandos.
 npm run build
 
 # 2. La suite completa. Esperado: 37 archivos pasan, 1 saltado;
-#    872 tests pasan, 48 saltados (los de equivalencia, desactivados por defecto).
+#    878 tests pasan, 48 saltados (los de equivalencia, desactivados por defecto).
 npx vitest run
 
 # 3. La suite del contrato del borde. Esperado: 33 tests, 0 fallos.
@@ -241,10 +259,55 @@ sesión de opencode en el repositorio y pedirle que muestre un ticket; el client
 además el `structuredContent`. No es necesaria para dar por buena la entrega, porque el punto
 4 y los tests ya lo comprueban sobre el catálogo real.
 
+### La migración del routing
+
+```bash
+# 6. Las suites de la migración. Esperado: 49 tests entre las dos, 0 fallos.
+npx vitest run tests/migrate.test.ts tests/routing.test.ts
+
+# 7. La migración sobre un proyecto de verdad, con un rol retirado dentro.
+LAB=$(mktemp -d); mkdir -p "$LAB/.valmen"
+printf 'preset: quality\n\nroles:\n  explorer:\n    model: glm-5.3\n    effort: low\n' \
+  > "$LAB/.valmen/routing.yaml"
+
+valmen migrate --root "$LAB" --dry-run     # anuncia, y NO escribe
+grep -c explorer "$LAB/.valmen/routing.yaml"   # esperado: 1 — sigue ahí
+
+valmen migrate --root "$LAB"               # ahora sí
+cat "$LAB/.valmen/routing.yaml"            # sin explorer, con preset: quality
+rm -rf "$LAB"
+```
+
+Lo que hay que mirar en el punto 7: que `--dry-run` **no** toque el archivo, que la ejecución
+real lo deje sin `explorer` y **con** `preset: quality` —una migración que arregla una clave
+borrando la configuración de al lado es peor que el defecto— y que el archivo quede en la
+forma que produce `renderRouting`.
+
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-09-23",
+    "build_reference": "commit:2e35eec78685ad4f695dce06c7abb0f5eaebed12",
+    "environment": "local, macOS, Node 22+, sin despliegue — revisión del commit del contrato del borde",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-09-23",
+    "build_reference": null,
+    "environment": null,
+    "result": "changes_requested",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  }
+]
 ```
 
 ## Evidencia
@@ -334,6 +397,46 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-09-23",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-09-23",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado changes_requested."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-09-23",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> changes_requested."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-09-23",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: changes_requested -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-09-23",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
