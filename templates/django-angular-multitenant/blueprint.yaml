@@ -1,0 +1,18 @@
+# Una plantilla por stack: lo que no depende del negocio.
+#
+# Esto es texto revisable, no un instalador: no ejecuta nada, no baja nada de la
+# red, y lo que escribe se lee en el diff como cualquier otro archivo.
+name: django-angular-multitenant
+title: Django multi-inquilino + Angular
+description: >-
+  Reglas de arquitectura para un backend Django con un esquema PostgreSQL por
+  inquilino, una interfaz Angular y un despliegue por contenedores. Destilada de
+  un proyecto en producción: cada invariante salió de un incidente real.
+detects:
+  - BackEnd/requirements.txt
+  - BackEnd/manage.py
+  - FrontEnd/angular.json
+files:
+  - rules/stack.md
+  - rules/invariantes.md
+config: config.fragment.yaml

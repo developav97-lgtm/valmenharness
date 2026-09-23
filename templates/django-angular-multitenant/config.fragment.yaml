@@ -1,0 +1,6 @@
+# Lo que esta arquitectura necesita declarado.
+test-commands:
+  - python BackEnd/manage.py test
+memory-sources:
+  - docs/decisions.md
+  - docs/errors.md

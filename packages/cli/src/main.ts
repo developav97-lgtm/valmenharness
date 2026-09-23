@@ -56,7 +56,12 @@ import {
   loadStatics,
   recordHumanDecision,
 } from "@valmen/server";
-import { memoryCommand, scanPendingSecretsCommand, usageCommand } from "./commands.js";
+import {
+  memoryCommand,
+  scanPendingSecretsCommand,
+  templateCommand,
+  usageCommand,
+} from "./commands.js";
 import {
   type Entity,
   addAiUsage,
@@ -97,6 +102,10 @@ Comandos:
                             routing los roles que el harness ya no ejecuta.
   sync [--check]            Proyecta .valmen/ a AGENTS.md.
   adopt [--dry-run]         Incorpora el harness a un proyecto existente.
+  template list             Las plantillas por stack disponibles.
+  template show <nombre>    Imprime lo que una plantilla escribe. Leerla es el paso.
+  template apply <nombre>   Escribe sus reglas en .valmen/ (no pisa lo que existe).
+      --dry-run             Muestra qué escribiría, sin escribir.
   gate <gate> --id <ID>     Evalúa un gate contra un ticket.
       --evaluator <id>      auto (por defecto) · command · jev · llm-judge
   create --id <ID> --title <t> --type <TIPO> --module <MODULO> --request <texto>
@@ -808,6 +817,13 @@ export function dispatch(options: Options): CommandResult {
 
     case "usage":
       return usageCommand(paths, options.flags);
+
+    case "template": {
+      const [verbo, nombre] = rest;
+      return templateCommand(paths.root, verbo ?? "", nombre, {
+        dryRun: options.flags["dry-run"] === true,
+      });
+    }
 
     case "report":
       return reportClosed(paths, options.flags);

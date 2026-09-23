@@ -384,6 +384,21 @@ monorepo-turborepo
 acumuladas. Extraer eso como plantilla significa que el siguiente proyecto con el mismo stack
 arranca con ese conocimiento, en vez de desde cero.
 
+**Estado: hecho, con la primera plantilla.** El comando terminó siendo `valmen template
+list|show|apply` —y `valmen adopt` sugiere la que le sirve al stack que detecta, sin aplicarla:
+escribir reglas que nadie pidió es lo que el harness no hace—. La primera es
+**`django-angular-multitenant`**, con ocho invariantes que salieron de incidentes reales:
+migraciones antes del despliegue y canario acotado por esquema, `bulk_create` no dispara señales,
+el consecutivo se consume después de persistir, el estado del servidor en el navegador no es
+caché de descarte.
+
+Una plantilla **no pisa nada** —lo que existe se respeta y se dice— y trae la configuración que
+la hace operable (`test-commands`, `memory-sources`), para que el gate mecánico y la memoria
+funcionen desde el primer día en vez de descubrirse a la primera entrega.
+
+Lo que falta: las otras plantillas de la lista, y sacar de la primera lo que todavía es específico
+del negocio de su proyecto de origen.
+
 **Esfuerzo:** 1 semana por plantilla, mucho menos para las derivadas.
 
 ---

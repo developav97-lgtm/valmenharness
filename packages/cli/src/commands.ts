@@ -28,10 +28,15 @@ import {
 import {
   type Projection,
   adoptPlan,
+  applyBlueprint,
+  blueprintsDir,
+  listBlueprints,
   parseRoutingTolerante,
   profileProject,
   projectFiles,
   proposeConfig,
+  readBlueprint,
+  renderBlueprintOutcome,
   renderRouting,
   routingPath,
 } from "@valmen/adapter";
@@ -630,6 +635,99 @@ export function syncProject(
  *
  * Con `--dry-run` informa sin escribir.
  */
+/**
+ * `template`: las plantillas por stack disponibles.
+ *
+ * Existe porque a una plantilla que no se sabe que existe no se le puede pedir
+ * nada. `list` las enumera, `show` imprime el contenido —**se lee antes de
+ * aplicarse**: aplicar reglas a ciegas no es más rápido, es aplicar reglas a
+ * ciegas— y `apply` las escribe.
+ */
+export function templateCommand(
+  root: string,
+  verbo: string,
+  nombre: string | undefined,
+  options: { dryRun?: boolean } = {},
+): CommandResult {
+  const directorio = blueprintsDir();
+  if (directorio === null) {
+    return error(
+      "No se encontraron las plantillas del harness. Se buscan en `templates/` de " +
+        "la instalación, junto a `packages/`.",
+      EXIT_SCHEMA,
+    );
+  }
+
+  if (verbo === "list" || verbo === "") {
+    const plantillas = listBlueprints(directorio);
+    if (plantillas.length === 0) return ok("No hay plantillas instaladas.\n");
+    return ok(
+      [
+        `Plantillas disponibles — ${plantillas.length}`,
+        "",
+        ...plantillas.flatMap((plantilla) => [
+          `  ${plantilla.name}`,
+          `    ${plantilla.title}`,
+          `    ${plantilla.description}`,
+          `    Aplíquela con: valmen template apply ${plantilla.name}`,
+          "",
+        ]),
+      ].join("\n"),
+    );
+  }
+
+  if (nombre === undefined || nombre === "") {
+    return error(`template ${verbo} requiere el nombre de una plantilla.`, EXIT_SCHEMA);
+  }
+
+  let plantilla;
+  try {
+    plantilla = readBlueprint(directorio, nombre);
+  } catch {
+    return error(
+      `No existe la plantilla "${nombre}". Las que hay: ` +
+        `${
+          listBlueprints(directorio)
+            .map((candidata) => candidata.name)
+            .join(", ") || "(ninguna)"
+        }.`,
+      EXIT_SCHEMA,
+    );
+  }
+
+  if (verbo === "show") {
+    const lineas = [
+      `Plantilla ${plantilla.name} — ${plantilla.title}`,
+      "",
+      plantilla.description,
+      "",
+      `Detecta: ${plantilla.detects.join(", ") || "(nada en particular)"}`,
+      `Escribe: ${plantilla.files.map((archivo) => `.valmen/${archivo.path}`).join(", ")}`,
+      "",
+    ];
+    for (const archivo of plantilla.files) {
+      lineas.push(
+        `── .valmen/${archivo.path} ${"─".repeat(Math.max(0, 50 - archivo.path.length))}`,
+      );
+      lineas.push(archivo.content.trimEnd());
+      lineas.push("");
+    }
+    if (plantilla.configFragment !== null) {
+      lineas.push("── configuración que aporta ──────────────────────────────");
+      lineas.push(plantilla.configFragment.trimEnd());
+      lineas.push("");
+    }
+    return ok(lineas.join("\n"));
+  }
+
+  if (verbo === "apply") {
+    const resultado = applyBlueprint(root, plantilla, options);
+    return ok(renderBlueprintOutcome(plantilla, resultado, options.dryRun === true));
+  }
+
+  return error(`template no conoce el verbo "${verbo}".`, EXIT_SCHEMA);
+}
+
 export function adoptProject(
   root: string,
   projectName: string,
@@ -691,6 +789,28 @@ export function adoptProject(
       "  describe el dominio del proyecto, cópiela a .valmen/rules/ y quedará",
       "  incluida en AGENTS.md.",
     );
+  }
+
+  // Una plantilla que no se sabe que existe no se usa. Se sugiere por lo que el
+  // proyecto tiene en disco, y no se aplica sola: escribir reglas que nadie pidió
+  // es exactamente lo que el harness no hace.
+  const directorio = blueprintsDir();
+  const sugeridas =
+    directorio === null
+      ? []
+      : listBlueprints(directorio).filter((plantilla) =>
+          plantilla.detects.some((manifiesto) => existsSync(join(root, manifiesto))),
+        );
+
+  if (sugeridas.length > 0) {
+    lines.push("", "Plantillas que le sirven a este stack:");
+    for (const plantilla of sugeridas) {
+      lines.push(
+        `  ${plantilla.name} — ${plantilla.title}`,
+        `    valmen template show ${plantilla.name}   (leerla antes de aplicarla)`,
+        `    valmen template apply ${plantilla.name}`,
+      );
+    }
   }
 
   lines.push("", "Se creará:", `  ${relative(root, plan.configPath)}`);
