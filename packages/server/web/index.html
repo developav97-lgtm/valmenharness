@@ -1562,10 +1562,21 @@
         conPuntos: false,
         desde: "",
         hasta: "",
-        // `updated` por defecto: «lo que se tocó en el rango» es lo que se espera
-        // de una lista de trabajo. El reporte de cierres cambia a `closedOn`, que
-        // es la fecha del cierre y no la de la última edición.
-        fecha: "updated",
+        /*
+         * `closedOn` por defecto, y costó un fallo aprenderlo.
+         *
+         * Arrancaba en `updated` —«lo que se tocó en el rango»— con el argumento de
+         * que es lo que se espera de una lista de trabajo. En este registro eso da
+         * un resultado que parece roto: la migración al esquema 2 reescribió el
+         * frontmatter de los **63** tickets el mismo día, así que pulsar «Ayer»
+         * mostraba los 63 en vez de los tres que se cerraron.
+         *
+         * El botón dice «Ayer» y quien lo pulsa piensa en lo que pasó ayer, que en
+         * este flujo es lo que se cerró: el reporte semanal cuenta cierres y el
+         * botón de exportar también. El campo se puede cambiar —está ahí al lado—,
+         * pero el valor por defecto tiene que ser el que no sorprende.
+         */
+        fecha: "closedOn",
         // Lo que se tocó hace menos va primero, que es lo que se espera de una
         // lista de trabajo.
         orden: "updated",
@@ -1947,6 +1958,11 @@
           columnaOrdenable("Release", "releaseStatus", "Ordenar por estado de release"),
           columnaOrdenable("Puntos", "openPoints", "Ordenar por puntos abiertos"),
           columnaOrdenable("Actualizado", "updated", "Ordenar por última edición"),
+          // La fecha de cierre es la que filtra el reporte y los atajos, así que
+          // tiene que verse: sin la columna, un filtro por cierre y un filtro por
+          // edición son indistinguibles en pantalla, y esa confusión ya costó una
+          // sesión de depuración.
+          columnaOrdenable("Cerrado", "closedOn", "Ordenar por fecha de cierre"),
           el("th", ""),
         );
         thead.append(filaCabecera);
@@ -1987,6 +2003,10 @@
           tr.append(celdaPuntos);
 
           tr.append(el("td", t.updated, "id"));
+
+          const celdaCierre = el("td");
+          celdaCierre.append(el("span", t.closedOn ?? "—", "id"));
+          tr.append(celdaCierre);
 
           const celdaAcciones = el("td");
           const ver = el("button", "Ver", "enlace");
