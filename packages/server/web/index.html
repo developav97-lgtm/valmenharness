@@ -768,6 +768,51 @@
         font-size: 12px;
       }
 
+      /* Rango de fechas. Va en su propia línea dentro de la barra de filtros: con
+         los dos campos, el selector y los cinco atajos, compartir línea con la
+         búsqueda dejaba todo apretado y sin jerarquía. */
+      .rango-fechas {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        flex-basis: 100%;
+        padding-top: 8px;
+        border-top: 1px solid var(--borde);
+      }
+      .campo-fecha {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .campo-fecha input {
+        font: inherit;
+        font-size: 12px;
+        background: var(--panel);
+        color: var(--texto);
+        border: 1px solid var(--borde);
+        border-radius: 6px;
+        padding: 5px 8px;
+      }
+      .atajos-fecha {
+        display: inline-flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .atajos-fecha button {
+        font-size: 11px;
+        padding: 5px 9px;
+        background: var(--panel);
+        color: var(--tenue);
+        border: 1px solid var(--borde);
+        border-radius: 999px;
+        cursor: pointer;
+      }
+      .atajos-fecha button:hover {
+        color: var(--texto);
+        border-color: var(--acento);
+      }
+
       /* ── Estado del ticket ──────────────────────────────────────────────
          La tira de avance responde "¿por dónde va?" de un golpe. Los pasos
          cumplidos se apagan para que el actual destaque sin competir. */
@@ -970,10 +1015,10 @@
       /* ── Un documento, no un muro ────────────────────────────────────────
          El plan de un ticket tiene títulos, pasos numerados con subpasos y código
          en línea. Como `<pre>` se lee como una pared; aquí se lee como documento.
-         La medida de línea es lo que más cambia la lectura: a todo el ancho de la
-         pantalla, el ojo pierde el renglón al volver. */
+         Ocupa todo el ancho de su contenedor: limitarlo a una medida de lectura
+         dejaba media tarjeta vacía, y el documento ya vive dentro de un ancho
+         acotado. */
       .md {
-        max-width: 78ch;
         font-size: 14px;
         line-height: 1.65;
       }
@@ -1462,6 +1507,12 @@
         invalid: false,
         critical: false,
         conPuntos: false,
+        desde: "",
+        hasta: "",
+        // `updated` por defecto: «lo que se tocó en el rango» es lo que se espera
+        // de una lista de trabajo. El reporte de cierres cambia a `closedOn`, que
+        // es la fecha del cierre y no la de la última edición.
+        fecha: "updated",
       };
 
       async function vistaTickets() {
@@ -1476,6 +1527,9 @@
         if (filtros.invalid) params.set("invalid", "1");
         if (filtros.critical) params.set("critical", "1");
         if (filtros.conPuntos) params.set("con-puntos", "1");
+        if (filtros.desde !== "") params.set("desde", filtros.desde);
+        if (filtros.hasta !== "") params.set("hasta", filtros.hasta);
+        if (filtros.desde !== "" || filtros.hasta !== "") params.set("fecha", filtros.fecha);
 
         const datos = await api("GET", `/api/tickets?${params.toString()}`);
         const r = datos.summary;
@@ -1577,6 +1631,15 @@
         if (filtros.conPuntos) aplicados.push("con puntos abiertos");
         if (filtros.invalid) aplicados.push("inválidos");
         if (filtros.type !== "") aplicados.push(filtros.type);
+        if (filtros.desde !== "" || filtros.hasta !== "") {
+          const campo = { updated: "edición", created: "alta", closedOn: "cierre" }[
+            filtros.fecha
+          ];
+          const rango = `${filtros.desde === "" ? "siempre" : filtros.desde} → ${
+            filtros.hasta === "" ? "hoy" : filtros.hasta
+          }`;
+          aplicados.push(`${campo} ${rango}`);
+        }
         if (aplicados.length > 0) {
           const linea = el("div", undefined, "filtros-aplicados");
           linea.append(el("span", `Mostrando: ${aplicados.join(" · ")}`, "resultado"));
@@ -1589,6 +1652,8 @@
             filtros.invalid = false;
             filtros.critical = false;
             filtros.conPuntos = false;
+            filtros.desde = "";
+            filtros.hasta = "";
             void vistaTickets();
           });
           linea.append(limpiar);
@@ -1649,6 +1714,107 @@
           label.append(input, el("span", texto));
           return label;
         };
+        // ── Rango de fechas ──
+        //
+        // El caso que lo pide es semanal: «las incidencias que se montaron y se
+        // cerraron en esta semana». Escribir dos fechas cada vez es trabajo
+        // repetido, así que los atajos van al lado.
+        const rango = el("div", undefined, "rango-fechas");
+
+        const campoFecha = document.createElement("select");
+        for (const [valor, etiqueta] of [
+          ["updated", "Última edición"],
+          ["created", "Fecha de alta"],
+          ["closedOn", "Fecha de cierre"],
+        ]) {
+          campoFecha.append(new Option(etiqueta, valor));
+        }
+        campoFecha.value = filtros.fecha;
+        campoFecha.title =
+          "Con qué fecha se compara el rango. «Última edición» incluye lo que se " +
+          "tocó en el rango aunque se cerrara antes; «fecha de cierre» cuenta lo " +
+          "que se cerró, que es lo que va al reporte.";
+        campoFecha.addEventListener("change", () => {
+          filtros.fecha = campoFecha.value;
+          void vistaTickets();
+        });
+
+        const entradaFecha = (clave, etiqueta) => {
+          const caja = el("label", undefined, "campo-fecha");
+          caja.append(el("span", etiqueta, "chip-rotulo"));
+          const entrada = document.createElement("input");
+          entrada.type = "date";
+          entrada.value = filtros[clave];
+          entrada.addEventListener("change", () => {
+            filtros[clave] = entrada.value;
+            void vistaTickets();
+          });
+          caja.append(entrada);
+          return caja;
+        };
+
+        /** El rango de los atajos, en `YYYY-MM-DD` locales. */
+        const ATAJOS = [
+          ["Hoy", 0, 0],
+          ["Ayer", 1, 1],
+          // La semana empieza el lunes: un reporte semanal que empieza en domingo
+          // parte el fin de semana, que es cuando más se despliega.
+          ["Esta semana", "lunes", 0],
+          ["Últimos 7 días", 6, 0],
+          ["Este mes", "mes", 0],
+        ];
+
+        /** Una fecha local en `YYYY-MM-DD`, sin pasar por UTC. */
+        const enTexto = (fecha) => {
+          const y = fecha.getFullYear();
+          const m = String(fecha.getMonth() + 1).padStart(2, "0");
+          const d = String(fecha.getDate()).padStart(2, "0");
+          return `${y}-${m}-${d}`;
+        };
+
+        const atajos = el("div", undefined, "atajos-fecha");
+        for (const [etiqueta, desde, hasta] of ATAJOS) {
+          const boton = el("button", etiqueta);
+          boton.addEventListener("click", () => {
+            const hoy = new Date();
+            let inicio = new Date(hoy);
+            let fin = new Date(hoy);
+
+            if (desde === "lunes") {
+              // `getDay()` pone el domingo en 0; para la semana que empieza el
+              // lunes hay que convertirlo a 7.
+              const dia = hoy.getDay() === 0 ? 7 : hoy.getDay();
+              inicio.setDate(hoy.getDate() - (dia - 1));
+            } else if (desde === "mes") {
+              inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+            } else {
+              inicio.setDate(hoy.getDate() - Number(desde));
+              fin.setDate(hoy.getDate() + Number(hasta));
+            }
+
+            filtros.desde = enTexto(inicio);
+            filtros.hasta = enTexto(fin);
+            void vistaTickets();
+          });
+          atajos.append(boton);
+        }
+
+        const limpiarFechas = el("button", "Sin rango");
+        limpiarFechas.addEventListener("click", () => {
+          filtros.desde = "";
+          filtros.hasta = "";
+          void vistaTickets();
+        });
+        atajos.append(limpiarFechas);
+
+        rango.append(
+          campoFecha,
+          entradaFecha("desde", "desde"),
+          entradaFecha("hasta", "hasta"),
+          atajos,
+        );
+        barra.append(rango);
+
         barra.append(
           casilla("Solo abiertos", "open"),
           casilla("Solo inválidos", "invalid"),
@@ -1660,7 +1826,8 @@
         // `valmen report` dan exactamente el mismo documento.
         const botonReporte = el("button", "Reporte de cierres");
         botonReporte.title =
-          "Markdown de los tickets cerrados en los últimos 30 días, listo para pegar.";
+          "Markdown de los tickets cerrados en el rango que tengas filtrado, listo " +
+          "para pegar. Sin rango, los últimos 30 días.";
         botonReporte.addEventListener("click", () => void descargarReporte());
         barra.append(botonReporte);
         cont.append(barra);
@@ -2330,7 +2497,15 @@
        * pestaña, que es lo contrario de lo que se quiere —pegarlo en un correo—.
        */
       async function descargarReporte() {
-        const datos = await api("GET", "/api/report");
+        // El rango sale de los filtros de la lista: el reporte semanal es sobre lo
+        // que se cerró esa semana, así que el botón tiene que exportar **lo que se
+        // está viendo** y no un rango fijo. El reporte siempre cuenta por fecha de
+        // cierre, que es la del bloque `## Cierre`.
+        const params = new URLSearchParams();
+        if (filtros.desde !== "") params.set("desde", filtros.desde);
+        if (filtros.hasta !== "") params.set("hasta", filtros.hasta);
+
+        const datos = await api("GET", `/api/report?${params.toString()}`);
         const blob = new Blob([datos.markdown], { type: "text/markdown;charset=utf-8" });
         const url = URL.createObjectURL(blob);
         const enlace = document.createElement("a");

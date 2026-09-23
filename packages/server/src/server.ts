@@ -250,6 +250,13 @@ export async function handleApi(
       ...(params.get("invalid") === "1" ? { onlyInvalid: true } : {}),
       ...(params.get("critical") === "1" ? { onlyCritical: true } : {}),
       ...(params.get("con-puntos") === "1" ? { onlyWithOpenPoints: true } : {}),
+      ...(params.get("desde") === null ? {} : { desde: params.get("desde") as string }),
+      ...(params.get("hasta") === null ? {} : { hasta: params.get("hasta") as string }),
+      // Solo los tres campos que el motor conoce. Un nombre inventado se ignora en
+      // vez de propagarse: el filtro caería a `updated` sin decirlo.
+      ...(["updated", "created", "closedOn"].includes(params.get("fecha") ?? "")
+        ? { dateField: params.get("fecha") as "updated" | "created" | "closedOn" }
+        : {}),
       ...(params.get("limit") === null
         ? {}
         : { limit: Number.parseInt(params.get("limit") as string, 10) }),

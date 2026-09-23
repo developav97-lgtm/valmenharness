@@ -29,6 +29,15 @@ export interface TicketRow {
   readonly riskLevel: string;
   readonly created: string;
   readonly updated: string;
+  /**
+   * La fecha del último cierre, o `null` si el ticket no está cerrado.
+   *
+   * Es la del bloque `## Cierre`, no la de `updated`. Filtrar los cierres de la
+   * semana por «última edición» deja fuera un ticket cerrado el lunes al que
+   * alguien le corrigió una tilde el jueves, y el reporte semanal lo perdería. El
+   * reporte de cierres ya usaba esta fecha; ahora la lista puede usarla también.
+   */
+  readonly closedOn: string | null;
   /** Puntos abiertos o en curso. */
   readonly openPoints: number;
   readonly totalPoints: number;
@@ -127,12 +136,22 @@ function toRow(id: string, parsed: ParsedTicket, relativePath: string): TicketRo
     riskLevel: fields.risk_level,
     created: fields.created,
     updated: fields.updated,
+    closedOn: ultimaFechaDeCierre(parsed),
     openPoints: abiertos,
     totalPoints: puntos.length,
     criticalImpacts: criticos,
     path: relativePath,
     invalid: null,
   };
+}
+
+/** La fecha del último cierre registrado, o `null` si no hay ninguno. */
+function ultimaFechaDeCierre(parsed: ParsedTicket): string | null {
+  const cierres = parsed.blocks.Cierre;
+  const ultimo = cierres[cierres.length - 1];
+  if (ultimo === undefined) return null;
+  const fecha = ultimo["date"];
+  return typeof fecha === "string" && fecha.trim() !== "" ? fecha.trim() : null;
 }
 
 /**
@@ -170,6 +189,7 @@ export function listTickets(paths: RegistryPaths): TicketRow[] {
         riskLevel: parcial.riskLevel ?? "?",
         created: parcial.created ?? "",
         updated: parcial.updated ?? "",
+        closedOn: parcial.closedOn ?? null,
         openPoints: parcial.openPoints ?? 0,
         totalPoints: parcial.totalPoints ?? 0,
         criticalImpacts: parcial.criticalImpacts ?? [],
@@ -264,6 +284,26 @@ export interface TicketFilters {
   readonly onlyCritical?: boolean;
   /** Solo los que tienen puntos abiertos. Igual que el anterior, para su tarjeta. */
   readonly onlyWithOpenPoints?: boolean;
+  /**
+   * Desde qué fecha y hasta cuál, en `YYYY-MM-DD`, ambas incluidas.
+   *
+   * Los dos extremos se comparan como texto: el formato del contrato los ordena
+   * igual que las fechas, así que no hace falta convertirlos y una fecha mal
+   * formada se compara como lo que es —texto— en vez de producir un `NaN` que
+   * silenciosamente no filtraría nada.
+   */
+  readonly desde?: string;
+  readonly hasta?: string;
+  /**
+   * Qué fecha se compara contra el rango.
+   *
+   * `updated` por defecto —«lo que se tocó en el rango»—, y `closedOn` para el
+   * reporte de cierres, que cuenta lo que se cerró y no lo que se editó. La
+   * diferencia importa: un ticket cerrado el lunes y retocado el jueves aparece en
+   * el rango del jueves por `updated` y en el del lunes por `closedOn`, y ninguno
+   * de los dos es «el correcto» sin saber qué se está contando.
+   */
+  readonly dateField?: "updated" | "created" | "closedOn";
   readonly limit?: number;
 }
 
@@ -293,6 +333,18 @@ export function filterTickets(
     if (filters.onlyInvalid === true && row.invalid === null) return false;
     if (filters.onlyCritical === true && row.criticalImpacts.length === 0) return false;
     if (filters.onlyWithOpenPoints === true && row.openPoints === 0) return false;
+
+    // El rango de fechas. `closedOn` es `null` en un ticket abierto, y un ticket
+    // abierto no está «dentro» de ningún rango de cierres: se excluye en vez de
+    // tratarlo como si su fecha fuera la cadena vacía, que sería menor que
+    // cualquier `desde` y lo colaría en todos los rangos.
+    const campo = filters.dateField ?? "updated";
+    if (filters.desde !== undefined || filters.hasta !== undefined) {
+      const fecha = campo === "closedOn" ? row.closedOn : row[campo];
+      if (fecha === null || fecha === "") return false;
+      if (filters.desde !== undefined && fecha < filters.desde) return false;
+      if (filters.hasta !== undefined && fecha > filters.hasta) return false;
+    }
     if (consulta !== "") {
       const texto = `${row.id} ${row.title} ${row.module} ${row.type}`.toLowerCase();
       if (!texto.includes(consulta)) return false;

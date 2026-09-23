@@ -34,6 +34,7 @@ import {
   readTicket,
   summarize,
 } from "../packages/server/src/tickets.js";
+import { writeFixtureTicket } from "./helpers/fixtures.js";
 import { handleApi } from "../packages/server/src/server.js";
 
 /** Rutas del registro del laboratorio. El laboratorio usa el layout nuevo. */
@@ -56,6 +57,8 @@ afterEach(() => {
 });
 
 const UN_TICKET = "BUGFIX-POS-REPORTE-Z-SUCURSAL-20260907";
+/** Un ticket que no está cerrado, para probar lo que se excluye por estado. */
+const ABIERTO = "BUGFIX-POS-ABIERTO-20260922";
 
 // ── Proyección ──────────────────────────────────────────────────────────────
 
@@ -264,6 +267,79 @@ describe("filtros", () => {
     );
     const otro = conPuntos.body as { tickets: { openPoints: number }[] };
     expect(otro.tickets.every((t) => t.openPoints > 0)).toBe(true);
+  });
+
+  it("filtra por rango de fechas sobre la última edición", () => {
+    const todos = filas();
+    const fechas = todos.map((f) => f.updated).sort();
+    const primera = fechas[0] as string;
+    const ultima = fechas[fechas.length - 1] as string;
+
+    // El rango incluye los dos extremos: es lo que se espera de «del 1 al 7», que
+    // el 7 entre.
+    const enRango = filterTickets(todos, { desde: primera, hasta: ultima });
+    expect(enRango).toHaveLength(todos.length);
+
+    const unDia = filterTickets(todos, { desde: primera, hasta: primera });
+    expect(unDia.length).toBeGreaterThan(0);
+    expect(unDia.every((f) => f.updated === primera)).toBe(true);
+  });
+
+  it("filtra por fecha de cierre, y deja fuera los que no están cerrados", () => {
+    // La diferencia que justifica el campo: un ticket cerrado el lunes y editado
+    // el jueves aparece en el rango del jueves por `updated` y en el del lunes por
+    // `closedOn`. Ninguno de los dos es «el correcto» sin saber qué se cuenta, y
+    // el reporte de cierres cuenta cierres.
+    const todos = filas();
+    const cerrados = filterTickets(todos, {
+      desde: "2000-01-01",
+      hasta: "2100-01-01",
+      dateField: "closedOn",
+    });
+
+    expect(cerrados.length).toBeGreaterThan(0);
+    expect(cerrados.every((f) => f.closedOn !== null)).toBe(true);
+    expect(cerrados.every((f) => f.workflowStatus === "closed")).toBe(true);
+
+    // Un ticket abierto no tiene fecha de cierre, así que no cae en ningún rango de
+    // cierres. Los 57 del fixture están cerrados, así que hay que añadir uno abierto
+    // para probarlo: sin este caso, tratar el `null` como cadena vacía —que lo
+    // colaría en **todos** los rangos— pasaría inadvertido.
+    writeFixtureTicket(lab, { id: ABIERTO, workflowStatus: "planned" });
+    const conAbierto = filterTickets(listTickets(PATHS()), {
+      desde: "2000-01-01",
+      hasta: "2100-01-01",
+      dateField: "closedOn",
+    });
+    expect(conAbierto.some((f) => f.id === ABIERTO)).toBe(false);
+    expect(conAbierto.every((f) => f.closedOn !== null)).toBe(true);
+  });
+
+  it("el endpoint acepta el rango y el campo de fecha", async () => {
+    const r = await handleApi(
+      "GET",
+      "/api/tickets",
+      {},
+      { root: lab, credentialsFile: join(lab, ".valmen", ".credentials.yaml"), env: {} },
+      new URLSearchParams("desde=2000-01-01&hasta=2100-01-01&fecha=closedOn"),
+    );
+    const cuerpo = r.body as { tickets: { closedOn: string | null }[] };
+    expect(cuerpo.tickets.length).toBeGreaterThan(0);
+    expect(cuerpo.tickets.every((t) => t.closedOn !== null)).toBe(true);
+  });
+
+  it("un campo de fecha inventado no rompe: se usa el de por defecto", async () => {
+    // Ignorarlo en silencio es lo correcto aquí: el filtro cae a `updated`, que es
+    // el comportamiento documentado, en vez de fallar la petición entera por un
+    // parámetro de más.
+    const r = await handleApi(
+      "GET",
+      "/api/tickets",
+      {},
+      { root: lab, credentialsFile: join(lab, ".valmen", ".credentials.yaml"), env: {} },
+      new URLSearchParams("desde=2000-01-01&fecha=inventado"),
+    );
+    expect(r.status).toBe(200);
   });
 
   it("respeta el límite", () => {
