@@ -13,7 +13,7 @@
   ],
   "scripts": {
     "clean": "rm -rf packages/*/dist .tsbuildinfo packages/*/*.tsbuildinfo",
-    "build": "tsc --build tsconfig.build.json",
+    "build": "tsc --build tsconfig.build.json && node scripts/publicar-web.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "npm run build && tsc --noEmit -p tsconfig.json",

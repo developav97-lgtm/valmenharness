@@ -221,6 +221,43 @@
         border-color: var(--alerta);
         color: var(--alerta);
       }
+      /* La sección que toca mirar en el estado actual. */
+      .acordeon.de-turno {
+        border-left: 3px solid var(--acento);
+        padding-left: 10px;
+      }
+      .marca-turno {
+        background: var(--acento);
+        border-radius: 3px;
+        color: var(--fondo);
+        font-size: 10px;
+        letter-spacing: 0.03em;
+        margin-left: 8px;
+        padding: 1px 6px;
+        text-transform: uppercase;
+        vertical-align: middle;
+      }
+
+      /* Los impactos, en su columna y en un solo renglón. */
+      th.columna-impactos,
+      td.columna-impactos {
+        white-space: nowrap;
+        width: 1%;
+      }
+      .impactos {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+      }
+      .impacto {
+        border: 1px solid var(--alerta);
+        border-radius: 3px;
+        color: var(--alerta);
+        font-size: 10px;
+        letter-spacing: 0.02em;
+        padding: 0 5px;
+        text-transform: uppercase;
+      }
       .etiqueta.roto {
         border-color: var(--error);
         color: var(--error);
@@ -1953,6 +1990,10 @@
         filaCabecera.append(
           columnaOrdenable("Ticket", "id", "Ordenar por identificador"),
           columnaOrdenable("Tipo", "type", "Ordenar por tipo"),
+          // Los impactos tienen su propia columna porque son una propiedad del
+          // ticket, no del estado: colgados debajo del estado obligaban a la celda
+          // a crecer tres renglones y la tabla dejaba de leerse de un barrido.
+          el("th", "Impactos", "columna-impactos"),
           columnaOrdenable("Estado", "workflowStatus", "Ordenar por estado"),
           columnaOrdenable("QA", "qaStatus", "Ordenar por estado de QA"),
           columnaOrdenable("Release", "releaseStatus", "Ordenar por estado de release"),
@@ -1979,13 +2020,26 @@
           celdaTipo.append(el("span", `${t.type} · ${t.module}`, "etiqueta"));
           tr.append(celdaTipo);
 
+          const celdaImpactos = el("td", undefined, "columna-impactos");
+          if (t.criticalImpacts.length === 0) {
+            celdaImpactos.append(el("span", "—", "id"));
+          } else {
+            const caja = el("div", undefined, "impactos");
+            for (const impacto of t.criticalImpacts) {
+              // La etiqueta corta es la del contrato sin el sufijo: `sync_impact`
+              // es el nombre del campo, no lo que hay que leer en una lista. El
+              // nombre completo queda en el `title`, para cuando haga falta.
+              const corto = NOMBRE_DE_IMPACTO[impacto] ?? impacto;
+              const marca = el("span", corto, "impacto");
+              marca.title = impacto;
+              caja.append(marca);
+            }
+            celdaImpactos.append(caja);
+          }
+          tr.append(celdaImpactos);
+
           const celdaEstado = el("td");
           celdaEstado.append(el("span", t.workflowStatus));
-          if (t.criticalImpacts.length > 0) {
-            const critico = el("div");
-            critico.append(el("span", t.criticalImpacts.join(" · "), "etiqueta critico"));
-            celdaEstado.append(critico);
-          }
           if (t.invalid !== null) {
             const roto = el("div");
             roto.append(el("span", "inválido", "etiqueta roto"));
@@ -2848,7 +2902,7 @@
             try {
               await api(
                 "POST",
-                `/api/tickets/${ticketId}/gates/${recibo.gate}/${recibo.receiptId}/decision`,
+                `/api/tickets/${ticketId}/gates/${recibo.receiptId}/decision`,
                 {
                   decision,
                   actor: responsable,
@@ -3059,7 +3113,6 @@
         // lo informativo. Ahora el orden del documento es el orden en que se
         // necesita.
         const acordeonGates = acordeon("Compuertas", undefined, true);
-        cont.append(acordeonGates.caja);
 
         const zonaGates = el("div");
         acordeonGates.cuerpo.append(zonaGates);
@@ -3068,7 +3121,6 @@
         acordeonGates.cuerpo.append(zonaCorrecciones);
 
         const acordeonHistorial = acordeon("Historial de decisiones");
-        cont.append(acordeonHistorial.caja);
 
         const pintarCorrecciones = (correcciones) => {
           zonaCorrecciones.textContent = "";
@@ -3124,7 +3176,6 @@
         // solo se pintan: ofrecer un movimiento que la tabla no permite sería
         // ofrecer un botón que falla.
         const acordeonTransiciones = acordeon("Avanzar el estado", undefined, true);
-        cont.append(acordeonTransiciones.caja);
         const zonaTransiciones = el("div");
         acordeonTransiciones.cuerpo.append(zonaTransiciones);
 
@@ -3193,7 +3244,7 @@
         // abierto porque es lo que más se relee cuando algo va mal; el plan, la
         // solicitud y las pruebas arrancan plegados, que es lo que devuelve la
         // pantalla al tamaño de una lectura.
-        const solicitud = acordeon("Solicitud original");
+        const solicitud = acordeonDeSeccion("Solicitud original", undefined, t.workflowStatus);
         solicitud.cuerpo.append(
           t.request.trim() === ""
             ? el("div", "(vacía)", "vacio")
@@ -3201,7 +3252,11 @@
         );
         cont.append(solicitud.caja);
 
-        const descripcion = acordeon("Descripción funcional");
+        const descripcion = acordeonDeSeccion(
+          "Descripción funcional",
+          undefined,
+          t.workflowStatus,
+        );
         descripcion.cuerpo.append(
           (t.sections["Descripción funcional"] ?? "").trim() === ""
             ? el("div", "(vacía)", "vacio")
@@ -3209,7 +3264,11 @@
         );
         cont.append(descripcion.caja);
 
-        const diagnostico = acordeon("Diagnóstico", t.sections["Diagnóstico"] ? "" : "vacío", true);
+        const diagnostico = acordeonDeSeccion(
+          "Diagnóstico",
+          t.sections["Diagnóstico"] ? "" : "vacío",
+          t.workflowStatus,
+        );
         diagnostico.cuerpo.append(
           (t.sections["Diagnóstico"] ?? "").trim() === ""
             ? el("div", "(vacío)", "vacio")
@@ -3217,7 +3276,7 @@
         );
         cont.append(diagnostico.caja);
 
-        const plan = acordeon("Plan", t.sections["Plan"] ? "" : "vacío");
+        const plan = acordeonDeSeccion("Plan", t.sections["Plan"] ? "" : "vacío", t.workflowStatus);
         plan.cuerpo.append(
           (t.sections["Plan"] ?? "").trim() === ""
             ? el("div", "(vacío)", "vacio")
@@ -3233,9 +3292,10 @@
           .map((linea) => /^\s*[-*]\s+\[[ xX]\]\s*(.*)$/.exec(linea))
           .filter((m) => m !== null && (m[1] ?? "").trim() !== "")
           .map((m) => m[1].trim());
-        const acordeonCriterios = acordeon(
+        const acordeonCriterios = acordeonDeSeccion(
           "Criterios de aceptación",
           `${criterios.length}`,
+          t.workflowStatus,
         );
         if (criterios.length === 0) {
           acordeonCriterios.cuerpo.append(
@@ -3248,7 +3308,7 @@
         }
         cont.append(acordeonCriterios.caja);
 
-        const implementacion = acordeon("Implementación");
+        const implementacion = acordeonDeSeccion("Implementación", undefined, t.workflowStatus);
         implementacion.cuerpo.append(
           (t.sections["Implementación"] ?? "").trim() === ""
             ? el("div", "(vacía)", "vacio")
@@ -3256,13 +3316,24 @@
         );
         cont.append(implementacion.caja);
 
-        const pruebas = acordeon("Pruebas");
+        const pruebas = acordeonDeSeccion("Pruebas", undefined, t.workflowStatus);
         pruebas.cuerpo.append(
           (t.sections["Pruebas"] ?? "").trim() === ""
             ? el("div", "(vacía)", "vacio")
             : seccionDeTicket(t.sections["Pruebas"]),
         );
         cont.append(pruebas.caja);
+
+        // ── La maquinaria, después del contenido ──
+        //
+        // El orden del documento es el orden en que se lee un ticket: primero el
+        // artefacto del estado en que está —y ese viene abierto y marcado—, y
+        // después lo que se hace con él. Antes las compuertas y las transiciones
+        // iban arriba de todo, así que la pantalla abría con botones y dejaba el
+        // diagnóstico tres secciones más abajo.
+        cont.append(acordeonGates.caja);
+        cont.append(acordeonTransiciones.caja);
+        cont.append(acordeonHistorial.caja);
 
         // ── Línea de tiempo y coste ──
         const acordeonLinea = acordeon("Línea de tiempo y coste");
@@ -3456,11 +3527,17 @@
       // el plan y la línea de tiempo desplegados, para leer el ticket había que
       // bajar media pantalla cada vez. Plegado, el ticket se lee de un vistazo y
       // cada cosa se abre cuando se necesita.
-      function acordeon(titulo, resumen, abierto = false) {
-        const caja = el("details", undefined, "acordeon");
+      function acordeon(titulo, resumen, abierto = false, deTurno = false) {
+        const caja = el("details", undefined, deTurno ? "acordeon de-turno" : "acordeon");
         if (abierto) caja.open = true;
         const cabecera = el("summary");
         cabecera.append(el("span", titulo, "acordeon-titulo"));
+        if (deTurno) {
+          // La marca dice por qué esa sección está abierta: sin ella, «abierto» y
+          // «es lo que toca ahora» se confunden, y el que llega nuevo cree que el
+          // resto está cerrado por casualidad.
+          cabecera.append(el("span", "lo que toca ahora", "marca-turno"));
+        }
         if (resumen !== undefined && resumen !== "") {
           cabecera.append(el("span", resumen, "acordeon-resumen"));
         }
@@ -3468,6 +3545,52 @@
         caja.append(cabecera, cuerpo);
         return { caja, cuerpo };
       }
+
+      /**
+       * Qué sección se mira primero en cada estado.
+       *
+       * El ticket avanza por artefactos —se describe, se diagnostica, se planifica,
+       * se implementa, se prueba— y quien lo abre viene a mirar **el del estado en
+       * que está**. Antes el diagnóstico era el único abierto por defecto, así que
+       * un ticket recién creado abría una sección vacía y uno en pruebas abría la
+       * que ya nadie toca.
+       *
+       * El título es el de la sección, y por eso el mapa se escribe con los mismos
+       * textos: si una sección cambia de nombre, esta entrada deja de encontrarla y
+       * la marca desaparece —que es un fallo visible, no una sección marcada mal—.
+       */
+      const SECCION_DE_TURNO = {
+        intake: "Descripción funcional",
+        analyzed: "Diagnóstico",
+        planned: "Plan",
+        approved: "Implementación",
+        in_progress: "Implementación",
+        blocked: "Diagnóstico",
+        awaiting_user_tests: "Pruebas",
+        in_qa: "Pruebas",
+        changes_requested: "Pruebas",
+        qa_approved: "Pruebas",
+        closed: "Pruebas",
+      };
+
+      /** El acordeón de una sección, abierto y marcado si le toca el turno. */
+      function acordeonDeSeccion(titulo, resumen, estado) {
+        const deTurno = SECCION_DE_TURNO[estado] === titulo;
+        return acordeon(titulo, resumen, deTurno, deTurno);
+      }
+
+      /**
+       * El nombre corto de un impacto.
+       *
+       * El contrato los llama `sync_impact`, `migration_impact` y `docker_impact`:
+       * el sufijo dice que el campo es booleano, y en una lista no aporta nada. Lo
+       * que hay que leer es a qué afecta el cambio.
+       */
+      const NOMBRE_DE_IMPACTO = {
+        sync_impact: "sync",
+        migration_impact: "migración",
+        docker_impact: "docker",
+      };
 
       /** Un chip de estado, con su color por significado. */
       function chip(rotulo, valor, tono = "") {

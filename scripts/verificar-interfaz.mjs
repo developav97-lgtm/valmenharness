@@ -22,7 +22,7 @@
  *
  * Uso: `node scripts/verificar-interfaz.mjs [ruta-del-html]`
  */
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { tmpdir } from "node:os";
@@ -315,6 +315,22 @@ export function verificarInterfaz(texto, contenido, fallos) {
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   const raiz = join(dirname(fileURLToPath(import.meta.url)), "..");
   const ruta = process.argv[2] ?? join(raiz, "packages", "server", "web", "index.html");
+
+  // La copia publicada tiene que ser la misma que la fuente. El servidor sirve
+  // `dist/web/`, así que una copia vieja muestra una pantalla vieja **sin decir
+  // por qué** —el síntoma más caro que tuvo esta interfaz—, y comprobarlo acá es
+  // lo que convierte «acordate de copiar» en algo que no hace falta recordar.
+  const publicada = join(raiz, "packages", "cli", "dist", "web", "index.html");
+  if (existsSync(publicada)) {
+    const fuente = readFileSync(ruta, "utf8");
+    if (readFileSync(publicada, "utf8") !== fuente) {
+      console.log(
+        "FALLO: la interfaz publicada en packages/cli/dist/web/ no coincide con " +
+          "la fuente. Ejecute `npm run build`: es lo que sirve el servidor.",
+      );
+      process.exit(1);
+    }
+  }
 
   const { contenido, texto, fallos } = await ejecutarInterfaz(ruta);
   const resultado = verificarInterfaz(texto, contenido, fallos);
