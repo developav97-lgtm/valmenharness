@@ -32,7 +32,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { spawnSync } from "node:child_process";
 
@@ -141,11 +141,11 @@ describe("el catálogo de herramientas", () => {
     expect(nombres.some((nombre) => /aprob|approve|decid|decide/.test(nombre))).toBe(false);
   });
 
-  it("declara las quince herramientas, cada una con descripción y esquema", () => {
+  it("declara las veinticuatro herramientas, cada una con descripción y esquema", () => {
     // El orden es el de la lectura: alta, consulta, validación, movimiento,
-    // anotación, compuertas, y al final el ciclo de QA y el cierre. Estaba
-    // intercalado por historia —cada herramienta nueva entraba donde se pudiera—
-    // y leer el catálogo costaba más de lo que debería.
+    // anotación, compuertas, features, procesos, reportes, y al final el ciclo de
+    // QA y el cierre. Estaba intercalado por historia —cada herramienta nueva
+    // entraba donde se pudiera— y leer el catálogo costaba más de lo que debería.
     expect(TOOLS.map((tool) => tool.name)).toEqual([
       "crear_ticket",
       "ver_ticket",
@@ -158,6 +158,15 @@ describe("el catálogo de herramientas", () => {
       "reanudar_ticket",
       "evaluar_compuerta",
       "simular_compuerta",
+      "ver_features",
+      "descomponer_feature",
+      "ver_procesos",
+      "estado_proceso",
+      "ejecutar_proceso",
+      "reporte_cierres",
+      "calibrar_compuerta",
+      "manifiesto_entrega",
+      "indexar_registro",
       "iniciar_qa",
       "anotar_retest",
       "cerrar_qa",
@@ -1245,5 +1254,164 @@ describe("los archivos que declara un punto", () => {
 
     expect(resultado.isError).toBe(true);
     expect(resultado.text).toContain("no canónica");
+  });
+});
+
+// ── Lo que el motor ya sabía hacer ──────────────────────────────────────────
+
+describe("features, procesos y reportes", () => {
+  /** Un comando de verdad, sin depender del shell. */
+  const comando = (texto: string) => `node -e "process.stdout.write('${texto}')"`;
+
+  /** Un proyecto con un proceso que se detiene en un gate a mitad de camino. */
+  function escribirProceso(): void {
+    mkdirSync(join(lab, ".valmen", "processes"), { recursive: true });
+    mkdirSync(join(lab, ".valmen", "gates"), { recursive: true });
+    writeFileSync(
+      join(lab, ".valmen", "gates", "deploy.yaml"),
+      "id: deploy\ntitle: Aprobación\n",
+    );
+    writeFileSync(
+      join(lab, ".valmen", "processes", "saludar.yaml"),
+      [
+        "id: saludar",
+        "title: Saludar con aprobación",
+        "params:",
+        "  nombre: { type: string, required: true }",
+        "steps:",
+        "  - id: eco",
+        "    title: Escribir el saludo",
+        "    kind: command",
+        `    run: ${comando("hola")}`,
+        "  - id: aprobacion",
+        "    title: Aprobación de una persona",
+        "    kind: gate",
+        "    gate: deploy",
+        "  - id: despues",
+        "    title: Lo que va después del gate",
+        "    kind: command",
+        `    run: ${comando("despues")}`,
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+  }
+
+  it("lista las features y dice cuando no hay ninguna", async () => {
+    const vacio = await callTool(contexto, "ver_features", {});
+    expect(vacio.isError).toBe(false);
+
+    const { featureNew } = await import("../packages/cli/src/features.js");
+    expect(featureNew(lab, "demo", "Una feature de prueba").exitCode).toBe(0);
+
+    const lista = await callTool(contexto, "ver_features", {});
+    expect(lista.text).toContain("demo");
+
+    const detalle = await callTool(contexto, "ver_features", { slug: "demo" });
+    expect(detalle.text).toContain("Una feature de prueba");
+  });
+
+  it("mover un proceso inexistente lo dice, en vez de fallar sin motivo", async () => {
+    const resultado = await callTool(contexto, "ver_procesos", { proceso: "no-existe" });
+    expect(resultado.isError).toBe(true);
+    expect(resultado.text).toContain("no-existe");
+  });
+
+  it("lista y muestra los procesos declarados", async () => {
+    escribirProceso();
+    const lista = await callTool(contexto, "ver_procesos", {});
+    expect(lista.text).toContain("saludar");
+
+    const detalle = await callTool(contexto, "ver_procesos", { proceso: "saludar" });
+    expect(detalle.text).toContain("aprobacion");
+  });
+
+  it("correr un proceso se detiene en el gate, y eso es un resultado y no un error", async () => {
+    escribirProceso();
+    const resultado = await callTool(contexto, "ejecutar_proceso", {
+      proceso: "saludar",
+      parametros: { nombre: "Juan" },
+    });
+
+    // Que se detenga es lo que tiene que pasar: el gate existe para eso. Un
+    // agente que lo leyera como error intentaría «arreglar» lo que está bien.
+    expect(resultado.isError).toBe(false);
+    expect(resultado.text).toContain("se detuvo esperando");
+    // Y el avance de los pasos, que en el CLI se ve al vuelo, viaja en el texto.
+    expect(resultado.text).toContain("eco");
+
+    const corridas = await callTool(contexto, "estado_proceso", {});
+    expect(corridas.text).toContain("saludar");
+  });
+
+  it("no escribe nada en stdout, porque stdout es el protocolo", async () => {
+    // El avance de los pasos se imprimía directo a stdout: desde el CLI es lo
+    // correcto, y desde acá metería un renglón suelto entre dos mensajes
+    // JSON-RPC, que rompe la sesión del agente con un síntoma que no dice nada
+    // de la causa. Se afirma sobre el espía y no sobre la intención.
+    escribirProceso();
+    const espia = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    try {
+      const resultado = await callTool(contexto, "ejecutar_proceso", {
+        proceso: "saludar",
+        parametros: { nombre: "Juan" },
+      });
+      expect(resultado.isError).toBe(false);
+    } finally {
+      espia.mockRestore();
+    }
+    expect(espia).not.toHaveBeenCalled();
+  });
+
+  it("el reporte de cierres y el índice leen el registro sin tocarlo", async () => {
+    await hastaCerrado();
+    const reporte = await callTool(contexto, "reporte_cierres", {});
+    expect(reporte.isError).toBe(false);
+    expect(reporte.text).toContain("Tickets cerrados");
+
+    const indice = await callTool(contexto, "indexar_registro", {});
+    expect(indice.isError).toBe(false);
+    expect(existsSync(join(lab, "tickets", "index.md"))).toBe(true);
+
+    // `comprobar` no escribe: dice si está al día.
+    const comprobado = await callTool(contexto, "indexar_registro", { comprobar: true });
+    expect(comprobado.isError).toBe(false);
+    expect(comprobado.text).toContain("actualizado");
+
+    // La deriva que esto repara no viene del motor —cada mutación reescribe el
+    // índice—, sino de lo que pasa por fuera: un archivo copiado a mano, una
+    // operación interrumpida, alguien que editó el índice. Se reproduce así.
+    const rutaIndice = join(lab, "tickets", "index.md");
+    writeFileSync(rutaIndice, `${readFileSync(rutaIndice, "utf8")}| basura |\n`, "utf8");
+    const desactualizado = await callTool(contexto, "indexar_registro", {
+      comprobar: true,
+    });
+    expect(desactualizado.isError).toBe(true);
+    expect(desactualizado.text).toContain("desactualizado");
+
+    // Y regenerarlo lo arregla.
+    const regenerado = await callTool(contexto, "indexar_registro", {});
+    expect(regenerado.isError).toBe(false);
+    expect(readFileSync(rutaIndice, "utf8")).not.toContain("basura");
+  });
+
+  it("el manifiesto exige la lista explícita y no publica nada", async () => {
+    const sinLista = await callTool(contexto, "manifiesto_entrega", {
+      version: "1.0.0",
+      tickets: [],
+      dry_run: true,
+    });
+    expect(sinLista.isError).toBe(true);
+    expect(sinLista.text).toContain("explícita");
+  });
+
+  it("calibrar mide sobre el histórico sin gastar llamadas cuando no hay nada que medir", async () => {
+    await crear();
+    const resultado = await callTool(contexto, "calibrar_compuerta", {
+      gate: "analysis",
+      limite: 0,
+    });
+    expect(resultado.isError).toBe(false);
+    expect(resultado.text.toLowerCase()).toContain("calibración");
   });
 });

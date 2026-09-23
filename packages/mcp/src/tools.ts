@@ -56,9 +56,26 @@ import {
   transition,
 } from "@valmen/engine";
 import { gateFor, gateById } from "@valmen/gate";
-import { gateRoutingFor } from "@valmen/adapter";
+import { architectRoutingFor, gateRoutingFor } from "@valmen/adapter";
 import { apiKeyWithPrecedence } from "@valmen/credentials";
-import { resumeTicket, showTicket, validateAll, validateOne } from "@valmen/cli";
+import {
+  buildIndex,
+  calibrateReport,
+  deliverManifest,
+  featureDecompose,
+  featureList,
+  featureShow,
+  listProcesses,
+  listProcessRuns,
+  reportClosed,
+  resumeTicket,
+  runProcessCommand,
+  showProcess,
+  showProcessRun,
+  showTicket,
+  validateAll,
+  validateOne,
+} from "@valmen/cli";
 
 import type { ToolDefinition, ToolResult } from "./protocol.js";
 
@@ -571,6 +588,185 @@ export const TOOLS: readonly ToolDefinition[] = [
     }),
   },
   {
+    name: "ver_features",
+    title: "Ver las features del proyecto",
+    description:
+      "Sin `slug`, lista las features con su estado y su progreso. Con uno, devuelve " +
+      "el brief y los artefactos: spec, diseño y el grafo de tickets si ya se " +
+      "descompuso. Una feature es el registro de lo que excede a un ticket, así que " +
+      "mirarla antes de trabajar es lo que evita descomponer a mano algo que ya está " +
+      "descompuesto, o duplicar un ticket que ya existe en el grafo.",
+    inputSchema: conRoot({
+      properties: {
+        slug: { type: "string", description: "Identificador de la feature. Opcional." },
+      },
+    }),
+  },
+  {
+    name: "descomponer_feature",
+    title: "Descomponer una feature en tickets",
+    description:
+      "Propone el grafo de tickets de una feature con el modelo del rol `architect` y " +
+      "escribe `tickets.yaml`. Es la única herramienta que le pide a un modelo que " +
+      "**escriba** un artefacto del registro, así que comprueba de más: los requisitos " +
+      "salen de la spec y no del modelo, la respuesta se reescribe desde la estructura " +
+      "validada, y el archivo resultante se relee con el mismo parser que leería uno " +
+      "escrito a mano. Si algo no cuadra, no escribe nada. Cuesta una llamada al modelo " +
+      "del rol `architect` —distinto del que evalúa las compuertas, a propósito—, así " +
+      "que `dry_run` sirve para ver la propuesta sin gastarla dos veces.",
+    inputSchema: conRoot({
+      properties: {
+        slug: { type: "string", description: "Identificador de la feature." },
+        dry_run: {
+          type: "boolean",
+          description: "Muestra la descomposición sin escribirla ni avanzar el estado.",
+        },
+      },
+      required: ["slug"],
+    }),
+  },
+  {
+    name: "ver_procesos",
+    title: "Ver los procesos declarados",
+    description:
+      "Sin `proceso`, lista los procesos que el proyecto declara en " +
+      "`.valmen/processes/`. Con uno, muestra sus pasos y sus parámetros. Un proceso " +
+      "es trabajo repetible con sus gates: mirarlo antes de correrlo es lo que dice si " +
+      "va a hacer falta una persona en el medio y en qué paso.",
+    inputSchema: conRoot({
+      properties: {
+        proceso: { type: "string", description: "Identificador del proceso. Opcional." },
+      },
+    }),
+  },
+  {
+    name: "estado_proceso",
+    title: "Ver las corridas de procesos",
+    description:
+      "Sin `corrida`, lista las últimas: las detenidas van primero, que son las únicas " +
+      "sobre las que hay algo que hacer. Con una, muestra su detalle paso a paso, " +
+      "incluido dónde se detuvo y qué gate está esperando. Una corrida detenida no " +
+      "está fallando: está esperando una decisión.",
+    inputSchema: conRoot({
+      properties: {
+        corrida: { type: "string", description: "Identificador de la corrida. Opcional." },
+      },
+    }),
+  },
+  {
+    name: "ejecutar_proceso",
+    title: "Ejecutar un proceso",
+    description:
+      "Corre un proceso con sus parámetros y **se detiene en el primer gate sin " +
+      "aprobar**: desde acá no hay forma de saltearlo. Los pasos son los que el " +
+      "proyecto declaró en `.valmen/processes/`, no los que decide el agente, y la " +
+      "decisión del gate la registra una persona en la pantalla. Si el proceso tiene " +
+      "pasos que despliegan, esto los prepara y se detiene antes de ejecutarlos.",
+    inputSchema: conRoot({
+      properties: {
+        proceso: { type: "string", description: "Identificador del proceso." },
+        parametros: {
+          type: "object",
+          description:
+            "Los parámetros del proceso, por nombre. Los que declara y no vengan acá " +
+            "usan su valor por defecto.",
+        },
+      },
+      required: ["proceso"],
+    }),
+  },
+  {
+    name: "reporte_cierres",
+    title: "Reporte de los tickets cerrados",
+    description:
+      "El reporte Markdown de lo cerrado en un rango, con el problema, la solución y " +
+      "el rol afectado de cada ticket. El rango se cuenta por **fecha de cierre**, no " +
+      "por última edición: un ticket cerrado el lunes y retocado el jueves pertenece " +
+      "al lunes, y contarlo por edición lo movería de semana. Sin fechas, los últimos " +
+      "treinta días.",
+    inputSchema: conRoot({
+      properties: {
+        desde: { type: "string", description: "Fecha inicial `YYYY-MM-DD`, incluida." },
+        hasta: { type: "string", description: "Fecha final `YYYY-MM-DD`, incluida." },
+        tipo: { type: "string", enum: [...TICKET_TYPES], description: "Filtra por tipo." },
+        texto: {
+          type: "string",
+          description: "Busca en título, problema, solución y rol afectado.",
+        },
+      },
+    }),
+  },
+  {
+    name: "calibrar_compuerta",
+    title: "Calibrar una compuerta contra el histórico",
+    description:
+      "Mide una compuerta sobre el registro y la contrasta con lo que registraron las " +
+      "personas: cuántas veces coincidió, cuántos falsos aprobados y cuántos falsos " +
+      "bloqueos. Es lo que convierte «el umbral está mal» en un número, y por eso es " +
+      "una herramienta de decisión, no de trabajo: sirve para promover un gate de " +
+      "híbrido a automático con evidencia. Cuesta una llamada al modelo por ticket " +
+      "evaluado, así que `limite` no es un detalle.",
+    inputSchema: conRoot({
+      properties: {
+        gate: {
+          type: "string",
+          enum: ["analysis", "plan"],
+          description: "Compuerta a medir.",
+        },
+        limite: {
+          type: "number",
+          description: "Evalúa solo los primeros n tickets. Sin él, todo el registro.",
+        },
+      },
+      required: ["gate"],
+    }),
+  },
+  {
+    name: "manifiesto_entrega",
+    title: "Escribir el manifiesto de una entrega",
+    description:
+      "Registra la versión y los tickets que entran en una entrega. Cada ticket tiene " +
+      "que estar cerrado, ser visible al usuario y **no estar publicado todavía**: el " +
+      "manifiesto describe lo que se va a entregar, y un ticket ya publicado pertenece " +
+      "a otra entrega. No publica nada — eso exige el tag anotado sobre producción y " +
+      "una persona—, así que es la mitad preparable del despliegue.",
+    inputSchema: conRoot({
+      properties: {
+        version: { type: "string", description: "Versión SemVer, sin la `v`." },
+        tickets: {
+          type: "array",
+          items: { type: "string" },
+          description:
+            "Los identificadores que entran. La lista es explícita: no se adivina.",
+        },
+        fecha: {
+          type: "string",
+          description: "Fecha de entrega `YYYY-MM-DD`. Por defecto, hoy.",
+        },
+        dry_run: { type: "boolean", description: "Muestra el manifiesto sin escribirlo." },
+      },
+      required: ["version", "tickets"],
+    }),
+  },
+  {
+    name: "indexar_registro",
+    title: "Regenerar el índice del registro",
+    description:
+      "Regenera `index.md`, o comprueba con `comprobar` si está al día. El motor " +
+      "reescribe el índice en cada mutación, así que esto repara la deriva que no vino " +
+      "de él: un archivo copiado a mano, una operación interrumpida, o el índice " +
+      "editado por alguien. Un índice viejo se lee como si fuera el estado, que es peor " +
+      "que no tenerlo; la fuente de verdad sigue siendo cada ticket.",
+    inputSchema: conRoot({
+      properties: {
+        comprobar: {
+          type: "boolean",
+          description: "No escribe: dice si está al día y sale con error si no lo está.",
+        },
+      },
+    }),
+  },
+  {
     name: "iniciar_qa",
     title: "Abrir un ciclo de QA",
     description:
@@ -1032,6 +1228,141 @@ export async function callTool(
           reason: texto(args, "motivo", false),
         });
         return bien(movimiento.details);
+      }
+
+      case "ver_features": {
+        const slug = texto(args, "slug", false);
+        return delCli(
+          slug === undefined ? featureList(paths.root) : featureShow(paths.root, slug),
+        );
+      }
+
+      case "descomponer_feature": {
+        // El modelo del rol `architect` es el que escribe, y la clave se resuelve
+        // acá porque este proceso es el único que sabe con qué archivo de
+        // credenciales se lo lanzó.
+        const routing = architectRoutingFor(paths.root);
+        const apiKey = apiKeyDe(contexto, routing.provider);
+        return delCli(
+          await featureDecompose(
+            paths.root,
+            texto(args, "slug") as string,
+            args["dry_run"] === true ? { "dry-run": true } : {},
+            apiKey === null ? undefined : apiKey,
+          ),
+        );
+      }
+
+      case "ver_procesos": {
+        const proceso = texto(args, "proceso", false);
+        return delCli(
+          proceso === undefined
+            ? listProcesses(paths.root)
+            : showProcess(paths.root, proceso),
+        );
+      }
+
+      case "estado_proceso": {
+        const corrida = texto(args, "corrida", false);
+        return delCli(
+          corrida === undefined
+            ? listProcessRuns(paths.root)
+            : showProcessRun(paths.root, corrida),
+        );
+      }
+
+      case "ejecutar_proceso": {
+        // Los parámetros se pasan por `--set` y no como banderas sueltas: una
+        // bandera del CLI que se llame como un parámetro del proceso se pisaría
+        // con ella, y el proceso correría con otro valor sin decirlo.
+        const crudos = args["parametros"];
+        const partes =
+          crudos !== null && typeof crudos === "object" && !Array.isArray(crudos)
+            ? Object.entries(crudos as Record<string, unknown>).map(
+                ([nombre, valor]) => `${nombre}=${String(valor)}`,
+              )
+            : [];
+        // El avance de los pasos se recoge en vez de dejarlo salir: en el CLI va a
+        // stdout, y acá stdout **es** el protocolo. Un renglón suelto entre dos
+        // mensajes JSON-RPC rompe la sesión del agente, y el síntoma —«el servidor
+        // MCP dejó de responder»— no dice nada de la causa.
+        const pasos: string[] = [];
+        const informe = delCli(
+          runProcessCommand(
+            paths.root,
+            texto(args, "proceso") as string,
+            partes.length === 0 ? {} : { set: partes.join(";") },
+            (linea) => pasos.push(linea.trimEnd()),
+          ),
+        );
+        return {
+          ...informe,
+          text: [pasos.join("\n"), informe.text]
+            .filter((parte) => parte.trim() !== "")
+            .join("\n"),
+        };
+      }
+
+      case "reporte_cierres": {
+        const tipo = texto(args, "tipo", false);
+        const desde = texto(args, "desde", false);
+        const hasta = texto(args, "hasta", false);
+        const busqueda = texto(args, "texto", false);
+        return delCli(
+          reportClosed(
+            paths,
+            {
+              ...(tipo === undefined ? {} : { type: tipo }),
+              ...(desde === undefined ? {} : { desde }),
+              ...(hasta === undefined ? {} : { hasta }),
+              ...(busqueda === undefined ? {} : { q: busqueda }),
+            },
+            contexto.now?.() ?? new Date(),
+          ),
+        );
+      }
+
+      case "calibrar_compuerta": {
+        const gateId = texto(args, "gate") as string;
+        const limite = args["limite"];
+        // Medir y contrastar son dos pasos del mismo acto: la simulación produce
+        // el informe y la calibración lo lee contra lo que decidieron las
+        // personas. Separarlos en dos herramientas dejaría el número a medias.
+        const simulacion = await simulateGate(paths, {
+          gate: gateFor(gateById(gateId), { criteria: [] }),
+          ...(typeof limite === "number" ? { limit: limite } : {}),
+        });
+        return delCli(calibrateReport(paths, gateId, simulacion));
+      }
+
+      case "manifiesto_entrega": {
+        const crudos = args["tickets"];
+        const tickets = Array.isArray(crudos)
+          ? crudos.filter((id): id is string => typeof id === "string" && id.trim() !== "")
+          : [];
+        if (tickets.length === 0) {
+          throw new Error(
+            "`tickets` no puede ir vacío: la lista de lo que entra en la entrega es " +
+              "explícita y no se adivina.",
+          );
+        }
+        const fecha = texto(args, "fecha", false);
+        return delCli(
+          deliverManifest(
+            paths,
+            {
+              version: texto(args, "version") as string,
+              tickets: tickets.join(","),
+              ...(fecha === undefined ? {} : { "released-at": fecha }),
+              ...(args["dry_run"] === true ? { "dry-run": true as const } : {}),
+            },
+            contexto.now?.() ?? new Date(),
+          ),
+        );
+      }
+
+      case "indexar_registro": {
+        return delCli(buildIndex(paths, args["comprobar"] === true));
       }
 
       case "iniciar_qa": {

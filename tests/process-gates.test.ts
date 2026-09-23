@@ -393,7 +393,11 @@ describe("el ciclo por el CLI", () => {
     const corrida = correr("run", "deploy", "--version", "1.2.3");
     // 3 es invariante: el proceso no terminó, y un 0 diría que sí.
     expect(corrida.exitCode).toBe(3);
-    expect(corrida.stderr).toContain("se detuvo esperando");
+    // Por stdout, como el informe de una compuerta bloqueada: es un resultado
+    // —quedó esperando una decisión— y no un diagnóstico. Un cliente de protocolo
+    // lee stdout como resultado y stderr como error, y esperar no es un error.
+    expect(corrida.stdout).toContain("se detuvo esperando");
+    expect(corrida.stderr).toBe("");
 
     const lista = correr("runs");
     expect(lista.exitCode).toBe(0);

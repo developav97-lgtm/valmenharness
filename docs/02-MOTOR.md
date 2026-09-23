@@ -536,7 +536,7 @@ con su agente —opencode, codex, Claude Code—, y el agente necesita poder dar
 ticket, validarlo, evaluar la compuerta y mover el estado. Sin esto, cada ticket empieza
 con alguien copiando un comando.
 
-### Las quince herramientas
+### Las veinticuatro herramientas
 
 | Herramienta | Qué hace | Reutiliza |
 |---|---|---|
@@ -545,16 +545,34 @@ con alguien copiando un comando.
 | `listar_tickets` | Filtros por estado, tipo, módulo, texto, puntos, impacto y fechas | `listTickets` + `filterTickets` |
 | `validar_ticket` | Contrato del ticket; sin `id`, todo el registro | `valmen validate` |
 | `mover_ticket` | Aplica la tabla de estados, y reabre un cerrado con su motivo | `transition` |
-| `anotar_punto` | Un hallazgo, con `actual` y `expected` separados, y los archivos que toca | `addPoint` |
+| `anotar_punto` | Un hallazgo, con `actual`, `expected` y los archivos que toca | `addPoint` |
 | `mover_punto` | El ciclo del punto, independiente del ticket | `transition` |
 | `anotar_evidencia` | La prueba de algo hecho, enlazada al punto que la originó | `addEvidence` |
 | `reanudar_ticket` | Contexto para retomar trabajo empezado | `valmen resume` |
 | `evaluar_compuerta` | Evalúa un gate y escribe el recibo | `runGate` |
 | `simular_compuerta` | Mide un gate sobre el histórico, para calibrar | `simulateGate` |
+| `ver_features` | Las features, o una con su brief y sus artefactos | `featureList` / `featureShow` |
+| `descomponer_feature` | El grafo de tickets, propuesto por el rol `architect` | `featureDecompose` |
+| `ver_procesos` | Los procesos declarados, o uno con sus pasos y parámetros | `listProcesses` / `showProcess` |
+| `estado_proceso` | Las corridas, y dónde se detuvo la que espera | `listProcessRuns` / `showProcessRun` |
+| `ejecutar_proceso` | Corre un proceso; se detiene en el primer gate sin aprobar | `runProcessCommand` |
+| `reporte_cierres` | Reporte de lo cerrado en un rango, por fecha de cierre | `reportClosed` |
+| `calibrar_compuerta` | Un gate contra el histórico, con sus falsos aprobados | `calibrateReport` |
+| `manifiesto_entrega` | La versión y los tickets de una entrega; no publica nada | `deliverManifest` |
+| `indexar_registro` | Regenera el índice, o dice si se desincronizó | `buildIndex` |
 | `iniciar_qa` | Abre el ciclo con su ambiente y su referencia de build | `qaStart` |
 | `anotar_retest` | El resultado de retestar un punto | `addRetest` |
 | `cerrar_qa` | Cierra el ciclo: hallazgos, o la aprobación con la frase del PO | `qaClose` |
 | `preparar_cierre` | Los dos resúmenes y el impacto de release | `closeAttempt` |
+
+**Nada escribe en stdout salvo el protocolo, y eso incluye a las funciones del CLI
+que se reutilizan.** `runProcessCommand` imprimía el avance de cada paso directo a
+`process.stdout`: desde una terminal es lo correcto —se ve al vuelo y no hace falta
+al final—, y desde acá metería un renglón suelto entre dos respuestas JSON-RPC y
+rompería la sesión del agente con un síntoma que no dice nada de la causa. El avance
+es un parámetro inyectable, y la herramienta lo devuelve como parte del resultado.
+Hay una prueba que espía `process.stdout.write` durante la llamada y exige que no se
+haya escrito nada.
 
 **El ciclo entero se recorre sin terminal**: alta, plan, compuertas, implementación con sus
 hallazgos y su evidencia, prueba del PO, ciclo de QA, cierre. Y las dos únicas cosas que el
@@ -634,7 +652,7 @@ valmen-mcp --check
 # raíz:        /proyectos/tienda
 # registro:    tickets
 # credenciales: /proyectos/tienda/.valmen/.credentials.yaml
-# herramientas: 15
+# herramientas: 24
 #   - crear_ticket(id, title, type, module, request): Crear un ticket
 #   - ver_ticket(id): Ver un ticket
 #   - listar_tickets(): Listar tickets

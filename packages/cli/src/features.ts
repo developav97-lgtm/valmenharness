@@ -168,10 +168,11 @@ export function featureNew(
  * El modelo es el del rol `architect` del routing, y es **a propósito** distinto
  * del que evalúa los gates: un modelo revisándose a sí mismo no revisa nada.
  */
-async function featureDecompose(
+export async function featureDecompose(
   root: string,
   slug: string | undefined,
   flags: Readonly<Record<string, string | true>>,
+  apiKey?: string | undefined,
 ): Promise<CommandResult> {
   if (slug === undefined) {
     return error("feature decompose requiere un slug.", EXIT_SCHEMA);
@@ -201,6 +202,10 @@ async function featureDecompose(
         const respuesta = await callChat({
           provider: proveedor,
           model: modelo,
+          // La clave llega resuelta desde quien arrancó el proceso —el CLI o el
+          // servidor MCP—, que es el único que sabe con qué archivo de
+          // credenciales se lanzó. Sin ella, `callChat` resuelve por su cuenta.
+          ...(apiKey === undefined ? {} : { apiKey }),
           // El presupuesto de salida es generoso a propósito: un modelo que
           // razona gasta tokens pensando **antes** de escribir, y con un límite
           // bajo devuelve contenido vacío con HTTP 200. Medido con K3.

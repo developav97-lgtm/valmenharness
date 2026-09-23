@@ -64,26 +64,35 @@ porque ahí sí hereda el `PATH` completo.
 
 ## Contrato
 
-Las quince herramientas. Ninguna es una segunda implementación: las de lectura llaman a las
-mismas funciones que el CLI, y las de escritura al mismo motor.
+Las veinticuatro herramientas. Ninguna es una segunda implementación: las de lectura llaman a
+las mismas funciones que el CLI, y las de escritura al mismo motor.
 
-| Herramienta         | Qué hace                                                          |
-| ------------------- | ----------------------------------------------------------------- |
-| `crear_ticket`      | Alta en `intake`; devuelve la ruta del archivo                    |
-| `ver_ticket`        | Resumen del ticket: frontmatter, secciones y bloques              |
-| `listar_tickets`    | Filtra por estado, tipo, módulo, texto, puntos, impacto y fechas  |
-| `validar_ticket`    | Contrato del ticket; sin `id`, todo el registro                   |
-| `mover_ticket`      | Aplica la tabla de estados, y reabre un cerrado con su motivo     |
-| `anotar_punto`      | Un hallazgo, con `actual` y `expected` separados, y sus archivos   |
-| `mover_punto`       | El ciclo del punto: analizado, en curso, por retestar, verificado |
-| `anotar_evidencia`  | La prueba de algo hecho, enlazada a su punto                      |
-| `reanudar_ticket`   | Contexto para retomar trabajo empezado                            |
-| `evaluar_compuerta` | Evalúa un gate y escribe el recibo                                |
-| `simular_compuerta` | Mide un gate sobre el histórico, para calibrar                    |
-| `iniciar_qa`        | Abre el ciclo con su ambiente y la referencia de lo probado       |
-| `anotar_retest`     | El resultado de retestar un punto                                 |
-| `cerrar_qa`         | Cierra el ciclo: hallazgos, o la aprobación con la frase del PO   |
-| `preparar_cierre`   | Los dos resúmenes y el impacto de release, antes de cerrar        |
+| Herramienta            | Qué hace                                                          |
+| ---------------------- | ----------------------------------------------------------------- |
+| `crear_ticket`         | Alta en `intake`; devuelve la ruta del archivo                    |
+| `ver_ticket`           | Resumen del ticket: frontmatter, secciones y bloques              |
+| `listar_tickets`       | Filtra por estado, tipo, módulo, texto, puntos, impacto y fechas  |
+| `validar_ticket`       | Contrato del ticket; sin `id`, todo el registro                   |
+| `mover_ticket`         | Aplica la tabla de estados, y reabre un cerrado con su motivo     |
+| `anotar_punto`         | Un hallazgo, con `actual`, `expected` y sus archivos              |
+| `mover_punto`          | El ciclo del punto: analizado, en curso, por retestar, verificado |
+| `anotar_evidencia`     | La prueba de algo hecho, enlazada a su punto                      |
+| `reanudar_ticket`      | Contexto para retomar trabajo empezado                            |
+| `evaluar_compuerta`    | Evalúa un gate y escribe el recibo                                |
+| `simular_compuerta`    | Mide un gate sobre el histórico, para calibrar                    |
+| `ver_features`         | Las features del proyecto, o una con su brief y sus artefactos    |
+| `descomponer_feature`  | El grafo de tickets de una feature, propuesto por el `architect`  |
+| `ver_procesos`         | Los procesos declarados, o uno con sus pasos y parámetros         |
+| `estado_proceso`       | Las corridas, y dónde se detuvo la que espera una decisión        |
+| `ejecutar_proceso`     | Corre un proceso; se detiene en el primer gate sin aprobar        |
+| `reporte_cierres`      | Reporte de lo cerrado en un rango, por fecha de cierre            |
+| `calibrar_compuerta`   | Un gate contra el histórico, con sus falsos aprobados y bloqueos  |
+| `manifiesto_entrega`   | La versión y los tickets de una entrega; no publica nada          |
+| `indexar_registro`     | Regenera el índice, o dice si se desincronizó                     |
+| `iniciar_qa`           | Abre el ciclo con su ambiente y la referencia de lo probado       |
+| `anotar_retest`        | El resultado de retestar un punto                                 |
+| `cerrar_qa`            | Cierra el ciclo: hallazgos, o la aprobación con la frase del PO   |
+| `preparar_cierre`      | Los dos resúmenes y el impacto de release, antes de cerrar        |
 
 Todas aceptan un `root` opcional que gana sobre el directorio de trabajo, para una sesión que
 trabaje sobre dos repositorios. Se declara en todos los esquemas, no solo se lee: un argumento

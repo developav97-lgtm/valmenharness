@@ -954,6 +954,16 @@ export function runProcessCommand(
   root: string,
   id: string | undefined,
   flags: Readonly<Record<string, string | true>>,
+  /**
+   * Dónde va el avance de cada paso.
+   *
+   * Es un parámetro y no un `process.stdout.write` fijo porque hay dos clases de
+   * quien llama: una persona que mira la terminal —donde el avance se ve al
+   * vuelo y no sirve para nada al final— y un cliente de protocolo, donde stdout
+   * **es** el canal de mensajes y un renglón suelto entre dos respuestas JSON-RPC
+   * rompe la sesión de una forma que después nadie sabe explicar.
+   */
+  avance: (linea: string) => void = (linea) => process.stdout.write(linea),
 ): CommandResult {
   if (id === undefined) {
     return error("process run requiere un identificador.", EXIT_SCHEMA);
@@ -1036,19 +1046,25 @@ export function runProcessCommand(
             : paso.latencyMs > 0
               ? ` (${paso.latencyMs} ms)`
               : "";
-        process.stdout.write(`${marca} ${paso.id} — ${paso.title}${extra}\n`);
+        avance(`${marca} ${paso.id} — ${paso.title}${extra}\n`);
       },
     });
 
     // Un proceso detenido en un gate **no es un fallo**: es un proceso a medias a
     // propósito, y confundirlos haría que nadie supiera si hay algo que hacer.
+    //
+    // El informe sale por stdout y no por stderr, que es como lo hace una
+    // compuerta bloqueada: es un resultado —«quedó esperando una decisión»— y no
+    // un diagnóstico de lo que se rompió. La diferencia no es cosmética: quien
+    // lee stdout lo recibe como resultado y quien lee stderr lo reporta como
+    // error, y un proceso esperando no es un error del harness.
     if (corrida.waiting) {
       return {
-        stdout: "",
-        stderr:
+        stdout:
           `El proceso "${id}" se detuvo esperando: ` +
           `${corrida.state?.reason ?? "un gate sin aprobar"}\n` +
           `Corrida: ${corrida.state?.runId ?? "(sin identificar)"}\n`,
+        stderr: "",
         exitCode: EXIT_INVARIANT,
       };
     }
@@ -1163,6 +1179,7 @@ export function resumeProcessRun(
   root: string,
   runId: string | undefined,
   flags: Readonly<Record<string, string | true>>,
+  avance: (linea: string) => void = (linea) => process.stdout.write(linea),
 ): CommandResult {
   // Sin identificador se retoma la única detenida, y si hay varias se pide cuál:
   // elegir por alguien es cómo se retoma el proceso equivocado.
@@ -1222,16 +1239,16 @@ export function resumeProcessRun(
             : paso.latencyMs > 0
               ? ` (${paso.latencyMs} ms)`
               : "";
-        process.stdout.write(`${marca} ${paso.id} — ${paso.title}${extra}\n`);
+        avance(`${marca} ${paso.id} — ${paso.title}${extra}\n`);
       },
     });
 
     if (corridaEjecutada.waiting) {
       return {
-        stdout: "",
-        stderr:
+        stdout:
           `El proceso "${estado.processId}" volvió a detenerse: ` +
           `${corridaEjecutada.state?.reason ?? "esperando un gate"}\n`,
+        stderr: "",
         exitCode: EXIT_INVARIANT,
       };
     }

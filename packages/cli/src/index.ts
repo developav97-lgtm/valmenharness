@@ -12,6 +12,7 @@
  */
 
 export * from "./commands.js";
+export * from "./features.js";
 export { parseArgs, dispatch, resolvePaths, run } from "./main.js";
 export type { CommandResult } from "./commands.js";
 export type { LocatedTicket, RegistryPaths, RunnerResult } from "@valmen/engine";
