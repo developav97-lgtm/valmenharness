@@ -1329,7 +1329,10 @@ export async function callTool(
         // el informe y la calibración lo lee contra lo que decidieron las
         // personas. Separarlos en dos herramientas dejaría el número a medias.
         const simulacion = await simulateGate(paths, {
-          gate: gateFor(gateById(gateId), { criteria: [] }),
+          // El gate **sin expandir**: `simulateGate` lo expande por ticket, con
+          // los criterios y los impactos de cada uno. Expandirlo aquí con listas
+          // vacías daría el mismo objeto y sugeriría lo contrario.
+          gate: gateFor(gateById(gateId), { criteria: [], impacts: [] }),
           ...(typeof limite === "number" ? { limit: limite } : {}),
         });
         return delCli(calibrateReport(paths, gateId, simulacion));
@@ -1515,7 +1518,10 @@ export async function callTool(
         const gateId = texto(args, "gate") as string;
         const limite = args["limit"];
         const informe = await simulateGate(paths, {
-          gate: gateFor(gateById(gateId), { criteria: [] }),
+          // El gate **sin expandir**: `simulateGate` lo expande por ticket, con
+          // los criterios y los impactos de cada uno. Expandirlo aquí con listas
+          // vacías daría el mismo objeto y sugeriría lo contrario.
+          gate: gateFor(gateById(gateId), { criteria: [], impacts: [] }),
           ...(typeof limite === "number" ? { limit: limite } : {}),
         });
         return bien(

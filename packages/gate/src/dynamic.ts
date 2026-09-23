@@ -61,6 +61,76 @@ export function criterionProposition(index: number, criterion: string): Proposit
 }
 
 /**
+ * Lo que un impacto declarado obliga a responder en el plan.
+ *
+ * Un ticket que declara impacto de migración y un plan que no dice cómo se
+ * revierte no son el mismo riesgo que un bugfix de una línea, y el gate los
+ * evaluaba igual: los impactos vivían en el frontmatter y **nunca llegaban al
+ * evaluador**. La consecuencia práctica era la peor posible —el registro decía
+ * «migración» y la compuerta preguntaba por criterios genéricos—, así que un plan
+ * que ignoraba la migración podía aprobarse sin que nadie lo notara.
+ *
+ * Cada pregunta es atómica y nombra el artefacto que falta, como las de criterio:
+ * una proposición compuesta acierta el 7% de las veces y una atómica el 62%. Y no
+ * se le pregunta al modelo si el impacto «está bien considerado» —eso no se puede
+ * computar— sino por un hecho del plan que sí se puede leer.
+ */
+const PREGUNTAS_DE_IMPACTO: Readonly<
+  Record<
+    string,
+    {
+      readonly description: string;
+      readonly instructions: string;
+      readonly yes: string;
+      readonly no: string;
+    }
+  >
+> = {
+  sync_impact: {
+    description: "El plan contempla la sincronización",
+    instructions:
+      "`plan` dice qué pasa con los datos que ya están sincronizados y con los clientes " +
+      "que todavía no se actualizaron, dado que el ticket declara impacto de sincronización.",
+    yes: "El plan nombra el efecto sobre lo ya sincronizado y sobre los clientes desactualizados.",
+    no: "El plan no dice qué pasa con lo ya sincronizado ni con los clientes viejos.",
+  },
+  migration_impact: {
+    description: "El plan contempla la migración",
+    instructions:
+      "`plan` declara cómo se aplica la migración, en qué orden respecto del despliegue, y " +
+      "cómo se revierte, dado que el ticket declara impacto de migración.",
+    yes: "El plan dice en qué orden se aplica la migración y cómo se revierte.",
+    no: "El plan no dice en qué orden se aplica ni cómo se revierte.",
+  },
+  docker_impact: {
+    description: "El plan contempla los contenedores",
+    instructions:
+      "`plan` declara qué imagen o contenedor cambia y cómo llega al entorno donde corre, " +
+      "dado que el ticket declara impacto sobre los contenedores.",
+    yes: "El plan nombra la imagen o el contenedor y cómo se publica.",
+    no: "El plan no dice qué imagen cambia ni cómo llega al entorno.",
+  },
+};
+
+/** El orden canónico de las preguntas: el mismo del contrato. */
+const ORDEN_DE_IMPACTOS = ["sync_impact", "migration_impact", "docker_impact"] as const;
+
+/** La proposición atómica de un impacto declarado. */
+export function impactProposition(impacto: string): Proposition | null {
+  const pregunta = PREGUNTAS_DE_IMPACTO[impacto];
+  if (pregunta === undefined) return null;
+
+  return {
+    id: impacto,
+    kind: "noul",
+    weight: 1,
+    description: pregunta.description,
+    instructions: pregunta.instructions,
+    criteria: { yes: pregunta.yes, no: pregunta.no },
+  };
+}
+
+/**
  * Expande un gate con las proposiciones derivadas del sujeto.
  *
  * Sustituye la proposición compuesta de criterios por una por criterio, **en los
@@ -68,21 +138,27 @@ export function criterionProposition(index: number, criterion: string): Proposit
  * sin cambios: es preferible que falle el check mecánico de criterios presentes a
  * que el gate evalúe una lista vacía y apruebe por vacuidad.
  */
-export function expandGate(
-  gate: GateDefinition,
-  context: { readonly criteria: readonly string[] },
-): GateDefinition {
-  if (context.criteria.length === 0) return gate;
+export function expandGate(gate: GateDefinition, context: GateContext): GateDefinition {
+  // Las dos expansiones existen por la misma razón —una pregunta compuesta no se
+  // puede contestar y una atómica sí—, pero las declara el gate por separado. Un
+  // gate que evalúa un artefacto que todavía no existe —el de análisis, que
+  // protege `analyzed → planned`— no puede preguntar por pasos del plan, porque el
+  // plan es justo lo que ese estado precede. Ver `GateDefinition`.
+  const atomicas =
+    gate.criteriaPropositions === true
+      ? context.criteria.map((criterion, index) => criterionProposition(index, criterion))
+      : [];
 
-  // La expansión no es una regla general: la declara el gate. Un gate que evalúa
-  // un artefacto que todavía no existe —el de análisis, que protege
-  // `analyzed → planned`— no puede preguntar por pasos del plan, porque el plan
-  // es justo lo que ese estado precede. Ver `GateDefinition.criteriaPropositions`.
-  if (gate.criteriaPropositions !== true) return gate;
+  // Los impactos se despliegan en el orden del contrato y no en el que lleguen:
+  // dos tickets con los mismos impactos tienen que producir el mismo recibo.
+  const porImpacto =
+    gate.impactPropositions === true
+      ? ORDEN_DE_IMPACTOS.filter((impacto) => context.impacts.includes(impacto))
+          .map((impacto) => impactProposition(impacto))
+          .filter((proposition): proposition is Proposition => proposition !== null)
+      : [];
 
-  const atomicas = context.criteria.map((criterion, index) =>
-    criterionProposition(index, criterion),
-  );
+  if (atomicas.length === 0 && porImpacto.length === 0) return gate;
 
   // Cuando el sujeto declara criterios, el veredicto lo dan **las proposiciones
   // atómicas** y las dimensiones fijas pasan a ser descriptivas.
@@ -101,19 +177,38 @@ export function expandGate(
   // ausencia de una respuesta que nunca se pidió. Se conservan como
   // descriptivas porque su valor es informativo y queda en el recibo.
   const propositions = gate.propositions.map((proposition) =>
-    proposition.verdict === false ? proposition : { ...proposition, verdict: false },
+    atomicas.length > 0 && proposition.verdict !== false
+      ? { ...proposition, verdict: false }
+      : proposition,
   );
+
+  const sufijo = [
+    atomicas.length > 0 ? "criterios" : "",
+    porImpacto.length > 0 ? "impactos" : "",
+  ]
+    .filter((parte) => parte !== "")
+    .join("+");
 
   return {
     ...gate,
-    id: `${gate.id}+criterios`,
-    propositions: [...atomicas, ...propositions],
+    id: `${gate.id}+${sufijo}`,
+    propositions: [...atomicas, ...porImpacto, ...propositions],
   };
 }
 
-/** Contexto del sujeto que un gate puede necesitar para expandirse. */
+/**
+ * Contexto del sujeto que un gate puede necesitar para expandirse.
+ *
+ * Los dos campos son obligatorios a propósito: quien expande un gate tiene que
+ * decir qué criterios **y** qué impactos declara el ticket. Dejarlos opcionales
+ * haría que un sitio nuevo los omitiera sin que nada lo dijera, y el gate
+ * preguntaría de menos en silencio —que es exactamente el defecto que esta
+ * expansión existe para cerrar—.
+ */
 export interface GateContext {
   readonly criteria: readonly string[];
+  /** Identificadores del contrato: `sync_impact`, `migration_impact`, `docker_impact`. */
+  readonly impacts: readonly string[];
 }
 
 /** Obtiene un gate expandido con el contexto del sujeto. */
@@ -126,8 +221,9 @@ export function describeExpansion(base: GateDefinition, expanded: GateDefinition
   const nuevas = expanded.propositions.filter(
     (proposition) => !base.propositions.some((item) => item.id === proposition.id),
   );
-  if (nuevas.length === 0) return "sin expansión: el sujeto no declara criterios";
-  return `${nuevas.length} proposición(es) por criterio, más ${base.propositions.length} fijas`;
+  if (nuevas.length === 0)
+    return "sin expansión: el sujeto no declara criterios ni impactos";
+  return `${nuevas.length} proposición(es) del sujeto, más ${base.propositions.length} fijas`;
 }
 
 export { ANALYSIS_GATE, PLAN_GATE, DEFAULT_POLICY };

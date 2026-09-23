@@ -15,7 +15,7 @@
  *
  * Ver docs/03-GATES.md §5.1ter y §9.
  */
-import { EXIT_INVARIANT, parseTicket, toFailure } from "@valmen/core";
+import { EXIT_INVARIANT, declaredImpactIds, parseTicket, toFailure } from "@valmen/core";
 import {
   type GateDecision,
   type GatePolicy,
@@ -169,9 +169,12 @@ export async function simulateGate(
     options.onProgress?.(index, selected.length);
     let state: Record<string, string>;
     let workflow: string;
+    let impacts: string[];
     try {
+      const parsed = parseTicket(ticket.text);
       state = buildGateState(ticket.text);
-      workflow = parseTicket(ticket.text).fields.workflow_status;
+      workflow = parsed.fields.workflow_status;
+      impacts = declaredImpactIds(parsed);
     } catch (caught) {
       errors.push({ id: ticket.id, message: toFailure(caught).message });
       continue;
@@ -182,6 +185,7 @@ export async function simulateGate(
     // corre en producción.
     const expanded = gateFor(gate, {
       criteria: extractCriteria(state["criterios"] ?? ""),
+      impacts,
     });
 
     let evaluation;

@@ -313,6 +313,104 @@ describe("checks mecánicos", () => {
   });
 });
 
+describe("un impacto declarado cambia lo que se pregunta", () => {
+  it("un plan que ignora la migración no se aprueba, aunque cumpla los criterios", () => {
+    // El caso que el harness no veía: el frontmatter dice que el cambio toca la
+    // base de datos, el plan no dice cómo se revierte, y el gate aprobaba igual
+    // porque la migración nunca llegaba a la pregunta. Se declara el impacto y el
+    // evaluador puntúa esa proposición como lo que es —un hueco—.
+    writeFixtureTicket(lab, {
+      id: TICKET,
+      impacts: ["migration_impact"],
+      diagnostico: [
+        "- Archivos y flujo investigados: `BackEnd/pos/filters.py`, que define el filtro.",
+        "- Causa raíz o hipótesis: el lookup compara por igualdad exacta.",
+        "- Riesgos y compatibilidad: la tabla cambia de forma.",
+        "- Impactos de sync, migración, Docker o despliegue: hay migración de la tabla `orders`.",
+      ].join("\n"),
+    });
+
+    return runGate(PATHS(), {
+      gateId: "plan",
+      ticketId: TICKET,
+      jev: evaluator({ ...allPropositions(0.95), migration_impact: 0.05 }, 1.0),
+      dryRun: true,
+    }).then((result) => {
+      // El resto del plan está impecable; lo único que falta es la migración.
+      expect(result.stdout).toContain("migration_impact");
+      expect(result.stdout).not.toContain("RESULTADO: APPROVE");
+      expect(result.exitCode).toBe(3);
+    });
+  });
+
+  it("el mismo plan con la migración resuelta sí se aprueba", () => {
+    // El otro lado, que es lo que hace útil la pregunta: cuando el plan dice cómo
+    // se revierte, el impacto declarado no bloquea nada.
+    writeFixtureTicket(lab, {
+      id: TICKET,
+      impacts: ["migration_impact"],
+      diagnostico: [
+        "- Archivos y flujo investigados: `BackEnd/pos/filters.py`, que define el filtro.",
+        "- Causa raíz o hipótesis: el lookup compara por igualdad exacta.",
+        "- Riesgos y compatibilidad: la tabla cambia de forma.",
+        "- Impactos de sync, migración, Docker o despliegue: hay migración de la tabla `orders`.",
+      ].join("\n"),
+      plan: [
+        "- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).",
+        "- Pasos ordenados:",
+        "  1. Añadir la migración `0042_orders_lookup` y aplicarla antes del despliegue.",
+        "  2. Cambiar en `BackEnd/pos/filters.py` el `lookup_expr` a `icontains`.",
+        "- Rollback: revertir la migración con `0042_orders_lookup --reverse`.",
+      ].join("\n"),
+    });
+
+    return runGate(PATHS(), {
+      gateId: "plan",
+      ticketId: TICKET,
+      jev: evaluator(allPropositions(0.95), 1.0),
+      dryRun: true,
+    }).then((result) => {
+      expect(result.stdout).toContain("RESULTADO: APPROVE");
+      expect(result.exitCode).toBe(0);
+    });
+  });
+
+  it("un ticket sin impactos no arrastra la pregunta", () => {
+    // La garantía simétrica: el que no declara impactos no recibe proposiciones de
+    // impacto, así que esto no volvió más estricto a todo el registro.
+    return runGate(PATHS(), {
+      gateId: "plan",
+      ticketId: TICKET,
+      jev: evaluator(allPropositions(0.95), 1.0),
+      dryRun: true,
+    }).then((result) => {
+      expect(result.stdout).toContain("RESULTADO: APPROVE");
+      expect(result.stdout).not.toContain("migration_impact");
+    });
+  });
+
+  it("la compuerta no llega al evaluador si el diagnóstico contradice al frontmatter", async () => {
+    // Un ticket que declara migración y dice «ninguno» en su diagnóstico no gasta
+    // una llamada: el hueco se ve en el código.
+    writeFixtureTicket(lab, {
+      id: TICKET,
+      workflowStatus: "analyzed",
+      impacts: ["migration_impact"],
+    });
+
+    const result = await runGate(PATHS(), {
+      gateId: "analysis",
+      ticketId: TICKET,
+      jev: evaluator(allPropositions(0.95), 1.0),
+      dryRun: true,
+    });
+
+    expect(result.exitCode).toBe(3);
+    expect(result.stderr).toContain("impactos_declarados");
+    expect(result.stderr).toContain("No se llamó al evaluador");
+  });
+});
+
 describe("el recibo", () => {
   it("se anexa como JSONL y es auditable", async () => {
     const result = await runGate(PATHS(), {

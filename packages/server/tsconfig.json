@@ -15,6 +15,9 @@
     },
     {
       "path": "../engine"
+    },
+    {
+      "path": "../gate"
     }
   ],
   "include": ["src/**/*.ts"]

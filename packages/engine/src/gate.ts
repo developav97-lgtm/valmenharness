@@ -15,7 +15,13 @@
  * ticket**: entrega el recibo y deja la decisión pendiente. Un gate no cambia
  * estados por su cuenta.
  */
-import { EXIT_INVARIANT, TicketError, parseTicket, toFailure } from "@valmen/core";
+import {
+  EXIT_INVARIANT,
+  TicketError,
+  declaredImpactIds,
+  parseTicket,
+  toFailure,
+} from "@valmen/core";
 import {
   type GateDecision,
   type GatePolicy,
@@ -134,19 +140,21 @@ export async function runGate(
 
   let state: Record<string, string>;
   let checks: MechanicalCheck[];
+  let impacts: string[];
   try {
     state = buildGateState(ticket.text);
     checks = runMechanicalChecks(ticket.text);
+    impacts = declaredImpactIds(parseTicket(ticket.text));
   } catch (caught) {
     const failure = toFailure(caught);
     return { stdout: "", stderr: failure.message, exitCode: failure.exitCode };
   }
 
-  // El gate se expande con el sujeto: una proposición por criterio de
-  // aceptación, en vez de una pregunta compuesta que el evaluador no sabe
-  // responder. Medido: la compuesta acierta el 7%, las atómicas el 62%.
+  // El gate se expande con el sujeto: una proposición por criterio de aceptación
+  // y una por impacto declarado, en vez de preguntas compuestas que el evaluador
+  // no sabe responder. Medido: la compuesta acierta el 7%, las atómicas el 62%.
   const criteria = extractCriteria(state["criterios"] ?? "");
-  const gate = gateFor(definition, { criteria });
+  const gate = gateFor(definition, { criteria, impacts });
 
   // Un check mecánico fallido bloquea sin gastar una llamada al modelo.
   const fallidos = checks.filter((check) => check.result === "fail");

@@ -586,6 +586,47 @@ señalar el trabajo que necesita una mirada.
 2. Medir la coincidencia: de las veces que el gate dijo `approve`, ¿cuántas el humano aprobó?
 3. Promover a `auto` solo para tickets de riesgo `low` cuando la coincidencia supere el 98%.
 
+### 5.1quinquies Los impactos dejan de ser decorativos
+
+Un ticket que toca una migración y un bugfix de una línea no son el mismo riesgo, y hasta ahora
+el gate los evaluaba igual. Los impactos vivían en el frontmatter —el análisis los clasificaba,
+la pantalla los contaba, el reporte los listaba— y **nunca llegaban al evaluador**: un plan que
+ignoraba la migración se aprobaba con las mismas preguntas que uno que la resolvía.
+
+Hay un check mecánico que decía comprobarlo y **siempre devolvía `pass`**, con un detalle que
+hablaba de los puntos registrados. Un check que siempre pasa es peor que no tenerlo: la lista de
+comprobaciones afirma que algo se comprobó.
+
+Ahora son dos cosas, y las dos son código:
+
+1. **Coherencia entre el frontmatter y el diagnóstico.** Si el ticket declara un impacto y su
+   diagnóstico dice «ninguno», una de las dos cosas es falsa y la compuerta se detiene antes de
+   gastar una llamada. Lo contrario —una prosa que menciona más de lo que declara— **no
+   bloquea**: castigar a quien explicó de más es castigar la explicación.
+
+   La primera versión exigía nombrar cada impacto con la palabra del contrato, y el registro real
+   la desmintió: un ticket de release dice «aplican los cuatro» y tiene razón. Se corrigió la
+   regla, no el ticket. La señal queda en el detalle, que es lo que muestra la pantalla.
+
+2. **Una proposición por impacto declarado**, en el gate de plan. El de análisis no las despliega
+   por la misma razón por la que no despliega criterios: protege `analyzed → planned`, y el plan
+   es lo que ese estado precede.
+
+   | Impacto | Lo que la proposición pregunta |
+   |---|---|
+   | `sync_impact` | Qué pasa con los datos ya sincronizados y con los clientes desactualizados |
+   | `migration_impact` | En qué orden se aplica la migración y cómo se revierte |
+   | `docker_impact` | Qué imagen cambia y cómo llega al entorno |
+
+   Son atómicas y nombran el artefacto que falta, como las de criterio: una proposición compuesta
+   acierta el 7% de las veces y una atómica el 62%. No se le pregunta al modelo si el impacto
+   «está bien considerado» —eso no se puede computar— sino por un hecho del plan que sí se puede
+   leer.
+
+Además, los impactos viajan en el **estado** que ve el evaluador, no solo en las proposiciones: un
+modelo que responde por los criterios tiene que saber que ese cambio toca la base de datos, o
+contesta lo mismo que para un bugfix.
+
 ### 5.2 Calibración: la banda media es información
 
 Después de unas semanas de tráfico real:
@@ -737,8 +778,8 @@ Es el objeto que hace auditable todo el sistema. Se escribe **append-only** en
 | Gate              | Transición                          | Modo por defecto | Qué valida                                                                                                         |
 | ----------------- | ----------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------ |
 | `intake`          | `intake → analyzed`                 | auto             | La solicitud original se preservó literalmente (hash). Se clasificó el tipo y los impactos.                        |
-| `analysis`        | `analyzed → planned`                | hybrid           | La investigación identifica archivos reales, causa raíz o hipótesis falsable, riesgos coherentes con los impactos. |
-| `plan`            | `planned → approved`                | hybrid           | Cobertura de criterios, correspondencia con la investigación, pasos ejecutables, rollback, compatibilidad.         |
+| `analysis`        | `analyzed → planned`                | hybrid           | La investigación identifica archivos reales, causa raíz o hipótesis falsable, y declara los impactos de forma coherente con el frontmatter. |
+| `plan`            | `planned → approved`                | hybrid           | Cobertura de criterios, correspondencia con la investigación, pasos ejecutables, rollback, compatibilidad, y una proposición por cada impacto declarado. |
 | `pre-apply`       | `approved → in_progress`            | auto             | Existe plan aprobado si el tipo lo exige. Existe el ticket antes de la primera escritura.                          |
 | `qa-mechanical`   | `in_progress → awaiting_user_tests` | auto             | Los tests declarados corren y pasan. `git diff --check` limpio. Sin secretos en el diff.                           |
 | `qa`              | `in_qa → qa_approved`               | human            | QA funcional. Heredado de SaiOpenCloud: sin puntos abiertos.                                                       |

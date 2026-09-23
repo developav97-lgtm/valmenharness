@@ -161,6 +161,15 @@ export interface GateDefinition {
    * ausencia de algo que nadie pidió todavía.
    */
   readonly criteriaPropositions?: boolean;
+  /**
+   * Si despliega una proposición por cada impacto que el ticket declara.
+   *
+   * Un plan no puede ser igual de exigente para un cambio que toca la
+   * sincronización que para uno que no, y la diferencia tiene que estar en lo que
+   * se pregunta: los impactos vivían en el frontmatter y no llegaban al
+   * evaluador, así que un plan que ignoraba la migración se aprobaba igual.
+   */
+  readonly impactPropositions?: boolean;
   readonly policy: GatePolicy;
   readonly mechanicalChecks: readonly MechanicalCheck[];
   /**

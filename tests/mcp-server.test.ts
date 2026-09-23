@@ -95,6 +95,30 @@ function escribirCriterio(ruta: string, criterio: string): void {
   );
 }
 
+/**
+ * Escribe un diagnóstico real en el ticket.
+ *
+ * Desde que el check mecánico de impactos comprueba de verdad, un ticket con la
+ * línea de impactos sin rellenar **no llega al evaluador**: la compuerta se
+ * detiene antes. Es lo que le pasa a un ticket de verdad, y el check no distingue
+ * un test de un proyecto — así que el test escribe el ticket como lo escribiría
+ * una persona.
+ */
+function escribirDiagnostico(ruta: string): void {
+  const texto = readFileSync(ruta, "utf8");
+  const cuerpo = [
+    "- Archivos y flujo investigados: `BackEnd/pos/filters.py` define `OrderFilter.number` con `lookup_expr='exact'`.",
+    "- Causa raíz o hipótesis: el lookup es exacto cuando la pantalla documenta búsqueda parcial.",
+    "- Riesgos y compatibilidad: ampliar el conjunto de resultados; un cliente que consulte el número exacto sigue recibiéndolo.",
+    "- Impactos de sync, migración, Docker o despliegue: ninguno.",
+  ].join("\n");
+  writeFileSync(
+    ruta,
+    texto.replace(/(## Diagnóstico\n\n)[\s\S]*?(?=\n## )/, `$1${cuerpo}\n`),
+    "utf8",
+  );
+}
+
 /** Un evaluador semántico falso que aprueba todo lo que se le pregunte. */
 function evaluadorQueAprueba(valor = 0.95): NonNullable<ToolContext["jev"]> {
   // La opción que aprueba se llama distinto en cada gate —`completa` en el de
@@ -393,6 +417,7 @@ describe("evaluar una compuerta", () => {
 
   it("un evaluador determinista sin checks declarados lo dice, en vez de fingir un veredicto", async () => {
     const ruta = await crear();
+    escribirDiagnostico(ruta);
     escribirCriterio(ruta, 'Buscar "104" devuelve la orden "1042".');
     await callTool(contexto, "mover_ticket", { id: ID, to: "analyzed" });
 
@@ -410,6 +435,7 @@ describe("evaluar una compuerta", () => {
 
   it("escribe el recibo y devuelve el veredicto cuando el evaluador responde", async () => {
     const ruta = await crear();
+    escribirDiagnostico(ruta);
     escribirCriterio(ruta, 'Buscar "104" devuelve la orden "1042".');
     await callTool(contexto, "mover_ticket", { id: ID, to: "analyzed" });
 
@@ -446,6 +472,7 @@ describe("evaluar una compuerta", () => {
     // agente recibía un fallo **sin texto**: sin veredicto, sin motivo y sin
     // nada que contarle a quien preguntaba. Pasó en el primer ticket real.
     const ruta = await crear();
+    escribirDiagnostico(ruta);
     escribirCriterio(ruta, 'Buscar "104" devuelve la orden "1042".');
     await callTool(contexto, "mover_ticket", { id: ID, to: "analyzed" });
 
@@ -475,6 +502,7 @@ describe("evaluar una compuerta", () => {
 
   it("no mueve el ticket aunque el veredicto sea de aprobación", async () => {
     const ruta = await crear();
+    escribirDiagnostico(ruta);
     escribirCriterio(ruta, 'Buscar "104" devuelve la orden "1042".');
     await callTool(contexto, "mover_ticket", { id: ID, to: "analyzed" });
 
@@ -509,6 +537,7 @@ describe("el contenido estructurado", () => {
 
   it("`evaluar_compuerta` devuelve el recibo que acaba de anexar, sin interpretar el informe", async () => {
     const ruta = await crear();
+    escribirDiagnostico(ruta);
     escribirCriterio(ruta, 'Buscar "104" devuelve la orden "1042".');
     await callTool(contexto, "mover_ticket", { id: ID, to: "analyzed" });
 

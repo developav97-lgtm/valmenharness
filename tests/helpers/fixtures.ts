@@ -25,6 +25,17 @@ export interface FixtureTicketOptions {
   readonly criterios?: string;
   readonly diagnostico?: string;
   readonly releaseStatus?: string;
+  /**
+   * Los impactos que el ticket declara, por su identificador del contrato:
+   * `sync_impact`, `migration_impact`, `docker_impact`.
+   *
+   * Existe porque los impactos dejaron de ser decorativos: el check mecánico
+   * compara esta declaración con la línea del diagnóstico, y la compuerta de plan
+   * despliega una proposición por cada uno. Un test de impactos necesita
+   * declararlos, y hacerlo con un `replace` sobre el texto generado sería escribir
+   * el caso dos veces.
+   */
+  readonly impacts?: readonly string[];
   readonly targetRelease?: string;
   readonly releasedIn?: string;
 }
@@ -63,6 +74,7 @@ export function renderFixtureTicket(options: FixtureTicketOptions): string {
       "- Riesgos y compatibilidad: cambiar el lookup a `icontains` amplía el conjunto de resultados. Un cliente que consulte con el número exacto sigue recibiendo su resultado.",
       "- Impactos de sync, migración, Docker o despliegue: ninguno.",
     ].join("\n"),
+    impacts = [],
     releaseStatus = "unreleased",
     targetRelease = "null",
     releasedIn = "null",
@@ -83,9 +95,9 @@ workflow_status: ${workflowStatus}
 qa_status: pending
 release_status: ${releaseStatus}
 user_visible: true
-sync_impact: false
-migration_impact: false
-docker_impact: false
+sync_impact: ${impacts.includes("sync_impact")}
+migration_impact: ${impacts.includes("migration_impact")}
+docker_impact: ${impacts.includes("docker_impact")}
 risk_level: ${riskLevel}
 created: 2026-09-21
 updated: 2026-09-21

@@ -32,6 +32,9 @@ export const PLAN_GATE: GateDefinition = {
   // hay que hacer. El de análisis no las despliega porque protege el estado
   // anterior, donde el plan todavía no existe.
   criteriaPropositions: true,
+  // Y una por impacto declarado: el plan de un ticket que toca la migración tiene
+  // que decir cómo se revierte, y el de uno que no, no.
+  impactPropositions: true,
   // Solo tiene sentido antes de que la transición ocurra. Un ticket ya aprobado
   // o cerrado pasó por aquí, y volver a evaluarlo mide otra cosa.
   appliesTo: ["planned"],

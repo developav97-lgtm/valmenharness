@@ -144,6 +144,96 @@ export function hasStructuredPlan(planSection: string): boolean {
   return steps.length >= 2;
 }
 
+/**
+ * Las tres dimensiones de impacto del contrato, con las palabras que las nombran.
+ *
+ * Las palabras se buscan **solo en el valor** de la línea del diagnóstico, nunca
+ * en la etiqueta: la etiqueta del contrato dice «Impactos de sync, migración,
+ * Docker o despliegue», así que buscarlas en la línea entera daría que todos los
+ * tickets declaran los tres.
+ */
+const DIMENSIONES_DE_IMPACTO: readonly {
+  readonly campo: "sync_impact" | "migration_impact" | "docker_impact";
+  readonly nombre: string;
+  readonly palabras: RegExp;
+}[] = [
+  { campo: "sync_impact", nombre: "sincronización", palabras: /sync|sincroniz/i },
+  { campo: "migration_impact", nombre: "migración", palabras: /migrac/i },
+  { campo: "docker_impact", nombre: "contenedores", palabras: /docker|contenedor/i },
+];
+
+/** Las palabras con las que el diagnóstico dice que no hay ningún impacto. */
+const SIN_IMPACTO_RE = /^(?:ningun[oa]s?\b|no aplica\b|sin impactos?\b|ninguna\b)/i;
+
+/** La etiqueta del diagnóstico que declara los impactos. */
+const ETIQUETA_DE_IMPACTOS_RE = /^\s*[-*]?\s*impactos?\b[^:]*:\s*(.*)$/i;
+
+/** Los identificadores de impacto que declara un frontmatter. */
+export function impactIdsInFields(fields: Readonly<Record<string, string>>): string[] {
+  return DIMENSIONES_DE_IMPACTO.filter(
+    (dimension) => fields[dimension.campo] === "true",
+  ).map((dimension) => dimension.campo);
+}
+
+/** Los identificadores de impacto que el ticket declara en su frontmatter. */
+export function declaredImpactIds(ticket: ParsedTicket): string[] {
+  return impactIdsInFields(ticket.fields);
+}
+
+/** Lo que el diagnóstico dice sobre los impactos. */
+export interface DiagnosedImpacts {
+  /** `false` si el diagnóstico no tiene la línea. */
+  readonly found: boolean;
+  /** El texto declarado, ya sin la etiqueta. */
+  readonly value: string;
+  /** `true` si declara explícitamente que no hay ninguno. */
+  readonly saysNone: boolean;
+  /** Los identificadores de impacto que el texto nombra. */
+  readonly named: readonly string[];
+}
+
+/**
+ * Lee la línea de impactos del diagnóstico.
+ *
+ * El valor puede continuar en las líneas indentadas que siguen —es markdown, y
+ * una explicación de impacto no siempre cabe en un renglón—, así que se recogen
+ * hasta la siguiente etiqueta. Una línea sin valor no es una declaración: es la
+ * plantilla sin rellenar, y por eso `found` puede ser `true` con `value` vacío.
+ */
+export function diagnosedImpacts(diagnostico: string): DiagnosedImpacts {
+  const lineas = diagnostico.split("\n");
+
+  for (let i = 0; i < lineas.length; i += 1) {
+    const match = ETIQUETA_DE_IMPACTOS_RE.exec(lineas[i] as string);
+    if (match === null) continue;
+
+    const partes = [(match[1] as string).trim()];
+    for (let j = i + 1; j < lineas.length; j += 1) {
+      const continuacion = lineas[j] as string;
+      if (continuacion.trim() === "") break;
+      if (!/^\s+\S/.test(continuacion)) break;
+      partes.push(continuacion.trim());
+    }
+
+    const value = partes.filter((parte) => parte !== "").join(" ");
+    return {
+      found: true,
+      value,
+      saysNone: SIN_IMPACTO_RE.test(value),
+      named: DIMENSIONES_DE_IMPACTO.filter((dimension) =>
+        dimension.palabras.test(value),
+      ).map((dimension) => dimension.campo),
+    };
+  }
+
+  return { found: false, value: "", saysNone: false, named: [] };
+}
+
+/** El nombre en palabras de una dimensión de impacto, para los mensajes. */
+export function impactName(id: string): string {
+  return DIMENSIONES_DE_IMPACTO.find((dimension) => dimension.campo === id)?.nombre ?? id;
+}
+
 /** `true` si el tipo o los impactos exigen aprobación explícita del PO. */
 export function isCriticalPlanGate(ticket: ParsedTicket): boolean {
   const criticalTypes = ["FEATURE", "SYNC", "INTEGRATION", "AGENT", "SECURITY"];

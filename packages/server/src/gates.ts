@@ -34,7 +34,7 @@ import {
   weightedMean,
   withHumanDecision,
 } from "@valmen/gate";
-import { parseTicket } from "@valmen/core";
+import { declaredImpactIds, parseTicket } from "@valmen/core";
 import { apiKeyWithPrecedence } from "@valmen/credentials";
 import { gateRouting } from "./routing.js";
 import {
@@ -235,7 +235,11 @@ export function listGateCards(paths: RegistryPaths, ticketId: string): GateCard[
     propositionCounts = new Map(
       Object.values(GATES).map((definicion) => [
         definicion.id,
-        gateFor(definicion, { criteria }).propositions.length,
+        // Con los impactos del ticket: el plan de uno que toca la migración tiene
+        // más proposiciones que el de un bugfix, y el número que muestra la
+        // pantalla tiene que ser el que se va a evaluar.
+        gateFor(definicion, { criteria, impacts: declaredImpactIds(parsed) }).propositions
+          .length,
       ]),
     );
   } catch {

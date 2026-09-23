@@ -11,7 +11,7 @@
  * copia del simulador no describiría al gate real en cuanto las dos se
  * separaran, así que ahora hay una sola.
  */
-import { parseTicket } from "@valmen/core";
+import { diagnosedImpacts, impactIdsInFields, impactName, parseTicket } from "@valmen/core";
 import { type MechanicalCheck } from "@valmen/gate";
 
 /** Secciones del ticket que se envían al evaluador, según lo que declare el gate. */
@@ -22,6 +22,14 @@ export function buildGateState(text: string): Record<string, string> {
     tipo: fields.type,
     modulo: fields.module,
     riesgo: fields.risk_level,
+    // Los impactos van al estado **además** de generar proposiciones propias. Un
+    // evaluador que responde por los criterios tiene que saber que este cambio
+    // toca la migración: sin eso contesta como si fuera un bugfix de una línea, y
+    // su respuesta es la misma para los dos casos.
+    impactos:
+      impactIdsInFields(fields)
+        .map((impacto) => impactName(impacto))
+        .join(", ") || "ninguno",
     solicitud: sections["Solicitud original"].trim(),
     investigacion: sections["Diagnóstico"].trim(),
     plan: sections["Plan"].trim(),
@@ -61,7 +69,7 @@ function tieneCriterioReal(linea: string): boolean {
 }
 
 export function runMechanicalChecks(text: string): MechanicalCheck[] {
-  const { sections, blocks, fields } = parseTicket(text);
+  const { sections, fields } = parseTicket(text);
   const checks: MechanicalCheck[] = [];
 
   const criterios = sections["Criterios de aceptación"].trim();
@@ -89,12 +97,84 @@ export function runMechanicalChecks(text: string): MechanicalCheck[] {
     detail: riesgoCritico ? `riesgo ${fields.risk_level}` : "riesgo no crítico",
   });
 
-  checks.push({
-    id: "impactos_declarados",
-    description: "Los impactos de sync, migración y contenedores están declarados.",
-    result: "pass",
-    detail: `${blocks.Puntos.length} punto(s) registrados`,
-  });
+  checks.push(chequeoDeImpactos(fields, sections["Diagnóstico"] ?? ""));
 
   return checks;
+}
+
+/**
+ * Los impactos del frontmatter y los del diagnóstico tienen que coincidir.
+ *
+ * Este check existía **solo de nombre**: devolvía `pass` siempre y su detalle
+ * hablaba de los puntos registrados, que no tiene nada que ver. Un check que
+ * siempre pasa es peor que no tenerlo, porque la lista de comprobaciones dice que
+ * algo se comprobó.
+ *
+ * Lo que comprueba ahora es la coherencia en la dirección que importa: **un
+ * impacto declarado tiene que estar explicado**. Si el frontmatter dice que el
+ * cambio toca la sincronización y el diagnóstico dice «ninguno», una de las dos
+ * cosas es falsa, y el gate no puede preguntar por un impacto que el propio
+ * ticket niega. La dirección contraria —una línea que menciona más de lo que
+ * declara— no bloquea: la prosa puede hablar de un impacto para descartarlo
+ * («no hay impacto de sync; el despliegue va aparte») y bloquear ahí sería
+ * castigar una explicación honesta.
+ */
+function chequeoDeImpactos(
+  fields: Readonly<Record<string, string>>,
+  diagnostico: string,
+): MechanicalCheck {
+  const declarados = impactIdsInFields(fields);
+  const linea = diagnosedImpacts(diagnostico);
+
+  const base = {
+    id: "impactos_declarados",
+    description: "Los impactos declarados están explicados en el diagnóstico.",
+  };
+
+  if (!linea.found) {
+    return {
+      ...base,
+      result: "fail",
+      detail: "el diagnóstico no tiene la línea de impactos del contrato",
+    };
+  }
+  if (linea.value === "") {
+    return { ...base, result: "fail", detail: "la línea de impactos está sin rellenar" };
+  }
+  if (declarados.length === 0) {
+    return {
+      ...base,
+      result: "pass",
+      detail: linea.saysNone ? "sin impactos" : `declara: ${linea.value}`,
+    };
+  }
+  if (linea.saysNone) {
+    return {
+      ...base,
+      result: "fail",
+      detail:
+        `el frontmatter declara ${declarados.map(impactName).join(", ")} y el ` +
+        "diagnóstico dice que no hay ninguno",
+    };
+  }
+
+  // Que el diagnóstico no nombre cada impacto uno por uno **no bloquea**, y la
+  // diferencia se aprendió mirando el registro real: un ticket de release dice
+  // «aplican los cuatro» y es una declaración perfectamente coherente. Exigir la
+  // palabra del contrato castigaba la forma de escribirlo, no un hueco —y una
+  // regla que obliga a reescribir una frase clara es la clase de trámite que hace
+  // que la gente deje de usar el proceso—. La señal se conserva donde sirve: en el
+  // detalle, que es lo que la pantalla muestra.
+  const sinNombrar = declarados.filter((impacto: string) => !linea.named.includes(impacto));
+  if (sinNombrar.length > 0) {
+    return {
+      ...base,
+      result: "pass",
+      detail:
+        `declara ${declarados.map(impactName).join(", ")}; el diagnóstico no ` +
+        `${sinNombrar.length === 1 ? "lo" : "los"} nombra uno por uno`,
+    };
+  }
+
+  return { ...base, result: "pass", detail: declarados.map(impactName).join(", ") };
 }
