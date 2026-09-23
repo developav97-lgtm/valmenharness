@@ -175,7 +175,7 @@ describe("el catálogo de herramientas", () => {
     expect(nombres.some((nombre) => /aprob|approve|decid|decide/.test(nombre))).toBe(false);
   });
 
-  it("declara las veinticinco herramientas, cada una con descripción y esquema", () => {
+  it("declara las veintiséis herramientas, cada una con descripción y esquema", () => {
     // El orden es el de la lectura: alta, consulta, validación, movimiento,
     // anotación, compuertas, features, procesos, reportes, y al final el ciclo de
     // QA y el cierre. Estaba intercalado por historia —cada herramienta nueva
@@ -202,6 +202,7 @@ describe("el catálogo de herramientas", () => {
       "manifiesto_entrega",
       "indexar_registro",
       "revisar_secretos",
+      "reporte_consumo",
       "iniciar_qa",
       "anotar_retest",
       "cerrar_qa",
@@ -248,7 +249,12 @@ describe("el catálogo de herramientas", () => {
     // nunca donde habría que inventar una segunda representación del texto que
     // la herramienta ya devuelve.
     const conEsquema = TOOLS.filter((t) => t.outputSchema !== undefined).map((t) => t.name);
-    expect(conEsquema).toEqual(["ver_ticket", "listar_tickets", "evaluar_compuerta"]);
+    expect(conEsquema).toEqual([
+      "ver_ticket",
+      "listar_tickets",
+      "evaluar_compuerta",
+      "reporte_consumo",
+    ]);
   });
 
   it("los esquemas de salida están cerrados, para que la forma prometida sea una sola", () => {

@@ -68,7 +68,13 @@ import {
   renderReport,
   ticketsPath,
 } from "@valmen/engine";
-import { isIndexCurrent, renderIndex, scanPendingChanges } from "@valmen/engine";
+import {
+  isIndexCurrent,
+  renderIndex,
+  renderUsage,
+  scanPendingChanges,
+  usageReport,
+} from "@valmen/engine";
 
 /**
  * Resultado de un comando: qué escribir y con qué código salir.
@@ -839,6 +845,33 @@ export function deliverManifest(
  * o una feature: un archivo con un error de tipeo que desaparece de la lista hace
  * creer que el proceso no existe, y entonces alguien lo escribe otra vez.
  */
+/**
+ * `usage`: el consumo del harness, contado de sus propios recibos.
+ *
+ * No mide nada nuevo: junta lo que cada evaluación ya escribió —veredicto, coste,
+ * modelo, latencia— y lo cuenta. Lo que agrega es la única cifra que dice si el
+ * harness está cumpliendo lo que promete: **cuánto decidió el código y cuánto un
+ * modelo**.
+ */
+export function usageCommand(
+  paths: RegistryPaths,
+  flags: Readonly<Record<string, string | true>>,
+): CommandResult {
+  const desde = flags["desde"];
+  const hasta = flags["hasta"];
+
+  try {
+    const informe = usageReport(paths, {
+      ...(typeof desde === "string" ? { desde } : {}),
+      ...(typeof hasta === "string" ? { hasta } : {}),
+    });
+    return ok(renderUsage(informe));
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
 /**
  * `secrets`: revisa los cambios pendientes en busca de secretos.
  *

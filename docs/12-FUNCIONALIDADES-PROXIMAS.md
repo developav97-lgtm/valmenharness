@@ -468,7 +468,19 @@ tiempo ahorra dinero y tiempo.
 **Por qué importa.** Un harness sin observabilidad es un harness en el que no se puede
 confiar. Y es lo que hace posible el ajuste continuo de umbrales y presets basado en datos.
 
-**Esfuerzo:** 1–2 semanas (con Grafana).
+**Estado: la primera mitad, hecha —y sin Grafana.** `valmen usage` y `reporte_consumo` cuentan lo
+que el harness ya escribió en sus recibos: evaluaciones, coste, latencia, veredicto por compuerta,
+modelo usado, y **cuánto se decidió en código frente a cuánto se le preguntó a un modelo** —la
+cifra que dice si el harness cumple lo que promete—. Incluye la **calibración con datos reales**:
+lo que dijo cada compuerta contra lo que terminó diciendo una persona, con la misma matemática que
+la simulación, que es lo que permite promover un gate de híbrido a automático con evidencia.
+
+Queda la parte de trazas y tablero: OpenTelemetry por sesión, series temporales, duración de
+tickets, heatmap de archivos conflictivos. Eso sí necesita una herramienta externa, y por eso no
+es lo primero: el dato que decide ya está, y agregarlo es una decisión que se puede tomar con el
+número delante.
+
+**Esfuerzo original:** 1–2 semanas (con Grafana).
 
 ---
 

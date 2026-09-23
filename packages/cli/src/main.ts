@@ -56,7 +56,7 @@ import {
   loadStatics,
   recordHumanDecision,
 } from "@valmen/server";
-import { scanPendingSecretsCommand } from "./commands.js";
+import { scanPendingSecretsCommand, usageCommand } from "./commands.js";
 import {
   type Entity,
   addAiUsage,
@@ -85,6 +85,9 @@ Comandos:
   index [--check]           Regenera el índice, o comprueba que esté al día.
   secrets [--staged]        Revisa los cambios pendientes en busca de secretos.
                             Solo mira las líneas agregadas. No imprime el valor.
+  usage [--desde <f>] [--hasta <f>]
+                            Consumo del harness: evaluaciones, coste y calibración,
+                            contado de los recibos. Sin fechas, todo el registro.
   migrate [--dry-run]       Lleva el registro al esquema vigente y limpia del
                             routing los roles que el harness ya no ejecuta.
   sync [--check]            Proyecta .valmen/ a AGENTS.md.
@@ -784,6 +787,9 @@ export function dispatch(options: Options): CommandResult {
 
     case "secrets":
       return scanPendingSecretsCommand(paths.root, options.flags);
+
+    case "usage":
+      return usageCommand(paths, options.flags);
 
     case "report":
       return reportClosed(paths, options.flags);

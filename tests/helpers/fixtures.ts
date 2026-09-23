@@ -36,6 +36,14 @@ export interface FixtureTicketOptions {
    * el caso dos veces.
    */
   readonly impacts?: readonly string[];
+  /**
+   * El estado de QA del frontmatter.
+   *
+   * Hace falta para construir un ticket en `qa_approved`: el validador exige que
+   * `qa_status` acompañe al estado del workflow, y un ticket aprobado con la QA en
+   * `pending` es una incoherencia —con razón—.
+   */
+  readonly qaStatus?: string;
   readonly targetRelease?: string;
   readonly releasedIn?: string;
 }
@@ -75,6 +83,7 @@ export function renderFixtureTicket(options: FixtureTicketOptions): string {
       "- Impactos de sync, migración, Docker o despliegue: ninguno.",
     ].join("\n"),
     impacts = [],
+    qaStatus = "pending",
     releaseStatus = "unreleased",
     targetRelease = "null",
     releasedIn = "null",
@@ -92,7 +101,7 @@ title: ${title}
 type: ${type}
 module: ${module}
 workflow_status: ${workflowStatus}
-qa_status: pending
+qa_status: ${qaStatus}
 release_status: ${releaseStatus}
 user_visible: true
 sync_impact: ${impacts.includes("sync_impact")}

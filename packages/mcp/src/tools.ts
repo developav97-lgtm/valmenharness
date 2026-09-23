@@ -52,7 +52,9 @@ import {
   readReceipts,
   runGate,
   simulateGate,
+  renderUsage,
   summarize,
+  usageReport,
   ticketsPath,
   transition,
 } from "@valmen/engine";
@@ -71,6 +73,7 @@ import {
   reportClosed,
   resumeTicket,
   scanPendingSecretsCommand,
+  usageCommand,
   runProcessCommand,
   showProcess,
   showProcessRun,
@@ -797,6 +800,39 @@ export const TOOLS: readonly ToolDefinition[] = [
     }),
   },
   {
+    name: "reporte_consumo",
+    title: "Cuánto costó y cuánto se decidió en código",
+    description:
+      "Cuenta lo que el harness ya escribió en sus recibos: evaluaciones, coste, " +
+      "latencia, veredicto por compuerta, modelo usado y —lo que importa de verdad— " +
+      "**cuánto se decidió en código y cuánto preguntándole a un modelo**. También " +
+      "compara lo que dijo cada compuerta con lo que terminó diciendo una persona, que " +
+      "es el número que permite promover un gate de híbrido a automático con evidencia " +
+      "y no con opinión. Sin fechas, cuenta todo el registro.",
+    inputSchema: conRoot({
+      properties: {
+        desde: { type: "string", description: "Fecha inicial `YYYY-MM-DD`, incluida." },
+        hasta: { type: "string", description: "Fecha final `YYYY-MM-DD`, incluida." },
+      },
+    }),
+    outputSchema: {
+      type: "object",
+      properties: {
+        evaluaciones: { type: "number" },
+        tickets: { type: "number" },
+        costeUsd: { type: "number" },
+        decididasEnCodigo: { type: "number" },
+        calibracion: {
+          type: "array",
+          items: { type: "object" },
+          description: "Un informe por compuerta, con su coincidencia y sus falsos.",
+        },
+      },
+      required: ["evaluaciones", "tickets", "costeUsd", "decididasEnCodigo", "calibracion"],
+      additionalProperties: false,
+    },
+  },
+  {
     name: "iniciar_qa",
     title: "Abrir un ciclo de QA",
     description:
@@ -1424,6 +1460,22 @@ export async function callTool(
             args["staged"] === true ? { staged: true } : {},
           ),
         );
+      }
+
+      case "reporte_consumo": {
+        const desde = texto(args, "desde", false);
+        const hasta = texto(args, "hasta", false);
+        const informe = usageReport(paths, {
+          ...(desde === undefined ? {} : { desde }),
+          ...(hasta === undefined ? {} : { hasta }),
+        });
+        return bien(renderUsage(informe), {
+          evaluaciones: informe.evaluations,
+          tickets: informe.tickets,
+          costeUsd: informe.costUsd,
+          decididasEnCodigo: informe.byCode,
+          calibracion: informe.calibration.map((fila) => ({ ...fila, rows: undefined })),
+        });
       }
 
       case "iniciar_qa": {
