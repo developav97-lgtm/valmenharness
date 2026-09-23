@@ -48,6 +48,7 @@ import {
   listTickets,
   qaClose,
   qaStart,
+  scanSecrets,
   readReceipts,
   runGate,
   simulateGate,
@@ -69,6 +70,7 @@ import {
   listProcessRuns,
   reportClosed,
   resumeTicket,
+  scanPendingSecretsCommand,
   runProcessCommand,
   showProcess,
   showProcessRun,
@@ -767,6 +769,34 @@ export const TOOLS: readonly ToolDefinition[] = [
     }),
   },
   {
+    name: "revisar_secretos",
+    title: "Revisar secretos antes de commitear",
+    description:
+      "Busca credenciales en lo que está por entrar al repositorio —las líneas que el " +
+      "cambio agrega, más los archivos nuevos— y en el texto que se le pase. Corra esto " +
+      "**antes de commitear**: un secreto commiteado no se descommitea, queda en el " +
+      "historial aunque el commit siguiente lo borre. El reporte ubica el hallazgo por " +
+      "archivo, línea y tipo, y **nunca imprime el valor**: un detector que lo copia lo " +
+      "multiplica. Si el hallazgo es legítimo —una prueba, un ejemplo, la documentación " +
+      "de un formato— la línea se marca con `valmen:allow-secret` y deja de aparecer.",
+    inputSchema: conRoot({
+      properties: {
+        staged: {
+          type: "boolean",
+          description:
+            "Mira solo lo que está en el índice (`git add`), en vez de todo lo pendiente.",
+        },
+        texto: {
+          type: "string",
+          description:
+            "Revisa este texto en vez del repositorio. Sirve para lo que se está por " +
+            "escribir en un ticket o en un plan: ese texto viaja al proveedor del modelo " +
+            "en la próxima evaluación, así que un secreto ahí ya salió.",
+        },
+      },
+    }),
+  },
+  {
     name: "iniciar_qa",
     title: "Abrir un ciclo de QA",
     description:
@@ -1366,6 +1396,34 @@ export async function callTool(
 
       case "indexar_registro": {
         return delCli(buildIndex(paths, args["comprobar"] === true));
+      }
+
+      case "revisar_secretos": {
+        const texto = opcional(args, "texto");
+        if (texto !== undefined) {
+          const hallazgos = scanSecrets(texto);
+          if (hallazgos.length === 0) return bien("Sin secretos en el texto.");
+          return bien(
+            hallazgos
+              .map(
+                (hallazgo) =>
+                  `línea ${hallazgo.line}: ${hallazgo.kind} — ${hallazgo.description}\n` +
+                  `  ${hallazgo.preview}`,
+              )
+              .join("\n") +
+              "\n\nEl valor no se imprime a propósito. Si es un ejemplo legítimo, " +
+              "marque la línea con `valmen:allow-secret`.",
+          );
+        }
+        // El mismo comando que el CLI: un hallazgo sale por stdout con código
+        // distinto de cero, así que llega como resultado y no como error del
+        // harness. `delMotor` ya sabe leer esa señal.
+        return delCli(
+          scanPendingSecretsCommand(
+            paths.root,
+            args["staged"] === true ? { staged: true } : {},
+          ),
+        );
       }
 
       case "iniciar_qa": {

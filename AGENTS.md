@@ -165,6 +165,11 @@ commitear, revisar el estado del repositorio, identificar los archivos
 atribuibles al ticket y excluir los ajenos sin modificarlos. Los cambios ajenos
 conocidos no bloquean la entrega.
 
+Y antes de commitear, `valmen secrets`: un secreto commiteado no se descommitea
+—queda en el historial aunque el commit siguiente lo borre—. Si el hallazgo es
+legítimo (una prueba, un ejemplo), la línea se marca con `valmen:allow-secret` y
+deja de aparecer.
+
 No se mezclan tickets en un commit. No se usan `git add -A` sin revisión ni
 autocommits.
 

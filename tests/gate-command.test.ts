@@ -411,6 +411,38 @@ describe("un impacto declarado cambia lo que se pregunta", () => {
   });
 });
 
+describe("un secreto en el ticket detiene la compuerta", () => {
+  it("no se llama al evaluador: ese texto ya habría salido de la máquina", async () => {
+    // El texto del ticket es exactamente lo que se le manda al proveedor del
+    // modelo. Un token escrito en el diagnóstico no es un riesgo futuro: viaja en
+    // la llamada siguiente. Por eso el chequeo corre antes y la detiene.
+    writeFixtureTicket(lab, {
+      id: TICKET,
+      workflowStatus: "analyzed",
+      diagnostico: [
+        "- Archivos y flujo investigados: `BackEnd/pos/filters.py`.",
+        "- Causa raíz o hipótesis: el lookup es exacto.",
+        `- Riesgos y compatibilidad: el servicio usa \`Authorization: Bearer ${"aB3dE5gH7jK9lM1nO3pQ5"}\`.`,
+        "- Impactos de sync, migración, Docker o despliegue: ninguno.",
+      ].join("\n"),
+    });
+
+    const result = await runGate(PATHS(), {
+      gateId: "analysis",
+      ticketId: TICKET,
+      jev: evaluator(allPropositions(0.95), 1.0),
+      dryRun: true,
+    });
+
+    expect(result.exitCode).toBe(3);
+    expect(result.stderr).toContain("sin_secretos");
+    expect(result.stderr).toContain("No se llamó al evaluador");
+    // Y el token no aparece en la salida: un detector que lo repite lo multiplica.
+    expect(result.stdout).not.toContain("aB3dE5gH7jK9lM1nO3pQ5");
+    expect(result.stderr).not.toContain("aB3dE5gH7jK9lM1nO3pQ5");
+  });
+});
+
 describe("el recibo", () => {
   it("se anexa como JSONL y es auditable", async () => {
     const result = await runGate(PATHS(), {

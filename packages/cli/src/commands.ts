@@ -68,7 +68,7 @@ import {
   renderReport,
   ticketsPath,
 } from "@valmen/engine";
-import { isIndexCurrent, renderIndex } from "@valmen/engine";
+import { isIndexCurrent, renderIndex, scanPendingChanges } from "@valmen/engine";
 
 /**
  * Resultado de un comando: qué escribir y con qué código salir.
@@ -839,6 +839,53 @@ export function deliverManifest(
  * o una feature: un archivo con un error de tipeo que desaparece de la lista hace
  * creer que el proceso no existe, y entonces alguien lo escribe otra vez.
  */
+/**
+ * `secrets`: revisa los cambios pendientes en busca de secretos.
+ *
+ * Existe porque un secreto commiteado no se descommitea: queda en el historial
+ * aunque el commit siguiente lo borre. El reporte sale por **stdout** con código
+ * distinto de cero —igual que una compuerta bloqueada— porque un hallazgo es un
+ * resultado que hay que leer, no un fallo del harness.
+ *
+ * La salida no repite nunca el valor encontrado: lo ubica por archivo, línea y
+ * tipo, y lo tapa. Un detector que imprime el secreto lo multiplica.
+ */
+export function scanPendingSecretsCommand(
+  root: string,
+  flags: Readonly<Record<string, string | true>>,
+): CommandResult {
+  const staged = flags["staged"] === true;
+
+  try {
+    const { findings, scanned } = scanPendingChanges(root, staged);
+
+    if (findings.length === 0) {
+      return ok(`Sin secretos en ${scanned} archivo(s) con cambios.\n`);
+    }
+
+    const lineas = findings.map(
+      (hallazgo) =>
+        `  ${hallazgo.path}:${hallazgo.line}  ${hallazgo.kind}\n` +
+        `    ${hallazgo.description}\n` +
+        `    ${hallazgo.preview}`,
+    );
+
+    return {
+      stdout:
+        `${findings.length} hallazgo(s) en ${scanned} archivo(s) con cambios:\n\n` +
+        lineas.join("\n") +
+        "\n\nSi el hallazgo es legítimo —una prueba, un ejemplo, un formato— marque la " +
+        "línea con `valmen:allow-secret`. Si no lo es, quítelo antes de commitear: en el " +
+        "historial se queda.\n",
+      stderr: "",
+      exitCode: EXIT_INVARIANT,
+    };
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
 export function listProcesses(root: string): CommandResult {
   const cargados = loadProcesses(root);
   if (cargados.length === 0) {

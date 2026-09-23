@@ -161,7 +161,21 @@ credenciales, valores de respaldo o información sensible en tickets, planes, lo
 reportes"*). Hoy es una regla; esto la vuelve imposible de violar por descuido. Además, los
 prompts viajan a proveedores externos: un secreto en un prompt es un secreto filtrado.
 
-**Esfuerzo:** 3–4 días (`gitleaks` + reglas propias de datos de cliente).
+**Estado: hecho, y sin `gitleaks`.** El detector vive en `packages/engine/src/secrets.ts` con
+patrones propios: la alternativa era un binario externo, y el motor no ejecuta nada que no
+traiga —el camino crítico del harness no debería romperse porque un binario no está en el
+`PATH` de la máquina de otro—. Se prioriza la precisión sobre la cobertura, por una razón
+concreta: un detector que grita en falso se ignora, y un detector ignorado deja pasar el
+secreto de verdad. Corre como check mecánico del gate —sobre el texto del ticket, que es lo
+que viaja al proveedor del modelo— y como `valmen secrets` / `revisar_secretos` sobre los
+cambios pendientes. Un hallazgo legítimo se marca con `valmen:allow-secret`.
+
+Queda pendiente la segunda mitad de la idea original: **datos de clientes reales** en tickets
+y evidencia (nombres, identificaciones, teléfonos). Los patrones de credenciales están; los
+de datos personales necesitan una decisión sobre qué se considera dato sensible en este
+proyecto, y eso no lo puede decidir el código solo.
+
+**Esfuerzo original:** 3–4 días.
 
 ---
 
@@ -451,23 +465,28 @@ confiar. Y es lo que hace posible el ajuste continuo de umbrales y presets basad
 
 ### C4. Servidor MCP bidireccional de primera clase
 
-**Estado: construido en su primera mitad.** El servidor existe (`@valmen/mcp`, ejecutable
+**Estado: la superficie está construida.** El servidor existe (`@valmen/mcp`, ejecutable
 `valmen-mcp`), habla el protocolo por stdio sin dependencias, y `valmen mcp --install` lo
-declara en opencode y entrega el fragmento de codex. Las ocho herramientas implementadas
-—y lo que deliberadamente **no** se expone— están en `docs/02-MOTOR.md` §10.
-
-**Lo que falta para cerrar C4** es la segunda mitad: que el harness también sea *cliente*
-MCP —hablar con CodeGraph y con Hermes— y las herramientas que dependen de trabajo que
-todavía no existe.
+declara en opencode y entrega el fragmento de codex. **El ciclo entero del ticket se recorre
+sin terminal** —de `intake` a `closed`, con sus puntos, su evidencia, su QA, su cierre y su
+reapertura— y las skills del proyecto se publican como *prompts* del protocolo, que es lo
+que vuelve el servidor agnóstico del agente sin escribir un adaptador por cliente. Las
+veinticinco herramientas, y lo que deliberadamente **no** se expone, están en
+`docs/02-MOTOR.md` §10.
 
 | Herramienta MCP | Qué hace | Estado |
 |---|---|---|
-| `crear_ticket`, `ver_ticket`, `listar_tickets`, `validar_ticket` | Ciclo de vida del ticket | **Hecho** |
-| `mover_ticket`, `reanudar_ticket` | Estado y contexto para retomar | **Hecho** |
-| `evaluar_compuerta`, `simular_compuerta` | Gates y calibración | **Hecho** |
-| `descomponer_feature` | Features | Falta: expone `decomposeFeature` |
-| `process_run` / `process_status` | Procesos | Falta: expone `runProcess` |
-| `usage_report` | Costos | Falta: `valmen usage report` no existe |
+| `crear_ticket`, `ver_ticket`, `listar_tickets`, `validar_ticket` | Ciclo de vida del ticket, con filtros | **Hecho** |
+| `mover_ticket`, `reanudar_ticket` | Estado, reapertura con motivo, contexto para retomar | **Hecho** |
+| `anotar_punto`, `mover_punto`, `anotar_evidencia` | Hallazgos, su ciclo y su evidencia | **Hecho** |
+| `evaluar_compuerta`, `simular_compuerta`, `calibrar_compuerta` | Gates, simulación y calibración | **Hecho** |
+| `iniciar_qa`, `anotar_retest`, `cerrar_qa`, `preparar_cierre` | El ciclo de QA y el cierre | **Hecho** |
+| `ver_features`, `descomponer_feature` | Features y su descomposición | **Hecho** |
+| `ver_procesos`, `estado_proceso`, `ejecutar_proceso` | Procesos y sus corridas | **Hecho** |
+| `reporte_cierres`, `manifiesto_entrega`, `indexar_registro` | El registro contado | **Hecho** |
+| `revisar_secretos` | Credenciales en el cambio pendiente y en un texto | **Hecho** |
+| Prompts (`prompts/list`, `prompts/get`) | Las skills del proyecto, sin adaptador | **Hecho** |
+| `usage_report` | Costos agregados | Falta: `valmen usage report` no existe |
 | `memory_search` / `memory_save` | Memoria | Fase 6 |
 | `drift_check` | Drift de artefactos | Falta |
 

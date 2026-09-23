@@ -56,6 +56,7 @@ import {
   loadStatics,
   recordHumanDecision,
 } from "@valmen/server";
+import { scanPendingSecretsCommand } from "./commands.js";
 import {
   type Entity,
   addAiUsage,
@@ -82,6 +83,8 @@ Comandos:
                             Sin --id y con varios activos, no elige: pide uno.
   show <ID>                 Muestra el resumen de un ticket.
   index [--check]           Regenera el índice, o comprueba que esté al día.
+  secrets [--staged]        Revisa los cambios pendientes en busca de secretos.
+                            Solo mira las líneas agregadas. No imprime el valor.
   migrate [--dry-run]       Lleva el registro al esquema vigente y limpia del
                             routing los roles que el harness ya no ejecuta.
   sync [--check]            Proyecta .valmen/ a AGENTS.md.
@@ -778,6 +781,9 @@ export function dispatch(options: Options): CommandResult {
 
     case "index":
       return buildIndex(paths, options.flags["check"] === true);
+
+    case "secrets":
+      return scanPendingSecretsCommand(paths.root, options.flags);
 
     case "report":
       return reportClosed(paths, options.flags);

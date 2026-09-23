@@ -13,6 +13,7 @@
  */
 export * from "./result.js";
 export * from "./discovery.js";
+export * from "./secrets.js";
 export * from "./tickets.js";
 export * from "./state.js";
 export * from "./receipts.js";

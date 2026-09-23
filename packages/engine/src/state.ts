@@ -12,6 +12,8 @@
  * separaran, así que ahora hay una sola.
  */
 import { diagnosedImpacts, impactIdsInFields, impactName, parseTicket } from "@valmen/core";
+
+import { scanSecrets } from "./secrets.js";
 import { type MechanicalCheck } from "@valmen/gate";
 
 /** Secciones del ticket que se envían al evaluador, según lo que declare el gate. */
@@ -98,8 +100,36 @@ export function runMechanicalChecks(text: string): MechanicalCheck[] {
   });
 
   checks.push(chequeoDeImpactos(fields, sections["Diagnóstico"] ?? ""));
+  checks.push(chequeoDeSecretos(text));
 
   return checks;
+}
+
+/**
+ * Un secreto en el ticket es un secreto que ya salió.
+ *
+ * El texto del ticket es exactamente lo que se le manda al evaluador, así que un
+ * token escrito en el diagnóstico o en el plan no es un riesgo futuro: viaja a un
+ * proveedor externo en la llamada siguiente. Por eso el chequeo corre **antes** de
+ * la evaluación y la detiene, en vez de avisar después.
+ *
+ * Lo que se reporta describe el hallazgo y lo ubica —el tipo y la línea— y nunca
+ * lo repite: un detector que copia el secreto a la consola o al recibo lo
+ * multiplica.
+ */
+function chequeoDeSecretos(texto: string): MechanicalCheck {
+  const hallazgos = scanSecrets(texto);
+  return {
+    id: "sin_secretos",
+    description: "El ticket no expone credenciales ni valores sensibles.",
+    result: hallazgos.length === 0 ? "pass" : "fail",
+    detail:
+      hallazgos.length === 0
+        ? "ninguno"
+        : hallazgos
+            .map((hallazgo) => `${hallazgo.kind} en la línea ${hallazgo.line}`)
+            .join(", "),
+  };
 }
 
 /**
