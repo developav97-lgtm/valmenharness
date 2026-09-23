@@ -112,6 +112,22 @@ decida por costumbre.
 `isError: true` con el mensaje del motor —«Falta `type`, y es obligatorio»— y puede corregir.
 Un error JSON-RPC lo dejaría sin el motivo.
 
+### Las skills, como prompts
+
+El harness publica además las skills del proyecto —`.valmen/skills/*/SKILL.md`— como
+**prompts** del protocolo: `prompts/list` las lista y `prompts/get` devuelve su
+procedimiento como mensaje.
+
+Es la pieza que vuelve el servidor agnóstico de verdad. Hoy las skills se **proyectan** a
+`.opencode/skills/`, `.claude/skills/` y `.codex/skills/`, y eso funciona con esos tres
+clientes y con ningún otro: cada agente nuevo exige escribir un adaptador, y el adaptador es
+una copia que se desincroniza. Como prompt las recibe cualquier cliente que hable el
+protocolo, sin escribir una línea más — y se sirven desde `.valmen/skills/`, que es la
+fuente, así que no hay copia que pueda quedar vieja.
+
+Sin argumentos, a propósito: las skills del harness resuelven por sí solas qué leer, y
+declarar argumentos que no usan sería inventar un contrato que nadie escribió.
+
 ## Limitaciones
 
 **No hay herramienta para aprobar una compuerta, y no es un olvido.** La aprobación es una

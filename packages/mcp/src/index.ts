@@ -18,10 +18,13 @@
 
 export { TOOLS, callTool } from "./tools.js";
 export type { ToolContext } from "./tools.js";
+export { getPromptFor, promptsFor } from "./prompts.js";
 export {
   PROTOCOL_VERSION,
   serveStdio,
-  type ToolCatalog,
+  type PromptDefinition,
+  type PromptResult,
+  type ServerCatalog,
   type ToolDefinition,
   type ToolResult,
 } from "./protocol.js";

@@ -640,6 +640,18 @@ proyecto registrado.
 Cada herramienta acepta un `root` en sus argumentos, que gana sobre todo lo demás. Es la
 salida para el caso raro: una sesión que trabaja sobre dos repositorios.
 
+### Las skills, como prompts
+
+Las skills del proyecto se publican también como **prompts** del protocolo
+—`prompts/list` y `prompts/get`—, y esa es la segunda mitad de la tesis de C4: el
+harness deja de necesitar un adaptador por agente.
+
+La proyección a `.opencode/skills/`, `.claude/skills/` y `.codex/skills/` sigue
+existiendo y sigue siendo la que usan esos clientes de forma nativa. Lo que cambia es
+que **un cliente que no esté en esa lista ya no exige escribir código**: pide el
+prompt y recibe el procedimiento. Y se sirve desde `.valmen/skills/`, la fuente, así
+que el prompt no puede quedar viejo como puede quedar una copia proyectada.
+
 ### Diagnóstico
 
 El primer fallo de un servidor MCP es que el cliente no lo encuentra, y desde dentro del
@@ -656,6 +668,9 @@ valmen-mcp --check
 #   - crear_ticket(id, title, type, module, request): Crear un ticket
 #   - ver_ticket(id): Ver un ticket
 #   - listar_tickets(): Listar tickets
+#   …
+# prompts:      7
+#   - planificacion: Planificación
 #   …
 ```
 

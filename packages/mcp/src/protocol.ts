@@ -2,8 +2,9 @@
  * El protocolo MCP sobre stdio.
  *
  * Un servidor MCP es JSON-RPC 2.0 con mensajes separados por saltos de línea. No
- * hace falta el SDK: los tres métodos que un cliente usa de verdad —`initialize`,
- * `tools/list` y `tools/call`— son unas doscientas líneas, y escribirlas aquí tiene
+ * hace falta el SDK: los métodos que un cliente usa de verdad —`initialize`,
+ * `tools/list`, `tools/call`, `prompts/list` y `prompts/get`— son unas doscientas
+ * líneas, y escribirlas aquí tiene
  * una ventaja concreta para este proyecto: **el camino crítico del harness queda sin
  * dependencias**, igual que `core` y el motor. Un agente que no puede arrancar el
  * servidor porque una dependencia transitiva cambió de versión es un agente que no
@@ -13,7 +14,10 @@
  *
  * - La negociación de versión en `initialize`, y que se responda la que el cliente
  *   pidió si se conoce.
- * - `capabilities.tools` con `listChanged: false`: el catálogo es fijo.
+ * - `capabilities.tools` y `capabilities.prompts`, los dos con `listChanged: false`:
+ *   los catálogos son fijos —salen del disco y no cambian mientras el servidor
+ *   vive—, así que prometer notificaciones de cambio sería prometer algo que nadie
+ *   va a mandar.
  * - Los errores de herramienta van **dentro** del resultado con `isError: true`, no
  *   como error JSON-RPC. Un error de protocolo significa que la llamada no se pudo
  *   hacer; que el comando haya fallado es un resultado, y el agente tiene que poder
@@ -65,15 +69,40 @@ export interface ToolResult {
   readonly data?: Record<string, unknown>;
 }
 
+/**
+ * Lo que declara un prompt.
+ *
+ * Un prompt es un procedimiento que el cliente ofrece a la persona —en la mayoría
+ * de los clientes, un comando— y que se materializa como un mensaje. El harness
+ * publica así sus skills, para no depender de un adaptador por agente.
+ */
+export interface PromptDefinition {
+  readonly name: string;
+  readonly title: string;
+  readonly description: string;
+}
+
+/** Lo que devuelve `prompts/get`: el contenido del prompt, ya armado. */
+export interface PromptResult {
+  readonly description: string;
+  readonly messages: readonly {
+    readonly role: "user";
+    readonly content: { readonly type: "text"; readonly text: string };
+  }[];
+}
+
 /** El catálogo que un servidor concreto expone. */
-export interface ToolCatalog {
+export interface ServerCatalog {
   readonly name: string;
   readonly version: string;
   readonly tools: readonly ToolDefinition[];
+  readonly prompts: readonly PromptDefinition[];
   readonly call: (name: string, args: Record<string, unknown>) => Promise<ToolResult>;
+  readonly getPrompt: (name: string, args: Record<string, unknown>) => PromptResult;
 }
 
-interface Peticion {
+/** Una petición del cliente. Se exporta para poder probar el despacho sin stdio. */
+export interface Peticion {
   readonly jsonrpc: "2.0";
   readonly id?: number | string;
   readonly method: string;
@@ -111,7 +140,7 @@ function errorProtocolo(
  * acabar de registrar los manejadores, el agente vería morir el proceso antes de
  * poder llamar a nada.
  */
-export function serveStdio(catalogo: ToolCatalog): Promise<void> {
+export function serveStdio(catalogo: ServerCatalog): Promise<void> {
   const lineas = createInterface({ input: process.stdin, terminal: false });
 
   lineas.on("line", (linea: string) => {
@@ -169,8 +198,18 @@ export function respuestaDeHerramienta(resultado: ToolResult): Record<string, un
   return respuesta;
 }
 
-/** Atiende un método del protocolo. */
-async function atender(peticion: Peticion, catalogo: ToolCatalog): Promise<unknown> {
+/**
+ * Atiende un método del protocolo.
+ *
+ * Está separada de `serveStdio` por la misma razón que `respuestaDeHerramienta`:
+ * afirmar sobre `stdout` es afirmar sobre el canal del protocolo, y ahí una prueba
+ * se vuelve frágil —basta un aviso de Node para que deje de medir lo que dice
+ * medir—. Así se prueba lo que el cliente recibe, que es lo que importa.
+ */
+export async function atender(
+  peticion: Peticion,
+  catalogo: ServerCatalog,
+): Promise<unknown> {
   switch (peticion.method) {
     case "initialize": {
       const pedida = peticion.params?.["protocolVersion"];
@@ -180,7 +219,10 @@ async function atender(peticion: Peticion, catalogo: ToolCatalog): Promise<unkno
           : PROTOCOL_VERSION;
       return {
         protocolVersion: version,
-        capabilities: { tools: { listChanged: false } },
+        capabilities: {
+          tools: { listChanged: false },
+          prompts: { listChanged: false },
+        },
         serverInfo: { name: catalogo.name, version: catalogo.version },
       };
     }
@@ -214,6 +256,38 @@ async function atender(peticion: Peticion, catalogo: ToolCatalog): Promise<unkno
 
       const resultado = await catalogo.call(nombre, argumentos);
       return respuestaDeHerramienta(resultado);
+    }
+
+    case "prompts/list":
+      return {
+        prompts: catalogo.prompts.map((prompt) => ({
+          name: prompt.name,
+          title: prompt.title,
+          description: prompt.description,
+          // Sin `arguments`: las skills del harness resuelven por sí solas qué leer.
+          // Declarar argumentos vacíos haría que algunos clientes pidieran valores
+          // para una lista que no existe.
+        })),
+      };
+
+    case "prompts/get": {
+      const nombre = peticion.params?.["name"];
+      if (typeof nombre !== "string") {
+        throw new Error("`prompts/get` necesita `name`.");
+      }
+      const conocido = catalogo.prompts.find((prompt) => prompt.name === nombre);
+      if (conocido === undefined) {
+        throw new Error(
+          `Prompt desconocido: "${nombre}". Los que hay: ` +
+            `${catalogo.prompts.map((p) => p.name).join(", ") || "(ninguno)"}.`,
+        );
+      }
+      const bruto = peticion.params?.["arguments"];
+      const argumentos =
+        typeof bruto === "object" && bruto !== null
+          ? (bruto as Record<string, unknown>)
+          : {};
+      return catalogo.getPrompt(nombre, argumentos);
     }
 
     default:

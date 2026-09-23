@@ -30,6 +30,7 @@ import { fileURLToPath } from "node:url";
 import { type RegistryPaths, choosePaths } from "@valmen/engine";
 
 import { serveStdio } from "./protocol.js";
+import { getPromptFor, promptsFor } from "./prompts.js";
 import { TOOLS, callTool, type ToolContext } from "./tools.js";
 
 /** El nombre con el que se declara el servidor. */
@@ -112,6 +113,7 @@ export function pathsFor(root: string): RegistryPaths {
 export function describe(options: Options): string {
   const paths = pathsFor(options.root);
   const credenciales = options.credentialsFile ?? credentialsFor(options.root);
+  const prompts = promptsFor(options.root);
   return [
     `servidor:    ${SERVER_NAME} ${SERVER_VERSION}`,
     `raíz:        ${paths.root}`,
@@ -123,6 +125,11 @@ export function describe(options: Options): string {
       const lista = Array.isArray(requeridos) ? requeridos.join(", ") : "";
       return `  - ${tool.name}(${lista}): ${tool.title}`;
     }),
+    // Los prompts también se listan: cuando alguien dice «no me aparece la skill»,
+    // la diferencia entre «no está» y «está y se llama distinto» es la diferencia
+    // entre revisar el proyecto y revisar el cliente.
+    `prompts:      ${prompts.length}`,
+    ...prompts.map((prompt) => `  - ${prompt.name}: ${prompt.title}`),
   ].join("\n");
 }
 
@@ -153,12 +160,17 @@ export async function main(
     name: SERVER_NAME,
     version: SERVER_VERSION,
     tools: TOOLS,
+    prompts: promptsFor(options.root),
     call: (nombre, args) =>
       callTool(
         contextoConRoot(contexto, args, options.credentialsFile !== undefined),
         nombre,
         args,
       ),
+    // El prompt se lee del proyecto de la sesión, no del que arrancó el proceso:
+    // una herramienta puede apuntar a otro repositorio con `root`, y una skill
+    // tiene que salir del proyecto sobre el que se está trabajando.
+    getPrompt: (nombre) => getPromptFor(options.root, nombre),
   });
   return 0;
 }
