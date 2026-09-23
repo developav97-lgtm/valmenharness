@@ -38,6 +38,7 @@ import {
   hasStructuredPlan,
   hasSubstantivePlan,
   hasValidQaWaiver,
+  isCriticalPlanGate,
   replaceBlock,
   replaceFrontmatterField,
   validateText,
@@ -236,8 +237,17 @@ function applyTicket(
     fail("No se puede marcar planned con placeholders o un plan vacío.", EXIT_INVARIANT);
   }
   if (to === "approved" && !hasPlanGate(document)) {
+    // El mensaje trae la forma exacta de la línea a propósito. Antes decía qué
+    // falta y no cómo escribirlo, así que un agente que ya tenía la aprobación de
+    // la persona quedaba adivinando la redacción —y el humano, mirando—.
     fail(
-      "approved requiere aprobación explícita del PO o razón de gate no exigible.",
+      "approved requiere aprobación explícita del PO o razón de gate no exigible.\n" +
+        "En `## Plan`, una línea así:\n" +
+        "  - Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).\n" +
+        (isCriticalPlanGate(document)
+          ? "Este ticket la exige —su tipo o sus impactos la vuelven crítica—, así que la " +
+            "razón de gate no exigible no aplica."
+          : "Si la compuerta no se exige, alcanza con una línea `- Gate no exigible: <razón>`."),
       EXIT_INVARIANT,
     );
   }

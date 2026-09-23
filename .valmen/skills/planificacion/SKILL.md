@@ -66,7 +66,11 @@ Todo ticket necesita plan. La aprobación explícita del responsable es obligato
 
 Presentar alcance, pasos, criterios, pruebas y riesgos. Si hace falta aprobación, **detenerse en `planned` y pedirla**. No interpretar el silencio, la urgencia, una herramienta exitosa ni una aprobación anterior de distinto alcance como autorización del plan actual.
 
-Solo tras recibirla, registrar en `## Plan` la línea de aprobación explícita con fecha, alcance y referencia a la confirmación real. Si la compuerta no se exige, registrar la razón concreta. Esa excepción **no aplica a los impactos críticos**: pasar la validación mecánica no demuestra autorización.
+Solo tras recibirla, registrar en `## Plan` la línea de aprobación explícita con fecha, alcance y referencia a la confirmación real. La forma que el motor reconoce es esta —y para un ticket crítico es la única que vale—:
+
+```markdown
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
+``` Si la compuerta no se exige, registrar la razón concreta. Esa excepción **no aplica a los impactos críticos**: pasar la validación mecánica no demuestra autorización.
 
 Mover el estado con el harness, no editando el campo a mano: un salto que la tabla del contrato no permite se rechaza. Preservar el historial de aprobaciones al ajustar el plan; un cambio material necesita aprobación renovada antes de implementar.
 
