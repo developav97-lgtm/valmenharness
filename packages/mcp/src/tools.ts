@@ -24,27 +24,36 @@
  */
 import { existsSync } from "node:fs";
 
-import { parseTicket, toFailure } from "@valmen/core";
 import {
+  EVIDENCE_KINDS,
+  SEVERITIES,
+  TICKET_TYPES,
+  WORKFLOW_STATES,
+  parseTicket,
+  toFailure,
+} from "@valmen/core";
+import {
+  CAMPOS_ORDENABLES,
   type RegistryPaths,
+  type TicketFilters,
+  type TicketRow,
+  addEvidence,
+  addPoint,
   createTicket,
+  filterTickets,
   findTicket,
+  listTickets,
   readReceipts,
   runGate,
   simulateGate,
+  summarize,
   ticketsPath,
   transition,
 } from "@valmen/engine";
 import { gateFor, gateById } from "@valmen/gate";
 import { gateRoutingFor } from "@valmen/adapter";
 import { apiKeyWithPrecedence } from "@valmen/credentials";
-import {
-  listActive,
-  resumeTicket,
-  showTicket,
-  validateAll,
-  validateOne,
-} from "@valmen/cli";
+import { resumeTicket, showTicket, validateAll, validateOne } from "@valmen/cli";
 
 import type { ToolDefinition, ToolResult } from "./protocol.js";
 
@@ -227,11 +236,168 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
   {
     name: "listar_tickets",
-    title: "Listar tickets activos",
+    title: "Listar tickets",
     description:
-      "Lista los tickets no cerrados, con su estado, su módulo y su título. Sirve para " +
-      "saber qué hay en curso antes de crear uno nuevo y para no duplicar trabajo.",
-    inputSchema: conRoot({ properties: {} }),
+      "Lista los tickets del registro con su estado, su módulo y su título. Sin filtros " +
+      "devuelve los activos, que es lo que hay que mirar antes de crear uno para no " +
+      "duplicar trabajo. Con filtros contesta lo que antes había que ir a ver a la " +
+      "pantalla: qué está bloqueado, qué toca este módulo, qué tiene puntos abiertos, " +
+      "qué se cerró en un rango de fechas. Los filtros se combinan entre sí.",
+    inputSchema: conRoot({
+      properties: {
+        estado: {
+          type: "string",
+          enum: [...WORKFLOW_STATES],
+          description:
+            "Estado del flujo de trabajo. `closed` es «cerrado», no «publicado».",
+        },
+        tipo: { type: "string", enum: [...TICKET_TYPES], description: "Tipo del ticket." },
+        modulo: {
+          type: "string",
+          description: "Módulo, tal como está escrito en el ticket.",
+        },
+        texto: {
+          type: "string",
+          description:
+            "Busca en identificador, título y módulo. No busca dentro de los bloques " +
+            "JSON: encontrar una palabra en un bloque no significa que el ticket trate " +
+            "de eso.",
+        },
+        incluir_cerrados: {
+          type: "boolean",
+          description:
+            "Incluye los cerrados. Por defecto no: una lista de trabajo que empieza por " +
+            "lo terminado esconde lo que falta.",
+        },
+        solo_criticos: {
+          type: "boolean",
+          description: "Solo los que declaran algún impacto crítico.",
+        },
+        solo_con_puntos: {
+          type: "boolean",
+          description: "Solo los que tienen puntos abiertos o en curso.",
+        },
+        desde: {
+          type: "string",
+          description: "Fecha inicial `YYYY-MM-DD`, incluida. Se usa con `hasta`.",
+        },
+        hasta: { type: "string", description: "Fecha final `YYYY-MM-DD`, incluida." },
+        fecha: {
+          type: "string",
+          enum: ["updated", "created", "closedOn"],
+          description:
+            "Qué fecha se compara contra el rango. `closedOn` es la del cierre y es la " +
+            "que hay que usar para contar lo que se terminó; `updated`, para lo que se " +
+            "tocó. Un ticket cerrado el lunes y retocado el jueves aparece en los dos " +
+            "rangos distintos, y ninguno de los dos está mal.",
+        },
+        orden: {
+          type: "string",
+          enum: [...CAMPOS_ORDENABLES],
+          description: "Columna por la que ordenar. Por defecto, lo tocado hace menos.",
+        },
+        sentido: {
+          type: "string",
+          enum: ["asc", "desc"],
+          description: "Sentido del orden.",
+        },
+        limite: { type: "number", description: "Devuelve solo los primeros n." },
+      },
+    }),
+    outputSchema: {
+      type: "object",
+      properties: {
+        total: { type: "number", description: "Cuántos cumplen el filtro." },
+        enElRegistro: { type: "number", description: "Cuántos hay en total." },
+        resumen: { type: "object", description: "El desglose de los que se devuelven." },
+        tickets: {
+          type: "array",
+          items: { type: "object" },
+          description: "Las filas, tal como se leen del motor.",
+        },
+      },
+      required: ["total", "enElRegistro", "resumen", "tickets"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "anotar_punto",
+    title: "Anotar un hallazgo en el ticket",
+    description:
+      "Registra un punto en el ticket: algo que no coincide con lo que debía pasar. Sirve " +
+      "para dejar constancia **cuando se descubre**, sin esperar al informe final, y es lo " +
+      "que después se retestea. `actual` y `expected` van separados a propósito: juntos en " +
+      "una frase, nadie puede decidir más tarde si el arreglo distingue los dos casos. El " +
+      "identificador lo asigna el motor y lo devuelve; no se inventa.",
+    inputSchema: conRoot({
+      properties: {
+        id: { type: "string", description: "Identificador del ticket." },
+        title: { type: "string", description: "El hallazgo en una línea." },
+        severity: {
+          type: "string",
+          enum: [...SEVERITIES],
+          description:
+            "Gravedad. `critical` es lo que rompe producción o pierde datos, y es lo que " +
+            "después dispara el aviso de impacto.",
+        },
+        actual: {
+          type: "string",
+          description:
+            "Lo que pasa hoy, observado. El valor que salió, el error exacto, el archivo " +
+            "y la línea. Un hallazgo sin el dato concreto no se puede reproducir.",
+        },
+        expected: { type: "string", description: "Lo que debía pasar." },
+      },
+      required: ["id", "title", "severity", "actual", "expected"],
+    }),
+  },
+  {
+    name: "anotar_evidencia",
+    title: "Anotar evidencia de algo ya hecho",
+    description:
+      "Registra la prueba de algo que se hizo: el resultado de una prueba, una inspección " +
+      "de código, un build, un despliegue. Es lo que convierte una afirmación en algo " +
+      "verificable meses después —sin evidencia, «ya está probado» es solo una frase— y lo " +
+      "que la compuerta de QA mira. Con `punto`, la evidencia queda además enlazada al " +
+      "hallazgo que la originó, que es lo que mantiene coherente el bloque.",
+    inputSchema: conRoot({
+      properties: {
+        id: { type: "string", description: "Identificador del ticket." },
+        kind: {
+          type: "string",
+          enum: [...EVIDENCE_KINDS],
+          description:
+            "De qué clase es la prueba. `user-report` es lo que contó una persona; " +
+            "`code-inspection` es lo que se leyó, no lo que se ejecutó. La lista es la " +
+            "canónica del contrato a propósito: el contrato admite además extensiones " +
+            "con prefijo `x-`, y esas se registran por el CLI " +
+            "(`valmen add-evidence --kind x-…`), porque una extensión se justifica una " +
+            "vez y no cada vez que alguien escribe una prueba.",
+        },
+        description: {
+          type: "string",
+          description:
+            "Qué se hizo y qué dio, con el comando y su resultado. «Funciona» no es una " +
+            "descripción: dentro de seis meses no dice qué se comprobó.",
+        },
+        reference: {
+          type: "string",
+          description:
+            "La referencia que respalda la evidencia, con la forma que exige el contrato: " +
+            "`commit:<sha40>`, o `worktree:sha256:<sha256>` en minúsculas, o la palabra " +
+            "`worktree` para que la calcule el motor sobre los archivos que declaren los " +
+            "puntos —así que sola exige que haya puntos con archivos—. Una ruta suelta no " +
+            "sirve: no dice qué estado del código se probó.",
+        },
+        punto: {
+          type: "string",
+          description:
+            "Punto al que pertenece, `POINT-001`. Opcional: hay evidencia del " +
+            "ticket entero que no es de ningún punto.",
+        },
+      },
+      required: ["id", "kind", "description"],
+    }),
   },
   {
     name: "validar_ticket",
@@ -405,6 +571,149 @@ function delCli(resultado: {
   return delMotor(resultado);
 }
 
+/** Un argumento de texto, o `undefined` si no vino. Sin obligatoriedad. */
+function opcional(args: Record<string, unknown>, nombre: string): string | undefined {
+  const valor = args[nombre];
+  return typeof valor === "string" && valor.trim() !== "" ? valor.trim() : undefined;
+}
+
+/**
+ * Los filtros de la lista, armados desde los argumentos.
+ *
+ * Los tres enumerados se validan aquí además de declararse en el esquema, y no
+ * es redundante: un cliente que no valide el esquema —o un agente que escriba el
+ * argumento a mano— produciría un filtro que no filtra. `estado: "cerrado"`
+ * devuelve cero tickets y se lee como «no hay nada», que es la conclusión
+ * contraria a la verdad. Un valor que no existe se contesta con los que sí.
+ */
+function filtrosDe(args: Record<string, unknown>): TicketFilters {
+  const estado = opcional(args, "estado");
+  const tipo = opcional(args, "tipo");
+  const modulo = opcional(args, "modulo");
+  const consulta = opcional(args, "texto");
+  const desde = opcional(args, "desde");
+  const hasta = opcional(args, "hasta");
+  const fecha = opcional(args, "fecha");
+  const orden = opcional(args, "orden");
+  const sentido = opcional(args, "sentido");
+  const limite = args["limite"];
+
+  if (estado !== undefined && !(WORKFLOW_STATES as readonly string[]).includes(estado)) {
+    throw new Error(
+      `\`estado\` no admite "${estado}". Los estados son: ${WORKFLOW_STATES.join(", ")}.`,
+    );
+  }
+  if (tipo !== undefined && !(TICKET_TYPES as readonly string[]).includes(tipo)) {
+    throw new Error(
+      `\`tipo\` no admite "${tipo}". Los tipos son: ${TICKET_TYPES.join(", ")}.`,
+    );
+  }
+  if (
+    fecha !== undefined &&
+    !(["updated", "created", "closedOn"] as readonly string[]).includes(fecha)
+  ) {
+    throw new Error(
+      `\`fecha\` no admite "${fecha}". Los valores son: updated, created, closedOn.`,
+    );
+  }
+  if (orden !== undefined && !(CAMPOS_ORDENABLES as readonly string[]).includes(orden)) {
+    throw new Error(
+      `\`orden\` no admite "${orden}". Las columnas son: ${CAMPOS_ORDENABLES.join(", ")}.`,
+    );
+  }
+
+  return {
+    // El defecto es «activos», que es lo que esta herramienta devolvía antes de
+    // tener filtros. Cambiarlo habría hecho que la misma llamada contestara otra
+    // cosa, y eso rompe a quien ya la usaba.
+    ...(args["incluir_cerrados"] === true ? {} : { onlyOpen: true }),
+    ...(estado === undefined ? {} : { workflowStatus: estado }),
+    ...(tipo === undefined ? {} : { type: tipo }),
+    ...(modulo === undefined ? {} : { module: modulo }),
+    ...(consulta === undefined ? {} : { query: consulta }),
+    ...(args["solo_criticos"] === true ? { onlyCritical: true } : {}),
+    ...(args["solo_con_puntos"] === true ? { onlyWithOpenPoints: true } : {}),
+    ...(desde === undefined ? {} : { desde }),
+    ...(hasta === undefined ? {} : { hasta }),
+    ...(fecha === undefined
+      ? {}
+      : { dateField: fecha as NonNullable<TicketFilters["dateField"]> }),
+    ...(orden === undefined
+      ? {}
+      : { sortBy: orden as NonNullable<TicketFilters["sortBy"]> }),
+    ...(sentido === "asc" || sentido === "desc" ? { sortDir: sentido } : {}),
+    ...(typeof limite === "number" ? { limit: limite } : {}),
+  };
+}
+
+/** En palabras, qué se filtró. Se imprime para que la lista explique su propio tamaño. */
+function describirFiltros(args: Record<string, unknown>): string {
+  const partes: string[] = [];
+  const campos: readonly (readonly [string, string])[] = [
+    ["estado", "estado"],
+    ["tipo", "tipo"],
+    ["modulo", "módulo"],
+    ["texto", "texto"],
+  ];
+  for (const [nombre, etiqueta] of campos) {
+    const valor = opcional(args, nombre);
+    if (valor !== undefined) partes.push(`${etiqueta}=${valor}`);
+  }
+  if (args["incluir_cerrados"] === true) partes.push("incluye cerrados");
+  if (args["solo_criticos"] === true) partes.push("solo con impacto crítico");
+  if (args["solo_con_puntos"] === true) partes.push("solo con puntos abiertos");
+  const desde = opcional(args, "desde");
+  const hasta = opcional(args, "hasta");
+  if (desde !== undefined || hasta !== undefined) {
+    const campo = opcional(args, "fecha") ?? "updated";
+    partes.push(`${campo} entre ${desde ?? "el principio"} y ${hasta ?? "hoy"}`);
+  }
+  return partes.join(", ");
+}
+
+/**
+ * La lista en texto, en el formato que esta herramienta ya devolvía.
+ *
+ * Las cuatro columnas —`id | estado | módulo | título`— no cambiaron: un agente
+ * que ya las leía no debería tener que aprender otro formato para seguir
+ * leyendo lo mismo. Lo que se añade es el encabezado, que es lo que faltaba: sin
+ * él, una lista de tres y una de sesenta se ven iguales, y un filtro que no
+ * encontró nada es indistinguible de un registro vacío.
+ *
+ * Detrás del título van solo las señales que cambian la decisión de por dónde
+ * empezar: puntos abiertos, impacto crítico y un ticket que no valida. Esconderlas
+ * obligaría a una segunda llamada para saber lo que ya se sabía al listar.
+ */
+function renderLista(
+  visibles: readonly TicketRow[],
+  enElRegistro: number,
+  args: Record<string, unknown>,
+): string {
+  const filtros = describirFiltros(args);
+  const encabezado =
+    filtros === ""
+      ? `${visibles.length} de ${enElRegistro} ticket(s).`
+      : `${visibles.length} de ${enElRegistro} ticket(s) — ${filtros}.`;
+
+  if (visibles.length === 0) {
+    return filtros === ""
+      ? `${encabezado}\nNo hay tickets activos.`
+      : `${encabezado}\nNingún ticket cumple el filtro.`;
+  }
+
+  const lineas = visibles.map((fila) => {
+    let linea = `${fila.id} | ${fila.workflowStatus} | ${fila.module} | ${fila.title}`;
+    if (fila.openPoints > 0) linea += ` | ${fila.openPoints} punto(s) abierto(s)`;
+    if (fila.criticalImpacts.length > 0) {
+      linea += ` | impacto crítico: ${fila.criticalImpacts.join(", ")}`;
+    }
+    if (fila.invalid !== null) linea += ` | INVÁLIDO: ${fila.invalid}`;
+    return linea;
+  });
+
+  return [encabezado, ...lineas].join("\n");
+}
+
 /** Ejecuta una herramienta por nombre. */
 export async function callTool(
   contexto: ToolContext,
@@ -475,9 +784,56 @@ export async function callTool(
         // fallo opaco y lo más probable es que concluya que el harness está
         // roto. Se distingue el caso y se contesta la verdad: no hay nada.
         if (!existsSync(ticketsPath(paths))) {
-          return bien("No hay tickets activos: el registro todavía no existe.");
+          return bien("No hay tickets: el registro todavía no existe.", {
+            total: 0,
+            enElRegistro: 0,
+            resumen: summarize([]),
+            tickets: [],
+          });
         }
-        return delCli(listActive(paths));
+
+        // Se lee el registro entero y se filtra en memoria. El registro de un
+        // proyecto son decenas de archivos, y el filtro sobre las filas ya
+        // parseadas es el mismo que usa la pantalla: una segunda forma de
+        // contar los tickets sería una segunda respuesta a la misma pregunta.
+        const filas = listTickets(paths);
+        const visibles = filterTickets(filas, filtrosDe(args));
+
+        return bien(renderLista(visibles, filas.length, args), {
+          total: visibles.length,
+          enElRegistro: filas.length,
+          resumen: { ...summarize(visibles) },
+          tickets: visibles.map((fila) => ({ ...fila })),
+        });
+      }
+
+      case "anotar_punto": {
+        const salida = addPoint({
+          paths,
+          ticketId: texto(args, "id") as string,
+          title: texto(args, "title") as string,
+          severity: texto(args, "severity") as string,
+          actual: texto(args, "actual") as string,
+          expected: texto(args, "expected") as string,
+          now: contexto.now,
+        });
+        return bien(
+          `${salida}\nEl punto queda abierto y no se cierra con la corrección, sino con ` +
+            "el retest. Anota lo que hagas con `anotar_evidencia`, pasando `punto`.",
+        );
+      }
+
+      case "anotar_evidencia": {
+        const salida = addEvidence({
+          paths,
+          ticketId: texto(args, "id") as string,
+          kind: texto(args, "kind") as string,
+          description: texto(args, "description") as string,
+          reference: texto(args, "reference", false),
+          pointId: texto(args, "punto", false),
+          now: contexto.now,
+        });
+        return bien(salida);
       }
 
       case "validar_ticket": {

@@ -536,18 +536,28 @@ con su agente —opencode, codex, Claude Code—, y el agente necesita poder dar
 ticket, validarlo, evaluar la compuerta y mover el estado. Sin esto, cada ticket empieza
 con alguien copiando un comando.
 
-### Las ocho herramientas
+### Las diez herramientas
 
 | Herramienta | Qué hace | Reutiliza |
 |---|---|---|
 | `crear_ticket` | Alta en `intake`, devuelve la ruta del archivo | `createTicket` |
 | `ver_ticket` | Resumen del ticket: frontmatter, secciones, bloques | `valmen show` |
-| `listar_tickets` | Tickets no cerrados | `valmen list` |
+| `listar_tickets` | Tickets activos, con filtros por estado, tipo, módulo, texto y rango de fechas | `listTickets` + `filterTickets` |
+| `anotar_punto` | Registra un hallazgo cuando se descubre, con `actual` y `expected` separados | `addPoint` |
+| `anotar_evidencia` | Registra la prueba de algo hecho, y la enlaza al punto que la originó | `addEvidence` |
 | `validar_ticket` | Contrato del ticket; sin `id`, todo el registro | `valmen validate` |
 | `evaluar_compuerta` | Evalúa un gate y escribe el recibo | `runGate` |
 | `mover_ticket` | Aplica la tabla de estados | `transition` |
 | `reanudar_ticket` | Contexto para retomar trabajo empezado | `valmen resume` |
 | `simular_compuerta` | Mide un gate sobre el histórico, para calibrar | `simulateGate` |
+
+Quedan fuera a propósito las que **deciden**: aprobar una compuerta, cerrar un ciclo de QA con
+veredicto del PO, publicar una release. Un agente puede prepararlas y anotar el resultado que
+una persona le dio; no puede dártelo.
+
+Anotar consumo de IA tampoco está, y no por olvido: el coste real vive en la base de datos de
+opencode, y un modelo que declara lo que gastó lo está estimando. Ese dato lo escribe quien lo
+mide —Mission Control, que la lee—, no quien lo protagoniza.
 
 Las herramientas **no son una segunda implementación**: las de lectura llaman literalmente
 a las funciones de `@valmen/cli`, y las de escritura al mismo motor. Si el agente creara un
@@ -556,18 +566,19 @@ es justo lo que el harness existe para impedir.
 
 ### Qué declara cada herramienta
 
-**`root` va en las ocho, y es opcional.** Es la salida para la sesión que trabaja sobre dos
+**`root` va en todas, y es opcional.** Es la salida para la sesión que trabaja sobre dos
 repositorios: gana sobre el directorio de trabajo con el que se lanzó el servidor. Que
-estuviera prometido aquí, leído en `main.ts` y **ausente de los ocho esquemas** fue un defecto
+estuviera prometido aquí, leído en `main.ts` y **ausente de los esquemas** fue un defecto
 durante toda la construcción del servidor: como todos declaran `additionalProperties: false`,
 un cliente que validara el esquema rechazaba el argumento antes de llamar, y desde dentro del
 agente eso se ve como «no puedo apuntar a otro proyecto». Ahora los esquemas se arman con una
 función que lo inyecta, así que una herramienta no puede quedar sin admitirlo por olvido.
 
-**El resultado es texto, y en dos casos además dato.** El texto es el informe del motor —dice
+**El resultado es texto, y en tres casos además dato.** El texto es el informe del motor —dice
 qué falta y con qué código de salida, y parafrasearlo le quitaría al agente lo que necesita
-para corregir—. `ver_ticket` y `evaluar_compuerta` devuelven **además** `structuredContent`,
-para que el agente ramifique por estado o por veredicto sin interpretar prosa.
+para corregir—. `ver_ticket`, `listar_tickets` y `evaluar_compuerta` devuelven **además**
+`structuredContent`, para que el agente ramifique por estado, por fila o por veredicto sin
+interpretar prosa.
 
 El criterio de cuándo se declara `outputSchema` es una sola frase: **solo donde la fuente ya
 es un dato canónico en disco.** En `ver_ticket` es el frontmatter, leído con el mismo
@@ -616,10 +627,10 @@ valmen-mcp --check
 # raíz:        /proyectos/tienda
 # registro:    tickets
 # credenciales: /proyectos/tienda/.valmen/.credentials.yaml
-# herramientas: 8
+# herramientas: 10
 #   - crear_ticket(id, title, type, module, request): Crear un ticket
 #   - ver_ticket(id): Ver un ticket
-#   - listar_tickets(): Listar tickets activos
+#   - listar_tickets(): Listar tickets
 #   …
 ```
 

@@ -64,14 +64,16 @@ porque ahí sí hereda el `PATH` completo.
 
 ## Contrato
 
-Las ocho herramientas. Ninguna es una segunda implementación: las de lectura llaman a las
+Las diez herramientas. Ninguna es una segunda implementación: las de lectura llaman a las
 mismas funciones que el CLI, y las de escritura al mismo motor.
 
 | Herramienta              | Qué hace                                              |
 | ------------------------ | ----------------------------------------------------- |
 | `crear_ticket`           | Alta en `intake`; devuelve la ruta del archivo        |
 | `ver_ticket`             | Resumen del ticket: frontmatter, secciones y bloques  |
-| `listar_tickets`         | Tickets no cerrados                                   |
+| `listar_tickets`         | Tickets activos, con filtros por estado, tipo, módulo, texto y fechas |
+| `anotar_punto`           | Un hallazgo, con `actual` y `expected` separados      |
+| `anotar_evidencia`       | La prueba de algo hecho, enlazada a su punto          |
 | `validar_ticket`         | Contrato del ticket; sin `id`, todo el registro       |
 | `evaluar_compuerta`      | Evalúa un gate y escribe el recibo                    |
 | `mover_ticket`           | Aplica la tabla de estados del contrato               |
@@ -79,7 +81,7 @@ mismas funciones que el CLI, y las de escritura al mismo motor.
 | `simular_compuerta`      | Mide un gate sobre el histórico, para calibrar        |
 
 Todas aceptan un `root` opcional que gana sobre el directorio de trabajo, para una sesión que
-trabaje sobre dos repositorios. Se declara en los ocho esquemas, no solo se lee: un argumento
+trabaje sobre dos repositorios. Se declara en todos los esquemas, no solo se lee: un argumento
 que el servidor acepta pero el esquema no declara lo rechaza cualquier cliente que valide
 antes de llamar.
 
@@ -105,6 +107,14 @@ aprobarse a sí mismo convertiría el control en un trámite.
 Tampoco hay forma de saltar la tabla de estados. Un agente puede recorrer
 `intake → analyzed → planned` y **no puede cruzar** a `approved`: el motor exige la línea de
 aprobación explícita del PO en el plan, y la plantilla la deja vacía.
+
+**Las que deciden siguen fuera, y son más que las compuertas.** Cerrar un ciclo de QA con
+veredicto del PO, publicar una release y aprobar una compuerta de proceso son la misma clase
+de cosa: un agente puede prepararlas, reunir la evidencia y anotar el resultado que una
+persona le dio —con sus palabras—, pero el veredicto no se lo puede dar.
+
+Anotar el consumo de IA tampoco está, y no por olvido: el gasto real vive en la base de datos
+de opencode, y un modelo que declara lo que gastó lo está estimando. Lo escribe quien lo mide.
 
 Falta la segunda mitad de C4 —el harness como *cliente* MCP— y las herramientas que dependen
 de trabajo que todavía no existe (`descomponer_feature`, `process_run`, `usage_report`,

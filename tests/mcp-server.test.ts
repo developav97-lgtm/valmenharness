@@ -21,6 +21,7 @@
  *    mensaje y nada más.
  */
 import {
+  cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -33,6 +34,8 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { parseTicket } from "../packages/core/src/index.js";
+import { writeFixtureTicket } from "./helpers/fixtures.js";
 import { TOOLS, callTool } from "../packages/mcp/src/tools.js";
 import type { ToolContext } from "../packages/mcp/src/tools.js";
 import {
@@ -136,11 +139,13 @@ describe("el catálogo de herramientas", () => {
     expect(nombres.some((nombre) => /aprob|approve|decid|decide/.test(nombre))).toBe(false);
   });
 
-  it("declara las ocho herramientas, cada una con descripción y esquema", () => {
+  it("declara las diez herramientas, cada una con descripción y esquema", () => {
     expect(TOOLS.map((tool) => tool.name)).toEqual([
       "crear_ticket",
       "ver_ticket",
       "listar_tickets",
+      "anotar_punto",
+      "anotar_evidencia",
       "validar_ticket",
       "evaluar_compuerta",
       "mover_ticket",
@@ -153,7 +158,7 @@ describe("el catálogo de herramientas", () => {
     }
   });
 
-  it("declara `root` en los ocho esquemas, para que una sesión pueda apuntar a otro proyecto", () => {
+  it("declara `root` en todos los esquemas, para que una sesión pueda apuntar a otro proyecto", () => {
     // Este test se llamaba así desde antes y **no comprobaba esto**: miraba
     // `additionalProperties` y pasaba en verde con el argumento sin declarar, que
     // es justo lo que decía cubrir. El `root` se leía en `main.ts` y no estaba en
@@ -171,7 +176,7 @@ describe("el catálogo de herramientas", () => {
     }
   });
 
-  it("`root` es opcional en las ocho: volverlo obligatorio rompería a los clientes de hoy", () => {
+  it("`root` es opcional en todas: volverlo obligatorio rompería a los clientes de hoy", () => {
     for (const tool of TOOLS) {
       const requeridos = tool.inputSchema["required"];
       if (Array.isArray(requeridos)) {
@@ -180,14 +185,15 @@ describe("el catálogo de herramientas", () => {
     }
   });
 
-  it("solo declara `outputSchema` donde la fuente ya es un dato en disco", () => {
+  it("solo declara `outputSchema` donde el dato ya existe del lado del motor", () => {
     // El criterio, afirmado sobre el catálogo y no sobre la intención: devolver
     // contenido estructurado obliga a prometer una forma estable, y solo se
-    // promete donde el dato **ya existe** —el frontmatter del ticket y el recibo
-    // de la compuerta—, nunca donde habría que inventar una segunda
-    // representación del texto que la herramienta ya devuelve.
+    // promete donde el dato **ya existe** —el frontmatter del ticket, las filas
+    // que el motor proyecta para la pantalla, y el recibo de la compuerta—,
+    // nunca donde habría que inventar una segunda representación del texto que
+    // la herramienta ya devuelve.
     const conEsquema = TOOLS.filter((t) => t.outputSchema !== undefined).map((t) => t.name);
-    expect(conEsquema).toEqual(["ver_ticket", "evaluar_compuerta"]);
+    expect(conEsquema).toEqual(["ver_ticket", "listar_tickets", "evaluar_compuerta"]);
   });
 
   it("los esquemas de salida están cerrados, para que la forma prometida sea una sola", () => {
@@ -283,7 +289,10 @@ describe("ver, listar y reanudar", () => {
     // correcta es que no hay trabajo en curso.
     const resultado = await callTool(contexto, "listar_tickets", {});
     expect(resultado.isError).toBe(false);
-    expect(resultado.text).toContain("No hay tickets activos");
+    // No dice «no hay tickets activos» porque ahora también puede listar los
+    // cerrados: lo que falta es el registro entero, y eso es lo que dice.
+    expect(resultado.text).toContain("el registro todavía no existe");
+    expect(resultado.data).toMatchObject({ total: 0, enElRegistro: 0 });
   });
 
   it("lista los activos y excluye los cerrados", async () => {
@@ -500,7 +509,7 @@ describe("el contenido estructurado", () => {
     // El otro lado del criterio: mandar `structuredContent` sin esquema sería
     // entregar un objeto que el cliente no puede validar contra nada.
     await crear();
-    const resultado = await callTool(contexto, "listar_tickets", {});
+    const resultado = await callTool(contexto, "validar_ticket", { id: ID });
     expect(resultado.isError).toBe(false);
     expect(resultado.data).toBeUndefined();
   });
@@ -561,5 +570,271 @@ describe("el arranque del servidor", () => {
     mkdirSync(join(lab, ".valmen"), { recursive: true });
     writeFileSync(propio, "version: 1\n", { mode: 0o600 });
     expect(credentialsFor(lab)).toBe(propio);
+  });
+});
+
+// ── Anotar lo que se encuentra mientras se trabaja ──────────────────────────
+
+describe("anotar un hallazgo", () => {
+  it("crea el punto con el identificador del motor y deja el ticket válido", async () => {
+    const ruta = await crear();
+    const resultado = await callTool(contexto, "anotar_punto", {
+      id: ID,
+      title: "El listado ignora las sucursales inactivas",
+      severity: "high",
+      actual: "Con el filtro `999` el endpoint contesta 200 y una lista vacía.",
+      expected: "Debe devolver la orden 1042.",
+    });
+
+    expect(resultado.isError).toBe(false);
+    expect(resultado.text).toContain("POINT-001");
+
+    // Que el bloque quede coherente lo dice el validador del contrato, no este
+    // test: anotar por la herramienta tiene que dejar el ticket como lo dejaría
+    // el comando, y eso solo lo puede afirmar quien valida.
+    const validacion = await callTool(contexto, "validar_ticket", { id: ID });
+    expect(validacion.isError).toBe(false);
+    expect(readFileSync(ruta, "utf8")).toContain(
+      "El listado ignora las sucursales inactivas",
+    );
+  });
+
+  it("rechaza una gravedad fuera del contrato con el mensaje del motor", async () => {
+    await crear();
+    const resultado = await callTool(contexto, "anotar_punto", {
+      id: ID,
+      title: "Un hallazgo",
+      severity: "urgentísimo",
+      actual: "Pasa esto.",
+      expected: "Debería pasar lo otro.",
+    });
+
+    expect(resultado.isError).toBe(true);
+    // El mensaje se devuelve tal cual lo produjo el motor: parafrasearlo aquí le
+    // quitaría al agente lo único que necesita para corregir.
+    expect(resultado.text).toContain("severity no pertenece al esquema");
+  });
+
+  it("exige lo que exige el contrato: sin `expected` no hay punto", async () => {
+    await crear();
+    const resultado = await callTool(contexto, "anotar_punto", {
+      id: ID,
+      title: "Un hallazgo",
+      severity: "high",
+      actual: "Pasa esto.",
+    });
+
+    expect(resultado.isError).toBe(true);
+    expect(resultado.text).toContain("expected");
+  });
+});
+
+describe("anotar evidencia", () => {
+  /** El ticket con un punto ya anotado, que es el estado normal al probar algo. */
+  async function conPunto(): Promise<string> {
+    const ruta = await crear();
+    await callTool(contexto, "anotar_punto", {
+      id: ID,
+      title: "El listado ignora las sucursales inactivas",
+      severity: "high",
+      actual: "Con el filtro `999` devuelve una lista vacía.",
+      expected: "Debe devolver la orden 1042.",
+    });
+    return ruta;
+  }
+
+  it("enlaza la evidencia con el punto, que es lo que mantiene coherente el bloque", async () => {
+    const ruta = await conPunto();
+    const resultado = await callTool(contexto, "anotar_evidencia", {
+      id: ID,
+      kind: "automated-test",
+      description: "`npx vitest run tests/filtros.test.ts`: 12 pruebas, todas en verde.",
+      punto: "POINT-001",
+    });
+
+    expect(resultado.isError).toBe(false);
+    expect(resultado.text).toContain("EVIDENCE-001");
+
+    // La coherencia del contrato exige que el punto declare sus evidencias: si
+    // la herramienta anotara solo el bloque, el ticket quedaría inválido. Se
+    // afirma sobre el dato, no sobre el texto del archivo.
+    const ticket = parseTicket(readFileSync(ruta, "utf8"));
+    const puntos = ticket.blocks.Puntos as readonly Record<string, unknown>[];
+    expect(puntos[0]?.["evidence"]).toEqual(["EVIDENCE-001"]);
+    const validacion = await callTool(contexto, "validar_ticket", { id: ID });
+    expect(validacion.isError).toBe(false);
+  });
+
+  it("sin `punto`, la evidencia es del ticket y no se cuelga de ningún hallazgo", async () => {
+    await crear();
+    const resultado = await callTool(contexto, "anotar_evidencia", {
+      id: ID,
+      kind: "code-inspection",
+      description: "Leí `BackEnd/pos/filters.py`: el lookup compara por igualdad exacta.",
+    });
+
+    expect(resultado.isError).toBe(false);
+    expect(resultado.text).toContain("EVIDENCE-001");
+    const validacion = await callTool(contexto, "validar_ticket", { id: ID });
+    expect(validacion.isError).toBe(false);
+  });
+
+  it("señala un punto que no existe en vez de inventarlo", async () => {
+    await crear();
+    const resultado = await callTool(contexto, "anotar_evidencia", {
+      id: ID,
+      kind: "build",
+      description: "Build en verde.",
+      punto: "POINT-007",
+    });
+
+    expect(resultado.isError).toBe(true);
+    expect(resultado.text).toContain("punto inexistente");
+  });
+
+  it("exige la forma del contrato en la referencia, que no es una ruta suelta", async () => {
+    await crear();
+    const resultado = await callTool(contexto, "anotar_evidencia", {
+      id: ID,
+      kind: "build",
+      description: "Build en verde.",
+      reference: "BackEnd/pos/filters.py",
+    });
+
+    expect(resultado.isError).toBe(true);
+    expect(resultado.text).toContain("commit:<sha40>");
+  });
+});
+
+// ── Filtros de la lista ─────────────────────────────────────────────────────
+
+describe("listar con filtros", () => {
+  const FIXTURE = join(import.meta.dirname, "fixtures", "saicloud", "tickets");
+  /** Los del fixture real: todos cerrados, que es lo que hace útil el contraste. */
+  const CERRADOS = 57;
+  const UN_CERRADO = "BUGFIX-POS-REPORTE-Z-SUCURSAL-20260907";
+
+  let registro: string;
+  let ctx: ToolContext;
+
+  beforeEach(() => {
+    registro = mkdtempSync(join(tmpdir(), "valmen-mcp-lista-"));
+    cpSync(FIXTURE, join(registro, "tickets"), { recursive: true });
+    ctx = { paths: pathsFor(registro) };
+  });
+
+  afterEach(() => {
+    rmSync(registro, { recursive: true, force: true });
+  });
+
+  it("sin filtros devuelve los activos, que es lo que devolvía antes de tenerlos", async () => {
+    const resultado = await callTool(ctx, "listar_tickets", {});
+    expect(resultado.isError).toBe(false);
+    // El encabezado es lo que faltaba: sin él, «no hay nada» y «no encontré
+    // nada» se ven igual.
+    expect(resultado.text).toContain(`0 de ${CERRADOS} ticket(s).`);
+    expect(resultado.text).toContain("No hay tickets activos.");
+    expect(resultado.data).toMatchObject({ total: 0, enElRegistro: CERRADOS });
+  });
+
+  it("con un ticket en curso lo trae, y deja fuera los cerrados", async () => {
+    const abierto = writeFixtureTicket(registro, {
+      id: "BUGFIX-POS-ABIERTO-20260922",
+      workflowStatus: "in_progress",
+      module: "POS",
+    });
+    const resultado = await callTool(ctx, "listar_tickets", {});
+
+    expect(resultado.text).toContain(`1 de ${CERRADOS + 1} ticket(s).`);
+    expect(resultado.text).toContain(abierto);
+    expect(resultado.text).not.toContain(UN_CERRADO);
+  });
+
+  it("`incluir_cerrados` los trae, y lo dice en el encabezado", async () => {
+    const resultado = await callTool(ctx, "listar_tickets", { incluir_cerrados: true });
+    expect(resultado.text).toContain(`de ${CERRADOS} ticket(s) — incluye cerrados.`);
+    expect(resultado.text).toContain(UN_CERRADO);
+    expect(resultado.data).toMatchObject({ total: CERRADOS, enElRegistro: CERRADOS });
+  });
+
+  it("combina tipo, módulo y texto sobre el registro entero", async () => {
+    const porTipo = await callTool(ctx, "listar_tickets", {
+      tipo: "SYNC",
+      incluir_cerrados: true,
+    });
+    expect(porTipo.text).toContain("tipo=SYNC");
+    // El tipo no se repite en la línea —va en el identificador, como en el CLI—,
+    // así que se comprueba sobre el dato, que es de donde sale el filtro.
+    const filas = porTipo.data?.["tickets"] as readonly { type: string }[];
+    expect(filas.length).toBeGreaterThan(0);
+    expect(filas.every((fila) => fila.type === "SYNC")).toBe(true);
+    expect(porTipo.data).toMatchObject({ total: filas.length });
+
+    const porTexto = await callTool(ctx, "listar_tickets", {
+      texto: "reporte z",
+      incluir_cerrados: true,
+    });
+    expect(porTexto.text).toContain(UN_CERRADO);
+
+    const sinNada = await callTool(ctx, "listar_tickets", {
+      modulo: "NO-EXISTE",
+      incluir_cerrados: true,
+    });
+    expect(sinNada.text).toContain("Ningún ticket cumple el filtro.");
+    expect(sinNada.data).toMatchObject({ total: 0 });
+  });
+
+  it("filtra por rango sobre la fecha de cierre, que es lo que se cuenta al reportar", async () => {
+    const resultado = await callTool(ctx, "listar_tickets", {
+      desde: "2026-09-07",
+      hasta: "2026-09-07",
+      fecha: "closedOn",
+      incluir_cerrados: true,
+    });
+
+    expect(resultado.text).toContain("closedOn entre 2026-09-07 y 2026-09-07");
+    expect(resultado.data).toMatchObject({ total: 1 });
+  });
+
+  it("un valor que no existe se contesta con los que sí, no con una lista vacía", async () => {
+    // `estado: "cerrado"` devolvería cero tickets y se leería como «no hay
+    // nada», que es la conclusión contraria a la verdad.
+    const estado = await callTool(ctx, "listar_tickets", { estado: "cerrado" });
+    expect(estado.isError).toBe(true);
+    expect(estado.text).toContain("intake");
+    expect(estado.text).toContain("closed");
+
+    const orden = await callTool(ctx, "listar_tickets", { orden: "titulo" });
+    expect(orden.isError).toBe(true);
+    expect(orden.text).toContain("closedOn");
+  });
+
+  it("la línea avisa del impacto crítico, que cambia por dónde empezar", async () => {
+    const resultado = await callTool(ctx, "listar_tickets", {
+      solo_criticos: true,
+      incluir_cerrados: true,
+    });
+
+    expect(resultado.text).toContain("solo con impacto crítico");
+    // Todas las que salen lo declaran: el filtro y la señal no pueden discrepar.
+    for (const linea of resultado.text.split("\n").slice(1)) {
+      expect(linea).toContain("impacto crítico:");
+    }
+  });
+});
+
+describe("la lista avisa de lo que está a medias", () => {
+  it("señala los puntos abiertos de cada ticket", async () => {
+    await crear();
+    await callTool(contexto, "anotar_punto", {
+      id: ID,
+      title: "El listado ignora las sucursales inactivas",
+      severity: "critical",
+      actual: "Con el filtro `999` devuelve una lista vacía.",
+      expected: "Debe devolver la orden 1042.",
+    });
+
+    const resultado = await callTool(contexto, "listar_tickets", {});
+    expect(resultado.text).toContain("1 punto(s) abierto(s)");
   });
 });
