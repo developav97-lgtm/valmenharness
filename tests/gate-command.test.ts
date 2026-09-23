@@ -555,3 +555,75 @@ describe("la expansión por criterios es de la compuerta, no una regla general",
     expect(result.stderr).toContain("criterios_presentes");
   });
 });
+
+/**
+ * Que el recibo no afirme más de lo que el gate decidió.
+ *
+ * Un gate expandido con los criterios del ticket conserva sus dimensiones fijas
+ * como descriptivas. Eso es deliberado y está medido, pero el informe las pintaba
+ * **igual que las que deciden**: con su valor y con `⚠` cuando caían en la banda
+ * media, que es la marca de «esto pide tu revisión».
+ *
+ * Se leyó un `compatibilidad_hacia_atras` a 0.59 en un ticket de sincronización
+ * como un problema de compatibilidad señalado por el gate. No lo era: esa
+ * proposición no podía votar, y ninguna de las ocho fijas llegó a votar en los 63
+ * tickets del registro. El dato que lo desmiente —`verdict`— estaba desde el
+ * principio; lo que faltaba era contarlo.
+ */
+describe("la procedencia del veredicto", () => {
+  const ID = "BUGFIX-POS-FILTRO-ORDENES-20260921";
+
+  /** Un evaluador que aprueba todo, con la opción correcta según el gate. */
+  const apruebaTodo = (async (options: { propositions?: readonly { id: string }[] }) => ({
+    answers: (options.propositions ?? []).map((proposition) =>
+      proposition.id === "clasificacion"
+        ? {
+            id: proposition.id,
+            kind: "choice" as const,
+            choice: "completo",
+            rationale: "x",
+          }
+        : { id: proposition.id, kind: "noul" as const, value: 0.95, rationale: "x" },
+    ),
+    model: { provider: "falso", model: "prueba", resolvedVersion: "falso/prueba@0" },
+    usage: { inputTokens: 0, outputTokens: 0, costUsd: 0 },
+    latencyMs: 1,
+  })) as never;
+
+  it("el motivo dice cuántas decidieron y cuántas son contexto", async () => {
+    writeFixtureTicket(lab, { id: ID, workflowStatus: "planned" });
+    const result = await runGate(PATHS(), {
+      gateId: "plan",
+      ticketId: ID,
+      jev: apruebaTodo,
+      dryRun: true,
+    });
+
+    // El ticket del fixture declara cuatro criterios, y el gate de plan despliega
+    // uno por criterio: esos cuatro son los que deciden. Las ocho dimensiones fijas
+    // del gate son contexto.
+    expect(result.stdout).toContain("decidieron 4 de 12 proposiciones");
+    expect(result.stdout).toContain("8 son contexto y no emiten veredicto");
+  });
+
+  it("una descriptiva en la banda no se marca como una revisión pendiente", async () => {
+    writeFixtureTicket(lab, { id: ID, workflowStatus: "planned" });
+    const result = await runGate(PATHS(), {
+      gateId: "plan",
+      ticketId: ID,
+      // Las fijas caen en la banda: sin el arreglo, saldrían con `⚠` y el informe
+      // diría que el gate encontró algo que revisar.
+      jev: evaluator(allPropositions(0.5), 0.95),
+      dryRun: true,
+    });
+
+    const lineas = result.stdout.split("\n");
+    const fija = lineas.find((linea) => linea.includes("compatibilidad_hacia_atras"));
+    expect(fija).toBeDefined();
+    expect(fija).toContain("descriptiva");
+    expect(fija).not.toContain("⚠");
+
+    // Y el informe avisa de que esas líneas no son señales del gate.
+    expect(result.stdout).toContain("no emitieron veredicto");
+  });
+});

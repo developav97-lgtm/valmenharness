@@ -255,16 +255,30 @@ export async function runGate(
   }[evaluation.evaluator];
   lines.push("", `  Evaluación (${etiquetaEvaluador})`);
   for (const item of decision.propositions) {
-    const marca = item.inBand
-      ? "⚠"
-      : item.verdict
-        ? item.effect?.outcome === "approve"
+    // El orden de las marcas importa y estaba al revés. Se elegía por `inBand`
+    // primero, así que una proposición de **contexto** con el valor en la banda
+    // salía con `⚠` —la marca de «esto pide revisión»— cuando no puede pedir nada:
+    // no emite veredicto. Eso es lo que hizo leer un `compatibilidad_hacia_atras`
+    // a 0.59 en un ticket de sincronización como un problema señalado por el gate.
+    // Una descriptiva se marca como descriptiva, con su valor, y nada más.
+    const marca = !item.verdict
+      ? "·"
+      : item.inBand
+        ? "⚠"
+        : item.effect?.outcome === "approve"
           ? "✓"
-          : "✗"
-        : "·";
+          : "✗";
     const peso = item.kind === "noul" && item.weight !== 1 ? `  (peso ${item.weight})` : "";
     lines.push(
       `    ${marca}  ${item.label.padEnd(38)} ${item.verdict ? "" : "descriptiva"}${peso}`.trimEnd(),
+    );
+  }
+
+  if (decision.propositions.some((item) => !item.verdict && item.inBand)) {
+    lines.push(
+      "",
+      "  Las marcadas como descriptivas no emitieron veredicto: su valor es contexto " +
+        "del recibo y no una señal del gate.",
     );
   }
 

@@ -368,7 +368,7 @@ export function decide(
   if (notApproving.length > 0) {
     return {
       outcome: "review",
-      reason: notApproving.map((item) => item.reason).join("; "),
+      reason: notApproving.map((item) => item.reason).join("; ") + procedencia(evaluated),
       actor: "model",
       propositions: evaluated,
       blocking: [],
@@ -378,12 +378,37 @@ export function decide(
 
   return {
     outcome: "approve",
-    reason: "todas las proposiciones claras",
+    reason: "todas las proposiciones claras" + procedencia(evaluated),
     actor: "model",
     propositions: evaluated,
     blocking: [],
     inBand: [],
   };
+}
+
+/**
+ * De dónde salió el veredicto, cuando no salió de todas.
+ *
+ * Un gate expandido con los criterios del ticket conserva sus dimensiones fijas
+ * como descriptivas, y en el recibo aparecían **igual que las que deciden**: con su
+ * valor y su banda. Eso afirma algo falso. Se leyó un `compatibilidad_hacia_atras`
+ * a 0.59 con su «revisión» en un ticket de sincronización como si el gate hubiera
+ * señalado un problema de compatibilidad, y no había señalado nada: esa proposición
+ * no podía votar, y de hecho **ninguna de las ocho fijas llegó a votar en los 63
+ * tickets del registro**.
+ *
+ * Decirlo en el motivo es lo mínimo para que el número no engañe. La distinción
+ * estaba en `verdict` desde el principio; lo que faltaba era contarla.
+ */
+function procedencia(evaluated: readonly EvaluatedProposition[]): string {
+  const votaron = evaluated.filter((item) => item.verdict).length;
+  const contexto = evaluated.length - votaron;
+  if (contexto === 0) return "";
+
+  return (
+    ` (decidieron ${votaron} de ${evaluated.length} proposiciones; ` +
+    `${contexto} son contexto y no emiten veredicto)`
+  );
 }
 
 /** Evalúa una proposición booleana contra los umbrales. */

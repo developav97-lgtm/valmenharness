@@ -123,6 +123,13 @@ export interface GateDecisionView {
   readonly propositions: readonly PropositionView[];
   /** Media ponderada. Es informativa: la decisión no la usa. */
   readonly weightedMean: number;
+  /**
+   * Las proposiciones **que votan** y quedaron en la banda media.
+   *
+   * Las descriptivas no entran aunque su valor caiga en medio: no son una pregunta
+   * pendiente para nadie. El nombre se conserva porque la pantalla lo usa para el
+   * aviso de «queda algo que decidir tú», y ahí solo cuentan las que pueden decidir.
+   */
   readonly inBand: readonly string[];
   readonly blocking: readonly string[];
   readonly report: string;
@@ -171,8 +178,14 @@ export function projectReceipt(
       mark: markOf(proposicion),
     })),
     weightedMean: mean,
+    // Solo las que **pueden** votar. Una proposición de contexto con el valor en
+    // la banda no es una pregunta pendiente: el aviso de «queda algo que decidir
+    // tú» se dispara con esta lista, y llenarla de descriptivas hacía que la
+    // pantalla afirmara que el gate había señalado algo. Un
+    // `compatibilidad_hacia_atras` a 0.59 en una compuerta que no lo despliega como
+    // veredicto aparecía como una revisión pendiente, y no lo era.
     inBand: receipt.propositions
-      .filter((proposicion) => proposicion.inBand)
+      .filter((proposicion) => proposicion.verdict && proposicion.inBand)
       .map((proposicion) => proposicion.id),
     blocking: receipt.propositions
       .filter(

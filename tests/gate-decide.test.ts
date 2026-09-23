@@ -214,7 +214,9 @@ describe("la asimetría de la decisión", () => {
       { id: "b", kind: "noul", value: 0.92 },
     ]);
     expect(decision.outcome).toBe("approve");
-    expect(decision.reason).toBe("todas las proposiciones claras");
+    // El motivo dice de dónde salió el veredicto: en un gate expandido con
+    // criterios, las dimensiones fijas no votan y no pueden parecer que sí.
+    expect(decision.reason).toContain("todas las proposiciones claras");
   });
 });
 
