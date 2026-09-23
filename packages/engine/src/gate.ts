@@ -15,14 +15,8 @@
  * ticket**: entrega el recibo y deja la decisión pendiente. Un gate no cambia
  * estados por su cuenta.
  */
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-
 import {
   EXIT_INVARIANT,
-  type YamlMap,
-  type YamlValue,
-  parseYamlSubset,
   TicketError,
   declaredImpactIds,
   parseTicket,
@@ -49,7 +43,7 @@ import { type CommandCheck } from "@valmen/gate-command";
 import { type EvaluatorId, evaluateGate } from "./evaluators.js";
 
 import type { RunnerResult } from "./result.js";
-import { type RegistryPaths, findTicket } from "./discovery.js";
+import { type RegistryPaths, configList, findTicket } from "./discovery.js";
 import { buildGateState, runMechanicalChecks } from "./state.js";
 import { appendReceipt } from "./receipts.js";
 
@@ -112,26 +106,7 @@ export interface GateRunOptions {
  * evaluar. Con la lista, lo máximo que consigue es apuntar a un test que falla.
  */
 export function testCommands(root: string): string[] {
-  let texto: string;
-  try {
-    texto = readFileSync(join(root, ".valmen", "config.yaml"), "utf8");
-  } catch {
-    return [];
-  }
-
-  let documento: YamlValue;
-  try {
-    documento = parseYamlSubset(texto, { fileName: ".valmen/config.yaml" });
-  } catch {
-    // Un `config.yaml` que no parsea no es un fallo de este gate: `valmen sync`
-    // lo reporta donde corresponde. Acá, sin lista, no se corre nada.
-    return [];
-  }
-
-  if (typeof documento !== "object" || Array.isArray(documento)) return [];
-  const lista = (documento as YamlMap)["test-commands"];
-  if (!Array.isArray(lista)) return [];
-  return lista.filter((entrada): entrada is string => typeof entrada === "string");
+  return configList(root, "test-commands");
 }
 
 /**

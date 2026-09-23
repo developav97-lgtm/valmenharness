@@ -14,6 +14,7 @@
 export * from "./result.js";
 export * from "./discovery.js";
 export * from "./secrets.js";
+export * from "./memory.js";
 export * from "./usage.js";
 export * from "./tickets.js";
 export * from "./state.js";

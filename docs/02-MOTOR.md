@@ -536,7 +536,7 @@ con su agente —opencode, codex, Claude Code—, y el agente necesita poder dar
 ticket, validarlo, evaluar la compuerta y mover el estado. Sin esto, cada ticket empieza
 con alguien copiando un comando.
 
-### Las veintiséis herramientas
+### Las veintiocho herramientas
 
 | Herramienta | Qué hace | Reutiliza |
 |---|---|---|
@@ -562,6 +562,8 @@ con alguien copiando un comando.
 | `indexar_registro` | Regenera el índice, o dice si se desincronizó | `buildIndex` |
 | `revisar_secretos` | Credenciales en el cambio pendiente, o en el texto que se le pase | `scanPendingChanges` |
 | `reporte_consumo` | Evaluaciones, coste y **cuánto se decidió en código**, con la calibración real | `usageReport` |
+| `buscar_memoria` | Lo que el proyecto ya decidió y ya falló, por sus palabras | `searchMemory` |
+| `guardar_aprendizaje` | Anexa lo que este trabajo enseñó, cuando se descubre | `saveLearning` |
 | `iniciar_qa` | Abre el ciclo con su ambiente y su referencia de build | `qaStart` |
 | `anotar_retest` | El resultado de retestar un punto | `addRetest` |
 | `cerrar_qa` | Cierra el ciclo: hallazgos, o la aprobación con la frase del PO | `qaClose` |
@@ -666,7 +668,7 @@ valmen-mcp --check
 # raíz:        /proyectos/tienda
 # registro:    tickets
 # credenciales: /proyectos/tienda/.valmen/.credentials.yaml
-# herramientas: 26
+# herramientas: 28
 #   - crear_ticket(id, title, type, module, request): Crear un ticket
 #   - ver_ticket(id): Ver un ticket
 #   - listar_tickets(): Listar tickets

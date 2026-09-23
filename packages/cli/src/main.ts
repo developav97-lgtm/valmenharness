@@ -56,7 +56,7 @@ import {
   loadStatics,
   recordHumanDecision,
 } from "@valmen/server";
-import { scanPendingSecretsCommand, usageCommand } from "./commands.js";
+import { memoryCommand, scanPendingSecretsCommand, usageCommand } from "./commands.js";
 import {
   type Entity,
   addAiUsage,
@@ -85,6 +85,11 @@ Comandos:
   index [--check]           Regenera el índice, o comprueba que esté al día.
   secrets [--staged]        Revisa los cambios pendientes en busca de secretos.
                             Solo mira las líneas agregadas. No imprime el valor.
+  memory search <consulta>  Busca en la memoria del proyecto —decisiones y errores.
+      --limite <n>          Cuántos resultados. Por defecto, 5.
+  memory save --title <t> --body <b> [--tickets <ids>]
+                            Guarda un aprendizaje en .valmen/memory/.
+  memory list               Qué documentos son la memoria y qué se indexó.
   usage [--desde <f>] [--hasta <f>]
                             Consumo del harness: evaluaciones, coste y calibración,
                             contado de los recibos. Sin fechas, todo el registro.
@@ -787,6 +792,13 @@ export function dispatch(options: Options): CommandResult {
 
     case "secrets":
       return scanPendingSecretsCommand(paths.root, options.flags);
+
+    case "memory": {
+      // `memory search <consulta>`: la consulta es el resto de los posicionales,
+      // unida, para que no haga falta entrecomillarla.
+      const [verbo, ...resto] = rest;
+      return memoryCommand(paths, { ...options.flags, _: resto.join(" ") }, verbo ?? "");
+    }
 
     case "usage":
       return usageCommand(paths, options.flags);

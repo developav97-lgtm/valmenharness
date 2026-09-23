@@ -64,7 +64,7 @@ porque ahí sí hereda el `PATH` completo.
 
 ## Contrato
 
-Las veintiséis herramientas. Ninguna es una segunda implementación: las de lectura llaman a
+Las veintiocho herramientas. Ninguna es una segunda implementación: las de lectura llaman a
 las mismas funciones que el CLI, y las de escritura al mismo motor.
 
 | Herramienta            | Qué hace                                                          |
@@ -91,6 +91,8 @@ las mismas funciones que el CLI, y las de escritura al mismo motor.
 | `indexar_registro`     | Regenera el índice, o dice si se desincronizó                     |
 | `revisar_secretos`     | Credenciales en el cambio pendiente, o en el texto que se le pase  |
 | `reporte_consumo`      | Evaluaciones, coste y cuánto se decidió en código, con la calibración |
+| `buscar_memoria`       | Lo que el proyecto ya decidió y ya falló, por sus palabras         |
+| `guardar_aprendizaje`  | Anexa lo que este trabajo enseñó, cuando se descubre               |
 | `iniciar_qa`           | Abre el ciclo con su ambiente y la referencia de lo probado       |
 | `anotar_retest`        | El resultado de retestar un punto                                 |
 | `cerrar_qa`            | Cierra el ciclo: hallazgos, o la aprobación con la frase del PO   |

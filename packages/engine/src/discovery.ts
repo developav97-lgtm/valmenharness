@@ -11,7 +11,13 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 
-import { EXIT_SCHEMA, fail } from "@valmen/core";
+import {
+  EXIT_SCHEMA,
+  type YamlMap,
+  type YamlValue,
+  fail,
+  parseYamlSubset,
+} from "@valmen/core";
 
 /** Un ticket leído de disco, con su ruta relativa a la raíz del proyecto. */
 export interface LocatedTicket {
@@ -69,6 +75,38 @@ export function chooseTicketsDir(root: string): string {
   if (existsSync(anterior)) return "docs/tickets";
   if (existsSync(nuevo)) return "tickets";
   return "tickets";
+}
+
+/**
+ * Una lista de textos declarada en `.valmen/config.yaml`.
+ *
+ * Es la forma que tienen las declaraciones del proyecto que el motor necesita
+ * leer —qué comandos puede correr, qué documentos son su memoria— y estaba
+ * escrita dos veces: una por lista. Dos lectores del mismo archivo se separan, y
+ * el que se separa es el que deja de ver una clave que sí está.
+ *
+ * Sin archivo, sin la clave, o con un archivo que no parsea, devuelve vacío: no es
+ * un fallo del motor, y quien pregunte decide qué hacer con la ausencia.
+ */
+export function configList(root: string, clave: string): string[] {
+  let texto: string;
+  try {
+    texto = readFileSync(join(root, ".valmen", "config.yaml"), "utf8");
+  } catch {
+    return [];
+  }
+
+  let documento: YamlValue;
+  try {
+    documento = parseYamlSubset(texto, { fileName: ".valmen/config.yaml" });
+  } catch {
+    return [];
+  }
+
+  if (typeof documento !== "object" || Array.isArray(documento)) return [];
+  const lista = (documento as YamlMap)[clave];
+  if (!Array.isArray(lista)) return [];
+  return lista.filter((entrada): entrada is string => typeof entrada === "string");
 }
 
 /** `true` si el directorio tiene al menos un `ticket.md` en su segundo nivel. */

@@ -46,13 +46,17 @@ import {
   filterTickets,
   findTicket,
   listTickets,
+  loadMemory,
   qaClose,
   qaStart,
   scanSecrets,
   readReceipts,
   runGate,
   simulateGate,
+  renderHits,
   renderUsage,
+  saveLearning,
+  searchMemory,
   summarize,
   usageReport,
   ticketsPath,
@@ -832,6 +836,63 @@ export const TOOLS: readonly ToolDefinition[] = [
     },
   },
   {
+    name: "buscar_memoria",
+    title: "Buscar en la memoria del proyecto",
+    description:
+      "Busca en lo que el proyecto ya decidió y ya falló: sus documentos de decisiones y " +
+      "de errores, más lo que el harness haya aprendido. **Usala antes de diagnosticar** " +
+      "un ticket, con el módulo y el síntoma: el problema que estás por investigar puede " +
+      "estar resuelto desde hace meses, con la causa raíz escrita y el porqué de la " +
+      "decisión. Buscar acá cuesta una llamada; no buscar cuesta rediagnosticar algo que " +
+      "alguien ya pagó por entender. Devuelve candidatos con su archivo y su línea —el " +
+      "identificador y el título pesan más que el cuerpo—, y no exige que aparezcan todas " +
+      "las palabras: leé los que salgan y decidí.",
+    inputSchema: conRoot({
+      properties: {
+        consulta: {
+          type: "string",
+          description:
+            "Qué se busca, en las palabras del dominio: «bulk_create pierde registros en " +
+            "la cola», «natural keys en sync». Una descripción del problema funciona mejor " +
+            "que una sola palabra.",
+        },
+        limite: { type: "number", description: "Cuántos resultados. Por defecto, 5." },
+      },
+      required: ["consulta"],
+    }),
+  },
+  {
+    name: "guardar_aprendizaje",
+    title: "Guardar un aprendizaje en la memoria",
+    description:
+      "Anexa un aprendizaje al registro del proyecto —lo que este trabajo enseñó y no " +
+      "estaba escrito en ninguna parte: una causa raíz que costó encontrar, una decisión " +
+      "con su porqué, un patrón que se repite—. Guardalo **cuando lo descubrís**, no al " +
+      "final: lo que se escribe tres días después pierde el detalle que lo hacía útil. " +
+      "No reemplaza al ticket: el ticket cuenta qué pasó con un pedido, y esto cuenta qué " +
+      "hay que saber para el próximo.",
+    inputSchema: conRoot({
+      properties: {
+        titulo: {
+          type: "string",
+          description: "El aprendizaje en una línea, como se busca después.",
+        },
+        cuerpo: {
+          type: "string",
+          description:
+            "Qué se aprendió y por qué importa. Con las palabras del dominio —archivos, " +
+            "síntomas, causas— porque es lo que después se busca.",
+        },
+        tickets: {
+          type: "array",
+          items: { type: "string" },
+          description: "Los tickets donde se aprendió, si los hay.",
+        },
+      },
+      required: ["titulo", "cuerpo"],
+    }),
+  },
+  {
     name: "iniciar_qa",
     title: "Abrir un ciclo de QA",
     description:
@@ -1475,6 +1536,39 @@ export async function callTool(
           decididasEnCodigo: informe.byCode,
           calibracion: informe.calibration.map((fila) => ({ ...fila, rows: undefined })),
         });
+      }
+
+      case "buscar_memoria": {
+        const limite = args["limite"];
+        return bien(
+          renderHits(
+            searchMemory(
+              loadMemory(paths),
+              texto(args, "consulta") as string,
+              typeof limite === "number" ? limite : 5,
+            ),
+            texto(args, "consulta") as string,
+          ),
+        );
+      }
+
+      case "guardar_aprendizaje": {
+        const crudos = args["tickets"];
+        const guardado = saveLearning(paths, {
+          title: texto(args, "titulo") as string,
+          body: texto(args, "cuerpo") as string,
+          tickets: Array.isArray(crudos)
+            ? crudos.filter(
+                (id): id is string => typeof id === "string" && id.trim() !== "",
+              )
+            : [],
+          now: contexto.now,
+        });
+        return bien(
+          `Aprendizaje guardado: ${guardado.id} en ${guardado.path}\n` +
+            "Queda en la memoria del proyecto: la próxima búsqueda que toque este tema lo " +
+            "va a encontrar.",
+        );
       }
 
       case "iniciar_qa": {

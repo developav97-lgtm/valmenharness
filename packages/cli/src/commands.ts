@@ -70,6 +70,11 @@ import {
 } from "@valmen/engine";
 import {
   isIndexCurrent,
+  loadMemory,
+  memoryFiles,
+  renderHits,
+  saveLearning,
+  searchMemory,
   renderIndex,
   renderUsage,
   scanPendingChanges,
@@ -845,6 +850,82 @@ export function deliverManifest(
  * o una feature: un archivo con un error de tipeo que desaparece de la lista hace
  * creer que el proceso no existe, y entonces alguien lo escribe otra vez.
  */
+/**
+ * `memory`: la memoria del proyecto —lo ya decidido y lo ya fallado—.
+ *
+ * Tres verbos y ninguno mueve un archivo: `search` consulta, `save` anexa un
+ * aprendizaje al archivo del harness, y `list` dice qué se está indexando. Los
+ * documentos del proyecto se leen donde están.
+ */
+export function memoryCommand(
+  paths: RegistryPaths,
+  flags: Readonly<Record<string, string | true>>,
+  verbo: string,
+): CommandResult {
+  try {
+    if (verbo === "search") {
+      const consulta = flags["_"];
+      if (typeof consulta !== "string" || consulta.trim() === "") {
+        return error("memory search requiere una consulta.", EXIT_SCHEMA);
+      }
+      const bruto = flags["limite"];
+      const limite = typeof bruto === "string" ? Number.parseInt(bruto, 10) : 5;
+      return ok(renderHits(searchMemory(loadMemory(paths), consulta, limite), consulta));
+    }
+
+    if (verbo === "save") {
+      const title = flags["title"];
+      const body = flags["body"];
+      if (typeof title !== "string" || title.trim() === "") {
+        return error("memory save requiere --title.", EXIT_SCHEMA);
+      }
+      if (typeof body !== "string" || body.trim() === "") {
+        return error("memory save requiere --body.", EXIT_SCHEMA);
+      }
+      const crudos = flags["tickets"];
+      const tickets =
+        typeof crudos === "string"
+          ? crudos
+              .split(",")
+              .map((id) => id.trim())
+              .filter((id) => id !== "")
+          : [];
+      const guardado = saveLearning(paths, { title, body, tickets });
+      return ok(`Aprendizaje guardado: ${guardado.id} en ${guardado.path}\n`);
+    }
+
+    if (verbo === "list") {
+      const archivos = memoryFiles(paths.root);
+      const entradas = loadMemory(paths);
+      const porTipo = new Map<string, number>();
+      for (const entrada of entradas) {
+        porTipo.set(entrada.kind, (porTipo.get(entrada.kind) ?? 0) + 1);
+      }
+      if (archivos.length === 0) {
+        return ok(
+          "La memoria está vacía: declare `memory-sources` en `.valmen/config.yaml` " +
+            "con los documentos del proyecto, o guarde un aprendizaje.\n",
+        );
+      }
+      return ok(
+        `Memoria del proyecto — ${entradas.length} entrada(s)\n\n` +
+          archivos.map((archivo) => `  ${archivo}`).join("\n") +
+          "\n\n" +
+          [...porTipo.entries()]
+            .sort()
+            .map(([tipo, cuantas]) => `  ${tipo.padEnd(14)} ${cuantas}`)
+            .join("\n") +
+          "\n",
+      );
+    }
+
+    return error(`memory no conoce el verbo "${verbo}".`, EXIT_SCHEMA);
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
 /**
  * `usage`: el consumo del harness, contado de sus propios recibos.
  *

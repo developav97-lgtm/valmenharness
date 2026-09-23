@@ -121,6 +121,22 @@ mecánico, automático o humano.
 verificables y el código decide. Cada decisión deja un recibo con la evidencia
 que vio el evaluador, sus respuestas y su coste.
 
+### Antes de diagnosticar, buscar en la memoria
+
+El proyecto acumula lo que ya decidió y lo que ya falló. Antes de investigar un
+ticket, `buscar_memoria` con el módulo y el síntoma:
+
+> el problema que estás por diagnosticar puede estar resuelto desde hace meses,
+> con su causa raíz escrita y el porqué de la decisión.
+
+Buscar cuesta una llamada. No buscar cuesta rediagnosticar algo que alguien ya pagó
+por entender, y volver a decidir lo que ya se decidió. Cuando la búsqueda devuelve
+algo, el diagnóstico lo **cita**: un ticket que repite un error conocido se explica
+mucho mejor diciendo cuál es y por qué volvió.
+
+Y lo que este trabajo enseñe —una causa raíz que costó encontrar, un patrón que se
+repite— se guarda con `guardar_aprendizaje` cuando se descubre, no al final.
+
 ### Cómo se verifica un criterio
 
 Cada criterio de aceptación declara **cómo se verifica**, en un comentario debajo:

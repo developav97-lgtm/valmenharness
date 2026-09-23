@@ -552,7 +552,23 @@ enormes y valiosos, pero `grep` es la única forma de consultarlos y el agente n
 mirarlos. Con búsqueda y disparadores automáticos ("este ticket toca sync → buscar errores
 conocidos de sync"), el conocimiento se usa en el momento en que importa.
 
-**Esfuerzo:** 2–3 semanas (embeddings locales + índice).
+**Estado: hecho, y sin embeddings.** El diseño preveía un índice vectorial con un modelo local;
+lo que hay es una búsqueda **léxica** —sin dependencia, sin red, y funciona sin conexión— porque la
+división de trabajo del harness ya resuelve el problema: el código recupera y ordena candidatos
+por sus palabras, y el modelo que los lee decide si sirven. Un buscador que devuelve tres
+candidatos buenos y uno malo es útil; uno que no devuelve nada porque las palabras no coinciden
+exactamente no lo es, y por eso la búsqueda no exige que aparezcan todos los términos.
+
+Sobre el corpus real de SaiOpenCloud —240 entradas de `decisions.md` y `errors.md`— las consultas
+del dominio devuelven la entrada correcta arriba de todo, y los tres formatos de encabezado que
+conviven en esos documentos se indexan sin migrarlos: **la memoria no se muda**, se lee donde
+está. `buscar_memoria` y `guardar_aprendizaje` la consultan y la alimentan desde el MCP, y la
+regla de «antes de diagnosticar, buscar» está en el `AGENTS.md` que lee el agente.
+
+Queda el grafo: vínculos explícitos entre entradas —«ver también»— y entre entradas y tickets.
+Hoy los vínculos existen como texto y la búsqueda los encuentra por sus palabras.
+
+**Esfuerzo original:** 2–3 semanas (embeddings locales + índice).
 
 ---
 
