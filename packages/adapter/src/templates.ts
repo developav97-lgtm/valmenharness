@@ -31,7 +31,8 @@ configuración del harness.
 **El modo directo no relaja los gates de impacto.** Un cambio que toque
 sincronización, migraciones, contenedores, autenticación o despliegue exige
 ticket, plan aprobado y gate humano, aunque el pedido haya sido "cámbiame este
-texto".
+texto". El agente lo dice y se detiene: no sigue sin el ticket, y tampoco lo
+abre por su cuenta.
 
 ### Autorización antes de acción
 
@@ -39,16 +40,26 @@ Investigar, explicar, revisar, auditar, comparar y proponer son operaciones
 **read-only** salvo que el pedido autorice explícitamente un cambio. Es el
 primer paso del protocolo, no una recomendación.
 
-### Cuándo hace falta un ticket
+### Quién decide que hace falta un ticket
 
-El trabajo se registra cuando la exploración revela dos o más pasos de
-implementación con archivos distintos, o cuando el progreso vale la pena
-recuperarlo tras una interrupción. Un cambio trivial y comprendido no crea
-artefactos durables.
+**La persona, no el agente.** Abrir un ticket escribe en el repositorio, y
+escribir exige autorización: la regla que vale para el código vale para el
+registro. El agente puede proponerlo —una línea, con el motivo— y esperar
+respuesta. No lo abre por su cuenta, ni siquiera cuando el trabajo cumple de
+sobra las condiciones para tenerlo.
 
-Para una funcionalidad que excede un ticket —un módulo con varias pantallas,
-reportes y configuración— se usa una **feature**: spec, diseño, descomposición
-en tickets con grafo de dependencias y seguimiento del conjunto.
+Un pedido de trabajo no es un pedido de registro. Cuando alguien dice
+"hagámoslo", el modo por defecto es el directo: se hace y se prueba.
+
+Cuando sí se pide, esto es lo que lo justifica: dos o más pasos de
+implementación con archivos distintos, o un progreso que conviene recuperar tras
+una interrupción. Un cambio trivial y comprendido no crea artefactos durables.
+
+Una funcionalidad que excede un ticket —un módulo con varias pantallas, reportes
+y configuración— se registra como **feature**: spec, diseño, descomposición en
+tickets con grafo de dependencias y seguimiento del conjunto. Si quien la pide
+prefiere tickets sueltos, se hacen tickets sueltos: la forma del registro la
+decide quien lo pide, no el agente que lo recibe.
 
 ### Estados del ticket
 

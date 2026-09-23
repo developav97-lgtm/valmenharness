@@ -214,6 +214,18 @@ describe("proyección a AGENTS.md", () => {
     expect(output.toLowerCase()).toContain("los bloques append-only no se reescriben");
   });
 
+  it("deja el registro en manos de la persona y no del agente", () => {
+    scaffold({}, "name: Demo\n");
+    const output = projectAgentsMd(loadProjectModel(lab, "Demo"));
+
+    expect(output).toContain("### Quién decide que hace falta un ticket");
+    expect(output).toContain("**La persona, no el agente.**");
+    // El modo por defecto ante un pedido de trabajo es el directo.
+    expect(output).toContain("el modo por defecto es el directo");
+    // Y el caso que no es opcional sigue siéndolo: el impacto.
+    expect(output).toContain("El agente lo dice y se detiene");
+  });
+
   it("avisa cuando el proyecto no declara reglas propias", () => {
     scaffold({}, "name: Demo\n");
     const output = projectAgentsMd(loadProjectModel(lab, "Demo"));
