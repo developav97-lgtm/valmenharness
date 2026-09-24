@@ -283,11 +283,13 @@
       #actualizado {
         color: var(--ok);
       }
+      /* El contenido usa **todo** el ancho disponible, como un `container-fluid`:
+         una tabla de tickets con siete columnas y un tablero de feature no se
+         leen mejor centrados con doscientos píxeles muertos a cada lado. Lo que
+         necesita medida corta —un diálogo, un párrafo largo— la pide él mismo. */
       main {
-        max-width: 1240px;
         width: 100%;
-        margin: 0 auto;
-        padding: 22px 24px 48px;
+        padding: 20px 28px 56px;
       }
       h2 {
         font-size: 13px;
