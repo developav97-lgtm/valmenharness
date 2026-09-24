@@ -65,10 +65,26 @@ implementación con archivos distintos, o un progreso que conviene recuperar tra
 una interrupción. Un cambio trivial y comprendido no crea artefactos durables.
 
 Una funcionalidad que excede un ticket —un módulo con varias pantallas, reportes
-y configuración— se registra como **feature**: spec, diseño, descomposición en
-tickets con grafo de dependencias y seguimiento del conjunto. Si quien la pide
-prefiere tickets sueltos, se hacen tickets sueltos: la forma del registro la
-decide quien lo pide, no el agente que lo recibe.
+y configuración— se registra como **feature**: brief, spec con requisitos, diseño,
+descomposición en tickets con grafo de dependencias y seguimiento del conjunto. Si
+quien la pide prefiere tickets sueltos, se hacen tickets sueltos: la forma del
+registro la decide quien lo pide, no el agente que lo recibe.
+
+El recorrido tiene un orden y se sigue **siempre igual** —está escrito en la skill
+\`feature\`, que se lee antes de empezar—:
+
+\`\`\`text
+valmen feature new <slug> --title "…"     el brief, en draft
+spec/<dominio>/spec.md                    los requisitos, en RFC 2119
+valmen feature decompose <slug>           el arquitecto propone el grafo
+   ↳ se revisa con la persona             es el momento barato de corregir
+valmen feature materialize <slug>         los tickets existen, en intake
+\`\`\`
+
+Hasta el último paso los tickets son **un plan**: un ticket del grafo no tiene
+\`ticket.md\`, no está en \`intake\` y ninguna compuerta lo mira. Y cada ticket nace
+en \`intake\` con el flujo de siempre: análisis, plan, aprobación de una persona,
+implementación, entrega y QA — en el orden que dicen las dependencias.
 
 ### Estados del ticket
 
