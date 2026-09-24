@@ -42,8 +42,13 @@ Recordatorio de [`00-VISION.md` §8](00-VISION.md#8-principio-de-crecimiento-el-
 de aceptación cumplido y escrito en su sección. De la 3 queda una salvedad que no es código:
 la medición de calibración existe, el número todavía no se cumple y se sabe por qué —hacen
 falta planes aprobados por personas contra los que comparar—. De la 5 falta el dogfooding,
-que es del lado del proyecto y no de aquí. La 6 no ha empezado. Y la pieza que cerraba el
-flujo —el servidor MCP— está hecha: ver §Fase 5.
+que es del lado del proyecto y no de aquí. La 6 —que es continua por diseño— está a medias, y
+el detalle entregable por entregable vive en
+[`09-MIGRACION-SAICLOUD.md` §Fase 6](09-MIGRACION-SAICLOUD.md#fase-6--autonomía-y-memoria-continuo):
+la memoria, la plantilla y la primera mitad de la observabilidad están hechas; la promoción de
+compuertas tiene la evidencia pero no el acto; y el modo headless no ha empezado, a propósito,
+porque necesita esa evidencia. Y la pieza que cerraba el flujo —el servidor MCP— está hecha:
+ver §Fase 5.
 
 ## 3. Fases en detalle
 

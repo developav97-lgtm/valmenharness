@@ -763,15 +763,15 @@ primeros tickets implementados y cerrados a través del harness.
 
 ### Fase 6 — Autonomía y memoria (continuo)
 
-| # | Entregable |
-|---|---|
-| 6.1 | Memoria persistente: decisiones, errores, patrones aprendidos |
-| 6.2 | Puente de Hermes para control desde el celular |
-| 6.3 | Promoción automática de gates `hybrid` → `auto` por evidencia |
-| 6.4 | Modo headless: ejecución desatendida de tickets de bajo riesgo |
-| 6.5 | Reportes diario/semanal generados del motor |
-| 6.6 | Observabilidad: OTEL, dashboards de costo y acierto de gates |
-| 6.7 | Extraer la plantilla `django-angular-multitenant` para otros proyectos |
+| # | Entregable | Estado |
+|---|---|---|
+| 6.1 | Memoria persistente: decisiones, errores, patrones aprendidos | **Hecho**, con la memoria y los estándares: búsqueda sobre `memory-sources`, `guardar_aprendizaje`, y la regla que se propone, se decide con las palabras de la persona y entra en vigor. Falta la captura pasiva (A5) con su cola de revisión |
+| 6.2 | Puente de Hermes para control desde el celular | **Descartado por decisión del responsable** |
+| 6.3 | Promoción automática de gates `hybrid` → `auto` por evidencia | **La evidencia, hecha**: `valmen usage` calibra cada compuerta contra el veredicto humano del ticket. Falta el acto de promover (hoy se edita la configuración con el número delante) |
+| 6.4 | Modo headless: ejecución desatendida de tickets de bajo riesgo | **Falta**, y va al final a propósito: necesita el histórico de calibración que todavía no existe |
+| 6.5 | Reportes diario/semanal generados del motor | **El contenido, hecho** (`valmen report`, `valmen usage`, el visor); falta la cadencia — nada los genera solo |
+| 6.6 | Observabilidad: OTEL, dashboards de costo y acierto de gates | **La primera mitad, hecha**: consumo por compuerta y modelo, calibración real, línea de tiempo por ticket con coste por sesión. Falta lo externo: trazas, series temporales, tableros |
+| 6.7 | Extraer la plantilla `django-angular-multitenant` para otros proyectos | **La primera, hecha** (`valmen template`); faltan las demás de la lista de B6 |
 
 ## 4. Cronograma y esfuerzo
 

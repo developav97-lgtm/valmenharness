@@ -503,11 +503,13 @@ número delante.
 
 **Estado: la superficie está construida.** El servidor existe (`@valmen/mcp`, ejecutable
 `valmen-mcp`), habla el protocolo por stdio sin dependencias, y `valmen mcp --install` lo
-declara en opencode y entrega el fragmento de codex. **El ciclo entero del ticket se recorre
+declara en las **dos** configuraciones de proyecto —`opencode.json` y el `.mcp.json` de Claude
+Code—, `--global` añade la de codex e imprime el fragmento de DSH con sus dos pasos. Donde el
+cliente no hable MCP no hay hueco: `valmen` es un CLI, y las dos puertas llaman al mismo motor. **El ciclo entero del ticket se recorre
 sin terminal** —de `intake` a `closed`, con sus puntos, su evidencia, su QA, su cierre y su
 reapertura— y las skills del proyecto se publican como *prompts* del protocolo, que es lo
 que vuelve el servidor agnóstico del agente sin escribir un adaptador por cliente. Las
-veinticinco herramientas, y lo que deliberadamente **no** se expone, están en
+treinta y dos herramientas, y lo que deliberadamente **no** se expone, están en
 `docs/02-MOTOR.md` §10.
 
 | Herramienta MCP | Qué hace | Estado |
@@ -522,9 +524,9 @@ veinticinco herramientas, y lo que deliberadamente **no** se expone, están en
 | `reporte_cierres`, `manifiesto_entrega`, `indexar_registro` | El registro contado | **Hecho** |
 | `revisar_secretos` | Credenciales en el cambio pendiente y en un texto | **Hecho** |
 | Prompts (`prompts/list`, `prompts/get`) | Las skills del proyecto, sin adaptador | **Hecho** |
-| `usage_report` | Costos agregados | Falta: `valmen usage report` no existe |
-| `memory_search` / `memory_save` | Memoria | Fase 6 |
-| `drift_check` | Drift de artefactos | Falta |
+| `reporte_consumo`, `buscar_memoria`, `guardar_aprendizaje` | Consumo, memoria y lo aprendido | **Hecho** |
+| `ver_estandares`, `proponer_estandar`, `decidir_estandar`, `revisar_presentacion` | Los estándares: consultarlos, proponerlos, decidirlos y revisar los colores fijos | **Hecho** |
+| `drift_check` | Drift de artefactos | Falta: depende de A2, que no está construido |
 
 **`gate_approve` / `gate_reject` no se van a exponer.** Estaban en esta tabla y se
 descartaron a propósito: la aprobación de un gate es una decisión humana, y un agente que
