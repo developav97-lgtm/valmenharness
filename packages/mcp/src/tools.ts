@@ -602,9 +602,10 @@ export const TOOLS: readonly ToolDefinition[] = [
     title: "Reanudar un ticket",
     description:
       "Devuelve el contexto de un ticket para retomar trabajo ya empezado: estado, QA, " +
-      "release y cuántos puntos hay. Es lo primero que conviene llamar al empezar una " +
-      "sesión sobre algo en curso. Sin `id`, si hay más de un ticket activo **no " +
-      "elige**: devuelve la lista y hay que decidir cuál.",
+      "release, cuántos puntos hay y —si el ticket viene de una feature— de cuál, con su " +
+      "sprint, sus dependencias y dónde está la spec que le da los requisitos. Es lo " +
+      "primero que conviene llamar al empezar una sesión sobre algo en curso. Sin `id`, " +
+      "si hay más de un ticket activo **no elige**: devuelve la lista y hay que decidir cuál.",
     inputSchema: conRoot({
       properties: { id: { type: "string" } },
     }),

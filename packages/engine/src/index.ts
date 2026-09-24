@@ -21,6 +21,7 @@ export * from "./standards.js";
 export * from "./memory.js";
 export * from "./learnings.js";
 export * from "./materialize.js";
+export * from "./provenance.js";
 export * from "./notify.js";
 export * from "./approval.js";
 export * from "./usage.js";

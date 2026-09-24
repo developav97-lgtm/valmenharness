@@ -97,6 +97,8 @@ import {
   ticketValueReport,
   renderDrift,
   scanDrift,
+  procedenciaDeTicket,
+  renderProcedencia,
   DECISIONES_APRENDIZAJE,
   materializeFeature,
   renderMaterialization,
@@ -246,7 +248,7 @@ export function resumeTicket(paths: RegistryPaths, id: string | undefined): Comm
     }
     const failure = validationError(ticket, id);
     if (failure !== undefined) return error(failure.message, failure.exitCode);
-    return ok(renderResume(parseTicket(ticket.text)));
+    return ok(renderResume(parseTicket(ticket.text), paths.root));
   }
 
   const activos = activosOrdenados(paths);
@@ -264,12 +266,20 @@ export function resumeTicket(paths: RegistryPaths, id: string | undefined): Comm
       exitCode: EXIT_AMBIGUOUS,
     };
   }
-  return ok(renderResume(activos.rows[0]?.document as ParsedTicket));
+  return ok(renderResume(activos.rows[0]?.document as ParsedTicket, paths.root));
 }
 
-/** El bloque de siete líneas de `resume`. */
-function renderResume(document: ParsedTicket): string {
+/**
+ * El bloque de `resume`.
+ *
+ * Cuando el ticket viene de una feature, se dice: la spec que le da los
+ * requisitos, el sprint del que forma parte y qué tiene que estar cerrado antes.
+ * Es lo que un agente necesita para trabajar un ticket de un feature sin que
+ * alguien se lo explique en la conversación.
+ */
+function renderResume(document: ParsedTicket, root: string): string {
   const { fields } = document;
+  const procedencia = procedenciaDeTicket(root, fields.id);
   return (
     [
       `Ticket: ${fields.id}`,
@@ -279,6 +289,7 @@ function renderResume(document: ParsedTicket): string {
       `QA: ${fields.qa_status}`,
       `Release: ${fields.release_status}`,
       `Puntos: ${(document.blocks.Puntos ?? []).length}`,
+      ...(procedencia === null ? [] : [renderProcedencia(procedencia)]),
     ].join("\n") + "\n"
   );
 }
