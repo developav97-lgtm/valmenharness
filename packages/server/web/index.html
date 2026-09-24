@@ -530,7 +530,10 @@
         margin: 8px 0 8px 12px;
         opacity: 0.85;
       }
-      details > summary {
+      /* El margen es del historial, no de todo desplegable: puesto como
+         `details > summary` global engordaba los acordeones de un ticket —los
+         dejaba en setenta píxeles de alto— y el usuario lo notó antes que yo. */
+      .historial-estandares > summary {
         cursor: pointer;
         margin: 14px 0 8px;
       }
@@ -2552,6 +2555,7 @@
         if (decididas.length > 0) {
           const aceptadas = decididas.filter((p) => p.state === "aceptado").length;
           const historial = document.createElement("details");
+          historial.className = "historial-estandares";
           historial.append(
             el(
               "summary",
