@@ -339,6 +339,7 @@ describe("el paso de confianza de las skills", () => {
     // proyecto» con «y ahora confiá en las instrucciones de adentro» es la forma
     // de que un `git clone` se convierta en ejecución de código ajeno.
     conSkill();
+    mkdirSync(join(proyecto, ".agents", "skills"), { recursive: true });
     const r = hermesConnect(pedido());
     expect(r.exitCode).toBe(0);
     expect(r.stdout).toContain("hermes skills trust");
@@ -349,6 +350,39 @@ describe("el paso de confianza de las skills", () => {
   it("sin skills, no menciona nada: sería un paso que no hace falta", () => {
     const r = hermesConnect(pedido());
     expect(r.stdout).not.toContain("hermes skills trust");
+  });
+
+  it("con skills sin proyectar, manda a `valmen sync` en vez de a confiar", () => {
+    // Hermes lee la **proyección**, que es un artefacto generado y no está en un
+    // clon recién bajado. Mandar a `hermes skills trust` sin comprobarlo lleva a
+    // un comando que contesta «no hay ninguna skill de proyecto», y su aviso
+    // nombra `.hermes/` y `.agents/` en vez de la fuente. Pasó de verdad la
+    // primera vez que se conectó un proyecto.
+    conSkill();
+    const r = hermesConnect(pedido());
+    expect(r.stdout).toContain("Corré primero:");
+    expect(r.stdout).toContain("valmen sync");
+    // El comando de confianza **con su ruta** no está: se lo nombra solo para
+    // explicar por qué no sirve todavía, que es distinto de mandarlo a correrlo.
+    expect(r.stdout).not.toContain(`hermes skills trust ${proyecto}`);
+  });
+
+  it("con las skills proyectadas, sí manda a confiar", () => {
+    conSkill();
+    mkdirSync(join(proyecto, ".agents", "skills"), { recursive: true });
+    const r = hermesConnect(pedido());
+    expect(r.stdout).toContain("hermes skills trust");
+  });
+
+  it("y lo dice también cuando la entrada MCP ya estaba", () => {
+    // El paso vivía solo en el camino que escribía la configuración, así que una
+    // segunda conexión no avisaba de nada.
+    conSkill();
+    mkdirSync(join(casa, "..", "x"), { recursive: true });
+    writeFileSync(configPath(), 'mcp_servers:\n  valmen:\n    command: "x"\n', "utf8");
+    const r = hermesConnect(pedido());
+    expect(r.stdout).toContain("Sin cambios");
+    expect(r.stdout).toContain("valmen sync");
   });
 });
 

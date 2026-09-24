@@ -315,13 +315,23 @@ export function hermesConnect(request: HermesRequest): CommandResult {
   // importa: la entrada MCP y la skill son dos cosas distintas, y si la segunda
   // dependiera de que la primera fuera nueva, un proyecto ya declarado nunca
   // recibiría la skill —ni después de una versión que la agregue—.
+  // Las dos cosas se calculan **antes** del corte por «sin cambios», y el orden
+  // importa: son hechos sobre el proyecto y el perfil, no sobre el archivo de
+  // configuración. Cuando vivían solo en el camino que escribe, una segunda
+  // conexión —o una con la entrada ya declarada— no decía ni que la skill se
+  // había instalado ni que faltaba proyectar las del proyecto.
   const skill = instalarSkill(request.force);
+  const skills = pasoDeSkills(request.root);
 
   if (!fusion.changed) {
     return ok(
-      [`Sin cambios: ${fusion.note}`, `  archivo  ${configPath}`, ...skill.lineas, ""].join(
-        "\n",
-      ) + "\n",
+      [
+        `Sin cambios: ${fusion.note}`,
+        `  archivo  ${configPath}`,
+        ...skill.lineas,
+        ...skills,
+        "",
+      ].join("\n") + "\n",
     );
   }
 
@@ -349,7 +359,7 @@ export function hermesConnect(request: HermesRequest): CommandResult {
       "Y si tienes la app de escritorio abierta, esto hace lo mismo con confirmación:",
       `    ${hermesDeepLink(entry)}`,
       ...skill.lineas,
-      ...pasoDeSkills(request.root),
+      ...skills,
       "",
     ].join("\n") + "\n",
   );
@@ -850,7 +860,29 @@ export function configDeHermes(paths: RegistryPaths): HermesConfig {
  * ajeno.
  */
 function pasoDeSkills(root: string): readonly string[] {
-  if (readSkills(root).length === 0) return [];
+  const skills = readSkills(root);
+  if (skills.length === 0) return [];
+
+  // Las skills viven en `.valmen/skills/` y Hermes lee la **proyección**, que es un
+  // artefacto generado y por lo tanto no está en un clon recién bajado. Decir
+  // «confiá en el repositorio» sin comprobarlo manda a un comando que contesta
+  // «no hay ninguna skill de proyecto» —y el aviso de Hermes nombra `.hermes/` y
+  // `.agents/`, no la fuente, así que tampoco explica dónde mirar—.
+  //
+  // Pasó de verdad la primera vez que se conectó un proyecto: la confianza quedó
+  // registrada, las ocho skills no aparecieron, y el motivo estaba a un `sync` de
+  // distancia. Este comando no lo corre solo —escribe en el proyecto, y eso no lo
+  // hace un instalador por su cuenta— pero tiene que decir que falta.
+  if (!existsSync(join(root, ".agents", "skills"))) {
+    return [
+      "",
+      `Este proyecto declara ${skills.length} skill(s), pero su proyección a`,
+      ".agents/skills/ todavía no existe, así que `hermes skills trust` no va a",
+      "encontrar ninguna. Corré primero:",
+      "",
+      "    valmen sync",
+    ];
+  }
 
   return [
     "",
