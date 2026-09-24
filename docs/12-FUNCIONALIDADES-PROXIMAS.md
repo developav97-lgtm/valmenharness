@@ -676,6 +676,59 @@ Hoy los vínculos existen como texto y la búsqueda los encuentra por sus palabr
 
 Ver [`06-CONTROL-APP.md` §5](06-CONTROL-APP.md#5-integración-con-hermes-control-desde-el-celular).
 
+**Estado: hecho, y sin el adaptador webhook que el diseño preveía.** El diseño de §5
+anticipaba un servidor HTTP con `deliver_only` y firma HMAC para la salida; lo que hay es
+más simple y más sólido, porque Hermes ya trae la pieza: **`hermes send`** manda un mensaje
+a cualquiera de sus plataformas sin agente y sin bucle, reusando las credenciales que la
+pasarela ya tiene. No hay puerto que abrir, ni ruta que declarar, ni secreto que compartir
+para avisar, y los códigos de salida son el recibo de entrega.
+
+Lo que se construyó, y dónde vive:
+
+| Pieza | Dónde | Qué resuelve |
+| --- | --- | --- |
+| Declaración del servidor | `valmen mcp` y `valmen hermes connect` | El harness en Hermes, con su raíz por proyecto |
+| Diagnóstico | `valmen hermes status` | Qué falta de las cuatro cosas que pueden faltar |
+| Aviso de gates | `valmen hermes notify` | Los gates que esperan decisión, con su código |
+| Decisión a distancia | `valmen gate-decide --code` | Token HMAC de un solo uso, con techo de riesgo |
+| Aviso de procesos | `valmen hermes notify` | Un proceso detenido, que se aprueba **solo** en la máquina |
+| El parte | `valmen hermes brief` | Lo que espera, lo que se detuvo, lo que se cerró y el consumo |
+| Las reglas al celular | prompt `reglas-del-proyecto` | El `AGENTS.md` del proyecto, sin el archivo |
+| Las skills al celular | proyección a `.agents/skills/` | Hermes las lee como project-local |
+| El criterio del agente | skill `valmen` en `~/.hermes/skills/` | Cómo se trabaja acá, no qué herramientas hay |
+| El consumo de un agente | `ticket_param` + `{usage-file}` | Lo que gastó un paso de agente, cargado a sus tickets |
+
+**El techo de riesgo lo aplica el motor y no la configuración.** `mintApproval` no emite un
+token para riesgo `high` o `critical`, ni para un ticket con impacto de migración,
+contenedores o sincronización, ni para un gate de proceso: no existe un parámetro para
+saltearlo. Eso sostiene la frase del diseño —«un token emitido para un gate crítico no se
+emite nunca, aunque el plugin esté mal configurado»— con un test que la afirma.
+
+**La aprobación vuelve por un camino que el agente no controla**, y esa es la mitad del
+diseño que era fácil hacer mal. No hay herramienta MCP para aprobar, y no la va a haber: el
+código lo emite el harness y lo consume `gate-decide`, que es también donde se registra la
+decisión desde Mission Control. Si la aprobación viajara como herramienta MCP, el harness no
+podría distinguir una decisión humana de una aserción del agente, y una inyección de prompt
+en el cuerpo de un ticket bastaría para aprobar.
+
+**El consumo de un paso de agente se captura y se carga a sus tickets.** El proceso declara
+dónde su runtime escribe el reporte —`runtime: hermes -z --usage-file {usage-file}`—, el
+harness lo lee, lo persiste con la corrida y lo reparte entre los tickets que el proceso
+nombra en su parámetro `ticket_param`.
+
+Es un **campo declarado y no una convención de nombre**, y la diferencia es el modo de
+fallo: con una convención, un proceso que llamara `ticket` a su parámetro en vez de
+`tickets` no atribuiría nada y nadie se enteraría —el proceso corre, el informe sale, y el
+gasto simplemente no aparece en ningún lado—. Declarado, el validador exige que el
+parámetro exista y el error aparece al cargar el proceso, no en la contabilidad tres
+semanas después.
+
+Tres detalles que están en el código y conviene saber: **se reparte en partes iguales** y no
+se carga el total a cada uno —una corrida que cubre tres tickets gastó lo que gastó, no el
+triple—; el registro **dice que es una imputación y no una medición**, para que nadie lea
+ese número como exacto; y **un ticket que no está en el registro no se inventa**: se saltea y
+se informa.
+
 **Esfuerzo:** 1–2 semanas.
 
 ---

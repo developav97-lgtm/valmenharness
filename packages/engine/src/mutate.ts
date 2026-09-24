@@ -67,6 +67,54 @@ export function allDocuments(paths: RegistryPaths): RegistryDocument[] {
   }));
 }
 
+/**
+ * Un ticket del registro, con su documento **o** el motivo por el que no se pudo
+ * leer.
+ */
+export interface RegistryDocumentOrError {
+  readonly ticket: LocatedTicket;
+  readonly document: ParsedTicket | null;
+  /** El error de validación, o `null` si el ticket está bien. */
+  readonly invalid: string | null;
+}
+
+/**
+ * Lee los tickets del registro **sin detenerse** en el que no valida.
+ *
+ * `allDocuments` falla en el primero que no valida, y eso es correcto para una
+ * mutación: si un ticket hermano está roto, no se escribe nada. Pero un
+ * **reporte** necesita exactamente lo contrario. Un informe es a menudo **cómo
+ * alguien se entera** de que un ticket está roto, así que negarse a producirlo
+ * hasta que se arregle deja a la persona sin el informe y sin el motivo —y con el
+ * registro entero ilegible por culpa de un renglón—.
+ *
+ * Los que no se pudieron leer se devuelven con su error en vez de desaparecer:
+ * saltarlos en silencio dejaría un informe con aspecto completo y un dato falso,
+ * que es peor que no tenerlo.
+ */
+export function documentsForReport(paths: RegistryPaths): RegistryDocumentOrError[] {
+  return findAllTickets(paths).map((ticket) => {
+    try {
+      return { ticket, document: readAndValidate(paths, ticket), invalid: null };
+    } catch (caught) {
+      return {
+        ticket,
+        document: null,
+        invalid: caught instanceof Error ? caught.message : String(caught),
+      };
+    }
+  });
+}
+
+/** Los tickets del registro que no se pudieron leer, con su error. */
+export function unreadableTickets(
+  paths: RegistryPaths,
+): readonly { readonly id: string; readonly error: string }[] {
+  return documentsForReport(paths)
+    .filter((registro) => registro.invalid !== null)
+    .map((registro) => ({ id: registro.ticket.id, error: registro.invalid as string }));
+}
+
 /** Parsea y valida un ticket ya localizado. */
 export function readAndValidate(paths: RegistryPaths, ticket: LocatedTicket): ParsedTicket {
   const document = parseTicket(ticket.text);

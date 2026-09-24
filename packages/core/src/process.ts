@@ -132,6 +132,22 @@ export interface ProcessDefinition {
   readonly produces: readonly string[];
   /** Procesos a encadenar al terminar con éxito. */
   readonly onSuccess: readonly string[];
+  /**
+   * El nombre del parámetro que dice **a qué tickets pertenece** la corrida.
+   *
+   * Existe porque un paso de agente gasta dinero y ese gasto hay que cargarlo a
+   * algún lado: sin esto, lo que costó un proceso queda en el estado de su corrida
+   * y no entra en el coste por ticket, que es el número que el harness usa para no
+   * mentir. `addAiUsage` ya sabía registrar consumo contra un ticket; lo que
+   * faltaba era saber cuál.
+   *
+   * Es un **campo declarado y no una convención de nombre** a propósito. Con una
+   * convención —«si el parámetro se llama `tickets`, se atribuye»— un proceso que lo
+   * llamara de otra forma no atribuiría nada y nadie se enteraría: corre igual, el
+   * informe sale igual, y el número simplemente queda más bajo. Declarado, el
+   * validador exige que el parámetro exista y el error aparece al cargar.
+   */
+  readonly ticketParam: string | null;
 }
 
 /** Un identificador: minúsculas, dígitos y guiones. */
@@ -403,6 +419,7 @@ export function parseProcess(text: string, fileName = "process.yaml"): ProcessDe
     steps,
     produces: listaDeTextos(raiz["produces"], "produces"),
     onSuccess: leerOnSuccess(raiz["on_success"]),
+    ticketParam: textoOpcional(raiz["ticket_param"]),
   };
 }
 
@@ -436,6 +453,23 @@ export function validateProcess(
   const procesos = new Set(catalog.processes);
   const gates = new Set(catalog.gates);
   const procesoDeRuntime = new Map<string, string>();
+
+  // El parámetro que declara los tickets tiene que existir. Es la mitad del
+  // motivo por el que esto es un campo y no una convención de nombre: una
+  // atribución que no ocurre no se nota nunca —el proceso corre, el informe sale,
+  // y el gasto simplemente no aparece—, así que el error tiene que darse al
+  // cargar y no en la contabilidad tres semanas después.
+  if (process.ticketParam !== null) {
+    const declarados = new Set(process.params.map((param) => param.name));
+    if (!declarados.has(process.ticketParam)) {
+      fail(
+        `El proceso "${process.id}" atribuye su consumo al parámetro ` +
+          `"${process.ticketParam}", que no declara. Los que declara son: ` +
+          `${[...declarados].sort().join(", ") || "(ninguno)"}.`,
+        EXIT_SCHEMA,
+      );
+    }
+  }
 
   for (const paso of process.steps) {
     if (!(STEP_KINDS_EJECUTABLES as readonly string[]).includes(paso.kind)) {

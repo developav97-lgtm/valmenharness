@@ -20,6 +20,7 @@
  *    justo cuando alguien lo abra para entender qué pasó.
  */
 import { existsSync, lstatSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { basename, dirname, join } from "node:path";
 
 /** La entrada del servidor, ya resuelta para un runtime. */
@@ -337,4 +338,381 @@ export function readIfExists(path: string): string | null {
   } catch {
     return null;
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Hermes
+//
+// Hermes es el único destino que **no** vive en el proyecto. Su configuración es
+// `~/.hermes/config.yaml`, una sola para todos los proyectos de la máquina, y eso
+// cambia las dos decisiones que el resto de este archivo resuelve igual para
+// todos: dónde se declara el servidor y cómo se le dice cuál es la raíz.
+//
+// Las dos se responden con lo mismo: `cwd`. El servidor del harness resuelve su
+// registro por el directorio de trabajo, y el de Hermes —que arranca desde donde
+// viva la pasarela, no desde el proyecto— no lo tiene. Por eso aquí sí se graba
+// una ruta absoluta, que es justo lo que `mcpEntry()` evita para los runtimes de
+// proyecto: en un archivo global y no versionado, la ruta es la única forma de
+// que el servidor sepa sobre qué proyecto escribe.
+//
+// La consecuencia hay que decirla: **un proyecto, una entrada**. Conectar dos
+// proyectos a la misma instalación de Hermes son dos entradas con nombres
+// distintos, y por eso el nombre es un parámetro y no una constante.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** El nombre con el que se declara el harness en Hermes por defecto. */
+export const HERMES_SERVER_ID = "valmen";
+
+/**
+ * El home de Hermes.
+ *
+ * `HERMES_HOME` lo mueve, y respetarlo importa: hay instalaciones con el home en
+ * otro sitio —el propio Hermes genera servicios por `HERMES_HOME`— y escribir en
+ * `~/.hermes` cuando la instalación vive en otro lado deja archivos que nadie lee
+ * y un diagnóstico que dice que todo está bien.
+ */
+export function hermesHome(home: string = homedir()): string {
+  const propio = process.env["HERMES_HOME"];
+  return propio !== undefined && propio.trim() !== "" ? propio : join(home, ".hermes");
+}
+
+/** El archivo de configuración de Hermes. */
+export function hermesConfigPath(home: string = homedir()): string {
+  return join(hermesHome(home), "config.yaml");
+}
+
+/** El directorio de skills de Hermes: el global del usuario, no el del proyecto. */
+export function hermesSkillsDir(home: string = homedir()): string {
+  return join(hermesHome(home), "skills");
+}
+
+/**
+ * Un escalar YAML entre comillas dobles.
+ *
+ * Se cita **siempre** y no solo cuando hace falta: decidir cuándo un valor
+ * necesita comillas es exactamente el tipo de regla que se implementa mal para el
+ * caso raro —una ruta con dos puntos, un `#`, un espacio al final— y el síntoma
+ * es un archivo que el otro programa rechaza al arrancar. Citar de más nunca
+ * rompe; citar de menos, sí.
+ */
+function yamlEscalar(valor: string): string {
+  return `"${valor.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+}
+
+/** Lo que se declara en Hermes para un proyecto. */
+export interface HermesEntry {
+  readonly name: string;
+  /** La raíz absoluta del proyecto. Es lo que el servidor usa como registro. */
+  readonly root: string;
+  readonly command: string;
+  readonly credentialsFile?: string | undefined;
+  /** `trust: untrusted`: Hermes pide permiso humano antes de cada escritura. */
+  readonly untrusted: boolean;
+  /**
+   * Reciclar el proceso tras este tiempo sin llamadas.
+   *
+   * Sin esto, la pasarela de Hermes —que vive meses— deja un servidor del harness
+   * colgado por cada entrada declarada. El servidor es barato, pero uno por
+   * proyecto y para siempre no lo es, y el precio se paga en la máquina de quien
+   * instaló esto para probarlo.
+   */
+  readonly idleTimeoutSeconds: number;
+}
+
+/** Cómo se arma la entrada de Hermes. */
+export interface HermesEntryOptions {
+  /** La raíz del proyecto que se declara. */
+  readonly root: string;
+  /** Cómo se invocó el CLI: de ahí sale el ejecutable del servidor. */
+  readonly invocation: string;
+  readonly name?: string | undefined;
+  readonly credentialsFile?: string | undefined;
+  readonly untrusted?: boolean | undefined;
+  readonly idleTimeoutSeconds?: number | undefined;
+}
+
+/**
+ * La entrada de Hermes, armada desde lo que el CLI ya sabe de sí mismo.
+ *
+ * Vive acá y no en el CLI porque la usan dos comandos —`valmen mcp`, que la
+ * imprime, y `valmen hermes connect`, que la escribe— y dos construcciones de la
+ * misma entrada se desincronizan: el que imprime diría una cosa y el que escribe
+ * otra, y el que imprime es justo el que la persona copia a mano. Un solo
+ * constructor hace que lo que se ve sea exactamente lo que se escribe.
+ *
+ * El ejecutable se deduce de la **invocación** y no de la ruta del módulo, por lo
+ * mismo que en el resto del archivo: con un binario enlazado en el `PATH`, la
+ * ruta del módulo es la del repositorio de desarrollo y quedaría grabada en la
+ * configuración de una máquina.
+ */
+export function buildHermesEntry(opciones: HermesEntryOptions): HermesEntry {
+  const base = mcpEntry(mcpExecutableFrom(opciones.invocation));
+  return {
+    name: opciones.name ?? HERMES_SERVER_ID,
+    root: opciones.root,
+    command: base.command,
+    ...(opciones.credentialsFile === undefined
+      ? {}
+      : { credentialsFile: opciones.credentialsFile }),
+    untrusted: opciones.untrusted ?? false,
+    idleTimeoutSeconds: opciones.idleTimeoutSeconds ?? 900,
+  };
+}
+
+/**
+ * El bloque `valmen:` tal como va dentro de `mcp_servers:`.
+ *
+ * Devuelve solo el bloque indentado, sin la cabecera `mcp_servers:`, porque quien
+ * lo inserta decide dónde: si la cabecera ya estaba, el bloque va debajo; si no
+ * estaba, se añade con ella. Separar las dos cosas es lo que permite insertar sin
+ * reescribir el archivo, que es la única forma de no perderle los comentarios a
+ * una configuración que no es nuestra.
+ */
+export function hermesBlock(entry: HermesEntry): string {
+  const lineas = [
+    `  ${entry.name}:`,
+    `    command: ${yamlEscalar(entry.command)}`,
+    `    cwd: ${yamlEscalar(entry.root)}`,
+    "    enabled: true",
+    `    idle_timeout_seconds: ${entry.idleTimeoutSeconds}`,
+  ];
+
+  if (entry.credentialsFile !== undefined) {
+    lineas.push(`    args: ["--credentials", ${yamlEscalar(entry.credentialsFile)}]`);
+  }
+
+  if (entry.untrusted) {
+    lineas.push("    trust: untrusted");
+  }
+
+  return lineas.join("\n") + "\n";
+}
+
+/**
+ * Fusiona el bloque en el `config.yaml` de Hermes.
+ *
+ * Es una fusión de **inserción**, no de reescritura, y la diferencia importa más
+ * acá que en ningún otro archivo de este módulo: el `config.yaml` de Hermes lo
+ * escribe una persona a mano —plataformas, modelos, rutas de proveedor— y tiene
+ * comentarios que explican por qué cada cosa está como está. Reescribirlo desde
+ * una estructura los perdería todos, y el usuario descubriría el daño la próxima
+ * vez que abriera el archivo.
+ *
+ * Tres casos, y ninguno toca una línea que ya estaba:
+ *
+ * 1. **La entrada ya existe** → no se toca, aunque su contenido difiera. Es la
+ *    misma regla que la fusión de codex: cambiar la configuración de otro
+ *    programa sin que nadie lo pida es peor que informar de que ya hay una.
+ * 2. **La cabecera `mcp_servers:` existe** → el bloque se inserta justo debajo.
+ *    Vale porque YAML no depende del orden: las líneas indentadas que siguen a la
+ *    cabecera son sus entradas, y una más en esa posición es una entrada más.
+ * 3. **No existe** → se añade al final, con su cabecera.
+ *
+ * El cuarto caso es el que hay que rechazar en vez de adivinar: `mcp_servers: {}`
+ * es un mapa vacío **en la misma línea**, y meter debajo un bloque indentado
+ * produciría un archivo inválido. Ahí se devuelve `changed: false` con el motivo,
+ * y la persona lo cambia a mano.
+ */
+export function mergeHermesConfig(
+  texto: string | null,
+  bloque: string,
+  nombre: string = HERMES_SERVER_ID,
+): MergeResult {
+  if (texto === null || texto.trim() === "") {
+    return {
+      content: `mcp_servers:\n${bloque}`,
+      changed: true,
+      note: "se creó el archivo con el servidor declarado",
+    };
+  }
+
+  // Case 1: ya declarado. Se busca la clave indentada bajo cualquier cabecera:
+  // `^  valmen:` es una entrada de `mcp_servers` y no hay otra cosa que pueda ser
+  // a esa profundidad en la raíz del archivo de Hermes.
+  if (new RegExp(`^ {2}${nombre}:\\s*$`, "m").test(texto)) {
+    return {
+      content: texto,
+      changed: false,
+      note: `ya había una entrada \`${nombre}\` en mcp_servers; no se tocó`,
+    };
+  }
+
+  const cabecera = /^mcp_servers:[ \t]*$/m.exec(texto);
+
+  if (cabecera !== null) {
+    const corte = cabecera.index + cabecera[0].length;
+    return {
+      content: `${texto.slice(0, corte)}\n${bloque.trimEnd()}${texto.slice(corte)}`,
+      changed: true,
+      note: "se añadió el servidor a la lista mcp_servers que ya existía",
+    };
+  }
+
+  // `mcp_servers` existe pero no como cabecera suelta: `mcp_servers: {}`, o con
+  // un valor en la misma línea. Insertar debajo daría un YAML inválido.
+  if (/^mcp_servers:[ \t]*\S/m.test(texto)) {
+    return {
+      content: texto,
+      changed: false,
+      note:
+        "`mcp_servers` no está vacío en una línea propia, así que no se insertó nada: " +
+        "añada la entrada a mano o deje `mcp_servers:` y vuelva a intentarlo",
+    };
+  }
+
+  const separador = texto.endsWith("\n") ? "" : "\n";
+  return {
+    content: `${texto}${separador}\nmcp_servers:\n${bloque}`,
+    changed: true,
+    note: "se añadió mcp_servers al final del archivo, que no lo declaraba",
+  };
+}
+
+/**
+ * El enlace de un clic que ofrece la propia documentación de Hermes.
+ *
+ * `hermes://mcp/install?name=…&config=<base64url>` abre la app de escritorio con
+ * la configuración precargada. No instala nada por sí solo —muestra un diálogo
+ * con el comando completo y pide confirmación—, y por eso es una alternativa y no
+ * el camino principal: sirve para quien prefiere ver antes de aceptar, y para
+ * quien tiene la app abierta y no quiere volver a la terminal.
+ *
+ * El `cwd` viaja en el enlace igual que en el archivo. Sin él, la app declararía
+ * un servidor que no sabe sobre qué proyecto escribe.
+ */
+export function hermesDeepLink(entry: HermesEntry): string {
+  const config: Record<string, unknown> = {
+    command: entry.command,
+    cwd: entry.root,
+  };
+  if (entry.credentialsFile !== undefined) {
+    config["args"] = ["--credentials", entry.credentialsFile];
+  }
+  if (entry.untrusted) config["trust"] = "untrusted";
+
+  const base64 = Buffer.from(JSON.stringify(config), "utf8").toString("base64url");
+  return `hermes://mcp/install?name=${encodeURIComponent(entry.name)}&config=${base64}`;
+}
+
+/** El comando de Hermes que declararía lo mismo, para quien prefiera su CLI. */
+export function hermesAddCommand(entry: HermesEntry): string {
+  const partes = ["hermes", "mcp", "add", entry.name, "--command", entry.command];
+  if (entry.credentialsFile !== undefined) {
+    // `--args` usa REMAINDER en el parser de Hermes: tiene que ir último.
+    partes.push("--args", "--credentials", entry.credentialsFile);
+  }
+  return partes.join(" ");
+}
+
+/**
+ * La skill que le enseña a Hermes cómo se trabaja con el harness.
+ *
+ * Va al directorio **global** de skills —`~/.hermes/skills/`— y no al del
+ * proyecto, y la diferencia importa: las skills del proyecto describen cómo se
+ * trabaja en ese proyecto —`desarrollo-backend`, `planificacion`— y se proyectan
+ * a `.agents/skills/`; esta describe cómo se usa **el harness**, que es el mismo
+ * en todos. Ponerla por proyecto la duplicaría en cada uno y las copias se
+ * desincronizarían.
+ *
+ * Existe porque las herramientas solas no alcanzan. Un agente con el MCP
+ * conectado ve treinta y cinco herramientas y no sabe cuál usar primero: la regla
+ * de «antes de diagnosticar, buscar en la memoria» vive en el `AGENTS.md` del
+ * proyecto, y **la sesión del celular no lee ese archivo**. Sin esto, lo que llega
+ * por el celular es un agente con las capacidades del harness y ninguno de sus
+ * criterios.
+ *
+ * El texto está escrito como instrucciones para un agente y no como código: no
+ * nombra herramientas por su identificador prefixado —`mcp__valmen__…`, cuyo
+ * separador las dos páginas de Hermes escriben distinto— sino que dice qué pedir.
+ * Un nombre mal escrito sería una instrucción que el agente no puede seguir, y
+ * fallaría en silencio.
+ */
+export const HERMES_SKILL_ID = "valmen";
+
+/** El contenido de la skill, tal como se escribe en `SKILL.md`. */
+export function hermesSkill(): string {
+  return `---
+name: ${HERMES_SKILL_ID}
+description: Consultar y operar el registro de trabajo del harness ValmenHarness
+version: 1.0.0
+metadata:
+  hermes:
+    tags: [valmen, tickets, compuertas, registro]
+    category: devops
+---
+
+# ValmenHarness desde el celular
+
+El servidor MCP \`valmen\` da acceso al registro de trabajo de un proyecto: sus
+tickets, sus compuertas, sus procesos y su memoria. Esta skill dice **cómo se usa**,
+que no es lo mismo que qué se puede hacer.
+
+## Cuándo usarla
+
+Cuando la conversación trate sobre el trabajo de un proyecto que usa el harness:
+qué hay pendiente, en qué va algo, qué se rompió, o cuando alguien pida registrar
+algo. Si el servidor MCP \`valmen\` no está conectado, no hay nada que hacer y se
+dice: no se inventan estados.
+
+## Procedimiento
+
+**1. Antes de nada, leé las reglas del proyecto.** Pedile al servidor MCP \`valmen\`
+el prompt \`reglas-del-proyecto\`. Ahí están el flujo, los estados, los invariantes y
+las convenciones que ese proyecto ya decidió. Trabajar sin eso es contestar con las
+reglas de otro proyecto.
+
+**2. Antes de diagnosticar, buscá en la memoria.** Usá \`buscar_memoria\` con el
+módulo y el síntoma, en las palabras del dominio. El problema que te están
+contando puede estar resuelto desde hace meses, con su causa raíz escrita. Si la
+búsqueda devuelve algo, **citalo**: un diagnóstico que repite un error conocido se
+explica mucho mejor diciendo cuál es y por qué volvió.
+
+**3. Si alguien reporta un problema, creá el ticket — no lo arregles.** Usá
+\`crear_ticket\` con la solicitud **literal** de quien la hizo: sus palabras, sin
+resumir ni mejorar. Es lo que después se compara con la investigación, y una
+solicitud embellecida hace que esa comparación no diga nada. El identificador no se
+inventa: \`<TIPO>-<MÓDULO>-<DESC>-<YYYYMMDD>\`.
+
+**4. Para saber en qué va algo**, \`listar_tickets\` con los filtros que hagan falta,
+o \`reanudar_ticket\` para el contexto de uno en curso. Para el panorama de un
+módulo entero, \`ver_features\`.
+
+**5. Para seguir trabajando en algo**, \`reanudar_ticket\`. Sin identificador y con
+más de un ticket activo **no elige**: devuelve la lista y hay que decidir cuál.
+
+**6. Lo que aprendas, guardalo cuando lo aprendas.** \`guardar_aprendizaje\` con la
+causa raíz, el porqué de una decisión o el patrón que se repite. No al final de la
+conversación: lo que se escribe tres días después pierde el detalle que lo hacía
+útil.
+
+## Qué NO hacer
+
+- **No apruebes ni rechaces una compuerta.** No existe herramienta para eso y no es
+  un olvido: aprobar es una decisión de una persona. Se hace en la máquina, y el
+  mensaje que llega al celular trae el código para las de riesgo bajo.
+- **No escribas la confirmación de nadie.** \`cerrar_qa\`, \`anotar_retest\` y
+  \`preparar_cierre\` piden las palabras literales de quien aprobó. Si no las tenés
+  —porque no te las dieron, porque no contestaron, porque lo insinuaron—, pedilas.
+  Escribirlas vos convierte una aprobación en un trámite.
+- **No muevas un ticket a un estado que su máquina no permite.** \`mover_ticket\`
+  aplica la tabla del contrato; un salto ilegal se rechaza con el motivo, y el
+  motivo es la respuesta.
+- **No inventes un estado ni un identificador.** Si algo no está en el registro, se
+  dice que no está.
+- **No trabajes sobre un proyecto que no declaró sus reglas.** Si el prompt
+  \`reglas-del-proyecto\` no existe, el proyecto no está adoptado: decilo antes de
+  tocar nada.
+
+## Verificación
+
+Después de crear un ticket, \`ver_ticket\` con su identificador tiene que devolverlo.
+Después de moverlo, el estado que devuelve \`reanudar_ticket\` tiene que ser el que
+pediste. Si no coincide, el movimiento no ocurrió, y decirlo es mejor que suponer
+que sí.
+`;
+}
+
+/** La ruta donde va la skill. */
+export function hermesSkillPath(home: string = homedir()): string {
+  return join(hermesSkillsDir(home), HERMES_SKILL_ID, "SKILL.md");
 }

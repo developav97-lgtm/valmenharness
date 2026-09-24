@@ -128,7 +128,7 @@ describe("leer las skills del proyecto", () => {
 });
 
 describe("proyectar a los runtimes", () => {
-  it("escribe en las tres rutas que los clientes leen", () => {
+  it("escribe en las cuatro rutas que los clientes leen", () => {
     escribirSkill(
       "planificacion",
       "name: planificacion\ndescription: Planifica.",
@@ -138,18 +138,20 @@ describe("proyectar a los runtimes", () => {
     const rutas = archivos.map((archivo) => archivo.path).sort();
 
     expect(rutas).toEqual([
+      ".agents/skills/planificacion/SKILL.md",
       ".claude/skills/planificacion/SKILL.md",
       ".codex/skills/planificacion/SKILL.md",
       ".opencode/skills/planificacion/SKILL.md",
     ]);
-    // Los tres runtimes están declarados en un solo sitio, y ninguna ruta se
-    // escribe a mano en el renderizador.
+    // Los runtimes están declarados en un solo sitio, y ninguna ruta se escribe a
+    // mano en el renderizador.
     expect(Object.values(SKILL_RUNTIMES)).toEqual([
       ".opencode/skills",
       ".claude/skills",
       ".codex/skills",
+      ".agents/skills",
     ]);
-    expect(SKILL_RUNTIME_IDS).toHaveLength(3);
+    expect(SKILL_RUNTIME_IDS).toHaveLength(4);
   });
 
   it("mantiene el frontmatter **al principio**, que es lo que el cliente exige", () => {

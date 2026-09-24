@@ -16,6 +16,7 @@
     "build": "tsc --build tsconfig.build.json && node scripts/copy-web.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
+    "verify:hermes": "node scripts/verificar-hermes.mjs",
     "typecheck": "npm run build && tsc --noEmit -p tsconfig.json",
     "lint": "eslint .",
     "format": "prettier --write .",

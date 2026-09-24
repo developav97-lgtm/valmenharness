@@ -22,6 +22,7 @@
 import {
   cpSync,
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -32,7 +33,10 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { TICKET_TEMPLATE } from "@valmen/core";
+
 import {
+  allDocuments,
   buildManifest,
   closedTickets,
   defaultReportRange,
@@ -43,6 +47,8 @@ import {
   renderManifest,
   type ReportEntry,
   renderReport,
+  unreadableTickets,
+  usageReport,
 } from "@valmen/engine";
 
 import { dispatch, parseArgs } from "../packages/cli/src/main.js";
@@ -615,5 +621,61 @@ describe("GET /api/report", () => {
     expect(r.status).toBe(200);
     expect((r.body as { count: number }).count).toBe(0);
     expect((r.body as { markdown: string }).markdown).toContain("No hubo tickets cerrados");
+  });
+});
+
+describe("un ticket que no se puede leer", () => {
+  let root: string;
+
+  beforeEach(() => {
+    root = mkdtempSync(join(tmpdir(), "reporte-roto-"));
+    const carpeta = join(root, "tickets", "2026", "BUGFIX-MODULO-ROTO-20260924");
+    mkdirSync(carpeta, { recursive: true });
+    // Se parte de la plantilla del harness y se rompe **una** cosa: la fecha. Un
+    // frontmatter a mano falla por el juego de claves y el test afirmaría sobre
+    // otro error que el que dice cubrir.
+    writeFileSync(
+      join(carpeta, "ticket.md"),
+      TICKET_TEMPLATE.replace(/^id:.*$/m, "id: BUGFIX-MODULO-ROTO-20260924").replace(
+        /^created:.*$/m,
+        "created: no-es-fecha",
+      ),
+      "utf8",
+    );
+  });
+
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  const paths = () => ({ root, ticketsDir: "tickets" });
+
+  it("no tumba el reporte de cierres", () => {
+    // Antes esto lanzaba `created debe usar YYYY-MM-DD` y el informe entero era
+    // inalcanzable. Y un informe es a menudo **cómo alguien se entera** de que un
+    // ticket está roto: negarse a producirlo hasta que se arregle deja a la
+    // persona sin el informe y sin el motivo.
+    expect(() => closedTickets(paths())).not.toThrow();
+    expect(closedTickets(paths())).toEqual([]);
+  });
+
+  it("no tumba el informe de consumo", () => {
+    expect(() => usageReport(paths())).not.toThrow();
+  });
+
+  it("y el ticket que quedó afuera se puede nombrar", () => {
+    // Saltarlo en silencio dejaría un informe con aspecto completo y un dato de
+    // menos, que es peor que uno incompleto que lo declara.
+    const ilegibles = unreadableTickets(paths());
+    expect(ilegibles).toHaveLength(1);
+    expect(ilegibles[0]?.id).toBe("BUGFIX-MODULO-ROTO-20260924");
+    expect(ilegibles[0]?.error).toContain("created");
+  });
+
+  it("una mutación sigue negándose a escribir con un hermano roto", () => {
+    // La tolerancia es para los reportes y **no** para las mutaciones: si un
+    // ticket hermano no valida, escribir dejaría el registro en un estado del que
+    // no se puede regenerar el índice.
+    expect(() => allDocuments(paths())).toThrow();
   });
 });

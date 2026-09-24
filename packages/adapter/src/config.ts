@@ -80,3 +80,53 @@ export function readMap(config: ConfigMap, key: string): ConfigMap {
   }
   return value;
 }
+
+/**
+ * La configuración del puente con Hermes.
+ *
+ * Va anidada —`notify.gate`, `approval.token-hours`— y no en claves planas
+ * porque el diseño anticipa más destinos que el gate: cuando existan los avisos
+ * de proceso y de presupuesto, entran como una clave más bajo `notify` en vez de
+ * como un nombre nuevo al lado, y nadie tiene que migrar el archivo.
+ *
+ * **Todo es opcional y el valor por defecto es el silencio.** Sin `enabled: true`
+ * el harness no manda nada, y eso importa: una herramienta que empieza a mandar
+ * mensajes al celular de alguien porque actualizó una versión es una herramienta
+ * que se desinstala. El puente se enciende a propósito.
+ */
+export interface HermesConfig {
+  /** Si está encendido. Por defecto, no. */
+  readonly enabled: boolean;
+  /** A dónde van los avisos de gate. Vacío significa que no se manda. */
+  readonly gateTarget: string;
+  /** Cuántas horas vale un token de aprobación. */
+  readonly tokenHours: number;
+  /** El techo de riesgo que se puede aprobar a distancia. */
+  readonly allowedRisk: readonly string[];
+}
+
+/** La configuración de Hermes, leída de `.valmen/config.yaml`. */
+export function readHermesConfig(config: ConfigMap): HermesConfig {
+  const hermes = readMap(config, "hermes");
+  const notify = readMap(hermes, "notify");
+  const approval = readMap(hermes, "approval");
+
+  const horas = Number(readString(approval, "token-hours", "24"));
+  if (!Number.isFinite(horas) || horas <= 0) {
+    // Un token de cero horas o de infinitas no es una configuración: es un error
+    // de tipeo con el mismo aspecto que un valor legítimo. Se dice.
+    fail(
+      'config.yaml: "hermes.approval.token-hours" debe ser un número de horas mayor que cero.',
+    );
+  }
+
+  return {
+    // El parser devuelve los escalares como texto, así que el booleano se compara
+    // tal como está escrito. Cualquier otra cosa —`yes`, `1`, vacío— es `false`:
+    // el default seguro, y el único que no manda mensajes sin que nadie lo pida.
+    enabled: readString(hermes, "enabled", "false") === "true",
+    gateTarget: readString(notify, "gate", ""),
+    tokenHours: horas,
+    allowedRisk: readList(approval, "allowed-risk", ["low", "normal"]),
+  };
+}

@@ -64,11 +64,7 @@ export interface Projection {
   /** Archivos que son fuente de la proyección, para el encabezado generado. */
   readonly sources: readonly string[];
   /** Cuántos archivos se generan por runtime de agente. */
-  readonly byRuntime: {
-    readonly codex: number;
-    readonly opencode: number;
-    readonly claude: number;
-  };
+  readonly byRuntime: Readonly<Record<SkillRuntime, number>>;
   /** Cuántas reglas del proyecto entraron en `AGENTS.md`. */
   readonly ruleCount: number;
   /**
@@ -131,11 +127,16 @@ export function projectFiles(
   return {
     files,
     sources,
-    byRuntime: {
-      codex: files.filter((file) => file.path.startsWith(".codex/")).length,
-      opencode: files.filter((file) => file.path.startsWith(".opencode/")).length,
-      claude: files.filter((file) => file.path.startsWith(".claude/")).length,
-    },
+    // Los conteos se **derivan** de la lista de runtimes y no se escriben a mano.
+    // Escritos a mano se desincronizaron en cuanto se agregó `.agents/`: los
+    // archivos se proyectaban bien y el informe no los nombraba, que es la peor
+    // combinación —el trabajo hecho y el informe diciendo que no—.
+    byRuntime: Object.fromEntries(
+      SKILL_RUNTIME_IDS.map((runtime) => [
+        runtime,
+        files.filter((file) => file.path.startsWith(RUNTIME_DIRS[runtime])).length,
+      ]),
+    ) as Record<SkillRuntime, number>,
     ruleCount: model.rules.length,
     agentCount: agents.length,
     skillCount: skills.length,

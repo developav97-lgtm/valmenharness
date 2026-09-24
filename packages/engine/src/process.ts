@@ -21,7 +21,9 @@
  * una decisión del proceso, no un efecto del motor.
  */
 import { spawnSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import {
@@ -34,6 +36,8 @@ import {
   validateProcess,
 } from "@valmen/core";
 
+import { addAiUsage } from "./append.js";
+import { type RegistryPaths, choosePaths, findTicket } from "./discovery.js";
 import {
   type ProcessRunState,
   type RunStepState,
@@ -99,6 +103,10 @@ export function loadProcesses(root: string): LoadedProcess[] {
           steps: [],
           produces: [],
           onSuccess: [],
+          // Un proceso que no se pudo leer no atribuye nada: sin esto, el
+          // marcador de inválido tendría un campo menos que el tipo y el
+          // compilador lo diría, que es como se descubrió.
+          ticketParam: null,
         },
         path: relativa,
         invalid: caught instanceof Error ? caught.message : String(caught),
@@ -208,6 +216,66 @@ export function requireProcess(root: string, id: string): ProcessCheck {
 }
 
 /**
+ * La clave reservada donde el proceso pide la ruta de su reporte de consumo.
+ *
+ * Lleva **guion y no guion bajo** porque el patrón de sustitución solo admite
+ * `[a-z0-9-]`, y una clave que el sustituto no reconoce no falla en silencio:
+ * falla con el nombre, que es lo correcto pero no lo que se quiere acá.
+ *
+ * Se declara como una variable más para que sirva a cualquier runtime, no solo a
+ * Hermes: el proceso dice dónde escribe su reporte y el harness lee ese archivo.
+ * Un runtime que no lo soporte simplemente no la usa, y no pasa nada.
+ */
+export const USAGE_FILE_VAR = "usage-file";
+
+/**
+ * Lo que gastó un runtime, leído de su reporte.
+ *
+ * El formato es el de Hermes, y se dice en vez de disimularlo: el harness lee
+ * `estimated_cost_usd` y `total_tokens`, y los busca **también** dentro de
+ * `total_including_auxiliary`, que es el total que hay que facturar. Los
+ * contadores de arriba cubren solo el bucle principal y dejan fuera las llamadas
+ * auxiliares —títulos, compresión de contexto—, así que un costo por ticket
+ * calculado con ellos sería más bajo que el real, y más bajo en la dirección que
+ * tranquiliza.
+ *
+ * Devuelve `null` en todos los casos en los que no hay un número confiable: el
+ * archivo no existe, no es JSON, o no trae costo. Un consumo **inventado** es peor
+ * que un consumo ausente: el ausente se ve, el inventado no.
+ */
+export function leerConsumo(ruta: string | undefined): StepUsage | null {
+  if (ruta === undefined || !existsSync(ruta)) return null;
+
+  let datos: Record<string, unknown>;
+  try {
+    datos = JSON.parse(readFileSync(ruta, "utf8")) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+
+  const auxiliar = (datos["total_including_auxiliary"] ?? {}) as Record<string, unknown>;
+  const numero = (...claves: string[]): number | null => {
+    for (const clave of claves) {
+      for (const fuente of [auxiliar, datos]) {
+        const valor = fuente[clave];
+        if (typeof valor === "number" && Number.isFinite(valor)) return valor;
+      }
+    }
+    return null;
+  };
+
+  const costUsd = numero("estimated_cost_usd", "costUsd");
+  if (costUsd === null) return null;
+
+  return {
+    costUsd,
+    totalTokens: numero("total_tokens", "totalTokens") ?? 0,
+    apiCalls: numero("api_calls", "apiCalls"),
+    model: typeof datos["model"] === "string" ? datos["model"] : null,
+  };
+}
+
+/**
  * Sustituye `{variable}` por su valor.
  *
  * Estricta: una variable que no está en el mapa **falla** con su nombre. La
@@ -303,6 +371,27 @@ export function resolveParams(
 }
 
 /** Lo que pasó con un paso. */
+/**
+ * Lo que un paso de agente costó, según su propio runtime.
+ *
+ * Es lo único del harness que no puede saber por sí mismo: cuánto gastó un modelo
+ * lo sabe quien lo llamó. Por eso el proceso declara **dónde** su runtime escribe
+ * el reporte —`runtime: hermes -z --usage-file {usage-file}`— y el harness le da
+ * la ruta, lo lee y lo guarda.
+ *
+ * El formato es el de Hermes (`--usage-file`), y se dice en vez de disimularlo: el
+ * harness lee tres claves y las busca también en su forma anidada, porque el total
+ * que hay que facturar incluye las llamadas auxiliares —títulos, compresión de
+ * contexto— que no están en los contadores de arriba.
+ */
+export interface StepUsage {
+  readonly costUsd: number;
+  readonly totalTokens: number;
+  readonly apiCalls: number | null;
+  /** El modelo que lo corrió, si el reporte lo dice. */
+  readonly model: string | null;
+}
+
 export interface StepOutcome {
   readonly id: string;
   readonly title: string;
@@ -316,6 +405,8 @@ export interface StepOutcome {
   readonly stderr: string;
   /** Por qué se salteó, si se salteó. */
   readonly reason: string | null;
+  /** Lo que costó, si el runtime dejó su reporte donde el proceso dijo. */
+  readonly usage: StepUsage | null;
 }
 
 /** El resultado de ejecutar un proceso. */
@@ -335,12 +426,23 @@ export interface ProcessRun {
   /** La corrida persistida, si el proceso se detuvo. */
   readonly state: ProcessRunState | null;
   readonly durationMs: number;
+  /** Qué se hizo con el consumo de la corrida, en líneas para mostrar. */
+  readonly attribution: readonly string[];
 }
 
 /** Lo que hace falta para ejecutar. */
 export interface RunProcessRequest {
   readonly root: string;
   readonly id: string;
+  /**
+   * Dónde está el registro, cuando quien llama ya lo sabe.
+   *
+   * Se necesita para cargar a los tickets lo que gastó la corrida. Sin esto el
+   * motor lo deduce de la raíz, que es lo correcto salvo cuando el proyecto usa
+   * `--tickets-dir`: ahí la deducción apuntaría al directorio por defecto y el
+   * consumo se cargaría —o no— en el registro equivocado.
+   */
+  readonly paths?: RegistryPaths | undefined;
   readonly params: Readonly<Record<string, string>>;
   /** Escribe en stdout mientras corre. Sin esto, el proceso es silencioso. */
   readonly onStep?: ((outcome: StepOutcome) => void) | undefined;
@@ -459,6 +561,18 @@ export function runProcess(request: RunProcessRequest): ProcessRun {
   const inicio = Date.now();
   const { definition } = requireProcess(root, id);
   const valores = resolveParams(definition, request.params);
+
+  // La ruta del reporte de consumo, para el proceso que la pida con
+  // `{usage-file}`. Se resuelve una vez por corrida y vive en un temporal: el
+  // número que importa queda en el estado de la corrida, y el archivo es solo el
+  // canal por el que llegó.
+  //
+  // **No entra en `valores`**, y la distinción importa: ese mapa es el de los
+  // parámetros declarados, y es el que se valida, se compara y se encadena a los
+  // sub-procesos. Meter una clave interna ahí la hacía pasar por un parámetro que
+  // el proceso no declaró, y el motor la rechazaba. La ruta se sustituye sin ser
+  // un parámetro.
+  const usageFile = join(tmpdir(), `valmen-consumo-${randomUUID()}.json`);
   const correr =
     request.runCommand ??
     ((comando: string, cwd: string) => ejecutar(comando, cwd, maximo));
@@ -494,6 +608,7 @@ export function runProcess(request: RunProcessRequest): ProcessRun {
     const resultado = ejecutarPaso({
       paso,
       valores,
+      usageFile,
       root,
       correr,
       onStep: request.onStep,
@@ -525,6 +640,7 @@ export function runProcess(request: RunProcessRequest): ProcessRun {
             : "failed",
       at: ahora(),
       detail: resultado.detail,
+      usage: resultado.usage,
     });
 
     if (resultado.status === "failed" && !paso.continueOnFailure) {
@@ -544,11 +660,21 @@ export function runProcess(request: RunProcessRequest): ProcessRun {
     encadenar({ root, definition, valores, resultados, request, correr, maximo });
   }
 
-  // Solo se persiste lo que tiene algo que persistir: un proceso que termina bien
-  // o que falla no necesita estado, y dejar un archivo por cada corrida llenaría
-  // el proyecto de basura. Lo que se guarda es lo que hay que **retomar**.
+  // Se persiste lo que hay que **retomar**, y además lo que **costó**.
+  //
+  // La regla era solo la primera, y con ese criterio un proceso que termina bien
+  // no dejaba estado —un archivo por corrida llenaría el proyecto de basura—. Pero
+  // un paso de agente que reportó su consumo tiene algo que guardar aunque haya
+  // terminado: si no se persiste, el gasto desaparece con el proceso, y el costo
+  // por ticket queda más bajo que el real —y más bajo en la dirección que
+  // tranquiliza—.
+  //
+  // El freno a la basura sigue en pie: un proceso de comandos no deja nada, porque
+  // ninguno de sus pasos declara consumo.
+  const gastado = resultados.some((resultado) => resultado.usage !== null);
+
   let state: ProcessRunState | null = null;
-  if (waiting || request.resume !== undefined) {
+  if (waiting || request.resume !== undefined || gastado) {
     state = {
       runId: request.resume?.runId ?? newRunId(definition.id),
       processId: definition.id,
@@ -563,6 +689,14 @@ export function runProcess(request: RunProcessRequest): ProcessRun {
     writeRun(root, state);
   }
 
+  const atribucion = atribuirConsumo({
+    definition,
+    valores,
+    resultados,
+    paths: request.paths ?? choosePaths(root),
+    runId: state?.runId ?? null,
+  });
+
   return {
     id: definition.id,
     params: valores,
@@ -570,14 +704,137 @@ export function runProcess(request: RunProcessRequest): ProcessRun {
     ok,
     waiting,
     state,
+    attribution: atribucion,
     durationMs: Date.now() - inicio,
   };
+}
+
+/**
+ * Carga a los tickets lo que costó la corrida.
+ *
+ * Un paso de agente gasta dinero y ese gasto tiene que entrar en el coste por
+ * ticket; si no, el número que el harness reporta es más bajo que el real, y más
+ * bajo en la dirección que tranquiliza. `addAiUsage` ya sabía registrarlo contra
+ * un ticket: lo que faltaba era saber cuál, y eso lo declara el proceso con
+ * `ticket-param`.
+ *
+ * Tres decisiones que están en el código y no en un comentario aparte:
+ *
+ * - **Se reparte, no se carga entero a cada uno.** Una corrida que cubre tres
+ *   tickets gastó lo que gastó, no el triple. Cargar el total a cada uno inflaría
+ *   los tres y la métrica dejaría de servir para lo único que sirve: comparar.
+ * - **Es una imputación y se dice.** El reparto en partes iguales no es una
+ *   medición de lo que costó cada ticket, y el campo `notes` lo escribe con esas
+ *   palabras para que nadie lo lea como exacto.
+ * - **Un ticket que no existe no se inventa.** Se saltea y se informa. Escribir
+ *   consumo en un ticket inexistente sería crear trabajo de la nada.
+ *
+ * Devuelve las líneas que hay que mostrar. Nunca lanza: la corrida ya ocurrió, y
+ * un fallo al rendir cuentas no puede cambiar lo que pasó.
+ */
+function atribuirConsumo(contexto: {
+  definition: ProcessDefinition;
+  valores: Readonly<Record<string, string>>;
+  resultados: readonly StepOutcome[];
+  paths: RegistryPaths;
+  runId: string | null;
+}): string[] {
+  const { definition } = contexto;
+  const gastado = contexto.resultados.filter((resultado) => resultado.usage !== null);
+  if (gastado.length === 0) return [];
+
+  const costUsd = gastado.reduce((suma, r) => suma + (r.usage?.costUsd ?? 0), 0);
+  const totalTokens = gastado.reduce((suma, r) => suma + (r.usage?.totalTokens ?? 0), 0);
+  const modelo = gastado.find((r) => r.usage?.model != null)?.usage?.model ?? null;
+
+  if (definition.ticketParam === null) {
+    return [
+      `Gastó $${costUsd.toFixed(4)} y el proceso no declara \`ticket-param\`, ` +
+        "así que ese consumo no se carga a ningún ticket.",
+    ];
+  }
+
+  const crudo = contexto.valores[definition.ticketParam] ?? "";
+  const nombrados = [
+    ...new Set(
+      crudo
+        .split(",")
+        .map((id) => id.trim())
+        .filter((id) => id !== ""),
+    ),
+  ];
+
+  if (nombrados.length === 0) {
+    return [
+      `Gastó $${costUsd.toFixed(4)} y el parámetro "${definition.ticketParam}" vino ` +
+        "vacío, así que no se cargó a ningún ticket.",
+    ];
+  }
+
+  const existentes = nombrados.filter((id) => findTicket(contexto.paths, id) !== undefined);
+  const ausentes = nombrados.filter((id) => !existentes.includes(id));
+  const lineas: string[] = [];
+
+  if (ausentes.length > 0) {
+    lineas.push(
+      `No están en el registro, así que no se les cargó nada: ${ausentes.join(", ")}.`,
+    );
+  }
+
+  if (existentes.length > 0) {
+    const porTicket = costUsd / existentes.length;
+    const tokensPorTicket = Math.round(totalTokens / existentes.length);
+
+    for (const ticketId of existentes) {
+      try {
+        addAiUsage({
+          paths: contexto.paths,
+          ticketId,
+          source: `process:${definition.id}`,
+          // Es un dato del cliente, no una estimación: el runtime lo reportó.
+          confidence: "high",
+          ...(contexto.runId === null ? {} : { sessionReference: contexto.runId }),
+          ...(modelo === null ? {} : { model: modelo }),
+          totalTokens: String(tokensPorTicket),
+          estimatedCostUsd: porTicket.toFixed(6),
+          notes:
+            `Corrida "${contexto.runId ?? definition.id}" del proceso ${definition.id}` +
+            (gastoDePasos(gastado) === null ? "" : `, paso ${gastoDePasos(gastado)}`) +
+            `. Imputado en partes iguales entre ${existentes.length} ticket(s): ` +
+            "el reparto es una imputación, no una medición de lo que costó cada uno.",
+        });
+      } catch (caught) {
+        lineas.push(
+          `No se pudo cargar el consumo a ${ticketId}: ` +
+            `${caught instanceof Error ? caught.message : String(caught)}`,
+        );
+      }
+    }
+
+    if (existentes.length > 0) {
+      lineas.unshift(
+        `Consumo cargado a ${existentes.length} ticket(s): ` +
+          `$${porTicket.toFixed(4)} cada uno` +
+          (existentes.length > 1 ? ` ($${costUsd.toFixed(4)} repartidos)` : "") +
+          ".",
+      );
+    }
+  }
+
+  return lineas;
+}
+
+/** El identificador del paso que gastó, si fue uno solo. */
+function gastoDePasos(gastado: readonly StepOutcome[]): string | null {
+  return gastado.length === 1 ? (gastado[0]?.id ?? null) : null;
 }
 
 /** Ejecuta un paso y devuelve lo que pasó. */
 function ejecutarPaso(contexto: {
   paso: ProcessStep;
   valores: Readonly<Record<string, string>>;
+  /** Dónde escribe su reporte de consumo el runtime, si el paso lo pide. */
+  usageFile: string;
   root: string;
   correr: (
     comando: string,
@@ -592,7 +849,15 @@ function ejecutarPaso(contexto: {
   /** Dónde meter los pasos de un sub-proceso, para que se vean en el resumen. */
   expandir?: ((outcomes: readonly StepOutcome[]) => void) | undefined;
 }): StepOutcome {
-  const { paso, valores, root } = contexto;
+  const { paso, root } = contexto;
+  // El mapa con el que se sustituyen las plantillas **sí** lleva la ruta del
+  // reporte: es una variable para el proceso y no un parámetro suyo. La diferencia
+  // se ve en el error —«no declara el parámetro usage-file»— que es lo que pasaba
+  // cuando la clave entraba en `valores`.
+  const valores: Record<string, string> = {
+    ...contexto.valores,
+    [USAGE_FILE_VAR]: contexto.usageFile,
+  };
   const anunciar = (outcome: StepOutcome): StepOutcome => {
     contexto.onStep?.(outcome);
     return outcome;
@@ -616,6 +881,9 @@ function ejecutarPaso(contexto: {
       stdout: "",
       stderr: "",
       reason: `La condición no se cumple: ${substitute(paso.when, valores)}`,
+      // Solo el paso de agente puede tenerlo: es el único que delega en
+      // algo que gasta por su cuenta.
+      usage: null,
     });
   }
 
@@ -636,6 +904,12 @@ function ejecutarPaso(contexto: {
     const resultado = contexto.correr(comando, root);
     const latencia = Date.now() - inicio;
 
+    // Lo que gastó, si el runtime dejó su reporte donde el proceso dijo. Se lee
+    // **pase lo que pase** con el código de salida: un agente que falló a mitad
+    // igual consumió, y no contarlo dejaría ese gasto fuera del costo por ticket
+    // —que es justo el número que existe para no mentir—.
+    const usage = leerConsumo(contexto.usageFile);
+
     return anunciar({
       id: base.id,
       title: base.title,
@@ -651,6 +925,7 @@ function ejecutarPaso(contexto: {
       stderr: resultado.stderr,
       reason:
         resultado.status === 0 ? null : `El runtime salió con código ${resultado.status}.`,
+      usage,
     });
   }
 
@@ -680,6 +955,7 @@ function ejecutarPaso(contexto: {
             ? `El gate "${paso.target}" no está aprobado. El proceso queda esperando: ` +
               "apruébalo con `valmen process approve` y retómalo con `process resume`."
             : `El gate "${paso.target}" no está aprobado y se pidió no esperar.`,
+      usage: null,
     });
   }
 
@@ -737,6 +1013,7 @@ function ejecutarPaso(contexto: {
       reason: anidado.ok
         ? null
         : `El sub-proceso falló en: ${fallidos.map((f) => f.id).join(", ")}`,
+      usage: null,
     });
   }
 
@@ -754,6 +1031,9 @@ function ejecutarPaso(contexto: {
     stdout: resultado.stdout,
     stderr: resultado.stderr,
     reason: resultado.status === 0 ? null : `Salió con código ${resultado.status}.`,
+    // Solo el paso de agente puede tenerlo: es el único que delega en
+    // algo que gasta por su cuenta.
+    usage: null,
   });
 }
 

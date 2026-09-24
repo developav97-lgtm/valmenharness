@@ -473,55 +473,77 @@ archivo de gate, con su umbral. Ver [`03-GATES.md`](03-GATES.md).
 
 ## 9. Comandos del CLI
 
-```
-# Ciclo de vida del harness
-valmen init                       # crear .valmen/ en un proyecto nuevo
-valmen adopt [--from claude|codex|auto]   # importar config existente
-valmen sync                       # regenerar AGENTS.md / .codex / .claude / .opencode
-valmen migrate [--dry-run]        # registro y routing al vocabulario vigente
-valmen doctor                     # diagnóstico read-only del setup
-valmen config get|set|edit        # configuración
-valmen config chat "..."          # configurar en lenguaje natural (con preview)
+**La fuente de esto es `valmen --help`, no este documento.** La lista se copió de ahí y
+se revisa contra ahí: una lista escrita a mano deriva, y esta derivó —durante varias fases
+tuvo comandos que nunca existieron con ese nombre (`valmen ticket new`, `valmen gate run`)
+y le faltaban los que sí—. Si algo no coincide, manda el comando.
 
-# Tickets
-valmen ticket new|show|list|validate|active|resume
-valmen ticket transition <id> <estado>
-valmen ticket point add|update|close
-valmen ticket evidence add|qa start|qa close|retest add|close-attempt
-valmen ticket split <id> --into A,B
+```text
+# El registro
+valmen create --id --title --type --module --request   # alta, en intake
+valmen validate --all | --id <ID>     # el contrato del ticket
+valmen active                         # los no cerrados (alias: list)
+valmen show <ID>                      # el resumen de un ticket
+valmen resume [--id <ID>]             # contexto para retomar
+valmen transition --id --entity --to  # mueve estados, con la tabla del contrato
+valmen index [--check]                # el índice derivado
+valmen report [--desde --hasta --type --q]   # cierres, por fecha de CIERRE
+valmen drift [--id] [--todos] [--strict]     # lo que el ticket cita y el código no confirma
+
+# Compuertas
+valmen gate <gate> --id <ID>          # evalúa, y emite recibo
+      --evaluator auto|command|jev|llm-judge
+valmen gate-decide --id <ID> --receipt <GR-…> --decision --actor
+valmen gate-decide --code <CÓDIGO> --decision --actor   # desde el celular
+valmen simulate <gate> [--limit] [--json] [--calibrate]
+
+# QA, evidencia y cierre
+valmen add-point --id --title --severity --actual --expected [--files]
+valmen qa-start --id --environment --build-reference
+valmen qa-close --id --result [--po-confirmation]
+valmen add-evidence --id --kind --description [--reference] [--point-id]
+valmen add-retest --id --point-id --result
+valmen add-ai-usage --id --source --confidence
+valmen close-attempt --id --technical-summary --functional-summary --qa-status --release-impact
 
 # Features
-valmen feature new|show|list
-valmen feature specify|design|decompose
-valmen feature amend|unlink|status
-valmen feature archive
-valmen feature plan --assign-model <rol:modelo>
-
-# Gates
-valmen gate list|show|explain <receipt-id>
-valmen gate run <gate-id> --subject <ticket|feature>
-valmen gate approve <subject> --gate <id> [--reason ...]
-valmen gate simulate <gate-id> --subject <id>   # dry-run: qué decidiría, sin aplicar
+valmen feature list | show <slug> | new <slug> --title | decompose <slug> [--dry-run]
 
 # Procesos
-valmen process list|show
-valmen process run <id> [--param k=v]
-valmen process run deploy --version 1.4.0 --tickets ID1,ID2
+valmen process list | show <id> | run <id> [--set n=v] [--skip-gates]
+valmen process approve <gate> --actor <nombre>
+valmen process runs | show-run <corrida> | resume [corrida] | abandon <corrida>
 
-# Proveedores y modelos
-valmen provider list|login|logout|status
-valmen model list|select
-valmen usage report [--ticket <id>] [--feature <slug>]
+# Memoria y estándares
+valmen memory search <consulta> | save --title --body | list | review
+valmen memory clasificar <AP-001> --decision regla|caso|descartar
+valmen estandar listar | proponer --title --rule --area | revisar
+valmen estandar aceptar|descartar <EST-001|pendientes> --instruccion <frase>
+
+# Entrega
+valmen deliver-manifest --version --tickets       # el manifiesto, sin publicar
+valmen release-publish --version --tickets        # exige el tag anotado
+
+# Proyecto
+valmen init | adopt [--dry-run] | migrate [--dry-run] | sync [--check]
+valmen template list | show <nombre> | apply <nombre>
+valmen secrets [--staged]
+
+# Consumo
+valmen usage [--desde --hasta]
+valmen usage value [--desde --hasta] [--limite <n>]   # ticket por ticket
 
 # Servicios
-valmen serve                      # Mission Control en localhost
-valmen mcp                        # qué declarar en cada agente (no arranca nada)
-valmen mcp --install              # lo escribe en la config del proyecto
-valmen index                      # reconstruir el estado derivado
+valmen serve [--port <n>]             # Mission Control en 127.0.0.1
+valmen mcp [--install] [--global]     # qué declarar en cada agente
+valmen hermes status|connect|test|notify|brief   # el puente, para el celular
 ```
 
-Todos los comandos que mutan aceptan `--json` y `--dry-run`. Esto es lo que permite que
-los agentes y la GUI usen la misma superficie que tú.
+Opciones globales: `--root <ruta>`, `--tickets-dir <ruta>`, `--legacy-layout`, `--credentials <ruta>`.
+
+Los comandos de anexado llevan un valor por bandera y no `--json`: escriben bloques
+append-only, y la confirmación es el identificador que devuelven. Los que deciden
+—`gate`, `simulate`— sí aceptan `--json`, porque su resultado es un dato.
 
 ---
 
@@ -618,6 +640,45 @@ siempre la que nadie mira. Las otras seis devuelven solo texto, y el test afirma
 exacta —`["ver_ticket", "evaluar_compuerta"]`— para que una herramienta nueva no lo decida por
 costumbre.
 
+### Las anotaciones: qué declara cada herramienta de sí misma
+
+Una herramienta no solo tiene forma: tiene **carácter**, y un cliente MCP necesita saberlo
+**antes** de llamarla. Hasta ahora no lo decía ninguna, así que las treinta y cinco se veían
+iguales y un cliente con aprobación por herramienta —Hermes con `trust: untrusted`, Claude
+Code, Cursor— solo tenía dos opciones, y ninguna sirve: preguntar por todo convierte un
+servidor de consulta en un trámite, y no preguntar por nada deja que un agente escriba en el
+registro sin que nadie mire.
+
+Cada una declara ahora las cuatro anotaciones del protocolo, y el criterio se escribe **una
+vez** en `packages/mcp/src/tools.ts`, como cuatro constantes que las herramientas eligen:
+
+| Constante | Qué significa | Cuántas |
+| --- | --- | --- |
+| `SOLO_LEE` | No escribe **y no gasta** | 15 |
+| `ANEXA` | Solo agrega: un archivo nuevo o un bloque append-only | 10 |
+| `REESCRIBE` | Cambia algo que ya existía | 4 |
+| `GASTA` | No toca el registro y sale del proyecto: llama a un modelo | 3 |
+
+Tres no encajan en ninguna —`descomponer_feature`, `ejecutar_proceso` e `indexar_registro`—
+y declaran su objeto entero, que también dice algo: son las que combinan cosas que las otras
+separan.
+
+**La segunda condición de `SOLO_LEE` importa tanto como la primera.** `simular_compuerta` y
+`calibrar_compuerta` no tocan un archivo, pero cada llamada evalúa el histórico contra un
+proveedor: sin esa condición, «permiso para leer» sería «permiso para gastar sin tope».
+
+`ANEXA` con `destructiveHint: false` es el invariante 4 del harness —los bloques append-only
+no se reescriben— visto desde afuera: una herramienta que solo anexa no puede destruir nada,
+y por eso puede declararlo sin mentir.
+
+**El campo es obligatorio en `ToolDefinition`, y eso es lo que lo sostiene.** Una anotación que
+se puede omitir es una anotación que se omite, y el default del protocolo para
+`destructiveHint` es `true`: una herramienta nueva sin anotar no rompería nada, se declararía
+peligrosa en silencio y el cliente le pediría permiso a la persona para leer un ticket.
+Haciéndolo obligatorio, la herramienta que se agregue sin anotar **no compila**. El
+compilador garantiza que están; un test fija los valores con las listas explícitas, para que
+cambiar el carácter de una herramienta exija editar el test y decirlo.
+
 ### Lo que **no** hay, y por qué
 
 **No hay herramienta para aprobar una compuerta.** El diseño original de
@@ -655,6 +716,28 @@ existiendo y sigue siendo la que usan esos clientes de forma nativa. Lo que camb
 que **un cliente que no esté en esa lista ya no exige escribir código**: pide el
 prompt y recibe el procedimiento. Y se sirve desde `.valmen/skills/`, la fuente, así
 que el prompt no puede quedar viejo como puede quedar una copia proyectada.
+
+### Las reglas del proyecto, también como prompt
+
+El catálogo empieza con un prompt reservado, `reglas-del-proyecto`, que devuelve el mismo
+documento que `valmen sync` escribe en `AGENTS.md` —generado por la misma función pura, y
+leído de `.valmen/` en vez del archivo proyectado—, sin su encabezado de archivo generado.
+
+Existe por un caso concreto: un agente lee las convenciones del proyecto del `AGENTS.md`
+que encuentra en su directorio de trabajo, y **la sesión del celular no tiene ese
+directorio**. Hermes corre desde donde viva la pasarela, no desde el proyecto, así que su
+prompt de sistema no incluye nada de esto. Sin esta puerta, la conversación del celular
+contesta sin saber cómo se trabaja acá y el agente parece ignorar reglas que el de la
+máquina sí leyó.
+
+El nombre está **reservado**: si un proyecto declara una skill con ese nombre, gana el
+prompt de reglas. La alternativa —que gane la skill— dejaría tapado el mecanismo que
+existe justamente para que un agente lea las reglas, y hay un test que lo afirma.
+
+Las reglas van primero en el catálogo, por la misma razón por la que van antes en el
+`AGENTS.md`: quien lee necesita saber de qué sistema se trata antes de un procedimiento
+suelto. Y no dependen de que el proyecto declare skills —un proyecto sin skills también
+tiene flujo, estados y gates que un agente tiene que conocer—.
 
 ### Diagnóstico
 

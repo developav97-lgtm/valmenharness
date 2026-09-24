@@ -31,12 +31,70 @@ export const PROTOCOL_VERSION = "2025-06-18";
 /** Las que se aceptan si el cliente pide otra. */
 const COMPATIBLES = ["2025-06-18", "2025-03-26", "2024-11-05"];
 
+/**
+ * Lo que una herramienta declara de sí misma, además de su forma.
+ *
+ * Existe porque un cliente MCP tiene que poder decidir **sin llamar** si una
+ * herramienta es segura de ejecutar sola. Hasta ahora no podía: las treinta y
+ * cinco se veían iguales, así que un cliente con aprobación por herramienta
+ * —Hermes con `trust: untrusted`, Claude Code, Cursor— solo tenía dos opciones,
+ * preguntar por todo o no preguntar por nada. Ninguna de las dos es aceptable:
+ * la primera vuelve inusable un servidor de consulta, y la segunda deja que un
+ * agente escriba en el registro sin que nadie lo mire.
+ *
+ * El campo es **obligatorio** en `ToolDefinition` a propósito. Una anotación que
+ * se puede omitir es una anotación que se omite, y el default del protocolo para
+ * `destructiveHint` es `true`: una herramienta nueva sin anotar no rompe nada, se
+ * declara peligrosa en silencio y el cliente le pide permiso a la persona para
+ * leer un ticket. Haciéndolo obligatorio, la herramienta que se agregue sin
+ * anotar **no compila**, que es la única forma de que esto no se desactualice.
+ *
+ * El criterio con el que se llenan está escrito en `tools.ts`, junto a las
+ * constantes que las agrupan: no se inventa herramienta por herramienta.
+ */
+export interface ToolAnnotations {
+  /**
+   * No escribe en el registro **y no gasta**.
+   *
+   * Las dos condiciones, y la segunda no es un detalle: `simular_compuerta` y
+   * `calibrar_compuerta` no tocan un archivo, pero cada llamada evalúa el
+   * histórico contra un proveedor de modelo. Un cliente que auto-apruebe todo lo
+   * que se declara de solo lectura tiene que poder confiar en que eso también
+   * significa que no le va a costar dinero a nadie.
+   */
+  readonly readOnlyHint: boolean;
+  /**
+   * Reescribe algo que ya existía.
+   *
+   * Se corresponde con el invariante 4 del harness —los bloques append-only no se
+   * reescriben—: una herramienta que solo anexa o que crea un archivo nuevo nunca
+   * lo es, y una que mueve un estado, reescribe un índice o cierra una decisión
+   * sí. El valor por defecto del protocolo es `true`, así que declararlo exige
+   * haberlo pensado.
+   */
+  readonly destructiveHint: boolean;
+  /** Repetirla con los mismos argumentos deja el mismo estado. */
+  readonly idempotentHint: boolean;
+  /**
+   * Sale del proyecto: llama a un proveedor de modelo o ejecuta pasos que el
+   * proceso declara. Es lo que le dice a un cliente que la herramienta tiene
+   * efectos fuera del registro.
+   */
+  readonly openWorldHint: boolean;
+}
+
 /** Lo que declara una herramienta. */
 export interface ToolDefinition {
   readonly name: string;
   readonly title: string;
   readonly description: string;
   readonly inputSchema: Record<string, unknown>;
+  /**
+   * Si escribe, si borra, si se puede repetir y si sale del proyecto.
+   *
+   * Obligatorio, y por eso no lleva `?`: ver `ToolAnnotations`.
+   */
+  readonly annotations: ToolAnnotations;
   /**
    * El esquema del contenido estructurado, cuando la herramienta lo devuelve.
    *

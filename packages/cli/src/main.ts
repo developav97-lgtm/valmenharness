@@ -38,6 +38,16 @@ import {
   validateOne,
 } from "./commands.js";
 import { runFeature } from "./features.js";
+import {
+  runHermes,
+  hermesNotify,
+  hermesNotifyPendientes,
+  hermesBrief,
+  configDeHermes,
+  approvalSecret,
+  decideByCode,
+  COMO_CREAR_EL_SECRETO,
+} from "./hermes.js";
 import { mcpCommand } from "./mcp.js";
 import { runProcess } from "./process.js";
 import {
@@ -162,6 +172,11 @@ Comandos:
   gate-decide --id <ID> --receipt <GR-…> --decision <approve|reject> --actor <nombre>
                             Registra la decisión humana sobre un gate escalado.
       --reason <texto>      Queda en el recibo y en el historial del ticket.
+  gate-decide --code <CÓDIGO> --decision <approve|reject> --actor <nombre>
+                            La misma decisión, tomada desde el celular. El código
+                            lo emite "valmen hermes notify"; el ticket y el recibo
+                            los trae el token firmado, así que no se pasan. Se
+                            niega si el ticket cambió desde que se notificó.
   transition --id <ID> --entity <entidad> --to <estado>
                             Mueve el estado de un ticket, un punto o una release.
       --point-id <POINT>    Obligatorio con --entity point.
@@ -207,6 +222,39 @@ Comandos:
                             pasos ya ejecutados no se repiten.
       --skip-gates          Saltea los gates que sigan sin aprobar.
   process abandon <corrida> Deja de poder retomarla. No deshace lo ya ejecutado.
+  mcp                       El servidor MCP del harness, y cómo declararlo en cada
+                            agente. Sin --install muestra el fragmento exacto.
+      --install             Escribe las entradas del proyecto (opencode.json,
+                            .mcp.json de Claude Code), conservando lo que hubiera.
+      --global              Añade también la de codex, que es de la persona.
+  hermes [status|connect|test|notify|brief]
+                            Conexión con Hermes. "status" diagnostica —y es lo que
+                            hace sin argumentos—; "connect" declara el servidor en
+                            ~/.hermes/config.yaml, que es global y por eso necesita
+                            la raíz de este proyecto; "test" manda un mensaje de
+                            prueba al celular; "notify" avisa de lo que espera una
+                            decisión —los gates de ticket, con su código para
+                            decidirlos a distancia, y los procesos detenidos, que se
+                            aprueban solo en la máquina—. Sin --id ni --receipt
+                            avisa de todo lo pendiente, y el
+                            destino sale de .valmen/config.yaml; se puede correr
+                            seguido, porque lo ya avisado no se avisa dos veces.
+                            "brief" arma el parte —lo que espera decisión, lo que
+                            se detuvo, lo que está en curso, lo que se cerró y el
+                            consumo— y lo manda. Sin destino lo imprime, que es
+                            como se revisa antes de que le llegue a nadie.
+      --dias <n>            Cuántos días atrás se cuentan los cierres. Por defecto, 7.
+      --id <TICKET>         Avisar solo de este ticket. Con --receipt y --to.
+      --receipt <GR-…>      El recibo vigente y escalado a una persona.
+      --name <n>            Nombre de la entrada. Por defecto, valmen: hace falta
+                            cambiarlo para conectar un segundo proyecto.
+      --to <destino>        Destino: telegram, discord:#ops. Pisa al de la
+                            configuración. Los que haya se listan con
+                            "hermes send --list".
+      --untrusted           Declara trust: untrusted: Hermes pide permiso antes
+                            de cada escritura al registro.
+      --dry-run             Muestra el bloque sin escribir el archivo.
+      --force               Escribe aunque Hermes no parezca instalado.
   serve [--port <n>]        Mission Control en 127.0.0.1.
   simulate <gate>           Mide un gate sobre el registro histórico.
       --limit <n>           Evalúa solo los primeros n sujetos.
@@ -320,6 +368,17 @@ export const VALUE_OPTIONS = [
   "--type",
   "--module",
   "--request",
+  // `hermes`: el nombre de la entrada. Hermes es global —una config para todos
+  // los proyectos—, así que conectar un segundo proyecto es declarar una segunda
+  // entrada con otro nombre. Sin esto en la lista, `--name valor` se leía como
+  // bandera booleana más un argumento suelto, y `connect` escribía la entrada
+  // `valmen` creyendo que había hecho lo que se le pidió.
+  "--name",
+  // `gate-decide --code`: el código corto que llegó al celular. Reemplaza a
+  // `--id` y `--receipt`, que el token firmado ya trae.
+  "--code",
+  // `hermes brief --dias N`: cuántos días hacia atrás se cuentan los cierres.
+  "--dias",
 ] as const;
 
 /** Error de uso: se reporta con el código de esquema, como el CLI de referencia. */
@@ -429,6 +488,7 @@ export function runGateDecide(
   const receiptId = flag(flags, "receipt");
   const decision = flag(flags, "decision");
   const actor = flag(flags, "actor");
+  const codigo = flag(flags, "code");
 
   const falta = (nombre: string): CommandResult => ({
     stdout: "",
@@ -437,6 +497,57 @@ export function runGateDecide(
       "Una decisión humana sin ese dato no es auditable.",
     exitCode: EXIT_SCHEMA,
   });
+
+  // El camino del celular. Con `--code`, el ticket y el recibo los dice el token
+  // firmado, no la línea de comandos: si se pudieran pasar por separado, el
+  // código autorizaría una decisión y el comando registraría otra. Por eso los
+  // dos caminos no comparten la comprobación de banderas —el remoto exige
+  // `--code` y **prohíbe** `--id` y `--receipt`— en vez de aceptar las dos y
+  // quedarse con una.
+  if (codigo !== undefined) {
+    if (ticketId !== undefined || receiptId !== undefined) {
+      return {
+        stdout: "",
+        stderr:
+          "Con --code no se pasan --id ni --receipt: los dice el token firmado.\n" +
+          "Aceptarlos permitiría autorizar una decisión y registrar otra.\n",
+        exitCode: EXIT_SCHEMA,
+      };
+    }
+    if (decision !== "approve" && decision !== "reject") {
+      return {
+        stdout: "",
+        stderr: "gate decide requiere --decision approve o --decision reject.",
+        exitCode: EXIT_SCHEMA,
+      };
+    }
+    if (actor === undefined || actor.trim() === "") return falta("actor");
+
+    const secreto = approvalSecret(
+      typeof flags["credentials"] === "string"
+        ? (flags["credentials"] as string)
+        : undefined,
+    );
+    if (secreto === null) {
+      return {
+        stdout: "",
+        stderr:
+          "Falta el secreto con el que se verifican los tokens de aprobación.\n\n" +
+          `${COMO_CREAR_EL_SECRETO}\n`,
+        exitCode: EXIT_SCHEMA,
+      };
+    }
+
+    return decideByCode({
+      paths,
+      code: codigo,
+      decision,
+      actor: actor.trim(),
+      reason: flag(flags, "reason") ?? "",
+      secret: secreto,
+      now: new Date(),
+    });
+  }
 
   if (ticketId === undefined) return falta("id");
   if (receiptId === undefined) return falta("receipt");
@@ -1047,6 +1158,111 @@ export async function run(argv: readonly string[]): Promise<number> {
         global: options.flags["global"] === true,
         json: options.flags["json"] === true,
       });
+    } else if (command === "hermes") {
+      // Hermes es el único destino que no vive en el proyecto: su configuración
+      // es global y por eso necesita la raíz explícita. La acción sale del
+      // subcomando, y sin él se diagnostica —que es lo que se quiere saber
+      // primero— en vez de escribir.
+      const accion = rest[0] ?? "status";
+      if (
+        accion !== "status" &&
+        accion !== "connect" &&
+        accion !== "test" &&
+        accion !== "notify" &&
+        accion !== "brief"
+      ) {
+        result = {
+          stdout: "",
+          stderr: `Acción desconocida: "${accion}". Use status, connect, test, notify o brief.`,
+          exitCode: EXIT_SCHEMA,
+        };
+      } else if (accion === "brief") {
+        // El parte se arma de la misma configuración que los avisos, y sin
+        // destino se imprime: es lo que se quiere hacer la primera vez, antes de
+        // que le llegue a nadie.
+        const paths = resolvePaths(options);
+        const dias = flag(options.flags, "dias");
+        const destino = flag(options.flags, "to");
+        result = hermesBrief({
+          paths,
+          config: configDeHermes(paths),
+          now: new Date(),
+          ...(destino === undefined ? {} : { to: destino }),
+          json: options.flags["json"] === true,
+          ...(dias === undefined ? {} : { dias: Number(dias) }),
+        });
+      } else if (accion === "notify") {
+        // Notificar un gate y emitir su token. Se separa del resto porque no es
+        // sobre la conexión: es sobre un gate concreto, y necesita el secreto con
+        // el que se firma.
+        const paths = resolvePaths(options);
+        const secreto = approvalSecret(
+          typeof options.flags["credentials"] === "string"
+            ? (options.flags["credentials"] as string)
+            : undefined,
+        );
+        const id = flag(options.flags, "id");
+        const recibo = flag(options.flags, "receipt");
+        const destino = flag(options.flags, "to");
+
+        if (secreto === null) {
+          result = {
+            stdout: "",
+            stderr:
+              "Falta el secreto con el que se firman los tokens de aprobación.\n\n" +
+              `${COMO_CREAR_EL_SECRETO}\n`,
+            exitCode: EXIT_SCHEMA,
+          };
+        } else if (id === undefined && recibo === undefined) {
+          // Sin ticket ni recibo: todos los que esperan una decisión. Es el modo
+          // que se puede correr seguido —a mano, por cron o desde un gancho de
+          // Hermes— porque lo ya avisado no se vuelve a avisar.
+          result = hermesNotifyPendientes({
+            paths,
+            config: configDeHermes(paths),
+            secret: secreto,
+            now: new Date(),
+            ...(destino === undefined ? {} : { to: destino }),
+            json: options.flags["json"] === true,
+          });
+        } else if (id === undefined || recibo === undefined || destino === undefined) {
+          result = {
+            stdout: "",
+            stderr:
+              "Para avisar de un gate concreto hacen falta --id <TICKET>, " +
+              "--receipt <GR-…> y --to <destino>.\n" +
+              "Sin --id ni --receipt se avisa de todos los que esperan una decisión, " +
+              "y el destino sale de `.valmen/config.yaml`.\n",
+            exitCode: EXIT_SCHEMA,
+          };
+        } else {
+          result = hermesNotify({
+            paths,
+            ticketId: id,
+            receiptId: recibo,
+            to: destino,
+            secret: secreto,
+            now: new Date(),
+          });
+        }
+      } else {
+        const nombre = options.flags["name"];
+        const destino = options.flags["to"];
+        result = runHermes({
+          root: options.root,
+          cliEntry: process.argv[1] ?? fileURLToPath(import.meta.url),
+          action: accion,
+          name:
+            typeof nombre === "string" && nombre.trim() !== "" ? nombre.trim() : "valmen",
+          dryRun: options.flags["dry-run"] === true,
+          untrusted: options.flags["untrusted"] === true,
+          json: options.flags["json"] === true,
+          force: options.flags["force"] === true,
+          ...(typeof destino === "string" && destino.trim() !== ""
+            ? { to: destino.trim() }
+            : {}),
+        });
+      }
     } else if (command === "simulate") {
       const gateId = rest[0];
       if (gateId === undefined) {

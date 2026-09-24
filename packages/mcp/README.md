@@ -136,6 +136,55 @@ decida por costumbre.
 `isError: true` con el mensaje del motor —«Falta `type`, y es obligatorio»— y puede corregir.
 Un error JSON-RPC lo dejaría sin el motivo.
 
+### Las anotaciones: qué puede hacer cada una sin preguntar
+
+Cada herramienta declara las cuatro anotaciones del protocolo —`readOnlyHint`,
+`destructiveHint`, `idempotentHint`, `openWorldHint`—, porque un cliente necesita decidir
+**antes** de llamar si puede ejecutarla sola. Hermes con `trust: untrusted`, Claude Code y
+Cursor piden permiso humano para toda llamada que no venga marcada como de solo lectura; sin
+anotaciones, las treinta y cinco se ven iguales y al cliente solo le quedan dos opciones, y
+ninguna sirve: preguntar por todo convierte un servidor de consulta en un trámite, y no
+preguntar por nada deja que un agente escriba en el registro sin que nadie mire.
+
+El criterio se escribe una vez, como cuatro constantes en `packages/mcp/src/tools.ts`, y las
+herramientas lo eligen:
+
+| Constante   | Qué significa                                                     | Cuántas |
+| ----------- | ----------------------------------------------------------------- | ------- |
+| `SOLO_LEE`  | No escribe **y no gasta**                                         | 15      |
+| `ANEXA`     | Solo agrega: un archivo nuevo o un bloque append-only             | 10      |
+| `REESCRIBE` | Cambia algo que ya existía                                        | 4       |
+| `GASTA`     | No toca el registro y sale del proyecto: llama a un modelo        | 3       |
+
+`descomponer_feature`, `ejecutar_proceso` e `indexar_registro` no encajan en ninguna y
+declaran su objeto entero: son las que combinan cosas que las otras separan.
+
+Dos detalles que no son adorno. **`SOLO_LEE` exige también no gastar**: `simular_compuerta` no
+toca un archivo y cuesta una llamada por ticket evaluado, así que sin esa condición «permiso
+para leer» sería «permiso para gastar sin tope». Y **`ANEXA` con `destructiveHint: false`** es
+el invariante 4 del harness —los bloques append-only no se reescriben— visto desde afuera.
+
+`annotations` es **obligatorio** en `ToolDefinition`: una anotación que se puede omitir es una
+anotación que se omite, y el default del protocolo para `destructiveHint` es `true`, así que
+una herramienta sin anotar se declararía peligrosa en silencio. Agregar una herramienta sin
+anotarla no compila.
+
+### Las reglas del proyecto, también como prompt
+
+El catálogo de prompts empieza con uno reservado, `reglas-del-proyecto`, que devuelve el
+mismo documento que `valmen sync` escribe en `AGENTS.md` —generado por la misma función
+pura y leído de `.valmen/`, sin su encabezado de archivo generado—.
+
+Existe porque un agente lee las convenciones del proyecto del `AGENTS.md` que encuentra en
+su directorio de trabajo, y **la sesión del celular no tiene ese directorio**: Hermes corre
+desde donde viva la pasarela, no desde el proyecto. Sin esta puerta, la conversación del
+celular contesta sin saber cómo se trabaja acá.
+
+El nombre está reservado: si un proyecto declara una skill con ese nombre, gana el prompt
+de reglas —dejar que la tape la skill taparía el mecanismo que existe para que un agente
+lea las reglas—. Y va primero en el catálogo, como en el `AGENTS.md`: quien lee necesita
+saber de qué sistema se trata antes de un procedimiento suelto.
+
 ### Las skills, como prompts
 
 El harness publica además las skills del proyecto —`.valmen/skills/*/SKILL.md`— como

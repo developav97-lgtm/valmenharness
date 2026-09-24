@@ -12,7 +12,7 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { getPromptFor, promptsFor } from "../packages/mcp/src/prompts.js";
+import { REGLAS_PROMPT, getPromptFor, promptsFor } from "../packages/mcp/src/prompts.js";
 import {
   atender,
   type Peticion,
@@ -67,7 +67,10 @@ const pedir = (method: string, params?: Record<string, unknown>): Peticion => ({
 });
 
 describe("el catálogo de prompts", () => {
-  it("publica las skills del proyecto con su descripción y su título", () => {
+  it("publica las reglas del proyecto primero, y después las skills", () => {
+    // Las reglas van primero por la misma razón por la que el `AGENTS.md` las pone
+    // antes: quien lee necesita saber de qué sistema se trata y cómo se trabaja en
+    // él antes de leer un procedimiento suelto.
     escribirSkill(
       "planificacion",
       "Usar antes de implementar un ticket.",
@@ -77,19 +80,63 @@ describe("el catálogo de prompts", () => {
 
     const prompts = promptsFor(lab);
     expect(prompts.map((prompt) => prompt.name)).toEqual([
+      REGLAS_PROMPT,
       "planificacion",
       "revision-final",
     ]);
-    expect(prompts[0]?.description).toBe("Usar antes de implementar un ticket.");
+    expect(prompts[1]?.description).toBe("Usar antes de implementar un ticket.");
     // El título sale del encabezado que escribió quien escribió la skill.
-    expect(prompts[0]?.title).toBe("Planificación");
+    expect(prompts[1]?.title).toBe("Planificación");
     // Y si no hay encabezado, el nombre del directorio: nunca un título vacío.
-    expect(prompts[1]?.title).toBe("revision-final");
+    expect(prompts[2]?.title).toBe("revision-final");
   });
 
-  it("un proyecto sin skills no falla: devuelve una lista vacía", () => {
-    expect(promptsFor(lab)).toEqual([]);
-    expect(() => getPromptFor(lab, "cualquiera")).toThrow(/no declara skills/);
+  it("un proyecto sin skills igual ofrece sus reglas", () => {
+    // Las reglas no dependen de que el proyecto declare skills: son el documento
+    // que `valmen sync` ya escribe, y un proyecto sin skills también tiene flujo,
+    // estados y gates que un agente tiene que conocer.
+    const prompts = promptsFor(lab);
+    expect(prompts.map((prompt) => prompt.name)).toEqual([REGLAS_PROMPT]);
+    // Y la lista de los que sí hay sirve para corregir sin adivinar: antes decía
+    // «el proyecto no declara skills», que ahora sería falso.
+    expect(() => getPromptFor(lab, "cualquiera")).toThrow(/reglas-del-proyecto/);
+  });
+
+  it("las reglas son el mismo documento que se proyecta a AGENTS.md", () => {
+    // No es una segunda versión de las reglas: es la misma, generada por la misma
+    // función pura y leída de `.valmen/`. Servir una copia dejaría que el agente
+    // del celular siguiera una versión y el de la máquina otra.
+    mkdirSync(join(lab, ".valmen"), { recursive: true });
+    writeFileSync(
+      join(lab, ".valmen", "config.yaml"),
+      "name: Proyecto de prueba\ntickets-dir: tickets\n",
+      "utf8",
+    );
+    mkdirSync(join(lab, ".valmen", "rules"), { recursive: true });
+    writeFileSync(
+      join(lab, ".valmen", "rules", "proyecto.md"),
+      "# Cómo se trabaja\n\nSe trabaja en modo directo.\n",
+      "utf8",
+    );
+
+    const texto = getPromptFor(lab, REGLAS_PROMPT).messages[0]?.content as {
+      type: string;
+      text: string;
+    };
+    expect(texto.text).toContain("Proyecto de prueba");
+    expect(texto.text).toContain("Se trabaja en modo directo.");
+    // Y es exactamente lo que se proyecta, sin una marca de archivo generado que
+    // no aporta nada en una conversación.
+    expect(texto.text).not.toContain("NO EDITAR A MANO");
+  });
+
+  it("el nombre del prompt de reglas está reservado: una skill no lo tapa", () => {
+    // El mecanismo que existe para que un agente lea las reglas no puede quedar
+    // tapado por una skill con el mismo nombre.
+    escribirSkill(REGLAS_PROMPT, "Una skill con el nombre reservado.", "# Otra cosa\n");
+    const prompts = promptsFor(lab);
+    expect(prompts.map((prompt) => prompt.name)).toEqual([REGLAS_PROMPT]);
+    expect(prompts[0]?.title).toBe("Las reglas de este proyecto");
   });
 
   it("el contenido sale de la fuente, sin la marca de archivo generado", () => {
@@ -134,8 +181,9 @@ describe("el protocolo de prompts", () => {
       prompts: readonly Record<string, unknown>[];
     };
 
-    expect(respuesta.prompts).toHaveLength(1);
-    expect(respuesta.prompts[0]).toEqual({
+    // Dos: las reglas del proyecto y la skill. Las reglas siempre están.
+    expect(respuesta.prompts).toHaveLength(2);
+    expect(respuesta.prompts[1]).toEqual({
       name: "planificacion",
       title: "Planificación",
       description: "Antes de implementar.",

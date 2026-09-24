@@ -19,7 +19,7 @@
  * fallo del motor no dependa de qué shell haya debajo. Los que sí ejecutan de
  * verdad están marcados y usan `node` para ser portables.
  */
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -27,6 +27,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
   type ProcessDefinition,
+  TICKET_TEMPLATE,
   parseProcess,
   parseYamlSubset,
   processCycle,
@@ -34,6 +35,7 @@ import {
 } from "@valmen/core";
 import {
   evaluateWhen,
+  listRuns,
   loadProcesses,
   requireProcess,
   resolveParams,
@@ -1250,5 +1252,453 @@ describe("los pasos de agente", () => {
       runCommand: simulador(),
     });
     expect(corrida.steps[0]?.detail).toBe("mi-runtime");
+  });
+});
+
+describe("lo que costó un paso de agente", () => {
+  /**
+   * Un proceso con un paso de agente cuyo runtime escribe el reporte donde se le
+   * dice, como hace `hermes -z --usage-file`.
+   */
+  function procesoConAgente(root: string): void {
+    const dir = join(root, ".valmen", "processes");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      join(dir, "revisar.yaml"),
+      [
+        "id: revisar",
+        "title: Revisar con un agente",
+        "steps:",
+        "  - id: revisar",
+        "    kind: agent",
+        "    title: Revisar",
+        "    runtime: escribo-consumo {usage-file}",
+        "    instructions: Revisá el cambio.",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+  }
+
+  /** Un runner que escribe el reporte en la ruta que el comando declara. */
+  function runnerQueReporta(reporte: unknown): {
+    run: (
+      comando: string,
+      cwd: string,
+    ) => { status: number; stdout: string; stderr: string };
+    rutas: string[];
+  } {
+    const rutas: string[] = [];
+    return {
+      rutas,
+      run: (comando: string) => {
+        const ruta = comando.split(" ")[1] as string;
+        rutas.push(ruta);
+        writeFileSync(ruta, JSON.stringify(reporte), "utf8");
+        return { status: 0, stdout: "listo", stderr: "" };
+      },
+    };
+  }
+
+  it("lee el total que incluye las llamadas auxiliares, no el del bucle principal", () => {
+    // Los contadores de arriba cubren solo el bucle principal y dejan fuera los
+    // títulos y la compresión de contexto. Un costo por ticket calculado con ellos
+    // sería más bajo que el real, y más bajo en la dirección que tranquiliza.
+    const root = mkdtempSync(join(tmpdir(), "consumo-"));
+    try {
+      procesoConAgente(root);
+      const { run, rutas } = runnerQueReporta({
+        estimated_cost_usd: 0.1,
+        total_tokens: 1000,
+        api_calls: 3,
+        model: "anthropic/claude-sonnet-4.6",
+        total_including_auxiliary: {
+          estimated_cost_usd: 0.1234,
+          total_tokens: 1500,
+          api_calls: 5,
+        },
+      });
+
+      const corrida = runProcess({ root, id: "revisar", params: {}, runCommand: run });
+      const paso = corrida.steps[0];
+
+      expect(paso?.usage?.costUsd).toBe(0.1234);
+      expect(paso?.usage?.totalTokens).toBe(1500);
+      expect(paso?.usage?.apiCalls).toBe(5);
+      expect(paso?.usage?.model).toBe("anthropic/claude-sonnet-4.6");
+      // Y la ruta que se le pasó al runtime es la que después se lee.
+      expect(paso?.detail).toContain(rutas[0] as string);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("sin el bloque auxiliar, usa los contadores de arriba", () => {
+    const root = mkdtempSync(join(tmpdir(), "consumo-"));
+    try {
+      procesoConAgente(root);
+      const { run } = runnerQueReporta({
+        estimated_cost_usd: 0.5,
+        total_tokens: 20,
+        model: "otro",
+      });
+      const corrida = runProcess({ root, id: "revisar", params: {}, runCommand: run });
+      expect(corrida.steps[0]?.usage?.costUsd).toBe(0.5);
+      expect(corrida.steps[0]?.usage?.apiCalls).toBeNull();
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("un reporte que no se puede leer deja el consumo en `null`, no en cero", () => {
+    // Ausente y cero no son lo mismo: uno dice «no gastó» y el otro «no se sabe».
+    // Un consumo inventado es peor que uno ausente, porque el ausente se ve.
+    const root = mkdtempSync(join(tmpdir(), "consumo-"));
+    try {
+      procesoConAgente(root);
+      const run = (): { status: number; stdout: string; stderr: string } => ({
+        status: 0,
+        stdout: "",
+        stderr: "",
+      });
+      const corrida = runProcess({ root, id: "revisar", params: {}, runCommand: run });
+      expect(corrida.steps[0]?.usage).toBeNull();
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("un runtime que falla igual deja su consumo registrado", () => {
+    // Un agente que falló a mitad consumió igual, y no contarlo dejaría ese gasto
+    // fuera del costo por ticket, que es el número que existe para no mentir.
+    const root = mkdtempSync(join(tmpdir(), "consumo-"));
+    try {
+      procesoConAgente(root);
+      const run = (comando: string): { status: number; stdout: string; stderr: string } => {
+        writeFileSync(
+          comando.split(" ")[1] as string,
+          JSON.stringify({ estimated_cost_usd: 0.07, total_tokens: 10 }),
+          "utf8",
+        );
+        return { status: 1, stdout: "", stderr: "se cayó" };
+      };
+      const corrida = runProcess({ root, id: "revisar", params: {}, runCommand: run });
+      expect(corrida.steps[0]?.status).toBe("failed");
+      expect(corrida.steps[0]?.usage?.costUsd).toBe(0.07);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("la ruta del reporte es una variable, no un parámetro del proceso", () => {
+    // La regresión que esto fija: al principio la clave entraba en el mapa de
+    // parámetros, que es el que se valida contra lo declarado, y el motor
+    // rechazaba la corrida con «El proceso no declara el parámetro usage-file».
+    // Una variable de sustitución y un parámetro declarado no son lo mismo, y
+    // confundirlos rompía cualquier proceso que usara la ruta.
+    const root = mkdtempSync(join(tmpdir(), "consumo-"));
+    try {
+      procesoConAgente(root);
+      const { run } = runnerQueReporta({ estimated_cost_usd: 0.01, total_tokens: 1 });
+      const corrida = runProcess({ root, id: "revisar", params: {}, runCommand: run });
+
+      expect(corrida.params).toEqual({});
+      expect(Object.keys(corrida.params)).not.toContain("usage-file");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("una corrida que terminó bien pero gastó deja su estado", () => {
+    // Antes solo se persistía lo que había que retomar, y con ese criterio el
+    // gasto de un agente desaparecía con el proceso: el costo por ticket quedaba
+    // más bajo que el real, y más bajo en la dirección que tranquiliza.
+    const root = mkdtempSync(join(tmpdir(), "consumo-"));
+    try {
+      procesoConAgente(root);
+      const { run } = runnerQueReporta({ estimated_cost_usd: 0.02, total_tokens: 5 });
+      const corrida = runProcess({ root, id: "revisar", params: {}, runCommand: run });
+
+      expect(corrida.ok).toBe(true);
+      expect(corrida.state).not.toBeNull();
+      expect(listRuns(root)).toHaveLength(1);
+      expect(listRuns(root)[0]?.steps[0]?.usage?.costUsd).toBe(0.02);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("una corrida de comandos sigue sin dejar estado", () => {
+    // El freno a la basura sigue en pie: lo que se persiste es lo que hay que
+    // retomar o lo que costó, y un `echo` no es ninguna de las dos.
+    const root = mkdtempSync(join(tmpdir(), "consumo-"));
+    try {
+      const dir = join(root, ".valmen", "processes");
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(
+        join(dir, "simple.yaml"),
+        [
+          "id: simple",
+          "title: Simple",
+          "steps:",
+          "  - id: eco",
+          "    kind: command",
+          "    title: Eco",
+          "    run: echo hola",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+      const corrida = runProcess({
+        root,
+        id: "simple",
+        params: {},
+        runCommand: () => ({ status: 0, stdout: "hola", stderr: "" }),
+      });
+      expect(corrida.state).toBeNull();
+      expect(listRuns(root)).toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("un paso que no es de agente no declara consumo", () => {
+    const root = mkdtempSync(join(tmpdir(), "consumo-"));
+    try {
+      const dir = join(root, ".valmen", "processes");
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(
+        join(dir, "simple.yaml"),
+        [
+          "id: simple",
+          "title: Simple",
+          "steps:",
+          "  - id: eco",
+          "    kind: command",
+          "    title: Eco",
+          "    run: echo hola",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+      const corrida = runProcess({
+        root,
+        id: "simple",
+        params: {},
+        runCommand: () => ({ status: 0, stdout: "hola", stderr: "" }),
+      });
+      expect(corrida.steps[0]?.usage).toBeNull();
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("a qué ticket se carga lo que gastó una corrida", () => {
+  /**
+   * Un proceso con un paso de agente que gasta, y que declara a qué tickets
+   * pertenece la corrida.
+   */
+  function procesoQueGasta(
+    root: string,
+    ticketParam: string | null,
+    tickets: string[],
+  ): void {
+    const dir = join(root, ".valmen", "processes");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      join(dir, "revisar.yaml"),
+      [
+        "id: revisar",
+        "title: Revisar",
+        ...(ticketParam === null ? [] : [`ticket_param: ${ticketParam}`]),
+        "params:",
+        "  tickets: { type: string, required: false }",
+        "steps:",
+        "  - id: revisar",
+        "    kind: agent",
+        "    title: Revisar",
+        "    runtime: escribo-consumo {usage-file}",
+        "    instructions: Revisá.",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    for (const id of tickets) {
+      const carpeta = join(root, "tickets", id.slice(-8, -4), id);
+      mkdirSync(carpeta, { recursive: true });
+      // El tipo tiene que coincidir con el prefijo del identificador: el registro
+      // lo valida, y `addAiUsage` —que escribe en el ticket— lo comprueba. Un
+      // fixture que no lo respete no prueba la atribución: prueba la validación.
+      // El tipo y el módulo tienen que coincidir con los segmentos del
+      // identificador, y `addAiUsage` —que escribe en el ticket— lo comprueba
+      // antes de tocar nada. Un fixture que no lo respete no prueba la
+      // atribución: prueba la validación que la rechaza.
+      const [tipo, modulo] = id.split("-") as [string, string];
+      writeFileSync(
+        join(carpeta, "ticket.md"),
+        TICKET_TEMPLATE.replace(/^id:.*$/m, `id: ${id}`)
+          .replace(/^type:.*$/m, `type: ${tipo}`)
+          .replace(/^module:.*$/m, `module: ${modulo}`)
+          .replace(/^(?:created|updated):.*$/gm, (m) => `${m.split(":")[0]}: 2026-09-24`)
+          .replace(/^# .*$/m, `# ${id}`),
+        "utf8",
+      );
+    }
+  }
+
+  function runnerQueGasta(costUsd: number, totalTokens: number) {
+    return (comando: string): { status: number; stdout: string; stderr: string } => {
+      writeFileSync(
+        comando.split(" ")[1] as string,
+        JSON.stringify({ estimated_cost_usd: costUsd, total_tokens: totalTokens }),
+        "utf8",
+      );
+      return { status: 0, stdout: "", stderr: "" };
+    };
+  }
+
+  /** Las entradas de consumo registradas en un ticket, como dato. */
+  function consumoDe(
+    root: string,
+    id: string,
+  ): { estimated_cost_usd: number; notes: string }[] {
+    const texto = readFileSync(
+      join(root, "tickets", id.slice(-8, -4), id, "ticket.md"),
+      "utf8",
+    );
+    // Se extrae el bloque y se parsea en vez de buscar el número en el texto: un
+    // `toContain("0.1")` daría positivo con `0.15`, y el test afirmaría algo que
+    // no comprobó. Es el mismo error que el test de `root` del servidor MCP, que
+    // se llamaba «declara root» y miraba otra cosa.
+    const bloque = /## Consumo de IA\s*```json\s*([\s\S]*?)```/.exec(texto);
+    if (bloque === null) return [];
+    return JSON.parse(bloque[1] as string) as {
+      estimated_cost_usd: number;
+      notes: string;
+    }[];
+  }
+
+  it("reparte el gasto entre los tickets que declara, y lo dice", () => {
+    // Repartir y no cargar el total a cada uno: una corrida que cubre dos tickets
+    // gastó lo que gastó, no el doble. Cargarlo entero a cada uno inflaría los dos
+    // números y la métrica de coste por ticket dejaría de servir para comparar.
+    const root = mkdtempSync(join(tmpdir(), "atribuir-"));
+    try {
+      const a = "FEATURE-INVENTARIO-API-20260924";
+      const b = "BUGFIX-POS-FILTRO-20260924";
+      procesoQueGasta(root, "tickets", [a, b]);
+
+      const corrida = runProcess({
+        root,
+        id: "revisar",
+        params: { tickets: `${a},${b}` },
+        runCommand: runnerQueGasta(0.2, 1000),
+      });
+
+      expect(corrida.attribution[0]).toContain("2 ticket(s)");
+      expect(corrida.attribution[0]).toContain("$0.1000 cada uno");
+      expect(consumoDe(root, a)[0]?.estimated_cost_usd).toBeCloseTo(0.1, 6);
+      expect(consumoDe(root, b)[0]?.estimated_cost_usd).toBeCloseTo(0.1, 6);
+      // Y el reparto se declara como lo que es: una imputación y no una medición
+      // de lo que costó cada ticket.
+      expect(consumoDe(root, a)[0]?.notes).toContain("no una medición");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("un proceso que no declara `ticket-param` lo dice, en vez de callarse", () => {
+    // Es el modo de fallo que el campo existe para evitar: el proceso corre, el
+    // informe sale, y el gasto simplemente no aparece en ningún lado.
+    const root = mkdtempSync(join(tmpdir(), "atribuir-"));
+    try {
+      procesoQueGasta(root, null, []);
+      const corrida = runProcess({
+        root,
+        id: "revisar",
+        params: {},
+        runCommand: runnerQueGasta(0.3, 10),
+      });
+      expect(corrida.attribution[0]).toContain("no declara");
+      expect(corrida.attribution[0]).toContain("$0.3000");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("un ticket que no está en el registro no se inventa", () => {
+    const root = mkdtempSync(join(tmpdir(), "atribuir-"));
+    try {
+      const real = "FEATURE-INVENTARIO-API-20260924";
+      procesoQueGasta(root, "tickets", [real]);
+
+      const corrida = runProcess({
+        root,
+        id: "revisar",
+        params: { tickets: `${real},NO-EXISTE-20260924` },
+        runCommand: runnerQueGasta(0.1, 100),
+      });
+
+      expect(corrida.attribution.join("\n")).toContain("NO-EXISTE-20260924");
+      expect(corrida.attribution[0]).toContain("1 ticket(s)");
+      expect(consumoDe(root, real)[0]?.estimated_cost_usd).toBeCloseTo(0.1, 6);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("sin consumo no hay nada que atribuir", () => {
+    const root = mkdtempSync(join(tmpdir(), "atribuir-"));
+    try {
+      procesoQueGasta(root, "tickets", ["FEATURE-INVENTARIO-API-20260924"]);
+      const corrida = runProcess({
+        root,
+        id: "revisar",
+        params: { tickets: "FEATURE-INVENTARIO-API-20260924" },
+        runCommand: () => ({ status: 0, stdout: "", stderr: "" }),
+      });
+      expect(corrida.attribution).toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("declarar un `ticket-param` que no existe detiene el proceso al cargarlo", () => {
+    // La mitad del motivo por el que esto es un campo y no una convención de
+    // nombre: una atribución que no ocurre no se nota nunca, así que el error
+    // tiene que aparecer al cargar y no en la contabilidad tres semanas después.
+    const root = mkdtempSync(join(tmpdir(), "atribuir-"));
+    try {
+      const dir = join(root, ".valmen", "processes");
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(
+        join(dir, "malo.yaml"),
+        [
+          "id: malo",
+          "title: Malo",
+          "ticket_param: tickets",
+          "steps:",
+          "  - id: eco",
+          "    kind: command",
+          "    title: Eco",
+          "    run: echo hola",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+
+      const cargado = loadProcesses(root)[0];
+      expect(cargado?.definition.ticketParam).toBe("tickets");
+      expect(() =>
+        validateProcess(cargado?.definition as ProcessDefinition, {
+          processes: ["malo"],
+          gates: [],
+        }),
+      ).toThrow(/no declara/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });

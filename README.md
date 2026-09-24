@@ -131,6 +131,8 @@ valmen index --check    # detecta un índice desactualizado (para CI)
 valmen gate plan --id BUGFIX-POS-ALGO-20260921    # evalúa el plan y emite recibo
 valmen serve                                       # Mission Control en 127.0.0.1
 valmen mcp --install                               # el harness, al alcance del agente
+valmen hermes connect                              # y el aviso de compuertas al celular
+valmen hermes brief                                # lo que espera, lo que se detuvo, lo que se cerró
 ```
 
 ### Desde el agente, sin terminal
@@ -158,6 +160,41 @@ convertiría el control en un trámite. Un agente recorre
 `intake → analyzed → planned` y no puede cruzar a `approved`. Lo mismo vale para
 lo que la persona decide con sus palabras —la QA aprobada, una exención, un
 estándar que entra en vigor—: el agente las **cita**, nunca las escribe.
+
+### Desde el celular
+
+El harness no integra mensajería: delega en [Hermes Agent](https://github.com/NousResearch/hermes-agent),
+que ya habla veintiuna plataformas. Lo que se construye es el puente.
+
+```bash
+valmen hermes connect   # declara el servidor en ~/.hermes/config.yaml y le instala la skill
+valmen hermes status    # qué falta, de las cuatro cosas que pueden faltar
+valmen hermes test      # un mensaje de prueba: lo primero que hay que correr
+```
+
+A partir de ahí, una compuerta que espera una decisión llega al celular:
+
+```bash
+valmen hermes notify    # avisa de los gates que esperan y de los procesos detenidos
+valmen hermes brief     # el parte: lo que espera, lo que se detuvo, lo que se cerró
+```
+
+El aviso de un gate de riesgo `low` o `normal` trae un código corto, y la decisión vuelve
+por donde el agente no la controla:
+
+```bash
+valmen gate-decide --code 5YF9-4NR5 --decision approve --actor juan
+```
+
+**El techo de riesgo lo aplica el motor, no la configuración.** No se emite token para
+riesgo `high` o `critical`, ni para un ticket con impacto de migración, contenedores o
+sincronización, ni para un gate de proceso —un paso de despliegue se aprueba en la máquina,
+con el diff delante—. No hay parámetro para saltearlo, y hay un test que lo afirma.
+
+Y no hay herramienta MCP para aprobar, por la misma razón que no la hay para nada de esto:
+si la aprobación viajara como herramienta, el harness no podría distinguir una decisión
+humana de una aserción del agente, y una inyección de prompt en el cuerpo de un ticket
+bastaría para aprobar.
 
 ### Mission Control
 

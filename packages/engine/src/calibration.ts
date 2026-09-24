@@ -36,7 +36,7 @@
 import { type ParsedTicket, fail } from "@valmen/core";
 
 import { type RegistryPaths } from "./discovery.js";
-import { allDocuments } from "./mutate.js";
+import { documentsForReport } from "./mutate.js";
 
 /** Lo que dijo una persona sobre un ticket, leído de su registro. */
 export type HumanVerdict = "approved" | "rejected" | "unknown";
@@ -82,7 +82,12 @@ export function humanVerdictOf(document: ParsedTicket): HumanReference {
 /** Las referencias de todo el registro, indexadas por identificador. */
 export function humanReferences(paths: RegistryPaths): Map<string, HumanReference> {
   const mapa = new Map<string, HumanReference>();
-  for (const registro of allDocuments(paths)) {
+  for (const registro of documentsForReport(paths)) {
+    // Un ticket que no se pudo leer no tiene veredicto humano que comparar. Se
+    // saltea en vez de tumbar la calibración entera: el informe mide la precisión
+    // del gate sobre lo que sí se puede leer, y negarse por un ticket roto deja
+    // sin el número a quien lo estaba mirando.
+    if (registro.document === null) continue;
     const referencia = humanVerdictOf(registro.document);
     mapa.set(referencia.ticketId, referencia);
   }

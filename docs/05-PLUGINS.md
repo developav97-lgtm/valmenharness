@@ -305,7 +305,7 @@ bloque completo** de la fila, no hace merge profundo. Por eso las filas se direc
 | `@valmen/plugin-tickets` | Compatibilidad con el `ticket.py` de SaiOpenCloud | 1 |
 | `@valmen/plugin-codegraph` | Integración MCP, check de impacto en el gate de plan | 2 |
 | `@valmen/plugin-memory` | Memoria persistente: decisiones, errores, patrones. Alimenta `docs/decisions.md` y `docs/errors.md`. | 4 |
-| `@valmen/plugin-hermes` | Puente a Hermes para control desde el celular | 5 |
+| ~~`@valmen/plugin-hermes`~~ | **No se construyó como plugin**: el puente vive en `@valmen/adapter`, `@valmen/engine` y el CLI. Ver [`12` §C6](12-FUNCIONALIDADES-PROXIMAS.md#c6-integración-bidireccional-con-hermes). | 6 |
 | `@valmen/plugin-observability` | OTEL, costos por sesión, dashboards | 5 |
 | `@valmen/plugin-jira` | Sincronización bidireccional de tickets | 6 |
 | `@valmen/plugin-sprint` | Planificación de sprint, capacidad, velocidad | 6 |

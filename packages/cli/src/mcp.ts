@@ -37,8 +37,13 @@ import { join } from "node:path";
 import {
   type McpEntry,
   MCP_SERVER_ID,
+  buildHermesEntry,
   claudeServer,
   codexToml,
+  hermesAddCommand,
+  hermesBlock,
+  hermesConfigPath,
+  hermesDeepLink,
   mergeClaudeConfig,
   mergeCodexConfig,
   mergeOpencodeConfig,
@@ -275,19 +280,22 @@ export function mcpCommand(request: McpRequest): CommandResult {
     `    dsh plugin --profile web add @deepseek-ai/dsh-mcp-client`,
     `    y añadir el bloque de arriba a ${rutaDsh}`,
     "",
-    "  El puente de DSH publica **herramientas**, no prompts: las 30 herramientas",
-    "  aparecen como `mcp__valmen__<nombre>`, y los prompts del harness no están",
-    "  ahí (siguen disponibles por el CLI).",
+    "  El puente de DSH publica **herramientas**, no prompts: las herramientas del",
+    "  harness aparecen como `mcp__valmen__<nombre>`, y los prompts del harness no",
+    "  están ahí (siguen disponibles por el CLI).",
   );
+
+  lineas.push("");
+  lineas.push(...hermesSnippet(request));
 
   lineas.push(
     "",
     "Comprueba que el servidor arranca antes de culpar al agente:",
-    `  ${entry.command} ${entry.args.join(" ")} --check`,
+    `  ${[entry.command, ...entry.args, "--check"].join(" ")}`,
     "",
     "Y recuerda que ninguna de estas puertas hace falta para trabajar: el CLI",
     "—`valmen …`— funciona en cualquier agente que tenga una shell, incluidos",
-    "los cuatro. El MCP es la puerta cómoda, no la única.",
+    "todos los de arriba. El MCP es la puerta cómoda, no la única.",
     "",
   );
 
@@ -300,4 +308,42 @@ function indent(texto: string): string {
     .split("\n")
     .map((linea) => `    ${linea}`)
     .join("\n");
+}
+
+/**
+ * La sección de Hermes.
+ *
+ * Se **imprime** y no se escribe, aunque Hermes sea un destino más. La razón es
+ * que su configuración no es del proyecto: es `~/.hermes/config.yaml`, una sola
+ * para todos, y escribirla desde `valmen mcp --install` haría que instalar el
+ * servidor en un proyecto tocara la configuración global de la máquina. Eso es
+ * una decisión aparte, con su propio comando —`valmen hermes connect`—, que
+ * además dice qué escribió y dónde.
+ *
+ * Lo que sí se imprime entero es el bloque, para quien prefiera pegarlo, y el
+ * comando de su CLI para quien prefiera su asistente.
+ */
+function hermesSnippet(request: McpRequest): readonly string[] {
+  const entry = buildHermesEntry({
+    root: request.root,
+    invocation: request.cliEntry,
+  });
+  return [
+    "Hermes — configuración global del usuario",
+    `  archivo      ${hermesConfigPath()}`,
+    "  No vive en el proyecto: una sola config para todos, y por eso la entrada",
+    "  lleva la raíz de este proyecto. Conectar un segundo proyecto son dos",
+    "  entradas con nombres distintos.",
+    "",
+    indent(hermesBlock(entry).trimEnd()),
+    "",
+    "  Se escribe con:",
+    "    valmen hermes connect",
+    "",
+    "  O con el asistente de Hermes, que además deja elegir qué herramientas ve:",
+    `    ${hermesAddCommand(entry)}`,
+    "",
+    "  Y si tienes la app de escritorio abierta, el enlace de un clic:",
+    `    ${hermesDeepLink(entry)}`,
+  ];
 }

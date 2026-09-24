@@ -105,7 +105,7 @@ import {
   validateOne,
 } from "@valmen/cli";
 
-import type { ToolDefinition, ToolResult } from "./protocol.js";
+import type { ToolAnnotations, ToolDefinition, ToolResult } from "./protocol.js";
 
 /** Lo que necesita una herramienta para trabajar. */
 export interface ToolContext {
@@ -199,10 +199,68 @@ function conRoot(esquema: {
   };
 }
 
+/**
+ * Las cuatro formas que tiene una herramienta de este catálogo.
+ *
+ * Son cuatro constantes con nombre y no un objeto escrito treinta y cinco veces
+ * por la misma razón que `ROOT` se inyecta en vez de copiarse: un criterio
+ * repetido se desincroniza, y el que se desincroniza es el que nadie revisa. Acá
+ * el criterio se escribe una vez y las herramientas lo **eligen**, así que
+ * discrepar de él exige escribir un objeto entero a mano, que es exactamente el
+ * acto deliberado que se busca.
+ *
+ * El criterio, en una línea cada uno:
+ *
+ * - **`SOLO_LEE`** — no escribe y no gasta. Es la única que un cliente puede
+ *   auto-aprobar sin mirar, y por eso la segunda condición importa tanto como la
+ *   primera: `simular_compuerta` no toca un archivo y sin embargo cuesta una
+ *   llamada por ticket.
+ * - **`ANEXA`** — solo agrega: un archivo nuevo o un bloque append-only. Es el
+ *   invariante 4 del harness visto desde afuera, y es la razón por la que
+ *   `destructiveHint` puede ser `false` sin mentir.
+ * - **`REESCRIBE`** — cambia algo que ya existía: mueve un estado, reescribe un
+ *   índice, cierra una decisión.
+ * - **`GASTA`** — no toca el registro y sale del proyecto: llama a un proveedor
+ *   de modelo. Separada de `SOLO_LEE` justamente para que «de solo lectura» no
+ *   signifique «gratis».
+ *
+ * Las tres que no encajan en ninguna —`descomponer_feature`, `ejecutar_proceso`
+ * e `indexar_registro`— declaran su objeto completo, y eso también dice algo: son
+ * las que combinan cosas que las otras separan.
+ */
+const SOLO_LEE: ToolAnnotations = {
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: false,
+};
+
+const ANEXA: ToolAnnotations = {
+  readOnlyHint: false,
+  destructiveHint: false,
+  idempotentHint: false,
+  openWorldHint: false,
+};
+
+const REESCRIBE: ToolAnnotations = {
+  readOnlyHint: false,
+  destructiveHint: true,
+  idempotentHint: false,
+  openWorldHint: false,
+};
+
+const GASTA: ToolAnnotations = {
+  readOnlyHint: false,
+  destructiveHint: false,
+  idempotentHint: false,
+  openWorldHint: true,
+};
+
 /** El catálogo de herramientas. */
 export const TOOLS: readonly ToolDefinition[] = [
   {
     name: "crear_ticket",
+    annotations: ANEXA,
     title: "Crear un ticket",
     description:
       "Da de alta un ticket en el registro del proyecto, en estado `intake`, a partir " +
@@ -251,6 +309,7 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
   {
     name: "ver_ticket",
+    annotations: SOLO_LEE,
     title: "Ver un ticket",
     description:
       "Devuelve el resumen del ticket: frontmatter, secciones y bloques. Es lo que hay " +
@@ -286,6 +345,7 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
   {
     name: "listar_tickets",
+    annotations: SOLO_LEE,
     title: "Listar tickets",
     description:
       "Lista los tickets del registro con su estado, su módulo y su título. Sin filtros " +
@@ -372,6 +432,7 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
   {
     name: "validar_ticket",
+    annotations: SOLO_LEE,
     title: "Validar un ticket",
     description:
       "Comprueba el ticket contra el contrato y devuelve el error exacto si no lo " +
@@ -389,6 +450,7 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
   {
     name: "mover_ticket",
+    annotations: REESCRIBE,
     title: "Mover el estado de un ticket",
     description:
       "Mueve el estado de un ticket según la tabla del contrato. Los movimientos " +
@@ -418,6 +480,7 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
   {
     name: "anotar_punto",
+    annotations: ANEXA,
     title: "Anotar un hallazgo en el ticket",
     description:
       "Registra un punto en el ticket: algo que no coincide con lo que debía pasar. Sirve " +
@@ -459,6 +522,7 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
   {
     name: "mover_punto",
+    annotations: REESCRIBE,
     title: "Mover un punto por su máquina de estados",
     description:
       "Un punto tiene su propio ciclo, independiente del ticket: `open → analyzed → " +
@@ -485,6 +549,7 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
   {
     name: "anotar_evidencia",
+    annotations: ANEXA,
     title: "Anotar evidencia de algo ya hecho",
     description:
       "Registra la prueba de algo que se hizo: el resultado de una prueba, una inspección " +
@@ -533,6 +598,7 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
   {
     name: "reanudar_ticket",
+    annotations: SOLO_LEE,
     title: "Reanudar un ticket",
     description:
       "Devuelve el contexto de un ticket para retomar trabajo ya empezado: estado, QA, " +
@@ -545,6 +611,7 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
   {
     name: "evaluar_compuerta",
+    annotations: GASTA,
     title: "Evaluar una compuerta",
     description:
       "Evalúa una compuerta contra un ticket y devuelve el veredicto con su recibo: " +
@@ -598,6 +665,7 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
   {
     name: "simular_compuerta",
+    annotations: GASTA,
     title: "Medir una compuerta sobre el histórico",
     description:
       "Corre una compuerta sobre los tickets del registro y devuelve la distribución de " +
@@ -617,6 +685,7 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
   {
     name: "ver_features",
+    annotations: SOLO_LEE,
     title: "Ver las features del proyecto",
     description:
       "Sin `slug`, lista las features con su estado y su progreso. Con uno, devuelve " +
@@ -632,6 +701,12 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
   {
     name: "descomponer_feature",
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
     title: "Descomponer una feature en tickets",
     description:
       "Propone el grafo de tickets de una feature con el modelo del rol `architect` y " +
@@ -655,6 +730,7 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
   {
     name: "ver_procesos",
+    annotations: SOLO_LEE,
     title: "Ver los procesos declarados",
     description:
       "Sin `proceso`, lista los procesos que el proyecto declara en " +
@@ -669,6 +745,7 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
   {
     name: "estado_proceso",
+    annotations: SOLO_LEE,
     title: "Ver las corridas de procesos",
     description:
       "Sin `corrida`, lista las últimas: las detenidas van primero, que son las únicas " +
@@ -683,6 +760,12 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
   {
     name: "ejecutar_proceso",
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
     title: "Ejecutar un proceso",
     description:
       "Corre un proceso con sus parámetros y **se detiene en el primer gate sin " +
@@ -705,6 +788,7 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
   {
     name: "reporte_cierres",
+    annotations: SOLO_LEE,
     title: "Reporte de los tickets cerrados",
     description:
       "El reporte Markdown de lo cerrado en un rango, con el problema, la solución y " +
@@ -726,6 +810,7 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
   {
     name: "calibrar_compuerta",
+    annotations: GASTA,
     title: "Calibrar una compuerta contra el histórico",
     description:
       "Mide una compuerta sobre el registro y la contrasta con lo que registraron las " +
@@ -751,6 +836,7 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
   {
     name: "manifiesto_entrega",
+    annotations: ANEXA,
     title: "Escribir el manifiesto de una entrega",
     description:
       "Registra la versión y los tickets que entran en una entrega. Cada ticket tiene " +
@@ -778,6 +864,12 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
   {
     name: "indexar_registro",
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
     title: "Regenerar el índice del registro",
     description:
       "Regenera `index.md`, o comprueba con `comprobar` si está al día. El motor " +
@@ -796,6 +888,7 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
   {
     name: "revisar_secretos",
+    annotations: SOLO_LEE,
     title: "Revisar secretos antes de commitear",
     description:
       "Busca credenciales en lo que está por entrar al repositorio —las líneas que el " +
@@ -824,6 +917,7 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
   {
     name: "reporte_consumo",
+    annotations: SOLO_LEE,
     title: "Cuánto costó y cuánto se decidió en código",
     description:
       "Cuenta lo que el harness ya escribió en sus recibos: evaluaciones, coste, " +
@@ -857,6 +951,7 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
   {
     name: "revisar_drift",
+    annotations: SOLO_LEE,
     title: "Lo que el ticket dice del código, contra el código",
     description:
       "Contrasta lo que un ticket cita —archivos, símbolos como `Modelo.campo`, y otros " +
@@ -909,6 +1004,7 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
   {
     name: "reporte_valor",
+    annotations: SOLO_LEE,
     title: "Qué costó y qué dejó cada ticket cerrado",
     description:
       "El consumo agregado dice cuánto se gastó; esto dice **en qué**. Toma los tickets " +
@@ -950,6 +1046,7 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
   {
     name: "buscar_memoria",
+    annotations: SOLO_LEE,
     title: "Buscar en la memoria del proyecto",
     description:
       "Busca en lo que el proyecto ya decidió y ya falló: sus documentos de decisiones y " +
@@ -976,6 +1073,7 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
   {
     name: "guardar_aprendizaje",
+    annotations: ANEXA,
     title: "Guardar un aprendizaje en la memoria",
     description:
       "Anexa un aprendizaje al registro del proyecto —lo que este trabajo enseñó y no " +
@@ -1007,6 +1105,7 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
   {
     name: "revisar_aprendizajes",
+    annotations: REESCRIBE,
     title: "La cola de aprendizajes: qué hacer con lo aprendido",
     description:
       "La memoria tiene entrada y salida. **Entrada**: guardás lo que el trabajo te enseñó con " +
@@ -1040,6 +1139,7 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
   {
     name: "ver_estandares",
+    annotations: SOLO_LEE,
     title: "Los estándares del proyecto",
     description:
       "Las reglas que el proyecto ya decidió sobre cómo se ve y cómo se escribe: " +
@@ -1051,6 +1151,7 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
   {
     name: "proponer_estandar",
+    annotations: ANEXA,
     title: "Proponer un estándar",
     description:
       "Propone una convención para que el proyecto la adopte. **Usala cuando el trabajo " +
@@ -1098,6 +1199,7 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
   {
     name: "decidir_estandar",
+    annotations: REESCRIBE,
     title: "Aceptar o descartar un estándar propuesto",
     description:
       "Cierra una propuesta de estándar: `aceptado` escribe la regla en " +
@@ -1135,6 +1237,7 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
   {
     name: "revisar_presentacion",
+    annotations: SOLO_LEE,
     title: "Colores fijos en lo que estás por entregar",
     description:
       "Revisa las líneas que el cambio agrega a los archivos de interfaz y avisa de los " +
@@ -1189,6 +1292,7 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
   {
     name: "iniciar_qa",
+    annotations: ANEXA,
     title: "Abrir un ciclo de QA",
     description:
       "Abre el ciclo de QA de un ticket que está `in_qa`, con el ambiente y la referencia " +
@@ -1219,6 +1323,7 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
   {
     name: "anotar_retest",
+    annotations: ANEXA,
     title: "Anotar el resultado de un retest",
     description:
       "Registra el retest de un punto dentro del ciclo de QA abierto. El punto tiene que " +
@@ -1248,6 +1353,7 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
   {
     name: "cerrar_qa",
+    annotations: ANEXA,
     title: "Cerrar el ciclo de QA",
     description:
       "Cierra el ciclo abierto con su resultado. `changes_requested` y `failed` son " +
@@ -1275,6 +1381,7 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
   {
     name: "preparar_cierre",
+    annotations: ANEXA,
     title: "Registrar el intento de cierre",
     description:
       "Escribe el intento de cierre: los dos resúmenes, el estado de QA y el impacto de " +

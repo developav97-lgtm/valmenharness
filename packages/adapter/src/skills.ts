@@ -45,15 +45,29 @@ const SKILL_LINE_RE = /^([A-Za-z0-9_-]+):\s*(.*)$/;
 /**
  * Los runtimes a los que se proyectan las skills, con su directorio.
  *
- * `.agents/` no está: un directorio propio del harness sería un cuarto formato
- * que mantener y ningún cliente lo lee por ese nombre. Los tres de la tabla son
- * los que los clientes buscan de verdad, y `opencode` lee además los dos
- * últimos, así que la misma skill sirve en los tres sin duplicar el contenido.
+ * Los tres primeros son los que los clientes buscan de verdad, y `opencode` lee
+ * además los dos últimos, así que la misma skill sirve en los tres sin duplicar
+ * el contenido.
+ *
+ * **`.agents/` se sumó después, y el motivo por el que no estaba era correcto y
+ * dejó de serlo.** El comentario decía que un directorio propio del harness sería
+ * un cuarto formato que nadie lee por ese nombre; pero `.agents/skills/` no es
+ * nuestro: es la convención cross-tool que varios CLIs de agentes comparten, y
+ * Hermes la lee como skills **project-local** de máxima precedencia. La
+ * diferencia con el MCP, que ya sirve estas mismas skills como prompts, no es
+ * cosmética: por el protocolo el agente tiene que saber que puede pedirlas,
+ * mientras que proyectadas aparecen en su índice, se cargan solas cuando vienen
+ * al caso y quedan como `/comando`. Es la diferencia entre que estén disponibles y
+ * que el agente las use.
+ *
+ * La proyección **solo escribe**: nunca borra el directorio ni lo vacía, así que
+ * compartirlo con otras herramientas no les toca nada.
  */
 export const SKILL_RUNTIMES = {
   opencode: ".opencode/skills",
   claude: ".claude/skills",
   codex: ".codex/skills",
+  agents: ".agents/skills",
 } as const;
 
 /**
@@ -69,13 +83,19 @@ export const RUNTIME_DIRS = {
   opencode: ".opencode/",
   claude: ".claude/",
   codex: ".codex/",
+  agents: ".agents/",
 } as const;
 
 /** Un runtime de proyección de skills. */
 export type SkillRuntime = keyof typeof SKILL_RUNTIMES;
 
 /** Todos los runtimes, en orden estable. */
-export const SKILL_RUNTIME_IDS: readonly SkillRuntime[] = ["opencode", "claude", "codex"];
+export const SKILL_RUNTIME_IDS: readonly SkillRuntime[] = [
+  "opencode",
+  "claude",
+  "codex",
+  "agents",
+];
 
 /** Separa el frontmatter del cuerpo. */
 function splitSkillFrontmatter(text: string): {

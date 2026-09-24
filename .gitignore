@@ -25,3 +25,6 @@ coverage/
 # La configuración de opencode la genera `valmen mcp --install` y cada proyecto
 # decide si la versiona. Aquí es configuración del entorno de trabajo.
 opencode.json
+
+# La convención cross-tool de skills, que leen Hermes y otros CLIs.
+.agents/

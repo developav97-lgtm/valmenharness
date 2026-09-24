@@ -39,6 +39,8 @@ import {
   renderBlueprintOutcome,
   renderRouting,
   routingPath,
+  SKILL_RUNTIME_IDS,
+  RUNTIME_DIRS,
 } from "@valmen/adapter";
 
 import {
@@ -71,6 +73,7 @@ import {
   parseTicketList,
   renderManifest,
   renderReport,
+  unreadableTickets,
   ticketsPath,
 } from "@valmen/engine";
 import { guardarFotoEnTicket } from "@valmen/server";
@@ -628,11 +631,12 @@ export function syncProject(
     );
   }
 
-  lines.push(
-    `    .codex/                ${byRuntime.codex} archivo(s)`,
-    `    .opencode/             ${byRuntime.opencode} archivo(s)`,
-    `    .claude/               ${byRuntime.claude} archivo(s)`,
-  );
+  // Los runtimes se listan desde la tabla del adaptador y no a mano: escritos a
+  // mano se desincronizaron en cuanto se agregó `.agents/`, y el informe decía
+  // que se habían proyectado tres cuando eran cuatro.
+  for (const runtime of SKILL_RUNTIME_IDS) {
+    lines.push(`    ${RUNTIME_DIRS[runtime].padEnd(23)}${byRuntime[runtime]} archivo(s)`);
+  }
 
   if (proyeccion.ruleCount === 0) {
     lines.push("  Añada reglas en .valmen/rules/ para que se incluyan en AGENTS.md.");
@@ -931,7 +935,20 @@ export function reportClosed(
       ...(typeof rawQuery === "string" && rawQuery !== "" ? { query: rawQuery } : {}),
     });
 
-    return ok(renderReport(entradas, desde, hasta));
+    // Un ticket que no se pudo leer **no se saltea en silencio**. El informe
+    // sigue saliendo —es lo que se pidió, y negarse por un renglón roto deja sin
+    // el panorama a quien lo estaba mirando—, pero dice qué quedó afuera. Un
+    // informe con aspecto completo y un dato de menos es peor que uno incompleto
+    // que lo declara.
+    const ilegibles = unreadableTickets(paths);
+    const aviso =
+      ilegibles.length === 0
+        ? ""
+        : `\n---\n\n⚠ ${ilegibles.length} ticket(s) no se pudieron leer y quedaron fuera del informe:\n` +
+          ilegibles.map((t) => `  · ${t.id} — ${t.error}`).join("\n") +
+          "\n";
+
+    return ok(renderReport(entradas, desde, hasta) + aviso);
   } catch (caught) {
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);
@@ -1723,8 +1740,20 @@ export function runProcessCommand(
       };
     }
 
+    // Lo que se hizo con el consumo se dice **siempre** que haya algo que decir,
+    // incluso cuando no se pudo cargar a ningún ticket: un gasto que no aparece en
+    // ningún informe es un gasto que nadie va a buscar.
+    const consumo =
+      corrida.attribution.length === 0
+        ? []
+        : ["", "Consumo:", ...corrida.attribution.map((linea) => `  ${linea}`)];
+
     return ok(
-      `Proceso ${corrida.id}: ${corrida.steps.length} paso(s) en ${corrida.durationMs} ms.\n`,
+      [
+        `Proceso ${corrida.id}: ${corrida.steps.length} paso(s) en ${corrida.durationMs} ms.`,
+        ...consumo,
+        "",
+      ].join("\n"),
     );
   } catch (caught) {
     const failure = toFailure(caught);

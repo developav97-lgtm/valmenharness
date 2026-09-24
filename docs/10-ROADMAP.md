@@ -261,6 +261,14 @@ Prioridad estricta. Cada paquete se termina antes de empezar el siguiente.
 | 19  | `plugins/codegraph`                     | 5    | Integración MCP.                                                   |
 | 20  | `plugins/memory`, `plugins/hermes`      | 6    | Autonomía y móvil.                                                 |
 
+**El puente de Hermes no se construyó como paquete 20, y conviene decir por qué.** El plan
+preveía `plugins/hermes`; lo que se hizo vive en `@valmen/adapter` —la declaración del
+servidor, la skill que se le instala y la configuración—, `@valmen/engine` —el token de
+aprobación, el canal de notificación y los mensajes— y el CLI, bajo `valmen hermes`. Un
+paquete aparte habría sido un plugin para cargar código que el harness ya tiene, y el total
+sigue siendo veinte. Ver
+[`12-FUNCIONALIDADES-PROXIMAS.md` §C6](12-FUNCIONALIDADES-PROXIMAS.md#c6-integración-bidireccional-con-hermes).
+
 **Son 20 paquetes, no 200.** Lección de DSH: la granularidad agresiva paga solo con su
 escala. Se parte un paquete cuando duela, no antes.
 

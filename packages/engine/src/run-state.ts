@@ -23,6 +23,7 @@
  * paralelo del que ya existe. Se guarda el veredicto —paso, estado, cuándo— y la
  * salida se ve mientras corre.
  */
+import type { StepUsage } from "./process.js";
 import { mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
@@ -50,6 +51,15 @@ export interface RunStepState {
   readonly at: string;
   /** El comando ya sustituido, para poder auditar qué corrió. */
   readonly detail: string;
+  /**
+   * Lo que costó el paso, si su runtime dejó el reporte.
+   *
+   * Opcional porque las corridas anteriores a esto no lo tienen, y porque la
+   * mayoría de los pasos no gasta nada: un `npm run build` no tiene consumo que
+   * registrar. Ausente y cero no son lo mismo —uno dice «no gastó» y el otro
+   * «no se sabe»— y por eso es `null` y no `0` cuando no hay dato.
+   */
+  readonly usage?: StepUsage | null;
 }
 
 /** Una corrida de un proceso. */
@@ -183,7 +193,14 @@ export function renderRun(state: ProcessRunState): string {
     lineas.push("  pasos:");
     for (const paso of state.steps) {
       const marca = paso.status === "ok" ? "✓" : paso.status === "failed" ? "✗" : "·";
-      lineas.push(`    ${marca} ${paso.id}`);
+      // El costo se muestra al lado del paso que lo gastó, no sumado al final: lo
+      // que se quiere saber cuando una corrida salió cara es **qué paso** la hizo
+      // cara, y un total no contesta eso.
+      const costo =
+        paso.usage == null
+          ? ""
+          : ` — $${paso.usage.costUsd.toFixed(4)}${paso.usage.model === null ? "" : ` (${paso.usage.model})`}`;
+      lineas.push(`    ${marca} ${paso.id}${costo}`);
     }
   }
   return lineas.join("\n") + "\n";

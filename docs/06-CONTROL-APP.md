@@ -588,6 +588,31 @@ Escenario real: la web abierta, un agente por CLI trabajando, y un proceso en ba
 El pedido: _"mirar integraciones con hermes agent para poder tener control desde el celular
 o que se integren funcionalidades entre los dos"_.
 
+> **Estado: hecho.** Lo que sigue es el diseño, y se conserva porque una decisión sin
+> registro se vuelve a discutir. Tres cosas cambiaron al construirlo, y las tres por lo
+> mismo —Hermes ya trae la pieza y el diseño la suponía por construir—:
+>
+> 1. **La salida no usa el adaptador webhook.** En vez de un servidor HTTP con
+>    `deliver_only` y firma HMAC, se llama a **`hermes send`**, que manda un mensaje a
+>    cualquiera de sus plataformas sin agente y sin bucle, reusando las credenciales de la
+>    pasarela. No hay puerto que abrir, ni ruta que declarar, ni secreto que compartir para
+>    avisar, y los códigos de salida son el recibo de entrega. Menos piezas y menos
+>    superficie.
+> 2. **No hay `plugin-hermes`.** El puente vive en `@valmen/adapter` (la declaración y la
+>    skill), `@valmen/engine` (el token, el canal, los mensajes) y el CLI (`valmen hermes`).
+>    Un plugin habría sido un paquete para cargar código desde npm que el harness ya tiene.
+> 3. **La aprobación vuelve por un código, no por un botón.** `valmen hermes notify` emite un
+>    token HMAC de un solo uso y manda su código corto; `valmen gate-decide --code` lo
+>    consume. El `5.3` describe el callback con botón; un botón de chat exige que alguien
+>    reciba el callback, y eso es lo que abre el puerto que el punto 2 de `11-OPEN-QUESTIONS`
+>    recomienda no abrir.
+>
+> Lo que **no** cambió es la regla dura ni el reparto: el techo de riesgo lo aplica
+> `mintApproval` —nunca un token para `high`, `critical`, un impacto duro o un gate de
+> proceso, y sin parámetro para saltearlo—, y las tareas que `5.4` deja fuera siguen fuera.
+> El detalle de lo construido está en
+> [`12-FUNCIONALIDADES-PROXIMAS.md` §C6](12-FUNCIONALIDADES-PROXIMAS.md#c6-integración-bidireccional-con-hermes).
+
 ### 5.1 Qué es Hermes realmente (verificado)
 
 Hermes Agent es el agente de Nous Research: **terminal-native**, autónomo, con memoria

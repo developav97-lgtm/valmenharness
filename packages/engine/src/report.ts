@@ -29,7 +29,7 @@ import { existsSync } from "node:fs";
 
 import { type ParsedTicket, EXIT_SCHEMA, fail } from "@valmen/core";
 
-import { allDocuments } from "./mutate.js";
+import { documentsForReport } from "./mutate.js";
 import { type RegistryPaths, ticketsPath } from "./discovery.js";
 
 /** El texto que el visor ponía cuando no había nada que contar. */
@@ -181,8 +181,10 @@ export function toReportEntry(document: ParsedTicket): ReportEntry | null {
 export function closedTickets(paths: RegistryPaths): ReportEntry[] {
   if (!existsSync(ticketsPath(paths))) return [];
 
-  return allDocuments(paths)
-    .map((registro) => toReportEntry(registro.document))
+  return documentsForReport(paths)
+    .map((registro) =>
+      registro.document === null ? null : toReportEntry(registro.document),
+    )
     .filter((entrada): entrada is ReportEntry => entrada !== null)
     .sort((a, b) => {
       if (a.closedOn !== b.closedOn) return a.closedOn < b.closedOn ? -1 : 1;
