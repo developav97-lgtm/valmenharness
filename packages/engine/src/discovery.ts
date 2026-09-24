@@ -109,6 +109,40 @@ export function configList(root: string, clave: string): string[] {
   return lista.filter((entrada): entrada is string => typeof entrada === "string");
 }
 
+/**
+ * Cuánto se espera a un comando de verificación declarado en un criterio.
+ *
+ * El tope por defecto son 30 segundos, que alcanzan para un test unitario y no
+ * para lo que tarda una suite dentro de `docker compose` —el primer proyecto real
+ * que usó el gate mecánico con contenedores lo pasó y el gate respondió «El
+ * comando "docker" superó el tiempo máximo de 30000 ms»—. El proyecto lo declara
+ * en `test-timeout` (segundos), y sin esa clave se mantiene el valor de siempre.
+ */
+export function testTimeout(root: string): number {
+  let texto: string;
+  try {
+    texto = readFileSync(join(root, ".valmen", "config.yaml"), "utf8");
+  } catch {
+    return POR_DEFECTO;
+  }
+
+  let documento: YamlValue;
+  try {
+    documento = parseYamlSubset(texto, { fileName: ".valmen/config.yaml" });
+  } catch {
+    return POR_DEFECTO;
+  }
+  if (typeof documento !== "object" || Array.isArray(documento)) return POR_DEFECTO;
+
+  const bruto = (documento as YamlMap)["test-timeout"];
+  const segundos = typeof bruto === "number" ? bruto : Number.parseInt(String(bruto), 10);
+  if (!Number.isFinite(segundos) || segundos <= 0) return POR_DEFECTO;
+  return Math.round(segundos * 1000);
+}
+
+/** El tope de siempre para un comando de verificación: 30 segundos. */
+const POR_DEFECTO = 30_000;
+
 /** `true` si el directorio tiene al menos un `ticket.md` en su segundo nivel. */
 function contieneTickets(base: string): boolean {
   let anios: string[];

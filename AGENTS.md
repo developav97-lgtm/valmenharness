@@ -213,7 +213,10 @@ Cada criterio de aceptación declara **cómo se verifica**, en un comentario deb
 El gate `qa-mechanical` corre los declarados antes de que el ticket pase a las
 pruebas del responsable, y la entrega no avanza sin ese recibo. Los comandos
 permitidos los declara el proyecto en `test-commands` (`.valmen/config.yaml`), y
-el prefijo se compara por palabra completa. Un criterio sin anotación detiene el
+el prefijo se compara por palabra completa. El tiempo máximo de cada comando son
+30 segundos, y se cambia con `test-timeout` (en segundos): una suite que corre
+dentro de `docker compose` tarda más, y el gate la corta con un error que parece
+del comando y no del tope. Un criterio sin anotación detiene el
 gate: la ambigüedad se resuelve sola a favor de «seguramente está bien», y un
 criterio que solo verifica una persona se marca `verify: manual` —que es una
 declaración, no una omisión—.

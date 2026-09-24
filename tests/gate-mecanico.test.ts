@@ -12,6 +12,7 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { testTimeout } from "../packages/engine/src/discovery.js";
 import { runGate } from "../packages/engine/src/gate.js";
 import { readReceipts } from "../packages/engine/src/receipts.js";
 import { transition } from "../packages/engine/src/transition.js";
@@ -60,6 +61,33 @@ afterEach(() => {
 });
 
 const correr = () => runGate(PATHS(), { gateId: "qa-mechanical", ticketId: TICKET });
+
+describe("el tope de tiempo de un comando de verificación", () => {
+  it("sale de la configuración del proyecto, con 30 segundos por defecto", async () => {
+    // El primer proyecto con tests dentro de `docker compose` se pasó del tope y el
+    // gate respondió «El comando "docker" superó el tiempo máximo de 30000 ms»: un
+    // error que parece del comando y es del tope.
+    mkdirSync(join(lab, ".valmen"), { recursive: true });
+    expect(testTimeout(lab)).toBe(30_000);
+
+    writeFileSync(
+      join(lab, ".valmen", "config.yaml"),
+      "name: Laboratorio\ntest-timeout: 600\n",
+      "utf8",
+    );
+    expect(testTimeout(lab)).toBe(600_000);
+  });
+
+  it("un valor inválido no cambia el tope", () => {
+    mkdirSync(join(lab, ".valmen"), { recursive: true });
+    writeFileSync(
+      join(lab, ".valmen", "config.yaml"),
+      "name: Laboratorio\ntest-timeout: lo-que-sea\n",
+      "utf8",
+    );
+    expect(testTimeout(lab)).toBe(30_000);
+  });
+});
 
 describe("corre lo que los criterios declaran", () => {
   it("aprueba cuando el test del criterio pasa, sin gastar una llamada", async () => {

@@ -4150,9 +4150,9 @@
           zona.append(
             el(
               "div",
-              "Ninguna sesión trabajó este ticket: ni de opencode ni de codex. " +
-                "El consumo se registra buscando el identificador en lo que hizo cada sesión, " +
-                "así que un ticket que se trabajó a mano no tiene nada que mostrar.",
+              "Ninguna sesión trabajó este ticket: ni de opencode, ni de codex, ni de " +
+                "Hermes. El consumo se registra buscando el identificador en lo que hizo cada " +
+                "sesión, así que un ticket que se trabajó a mano no tiene nada que mostrar.",
               "vacio",
             ),
           );
@@ -4192,8 +4192,8 @@
           resumen,
         );
 
-        // Las sesiones, con su origen: una de codex se entiende sabiendo de dónde
-        // viene, porque su coste no existe y sus tokens sí.
+        // Las sesiones, con su origen: una de codex o de Hermes se entiende sabiendo
+        // de dónde viene, porque su coste puede no existir y sus tokens sí.
         const tablaSesiones = el("table", undefined, "tabla-intervenciones");
         const cabSesiones = el("tr");
         for (const titulo of ["origen", "agente", "modelo", "tokens", "coste", "intervenciones"]) {

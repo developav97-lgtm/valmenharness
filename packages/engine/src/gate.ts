@@ -43,7 +43,7 @@ import { type CommandCheck } from "@valmen/gate-command";
 import { type EvaluatorId, evaluateGate } from "./evaluators.js";
 
 import type { RunnerResult } from "./result.js";
-import { type RegistryPaths, configList, findTicket } from "./discovery.js";
+import { type RegistryPaths, configList, findTicket, testTimeout } from "./discovery.js";
 import { buildGateState, runMechanicalChecks } from "./state.js";
 import { appendReceipt } from "./receipts.js";
 
@@ -243,6 +243,7 @@ export async function runGate(
     const { checks: generados, refused } = commandChecksFor(
       criteria,
       testCommands(paths.root),
+      testTimeout(paths.root),
     );
     if (refused.length > 0) {
       return {

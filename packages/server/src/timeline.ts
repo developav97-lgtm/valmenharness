@@ -27,6 +27,7 @@ import { join } from "node:path";
 import { type RegistryPaths, addAiUsage } from "@valmen/engine";
 
 import { leerSesionesDeCodex } from "./codex.js";
+import { leerSesionesDeHermes } from "./hermes.js";
 
 /**
  * La base de datos de opencode, cargada **de forma perezosa**.
@@ -91,7 +92,7 @@ export interface SesionDeAgente {
    * ticket se puede hacer desde codex. El dato se muestra porque una sesión sin
    * coste solo se entiende sabiendo de dónde viene.
    */
-  readonly source: "opencode" | "codex";
+  readonly source: "opencode" | "codex" | "hermes";
   readonly agent: string;
   readonly provider: string;
   readonly model: string;
@@ -281,13 +282,19 @@ export function leerLineaDeTiempo(
 
   if (db === null) {
     // Sin base de opencode puede haber igual consumo: un proyecto que trabaja
-    // desde codex y nada más. Devolver `null` ahí borraría su línea de tiempo
-    // entera, que es lo que pasaba antes de que existiera este lector.
+    // desde codex o desde Hermes y nada más. Devolver `null` ahí borraría su línea
+    // de tiempo entera, que es lo que pasaba antes de que existieran estos lectores.
     const sesiones = leerSesionesDeCodex(directory, {
       ...(options.home === undefined ? {} : { home: options.home }),
       ...(options.ticketId === undefined ? {} : { ticketId: options.ticketId }),
     });
-    return sesiones.length === 0 ? null : lineaSoloDeCodex(sesiones, directory);
+    if (sesiones.length > 0) return lineaSoloDeCodex(sesiones, directory);
+
+    const deHermes = leerSesionesDeHermes(directory, {
+      ...(options.home === undefined ? {} : { home: options.home }),
+      ...(options.ticketId === undefined ? {} : { ticketId: options.ticketId }),
+    });
+    return deHermes.length === 0 ? null : lineaSoloDeHermes(deHermes, directory);
   }
 
   try {
@@ -328,6 +335,55 @@ function lineaSoloDeCodex(
       output: sesiones.reduce((suma, s) => suma + s.outputTokens, 0),
       reasoning: sesiones.reduce((suma, s) => suma + s.reasoningTokens, 0),
       cacheRead: sesiones.reduce((suma, s) => suma + s.cachedInputTokens, 0),
+    },
+    desglose: {
+      harnessUsd: 0,
+      exploracionUsd: 0,
+      harnessMensajes: 0,
+      exploracionMensajes: 0,
+    },
+  };
+}
+
+/**
+ * La línea de tiempo de un proyecto del que solo hay sesiones de Hermes.
+ *
+ * Mismo caso que el de codex: sin base de opencode, el consumo puede venir del
+ * puente al celular, y devolver `null` diría que no hubo trabajo. Hermes sí trae
+ * coste estimado, así que el total no es cero cuando el proveedor lo declara.
+ */
+function lineaSoloDeHermes(
+  sesiones: readonly import("./hermes.js").SesionDeHermes[],
+  directory: string,
+): LineaDeTiempo {
+  const convertidas: SesionDeAgente[] = sesiones.map((sesion) => ({
+    id: sesion.id,
+    title: sesion.title === "" ? "Sesión de Hermes" : sesion.title,
+    source: "hermes" as const,
+    agent: `hermes:${sesion.origin}`,
+    provider: sesion.provider,
+    model: sesion.model,
+    costUsd: sesion.costUsd,
+    inputTokens: sesion.inputTokens,
+    outputTokens: sesion.outputTokens,
+    reasoningTokens: sesion.reasoningTokens,
+    cacheReadTokens: sesion.cacheReadTokens,
+    startedAt: sesion.startedAt,
+    intervenciones: sesion.toolCalls,
+    fallidas: 0,
+  }));
+
+  return {
+    source: `hermes:${directory}`,
+    sessions: convertidas,
+    intervenciones: [],
+    totalCostUsd: convertidas.reduce((suma, s) => suma + (s.costUsd ?? 0), 0),
+    sesionesSinCoste: convertidas.filter((s) => s.costUsd === null).length,
+    totalTokens: {
+      input: sesiones.reduce((suma, s) => suma + s.inputTokens, 0),
+      output: sesiones.reduce((suma, s) => suma + s.outputTokens, 0),
+      reasoning: sesiones.reduce((suma, s) => suma + s.reasoningTokens, 0),
+      cacheRead: sesiones.reduce((suma, s) => suma + s.cacheReadTokens, 0),
     },
     desglose: {
       harnessUsd: 0,
@@ -540,6 +596,31 @@ function consultar(
     });
   }
 
+  // Las de Hermes —el puente al celular—, que ejecuta con su propio agente: llamó
+  // a las herramientas del harness por MCP y hasta ahora no lo veía nadie. Trae
+  // coste estimado, que es más de lo que trae codex.
+  for (const sesion of leerSesionesDeHermes(directory, {
+    ...(home === undefined ? {} : { home }),
+    ...(ticketId === undefined ? {} : { ticketId }),
+  })) {
+    sesiones.set(`hermes:${sesion.id}`, {
+      id: sesion.id,
+      title: sesion.title === "" ? "Sesión de Hermes" : sesion.title,
+      source: "hermes",
+      agent: `hermes:${sesion.origin}`,
+      provider: sesion.provider,
+      model: sesion.model,
+      costUsd: sesion.costUsd,
+      inputTokens: sesion.inputTokens,
+      outputTokens: sesion.outputTokens,
+      reasoningTokens: sesion.reasoningTokens,
+      cacheReadTokens: sesion.cacheReadTokens,
+      startedAt: sesion.startedAt,
+      intervenciones: sesion.toolCalls,
+      fallidas: 0,
+    });
+  }
+
   // **La atribución, cuando se pide un ticket.** Sin esto, el coste que mostraba
   // la pantalla de un ticket era el de **todas** las sesiones del proyecto: un
   // número con aspecto de dato y sin relación con lo que se estaba mirando. Una
@@ -547,9 +628,13 @@ function consultar(
   // al harness que lo nombra; para codex, una sesión que lo menciona—.
   if (ticketId !== undefined) {
     for (const [clave, sesion] of sesiones) {
-      // Las de codex ya vienen filtradas por el ticket desde su lector: ahí la
-      // pertenencia se decide por mención, que es lo que hay.
-      const tocaElTicket = sesion.source === "codex" || sesionesDelTicket.has(clave);
+      // Las de codex y Hermes ya vienen filtradas por el ticket desde su lector:
+      // ahí la pertenencia se decide por mención —una sesión de Hermes que llama a
+      // `mover_ticket` con el identificador es de ese ticket—, que es lo que hay.
+      const tocaElTicket =
+        sesion.source === "codex" ||
+        sesion.source === "hermes" ||
+        sesionesDelTicket.has(clave);
       if (!tocaElTicket) sesiones.delete(clave);
     }
   }

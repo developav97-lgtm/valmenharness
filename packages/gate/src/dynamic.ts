@@ -148,6 +148,12 @@ export function criterionProposition(index: number, criterion: CriterionSpec): P
 export function commandChecksFor(
   criteria: readonly CriterionSpec[],
   allowed: readonly string[],
+  /**
+   * Cuánto se espera a cada comando. Sin esto, una suite dentro de `docker
+   * compose` se corta a los 30 segundos y el gate informa un timeout que parece
+   * un fallo del comando.
+   */
+  timeoutMs?: number,
 ): { readonly checks: readonly CommandCheckSpec[]; readonly refused: readonly string[] } {
   const checks: CommandCheckSpec[] = [];
   const refused: string[] = [];
@@ -166,6 +172,7 @@ export function commandChecksFor(
       propositionId: proposicion,
       command: partes[0] as string,
       args: partes.slice(1),
+      ...(timeoutMs === undefined ? {} : { timeoutMs }),
       description: criterion.text,
     });
   });
