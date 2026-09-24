@@ -257,6 +257,14 @@ exactos, directorio de ejecución, resultado esperado, validaciones manuales y
 requisitos de ambiente. El ticket pasa a `awaiting_user_tests` y solo avanza con
 el resultado del responsable o con una omisión explícita y documentada.
 
+Y **los criterios que se verificaron quedan marcados** con `- [x]` en el ticket.
+Una casilla sin marcar en un ticket entregado —o peor, cerrado— dice que nadie
+comprobó ese criterio: el registro afirma a la vez que el trabajo está aprobado y
+que hay criterios que nadie miró. Los que se corren por comando se marcan cuando
+el recibo del gate mecánico dice que pasaron; los `verify: manual`, cuando quien
+prueba confirma el resultado, no antes. Un criterio que dejó de aplicar no se
+marca en falso: se dice por qué en la entrega.
+
 Los commits se crean solo tras la confirmación de las pruebas. Antes de
 commitear, revisar el estado del repositorio, identificar los archivos
 atribuibles al ticket y excluir los ajenos sin modificarlos. Los cambios ajenos

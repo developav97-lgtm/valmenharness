@@ -27,6 +27,16 @@ Clasificar cada hallazgo como **bloqueante o no bloqueante**, con el archivo o c
 
 Los hallazgos funcionales de la misma solicitud se registran en el ticket como puntos; **no se borran ni se renumeran los ciclos previos**.
 
+## Los criterios se marcan
+
+Antes de entregar y antes de cerrar, **cada criterio de aceptación que se verificó queda marcado** con `- [x]` en el ticket. Una casilla sin marcar en un ticket entregado —o peor, cerrado— dice que nadie comprobó ese criterio, y el registro queda afirmando dos cosas a la vez: el ticket está aprobado y hay criterios que nadie miró.
+
+- Los que se corrieron por comando y pasaron, marcados. El recibo del gate mecánico dice cuáles: si un criterio con `<!-- test: … -->` no pasó, el ticket no se entrega.
+- Los `verify: manual`, marcados cuando quien prueba confirma el resultado —no antes—. Mientras no se hayan probado, quedan sin marcar y el ticket no está listo.
+- Un criterio que dejó de aplicar **no se borra ni se marca en falso**: se dice por qué en la entrega, y si el alcance cambió, eso se resuelve en el plan.
+
+Marcarlos es parte de entregar, como escribir los comandos exactos: es lo que permite leer un ticket cerrado dentro de un año y saber qué se comprobó.
+
 ## Informe y siguiente estado
 
 Entregar un informe breve con:

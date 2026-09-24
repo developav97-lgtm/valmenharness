@@ -765,13 +765,23 @@ primeros tickets implementados y cerrados a través del harness.
 
 | # | Entregable | Estado |
 |---|---|---|
-| 6.1 | Memoria persistente: decisiones, errores, patrones aprendidos | **Hecho**, con la memoria y los estándares: búsqueda sobre `memory-sources`, `guardar_aprendizaje`, y la regla que se propone, se decide con las palabras de la persona y entra en vigor. Falta la captura pasiva (A5) con su cola de revisión |
+| 6.1 | Memoria persistente: decisiones, errores, patrones aprendidos | **Hecho**: búsqueda sobre `memory-sources`, `guardar_aprendizaje`, la **cola de revisión** que clasifica cada aprendizaje en regla, caso o descarte, y los estándares —la regla se propone, se decide con las palabras de la persona y entra en vigor— |
 | 6.2 | Puente de Hermes para control desde el celular | **Descartado por decisión del responsable** |
 | 6.3 | Promoción automática de gates `hybrid` → `auto` por evidencia | **La evidencia, hecha**: `valmen usage` calibra cada compuerta contra el veredicto humano del ticket. Falta el acto de promover (hoy se edita la configuración con el número delante) |
 | 6.4 | Modo headless: ejecución desatendida de tickets de bajo riesgo | **Falta**, y va al final a propósito: necesita el histórico de calibración que todavía no existe |
 | 6.5 | Reportes diario/semanal generados del motor | **El contenido, hecho** (`valmen report`, `valmen usage`, el visor); falta la cadencia — nada los genera solo |
 | 6.6 | Observabilidad: OTEL, dashboards de costo y acierto de gates | **La primera mitad, hecha**: consumo por compuerta y modelo, calibración real, línea de tiempo por ticket con coste por sesión. Falta lo externo: trazas, series temporales, tableros |
 | 6.7 | Extraer la plantilla `django-angular-multitenant` para otros proyectos | **La primera, hecha** (`valmen template`); faltan las demás de la lista de B6 |
+
+**Fuera del catálogo original, y hecho en el mismo tramo.** Cuatro cosas que la fase 6 no
+listaba y salieron del uso real:
+
+| Qué | Estado |
+|---|---|
+| Gobernanza de estándares: proponer, decidir, entrar en vigor y llegar al `AGENTS.md` | **Hecho**, con las dos puertas (pantalla y «aceptá los estándares propuestos») |
+| Detector de drift: lo que un ticket cita y el código no confirma (A2) | **Hecho** (`valmen drift`, `revisar_drift`); falta la mitad semántica spec ↔ ticket |
+| Valor por ticket: qué costó cada cierre y qué dejó (B5) | **Hecho** (`valmen usage value`, `reporte_valor`) |
+| El recorrido de una feature: skill, `materialize`, tablero, procedencia del ticket | **Hecho**, con el primer feature real corriendo de punta a punta |
 
 ## 4. Cronograma y esfuerzo
 
