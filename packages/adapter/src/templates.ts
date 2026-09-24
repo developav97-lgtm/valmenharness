@@ -113,6 +113,32 @@ mucho mejor diciendo cuál es y por qué volvió.
 Y lo que este trabajo enseñe —una causa raíz que costó encontrar, un patrón que se
 repite— se guarda con \`guardar_aprendizaje\` cuando se descubre, no al final.
 
+### Los estándares del proyecto, y cómo crecen
+
+Los estándares viven en \`.valmen/rules/estandares-<área>.md\` y llegan acá en el
+\`valmen sync\`: alineación, formato de montos, tema claro y oscuro, convenciones
+de código. Se leen **antes** de escribir la primera línea de una pantalla o de un
+modelo, no después de que alguien corrija: la regla que no se lee se descubre por
+una devolución, y esa devolución ya se pagó.
+
+Cuando el trabajo enseñe algo que no está escrito —hubo que aclararlo dos veces,
+una corrección reveló que la regla existía solo en la cabeza de alguien, apareció
+un caso que ninguna regla cubre—, se propone con \`proponer_estandar\`:
+la regla en imperativo, el motivo con el caso concreto, y los tickets donde se
+vio. La propuesta **no está en vigor** hasta que una persona la acepte; no la
+apliques como si lo estuviera.
+
+Y la decisión se puede pedir por donde sea. Si la persona dice «aceptá los
+estándares propuestos», se aceptan con \`decidir_estandar\` —o
+\`valmen estandar aceptar pendientes --instruccion "…"\`— citando **sus** palabras:
+el registro guarda la frase que autorizó la regla. Si no dio ninguna, se le pide;
+no se escribe por ella.
+
+Si el cambio toca pantallas, antes de entregar se corre \`revisar_presentacion\`:
+avisa de los colores escritos a mano en lo que el cambio agrega, que son los que
+rompen el modo oscuro. No bloquea, y un color legítimo —una marca, una
+impresión— se marca en la línea con \`valmen:allow-color\` y su motivo.
+
 ### Cómo se verifica un criterio
 
 Cada criterio de aceptación declara **cómo se verifica**, en un comentario debajo:

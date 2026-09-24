@@ -1,8 +1,13 @@
 # @valmen/mcp
 
 El harness al alcance de un agente. Este paquete es el servidor MCP que permite que
-**opencode, codex o Claude Code** creen tickets, los validen, evalúen compuertas y muevan su
-estado **sin que nadie escriba un comando**.
+**opencode, codex, Claude Code o DSH** creen tickets, los validen, evalúen compuertas y muevan
+su estado **sin que nadie escriba un comando**.
+
+Y donde el cliente no hable MCP, el camino sigue abierto: `valmen` es un CLI, así que
+cualquier agente con una shell puede hacer lo mismo escribiendo el comando. Las dos puertas
+llaman a las mismas funciones —el MCP **es** el CLI con otro transporte—, así que no hay un
+camino de segunda.
 
 ## Resumen
 
@@ -24,8 +29,15 @@ valmen mcp
 # los servidores MCP que ya estuvieran declarados
 valmen mcp --install
 
+# Escribe las dos configuraciones de proyecto: opencode.json y .mcp.json
+# (el de Claude Code). Sin `--install` solo imprime los fragmentos.
+valmen mcp --install
+
 # Añade además la sección al config.toml global de codex
 valmen mcp --global
+
+# El fragmento de DSH, que va en el perfil y necesita su paquete
+valmen mcp
 
 # Comprobar que arranca, sin hablar el protocolo
 valmen-mcp --check
@@ -64,7 +76,7 @@ porque ahí sí hereda el `PATH` completo.
 
 ## Contrato
 
-Las veintiocho herramientas. Ninguna es una segunda implementación: las de lectura llaman a
+Las treinta y dos herramientas. Ninguna es una segunda implementación: las de lectura llaman a
 las mismas funciones que el CLI, y las de escritura al mismo motor.
 
 | Herramienta            | Qué hace                                                          |
@@ -93,6 +105,10 @@ las mismas funciones que el CLI, y las de escritura al mismo motor.
 | `reporte_consumo`      | Evaluaciones, coste y cuánto se decidió en código, con la calibración |
 | `buscar_memoria`       | Lo que el proyecto ya decidió y ya falló, por sus palabras         |
 | `guardar_aprendizaje`  | Anexa lo que este trabajo enseñó, cuando se descubre               |
+| `ver_estandares`       | Las reglas en vigor y las propuestas que todavía no lo están       |
+| `proponer_estandar`    | Propone una convención que el trabajo enseñó; no la pone en vigor  |
+| `decidir_estandar`     | Acepta o descarta una propuesta, **con las palabras de la persona** |
+| `revisar_presentacion` | Colores fijos en lo que el cambio agrega a las pantallas           |
 | `iniciar_qa`           | Abre el ciclo con su ambiente y la referencia de lo probado       |
 | `anotar_retest`        | El resultado de retestar un punto                                 |
 | `cerrar_qa`            | Cierra el ciclo: hallazgos, o la aprobación con la frase del PO   |

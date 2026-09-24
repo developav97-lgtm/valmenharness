@@ -136,19 +136,28 @@ valmen mcp --install                               # el harness, al alcance del 
 ### Desde el agente, sin terminal
 
 ```bash
-valmen mcp --install   # declara el servidor MCP en opencode.json del proyecto
+valmen mcp --install   # declara el servidor en opencode.json y en .mcp.json
+valmen mcp --global    # y en el config.toml de codex; `valmen mcp` imprime el de DSH
 ```
 
 A partir de ahí, el flujo no empieza en una consola: se le describe un problema al
 agente y el agente crea el ticket, escribe el diagnóstico, valida contra el
-contrato, evalúa la compuerta y mueve el estado. Ocho herramientas, y todas
-llaman al mismo motor que el CLI —dos implementaciones podrían dar dos veredictos
-sobre el mismo ticket, que es justo lo que el harness existe para impedir.
+contrato, evalúa la compuerta y mueve el estado. Treinta y dos herramientas, y
+todas llaman al mismo motor que el CLI —dos implementaciones podrían dar dos
+veredictos sobre el mismo ticket, que es justo lo que el harness existe para
+impedir.
+
+Y donde el cliente no hable MCP, el camino sigue abierto: `valmen` es un CLI, así
+que cualquier agente con una shell —opencode, codex, Claude Code, DSH— hace lo
+mismo escribiendo el comando. Las dos puertas son la misma: el MCP es el CLI con
+otro transporte.
 
 **Lo que no hay también es el diseño:** no existe herramienta para aprobar una
 compuerta. La aprobación es de una persona, y un agente que pudiera dársela
 convertiría el control en un trámite. Un agente recorre
-`intake → analyzed → planned` y no puede cruzar a `approved`.
+`intake → analyzed → planned` y no puede cruzar a `approved`. Lo mismo vale para
+lo que la persona decide con sus palabras —la QA aprobada, una exención, un
+estándar que entra en vigor—: el agente las **cita**, nunca las escribe.
 
 ### Mission Control
 

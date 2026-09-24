@@ -17,7 +17,10 @@
  *
  * La propuesta es del agente; **la decisión es de la persona**. Es la misma
  * división del resto del harness: el agente propone con su motivo y sus tickets,
- * y aceptar —que es lo que lo pone en vigor— se hace desde Mission Control.
+ * y aceptar —que es lo que lo pone en vigor— lo decide una persona. Da igual por
+ * dónde lo diga: la pantalla tiene su botón, y a un agente se le pide por su
+ * nombre («aceptá los estándares propuestos») y la decisión queda escrita con la
+ * frase que la autorizó.
  *
  * Las propuestas van a un archivo aparte y **no entran al `AGENTS.md`**: una regla
  * sin aprobar no debe comportarse como una aprobada. Lo que no está en vigor no se
@@ -52,6 +55,23 @@ export interface EstandarPropuesto {
   /** Los tickets donde se vio la necesidad. */
   readonly tickets: readonly string[];
   readonly date: string;
+  /**
+   * Cuándo se decidió, si ya se decidió.
+   *
+   * Va aparte de `date` —la fecha de la propuesta— porque son dos hechos
+   * distintos: una propuesta de hace tres meses se puede aceptar hoy, y la
+   * decisión de hoy tiene que leerse con la fecha de hoy.
+   */
+  readonly decidedOn: string;
+  /**
+   * Las palabras de quien decidió, tal como las dijo.
+   *
+   * Es la misma regla que en el resto del harness: el agente registra hechos, la
+   * persona emite veredictos y el registro conserva sus palabras. Aceptar un
+   * estándar **pone una regla en vigor**, así que el registro guarda la frase que
+   * lo autorizó, no un resumen de ella.
+   */
+  readonly instruction: string;
   readonly state: "propuesto" | "aceptado" | "descartado";
   readonly source: { readonly path: string; readonly line: number };
 }
@@ -95,6 +115,15 @@ function etiqueta(cuerpo: string, nombre: string): string | null {
 const ENTRADA_RE = /^###\s+\[(EST-\d{3})\]\s+(.+)$/;
 
 /**
+ * La línea que deja una decisión: `- **Decidido:** 2026-09-24 · «aceptalos»`.
+ *
+ * La instrucción va entre comillas angulares y es opcional: la decisión tomada
+ * desde la pantalla no tiene frase que citar, y inventarle una sería peor que
+ * dejarla sin frase. Lo que sí es obligatorio es la fecha.
+ */
+const DECIDIDO_RE = /^-\s+\*\*Decidido:\*\*\s*(\d{4}-\d{2}-\d{2})(?:\s*·\s*«([^»]*)»)?/m;
+
+/**
  * Lee las propuestas.
  *
  * El formato es el mismo que el de los documentos de conocimiento del proyecto
@@ -118,6 +147,7 @@ export function listProposals(paths: RegistryPaths): EstandarPropuesto[] {
     const cuerpo = actual.cuerpo.join("\n").trim();
     const area = (etiqueta(cuerpo, "área") ?? "proceso") as AreaEstandar;
     const estado = (etiqueta(cuerpo, "estado") ?? "propuesto").toLowerCase();
+    const decidido = DECIDIDO_RE.exec(cuerpo);
     propuestas.push({
       id: actual.id,
       title: actual.title,
@@ -129,6 +159,8 @@ export function listProposals(paths: RegistryPaths): EstandarPropuesto[] {
         .map((id) => id.trim())
         .filter((id) => id !== ""),
       date: etiqueta(cuerpo, "propuesto") ?? "",
+      decidedOn: decidido === null ? "" : (decidido[1] as string),
+      instruction: decidido === null ? "" : ((decidido[2] as string) ?? "").trim(),
       state:
         estado === "aceptado"
           ? "aceptado"
@@ -205,10 +237,10 @@ export function proposeStandard(
     writeFileSync(
       archivo,
       "# Estándares propuestos\n\n" +
-        "Reglas que el trabajo enseñó y que **todavía no están en vigor**. Se aceptan o\n" +
-        "se descartan desde Mission Control; al aceptarlas pasan a\n" +
-        "`.valmen/rules/estandares-<área>.md`, que es lo que llega al `AGENTS.md`.\n",
-      "utf8",
+        "Reglas que el trabajo enseñó y que **todavía no están en vigor**. Las decide una\n" +
+        "persona —desde Mission Control o pidiéndoselo a un agente— y al aceptarlas\n" +
+        "pasan a `.valmen/rules/estandares-<área>.md`, que es lo que llega al\n" +
+        "`AGENTS.md`. La decisión queda escrita con la frase que la autorizó.\n",
     );
   }
 
@@ -244,6 +276,8 @@ export function proposeStandard(
     why: motivo,
     tickets,
     date: fecha,
+    decidedOn: "",
+    instruction: "",
     state: "propuesto",
     source: { path: PROPUESTAS, line: 0 },
   };
@@ -262,12 +296,25 @@ export interface DecisionDeEstandar {
  * Aceptar **escribe la regla** en el archivo del área y la deja en vigor; descartar
  * solo cambia su estado. Las dos cosas quedan escritas en la propuesta: dentro de
  * un mes, «¿por qué no tenemos esta regla?» tiene respuesta.
+ *
+ * Las dos son **decisiones de una persona**, y por eso la instrucción se guarda
+ * cuando existe. El motor no la exige: la pantalla no tiene frase que citar —quien
+ * pulsa el botón es quien decide, y su clic no se transcribe—, pero las puertas por
+ * las que habla un agente sí, porque ahí el agente estaría decidiendo por alguien.
+ * Exigirla acá obligaría a la pantalla a inventar unas palabras que nadie dijo.
  */
 export function decideProposal(
   paths: RegistryPaths,
   id: string,
   decision: "aceptado" | "descartado",
+  opciones: {
+    /** Las palabras de quien lo decidió, tal como las dijo. */
+    readonly instruccion?: string | undefined;
+    readonly now?: (() => Date) | undefined;
+  } = {},
 ): DecisionDeEstandar {
+  const instruccion = (opciones.instruccion ?? "").trim();
+  const fecha = (opciones.now?.() ?? new Date()).toISOString().slice(0, 10);
   const propuesta = listProposals(paths).find((candidata) => candidata.id === id);
   if (propuesta === undefined) {
     throw new Error(
@@ -323,12 +370,27 @@ export function decideProposal(
     if (i > desde && /^###\s+\[EST-/.test(lineas[i] as string)) break;
     if (/^-\s+\*\*Estado:\*\*/.test(lineas[i] as string)) {
       lineas[i] = `- **Estado:** ${decision}`;
+      // La frase va debajo del estado, con su fecha: es lo que permite responder
+      // después «¿esto quién lo pidió?» sin depender de la memoria de nadie.
+      lineas.splice(
+        i + 1,
+        0,
+        `- **Decidido:** ${fecha}${instruccion === "" ? "" : ` · «${instruccion}»`}`,
+      );
       break;
     }
   }
   writeFileSync(proposalsPath(paths), lineas.join("\n"), "utf8");
 
-  return { propuesta: { ...propuesta, state: decision }, writtenTo: destino };
+  return {
+    propuesta: {
+      ...propuesta,
+      state: decision,
+      decidedOn: fecha,
+      instruction: instruccion,
+    },
+    writtenTo: destino,
+  };
 }
 
 /** Los archivos de estándares en vigor, con su área. */
@@ -376,6 +438,12 @@ export function renderProposals(propuestas: readonly EstandarPropuesto[]): strin
       ...(propuesta.tickets.length === 0
         ? []
         : [`  Visto en: ${propuesta.tickets.join(", ")}`]),
+      ...(propuesta.state === "propuesto"
+        ? []
+        : [
+            `  Decidido: ${propuesta.decidedOn}` +
+              (propuesta.instruction === "" ? "" : ` — «${propuesta.instruction}»`),
+          ]),
       `  → ${propuesta.source.path}:${propuesta.source.line}`,
       "",
     );
@@ -383,8 +451,10 @@ export function renderProposals(propuestas: readonly EstandarPropuesto[]): strin
 
   if (pendientes.length > 0) {
     lineas.push(
-      "  Se aceptan o se descartan desde Mission Control; al aceptar, la regla pasa a",
+      "  Se aceptan o se descartan desde Mission Control o pidiéndoselo a cualquier",
+      "  agente («aceptá los estándares propuestos»): al aceptar, la regla pasa a",
       "  `.valmen/rules/estandares-<área>.md` y entra al AGENTS.md en el próximo sync.",
+      "  Lo decide la persona: el agente cita sus palabras, no las inventa.",
     );
   }
 

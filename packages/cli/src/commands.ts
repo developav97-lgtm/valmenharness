@@ -90,7 +90,9 @@ import {
   searchMemory,
   renderIndex,
   renderUsage,
+  renderColorReport,
   scanPendingChanges,
+  scanPendingColors,
   usageReport,
 } from "@valmen/engine";
 
@@ -1125,17 +1127,76 @@ export function standardsCommand(
     }
 
     if (verbo === "aceptar" || verbo === "descartar") {
-      if (id === undefined || id === "") {
-        return error(`estandar ${verbo} requiere el identificador: EST-001.`, EXIT_SCHEMA);
-      }
       const decision = verbo === "aceptar" ? "aceptado" : "descartado";
-      const resultado = decideProposal(paths, id.toUpperCase(), decision);
-      if (resultado.writtenTo === null) {
-        return ok(`${id} descartado. Queda escrito en las propuestas con su estado.\n`);
+
+      // Las palabras de quien lo decidió. Aceptar **pone una regla en vigor**, y
+      // eso no lo decide un agente: la regla que vale para el plan vale para el
+      // estándar. Un agente que no tenga la frase pide la decisión; no la escribe
+      // él. El motor no la exige —la pantalla no tiene frase que citar—, pero la
+      // puerta por la que habla un agente sí.
+      const instruccion = texto("instruccion");
+      if (instruccion === "") {
+        return error(
+          `estandar ${verbo} exige --instruccion con las palabras de quien lo decidió.\n` +
+            `  Aceptar un estándar lo pone en vigor y descartarlo lo saca de la cola:\n` +
+            `  las dos son decisiones de la persona. Si no tenés su frase, pedila.\n` +
+            `  Ejemplo: valmen estandar ${verbo} ${id === undefined || id === "" ? "pendientes" : id} ` +
+            `--instruccion "aceptá las que propusiste"`,
+          EXIT_SCHEMA,
+        );
       }
+
+      // `pendientes` aplica a todas: una persona que dice «aceptalos» está
+      // decidiendo sobre el conjunto, y obligarla a repetir la frase por cada
+      // identificador sería fabricar trabajo para que el registro quede igual.
+      const objetivo = (id ?? "").toUpperCase();
+      const ids =
+        objetivo === "PENDIENTES" || objetivo === "TODOS"
+          ? listProposals(paths)
+              .filter((propuesta) => propuesta.state === "propuesto")
+              .map((propuesta) => propuesta.id)
+          : [objetivo];
+
+      if (ids.length === 0) {
+        return ok(`No hay estándares pendientes: nada que ${verbo}.\n`);
+      }
+
+      const lineas: string[] = [];
+      for (const uno of ids) {
+        const resultado = decideProposal(paths, uno, decision, { instruccion });
+        lineas.push(
+          resultado.writtenTo === null
+            ? `${uno} descartado. Queda escrito en las propuestas con su estado.`
+            : `${uno} aceptado: la regla quedó en ${resultado.writtenTo}`,
+        );
+      }
+
+      if (ids.length > 1) {
+        // El participio, no el verbo: `aceptars` no es una palabra, y la primera
+        // versión de esta línea la escribía así.
+        lineas.unshift(
+          `${ids.length} estándares ${decision === "aceptado" ? "aceptados" : "descartados"}:`,
+        );
+      }
+      if (decision === "aceptado") {
+        lineas.push(
+          "",
+          "  Ejecute `valmen sync` para que entren al AGENTS.md del proyecto.",
+        );
+      }
+      lineas.push(`  Decisión registrada con la frase: «${instruccion}»`);
+      return ok(`${lineas.join("\n")}\n`);
+    }
+
+    if (verbo === "revisar") {
+      const revision = scanPendingColors(paths.root, flags["staged"] === true);
+      const limite = texto("limite");
+      const cuantos = limite === "" ? Number.NaN : Number.parseInt(limite, 10);
       return ok(
-        `${id} aceptado: la regla quedó en ${resultado.writtenTo}\n` +
-          "  Ejecute `valmen sync` para que entre al AGENTS.md del proyecto.\n",
+        renderColorReport(
+          revision,
+          Number.isFinite(cuantos) && cuantos > 0 ? { limite: cuantos } : {},
+        ),
       );
     }
 

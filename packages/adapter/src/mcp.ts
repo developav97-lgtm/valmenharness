@@ -118,6 +118,23 @@ export function opencodeServer(entry: McpEntry): Record<string, unknown> {
   };
 }
 
+/**
+ * La entrada tal como la espera Claude Code en su `.mcp.json`.
+ *
+ * Es el mismo objeto plano que usa la mayoría de los clientes MCP —`command` y
+ * `args`—, sin envoltorios: Claude Code lo lee del archivo de proyecto, que se
+ * versiona, así que la entrada tiene que ser portable. Se escribe `cwd` relativo
+ * por el mismo motivo que en opencode: una ruta absoluta en un archivo
+ * compartido no arranca en la máquina de nadie más.
+ */
+export function claudeServer(entry: McpEntry): Record<string, unknown> {
+  return {
+    command: entry.command,
+    args: [...entry.args],
+    cwd: RELATIVE_CWD,
+  };
+}
+
 /** El texto de la entrada TOML, como la espera `codex`. */
 export function codexToml(entry: McpEntry): string {
   return [
@@ -208,6 +225,70 @@ export function mergeOpencodeConfig(texto: string | null, entry: McpEntry): Merg
       actual === undefined
         ? "se añadió el servidor a opencode.json"
         : "se actualizó la entrada del servidor en opencode.json",
+  };
+}
+
+/**
+ * Fusiona la entrada en un `.mcp.json` de Claude Code.
+ *
+ * La forma es la de opencode —un objeto JSON con un mapa de servidores— pero la
+ * clave es otra: `mcpServers` en vez de `mcp`. Se conserva todo lo que ya
+ * estuviera declarado, y un archivo ilegible no se toca: es la configuración de
+ * otra persona, y probablemente la de sus otros servidores.
+ */
+export function mergeClaudeConfig(texto: string | null, entry: McpEntry): MergeResult {
+  if (texto === null) {
+    const nuevo = { mcpServers: { [MCP_SERVER_ID]: claudeServer(entry) } };
+    return {
+      content: JSON.stringify(nuevo, null, 2) + "\n",
+      changed: true,
+      note: "se creó .mcp.json con el servidor declarado",
+    };
+  }
+
+  let documento: Record<string, unknown>;
+  try {
+    const analizado: unknown = JSON.parse(texto);
+    if (typeof analizado !== "object" || analizado === null || Array.isArray(analizado)) {
+      return {
+        content: texto,
+        changed: false,
+        note: ".mcp.json no es un objeto JSON; no se tocó",
+      };
+    }
+    documento = analizado as Record<string, unknown>;
+  } catch {
+    return {
+      content: texto,
+      changed: false,
+      note: ".mcp.json no es JSON válido; no se tocó",
+    };
+  }
+
+  const servidores = documento["mcpServers"];
+  const seccion =
+    typeof servidores === "object" && servidores !== null && !Array.isArray(servidores)
+      ? (servidores as Record<string, unknown>)
+      : {};
+
+  const deseado = claudeServer(entry);
+  const actual = seccion[MCP_SERVER_ID];
+  if (actual !== undefined && JSON.stringify(actual) === JSON.stringify(deseado)) {
+    return {
+      content: texto,
+      changed: false,
+      note: ".mcp.json ya declaraba el servidor como está",
+    };
+  }
+
+  documento["mcpServers"] = { ...seccion, [MCP_SERVER_ID]: deseado };
+  return {
+    content: JSON.stringify(documento, null, 2) + "\n",
+    changed: true,
+    note:
+      actual === undefined
+        ? "se añadió el servidor a .mcp.json"
+        : "se actualizó la entrada del servidor en .mcp.json",
   };
 }
 

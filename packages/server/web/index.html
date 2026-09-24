@@ -2140,6 +2140,20 @@
             if (propuesta.tickets.length > 0) {
               tarjeta.append(el("div", `Visto en: ${propuesta.tickets.join(", ")}`, "ruta"));
             }
+            // Quién lo decidió y con qué palabras. Es la misma regla que en el
+            // resto del registro: la decisión se guarda con la frase que la
+            // autorizó, y acá se lee sin abrir el archivo de propuestas.
+            if (propuesta.state !== "propuesto" && propuesta.decidedOn) {
+              tarjeta.append(
+                el(
+                  "div",
+                  propuesta.instruction
+                    ? `Decidido el ${propuesta.decidedOn} — «${propuesta.instruction}»`
+                    : `Decidido el ${propuesta.decidedOn}`,
+                  "ruta",
+                ),
+              );
+            }
 
             if (propuesta.state === "propuesto") {
               const acciones = el("div", undefined, "responsable");
@@ -2167,7 +2181,20 @@
               };
               aceptar.addEventListener("click", () => void decidir("aceptado", aceptar));
               descartar.addEventListener("click", () => void decidir("descartado", descartar));
-              acciones.append(aceptar, descartar, salida);
+              // Las dos puertas, dichas donde se decide: los botones son una, y
+              // pedírselo al agente es la otra. Quien no usa la pantalla tiene que
+              // poder enterarse acá de que también se puede por la conversación.
+              acciones.append(
+                aceptar,
+                descartar,
+                el(
+                  "div",
+                  "También se decide hablando: pedile al agente «aceptá los estándares " +
+                    "propuestos» y la decisión queda registrada con tus palabras.",
+                  "ruta",
+                ),
+                salida,
+              );
               tarjeta.append(acciones);
             }
             cont.append(tarjeta);

@@ -27,16 +27,21 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   MCP_SERVER_ID,
   RELATIVE_CWD,
+  claudeServer,
   codexToml,
   mcpEntry,
   mcpExecutableFrom,
+  mergeClaudeConfig,
   mergeCodexConfig,
   mergeOpencodeConfig,
   opencodeServer,
   readIfExists,
 } from "../packages/adapter/src/mcp.js";
 import {
+  claudeConfigPath,
   codexConfigPath,
+  dshProfilePath,
+  dshSnippet,
   mcpCommand,
   opencodeConfigPath,
 } from "../packages/cli/src/mcp.js";
@@ -95,6 +100,76 @@ describe("la entrada del servidor", () => {
     // Sin `--root`: la raíz sale del directorio de trabajo, que es el del
     // proyecto abierto. Grabar la raíz ataría la configuración a un proyecto.
     expect(servidor["command"]).toEqual([EJECUTABLE]);
+  });
+});
+
+describe("la fusión en el `.mcp.json` de Claude Code", () => {
+  it("usa la clave de Claude Code, que no es la de opencode", () => {
+    // Mismo formato de archivo, clave distinta: `mcpServers` en vez de `mcp`. Una
+    // entrada escrita con la clave equivocada no da error —simplemente el
+    // servidor no aparece—, que es el fallo que este comando existe para evitar.
+    const documento = JSON.parse(mergeClaudeConfig(null, entrada()).content) as Record<
+      string,
+      unknown
+    >;
+    expect(Object.keys(documento)).toEqual(["mcpServers"]);
+    expect(claudeServer(entrada())).toEqual({
+      command: EJECUTABLE,
+      args: [],
+      cwd: RELATIVE_CWD,
+    });
+  });
+
+  it("conserva los otros servidores y es idempotente", () => {
+    const previo = JSON.stringify({
+      mcpServers: { github: { command: "npx", args: ["-y", "server-github"] } },
+    });
+    const primera = mergeClaudeConfig(previo, entrada());
+    const servidores = (
+      JSON.parse(primera.content) as Record<string, Record<string, unknown>>
+    )["mcpServers"];
+
+    expect(servidores?.["github"]).toEqual({
+      command: "npx",
+      args: ["-y", "server-github"],
+    });
+    expect(servidores?.[MCP_SERVER_ID]).toBeDefined();
+
+    const segunda = mergeClaudeConfig(primera.content, entrada());
+    expect(segunda.changed).toBe(false);
+    expect(segunda.content).toBe(primera.content);
+  });
+
+  it("no pisa un archivo que no se pudo leer", () => {
+    // Los comentarios son válidos en el `opencode.json` de opencode y no en JSON.
+    // Aquí el caso es el mismo: un archivo ilegible puede tener la configuración
+    // de otras herramientas, y sobrescribirlo sería borrarla.
+    const roto = '{ "mcpServers": { /* comentario */ } }';
+    const resultado = mergeClaudeConfig(roto, entrada());
+    expect(resultado.changed).toBe(false);
+    expect(resultado.content).toBe(roto);
+  });
+});
+
+describe("la declaración en DSH", () => {
+  it("es una lista de inserción de su capa de parches", () => {
+    // La forma importa: DSH compone su árbol con entradas `- insert:`, y una
+    // entrada suelta no se carga —sin error, otra vez—.
+    const fragmento = dshSnippet(entrada());
+    expect(fragmento).toContain("- insert:");
+    expect(fragmento).toContain("name: '@deepseek-ai/dsh-mcp-client'");
+    expect(fragmento).toContain("serverName: valmen");
+    expect(fragmento).toContain(`command: ${EJECUTABLE}`);
+    // Sin `cwd`: el servidor hereda el directorio desde el que se lanzó DSH, que
+    // es el espacio de trabajo. Fijarlo en un archivo de perfil haría que todas
+    // las sesiones escribieran en el registro de un proyecto concreto.
+    expect(fragmento).not.toContain("cwd");
+  });
+
+  it("vive en el perfil de DSH, que es global", () => {
+    expect(dshProfilePath("/casa/juan")).toBe(
+      "/casa/juan/.dsh/profiles/web/cordis.patch.yml",
+    );
   });
 });
 
@@ -217,7 +292,7 @@ describe("la fusión en el config.toml de codex", () => {
 });
 
 describe("el comando `valmen mcp`", () => {
-  it("muestra los dos fragmentos sin escribir nada", () => {
+  it("muestra los cuatro fragmentos sin escribir nada", () => {
     const resultado = mcpCommand({
       root: lab,
       cliEntry: "/repos/valmen/packages/cli/dist/main.js",
@@ -227,13 +302,22 @@ describe("el comando `valmen mcp`", () => {
     });
 
     expect(resultado.exitCode).toBe(0);
+    // Los cuatro agentes con los que se trabaja: el registro tiene que decir los
+    // cuatro, porque el que falta es el que parece no estar soportado.
     expect(resultado.stdout).toContain("opencode");
+    expect(resultado.stdout).toContain("Claude Code");
     expect(resultado.stdout).toContain("codex");
+    expect(resultado.stdout).toContain("DSH");
     expect(resultado.stdout).toContain("[mcp_servers.valmen]");
+    expect(resultado.stdout).toContain("mcpServers");
+    expect(resultado.stdout).toContain("dsh-mcp-client");
     // Y dice cómo comprobar que arranca, que es el primer fallo real.
     expect(resultado.stdout).toContain("--check");
+    // La puerta que no depende de ninguna configuración: el CLI.
+    expect(resultado.stdout).toContain("valmen …");
     // Nada se escribió: sin `--install` el comando solo informa.
     expect(readIfExists(opencodeConfigPath(lab))).toBeNull();
+    expect(readIfExists(claudeConfigPath(lab))).toBeNull();
   });
 
   it("con `--install` escribe la configuración del proyecto", () => {
@@ -246,8 +330,12 @@ describe("el comando `valmen mcp`", () => {
     });
 
     expect(resultado.stdout).toContain("se creó");
+    // Las dos configuraciones de proyecto se escriben juntas: son el mismo paso
+    // —dejar el servidor al alcance de los agentes del proyecto— y separarlas
+    // obligaría a acordarse de la segunda.
     const escrito = readIfExists(opencodeConfigPath(lab));
     expect(escrito).not.toBeNull();
+    expect(readIfExists(claudeConfigPath(lab))).not.toBeNull();
     const mcp = (JSON.parse(escrito as string) as Record<string, unknown>)["mcp"] as Record<
       string,
       unknown
@@ -281,9 +369,14 @@ describe("el comando `valmen mcp`", () => {
     const documento = JSON.parse(resultado.stdout) as Record<string, unknown>;
     expect(documento["executable"]).toBe("/repos/valmen/packages/mcp/dist/main.js");
     expect(String(documento["codex"])).toBeDefined();
+    const dsh = documento["dsh"] as Record<string, unknown>;
+    expect(String(dsh["snippet"])).toContain("dsh-mcp-client");
     const opencode = documento["opencode"] as Record<string, unknown>;
     expect(String(opencode["content"])).toContain(MCP_SERVER_ID);
+    const claude = documento["claude"] as Record<string, unknown>;
+    expect(String(claude["content"])).toContain(MCP_SERVER_ID);
     expect(readIfExists(opencodeConfigPath(lab))).toBeNull();
+    expect(readIfExists(claudeConfigPath(lab))).toBeNull();
   });
 
   it("declara el directorio de trabajo relativo, para que el archivo sirva en otra máquina", () => {

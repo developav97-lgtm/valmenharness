@@ -95,8 +95,14 @@ Comandos:
   estandar listar           Los estándares en vigor y los propuestos.
   estandar proponer --title <t> --rule <r> --area <a> [--why <texto>]
                             Propone un estándar. No está en vigor hasta aceptarlo.
-  estandar aceptar <EST-001>  Lo pone en vigor en .valmen/rules/estandares-<área>.md
-  estandar descartar <EST-001>  Lo deja escrito con su estado.
+  estandar revisar [--staged] [--limite <n>]
+                            Avisa de colores fijos en las líneas que el cambio
+                            agrega a archivos de interfaz. No bloquea.
+  estandar aceptar <EST-001|pendientes> --instruccion <frase>
+  estandar descartar <EST-001|pendientes> --instruccion <frase>
+                            La decisión es de la persona: --instruccion lleva sus
+                            palabras y queda escrita. Al aceptar, la regla pasa a
+                            .valmen/rules/estandares-<área>.md.
   memory search <consulta>  Busca en la memoria del proyecto —decisiones y errores.
       --limite <n>          Cuántos resultados. Por defecto, 5.
   memory save --title <t> --body <b> [--tickets <ids>]
@@ -281,6 +287,9 @@ export const VALUE_OPTIONS = [
   "--rule",
   "--why",
   "--area",
+  // `estandar aceptar`: las palabras de quien decide. Una bandera que consume
+  // valor y no está en esta lista se lee como booleana y su valor queda suelto.
+  "--instruccion",
   "--actor",
   "--run",
   "--credentials",

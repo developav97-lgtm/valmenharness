@@ -47,7 +47,10 @@ import {
   findTicket,
   AREAS,
   type EstandarPropuesto,
+  decideProposal,
   listProposals,
+  renderColorReport,
+  scanPendingColors,
   listTickets,
   loadMemory,
   proposeStandard,
@@ -920,8 +923,9 @@ export const TOOLS: readonly ToolDefinition[] = [
       "apareció un caso que ninguna regla cubre. Escribí la regla en imperativo y el " +
       "motivo con el caso concreto que la originó —el motivo es lo que permite discutirla " +
       "después— y pasá los tickets donde apareció. **La propuesta no está en vigor**: la " +
-      "aprueba una persona desde Mission Control, y al aprobarla entra al `AGENTS.md`. " +
-      "No la apliques como si ya fuera una regla del proyecto.",
+      "aprueba una persona —desde Mission Control, o pidiéndote que la aceptes, con " +
+      "`decidir_estandar`— y al aprobarla entra al `AGENTS.md`. No la apliques como si ya " +
+      "fuera una regla del proyecto.",
     inputSchema: conRoot({
       properties: {
         titulo: {
@@ -954,6 +958,65 @@ export const TOOLS: readonly ToolDefinition[] = [
         },
       },
       required: ["titulo", "regla", "motivo", "area"],
+    }),
+  },
+  {
+    name: "decidir_estandar",
+    title: "Aceptar o descartar un estándar propuesto",
+    description:
+      "Cierra una propuesta de estándar: `aceptado` escribe la regla en " +
+      "`.valmen/rules/estandares-<área>.md` y la **pone en vigor** —el próximo `valmen " +
+      "sync` la lleva al `AGENTS.md`—; `descartado` la saca de la cola dejándola escrita " +
+      "con su estado. **La decisión es de la persona, no tuya**: `instruccion` lleva sus " +
+      "palabras literales, tal como las dijo («aceptá las que propusiste»), y queda " +
+      "escrita junto a la decisión. Si no te dio una frase —porque no lo pidió, porque " +
+      "no contestó, porque insinuó— no la escribas: pedile que lo decida. Un estándar " +
+      "aceptado sin que nadie lo haya pedido es una regla que el proyecto nunca decidió. " +
+      "Con `pendientes` como id se aplican todas las que estén sin decidir, que es lo que " +
+      "quien dice «aceptalos» está pidiendo.",
+    inputSchema: conRoot({
+      properties: {
+        id: {
+          type: "string",
+          description:
+            "El identificador de la propuesta (`EST-001`), o `pendientes` para todas " +
+            "las que falten decidir.",
+        },
+        decision: {
+          type: "string",
+          enum: ["aceptado", "descartado"],
+          description: "`aceptado` la pone en vigor; `descartado` la deja sin efecto.",
+        },
+        instruccion: {
+          type: "string",
+          description:
+            "Las palabras **literales** de quien decidió. Obligatoria en las dos " +
+            "direcciones: sin la frase de la persona, la decisión no ocurrió.",
+        },
+      },
+      required: ["id", "decision", "instruccion"],
+    }),
+  },
+  {
+    name: "revisar_presentacion",
+    title: "Colores fijos en lo que estás por entregar",
+    description:
+      "Revisa las líneas que el cambio agrega a los archivos de interfaz y avisa de los " +
+      "colores escritos a mano —hexadecimales, `rgb()/hsl()`, nombres de color, clases de " +
+      "paleta—. Existe porque un color fijo es lo que rompe el modo oscuro: la tarjeta " +
+      "blanca se ve perfecta en claro y deja un rectángulo cegador en oscuro, y quien la " +
+      "escribió no lo vio porque probó en claro. **No bloquea**: hay colores legítimos " +
+      "(marca, impresión, el negro translúcido de una sombra). Los que lo sean se marcan " +
+      "en la línea con `valmen:allow-color` y su motivo. Corré esto antes de entregar " +
+      "cuando el cambio toque pantallas, no solo cuando alguien lo pida.",
+    inputSchema: conRoot({
+      properties: {
+        staged: {
+          type: "boolean",
+          description:
+            "Mirar solo lo que está en el índice (`git add`), no todo el cambio.",
+        },
+      },
     }),
   },
   {
@@ -1664,8 +1727,76 @@ export async function callTool(
         });
         return bien(
           `Estándar propuesto: ${propuesta.id} (${propuesta.area})\n` +
-            "Queda pendiente de aprobación en Mission Control: **no está en vigor** hasta " +
-            "que una persona lo acepte, y al aceptarlo entra al `AGENTS.md`.",
+            "Queda pendiente de decisión: **no está en vigor** hasta que una persona lo " +
+            "acepte —desde Mission Control, o pidiéndote que lo aceptes con " +
+            "`decidir_estandar`— y al aceptarlo entra al `AGENTS.md`.",
+        );
+      }
+
+      case "decidir_estandar": {
+        const decision = texto(args, "decision") as "aceptado" | "descartado";
+        if (decision !== "aceptado" && decision !== "descartado") {
+          return mal("`decision` debe ser `aceptado` o `descartado`.");
+        }
+
+        // La frase se exige acá, en la puerta por la que habla un agente, y no en
+        // el motor: la pantalla decide con un clic y no tiene palabras que citar.
+        const instruccion = (texto(args, "instruccion", false) ?? "").trim();
+        if (instruccion === "") {
+          return mal(
+            "Falta `instruccion`: las palabras literales de quien decidió.\n" +
+              "Aceptar un estándar lo pone en vigor, y esa decisión es de la persona.\n" +
+              "Si no te dio una frase, pedísela: no la escribas vos.",
+          );
+        }
+
+        const objetivo = (texto(args, "id") as string).toUpperCase();
+        const ids =
+          objetivo === "PENDIENTES" || objetivo === "TODOS"
+            ? listProposals(paths)
+                .filter((propuesta) => propuesta.state === "propuesto")
+                .map((propuesta) => propuesta.id)
+            : [objetivo];
+
+        if (ids.length === 0)
+          return bien("No hay estándares pendientes: nada que decidir.");
+
+        const lineas: string[] = [];
+        for (const uno of ids) {
+          const resultado = decideProposal(paths, uno, decision, {
+            instruccion,
+            now: contexto.now,
+          });
+          lineas.push(
+            resultado.writtenTo === null
+              ? `${uno} descartado. Queda escrito en las propuestas con su estado.`
+              : `${uno} aceptado: la regla quedó en ${resultado.writtenTo}`,
+          );
+        }
+        if (decision === "aceptado") {
+          lineas.push(
+            "",
+            "Corré `valmen sync` para que entren al `AGENTS.md`: hasta entonces la regla",
+            "está en vigor en `.valmen/rules/` pero el agente todavía no la lee al empezar.",
+          );
+        }
+        lineas.push(`Decisión registrada con la frase: «${instruccion}»`);
+        return bien(lineas.join("\n"));
+      }
+
+      case "revisar_presentacion": {
+        const revision = scanPendingColors(paths.root, args["staged"] === true);
+        // El informe ya está escrito para que lo lea una persona; el agente es
+        // una más, y devolverle otra cosa sería tener dos verdades del mismo
+        // chequeo. Si hay avisos, se dice qué hacer con cada uno: el de un color
+        // legítimo se marca, y el otro se cambia.
+        const informe = renderColorReport(revision);
+        return bien(
+          revision.findings.length === 0
+            ? informe
+            : `${informe}\nRevisá cada uno: si el color es legítimo, marcá la línea con ` +
+                "`valmen:allow-color` y escribí por qué; si no, usá la variable del tema. " +
+                "No es un gate: no impide entregar, avisa antes de que lo vea la persona.",
         );
       }
 

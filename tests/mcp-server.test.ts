@@ -172,10 +172,40 @@ describe("el catálogo de herramientas", () => {
     // aprobación es de una persona. No es un olvido — es la propiedad que este
     // servidor no puede perder, y por eso se afirma sobre los nombres.
     const nombres = TOOLS.map((tool) => tool.name);
-    expect(nombres.some((nombre) => /aprob|approve|decid|decide/.test(nombre))).toBe(false);
+    expect(nombres.filter((nombre) => /aprob|approve/.test(nombre))).toEqual([]);
   });
 
-  it("declara las treinta herramientas, cada una con descripción y esquema", () => {
+  it("toda herramienta que emite un veredicto de persona exige sus palabras", () => {
+    // Esta prueba empezó prohibiendo la sílaba `decid` en los nombres, y eso
+    // confundía la propiedad con su ortografía: `decidir_estandar` decide un
+    // estándar, no una compuerta, y lo hace **con la frase de la persona**
+    // citada. Lo que no se puede perder no es una lista de nombres: es que un
+    // agente no pueda emitir un veredicto reservado sin esa frase. Se afirma
+    // sobre el esquema, que es lo que el cliente obliga a mandar, y sobre los
+    // tres casos que existen hoy, para que agregar uno sin sus palabras falle
+    // acá en vez de fallar en un proyecto real.
+    const conVeredicto = ["cerrar_qa", "preparar_cierre", "decidir_estandar"];
+    expect(TOOLS.map((tool) => tool.name)).toEqual(expect.arrayContaining(conVeredicto));
+
+    for (const nombre of conVeredicto) {
+      const tool = TOOLS.find((candidata) => candidata.name === nombre);
+      expect(tool, `falta ${nombre}`).toBeDefined();
+      const propiedades = Object.keys(
+        (tool?.inputSchema["properties"] ?? {}) as Record<string, unknown>,
+      );
+      expect(
+        propiedades.some((clave) => clave === "confirmacion_po" || clave === "instruccion"),
+        `${nombre} no declara las palabras de quien decide`,
+      ).toBe(true);
+    }
+
+    // Y la única que decide sin condiciones —un estándar se acepta o no, no hay
+    // resultado que lo exima— las exige en `required`.
+    const estandar = TOOLS.find((tool) => tool.name === "decidir_estandar");
+    expect(estandar?.inputSchema["required"]).toContain("instruccion");
+  });
+
+  it("declara las treinta y dos herramientas, cada una con descripción y esquema", () => {
     // El orden es el de la lectura: alta, consulta, validación, movimiento,
     // anotación, compuertas, features, procesos, reportes, y al final el ciclo de
     // QA y el cierre. Estaba intercalado por historia —cada herramienta nueva
@@ -207,6 +237,8 @@ describe("el catálogo de herramientas", () => {
       "guardar_aprendizaje",
       "ver_estandares",
       "proponer_estandar",
+      "decidir_estandar",
+      "revisar_presentacion",
       "iniciar_qa",
       "anotar_retest",
       "cerrar_qa",

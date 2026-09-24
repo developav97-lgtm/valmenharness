@@ -24,9 +24,12 @@
  * Ningún hallazgo imprime el valor encontrado: el reporte lo tapa. Un detector
  * que copia el secreto a la consola, al recibo o al log lo multiplica.
  */
-import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { pendingChanges, pendingFiles } from "./diff.js";
+
+// Se reexporta porque era la puerta por la que este módulo lo ofrecía, y quien lo
+// importaba desde acá no tiene por qué enterarse de que el recorrido del diff se
+// mudó a su propio archivo.
+export { pendingFiles };
 
 /** Un patrón con nombre. El identificador es lo que se reporta, nunca el valor. */
 interface Patron {
@@ -237,37 +240,6 @@ export interface PendingSecrets {
   readonly scanned: number;
 }
 
-/** Corre git y devuelve su salida, o `null` si no se pudo. */
-function git(root: string, args: readonly string[]): string | null {
-  const resultado = spawnSync("git", [...args], {
-    cwd: root,
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-    maxBuffer: 32 * 1024 * 1024,
-  });
-  return resultado.status === 0 ? (resultado.stdout ?? "") : null;
-}
-
-/**
- * Los archivos que git reporta como cambiados o nuevos.
- *
- * Es la lista de lo que se va a commitear, no el árbol entero: revisar todo el
- * repositorio marcaría secretos históricos que este cambio no introduce, y el
- * trabajo se detendría por algo que no es de quien está trabajando.
- */
-export function pendingFiles(root: string, staged = false): string[] {
-  const rango = staged ? ["--cached"] : [];
-  const modificados = git(root, ["diff", "--name-only", ...rango, "HEAD"]) ?? "";
-  const nuevos = staged
-    ? []
-    : (git(root, ["ls-files", "--others", "--exclude-standard"]) ?? "").split("\n");
-
-  return [...new Set([...modificados.split("\n"), ...nuevos])]
-    .map((linea) => linea.trim())
-    .filter((linea) => linea !== "")
-    .sort();
-}
-
 /**
  * Revisa los cambios pendientes de un proyecto.
  *
@@ -276,54 +248,18 @@ export function pendingFiles(root: string, staged = false): string[] {
  * el objetivo es que un secreto no **entre**, no auditar lo que ya entró.
  */
 export function scanPendingChanges(root: string, staged = false): PendingSecrets {
-  const rango = staged ? ["--cached"] : [];
-  const diff = git(root, ["diff", "--unified=0", "--no-color", ...rango, "HEAD"]);
+  const { blocks, files } = pendingChanges(root, staged);
   const hallazgos: FileSecretFinding[] = [];
-  const archivos = new Set<string>();
 
-  if (diff !== null) {
-    let path = "";
-    let linea = 0;
-
-    for (const renglon of diff.split("\n")) {
-      if (renglon.startsWith("+++ b/")) {
-        path = renglon.slice(6);
-        archivos.add(path);
-        continue;
-      }
-      const encabezado = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(renglon);
-      if (encabezado !== null) {
-        linea = Number.parseInt(encabezado[1] as string, 10);
-        continue;
-      }
-      if (renglon.startsWith("+") && !renglon.startsWith("+++")) {
-        for (const hallazgo of scanSecrets(renglon.slice(1))) {
-          hallazgos.push({ ...hallazgo, path, line: linea });
-        }
-        linea += 1;
-      }
-    }
-  }
-
-  // Un archivo nuevo no aparece en el diff como líneas agregadas —no tiene contra
-  // qué diferenciarse—, así que se lee entero. Es donde más probable es que haya
-  // algo: nadie revisa lo que acaba de escribir.
-  if (!staged) {
-    for (const path of git(root, ["ls-files", "--others", "--exclude-standard"])?.split(
-      "\n",
-    ) ?? []) {
-      const relativa = path.trim();
-      if (relativa === "") continue;
-      archivos.add(relativa);
-      let contenido: string;
-      try {
-        contenido = readFileSync(join(root, relativa), "utf8");
-      } catch {
-        continue;
-      }
-      for (const hallazgo of scanSecrets(contenido)) {
-        hallazgos.push({ ...hallazgo, path: relativa });
-      }
+  // Se escanea el bloque entero, no línea por línea: la marca que perdona un
+  // secreto vive en la línea de arriba, y trocear el texto la dejaría huérfana.
+  for (const bloque of blocks) {
+    for (const hallazgo of scanSecrets(bloque.lines.join("\n"))) {
+      hallazgos.push({
+        ...hallazgo,
+        path: bloque.path,
+        line: bloque.startLine + hallazgo.line - 1,
+      });
     }
   }
 
@@ -331,6 +267,6 @@ export function scanPendingChanges(root: string, staged = false): PendingSecrets
     findings: hallazgos.sort((a, b) =>
       a.path === b.path ? a.line - b.line : a.path < b.path ? -1 : 1,
     ),
-    scanned: archivos.size,
+    scanned: files.length,
   };
 }
