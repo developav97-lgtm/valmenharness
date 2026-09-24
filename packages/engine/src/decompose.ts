@@ -21,7 +21,7 @@
  * proveedores, y esa frontera es la que permite probar todo esto sin gastar un
  * token y sin una clave.
  */
-import { mkdirSync, readFileSync } from "node:fs";
+import { mkdirSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 import {
@@ -93,6 +93,79 @@ export interface DecomposeInput {
   readonly brief: string;
   readonly design: string;
   readonly requirements: readonly FeatureRequirement[];
+  /**
+   * Las reglas del proyecto, ya leídas y recortadas.
+   *
+   * Vacío si el proyecto no declara ninguna. Va acá y no en el sistema porque es
+   * **de este proyecto**: el sistema es lo que vale para descomponer en
+   * cualquier parte, y esto es cómo se trabaja en esta.
+   */
+  readonly rules: string;
+}
+
+/**
+ * Cuánto de las reglas del proyecto entra al prompt.
+ *
+ * Un techo existe porque el prompt se paga en cada llamada y porque un proyecto
+ * con veinte archivos de reglas mandaría más contexto que el trabajo mismo. Se
+ * corta por lo alto y se dice que se cortó: un recorte silencioso haría creer al
+ * modelo que leyó todo.
+ */
+const TOPE_REGLAS = 20_000;
+
+/**
+ * Las reglas del proyecto, para que el arquitecto no descomponga a ciegas.
+ *
+ * El arquitecto no es un agente: no lee archivos ni decide qué mirar —recibe un
+ * prompt y devuelve un grafo—, así que las skills del proyecto, que un agente sí
+ * abre, **no lo alcanzan**. Sin esto descompone con reglas genéricas y decide
+ * cómo partir el trabajo sin saber que en este proyecto los modelos viven en
+ * `models/<área>.py`, que las migraciones no se mezclan con el sync o que hay
+ * estándares que acaban de entrar en vigor.
+ *
+ * Se leen el stack, los estándares en vigor y, si el proyecto escribe uno, su
+ * propia skill de descomposición: eso es lo que un proyecto tiene para decir
+ * sobre cómo se parte su trabajo.
+ */
+export function projectRulesFor(root: string): string {
+  const partes: string[] = [];
+  const leer = (relativa: string): string => {
+    try {
+      return readFileSync(join(root, relativa), "utf8").trim();
+    } catch {
+      return "";
+    }
+  };
+
+  const stack = leer(join(".valmen", "rules", "stack.md"));
+  if (stack !== "")
+    partes.push(`### Stack y arquitectura
+${stack}`);
+
+  let estandares: string[];
+  try {
+    estandares = readdirSync(join(root, ".valmen", "rules"))
+      .filter((nombre) => nombre.startsWith("estandares-") && nombre.endsWith(".md"))
+      .sort();
+  } catch {
+    estandares = [];
+  }
+  for (const nombre of estandares) {
+    const texto = leer(join(".valmen", "rules", nombre));
+    if (texto !== "")
+      partes.push(`### ${nombre.replace(".md", "")}
+${texto}`);
+  }
+
+  const skill = leer(join(".valmen", "skills", "descomposicion", "SKILL.md"));
+  if (skill !== "") {
+    partes.push(`### Cómo se descompone en este proyecto\n${skill}`);
+  }
+
+  const juntas = partes.join("\n\n");
+  return juntas.length > TOPE_REGLAS
+    ? `${juntas.slice(0, TOPE_REGLAS)}\n\n(reglas recortadas: el proyecto declara más de lo que entra en el prompt)`
+    : juntas;
 }
 
 /** El resultado de descomponer. */
@@ -241,6 +314,7 @@ export async function decomposeFeature(
     brief,
     design: leerDiseno(root, slug),
     requirements: requisitos,
+    rules: projectRulesFor(root),
   });
 
   const yaml = proposalToYaml(slug, exigirPropuesta(proposal), decomposer);
@@ -315,6 +389,13 @@ export function decompositionPrompt(entrada: DecomposeInput): string {
     "BRIEF:",
     entrada.brief,
     "",
+    ...(entrada.rules === ""
+      ? []
+      : [
+          "REGLAS DEL PROYECTO — mandan sobre las reglas genéricas de abajo:",
+          entrada.rules,
+          "",
+        ]),
     "Reglas:",
     "1. Agrupa los tickets en sprints. Cada sprint es un tramo que se puede",
     "   entregar y verificar por separado.",
@@ -346,6 +427,10 @@ export const SISTEMA_DESCOMPOSICION = [
   "4. Un ticket es una unidad revisable: si toca más de un módulo o excede unas",
   "   pocas horas de trabajo, divídelo.",
   "5. El identificador es `<TIPO>-<MODULO>-<DESC>-<YYYYMMDD>`, en mayúsculas.",
+  "6. Si el mensaje trae las reglas del proyecto, **manda el proyecto**: decide",
+  "   cómo se agrupa el trabajo, qué archivos viven juntos y qué no se mezcla en",
+  "   un mismo ticket. Partir el trabajo ignorándolas produce un grafo que se",
+  "   rechaza al implementarlo, no al escribirlo.",
   "",
   "Responde solo con el grafo, en la forma que se te pide.",
 ].join("\n");

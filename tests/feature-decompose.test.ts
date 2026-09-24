@@ -26,6 +26,7 @@ import {
   advanceFeature,
   createFeature,
   decomposeFeature,
+  decompositionPrompt,
   parseRequirements,
   readRequirements,
 } from "../packages/engine/src/index.js";
@@ -388,6 +389,80 @@ describe("decomposeFeature", () => {
     );
     expect(escrito).toBe(resultado.yaml);
     expect(escrito).toContain("model: kimi-k3");
+  });
+
+  it("el arquitecto recibe las reglas del proyecto, y sabe que mandan", async () => {
+    // El arquitecto no es un agente: recibe un prompt y devuelve un grafo, así
+    // que las skills del proyecto —que un agente abre cuando quiere— no lo
+    // alcanzan. Sin esto descompone a ciegas, y decide cómo partir el trabajo sin
+    // saber cómo se trabaja acá.
+    const root = featureConSpec(proyecto());
+    mkdirSync(join(root, ".valmen", "rules"), { recursive: true });
+    writeFileSync(
+      join(root, ".valmen", "rules", "stack.md"),
+      "# Stack\n\nDjango con un esquema por inquilino.\n",
+      "utf8",
+    );
+    writeFileSync(
+      join(root, ".valmen", "rules", "estandares-datos.md"),
+      "# Estándares de datos\n\nLos modelos nuevos no usan FloatField para dinero.\n",
+      "utf8",
+    );
+
+    let visto = "";
+    await decomposeFeature({
+      root,
+      slug: "modulo-inventario",
+      callModel: async (entrada) => {
+        visto = decompositionPrompt(entrada);
+        return { proposal: PROPUESTA, decomposer };
+      },
+    });
+
+    expect(visto).toContain("REGLAS DEL PROYECTO");
+    expect(visto).toContain("Django con un esquema por inquilino");
+    expect(visto).toContain("no usan FloatField para dinero");
+    // Y las reglas dicen que mandan sobre las genéricas: si no, el modelo elige.
+    expect(visto).toContain("mandan sobre las reglas genéricas");
+  });
+
+  it("la skill de descomposición del proyecto entra, si existe", async () => {
+    // Es lo que un proyecto tiene para decir sobre **cómo se parte su trabajo**:
+    // que un ticket no cruce dos apps, que las migraciones vayan aparte.
+    const root = featureConSpec(proyecto());
+    mkdirSync(join(root, ".valmen", "skills", "descomposicion"), { recursive: true });
+    writeFileSync(
+      join(root, ".valmen", "skills", "descomposicion", "SKILL.md"),
+      "---\nname: descomposicion\n---\n\nUn ticket no cruza dos apps.\n",
+      "utf8",
+    );
+
+    let visto = "";
+    await decomposeFeature({
+      root,
+      slug: "modulo-inventario",
+      callModel: async (entrada) => {
+        visto = decompositionPrompt(entrada);
+        return { proposal: PROPUESTA, decomposer };
+      },
+    });
+
+    expect(visto).toContain("Cómo se descompone en este proyecto");
+    expect(visto).toContain("Un ticket no cruza dos apps");
+  });
+
+  it("un proyecto sin reglas no recibe un bloque vacío", async () => {
+    const root = featureConSpec(proyecto());
+    let visto = "";
+    await decomposeFeature({
+      root,
+      slug: "modulo-inventario",
+      callModel: async (entrada) => {
+        visto = decompositionPrompt(entrada);
+        return { proposal: PROPUESTA, decomposer };
+      },
+    });
+    expect(visto).not.toContain("REGLAS DEL PROYECTO");
   });
 
   it("el YAML escrito se relee con el mismo parser que un archivo a mano", async () => {
