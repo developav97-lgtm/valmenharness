@@ -1260,6 +1260,16 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
   {
     name: "materializar_feature",
+    // No encaja en ningún preset: escribe, pero **solo agrega** —un ticket que ya
+    // existe no se toca— y repetirla deja el mismo registro. Las tres cosas a la
+    // vez no las declara ninguna de las cuatro constantes, y forzarla en `ANEXA`
+    // diría que no es idempotente cuando sí lo es.
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
     title: "Escribir los tickets de una feature en el registro",
     description:
       "Descomponer una feature deja un **plan**: un `tickets.yaml` con sprints, " +

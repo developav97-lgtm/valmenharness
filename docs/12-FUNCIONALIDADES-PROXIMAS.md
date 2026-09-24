@@ -590,7 +590,7 @@ cliente no hable MCP no hay hueco: `valmen` es un CLI, y las dos puertas llaman 
 sin terminal** —de `intake` a `closed`, con sus puntos, su evidencia, su QA, su cierre y su
 reapertura— y las skills del proyecto se publican como *prompts* del protocolo, que es lo
 que vuelve el servidor agnóstico del agente sin escribir un adaptador por cliente. Las
-treinta y cinco herramientas, y lo que deliberadamente **no** se expone, están en
+treinta y seis herramientas, y lo que deliberadamente **no** se expone, están en
 `docs/02-MOTOR.md` §10.
 
 | Herramienta MCP | Qué hace | Estado |
