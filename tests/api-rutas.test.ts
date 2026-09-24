@@ -13,10 +13,13 @@
  * y se lee del archivo, así que una URL nueva sin su ruta falla acá y no en la
  * pantalla de alguien.
  */
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
+
+import { type ServerContext, handleApi } from "../packages/server/src/server.js";
 
 const WEB = readFileSync(
   join(import.meta.dirname, "..", "packages", "server", "web", "index.html"),
@@ -42,8 +45,9 @@ const RUTAS = [
   "GET /api/features/:slug",
   "POST /api/features/:slug/decompose",
   "POST /api/features/:slug/transition",
-  "GET /api/processes/gates/:gate/approve",
-  "POST /api/providers/:id/credential",
+  "POST /api/processes/gates/:gate/approve",
+  "PUT /api/providers/:id/credential",
+  "DELETE /api/providers/:id/credential",
   "GET /api/providers/:id/models",
   "POST /api/providers/:id/probe",
   "POST /api/providers/:id/models/test",
@@ -72,6 +76,26 @@ function canonica(ruta: string): string {
   return `${metodo} ${normalizar(camino ?? "")}`;
 }
 
+/**
+ * Las llamadas de la interfaz, con su método.
+ *
+ * El método importa y la prueba de rutas lo ignoraba: comparaba solo caminos, así
+ * que una URL declarada como `POST` y llamada como `PUT` pasaba en verde. Apareció
+ * al llamar de verdad al despachador —`PUT /api/providers/:id/credential` era
+ * `POST` en la lista— y ahora se afirma con el método incluido.
+ */
+function llamadasDeLaInterfaz(): string[] {
+  const encontradas = new Set<string>();
+  for (const match of WEB.matchAll(
+    /api\(\s*"(GET|POST|PUT|DELETE)"\s*,\s*`(\/api\/[^`]*)`/g,
+  )) {
+    const metodo = match[1] as string;
+    const camino = (match[2] as string).replace(/encodeURIComponent\([^)]*\)/g, ":param");
+    encontradas.add(`${metodo} ${normalizar(camino)}`);
+  }
+  return [...encontradas].sort();
+}
+
 /** Las URLs de `/api/` que el módulo de la interfaz construye. */
 function urlsDeLaInterfaz(): string[] {
   const encontradas = new Set<string>();
@@ -88,6 +112,13 @@ describe("el contrato de rutas entre la interfaz y el servidor", () => {
     // Una prueba que no encuentra nada pasa siempre, y esta existe justamente
     // porque una prueba que pasaba no vio el defecto.
     expect(urlsDeLaInterfaz().length).toBeGreaterThan(10);
+  });
+
+  it("cada llamada de la interfaz corresponde a una ruta declarada, con su método", () => {
+    const conocidas = new Set(RUTAS.map((ruta) => canonica(ruta)));
+    const llamadas = llamadasDeLaInterfaz();
+    expect(llamadas.length).toBeGreaterThan(5);
+    expect(llamadas.filter((llamada) => !conocidas.has(llamada))).toEqual([]);
   });
 
   it("cada URL que la interfaz construye corresponde a una ruta declarada", () => {
@@ -113,5 +144,53 @@ describe("el contrato de rutas entre la interfaz y el servidor", () => {
     for (const ruta of RUTAS) {
       expect(canonica(ruta)).toMatch(/^(GET|POST|PUT|DELETE) \/api\//);
     }
+  });
+});
+
+/**
+ * Las rutas, contra el despachador de verdad.
+ *
+ * Esta suite existe porque la comparación de arriba **pasó en verde mientras la
+ * pantalla devolvía 404**: la ruta de la decisión de un estándar pedía cinco
+ * segmentos y la interfaz mandaba cuatro, y como la prueba comparaba cadenas
+ * normalizadas —no el despachador— el defecto vivía justo en el medio que decía
+ * cubrir. Comparar textos puede afirmar que dos listas coinciden; no puede
+ * afirmar que el servidor reconozca el camino.
+ *
+ * Así que aquí se llama a `handleApi` con cada ruta declarada, con un `:param`
+ * sustituido por un valor real. Lo que se afirma es una sola cosa: que la
+ * respuesta **no** sea «Ruta no encontrada». Que después falle por falta de
+ * datos, de credenciales o de ticket es lo esperado —el proyecto de prueba está
+ * vacío—, y es la diferencia exacta entre «esta ruta no existe» y «esta ruta
+ * existe y le faltan cosas».
+ */
+describe("las rutas declaradas, contra el despachador", () => {
+  const lab = mkdtempSync(join(tmpdir(), "valmen-rutas-"));
+  const contexto = (): ServerContext => ({
+    root: lab,
+    paths: { root: lab, ticketsDir: "tickets" },
+  });
+
+  afterAll(() => {
+    rmSync(lab, { recursive: true, force: true });
+  });
+
+  it("ninguna ruta declarada termina en «Ruta no encontrada»", async () => {
+    const noEncontradas: string[] = [];
+
+    for (const ruta of RUTAS) {
+      const [metodo, camino] = ruta.split(" ") as [string, string];
+      const concreto = camino.replace(/:([a-zA-Z]+)/g, "de-prueba");
+      const respuesta = await handleApi(metodo, concreto, {}, contexto());
+      const cuerpo = JSON.stringify(respuesta.body);
+
+      // El 404 legítimo es el de un recurso que no existe; el que delata un
+      // contrato roto es el del camino, y dice «Ruta no encontrada».
+      if (respuesta.status === 404 && cuerpo.includes("Ruta no encontrada")) {
+        noEncontradas.push(`${metodo} ${camino} → ${concreto}`);
+      }
+    }
+
+    expect(noEncontradas).toEqual([]);
   });
 });

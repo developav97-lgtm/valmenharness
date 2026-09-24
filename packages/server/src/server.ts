@@ -680,19 +680,10 @@ export async function handleApi(
   // `AGENTS.md`.
   if (
     method === "POST" &&
-    partes.length === 5 &&
+    partes.length === 4 &&
     partes[0] === "api" &&
     partes[1] === "standards" &&
-    partes[3] === undefined
-  ) {
-    return { status: 404, body: { error: "Ruta no encontrada." } };
-  }
-  if (
-    method === "POST" &&
-    partes.length === 5 &&
-    partes[0] === "api" &&
-    partes[1] === "standards" &&
-    partes[4] === "decision"
+    partes[3] === "decision"
   ) {
     const id = (partes[2] as string).toUpperCase();
     const datos = body as { decision?: unknown };
