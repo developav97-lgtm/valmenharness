@@ -124,8 +124,11 @@ describe("el tablero de una feature", () => {
     expect(texto).toContain("Sin crear · 1");
     expect(texto).toContain("En curso · 1");
     expect(texto).toContain("Cerrado · 1");
-    // Las que no tienen nadie se muestran igual: el tablero se lee por su forma.
-    expect(texto).toContain("Aprobado · 0");
+    // Y las que no tienen tarjetas no ocupan una columna: con ocho etapas y seis
+    // vacías había que desplazarse para ver las dos que tienen trabajo. Se nombran
+    // al pie, así que la forma del tablero no se pierde.
+    expect(texto).not.toContain("Aprobado · 0");
+    expect(texto).toContain("Sin tarjetas: Por analizar, Planeado, Aprobado, Por probar");
   });
 
   it("dice cuál se puede empezar y cuál espera", async () => {

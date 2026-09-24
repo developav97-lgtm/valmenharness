@@ -505,10 +505,29 @@
         overflow-x: auto;
         padding-bottom: 10px;
         align-items: flex-start;
+        width: 100%;
       }
+      /* El título de una tarjeta se recorta a tres renglones: el del modelo puede
+         tener doscientos caracteres y en una columna angosta se come la tarjeta.
+         El texto completo queda en el `title`, que es donde se consulta. */
+      .tarjeta-ticket .titulo-ticket {
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .vacio-tablero {
+        color: var(--tenue);
+        font-size: 12px;
+        margin-top: 2px;
+      }
+      /* Las columnas se reparten el ancho disponible. Antes tenían un mínimo de
+         210 px y con ocho etapas el tablero pedía mil setecientos: había que
+         desplazarse para ver la mitad del trabajo. Ahora caben las que hay, y el
+         desplazamiento queda solo como salida para una pantalla muy angosta. */
       .columna-tablero {
-        flex: 1 0 210px;
-        min-width: 210px;
+        flex: 1 1 0;
+        min-width: 180px;
         background: var(--panel);
         border: 1px solid var(--borde);
         border-radius: 8px;
@@ -3195,13 +3214,17 @@
         ];
 
         const tablero = el("div", undefined, "tablero");
+        const vacias = [];
         for (const [nombre, coincide] of etapas) {
           const suyos = tickets.filter(coincide);
-          // Una columna vacía se muestra —el tablero se lee por su forma, y las
-          // que faltan cambian la forma—, salvo «Bloqueado»: no hay nada
-          // bloqueado hasta que lo hay, y una columna que casi siempre está vacía
-          // solo ocupa sitio.
-          if (suyos.length === 0 && nombre === "Bloqueado") continue;
+          // Una columna sin tarjetas no se pinta: ocho etapas con seis vacías
+          // obligaban a desplazarse para ver las dos que tienen trabajo. La forma
+          // del tablero no se pierde —las vacías se nombran al pie— y lo que se
+          // gana es que el trabajo entre en la pantalla.
+          if (suyos.length === 0) {
+            vacias.push(nombre);
+            continue;
+          }
 
           const columna = el("div", undefined, "columna-tablero");
           columna.append(el("div", `${nombre} · ${suyos.length}`, "titulo"));
@@ -3217,7 +3240,10 @@
               identificador.append(enlace);
             }
             tarjeta.append(identificador);
-            tarjeta.append(el("div", t.title || "(sin título)", "titulo-ticket"));
+            const titulo = el("div", t.title || "(sin título)", "titulo-ticket");
+            // El texto completo, para cuando el recorte de tres renglones lo corta.
+            titulo.title = t.title || "(sin título)";
+            tarjeta.append(titulo);
             const meta = el("div", undefined, "meta");
             meta.append(
               el("span", t.exists ? t.state : "sin crear", "etiqueta"),
@@ -3239,6 +3265,9 @@
         }
 
         caja.append(tablero);
+        if (vacias.length > 0) {
+          caja.append(el("div", `Sin tarjetas: ${vacias.join(", ")}.`, "vacio-tablero"));
+        }
 
         const sinCrear = tickets.filter((t) => !t.exists).length;
         // El paso que convierte el plan en trabajo. Está acá, junto al dato que lo

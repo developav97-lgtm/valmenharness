@@ -14,6 +14,7 @@
  * todos los comandos sean testeables sin capturar la salida del proceso.
  */
 import { realpathSync } from "node:fs";
+import { networkInterfaces } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -256,7 +257,10 @@ Comandos:
                             de cada escritura al registro.
       --dry-run             Muestra el bloque sin escribir el archivo.
       --force               Escribe aunque Hermes no parezca instalado.
-  serve [--port <n>]        Mission Control en 127.0.0.1.
+  serve [--port <n>] [--host <dirección>]
+                            Mission Control en 127.0.0.1. Con --host 0.0.0.0
+                            escucha en la red —para mirarlo desde una tablet— y sin
+                            autenticación: la frontera de confianza es tu red.
   simulate <gate>           Mide un gate sobre el registro histórico.
       --limit <n>           Evalúa solo los primeros n sujetos.
       --json                Informe en JSON en vez de tabla.
@@ -359,6 +363,8 @@ export const VALUE_OPTIONS = [
   // `estandar aceptar`: las palabras de quien decide. Una bandera que consume
   // valor y no está en esta lista se lee como booleana y su valor queda suelto.
   "--instruccion",
+  // `serve --host`: dónde escucha Mission Control.
+  "--host",
   // `memory clasificar`: qué se hace con el aprendizaje.
   "--decision",
   "--actor",
@@ -381,6 +387,22 @@ export const VALUE_OPTIONS = [
   // `hermes brief --dias N`: cuántos días hacia atrás se cuentan los cierres.
   "--dias",
 ] as const;
+
+/**
+ * La primera dirección IPv4 de la máquina en la red local.
+ *
+ * Se imprime para que abrir Mission Control desde una tablet no exija averiguar
+ * la IP a mano: `0.0.0.0` es la dirección donde **escucha**, no donde se entra.
+ */
+function primerIpLocal(): string {
+  const interfaces = networkInterfaces();
+  for (const direcciones of Object.values(interfaces)) {
+    for (const direccion of direcciones ?? []) {
+      if (direccion.family === "IPv4" && !direccion.internal) return direccion.address;
+    }
+  }
+  return "0.0.0.0";
+}
 
 /** Error de uso: se reporta con el código de esquema, como el CLI de referencia. */
 class UsageError extends Error {}
@@ -1119,20 +1141,33 @@ export async function run(argv: readonly string[]): Promise<number> {
       const servidor = createMissionControl(contexto);
       const puertoFinal = Number.isNaN(puerto) ? 4173 : puerto;
 
+      // Solo en la interfaz de loopback por defecto: la frontera de confianza es
+      // la máquina, igual que en cualquier herramienta que maneja credenciales.
+      // Abrirlo a la red es una decisión explícita —mirarlo desde una tablet, por
+      // ejemplo— y por eso se pide con `--host` y se avisa de lo que implica.
+      const anfitrion =
+        typeof options.flags["host"] === "string" ? options.flags["host"] : "127.0.0.1";
+
       await new Promise<void>((resolve, reject) => {
         servidor.once("error", reject);
-        // Solo en la interfaz de loopback: la frontera de confianza es la
-        // máquina, igual que en cualquier herramienta que maneja credenciales.
-        servidor.listen(puertoFinal, "127.0.0.1", resolve);
+        servidor.listen(puertoFinal, anfitrion, resolve);
       });
 
+      const abierto = anfitrion !== "127.0.0.1" && anfitrion !== "localhost";
       process.stdout.write(
         [
           "Mission Control",
-          `  http://127.0.0.1:${puertoFinal}`,
+          `  http://${anfitrion === "0.0.0.0" ? primerIpLocal() : anfitrion}:${puertoFinal}`,
+          ...(abierto ? [`  http://127.0.0.1:${puertoFinal}   (esta máquina)`] : []),
           `  raíz del proyecto   ${options.root}`,
           "",
-          "  Escucha solo en 127.0.0.1. Detenlo con Ctrl-C.",
+          ...(abierto
+            ? [
+                "  Escucha en la red: cualquiera que llegue a esa dirección puede leer el",
+                "  registro y decidir compuertas. No hay autenticación — la frontera de",
+                "  confianza es tu red. Detenlo con Ctrl-C cuando termines.",
+              ]
+            : ["  Escucha solo en 127.0.0.1. Detenlo con Ctrl-C."]),
           "",
         ].join("\n"),
       );
