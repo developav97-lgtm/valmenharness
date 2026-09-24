@@ -142,7 +142,7 @@ valmen mcp --global    # y en el config.toml de codex; `valmen mcp` imprime el d
 
 A partir de ahí, el flujo no empieza en una consola: se le describe un problema al
 agente y el agente crea el ticket, escribe el diagnóstico, valida contra el
-contrato, evalúa la compuerta y mueve el estado. Treinta y dos herramientas, y
+contrato, evalúa la compuerta y mueve el estado. Treinta y tres herramientas, y
 todas llaman al mismo motor que el CLI —dos implementaciones podrían dar dos
 veredictos sobre el mismo ticket, que es justo lo que el harness existe para
 impedir.

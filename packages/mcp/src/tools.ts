@@ -64,6 +64,8 @@ import {
   simulateGate,
   renderHits,
   renderUsage,
+  renderValue,
+  ticketValueReport,
   saveLearning,
   searchMemory,
   summarize,
@@ -842,6 +844,47 @@ export const TOOLS: readonly ToolDefinition[] = [
         },
       },
       required: ["evaluaciones", "tickets", "costeUsd", "decididasEnCodigo", "calibracion"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "reporte_valor",
+    title: "Qué costó y qué dejó cada ticket cerrado",
+    description:
+      "El consumo agregado dice cuánto se gastó; esto dice **en qué**. Toma los tickets " +
+      "cerrados en un rango y pone, ticket por ticket, lo que costó —los recibos de " +
+      "compuerta más las sesiones que el ticket registró al cerrarse— junto a lo que " +
+      "dejó: compuertas aprobadas, ciclos de QA, y **cuántas veces el trabajo volvió " +
+      "atrás**, que es la señal más barata de que el análisis se hizo a las prisas. " +
+      "Ordenado por coste: el de arriba es el que hay que mirar. Es el informe para " +
+      "responder «¿esto está sirviendo?» con números en vez de con impresiones.",
+    inputSchema: conRoot({
+      properties: {
+        desde: { type: "string", description: "Fecha inicial `YYYY-MM-DD`, incluida." },
+        hasta: { type: "string", description: "Fecha final `YYYY-MM-DD`, incluida." },
+        limite: { type: "number", description: "Cuántas filas mostrar. Por defecto, 20." },
+      },
+    }),
+    outputSchema: {
+      type: "object",
+      properties: {
+        tickets: { type: "number" },
+        costeTotalUsd: { type: "number" },
+        costeMedioUsd: { type: ["number", "null"] },
+        conVueltasAtras: { type: "array", items: { type: "string" } },
+        costeParcial: { type: "array", items: { type: "string" } },
+        aprobadasEnCodigo: { type: "number" },
+        revertidasPorPersona: { type: "number" },
+      },
+      required: [
+        "tickets",
+        "costeTotalUsd",
+        "costeMedioUsd",
+        "conVueltasAtras",
+        "costeParcial",
+        "aprobadasEnCodigo",
+        "revertidasPorPersona",
+      ],
       additionalProperties: false,
     },
   },
@@ -1662,6 +1705,25 @@ export async function callTool(
           costeUsd: informe.costUsd,
           decididasEnCodigo: informe.byCode,
           calibracion: informe.calibration.map((fila) => ({ ...fila, rows: undefined })),
+        });
+      }
+
+      case "reporte_valor": {
+        const desde = texto(args, "desde", false);
+        const hasta = texto(args, "hasta", false);
+        const limite = args["limite"];
+        const informe = ticketValueReport(paths, {
+          ...(desde === undefined ? {} : { desde }),
+          ...(hasta === undefined ? {} : { hasta }),
+        });
+        return bien(renderValue(informe, typeof limite === "number" ? { limite } : {}), {
+          tickets: informe.tickets.length,
+          costeTotalUsd: informe.totalUsd,
+          costeMedioUsd: informe.meanUsd,
+          conVueltasAtras: [...informe.withReturns],
+          costeParcial: [...informe.partial],
+          aprobadasEnCodigo: informe.byCode,
+          revertidasPorPersona: informe.reversedByHuman,
         });
       }
 

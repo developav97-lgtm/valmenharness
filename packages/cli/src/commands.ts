@@ -90,6 +90,8 @@ import {
   searchMemory,
   renderIndex,
   renderUsage,
+  renderValue,
+  ticketValueReport,
   renderColorReport,
   scanPendingChanges,
   scanPendingColors,
@@ -1202,6 +1204,40 @@ export function standardsCommand(
     }
 
     return error(`estandar no conoce el verbo "${verbo}".`, EXIT_SCHEMA);
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/**
+ * `usage value`: el consumo del harness, ticket por ticket.
+ *
+ * El agregado dice cuánto se gastó; esto dice en qué, y con qué resultado. Es la
+ * mitad que responde «¿esto está sirviendo?» sin abrir un tablero: la tabla
+ * ordenada por coste pone arriba el ticket que hay que mirar, y las vueltas atrás
+ * dicen si el problema fue el análisis o la ejecución.
+ */
+export function valueCommand(
+  paths: RegistryPaths,
+  flags: Readonly<Record<string, string | true>>,
+): CommandResult {
+  const desde = flags["desde"];
+  const hasta = flags["hasta"];
+  const limite = flags["limite"];
+
+  try {
+    const informe = ticketValueReport(paths, {
+      ...(typeof desde === "string" ? { desde } : {}),
+      ...(typeof hasta === "string" ? { hasta } : {}),
+    });
+    const cuantos = typeof limite === "string" ? Number.parseInt(limite, 10) : Number.NaN;
+    return ok(
+      renderValue(
+        informe,
+        Number.isFinite(cuantos) && cuantos > 0 ? { limite: cuantos } : {},
+      ),
+    );
   } catch (caught) {
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);

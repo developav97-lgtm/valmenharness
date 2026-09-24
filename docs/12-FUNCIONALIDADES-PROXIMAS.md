@@ -361,6 +361,22 @@ Gate automático: 6 aprobaciones, 0 reversadas por humano  ✓
 **Por qué importa.** Es lo que permite responder "¿esto está sirviendo?" con números. Y
 detecta los tickets que se reanudan mucho, que es donde está el desperdicio real.
 
+**Estado: hecho.** El comando es `valmen usage value` —y `reporte_valor` por el MCP—, porque
+es la misma pregunta que `valmen usage` mirada ticket por ticket y no dos contadores que haya
+que recordar por separado.
+
+Junta dos fuentes que ya existían y nunca se habían mirado juntas: los **recibos de compuerta**
+y el **consumo que el ticket registró al cerrarse** —las sesiones de agente, con su coste o con
+sus tokens—. La tabla va ordenada por coste, porque el de arriba es el que hay que mirar, y
+lleva las vueltas atrás al lado: cuántas veces el trabajo volvió a `changes_requested`, que es
+la señal más barata de que el análisis se hizo a las prisas.
+
+Dos decisiones que valen más que la tabla: un coste desconocido **no se suma como cero** —un
+proveedor por suscripción no tiene coste por token, y contarlo como gratis haría que el ticket
+más trabajado pareciera el más barato—, así que la fila se marca con `?` y el pie lo explica; y
+se cuenta aparte **cuántas aprobaciones decidió el código y cuántas revirtió una persona**, que
+es el único número que mide si un gate automático se está equivocando a favor.
+
 **Esfuerzo:** 4–5 días.
 
 ---
@@ -509,7 +525,7 @@ cliente no hable MCP no hay hueco: `valmen` es un CLI, y las dos puertas llaman 
 sin terminal** —de `intake` a `closed`, con sus puntos, su evidencia, su QA, su cierre y su
 reapertura— y las skills del proyecto se publican como *prompts* del protocolo, que es lo
 que vuelve el servidor agnóstico del agente sin escribir un adaptador por cliente. Las
-treinta y dos herramientas, y lo que deliberadamente **no** se expone, están en
+treinta y tres herramientas, y lo que deliberadamente **no** se expone, están en
 `docs/02-MOTOR.md` §10.
 
 | Herramienta MCP | Qué hace | Estado |
@@ -525,6 +541,7 @@ treinta y dos herramientas, y lo que deliberadamente **no** se expone, están en
 | `revisar_secretos` | Credenciales en el cambio pendiente y en un texto | **Hecho** |
 | Prompts (`prompts/list`, `prompts/get`) | Las skills del proyecto, sin adaptador | **Hecho** |
 | `reporte_consumo`, `buscar_memoria`, `guardar_aprendizaje` | Consumo, memoria y lo aprendido | **Hecho** |
+| `reporte_valor` | Qué costó y qué dejó cada ticket cerrado | **Hecho** |
 | `ver_estandares`, `proponer_estandar`, `decidir_estandar`, `revisar_presentacion` | Los estándares: consultarlos, proponerlos, decidirlos y revisar los colores fijos | **Hecho** |
 | `drift_check` | Drift de artefactos | Falta: depende de A2, que no está construido |
 

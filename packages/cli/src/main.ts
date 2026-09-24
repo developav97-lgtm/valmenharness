@@ -63,6 +63,7 @@ import {
   scanPendingSecretsCommand,
   templateCommand,
   usageCommand,
+  valueCommand,
 } from "./commands.js";
 import {
   type Entity,
@@ -111,6 +112,10 @@ Comandos:
   usage [--desde <f>] [--hasta <f>]
                             Consumo del harness: evaluaciones, coste y calibración,
                             contado de los recibos. Sin fechas, todo el registro.
+  usage value [--desde <f>] [--hasta <f>] [--limite <n>]
+                            Lo mismo, ticket por ticket: qué costó cada cierre, sus
+                            compuertas, sus ciclos de QA y cuántas veces volvió atrás.
+                            Ordenado por coste. --limite son las filas (20 por defecto).
   migrate [--dry-run]       Lleva el registro al esquema vigente y limpia del
                             routing los roles que el harness ya no ejecuta.
   sync [--check]            Proyecta .valmen/ a AGENTS.md.
@@ -856,8 +861,23 @@ export function dispatch(options: Options): CommandResult {
       return memoryCommand(paths, { ...options.flags, _: resto.join(" ") }, verbo ?? "");
     }
 
-    case "usage":
+    case "usage": {
+      // `usage` sin verbo es el consumo del harness; `usage value` es el mismo
+      // registro mirado ticket por ticket. Dos comandos separados obligarían a
+      // recordar cuál de los dos tiene la respuesta, y son la misma pregunta.
+      const [verbo] = rest;
+      if (verbo === "value" || verbo === "valor") {
+        return valueCommand(paths, options.flags);
+      }
+      if (verbo !== undefined && verbo !== "") {
+        return {
+          stdout: "",
+          stderr: `usage no conoce el verbo "${verbo}". Los que hay: value.\n`,
+          exitCode: EXIT_SCHEMA,
+        };
+      }
       return usageCommand(paths, options.flags);
+    }
 
     case "template": {
       const [verbo, nombre] = rest;

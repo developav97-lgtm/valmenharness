@@ -76,7 +76,7 @@ porque ahí sí hereda el `PATH` completo.
 
 ## Contrato
 
-Las treinta y dos herramientas. Ninguna es una segunda implementación: las de lectura llaman a
+Las treinta y tres herramientas. Ninguna es una segunda implementación: las de lectura llaman a
 las mismas funciones que el CLI, y las de escritura al mismo motor.
 
 | Herramienta            | Qué hace                                                          |
