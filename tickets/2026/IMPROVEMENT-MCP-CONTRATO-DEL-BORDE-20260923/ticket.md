@@ -4,8 +4,8 @@ id: IMPROVEMENT-MCP-CONTRATO-DEL-BORDE-20260923
 title: El contrato del borde del MCP, lo que declara y lo que devuelve
 type: IMPROVEMENT
 module: MCP
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -306,6 +306,26 @@ forma que produce `renderRouting`.
     "findings": [],
     "correction": null,
     "po_confirmation": null
+  },
+  {
+    "id": "QA-003",
+    "date": "2026-09-24",
+    "build_reference": "commit:eeab5d62edc9e22ecae5b36b4c673206110770ea",
+    "environment": "local, macOS, Node 24 — sesión de opencode contra el servidor MCP del repositorio",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-004",
+    "date": "2026-09-24",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "yo lo que probé funcionó correcto"
   }
 ]
 ```
@@ -325,7 +345,19 @@ forma que produce `renderRouting`.
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-09-24",
+    "technical_summary": "El servidor MCP declara lo que promete: root opcional en los treinta y dos esquemas —antes ninguno lo declaraba y additionalProperties:false hacía que un cliente que validara rechazara el argumento—, structuredContent con outputSchema en las herramientas cuyo dato ya es canónico, y una autocomprobación (valmen-mcp --check) que dice por herramienta qué argumentos exige. Además, valmen migrate limpia de .valmen/routing.yaml los roles retirados, que antes detenían todas las compuertas.",
+    "functional_summary": "Un agente puede apuntar el harness a otro proyecto sin que su cliente rechace la llamada, recibe el dato estructurado cuando existe en vez de solo texto, y quien diagnostica un servidor que no aparece tiene en --check la lista de argumentos obligatorios. Y una clave retirada del routing deja de romper el trabajo: migrate la limpia sin borrar la configuración de al lado.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "unreleased"
+  }
+]
 ```
 
 ## Consumo de IA
@@ -437,6 +469,54 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-09-23",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-09-23",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-09-23",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-004 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-09-23",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-09-23",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-09-23",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
