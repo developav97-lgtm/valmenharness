@@ -85,6 +85,26 @@ describe("la decisión", () => {
     ).toContain("«aceptalos»");
   });
 
+  it("deja las reglas separadas, no pegadas unas a otras", () => {
+    // El anexado filtraba las líneas vacías para omitir el motivo cuando no
+    // había, y se llevaba puestos los separadores: dos estándares aceptados
+    // quedaban como un solo bloque ilegible.
+    const uno = proponer("Primero");
+    const dos = proponer("Segundo");
+    decideProposal(paths(), uno, "aceptado", { instruccion: "dale" });
+    decideProposal(paths(), dos, "aceptado", { instruccion: "dale" });
+
+    const archivo = readFileSync(
+      join(lab, ".valmen", "rules", "estandares-presentacion.md"),
+      "utf8",
+    );
+    expect(archivo).toMatch(/\n\n## Primero\n\nLos montos/);
+    expect(archivo).toMatch(/\n\n## Segundo\n\nLos montos/);
+    // Una línea en blanco entre bloques, no dos: el archivo se lee de corrido.
+    expect(archivo).not.toMatch(/\n\n\n/);
+    expect(archivo.endsWith("\n")).toBe(true);
+  });
+
   it("descartar no escribe la regla, y también queda con su frase", () => {
     const id = proponer();
     const resultado = decideProposal(paths(), id, "descartado", {

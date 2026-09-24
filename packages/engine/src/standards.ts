@@ -340,24 +340,25 @@ export function decideProposal(
       mkdirSync(join(paths.root, ".valmen", "rules"), { recursive: true });
       writeFileSync(archivo, cabeceraDeArea(propuesta.area), "utf8");
     }
-    appendFileSync(
-      archivo,
-      [
-        "",
-        `## ${propuesta.title}`,
-        "",
-        propuesta.rule,
-        "",
-        propuesta.why === "" ? "" : `**Por qué:** ${propuesta.why}`,
-        propuesta.tickets.length === 0
-          ? ""
-          : `**Visto en:** ${propuesta.tickets.join(", ")} (${propuesta.date})`,
-        "",
-      ]
-        .filter((linea) => linea !== "")
-        .join("\n") + "\n",
-      "utf8",
-    );
+    // Las líneas condicionales se omiten una por una, no filtrando vacíos: filtrar
+    // se llevaba puestos los separadores y las reglas quedaban pegadas unas a
+    // otras, sin el renglón que las hace legibles. Y el archivo se reescribe en
+    // vez de anexarse para que la separación con lo anterior sea **una** línea en
+    // blanco: anexando, cada regla nueva sumaba la suya y el archivo se abría a
+    // golpes.
+    const previo = readFileSync(archivo, "utf8").replace(/\n+$/, "");
+    const bloque = [
+      `## ${propuesta.title}`,
+      "",
+      propuesta.rule,
+      "",
+      ...(propuesta.why === "" ? [] : [`**Por qué:** ${propuesta.why}`]),
+      ...(propuesta.tickets.length === 0
+        ? []
+        : [`**Visto en:** ${propuesta.tickets.join(", ")} (${propuesta.date})`]),
+      "",
+    ].join("\n");
+    writeFileSync(archivo, `${previo}\n\n${bloque}`, "utf8");
     destino = relativa;
   }
 
