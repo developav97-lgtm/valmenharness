@@ -417,8 +417,15 @@ export function saveLearning(
     "",
     `### [${id}] ${aprendizaje.title.trim()}`,
     "",
-    `**Fecha:** ${fecha}`,
-    ...(tickets.length === 0 ? [] : [`**Tickets:** ${tickets.join(", ")}`]),
+    // Las etiquetas van con guion, como las de las propuestas de estándar: el
+    // mismo formato en los dos archivos hace que una herramienta que lea uno lea
+    // el otro, y que una persona no tenga que aprender dos dialectos.
+    `- **Fecha:** ${fecha}`,
+    // Nace **pendiente**: guardar es del agente —lo descubrió y lo anota—, y
+    // decidir qué es eso es de una persona. La cola es lo que hace que la segunda
+    // mitad ocurra en vez de quedar en un «algún día lo reviso».
+    "- **Estado:** pendiente",
+    ...(tickets.length === 0 ? [] : [`- **Tickets:** ${tickets.join(", ")}`]),
     "",
     aprendizaje.body.trim(),
     "",

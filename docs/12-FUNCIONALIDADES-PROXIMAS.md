@@ -171,6 +171,29 @@ $ valmen memory review
 siente a escribir documentación. El conocimiento se captura en el momento en que se descubre,
 que es cuando alguien lo tiene fresco.
 
+**Estado: hecho, con la salida además de la entrada.** La entrada ya existía
+—`guardar_aprendizaje` anota lo que el trabajo enseñó, cuando lo enseña—. Lo que faltaba era la
+salida: un aprendizaje guardado y sin clasificar es conocimiento a medias, porque nadie dijo si
+es una regla, un caso o una impresión que no vale la pena conservar.
+
+Ahora cada aprendizaje nace **pendiente** y la cola se mira con `valmen memory review` —o
+`revisar_aprendizajes` por el MCP—, que lista lo que espera. Clasificar tiene tres salidas, y no
+son la misma cosa con distinto nombre:
+
+- **`regla`** crea una **propuesta de estándar**. No escribe la regla: aceptarla sigue siendo la
+  decisión de una persona, con sus palabras. Clasificar es triaje, es reversible y no pone nada
+  en vigor, así que lo puede hacer un agente.
+- **`caso`** lo deja como documentación de lo que pasó. Se queda en la memoria, que es donde ya
+  está, y sigue siendo consultable.
+- **`descartar`** lo marca **y lo conserva**: borrarlo destruiría el registro de que alguien ya
+  lo evaluó, y el próximo agente volvería a proponer lo mismo.
+
+Los dos verbos viven bajo `memory` y no en un comando aparte porque son la misma cosa vista
+desde el otro lado: `memory save` escribe, `memory review` decide qué hacer con lo escrito.
+
+Queda de la idea original la captura automática al final del reporte de cada subagente: hoy la
+hace el agente que está trabajando, con `guardar_aprendizaje`, y no un colector que lea reportes.
+
 **Esfuerzo:** 1 semana (con el plugin de memoria).
 
 ---
@@ -552,7 +575,7 @@ cliente no hable MCP no hay hueco: `valmen` es un CLI, y las dos puertas llaman 
 sin terminal** —de `intake` a `closed`, con sus puntos, su evidencia, su QA, su cierre y su
 reapertura— y las skills del proyecto se publican como *prompts* del protocolo, que es lo
 que vuelve el servidor agnóstico del agente sin escribir un adaptador por cliente. Las
-treinta y cuatro herramientas, y lo que deliberadamente **no** se expone, están en
+treinta y cinco herramientas, y lo que deliberadamente **no** se expone, están en
 `docs/02-MOTOR.md` §10.
 
 | Herramienta MCP | Qué hace | Estado |
@@ -569,6 +592,7 @@ treinta y cuatro herramientas, y lo que deliberadamente **no** se expone, están
 | Prompts (`prompts/list`, `prompts/get`) | Las skills del proyecto, sin adaptador | **Hecho** |
 | `reporte_consumo`, `buscar_memoria`, `guardar_aprendizaje` | Consumo, memoria y lo aprendido | **Hecho** |
 | `reporte_valor` | Qué costó y qué dejó cada ticket cerrado | **Hecho** |
+| `revisar_aprendizajes` | La cola de lo aprendido: clasificarlo como regla, caso o descarte | **Hecho** |
 | `ver_estandares`, `proponer_estandar`, `decidir_estandar`, `revisar_presentacion` | Los estándares: consultarlos, proponerlos, decidirlos y revisar los colores fijos | **Hecho** |
 | `revisar_drift` | Lo que el ticket cita y el código no confirma | **Hecho** |
 

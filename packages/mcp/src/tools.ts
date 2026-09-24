@@ -68,6 +68,10 @@ import {
   ticketValueReport,
   renderDrift,
   scanDrift,
+  DECISIONES_APRENDIZAJE,
+  classifyLearning,
+  listLearnings,
+  renderLearnings,
   saveLearning,
   searchMemory,
   summarize,
@@ -1000,6 +1004,39 @@ export const TOOLS: readonly ToolDefinition[] = [
     }),
   },
   {
+    name: "revisar_aprendizajes",
+    title: "La cola de aprendizajes: qué hacer con lo aprendido",
+    description:
+      "La memoria tiene entrada y salida. **Entrada**: guardás lo que el trabajo te enseñó con " +
+      "`guardar_aprendizaje`, cuando lo descubrís. **Salida**: esto. Sin id, devuelve la cola " +
+      "de lo que espera clasificación; con id y decisión, la clasifica. Las tres salidas no " +
+      "son lo mismo: `regla` convierte el aprendizaje en una **propuesta de estándar** —no " +
+      "escribe ninguna regla: eso lo decide una persona con sus palabras, igual que " +
+      "cualquier propuesta—; `caso` lo deja como documentación de algo que pasó; y " +
+      "`descartar` lo marca y lo conserva, para que el próximo agente no vuelva a proponer " +
+      "lo mismo. Clasificar es triaje, es reversible y no pone nada en vigor: podés hacerlo " +
+      "vos. No lo dejes crecer: una cola que nadie mira es una memoria sin criterio.",
+    inputSchema: conRoot({
+      properties: {
+        id: {
+          type: "string",
+          description: "El aprendizaje (`AP-001`). Sin `id`, se devuelve la cola.",
+        },
+        decision: {
+          type: "string",
+          enum: [...DECISIONES_APRENDIZAJE],
+          description: "Qué se hace con él. Obligatoria cuando hay `id`.",
+        },
+        area: {
+          type: "string",
+          enum: [...AREAS],
+          description:
+            "Para `regla`: a qué área pertenece el estándar que sale. Por defecto, `proceso`.",
+        },
+      },
+    }),
+  },
+  {
     name: "ver_estandares",
     title: "Los estándares del proyecto",
     description:
@@ -1830,6 +1867,39 @@ export async function callTool(
           `Aprendizaje guardado: ${guardado.id} en ${guardado.path}\n` +
             "Queda en la memoria del proyecto: la próxima búsqueda que toque este tema lo " +
             "va a encontrar.",
+        );
+      }
+
+      case "revisar_aprendizajes": {
+        const id = texto(args, "id", false);
+        if (id === undefined) {
+          return bien(renderLearnings(listLearnings(paths)));
+        }
+        const decision = texto(args, "decision");
+        if (
+          !DECISIONES_APRENDIZAJE.includes(
+            decision as (typeof DECISIONES_APRENDIZAJE)[number],
+          )
+        ) {
+          return mal(`\`decision\` debe ser una de: ${DECISIONES_APRENDIZAJE.join(", ")}.`);
+        }
+        const area = texto(args, "area", false);
+        const resultado = classifyLearning(
+          paths,
+          id.toUpperCase(),
+          decision as (typeof DECISIONES_APRENDIZAJE)[number],
+          area === undefined ? {} : { area: area as (typeof AREAS)[number] },
+        );
+        if (resultado.propuestaId === null) {
+          return bien(
+            `${id.toUpperCase()} → ${resultado.aprendizaje.state}. Queda escrito en ` +
+              "`.valmen/memory/aprendizajes.md` con su clasificación.",
+          );
+        }
+        return bien(
+          `${id.toUpperCase()} → regla. Se creó la propuesta ${resultado.propuestaId}, que ` +
+            "**todavía no está en vigor**: la decide una persona. Decile que la acepte " +
+            "—citando sus palabras— cuando quiera que entre.",
         );
       }
 

@@ -63,6 +63,7 @@ import {
   scanPendingSecretsCommand,
   templateCommand,
   driftCommand,
+  learningsCommand,
   usageCommand,
   valueCommand,
 } from "./commands.js";
@@ -115,6 +116,11 @@ Comandos:
   memory save --title <t> --body <b> [--tickets <ids>]
                             Guarda un aprendizaje en .valmen/memory/.
   memory list               Qué documentos son la memoria y qué se indexó.
+  memory review             Los aprendizajes que esperan clasificación.
+  memory clasificar <AP-001> --decision <regla|caso|descartar> [--area <área>]
+                            Clasifica un aprendizaje. «regla» crea una propuesta de
+                            estándar —que decide una persona—; «caso» lo deja como
+                            documentación; «descartar» lo marca y lo conserva.
   usage [--desde <f>] [--hasta <f>]
                             Consumo del harness: evaluaciones, coste y calibración,
                             contado de los recibos. Sin fechas, todo el registro.
@@ -301,6 +307,8 @@ export const VALUE_OPTIONS = [
   // `estandar aceptar`: las palabras de quien decide. Una bandera que consume
   // valor y no está en esta lista se lee como booleana y su valor queda suelto.
   "--instruccion",
+  // `memory clasificar`: qué se hace con el aprendizaje.
+  "--decision",
   "--actor",
   "--run",
   "--credentials",
@@ -861,9 +869,13 @@ export function dispatch(options: Options): CommandResult {
     }
 
     case "memory": {
-      // `memory search <consulta>`: la consulta es el resto de los posicionales,
-      // unida, para que no haga falta entrecomillarla.
+      // La consulta de `memory search` es el resto de los posicionales, unida,
+      // para que no haga falta entrecomillarla; `review` y `clasificar` son los
+      // verbos de la cola de aprendizajes, que hasta ahora no tenía salida.
       const [verbo, ...resto] = rest;
+      if (verbo === "review" || verbo === "clasificar") {
+        return learningsCommand(paths, verbo, resto[0], options.flags);
+      }
       return memoryCommand(paths, { ...options.flags, _: resto.join(" ") }, verbo ?? "");
     }
 

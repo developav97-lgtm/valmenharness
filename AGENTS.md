@@ -63,11 +63,20 @@ Consultas, diagnósticos, exploración, cambios visuales o de contenido que no
 alteran funcionalidad, prototipos desechables, y cambios de la propia
 configuración del harness.
 
-**El modo directo no relaja los gates de impacto.** Un cambio que toque
-sincronización, migraciones, contenedores, autenticación o despliegue exige
-ticket, plan aprobado y gate humano, aunque el pedido haya sido "cámbiame este
-texto". El agente lo dice y se detiene: no sigue sin el ticket, y tampoco lo
-abre por su cuenta.
+**El modo directo no relaja los gates de impacto.** Un cambio que se vaya a
+aplicar **sobre un proyecto real** y toque sincronización, migraciones,
+contenedores, autenticación o despliegue exige ticket, plan aprobado y gate
+humano, aunque el pedido haya sido "cámbiame este texto". El agente lo dice y se
+detiene: no sigue sin el ticket, y tampoco lo abre por su cuenta.
+
+Esa condición no es un tecnicismo, y sin ella esta regla se contradice con la de
+arriba. Los gates de impacto protegen los datos y los clientes de un proyecto en
+uso: son irreversibles para alguien que no está en la conversación. En un
+repositorio que **es** el producto que se construye —y que lo declara en sus
+reglas— la protección equivalente son las pruebas antes de decir que algo
+funciona y la confirmación antes de commitear, así que su modo directo no se
+interrumpe al escribir autenticación. Para un proyecto adoptado la condición se
+cumple siempre, y la regla le sigue valiendo igual que antes.
 
 ### Autorización antes de acción
 

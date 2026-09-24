@@ -94,6 +94,10 @@ import {
   ticketValueReport,
   renderDrift,
   scanDrift,
+  DECISIONES_APRENDIZAJE,
+  classifyLearning,
+  listLearnings,
+  renderLearnings,
   renderColorReport,
   scanPendingChanges,
   scanPendingColors,
@@ -1206,6 +1210,76 @@ export function standardsCommand(
     }
 
     return error(`estandar no conoce el verbo "${verbo}".`, EXIT_SCHEMA);
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/**
+ * `memory review` y `memory clasificar`: la cola de aprendizajes.
+ *
+ * La memoria tenía entrada y no tenía salida: el agente guardaba lo que aprendía
+ * y nadie decidía qué era. Sin eso, el conocimiento se acumula sin criterio y la
+ * búsqueda devuelve lo mismo que una nota suelta.
+ *
+ * Clasificar es triaje —y por eso lo puede hacer un agente—: `regla` crea una
+ * propuesta de estándar que una persona decide después, y no escribe ninguna
+ * regla en vigor.
+ */
+export function learningsCommand(
+  paths: RegistryPaths,
+  verbo: string,
+  id: string | undefined,
+  flags: Readonly<Record<string, string | true>>,
+): CommandResult {
+  try {
+    if (verbo === "" || verbo === "review" || verbo === "pendientes") {
+      return ok(renderLearnings(listLearnings(paths)));
+    }
+
+    if (verbo === "clasificar" || verbo === "clasifica") {
+      if (id === undefined || id === "") {
+        return error(
+          "memory clasificar requiere el identificador: AP-001. Vea los pendientes con `valmen memory review`.",
+          EXIT_SCHEMA,
+        );
+      }
+      const decision = flags["decision"];
+      if (
+        typeof decision !== "string" ||
+        !DECISIONES_APRENDIZAJE.includes(
+          decision as (typeof DECISIONES_APRENDIZAJE)[number],
+        )
+      ) {
+        return error(
+          `--decision debe ser una de: ${DECISIONES_APRENDIZAJE.join(", ")}.`,
+          EXIT_SCHEMA,
+        );
+      }
+      const area = flags["area"];
+      const resultado = classifyLearning(
+        paths,
+        id.toUpperCase(),
+        decision as (typeof DECISIONES_APRENDIZAJE)[number],
+        typeof area === "string" ? { area: area as (typeof AREAS)[number] } : {},
+      );
+
+      if (resultado.propuestaId === null) {
+        return ok(
+          `${id.toUpperCase()} → ${resultado.aprendizaje.state}. ` +
+            "Queda escrito en .valmen/memory/aprendizajes.md con su clasificación.\n",
+        );
+      }
+      return ok(
+        `${id.toUpperCase()} → regla. Se creó la propuesta ${resultado.propuestaId}, que ` +
+          "todavía **no está en vigor**: la decide una persona.\n" +
+          "  · Aceptarla: `valmen estandar aceptar " +
+          `${resultado.propuestaId} --instruccion "<sus palabras>"\`\n`,
+      );
+    }
+
+    return error(`memory no conoce el verbo "${verbo}".`, EXIT_SCHEMA);
   } catch (caught) {
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);

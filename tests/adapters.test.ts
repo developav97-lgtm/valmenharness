@@ -218,12 +218,19 @@ describe("proyección a AGENTS.md", () => {
     scaffold({}, "name: Demo\n");
     const output = projectAgentsMd(loadProjectModel(lab, "Demo"));
 
-    expect(output).toContain("### Quién decide que hace falta un ticket");
-    expect(output).toContain("**La persona, no el agente.**");
+    // Se compara sobre el texto **sin los saltos de línea**: una aserción contra
+    // una frase del documento se rompe cuando el párrafo se reenvuelve, y eso ya
+    // pasó —el texto cambió, la frase siguió igual, y la prueba falló por dónde
+    // caía el corte—. Lo que se afirma es la frase, no dónde termina el renglón.
+    const plano = output.replace(/\s+/g, " ");
+    expect(plano).toContain("### Quién decide que hace falta un ticket");
+    expect(plano).toContain("**La persona, no el agente.**");
     // El modo por defecto ante un pedido de trabajo es el directo.
-    expect(output).toContain("el modo por defecto es el directo");
-    // Y el caso que no es opcional sigue siéndolo: el impacto.
-    expect(output).toContain("El agente lo dice y se detiene");
+    expect(plano).toContain("el modo por defecto es el directo");
+    // Y el caso que no es opcional sigue siéndolo: el impacto sobre un proyecto
+    // real, que es donde los gates de impacto protegen a alguien.
+    expect(plano).toContain("El agente lo dice y se detiene");
+    expect(plano).toContain("aplicar **sobre un proyecto real**");
   });
 
   it("avisa cuando el proyecto no declara reglas propias", () => {
