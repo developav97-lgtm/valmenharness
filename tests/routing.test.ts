@@ -90,11 +90,18 @@ describe("el catálogo de roles", () => {
     // `critic`, `explorer`, `implementer`, `test-author`, `doc-writer`,
     // `verifier`, `classifier` y `summarizer`— se retiraron del contrato y de los
     // presets. Este test impide que vuelvan por descuido.
+    //
+    // `architect` volvió, y con consumidor: `valmen feature decompose` lo ejecuta
+    // de verdad —y la pantalla de una feature ofrece el botón—, así que el rol
+    // tenía que estar acá y en los presets. Estaba en el formato del archivo y en
+    // ninguna otra parte, y el resultado era que descomponer fallaba con «no hay
+    // modelo para el rol architect» en un proyecto recién adoptado.
     expect(ROLES.every((rol) => rol.consumer !== null && rol.consumer !== "")).toBe(true);
     expect(ROLES.map((rol) => rol.id)).toEqual([
       "gate-evaluator",
       "gate-judge",
       "orchestrator",
+      "architect",
     ]);
     expect(ROLES.every((rol) => rol.description !== "")).toBe(true);
   });
@@ -138,6 +145,34 @@ describe("el catálogo de roles", () => {
 });
 
 // ── Resolución ──────────────────────────────────────────────────────────────
+
+describe("cada rol que el harness ejecuta tiene modelo", () => {
+  it("en los tres presets, sin que nadie configure nada", () => {
+    // La propiedad que estaba rota: ningún preset daba modelo al `architect`, y
+    // la pantalla tampoco lo mostraba para asignarlo a mano, así que el botón de
+    // descomponer no podía funcionar en un proyecto recién adoptado.
+    for (const preset of PRESETS.map((p) => p.id)) {
+      const sinModelo = resolveRouting({ preset, roles: {} })
+        .filter((ruta) => ruta.model === "")
+        .map((ruta) => ruta.role);
+      expect(sinModelo, `el preset ${preset} deja roles sin modelo`).toEqual([]);
+    }
+  });
+
+  it("el arquitecto no es el juez ni el evaluador de la compuerta", () => {
+    // La descomposición la escribe el arquitecto y la revisa una compuerta: un
+    // modelo revisándose a sí mismo no revisa nada. Hoy la cobertura se comprueba
+    // en código, y la separación se afirma igual para que no se pierda el día que
+    // esa comprobación la haga un modelo.
+    for (const preset of PRESETS.map((p) => p.id)) {
+      const rutas = resolveRouting({ preset, roles: {} });
+      const modelo = (rol: string) => rutas.find((r) => r.role === rol)?.model;
+      expect(modelo("architect")).toBeTruthy();
+      expect(modelo("architect")).not.toBe(modelo("gate-judge"));
+      expect(modelo("architect")).not.toBe(modelo("gate-evaluator"));
+    }
+  });
+});
 
 describe("la resolución de un rol", () => {
   it("sin override, el modelo viene del preset", () => {

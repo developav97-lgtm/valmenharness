@@ -90,6 +90,16 @@ export const ROLES: readonly RoleSpec[] = [
     description: "Propone cambios de configuración en el chat de Mission Control",
     consumer: "POST /api/chat/config",
   },
+  {
+    // El rol que **descompone una feature en tickets**. Estaba en el formato del
+    // archivo y lo consumía `valmen feature decompose`, pero no estaba acá: ni la
+    // pantalla lo ofrecía ni ningún preset le daba un modelo, así que descomponer
+    // fallaba con «no hay modelo para el rol architect» en un proyecto recién
+    // adoptado —y la pantalla que lo pide es la misma que no dejaba configurarlo—.
+    id: "architect",
+    description: "Descompone una feature en tickets, con su grafo y su cobertura",
+    consumer: "valmen feature decompose",
+  },
 ];
 
 /** Un modelo asignado a un rol. */
@@ -134,6 +144,15 @@ export const PRESETS: readonly Preset[] = [
         model: "anthropic/claude-opus-4.6",
         effort: "high",
       },
+      // Distinto del `gate-judge` a propósito, y no por gusto: si algún día la
+      // cobertura se revisa con un modelo, el que revisa no puede ser el que
+      // escribió el grafo. Hoy esa comprobación es de código, y la separación se
+      // deja puesta igual.
+      architect: {
+        provider: "openrouter",
+        model: "openai/gpt-5.6-luna-pro",
+        effort: "high",
+      },
     },
   },
   {
@@ -152,6 +171,11 @@ export const PRESETS: readonly Preset[] = [
         effort: "auto",
       },
       "gate-judge": { provider: "openrouter", model: DEFAULT_GATE_JUDGE, effort: "medium" },
+      architect: {
+        provider: "openrouter",
+        model: "moonshotai/kimi-k3",
+        effort: "medium",
+      },
     },
   },
   {
@@ -166,6 +190,11 @@ export const PRESETS: readonly Preset[] = [
         effort: "auto",
       },
       "gate-judge": { provider: "openrouter", model: DEFAULT_GATE_JUDGE, effort: "medium" },
+      architect: {
+        provider: "openrouter",
+        model: "z-ai/glm-5.3-flash",
+        effort: "auto",
+      },
     },
   },
 ];
