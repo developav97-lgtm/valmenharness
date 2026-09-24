@@ -19,6 +19,7 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import type { RegistryPaths } from "../packages/engine/src/discovery.js";
 import {
   decideProposal,
   listProposals,
@@ -29,8 +30,15 @@ import { callTool, type ToolContext } from "../packages/mcp/src/tools.js";
 
 let lab: string;
 
-/** El `RegistryPaths` mínimo: la raíz manda. */
-const paths = (): { root: string } => ({ root: lab });
+/**
+ * El `RegistryPaths` del laboratorio.
+ *
+ * Se declara `ticketsDir` aunque estos casos no toquen tickets: el tipo lo exige
+ * —el layout de un proyecto adoptado puede ser `docs/tickets`, y adivinarlo es lo
+ * que el tipo impide— y un `as` para callarlo escondería justo el dato que el
+ * motor necesita.
+ */
+const paths = (): RegistryPaths => ({ root: lab, ticketsDir: "tickets" });
 
 beforeEach(() => {
   lab = mkdtempSync(join(tmpdir(), "valmen-estandares-"));

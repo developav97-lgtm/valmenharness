@@ -169,6 +169,10 @@ describe("las rutas declaradas, contra el despachador", () => {
   const contexto = (): ServerContext => ({
     root: lab,
     paths: { root: lab, ticketsDir: "tickets" },
+    // Sin proveedores ni claves: estas rutas existen, y lo que se afirma es que
+    // el servidor las reconozca, no que tengan datos con qué responder.
+    credentialsFile: join(lab, ".valmen", "credentials.yaml"),
+    env: {},
   });
 
   afterAll(() => {
