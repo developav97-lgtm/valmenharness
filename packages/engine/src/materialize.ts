@@ -32,6 +32,7 @@ import { join } from "node:path";
 import {
   type NormalizedTicket,
   EXIT_INVARIANT,
+  atomicWrite,
   decompositionTickets,
   fail,
   isSafePlainScalar,
@@ -167,6 +168,55 @@ function solicitudDe(
 }
 
 /**
+ * Los criterios de aceptación de un ticket, escritos desde la spec.
+ *
+ * El alta deja la sección con una casilla vacía, y quien la llena suele ser el
+ * agente al planificar: los criterios de un ticket de feature **ya están
+ * escritos** —son los requisitos de la spec que el grafo dice que cubre—, así que
+ * pedírselos de nuevo es invitar a que los invente. Se escriben con su
+ * identificador delante para que la trazabilidad se lea en el ticket.
+ *
+ * **Sin anotación de verificación, a propósito**: si un criterio se comprueba con
+ * un comando o a mano lo decide quien planifica, y la compuerta mecánica detiene
+ * el gate hasta que lo declare. Poner `verify: manual` por defecto convertiría
+ * todos los criterios en manuales y el gate no comprobaría nada.
+ */
+function criteriosDe(
+  requisitos: readonly { readonly id: string; readonly statement: string }[],
+  cubre: readonly string[],
+): string {
+  return cubre
+    .map((id) => requisitos.find((requisito) => requisito.id === id))
+    .filter(
+      (requisito): requisito is { id: string; statement: string } =>
+        requisito !== undefined,
+    )
+    .map((requisito) => `- [ ] ${requisito.id}: ${requisito.statement}`)
+    .join("\n");
+}
+
+/**
+ * Rellena los criterios de un ticket recién creado.
+ *
+ * Solo cuando la sección está **vacía** —una casilla sin texto—: si el proyecto
+ * tiene su propia plantilla con texto ahí, se respeta. La sustitución es sobre el
+ * archivo que se acaba de escribir, así que no hay riesgo de pisar trabajo.
+ */
+function escribirCriterios(ruta: string, criterios: string): boolean {
+  if (criterios === "") return false;
+  let texto: string;
+  try {
+    texto = readFileSync(ruta, "utf8");
+  } catch {
+    return false;
+  }
+  const vacia = /## Criterios de aceptación\n\n- \[ \]\n/;
+  if (!vacia.test(texto)) return false;
+  atomicWrite(ruta, texto.replace(vacia, `## Criterios de aceptación\n\n${criterios}\n`));
+  return true;
+}
+
+/**
  * Escribe en el registro los tickets del grafo que falten.
  *
  * `write: false` devuelve lo que haría sin escribir nada, que es lo que necesita
@@ -250,6 +300,11 @@ export function materializeFeature(
         ),
         ...(opciones.now === undefined ? {} : { now: opciones.now }),
       });
+      // Y sus criterios, que ya están escritos en la spec.
+      escribirCriterios(
+        ticketPathFor(paths, ticket.id),
+        criteriosDe(requirements, coverage.get(ticket.id) ?? []),
+      );
     }
   }
 

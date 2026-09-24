@@ -260,6 +260,27 @@ describe("materializar una feature", () => {
     expect(() => materializeFeature(PATHS(), "kardex")).toThrow(/no tiene tickets.yaml/);
   });
 
+  it("los criterios de aceptación salen de la spec, sin anotación de verificación", () => {
+    // Los criterios de un ticket de feature ya están escritos: son los requisitos
+    // que el grafo dice que cubre. Dejarlos vacíos invita a que se los inventen, y
+    // la anotación de cómo se verifican la decide quien planifica.
+    materializeFeature(PATHS(), "kardex");
+    const texto = readFileSync(
+      join(lab, "tickets", "2026", "FEATURE-INVENTARIO-API-20260924", "ticket.md"),
+      "utf8",
+    );
+    const criterios =
+      /## Criterios de aceptación\n\n([\s\S]*?)\n\n## /.exec(texto)?.[1] ?? "";
+    expect(criterios).toContain(
+      "- [ ] R-INV-001: El sistema DEBE registrar cada movimiento",
+    );
+    expect(criterios).toContain("- [ ] R-INV-002: El sistema DEBE permitir exportar");
+    // Sin anotación: el gate mecánico detiene el ticket hasta que se declare cómo
+    // se comprueba cada uno.
+    expect(criterios).not.toContain("<!--");
+    expect(criterios.split("\n")).toHaveLength(2);
+  });
+
   it("la solicitud no repite el punto del objetivo del sprint", () => {
     // El objetivo termina en punto casi siempre: agregar otro dejaba «documentos..»
     // en la solicitud de cada ticket del feature real.
