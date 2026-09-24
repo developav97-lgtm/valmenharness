@@ -58,6 +58,7 @@ import {
 } from "@valmen/server";
 import {
   guardarConsumoDeSesiones,
+  standardsCommand,
   memoryCommand,
   scanPendingSecretsCommand,
   templateCommand,
@@ -91,6 +92,11 @@ Comandos:
   index [--check]           Regenera el índice, o comprueba que esté al día.
   secrets [--staged]        Revisa los cambios pendientes en busca de secretos.
                             Solo mira las líneas agregadas. No imprime el valor.
+  estandar listar           Los estándares en vigor y los propuestos.
+  estandar proponer --title <t> --rule <r> --area <a> [--why <texto>]
+                            Propone un estándar. No está en vigor hasta aceptarlo.
+  estandar aceptar <EST-001>  Lo pone en vigor en .valmen/rules/estandares-<área>.md
+  estandar descartar <EST-001>  Lo deja escrito con su estado.
   memory search <consulta>  Busca en la memoria del proyecto —decisiones y errores.
       --limite <n>          Cuántos resultados. Por defecto, 5.
   memory save --title <t> --body <b> [--tickets <ids>]
@@ -270,6 +276,11 @@ export const VALUE_OPTIONS = [
   "--limite",
   "--body",
   "--files",
+  // `estandar proponer`: las tres banderas del estándar. La prueba que compara la
+  // ayuda con esta lista las cazó en cuanto se agregaron, que es para lo que está.
+  "--rule",
+  "--why",
+  "--area",
   "--actor",
   "--run",
   "--credentials",
@@ -823,6 +834,11 @@ export function dispatch(options: Options): CommandResult {
 
     case "secrets":
       return scanPendingSecretsCommand(paths.root, options.flags);
+
+    case "estandar": {
+      const [verbo, id] = rest;
+      return standardsCommand(paths, verbo ?? "", id, options.flags);
+    }
 
     case "memory": {
       // `memory search <consulta>`: la consulta es el resto de los posicionales,

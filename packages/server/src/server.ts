@@ -35,6 +35,9 @@ import {
   defaultReportRange,
   filterReport,
   CAMPOS_ORDENABLES,
+  decideProposal,
+  listProposals,
+  standardsFiles,
   type TicketFilters,
   filterTickets,
   findTicket,
@@ -642,6 +645,84 @@ export async function handleApi(
             }
           : { available: true, directory, ...linea },
     };
+  }
+
+  // GET /api/standards
+  //
+  // Los estándares en vigor y las propuestas pendientes. Es la vista que faltaba:
+  // un estándar que solo vive en un archivo del repositorio se lee cuando alguien
+  // se acuerda, y el que decide si una propuesta entra en vigor necesita verla
+  // junto a lo que ya está en vigor para no duplicar ni contradecir.
+  if (method === "GET" && path === "/api/standards") {
+    const archivos = standardsFiles(paths.root);
+    return {
+      status: 200,
+      body: {
+        standards: archivos.map((archivo) => {
+          let content = "";
+          try {
+            content = readFileSync(join(paths.root, archivo.path), "utf8");
+          } catch {
+            content = "";
+          }
+          return { area: archivo.area, path: archivo.path, content };
+        }),
+        proposals: listProposals(paths),
+      },
+    };
+  }
+
+  // POST /api/standards/:id/decision
+  //
+  // Aceptar es lo que pone una regla en vigor, y por eso es una decisión de una
+  // persona: el agente propone y espera. Al aceptarla se escribe en
+  // `.valmen/rules/estandares-<área>.md`, y el `valmen sync` posterior la lleva al
+  // `AGENTS.md`.
+  if (
+    method === "POST" &&
+    partes.length === 5 &&
+    partes[0] === "api" &&
+    partes[1] === "standards" &&
+    partes[3] === undefined
+  ) {
+    return { status: 404, body: { error: "Ruta no encontrada." } };
+  }
+  if (
+    method === "POST" &&
+    partes.length === 5 &&
+    partes[0] === "api" &&
+    partes[1] === "standards" &&
+    partes[4] === "decision"
+  ) {
+    const id = (partes[2] as string).toUpperCase();
+    const datos = body as { decision?: unknown };
+
+    if (datos.decision !== "aceptado" && datos.decision !== "descartado") {
+      return {
+        status: 400,
+        body: { error: "La decisión debe ser `aceptado` o `descartado`." },
+      };
+    }
+
+    try {
+      const resultado = decideProposal(paths, id, datos.decision);
+      return {
+        status: 200,
+        body: {
+          ok: true,
+          propuesta: resultado.propuesta,
+          writtenTo: resultado.writtenTo,
+          details:
+            resultado.writtenTo === null
+              ? `${id} descartado.`
+              : `${id} aceptado: la regla quedó en ${resultado.writtenTo}. ` +
+                "Ejecute `valmen sync` para que entre al AGENTS.md del proyecto.",
+        },
+      };
+    } catch (caught) {
+      const failure = toFailure(caught);
+      return { status: 409, body: { ok: false, error: failure.message } };
+    }
   }
 
   // GET /api/report?desde=&hasta=&type=&q=

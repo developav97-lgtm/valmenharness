@@ -45,8 +45,14 @@ import {
   createTicket,
   filterTickets,
   findTicket,
+  AREAS,
+  type EstandarPropuesto,
+  listProposals,
   listTickets,
   loadMemory,
+  proposeStandard,
+  renderProposals,
+  standardsFiles,
   qaClose,
   qaStart,
   scanSecrets,
@@ -894,6 +900,63 @@ export const TOOLS: readonly ToolDefinition[] = [
     }),
   },
   {
+    name: "ver_estandares",
+    title: "Los estándares del proyecto",
+    description:
+      "Las reglas que el proyecto ya decidió sobre cómo se ve y cómo se escribe: " +
+      "alineación, formato de montos, tema claro y oscuro, qué campo usa autocompletado, " +
+      "convenciones de código. Están en el `AGENTS.md` que leés al empezar, así que esto " +
+      "es para consultarlas enteras cuando el trabajo toque una pantalla o un modelo. " +
+      "Devuelve además las propuestas pendientes: una regla sin aprobar no está en vigor.",
+    inputSchema: conRoot({ properties: {} }),
+  },
+  {
+    name: "proponer_estandar",
+    title: "Proponer un estándar",
+    description:
+      "Propone una convención para que el proyecto la adopte. **Usala cuando el trabajo " +
+      "enseñe algo que no está escrito**: porque hubo que aclararlo dos veces, porque una " +
+      "corrección reveló que la regla existía solo en la cabeza de alguien, o porque " +
+      "apareció un caso que ninguna regla cubre. Escribí la regla en imperativo y el " +
+      "motivo con el caso concreto que la originó —el motivo es lo que permite discutirla " +
+      "después— y pasá los tickets donde apareció. **La propuesta no está en vigor**: la " +
+      "aprueba una persona desde Mission Control, y al aprobarla entra al `AGENTS.md`. " +
+      "No la apliques como si ya fuera una regla del proyecto.",
+    inputSchema: conRoot({
+      properties: {
+        titulo: {
+          type: "string",
+          description: "La convención en una línea, como se busca después.",
+        },
+        regla: {
+          type: "string",
+          description:
+            "La regla en imperativo y sin ambigüedad: «los montos llevan siempre dos " +
+            "decimales», no «convendría revisar los montos».",
+        },
+        motivo: {
+          type: "string",
+          description:
+            "El caso que la motivó. Es lo que permite decidir si sigue teniendo sentido " +
+            "dentro de un año.",
+        },
+        area: {
+          type: "string",
+          enum: [...AREAS],
+          description:
+            "Dónde aplica: `presentacion` (cómo se ve), `backend` (cómo se escribe), " +
+            "`datos` (modelos y migraciones), `proceso` (cómo se trabaja).",
+        },
+        tickets: {
+          type: "array",
+          items: { type: "string" },
+          description: "Los tickets donde apareció la necesidad.",
+        },
+      },
+      required: ["titulo", "regla", "motivo", "area"],
+    }),
+  },
+  {
     name: "iniciar_qa",
     title: "Abrir un ciclo de QA",
     description:
@@ -1569,6 +1632,40 @@ export async function callTool(
           `Aprendizaje guardado: ${guardado.id} en ${guardado.path}\n` +
             "Queda en la memoria del proyecto: la próxima búsqueda que toque este tema lo " +
             "va a encontrar.",
+        );
+      }
+
+      case "ver_estandares": {
+        const archivos = standardsFiles(paths.root);
+        const propuestas = listProposals(paths);
+        const lineas = [
+          `Estándares en vigor — ${archivos.length} archivo(s)`,
+          "",
+          ...archivos.map((archivo) => `  ${archivo.path}`),
+          "",
+          renderProposals(propuestas).trimEnd(),
+        ];
+        return bien(lineas.join("\n"));
+      }
+
+      case "proponer_estandar": {
+        const crudos = args["tickets"];
+        const propuesta = proposeStandard(paths, {
+          title: texto(args, "titulo") as string,
+          rule: texto(args, "regla") as string,
+          why: texto(args, "motivo") as string,
+          area: texto(args, "area") as EstandarPropuesto["area"],
+          tickets: Array.isArray(crudos)
+            ? crudos.filter(
+                (id): id is string => typeof id === "string" && id.trim() !== "",
+              )
+            : [],
+          now: contexto.now,
+        });
+        return bien(
+          `Estándar propuesto: ${propuesta.id} (${propuesta.area})\n` +
+            "Queda pendiente de aprobación en Mission Control: **no está en vigor** hasta " +
+            "que una persona lo acepte, y al aceptarlo entra al `AGENTS.md`.",
         );
       }
 

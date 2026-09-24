@@ -221,6 +221,18 @@
         border-color: var(--alerta);
         color: var(--alerta);
       }
+      .tarjeta-estandar {
+        border: 1px solid var(--borde);
+        border-radius: 6px;
+        margin-bottom: 12px;
+        padding: 12px;
+      }
+      .tarjeta-estandar .nombre {
+        font-size: 15px;
+        font-weight: 600;
+        margin: 6px 0;
+      }
+
       /* La sección que toca mirar en el estado actual. */
       .acordeon.de-turno {
         border-left: 3px solid var(--acento);
@@ -1511,6 +1523,7 @@
         <a href="#/tickets" data-vista="tickets">Tickets</a>
         <a href="#/features" data-vista="features">Features</a>
         <a href="#/procesos" data-vista="procesos">Procesos</a>
+        <a href="#/estandares" data-vista="estandares">Estándares</a>
         <a href="#/configurar" data-vista="configurar">Configurar</a>
         <a href="#/modelos" data-vista="modelos">Modelos</a>
         <a href="#/configuracion" data-vista="configuracion">Configuración</a>
@@ -2075,6 +2088,115 @@
 
         tabla.append(thead, tbody);
         cont.append(tabla);
+      }
+
+      // ── Vista: estándares ─────────────────────────────────────────────────
+      //
+      // Las reglas que el proyecto ya decidió y las que están por decidir. Las dos
+      // cosas juntas a propósito: quien aprueba una propuesta necesita ver lo que
+      // ya está en vigor, o aprueba algo que ya existía con otras palabras.
+      async function vistaEstandares() {
+        const cont = $("contenido");
+        cont.textContent = "";
+        const datos = await api("GET", "/api/standards");
+
+        cont.append(el("h2", "Estándares del proyecto"));
+        cont.append(
+          el(
+            "div",
+            "Cómo se ve y cómo se escribe lo que se construye acá. Están en el AGENTS.md " +
+              "que lee el agente, así que los tiene antes de escribir la primera línea.",
+            "resultado",
+          ),
+        );
+
+        const pendientes = datos.proposals.filter((p) => p.state === "propuesto");
+        if (pendientes.length > 0) {
+          const caja = el("div", undefined, "nota alerta");
+          caja.append(
+            el("strong", `${pendientes.length} propuesta(s) esperando tu decisión. `),
+            el("span", "Una regla sin aprobar no está en vigor y el agente no la aplica."),
+          );
+          cont.append(caja);
+        }
+
+        // ── Las propuestas ──
+        if (datos.proposals.length > 0) {
+          cont.append(el("h3", "Propuestas"));
+          for (const propuesta of datos.proposals) {
+            const tarjeta = el("div", undefined, "tarjeta-estandar");
+            const cabecera = el("div", undefined, "meta");
+            cabecera.append(
+              el("span", propuesta.id, "id"),
+              el("span", propuesta.area, "etiqueta"),
+              el("span", propuesta.state, propuesta.state === "propuesto" ? "etiqueta" : ""),
+              el("span", propuesta.date, "id"),
+            );
+            tarjeta.append(cabecera);
+            tarjeta.append(el("div", propuesta.title, "nombre"));
+            tarjeta.append(el("div", `Regla: ${propuesta.rule}`, "resultado"));
+            if (propuesta.why !== "")
+              tarjeta.append(el("div", `Por qué: ${propuesta.why}`, "resultado"));
+            if (propuesta.tickets.length > 0) {
+              tarjeta.append(el("div", `Visto en: ${propuesta.tickets.join(", ")}`, "ruta"));
+            }
+
+            if (propuesta.state === "propuesto") {
+              const acciones = el("div", undefined, "responsable");
+              const aceptar = el("button", "Aceptar y poner en vigor");
+              const descartar = el("button", "Descartar", "enlace");
+              const salida = el("div", undefined, "resultado");
+              const decidir = async (decision, boton) => {
+                boton.disabled = true;
+                salida.className = "resultado";
+                salida.textContent = "Registrando…";
+                try {
+                  const r = await api(
+                    "POST",
+                    `/api/standards/${propuesta.id}/decision`,
+                    { decision },
+                  );
+                  salida.className = "resultado ok";
+                  salida.textContent = r.details;
+                  await vistaEstandares();
+                } catch (fallo) {
+                  salida.className = "resultado error";
+                  salida.textContent = fallo.message;
+                  boton.disabled = false;
+                }
+              };
+              aceptar.addEventListener("click", () => void decidir("aceptado", aceptar));
+              descartar.addEventListener("click", () => void decidir("descartado", descartar));
+              acciones.append(aceptar, descartar, salida);
+              tarjeta.append(acciones);
+            }
+            cont.append(tarjeta);
+          }
+        }
+
+        // ── Los que están en vigor ──
+        cont.append(el("h3", "En vigor"));
+        if (datos.standards.length === 0) {
+          cont.append(
+            el(
+              "div",
+              "Todavía no hay estándares escritos. El agente los propone cuando el trabajo " +
+                "le enseña una convención que no está en ninguna parte.",
+              "vacio",
+            ),
+          );
+          return;
+        }
+
+        for (const archivo of datos.standards) {
+          const acordeonEstandar = acordeon(
+            archivo.path.split("/").pop() ?? archivo.area,
+            archivo.area,
+            true,
+          );
+          acordeonEstandar.cuerpo.append(seccionDeTicket(archivo.content));
+          cont.append(acordeonEstandar.caja);
+        }
       }
 
       // ── Vista: features ───────────────────────────────────────────────────
@@ -5646,6 +5768,7 @@
           else if (nombre === "proveedores") await vistaProveedores();
           else if (nombre === "features") await vistaFeatures();
           else if (nombre === "procesos") await vistaProcesos();
+          else if (nombre === "estandares") await vistaEstandares();
           else await vistaTickets();
         } catch (error) {
           const cont = $("contenido");

@@ -76,6 +76,12 @@ import {
 import { guardarFotoEnTicket } from "@valmen/server";
 
 import {
+  AREAS,
+  decideProposal,
+  listProposals,
+  proposeStandard,
+  renderProposals,
+  standardsFiles,
   isIndexCurrent,
   loadMemory,
   memoryFiles,
@@ -1042,6 +1048,98 @@ export function memoryCommand(
     }
 
     return error(`memory no conoce el verbo "${verbo}".`, EXIT_SCHEMA);
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/**
+ * `estandar`: las reglas del proyecto y las que están por aprobar.
+ *
+ * Un estándar que se puede agregar sin abrir un editor de texto es un estándar que
+ * se agrega. El agente propone con su motivo y sus tickets; aceptar lo pone en
+ * vigor —lo escribe en `.valmen/rules/estandares-<área>.md`, que es lo que llega al
+ * `AGENTS.md`— y descartar lo deja escrito con su porqué.
+ */
+export function standardsCommand(
+  paths: RegistryPaths,
+  verbo: string,
+  id: string | undefined,
+  flags: Readonly<Record<string, string | true>>,
+): CommandResult {
+  const texto = (nombre: string): string =>
+    typeof flags[nombre] === "string" ? (flags[nombre] as string).trim() : "";
+
+  try {
+    if (verbo === "listar" || verbo === "") {
+      const archivos = standardsFiles(paths.root);
+      const propuestas = listProposals(paths);
+      const lineas = [
+        `Estándares en vigor — ${archivos.length} archivo(s)`,
+        "",
+        ...(archivos.length === 0
+          ? [
+              "  (ninguno todavía)",
+              "",
+              "  Se escriben en .valmen/rules/estandares-<área>.md y entran al AGENTS.md",
+              "  en el próximo `valmen sync`.",
+            ]
+          : archivos.map(
+              (archivo) =>
+                `  .valmen/rules/${archivo.area}.md`.replace(".valmen/rules/", "  ") +
+                `  →  ${archivo.path}`,
+            )),
+        "",
+        renderProposals(propuestas).trimEnd(),
+      ];
+      return ok(`${lineas.join("\n")}\n`);
+    }
+
+    if (verbo === "proponer") {
+      const area = texto("area");
+      if (!AREAS.includes(area as (typeof AREAS)[number])) {
+        return error(
+          `--area debe ser una de: ${AREAS.join(", ")}. Llegó "${area}".`,
+          EXIT_SCHEMA,
+        );
+      }
+      const tickets = texto("tickets");
+      const propuesta = proposeStandard(paths, {
+        title: texto("title"),
+        rule: texto("rule"),
+        why: texto("why"),
+        area: area as (typeof AREAS)[number],
+        tickets:
+          tickets === ""
+            ? []
+            : tickets
+                .split(",")
+                .map((uno) => uno.trim())
+                .filter((uno) => uno !== ""),
+      });
+      return ok(
+        `Estándar propuesto: ${propuesta.id} (${propuesta.area})\n` +
+          "  Queda pendiente de aprobación: no está en vigor hasta que se acepte.\n",
+      );
+    }
+
+    if (verbo === "aceptar" || verbo === "descartar") {
+      if (id === undefined || id === "") {
+        return error(`estandar ${verbo} requiere el identificador: EST-001.`, EXIT_SCHEMA);
+      }
+      const decision = verbo === "aceptar" ? "aceptado" : "descartado";
+      const resultado = decideProposal(paths, id.toUpperCase(), decision);
+      if (resultado.writtenTo === null) {
+        return ok(`${id} descartado. Queda escrito en las propuestas con su estado.\n`);
+      }
+      return ok(
+        `${id} aceptado: la regla quedó en ${resultado.writtenTo}\n` +
+          "  Ejecute `valmen sync` para que entre al AGENTS.md del proyecto.\n",
+      );
+    }
+
+    return error(`estandar no conoce el verbo "${verbo}".`, EXIT_SCHEMA);
   } catch (caught) {
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);

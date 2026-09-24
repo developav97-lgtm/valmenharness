@@ -49,6 +49,8 @@ const RUTAS = [
   "POST /api/providers/:id/models/test",
   "GET /api/report",
   "GET /api/timeline",
+  "GET /api/standards",
+  "POST /api/standards/:id/decision",
 ] as const;
 
 /** Normaliza una ruta: los valores dinámicos pasan a `:param` y se quita la consulta. */
@@ -97,12 +99,14 @@ describe("el contrato de rutas entre la interfaz y el servidor", () => {
     expect(desconocidas).toEqual([]);
   });
 
-  it("la ruta de la decisión no lleva la compuerta de más", () => {
+  it("la ruta de la decisión de una compuerta no lleva la compuerta de más", () => {
     // El identificador del recibo ya nombra su compuerta (`GR-…-analysis`), así que
     // repetirla en la URL es redundancia que puede contradecir: una URL que dice
     // `plan` y un recibo que dice `analysis` no tienen una respuesta correcta.
-    const decision = urlsDeLaInterfaz().filter((url) => url.endsWith("/decision"));
-    expect(decision).toEqual(["/api/tickets/:param/gates/:param/decision"]);
+    const compuertas = urlsDeLaInterfaz().filter(
+      (url) => url.endsWith("/decision") && url.includes("/gates/"),
+    );
+    expect(compuertas).toEqual(["/api/tickets/:param/gates/:param/decision"]);
   });
 
   it("las rutas declaradas se pueden normalizar, o la comparación mentiría", () => {
