@@ -211,6 +211,11 @@ export async function featureDecompose(
           // razona gasta tokens pensando **antes** de escribir, y con un límite
           // bajo devuelve contenido vacío con HTTP 200. Medido con K3.
           maxTokens: 16_000,
+          // Y el de tiempo también: el tope por defecto de una llamada son 90
+          // segundos, que alcanzan para una pregunta y no para esto —un grafo con
+          // sus sprints, sus dependencias y su cobertura, razonado a esfuerzo
+          // alto—. Se corta a los cinco minutos en vez de a los noventa.
+          timeoutMs: TIMEOUT_DESCOMPOSICION_MS,
           effort: routing.effort,
           messages: [
             { role: "system", content: SISTEMA_DESCOMPOSICION },
@@ -252,6 +257,16 @@ export async function featureDecompose(
  * `feature <sub> [args]`, y meterlo en el switch obligaría a que `main.ts`
  * supiera de features. Es asíncrono porque `decompose` habla con un proveedor.
  */
+/**
+ * Cuánto se espera a que el arquitecto escriba el grafo.
+ *
+ * Una descomposición no es una pregunta: el modelo razona, reparte requisitos en
+ * tickets, decide dependencias y escribe la cobertura. El tope por defecto de una
+ * llamada —90 segundos— se queda corto con un modelo que piensa a esfuerzo alto, y
+ * el fallo se ve como un timeout que parece un problema del proveedor.
+ */
+const TIMEOUT_DESCOMPOSICION_MS = 300_000;
+
 export async function runFeature(
   root: string,
   args: readonly string[],

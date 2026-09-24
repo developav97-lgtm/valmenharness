@@ -592,6 +592,10 @@ export async function handleApi(
             // El presupuesto de salida es generoso porque un modelo que razona
             // gasta tokens pensando **antes** de escribir.
             maxTokens: 16_000,
+            // Cinco minutos: el tope por defecto de una llamada —90 segundos—
+            // alcanza para una pregunta y no para un grafo razonado a esfuerzo
+            // alto. El fallo, si no, se ve como un timeout del proveedor.
+            timeoutMs: 300_000,
             effort: arquitecto.effort,
             messages: [
               { role: "system", content: SISTEMA_DESCOMPOSICION },
