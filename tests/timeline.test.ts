@@ -20,7 +20,7 @@
  * Es la única forma de probar la interpretación sin depender de la base real de
  * quien ejecuta los tests, que además cambia mientras trabaja.
  */
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createRequire } from "node:module";
@@ -332,17 +332,18 @@ describe("leer la línea de tiempo", () => {
     expect(dos?.intervenciones).toHaveLength(1);
     expect(dos?.intervenciones[0]?.tool).toBe("valmen_validar_ticket");
 
-    // Pedir un ticket que no estuvo devuelve cero intervenciones, pero la sesión
-    // sigue contando las suyas: el conteo es de la sesión y se hace antes de
-    // filtrar, así que no se pone a cero por pedir otro ticket.
+    // Pedir un ticket que ninguna sesión tocó **no devuelve sesiones**. Antes sí
+    // las devolvía —con su coste— y eso hacía que la pantalla de un ticket mostrara
+    // el gasto de todo el proyecto como si fuera suyo: un número con aspecto de
+    // dato y sin relación con lo que se estaba mirando. La decisión anterior está
+    // escrita en este mismo test, y era la equivocada.
     const ninguno = leerLineaDeTiempo("/proyecto", {
       home: lab,
       ticketId: "BUGFIX-POS-TRES-20260103",
     });
     expect(ninguno?.intervenciones).toHaveLength(0);
-    expect(ninguno?.sessions[0]?.intervenciones).toBe(2);
-    // Y el coste total tampoco cambia: es de la sesión, no de la vista.
-    expect(ninguno?.totalCostUsd).toBeCloseTo(0.02, 9);
+    expect(ninguno?.sessions).toEqual([]);
+    expect(ninguno?.totalCostUsd).toBe(0);
   });
 
   it("no mezcla las sesiones de otro proyecto", async () => {
@@ -370,5 +371,137 @@ describe("leer la línea de tiempo", () => {
     expect(r).not.toBeNull();
     expect(r?.sessions).toHaveLength(0);
     expect(r?.totalCostUsd).toBe(0);
+  });
+});
+
+describe("las sesiones de codex", () => {
+  /** Una sesión de codex, con la forma real: metadatos, uso y comandos. */
+  function escribirSesionDeCodex(
+    home: string,
+    opciones: {
+      readonly fecha: string;
+      readonly id: string;
+      readonly cwd: string;
+      readonly tokens: number;
+      readonly lineas: readonly string[];
+    },
+  ): string {
+    const [anio, mes, dia] = opciones.fecha.split("-") as [string, string, string];
+    const directorio = join(home, ".codex", "sessions", anio, mes, dia);
+    mkdirSync(directorio, { recursive: true });
+    // La primera línea real trae las instrucciones completas del agente: cientos
+    // de kilobytes que hacen que un `JSON.parse` sobre un trozo cortado falle.
+    const meta = JSON.stringify({
+      type: "session_meta",
+      payload: {
+        id: opciones.id,
+        timestamp: `${opciones.fecha}T10:00:00.000Z`,
+        cwd: opciones.cwd,
+        base_instructions: { text: "x".repeat(30_000) },
+      },
+    });
+    const uso = JSON.stringify({
+      type: "event_msg",
+      payload: {
+        type: "token_count",
+        info: {
+          total_token_usage: {
+            input_tokens: opciones.tokens,
+            cached_input_tokens: Math.floor(opciones.tokens / 2),
+            output_tokens: 1000,
+            reasoning_output_tokens: 500,
+          },
+        },
+      },
+    });
+    const ruta = join(
+      directorio,
+      `rollout-${opciones.fecha}T10-00-00-${opciones.id}.jsonl`,
+    );
+    writeFileSync(ruta, [meta, ...opciones.lineas, uso].join("\n"), "utf8");
+    return ruta;
+  }
+
+  const hoy = (): string => new Date().toISOString().slice(0, 10);
+
+  it("lee el consumo de la sesión que trabajó el ticket", async () => {
+    const home = mkdtempSync(join(tmpdir(), "valmen-codex-"));
+    try {
+      escribirSesionDeCodex(home, {
+        fecha: hoy(),
+        id: "01a0cf37-489d-7752-b64f-705554ddc130",
+        cwd: "/proyecto",
+        tokens: 2_000_000,
+        lineas: [
+          JSON.stringify({
+            payload: { command: "valmen validate --id BUGFIX-POS-UNO-20260101" },
+          }),
+          JSON.stringify({ payload: { text: "cerré BUGFIX-POS-UNO-20260101" } }),
+        ],
+      });
+
+      const { leerLineaDeTiempo } = await cargar();
+      const linea = leerLineaDeTiempo("/proyecto", {
+        home,
+        ticketId: "BUGFIX-POS-UNO-20260101",
+      });
+
+      expect(linea?.sessions).toHaveLength(1);
+      const sesion = linea?.sessions[0];
+      expect(sesion?.source).toBe("codex");
+      // La entrada se descuenta de los tokens de entrada: codex los cuenta juntos.
+      expect(sesion?.inputTokens).toBe(1_000_000);
+      expect(sesion?.cacheReadTokens).toBe(1_000_000);
+      expect(sesion?.intervenciones).toBe(1);
+      // Y el coste no se inventa: una suscripción no tiene precio por token.
+      expect(sesion?.costUsd).toBeNull();
+      expect(linea?.sesionesSinCoste).toBe(1);
+      expect(linea?.totalCostUsd).toBe(0);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  it("no cuenta las sesiones de otro proyecto", async () => {
+    const home = mkdtempSync(join(tmpdir(), "valmen-codex-"));
+    try {
+      escribirSesionDeCodex(home, {
+        fecha: hoy(),
+        id: "otro",
+        cwd: "/otro-proyecto",
+        tokens: 500_000,
+        lineas: [],
+      });
+
+      // Sin sesiones de este proyecto y sin base de opencode, la línea de tiempo
+      // es `null`: «no hay datos», que la API traduce a `available: false` para que
+      // la pantalla lo diga en vez de mostrar un cero que se lee como «no costó».
+      const { leerLineaDeTiempo } = await cargar();
+      expect(leerLineaDeTiempo("/proyecto", { home })).toBeNull();
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  it("sin el ticket, una sesión que no lo menciona no se atribuye", async () => {
+    const home = mkdtempSync(join(tmpdir(), "valmen-codex-"));
+    try {
+      escribirSesionDeCodex(home, {
+        fecha: hoy(),
+        id: "ajena",
+        cwd: "/proyecto",
+        tokens: 100_000,
+        lineas: [JSON.stringify({ payload: { text: "otra cosa" } })],
+      });
+
+      const { leerLineaDeTiempo } = await cargar();
+      expect(
+        leerLineaDeTiempo("/proyecto", { home, ticketId: "BUGFIX-POS-UNO-20260101" }),
+      ).toBeNull();
+      // Pero sin filtro aparece: el proyecto sí la tiene, con sus tokens.
+      expect(leerLineaDeTiempo("/proyecto", { home })?.sessions).toHaveLength(1);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
   });
 });

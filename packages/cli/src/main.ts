@@ -57,6 +57,7 @@ import {
   recordHumanDecision,
 } from "@valmen/server";
 import {
+  guardarConsumoDeSesiones,
   memoryCommand,
   scanPendingSecretsCommand,
   templateCommand,
@@ -689,7 +690,22 @@ export function runTransition(
       reason: flag(flags, "reason"),
       version: flag(flags, "version"),
     });
-    return { stdout: `${outcome.details}\n`, stderr: "", exitCode: 0 };
+
+    // Cerrar guarda el consumo de lo que costó el ticket. Se hace acá, en el
+    // momento en que el trabajo termina, y no cuando alguien se acuerde de pulsar
+    // un botón: la contabilidad del cliente puede no existir dentro de un mes.
+    const consumo =
+      entity === "ticket" && to === "closed"
+        ? guardarConsumoDeSesiones(paths, ticketId)
+        : null;
+
+    return {
+      stdout:
+        `${outcome.details}\n` +
+        (consumo === null ? "" : `Consumo guardado en el ticket: ${consumo}\n`),
+      stderr: "",
+      exitCode: 0,
+    };
   } catch (caught) {
     const failure = toFailure(caught);
     return { stdout: "", stderr: failure.message, exitCode: failure.exitCode };

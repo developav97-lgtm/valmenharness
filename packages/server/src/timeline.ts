@@ -26,6 +26,8 @@ import { join } from "node:path";
 
 import { type RegistryPaths, addAiUsage } from "@valmen/engine";
 
+import { leerSesionesDeCodex } from "./codex.js";
+
 /**
  * La base de datos de opencode, cargada **de forma perezosa**.
  *
@@ -82,10 +84,26 @@ export interface Intervencion {
 export interface SesionDeAgente {
   readonly id: string;
   readonly title: string;
+  /**
+   * De qué agente salió la sesión.
+   *
+   * El harness nació leyendo solo opencode, y eso medía mal el trabajo: el mismo
+   * ticket se puede hacer desde codex. El dato se muestra porque una sesión sin
+   * coste solo se entiende sabiendo de dónde viene.
+   */
+  readonly source: "opencode" | "codex";
   readonly agent: string;
   readonly provider: string;
   readonly model: string;
-  readonly costUsd: number;
+  /**
+   * El coste, o `null` cuando no existe.
+   *
+   * Un proveedor por suscripción no tiene precio por token: poner un cero diría
+   * «gratis», que es falso, y estimarlo con la tarifa de otro proveedor sería un
+   * número inventado con forma de medición. Los tokens sí se registran: esos son
+   * un dato.
+   */
+  readonly costUsd: number | null;
   readonly inputTokens: number;
   readonly outputTokens: number;
   readonly reasoningTokens: number;
@@ -127,6 +145,8 @@ export interface LineaDeTiempo {
   readonly sessions: readonly SesionDeAgente[];
   readonly intervenciones: readonly Intervencion[];
   readonly totalCostUsd: number;
+  /** Sesiones cuyo coste no existe —suscripción—, para poder decirlo. */
+  readonly sesionesSinCoste: number;
   readonly totalTokens: {
     readonly input: number;
     readonly output: number;
@@ -258,13 +278,64 @@ export function leerLineaDeTiempo(
 ): LineaDeTiempo | null {
   const dbPath = opencodeDbPath(options.home ?? homedir());
   const db = abrir(dbPath);
-  if (db === null) return null;
+
+  if (db === null) {
+    // Sin base de opencode puede haber igual consumo: un proyecto que trabaja
+    // desde codex y nada más. Devolver `null` ahí borraría su línea de tiempo
+    // entera, que es lo que pasaba antes de que existiera este lector.
+    const sesiones = leerSesionesDeCodex(directory, {
+      ...(options.home === undefined ? {} : { home: options.home }),
+      ...(options.ticketId === undefined ? {} : { ticketId: options.ticketId }),
+    });
+    return sesiones.length === 0 ? null : lineaSoloDeCodex(sesiones, directory);
+  }
 
   try {
-    return consultar(db, dbPath, directory, options.ticketId);
+    return consultar(db, dbPath, directory, options.ticketId, options.home);
   } finally {
     db.close();
   }
+}
+
+/** La línea de tiempo de un proyecto del que solo hay sesiones de codex. */
+function lineaSoloDeCodex(
+  sesiones: readonly import("./codex.js").SesionDeCodex[],
+  directory: string,
+): LineaDeTiempo {
+  return {
+    source: `codex:${directory}`,
+    sessions: sesiones.map((sesion) => ({
+      id: sesion.id,
+      title: "Sesión de codex",
+      source: "codex" as const,
+      agent: "codex",
+      provider: "",
+      model: "",
+      costUsd: null,
+      inputTokens: sesion.inputTokens,
+      outputTokens: sesion.outputTokens,
+      reasoningTokens: sesion.reasoningTokens,
+      cacheReadTokens: sesion.cachedInputTokens,
+      startedAt: sesion.startedAt,
+      intervenciones: sesion.intervenciones,
+      fallidas: 0,
+    })),
+    intervenciones: [],
+    totalCostUsd: 0,
+    sesionesSinCoste: sesiones.length,
+    totalTokens: {
+      input: sesiones.reduce((suma, s) => suma + s.inputTokens, 0),
+      output: sesiones.reduce((suma, s) => suma + s.outputTokens, 0),
+      reasoning: sesiones.reduce((suma, s) => suma + s.reasoningTokens, 0),
+      cacheRead: sesiones.reduce((suma, s) => suma + s.cachedInputTokens, 0),
+    },
+    desglose: {
+      harnessUsd: 0,
+      exploracionUsd: 0,
+      harnessMensajes: 0,
+      exploracionMensajes: 0,
+    },
+  };
 }
 
 /** La consulta y su interpretación, separadas para cerrar la base siempre. */
@@ -273,6 +344,7 @@ function consultar(
   dbPath: string,
   directory: string,
   ticketId: string | undefined,
+  home: string | undefined,
 ): LineaDeTiempo | null {
   const patron = `${directory}%`;
 
@@ -379,6 +451,7 @@ function consultar(
       provider: mensaje.provider,
       model: mensaje.model === "" ? modeloDeSesion(fila.sessionModel) : mensaje.model,
       costUsd: fila.cost,
+      source: "opencode",
       inputTokens: fila.tokensInput,
       outputTokens: fila.tokensOutput,
       reasoningTokens: fila.tokensReasoning,
@@ -394,6 +467,8 @@ function consultar(
   // de la llamada.
   const delHarness = new Set<string>();
   const intervenciones: Intervencion[] = [];
+  /** Las sesiones que intervinieron sobre el ticket que se está mirando. */
+  const sesionesDelTicket = new Set<string>();
   for (const [messageId, llamadasDelMensaje] of llamadas) {
     const entrada = porMensaje.get(messageId);
     if (entrada === undefined) continue;
@@ -418,6 +493,9 @@ function consultar(
       // El identificador se busca en los argumentos de la llamada, que es donde
       // está; el texto del mensaje no lo lleva.
       if (ticketId !== undefined && !llamada.data.includes(ticketId)) continue;
+      // Y la intervención ya sabe de qué sesión salió, así que la pertenencia se
+      // resuelve acá y no adivinando por tiempo.
+      sesionesDelTicket.add(entrada.sessionId);
 
       intervenciones.push({
         at: llamada.at,
@@ -437,13 +515,54 @@ function consultar(
     costeHarness += porMensaje.get(messageId)?.mensaje.cost ?? 0;
   }
 
-  const totalCostUsd = [...sesiones.values()].reduce((suma, s) => suma + s.costUsd, 0);
+  // Las sesiones de codex, si las hay. Se leen después de las de opencode porque
+  // son otro almacén, y se suman a la misma lista: quien mira quiere el consumo de
+  // su ticket, no el de la herramienta con la que se hizo.
+  for (const sesion of leerSesionesDeCodex(directory, {
+    ...(home === undefined ? {} : { home }),
+    ...(ticketId === undefined ? {} : { ticketId }),
+  })) {
+    sesiones.set(`codex:${sesion.id}`, {
+      id: sesion.id,
+      title: "Sesión de codex",
+      source: "codex",
+      agent: "codex",
+      provider: "",
+      model: "",
+      costUsd: null,
+      inputTokens: sesion.inputTokens,
+      outputTokens: sesion.outputTokens,
+      reasoningTokens: sesion.reasoningTokens,
+      cacheReadTokens: sesion.cachedInputTokens,
+      startedAt: sesion.startedAt,
+      intervenciones: sesion.intervenciones,
+      fallidas: 0,
+    });
+  }
+
+  // **La atribución, cuando se pide un ticket.** Sin esto, el coste que mostraba
+  // la pantalla de un ticket era el de **todas** las sesiones del proyecto: un
+  // número con aspecto de dato y sin relación con lo que se estaba mirando. Una
+  // sesión pertenece al ticket si intervino sobre él —para opencode, una llamada
+  // al harness que lo nombra; para codex, una sesión que lo menciona—.
+  if (ticketId !== undefined) {
+    for (const [clave, sesion] of sesiones) {
+      // Las de codex ya vienen filtradas por el ticket desde su lector: ahí la
+      // pertenencia se decide por mención, que es lo que hay.
+      const tocaElTicket = sesion.source === "codex" || sesionesDelTicket.has(clave);
+      if (!tocaElTicket) sesiones.delete(clave);
+    }
+  }
+
+  const conCoste = [...sesiones.values()].filter((s) => s.costUsd !== null);
+  const totalCostUsd = conCoste.reduce((suma, s) => suma + (s.costUsd ?? 0), 0);
   const suma = (elegir: (s: SesionDeAgente) => number): number =>
     [...sesiones.values()].reduce((total, s) => total + elegir(s), 0);
 
   return {
     source: dbPath,
     sessions: [...sesiones.values()].sort((a, b) => a.startedAt - b.startedAt),
+    sesionesSinCoste: [...sesiones.values()].length - conCoste.length,
     intervenciones: intervenciones.sort((a, b) => a.at - b.at),
     totalCostUsd,
     totalTokens: {
@@ -498,7 +617,7 @@ export function guardarFotoEnTicket(
       addAiUsage({
         paths,
         ticketId,
-        source: `opencode:${linea.source}`,
+        source: `${sesion.source}:${sesion.source === "codex" ? sesion.id : linea.source}`,
         confidence: "high",
         sessionReference: sesion.id,
         model: sesion.provider === "" ? sesion.model : `${sesion.provider}/${sesion.model}`,
@@ -507,14 +626,20 @@ export function guardarFotoEnTicket(
         totalTokens: String(
           sesion.inputTokens + sesion.outputTokens + sesion.reasoningTokens,
         ),
-        estimatedCostUsd: sesion.costUsd.toFixed(6),
+        // Un proveedor por suscripción no tiene coste por token: el campo se deja
+        // fuera y la nota lo dice, en vez de escribir un cero que se leería como
+        // «gratis».
+        ...(sesion.costUsd === null ? {} : { estimatedCostUsd: sesion.costUsd.toFixed(6) }),
         notes:
           `Agente ${sesion.agent || "(sin declarar)"}. ` +
           `${sesion.intervenciones} intervención(es) sobre el registro, ` +
           `${sesion.fallidas} con fallo. ` +
           `Razonamiento ${sesion.reasoningTokens} tokens, ` +
           `caché leída ${sesion.cacheReadTokens} tokens. ` +
-          `Sesión "${sesion.title}".`,
+          `Sesión "${sesion.title}".` +
+          (sesion.costUsd === null
+            ? " Proveedor por suscripción: no hay coste por token, se registran los tokens."
+            : ""),
         ...(options.now === undefined ? {} : { now: options.now }),
       }),
     );

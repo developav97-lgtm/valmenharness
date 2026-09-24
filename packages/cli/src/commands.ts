@@ -73,6 +73,8 @@ import {
   renderReport,
   ticketsPath,
 } from "@valmen/engine";
+import { guardarFotoEnTicket } from "@valmen/server";
+
 import {
   isIndexCurrent,
   loadMemory,
@@ -1044,6 +1046,30 @@ export function memoryCommand(
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);
   }
+}
+
+/**
+ * Guarda el consumo de las sesiones que trabajaron un ticket.
+ *
+ * Es la mitad automática de la línea de tiempo: la pantalla la muestra en vivo y
+ * el ticket tiene que poder auditarse meses después, cuando la contabilidad del
+ * cliente ya no esté. El disparador natural es el cierre, y por eso esto se llama
+ * desde ahí —en el CLI, en Mission Control y en el MCP— en vez de depender de que
+ * alguien pulse un botón.
+ *
+ * Devuelve el resumen de lo guardado, o `null` si no había nada que guardar: un
+ * ticket que se trabajó a mano no tiene sesiones, y eso no es un fallo.
+ *
+ * Vive en el CLI —y no en cada puerta— porque las tres ya dependen de él: una
+ * implementación por puerta sería tres formas de guardar lo mismo.
+ */
+export function guardarConsumoDeSesiones(
+  paths: RegistryPaths,
+  ticketId: string,
+  options: { readonly home?: string; readonly now?: () => Date } = {},
+): string | null {
+  const guardado = guardarFotoEnTicket(paths, ticketId, options);
+  return guardado === null ? null : guardado.detalle;
 }
 
 /**

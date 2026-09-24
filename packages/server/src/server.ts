@@ -802,7 +802,26 @@ export async function handleApi(
         ...(typeof datos.reason === "string" ? { reason: datos.reason } : {}),
         ...(typeof datos.version === "string" ? { version: datos.version } : {}),
       });
-      return { status: 200, body: { ok: true, details: resultado.details } };
+
+      // Cerrar guarda el consumo, igual que desde el CLI y desde el MCP: el
+      // ticket tiene que poder auditarse cuando la contabilidad del agente ya no
+      // exista, y eso no puede depender de por dónde se cerró.
+      const consumo =
+        datos.entity === "ticket" && datos.to === "closed"
+          ? guardarFotoEnTicket(paths, id)
+          : null;
+
+      return {
+        status: 200,
+        body: {
+          ok: true,
+          details:
+            resultado.details +
+            (consumo === null
+              ? ""
+              : `\nConsumo registrado en el ticket: ${consumo.detalle}`),
+        },
+      };
     } catch (caught) {
       // El motor explica por qué no se puede —transición ilegal, precondición
       // incumplida— y ese mensaje es el que hay que mostrar.

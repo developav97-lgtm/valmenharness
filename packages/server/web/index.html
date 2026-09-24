@@ -3440,27 +3440,90 @@
         }
 
         const zona = el("div");
+        const sesiones = datos.sessions ?? [];
 
-        const total = datos.desglose.harnessUsd + datos.desglose.exploracionUsd;
+        // Sin sesiones que hayan trabajado **este** ticket, se dice. Antes esta
+        // vista mostraba el gasto de todas las sesiones del proyecto como si
+        // fueran del ticket: un número con aspecto de dato y sin relación con lo
+        // que se estaba mirando.
+        if (sesiones.length === 0) {
+          zona.append(
+            el(
+              "div",
+              "Ninguna sesión trabajó este ticket: ni de opencode ni de codex. " +
+                "El consumo se registra buscando el identificador en lo que hizo cada sesión, " +
+                "así que un ticket que se trabajó a mano no tiene nada que mostrar.",
+              "vacio",
+            ),
+          );
+          return zona;
+        }
+
+        const conCoste = sesiones.filter((s) => s.costUsd !== null);
+        const coste = conCoste.reduce((suma, s) => suma + s.costUsd, 0);
+        const tokens = sesiones.reduce(
+          (suma, s) =>
+            suma + s.inputTokens + s.outputTokens + s.reasoningTokens + s.cacheReadTokens,
+          0,
+        );
+
         const resumen = el("div", undefined, "meta");
         resumen.append(
-          el("span", `coste $${total.toFixed(6)}`, "etiqueta"),
-          el("span", `harness $${datos.desglose.harnessUsd.toFixed(6)}`, "etiqueta"),
-          el("span", `exploración $${datos.desglose.exploracionUsd.toFixed(6)}`, "etiqueta"),
-          el("span", `${datos.intervenciones.length} intervención(es)`, "etiqueta"),
+          el("span", `coste $${coste.toFixed(6)}`, "etiqueta"),
+          el("span", `${(tokens / 1e6).toFixed(1)}M tokens`, "etiqueta"),
+          el("span", `${sesiones.length} sesión(es)`, "etiqueta"),
+          el("span", `${datos.intervenciones.length} intervención(es) sobre el registro`, "etiqueta"),
         );
+        if (datos.sesionesSinCoste > 0) {
+          // Un proveedor por suscripción no tiene precio por token: se dice, en
+          // vez de sumar un cero que se leería como «gratis».
+          resumen.append(
+            el("span", `${datos.sesionesSinCoste} sin coste por token (suscripción)`, "etiqueta"),
+          );
+        }
         zona.append(
           el(
             "div",
             "Harness es lo que costó llamar a las herramientas del registro; " +
-              "exploración es leer, buscar y editar. Es el mismo gasto de la sesión, repartido.",
+              "exploración es leer, buscar y editar. El desglose solo cuenta las sesiones " +
+              "con coste por token.",
             "resultado",
           ),
           resumen,
         );
 
+        // Las sesiones, con su origen: una de codex se entiende sabiendo de dónde
+        // viene, porque su coste no existe y sus tokens sí.
+        const tablaSesiones = el("table", undefined, "tabla-intervenciones");
+        const cabSesiones = el("tr");
+        for (const titulo of ["origen", "agente", "modelo", "tokens", "coste", "intervenciones"]) {
+          cabSesiones.append(el("th", titulo));
+        }
+        tablaSesiones.append(cabSesiones);
+        for (const sesion of sesiones) {
+          const fila = el("tr");
+          const suyos = sesion.inputTokens + sesion.outputTokens + sesion.reasoningTokens;
+          fila.append(
+            el("td", sesion.source, "id"),
+            el("td", sesion.agent || "—"),
+            el("td", sesion.model === "" ? "—" : sesion.model, "id"),
+            el("td", `${(suyos / 1e6).toFixed(2)}M`, "id"),
+            el("td", sesion.costUsd === null ? "suscripción" : `$${sesion.costUsd.toFixed(4)}`, "id"),
+            el("td", String(sesion.intervenciones), "id"),
+          );
+          tablaSesiones.append(fila);
+        }
+        zona.append(tablaSesiones);
+
         if (datos.intervenciones.length === 0) {
-          zona.append(el("div", "Esta sesión no llamó a ninguna herramienta del registro.", "vacio"));
+          zona.append(
+            el(
+              "div",
+              "Ninguna de esas sesiones llamó a una herramienta del registro desde acá: " +
+                "el trabajo se hizo por el CLI o desde otro agente.",
+              "resultado",
+            ),
+          );
           return zona;
         }
 

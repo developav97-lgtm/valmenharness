@@ -67,6 +67,7 @@ import { architectRoutingFor, gateRoutingFor } from "@valmen/adapter";
 import { apiKeyWithPrecedence } from "@valmen/credentials";
 import {
   buildIndex,
+  guardarConsumoDeSesiones,
   calibrateReport,
   deliverManifest,
   featureDecompose,
@@ -1640,14 +1641,28 @@ export async function callTool(
       }
 
       case "mover_ticket": {
+        const id = texto(args, "id") as string;
+        const to = texto(args, "to") as string;
         const movimiento = transition({
           paths,
-          ticketId: texto(args, "id") as string,
+          ticketId: id,
           entity: "ticket",
-          to: texto(args, "to") as string,
+          to,
           reason: texto(args, "motivo", false),
         });
-        return bien(movimiento.details);
+
+        // Cerrar guarda el consumo en el ticket, igual que desde el CLI y desde la
+        // pantalla: el ticket tiene que poder auditarse cuando la contabilidad del
+        // agente ya no exista, y eso no puede depender de quién cerró.
+        const consumo =
+          to === "closed"
+            ? guardarConsumoDeSesiones(paths, id, contexto.now ? { now: contexto.now } : {})
+            : null;
+
+        return bien(
+          movimiento.details +
+            (consumo === null ? "" : `\nConsumo registrado en el ticket: ${consumo}`),
+        );
       }
 
       case "evaluar_compuerta": {
