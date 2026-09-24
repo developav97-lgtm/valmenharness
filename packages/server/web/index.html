@@ -9,17 +9,27 @@
          arrancar con el servidor, y su objetivo es mostrar el estado, no
          impresionar. Una hoja propia se lee entera en un minuto. */
       :root {
-        --fondo: #0f1115;
-        --panel: #171a21;
-        --panel-alto: #1e222b;
-        --borde: #2a2f3a;
-        --texto: #e6e8ee;
-        --tenue: #8b93a7;
-        --acento: #4f8cff;
-        --ok: #3fb950;
-        --alerta: #d29922;
-        --error: #f85149;
+        --fondo: #0d1014;
+        --panel: #14181f;
+        --panel-alto: #1b202a;
+        --panel-hover: #212733;
+        --borde: #262c38;
+        --borde-suave: #1e232d;
+        --texto: #e8eaf0;
+        --tenue: #8a92a6;
+        --acento: #5b8dff;
+        --acento-suave: rgba(91, 141, 255, 0.14);
+        --acento-halo: rgba(91, 141, 255, 0.07);
+        --acento-2: #8f6bff;
+        --halo-ok: 0 0 0 3px rgba(70, 185, 90, 0.14);
+        --alerta-suave: rgba(214, 160, 34, 0.16);
+        --barra: rgba(13, 16, 20, 0.86);
+        --ok: #46b95a;
+        --alerta: #d6a022;
+        --error: #f2695c;
         --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+        --lateral: 232px;
+        --radio: 8px;
       }
       * {
         box-sizing: border-box;
@@ -34,7 +44,224 @@
           "Segoe UI",
           sans-serif;
       }
-      header {
+      /* ── El armazón ──────────────────────────────────────────────────────
+         Barra lateral fija y una columna de contenido. La navegación deja de
+         competir con el contenido por el ancho de arriba: en una pantalla de
+         registro hay ocho destinos y ninguno es «el principal», así que una
+         barra horizontal obliga a leerlos todos en cada vista. */
+      body.armazon {
+        display: grid;
+        grid-template-columns: var(--lateral) 1fr;
+        min-height: 100vh;
+      }
+      body.armazon.lateral-oculta {
+        grid-template-columns: 0 1fr;
+      }
+      .lateral {
+        background: var(--panel);
+        border-right: 1px solid var(--borde);
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 14px 10px;
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        overflow-y: auto;
+        overflow-x: hidden;
+      }
+      body.lateral-oculta .lateral {
+        padding: 0;
+        border: 0;
+      }
+      body.lateral-oculta .lateral > * {
+        display: none;
+      }
+      .lateral .marca {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 6px 8px 14px;
+      }
+      .lateral .marca .icono-marca {
+        width: 24px;
+        height: 24px;
+        border-radius: 7px;
+        background: linear-gradient(140deg, var(--acento), var(--acento-2));
+        display: grid;
+        place-items: center;
+        color: var(--texto);
+        font-size: 13px;
+        font-weight: 700;
+        flex: none;
+      }
+      .lateral .marca .nombre {
+        font-size: 14px;
+        font-weight: 650;
+        letter-spacing: -0.01em;
+      }
+      .lateral .marca .nombre span {
+        color: var(--tenue);
+        font-weight: 500;
+      }
+      .lateral .grupo {
+        color: var(--tenue);
+        font-size: 10.5px;
+        font-weight: 600;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+        padding: 12px 9px 5px;
+      }
+      .lateral nav {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .lateral nav a {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--tenue);
+        text-decoration: none;
+        font-size: 13.5px;
+        padding: 7px 9px;
+        border-radius: var(--radio);
+        border: 0;
+      }
+      .lateral nav a svg {
+        width: 15px;
+        height: 15px;
+        flex: none;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 1.6;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        opacity: 0.85;
+      }
+      .lateral nav a:hover {
+        background: var(--panel-hover);
+        color: var(--texto);
+      }
+      .lateral nav a[aria-current="page"] {
+        background: var(--acento-suave);
+        color: var(--texto);
+        font-weight: 550;
+        box-shadow: inset 2px 0 0 var(--acento);
+      }
+      .lateral nav a[aria-current="page"] svg {
+        color: var(--acento);
+        opacity: 1;
+      }
+      .lateral nav a .cuenta {
+        margin-left: auto;
+        background: var(--acento-suave);
+        color: var(--acento);
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 1px 7px;
+        line-height: 1.5;
+      }
+      .lateral nav a .cuenta.alerta {
+        background: var(--alerta-suave);
+        color: var(--alerta);
+      }
+      .lateral .pie {
+        margin-top: auto;
+        border-top: 1px solid var(--borde-suave);
+        padding: 12px 9px 4px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .lateral .pie .rotulo {
+        font-size: 10.5px;
+        color: var(--tenue);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      .lateral .pie .ruta {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--tenue);
+        word-break: break-all;
+        line-height: 1.4;
+      }
+      .lateral .pie .latido {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 11.5px;
+        color: var(--tenue);
+      }
+      .lateral .pie .punto {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--ok);
+        box-shadow: var(--halo-ok);
+        flex: none;
+      }
+      .principal {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+      }
+      .barra-vista {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 24px;
+        border-bottom: 1px solid var(--borde);
+        background: var(--barra);
+        backdrop-filter: blur(8px);
+        position: sticky;
+        top: 0;
+        z-index: 5;
+      }
+      .barra-vista .titulo {
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+      .barra-vista .sello {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--tenue);
+        border: 1px solid var(--borde);
+        border-radius: 999px;
+        padding: 2px 9px;
+      }
+      .barra-vista .crecer {
+        margin-left: auto;
+      }
+      .pliegue {
+        background: transparent;
+        border: 1px solid var(--borde);
+        border-radius: 6px;
+        color: var(--tenue);
+        cursor: pointer;
+        width: 28px;
+        height: 26px;
+        display: grid;
+        place-items: center;
+        padding: 0;
+        flex: none;
+      }
+      .pliegue:hover {
+        color: var(--texto);
+        border-color: var(--acento);
+      }
+      .pliegue svg {
+        width: 14px;
+        height: 14px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 1.7;
+        stroke-linecap: round;
+      }
+      header.heredado {
         display: flex;
         align-items: baseline;
         gap: 20px;
@@ -48,39 +275,19 @@
         font-weight: 600;
         padding: 16px 0;
       }
-      nav {
-        display: flex;
-        gap: 4px;
-      }
-      nav a {
-        color: var(--tenue);
-        text-decoration: none;
-        font-size: 14px;
-        padding: 16px 12px;
-        border-bottom: 2px solid transparent;
-      }
-      nav a:hover {
-        color: var(--texto);
-      }
-      nav a[aria-current="page"] {
-        color: var(--texto);
-        border-bottom-color: var(--acento);
-      }
-      header .raiz {
+      header.heredado .raiz {
         color: var(--tenue);
         font-family: var(--mono);
         font-size: 12px;
-      }
-      header .raiz:first-of-type {
-        margin-left: auto;
       }
       #actualizado {
         color: var(--ok);
       }
       main {
-        max-width: 1180px;
+        max-width: 1240px;
+        width: 100%;
         margin: 0 auto;
-        padding: 24px;
+        padding: 22px 24px 48px;
       }
       h2 {
         font-size: 13px;
@@ -93,11 +300,28 @@
         font-size: 15px;
         margin: 0;
       }
+      /* El contenido vive en una columna con un halo suave arriba: da
+         profundidad sin imágenes ni degradados que compitan con los datos. */
+      .principal::before {
+        content: "";
+        position: fixed;
+        inset: 0 0 auto var(--lateral);
+        height: 220px;
+        background: radial-gradient(
+          900px 220px at 18% -40%,
+          var(--acento-halo),
+          transparent 70%
+        );
+        pointer-events: none;
+      }
+      body.lateral-oculta .principal::before {
+        left: 0;
+      }
       .nota {
         background: var(--panel-alto);
         border: 1px solid var(--borde);
         border-left: 3px solid var(--acento);
-        border-radius: 6px;
+        border-radius: var(--radio);
         padding: 12px 16px;
         margin-bottom: 24px;
         color: var(--tenue);
@@ -120,8 +344,11 @@
         letter-spacing: 0.06em;
         color: var(--tenue);
         font-weight: 600;
-        padding: 8px 10px;
+        padding: 10px;
         border-bottom: 1px solid var(--borde);
+        position: sticky;
+        top: 51px;
+        background: var(--fondo);
         white-space: nowrap;
       }
       td {
@@ -129,8 +356,14 @@
         border-bottom: 1px solid var(--borde);
         vertical-align: middle;
       }
+      tbody tr {
+        transition: background 0.12s ease;
+      }
       tbody tr:hover td {
         background: var(--panel);
+      }
+      tbody tr:last-child td {
+        border-bottom: 0;
       }
       .nombre {
         font-weight: 500;
@@ -169,15 +402,27 @@
       button {
         font: inherit;
         font-size: 13px;
-        padding: 5px 12px;
-        border-radius: 5px;
+        padding: 6px 12px;
+        border-radius: 6px;
         cursor: pointer;
         background: var(--panel-alto);
         color: var(--texto);
         border: 1px solid var(--borde);
+        transition:
+          background 0.12s ease,
+          border-color 0.12s ease,
+          transform 0.06s ease;
       }
       button:hover:not(:disabled) {
         border-color: var(--acento);
+        background: var(--panel-hover);
+      }
+      button:active:not(:disabled) {
+        transform: translateY(1px);
+      }
+      button:disabled {
+        opacity: 0.55;
+        cursor: default;
       }
       button:disabled {
         opacity: 0.45;
@@ -374,18 +619,23 @@
         margin-bottom: 24px;
       }
       .tarjeta {
-        background: var(--panel);
+        background: linear-gradient(180deg, var(--panel-alto), var(--panel));
         border: 1px solid var(--borde);
-        border-radius: 8px;
+        border-radius: var(--radio);
         padding: 14px 16px;
       }
       .tarjeta .valor {
-        font-size: 24px;
-        font-weight: 600;
+        font-size: 25px;
+        font-weight: 620;
+        letter-spacing: -0.02em;
+        line-height: 1.2;
       }
       .tarjeta .rotulo {
-        font-size: 12px;
+        font-size: 11.5px;
         color: var(--tenue);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-top: 2px;
       }
       dialog {
         background: var(--panel);
@@ -1571,24 +1821,44 @@
       }
     </style>
   </head>
-  <body>
-    <header>
-      <h1>ValmenHarness</h1>
-      <nav>
-        <a href="#/tickets" data-vista="tickets">Tickets</a>
-        <a href="#/features" data-vista="features">Features</a>
-        <a href="#/procesos" data-vista="procesos">Procesos</a>
-        <a href="#/estandares" data-vista="estandares">Estándares</a>
-        <a href="#/configurar" data-vista="configurar">Configurar</a>
-        <a href="#/modelos" data-vista="modelos">Modelos</a>
-        <a href="#/configuracion" data-vista="configuracion">Configuración</a>
-        <a href="#/proveedores" data-vista="proveedores">Proveedores</a>
-      </nav>
-      <span class="raiz" id="actualizado"></span>
-      <span class="raiz" id="raiz"></span>
-    </header>
+  <body class="armazon">
+    <aside class="lateral" id="lateral">
+      <div class="marca">
+        <span class="icono-marca">V</span>
+        <span class="nombre">Valmen<span>Harness</span></span>
+      </div>
 
-    <main id="contenido"></main>
+      <div class="grupo">Registro</div>
+      <nav>
+          <a href="#/tickets" data-vista="tickets"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Tickets</a>
+          <a href="#/features" data-vista="features"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h7v7H4zM13 5h7v4h-7zM13 11h7v8h-7zM4 14h7v5H4z"/></svg>Features</a>
+          <a href="#/procesos" data-vista="procesos"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h9a4 4 0 0 1 0 8H9"/><path d="M8 5 5 7l3 2"/><path d="M14 17h5"/></svg>Procesos</a>
+          <a href="#/estandares" data-vista="estandares"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16"/><path d="M5 7l7-3 7 3"/><path d="M5 7v5a7 7 0 0 0 7 7 7 7 0 0 0 7-7V7"/></svg>Estándares</a>
+          <a href="#/configurar" data-vista="configurar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M4 12h2M18 12h2M12 4v2M12 18v2M6.5 6.5l1.5 1.5M16 16l1.5 1.5M17.5 6.5 16 8M8 16l-1.5 1.5"/></svg>Configurar</a>
+          <a href="#/modelos" data-vista="modelos"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 4 8l8 4 8-4-8-4z"/><path d="m4 12 8 4 8-4"/><path d="m4 16 8 4 8-4"/></svg>Modelos</a>
+          <a href="#/configuracion" data-vista="configuracion"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M5 12h14M5 18h14"/><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="8" cy="18" r="1.6"/></svg>Configuración</a>
+          <a href="#/proveedores" data-vista="proveedores"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8h10v10a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/><path d="M4 12h3M17 12h3"/></svg>Proveedores</a>
+      </nav>
+
+      <div class="pie">
+        <div class="rotulo">Proyecto</div>
+        <div class="ruta" id="raiz">…</div>
+        <div class="latido"><span class="punto"></span><span id="actualizado">conectando…</span></div>
+      </div>
+    </aside>
+
+    <div class="principal">
+      <header class="barra-vista">
+        <button class="pliegue" id="pliegue" type="button" title="Mostrar u ocultar la navegación">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <span class="titulo" id="titulo-vista">Tickets</span>
+        <span class="sello" id="sello-vista"></span>
+        <span class="crecer"></span>
+      </header>
+
+      <main id="contenido"></main>
+    </div>
 
     <dialog id="dialogo">
       <div class="dialogo">
@@ -5983,6 +6253,17 @@
 
       function conectarEventos() {
         const eventos = new EventSource("/api/events");
+        // «conectando…» es cierto hasta que la conexión abre, y después es una
+        // mentira tranquila: la pantalla se queda diciendo que está conectando
+        // cuando ya está conectada y lo único que pasa es que nadie escribió.
+        eventos.onopen = () => {
+          const marca = $("actualizado");
+          if (marca !== null) marca.textContent = "en vivo";
+        };
+        eventos.onerror = () => {
+          const marca = $("actualizado");
+          if (marca !== null) marca.textContent = "sin conexión";
+        };
         eventos.onmessage = () => {
           if (!puedeRefrescar()) return;
           clearTimeout(refrescoPendiente);
@@ -6008,11 +6289,97 @@
           String(ahora.getSeconds()).padStart(2, "0");
       }
 
+      /**
+       * El título de la barra, que dice en qué vista se está.
+       *
+       * La navegación dejó de marcar la vista con una línea debajo de cada
+       * pestaña: en la barra lateral el destino se ve por dónde está el resalte,
+       * y el título de arriba lo dice con palabras —también cuando la vista es
+       * una que no está en la lista, como el detalle de un ticket—.
+       */
+      const TITULOS = {
+        tickets: "Tickets",
+        ticket: "Ticket",
+        features: "Features",
+        feature: "Feature",
+        procesos: "Procesos",
+        estandares: "Estándares",
+        configurar: "Configurar",
+        modelos: "Modelos",
+        configuracion: "Configuración",
+        proveedores: "Proveedores",
+      };
+
+      function marcarTitulo(nombre, parametro) {
+        const titulo = $("titulo-vista");
+        const sello = $("sello-vista");
+        if (titulo === null) return;
+        titulo.textContent = TITULOS[nombre] ?? "Tickets";
+        if (sello === null) return;
+        // El identificador del sujeto abierto, cuando lo hay: sin él, dos
+        // pantallas distintas del mismo tipo se ven iguales en la barra.
+        sello.textContent = parametro ?? "";
+        sello.style.display = parametro === undefined ? "none" : "";
+      }
+
+      /**
+       * Los números que piden atención, en la navegación.
+       *
+       * Un menú dice a dónde se puede ir; esto dice **a dónde conviene ir**: las
+       * propuestas que esperan una decisión y los tickets que esperan una prueba
+       * de la persona. Son las dos cosas que se quedan quietas si nadie mira, y
+       * por eso están a la vista desde cualquier pantalla.
+       */
+      async function marcarPendientes() {
+        const poner = (vista, cuantos, alerta) => {
+          const enlace = document.querySelector(`nav a[data-vista="${vista}"]`);
+          if (enlace === null) return;
+          const previo = enlace.querySelector(".cuenta");
+          if (previo !== null) previo.remove();
+          if (cuantos === 0) return;
+          enlace.append(el("span", String(cuantos), alerta ? "cuenta alerta" : "cuenta"));
+        };
+
+        try {
+          const [estandares, tickets] = await Promise.all([
+            api("GET", "/api/standards"),
+            api("GET", "/api/tickets"),
+          ]);
+          poner(
+            "estandares",
+            estandares.proposals.filter((p) => p.state === "propuesto").length,
+            true,
+          );
+          poner(
+            "tickets",
+            (tickets.tickets ?? []).filter((t) => t.workflowStatus === "awaiting_user_tests")
+              .length,
+            true,
+          );
+        } catch {
+          // Sin números no se rompe nada: la navegación se queda sin contadores.
+        }
+      }
+
+      /** El pliegue de la barra lateral, recordado entre visitas. */
+      function montarPliegue() {
+        const boton = $("pliegue");
+        if (boton === null) return;
+        const guardado = localStorage.getItem("valmen-lateral");
+        if (guardado === "oculta") document.body.classList.add("lateral-oculta");
+        boton.addEventListener("click", () => {
+          const oculta = document.body.classList.toggle("lateral-oculta");
+          localStorage.setItem("valmen-lateral", oculta ? "oculta" : "visible");
+        });
+      }
+
       // ── Enrutado ──────────────────────────────────────────────────────────
 
       async function navegar() {
         const ruta = location.hash.replace(/^#\//, "") || "tickets";
         const [nombre, parametro] = ruta.split("/");
+
+        marcarTitulo(nombre, parametro);
 
         for (const enlace of document.querySelectorAll("nav a")) {
           // Un ticket pertenece a la vista de tickets: la pestaña sigue marcada
@@ -6052,9 +6419,18 @@
       window.addEventListener("hashchange", () => void navegar());
 
       void api("GET", "/api/health").then((salud) => {
-        $("raiz").textContent = salud.root;
+        const raiz = $("raiz");
+        if (raiz === null) return;
+        // El nombre del proyecto y no la ruta entera: en la barra lateral una
+        // ruta larga se parte en tres renglones y desplaza lo que sí se mira. La
+        // ruta completa queda en el `title`, que es donde se consulta.
+        const partes = String(salud.root).split("/").filter((parte) => parte !== "");
+        raiz.textContent = partes[partes.length - 1] ?? salud.root;
+        raiz.title = salud.root;
       });
+      montarPliegue();
       conectarEventos();
+      void marcarPendientes();
       void navegar();
     </script>
   </body>

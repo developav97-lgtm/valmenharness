@@ -110,6 +110,20 @@ const SOMBRA_RE = /\b(?:box-shadow|text-shadow|drop-shadow|filter)\s*:/i;
 const RESPALDO_RE = /var\(\s*--[\w-]+\s*,[^)]*$/;
 
 /**
+ * La **definición** de una variable del tema: `--fondo: #0f1115`.
+ *
+ * Es el otro sitio donde un color escrito a mano está bien, y el más importante:
+ * el bloque `:root` es justamente donde viven los colores del tema. Sin esta
+ * excepción el chequeo marcaba las dieciocho líneas del tema de la propia
+ * interfaz del harness —marcaba la definición de la solución—, que es la forma
+ * más rápida de que alguien lo apague.
+ *
+ * Lo que sigue marcado es usar un color crudo en una regla, que es lo que rompe
+ * el modo oscuro.
+ */
+const DEFINICION_RE = /--[\w-]+\s*:[^;]*$/;
+
+/**
  * Hexadecimales de 6 u 8 dígitos.
  *
  * Los que no tienen ninguna letra —`#123456`— solo cuentan en posición de valor,
@@ -249,7 +263,7 @@ export function scanFixedColors(texto: string): ColorFinding[] {
       // Un hexadecimal sin ninguna letra —`#123456`— es indistinguible de un
       // número: solo cuenta donde un color puede estar.
       if (!/[a-fA-F]/.test(valor.slice(1)) && !enPosicionDeValor(previo)) continue;
-      if (RESPALDO_RE.test(previo)) continue;
+      if (RESPALDO_RE.test(previo) || DEFINICION_RE.test(previo)) continue;
       sumar("hex", valor);
     }
 
@@ -259,7 +273,7 @@ export function scanFixedColors(texto: string): ColorFinding[] {
       const at = match.index ?? 0;
       const previo = linea.slice(0, at);
       if (!enPosicionDeValor(previo)) continue;
-      if (RESPALDO_RE.test(previo)) continue;
+      if (RESPALDO_RE.test(previo) || DEFINICION_RE.test(previo)) continue;
       sumar("hex", valor);
     }
 
@@ -271,6 +285,7 @@ export function scanFixedColors(texto: string): ColorFinding[] {
       if (!/\(\s*[\d.]/.test(llamada)) continue;
       if (sombra) continue;
       if (NEGRO_TRASLUCIDO_RE.test(llamada.trim())) continue;
+      if (DEFINICION_RE.test(linea.slice(0, match.index ?? 0))) continue;
       sumar("funcion", llamada.trim());
     }
 

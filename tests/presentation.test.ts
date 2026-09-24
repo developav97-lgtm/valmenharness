@@ -72,6 +72,18 @@ describe("lo que no marca, y por qué", () => {
     expect(hallados(".t { border-color: blackish; }")).toEqual([]);
   });
 
+  it("no marca la definición de una variable del tema", () => {
+    // `--fondo: #0f1115` es el tema escribiéndose, y es el sitio donde un color
+    // literal está bien. Sin esta excepción el chequeo marcaba las dieciocho
+    // líneas del tema de la propia interfaz del harness: marcaba la definición de
+    // la solución, que es la forma más rápida de que alguien lo apague.
+    expect(hallados(":root { --fondo: #0f1115; }")).toEqual([]);
+    expect(hallados("  --acento-suave: rgba(91, 141, 255, 0.14);")).toEqual([]);
+    expect(hallados("  --halo: 0 0 0 3px rgba(70, 185, 90, 0.14);")).toEqual([]);
+    // Pero usar un color crudo en una regla sigue siendo un hallazgo.
+    expect(hallados(".tarjeta { background: #0f1115; }")).toEqual(["hex=#0f1115"]);
+  });
+
   it("no marca el respaldo de una variable del tema", () => {
     // `var(--principal, #0984E3)` es la forma correcta de escribir un valor por
     // defecto: marcarla sería marcar el tema funcionando.
