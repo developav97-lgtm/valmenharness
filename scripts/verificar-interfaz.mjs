@@ -22,7 +22,8 @@
  *
  * Uso: `node scripts/verificar-interfaz.mjs [ruta-del-html]`
  */
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { tmpdir } from "node:os";
@@ -216,11 +217,21 @@ function textoDe(nodo, acumulado = []) {
  * —arranca la navegación y abre el flujo de eventos— y dos importaciones en el
  * mismo proceso compartirían ese estado.
  */
-export async function ejecutarInterfaz(rutaHtml) {
+/**
+ * @param {string} rutaHtml
+ * @param {{ hash?: string, respuesta?: (ruta: string) => unknown }} [opciones]
+ */
+export async function ejecutarInterfaz(rutaHtml, opciones = {}) {
   const codigo = /<script type="module">([\s\S]*?)<\/script>/.exec(
     readFileSync(rutaHtml, "utf8"),
   )?.[1];
   if (codigo === undefined) throw new Error(`No se encontró el módulo en ${rutaHtml}.`);
+
+  // La vista y las respuestas se pueden sustituir para ejercitar otra pantalla
+  // —el tablero de una feature, por ejemplo— con los datos que ese caso
+  // necesita. Sin argumentos se comporta como siempre: la vista del ticket.
+  const hash = opciones.hash ?? `#/ticket/${TICKET.id}`;
+  const responder = opciones.respuesta ?? respuesta;
 
   const porId = new Map();
   const documento = {
@@ -260,7 +271,7 @@ export async function ejecutarInterfaz(rutaHtml) {
   globalThis.fetch = async (url) => ({
     ok: true,
     status: 200,
-    json: async () => respuesta(String(url)),
+    json: async () => responder(String(url)),
     text: async () => "",
   });
 
@@ -273,19 +284,28 @@ export async function ejecutarInterfaz(rutaHtml) {
   // script y decide la vista según `location.hash`. Fijarlo desde fuera llega
   // tarde, y sin él la vista del ticket no se ejecuta —que es justo lo que este
   // arnés tiene que recorrer.
-  const destino = join(tmpdir(), `valmen-interfaz-${process.pid}.mjs`);
+  // Un archivo por llamada: el módulo tiene efectos al importarse y el caché de
+  // ESM lo importa **una vez por ruta**, así que dos vistas en el mismo proceso
+  // con el mismo nombre darían la segunda vacía —sin error— y la prueba diría
+  // que la vista no pinta nada cuando lo que pasa es que no se ejecutó.
+  const destino = join(tmpdir(), `valmen-interfaz-${process.pid}-${randomUUID()}.mjs`);
   // El intérprete de Markdown se expone además de ejecutar la vista: el resto se
   // comprueba por lo que pinta, pero un documento hay que interpretarlo para saber
   // si se lee.
   writeFileSync(
     destino,
-    `globalThis.location.hash = "#/ticket/${TICKET.id}";\n` +
+    `globalThis.location.hash = ${JSON.stringify(hash)};\n` +
       codigo +
       "\nglobalThis.RENDER_MARKDOWN = renderMarkdown;\n",
   );
 
   await import(pathToFileURL(destino).href);
   for (let i = 0; i < 50; i += 1) await new Promise((r) => setImmediate(r));
+  try {
+    unlinkSync(destino);
+  } catch {
+    // Si no se puede borrar, el temporal queda en /tmp y no afecta al resultado.
+  }
 
   return {
     contenido: porId.get("contenido"),

@@ -95,6 +95,8 @@ import {
   renderDrift,
   scanDrift,
   DECISIONES_APRENDIZAJE,
+  materializeFeature,
+  renderMaterialization,
   classifyLearning,
   listLearnings,
   renderLearnings,
@@ -1210,6 +1212,29 @@ export function standardsCommand(
     }
 
     return error(`estandar no conoce el verbo "${verbo}".`, EXIT_SCHEMA);
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/**
+ * `feature materialize`: escribe en el registro los tickets del grafo.
+ *
+ * Descomponer deja un plan; un plan no es trabajo. Hasta ahora el paso de uno al
+ * otro se hacía a mano y ticket por ticket, y por eso una feature descompuesta
+ * podía quedarse semanas con sus tickets «planeados» sin que nadie los escribiera.
+ * `--dry-run` dice qué crearía, que es lo que hace falta para decidir.
+ */
+export function materializeCommand(
+  paths: RegistryPaths,
+  slug: string,
+  flags: Readonly<Record<string, string | true>>,
+): CommandResult {
+  try {
+    const dryRun = flags["dry-run"] === true;
+    const resultado = materializeFeature(paths, slug, { write: !dryRun });
+    return ok(renderMaterialization(slug, resultado, { dryRun }));
   } catch (caught) {
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);

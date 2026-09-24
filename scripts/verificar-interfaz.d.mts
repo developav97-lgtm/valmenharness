@@ -33,8 +33,19 @@ export interface ResultadoDeInterfaz {
   readonly render?: (texto: string) => NodoFalso;
 }
 
+/** Las opciones del montaje, para ejercitar otra vista con otros datos. */
+export interface OpcionesDeInterfaz {
+  /** El `location.hash` que decide qué vista se ejecuta. */
+  readonly hash?: string;
+  /** Qué responde cada ruta. Sin esto, la vista del ticket. */
+  readonly respuesta?: (ruta: string) => unknown;
+}
+
 /** Monta el entorno, importa el módulo de la interfaz y devuelve lo que pintó. */
-export function ejecutarInterfaz(rutaHtml: string): Promise<ResultadoDeInterfaz>;
+export function ejecutarInterfaz(
+  rutaHtml: string,
+  opciones?: OpcionesDeInterfaz,
+): Promise<ResultadoDeInterfaz>;
 
 /** Comprueba que la vista se pintó y no un aviso de error. */
 export function verificarInterfaz(

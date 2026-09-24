@@ -174,6 +174,9 @@ Comandos:
                             Crea una feature en draft, en .valmen/features/.
   feature decompose <slug>  Propone el grafo de tickets con el modelo del rol
                             architect y escribe tickets.yaml. Pasa a decomposed.
+  feature materialize <slug> [--dry-run]
+                            Escribe en el registro los tickets del grafo que falten,
+                            en intake. Los que ya existen no se tocan.
       --dry-run             Muestra la descomposición sin escribirla.
       --model <id>          Sobrescribe el modelo del rol architect.
       --provider <id>       Sobrescribe el proveedor.

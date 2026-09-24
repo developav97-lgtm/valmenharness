@@ -20,6 +20,7 @@ export * from "./presentation.js";
 export * from "./standards.js";
 export * from "./memory.js";
 export * from "./learnings.js";
+export * from "./materialize.js";
 export * from "./usage.js";
 export * from "./value.js";
 export * from "./tickets.js";

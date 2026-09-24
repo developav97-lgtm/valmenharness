@@ -17,6 +17,7 @@ import {
   ESQUEMA_DESCOMPOSICION,
   SISTEMA_DESCOMPOSICION,
   advanceFeature,
+  choosePaths,
   createFeature,
   decomposeFeature,
   decompositionPrompt,
@@ -25,7 +26,7 @@ import {
   renderDecomposition,
 } from "@valmen/engine";
 
-import type { CommandResult } from "./commands.js";
+import { type CommandResult, materializeCommand } from "./commands.js";
 
 /** Escribe en stdout y termina con éxito. */
 function ok(stdout: string): CommandResult {
@@ -269,14 +270,17 @@ export async function runFeature(
       return featureNew(root, resto[0], title);
     case "decompose":
       return featureDecompose(root, resto[0], flags);
+    case "materialize":
+    case "materializar":
+      return materializeCommand(choosePaths(root), resto[0] ?? "", flags);
     case undefined:
       return error(
-        "feature requiere un subcomando: new, show, list o decompose.",
+        "feature requiere un subcomando: new, show, list, decompose o materialize.",
         EXIT_SCHEMA,
       );
     default:
       return error(
-        `Subcomando de feature desconocido: ${sub}. Use new, show, list o decompose.`,
+        `Subcomando de feature desconocido: ${sub}. Use new, show, list, decompose o materialize.`,
         EXIT_SCHEMA,
       );
   }

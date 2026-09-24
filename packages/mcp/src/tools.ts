@@ -68,6 +68,8 @@ import {
   ticketValueReport,
   renderDrift,
   scanDrift,
+  materializeFeature,
+  renderMaterialization,
   DECISIONES_APRENDIZAJE,
   classifyLearning,
   listLearnings,
@@ -1154,6 +1156,38 @@ export const TOOLS: readonly ToolDefinition[] = [
     }),
   },
   {
+    name: "materializar_feature",
+    title: "Escribir los tickets de una feature en el registro",
+    description:
+      "Descomponer una feature deja un **plan**: un `tickets.yaml` con sprints, " +
+      "identificadores, dependencias y qué requisito cubre cada ticket. Un plan no es " +
+      "trabajo. Esta herramienta escribe en el registro los tickets del grafo que falten, " +
+      "para que existan, estén en `intake` y se puedan trabajar. **Un ticket que ya existe " +
+      "no se toca** —volver a correrlo no pisa nada— y un grafo con requisitos sin cubrir " +
+      "se rechaza: escribir esa descomposición dejaría tickets con la cobertura a medias. " +
+      "La solicitud de cada ticket se arma con las palabras de la spec —los requisitos que " +
+      "el grafo dice que cubre— y el objetivo de su sprint.",
+    inputSchema: conRoot({
+      properties: {
+        slug: { type: "string", description: "El identificador de la feature." },
+        dryRun: {
+          type: "boolean",
+          description: "Decir qué crearía, sin escribir nada.",
+        },
+      },
+      required: ["slug"],
+    }),
+    outputSchema: {
+      type: "object",
+      properties: {
+        creados: { type: "array", items: { type: "string" } },
+        yaEstaban: { type: "array", items: { type: "string" } },
+      },
+      required: ["creados", "yaEstaban"],
+      additionalProperties: false,
+    },
+  },
+  {
     name: "iniciar_qa",
     title: "Abrir un ciclo de QA",
     description:
@@ -2003,6 +2037,16 @@ export async function callTool(
                 "`valmen:allow-color` y escribí por qué; si no, usá la variable del tema. " +
                 "No es un gate: no impide entregar, avisa antes de que lo vea la persona.",
         );
+      }
+
+      case "materializar_feature": {
+        const slug = texto(args, "slug") as string;
+        const dryRun = args["dryRun"] === true;
+        const resultado = materializeFeature(paths, slug, { write: !dryRun });
+        return bien(renderMaterialization(slug, resultado, { dryRun }), {
+          creados: [...resultado.created],
+          yaEstaban: [...resultado.skipped],
+        });
       }
 
       case "iniciar_qa": {

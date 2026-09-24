@@ -450,6 +450,21 @@ monorepo-turborepo
 acumuladas. Extraer eso como plantilla significa que el siguiente proyecto con el mismo stack
 arranca con ese conocimiento, en vez de desde cero.
 
+**Antes de las plantillas: el paso que faltaba entre el plan y el trabajo.** Descomponer
+escribe un `tickets.yaml` con sprints, identificadores, dependencias y cobertura, y ahí se
+quedaba: un ticket del grafo **no existe** para el registro —no tiene `ticket.md`, no está en
+`intake` y ninguna compuerta lo mira—, así que el paso siguiente se hacía a mano y ticket por
+ticket. Una feature podía quedarse semanas «descompuesta» con sus tickets planeados sin que
+nadie los escribiera.
+
+`valmen feature materialize <slug>` —y `materializar_feature` por el MCP, y un botón en el
+tablero— escribe los que falten, en `intake`, sin inventar: el identificador, el título y los
+requisitos que cubre salen del grafo que una persona revisó, y la solicitud original se arma
+con las palabras de la spec más el objetivo del sprint. Un ticket que ya existe **no se toca**, y
+un grafo con huecos se rechaza: escribir esa descomposición dejaría tickets con la cobertura a
+medias. El paso se comprueba entero antes de escribir el primero, porque tres creados y un fallo
+dejan el registro a medio hacer.
+
 **Estado: hecho, con la primera plantilla.** El comando terminó siendo `valmen template
 list|show|apply` —y `valmen adopt` sugiere la que le sirve al stack que detecta, sin aplicarla:
 escribir reglas que nadie pidió es lo que el harness no hace—. La primera es

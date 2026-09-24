@@ -233,6 +233,61 @@
         margin: 6px 0;
       }
 
+      /* El tablero de una feature: columnas por dónde está cada ticket.
+         Se desplaza en horizontal en vez de encogerse: una columna de tarjetas
+         ilegibles es peor que tener que desplazar. */
+      .tablero {
+        display: flex;
+        gap: 12px;
+        overflow-x: auto;
+        padding-bottom: 10px;
+        align-items: flex-start;
+      }
+      .columna-tablero {
+        flex: 1 0 210px;
+        min-width: 210px;
+        background: var(--panel);
+        border: 1px solid var(--borde);
+        border-radius: 8px;
+        padding: 10px;
+      }
+      .columna-tablero .titulo {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--tenue);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 10px;
+      }
+      .tarjeta-ticket {
+        background: var(--panel-alto);
+        border: 1px solid var(--borde);
+        border-radius: 6px;
+        padding: 9px;
+        margin-bottom: 8px;
+      }
+      .tarjeta-ticket .titulo-ticket {
+        font-weight: 600;
+        margin: 4px 0 6px;
+      }
+      .tarjeta-ticket .espera {
+        color: var(--alerta);
+      }
+      .tarjeta-ticket .listo {
+        color: var(--ok);
+      }
+
+      /* Lo ya decidido: se lee, pero no compite con lo que pide una acción. */
+      .tarjeta-estandar.historial {
+        border-left: 3px solid var(--borde);
+        margin: 8px 0 8px 12px;
+        opacity: 0.85;
+      }
+      details > summary {
+        cursor: pointer;
+        margin: 14px 0 8px;
+      }
+
       /* La sección que toca mirar en el estado actual. */
       .acordeon.de-turno {
         border-left: 3px solid var(--acento);
@@ -2120,16 +2175,23 @@
           cont.append(caja);
         }
 
-        // ── Las propuestas ──
-        if (datos.proposals.length > 0) {
-          cont.append(el("h3", "Propuestas"));
-          for (const propuesta of datos.proposals) {
+        // Lo decidido no se mezcla con lo que espera decisión. Una propuesta
+        // aceptada que sigue en la lista de propuestas hace dudar de si se aplicó,
+        // y la que se descartó parece pendiente para siempre: las dos se leen en
+        // el historial, que es donde se busca «¿esto por qué no está?».
+        const porDecidir = datos.proposals.filter((p) => p.state === "propuesto");
+        const decididas = datos.proposals.filter((p) => p.state !== "propuesto");
+
+        // ── Las propuestas: solo las que esperan ──
+        if (porDecidir.length > 0) {
+          cont.append(el("h3", `Propuestas (${porDecidir.length})`));
+          for (const propuesta of porDecidir) {
             const tarjeta = el("div", undefined, "tarjeta-estandar");
             const cabecera = el("div", undefined, "meta");
             cabecera.append(
               el("span", propuesta.id, "id"),
               el("span", propuesta.area, "etiqueta"),
-              el("span", propuesta.state, propuesta.state === "propuesto" ? "etiqueta" : ""),
+              el("span", propuesta.state, "etiqueta"),
               el("span", propuesta.date, "id"),
             );
             tarjeta.append(cabecera);
@@ -2140,63 +2202,47 @@
             if (propuesta.tickets.length > 0) {
               tarjeta.append(el("div", `Visto en: ${propuesta.tickets.join(", ")}`, "ruta"));
             }
-            // Quién lo decidió y con qué palabras. Es la misma regla que en el
-            // resto del registro: la decisión se guarda con la frase que la
-            // autorizó, y acá se lee sin abrir el archivo de propuestas.
-            if (propuesta.state !== "propuesto" && propuesta.decidedOn) {
-              tarjeta.append(
-                el(
-                  "div",
-                  propuesta.instruction
-                    ? `Decidido el ${propuesta.decidedOn} — «${propuesta.instruction}»`
-                    : `Decidido el ${propuesta.decidedOn}`,
-                  "ruta",
-                ),
-              );
-            }
 
-            if (propuesta.state === "propuesto") {
-              const acciones = el("div", undefined, "responsable");
-              const aceptar = el("button", "Aceptar y poner en vigor");
-              const descartar = el("button", "Descartar", "enlace");
-              const salida = el("div", undefined, "resultado");
-              const decidir = async (decision, boton) => {
-                boton.disabled = true;
-                salida.className = "resultado";
-                salida.textContent = "Registrando…";
-                try {
-                  const r = await api(
-                    "POST",
-                    `/api/standards/${propuesta.id}/decision`,
-                    { decision },
-                  );
-                  salida.className = "resultado ok";
-                  salida.textContent = r.details;
-                  await vistaEstandares();
-                } catch (fallo) {
-                  salida.className = "resultado error";
-                  salida.textContent = fallo.message;
-                  boton.disabled = false;
-                }
-              };
-              aceptar.addEventListener("click", () => void decidir("aceptado", aceptar));
-              descartar.addEventListener("click", () => void decidir("descartado", descartar));
-              // Las dos puertas, dichas donde se decide: los botones son una, y
-              // pedírselo al agente es la otra. Quien no usa la pantalla tiene que
-              // poder enterarse acá de que también se puede por la conversación.
-              acciones.append(
-                aceptar,
-                descartar,
-                el(
-                  "div",
-                  "También se decide hablando: pedile al agente «aceptá los estándares " +
-                    "propuestos» y la decisión queda registrada con tus palabras.",
-                  "ruta",
-                ),
-                salida,
-              );
-              tarjeta.append(acciones);
-            }
+            const acciones = el("div", undefined, "responsable");
+            const aceptar = el("button", "Aceptar y poner en vigor");
+            const descartar = el("button", "Descartar", "enlace");
+            const salida = el("div", undefined, "resultado");
+            const decidir = async (decision, boton) => {
+              boton.disabled = true;
+              salida.className = "resultado";
+              salida.textContent = "Registrando…";
+              try {
+                const r = await api(
+                  "POST",
+                  `/api/standards/${propuesta.id}/decision`,
+                  { decision },
+                );
+                salida.className = "resultado ok";
+                salida.textContent = r.details;
+                await vistaEstandares();
+              } catch (fallo) {
+                salida.className = "resultado error";
+                salida.textContent = fallo.message;
+                boton.disabled = false;
+              }
+            };
+            aceptar.addEventListener("click", () => void decidir("aceptado", aceptar));
+            descartar.addEventListener("click", () => void decidir("descartado", descartar));
+            // Las dos puertas, dichas donde se decide: los botones son una, y
+            // pedírselo al agente es la otra. Quien no usa la pantalla tiene que
+            // poder enterarse acá de que también se puede por la conversación.
+            acciones.append(
+              aceptar,
+              descartar,
+              el(
+                "div",
+                "También se decide hablando: pedile al agente «aceptá los estándares " +
+                  "propuestos» y la decisión queda registrada con tus palabras.",
+                "ruta",
+              ),
+              salida,
+            );
+            tarjeta.append(acciones);
             cont.append(tarjeta);
           }
         }
@@ -2223,6 +2269,54 @@
           );
           acordeonEstandar.cuerpo.append(seccionDeTicket(archivo.content));
           cont.append(acordeonEstandar.caja);
+        }
+
+        // ── El historial: lo que ya se decidió ──
+        //
+        // Cerrado por defecto: no es lo que se viene a hacer acá, y abierto
+        // empujaría hacia abajo lo único que pide una acción. Pero está, con su
+        // fecha y sus palabras, porque «¿por qué no tenemos esta regla?» y «¿esto
+        // quién lo aprobó?» son preguntas que se hacen meses después.
+        if (decididas.length > 0) {
+          const aceptadas = decididas.filter((p) => p.state === "aceptado").length;
+          const historial = document.createElement("details");
+          historial.append(
+            el(
+              "summary",
+              `Historial — ${decididas.length} decidido(s): ${aceptadas} en vigor, ` +
+                `${decididas.length - aceptadas} descartado(s)`,
+            ),
+          );
+          for (const propuesta of decididas) {
+            const tarjeta = el("div", undefined, "tarjeta-estandar historial");
+            const cabecera = el("div", undefined, "meta");
+            cabecera.append(
+              el("span", propuesta.id, "id"),
+              el("span", propuesta.area, "etiqueta"),
+              el(
+                "span",
+                propuesta.state,
+                propuesta.state === "aceptado" ? "etiqueta aprueba" : "etiqueta",
+              ),
+              el("span", propuesta.date, "id"),
+            );
+            tarjeta.append(cabecera);
+            tarjeta.append(el("div", propuesta.title, "nombre"));
+            tarjeta.append(el("div", `Regla: ${propuesta.rule}`, "resultado"));
+            tarjeta.append(
+              el(
+                "div",
+                propuesta.decidedOn
+                  ? `Decidido el ${propuesta.decidedOn}` +
+                      (propuesta.instruction ? ` — «${propuesta.instruction}»` : "")
+                  : "Decidido",
+                "ruta",
+              ),
+            );
+            tarjeta.append(el("div", `→ ${propuesta.source.path}`, "ruta"));
+            historial.append(tarjeta);
+          }
+          cont.append(historial);
         }
       }
 
@@ -2594,6 +2688,9 @@
           ["Grafo", () => panelGrafo(f)],
           ["Brief", () => bloqueCrudo("feature.md", f.brief, true)],
         ];
+        // El tablero va primero cuando hay grafo: es la respuesta a «¿por dónde
+        // va?», que es la pregunta con la que se entra a una feature en curso.
+        if (f.hasDecomposition) pestanas.unshift(["Tablero", () => panelTablero(f)]);
         if (f.design !== null)
           pestanas.push(["Diseño", () => bloqueCrudo("design.md", f.design)]);
         if (f.ticketsYaml !== null) {
@@ -2746,6 +2843,149 @@
             ),
           );
         }
+        return caja;
+      }
+
+      /**
+       * El tablero: los tickets de la feature, agrupados por dónde están.
+       *
+       * Es el grafo mirado al revés. La tabla de sprints responde «qué se planeó»,
+       * que es lo que se pregunta antes de empezar; el tablero responde «por dónde
+       * va», que es lo que se pregunta todos los días mientras se trabaja. Y
+       * responde una tercera, que es la que hace falta para ponerse a trabajar:
+       * **cuál se puede empezar ya** —el que no espera a nadie—, porque una
+       * dependencia sin cerrar es una razón para no tocarlo todavía.
+       *
+       * Un ticket del grafo que todavía no está en el registro no se esconde ni se
+       * disfraza: tiene su columna, «Sin crear», que es el estado en que queda una
+       * feature descompuesta y todavía sin tickets escritos.
+       */
+      function panelTablero(f) {
+        const caja = el("div");
+        const tickets = [...(f.decomposition?.sprints ?? [])].flatMap((sprint) =>
+          sprint.tickets.map((t) => ({ ...t, sprint: sprint.id })),
+        );
+
+        if (tickets.length === 0) {
+          caja.append(
+            el(
+              "div",
+              "El grafo no tiene tickets todavía. Descompone la feature o escribe el tickets.yaml.",
+              "vacio",
+            ),
+          );
+          return caja;
+        }
+
+        const porId = new Map(tickets.map((t) => [t.id, t]));
+        /** Un ticket está terminado cuando su trabajo ya no bloquea a nadie. */
+        const terminado = (id) => {
+          const otro = porId.get(id);
+          return (
+            otro !== undefined &&
+            (otro.state === "closed" || otro.state === "qa_approved")
+          );
+        };
+        const espera = (t) => t.dependsOn.filter((id) => !terminado(id));
+
+        const etapas = [
+          ["Sin crear", (t) => !t.exists],
+          ["Por analizar", (t) => t.exists && t.state === "intake"],
+          ["Planeado", (t) => ["analyzed", "planned"].includes(t.state)],
+          ["Aprobado", (t) => t.state === "approved"],
+          [
+            "En curso",
+            (t) => ["in_progress", "changes_requested"].includes(t.state),
+          ],
+          ["Por probar", (t) => ["awaiting_user_tests", "in_qa"].includes(t.state)],
+          ["Cerrado", (t) => ["qa_approved", "closed"].includes(t.state)],
+          ["Bloqueado", (t) => t.state === "blocked"],
+        ];
+
+        const tablero = el("div", undefined, "tablero");
+        for (const [nombre, coincide] of etapas) {
+          const suyos = tickets.filter(coincide);
+          // Una columna vacía se muestra —el tablero se lee por su forma, y las
+          // que faltan cambian la forma—, salvo «Bloqueado»: no hay nada
+          // bloqueado hasta que lo hay, y una columna que casi siempre está vacía
+          // solo ocupa sitio.
+          if (suyos.length === 0 && nombre === "Bloqueado") continue;
+
+          const columna = el("div", undefined, "columna-tablero");
+          columna.append(el("div", `${nombre} · ${suyos.length}`, "titulo"));
+          for (const t of suyos) {
+            const tarjeta = el("div", undefined, "tarjeta-ticket");
+            const identificador = el("div", t.id, "id");
+            // El identificador lleva al ticket cuando existe: es lo que se hace
+            // después de mirar el tablero.
+            if (t.exists) {
+              const enlace = el("a", t.id, "enlace");
+              enlace.href = `#/ticket/${t.id}`;
+              identificador.textContent = "";
+              identificador.append(enlace);
+            }
+            tarjeta.append(identificador);
+            tarjeta.append(el("div", t.title || "(sin título)", "titulo-ticket"));
+            const meta = el("div", undefined, "meta");
+            meta.append(
+              el("span", t.exists ? t.state : "sin crear", "etiqueta"),
+              el("span", t.sprint, "id"),
+            );
+            tarjeta.append(meta);
+
+            const pendientes = espera(t);
+            if (pendientes.length > 0) {
+              tarjeta.append(
+                el("div", `espera a ${pendientes.join(", ")}`, "espera resultado"),
+              );
+            } else if (t.exists && !["closed", "qa_approved"].includes(t.state)) {
+              tarjeta.append(el("div", "listo para empezar", "listo resultado"));
+            }
+            columna.append(tarjeta);
+          }
+          tablero.append(columna);
+        }
+
+        caja.append(tablero);
+
+        const sinCrear = tickets.filter((t) => !t.exists).length;
+        // El paso que convierte el plan en trabajo. Está acá, junto al dato que lo
+        // justifica —cuántos faltan— y no en el grafo: es lo que se quiere hacer
+        // después de ver qué no está escrito.
+        if (sinCrear > 0) {
+          const pie = el("div", undefined, "responsable");
+          const escribir = el("button", `Escribir los ${sinCrear} que faltan en el registro`);
+          const salida = el("div", undefined, "resultado");
+          escribir.addEventListener("click", async () => {
+            escribir.disabled = true;
+            salida.className = "resultado";
+            salida.textContent = "Creando…";
+            try {
+              const r = await api("POST", `/api/features/${f.id}/materialize`, {});
+              if (!r.ok) throw new Error(r.error);
+              salida.className = "resultado ok";
+              salida.textContent = r.details;
+              await vistaFeature(f.id);
+            } catch (fallo) {
+              salida.className = "resultado error";
+              salida.textContent = fallo.message;
+              escribir.disabled = false;
+            }
+          });
+          pie.append(escribir, salida);
+          caja.append(pie);
+        }
+        caja.append(
+          el(
+            "div",
+            sinCrear === 0
+              ? `${tickets.length} ticket(s) del grafo están escritos en el registro.`
+              : `${sinCrear} de ${tickets.length} ticket(s) del grafo todavía no están ` +
+                  "escritos en el registro: el grafo es el plan, y cada uno se crea para " +
+                  "poder trabajarlo. Los que esperan a otro conviene no empezarlos antes.",
+            "nota",
+          ),
+        );
         return caja;
       }
 

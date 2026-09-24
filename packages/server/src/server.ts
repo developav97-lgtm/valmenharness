@@ -28,6 +28,8 @@ import {
   ESQUEMA_DESCOMPOSICION,
   SISTEMA_DESCOMPOSICION,
   advanceFeature,
+  materializeFeature,
+  renderMaterialization,
   choosePaths,
   closedTickets,
   decomposeFeature,
@@ -486,6 +488,38 @@ export async function handleApi(
     } catch (caught) {
       const failure = toFailure(caught);
       return { status: 400, body: { error: failure.message } };
+    }
+  }
+
+  // POST /api/features/:slug/materialize
+  //
+  // Escribe en el registro los tickets del grafo que falten. Es el paso que
+  // convierte el plan en trabajo: hasta ahora se hacía a mano, ticket por ticket,
+  // y una feature descomponible podía quedarse semanas con sus tickets planeados
+  // sin que nadie los escribiera. `dryRun` dice qué haría sin escribir nada.
+  if (
+    method === "POST" &&
+    partes.length === 4 &&
+    partes[0] === "api" &&
+    partes[1] === "features" &&
+    partes[3] === "materialize"
+  ) {
+    const slug = partes[2] as string;
+    const dryRun = (body as { dryRun?: unknown }).dryRun === true;
+    try {
+      const resultado = materializeFeature(paths, slug, { write: !dryRun });
+      return {
+        status: 200,
+        body: {
+          ok: true,
+          created: resultado.created,
+          skipped: resultado.skipped,
+          details: renderMaterialization(slug, resultado, { dryRun }).trimEnd(),
+        },
+      };
+    } catch (caught) {
+      const failure = toFailure(caught);
+      return { status: 400, body: { ok: false, error: failure.message } };
     }
   }
 

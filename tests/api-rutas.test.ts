@@ -44,6 +44,7 @@ const RUTAS = [
   "POST /api/tickets/:id/consumo",
   "GET /api/features/:slug",
   "POST /api/features/:slug/decompose",
+  "POST /api/features/:slug/materialize",
   "POST /api/features/:slug/transition",
   "POST /api/processes/gates/:gate/approve",
   "PUT /api/providers/:id/credential",
