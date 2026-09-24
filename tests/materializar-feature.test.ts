@@ -260,6 +260,18 @@ describe("materializar una feature", () => {
     expect(() => materializeFeature(PATHS(), "kardex")).toThrow(/no tiene tickets.yaml/);
   });
 
+  it("la solicitud no repite el punto del objetivo del sprint", () => {
+    // El objetivo termina en punto casi siempre: agregar otro dejaba «documentos..»
+    // en la solicitud de cada ticket del feature real.
+    materializeFeature(PATHS(), "kardex");
+    const texto = readFileSync(
+      join(lab, "tickets", "2026", "FEATURE-INVENTARIO-MODELO-20260924", "ticket.md"),
+      "utf8",
+    );
+    expect(texto).toContain("Parte del sprint: Modelo y API del kardex.");
+    expect(texto).not.toContain("..");
+  });
+
   it("informa los requisitos que cubre cada ticket", () => {
     const resultado = materializeFeature(PATHS(), "kardex");
     expect(resultado.coverage["FEATURE-INVENTARIO-MODELO-20260924"]).toEqual(["R-INV-001"]);

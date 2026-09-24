@@ -150,8 +150,15 @@ function solicitudDe(
   const suyos = cubre
     .map((id) => requisitos.find((r) => r.id === id))
     .filter((r): r is LocatedRequirement => r !== undefined);
+  // El objetivo del sprint ya termina en punto casi siempre: agregar otro dejaba
+  // «documentos..» en la solicitud de cada ticket.
+  const lineaObjetivo =
+    objetivo === ""
+      ? ""
+      : `Parte del sprint: ${objetivo}${objetivo.endsWith(".") ? "" : "."}`;
+
   const lineas = [
-    objetivo === "" ? "" : `Parte del sprint: ${objetivo}.`,
+    lineaObjetivo,
     ...suyos.map((r) => `- ${r.id}: ${r.statement}`),
     ticket.dependsOn.length === 0 ? "" : `Depende de: ${ticket.dependsOn.join(", ")}.`,
     "Viene de una feature descompuesta en sprints; su plan completo está en el tickets.yaml de la feature.",
