@@ -159,7 +159,7 @@ describe("las anotaciones de las herramientas", () => {
       tools: TOOLS,
       prompts: [],
       call: () => Promise.resolve({ text: "", isError: false }),
-      getPrompt: () => ({ description: "", text: "" }),
+      getPrompt: () => ({ description: "", messages: [] }),
     };
 
     const resultado = (await atender(

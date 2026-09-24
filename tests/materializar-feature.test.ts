@@ -185,13 +185,72 @@ describe("materializar una feature", () => {
     expect(listTickets(PATHS())).toEqual([]);
   });
 
+  it("un título que el frontmatter no acepta detiene todo, y lo dice", () => {
+    // Pasó con el primer feature real: el modelo escribió un título con «: », que
+    // el frontmatter de un ticket no acepta porque se lee sin una librería YAML.
+    // La comprobación miraba solo el título vacío, así que los tickets anteriores
+    // quedaron escritos y el registro a medio hacer.
+    writeFileSync(
+      join(lab, ".valmen", "features", "kardex", "tickets.yaml"),
+      grafo().replace(
+        "        title: API de consulta",
+        '        title: "API de consulta: con dos puntos"',
+      ),
+      "utf8",
+    );
+
+    expect(() => materializeFeature(PATHS(), "kardex")).toThrow(/no se creó ninguno/);
+    expect(() => materializeFeature(PATHS(), "kardex")).toThrow(
+      /FEATURE-INVENTARIO-API-20260924/,
+    );
+    expect(() => materializeFeature(PATHS(), "kardex")).toThrow(/dos puntos/);
+    // Y nada quedó escrito: el que estaba bien tampoco.
+    expect(listTickets(PATHS())).toEqual([]);
+  });
+
+  it("los problemas se informan todos de una vez, no de a uno por corrida", () => {
+    // Corregir el grafo de a uno es descubrir el siguiente error después de
+    // arreglar el anterior. Los dos que se pueden dar a la vez: uno sin título y
+    // otro con un título que el frontmatter no acepta.
+    writeFileSync(
+      join(lab, ".valmen", "features", "kardex", "tickets.yaml"),
+      grafo()
+        .replace("        title: Modelo de datos", '        title: ""')
+        .replace("        title: API de consulta", '        title: "API: con dos puntos"'),
+      "utf8",
+    );
+    const error = (() => {
+      try {
+        materializeFeature(PATHS(), "kardex");
+        return "";
+      } catch (caught) {
+        return caught instanceof Error ? caught.message : String(caught);
+      }
+    })();
+    expect(error).toContain("2 problema(s)");
+    expect(error).toContain("FEATURE-INVENTARIO-MODELO-20260924");
+    expect(error).toContain("FEATURE-INVENTARIO-API-20260924");
+    expect(error).toContain("no tiene título");
+  });
+
+  it("un identificador que no valida lo detiene el propio grafo", () => {
+    // La forma del identificador se comprueba al leer el tickets.yaml, así que un
+    // id mal escrito no llega hasta acá: el grafo ni se puede leer.
+    writeFileSync(
+      join(lab, ".valmen", "features", "kardex", "tickets.yaml"),
+      grafo().replace("FEATURE-INVENTARIO-API-20260924", "FEATURE-api-MALA-20260924"),
+      "utf8",
+    );
+    expect(() => materializeFeature(PATHS(), "kardex")).toThrow(/no se puede leer/);
+  });
+
   it("un ticket sin título en el grafo detiene todo antes de escribir", () => {
     writeFileSync(
       join(lab, ".valmen", "features", "kardex", "tickets.yaml"),
       grafo({ tituloVacio: true }),
       "utf8",
     );
-    expect(() => materializeFeature(PATHS(), "kardex")).toThrow(/sin título/);
+    expect(() => materializeFeature(PATHS(), "kardex")).toThrow(/no tiene título/);
     // Y no quedó nada a medio hacer: el segundo ticket tampoco se creó.
     expect(listTickets(PATHS())).toEqual([]);
   });

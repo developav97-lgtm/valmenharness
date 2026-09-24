@@ -480,6 +480,22 @@
         margin: 6px 0;
       }
 
+      .barra-progreso {
+        background: var(--panel-alto);
+        border: 1px solid var(--borde);
+        border-radius: 999px;
+        height: 6px;
+        overflow: hidden;
+        margin-bottom: 6px;
+        max-width: 220px;
+      }
+      .barra-progreso-lleno {
+        background: linear-gradient(90deg, var(--acento), var(--acento-2));
+        height: 100%;
+        border-radius: 999px;
+        transition: width 0.2s ease;
+      }
+
       /* El tablero de una feature: columnas por dónde está cada ticket.
          Se desplaza en horizontal en vez de encogerse: una columna de tarjetas
          ilegibles es peor que tener que desplazar. */
@@ -3338,6 +3354,25 @@
             "nota",
           ),
         );
+        return caja;
+      }
+
+      /**
+       * La barra de progreso de una feature: cuántos de sus tickets cerraron.
+       *
+       * Faltaba, y la vista la llamaba desde que se escribió la columna de
+       * progreso: en un proyecto sin features descompuestas nadie pasaba por esa
+       * rama, y en cuanto hubo una, la pantalla entera respondió «Can't find
+       * variable: barraDeProgreso». Un `undefined` a la vista no aparece hasta
+       * que el dato existe.
+       */
+      function barraDeProgreso(cerrados, total) {
+        const caja = el("div", undefined, "barra-progreso");
+        const lleno = el("div", undefined, "barra-progreso-lleno");
+        const proporcion = total === 0 ? 0 : Math.round((cerrados / total) * 100);
+        lleno.style.width = `${proporcion}%`;
+        caja.append(lleno);
+        caja.title = `${cerrados} de ${total} cerrados`;
         return caja;
       }
 

@@ -20,7 +20,12 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { ejecutarInterfaz, type NodoFalso } from "../scripts/verificar-interfaz.mjs";
+import {
+  VISTAS,
+  ejecutarInterfaz,
+  ejecutarTodasLasVistas,
+  type NodoFalso,
+} from "../scripts/verificar-interfaz.mjs";
 
 const RAIZ = join(import.meta.dirname, "..");
 const SCRIPT = join(RAIZ, "scripts", "verificar-interfaz.mjs");
@@ -36,6 +41,20 @@ describe("la interfaz de Mission Control", () => {
     // decir qué variable o qué pieza falta, no solo que el proceso salió con 1.
     expect(resultado.stdout.trim()).toContain("Interfaz verificada.");
     expect(resultado.status).toBe(0);
+  });
+
+  it("todas las vistas se ejecutan, no solo la del ticket", () => {
+    // Un error de ejecución vive en una rama, no en el archivo: la vista de
+    // features llamaba a `barraDeProgreso`, que no existía, y ninguna prueba lo
+    // vio hasta que alguien abrió la pantalla con su primer feature descompuesto.
+    // Se recorren todas, con datos que hacen pasar por sus ramas.
+    return ejecutarTodasLasVistas(HTML).then(({ fallidas }) => {
+      const detalle = fallidas
+        .map((fallo) => `${fallo.vista} (${fallo.hash}): ${fallo.problemas.join("; ")}`)
+        .join("\n");
+      expect(detalle).toBe("");
+      expect(VISTAS.length).toBeGreaterThanOrEqual(10);
+    });
   });
 
   it("el verificador distingue una interfaz rota de una que funciona", () => {

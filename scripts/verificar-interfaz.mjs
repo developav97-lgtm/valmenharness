@@ -52,8 +52,22 @@ class Nodo {
       add: (clase) => {
         if (!this.className.includes(clase)) this.className += ` ${clase}`;
       },
-      remove: () => {},
-      contains: () => false,
+      remove: (clase) => {
+        this.className = this.className
+          .split(" ")
+          .filter((parte) => parte !== clase)
+          .join(" ");
+      },
+      contains: (clase) => this.className.split(" ").includes(clase),
+      // `toggle` devuelve el estado nuevo, como el del navegador: la interfaz lo
+      // usa para el pliegue de la barra lateral y espera un booleano.
+      toggle: (clase, forzar) => {
+        const tiene = this.classList.contains(clase);
+        const poner = forzar === undefined ? !tiene : Boolean(forzar);
+        if (poner) this.classList.add(clase);
+        else this.classList.remove(clase);
+        return poner;
+      },
     };
   }
   get textContent() {
@@ -161,6 +175,59 @@ const TICKET = {
   ],
 };
 
+/** Una feature descompuesta: la que hace recorrer el progreso y el tablero. */
+const FEATURE = {
+  id: "kardex",
+  title: "Kardex de inventario",
+  state: "decomposed",
+  created: "2026-01-01",
+  updated: "2026-01-02",
+  path: ".valmen/features/kardex/feature.md",
+  invalid: null,
+  hasSpec: true,
+  hasDesign: true,
+  hasDecomposition: true,
+  hasVerify: false,
+  requirements: 1,
+  tickets: 2,
+  closedTickets: 1,
+  gaps: 0,
+  transitions: ["in_progress"],
+  brief: "# Kardex\n",
+  specs: [],
+  design: null,
+  ticketsYaml: "feature: kardex\n",
+  decomposition: {
+    origin: null,
+    sprints: [
+      {
+        id: "S1",
+        goal: "Modelo y API",
+        tickets: [
+          {
+            id: "FEATURE-INVENTARIO-MODELO-20260101",
+            title: "Modelo",
+            dependsOn: [],
+            exists: true,
+            state: "closed",
+          },
+          {
+            id: "FEATURE-INVENTARIO-API-20260101",
+            title: "API",
+            dependsOn: ["FEATURE-INVENTARIO-MODELO-20260101"],
+            exists: false,
+            state: null,
+          },
+        ],
+      },
+    ],
+    requirements: [],
+    gaps: [],
+  },
+  decompositionError: null,
+  cycles: [],
+};
+
 /** Responde cada ruta con la forma que la vista espera. */
 function respuesta(ruta) {
   if (ruta.includes("/api/health")) return { root: "/proyecto" };
@@ -183,6 +250,109 @@ function respuesta(ruta) {
     };
   }
   if (ruta.includes("/api/timeline")) return { available: false, reason: "sin datos" };
+
+  // Las demás vistas. Cada una con el dato que la hace recorrer sus ramas: una
+  // feature **descompuesta** —que es la que pinta el progreso y el tablero—, una
+  // propuesta aceptada y otra pendiente, procesos y proveedores con filas.
+  if (ruta.includes("/api/features/")) return FEATURE;
+  if (ruta.includes("/api/features")) {
+    return {
+      summary: { total: 1, decomposed: 1, withGaps: 0, invalid: 0 },
+      features: [FEATURE],
+    };
+  }
+  if (ruta.includes("/api/standards")) {
+    return {
+      standards: [
+        {
+          area: "presentacion",
+          path: ".valmen/rules/estandares-presentacion.md",
+          content: "# Reglas\n\nUna regla.",
+        },
+      ],
+      proposals: [
+        {
+          id: "EST-001",
+          title: "Una propuesta",
+          area: "datos",
+          rule: "Una regla propuesta.",
+          why: "Porque sí.",
+          tickets: [],
+          date: "2026-01-01",
+          decidedOn: "",
+          instruction: "",
+          state: "propuesto",
+          source: { path: ".valmen/estandares-propuestos.md", line: 1 },
+        },
+        {
+          id: "EST-002",
+          title: "Una aceptada",
+          area: "datos",
+          rule: "Una regla en vigor.",
+          why: "Porque sí.",
+          tickets: [],
+          date: "2026-01-01",
+          decidedOn: "2026-01-02",
+          instruction: "aceptala",
+          state: "aceptado",
+          source: { path: ".valmen/estandares-propuestos.md", line: 9 },
+        },
+      ],
+    };
+  }
+  if (ruta.includes("/api/processes")) {
+    return {
+      summary: { processes: 0, waiting: 0, gatesPending: 0, runs: 0 },
+      processes: [],
+      runs: [],
+    };
+  }
+  if (ruta.includes("/api/providers")) return { providers: [] };
+  if (ruta.includes("/api/routing")) {
+    return {
+      routing: {
+        preset: "balanced",
+        roles: [
+          {
+            role: "gate-evaluator",
+            description: "Responde las proposiciones de un gate",
+            consumer: "valmen gate",
+            provider: "openrouter",
+            model: "typesafe/jev-1.13",
+            effort: "auto",
+            source: "preset",
+          },
+        ],
+        presets: [
+          {
+            id: "balanced",
+            description: "El equilibrio por defecto",
+            roles: {
+              orchestrator: { provider: "openrouter", model: "moonshotai/kimi-k3" },
+            },
+          },
+        ],
+        text: "preset: balanced\n",
+      },
+    };
+  }
+  if (ruta.includes("/api/config")) {
+    // La forma que devuelve el servidor: el estado del archivo con su ruta, su
+    // texto y si se pudo leer.
+    return {
+      config: {
+        path: ".valmen/config.yaml",
+        text: "name: Demo\n",
+        ok: true,
+        error: null,
+        summary: { name: "Demo", ticketsDir: "", gates: [], keys: ["name"] },
+        // El diff contra el archivo en disco: la vista lo recorre para mostrar
+        // qué cambiaría, y sin él la pantalla se cae al pintar.
+        diff: [],
+      },
+      impact: null,
+    };
+  }
   if (ruta.includes("/api/tickets/")) return TICKET;
   if (ruta.includes("/api/tickets")) {
     return {
@@ -276,9 +446,10 @@ export async function ejecutarInterfaz(rutaHtml, opciones = {}) {
   });
 
   const fallos = [];
-  process.on("unhandledRejection", (error) => {
+  const recoger = (error) => {
     fallos.push(`rechazo no capturado: ${error?.message ?? String(error)}`);
-  });
+  };
+  process.on("unhandledRejection", recoger);
 
   // El hash se fija **dentro** del módulo: `navegar()` se llama al final del
   // script y decide la vista según `location.hash`. Fijarlo desde fuera llega
@@ -306,6 +477,9 @@ export async function ejecutarInterfaz(rutaHtml, opciones = {}) {
   } catch {
     // Si no se puede borrar, el temporal queda en /tmp y no afecta al resultado.
   }
+  // Once vistas en el mismo proceso dejaban once oyentes y Node avisaba de una
+  // fuga: el aviso era del arnés, no de la interfaz.
+  process.off("unhandledRejection", recoger);
 
   return {
     contenido: porId.get("contenido"),
@@ -313,6 +487,52 @@ export async function ejecutarInterfaz(rutaHtml, opciones = {}) {
     fallos,
     render: globalThis.RENDER_MARKDOWN,
   };
+}
+
+/**
+ * Las vistas que la interfaz sabe pintar, con el hash que las abre.
+ *
+ * Se ejecutan **todas** porque un error de ejecución vive en una rama, no en el
+ * archivo: la vista de features llamaba a una función que no existía y ninguna
+ * prueba lo vio —la rama solo se recorría con una feature descompuesta, y no
+ * había ninguna— hasta que el usuario abrió la pantalla con su primer feature.
+ * Es el mismo fallo que originó este verificador, con otra función.
+ */
+export const VISTAS = [
+  ["tickets", "#/tickets"],
+  ["features", "#/features"],
+  ["feature", "#/feature/kardex"],
+  ["procesos", "#/procesos"],
+  ["estandares", "#/estandares"],
+  ["configurar", "#/configurar"],
+  ["modelos", "#/modelos"],
+  ["configuracion", "#/configuracion"],
+  ["proveedores", "#/proveedores"],
+  ["ticket", `#/ticket/${TICKET.id}`],
+];
+
+/**
+ * Ejecuta cada vista y devuelve las que fallaron.
+ *
+ * Un fallo es cualquiera de los dos que la aplicación ya sabe reportar: un
+ * rechazo sin capturar, o el aviso «No se pudo cargar la vista» que la pantalla
+ * pinta cuando el error ocurre dentro de una vista.
+ */
+export async function ejecutarTodasLasVistas(rutaHtml) {
+  const fallidas = [];
+  const texto = new Map();
+
+  for (const [nombre, hash] of VISTAS) {
+    const resultado = await ejecutarInterfaz(rutaHtml, { hash });
+    texto.set(nombre, resultado.texto);
+    const problemas = [...resultado.fallos];
+    if (resultado.texto.includes("No se pudo cargar la vista")) {
+      problemas.push(resultado.texto.slice(resultado.texto.indexOf("No se pudo cargar")));
+    }
+    if (problemas.length > 0) fallidas.push({ vista: nombre, hash, problemas });
+  }
+
+  return { fallidas, texto };
 }
 
 /** Comprueba que la vista se pintó y no un aviso de error. */
@@ -356,6 +576,17 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   const resultado = verificarInterfaz(texto, contenido, fallos);
 
   console.log(`nodos en #contenido: ${resultado.nodos}`);
+
+  // Y las demás vistas, que es donde se esconden las ramas que nadie recorría.
+  const vistas = await ejecutarTodasLasVistas(ruta);
+  if (vistas.fallidas.length > 0) {
+    for (const fallo of vistas.fallidas) {
+      console.error(`La vista ${fallo.vista} (${fallo.hash}) falló:`);
+      for (const problema of fallo.problemas) console.error(`  ${problema}`);
+    }
+    process.exit(1);
+  }
+  console.log(`vistas ejecutadas: ${VISTAS.length}`);
   if (!resultado.ok) {
     console.log(`FALLO: ${resultado.detalle}`);
     process.exitCode = 1;

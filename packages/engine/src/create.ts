@@ -82,7 +82,7 @@ export function ticketTemplate(root: string): string {
 }
 
 /** Las partes del identificador, ya validadas. */
-function components(id: string): {
+export function components(id: string): {
   type: string;
   module: string;
   year: string;

@@ -34,10 +34,11 @@ import {
   EXIT_INVARIANT,
   decompositionTickets,
   fail,
+  isSafePlainScalar,
   previewTicketsYaml,
 } from "@valmen/core";
 
-import { createTicket, ticketPathFor } from "./create.js";
+import { components, createTicket, ticketPathFor } from "./create.js";
 import { type RegistryPaths } from "./discovery.js";
 import { featuresDir } from "./features.js";
 import { type LocatedRequirement, readSpecs } from "./spec.js";
@@ -181,15 +182,41 @@ export function materializeFeature(
     sprintsDe(paths.root, slug).map((sprint) => [sprint.id, sprint.goal]),
   );
 
+  // Se comprueba **todo** lo que el alta va a comprobar, y se informan todos los
+  // problemas de una vez. La primera versión solo miraba que el título no
+  // estuviera vacío, y un título con «: » —que el frontmatter de un ticket no
+  // acepta— dejaba el registro a medio hacer: los anteriores ya escritos, el
+  // resto no. Pasó con el primer feature real.
   if (escribir) {
+    const problemas: string[] = [];
     for (const ticket of faltantes) {
-      if (ticket.title.trim() === "") {
-        fail(
-          `El ticket ${ticket.id} no tiene título en el grafo, y un ticket sin título ` +
-            "no se puede crear: completá el tickets.yaml antes de escribirlos.",
-          EXIT_INVARIANT,
+      const titulo = ticket.title.trim();
+      if (titulo === "") {
+        problemas.push(`${ticket.id}: no tiene título en el grafo.`);
+      } else if (!isSafePlainScalar(titulo)) {
+        problemas.push(
+          `${ticket.id}: el título «${titulo.slice(0, 80)}» no se puede escribir en un ` +
+            "ticket. El frontmatter se lee sin una librería YAML, así que el título no " +
+            "puede llevar «: », « #», saltos de línea, ni empezar por un carácter " +
+            "reservado (- ? : , [ ] { } # & * ! | > ' \" % @ `).",
         );
       }
+      try {
+        components(ticket.id);
+      } catch (caught) {
+        problemas.push(
+          `${ticket.id}: ${caught instanceof Error ? caught.message : String(caught)}`,
+        );
+      }
+    }
+
+    if (problemas.length > 0) {
+      fail(
+        `El grafo tiene ${problemas.length} problema(s) y por eso **no se creó ninguno**:\n` +
+          problemas.map((problema) => `  · ${problema}`).join("\n") +
+          "\nCorregí el tickets.yaml —o volvé a descomponer— y corré esto otra vez.",
+        EXIT_INVARIANT,
+      );
     }
   }
 
