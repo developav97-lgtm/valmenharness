@@ -24,7 +24,8 @@ import { createRequire } from "node:module";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-import { type RegistryPaths, addAiUsage } from "@valmen/engine";
+import { parseTicket } from "@valmen/core";
+import { type RegistryPaths, addAiUsage, findTicket } from "@valmen/engine";
 
 import { leerSesionesDeCodex } from "./codex.js";
 import { leerSesionesDeHermes } from "./hermes.js";
@@ -696,8 +697,15 @@ export function guardarFotoEnTicket(
   });
   if (linea === null || linea.sessions.length === 0) return null;
 
+  // Las sesiones que el ticket ya tiene registradas. La foto se puede volver a
+  // tomar —un lector nuevo, un agente que antes no se leía— y sin esto la segunda
+  // pasada duplicaría lo que ya estaba: el bloque es append-only y no se corrige
+  // después.
+  const yaEstaban = sesionesRegistradas(paths, ticketId);
+  const pendientes = linea.sessions.filter((sesion) => !yaEstaban.has(sesion.id));
+
   const entradas: string[] = [];
-  for (const sesion of linea.sessions) {
+  for (const sesion of pendientes) {
     entradas.push(
       addAiUsage({
         paths,
@@ -733,9 +741,34 @@ export function guardarFotoEnTicket(
   return {
     entradas,
     detalle:
-      `${linea.sessions.length} sesión(es) registradas. ` +
+      `${pendientes.length} sesión(es) nuevas de ${linea.sessions.length}. ` +
       `Total $${linea.totalCostUsd.toFixed(6)}: ` +
       `harness $${linea.desglose.harnessUsd.toFixed(6)}, ` +
-      `exploración $${linea.desglose.exploracionUsd.toFixed(6)}.`,
+      `exploración $${linea.desglose.exploracionUsd.toFixed(6)}.` +
+      (yaEstaban.size === 0
+        ? ""
+        : ` ${yaEstaban.size} ya estaban registradas y no se repitieron.`),
   };
+}
+
+/**
+ * Las referencias de sesión que el ticket ya tiene en su bloque de consumo.
+ *
+ * Se leen del documento: la referencia es lo que identifica a la sesión, y es lo
+ * único que permite volver a tomar la foto sin duplicar lo ya escrito.
+ */
+function sesionesRegistradas(paths: RegistryPaths, ticketId: string): Set<string> {
+  const ticket = findTicket(paths, ticketId);
+  if (ticket === undefined) return new Set();
+  try {
+    const documento = parseTicket(ticket.text);
+    const consumo = documento.blocks["Consumo de IA"] ?? [];
+    return new Set(
+      consumo
+        .map((entrada) => entrada["session_reference"])
+        .filter((referencia): referencia is string => typeof referencia === "string"),
+    );
+  } catch {
+    return new Set();
+  }
 }
