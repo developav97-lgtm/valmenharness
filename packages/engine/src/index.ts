@@ -14,6 +14,7 @@
 export * from "./result.js";
 export * from "./discovery.js";
 export * from "./diff.js";
+export * from "./drift.js";
 export * from "./secrets.js";
 export * from "./presentation.js";
 export * from "./standards.js";

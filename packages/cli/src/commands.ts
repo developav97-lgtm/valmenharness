@@ -92,6 +92,8 @@ import {
   renderUsage,
   renderValue,
   ticketValueReport,
+  renderDrift,
+  scanDrift,
   renderColorReport,
   scanPendingChanges,
   scanPendingColors,
@@ -1204,6 +1206,37 @@ export function standardsCommand(
     }
 
     return error(`estandar no conoce el verbo "${verbo}".`, EXIT_SCHEMA);
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/**
+ * `drift`: lo que los tickets dicen del código, contra el código.
+ *
+ * Es un chequeo de lectura y no bloquea: un plan que cita un archivo que no existe
+ * se corrige en una línea, y quien decide si eso importa es quien lo va a
+ * implementar. `--strict` existe para el caso en que sí se quiera frenar —una
+ * compuerta de CI, una entrega— y sale con el código de bloqueo.
+ */
+export function driftCommand(
+  paths: RegistryPaths,
+  flags: Readonly<Record<string, string | true>>,
+): CommandResult {
+  const id = flags["id"];
+  try {
+    const informe = scanDrift(paths, {
+      ...(typeof id === "string" ? { ticketId: id } : {}),
+      ...(flags["todos"] === true ? { todos: true } : {}),
+    });
+    const texto = renderDrift(informe);
+    if (flags["strict"] === true && informe.findings.length > 0) {
+      // El mismo código que usa una compuerta que bloquea: 3 no es «falló», es
+      // «hay algo que impide seguir», y es lo que un `--strict` quiere decir.
+      return { stdout: texto, stderr: "", exitCode: EXIT_INVARIANT };
+    }
+    return ok(texto);
   } catch (caught) {
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);

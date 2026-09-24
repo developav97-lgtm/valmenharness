@@ -62,6 +62,7 @@ import {
   memoryCommand,
   scanPendingSecretsCommand,
   templateCommand,
+  driftCommand,
   usageCommand,
   valueCommand,
 } from "./commands.js";
@@ -93,6 +94,11 @@ Comandos:
   index [--check]           Regenera el índice, o comprueba que esté al día.
   secrets [--staged]        Revisa los cambios pendientes en busca de secretos.
                             Solo mira las líneas agregadas. No imprime el valor.
+  drift [--id <ID>] [--todos] [--strict]
+                            Contrasta lo que los tickets citan —archivos, símbolos,
+                            otros tickets— contra el proyecto. Sin modelo. Mira los
+                            tickets en curso; --todos incluye el histórico. No bloquea
+                            salvo con --strict, que sale con el código de bloqueo.
   estandar listar           Los estándares en vigor y los propuestos.
   estandar proponer --title <t> --rule <r> --area <a> [--why <texto>]
                             Propone un estándar. No está en vigor hasta aceptarlo.
@@ -860,6 +866,9 @@ export function dispatch(options: Options): CommandResult {
       const [verbo, ...resto] = rest;
       return memoryCommand(paths, { ...options.flags, _: resto.join(" ") }, verbo ?? "");
     }
+
+    case "drift":
+      return driftCommand(paths, options.flags);
 
     case "usage": {
       // `usage` sin verbo es el consumo del harness; `usage value` es el mismo

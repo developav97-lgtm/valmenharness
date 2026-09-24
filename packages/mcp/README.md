@@ -76,7 +76,7 @@ porque ahí sí hereda el `PATH` completo.
 
 ## Contrato
 
-Las treinta y tres herramientas. Ninguna es una segunda implementación: las de lectura llaman a
+Las treinta y cuatro herramientas. Ninguna es una segunda implementación: las de lectura llaman a
 las mismas funciones que el CLI, y las de escritura al mismo motor.
 
 | Herramienta            | Qué hace                                                          |
@@ -103,6 +103,8 @@ las mismas funciones que el CLI, y las de escritura al mismo motor.
 | `indexar_registro`     | Regenera el índice, o dice si se desincronizó                     |
 | `revisar_secretos`     | Credenciales en el cambio pendiente, o en el texto que se le pase  |
 | `reporte_consumo`      | Evaluaciones, coste y cuánto se decidió en código, con la calibración |
+| `reporte_valor`        | Lo mismo ticket por ticket: qué costó cada cierre y qué dejó        |
+| `revisar_drift`        | Lo que el ticket cita —archivos, símbolos, tickets— y no existe     |
 | `buscar_memoria`       | Lo que el proyecto ya decidió y ya falló, por sus palabras         |
 | `guardar_aprendizaje`  | Anexa lo que este trabajo enseñó, cuando se descubre               |
 | `ver_estandares`       | Las reglas en vigor y las propuestas que todavía no lo están       |
@@ -166,9 +168,9 @@ persona le dio —con sus palabras—, pero el veredicto no se lo puede dar.
 Anotar el consumo de IA tampoco está, y no por olvido: el gasto real vive en la base de datos
 de opencode, y un modelo que declara lo que gastó lo está estimando. Lo escribe quien lo mide.
 
-Falta la segunda mitad de C4 —el harness como *cliente* MCP— y las herramientas que dependen
-de trabajo que todavía no existe (`descomponer_feature`, `process_run`, `usage_report`,
-`memory_*`, `drift_check`). Ver `docs/12-FUNCIONALIDADES-PROXIMAS.md`.
+Falta la segunda mitad de C4 —el harness como *cliente* MCP— y la mitad semántica del detector
+de drift, que necesita el vínculo requisito ↔ ticket. Ver
+`docs/12-FUNCIONALIDADES-PROXIMAS.md`.
 
 **Nada escribe en stdout salvo el protocolo.** Un `console.log` perdido o un aviso de Node
 rompen la sesión del agente de una forma que después nadie sabe explicar; los diagnósticos van

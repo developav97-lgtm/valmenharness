@@ -53,6 +53,33 @@ generar un cambio equivocado. Detectar esto **antes** de implementar ahorra el c
 
 **Cómo.** CodeGraph para verificar símbolos y archivos; comparación mecánica. Sin LLM.
 
+**Estado: hecho, sin CodeGraph.** El comando es `valmen drift` —y `revisar_drift` por el MCP—,
+y resuelve la mitad mecánica con un índice del propio repositorio en vez de con una integración
+externa: recorre el proyecto una vez, indexa qué clases y qué miembros declara cada archivo, y
+contrasta contra eso las citas del ticket. Mil archivos se indexan en un segundo, así que el
+chequeo se puede correr sin pensarlo.
+
+Tres clases de hallazgo: un archivo citado que no existe, un símbolo cuyo miembro el código no
+declara —el caso que motiva todo esto, `MovimientoInventario.saldo_actual` cuando el campo se
+llama `saldo`—, y un ticket que cita a otro que no está en el registro.
+
+Lo que costó más no fue encontrarlos sino **no marcar lo que no era**: un archivo que todavía no
+existe en un ticket `planned` es lo normal; `FrontEnd/.../x.spec.ts` es una ruta abreviada a
+propósito; `common/services/x.ts` es un fragmento de una ruta más larga; `.codex/config.toml` es
+configuración de la máquina y no del repositorio; y `Meta.fields` es una clase interna de Django
+que puede estar declarada en otro archivo. Cada una de esas reglas salió de medir contra el
+proyecto real y ver el aviso falso. Sobre el registro del piloto, con las reglas puestas: de 57
+hallazgos a 22, y los 22 son historia de verdad —archivos que el plan citaba y que después se
+renombraron o se borraron del todo—.
+
+Por defecto mira los tickets **en curso**, que es donde corregir el plan todavía sirve, y
+`--todos` incluye el histórico. `--strict` sale con el código de bloqueo para quien lo quiera
+usar como compuerta; sin él, avisa y no frena.
+
+**Queda de la idea original** la mitad semántica —contrastar un requisito de la spec con el
+ticket que dice implementarlo—, que necesita el vínculo requisito ↔ ticket y no una búsqueda de
+texto.
+
 **Esfuerzo:** 3–4 días.
 
 ---
@@ -525,7 +552,7 @@ cliente no hable MCP no hay hueco: `valmen` es un CLI, y las dos puertas llaman 
 sin terminal** —de `intake` a `closed`, con sus puntos, su evidencia, su QA, su cierre y su
 reapertura— y las skills del proyecto se publican como *prompts* del protocolo, que es lo
 que vuelve el servidor agnóstico del agente sin escribir un adaptador por cliente. Las
-treinta y tres herramientas, y lo que deliberadamente **no** se expone, están en
+treinta y cuatro herramientas, y lo que deliberadamente **no** se expone, están en
 `docs/02-MOTOR.md` §10.
 
 | Herramienta MCP | Qué hace | Estado |
@@ -543,7 +570,7 @@ treinta y tres herramientas, y lo que deliberadamente **no** se expone, están e
 | `reporte_consumo`, `buscar_memoria`, `guardar_aprendizaje` | Consumo, memoria y lo aprendido | **Hecho** |
 | `reporte_valor` | Qué costó y qué dejó cada ticket cerrado | **Hecho** |
 | `ver_estandares`, `proponer_estandar`, `decidir_estandar`, `revisar_presentacion` | Los estándares: consultarlos, proponerlos, decidirlos y revisar los colores fijos | **Hecho** |
-| `drift_check` | Drift de artefactos | Falta: depende de A2, que no está construido |
+| `revisar_drift` | Lo que el ticket cita y el código no confirma | **Hecho** |
 
 **`gate_approve` / `gate_reject` no se van a exponer.** Estaban en esta tabla y se
 descartaron a propósito: la aprobación de un gate es una decisión humana, y un agente que

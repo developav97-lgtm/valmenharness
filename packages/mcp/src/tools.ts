@@ -66,6 +66,8 @@ import {
   renderUsage,
   renderValue,
   ticketValueReport,
+  renderDrift,
+  scanDrift,
   saveLearning,
   searchMemory,
   summarize,
@@ -844,6 +846,58 @@ export const TOOLS: readonly ToolDefinition[] = [
         },
       },
       required: ["evaluaciones", "tickets", "costeUsd", "decididasEnCodigo", "calibracion"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "revisar_drift",
+    title: "Lo que el ticket dice del código, contra el código",
+    description:
+      "Contrasta lo que un ticket cita —archivos, símbolos como `Modelo.campo`, y otros " +
+      "tickets— contra lo que hay en el proyecto. **Sin modelo y sin adivinar**: mira las " +
+      "secciones donde el ticket habla del código y comprueba cada cita. Sirve para lo que " +
+      "más caro sale: un plan que apunta a un archivo que no existe o a un campo que el " +
+      "modelo no tiene produce el cambio equivocado, y el error aparece al implementarlo o, " +
+      "peor, al probarlo. Corré esto **antes de implementar**, con el ticket delante. Por " +
+      "defecto mira los tickets en curso; `todos` incluye el histórico. No bloquea: avisa.",
+    inputSchema: conRoot({
+      properties: {
+        id: {
+          type: "string",
+          description:
+            "Un ticket concreto. Sin `id`, se revisan todos los que estén en curso.",
+        },
+        todos: {
+          type: "boolean",
+          description:
+            "Incluir los tickets cerrados. Ahí lo que aparece es historia —un archivo que " +
+            "el plan citaba y que después se renombró—, que se quiere poder ver pero no en " +
+            "cada corrida.",
+        },
+      },
+    }),
+    outputSchema: {
+      type: "object",
+      properties: {
+        hallazgos: { type: "number" },
+        tickets: { type: "number" },
+        revisados: { type: "number" },
+        detalle: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              ticket: { type: "string" },
+              clase: { type: "string" },
+              cita: { type: "string" },
+              seccion: { type: "string" },
+            },
+            required: ["ticket", "clase", "cita", "seccion"],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ["hallazgos", "tickets", "revisados", "detalle"],
       additionalProperties: false,
     },
   },
@@ -1705,6 +1759,25 @@ export async function callTool(
           costeUsd: informe.costUsd,
           decididasEnCodigo: informe.byCode,
           calibracion: informe.calibration.map((fila) => ({ ...fila, rows: undefined })),
+        });
+      }
+
+      case "revisar_drift": {
+        const id = texto(args, "id", false);
+        const informe = scanDrift(paths, {
+          ...(id === undefined ? {} : { ticketId: id }),
+          ...(args["todos"] === true ? { todos: true } : {}),
+        });
+        return bien(renderDrift(informe), {
+          hallazgos: informe.findings.length,
+          tickets: new Set(informe.findings.map((uno) => uno.ticketId)).size,
+          revisados: informe.scanned,
+          detalle: informe.findings.map((uno) => ({
+            ticket: uno.ticketId,
+            clase: uno.kind,
+            cita: uno.cited,
+            seccion: uno.section,
+          })),
         });
       }
 
