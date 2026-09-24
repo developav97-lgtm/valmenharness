@@ -26,6 +26,17 @@ proyecto real y toque los gates de impacto— se abre y se sigue el flujo comple
 `tickets/` conserva lo que ya está registrado. No se borra: es el historial, y
 los tickets que quedaron a medias se retoman cuando alguien lo pida.
 
+## Idioma
+
+Todo se escribe en **español**: las respuestas, los commits, la documentación y
+los mensajes de error del harness. Incluye lo que un agente contesta en la
+conversación, no solo lo que queda en un archivo —una respuesta en otro idioma es
+un cambio de idioma que nadie pidió, y quien la lee tiene que traducir para
+seguir—.
+
+El código sigue igual: identificadores en inglés donde el proyecto ya los tiene,
+y los nombres del dominio como los nombra el negocio.
+
 ## Stack y arquitectura
 
 Monorepo de TypeScript con npm workspaces. Node 24. Sin dependencias externas en
