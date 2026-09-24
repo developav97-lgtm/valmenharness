@@ -1088,9 +1088,10 @@ export function standardsCommand(
               "  en el próximo `valmen sync`.",
             ]
           : archivos.map(
-              (archivo) =>
-                `  .valmen/rules/${archivo.area}.md`.replace(".valmen/rules/", "  ") +
-                `  →  ${archivo.path}`,
+              // El área y el archivo, no el archivo dos veces: la primera versión
+              // componía `.valmen/rules/<área>.md` —sin el prefijo `estandares-`—
+              // y lo imprimía al lado de la ruta real, que dice otra cosa.
+              (archivo) => `  ${archivo.area.padEnd(14)} →  ${archivo.path}`,
             )),
         "",
         renderProposals(propuestas).trimEnd(),

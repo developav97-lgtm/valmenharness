@@ -171,6 +171,19 @@ describe("el CLI, que es la puerta de cualquier agente", () => {
     expect(resultado.stderr).toContain("EST-099");
   });
 
+  it("listar muestra el área y la ruta, sin componer un nombre que no existe", () => {
+    // La primera versión imprimía `.valmen/rules/<área>.md` —sin el prefijo
+    // `estandares-`— al lado de la ruta de verdad, así que la lista decía dos
+    // cosas distintas de lo mismo. Se afirma sobre la salida porque es lo que lee
+    // quien la ejecuta.
+    const id = proponer();
+    standardsCommand(paths(), "aceptar", id, { instruccion: "dale" });
+    const resultado = standardsCommand(paths(), "listar", undefined, {});
+
+    expect(resultado.stdout).toContain(".valmen/rules/estandares-presentacion.md");
+    expect(resultado.stdout).not.toContain("rules/presentacion.md");
+  });
+
   it("revisar avisa de los colores fijos del cambio pendiente", () => {
     execFileSync("git", ["init", "-q"], { cwd: lab, stdio: "ignore" });
     writeFileSync(join(lab, "pantalla.css"), ".modal { background: #fff; }\n", "utf8");
