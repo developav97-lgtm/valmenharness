@@ -43,6 +43,7 @@ import {
   hermesNotify,
   hermesNotifyPendientes,
   hermesBrief,
+  hermesRelay,
   configDeHermes,
   approvalSecret,
   decideByCode,
@@ -1169,13 +1170,21 @@ export async function run(argv: readonly string[]): Promise<number> {
         accion !== "connect" &&
         accion !== "test" &&
         accion !== "notify" &&
-        accion !== "brief"
+        accion !== "brief" &&
+        accion !== "relay"
       ) {
         result = {
           stdout: "",
-          stderr: `Acción desconocida: "${accion}". Use status, connect, test, notify o brief.`,
+          stderr: `Acción desconocida: "${accion}". Use status, connect, test, notify, brief o relay.`,
           exitCode: EXIT_SCHEMA,
         };
+      } else if (accion === "relay") {
+        // El relé: contestar en el chat y que la decisión se ejecute sola.
+        result = hermesRelay({
+          root: options.root,
+          cliEntry: process.argv[1] ?? fileURLToPath(import.meta.url),
+          install: options.flags["install"] === true,
+        });
       } else if (accion === "brief") {
         // El parte se arma de la misma configuración que los avisos, y sin
         // destino se imprime: es lo que se quiere hacer la primera vez, antes de

@@ -20,7 +20,15 @@
  * comando se imprime igual, para quien prefiera su CLI y su checklist.
  */
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 
 import {
@@ -30,8 +38,14 @@ import {
   hermesBlock,
   hermesConfigPath,
   hermesDeepLink,
+  RELAY_SCRIPT_NAME,
+  hermesRelayHookBlock,
+  hermesRelayScript,
   hermesSkill,
   hermesSkillPath,
+  mergeHermesBlock,
+  relayPythonCommand,
+  hermesHookPath,
   mergeHermesConfig,
   parseConfig,
   readHermesConfig,
@@ -1252,3 +1266,149 @@ export function hermesTest(request: HermesRequest): CommandResult {
 
 /** El nombre por defecto de la entrada. Se exporta para el CLI y para los tests. */
 export { HERMES_SERVER_ID };
+
+/** Lo que devuelve instalar o consultar el relé. */
+export interface RelayState {
+  readonly scriptPath: string;
+  readonly scriptExists: boolean;
+  readonly declared: boolean;
+  readonly python: string | null;
+}
+
+/**
+ * Dónde está el CLI, para grabarlo en el gancho.
+ *
+ * El gancho no puede buscarlo en el `PATH`: el servicio de Hermes arranca con
+ * `/usr/bin:/bin:/usr/sbin:/sbin` —lo verifiqué en el `plist` de launchd—, así que
+ * un `valmen` a secas no se encuentra y el relé fallaría en silencio. Es el mismo
+ * motivo por el que la entrada MCP graba la ruta absoluta del servidor.
+ */
+function rutaDelCli(invocacion: string): string {
+  // Un enlace simbólico significa que está instalado: se usa su ruta real, que es
+  // la que existe sin depender del `PATH` de nadie.
+  try {
+    return realpathSync(invocacion);
+  } catch {
+    return invocacion;
+  }
+}
+
+/**
+ * El relé: contestar en el chat y que la decisión se ejecute sola.
+ *
+ * Es la última milla del puente. Hasta acá el código llegaba al celular y había
+ * que correr `gate-decide` en la máquina; con esto, la persona contesta en Slack y
+ * el gancho de Hermes lo ejecuta.
+ *
+ * **No lo activa solo, y hay dos pasos que quedan en manos de la persona.** El
+ * primero es la aprobación del gancho: Hermes pide consentimiento la primera vez
+ * que ve un script nuevo, y el gateway —que es quien atiende Slack— solo lo levanta
+ * si se aprobó o si se aceptó de antemano. El segundo es el secreto con el que se
+ * verifican los tokens, que tiene que estar donde el gateway lo lea. Ninguno de los
+ * dos los puede dar un instalador: el primero es aceptar que un script corra con
+ * cada mensaje, y el segundo es una credencial.
+ */
+export function hermesRelay(request: {
+  readonly root: string;
+  readonly cliEntry: string;
+  readonly install: boolean;
+}): CommandResult {
+  const configPath = hermesConfigPath();
+  const scriptPath = hermesHookPath(homedir(), configPath);
+  const python = relayPythonCommand();
+
+  if (python === null) {
+    return falla(
+      "No encontré un Python 3 para ejecutar el gancho.\n\n" +
+        "Hermes es Python y sus ganchos también, así que el relé necesita uno. Si\n" +
+        "Hermes funciona, hay uno: mirá con qué corre y avisá, porque este comando\n" +
+        "solo busca en las rutas habituales de macOS.\n",
+    );
+  }
+
+  const declarado = readIfExists(configPath)?.includes(RELAY_SCRIPT_NAME) ?? false;
+  const existe = existsSync(scriptPath);
+
+  if (!request.install) {
+    const lineas = [
+      "Relé de decisiones",
+      `  gancho       ${scriptPath}`,
+      `  script       ${existe ? "sí" : "no"}`,
+      `  declarado    ${declarado ? "sí" : "no"}`,
+      `  intérprete   ${python}`,
+      "",
+    ];
+
+    if (existe && declarado) {
+      lineas.push(
+        "Instalado. Falta que Hermes lo tenga aprobado:",
+        "    hermes hooks",
+        "",
+        "Y que el gateway lo levante —atiende Slack y arranca sin terminal—:",
+        "    hermes config set hooks_auto_accept true",
+        "    hermes gateway restart",
+      );
+    } else {
+      lineas.push("Falta instalarlo:", "    valmen hermes relay --install");
+    }
+    return ok(lineas.join("\n") + "\n");
+  }
+
+  const cli = rutaDelCli(request.cliEntry);
+  escribirGancho(scriptPath, hermesRelayScript({ valmen: cli, root: request.root }));
+
+  const fusion = mergeHermesBlock(
+    readIfExists(configPath),
+    hermesRelayHookBlock(scriptPath, python),
+    {
+      clave: "hooks",
+      // La clave del gancho no lleva indentación fija —es una lista—, así que la
+      // comprobación es por el nombre del archivo en cualquier parte del archivo.
+      yaEsta: new RegExp(RELAY_SCRIPT_NAME.replace(".", "\\.")),
+      queEs: "el gancho del relé",
+      alInsertar: "se añadió el gancho a la lista hooks que ya existía",
+      alCrear: "se creó el archivo con el gancho declarado",
+      alFinal: "se añadió hooks al final del archivo, que no lo declaraba",
+    },
+  );
+
+  if (fusion.changed) {
+    mkdirSync(dirname(configPath), { recursive: true });
+    writeFileSync(configPath, fusion.content, "utf8");
+  }
+
+  return ok(
+    [
+      "Relé instalado.",
+      `  gancho       ${scriptPath}`,
+      `  config       ${configPath}`,
+      `  ${fusion.changed ? fusion.note : `sin cambios: ${fusion.note}`}`,
+      `  proyecto     ${request.root}`,
+      `  CLI          ${cli}`,
+      "",
+      "Ahora, en Hermes —los dos pasos son de la persona, no del instalador—:",
+      "",
+      "  1. Aprobar el gancho. Hermes pide consentimiento la primera vez, y con",
+      "     razón: el script corre con **cada mensaje** que le llega al agente.",
+      "       hermes hooks",
+      "",
+      "  2. Que el gateway lo levante. Atiende Slack y arranca sin terminal, así que",
+      "     necesita la aceptación de antemano para verlo:",
+      "       hermes config set hooks_auto_accept true",
+      "       hermes gateway restart",
+      "",
+      "Y el secreto tiene que estar donde el gateway lo lea —su entorno no lo tiene—:",
+      "  ~/.valmen/.credentials.yaml",
+      "    aprobacion:",
+      '      secret: "…"',
+      "",
+    ].join("\n") + "\n",
+  );
+}
+
+/** Escribe el gancho con permiso de ejecución. */
+function escribirGancho(ruta: string, contenido: string): void {
+  mkdirSync(dirname(ruta), { recursive: true });
+  writeFileSync(ruta, contenido, "utf8");
+  chmodSync(ruta, 0o755);
+}

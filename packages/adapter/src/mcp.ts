@@ -518,53 +518,81 @@ export function mergeHermesConfig(
   bloque: string,
   nombre: string = HERMES_SERVER_ID,
 ): MergeResult {
+  return mergeHermesBlock(texto, bloque, {
+    clave: "mcp_servers",
+    // La indentación a dos espacios bajo cualquier cabecera es una entrada de
+    // `mcp_servers`: no hay otra cosa que pueda estar a esa profundidad en la raíz
+    // del archivo de Hermes.
+    yaEsta: new RegExp(`^ {2}${nombre}:\\s*$`, "m"),
+    queEs: "la entrada `" + nombre + "`",
+    alInsertar: "se añadió el servidor a la lista mcp_servers que ya existía",
+    alCrear: "se creó el archivo con el servidor declarado",
+    alFinal: "se añadió mcp_servers al final del archivo, que no lo declaraba",
+  });
+}
+
+/**
+ * Fusiona un bloque de primer nivel en el `config.yaml` de Hermes.
+ *
+ * Es la misma inserción que la del servidor MCP, extraída porque el gancho del
+ * relé necesita exactamente lo mismo sobre otra clave. Escribirla dos veces sería
+ * dos sitios donde equivocarse con el YAML de otro programa —y el segundo se
+ * olvidaría de uno de los tres casos—.
+ */
+export function mergeHermesBlock(
+  texto: string | null,
+  bloque: string,
+  opciones: {
+    readonly clave: string;
+    readonly yaEsta: RegExp | null;
+    readonly queEs: string;
+    readonly alInsertar: string;
+    readonly alCrear: string;
+    readonly alFinal: string;
+  },
+): MergeResult {
+  const { clave } = opciones;
+
   if (texto === null || texto.trim() === "") {
-    return {
-      content: `mcp_servers:\n${bloque}`,
-      changed: true,
-      note: "se creó el archivo con el servidor declarado",
-    };
+    return { content: `${clave}:\n${bloque}`, changed: true, note: opciones.alCrear };
   }
 
-  // Case 1: ya declarado. Se busca la clave indentada bajo cualquier cabecera:
-  // `^  valmen:` es una entrada de `mcp_servers` y no hay otra cosa que pueda ser
-  // a esa profundidad en la raíz del archivo de Hermes.
-  if (new RegExp(`^ {2}${nombre}:\\s*$`, "m").test(texto)) {
+  if (opciones.yaEsta !== null && opciones.yaEsta.test(texto)) {
     return {
       content: texto,
       changed: false,
-      note: `ya había una entrada \`${nombre}\` en mcp_servers; no se tocó`,
+      note: `ya estaba ${opciones.queEs}; no se tocó`,
     };
   }
 
-  const cabecera = /^mcp_servers:[ \t]*$/m.exec(texto);
-
+  const cabecera = new RegExp(`^${clave}:[ \\t]*$`, "m").exec(texto);
   if (cabecera !== null) {
     const corte = cabecera.index + cabecera[0].length;
     return {
       content: `${texto.slice(0, corte)}\n${bloque.trimEnd()}${texto.slice(corte)}`,
       changed: true,
-      note: "se añadió el servidor a la lista mcp_servers que ya existía",
+      note: opciones.alInsertar,
     };
   }
 
-  // `mcp_servers` existe pero no como cabecera suelta: `mcp_servers: {}`, o con
-  // un valor en la misma línea. Insertar debajo daría un YAML inválido.
-  if (/^mcp_servers:[ \t]*\S/m.test(texto)) {
+  // La clave existe pero no como cabecera suelta: `clave: {}`, o con un valor en
+  // la misma línea. Insertar debajo daría un YAML inválido, así que se dice en vez
+  // de adivinar.
+  if (new RegExp(`^${clave}:[ \\t]*\\S`, "m").test(texto)) {
     return {
       content: texto,
       changed: false,
       note:
-        "`mcp_servers` no está vacío en una línea propia, así que no se insertó nada: " +
-        "añada la entrada a mano o deje `mcp_servers:` y vuelva a intentarlo",
+        `\`${clave}\` no está vacío en una línea propia, así que no se insertó nada: ` +
+        "añadilo a mano o dejá la clave sola y volvé a intentarlo",
     };
   }
 
   const separador = texto.endsWith("\n") ? "" : "\n";
   return {
-    content: `${texto}${separador}\nmcp_servers:\n${bloque}`,
+    content: `${texto}${separador}\n${clave}:\n${bloque}`,
     changed: true,
-    note: "se añadió mcp_servers al final del archivo, que no lo declaraba",
+    note: opciones.alFinal,
   };
 }
 

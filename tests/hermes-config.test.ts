@@ -13,6 +13,8 @@
  * sus propios documentos, y se comprueba la estructura resultante. Que un archivo
  * «se vea bien» no es evidencia de que sea válido.
  */
+import { spawnSync } from "node:child_process";
+
 import { describe, expect, it, afterEach } from "vitest";
 
 import { parseYamlSubset, type YamlMap } from "../packages/core/src/index.js";
@@ -24,6 +26,8 @@ import {
   hermesBlock,
   hermesConfigPath,
   hermesDeepLink,
+  hermesRelayHookBlock,
+  hermesRelayScript,
   hermesSkill,
   hermesSkillPath,
   mergeHermesConfig,
@@ -368,5 +372,81 @@ describe("la skill que se le instala a Hermes", () => {
     // `mcp__`— y una instrucción con el nombre equivocado es una instrucción que
     // el agente no puede seguir, que falla en silencio.
     expect(hermesSkill()).not.toMatch(/mcp_{1,2}valmen_{1,2}/);
+  });
+});
+
+describe("el relé", () => {
+  const RUTAS = { valmen: "/opt/valmen", root: "/tmp/proyecto con espacios" };
+
+  it("el script graba las rutas absolutas, no las busca en el PATH", () => {
+    // El servicio de Hermes arranca con `/usr/bin:/bin:/usr/sbin:/sbin`, así que un
+    // `valmen` a secas no se encuentra y el relé fallaría en silencio.
+    const script = hermesRelayScript(RUTAS);
+    expect(script).toContain('VALMEN = "/opt/valmen"');
+    expect(script).toContain('ROOT = "/tmp/proyecto con espacios"');
+  });
+
+  it("no se mete cuando el mensaje no es una decisión", () => {
+    // Es la mitad del contrato: el gancho corre con **cada** mensaje, y devolver
+    // algo distinto de la nada cambiaría la conversación en las que no son para él.
+    const script = hermesRelayScript(RUTAS);
+    expect(script).toContain("if coincidencia is None:");
+    expect(script).toContain("return 0");
+  });
+
+  it("reconoce el código con las dos decisiones", () => {
+    const script = hermesRelayScript(RUTAS);
+    expect(script).toContain("(aprobar|rechazar)");
+    expect(script).toContain('"aprobar": "approve"');
+    expect(script).toContain('"rechazar": "reject"');
+  });
+
+  it("explica por qué es un gancho y no una herramienta", () => {
+    // La decisión de seguridad de todo el puente: si la aprobación fuera una
+    // herramienta MCP, el harness no podría distinguir una persona de una
+    // aserción del agente, y una inyección de prompt bastaría para aprobar.
+    const script = hermesRelayScript(RUTAS);
+    expect(script).toContain("antes de que el\nmodelo lo vea");
+  });
+
+  it("le dice al agente qué pasó, para que su respuesta sea coherente", () => {
+    // `pre_llm_call` no puede bloquear el turno: sin esto el agente contestaría
+    // «no puedo aprobar compuertas» sobre una decisión ya registrada.
+    const script = hermesRelayScript(RUTAS);
+    expect(script).toContain("CONTEXTO_OK");
+    expect(script).toContain("CONTEXTO_FALLO");
+  });
+
+  it("el script es Python válido", () => {
+    // Se comprueba de verdad y no por el texto: la primera versión tenía un `}`
+    // donde iba un `)` y solo se vio al ejecutarlo.
+    const script = hermesRelayScript(RUTAS);
+    const r = spawnSync(
+      "/usr/bin/python3",
+      ["-c", "import ast,sys; ast.parse(sys.stdin.read())"],
+      {
+        input: script,
+        encoding: "utf8",
+      },
+    );
+    expect(r.stderr ?? "").toBe("");
+    expect(r.status).toBe(0);
+  });
+
+  it("el bloque del gancho no repite la cabecera", () => {
+    // La cabecera `hooks:` la pone la fusión, igual que con `mcp_servers`. Repetirla
+    // duplicó la clave en la configuración del primer proyecto donde se instaló.
+    const bloque = hermesRelayHookBlock("/ruta/script.py", "/usr/bin/python3");
+    expect(bloque).not.toMatch(/^hooks:/m);
+    expect(bloque).toContain("pre_llm_call:");
+    expect(bloque).toContain("timeout: 60");
+  });
+
+  it("cita la ruta del script, que puede tener espacios", () => {
+    const bloque = hermesRelayHookBlock(
+      "/tmp/10-Proyectos/mi script.py",
+      "/usr/bin/python3",
+    );
+    expect(bloque).toContain("'/tmp/10-Proyectos/mi script.py'");
   });
 });
