@@ -206,7 +206,11 @@ describe("doctor", () => {
     writeFileSync(join(lab, ".mcp.json"), '{"mcpServers":{"valmen":{}}}\n', "utf8");
     writeFileSync(join(lab, "opencode.json"), '{"mcp":{"valmen":{}}}\n', "utf8");
 
-    const resultado = await doctorCommand(PATHS(), { env: {} });
+    // Con una credencial declarada por entorno: sin ninguna, el diagnóstico marca
+    // «Credenciales» como faltante —que es correcto— y el código sería 2.
+    const resultado = await doctorCommand(PATHS(), {
+      env: { OPENROUTER_API_KEY: "de-prueba" },
+    });
     // Ya no falta nada bloqueante: los avisos —el registro vacío, Hermes— no
     // cambian el código de salida.
     expect(resultado.exitCode).toBe(0);

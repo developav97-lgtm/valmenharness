@@ -979,19 +979,6 @@ export async function listProviderModels(
     options.env ?? process.env,
   );
 
-  if (clave === null || clave === "") {
-    const motivo = motivoSinCredencial(spec);
-    if (motivo !== null) {
-      // Lo declarado se devuelve igual que en los demás fallos: que el catálogo no
-      // se pueda pedir no invalida la lista que el usuario escribió.
-      return {
-        ok: false,
-        error: motivo,
-        models: declarados.map((modelo) => ({ id: modelo, name: modelo, promptUsd: null })),
-      };
-    }
-  }
-
   const headers = headersFor(spec, clave);
 
   // La credencial **cambia la respuesta**, y conviene saberlo antes de sospechar
@@ -1023,11 +1010,14 @@ export async function listProviderModels(
     }
   } catch (caught) {
     const detalle = caught instanceof Error ? caught.message : String(caught);
+    const sinSesion = clave === null || clave === "" ? motivoSinCredencial(spec) : null;
     return {
       ok: false,
-      error: /abort|timeout/i.test(detalle)
-        ? `El proveedor superó el tiempo máximo de ${options.timeoutMs ?? 15_000} ms.`
-        : `No se pudo consultar la lista de modelos: ${detalle}`,
+      error:
+        sinSesion ??
+        (/abort|timeout/i.test(detalle)
+          ? `El proveedor superó el tiempo máximo de ${options.timeoutMs ?? 15_000} ms.`
+          : `No se pudo consultar la lista de modelos: ${detalle}`),
       models: declarados.map((modelo) => ({ id: modelo, name: modelo, promptUsd: null })),
     };
   }
