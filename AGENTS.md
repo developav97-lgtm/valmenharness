@@ -273,6 +273,23 @@ commitear, revisar el estado del repositorio, identificar los archivos
 atribuibles al ticket y excluir los ajenos sin modificarlos. Los cambios ajenos
 conocidos no bloquean la entrega.
 
+Y **el consumo de IA queda registrado antes de cerrar**: `## Consumo de IA` lleva
+una entrada por sesión que trabajó el ticket, con los números de la sesión y no de
+una estimación. Sin consumo el motor no prepara el cierre —no es una
+recomendación: se rechaza—, y la fuente tiene que decir de dónde salieron los
+números con un prefijo que apunte de verdad ahí: `opencode:` su base,
+`hermes:` la suya, `codex:` la sesión, `manual:` una sesión sin agregado —con el
+motivo en las notas— y `process:` una corrida del harness. Un `hermes:` que apunta
+a la base de OpenCode diría una cosa y mostraría otra, y el costo dejaría de ser
+verificable. Y una sesión que sirvió **varios** tickets se declara con `manual:` y
+sin números, diciendo cuáles y dónde quedó su gasto completo: un reparto a ojo es
+un número inventado con forma de medición, y el hueco declarado se ve.
+
+**Una sesión por ticket**, además, es lo que hace posible ese número: una
+conversación que atendió cinco tickets tiene un solo costo y ningún modo de
+repartirlo, así que el consumo por ticket se vuelve una estimación justo donde el
+registro promete un dato.
+
 Y antes de commitear, `valmen secrets`: un secreto commiteado no se descommitea
 —queda en el historial aunque el commit siguiente lo borre—. Si el hallazgo es
 legítimo (una prueba, un ejemplo), la línea se marca con `valmen:allow-secret` y

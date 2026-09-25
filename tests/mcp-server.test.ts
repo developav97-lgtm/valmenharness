@@ -205,7 +205,7 @@ describe("el catálogo de herramientas", () => {
     expect(estandar?.inputSchema["required"]).toContain("instruccion");
   });
 
-  it("declara las treinta y seis herramientas, cada una con descripción y esquema", () => {
+  it("declara las treinta y siete herramientas, cada una con descripción y esquema", () => {
     // El orden es el de la lectura: alta, consulta, validación, movimiento,
     // anotación, compuertas, features, procesos, reportes, y al final el ciclo de
     // QA y el cierre. Estaba intercalado por historia —cada herramienta nueva
@@ -219,6 +219,7 @@ describe("el catálogo de herramientas", () => {
       "anotar_punto",
       "mover_punto",
       "anotar_evidencia",
+      "registrar_consumo_ia",
       "reanudar_ticket",
       "evaluar_compuerta",
       "simular_compuerta",
@@ -1071,6 +1072,20 @@ async function hastaCerrado(): Promise<string> {
     confirmacion_po: "Conforme",
   });
   await paso(contexto, "mover_ticket", { id: ID, to: "qa_approved" });
+  // El consumo es lo último que falta antes de cerrar, y el motor no prepara el
+  // cierre sin él: acá no hay contabilidad de la que sacarlo —el ticket se
+  // trabajó dentro del test—, así que se registra a mano.
+  await paso(contexto, "registrar_consumo_ia", {
+    id: ID,
+    source: "manual:sesión del test, sin contabilidad que leer",
+    confidence: "high",
+    session_reference: "sesion-del-test",
+    input_tokens: 1200,
+    output_tokens: 300,
+    total_tokens: 1500,
+    estimated_cost_usd: 0.0123,
+    notes: "Sesión del propio test.",
+  });
   await paso(contexto, "preparar_cierre", {
     id: ID,
     resumen_tecnico: "El lookup pasó de exacto a parcial.",
@@ -1164,6 +1179,16 @@ describe("el ciclo entero del ticket", () => {
       confirmacion_po: "Aprobado, quedó bien",
     });
     await paso(contexto, "mover_ticket", { id: ID, to: "qa_approved" });
+    await paso(contexto, "registrar_consumo_ia", {
+      id: ID,
+      source: "manual:sesión del test, sin contabilidad que leer",
+      confidence: "high",
+      session_reference: "sesion-del-test",
+      input_tokens: 1200,
+      output_tokens: 300,
+      total_tokens: 1500,
+      estimated_cost_usd: 0.0123,
+    });
     await paso(contexto, "preparar_cierre", {
       id: ID,
       resumen_tecnico: "El lookup pasó de exacto a parcial.",

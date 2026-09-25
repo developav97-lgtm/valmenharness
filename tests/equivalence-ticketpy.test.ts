@@ -712,6 +712,26 @@ describe.skipIf(!disponible)("equivalencia con ticket.py", () => {
             "Aprobado por el PO",
           ],
           ["transition", ...id, "--entity", "ticket", "--to", "qa_approved"],
+          // El consumo se registra **antes** del cierre: el motor no cierra un
+          // ticket sin él, y la referencia acepta el mismo registro en el mismo
+          // orden. Lo que cambia es que el prefijo de la fuente tiene que apuntar
+          // a la base que nombra, y por eso `cli` ya no sirve.
+          [
+            "add-ai-usage",
+            ...id,
+            "--source",
+            "opencode:/tmp/home/.local/share/opencode/opencode.db",
+            "--confidence",
+            "high",
+            "--model",
+            "deepseek/deepseek-v4-flash",
+            "--input-tokens",
+            "751",
+            "--output-tokens",
+            "115",
+            "--estimated-cost-usd",
+            "0.0000315",
+          ],
           [
             "close-attempt",
             ...id,
@@ -725,12 +745,14 @@ describe.skipIf(!disponible)("equivalencia con ticket.py", () => {
             "Entra en la próxima release.",
           ],
           ["transition", ...id, "--entity", "ticket", "--to", "closed"],
-          // El consumo se registra incluso con el ticket cerrado.
+          // El consumo se registra incluso con el ticket cerrado. `manual` es el
+          // origen declarado de una sesión que no expone agregado: el motivo va
+          // en las notas.
           [
             "add-ai-usage",
             ...id,
             "--source",
-            "cli",
+            "manual:sesión de codex sin agregado de tokens",
             "--confidence",
             "high",
             "--model",
@@ -815,6 +837,16 @@ describe.skipIf(!disponible)("equivalencia con ticket.py", () => {
           ],
           ["qa-close", ...id, "--result", "approved", "--po-confirmation", "Aprobado"],
           ["transition", ...id, "--entity", "ticket", "--to", "qa_approved"],
+          // Sin consumo el motor ya no cierra: la referencia acepta el registro
+          // igual, así que el paso va en los dos lados.
+          [
+            "add-ai-usage",
+            ...id,
+            "--source",
+            "opencode:/tmp/home/.local/share/opencode/opencode.db",
+            "--confidence",
+            "high",
+          ],
           [
             "close-attempt",
             ...id,

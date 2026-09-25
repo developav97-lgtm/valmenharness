@@ -643,7 +643,7 @@ export function hermesAddCommand(entry: HermesEntry): string {
  * desincronizarían.
  *
  * Existe porque las herramientas solas no alcanzan. Un agente con el MCP
- * conectado ve treinta y cinco herramientas y no sabe cuál usar primero: la regla
+ * conectado ve treinta y siete herramientas y no sabe cuál usar primero: la regla
  * de «antes de diagnosticar, buscar en la memoria» vive en el `AGENTS.md` del
  * proyecto, y **la sesión del celular no lee ese archivo**. Sin esto, lo que llega
  * por el celular es un agente con las capacidades del harness y ninguno de sus
@@ -712,6 +712,23 @@ más de un ticket activo **no elige**: devuelve la lista y hay que decidir cuál
 causa raíz, el porqué de una decisión o el patrón que se repite. No al final de la
 conversación: lo que se escribe tres días después pierde el detalle que lo hacía
 útil.
+
+**7. Un ticket, una sesión; y el consumo se registra al cerrar.** Si vas a trabajar
+un ticket —analizarlo, planearlo, implementarlo, verificarlo—, empezá una sesión
+nueva para él (\`/new <ID-DEL-TICKET>\`) y cerrala cuando el ticket cierre. Una
+conversación que atendió cinco tickets tiene un solo costo y ningún modo de
+repartirlo: el registro no puede decir qué costó cada uno. Al cerrar, \`## Consumo de
+IA\` lleva una entrada por sesión que trabajó el ticket, con los números de la sesión
+y no de una estimación —el cierre se rechaza sin consumo—, y el prefijo de \`source\`
+tiene que concordar con la base que citás: \`hermes:\` la de Hermes, \`opencode:\` la
+de OpenCode. Si una sesión sirvió varios tickets, va una entrada de referencia **sin
+números** que la nombre y diga dónde quedó su costo completo: un reparto inventado
+es peor que un hueco declarado, porque el hueco se ve.
+
+**8. Lo que escribas vos, nombralo.** Cuando dos agentes trabajan el mismo ticket
+—uno implementa, otro verifica y corrige—, el que corrige dice qué archivos tocó.
+Si no, el commit le atribuye al ejecutor lo que escribió el verificador y el
+registro afirma algo que no pasó.
 
 ## Qué NO hacer
 

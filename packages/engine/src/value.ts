@@ -320,9 +320,10 @@ export function renderValue(
   if (report.partial.length > 0) {
     lineas.push(
       "",
-      "  El «?» marca un ticket cuyo coste es parcial: alguna sesión es de un proveedor",
-      "  por suscripción, que no tiene coste por token. No se cuenta como cero —eso lo",
-      "  haría parecer gratis— ni se estima: se deja dicho.",
+      "  El «?» marca un ticket con coste parcial: una de sus sesiones no tiene",
+      "  coste por token —un proveedor por suscripción— o está declarada sin números",
+      "  porque sirvió a varios tickets y su gasto no se reparte. No se cuenta como",
+      "  cero —eso lo haría parecer gratis— ni se estima: se deja dicho.",
     );
   }
 

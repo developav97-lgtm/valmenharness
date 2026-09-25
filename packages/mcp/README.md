@@ -76,7 +76,7 @@ porque ahí sí hereda el `PATH` completo.
 
 ## Contrato
 
-Las treinta y seis herramientas. Ninguna es una segunda implementación: las de lectura llaman a
+Las treinta y siete herramientas. Ninguna es una segunda implementación: las de lectura llaman a
 las mismas funciones que el CLI, y las de escritura al mismo motor.
 
 | Herramienta            | Qué hace                                                          |
@@ -116,7 +116,8 @@ las mismas funciones que el CLI, y las de escritura al mismo motor.
 | `iniciar_qa`           | Abre el ciclo con su ambiente y la referencia de lo probado       |
 | `anotar_retest`        | El resultado de retestar un punto                                 |
 | `cerrar_qa`            | Cierra el ciclo: hallazgos, o la aprobación con la frase del PO   |
-| `preparar_cierre`      | Los dos resúmenes y el impacto de release, antes de cerrar        |
+| `registrar_consumo_ia` | Lo que costó una sesión, con la fuente que permite verificarlo    |
+| `preparar_cierre`      | Los dos resúmenes y el impacto de release, con el consumo ya registrado |
 
 Todas aceptan un `root` opcional que gana sobre el directorio de trabajo, para una sesión que
 trabaje sobre dos repositorios. Se declara en todos los esquemas, no solo se lee: un argumento

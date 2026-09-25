@@ -160,6 +160,18 @@ estaba. Un punto puede llegar a `verified` con el ciclo QA **abierto**: no exige
 `transition --entity ticket --to closed`, y exige que exista un intento con el mismo
 `qa_status` que el frontmatter.
 
+> **Dos precondiciones que el harness agrega a la referencia.** `close-attempt`
+> exige además que `## Consumo de IA` tenga al menos una entrada, y que el prefijo
+> de cada `source` apunte a la base que nombra (`opencode:`, `hermes:`, `codex:`,
+> `manual:`, `process:`). `ticket.py` acepta el bloque vacío y cualquier texto en
+> `source`. Es deliberado, y es la única divergencia de este comando: el consumo se
+> declaraba obligatorio en las reglas y nada lo comprobaba, y el registro real ya
+> tenía un ticket cerrado cuyo cierre decía que una sesión de Hermes había
+> trabajado en él mientras el costo de esa sesión estaba entero en otro ticket. Un
+> dato que no se puede rastrear es una afirmación, no una medición. `add-ai-usage`
+> valida su `source` **después** de las comprobaciones que la referencia ya hacía,
+> para que un caso que ella rechaza se siga rechazando con su mismo motivo.
+
 **Sin banderas para datos estructurados**: `findings`, `correction`, `evidence` de un retest,
 `affected_files`, `diagnosis`, `solution` y `related_ticket` de un punto se escriben siempre
 como `[]` o `null`. No hay forma de llenarlos por CLI: se editan a mano en el ticket.

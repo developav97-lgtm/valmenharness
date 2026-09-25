@@ -171,6 +171,11 @@ Comandos:
                             Anexa un intento de cierre. No cierra el ticket.
   add-ai-usage --id <ID> --source <s> --confidence <high|medium|low>
                             Anexa consumo de IA. El resto de campos son opcionales.
+                            La fuente es <origen>:<referencia>, con origen
+                            opencode —la ruta de opencode.db—, hermes —la de su
+                            base—, codex —la sesión— o manual —una sesión sin
+                            agregado, con el motivo en --notes—. Sin consumo el
+                            ticket no cierra.
   gate-decide --id <ID> --receipt <GR-…> --decision <approve|reject> --actor <nombre>
                             Registra la decisión humana sobre un gate escalado.
       --reason <texto>      Queda en el recibo y en el historial del ticket.
@@ -772,7 +777,13 @@ export function runAppend(
         });
         break;
 
-      case "close-attempt":
+      case "close-attempt": {
+        // El consumo se guarda **antes** del intento de cierre, no al mover el
+        // ticket: el motor exige el bloque lleno para preparar el cierre, y
+        // guardarlo después llegaría tarde. Es idempotente —lo ya registrado no
+        // se repite—, así que el guardado de la transición sigue siendo la red
+        // por si alguien cerró sin pasar por acá.
+        const consumo = guardarConsumoDeSesiones(paths, identificador());
         salida = closeAttempt({
           paths,
           ticketId: identificador(),
@@ -783,7 +794,11 @@ export function runAppend(
           qaWaiverReason: flag(flags, "qa-waiver-reason"),
           poConfirmation: flag(flags, "po-confirmation"),
         });
+        if (consumo !== null) {
+          salida = `${salida}\nConsumo guardado en el ticket: ${consumo}`;
+        }
         break;
+      }
 
       case "add-ai-usage":
         salida = addAiUsage({

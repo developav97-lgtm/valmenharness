@@ -133,7 +133,7 @@ describe("el valor de cada ticket", () => {
     addAiUsage({
       paths: PATHS(),
       ticketId: CON_VUELTAS,
-      source: "opencode:sesion-1",
+      source: "opencode:/tmp/home/.local/share/opencode/opencode.db",
       confidence: "high",
       sessionReference: "sesion-1",
       estimatedCostUsd: "1.50",

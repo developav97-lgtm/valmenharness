@@ -4210,12 +4210,26 @@
             el("span", `${datos.sesionesSinCoste} sin coste por token (suscripción)`, "etiqueta"),
           );
         }
+        if (datos.sesionesCompartidas > 0) {
+          // Una sesión que sirvió a varios tickets tiene un solo gasto y ningún
+          // modo de repartirlo: se muestra marcada y **no** entra en el total, en
+          // vez de adjudicarle a este ticket lo que costaron los otros.
+          resumen.append(
+            el(
+              "span",
+              `${datos.sesionesCompartidas} compartida(s) entre varios tickets ` +
+                `($${(datos.costeCompartidoUsd ?? 0).toFixed(4)} sin sumar)`,
+              "etiqueta",
+            ),
+          );
+        }
         zona.append(
           el(
             "div",
             "Harness es lo que costó llamar a las herramientas del registro; " +
               "exploración es leer, buscar y editar. El desglose solo cuenta las sesiones " +
-              "con coste por token.",
+              "con coste por token, y deja fuera las compartidas: su gasto es de todos los " +
+              "tickets que atendieron.",
             "resultado",
           ),
           resumen,
@@ -4232,12 +4246,24 @@
         for (const sesion of sesiones) {
           const fila = el("tr");
           const suyos = sesion.inputTokens + sesion.outputTokens + sesion.reasoningTokens;
+          const cuantos = (sesion.reparto ?? []).length;
           fila.append(
             el("td", sesion.source, "id"),
-            el("td", sesion.agent || "—"),
+            el(
+              "td",
+              cuantos === 0
+                ? sesion.agent || "—"
+                : `${sesion.agent || "—"} · compartida entre ${cuantos} tickets`,
+            ),
             el("td", sesion.model === "" ? "—" : sesion.model, "id"),
             el("td", `${(suyos / 1e6).toFixed(2)}M`, "id"),
-            el("td", sesion.costUsd === null ? "suscripción" : `$${sesion.costUsd.toFixed(4)}`, "id"),
+            el(
+              "td",
+              sesion.costUsd === null
+                ? "suscripción"
+                : `$${sesion.costUsd.toFixed(4)}${cuantos === 0 ? "" : " · no se suma"}`,
+              "id",
+            ),
             el("td", String(sesion.intervenciones), "id"),
           );
           tablaSesiones.append(fila);

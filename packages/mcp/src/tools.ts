@@ -53,6 +53,7 @@ import {
   scanPendingColors,
   listTickets,
   loadMemory,
+  addAiUsage,
   proposeStandard,
   renderProposals,
   standardsFiles,
@@ -594,6 +595,68 @@ export const TOOLS: readonly ToolDefinition[] = [
         },
       },
       required: ["id", "kind", "description"],
+    }),
+  },
+  {
+    name: "registrar_consumo_ia",
+    annotations: ANEXA,
+    title: "Registrar el consumo de IA de un ticket",
+    description:
+      "Anota en `## Consumo de IA` lo que costó una sesión que trabajó el ticket: sus " +
+      "tokens y su costo, con la referencia que permite verificarlos. **El cierre no se " +
+      "prepara sin esto**, así que es el último dato que falta antes de cerrar y el " +
+      "primero que se olvida. Una entrada por sesión: si el ticket lo trabajó el " +
+      "ejecutor y además lo verificó otro agente, van dos.\n\n" +
+      "La fuente dice de dónde salieron los números y tiene que apuntar de verdad ahí: " +
+      "`opencode:<ruta de opencode.db>`, `hermes:<ruta de su state.db>`, " +
+      "`codex:<identificador de la sesión>` o `manual:<motivo>`, que es el caso " +
+      "declarado de una sesión que no expone agregado de tokens. Un `hermes:` que " +
+      "apunta a la base de OpenCode se rechaza: diría una cosa y mostraría otra.\n\n" +
+      "Si una sesión sirvió **varios** tickets, se registra con `manual:` y sin " +
+      "números, diciendo en las notas cuáles y dónde quedó su costo completo: repartir " +
+      "a ojo sería un número inventado con forma de medición.",
+    inputSchema: conRoot({
+      properties: {
+        id: { type: "string", description: "Identificador del ticket." },
+        source: {
+          type: "string",
+          description:
+            "`<origen>:<referencia>` — por ejemplo " +
+            "`opencode:/Users/quien/.local/share/opencode/opencode.db`.",
+        },
+        confidence: {
+          type: "string",
+          enum: ["high", "medium", "low"],
+          description:
+            "`high` cuando el número sale de la contabilidad de la herramienta —es un " +
+            "registro—, `medium` cuando es una estimación. Un dato de sesión no es " +
+            "`low`: si no hay número, se deja fuera y se explica en las notas.",
+        },
+        session_reference: {
+          type: "string",
+          description: "El identificador de la sesión, tal como lo nombra su herramienta.",
+        },
+        model: { type: "string", description: "`<proveedor>/<modelo>`." },
+        input_tokens: { type: "number", description: "Tokens de entrada." },
+        output_tokens: { type: "number", description: "Tokens de salida." },
+        total_tokens: {
+          type: "number",
+          description: "Entrada + salida + razonamiento.",
+        },
+        estimated_cost_usd: {
+          type: "number",
+          description:
+            "El costo en dólares. Se omite —no se pone cero— cuando el proveedor es " +
+            "por suscripción: un cero se leería como «gratis».",
+        },
+        notes: {
+          type: "string",
+          description:
+            "De qué agente es la sesión, cuántas intervenciones hizo y cualquier cosa " +
+            "que haga falta para leer el número dentro de seis meses.",
+        },
+      },
+      required: ["id", "source", "confidence"],
     }),
   },
   {
@@ -2205,9 +2268,18 @@ export async function callTool(
       }
 
       case "preparar_cierre": {
+        const id = texto(args, "id") as string;
+        // El consumo se guarda antes de preparar el cierre: el motor no prepara
+        // un cierre sin él, y el guardado de la transición a `closed` llegaría
+        // tarde. Es idempotente, así que no duplica lo ya registrado.
+        const consumo = guardarConsumoDeSesiones(
+          paths,
+          id,
+          contexto.now ? { now: contexto.now } : {},
+        );
         const salida = closeAttempt({
           paths,
-          ticketId: texto(args, "id") as string,
+          ticketId: id,
           technicalSummary: texto(args, "resumen_tecnico") as string,
           functionalSummary: texto(args, "resumen_funcional") as string,
           qaStatus: texto(args, "qa") as string,
@@ -2218,13 +2290,41 @@ export async function callTool(
         });
         return bien(
           `${salida}\nEl cierre queda preparado. \`mover_ticket\` a \`closed\` lo aplica, ` +
-            "y el motor va a exigir que sea coherente con QA.",
+            "y el motor va a exigir que sea coherente con QA." +
+            (consumo === null ? "" : `\nConsumo guardado en el ticket: ${consumo}`),
         );
       }
 
       case "validar_ticket": {
         const id = texto(args, "id", false);
         return delCli(id === undefined ? validateAll(paths) : validateOne(paths, id));
+      }
+
+      case "registrar_consumo_ia": {
+        // Los números llegan como número y el motor los quiere como texto decimal
+        // sin notación exponencial: la conversión vive acá, en la puerta, para no
+        // obligar al agente a escribir `1e3`, que el contrato rechaza.
+        const numero = (nombre: string): string | undefined => {
+          const valor = args[nombre];
+          if (typeof valor !== "number" || !Number.isFinite(valor)) return undefined;
+          return String(valor);
+        };
+        const salida = addAiUsage({
+          paths,
+          ticketId: texto(args, "id") as string,
+          source: texto(args, "source") as string,
+          confidence: texto(args, "confidence") as string,
+          sessionReference: texto(args, "session_reference", false),
+          model: texto(args, "model", false),
+          reasoningEffort: texto(args, "reasoning_effort", false),
+          inputTokens: numero("input_tokens"),
+          outputTokens: numero("output_tokens"),
+          totalTokens: numero("total_tokens"),
+          estimatedCostUsd: numero("estimated_cost_usd"),
+          notes: texto(args, "notes", false),
+          now: contexto.now,
+        });
+        return bien(salida);
       }
 
       case "reanudar_ticket": {

@@ -367,6 +367,27 @@ describe("la skill que se le instala a Hermes", () => {
     expect(skill).toContain("No escribas la confirmación de nadie");
   });
 
+  it("pide una sesión por ticket y el consumo al cerrar", () => {
+    // Sin esto, una conversación que atendió cinco tickets deja un solo costo y
+    // el registro no tiene de dónde repartirlo: el consumo por ticket se vuelve
+    // una estimación, que es exactamente lo que el registro no admite.
+    const skill = hermesSkill();
+    expect(skill).toContain("Un ticket, una sesión");
+    expect(skill).toContain("/new <ID-DEL-TICKET>");
+    expect(skill).toContain("el cierre se rechaza sin consumo");
+    // Y la salida honesta cuando la sesión ya es compartida: declararlo, no
+    // inventar un reparto.
+    expect(skill).toContain("sin\nnúmeros");
+  });
+
+  it("obliga a nombrar lo que escribió el verificador", () => {
+    // En un flujo de dos agentes —uno implementa, otro verifica— el commit
+    // atribuye al ejecutor lo que escribió el verificador salvo que alguien lo
+    // diga.
+    const skill = hermesSkill();
+    expect(skill).toContain("Lo que escribas vos, nombralo");
+  });
+
   it("no nombra identificadores prefixados de herramientas", () => {
     // Las dos páginas de Hermes escriben el prefijo distinto —`mcp_` contra
     // `mcp__`— y una instrucción con el nombre equivocado es una instrucción que

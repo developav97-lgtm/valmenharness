@@ -324,6 +324,17 @@ export function addAiUsage(request: AddAiUsageRequest): string {
   const totalTokens = enteroOpcional(request.totalTokens, "total-tokens");
   const estimatedCostUsd = costoOpcional(request.estimatedCostUsd);
 
+  // La fuente se comprueba al escribir y no solo al cerrar: un `hermes:` que
+  // apunta a la base de OpenCode se corrige en el momento, y no cuando el ticket
+  // ya no puede cerrarse. Va **después** de las comprobaciones de la referencia
+  // —confianza, enteros, decimal— para que un caso que la referencia rechaza se
+  // siga rechazando con su mismo motivo: esta regla es un agregado, no un cambio
+  // de las que ya estaban.
+  const problema = problemaDeFuente(source);
+  if (problema !== null) {
+    fail(`source: ${problema}`);
+  }
+
   return conTicket(request.paths, request.ticketId, request.now, (contexto) => {
     const consumo = (contexto.document.blocks["Consumo de IA"] ?? []).map((entrada) => ({
       ...entrada,
@@ -578,6 +589,51 @@ export function addRetest(request: AddRetestRequest): string {
 
 // ── close-attempt ───────────────────────────────────────────────────────────
 
+/**
+ * Los orígenes que el registro admite en `source`, y qué referencia espera cada
+ * uno.
+ *
+ * El prefijo dice de dónde salieron los números, y la referencia tiene que
+ * permitir llegar ahí: un `hermes:` que apunta a la base de OpenCode dice una
+ * cosa y muestra otra, y el costo deja de ser verificable. No se admite un
+ * prefijo desconocido —eso es como pasa un `opencodes:` mal escrito, que se lee
+ * bien y no verifica nada—; `manual` es el caso declarado de una sesión que no
+ * expone agregado, y `process` el de una corrida del propio harness, que reporta
+ * su gasto sin base de sesión de por medio. En los dos, el motivo va en `notes`.
+ */
+const FUENTES_DE_CONSUMO: Readonly<Record<string, string | null>> = {
+  opencode: "espera la ruta de su base (`…/opencode/opencode.db`)",
+  hermes:
+    "espera la ruta de la base de Hermes (`~/.hermes/state.db` o `~/.hermes/profiles/<perfil>/state.db`)",
+  codex: null,
+  manual: null,
+  process: null,
+};
+
+/** Qué le falta a una fuente, o `null` si está bien formada. */
+function problemaDeFuente(fuente: string): string | null {
+  const corte = fuente.indexOf(":");
+  const prefijo = corte === -1 ? "" : fuente.slice(0, corte);
+  const referencia = corte === -1 ? "" : fuente.slice(corte + 1).trim();
+
+  const lista = Object.keys(FUENTES_DE_CONSUMO).join(", ");
+  if (corte === -1 || !(prefijo in FUENTES_DE_CONSUMO)) {
+    return `tiene que empezar con uno de los orígenes conocidos —${lista}— seguido de dos puntos y la referencia de la sesión.`;
+  }
+  if (referencia === "") {
+    return `\`${prefijo}:\` necesita una referencia: la ruta de la base o el identificador de la sesión.`;
+  }
+
+  const espera = FUENTES_DE_CONSUMO[prefijo] ?? null;
+  if (prefijo === "opencode" && !referencia.includes("opencode")) {
+    return `\`opencode:\` ${espera}, y esta apunta a otra cosa: \`${referencia}\`.`;
+  }
+  if (prefijo === "hermes" && !referencia.includes(".hermes")) {
+    return `\`hermes:\` ${espera}, y esta apunta a otra cosa: \`${referencia}\`.`;
+  }
+  return null;
+}
+
 export interface CloseAttemptRequest {
   readonly paths: RegistryPaths;
   readonly ticketId: string;
@@ -629,6 +685,34 @@ export function closeAttempt(request: CloseAttemptRequest): string {
       }
       if (qa.length % 2 !== 0) {
         fail("No se puede eximir QA mientras exista un ciclo abierto.", EXIT_INVARIANT);
+      }
+    }
+
+    // El consumo de IA se declara obligatorio en las reglas del proyecto, y una
+    // regla que nadie comprueba es una recomendación. Acá se comprueba: sin
+    // entradas no hay cierre, y cada entrada tiene que decir de dónde salieron
+    // sus números —una fuente que no se puede verificar convierte el costo en
+    // una afirmación, y el registro no afirma lo que no puede mostrar—.
+    const consumo = contexto.document.blocks["Consumo de IA"] ?? [];
+    if (consumo.length === 0) {
+      fail(
+        "El cierre exige el consumo de IA. Registralo con " +
+          "`valmen add-ai-usage --id " +
+          contexto.document.fields.id +
+          ' --source "<opencode|hermes|codex|manual>:<referencia>" --confidence high …` ' +
+          "antes de preparar el cierre.",
+        EXIT_INVARIANT,
+      );
+    }
+    for (const entrada of consumo) {
+      const fuente = entrada["source"];
+      const id = typeof entrada["id"] === "string" ? entrada["id"] : "CONSUMO";
+      if (typeof fuente !== "string") {
+        fail(`${id}.source tiene que decir de dónde salieron los números.`, EXIT_INVARIANT);
+      }
+      const problema = problemaDeFuente(fuente);
+      if (problema !== null) {
+        fail(`${id}.source: ${problema}`, EXIT_INVARIANT);
       }
     }
 

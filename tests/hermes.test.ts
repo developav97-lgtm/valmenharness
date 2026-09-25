@@ -23,7 +23,12 @@ import { createRequire } from "node:module";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { leerSesionesDeHermes, ticketsDeTexto } from "../packages/server/src/hermes.js";
+import {
+  HERRAMIENTAS_DE_LECTURA,
+  HERRAMIENTAS_QUE_ESCRIBEN,
+  leerSesionesDeHermes,
+  ticketsDeTexto,
+} from "../packages/server/src/hermes.js";
 
 const requerir = createRequire(import.meta.url);
 
@@ -200,6 +205,132 @@ describe.skipIf(sqlite === null)("las sesiones de Hermes", () => {
       ticketId: "FEATURE-AUDITORIA-DOCUMENTO-20260924",
     });
     expect(suyas.map((s) => s.id)).toEqual(["20260924_130000_dddddd"]);
+  });
+
+  it("una sesión que trabajó dos tickets no se atribuye a uno solo", () => {
+    // El caso real: una sesión de Slack de dos horas y media movió dos tickets y
+    // su costo entero quedó registrado en el que más nombró. Una sesión así tiene
+    // un solo gasto y ningún modo de repartirlo, y decirlo es la única respuesta
+    // honesta.
+    const db = crearBase(base);
+    sesion(db, "20260924_180000_jjjjjj", { coste: 0.0755 });
+    for (const [id, ticket] of [
+      ["m1", "FEATURE-AUDITORIA-DOCUMENTO-20260924"],
+      ["m2", "FEATURE-CREACION-MANUAL-CORE-20260924"],
+    ] as const) {
+      mensaje(
+        db,
+        id,
+        "20260924_180000_jjjjjj",
+        `[{"function":{"name":"mcp__valmen__mover_ticket","arguments":"{\\"id\\":\\"${ticket}\\"}"}}]`,
+      );
+    }
+    db.close();
+
+    const sesionLeida = leerSesionesDeHermes("/proyectos/tienda", { home: lab })[0];
+    expect(sesionLeida?.compartida).toBe(true);
+    expect(sesionLeida?.ticket).toBeNull();
+    // Y se puede decir entre cuáles, que es lo que permite ir a buscar el costo.
+    expect(sesionLeida?.tickets.map((t) => t.id).sort()).toEqual([
+      "FEATURE-AUDITORIA-DOCUMENTO-20260924",
+      "FEATURE-CREACION-MANUAL-CORE-20260924",
+    ]);
+    expect(sesionLeida?.tickets.every((t) => t.trabajado)).toBe(true);
+  });
+
+  it("una sesión compartida entra en la vista de cada ticket que trabajó", () => {
+    // Esconderla dejaría la vista diciendo que nadie de Hermes la tocó; contarla
+    // sin marca le adjudicaría a este ticket el gasto del otro. Entra marcada.
+    const db = crearBase(base);
+    sesion(db, "20260924_190000_kkkkkk");
+    for (const [id, ticket] of [
+      ["m1", "FEATURE-UNO-20260924"],
+      ["m2", "FEATURE-DOS-20260924"],
+    ] as const) {
+      mensaje(
+        db,
+        id,
+        "20260924_190000_kkkkkk",
+        `[{"function":{"name":"valmen_anotar_evidencia","arguments":"{\\"id\\":\\"${ticket}\\"}"}}]`,
+      );
+    }
+    db.close();
+
+    for (const ticketId of ["FEATURE-UNO-20260924", "FEATURE-DOS-20260924"]) {
+      const suyas = leerSesionesDeHermes("/proyectos/tienda", { home: lab, ticketId });
+      expect(
+        suyas.map((s) => s.id),
+        ticketId,
+      ).toEqual(["20260924_190000_kkkkkk"]);
+    }
+  });
+
+  it("consultar un ticket no lo convierte en trabajo de la sesión", () => {
+    // Sin esta distinción, la vista de un ticket se llena con las sesiones que
+    // alguna vez lo nombraron, y el costo de un ticket pasa a incluir el de todo
+    // lo que se miró desde ahí.
+    const db = crearBase(base);
+    sesion(db, "20260924_200000_llllll");
+    // Trabajó UNO: lo movió. Y de paso consultó DOS.
+    mensaje(
+      db,
+      "m1",
+      "20260924_200000_llllll",
+      '[{"function":{"name":"mcp__valmen__mover_ticket","arguments":"{\\"id\\":\\"FEATURE-UNO-20260924\\"}"}}]',
+    );
+    mensaje(
+      db,
+      "m2",
+      "20260924_200000_llllll",
+      '[{"function":{"name":"mcp__valmen__ver_ticket","arguments":"{\\"id\\":\\"FEATURE-DOS-20260924\\"}"}}]',
+    );
+    mensaje(
+      db,
+      "m3",
+      "20260924_200000_llllll",
+      '[{"function":{"name":"mcp__valmen__listar_tickets","arguments":"{\\"modulo\\":\\"FEATURE-DOS-20260924\\"}"}}]',
+    );
+    db.close();
+
+    // La vista de DOS no la incluye: consultarlo no fue trabajar en él, aunque lo
+    // nombre más veces que al ticket que sí movió.
+    expect(
+      leerSesionesDeHermes("/proyectos/tienda", {
+        home: lab,
+        ticketId: "FEATURE-DOS-20260924",
+      }),
+    ).toEqual([]);
+    expect(
+      leerSesionesDeHermes("/proyectos/tienda", {
+        home: lab,
+        ticketId: "FEATURE-UNO-20260924",
+      }).map((s) => s.id),
+    ).toEqual(["20260924_200000_llllll"]);
+
+    const sesionLeida = leerSesionesDeHermes("/proyectos/tienda", { home: lab })[0];
+    expect(sesionLeida?.compartida).toBe(false);
+    expect(sesionLeida?.ticket).toBe("FEATURE-UNO-20260924");
+    expect(
+      sesionLeida?.tickets.find((t) => t.id === "FEATURE-DOS-20260924")?.trabajado,
+    ).toBe(false);
+  });
+
+  it("la lista de herramientas de lectura coincide con el catálogo MCP", async () => {
+    // La distinción entre trabajar y consultar se apoya en esta lista, y una
+    // herramienta de lectura nueva que no se agregue acá haría que consultarla
+    // cuente como trabajo. El catálogo ya declara cuáles son: `readOnlyHint`.
+    const { TOOLS } = await import("../packages/mcp/src/tools.js");
+    const leenEnElCatalogo = TOOLS.filter((t) => t.annotations.readOnlyHint)
+      .map((t) => t.name)
+      .sort();
+    expect([...HERRAMIENTAS_DE_LECTURA].sort()).toEqual(leenEnElCatalogo);
+
+    // Y las que escriben son exactamente el resto: una herramienta nueva tiene que
+    // caer de un lado o del otro, no quedar sin clasificar.
+    const escribenEnElCatalogo = TOOLS.filter((t) => !t.annotations.readOnlyHint)
+      .map((t) => t.name)
+      .sort();
+    expect([...HERRAMIENTAS_QUE_ESCRIBEN].sort()).toEqual(escribenEnElCatalogo);
   });
 
   it("no lee sesiones de otro proyecto", () => {

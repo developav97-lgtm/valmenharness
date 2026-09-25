@@ -128,6 +128,22 @@ export interface SesionDeAgente {
    */
   readonly intervenciones: number;
   readonly fallidas: number;
+  /**
+   * La base de la que salió esta sesión, cuando no es la de opencode.
+   *
+   * Se arrastra para poder escribir el `source` del consumo con la base que
+   * corresponde: `hermes:<la de Hermes>`, no `hermes:<la de opencode>`, que dice
+   * una cosa y muestra otra.
+   */
+  readonly fuente?: string;
+  /**
+   * Los tickets que sirvió la sesión, cuando sirvió a más de uno.
+   *
+   * Su costo no es de este ticket y por eso no se suma: la sesión de Slack de dos
+   * horas y media que atendió cinco tickets tiene un solo gasto, y adjudicárselo
+   * al más mencionado es un número inventado con forma de medición.
+   */
+  readonly reparto?: readonly { readonly id: string; readonly peso: number }[];
 }
 
 /** El desglose que responde «en qué se fue el dinero». */
@@ -149,6 +165,15 @@ export interface LineaDeTiempo {
   readonly totalCostUsd: number;
   /** Sesiones cuyo coste no existe —suscripción—, para poder decirlo. */
   readonly sesionesSinCoste: number;
+  /**
+   * Sesiones que sirvieron a varios tickets.
+   *
+   * Aparecen en la vista, marcadas, y **no** entran en los totales: su costo es
+   * de todos los tickets que atendieron, no del que se está mirando.
+   */
+  readonly sesionesCompartidas: number;
+  /** Lo que costaron las compartidas, para poder decir cuánto queda fuera. */
+  readonly costeCompartidoUsd: number;
   readonly totalTokens: {
     readonly input: number;
     readonly output: number;
@@ -331,6 +356,8 @@ function lineaSoloDeCodex(
     intervenciones: [],
     totalCostUsd: 0,
     sesionesSinCoste: sesiones.length,
+    sesionesCompartidas: 0,
+    costeCompartidoUsd: 0,
     totalTokens: {
       input: sesiones.reduce((suma, s) => suma + s.inputTokens, 0),
       output: sesiones.reduce((suma, s) => suma + s.outputTokens, 0),
@@ -372,14 +399,22 @@ function lineaSoloDeHermes(
     startedAt: sesion.startedAt,
     intervenciones: sesion.toolCalls,
     fallidas: 0,
+    fuente: sesion.dbPath,
+    ...(sesion.compartida ? { reparto: sesion.tickets } : {}),
   }));
 
   return {
     source: `hermes:${directory}`,
     sessions: convertidas,
     intervenciones: [],
-    totalCostUsd: convertidas.reduce((suma, s) => suma + (s.costUsd ?? 0), 0),
+    totalCostUsd: convertidas
+      .filter((s) => s.reparto === undefined)
+      .reduce((suma, s) => suma + (s.costUsd ?? 0), 0),
     sesionesSinCoste: convertidas.filter((s) => s.costUsd === null).length,
+    sesionesCompartidas: convertidas.filter((s) => s.reparto !== undefined).length,
+    costeCompartidoUsd: convertidas
+      .filter((s) => s.reparto !== undefined)
+      .reduce((suma, s) => suma + (s.costUsd ?? 0), 0),
     totalTokens: {
       input: sesiones.reduce((suma, s) => suma + s.inputTokens, 0),
       output: sesiones.reduce((suma, s) => suma + s.outputTokens, 0),
@@ -619,6 +654,8 @@ function consultar(
       startedAt: sesion.startedAt,
       intervenciones: sesion.toolCalls,
       fallidas: 0,
+      fuente: sesion.dbPath,
+      ...(sesion.compartida ? { reparto: sesion.tickets } : {}),
     });
   }
 
@@ -640,15 +677,27 @@ function consultar(
     }
   }
 
-  const conCoste = [...sesiones.values()].filter((s) => s.costUsd !== null);
+  // Las compartidas quedan fuera de los totales: su gasto es de todos los
+  // tickets que atendieron, y sumarlo acá diría que este ticket costó lo que
+  // costaron los cinco. Se cuentan aparte para poder decirlo en pantalla.
+  const compartidas = [...sesiones.values()].filter((s) => s.reparto !== undefined);
+  const costeCompartidoUsd = compartidas.reduce((suma, s) => suma + (s.costUsd ?? 0), 0);
+
+  const conCoste = [...sesiones.values()].filter(
+    (s) => s.costUsd !== null && s.reparto === undefined,
+  );
   const totalCostUsd = conCoste.reduce((suma, s) => suma + (s.costUsd ?? 0), 0);
   const suma = (elegir: (s: SesionDeAgente) => number): number =>
-    [...sesiones.values()].reduce((total, s) => total + elegir(s), 0);
+    [...sesiones.values()]
+      .filter((s) => s.reparto === undefined)
+      .reduce((total, s) => total + elegir(s), 0);
 
   return {
     source: dbPath,
     sessions: [...sesiones.values()].sort((a, b) => a.startedAt - b.startedAt),
     sesionesSinCoste: [...sesiones.values()].length - conCoste.length,
+    sesionesCompartidas: compartidas.length,
+    costeCompartidoUsd,
     intervenciones: intervenciones.sort((a, b) => a.at - b.at),
     totalCostUsd,
     totalTokens: {
@@ -706,38 +755,73 @@ export function guardarFotoEnTicket(
 
   const entradas: string[] = [];
   for (const sesion of pendientes) {
+    // La base es la de la sesión, no la de la vista: un `hermes:` que apunta a
+    // `opencode.db` dice una cosa y muestra otra, y deja el costo sin verificar.
+    const base = sesion.source === "codex" ? sesion.id : (sesion.fuente ?? linea.source);
+    const reparto = sesion.reparto;
     entradas.push(
       addAiUsage({
         paths,
         ticketId,
-        source: `${sesion.source}:${sesion.source === "codex" ? sesion.id : linea.source}`,
+        source: `${sesion.source}:${base}`,
         confidence: "high",
         sessionReference: sesion.id,
-        model: sesion.provider === "" ? sesion.model : `${sesion.provider}/${sesion.model}`,
-        inputTokens: String(sesion.inputTokens),
-        outputTokens: String(sesion.outputTokens),
-        totalTokens: String(
-          sesion.inputTokens + sesion.outputTokens + sesion.reasoningTokens,
-        ),
-        // Un proveedor por suscripción no tiene coste por token: el campo se deja
-        // fuera y la nota lo dice, en vez de escribir un cero que se leería como
-        // «gratis».
-        ...(sesion.costUsd === null ? {} : { estimatedCostUsd: sesion.costUsd.toFixed(6) }),
-        notes:
-          `Agente ${sesion.agent || "(sin declarar)"}. ` +
-          `${sesion.intervenciones} intervención(es) sobre el registro, ` +
-          `${sesion.fallidas} con fallo. ` +
-          `Razonamiento ${sesion.reasoningTokens} tokens, ` +
-          `caché leída ${sesion.cacheReadTokens} tokens. ` +
-          `Sesión "${sesion.title}".` +
-          (sesion.costUsd === null
-            ? " Proveedor por suscripción: no hay coste por token, se registran los tokens."
-            : ""),
+        // Una sesión compartida se declara **sin números**. Su costo es de todos
+        // los tickets que atendió y repartirlo a ojo sería un número inventado
+        // con forma de medición: el hueco declarado se ve, el reparto inventado
+        // no. Los números quedan en la entrada de la sesión que sí es de un
+        // ticket, o en la nota de esta.
+        ...(reparto === undefined
+          ? {
+              model:
+                sesion.provider === ""
+                  ? sesion.model
+                  : `${sesion.provider}/${sesion.model}`,
+              inputTokens: String(sesion.inputTokens),
+              outputTokens: String(sesion.outputTokens),
+              totalTokens: String(
+                sesion.inputTokens + sesion.outputTokens + sesion.reasoningTokens,
+              ),
+              // Un proveedor por suscripción no tiene coste por token: el campo se
+              // deja fuera y la nota lo dice, en vez de escribir un cero que se
+              // leería como «gratis».
+              ...(sesion.costUsd === null
+                ? {}
+                : { estimatedCostUsd: sesion.costUsd.toFixed(6) }),
+              notes:
+                `Agente ${sesion.agent || "(sin declarar)"}. ` +
+                `${sesion.intervenciones} intervención(es) sobre el registro, ` +
+                `${sesion.fallidas} con fallo. ` +
+                `Razonamiento ${sesion.reasoningTokens} tokens, ` +
+                `caché leída ${sesion.cacheReadTokens} tokens. ` +
+                `Sesión "${sesion.title}".` +
+                (sesion.costUsd === null
+                  ? " Proveedor por suscripción: no hay coste por token, se registran los tokens."
+                  : ""),
+            }
+          : {
+              notes:
+                `Agente ${sesion.agent || "(sin declarar)"}. Sesión **compartida**: ` +
+                `trabajó ${reparto.length} tickets ` +
+                `(${reparto
+                  .slice(0, 5)
+                  .map((t) => `${t.id} ×${t.peso}`)
+                  .join(", ")}), así que su costo no se reparte y acá no se ` +
+                `registran números. ` +
+                `Costo completo de la sesión: ` +
+                (sesion.costUsd === null
+                  ? "no declarado por el proveedor"
+                  : `$${sesion.costUsd.toFixed(6)}`) +
+                `, ${sesion.inputTokens + sesion.outputTokens + sesion.reasoningTokens} tokens. ` +
+                `Registralo en el ticket cuya sesión sea propia, o declaralo compartido donde ` +
+                `corresponda. Sesión "${sesion.title}".`,
+            }),
         ...(options.now === undefined ? {} : { now: options.now }),
       }),
     );
   }
 
+  const compartidas = pendientes.filter((s) => s.reparto !== undefined).length;
   return {
     entradas,
     detalle:
@@ -745,6 +829,10 @@ export function guardarFotoEnTicket(
       `Total $${linea.totalCostUsd.toFixed(6)}: ` +
       `harness $${linea.desglose.harnessUsd.toFixed(6)}, ` +
       `exploración $${linea.desglose.exploracionUsd.toFixed(6)}.` +
+      (compartidas === 0
+        ? ""
+        : ` ${compartidas} compartida(s) entre varios tickets: se registran sin números, ` +
+          `porque su costo no es de este ticket.`) +
       (yaEstaban.size === 0
         ? ""
         : ` ${yaEstaban.size} ya estaban registradas y no se repitieron.`),

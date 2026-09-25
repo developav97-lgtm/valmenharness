@@ -782,6 +782,7 @@ listaba y salieron del uso real:
 | Detector de drift: lo que un ticket cita y el código no confirma (A2) | **Hecho** (`valmen drift`, `revisar_drift`); falta la mitad semántica spec ↔ ticket |
 | Valor por ticket: qué costó cada cierre y qué dejó (B5) | **Hecho** (`valmen usage value`, `reporte_valor`) |
 | El recorrido de una feature: skill, `materialize`, tablero, procedencia del ticket | **Hecho**, con el primer feature real corriendo de punta a punta |
+| El consumo como dato verificable: sin él no hay cierre, y la fuente tiene que apuntar a la base que nombra | **Hecho**. Salió del registro real: un ticket cerrado cuyo cierre decía que una sesión de Hermes había trabajado en él mientras el costo de esa sesión estaba entero en otro ticket, y una entrada con `hermes:` apuntando a la base de OpenCode. Ahora el cierre se rechaza sin consumo y con un prefijo incoherente; una sesión que trabajó varios tickets se marca **compartida** y no se le atribuye el gasto a uno; y `registrar_consumo_ia` permite cumplirlo desde el celular, que antes solo se podía por el CLI |
 
 ## 4. Cronograma y esfuerzo
 

@@ -589,7 +589,8 @@ con alguien copiando un comando.
 | `iniciar_qa` | Abre el ciclo con su ambiente y su referencia de build | `qaStart` |
 | `anotar_retest` | El resultado de retestar un punto | `addRetest` |
 | `cerrar_qa` | Cierra el ciclo: hallazgos, o la aprobación con la frase del PO | `qaClose` |
-| `preparar_cierre` | Los dos resúmenes y el impacto de release | `closeAttempt` |
+| `registrar_consumo_ia` | Lo que costó una sesión: tokens, coste y de dónde salieron | `addAiUsage` |
+| `preparar_cierre` | Los dos resúmenes y el impacto de release, con el consumo ya registrado | `closeAttempt` |
 
 **Nada escribe en stdout salvo el protocolo, y eso incluye a las funciones del CLI
 que se reutilizan.** `runProcessCommand` imprimía el avance de cada paso directo a
