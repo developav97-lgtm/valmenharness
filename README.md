@@ -2,10 +2,49 @@
 
 **Harness agéntico empresarial.** Motor determinista de estado, especificaciones y gates
 configurables que se instala **dentro** del agente de código que ya usas —Claude Code, Codex,
-opencode, Cursor— sin reemplazarlo.
+opencode, Cursor, DSH— sin reemplazarlo.
 
 > **Estado: en construcción.** El MVP está en desarrollo activo. Lo que funciona hoy está
 > listado abajo con su evidencia; lo que no, también.
+
+## Empezá por acá
+
+| Si querés… | Andá a |
+|---|---|
+| **Usarlo en tu proyecto**, con Claude Code | [`docs/15-PUESTA-EN-MARCHA.md`](docs/15-PUESTA-EN-MARCHA.md) — veinte minutos, incluido el texto que se le pega al agente |
+| **Que lo instale tu agente** | El [texto para pegarle](docs/15-PUESTA-EN-MARCHA.md#para-el-agente-el-texto-que-se-le-pega) al final de esa guía |
+| **Entender por qué existe** | [`docs/00-VISION.md`](docs/00-VISION.md) y [`docs/13-RECORRIDO-COMPLETO.md`](docs/13-RECORRIDO-COMPLETO.md): un ticket de principio a fin |
+| **Tocarlo** | `git clone && npm install && npm test` — 1.348 pruebas contra 57 tickets reales, sin red ni claves |
+
+El camino corto, si ya tenés Node 22 y un agente:
+
+```bash
+git clone https://github.com/developav97-lgtm/valmenharness.git ~/valmenharness
+cd ~/valmenharness && npm install && npm run build
+ln -sf ~/valmenharness/packages/cli/dist/main.js ~/.local/bin/valmen
+
+cd ~/tu-proyecto
+valmen adopt && valmen sync && valmen doctor   # el doctor dice qué falta, con el comando
+valmen routing set --preset suscripcion        # Claude Code para los cuatro roles
+valmen mcp --install                           # el harness al alcance de tu agente
+```
+
+**Claude como proveedor, sin pegar ninguna clave.** Si ya usás Claude Code, el harness lee el
+token de su sesión —en macOS del llavero, en Linux de `~/.claude/.credentials.json`— y no lo
+reescribe nunca: el `refresh_token` es de su CLI, y dos clientes renovando a la vez rompen la
+sesión. Con una clave de API, en cambio: `valmen provider set anthropic --key sk-ant-…`, que
+**prueba antes de guardar** y no escribe nada si la clave no sirve.
+
+| Proveedor | Cómo se autentica | Para quién |
+|---|---|---|
+| `claude-code` | suscripción, leída de su CLI | quien ya paga Claude Code |
+| `anthropic` | clave de API | quien factura por token |
+| `codex` | suscripción, leída de su CLI | quien ya paga ChatGPT |
+| `openrouter`, `deepseek`, `moonshot`, `qwen`, `zhipu`, `opencode-go`, `opencode-zen`, `ollama` | clave de API, o local | el resto |
+
+Y los modelos se eligen **por rol**, no en un archivo suelto: `valmen routing show` dice de
+dónde sale el modelo de cada uno, y `valmen routing set` lo cambia —el mismo archivo que
+edita la pantalla, así que las dos puertas no pueden divergir—.
 
 ## El problema
 
@@ -124,11 +163,14 @@ docs/            Diseño completo: visión, arquitectura, motor, gates, roadmap
 
 ```bash
 valmen adopt            # perfila el proyecto y crea .valmen/
-valmen migrate          # lleva el registro al esquema vigente
 valmen sync             # proyecta .valmen/ a AGENTS.md
-valmen validate --all   # valida el registro
+valmen doctor           # qué falta, con el comando exacto que lo arregla
+valmen provider set <id> --key <clave>   # prueba la clave y la guarda solo si sirve
+valmen routing show     # qué modelo ejecuta cada rol, y de dónde sale
+valmen validate --all   # valida el registro contra el contrato
 valmen index --check    # detecta un índice desactualizado (para CI)
 valmen gate plan --id BUGFIX-POS-ALGO-20260921    # evalúa el plan y emite recibo
+valmen migrate          # lleva el registro al esquema vigente
 valmen serve                                       # Mission Control en 127.0.0.1
 valmen mcp --install                               # el harness, al alcance del agente
 valmen hermes connect                              # y el aviso de compuertas al celular
@@ -138,13 +180,13 @@ valmen hermes brief                                # lo que espera, lo que se de
 ### Desde el agente, sin terminal
 
 ```bash
-valmen mcp --install   # declara el servidor en opencode.json y en .mcp.json
+valmen mcp --install   # declara el servidor en opencode.json y en .mcp.json de Claude Code
 valmen mcp --global    # y en el config.toml de codex; `valmen mcp` imprime el de DSH
 ```
 
 A partir de ahí, el flujo no empieza en una consola: se le describe un problema al
 agente y el agente crea el ticket, escribe el diagnóstico, valida contra el
-contrato, evalúa la compuerta y mueve el estado. Treinta y seis herramientas, y
+contrato, evalúa la compuerta y mueve el estado. Treinta y siete herramientas, y
 todas llaman al mismo motor que el CLI —dos implementaciones podrían dar dos
 veredictos sobre el mismo ticket, que es justo lo que el harness existe para
 impedir.
@@ -195,6 +237,23 @@ Y no hay herramienta MCP para aprobar, por la misma razón que no la hay para na
 si la aprobación viajara como herramienta, el harness no podría distinguir una decisión
 humana de una aserción del agente, y una inyección de prompt en el cuerpo de un ticket
 bastaría para aprobar.
+
+### Proveedores y modelos
+
+El harness habla **cuatro dialectos** de proveedor, y el catálogo decide cuál le toca a cada
+modelo —no el usuario, que no tiene por qué saber que un `gpt-*` de codex va por `/responses`
+y el mismo `gpt-*` de un pasarela va por `/chat/completions`—:
+
+| Dialecto | Quién lo habla | Salida estructurada |
+|---|---|---|
+| `openai-chat` | GLM, Kimi, DeepSeek, casi todos | `json_schema` |
+| `openai-responses` | los `gpt-*` de codex y de Zen | texto en streaming |
+| `anthropic-messages` | **Claude**: su API, la suscripción de Claude Code y los `claude-*` de Zen | herramienta forzada |
+| `opencode-models` | el catálogo de opencode | — |
+
+Un modelo cuyo dialecto no esté implementado **falla antes de gastar la llamada**, con un
+mensaje que lo dice: mandar la petición a la ruta equivocada devolvería un error del proveedor
+que habla de otra cosa.
 
 ### Mission Control
 

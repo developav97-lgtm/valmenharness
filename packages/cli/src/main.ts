@@ -39,6 +39,7 @@ import {
   validateOne,
 } from "./commands.js";
 import { runFeature } from "./features.js";
+import { doctorCommand, providerCommand, routingCommand } from "./setup.js";
 import {
   runHermes,
   hermesNotify,
@@ -229,6 +230,24 @@ Comandos:
                             pasos ya ejecutados no se repiten.
       --skip-gates          Saltea los gates que sigan sin aprobar.
   process abandon <corrida> Deja de poder retomarla. No deshace lo ya ejecutado.
+  provider [list|set|test|models]
+                            Los proveedores y sus credenciales. "list" dice cuáles
+                            hay y cuáles están configurados; "set <id> --key <k>"
+                            prueba la clave contra el proveedor y la guarda solo si
+                            sirve; "test <id> [--model <m>]" comprueba la credencial
+                            o un modelo concreto; "models <id>" lista su catálogo.
+                            Los proveedores de suscripción —Claude Code, codex— no se
+                            pegan a mano: se leen del CLI que ya los autenticó.
+  routing [show|set|clear]
+                            Qué modelo ejecuta cada rol. "show" dice de dónde sale
+                            cada uno; "set --preset <p>" cambia el conjunto entero;
+                            "set <rol> --provider <p> --model <m> [--effort <e>]"
+                            cambia uno; "clear <rol>" lo devuelve al preset. Escribe
+                            .valmen/routing.yaml, el mismo archivo que la pantalla.
+  doctor                    Qué le falta a esta máquina y a este proyecto, con el
+                            comando exacto que lo arregla. No escribe nada: es lo
+                            primero que corre un agente al que le piden configurar
+                            el proyecto. Sale con 2 si falta algo.
   mcp                       El servidor MCP del harness, y cómo declararlo en cada
                             agente. Sin --install muestra el fragmento exacto.
       --install             Escribe las entradas del proyecto (opencode.json,
@@ -391,6 +410,13 @@ export const VALUE_OPTIONS = [
   "--code",
   // `hermes brief --dias N`: cuántos días hacia atrás se cuentan los cierres.
   "--dias",
+  // `provider` y `routing`: la puesta en marcha sin pasar por la pantalla. Es lo
+  // que permite que un agente configure el proyecto —un equipo que trabaja dentro
+  // de Claude Code le pide a Claude que lo instale, y Claude no puede pulsar un
+  // botón—.
+  "--key",
+  "--preset",
+  "--effort",
 ] as const;
 
 /**
@@ -1374,6 +1400,17 @@ export async function run(argv: readonly string[]): Promise<number> {
           result = { stdout: "", stderr: "", exitCode: 0 };
         }
       }
+    } else if (command === "provider") {
+      result = await providerCommand(
+        resolvePaths(options),
+        options.flags,
+        rest[0],
+        rest[1],
+      );
+    } else if (command === "routing") {
+      result = routingCommand(resolvePaths(options), options.flags, rest[0], rest[1]);
+    } else if (command === "doctor") {
+      result = await doctorCommand(resolvePaths(options));
     } else if (command === "feature") {
       result = await runFeature(options.root, rest, options.flags);
     } else if (command === "gate-decide") {

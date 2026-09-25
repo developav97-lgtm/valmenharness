@@ -116,7 +116,12 @@ describe("el catálogo de roles", () => {
   });
 
   it("los presets cubren todos los roles y usan esfuerzos válidos", () => {
-    expect(PRESETS.map((preset) => preset.id)).toEqual(["quality", "balanced", "economy"]);
+    expect(PRESETS.map((preset) => preset.id)).toEqual([
+      "quality",
+      "balanced",
+      "economy",
+      "suscripcion",
+    ]);
     for (const preset of PRESETS) {
       for (const rol of ROLES) {
         const ruta = preset.roles[rol.id];
@@ -127,11 +132,22 @@ describe("el catálogo de roles", () => {
     }
   });
 
-  it("los tres presets usan Jev como evaluador de gates", () => {
-    // Cambiarlo es posible, pero no es lo que propone el harness: Jev es el
-    // único que emite probabilidades calibradas.
+  it("los presets con claves de API usan Jev como evaluador de gates", () => {
+    // Cambiarlo es posible, pero no es lo que propone el harness: Jev es el único
+    // que emite probabilidades calibradas. La excepción es `suscripcion`, que
+    // existe justamente para un equipo **sin claves de API**: ahí el evaluador es
+    // Claude, el gate pasa a juicio de un modelo y `routing show` lo advierte.
     for (const preset of PRESETS) {
+      if (preset.id === "suscripcion") continue;
       expect(preset.roles["gate-evaluator"]?.model).toBe("typesafe/jev-1.13");
+    }
+
+    const sinClaves = PRESETS.find((preset) => preset.id === "suscripcion");
+    expect(sinClaves?.roles["gate-evaluator"]?.provider).toBe("claude-code");
+    // Y los cuatro roles resuelven a un proveedor que no pide clave de API.
+    for (const ruta of Object.values(sinClaves?.roles ?? {})) {
+      expect(ruta.provider).toBe("claude-code");
+      expect(ruta.model).not.toBe("");
     }
   });
 

@@ -16,8 +16,16 @@ Usa el plan que ya pagas. El harness detecta, reutiliza o lanza el flujo de logi
 
 | Proveedor | Método | Qué se reutiliza |
 |---|---|---|
-| **Claude (plan Pro/Max)** | OAuth de Claude Code | Si `claude` CLI está autenticado, el vault lee el token existente. Si no, lanza el flujo en el navegador. |
+| **Claude (plan Pro/Max)** | OAuth de Claude Code | El token que su CLI ya guardó: **en macOS el llavero** (entrada `Claude Code-credentials`) y en Linux `~/.claude/.credentials.json`. Si no hay sesión, no se lanza ningún flujo: se dice qué correr. |
 | **ChatGPT / Codex (plan Plus/Pro)** | OAuth de Codex | Igual, desde `~/.codex/auth.json`. |
+
+> **Dónde vive el token de Claude Code, y por qué importa.** Se descubrió mirando una máquina
+> real: el archivo no existía y la sesión estaba viva en el llavero. Un lector que solo mirara
+> el archivo habría dicho «Claude Code no está autenticado» con la sesión perfectamente
+> válida, y el usuario habría ido a buscar el problema donde no estaba. Y cuando el token
+> caduca, el harness **no lo renueva**: el `refresh_token` es de su CLI, y dos clientes
+> renovando a la vez invalidan la sesión del otro. Se dice con la fecha y con el comando que lo
+> arregla —`claude`, una vez—.
 | **opencode go (Zen)** | Token de sesión de opencode | Igual, desde la config de opencode. |
 | **GitHub Copilot** | OAuth de dispositivo | Flujo de device code. |
 | **Gemini (plan Google AI)** | OAuth | Flujo en navegador. |
@@ -111,10 +119,15 @@ providers:
     base_url: https://api.minimax.chat/v1
     auth: { kind: api-key, ref: MINIMAX_API_KEY }
 
+  anthropic:                          # clave de API, facturada por token
+    transport: anthropic-messages
+    base_url: https://api.anthropic.com/v1
+    auth: { kind: api-key, ref: ANTHROPIC_API_KEY }
+
   claude-code:                        # suscripción vía OAuth
-    transport: anthropic
-    base_url: https://api.anthropic.com
-    auth: { kind: oauth, source: claude-cli }
+    transport: anthropic-messages
+    base_url: https://api.anthropic.com/v1
+    auth: { kind: oauth, source: claude-cli }   # llavero en macOS, archivo en Linux
 
   codex:                              # suscripción vía OAuth
     transport: openai-responses
@@ -261,10 +274,15 @@ presets:
 
   subscription:                               # sin coste por token
     description: "Usa los planes que ya pagas. Sin facturación por uso."
-    orchestrator:   { provider: claude-code, model: opus }
+    orchestrator:   { provider: claude-code, model: claude-sonnet-5, effort: auto }
     gate-evaluator: { provider: openrouter, model: typesafe/jev-1.13, effort: auto }
     gate-judge:     { provider: codex, model: gpt-5.6-terra, effort: medium }
 ```
+
+Y el que viene incluido para un equipo que trabaja **solo** con Claude Code, sin ninguna clave
+de API: `suscripcion`. Los cuatro roles van a Claude, incluido el evaluador —que deja de ser
+probabilístico, y por eso `valmen routing show` lo advierte solo—. Se elige con
+`valmen routing set --preset suscripcion`.
 
 Estos dos últimos son ejemplos de lo que un proyecto puede escribir, no presets que
 vengan incluidos: los tres que trae el harness están arriba, y solo cubren los roles

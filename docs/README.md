@@ -25,6 +25,7 @@ opencode, Cursor…) sin reemplazarlo.
 | [`docs/11-OPEN-QUESTIONS.md`](docs/11-OPEN-QUESTIONS.md) | Decisiones abiertas que necesitan tu respuesta |
 | [`docs/12-FUNCIONALIDADES-PROXIMAS.md`](docs/12-FUNCIONALIDADES-PROXIMAS.md) | Catálogo de funcionalidades propuestas, priorizadas |
 | [`docs/13-RECORRIDO-COMPLETO.md`](docs/13-RECORRIDO-COMPLETO.md) | **Un ticket de principio a fin: las 8 escenas, con quién decide y qué cuesta** |
+| [`docs/15-PUESTA-EN-MARCHA.md`](docs/15-PUESTA-EN-MARCHA.md) | **Instalarlo en otra máquina y otro proyecto: proveedores, modelos, MCP, Hermes y el texto que se le pega al agente** |
 | [`docs/99-REFERENCIAS.md`](docs/99-REFERENCIAS.md) | Hallazgos verificados de la investigación (gentle-ai, DSH, Jev, SaiOpenCloud) |
 
 ## Resumen en 10 líneas

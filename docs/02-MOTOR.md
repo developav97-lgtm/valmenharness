@@ -524,6 +524,11 @@ valmen estandar aceptar|descartar <EST-001|pendientes> --instruccion <frase>
 valmen deliver-manifest --version --tickets       # el manifiesto, sin publicar
 valmen release-publish --version --tickets        # exige el tag anotado
 
+# Puesta en marcha
+valmen doctor                                  # qué falta, y el comando que lo arregla
+valmen provider list | set <id> --key <k> | test <id> | models <id>
+valmen routing show | set --preset <p> | set <rol> --provider <p> --model <m> | clear <rol>
+
 # Proyecto
 valmen init | adopt [--dry-run] | migrate [--dry-run] | sync [--check]
 valmen template list | show <nombre> | apply <nombre>

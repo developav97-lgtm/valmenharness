@@ -197,6 +197,39 @@ export const PRESETS: readonly Preset[] = [
       },
     },
   },
+  {
+    // Para un equipo que trabaja con la suscripción de Claude Code y no tiene
+    // claves de API. Los cuatro roles van a Claude, incluido el evaluador: eso
+    // **cambia el evaluador de `jev` a un juez de chat**, y el gate pierde
+    // reproducibilidad —es el precio de no tener una clave de OpenRouter—. El
+    // aviso lo da la interfaz sola, porque sale del modelo declarado y no de una
+    // bandera escrita a mano.
+    id: "suscripcion",
+    description:
+      "Los planes que ya se pagan: Claude Code para todo. El gate pasa a juicio de un modelo.",
+    roles: {
+      orchestrator: {
+        provider: "claude-code",
+        model: "claude-sonnet-5",
+        effort: "auto",
+      },
+      "gate-evaluator": {
+        provider: "claude-code",
+        model: "claude-sonnet-5",
+        effort: "auto",
+      },
+      "gate-judge": {
+        provider: "claude-code",
+        model: "claude-sonnet-5",
+        effort: "medium",
+      },
+      architect: {
+        provider: "claude-code",
+        model: "claude-opus-4-8",
+        effort: "high",
+      },
+    },
+  },
 ];
 
 /** El preset que se usa si el proyecto no elige ninguno. */

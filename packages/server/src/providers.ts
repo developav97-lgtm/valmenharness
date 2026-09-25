@@ -20,7 +20,13 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
 import { yamlBlockOf, yamlFieldOf } from "@valmen/core";
-import { type Protocol, readCodexCredential } from "@valmen/credentials";
+import {
+  type Protocol,
+  anthropicAuthHeaders,
+  hayCredencialDeClaudeCode,
+  readClaudeCodeCredential,
+  readCodexCredential,
+} from "@valmen/credentials";
 
 /** Cómo se autentica un proveedor. */
 export type AuthKind = "api-key" | "subscription" | "none";
@@ -74,7 +80,7 @@ export interface ProviderSpec {
    * mandar. Se declara por nombre para que quien resuelva la credencial sepa que
    * este proveedor no se lee como los demás.
    */
-  readonly credential?: "codex";
+  readonly credential?: "codex" | "claude-code";
   /**
    * El dialecto del proveedor, cuando no es el de chat.
    *
@@ -85,6 +91,15 @@ export interface ProviderSpec {
   readonly protocol?: Protocol;
   /** Dónde vive el token, para los proveedores de suscripción. */
   readonly tokenSource?: string;
+  /**
+   * Los identificadores que se conocen de este proveedor.
+   *
+   * Existen para los que **no publican catálogo**: sin esto, el selector queda
+   * vacío y hay que escribir el identificador a mano, que en un modelo de nombre
+   * largo es una fuente de errores. Entran como candidatos, no como verdad: el
+   * usuario puede escribir otro y el proveedor decide si lo acepta.
+   */
+  readonly knownModels?: readonly string[];
   /** Nombre de la variable de entorno que también se acepta. */
   readonly envVar: string;
 }
@@ -164,11 +179,49 @@ const CATALOGO: readonly ProviderSpec[] = [
     },
   },
   {
+    // La API de Anthropic con una clave. Es el camino de quien no tiene
+    // suscripción de Claude Code, y el que se factura por token.
+    id: "anthropic",
+    modelsUrl: "https://api.anthropic.com/v1/models",
+    name: "Anthropic (clave de API)",
+    auth: "api-key",
+    envVar: "ANTHROPIC_API_KEY",
+    protocol: "anthropic-messages",
+    probe: {
+      url: "https://api.anthropic.com/v1/models",
+      expect: 200,
+      headers: { "anthropic-version": "2023-06-01" },
+    },
+  },
+  {
+    // La suscripción de Claude Code: sin factura por token, con el plan que la
+    // persona ya paga. Su token **no** vive en un archivo en macOS —está en el
+    // llavero—, así que el estado no se decide leyendo `tokenSource`: se le
+    // pregunta al lector, que sabe dónde buscarlo en cada sistema.
     id: "claude-code",
-    name: "Claude Code",
+    name: "Claude Code (suscripción)",
     auth: "subscription",
+    credential: "claude-code",
     envVar: "ANTHROPIC_API_KEY",
     tokenSource: "~/.claude/.credentials.json",
+    protocol: "anthropic-messages",
+    // No publica catálogo con un token de sesión, así que los identificadores se
+    // declaran. Son los vigentes de su CLI, y se pueden escribir otros.
+    knownModels: [
+      "claude-sonnet-5",
+      "claude-opus-4-8",
+      "claude-fable-5",
+      "claude-haiku-4-5-20251001",
+    ],
+    probe: {
+      url: "https://api.anthropic.com/v1/messages",
+      expect: 200,
+      method: "POST",
+      // El cuerpo se completa en la prueba con el modelo que se quiera comprobar;
+      // `max_tokens` es obligatorio en este dialecto.
+      body: { max_tokens: 1, messages: [{ role: "user", content: "ok" }] },
+      headers: { "anthropic-version": "2023-06-01", "anthropic-beta": "oauth-2025-04-20" },
+    },
   },
   {
     // Codex es una suscripción de ChatGPT, y **sí tiene API**: su catálogo está en
@@ -288,8 +341,21 @@ export interface ProviderStatus {
    * siempre falla es peor que no ofrecerlo, porque parece un error del usuario.
    */
   readonly probeable: boolean;
-  /** El host contra el que se prueba, para que se sepa qué se va a tocar. */
+  /** El host contra el que se va a tocar al probar, para poder decirlo. */
   readonly probeHost: string | null;
+  /**
+   * El dialecto con el que habla, cuando no es el de chat.
+   *
+   * Se publica para que un diagnóstico pueda decir por dónde va a salir la
+   * petición: es lo primero que hay que saber cuando un modelo «no responde».
+   */
+  readonly protocol?: Protocol;
+  /** Los identificadores conocidos, para los proveedores sin catálogo público. */
+  readonly knownModels?: readonly string[];
+  /** `true` si publica su catálogo de modelos en una URL. */
+  readonly listable: boolean;
+  /** `true` si se puede comprobar un modelo concreto contra el proveedor. */
+  readonly testable: boolean;
 }
 
 /** Ruta del archivo de credenciales. */
@@ -399,6 +465,11 @@ export function listProviders(
         existe = readFileSync(expandido, "utf8").length > 0;
       } catch {
         existe = false;
+      }
+      // Claude Code guarda su sesión en el llavero en macOS: preguntarle al lector
+      // es lo único que dice la verdad en los dos sistemas.
+      if (!existe && spec.credential === "claude-code") {
+        existe = hayCredencialDeClaudeCode();
       }
       return {
         ...spec,
@@ -663,6 +734,17 @@ export async function probeProvider(
       options.env ?? process.env,
     );
 
+  // Sin credencial de un proveedor que la lee de su CLI, la petición saldría sin
+  // cabecera y el proveedor contestaría algo que habla de otra cosa —`x-api-key
+  // header is required`—. El lector sí sabe qué pasa: archivo, llavero, token
+  // caducado. Con una clave recién pegada no se pregunta: esa se prueba.
+  if ((clave === null || clave === "") && options.apiKey === undefined) {
+    const motivo = motivoSinCredencial(spec);
+    if (motivo !== null) {
+      return { ok: false, status: null, detail: motivo, latencyMs: 0 };
+    }
+  }
+
   const headers = headersFor(spec, clave);
   if (spec.probe.body !== undefined) headers["Content-Type"] = "application/json";
 
@@ -725,6 +807,25 @@ export async function probeProvider(
   }
 }
 
+/**
+ * Por qué no hay credencial de un proveedor de CLI.
+ *
+ * Sin esto, una sesión ausente se probaba igual y el proveedor contestaba
+ * `x-api-key header is required`: un mensaje que habla de una cabecera y manda a
+ * buscar el problema al sitio equivocado. El lector sí sabe qué pasa —archivo,
+ * llavero, token caducado— y esto lo trae.
+ */
+function motivoSinCredencial(spec: ProviderSpec): string | null {
+  if (spec.credential === undefined) return null;
+  try {
+    if (spec.credential === "claude-code") readClaudeCodeCredential();
+    else readCodexCredential();
+    return null;
+  } catch (caught) {
+    return caught instanceof Error ? caught.message : String(caught);
+  }
+}
+
 /** Resuelve la clave de un proveedor para una prueba, o `null` si no aplica. */
 function resolveForProbe(
   spec: ProviderSpec,
@@ -740,6 +841,16 @@ function resolveForProbe(
       // Un error de credencial no se convierte en una excepción aquí: quien llama
       // decide qué hacer sin ella, y el archivo de codex puede no existir en una
       // máquina que nunca lo usó.
+      return null;
+    }
+  }
+
+  if (spec.credential === "claude-code") {
+    try {
+      // El lector sabe que en macOS el token está en el llavero: mirar solo
+      // `tokenSource` diría «no configurado» con la sesión viva.
+      return readClaudeCodeCredential().accessToken;
+    } catch {
       return null;
     }
   }
@@ -761,7 +872,16 @@ function resolveForProbe(
  */
 function headersFor(spec: ProviderSpec, clave: string | null): Record<string, string> {
   const headers: Record<string, string> = {};
-  if (clave !== null && clave !== "") headers["Authorization"] = `Bearer ${clave}`;
+
+  // En el dialecto de Anthropic la cabecera **depende de qué sea el valor**: una
+  // clave va en `x-api-key` y un token de sesión en `Authorization` con su
+  // `anthropic-beta`. Mandar una donde va la otra responde `invalid x-api-key`,
+  // que no dice nada del problema.
+  if (spec.protocol === "anthropic-messages") {
+    Object.assign(headers, anthropicAuthHeaders(clave ?? ""));
+  } else if (clave !== null && clave !== "") {
+    headers["Authorization"] = `Bearer ${clave}`;
+  }
 
   if (spec.credential === "codex") {
     try {
@@ -822,7 +942,7 @@ export async function listProviderModels(
       readonly models: readonly ProviderModel[];
       /** Los declarados por el proyecto que el proveedor no publica. */
       readonly configured: readonly string[];
-      readonly source: "publicado" | "declarado" | "ambos";
+      readonly source: "publicado" | "declarado" | "conocido" | "ambos";
     }
   | {
       readonly ok: false;
@@ -837,15 +957,18 @@ export async function listProviderModels(
     .filter((m) => m !== "");
 
   // Un proveedor que no está en el catálogo y uno que no publica su lista acaban
-  // en el mismo sitio —no hay URL que pedir—, salvo que el proyecto haya
-  // declarado modelos: entonces esos son toda la lista.
+  // en el mismo sitio —no hay URL que pedir—, salvo que haya modelos que ofrecer:
+  // los que el proyecto declaró y los que el catálogo conoce. Sin ninguno de los
+  // dos, el selector ofrece escribir el identificador, que es lo honesto.
   if (spec === undefined || spec.modelsUrl === undefined) {
-    if (declarados.length === 0) return null;
+    const conocidos = spec?.knownModels ?? [];
+    const todos = [...new Set([...declarados, ...conocidos])];
+    if (todos.length === 0) return null;
     return {
       ok: true,
-      models: declarados.map((modelo) => ({ id: modelo, name: modelo, promptUsd: null })),
+      models: todos.map((modelo) => ({ id: modelo, name: modelo, promptUsd: null })),
       configured: declarados,
-      source: "declarado",
+      source: declarados.length > 0 ? "declarado" : "conocido",
     };
   }
 
@@ -855,6 +978,19 @@ export async function listProviderModels(
     options.filePath ?? credentialsPath(),
     options.env ?? process.env,
   );
+
+  if (clave === null || clave === "") {
+    const motivo = motivoSinCredencial(spec);
+    if (motivo !== null) {
+      // Lo declarado se devuelve igual que en los demás fallos: que el catálogo no
+      // se pueda pedir no invalida la lista que el usuario escribió.
+      return {
+        ok: false,
+        error: motivo,
+        models: declarados.map((modelo) => ({ id: modelo, name: modelo, promptUsd: null })),
+      };
+    }
+  }
 
   const headers = headersFor(spec, clave);
 
@@ -1050,6 +1186,14 @@ export async function testProviderModel(
     options.filePath ?? credentialsPath(),
     options.env ?? process.env,
   );
+
+  if (clave === null || clave === "") {
+    const motivo = motivoSinCredencial(spec);
+    if (motivo !== null) {
+      return { ok: false, status: null, detail: motivo, latencyMs: 0 };
+    }
+  }
+
   const headers = headersFor(spec, clave);
   headers["Content-Type"] = "application/json";
 

@@ -85,11 +85,12 @@ interface Transport {
    * De dónde sale la credencial, cuando no es una clave del harness.
    *
    * `codex` no tiene clave: usa tokens OAuth de su CLI, en su propio archivo, y su
-   * backend pide además una cabecera con la cuenta. Se declara aquí y no se adivina
-   * por el identificador del proveedor, que sería una lista de casos particulares
-   * escondida en el código.
+   * backend pide además una cabecera con la cuenta. Y `claude-code` tampoco: su
+   * token vive en el llavero del sistema —en macOS— o en su archivo, y va en otra
+   * cabecera que una clave. Se declara aquí y no se adivina por el identificador
+   * del proveedor, que sería una lista de casos particulares escondida en el código.
    */
-  readonly credential?: "codex";
+  readonly credential?: "codex" | "claude-code";
   /**
    * El dialecto del proveedor entero, cuando no es el de chat.
    *
@@ -152,6 +153,23 @@ export const TRANSPORTS: readonly Transport[] = [
     name: "Zhipu (GLM)",
     baseUrl: "https://open.bigmodel.cn/api/paas/v4",
     defaultProtocol: "openai-chat",
+  },
+  {
+    id: "anthropic",
+    name: "Anthropic (clave de API)",
+    baseUrl: "https://api.anthropic.com/v1",
+    defaultProtocol: "anthropic-messages",
+  },
+  {
+    // La suscripción de Claude Code. Su token no es una clave: va en
+    // `Authorization: Bearer` con la cabecera `anthropic-beta`, y lo resuelve
+    // `readClaudeCodeCredential`, que sabe que en macOS vive en el llavero del
+    // sistema y no en un archivo.
+    id: "claude-code",
+    name: "Claude Code (suscripción)",
+    baseUrl: "https://api.anthropic.com/v1",
+    defaultProtocol: "anthropic-messages",
+    credential: "claude-code",
   },
   {
     // Codex es una suscripción de ChatGPT y **sí tiene API**: `/responses` con
@@ -241,17 +259,20 @@ export function resolveChatEndpoint(providerId: string, model: string): HttpEndp
   const transport = transportById(providerId);
   const protocol = protocolFor(transport, model);
 
-  // Dos dialectos, y cada uno tiene su ruta. Los demás siguen sin implementarse, y
+  // Tres dialectos, y cada uno tiene su ruta. Los demás siguen sin implementarse, y
   // decirlo es mejor que mandar la petición a la ruta equivocada: el proveedor
   // respondería un error que no habla del dialecto.
   if (protocol === "openai-responses") {
     return { provider: transport.id, protocol, url: `${transport.baseUrl}/responses` };
   }
+  if (protocol === "anthropic-messages") {
+    return { provider: transport.id, protocol, url: `${transport.baseUrl}/messages` };
+  }
   if (protocol !== "openai-chat") {
     fail(
       `El modelo "${model}" de ${transport.name} habla el dialecto "${protocol}", ` +
         "y el harness todavía no lo implementa. Elige un modelo que hable " +
-        '"openai-chat" o "openai-responses".',
+        '"openai-chat", "openai-responses" o "anthropic-messages".',
     );
   }
 
@@ -272,10 +293,15 @@ export function extraHeaders(providerId: string): Readonly<Record<string, string
  *
  * Por defecto `json-schema`, que es lo que el harness usa y lo que OpenRouter
  * acepta. Un proveedor que no lo soporte lo declara y recibe el esquema en el
- * prompt.
+ * prompt; el dialecto de Anthropic lo pide con una **herramienta forzada**, que es
+ * su manera de garantizar la forma.
  */
-export function structuredOutputOf(providerId: string): "json-schema" | "json-object" {
-  return transportById(providerId).structuredOutput ?? "json-schema";
+export function structuredOutputOf(
+  providerId: string,
+): "json-schema" | "json-object" | "tool-call" {
+  const transport = transportById(providerId);
+  if (transport.defaultProtocol === "anthropic-messages") return "tool-call";
+  return transport.structuredOutput ?? "json-schema";
 }
 
 /** Todos los proveedores con su dialecto por defecto, para la interfaz. */

@@ -14,6 +14,8 @@
  * arreglarlo en un sitio y arreglarlo en tres. Ver `scripts/probe-deepseek-tools.md`.
  */
 import { CodexCredentialError, readCodexCredential } from "./codex.js";
+import { ClaudeCodeCredentialError, readClaudeCodeCredential } from "./claude-code.js";
+import { anthropicAuthHeaders, callAnthropic } from "./anthropic.js";
 import { CredentialError, resolveApiKey } from "./credentials.js";
 import { callResponses } from "./responses.js";
 import {
@@ -106,7 +108,20 @@ export interface ChatOptions {
  * discrepar.
  */
 function resolveCredentialFor(proveedor: string): string {
-  if (transportById(proveedor).credential === "codex") {
+  const transport = transportById(proveedor);
+
+  if (transport.credential === "claude-code") {
+    try {
+      return readClaudeCodeCredential().accessToken;
+    } catch (caught) {
+      if (caught instanceof ClaudeCodeCredentialError) {
+        throw new ChatError(caught.message, "CREDENTIAL_MISSING");
+      }
+      throw caught;
+    }
+  }
+
+  if (transport.credential === "codex") {
     try {
       return readCodexCredential().accessToken;
     } catch (caught) {
@@ -177,6 +192,28 @@ export async function callChat(options: ChatOptions): Promise<ChatResult> {
         messages: options.messages,
         maxTokens: options.maxTokens,
         effort: options.effort,
+        signal: options.signal ?? AbortSignal.timeout(options.timeoutMs ?? 90_000),
+      },
+      fetchImpl,
+    );
+  }
+
+  // El de Anthropic tampoco: los modelos de Claude —los de su API y los de la
+  // suscripción de Claude Code— hablan `/messages`, con el sistema aparte y la
+  // salida estructurada por herramienta forzada.
+  if (endpoint.protocol === "anthropic-messages") {
+    return callAnthropic(
+      {
+        url: endpoint.url,
+        headers: {
+          ...extra,
+          ...anthropicAuthHeaders(apiKey ?? ""),
+        },
+        model: options.model,
+        messages: options.messages,
+        maxTokens: options.maxTokens,
+        temperature: options.temperature,
+        structured: options.structured,
         signal: options.signal ?? AbortSignal.timeout(options.timeoutMs ?? 90_000),
       },
       fetchImpl,

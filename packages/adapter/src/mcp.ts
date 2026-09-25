@@ -730,6 +730,12 @@ es peor que un hueco declarado, porque el hueco se ve.
 Si no, el commit le atribuye al ejecutor lo que escribió el verificador y el
 registro afirma algo que no pasó.
 
+**9. El plan va en el ticket, no en el chat.** Si tu trabajo es analizar y planear
+—y después lo implementa otro agente, o vos en otra sesión—, el plan se escribe en
+la sección \`## Plan\` del ticket: es el único artefacto que el siguiente lee. Lo que
+quede solo en la conversación no llega, y el traspaso se rompe sin que nadie lo
+note.
+
 ## Qué NO hacer
 
 - **No apruebes ni rechaces una compuerta.** No existe herramienta para eso y no es

@@ -380,6 +380,12 @@ describe("la skill que se le instala a Hermes", () => {
     expect(skill).toContain("sin\nnúmeros");
   });
 
+  it("manda escribir el plan en el ticket cuando lo implementa otro", () => {
+    // El traspaso entre agentes se rompe en silencio: el que implementa lee el
+    // ticket, no la conversación donde se planeó.
+    expect(hermesSkill()).toContain("El plan va en el ticket, no en el chat");
+  });
+
   it("obliga a nombrar lo que escribió el verificador", () => {
     // En un flujo de dos agentes —uno implementa, otro verifica— el commit
     // atribuye al ejecutor lo que escribió el verificador salvo que alguien lo
