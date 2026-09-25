@@ -249,7 +249,67 @@ function respuesta(ruta) {
       transitions: { ticket: ["approved"], release: [], points: [] },
     };
   }
-  if (ruta.includes("/api/timeline")) return { available: false, reason: "sin datos" };
+  // La línea de tiempo, con una sesión normal y una **compartida**: la pantalla
+  // tiene que decir cuál no se suma y por qué, que es la rama que se agregó para
+  // que una conversación de cinco tickets no se le adjudique a uno solo.
+  if (ruta.includes("/api/timeline")) {
+    return {
+      available: true,
+      source: "/contabilidad/opencode.db",
+      sessions: [
+        {
+          id: "ses_propia",
+          title: "Implementación",
+          source: "opencode",
+          agent: "build",
+          provider: "opencode-go",
+          model: "deepseek-v4.1-flash",
+          costUsd: 0.05,
+          inputTokens: 1000,
+          outputTokens: 200,
+          reasoningTokens: 100,
+          cacheReadTokens: 0,
+          startedAt: 1_700_000_000_000,
+          intervenciones: 3,
+          fallidas: 0,
+          fuente: "/contabilidad/opencode.db",
+        },
+        {
+          id: "20260924_160837_94217148",
+          title: "Sesión de Slack",
+          source: "hermes",
+          agent: "hermes:slack",
+          provider: "opencode-go",
+          model: "deepseek-v4.1-flash",
+          costUsd: 0.0755,
+          inputTokens: 5000,
+          outputTokens: 900,
+          reasoningTokens: 300,
+          cacheReadTokens: 0,
+          startedAt: 1_700_000_100_000,
+          intervenciones: 40,
+          fallidas: 0,
+          fuente: "/casa/.hermes/profiles/tienda/state.db",
+          reparto: [
+            { id: TICKET.id, peso: 393, trabajado: true },
+            { id: "FEATURE-OTRO-20260924", peso: 357, trabajado: true },
+          ],
+        },
+      ],
+      intervenciones: [],
+      totalCostUsd: 0.05,
+      sesionesSinCoste: 0,
+      sesionesCompartidas: 1,
+      costeCompartidoUsd: 0.0755,
+      totalTokens: { input: 6000, output: 1100, reasoning: 400, cacheRead: 0 },
+      desglose: {
+        harnessUsd: 0.02,
+        exploracionUsd: 0.03,
+        harnessMensajes: 2,
+        exploracionMensajes: 1,
+      },
+    };
+  }
 
   // Las demás vistas. Cada una con el dato que la hace recorrer sus ramas: una
   // feature **descompuesta** —que es la que pinta el progreso y el tablero—, una
@@ -512,11 +572,27 @@ export const VISTAS = [
 ];
 
 /**
+ * Lo que una vista tiene que decir cuando se pinta.
+ *
+ * No basta con que no falle: una pantalla que dibuja la tabla sin la marca de la
+ * sesión compartida se ve igual de bien y miente igual, así que la frase que
+ * explica el número también se comprueba.
+ */
+const AFIRMACIONES = [
+  [
+    "ticket",
+    ["compartida entre 2 tickets", "no se suma", "1 compartida(s) entre varios tickets"],
+  ],
+];
+
+/**
  * Ejecuta cada vista y devuelve las que fallaron.
  *
  * Un fallo es cualquiera de los dos que la aplicación ya sabe reportar: un
  * rechazo sin capturar, o el aviso «No se pudo cargar la vista» que la pantalla
- * pinta cuando el error ocurre dentro de una vista.
+ * pinta cuando el error ocurre dentro de una vista. Y además, lo que la vista
+ * tenga que decir: un texto que falta es una pantalla que se ve bien y no dice lo
+ * que tiene que decir.
  */
 export async function ejecutarTodasLasVistas(rutaHtml) {
   const fallidas = [];
@@ -528,6 +604,14 @@ export async function ejecutarTodasLasVistas(rutaHtml) {
     const problemas = [...resultado.fallos];
     if (resultado.texto.includes("No se pudo cargar la vista")) {
       problemas.push(resultado.texto.slice(resultado.texto.indexOf("No se pudo cargar")));
+    }
+    for (const [vista, frases] of AFIRMACIONES) {
+      if (vista !== nombre) continue;
+      for (const frase of frases) {
+        if (!resultado.texto.includes(frase)) {
+          problemas.push(`la vista no dice «${frase}»`);
+        }
+      }
     }
     if (problemas.length > 0) fallidas.push({ vista: nombre, hash, problemas });
   }
