@@ -400,7 +400,10 @@ function lineaSoloDeHermes(
     intervenciones: sesion.toolCalls,
     fallidas: 0,
     fuente: sesion.dbPath,
-    ...(sesion.compartida ? { reparto: sesion.tickets } : {}),
+    // El reparto son los tickets que la sesión **trabajó**, no todos los que
+    // mencionó: nombrar veintinueve y haber trabajado cuatro no es repartir
+    // entre veintinueve.
+    ...(sesion.compartida ? { reparto: sesion.tickets.filter((t) => t.trabajado) } : {}),
   }));
 
   return {
@@ -655,7 +658,10 @@ function consultar(
       intervenciones: sesion.toolCalls,
       fallidas: 0,
       fuente: sesion.dbPath,
-      ...(sesion.compartida ? { reparto: sesion.tickets } : {}),
+      // El reparto son los tickets que la sesión **trabajó**, no todos los que
+      // mencionó: nombrar veintinueve y haber trabajado cuatro no es repartir
+      // entre veintinueve.
+      ...(sesion.compartida ? { reparto: sesion.tickets.filter((t) => t.trabajado) } : {}),
     });
   }
 
