@@ -284,6 +284,16 @@ export interface TicketFilters {
   readonly module?: string;
   readonly query?: string;
   readonly onlyOpen?: boolean;
+  /**
+   * Solo lo que ya se empezó: todo menos `intake` y `closed`.
+   *
+   * Es el filtro por defecto de la pantalla, y salió del uso: la lista de «solo
+   * abiertos» trae todos los tickets creados y nunca analizados, que en un
+   * proyecto con historia son cientos de filas tapando los dos que están en
+   * curso. Un ticket en `intake` es una intención; el trabajo empieza cuando
+   * alguien lo analiza.
+   */
+  readonly onlyStarted?: boolean;
   readonly onlyInvalid?: boolean;
   /**
    * Solo los que declaran algún impacto crítico.
@@ -376,6 +386,12 @@ export function filterTickets(
     if (filters.type !== undefined && row.type !== filters.type) return false;
     if (filters.module !== undefined && row.module !== filters.module) return false;
     if (filters.onlyOpen === true && row.workflowStatus === "closed") return false;
+    if (
+      filters.onlyStarted === true &&
+      (row.workflowStatus === "closed" || row.workflowStatus === "intake")
+    ) {
+      return false;
+    }
     if (filters.onlyInvalid === true && row.invalid === null) return false;
     if (filters.onlyCritical === true && row.criticalImpacts.length === 0) return false;
     if (filters.onlyWithOpenPoints === true && row.openPoints === 0) return false;

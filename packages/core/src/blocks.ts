@@ -60,7 +60,7 @@ function requireStringList(value: unknown, label: string): void {
  */
 export function validatePoints(points: readonly JsonObject[]): void {
   if (points.length > MAX_POINTS) {
-    fail("Un ticket admite como máximo veinte puntos.");
+    fail(`Un ticket admite como máximo ${MAX_POINTS} puntos.`);
   }
   validateSequential(points, "POINT", "Puntos");
 

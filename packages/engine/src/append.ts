@@ -24,6 +24,7 @@ import {
   type JsonObject,
   type ParsedTicket,
   EXIT_INVARIANT,
+  MAX_POINTS,
   EXIT_SCHEMA,
   fail,
   MutationLock,
@@ -151,8 +152,8 @@ export function addPoint(request: AddPointRequest): string {
     }));
     const pointId = nextPointId(contexto.document);
 
-    if (puntos.length >= 20 || pointId === "POINT-021") {
-      fail("El ticket ya alcanzó el máximo de veinte puntos.", EXIT_INVARIANT);
+    if (puntos.length >= MAX_POINTS || pointId === `POINT-${String(MAX_POINTS + 1).padStart(3, "0")}`) {
+      fail(`El ticket ya alcanzó el máximo de ${MAX_POINTS} puntos.`, EXIT_INVARIANT);
     }
 
     // El orden de las claves es el del contrato: `id` primero, y los cuatro

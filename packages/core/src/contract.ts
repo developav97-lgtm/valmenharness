@@ -198,9 +198,23 @@ export const BLOCKING_POINT_STATES = [
  * Máximo de puntos por ticket.
  *
  * El límite es por funcionalidad, no por hallazgo: una lista de hallazgos de la
- * misma funcionalidad permanece en un único ticket.
+ * misma funcionalidad permanece en un único ticket. **Por eso subió de veinte a
+ * cien**, y la referencia decía veinte.
+ *
+ * Lo que se vio en el uso real: una pantalla nueva, probada por el responsable
+ * varias veces, acumula hallazgos —doce, siete, seis por ciclo— y una pantalla
+ * completa los pasa de veinte con facilidad. Con el tope en veinte, el trabajo
+ * **seguía existiendo** y la única salida era abrir un ticket nuevo para los
+ * hallazgos de la misma funcionalidad, que es exactamente lo que el límite
+ * existe para evitar: el segundo ticket quedaba fuera de la feature, sin el
+ * grafo, sin las dependencias y sin la spec que le daba los requisitos.
+ *
+ * Cien no es una meta: es un techo que un ciclo de correcciones no alcanza, y
+ * sigue atajando al generador descontrolado que escribía cientos de puntos.
+ * Sigue siendo una divergencia deliberada de `ticket.py`; ver
+ * docs/14-INVENTARIO-TICKETPY.md.
  */
-export const MAX_POINTS = 20;
+export const MAX_POINTS = 100;
 
 /** Máximo de niveles en una escala `score` de un evaluador tipo Jev. */
 export const MAX_SCORE_LEVELS = 10;
