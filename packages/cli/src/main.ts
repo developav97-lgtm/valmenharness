@@ -200,6 +200,13 @@ Comandos:
   feature materialize <slug> [--dry-run]
                             Escribe en el registro los tickets del grafo que falten,
                             en intake. Los que ya existen no se tocan.
+  feature attach <slug> --ticket <ID> [--sprint S6 --goal "…"] [--depends-on A,B]
+                            Mete en el grafo de la feature un ticket que ya existe, para
+                            que cuente en su tablero y no quede suelto. Con un sprint que
+                            no existe, hay que dar su objetivo: un sprint sin objetivo es
+                            una fila vacía. No toca el ticket.
+  feature detach <slug> --ticket <ID>
+                            Lo saca del grafo. El ticket sigue en el registro.
       --dry-run             Muestra la descomposición sin escribirla.
       --model <id>          Sobrescribe el modelo del rol architect.
       --provider <id>       Sobrescribe el proveedor.
@@ -417,6 +424,11 @@ export const VALUE_OPTIONS = [
   "--key",
   "--preset",
   "--effort",
+  // `feature attach`: anexar al grafo un ticket que ya existe.
+  "--ticket",
+  "--sprint",
+  "--goal",
+  "--depends-on",
 ] as const;
 
 /**

@@ -76,7 +76,7 @@ porque ahí sí hereda el `PATH` completo.
 
 ## Contrato
 
-Las treinta y siete herramientas. Ninguna es una segunda implementación: las de lectura llaman a
+Las treinta y ocho herramientas. Ninguna es una segunda implementación: las de lectura llaman a
 las mismas funciones que el CLI, y las de escritura al mismo motor.
 
 | Herramienta            | Qué hace                                                          |
@@ -109,6 +109,7 @@ las mismas funciones que el CLI, y las de escritura al mismo motor.
 | `guardar_aprendizaje`  | Anexa lo que este trabajo enseñó, cuando se descubre               |
 | `revisar_aprendizajes` | La cola: qué hacer con lo aprendido —regla, caso o descarte—        |
 | `materializar_feature` | Escribe en el registro los tickets del grafo que falten             |
+| `anexar_ticket_a_feature` | Mete en el grafo un ticket que ya existe, o lo saca              |
 | `ver_estandares`       | Las reglas en vigor y las propuestas que todavía no lo están       |
 | `proponer_estandar`    | Propone una convención que el trabajo enseñó; no la pone en vigor  |
 | `decidir_estandar`     | Acepta o descarta una propuesta, **con las palabras de la persona** |

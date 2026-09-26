@@ -39,6 +39,9 @@ import {
   type TicketFilters,
   type TicketRow,
   addEvidence,
+  attachTicketToFeature,
+  detachTicketFromFeature,
+  renderAttachedTicket,
   addPoint,
   addRetest,
   closeAttempt,
@@ -1365,6 +1368,55 @@ export const TOOLS: readonly ToolDefinition[] = [
     },
   },
   {
+    name: "anexar_ticket_a_feature",
+    // Anexar y quitar son la misma operación sobre el mismo archivo y ninguna de
+    // las dos es destructiva para el ticket: sacarlo del grafo no lo borra del
+    // registro.
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: false,
+    },
+    title: "Anexar un ticket a una feature (o sacarlo)",
+    description:
+      "Mete en el grafo de una feature un ticket que **ya existe** en el registro, para que " +
+      "cuente en su tablero, herede su spec y no quede suelto. Es lo que hace falta cuando " +
+      "los hallazgos de una pantalla desbordan el tope de puntos de su ticket y hay que " +
+      "abrir otro: el trabajo es de la misma funcionalidad y tiene que seguir viéndose " +
+      "junto. **No toca el ticket**: el grafo dice qué tickets son de la feature y el " +
+      "registro dice en qué estado está cada uno. Con `sprint` que no exista hace falta " +
+      "`goal`: un sprint sin objetivo es una fila vacía en el tablero. Con `quitar: true` " +
+      "lo saca del grafo —y falla si algún otro ticket declara depender de él—.",
+    inputSchema: conRoot({
+      properties: {
+        slug: { type: "string", description: "El identificador de la feature." },
+        ticket: { type: "string", description: "El identificador del ticket." },
+        sprint: {
+          type: "string",
+          description:
+            "El sprint al que entra, `S6`. Sin él va al último. Uno que no exista se " +
+            "crea, y entonces `goal` es obligatorio.",
+        },
+        goal: {
+          type: "string",
+          description: "El objetivo del sprint, si hay que crearlo.",
+        },
+        depends_on: {
+          type: "array",
+          items: { type: "string" },
+          description:
+            "Los tickets de los que depende, que tienen que estar ya en el grafo.",
+        },
+        quitar: {
+          type: "boolean",
+          description: "Sacarlo del grafo en vez de anexarlo.",
+        },
+      },
+      required: ["slug", "ticket"],
+    }),
+  },
+  {
     name: "iniciar_qa",
     annotations: ANEXA,
     title: "Abrir un ciclo de QA",
@@ -2228,6 +2280,29 @@ export async function callTool(
           creados: [...resultado.created],
           yaEstaban: [...resultado.skipped],
         });
+      }
+
+      case "anexar_ticket_a_feature": {
+        const slug = texto(args, "slug") as string;
+        const ticket = texto(args, "ticket") as string;
+        if (args["quitar"] === true) {
+          const fuera = detachTicketFromFeature({ paths, slug, ticketId: ticket });
+          return bien(
+            `${fuera.ticketId} salió del grafo de ${fuera.slug} (estaba en ${fuera.sprint}). ` +
+              "El ticket sigue en el registro: esto no lo toca.",
+          );
+        }
+        const anexado = attachTicketToFeature({
+          paths,
+          slug,
+          ticketId: ticket,
+          sprint: texto(args, "sprint", false),
+          goal: texto(args, "goal", false),
+          ...(Array.isArray(args["depends_on"])
+            ? { dependsOn: (args["depends_on"] as unknown[]).map(String) }
+            : {}),
+        });
+        return bien(renderAttachedTicket(anexado));
       }
 
       case "iniciar_qa": {

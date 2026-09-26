@@ -205,7 +205,7 @@ describe("el catálogo de herramientas", () => {
     expect(estandar?.inputSchema["required"]).toContain("instruccion");
   });
 
-  it("declara las treinta y siete herramientas, cada una con descripción y esquema", () => {
+  it("declara las treinta y ocho herramientas, cada una con descripción y esquema", () => {
     // El orden es el de la lectura: alta, consulta, validación, movimiento,
     // anotación, compuertas, features, procesos, reportes, y al final el ciclo de
     // QA y el cierre. Estaba intercalado por historia —cada herramienta nueva
@@ -244,6 +244,7 @@ describe("el catálogo de herramientas", () => {
       "decidir_estandar",
       "revisar_presentacion",
       "materializar_feature",
+      "anexar_ticket_a_feature",
       "iniciar_qa",
       "anotar_retest",
       "cerrar_qa",

@@ -17,12 +17,15 @@ import {
   ESQUEMA_DESCOMPOSICION,
   SISTEMA_DESCOMPOSICION,
   advanceFeature,
+  attachTicketToFeature,
   choosePaths,
   createFeature,
   decomposeFeature,
   decompositionPrompt,
+  detachTicketFromFeature,
   listFeatures,
   readFeature,
+  renderAttachedTicket,
   renderDecomposition,
 } from "@valmen/engine";
 
@@ -251,6 +254,87 @@ export async function featureDecompose(
 }
 
 /**
+ * `feature attach <slug> --ticket <ID> [--sprint S6] [--goal "…"]`.
+ *
+ * Mete en el grafo de la feature un ticket que ya existe. Es lo que permite que
+ * los hallazgos que desbordan un ticket sigan siendo parte del conjunto en vez de
+ * quedar en un ticket suelto que no aparece en el tablero ni conoce la spec.
+ */
+function attachCommand(
+  paths: ReturnType<typeof choosePaths>,
+  slug: string,
+  flags: Readonly<Record<string, string | true>>,
+): CommandResult {
+  if (slug === "") {
+    return error(
+      "feature attach requiere la feature: valmen feature attach <slug> --ticket <ID>.",
+      EXIT_SCHEMA,
+    );
+  }
+  const ticket = flags["ticket"];
+  if (typeof ticket !== "string" || ticket.trim() === "") {
+    return error("feature attach requiere --ticket <ID>.", EXIT_SCHEMA);
+  }
+
+  const texto = (nombre: string): string | undefined => {
+    const valor = flags[nombre];
+    return typeof valor === "string" && valor.trim() !== "" ? valor.trim() : undefined;
+  };
+  const dependencias = texto("depends-on");
+
+  try {
+    const resultado = attachTicketToFeature({
+      paths,
+      slug,
+      ticketId: ticket.trim(),
+      sprint: texto("sprint"),
+      goal: texto("goal"),
+      title: texto("title"),
+      ...(dependencias === undefined
+        ? {}
+        : {
+            dependsOn: dependencias
+              .split(",")
+              .map((id) => id.trim())
+              .filter((id) => id !== ""),
+          }),
+    });
+    return ok(renderAttachedTicket(resultado));
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/** `feature detach <slug> --ticket <ID>`: lo saca del grafo, sin tocarlo. */
+function detachCommand(
+  paths: ReturnType<typeof choosePaths>,
+  slug: string,
+  flags: Readonly<Record<string, string | true>>,
+): CommandResult {
+  if (slug === "") {
+    return error(
+      "feature detach requiere la feature: valmen feature detach <slug> --ticket <ID>.",
+      EXIT_SCHEMA,
+    );
+  }
+  const ticket = flags["ticket"];
+  if (typeof ticket !== "string" || ticket.trim() === "") {
+    return error("feature detach requiere --ticket <ID>.", EXIT_SCHEMA);
+  }
+  try {
+    const resultado = detachTicketFromFeature({ paths, slug, ticketId: ticket.trim() });
+    return ok(
+      `${resultado.ticketId} salió del grafo de ${resultado.slug} (estaba en ` +
+        `${resultado.sprint}). El ticket sigue en el registro: esto no lo toca.\n`,
+    );
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/**
  * `feature <subcomando>`: el despachador.
  *
  * Se despacha aquí y no en el `switch` de `main.ts` porque la forma es
@@ -288,14 +372,22 @@ export async function runFeature(
     case "materialize":
     case "materializar":
       return materializeCommand(choosePaths(root), resto[0] ?? "", flags);
+    case "attach":
+    case "anexar":
+      return attachCommand(choosePaths(root), resto[0] ?? "", flags);
+    case "detach":
+    case "desanexar":
+      return detachCommand(choosePaths(root), resto[0] ?? "", flags);
     case undefined:
       return error(
-        "feature requiere un subcomando: new, show, list, decompose o materialize.",
+        "feature requiere un subcomando: new, show, list, decompose, materialize, " +
+          "attach o detach.",
         EXIT_SCHEMA,
       );
     default:
       return error(
-        `Subcomando de feature desconocido: ${sub}. Use new, show, list, decompose o materialize.`,
+        `Subcomando de feature desconocido: ${sub}. Use new, show, list, decompose, ` +
+          "materialize, attach o detach.",
         EXIT_SCHEMA,
       );
   }

@@ -251,6 +251,7 @@ export async function handleApi(
       ...(params.get("module") === null ? {} : { module: params.get("module") as string }),
       ...(params.get("q") === null ? {} : { query: params.get("q") as string }),
       ...(params.get("open") === "1" ? { onlyOpen: true } : {}),
+      ...(params.get("empezados") === "1" ? { onlyStarted: true } : {}),
       ...(params.get("invalid") === "1" ? { onlyInvalid: true } : {}),
       ...(params.get("critical") === "1" ? { onlyCritical: true } : {}),
       ...(params.get("con-puntos") === "1" ? { onlyWithOpenPoints: true } : {}),
@@ -1416,11 +1417,20 @@ function serveStatic(path: string, context: ServerContext): ApiResponse | null {
  */
 const suscriptores = new Set<ServerResponse>();
 
-/** Avisa a todos los suscriptores de que algo cambió. */
-function broadcast(): void {
+/**
+ * Avisa a todos los suscriptores de que algo cambió, **y qué**.
+ *
+ * Las rutas importan: sin ellas, la pantalla de un ticket se repinta cada vez que
+ * el agente toca **cualquier** ticket. El usuario lo describió como «se refresca y
+ * me sube de nuevo»: estaba mirando las compuertas de un ticket mientras el agente
+ * escribía en él, y también mientras escribía en otros. Con las rutas, el refresco
+ * se decide con el dato: lo que no es de esta pantalla no la toca.
+ */
+function broadcast(rutas: readonly string[] = []): void {
+  const aviso = JSON.stringify({ kind: "changed", paths: [...rutas].slice(0, 50) });
   for (const cliente of suscriptores) {
     try {
-      cliente.write('data: {"kind":"changed"}\n\n');
+      cliente.write(`data: ${aviso}\n\n`);
     } catch {
       suscriptores.delete(cliente);
     }
@@ -1443,15 +1453,21 @@ function vigilar(context: ServerContext, paths: RegistryPaths): () => void {
   const objetivos = [ticketsPath(paths), join(context.root, ".valmen")];
   const vigías: FSWatcher[] = [];
   let pendiente: NodeJS.Timeout | null = null;
+  // Las rutas del lote que se está juntando. Una mutación del harness escribe el
+  // ticket, el índice y el recibo en milisegundos: se avisa una vez, con las tres.
+  const tocadas = new Set<string>();
 
   for (const objetivo of objetivos) {
     try {
       vigías.push(
-        watch(objetivo, { recursive: true }, () => {
+        watch(objetivo, { recursive: true }, (_evento, archivo) => {
+          if (archivo !== null) tocadas.add(join(objetivo, String(archivo)));
           if (pendiente !== null) clearTimeout(pendiente);
           pendiente = setTimeout(() => {
             pendiente = null;
-            broadcast();
+            const rutas = [...tocadas];
+            tocadas.clear();
+            broadcast(rutas);
           }, 250);
         }),
       );
@@ -1464,6 +1480,7 @@ function vigilar(context: ServerContext, paths: RegistryPaths): () => void {
 
   return () => {
     if (pendiente !== null) clearTimeout(pendiente);
+    tocadas.clear();
     for (const vigía of vigías) vigía.close();
   };
 }

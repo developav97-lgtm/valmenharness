@@ -283,6 +283,21 @@
       #actualizado {
         color: var(--ok);
       }
+      /* El aviso de que hay cambios **sin** mover la pantalla. Aparece solo cuando
+         el refresco se difirió —hay un diálogo abierto, o el foco está en un
+         campo— y es la salida para no quedarse leyendo algo viejo sin saberlo. */
+      .barra-vista .cambios {
+        font-size: 12px;
+        padding: 3px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--acento);
+        background: transparent;
+        color: var(--acento);
+        cursor: pointer;
+      }
+      .barra-vista .cambios[hidden] {
+        display: none;
+      }
       /* El contenido usa **todo** el ancho disponible, como un `container-fluid`:
          una tabla de tickets con siete columnas y un tablero de feature no se
          leen mejor centrados con doscientos píxeles muertos a cada lado. Lo que
@@ -1893,6 +1908,9 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
         <span class="titulo" id="titulo-vista">Tickets</span>
+        <button class="cambios" id="hay-cambios" type="button" hidden>
+          hay cambios · actualizar
+        </button>
         <span class="sello" id="sello-vista"></span>
         <span class="crecer"></span>
       </header>
@@ -1967,11 +1985,38 @@
       // La vista inicial responde «¿qué hay que hacer?», así que arranca filtrando
       // los que están en curso. Ver los 62 —cerrados incluidos— obligaba a filtrar
       // a mano cada vez para llegar a lo que de verdad se está trabajando.
+      /**
+       * El orden canónico de los estados, para agrupar la lista.
+       *
+       * Es el del contrato (`WORKFLOW_STATES`); acá no se puede importar porque
+       * este archivo corre en el navegador. Un estado que no esté en la lista
+       * —uno nuevo del contrato, o uno que el registro tenga de antes— cae al
+       * final en vez de desaparecer de la pantalla.
+       */
+      const ORDEN_DE_ESTADOS = [
+        "in_progress",
+        "blocked",
+        "awaiting_user_tests",
+        "in_qa",
+        "changes_requested",
+        "qa_approved",
+        "approved",
+        "planned",
+        "analyzed",
+        "intake",
+        "closed",
+      ];
+
       const filtros = {
         q: "",
         workflow: "",
         type: "",
-        open: true,
+        // Por defecto, **lo que ya se empezó**: ni lo que nunca se analizó
+        // (`intake`) ni lo cerrado. La lista de «solo abiertos» traía todos los
+        // tickets creados y sin analizar, y con un proyecto con historia los dos
+        // que están en curso quedaban enterrados. «Todos» sigue a un clic.
+        empezados: true,
+        open: false,
         invalid: false,
         critical: false,
         conPuntos: false,
@@ -2006,6 +2051,7 @@
         if (filtros.q !== "") params.set("q", filtros.q);
         if (filtros.workflow !== "") params.set("workflow", filtros.workflow);
         if (filtros.type !== "") params.set("type", filtros.type);
+        if (filtros.empezados) params.set("empezados", "1");
         if (filtros.open) params.set("open", "1");
         if (filtros.invalid) params.set("invalid", "1");
         if (filtros.critical) params.set("critical", "1");
@@ -2032,6 +2078,7 @@
           // «cerrados» a la vez no devuelven nada, y ese vacío se lee como un
           // fallo en vez de como dos filtros contradictorios.
           filtros.workflow = "";
+          filtros.empezados = false;
           filtros.open = false;
           filtros.critical = false;
           filtros.conPuntos = false;
@@ -2042,9 +2089,11 @@
         const metricas = [
           { rotulo: "Tickets", valor: r.total, filtro: null },
           {
+            // «En curso» es lo empezado y sin cerrar: el mismo conjunto que la
+            // lista muestra por defecto, para que el número y las filas coincidan.
             rotulo: "En curso",
-            valor: r.total - (r.byWorkflow.closed ?? 0),
-            filtro: "open",
+            valor: r.total - (r.byWorkflow.closed ?? 0) - (r.byWorkflow.intake ?? 0),
+            filtro: "empezados",
           },
           {
             rotulo: "Cerrados",
@@ -2301,6 +2350,7 @@
         barra.append(rango);
 
         barra.append(
+          casilla("Solo lo empezado", "empezados"),
           casilla("Solo abiertos", "open"),
           casilla("Solo inválidos", "invalid"),
         );
@@ -4347,6 +4397,10 @@
       // cada cosa se abre cuando se necesita.
       function acordeon(titulo, resumen, abierto = false, deTurno = false) {
         const caja = el("details", undefined, deTurno ? "acordeon de-turno" : "acordeon");
+        // El título es la identidad del acordeón: es lo que permite reabrir, tras
+        // un refresco, exactamente los que la persona había abierto. Sin clave no
+        // se conserva nada, que es el comportamiento seguro.
+        caja.dataset.acordeon = titulo;
         if (abierto) caja.open = true;
         const cabecera = el("summary");
         cabecera.append(el("span", titulo, "acordeon-titulo"));
@@ -6360,14 +6414,39 @@
           const marca = $("actualizado");
           if (marca !== null) marca.textContent = "sin conexión";
         };
-        eventos.onmessage = () => {
-          if (!puedeRefrescar()) return;
+        eventos.onmessage = (mensaje) => {
+          // Lo que cambió viene en el aviso. Si no se puede leer, se asume que
+          // toca todo: refrescar de más es molesto, refrescar de menos miente.
+          let rutas = [];
+          try {
+            const dato = JSON.parse(mensaje.data);
+            if (Array.isArray(dato.paths)) rutas = dato.paths.map(String);
+          } catch {
+            rutas = [];
+          }
+
+          // Los contadores de la navegación se actualizan siempre: son un número
+          // chico y dicen si hay algo esperando, aunque la vista no se repinte.
+          void marcarPendientes();
+
+          if (!elCambioTocaLaVista(rutas)) return;
+
+          if (!puedeRefrescar()) {
+            // La persona está escribiendo, tiene un diálogo abierto, o el harness
+            // está en medio de una mutación: no se le mueve la pantalla, y se le
+            // dice que hay algo nuevo para mirar cuando quiera.
+            avisarQueHayCambios();
+            return;
+          }
+
           clearTimeout(refrescoPendiente);
           // Un margen corto: una mutación escribe el ticket, el índice y el
           // recibo en milisegundos, y sin él la vista se reharía tres veces.
           refrescoPendiente = setTimeout(() => {
             marcarActualizado();
-            void navegar();
+            // Conservando la vista: refrescar no es navegar, y nadie tiene por qué
+            // perder dónde estaba leyendo.
+            void navegar({ conservarVista: true });
           }, 300);
         };
       }
@@ -6471,9 +6550,76 @@
 
       // ── Enrutado ──────────────────────────────────────────────────────────
 
-      async function navegar() {
+      /**
+       * Dónde estaba mirando la persona, y qué tenía abierto.
+       *
+       * El refresco en vivo repinta la vista entera, y sin esto la pantalla volvía
+       * al principio cada vez que el agente escribía algo: se perdía el scroll y
+       * los acordeones que la persona había abierto. El síntoma que lo hizo
+       * evidente: revisar las compuertas de un ticket mientras el agente lo
+       * escribe era imposible —cada mutación subía la pantalla— y había que
+       * esperar a que terminara.
+       */
+      function instantaneaDeLaVista() {
+        const cont = $("contenido");
+        const abiertos = [];
+        if (cont !== null) {
+          for (const caja of cont.querySelectorAll("details.acordeon")) {
+            const clave = caja.dataset.acordeon;
+            if (caja.open && clave !== undefined && clave !== "") abiertos.push(clave);
+          }
+        }
+        return { scrollY: window.scrollY, abiertos };
+      }
+
+      function restaurarVista(antes) {
+        const cont = $("contenido");
+        if (cont !== null) {
+          for (const caja of cont.querySelectorAll("details.acordeon")) {
+            if (antes.abiertos.includes(caja.dataset.acordeon)) caja.open = true;
+          }
+        }
+        // El scroll se restaura **después** de pintar: el documento cambia de alto
+        // con el contenido nuevo, y hacerlo antes deja la pantalla a mitad de
+        // camino —que es el salto que se quería evitar—.
+        if (antes.scrollY > 0) window.scrollTo(0, antes.scrollY);
+      }
+
+      /** Muestra «hay cambios» sin repintar: el refresco se difirió. */
+      function avisarQueHayCambios() {
+        const boton = $("hay-cambios");
+        if (boton !== null) boton.hidden = false;
+      }
+
+      function ocultarAvisoDeCambios() {
+        const boton = $("hay-cambios");
+        if (boton !== null) boton.hidden = true;
+      }
+
+      /**
+       * Si el cambio toca lo que se está mirando.
+       *
+       * El servidor avisa con las rutas que cambiaron, así que una mutación de
+       * **otro** ticket no tiene por qué repintar esta pantalla. Las vistas que
+       * agregan —listas, tableros, procesos— se refrescan siempre: cualquier
+       * cambio puede mover un contador. La de un ticket solo cuando el cambio lo
+       * nombra; los recibos de ese ticket llevan su identificador en el nombre del
+       * archivo, así que entran solos.
+       */
+      function elCambioTocaLaVista(rutas) {
         const ruta = location.hash.replace(/^#\//, "") || "tickets";
         const [nombre, parametro] = ruta.split("/");
+        if (nombre !== "ticket" || parametro === undefined) return true;
+        if (rutas.length === 0) return true;
+        return rutas.some((p) => p.includes(parametro));
+      }
+
+      async function navegar(opciones = {}) {
+        const ruta = location.hash.replace(/^#\//, "") || "tickets";
+        const [nombre, parametro] = ruta.split("/");
+
+        // Navegar de verdad empieza arriba; **refrescar** no mueve a nadie.
+        const antes = opciones.conservarVista === true ? instantaneaDeLaVista() : null;
 
         marcarTitulo(nombre, parametro);
 
@@ -6504,9 +6650,16 @@
           const cont = $("contenido");
           cont.textContent = "";
           cont.append(el("div", `No se pudo cargar la vista: ${error.message}`, "vacio"));
+        } finally {
+          if (antes !== null) restaurarVista(antes);
+          ocultarAvisoDeCambios();
         }
       }
 
+      $("hay-cambios").addEventListener("click", () => {
+        marcarActualizado();
+        void navegar({ conservarVista: true });
+      });
       $("cancelar").addEventListener("click", () => $("dialogo").close());
       $("guardar").addEventListener("click", () => void guardar());
       $("clave").addEventListener("keydown", (e) => {
