@@ -42,11 +42,16 @@ tickets en intake, sin relajar ninguna compuerta humana existente.
 
 ## Restricciones
 
-- Ninguna ola relaja una decisión humana existente: deploys, cierres de QA y
-  umbrales siguen siendo de una persona.
+- Ninguna ola relaja una decisión humana existente **por defecto**: deploys,
+  cierres de QA y umbrales siguen siendo de una persona, salvo la autonomía
+  explícitamente declarada y registrada por quien la autoriza (R-S5-006,
+  R-S5-010). Lo que se automatiza es la confirmación que siempre da el mismo
+  resultado, y solo cuando el cambio es verificable sin una persona.
 - Cada ticket nace en intake con el flujo completo: análisis, plan, aprobación.
 - El motor sigue sin dependencias externas en el camino crítico (invariante 1 y
   la sección E: ni orquestador de contenedores ni DSL propio).
+- Nada de esto es obligatorio por proyecto: cada capacidad nace apagada y se
+  enciende por configuración, con validación en la interfaz (R-S5-009).
 
 ## Artefactos
 

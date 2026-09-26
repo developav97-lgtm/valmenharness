@@ -37,3 +37,30 @@ Lo que entra al gate DEBE ser un test guardado en el repositorio del proyecto,
 determinista y repetible sin modelo. El Playwright MCP interactivo PUEDE usarse
 para explorar y grabar, pero la evidencia del gate sale de la ejecución del
 archivo, no de la sesión del agente.
+
+## R-S4-005 — El tercer verbo: validación en el ambiente desplegado
+
+Un criterio de interfaz DEBE poder declararse `<!-- verify: dev -->`, que es la
+validación que hoy se hace a mano: la persona prueba la pantalla en el ambiente
+de desarrollo ya desplegado. El proyecto DEBE declarar en `.valmen/config.yaml`
+la URL de ese ambiente y, si aplica, el esquema o la rama que lo alimenta:
+
+```yaml
+verify-dev:
+  url: "https://dev.saiopencloud.co"
+  branch: dev            # la rama que alimenta ese ambiente
+```
+
+Reglas:
+
+- `verify: dev` es una **declaración explícita**, no una omisión: el criterio
+  queda pendiente de la prueba de la persona, igual que `verify: manual`, y el
+  ticket NO DEBE pasar a QA hasta que esa prueba se confirme.
+- Un criterio `verify: dev` DEJA el ticket fuera de la integración automática
+  (R-S5-006), porque su verificación depende de una persona. Es el complemento
+  exacto del caso de backend: lo que se prueba con `test:` puede integrarse
+  solo; lo que se prueba mirando una pantalla, no.
+- Si el ambiente no está declarado, `verify: dev` DEBE rechazarse al validar el
+  ticket: prometer una verificación contra un ambiente que no existe es peor
+  que no declararla.
+
