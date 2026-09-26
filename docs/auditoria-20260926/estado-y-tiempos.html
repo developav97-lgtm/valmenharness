@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>ValmenHarness × SaiOpenCloud — Estado medido al 26-sep-2026</title>
+<style>
+  body { color: var(--foreground); font-size: 14px; line-height: 1.45; max-width: 900px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h2 { font-size: 15px; margin: 22px 0 8px; }
+  .sub { color: var(--muted-foreground); margin: 0 0 16px; font-size: 13px; }
+  .kpis { display: flex; gap: 10px; flex-wrap: wrap; }
+  .kpi { border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; background: var(--card); min-width: 120px; }
+  .kpi b { font-size: 22px; display: block; }
+  .kpi small { color: var(--muted-foreground); font-size: 11.5px; }
+  table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+  th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted-foreground); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .bar { height: 8px; border-radius: 4px; background: var(--accent); display: inline-block; vertical-align: middle; }
+  .warn { color: #e8590c; font-weight: 600; }
+  .ok { color: #2f9e44; font-weight: 600; }
+  .callout { border: 1px solid var(--border); border-left: 4px solid #e8590c; border-radius: 8px; padding: 10px 12px; margin: 14px 0; background: var(--card); font-size: 13px; }
+  .callout.blue { border-left-color: #1971c2; }
+  .callout.green { border-left-color: #2f9e44; }
+  code { font-size: 12px; }
+</style>
+</head>
+<body>
+<h1>Estado medido — ValmenHarness × SaiOpenCloud</h1>
+<p class="sub">Auditoría del 26 de septiembre de 2026 · fuentes: registro de tickets, recibos, git log, sesiones de opencode</p>
+
+<h2>El proyecto en números</h2>
+<div class="kpis">
+  <div class="kpi"><b>93</b><small>tickets en el registro<br>81 cerrados · 12 en intake</small></div>
+  <div class="kpi"><b>28.3M</b><small>tokens de entrada medidos<br>2.5M de salida</small></div>
+  <div class="kpi"><b>≈$4.67</b><small>costo estimado total<br>(tarifa pública deepseek-flash)</small></div>
+  <div class="kpi"><b>16</b><small>tickets cerrados el 24–25 sep<br>ritmo de ~8/día</small></div>
+</div>
+
+<h2>Dónde se va el tiempo y los tokens — tickets con consumo registrado</h2>
+<table>
+<tr><th>Ticket</th><th style="text-align:right">Sesiones</th><th style="text-align:right">Puntos</th><th style="text-align:right">Tokens in</th><th style="text-align:right">Tokens out</th><th>Proporción</th></tr>
+<tr><td>IMPROVEMENT-CREACION-MANUAL-CONGRUENCIA</td><td class="num">11</td><td class="num">13</td><td class="num warn">8,741,516</td><td class="num">1,039,368</td><td><span class="bar" style="width:180px"></span></td></tr>
+<tr><td>BUGFIX-RESTAURANTE-VALIDACION-PAGOS</td><td class="num">6</td><td class="num">2</td><td class="num warn">4,456,956</td><td class="num">189,592</td><td><span class="bar" style="width:92px"></span></td></tr>
+<tr><td>FEATURE-CREACION-MANUAL-PANTALLA</td><td class="num">21</td><td class="num">20</td><td class="num warn">3,786,920</td><td class="num">403,803</td><td><span class="bar" style="width:78px"></span></td></tr>
+<tr><td>IMPROVEMENT-TERCEROS-DIAN-PARAMETRO</td><td class="num">4</td><td class="num">1</td><td class="num">3,523,841</td><td class="num">125,798</td><td><span class="bar" style="width:72px"></span></td></tr>
+<tr><td>FEATURE-CREACION-MANUAL-RESTAURANTE</td><td class="num">2</td><td class="num">1</td><td class="num">1,583,498</td><td class="num">127,740</td><td><span class="bar" style="width:33px"></span></td></tr>
+<tr><td>FEATURE-HUECOS-DETECCION-API</td><td class="num">3</td><td class="num">0</td><td class="num">1,411,320</td><td class="num">132,083</td><td><span class="bar" style="width:29px"></span></td></tr>
+<tr><td>IMPROVEMENT-PRODUCTOS-FILTRO-KIT-COMBO</td><td class="num">2</td><td class="num">0</td><td class="num">1,018,233</td><td class="num">107,512</td><td><span class="bar" style="width:21px"></span></td></tr>
+<tr><td>BUGFIX-COBRANZA-REINTENTO-SINCRONIZADO</td><td class="num">2</td><td class="num">0</td><td class="num ok">39,041</td><td class="num">2,176</td><td><span class="bar" style="width:2px"></span></td></tr>
+</table>
+
+<div class="callout">
+<b>Hallazgo 1 — El costo no es el flujo, es la re-contextualización.</b> El ticket de congruencia de la factura manual (13 puntos de UI) quemó <b>8.7M tokens de entrada</b> en 11 sesiones. Una sola de esas sesiones cargó 6.18M. Cada reanudación re-lee el ticket entero y su historial. El flujo de gates cuesta centavos; <b>volver a poner al agente en contexto cuesta 100× más</b>.
+</div>
+
+<div class="callout blue">
+<b>Hallazgo 2 — Los tickets de UI con retest cuestan 20–200× más que un bugfix acotado.</b> El bugfix de cobranza cerró con 39K tokens; la pantalla de factura acumuló 3.8M + 8.7M + 1.5M entre su feature y sus dos mejoras. No es que el ticket sea lento: es que <b>la pantalla se descubre probándola</b>, y cada ciclo PO→punto→corrección→retest paga el contexto completo otra vez.
+</div>
+
+<div class="callout green">
+<b>Hallazgo 3 — Lo que ya funciona y no hay que tocar.</b> Los gates mecánicos ($0), la evaluación Jev ($0.0001/decisión), los recibos inmutables, la memoria léxica y el detector de secretos están construidos y medidos. El 81% del registro está cerrado con su consumo declarado. La disciplina del sistema no es el problema.
+</div>
+
+<h2>El harness mismo — trabajo sin commitear</h2>
+<table>
+<tr><th>Cambio</th><th style="text-align:right">Líneas</th><th>Estado</th></tr>
+<tr><td><code>anexar_ticket_a_feature</code> — un ticket huérfano entra al grafo de su feature</td><td class="num">+279 engine · +75 MCP · +96 CLI</td><td class="ok">con tests</td></tr>
+<tr><td>Tope de puntos por ticket: 20 → 100</td><td class="num">core + tests nuevos</td><td class="ok">con tests</td></tr>
+<tr><td>Mission Control: botón de anexar y vista del grafo</td><td class="num">+167 html · +27 server</td><td>pendiente verificación en navegador</td></tr>
+</table>
+<p class="sub">15 archivos modificados, 2 tests nuevos, +689 líneas. Todo trazable al caso real de la pantalla de factura (los 20 puntos no cabían en un ticket). <b>Listo para commit cuando lo autorices.</b></p>
+
+<h2>Qué está documentado y pendiente en el roadmap propio</h2>
+<table>
+<tr><th>Propuesta</th><th>Estado real</th></tr>
+<tr><td>A2 detector de drift · A5 aprendizajes · A6 secretos · B1 criterios como tests · B5 reporte de valor · B6 plantillas · C4 MCP · C5 memoria · C6 puente Hermes</td><td class="ok">Hecho</td></tr>
+<tr><td>A1 modo pregunta forzado (<code>valmen ask</code>)</td><td class="warn">Pendiente — 2–3 días</td></tr>
+<tr><td>A3 simulador de sprint · A4 colisiones de escritura</td><td class="warn">Pendiente — necesario antes de paralelizar</td></tr>
+<tr><td>B2 cascada verificada (modelo barato → Jev → caro solo si falla)</td><td class="warn">Pendiente — la mayor palanca de costo</td></tr>
+<tr><td>B3 revisión adversarial por riesgo</td><td class="warn">Pendiente</td></tr>
+<tr><td>C1 modo headless (ejecutar tickets elegibles sin intervención)</td><td class="warn">Pendiente — requiere métricas de gates ya medidas</td></tr>
+</table>
+</body>
+</html>

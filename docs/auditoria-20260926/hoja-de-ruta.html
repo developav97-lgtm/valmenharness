@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>ValmenHarness — Hoja de ruta propuesta</title>
+<style>
+  body { color: var(--foreground); font-size: 14px; line-height: 1.45; max-width: 920px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h2 { font-size: 15px; margin: 22px 0 8px; }
+  .sub { color: var(--muted-foreground); margin: 0 0 16px; font-size: 13px; }
+  .wave { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; background: var(--card); }
+  .wave h3 { margin: 0 0 6px; font-size: 14px; }
+  .wave h3 .tag { font-size: 11px; font-weight: 600; border: 1px solid var(--border); border-radius: 20px; padding: 2px 8px; margin-left: 8px; color: var(--muted-foreground); vertical-align: 2px; }
+  ul { margin: 6px 0 0; padding-left: 18px; }
+  li { margin-bottom: 4px; }
+  .why { color: var(--muted-foreground); font-size: 12.5px; }
+  .gate-note { border: 1px dashed #e8590c; border-radius: 8px; padding: 8px 12px; font-size: 12.5px; margin-top: 14px; }
+  .flow { font-family: ui-monospace, monospace; font-size: 12px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; white-space: pre; overflow-x: auto; margin-top: 8px; }
+</style>
+</head>
+<body>
+<h1>Hoja de ruta propuesta — más autónomo, sin soltar las compuertas</h1>
+<p class="sub">Ordenado por retorno sobre esfuerzo. Cada ola deja el sistema en un estado usable; ninguna relaja una decisión humana existente.</p>
+
+<div class="wave">
+  <h3>Ola 1 — Que un ticket sencillo no cueste una fortuna <span class="tag">1–2 semanas</span></h3>
+  <ul>
+    <li><b>Reanudación compacta del ticket.</b> <code>reanudar_ticket</code> entrega un resumen estructurado (estado, plan, puntos abiertos, último recibo) en vez del documento entero. El ticket de 8.7M tokens baja a una fracción desde el primer día. <span class="why">— ataca el hallazgo 1 directamente.</span></li>
+    <li><b>B2 · Cascada verificada.</b> El modelo barato trabaja, Jev verifica contra el contexto, y solo si falla escala a uno caro. OpenRouter reporta ~7% del costo con 0 errores adicionales. Aplica a exploración, clasificación y resúmenes.</li>
+    <li><b>C2 · Presupuestos adaptativos.</b> Un ticket que ya gastó 2× lo típico de su tipo lo dice en voz alta en vez de descubrirse en la factura: avisa a 1.5×, degrada el modelo a 2×, pausa y pregunta a 3×.</li>
+    <li><b>A1 · <code>valmen ask</code>.</b> Modo pregunta con permisos de escritura revocados por el motor, no por el prompt. Elimina el modo de fallo más caro: editar cuando se pidió analizar.</li>
+  </ul>
+</div>
+
+<div class="wave">
+  <h3>Ola 2 — Multiproyecto de verdad <span class="tag">1–2 semanas</span></h3>
+  <ul>
+    <li><b>Un perfil de Hermes por proyecto, un MCP por proyecto.</b> Hoy existe <code>valmen-saicloud</code> con <code>cwd</code> fijo. El patrón se repite: perfil nuevo → <code>mcp_servers.valmen-&lt;proyecto&gt;</code> con su raíz → <code>valmen adopt</code> en el repo → la plantilla <code>django-angular-multitenant</code> si aplica. Nada de esto exige código nuevo del harness.</li>
+    <li><b>ValmenHarness mismo como segundo adoptante.</b> Hoy trabaja en "modo directo" por decisión propia; adoptarlo con gates reales es la mejor prueba de que la adopción de un proyecto nuevo toma menos de una tarde.</li>
+    <li><b>Vista de portafolio en Mission Control.</b> Un índice de proyectos (cada uno con su raíz declarada) que agrega: qué gates esperan decisión, qué procesos se detuvieron, consumo del mes por proyecto. Es la pieza D del roadmap y empieza a dar forma de producto.</li>
+  </ul>
+</div>
+
+<div class="wave">
+  <h3>Ola 3 — Manuales como subproducto del registro <span class="tag">1–2 semanas</span></h3>
+  <ul>
+    <li><b>Proceso <code>actualizar-manuales</code> ya diseñado en el deploy.</b> Falta construirlo: detectar pantallas tocadas por los tickets de la release (los archivos están en los recibos), marcar manuales desactualizados, y regenerar el <code>.md</code> con la metodología de <code>PROCESO-MANUALES.md</code> — que ya es excelente y no hay que reinventar.</li>
+    <li><b>Los manuales quedan en <code>.md</code> como fuente de verdad</b> (como hoy), con el portal web y el PDF como proyecciones. Nada cambia para quien escribe.</li>
+    <li><b>Semilla del RAG:</b> el corpus queda listo — manuales (qué hace la pantalla), memoria (por qué se decidió así), tickets (qué cambió y cuándo). Tres colecciones, todas en markdown, todas versionadas.</li>
+  </ul>
+  <div class="flow">manuales/*.md ──┐
+decisions.md ───┼─► indexador ─► base vectorial ─► agente "pregúntale al sistema"
+errors.md ──────┤    (nuevo)      (Qdrant/pgvector)   (responde con cita al doc)
+tickets/*.md ───┘</div>
+</div>
+
+<div class="wave">
+  <h3>Ola 4 — Pruebas de escritorio con Playwright, dentro de la compuerta <span class="tag">1 semana</span></h3>
+  <ul>
+    <li><b>No es una herramienta aparte: es un tercer verbo en los criterios.</b> Hoy: <code>&lt;!-- test: … --&gt;</code> y <code>&lt;!-- verify: manual --&gt;</code>. Mañana: <code>&lt;!-- test: playwright tests/pos/creacion-manual.spec.ts --&gt;</code>, ejecutado por el gate mecánico con el prefijo autorizado en <code>test-commands</code>.</li>
+    <li><b>El PO decide por ticket.</b> Si el plan declara una prueba Playwright, el gate la corre y el recibo la guarda con su video/traza como evidencia. Si no, nada cambia. La autonomía sube sin quitarle a nadie el botón.</li>
+    <li><b>Playwright MCP vs tests en repo:</b> el MCP de Playwright sirve para explorar y grabar; lo que entra al gate es el test guardado en el repo — determinista, repetible, sin modelo en el camino crítico.</li>
+  </ul>
+</div>
+
+<div class="wave">
+  <h3>Ola 5 — Autonomía acotada (el nivel 4) <span class="tag">3–4 semanas, al final</span></h3>
+  <ul>
+    <li><b>C1 · Modo headless con elegibilidad por configuración:</b> tipos permitidos, riesgo máximo <code>normal</code>, módulos excluidos (sync, auth, deploy), tope diario y presupuesto por ticket. <span class="why">El agente no elige qué tomar: el motor le ofrece solo lo que cumple criterios que tú definiste.</span></li>
+    <li><b>A4 · Colisiones de escritura</b> antes de lanzar dos agentes en paralelo sobre el mismo repo.</li>
+    <li><b>Precondición dura:</b> la calibración de gates medida (<code>valmen gate simulate</code> con ≥30 decisiones humanas) antes de promover nada a automático. Es lo que falta hoy — no es código, es evidencia.</li>
+  </ul>
+</div>
+
+<div class="gate-note"><b>Lo que nunca entra en ninguna ola:</b> aprobar deploys por token remoto de riesgo alto, cerrar QA sin la frase del PO, relajar umbrales por decreto, telemetría obligatoria. El sistema se vuelve más autónomo en lo mecánico y más barato en lo semántico; las decisiones irreversibles quedan donde están.</div>
+</body>
+</html>

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>ValmenHarness — Calificación y análisis de mercado</title>
+<style>
+  body { color: var(--foreground); font-size: 14px; line-height: 1.45; max-width: 940px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h2 { font-size: 15px; margin: 24px 0 8px; }
+  .sub { color: var(--muted-foreground); margin: 0 0 16px; font-size: 13px; }
+  .grade { display: flex; gap: 10px; align-items: stretch; flex-wrap: wrap; margin: 10px 0; }
+  .gcard { border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; background: var(--card); min-width: 130px; flex: 1; }
+  .gcard b { font-size: 20px; display: block; }
+  .gcard small { color: var(--muted-foreground); font-size: 11px; line-height: 1.3; display: block; margin-top: 3px; }
+  .big { border: 2px solid var(--accent); }
+  table { border-collapse: collapse; width: 100%; font-size: 12px; margin-top: 6px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted-foreground); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+  .cat { font-weight: 700; white-space: nowrap; }
+  .price { color: var(--muted-foreground); white-space: nowrap; font-size: 11.5px; }
+  .no { color: #c92a2a; } .yes { color: #2f9e44; font-weight: 600; }
+  .callout { border: 1px solid var(--border); border-left: 4px solid #1971c2; border-radius: 8px; padding: 10px 12px; margin: 14px 0; background: var(--card); font-size: 13px; }
+  .callout.red { border-left-color: #c92a2a; }
+  .callout.green { border-left-color: #2f9e44; }
+  ol.caps { counter-reset: cap; list-style: none; padding: 0; margin: 6px 0; }
+  ol.caps li { counter-increment: cap; margin-bottom: 8px; padding-left: 34px; position: relative; font-size: 13px; }
+  ol.caps li::before { content: counter(cap); position: absolute; left: 0; top: 1px; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: var(--card); font-weight: 700; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+  ol.caps .why { display: block; color: var(--muted-foreground); font-size: 12px; margin-top: 2px; }
+  .money { border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; background: var(--card); display: inline-block; margin-right: 10px; margin-top: 6px; min-width: 160px; }
+  .money b { font-size: 17px; display: block; }
+  .money small { color: var(--muted-foreground); font-size: 11.5px; }
+</style>
+</head>
+<body>
+<h1>Calificación del MCP y análisis de mercado</h1>
+<p class="sub">Investigación del 26-sep-2026 · 12 competidores en 4 categorías · precios públicos verificados · fuentes en el INFORME.md</p>
+
+<h2>Calificación de ValmenHarness como herramienta</h2>
+<div class="grade">
+  <div class="gcard big"><b>8.0 / 10</b><small>Nota global como herramienta interna</small></div>
+  <div class="gcard"><b>9/10</b><small>Contrato y completitud — el ciclo entero del ticket sin terminal</small></div>
+  <div class="gcard"><b>9/10</b><small>Seguridad — la aprobación jamás viaja por MCP; techo de riesgo en código</small></div>
+  <div class="gcard"><b>9/10</b><small>Costo de operación — gates $0, Jev $0.0001 por decisión</small></div>
+  <div class="gcard"><b>7/10</b><small>Ergonomía — reanudar_ticket entrega demasiado contexto (mejora #1)</small></div>
+  <div class="gcard"><b>6/10</b><small>Multiproyecto — funciona por cwd; falta vista de portafolio</small></div>
+  <div class="gcard"><b>7/10</b><small>Observabilidad — reportes hechos; faltan series y trazas</small></div>
+</div>
+
+<div class="callout green"><b>El hueco de mercado es real:</b> ValmenHarness es un harness que <b>no es un agente</b> — se instala dentro de Claude Code, opencode, Codex o Hermes y aporta el contrato: tickets con máquina de estados verificada, gates con recibo inmutable, memoria auditable versionada en git, consumo medido por ticket, cero dependencias de vendor. Ningún competidor cubre esa tesis completa.</div>
+
+<h2>El mercado en 4 categorías — qué tienen ellos que Valmen no, y al revés</h2>
+<table>
+<tr><th></th><th>Precio público</th><th>Ellos tienen y Valmen no</th><th>Valmen tiene y ellos no</th></tr>
+<tr><td class="cat">Devin (Cognition)</td><td class="price">$20–500/mes</td><td>Sandbox cloud, paralelismo, demo "wow", marca</td><td class="yes" rowspan="5">Gates humanos bloqueantes con recibo inmutable · máquina de estados verificable en disco · memoria auditable en git · consumo medido por ticket · la aprobación no la puede firmar el agente · funciona offline y sin vendor</td></tr>
+<tr><td class="cat">Factory AI</td><td class="price">$20–200/asiento</td><td>Coordinador multi-droide, sandboxes incluidos, on-prem enterprise</td></tr>
+<tr><td class="cat">Copilot coding agent</td><td class="price">$19–39/asiento</td><td>Distribución imbatible (ya está en GitHub), indemnización IP</td></tr>
+<tr><td class="cat">Cursor</td><td class="price">$20–200/mes</td><td>El IDE donde el dev ya vive, background agents, marketplace de reglas</td></tr>
+<tr><td class="cat">OpenHands</td><td class="price">OSS gratis · $20 cloud</td><td>72–77% SWE-bench, 78k stars, control plane con RBAC y budgets</td></tr>
+<tr><td class="cat">CodeRabbit / Greptile</td><td class="price">$24–72/dev</td><td>Review del diff con contexto full-codebase, aprenden del equipo</td><td class="yes" rowspan="3">Gobiernan el <b>proceso que produce</b> el código, no solo el PR ya escrito · presupuesto por ticket · gate que bloquea el deploy desde tu máquina</td></tr>
+<tr><td class="cat">LinearB / Swarmia</td><td class="price">$20–59/dev</td><td>Métricas DORA/SPACE, benchmark de industria, ROI de AI ante un CFO</td></tr>
+<tr><td class="cat">Linear / Jira con AI</td><td class="price">$8–14/usuario</td><td>El tablero donde el trabajo ya vive; agentes asignables como ciudadanos</td></tr>
+<tr><td class="cat">LangGraph / CrewAI</td><td class="price">OSS · $39/dev observab.</td><td>Durable execution, human-in-the-loop nativo, comunidad masiva</td><td class="yes">Estado verificable sin framework de prompts; gates que el agente no puede ampliar</td></tr>
+</table>
+
+<h2>Las 10 capacidades para ser vendible — ordenadas</h2>
+<ol class="caps">
+  <li><b>Modo headless con elegibilidad configurable</b> (C1 del roadmap propio)<span class="why">Sin esto no hay demo que el comprador espera ver. Es el nivel 4: tickets elegibles de punta a punta hasta awaiting_user_tests.</span></li>
+  <li><b>Sandboxes cloud opcionales</b><span class="why">Devin, Factory y OpenHands los incluyen. Hoy Valmen exige la máquina del dev: eso bloquea enterprise y paralelismo real.</span></li>
+  <li><b>Paralelismo con detección de colisiones</b> (A3+A4)<span class="why">Simular el sprint, detectar colisiones de archivos, lanzar N agentes sin merge conflictivo. Sin esto Valmen es single-threaded.</span></li>
+  <li><b>Review agéntico del código con contexto full-codebase</b><span class="why">Greptile/CodeRabbit lo hacen sobre el PR. Valmen gobierna el plan pero no revisa el diff producido con el grafo del repo.</span></li>
+  <li><b>Métricas DORA/SPACE y ROI de AI</b><span class="why">El comprador enterprise necesita justificar el gasto ante un CFO. Valmen mide consumo por ticket; le falta la vista agregada.</span></li>
+  <li><b>Integración bidireccional Linear/Jira</b><span class="why">Los tickets viven ahí. Valmen debe ser la fuente de verdad técnica que sincroniza, no exigir migrar el backlog. Subirla de prioridad desde la sección D.</span></li>
+  <li><b>Marketplace de plantillas por stack</b><span class="why">django-angular-multitenant es el activo más valioso: 4 años de decisiones empaquetadas. Que otros publiquen las suyas convierte el harness en plataforma.</span></li>
+  <li><b>Observabilidad con OpenTelemetry y dashboard de gates</b> (C3)<span class="why">Sin el número de acierto por gate, "los gates automáticos aciertan" es una afirmación, no un dato.</span></li>
+  <li><b>Revisión adversarial con refutador</b> (B3)<span class="why">Un revisor independiente con otro modelo ataca el cambio. Ningún competidor la tiene: es un diferencial, no un catch-up.</span></li>
+  <li><b>Benchmark propio de modelos sobre los tickets del cliente</b><span class="why">Qué modelo rinde mejor en TUS tickets, no en SWE-bench. Ningún vendor puede darlo porque no tiene tu historial — Valmen sí.</span></li>
+</ol>
+
+<h2>Modelo de negocio plausible — open-core (el patrón validado por OpenHands, CrewAI y GitLab)</h2>
+<div>
+  <div class="money"><b>Open source (MIT)</b><small>Motor, máquina de estados, gates mecánicos, memoria, CLI, MCP. Coherente con la tesis "cero vendor": nadie adopta un harness cerrado que promete no atarlo.</small></div>
+  <div class="money"><b>Team · $30–40/dev/mes</b><small>Mission Control multiproyecto, gates con Jev, memoria, consumo por ticket, integración Linear.</small></div>
+  <div class="money"><b>Business · $60–80/dev/mes</b><small>Modo headless, paralelismo con colisiones, revisión adversarial, observabilidad, plantillas.</small></div>
+  <div class="money"><b>Enterprise · custom</b><small>~$100–150/dev o $30–80k/año. On-prem/air-gapped, SSO/SAML, audit logs, soporte, plantillas a medida.</small></div>
+</div>
+<p class="sub">Ancla de valor: Valmen no cobra por tokens (eso lo paga el cliente a su proveedor) — cobra por el contrato que hace confiable al agente. Alternativa: $2–5 por ticket cerrado con gates verificados, pero el mercado se mueve a seat-based predecible.</p>
+
+<h2>Los riesgos, dichos de frente</h2>
+<div class="callout red"><b>1. Es una venta de disciplina, no de demo.</b> El mercado compra "mira el PR que Devin abrió solo", no "mira el recibo inmutable de esta decisión". El comprador de Valmen es el CTO que ya sufrió un agente que aprobó sin evidencia — educar ese mercado es lento y caro.</div>
+<div class="callout red"><b>2. Linear y GitHub se pueden comer la categoría por distribución.</b> Linear ya asigna issues a Cursor/Devin; si añade gates humanos desde su app móvil, la mitad del diferencial se evapora sin que el cliente adopte nada nuevo.</div>
+<div class="callout red"><b>3. La tesis "el harness no es el agente" se debilita si los agentes absorben el contrato.</b> Claude Code ya tiene hooks y skills; si los runtimes incorporan gates declarativos nativos, la capa que Valmen vende se commoditiza.</div>
+<div class="callout red"><b>4. El precio compite contra lo que el equipo ya paga.</b> $30–80/dev contra Copilot/Cursor/CodeRabbit que ya están en el presupuesto. En Latinoamérica la conversación con el CFO es más dura todavía.</div>
+<div class="callout"><b>El nicho defendible:</b> equipos regulados, multi-modelo real, o desarrollo nearshore con trazabilidad contractual — donde el recibo auditable no es un lujo sino un requisito. Ese es el mercado donde Valmen gana hoy, sin construir nada más.</div>
+</body>
+</html>

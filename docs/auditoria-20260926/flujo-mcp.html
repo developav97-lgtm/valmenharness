@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>ValmenHarness — Mapa del flujo de un ticket</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { color: var(--foreground); font-size: 14px; line-height: 1.45; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: var(--muted-foreground); margin: 0 0 18px; font-size: 13px; }
+  .lane { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; background: var(--card); }
+  .lane h2 { font-size: 13px; margin: 0 0 8px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted-foreground); }
+  .steps { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; }
+  .step { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; min-width: 150px; max-width: 210px; background: transparent; position: relative; }
+  .step b { display: block; font-size: 13px; }
+  .step small { color: var(--muted-foreground); font-size: 11.5px; display: block; margin-top: 2px; }
+  .step .cost { position: absolute; top: 6px; right: 8px; font-size: 10.5px; color: var(--muted-foreground); }
+  .mech { border-left: 4px solid #2f9e44; }
+  .model { border-left: 4px solid #1971c2; }
+  .human { border-left: 4px solid #e8590c; }
+  .agent { border-left: 4px solid #9c36b5; }
+  .arrow { align-self: center; color: var(--muted-foreground); font-size: 16px; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; margin: 0 0 14px; font-size: 12px; color: var(--muted-foreground); }
+  .legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+  .l-mech::before { background: #2f9e44; } .l-model::before { background: #1971c2; }
+  .l-human::before { background: #e8590c; } .l-agent::before { background: #9c36b5; }
+  .note { border: 1px dashed var(--border); border-radius: 8px; padding: 8px 10px; font-size: 12.5px; color: var(--muted-foreground); margin-top: 12px; }
+  .states { font-family: ui-monospace, monospace; font-size: 12px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; white-space: pre; overflow-x: auto; margin-top: 12px; }
+</style>
+</head>
+<body>
+<h1>ValmenHarness — el recorrido de un ticket, de punta a punta</h1>
+<p class="sub">Quién decide en cada paso, qué cuesta y qué queda grabado. Medido sobre el flujo real de SaiOpenCloud (sept 2026).</p>
+
+<div class="legend">
+  <span class="l-mech">Mecánico — código, $0</span>
+  <span class="l-model">Modelo evaluador (Jev) — ~$0.0001</span>
+  <span class="l-human">Persona — decisión que no se delega</span>
+  <span class="l-agent">Agente de desarrollo (opencode / Hermes)</span>
+</div>
+
+<div class="lane">
+  <h2>1 · Nacimiento — del pedido al ticket</h2>
+  <div class="steps">
+    <div class="step agent"><span class="cost">~$0.01</span><b>Pedido del PO</b><small>En lenguaje natural, desde cualquier cliente MCP. El agente autoriza: read-only hasta que se pida un cambio.</small></div>
+    <span class="arrow">→</span>
+    <div class="step mech"><span class="cost">$0</span><b>crear_ticket</b><small>Se guarda la solicitud <i>literal</i> con su hash. ID: TIPO-MÓDULO-DESC-FECHA.</small></div>
+    <span class="arrow">→</span>
+    <div class="step mech"><span class="cost">$0</span><b>gate intake</b><small>3 checks mecánicos: solicitud preservada, tipo válido, impactos declarados. Aprueba solo.</small></div>
+  </div>
+</div>
+
+<div class="lane">
+  <h2>2 · Análisis — entender antes de tocar</h2>
+  <div class="steps">
+    <div class="step agent"><span class="cost">~$0.08</span><b>Investigación</b><small>buscar_memoria primero (errores ya conocidos), luego código. Se escribe el Diagnóstico con causa raíz y archivos:línea.</small></div>
+    <span class="arrow">→</span>
+    <div class="step mech"><span class="cost">$0</span><b>checks mecánicos</b><small>¿Los archivos citados existen? ¿La línea citada dice lo que el diagnóstico afirma? Sin modelo.</small></div>
+    <span class="arrow">→</span>
+    <div class="step model"><span class="cost">$0.0001</span><b>Jev evalúa</b><small>5 proposiciones de hechos verificables. Umbrales: ≥0.90 aprueba, ≤0.10 bloquea, entre medio → humano.</small></div>
+  </div>
+</div>
+
+<div class="lane">
+  <h2>3 · Plan — la compuerta donde la persona sí entra</h2>
+  <div class="steps">
+    <div class="step agent"><b>Plan + criterios</b><small>Pasos ordenados, criterios de aceptación con <code>&lt;!-- test: … --&gt;</code> o <code>verify: manual</code>, rollback declarado.</small></div>
+    <span class="arrow">→</span>
+    <div class="step model"><span class="cost">$0.0001</span><b>gate plan</b><small>Jev puntúa cobertura, coherencia, verificabilidad. Si duda (banda media), escala.</small></div>
+    <span class="arrow">→</span>
+    <div class="step human"><b>Decisión humana</b><small>Telegram / Mission Control. Aprueba, rechaza o devuelve — con su frase literal en el recibo. Nunca la escribe el agente.</small></div>
+  </div>
+</div>
+
+<div class="lane">
+  <h2>4 · Implementación y verificación mecánica</h2>
+  <div class="steps">
+    <div class="step agent"><span class="cost">~$0.20</span><b>El agente implementa</b><small>Solo los archivos del plan. Corre los tests declarados. Registra evidencia con SHA.</small></div>
+    <span class="arrow">→</span>
+    <div class="step mech"><span class="cost">$0</span><b>gate qa-mechanical</b><small>Corre los <code>test:</code> declarados (prefijos autorizados, timeout configurable), diff limpio, sin secretos, archivos dentro del alcance.</small></div>
+    <span class="arrow">→</span>
+    <div class="step human"><b>Pruebas del PO</b><small>Contrato de pruebas entregado: comandos, pasos manuales, ambiente. Estado: <code>awaiting_user_tests</code>.</small></div>
+  </div>
+</div>
+
+<div class="lane">
+  <h2>5 · QA y cierre — nada se marca en falso</h2>
+  <div class="steps">
+    <div class="step human"><b>Retest con puntos</b><small>Cada hallazgo es un POINT con su propio ciclo (open→…→verified→closed). La confirmación es la frase del PO.</small></div>
+    <span class="arrow">→</span>
+    <div class="step mech"><span class="cost">$0</span><b>preparar_cierre</b><small>Rechaza sin consumo de IA registrado. Exige criterios marcados, puntos cerrados, SHAs atribuibles.</small></div>
+    <span class="arrow">→</span>
+    <div class="step mech"><span class="cost">$0</span><b>closed</b><small>Recibo de cierre + consumo medido por sesión (opencode:/hermes:/manual:). Índice regenerado.</small></div>
+  </div>
+</div>
+
+<div class="lane">
+  <h2>6 · Release — lo irreversible nunca se automatiza</h2>
+  <div class="steps">
+    <div class="step mech"><b>proceso deploy</b><small>8 pasos: preflight, version-check, gate humano, tag, publish, manuales, changelog, notify.</small></div>
+    <span class="arrow">→</span>
+    <div class="step human"><b>Frase literal</b><small>«APROBAR DEPLOY vX.Y.Z». Sin token para riesgo alto ni impacto en migración/sync/docker. Jamás vía MCP.</small></div>
+  </div>
+</div>
+
+<div class="states">ticket:  intake → analyzed → planned → approved → in_progress → awaiting_user_tests → in_qa → qa_approved → closed
+                 ↘ blocked ────────────────────↗              ↘ changes_requested ↗
+point:   open → analyzed → in_progress → awaiting_retest → verified → closed
+release: unreleased → planned → released</div>
+
+<div class="note"><b>Lo que queda en disco de cada decisión:</b> recibo append-only en <code>.valmen/receipts/&lt;ticket&gt;.jsonl</code> con el estado congelado comprimido, las respuestas del modelo, el costo y la decisión humana con su motivo. Una auditoría de hace 3 meses se responde con el archivo, no con una reconstrucción.</div>
+</body>
+</html>
