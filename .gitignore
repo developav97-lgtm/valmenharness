@@ -28,3 +28,8 @@ opencode.json
 
 # La convención cross-tool de skills, que leen Hermes y otros CLIs.
 .agents/
+
+# El lanzador de Mission Control que vive en la raíz. Es de la máquina y no del
+# repositorio: cada proyecto tiene el suyo, con su raíz y su rango de puertos, y
+# versionarlo obligaría a mantener una copia por proyecto dentro del harness.
+Abrir pantalla.command
