@@ -48,8 +48,8 @@ export interface McpEntry {
  * El `--root` sigue existiendo y sigue siendo la salida para el caso raro: un
  * agente que trabaja sobre un repositorio distinto del que está abierto.
  */
-export function mcpEntry(executable: string): McpEntry {
-  return { command: executable, args: [] };
+export function mcpEntry(executable: string, args: readonly string[] = []): McpEntry {
+  return { command: executable, args: [...args] };
 }
 
 /** El identificador con el que se declara el servidor en todos los runtimes. */

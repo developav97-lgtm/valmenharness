@@ -28,8 +28,9 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { type RegistryPaths, choosePaths } from "@valmen/engine";
+import { setAccessMode } from "@valmen/core";
 
-import { serveStdio } from "./protocol.js";
+import { type ToolDefinition, serveStdio } from "./protocol.js";
 import { getPromptFor, promptsFor } from "./prompts.js";
 import { TOOLS, callTool, type ToolContext } from "./tools.js";
 
@@ -44,6 +45,14 @@ export interface Options {
   readonly root: string;
   readonly credentialsFile: string | undefined;
   readonly check: boolean;
+  /**
+   * `true` si el servidor arranca en modo pregunta.
+   *
+   * Es opcional a propósito: quien construya las opciones a mano —una prueba, otro
+   * punto de entrada— no está obligado a declarar el modo, y el modo por defecto es
+   * el de siempre: escribir.
+   */
+  readonly ask?: boolean;
 }
 
 /**
@@ -66,6 +75,7 @@ export function parseOptions(argv: readonly string[], cwd: string): Options {
   let root = cwd;
   let credentialsFile: string | undefined;
   let check = false;
+  let ask = false;
 
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -81,17 +91,40 @@ export function parseOptions(argv: readonly string[], cwd: string): Options {
       i += 1;
     } else if (arg === "--check") {
       check = true;
+    } else if (arg === "--ask") {
+      ask = true;
     } else if (arg === "--help" || arg === "-h") {
       check = true;
     }
   }
 
-  return { root, credentialsFile, check };
+  return { root, credentialsFile, check, ask };
 }
 
 /** Las rutas del registro para una raíz. */
 export function pathsFor(root: string): RegistryPaths {
   return choosePaths(root);
+}
+
+/**
+ * El catálogo que el servidor publica en cada modo.
+ *
+ * En modo pregunta el catálogo son las herramientas que sólo leen: las que
+ * escriben, mueven estados o gastan una llamada **no se ofrecen**, así que un
+ * agente que consulte no las ve. Es el permiso visto desde donde el agente mira:
+ * no hay que confiar en que respete una anotación, porque la herramienta no está
+ * en la lista que recibe.
+ *
+ * Y no queda ahí: el proceso arranca con el modo puesto, así que una llamada que
+ * llegue igual —un cliente con el catálogo cacheado, una herramienta invocada por
+ * nombre— la rechaza el guardia del motor antes de tocar el disco.
+ */
+export function toolsInMode(
+  ask: boolean,
+  tools: readonly ToolDefinition[] = TOOLS,
+): readonly ToolDefinition[] {
+  if (!ask) return tools;
+  return tools.filter((tool) => tool.annotations.readOnlyHint);
 }
 
 /**
@@ -114,13 +147,18 @@ export function describe(options: Options): string {
   const paths = pathsFor(options.root);
   const credenciales = options.credentialsFile ?? credentialsFor(options.root);
   const prompts = promptsFor(options.root);
+  // El modo se imprime porque cambia lo que el servidor publica, y sin esa línea
+  // «faltan herramientas» —el diagnóstico más común de un servidor MCP— se lee
+  // como un error de configuración del cliente cuando es el modo.
+  const catalogo = toolsInMode(options.ask === true);
   return [
     `servidor:    ${SERVER_NAME} ${SERVER_VERSION}`,
     `raíz:        ${paths.root}`,
     `registro:    ${paths.ticketsDir}`,
     `credenciales: ${credenciales ?? "(ninguna: se resolverá por variable de entorno)"}`,
-    `herramientas: ${TOOLS.length}`,
-    ...TOOLS.map((tool) => {
+    `modo:        ${options.ask === true ? "pregunta (no concede escritura)" : "escritura"}`,
+    `herramientas: ${catalogo.length}`,
+    ...catalogo.map((tool) => {
       const requeridos = tool.inputSchema["required"];
       const lista = Array.isArray(requeridos) ? requeridos.join(", ") : "";
       return `  - ${tool.name}(${lista}): ${tool.title}`;
@@ -156,10 +194,15 @@ export async function main(
     credentialsFile: options.credentialsFile ?? credentialsFor(options.root),
   };
 
+  // El modo se pone para todo el proceso antes de atender nada: en modo pregunta
+  // el motor no concede escritura, así que ni una llamada que llegue con el
+  // catálogo viejo puede mutar el registro.
+  if (options.ask === true) setAccessMode("ask");
+
   await serveStdio({
     name: SERVER_NAME,
     version: SERVER_VERSION,
-    tools: TOOLS,
+    tools: toolsInMode(options.ask === true),
     prompts: promptsFor(options.root),
     call: (nombre, args) =>
       callTool(

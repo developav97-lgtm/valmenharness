@@ -25,6 +25,7 @@ import { gateRoutingFor, cascadeRoutingFor } from "@valmen/adapter";
 
 import {
   type CommandResult,
+  askCommand,
   buildIndex,
   calibrateReport,
   deliverManifest,
@@ -106,6 +107,12 @@ Comandos:
   active                    Lista los tickets no cerrados (alias: list).
   resume [--id <ID>]        Imprime el contexto para retomar un ticket.
                             Sin --id y con varios activos, no elige: pide uno.
+  ask <pregunta>            El modo pregunta: el motor no concede permisos de
+      --id <ID>             escritura, así que no se pueden crear tickets, mover
+                            estados ni escribir archivos. Imprime el contexto de la
+                            consulta —registro activo, el ticket con --id y lo que
+                            la memoria del proyecto sabe del tema— y quién responde
+                            no recibe el permiso.
   show <ID>                 Muestra el resumen de un ticket.
   index [--check]           Regenera el índice, o comprueba que esté al día.
   secrets [--staged]        Revisa los cambios pendientes en busca de secretos.
@@ -1037,6 +1044,23 @@ export function dispatch(options: Options): CommandResult {
       return resumeTicket(paths, id);
     }
 
+    case "ask": {
+      // La pregunta es el resto de los posicionales, unida, para que no haga
+      // falta entrecomillarla cuando alguien la escribe desde una shell que ya
+      // la partió. Sin pregunta no hay consulta: se falla antes de armar nada.
+      const pregunta = rest.join(" ").trim();
+      if (pregunta === "") {
+        return {
+          stdout: "",
+          stderr: "ask requiere una pregunta.",
+          exitCode: EXIT_SCHEMA,
+        };
+      }
+      const rawId = options.flags["id"];
+      const id = typeof rawId === "string" ? rawId : undefined;
+      return askCommand(paths, pregunta, id);
+    }
+
     case "show": {
       const id = rest[0];
       if (id === undefined) {
@@ -1252,6 +1276,7 @@ export async function run(argv: readonly string[]): Promise<number> {
         install: options.flags["install"] === true,
         global: options.flags["global"] === true,
         json: options.flags["json"] === true,
+        ask: options.flags["ask"] === true,
       });
     } else if (command === "hermes") {
       // Hermes es el único destino que no vive en el proyecto: su configuración

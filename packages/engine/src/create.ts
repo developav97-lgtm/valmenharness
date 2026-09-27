@@ -31,6 +31,7 @@ import {
   TEMPLATE_TITLE_MARKER,
   TICKET_TEMPLATE,
   TICKET_TYPES,
+  assertWriteAllowed,
   atomicWrite,
   ensureSecurePath,
   fail,
@@ -123,6 +124,8 @@ export function ticketPathFor(paths: RegistryPaths, id: string): string {
  * Devuelve la línea que informa del alta.
  */
 export function createTicket(request: CreateRequest): string {
+  assertWriteAllowed("crear un ticket");
+
   const { paths, id } = request;
 
   const { type, module: moduleFromId, year } = components(id);

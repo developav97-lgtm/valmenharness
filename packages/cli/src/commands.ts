@@ -24,6 +24,7 @@ import {
   toFailure,
   today as todayIso,
   validateDocument,
+  withAccessMode,
 } from "@valmen/core";
 import {
   type Projection,
@@ -103,7 +104,9 @@ import {
   ticketValueReport,
   renderDrift,
   scanDrift,
+  buildAskContext,
   buildResumeContext,
+  renderAskContext,
   renderResumeContext,
   DECISIONES_APRENDIZAJE,
   materializeFeature,
@@ -291,6 +294,44 @@ function resultadoReanudacion(
     exitCode: 0,
     data: context as unknown as Record<string, unknown>,
   };
+}
+
+/**
+ * `ask`: el contexto de una consulta, en modo pregunta.
+ *
+ * El modo lo pone acá el CLI y no el motor, y es la única forma de pedirlo: el
+ * permiso de escritura se niega dentro de `withAccessMode`, así que todo lo que
+ * corra dentro de este comando —incluido lo que un agente decida llamar después
+ * mientras dure la consulta— falla con invariante antes de tocar el disco.
+ *
+ * No lanza un agente ni consulta a un modelo: arma el contexto —registro activo,
+ * el ticket si se pidió uno, y lo que la memoria del proyecto sabe del tema— y lo
+ * imprime con el permiso declarado. La respuesta la produce quien lo lea.
+ */
+export function askCommand(
+  paths: RegistryPaths,
+  question: string,
+  ticketId: string | undefined,
+): CommandResult & { readonly data?: Record<string, unknown> } {
+  try {
+    const context = withAccessMode("ask", () =>
+      buildAskContext({
+        paths,
+        question,
+        ...(ticketId === undefined ? {} : { ticketId }),
+      }),
+    );
+
+    return {
+      stdout: renderAskContext(context),
+      stderr: "",
+      exitCode: 0,
+      data: context as unknown as Record<string, unknown>,
+    };
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
 }
 
 /** Los tickets activos, ordenados por `created` y luego por `id`. */

@@ -30,6 +30,7 @@ import {
   FEATURE_TEMPLATE,
   MutationLock,
   SCHEMA_VERSION,
+  assertWriteAllowed,
   atomicWrite,
   decompositionTickets,
   fail,
@@ -272,6 +273,8 @@ export interface AdvanceFeatureRequest {
  * en el siguiente comando que lea la feature.
  */
 export function advanceFeature(request: AdvanceFeatureRequest): FeatureRow {
+  assertWriteAllowed("avanzar el estado de una feature");
+
   const { root, slug, to } = request;
   const leida = readFeature(root, slug);
   if (leida === null) {
@@ -404,6 +407,8 @@ export interface AttachedTicket {
  * crea —que es lo mismo que haberlo puesto en el grafo desde el principio—.
  */
 export function attachTicketToFeature(request: AttachTicketRequest): AttachedTicket {
+  assertWriteAllowed("anexar un ticket a una feature");
+
   const { paths, slug, ticketId } = request;
   const feature = readFeature(paths.root, slug);
   if (feature === null) {
@@ -554,6 +559,8 @@ export function detachTicketFromFeature(request: {
   readonly slug: string;
   readonly ticketId: string;
 }): { readonly slug: string; readonly ticketId: string; readonly sprint: string } {
+  assertWriteAllowed("sacar un ticket del grafo de una feature");
+
   const { paths, slug, ticketId } = request;
   const ruta = join(featuresDir(paths.root), slug, "tickets.yaml");
   let texto: string;

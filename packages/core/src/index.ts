@@ -13,6 +13,7 @@ export * from "./tickets-yaml.js";
 export * from "./process.js";
 export * from "./template.js";
 export * from "./errors.js";
+export * from "./permissions.js";
 export * from "./parser.js";
 export * from "./validators.js";
 export * from "./blocks.js";

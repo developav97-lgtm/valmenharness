@@ -63,6 +63,14 @@ export interface McpRequest {
   readonly install: boolean;
   readonly global: boolean;
   readonly json: boolean;
+  /**
+   * `true` si la entrada declarada arranca el servidor en modo pregunta.
+   *
+   * La bandera va **en los argumentos** y no en un segundo servidor: el registro y
+   * el catálogo son los mismos, y dos entradas duplicarían la declaración en cada
+   * runtime. Lo que cambia con el modo es el permiso que el servidor concede.
+   */
+  readonly ask?: boolean;
 }
 
 function ok(stdout: string): CommandResult {
@@ -129,7 +137,7 @@ export function dshSnippet(entry: McpEntry): string {
 
 /** La entrada del servidor para este proyecto. */
 export function entryFor(request: McpRequest): McpEntry {
-  return mcpEntry(mcpExecutableFrom(request.cliEntry));
+  return mcpEntry(mcpExecutableFrom(request.cliEntry), request.ask === true ? ["--ask"] : []);
 }
 
 /** El fragmento de opencode, tal como queda en el archivo. */
@@ -160,6 +168,11 @@ export function mcpCommand(request: McpRequest): CommandResult {
     ...(entry.args.length === 0 ? [] : [`  argumentos   ${entry.args.join(" ")}`]),
     "",
     `  registro     ${request.root}`,
+    `  modo         ${
+      request.ask === true
+        ? "pregunta: no concede escritura y sólo publica las herramientas de sólo lectura"
+        : "escritura"
+    }`,
     "",
   ];
 

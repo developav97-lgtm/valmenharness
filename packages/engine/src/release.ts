@@ -37,6 +37,7 @@ import {
   EXIT_SCHEMA,
   MutationLock,
   SEMVER_RE,
+  assertWriteAllowed,
   atomicWrite,
   fail,
   newEvent,
@@ -164,6 +165,8 @@ export interface ReleasePublishRequest {
 
 /** Publica una release y devuelve la línea que lo informa. */
 export function releasePublish(request: ReleasePublishRequest): string {
+  assertWriteAllowed("registrar la publicación de una release");
+
   const { paths } = request;
   const version = validateText(request.version, "version");
   if (!SEMVER_RE.test(version)) {

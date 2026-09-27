@@ -30,7 +30,9 @@ import {
 } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
-import { EXIT_HISTORY, fail } from "@valmen/core";
+import { EXIT_HISTORY, fail } from "./errors.js";
+
+import { assertWriteAllowed } from "./permissions.js";
 
 /** Permisos con los que se crean los artefactos del registro. */
 const FILE_MODE = 0o644;
@@ -101,6 +103,11 @@ export function ensureSecurePath(
  * directorio temporal del sistema rompería la garantía.
  */
 export function atomicWrite(path: string, content: string): void {
+  // La puerta de escritura del harness. Todo lo que escribe pasa por acá, así que
+  // el permiso se niega acá: en modo pregunta no hay camino —ni el que todavía no
+  // existe— que llegue al disco sin pasar por este guardia.
+  assertWriteAllowed(`escribir ${path}`);
+
   mkdirSync(dirname(path), { recursive: true });
   const temporary = join(
     dirname(path),
@@ -173,6 +180,7 @@ export class MutationLock {
    * espurio en el caso normal.
    */
   static acquire(ticketsDir: string): MutationLock {
+    assertWriteAllowed("tomar el lock de mutación del registro");
     mkdirSync(ticketsDir, { recursive: true });
     const path = join(ticketsDir, ".valmen.lock");
 

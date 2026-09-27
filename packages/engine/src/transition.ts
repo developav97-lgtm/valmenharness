@@ -31,6 +31,7 @@ import {
   EXIT_SCHEMA,
   MutationLock,
   assertTransition,
+  assertWriteAllowed,
   fail,
   hasApprovedQaCycle,
   hasPlanGate,
@@ -99,6 +100,8 @@ function nextId(entries: readonly JsonObject[], prefix: string): string {
  * distintas.
  */
 export function transition(request: TransitionRequest): TransitionOutcome {
+  assertWriteAllowed("mover el estado de un ticket");
+
   const { paths, ticketId, entity } = request;
 
   return MutationLock.run(paths.root, () => {

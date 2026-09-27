@@ -28,6 +28,15 @@ un system prompt reducido. Determinista, no depende de que el modelo obedezca.
 
 **Esfuerzo:** 2–3 días.
 
+**Estado: hecho, sin invocación de modelo.** El comando es `valmen ask "<pregunta>" [--id <TICKET>]`,
+y el mismo modo se declara para el servidor MCP con `valmen mcp --ask`. En modo pregunta el motor
+no concede permiso de escritura —crear un ticket, mover un estado y escribir un archivo fallan con
+invariante (código 3) sin dejar archivo escrito—, y el catálogo del MCP publica sólo las 15
+herramientas de sólo lectura de las 38 que hay. El guardia vive en las dos puertas de escritura del
+harness —`atomicWrite` y el lock de mutación, en `packages/core/src/fs.ts`—, así que también cierra
+los caminos que se agreguen después y no depende de que el agente obedezca. Lo que queda afuera es
+la última mitad de la idea original: `ask` no invoca a un modelo, arma el contexto y lo imprime.
+
 ---
 
 ### A2. Detector de specs y tickets desactualizados

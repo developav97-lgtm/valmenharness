@@ -26,6 +26,7 @@ import {
   EXIT_INVARIANT,
   MAX_POINTS,
   EXIT_SCHEMA,
+  assertWriteAllowed,
   fail,
   MutationLock,
   RISK_LEVELS,
@@ -66,6 +67,8 @@ function conTicket(
     salida: string;
   },
 ): string {
+  assertWriteAllowed("anexar datos a un ticket");
+
   return MutationLock.run(paths.root, () => {
     const located = findTicket(paths, ticketId);
     if (located === undefined) {
