@@ -2,7 +2,7 @@
 schema_version: 2
 id: evolucion-harness
 title: Evolución del harness: olas S1–S5 desde la auditoría del 26-sep
-state: draft
+state: in_progress
 created: 2026-09-26
 updated: 2026-09-26
 ---

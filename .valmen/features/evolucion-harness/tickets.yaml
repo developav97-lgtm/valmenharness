@@ -1,0 +1,266 @@
+feature: evolucion-harness
+generated_by:
+  provider: openrouter
+  model: openai/gpt-5.6-luna-pro
+  cost_usd: 0.047381
+sprints:
+  - id: S1
+    goal: Reducir el costo de contexto y habilitar el enrutado y la consulta segura.
+    tickets:
+      - id: FEATURE-ENGINE-REANUDAR-COMPACTO-20260926
+        title: Añadir reanudación compacta determinista
+        depends_on: []
+      - id: FEATURE-ENGINE-ROLES-ENRUTAMIENTO-20260926
+        title: Enrutar modelos por rol de ejecución
+        depends_on: []
+      - id: DOCS-ENGINE-CASCADA-VERIFICADA-20260926
+        title: Documentar el patrón de cascada verificada
+        depends_on: []
+      - id: IMPROVEMENT-ENGINE-CASCADA-VERIFICADA-20260926
+        title: Habilitar cascada en clasificación y exploración
+        depends_on:
+          - FEATURE-ENGINE-ROLES-ENRUTAMIENTO-20260926
+          - DOCS-ENGINE-CASCADA-VERIFICADA-20260926
+      - id: IMPROVEMENT-ENGINE-PRESUPUESTOS-ADAPTATIVOS-20260926
+        title: Aprender costos típicos y declarar presupuestos por ticket
+        depends_on:
+          - FEATURE-ENGINE-ROLES-ENRUTAMIENTO-20260926
+      - id: FEATURE-CLI-MODO-ASK-20260926
+        title: Añadir modo de consulta valmen ask sin permisos
+        depends_on: []
+  - id: S2
+    goal: Adoptar el harness y habilitar la operación multiproyecto con registros independientes.
+    tickets:
+      - id: FEATURE-CLI-ADOPTAR-PROYECTO-20260926
+        title: Implementar valmen adopt para proyectos nuevos
+        depends_on: []
+      - id: FEATURE-ENGINE-DOGFOODING-REGISTRO-20260926
+        title: Adoptar ValmenHarness con su registro propio
+        depends_on:
+          - FEATURE-CLI-ADOPTAR-PROYECTO-20260926
+      - id: INTEGRATION-CRM-ADOPTAR-PROYECTO-20260926
+        title: Adoptar crm-valment con registro independiente
+        depends_on:
+          - FEATURE-CLI-ADOPTAR-PROYECTO-20260926
+      - id: FEATURE-HERMES-PERFIL-PROYECTO-20260926
+        title: Declarar cada proyecto como perfil MCP de Hermes
+        depends_on:
+          - FEATURE-CLI-ADOPTAR-PROYECTO-20260926
+      - id: FEATURE-MC-PORTAFOLIO-PROYECTOS-20260926
+        title: Agregar portafolio de proyectos en Mission Control
+        depends_on:
+          - FEATURE-CLI-ADOPTAR-PROYECTO-20260926
+          - FEATURE-HERMES-PERFIL-PROYECTO-20260926
+  - id: S3
+    goal: "Encadenar manuales al deploy, auditarlos y publicar el corpus indexable."
+    tickets:
+      - id: FEATURE-DEPLOY-ACTUALIZAR-MANUALES-20260926
+        title: Encadenar actualizar-manuales al deploy
+        depends_on: []
+      - id: AGENT-DOCS-GENERAR-MANUAL-MARKDOWN-20260926
+        title: Generar manuales Markdown con skill del proyecto
+        depends_on:
+          - FEATURE-DEPLOY-ACTUALIZAR-MANUALES-20260926
+      - id: AGENT-GATE-AUDITAR-MANUAL-CITAS-20260926
+        title: Auditar manuales contra código con citas
+        depends_on:
+          - AGENT-DOCS-GENERAR-MANUAL-MARKDOWN-20260926
+      - id: FEATURE-ENGINE-CORPUS-RAG-20260926
+        title: Publicar corpus de tickets para RAG por colecciones
+        depends_on:
+          - AGENT-GATE-AUDITAR-MANUAL-CITAS-20260926
+  - id: S4
+    goal: "Declarar, consultar y validar criterios de interfaz desde artefactos del proyecto."
+    tickets:
+      - id: FEATURE-GATE-CRITERIO-PLAYWRIGHT-20260926
+        title: Aceptar el verbo playwright en criterios
+        depends_on: []
+      - id: AGENT-ENGINE-CONSULTA-CAPACIDAD-UI-20260926
+        title: Proponer y consultar uso de capacidades de interfaz
+        depends_on:
+          - FEATURE-GATE-CRITERIO-PLAYWRIGHT-20260926
+      - id: FEATURE-CONFIG-PERFIL-UI-20260926
+        title: Configurar capacidades UI y modelo equilibrado por proyecto
+        depends_on:
+          - FEATURE-ENGINE-ROLES-ENRUTAMIENTO-20260926
+          - FEATURE-GATE-CRITERIO-PLAYWRIGHT-20260926
+      - id: FEATURE-GATE-SPECS-REPOSITORIO-20260926
+        title: Ejecutar specs de interfaz guardadas en el repositorio
+        depends_on:
+          - FEATURE-GATE-CRITERIO-PLAYWRIGHT-20260926
+      - id: FEATURE-GATE-VERIFY-DEV-20260926
+        title: Validar criterios de interfaz en ambiente dev
+        depends_on:
+          - FEATURE-GATE-CRITERIO-PLAYWRIGHT-20260926
+          - FEATURE-GATE-SPECS-REPOSITORIO-20260926
+  - id: S5
+    goal: "Ejecutar autonomía acotada con colisiones, evidencia, migraciones e integración controladas."
+    tickets:
+      - id: FEATURE-CONFIG-ELEGIBILIDAD-AUTONOMA-20260926
+        title: Declarar elegibilidad autónoma en configuración
+        depends_on:
+          - FEATURE-CONFIG-PERFIL-UI-20260926
+          - FEATURE-GATE-VERIFY-DEV-20260926
+      - id: FEATURE-ENGINE-RUN-AUTONOMO-20260926
+        title: Ejecutar valmen run hasta awaiting_user_tests
+        depends_on:
+          - FEATURE-CONFIG-ELEGIBILIDAD-AUTONOMA-20260926
+          - FEATURE-GATE-VERIFY-DEV-20260926
+      - id: SECURITY-ENGINE-COLISIONES-ESCRITURA-20260926
+        title: Detectar colisiones de escritura antes de paralelizar
+        depends_on:
+          - FEATURE-ENGINE-RUN-AUTONOMO-20260926
+      - id: FEATURE-GATE-CALIBRACION-EVIDENCIA-20260926
+        title: Promover gates híbridos con evidencia calibrada
+        depends_on:
+          - FEATURE-GATE-VERIFY-DEV-20260926
+      - id: SECURITY-ENGINE-PARADA-SEGURA-20260926
+        title: Detener ejecuciones ante secretos o exceso de presupuesto
+        depends_on:
+          - FEATURE-ENGINE-RUN-AUTONOMO-20260926
+          - IMPROVEMENT-ENGINE-PRESUPUESTOS-ADAPTATIVOS-20260926
+      - id: FEATURE-ENGINE-REGLAS-INTEGRACION-20260926
+        title: Decidir integración automática por cambio y criterios
+        depends_on:
+          - FEATURE-GATE-VERIFY-DEV-20260926
+          - FEATURE-CONFIG-ELEGIBILIDAD-AUTONOMA-20260926
+      - id: INTEGRATION-GIT-INTEGRACION-AUTONOMA-20260926
+        title: Hacer commit y push solo bajo condiciones seguras
+        depends_on:
+          - FEATURE-ENGINE-REGLAS-INTEGRACION-20260926
+          - SECURITY-ENGINE-PARADA-SEGURA-20260926
+      - id: FEATURE-CONFIG-PROPOSICIONES-JEV-20260926
+        title: Declarar proposiciones Jev por etapa
+        depends_on:
+          - FEATURE-CONFIG-ELEGIBILIDAD-AUTONOMA-20260926
+      - id: FEATURE-ENGINE-VALIDAR-PROPOSICIONES-JEV-20260926
+        title: Aplicar proposiciones Jev con umbrales y recibos
+        depends_on:
+          - FEATURE-CONFIG-PROPOSICIONES-JEV-20260926
+          - FEATURE-ENGINE-RUN-AUTONOMO-20260926
+      - id: FEATURE-CONFIG-MIGRACION-PRUEBAS-20260926
+        title: Declarar migraciones con esquema permitido y auto apagado
+        depends_on:
+          - FEATURE-CONFIG-ELEGIBILIDAD-AUTONOMA-20260926
+      - id: FEATURE-ENGINE-MIGRACION-ANTES-TESTS-20260926
+        title: Ejecutar migraciones autorizadas antes de pruebas
+        depends_on:
+          - FEATURE-CONFIG-MIGRACION-PRUEBAS-20260926
+          - FEATURE-ENGINE-RUN-AUTONOMO-20260926
+      - id: SECURITY-ENGINE-CIERRE-AUTORIZADO-20260926
+        title: Cerrar tickets solo con autorización permanente
+        depends_on:
+          - FEATURE-CONFIG-ELEGIBILIDAD-AUTONOMA-20260926
+          - FEATURE-ENGINE-RUN-AUTONOMO-20260926
+          - FEATURE-ENGINE-VALIDAR-PROPOSICIONES-JEV-20260926
+      - id: FEATURE-MC-POLITICAS-AUTONOMAS-20260926
+        title: Editar políticas autónomas desde Mission Control
+        depends_on:
+          - FEATURE-CONFIG-PERFIL-UI-20260926
+          - FEATURE-CONFIG-ELEGIBILIDAD-AUTONOMA-20260926
+          - FEATURE-ENGINE-RUN-AUTONOMO-20260926
+          - SECURITY-ENGINE-COLISIONES-ESCRITURA-20260926
+          - FEATURE-GATE-CALIBRACION-EVIDENCIA-20260926
+          - SECURITY-ENGINE-PARADA-SEGURA-20260926
+          - FEATURE-ENGINE-REGLAS-INTEGRACION-20260926
+          - FEATURE-CONFIG-PROPOSICIONES-JEV-20260926
+          - FEATURE-ENGINE-VALIDAR-PROPOSICIONES-JEV-20260926
+          - FEATURE-CONFIG-MIGRACION-PRUEBAS-20260926
+          - FEATURE-ENGINE-MIGRACION-ANTES-TESTS-20260926
+          - SECURITY-ENGINE-CIERRE-AUTORIZADO-20260926
+      - id: IMPROVEMENT-GATE-CRITERIO-ATOMICO-20260926
+        title: Hacer legible por que un plan queda en banda y avisar del criterio compuesto
+        depends_on: []
+      - id: IMPROVEMENT-MC-REGISTRO-COSTO-TIEMPO-20260926
+        title: Registrar el costo y el tiempo de un ticket cuando el harness se maneja desde Hermes o desde el CLI
+        depends_on: []
+coverage:
+  - requirement: R-S1-001
+    covered_by:
+      - FEATURE-ENGINE-REANUDAR-COMPACTO-20260926
+  - requirement: R-S1-002
+    covered_by:
+      - DOCS-ENGINE-CASCADA-VERIFICADA-20260926
+      - IMPROVEMENT-ENGINE-CASCADA-VERIFICADA-20260926
+  - requirement: R-S1-003
+    covered_by:
+      - IMPROVEMENT-ENGINE-PRESUPUESTOS-ADAPTATIVOS-20260926
+  - requirement: R-S1-004
+    covered_by:
+      - FEATURE-CLI-MODO-ASK-20260926
+  - requirement: R-S2-001
+    covered_by:
+      - FEATURE-ENGINE-DOGFOODING-REGISTRO-20260926
+  - requirement: R-S2-002
+    covered_by:
+      - FEATURE-CLI-ADOPTAR-PROYECTO-20260926
+  - requirement: R-S2-003
+    covered_by:
+      - INTEGRATION-CRM-ADOPTAR-PROYECTO-20260926
+  - requirement: R-S2-004
+    covered_by:
+      - FEATURE-HERMES-PERFIL-PROYECTO-20260926
+  - requirement: R-S2-005
+    covered_by:
+      - FEATURE-MC-PORTAFOLIO-PROYECTOS-20260926
+  - requirement: R-S3-001
+    covered_by:
+      - FEATURE-DEPLOY-ACTUALIZAR-MANUALES-20260926
+  - requirement: R-S3-002
+    covered_by:
+      - AGENT-DOCS-GENERAR-MANUAL-MARKDOWN-20260926
+  - requirement: R-S3-003
+    covered_by:
+      - AGENT-GATE-AUDITAR-MANUAL-CITAS-20260926
+  - requirement: R-S3-004
+    covered_by:
+      - FEATURE-ENGINE-CORPUS-RAG-20260926
+  - requirement: R-S4-001
+    covered_by:
+      - FEATURE-GATE-CRITERIO-PLAYWRIGHT-20260926
+  - requirement: R-S4-002
+    covered_by:
+      - AGENT-ENGINE-CONSULTA-CAPACIDAD-UI-20260926
+  - requirement: R-S4-003
+    covered_by:
+      - FEATURE-CONFIG-PERFIL-UI-20260926
+  - requirement: R-S4-004
+    covered_by:
+      - FEATURE-GATE-SPECS-REPOSITORIO-20260926
+  - requirement: R-S4-005
+    covered_by:
+      - FEATURE-GATE-VERIFY-DEV-20260926
+  - requirement: R-S5-001
+    covered_by:
+      - FEATURE-CONFIG-ELEGIBILIDAD-AUTONOMA-20260926
+  - requirement: R-S5-002
+    covered_by:
+      - FEATURE-ENGINE-RUN-AUTONOMO-20260926
+  - requirement: R-S5-003
+    covered_by:
+      - SECURITY-ENGINE-COLISIONES-ESCRITURA-20260926
+  - requirement: R-S5-004
+    covered_by:
+      - FEATURE-GATE-CALIBRACION-EVIDENCIA-20260926
+  - requirement: R-S5-005
+    covered_by:
+      - SECURITY-ENGINE-PARADA-SEGURA-20260926
+  - requirement: R-S5-006
+    covered_by:
+      - FEATURE-ENGINE-REGLAS-INTEGRACION-20260926
+      - INTEGRATION-GIT-INTEGRACION-AUTONOMA-20260926
+  - requirement: R-S5-007
+    covered_by:
+      - FEATURE-CONFIG-PROPOSICIONES-JEV-20260926
+      - FEATURE-ENGINE-VALIDAR-PROPOSICIONES-JEV-20260926
+  - requirement: R-S5-008
+    covered_by:
+      - FEATURE-CONFIG-MIGRACION-PRUEBAS-20260926
+      - FEATURE-ENGINE-MIGRACION-ANTES-TESTS-20260926
+  - requirement: R-S5-009
+    covered_by:
+      - FEATURE-MC-POLITICAS-AUTONOMAS-20260926
+  - requirement: R-S5-010
+    covered_by:
+      - SECURITY-ENGINE-CIERRE-AUTORIZADO-20260926
+gaps: []

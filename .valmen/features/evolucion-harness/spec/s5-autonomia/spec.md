@@ -6,7 +6,7 @@ configuración auditable, las migraciones al esquema de pruebas declaradas por
 proyecto, y la evidencia de calibración delante. Se construye al final, con las
 olas anteriores en producción.
 
-## R-S5-001 — Elegibilidad por configuración
+### Requirement: R-S5-001 — Elegibilidad por configuración — DEBE existir una sección `autonomous:` en `.valmen/config.yaml` que declare:
 
 DEBE existir una sección `autonomous:` en `.valmen/config.yaml` que declare:
 tipos de ticket elegibles, riesgo máximo, módulos excluidos, condiciones
@@ -15,7 +15,7 @@ requeridas (plan aprobado, tests declarados, sin impactos críticos) y límites
 parada). El agente NO DEBE poder tomar un ticket fuera de esa lista: el motor
 ofrece solo lo que cumple los criterios declarados.
 
-## R-S5-002 — Ejecución desatendida hasta `awaiting_user_tests`
+### Requirement: R-S5-002 — Ejecución desatendida hasta `awaiting_user_tests` — `valmen run` DEBE llevar un ticket elegible desde su estado actual hasta
 
 `valmen run` DEBE llevar un ticket elegible desde su estado actual hasta
 `awaiting_user_tests` sin intervención: análisis, plan, gates automáticos,
@@ -23,28 +23,28 @@ implementación y entrega del contrato de pruebas. La prueba del responsable y
 cualquier gate de riesgo alto SIGUEN siendo de una persona, salvo lo que declara
 R-S5-006 y R-S5-010.
 
-## R-S5-003 — Colisiones de escritura antes de paralelizar
+### Requirement: R-S5-003 — Colisiones de escritura antes de paralelizar — DEBE contrastar los archivos que cada plan declara tocar y aplicar la política
 
 Antes de ejecutar dos tickets en paralelo sobre el mismo repositorio, el motor
 DEBE contrastar los archivos que cada plan declara tocar y aplicar la política
 configurada (`warn`, `serialize` o `block`). La detección es mecánica: archivos
 declarados, no inferencia del modelo.
 
-## R-S5-004 — Promoción de gates por evidencia
+### Requirement: R-S5-004 — Promoción de gates por evidencia — Un gate híbrido SOLO DEBE promoverse a automático cuando la calibración contra
 
 Un gate híbrido SOLO DEBE promoverse a automático cuando la calibración contra
 decisiones humanas registradas muestre el umbral cumplido (la simulación con
 las últimas N decisiones), y la promoción queda registrada con su evidencia.
 Sin ese número, el gate NO DEBE promoverse aunque la configuración lo pida.
 
-## R-S5-005 — Parada segura
+### Requirement: R-S5-005 — Parada segura — secreto detectado, presupuesto superado), la ejecución DEBE detenerse dejando
 
 Cumplida una condición de parada (gate bloqueado dos veces, fallo de pruebas,
 secreto detectado, presupuesto superado), la ejecución DEBE detenerse dejando
 el ticket en un estado válido del contrato, con el motivo en el recibo y el
 aviso emitido. Una corrida detenida NO DEBE reintentarse sola.
 
-## R-S5-006 — Integración desatendida (commit y push) bajo condiciones
+### Requirement: R-S5-006 — Integración desatendida (commit y push) bajo condiciones — `valmen run` DEBE poder commitear y hacer push sin intervención cuando **todas**
 
 `valmen run` DEBE poder commitear y hacer push sin intervención cuando **todas**
 estas condiciones se cumplen, y NO DEBE integrar cuando alguna falte:
@@ -70,7 +70,7 @@ Un proyecto que no declare `autonomous.integration` (o lo declare en `false`)
 NO DEBE integrar nada: el comportamiento de hoy, donde la persona confirma el
 commit, sigue siendo el defecto.
 
-## R-S5-007 — Validación semántica ampliada por etapa
+### Requirement: R-S5-007 — Validación semántica ampliada por etapa — El proyecto DEBE poder declarar proposiciones adicionales de Jev por etapa del
 
 El proyecto DEBE poder declarar proposiciones adicionales de Jev por etapa del
 flujo, para que la persona no tenga que revisar a mano lo que la validación ya
@@ -87,7 +87,7 @@ Para la integración desatendida, la proposición que decide DEBE verificar que 
 implementado corresponde al plan aprobado y a la solicitud original, y que no
 hay cambios fuera del alcance declarado.
 
-## R-S5-008 — Migración automática al esquema de pruebas
+### Requirement: R-S5-008 — Migración automática al esquema de pruebas — El proyecto DEBE poder declarar en `.valmen/config.yaml` la migración que se
 
 El proyecto DEBE poder declarar en `.valmen/config.yaml` la migración que se
 ejecuta para dejar el esquema de pruebas al día, con su comando exacto, el
@@ -114,7 +114,7 @@ Reglas:
 - `auto: false` significa que el comando se prepara y se informa, pero lo
   ejecuta una persona.
 
-## R-S5-009 — Todo lo anterior se configura desde la interfaz
+### Requirement: R-S5-009 — Todo lo anterior se configura desde la interfaz — adicionales por etapa DEBEN poder verse y editarse desde Mission Control, con
 
 Las secciones `autonomous`, `migrations`, `playwright` y las proposiciones
 adicionales por etapa DEBEN poder verse y editarse desde Mission Control, con
@@ -123,7 +123,7 @@ YAML DEBE rechazarse también en la pantalla. La pantalla NO DEBE permitir
 declarar una rama de producción como destino de push ni un esquema fuera de la
 lista permitida.
 
-## R-S5-010 — Cierre desatendido con autorización permanente
+### Requirement: R-S5-010 — Cierre desatendido con autorización permanente — El cierre de un ticket elegible PUEDE automatizarse **solo** cuando la persona
 
 El cierre de un ticket elegible PUEDE automatizarse **solo** cuando la persona
 dejó una autorización permanente y registrada con sus palabras —el equivalente
