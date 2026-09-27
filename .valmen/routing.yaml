@@ -7,12 +7,16 @@
 preset: quality
 # Máxima calidad. Para trabajo crítico o cuando el coste no importa.
 
-# Sin overrides: los tres roles —gate-evaluator, gate-judge y orchestrator— se
-# resuelven del preset de arriba.
-#
-# Aquí había un `explorer` con opencode-go/glm-5.3, escrito cuando el harness
-# declaraba doce roles. Ese rol se retiró al comprobar que nadie lo leía, y el
-# archivo quedó con una clave que ya no existe: `parseRouting` la rechaza, así
-# que **todo** `valmen gate` fallaba antes de llegar al evaluador, con el error
-# apuntando al rol y no a que el archivo estaba viejo.
-roles: {}
+roles:
+  architect:
+    provider: opencode-go
+    model: deepseek-v4.1-flash
+    effort: high
+  gate-judge:
+    provider: opencode-go
+    model: kimi-k3
+    effort: high
+  orchestrator:
+    provider: opencode-go
+    model: deepseek-v4.1-flash
+    effort: high
