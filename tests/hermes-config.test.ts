@@ -15,7 +15,7 @@
  */
 import { spawnSync } from "node:child_process";
 
-import { describe, expect, it, afterEach } from "vitest";
+import { describe, expect, it, afterEach, beforeEach } from "vitest";
 
 import { parseYamlSubset, type YamlMap } from "../packages/core/src/index.js";
 import {
@@ -76,6 +76,10 @@ function anidado(raiz: YamlMap, ...claves: string[]): YamlMap {
   }
   return actual as YamlMap;
 }
+
+beforeEach(() => {
+  delete process.env["HERMES_HOME"];
+});
 
 afterEach(() => {
   delete process.env["HERMES_HOME"];

@@ -63,7 +63,7 @@ export const RFC2119_WORDS = [
  * identificador mal escrito en un error en vez de en un requisito con un nombre
  * raro.
  */
-const ID_PATTERN = "R-[A-Z]+(?:-[A-Z]+)*-\\d{3}";
+const ID_PATTERN = "R-[A-Z0-9]+(?:-[A-Z0-9]+)*-\\d{3}";
 /** `### Requirement: R-INV-001 — Registro de movimientos` */
 const HEADING_RE = new RegExp(
   `^###\\s+Requirement:\\s*(${ID_PATTERN})\\s*(?:—|-|:)\\s*(.+?)\\s*$`,
