@@ -183,6 +183,32 @@ sabía que un mensaje tocó el harness y la línea de tiempo del ticket seguía 
   la reanudación compacta: `ResumeContext.etapas` y el bloque «Duración por etapa» de
   `RenderResumeContext`.
 
+### El defecto que la verificación encontró, y su arreglo (reapertura)
+
+Cerrado el ticket, al comprobar la duración contra el registro real —`valmen resume` de este mismo
+ticket— salió **una sola etapa**: `intake: no reconstruible`. De los catorce eventos, ocho eran
+transiciones y ninguna se veía.
+
+- **La causa:** `packages/engine/src/transition.ts` escribe la acción como `` `${entity}-transition` ``,
+  o sea `ticket-transition`; `etapas.ts` buscaba `transition`, un valor que **el registro no tiene**.
+  Sólo sobrevivía el evento de creación. La duración por etapa no existía en ningún ticket y **nada
+  fallaba**: la prueba del archivo armaba sus eventos a mano con esa misma forma inexistente, así que
+  código y prueba compartían el error y la suite quedaba verde. Es el caso que este ticket vino a
+  arreglar —un cero con aspecto de dato— cometido por el ticket mismo.
+- **El arreglo del código:** `ACCION_TRANSICION = "ticket-transition"` en `packages/engine/src/etapas.ts`,
+  declarada una vez y con el archivo del motor nombrado en el comentario. Y `duracionEnTexto` dice
+  `<1 min` por debajo del minuto: redondear medio segundo a `0 min` es la misma mentira que el cero
+  que se sacó del reparto.
+- **El arreglo de la prueba, que es lo que impide que vuelva a pasar:** `tests/etapas.test.ts` ya no
+  inventa los eventos. La prueba principal escribe un ticket en un registro temporal, lo mueve con
+  `transition()` —el motor de verdad— y **lee los eventos del archivo**; además afirma que la acción
+  escrita es la del motor, así que si esa forma cambia hay que enterarse ahí y no en producción. Las
+  pruebas de reglas siguen armando eventos, pero con la acción real declarada una sola vez.
+- **Verificación en el registro real:** `valmen resume` de este ticket ahora lista diez etapas —
+  `in_qa: 29 min` (lo que esperó por tus pruebas), `qa_approved: 0 min`, `closed: 0 min`,
+  `in_progress: 3 min` (la reapertura) — y las anteriores siguen diciendo `no reconstruible`, porque
+  sus eventos no tienen hora. Correcto: no se estima.
+
 ### Desvíos del plan aprobado
 
 - **El paso 1 decía meter las llamadas de Hermes «en el mismo mapa por mensaje» de opencode.**
@@ -206,7 +232,7 @@ sabía que un mensaje tocó el harness y la línea de tiempo del ticket seguía 
 ## Pruebas
 
 - `npx vitest run tests/hermes.test.ts tests/timeline.test.ts tests/etapas.test.ts tests/eventos-con-hora.test.ts`
-  — 40 pruebas pasan (19 + 12 + 4 + 5), las de este ticket entre ellas: el rojo se vio
+  — 42 pruebas pasan (19 + 12 + 6 + 5), las de este ticket entre ellas: el rojo se vio
   primero, y la de atribución falló con `expected [] to deeply equal [ '20260924_140000_ffffff' ]`
   antes del arreglo y la de reconocimiento con `expected false to be true`.
 - `npm test` — 1.415 pruebas pasan, 48 omitidas, una suite omitida. Las que ya existían
@@ -215,12 +241,14 @@ sabía que un mensaje tocó el harness y la línea de tiempo del ticket seguía 
   reconstruido: la línea de tiempo de este ticket muestra la sesión de Hermes que lo
   trabajó —`hermes:desktop`, `deepseek-v4.1-flash`, $0.229688, 1.474 mensajes, 52 sobre el
   registro— donde antes no aparecía ninguna.
-- **La compuerta mecánica** (`gate qa-mechanical`) pasó 6/6 en 1.00 con $0 corriendo los seis
-  comandos declarados, pero su recibo guarda el hash de estado del ticket **anterior** a este
-  último cambio de texto, y esa compuerta sólo se puede correr con el ticket en `in_progress`
-  —desde `awaiting_user_tests` el motor la rechaza a propósito, porque el veredicto no
-  significaría nada—. Los seis comandos se volvieron a correr a mano contra el código final y
-  las 40 pruebas pasan. Se dice acá para que nadie lea ese recibo como si cubriera este cambio.
+- **Tras la reapertura, la compuerta mecánica se volvió a correr desde `in_progress` y pasó
+  6/6 en 1.00 con $0** sobre el texto final del ticket: su recibo coincide con el estado que se
+  entrega. La corrida anterior —la del cierre— quedó con el hash de un texto que ya no existe; el
+  motor ya no la mira, y se dice acá para que nadie la lea como si cubriera este cambio.
+- **El defecto de la duración por etapa se vio en el registro, no en la suite:** `valmen resume` de
+  este ticket imprimía una etapa en vez de diez, con 1.417 pruebas en verde. La prueba que lo fija
+  ahora arma su caso con el motor (`transition()` sobre un ticket de un registro temporal) en vez de
+  escribir los eventos a mano.
 - `npm run build` y `npm run typecheck` — pasan.
 - `npx prettier --write` sobre los dieciocho archivos tocados; quedan tres avisos previos y
   ajenos a este ticket (`packages/engine/src/append.ts`, `packages/engine/src/features.ts`,
@@ -232,6 +260,10 @@ sabía que un mensaje tocó el harness y la línea de tiempo del ticket seguía 
   sobre los archivos porfa realizales un commit aparte». Verificó las dos órdenes del contrato
   —`npx vitest run tests/hermes.test.ts tests/timeline.test.ts tests/etapas.test.ts
   tests/eventos-con-hora.test.ts` y `npm test`— y las miró en la pantalla.
+- Resultado del PO, tras la reapertura: «porfa corrige, corre las pruebas con las tuyas es
+  suficiente yo las apruebo esta vez». Aprobó el arreglo de la duración por etapa sobre las pruebas
+  corridas por el agente —42 pruebas en los cuatro archivos (19 + 12 + 6 + 5), 1.417 en la suite—, sin volver a
+  correrlas él. Es una decisión suya y queda dicha como suya.
 
 ### Contrato de pruebas para el responsable
 
@@ -268,6 +300,48 @@ el costo sin repartir, en vez de mostrar un cero con la palabra «harness».
     "findings": [],
     "correction": null,
     "po_confirmation": "ya verifique las pruebas y esta bien todo pasa, podemos cerrar el ticket y sobre los archivos porfa realizales un commit aparte"
+  },
+  {
+    "id": "QA-003",
+    "date": "2026-09-27",
+    "build_reference": "commit:070cda36d04d7af904d31414389c5c37276ef10d",
+    "environment": "local: macOS 27.0, Node v22.16.0",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-004",
+    "date": "2026-09-27",
+    "build_reference": null,
+    "environment": null,
+    "result": "changes_requested",
+    "findings": [
+      "Hallazgo al verificar en el registro real: duracionesPorEtapa solo reconoce el evento de creacion, asi que la duracion por etapa no funciona en ningun ticket. La accion del evento de transicion la escribe el motor como `${entity}-transition` (packages/engine/src/transition.ts:125), o sea ticket-transition, y el codigo y su prueba usaron el valor inventado `transition`. La prueba pasaba porque su fixture estaba escrito a mano con esa misma forma inexistente. Evidence: valmen resume de este ticket cerrado imprime una sola etapa (intake, no reconstruible) en vez de nueve."
+    ],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-005",
+    "date": "2026-09-27",
+    "build_reference": "commit:5f386afa3ded2370deefa4d91394f00e1c3e6955",
+    "environment": "local: macOS 27.0, Node v22.16.0",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-006",
+    "date": "2026-09-27",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "porfa corrige, corre las pruebas con las tuyas es suficiente yo las apruebo esta vez, haces los commit y push cerrando el ticket"
   }
 ]
 ```
@@ -298,6 +372,17 @@ el costo sin repartir, en vez de mostrar un cero con la palabra «harness».
     "qa_waiver_reason": null,
     "po_confirmation": null,
     "release_impact": "Sin migraciones: at es opcional y los tickets ya escritos siguen validando. Los tickets anteriores a este cambio no se pueden medir por etapa —no tienen hora— y la medicion empieza en los eventos nuevos. Cambia el texto del resumen de consumo en la pantalla y agrega dos campos a la lectura de sesiones; el campo renombrado en el valor del ticket no se persiste. Las sesiones compartidas siguen fuera de los totales del ticket, ahora dichas como tales."
+  },
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-002",
+    "date": "2026-09-27",
+    "technical_summary": "Ademas de lo ya entregado, la reapertura corrio sobre el defecto que la verificacion en el registro encontro: duracionesPorEtapa buscaba action igual a transition y el motor escribe ticket-transition (packages/engine/src/transition.ts), asi que solo reconocia el evento de creacion y valmen resume imprimia una etapa en vez de diez. La accion pasa a ACCION_TRANSICION, declarada una vez con el archivo del motor al lado, y tests/etapas.test.ts deja de armar sus eventos a mano: escribe un ticket en un registro temporal, lo mueve con transition() y lee los eventos del archivo, con una afirmacion que ata la accion de la prueba a la del motor. duracionEnTexto dice <1 min por debajo del minuto, en vez de redondear medio segundo a 0 min. 42 pruebas en los cuatro archivos del ticket; 1.417 en la suite; build y typecheck en verde; gate mecanico 6/6 en 1.00 con $0 sobre el texto final.",
+    "functional_summary": "El PO ve la duracion por etapa funcionando en tickets reales: valmen resume de este mismo ticket lista diez etapas, con in_qa en 29 min (lo que espero por sus pruebas), la reapertura en 3 min y las etapas anteriores declaradas no reconstruibles porque sus eventos no tienen hora. Antes de este arreglo esa lista tenia un solo elemento.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "Sin migraciones ni cambios de esquema: el arreglo es de lectura, sobre los mismos eventos. Los tickets sin hora siguen declarandose no reconstruibles. Cambia el texto del informe de reanudacion para los tramos cortos (<1 min en vez de 0 min)."
   }
 ]
 ```
@@ -335,6 +420,36 @@ el costo sin repartir, en vez de mostrar un cero con la palabra «harness».
     "source": "manual:sesion 20260926_182737_425c0d",
     "confidence": "low",
     "id": "CONSUMO-002"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-27",
+    "session_reference": null,
+    "model": "typesafe/jev-1.13-20260917",
+    "reasoning_effort": null,
+    "notes": "Las compuertas de este ticket: una corrida del gate de plan a $0.000141036 y dos del gate mecanico con coste 0 (la del cierre y la de la reapertura, sobre el commit 5f386af). Suma verificable en los recibos.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": 0.000141036,
+    "source": "process:.valmen/receipts/IMPROVEMENT-MC-REGISTRO-COSTO-TIEMPO-20260926.jsonl",
+    "confidence": "high",
+    "id": "CONSUMO-003"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-27",
+    "session_reference": "20260926_182737_425c0d",
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "La sesion que trabajo este ticket ya declaro su costo en FEATURE-ENGINE-REANUDAR-COMPACTO-20260926 (CONSUMO-001, $0.229688). Registrarla otra vez contaria dos veces el mismo gasto; la linea de tiempo de este ticket la muestra marcada como compartida, porque trabajo cinco tickets y su costo no se reparte entre ellos.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:sesion 20260926_182737_425c0d",
+    "confidence": "low",
+    "id": "CONSUMO-004"
   }
 ]
 ```
@@ -464,6 +579,105 @@ Sin publicar todavía.
     "id": "EVENT-014",
     "date": "2026-09-26",
     "at": "2026-09-27T02:29:33.911Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-09-26",
+    "at": "2026-09-27T02:32:27.769Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: closed -> changes_requested. Reapertura por hallazgo: Hallazgo al verificar en el registro real: duracionesPorEtapa solo reconoce el evento de creacion, asi que la duracion por etapa no funciona en ningun ticket. La accion del evento de transicion la escribe el motor como `${entity}-transition` (packages/engine/src/transition.ts:125), o sea ticket-transition, y el codigo y su prueba usaron el valor inventado `transition`. La prueba pasaba porque su fixture estaba escrito a mano con esa misma forma inexistente. Evidence: valmen resume de este ticket cerrado imprime una sola etapa (intake, no reconstruible) en vez de nueve."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-09-26",
+    "at": "2026-09-27T02:32:27.888Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: changes_requested -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-09-26",
+    "at": "2026-09-27T02:36:41.509Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-09-26",
+    "at": "2026-09-27T02:36:41.635Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-09-26",
+    "at": "2026-09-27T02:36:41.753Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-005."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-09-26",
+    "at": "2026-09-27T02:36:41.872Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-006 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-09-26",
+    "at": "2026-09-27T02:36:41.993Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-09-26",
+    "at": "2026-09-27T02:36:42.116Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-09-26",
+    "at": "2026-09-27T02:36:42.240Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-004."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-09-26",
+    "at": "2026-09-27T02:36:42.770Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-025",
+    "date": "2026-09-26",
+    "at": "2026-09-27T02:36:42.916Z",
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: qa_approved -> closed."
