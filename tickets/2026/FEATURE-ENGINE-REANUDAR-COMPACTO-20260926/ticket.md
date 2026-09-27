@@ -4,8 +4,8 @@ id: FEATURE-ENGINE-REANUDAR-COMPACTO-20260926
 title: Añadir reanudación compacta determinista
 type: FEATURE
 module: ENGINE
-workflow_status: in_qa
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -107,7 +107,28 @@ Viene de una feature descompuesta en sprints; su plan completo está en el ticke
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-09-27",
+    "build_reference": "commit:3b345401cc788018e2715008519cb0b70036dc97",
+    "environment": "local: macOS 27.0, Node v26.10.0",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-09-27",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "yo ya vi que ejecutaste las pruebas y pasaron creo que de mi parte no habria necesidad de volver a correr los mismos comandos si con eso ya es necesario pasemos a cerrar"
+  }
+]
 ```
 
 ## Evidencia
@@ -125,13 +146,41 @@ Viene de una feature descompuesta en sprints; su plan completo está en el ticke
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-09-27",
+    "technical_summary": "Se anadio packages/engine/src/resume.ts: buildResumeContext proyecta el resumen de reanudacion desde el ticket parseado y el registro append-only de recibos, sin modelo, sin reloj y sin estado externo; renderResumeContext lo formatea. resumeTicket en el CLI acepta modo, compacto por defecto, y la herramienta MCP reanudar_ticket expone modo con outputSchema cerrado y structuredContent. Pruebas en tests/mcp-server.test.ts: modo compacto, puntos abiertos, determinismo al repetir la llamada, outputSchema y modo completo. 1.391 pruebas pasan; build, typecheck y prettier en verde.",
+    "functional_summary": "Al retomar un ticket, el agente recibe de una sola lectura el identificador, los estados de workflow, QA y release, el plan vigente, los puntos abiertos con su estado, el ultimo recibo de compuerta y la indicacion de leer las secciones completas bajo demanda. El documento entero sigue disponible pidiendo el modo completo.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "Backend sin cambio de esquema de tickets ni migraciones. Cambia lo que devuelve reanudar_ticket en MCP y valmen resume en el CLI: quien consumia el documento integro debe pedir el modo completo. Sin cambios de interfaz grafica ni de datos persistidos."
+  }
+]
 ```
 
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-27",
+    "session_reference": "20260926_182737_425c0d",
+    "model": "opencode-go/deepseek-v4.1-flash",
+    "reasoning_effort": null,
+    "notes": "Agente hermes:desktop. 79 intervención(es) sobre el registro, 0 con fallo. Razonamiento 47614 tokens, caché leída 29328852 tokens. Sesión \"Trabajar en FEATURE-ENGINE-REANUDAR-COMPACTO-20260926\".",
+    "input_tokens": 2070402,
+    "output_tokens": 86764,
+    "total_tokens": 2204780,
+    "estimated_cost_usd": 0.229688,
+    "source": "hermes:/Users/juanandrade/.hermes/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -197,6 +246,54 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-09-26",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-09-26",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-09-26",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-09-26",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-09-26",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-09-26",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
