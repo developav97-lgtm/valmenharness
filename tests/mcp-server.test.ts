@@ -41,6 +41,7 @@ import { writeFixtureTicket } from "./helpers/fixtures.js";
 import { TEMPLATE_CRITERIOS_VACIOS } from "../packages/core/src/template.js";
 import { TOOLS, callTool } from "../packages/mcp/src/tools.js";
 import type { ToolContext } from "../packages/mcp/src/tools.js";
+import { EVALUATOR_IDS } from "../packages/engine/src/evaluators.js";
 import {
   credentialsFor,
   describe as describirServidor,
@@ -205,6 +206,18 @@ describe("el catálogo de herramientas", () => {
     // resultado que lo exima— las exige en `required`.
     const estandar = TOOLS.find((tool) => tool.name === "decidir_estandar");
     expect(estandar?.inputSchema["required"]).toContain("instruccion");
+  });
+
+  it("los evaluadores que ofrece la compuerta son los mismos que admite el motor", () => {
+    // La lista se declara una sola vez en el motor y la usan el MCP, el CLI y la
+    // pantalla: si este esquema tuviera su propia copia, un evaluador nuevo
+    // quedaría disponible por un camino y rechazado por el otro —y el que lo
+    // pidió vería «desconocido» en el camino que no lo lista—.
+    const tool = TOOLS.find((candidata) => candidata.name === "evaluar_compuerta");
+    const propiedades = tool?.inputSchema["properties"] as
+      | Record<string, { enum?: readonly string[] }>
+      | undefined;
+    expect(propiedades?.["evaluator"]?.enum).toEqual([...EVALUATOR_IDS]);
   });
 
   it("declara las treinta y ocho herramientas, cada una con descripción y esquema", () => {

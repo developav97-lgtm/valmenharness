@@ -19,9 +19,15 @@ import { cpSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { USAGE, VALUE_OPTIONS, dispatch, parseArgs } from "../packages/cli/src/main.js";
+import {
+  USAGE,
+  VALUE_OPTIONS,
+  dispatch,
+  parseArgs,
+  run,
+} from "../packages/cli/src/main.js";
 import {
   buildIndex,
   listActive,
@@ -216,5 +222,39 @@ describe("las banderas que consumen valor", () => {
     ]);
     expect(opciones.flags["limite"]).toBe("3");
     expect(opciones.positionals).toEqual(["memory", "search", "consulta"]);
+  });
+});
+
+describe("gate --evaluator", () => {
+  it("admite la cascada y la nombra al rechazar un evaluador desconocido", async () => {
+    // La lista de evaluadores vive en el motor y la usan el CLI y el MCP: el
+    // mensaje de rechazo es la prueba de que este borde no tiene la suya escrita
+    // a mano, que es como un evaluador queda admitido por un camino y rechazado
+    // por el otro. El rechazo ocurre antes de resolver rutas y credenciales, así
+    // que esta prueba no toca el registro ni sale a la red.
+    const escrituras: string[] = [];
+    const escribir = (chunk: unknown): boolean => {
+      escrituras.push(String(chunk));
+      return true;
+    };
+    const stdout = vi.spyOn(process.stdout, "write").mockImplementation(escribir);
+    const stderr = vi.spyOn(process.stderr, "write").mockImplementation(escribir);
+    let codigo = 0;
+    try {
+      codigo = await run([
+        "gate",
+        "analysis",
+        "--id",
+        "BUGFIX-POS-REPORTE-Z-SUCURSAL-20260907",
+        "--evaluator",
+        "inventado",
+      ]);
+    } finally {
+      stdout.mockRestore();
+      stderr.mockRestore();
+    }
+
+    expect(codigo).toBe(EXIT_SCHEMA);
+    expect(escrituras.join("")).toContain("cascade");
   });
 });

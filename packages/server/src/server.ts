@@ -38,6 +38,7 @@ import {
   filterReport,
   CAMPOS_ORDENABLES,
   decideProposal,
+  isEvaluatorId,
   listProposals,
   standardsFiles,
   type TicketFilters,
@@ -956,17 +957,11 @@ export async function handleApi(
     const id = partes[2] as string;
     const gateId = partes[4] as string;
     const datos = body as { evaluator?: unknown };
-    const evaluador = datos.evaluator;
-    if (
-      evaluador !== undefined &&
-      evaluador !== "auto" &&
-      evaluador !== "command" &&
-      evaluador !== "jev" &&
-      evaluador !== "llm-judge"
-    ) {
+    const evaluador = isEvaluatorId(datos.evaluator) ? datos.evaluator : undefined;
+    if (datos.evaluator !== undefined && evaluador === undefined) {
       return {
         status: 400,
-        body: { error: `Evaluador desconocido: ${String(evaluador)}.` },
+        body: { error: `Evaluador desconocido: ${String(datos.evaluator)}.` },
       };
     }
 

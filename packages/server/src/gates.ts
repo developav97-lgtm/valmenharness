@@ -36,7 +36,7 @@ import {
 } from "@valmen/gate";
 import { declaredImpactIds, parseTicket } from "@valmen/core";
 import { apiKeyWithPrecedence } from "@valmen/credentials";
-import { gateRouting } from "./routing.js";
+import { cascadeRouting, gateRouting } from "./routing.js";
 import {
   type EvaluatorId,
   type RegistryPaths,
@@ -318,6 +318,10 @@ export async function runTicketGate(
   // apunta a un modelo de chat, el evaluador semántico pasa a ser un juez —y el
   // recibo lo dirá—; si apunta a Jev, se mantienen las probabilidades.
   const routing = gateRouting(paths.root);
+  // La cadena de la cascada, si el borde pidió ese evaluador: los tres roles se
+  // resuelven donde se lee el routing, igual que en el CLI y en el MCP.
+  const cascade =
+    request.evaluator === "cascade" ? cascadeRouting(paths.root) : undefined;
 
   // Se cuentan las líneas antes de evaluar. Sin esto, una evaluación que falla
   // devolvería **el recibo anterior** como si fuera el resultado: el identificador
@@ -350,6 +354,7 @@ export async function runTicketGate(
     ...(routing.probabilistic ? {} : { semantic: "llm-judge" as const }),
     ...(routing.evaluatorEffort === "auto" ? {} : { effort: routing.evaluatorEffort }),
     ...(routing.judgeModel === "" ? {} : { judgeModel: routing.judgeModel }),
+    ...(cascade === undefined ? {} : { cascade }),
   });
 
   const actual = await currentStateHash(paths, ticketId);

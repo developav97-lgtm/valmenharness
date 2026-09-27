@@ -98,6 +98,45 @@ export interface GateReceipt {
    * plan, y el problema está en la forma del criterio.
    */
   readonly notes?: readonly string[];
+  /**
+   * Los escalamientos entre modelos de la cascada verificada, si los hubo.
+   *
+   * Opcional a propósito: los recibos emitidos antes de que la cascada existiera
+   * siguen siendo válidos y no se reescriben —el registro es append-only—, así
+   * que un recibo sin este campo no dice «no se escaló» sino «esto se evaluó sin
+   * cascada».
+   */
+  readonly escalations?: readonly EscalationRecord[];
+}
+
+/** Los dos extremos de un escalamiento, en lo que el recibo necesita. */
+export interface EscalationModel {
+  readonly provider: string;
+  readonly model: string;
+}
+
+/**
+ * Un escalamiento de la cascada verificada, con su motivo.
+ *
+ * Es una entrada por proposición y no una por corrida: el motivo de escalar «b» no
+ * es el de escalar «a», y una lista con las dos juntas deja el recibo afirmando
+ * que se pagó el modelo caro por algo sin poder decir por cuál. El número que lo
+ * decidió —la probabilidad que emitió el verificador— va al lado del umbral, para
+ * que el motivo se pueda volver a juzgar sin recalcular nada.
+ */
+export interface EscalationRecord {
+  /** El rol que recibió el trabajo: el eslabón de escalado. */
+  readonly role: string;
+  /** La proposición que se volvió a preguntar. */
+  readonly proposition: string;
+  readonly from: EscalationModel;
+  readonly to: EscalationModel;
+  /** La probabilidad que emitió el verificador sobre la respuesta del productor. */
+  readonly verified: number;
+  /** El umbral que esa probabilidad no alcanzó. */
+  readonly threshold: number;
+  /** El motivo, en una frase, con su número. */
+  readonly reason: string;
 }
 
 /** La decisión de una persona sobre un gate escalado. */
@@ -163,6 +202,8 @@ export interface ReceiptInput {
   readonly decidedAt: string;
   /** El aviso de forma, si la lectura mecánica produjo alguno. */
   readonly notes?: readonly string[];
+  /** Los escalamientos entre modelos, si el evaluador fue la cascada. */
+  readonly escalations?: readonly EscalationRecord[];
 }
 
 /** Construye un recibo a partir de una decisión. */
@@ -194,6 +235,9 @@ export function buildReceipt(input: ReceiptInput): GateReceipt {
     ...(input.notes === undefined || input.notes.length === 0
       ? {}
       : { notes: input.notes }),
+    ...(input.escalations === undefined || input.escalations.length === 0
+      ? {}
+      : { escalations: input.escalations }),
   };
 }
 
@@ -221,6 +265,13 @@ export function summarizeReceipt(receipt: GateReceipt): string {
   const partes = [receipt.gate.padEnd(12), receipt.outcome.padEnd(8), receipt.subject.id];
   if (receipt.model !== null) partes.push(receipt.model.resolvedVersion);
   if (receipt.usage !== null) partes.push(`$${receipt.usage.costUsd.toFixed(6)}`);
+  if (receipt.escalations !== undefined && receipt.escalations.length > 0) {
+    // El escalamiento entre modelos se marca aparte de la escalada a una persona:
+    // son dos cosas distintas —una sube el modelo, la otra sube la decisión— y
+    // confundirlas en la línea haría creer que el gate pidió una persona cuando
+    // lo que hizo fue pagar el modelo caro.
+    partes.push(`→ ${receipt.escalations.length} escalado(s)`);
+  }
   if (receipt.escalatedTo !== null) partes.push("→ humano");
   return partes.join("  ");
 }

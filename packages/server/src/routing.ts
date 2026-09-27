@@ -21,6 +21,7 @@
 import { existsSync, readFileSync } from "node:fs";
 
 import {
+  type CascadeRouting,
   type Effort,
   type GateRouting,
   type Preset,
@@ -29,6 +30,7 @@ import {
   DEFAULT_GATE_EVALUATOR,
   PRESETS,
   ROLES,
+  cascadeRoutingFor,
   gateRoutingFor,
   parseRouting,
   routingPath,
@@ -50,6 +52,18 @@ export { routingPath };
 /** Los modelos que usará un gate en este proyecto. */
 export function gateRouting(root: string): GateRouting {
   return gateRoutingFor(root);
+}
+
+/**
+ * Los modelos que usará la cascada verificada en este proyecto.
+ *
+ * Los tres roles de ejecución —productor, verificador y escalado— se resuelven
+ * juntos porque la cadena solo sirve si los tres existen y son distintos: un
+ * `reason` no nulo es lo que viaja al motor para que rechace la corrida antes de
+ * gastarla, en vez de escalar a donde ya se preguntó.
+ */
+export function cascadeRouting(root: string): CascadeRouting {
+  return cascadeRoutingFor(root);
 }
 
 /** El texto guardado, o `""` si el proyecto no declara routing. */

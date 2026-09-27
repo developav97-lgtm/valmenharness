@@ -43,7 +43,7 @@ import {
 } from "@valmen/gate";
 import { evaluateWithJev } from "@valmen/gate-jev";
 import { type CommandCheck } from "@valmen/gate-command";
-import { type EvaluatorId, evaluateGate } from "./evaluators.js";
+import { type CascadeOptions, type EvaluatorId, evaluateGate } from "./evaluators.js";
 
 import type { RunnerResult } from "./result.js";
 import { type RegistryPaths, configList, findTicket, testTimeout } from "./discovery.js";
@@ -93,6 +93,14 @@ export interface GateRunOptions {
   readonly jev?: typeof evaluateWithJev;
   /** Juez de chat inyectable, por la misma razón que `jev`. */
   readonly judge?: typeof import("@valmen/gate-llm-judge").evaluateWithJudge;
+  /**
+   * La cadena de la cascada, resuelta por el routing del proyecto.
+   *
+   * Viaja resuelta desde el borde por el mismo motivo que el modelo del
+   * evaluador: el motor no lee configuración, y el recibo tiene que registrar
+   * exactamente los modelos que se usaron.
+   */
+  readonly cascade?: CascadeOptions;
   readonly now?: () => Date;
   readonly receiptId?: string;
 }
@@ -384,6 +392,7 @@ export async function runGate(
         ...(options.effort === undefined ? {} : { effort: options.effort }),
         ...(options.judgeModel === undefined ? {} : { judgeModel: options.judgeModel }),
         ...(options.semantic === undefined ? {} : { semantic: options.semantic }),
+        ...(options.cascade === undefined ? {} : { cascade: options.cascade }),
         sessionId: `${options.ticketId}:${options.gateId}`,
       });
     } catch (caught) {
@@ -437,6 +446,7 @@ export async function runGate(
     latencyMs: evaluation.latencyMs,
     decidedAt: now().toISOString(),
     notes: notas,
+    ...(evaluation.escalations === undefined ? {} : { escalations: evaluation.escalations }),
   });
 
   // Se informa de lo que de verdad se evaluó. Antes decía «N criterio(s)
@@ -464,6 +474,7 @@ export async function runGate(
     command: "checks deterministas, sin coste",
     jev: "Jev, probabilidades tipadas",
     "llm-judge": "modelo de chat con salida estructurada",
+    cascade: "cascada verificada: produce el modelo barato y el verificador escala lo no respaldado",
   }[evaluation.evaluator];
   lines.push("", `  Evaluación (${etiquetaEvaluador})`);
   for (const item of decision.propositions) {
@@ -496,6 +507,26 @@ export async function runGate(
       "",
       "  Las marcadas como descriptivas no emitieron veredicto: su valor es contexto " +
         "del recibo y no una señal del gate.",
+    );
+  }
+
+  // El escalamiento se informa aparte de la escalada a una persona: la cascada
+  // sube de modelo, y quien lee tiene que poder saber por qué se pagó el caro. El
+  // detalle por proposición está también en el recibo, que es lo que se audita.
+  if (evaluation.escalations !== undefined && evaluation.escalations.length > 0) {
+    lines.push("", "  Escalamiento (cascada verificada)");
+    for (const escalamiento of evaluation.escalations) {
+      lines.push(
+        `    ⤴  ${escalamiento.proposition.padEnd(34)} ` +
+          `verificado ${escalamiento.verified.toFixed(2)} < ${escalamiento.threshold}  ` +
+          `→ ${escalamiento.to.model}`,
+      );
+    }
+    lines.push(
+      "",
+      `  ${evaluation.escalations.length} de ${decision.propositions.length} proposición(es) ` +
+        "se volvieron a preguntar al modelo del rol `escalation`: lo demás quedó como lo " +
+        "respondió el productor y no pagó el modelo caro.",
     );
   }
 

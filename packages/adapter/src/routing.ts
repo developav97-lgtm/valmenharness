@@ -100,6 +100,27 @@ export const ROLES: readonly RoleSpec[] = [
     description: "Descompone una feature en tickets, con su grafo y su cobertura",
     consumer: "valmen feature decompose",
   },
+  // Los tres eslabones de la cascada verificada (R-S1-002). Son roles de
+  // **ejecución** y no de evaluación, y por eso no existían: el harness declaraba
+  // con qué modelo juzga, pero no con cuál produce ni a cuál escala. Los tres
+  // tienen consumidor real —el evaluador `cascade` de `valmen gate`—, que es la
+  // condición para figurar acá: un rol que nadie ejecuta parece configuración
+  // activa y no lo es.
+  {
+    id: "producer",
+    description: "Responde primero, con el modelo barato, lo que el verificador va a comprobar",
+    consumer: "valmen gate --evaluator cascade",
+  },
+  {
+    id: "verifier",
+    description: "Comprueba contra el contexto la respuesta del productor, con probabilidades",
+    consumer: "valmen gate --evaluator cascade",
+  },
+  {
+    id: "escalation",
+    description: "Responde otra vez lo que la verificación no respaldó",
+    consumer: "valmen gate --evaluator cascade",
+  },
 ];
 
 /** Un modelo asignado a un rol. */
@@ -153,6 +174,20 @@ export const PRESETS: readonly Preset[] = [
         model: "openai/gpt-5.6-luna-pro",
         effort: "high",
       },
+      // La cascada del preset de máxima calidad: el productor sigue siendo barato
+      // —es el punto del patrón— y el escalado es el modelo más fuerte del
+      // catálogo.
+      producer: { provider: "openrouter", model: DEFAULT_GATE_JUDGE, effort: "auto" },
+      verifier: {
+        provider: "openrouter",
+        model: DEFAULT_GATE_EVALUATOR,
+        effort: "auto",
+      },
+      escalation: {
+        provider: "openrouter",
+        model: "anthropic/claude-opus-4.6",
+        effort: "high",
+      },
     },
   },
   {
@@ -176,6 +211,24 @@ export const PRESETS: readonly Preset[] = [
         model: "moonshotai/kimi-k3",
         effort: "medium",
       },
+      // El equilibrio, aplicado a la cascada: el productor es el modelo barato de
+      // volumen y el escalado el equilibrado —el mismo que el arquitecto, que es
+      // donde este preset pone el razonamiento de coste medio—.
+      producer: {
+        provider: "openrouter",
+        model: "deepseek/deepseek-v4-flash",
+        effort: "auto",
+      },
+      verifier: {
+        provider: "openrouter",
+        model: DEFAULT_GATE_EVALUATOR,
+        effort: "auto",
+      },
+      escalation: {
+        provider: "openrouter",
+        model: "moonshotai/kimi-k3",
+        effort: "medium",
+      },
     },
   },
   {
@@ -193,6 +246,19 @@ export const PRESETS: readonly Preset[] = [
       architect: {
         provider: "openrouter",
         model: "z-ai/glm-5.3-flash",
+        effort: "auto",
+      },
+      // Lo más barato que sigue funcionando, en la cascada también: producir con
+      // el modelo de volumen y escalar al que ya usa el juicio de reserva.
+      producer: { provider: "openrouter", model: "z-ai/glm-5.3-flash", effort: "auto" },
+      verifier: {
+        provider: "openrouter",
+        model: DEFAULT_GATE_EVALUATOR,
+        effort: "auto",
+      },
+      escalation: {
+        provider: "openrouter",
+        model: "deepseek/deepseek-v4-flash",
         effort: "auto",
       },
     },
@@ -228,6 +294,14 @@ export const PRESETS: readonly Preset[] = [
         model: "claude-opus-4-8",
         effort: "high",
       },
+      // La cascada de este preset **no se puede ejecutar**, y se declara igual: el
+      // verificador es Claude, que no emite probabilidades calibradas, así que
+      // `cascadeRoutingFor` la rechaza con su motivo en vez de verificar con un
+      // modelo tan flojo como el productor. Es la misma pérdida que ya declara el
+      // evaluador de gates de este preset, dicha donde se usa.
+      producer: { provider: "claude-code", model: "claude-sonnet-5", effort: "auto" },
+      verifier: { provider: "claude-code", model: "claude-sonnet-5", effort: "auto" },
+      escalation: { provider: "claude-code", model: "claude-opus-4-8", effort: "high" },
     },
   },
 ];
@@ -412,8 +486,14 @@ export function resolveRouting(routing: Routing): ResolvedRoute[] {
       model: elegido?.model ?? "",
       effort: elegido?.effort ?? "auto",
       source,
+      // Los dos roles que **verifican** —el evaluador de un gate y el verificador
+      // de la cascada— son los únicos de los que importa que emitan
+      // probabilidades. Cambiarlos por un modelo de chat no rompe nada, pero la
+      // decisión deja de ser reproducible, y quien lee la advertencia tiene que
+      // poder saberlo.
       probabilistic:
-        spec.id === "gate-evaluator" && (elegido?.model ?? "").startsWith("typesafe/"),
+        (spec.id === "gate-evaluator" || spec.id === "verifier") &&
+        (elegido?.model ?? "").startsWith("typesafe/"),
     };
   });
 }
@@ -512,6 +592,110 @@ export function architectRoutingFor(root: string): ArchitectRouting {
     effort: arquitecto?.effort ?? "auto",
     source: arquitecto?.source ?? "sistema",
   };
+}
+
+/**
+ * Un eslabón de la cascada, ya resuelto.
+ *
+ * `probabilistic` solo importa en el verificador, y se arrastra igual en los tres
+ * para que quien lea la cadena no tenga que saber cuál de los tres roles tiene esa
+ * propiedad.
+ */
+export interface CascadeStep {
+  readonly role: string;
+  readonly provider: string;
+  readonly model: string;
+  readonly effort: Effort;
+  readonly source: RouteSource;
+  readonly probabilistic: boolean;
+}
+
+/**
+ * La cadena de la cascada verificada (R-S1-002).
+ *
+ * `reason` es `null` cuando la cadena se puede ejecutar, y el motivo cuando no. Se
+ * devuelve el motivo en vez de fallar porque quien resuelve la cadena no siempre
+ * puede decidir: la pantalla de modelos tiene que poder decir *por qué* esa
+ * configuración no sirve para la cascada, y un error sin salida obliga a
+ * adivinar. Quien la va a ejecutar —`valmen gate --evaluator cascade`— sí falla,
+ * con este mismo texto.
+ *
+ * Las dos cadenas que se rechazan son las que harían del escalamiento una
+ * ceremonia: escalar al modelo que ya respondió, y verificar con un modelo que no
+ * emite probabilidades —tan flojo como el productor, así que su respaldo no
+ * significa nada—.
+ */
+export interface CascadeRouting {
+  readonly producer: CascadeStep;
+  readonly verifier: CascadeStep;
+  readonly escalation: CascadeStep;
+  readonly reason: string | null;
+}
+
+/** Resuelve la cadena de la cascada, con el motivo cuando no se puede ejecutar. */
+export function cascadeRoutingFor(root: string): CascadeRouting {
+  const rutas = resolveRouting(readProjectRouting(root));
+  const eslabon = (role: string): CascadeStep => {
+    const ruta = rutas.find((candidato) => candidato.role === role);
+    return {
+      role,
+      provider: ruta?.provider ?? DEFAULT_PROVIDER,
+      model: ruta?.model ?? "",
+      effort: ruta?.effort ?? "auto",
+      source: ruta?.source ?? "sin-asignar",
+      probabilistic: ruta?.probabilistic ?? false,
+    };
+  };
+
+  const producer = eslabon("producer");
+  const verifier = eslabon("verifier");
+  const escalation = eslabon("escalation");
+
+  return {
+    producer,
+    verifier,
+    escalation,
+    reason: motivoDeCadenaInutil(producer, verifier, escalation),
+  };
+}
+
+/** El motivo por el que la cadena no se puede ejecutar, o `null` si se puede. */
+function motivoDeCadenaInutil(
+  producer: CascadeStep,
+  verifier: CascadeStep,
+  escalation: CascadeStep,
+): string | null {
+  for (const paso of [producer, verifier, escalation]) {
+    if (paso.model === "") {
+      return (
+        `el rol ${paso.role} no tiene modelo: sin los tres eslabones la cascada no ` +
+        `puede producir, verificar y escalar. Asígnalo en .valmen/routing.yaml o ` +
+        `vuelve al preset con \`valmen routing set --preset <id>\`.`
+      );
+    }
+  }
+
+  if (producer.model === escalation.model) {
+    return (
+      `el rol producer y el rol escalation son el mismo modelo (${producer.model}): ` +
+      `escalar a donde ya se preguntó no cambia la respuesta, y el recibo anotaría ` +
+      `un escalamiento que no ocurrió. Declara en .valmen/routing.yaml un escalado ` +
+      `distinto del productor.`
+    );
+  }
+
+  if (!verifier.probabilistic) {
+    return (
+      `el rol verifier apunta a ${verifier.provider}/${verifier.model} y la ` +
+      `verificación necesita probabilidades: un verificador que responde booleanos ` +
+      `con confianza autoinformada es tan flojo como el productor, así que su ` +
+      `respaldo no significaría nada. Apunta el rol verifier a un modelo de ` +
+      `probabilidades —\`${DEFAULT_GATE_EVALUATOR}\`— o usa los evaluadores ` +
+      `\`jev\` y \`llm-judge\` sin cascada.`
+    );
+  }
+
+  return null;
 }
 
 /**

@@ -35,6 +35,8 @@ import {
 } from "@valmen/core";
 import {
   CAMPOS_ORDENABLES,
+  EVALUATOR_IDS,
+  isEvaluatorId,
   type RegistryPaths,
   type TicketFilters,
   type TicketRow,
@@ -87,7 +89,7 @@ import {
   transition,
 } from "@valmen/engine";
 import { gateFor, gateById } from "@valmen/gate";
-import { architectRoutingFor, gateRoutingFor } from "@valmen/adapter";
+import { architectRoutingFor, cascadeRoutingFor, gateRoutingFor } from "@valmen/adapter";
 import { apiKeyWithPrecedence } from "@valmen/credentials";
 import {
   buildIndex,
@@ -782,8 +784,10 @@ export const TOOLS: readonly ToolDefinition[] = [
           type: "string",
           description:
             "Evaluador. `auto` usa el del routing del proyecto, que es lo normal. " +
-            "`command` no llama a ningún modelo y solo corre los checks mecánicos.",
-          enum: ["auto", "command", "jev", "llm-judge"],
+            "`command` no llama a ningún modelo y solo corre los checks mecánicos. " +
+            "`cascade` es la cascada verificada: produce el rol producer, verifica " +
+            "el rol verifier y solo lo no respaldado se escala al rol escalation.",
+          enum: EVALUATOR_IDS,
         },
       },
       required: ["gate", "id"],
@@ -2526,13 +2530,10 @@ export async function callTool(
         const gateId = texto(args, "gate") as string;
         const id = texto(args, "id") as string;
         const bruto = texto(args, "evaluator", false);
-        const evaluator =
-          bruto === "auto" ||
-          bruto === "command" ||
-          bruto === "jev" ||
-          bruto === "llm-judge"
-            ? bruto
-            : undefined;
+        if (bruto !== "" && bruto !== undefined && !isEvaluatorId(bruto)) {
+          return mal(`Evaluador desconocido: ${String(bruto)}. Use ${EVALUATOR_IDS.join(", ")}.`);
+        }
+        const evaluator = isEvaluatorId(bruto) ? bruto : undefined;
 
         // El routing del proyecto decide el modelo del rol `gate-evaluator`. Es
         // la misma resolución que hace Mission Control, porque una compuerta
@@ -2540,6 +2541,10 @@ export async function callTool(
         // compuerta.
         const routing = gateRoutingFor(paths.root);
         const apiKey = apiKeyDe(contexto, routing.evaluatorProvider);
+        // La cascada suma los roles de ejecución: su cadena se resuelve donde se
+        // lee el routing, igual que en el CLI y en la pantalla.
+        const cascade =
+          evaluator === "cascade" ? cascadeRoutingFor(paths.root) : undefined;
 
         const resultado = await runGate(paths, {
           gateId,
@@ -2558,6 +2563,7 @@ export async function callTool(
             ? {}
             : { effort: routing.evaluatorEffort }),
           ...(routing.judgeModel === "" ? {} : { judgeModel: routing.judgeModel }),
+          ...(cascade === undefined ? {} : { cascade }),
         });
 
         // El veredicto no cambia el estado del ticket —esa es la regla—, así que

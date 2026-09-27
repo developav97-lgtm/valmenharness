@@ -102,6 +102,12 @@ describe("el catálogo de roles", () => {
       "gate-judge",
       "orchestrator",
       "architect",
+      // Los tres roles de la cascada verificada (R-S1-002) volvieron a estar
+      // declarados con su consumidor: `producer`, `verifier` y `escalation` se
+      // resuelven por routing y los ejecuta `valmen gate --evaluator cascade`.
+      "producer",
+      "verifier",
+      "escalation",
     ]);
     expect(ROLES.every((rol) => rol.description !== "")).toBe(true);
   });

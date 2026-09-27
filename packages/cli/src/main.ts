@@ -21,7 +21,7 @@ import { fileURLToPath } from "node:url";
 import { EXIT_INVARIANT, EXIT_SCHEMA, toFailure } from "@valmen/core";
 import { resolveApiKeyWithFile } from "@valmen/credentials";
 import { gateById } from "@valmen/gate";
-import { gateRoutingFor } from "@valmen/adapter";
+import { gateRoutingFor, cascadeRoutingFor } from "@valmen/adapter";
 
 import {
   type CommandResult,
@@ -55,7 +55,9 @@ import { mcpCommand } from "./mcp.js";
 import { runProcess } from "./process.js";
 import {
   type RegistryPaths,
+  EVALUATOR_IDS,
   choosePaths,
+  isEvaluatorId,
   legacyPaths,
   declaredParamNames,
   renderSimulation,
@@ -1162,9 +1164,13 @@ export async function run(argv: readonly string[]): Promise<number> {
     throw caught;
   }
 
+  // El resultado se declara **fuera** del `try` a propósito: el centinela
+  // `__handled__` de un comando corta el cuerpo por excepción, y sin esto el
+  // mensaje que ese comando escribió con cuidado se quedaba sin imprimir —el
+  // usuario veía `Error: __handled__`, que no dice nada—.
+  let result: CommandResult | undefined;
   try {
     const [command, ...rest] = options.positionals;
-    let result: CommandResult | undefined;
 
     if (command === "serve") {
       const rawPort = options.flags["port"];
@@ -1450,15 +1456,12 @@ export async function run(argv: readonly string[]): Promise<number> {
         };
       } else {
         const rawEvaluator = options.flags["evaluator"];
-        const evaluator =
-          typeof rawEvaluator === "string" &&
-          ["auto", "command", "jev", "llm-judge"].includes(rawEvaluator)
-            ? (rawEvaluator as "auto" | "command" | "jev" | "llm-judge")
-            : undefined;
+        const evaluator = isEvaluatorId(rawEvaluator) ? rawEvaluator : undefined;
         if (typeof rawEvaluator === "string" && evaluator === undefined) {
           result = {
             stdout: "",
-            stderr: `Evaluador desconocido: "${rawEvaluator}". Use auto, command, jev o llm-judge.`,
+            stderr:
+              `Evaluador desconocido: "${rawEvaluator}". Use ${EVALUATOR_IDS.join(", ")}.`,
             exitCode: EXIT_SCHEMA,
           };
           throw new Error("__handled__");
@@ -1468,6 +1471,10 @@ export async function run(argv: readonly string[]): Promise<number> {
         // aprobación no describiría la otra.
         const rutas = resolvePaths(options);
         const routing = gateRoutingFor(rutas.root);
+        // La cascada necesita los tres roles, y su cadena se resuelve acá —donde
+        // se lee el routing— para que el motor reciba los modelos ya decididos y
+        // el recibo registre los que de verdad se usaron.
+        const cascade = evaluator === "cascade" ? cascadeRoutingFor(rutas.root) : undefined;
 
         // La credencial se resuelve aquí, en el borde, con el archivo que el
         // usuario indique. Sin `--credentials` es el del `$HOME`, que es lo normal
@@ -1505,6 +1512,7 @@ export async function run(argv: readonly string[]): Promise<number> {
             ? {}
             : { effort: routing.evaluatorEffort }),
           ...(routing.judgeModel === "" ? {} : { judgeModel: routing.judgeModel }),
+          ...(cascade === undefined ? {} : { cascade }),
         });
       }
     } else {
@@ -1520,6 +1528,14 @@ export async function run(argv: readonly string[]): Promise<number> {
     if (final.stderr !== "") process.stderr.write(`Error: ${final.stderr}\n`);
     return final.exitCode;
   } catch (caught) {
+    // `__handled__` no es un fallo: el comando ya dejó su resultado escrito y lo
+    // único que falta es imprimirlo. Un rechazo de validación con su mensaje
+    // —«Evaluador desconocido: …»— llegaba al usuario como `Error: __handled__`.
+    if (caught instanceof Error && caught.message === "__handled__" && result !== undefined) {
+      if (result.stdout !== "") process.stdout.write(result.stdout);
+      if (result.stderr !== "") process.stderr.write(`Error: ${result.stderr}\n`);
+      return result.exitCode;
+    }
     const failure = toFailure(caught);
     process.stderr.write(`Error: ${failure.message}\n`);
     return failure.exitCode;
