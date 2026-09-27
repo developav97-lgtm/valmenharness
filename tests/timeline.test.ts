@@ -28,6 +28,7 @@ import { createRequire } from "node:module";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { ticketDeTexto } from "../packages/server/src/timeline.js";
+import { mensajesDelRegistroEnTexto } from "../packages/server/src/timeline.js";
 
 const requerir = createRequire(import.meta.url);
 
@@ -503,5 +504,176 @@ describe("las sesiones de codex", () => {
     } finally {
       rmSync(home, { recursive: true, force: true });
     }
+  });
+});
+
+/** El ticket que se trabaja en la prueba del reparto. */
+const TICKET = "BUGFIX-POS-UNO-20260101";
+
+/**
+ * Una base de Hermes de mentira, con lo que su lector consulta.
+ *
+ * El reparto de la línea de tiempo solo miraba la base de opencode, así que una
+ * sesión de Hermes —`hermes:desktop`, la que trabaja el harness desde la app—
+ * entraba con su coste entero y sin una sola intervención contada: el registro
+ * decía «harness $0.000000» y le adjudicaba a la exploración un gasto que fue
+ * trabajo sobre el ticket.
+ */
+function escribirBaseDeHermes(datos: {
+  directorio: string;
+  sesiones: {
+    id: string;
+    coste: number;
+    mensajes: { id: string; toolCalls: string }[];
+  }[];
+}): void {
+  const modulo = sqlite();
+  if (modulo === null) return;
+
+  mkdirSync(join(lab, ".hermes"), { recursive: true });
+  const db = new modulo.DatabaseSync(join(lab, ".hermes", "state.db"));
+  db.exec(`
+        CREATE TABLE sessions (
+        id text PRIMARY KEY, source text, title text, display_name text, model text,
+        billing_provider text, cwd text, git_repo_root text, api_call_count integer,
+        tool_call_count integer, input_tokens integer, output_tokens integer,
+        reasoning_tokens integer, cache_read_tokens integer, estimated_cost_usd real,
+        actual_cost_usd real, cost_status text, started_at real, ended_at real,
+        end_reason text
+        );
+        CREATE TABLE messages (id text PRIMARY KEY, session_id text, content text, tool_calls text);
+        `);
+
+  for (const s of datos.sesiones) {
+    db.prepare(
+      `INSERT INTO sessions VALUES (?, 'desktop', 'Sesión de trabajo', NULL,
+           'deepseek-v4.1-flash', 'opencode-go', ?, NULL, 12, 5, 4000, 300, 40, 200,
+           ?, 0, 'estimated', ?, NULL, NULL)`,
+    ).run(s.id, datos.directorio, s.coste, Date.now() / 1000);
+    for (const m of s.mensajes) {
+      db.prepare("INSERT INTO messages VALUES (?,?,NULL,?)").run(m.id, s.id, m.toolCalls);
+    }
+  }
+  db.close();
+}
+
+describe.skipIf(sqlite === null)("el trabajo del harness desde Hermes", () => {
+  it("cuenta sus intervenciones y no le llama exploración a su gasto", async () => {
+    // La sesión de opencode: un mensaje, del harness, con su coste.
+    escribirBase({
+      directorio: "/proyecto",
+      sesiones: [
+        {
+          id: "ses_opencode",
+          title: "Sesión de opencode",
+          cost: 0.02,
+          mensajes: [
+            {
+              id: "m1",
+              data: mensaje(0.02),
+              partes: [{ tool: "valmen_mover_ticket", status: "completed" }],
+            },
+          ],
+        },
+      ],
+    });
+
+    const modulo = sqlite();
+    if (modulo === null) return;
+    const db = new modulo.DatabaseSync(
+      join(lab, ".local", "share", "opencode", "opencode.db"),
+    );
+    db.prepare("UPDATE part SET data = ? WHERE message_id = ?").run(
+      JSON.stringify({
+        type: "tool",
+        tool: "valmen_mover_ticket",
+        state: { status: "completed", time: { start: 1 }, input: { id: TICKET } },
+      }),
+      "m1",
+    );
+    db.close();
+
+    // La sesión de Hermes: tres mensajes, dos del harness —uno por MCP y otro por
+    // el CLI—, y un coste que Hermes solo sabe por sesión, no por mensaje.
+    escribirBaseDeHermes({
+      directorio: "/proyecto",
+      sesiones: [
+        {
+          id: "20260926_182737_425c0d",
+          coste: 0.07,
+          mensajes: [
+            {
+              id: "h1",
+              toolCalls: `[{"function":{"name":"mcp__valmen__mover_ticket","arguments":"{\\"id\\":\\"${TICKET}\\"}"}}]`,
+            },
+            {
+              id: "h2",
+              toolCalls: `[{"function":{"name":"terminal","arguments":"{\\"command\\":\\"valmen gate plan --id ${TICKET}\\"}"}}]`,
+            },
+            {
+              id: "h3",
+              toolCalls: '[{"function":{"name":"read_file","arguments":"{}"}}]',
+            },
+          ],
+        },
+      ],
+    });
+
+    const { leerLineaDeTiempo } = await cargar();
+    const linea = leerLineaDeTiempo("/proyecto", { home: lab, ticketId: TICKET });
+
+    // Las sesiones de las dos herramientas entran: quien mira quiere el consumo de
+    // su ticket, no el de la herramienta con la que se hizo.
+    expect(linea?.sessions).toHaveLength(2);
+    // Un mensaje del harness en opencode más dos en Hermes.
+    expect(linea?.desglose.harnessMensajes).toBe(3);
+    expect(linea?.desglose.exploracionMensajes).toBe(1);
+    // El coste de opencode es del mensaje, y ese mensaje era del harness.
+    expect(linea?.desglose.harnessUsd).toBeCloseTo(0.02, 6);
+    // El de Hermes no se puede repartir, así que no se afirma que sea exploración.
+    expect(linea?.desglose.exploracionUsd).toBeCloseTo(0, 6);
+    expect(linea?.desglose.costeNoAtribuibleUsd).toBeCloseTo(0.07, 6);
+    // Y sí se dice cuántos mensajes de cuántos fueron trabajo sobre el registro.
+    const deHermes = linea?.sessions.find((s) => s.source === "hermes");
+    expect(mensajesDelRegistroEnTexto(deHermes!)).toBe(
+      "2 de 3 mensajes tocaron el registro. ",
+    );
+  });
+
+  it("el resumen no llama «harness» a lo que no lo es, ni afirma un cero", async () => {
+    // Lo que veía el PO: «harness $0.000000, exploración $0.229688» en un ticket
+    // cuyas compuertas costaron de verdad. El nombre era del reparto de la sesión,
+    // pero se leía como si el harness no hubiera costado nada.
+    const { renderDesglose } = await cargar();
+    const deHermes = renderDesglose(
+      {
+        harnessUsd: 0,
+        exploracionUsd: 0,
+        harnessMensajes: 79,
+        exploracionMensajes: 165,
+        costeNoAtribuibleUsd: 0.229688,
+      },
+      0.229688,
+    );
+
+    expect(deHermes).not.toContain("harness");
+    expect(deHermes).toContain("79 mensaje(s) que tocaron el registro");
+    // Un cero con mensajes no es gratis: es una sesión sin coste por mensaje.
+    expect(deHermes).not.toContain("$0.000000");
+    expect(deHermes).toContain("sin repartir");
+
+    // Con coste por mensaje, el reparto sí se puede afirmar.
+    const deOpencode = renderDesglose(
+      {
+        harnessUsd: 0.02,
+        exploracionUsd: 0.01,
+        harnessMensajes: 3,
+        exploracionMensajes: 5,
+        costeNoAtribuibleUsd: 0,
+      },
+      0.03,
+    );
+    expect(deOpencode).toContain("$0.020000 en 3 mensaje(s) que tocaron el registro");
+    expect(deOpencode).not.toContain("sin repartir");
   });
 });

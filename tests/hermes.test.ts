@@ -26,6 +26,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   HERRAMIENTAS_DE_LECTURA,
   HERRAMIENTAS_QUE_ESCRIBEN,
+  esIntervencionDelHarness,
   leerSesionesDeHermes,
   ticketsDeTexto,
 } from "../packages/server/src/hermes.js";
@@ -185,6 +186,40 @@ describe.skipIf(sqlite === null)("las sesiones de Hermes", () => {
 
     const sesiones = leerSesionesDeHermes("/proyectos/tienda", { home: lab });
     expect(sesiones[0]?.ticket).toBe("FEATURE-UNO-20260924");
+  });
+
+  it("una sesión que trabaja el registro por el CLI tiene el ticket por trabajado", () => {
+    // El caso que dejaba la línea de tiempo vacía: la sesión no llama ninguna
+    // herramienta con nombre del harness —ejecuta el CLI desde la shell—, así que
+    // el ticket sólo contaba como mencionado. Y mencionar no basta: acá otro ticket
+    // se nombra más veces que las que se trabajó, así que sin contar el CLI como
+    // escritura el ticket trabajado se perdía detrás de las menciones.
+    const db = crearBase(base);
+    sesion(db, "20260924_140000_ffffff");
+    for (const id of ["m1", "m2", "m3", "m4"]) {
+      mensaje(
+        db,
+        id,
+        "20260924_140000_ffffff",
+        '[{"function":{"name":"mcp__valmen__ver_ticket","arguments":"{\\"id\\":\\"BUGFIX-OTRO-20260924\\"}"}}]',
+      );
+    }
+    // El CLI tal como se lo ejecuta desde el propio repositorio, que es como se
+    // trabaja el harness cuando se lo está desarrollando: no aparece la palabra
+    // `valmen` en ninguna parte del comando.
+    mensaje(
+      db,
+      "m5",
+      "20260924_140000_ffffff",
+      '[{"function":{"name":"terminal","arguments":"{\\"command\\":\\"node /Users/q/Desktop/ValmenHarness/packages/cli/dist/main.js --root /Users/q/Desktop/ValmenHarness validate --id FEATURE-UNO-20260924\\"}"}}]',
+    );
+    db.close();
+
+    const suyas = leerSesionesDeHermes("/proyectos/tienda", {
+      home: lab,
+      ticketId: "FEATURE-UNO-20260924",
+    });
+    expect(suyas.map((s) => s.id)).toEqual(["20260924_140000_ffffff"]);
   });
 
   it("filtra por ticket cuando se pide uno", () => {
@@ -378,3 +413,107 @@ describe.skipIf(sqlite === null)("las sesiones de Hermes", () => {
     expect(leerSesionesDeHermes("/proyectos/tienda", { home: lab })).toEqual([]);
   });
 });
+
+describe("qué cuenta como intervención sobre el harness", () => {
+  // El reparto de la línea de tiempo buscaba el prefijo `valmen_` de opencode, y
+  // desde Hermes las herramientas llegan con otro nombre —`mcp__valmen__…`,
+  // `mcp__valmen_<perfil>__…`— o no llegan: el harness se maneja por la shell y
+  // entonces no hay nombre de herramienta, hay un comando. Las tres formas son la
+  // misma intervención, y ninguna se contaba.
+  it("reconoce las dos convenciones de nombre y el CLI", () => {
+    expect(
+      esIntervencionDelHarness(
+        '{"id":"1","function":{"name":"mcp__valmen__mover_ticket","arguments":"{}"}}',
+      ),
+    ).toBe(true);
+    expect(
+      esIntervencionDelHarness(
+        '{"id":"2","function":{"name":"mcp__valmen_saicloud__listar_tickets","arguments":"{}"}}',
+      ),
+    ).toBe(true);
+    expect(
+      esIntervencionDelHarness(
+        '{"id":"3","function":{"name":"terminal","arguments":"{\\"command\\":\\"valmen gate plan --id X\\"}"}}',
+      ),
+    ).toBe(true);
+  });
+
+  it("no cuenta lo que no toca el registro", () => {
+    expect(
+      esIntervencionDelHarness(
+        '{"id":"4","function":{"name":"read_file","arguments":"{\\"path\\":\\"/Users/q/Desktop/ValmenHarness/src/x.ts\\"}"}}',
+      ),
+    ).toBe(false);
+    expect(
+      esIntervencionDelHarness(
+        '{"id":"5","function":{"name":"execute_code","arguments":"{\\"code\\":\\"print(1)\\"}"}}',
+      ),
+    ).toBe(false);
+    expect(
+      esIntervencionDelHarness(
+        '{"id":"6","function":{"name":"mcp__otrosistema__listar_cosas","arguments":"{}"}}',
+      ),
+    ).toBe(false);
+    expect(esIntervencionDelHarness("")).toBe(false);
+  });
+
+  it("una llamada sin subcomando no es una intervención del CLI", () => {
+    // La ruta del propio repositorio contiene la palabra y no es una llamada: el
+    // subcomando es lo que distingue una invocación de una mención.
+    expect(
+      esIntervencionDelHarness(
+        '{"id":"7","function":{"name":"terminal","arguments":"{\\"command\\":\\"ls /Users/q/valmen/\\"}"}}',
+      ),
+    ).toBe(false);
+  });
+
+  it("reconoce el CLI del propio repositorio, no sólo el comando instalado", () => {
+    // Trabajar el harness desde su repositorio es invocarlo por su ruta, con las
+    // banderas antes del subcomando: `node …/packages/cli/dist/main.js --root … validate`.
+    expect(
+      esIntervencionDelHarness(
+        '{"id":"8","function":{"name":"terminal","arguments":"{\\"command\\":\\"node /Users/q/Desktop/ValmenHarness/packages/cli/dist/main.js --root /Users/q/Desktop/ValmenHarness validate --id FEATURE-UNO-20260924\\"}"}}',
+      ),
+    ).toBe(true);
+    expect(
+      esIntervencionDelHarness(
+        '{"id":"9","function":{"name":"terminal","arguments":"{\\"command\\":\\"node main.js --root /x resume --id FEATURE-UNO-20260924\\"}"}}',
+      ),
+    ).toBe(true);
+  });
+});
+
+describe.skipIf(sqlite === null)(
+  "las intervenciones sobre el harness en una sesión",
+  () => {
+    it("cuenta los mensajes que tocaron el registro, y cuántos mensajes hay", () => {
+      const db = crearBase(base);
+      sesion(db, "20260924_180000_jjjjjj");
+      // Dos mensajes del harness —uno por MCP y otro por el CLI— y uno de trabajo
+      // propio: el número tiene que decir 2 de 3, no 0 de 3.
+      mensaje(
+        db,
+        "h1",
+        "20260924_180000_jjjjjj",
+        '[{"function":{"name":"mcp__valmen__mover_ticket","arguments":"{\\"id\\":\\"FEATURE-UNO-20260924\\"}"}}]',
+      );
+      mensaje(
+        db,
+        "h2",
+        "20260924_180000_jjjjjj",
+        '[{"function":{"name":"terminal","arguments":"{\\"command\\":\\"valmen validate --id FEATURE-UNO-20260924\\"}"}}]',
+      );
+      mensaje(
+        db,
+        "h3",
+        "20260924_180000_jjjjjj",
+        '[{"function":{"name":"read_file","arguments":"{\\"path\\":\\"/x/y.ts\\"}"}}]',
+      );
+      db.close();
+
+      const sesiones = leerSesionesDeHermes("/proyectos/tienda", { home: lab });
+      expect(sesiones[0]?.intervencionesDelHarness).toBe(2);
+      expect(sesiones[0]?.mensajes).toBe(3);
+    });
+  },
+);

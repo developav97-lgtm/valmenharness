@@ -141,7 +141,8 @@ export function createTicket(request: CreateRequest): string {
   }
 
   const plantilla = ticketTemplate(paths.root);
-  const date = today(request.now?.() ?? new Date());
+  const momento = request.now?.() ?? new Date();
+  const date = today(momento);
 
   // El texto se monta entero en memoria y se valida antes del lock: si la
   // plantilla no produce un ticket válido, no se toma el lock siquiera.
@@ -176,7 +177,7 @@ export function createTicket(request: CreateRequest): string {
   }
   texto = texto.replace(TEMPLATE_REQUEST_MARKER, solicitud);
   texto = replaceBlock(texto, "Eventos", [
-    newEvent([], "created", "Ticket creado sin sobrescribir historial.", "cli", date),
+    newEvent([], "created", "Ticket creado sin sobrescribir historial.", "cli", momento),
   ]);
 
   const destino = ticketPathFor(paths, id);

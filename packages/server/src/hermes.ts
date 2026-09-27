@@ -69,6 +69,10 @@ export interface SesionDeHermes {
   readonly startedAt: number;
   readonly apiCalls: number;
   readonly toolCalls: number;
+  /** Cuántos mensajes tiene la sesión. */
+  readonly mensajes: number;
+  /** Cuántos de esos mensajes tocaron el harness: leyeron o escribieron el registro. */
+  readonly intervencionesDelHarness: number;
   readonly inputTokens: number;
   readonly outputTokens: number;
   readonly reasoningTokens: number;
@@ -197,6 +201,7 @@ export const HERRAMIENTAS_QUE_ESCRIBEN: readonly string[] = [
   "anotar_retest",
   "cerrar_qa",
   "preparar_cierre",
+  "anexar_ticket_a_feature",
 ];
 
 /**
@@ -211,6 +216,130 @@ function nombreDeHerramienta(nombre: string): string {
   const corte = nombre.lastIndexOf("__");
   const base = corte === -1 ? nombre : nombre.slice(corte + 2);
   return base.replace(/^valmen_/, "");
+}
+
+/**
+ * El nombre de una herramienta del harness, o `null` si la llamada no lo es.
+ *
+ * Las dos convenciones son la misma herramienta: opencode nombra
+ * `valmen_mover_ticket` y Hermes `mcp__valmen__mover_ticket` o
+ * `mcp__valmen_<perfil>__mover_ticket`. Se normaliza con `nombreDeHerramienta`,
+ * que quita el prefijo de la página, y se compara contra el catálogo exacto y no
+ * por sufijo: `mover_ticket` termina en `ver_ticket`, y comparar por sufijo
+ * tomaría una escritura por una lectura.
+ */
+function herramientaDelHarness(nombre: string): string | null {
+  const base = nombreDeHerramienta(nombre);
+  if (HERRAMIENTAS_QUE_ESCRIBEN.includes(base)) return base;
+  return HERRAMIENTAS_DE_LECTURA.includes(base) ? base : null;
+}
+
+/**
+ * Dónde empieza una invocación del CLI del harness.
+ *
+ * Dos formas, y las dos cuentan: el comando instalado (`valmen`) y el del propio
+ * repositorio (`…/packages/cli/dist/main.js`), que es como se lo ejecuta mientras
+ * se lo desarrolla. Sin lo segundo, trabajar el harness desde su repositorio
+ * quedaba invisible: la sesión nombraba el ticket ciento treinta veces, ninguna
+ * contaba como escritura —la palabra `valmen` no aparecía en ninguna parte del
+ * comando— y el ticket no se atribuía a la sesión.
+ *
+ * Se exige una invocación seguida de algo, para no contar una ruta que lleve la
+ * palabra —`…/valmen/x.ts` no es una invocación— ni el nombre del repositorio, que
+ * se escribe `ValmenHarness` y no casa.
+ */
+const INVOCACION_DEL_CLI_RE =
+  /(?:^|[\s;&|()"'])(?:valmen|[^\s;&|()"']*main\.js)[\s;&|()"']+/g;
+
+/**
+ * El subcomando de la primera invocación del CLI que aparezca, o `null`.
+ *
+ * Se salta las banderas y las rutas —van antes del subcomando— y toma la primera
+ * palabra suelta, y no cruza un `;` ni un `&&`: lo que sigue es otro comando. El
+ * valor de una bandera que sea una palabra suelta se leería como subcomando; esto
+ * cuenta mensajes y no decide nada, así que lo más que puede pasar es sumar un
+ * mensaje de más al conteo del registro.
+ */
+function subcomandoDeValmen(texto: string): string | null {
+  for (const match of texto.matchAll(INVOCACION_DEL_CLI_RE)) {
+    const resto = texto.slice((match.index ?? 0) + match[0].length);
+    const segmento = resto.split(/[;&|()"']/)[0] ?? "";
+    for (const token of segmento.split(/\s+/)) {
+      if (token === "" || token.startsWith("-")) continue;
+      if (token.includes("/") || token.includes(".")) continue;
+      if (/^[a-z][a-z0-9-]*$/.test(token)) return token;
+    }
+  }
+  return null;
+}
+
+/** Las llamadas de un mensaje, con las comillas desescapadas. */
+function textoDeLlamadas(llamadas: string): string {
+  return llamadas.replace(/\\"/g, '"');
+}
+
+/**
+ * `true` si las llamadas de un mensaje usaron el harness.
+ *
+ * Cuenta igual una herramienta por MCP —con cualquiera de las dos
+ * convenciones— que una llamada de shell que ejecuta el CLI. Es el criterio que
+ * la línea de tiempo necesita para no llamar «exploración» a lo que fue trabajo
+ * sobre el registro, y se lee de los argumentos porque el nombre del ticket y el
+ * comando viajan ahí.
+ */
+export function esIntervencionDelHarness(llamadas: string): boolean {
+  if (llamadas === "") return false;
+  const texto = textoDeLlamadas(llamadas);
+  for (const match of texto.matchAll(/"name"\s*:\s*"([A-Za-z_0-9]+)"/g)) {
+    if (herramientaDelHarness(match[1] as string) !== null) return true;
+  }
+  return subcomandoDeValmen(texto) !== null;
+}
+
+/**
+ * `true` si las llamadas de un mensaje escribieron el registro desde el CLI.
+ *
+ * Es la mitad que faltaba para atribuir una sesión a su ticket: una sesión que
+ * trabaja el harness por la shell no llama ninguna herramienta con nombre del
+ * harness —llama a `terminal` con un comando—, así que el ticket no contaba como
+ * trabajado y su línea de tiempo quedaba vacía aunque la sesión hubiera hecho el
+ * ticket entero. Contar la intervención y no atribuir la sesión dejaba el arreglo
+ * a medias.
+ */
+export function escribePorCli(llamadas: string): boolean {
+  return subcomandoDeValmen(textoDeLlamadas(llamadas)) !== null;
+}
+
+/**
+ * Cuántos mensajes tiene una sesión y cuántos de ellos tocaron el harness.
+ *
+ * La sesión de Hermes no trae coste por mensaje —solo el agregado de la
+ * sesión—, así que esto **no** sirve para repartir su coste: sirve para decir
+ * cuántos mensajes de cuántos fueron trabajo sobre el registro, que es lo que sí
+ * se puede afirmar sin inventar un número.
+ */
+function intervencionesDeSesion(
+  db: BaseDeDatos,
+  sessionId: string,
+): { mensajes: number; delHarness: number } {
+  let filas: { data: string | null }[] = [];
+  try {
+    filas = db
+      .prepare(
+        `SELECT tool_calls AS data
+           FROM messages
+          WHERE session_id = ?`,
+      )
+      .all(sessionId) as unknown as typeof filas;
+  } catch {
+    return { mensajes: 0, delHarness: 0 };
+  }
+
+  let delHarness = 0;
+  for (const fila of filas) {
+    if (esIntervencionDelHarness(fila.data ?? "")) delHarness += 1;
+  }
+  return { mensajes: filas.length, delHarness };
 }
 
 /** Los tickets que menciona un texto, con cuántas veces cada uno. */
@@ -310,6 +439,7 @@ export function leerSesionesDeHermes(
 
         const tickets = ticketsDeSesion(db, fila.id);
         const { ticket, compartida } = atribucionDeSesion(tickets);
+        const { mensajes, delHarness } = intervencionesDeSesion(db, fila.id);
         // Al pedir un ticket, una sesión compartida **entra** —trabajó ese
         // ticket— pero marcada: esconderla dejaría la vista diciendo que nadie
         // de Hermes la tocó, y contarla sin marca le adjudicaría a este ticket el
@@ -339,6 +469,8 @@ export function leerSesionesDeHermes(
           startedAt: n(fila.started_at) * 1000,
           apiCalls: n(fila.api_call_count),
           toolCalls: n(fila.tool_call_count),
+          mensajes,
+          intervencionesDelHarness: delHarness,
           inputTokens: n(fila.input_tokens),
           outputTokens: n(fila.output_tokens),
           reasoningTokens: n(fila.reasoning_tokens),
@@ -404,7 +536,9 @@ function ticketsDeSesion(db: BaseDeDatos, sessionId: string): TicketDeSesion[] {
     const nombres = [
       ...llamadas.replace(/\\"/g, '"').matchAll(/"name"\s*:\s*"([A-Za-z_0-9]+)"/g),
     ].map((m) => nombreDeHerramienta(m[1] as string));
-    const escribe = nombres.some((nombre) => HERRAMIENTAS_QUE_ESCRIBEN.includes(nombre));
+    const escribe =
+      nombres.some((nombre) => HERRAMIENTAS_QUE_ESCRIBEN.includes(nombre)) ||
+      escribePorCli(llamadas);
     for (const [id, veces] of ticketsDeTexto(llamadas)) {
       sumar(id, veces * (escribe ? 3 : 1), escribe);
     }

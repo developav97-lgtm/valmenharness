@@ -12,6 +12,7 @@
  * que el harness existe para impedir.
  */
 export * from "./result.js";
+export * from "./etapas.js";
 export * from "./discovery.js";
 export * from "./diff.js";
 export * from "./drift.js";

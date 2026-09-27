@@ -36,7 +36,7 @@ export interface TicketValue {
   readonly closedOn: string;
   readonly releaseStatus: string;
   /** Coste de las evaluaciones de compuerta, de los recibos. */
-  readonly harnessUsd: number;
+  readonly compuertasUsd: number;
   /** Coste de las sesiones de agente que el ticket registró. */
   readonly sessionsUsd: number;
   /** Sesiones sin coste por token: el proveedor cobra por suscripción. */
@@ -182,7 +182,7 @@ export function ticketValueReport(
       (uso) =>
         uso["estimated_cost_usd"] === null || uso["estimated_cost_usd"] === undefined,
     ).length;
-    const harnessUsd = suyos?.costUsd ?? 0;
+    const compuertasUsd = suyos?.costUsd ?? 0;
 
     tickets.push({
       ticketId: entrada.ticketId,
@@ -190,10 +190,10 @@ export function ticketValueReport(
       type: entrada.type,
       closedOn: entrada.closedOn,
       releaseStatus: entrada.releaseStatus,
-      harnessUsd,
+      compuertasUsd,
       sessionsUsd: sesionesUsd,
       sessionsUnknown,
-      knownUsd: harnessUsd + sesionesUsd,
+      knownUsd: compuertasUsd + sesionesUsd,
       partial: sessionsUnknown > 0,
       evaluations: suyos?.evaluaciones ?? 0,
       approved: suyos?.aprobadas ?? 0,

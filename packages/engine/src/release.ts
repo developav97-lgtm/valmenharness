@@ -170,7 +170,8 @@ export function releasePublish(request: ReleasePublishRequest): string {
     fail("--version debe usar SemVer MAJOR.MINOR.PATCH sin prefijo v.", EXIT_SCHEMA);
   }
   const identifiers = releaseTicketIds(request.tickets);
-  const date = today(request.now?.() ?? new Date());
+  const momento = request.now?.() ?? new Date();
+  const date = today(momento);
 
   return MutationLock.run(paths.root, () => {
     const releaseCommit = releaseTagCommit(paths.root, version);
@@ -221,7 +222,7 @@ export function releasePublish(request: ReleasePublishRequest): string {
           "release-transition",
           "Release: unreleased -> planned.",
           "cli",
-          date,
+          momento,
         ),
       );
       eventos.push(
@@ -230,7 +231,7 @@ export function releasePublish(request: ReleasePublishRequest): string {
           "release-transition",
           "Release: planned -> released.",
           "cli",
-          date,
+          momento,
         ),
       );
 

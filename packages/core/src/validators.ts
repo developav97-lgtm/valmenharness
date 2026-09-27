@@ -5,7 +5,7 @@
  * literal y su código de salida**. Los mensajes son parte del contrato: un test
  * de equivalencia que los compare falla si se "mejoran".
  */
-import { BUILD_REFERENCE_RE, DATE_RE } from "./contract.js";
+import { BUILD_REFERENCE_RE, DATE_RE, DATE_TIME_RE } from "./contract.js";
 import { EXIT_REFERENCE, EXIT_SCHEMA, fail } from "./errors.js";
 
 /**
@@ -112,6 +112,43 @@ export function validateIsoDate(value: unknown, label: string): void {
   }
 }
 
+/**
+ * Fecha y hora en ISO-8601, con zona.
+ *
+ * Es lo que un evento necesita para que la duración de un ticket se pueda
+ * calcular: el día solo no distingue el análisis del cierre. Se exige la hora con
+ * minutos y segundos y la zona —`Z` o desplazamiento—, y que el instante exista:
+ * `Date.parse` normaliza los desbordamientos, así que se comprueba que la fecha
+ * reconstruida coincida con la declarada.
+ */
+export function validateIsoDateTime(value: unknown, label: string): void {
+  if (typeof value !== "string" || !DATE_TIME_RE.test(value)) {
+    fail(`${label} debe usar YYYY-MM-DDTHH:MM:SS con zona.`);
+  }
+  const instante = new Date(value);
+  if (Number.isNaN(instante.getTime())) {
+    fail(`${label} contiene una hora inexistente.`);
+  }
+  // `Date` normaliza los desbordamientos —`2026-02-30` es el 2 de marzo—, así que
+  // se reconstruye el instante y se comprueba que caiga en el día declarado.
+  const [anio, mes, dia, hora, minuto, segundo] = [
+    Number(value.slice(0, 4)),
+    Number(value.slice(5, 7)),
+    Number(value.slice(8, 10)),
+    Number(value.slice(11, 13)),
+    Number(value.slice(14, 16)),
+    Number(value.slice(17, 19)),
+  ];
+  const reconstruido = new Date(Date.UTC(anio, mes - 1, dia, hora, minuto, segundo));
+  if (
+    reconstruido.getUTCFullYear() !== anio ||
+    reconstruido.getUTCMonth() !== mes - 1 ||
+    reconstruido.getUTCDate() !== dia
+  ) {
+    fail(`${label} contiene una hora inexistente.`);
+  }
+}
+
 /** `null` o texto no vacío. */
 export function validateNullableText(value: unknown, label: string): void {
   if (value === null) return;
@@ -174,10 +211,13 @@ export function requireExactKeys(
   item: Record<string, unknown>,
   keys: readonly string[],
   label: string,
+  opcionales: readonly string[] = [],
 ): void {
-  const expected = new Set(keys);
+  const permitidas = new Set([...keys, ...opcionales]);
   const actual = Object.keys(item);
-  if (actual.length !== expected.size || actual.some((key) => !expected.has(key))) {
+  const sobra = actual.some((key) => !permitidas.has(key));
+  const falta = keys.some((key) => !(key in item));
+  if (sobra || falta) {
     fail(`${label} no contiene las claves exactas del esquema.`);
   }
 }

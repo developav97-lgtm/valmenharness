@@ -19,6 +19,7 @@ import {
   requireExactKeys,
   requireList,
   validateIsoDate,
+  validateIsoDateTime,
   validateNullableText,
   validateNullableNonNegativeInteger,
   validateNullableNonNegativeNumber,
@@ -429,7 +430,16 @@ export function validateEvents(entries: readonly JsonObject[]): void {
 
   for (const entry of entries) {
     const id = entryId(entry, "EVENT");
-    requireExactKeys(entry, ["kind", "id", "date", "action", "actor", "details"], id);
+    // `at` es opcional: los eventos escritos antes de que existiera la hora —todo
+    // el registro hasta ahora— siguen validando, y por eso agregarlo no necesita
+    // migración. Lo que no es opcional es que una hora declarada sea una hora.
+    requireExactKeys(entry, ["kind", "id", "date", "action", "actor", "details"], id, [
+      "at",
+    ]);
+
+    if (entry["at"] !== undefined) {
+      validateIsoDateTime(entry["at"], `${id}.at`);
+    }
 
     if (entry["kind"] !== "ticket-event") {
       fail(`${id}.kind debe ser ticket-event.`);

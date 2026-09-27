@@ -137,6 +137,15 @@ export interface SesionDeAgente {
    */
   readonly fuente?: string;
   /**
+   * Cuántos mensajes tiene la sesión y cuántos tocaron el registro.
+   *
+   * Solo lo traen las sesiones de Hermes, que no tienen coste por mensaje: ahí no
+   * se puede repartir el gasto, pero sí decir cuántos mensajes de cuántos fueron
+   * trabajo sobre el registro. Es lo que el PO eligió —contar, no repartir—.
+   */
+  readonly mensajes?: number;
+  readonly mensajesDelRegistro?: number;
+  /**
    * Los tickets que sirvió la sesión, cuando sirvió a más de uno.
    *
    * Su costo no es de este ticket y por eso no se suma: la sesión de Slack de dos
@@ -154,6 +163,15 @@ export interface DesgloseDeTrabajo {
   readonly exploracionUsd: number;
   readonly harnessMensajes: number;
   readonly exploracionMensajes: number;
+  /**
+   * El coste que no se puede repartir entre harness y exploración.
+   *
+   * Hermes no guarda coste por mensaje: solo el agregado de la sesión. Un reparto
+   * inventado sería peor que la ausencia, así que ese gasto se declara acá y sus
+   * intervenciones se cuentan aparte —cuántos mensajes de cuántos tocaron el
+   * registro—, que es lo que sí se puede afirmar de él.
+   */
+  readonly costeNoAtribuibleUsd: number;
 }
 
 /** La línea de tiempo completa de un proyecto. */
@@ -369,6 +387,7 @@ function lineaSoloDeCodex(
       exploracionUsd: 0,
       harnessMensajes: 0,
       exploracionMensajes: 0,
+      costeNoAtribuibleUsd: 0,
     },
   };
 }
@@ -400,6 +419,8 @@ function lineaSoloDeHermes(
     intervenciones: sesion.toolCalls,
     fallidas: 0,
     fuente: sesion.dbPath,
+    mensajes: sesion.mensajes,
+    mensajesDelRegistro: sesion.intervencionesDelHarness,
     // El reparto son los tickets que la sesión **trabajó**, no todos los que
     // mencionó: nombrar veintinueve y haber trabajado cuatro no es repartir
     // entre veintinueve.
@@ -427,8 +448,19 @@ function lineaSoloDeHermes(
     desglose: {
       harnessUsd: 0,
       exploracionUsd: 0,
-      harnessMensajes: 0,
-      exploracionMensajes: 0,
+      // Sin base de opencode no hay coste por mensaje que repartir: los dos
+      // primeros quedan en cero porque no hay nada que sumar ahí. Lo que sí hay es
+      // cuántos mensajes tocaron el registro, y un coste de sesión que no se puede
+      // partir, declarado como lo que es.
+      harnessMensajes: sesiones
+        .filter((s) => !s.compartida)
+        .reduce((suma, s) => suma + s.intervencionesDelHarness, 0),
+      exploracionMensajes: sesiones
+        .filter((s) => !s.compartida)
+        .reduce((suma, s) => suma + (s.mensajes - s.intervencionesDelHarness), 0),
+      costeNoAtribuibleUsd: convertidas
+        .filter((s) => s.reparto === undefined)
+        .reduce((suma, s) => suma + (s.costUsd ?? 0), 0),
     },
   };
 }
@@ -638,6 +670,15 @@ function consultar(
   // Las de Hermes —el puente al celular—, que ejecuta con su propio agente: llamó
   // a las herramientas del harness por MCP y hasta ahora no lo veía nadie. Trae
   // coste estimado, que es más de lo que trae codex.
+  //
+  // Y sus intervenciones se cuentan acá, no en el mapa de mensajes de opencode:
+  // aquel existe para repartir el coste **por mensaje**, y Hermes no lo tiene. Una
+  // sesión que trabajó el ticket desde la app entraba con su gasto entero y sin una
+  // sola intervención contada, así que el reparto decía «harness $0» y le
+  // adjudicaba a la exploración el trabajo sobre el registro.
+  let mensajesDeHermes = 0;
+  let intervencionesDeHermes = 0;
+  let costeDeHermes = 0;
   for (const sesion of leerSesionesDeHermes(directory, {
     ...(home === undefined ? {} : { home }),
     ...(ticketId === undefined ? {} : { ticketId }),
@@ -658,11 +699,20 @@ function consultar(
       intervenciones: sesion.toolCalls,
       fallidas: 0,
       fuente: sesion.dbPath,
+      mensajes: sesion.mensajes,
+      mensajesDelRegistro: sesion.intervencionesDelHarness,
       // El reparto son los tickets que la sesión **trabajó**, no todos los que
       // mencionó: nombrar veintinueve y haber trabajado cuatro no es repartir
       // entre veintinueve.
       ...(sesion.compartida ? { reparto: sesion.tickets.filter((t) => t.trabajado) } : {}),
     });
+    // Una sesión compartida queda fuera de los totales —su gasto es de varios
+    // tickets— y tampoco se reparte acá.
+    if (!sesion.compartida) {
+      mensajesDeHermes += sesion.mensajes;
+      intervencionesDeHermes += sesion.intervencionesDelHarness;
+      costeDeHermes += sesion.costUsd ?? 0;
+    }
   }
 
   // **La atribución, cuando se pide un ticket.** Sin esto, el coste que mostraba
@@ -714,11 +764,69 @@ function consultar(
     },
     desglose: {
       harnessUsd: costeHarness,
-      exploracionUsd: totalCostUsd - costeHarness,
-      harnessMensajes: delHarness.size,
-      exploracionMensajes: porMensaje.size - delHarness.size,
+      // El coste de Hermes sale de la exploración: no se sabe en qué se fue, y
+      // llamarlo exploración era afirmar algo que nadie midió. Se declara aparte,
+      // con sus intervenciones contadas.
+      exploracionUsd: totalCostUsd - costeHarness - costeDeHermes,
+      harnessMensajes: delHarness.size + intervencionesDeHermes,
+      exploracionMensajes:
+        porMensaje.size - delHarness.size + (mensajesDeHermes - intervencionesDeHermes),
+      costeNoAtribuibleUsd: costeDeHermes,
     },
   };
+}
+
+/** Un tramo del desglose, en palabras. */
+function parteDelDesglose(coste: number, mensajes: number, etiqueta: string): string {
+  // Un cero con mensajes no es «gratis»: es una sesión sin coste por mensaje. Se
+  // dice lo que sí se sabe —cuántos mensajes— en vez de afirmar un cero.
+  if (coste === 0 && mensajes > 0) {
+    return `${mensajes} mensaje(s) ${etiqueta}, sin coste separable`;
+  }
+  return `$${coste.toFixed(6)} en ${mensajes} mensaje(s) ${etiqueta}`;
+}
+
+/**
+ * «N de M mensajes tocaron el registro», o vacío si la sesión no los trae.
+ *
+ * Es la mitad que sí se puede afirmar de una sesión sin coste por mensaje: no
+ * cuánto costó el trabajo sobre el registro, pero sí cuánto de la sesión fue. El
+ * PO eligió esto antes que un reparto estimado.
+ */
+export function mensajesDelRegistroEnTexto(sesion: SesionDeAgente): string {
+  if (sesion.mensajes === undefined || sesion.mensajesDelRegistro === undefined) return "";
+  return `${sesion.mensajesDelRegistro} de ${sesion.mensajes} mensajes tocaron el registro. `;
+}
+
+/**
+ * El desglose, en palabras.
+ *
+ * Las dos cantidades no comparten nombre, que era el problema: esto decía
+ * «harness $0.000000, exploración $0.229688» y quien trabajaba el ticket desde la
+ * app leía que el harness no había costado nada, cuando lo que pasaba es que su
+ * coste no se puede repartir por mensaje. Ahora el reparto se llama por lo que es
+ * —mensajes que tocaron el registro y mensajes fuera de él— y el tramo que no se
+ * puede repartir se declara aparte.
+ */
+export function renderDesglose(desglose: DesgloseDeTrabajo, totalUsd: number): string {
+  const partes = [
+    parteDelDesglose(
+      desglose.harnessUsd,
+      desglose.harnessMensajes,
+      "que tocaron el registro",
+    ),
+    parteDelDesglose(
+      desglose.exploracionUsd,
+      desglose.exploracionMensajes,
+      "fuera del registro",
+    ),
+  ];
+  if (desglose.costeNoAtribuibleUsd > 0) {
+    partes.push(
+      `$${desglose.costeNoAtribuibleUsd.toFixed(6)} sin repartir: esa sesión no trae coste por mensaje`,
+    );
+  }
+  return `Total $${totalUsd.toFixed(6)}: ${partes.join("; ")}.`;
 }
 
 /** Lo que se escribió en el ticket al guardar la foto. */
@@ -798,6 +906,7 @@ export function guardarFotoEnTicket(
                 `Agente ${sesion.agent || "(sin declarar)"}. ` +
                 `${sesion.intervenciones} intervención(es) sobre el registro, ` +
                 `${sesion.fallidas} con fallo. ` +
+                mensajesDelRegistroEnTexto(sesion) +
                 `Razonamiento ${sesion.reasoningTokens} tokens, ` +
                 `caché leída ${sesion.cacheReadTokens} tokens. ` +
                 `Sesión "${sesion.title}".` +
@@ -832,9 +941,7 @@ export function guardarFotoEnTicket(
     entradas,
     detalle:
       `${pendientes.length} sesión(es) nuevas de ${linea.sessions.length}. ` +
-      `Total $${linea.totalCostUsd.toFixed(6)}: ` +
-      `harness $${linea.desglose.harnessUsd.toFixed(6)}, ` +
-      `exploración $${linea.desglose.exploracionUsd.toFixed(6)}.` +
+      renderDesglose(linea.desglose, linea.totalCostUsd) +
       (compartidas === 0
         ? ""
         : ` ${compartidas} compartida(s) entre varios tickets: se registran sin números, ` +

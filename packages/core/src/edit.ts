@@ -142,18 +142,24 @@ export function nextId(entries: readonly JsonObject[], prefix: string): string {
  * El registro de eventos es append-only: cada mutación añade exactamente uno.
  * Es la razón por la que un ticket se puede auditar sin depender de que alguien
  * haya documentado lo que hizo.
+ *
+ * Recibe el **instante**, no el día: de ahí salen las dos marcas —`date` para el
+ * contrato, `at` con la hora— y la duración de cada etapa deja de ser un cálculo
+ * imposible. Un evento sin hora no se puede medir, y el tiempo de un ticket es
+ * justamente lo que nadie podía reconstruir.
  */
 export function newEvent(
   entries: readonly JsonObject[],
   action: string,
   details: string,
   actor: string,
-  today: string,
+  momento: Date,
 ): JsonObject {
   return {
     kind: "ticket-event",
     id: nextId(entries, "EVENT"),
-    date: today,
+    date: today(momento),
+    at: momento.toISOString(),
     action,
     actor,
     details,

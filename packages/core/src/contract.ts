@@ -322,6 +322,15 @@ export const ID_RE =
   /^(FEATURE|BUGFIX|IMPROVEMENT|SYNC|INTEGRATION|AGENT|SECURITY|CLAUDIO|CHORE|DOCS)-([A-Z0-9]+)-([A-Z0-9]+(?:-[A-Z0-9]+)*)-(\d{8})$/;
 
 export const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+/**
+ * Fecha con hora y zona: lo que un evento necesita para poder medirse.
+ *
+ * El día solo no distingue el análisis del cierre, así que la hora es parte del
+ * contrato de un evento nuevo. Se acepta `Z` y el desplazamiento, que es lo que
+ * escribe una máquina en Colombia.
+ */
+export const DATE_TIME_RE =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/;
 export const SEMVER_RE = /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/;
 export const BUILD_REFERENCE_RE = /^(?:commit:[0-9a-f]{40}|worktree:sha256:[0-9a-f]{64})$/;
 

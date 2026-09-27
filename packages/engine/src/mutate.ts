@@ -182,7 +182,8 @@ export interface MutationResult {
  */
 export function finalizeMutation(request: MutationRequest): MutationResult {
   const { paths, located, document, text, action, details } = request;
-  const date = today(request.now?.() ?? new Date());
+  const momento = request.now?.() ?? new Date();
+  const date = today(momento);
 
   // 1. El registro entero tiene que estar sano antes de escribir nada.
   allDocuments(paths);
@@ -190,7 +191,7 @@ export function finalizeMutation(request: MutationRequest): MutationResult {
   // 2. El evento se anexa al final. `newEvent` numera por longitud, así que el
   //    identificador es el siguiente de la serie sin tener que buscarlo.
   const eventos = [...(document.blocks.Eventos ?? [])] as JsonObject[];
-  eventos.push(newEvent(eventos, action, details, ACTOR, date));
+  eventos.push(newEvent(eventos, action, details, ACTOR, momento));
 
   // 3 y 4. El bloque y la fecha, y la revalidación completa del resultado.
   let nuevo = replaceBlock(text, "Eventos", eventos);

@@ -143,7 +143,7 @@ describe("el valor de cada ticket", () => {
     const ticket = ticketValueReport(PATHS(), TODO).tickets.find(
       (fila) => fila.ticketId === CON_VUELTAS,
     );
-    expect(ticket?.harnessUsd).toBeCloseTo(0.25, 6);
+    expect(ticket?.compuertasUsd).toBeCloseTo(0.25, 6);
     expect(ticket?.sessionsUsd).toBeCloseTo(1.5, 6);
     expect(ticket?.knownUsd).toBeCloseTo(1.75, 6);
     expect(ticket?.partial).toBe(false);

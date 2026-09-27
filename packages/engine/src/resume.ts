@@ -8,6 +8,7 @@
 import type { ParsedTicket } from "@valmen/core";
 
 import { procedenciaDeTicket, type Procedencia } from "./provenance.js";
+import { duracionEnTexto, duracionesPorEtapa, type EtapaDeTicket } from "./etapas.js";
 import { readReceipts } from "./receipts.js";
 import type { RegistryPaths } from "./discovery.js";
 
@@ -45,6 +46,14 @@ export interface ResumeContext {
   readonly openPoints: readonly ResumePoint[];
   readonly lastReceipt: ResumeReceipt | null;
   readonly readInstruction: string;
+  /**
+   * Lo que tardó cada etapa, desde los eventos del ticket.
+   *
+   * Es determinista —dos marcas de la misma lista— y `ms: null` significa «no
+   * reconstruible», no «instantáneo»: los eventos escritos antes de que existiera
+   * la hora no se pueden medir, y el contexto lo dice en vez de estimarlo.
+   */
+  readonly etapas: readonly EtapaDeTicket[];
   readonly provenance: Procedencia | null;
   /** Solo se incluye en modo completo; conserva los bytes leídos del ticket. */
   readonly documentoCompleto?: string;
@@ -98,6 +107,7 @@ export function buildResumeContext(
       severity: String(point["severity"]),
     })),
     lastReceipt,
+    etapas: duracionesPorEtapa(ticket.blocks.Eventos ?? []),
     readInstruction:
       "Lee las secciones completas bajo demanda con ver_ticket usando el mismo identificador.",
     provenance: procedenciaDeTicket(paths.root, fields.id),
@@ -149,6 +159,18 @@ export function renderResumeContext(context: ResumeContext): string {
       `Último recibo de compuerta: ${context.lastReceipt.id} · ${context.lastReceipt.gate} · ` +
         `${context.lastReceipt.outcome} · ${context.lastReceipt.reason}`,
     );
+  }
+
+  lines.push("Duración por etapa:");
+  if (context.etapas.length === 0) {
+    lines.push("- Sin marcas de workflow en los eventos.");
+  } else {
+    for (const etapa of context.etapas) {
+      const marca = etapa.at === null ? "" : ` (${etapa.at})`;
+      lines.push(
+        `- ${etapa.estado}${marca}: ${etapa.ms === null ? "no reconstruible" : duracionEnTexto(etapa.ms)}`,
+      );
+    }
   }
 
   lines.push(context.readInstruction);
