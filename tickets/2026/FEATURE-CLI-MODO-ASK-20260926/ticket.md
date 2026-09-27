@@ -4,8 +4,8 @@ id: FEATURE-CLI-MODO-ASK-20260926
 title: Añadir modo de consulta valmen ask sin permisos
 type: FEATURE
 module: CLI
-workflow_status: in_progress
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -368,7 +368,28 @@ corrió está en Evidencia).
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-09-27",
+    "build_reference": "commit:b7c4a39ce5993a71e6070a12e0d1892f4fe086aa",
+    "environment": "local: arbol de trabajo de la sesion, rama main, commit b7c4a39",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-09-27",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "Aprobacion DELEGADA por el PO Juan Andrade el 2026-09-26, sus palabras: si el analisis pasa las compuertas te doy la libertad de aprobarlo, al igual que con el plan si el plan pasa la compuerta y te parece que el plan cumple tienes la potestad de aprobar, si las pruebas que ejecutes pasan correctamente como yo ejecutaria las mismas pasa como aprobado el QA y cierras. El QA lo aprobo esta sesion en su nombre, sobre el arbol commiteado del ticket (commit b7c4a39): el archivo enfocado tests/modo-ask.test.ts pasa 21 de 21 y la suite completa npx vitest run da 1477 pasan, 48 omitidas y 0 fallan."
+  }
+]
 ```
 
 ## Evidencia
@@ -395,13 +416,71 @@ corrió está en Evidencia).
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-09-27",
+    "technical_summary": "El modo de consulta vive en el proceso: packages/core/src/permissions.ts declara AccessMode con los valores write y ask, accessMode, setAccessMode, withAccessMode que restaura en finally, y assertWriteAllowed, que falla con EXIT_INVARIANT nombrando el acto. El guardia se aplica en las dos puertas de escritura del harness, atomicWrite y el lock de mutacion de packages/core/src/fs.ts, con la etiqueta del acto en los seis puntos que toman el lock en packages/engine/src. packages/engine/src/ask.ts arma el contexto de consulta sin modelo y sin red: la pregunta, el registro activo, el ticket en formato compacto y la memoria del proyecto. El CLI expone valmen ask y valmen mcp --ask, que agrega la bandera a la entrada declarada del servidor y arranca el proceso en modo pregunta, con el catalogo del MCP filtrado a las 15 herramientas de solo lectura de 38. Se corrigio ademas un ciclo de importacion en fs.ts, que importaba el indice de su propio paquete y en cierto orden de evaluacion dejaba MutationLock sin definir. Verificado con tests/modo-ask.test.ts (21 pruebas), la suite completa (1477 pasan, 48 omitidas, 0 fallan), npm run typecheck, eslint de los archivos tocados y la punta a punta sobre los paquetes compilados, incluido el servidor MCP por stdio.",
+    "functional_summary": "Quien consulta ya no puede escribir por accidente: valmen ask responde con el contexto del registro y del ticket sin tocar nada, y el servidor MCP en modo pregunta no ofrece las herramientas que escriben. La barrera es del motor y no de la instruccion que recibe el agente: crear un ticket, mover un estado o escribir un archivo fallan con invariante aunque el agente insista.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "unreleased"
+  }
+]
 ```
 
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-27",
+    "session_reference": "cron_892c64034c64_20260927_152134",
+    "model": "deepseek-v4.1-flash",
+    "reasoning_effort": null,
+    "notes": "Sesion de cron que trabajo el ticket entera: analisis, compuertas, plan, implementacion, verificacion, QA y cierre. Lectura hecha al momento de registrar el consumo, con el turno todavia en curso: la fila de la sesion sigue creciendo hasta que este turno termina, asi que los numeros son un piso y no la medicion final (desvio declarado). El proveedor factura por suscripcion, asi que no se declara coste por token. No hubo ejecutor de OpenCode sobre este arbol: el codigo lo escribio esta sesion.",
+    "input_tokens": 379896,
+    "output_tokens": 112589,
+    "total_tokens": 492485,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db session cron_892c64034c64_20260927_152134",
+    "confidence": "high",
+    "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-27",
+    "session_reference": "20260926_230404_d977c6",
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Agente hermes:desktop. Sesión **compartida**: trabajó 7 tickets (FEATURE-ENGINE-ROLES-ENRUTAMIENTO-20260926 ×49, FEATURE-CLI-MODO-ASK-20260926 ×15, DOCS-ENGINE-CASCADA-VERIFICADA-20260926 ×14, IMPROVEMENT-ENGINE-CASCADA-VERIFICADA-20260926 ×13, IMPROVEMENT-ENGINE-PRESUPUESTOS-ADAPTATIVOS-20260926 ×11), así que su costo no se reparte y acá no se registran números. Costo completo de la sesión: no declarado por el proveedor, 448415 tokens. Registralo en el ticket cuya sesión sea propia, o declaralo compartido donde corresponda. Sesión \"Bot Chat\".",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-002"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-27",
+    "session_reference": "20260927_143939_5b7f19d7",
+    "model": "opencode-go/deepseek-v4.1-flash",
+    "reasoning_effort": null,
+    "notes": "Agente hermes:slack. 32 intervención(es) sobre el registro, 0 con fallo. 2 de 60 mensajes tocaron el registro. Razonamiento 28170 tokens, caché leída 1803264 tokens. Sesión \"Saludo amistoso\". Proveedor por suscripción: no hay coste por token, se registran los tokens.",
+    "input_tokens": 117645,
+    "output_tokens": 34639,
+    "total_tokens": 180454,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-003"
+  }
+]
 ```
 
 ## Release
@@ -464,6 +543,96 @@ Sin publicar todavía.
     "action": "evidence-added",
     "actor": "cli",
     "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-09-27",
+    "at": "2026-09-27T20:56:12.226Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-09-27",
+    "at": "2026-09-27T20:56:12.372Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-09-27",
+    "at": "2026-09-27T20:56:17.680Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-09-27",
+    "at": "2026-09-27T20:56:53.935Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-09-27",
+    "at": "2026-09-27T20:56:54.071Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-09-27",
+    "at": "2026-09-27T20:57:10.437Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-09-27",
+    "at": "2026-09-27T20:57:21.340Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-09-27",
+    "at": "2026-09-27T20:57:21.379Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-09-27",
+    "at": "2026-09-27T20:57:21.405Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-09-27",
+    "at": "2026-09-27T20:57:26.503Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
