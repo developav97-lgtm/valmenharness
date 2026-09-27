@@ -29,8 +29,11 @@ import {
   type GatePolicy,
   type MechanicalCheck,
   type PropositionAnswer,
+  type FormaDeCriterio,
+  analizarFormaDeCriterios,
   buildReceipt,
   commandChecksFor,
+  criterionPropositionId,
   decide,
   extractCriteriaSpecs,
   gateById,
@@ -154,6 +157,63 @@ function revisarCriteriosVerificables(
   }
 
   return null;
+}
+
+/**
+ * El aviso de forma: por qué un artefacto completo queda en banda de revisión.
+ *
+ * Un criterio se despliega como una proposición atómica, así que uno que agrupa
+ * varias afirmaciones cae en 0.87–0.89 contra un umbral de 0.90 y el recibo
+ * termina diciendo `criterio_04 en banda de revisión`: eso manda a mirar el
+ * contenido del plan, y el problema está en cómo está escrito el criterio.
+ *
+ * Es una regla sobre números que ya existen —no evalúa nada, no llama a nadie y no
+ * toca la política— y **no cambia el veredicto**: si además hay un hueco real, o
+ * algo que no es un criterio quedó en banda, calla. Un aviso que despejara la banda
+ * sería la puerta de atrás que R-S5-007 prohíbe.
+ */
+function avisoDeForma(
+  decision: GateDecision,
+  criteria: readonly CriterionSpec[],
+  policy: GatePolicy,
+): string[] {
+  if (decision.outcome !== "review") return [];
+
+  const porId = new Map(
+    analizarFormaDeCriterios(criteria).map((forma) => [
+      criterionPropositionId(forma.index),
+      forma,
+    ]),
+  );
+
+  // Solo cuentan las que emiten veredicto. Una descriptiva es contexto: puede
+  // estar por debajo del umbral sin pedir nada, y no puede frenar el aviso.
+  const enBanda = decision.propositions.filter(
+    (proposicion) => proposicion.verdict && proposicion.inBand,
+  );
+  if (enBanda.length === 0) return [];
+
+  // Si algo que no es un criterio quedó en banda, el artefacto tiene un problema
+  // que partir un criterio no arregla.
+  if (!enBanda.every((proposicion) => porId.has(proposicion.id))) return [];
+
+  const compuestos = enBanda
+    .map((proposicion) => porId.get(proposicion.id))
+    .filter((forma): forma is FormaDeCriterio => forma !== undefined && forma.compuesto);
+  if (compuestos.length === 0) return [];
+
+  return [
+    `Nada más quedó en banda: el umbral de aprobación es ${policy.approveAt} y lo único por ` +
+      "debajo son criterios que agrupan varias afirmaciones.",
+    ...compuestos.map(
+      (forma) =>
+        `· ${criterionPropositionId(forma.index)} — ${forma.motivos.join(", ")}: ${forma.text}`,
+    ),
+    "Una proposición compuesta puntúa por debajo del umbral aunque el plan la cubra entera, " +
+      "así que lo que hay que replantear puede ser cómo está escrito el criterio y no lo que " +
+      "el plan cubre. Partilo en criterios atómicos —una afirmación verificable cada uno— y " +
+      "volvé a evaluar. El veredicto no cambia: sigue en revisión hasta que la banda se despeje.",
+  ];
 }
 
 export async function runGate(
@@ -351,6 +411,11 @@ export async function runGate(
     }
   }
 
+  // La causa probable de una banda de revisión, cuando la banda la causan los
+  // criterios y no el plan. Se calcula acá y no dentro de `decide`: decidir es del
+  // gate, y esto no decide — explica por qué el número salió así.
+  const notas = avisoDeForma(decision, criteria, gate.policy as GatePolicy);
+
   const receipt = buildReceipt({
     id:
       options.receiptId ??
@@ -371,6 +436,7 @@ export async function runGate(
     usage: evaluation.usage,
     latencyMs: evaluation.latencyMs,
     decidedAt: now().toISOString(),
+    notes: notas,
   });
 
   // Se informa de lo que de verdad se evaluó. Antes decía «N criterio(s)
@@ -447,6 +513,11 @@ export async function runGate(
       "",
       "  Va a revisión humana. El ticket NO avanza: el gate no cambia estados.",
     );
+  }
+
+  if (notas.length > 0) {
+    lines.push("", "  Forma de los criterios");
+    for (const nota of notas) lines.push(`    ${nota}`);
   }
 
   lines.push(

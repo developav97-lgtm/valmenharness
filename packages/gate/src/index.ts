@@ -15,3 +15,4 @@ export * from "./receipt.js";
 export type { MechanicalCheck } from "./decide.js";
 export * from "./definitions.js";
 export * from "./dynamic.js";
+export * from "./criteria.js";

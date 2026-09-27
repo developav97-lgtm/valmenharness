@@ -89,6 +89,15 @@ export interface GateReceipt {
   readonly escalatedTo: "human" | null;
   /** La decisión humana, si hubo. Se anexa después, sin tocar el resto. */
   readonly humanDecision: HumanDecision | null;
+  /**
+   * Lo que la lectura mecánica del artefacto agrega a la decisión.
+   *
+   * No es una proposición y no puede cambiar el veredicto: es la causa probable de
+   * una banda de revisión cuando el artefacto está completo. Sin esto, un recibo
+   * que dice `criterio_04 en banda de revisión` manda a mirar el contenido del
+   * plan, y el problema está en la forma del criterio.
+   */
+  readonly notes?: readonly string[];
 }
 
 /** La decisión de una persona sobre un gate escalado. */
@@ -152,6 +161,8 @@ export interface ReceiptInput {
   readonly usage?: EvaluationUsage | null;
   readonly latencyMs?: number | null;
   readonly decidedAt: string;
+  /** El aviso de forma, si la lectura mecánica produjo alguno. */
+  readonly notes?: readonly string[];
 }
 
 /** Construye un recibo a partir de una decisión. */
@@ -180,6 +191,9 @@ export function buildReceipt(input: ReceiptInput): GateReceipt {
     latencyMs: input.latencyMs ?? null,
     escalatedTo: escalates ? "human" : null,
     humanDecision: null,
+    ...(input.notes === undefined || input.notes.length === 0
+      ? {}
+      : { notes: input.notes }),
   };
 }
 

@@ -32,6 +32,18 @@ export const TEMPLATE_REQUEST_MARKER =
   "<!-- Preservar literalmente la solicitud del PO. -->";
 
 /**
+ * La sección de criterios tal como sale de la plantilla: vacía y con la guía delante.
+ *
+ * La usan quien materializa una feature y quien escribe un criterio en una prueba.
+ * Vive acá, y no copiada en cada consumidor, porque quien define la forma de la
+ * sección es este archivo: cuando la plantilla cambió, dos patrones literales se
+ * rompieron en silencio y los tickets salieron sin criterios —un ticket sin
+ * criterios es un ticket que no se puede evaluar—.
+ */
+export const TEMPLATE_CRITERIOS_VACIOS =
+  /## Criterios de aceptación\n\n(?:<!--[\s\S]*?-->\n)?- \[ \]\n/;
+
+/**
  * La plantilla por defecto.
  *
  * Se escribe con los valores del esquema 2 —`schema_version: 2`— porque es lo
@@ -83,12 +95,17 @@ ${TEMPLATE_REQUEST_MARKER}
 
 - Gate de plan y aprobación:
 - Pasos ordenados:
+  <!-- Cada paso nombra archivo, símbolo o comando. Un paso que no dice dónde ni
+       con qué se toca no se puede ejecutar ni revisar, y la compuerta lo lee así. -->
   1.
   2.
 - Rollback:
 
 ## Criterios de aceptación
 
+<!-- Una afirmación verificable por criterio. Una frase con «y» son dos criterios:
+     cada uno se despliega como una proposición propia, y una que agrupa varias
+     afirmaciones cae en banda de revisión aunque el plan la cubra entera. -->
 - [ ]
 
 ## Puntos

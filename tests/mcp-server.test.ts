@@ -38,6 +38,7 @@ import { spawnSync } from "node:child_process";
 
 import { parseTicket } from "../packages/core/src/index.js";
 import { writeFixtureTicket } from "./helpers/fixtures.js";
+import { TEMPLATE_CRITERIOS_VACIOS } from "../packages/core/src/template.js";
 import { TOOLS, callTool } from "../packages/mcp/src/tools.js";
 import type { ToolContext } from "../packages/mcp/src/tools.js";
 import {
@@ -98,8 +99,9 @@ function escribirCriterio(ruta: string, criterio: string): void {
   writeFileSync(
     ruta,
     texto.replace(
-      /## Criterios de aceptación\n\n- \[ \]/,
-      `## Criterios de aceptación\n\n- [ ] ${criterio}`,
+      // El patrón lo define la plantilla, que es quien decide la forma de la sección.
+      TEMPLATE_CRITERIOS_VACIOS,
+      `## Criterios de aceptación\n\n- [ ] ${criterio}\n`,
     ),
     "utf8",
   );

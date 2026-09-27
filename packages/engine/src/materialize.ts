@@ -32,6 +32,7 @@ import { join } from "node:path";
 import {
   type NormalizedTicket,
   EXIT_INVARIANT,
+  TEMPLATE_CRITERIOS_VACIOS,
   atomicWrite,
   decompositionTickets,
   fail,
@@ -210,7 +211,12 @@ function escribirCriterios(ruta: string, criterios: string): boolean {
   } catch {
     return false;
   }
-  const vacia = /## Criterios de aceptación\n\n- \[ \]\n/;
+  // El patrón lo define la plantilla: la sección vacía lleva delante la guía de cómo
+  // se escribe un criterio, y un literal acá se rompe en silencio cuando eso cambia
+  // —el ticket materializado se queda sin los criterios de la spec, que es quedarse
+  // sin lo que el gate evalúa—. El comentario se consume con el resto: su trabajo es
+  // el andamio, no el ticket.
+  const vacia = TEMPLATE_CRITERIOS_VACIOS;
   if (!vacia.test(texto)) return false;
   atomicWrite(ruta, texto.replace(vacia, `## Criterios de aceptación\n\n${criterios}\n`));
   return true;

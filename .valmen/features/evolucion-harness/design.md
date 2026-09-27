@@ -133,3 +133,35 @@ Dos límites que la hacen segura:
 Las proposiciones se declaran por etapa (análisis, plan, integración, cierre) en
 la configuración del proyecto, y se editan desde Mission Control igual que el
 resto (R-S5-009).
+
+## D10 — La banda por redacción se explica, no se desbloquea
+
+Decisión de la persona: *«veo que el plan fallo por redaccion eso no se puede
+afinar para cuando se escriban los planes?»*, con el alcance que eligió —«las dos
+adiciones completas al motor, incluido el aviso previo de criterio compuesto»—.
+
+Un criterio se despliega como proposición **atómica** (`criterionProposition`),
+así que uno que agrupa varias afirmaciones cae en 0.87–0.89 contra el umbral de
+0.90 y el recibo dice `criterio_NN en banda de revisión`. Eso manda a mirar el
+contenido del plan, y el problema está en cómo está escrito el criterio. Medido
+en `FEATURE-ENGINE-REANUDAR-COMPACTO-20260926`: media 0.743 → 0.845 → 0.861 →
+0.890, con la clasificación en `completo` desde la primera corrida, y el bloqueo
+corriéndose de criterio en criterio mientras cada uno siguiera siendo compuesto.
+
+Se agregan dos cosas, ninguna de las cuales toca un umbral:
+
+1. `analizarFormaDeCriterios` (`packages/gate/src/criteria.ts`) cuenta las
+   afirmaciones de cada criterio sin modelo: separadores `;`, conjunciones
+   ` y `, ` o `, ` así como ` y longitud.
+2. Cuando el veredicto es `review` y lo único en banda son criterios que agrupan
+   varias afirmaciones, el informe y el recibo —campo `notes`— lo dicen y piden
+   partirlos. Si hay un hueco real, o algo que no es un criterio quedó en banda,
+   el aviso calla.
+
+El aviso **informa**: no despeja la banda ni promueve la compuerta a automática.
+Una validación nueva no puede desbloquear lo que otra bloqueó (D9, R-S5-007).
+
+La guía de escritura vive en la plantilla (`TICKET_TEMPLATE`), que es donde el
+criterio se escribe. Que la plantilla gane una línea obliga a que la forma de la
+sección vacía deje de estar copiada como literal en cada consumidor: el patrón
+vive en `TEMPLATE_CRITERIOS_VACIOS`, en el archivo que define la plantilla.
