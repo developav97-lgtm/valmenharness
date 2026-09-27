@@ -47,3 +47,4 @@ export * from "./release.js";
 export * from "./evaluators.js";
 export * from "./gate.js";
 export * from "./simulate.js";
+export * from "./resume.js";

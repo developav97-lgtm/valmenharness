@@ -38,6 +38,7 @@ import {
   type RegistryPaths,
   type TicketFilters,
   type TicketRow,
+  type ResumeMode,
   addEvidence,
   attachTicketToFeature,
   detachTicketFromFeature,
@@ -667,14 +668,89 @@ export const TOOLS: readonly ToolDefinition[] = [
     annotations: SOLO_LEE,
     title: "Reanudar un ticket",
     description:
-      "Devuelve el contexto de un ticket para retomar trabajo ya empezado: estado, QA, " +
-      "release, cuántos puntos hay y —si el ticket viene de una feature— de cuál, con su " +
-      "sprint, sus dependencias y dónde está la spec que le da los requisitos. Es lo " +
-      "primero que conviene llamar al empezar una sesión sobre algo en curso. Sin `id`, " +
-      "si hay más de un ticket activo **no elige**: devuelve la lista y hay que decidir cuál.",
+      "Devuelve el contexto para retomar un ticket. Por defecto entrega un resumen " +
+      "compacto, determinista y estructurado con estado, plan, puntos abiertos y último " +
+      "recibo; usa `modo: completo` para leer el ticket entero. Sin `id`, si hay más de " +
+      "un ticket activo **no elige**: devuelve la lista y hay que decidir cuál.",
     inputSchema: conRoot({
-      properties: { id: { type: "string" } },
+      properties: {
+        id: { type: "string", description: "Identificador del ticket." },
+        modo: {
+          type: "string",
+          enum: ["compacto", "completo"],
+          description: "`compacto` por defecto; `completo` devuelve el ticket íntegro.",
+        },
+      },
     }),
+    outputSchema: {
+      type: "object",
+      properties: {
+        modo: { type: "string", enum: ["compacto", "completo"] },
+        id: { type: "string" },
+        title: { type: "string" },
+        type: { type: "string" },
+        module: { type: "string" },
+        status: {
+          type: "object",
+          properties: {
+            workflow: { type: "string" },
+            qa: { type: "string" },
+            release: { type: "string" },
+          },
+          required: ["workflow", "qa", "release"],
+          additionalProperties: false,
+        },
+        plan: { type: "string" },
+        openPoints: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              id: { type: "string" },
+              status: { type: "string" },
+              title: { type: "string" },
+              severity: { type: "string" },
+            },
+            required: ["id", "status", "title", "severity"],
+            additionalProperties: false,
+          },
+        },
+        lastReceipt: {
+          anyOf: [
+            {
+              type: "object",
+              properties: {
+                id: { type: "string" },
+                gate: { type: "string" },
+                outcome: { type: "string" },
+                reason: { type: "string" },
+                decidedAt: { type: "string" },
+              },
+              required: ["id", "gate", "outcome", "reason", "decidedAt"],
+              additionalProperties: false,
+            },
+            { type: "null" },
+          ],
+        },
+        readInstruction: { type: "string" },
+        provenance: { anyOf: [{ type: "object" }, { type: "null" }] },
+        documentoCompleto: { type: "string" },
+      },
+      required: [
+        "modo",
+        "id",
+        "title",
+        "type",
+        "module",
+        "status",
+        "plan",
+        "openPoints",
+        "lastReceipt",
+        "readInstruction",
+        "provenance",
+      ],
+      additionalProperties: false,
+    },
   },
   {
     name: "evaluar_compuerta",
@@ -2403,10 +2479,21 @@ export async function callTool(
       }
 
       case "reanudar_ticket": {
-        const resultado = resumeTicket(paths, texto(args, "id", false));
+        const modo = texto(args, "modo", false);
+        if (modo !== undefined && modo !== "compacto" && modo !== "completo") {
+          return mal("`modo` debe ser `compacto` o `completo`.");
+        }
+        const resultado = resumeTicket(
+          paths,
+          texto(args, "id", false),
+          modo as ResumeMode | undefined,
+        );
         // "Hay varios activos, indique uno" no es un fallo del comando: es una
         // pregunta, y el agente tiene que poder leerla como algo que puede
         // resolver llamando otra vez con `id`.
+        if (resultado.exitCode === 0 && resultado.data !== undefined) {
+          return { text: resultado.stdout, isError: false, data: resultado.data };
+        }
         return delCli(resultado);
       }
 

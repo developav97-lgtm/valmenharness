@@ -49,6 +49,7 @@ import {
   type ProcessRunState,
   type RunnerResult,
   type SimulationReport,
+  type ResumeMode,
   abandonRun,
   approveGate,
   buildManifest,
@@ -97,8 +98,8 @@ import {
   ticketValueReport,
   renderDrift,
   scanDrift,
-  procedenciaDeTicket,
-  renderProcedencia,
+  buildResumeContext,
+  renderResumeContext,
   DECISIONES_APRENDIZAJE,
   materializeFeature,
   renderMaterialization,
@@ -240,7 +241,11 @@ export function listActive(paths: RegistryPaths): CommandResult {
  * ticket activo no elige**. Devuelve `EXIT_AMBIGUOUS` y pide que se indique uno.
  * Un comando que adivina cuál querías es peor que uno que pregunta.
  */
-export function resumeTicket(paths: RegistryPaths, id: string | undefined): CommandResult {
+export function resumeTicket(
+  paths: RegistryPaths,
+  id: string | undefined,
+  modo: ResumeMode = "compacto",
+): CommandResult & { readonly data?: Record<string, unknown> } {
   if (id !== undefined) {
     const ticket = findTicket(paths, id);
     if (ticket === undefined) {
@@ -248,7 +253,7 @@ export function resumeTicket(paths: RegistryPaths, id: string | undefined): Comm
     }
     const failure = validationError(ticket, id);
     if (failure !== undefined) return error(failure.message, failure.exitCode);
-    return ok(renderResume(parseTicket(ticket.text), paths.root));
+    return resultadoReanudacion(paths, parseTicket(ticket.text), modo);
   }
 
   const activos = activosOrdenados(paths);
@@ -266,32 +271,21 @@ export function resumeTicket(paths: RegistryPaths, id: string | undefined): Comm
       exitCode: EXIT_AMBIGUOUS,
     };
   }
-  return ok(renderResume(activos.rows[0]?.document as ParsedTicket, paths.root));
+  return resultadoReanudacion(paths, activos.rows[0]?.document as ParsedTicket, modo);
 }
 
-/**
- * El bloque de `resume`.
- *
- * Cuando el ticket viene de una feature, se dice: la spec que le da los
- * requisitos, el sprint del que forma parte y qué tiene que estar cerrado antes.
- * Es lo que un agente necesita para trabajar un ticket de un feature sin que
- * alguien se lo explique en la conversación.
- */
-function renderResume(document: ParsedTicket, root: string): string {
-  const { fields } = document;
-  const procedencia = procedenciaDeTicket(root, fields.id);
-  return (
-    [
-      `Ticket: ${fields.id}`,
-      `Título: ${fields.title}`,
-      `Tipo/Módulo: ${fields.type} / ${fields.module}`,
-      `Workflow: ${fields.workflow_status}`,
-      `QA: ${fields.qa_status}`,
-      `Release: ${fields.release_status}`,
-      `Puntos: ${(document.blocks.Puntos ?? []).length}`,
-      ...(procedencia === null ? [] : [renderProcedencia(procedencia)]),
-    ].join("\n") + "\n"
-  );
+function resultadoReanudacion(
+  paths: RegistryPaths,
+  document: ParsedTicket,
+  modo: ResumeMode,
+): CommandResult & { readonly data?: Record<string, unknown> } {
+  const context = buildResumeContext(paths, document, modo);
+  return {
+    stdout: renderResumeContext(context),
+    stderr: "",
+    exitCode: 0,
+    data: context as unknown as Record<string, unknown>,
+  };
 }
 
 /** Los tickets activos, ordenados por `created` y luego por `id`. */

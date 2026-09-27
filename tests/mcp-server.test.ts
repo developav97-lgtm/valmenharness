@@ -294,6 +294,7 @@ describe("el catálogo de herramientas", () => {
     expect(conEsquema).toEqual([
       "ver_ticket",
       "listar_tickets",
+      "reanudar_ticket",
       "evaluar_compuerta",
       "reporte_consumo",
       "revisar_drift",
@@ -405,6 +406,76 @@ describe("ver, listar y reanudar", () => {
     await crear();
     const resultado = await callTool(contexto, "listar_tickets", {});
     expect(resultado.text).toContain(ID);
+  });
+
+  it("reanuda en modo compacto por defecto con el estado, el plan, los puntos y el último recibo", async () => {
+    await crear();
+    const punto = await callTool(contexto, "anotar_punto", {
+      id: ID,
+      title: "El caso parcial no aparece",
+      severity: "low",
+      actual: "La búsqueda devuelve cero resultados.",
+      expected: "La búsqueda debe incluir coincidencias parciales.",
+    });
+    expect(punto.isError).toBe(false);
+    mkdirSync(join(lab, ".valmen", "receipts"), { recursive: true });
+    writeFileSync(
+      join(lab, ".valmen", "receipts", `${ID}.jsonl`),
+      `${JSON.stringify({
+        kind: "gate-receipt",
+        receiptVersion: 1,
+        schemaVersion: "1",
+        id: "RECEIPT-001",
+        gate: "analysis",
+        outcome: "approved",
+        reason: "El análisis cumple.",
+        decidedAt: "2026-09-26T10:00:00.000Z",
+      })}\n`,
+      "utf8",
+    );
+
+    const resultado = await callTool(contexto, "reanudar_ticket", { id: ID });
+
+    expect(resultado.isError).toBe(false);
+    expect(respuestaDeHerramienta(resultado)["structuredContent"]).toEqual(resultado.data);
+    expect(resultado.data).toMatchObject({
+      id: ID,
+      status: { workflow: "intake", qa: "pending", release: "unreleased" },
+      plan: expect.stringContaining("Pasos ordenados"),
+      openPoints: [
+        {
+          id: "POINT-001",
+          status: "open",
+          title: "El caso parcial no aparece",
+          severity: "low",
+        },
+      ],
+      lastReceipt: {
+        id: "RECEIPT-001",
+        gate: "analysis",
+        outcome: "approved",
+        reason: "El análisis cumple.",
+      },
+      readInstruction: expect.stringContaining("ver_ticket"),
+    });
+    const repetida = await callTool(contexto, "reanudar_ticket", { id: ID });
+    expect(repetida.data).toEqual(resultado.data);
+    expect(repetida.text).toBe(resultado.text);
+  });
+
+  it("permite pedir el ticket completo al reanudar", async () => {
+    const ruta = await crear();
+    const completo = readFileSync(ruta, "utf8");
+
+    const resultado = await callTool(contexto, "reanudar_ticket", {
+      id: ID,
+      modo: "completo",
+    });
+
+    expect(resultado.isError).toBe(false);
+    expect(resultado.text).toBe(completo);
+    expect(resultado.data).toMatchObject({ modo: "completo", id: ID });
+    expect(resultado.data?.["documentoCompleto"]).toBe(completo);
   });
 
   it("reanudar sin id y con varios activos no elige: pregunta", async () => {
