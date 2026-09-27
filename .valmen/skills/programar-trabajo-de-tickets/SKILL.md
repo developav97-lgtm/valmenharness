@@ -128,7 +128,9 @@ node scripts/programar-tickets.mjs \
 ```
 
 - **`--dry-run` primero, siempre.** Escribe los prompts y los avisos en `--salida` y muestra
-  la tabla sin crear nada. Se leen los prompts antes de agendar.
+  la tabla sin crear nada. Se leen los prompts antes de agendar. Ese directorio —por defecto
+  `.valmen/programar/` del proyecto— es derivado y se agrega al `.gitignore` del proyecto: los
+  prompts contienen la autorización citada y se regeneran al programar la tanda siguiente.
 - De qué sale cada dato: el nombre del proyecto y los comandos de prueba de
   `.valmen/config.yaml`; el servidor MCP del perfil; la ruta del ticket y la de la feature
   del registro; el resumen, del título y de los `R-*` que el ticket cita. Lo que no se puede
