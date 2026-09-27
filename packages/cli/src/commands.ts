@@ -41,6 +41,11 @@ import {
   routingPath,
   SKILL_RUNTIME_IDS,
   RUNTIME_DIRS,
+  derivaPublicada,
+  descripcionDeDeriva,
+  instalarPublicadas,
+  publicadas,
+  publicadasDelProyecto,
 } from "@valmen/adapter";
 
 import {
@@ -563,6 +568,20 @@ export function migrateRegistry(
 export { SCHEMA_VERSION };
 
 /**
+ * Qué skills publicadas se compararon, para que el check diga sobre qué habló.
+ *
+ * Una lista vacía es informativa, no un fallo: un proyecto adoptado antes de que
+ * existiera el catálogo no tiene ninguna copia, y `valmen sync` se las instala.
+ */
+function lineaDeComparadas(root: string): string {
+  const ids = publicadasDelProyecto(root);
+  if (ids.length === 0) {
+    return `Skills publicadas comparadas: ninguna (el harness publica ${publicadas().length}; \`valmen sync\` las instala)`;
+  }
+  return `Skills publicadas comparadas: ${ids.join(", ")}`;
+}
+
+/**
  * `sync`: proyecta `.valmen/` a los archivos que leen los agentes.
  *
  * El valor está en la **fuente única**: `AGENTS.md` deja de ser un archivo que
@@ -579,6 +598,12 @@ export function syncProject(
   projectName: string,
   check: boolean,
 ): CommandResult {
+  // Las publicadas se instalan **antes** de proyectar, y el orden importa: la
+  // proyección se calcula desde la copia del proyecto, así que proyectar primero
+  // escribiría la versión que se acaba de actualizar. Con `--check` no se toca
+  // nada: la diferencia se informa y la resuelve quien ejecute `sync` sin `--check`.
+  const instaladas = check ? [] : instalarPublicadas(root);
+
   // La proyección se calcula con la misma función que usa Mission Control: si el
   // botón y el comando generaran archivos distintos, la comparación de frescura
   // daría un resultado distinto según quién la ejecute.
@@ -600,13 +625,24 @@ export function syncProject(
       else if (onDisk !== file.content) stale.push(file.path);
     }
 
-    if (stale.length > 0) {
-      return error(
-        `Hay ${stale.length} archivo(s) generados desactualizados o editados a mano; ` +
-          `ejecute \`valmen sync\`: ${stale.join(", ")}`,
-      );
+    // Dos cosas distintas y las dos importan: la proyección puede estar fresca
+    // —porque nadie tocó el archivo generado— y la copia del proyecto estar en una
+    // versión anterior del catálogo. Antes de esto, esa segunda nada la veía.
+    const deriva = derivaPublicada(root);
+
+    if (stale.length > 0 || deriva.length > 0) {
+      const partes: string[] = [];
+      if (stale.length > 0) {
+        partes.push(
+          `Hay ${stale.length} archivo(s) generados desactualizados o editados a mano; ` +
+            `ejecute \`valmen sync\`: ${stale.join(", ")}`,
+        );
+      }
+      if (deriva.length > 0) partes.push(descripcionDeDeriva(deriva));
+      return error(partes.join("\n"));
     }
-    return ok("Archivos generados al día.\n");
+
+    return ok(`Archivos generados al día.\n${lineaDeComparadas(root)}\n`);
   }
 
   for (const file of projected) {
@@ -642,6 +678,12 @@ export function syncProject(
   for (const runtime of SKILL_RUNTIME_IDS) {
     lines.push(`    ${RUNTIME_DIRS[runtime].padEnd(23)}${byRuntime[runtime]} archivo(s)`);
   }
+
+  const instaladasTexto =
+    instaladas.length === 0
+      ? `al día (${publicadasDelProyecto(root).length})`
+      : `${instaladas.length} actualizada(s): ${instaladas.join(", ")}`;
+  lines.push(`  skills publicadas        ${instaladasTexto}`);
 
   if (proyeccion.ruleCount === 0) {
     lines.push("  Añada reglas en .valmen/rules/ para que se incluyan en AGENTS.md.");
@@ -874,9 +916,15 @@ export function adoptProject(
   mkdirSync(plan.rulesDir, { recursive: true });
   mkdirSync(join(root, ".valmen", "agents"), { recursive: true });
 
+  // Las skills de proceso que publica el harness llegan con la adopción, para que
+  // el proyecto arranque con las mismas que cualquier otro. Las del stack las
+  // escribe el proyecto: esto no las toca.
+  const publicadasInstaladas = instalarPublicadas(root);
+
   lines.push(
     `  ${relative(root, plan.rulesDir)}/`,
     `  .valmen/agents/`,
+    `  .valmen/skills/  (${publicadasInstaladas.length} skill(s) de proceso publicadas por el harness)`,
     "",
     "Reglas y agentes del proyecto",
     "  El harness no puede separar por sí solo lo que es regla de dominio de lo",

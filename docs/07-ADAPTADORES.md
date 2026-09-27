@@ -297,6 +297,69 @@ de dominio van a las reglas del proyecto, que es lo que compone `AGENTS.md`.
 conviven con las del harness, que es deliberado: permite comparar antes de retirar las
 viejas, y ninguna se pierde.
 
+## 8. El catálogo publicado: el harness publica las skills de proceso
+
+**Implementado.** La sección anterior describe la **proyección**; esta describe la **fuente**
+cuando la fuente es el harness y no el proyecto.
+
+**Por qué existe.** La misma skill de proceso vivía en una copia por proyecto, y las copias
+divergieron: medido, `planificacion` tenía 81 líneas en el harness y 77 en SaiOpenCloud, y a
+la segunda le faltaba justo el bloque que el motor reconoce para registrar la aprobación del
+gate de plan; en la otra dirección, `descomposicion` existía en el proyecto y no en el
+harness. Nada lo detectaba —`valmen sync --check` comparaba la copia del proyecto contra sus
+proyecciones, nunca contra una versión publicada—, así que cada proyecto era su propia
+verdad.
+
+El harness ya había resuelto este problema una vez: la skill `valmen` —cómo se usa el
+harness— no vive en ningún proyecto, la escribe el harness desde el código y la instala en el
+directorio global de skills del agente, con el motivo escrito en `packages/adapter/src/mcp.ts`:
+describe algo que es igual en todos los proyectos. Las de proceso lo son igual.
+
+### Las tres capas
+
+| Capa | Qué contiene | Dónde vive | Quién la actualiza |
+|---|---|---|---|
+| Publicada por el harness | cómo se planifica, se prueba, se revisa y se entrega en cualquier proyecto | `skills/<id>/SKILL.md` del repositorio del harness, con `version:` y `origen: valmen` | el harness |
+| Global del agente | las publicadas, instaladas | el directorio global de skills —`~/.hermes/skills/<id>/SKILL.md`—, junto a la skill `valmen` | `valmen hermes connect` |
+| Del proyecto | el stack, las rutas, los servicios, las convenciones | `.valmen/skills/<id>/SKILL.md` | el proyecto |
+
+La regla de reparto es una sola: **si la skill nombra un archivo, un servicio, una versión o
+una convención de un stack concreto, es del proyecto; si describe cómo cualquier proyecto
+planifica, prueba, revisa o entrega, es del harness.** Hoy publica cuatro —`planificacion`,
+`pruebas-unitarias`, `revision-final` y `feature`—; `descomposicion` quedó fuera porque la de
+SaiOpenCloud se declara a sí misma «las reglas de reparto de SaiOpenCloud y no las generales»,
+y una skill que miente en el proyecto siguiente no se publica.
+
+### Cómo se extiende sin bifurcar
+
+Un proyecto que necesita agregar algo a una publicada escribe
+`.valmen/skills/<id>/local.md`. La proyección lo concatena **al final** del archivo
+proyectado —después de la marca de generado, que señala dónde termina lo que el harness
+reescribe— y `valmen sync` **nunca lo toca**. Extender no exige editar el archivo publicado,
+que es justo lo que la comparación detecta.
+
+### La comparación, y qué hace cada veredicto
+
+`valmen sync --check` compara, para cada id publicado que el proyecto tenga copiado, la
+versión declarada y el sha256 del contenido, y nombra el id, el motivo y las dos versiones:
+
+| Motivo | Qué pasó | Cómo se resuelve |
+|---|---|---|
+| `falta` | el proyecto no tiene la copia | `valmen sync` la instala |
+| `version` | la copia es de una versión anterior del catálogo | `valmen sync` la actualiza |
+| `editada` | el contenido se cambió a mano sobre la versión publicada | `valmen sync` **la reemplaza**; si la edición era deliberada, su sitio es `local.md` |
+
+`sync` pisa una copia editada a mano, y es deliberado: el check la nombra **antes**, así que
+nadie pierde su edición sin haberlo leído. La capa global usa la política contraria —no pisa
+sin `--force`— porque ahí no hay una versión publicada con la que comparar, y una copia
+distinta suele ser una edición propia del usuario.
+
+### Adoptar un proyecto que ya existía
+
+`valmen adopt` instala las publicadas en `.valmen/skills/` del proyecto adoptado, y **no
+toca** las skills del proyecto. Un proyecto adoptado antes de que existiera el catálogo las
+recibe con `valmen sync`: es el mismo camino, sin volver a adoptar.
+
 ## 8. Hooks y validaciones mecánicas
 
 El contrato heredado de SaiOpenCloud es correcto y se conserva: *"los hooks solo pueden

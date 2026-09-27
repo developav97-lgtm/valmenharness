@@ -261,6 +261,17 @@ El paso 3 es el corazón del proceso. Presenta la clasificación en una interfaz
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
+## 2 bis. Lo que la adopción instala además de la configuración
+
+`valmen adopt` escribe la configuración del proyecto **y las skills de proceso que publica el
+harness**, en `.valmen/skills/`, con su versión y su origen. No es un extra: es lo que hace que
+dos proyectos tengan el mismo criterio de planificación sin que nadie compare a mano, y el
+detalle de las tres capas —publicada, global del agente, del proyecto— está en
+`docs/07-ADAPTADORES.md`, sección 8.
+
+Las skills **del proyecto** no se tocan: la adopción sólo escribe ids que el harness publica.
+Un proyecto adoptado antes de que existiera el catálogo las recibe con `valmen sync`.
+
 ## 3. Modos de ejecución
 
 ```bash

@@ -275,7 +275,11 @@ describe("comando sync", () => {
 
     const checked = syncProject(lab, "Demo", true);
     expect(checked.exitCode).toBe(0);
-    expect(checked.stdout).toBe("Archivos generados al día.\n");
+    // La salida dejó de ser una sola línea: además de decir que está al día, nombra
+    // qué skills publicadas comparó. Se comprueba el mensaje y no la igualdad exacta
+    // para que agregar una línea informativa no rompa una prueba que no la mira.
+    expect(checked.stdout).toContain("Archivos generados al día.");
+    expect(checked.stdout).toContain("Skills publicadas comparadas:");
   });
 
   it("detecta que alguien editó el archivo generado a mano", () => {

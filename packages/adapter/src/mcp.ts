@@ -19,9 +19,11 @@
  *    `--install` repetido acumularía entradas y el archivo se volvería ilegible
  *    justo cuando alguien lo abra para entender qué pasó.
  */
-import { existsSync, lstatSync, readFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, join } from "node:path";
+
+import { publicadas } from "./skills.js";
 
 /** La entrada del servidor, ya resuelta para un runtime. */
 export interface McpEntry {
@@ -766,4 +768,53 @@ que sí.
 /** La ruta donde va la skill. */
 export function hermesSkillPath(home: string = homedir()): string {
   return join(hermesSkillsDir(home), HERMES_SKILL_ID, "SKILL.md");
+}
+
+/** El resultado de instalar en la capa global. */
+export interface ResultadoGlobal {
+  /** Los ids escritos en esta corrida. */
+  readonly escritas: readonly string[];
+  /** Los que ya existían con otro contenido y no se tocaron sin `--force`. */
+  readonly pendientes: readonly string[];
+}
+
+/**
+ * Instala las skills publicadas en el directorio global de skills del agente, y
+ * devuelve los ids que escribió y los que quedaron pendientes de `--force`.
+ *
+ * Va al directorio **global** y no al del proyecto por el mismo motivo que la skill
+ * `valmen`: lo que describe cómo se planifica, se prueba y se entrega es igual en
+ * todos los proyectos, e instalarlo por proyecto obligaría a un paso de confianza
+ * en cada uno —`hermes skills trust`— para que el agente las viera. De paso, el
+ * proyecto que todavía no está adoptado también las tiene.
+ *
+ * Idempotente: lo que ya coincide con el catálogo no se reescribe, así que
+ * repetirlo no cambia ninguna fecha.
+ */
+export function instalarPublicadasEnHermes(
+  home: string = homedir(),
+  options: { readonly forzar?: boolean } = {},
+): ResultadoGlobal {
+  const escritas: string[] = [];
+  const pendientes: string[] = [];
+
+  for (const skill of publicadas()) {
+    const ruta = join(hermesSkillsDir(home), skill.id, "SKILL.md");
+    const existente = existsSync(ruta) ? readFileSync(ruta, "utf8") : null;
+    if (existente === skill.texto) continue;
+
+    // Misma política que la skill del harness: no se pisa una edición sin que
+    // alguien lo pida. Una copia global distinta suele ser una edición propia, y
+    // reemplazarla en silencio borraría trabajo; se informa y `--force` la aplica.
+    if (existente !== null && options.forzar !== true) {
+      pendientes.push(skill.id);
+      continue;
+    }
+
+    mkdirSync(dirname(ruta), { recursive: true });
+    writeFileSync(ruta, skill.texto, "utf8");
+    escritas.push(skill.id);
+  }
+
+  return { escritas, pendientes };
 }

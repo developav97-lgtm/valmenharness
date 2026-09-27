@@ -42,6 +42,7 @@ import {
   hermesRelayHookBlock,
   hermesRelayScript,
   hermesSkill,
+  instalarPublicadasEnHermes,
   hermesSkillPath,
   mergeHermesBlock,
   relayPythonCommand,
@@ -392,7 +393,7 @@ export function hermesConnect(request: HermesRequest): CommandResult {
  * La comparación es de contenido y no de fecha: dos instalaciones seguidas del
  * mismo harness dejan el archivo idéntico y la segunda no tiene nada que hacer.
  */
-function instalarSkill(forzar: boolean): { readonly lineas: readonly string[] } {
+function instalarSkillDelHarness(forzar: boolean): { readonly lineas: readonly string[] } {
   const ruta = hermesSkillPath();
   const contenido = hermesSkill();
   const existente = readIfExists(ruta);
@@ -423,6 +424,37 @@ function instalarSkill(forzar: boolean): { readonly lineas: readonly string[] } 
         : "               reemplazada por la del harness (--force).",
     ],
   };
+}
+
+/**
+ * Instala en el agente lo que el harness publica: la skill de uso y las de proceso.
+ *
+ * Son dos capas con el mismo destino y distinto motivo. La de uso describe **el
+ * harness**; las de proceso describen **cómo se trabaja** —planificar, probar,
+ * revisar, entregar—, que es igual en todos los proyectos. Las dos van al
+ * directorio global para que cualquier perfil las tenga sin un paso de confianza
+ * por proyecto, y las del stack siguen siendo del proyecto, en su `.valmen/skills/`.
+ */
+function instalarSkill(forzar: boolean): { readonly lineas: readonly string[] } {
+  const delHarness = instalarSkillDelHarness(forzar);
+  const global = instalarPublicadasEnHermes(homedir(), { forzar });
+  const lineas = [...delHarness.lineas];
+
+  if (global.escritas.length > 0) {
+    lineas.push(
+      "",
+      `  skills de proceso    ${global.escritas.length} instalada(s): ${global.escritas.join(", ")}`,
+    );
+  }
+  if (global.pendientes.length > 0) {
+    lineas.push(
+      "",
+      `  skills de proceso    ${global.pendientes.length} con contenido distinto; no se tocaron: ${global.pendientes.join(", ")}`,
+      "                       Para reemplazarlas por las del harness: valmen hermes connect --force",
+    );
+  }
+
+  return { lineas };
 }
 
 /** Lo que hace falta para decidir un gate con un código. */
