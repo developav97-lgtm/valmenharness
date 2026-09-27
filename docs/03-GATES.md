@@ -247,7 +247,7 @@ on_outcome:
     - notify: { channel: approvals }
 ```
 
-## 4. Los cuatro evaluadores (`GateEvaluator`)
+## 4. Los cinco evaluadores (`GateEvaluator`)
 
 El gate declara `evaluator:`, y el evaluador es un **seam** intercambiable.
 
@@ -280,11 +280,96 @@ interface EvaluationResult {
 | `command`   | Todo lo decidible en código: tests, linters, `git diff --check`, esquemas                        | $0                     | Total                                |
 | `jev`       | Proposiciones semánticas sobre texto: cobertura de requisitos, calidad del plan, coherencia      | ~$0.00003/verificación | Alto (probabilidades estables ±0.08) |
 | `llm-judge` | Cuando se necesita una explicación, no solo un veredicto (revisión adversarial, "¿qué falta?")   | $0.001–$0.05           | Medio                                |
+| `cascade`   | Cuando el veredicto importa y el artefacto tiene sustancia: produce el modelo barato y sólo lo no respaldado se vuelve a preguntar a uno superior (§4.1) | tres llamadas por corrida | Medio (verifica Jev, con probabilidades) |
 | `mcp`       | Delegar a una herramienta externa: CodeGraph para impacto real de un cambio, un validador propio | varía                  | Alto                                 |
 
 **Orden de aplicación obligatorio:** `command` → `jev` → `llm-judge`. Nunca se le pide a un
 modelo lo que un script puede decidir. Esto es una decisión de costo y de confiabilidad:
 un evaluador barato y determinista bien puesto ahorra llamadas innecesarias a modelos.
+
+`cascade` no entra en ese orden: gasta tres llamadas donde los otros gastan una, así que
+se **pide** por nombre —`--evaluator cascade`— y `auto` no lo elige
+(`packages/engine/src/evaluators.ts:36-41`). El recibo registra cuál se usó, como con
+cualquier otro.
+
+### 4.1 La cascada verificada (`cascade`)
+
+Un modelo barato **produce**, otro **verifica cada respuesta contra el mismo estado** y
+sólo lo que no queda respaldado se vuelve a preguntar a un modelo superior. Es el patrón
+que entra cuando el veredicto importa y el artefacto tiene sustancia: el análisis de un
+ticket con diagnóstico escrito, el plan de un cambio que toca código, el cierre con
+criterios declarados — y el evaluador de siempre cuando el cambio es de texto o de
+configuración, o cuando el gate se resuelve en código.
+
+**Los tres roles los declara el proyecto.** La cascada no trae modelos propios: los
+resuelve el routing con la misma precedencia que los demás
+(`packages/adapter/src/routing.ts:109-124`), y cada rol dice qué lo ejecuta.
+
+| Rol | Qué hace |
+|---|---|
+| `producer` | Responde primero todas las proposiciones, con el modelo barato |
+| `verifier` | Comprueba cada respuesta contra el estado, y tiene que emitir probabilidades |
+| `escalation` | Responde otra vez lo que la verificación no respaldó |
+
+**Los tres pasos**, en `runCascade` (`packages/engine/src/evaluators.ts:397-507`):
+
+1. **Producir.** Todas las proposiciones se responden con el modelo del rol `producer`.
+2. **Verificar.** Por **cada respuesta producida** se crea una proposición nueva —
+   `respaldada_<id>`, `preguntaDeVerificacion` (`:522-547`)— que pregunta si el estado
+   contiene lo que esa respuesta afirma; se evalúa contra el **mismo estado congelado** que
+   vio el productor y con el modelo del rol `verifier`. No se vuelve a preguntar la
+   proposición original: comparar dos opiniones no es verificar, y lo que se mide es si el
+   contexto respalda la respuesta que se dio.
+3. **Escalar.** Sólo lo que quedó por debajo del umbral se manda al modelo del rol
+   `escalation`, en una sola llamada con las proposiciones dudosas. Lo respaldado se queda
+   como lo respondió el productor, y por eso el modelo caro se paga por lo dudoso y no por
+   el volumen: si nada queda en banda, el escalado no se llama.
+
+**Cuándo se escala.** El umbral es el que declare la cadena
+(`CascadeOptions.threshold`, `packages/engine/src/evaluators.ts:77-85`) y, si no declara
+ninguno, el de la política del gate (`policy.approveAt`, `:402`): la misma banda con la que
+el motor decide si una respuesta está clara. Una respuesta que el verificador respalda con
+0.99 no se pregunta dos veces; una con 0.30 se pregunta de nuevo.
+
+**Cómo queda el motivo en el recibo.** Cada escalamiento se registra con la proposición
+que se volvió a preguntar, los modelos de origen y destino, la probabilidad que emitió el
+verificador y el umbral que no alcanzó, más el motivo en una frase
+(`EscalationRecord`, `packages/gate/src/receipt.ts:118-140`). Es una entrada **por
+proposición** y no una por corrida: el motivo de escalar `a` no es el de escalar `b`, y una
+lista con los dos juntos deja el recibo afirmando que se pagó el modelo caro sin poder decir
+por cuál.
+
+```json
+{
+  "escalations": [
+    {
+      "role": "escalation",
+      "proposition": "causa_especifica",
+      "from": { "provider": "openrouter", "model": "proveedor/modelo-barato" },
+      "to": { "provider": "openrouter", "model": "proveedor/modelo-superior" },
+      "verified": 0.3,
+      "threshold": 0.9,
+      "reason": "el verificador dio 0.30 a la respuesta de «causa_especifica» y el umbral es 0.9: el estado no la respalda, así que se volvió a preguntar a proveedor/modelo-superior"
+    }
+  ]
+}
+```
+
+El bloque va **además** del veredicto, no en su lugar: `model` informa el modelo que
+respondió lo dudoso —si algo se escaló, el veredicto no lo decidió el barato— y `usage`
+suma los tres pasos, porque informar sólo el último diría que la cascada cuesta lo que
+cuesta el escalado (`:481-494`). Y `valmen gate` imprime el escalamiento entre modelos
+aparte de la escalada a una persona (`packages/engine/src/gate.ts:516-530`): una sube el
+modelo y la otra sube la decisión.
+
+**Cuándo la cascada no corre.** `cascadeRoutingFor`
+(`packages/adapter/src/routing.ts:636-660`) resuelve la cadena y devuelve el motivo cuando
+no sirve, y `exigirCadena` (`packages/engine/src/evaluators.ts:296-310`) rechaza la corrida
+**antes de gastarla**: un rol sin modelo, un escalado que es el mismo modelo que ya
+respondió —escalar a donde ya se preguntó no cambia la respuesta, y el recibo anotaría un
+escalamiento que no ocurrió—, o un verificador que no emite probabilidades. Lo último no es
+un tecnicismo: un juez de chat que devuelve booleanos con confianza autoinformada es tan
+flojo como el productor, así que su respaldo no significaría nada.
 
 ## 5. Escritura correcta de proposiciones
 
@@ -795,7 +880,19 @@ Es el objeto que hace auditable todo el sistema. Se escribe **append-only** en
   "latencyMs": 412,
 
   "escalatedTo": "human",
-  "humanDecision": null
+  "humanDecision": null,
+
+  "escalations": [
+    {
+      "role": "escalation",
+      "proposition": "causa_especifica",
+      "from": { "provider": "openrouter", "model": "proveedor/modelo-barato" },
+      "to": { "provider": "openrouter", "model": "proveedor/modelo-superior" },
+      "verified": 0.3,
+      "threshold": 0.9,
+      "reason": "el verificador dio 0.30 a la respuesta de «causa_especifica» y el umbral es 0.9: el estado no la respalda, así que se volvió a preguntar a proveedor/modelo-superior"
+    }
+  ]
 }
 ```
 
@@ -807,6 +904,14 @@ Es el objeto que hace auditable todo el sistema. Se escribe **append-only** en
   artefacto cuando los resultados se mueven.
 - `resolvedVersion`: la versión concreta del modelo (`jev-1.13-20260917`), no el alias.
 - `usage.costUsd`: alimenta directamente `## Consumo de IA` del ticket.
+- `escalations`: los escalamientos **entre modelos**, si el evaluador fue la cascada (§4.1),
+  con la proposición, los modelos de origen y destino, la probabilidad que emitió el
+  verificador, el umbral y el motivo. Es un campo **opcional** y no cambia
+  `receiptVersion`: los recibos emitidos antes de que la cascada existiera siguen siendo
+  válidos y no se reescriben, así que un recibo sin él no dice «no se escaló» sino «esto se
+  evaluó sin cascada» (`packages/gate/src/receipt.ts:101-109`). No se confunde con
+  `escalatedTo: "human"`: el primero sube el modelo, el segundo sube la decisión
+  (`packages/engine/src/gate.ts:516-530`).
 
 ## 8. Gates del pipeline completo
 

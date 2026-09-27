@@ -492,7 +492,7 @@ valmen drift [--id] [--todos] [--strict]     # lo que el ticket cita y el códig
 
 # Compuertas
 valmen gate <gate> --id <ID>          # evalúa, y emite recibo
-      --evaluator auto|command|jev|llm-judge
+      --evaluator auto|command|jev|llm-judge|cascade
 valmen gate-decide --id <ID> --receipt <GR-…> --decision --actor
 valmen gate-decide --code <CÓDIGO> --decision --actor   # desde el celular
 valmen simulate <gate> [--limit] [--json] [--calibrate]

@@ -152,7 +152,7 @@ Comandos:
   template apply <nombre>   Escribe sus reglas en .valmen/ (no pisa lo que existe).
       --dry-run             Muestra qué escribiría, sin escribir.
   gate <gate> --id <ID>     Evalúa un gate contra un ticket.
-      --evaluator <id>      auto (por defecto) · command · jev · llm-judge
+      --evaluator <id>      auto (por defecto) · command · jev · llm-judge · cascade
   create --id <ID> --title <t> --type <TIPO> --module <MODULO> --request <texto>
                             Crea un ticket desde la plantilla, en intake.
   release-publish --version <SemVer> --tickets <ID1,ID2>
