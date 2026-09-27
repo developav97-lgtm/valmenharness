@@ -160,6 +160,42 @@ describe("qué gates aplican a un ticket", () => {
     expect(plan?.propositionCount).toBeGreaterThan(4);
   });
 
+  it("dice qué gates ya se resuelven en código y cuáles necesitan un modelo", () => {
+    // Sin comandos declarados en los criterios, el gate mecánico no tiene con qué
+    // decidir: no se ofrece el evaluador determinista, y tampoco la cascada,
+    // porque no queda ninguna proposición que verificar.
+    const sinComandos = listGateCards(PATHS(), TICKET)?.find(
+      (tarjeta) => tarjeta.id === "qa-mechanical",
+    );
+    expect(sinComandos?.hasCommandChecks).toBe(false);
+    expect(sinComandos?.needsModel).toBe(false);
+
+    // Con los criterios declarando cómo se prueban, el mismo gate se resuelve
+    // entero en código y ningún modelo participa.
+    writeFixtureTicket(lab, {
+      id: TICKET,
+      criterios: [
+        "- [ ] Buscar «104» devuelve la orden «1042».",
+        "      <!-- test: npx vitest run tests/filter.test.ts -->",
+        "- [ ] Buscar «999» no devuelve resultados.",
+        "      <!-- test: npx vitest run tests/filter.test.ts -->",
+      ].join("\n"),
+    });
+    mkdirSync(join(lab, ".valmen"), { recursive: true });
+    writeFileSync(join(lab, ".valmen", "config.yaml"), "test-commands:\n  - npx\n");
+
+    const conComandos = listGateCards(PATHS(), TICKET)?.find(
+      (tarjeta) => tarjeta.id === "qa-mechanical",
+    );
+    expect(conComandos?.hasCommandChecks).toBe(true);
+    expect(conComandos?.needsModel).toBe(false);
+
+    // El de plan no tiene comandos: sus proposiciones las responde un modelo.
+    const plan = listGateCards(PATHS(), TICKET)?.find((tarjeta) => tarjeta.id === "plan");
+    expect(plan?.hasCommandChecks).toBe(false);
+    expect(plan?.needsModel).toBe(true);
+  });
+
   it("devuelve null si el ticket no existe", () => {
     expect(listGateCards(PATHS(), "NO-EXISTE-20260921")).toBeNull();
   });

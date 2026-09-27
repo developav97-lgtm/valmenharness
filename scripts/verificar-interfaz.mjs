@@ -233,16 +233,85 @@ function respuesta(ruta) {
   if (ruta.includes("/api/health")) return { root: "/proyecto" };
   if (ruta.includes("/gates")) {
     return {
-      gates: [],
+      // Un gate con proposiciones que solo un modelo puede responder: es lo que
+      // hace que el desplegable ofrezca la cascada verificada, y sin un gate acá
+      // la rama del desplegable no se recorría.
+      gates: [
+        {
+          id: "plan",
+          title: "El plan resuelve el diagnóstico",
+          transition: "planned → approved",
+          mode: "hybrid",
+          appliesTo: ["planned"],
+          applies: true,
+          workflowStatus: "planned",
+          mechanicalChecks: [
+            {
+              id: "criterios_presentes",
+              description: "El ticket tiene criterios de aceptación.",
+              result: "pass",
+              detail: "4 criterios",
+            },
+          ],
+          blockedByCode: false,
+          propositionCount: 12,
+          hasCommandChecks: false,
+          needsModel: true,
+          policy: { approveAt: 0.9, blockAt: 0.4 },
+          routing: {
+            model: "typesafe/jev-1.13",
+            effort: "high",
+            source: "preset",
+            probabilistic: true,
+          },
+        },
+      ],
       decisions: [
         {
           gate: "plan",
-          outcome: "approve",
+          outcome: "review",
           receiptId: "GR-1",
           actor: "model",
           decidedAt: "2026-01-01T00:00:00Z",
           stale: false,
           humanDecision: null,
+          // Un recibo completo, con una proposición en banda media y la decisión
+          // escalada a una persona: es la rama más larga de la tarjeta —la tabla de
+          // proposiciones, el pie con el coste y los botones de decisión— y sin un
+          // recibo entero no se recorre.
+          reason: "Ninguna proposición alcanzó los umbrales: queda en banda media.",
+          escalatedTo: "human",
+          weightedMean: 0.865,
+          model: { resolvedVersion: "typesafe/jev-1.13-20260917" },
+          usage: { costUsd: 0.000012 },
+          latencyMs: 420,
+          stateHash: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          propositions: [
+            {
+              id: "criterio_01",
+              label: "criterio_01",
+              description: "Buscar «104» devuelve la orden «1042».",
+              value: 0.95,
+              mark: "approve",
+              reason: "",
+            },
+            {
+              id: "rollback_declarado",
+              label: "el plan declara cómo volver atrás",
+              value: 0.78,
+              mark: "review",
+              reason: "El plan lo menciona sin decir cómo se revierte.",
+            },
+          ],
+          mechanicalChecks: [
+            {
+              id: "criterios_presentes",
+              description: "El ticket tiene criterios de aceptación.",
+              result: "pass",
+              detail: "4 criterios",
+            },
+          ],
+          report: "RESULTADO: REVIEW",
         },
       ],
       corrections: [],
@@ -495,6 +564,11 @@ export async function ejecutarInterfaz(rutaHtml, opciones = {}) {
   globalThis.Option = class {
     constructor(etiqueta, valor) {
       this.text = etiqueta;
+      // El texto va también en `_texto`: el recuento de lo que una vista pinta
+      // recorre `_texto`, y la etiqueta de una opción es texto visible —sin esto,
+      // comprobar que la pantalla ofrece una opción del desplegable no se puede
+      // escribir.
+      this._texto = String(etiqueta);
       this.value = valor;
     }
   };
@@ -581,7 +655,16 @@ export const VISTAS = [
 const AFIRMACIONES = [
   [
     "ticket",
-    ["compartida entre 2 tickets", "no se suma", "1 compartida(s) entre varios tickets"],
+    [
+      "compartida entre 2 tickets",
+      "no se suma",
+      "1 compartida(s) entre varios tickets",
+      // La cascada verificada aparece porque el gate falso declara proposiciones
+      // que solo un modelo puede responder. Que **no** se ofrezca donde el código
+      // responde todo se comprueba en `gate-view.test.ts`, que sí puede mirar el
+      // dato del que depende el desplegable; acá solo se ve la frase pintada.
+      "cascada verificada",
+    ],
   ],
 ];
 

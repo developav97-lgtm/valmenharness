@@ -23,11 +23,14 @@
  * Ver docs/06-CONTROL-APP.md §2.3 y docs/03-GATES.md §7.
  */
 import {
+  type CommandCheckSpec,
   type EvaluatedProposition,
   type GateDefinition,
   type GateReceipt,
   type MechanicalCheck,
+  type Proposition,
   GATES,
+  commandChecksFor,
   extractCriteriaSpecs,
   gateFor,
   hashState,
@@ -48,7 +51,25 @@ import {
   readReceipts,
   runGate,
   runMechanicalChecks,
+  testCommands,
+  testTimeout,
 } from "@valmen/engine";
+
+/**
+ * Las proposiciones que ningún comando responde.
+ *
+ * Es la misma resta que hace el motor al repartir el trabajo entre el código y el
+ * modelo: el comando contesta las suyas y las que quedan se le envían al
+ * evaluador. La pantalla la necesita para no ofrecer un evaluador semántico
+ * donde no queda nada que juzgar.
+ */
+function pendientesDeModelo(
+  proposiciones: readonly Proposition[],
+  comandos: readonly CommandCheckSpec[],
+): readonly Proposition[] {
+  const cubiertas = new Set(comandos.map((comando) => comando.propositionId));
+  return proposiciones.filter((proposicion) => !cubiertas.has(proposicion.id));
+}
 
 /** Un gate disponible para un ticket, con lo que el código ya sabe de él. */
 export interface GateCard {
@@ -68,12 +89,25 @@ export interface GateCard {
   /** Cuántas proposiciones se enviarán, contando la expansión por criterio. */
   readonly propositionCount: number;
   /**
-   * `true` si el gate declara comandos para resolver proposiciones en código.
+   * `true` si los criterios del ticket declaran comandos que responden sus
+   * proposiciones.
    *
-   * Sin comandos, el evaluador determinista no tiene con qué decidir y falla.
-   * Ofrecerlo en la interfaz sería ofrecer un botón que siempre da error.
+   * Sale de los criterios —no de la definición del gate—, que es donde el motor
+   * los lee: cada criterio con `test:` se convierte en un comando, y el código de
+   * salida decide. Sin comandos, el evaluador determinista no tiene con qué
+   * decidir y falla; ofrecerlo en la interfaz sería ofrecer un botón que siempre
+   * da error.
    */
   readonly hasCommandChecks: boolean;
+  /**
+   * `true` si queda alguna proposición que solo un modelo puede responder.
+   *
+   * Es la resta que hace el motor al repartir el trabajo: los comandos responden
+   * las suyas y las que quedan van al evaluador semántico. Es, además, la
+   * condición para ofrecer la cascada verificada: donde el código ya responde
+   * todo, no hay nada que un verificador pueda comprobar.
+   */
+  readonly needsModel: boolean;
   /** Umbrales vigentes. */
   readonly policy: { readonly approveAt: number; readonly blockAt: number };
   /**
@@ -226,22 +260,35 @@ export function listGateCards(paths: RegistryPaths, ticketId: string): GateCard[
 
   let workflow = "";
   let checks: MechanicalCheck[] = [];
-  let propositionCounts = new Map<string, number>();
+  const proposiciones = new Map<string, readonly Proposition[]>();
+  const comandos = new Map<string, readonly CommandCheckSpec[]>();
   try {
     const parsed = parseTicket(ticket.text);
     workflow = parsed.fields.workflow_status;
     checks = runMechanicalChecks(ticket.text);
     const criteria = extractCriteriaSpecs(parsed.sections["Criterios de aceptación"]);
-    propositionCounts = new Map(
-      Object.values(GATES).map((definicion) => [
+    const autorizados = testCommands(paths.root);
+    const espera = testTimeout(paths.root);
+    for (const definicion of Object.values(GATES)) {
+      // Con los impactos del ticket: el plan de uno que toca la migración tiene
+      // más proposiciones que el de un bugfix, y el número que muestra la
+      // pantalla tiene que ser el que se va a evaluar.
+      proposiciones.set(
         definicion.id,
-        // Con los impactos del ticket: el plan de uno que toca la migración tiene
-        // más proposiciones que el de un bugfix, y el número que muestra la
-        // pantalla tiene que ser el que se va a evaluar.
-        gateFor(definicion, { criteria, impacts: declaredImpactIds(parsed) }).propositions
-          .length,
-      ]),
-    );
+        gateFor(definicion, { criteria, impacts: declaredImpactIds(parsed) }).propositions,
+      );
+      // Los comandos salen de los criterios del ticket, igual que en el motor. Se
+      // leían de `definicion.commandChecks`, un campo que ninguna definición
+      // declara: el desplegable de la pantalla nunca ofrecía el evaluador
+      // determinista, ni siquiera en el gate cuyas proposiciones son todas
+      // comandos.
+      comandos.set(
+        definicion.id,
+        definicion.commandPropositions === true
+          ? commandChecksFor(criteria, autorizados, espera).checks
+          : [],
+      );
+    }
   } catch {
     // Un ticket inválido no tiene estado del que hablar. Las tarjetas se
     // devuelven igual, sin precondición cumplida, para que la pantalla pueda
@@ -261,8 +308,13 @@ export function listGateCards(paths: RegistryPaths, ticketId: string): GateCard[
     workflowStatus: workflow,
     mechanicalChecks: checks,
     blockedByCode: checks.some((check) => check.result === "fail"),
-    propositionCount: propositionCounts.get(definicion.id) ?? 0,
-    hasCommandChecks: (definicion.commandChecks?.length ?? 0) > 0,
+    propositionCount: proposiciones.get(definicion.id)?.length ?? 0,
+    hasCommandChecks: (comandos.get(definicion.id)?.length ?? 0) > 0,
+    needsModel:
+      pendientesDeModelo(
+        proposiciones.get(definicion.id) ?? [],
+        comandos.get(definicion.id) ?? [],
+      ).length > 0,
     policy: definicion.policy,
     routing: {
       model: routing.evaluatorModel,

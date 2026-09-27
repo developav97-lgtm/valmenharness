@@ -3765,6 +3765,12 @@
           ["jev", "Jev (probabilidades)"],
           ["llm-judge", "modelo de chat"],
         ];
+        // La cascada solo se ofrece donde queda algo que un verificador pueda
+        // comprobar: un gate que se resuelve entero en código no gasta llamadas
+        // aunque se la pida, y un desplegable que ofrece una opción que no hace
+        // nada enseña a no creerle al desplegable.
+        if (gate.needsModel)
+          opciones.push(["cascade", "cascada verificada (barato, verifica, escala)"]);
         if (gate.hasCommandChecks) opciones.push(["command", "solo checks deterministas"]);
         for (const [valor, etiqueta] of opciones) {
           evaluador.append(new Option(etiqueta, valor));
