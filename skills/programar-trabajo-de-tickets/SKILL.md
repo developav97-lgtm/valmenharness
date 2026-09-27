@@ -1,7 +1,7 @@
 ---
 name: programar-trabajo-de-tickets
-description: Usar cuando haya que dejar agendado el trabajo de varios tickets para que corran solos, o cuando se revise cómo se programó. Cubre el orden, las guardas, la cadencia, la autorización y el costeo por sesión.
-version: 1.0.0
+description: Usar cuando haya que dejar agendado el trabajo de varios tickets para que corran solos, o cuando se revise cómo se programó. Cubre el orden, las guardas, la cadencia, el aviso de arranque con la pantalla del ticket, la autorización y el costeo por sesión.
+version: 1.1.0
 origen: valmen
 ---
 
@@ -10,7 +10,56 @@ origen: valmen
 Dejar agendado el trabajo de varios tickets de una feature para que arranquen solos, en el
 orden del grafo y **cada uno en su propia sesión**. La forma se ejecuta con
 `scripts/programar-tickets.mjs` del harness, que rellena la plantilla
-`templates/programar/prompt-eslabon.md`.
+`templates/programar/prompt-eslabon.md` y, por cada eslabón, escribe su aviso de arranque
+desde `templates/programar/aviso-eslabon.sh`.
+
+## El aviso de arranque y la pantalla del ticket
+
+Una tanda avisa **cuando empieza y cuando termina**, y al empezar entrega el enlace al
+ticket para seguirlo desde el celular. Son dos jobs por eslabón y no es un capricho: un job
+entrega sólo su respuesta final, así que el aviso de arranque no puede salir del job del
+trabajo —el que termina es el único que habla—; el aviso es un `no_agent` tres minutos
+antes, que no gasta modelo.
+
+El aviso es un script y hace tres cosas, en este orden:
+
+1. **Se asegura de que Mission Control del proyecto esté sirviendo y de que abra desde el
+   celular.** Un servidor escuchando sólo en `127.0.0.1` da un enlace que no abre desde el
+   teléfono, y el aviso que lo promete es una mentira: el script busca el puerto donde ya
+   sirve ese proyecto (comprobando por `/api/health` que el `root` sea el del proyecto, no
+   que algo escuche), y si escucha sólo en loopback lo releva en el mismo puerto con
+   `--host 0.0.0.0`. Si no estaba sirviendo, lo levanta en el primer puerto libre.
+2. **Comprueba que el harness sea el del árbol.** `dist/` no se versiona, así que un build
+   atrás de `src/` deja al MCP y al CLI corriendo código viejo. Lo reconstruye **sólo con el
+   árbol limpio**: con cambios a medias de otra sesión, reconstruir publicaría un build roto.
+   Y después de reconstruir deja caer el proceso del MCP, que sigue siendo el del build
+   viejo, para que la próxima llamada lo levante nuevo.
+3. Imprime el aviso: el eslabón, el ticket, el proyecto, la hora, el enlace y el estado del
+   árbol y del build.
+
+El enlace lo arma una sola vez ese script. La sesión del eslabón lo reusa al entregar con
+`--enlace` (imprime sólo la URL): así el enlace no se calcula dos veces con dos criterios, y
+si la pantalla no está sirviendo el script no imprime nada y la sesión lo dice en vez de
+inventar una URL.
+
+«Actualizado» quiere decir que lo que el PO mira sea el código del árbol, y el enlace lo da
+la IP de la máquina, no `127.0.0.1`. Por eso el estándar publica la pantalla en la red
+local: la franja de puertos `4173-4199`, un proyecto por puerto, con la frontera de
+confianza en la red doméstica.
+
+## Al cerrar: el enlace y el siguiente eslabón
+
+La entrega de un eslabón termina con dos líneas más, y las dos son parte del estándar:
+
+1. **El enlace de la pantalla del ticket**, para abrirlo desde el celular.
+2. **Si queda otro eslabón de la tanda por correr**, se nombra con su hora y su ticket y se
+   ofrece adelantarlo. No lo adelanta: la orden la da el PO. Si la tanda terminó antes de
+   tiempo, nadie tiene por qué esperar dos horas a que dispare un job.
+
+Cuando el PO responde a ese hilo —por eso el job de trabajo se crea con
+`attach_to_session`, para que su respuesta siga en la misma sesión—, el que adelanta corre
+`cronjob_manage` `action='update'` con `schedule='in 5m'` sobre el job que él nombre. Ese
+job trabaja su propio ticket en su propia sesión: no se trabaja acá.
 
 ## Por qué una sesión por ticket
 
@@ -45,7 +94,11 @@ cambia y la lista no.
   para que el anterior termine, y el siguiente tiene la guarda de repositorio ocupado si no
   terminó.
 - **Tope de cinco eslabones por día y nada después de las 20:00** hora del PO. El tope
-  existe porque cada eslabón gasta sin que nadie mire.
+  existe porque cada eslabón gasta sin que nadie mire. Cuando el PO pide horas que cruzan el
+  tope, se programan igual —es su palabra, no una excepción silenciosa— y se le dice en la
+  entrega que la tanda pasa de las 20:00. Desde que la tanda avisa al arrancar y al cerrar, y
+  el que cierra ofrece adelantar el siguiente, el tope dejó de ser lo único que impide que
+  algo gaste sin que nadie mire; lo que no cambia es que se declara.
 - Un eslabón que arranca tarde entra por `catch_up_missed`, pero **la máquina tiene que
   estar despierta**: el planificador es un proceso del host.
 
@@ -71,11 +124,11 @@ node scripts/programar-tickets.mjs \
   --implementador sesion|opencode \
   --linea-base '<la suite en verde al día tal>' \
   [--nota '<particularidad del proyecto>'] [--mcp <servidor>] \
-  [--permitir-criticos] [--dry-run] [--salida <dir>]
+  [--permitir-criticos] [--sin-aviso] [--dry-run] [--salida <dir>]
 ```
 
-- **`--dry-run` primero, siempre.** Escribe los prompts en `--salida` y muestra la tabla
-  sin crear nada. Se leen los prompts antes de agendar.
+- **`--dry-run` primero, siempre.** Escribe los prompts y los avisos en `--salida` y muestra
+  la tabla sin crear nada. Se leen los prompts antes de agendar.
 - De qué sale cada dato: el nombre del proyecto y los comandos de prueba de
   `.valmen/config.yaml`; el servidor MCP del perfil; la ruta del ticket y la de la feature
   del registro; el resumen, del título y de los `R-*` que el ticket cita. Lo que no se puede
@@ -83,16 +136,31 @@ node scripts/programar-tickets.mjs \
 - **`--implementador`**: `sesion` cuando el código lo escribe la sesión con TDD (el caso de
   un repositorio de tests propios); `opencode` cuando el proyecto implementa con su propio
   ejecutor.
+- **`--sin-aviso`** deja la tanda sin aviso de arranque: se usa cuando el PO ya está mirando
+  la corrida, no por comodidad. La forma por defecto crea los dos jobs por eslabón.
+- **El `attach_to_session` se pone después, con `cronjob_manage`.** El CLI de Hermes todavía
+  no tiene bandera para eso —`cron create` y `cron edit` no lo aceptan—, así que el paso que
+  sigue al programador es `cronjob_manage` `action='update'` con `attach_to_session: true`
+  sobre cada job de trabajo. Sin eso, la respuesta del PO al mensaje de cierre abre una
+  sesión nueva en vez de continuar la del eslabón, y el que adelanta el siguiente eslabón ya
+  no tiene el brief en contexto.
 
 ## Qué se verifica después
 
 ```bash
-hermes -p <perfil> cron list      # el job, su hora, su deliver, su workdir y sus skills
+hermes -p <perfil> cron list      # los jobs, su hora, su deliver, su workdir y sus skills
 hermes -p <perfil> cron doctor    # salud de los jobs
 ```
 
 Y se comprueba en el `jobs.json` del perfil que **cada job cita un solo ticket**: si un
-prompt nombra dos, la sesión va a trabajar dos y el costeo se rompe.
+prompt nombra dos, la sesión va a trabajar dos y el costeo se rompe. Por cada eslabón tienen
+que quedar **dos** jobs —el del trabajo y su aviso `aviso-<nombre>` tres minutos antes—, y el
+job de trabajo con `attach_to_session`.
+
+El aviso se prueba antes de esa hora, no en la hora: correrlo a mano en seco —con la copia
+que dejó el `--dry-run`— dice si el enlace sale con la IP de la máquina y si Mission Control
+queda sirviendo fuera de loopback (`lsof -nP -iTCP:<puerto> -sTCP:LISTEN` debe mostrar `*:`).
+Un aviso que nunca se probó falla justo cuando el PO lo está esperando.
 
 ## Al pulirla
 

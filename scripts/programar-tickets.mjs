@@ -7,7 +7,23 @@
  *     --cantidad 5 --inicio 2026-09-28T08:00:00 --cada 2h --deliver slack:D0C49E1UUJD \
  *     --skills a,b --autorizacion '<frase literal del PO>' --autorizado-por 'Juan Andrade' \
  *     --autorizado-el 2026-09-26 [--implementador sesion|opencode] [--nota '<texto>'] \
- *     [--linea-base '<texto>'] [--dry-run] [--salida <dir>]
+ *     [--linea-base '<texto>'] [--tickets ID1,ID2] [--sin-aviso] [--dry-run] [--salida <dir>]
+ *
+ * `--tickets` reprograma una lista explícita, en ese orden, en vez de dejar la elección al
+ * grafo: es lo que se usa para aplicar una forma nueva a una tanda que ya estaba agendada. Se
+ * programa entera o no se programa —los eslabones se numeran sobre la tanda completa—, y un
+ * ticket cerrado aborta la corrida en vez de colarse.
+ *
+ * Por cada eslabón crea **dos jobs**: el del trabajo y, tres minutos antes, el aviso de
+ * arranque sin agente (`no_agent`) que le avisa al PO que arranca y le deja el enlace de la
+ * pantalla del ticket con la IP de la máquina, para abrirlo desde el celular. Un job entrega
+ * solo su respuesta final, así que el aviso de arranque no puede salir del job del trabajo:
+ * por eso son dos, y el segundo cuesta cero modelo.
+ *
+ * El aviso es un script que este programador escribe desde
+ * `templates/programar/aviso-eslabon.sh` en `scripts/` del perfil de Hermes del proyecto.
+ * Ese mismo script, con `--enlace`, lo usa la sesión del eslabón al entregar: así el
+ * enlace no se arma dos veces ni con dos criterios distintos.
  *
  * El orden y la elegibilidad salen del `tickets.yaml` de la feature, no de una lista
  * escrita a mano: se toma el ticket más temprano del grafo que esté en `intake` y cuyas
@@ -18,7 +34,7 @@
  * nunca se programan dos tickets en el mismo job.
  */
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -141,6 +157,28 @@ function fechas(inicio, cadaHoras, cantidad) {
 
 const hora = (iso) => iso.slice(11, 16);
 
+/** Un instante ISO sin zona, corrido N minutos: el aviso va antes que el trabajo. */
+function menosMinutos(iso, minutos) {
+  const d = new Date(iso);
+  d.setMinutes(d.getMinutes() - minutos);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
+}
+
+/** Escribe el script del aviso de arranque en `scripts/` del perfil, y lo deja ejecutable. */
+function escribirAviso(plantilla, valores, perfil) {
+  let texto = plantilla;
+  for (const [clave, valor] of Object.entries(valores)) texto = texto.replaceAll(`{{${clave}}}`, String(valor));
+  const sobrantes = texto.match(/\{\{[A-Z_]+\}\}/g);
+  if (sobrantes) throw new Error(`Marcadores sin rellenar en el aviso: ${sobrantes.join(", ")}`);
+  const dir = join(homedir(), ".hermes", "profiles", perfil, "scripts");
+  if (!existe(dir)) mkdirSync(dir, { recursive: true });
+  const ruta = join(dir, valores.SCRIPT_AVISO);
+  writeFileSync(ruta, texto, "utf8");
+  chmodSync(ruta, 0o755);
+  return ruta;
+}
+
 function main() {
   const f = banderas(process.argv.slice(2));
   const raiz = resolve(String(f.raiz ?? process.cwd()));
@@ -152,6 +190,8 @@ function main() {
   const deliver = String(f.deliver ?? "local");
   const skills = String(f.skills ?? "").split(",").map((s) => s.trim()).filter(Boolean);
   const seco = f["dry-run"] === true;
+  const conAviso = f["sin-aviso"] !== true;
+  const minutosAviso = 3;
   const salida = resolve(String(f.salida ?? join(raiz, ".valmen", "programar")));
 
   if (!feature || !inicio) {
@@ -185,17 +225,45 @@ function main() {
   const cerrados = new Set([...estado].filter(([, c]) => c.workflow_status === "closed").map(([id]) => id));
   const elegidos = [];
   const saltados = [];
-  for (const t of grafo) {
-    const campos = estado.get(t.id);
-    if (!campos || campos.workflow_status === "closed") continue;
-    if (!t.deps.every((d) => cerrados.has(d))) continue;
-    if (TIPOS_QUE_PIDEN_AUTORIZACION_APARTE.has(campos.type) && f["permitir-criticos"] !== true) {
-      saltados.push({ id: t.id, motivo: `${campos.type} pide autorización aparte` });
-      continue;
+  if (f.tickets) {
+    // Lista explícita: se vuelve a programar una tanda que ya existe, con esos tickets y en
+    // ese orden. Sirve para aplicar una forma nueva —un aviso, otra plantilla— a lo que ya
+    // estaba agendado, sin dejar la elección al grafo por segunda vez. Un ticket cerrado se
+    // saltea y se dice: reprogramar trabajo entregado es un error, no una decisión.
+    const porId = new Map(grafo.map((t) => [t.id, t]));
+    for (const id of String(f.tickets).split(",").map((s) => s.trim()).filter(Boolean)) {
+      const campos = estado.get(id);
+      if (!campos) {
+        saltados.push({ id, motivo: "no está en el registro de este proyecto" });
+        continue;
+      }
+      if (campos.workflow_status === "closed") {
+        saltados.push({ id, motivo: "ya está cerrado" });
+        continue;
+      }
+      const enGrafo = porId.get(id);
+      elegidos.push(enGrafo ? { ...enGrafo } : { id, sprint: null, title: campos.title ?? id, deps: [] });
     }
-    elegidos.push(t);
-    cerrados.add(t.id);
-    if (elegidos.length === cantidad) break;
+    if (saltados.length > 0) {
+      // No se programa media lista: los eslabones se numeran sobre la tanda entera y una
+      // tanda recortada entregaría «el eslabón 3 de 5» donde hay cuatro.
+      for (const s of saltados) console.error(`– ${s.id}: ${s.motivo}`);
+      console.error("Una lista explícita se programa entera o no se programa.");
+      process.exit(2);
+    }
+  } else {
+    for (const t of grafo) {
+      const campos = estado.get(t.id);
+      if (!campos || campos.workflow_status === "closed") continue;
+      if (!t.deps.every((d) => cerrados.has(d))) continue;
+      if (TIPOS_QUE_PIDEN_AUTORIZACION_APARTE.has(campos.type) && f["permitir-criticos"] !== true) {
+        saltados.push({ id: t.id, motivo: `${campos.type} pide autorización aparte` });
+        continue;
+      }
+      elegidos.push(t);
+      cerrados.add(t.id);
+      if (elegidos.length === cantidad) break;
+    }
   }
 
   if (elegidos.length === 0) {
@@ -209,6 +277,7 @@ function main() {
   // el proyecto aporta su registro y su configuración, no la forma del instructivo.
   const plantilla = leer(join(homeDelScript, "..", "templates", "programar", "prompt-eslabon.md"));
   const cuerpo = /````text\n([\s\S]*?)\n````/.exec(plantilla)[1];
+  const plantillaAviso = leer(join(homeDelScript, "..", "templates", "programar", "aviso-eslabon.sh"));
   const programa = fechas(inicio, horas, elegidos.length);
 
   /** Enumera: «el eslabón 5», «los eslabones 2, 3, 4 y 5». */
@@ -233,17 +302,28 @@ function main() {
 
   if (!existe(salida)) mkdirSync(salida, { recursive: true });
   const planes = [];
+  const avisos = [];
 
   elegidos.forEach((t, indice) => {
     const n = indice + 1;
     const campos = estado.get(t.id);
+    const cuando = programa[indice];
+    // El nombre del job dice de qué habla: prefijo de la feature, sprint, eslabón y el id
+    // sin su tipo ni su fecha (`FEATURE-RELLENO-MASIVO-GENERACION-20260924` → `relleno-masivo-generacion`).
+    const cola = t.id.split("-").slice(1, -1).join("-").toLowerCase();
+    const nombre = `${feature.split("-")[0]}-${(t.sprint ?? "s").toLowerCase()}-eslabon-${n}-${cola}`;
+    const scriptAviso = `aviso-${nombre}.sh`;
     const valores = {
       PROYECTO: proyecto,
+      PERFIL: perfil,
       TICKET_ID: t.id,
       TIPO: campos.type ?? "FEATURE",
       FEATURE_SLUG: feature,
       SPRINT: t.sprint ?? "S1",
       ESLABON: String(n),
+      HORA: hora(cuando),
+      SCRIPT_AVISO: scriptAviso,
+      PREFIJO_JOBS: `${feature.split("-")[0]}-`,
       RESUMEN: resumenDe(rutas.get(t.id), t.title),
       RUTA_REPO: raiz,
       RAMA: rama,
@@ -271,28 +351,63 @@ function main() {
     const archivo = join(salida, `eslabon-${n}-${t.id}.txt`);
     writeFileSync(archivo, texto, "utf8");
 
-    // El nombre del job dice de qué habla: prefijo de la feature, sprint, eslabón y el id
-    // sin su tipo ni su fecha (`FEATURE-RELLENO-MASIVO-GENERACION-20260924` → `relleno-masivo-generacion`).
-    const cola = t.id.split("-").slice(1, -1).join("-").toLowerCase();
-    const nombre = `${feature.split("-")[0]}-${(t.sprint ?? "s").toLowerCase()}-eslabon-${n}-${cola}`;
+    planes.push({ n, id: t.id, cuando, archivo, nombre, titulo: campos.title ?? t.title, scriptAviso });
 
-    planes.push({ n, id: t.id, cuando: programa[indice], archivo, nombre, titulo: campos.title ?? t.title });
-
-    if (!seco) {
-      const args = [
-        "-p", perfil, "cron", "create", programa[indice], texto,
-        "--name", nombre, "--deliver", deliver, "--workdir", raiz, "--repeat", "1",
-      ];
-      for (const s of skills) args.push("--skill", s);
-      const salidaCron = execFileSync("hermes", args, { encoding: "utf8" });
-      console.log(salidaCron.trim().split("\n")[0]);
+    if (seco) {
+      // En seco también se escribe el aviso, al lado de los prompts, para poder leerlo
+      // antes de agendar. No toca `scripts/` del perfil.
+      const textoAviso = plantillaAviso
+        .replaceAll("{{PROYECTO}}", proyecto)
+        .replaceAll("{{PERFIL}}", perfil)
+        .replaceAll("{{TICKET_ID}}", t.id)
+        .replaceAll("{{ESLABON}}", String(n))
+        .replaceAll("{{HORA}}", hora(cuando))
+        .replaceAll("{{RUTA_REPO}}", raiz)
+        .replaceAll("{{NOMBRE_JOB}}", nombre);
+      writeFileSync(join(salida, scriptAviso), textoAviso, "utf8");
+      return;
     }
+
+    if (conAviso) {
+      const rutaAviso = escribirAviso(
+        plantillaAviso,
+        { PROYECTO: proyecto, PERFIL: perfil, TICKET_ID: t.id, ESLABON: String(n), HORA: hora(cuando), RUTA_REPO: raiz, NOMBRE_JOB: nombre, SCRIPT_AVISO: scriptAviso },
+        perfil,
+      );
+      const cuandoAviso = menosMinutos(cuando, minutosAviso);
+      const salidaAviso = execFileSync(
+        "hermes",
+        [
+          "-p", perfil, "cron", "create", cuandoAviso,
+          `Aviso de arranque del eslabón ${n} de la tanda de ${proyecto}: ${t.id}. Lo entrega el script, sin modelo.`,
+          "--name", `aviso-${nombre}`, "--no-agent", "--script", scriptAviso,
+          "--deliver", deliver, "--workdir", raiz, "--repeat", "1",
+        ],
+        { encoding: "utf8" },
+      );
+      console.log(salidaAviso.trim().split("\n")[0]);
+      avisos.push({ n, cuando: cuandoAviso, ruta: rutaAviso });
+    }
+
+    const args = [
+      "-p", perfil, "cron", "create", cuando, texto,
+      "--name", nombre, "--deliver", deliver, "--workdir", raiz, "--repeat", "1",
+    ];
+    for (const s of skills) args.push("--skill", s);
+    const salidaCron = execFileSync("hermes", args, { encoding: "utf8" });
+    console.log(salidaCron.trim().split("\n")[0]);
   });
 
   console.log("");
   for (const p of planes) console.log(`${hora(p.cuando)}  eslabón ${p.n}  ${p.id}  →  ${p.nombre}`);
+  if (avisos.length > 0) {
+    console.log("");
+    for (const a of avisos) console.log(`${hora(a.cuando)}  aviso del eslabón ${a.n}  →  ${a.ruta}`);
+  }
   console.log(`\n${planes.length} ticket(s) de ${proyecto} · perfil ${perfil} · entrega ${deliver}` +
-    (seco ? ` · SECO (los prompts quedaron en ${salida})` : ` · jobs creados · prompts en ${salida}`));
+    (seco
+      ? ` · SECO (los prompts y los avisos quedaron en ${salida})`
+      : ` · ${planes.length} job(s) de trabajo${avisos.length > 0 ? ` y ${avisos.length} aviso(s) de arranque` : ""} creados · prompts en ${salida}`));
 }
 
 main();

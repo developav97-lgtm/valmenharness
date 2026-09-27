@@ -6,6 +6,10 @@ coverage/
 # Estado derivado del harness: siempre reconstruible con `valmen index`.
 .valmen/state/
 
+# Lo que escribe `scripts/programar-tickets.mjs`: los prompts y los avisos de una tanda
+# agendada, que se regeneran al programar la siguiente. Los jobs ya quedaron creados.
+.valmen/programar/
+
 # Secretos: nunca versionar credenciales ni configuración local.
 .env
 .env.local
