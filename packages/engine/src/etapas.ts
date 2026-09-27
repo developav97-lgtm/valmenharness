@@ -3,9 +3,8 @@
  *
  * Los eventos del ticket llevaban solo `date` —el día—, así que el tiempo
  * invertido no se podía medir: no había nada que restar. No se perdió, nunca se
- * escribió. Con la hora en los eventos (`at`) y los `decidedAt` de los recibos, la
- * duración de cada etapa se calcula sin modelo, sin reloj y sin estado externo:
- * dos marcas de la misma lista.
+ * escribió. Con la hora en los eventos (`at`) la duración de cada etapa se calcula
+ * sin modelo, sin reloj y sin estado externo: dos marcas de la misma lista.
  *
  * Dos reglas que lo hacen honesto:
  *
@@ -26,6 +25,16 @@ export interface EtapaDeTicket {
   /** Lo que tardó desde la marca anterior, en milisegundos, o `null` si no se sabe. */
   readonly ms: number | null;
 }
+
+/**
+ * La acción con la que el motor escribe una transición de ticket.
+ *
+ * No es `transition`: el motor escribe `` `${entity}-transition` ``
+ * (`packages/engine/src/transition.ts`), o sea `ticket-transition`. Buscar la
+ * forma corta dejaba la función reconociendo solo el evento de creación, así que
+ * la duración por etapa no existía en ningún ticket y nada fallaba.
+ */
+const ACCION_TRANSICION = "ticket-transition";
 
 /** `Workflow: intake -> analyzed.` → `analyzed`. */
 const TRANSICION_RE = /^Workflow: [a-z_]+ -> ([a-z_]+)\.$/;
@@ -59,7 +68,7 @@ export function duracionesPorEtapa(
     let estado: string | null = null;
     if (action === "created") {
       estado = "intake";
-    } else if (action === "transition") {
+    } else if (action === ACCION_TRANSICION) {
       const match = TRANSICION_RE.exec(details);
       estado = match === null ? null : (match[1] as string);
     }
@@ -79,9 +88,16 @@ export function duracionesPorEtapa(
   return etapas;
 }
 
-/** La duración en texto, para el informe: `2 h 5 min`, o `no reconstruible`. */
+/**
+ * La duración en texto, para el informe: `2 h 5 min`, o `no reconstruible`.
+ *
+ * Por debajo del minuto se dice `<1 min` y no `0 min`: redondear medio segundo a
+ * cero se lee como «no tardó nada», que es la misma mentira que el cero que este
+ * ticket vino a sacar del reparto.
+ */
 export function duracionEnTexto(ms: number | null): string {
   if (ms === null) return "no reconstruible";
+  if (ms < 60000) return "<1 min";
   const minutos = Math.round(ms / 60000);
   if (minutos < 60) return `${minutos} min`;
   const horas = Math.floor(minutos / 60);
