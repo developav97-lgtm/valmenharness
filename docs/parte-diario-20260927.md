@@ -75,6 +75,12 @@ impactos»** —el caso documentado—. El eslabón 1, cuyo análisis sí corri�
 5. **Reprogramar una tanda ya agendada la duplica.** `scripts/programar-tickets.mjs` **crea**
    jobs (`hermes cron create`): correrlo otra vez —con `--tickets` o sin él— deja los viejos
    agendados y suma los nuevos, y cada ticket corre dos veces.
+6. **El hueco no es de un día: en SaiOpenCloud hay 30 compuertas escaladas sin decisión.** El
+   registro del harness quedó en cero al cerrar esta jornada, pero el de SaiOpenCloud arrastra
+   `escalatedTo: "human"` con `humanDecision: null` en el análisis y el plan de tickets del 23,
+   24 y 25 de septiembre —más una `qa-mechanical`—. Los tickets avanzaron o se cerraron igual,
+   así que la aprobación existió en los hechos y no en el registro. La tanda que corre mañana
+   no debería sumar ninguna: los cinco prompts quedaron con el registro de la decisión.
 
 ## Lo que se hizo con eso
 
@@ -95,6 +101,9 @@ impactos»** —el caso documentado—. El eslabón 1, cuyo análisis sí corri�
 
 ## Pendientes, con recomendación
 
+- **Las 30 compuertas de SaiOpenCloud.** Se pueden registrar en bloque —ticket por ticket, con
+  la frase que autorizó cada tanda— y el registro queda sin huecos antes de la jornada de
+  mañana. Es una decisión del PO: se hace si lo pide.
 - **El umbral 0,90 contra los criterios de un plan.** Mientras cada criterio sea una
   proposición, un plan con diez criterios buenos vuelve `REVIEW` y obliga a una decisión humana
   que no aporta. Recomiendo medir —con los recibos que ya hay— cuántos `REVIEW` de `plan` no
