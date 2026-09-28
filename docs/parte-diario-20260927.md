@@ -75,12 +75,16 @@ impactos»** —el caso documentado—. El eslabón 1, cuyo análisis sí corri�
 5. **Reprogramar una tanda ya agendada la duplica.** `scripts/programar-tickets.mjs` **crea**
    jobs (`hermes cron create`): correrlo otra vez —con `--tickets` o sin él— deja los viejos
    agendados y suma los nuevos, y cada ticket corre dos veces.
-6. **El hueco no es de un día: en SaiOpenCloud hay 30 compuertas escaladas sin decisión.** El
-   registro del harness quedó en cero al cerrar esta jornada, pero el de SaiOpenCloud arrastra
-   `escalatedTo: "human"` con `humanDecision: null` en el análisis y el plan de tickets del 23,
-   24 y 25 de septiembre —más una `qa-mechanical`—. Los tickets avanzaron o se cerraron igual,
-   así que la aprobación existió en los hechos y no en el registro. La tanda que corre mañana
-   no debería sumar ninguna: los cinco prompts quedaron con el registro de la decisión.
+6. **El hueco no era de un día: en SaiOpenCloud había 30 compuertas escaladas sin decisión.** El
+   registro del harness quedó en cero al cerrar esta jornada, pero el de SaiOpenCloud arrastraba
+   `escalatedTo: "human"` con `humanDecision: null` en el análisis y el plan de 19 tickets del 22
+   al 26 de septiembre —más una `qa-mechanical`—. Los tickets avanzaron o se cerraron igual, así
+   que la aprobación existió en los hechos y no en el registro. **Registradas las 30** con la
+   autorización que cada ticket ya tenía escrita y el punto en banda de cada corrida, por orden
+   del PO; los dos registros quedaron sin compuertas huérfanas. La `qa-mechanical` de
+   `IMPROVEMENT-CREACION-MANUAL-CONGRUENCIA-20260925` era el caso raro: su corrida no dejó
+   proposiciones —el gate contesta que los diez criterios se verifican a mano— y se registró
+   diciendo eso, no como una aprobación de fondo.
 
 ## Lo que se hizo con eso
 
@@ -98,21 +102,21 @@ impactos»** —el caso documentado—. El eslabón 1, cuyo análisis sí corri�
   completa en verde (1530 pruebas) y build sin errores.
 - **El trabajo de `valmen adopt`** que el eslabón 3 dejó en el árbol, commiteado con su ticket y
   su recibo.
+- **Las 30 compuertas huérfanas de SaiOpenCloud**, registradas por lote con la autorización de
+  cada ticket, a pedido del PO. El registro de los dos proyectos quedó sin compuertas esperando
+  a una persona.
 
 ## Pendientes, con recomendación
 
-- **Las 30 compuertas de SaiOpenCloud.** Se pueden registrar en bloque —ticket por ticket, con
-  la frase que autorizó cada tanda— y el registro queda sin huecos antes de la jornada de
-  mañana. Es una decisión del PO: se hace si lo pide.
 - **El umbral 0,90 contra los criterios de un plan.** Mientras cada criterio sea una
   proposición, un plan con diez criterios buenos vuelve `REVIEW` y obliga a una decisión humana
   que no aporta. Recomiendo medir —con los recibos que ya hay— cuántos `REVIEW` de `plan` no
   tienen ninguna proposición de fondo en banda, y con ese número decidir si el umbral de las
   `criterio_NN` se separa del resto.
-- **El tope de la evaluación completa.** El tope por comando lo declara el proyecto
-  (`test-timeout`), pero la corrida entera de una compuerta mecánica con `docker compose` puede
-  morir por tiempo de espera de la llamada: conviene que los criterios de SaiOpenCloud apunten al
-  archivo enfocado y no a la suite completa.
+- **El tope de la evaluación completa.** El tope de la corrida de pruebas lo declara el proyecto
+  (`test-timeout: 900` en SaiOpenCloud) y el del juez quedó en 180 s: son cosas distintas —uno
+  espera a `docker compose`, el otro a un modelo— y conviene no confundirlas al leer una
+  corrida que murió por tiempo.
 - **`gate-jev` sin tope propio.** No es un defecto por sí solo —el tope lo pone quien dispara—,
   pero el fallo del eslabón 1 quedó sin un número que lo explique.
 
