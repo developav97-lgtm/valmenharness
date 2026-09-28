@@ -46,6 +46,7 @@ export * from "./run-state.js";
 export * from "./calibration.js";
 export * from "./release.js";
 export * from "./evaluators.js";
+export * from "./cascade.js";
 export * from "./gate.js";
 export * from "./simulate.js";
 export * from "./resume.js";

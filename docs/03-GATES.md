@@ -311,7 +311,10 @@ resuelve el routing con la misma precedencia que los demás
 | `verifier` | Comprueba cada respuesta contra el estado, y tiene que emitir probabilidades |
 | `escalation` | Responde otra vez lo que la verificación no respaldó |
 
-**Los tres pasos**, en `runCascade` (`packages/engine/src/evaluators.ts:397-507`):
+**Los tres pasos**, en `verifiedCascade` (`packages/engine/src/cascade.ts:224-385`), que es
+la corrida compartida: la usan el evaluador de la compuerta y la corrida de una tarea
+—clasificar, explorar—, y `runCascade` (`packages/engine/src/evaluators.ts:359-382`) sólo le
+pasa el umbral de la política y devuelve lo que el recibo espera.
 
 1. **Producir.** Todas las proposiciones se responden con el modelo del rol `producer`.
 2. **Verificar.** Por **cada respuesta producida** se crea una proposición nueva —
@@ -364,7 +367,7 @@ modelo y la otra sube la decisión.
 
 **Cuándo la cascada no corre.** `cascadeRoutingFor`
 (`packages/adapter/src/routing.ts:636-660`) resuelve la cadena y devuelve el motivo cuando
-no sirve, y `exigirCadena` (`packages/engine/src/evaluators.ts:296-310`) rechaza la corrida
+no sirve, y `exigirCadena` (`packages/engine/src/cascade.ts:96-110`) rechaza la corrida
 **antes de gastarla**: un rol sin modelo, un escalado que es el mismo modelo que ya
 respondió —escalar a donde ya se preguntó no cambia la respuesta, y el recibo anotaría un
 escalamiento que no ocurrió—, o un verificador que no emite probabilidades. Lo último no es

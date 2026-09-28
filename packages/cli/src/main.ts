@@ -56,12 +56,16 @@ import { mcpCommand } from "./mcp.js";
 import { runProcess } from "./process.js";
 import {
   type RegistryPaths,
+  CASCADE_TASK_IDS,
   EVALUATOR_IDS,
   choosePaths,
+  isCascadeTaskId,
   isEvaluatorId,
   legacyPaths,
   declaredParamNames,
+  renderCascadeTask,
   renderSimulation,
+  runCascadeTask,
   runGate,
   simulateGate,
 } from "@valmen/engine";
@@ -160,6 +164,10 @@ Comandos:
       --dry-run             Muestra qué escribiría, sin escribir.
   gate <gate> --id <ID>     Evalúa un gate contra un ticket.
       --evaluator <id>      auto (por defecto) · command · jev · llm-judge · cascade
+  cascada --tarea <id>      Corre una tarea de la cascada verificada y deja el recibo
+                            en .valmen/cascada/. La tarea es clasificacion o exploracion.
+      --solicitud <texto>   Lo que hay que clasificar (tarea clasificacion).
+      --pregunta <texto>    Lo que hay que responder (tarea exploracion).
   create --id <ID> --title <t> --type <TIPO> --module <MODULO> --request <texto>
                             Crea un ticket desde la plantilla, en intake.
   release-publish --version <SemVer> --tickets <ID1,ID2>
@@ -347,6 +355,10 @@ export const VALUE_OPTIONS = [
   "--id",
   "--limit",
   "--evaluator",
+  // La corrida de la cascada: la tarea y su entrada.
+  "--tarea",
+  "--solicitud",
+  "--pregunta",
   "--port",
   // `transition` mueve el estado de una entidad, y sus banderas llevan valor.
   "--entity",
@@ -1539,6 +1551,55 @@ export async function run(argv: readonly string[]): Promise<number> {
           ...(routing.judgeModel === "" ? {} : { judgeModel: routing.judgeModel }),
           ...(cascade === undefined ? {} : { cascade }),
         });
+      }
+    } else if (command === "cascada") {
+      // La tarea se valida **antes** de resolver rutas, cadena y credenciales: un
+      // identificador mal escrito tiene que decirlo sin tocar el registro ni gastar
+      // una llamada, y la lista que se nombra es la del motor, no una copia de acá.
+      const rawTarea = options.flags["tarea"];
+      if (!isCascadeTaskId(rawTarea)) {
+        result = {
+          stdout: "",
+          stderr:
+            `Tarea desconocida: "${typeof rawTarea === "string" ? rawTarea : ""}". ` +
+            `Use ${CASCADE_TASK_IDS.join(", ")}.`,
+          exitCode: EXIT_SCHEMA,
+        };
+      } else {
+        const rutas = resolvePaths(options);
+        // La cadena sale del routing del proyecto, igual que en la compuerta: si el
+        // comando y la app usaran modelos distintos, el recibo de una corrida no
+        // describiría la otra.
+        const chain = cascadeRoutingFor(rutas.root);
+        const archivoCredenciales =
+          typeof options.flags["credentials"] === "string"
+            ? options.flags["credentials"]
+            : undefined;
+        const solicitud =
+          typeof options.flags["solicitud"] === "string" ? options.flags["solicitud"] : undefined;
+        const pregunta =
+          typeof options.flags["pregunta"] === "string" ? options.flags["pregunta"] : undefined;
+
+        try {
+          const apiKey = resolveApiKeyWithFile(
+            chain.producer.provider === "" ? "openrouter" : chain.producer.provider,
+            archivoCredenciales,
+          );
+          const corrida = await runCascadeTask({
+            paths: rutas,
+            task: rawTarea,
+            entrada: {
+              ...(solicitud === undefined ? {} : { solicitud }),
+              ...(pregunta === undefined ? {} : { pregunta }),
+            },
+            chain,
+            ...(apiKey === undefined ? {} : { apiKey }),
+          });
+          result = { stdout: renderCascadeTask(corrida), stderr: "", exitCode: 0 };
+        } catch (caught) {
+          const failure = toFailure(caught);
+          result = { stdout: "", stderr: failure.message, exitCode: failure.exitCode };
+        }
       }
     } else {
       result = dispatch(options);

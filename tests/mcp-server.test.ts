@@ -220,7 +220,7 @@ describe("el catálogo de herramientas", () => {
     expect(propiedades?.["evaluator"]?.enum).toEqual([...EVALUATOR_IDS]);
   });
 
-  it("declara las treinta y ocho herramientas, cada una con descripción y esquema", () => {
+  it("declara las treinta y nueve herramientas, cada una con descripción y esquema", () => {
     // El orden es el de la lectura: alta, consulta, validación, movimiento,
     // anotación, compuertas, features, procesos, reportes, y al final el ciclo de
     // QA y el cierre. Estaba intercalado por historia —cada herramienta nueva
@@ -237,6 +237,7 @@ describe("el catálogo de herramientas", () => {
       "registrar_consumo_ia",
       "reanudar_ticket",
       "evaluar_compuerta",
+      "cascada_verificada",
       "simular_compuerta",
       "ver_features",
       "descomponer_feature",
@@ -302,15 +303,18 @@ describe("el catálogo de herramientas", () => {
     // El criterio, afirmado sobre el catálogo y no sobre la intención: devolver
     // contenido estructurado obliga a prometer una forma estable, y solo se
     // promete donde el dato **ya existe** —el frontmatter del ticket, las filas
-    // que el motor proyecta para la pantalla, y el recibo de la compuerta—,
-    // nunca donde habría que inventar una segunda representación del texto que
-    // la herramienta ya devuelve.
+    // que el motor proyecta para la pantalla, el recibo de la compuerta y el de la
+    // corrida de la cascada—, nunca donde habría que inventar una segunda
+    // representación del texto que la herramienta ya devuelve. En la corrida el
+    // dato es la ruta del recibo y cuántas proposiciones escalaron: los dos los
+    // produce el motor, no el informe.
     const conEsquema = TOOLS.filter((t) => t.outputSchema !== undefined).map((t) => t.name);
     expect(conEsquema).toEqual([
       "ver_ticket",
       "listar_tickets",
       "reanudar_ticket",
       "evaluar_compuerta",
+      "cascada_verificada",
       "reporte_consumo",
       "revisar_drift",
       "reporte_valor",

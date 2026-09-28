@@ -87,6 +87,10 @@ import {
   usageReport,
   ticketsPath,
   transition,
+  CASCADE_TASK_IDS,
+  isCascadeTaskId,
+  renderCascadeTask,
+  runCascadeTask,
 } from "@valmen/engine";
 import { gateFor, gateById } from "@valmen/gate";
 import { architectRoutingFor, cascadeRoutingFor, gateRoutingFor } from "@valmen/adapter";
@@ -807,6 +811,62 @@ export const TOOLS: readonly ToolDefinition[] = [
         },
       },
       required: ["recibo"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "cascada_verificada",
+    annotations: GASTA,
+    title: "Correr una tarea de la cascada verificada",
+    description:
+      "Corre una tarea de la cascada verificada —el modelo barato produce, el " +
+      "verificador comprueba cada respuesta contra el mismo estado, y sólo lo no " +
+      "respaldado se vuelve a preguntar al modelo superior— y **no escribe el " +
+      "registro**: devuelve la propuesta con lo que la respalda y deja su recibo en " +
+      "`.valmen/cascada/`. Cuando la verificación respalda todo, el modelo caro no se " +
+      "llama, y eso es lo que el recibo deja ver.\\n\\n" +
+      "Las tareas son las de R-S1-002: `clasificacion` propone el tipo, el módulo y el " +
+      "riesgo de una solicitud (`solicitud`), y `exploracion` propone dónde buscar, qué " +
+      "ticket ya habla del tema y qué módulo toca (`pregunta`). Lo que el código puede " +
+      "decidir contra el registro —el módulo propuesto, el ticket propuesto— se decide " +
+      "ahí y no se le pregunta al verificador.\\n\\n" +
+      "Una propuesta no es un ticket: no concede permisos ni salta ninguna compuerta, y " +
+      "se registra con las herramientas de siempre.",
+    inputSchema: conRoot({
+      properties: {
+        tarea: {
+          type: "string",
+          description:
+            "Tarea a correr. `clasificacion` clasifica una solicitud; `exploracion` " +
+            "explora el registro para responder una pregunta.",
+          enum: CASCADE_TASK_IDS,
+        },
+        solicitud: {
+          type: "string",
+          description: "Lo que hay que clasificar (tarea `clasificacion`).",
+        },
+        pregunta: {
+          type: "string",
+          description: "Lo que hay que responder (tarea `exploracion`).",
+        },
+      },
+      required: ["tarea"],
+    }),
+    outputSchema: {
+      type: "object",
+      properties: {
+        recibo: {
+          type: "string",
+          description: "La ruta del recibo de la corrida, relativa a la raíz.",
+        },
+        escalamientos: {
+          type: "number",
+          description:
+            "Cuántas proposiciones volvieron al modelo superior. Cero significa que " +
+            "la verificación respaldó todo y el modelo caro no se llamó.",
+        },
+      },
+      required: ["recibo", "escalamientos"],
       additionalProperties: false,
     },
   },
@@ -2593,6 +2653,50 @@ export async function callTool(
             "qué valor; corrige el artefacto y vuelve a evaluar.",
           { recibo: ultimo === undefined ? null : { ...ultimo } },
         );
+      }
+
+      case "cascada_verificada": {
+        const brutaTarea = texto(args, "tarea");
+        if (!isCascadeTaskId(brutaTarea)) {
+          return mal(
+            `Tarea desconocida: ${String(brutaTarea)}. Use ${CASCADE_TASK_IDS.join(", ")}.`,
+          );
+        }
+        const solicitud = texto(args, "solicitud", false);
+        const pregunta = texto(args, "pregunta", false);
+        // La entrada de cada tarea es obligatoria, y decirlo acá evita una corrida
+        // que gaste tres llamadas para clasificar la nada.
+        if (brutaTarea === "clasificacion" && solicitud === undefined) {
+          return mal("La tarea `clasificacion` necesita `solicitud`: lo que hay que clasificar.");
+        }
+        if (brutaTarea === "exploracion" && pregunta === undefined) {
+          return mal("La tarea `exploracion` necesita `pregunta`: lo que hay que responder.");
+        }
+
+        // La cadena sale del routing del proyecto, igual que en la compuerta y en el
+        // CLI: si el MCP y el comando usaran modelos distintos, el recibo de una
+        // corrida no describiría la otra.
+        const chain = cascadeRoutingFor(paths.root);
+        const apiKey = apiKeyDe(contexto, chain.producer.provider);
+
+        const corrida = await runCascadeTask({
+          paths,
+          task: brutaTarea,
+          entrada: {
+            ...(solicitud === undefined ? {} : { solicitud }),
+            ...(pregunta === undefined ? {} : { pregunta }),
+          },
+          chain,
+          ...(apiKey === null ? {} : { apiKey }),
+          ...(contexto.judge === undefined ? {} : { judge: contexto.judge }),
+          ...(contexto.jev === undefined ? {} : { jev: contexto.jev }),
+          ...(contexto.now === undefined ? {} : { now: contexto.now }),
+        });
+
+        return bien(renderCascadeTask(corrida), {
+          recibo: corrida.recibo,
+          escalamientos: corrida.escalations.length,
+        });
       }
 
       case "simular_compuerta": {
