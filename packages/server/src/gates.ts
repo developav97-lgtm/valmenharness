@@ -43,6 +43,7 @@ import { cascadeRouting, gateRouting } from "./routing.js";
 import {
   type EvaluatorId,
   type RegistryPaths,
+  budgetRouting,
   appendEvent,
   appendReceipt,
   buildGateState,
@@ -369,11 +370,17 @@ export async function runTicketGate(
   // El modelo lo decide el routing del proyecto. Si el rol `gate-evaluator`
   // apunta a un modelo de chat, el evaluador semántico pasa a ser un juez —y el
   // recibo lo dirá—; si apunta a Jev, se mantienen las probabilidades.
-  const routing = gateRouting(paths.root);
+  // El presupuesto del ticket decide el preset de esta evaluación (R-S1-003), y la
+  // nota que lo explica viaja al recibo: la pantalla muestra el modelo que se usó y
+  // por qué, en vez de un modelo distinto sin explicación.
+  const presupuesto = budgetRouting(paths, ticketId);
+  const routing = gateRouting(paths.root, presupuesto.preset ?? undefined);
   // La cadena de la cascada, si el borde pidió ese evaluador: los tres roles se
   // resuelven donde se lee el routing, igual que en el CLI y en el MCP.
   const cascade =
-    request.evaluator === "cascade" ? cascadeRouting(paths.root) : undefined;
+    request.evaluator === "cascade"
+      ? cascadeRouting(paths.root, presupuesto.preset ?? undefined)
+      : undefined;
 
   // Se cuentan las líneas antes de evaluar. Sin esto, una evaluación que falla
   // devolvería **el recibo anterior** como si fuera el resultado: el identificador
@@ -407,6 +414,7 @@ export async function runTicketGate(
     ...(routing.evaluatorEffort === "auto" ? {} : { effort: routing.evaluatorEffort }),
     ...(routing.judgeModel === "" ? {} : { judgeModel: routing.judgeModel }),
     ...(cascade === undefined ? {} : { cascade }),
+    ...(presupuesto.note === null ? {} : { notes: [presupuesto.note] }),
   });
 
   const actual = await currentStateHash(paths, ticketId);

@@ -26,6 +26,7 @@ export * from "./provenance.js";
 export * from "./notify.js";
 export * from "./approval.js";
 export * from "./usage.js";
+export * from "./budget.js";
 export * from "./value.js";
 export * from "./tickets.js";
 export * from "./state.js";

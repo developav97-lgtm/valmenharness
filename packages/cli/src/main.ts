@@ -26,6 +26,7 @@ import { gateRoutingFor, cascadeRoutingFor } from "@valmen/adapter";
 import {
   type CommandResult,
   askCommand,
+  budgetCommand,
   buildIndex,
   calibrateReport,
   deliverManifest,
@@ -58,6 +59,7 @@ import {
   type RegistryPaths,
   CASCADE_TASK_IDS,
   EVALUATOR_IDS,
+  budgetRouting,
   choosePaths,
   isCascadeTaskId,
   isEvaluatorId,
@@ -154,6 +156,12 @@ Comandos:
                             Lo mismo, ticket por ticket: qué costó cada cierre, sus
                             compuertas, sus ciclos de QA y cuántas veces volvió atrás.
                             Ordenado por coste. --limite son las filas (20 por defecto).
+  budget [--tipo <TIPO>] [--id <ID>] [--avisar] [--check]
+                            El costo típico por tipo de ticket —la mediana de sus
+                            cierres— y los tres cortes del proyecto: aviso, degradación
+                            y pausa. Con --id dice dónde está esa corrida; --avisar
+                            manda el aviso del corte; --check sale con el código de
+                            invariante cuando el corte es la pausa.
   migrate [--dry-run]       Lleva el registro al esquema vigente y limpia del
                             routing los roles que el harness ya no ejecuta.
   sync [--check]            Proyecta .valmen/ a AGENTS.md.
@@ -355,6 +363,8 @@ export const VALUE_OPTIONS = [
   "--id",
   "--limit",
   "--evaluator",
+  // El tipo de ticket del informe de presupuestos.
+  "--tipo",
   // La corrida de la cascada: la tarea y su entrada.
   "--tarea",
   "--solicitud",
@@ -1107,6 +1117,8 @@ export function dispatch(options: Options): CommandResult {
       return memoryCommand(paths, { ...options.flags, _: resto.join(" ") }, verbo ?? "");
     }
 
+    case "budget":
+      return budgetCommand(paths, options.flags);
     case "drift":
       return driftCommand(paths, options.flags);
 
@@ -1507,11 +1519,19 @@ export async function run(argv: readonly string[]): Promise<number> {
         // el botón y el comando usaran modelos distintos, el recibo de una
         // aprobación no describiría la otra.
         const rutas = resolvePaths(options);
-        const routing = gateRoutingFor(rutas.root);
+        // El presupuesto del ticket decide con qué preset se evalúa esta compuerta
+        // (R-S1-003): uno que ya lleva el doble de lo típico de su tipo se evalúa
+        // con el preset barato en vez de seguir gastando en los caros, y el recibo
+        // lleva la nota que lo explica para que el modelo distinto no quede mudo.
+        const presupuesto = budgetRouting(rutas, ticketId);
+        const preset = presupuesto.preset === null ? {} : { preset: presupuesto.preset };
+        const routing = gateRoutingFor(rutas.root, preset);
         // La cascada necesita los tres roles, y su cadena se resuelve acá —donde
         // se lee el routing— para que el motor reciba los modelos ya decididos y
-        // el recibo registre los que de verdad se usaron.
-        const cascade = evaluator === "cascade" ? cascadeRoutingFor(rutas.root) : undefined;
+        // el recibo registre los que de verdad se usaron. Degradar el gate y no la
+        // cascada dejaría media evaluación con los modelos caros.
+        const cascade =
+          evaluator === "cascade" ? cascadeRoutingFor(rutas.root, preset) : undefined;
 
         // La credencial se resuelve aquí, en el borde, con el archivo que el
         // usuario indique. Sin `--credentials` es el del `$HOME`, que es lo normal
@@ -1550,6 +1570,7 @@ export async function run(argv: readonly string[]): Promise<number> {
             : { effort: routing.evaluatorEffort }),
           ...(routing.judgeModel === "" ? {} : { judgeModel: routing.judgeModel }),
           ...(cascade === undefined ? {} : { cascade }),
+          ...(presupuesto.note === null ? {} : { notes: [presupuesto.note] }),
         });
       }
     } else if (command === "cascada") {

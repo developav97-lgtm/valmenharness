@@ -32,7 +32,9 @@ import {
   applyBlueprint,
   blueprintsDir,
   listBlueprints,
+  parseConfig,
   parseRoutingTolerante,
+  readHermesConfig,
   profileProject,
   projectFiles,
   proposeConfig,
@@ -50,12 +52,15 @@ import {
 } from "@valmen/adapter";
 
 import {
+  type BudgetPolicy,
+  type CommandRunner,
   type LocatedTicket,
   type RegistryPaths,
   type ProcessRunState,
   type RunnerResult,
   type SimulationReport,
   type ResumeMode,
+  type TicketBudget,
   abandonRun,
   approveGate,
   buildManifest,
@@ -69,8 +74,14 @@ import {
   waitingRuns,
   requireProcess,
   runProcess,
+  budgetForTicket,
   chooseTicketsDir,
   closedTickets,
+  hermesSendChannel,
+  learnTypicalCosts,
+  readBudgetPolicy,
+  renderBudgetNotification,
+  renderBudgetReport,
   defaultReportRange,
   findAllTickets,
   filterReport,
@@ -2060,4 +2071,141 @@ export function calibrateReport(
     referencias,
   );
   return ok(renderCalibration(informe));
+}
+
+/**
+ * `budget`: el costo típico por tipo de ticket y dónde está esta corrida.
+ *
+ * Es de solo lectura salvo por `--avisar`, que es el único efecto: manda el aviso
+ * del corte por el canal de Hermes. Y existe `--check` porque el corte de pausa
+ * tiene que servir en una corrida desatendida: sale con el código de invariante para
+ * que quien lo invoque tenga de dónde parar, sin inventar un estado nuevo.
+ */
+export interface BudgetCommandOptions {
+  readonly now?: () => Date;
+  readonly policy?: BudgetPolicy;
+  readonly runner?: CommandRunner;
+}
+
+/** El destino del aviso, leído del archivo del proyecto. `null` si no hay ninguno. */
+function destinoDelAviso(root: string): { target: string; enabled: boolean } | null {
+  let texto: string;
+  try {
+    texto = readFileSync(join(root, ".valmen", "config.yaml"), "utf8");
+  } catch {
+    return null;
+  }
+  try {
+    const config = readHermesConfig(parseConfig(texto));
+    return { target: config.budgetTarget.trim(), enabled: config.enabled };
+  } catch {
+    // Un archivo ilegible no es un destino: no se manda, y el comando dice qué
+    // clave falta en vez de fallar entero por el puente.
+    return null;
+  }
+}
+
+/** El aviso del corte, si hay a dónde mandarlo. */
+function avisarCorte(
+  paths: RegistryPaths,
+  presupuesto: TicketBudget,
+  runner: CommandRunner | undefined,
+): string {
+  if (presupuesto.typicalUsd === null || presupuesto.tier === "within") {
+    return "\nNo se avisó: la corrida no alcanzó ningún corte del presupuesto.\n";
+  }
+
+  const destino = destinoDelAviso(paths.root);
+  if (destino === null || !destino.enabled || destino.target === "") {
+    return (
+      "\nNo se avisó: no hay destino declarado en hermes.notify.budget de " +
+      ".valmen/config.yaml, o el puente con Hermes está apagado.\n" +
+      "  Para que llegue al celular:\n" +
+      "    hermes:\n      enabled: true\n      notify:\n        budget: telegram\n"
+    );
+  }
+
+  const canal = hermesSendChannel({
+    target: destino.target,
+    ...(runner === undefined ? {} : { runner }),
+  });
+  const entrega = canal.notify(
+    renderBudgetNotification({
+      ticketId: presupuesto.ticketId,
+      title: presupuesto.title,
+      type: presupuesto.type,
+      costUsd: presupuesto.costUsd,
+      typicalUsd: presupuesto.typicalUsd,
+      multiple: presupuesto.multiple ?? 0,
+      tier: presupuesto.tier,
+      preset: presupuesto.preset,
+    }),
+  );
+
+  return entrega.delivered
+    ? `\nAvisado a ${destino.target}.\n  ${entrega.detail}\n`
+    : `\nNo se pudo avisar a ${destino.target}.\n  ${entrega.detail}\n`;
+}
+
+/** `budget`: el informe de típicos, o el de una corrida concreta. */
+export function budgetCommand(
+  paths: RegistryPaths,
+  flags: Readonly<Record<string, string | true>>,
+  options: BudgetCommandOptions = {},
+): CommandResult {
+  const ahora = options.now?.() ?? new Date();
+
+  let policy: BudgetPolicy;
+  try {
+    policy = options.policy ?? readBudgetPolicy(paths.root);
+  } catch (caught) {
+    return error(caught instanceof Error ? caught.message : String(caught));
+  }
+
+  const id = typeof flags["id"] === "string" ? flags["id"] : "";
+  const tipo = (typeof flags["tipo"] === "string" ? flags["tipo"] : "").toUpperCase();
+
+  let presupuesto: TicketBudget | null = null;
+  try {
+    if (id !== "") presupuesto = budgetForTicket(paths, id, policy, { now: ahora });
+  } catch (caught) {
+    return error(caught instanceof Error ? caught.message : String(caught));
+  }
+
+  const informe = learnTypicalCosts(paths, policy, { now: ahora });
+  const tipos =
+    tipo === ""
+      ? informe.types
+      : [
+          informe.types.find((entrada: { type: string }) => entrada.type === tipo) ?? {
+            type: tipo,
+            typicalUsd: null,
+            samples: 0,
+            reference: true,
+            minUsd: null,
+            maxUsd: null,
+          },
+        ];
+
+  let stdout = renderBudgetReport({
+    report: { ...informe, types: tipos },
+    policy,
+    assessment: presupuesto,
+  });
+  let exitCode = 0;
+
+  if (flags["check"] === true && presupuesto?.tier === "pause") {
+    exitCode = EXIT_INVARIANT;
+    stdout +=
+      "\nEl corte de pausa exige la decisión de una persona: esta corrida no sigue sin respuesta.\n";
+  }
+
+  if (flags["avisar"] === true) {
+    stdout +=
+      presupuesto === null
+        ? "\nNo se avisó: --avisar necesita --id para saber de qué ticket habla.\n"
+        : avisarCorte(paths, presupuesto, options.runner);
+  }
+
+  return { stdout, stderr: "", exitCode };
 }

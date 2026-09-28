@@ -442,6 +442,7 @@ describe("avisar de todo lo que espera una decisión", () => {
   const CONFIG = {
     enabled: true,
     gateTarget: "telegram",
+    budgetTarget: "",
     tokenHours: 24,
     allowedRisk: ["low", "normal"],
   };
@@ -572,6 +573,7 @@ describe("el parte", () => {
   const CONFIG = {
     enabled: true,
     gateTarget: "telegram",
+    budgetTarget: "",
     tokenHours: 24,
     allowedRisk: ["low", "normal"],
   };
@@ -679,6 +681,7 @@ describe("un proceso detenido", () => {
   const CONFIG = {
     enabled: true,
     gateTarget: "telegram",
+    budgetTarget: "",
     tokenHours: 24,
     allowedRisk: ["low", "normal"],
   };

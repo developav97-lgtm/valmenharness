@@ -99,6 +99,15 @@ export interface HermesConfig {
   readonly enabled: boolean;
   /** A dónde van los avisos de gate. Vacío significa que no se manda. */
   readonly gateTarget: string;
+  /**
+   * A dónde van los avisos de presupuesto, o vacío.
+   *
+   * Es un destino propio y no el del gate: un corte de presupuesto se lee mientras
+   * se trabaja —para decidir si se sigue—, y el del gate llega cuando algo ya se
+   * detuvo. Quien quiera los dos al mismo lugar repite el valor, y así el reparto se
+   * ve en el archivo en vez de quedar decidido por el harness.
+   */
+  readonly budgetTarget: string;
   /** Cuántas horas vale un token de aprobación. */
   readonly tokenHours: number;
   /** El techo de riesgo que se puede aprobar a distancia. */
@@ -126,6 +135,7 @@ export function readHermesConfig(config: ConfigMap): HermesConfig {
     // el default seguro, y el único que no manda mensajes sin que nadie lo pida.
     enabled: readString(hermes, "enabled", "false") === "true",
     gateTarget: readString(notify, "gate", ""),
+    budgetTarget: readString(notify, "budget", ""),
     tokenHours: horas,
     allowedRisk: readList(approval, "allowed-risk", ["low", "normal"]),
   };

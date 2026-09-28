@@ -361,6 +361,72 @@ export interface ProcessNotificationInput {
 }
 
 /**
+ * El aviso de un corte de presupuesto (R-S1-003).
+ *
+ * Existe porque un presupuesto que solo se ve cuando alguien abre el informe no
+ * avisa: lo que se quiere saber es que **esta** corrida se está yendo, mientras se
+ * está yendo. Los tres números van en el cuerpo —lo que costó, lo que suele costar y
+ * cuántas veces es— porque con dos de ellos la persona no puede juzgar si el gasto
+ * es razonable.
+ *
+ * Cuando el corte es la pausa, el mensaje **no resuelve**: pide la decisión. Un
+ * aviso que decidiera por su cuenta convertiría la pausa en un trámite.
+ */
+export interface BudgetNotificationInput {
+  readonly ticketId: string;
+  readonly title: string;
+  readonly type: string;
+  readonly costUsd: number;
+  readonly typicalUsd: number;
+  readonly multiple: number;
+  /** El corte alcanzado: `notify`, `degrade` o `pause`. */
+  readonly tier: string;
+  /** El preset al que se degrada el enrutado, si corresponde. */
+  readonly preset?: string | null;
+}
+
+/** El aviso de presupuesto, en el payload que el canal entrega. */
+export function renderBudgetNotification(input: BudgetNotificationInput): NotificationPayload {
+  const lineas = [
+    `💵 PRESUPUESTO · ${input.tier.toUpperCase()}`,
+    "",
+    `  ticket     ${input.ticketId}`,
+    `  ${input.title}`,
+    `  tipo       ${input.type}`,
+    "",
+    `  costo      $${input.costUsd.toFixed(4)}`,
+    `  típico     $${input.typicalUsd.toFixed(4)} del tipo ${input.type}`,
+    `  múltiplo   ${input.multiple.toFixed(1)}× lo típico`,
+    "",
+  ];
+
+  if (input.preset !== undefined && input.preset !== null) {
+    lineas.push(
+      `El enrutado de sus compuertas se degrada al preset ${input.preset}: lo que el`,
+      "harness ejecute para este ticket deja de usar los modelos caros, y el recibo",
+      "de cada evaluación lo declara.",
+      "",
+    );
+  }
+
+  if (input.tier === "pause") {
+    lineas.push(
+      "La decisión es tuya: la corrida se detiene y el harness no sigue gastando en",
+      "silencio, ni decide por vos que hay que parar.",
+      "",
+    );
+  }
+
+  return {
+    // El corte entra en la clave: pasar de «avisa» a «degrada» es un hecho nuevo, y
+    // el mismo corte no se avisa dos veces.
+    key: `budget:${input.ticketId}:${input.tier}`,
+    subject: `Presupuesto ${input.tier} · ${input.ticketId}`,
+    body: lineas.join("\n").trimEnd(),
+  };
+}
+
+/**
  * El mensaje de un proceso detenido en un gate.
  *
  * No lleva código, y la diferencia con el mensaje de un gate de ticket es el

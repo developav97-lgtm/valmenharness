@@ -550,9 +550,24 @@ export interface GateRouting {
   readonly source: RouteSource;
 }
 
-/** Resuelve el routing que usará un gate en este proyecto. */
-export function gateRoutingFor(root: string): GateRouting {
-  const rutas = resolveRouting(readProjectRouting(root));
+/**
+ * El enrutado del proyecto con otro preset.
+ *
+ * Existe para que el presupuesto pueda degradar el enrutado de **una** corrida sin
+ * escribir configuración: el preset se sustituye en memoria y los roles que el
+ * proyecto declaró a mano siguen ganando, porque degradar no es reescribir la
+ * configuración de nadie —es elegir un preset para esta evaluación—.
+ */
+function routingConPreset(routing: Routing, preset: string | undefined): Routing {
+  if (preset === undefined || preset === routing.preset) return routing;
+  return { preset, roles: routing.roles };
+}
+
+export function gateRoutingFor(
+  root: string,
+  options: { readonly preset?: string } = {},
+): GateRouting {
+  const rutas = resolveRouting(routingConPreset(readProjectRouting(root), options.preset));
   const evaluador = rutas.find((ruta) => ruta.role === "gate-evaluator");
   const juez = rutas.find((ruta) => ruta.role === "gate-judge");
 
@@ -633,8 +648,11 @@ export interface CascadeRouting {
 }
 
 /** Resuelve la cadena de la cascada, con el motivo cuando no se puede ejecutar. */
-export function cascadeRoutingFor(root: string): CascadeRouting {
-  const rutas = resolveRouting(readProjectRouting(root));
+export function cascadeRoutingFor(
+  root: string,
+  options: { readonly preset?: string } = {},
+): CascadeRouting {
+  const rutas = resolveRouting(routingConPreset(readProjectRouting(root), options.preset));
   const eslabon = (role: string): CascadeStep => {
     const ruta = rutas.find((candidato) => candidato.role === role);
     return {

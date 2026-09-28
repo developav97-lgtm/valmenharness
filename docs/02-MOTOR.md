@@ -537,6 +537,8 @@ valmen secrets [--staged]
 # Consumo
 valmen usage [--desde --hasta]
 valmen usage value [--desde --hasta] [--limite <n>]   # ticket por ticket
+valmen budget [--tipo <TIPO>] [--id <ID>] [--avisar] [--check]
+                                    # costo típico por tipo y los tres cortes
 
 # Servicios
 valmen serve [--port <n>]             # Mission Control en 127.0.0.1

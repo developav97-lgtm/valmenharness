@@ -61,6 +61,7 @@ import {
   loadMemory,
   addAiUsage,
   proposeStandard,
+  budgetRouting,
   renderProposals,
   standardsFiles,
   qaClose,
@@ -2599,12 +2600,17 @@ export async function callTool(
         // la misma resolución que hace Mission Control, porque una compuerta
         // evaluada con otro modelo según quién la pida no sería la misma
         // compuerta.
-        const routing = gateRoutingFor(paths.root);
+        // El presupuesto del ticket decide el preset con el que se evalúa (R-S1-003),
+        // y la nota del corte queda en el recibo: es la misma decisión que toman el
+        // CLI y la pantalla.
+        const presupuesto = budgetRouting(paths, id);
+        const preset = presupuesto.preset === null ? {} : { preset: presupuesto.preset };
+        const routing = gateRoutingFor(paths.root, preset);
         const apiKey = apiKeyDe(contexto, routing.evaluatorProvider);
         // La cascada suma los roles de ejecución: su cadena se resuelve donde se
         // lee el routing, igual que en el CLI y en la pantalla.
         const cascade =
-          evaluator === "cascade" ? cascadeRoutingFor(paths.root) : undefined;
+          evaluator === "cascade" ? cascadeRoutingFor(paths.root, preset) : undefined;
 
         const resultado = await runGate(paths, {
           gateId,
@@ -2624,6 +2630,7 @@ export async function callTool(
             : { effort: routing.evaluatorEffort }),
           ...(routing.judgeModel === "" ? {} : { judgeModel: routing.judgeModel }),
           ...(cascade === undefined ? {} : { cascade }),
+          ...(presupuesto.note === null ? {} : { notes: [presupuesto.note] }),
         });
 
         // El veredicto no cambia el estado del ticket —esa es la regla—, así que

@@ -101,6 +101,15 @@ export interface GateRunOptions {
    * exactamente los modelos que se usaron.
    */
   readonly cascade?: CascadeOptions;
+  /**
+   * Notas que quien llama quiere dejar en el recibo.
+   *
+   * Existen porque hay decisiones que no cambian el veredicto y sí explican el
+   * recibo: el corte de presupuesto degrada el preset de esta evaluación (R-S1-003),
+   * y sin la nota el recibo mostraría otro modelo sin decir por qué. Se anexan a las
+   * del análisis de forma de los criterios, que las calcula el gate.
+   */
+  readonly notes?: readonly string[];
   readonly now?: () => Date;
   readonly receiptId?: string;
 }
@@ -423,7 +432,10 @@ export async function runGate(
   // La causa probable de una banda de revisión, cuando la banda la causan los
   // criterios y no el plan. Se calcula acá y no dentro de `decide`: decidir es del
   // gate, y esto no decide — explica por qué el número salió así.
-  const notas = avisoDeForma(decision, criteria, gate.policy as GatePolicy);
+  const notas = [
+    ...(options.notes ?? []),
+    ...avisoDeForma(decision, criteria, gate.policy as GatePolicy),
+  ];
 
   const receipt = buildReceipt({
     id:

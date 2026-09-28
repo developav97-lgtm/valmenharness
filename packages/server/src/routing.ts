@@ -49,9 +49,16 @@ import { type ConfigDiffLine, diffLines } from "./config.js";
  */
 export { routingPath };
 
-/** Los modelos que usará un gate en este proyecto. */
-export function gateRouting(root: string): GateRouting {
-  return gateRoutingFor(root);
+/**
+ * Los modelos que usará un gate en este proyecto.
+ *
+ * `preset` existe para el presupuesto (R-S1-003): un ticket que lleva el doble de lo
+ * típico de su tipo se evalúa con el preset barato, y eso tiene que valer igual desde
+ * la pantalla que desde el CLI —una compuerta evaluada con otro modelo según quién la
+ * pida no sería la misma compuerta—.
+ */
+export function gateRouting(root: string, preset?: string): GateRouting {
+  return gateRoutingFor(root, preset === undefined ? {} : { preset });
 }
 
 /**
@@ -62,8 +69,8 @@ export function gateRouting(root: string): GateRouting {
  * `reason` no nulo es lo que viaja al motor para que rechace la corrida antes de
  * gastarla, en vez de escalar a donde ya se preguntó.
  */
-export function cascadeRouting(root: string): CascadeRouting {
-  return cascadeRoutingFor(root);
+export function cascadeRouting(root: string, preset?: string): CascadeRouting {
+  return cascadeRoutingFor(root, preset === undefined ? {} : { preset });
 }
 
 /** El texto guardado, o `""` si el proyecto no declara routing. */

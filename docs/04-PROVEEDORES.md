@@ -370,19 +370,43 @@ y mide el tamaño del input, y elige dentro del rango que el rol permite.
 
 ## 6. Control de costo
 
-### 6.1 Presupuesto por unidad de trabajo
+### 6.1 Presupuesto adaptativo por tipo de ticket
+
+**Implementado** (`IMPROVEMENT-ENGINE-PRESUPUESTOS-ADAPTATIVOS-20260926`, R-S1-003). El
+presupuesto no se declara como un monto absoluto: se **aprende** de los cierres del registro.
+El costo típico de un tipo de ticket es la **mediana** de lo que costaron sus cierres —sus
+sesiones más los recibos de sus compuertas—, y los cierres con una sesión sin costo quedan
+fuera, para no contar como cero lo que no se midió.
 
 ```yaml
 budgets:
-  per_ticket:    { soft: 2.00, hard: 8.00, currency: USD }
-  per_feature:   { soft: 15.00, hard: 60.00 }
-  per_day:       { soft: 20.00, hard: 80.00, action: notify }
-  per_gate_call: { hard: 0.05 }
+  adaptive:
+    enabled: false           # las acciones nacen apagadas: consultar no cuesta nada
+    min-samples: 3           # por debajo, el típico se declara como referencia y no corta
+    learn-from-days: 90      # la ventana de aprendizaje, sobre la fecha de cierre
+    multipliers: { notify: 1.5, degrade: 2, pause: 3 }
+    degrade-preset: economy  # el preset al que baja el enrutado cuando el corte degrada
 ```
 
-Al cruzar el `soft`, el sistema avisa y **sugiere degradar** el routing de los roles de
-ejecución. Al cruzar el `hard`, **para el trabajo automático** y pasa el ticket a
-`awaiting_user_tests` con el motivo registrado. Nunca sigue gastando en silencio.
+`valmen budget` declara los típicos por tipo y, con `--id`, dónde está esa corrida. Los tres
+cortes son multiplicadores sobre el típico: a 1.5× el sistema **avisa** (`--avisar` lo manda
+por el puente de Hermes al destino `hermes.notify.budget`), a 2× **degrada** el enrutado de
+las compuertas de ese ticket —al preset de `degrade-preset`, con la nota que lo explica
+escrita en el recibo—, y a 3× **consulta**: la corrida se detiene y la decisión es de una
+persona, con `--check` saliendo por el código de invariante para que quien ejecute
+desatendido tenga de dónde parar. Nunca sigue gastando en silencio, y tampoco decide por su
+cuenta cuando el corte pide una persona.
+
+Un típico sostenido por menos cierres que `min-samples` es una **referencia**: se declara y
+no se usa como umbral, porque un corte calculado sobre una anécdota degradaría el enrutado
+por casualidad. Y sin cierres del tipo no hay típico —se dice «sin cierres», no un típico de
+cero—, así que un tipo de trabajo nuevo no arrastra el umbral de otro.
+
+> **No implementado.** Los techos **absolutos** por unidad de trabajo —`per_ticket`,
+> `per_feature`, `per_day`, `per_gate_call`— y la parada automática al cruzar el `hard`:
+> detener la ejecución es R-S5-005 (`SECURITY-ENGINE-PARADA-SEGURA-20260926`), que depende del
+> ticket que implementó los cortes. Hasta entonces el corte de pausa consulta y deja el
+> código de salida, que es lo que una corrida desatendida mira para parar.
 
 ### 6.2 Trazabilidad de consumo
 
