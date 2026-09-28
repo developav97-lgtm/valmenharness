@@ -33,6 +33,14 @@ export interface DetectedDependency {
   readonly source: string;
 }
 
+/** Un comando de verificación que el stack del proyecto respalda. */
+export interface DetectedTestCommand {
+  /** El comando tal como se declara en `test-commands`. */
+  readonly command: string;
+  /** El archivo que lo respalda, para que el informe diga por qué está ahí. */
+  readonly evidence: string;
+}
+
 /** Configuración agéntica preexistente que la adopción **no** toca. */
 export interface LegacyConfig {
   readonly path: string;
@@ -47,6 +55,8 @@ export interface ProjectProfile {
   readonly detectedFiles: readonly DetectedFile[];
   readonly dependencies: readonly DetectedDependency[];
   readonly legacyConfigs: readonly LegacyConfig[];
+  /** Comandos de verificación que el stack respalda, con su evidencia. */
+  readonly testCommands: readonly DetectedTestCommand[];
   /** Capacidades detectadas, para el resumen. */
   readonly capabilities: readonly string[];
 }
@@ -248,10 +258,100 @@ export function detectLegacyConfigs(root: string): LegacyConfig[] {
   return found;
 }
 
+/**
+ * Los directorios donde se buscan manifiestos, sin repetir el mismo.
+ *
+ * En macOS y Windows `BackEnd` y `backend` resuelven al mismo directorio: sin
+ * comparar el inodo, cada comando se detectaría dos veces.
+ */
+function manifestDirs(root: string): { relative: string; absolute: string }[] {
+  const found: { relative: string; absolute: string }[] = [];
+  const seen = new Set<string>();
+
+  for (const directory of MANIFEST_DIRS) {
+    const absolute = directory === "" ? root : join(root, directory);
+    if (!existsSync(absolute)) continue;
+
+    let identity: string;
+    try {
+      identity = statSync(absolute).ino.toString();
+    } catch {
+      identity = absolute;
+    }
+    if (seen.has(identity)) continue;
+    seen.add(identity);
+    found.push({ relative: directory, absolute });
+  }
+
+  return found;
+}
+
+/**
+ * Los comandos de verificación que el stack del proyecto respalda.
+ *
+ * Solo se declara un comando que se pueda señalar en disco. El gate ejecuta lo
+ * que un criterio de ticket declare y no revisa más que el prefijo, así que una
+ * lista de comandos típicos por stack autorizaría a correr algo que el proyecto
+ * no tiene —y el criterio fallaría por eso, no por el cambio—. Cada entrada dice
+ * de qué archivo salió, para que el informe lo muestre y la persona pueda
+ * quitar la que no corresponda.
+ */
+export function detectTestCommands(root: string): DetectedTestCommand[] {
+  const found: DetectedTestCommand[] = [];
+  const seen = new Set<string>();
+
+  const declare = (command: string, evidence: string): void => {
+    if (seen.has(command)) return;
+    seen.add(command);
+    found.push({ command, evidence });
+  };
+
+  for (const { relative, absolute } of manifestDirs(root)) {
+    const inside = (name: string): string => (relative === "" ? name : `${relative}/${name}`);
+
+    if (existsSync(join(absolute, "manage.py"))) {
+      declare(`python ${inside("manage.py")} test`, inside("manage.py"));
+    }
+
+    const requirements = readOrNull(join(absolute, "requirements.txt"));
+    const pyproject = readOrNull(join(absolute, "pyproject.toml"));
+    if (pyproject !== null && pyproject.includes("[tool.pytest.ini_options]")) {
+      declare("pytest", inside("pyproject.toml"));
+    } else if (requirements !== null && /^pytest\b/im.test(requirements)) {
+      declare("pytest", inside("requirements.txt"));
+    }
+
+    const packageJson = readOrNull(join(absolute, "package.json"));
+    if (packageJson === null) continue;
+
+    const names = new Set<string>();
+    try {
+      const data = JSON.parse(packageJson) as Record<string, unknown>;
+      for (const section of ["dependencies", "devDependencies"]) {
+        const dependencies = data[section];
+        if (typeof dependencies !== "object" || dependencies === null) continue;
+        for (const name of Object.keys(dependencies as Record<string, unknown>)) {
+          names.add(name.toLowerCase());
+        }
+      }
+    } catch {
+      // Un `package.json` ilegible no aporta nada y no debe abortar la adopción,
+      // igual que en el perfil del proyecto.
+      continue;
+    }
+
+    if (names.has("vitest")) declare("npx vitest run", inside("package.json"));
+    if (names.has("jest")) declare("npx jest", inside("package.json"));
+  }
+
+  return found;
+}
+
 /** Construye el perfil del proyecto. */
 export function profileProject(root: string, name: string): ProjectProfile {
   const { files, dependencies } = detectFiles(root);
   const legacyConfigs = detectLegacyConfigs(root);
+  const testCommands = detectTestCommands(root);
 
   const capabilities: string[] = [];
   if (
@@ -277,6 +377,7 @@ export function profileProject(root: string, name: string): ProjectProfile {
     detectedFiles: files,
     dependencies,
     legacyConfigs,
+    testCommands,
     capabilities,
   };
 }
@@ -323,6 +424,43 @@ export function proposeConfig(profile: ProjectProfile, ticketsDir: string): stri
     "# con evidencia, no al adoptar.",
     "gates: []",
     "",
+  );
+
+  // Sin esta lista, el primer ticket del proyecto adoptado se detiene en el gate
+  // mecánico en cuanto un criterio declara su test: el comando sale del ticket y
+  // no hay nada que lo autorice. Los comandos salen de lo que se pudo señalar en
+  // disco, y el informe de la adopción dice de dónde salió cada uno.
+  lines.push(
+    "# Los comandos que el gate mecánico puede ejecutar como verificación.",
+    "#",
+    "# Los criterios de un ticket declaran su test (`<!-- test: … -->`), y el comando",
+    "# sale del ticket —que lo escribe quien el gate tiene que controlar—, así que solo",
+    "# se ejecuta lo que empiece con uno de estos prefijos.",
+  );
+
+  if (profile.testCommands.length === 0) {
+    lines.push(
+      "#",
+      "# No se detectó ninguno: agréguelos aquí cuando el proyecto los tenga.",
+      "test-commands: []",
+      "",
+    );
+  } else {
+    lines.push(
+      "#",
+      "# Detectados en el stack, con su evidencia. Revise y quite lo que no corresponda:",
+    );
+    for (const detected of profile.testCommands) {
+      lines.push(`#   ${detected.evidence}  →  ${detected.command}`);
+    }
+    lines.push("test-commands:");
+    for (const detected of profile.testCommands) {
+      lines.push(`  - ${detected.command}`);
+    }
+    lines.push("");
+  }
+
+  lines.push(
     "# Modelos que este proyecto quiere tener a mano en el selector, por proveedor.",
     "#",
     "# Hace falta para los proveedores que no publican su catálogo —codex no lo",

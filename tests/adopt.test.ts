@@ -22,6 +22,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
   detectLegacyConfigs,
+  extractRules,
   parseConfig,
   profileProject,
   proposeConfig,
@@ -242,5 +243,165 @@ describe("comando adopt", () => {
     expect(generated).not.toContain("## Gates configurados");
     // Con registro declarado, sí se anuncia.
     expect(generated).toContain("## Registro de trabajo");
+  });
+});
+
+describe("comandos de prueba detectados del stack", () => {
+  it("declara lo que el disco respalda, con la evidencia de cada uno", () => {
+    write("BackEnd/requirements.txt", "Django==5.2.1\npytest==8.0.0\n");
+    write("BackEnd/manage.py", "#!/usr/bin/env python\n");
+    write(
+      "FrontEnd/package.json",
+      JSON.stringify({ devDependencies: { vitest: "^2.1.8" } }),
+    );
+
+    const profile = profileProject(lab, "Demo");
+    expect(profile.testCommands.map((uno) => uno.command)).toEqual([
+      "python BackEnd/manage.py test",
+      "pytest",
+      "npx vitest run",
+    ]);
+    expect(profile.testCommands[0]?.evidence).toBe("BackEnd/manage.py");
+  });
+
+  it("no declara ningún comando que el disco no respalde", () => {
+    // Un stack sin runner de pruebas no autoriza nada: declarar comandos típicos
+    // haría que el gate ejecutara algo que el proyecto no tiene.
+    write(
+      "FrontEnd/package.json",
+      JSON.stringify({ dependencies: { "@angular/core": "^14.3.0" } }),
+    );
+    expect(profileProject(lab, "Demo").testCommands).toEqual([]);
+  });
+
+  it("el documento propuesto declara los comandos y el parser del motor los lee", () => {
+    write("BackEnd/requirements.txt", "Django==5.2.1\n");
+    write("BackEnd/manage.py", "#!/usr/bin/env python\n");
+
+    const config = parseConfig(proposeConfig(profileProject(lab, "Demo"), "tickets"));
+    expect(readList(config, "test-commands", [])).toEqual(["python BackEnd/manage.py test"]);
+  });
+
+  it("sin comandos detectados la lista queda vacía, no como el texto «[]»", () => {
+    const config = parseConfig(proposeConfig(profileProject(lab, "Demo"), "tickets"));
+    expect(readList(config, "test-commands", ["nada"])).toEqual([]);
+  });
+});
+
+describe("extracción de las reglas del AGENTS.md previo", () => {
+  /** El caso real: título, preámbulo, secciones y un ejemplo cercado. */
+  const previo = [
+    "# crm-valment",
+    "",
+    "Sistema de gestión con backend Django.",
+    "",
+    "## Stack",
+    "",
+    "Django 5.2 y Angular 14.",
+    "",
+    "```bash",
+    "## esto no es una sección",
+    "valmen sync",
+    "```",
+    "",
+    "## Invariantes",
+    "",
+    "El saldo no se edita a mano.",
+    "",
+  ].join("\n");
+
+  it("una sección de nivel 2 por archivo, con su título y su cuerpo", () => {
+    write("AGENTS.md", previo);
+    const extraccion = extractRules(lab);
+
+    expect(extraccion.source).toBe("AGENTS.md");
+    expect(extraccion.files.map((uno) => uno.path)).toEqual([
+      ".valmen/rules/crm-valment.md",
+      ".valmen/rules/stack.md",
+      ".valmen/rules/invariantes.md",
+    ]);
+
+    const stack = extraccion.files.find((uno) => uno.path === ".valmen/rules/stack.md");
+    expect(stack?.content).toContain("# Stack");
+    expect(stack?.content).toContain("Django 5.2 y Angular 14.");
+  });
+
+  it("un encabezado dentro de un cerco no abre una sección nueva", () => {
+    write("AGENTS.md", previo);
+    const extraccion = extractRules(lab);
+
+    const stack = extraccion.files.find((uno) => uno.path === ".valmen/rules/stack.md");
+    // El ejemplo viaja entero dentro de su sección: partirlo perdería el bloque.
+    expect(stack?.content).toContain("## esto no es una sección");
+    expect(stack?.content).toContain("valmen sync");
+    expect(extraccion.files.some((uno) => uno.path.includes("esto-no-es"))).toBe(false);
+  });
+
+  it("no pisa una regla preexistente y la informa como salteada", () => {
+    write("AGENTS.md", previo);
+    write(".valmen/rules/stack.md", "# Stack\n\nLo que el proyecto ya decidió.\n");
+
+    const extraccion = extractRules(lab);
+    expect(extraccion.skipped.map((uno) => uno.path)).toEqual([".valmen/rules/stack.md"]);
+    expect(extraccion.files.some((uno) => uno.path === ".valmen/rules/stack.md")).toBe(false);
+  });
+
+  it("un AGENTS.md ya generado por el harness no aporta reglas", () => {
+    // Sus reglas ya viven en `.valmen/rules/`: extraerlas de nuevo duplicaría el
+    // flujo de trabajo del harness dentro de las reglas del proyecto.
+    write(
+      "AGENTS.md",
+      "<!-- GENERADO POR valmen — NO EDITAR A MANO -->\n\n# Demo\n\n## Flujo de trabajo\n\n…\n",
+    );
+    expect(extractRules(lab).files).toEqual([]);
+  });
+
+  it("sin AGENTS.md previo no hay nada que extraer", () => {
+    const extraccion = extractRules(lab);
+    expect(extraccion.source).toBeNull();
+    expect(extraccion.files).toEqual([]);
+  });
+});
+
+describe("adopt con reglas y comandos del stack", () => {
+  it("deja las reglas extraídas en .valmen/rules/ sin tocar el AGENTS.md", () => {
+    scaffoldRealProject();
+    write("BackEnd/manage.py", "#!/usr/bin/env python\n");
+    const agents = "# Demo\n\n## Stack\n\nDjango.\n";
+    write("AGENTS.md", agents);
+
+    const result = adoptProject(lab, "Demo");
+    expect(result.exitCode).toBe(0);
+    expect(readFileSync(join(lab, ".valmen", "rules", "stack.md"), "utf8")).toContain(
+      "Django.",
+    );
+    expect(readFileSync(join(lab, "AGENTS.md"), "utf8")).toBe(agents);
+    expect(result.stdout).toContain(".valmen/rules/stack.md");
+  });
+
+  it("sugiere la plantilla cuando el stack coincide", () => {
+    write("BackEnd/requirements.txt", "Django==5.2.1\n");
+    write("BackEnd/manage.py", "#!/usr/bin/env python\n");
+    write("FrontEnd/angular.json", "{}\n");
+
+    expect(adoptProject(lab, "Demo").stdout).toContain("django-angular-multitenant");
+  });
+
+  it("con --dry-run informa las reglas pero no las escribe", () => {
+    write("AGENTS.md", "# Demo\n\n## Stack\n\nDjango.\n");
+
+    const result = adoptProject(lab, "Demo", { dryRun: true });
+    expect(result.stdout).toContain(".valmen/rules/stack.md");
+    expect(existsSync(join(lab, ".valmen"))).toBe(false);
+  });
+
+  it("adopt y luego sync devuelven la sección extraída al AGENTS.md", () => {
+    write("AGENTS.md", "# Demo\n\n## Stack\n\nDjango 5.2.\n");
+    adoptProject(lab, "Demo");
+    expect(syncProject(lab, "Demo", false).exitCode).toBe(0);
+
+    const generado = readFileSync(join(lab, "AGENTS.md"), "utf8");
+    expect(generado).toContain("## Stack");
+    expect(generado).toContain("Django 5.2.");
   });
 });

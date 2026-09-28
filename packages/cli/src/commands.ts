@@ -31,7 +31,9 @@ import {
   adoptPlan,
   applyBlueprint,
   blueprintsDir,
+  extractRules,
   listBlueprints,
+  renderRuleExtraction,
   parseConfig,
   parseRoutingTolerante,
   readHermesConfig,
@@ -870,6 +872,7 @@ export function adoptProject(
   const plan = adoptPlan(root);
   const config = proposeConfig(profile, ticketsDir);
   const alreadyAdopted = existsSync(plan.configPath);
+  const extraccion = extractRules(root);
 
   const lines: string[] = [
     dryRun ? "Adopción (simulación)" : "Adopción",
@@ -938,6 +941,22 @@ export function adoptProject(
 
   lines.push("", "Se creará:", `  ${relative(root, plan.configPath)}`);
 
+  // Las reglas del AGENTS.md previo se extraen antes de decidir si se escribe la
+  // configuración: es el paso que evita que `valmen sync` —el que el propio
+  // `adopt` indica como siguiente— recomponga el documento sin las reglas que el
+  // proyecto ya tenía escritas.
+  if (extraccion.source !== null || extraccion.note !== null) {
+    lines.push("", ...renderRuleExtraction(extraccion));
+  }
+
+  if (!dryRun) {
+    for (const file of extraccion.files) {
+      const destino = join(root, file.path);
+      mkdirSync(dirname(destino), { recursive: true });
+      atomicWrite(destino, file.content);
+    }
+  }
+
   if (alreadyAdopted) {
     lines.push(
       "",
@@ -989,8 +1008,15 @@ export function adoptProject(
   if (existsSync(plan.agentsPath)) {
     lines.push(
       "",
-      "  Existe un AGENTS.md previo. `valmen sync` lo reemplazará por el generado,",
-      "  así que conserve su contenido en .valmen/rules/ antes de sincronizar.",
+      "  Existe un AGENTS.md previo. `valmen sync` lo reemplazará por el generado:",
+      extraccion.files.length > 0
+        ? "  su contenido ya quedó en .valmen/rules/, así que el documento nuevo lo vuelve"
+        : "  no había reglas propias que preservar de él, así que el documento nuevo lo",
+    );
+    lines.push(
+      extraccion.files.length > 0
+        ? "  a incluir."
+        : "  reemplaza sin perder nada.",
     );
   }
 

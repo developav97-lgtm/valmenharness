@@ -12,6 +12,7 @@ export * from "./templates.js";
 export * from "./project.js";
 export * from "./projection.js";
 export * from "./adopt.js";
+export * from "./adopt-rules.js";
 export * from "./routing.js";
 export * from "./agents.js";
 export * from "./skills.js";
