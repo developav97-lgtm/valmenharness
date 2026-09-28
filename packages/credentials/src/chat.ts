@@ -26,6 +26,18 @@ import {
   transportById,
 } from "./endpoints.js";
 
+/**
+ * Lo que se espera a que el proveedor conteste, en milisegundos.
+ *
+ * Eran 90 s. Una respuesta que razona sobre un estado grande —el plan de un
+ * ticket con veinte criterios, un juicio con trece proposiciones— no entra en
+ * ese presupuesto y la llamada moría por tiempo, no por error del modelo. El
+ * tope no está para acelerar sino para no quedarse colgado, y quien dispara la
+ * llamada puede seguir poniendo el suyo: `timeoutMs` manda cuando viene. El caso
+ * medido está en `docs/parte-diario-20260927.md`.
+ */
+const TIMEOUT_LLAMADA_MS = 180_000;
+
 /** Un mensaje del historial. */
 export interface ChatMessage {
   readonly role: "system" | "user" | "assistant";
@@ -192,7 +204,7 @@ export async function callChat(options: ChatOptions): Promise<ChatResult> {
         messages: options.messages,
         maxTokens: options.maxTokens,
         effort: options.effort,
-        signal: options.signal ?? AbortSignal.timeout(options.timeoutMs ?? 90_000),
+        signal: options.signal ?? AbortSignal.timeout(options.timeoutMs ?? TIMEOUT_LLAMADA_MS),
       },
       fetchImpl,
     );
@@ -214,7 +226,7 @@ export async function callChat(options: ChatOptions): Promise<ChatResult> {
         maxTokens: options.maxTokens,
         temperature: options.temperature,
         structured: options.structured,
-        signal: options.signal ?? AbortSignal.timeout(options.timeoutMs ?? 90_000),
+        signal: options.signal ?? AbortSignal.timeout(options.timeoutMs ?? TIMEOUT_LLAMADA_MS),
       },
       fetchImpl,
     );
@@ -278,14 +290,14 @@ export async function callChat(options: ChatOptions): Promise<ChatResult> {
                 },
               }),
       }),
-      signal: options.signal ?? AbortSignal.timeout(options.timeoutMs ?? 90_000),
+      signal: options.signal ?? AbortSignal.timeout(options.timeoutMs ?? TIMEOUT_LLAMADA_MS),
     });
   } catch (caught) {
     const detail = caught instanceof Error ? caught.message : String(caught);
     const esTimeout = /abort|timeout/i.test(detail);
     throw new ChatError(
       esTimeout
-        ? `La llamada a ${proveedor} superó el tiempo máximo de ${options.timeoutMs ?? 90_000} ms.`
+        ? `La llamada a ${proveedor} superó el tiempo máximo de ${options.timeoutMs ?? TIMEOUT_LLAMADA_MS} ms.`
         : `Fallo de transporte al llamar a ${proveedor}: ${detail}`,
       esTimeout ? "TIMEOUT" : "TRANSPORT",
     );

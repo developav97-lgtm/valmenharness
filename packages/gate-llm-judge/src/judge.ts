@@ -54,6 +54,20 @@ export const CHAT_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
  */
 export const DEFAULT_JUDGE_MODEL = "deepseek/deepseek-v4-flash";
 
+/**
+ * Lo que se espera a que el juez conteste, en milisegundos.
+ *
+ * Eran 90 s, y con un artefacto grande no alcanzan: una cascada con trece
+ * proposiciones murió dos veces en ese tope y el gate cayó al evaluador barato,
+ * que devolvió `REVIEW` sobre un plan que estaba bien. Un juicio que razona
+ * sobre el estado entero tarda, y el tope no está para acelerarlo sino para no
+ * quedarse colgado: tres minutos siguen siendo una espera acotada, y el tope
+ * real de una corrida lo sigue poniendo quien la dispara —`timeoutMs` manda
+ * cuando viene—. El caso medido está en
+ * `docs/parte-diario-20260927.md`.
+ */
+export const TIMEOUT_JUEZ_MS = 180_000;
+
 /** Error de comunicación con el evaluador. */
 export class JudgeError extends Error {
   readonly code: string;
@@ -364,7 +378,7 @@ export async function evaluateWithJudge(options: JudgeOptions): Promise<JudgeEva
               },
             }),
       }),
-      signal: options.signal ?? AbortSignal.timeout(options.timeoutMs ?? 90_000),
+      signal: options.signal ?? AbortSignal.timeout(options.timeoutMs ?? TIMEOUT_JUEZ_MS),
     });
   } catch (caught) {
     const detail = caught instanceof Error ? caught.message : String(caught);
@@ -374,7 +388,7 @@ export async function evaluateWithJudge(options: JudgeOptions): Promise<JudgeEva
     // El mensaje nunca incluye cabeceras: llevan la credencial.
     throw new JudgeError(
       esTimeout
-        ? `El juez superó el tiempo máximo de ${options.timeoutMs ?? 90_000} ms.`
+        ? `El juez superó el tiempo máximo de ${options.timeoutMs ?? TIMEOUT_JUEZ_MS} ms.`
         : `Fallo de transporte: ${detail}`,
       esTimeout ? "TIMEOUT" : "TRANSPORT",
     );
@@ -391,7 +405,7 @@ export async function evaluateWithJudge(options: JudgeOptions): Promise<JudgeEva
     const esTimeout = /abort|timeout/i.test(detail);
     throw new JudgeError(
       esTimeout
-        ? `El juez superó el tiempo máximo de ${options.timeoutMs ?? 90_000} ms mientras se leía la respuesta.`
+        ? `El juez superó el tiempo máximo de ${options.timeoutMs ?? TIMEOUT_JUEZ_MS} ms mientras se leía la respuesta.`
         : `Fallo al leer la respuesta: ${detail}`,
       esTimeout ? "TIMEOUT" : "TRANSPORT",
     );
