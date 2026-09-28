@@ -110,6 +110,17 @@ no (commit, push, PR, tag ni despliegue). Si el PO delega el QA, el cierre se re
 **aprobación delegada** citando su frase; nunca se escribe como palabras suyas algo que no
 dijo.
 
+La aprobación delegada de una compuerta **se registra, no se escribe sólo en prosa**: la
+línea del plan es lo que el motor exige para mover el ticket, y el `valmen gate-decide --id
+<ID> --receipt <GR-…> --decision approve --actor "<nombre> (delegación, <fecha>)" --reason
+"<qué quedó en banda y por qué se recomienda>"` es lo que deja la decisión en el recibo. Sin
+ese registro el recibo queda con la decisión en blanco: el registro sigue contando esa
+compuerta como esperando a una persona —en un ticket ya cerrado— y el relé de Hermes la
+vuelve a avisar. El motor no lo exige para avanzar (sólo `qa-mechanical` bloquea una
+transición), así que un eslabón que aprueba «en prosa» avanza igual y deja el hueco: por eso
+lo pide la plantilla, y por eso el recibo **no se puede re-decidir** después (responde «ya
+tiene una decisión humana registrada»): la primera vez es la que vale.
+
 ## Cómo se corre
 
 ```bash
@@ -131,6 +142,17 @@ node scripts/programar-tickets.mjs \
   la tabla sin crear nada. Se leen los prompts antes de agendar. Ese directorio —por defecto
   `.valmen/programar/` del proyecto— es derivado y se agrega al `.gitignore` del proyecto: los
   prompts contienen la autorización citada y se regeneran al programar la tanda siguiente.
+- **A una tanda ya agendada no se le aplica la forma nueva volviéndola a programar.** El
+  script **crea** jobs (`hermes cron create`): correrlo otra vez —con `--tickets` o sin él—
+  deja los jobs viejos agendados y suma los nuevos, y cada ticket corre dos veces. Lo que
+  corresponde es regenerar en seco (`--dry-run --tickets <los ids, en orden> --salida <dir>`) y
+  editar los jobs que ya existen con su prompt nuevo:
+  `hermes -p <perfil> cron edit <job_id> --prompt "$(cat <dir>/eslabon-<n>-<ID>.txt)"`. Antes
+  de editar, respaldá el `jobs.json` del perfil y los prompts agendados; al terminar, compará
+  campo por campo que el horario, el `deliver`, las `skills`, el `workdir` y el
+  `attach_to_session` quedaron iguales y que **sólo** cambió el prompt. Los avisos de arranque
+  no se tocan. Y copiá los prompts nuevos sobre la copia del proyecto (`.valmen/programar/`) o
+  quedan describiendo una tanda que ya no es la agendada.
 - De qué sale cada dato: el nombre del proyecto y los comandos de prueba de
   `.valmen/config.yaml`; el servidor MCP del perfil; la ruta del ticket y la de la feature
   del registro; el resumen, del título y de los `R-*` que el ticket cita. Lo que no se puede
