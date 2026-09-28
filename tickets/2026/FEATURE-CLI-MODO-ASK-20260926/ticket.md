@@ -633,6 +633,15 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: qa_approved -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-09-27",
+    "at": "2026-09-28T02:33:11.829Z",
+    "action": "gate-approved",
+    "actor": "cli",
+    "details": "Gate plan aprobado por Delegacion del PO (Juan Andrade 2026-09-26): Aprobacion DELEGADA, la que el propio plan del ticket ya declara. Sus palabras del 2026-09-26: «si el analisis pasa las compuertas te doy la libertad de aprobarlo, al igual que con el plan si el plan pasa la compuerta y te parece que el plan cumple tienes la potestad de aprobar». La compuerta quedo en REVIEW con dos proposiciones de criterio en 0.89 sobre el caso de control fuera; el alcance, los archivos y el rollback salieron en verde. El registro de la decision lo confirmo el PO el 2026-09-27 con sus palabras: «Si apruebo ambas cosas recuerda que hay algo para la generacion de los eslabones entonces si toca se deben actualizar para que no siga pasando y luego haces commit y push». Se registra para que el recibo no siga contando como esperando la decision de una persona en un ticket ya cerrado."
   }
 ]
 ```

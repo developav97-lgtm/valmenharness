@@ -666,6 +666,24 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: qa_approved -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-09-27",
+    "at": "2026-09-28T02:33:11.574Z",
+    "action": "gate-approved",
+    "actor": "cli",
+    "details": "Gate analysis aprobado por Delegacion del PO (Juan Andrade 2026-09-27): Aprobacion DELEGADA. La tanda se autorizo el 2026-09-27 con las palabras del PO: «�, cuyo alcance declaro el programador de la tanda como aprobar analysis plan y QA; y el PO confirmo el registro de estas decisiones con sus palabras del mismo dia: «�. La compuerta quedo en REVIEW con diagnostico_explica_el_sintoma=0.88, nombra_archivos_reales=0.89 y riesgos_cubren_impactos=0.51, con causa_especifica=0.95 y clasificacion completa; el ticket declara sin impactos con su motivo, que es el caso conocido en que esa proposicion no tiene de que agarrarse. No hay alcance mal fijado ni riesgo sin mitigacion. Se aprueba para que el recibo no siga contando como esperando la decision de una persona en un ticket ya cerrado."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-09-27",
+    "at": "2026-09-28T02:33:11.702Z",
+    "action": "gate-approved",
+    "actor": "cli",
+    "details": "Gate plan aprobado por Delegacion del PO (Juan Andrade 2026-09-27): Aprobacion DELEGADA. La tanda se autorizo el 2026-09-27 con las palabras del PO: «�, cuyo alcance declaro el programador de la tanda como aprobar analysis plan y QA; y el PO confirmo el registro de estas decisiones con sus palabras del mismo dia: «�. La compuerta quedo en REVIEW con diez proposiciones de criterio entre 0.83 y 0.89 y cubre_todos_los_criterios=0.64 (descriptiva, no decide); en verde clasificacion completa, criterios_verificables=0.94, rollback_suficiente=0.90 y hay_archivos_afectados=0.98. Es el caso mas claro de banda estructural: todos los criterios por encima de 0.83 y ninguno alcanza 0.90. Se aprueba para que el recibo no siga contando como esperando la decision de una persona en un ticket ya cerrado."
   }
 ]
 ```

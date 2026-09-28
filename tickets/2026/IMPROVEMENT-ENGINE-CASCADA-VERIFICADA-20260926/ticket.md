@@ -613,6 +613,15 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: qa_approved -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-09-27",
+    "at": "2026-09-28T02:33:11.437Z",
+    "action": "gate-approved",
+    "actor": "cli",
+    "details": "Gate plan aprobado por Delegacion del PO (Juan Andrade 2026-09-27): Aprobacion DELEGADA. La tanda se autorizo el 2026-09-27 con las palabras del PO: «�, cuyo alcance declaro el programador de la tanda como aprobar analysis plan y QA; y el PO confirmo el registro de estas decisiones con sus palabras del mismo dia: «�. La compuerta quedo en REVIEW con diez proposiciones de criterio entre 0.62 y 0.86 y cubre_todos_los_criterios=0.71 (descriptiva, no decide); en verde hay_archivos_afectados=0.98, criterios_verificables=0.94, compatibilidad_hacia_atras=0.92 y rollback_suficiente=0.92. La segunda corrida, ya con los criterios partidos en atomicos, no subio la media: lo flojo es la banda por redaccion, no el alcance. Se aprueba para que el recibo no siga contando como esperando la decision de una persona en un ticket ya cerrado."
   }
 ]
 ```
