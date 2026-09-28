@@ -13,7 +13,7 @@ migration_impact: false
 docker_impact: false
 risk_level: normal
 created: 2026-09-23
-updated: 2026-09-23
+updated: 2026-09-27
 related_ticket: null
 target_release: null
 released_in: null
@@ -517,6 +517,24 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: qa_approved -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-09-27",
+    "at": "2026-09-28T02:48:01.877Z",
+    "action": "gate-approved",
+    "actor": "cli",
+    "details": "Gate analysis aprobado por Delegacion del PO (Juan Andrade 2026-09-23): Aprobacion DELEGADA del analisis. El plan de este ticket dejo escrito el 2026-09-23 que la compuerta de analisis quedaba asumida por el PO al aprobar el plan, con sus palabras: «1. si apruebo el plan». Lo que quedo en banda fue diagnostico_explica_el_sintoma (0.30, 0.41 y 0.48 en las tres corridas) y riesgos_cubren_impactos=0.80: el ticket no nace de un sintoma observable sino de un contrato de borde del MCP, y el diagnostico lo explica con rutas y con el contrato que ya existe. El PO pidio cerrar estas decisiones el 2026-09-27 con sus palabras: «Y podriamos como documentar lo que se encontro de hoy la idea es poder hacer un cierre asi diariamente como de lo que se encontro para que puedas revisar y que me puedas sugerir mejoras a base de nuestro mismo trabajo, y si cierra igual las del 23, lo de valmen adopt si realiza el commit, y listo entonces subamos el tope del juez». Se registra para que el recibo no siga contando como esperando la decision de una persona en un ticket ya cerrado."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-09-27",
+    "at": "2026-09-28T02:48:02.021Z",
+    "action": "gate-approved",
+    "actor": "cli",
+    "details": "Gate plan aprobado por Delegacion del PO (Juan Andrade 2026-09-23): Aprobacion DELEGADA del plan, la que el propio plan del ticket ya declara: «aprobado explicitamente por el PO (gate de plan) el 2026-09-23, con estas palabras: 1. si apruebo el plan». La compuerta quedo en REVIEW con criterio_01=0.72, corresponde_a_la_investigacion=0.63 (descriptiva, no decide), pasos_ejecutables=0.88 y compatibilidad_hacia_atras=0.88, las dos ultimas tambien descriptivas: lo que decide es el criterio, y el alcance, los archivos y el rollback quedaron en verde. El PO pidio cerrar estas decisiones el 2026-09-27 con sus palabras: «Y podriamos como documentar lo que se encontro de hoy la idea es poder hacer un cierre asi diariamente como de lo que se encontro para que puedas revisar y que me puedas sugerir mejoras a base de nuestro mismo trabajo, y si cierra igual las del 23, lo de valmen adopt si realiza el commit, y listo entonces subamos el tope del juez». Se registra para que el recibo no siga contando como esperando la decision de una persona en un ticket ya cerrado."
   }
 ]
 ```
