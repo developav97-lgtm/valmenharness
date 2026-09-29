@@ -4,8 +4,8 @@ id: IMPROVEMENT-TIMELINE-COSTO-COMPUERTAS-20260928
 title: Mostrar el costo y los tokens de las compuertas Jev en la ficha del ticket
 type: IMPROVEMENT
 module: TIMELINE
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -82,12 +82,33 @@ Nota: el paso 3 del plan hablaba de «si el payload del endpoint de gates los tr
 - `npx vitest run tests/timeline.test.ts` → 17 pasadas (16 previas + 1 nueva del desglose de compuertas).
 - `npx vitest run` (suite completa) → **1539 pasadas, 48 skipped, 0 fallos** (tras `npm run build`: la prueba de interfaz ejecutable compara el dist contra la fuente).
 - Verificación contra el registro real de SaiOpenCloud vía API en :4174: FEATURE-RELLENO-MASIVO-ANULACION-20260924 muestra 7 evaluaciones — 6 de Jev (3 analysis ~$0.00013, 3 plan ~$0.00034, `TypeSafe/typesafe/jev-1.13`) y 1 qa-mechanical sin modelo — con su total ~$0.0014 junto al $0.0731 del ejecutor.
-- Verificación manual pendiente del PO: la sección «Línea de tiempo y coste» del ticket muestra la fila de compuertas y los chips del historial traen costo/tokens al pasar el cursor.
+- Resultado del PO: Ve el desglose de compuertas en Mission Control y lo aprueba — «si yo las veo bien quedo perfecto».
 
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-09-29",
+    "build_reference": "worktree:sha256:e3ff591c95225e3ed4805e85f906ac78f61555ef975442868f5fdf26b82751b1",
+    "environment": "dev",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-09-29",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "si yo las veo bien quedo perfecto"
+  }
+]
 ```
 
 ## Evidencia
@@ -114,7 +135,19 @@ Nota: el paso 3 del plan hablaba de «si el payload del endpoint de gates los tr
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-09-29",
+    "technical_summary": "Desglose de compuertas en /api/timeline y vista",
+    "functional_summary": "El costo de decidir se ve en la linea de tiempo del ticket",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "ninguno"
+  }
+]
 ```
 
 ## Consumo de IA
@@ -135,6 +168,21 @@ Nota: el paso 3 del plan hablaba de «si el payload del endpoint de gates los tr
     "source": "manual:hermes",
     "confidence": "high",
     "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-29",
+    "session_reference": "20260928_140418_c56444",
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Agente hermes:desktop. Sesión **compartida**: trabajó 9 tickets (BUGFIX-TIMELINE-SESSION-V2-20260928 ×165, BUGFIX-SERVER-ATRIBUCION-POR-LLAMADA-20260928 ×142, IMPROVEMENT-ENGINE-QA-REFERENCIA-COMMIT-20260928 ×108, IMPROVEMENT-TIMELINE-COSTO-COMPUERTAS-20260928 ×101, FEATURE-RELLENO-MASIVO-ANULACION-20260924 ×87), así que su costo no se reparte y acá no se registran números. Costo completo de la sesión: no declarado por el proveedor, 5356043 tokens. Registralo en el ticket cuya sesión sea propia, o declaralo compartido donde corresponda. Sesión \"Evolucionar flujo de trabajo SciOpenCloud\".",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/saiopencloud/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-002"
   }
 ]
 ```
@@ -227,6 +275,69 @@ Sin publicar todavía.
     "action": "ai-usage-added",
     "actor": "cli",
     "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-09-28",
+    "at": "2026-09-29T04:12:23.569Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-09-28",
+    "at": "2026-09-29T04:12:23.777Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-09-28",
+    "at": "2026-09-29T04:12:23.970Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-09-28",
+    "at": "2026-09-29T04:12:24.158Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-09-28",
+    "at": "2026-09-29T04:12:25.179Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-09-28",
+    "at": "2026-09-29T04:12:25.225Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-09-28",
+    "at": "2026-09-29T04:12:25.406Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
