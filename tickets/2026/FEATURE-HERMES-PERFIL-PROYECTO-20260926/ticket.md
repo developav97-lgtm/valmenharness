@@ -99,6 +99,8 @@ Implementado por OpenCode (`opencode run --standalone --auto`, modelo `opencode-
 - `tests/docs-perfil-hermes.test.ts` (nuevo) — lee `docs/15-PUESTA-EN-MARCHA.md` y comprueba que el bloque de puesta en marcha nombra los tres comandos **en orden**, y que la ayuda del CLI declara `--profile` con el archivo al que apunta y el nombre por defecto. La ayuda se contrasta contra `USAGE` de `packages/cli/src/main.ts`, que es la fuente que ya es la verdad.
 - `docs/15-PUESTA-EN-MARCHA.md` — bloque «Un perfil por proyecto» en §6 con los tres pasos, la fila de la tabla de agentes que declaraba Hermes sólo global y el ejemplo de §6, que proponía `--name` como único recurso para un segundo proyecto.
 
+**Corrección de la ronda de revisión 1 (2026-09-29).** `EVIDENCE-001` se anotó a las `19:16:43Z` y el commit `c352c34` es de las `19:19:18Z`: entre medio, el verificador aplicó el formateo con prettier sobre `packages/cli/src/hermes.ts`, `packages/adapter/src/mcp.ts` y `tests/docs-perfil-hermes.test.ts` —tres de los ocho archivos del hash—, así que su referencia (`worktree:sha256:94cfbe88…`) describía un árbol que ya no existe. Recomputada por el verificador sobre los mismos ocho archivos y el mismo orden, la del árbol commiteado es `worktree:sha256:514432e4…`, y eso es lo que declara `EVIDENCE-002`; `EVIDENCE-001` no se edita porque el bloque es append-only. No hubo ningún otro cambio en el entregable: los ocho archivos del hash son los de `c352c34` y no se tocaron después.
+
 ## Pruebas
 
 Verificadas por el verificador sobre el árbol del ticket (los comandos y sus resultados, no el auto-reporte del ejecutor):
@@ -109,6 +111,7 @@ Verificadas por el verificador sobre el árbol del ticket (los comandos y sus re
 - `npx tsc --noEmit -p tsconfig.json` → exit 0. `npx eslint` sobre los siete archivos tocados → exit 0. `npx prettier --check` sobre los archivos que estaban limpios en `HEAD` → «All matched files use Prettier code style!».
 - Sonda desechable (`tests/_sonda-perfil-cli.test.ts`, creada y borrada: el árbol no guarda rastro) para el tramo que las suites del ticket no cubren —que la bandera llegue de punta a punta por `run(argv)`—: `valmen hermes connect --profile demo --root <proyecto>` con `HERMES_HOME` en un temporal devolvió exit 0, escribió `valmen-demo` con el `cwd` del proyecto en `<temporal>/profiles/demo/config.yaml`, **no creó** el `config.yaml` global, y un perfil inexistente salió con exit 2 sin crear el directorio.
 - Línea base de los fallos ajenos: no aplica — el árbol no tenía archivos de este ticket, y la batería completa quedó sin fallos después del cambio.
+- Corrección de la ronda de revisión 1 (2026-09-29), sobre el árbol final —con `EVIDENCE-002` y esta nota ya escritos—: `npx vitest run` → `Test Files 82 passed | 1 skipped (83)`, `Tests 1594 passed | 48 skipped (1642)`, exit 0; los tres archivos del ticket → `Test Files 3 passed (3)`, `Tests 82 passed (82)`. Los ocho archivos del hash no se tocaron después de `c352c34`. La diferencia con los números de la primera entrega (78 archivos, 1559 pruebas) es de árbol, no de suite: después de `16bf50d` entraron commits de otros tickets con sus archivos de prueba.
 
 Lo que **falta** de la prueba de punta a punta real: conectar un proyecto a un perfil de Hermes de la máquina y verlo en `hermes -p <perfil> mcp list`. Eso escribe en el `config.yaml` de un perfil real y necesita la orden de la persona; la sonda lo deja medido hasta el borde del archivo.
 
@@ -128,6 +131,14 @@ Lo que **falta** de la prueba de punta a punta real: conectar un proyecto a un p
     "kind": "verification",
     "description": "Árbol del ticket verificado por el orquestador (no por el auto-reporte del ejecutor): npx vitest run tests/hermes-cli.test.ts tests/docs-perfil-hermes.test.ts = 39 pasadas; los tres archivos de prueba con tests/hermes-config.test.ts = 82 pasadas; la batería npx vitest run = 78 archivos pasados y 1559 pruebas pasadas, 0 fallos; tsc --noEmit exit 0; eslint de los siete archivos exit 0. El hash cubre los ocho archivos del cambio en orden alfabético: docs/15-PUESTA-EN-MARCHA.md, packages/adapter/src/mcp.ts, packages/cli/src/hermes.ts, packages/cli/src/main.ts, packages/cli/src/mcp.ts, tests/docs-perfil-hermes.test.ts, tests/hermes-cli.test.ts, tests/hermes-config.test.ts. Escrito por OpenCode (sesión ses_f117341b1ffeRtJkn8EFoyvvaR); el formateo con prettier de packages/cli/src/hermes.ts, packages/adapter/src/mcp.ts y tests/docs-perfil-hermes.test.ts lo aplicó el verificador, no el ejecutor. Sin puntos en el ticket, la referencia se computó sobre los archivos del cambio con el encuadre del contrato.",
     "reference": "worktree:sha256:94cfbe8878a118f4721aaac371a23c4132f3e503b0c1fa2ac32aa38f7ee92d86",
+    "point_id": null
+  },
+  {
+    "id": "EVIDENCE-002",
+    "date": "2026-09-29",
+    "kind": "verification",
+    "description": "Ronda de revision 2026-09-29: la referencia de EVIDENCE-001 no verificaba sobre el arbol commiteado. EVIDENCE-001 se anoto a las 19:16:43Z y el commit c352c34 es de las 19:19:18Z, y entre medio el verificador aplico formateo con prettier sobre packages/cli/src/hermes.ts, packages/adapter/src/mcp.ts y tests/docs-perfil-hermes.test.ts, tres de los ocho archivos del hash: la referencia describia un arbol que ya no existe. Esta referencia describe el arbol commiteado, recomputada por el verificador sobre los mismos ocho archivos y el mismo orden (docs/15-PUESTA-EN-MARCHA.md, packages/adapter/src/mcp.ts, packages/cli/src/hermes.ts, packages/cli/src/main.ts, packages/cli/src/mcp.ts, tests/docs-perfil-hermes.test.ts, tests/hermes-cli.test.ts, tests/hermes-config.test.ts), y confirmada doble: leyendo el disco y leyendo los blobs de HEAD del commit c352c34, que coinciden byte a byte en los ocho. EVIDENCE-001 no se edita: el bloque es append-only.",
+    "reference": "worktree:sha256:514432e43f6fd7c4efe3eabc28b703e3ab9e60b1c62c990e33ee370416eb75ce",
     "point_id": null
   }
 ]
@@ -326,6 +337,15 @@ Sin publicar todavía.
     "action": "ai-usage-added",
     "actor": "cli",
     "details": "Se agregó CONSUMO-004."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-09-29",
+    "at": "2026-09-29T21:32:42.952Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-002."
   }
 ]
 ```
