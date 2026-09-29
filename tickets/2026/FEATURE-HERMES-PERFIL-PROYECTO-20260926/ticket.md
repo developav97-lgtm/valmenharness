@@ -219,6 +219,21 @@ Lo que **falta** de la prueba de punta a punta real: conectar un proyecto a un p
     "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
     "confidence": "high",
     "id": "CONSUMO-004"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-29",
+    "session_reference": "20260929_163103_7da832",
+    "model": "deepseek-v4.1-flash",
+    "reasoning_effort": null,
+    "notes": "Sesion kanban de la ronda de revision 1 del ticket: EVIDENCE-002 con el hash del arbol commiteado, la nota de la correccion en Implementacion y Pruebas, la bateria npx vitest run sobre el arbol final y el commit 764d406; la base no calcula el costo y la lectura es con el turno todavia en curso",
+    "input_tokens": 73245,
+    "output_tokens": 11825,
+    "total_tokens": 92967,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-005"
   }
 ]
 ```
@@ -346,6 +361,15 @@ Sin publicar todavía.
     "action": "evidence-added",
     "actor": "cli",
     "details": "Se agregó EVIDENCE-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-09-29",
+    "at": "2026-09-29T21:34:56.173Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-005."
   }
 ]
 ```
