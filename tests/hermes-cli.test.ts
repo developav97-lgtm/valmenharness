@@ -30,6 +30,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { parseYamlSubset, type YamlMap } from "../packages/core/src/index.js";
+import { buildHermesEntry, hermesBlock } from "../packages/adapter/src/index.js";
 import type { CommandRunner } from "../packages/engine/src/index.js";
 import {
   declaredRoot,
@@ -87,7 +88,6 @@ function pedido(extra: Partial<HermesRequest> = {}): HermesRequest {
     root: proyecto,
     cliEntry: "/usr/local/bin/valmen",
     action: "status",
-    name: "valmen",
     dryRun: false,
     untrusted: false,
     json: false,
@@ -100,6 +100,26 @@ function pedido(extra: Partial<HermesRequest> = {}): HermesRequest {
 /** El archivo de configuración que este comando escribe. */
 function configPath(): string {
   return join(casa, "config.yaml");
+}
+
+/**
+ * El home y el `config.yaml` de un perfil.
+ *
+ * Con `HERMES_HOME` apuntando a un temporal, la raíz de Hermes es ese mismo
+ * temporal, así que los perfiles cuelgan de `<casa>/profiles/<perfil>`.
+ */
+function perfilHome(perfil: string): string {
+  return join(casa, "profiles", perfil);
+}
+
+function perfilConfigPath(perfil: string): string {
+  return join(perfilHome(perfil), "config.yaml");
+}
+
+function leerPerfil(perfil: string): YamlMap {
+  return parseYamlSubset(readFileSync(perfilConfigPath(perfil), "utf8"), {
+    fileName: "config.yaml",
+  }) as YamlMap;
 }
 
 function leerConfig(): YamlMap {
@@ -283,6 +303,86 @@ describe("conectar", () => {
     hermesConnect(pedido({ untrusted: true }));
     const servidores = leerConfig()["mcp_servers"] as YamlMap;
     expect((servidores["valmen"] as YamlMap)["trust"]).toBe("untrusted");
+  });
+});
+
+describe("conectar un perfil", () => {
+  it("declara en el config del perfil y deja el global byte a byte igual", () => {
+    // Es la razón de existir del ticket: desde una terminal común HERMES_HOME no
+    // está, así que el camino de siempre escribía todo en el global. Con
+    // `--profile` la entrada va al archivo del perfil y el global no se toca.
+    const perfil = "saicloud";
+    mkdirSync(perfilHome(perfil), { recursive: true });
+    const globalPrevio = "# mi configuración global\nmodel: anthropic/claude-sonnet-4.6\n";
+    writeFileSync(configPath(), globalPrevio, "utf8");
+
+    const r = hermesConnect(pedido({ action: "connect", profile: perfil }));
+    expect(r.exitCode).toBe(0);
+
+    const servidores = leerPerfil(perfil)["mcp_servers"] as YamlMap;
+    expect((servidores["valmen-saicloud"] as YamlMap)["cwd"]).toBe(proyecto);
+    expect(readFileSync(configPath(), "utf8")).toBe(globalPrevio);
+  });
+
+  it("sin `--name` el nombre es `valmen-<perfil>`", () => {
+    const perfil = "saicloud";
+    mkdirSync(perfilHome(perfil), { recursive: true });
+    hermesConnect(pedido({ action: "connect", profile: perfil }));
+    const servidores = leerPerfil(perfil)["mcp_servers"] as YamlMap;
+    expect(Object.keys(servidores)).toContain("valmen-saicloud");
+  });
+
+  it("con `--name`, gana el nombre dado", () => {
+    const perfil = "saicloud";
+    mkdirSync(perfilHome(perfil), { recursive: true });
+    hermesConnect(pedido({ action: "connect", profile: perfil, name: "nombre-propio" }));
+    const servidores = leerPerfil(perfil)["mcp_servers"] as YamlMap;
+    expect(Object.keys(servidores)).toContain("nombre-propio");
+  });
+
+  it("con un perfil inexistente no escribe y manda a crearlo", () => {
+    // Un directorio que el harness inventara no lo lista Hermes, así que quedaría
+    // un archivo que nadie lee con un diagnóstico en verde. Se decide antes de
+    // escribir cualquier cosa.
+    const perfil = "no-existe";
+    const r = hermesConnect(pedido({ action: "connect", profile: perfil }));
+    expect(r.exitCode).not.toBe(0);
+    expect(r.stderr).toContain(`hermes profile create ${perfil}`);
+    expect(existsSync(perfilHome(perfil))).toBe(false);
+    expect(existsSync(configPath())).toBe(false);
+  });
+
+  it("también con `--dry-run` se niega si el perfil no existe", () => {
+    // Un dry-run que muestra un bloque imposible no sirve: la decisión es la
+    // misma antes de mostrar.
+    const perfil = "no-existe";
+    const r = hermesConnect(pedido({ action: "connect", profile: perfil, dryRun: true }));
+    expect(r.exitCode).not.toBe(0);
+    expect(r.stderr).toContain(`hermes profile create ${perfil}`);
+    expect(existsSync(perfilHome(perfil))).toBe(false);
+  });
+
+  it("el diagnóstico de un perfil informa su archivo y su entrada", () => {
+    const perfil = "saicloud";
+    mkdirSync(perfilHome(perfil), { recursive: true });
+    hermesConnect(pedido({ action: "connect", profile: perfil }));
+
+    const r = hermesStatus(pedido({ profile: perfil }));
+    expect(r.stdout).toContain(perfilConfigPath(perfil));
+    expect(r.stdout).toContain("valmen-saicloud");
+    expect(r.stdout).toContain("apunta a este proyecto");
+  });
+
+  it("sin `--profile` el camino es el de siempre, con el bloque conocido", () => {
+    const r = hermesConnect(pedido({ action: "connect" }));
+    expect(r.exitCode).toBe(0);
+
+    const entry = buildHermesEntry({
+      root: proyecto,
+      invocation: "/usr/local/bin/valmen",
+    });
+    expect(readFileSync(configPath(), "utf8")).toBe(`mcp_servers:\n${hermesBlock(entry)}`);
+    expect((leerConfig()["mcp_servers"] as YamlMap)["valmen"]).toBeDefined();
   });
 });
 

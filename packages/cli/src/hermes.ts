@@ -37,6 +37,8 @@ import {
   hermesAddCommand,
   hermesBlock,
   hermesConfigPath,
+  hermesProfileConfigPath,
+  hermesProfileHome,
   hermesDeepLink,
   RELAY_SCRIPT_NAME,
   hermesRelayHookBlock,
@@ -111,8 +113,21 @@ export interface HermesRequest {
   /** El ejecutable del CLI, para deducir el del servidor MCP. */
   readonly cliEntry: string;
   readonly action: "status" | "connect" | "test";
-  /** El nombre de la entrada. Un proyecto, una entrada: ver `hermesBlock`. */
-  readonly name: string;
+  /**
+   * El nombre de la entrada. Un proyecto, una entrada: ver `hermesBlock`.
+   *
+   * Opcional a propósito: el default lo resuelve `entryName`, que con
+   * `--profile` declara `valmen-<perfil>` en vez de `valmen`.
+   */
+  readonly name?: string | undefined;
+  /**
+   * El perfil de Hermes sobre el que se opera.
+   *
+   * Con perfil, la configuración sale de
+   * `~/.hermes/profiles/<perfil>/config.yaml` y no del `config.yaml` global. Sin
+   * él, todo queda como siempre.
+   */
+  readonly profile?: string | undefined;
   readonly dryRun: boolean;
   readonly untrusted: boolean;
   readonly json: boolean;
@@ -161,12 +176,26 @@ export function hermesBinaryWorks(): boolean {
   }
 }
 
+/**
+ * El nombre efectivo de la entrada.
+ *
+ * `--name` siempre gana. Sin él, un perfil declara `valmen-<perfil>` —el perfil
+ * es el ámbito que Hermes muestra y el que la persona escribió en la bandera— y
+ * sin perfil queda el histórico `valmen`.
+ */
+function entryName(request: HermesRequest): string {
+  if (request.name !== undefined && request.name.trim() !== "") return request.name;
+  return request.profile === undefined
+    ? HERMES_SERVER_ID
+    : `${HERMES_SERVER_ID}-${request.profile}`;
+}
+
 /** La entrada que este comando declara. */
 export function entryFor(request: HermesRequest): HermesEntry {
   return buildHermesEntry({
     root: request.root,
     invocation: request.cliEntry,
-    name: request.name,
+    name: entryName(request),
     untrusted: request.untrusted,
   });
 }
@@ -202,9 +231,13 @@ export function declaredRoot(texto: string, nombre: string): string | null {
 
 /** El diagnóstico. */
 export function hermesStatus(request: HermesRequest): CommandResult {
-  const configPath = hermesConfigPath();
+  const configPath =
+    request.profile === undefined
+      ? hermesConfigPath()
+      : hermesProfileConfigPath(request.profile);
+  const nombre = entryName(request);
   const texto = readIfExists(configPath);
-  const raiz = texto === null ? null : declaredRoot(texto, request.name);
+  const raiz = texto === null ? null : declaredRoot(texto, nombre);
   const instalado = request.instalado ?? hermesBinaryWorks;
 
   const estado: HermesStatus = {
@@ -227,7 +260,7 @@ export function hermesStatus(request: HermesRequest): CommandResult {
   const etiquetas = [
     "Hermes instalado",
     "archivo de configuración",
-    `entrada \`${request.name}\` declarada`,
+    `entrada \`${nombre}\` declarada`,
     ...(texto === null ? [] : ["apunta a este proyecto"]),
   ];
   const ancho = Math.max(...etiquetas.map((e) => e.length)) + 2;
@@ -237,10 +270,11 @@ export function hermesStatus(request: HermesRequest): CommandResult {
   const lineas = [
     "Conexión con Hermes",
     `  configuración   ${configPath}`,
+    ...(request.profile === undefined ? [] : [`  perfil          ${request.profile}`]),
     "",
     fila("Hermes instalado", marca(estado.binaryWorks)),
     fila("archivo de configuración", marca(estado.configExists)),
-    fila(`entrada \`${request.name}\` declarada`, marca(estado.declared)),
+    fila(`entrada \`${nombre}\` declarada`, marca(estado.declared)),
   ];
 
   if (estado.declared) {
@@ -253,13 +287,15 @@ export function hermesStatus(request: HermesRequest): CommandResult {
 
   // El siguiente paso, y solo el que hace falta. Un diagnóstico que lista todo lo
   // que podría estar mal obliga a leerlo entero para encontrar lo único que sí.
-  // El comando que se sugiere lleva el nombre puesto: sin él, alguien con dos
-  // proyectos copiaría el consejo, escribiría la entrada `valmen` y volvería a
-  // este mismo diagnóstico sin entender por qué.
+  // El comando que se sugiere lleva el perfil —o el nombre— puesto: sin él,
+  // alguien con dos proyectos copiaría el consejo, escribiría la entrada `valmen`
+  // y volvería a este mismo diagnóstico sin entender por qué.
   const conectar =
-    request.name === HERMES_SERVER_ID
-      ? "valmen hermes connect"
-      : `valmen hermes connect --name ${request.name}`;
+    request.profile !== undefined
+      ? `valmen hermes connect --profile ${request.profile}`
+      : nombre === HERMES_SERVER_ID
+        ? "valmen hermes connect"
+        : `valmen hermes connect --name ${nombre}`;
 
   lineas.push("");
   if (!estado.configExists || !estado.declared) {
@@ -268,7 +304,7 @@ export function hermesStatus(request: HermesRequest): CommandResult {
     lineas.push(
       "La entrada declarada apunta a otro proyecto. Hermes es global: cada",
       "proyecto necesita su propia entrada, con su propio nombre.",
-      `    valmen hermes connect --name ${request.name}-${basenameSeguro(request.root)}`,
+      `    valmen hermes connect --name ${nombre}-${basenameSeguro(request.root)}`,
     );
   } else if (!estado.binaryWorks) {
     lineas.push(
@@ -293,7 +329,28 @@ function basenameSeguro(ruta: string): string {
 
 /** La escritura. */
 export function hermesConnect(request: HermesRequest): CommandResult {
-  const configPath = hermesConfigPath();
+  // El perfil tiene que existir antes de escribir nada, y también antes de un
+  // `--dry-run`: un dry-run que muestra un bloque imposible no sirve. Hermes no
+  // lista un directorio sin identidad de perfil (`hermes_cli/profiles.py:1316`),
+  // así que crearlo desde acá dejaría un archivo que nadie lee con un diagnóstico
+  // en verde. Por eso se decide antes y se manda a crear el perfil.
+  if (request.profile !== undefined && !existsSync(hermesProfileHome(request.profile))) {
+    return falla(
+      `No existe el perfil \`${request.profile}\` de Hermes: ` +
+        `${hermesProfileHome(request.profile)}.\n\n` +
+        "Un directorio sin identidad de perfil Hermes no lo lista, así que escribir\n" +
+        "ahí dejaría un archivo que nadie lee. Creá el perfil primero:\n\n" +
+        `  hermes profile create ${request.profile}\n\n` +
+        "Y después conectá este proyecto a ese perfil:\n" +
+        `  valmen hermes connect --profile ${request.profile}\n`,
+    );
+  }
+
+  const configPath =
+    request.profile === undefined
+      ? hermesConfigPath()
+      : hermesProfileConfigPath(request.profile);
+  const nombre = entryName(request);
   const entry = entryFor(request);
   const bloque = hermesBlock(entry);
   const instalado = request.instalado ?? hermesBinaryWorks;
@@ -310,12 +367,13 @@ export function hermesConnect(request: HermesRequest): CommandResult {
     );
   }
 
-  const fusion = mergeHermesConfig(readIfExists(configPath), bloque, request.name);
+  const fusion = mergeHermesConfig(readIfExists(configPath), bloque, nombre);
 
   if (request.dryRun) {
     return ok(
       [
         `Escribiría en ${configPath}`,
+        ...(request.profile === undefined ? [] : [`  perfil  ${request.profile}`]),
         `  ${fusion.note}`,
         "",
         "El bloque:",
@@ -343,6 +401,7 @@ export function hermesConnect(request: HermesRequest): CommandResult {
       [
         `Sin cambios: ${fusion.note}`,
         `  archivo  ${configPath}`,
+        ...(request.profile === undefined ? [] : [`  perfil   ${request.profile}`]),
         ...skill.lineas,
         ...skills,
         "",
@@ -355,21 +414,24 @@ export function hermesConnect(request: HermesRequest): CommandResult {
 
   return ok(
     [
-      "Hermes — configuración global",
+      request.profile === undefined
+        ? "Hermes — configuración global"
+        : "Hermes — configuración del perfil",
+      ...(request.profile === undefined ? [] : [`  perfil       ${request.profile}`]),
       `  archivo      ${configPath}`,
       `  ${fusion.note}`,
       "",
       `  raíz         ${request.root}`,
-      `  entrada      ${request.name}`,
+      `  entrada      ${nombre}`,
       "",
       "Comprueba cómo quedó:",
-      "    valmen hermes status",
+      `    valmen hermes status${request.profile === undefined ? "" : ` --profile ${request.profile}`}`,
       "",
       "En una sesión de Hermes ya abierta, `/reload-mcp` la carga sin reiniciar.",
       "",
       "Si prefieres su asistente, o quieres elegir qué herramientas ve el celular:",
       `    ${hermesAddCommand(entry)}`,
-      `    hermes mcp configure ${request.name}`,
+      `    hermes mcp configure ${nombre}`,
       "",
       "Y si tienes la app de escritorio abierta, esto hace lo mismo con confirmación:",
       `    ${hermesDeepLink(entry)}`,

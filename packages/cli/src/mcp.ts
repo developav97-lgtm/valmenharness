@@ -352,6 +352,7 @@ function hermesSnippet(request: McpRequest): readonly string[] {
     "",
     "  Se escribe con:",
     "    valmen hermes connect",
+    "    valmen hermes connect --profile <perfil>   # un perfil por proyecto",
     "",
     "  O con el asistente de Hermes, que además deja elegir qué herramientas ve:",
     `    ${hermesAddCommand(entry)}`,

@@ -179,7 +179,7 @@ valmen mcp               # imprime el fragmento exacto de cada agente, sin escri
 | **opencode** | `opencode.json` | proyecto |
 | **codex** | `~/.codex/config.toml` | global: la raíz sale del directorio de trabajo |
 | **DSH** | `~/.dsh/profiles/<perfil>/cordis.patch.yml` | global, y además hay que instalar el puente |
-| **Hermes** | `~/.hermes/config.yaml` | global, con la raíz de cada proyecto en su entrada |
+| **Hermes** | `~/.hermes/config.yaml` o `~/.hermes/profiles/<perfil>/config.yaml` | global, o por perfil: cada entrada lleva la raíz de su proyecto |
 
 `--install` **conserva** lo que ya estuviera declarado en esos archivos: agrega la entrada del
 harness y deja el resto igual.
@@ -225,11 +225,28 @@ que ya habla veintiuna plataformas. Lo que se construye es el puente.
 valmen hermes status                  # qué falta, de las cuatro cosas que pueden faltar
 valmen hermes connect                 # declara el servidor y le instala la skill
 valmen hermes connect --dry-run       # muestra lo que escribiría, sin escribir
-valmen hermes connect --name valmen-otro-proyecto   # un segundo proyecto son dos entradas
+valmen hermes connect --profile otro-proyecto   # un segundo proyecto, en su propio perfil
 valmen hermes test                    # un mensaje de prueba al celular
 valmen hermes notify                  # avisa de los gates que esperan decisión
 valmen hermes brief                   # el parte: lo que espera, lo que se detuvo, lo que se cerró
 ```
+
+### Un perfil por proyecto
+
+Un proyecto nuevo puede declararse en su **propio perfil** de Hermes en vez del perfil por
+defecto, y así deja de compartir entradas con el resto. Son tres pasos, en este orden:
+
+```bash
+hermes profile create <proyecto>              # Hermes crea el perfil y su identidad
+valmen hermes connect --profile <proyecto>    # este proyecto se declara ahí dentro
+hermes -p <proyecto> mcp list                 # y desde ahí aparece `valmen-<proyecto>`
+```
+
+El perfil tiene que existir **antes**: `connect --profile` no lo inventa, y si falta te manda a
+`hermes profile create`. La entrada por defecto se llama `valmen-<proyecto>` —`--name` la
+cambia— y el archivo global `~/.hermes/config.yaml` no se toca —por eso `hermes -p
+<proyecto> mcp list` lista sólo lo de ese proyecto—. Sin `--profile`, todo sigue exactamente
+como antes: el `config.yaml` global de tu máquina.
 
 Qué es global y qué es de cada proyecto, porque es la confusión más común:
 

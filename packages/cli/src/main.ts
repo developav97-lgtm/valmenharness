@@ -308,8 +308,13 @@ Comandos:
       --dias <n>            Cuántos días atrás se cuentan los cierres. Por defecto, 7.
       --id <TICKET>         Avisar solo de este ticket. Con --receipt y --to.
       --receipt <GR-…>      El recibo vigente y escalado a una persona.
-      --name <n>            Nombre de la entrada. Por defecto, valmen: hace falta
-                            cambiarlo para conectar un segundo proyecto.
+      --name <n>            Nombre de la entrada. Sin --profile, por defecto
+                            valmen; con --profile, valmen-<perfil>. Cambiarlo
+                            conecta un segundo proyecto a la misma config.
+      --profile <perfil>    Perfil de Hermes donde se declara: escribe en
+                            ~/.hermes/profiles/<perfil>/config.yaml y la entrada
+                            se llama valmen-<perfil>. El perfil tiene que existir
+                            (hermes profile create <perfil>).
       --to <destino>        Destino: telegram, discord:#ops. Pisa al de la
                             configuración. Los que haya se listan con
                             "hermes send --list".
@@ -447,6 +452,10 @@ export const VALUE_OPTIONS = [
   // bandera booleana más un argumento suelto, y `connect` escribía la entrada
   // `valmen` creyendo que había hecho lo que se le pidió.
   "--name",
+  // `hermes --profile`: el perfil de Hermes donde se declara la entrada. Sin
+  // esto en la lista, `--profile valor` se leería como booleana más un argumento
+  // suelto, y `connect` escribiría en el config global creyendo otra cosa.
+  "--profile",
   // `gate-decide --code`: el código corto que llegó al celular. Reemplaza a
   // `--id` y `--receipt`, que el token firmado ya trae.
   "--code",
@@ -1403,13 +1412,20 @@ export async function run(argv: readonly string[]): Promise<number> {
         }
       } else {
         const nombre = options.flags["name"];
+        const perfil = options.flags["profile"];
         const destino = options.flags["to"];
         result = runHermes({
           root: options.root,
           cliEntry: process.argv[1] ?? fileURLToPath(import.meta.url),
           action: accion,
-          name:
-            typeof nombre === "string" && nombre.trim() !== "" ? nombre.trim() : "valmen",
+          // `--name` siempre gana; sin él, `entryName` resuelve `valmen`, o
+          // `valmen-<perfil>` cuando hay `--profile`.
+          ...(typeof nombre === "string" && nombre.trim() !== ""
+            ? { name: nombre.trim() }
+            : {}),
+          ...(typeof perfil === "string" && perfil.trim() !== ""
+            ? { profile: perfil.trim() }
+            : {}),
           dryRun: options.flags["dry-run"] === true,
           untrusted: options.flags["untrusted"] === true,
           json: options.flags["json"] === true,

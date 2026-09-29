@@ -21,7 +21,7 @@
  */
 import { existsSync, lstatSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { basename, dirname, join } from "node:path";
+import { basename, dirname, join, resolve, sep } from "node:path";
 
 import { publicadas } from "./skills.js";
 
@@ -345,10 +345,12 @@ export function readIfExists(path: string): string | null {
 // ─────────────────────────────────────────────────────────────────────────────
 // Hermes
 //
-// Hermes es el único destino que **no** vive en el proyecto. Su configuración es
-// `~/.hermes/config.yaml`, una sola para todos los proyectos de la máquina, y eso
-// cambia las dos decisiones que el resto de este archivo resuelve igual para
-// todos: dónde se declara el servidor y cómo se le dice cuál es la raíz.
+// Hermes es el único destino que **no** vive en el proyecto. Su configuración
+// tiene dos alcances: la global —`~/.hermes/config.yaml`—, que comparten todos
+// los proyectos de la máquina, y la de un perfil —`~/.hermes/profiles/<perfil>/
+// config.yaml`—, que declara un proyecto aparte del resto. Eso cambia las dos
+// decisiones que el resto de este archivo resuelve igual para todos: dónde se
+// declara el servidor y cómo se le dice cuál es la raíz.
 //
 // Las dos se responden con lo mismo: `cwd`. El servidor del harness resuelve su
 // registro por el directorio de trabajo, y el de Hermes —que arranca desde donde
@@ -359,7 +361,9 @@ export function readIfExists(path: string): string | null {
 //
 // La consecuencia hay que decirla: **un proyecto, una entrada**. Conectar dos
 // proyectos a la misma instalación de Hermes son dos entradas con nombres
-// distintos, y por eso el nombre es un parámetro y no una constante.
+// distintos, y por eso el nombre es un parámetro y no una constante. El perfil
+// es el otro eje: dos proyectos en la misma instalación se aíslan declarando
+// cada uno en su perfil, y de eso se ocupan los constructores de abajo.
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** El nombre con el que se declara el harness en Hermes por defecto. */
@@ -381,6 +385,49 @@ export function hermesHome(home: string = homedir()): string {
 /** El archivo de configuración de Hermes. */
 export function hermesConfigPath(home: string = homedir()): string {
   return join(hermesHome(home), "config.yaml");
+}
+
+/**
+ * La raíz de Hermes, de donde cuelgan la configuración y los perfiles.
+ *
+ * **No es siempre `HERMES_HOME`**, y la diferencia importa. Dentro de una sesión
+ * de Hermes, `HERMES_HOME` ya vale un perfil —`~/.hermes/profiles/<perfil>`—, y
+ * derivar de ahí daría `~/.hermes/profiles/<perfil>/profiles/<otro>/config.yaml`,
+ * un archivo que nadie lee. Hermes ancla los perfiles a la raíz por defecto y no
+ * al `HERMES_HOME` activo (`hermes_cli/profiles.py:220-231` con
+ * `hermes_constants.py:216-233`), y el harness hace lo mismo:
+ *
+ * - Si `HERMES_HOME` está vacío, o su ruta resuelta cae dentro de `~/.hermes`, la
+ *   raíz es `~/.hermes`: el caso normal y el de una sesión de Hermes.
+ * - Si está fuera —una instalación en otro sitio, Docker— la raíz es el abuelo
+ *   cuando el padre se llama `profiles` (`/opt/hermes/profiles/x` →
+ *   `/opt/hermes`), y si no el propio `HERMES_HOME`.
+ */
+export function hermesRoot(home: string = homedir()): string {
+  const native = resolve(home, ".hermes");
+  const propio = process.env["HERMES_HOME"];
+  if (propio === undefined || propio.trim() === "") return native;
+
+  const resuelto = resolve(propio);
+  if (resuelto === native || resuelto.startsWith(native + sep)) return native;
+
+  const padre = dirname(resuelto);
+  return basename(padre) === "profiles" ? dirname(padre) : resuelto;
+}
+
+/** El directorio `profiles` de la raíz de Hermes. */
+export function hermesProfilesRoot(home: string = homedir()): string {
+  return join(hermesRoot(home), "profiles");
+}
+
+/** El home de un perfil de Hermes: `<raíz>/profiles/<perfil>`. */
+export function hermesProfileHome(perfil: string, home: string = homedir()): string {
+  return join(hermesProfilesRoot(home), perfil);
+}
+
+/** El archivo de configuración de un perfil de Hermes. */
+export function hermesProfileConfigPath(perfil: string, home: string = homedir()): string {
+  return join(hermesProfileHome(perfil, home), "config.yaml");
 }
 
 /** El directorio de skills de Hermes: el global del usuario, no el del proyecto. */

@@ -26,6 +26,9 @@ import {
   hermesBlock,
   hermesConfigPath,
   hermesDeepLink,
+  hermesProfileConfigPath,
+  hermesProfileHome,
+  hermesProfilesRoot,
   hermesRelayHookBlock,
   hermesRelayScript,
   hermesSkill,
@@ -96,6 +99,44 @@ describe("la ubicación del archivo de Hermes", () => {
     // un diagnóstico que dice que todo está bien, que es el peor de los dos.
     process.env["HERMES_HOME"] = "/opt/hermes";
     expect(hermesConfigPath("/Users/alguien")).toBe("/opt/hermes/config.yaml");
+  });
+});
+
+describe("la ubicación de un perfil de Hermes", () => {
+  it("sin HERMES_HOME, los perfiles cuelgan de `~/.hermes`", () => {
+    expect(hermesProfilesRoot("/Users/alguien")).toBe("/Users/alguien/.hermes/profiles");
+    expect(hermesProfileHome("sai", "/Users/alguien")).toBe(
+      "/Users/alguien/.hermes/profiles/sai",
+    );
+    expect(hermesProfileConfigPath("sai", "/Users/alguien")).toBe(
+      "/Users/alguien/.hermes/profiles/sai/config.yaml",
+    );
+  });
+
+  it("dentro de una sesión de Hermes, `HERMES_HOME` ya es un perfil y no la raíz", () => {
+    // Es el error que este constructor evita: derivar del `HERMES_HOME` activo
+    // daría `~/.hermes/profiles/<perfil>/profiles/<otro>/config.yaml`, un archivo
+    // que nadie lee. Hermes ancla los perfiles a la raíz por defecto.
+    process.env["HERMES_HOME"] = "/Users/alguien/.hermes/profiles/valmen-harness";
+    expect(hermesProfileConfigPath("otro", "/Users/alguien")).toBe(
+      "/Users/alguien/.hermes/profiles/otro/config.yaml",
+    );
+  });
+
+  it("fuera del home nativo, la raíz es el abuelo cuando el padre es `profiles`", () => {
+    // Una instalación en otro sitio o en un contenedor, con `HERMES_HOME`
+    // apuntando a un perfil: `/opt/hermes/profiles/x` → `/opt/hermes`.
+    process.env["HERMES_HOME"] = "/opt/hermes/profiles/sai";
+    expect(hermesProfileConfigPath("otro", "/Users/alguien")).toBe(
+      "/opt/hermes/profiles/otro/config.yaml",
+    );
+  });
+
+  it("una instalación en otro sitio sin `profiles` deja la raíz donde está", () => {
+    process.env["HERMES_HOME"] = "/opt/hermes";
+    expect(hermesProfileConfigPath("sai", "/Users/alguien")).toBe(
+      "/opt/hermes/profiles/sai/config.yaml",
+    );
   });
 });
 
