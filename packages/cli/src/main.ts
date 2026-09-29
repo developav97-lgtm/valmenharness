@@ -185,7 +185,11 @@ Comandos:
                             Anexa el siguiente POINT-NNN, en estado abierto.
       --files <a,b>         Archivos que el punto toca, relativos a la raíz.
   qa-start --id <ID> --environment <e> --build-reference <ref>
-                            Abre un ciclo QA. Exige el ticket en in_qa.
+                            Abre un ciclo QA. Exige el ticket en in_qa. La ref es
+                            commit:<sha> —verifica que el árbol del commit sea
+                            el de la evidencia worktree:sha256 del ticket; igualdad
+                            probada evita re-correr la suite sobre el commit— o
+                            worktree / worktree:sha256:hash.
   qa-close --id <ID> --result <r>
                             Cierra el ciclo abierto. --po-confirmation si aprueba.
   add-evidence --id <ID> --kind <k> --description <d>

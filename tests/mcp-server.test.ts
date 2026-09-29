@@ -1155,7 +1155,7 @@ async function hastaCerrado(): Promise<string> {
   await paso(contexto, "iniciar_qa", {
     id: ID,
     ambiente: "local, macOS, Node 24",
-    referencia: `commit:${SHA}`,
+    referencia: `worktree:sha256:${"b".repeat(64)}`,
   });
   await paso(contexto, "cerrar_qa", {
     id: ID,
@@ -1255,7 +1255,7 @@ describe("el ciclo entero del ticket", () => {
     await paso(contexto, "iniciar_qa", {
       id: ID,
       ambiente: "local, macOS, Node 24, datos de la sucursal 3",
-      referencia: `commit:${SHA}`,
+      referencia: `worktree:sha256:${"b".repeat(64)}`,
     });
     await paso(contexto, "anotar_retest", {
       id: ID,
@@ -1363,7 +1363,7 @@ describe("el ciclo entero del ticket", () => {
     const fuera = await callTool(contexto, "iniciar_qa", {
       id: ID,
       ambiente: "local",
-      referencia: `commit:${SHA}`,
+      referencia: `worktree:sha256:${"b".repeat(64)}`,
     });
     expect(fuera.isError).toBe(true);
     expect(fuera.text).toContain("in_qa");

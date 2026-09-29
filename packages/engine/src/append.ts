@@ -20,12 +20,15 @@
  *
  * Transcrito de `ticket.py` L1327-1903. Verificado contra la referencia.
  */
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   type JsonObject,
   type ParsedTicket,
   EXIT_INVARIANT,
   MAX_POINTS,
   EXIT_SCHEMA,
+  EXIT_REFERENCE,
   assertWriteAllowed,
   fail,
   MutationLock,
@@ -39,7 +42,7 @@ import {
 
 import { type RegistryPaths, findTicket } from "./discovery.js";
 import { finalizeMutation, readAndValidate } from "./mutate.js";
-import { resolveReference, validateFunctionalFile } from "./references.js";
+import { declaredFunctionalFiles, resolveReference, validateFunctionalFile } from "./references.js";
 
 /** El estado de un ticket, tal como lo ve un comando de anexado. */
 interface Contexto {
@@ -383,6 +386,47 @@ export interface QaStartRequest {
   readonly now?: (() => Date) | undefined;
 }
 
+/**
+ * El hash del contrato sobre el contenido **versionado** de los archivos del
+ * ticket: el blob de git a través del commit, no el disco. Mismo encuadre que
+ * `calculateWorktreeReference` —longitud de la ruta y del contenido en 8 bytes
+ * big-endian, rutas ordenadas— para que la comparación contra una evidencia
+ * `worktree:sha256` compare los mismos bytes.
+ *
+ * Devuelve `null` cuando algo falla: git sin el archivo en el commit o sin repo.
+ * El llamador decide qué significa ese vacío.
+ */
+function hashArbolDeCommit(
+  commit: string,
+  archivos: readonly string[],
+  root: string,
+): string | null {
+  const hash = createHash("sha256");
+  for (const relativa of archivos) {
+    let contenido: Buffer;
+    try {
+      const salida = execFileSync(
+        "git",
+        ["show", `${commit}:${relativa}`],
+        { cwd: root, encoding: "buffer", maxBuffer: 64 * 1024 * 1024 },
+      );
+      contenido = Buffer.from(salida);
+    } catch {
+      return null;
+    }
+    const ruta = Buffer.from(relativa, "utf8");
+    const largoRuta = Buffer.alloc(8);
+    largoRuta.writeBigUInt64BE(BigInt(ruta.length));
+    const largoContenido = Buffer.alloc(8);
+    largoContenido.writeBigUInt64BE(BigInt(contenido.length));
+    hash.update(largoRuta);
+    hash.update(ruta);
+    hash.update(largoContenido);
+    hash.update(contenido);
+  }
+  return hash.digest("hex");
+}
+
 export function qaStart(request: QaStartRequest): string {
   if (request.environment === undefined || request.buildReference === undefined) {
     fail("qa-start requiere --environment y --build-reference trazables.", EXIT_INVARIANT);
@@ -397,6 +441,78 @@ export function qaStart(request: QaStartRequest): string {
     const qa = (contexto.document.blocks.QA ?? []).map((entrada) => ({ ...entrada }));
     if (qa.length % 2 !== 0) {
       fail("Ya existe un ciclo QA pendiente de cierre.", EXIT_INVARIANT);
+    }
+
+    const buildReferencePedida = request.buildReference ?? "";
+    // La forma `commit:<sha>` no se acepta de buena fe: se verifica que el árbol
+    // del commit sea byte a byte el árbol que la evidencia `worktree:sha256` ya
+    // registró. Con la igualdad probada, la corrida previa es evidencia del ciclo
+    // y no hay que re-correrla sobre el commit; con cualquier otra cosa, se
+    // rechaza sin escribir el bloque y la corrida se hace. Sin evidencia de
+    // worktree, la forma no está disponible y la referencia libre de siempre
+    // sigue funcionando igual.
+    if (buildReferencePedida.startsWith("commit:")) {
+      const sha = buildReferencePedida.slice("commit:".length);
+      if (!/^[0-9a-f]{40}$/.test(sha)) {
+        fail(
+          "build_reference commit:<sha> exige un sha de 40 hex en minúsculas.",
+          EXIT_REFERENCE,
+        );
+      }
+      const entradas = contexto.document.blocks.Evidencia ?? [];
+      let evidencia: string | null = null;
+      for (const entrada of entradas) {
+        const referencia = entrada.reference;
+        if (typeof referencia === "string" && referencia.startsWith("worktree:sha256:")) {
+          evidencia = referencia;
+          break;
+        }
+      }
+      if (evidencia === null) {
+        fail(
+          "build_reference commit:<sha> exige que el ticket tenga evidencia con " +
+            "referencia worktree:sha256:… que nombre el árbol verificado; sin esa " +
+            "igualdad probada, la referencia de commit no dice qué se probó.",
+          EXIT_REFERENCE,
+        );
+      }
+      const archivos = declaredFunctionalFiles(
+        contexto.document,
+        contexto.ticketPath,
+        contexto.paths.root,
+      );
+      if (archivos.length === 0) {
+        fail(
+          "El ticket no declara archivos afectados: sin la lista no hay árbol del " +
+            "commit que hashear contra la evidencia.",
+          EXIT_REFERENCE,
+        );
+      }
+      let hashDeLaEvidencia: string | null = null;
+      try {
+        // El rev-parse valida primero que el commit exista; el hasheo lee los
+        // blobs por `git show` y falla igual si el archivo no está en el commit.
+        execFileSync("git", ["rev-parse", "--verify", `${sha}^{commit}`], {
+          cwd: contexto.paths.root,
+          encoding: "utf8",
+        });
+        hashDeLaEvidencia = hashArbolDeCommit(sha, archivos, contexto.paths.root);
+      } catch {
+        fail(
+          `El commit ${sha} no se pudo resolver en el repositorio del registro: ` +
+            "sin commit no hay igualdad de árbol que verificar.",
+          EXIT_REFERENCE,
+        );
+      }
+      if (hashDeLaEvidencia === null || hashDeLaEvidencia !== evidencia.slice("worktree:sha256:".length)) {
+        fail(
+          "El árbol del commit no coincide con la evidencia worktree:sha256 del " +
+            "ticket: el contenido cambió después de verificarse, o un archivo de la " +
+            "lista no está en el commit. La corrida de QA se hace de nuevo sobre el " +
+            "contenido actual.",
+          EXIT_REFERENCE,
+        );
+      }
     }
 
     const buildReference = resolveReference(
