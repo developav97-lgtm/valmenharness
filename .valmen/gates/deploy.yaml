@@ -1,0 +1,8 @@
+# El gate humano del despliegue. Los procesos lo referencian como paso `kind: gate` y
+# el motor espera una aprobación registrada con `valmen process approve deploy --actor
+# <nombre>`, que queda en .valmen/gates/approvals.json. La frase es la del contrato
+# del harness: un clic se da por accidente, escribir la versión exige haber leído cuál es.
+id: deploy
+title: Aprobación humana del despliegue
+mode: human
+require_phrase: "APROBAR DEPLOY v{version}"

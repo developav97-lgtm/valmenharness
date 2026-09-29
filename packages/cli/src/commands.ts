@@ -77,6 +77,7 @@ import {
   requireProcess,
   runProcess,
   budgetForTicket,
+  choosePaths,
   chooseTicketsDir,
   closedTickets,
   hermesSendChannel,
@@ -84,6 +85,9 @@ import {
   readBudgetPolicy,
   renderBudgetNotification,
   renderBudgetReport,
+  MANUALES_POR_DEFECTO,
+  manualesPendientes,
+  renderPendientes,
   defaultReportRange,
   findAllTickets,
   filterReport,
@@ -2086,6 +2090,75 @@ export function abandonProcessRun(root: string, runId: string | undefined): Comm
       `Corrida ${corrida.runId} abandonada. Sus pasos ya ejecutados no se deshacen: ` +
         "lo que hizo, hecho está.\n",
     );
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/**
+ * `manuales pendientes`: el cruce entre los tickets de la release y los manuales.
+ *
+ * El listado sale **siempre** por salida estándar. Sin `--escribir` no se escribe
+ * ningún archivo; con `--escribir` va a `<manuales-dir>/pendientes.md`, y si el
+ * directorio de manuales no existe **no** se crea: inventar la ruta dejaría en el
+ * repositorio un lugar que no significa nada. En ese caso se informa por salida
+ * estándar que no había dónde escribir.
+ */
+export function manualesPendientesCommand(
+  root: string,
+  flags: Readonly<Record<string, string | true>>,
+): CommandResult {
+  const crudos = typeof flags["tickets"] === "string" ? flags["tickets"] : "";
+  const tickets = [
+    ...new Set(
+      crudos
+        .split(",")
+        .map((id) => id.trim())
+        .filter((id) => id !== ""),
+    ),
+  ];
+  if (tickets.length === 0) {
+    return error(
+      "manuales pendientes requiere --tickets con los ids de la release, " +
+        "separados por coma.",
+      EXIT_SCHEMA,
+    );
+  }
+
+  const manualesDir =
+    typeof flags["manuales-dir"] === "string"
+      ? flags["manuales-dir"]
+      : MANUALES_POR_DEFECTO;
+  const pantallasCrudas = typeof flags["pantallas"] === "string" ? flags["pantallas"] : "";
+  const pantallas = pantallasCrudas
+    .split(",")
+    .map((patron) => patron.trim())
+    .filter((patron) => patron !== "");
+
+  try {
+    const resultado = manualesPendientes(choosePaths(root), {
+      tickets,
+      manualesDir,
+      ...(pantallas.length === 0 ? {} : { pantallas }),
+    });
+    const texto = renderPendientes(resultado);
+    const avisos: string[] = [];
+
+    if (flags["escribir"] === true) {
+      const directorio = join(root, ...manualesDir.split("/"));
+      if (!existsSync(directorio)) {
+        avisos.push(
+          `No se escribió el listado: no existe el directorio de manuales ` +
+            `${manualesDir}, y no se creó.\n`,
+        );
+      } else {
+        writeFileSync(join(directorio, "pendientes.md"), texto, "utf8");
+        avisos.push(`Listado escrito en ${manualesDir}/pendientes.md\n`);
+      }
+    }
+
+    return ok([texto, ...avisos].join(""));
   } catch (caught) {
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);

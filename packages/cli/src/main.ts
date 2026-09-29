@@ -55,6 +55,7 @@ import {
 } from "./hermes.js";
 import { mcpCommand } from "./mcp.js";
 import { runProcess } from "./process.js";
+import { runManuales } from "./manuales.js";
 import {
   type RegistryPaths,
   CASCADE_TASK_IDS,
@@ -266,6 +267,17 @@ Comandos:
                             pasos ya ejecutados no se repiten.
       --skip-gates          Saltea los gates que sigan sin aprobar.
   process abandon <corrida> Deja de poder retomarla. No deshace lo ya ejecutado.
+  manuales pendientes --tickets <ID1,ID2>
+                            Lista los manuales que la release dejó desactualizados,
+                            cruzando las pantallas que tocaron sus tickets con lo que
+                            cada manual declara como fuente. Sale siempre por stdout.
+      --tickets <ID1,ID2>   Los tickets de la release. Se puede repetir la bandera.
+      --manuales-dir <ruta> Dónde viven los manuales (por defecto
+                            docs/manuales/usuario-final).
+      --pantallas <g1,g2>   Los patrones que definen una pantalla. Por defecto
+                            **/*.component.ts y **/*.component.html.
+      --escribir            Deja el listado en <manuales-dir>/pendientes.md. Sin
+                            esta bandera no escribe ningún archivo.
   provider [list|set|test|models]
                             Los proveedores y sus credenciales. "list" dice cuáles
                             hay y cuáles están configurados; "set <id> --key <k>"
@@ -416,6 +428,11 @@ export const VALUE_OPTIONS = [
   "--decision",
   "--actor",
   "--tickets",
+  // `manuales pendientes`: dónde viven los manuales y qué archivos son pantalla.
+  // Sin esto en la lista, `--manuales-dir docs/…` se leería como bandera booleana
+  // y la ruta quedaría como argumento suelto.
+  "--manuales-dir",
+  "--pantallas",
   "--desde",
   "--hasta",
   "--q",
@@ -551,7 +568,15 @@ export function parseArgs(
       }
       if (name === "--root") root = inlineValue;
       else if (name === "--tickets-dir") ticketsDir = inlineValue;
-      else flags[name.slice(2)] = inlineValue;
+      else {
+        const clave = name.slice(2);
+        const previo = flags[clave];
+        // Una bandera repetida **acumula** en vez de pisar el valor anterior.
+        // `manuales pendientes --tickets A --tickets B` pide una lista, y quedarse
+        // con el último dejaba el primero afuera sin decir nada.
+        flags[clave] =
+          typeof previo === "string" ? `${previo},${inlineValue}` : inlineValue;
+      }
       continue;
     }
 
@@ -1169,6 +1194,10 @@ export function dispatch(options: Options): CommandResult {
     case "process":
       // `process <sub> [args]`: su propio módulo, como `feature`.
       return runProcess(options.root, rest, options.flags);
+
+    case "manuales":
+      // `manuales <sub> [args]`: su propio módulo, como `process`.
+      return runManuales(options.root, rest, options.flags);
 
     case "migrate":
       return migrateRegistry(paths, {

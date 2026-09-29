@@ -1,0 +1,47 @@
+id: deploy
+title: Despliegue de una release
+description: >
+  Promoción de una release con dry-run obligatorio y aprobación humana por frase
+  literal antes de los pasos irreversibles. Los manuales van encadenados al final: un
+  fallo ahí avisa y no bloquea la release.
+params:
+  version:
+    type: string
+    required: true
+    pattern: '^\d+\.\d+\.\d+$'
+    description: "Versión SemVer que se despliega."
+  tickets:
+    type: string
+    required: true
+    description: "Ids de los tickets de la release, separados por coma."
+ticket_param: tickets
+steps:
+  - id: preflight
+    title: Dry-run de lo que entra en la release
+    kind: command
+    run: git log --oneline origin/main..HEAD
+    evidence: [stdout]
+  - id: gate-deploy
+    title: Aprobación humana del despliegue
+    kind: gate
+    gate: deploy
+  - id: tag
+    title: Tag anotado de la release
+    kind: command
+    run: git tag -a v{version} -m "Release v{version}"
+  - id: publish
+    title: Registrar la publicación de los tickets
+    kind: command
+    run: valmen release-publish --version {version} --tickets {tickets}
+  - id: manuales
+    title: Actualizar los manuales de usuario final
+    kind: process
+    process: actualizar-manuales
+    params: { tickets: "{tickets}" }
+    continue_on_failure: true
+    notify_on_failure: true
+  - id: post-release
+    title: Regenerar el índice del registro tras la publicación
+    kind: command
+    run: valmen index
+    evidence: [stdout]

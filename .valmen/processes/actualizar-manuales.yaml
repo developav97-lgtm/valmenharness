@@ -1,0 +1,25 @@
+id: actualizar-manuales
+title: Actualizar manuales de usuario final
+description: >
+  Detecta las pantallas que tocaron los tickets de la release, marca los manuales que
+  las documentan como desactualizados y deja el listado como evidencia de la corrida.
+  Escribir los manuales es del paso de agente de R-S3-002 y auditarlos, del gate
+  manuals de R-S3-003: este proceso declara la detección y la marca.
+params:
+  tickets:
+    type: string
+    required: true
+    description: "Ids de los tickets de la release, separados por coma."
+  manualesdir:
+    type: string
+    default: docs/manuales/usuario-final
+    description: "Dónde viven los manuales de usuario final."
+ticket_param: tickets
+produces:
+  - docs/manuales/usuario-final/pendientes.md
+steps:
+  - id: detectar-pantallas
+    title: Detectar pantallas tocadas y marcar los manuales desactualizados
+    kind: command
+    run: valmen manuales pendientes --tickets {tickets} --manuales-dir {manualesdir} --escribir
+    evidence: [stdout]

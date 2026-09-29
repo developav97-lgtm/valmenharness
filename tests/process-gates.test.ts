@@ -325,9 +325,13 @@ describe("retomar una corrida", () => {
           : { status: 0, stdout: "", stderr: "" },
     });
     expect(corrida.ok).toBe(false);
-    // Un fallo que no se retoma no deja estado: solo se persiste lo que hay que
-    // reanudar, y un archivo por corrida fallida llenaría el proyecto de basura.
-    expect(listRuns(lab)).toEqual([]);
+    // Un fallo ahora **sí** deja estado, aunque nadie lo haya pedido para
+    // retomar: es lo que hace visible después un paso que avisa y no bloquea
+    // (`notify_on_failure`), que era justo el que no dejaba rastro. El freno a la
+    // basura sigue en pie para el proceso de comandos que termina bien.
+    const fallidas = listRuns(lab);
+    expect(fallidas).toHaveLength(1);
+    expect(fallidas[0]?.steps.find((paso) => paso.id === "uno")?.status).toBe("failed");
     // Y si se retoma, sigue desde el paso que falló.
     const reanudada = runProcess({
       root: lab,

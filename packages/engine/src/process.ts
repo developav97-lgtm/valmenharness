@@ -673,8 +673,15 @@ export function runProcess(request: RunProcessRequest): ProcessRun {
   // ninguno de sus pasos declara consumo.
   const gastado = resultados.some((resultado) => resultado.usage !== null);
 
+  // Y un paso que quedó en `failed` también se persiste, aunque su proceso haya
+  // seguido. Un fallo que no bloquea es justo el que alguien tiene que poder ver
+  // después: hoy queda el ✗ en la pantalla de quien miraba y nada más, y el paso
+  // de manuales que avisa sin cortar la release no deja rastro. El estado dice
+  // «completado» con el paso en rojo, que es la verdad.
+  const fallo = resultados.some((resultado) => resultado.status === "failed");
+
   let state: ProcessRunState | null = null;
-  if (waiting || request.resume !== undefined || gastado) {
+  if (waiting || request.resume !== undefined || gastado || fallo) {
     state = {
       runId: request.resume?.runId ?? newRunId(definition.id),
       processId: definition.id,
