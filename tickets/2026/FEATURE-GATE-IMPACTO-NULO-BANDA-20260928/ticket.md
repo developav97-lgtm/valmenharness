@@ -121,7 +121,23 @@ Lo implementado, paso por paso contra el plan:
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-29",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Sesion 20260928_140418_c56444 del escritorio Hermes: trabajo meta directo del harness - diagnostico del ticket de otra sesion retomado, implementacion del criterio de inaplicabilidad, pruebas y registro. Su gasto completo queda en la base del perfil saiopencloud: 3.169.166 tokens entrada + 348.987 salida + 211.763 razonamiento, 248 llamadas, modelo glm-5.3-flash, sin costo por token de suscripcion",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:hermes",
+    "confidence": "high",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -194,6 +210,15 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-09-28",
+    "at": "2026-09-29T04:25:17.297Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
   }
 ]
 ```
