@@ -331,7 +331,9 @@ export function expandGate(gate: GateDefinition, context: GateContext): GateDefi
           .filter((proposition): proposition is Proposition => proposition !== null)
       : [];
 
-  if (atomicas.length === 0 && porImpacto.length === 0 && porComando.length === 0)
+  if (atomicas.length === 0 && porImpacto.length === 0 && porComando.length === 0 && context.impacts.length > 0)
+    return gate;
+  if (atomicas.length === 0 && porImpacto.length === 0 && porComando.length === 0 && context.impacts.length === 0 && !PROPOSICIONES_QUE_PIDEN_IMPACTOS.some((id) => gate.propositions.some((proposition) => proposition.id === id && proposition.verdict !== false)))
     return gate;
 
   // Cuando el sujeto declara criterios, el veredicto lo dan **las proposiciones
@@ -356,6 +358,29 @@ export function expandGate(gate: GateDefinition, context: GateContext): GateDefi
       : proposition,
   );
 
+  // Un ticket sin impactos técnicos declara la ausencia, y una proposición que
+  // pregunta por la cobertura de impactos sobre un sujeto que declara que no
+  // tiene ninguno pregunta algo inaplicable: el evaluador lee la ausencia como
+  // cobertura débil y el gate cae a revisión sin haber nada faltando. Medido en
+  // los tickets reales del 2026-09-28: riesgos_cubren_impactos a 0.66 y 0.46
+  // con «ningún impacto» declarado empujó a banda ambos análisis. El mismo
+  // criterio de arriba —una pregunta inaplicable no mide calidad— aplica al
+  // conjunto de impactos vacío: las fijas que dependen de impactos pasan a
+  // descriptivas, quedan en el recibo y no entran a la media ni a la banda.
+  //
+  // Solo el conjunto **vacío** dispara el cambio: con al menos un impacto
+  // declarado la proposición sigue ponderada y su banda de revisión intacta,
+  // para que un ticket con impactos reales no pueda esconderlos por esta vía.
+  const sinImpactos = context.impacts.length === 0;
+  const sinImpactoAplicable = sinImpactos
+    ? new Set(PROPOSICIONES_QUE_PIDEN_IMPACTOS)
+    : null;
+  const propositionsFinales = propositions.map((proposition) =>
+    sinImpactoAplicable?.has(proposition.id) && proposition.verdict !== false
+      ? { ...proposition, verdict: false }
+      : proposition,
+  );
+
   const sufijo = [
     atomicas.length > 0 ? "criterios" : "",
     porImpacto.length > 0 ? "impactos" : "",
@@ -367,9 +392,21 @@ export function expandGate(gate: GateDefinition, context: GateContext): GateDefi
   return {
     ...gate,
     id: `${gate.id}+${sufijo}`,
-    propositions: [...atomicas, ...porImpacto, ...porComando, ...propositions],
+    propositions: [...atomicas, ...porImpacto, ...porComando, ...propositionsFinales],
   };
 }
+
+/**
+ * Las proposiciones fijas que preguntan por impactos declarados.
+ *
+ * Con el conjunto de impactos vacío —«ningún impacto»— son inaplicables: no hay
+ * nada que cubrir, y su respuesta solo mide la ausencia. Se declaran acá y no
+ * en la definición del gate para que el criterio de inaplicabilidad viva junto
+ * al de expansión, que es quien conoce el contexto del sujeto.
+ */
+export const PROPOSICIONES_QUE_PIDEN_IMPACTOS: readonly string[] = [
+  "riesgos_cubren_impactos",
+];
 
 /**
  * Contexto del sujeto que un gate puede necesitar para expandirse.
