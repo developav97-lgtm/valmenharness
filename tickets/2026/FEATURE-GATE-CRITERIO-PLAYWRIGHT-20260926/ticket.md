@@ -120,6 +120,18 @@ Desvíos del plan y límites declarados:
 - El criterio `verify: manual` (la batería completa con el typecheck) lo corrió esta sesión y sale verde, pero queda **sin marcar**: lo confirma quien prueba, y esta entrega no lo da por verificado. Las ocho pruebas por comando se marcaron con la corrida directa del archivo enfocado, y el recibo de la compuerta mecánica sobre este mismo estado las respalda.
 - Contrato de pruebas para el responsable: no hay nada que ejecutar a mano. Lo que se prueba en la aplicación es que un recibo de la compuerta mecánica muestre el resultado de cada comando con su invocación, su código de salida y su duración, y que un criterio de interfaz escrito con el verbo —`<!-- test: playwright tests/pos/<spec>.spec.ts -->`— corra el comando que el proyecto declare en `test-commands` sin que la compuerta invente el programa.
 
+### Compuerta de análisis: la banda que decidió una persona
+
+- La compuerta `analysis` volvió `REVIEW` en sus dos corridas —las dos revisiones del recibo `GR-20260929-analysis`, evaluadas con `typesafe/jev-1.13`—, y la proposición que emite veredicto y quedó en banda es `diagnostico_explica_el_sintoma`, **de peso 3: 0,79 en la primera corrida y 0,82 en la segunda**, contra el umbral de aprobación de 0,90. El veredicto de una compuerta es su proposición más débil y no su media.
+- Las otras proposiciones con veredicto salieron en approve —`causa_especifica` 0,94, `nombra_archivos_reales` 0,92, `clasificacion` completa—. `riesgos_cubren_impactos` quedó en 0,48 y **no emite veredicto**: es descriptiva (`verdict: false`), informa y no decide, así que no es una banda pendiente.
+- **La decisión no había quedado registrada en la entrega del 2026-09-29**: el recibo de análisis quedó en `escalatedTo: human` con `humanDecision: null`, y `packages/cli/src/hermes.ts:708` lista exactamente esos recibos como pendientes de aviso, con lo que el PO seguía recibiendo el aviso de una compuerta de un ticket ya entregado. Lo detectó la revisión de la tarjeta `t_befa18a7` y es lo único que devolvió.
+- Se registró el 2026-09-29 sobre el **último** recibo de análisis (revisión 14302, la de 0,82) con la delegación que el plan ya cita literal: actor «Delegación del PO (Juan Andrade)» con la orden del 2026-09-29 —«Dale, los ejecuto YA en orden (cf: 7 del EVOLUCION-HARNESS, commit sí por ticket al llegar a awaiting_user_tests, push con orden aparte del PO)»—, el motivo en el propio recibo y el evento `EVENT-012` en `## Eventos`. Después del registro quedan **cero** recibos escalados sin decisión en todo el registro.
+- La compuerta de plan **no necesita decisión**: su primera corrida volvió `REVIEW` (`criterio_03` 0,55 y `criterio_09` 0,35) y la segunda, sobre el plan corregido, aprobó con los nueve criterios entre 0,95 y 0,99. La revisión vigente de `GR-20260929-plan` es la aprobada, y el recibo escalado quedó superado por su propia corrida siguiente.
+- Lo que la banda mide es la redacción del diagnóstico y no su fondo —el diagnóstico nombra archivo y línea del síntoma en `packages/gate/src/dynamic.ts:148-181` y la implementación lo confirmó al correr—, así que la decisión delegada es la lectura correcta. Se deja el número a la vista para que el PO pueda revertirla si no le parece.
+- Dos notas de la revisión que no bloquearon y conviene tener a mano cuando llegue el ciclo de QA: la referencia con la que hay que abrirlo no puede ser `commit:<sha>`, porque el ticket tiene cero puntos y la lista de archivos afectados sale de `affected_files` de los puntos —`qa-start` la rechaza con «El ticket no declara archivos afectados»—, así que va `worktree:sha256:3839a4e74341d01b5409b203e62d7075fd2a481785cad21039f058a40e814626`; y la prueba de documentación asegura la mención con un `toContain` de una palabra, que pasaría aunque la sección se borrara —el contenido que afirma está en `docs/03-GATES.md` §5.1sexies, así que la afirmación es verdadera aunque la guarda sea floja—.
+- Quién escribió qué en esta ronda: la ronda 2 solo tocó el registro —la línea nueva del recibo y este texto—; no se editó ningún archivo de código ni de pruebas, y la sesión que lo hizo es la de la revisión, no la del ejecutor. Este texto es posterior al recibo `GR-20260929-qa-mechanical`, así que su estado congelado es anterior a él; ningún criterio se tocó —los ocho de comando siguen marcados con su corrida y el manual sigue sin marcar— y la compuerta mecánica no se puede volver a correr sobre un ticket ya entregado, porque solo aplica a un ticket en `in_progress`.
+- Además del mínimo que pidió la revisión, la ronda registró el consumo de IA de las dos sesiones de Hermes que trabajaron el ticket y no estaban declaradas: la de la revisión ronda 1 (`CONSUMO-005`, `20260929_181020_957da9`, con el turno ya cerrado) y la de esta ronda (`CONSUMO-006`, `20260929_181824_edfea1`, leída con el turno todavía en curso y declarada como piso). El bloque queda con **seis entradas**: tres de OpenCode y tres de Hermes. Ninguna de las dos declara costo: el proveedor factura por suscripción y la fila informa 0,0, que escrito como costo se leería como gratis.
+
 ## QA
 
 ```json
@@ -216,6 +228,36 @@ Desvíos del plan y límites declarados:
     "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
     "confidence": "high",
     "id": "CONSUMO-004"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-29",
+    "session_reference": "20260929_181020_957da9",
+    "model": "opencode-go/deepseek-v4.1-flash",
+    "reasoning_effort": null,
+    "notes": "Sesion de la revision ronda 1 de la tarjeta del tablero sobre este ticket: relee el diff en frio, reproduce por su cuenta el archivo enfocado, la bateria completa y el typecheck, recomputa la referencia de evidencia sobre los dos commits del ticket y devuelve la tarjeta por un unico hueco de registro, la compuerta de analisis escalada sin decision. El proveedor opencode-go factura por suscripcion, asi que no se declara costo: la fila del state.db informa 0.0 y escribirlo como cero se leeria como gratis.",
+    "input_tokens": 94569,
+    "output_tokens": 32761,
+    "total_tokens": 151643,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-005"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-29",
+    "session_reference": "20260929_181824_edfea1",
+    "model": "opencode-go/deepseek-v4.1-flash",
+    "reasoning_effort": null,
+    "notes": "Sesion que reviso la tarjeta del tablero de este ticket en la ronda 1 y cerro lo unico que esa revision devolvio: registro la decision delegada del PO sobre el recibo de analisis escalado, con su motivo, y escribio el resultado en el ticket. En esta ronda tambien registro el consumo de las sesiones que trabajaron el ticket. Lectura hecha al momento de registrar, con el turno todavia en curso: la fila sigue creciendo hasta que el turno termina, asi que estos numeros son un piso. El proveedor opencode-go factura por suscripcion, asi que no se declara costo: la fila del state.db informa 0.0 y escribirlo como cero se leeria como gratis.",
+    "input_tokens": 147111,
+    "output_tokens": 26427,
+    "total_tokens": 190045,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-006"
   }
 ]
 ```
@@ -325,6 +367,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-09-29",
+    "at": "2026-09-29T23:20:54.259Z",
+    "action": "gate-approved",
+    "actor": "cli",
+    "details": "Gate analysis aprobado por Delegación del PO (Juan Andrade): «Dale, los ejecuto YA en orden (cf: 7 del EVOLUCION-HARNESS, commit sí por ticket al llegar a awaiting_user_tests, push con orden aparte del PO)»: La banda es de redacción y no de fondo, y está medida dos veces en el mismo evaluador (typesafe/jev-1.13). La única proposición con veredicto fuera de umbral es diagnostico_explica_el_sintoma, de peso 3: 0,79 en la primera corrida y 0,82 en la segunda, contra el umbral de 0,90; el resto quedó en approve (causa_especifica=0,94, nombra_archivos_reales=0,92, clasificacion=completa) y riesgos_cubren_impactos=0,48 es descriptiva (verdict=false) y no emite veredicto. El diagnóstico del ticket nombra archivo y línea del síntoma (dynamic.ts, el mecanismo de prefijos de test-commands) y la implementación lo confirmó al correr: las siete pruebas del archivo enfocado pasan. Se registra la decisión delegada porque la orden del PO ya autoriza seguir, y sin registro el aviso de la compuerta seguía llegándole por una compuerta de un ticket ya entregado."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-09-29",
+    "at": "2026-09-29T23:25:04.113Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-005."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-09-29",
+    "at": "2026-09-29T23:25:25.610Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-006."
   }
 ]
 ```
