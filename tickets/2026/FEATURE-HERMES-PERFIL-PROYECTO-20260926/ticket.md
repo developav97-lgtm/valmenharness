@@ -287,6 +287,21 @@ Lo que **falta** de la prueba de punta a punta real: conectar un proyecto a un p
     "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
     "confidence": "high",
     "id": "CONSUMO-008"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-29",
+    "session_reference": "20260929_172211_64e54e",
+    "model": "deepseek-v4.1-flash",
+    "reasoning_effort": null,
+    "notes": "Sesion kanban de la revision ronda 3 del ticket: lente de contrato, ejerci el entregable de punta a punta con un HOME aislado, re-corri npx vitest run y reproduje las tres mediciones de los arboles de la evidencia; la revision aprobo. La base no calcula el costo y la lectura es con el turno todavia en curso",
+    "input_tokens": 142443,
+    "output_tokens": 23963,
+    "total_tokens": 185096,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-009"
   }
 ]
 ```
@@ -459,6 +474,15 @@ Sin publicar todavía.
     "action": "ai-usage-added",
     "actor": "cli",
     "details": "Se agregó CONSUMO-008."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-09-29",
+    "at": "2026-09-29T22:28:49.337Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-009."
   }
 ]
 ```
