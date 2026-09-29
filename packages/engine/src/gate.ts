@@ -459,6 +459,9 @@ export async function runGate(
     decidedAt: now().toISOString(),
     notes: notas,
     ...(evaluation.escalations === undefined ? {} : { escalations: evaluation.escalations }),
+    ...(evaluation.commandResults === undefined
+      ? {}
+      : { commandResults: evaluation.commandResults }),
   });
 
   // Se informa de lo que de verdad se evaluó. Antes decía «N criterio(s)
@@ -512,6 +515,23 @@ export async function runGate(
     lines.push(
       `    ${marca}  ${item.label.padEnd(38)} ${item.verdict ? "" : "descriptiva"}${peso}${descripcion}`.trimEnd(),
     );
+  }
+
+  // El resultado de cada comando corrido, con la evidencia que dejó. Sin esto la
+  // salida muestra el veredicto del criterio pero no lo que lo produjo, y un
+  // criterio de interfaz queda probado por un número sin su traza.
+  if (evaluation.commandResults !== undefined && evaluation.commandResults.length > 0) {
+    for (const resultado of evaluation.commandResults) {
+      const evidencia =
+        resultado.artifacts === undefined || resultado.artifacts.length === 0
+          ? ""
+          : `  →  ${resultado.artifacts.map((artifact) => artifact.path).join(", ")}`;
+      lines.push(
+        `    ·  ${resultado.invocation}  ` +
+          `salida ${resultado.exitCode} (esperado ${resultado.expectedExitCode})  ` +
+          `${resultado.durationMs} ms${evidencia}`,
+      );
+    }
   }
 
   if (decision.propositions.some((item) => !item.verdict && item.inBand)) {

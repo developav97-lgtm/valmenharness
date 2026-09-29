@@ -20,9 +20,22 @@
  * Ver docs/03-GATES.md §4.
  */
 import { execFileSync } from "node:child_process";
+import { readdirSync, statSync } from "node:fs";
+import { join, relative, resolve, sep } from "node:path";
 
 import type { Proposition, PropositionAnswer } from "@valmen/gate";
 import { GateDefinitionError } from "@valmen/gate";
+
+/**
+ * Un archivo que la corrida de un comando dejó en un directorio de evidencia.
+ *
+ * `path` es relativo a la raíz del proyecto y con separadores POSIX, para que el
+ * recibo sea legible y comparable entre sistemas.
+ */
+export interface CommandArtifact {
+  readonly path: string;
+  readonly bytes: number;
+}
 
 /** Declaración de un comando asociado a una proposición. */
 export interface CommandCheck {
@@ -45,6 +58,14 @@ export interface CommandCheck {
   readonly timeoutMs?: number;
   /** Qué se está comprobando, para el recibo. */
   readonly description: string;
+  /**
+   * Directorios donde el comando deja su evidencia, relativos a la raíz.
+   *
+   * Después de correr —también cuando falla, que es cuando más importa— se
+   * recorren y sus archivos posteriores al arranque viajan en el resultado. Sin
+   * este campo no se recolecta nada.
+   */
+  readonly artifactDirs?: readonly string[];
   /**
    * Cómo se traduce el resultado del comando a la respuesta de la proposición.
    *
@@ -72,6 +93,13 @@ export interface CommandCheckResult {
   readonly stdout: string;
   readonly stderr: string;
   readonly durationMs: number;
+  /**
+   * La evidencia que la corrida dejó en los directorios que el check declara.
+   *
+   * Solo aparece cuando el check declara `artifactDirs`: un comando que no las
+   * declara no tiene evidencia que recolectar.
+   */
+  readonly artifacts?: readonly CommandArtifact[];
 }
 
 /** Error de un comando que no se pudo ejecutar. */
@@ -87,6 +115,73 @@ export class CommandError extends Error {
 
 /** Límite de salida que se guarda en el recibo, por flujo. */
 export const MAX_CAPTURED_OUTPUT = 2000;
+
+/** Profundidad máxima del recorrido de un directorio de evidencia. */
+const MAX_PROFUNDIDAD_DE_EVIDENCIA = 3;
+
+/** Cuántos archivos de evidencia se guardan como máximo. */
+const MAX_ARCHIVOS_DE_EVIDENCIA = 10;
+
+/**
+ * Lista la evidencia que un comando dejó en los directorios declarados.
+ *
+ * Es pura y no ejecuta nada, así que se prueba sin correr un comando. Recorre
+ * cada directorio de forma recursiva hasta una profundidad acotada y se queda con
+ * los archivos **posteriores al arranque del comando** —con un segundo de margen
+ * por la resolución del sistema de archivos—: listar el directorio entero
+ * atribuiría al recibo la traza de una corrida anterior, que es una afirmación
+ * falsa con forma de prueba. Los archivos salen ordenados por ruta y acotados.
+ *
+ * Un directorio que no existe no es un error: significa que esta corrida no dejó
+ * evidencia ahí.
+ */
+export function listArtifacts(
+  root: string,
+  dirs: readonly string[],
+  sinceMs: number,
+): CommandArtifact[] {
+  const limite = sinceMs - 1000;
+  const encontrados: CommandArtifact[] = [];
+
+  const recorrer = (dirAbs: string, profundidad: number): void => {
+    if (profundidad > MAX_PROFUNDIDAD_DE_EVIDENCIA) return;
+
+    let entradas;
+    try {
+      entradas = readdirSync(dirAbs, { withFileTypes: true });
+    } catch {
+      return;
+    }
+
+    for (const entrada of entradas) {
+      const abs = join(dirAbs, entrada.name);
+      if (entrada.isDirectory()) {
+        recorrer(abs, profundidad + 1);
+        continue;
+      }
+      if (!entrada.isFile()) continue;
+
+      let stat;
+      try {
+        stat = statSync(abs);
+      } catch {
+        continue;
+      }
+      if (stat.mtimeMs < limite) continue;
+
+      encontrados.push({
+        path: relative(root, abs).split(sep).join("/"),
+        bytes: stat.size,
+      });
+    }
+  };
+
+  for (const dir of dirs) recorrer(resolve(root, dir), 0);
+
+  return encontrados
+    .sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0))
+    .slice(0, MAX_ARCHIVOS_DE_EVIDENCIA);
+}
 
 /** Ejecuta un check y devuelve su resultado, sin lanzar por un fallo del check. */
 export function runCommandCheck(
@@ -141,6 +236,14 @@ export function runCommandCheck(
     stderr = error.stderr ?? "";
   }
 
+  // La evidencia se recolecta después de correr —también cuando el comando
+  // falla, que es cuando más importa— y se filtra por marca de tiempo posterior
+  // al arranque: una traza vieja no es prueba de esta corrida.
+  const artifacts =
+    check.artifactDirs === undefined
+      ? undefined
+      : listArtifacts(options.root, check.artifactDirs, started);
+
   return {
     propositionId: check.propositionId,
     description: check.description,
@@ -151,6 +254,7 @@ export function runCommandCheck(
     stdout: stdout.slice(0, MAX_CAPTURED_OUTPUT),
     stderr: stderr.slice(0, MAX_CAPTURED_OUTPUT),
     durationMs: Date.now() - started,
+    ...(artifacts === undefined ? {} : { artifacts }),
   };
 }
 

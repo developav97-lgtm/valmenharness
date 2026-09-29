@@ -61,6 +61,42 @@ export interface GateSubject {
   readonly revision: string;
 }
 
+/**
+ * Un archivo que una corrida de comando dejó como evidencia.
+ *
+ * Se define acá y no importando el tipo de `@valmen/gate-command` porque la
+ * dependencia sería circular —`gate-command` depende de `gate`—. Es una copia
+ * estructural: el campo que llega desde el evaluador es compatible.
+ */
+export interface CommandArtifactRecord {
+  /** Ruta relativa a la raíz del proyecto, con separadores POSIX. */
+  readonly path: string;
+  readonly bytes: number;
+}
+
+/**
+ * El resultado de un comando que respondió una proposición, tal como queda en el
+ * recibo.
+ *
+ * Es la evidencia que un criterio verificable por comando necesita: sin ella, el
+ * recibo guarda un `1.00` y descarta por qué. Estructuralmente compatible con
+ * `CommandCheckResult` de `@valmen/gate-command`, sin importarlo.
+ */
+export interface CommandResultRecord {
+  readonly propositionId: string;
+  readonly description: string;
+  /** Línea de comando tal como se ejecutó, para reproducirla. */
+  readonly invocation: string;
+  readonly exitCode: number;
+  readonly expectedExitCode: number;
+  readonly passed: boolean;
+  readonly durationMs: number;
+  readonly stdout: string;
+  readonly stderr: string;
+  /** La evidencia que la corrida dejó, si el check declaró sus directorios. */
+  readonly artifacts?: readonly CommandArtifactRecord[];
+}
+
 /** Un recibo de gate, append-only y completo. */
 export interface GateReceipt {
   readonly kind: "gate-receipt";
@@ -107,6 +143,16 @@ export interface GateReceipt {
    * cascada».
    */
   readonly escalations?: readonly EscalationRecord[];
+  /**
+   * El resultado de cada comando que respondió una proposición, con su evidencia.
+   *
+   * Opcional y aditivo, con el mismo criterio que `notes` y `escalations`: un
+   * recibo emitido antes de que este campo existiera sigue siendo válido y no se
+   * reescribe —el registro es append-only—, y por eso `receiptVersion` no sube.
+   * Un recibo sin este campo no dice «no corrió comandos» sino «se emitió antes
+   * de que este campo existiera».
+   */
+  readonly commandResults?: readonly CommandResultRecord[];
 }
 
 /** Los dos extremos de un escalamiento, en lo que el recibo necesita. */
@@ -204,6 +250,8 @@ export interface ReceiptInput {
   readonly notes?: readonly string[];
   /** Los escalamientos entre modelos, si el evaluador fue la cascada. */
   readonly escalations?: readonly EscalationRecord[];
+  /** El resultado de cada comando corrido, si el evaluador fue determinista. */
+  readonly commandResults?: readonly CommandResultRecord[];
 }
 
 /** Construye un recibo a partir de una decisión. */
@@ -238,6 +286,9 @@ export function buildReceipt(input: ReceiptInput): GateReceipt {
     ...(input.escalations === undefined || input.escalations.length === 0
       ? {}
       : { escalations: input.escalations }),
+    ...(input.commandResults === undefined || input.commandResults.length === 0
+      ? {}
+      : { commandResults: input.commandResults }),
   };
 }
 

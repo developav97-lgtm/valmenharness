@@ -132,6 +132,27 @@ export function criterionProposition(index: number, criterion: CriterionSpec): P
 }
 
 /**
+ * El verbo `playwright` de las anotaciones `<!-- test: … -->`.
+ *
+ * Un criterio de interfaz puede declarar su spec con el verbo —`playwright
+ * tests/pos/creacion-manual.spec.ts`— y la compuerta lo resuelve contra el
+ * prefijo que el proyecto declara en `test-commands`: del criterio solo viaja la
+ * ruta del spec, y el programa sale siempre de la configuración.
+ */
+export const VERBO_PLAYWRIGHT = "playwright";
+
+/**
+ * Los directorios donde Playwright deja su evidencia por defecto.
+ *
+ * Son los del check y no los del motor a propósito: cuando el proyecto declare
+ * los suyos, la declaración del directorio es el punto de extensión.
+ */
+export const DIRECTORIOS_DE_EVIDENCIA_DE_PLAYWRIGHT: readonly string[] = [
+  "test-results",
+  "playwright-report",
+];
+
+/**
  * Los comandos que responden las proposiciones de un gate mecánico.
  *
  * Cada criterio que declara un `test:` se convierte en un comando, y el código de
@@ -144,6 +165,12 @@ export function criterionProposition(index: number, criterion: CriterionSpec): P
  * arbitraria que el gate ejecuta después, y el agente podría ampliar su propia
  * autoridad a través del artefacto que el gate evalúa —que es justo lo que el
  * harness no permite—.
+ *
+ * La resolución del verbo `playwright` no relaja eso: cuando el criterio nombra
+ * el verbo, **el programa sale de la configuración y del criterio solo viaja la
+ * ruta del spec**. Si el programa saliera del criterio, el mecanismo de prefijos
+ * dejaría de proteger la frontera, porque el ticket —el artefacto que la compuerta
+ * tiene que controlar— elegiría qué programa se corre.
  */
 export function commandChecksFor(
   criteria: readonly CriterionSpec[],
@@ -163,18 +190,57 @@ export function commandChecksFor(
     const proposicion = `criterio_${String(index + 1).padStart(2, "0")}`;
     const partes = partirComando(criterion.command);
 
-    if (partes.length === 0 || !autorizado(partes, allowed)) {
+    if (partes.length === 0) {
       refused.push(`criterio ${index + 1}: ${criterion.command}`);
       return;
     }
 
-    checks.push({
-      propositionId: proposicion,
-      command: partes[0] as string,
-      args: partes.slice(1),
-      ...(timeoutMs === undefined ? {} : { timeoutMs }),
-      description: criterion.text,
-    });
+    // (a) El criterio ya empieza con un prefijo autorizado —es el caso del
+    //     prefijo completo escrito en el criterio— y se arma igual que siempre:
+    //     la resolución del verbo no lo toca.
+    if (autorizado(partes, allowed)) {
+      checks.push({
+        propositionId: proposicion,
+        command: partes[0] as string,
+        args: partes.slice(1),
+        ...(timeoutMs === undefined ? {} : { timeoutMs }),
+        description: criterion.text,
+      });
+      return;
+    }
+
+    // (b) El criterio nombra el verbo `playwright`: se resuelve contra el prefijo
+    //     declarado que lo contiene. **El programa sale de la configuración** y
+    //     del criterio solo viaja la ruta del spec —más lo que la siga—, porque un
+    //     programa tomado del criterio dejaría de estar protegido por el mecanismo
+    //     de prefijos y el ticket elegiría qué se corre.
+    if (partes[0] === VERBO_PLAYWRIGHT) {
+      const prefijo = allowed
+        .map((linea) => partirComando(linea))
+        .find((piezas) => piezas.includes(VERBO_PLAYWRIGHT));
+
+      if (prefijo !== undefined && prefijo.length > 0) {
+        checks.push({
+          propositionId: proposicion,
+          command: prefijo[0] as string,
+          args: [...prefijo.slice(1), ...partes.slice(1)],
+          ...(timeoutMs === undefined ? {} : { timeoutMs }),
+          description: criterion.text,
+          artifactDirs: DIRECTORIOS_DE_EVIDENCIA_DE_PLAYWRIGHT,
+        });
+        return;
+      }
+
+      // (c) El verbo se nombró y el proyecto no declaró ningún prefijo que lo
+      //     contenga: el criterio se rechaza nombrando el verbo, sin correr nada.
+      refused.push(
+        `criterio ${index + 1}: ${criterion.command} — el verbo ${VERBO_PLAYWRIGHT} ` +
+          "necesita que el proyecto declare su comando en test-commands",
+      );
+      return;
+    }
+
+    refused.push(`criterio ${index + 1}: ${criterion.command}`);
   });
 
   return { checks, refused };

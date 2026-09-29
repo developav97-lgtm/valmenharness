@@ -728,6 +728,23 @@ comando:
       <!-- verify: manual -->
 ```
 
+La anotación `test:` tiene dos formas que la compuerta corre y una que declara una persona: un
+comando escrito con un prefijo que el proyecto autoriza, el verbo `playwright` con la ruta del
+spec, y `verify: manual` cuando la verifica una persona. El verbo no lleva un programa: un
+criterio de interfaz se escribe `<!-- test: playwright tests/pos/creacion-manual.spec.ts -->` y
+la compuerta lo resuelve contra el prefijo que el proyecto declara en `test-commands` —`npx
+playwright test`, o el que sea—, de modo que del criterio solo viaja la ruta del spec y el
+programa sigue saliendo de la configuración. Sin un prefijo que contenga `playwright`, el
+criterio se rechaza nombrando el verbo y no corre nada.
+
+El recibo guarda lo que la corrida dejó, y no solo el `1.00` del criterio: por cada comando
+anota su invocación, el código de salida esperado y obtenido, su duración y su salida capturada,
+y referencia los archivos que la corrida escribió en los directorios de evidencia de Playwright
+—`test-results` y `playwright-report` por defecto—, como la traza o el video. La recolección se
+queda solo con los archivos posteriores al arranque del comando, porque una traza vieja no es
+prueba de esta corrida. El campo es opcional y aditivo, como `notes` y `escalations`: los
+recibos ya emitidos siguen siendo válidos y no se reescriben.
+
 Tres decisiones lo sostienen:
 
 1. **El comando sale del ticket, y solo corre si el proyecto lo autorizó.** Los prefijos

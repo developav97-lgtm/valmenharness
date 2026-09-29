@@ -202,6 +202,14 @@ export interface CommandCheckSpec {
   readonly expectExitCode?: number;
   readonly timeoutMs?: number;
   readonly description: string;
+  /**
+   * Directorios donde el comando deja su evidencia, relativos a la raíz.
+   *
+   * El evaluador determinista los recorre después de la corrida y adjunta al
+   * resultado los archivos que aparecieron en ellos. Sin este campo no cambia
+   * nada: un comando que no produce evidencia no tiene nada que recolectar.
+   */
+  readonly artifactDirs?: readonly string[];
 }
 
 /** Efecto declarado de una respuesta. */
