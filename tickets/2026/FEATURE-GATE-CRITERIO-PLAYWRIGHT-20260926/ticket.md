@@ -258,6 +258,21 @@ Desvíos del plan y límites declarados:
     "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
     "confidence": "high",
     "id": "CONSUMO-006"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-29",
+    "session_reference": "20260929_182720_e37382",
+    "model": "opencode-go/deepseek-v4.1-flash",
+    "reasoning_effort": null,
+    "notes": "Sesion de la revision ronda 2 de la tarjeta del tablero sobre este ticket: reproduce por su cuenta el archivo enfocado 7 de 7, la bateria completa 1628 sin fallos, el recibo mecanico con sus ocho commandResults reales, recomputa la referencia de evidencia sobre los blobs de los dos commits del ticket y verifica la decision registrada sobre el ultimo recibo de analisis y que el aviso pendiente deja de listarlo. Lectura hecha al momento de registrar, con el turno todavia en curso: la fila de la sesion sigue creciendo hasta que el turno termina, asi que estos numeros son un piso y no la medicion final. El proveedor opencode-go factura por suscripcion, asi que no se declara costo: la fila del state.db informa 0.0 y escribirlo como cero se leeria como gratis.",
+    "input_tokens": 125908,
+    "output_tokens": 20909,
+    "total_tokens": 162366,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-007"
   }
 ]
 ```
@@ -394,6 +409,15 @@ Sin publicar todavía.
     "action": "ai-usage-added",
     "actor": "cli",
     "details": "Se agregó CONSUMO-006."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-09-29",
+    "at": "2026-09-29T23:31:31.194Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-007."
   }
 ]
 ```
