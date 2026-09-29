@@ -152,6 +152,56 @@ describe("el análisis de los documentos", () => {
   });
 });
 
+describe("la variante por fecha", () => {
+  it("reconoce una entrada encabezada por fecha, con separador y título", () => {
+    // La cuarta forma que convive en los documentos reales: el catálogo de
+    // errores la usa en todas sus entradas.
+    const entradas = parseMemory(
+      "## 2026-08-23 — El entorno local heredaba configuración externa\n\n**Síntoma:** x.\n",
+      "ERRORS.md",
+    );
+
+    expect(entradas).toHaveLength(1);
+    expect(entradas[0]?.id).toBeNull();
+    expect(entradas[0]?.title).toBe("El entorno local heredaba configuración externa");
+    expect(entradas[0]?.kind).toBe("error");
+  });
+
+  it("una fecha suelta no abre una entrada", () => {
+    // Sin separador ni título no es una entrada: es un contenedor.
+    expect(parseMemory("## 2026-08-23\n\nTexto suelto.\n", "ERRORS.md")).toEqual([]);
+    expect(parseMemory("## 2026-08-23 —\n\nTexto suelto.\n", "ERRORS.md")).toEqual([]);
+  });
+
+  it("las tres variantes de identificador siguen indexando", () => {
+    const entradas = parseMemory(DOCUMENTO, "docs/errors.md");
+    expect(entradas.map((entrada) => entrada.id)).toEqual(["E001", "E002", "E-010", "E031"]);
+  });
+
+  it("la línea base de un documento real no cambia", () => {
+    // El otro proyecto real: errores `### [E189] …` y decisiones `DEC-…`. La
+    // cuarta variante no debe alterar ese conteo.
+    const documento = [
+      "# Errores",
+      "",
+      "### [E189] La sesión se pierde al recargar",
+      "",
+      "**Síntoma:** x.",
+      "",
+      "### [E190] Otro error",
+      "",
+      "## DEC-041: Una decisión",
+      "",
+    ].join("\n");
+
+    expect(parseMemory(documento, "docs/errors.md").map((entrada) => entrada.id)).toEqual([
+      "E189",
+      "E190",
+      "DEC-041",
+    ]);
+  });
+});
+
 describe("la búsqueda", () => {
   const memoria = () => parseMemory(DOCUMENTO, "docs/errors.md");
 

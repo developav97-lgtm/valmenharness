@@ -54,15 +54,17 @@ export interface MemoryEntry {
 /**
  * Un encabezado que parece una entrada.
  *
- * El formato real de estos documentos tiene tres variantes —`### [E189] …`,
- * `## E-010: …`, `## E031 — …`— porque se escribieron en momentos distintos, y un
- * índice que solo entienda la última deja afuera las dos terceras partes del
- * conocimiento. El identificador es lo que distingue una entrada de un contenedor
- * (`## Patrones Registrados` no lleva id): por eso se exige, con corchetes o sin
- * ellos, con guion o sin él.
+ * El formato real de estos documentos tiene cuatro variantes —`### [E189] …`,
+ * `## E-010: …`, `## E031 — …` y `## 2026-08-23 — Título`— porque se escribieron
+ * en momentos distintos, y un índice que solo entienda una deja afuera el resto
+ * del conocimiento. Las tres primeras se distinguen por el identificador; la
+ * cuarta, por la fecha, exige separador y título detrás —una fecha suelta es un
+ * contenedor y no una entrada—. El identificador o la fecha son lo que distingue
+ * una entrada de un contenedor (`## Patrones Registrados` no lleva ninguno): por
+ * eso se exigen, con corchetes o sin ellos, con guion o sin él.
  */
 const ENTRADA_RE =
-  /^(#{2,3})\s+(?:\[([A-Za-z]{1,5}-?\d{1,4})\]\s*|([A-Za-z]{1,5}-?\d{1,4})\s*[:—–-]\s*)(.+)$/;
+  /^(#{2,3})\s+(?:\[([A-Za-z]{1,5}-?\d{1,4})\]\s*|([A-Za-z]{1,5}-?\d{1,4})\s*[:—–-]\s*|(?:\d{4}-\d{2}-\d{2})\s*[:—–-]\s+)(.+)$/;
 
 /**
  * Las secciones que no son conocimiento: explican el formato o guardan la

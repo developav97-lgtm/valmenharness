@@ -41,6 +41,18 @@ export interface DetectedTestCommand {
   readonly evidence: string;
 }
 
+/** Un documento del proyecto que el índice de memoria sabe leer. */
+export interface DetectedMemorySource {
+  /**
+   * La ruta relativa a la raíz, con el nombre tal como está en el disco. En un
+   * sistema que distingue mayúsculas, declarar otra forma deja la fuente sin
+   * abrir.
+   */
+  readonly path: string;
+  /** Qué habilita al indexarse, para que el informe lo diga. */
+  readonly kind: string;
+}
+
 /** Configuración agéntica preexistente que la adopción **no** toca. */
 export interface LegacyConfig {
   readonly path: string;
@@ -57,6 +69,8 @@ export interface ProjectProfile {
   readonly legacyConfigs: readonly LegacyConfig[];
   /** Comandos de verificación que el stack respalda, con su evidencia. */
   readonly testCommands: readonly DetectedTestCommand[];
+  /** Documentos que el índice de memoria sabe leer, con su ruta real. */
+  readonly memorySources: readonly DetectedMemorySource[];
   /** Capacidades detectadas, para el resumen. */
   readonly capabilities: readonly string[];
 }
@@ -101,6 +115,22 @@ const AGENTIC_CONFIGS: readonly { path: string; kind: string }[] = [
   { path: ".agents", kind: "skills y reglas compartidas" },
   { path: ".cursor", kind: "configuración de Cursor" },
   { path: ".github/copilot-instructions.md", kind: "instrucciones de Copilot" },
+];
+
+/** Directorios donde se buscan documentos de memoria, en orden de preferencia. */
+const MEMORY_DIRS = ["", "docs"];
+
+/**
+ * Los documentos que el índice de memoria sabe leer.
+ *
+ * No entra cualquier markdown: `CONTEXT.md` —prosa sin entradas— quedaría
+ * declarado sin producir una sola entrada, y una fuente declarada con cero
+ * entradas detrás se lee como «esto ya está indexado». Los nombres se comparan
+ * sin distinguir mayúsculas, pero se declara la forma que tiene el disco.
+ */
+const MEMORY_SOURCES: readonly { file: string; kind: string }[] = [
+  { file: "decisions.md", kind: "decisiones del proyecto" },
+  { file: "errors.md", kind: "errores con su causa raíz" },
 ];
 
 /** Tecnologías reconocidas por el nombre de la dependencia. */
@@ -347,11 +377,50 @@ export function detectTestCommands(root: string): DetectedTestCommand[] {
   return found;
 }
 
+/**
+ * Los documentos de memoria que el proyecto ya tiene en disco.
+ *
+ * La clave `memory-sources` de la configuración es la que convierte un documento
+ * en fuente: sin ella, `valmen memory list` responde que la memoria está vacía
+ * aunque el conocimiento esté ahí. La adopción la escribe con los documentos que
+ * el índice puede leer, y declara el nombre real del disco —en un sistema que
+ * distingue mayúsculas, `DECISIONS.md` y `decisions.md` no son el mismo archivo—.
+ * Se buscan en la raíz y en `docs/`.
+ */
+export function detectMemorySources(root: string): DetectedMemorySource[] {
+  const found: DetectedMemorySource[] = [];
+  const seen = new Set<string>();
+
+  for (const directory of MEMORY_DIRS) {
+    const base = directory === "" ? root : join(root, directory);
+    if (!existsSync(base)) continue;
+
+    let entries: string[];
+    try {
+      entries = readdirSync(base);
+    } catch {
+      continue;
+    }
+
+    for (const candidate of MEMORY_SOURCES) {
+      const real = entries.find((entry) => entry.toLowerCase() === candidate.file);
+      if (real === undefined) continue;
+      const relative = directory === "" ? real : `${directory}/${real}`;
+      if (seen.has(relative)) continue;
+      seen.add(relative);
+      found.push({ path: relative, kind: candidate.kind });
+    }
+  }
+
+  return found;
+}
+
 /** Construye el perfil del proyecto. */
 export function profileProject(root: string, name: string): ProjectProfile {
   const { files, dependencies } = detectFiles(root);
   const legacyConfigs = detectLegacyConfigs(root);
   const testCommands = detectTestCommands(root);
+  const memorySources = detectMemorySources(root);
 
   const capabilities: string[] = [];
   if (
@@ -378,6 +447,7 @@ export function profileProject(root: string, name: string): ProjectProfile {
     dependencies,
     legacyConfigs,
     testCommands,
+    memorySources,
     capabilities,
   };
 }
@@ -456,6 +526,37 @@ export function proposeConfig(profile: ProjectProfile, ticketsDir: string): stri
     lines.push("test-commands:");
     for (const detected of profile.testCommands) {
       lines.push(`  - ${detected.command}`);
+    }
+    lines.push("");
+  }
+
+  // La clave sin la cual la memoria del proyecto no existe para el harness: sin
+  // ella, la primera consulta responde que se declare, aunque el conocimiento ya
+  // esté en disco. Se declaran solo los documentos que el índice sabe leer y que
+  // están en el proyecto, con el nombre real de cada uno.
+  lines.push(
+    "# Los documentos del proyecto que son memoria: lo que ya se decidió y lo",
+    "# que ya falló, consultable con `valmen memory list` y `valmen memory search`.",
+  );
+
+  if (profile.memorySources.length === 0) {
+    lines.push(
+      "#",
+      "# No se detectó ningún documento de decisiones ni de errores en la raíz ni",
+      "# en docs/.",
+      "",
+    );
+  } else {
+    lines.push(
+      "#",
+      "# Detectados en el disco, con su ruta real. Revise y quite lo que no corresponda:",
+    );
+    for (const detected of profile.memorySources) {
+      lines.push(`#   ${detected.path}  →  ${detected.kind}`);
+    }
+    lines.push("memory-sources:");
+    for (const detected of profile.memorySources) {
+      lines.push(`  - ${detected.path}`);
     }
     lines.push("");
   }

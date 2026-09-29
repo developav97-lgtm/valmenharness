@@ -22,6 +22,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
   detectLegacyConfigs,
+  detectMemorySources,
   extractRules,
   parseConfig,
   profileProject,
@@ -29,6 +30,7 @@ import {
   readList,
 } from "../packages/adapter/src/index.js";
 import { chooseTicketsDir } from "../packages/engine/src/discovery.js";
+import { loadMemory } from "../packages/engine/src/memory.js";
 import { writeFixtureTicket } from "./helpers/fixtures.js";
 import { adoptProject, syncProject } from "../packages/cli/src/commands.js";
 
@@ -285,6 +287,92 @@ describe("comandos de prueba detectados del stack", () => {
   it("sin comandos detectados la lista queda vacía, no como el texto «[]»", () => {
     const config = parseConfig(proposeConfig(profileProject(lab, "Demo"), "tickets"));
     expect(readList(config, "test-commands", ["nada"])).toEqual([]);
+  });
+});
+
+describe("documentos de memoria detectados", () => {
+  it("declara las dos fuentes cuando los documentos están en la raíz", () => {
+    write("DECISIONS.md", "# Decisiones\n\n## DEC-001: Usar Django\n");
+    write("ERRORS.md", "# Errores\n\n## 2026-08-23 — El entorno heredaba .env\n");
+
+    const config = parseConfig(proposeConfig(profileProject(lab, "Demo"), "tickets"));
+    expect(readList(config, "memory-sources", [])).toEqual(["DECISIONS.md", "ERRORS.md"]);
+  });
+
+  it("declara la ruta relativa cuando el documento vive en docs/", () => {
+    write("docs/decisions.md", "# Decisiones\n\n## DEC-001: Usar Django\n");
+    const config = parseConfig(proposeConfig(profileProject(lab, "Demo"), "tickets"));
+    expect(readList(config, "memory-sources", [])).toEqual(["docs/decisions.md"]);
+  });
+
+  it("declara el nombre que está en el disco, no la forma canónica", () => {
+    // En un sistema que distingue mayúsculas `DECISIONS.md` y `decisions.md` no
+    // son el mismo archivo: declarar el que no es deja la fuente sin abrir.
+    write("DECISIONS.md", "# Decisiones\n\n## DEC-001: Usar Django\n");
+    const config = proposeConfig(profileProject(lab, "Demo"), "tickets");
+
+    expect(config).toContain("  - DECISIONS.md");
+    expect(config).not.toContain("- decisions.md");
+  });
+
+  it("no declara ninguna fuente cuando el proyecto no tiene esos documentos", () => {
+    // `CONTEXT.md` no entra: es prosa sin entradas, y una fuente declarada con
+    // cero entradas detrás se lee como «esto ya está indexado».
+    write("CONTEXT.md", "# Contexto\n\n## Lo que hay\n\nProsa suelta.\n");
+    const config = proposeConfig(profileProject(lab, "Demo"), "tickets");
+
+    expect(config).not.toContain("memory-sources");
+    expect(readList(parseConfig(config), "memory-sources", [])).toEqual([]);
+  });
+
+  it("la detección solo declara los documentos que el índice sabe leer", () => {
+    write("CONTEXT.md", "# Contexto\n\n## Lo que hay\n");
+    write("DECISIONS.md", "# Decisiones\n");
+
+    expect(detectMemorySources(lab).map((source) => source.path)).toEqual(["DECISIONS.md"]);
+  });
+
+  it("el informe los nombra, y dice qué revisó cuando no hay ninguno", () => {
+    write("DECISIONS.md", "# Decisiones\n\n## DEC-001: Usar Django\n");
+    write("ERRORS.md", "# Errores\n\n## 2026-08-23 — El entorno heredaba .env\n");
+
+    const conDocumentos = adoptProject(lab, "Demo", { dryRun: true }).stdout;
+    expect(conDocumentos).toContain("Documentos de memoria (2)");
+    expect(conDocumentos).toContain("DECISIONS.md");
+    expect(conDocumentos).toContain("ERRORS.md");
+
+    const vacio = mkdtempSync(join(tmpdir(), "valmen-adopt-vacio-"));
+    try {
+      const sinDocumentos = adoptProject(vacio, "Demo", { dryRun: true }).stdout;
+      expect(sinDocumentos).toContain("Documentos de memoria");
+      expect(sinDocumentos).toContain("no se detectó ninguno");
+    } finally {
+      rmSync(vacio, { recursive: true, force: true });
+    }
+  });
+
+  it("un proyecto adoptado consulta su memoria sin editar nada a mano", () => {
+    // El síntoma de punta a punta: la detección escribe la clave y el índice
+    // devuelve las entradas de los dos documentos, incluida la variante por
+    // fecha que el catálogo de errores usa.
+    write(
+      "DECISIONS.md",
+      "# Decisiones\n\n## DEC-001: Usar Django\n\n**Fecha:** 2026-01-01\n",
+    );
+    write(
+      "ERRORS.md",
+      "# Errores\n\n## 2026-08-23 — El entorno heredaba .env\n\n**Síntoma:** x.\n",
+    );
+
+    expect(adoptProject(lab, "Demo").exitCode).toBe(0);
+
+    const memoria = loadMemory({ root: lab, ticketsDir: "tickets" });
+    expect(memoria.map((entrada) => entrada.id)).toEqual(["DEC-001", null]);
+    expect(memoria.map((entrada) => entrada.source.path)).toEqual([
+      "DECISIONS.md",
+      "ERRORS.md",
+    ]);
+    expect(memoria.map((entrada) => entrada.kind)).toEqual(["decision", "error"]);
   });
 });
 

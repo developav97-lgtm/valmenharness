@@ -903,6 +903,24 @@ export function adoptProject(
     lines.push("", `  Capacidades: ${profile.capabilities.join(", ")}`);
   }
 
+  // Una fuente de memoria que el disco tiene y la configuración no declara deja
+  // la primera consulta con una instrucción en vez de con las entradas. Se nombra
+  // lo detectado, y cuando no hay nada se dice qué se revisó: callar se leería
+  // como que el proyecto no tiene memoria.
+  if (profile.memorySources.length > 0) {
+    lines.push("", `  Documentos de memoria (${profile.memorySources.length}):`);
+    for (const source of profile.memorySources) {
+      lines.push(`    ${source.path}  — ${source.kind}`);
+    }
+  } else {
+    lines.push(
+      "",
+      "  Documentos de memoria: no se detectó ninguno. Se buscó `DECISIONS.md`",
+      "  y `ERRORS.md` en la raíz y en `docs/`; sin declarar una fuente, la",
+      "  memoria del proyecto queda vacía hasta que se agregue una a mano.",
+    );
+  }
+
   if (profile.legacyConfigs.length > 0) {
     lines.push("", "Configuración agéntica preexistente (NO se toca):");
     for (const legacy of profile.legacyConfigs) {
