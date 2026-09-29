@@ -50,6 +50,7 @@ import {
   summarize,
   ticketsPath,
   transition,
+  readReceipts,
 } from "@valmen/engine";
 import { type JsonObject, nextStates, parseTicket, toFailure } from "@valmen/core";
 import { architectRoutingFor } from "@valmen/adapter";
@@ -672,6 +673,26 @@ export async function handleApi(
       ...(ticket === undefined ? {} : { ticketId: ticket }),
     });
 
+    // El desglose de compuertas va junto: el costo de decidir también es costo
+    // del ticket, y los recibos lo traen de primera mano —el harness lo pagó—.
+    // Sin ticket no hay recibos que desglosar; el vacío se declara igual.
+    const compuertas =
+      ticket === undefined
+        ? []
+        : readReceipts(choosePaths(directory), ticket).map((recibo) => ({
+            gate: recibo.gate,
+            outcome: recibo.outcome,
+            actor: recibo.actor,
+            decidedAt: recibo.decidedAt,
+            model:
+              recibo.model === null
+                ? null
+                : `${recibo.model.provider}/${recibo.model.model}`,
+            inputTokens: recibo.usage?.inputTokens ?? 0,
+            outputTokens: recibo.usage?.outputTokens ?? 0,
+            costUsd: recibo.usage?.costUsd ?? 0,
+          }));
+
     return {
       status: 200,
       body:
@@ -683,7 +704,7 @@ export async function handleApi(
                 "No se encontró la contabilidad de opencode. Sin ella no hay forma " +
                 "de saber qué modelo intervino ni cuánto costó.",
             }
-          : { available: true, directory, ...linea },
+          : { available: true, directory, ...linea, compuertas },
     };
   }
 

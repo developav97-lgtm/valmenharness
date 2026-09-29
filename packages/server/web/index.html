@@ -4259,6 +4259,20 @@
           el("span", `${sesiones.length} sesión(es)`, "etiqueta"),
           el("span", `${datos.intervenciones.length} intervención(es) sobre el registro`, "etiqueta"),
         );
+        // El costo de decidir también es costo del ticket: las compuertas que el
+        // harness pagó van al total, separadas para que se lea qué fue decisión
+        // y qué fue trabajo.
+        const compuertas = datos.compuertas ?? [];
+        const costeCompuertas = compuertas.reduce((suma, c) => suma + (c.costUsd ?? 0), 0);
+        if (compuertas.length > 0) {
+          resumen.append(
+            el(
+              "span",
+              `${compuertas.length} compuerta(s) ($${costeCompuertas.toFixed(6)})`,
+              "etiqueta",
+            ),
+          );
+        }
         if (datos.sesionesSinCoste > 0) {
           // Un proveedor por suscripción no tiene precio por token: se dice, en
           // vez de sumar un cero que se leería como «gratis».
@@ -4325,6 +4339,32 @@
           tablaSesiones.append(fila);
         }
         zona.append(tablaSesiones);
+
+        // El desglose de compuertas del ticket: qué evaluó el harness, con qué
+        // modelo, qué costó decidir. Va antes del corte de intervenciones porque
+        // un ticket sin llamadas al registro —el caso del cron— igual pagó sus
+        // compuertas, y ocultarlas sería mostrar un costo de menos.
+        if (compuertas.length > 0) {
+          const tablaCompuertas = el("table", undefined, "tabla-intervenciones");
+          const cabCompuertas = el("tr");
+          for (const titulo of ["compuerta", "resultado", "actor", "modelo", "tokens", "coste"]) {
+            cabCompuertas.append(el("th", titulo));
+          }
+          tablaCompuertas.append(cabCompuertas);
+          for (const c of compuertas) {
+            const fila = el("tr");
+            fila.append(
+              el("td", c.gate, "id"),
+              el("td", c.outcome),
+              el("td", c.actor),
+              el("td", c.model ?? "mecánico (sin modelo)", "id"),
+              el("td", `${((c.inputTokens + c.outputTokens) / 1e3).toFixed(1)}K`, "id"),
+              el("td", `$${(c.costUsd ?? 0).toFixed(6)}`, "cifra"),
+            );
+            tablaCompuertas.append(fila);
+          }
+          zona.append(tablaCompuertas);
+        }
 
         if (datos.intervenciones.length === 0) {
           zona.append(
@@ -4581,6 +4621,9 @@
           if (d.stale) nodo.append(el("span", " (obsoleto)", "chip-rotulo"));
           nodo.title =
             `${d.receiptId} · ${d.actor} · ${d.decidedAt.slice(0, 16).replace("T", " ")}` +
+            (d.usage === null || d.usage === undefined
+              ? " · mecánico, sin modelo"
+              : ` · ${(d.usage.inputTokens + d.usage.outputTokens).toLocaleString("es-CO")} tokens · $${d.usage.costUsd.toFixed(6)}`) +
             (d.humanDecision === null || d.humanDecision === undefined
               ? ""
               : ` · decidido por ${d.humanDecision.actor}`);

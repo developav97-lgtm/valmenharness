@@ -897,3 +897,86 @@ describe.skipIf(sqlite === null)("el trabajo del harness desde Hermes", () => {
     expect(deOpencode).not.toContain("sin repartir");
   });
 });
+
+describe("el desglose de compuertas del endpoint /api/timeline", () => {
+  /**
+   * El costo de decidir también es costo del ticket. Los recibos traen el uso
+   * de primera mano —el harness lo pagó— y ninguna vista los sumaba: se leen
+   * acá a través del endpoint, con un recibo Jev con coste y uno mecánico sin
+   * modelo, que es la pareja real de cualquier ticket del registro.
+   */
+  it("el endpoint agrega compuertas con tokens y coste de los recibos", async () => {
+    const { handleApi } = await import("../packages/server/src/server.js");
+    const { writeFixtureTicket } = await import("./helpers/fixtures.js");
+    const { mkdirSync, mkdtempSync, rmSync, writeFileSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+
+    const lab = mkdtempSync(join(tmpdir(), "valmen-timeline-gates-"));
+    try {
+      mkdirSync(join(lab, "tickets"), { recursive: true });
+      const id = "FEATURE-COMPUERTAS-VISIBLES-20260928";
+      writeFixtureTicket(lab, { id });
+
+      const reciboJev = {
+        kind: "gate-receipt",
+        receiptVersion: 1,
+        schemaVersion: "1",
+        id: "GT-001",
+        gate: "analysis",
+        gateHash: "a".repeat(64),
+        subject: { type: "ticket", id, revision: 1 },
+        outcome: "approve",
+        reason: "ok",
+        actor: "model",
+        decidedAt: "2026-09-28T09:00:00Z",
+        stateHash: "b".repeat(64),
+        policy: { approveAt: 0.9, blockAt: 0.1 },
+        mechanicalChecks: [],
+        modelAnswers: [],
+        propositions: [],
+        model: { provider: "TypeSafe", model: "typesafe/jev-1.13", resolvedVersion: "x" },
+        usage: { inputTokens: 3050, outputTokens: 148, costUsd: 0.0001281 },
+        latencyMs: 900,
+        escalatedTo: null,
+        humanDecision: null,
+      };
+      const reciboMecanico = {
+        ...reciboJev,
+        id: "GT-002",
+        gate: "qa-mechanical",
+        model: null,
+        usage: { inputTokens: 0, outputTokens: 0, costUsd: 0 },
+      };
+      mkdirSync(join(lab, ".valmen", "receipts"), { recursive: true });
+      writeFileSync(
+        join(lab, ".valmen", "receipts", `${id}.jsonl`),
+        `${JSON.stringify(reciboJev)}\n${JSON.stringify(reciboMecanico)}\n`,
+        "utf8",
+      );
+
+      const respuesta = await handleApi(
+        "GET",
+        "/api/timeline",
+        {},
+        {
+          root: lab,
+          paths: { root: lab, ticketsDir: "tickets" },
+          credentialsFile: join(lab, ".valmen", ".credentials.yaml"),
+          env: {},
+        },
+        new URLSearchParams({ ticket: id }),
+      );
+      expect(respuesta.status).toBe(200);
+      const cuerpo = respuesta.body as { compuertas: { gate: string; costUsd: number; model: string | null }[] };
+      expect(cuerpo.compuertas.map((c) => c.gate)).toEqual(["analysis", "qa-mechanical"]);
+      const [jev, mecanico] = cuerpo.compuertas;
+      expect(jev?.model).toBe("TypeSafe/typesafe/jev-1.13");
+      expect(jev?.costUsd).toBeCloseTo(0.0001281, 7);
+      // El mecánico no miente con un modelo que no tuvo: se rotula.
+      expect(mecanico?.model).toBeNull();
+    } finally {
+      rmSync(lab, { recursive: true, force: true });
+    }
+  });
+});
