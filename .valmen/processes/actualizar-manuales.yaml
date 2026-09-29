@@ -23,3 +23,8 @@ steps:
     kind: command
     run: valmen manuales pendientes --tickets {tickets} --manuales-dir {manualesdir} --escribir
     evidence: [stdout]
+  - id: auditar-manuales
+    title: Auditar los manuales contra el código con citas
+    kind: command
+    run: valmen manuales auditar --manuales-dir {manualesdir}
+    evidence: [stdout]

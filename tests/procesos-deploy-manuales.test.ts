@@ -71,6 +71,22 @@ describe("el proceso deploy declara el paso de manuales", () => {
   });
 });
 
+describe("el proceso actualizar-manuales declara la auditoría con citas", () => {
+  it("carga con el paso auditar-manuales, de tipo command, que corre valmen manuales auditar", () => {
+    const manuales = requireProcess(REPO, "actualizar-manuales");
+
+    const auditoria = manuales.definition.steps.find((step) => step.id === "auditar-manuales");
+    expect(auditoria).toBeDefined();
+    expect(auditoria?.kind).toBe("command");
+    expect(auditoria?.run).toContain("valmen manuales auditar");
+
+    // Va al final: la dependencia R-S3-002 agrega su paso en el mismo archivo y
+    // el cambio de este ticket es aditivo.
+    const ids = manuales.definition.steps.map((step) => step.id);
+    expect(ids[ids.length - 1]).toBe("auditar-manuales");
+  });
+});
+
 describe("un fallo de manuales no corta la release", () => {
   it("ejecuta el paso siguiente y deja la corrida con el paso de manuales en failed", () => {
     const comandos: string[] = [];

@@ -954,6 +954,34 @@ Es el objeto que hace auditable todo el sistema. Se escribe **append-only** en
 | `release-publish` | tras tag                            | **human**        | Tag anotado sobre `production`, cada ticket con SHA ancestro.                                                      |
 | `manuals`         | proceso `actualizar-manuales`       | auto             | Cada manual con cita textual del código real. Sin rutas técnicas en lenguaje de usuario.                           |
 
+### 8.1 Gate `manuals`: auditoría con citas
+
+El gate `manuals` no lo corre `runGate` —que exige un ticket como sujeto y acá el sujeto es la corrida del proceso `actualizar-manuales`—, sino `valmen manuales auditar`, que recorre `<manuales-dir>` y resuelve cada cita contra el repositorio sin modelo.
+
+**La anotación.** Cada afirmación declara la línea que la respalda con:
+
+```markdown
+<!-- cita: <ruta>:<línea> -->
+```
+
+en la misma línea de la afirmación o en la de abajo. `<ruta>` es relativa a la raíz del repositorio y `<línea>` es 1-based.
+
+**Qué cuenta como afirmación.** Una línea de cuerpo visible de una sección: fuera de los comentarios HTML (el bloque de metadata y las propias citas), fuera de los encabezados, fuera de los separadores de tabla y fuera de la sección de pendientes —cuya cabecera contiene «pendiente», sin distinguir mayúsculas—.
+
+**Los tres veredictos** son por manual, y el de la corrida es el peor de los tres:
+
+- `approve`: cada afirmación declara cita y cada cita resuelve a un archivo real y a una línea existente y no vacía.
+- `block`: falta una cita; una cita no resuelve (la ruta no existe, la línea cae fuera del archivo o la línea está vacía); una cita está mal formada (sin línea o con línea no numérica); o una ruta técnica con extensión de fuente se filtró al texto visible.
+- `review`: no hay nada que bloquear y solo falta lo que no se decide en código —un literal entre comillas de la sección de errores que no aparece en las fuentes citadas—, o no hay ningún manual que auditar.
+
+**El recibo.** `valmen manuales auditar` sale 0 solo con `approve`; con `review` devuelve el código de «hay algo que decidir» y con `block` el de «el contrato no se cumple». Deja el recibo en `.valmen/receipts/actualizar-manuales.jsonl`, con `gate: "manuals"`, la política por defecto, un check mecánico por cada causa (`citas_presentes`, `citas_resuelven`, `sin_rutas_tecnicas`, `mensajes_de_error`) y sujeto de proceso:
+
+```json
+{ "type": "process", "id": "actualizar-manuales", "revision": "<sha256 del corpus auditado>" }
+```
+
+El paso `auditar-manuales` del proceso `actualizar-manuales` corre este comando, y el `deploy` encadena el proceso con `continue_on_failure` y `notify_on_failure`: un manual bloqueado avisa y no corta la release.
+
 ## 9. Simulación: probar un gate antes de confiar en él
 
 ```bash

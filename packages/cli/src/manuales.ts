@@ -12,7 +12,7 @@
 import { EXIT_SCHEMA } from "@valmen/core";
 
 import type { CommandResult } from "./commands.js";
-import { manualesPendientesCommand } from "./commands.js";
+import { manualesAuditarCommand, manualesPendientesCommand } from "./commands.js";
 
 /** Falla con el mensaje y el código que corresponde. */
 function error(stderr: string, exitCode: number): CommandResult {
@@ -29,11 +29,13 @@ export function runManuales(
   switch (sub) {
     case "pendientes":
       return manualesPendientesCommand(root, flags);
+    case "auditar":
+      return manualesAuditarCommand(root, flags);
     case undefined:
-      return error("manuales requiere un subcomando: pendientes.", EXIT_SCHEMA);
+      return error("manuales requiere un subcomando: pendientes, auditar.", EXIT_SCHEMA);
     default:
       return error(
-        `Subcomando de manuales desconocido: ${sub}. Use pendientes.`,
+        `Subcomando de manuales desconocido: ${sub}. Use pendientes o auditar.`,
         EXIT_SCHEMA,
       );
   }

@@ -13,6 +13,7 @@ import {
   type ParsedTicket,
   EXIT_AMBIGUOUS,
   EXIT_INVARIANT,
+  EXIT_OK,
   EXIT_SCHEMA,
   MutationLock,
   SCHEMA_VERSION,
@@ -88,6 +89,11 @@ import {
   MANUALES_POR_DEFECTO,
   manualesPendientes,
   renderPendientes,
+  appendReceipt,
+  auditarManuales,
+  renderAuditoria,
+  reciboDeAuditoria,
+  SUJETO_MANUALES,
   defaultReportRange,
   findAllTickets,
   filterReport,
@@ -2159,6 +2165,49 @@ export function manualesPendientesCommand(
     }
 
     return ok([texto, ...avisos].join(""));
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/**
+ * `manuales auditar`: la auditoría con citas contra el código.
+ *
+ * Imprime el veredicto de cada manual y deja el recibo en
+ * `.valmen/receipts/actualizar-manuales.jsonl`, con sujeto de proceso. El código
+ * de salida es el del veredicto: `approve` sale 0, `review` sale con el código de
+ * «hay algo que decidir» y `block` con el de «el contrato no se cumple», para que
+ * el proceso distinga lo que hay que mirar de lo que hay que arreglar.
+ */
+export function manualesAuditarCommand(
+  root: string,
+  flags: Readonly<Record<string, string | true>>,
+): CommandResult {
+  const manualesDir =
+    typeof flags["manuales-dir"] === "string"
+      ? flags["manuales-dir"]
+      : MANUALES_POR_DEFECTO;
+
+  try {
+    const paths = choosePaths(root);
+    const resultado = auditarManuales(paths, { manualesDir });
+    const recibo = reciboDeAuditoria(resultado, {});
+    const ruta = appendReceipt(paths, SUJETO_MANUALES, recibo);
+
+    const texto = [
+      renderAuditoria(resultado),
+      `Recibo: ${relative(root, ruta)}\n`,
+    ].join("");
+
+    const exitCode =
+      resultado.veredicto === "approve"
+        ? EXIT_OK
+        : resultado.veredicto === "review"
+          ? EXIT_AMBIGUOUS
+          : EXIT_INVARIANT;
+
+    return { ...ok(texto), exitCode };
   } catch (caught) {
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);

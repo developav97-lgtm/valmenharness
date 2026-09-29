@@ -36,6 +36,7 @@ export * from "./mutate.js";
 export * from "./transition.js";
 export * from "./references.js";
 export * from "./manuales.js";
+export * from "./manuales-auditar.js";
 export * from "./append.js";
 export * from "./create.js";
 export * from "./features.js";

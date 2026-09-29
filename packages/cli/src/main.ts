@@ -278,6 +278,20 @@ Comandos:
                             **/*.component.ts y **/*.component.html.
       --escribir            Deja el listado en <manuales-dir>/pendientes.md. Sin
                             esta bandera no escribe ningún archivo.
+  manuales auditar --manuales-dir <ruta>
+                            Audita los manuales contra el código con citas. Cada
+                            afirmación visible declara la línea que la respalda
+                            con <!-- cita: <ruta>:<línea> -->, en la misma
+                            línea o en la de abajo; la cita resuelve si el
+                            archivo existe y la línea cae dentro y no está vacía.
+                            Veredictos: approve (todo cita y resuelve), block
+                            (falta cita, no resuelve, está mal formada o se filtró
+                            una ruta técnica) y review (un mensaje de error que no
+                            aparece en las fuentes, o ningún manual que auditar).
+                            Deja el recibo en
+                            .valmen/receipts/actualizar-manuales.jsonl.
+      --manuales-dir <ruta> Dónde viven los manuales (por defecto
+                            docs/manuales/usuario-final).
   provider [list|set|test|models]
                             Los proveedores y sus credenciales. "list" dice cuáles
                             hay y cuáles están configurados; "set <id> --key <k>"
