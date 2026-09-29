@@ -350,6 +350,95 @@ describe.skipIf(sqlite === null)("las sesiones de Hermes", () => {
     ).toBe(false);
   });
 
+  it("un mensaje que mezcla escritura del ticket propio con un grep de otros deja a los otros fuera", () => {
+    // El caso de la jornada: un mensaje del eslabón corre `valmen ticket move`
+    // del propio y a continuación un `for t in … grep` que menciona veinte
+    // tickets del grafo. Por mensaje, los veinte quedaban «trabajados».
+    const db = crearBase(base);
+    sesion(db, "20260928_090000_mmmmmm");
+    mensaje(
+      db,
+      "m1",
+      "20260928_090000_mmmmmm",
+      '[{"function":{"name":"terminal","arguments":"{\\"command\\":\\"valmen transition --id FEATURE-PROPIO-20260928 --entity ticket --to planned && for t in FEATURE-A FEATURE-B; do grep -q $t lista; done\\"}"}}]',
+    );
+    db.close();
+
+    const sesionLeida = leerSesionesDeHermes("/proyectos/tienda", { home: lab })[0];
+    expect(sesionLeida?.ticket).toBe("FEATURE-PROPIO-20260928");
+    expect(sesionLeida?.compartida).toBe(false);
+    const ajenos = sesionLeida?.tickets.filter(
+      (t) => t.id !== "FEATURE-PROPIO-20260928",
+    );
+    expect(ajenos?.every((t) => !t.trabajado)).toBe(true);
+  });
+
+  it("una llamada MCP de escritura marca solo los tickets de sus argumentos", () => {
+    const db = crearBase(base);
+    sesion(db, "20260928_090100_nnnnnn");
+    // La llamada mueve UNO; el mensaje vecino de lectura menciona DOS.
+    mensaje(
+      db,
+      "m1",
+      "20260928_090100_nnnnnn",
+      '[{"function":{"name":"mcp__valmen__mover_ticket","arguments":"{\\"id\\":\\"FEATURE-UNO-20260924\\"}"}}]',
+    );
+    mensaje(
+      db,
+      "m2",
+      "20260928_090100_nnnnnn",
+      '[{"function":{"name":"mcp__valmen__ver_ticket","arguments":"{\\"id\\":\\"FEATURE-DOS-20260924\\"}"}}]',
+    );
+    db.close();
+
+    const sesionLeida = leerSesionesDeHermes("/proyectos/tienda", { home: lab })[0];
+    expect(sesionLeida?.compartida).toBe(false);
+    expect(sesionLeida?.ticket).toBe("FEATURE-UNO-20260924");
+  });
+
+  it("una llamada MCP de escritura con dos tickets en sus argumentos los marca a los dos", () => {
+    // `anexar_ticket_a_feature` con lista: la llamada escribió los dos y los dos
+    // son de la sesión. El grano fino no debe romper este caso legítimo.
+    const db = crearBase(base);
+    sesion(db, "20260928_090200_pppppp");
+    mensaje(
+      db,
+      "m1",
+      "20260928_090200_pppppp",
+      '[{"function":{"name":"mcp__valmen__anexar_ticket_a_feature","arguments":"{\\"slug\\":\\"f\\",\\"tickets\\":[\\"FEATURE-UNO-20260924\\",\\"FEATURE-DOS-20260924\\"]}"}}]',
+    );
+    db.close();
+
+    const sesionLeida = leerSesionesDeHermes("/proyectos/tienda", { home: lab })[0];
+    expect(sesionLeida?.compartida).toBe(true);
+    expect(sesionLeida?.tickets.every((t) => t.trabajado)).toBe(true);
+  });
+
+  it("fixture de la jornada: terminal con valmen y grep multi-ticket da dueño único", () => {
+    // La forma textual real de las sesiones cron del 2026-09-28: un `terminal`
+    // cuyo comando mueve el ticket del eslabón y después grepea el grafo con
+    // los otros IDs. El eslabón 3 marcaba 4 trabajados; ahora queda 1.
+    const db = crearBase(base);
+    sesion(db, "20260928_091933_qqqqqq");
+    mensaje(
+      db,
+      "m1",
+      "20260928_091933_qqqqqq",
+      '[{"function":{"name":"terminal","arguments":"{\\"command\\":\\"cd /Users/x/SaiOpenCloud && valmen transition --id FEATURE-RELLENO-MASIVO-ANULACION-20260924 --entity ticket --to in_progress\\"}"}}]',
+    );
+    mensaje(
+      db,
+      "m2",
+      "20260928_091933_qqqqqq",
+      '[{"function":{"name":"terminal","arguments":"{\\"command\\":\\"for t in FEATURE-RELLENO-MASIVO-GENERACION-20260924 FEATURE-RELLENO-MASIVO-PANTALLA-20260924 FEATURE-AUDITORIA-DOCUMENTO-20260924; do valmen show $t; done\\"}"}}]',
+    );
+    db.close();
+
+    const sesionLeida = leerSesionesDeHermes("/proyectos/tienda", { home: lab })[0];
+    expect(sesionLeida?.ticket).toBe("FEATURE-RELLENO-MASIVO-ANULACION-20260924");
+    expect(sesionLeida?.compartida).toBe(false);
+  });
+
   it("la lista de herramientas de lectura coincide con el catálogo MCP", async () => {
     // La distinción entre trabajar y consultar se apoya en esta lista, y una
     // herramienta de lectura nueva que no se agregue acá haría que consultarla

@@ -496,15 +496,67 @@ export function leerSesionesDeHermes(
   return sesiones.sort((a, b) => b.startedAt - a.startedAt);
 }
 
+/** Las herramientas de shell, por las que también viaja una invocación del CLI. */
+const HERRAMIENTAS_DE_SHELL: readonly string[] = ["terminal", "shell", "bash", "execute"];
+
+/**
+ * `true` si el segmento de un comando invoca el CLI del harness.
+ *
+ * No se distingue lectura de escritura, y es una decisión con caso real detrás:
+ * el validador corrido desde el propio repositorio —`main.js … validate --id X`—
+ * es un comando de lectura que **apunta** al ticket, y validar un ticket es
+ * trabajar en él. Lo que se abandona del criterio viejo es el grano: el comando
+ * responde por los tickets que **nombra su propio segmento** (`;`, `&&`, `|`
+ * separan), no por los que el mensaje entero menciona.
+ */
+function segmentoInvocaCli(segmento: string): boolean {
+  return segmento.match(INVOCACION_DEL_CLI_RE) !== null;
+}
+
+/**
+ * Las llamadas de un mensaje de Hermes, con su nombre y sus argumentos.
+ *
+ * Se parsea el texto **crudo** de la base: las comillas escapadas son las que
+ * hacen del texto un JSON válido, y desescaparlo primero rompe el parseo —
+ * `arguments` queda con llaves sueltas y el arreglo entero deja de leerse. El
+ * valor de `arguments`, ya desescapado por el parseo, es donde viaja el ticket.
+ * Un `tool_calls` que no es un arreglo —un objeto suelto, texto libre— no
+ * produce llamadas: quien llama cuenta sus menciones como texto.
+ */
+function llamadasDeTexto(texto: string): {
+  readonly nombre: string;
+  readonly argumentos: string;
+}[] {
+  try {
+    const arreglo = JSON.parse(texto) as unknown;
+    if (!Array.isArray(arreglo)) return [];
+    const salidas: { nombre: string; argumentos: string }[] = [];
+    for (const llamada of arreglo) {
+      if (llamada === null || typeof llamada !== "object") continue;
+      const funcion = (llamada as Record<string, unknown>)["function"];
+      if (funcion === null || typeof funcion !== "object") continue;
+      const f = funcion as Record<string, unknown>;
+      salidas.push({
+        nombre: typeof f["name"] === "string" ? (f["name"] as string) : "",
+        argumentos: typeof f["arguments"] === "string" ? (f["arguments"] as string) : "",
+      });
+    }
+    return salidas;
+  } catch {
+    return [];
+  }
+}
+
 /**
  * El peso de cada ticket dentro de una sesión, y si se trabajó o solo se miró.
  *
- * Se mira lo que la sesión **hizo**: los argumentos de las llamadas a
- * herramientas. Una llamada que escribe pesa tres y marca el ticket como
- * trabajado; una de lectura pesa uno; el texto de los mensajes pesa uno y nunca
- * marca trabajo. Una sesión cita los tickets que dependen del suyo, así que la
- * lista no se recorta a uno: se devuelve entera, ordenada, y quien decide si hay
- * un dueño claro es `atribucionDeSesion`.
+ * Se mira lo que la sesión **hizo**, y el grano es **la llamada**, no el mensaje:
+ * un turno de orquestador mezcla la escritura del ticket propio con lecturas que
+ * citan otros —el grafo de la feature, los checks de estado—, y atribuir por
+ * mensaje le adjudica a cada ticket citado un trabajo que no hubo. Una llamada
+ * MCP de escritura marca los tickets de sus argumentos; una invocación CLI marca
+ * los del **segmento** escrito del comando (`;`, `&&`, `|` separan); las
+ * herramientas ajenas y los comandos de lectura pesan pero no marcan trabajo.
  */
 function ticketsDeSesion(db: BaseDeDatos, sessionId: string): TicketDeSesion[] {
   const cuenta = new Map<string, { peso: number; trabajado: boolean }>();
@@ -531,18 +583,45 @@ function ticketsDeSesion(db: BaseDeDatos, sessionId: string): TicketDeSesion[] {
 
   for (const fila of filas) {
     const llamadas = fila.data ?? "";
-    // Los nombres viajan con el prefijo de la página que llama, y en Hermes
-    // además anidados dentro de `tool_call` con las comillas escapadas: se
-    // desescapa para poder leerlos.
-    const nombres = [
-      ...llamadas.replace(/\\"/g, '"').matchAll(/"name"\s*:\s*"([A-Za-z_0-9]+)"/g),
-    ].map((m) => nombreDeHerramienta(m[1] as string));
-    const escribe =
-      nombres.some((nombre) => HERRAMIENTAS_QUE_ESCRIBEN.includes(nombre)) ||
-      escribePorCli(llamadas);
-    for (const [id, veces] of ticketsDeTexto(llamadas)) {
-      sumar(id, veces * (escribe ? 3 : 1), escribe);
+
+    const parseadas = llamadasDeTexto(llamadas);
+    for (const llamada of parseadas) {
+      const base = nombreDeHerramienta(llamada.nombre);
+      if (herramientaDelHarness(base) !== null) {
+        // Llamada MCP del harness: el ticket viaja en los argumentos de ESTA
+        // llamada, y escribir lo decide esta herramienta y no las hermanas.
+        const escribe = HERRAMIENTAS_QUE_ESCRIBEN.includes(base);
+        for (const [id, veces] of ticketsDeTexto(llamada.argumentos)) {
+          sumar(id, veces * (escribe ? 3 : 1), escribe);
+        }
+        continue;
+      }
+      if (!HERRAMIENTAS_DE_SHELL.includes(base)) {
+        // Herramienta ajena (read_file, patch…): puede citar tickets, nunca
+        // los trabaja.
+        for (const [id, veces] of ticketsDeTexto(llamada.argumentos)) {
+          sumar(id, veces, false);
+        }
+        continue;
+      }
+      // Shell: cada segmento del comando —`;`, `&&`, `|` separan— responde por
+      // los tickets que su propio segmento nombra. La escritura del ticket propio
+      // deja de arrastrar a los que citan los comandos vecinos de lectura.
+      for (const segmento of llamada.argumentos.split(/[;&|]/)) {
+        if (!segmentoInvocaCli(segmento)) continue;
+        for (const [id, veces] of ticketsDeTexto(segmento)) {
+          sumar(id, veces * 3, true);
+        }
+      }
     }
+    // Un `tool_calls` que no se pudo leer como arreglo de llamadas no se
+    // descarta: sus menciones pesan como texto, que es lo que eran.
+    if (parseadas.length === 0) {
+      for (const [id, veces] of ticketsDeTexto(llamadas)) {
+        sumar(id, veces, false);
+      }
+    }
+
     for (const [id, veces] of ticketsDeTexto(fila.content ?? "")) {
       sumar(id, veces, false);
     }
