@@ -28,7 +28,7 @@ import { parseTicket } from "@valmen/core";
 import { type RegistryPaths, addAiUsage, findTicket } from "@valmen/engine";
 
 import { leerSesionesDeCodex } from "./codex.js";
-import { leerSesionesDeHermes } from "./hermes.js";
+import { leerSesionesDeHermes, HERRAMIENTAS_DE_LECTURA, HERRAMIENTAS_QUE_ESCRIBEN } from "./hermes.js";
 
 /**
  * La base de datos de opencode, cargada **de forma perezosa**.
@@ -240,6 +240,21 @@ export function ticketDeTexto(texto: string): string | null {
   // El formato del contrato: <TIPO>-<MODULO>-<DESCRIPCION>-<YYYYMMDD>.
   const match = /\b([A-Z][A-Z0-9]*(?:-[A-Z0-9]+){2,}-\d{8})\b/.exec(texto);
   return match === null ? null : (match[1] as string);
+}
+
+/**
+ * El nombre de una herramienta MCP del harness según lo declara opencode 2.0.16,
+ * o `null` si la llamada no lo es.
+ *
+ * En `session_message` el nombre llega sin el prefijo de página
+ * (`valmen_mover_ticket`): se normaliza con la misma regla que el lector de
+ * Hermes y se compara contra el catálogo exacto.
+ */
+function herramientaDelHarnessDeOpencode(nombre: string): string | null {
+  if (nombre === "") return null;
+  const base = nombre.startsWith("valmen_") ? nombre.slice("valmen_".length) : nombre;
+  if (HERRAMIENTAS_QUE_ESCRIBEN.includes(base)) return base;
+  return HERRAMIENTAS_DE_LECTURA.includes(base) ? base : null;
 }
 
 /** Lo que un mensaje del cliente aporta a la línea de tiempo. */
@@ -488,7 +503,24 @@ function consultar(
     messageId: string;
     messageData: string;
     timeCreated: number;
-  }[];
+  }[] = [];
+  let filasV2: {
+    id: string;
+    title: string | null;
+    cost: number | null;
+    tokensInput: number | null;
+    tokensOutput: number | null;
+    tokensReasoning: number | null;
+    tokensCacheRead: number | null;
+    agent: string | null;
+    model: string | null;
+    timeCreated: number | null;
+  }[] = [];
+  // La consulta vieja puede fallar por dos motivos distintos y hay que
+  // distinguirlos: una base que ya no tiene las tablas viejas —opencode 2.0.16
+  // solo-v2— no es un fallo si la forma v2 trae datos; una base sin datos que
+  // se pueda leer, sí.
+  let falloLaVieja = false;
   try {
     filas = db
       .prepare(
@@ -505,7 +537,52 @@ function consultar(
       )
       .all(patron) as unknown as typeof filas;
   } catch {
-    return null;
+    falloLaVieja = true;
+  }
+
+  // La forma v2 es **añadida, no requisito**: una base con session_v2 y las
+  // viejas se lee completa; una base vieja sigue igual; y una base solo-v2
+  // también se lee — tumbar la línea de tiempo porque falta una de las dos formas
+  // era hacer depender el dato nuevo de la tabla que ya no crece.
+  let hayV2 = false;
+  try {
+    filasV2 = db
+      .prepare(
+        `SELECT id, title, cost, tokens_input AS tokensInput, tokens_output AS tokensOutput,
+                tokens_reasoning AS tokensReasoning, tokens_cache_read AS tokensCacheRead,
+                agent, model, time_created AS timeCreated
+           FROM session_v2
+          WHERE directory LIKE ?`,
+      )
+      .all(patron) as unknown as typeof filasV2;
+    hayV2 = filasV2.length > 0;
+  } catch {
+    hayV2 = false;
+  }
+  // Ninguna de las dos formas trajo una base legible: sí es un fallo, y la
+  // pantalla distingue «no hay datos» de un cero que se lee como «no costó».
+  if (falloLaVieja && !hayV2) return null;
+  // La consulta de mensajes v2 falla si la tabla no existe, y no es un fallo.
+  let leerMensajesV2: ((sessionId: string) => {
+    id: string;
+    type: string | null;
+    data: string | null;
+  }[]) | null = null;
+  try {
+    const consulta = db.prepare(
+      `SELECT id, type, data
+         FROM session_message
+        WHERE session_id = ?
+        ORDER BY time_created`,
+    );
+    leerMensajesV2 = (sessionId: string) =>
+      consulta.all(sessionId) as unknown as {
+        id: string;
+        type: string | null;
+        data: string | null;
+      }[];
+  } catch {
+    leerMensajesV2 = null;
   }
 
   // Se indexa una sola vez por mensaje: el coste y el texto se consultan en varios
@@ -642,6 +719,148 @@ function consultar(
     costeHarness += porMensaje.get(messageId)?.mensaje.cost ?? 0;
   }
 
+  // ── Las sesiones de opencode 2.0.16 (`session_v2`) ─────────────────────────
+  //
+  // opencode migró su contabilidad: las sesiones nuevas viven en `session_v2` con
+  // sus mensajes en `session_message`, y las tablas viejas quedaron presentes pero
+  // sin datos nuevos. El lector que solo consultaba `session` veía el pasado: la
+  // sesión del ejecutor —el trabajo más caro del ticket— no aparecía en ninguna
+  // parte, y el coste por ticket quedaba subestimado en silencio.
+  //
+  // En `session_v2` el coste y los tokens vienen por sesión y **también por
+  // mensaje** dentro de `session_message`, así que el desglose harness/exploración
+  // se puede afirmar igual que con las tablas viejas. La atribución al ticket usa
+  // las dos vías que existen: la llamada al harness —entrada MCP `valmen_*` o
+  // invocación del CLI dentro de una herramienta de shell— y, si nunca lo tocó, la
+  // mención —el título o el primer mensaje del usuario, que es como el orquestador
+  // le entrega el ticket al ejecutor—. Mencionar en un mensaje intermedio no
+  // atribuye: un ticket citado de pasada no fue trabajado por esta vía.
+  let costeHarnessV2 = 0;
+  let mensajesV2 = 0;
+  let mensajesV2DelHarness = 0;
+  const aNumero = (valor: unknown): number =>
+    typeof valor === "number" && Number.isFinite(valor) ? valor : 0;
+  for (const fila of filasV2) {
+    // Una sesión presente en las dos tablas es la misma dos veces: gana la
+    // entrada que ya se leyó y la de `session_v2` no se agrega.
+      if (sesiones.has(fila.id)) continue;
+
+      let intervencionesV2 = 0;
+      let fallidasV2 = 0;
+      let agente = "";
+      let modelo = "";
+      let primerTextoDeUsuario: string | null = null;
+
+      const mensajes = leerMensajesV2
+        ? leerMensajesV2(fila.id)
+        : [];
+
+      for (const mensaje of mensajes) {
+        let datos: Record<string, unknown>;
+        try {
+          datos = JSON.parse(mensaje.data ?? "{}") as Record<string, unknown>;
+        } catch {
+          continue;
+        }
+        if (mensaje.type !== "assistant") {
+          if (
+            mensaje.type === "user" &&
+            primerTextoDeUsuario === null &&
+            typeof datos["text"] === "string"
+          ) {
+            primerTextoDeUsuario = datos["text"] as string;
+          }
+          continue;
+        }
+
+        mensajesV2 += 1;
+        const coste = typeof datos["cost"] === "number" ? (datos["cost"] as number) : 0;
+        const delModelo = datos["model"] as Record<string, unknown> | undefined;
+        if (modelo === "" && delModelo && typeof delModelo["id"] === "string") {
+          modelo = modeloDeSesion(JSON.stringify(delModelo));
+        }
+        if (agente === "" && typeof datos["agent"] === "string") {
+          agente = datos["agent"] as string;
+        }
+
+        let elMensajeTocoElHarness = false;
+        const contenido = Array.isArray(datos["content"]) ? (datos["content"] as unknown[]) : [];
+        for (const entrada of contenido) {
+          if (entrada === null || typeof entrada !== "object") continue;
+          const parte = entrada as Record<string, unknown>;
+          if (parte["type"] !== "tool") continue;
+          const nombre = typeof parte["name"] === "string" ? parte["name"] : "";
+          const estado = (parte["state"] ?? {}) as Record<string, unknown>;
+          const bruto = JSON.stringify(parte);
+          const esMcpDelHarness = herramientaDelHarnessDeOpencode(nombre) !== null;
+          // La vía CLI: una herramienta de shell cuyo comando invoca `valmen`.
+          const esCli =
+            !esMcpDelHarness &&
+            (nombre === "shell" || nombre === "bash" || nombre === "execute") &&
+            /(?:^|[\s;&|()"'])(?:valmen|[^\s;&|()"']*main\.js)[\s;&|()"']+/.test(bruto);
+          if (!esMcpDelHarness && !esCli) continue;
+
+          elMensajeTocoElHarness = true;
+          intervencionesV2 += 1;
+          const status = typeof estado["status"] === "string" ? estado["status"] : "";
+          if (status === "error" || status === "failed") fallidasV2 += 1;
+
+          if (ticketId !== undefined && bruto.includes(ticketId)) {
+            sesionesDelTicket.add(fila.id);
+            intervenciones.push({
+              at:
+                typeof estado["time"] === "object" && estado["time"] !== null
+                  ? ((estado["time"] as Record<string, unknown>)["start"] as number) ||
+                    Number(mensaje.id) ||
+                    0
+                  : 0,
+              tool: nombre,
+              status: status || "completed",
+              agent: agente,
+              provider: typeof delModelo?.["providerID"] === "string" ? String(delModelo["providerID"]) : "",
+              model: modelo,
+              costUsd: coste,
+              failed: status === "error" || status === "failed",
+            });
+          }
+        }
+        if (elMensajeTocoElHarness) {
+          mensajesV2DelHarness += 1;
+          costeHarnessV2 += coste;
+        }
+      }
+
+      // La mención como última vía: el título o el primer mensaje del usuario
+      // nombran el ticket. Un ejecutor que implementó y nunca consultó el registro
+      // solo se puede atribuir así — y es lo que el lector de codex ya hace.
+      if (
+        ticketId !== undefined &&
+        !sesionesDelTicket.has(fila.id) &&
+        ((fila.title ?? "").includes(ticketId) ||
+          (primerTextoDeUsuario ?? "").includes(ticketId))
+      ) {
+        sesionesDelTicket.add(fila.id);
+      }
+
+      sesiones.set(fila.id, {
+        id: fila.id,
+        title: fila.title ?? "",
+        agent: agente || (fila.agent ?? ""),
+        provider: "",
+        model: modelo || modeloDeSesion(fila.model),
+        costUsd: typeof fila.cost === "number" && Number.isFinite(fila.cost) ? fila.cost : null,
+        source: "opencode",
+        inputTokens: aNumero(fila.tokensInput),
+        outputTokens: aNumero(fila.tokensOutput),
+        reasoningTokens: aNumero(fila.tokensReasoning),
+        cacheReadTokens: aNumero(fila.tokensCacheRead),
+        startedAt: aNumero(fila.timeCreated),
+        intervenciones: intervencionesV2,
+        fallidas: fallidasV2,
+      });
+    }
+    costeHarness += costeHarnessV2;
+
   // Las sesiones de codex, si las hay. Se leen después de las de opencode porque
   // son otro almacén, y se suman a la misma lista: quien mira quiere el consumo de
   // su ticket, no el de la herramienta con la que se hizo.
@@ -768,9 +987,9 @@ function consultar(
       // llamarlo exploración era afirmar algo que nadie midió. Se declara aparte,
       // con sus intervenciones contadas.
       exploracionUsd: totalCostUsd - costeHarness - costeDeHermes,
-      harnessMensajes: delHarness.size + intervencionesDeHermes,
+      harnessMensajes: delHarness.size + intervencionesDeHermes + mensajesV2DelHarness,
       exploracionMensajes:
-        porMensaje.size - delHarness.size + (mensajesDeHermes - intervencionesDeHermes),
+        porMensaje.size - delHarness.size + (mensajesDeHermes - intervencionesDeHermes) + (mensajesV2 - mensajesV2DelHarness),
       costeNoAtribuibleUsd: costeDeHermes,
     },
   };

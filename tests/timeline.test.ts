@@ -507,6 +507,226 @@ describe("las sesiones de codex", () => {
   });
 });
 
+describe("las sesiones de opencode 2.0.16 (session_v2)", () => {
+  /**
+   * Escribe la forma v2: la sesión en `session_v2` y sus mensajes en
+   * `session_message`. El coste y los tokens de sesión vienen en la fila; el
+   * coste por mensaje vive dentro del data de cada mensaje assistant.
+   */
+  function escribirBaseV2(datos: {
+    directorio: string;
+    sesiones: {
+      id: string;
+      title: string;
+      cost: number | null;
+      agente?: string | null;
+      modelo?: string;
+      tokensInput?: number;
+      tokensOutput?: number;
+      tokensReasoning?: number;
+      tokensCacheRead?: number;
+      conMensajes?: boolean;
+      mensajes?: {
+        tipo: string;
+        data: Record<string, unknown>;
+      }[];
+    }[];
+  }): void {
+    const modulo = sqlite();
+    if (modulo === null) return;
+    mkdirSync(join(lab, ".local", "share", "opencode"), { recursive: true });
+    const db = new modulo.DatabaseSync(join(lab, ".local", "share", "opencode", "opencode.db"));
+
+    db.exec(`
+      CREATE TABLE session_v2 (
+        id text PRIMARY KEY, title text, cost real, tokens_input integer,
+        tokens_output integer, tokens_reasoning integer, tokens_cache_read integer,
+        agent text, model text, directory text, time_created integer
+      );
+      CREATE TABLE session_message (
+        id text PRIMARY KEY, session_id text, type text, data text, time_created integer
+      );
+    `);
+
+    let t = 1_700_000_000_000;
+    for (const s of datos.sesiones) {
+      db.prepare(
+        "INSERT INTO session_v2 VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+      ).run(
+        s.id,
+        s.title,
+        s.cost,
+        s.tokensInput ?? 0,
+        s.tokensOutput ?? 0,
+        s.tokensReasoning ?? 0,
+        s.tokensCacheRead ?? 0,
+        s.agente ?? null,
+        s.modelo ?? null,
+        datos.directorio,
+        t,
+      );
+      if (s.conMensajes === false) continue;
+      for (const m of s.mensajes ?? []) {
+        t += 1000;
+        db.prepare("INSERT INTO session_message VALUES (?,?,?,?,?)").run(
+          `sm_${s.id}_${t}`,
+          s.id,
+          m.tipo,
+          JSON.stringify(m.data),
+          t,
+        );
+      }
+    }
+    db.close();
+  }
+
+  /** Un mensaje assistant de la v2, con coste y tool entries. */
+  function mensajeV2(
+    coste: number,
+    content: Record<string, unknown>[] = [],
+  ): Record<string, unknown> {
+    return {
+      time: { created: 1_700_000_000_000 },
+      agent: "build",
+      model: { id: "deepseek-v4.1-flash", providerID: "opencode-go" },
+      cost: coste,
+      content,
+    };
+  }
+
+  /** Un tool entry de la v2: el nombre sin prefijo de página y el input en state. */
+  function toolV2(nombre: string, input: Record<string, unknown>): Record<string, unknown> {
+    return {
+      type: "tool",
+      name: nombre,
+      state: { status: "completed", time: { start: 1_700_000_001_000 }, input },
+    };
+  }
+
+  it("la sesión del ejecutor entra con su coste y tokens reales de session_v2", async () => {
+    escribirBaseV2({
+      directorio: "/proyecto",
+      sesiones: [
+        {
+          id: "ses_v2_ejecutor",
+          title: "TICKET: BUGFIX-POS-UNO-20260101",
+          cost: 0.07315299,
+          tokensInput: 174613,
+          tokensOutput: 19625,
+          tokensReasoning: 34365,
+          tokensCacheRead: 4855680,
+          mensajes: [
+            { tipo: "user", data: { text: "Ticket: BUGFIX-POS-UNO-20260101. Implementá el plan." } },
+            { tipo: "assistant", data: mensajeV2(0.03, [{ type: "reasoning", text: "leo" }]) },
+            { tipo: "assistant", data: mensajeV2(0.04315299, [{ type: "text", text: "listo" }]) },
+          ],
+        },
+      ],
+    });
+
+    const { leerLineaDeTiempo } = await cargar();
+    const linea = leerLineaDeTiempo("/proyecto", { home: lab, ticketId: "BUGFIX-POS-UNO-20260101" });
+
+    expect(linea?.sessions).toHaveLength(1);
+    const sesion = linea?.sessions[0];
+    expect(sesion?.source).toBe("opencode");
+    expect(sesion?.costUsd).toBeCloseTo(0.07315299, 9);
+    expect(sesion?.inputTokens).toBe(174613);
+    expect(sesion?.outputTokens).toBe(19625);
+    expect(sesion?.model).toContain("deepseek-v4.1-flash");
+    // Sin llamadas al registro, la sesión es exploración: es desarrollo, y se dice
+    // con el desglose, no se esconde en «harness».
+    expect(linea?.desglose.harnessUsd).toBe(0);
+    expect(linea?.desglose.costeNoAtribuibleUsd).toBe(0);
+    expect(linea?.totalCostUsd).toBeCloseTo(0.07315299, 9);
+  });
+
+  it("una llamada MCP del harness en la v2 cuenta harness y atribuye por sus argumentos", async () => {
+    escribirBaseV2({
+      directorio: "/proyecto",
+      sesiones: [
+        {
+          id: "ses_v2_mcp",
+          title: "trabajo con registro",
+          cost: 0.02,
+          mensajes: [
+            {
+              tipo: "assistant",
+              data: mensajeV2(0.02, [
+                toolV2("valmen_mover_ticket", { id: "BUGFIX-POS-UNO-20260101" }),
+              ]),
+            },
+          ],
+        },
+      ],
+    });
+
+    const { leerLineaDeTiempo } = await cargar();
+    const linea = leerLineaDeTiempo("/proyecto", { home: lab, ticketId: "BUGFIX-POS-UNO-20260101" });
+    expect(linea?.sessions).toHaveLength(1);
+    expect(linea?.desglose.harnessUsd).toBeCloseTo(0.02, 6);
+    expect(linea?.sessions[0]?.intervenciones).toBe(1);
+  });
+
+  it("una sesión presente en session y en session_v2 aparece una sola vez", async () => {
+    // La misma sesión registrada en las dos tablas: la entrada que ya se leyó de
+    // la forma vieja gana, y la v2 no la duplica.
+    escribirBase({
+      directorio: "/proyecto",
+      sesiones: [
+        {
+          id: "ses_doble",
+          title: "Sesión en las dos tablas",
+          cost: 0.05,
+          mensajes: [
+            { id: "m1", data: mensaje(0.05), partes: [{ tool: "read", status: "completed" }] },
+          ],
+        },
+      ],
+    });
+    escribirBaseV2({
+      directorio: "/proyecto",
+      sesiones: [
+        {
+          id: "ses_doble",
+          title: "Sesión en las dos tablas",
+          cost: 0.05,
+          conMensajes: false,
+        },
+      ],
+    });
+
+    const { leerLineaDeTiempo } = await cargar();
+    const r = leerLineaDeTiempo("/proyecto", { home: lab });
+    expect(r?.sessions).toHaveLength(1);
+    expect(r?.totalCostUsd).toBeCloseTo(0.05, 9);
+  });
+
+  it("una base sin session_v2 (opencode viejo) sigue devolviendo la línea de siempre", async () => {
+    // La misma escribirBase de las tablas viejas, sin session_v2: el lector de v2
+    // falla al consultar la tabla y el catch lo convierte en «siga como estaba».
+    escribirBase({
+      directorio: "/proyecto",
+      sesiones: [
+        {
+          id: "ses_vieja",
+          title: "Sesión vieja",
+          cost: 0.01,
+          mensajes: [
+            { id: "m1", data: mensaje(0.01), partes: [{ tool: "read", status: "completed" }] },
+          ],
+        },
+      ],
+    });
+
+    const { leerLineaDeTiempo } = await cargar();
+    const r = leerLineaDeTiempo("/proyecto", { home: lab });
+    expect(r).not.toBeNull();
+    expect(r?.sessions).toHaveLength(1);
+    expect(r?.totalCostUsd).toBeCloseTo(0.01, 9);
+  });
+});
+
 /** El ticket que se trabaja en la prueba del reparto. */
 const TICKET = "BUGFIX-POS-UNO-20260101";
 
