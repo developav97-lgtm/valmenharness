@@ -122,11 +122,80 @@ Viene de una feature descompuesta en sprints; su plan completo está en el ticke
       <!-- test: npx vitest run tests/procesos-deploy-manuales.test.ts -->
 - [x] La ayuda del CLI documenta `manuales auditar` con el contrato de citas, los tres veredictos y la ruta del recibo
       <!-- test: npx vitest run tests/manuales-auditar.test.ts -->
+- [x] Un manual escrito con la plantilla que emite `valmen manuales plantilla` —bloque de metadata incluido— queda en `approve` cuando cada sección declara su cita
+      <!-- test: npx vitest run tests/manuales-auditar.test.ts -->
+- [x] La fila de cabecera de una tabla no exige cita y las filas de cuerpo de esa tabla sí
+      <!-- test: npx vitest run tests/manuales-auditar.test.ts -->
 
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "El bloque de metadata de la plantilla exige cita y bloquea todo manual generado",
+    "status": "awaiting_retest",
+    "severity": "high",
+    "actual": "Con la plantilla que publica valmen manuales plantilla, las cinco líneas del bloque de metadata (Módulo, ¿Dónde encontrarla?, Última actualización, Código, Versión) contaban como afirmaciones sin cita: valmen manuales auditar sobre un manual escrito con esa plantilla, con cada sección citada, devolvía block y salida 3 con cinco hallazgos sin-cita en las líneas 3 a 7. El paso escribir del proceso usa esa plantilla, así que todo manual generado quedaba bloqueado por su propia cabecera. Reproducido con el CLI compilado sobre un laboratorio temporal (docs/manuales/usuario-final/ordenes.md).",
+    "expected": "El bloque de metadata no es una afirmación: las líneas con la forma etiqueta en negrita, dos puntos y valor, entre el título del manual y el primer encabezado que lo sigue, quedan fuera del conteo; el manual que el proceso escribe con la plantilla aprueba cuando cada sección declara su cita. Es la decisión 2 del plan aprobado y §8.1 de docs/03-GATES.md.",
+    "evidence": [
+      "EVIDENCE-002"
+    ],
+    "affected_files": [
+      "docs/03-GATES.md",
+      "packages/cli/src/main.ts",
+      "packages/engine/src/manuales-auditar.ts",
+      "tests/manuales-auditar.test.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [],
+    "terminal_reason": null,
+    "related_ticket": null
+  },
+  {
+    "id": "POINT-002",
+    "title": "La fila de cabecera de una tabla exige cita y bloquea el manual que la usa",
+    "status": "awaiting_retest",
+    "severity": "normal",
+    "actual": "La fila de cabecera de una tabla contaba como afirmación sin cita: un manual cuya tabla de campos citaba la fila de cuerpo y no su cabecera quedaba en block por la cabecera. Reproducido con el CLI compilado sobre un laboratorio temporal, con el hallazgo sin-cita en la línea 22 (la fila con los nombres de columna). El plan excluía los separadores de tabla, no la cabecera de la tabla. Lo señaló la revisión ronda 1 como menor.",
+    "expected": "La fila de cabecera de una tabla, la que precede al separador, no es una afirmación: nombra las columnas y no sostiene nada de ningún campo, así que no lleva cita. Las filas de cuerpo sí la llevan.",
+    "evidence": [
+      "EVIDENCE-003"
+    ],
+    "affected_files": [
+      "docs/03-GATES.md",
+      "packages/cli/src/main.ts",
+      "packages/engine/src/manuales-auditar.ts",
+      "tests/manuales-auditar.test.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [],
+    "terminal_reason": null,
+    "related_ticket": null
+  },
+  {
+    "id": "POINT-003",
+    "title": "Un manual que dice que hay que mirar algo no queda en review",
+    "status": "analyzed",
+    "severity": "normal",
+    "actual": "La Descripción funcional declara que un manual que dice que hay que mirar queda en review, y el motor devuelve approve: reproducido con el CLI compilado sobre un manual con la sección de pendientes y la frase Hay que mirar el botón de anular, que salió approve con salida 0. La sección de pendientes se excluye entera del conteo.",
+    "expected": "Un manual cuya sección de pendientes dice que hay que mirar algo no cierra en approve. La decisión 3 del plan acota la banda a los literales de error y no menciona este caso, así que la brecha es entre la Descripción funcional y el plan y la resuelve el PO: la revisión ronda 1 pidió no implementarla sin su palabra.",
+    "evidence": [
+      "EVIDENCE-004"
+    ],
+    "affected_files": [],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -137,6 +206,7 @@ Viene de una feature descompuesta en sprints; su plan completo está en el ticke
 - El paso `auditar-manuales` quedó declarado al final de `.valmen/processes/actualizar-manuales.yaml` (`kind: command`, `run: valmen manuales auditar --manuales-dir {manualesdir}`, `evidence: [stdout]`), sin reordenar el paso de detección con el que la dependencia R-S3-002 comparte el archivo.
 - El contrato quedó escrito en la sección nueva `docs/03-GATES.md` §8.1: la anotación, qué cuenta como afirmación, los tres veredictos con sus causas, los cuatro checks y el sujeto del recibo.
 - Desvío del orquestador respecto del plan, declarado: la sesión de OpenCode se lanzó con `--auto` además de `--standalone`. Con `--standalone` y sin `--auto`, el servidor privado de OpenCode trata las rutas absolutas del repositorio como `external_directory` y auto-rechaza las lecturas —el primer lanzamiento murió en el primer `Read`—; `--auto` es la bandera documentada para aprobar lo que no está explícitamente denegado, no amplía el alcance del ticket y el alcance siguió cerrado a los nueve archivos del plan.
+- Corrección posterior, de la revisión ronda 1 (2026-09-29): sí hubo corrección del verificador, y queda nombrada. El orquestador editó `packages/engine/src/manuales-auditar.ts`, `packages/cli/src/main.ts`, `docs/03-GATES.md` y `tests/manuales-auditar.test.ts` para exceptuar del conteo de afirmaciones el bloque de metadata y la fila de cabecera de una tabla (`POINT-001` y `POINT-002`). Va en su propio commit, con su mensaje, y su evidencia se registró contra el punto: no se le atribuye al ejecutor lo que escribió el verificador. El código del alcance original sigue siendo del ejecutor, como dice la primera línea.
 - Desvíos menores del ejecutor, que no cambian el contrato: la ayuda del CLI no lleva backticks alrededor de la anotación porque el `USAGE` es un template literal; los cuatro checks se llaman `citas_presentes`, `citas_resuelven`, `sin_rutas_tecnicas` y `mensajes_de_error`; y la ruta técnica exige separador de ruta —`src/app/x.ts` sí, `Node.js` no—.
 
 ## Pruebas
@@ -148,6 +218,18 @@ Viene de una feature descompuesta en sprints; su plan completo está en el ticke
 - Verificación del orquestador sobre el producto y no sobre el auto-reporte: se corrió `valmen manuales auditar` con el CLI compilado contra tres laboratorios temporales y los veredictos salieron con el código de salida que el plan decide. `approve` con un manual cuya cita resuelve: salida 0 y recibo con `gate: "manuals"` y sujeto `process:actualizar-manuales`. `block` con las cinco causas —afirmación sin cita, ruta inexistente, línea fuera del archivo, cita mal formada y ruta técnica en el texto visible—: salida 3 y los tres checks de citas en `fail`. `review` con el literal de error ausente de las fuentes citadas: salida 6 y `mensajes_de_error` en `warn`. Y un directorio sin manuales: salida 6, los cuatro checks en `skip` y veredicto `review`.
 - Contrato de pruebas para quien retome: comando `npx vitest run`, directorio la raíz del repositorio, resultado esperado 1612 pruebas en verde y ningún fallo, sin requisitos de ambiente —el harness no tiene dependencias externas ni base de datos—.
 - Criterios 13 a 18 (la banda de revisión, el recibo y el paso del proceso): la compuerta despliega como máximo doce criterios como proposiciones (`MAX_CRITERIA_PROPOSITIONS`, `packages/gate/src/dynamic.ts:21`), así que sus comandos no los corrió el gate y los corrí directamente: `npx vitest run tests/manuales-auditar.test.ts` (17 en verde, con los casos de esos criterios entre ellos) y `npx vitest run tests/procesos-deploy-manuales.test.ts` (3 en verde, con la aserción del paso `auditar-manuales`). Quedan marcados con esa corrida directa y no con un recibo de compuerta, y se deja dicho acá para que el registro pueda distinguirlo. El gate sí corrió los doce primeros criterios y los doce dieron 1,00.
+
+### Corrección de la revisión ronda 1
+
+La revisión ronda 1 del artefacto devolvió un hallazgo requerido y uno menor, y los dos están corregidos y registrados como `POINT-001` y `POINT-002`. Lo que se corrigió es el conteo de afirmaciones: el bloque de metadata de la plantilla y la fila de cabecera de una tabla quedan fuera —estructura y no afirmación sobre el sistema—, y el proceso sigue exigiendo la cita a cada línea de cuerpo y a cada fila de tabla.
+
+- `npx vitest run tests/manuales-auditar.test.ts` — **21 pruebas en verde** (eran 17; las cuatro nuevas son el bloque de metadata, la plantilla del CLI de punta a punta, la fila de cabecera de la tabla y la guarda de que una línea en negrita dentro de una sección sí exige cita).
+- Las tres pruebas de la corrección se corrieron también **con el módulo apartado** (`git stash push -- packages/engine/src/manuales-auditar.ts`, la corrida, `git stash pop` y la comparación del sha256 del archivo antes y después, idéntico): **3 en rojo sin el cambio y 3 en verde con él**, que es lo que las vuelve prueba del defecto y no del arreglo.
+- Batería completa `npx vitest run` — **84 archivos en verde, 1 salteado (85); 1632 pruebas en verde, 48 salteadas (1680)**; sin fallos. La corrida de la entrega anterior, sobre este mismo árbol con el commit hermano encima, había dado 1628 pruebas en verde: la diferencia son las cuatro pruebas de esta corrección.
+- `npm run typecheck` — sin errores.
+- Reproducción del caso que la revisión denunció, con el CLI compilado: `valmen manuales plantilla --pantalla Órdenes --escribir --destino docs/manuales/usuario-final/ordenes.md` sobre un laboratorio temporal, cada sección completada con su cita, y `valmen manuales auditar`: **pasó de `block` con salida 3 y cinco hallazgos `sin-cita` en las líneas 3 a 7 a `approve` con salida 0**, con las cinco etiquetas del encabezado fuera del conteo.
+- Los dos criterios nuevos (plantilla del CLI y fila de cabecera de tabla) quedan marcados con esta **corrida directa del comando y no con un recibo de compuerta**: el ticket ya estaba entregado y `qa-mechanical` solo protege `in_progress → awaiting_user_tests`, así que no hay recibo posible para este ciclo. Se deja dicho para que el registro pueda distinguirlo.
+- Queda **sin implementar** el tercer hallazgo de la revisión —un manual que dice que hay que mirar algo debería quedar en `review` y devuelve `approve`—, registrado como `POINT-003` en `analyzed`: la revisión pidió no implementarlo sin la palabra del PO porque la skill del proceso manda dejar toda ambigüedad en la sección de pendientes y casi todo manual nuevo quedaría en `review` y el paso avisaría en cada deploy.
 
 ## QA
 
@@ -166,6 +248,30 @@ Viene de una feature descompuesta en sprints; su plan completo está en el ticke
     "description": "Verificación del orquestador sobre el árbol del cambio: npx vitest run tests/manuales-auditar.test.ts (17 pruebas en verde), npx vitest run tests/procesos-deploy-manuales.test.ts (3 en verde) y la batería completa npx vitest run (1612 en verde y 48 salteadas sobre 1660; línea base 1594 sin fallos), más npm run typecheck sin errores y las cuatro corridas directas de valmen manuales auditar contra laboratorios temporales con salida 0, 3, 6 y 6. El hash cubre, en orden alfabético, los nueve archivos del cambio: .valmen/processes/actualizar-manuales.yaml, docs/03-GATES.md, packages/cli/src/commands.ts, packages/cli/src/main.ts, packages/cli/src/manuales.ts, packages/engine/src/index.ts, packages/engine/src/manuales-auditar.ts, tests/manuales-auditar.test.ts y tests/procesos-deploy-manuales.test.ts. El ticket no tiene puntos, así que la referencia la computó el verificador con el encuadre del contrato (longitud de la ruta y del contenido en 8 bytes big-endian).",
     "reference": "worktree:sha256:348f292cd53c31a0bf5912bfb5ee36096482bf6ecea2556ed4b25dc960fc21cb",
     "point_id": null
+  },
+  {
+    "id": "EVIDENCE-002",
+    "date": "2026-09-29",
+    "kind": "automated-test",
+    "description": "Corrección del verificador, no del ejecutor: el parser de packages/engine/src/manuales-auditar.ts ahora exceptúa el bloque de metadata del conteo de afirmaciones (líneas con forma etiqueta en negrita entre el título y el primer encabezado que lo sigue), y docs/03-GATES.md §8.1 y la ayuda del CLI lo declaran. Pruebas nuevas en tests/manuales-auditar.test.ts: el bloque de metadata no exige cita (approve, 1 afirmación contada) y el manual que emite el CLI se audita de punta a punta en approve; las dos fallan sin el cambio (medido: 3 pruebas en rojo con el módulo apartado con git stash y restaurado, sha256 idéntico antes y después). Corrida: npx vitest run tests/manuales-auditar.test.ts (21 en verde), batería completa npx vitest run (84 archivos en verde más 1 salteado, 1632 pruebas en verde y 48 salteadas sobre 1680; la línea base del ticket era 1628 y la diferencia son estas 4 pruebas) y npm run typecheck sin errores. Reproducción con el CLI compilado: la plantilla emitida con valmen manuales plantilla, completada sección por sección con su cita, pasó de block con salida 3 y cinco sin-cita a approve con salida 0. El hash cubre los cuatro archivos de la corrección en orden alfabético.",
+    "reference": "worktree:sha256:79407952d3eb4c7b4d22fddbdda3ef269fa9c9111933a91281e208e055bf4d21",
+    "point_id": "POINT-001"
+  },
+  {
+    "id": "EVIDENCE-003",
+    "date": "2026-09-29",
+    "kind": "automated-test",
+    "description": "Corrección del verificador, no del ejecutor: la fila de cabecera de una tabla —la que precede al separador, con la barra en las dos líneas para no confundir una regla horizontal— queda fuera del conteo de afirmaciones en packages/engine/src/manuales-auditar.ts, y sus filas de cuerpo siguen exigiéndola. Prueba nueva en tests/manuales-auditar.test.ts (tabla de campos con la cita en la fila de cuerpo: approve sin hallazgos; en rojo sin el cambio). El hash es el mismo de POINT-001: los dos hallazgos se corrigieron en la misma pasada y el encuadre cubre los cuatro archivos.",
+    "reference": "worktree:sha256:79407952d3eb4c7b4d22fddbdda3ef269fa9c9111933a91281e208e055bf4d21",
+    "point_id": "POINT-002"
+  },
+  {
+    "id": "EVIDENCE-004",
+    "date": "2026-09-29",
+    "kind": "code-inspection",
+    "description": "Diagnóstico, sin cambio de código: la Descripción funcional declara que un manual que dice que hay que mirar queda en review y el motor devuelve approve. Reproducido con el CLI compilado sobre un laboratorio temporal (manual con la sección de pendientes y la frase Hay que mirar el botón de anular: approve, salida 0), porque la sección de pendientes se excluye entera. No se implementó: la decisión 3 del plan acota la banda a los literales de error y la revisión ronda 1 pidió no implementarla sin la palabra del PO, ya que la skill del proceso manda dejar toda ambigüedad en esa sección y casi todo manual nuevo quedaría en review. Queda en analyzed esperando su decisión.",
+    "reference": null,
+    "point_id": "POINT-003"
   }
 ]
 ```
@@ -245,6 +351,36 @@ Viene de una feature descompuesta en sprints; su plan completo está en el ticke
     "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
     "confidence": "high",
     "id": "CONSUMO-004"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-29",
+    "session_reference": "20260929_183321_e68410",
+    "model": "opencode-go/deepseek-v4.1-flash",
+    "reasoning_effort": null,
+    "notes": "Sesion de Hermes de la revision ronda 1 de la tarjeta kanban: leyo el diff, reprodujo todo con el CLI compilado y devolvio los cambios pedidos, con el bloque de metadata de la plantilla y la cabecera de tabla como hallazgos. La base no calcula el costo porque el proveedor factura por suscripcion; la lectura es al momento de registrar, con su turno ya cerrado.",
+    "input_tokens": 180621,
+    "output_tokens": 38741,
+    "total_tokens": 246717,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-005"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-29",
+    "session_reference": "20260929_184022_e67941",
+    "model": "opencode-go/deepseek-v4.1-flash",
+    "reasoning_effort": null,
+    "notes": "Sesion de Hermes que corrige la revision ronda 1: exceptua el bloque de metadata y la cabecera de tabla del conteo de afirmaciones, agrega las cuatro pruebas, corre la bateria completa y el typecheck, y registra los puntos y la evidencia. La base no calcula el costo porque el proveedor factura por suscripcion; la lectura es al momento de registrar, con el turno todavia en curso, asi que la fila crece hasta que termine.",
+    "input_tokens": 151367,
+    "output_tokens": 48898,
+    "total_tokens": 231017,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-006"
   }
 ]
 ```
@@ -372,6 +508,141 @@ Sin publicar todavía.
     "action": "ai-usage-added",
     "actor": "cli",
     "details": "Se agregó CONSUMO-004."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-09-29",
+    "at": "2026-09-29T23:51:51.828Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-09-29",
+    "at": "2026-09-29T23:52:04.472Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-09-29",
+    "at": "2026-09-29T23:52:04.718Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-09-29",
+    "at": "2026-09-29T23:52:13.137Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-09-29",
+    "at": "2026-09-29T23:52:13.296Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-09-29",
+    "at": "2026-09-29T23:52:13.438Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-09-29",
+    "at": "2026-09-29T23:52:13.591Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-002: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-09-29",
+    "at": "2026-09-29T23:52:13.738Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-002: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-09-29",
+    "at": "2026-09-29T23:52:13.878Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-002: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-09-29",
+    "at": "2026-09-29T23:52:14.046Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-003: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-09-29",
+    "at": "2026-09-29T23:52:33.761Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-025",
+    "date": "2026-09-29",
+    "at": "2026-09-29T23:52:33.918Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-026",
+    "date": "2026-09-29",
+    "at": "2026-09-29T23:52:34.073Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-004."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-027",
+    "date": "2026-09-29",
+    "at": "2026-09-29T23:54:33.566Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-005."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-028",
+    "date": "2026-09-29",
+    "at": "2026-09-29T23:54:33.834Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-006."
   }
 ]
 ```
