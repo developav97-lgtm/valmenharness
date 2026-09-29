@@ -20,11 +20,23 @@
  *
  * ## Qué cuenta como afirmación
  *
- * Una línea visible de una sección del manual: fuera de los comentarios HTML
- * —el bloque de metadata y las propias citas—, fuera de los encabezados, fuera
- * de los separadores de tabla y fuera de la sección de pendientes —cuya cabecera
- * contiene «pendiente», sin distinguir mayúsculas—. Los encabezados y las tablas
- * no afirman comportamiento, y exigirles cita produciría rojos falsos.
+ * Una línea visible de una sección del manual, y **nada más**: quedan fuera los
+ * comentarios HTML —las propias citas y la línea `rutas-fuente`—, los
+ * encabezados, el bloque de metadata y la sección de pendientes —cuya cabecera
+ * contiene «pendiente», sin distinguir mayúsculas—.
+ *
+ * El bloque de metadata son las líneas `**Etiqueta:** valor` que van entre el
+ * título y el primer encabezado que lo sigue: declaran a qué módulo pertenece el
+ * manual y cuándo se actualizó, no qué hace el sistema, y exigirles cita
+ * bloquearía **todo** manual escrito con la plantilla que publica
+ * `valmen manuales plantilla` —el esqueleto que usa el paso `escribir` del
+ * proceso—. La ventana es la del bloque: una línea en negrita dentro de una
+ * sección sí afirma, y se le exige la cita como a cualquier otra.
+ *
+ * De una tabla tampoco son afirmaciones su separador ni su fila de cabecera
+ * —estructura, no contenido—; las filas de cuerpo sí, porque cada una sostiene
+ * algo de un campo. Los encabezados y las tablas no afirman comportamiento, y
+ * exigirles cita produciría los rojos falsos que el diagnóstico declara.
  *
  * ## Los tres veredictos
  *
@@ -47,8 +59,8 @@
  *    el manual y su parser devuelve tokens sin línea, sin poder contrastar una
  *    afirmación concreta.
  * 2. **Una afirmación es una línea de cuerpo visible.** Exigir la cita a cada
- *    línea del archivo, encabezados y tablas incluidos, marca en rojo texto que
- *    no afirma comportamiento.
+ *    línea del archivo, encabezados, bloque de metadata y tablas incluidos,
+ *    marca en rojo texto que no afirma comportamiento.
  * 3. **Los tres estados existen.** Sin banda de revisión, el paso de proceso se
  *    volvería rojo por lo que el diagnóstico declara como no decidible en código.
  * 4. **El mensaje de error ausente queda en `review`, no bloquea.** Un literal
@@ -218,6 +230,10 @@ interface LineaVisible {
   readonly encabezado: boolean;
   readonly nivel: number | null;
   readonly separadorTabla: boolean;
+  /** `true` si la línea es del bloque de metadata, entre el título y la primera sección. */
+  readonly enMetadata: boolean;
+  /** `true` si la línea es la fila de cabecera de una tabla. */
+  readonly encabezadoTabla: boolean;
   readonly enPendientes: boolean;
   readonly enErrores: boolean;
 }
@@ -316,6 +332,32 @@ function esSeparadorTabla(visible: string): boolean {
 }
 
 /**
+ * `true` si la línea tiene la forma `**Etiqueta:** valor` del bloque de metadata.
+ *
+ * La etiqueta es una sola línea en negrita con dos puntos y un valor visible
+ * —`**Módulo:** Órdenes`—: la forma que emite `renderPlantilla` para las cinco
+ * etiquetas del encabezado.
+ */
+function esEtiquetaMetadata(visible: string): boolean {
+  return /^\s{0,3}\*\*[^*\n]+:\*\*\s*\S/.test(visible);
+}
+
+/**
+ * `true` si la línea es la fila de cabecera de una tabla.
+ *
+ * La cabecera es la fila que precede al separador —`| --- | --- |`—: nombra las
+ * columnas y no afirma nada de ningún campo, así que no lleva cita. Las filas de
+ * cuerpo sí, y el separador ya queda fuera por `esSeparadorTabla`. Se exige la
+ * barra en las dos líneas para no confundir una regla horizontal con un
+ * separador de tabla.
+ */
+function esEncabezadoTabla(visible: string, siguiente: string): boolean {
+  if (visible.trim() === "" || !visible.includes("|")) return false;
+  const t = siguiente.trim();
+  return t.includes("|") && /^[|:\-\s]+$/.test(t);
+}
+
+/**
  * Clasifica las líneas del manual.
  *
  * Las secciones de pendientes y de errores se detectan por su encabezado y
@@ -327,6 +369,10 @@ function analizarLineas(texto: string): LineaVisible[] {
   const lineas: LineaVisible[] = [];
   let pendNivel: number | null = null;
   let errNivel: number | null = null;
+  // El bloque de metadata vive entre el título y el primer encabezado que lo
+  // sigue. Fuera de esa ventana una línea en negrita es una afirmación como
+  // cualquier otra, y no se exceptúa: la exención no es «toda línea en negrita».
+  let enVentanaMetadata = false;
 
   for (let i = 0; i < visibles.length; i++) {
     const visible = visibles[i] ?? "";
@@ -337,6 +383,7 @@ function analizarLineas(texto: string): LineaVisible[] {
       const bajo = encabezado.texto.toLowerCase();
       if (bajo.includes("pendiente")) pendNivel = encabezado.nivel;
       if (bajo.includes("error") || bajo.includes("sale mal")) errNivel = encabezado.nivel;
+      enVentanaMetadata = encabezado.nivel === 1;
     }
     lineas.push({
       numero: i + 1,
@@ -344,6 +391,8 @@ function analizarLineas(texto: string): LineaVisible[] {
       encabezado: encabezado !== null,
       nivel: encabezado === null ? null : encabezado.nivel,
       separadorTabla: esSeparadorTabla(visible),
+      enMetadata: enVentanaMetadata && esEtiquetaMetadata(visible),
+      encabezadoTabla: esEncabezadoTabla(visible, visibles[i + 1] ?? ""),
       enPendientes: pendNivel !== null,
       enErrores: errNivel !== null,
     });
@@ -355,6 +404,8 @@ function analizarLineas(texto: string): LineaVisible[] {
 function esAfirmacion(linea: LineaVisible): boolean {
   if (linea.visible.trim() === "") return false;
   if (linea.encabezado) return false;
+  if (linea.enMetadata) return false;
+  if (linea.encabezadoTabla) return false;
   if (linea.separadorTabla) return false;
   if (linea.enPendientes) return false;
   return true;

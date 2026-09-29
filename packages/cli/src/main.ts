@@ -284,6 +284,11 @@ Comandos:
                             con <!-- cita: <ruta>:<línea> -->, en la misma
                             línea o en la de abajo; la cita resuelve si el
                             archivo existe y la línea cae dentro y no está vacía.
+                            No son afirmaciones los encabezados, el bloque de
+                            metadata de la plantilla, la cabecera y los
+                            separadores de una tabla, ni la sección de
+                            pendientes: ninguno afirma comportamiento y exigirles
+                            cita bloquearía todo manual escrito con la plantilla.
                             Veredictos: approve (todo cita y resuelve), block
                             (falta cita, no resuelve, está mal formada o se filtró
                             una ruta técnica) y review (un mensaje de error que no

@@ -966,7 +966,7 @@ El gate `manuals` no lo corre `runGate` —que exige un ticket como sujeto y ac�
 
 en la misma línea de la afirmación o en la de abajo. `<ruta>` es relativa a la raíz del repositorio y `<línea>` es 1-based.
 
-**Qué cuenta como afirmación.** Una línea de cuerpo visible de una sección: fuera de los comentarios HTML (el bloque de metadata y las propias citas), fuera de los encabezados, fuera de los separadores de tabla y fuera de la sección de pendientes —cuya cabecera contiene «pendiente», sin distinguir mayúsculas—.
+**Qué cuenta como afirmación.** Una línea de cuerpo visible de una sección, y nada más: queda fuera lo que es estructura del manual y no una afirmación sobre el sistema —los comentarios HTML (las propias citas y la línea `rutas-fuente`), los encabezados, el bloque de metadata —las líneas `**Etiqueta:** valor` entre el título y el primer encabezado que lo sigue—, la fila de cabecera de una tabla y sus separadores, y la sección de pendientes, cuya cabecera contiene «pendiente» sin distinguir mayúsculas—. Las cinco etiquetas del encabezado y la cabecera de una tabla se excluyen porque exigirles cita bloquearía todo manual escrito con la plantilla que publica `valmen manuales plantilla`, que es el esqueleto que usa el paso `escribir` del proceso; una línea en negrita dentro de una sección sí afirma y lleva su cita, y las filas de cuerpo de una tabla también, porque cada una sostiene algo de un campo.
 
 **Los tres veredictos** son por manual, y el de la corrida es el peor de los tres:
 

@@ -290,6 +290,115 @@ describe("manuales auditar: la banda de revisión", () => {
   });
 });
 
+describe("manuales auditar: lo que no es una afirmación", () => {
+  it("el bloque de metadata de la plantilla no exige cita", () => {
+    escribirFuente(["const listar = true;"]);
+    escribir(
+      MANUAL,
+      [
+        "# Órdenes del POS",
+        "",
+        "**Módulo:** Órdenes",
+        "**¿Dónde encontrarla?:** Menú Órdenes",
+        "**Última actualización:** 2026-09-29",
+        "**Código:** ORD",
+        "**Versión:** V1",
+        "",
+        "## ¿Qué es esta pantalla?",
+        "",
+        "La pantalla lista las órdenes de la sucursal.",
+        `<!-- cita: ${FUENTE}:1 -->`,
+        "",
+      ].join("\n"),
+    );
+
+    const resultado = auditarManuales(choosePaths(lab), {});
+
+    expect(resultado.manuales[0]?.veredicto).toBe("approve");
+    expect(resultado.manuales[0]?.hallazgos).toEqual([]);
+    // Las cinco etiquetas quedan fuera del conteo: la única afirmación del
+    // manual es la de la sección.
+    expect(resultado.manuales[0]?.afirmaciones).toBe(1);
+  });
+
+  it("el manual que emite el CLI se audita de punta a punta en approve", () => {
+    escribirFuente(["const listar = true;", "const guardar = true;"]);
+    const emitida = correr(
+      "plantilla",
+      "--pantalla",
+      "Órdenes",
+      "--escribir",
+      "--destino",
+      MANUAL,
+    );
+    expect(emitida.exitCode).toBe(0);
+
+    // El manual se escribe sobre el esqueleto que el proceso usa: cada sección
+    // recibe su afirmación con su cita, y la de pendientes queda sin cita —que es
+    // lo que la skill del proceso pide dejar ahí—.
+    const esqueleto = readFileSync(join(lab, ...MANUAL.split("/")), "utf8");
+    const texto = esqueleto
+      .split("\n")
+      .flatMap((linea) =>
+        linea.startsWith("## ") && !linea.toLowerCase().includes("pendiente")
+          ? [
+              linea,
+              "",
+              "La pantalla hace lo que esta sección describe.",
+              `<!-- cita: ${FUENTE}:1 -->`,
+            ]
+          : [linea],
+      )
+      .join("\n");
+    escribir(MANUAL, texto);
+
+    const salida = correr("auditar");
+
+    expect(salida.exitCode).toBe(0);
+    expect(salida.stdout).toContain("— approve");
+    expect(salida.stdout).toContain("Veredicto de la corrida: approve");
+  });
+
+  it("la fila de cabecera de una tabla no exige cita y sus filas de cuerpo sí", () => {
+    escribirFuente(["const listar = true;", "const guardar = true;"]);
+    escribir(
+      MANUAL,
+      [
+        "# M",
+        "",
+        "## Campos del formulario",
+        "",
+        "| Campo | Uso |",
+        "| --- | --- |",
+        "| Cliente | Elige el tercero de la orden. |",
+        `<!-- cita: ${FUENTE}:2 -->`,
+        "",
+      ].join("\n"),
+    );
+
+    const resultado = auditarManuales(choosePaths(lab), {});
+
+    expect(resultado.manuales[0]?.veredicto).toBe("approve");
+    expect(resultado.manuales[0]?.hallazgos).toEqual([]);
+  });
+
+  it("una línea en negrita fuera del bloque de metadata sí exige cita", () => {
+    escribir(SIN_CITA, [
+      "# M",
+      "",
+      "## ¿Cómo se usa?",
+      "",
+      "**Importante:** el botón guarda la orden.",
+      "",
+    ].join("\n"));
+
+    const resultado = auditarManuales(choosePaths(lab), {});
+
+    expect(resultado.manuales[0]?.veredicto).toBe("block");
+    expect(resultado.manuales[0]?.hallazgos.some((h) => h.tipo === "sin-cita")).toBe(true);
+  });
+});
+
 describe("manuales auditar: el recibo", () => {
   it("queda en .valmen/receipts/actualizar-manuales.jsonl con sujeto de proceso", () => {
     escribirFuente(["const listar = true;", "const guardar = true;"]);
