@@ -2,9 +2,9 @@ id: actualizar-manuales
 title: Actualizar manuales de usuario final
 description: >
   Detecta las pantallas que tocaron los tickets de la release, marca los manuales que
-  las documentan como desactualizados y deja el listado como evidencia de la corrida.
-  Escribir los manuales es del paso de agente de R-S3-002 y auditarlos, del gate
-  manuals de R-S3-003: este proceso declara la detección y la marca.
+  las documentan como desactualizados, escribe con el agente los manuales nuevos o
+  viejos siguiendo la skill del proyecto y audita el resultado contra el código con
+  citas. Los tres pasos dejan su evidencia de la corrida.
 params:
   tickets:
     type: string
@@ -22,6 +22,21 @@ steps:
     title: Detectar pantallas tocadas y marcar los manuales desactualizados
     kind: command
     run: valmen manuales pendientes --tickets {tickets} --manuales-dir {manualesdir} --escribir
+    evidence: [stdout]
+  - id: escribir
+    title: Escribir los manuales que la detección marcó como nuevos o desactualizados
+    kind: agent
+    runtime: opencode run --standalone
+    model_role: implementation
+    instructions: >
+      Lea la skill instalada `.valmen/skills/manuales-usuario-final/SKILL.md` y siga
+      sus reglas duras. Para cada pantalla que el paso de detección marcó como sin
+      manual o desactualizada, lea completos el componente y su template antes de
+      escribir una línea, y use `valmen manuales plantilla --pantalla "<nombre>"
+      --escribir --destino <ruta relativa>` para crear el `.md` con la estructura del
+      proceso. Copie los mensajes de error literales del código, no invente rutas
+      técnicas ni contenido, y deje en la sección de pendientes toda ambigüedad. No
+      commitear: deje los archivos escritos y el commit lo decide una persona.
     evidence: [stdout]
   - id: auditar-manuales
     title: Auditar los manuales contra el código con citas

@@ -43,6 +43,63 @@ export const MANUALES_POR_DEFECTO = "docs/manuales/usuario-final";
 /** Qué archivos son una pantalla, por defecto: el patrón de este stack. */
 export const PANTALLAS_POR_DEFECTO = ["**/*.component.ts", "**/*.component.html"];
 
+/**
+ * Las seis secciones del manual de usuario final, en el orden del proceso.
+ *
+ * El orden importa: es el recorrido con el que alguien lee la pantalla —qué es,
+ * cómo se usa, qué campos tiene, qué hacer si falla, qué conviene saber y qué
+ * quedó sin confirmar—. La última está siempre: un manual que no declara lo que
+ * no pudo verificar se lee como si lo hubiera verificado todo.
+ */
+export const PLANTILLA_SECCIONES = [
+  "## ¿Qué es esta pantalla?",
+  "## ¿Cómo se usa?",
+  "## Campos del formulario",
+  "## Qué hacer si algo sale mal",
+  "## Tips y cosas a tener en cuenta",
+  "## ⚠️ Pendiente de validación con el equipo",
+] as const;
+
+/**
+ * Las cinco etiquetas del bloque de metadata, con su marcador de posición.
+ *
+ * El marcador es visible y deliberado —`...`, `YYYY-MM-DD`, `[prefijo-ISO]`,
+ * `V1`—: es lo que el agente reemplaza al escribir, y lo que en la skill queda
+ * declarado como la forma del manual y no como un manual de ejemplo.
+ */
+export const PLANTILLA_METADATA = [
+  { etiqueta: "Módulo", marcador: "..." },
+  { etiqueta: "¿Dónde encontrarla?", marcador: "..." },
+  { etiqueta: "Última actualización", marcador: "YYYY-MM-DD" },
+  { etiqueta: "Código", marcador: "[prefijo-ISO]" },
+  { etiqueta: "Versión", marcador: "V1" },
+] as const;
+
+/** El nombre de pantalla de la plantilla sin `--pantalla`: el marcador a reemplazar. */
+export const PLANTILLA_PANTALLA = "[Nombre de la pantalla]";
+
+/**
+ * El esqueleto del manual, como texto.
+ *
+ * Es la forma que la skill `manuales-usuario-final` declara en su bloque de
+ * plantilla, y las dos piezas están atadas por una prueba: si una cambia sin la
+ * otra, la suite se pone roja. No lleva ninguna ruta técnica salvo la línea
+ * `<!-- rutas-fuente: … -->` —que la detección lee y que el agente completa con
+ * las fuentes reales— y no lleva contenido de ejemplo: solo encabezados y
+ * marcadores.
+ */
+export function renderPlantilla({ pantalla }: { readonly pantalla: string }): string {
+  const lineas: string[] = [`# ${pantalla}`, ""];
+  for (const campo of PLANTILLA_METADATA) {
+    lineas.push(`**${campo.etiqueta}:** ${campo.marcador}`);
+  }
+  lineas.push("<!-- rutas-fuente: … -->", "");
+  for (const seccion of PLANTILLA_SECCIONES) {
+    lineas.push(seccion, "");
+  }
+  return lineas.join("\n");
+}
+
 /** Un manual que la release dejó desactualizado. */
 export interface ManualDesactualizado {
   /** Ruta del manual relativa a la raíz. */

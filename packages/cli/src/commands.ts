@@ -7,7 +7,7 @@
  * sin cambios. Ver docs/09-MIGRACION-SAICLOUD.md.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 
 import {
   type ParsedTicket,
@@ -89,6 +89,8 @@ import {
   MANUALES_POR_DEFECTO,
   manualesPendientes,
   renderPendientes,
+  PLANTILLA_PANTALLA,
+  renderPlantilla,
   appendReceipt,
   auditarManuales,
   renderAuditoria,
@@ -2169,6 +2171,75 @@ export function manualesPendientesCommand(
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);
   }
+}
+
+/**
+ * `manuales plantilla`: el esqueleto del manual de usuario final.
+ *
+ * Imprime el esqueleto **siempre** por salida estándar, con o sin `--escribir`:
+ * el comando existe para que el agente no tenga que recordar la forma del
+ * manual. Con `--escribir` escribe el `.md`, y entonces **exige** `--destino`
+ * con una ruta relativa a la raíz: adivinar dónde va —componiendo un módulo que
+ * el harness no conoce— dejaría el archivo en un lugar que nadie declaró. Se
+ * niega a pisar un manual existente salvo `--forzar`, porque el `.md` es la
+ * fuente de verdad y lo que se pisaría es el trabajo de alguien.
+ */
+export function manualesPlantillaCommand(
+  root: string,
+  flags: Readonly<Record<string, string | true>>,
+): CommandResult {
+  const pantalla =
+    typeof flags["pantalla"] === "string" && flags["pantalla"].trim() !== ""
+      ? flags["pantalla"].trim()
+      : PLANTILLA_PANTALLA;
+  const texto = renderPlantilla({ pantalla });
+
+  if (flags["escribir"] !== true) {
+    return ok(texto);
+  }
+
+  const destino = typeof flags["destino"] === "string" ? flags["destino"].trim() : "";
+  if (destino === "") {
+    return error(
+      "manuales plantilla --escribir requiere --destino con la ruta relativa del " +
+        "manual. El comando no inventa dónde escribir.",
+      EXIT_SCHEMA,
+    );
+  }
+
+  if (isAbsolute(destino)) {
+    return error(
+      `--destino tiene que ser una ruta relativa a la raíz, y "${destino}" es ` +
+        "absoluta.",
+      EXIT_SCHEMA,
+    );
+  }
+
+  const absoluta = resolve(root, destino);
+  const dentro = relative(root, absoluta);
+  // `relative` devuelve "" para la raíz misma y algo que empieza por `..` o es
+  // absoluto cuando el destino se sale: las tres cosas se rechazan.
+  if (dentro === "" || dentro.startsWith("..") || isAbsolute(dentro)) {
+    return error(`--destino se sale de la raíz del proyecto: "${destino}".`, EXIT_SCHEMA);
+  }
+
+  if (existsSync(absoluta) && flags["forzar"] !== true) {
+    return error(
+      `El manual ${destino} ya existe. No se pisó: un manual es la fuente de ` +
+        "verdad. Use --forzar para reescribirlo con el esqueleto nuevo.",
+      EXIT_SCHEMA,
+    );
+  }
+
+  try {
+    mkdirSync(dirname(absoluta), { recursive: true });
+    writeFileSync(absoluta, texto, "utf8");
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+
+  return ok(`${texto}Manual escrito en ${destino}\n`);
 }
 
 /**

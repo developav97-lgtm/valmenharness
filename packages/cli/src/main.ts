@@ -292,6 +292,18 @@ Comandos:
                             .valmen/receipts/actualizar-manuales.jsonl.
       --manuales-dir <ruta> Dónde viven los manuales (por defecto
                             docs/manuales/usuario-final).
+  manuales plantilla        Imprime el esqueleto del manual de usuario final
+                            —el bloque de metadata, la línea
+                            <!-- rutas-fuente: … --> y las seis secciones— para
+                            que el agente lo escriba sin inventar la estructura.
+                            Sale siempre por stdout.
+      --pantalla <nombre>   El nombre de la pantalla, en el encabezado.
+      --escribir            Deja el manual en la ruta de --destino. Sin esta
+                            bandera no escribe ningún archivo.
+      --destino <ruta>      Ruta relativa a la raíz donde escribir el manual.
+                            Obligatoria con --escribir; no se pisa un archivo
+                            existente salvo con --forzar.
+      --forzar              Reescribe el archivo aunque ya exista.
   provider [list|set|test|models]
                             Los proveedores y sus credenciales. "list" dice cuáles
                             hay y cuáles están configurados; "set <id> --key <k>"
@@ -447,6 +459,11 @@ export const VALUE_OPTIONS = [
   // y la ruta quedaría como argumento suelto.
   "--manuales-dir",
   "--pantallas",
+  // `manuales plantilla`: el nombre de pantalla del encabezado y la ruta relativa
+  // donde escribir el manual. Sin esto en la lista, los dos valores quedarían
+  // como argumentos sueltos y el comando escribiría en cualquier parte.
+  "--pantalla",
+  "--destino",
   "--desde",
   "--hasta",
   "--q",
