@@ -99,7 +99,7 @@ Implementado por OpenCode (`opencode run --standalone --auto`, modelo `opencode-
 - `tests/docs-perfil-hermes.test.ts` (nuevo) — lee `docs/15-PUESTA-EN-MARCHA.md` y comprueba que el bloque de puesta en marcha nombra los tres comandos **en orden**, y que la ayuda del CLI declara `--profile` con el archivo al que apunta y el nombre por defecto. La ayuda se contrasta contra `USAGE` de `packages/cli/src/main.ts`, que es la fuente que ya es la verdad.
 - `docs/15-PUESTA-EN-MARCHA.md` — bloque «Un perfil por proyecto» en §6 con los tres pasos, la fila de la tabla de agentes que declaraba Hermes sólo global y el ejemplo de §6, que proponía `--name` como único recurso para un segundo proyecto.
 
-**Corrección de la ronda de revisión 1 (2026-09-29).** `EVIDENCE-001` se anotó a las `19:16:43Z` y el commit `c352c34` es de las `19:19:18Z`: entre medio, el verificador aplicó el formateo con prettier sobre `packages/cli/src/hermes.ts`, `packages/adapter/src/mcp.ts` y `tests/docs-perfil-hermes.test.ts` —tres de los ocho archivos del hash—, así que su referencia (`worktree:sha256:94cfbe88…`) describía un árbol que ya no existe. Recomputada por el verificador sobre los mismos ocho archivos y el mismo orden, la del árbol commiteado es `worktree:sha256:514432e4…`, y eso es lo que declara `EVIDENCE-002`; `EVIDENCE-001` no se edita porque el bloque es append-only. No hubo ningún otro cambio en el entregable: los ocho archivos del hash son los de `c352c34` y no se tocaron después.
+**Corrección de las rondas de revisión 1 y 2 (2026-09-29).** La ronda 2 midió los tres árboles y la premisa de la ronda 1 era **falsa**: `EVIDENCE-001` describe exactamente el árbol que commiteó este ticket —los blobs de `c352c34` sobre los ocho archivos en orden alfabético dan `worktree:sha256:94cfbe88…`, el valor que declara—, porque el formateo con prettier del verificador quedó **dentro** de `c352c34` y no después: el `git show c352c34:<ruta>` de los ocho archivos ya lo incluye, y el `19:16:43Z` de la anotación es anterior al `19:19:18Z` del commit sin que el contenido difiera entre los dos. `EVIDENCE-002` declara `worktree:sha256:514432e4…`, que es el árbol de trabajo y de `HEAD`, y **no** el del commit del ticket: la diferencia es un solo archivo, `packages/cli/src/main.ts` —68897 bytes en `c352c34` (blob `d65ccc0`) contra 70537 en `HEAD` (blob `406b2b4`)—, tocado después por el commit `1f706be` («manuales pendientes», otro ticket); los otros siete son idénticos entre los dos árboles. Lo que `EVIDENCE-002` afirmaba de más —que su árbol era el commiteado y que el disco y los blobs de `HEAD` de `c352c34` coincidían byte a byte en los ocho— es falso en `main.ts`, y `EVIDENCE-003` lo corrige dejando las dos mediciones. Ni `EVIDENCE-001` ni `EVIDENCE-002` se editan: el bloque es append-only. El entregable del ticket no se tocó después de `c352c34`.
 
 ## Pruebas
 
@@ -111,7 +111,7 @@ Verificadas por el verificador sobre el árbol del ticket (los comandos y sus re
 - `npx tsc --noEmit -p tsconfig.json` → exit 0. `npx eslint` sobre los siete archivos tocados → exit 0. `npx prettier --check` sobre los archivos que estaban limpios en `HEAD` → «All matched files use Prettier code style!».
 - Sonda desechable (`tests/_sonda-perfil-cli.test.ts`, creada y borrada: el árbol no guarda rastro) para el tramo que las suites del ticket no cubren —que la bandera llegue de punta a punta por `run(argv)`—: `valmen hermes connect --profile demo --root <proyecto>` con `HERMES_HOME` en un temporal devolvió exit 0, escribió `valmen-demo` con el `cwd` del proyecto en `<temporal>/profiles/demo/config.yaml`, **no creó** el `config.yaml` global, y un perfil inexistente salió con exit 2 sin crear el directorio.
 - Línea base de los fallos ajenos: no aplica — el árbol no tenía archivos de este ticket, y la batería completa quedó sin fallos después del cambio.
-- Corrección de la ronda de revisión 1 (2026-09-29), sobre el árbol final —con `EVIDENCE-002` y esta nota ya escritos—: `npx vitest run` → `Test Files 82 passed | 1 skipped (83)`, `Tests 1594 passed | 48 skipped (1642)`, exit 0; los tres archivos del ticket → `Test Files 3 passed (3)`, `Tests 82 passed (82)`. Los ocho archivos del hash no se tocaron después de `c352c34`. La diferencia con los números de la primera entrega (78 archivos, 1559 pruebas) es de árbol, no de suite: después de `16bf50d` entraron commits de otros tickets con sus archivos de prueba.
+- Correcciones de las rondas de revisión 1 y 2 (2026-09-29), sobre el árbol final —con `EVIDENCE-002`, `EVIDENCE-003` y esta nota ya escritos—: `npx vitest run` → `Test Files 82 passed | 1 skipped (83)`, `Tests 1594 passed | 48 skipped (1642)`, exit 0; los tres archivos del ticket → `Test Files 3 passed (3)`, `Tests 82 passed (82)`. De los ocho archivos del hash, siete quedaron idénticos a `c352c34`; `packages/cli/src/main.ts` sí cambió después, por el commit `1f706be` de otro ticket (68897 → 70537 bytes), y eso es lo que hace que el hash del disco y de `HEAD` sea `worktree:sha256:514432e4…` y no el del árbol del ticket (`worktree:sha256:94cfbe88…`, el que declara `EVIDENCE-001`). La diferencia con los números de la primera entrega (78 archivos, 1559 pruebas) es de árbol, no de suite: después de `16bf50d` entraron commits de otros tickets con sus archivos de prueba.
 
 Lo que **falta** de la prueba de punta a punta real: conectar un proyecto a un perfil de Hermes de la máquina y verlo en `hermes -p <perfil> mcp list`. Eso escribe en el `config.yaml` de un perfil real y necesita la orden de la persona; la sonda lo deja medido hasta el borde del archivo.
 
@@ -139,6 +139,14 @@ Lo que **falta** de la prueba de punta a punta real: conectar un proyecto a un p
     "kind": "verification",
     "description": "Ronda de revision 2026-09-29: la referencia de EVIDENCE-001 no verificaba sobre el arbol commiteado. EVIDENCE-001 se anoto a las 19:16:43Z y el commit c352c34 es de las 19:19:18Z, y entre medio el verificador aplico formateo con prettier sobre packages/cli/src/hermes.ts, packages/adapter/src/mcp.ts y tests/docs-perfil-hermes.test.ts, tres de los ocho archivos del hash: la referencia describia un arbol que ya no existe. Esta referencia describe el arbol commiteado, recomputada por el verificador sobre los mismos ocho archivos y el mismo orden (docs/15-PUESTA-EN-MARCHA.md, packages/adapter/src/mcp.ts, packages/cli/src/hermes.ts, packages/cli/src/main.ts, packages/cli/src/mcp.ts, tests/docs-perfil-hermes.test.ts, tests/hermes-cli.test.ts, tests/hermes-config.test.ts), y confirmada doble: leyendo el disco y leyendo los blobs de HEAD del commit c352c34, que coinciden byte a byte en los ocho. EVIDENCE-001 no se edita: el bloque es append-only.",
     "reference": "worktree:sha256:514432e43f6fd7c4efe3eabc28b703e3ab9e60b1c62c990e33ee370416eb75ce",
+    "point_id": null
+  },
+  {
+    "id": "EVIDENCE-003",
+    "date": "2026-09-29",
+    "kind": "verification",
+    "description": "Ronda de revision 2 (2026-09-29): la premisa de EVIDENCE-002 era falsa. Medido con dos implementaciones independientes —el script worktree-hash.py de la skill y un script propio que lee los blobs por git show— sobre los ocho archivos en orden alfabetico: los blobs de c352c34 dan worktree:sha256:94cfbe8878a118f4721aaac371a23c4132f3e503b0c1fa2ac32aa38f7ee92d86, el mismo valor de EVIDENCE-001, que por eso SI describia el arbol commiteado por el ticket; los blobs de HEAD (6769847) y el disco dan worktree:sha256:514432e43f6fd7c4efe3eabc28b703e3ab9e60b1c62c990e33ee370416eb75ce, el valor que declara EVIDENCE-002. La diferencia es un solo archivo, packages/cli/src/main.ts: 68897 bytes en c352c34 (blob d65ccc057ae7ae6a59ea4718bfe20734dfcdeec7) contra 70537 en HEAD (blob 406b2b48358a25de9cade1aea8ca527ed9583f19), por el commit 1f706be de otro ticket; los otros siete archivos son identicos entre los dos arboles (git diff --stat c352c34 HEAD sin salida). Esta evidencia corrige lo que EVIDENCE-002 afirmaba de mas: que su referencia describia el arbol commiteado y que el disco y los blobs de HEAD de c352c34 coincidian byte a byte en los ocho, cosa falsa en main.ts. Su referencia es el arbol del commit del ticket (c352c34), que es el entregable; EVIDENCE-001 y EVIDENCE-002 no se editan: el bloque es append-only.",
+    "reference": "worktree:sha256:94cfbe8878a118f4721aaac371a23c4132f3e503b0c1fa2ac32aa38f7ee92d86",
     "point_id": null
   }
 ]
@@ -234,6 +242,51 @@ Lo que **falta** de la prueba de punta a punta real: conectar un proyecto a un p
     "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
     "confidence": "high",
     "id": "CONSUMO-005"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-29",
+    "session_reference": "20260929_162502_3dd22b",
+    "model": "deepseek-v4.1-flash",
+    "reasoning_effort": null,
+    "notes": "Sesion kanban de la ronda de revision 1 del ticket: verifique el diff commiteado, la sonda de punta a punta por run argv, los siete criterios y las citas a Hermes en su codigo, y pedi el cambio de la evidencia. La base no calcula el costo",
+    "input_tokens": 236572,
+    "output_tokens": 23351,
+    "total_tokens": 274116,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-006"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-29",
+    "session_reference": "20260929_164204_c54188",
+    "model": "deepseek-v4.1-flash",
+    "reasoning_effort": null,
+    "notes": "Sesion kanban de la ronda de revision 2 del ticket: medi los tres arboles sobre los ocho archivos con dos implementaciones independientes y encontre que la premisa de la ronda 1 era falsa; pedi EVIDENCE-003 y la correccion de la prosa. La base no calcula el costo",
+    "input_tokens": 95007,
+    "output_tokens": 20136,
+    "total_tokens": 130215,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-007"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-29",
+    "session_reference": "20260929_164604_87fd4b",
+    "model": "deepseek-v4.1-flash",
+    "reasoning_effort": null,
+    "notes": "Sesion kanban de la jornada que aplico la correccion de la ronda 2: EVIDENCE-003 con las dos mediciones, la correccion de la nota de Implementacion y de la linea de Pruebas, y la bateria npx vitest run sobre el arbol final; la base no calcula el costo y la lectura es con el turno todavia en curso",
+    "input_tokens": 57374,
+    "output_tokens": 15494,
+    "total_tokens": 83122,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-008"
   }
 ]
 ```
@@ -370,6 +423,42 @@ Sin publicar todavía.
     "action": "ai-usage-added",
     "actor": "cli",
     "details": "Se agregó CONSUMO-005."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-09-29",
+    "at": "2026-09-29T21:47:24.484Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-09-29",
+    "at": "2026-09-29T21:49:17.738Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-006."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-09-29",
+    "at": "2026-09-29T21:49:18.069Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-007."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-09-29",
+    "at": "2026-09-29T21:49:18.346Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-008."
   }
 ]
 ```
