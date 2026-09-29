@@ -24,20 +24,30 @@ En un gate con proposiciones que solo un modelo puede responder se corre el eval
 
 ## Cómo se trabaja en este repositorio
 
-Este repositorio **es** el harness, no un proyecto que lo usa. Se trabaja en
-**modo directo**: se hace y se prueba, sin abrir tickets ni features. El registro
-es el producto que estamos construyendo; usarlo como proceso para construirlo
-añade ceremonia sin añadir información.
+Este repositorio **es** el harness, no un proyecto que lo usa, y se gestiona con
+su propio registro: `.valmen/` es la **fuente de verdad** y `AGENTS.md` y las
+skills son su proyección —la regenera `valmen sync`—. El trabajo de evolución se
+registra como features y tickets.
+
+El **modo directo** queda acotado a los **cambios triviales**: consultas,
+diagnósticos, exploración, cambios visuales o de contenido que no alteran
+funcionalidad, prototipos desechables y la configuración del propio harness.
+
+La **funcionalidad nueva** pasa por el **flujo** completo: feature cuando excede
+un ticket, y luego ticket, análisis, plan, aprobación de una persona,
+implementación, entrega y QA.
 
 Eso no relaja nada de lo demás: las pruebas se corren antes de decir que algo
 funciona, lo que toca interfaz se verifica en el navegador, y los commits siguen
-la misma disciplina de siempre. Lo que no se hace es registrar el trabajo.
-
-Cuando alguien pida un ticket —o cuando el cambio se vaya a aplicar sobre un
-proyecto real y toque los gates de impacto— se abre y se sigue el flujo completo.
+la misma disciplina de siempre.
 
 `tickets/` conserva lo que ya está registrado. No se borra: es el historial, y
 los tickets que quedaron a medias se retoman cuando alguien lo pida.
+
+**Por qué:** la auditoría del 26-sep encontró que el harness se construía en modo
+directo, sin su propio registro —la ceremonia se evitaba, pero también la
+evidencia—, y el registro es lo que hace auditable el trabajo; el modo directo se
+conserva para lo que no crea artefactos durables.
 
 ## Idioma
 

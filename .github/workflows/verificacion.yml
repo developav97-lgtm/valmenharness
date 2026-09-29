@@ -64,6 +64,12 @@ jobs:
           node packages/cli/dist/main.js sync
           node packages/cli/dist/main.js sync --check
 
+      # El registro es la fuente de verdad del repositorio, y sus tickets tienen
+      # que pasar el contrato del propio motor. Hasta ahora ningún paso miraba
+      # los tickets: la proyección se comprobaba y el registro, no.
+      - name: El registro se valida con el propio motor
+        run: node packages/cli/dist/main.js validate --all
+
       # La interfaz se **ejecuta**, además de compilarse: el módulo vive dentro de
       # un HTML que ningún test cubría, y así se cazó un identificador perdido que
       # llegó al navegador. El test de la suite ya lo hace, pero se corre aquí
