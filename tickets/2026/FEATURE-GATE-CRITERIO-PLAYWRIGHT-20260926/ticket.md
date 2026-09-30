@@ -4,8 +4,8 @@ id: FEATURE-GATE-CRITERIO-PLAYWRIGHT-20260926
 title: Aceptar el verbo playwright en criterios
 type: FEATURE
 module: GATE
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: qa_approved
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -120,6 +120,8 @@ Desvíos del plan y límites declarados:
 - El criterio `verify: manual` (la batería completa con el typecheck) lo corrió esta sesión y sale verde, pero queda **sin marcar**: lo confirma quien prueba, y esta entrega no lo da por verificado. Las ocho pruebas por comando se marcaron con la corrida directa del archivo enfocado, y el recibo de la compuerta mecánica sobre este mismo estado las respalda.
 - Contrato de pruebas para el responsable: no hay nada que ejecutar a mano. Lo que se prueba en la aplicación es que un recibo de la compuerta mecánica muestre el resultado de cada comando con su invocación, su código de salida y su duración, y que un criterio de interfaz escrito con el verbo —`<!-- test: playwright tests/pos/<spec>.spec.ts -->`— corra el comando que el proyecto declare en `test-commands` sin que la compuerta invente el programa.
 
+- Resultado del PO: yo apruebo porque veo que es correr en el terminal — la suite completa corrió en el terminal con 1632 pruebas en verde y 0 fallos, y con eso el PO aprobó; autorizó cerrar y al final commit y push de todo.
+
 ### Compuerta de análisis: la banda que decidió una persona
 
 - La compuerta `analysis` volvió `REVIEW` en sus dos corridas —las dos revisiones del recibo `GR-20260929-analysis`, evaluadas con `typesafe/jev-1.13`—, y la proposición que emite veredicto y quedó en banda es `diagnostico_explica_el_sintoma`, **de peso 3: 0,79 en la primera corrida y 0,82 en la segunda**, contra el umbral de aprobación de 0,90. El veredicto de una compuerta es su proposición más débil y no su media.
@@ -135,7 +137,28 @@ Desvíos del plan y límites declarados:
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-09-30",
+    "build_reference": "worktree:sha256:3839a4e74341d01b5409b203e62d7075fd2a481785cad21039f058a40e814626",
+    "environment": "dev",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-09-30",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "la suite completa corrió en el terminal con 1632 pruebas en verde y 0 fallos, y con eso el PO aprobó; autorizó cerrar y al final commit y push de todo"
+  }
+]
 ```
 
 ## Evidencia
@@ -418,6 +441,42 @@ Sin publicar todavía.
     "action": "ai-usage-added",
     "actor": "cli",
     "details": "Se agregó CONSUMO-007."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:33:58.027Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:33:58.329Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:33:58.602Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:33:58.852Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
   }
 ]
 ```
