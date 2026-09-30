@@ -4,7 +4,7 @@ id: FEATURE-GATE-IMPACTO-NULO-BANDA-20260928
 title: Un ticket sin impactos tecnicos declarados no baja los riesgos en la compuerta de analisis ni cae en banda por senales de redaccion
 type: FEATURE
 module: GATE
-workflow_status: qa_approved
+workflow_status: closed
 qa_status: approved
 release_status: unreleased
 user_visible: false
@@ -138,7 +138,19 @@ Lo implementado, paso por paso contra el plan:
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-09-30",
+    "technical_summary": "Un ticket sin impactos declarados no baja riesgos ni cae en banda por senales de redaccion; 3 pruebas dedicadas y suite completa 1546 en verde",
+    "functional_summary": "La compuerta de analisis no baja los riesgos de un ticket sin impactos ni lo deja caer en banda",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "none"
+  }
+]
 ```
 
 ## Consumo de IA
@@ -159,6 +171,21 @@ Lo implementado, paso por paso contra el plan:
     "source": "manual:hermes",
     "confidence": "high",
     "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-30",
+    "session_reference": "20260928_140418_c56444",
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Agente hermes:desktop. Sesión **compartida**: trabajó 14 tickets (BUGFIX-TIMELINE-SESSION-V2-20260928 ×180, BUGFIX-POS-EDICION-MANUAL-AJUSTES-20260929 ×176, FEATURE-GATE-IMPACTO-NULO-BANDA-20260928 ×169, BUGFIX-SERVER-ATRIBUCION-POR-LLAMADA-20260928 ×157, SYNC-EDICION-RESYNC-SAIOPEN-20260924 ×144), así que su costo no se reparte y acá no se registran números. Costo completo de la sesión: no declarado por el proveedor, 11654170 tokens. Registralo en el ticket cuya sesión sea propia, o declaralo compartido donde corresponda. Sesión \"Evolucionar flujo de trabajo SciOpenCloud\".",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/saiopencloud/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-002"
   }
 ]
 ```
@@ -278,6 +305,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:35:24.670Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:35:24.730Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:35:24.927Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```

@@ -4,7 +4,7 @@ id: FEATURE-GATE-CRITERIO-PLAYWRIGHT-20260926
 title: Aceptar el verbo playwright en criterios
 type: FEATURE
 module: GATE
-workflow_status: qa_approved
+workflow_status: closed
 qa_status: approved
 release_status: unreleased
 user_visible: false
@@ -185,7 +185,19 @@ Desvíos del plan y límites declarados:
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-09-30",
+    "technical_summary": "El verbo playwright se acepta en criterios y corre el comando declarado en test-commands con recibo de invocacion y salida; tests gate-playwright en verde",
+    "functional_summary": "Un criterio con el verbo playwright corre el comando que el proyecto declara, con recibo auditable",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "none"
+  }
+]
 ```
 
 ## Consumo de IA
@@ -477,6 +489,24 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:35:19.230Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:35:19.441Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```

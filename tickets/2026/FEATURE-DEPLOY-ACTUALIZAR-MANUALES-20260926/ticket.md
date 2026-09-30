@@ -4,7 +4,7 @@ id: FEATURE-DEPLOY-ACTUALIZAR-MANUALES-20260926
 title: Encadenar actualizar-manuales al deploy
 type: FEATURE
 module: DEPLOY
-workflow_status: qa_approved
+workflow_status: closed
 qa_status: approved
 release_status: unreleased
 user_visible: false
@@ -511,7 +511,19 @@ Corridas por esta sesión sobre el árbol de trabajo, después de la implementac
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-09-30",
+    "technical_summary": "El proceso actualizar-manuales queda encadenado al deploy: manuales-pendientes y procesos-deploy-manuales en verde (125 pruebas), suite completa en verde",
+    "functional_summary": "Al deploy se encadena actualizar-manuales: los manuales pendientes se detectan, renderizan y publican",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "none"
+  }
+]
 ```
 
 ## Consumo de IA
@@ -547,6 +559,21 @@ Corridas por esta sesión sobre el árbol de trabajo, después de la implementac
     "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
     "confidence": "high",
     "id": "CONSUMO-002"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-30",
+    "session_reference": "20260929_180516_42e435",
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Agente hermes:kanban. Sesión **compartida**: trabajó 3 tickets (FEATURE-DEPLOY-ACTUALIZAR-MANUALES-20260926 ×60, IMPROVEMENT-LAB-MANUALES-20260929 ×20, AGENT-NO-EXISTE-20260926 ×4), así que su costo no se reparte y acá no se registran números. Costo completo de la sesión: no declarado por el proveedor, 122540 tokens. Registralo en el ticket cuya sesión sea propia, o declaralo compartido donde corresponda. Sesión \"FEATURE-DEPLOY-ACTUALIZAR-MANUALES-20260926 · jornada 2026-09-29 #2\".",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-003"
   }
 ]
 ```
@@ -692,6 +719,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:35:17.564Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:35:17.638Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:35:17.877Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```

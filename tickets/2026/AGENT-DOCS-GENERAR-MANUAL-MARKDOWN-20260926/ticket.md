@@ -4,7 +4,7 @@ id: AGENT-DOCS-GENERAR-MANUAL-MARKDOWN-20260926
 title: Generar manuales Markdown con skill del proyecto
 type: AGENT
 module: DOCS
-workflow_status: qa_approved
+workflow_status: closed
 qa_status: approved
 release_status: unreleased
 user_visible: false
@@ -176,7 +176,19 @@ Viene de una feature descompuesta en sprints; su plan completo está en el ticke
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-09-30",
+    "technical_summary": "La plantilla del manual en la skill y el subcomando que la emite; 16 pruebas de plantilla en verde, suite completa 1628 en verde, typecheck sin errores",
+    "functional_summary": "valmen manuales plantilla emite el manual Markdown desde la skill del proyecto",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "none"
+  }
+]
 ```
 
 ## Consumo de IA
@@ -212,6 +224,111 @@ Viene de una feature descompuesta en sprints; su plan completo está en el ticke
     "source": "opencode:/Users/juanandrade/.local/share/opencode/opencode.db",
     "confidence": "high",
     "id": "CONSUMO-002"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-30",
+    "session_reference": "20260928_140418_c56444",
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Agente hermes:desktop. Sesión **compartida**: trabajó 14 tickets (BUGFIX-TIMELINE-SESSION-V2-20260928 ×180, BUGFIX-POS-EDICION-MANUAL-AJUSTES-20260929 ×176, FEATURE-GATE-IMPACTO-NULO-BANDA-20260928 ×169, BUGFIX-SERVER-ATRIBUCION-POR-LLAMADA-20260928 ×157, SYNC-EDICION-RESYNC-SAIOPEN-20260924 ×144), así que su costo no se reparte y acá no se registran números. Costo completo de la sesión: no declarado por el proveedor, 11654170 tokens. Registralo en el ticket cuya sesión sea propia, o declaralo compartido donde corresponda. Sesión \"Evolucionar flujo de trabajo SciOpenCloud\".",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/saiopencloud/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-003"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-30",
+    "session_reference": "20260929_161001_c99163",
+    "model": "opencode-go/deepseek-v4.1-flash",
+    "reasoning_effort": null,
+    "notes": "Agente hermes:kanban. 72 intervención(es) sobre el registro, 0 con fallo. 8 de 123 mensajes tocaron el registro. Razonamiento 21258 tokens, caché leída 5787008 tokens. Sesión \"AGENT-DOCS-GENERAR-MANUAL-MARKDOWN-20260926 · jornada 2026-09-29\". Proveedor por suscripción: no hay coste por token, se registran los tokens.",
+    "input_tokens": 161967,
+    "output_tokens": 33018,
+    "total_tokens": 216243,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-004"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-30",
+    "session_reference": "20260929_161702_624276",
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Agente hermes:kanban. Sesión **compartida**: trabajó 2 tickets (AGENT-GATE-AUDITAR-MANUAL-CITAS-20260926 ×82, AGENT-DOCS-GENERAR-MANUAL-MARKDOWN-20260926 ×21), así que su costo no se reparte y acá no se registran números. Costo completo de la sesión: no declarado por el proveedor, 256593 tokens. Registralo en el ticket cuya sesión sea propia, o declaralo compartido donde corresponda. Sesión \"AGENT-GATE-AUDITAR-MANUAL-CITAS-20260926 · jornada 2026-09-29\".",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-005"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-30",
+    "session_reference": "20260929_162028_549aae84",
+    "model": "opencode-go/glm-5.3-flash",
+    "reasoning_effort": null,
+    "notes": "Agente hermes:slack. 8 intervención(es) sobre el registro, 0 con fallo. 3 de 23 mensajes tocaron el registro. Razonamiento 0 tokens, caché leída 276992 tokens. Sesión \"Escenario si apruebo compuerta\". Proveedor por suscripción: no hay coste por token, se registran los tokens.",
+    "input_tokens": 138096,
+    "output_tokens": 5184,
+    "total_tokens": 143280,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/saiopencloud/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-006"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-30",
+    "session_reference": "20260929_163603_0a9f28",
+    "model": "opencode-go/deepseek-v4.1-flash",
+    "reasoning_effort": null,
+    "notes": "Agente hermes:kanban. 44 intervención(es) sobre el registro, 0 con fallo. 5 de 74 mensajes tocaron el registro. Razonamiento 18584 tokens, caché leída 3030144 tokens. Sesión \"AGENT-DOCS-GENERAR-MANUAL-MARKDOWN-20260926 · jornada 2026-09-29 #2\". Proveedor por suscripción: no hay coste por token, se registran los tokens.",
+    "input_tokens": 132258,
+    "output_tokens": 27710,
+    "total_tokens": 178552,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-007"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-30",
+    "session_reference": "20260929_173612_0d9314",
+    "model": "opencode-go/deepseek-v4.1-flash",
+    "reasoning_effort": null,
+    "notes": "Agente hermes:kanban. 95 intervención(es) sobre el registro, 0 con fallo. 13 de 165 mensajes tocaron el registro. Razonamiento 24629 tokens, caché leída 9607168 tokens. Sesión \"Generar manual en Markdown (AGENT-DOCS-GENERAR-MANUAL-MARKDOWN-20260926)\". Proveedor por suscripción: no hay coste por token, se registran los tokens.",
+    "input_tokens": 290078,
+    "output_tokens": 42919,
+    "total_tokens": 357626,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-008"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-30",
+    "session_reference": "20260929_175614_714de0",
+    "model": "opencode-go/deepseek-v4.1-flash",
+    "reasoning_effort": null,
+    "notes": "Agente hermes:kanban. 34 intervención(es) sobre el registro, 0 con fallo. 4 de 61 mensajes tocaron el registro. Razonamiento 10994 tokens, caché leída 3040128 tokens. Sesión \"Generar manual en Markdown (AGENT-DOCS-GENERAR-MANUAL-MARKDOWN-20260926) #2\". Proveedor por suscripción: no hay coste por token, se registran los tokens.",
+    "input_tokens": 145657,
+    "output_tokens": 17803,
+    "total_tokens": 174454,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-009"
   }
 ]
 ```
@@ -357,6 +474,87 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:35:20.845Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:35:20.916Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-004."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:35:20.966Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-005."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:35:21.019Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-006."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:35:21.076Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-007."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:35:21.128Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-008."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:35:21.177Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-009."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:35:21.227Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:35:21.463Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```

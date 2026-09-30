@@ -4,7 +4,7 @@ id: AGENT-GATE-AUDITAR-MANUAL-CITAS-20260926
 title: Auditar manuales contra código con citas
 type: AGENT
 module: GATE
-workflow_status: qa_approved
+workflow_status: closed
 qa_status: approved
 release_status: unreleased
 user_visible: false
@@ -329,7 +329,19 @@ La revisión ronda 1 del artefacto devolvió un hallazgo requerido y uno menor, 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-09-30",
+    "technical_summary": "La auditoria de manuales contra el codigo con citas: conteo de afirmaciones sin el bloque de metadata ni la cabecera de tabla; 17 pruebas en verde; POINT-001/002 corregidos, retesteados y cerrados; POINT-003 diferido por decision de producto pendiente",
+    "functional_summary": "valmen manuales auditar exige cita a cada linea de cuerpo y fila de tabla del manual contra el codigo",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "none"
+  }
+]
 ```
 
 ## Consumo de IA
@@ -425,6 +437,66 @@ La revisión ronda 1 del artefacto devolvió un hallazgo requerido y uno menor, 
     "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
     "confidence": "high",
     "id": "CONSUMO-006"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-30",
+    "session_reference": "20260929_163217_e11e5fc8",
+    "model": "opencode-go/glm-5.3-flash",
+    "reasoning_effort": null,
+    "notes": "Agente hermes:slack. 41 intervención(es) sobre el registro, 0 con fallo. 5 de 85 mensajes tocaron el registro. Razonamiento 0 tokens, caché leída 2102912 tokens. Sesión \"[Thread context — prior messages in this thread…\". Proveedor por suscripción: no hay coste por token, se registran los tokens.",
+    "input_tokens": 533263,
+    "output_tokens": 17850,
+    "total_tokens": 551113,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/saiopencloud/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-007"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-30",
+    "session_reference": "ses_f10ad90acffe3e23tGM38LipRz",
+    "model": "opencode-go/deepseek-v4.1-flash (default)",
+    "reasoning_effort": null,
+    "notes": "Agente build. 0 intervención(es) sobre el registro, 0 con fallo. Razonamiento 35 tokens, caché leída 384 tokens. Sesión \"AGENT-DOCS-GENERAR-MANUAL-MARKDOWN-20260926\".",
+    "input_tokens": 13587,
+    "output_tokens": 218,
+    "total_tokens": 13840,
+    "estimated_cost_usd": 0.002191,
+    "source": "opencode:/Users/juanandrade/.local/share/opencode/opencode.db",
+    "confidence": "high",
+    "id": "CONSUMO-008"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-30",
+    "session_reference": "ses_f10ad1d70ffeP88V1K4pnKSqLp",
+    "model": "opencode-go/deepseek-v4.1-flash (default)",
+    "reasoning_effort": null,
+    "notes": "Agente build. 8 intervención(es) sobre el registro, 0 con fallo. Razonamiento 19687 tokens, caché leída 4042368 tokens. Sesión \"AGENT-DOCS-GENERAR-MANUAL-MARKDOWN-20260926\".",
+    "input_tokens": 112760,
+    "output_tokens": 15832,
+    "total_tokens": 148279,
+    "estimated_cost_usd": 0.050353,
+    "source": "opencode:/Users/juanandrade/.local/share/opencode/opencode.db",
+    "confidence": "high",
+    "id": "CONSUMO-009"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-30",
+    "session_reference": "20260929_185623_a5480f",
+    "model": "opencode-go/deepseek-v4.1-flash",
+    "reasoning_effort": null,
+    "notes": "Agente hermes:kanban. 36 intervención(es) sobre el registro, 0 con fallo. 3 de 64 mensajes tocaron el registro. Razonamiento 14781 tokens, caché leída 3049088 tokens. Sesión \"AGENT-GATE-AUDITAR-MANUAL-CITAS-20260926 · jornada 2026-09-29 #5\". Proveedor por suscripción: no hay coste por token, se registran los tokens.",
+    "input_tokens": 139991,
+    "output_tokens": 23614,
+    "total_tokens": 178386,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-010"
   }
 ]
 ```
@@ -768,6 +840,60 @@ Sin publicar todavía.
     "action": "point-transition",
     "actor": "cli",
     "details": "POINT-002: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-038",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:35:22.896Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-007."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-039",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:35:22.953Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-008."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-040",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:35:23.002Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-009."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-041",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:35:23.054Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-010."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-042",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:35:23.105Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-043",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:35:23.308Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
