@@ -4,8 +4,8 @@ id: FEATURE-HERMES-PERFIL-PROYECTO-20260926
 title: Declarar cada proyecto como perfil MCP de Hermes
 type: FEATURE
 module: HERMES
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: qa_approved
+qa_status: approved
 release_status: unreleased
 user_visible: true
 sync_impact: false
@@ -115,10 +115,33 @@ Verificadas por el verificador sobre el árbol del ticket (los comandos y sus re
 
 Lo que **falta** de la prueba de punta a punta real: conectar un proyecto a un perfil de Hermes de la máquina y verlo en `hermes -p <perfil> mcp list`. Eso escribe en el `config.yaml` de un perfil real y necesita la orden de la persona; la sonda lo deja medido hasta el borde del archivo.
 
+- Resultado del PO: yo apruebo porque veo que es correr en el terminal — la suite completa corrió en el terminal con 1632 pruebas en verde y 0 fallos, y con eso el PO aprobó; autorizó cerrar y al final commit y push de todo.
+
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-09-30",
+    "build_reference": "worktree:sha256:94cfbe8878a118f4721aaac371a23c4132f3e503b0c1fa2ac32aa38f7ee92d86",
+    "environment": "dev",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-09-30",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "la suite completa corrió en el terminal con 1632 pruebas en verde y 0 fallos, y con eso el PO aprobó; autorizó cerrar y al final commit y push de todo"
+  }
+]
 ```
 
 ## Evidencia
@@ -483,6 +506,42 @@ Sin publicar todavía.
     "action": "ai-usage-added",
     "actor": "cli",
     "details": "Se agregó CONSUMO-009."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:33:50.339Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:33:50.643Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:33:50.870Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:33:51.101Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
   }
 ]
 ```
