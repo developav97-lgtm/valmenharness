@@ -4,7 +4,7 @@ id: FEATURE-HERMES-PERFIL-PROYECTO-20260926
 title: Declarar cada proyecto como perfil MCP de Hermes
 type: FEATURE
 module: HERMES
-workflow_status: qa_approved
+workflow_status: closed
 qa_status: approved
 release_status: unreleased
 user_visible: true
@@ -184,7 +184,19 @@ Lo que **falta** de la prueba de punta a punta real: conectar un proyecto a un p
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-09-30",
+    "technical_summary": "Declara cada proyecto como perfil MCP de Hermes: el CLI emite el perfil y su doc, con vitest en verde (suite completa 1632) y tsc sin errores",
+    "functional_summary": "Cada proyecto se declara como perfil MCP de Hermes y el CLI lo emite con su documentacion",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "none"
+  }
+]
 ```
 
 ## Consumo de IA
@@ -325,6 +337,21 @@ Lo que **falta** de la prueba de punta a punta real: conectar un proyecto a un p
     "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
     "confidence": "high",
     "id": "CONSUMO-009"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-30",
+    "session_reference": "20260928_140418_c56444",
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Agente hermes:desktop. Sesión **compartida**: trabajó 14 tickets (BUGFIX-TIMELINE-SESSION-V2-20260928 ×180, BUGFIX-POS-EDICION-MANUAL-AJUSTES-20260929 ×176, FEATURE-GATE-IMPACTO-NULO-BANDA-20260928 ×169, BUGFIX-SERVER-ATRIBUCION-POR-LLAMADA-20260928 ×157, SYNC-EDICION-RESYNC-SAIOPEN-20260924 ×144), así que su costo no se reparte y acá no se registran números. Costo completo de la sesión: no declarado por el proveedor, 11654170 tokens. Registralo en el ticket cuya sesión sea propia, o declaralo compartido donde corresponda. Sesión \"Evolucionar flujo de trabajo SciOpenCloud\".",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/saiopencloud/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-010"
   }
 ]
 ```
@@ -542,6 +569,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:35:10.774Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-010."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-025",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:35:10.932Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-026",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:35:11.428Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
