@@ -1,0 +1,67 @@
+feature: timeline-fases
+generated_by:
+  provider: opencode-go
+  model: deepseek-v4-flash
+sprints:
+  - id: sprint-1
+    goal: Núcleo de datos y API
+    tickets:
+      - id: FEATURE-CORE-DERIVAR-FASES-20260929
+        title: Derivar fases de ticket desde transiciones del registro
+        depends_on: []
+      - id: FEATURE-API-FASES-20260929
+        title: Endpoint de fases de ticket con duración y sesiones
+        depends_on:
+          - FEATURE-CORE-DERIVAR-FASES-20260929
+      - id: CHORE-CORE-TEST-READONLY-FASES-20260929
+        title: Tests de solo lectura para derivación y API de fases
+        depends_on:
+          - FEATURE-CORE-DERIVAR-FASES-20260929
+          - FEATURE-API-FASES-20260929
+  - id: sprint-2
+    goal: Fuente kanban complementaria
+    tickets:
+      - id: INTEGRATION-ADAPTER-KANBAN-READER-20260929
+        title: Leer task_events de kanban.db como eventos de fase
+        depends_on:
+          - FEATURE-CORE-DERIVAR-FASES-20260929
+      - id: FEATURE-API-KANBAN-FASES-20260929
+        title: Integrar lector kanban en endpoint de fases
+        depends_on:
+          - FEATURE-API-FASES-20260929
+          - INTEGRATION-ADAPTER-KANBAN-READER-20260929
+  - id: sprint-3
+    goal: Presentación en vivo
+    tickets:
+      - id: FEATURE-UI-BANDA-FASES-20260929
+        title: Banda de fases en pantalla de ticket de Mission Control
+        depends_on:
+          - FEATURE-API-FASES-20260929
+      - id: FEATURE-UI-SSE-FASES-20260929
+        title: Actualizar banda de fases en vivo con SSE de eventos
+        depends_on:
+          - FEATURE-UI-BANDA-FASES-20260929
+coverage:
+  - requirement: R-S1-001
+    covered_by:
+      - FEATURE-CORE-DERIVAR-FASES-20260929
+      - FEATURE-API-FASES-20260929
+      - INTEGRATION-ADAPTER-KANBAN-READER-20260929
+      - FEATURE-API-KANBAN-FASES-20260929
+  - requirement: R-S1-002
+    covered_by:
+      - FEATURE-UI-SSE-FASES-20260929
+  - requirement: R-S1-003
+    covered_by:
+      - FEATURE-API-FASES-20260929
+  - requirement: R-S1-004
+    covered_by:
+      - FEATURE-CORE-DERIVAR-FASES-20260929
+      - FEATURE-API-FASES-20260929
+      - CHORE-CORE-TEST-READONLY-FASES-20260929
+      - INTEGRATION-ADAPTER-KANBAN-READER-20260929
+      - FEATURE-API-KANBAN-FASES-20260929
+  - requirement: R-S1-005
+    covered_by:
+      - FEATURE-UI-BANDA-FASES-20260929
+gaps: []
