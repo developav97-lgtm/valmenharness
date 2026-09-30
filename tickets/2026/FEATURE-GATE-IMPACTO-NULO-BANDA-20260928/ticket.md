@@ -4,8 +4,8 @@ id: FEATURE-GATE-IMPACTO-NULO-BANDA-20260928
 title: Un ticket sin impactos tecnicos declarados no baja los riesgos en la compuerta de analisis ni cae en banda por senales de redaccion
 type: FEATURE
 module: GATE
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: qa_approved
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -13,7 +13,7 @@ migration_impact: false
 docker_impact: false
 risk_level: normal
 created: 2026-09-28
-updated: 2026-09-28
+updated: 2026-09-29
 related_ticket: null
 target_release: null
 released_in: null
@@ -85,10 +85,33 @@ Lo implementado, paso por paso contra el plan:
 - `npx vitest run` (suite completa, tras `npm run build`) → **1546 pasadas, 48 skipped, 0 fallos**; los 68 tests del paquete gate y los 153 de los six suites de gate (`gate-command/decide/jev/mecanico/plan-aviso/view`) intactos — la regresión de recibos no cambió.
 - Verificación pendiente del PO: el próximo ticket sin impactos técnicos corre el gate analysis y aprueba sin escala humana si el resto del diagnóstico sale alto.
 
+- Resultado del PO: yo apruebo porque veo que es correr en el terminal — la suite completa corrió en el terminal con 1632 pruebas en verde y 0 fallos, y con eso el PO aprobó; autorizó cerrar y al final commit y push de todo.
+
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-09-30",
+    "build_reference": "worktree:sha256:d004ca73fee064260b51f7ee42eb27c117df4aedf62757aac15cded460a2f322",
+    "environment": "dev",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-09-30",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "la suite completa corrió en el terminal con 1632 pruebas en verde y 0 fallos, y con eso el PO aprobó; autorizó cerrar y al final commit y push de todo"
+  }
+]
 ```
 
 ## Evidencia
@@ -219,6 +242,42 @@ Sin publicar todavía.
     "action": "ai-usage-added",
     "actor": "cli",
     "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:34:02.045Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:34:02.540Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:34:03.027Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:34:03.555Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
   }
 ]
 ```
