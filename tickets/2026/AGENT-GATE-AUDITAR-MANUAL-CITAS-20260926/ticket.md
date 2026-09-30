@@ -4,8 +4,8 @@ id: AGENT-GATE-AUDITAR-MANUAL-CITAS-20260926
 title: Auditar manuales contra código con citas
 type: AGENT
 module: GATE
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: in_qa
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -134,7 +134,7 @@ Viene de una feature descompuesta en sprints; su plan completo está en el ticke
   {
     "id": "POINT-001",
     "title": "El bloque de metadata de la plantilla exige cita y bloquea todo manual generado",
-    "status": "awaiting_retest",
+    "status": "verified",
     "severity": "high",
     "actual": "Con la plantilla que publica valmen manuales plantilla, las cinco líneas del bloque de metadata (Módulo, ¿Dónde encontrarla?, Última actualización, Código, Versión) contaban como afirmaciones sin cita: valmen manuales auditar sobre un manual escrito con esa plantilla, con cada sección citada, devolvía block y salida 3 con cinco hallazgos sin-cita en las líneas 3 a 7. El paso escribir del proceso usa esa plantilla, así que todo manual generado quedaba bloqueado por su propia cabecera. Reproducido con el CLI compilado sobre un laboratorio temporal (docs/manuales/usuario-final/ordenes.md).",
     "expected": "El bloque de metadata no es una afirmación: las líneas con la forma etiqueta en negrita, dos puntos y valor, entre el título del manual y el primer encabezado que lo sigue, quedan fuera del conteo; el manual que el proceso escribe con la plantilla aprueba cuando cada sección declara su cita. Es la decisión 2 del plan aprobado y §8.1 de docs/03-GATES.md.",
@@ -150,14 +150,16 @@ Viene de una feature descompuesta en sprints; su plan completo está en el ticke
     "diagnosis": null,
     "solution": null,
     "tests": [],
-    "qa_cycles": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
     "terminal_reason": null,
     "related_ticket": null
   },
   {
     "id": "POINT-002",
     "title": "La fila de cabecera de una tabla exige cita y bloquea el manual que la usa",
-    "status": "awaiting_retest",
+    "status": "verified",
     "severity": "normal",
     "actual": "La fila de cabecera de una tabla contaba como afirmación sin cita: un manual cuya tabla de campos citaba la fila de cuerpo y no su cabecera quedaba en block por la cabecera. Reproducido con el CLI compilado sobre un laboratorio temporal, con el hallazgo sin-cita en la línea 22 (la fila con los nombres de columna). El plan excluía los separadores de tabla, no la cabecera de la tabla. Lo señaló la revisión ronda 1 como menor.",
     "expected": "La fila de cabecera de una tabla, la que precede al separador, no es una afirmación: nombra las columnas y no sostiene nada de ningún campo, así que no lleva cita. Las filas de cuerpo sí la llevan.",
@@ -173,14 +175,16 @@ Viene de una feature descompuesta en sprints; su plan completo está en el ticke
     "diagnosis": null,
     "solution": null,
     "tests": [],
-    "qa_cycles": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
     "terminal_reason": null,
     "related_ticket": null
   },
   {
     "id": "POINT-003",
     "title": "Un manual que dice que hay que mirar algo no queda en review",
-    "status": "analyzed",
+    "status": "deferred",
     "severity": "normal",
     "actual": "La Descripción funcional declara que un manual que dice que hay que mirar queda en review, y el motor devuelve approve: reproducido con el CLI compilado sobre un manual con la sección de pendientes y la frase Hay que mirar el botón de anular, que salió approve con salida 0. La sección de pendientes se excluye entera del conteo.",
     "expected": "Un manual cuya sección de pendientes dice que hay que mirar algo no cierra en approve. La decisión 3 del plan acota la banda a los literales de error y no menciona este caso, así que la brecha es entre la Descripción funcional y el plan y la resuelve el PO: la revisión ronda 1 pidió no implementarla sin su palabra.",
@@ -192,7 +196,7 @@ Viene de una feature descompuesta en sprints; su plan completo está en el ticke
     "solution": null,
     "tests": [],
     "qa_cycles": [],
-    "terminal_reason": null,
+    "terminal_reason": "Decision de producto pendiente del PO: la revision ronda 1 pidio no implementar la banda de seccion de pendientes sin su palabra; el cierre del 2026-09-30 no la incluye",
     "related_ticket": null
   }
 ]
@@ -219,6 +223,8 @@ Viene de una feature descompuesta en sprints; su plan completo está en el ticke
 - Contrato de pruebas para quien retome: comando `npx vitest run`, directorio la raíz del repositorio, resultado esperado 1612 pruebas en verde y ningún fallo, sin requisitos de ambiente —el harness no tiene dependencias externas ni base de datos—.
 - Criterios 13 a 18 (la banda de revisión, el recibo y el paso del proceso): la compuerta despliega como máximo doce criterios como proposiciones (`MAX_CRITERIA_PROPOSITIONS`, `packages/gate/src/dynamic.ts:21`), así que sus comandos no los corrió el gate y los corrí directamente: `npx vitest run tests/manuales-auditar.test.ts` (17 en verde, con los casos de esos criterios entre ellos) y `npx vitest run tests/procesos-deploy-manuales.test.ts` (3 en verde, con la aserción del paso `auditar-manuales`). Quedan marcados con esa corrida directa y no con un recibo de compuerta, y se deja dicho acá para que el registro pueda distinguirlo. El gate sí corrió los doce primeros criterios y los doce dieron 1,00.
 
+- Resultado del PO: yo apruebo porque veo que es correr en el terminal — la suite completa corrió en el terminal con 1632 pruebas en verde y 0 fallos, y con eso el PO aprobó; autorizó cerrar y al final commit y push de todo.
+
 ### Corrección de la revisión ronda 1
 
 La revisión ronda 1 del artefacto devolvió un hallazgo requerido y uno menor, y los dos están corregidos y registrados como `POINT-001` y `POINT-002`. Lo que se corrigió es el conteo de afirmaciones: el bloque de metadata de la plantilla y la fila de cabecera de una tabla quedan fuera —estructura y no afirmación sobre el sistema—, y el proceso sigue exigiendo la cita a cada línea de cuerpo y a cada fila de tabla.
@@ -234,7 +240,28 @@ La revisión ronda 1 del artefacto devolvió un hallazgo requerido y uno menor, 
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-09-30",
+    "build_reference": "worktree:sha256:348f292cd53c31a0bf5912bfb5ee36096482bf6ecea2556ed4b25dc960fc21cb",
+    "environment": "dev",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-09-30",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "la suite completa corrió en el terminal con 1632 pruebas en verde y 0 fallos, y con eso el PO aprobó; autorizó cerrar y al final commit y push de todo"
+  }
+]
 ```
 
 ## Evidencia
@@ -279,7 +306,24 @@ La revisión ronda 1 del artefacto devolvió un hallazgo requerido y uno menor, 
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-09-30",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "la suite completa corrió en el terminal con 1632 pruebas en verde y 0 fallos, y con eso el PO aprobó; autorizó cerrar y al final commit y push de todo"
+  },
+  {
+    "id": "RETEST-002",
+    "date": "2026-09-30",
+    "point_id": "POINT-002",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "la suite completa corrió en el terminal con 1632 pruebas en verde y 0 fallos, y con eso el PO aprobó; autorizó cerrar y al final commit y push de todo"
+  }
+]
 ```
 
 ## Cierre
@@ -643,6 +687,60 @@ Sin publicar todavía.
     "action": "ai-usage-added",
     "actor": "cli",
     "details": "Se agregó CONSUMO-006."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-029",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:34:44.783Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-030",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:34:44.997Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-031",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:34:45.215Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-032",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:34:45.458Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-002 para POINT-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-033",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:34:52.708Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-003: analyzed -> deferred."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-034",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:34:52.934Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
   }
 ]
 ```
