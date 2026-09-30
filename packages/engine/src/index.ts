@@ -13,6 +13,7 @@
  */
 export * from "./result.js";
 export * from "./etapas.js";
+export * from "./fases.js";
 export * from "./discovery.js";
 export * from "./diff.js";
 export * from "./drift.js";
