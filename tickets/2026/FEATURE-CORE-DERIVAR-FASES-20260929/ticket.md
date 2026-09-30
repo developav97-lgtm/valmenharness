@@ -138,6 +138,21 @@ Se creó `packages/engine/src/fases.ts` (`FaseDeTicket` y `fasesPorTicket`), se 
     "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
     "confidence": "high",
     "id": "CONSUMO-002"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-30",
+    "session_reference": "20260930_161158_64c6d0",
+    "model": "opencode-go/glm-5.3-flash",
+    "reasoning_effort": null,
+    "notes": "Sesion Hermes del retrabajo de la ronda 1 (kanban t_b1f5ea9f, run 35): tres correcciones acotadas al registro del ticket, validate, vitest focal 6/6 reconfirmado, secrets, commit 62a3d09. Sin sesion OpenCode: el codigo no se toca. Proveedor por suscripcion: coste no declarado. Fuente leida al momento de registrar.",
+    "input_tokens": 97276,
+    "output_tokens": 8155,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-003"
   }
 ]
 ```
@@ -230,6 +245,15 @@ Sin publicar todavía.
     "action": "ai-usage-added",
     "actor": "cli",
     "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-09-30",
+    "at": "2026-09-30T21:18:45.997Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-003."
   }
 ]
 ```
