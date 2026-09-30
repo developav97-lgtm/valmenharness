@@ -4,7 +4,7 @@ id: INTEGRATION-CRM-ADOPTAR-PROYECTO-20260926
 title: Adoptar crm-valment con registro independiente
 type: INTEGRATION
 module: CRM
-workflow_status: qa_approved
+workflow_status: closed
 qa_status: approved
 release_status: unreleased
 user_visible: false
@@ -359,7 +359,19 @@ Los diez criterios con comando quedaron marcados con el recibo de `qa-mechanical
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-09-30",
+    "technical_summary": "valmen adopt detecta documentos de memoria y escribe memory-sources en el config que propone; tests adopt en verde",
+    "functional_summary": "valmen adopt adopta proyectos con registro independiente y declara sus fuentes de memoria",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "none"
+  }
+]
 ```
 
 ## Consumo de IA
@@ -410,6 +422,66 @@ Los diez criterios con comando quedaron marcados con el recibo de `qa-mechanical
     "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
     "confidence": "high",
     "id": "CONSUMO-003"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-30",
+    "session_reference": "ses_f11772e9affewl50WLdvuOSoTA",
+    "model": "opencode-go/deepseek-v4.1-flash (default)",
+    "reasoning_effort": null,
+    "notes": "Agente build. 0 intervención(es) sobre el registro, 0 con fallo. Razonamiento 244 tokens, caché leída 36992 tokens. Sesión \"FEATURE-HERMES-PERFIL-PROYECTO-20260926\".",
+    "input_tokens": 26777,
+    "output_tokens": 275,
+    "total_tokens": 27296,
+    "estimated_cost_usd": 0.004439,
+    "source": "opencode:/Users/juanandrade/.local/share/opencode/opencode.db",
+    "confidence": "high",
+    "id": "CONSUMO-004"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-30",
+    "session_reference": "ses_f117341b1ffeRtJkn8EFoyvvaR",
+    "model": "opencode-go/deepseek-v4.1-flash (default)",
+    "reasoning_effort": null,
+    "notes": "Agente build. 4 intervención(es) sobre el registro, 0 con fallo. Razonamiento 24956 tokens, caché leída 4848512 tokens. Sesión \"FEATURE-HERMES-PERFIL-PROYECTO-20260926 (reintento 1)\".",
+    "input_tokens": 127961,
+    "output_tokens": 16108,
+    "total_tokens": 169025,
+    "estimated_cost_usd": 0.058378,
+    "source": "opencode:/Users/juanandrade/.local/share/opencode/opencode.db",
+    "confidence": "high",
+    "id": "CONSUMO-005"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-30",
+    "session_reference": "ses_f115818a3ffeX8L3vvCfhkmIPf",
+    "model": "opencode-go/deepseek-v4.1-flash (default)",
+    "reasoning_effort": null,
+    "notes": "Agente build. 7 intervención(es) sobre el registro, 0 con fallo. Razonamiento 5011 tokens, caché leída 904192 tokens. Sesión \"FEATURE-ENGINE-DOGFOODING-REGISTRO-20260926\".",
+    "input_tokens": 49601,
+    "output_tokens": 5169,
+    "total_tokens": 59781,
+    "estimated_cost_usd": 0.016261,
+    "source": "opencode:/Users/juanandrade/.local/share/opencode/opencode.db",
+    "confidence": "high",
+    "id": "CONSUMO-006"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-30",
+    "session_reference": "20260929_180014_47de51",
+    "model": "opencode-go/deepseek-v4.1-flash",
+    "reasoning_effort": null,
+    "notes": "Agente hermes:kanban. 34 intervención(es) sobre el registro, 0 con fallo. 6 de 55 mensajes tocaron el registro. Razonamiento 15329 tokens, caché leída 2129792 tokens. Sesión \"INTEGRATION-CRM-ADOPTAR-PROYECTO-20260926 · jornada 2026-09-29 #3\". Proveedor por suscripción: no hay coste por token, se registran los tokens.",
+    "input_tokens": 72560,
+    "output_tokens": 22505,
+    "total_tokens": 110394,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-007"
   }
 ]
 ```
@@ -555,6 +627,60 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:35:15.676Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-004."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:35:15.741Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-005."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:35:15.791Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-006."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:35:15.845Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-007."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:35:15.894Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:35:16.088Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
