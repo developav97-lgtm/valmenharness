@@ -4,8 +4,8 @@ id: AGENT-DOCS-GENERAR-MANUAL-MARKDOWN-20260926
 title: Generar manuales Markdown con skill del proyecto
 type: AGENT
 module: DOCS
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: qa_approved
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -123,10 +123,33 @@ Viene de una feature descompuesta en sprints; su plan completo está en el ticke
 - `diff skills/manuales-usuario-final/SKILL.md .valmen/skills/manuales-usuario-final/SKILL.md` sin diferencias; `valmen sync --check` sale 0 con «Archivos generados al día.» y la skill entre las comparadas.
 - Contrato de pruebas para quien retome: comando `npx vitest run`, directorio la raíz del repositorio, resultado esperado 1628 pruebas en verde y ningún fallo; sin requisitos de ambiente —el harness no tiene dependencias externas ni base de datos—.
 
+- Resultado del PO: yo apruebo porque veo que es correr en el terminal — la suite completa corrió en el terminal con 1632 pruebas en verde y 0 fallos, y con eso el PO aprobó; autorizó cerrar y al final commit y push de todo.
+
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-09-30",
+    "build_reference": "worktree:sha256:4ff1594415424b7f33b40ee4b3e7f114e83b90262cedc71495d906168f594abb",
+    "environment": "dev",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-09-30",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "la suite completa corrió en el terminal con 1632 pruebas en verde y 0 fallos, y con eso el PO aprobó; autorizó cerrar y al final commit y push de todo"
+  }
+]
 ```
 
 ## Evidencia
@@ -298,6 +321,42 @@ Sin publicar todavía.
     "action": "ai-usage-added",
     "actor": "cli",
     "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:33:59.118Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:33:59.603Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:34:00.477Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:34:01.209Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
   }
 ]
 ```
