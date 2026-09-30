@@ -50,7 +50,7 @@ Viene de una feature descompuesta en sprints; su plan completo está en el ticke
 
 ## Plan
 
-- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan). «Apruebo» (PO por Slack, 2026-09-30) — decisión humana registrada en el recibo GR-20260930-analysis (`valmen gate-decide`, accor Juan Andrade (PO)); la banda de `diagnostico_explica_el_sintoma` (0.86) queda reportada como ruido conocido del caso cero y el resto de las proposiciones en verde. Se corre además `valmen gate plan --id FEATURE-CORE-DERIVAR-FASES-20260929 --evaluator cascade` sobre este plan; artefacto de sustancia (código nuevo en el engine). El brief del eslabón 1 (t_b1f5ea9f) declara el commit pre-autorizado de archivos propios del ticket y el tope en `awaiting_user_tests`.
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan). «Apruebo» (PO por Slack, 2026-09-30) — decisión humana registrada en el recibo GR-20260930-analysis (`valmen gate-decide`, accor Juan Andrade (PO)); la banda de `diagnostico_explica_el_sintoma` (0.86) queda reportada como ruido conocido del caso cero y el resto de las proposiciones en verde. No existe recibo de compuerta de plan: la transición `planned → approved` se cerró directamente con la aprobación humana explícita del PO citada arriba — el gate de plan definido en la feature aplica solo sobre `planned` y nunca se corrió `valmen gate plan` sobre este artefacto. El brief del eslabón 1 (t_b1f5ea9f) declara el commit pre-autorizado de archivos propios del ticket y el tope en `awaiting_user_tests`.
 - Decisiones: (1) derivadora pura en el engine (`fasesPorTicket`) sobre el bloque `Eventos`, y no un lector de `kanban.db`: R-S1-001 ya está cubierto con `Eventos` y el lector kanban es el eslabón INTEGRATION-ADAPTER-KANBAN-READER-20260929; (2) la hora de un ticket sin transiciones es el `at` del evento `created` —el spec dice «desde `created_at`» y ese evento es la única marca que el registro ya tiene—; (3) tramo sin hora queda `null` (no se estima), igual que `etapas.ts:92`. Descarte: reutilizar `duracionesPorEtapa` tal cual no alcanza porque no cierra tramos ni marca fase en curso; construir sobre sus mismas reglas evita tener dos parsers de `details`.
 - Pasos ordenados:
   1. `packages/engine/src/fases.ts` (nuevo): exportar `FaseDeTicket` (estado al que se llegó vía transición, instante de inicio y fin, duración `ms | null`, `enCurso: boolean`, `motivo | null` para el bloqueo con su motivo si `details` lo trae) y `fasesPorTicket(eventos: readonly JsonObject[]): readonly FaseDeTicket[]`, read-only: corrre la serie de eventos (same rules que `etapas.ts` — `created` abre `intake`, `ticket-transition` parsea `details` con una regex; un tramo sin marca no se rellena) y concatena tramos por estado.
@@ -60,11 +60,11 @@ Viene de una feature descompuesta en sprints; su plan completo está en el ticke
 
 ## Criterios de aceptación
 
-- [ ] R-S1-001: La derivación de fases toma una serie de eventos y produce la secuencia de fases con hora de inicio, hora de fin, duración y la fase en curso identificada — la prueba del paquete lo comprueba sobre `Eventos` del registro.
+- [x] R-S1-001: La derivación de fases toma una serie de eventos y produce la secuencia de fases con hora de inicio, hora de fin, duración y la fase en curso identificada — la prueba del paquete lo comprueba sobre `Eventos` del registro.
   <!-- test: npx vitest run tests/derivacion-fases.test.ts -->
 - [ ] R-S1-002: La derivación es read-only: lee `Eventos` y no escribe ni reescribe ningún bloque — nada del módulo nuevo toca el disco.
   <!-- verify: manual -->
-- [ ] R-S1-003: Un ticket sin transiciones (sólo el evento de creación) aparece con su fase única desde `created_at`.
+- [x] R-S1-003: Un ticket sin transiciones (sólo el evento de creación) aparece con su fase única desde `created_at`.
   <!-- test: npx vitest run tests/derivacion-fases.test.ts -->
 
 ## Puntos
@@ -80,8 +80,6 @@ Se creó `packages/engine/src/fases.ts` (`FaseDeTicket` y `fasesPorTicket`), se 
 ## Pruebas
 
 - Verificación mecánica de criterios: `npx vitest run tests/derivacion-fases.test.ts` — 6/6 pruebas pasadas (1 archivo); criterio R-S1-001 y R-S1-003. Batería completa `npx vitest run`: 85 archivos pasados | 1 omitido, 1638 pruebas pasadas | 48 omitidas. Criterio R-S1-002 (`verify: manual`): la derivación `fasesPorTicket` es una función pura sobre la lista de eventos recibida — no importa `node:fs` ni toca el disco; se declara sin tildar para quien prueba.
-
-Pendiente de ejecución.
 
 ## QA
 
