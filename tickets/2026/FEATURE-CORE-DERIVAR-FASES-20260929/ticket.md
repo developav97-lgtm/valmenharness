@@ -125,6 +125,21 @@ Pendiente de ejecución.
     "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
     "confidence": "high",
     "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-30",
+    "session_reference": "20260930_154157_aeb318",
+    "model": "opencode-go/glm-5.3-flash",
+    "reasoning_effort": null,
+    "notes": "Sesion Hermes (kanban) del eslabon 1 reanudado tras la aprobacion del PO del gate analysis: gate plan skip legal, OpenCode (ses_f0be7dfbbffeaVbN0qB44bPqKy) implemento, gates qa-mechanical y transiciones hasta awaiting_user_tests, commit 004932f. Proveedor opencode-go por suscripcion: coste no declarado (0).",
+    "input_tokens": 132931,
+    "output_tokens": 21121,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-002"
   }
 ]
 ```
@@ -208,6 +223,15 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-09-30",
+    "at": "2026-09-30T20:57:42.652Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
   }
 ]
 ```
