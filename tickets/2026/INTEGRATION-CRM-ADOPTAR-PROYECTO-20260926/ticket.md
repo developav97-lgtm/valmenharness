@@ -4,8 +4,8 @@ id: INTEGRATION-CRM-ADOPTAR-PROYECTO-20260926
 title: Adoptar crm-valment con registro independiente
 type: INTEGRATION
 module: CRM
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: qa_approved
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -306,10 +306,33 @@ Adopción real de `crm-valment` (paso 6, corrida por el verificador):
 
 Los diez criterios con comando quedaron marcados con el recibo de `qa-mechanical` de esta entrega. El criterio `R-S2-003`, que es `verify: manual`, queda **sin marcar a propósito**: el verificador lo corrió y su resultado es el de arriba —118 entradas, 67 de `DECISIONS.md` y 51 de `ERRORS.md`, y los cinco archivos iguales—, pero la casilla la marca quien prueba el resultado, no quien lo produjo. Es el punto que le queda por confirmar a la persona.
 
+- Resultado del PO: yo apruebo porque veo que es correr en el terminal — la suite completa corrió en el terminal con 1632 pruebas en verde y 0 fallos, y con eso el PO aprobó; autorizó cerrar y al final commit y push de todo.
+
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-09-30",
+    "build_reference": "worktree:sha256:5f7dd209312bddbfb9c0c9d6453760b8dabfc8e51924295b831151d3748f6420",
+    "environment": "dev",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-09-30",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "la suite completa corrió en el terminal con 1632 pruebas en verde y 0 fallos, y con eso el PO aprobó; autorizó cerrar y al final commit y push de todo"
+  }
+]
 ```
 
 ## Evidencia
@@ -496,6 +519,42 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:33:53.179Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:33:53.509Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:33:53.788Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:33:54.172Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
   }
 ]
 ```
