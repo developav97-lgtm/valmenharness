@@ -4,7 +4,7 @@ id: FEATURE-ENGINE-DOGFOODING-REGISTRO-20260926
 title: Adoptar ValmenHarness con su registro propio
 type: FEATURE
 module: ENGINE
-workflow_status: qa_approved
+workflow_status: closed
 qa_status: approved
 release_status: unreleased
 user_visible: false
@@ -330,7 +330,19 @@ Para la persona, con el ticket en `awaiting_user_tests`:
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-09-30",
+    "technical_summary": "El harness adopta su propio registro: tests de dogfooding en verde y suite completa 1632 en verde",
+    "functional_summary": "El harness gestiona su evolucion con su propio registro ValMen",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "none"
+  }
+]
 ```
 
 ## Consumo de IA
@@ -366,6 +378,21 @@ Para la persona, con el ticket en `awaiting_user_tests`:
     "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
     "confidence": "high",
     "id": "CONSUMO-002"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-30",
+    "session_reference": "20260929_173012_3282f1",
+    "model": "opencode-go/deepseek-v4.1-flash",
+    "reasoning_effort": null,
+    "notes": "Agente hermes:kanban. 30 intervención(es) sobre el registro, 0 con fallo. 5 de 62 mensajes tocaron el registro. Razonamiento 14456 tokens, caché leída 2987776 tokens. Sesión \"FEATURE-ENGINE-DOGFOODING-REGISTRO-20260926 · jornada 2026-09-29 #2\". Proveedor por suscripción: no hay coste por token, se registran los tokens.",
+    "input_tokens": 114555,
+    "output_tokens": 21206,
+    "total_tokens": 150217,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-003"
   }
 ]
 ```
@@ -511,6 +538,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:35:13.999Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:35:14.076Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:35:14.318Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
