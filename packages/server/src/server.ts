@@ -42,6 +42,7 @@ import {
   listProposals,
   standardsFiles,
   type TicketFilters,
+  fasesPorTicket,
   filterTickets,
   findTicket,
   listTickets,
@@ -653,6 +654,41 @@ export async function handleApi(
       };
     }
     return { status: 200, body: detalle };
+  }
+
+  // GET /api/ticket/fases?ticket=&directory=
+  //
+  // La secuencia de fases del ticket —cada tramo con su inicio, su fin y su
+  // duración— derivada del bloque `Eventos` que ya lee el detalle del ticket, más
+  // la línea de tiempo de sus sesiones. Es solo lectura: no escribe nada del
+  // registro ni de la contabilidad.
+  //
+  // La disponibilidad va declarada como `disponible`, con la misma regla que
+  // `GET /api/timeline`: sin base de contabilidad no se finge una línea vacía que
+  // se leería como «no costó nada».
+  if (method === "GET" && path === "/api/ticket/fases") {
+    const ticket = valorDeQuery(query, "ticket");
+    const directory = valorDeQuery(query, "directory") ?? paths.root;
+
+    if (ticket === undefined) {
+      return { status: 400, body: { error: "Falta el parámetro `ticket`." } };
+    }
+
+    const detalle = readTicket(paths, ticket);
+    if (detalle === null) {
+      return { status: 404, body: { error: `No existe el ticket "${ticket}".` } };
+    }
+
+    const linea = leerLineaDeTiempo(directory, { ticketId: ticket });
+    return {
+      status: 200,
+      body: {
+        ticket,
+        fases: fasesPorTicket(detalle.events),
+        timeline:
+          linea === null ? { disponible: false } : { disponible: true, ...linea },
+      },
+    };
   }
 
   // GET /api/timeline?ticket=&directory=

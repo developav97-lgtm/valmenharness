@@ -53,6 +53,7 @@ const RUTAS = [
   "POST /api/providers/:id/probe",
   "POST /api/providers/:id/models/test",
   "GET /api/report",
+  "GET /api/ticket/fases",
   "GET /api/timeline",
   "GET /api/standards",
   "POST /api/standards/:id/decision",
