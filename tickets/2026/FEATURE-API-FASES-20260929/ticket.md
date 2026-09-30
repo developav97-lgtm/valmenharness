@@ -95,6 +95,14 @@ Pendiente de ejecución.
     "description": "Sesión OpenCode ses_f0b89160cffetWs7A4SrlfveuD (modelo opencode-go/deepseek-v4.1-flash, 2026-09-30, /Users/juanandrade/Desktop/ValmenHarness): implementó GET /api/ticket/fases en packages/server/src/server.ts, tests/api-fases-api.test.ts (4 casos sobre handleApi real) y la fila de tests/api-rutas.test.ts. 29 mensajes en su historial; la implementación está en el árbol sin commitear.",
     "reference": null,
     "point_id": null
+  },
+  {
+    "id": "EVIDENCE-002",
+    "date": "2026-09-30",
+    "kind": "automated-test",
+    "description": "Commit 40eba3c: implementacion y pruebas del endpoint. npx vitest run tests/api-fases-api.test.ts tests/api-rutas.test.ts 10/10 pasadas; bateria completa 1642 pasadas/48 omitidas; typecheck limpio; valmen secrets sin hallazgos antes del commit.",
+    "reference": "commit:40eba3ce4abf27946ca48b5861c4b92a9221cccc",
+    "point_id": null
   }
 ]
 ```
@@ -269,6 +277,15 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-09-30",
+    "at": "2026-09-30T22:44:25.093Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-002."
   }
 ]
 ```
