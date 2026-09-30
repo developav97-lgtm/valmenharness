@@ -4,7 +4,7 @@ id: AGENT-GATE-AUDITAR-MANUAL-CITAS-20260926
 title: Auditar manuales contra código con citas
 type: AGENT
 module: GATE
-workflow_status: in_qa
+workflow_status: qa_approved
 qa_status: approved
 release_status: unreleased
 user_visible: false
@@ -134,7 +134,7 @@ Viene de una feature descompuesta en sprints; su plan completo está en el ticke
   {
     "id": "POINT-001",
     "title": "El bloque de metadata de la plantilla exige cita y bloquea todo manual generado",
-    "status": "verified",
+    "status": "closed",
     "severity": "high",
     "actual": "Con la plantilla que publica valmen manuales plantilla, las cinco líneas del bloque de metadata (Módulo, ¿Dónde encontrarla?, Última actualización, Código, Versión) contaban como afirmaciones sin cita: valmen manuales auditar sobre un manual escrito con esa plantilla, con cada sección citada, devolvía block y salida 3 con cinco hallazgos sin-cita en las líneas 3 a 7. El paso escribir del proceso usa esa plantilla, así que todo manual generado quedaba bloqueado por su propia cabecera. Reproducido con el CLI compilado sobre un laboratorio temporal (docs/manuales/usuario-final/ordenes.md).",
     "expected": "El bloque de metadata no es una afirmación: las líneas con la forma etiqueta en negrita, dos puntos y valor, entre el título del manual y el primer encabezado que lo sigue, quedan fuera del conteo; el manual que el proceso escribe con la plantilla aprueba cuando cada sección declara su cita. Es la decisión 2 del plan aprobado y §8.1 de docs/03-GATES.md.",
@@ -159,7 +159,7 @@ Viene de una feature descompuesta en sprints; su plan completo está en el ticke
   {
     "id": "POINT-002",
     "title": "La fila de cabecera de una tabla exige cita y bloquea el manual que la usa",
-    "status": "verified",
+    "status": "closed",
     "severity": "normal",
     "actual": "La fila de cabecera de una tabla contaba como afirmación sin cita: un manual cuya tabla de campos citaba la fila de cuerpo y no su cabecera quedaba en block por la cabecera. Reproducido con el CLI compilado sobre un laboratorio temporal, con el hallazgo sin-cita en la línea 22 (la fila con los nombres de columna). El plan excluía los separadores de tabla, no la cabecera de la tabla. Lo señaló la revisión ronda 1 como menor.",
     "expected": "La fila de cabecera de una tabla, la que precede al separador, no es una afirmación: nombra las columnas y no sostiene nada de ningún campo, así que no lleva cita. Las filas de cuerpo sí la llevan.",
@@ -741,6 +741,33 @@ Sin publicar todavía.
     "action": "qa-closed",
     "actor": "cli",
     "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-035",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:34:53.257Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-036",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:34:53.894Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-037",
+    "date": "2026-09-29",
+    "at": "2026-09-30T01:34:54.991Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-002: verified -> closed."
   }
 ]
 ```
