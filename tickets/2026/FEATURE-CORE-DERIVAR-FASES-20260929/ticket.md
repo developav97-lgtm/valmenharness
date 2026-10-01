@@ -4,8 +4,8 @@ id: FEATURE-CORE-DERIVAR-FASES-20260929
 title: Derivar fases de ticket desde transiciones del registro
 type: FEATURE
 module: CORE
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -13,7 +13,7 @@ migration_impact: false
 docker_impact: false
 risk_level: normal
 created: 2026-09-29
-updated: 2026-09-30
+updated: 2026-10-01
 related_ticket: null
 target_release: null
 released_in: null
@@ -79,18 +79,50 @@ Se creó `packages/engine/src/fases.ts` (`FaseDeTicket` y `fasesPorTicket`), se 
 
 ## Pruebas
 
+- Resultado del PO: probado por el PO en Mission Control en vivo — port 4175, banda de fases visible y en vivo, sesiones por fase y fuente kanban revisadas. Sus palabras el 2026-10-01: «Dale listo ya las vi entonces podemos proseguir a cerrar los tickets»
+
 - Verificación mecánica de criterios: `npx vitest run tests/derivacion-fases.test.ts` — 6/6 pruebas pasadas (1 archivo); criterio R-S1-001 y R-S1-003. Batería completa `npx vitest run`: 85 archivos pasados | 1 omitido, 1638 pruebas pasadas | 48 omitidas. Criterio R-S1-002 (`verify: manual`): la derivación `fasesPorTicket` es una función pura sobre la lista de eventos recibida — no importa `node:fs` ni toca el disco; se declara sin tildar para quien prueba.
 
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-01",
+    "build_reference": "worktree:sha256:e403448b021c226876122a17afe6a4a2aad14b4ef1889e982cd0b2df663c3c56",
+    "environment": "Mission Control port 4175, navegador + suite vitest del repo",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-01",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "Dale listo ya las vi entonces podemos proseguir a cerrar los tickets"
+  }
+]
 ```
 
 ## Evidencia
 
 ```json
-[]
+[
+  {
+    "id": "EVIDENCE-001",
+    "date": "2026-10-01",
+    "kind": "verification",
+    "description": "QA del cierre: prueba del PO en Mission Control port 4175 y suite del arbol final. El arbol hasheado son los archivos del ticket en orden alfabetico: packages/engine/src/fases.ts y tests/derivacion-fases.test.ts.",
+    "reference": "worktree:sha256:e403448b021c226876122a17afe6a4a2aad14b4ef1889e982cd0b2df663c3c56",
+    "point_id": null
+  }
+]
 ```
 
 ## Retests
@@ -102,7 +134,19 @@ Se creó `packages/engine/src/fases.ts` (`FaseDeTicket` y `fasesPorTicket`), se 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-01",
+    "technical_summary": "Derivacion de fases desde transiciones: marcaDe reconoce created y ticket-transition, linea por ticket con inicio/fin/ms y enCurso, fase unica sin transiciones",
+    "functional_summary": "La pantalla del ticket muestra la linea de fases como banda con su duracion y fase en curso, actualizada en vivo sin recargar; probado por el PO en Mission Control.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "none"
+  }
+]
 ```
 
 ## Consumo de IA
@@ -153,6 +197,111 @@ Se creó `packages/engine/src/fases.ts` (`FaseDeTicket` y `fasesPorTicket`), se 
     "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
     "confidence": "high",
     "id": "CONSUMO-003"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-01",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Sesiones Hermes kanban del eslabon, 5 corrida(s) agregadas. Lectura al cierre, proveedor por suscripcion, costo no declarado.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": 1203643,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
+    "confidence": "medium",
+    "id": "CONSUMO-004"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-01",
+    "session_reference": "20260930_153620_120b402d",
+    "model": "opencode-go/glm-5.3-flash",
+    "reasoning_effort": null,
+    "notes": "Agente hermes:slack. 25 intervención(es) sobre el registro, 0 con fallo. 1 de 54 mensajes tocaron el registro. Razonamiento 0 tokens, caché leída 1322752 tokens. Sesión \"Continuar tras aprobación\". Proveedor por suscripción: no hay coste por token, se registran los tokens.",
+    "input_tokens": 94396,
+    "output_tokens": 19974,
+    "total_tokens": 114370,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/saiopencloud/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-005"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-01",
+    "session_reference": "ses_f0be7dfbbffeaVbN0qB44bPqKy",
+    "model": "opencode-go/deepseek-v4.1-flash (default)",
+    "reasoning_effort": null,
+    "notes": "Agente build. 0 intervención(es) sobre el registro, 0 con fallo. Razonamiento 4550 tokens, caché leída 460416 tokens. Sesión \"Implementación de derivación de fases de tickets y pruebas Vitest (FEATURE-CORE-DERIVAR-FASES-202...\".",
+    "input_tokens": 42156,
+    "output_tokens": 6793,
+    "total_tokens": 53499,
+    "estimated_cost_usd": 0.014777,
+    "source": "opencode:/Users/juanandrade/.local/share/opencode/opencode.db",
+    "confidence": "high",
+    "id": "CONSUMO-006"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-01",
+    "session_reference": "20260930_155853_8cffa0",
+    "model": "opencode-go/glm-5.3-flash",
+    "reasoning_effort": null,
+    "notes": "Agente hermes:kanban. 22 intervención(es) sobre el registro, 0 con fallo. 0 de 40 mensajes tocaron el registro. Razonamiento 0 tokens, caché leída 677632 tokens. Sesión \"eslabon 1 de 7 · timeline-fases · jornada 2026-09-30 #3\". Proveedor por suscripción: no hay coste por token, se registran los tokens.",
+    "input_tokens": 287861,
+    "output_tokens": 14343,
+    "total_tokens": 302204,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-007"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-01",
+    "session_reference": "20260930_162100_67f983",
+    "model": "opencode-go/glm-5.3-flash",
+    "reasoning_effort": null,
+    "notes": "Agente hermes:kanban. 16 intervención(es) sobre el registro, 0 con fallo. 1 de 30 mensajes tocaron el registro. Razonamiento 0 tokens, caché leída 434304 tokens. Sesión \"eslabon 1 de 7 · timeline-fases · jornada 2026-09-30 #5\". Proveedor por suscripción: no hay coste por token, se registran los tokens.",
+    "input_tokens": 247244,
+    "output_tokens": 7901,
+    "total_tokens": 255145,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-008"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-01",
+    "session_reference": "20260930_210422_62308a2e",
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Agente hermes:telegram. Sesión **compartida**: trabajó 5 tickets (FEATURE-UI-BANDA-FASES-20260929 ×124, FEATURE-UI-SSE-FASES-20260929 ×104, FEATURE-API-KANBAN-FASES-20260929 ×103, FEATURE-CORE-DERIVAR-FASES-20260929 ×54, IMPROVEMENT-CLIENTE-DEV-20260930 ×18), así que su costo no se reparte y acá no se registran números. Costo completo de la sesión: no declarado por el proveedor, 3692302 tokens. Registralo en el ticket cuya sesión sea propia, o declaralo compartido donde corresponda. Sesión \"Saludo amistoso\".",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-009"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-01",
+    "session_reference": "cron_489da7b8e9b2_20260930_213020",
+    "model": "opencode-go/deepseek-v4.1-flash",
+    "reasoning_effort": null,
+    "notes": "Agente hermes:cron. 55 intervención(es) sobre el registro, 0 con fallo. 0 de 96 mensajes tocaron el registro. Razonamiento 28544 tokens, caché leída 5168896 tokens. Sesión \"parte-diario-del-harness · Sep 30 21:35\". Proveedor por suscripción: no hay coste por token, se registran los tokens.",
+    "input_tokens": 143457,
+    "output_tokens": 46436,
+    "total_tokens": 218437,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-010"
   }
 ]
 ```
@@ -254,6 +403,132 @@ Sin publicar todavía.
     "action": "ai-usage-added",
     "actor": "cli",
     "details": "Se agregó CONSUMO-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-01",
+    "at": "2026-10-01T17:32:00.388Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-004."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-10-01",
+    "at": "2026-10-01T17:32:49.727Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-01",
+    "at": "2026-10-01T17:43:24.487Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-01",
+    "at": "2026-10-01T17:43:24.658Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-01",
+    "at": "2026-10-01T17:43:48.244Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-01",
+    "at": "2026-10-01T17:43:48.410Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-01",
+    "at": "2026-10-01T17:43:50.251Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-005."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-01",
+    "at": "2026-10-01T17:43:50.295Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-006."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-01",
+    "at": "2026-10-01T17:43:50.330Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-007."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-01",
+    "at": "2026-10-01T17:43:50.366Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-008."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-01",
+    "at": "2026-10-01T17:43:50.402Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-009."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-01",
+    "at": "2026-10-01T17:43:50.439Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-010."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-01",
+    "at": "2026-10-01T17:43:50.477Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-01",
+    "at": "2026-10-01T17:44:02.008Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```

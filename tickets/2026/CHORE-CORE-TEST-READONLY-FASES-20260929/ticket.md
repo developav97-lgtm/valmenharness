@@ -4,8 +4,8 @@ id: CHORE-CORE-TEST-READONLY-FASES-20260929
 title: Tests de solo lectura para derivación y API de fases
 type: CHORE
 module: CORE
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -13,7 +13,7 @@ migration_impact: false
 docker_impact: false
 risk_level: normal
 created: 2026-09-29
-updated: 2026-09-30
+updated: 2026-10-01
 related_ticket: null
 target_release: null
 released_in: null
@@ -94,6 +94,8 @@ Viene de una feature descompuesta en sprints; su plan completo está en el ticke
 
 ## Pruebas
 
+- Resultado del PO: probado por el PO en Mission Control en vivo — port 4175, banda de fases visible y en vivo, sesiones por fase y fuente kanban revisadas. Sus palabras el 2026-10-01: «Dale listo ya las vi entonces podemos proseguir a cerrar los tickets»
+
 - Comandos corridos por la sesión del eslabón, no reportados por el ejecutor:
   1. `npx vitest run tests/readonly-fases.test.ts` → `Test Files 1 passed (1)` · `Tests 3 passed (3)` (44 ms).
   2. `npx vitest run` → `Test Files 87 passed | 1 skipped (88)` · `Tests 1646 passed | 48 skipped (1694)` (64 s de duración).
@@ -105,7 +107,28 @@ Viene de una feature descompuesta en sprints; su plan completo está en el ticke
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-01",
+    "build_reference": "worktree:sha256:4f05d755b4ee6a928d22272d6219e6b9a301b8bdf009f291cd13d6b179e01aa1",
+    "environment": "Mission Control port 4175, navegador + suite vitest del repo",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-01",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "Dale listo ya las vi entonces podemos proseguir a cerrar los tickets"
+  }
+]
 ```
 
 ## Evidencia
@@ -117,6 +140,14 @@ Viene de una feature descompuesta en sprints; su plan completo está en el ticke
     "date": "2026-10-01",
     "kind": "automated-test",
     "description": "Suite de solo lectura: npx vitest run tests/readonly-fases.test.ts -> 3/3 en 44 ms; npx vitest run -> 87 archivos en verde (1646 pruebas pasadas, 48 omitidas); npm run typecheck -> sin errores. Sensibilidad verificada: con una escritura inyectada y revertida en el camino de lectura del endpoint (server.ts) el caso (c) se puso rojo, y con una inyectada y revertida dentro del caso (a) el (a) se puso rojo. El arbol hasheado es tests/readonly-fases.test.ts, unico archivo del ticket, en orden alfabetico.",
+    "reference": "worktree:sha256:4f05d755b4ee6a928d22272d6219e6b9a301b8bdf009f291cd13d6b179e01aa1",
+    "point_id": null
+  },
+  {
+    "id": "EVIDENCE-002",
+    "date": "2026-10-01",
+    "kind": "verification",
+    "description": "QA del cierre: las pruebas del PO en Mission Control port 4175 y la suite del arbol final. El arbol hasheado son los archivos del ticket en orden alfabetico.",
     "reference": "worktree:sha256:4f05d755b4ee6a928d22272d6219e6b9a301b8bdf009f291cd13d6b179e01aa1",
     "point_id": null
   }
@@ -132,7 +163,19 @@ Viene de una feature descompuesta en sprints; su plan completo está en el ticke
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-01",
+    "technical_summary": "Suite de solo lectura de la derivacion y del endpoint de fases: casos de avance, fase unica, disponibilidad y 404; verificado que las corridas no escriben el registro",
+    "functional_summary": "La pantalla del ticket muestra la linea de fases como banda con su duracion y fase en curso, actualizada en vivo sin recargar; probado por el PO en Mission Control.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "none"
+  }
+]
 ```
 
 ## Consumo de IA
@@ -198,6 +241,111 @@ Viene de una feature descompuesta en sprints; su plan completo está en el ticke
     "source": "opencode:/Users/juanandrade/.local/share/opencode/opencode.db",
     "confidence": "high",
     "id": "CONSUMO-004"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-01",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Sesiones Hermes kanban del eslabon, 6 corrida(s) agregadas. Lectura al cierre, proveedor por suscripcion, costo no declarado.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": 5582902,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
+    "confidence": "medium",
+    "id": "CONSUMO-005"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-01",
+    "session_reference": "ses_f0a85e75fffeeaPLg3hLMMCBRT",
+    "model": "openai/gpt-6.1-sol",
+    "reasoning_effort": null,
+    "notes": "Sesion OpenCode del eslabon",
+    "input_tokens": 24,
+    "output_tokens": 4099,
+    "total_tokens": 4507,
+    "estimated_cost_usd": 0.1795239,
+    "source": "opencode:/Users/juanandrade/.local/share/opencode/opencode.db",
+    "confidence": "high",
+    "id": "CONSUMO-006"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-01",
+    "session_reference": "ses_f0a83e8e2ffeToRUEeJ3dkxUVs",
+    "model": "opencode-go/deepseek-v4.1-flash",
+    "reasoning_effort": null,
+    "notes": "Sesion OpenCode del eslabon",
+    "input_tokens": 75183,
+    "output_tokens": 7354,
+    "total_tokens": 93920,
+    "estimated_cost_usd": 0.024893154,
+    "source": "opencode:/Users/juanandrade/.local/share/opencode/opencode.db",
+    "confidence": "high",
+    "id": "CONSUMO-007"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-01",
+    "session_reference": "20260930_190853_c11507",
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Agente hermes:desktop. Sesión **compartida**: trabajó 3 tickets (CHORE-CORE-TEST-READONLY-FASES-20260929 ×64, FEATURE-ENGINE-ROLES-ENRUTAMIENTO-20260926 ×9, FEATURE-CORE-TEST-READONLY-FASES-20260929 ×3), así que su costo no se reparte y acá no se registran números. Costo completo de la sesión: no declarado por el proveedor, 2022463 tokens. Registralo en el ticket cuya sesión sea propia, o declaralo compartido donde corresponda. Sesión \"Corregir retrasos y organizar tarjetas kanban\".",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-008"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-01",
+    "session_reference": "20260930_200347_729fcb19",
+    "model": "opencode-go/glm-5.3-flash",
+    "reasoning_effort": null,
+    "notes": "Agente hermes:slack. 9 intervención(es) sobre el registro, 0 con fallo. 0 de 18 mensajes tocaron el registro. Razonamiento 0 tokens, caché leída 194048 tokens. Sesión \"Apruebo compuerta para continuar\". Proveedor por suscripción: no hay coste por token, se registran los tokens.",
+    "input_tokens": 45038,
+    "output_tokens": 5715,
+    "total_tokens": 50753,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/saiopencloud/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-009"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-01",
+    "session_reference": "20260930_220146_c19ce1",
+    "model": "opencode-go/glm-5.3-flash",
+    "reasoning_effort": null,
+    "notes": "Agente hermes:kanban. 3 intervención(es) sobre el registro, 0 con fallo. 2 de 6 mensajes tocaron el registro. Razonamiento 316 tokens, caché leída 85120 tokens. Sesión \"eslabon 3 de 7 · timeline-fases · jornada 2026-09-30 #3\". Proveedor por suscripción: no hay coste por token, se registran los tokens.",
+    "input_tokens": 54014,
+    "output_tokens": 562,
+    "total_tokens": 54892,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-010"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-01",
+    "session_reference": "20260930_223525_907242",
+    "model": "opencode-go/deepseek-v4.1-flash",
+    "reasoning_effort": null,
+    "notes": "Agente hermes:kanban. 30 intervención(es) sobre el registro, 0 con fallo. 4 de 52 mensajes tocaron el registro. Razonamiento 14618 tokens, caché leída 2072576 tokens. Sesión \"eslabon 3 de 7 · timeline-fases · jornada 2026-09-30 #5\". Proveedor por suscripción: no hay coste por token, se registran los tokens.",
+    "input_tokens": 134327,
+    "output_tokens": 21151,
+    "total_tokens": 170096,
+    "estimated_cost_usd": null,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-011"
   }
 ]
 ```
@@ -308,6 +456,132 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-10-01",
+    "at": "2026-10-01T17:32:00.563Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-005."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-01",
+    "at": "2026-10-01T17:32:00.716Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-006."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-01",
+    "at": "2026-10-01T17:32:00.863Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-007."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-01",
+    "at": "2026-10-01T17:32:50.121Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-01",
+    "at": "2026-10-01T17:42:42.089Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-01",
+    "at": "2026-10-01T17:42:42.277Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-01",
+    "at": "2026-10-01T17:43:50.608Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-01",
+    "at": "2026-10-01T17:43:50.747Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-01",
+    "at": "2026-10-01T17:43:51.280Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-008."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-01",
+    "at": "2026-10-01T17:43:51.322Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-009."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-01",
+    "at": "2026-10-01T17:43:51.360Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-010."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-01",
+    "at": "2026-10-01T17:43:51.396Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-011."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-01",
+    "at": "2026-10-01T17:43:51.435Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-025",
+    "date": "2026-10-01",
+    "at": "2026-10-01T17:44:02.554Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
