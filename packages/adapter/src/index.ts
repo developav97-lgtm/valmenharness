@@ -19,3 +19,4 @@ export * from "./skills.js";
 export * from "./mcp.js";
 export * from "./hermes-relay.js";
 export * from "./blueprints.js";
+export * from "./kanban.js";
