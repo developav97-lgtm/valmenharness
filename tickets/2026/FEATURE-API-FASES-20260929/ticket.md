@@ -72,11 +72,42 @@ Viene de una feature descompuesta en sprints; su plan completo está en el ticke
 
 ## Implementación
 
-Pendiente.
+Ronda 1 (commit 40eba3c): ruta `GET /api/ticket/fases` en
+`packages/server/src/server.ts` (despachador por `url.pathname` exacto, como las
+rutas anteriores), sesión OpenCode `ses_f0b89160cffetWs7A4SrlfveuD`.
+
+Ronda 2 (retracción de la review): OpenCode sesión
+`ses_f0b47468effeqYhEvinGfuSh2a` —el primer intento, `ses_f0b4d7e56ffeltGry9XlaOmHO1`,
+murió porque en modo no interactivo OpenCode auto-rechaza los permisos de
+`external_directory`; se relanzó con `--auto`—:
+
+- `packages/server/src/server.ts`: helper puro `sesionesPorTramo` (agrupa las
+  sesiones por el tramo `[inicio, fin)` de cada fase; el fin pertenece a la fase
+  siguiente; la fase en curso, sin `fin`, toma todo lo posterior a su inicio; un
+  tramo con una punta no parseable no atribuye ninguna sesión) y el cuerpo del
+  endpoint agrega `sesionesPorFase` al nivel del body: array alineado con
+  `fases`, de los mismos objetos de `timeline.sessions` —vista, no recorte—.
+  Con `timeline.disponible: false` queda un array vacío por fase.
+- `tests/api-fases-api.test.ts`: caso (e) «agrupa cada sesión en el tramo de la
+  fase en la que corrió» con base falsa de opencode v2 escrita en el HOME
+  aislado (`session_v2` + `session_message`, sesiones de 08:34:30 en
+  `planned` y 09:07:30 en `in_progress`), bajo `describe.skipIf(sqlite() ===
+  null)` —la misma técnica de `tests/timeline.test.ts`—; el caso (c) quedó
+  extendido: sin base también hay un array vacío por fase.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Ronda 2, reproducidas por la sesión del worker (no por OpenCode):
+
+- `npx vitest run tests/api-fases-api.test.ts tests/api-rutas.test.ts`: 11/11
+  pasadas (5 + 6).
+- `npx vitest run`: batería completa, 86 archivos pasados / 1 omitido,
+  1643 pruebas pasadas / 48 omitidas.
+- `npx tsc --build`: sin errores.
+
+Criterios: R-S1-001 y R-S1-003 verificados por su test (las casillas tildadas
+declaran la anotación `test:` intacta); R-S1-004 es `verify: manual` y queda
+sin tildar.
 
 ## QA
 
@@ -102,6 +133,14 @@ Pendiente de ejecución.
     "kind": "automated-test",
     "description": "Commit 40eba3c: implementacion y pruebas del endpoint. npx vitest run tests/api-fases-api.test.ts tests/api-rutas.test.ts 10/10 pasadas; bateria completa 1642 pasadas/48 omitidas; typecheck limpio; valmen secrets sin hallazgos antes del commit.",
     "reference": "commit:40eba3ce4abf27946ca48b5861c4b92a9221cccc",
+    "point_id": null
+  },
+  {
+    "id": "EVIDENCE-003",
+    "date": "2026-09-30",
+    "kind": "external-command",
+    "description": "Sesión OpenCode ses_f0b47468effeqYhEvinGfuSh2a (modelo opencode-go/deepseek-v4.1-flash, 2026-09-30): retracción de la review ronda 1 — helper sesionesPorTramo y sesionesPorFase en packages/server/src/server.ts, caso (e) con base v2 falsa y caso (c) extendido en tests/api-fases-api.test.ts. La primera corrida (ses_f0b4d7e56ffeltGry9XlaOmHO1) murió por permisos external_directory auto-rechazados en modo no interactivo; se relanzó con --auto. 34 mensajes en su historial al momento de registrar; el diff quedó en el árbol sin commitear.",
+    "reference": null,
     "point_id": null
   }
 ]
@@ -167,6 +206,66 @@ Pendiente de ejecución.
     "source": "opencode:/Users/juanandrade/.local/share/opencode/opencode.db",
     "confidence": "high",
     "id": "CONSUMO-003"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-30",
+    "session_reference": "20260930_174451_97636c",
+    "model": "opencode-go/glm-5.3-flash",
+    "reasoning_effort": null,
+    "notes": "Sesion Hermes de la review ronda 1 del eslabon 2 (kanban t_49571ce9): lente de artefacto, veredicto changes_requested publicado. Numeros leidos de session_model_usage al cerrar la corrida (12 llamadas, 352681 entrada / 12778 salida / 334464 cache). Proveedor opencode-go por suscripcion: coste no declarado (0).",
+    "input_tokens": 352681,
+    "output_tokens": 12778,
+    "total_tokens": 365459,
+    "estimated_cost_usd": 0,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-004"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-30",
+    "session_reference": "20260930_180117_bd4072",
+    "model": "opencode-go/glm-5.3-flash",
+    "reasoning_effort": null,
+    "notes": "Sesion Hermes del eslabon 2 (kanban t_49571ce9, retraccion de la ronda 1): lectura del veredicto, preparacion del alcance cerrado de OpenCode, dos corridas (la 1a murio por permisos auto-rechazados), verificacion propia del diff y de las pruebas, consumos, ticket, commit y transiciones. Numeros leidos de session_model_usage al momento de registrar: la fila crece hasta que el turno termina. Proveedor opencode-go por suscripcion: coste no declarado (0).",
+    "input_tokens": 2052374,
+    "output_tokens": 47827,
+    "total_tokens": 2100201,
+    "estimated_cost_usd": 0,
+    "source": "hermes:/Users/juanandrade/.hermes/profiles/valmen-harness/state.db",
+    "confidence": "high",
+    "id": "CONSUMO-005"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-30",
+    "session_reference": "ses_f0b4d7e56ffeltGry9XlaOmHO1",
+    "model": "opencode-go/deepseek-v4.1-flash",
+    "reasoning_effort": null,
+    "notes": "Sesion OpenCode abortada de la retraccion (1er intento, 3 mensajes): murio porque en modo no interactivo auto-rechaza el permiso external_directory sobre el arbol; no toco ninguna linea. Coste medido de la base: 0.002250177 USD (proveedor cobrable, no estimado esta vez); la dejo con el valor de la base",
+    "input_tokens": 12657,
+    "output_tokens": 194,
+    "total_tokens": 12906,
+    "estimated_cost_usd": 0.002250177,
+    "source": "opencode:/Users/juanandrade/.local/share/opencode/opencode.db",
+    "confidence": "high",
+    "id": "CONSUMO-006"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-09-30",
+    "session_reference": "ses_f0b47468effeqYhEvinGfuSh2a",
+    "model": "opencode-go/deepseek-v4.1-flash",
+    "reasoning_effort": null,
+    "notes": "Sesion OpenCode de la retraccion (2a corrida, con --auto): sesionesPorTramo en server.ts, caso (e) con base v2 falsa y caso (c) extendido; 34 mensajes al momento de registrar. Coste medido de la base: 0.023125877 USD (el proveedor esta vez declaro precio por mensaje).",
+    "input_tokens": 64161,
+    "output_tokens": 7216,
+    "total_tokens": 79315,
+    "estimated_cost_usd": 0.023125877,
+    "source": "opencode:/Users/juanandrade/.local/share/opencode/opencode.db",
+    "confidence": "high",
+    "id": "CONSUMO-007"
   }
 ]
 ```
@@ -286,6 +385,15 @@ Sin publicar todavía.
     "action": "evidence-added",
     "actor": "cli",
     "details": "Se agregó EVIDENCE-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-09-30",
+    "at": "2026-09-30T23:58:47.065Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-003."
   }
 ]
 ```

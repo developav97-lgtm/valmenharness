@@ -7,7 +7,10 @@
  * aparezca con su fase única desde el `at` de la creación, que la falta de base
  * de contabilidad se declare con `timeline.disponible: false` —y no se disfrace
  * con una lista vacía— y que un ticket inexistente responda 404 con el recurso,
- * no con «Ruta no encontrada».
+ * no con «Ruta no encontrada». También que las sesiones se agrupen por el tramo
+ * de cada fase en `sesionesPorFase` —alineada con `fases` y como una vista, sin
+ * recortar `timeline.sessions`— y que sin base la estructura vacía por fase siga
+ * existiendo.
  *
  * Se construye un registro de prueba con `writeFixtureTicket` y se le reescribe
  * el bloque `Eventos` con la forma real del motor (`action: "ticket-transition"`,
@@ -19,6 +22,7 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createRequire } from "node:module";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -35,6 +39,12 @@ interface Fase {
   readonly fin: string | null;
   readonly ms: number | null;
   readonly enCurso: boolean;
+}
+
+/** Una sesión de la línea de tiempo, con lo que estas pruebas afirman de ella. */
+interface Sesion {
+  readonly id: string;
+  readonly startedAt: number;
 }
 
 /** Un evento del registro, con la forma real del motor. */
@@ -125,6 +135,76 @@ async function pedirFases(ticket: string): Promise<{ status: number; body: unkno
   );
 }
 
+const requerir = createRequire(import.meta.url);
+
+/** El módulo del núcleo, o `null` si esta versión de Node no lo trae. */
+function sqlite(): { DatabaseSync: new (ruta: string) => SqliteDb } | null {
+  try {
+    return requerir("node:sqlite") as { DatabaseSync: new (ruta: string) => SqliteDb };
+  } catch {
+    return null;
+  }
+}
+
+/** Lo mínimo de la interfaz de la base que usan estas pruebas. */
+interface SqliteDb {
+  exec(sql: string): void;
+  prepare(sql: string): { run(...valores: unknown[]): void };
+  close(): void;
+}
+
+/**
+ * Escribe una base falsa de opencode v2 en el HOME aislado del `beforeEach`.
+ *
+ * Es la técnica de `escribirBaseV2` de `tests/timeline.test.ts` reducida a lo que
+ * este caso necesita: la sesión en `session_v2` con su `time_created`, de donde
+ * sale el `startedAt`. El título lleva el identificador del ticket porque, sin
+ * llamadas al registro, el lector v2 atribuye la sesión por mención del título o
+ * del primer mensaje del usuario. El `directory` es el laboratorio, que es el que
+ * pide el endpoint.
+ */
+function escribirBaseV2(
+  sesiones: readonly {
+    readonly id: string;
+    readonly title: string;
+    readonly timeCreated: number;
+  }[],
+): void {
+  const modulo = sqlite();
+  if (modulo === null) return;
+
+  mkdirSync(join(lab, ".local", "share", "opencode"), { recursive: true });
+  const db = new modulo.DatabaseSync(join(lab, ".local", "share", "opencode", "opencode.db"));
+
+  db.exec(`
+    CREATE TABLE session_v2 (
+      id text PRIMARY KEY, title text, cost real, tokens_input integer,
+      tokens_output integer, tokens_reasoning integer, tokens_cache_read integer,
+      agent text, model text, directory text, time_created integer
+    );
+    CREATE TABLE session_message (
+      id text PRIMARY KEY, session_id text, type text, data text, time_created integer
+    );
+  `);
+
+  for (const sesion of sesiones) {
+    db.prepare("INSERT INTO session_v2 VALUES (?,?,?,?,?,?,?,?,?,?,?)").run(
+      sesion.id,
+      sesion.title,
+      0,
+      0,
+      0,
+      0,
+      0,
+      "build",
+      "deepseek-v4.1-flash",
+      lab,
+      sesion.timeCreated,
+    );
+  }
+  db.close();
+}
+
 describe("GET /api/ticket/fases", () => {
   it("(a) deriva las fases de las transiciones del bloque Eventos", async () => {
     const id = "FEATURE-PRUEBA-FASES-20260929";
@@ -197,11 +277,20 @@ describe("GET /api/ticket/fases", () => {
 
     const r = await pedirFases(id);
     expect(r.status).toBe(200);
-    const cuerpo = r.body as { timeline: { disponible: boolean } };
+    const cuerpo = r.body as {
+      fases: Fase[];
+      timeline: { disponible: boolean };
+      sesionesPorFase: unknown[][];
+    };
 
     // `false` es distinto de una línea vacía: la pantalla tiene que poder decir
     // «no hay datos» en vez de mostrar un cero que se lee como «no costó nada».
     expect(cuerpo.timeline.disponible).toBe(false);
+
+    // La falta de datos es una estructura vacía —un tramo por fase—, no una
+    // lista recortada que oculte las fases que sí existen.
+    expect(cuerpo.sesionesPorFase).toHaveLength(cuerpo.fases.length);
+    expect(cuerpo.sesionesPorFase).toEqual(cuerpo.fases.map(() => []));
   });
 
   it("(d) un ticket inexistente responde 404 con el identificador", async () => {
@@ -209,5 +298,66 @@ describe("GET /api/ticket/fases", () => {
 
     expect(r.status).toBe(404);
     expect((r.body as { error: string }).error).toContain("NO-EXISTE");
+  });
+});
+
+describe.skipIf(sqlite() === null)("GET /api/ticket/fases: sesiones por fase", () => {
+  it("(e) agrupa cada sesión en el tramo de la fase en la que corrió", async () => {
+    const id = "FEATURE-PRUEBA-FASES-SESIONES-20260929";
+    escribirTicket(
+      id,
+      [
+        creado("2026-09-29T07:00:00.000Z"),
+        transicion("intake", "analyzed", "2026-09-29T08:00:00.000Z"),
+        transicion("analyzed", "planned", "2026-09-29T08:30:00.000Z"),
+        transicion("planned", "in_progress", "2026-09-29T09:00:00.000Z"),
+      ],
+      "in_progress",
+    );
+
+    // Dos sesiones con `startedAt` controlado: una dentro del tramo de `planned`
+    // (08:30–09:00) y otra dentro del de `in_progress` (abierto a las 09:00).
+    escribirBaseV2([
+      {
+        id: "ses_fases_a",
+        title: `TICKET: ${id}`,
+        timeCreated: Date.parse("2026-09-29T08:34:30.000Z"),
+      },
+      {
+        id: "ses_fases_b",
+        title: `TICKET: ${id}`,
+        timeCreated: Date.parse("2026-09-29T09:07:30.000Z"),
+      },
+    ]);
+
+    const r = await pedirFases(id);
+    expect(r.status).toBe(200);
+    const cuerpo = r.body as {
+      fases: Fase[];
+      timeline: { disponible: boolean; sessions: Sesion[] };
+      sesionesPorFase: Sesion[][];
+    };
+
+    expect(cuerpo.timeline.disponible).toBe(true);
+    expect(cuerpo.sesionesPorFase).toHaveLength(cuerpo.fases.length);
+
+    const indiceDe = (estado: string): number => {
+      const indice = cuerpo.fases.findIndex((fase) => fase.estado === estado);
+      expect(indice).toBeGreaterThanOrEqual(0);
+      return indice;
+    };
+    const tramoDe = (estado: string): Sesion[] => cuerpo.sesionesPorFase[indiceDe(estado)] ?? [];
+
+    expect(tramoDe("planned").map((s) => s.id)).toEqual(["ses_fases_a"]);
+    expect(tramoDe("in_progress").map((s) => s.id)).toEqual(["ses_fases_b"]);
+    expect(tramoDe("intake")).toEqual([]);
+    expect(tramoDe("analyzed")).toEqual([]);
+
+    // La agrupación es una vista, no un recorte: las sesiones siguen completas en
+    // la lista plana y son el mismo objeto que aparece en su tramo.
+    const plana = new Map(cuerpo.timeline.sessions.map((sesion) => [sesion.id, sesion]));
+    expect([...plana.keys()].sort()).toEqual(["ses_fases_a", "ses_fases_b"]);
+    expect(tramoDe("planned")[0]).toBe(plana.get("ses_fases_a"));
+    expect(tramoDe("in_progress")[0]).toBe(plana.get("ses_fases_b"));
   });
 });

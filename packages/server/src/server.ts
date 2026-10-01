@@ -43,6 +43,7 @@ import {
   standardsFiles,
   type TicketFilters,
   fasesPorTicket,
+  type FaseDeTicket,
   filterTickets,
   findTicket,
   listTickets,
@@ -210,6 +211,43 @@ function transitionsOf(
 function valorDeQuery(query: URLSearchParams, nombre: string): string | undefined {
   const valor = query.get(nombre);
   return valor === null || valor === "" ? undefined : valor;
+}
+
+/**
+ * Agrupa las sesiones por el tramo de cada fase, por su hora de inicio.
+ *
+ * La lista vuelve alineada con `fases`: misma longitud y mismo orden, así que
+ * `resultado[i]` es lo que corrió durante la fase `i`. Una sesión entra al tramo
+ * si su `startedAt` cae en `[inicio, fin)`: el fin pertenece a la fase siguiente
+ * —dos marcas consecutivas no se pisan—. La fase en curso, con `fin` en `null`,
+ * recibe todas las sesiones desde su inicio.
+ *
+ * Un tramo con una punta que no se puede parsear no atribuye ninguna sesión: una
+ * hora inventada ubicaría trabajo en una fase equivocada, y un cero se leería
+ * como un dato. La agrupación es una **vista**: devuelve los mismos objetos que
+ * recibe, sin recortarlos ni transformarlos, y no toca el disco.
+ */
+function sesionesPorTramo<S extends { readonly startedAt: number }>(
+  sesiones: readonly S[],
+  fases: readonly Pick<FaseDeTicket, "inicio" | "fin">[],
+): S[][] {
+  return fases.map((fase) => {
+    if (fase.inicio === null) return [];
+    const inicio = Date.parse(fase.inicio);
+    if (Number.isNaN(inicio)) return [];
+
+    // Sin fin declarado la fase corre ahora: todo lo posterior a su inicio entra.
+    // Un fin que no parsea invalida el tramo entero, igual que un inicio roto.
+    let fin: number | null = null;
+    if (fase.fin !== null) {
+      fin = Date.parse(fase.fin);
+      if (Number.isNaN(fin)) return [];
+    }
+
+    return sesiones.filter(
+      (sesion) => sesion.startedAt >= inicio && (fin === null || sesion.startedAt < fin),
+    );
+  });
 }
 
 /**
@@ -680,13 +718,19 @@ export async function handleApi(
     }
 
     const linea = leerLineaDeTiempo(directory, { ticketId: ticket });
+    const fases = fasesPorTicket(detalle.events);
     return {
       status: 200,
       body: {
         ticket,
-        fases: fasesPorTicket(detalle.events),
+        fases,
         timeline:
           linea === null ? { disponible: false } : { disponible: true, ...linea },
+        // La vista por fase de la misma lista de sesiones: la lista plana sigue
+        // completa y esto solo dice en qué tramo cayó cada una. Sin base de
+        // contabilidad queda una estructura vacía por fase, no una lista
+        // recortada que se lea como «no hubo sesiones».
+        sesionesPorFase: sesionesPorTramo(linea === null ? [] : linea.sessions, fases),
       },
     };
   }
