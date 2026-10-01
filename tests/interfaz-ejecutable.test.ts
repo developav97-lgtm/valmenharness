@@ -16,10 +16,23 @@
  * compartirían ese estado y el segundo resultado no diría nada del código.
  */
 import { spawnSync } from "node:child_process";
+import {
+  mkdtempSync,
+  readFileSync,
+  rmdirSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
+import {
+  fasesPorTicket,
+  readTicket,
+  type FaseDeTicket,
+} from "../packages/engine/src/index.js";
 import {
   VISTAS,
   ejecutarInterfaz,
@@ -86,6 +99,357 @@ describe("la interfaz de Mission Control", () => {
 
     expect(resultado.stdout).toContain("DIJO-FALLO");
     expect(resultado.stdout).toContain("pintarLineaDeTiempo");
+  });
+});
+
+describe("la banda de fases del ticket", () => {
+  const ID = "FEATURE-UI-BANDA-FASES-20260929";
+  const ticket = readTicket({ root: RAIZ, ticketsDir: "tickets" }, ID);
+  if (ticket === null) throw new Error(`Falta el ticket de prueba ${ID}`);
+  // La fase única sale de la creación real del registro, no de una forma inventada.
+  const faseUnica = fasesPorTicket(
+    ticket.events.filter((evento) => evento["action"] === "created"),
+  );
+
+  function pintar(fases: readonly FaseDeTicket[], caida: boolean | "pendiente" = false) {
+    return ejecutarInterfaz(HTML, {
+      hash: `#/ticket/${ID}`,
+      respuesta: (ruta) => {
+        const url = new URL(ruta, "http://localhost");
+        if (url.pathname === "/api/ticket/fases") {
+          expect(url.searchParams.get("ticket")).toBe(ID);
+          if (caida === "pendiente") return new Promise(() => {});
+          if (caida) throw new Error("API de fases no disponible");
+          return {
+            ticket: ID,
+            fases,
+            timeline: { disponible: false },
+            sesionesPorFase: [],
+            kanban: null,
+          };
+        }
+        if (url.pathname === `/api/tickets/${ID}/gates`) {
+          return { gates: [], decisions: [], corrections: [], transitions: null };
+        }
+        if (url.pathname === `/api/tickets/${ID}`) return ticket;
+        if (url.pathname === "/api/timeline") return { available: false };
+        if (url.pathname === "/api/health") return { root: RAIZ };
+        return {};
+      },
+    });
+  }
+
+  function conClase(nodo: NodoFalso | undefined, clase: string): NodoFalso[] {
+    if (nodo === undefined) return [];
+    return [
+      ...(nodo.className?.split(" ").includes(clase) ? [nodo] : []),
+      ...nodo.children.flatMap((hijo) => conClase(hijo, clase)),
+    ];
+  }
+
+  function texto(nodo: NodoFalso): string {
+    return [nodo._texto ?? "", ...nodo.children.map(texto)].join(" ");
+  }
+
+  async function montarEnVivo() {
+    // Se expone solo el transporte y el clic del DOM mínimo; se ejecutan la vista,
+    // el filtro SSE, la cortesía y el temporizador reales, sin sustituir su lógica.
+    const temporal = mkdtempSync(join(tmpdir(), "valmen-sse-fases-"));
+    const html = join(temporal, "index.html");
+    const entorno = globalThis as typeof globalThis & {
+      pruebaSSE: {
+        eventos: { onmessage: (mensaje: { data: string }) => void };
+        retomar: () => void;
+      };
+      document: {
+        activeElement: { tagName: string } | null;
+        querySelector: (selector: string) => object | null;
+        getElementById: (id: string) => { hidden?: boolean };
+      };
+      location: { hash: string };
+    };
+    let fases = faseUnica;
+    let caida = false;
+    const llamadas: string[] = [];
+    writeFileSync(
+      html,
+      readFileSync(HTML, "utf8").replace(
+        '<script type="module">',
+        `<script type="module">
+          document.activeElement = null;
+          globalThis.pruebaSSE = {};
+          const TransporteDePrueba = globalThis.EventSource;
+          globalThis.EventSource = class extends TransporteDePrueba {
+            constructor(...args) {
+              super(...args);
+              globalThis.pruebaSSE.eventos = this;
+            }
+          };
+          document.getElementById("hay-cambios").addEventListener = (tipo, accion) => {
+            if (tipo === "click") globalThis.pruebaSSE.retomar = accion;
+          };
+        `,
+      ),
+    );
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const resultado = await ejecutarInterfaz(html, {
+        hash: `#/ticket/${ID}`,
+        respuesta: (ruta) => {
+          llamadas.push(ruta);
+          const url = new URL(ruta, "http://localhost");
+          if (url.pathname === "/api/ticket/fases") {
+            expect(url.searchParams.get("ticket")).toBe(ID);
+            if (caida) throw new Error("API de fases no disponible");
+            return { ticket: ID, fases };
+          }
+          if (url.pathname === `/api/tickets/${ID}/gates`) {
+            return { gates: [], decisions: [], corrections: [], transitions: null };
+          }
+          if (url.pathname === `/api/tickets/${ID}`) return ticket;
+          if (url.pathname === "/api/timeline") return { available: false };
+          if (url.pathname === "/api/health") return { root: RAIZ };
+          if (url.pathname === "/api/standards") return { proposals: [] };
+          if (url.pathname === "/api/tickets") return { tickets: [] };
+          return {};
+        },
+      });
+      const banda = conClase(resultado.contenido, "banda-fases")[0]!;
+      const tramosIniciales = conClase(banda, "banda-fase");
+      const resto = resultado.contenido!.children.filter((nodo) => nodo !== banda);
+      const contenidoDelResto = resto.map(texto);
+      return {
+        resultado,
+        banda,
+        tramosIniciales,
+        resto,
+        contenidoDelResto,
+        llamadas,
+        entorno,
+        nuevasFases: () => {
+          fases = fasesPorTicket([
+            { action: "created", at: "2026-09-29T10:00:00Z", details: "Creado." },
+            {
+              action: "ticket-transition",
+              at: "2026-09-29T11:30:00Z",
+              details: "Workflow: intake -> in_progress.",
+            },
+          ]);
+        },
+        caer: () => { caida = true; },
+        avisar: (id = ID) => entorno.pruebaSSE.eventos.onmessage({
+          data: JSON.stringify({ paths: [`tickets/2026/${id}/ticket.md`] }),
+        }),
+        esperar: async (ms = 300) => {
+          await vi.advanceTimersByTimeAsync(ms);
+          for (let i = 0; i < 10; i += 1) await new Promise<void>((r) => setImmediate(r));
+        },
+      };
+    } finally {
+      unlinkSync(html);
+      rmdirSync(temporal);
+    }
+  }
+
+  it("un aviso SSE propio refresca solo la banda con el margen de 300 ms", async () => {
+    try {
+      const vivo = await montarEnVivo();
+      vivo.nuevasFases();
+      const detalleAntes = vivo.llamadas.filter((ruta) => ruta === `/api/tickets/${ID}`).length;
+      vivo.avisar();
+      vivo.avisar();
+      await vivo.esperar(299);
+      expect(conClase(vivo.banda, "banda-fase")).toEqual(vivo.tramosIniciales);
+      await vivo.esperar(1);
+      expect(conClase(vivo.banda, "banda-fase")).toHaveLength(2);
+      expect(texto(vivo.banda)).toContain("En curso");
+      expect(conClase(vivo.resultado.contenido, "banda-fases")[0]).toBe(vivo.banda);
+      const resto = vivo.resultado.contenido!.children.filter((nodo) => nodo !== vivo.banda);
+      resto.forEach((nodo, indice) => expect(nodo).toBe(vivo.resto[indice]));
+      expect(resto.map(texto)).toEqual(vivo.contenidoDelResto);
+      expect(vivo.llamadas.filter((ruta) => ruta === `/api/tickets/${ID}`)).toHaveLength(detalleAntes);
+      expect(vivo.llamadas.filter((ruta) => ruta.startsWith("/api/ticket/fases?"))).toHaveLength(2);
+      expect(vivo.resultado.fallos).toEqual([]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("un aviso ajeno o con foco o diálogo no mueve la banda; el aviso pospuesto permite retomarla", async () => {
+    for (const ocupacion of ["foco", "dialogo", "foco durante el margen"]) {
+      try {
+        const vivo = await montarEnVivo();
+        vivo.nuevasFases();
+        vivo.avisar("FEATURE-OTRO-20260929");
+        await vivo.esperar();
+        expect(conClase(vivo.banda, "banda-fase")).toEqual(vivo.tramosIniciales);
+        expect(vivo.llamadas.filter((ruta) => ruta.startsWith("/api/ticket/fases?"))).toHaveLength(1);
+        if (ocupacion === "foco durante el margen") vivo.avisar();
+        if (ocupacion === "dialogo") {
+          vivo.entorno.document.querySelector = (selector) => selector === "dialog[open]" ? {} : null;
+        } else {
+          vivo.entorno.document.activeElement = { tagName: "INPUT" };
+        }
+        if (ocupacion !== "foco durante el margen") vivo.avisar();
+        await vivo.esperar();
+        expect(conClase(vivo.banda, "banda-fase")).toEqual(vivo.tramosIniciales);
+        expect(vivo.llamadas.filter((ruta) => ruta.startsWith("/api/ticket/fases?"))).toHaveLength(1);
+        expect(vivo.entorno.document.getElementById("hay-cambios").hidden).toBe(false);
+        vivo.entorno.document.activeElement = null;
+        vivo.entorno.document.querySelector = () => null;
+        vivo.entorno.pruebaSSE.retomar();
+        await vivo.esperar(0);
+        expect(conClase(vivo.resultado.contenido, "banda-fase")).toHaveLength(2);
+        expect(vivo.entorno.document.getElementById("hay-cambios").hidden).toBe(true);
+        expect(vivo.resultado.fallos).toEqual([]);
+      } finally {
+        vi.useRealTimers();
+      }
+    }
+  });
+
+  it("si el endpoint falla al refrescar en vivo conserva el último contenido sin error", async () => {
+    try {
+      const vivo = await montarEnVivo();
+      const contenidoAnterior = texto(vivo.banda);
+      vivo.caer();
+      vivo.avisar();
+      await vivo.esperar();
+      expect(vivo.llamadas.filter((ruta) => ruta.startsWith("/api/ticket/fases?"))).toHaveLength(2);
+      expect(conClase(vivo.resultado.contenido, "banda-fases")[0]).toBe(vivo.banda);
+      expect(texto(vivo.banda)).toBe(contenidoAnterior);
+      expect(conClase(vivo.banda, "banda-fase")).toEqual(vivo.tramosIniciales);
+      vivo.tramosIniciales.forEach((nodo, indice) =>
+        expect(conClase(vivo.banda, "banda-fase")[indice]).toBe(nodo),
+      );
+      expect(texto(vivo.banda)).not.toContain("Sin línea de fases");
+      expect(conClase(vivo.banda, "error")).toHaveLength(0);
+      expect(vivo.resultado.fallos).toEqual([]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("pinta una fase única y los tramos cerrados y en curso con sus tiempos", async () => {
+    expect(faseUnica).toHaveLength(1);
+    const unica = await pintar(faseUnica);
+    expect(unica.fallos).toEqual([]);
+    const banda = conClase(unica.contenido, "banda-fases")[0]!;
+    expect(conClase(banda, "banda-fase")).toHaveLength(1);
+    expect(conClase(banda, "actual")).toHaveLength(1);
+    expect(texto(banda)).toContain("Alta");
+    expect(texto(banda)).toContain(
+      `Inicio: ${new Date(faseUnica[0]!.inicio!).toLocaleString("es-CO")}`,
+    );
+    expect(texto(banda)).toMatch(/Tiempo llevado: \d/);
+    const hijos = unica.contenido!.children;
+    expect(hijos.indexOf(banda)).toBe(
+      hijos.indexOf(conClase(unica.contenido, "estado-ticket")[0]!) + 1,
+    );
+
+    const fases = fasesPorTicket([
+      { action: "created", at: "2026-09-29T10:00:00Z", details: "Creado." },
+      {
+        action: "ticket-transition",
+        at: "2026-09-29T11:30:00Z",
+        details: "Workflow: intake -> in_progress.",
+      },
+    ]);
+    const varias = await pintar(fases);
+    const tramos = conClase(varias.contenido, "banda-fase");
+    expect(tramos).toHaveLength(2);
+    expect(texto(tramos[0]!)).toContain("Duración: 1 h 30 min 0 s");
+    expect(texto(tramos[0]!)).toContain(
+      `Fin: ${new Date(fases[0]!.fin!).toLocaleString("es-CO")}`,
+    );
+    expect(tramos[1]!.className).toContain("actual");
+    expect(texto(tramos[1]!)).toMatch(/En curso · Tiempo llevado: \d/);
+
+    const sinHoras = await pintar([
+      { estado: "closed", inicio: null, fin: null, ms: null, enCurso: false, motivo: null },
+    ]);
+    expect(sinHoras.texto).toContain("Sin duración registrada");
+    expect(sinHoras.texto).toContain("Sin hora registrada");
+    expect(conClase(conClase(sinHoras.contenido, "banda-fases")[0], "actual")).toHaveLength(
+      0,
+    );
+  });
+
+  it("muestra el motivo dentro del tramo y usa variables del tema sin colores literales", async () => {
+    for (const estado of ["blocked", "changes_requested"]) {
+      const motivo = "Falta confirmación <img src=x onerror=alert(1)>";
+      const resultado = await pintar([
+        {
+          estado,
+          inicio: "2026-09-29T10:00:00Z",
+          fin: "2026-09-29T11:00:00Z",
+          ms: 3_600_000,
+          enCurso: false,
+          motivo,
+        },
+        {
+          estado: "in_progress",
+          inicio: "2026-09-29T11:00:00Z",
+          fin: null,
+          ms: null,
+          enCurso: true,
+          motivo: null,
+        },
+      ]);
+      const banda = conClase(resultado.contenido, "banda-fases")[0]!;
+      const bloqueo = conClase(banda, "motivo-de-bloqueo")[0]!;
+      expect(texto(bloqueo)).toContain(`Motivo del bloqueo: ${motivo}`);
+      expect(texto(bloqueo)).toContain("Duración: 1 h 0 min 0 s");
+      expect(conClase(banda, "chip")).toHaveLength(0);
+      expect(bloqueo.children.some((nodo) => nodo.tagName === "IMG")).toBe(false);
+    }
+    const reglas = readFileSync(HTML, "utf8").match(/\.banda-[^{]+\{[^}]*\}/g) ?? [];
+    expect(reglas.length).toBeGreaterThanOrEqual(7);
+    const css = reglas.join("\n");
+    expect(css).toContain("var(--acento)");
+    expect(css).toContain("var(--error)");
+    expect(css).not.toMatch(/#[\da-f]{3,8}\b|\b(?:rgba?|hsla?)\s*\(/i);
+    const colores = [
+      ...css.matchAll(/(?:color|background|border(?:-color)?)\s*:\s*([^;]+);/g),
+    ];
+    expect(colores.length).toBeGreaterThan(0);
+    for (const [, valor] of colores) {
+      // Se admite solo la geometría del borde y colores resueltos desde el tema.
+      expect(
+        valor!.replace(
+          /var\(--[\w-]+\)|color-mix\(|in srgb|[\d.]+(?:px|%)?|solid|[\s,)]/g,
+          "",
+        ),
+      ).toBe("");
+      expect(valor).toMatch(/var\(--/);
+    }
+  });
+
+  it("con la API de fases caída conserva toda la vista y muestra una fila informativa", async () => {
+    const normal = await pintar(faseUnica);
+    const caida = await pintar([], true);
+    expect(caida.fallos).toEqual([]);
+    // El criterio del propio ticket cita esa frase: no es un aviso de la UI.
+    expect(
+      caida.contenido!.children.some((nodo) =>
+        nodo._texto?.startsWith("No se pudo cargar la vista:"),
+      ),
+    ).toBe(false);
+    const banda = conClase(caida.contenido, "banda-fases")[0]!;
+    expect(texto(banda)).toContain("Sin línea de fases");
+    expect(conClase(banda, "error")).toHaveLength(0);
+    expect(conClase(banda, "banda-fase")).toHaveLength(0);
+    const resto = (nodo: NodoFalso | undefined) =>
+      nodo!.children
+        .filter((hijo) => !hijo.className?.split(" ").includes("banda-fases"))
+        .map(texto);
+    expect(resto(caida.contenido)).toEqual(resto(normal.contenido));
+    expect(caida.texto).toContain("Criterios de aceptación");
+    expect(caida.texto).toContain("Línea de tiempo y coste");
+    const pendiente = await pintar([], "pendiente");
+    expect(pendiente.fallos).toEqual([]);
+    expect(pendiente.texto).toContain("Leyendo las fases…");
+    expect(resto(pendiente.contenido)).toEqual(resto(normal.contenido));
   });
 });
 

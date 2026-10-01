@@ -1277,6 +1277,42 @@
         padding: 14px 16px;
         margin: 4px 0 18px;
       }
+      /* La banda conserva la historia temporal, separada de la navegación. */
+      .banda-fases {
+        margin: 4px 0 18px;
+        color: var(--texto);
+      }
+      .banda-fases-tramos {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .banda-fase {
+        flex: 1 1 180px;
+        min-width: 0;
+        padding: 10px 12px;
+        border: 1px solid var(--borde);
+        border-radius: 8px;
+        background: var(--panel);
+        overflow-wrap: anywhere;
+      }
+      .banda-fase.actual {
+        border-color: var(--acento);
+        background: color-mix(in srgb, var(--acento) 16%, var(--panel));
+      }
+      .banda-fase.motivo-de-bloqueo {
+        border-color: var(--error);
+      }
+      .banda-fase-tiempo {
+        color: var(--tenue);
+        font-size: 12px;
+        margin-top: 4px;
+      }
+      .banda-fase-motivo {
+        margin-top: 6px;
+        color: var(--texto);
+        font-size: 12px;
+      }
       .estado-tira {
         display: flex;
         gap: 6px;
@@ -3829,6 +3865,107 @@
         return cont;
       }
 
+      /** Solo la banda de la vista vigente puede recibir el refresco parcial. */
+      let bandaDeFasesActual = null;
+
+      /** La API de fases es complementaria: no frena el resto de la vista. */
+      function pintarBandaDeFases(cont, ticket, id) {
+        const banda = el("section", undefined, "banda-fases");
+        banda.setAttribute("aria-label", "Fases del ticket");
+        banda.append(el("h3", "Fases del ticket"));
+        const tramos = el("div", undefined, "banda-fases-tramos");
+        tramos.setAttribute("aria-live", "polite");
+        tramos.append(el("div", "Leyendo las fases…", "resultado"));
+        banda.append(tramos);
+        cont.append(banda);
+
+        const rotulos = {
+          intake: "Alta",
+          analyzed: "Analizado",
+          planned: "Plan",
+          approved: "Aprobado",
+          in_progress: "En curso",
+          awaiting_user_tests: "Pruebas",
+          in_qa: "QA",
+          qa_approved: "QA aprobado",
+          closed: "Cerrado",
+          blocked: "Bloqueado",
+          changes_requested: "Cambios solicitados",
+        };
+        const duracion = (ms) => {
+          if (ms === null || !Number.isFinite(ms)) return "Sin duración registrada";
+          const segundos = Math.floor(Math.max(0, ms) / 1000);
+          const dias = Math.floor(segundos / 86400);
+          const horas = Math.floor((segundos % 86400) / 3600);
+          const minutos = Math.floor((segundos % 3600) / 60);
+          return `${dias ? `${dias} d ` : ""}${horas} h ${minutos} min ${segundos % 60} s`;
+        };
+        const fecha = (valor) => {
+          if (valor === null || !Number.isFinite(Date.parse(valor))) {
+            return "Sin hora registrada";
+          }
+          return new Date(valor).toLocaleString("es-CO");
+        };
+
+        async function refrescar(inicial = false) {
+          try {
+            const datos = await api(
+              "GET",
+              `/api/ticket/fases?ticket=${encodeURIComponent(ticket.id)}`,
+            );
+            // Una respuesta tardía no modifica una vista abandonada ni una pantalla
+            // que quedó ocupada mientras se consultaban las fases.
+            if (
+              !inicial &&
+              (bandaDeFasesActual?.refrescar !== refrescar || !puedeRefrescar())
+            ) {
+              if (bandaDeFasesActual?.refrescar === refrescar) avisarQueHayCambios();
+              return;
+            }
+            const nuevos = [];
+            if (datos.fases.length === 0) {
+              nuevos.push(el("div", "Sin línea de fases", "resultado"));
+            }
+            for (const fase of datos.fases) {
+              const conMotivo =
+                ["blocked", "changes_requested"].includes(fase.estado) && fase.motivo;
+              const tramo = el("div", undefined, "banda-fase");
+              if (fase.enCurso) tramo.className += " actual";
+              if (conMotivo) tramo.className += " motivo-de-bloqueo";
+              tramo.append(
+                el("strong", rotulos[fase.estado] ?? fase.estado),
+                el("div", `Inicio: ${fecha(fase.inicio)}`, "banda-fase-tiempo"),
+              );
+              if (fase.enCurso) {
+                const ms = fase.inicio === null ? null : Date.now() - Date.parse(fase.inicio);
+                tramo.append(el("div", `En curso · Tiempo llevado: ${duracion(ms)}`, "banda-fase-tiempo"));
+              } else {
+                tramo.append(
+                  el("div", `Fin: ${fecha(fase.fin)}`, "banda-fase-tiempo"),
+                  el("div", `Duración: ${duracion(fase.ms)}`, "banda-fase-tiempo"),
+                );
+              }
+              if (conMotivo) {
+                tramo.append(el("div", `Motivo del bloqueo: ${fase.motivo}`, "banda-fase-motivo"));
+              }
+              nuevos.push(tramo);
+            }
+            tramos.textContent = "";
+            tramos.replaceChildren(...nuevos);
+          } catch {
+            // Solo la carga inicial muestra la fila vacía: un fallo transitorio
+            // del refresco conserva el último historial que la persona vio.
+            if (inicial) {
+              tramos.textContent = "";
+              tramos.append(el("div", "Sin línea de fases", "resultado"));
+            }
+          }
+        }
+        bandaDeFasesActual = { id, refrescar };
+        void refrescar(true);
+        return refrescar;
+      }
+
       /** El detalle de un ticket, con la pantalla de gates delante. */
       async function vistaTicket(id) {
         const cont = $("contenido");
@@ -3861,6 +3998,7 @@
 
         // El estado primero, y visual: es lo que se viene a mirar.
         cont.append(tiraDeEstado(t, abiertos));
+        pintarBandaDeFases(cont, t, id);
 
         if (t.invalid !== null) {
           const nota = el("div", undefined, "nota alerta");
@@ -6492,7 +6630,17 @@
           // Un margen corto: una mutación escribe el ticket, el índice y el
           // recibo en milisegundos, y sin él la vista se reharía tres veces.
           refrescoPendiente = setTimeout(() => {
+            if (!puedeRefrescar()) {
+              avisarQueHayCambios();
+              return;
+            }
+            if (!elCambioTocaLaVista(rutas)) return;
             marcarActualizado();
+            const [nombre, id] = location.hash.replace(/^#\//, "").split("/");
+            if (nombre === "ticket" && bandaDeFasesActual?.id === id) {
+              void bandaDeFasesActual.refrescar();
+              return;
+            }
             // Conservando la vista: refrescar no es navegar, y nadie tiene por qué
             // perder dónde estaba leyendo.
             void navegar({ conservarVista: true });
@@ -6664,6 +6812,8 @@
       }
 
       async function navegar(opciones = {}) {
+        clearTimeout(refrescoPendiente);
+        bandaDeFasesActual = null;
         const ruta = location.hash.replace(/^#\//, "") || "tickets";
         const [nombre, parametro] = ruta.split("/");
 
