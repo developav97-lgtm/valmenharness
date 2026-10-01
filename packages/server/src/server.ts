@@ -55,7 +55,11 @@ import {
   readReceipts,
 } from "@valmen/engine";
 import { type JsonObject, nextStates, parseTicket, toFailure } from "@valmen/core";
-import { architectRoutingFor } from "@valmen/adapter";
+import {
+  architectRoutingFor,
+  leerEventosDeFaseKanban,
+  tareasDeTicketKanban,
+} from "@valmen/adapter";
 import { apiKeyWithPrecedence, callChat } from "@valmen/credentials";
 
 import {
@@ -211,6 +215,52 @@ function transitionsOf(
 function valorDeQuery(query: URLSearchParams, nombre: string): string | undefined {
   const valor = query.get(nombre);
   return valor === null || valor === "" ? undefined : valor;
+}
+
+/** La línea complementaria del board, sin mezclarla con los eventos del registro. */
+function fasesDeBoard(
+  board: string,
+  ticket: string,
+): {
+  readonly disponible: boolean;
+  readonly board: string;
+  readonly tarjetas: readonly string[];
+  readonly fases: readonly FaseDeTicket[];
+  readonly motivo: string | null;
+} {
+  const tarjetas = tareasDeTicketKanban(board, ticket);
+  if (tarjetas === null) {
+    return {
+      disponible: false,
+      board,
+      tarjetas: [],
+      fases: [],
+      motivo: "No hay base legible del board o node:sqlite no está disponible.",
+    };
+  }
+
+  const eventos: JsonObject[] = [];
+  for (const tarjeta of tarjetas) {
+    const leidos = leerEventosDeFaseKanban(board, tarjeta);
+    if (leidos === null) {
+      // Una lectura fallida no puede publicarse como una línea parcial disponible.
+      return {
+        disponible: false,
+        board,
+        tarjetas,
+        fases: [],
+        motivo: `No se pudieron leer los eventos de fase de la tarjeta "${tarjeta}".`,
+      };
+    }
+    eventos.push(...leidos);
+  }
+  return {
+    disponible: true,
+    board,
+    tarjetas,
+    fases: fasesPorTicket(eventos),
+    motivo: null,
+  };
 }
 
 /**
@@ -694,7 +744,7 @@ export async function handleApi(
     return { status: 200, body: detalle };
   }
 
-  // GET /api/ticket/fases?ticket=&directory=
+  // GET /api/ticket/fases?ticket=&directory=&board=
   //
   // La secuencia de fases del ticket —cada tramo con su inicio, su fin y su
   // duración— derivada del bloque `Eventos` que ya lee el detalle del ticket, más
@@ -719,11 +769,13 @@ export async function handleApi(
 
     const linea = leerLineaDeTiempo(directory, { ticketId: ticket });
     const fases = fasesPorTicket(detalle.events);
+    const board = valorDeQuery(query, "board") ?? "default";
     return {
       status: 200,
       body: {
         ticket,
         fases,
+        kanban: fasesDeBoard(board, ticket),
         timeline:
           linea === null ? { disponible: false } : { disponible: true, ...linea },
         // La vista por fase de la misma lista de sesiones: la lista plana sigue

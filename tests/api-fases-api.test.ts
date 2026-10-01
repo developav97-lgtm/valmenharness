@@ -19,9 +19,10 @@
  * dejaría la suite en verde con el endpoint devolviendo una sola fase en un
  * ticket real.
  */
+import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { createRequire } from "node:module";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -39,6 +40,16 @@ interface Fase {
   readonly fin: string | null;
   readonly ms: number | null;
   readonly enCurso: boolean;
+  readonly motivo: string | null;
+}
+
+/** El campo complementario del board, separado de la línea del registro. */
+interface FasesDeBoard {
+  readonly disponible: boolean;
+  readonly board: string;
+  readonly tarjetas: string[];
+  readonly fases: Fase[];
+  readonly motivo: string | null;
 }
 
 /** Una sesión de la línea de tiempo, con lo que estas pruebas afirman de ella. */
@@ -125,13 +136,20 @@ function escribirTicket(
 }
 
 /** Llama al endpoint para un ticket del laboratorio. */
-async function pedirFases(ticket: string): Promise<{ status: number; body: unknown }> {
+async function pedirFases(
+  ticket: string,
+  board?: string,
+): Promise<{ status: number; body: unknown }> {
   return await handleApi(
     "GET",
     "/api/ticket/fases",
     {},
     contexto(),
-    new URLSearchParams({ ticket, directory: lab }),
+    new URLSearchParams({
+      ticket,
+      directory: lab,
+      ...(board === undefined ? {} : { board }),
+    }),
   );
 }
 
@@ -203,6 +221,77 @@ function escribirBaseV2(
     );
   }
   db.close();
+}
+
+const BOARD = "valmen-harness";
+const TICKET_BOARD = "FEATURE-PRUEBA-BOARD-20260929";
+
+/** El board con nombre y el default viven en rutas distintas del HOME aislado. */
+function rutaBoard(board = BOARD): string {
+  return board === "default"
+    ? join(lab, ".hermes", "kanban.db")
+    : join(lab, ".hermes", "kanban", "boards", board, "kanban.db");
+}
+
+/** Planta tarjetas y task_events reales, sin reemplazar el lector por un doble. */
+function plantarBoard(
+  tarjetas: readonly { id: string; title: string; body: string; created_at: number }[],
+  eventos: readonly {
+    task_id: string;
+    kind: string;
+    payload: string | null;
+    created_at: number;
+  }[],
+  board = BOARD,
+): void {
+  const modulo = sqlite();
+  if (modulo === null) throw new Error("node:sqlite no está disponible.");
+  const ruta = rutaBoard(board);
+  mkdirSync(dirname(ruta), { recursive: true });
+  const db = new modulo.DatabaseSync(ruta);
+  try {
+    db.exec(`
+      CREATE TABLE tasks (id text primary key, title text, body text, created_at integer);
+      CREATE TABLE task_events (
+        id integer primary key autoincrement, task_id text, run_id integer,
+        kind text, payload text, created_at integer
+      );
+    `);
+    for (const tarjeta of tarjetas) {
+      db.prepare("INSERT INTO tasks VALUES (?,?,?,?)").run(
+        tarjeta.id,
+        tarjeta.title,
+        tarjeta.body,
+        tarjeta.created_at,
+      );
+    }
+    for (const evento of eventos) {
+      db.prepare(
+        "INSERT INTO task_events (task_id, run_id, kind, payload, created_at) VALUES (?,?,?,?,?)",
+      ).run(evento.task_id, null, evento.kind, evento.payload, evento.created_at);
+    }
+  } finally {
+    db.close();
+  }
+}
+
+/** Una jornada creada, tomada, bloqueada y enviada a revisión, en segundos epoch. */
+function eventosDeBoard(taskId = "t_primera", desde = "2026-09-29T07:00:00.000Z") {
+  const inicio = Date.parse(desde) / 1000;
+  return [
+    { kind: "created", payload: JSON.stringify({ status: "ready" }) },
+    { kind: "claimed", payload: null },
+    {
+      kind: "blocked",
+      payload: JSON.stringify({ reason: "El PO tiene que decidir.", kind: "needs_input" }),
+    },
+    { kind: "review_requested", payload: null },
+  ].map((evento, i) => ({ ...evento, task_id: taskId, created_at: inicio + i * 3600 }));
+}
+
+/** El contenido de ambos artefactos tiene que quedar byte por byte intacto. */
+function hashArchivo(ruta: string): string {
+  return createHash("sha256").update(readFileSync(ruta)).digest("hex");
 }
 
 describe("GET /api/ticket/fases", () => {
@@ -299,6 +388,34 @@ describe("GET /api/ticket/fases", () => {
     expect(r.status).toBe(404);
     expect((r.body as { error: string }).error).toContain("NO-EXISTE");
   });
+
+  it("(g) sin base del board declara su ausencia sin alterar el contrato existente", async () => {
+    escribirTicket(TICKET_BOARD, [creado("2026-09-29T06:15:00.000Z")], "intake");
+    const anterior = await pedirFases(TICKET_BOARD);
+    const r = await pedirFases(TICKET_BOARD, BOARD);
+    expect(r.status).toBe(200);
+    const cuerpo = r.body as {
+      kanban: FasesDeBoard;
+      fases: Fase[];
+      timeline: unknown;
+      sesionesPorFase: unknown[][];
+    };
+    expect(cuerpo.kanban).toMatchObject({
+      disponible: false,
+      board: BOARD,
+      tarjetas: [],
+      fases: [],
+    });
+    expect(cuerpo.kanban.motivo).toEqual(expect.any(String));
+    expect(cuerpo.kanban.motivo?.length).toBeGreaterThan(0);
+    const previo = anterior.body as typeof cuerpo;
+    expect(cuerpo.fases).toEqual(previo.fases);
+    expect(cuerpo.timeline).toEqual(previo.timeline);
+    expect(cuerpo.sesionesPorFase).toEqual(previo.sesionesPorFase);
+    expect(cuerpo.fases.map((fase) => fase.estado)).toEqual(["intake"]);
+    expect(cuerpo.timeline).toEqual({ disponible: false });
+    expect(cuerpo.sesionesPorFase).toEqual([[]]);
+  });
 });
 
 describe.skipIf(sqlite() === null)("GET /api/ticket/fases: sesiones por fase", () => {
@@ -359,5 +476,173 @@ describe.skipIf(sqlite() === null)("GET /api/ticket/fases: sesiones por fase", (
     expect([...plana.keys()].sort()).toEqual(["ses_fases_a", "ses_fases_b"]);
     expect(tramoDe("planned")[0]).toBe(plana.get("ses_fases_a"));
     expect(tramoDe("in_progress")[0]).toBe(plana.get("ses_fases_b"));
+  });
+});
+
+describe.skipIf(sqlite() === null)("GET /api/ticket/fases: fuente kanban", () => {
+  beforeEach(() => {
+    escribirTicket(TICKET_BOARD, [creado("2026-09-29T06:15:00.000Z")], "intake");
+  });
+
+  it("(f) publica los tramos del board y el bloqueo sin mezclarlos con el registro", async () => {
+    plantarBoard(
+      [{ id: "t_primera", title: TICKET_BOARD, body: "", created_at: 1 }],
+      eventosDeBoard(),
+    );
+    escribirBaseV2([
+      {
+        id: "ses_board",
+        title: TICKET_BOARD,
+        timeCreated: Date.parse("2026-09-29T09:30:00.000Z"),
+      },
+    ]);
+    const r = await pedirFases(TICKET_BOARD, BOARD);
+    expect(r.status).toBe(200);
+    const cuerpo = r.body as {
+      ticket: string;
+      kanban: FasesDeBoard;
+      fases: Fase[];
+      timeline: { disponible: boolean; sessions: Sesion[] };
+      sesionesPorFase: Sesion[][];
+    };
+    expect(cuerpo.ticket).toBe(TICKET_BOARD);
+    expect(cuerpo.kanban).toMatchObject({
+      disponible: true,
+      board: BOARD,
+      tarjetas: ["t_primera"],
+      motivo: null,
+    });
+    expect(cuerpo.kanban.fases).toEqual([
+      {
+        estado: "intake",
+        inicio: "2026-09-29T07:00:00.000Z",
+        fin: "2026-09-29T08:00:00.000Z",
+        ms: 3600000,
+        enCurso: false,
+        motivo: null,
+      },
+      {
+        estado: "in_progress",
+        inicio: "2026-09-29T08:00:00.000Z",
+        fin: "2026-09-29T09:00:00.000Z",
+        ms: 3600000,
+        enCurso: false,
+        motivo: null,
+      },
+      {
+        estado: "blocked",
+        inicio: "2026-09-29T09:00:00.000Z",
+        fin: "2026-09-29T10:00:00.000Z",
+        ms: 3600000,
+        enCurso: false,
+        motivo: "Bloqueo needs_input: El PO tiene que decidir.",
+      },
+      {
+        estado: "awaiting_user_tests",
+        inicio: "2026-09-29T10:00:00.000Z",
+        fin: null,
+        ms: null,
+        enCurso: true,
+        motivo: null,
+      },
+    ]);
+    expect(cuerpo.fases).toEqual([
+      {
+        estado: "intake",
+        inicio: "2026-09-29T06:15:00.000Z",
+        fin: null,
+        ms: null,
+        enCurso: true,
+        motivo: null,
+      },
+    ]);
+    expect(cuerpo.timeline.disponible).toBe(true);
+    expect(cuerpo.timeline.sessions.map((sesion) => sesion.id)).toEqual(["ses_board"]);
+    expect(cuerpo.sesionesPorFase).toEqual([cuerpo.timeline.sessions]);
+  });
+
+  it("(h) una base legible sin tarjetas del ticket devuelve una línea vacía disponible", async () => {
+    plantarBoard(
+      [{ id: "t_ajena", title: "Otra tarea", body: "Sin este ticket", created_at: 1 }],
+      eventosDeBoard("t_ajena"),
+    );
+    const r = await pedirFases(TICKET_BOARD, BOARD);
+    expect(r.status).toBe(200);
+    expect((r.body as { kanban: FasesDeBoard }).kanban).toEqual({
+      disponible: true,
+      board: BOARD,
+      tarjetas: [],
+      fases: [],
+      motivo: null,
+    });
+  });
+
+  it("(i) encadena todas las tarjetas con la más vieja primero", async () => {
+    plantarBoard(
+      [
+        { id: "t_segunda", title: "Otra jornada", body: TICKET_BOARD, created_at: 2 },
+        { id: "t_primera", title: TICKET_BOARD, body: "", created_at: 1 },
+      ],
+      [...eventosDeBoard("t_segunda", "2026-09-30T07:00:00.000Z"), ...eventosDeBoard()],
+    );
+    const r = await pedirFases(TICKET_BOARD, BOARD);
+    expect(r.status).toBe(200);
+    const kanban = (r.body as { kanban: FasesDeBoard }).kanban;
+    expect(kanban.disponible).toBe(true);
+    expect(kanban.tarjetas).toEqual(["t_primera", "t_segunda"]);
+    expect(kanban.fases.map((fase) => fase.estado)).toEqual([
+      "intake",
+      "in_progress",
+      "blocked",
+      "awaiting_user_tests",
+      "intake",
+      "in_progress",
+      "blocked",
+      "awaiting_user_tests",
+    ]);
+    expect(kanban.fases[3]).toMatchObject({
+      inicio: "2026-09-29T10:00:00.000Z",
+      fin: "2026-09-30T07:00:00.000Z",
+      ms: 21 * 3600000,
+      enCurso: false,
+    });
+    expect(kanban.fases[4]?.inicio).toBe("2026-09-30T07:00:00.000Z");
+    expect(kanban.fases.filter((fase) => fase.enCurso)).toEqual([kanban.fases[7]]);
+  });
+
+  it("(j) pedir fases no modifica el board ni el ticket", async () => {
+    plantarBoard(
+      [{ id: "t_primera", title: TICKET_BOARD, body: "", created_at: 1 }],
+      eventosDeBoard(),
+    );
+    const rutaTicket = join(lab, "tickets", "2026", TICKET_BOARD, "ticket.md");
+    const antes = [hashArchivo(rutaBoard()), hashArchivo(rutaTicket)];
+    const r = await pedirFases(TICKET_BOARD, BOARD);
+    expect(r.status).toBe(200);
+    expect((r.body as { kanban: FasesDeBoard }).kanban.disponible).toBe(true);
+    expect([hashArchivo(rutaBoard()), hashArchivo(rutaTicket)]).toEqual(antes);
+  });
+
+  it("(k) sin parámetro board lee el default de la ruta heredada y lo declara", async () => {
+    plantarBoard(
+      [{ id: "t_default", title: TICKET_BOARD, body: "", created_at: 1 }],
+      eventosDeBoard("t_default"),
+      "default",
+    );
+    const r = await pedirFases(TICKET_BOARD);
+    expect(r.status).toBe(200);
+    const kanban = (r.body as { kanban: FasesDeBoard }).kanban;
+    expect(kanban).toMatchObject({
+      disponible: true,
+      board: "default",
+      tarjetas: ["t_default"],
+      motivo: null,
+    });
+    expect(kanban.fases.map((fase) => fase.estado)).toEqual([
+      "intake",
+      "in_progress",
+      "blocked",
+      "awaiting_user_tests",
+    ]);
   });
 });
