@@ -365,6 +365,259 @@ describe("eventosDeFaseDeFilas: la traducción del board", () => {
     expect(cambios?.motivo).toBe("Falta el caso borde.");
   });
 
+  it("(g) una tarjeta que salió del tablero cierra su línea, y la creación no inventa un origen", () => {
+    // La fila `archived` es la que el board escribe cuando la tarjeta sale del
+    // tablero y el board no la deja volver (`kanban_db.py:3906`). Sin traducirla,
+    // una tarjeta archivada se quedaba con su última fase en curso para siempre
+    // —una fase viva sobre una tarjeta que ya no está—, que es lo que R-S1-001
+    // prohíbe inventar. El caso fija además que la creación abre la serie en
+    // `intake`: si tomara el estado del payload como última fase, una tarjeta
+    // creada en `blocked` perdería su `blocked` inicial y la transición que sale
+    // de él diría `blocked ->` sobre una serie que nunca tuvo esa fase (H2).
+    const filas: EventoDelBoard[] = [
+      {
+        id: 1,
+        kind: "created",
+        payload: JSON.stringify({ status: "ready" }),
+        created_at: enHoras(0),
+      },
+      { id: 2, kind: "promoted", payload: null, created_at: enHoras(0.5) },
+      { id: 3, kind: "claimed", payload: null, created_at: enHoras(1) },
+      { id: 4, kind: "review_requested", payload: null, created_at: enHoras(2) },
+      { id: 5, kind: "completed", payload: null, created_at: enHoras(3) },
+      { id: 6, kind: "archived", payload: null, created_at: enHoras(4) },
+    ];
+
+    const eventos = eventosDeFaseDeFilas(filas);
+    const fases = fasesPorTicket(eventos);
+
+    // La fila `archived` no agrega fase cuando la tarjeta ya estaba `done`
+    // (misma fase `closed`): el caso fija que tampoco la abre.
+    expect(fases.map((fase) => fase.estado)).toEqual([
+      "intake",
+      "in_progress",
+      "awaiting_user_tests",
+      "closed",
+    ]);
+    expect(eventos).toHaveLength(4);
+    expect(eventos[3]?.["details"]).toBe("Workflow: awaiting_user_tests -> closed.");
+    expect(fases[fases.length - 1]?.estado).toBe("closed");
+    expect(fases[fases.length - 1]?.enCurso).toBe(false);
+
+    // La tarjeta real que la revisión midió, creada en `blocked`: el `blocked`
+    // que la fuente escribe a continuación, el comentario del cron, el pase a
+    // `scheduled` y el archivado final.
+    const reales: EventoDelBoard[] = [
+      {
+        id: 1,
+        kind: "created",
+        payload: JSON.stringify({ status: "blocked" }),
+        created_at: enHoras(0),
+      },
+      {
+        id: 2,
+        kind: "blocked",
+        payload: JSON.stringify({
+          reason: "initial_status",
+          status: "blocked",
+          actor: "user",
+        }),
+        created_at: enHoras(0),
+      },
+      {
+        id: 3,
+        kind: "commented",
+        payload: JSON.stringify({ author: "default", len: 82 }),
+        created_at: enHoras(0.1),
+      },
+      {
+        id: 4,
+        kind: "scheduled",
+        payload: JSON.stringify({ reason: "Espejo de un cron." }),
+        created_at: enHoras(0.2),
+      },
+      { id: 5, kind: "archived", payload: null, created_at: enHoras(1) },
+    ];
+
+    const eventosReales = eventosDeFaseDeFilas(reales);
+    const fasesReales = fasesPorTicket(eventosReales);
+
+    expect(fasesReales.map((fase) => fase.estado)).toEqual([
+      "intake",
+      "blocked",
+      "intake",
+      "closed",
+    ]);
+    expect(fasesReales[fasesReales.length - 1]?.enCurso).toBe(false);
+
+    // La creación emite su `created` y, como el payload no es `intake`, la misma
+    // fila emite la transición que le sigue con un `id` propio: el par no
+    // comparte clave y el `blocked` inicial queda abierto en la serie.
+    expect(eventosReales[0]?.["id"]).toBe("KANBAN-1");
+    expect(eventosReales[0]?.["action"]).toBe("created");
+    expect(eventosReales[0]?.["details"]).toBe(
+      "Tarjeta creada en el board, en estado blocked.",
+    );
+    expect(eventosReales[1]?.["id"]).toBe("KANBAN-1-blocked");
+    expect(eventosReales[1]?.["details"]).toBe("Workflow: intake -> blocked.");
+
+    // El origen de la transición que sale de `blocked` es `blocked`, y la serie
+    // sí abrió esa fase: la creación no lo inventa. La transición que prohibía
+    // H2 —`blocked ->` sobre una serie sin `blocked`— no puede aparecer, y la
+    // única que sale de esa fase es el pase a `scheduled`, que sí la tuvo.
+    const salidasDeBloqueado = eventosReales.filter((evento) =>
+      String(evento["details"]).startsWith("Workflow: blocked -> "),
+    );
+    expect(salidasDeBloqueado).toHaveLength(1);
+    expect(salidasDeBloqueado[0]?.["details"]).toBe("Workflow: blocked -> intake.");
+
+    // Sensibilidad: sin la fila `archived`, la línea queda abierta en `intake`
+    // —el defecto que la fila nueva cierra—.
+    const sinArchivado = fasesPorTicket(
+      eventosDeFaseDeFilas(reales.filter((fila) => fila.kind !== "archived")),
+    );
+    expect(sinArchivado[sinArchivado.length - 1]?.estado).toBe("intake");
+    expect(sinArchivado[sinArchivado.length - 1]?.enCurso).toBe(true);
+  });
+
+  it("(h) los tipos que traen su destino en el payload producen su fase", () => {
+    // Los tipos que el board escribe con su destino en el payload —`gave_up`,
+    // `unblocked`, `specified`, `block_loop_detected`, `review_reopened`,
+    // `descendant_invalidated` y `status`— mueven la tarjeta. Sin traducirlos, la
+    // línea pierde mudanzas que el board sí registró y dos tarjetas con el mismo
+    // historial quedan contadas distinto según qué fila las movió.
+    const filas: EventoDelBoard[] = [
+      {
+        id: 1,
+        kind: "created",
+        payload: JSON.stringify({ status: "ready" }),
+        created_at: enHoras(0),
+      },
+      { id: 2, kind: "claimed", payload: null, created_at: enHoras(1) },
+      {
+        id: 3,
+        kind: "gave_up",
+        payload: JSON.stringify({
+          failures: 2,
+          effective_limit: 2,
+          limit_source: "dispatcher",
+          error: "El run terminó sin veredicto.",
+          trigger_outcome: "crashed",
+          retry_status: "ready",
+          sticky: true,
+        }),
+        created_at: enHoras(2),
+      },
+      {
+        id: 4,
+        kind: "unblocked",
+        payload: JSON.stringify({ status: "ready" }),
+        created_at: enHoras(3),
+      },
+      { id: 5, kind: "specified", payload: null, created_at: enHoras(4) },
+      {
+        id: 6,
+        kind: "block_loop_detected",
+        payload: JSON.stringify({
+          reason: "El PO tiene que decidir.",
+          kind: "needs_input",
+          recurrences: 2,
+          limit: 2,
+          source_status: "ready",
+        }),
+        created_at: enHoras(5),
+      },
+      { id: 7, kind: "archived", payload: null, created_at: enHoras(6) },
+    ];
+
+    const eventos = eventosDeFaseDeFilas(filas);
+    const fases = fasesPorTicket(eventos);
+
+    // `specified` y `block_loop_detected` caen en `intake`, que el `unblocked`
+    // ya había abierto: no agregan una fase que nadie vivió.
+    expect(fases.map((fase) => fase.estado)).toEqual([
+      "intake",
+      "in_progress",
+      "blocked",
+      "intake",
+      "closed",
+    ]);
+    expect(eventos).toHaveLength(5);
+    expect(fases.filter((fase) => fase.estado === "intake")).toHaveLength(2);
+    // `gave_up` trae `retry_status: "ready"` en el payload, pero el breaker del
+    // dispatcher dejó la tarjeta bloqueada: la fase es `blocked`, no `intake`.
+    expect(eventos.find((evento) => evento["id"] === "KANBAN-3")?.["details"]).toBe(
+      "Workflow: in_progress -> blocked.",
+    );
+
+    // La tarjeta que vuelve a revisión, entra en cambios, se reabre y su
+    // descendiente queda invalidado por la reapertura de un ancestro.
+    const reabierta: EventoDelBoard[] = [
+      {
+        id: 1,
+        kind: "created",
+        payload: JSON.stringify({ status: "ready" }),
+        created_at: enHoras(0),
+      },
+      { id: 2, kind: "claimed", payload: null, created_at: enHoras(1) },
+      { id: 3, kind: "review_requested", payload: null, created_at: enHoras(2) },
+      {
+        id: 4,
+        kind: "changes_requested",
+        payload: JSON.stringify({ reason: "Falta el caso borde." }),
+        created_at: enHoras(3),
+      },
+      {
+        id: 5,
+        kind: "review_reopened",
+        payload: JSON.stringify({ status: "ready", implementer: "valmen-harness" }),
+        created_at: enHoras(4),
+      },
+      { id: 6, kind: "claimed", payload: null, created_at: enHoras(5) },
+      { id: 7, kind: "review_requested", payload: null, created_at: enHoras(6) },
+      {
+        id: 8,
+        kind: "descendant_invalidated",
+        payload: JSON.stringify({
+          ancestor: "t_padre",
+          prior_status: "todo",
+          new_status: "todo",
+          resume_status: "ready",
+        }),
+        created_at: enHoras(7),
+      },
+      {
+        id: 9,
+        kind: "status",
+        payload: JSON.stringify({
+          status: "todo",
+          reason: "ancestor_reopened",
+          parent: "t_padre",
+          previous_status: "todo",
+          resume_status: "ready",
+        }),
+        created_at: enHoras(8),
+      },
+      { id: 10, kind: "review_reopened", payload: null, created_at: enHoras(9) },
+    ];
+
+    expect(
+      fasesPorTicket(eventosDeFaseDeFilas(reabierta)).map((fase) => fase.estado),
+    ).toEqual([
+      "intake",
+      "in_progress",
+      "awaiting_user_tests",
+      "changes_requested",
+      "intake",
+      "in_progress",
+      "awaiting_user_tests",
+      "intake",
+    ]);
+    // La última fila —`review_reopened` sin payload— no agrega fase: el board
+    // omite el payload justamente cuando el destino es `ready`, así que esa fila
+    // repetida es el default de la fuente y no un caso raro.
+  });
+
   it("(d) sin base el lector devuelve null y la ruta del board se resuelve por su nombre", () => {
     // `null` es «no hay base», distinto de `[]` que diría «la base no tiene
     // filas»: la pantalla tiene que poder declarar la ausencia, no un cero.

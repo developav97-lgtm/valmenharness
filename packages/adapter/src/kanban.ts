@@ -13,10 +13,15 @@
  *    `action: "ticket-transition"` con el destino en `details`; una fila del board
  *    no tiene ni `action` ni `details`, así que pasarla sin traducir no produce una
  *    fase mal formada sino ninguna fase.
- * 2. **El vocabulario.** Los ocho estados del board y los once del registro solo
- *    coinciden literalmente en dos nombres (`blocked` y `changes_requested`), de
- *    modo que traducir por parecido de nombres no alcanza: la equivalencia tiene
- *    que estar escrita (las dos tablas de abajo).
+ * 2. **El vocabulario.** Los nueve estados del board —`triage`, `todo`,
+ *    `scheduled`, `ready`, `running`, `blocked`, `review`, `done`, `archived`— y
+ *    los once del registro solo coinciden literalmente en dos nombres (`blocked`
+ *    y `changes_requested`), de modo que traducir por parecido de nombres no
+ *    alcanza: la equivalencia tiene que estar escrita (las dos tablas de abajo).
+ *    La creación abre la serie en `intake` —es lo que el consumidor deriva de
+ *    `action: "created"`— y el estado con el que la tarjeta nació, cuando no es
+ *    `intake`, lo emite la transición que le sigue: el `details` de la creación
+ *    no puede ser el único lugar donde ese estado queda dicho.
  * 3. **La unidad de hora.** `created_at` es epoch en **segundos** y el registro
  *    guarda ISO 8601, que es lo que `Date.parse` interpreta: pasar el entero tal
  *    cual deja todos los tramos en `null`, con la forma de un hueco de datos que
@@ -85,24 +90,48 @@ function payloadDe(texto: string | null): JsonObject {
 }
 
 /**
+ * El texto de una clave del payload, o `null` si no es un texto no vacío.
+ *
+ * Las tablas que traducen por payload —el estado que el board dejó en `status`,
+ * `new_status` o `retry_status`— separan «la clave viene con un texto» de «la
+ * clave falta o no es un texto», que es cuando el default o el descarte aplican.
+ */
+function textoDelPayload(payload: JsonObject, clave: string): string | null {
+  const valor = payload[clave];
+  return typeof valor === "string" && valor !== "" ? valor : null;
+}
+
+/**
  * Tabla 1: tipo de evento del board → estado del board.
  *
  * Va escrita y no traducida por parecido porque los dos vocabularios solo
- * coinciden en dos nombres. Devuelve `null` cuando el tipo no está en la tabla: no
- * es fase y no corta la serie.
+ * coinciden en dos nombres. Devuelve `null` cuando el tipo no está en la tabla —o
+ * cuando el tipo trae su destino en el payload y no lo trae—: no es fase y no
+ * corta la serie.
  */
 function estadoDelBoard(kind: string, payload: JsonObject): string | null {
   switch (kind) {
+    // La creación de la tarjeta y las filas que la devuelven al pool traen su
+    // destino en `status` (`kanban_db.py:1389`, `:3684`, `:3725`, `:3804`); en
+    // `unblocked` la fuente omite el payload cuando el destino ES `ready`
+    // (`kanban_db.py:3684`), así que el default `ready` no es un invento.
     case "created":
-    case "unblocked": {
-      const status = payload["status"];
-      return typeof status === "string" && status !== "" ? status : "ready";
-    }
+    case "unblocked":
+    case "review_reopened":
+    case "status":
+      return textoDelPayload(payload, "status") ?? "ready";
+    // El descendiente invalidado al reabrir un ancestro trae su destino en
+    // `new_status` (`kanban_db.py:3797`); la misma fuente anexa además la fila
+    // `status` con el mismo destino, que entonces no agrega fase.
+    case "descendant_invalidated":
+      return textoDelPayload(payload, "new_status") ?? "todo";
     case "promoted":
     case "promoted_manual":
-    case "reclaimed":
       return "ready";
     case "dependency_wait":
+      return "todo";
+    // La tarjeta especificada sale de `triage` hacia `todo` (`kanban_db.py:3843`).
+    case "specified":
       return "todo";
     case "scheduled":
       return "scheduled";
@@ -111,12 +140,37 @@ function estadoDelBoard(kind: string, payload: JsonObject): string | null {
       return "running";
     case "blocked":
       return "blocked";
+    // El ciclo de bloqueos agotado manda la tarjeta a `triage` (`kanban_db.py:3333`).
+    case "block_loop_detected":
+      return "triage";
+    // El breaker del dispatcher deja la tarjeta bloqueada cuando suelta el run
+    // —`UPDATE tasks SET status = 'blocked'` (`kanban_db_dispatch.py:1421`)— y
+    // recién ahí escribe la fila `gave_up` (`kanban_db_dispatch.py:1455`).
+    case "gave_up":
+      return "blocked";
     case "review_requested":
       return "review";
     case "changes_requested":
       return "changes_requested";
     case "completed":
       return "done";
+    // La tarjeta archivada salió del tablero y el board no la deja volver
+    // (`WHERE id = ? AND status != 'archived'`, `kanban_db.py:3906`), así que es
+    // el estado terminal suyo.
+    case "archived":
+      return "archived";
+    // Finales de un run que devuelven la tarjeta a la fase de donde salió y el
+    // payload dice cuál —`reclaimed` (`kanban_db.py:2498`), `timed_out`
+    // (`kanban_db_dispatch.py:720`), `stale` (`:825`)—; una fila de esa familia
+    // sin `retry_status` no dice a dónde volvió la tarjeta, así que no se
+    // traduce: inventarle un `ready` pondría una fase que no pasó.
+    case "reclaimed":
+    case "crashed":
+    case "stale":
+    case "timed_out":
+    case "spawn_failed":
+    case "rate_limited":
+      return textoDelPayload(payload, "retry_status");
     default:
       return null;
   }
@@ -143,7 +197,12 @@ function faseDelRegistro(estado: string): string | null {
       return "awaiting_user_tests";
     case "changes_requested":
       return "changes_requested";
+    // `done` y `archived` son los terminales del board: la tarjeta archivada
+    // salió del tablero y no puede volver (`WHERE id = ? AND status != 'archived'`,
+    // `kanban_db.py:3906`), así que no puede quedar con una fase en curso que
+    // nadie vive (R-S1-001).
     case "done":
+    case "archived":
       return "closed";
     default:
       return null;
@@ -175,6 +234,37 @@ function motivoDelPayload(kind: string, payload: JsonObject): string | null {
 }
 
 /**
+ * Un evento con la forma del registro, o sea lo que `fasesPorTicket` consume.
+ *
+ * La construcción va en un solo lugar porque la creación y la transición que le
+ * sigue salen de la misma fila: dos copias de la forma —el `kind`, el `actor` con
+ * su default, el `at` que se omite cuando no hay hora— divergirían a la primera
+ * corrección. El `id` llega del llamador porque el par de la creación no puede
+ * compartir clave.
+ */
+function eventoDeFase(
+  fila: EventoDelBoard,
+  payload: JsonObject,
+  id: string,
+  action: string,
+  details: string,
+): JsonObject {
+  const at = horaISO(fila.created_at);
+  const actor = payload["actor"];
+  return {
+    kind: "ticket-event",
+    id,
+    date: at === null ? "" : at.slice(0, 10),
+    actor: typeof actor === "string" && actor !== "" ? actor : "kanban",
+    action,
+    details,
+    // Sin hora el tramo queda declarado no reconstruible: se omite `at` en vez
+    // de estimarlo.
+    ...(at === null ? {} : { at }),
+  };
+}
+
+/**
  * La traducción pura: las filas de `task_events` en orden → eventos de fase.
  *
  * Recorre las filas en el orden recibido —la consulta las trae por
@@ -182,6 +272,11 @@ function motivoDelPayload(kind: string, payload: JsonObject): string | null {
  * última emitida: dos filas seguidas que dan la misma fase (`claimed` y después
  * `spawned`) son una sola. Una fila sin tipo o sin estado reconocido no emite, no
  * corta la serie y no cambia la última fase vista.
+ *
+ * La creación abre la serie en `intake`, que es lo que el consumidor deriva de
+ * `action: "created"` sin mirar el estado del payload; si la tarjeta nació en
+ * otra fase, la misma fila emite además la transición `intake -> <fase>`, de
+ * modo que el estado inicial no queda solo en el `details` de la creación.
  *
  * No importa `node:fs` ni `node:sqlite`: no toca el disco y no muta las filas.
  */
@@ -198,40 +293,52 @@ export function eventosDeFaseDeFilas(
     if (estado === null) continue;
     const fase = faseDelRegistro(estado);
     if (fase === null) continue;
+
+    if (fila.kind === "created" && !yaEmitioCreacion) {
+      yaEmitioCreacion = true;
+      eventos.push(
+        eventoDeFase(
+          fila,
+          payload,
+          `KANBAN-${fila.id}`,
+          "created",
+          `Tarjeta creada en el board, en estado ${estado}.`,
+        ),
+      );
+      // La creación deja la última fase vista en `intake`, la que el consumidor
+      // va a derivar de esa acción. Con eso, el estado con el que la tarjeta
+      // nació —`running` y `blocked` son los dos estados iniciales que el board
+      // admite— no se pierde: lo emite la transición que le sigue.
+      ultimaFase = "intake";
+      if (fase !== "intake") {
+        // La segunda emisión de la misma fila lleva su propio `id`: el `id` de
+        // un evento identifica un dato, no una fila del board.
+        eventos.push(
+          eventoDeFase(
+            fila,
+            payload,
+            `KANBAN-${fila.id}-${fase}`,
+            "ticket-transition",
+            `Workflow: intake -> ${fase}.`,
+          ),
+        );
+        ultimaFase = fase;
+      }
+      continue;
+    }
+
     // Un evento que no mueve la fase no emite: la serie de fases no tiene
     // escalones de un segundo que nadie vivió.
     if (fase === ultimaFase) continue;
 
-    const at = horaISO(fila.created_at);
-    const esCreacion = fila.kind === "created" && !yaEmitioCreacion;
-    if (fila.kind === "created") yaEmitioCreacion = true;
-
-    let action: string;
-    let details: string;
-    if (esCreacion) {
-      action = "created";
-      details = `Tarjeta creada en el board, en estado ${estado}.`;
-    } else {
-      action = "ticket-transition";
-      // El origen es la fase anterior de la serie que este lector armó, o
-      // `desconocido` cuando la serie no arranca en una creación.
-      const anterior = ultimaFase ?? "desconocido";
-      const motivo = motivoDelPayload(fila.kind, payload);
-      details = `Workflow: ${anterior} -> ${fase}.${motivo === null ? "" : ` ${motivo}`}`;
-    }
-
-    const actor = payload["actor"];
-    eventos.push({
-      kind: "ticket-event",
-      id: `KANBAN-${fila.id}`,
-      date: at === null ? "" : at.slice(0, 10),
-      actor: typeof actor === "string" && actor !== "" ? actor : "kanban",
-      action,
-      details,
-      // Sin hora el tramo queda declarado no reconstruible: se omite `at` en vez
-      // de estimarlo.
-      ...(at === null ? {} : { at }),
-    });
+    // El origen es la fase anterior de la serie que este lector armó, o
+    // `desconocido` cuando la serie no arranca en una creación.
+    const anterior = ultimaFase ?? "desconocido";
+    const motivo = motivoDelPayload(fila.kind, payload);
+    const details = `Workflow: ${anterior} -> ${fase}.${motivo === null ? "" : ` ${motivo}`}`;
+    eventos.push(
+      eventoDeFase(fila, payload, `KANBAN-${fila.id}`, "ticket-transition", details),
+    );
     ultimaFase = fase;
   }
 
