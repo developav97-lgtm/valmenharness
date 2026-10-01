@@ -142,6 +142,14 @@ sin tildar.
     "description": "Sesión OpenCode ses_f0b47468effeqYhEvinGfuSh2a (modelo opencode-go/deepseek-v4.1-flash, 2026-09-30): retracción de la review ronda 1 — helper sesionesPorTramo y sesionesPorFase en packages/server/src/server.ts, caso (e) con base v2 falsa y caso (c) extendido en tests/api-fases-api.test.ts. La primera corrida (ses_f0b4d7e56ffeltGry9XlaOmHO1) murió por permisos external_directory auto-rechazados en modo no interactivo; se relanzó con --auto. 34 mensajes en su historial al momento de registrar; el diff quedó en el árbol sin commitear.",
     "reference": null,
     "point_id": null
+  },
+  {
+    "id": "EVIDENCE-004",
+    "date": "2026-10-01",
+    "kind": "automated-test",
+    "description": "Commit e6e4c57: retraccion de la review ronda 1. npx vitest run tests/api-fases-api.test.ts tests/api-rutas.test.ts 11/11 pasadas; bateria completa 1643 pasadas/48 omitidas; tsc --build sin errores; valmen secrets sin hallazgos pre y post staging.",
+    "reference": "commit:e6e4c57a5c4646f1c9dfbcf71de11777c1d2ebd3",
+    "point_id": null
   }
 ]
 ```
@@ -394,6 +402,15 @@ Sin publicar todavía.
     "action": "evidence-added",
     "actor": "cli",
     "details": "Se agregó EVIDENCE-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-09-30",
+    "at": "2026-10-01T00:00:49.271Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-004."
   }
 ]
 ```
