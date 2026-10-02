@@ -4,6 +4,7 @@
 # el harness solo escribió lo que pudo comprobar en el disco.
 
 name: ValmenHarness
+project-id: valmen-harness
 tickets-dir: tickets
 
 # Dependencias clave detectadas. No son una regla: son un punto de partida

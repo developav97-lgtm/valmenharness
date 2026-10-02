@@ -43,3 +43,8 @@ steps:
     kind: command
     run: valmen manuales auditar --manuales-dir {manualesdir}
     evidence: [stdout]
+  - id: publicar-corpus
+    title: Publicar el corpus incremental por colecciones
+    kind: command
+    run: valmen corpus publicar --manuales-dir {manualesdir}
+    evidence: [stdout]
