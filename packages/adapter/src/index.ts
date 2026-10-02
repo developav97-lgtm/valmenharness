@@ -8,6 +8,7 @@
  */
 
 export * from "./config.js";
+export * from "./machine-bindings.js";
 export * from "./templates.js";
 export * from "./project.js";
 export * from "./projection.js";

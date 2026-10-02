@@ -10,7 +10,7 @@
  * equivocado. Es preferible que el harness no arranque a que arranque con una
  * configuración distinta de la que el usuario escribió.
  */
-import { type YamlValue, fail, parseYamlSubset } from "@valmen/core";
+import { PROJECT_ID_RE, type YamlValue, fail, parseYamlSubset } from "@valmen/core";
 
 /** Valor admitido en la configuración. */
 export type ConfigValue = YamlValue;
@@ -36,6 +36,11 @@ export function parseConfig(text: string): ConfigMap {
   });
   if (typeof value === "string" || Array.isArray(value)) {
     fail("config.yaml debe tener un mapa en la raíz.");
+  }
+  if (value["machine-bindings"] !== undefined) {
+    fail(
+      'config.yaml: "machine-bindings" pertenece a ~/.valmen/bindings.local.yaml y no se versiona con la política del proyecto.',
+    );
   }
   return value;
 }
@@ -139,4 +144,77 @@ export function readHermesConfig(config: ConfigMap): HermesConfig {
     tokenHours: horas,
     allowedRisk: readList(approval, "allowed-risk", ["low", "normal"]),
   };
+}
+
+/** Identidad que viaja con la política compartible del proyecto. */
+export interface SharedProjectPolicy {
+  readonly projectId: string | null;
+}
+
+/**
+ * Consentimiento compartible para observar actividad o despachar trabajo.
+ *
+ * Una integración instalada no concede estas capacidades. Cada lista declara
+ * el alcance elegido por el equipo y una lista ausente significa que no hay
+ * nada habilitado; rutas, perfiles y credenciales siguen perteneciendo al
+ * binding de la máquina o a su almacén local.
+ */
+export interface ExecutionCapabilities {
+  readonly observationSources: readonly string[];
+  readonly dispatchExecutors: readonly string[];
+}
+
+const EXECUTION_CAPABILITY_RE = /^[a-z][a-z0-9-]{0,63}$/;
+
+/**
+ * Lee las capacidades operativas sin inferirlas de Hermes, MCP o bindings.
+ *
+ * Las etiquetas son deliberadamente extensibles: un equipo puede declarar un
+ * adaptador futuro sin tener que cambiar el parser, y el adaptador que lo
+ * consume decidirá después si conoce esa capacidad. Lo que no admite es una
+ * etiqueta ambigua, duplicada o un valor que parezca ruta.
+ */
+export function readExecutionCapabilities(config: ConfigMap): ExecutionCapabilities {
+  const execution = readMap(config, "execution");
+  const observationSources = readCapabilityList(execution, "observation-sources");
+  const dispatchExecutors = readCapabilityList(execution, "dispatch-executors");
+  return Object.freeze({
+    observationSources: Object.freeze(observationSources),
+    dispatchExecutors: Object.freeze(dispatchExecutors),
+  });
+}
+
+/**
+ * Lee la identidad lógica compartible sin exigirla a configuraciones históricas.
+ *
+ * La resolución autorizada la requerirá cuando una operación abarque varios
+ * proyectos; mantener `null` aquí evita que adoptar una versión nueva rompa un
+ * proyecto que todavía solo usa el flujo local existente.
+ */
+export function readSharedProjectPolicy(config: ConfigMap): SharedProjectPolicy {
+  const value = config["project-id"];
+  if (value === undefined || value === "") return { projectId: null };
+  if (typeof value !== "string" || !PROJECT_ID_RE.test(value)) {
+    fail(
+      'config.yaml: "project-id" debe ser un identificador lógico en minúsculas (letras, números y guiones).',
+    );
+  }
+  return { projectId: value };
+}
+
+function readCapabilityList(config: ConfigMap, key: string): string[] {
+  const values = readList(config, key, []);
+  const seen = new Set<string>();
+  for (const value of values) {
+    if (!EXECUTION_CAPABILITY_RE.test(value)) {
+      fail(
+        `config.yaml: "execution.${key}" solo admite etiquetas en minúsculas, sin rutas ni espacios.`,
+      );
+    }
+    if (seen.has(value)) {
+      fail(`config.yaml: "execution.${key}" no puede repetir "${value}".`);
+    }
+    seen.add(value);
+  }
+  return values;
 }
