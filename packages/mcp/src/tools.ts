@@ -98,7 +98,7 @@ import {
   EXECUTION_ACTIVITY_STATES,
   type ExecutionActivityState,
 } from "@valmen/engine";
-import { gateFor, gateById } from "@valmen/gate";
+import { gateFor, gateById, SIN_INTERFAZ } from "@valmen/gate";
 import { architectRoutingFor, cascadeRoutingFor, gateRoutingFor } from "@valmen/adapter";
 import { apiKeyWithPrecedence, transportById } from "@valmen/credentials";
 import {
@@ -2190,8 +2190,14 @@ export async function callTool(
         const simulacion = await simulateGate(paths, {
           // El gate **sin expandir**: `simulateGate` lo expande por ticket, con
           // los criterios y los impactos de cada uno. Expandirlo aquí con listas
-          // vacías daría el mismo objeto y sugeriría lo contrario.
-          gate: gateFor(gateById(gateId), { criteria: [], impacts: [] }),
+          // vacías daría el mismo objeto y sugeriría lo contrario. La interfaz
+          // tampoco se calcula acá: `SIN_INTERFAZ` declara que este sitio no la
+          // mide, porque el gate viaja sin expandir a propósito.
+          gate: gateFor(gateById(gateId), {
+            criteria: [],
+            impacts: [],
+            interfaz: SIN_INTERFAZ,
+          }),
           ...(typeof limite === "number" ? { limit: limite } : {}),
         });
         return delCli(calibrateReport(paths, gateId, simulacion));
@@ -2779,8 +2785,14 @@ export async function callTool(
         const informe = await simulateGate(paths, {
           // El gate **sin expandir**: `simulateGate` lo expande por ticket, con
           // los criterios y los impactos de cada uno. Expandirlo aquí con listas
-          // vacías daría el mismo objeto y sugeriría lo contrario.
-          gate: gateFor(gateById(gateId), { criteria: [], impacts: [] }),
+          // vacías daría el mismo objeto y sugeriría lo contrario. La interfaz
+          // tampoco se calcula acá: `SIN_INTERFAZ` declara que este sitio no la
+          // mide, porque el gate viaja sin expandir a propósito.
+          gate: gateFor(gateById(gateId), {
+            criteria: [],
+            impacts: [],
+            interfaz: SIN_INTERFAZ,
+          }),
           ...(typeof limite === "number" ? { limit: limite } : {}),
         });
         return bien(
