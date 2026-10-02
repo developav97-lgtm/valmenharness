@@ -37,3 +37,10 @@ opencode.json
 # repositorio: cada proyecto tiene el suyo, con su raíz y su rango de puertos, y
 # versionarlo obligaría a mantener una copia por proyecto dentro del harness.
 Abrir pantalla.command
+
+# Salida de compilación junto al fuente: el código corre desde dist/, y un tsc
+# corrido sin outDir deja estos archivos sueltos que no son fuente ni build.
+packages/*/src/**/*.js
+packages/*/src/**/*.js.map
+packages/*/src/**/*.d.ts
+packages/*/src/**/*.d.ts.map
