@@ -79,6 +79,8 @@ export interface GateRunOptions {
    * contra el `$HOME`, que puede ser el de otro usuario.
    */
   readonly apiKey?: string;
+  /** Resuelve la credencial de cada proveedor usado por una cascada. */
+  readonly credentialForProvider?: (provider: string) => string | undefined;
   readonly effort?: "auto" | "low" | "medium" | "high";
   readonly judgeModel?: string;
   /** Evaluador semántico preferido por el routing del proyecto. */
@@ -398,6 +400,9 @@ export async function runGate(
         ...(options.model === undefined ? {} : { model: options.model }),
         ...(options.provider === undefined ? {} : { provider: options.provider }),
         ...(options.apiKey === undefined ? {} : { apiKey: options.apiKey }),
+        ...(options.credentialForProvider === undefined
+          ? {}
+          : { credentialForProvider: options.credentialForProvider }),
         ...(options.effort === undefined ? {} : { effort: options.effort }),
         ...(options.judgeModel === undefined ? {} : { judgeModel: options.judgeModel }),
         ...(options.semantic === undefined ? {} : { semantic: options.semantic }),

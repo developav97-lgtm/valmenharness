@@ -147,10 +147,27 @@ export interface CascadeRunOptions {
     estado: unknown,
   ) => CodeVerdict | null;
   readonly apiKey?: string;
+  /**
+   * Credenciales resueltas por proveedor en el borde que conoce el archivo de
+   * credenciales. Una cascada puede combinar proveedores; reutilizar la clave de
+   * un rol para los otros convierte una configuración válida en un 401.
+   *
+   * El callback puede devolver `undefined` para proveedores de suscripción
+   * (Codex o Claude Code): ellos resuelven su token nativo dentro del transporte.
+   */
+  readonly credentialForProvider?: (provider: string) => string | undefined;
   readonly sessionId?: string;
   /** Inyectables para pruebas. */
   readonly judge?: typeof evaluateWithJudge;
   readonly jev?: typeof evaluateWithJev;
+}
+
+/** La credencial del rol, sin mezclar proveedores dentro de una cascada. */
+function credentialFor(options: CascadeRunOptions, provider: string): string | undefined {
+  if (options.credentialForProvider !== undefined) {
+    return options.credentialForProvider(provider);
+  }
+  return options.apiKey;
 }
 
 /** Lo que devuelve una corrida, con el motivo de cada escalamiento. */
@@ -227,6 +244,9 @@ export async function verifiedCascade(options: CascadeRunOptions): Promise<Casca
   const judge = options.judge ?? evaluateWithJudge;
   const verificar = options.jev ?? evaluateWithJev;
   const umbral = options.threshold;
+  const credencialProductor = credentialFor(options, cadena.producer.provider);
+  const credencialVerificador = credentialFor(options, cadena.verifier.provider);
+  const credencialEscalamiento = credentialFor(options, cadena.escalation.provider);
 
   // Paso 1: producir.
   const produccion = await judge({
@@ -234,7 +254,7 @@ export async function verifiedCascade(options: CascadeRunOptions): Promise<Casca
     state: options.state,
     model: cadena.producer.model,
     provider: cadena.producer.provider,
-    ...(options.apiKey === undefined ? {} : { apiKey: options.apiKey }),
+    ...(credencialProductor === undefined ? {} : { apiKey: credencialProductor }), // valmen:allow-secret — valor ya resuelto, nunca literal
     ...(cadena.producer.effort === undefined || cadena.producer.effort === "auto"
       ? {}
       : { effort: cadena.producer.effort }),
@@ -273,7 +293,7 @@ export async function verifiedCascade(options: CascadeRunOptions): Promise<Casca
           propositions: pendientes,
           state: options.state,
           model: cadena.verifier.model,
-          ...(options.apiKey === undefined ? {} : { apiKey: options.apiKey }),
+          ...(credencialVerificador === undefined ? {} : { apiKey: credencialVerificador }), // valmen:allow-secret — valor ya resuelto, nunca literal
           sessionId: `${options.sessionId ?? "cascada"}:cascada`,
         });
 
@@ -299,7 +319,7 @@ export async function verifiedCascade(options: CascadeRunOptions): Promise<Casca
           state: options.state,
           model: cadena.escalation.model,
           provider: cadena.escalation.provider,
-          ...(options.apiKey === undefined ? {} : { apiKey: options.apiKey }),
+          ...(credencialEscalamiento === undefined ? {} : { apiKey: credencialEscalamiento }), // valmen:allow-secret — valor ya resuelto, nunca literal
           ...(cadena.escalation.effort === undefined || cadena.escalation.effort === "auto"
             ? {}
             : { effort: cadena.escalation.effort }),
@@ -708,6 +728,7 @@ export interface CascadeTaskRequest {
   /** La cadena, resuelta por el routing del proyecto. */
   readonly chain: CascadeOptions;
   readonly apiKey?: string;
+  readonly credentialForProvider?: (provider: string) => string | undefined;
   readonly sessionId?: string;
   readonly judge?: typeof evaluateWithJudge;
   readonly jev?: typeof evaluateWithJev;
@@ -792,6 +813,9 @@ export async function runCascadeTask(
     verificarEnCodigo: (proposicion, respuesta, visto) =>
       tarea.verificarEnCodigo(proposicion, respuesta, visto as CascadeState),
     ...(request.apiKey === undefined ? {} : { apiKey: request.apiKey }),
+    ...(request.credentialForProvider === undefined
+      ? {}
+      : { credentialForProvider: request.credentialForProvider }),
     sessionId: `cascada:${tarea.id}`,
     ...(request.judge === undefined ? {} : { judge: request.judge }),
     ...(request.jev === undefined ? {} : { jev: request.jev }),

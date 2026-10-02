@@ -38,7 +38,7 @@ import {
   withHumanDecision,
 } from "@valmen/gate";
 import { declaredImpactIds, parseTicket } from "@valmen/core";
-import { apiKeyWithPrecedence } from "@valmen/credentials";
+import { apiKeyWithPrecedence, transportById } from "@valmen/credentials";
 import { cascadeRouting, gateRouting } from "./routing.js";
 import {
   type EvaluatorId,
@@ -398,11 +398,16 @@ export async function runTicketGate(
   // cada evaluador resuelve por su cuenta como siempre —la variable de entorno
   // primero— y nada cambia para quien usa la configuración por defecto.
   const apiKey = apiKeyWithPrecedence(routing.evaluatorProvider, request.credentialsFile);
+  const credentialResolver = (provider: string): string | undefined => {
+    if (transportById(provider).credential !== undefined) return undefined;
+    return apiKeyWithPrecedence(provider, request.credentialsFile) ?? undefined;
+  };
 
   const result = await runGate(paths, {
     gateId,
     ticketId,
     ...(apiKey === null ? {} : { apiKey }),
+    ...(cascade === undefined ? {} : { credentialForProvider: credentialResolver }),
     ...(request.evaluator === undefined ? {} : { evaluator: request.evaluator }),
     ...(request.jev === undefined ? {} : { jev: request.jev }),
     ...(request.judge === undefined ? {} : { judge: request.judge }),

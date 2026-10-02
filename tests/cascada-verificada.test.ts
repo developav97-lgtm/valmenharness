@@ -213,6 +213,82 @@ describe("la cascada verificada", () => {
     ]);
   });
 
+  it("resuelve una credencial por proveedor cuando los roles son distintos", async () => {
+    const credencialesVistas: Array<{ provider: string; apiKey?: string }> = [];
+    const cadenaMixta: CascadeOptions = {
+      producer: { provider: "productor", model: PRODUCTOR, effort: "auto" },
+      verifier: { provider: "verificador", model: VERIFICADOR, effort: "auto" },
+      escalation: { provider: "escalamiento", model: ESCALADO, effort: "medium" },
+      reason: null,
+    };
+    const judge = (async (options: {
+      readonly propositions: readonly Proposition[];
+      readonly model?: string;
+      readonly provider?: string;
+      readonly apiKey?: string;
+    }) => {
+      credencialesVistas.push({
+        provider: options.provider ?? "",
+        ...(options.apiKey === undefined ? {} : { apiKey: options.apiKey }),
+      });
+      return {
+        answers: options.propositions.map(
+          (proposicion): PropositionAnswer => ({
+            id: proposicion.id,
+            kind: proposicion.kind,
+            value: 0.95,
+            confidence: 0.95,
+          }),
+        ),
+        model: {
+          provider: options.provider ?? "",
+          model: options.model ?? "",
+          resolvedVersion: "prueba",
+        },
+        usage: { inputTokens: 1, outputTokens: 1, costUsd: 0 },
+        latencyMs: 1,
+      };
+    }) as unknown as NonNullable<Parameters<typeof evaluateGate>[0]["judge"]>;
+    const jev = (async (options: {
+      readonly propositions: readonly Proposition[];
+      readonly apiKey?: string;
+    }) => {
+      credencialesVistas.push({
+        provider: "verificador",
+        ...(options.apiKey === undefined ? {} : { apiKey: options.apiKey }),
+      });
+      return {
+        answers: options.propositions.map(
+          (proposicion): PropositionAnswer => ({
+            id: proposicion.id,
+            kind: "noul",
+            value: 0.2,
+          }),
+        ),
+        model: { provider: "verificador", model: VERIFICADOR, resolvedVersion: "prueba" },
+        usage: { inputTokens: 1, outputTokens: 1, costUsd: 0 },
+        latencyMs: 1,
+      };
+    }) as unknown as NonNullable<Parameters<typeof evaluateGate>[0]["jev"]>;
+
+    await evaluateGate({
+      gate: gateDePrueba(),
+      state: { solicitud: "algo" },
+      root: lab,
+      evaluator: "cascade",
+      cascade: cadenaMixta,
+      credentialForProvider: (provider) => `${provider}-credencial`,
+      judge,
+      jev,
+    });
+
+    expect(credencialesVistas).toEqual([
+      { provider: "productor", apiKey: "productor-credencial" }, // valmen:allow-secret — valor sintético de prueba
+      { provider: "verificador", apiKey: "verificador-credencial" }, // valmen:allow-secret — valor sintético de prueba
+      { provider: "escalamiento", apiKey: "escalamiento-credencial" }, // valmen:allow-secret — valor sintético de prueba
+    ]);
+  });
+
   it("el escalamiento lleva su motivo, su probabilidad y su umbral", async () => {
     const resultado = await evaluateGate({
       gate: gateDePrueba(),

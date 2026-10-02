@@ -115,6 +115,8 @@ export interface SelectOptions {
   readonly evaluator?: EvaluatorId;
   readonly sessionId?: string;
   readonly apiKey?: string;
+  /** Resuelve la credencial del proveedor de cada rol de una cascada. */
+  readonly credentialForProvider?: (provider: string) => string | undefined;
   /** Modelo del rol `gate-evaluator`, resuelto por el routing del proyecto. */
   readonly model?: string;
   /** Proveedor por el que hablar. Sin él, OpenRouter. */
@@ -366,6 +368,9 @@ async function runCascade(options: SelectOptions): Promise<EvaluationOutcome> {
     chain: cadena,
     threshold: cadena.threshold ?? options.gate.policy.approveAt,
     ...(options.apiKey === undefined ? {} : { apiKey: options.apiKey }),
+    ...(options.credentialForProvider === undefined
+      ? {}
+      : { credentialForProvider: options.credentialForProvider }),
     sessionId: options.sessionId ?? "gate",
     ...(options.judge === undefined ? {} : { judge: options.judge }),
     ...(options.jev === undefined ? {} : { jev: options.jev }),
