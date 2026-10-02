@@ -11,6 +11,9 @@
       "path": "../core"
     },
     {
+      "path": "../adapter"
+    },
+    {
       "path": "../gate"
     },
     {
@@ -23,5 +26,7 @@
       "path": "../gate-llm-judge"
     }
   ],
-  "include": ["src/**/*.ts"]
+  "include": [
+    "src/**/*.ts"
+  ]
 }

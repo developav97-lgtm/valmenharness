@@ -24,7 +24,8 @@
     "@valmen/gate": "0.0.1",
     "@valmen/gate-command": "0.0.1",
     "@valmen/gate-jev": "0.0.1",
-    "@valmen/gate-llm-judge": "0.0.1"
+    "@valmen/gate-llm-judge": "0.0.1",
+    "@valmen/adapter": "0.0.1"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json"
