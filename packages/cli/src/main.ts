@@ -19,9 +19,23 @@ import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { EXIT_INVARIANT, EXIT_SCHEMA, toFailure } from "@valmen/core";
-import { resolveApiKeyWithFile } from "@valmen/credentials";
+import { apiKeyWithPrecedence, transportById } from "@valmen/credentials";
 import { gateById } from "@valmen/gate";
 import { gateRoutingFor, cascadeRoutingFor } from "@valmen/adapter";
+
+/**
+ * El CLI conoce el archivo de credenciales; el motor sólo conoce los roles.
+ * Las suscripciones resuelven su token en su transporte nativo y no aceptan una
+ * clave del YAML como si fuera un bearer token.
+ */
+function credentialForCascade(
+  credentialsFile: string | undefined,
+): (provider: string) => string | undefined {
+  return (provider) => {
+    if (transportById(provider).credential !== undefined) return undefined;
+    return apiKeyWithPrecedence(provider, credentialsFile) ?? undefined;
+  };
+}
 
 import {
   type CommandResult,
@@ -56,6 +70,8 @@ import {
 import { mcpCommand } from "./mcp.js";
 import { runProcess } from "./process.js";
 import { runManuales } from "./manuales.js";
+import { runCorpus } from "./corpus.js";
+import { executionCommand } from "./execution.js";
 import {
   type RegistryPaths,
   CASCADE_TASK_IDS,
@@ -309,6 +325,13 @@ Comandos:
                             Obligatoria con --escribir; no se pisa un archivo
                             existente salvo con --forzar.
       --forzar              Reescribe el archivo aunque ya exista.
+  corpus publicar           Publica manuales, memoria y tickets cerrados por colecciones.
+                            Entrega solo nuevos, cambiados y eliminados; sin embeddings.
+      --corpus-dir <ruta>   Destino y estado (por defecto .valmen/corpus).
+      --manuales-dir <ruta> Fuente de manuales (docs/manuales/usuario-final).
+      --indexador <nombre> Destino registrado (archivos por defecto; corpus-indexer
+                            en la configuración puede elegirlo).
+      --completo            Republica todos los documentos actuales.
   provider [list|set|test|models]
                             Los proveedores y sus credenciales. "list" dice cuáles
                             hay y cuáles están configurados; "set <id> --key <k>"
@@ -463,6 +486,9 @@ export const VALUE_OPTIONS = [
   // Sin esto en la lista, `--manuales-dir docs/…` se leería como bandera booleana
   // y la ruta quedaría como argumento suelto.
   "--manuales-dir",
+  // `corpus publicar`: destino del corpus e indexador registrado.
+  "--corpus-dir",
+  "--indexador",
   "--pantallas",
   // `manuales plantilla`: el nombre de pantalla del encabezado y la ruta relativa
   // donde escribir el manual. Sin esto en la lista, los dos valores quedarían
@@ -526,6 +552,13 @@ export const VALUE_OPTIONS = [
   "--sprint",
   "--goal",
   "--depends-on",
+  // `execution`: identidad y hecho de actividad del contrato portable.
+  "--project",
+  "--execution",
+  "--attempt",
+  "--event-id",
+  "--state",
+  "--occurred-at",
 ] as const;
 
 /**
@@ -1227,6 +1260,9 @@ export function dispatch(options: Options): CommandResult {
     case "deliver-manifest":
       return deliverManifest(paths, options.flags);
 
+    case "execution":
+      return executionCommand(rest, options.flags);
+
     case "process":
       // `process <sub> [args]`: su propio módulo, como `feature`.
       return runProcess(options.root, rest, options.flags);
@@ -1234,6 +1270,9 @@ export function dispatch(options: Options): CommandResult {
     case "manuales":
       // `manuales <sub> [args]`: su propio módulo, como `process`.
       return runManuales(options.root, rest, options.flags);
+
+    case "corpus":
+      return runCorpus(options.root, rest, options.flags);
 
     case "migrate":
       return migrateRegistry(paths, {
@@ -1552,6 +1591,8 @@ export async function run(argv: readonly string[]): Promise<number> {
           result = { stdout: "", stderr: "", exitCode: 0 };
         }
       }
+    } else if (command === "execution") {
+      result = executionCommand(rest, options.flags);
     } else if (command === "provider") {
       result = await providerCommand(
         resolvePaths(options),
@@ -1626,24 +1667,24 @@ export async function run(argv: readonly string[]): Promise<number> {
           typeof options.flags["credentials"] === "string"
             ? options.flags["credentials"]
             : undefined;
-        let apiKey: string | undefined;
-        try {
-          apiKey = resolveApiKeyWithFile(
-            routing.evaluatorProvider === "" ? "openrouter" : routing.evaluatorProvider,
-            archivoCredenciales,
-          );
-        } catch (caught) {
-          // Un fallo de credencial no se silencia: el evaluador daría el mismo
-          // error más tarde y con menos contexto.
-          const failure = toFailure(caught);
-          result = { stdout: "", stderr: failure.message, exitCode: failure.exitCode };
-        }
+        const credentialResolver =
+          cascade === undefined ? undefined : credentialForCascade(archivoCredenciales);
+        const apiKey =
+          cascade === undefined
+            ? apiKeyWithPrecedence(
+                routing.evaluatorProvider === "" ? "openrouter" : routing.evaluatorProvider,
+                archivoCredenciales,
+              ) ?? undefined
+            : undefined;
 
-        result ??= await runGate(rutas, {
+        result = await runGate(rutas, {
           gateId,
           ticketId,
           dryRun: options.flags["dry-run"] === true,
           ...(apiKey === undefined ? {} : { apiKey }),
+          ...(credentialResolver === undefined
+            ? {}
+            : { credentialForProvider: credentialResolver }),
           ...(evaluator === undefined ? {} : { evaluator }),
           ...(routing.evaluatorModel === "" ? {} : { model: routing.evaluatorModel }),
           ...(routing.evaluatorProvider === ""
@@ -1687,10 +1728,6 @@ export async function run(argv: readonly string[]): Promise<number> {
           typeof options.flags["pregunta"] === "string" ? options.flags["pregunta"] : undefined;
 
         try {
-          const apiKey = resolveApiKeyWithFile(
-            chain.producer.provider === "" ? "openrouter" : chain.producer.provider,
-            archivoCredenciales,
-          );
           const corrida = await runCascadeTask({
             paths: rutas,
             task: rawTarea,
@@ -1699,7 +1736,7 @@ export async function run(argv: readonly string[]): Promise<number> {
               ...(pregunta === undefined ? {} : { pregunta }),
             },
             chain,
-            ...(apiKey === undefined ? {} : { apiKey }),
+            credentialForProvider: credentialForCascade(archivoCredenciales),
           });
           result = { stdout: renderCascadeTask(corrida), stderr: "", exitCode: 0 };
         } catch (caught) {

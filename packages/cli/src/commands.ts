@@ -96,6 +96,9 @@ import {
   renderAuditoria,
   reciboDeAuditoria,
   SUJETO_MANUALES,
+  INDEXADORES_CORPUS,
+  publicarCorpus,
+  renderCorpus,
   defaultReportRange,
   findAllTickets,
   filterReport,
@@ -2279,6 +2282,32 @@ export function manualesAuditarCommand(
           : EXIT_INVARIANT;
 
     return { ...ok(texto), exitCode };
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/** `corpus publicar`: entrega el delta al destino elegido, sin dependencias de índice. */
+export function corpusPublicarCommand(
+  root: string,
+  flags: Readonly<Record<string, string | true>>,
+): CommandResult {
+  const nombre = typeof flags["indexador"] === "string" ? flags["indexador"] : undefined;
+  if (nombre !== undefined && !Object.hasOwn(INDEXADORES_CORPUS, nombre)) {
+    return error(
+      `Indexador de corpus desconocido: ${nombre}. Válidos: ${Object.keys(INDEXADORES_CORPUS).join(", ")}.`,
+      EXIT_SCHEMA,
+    );
+  }
+  try {
+    const resultado = publicarCorpus(choosePaths(root), {
+      ...(typeof flags["corpus-dir"] === "string" ? { corpusDir: flags["corpus-dir"] } : {}),
+      ...(typeof flags["manuales-dir"] === "string" ? { manualesDir: flags["manuales-dir"] } : {}),
+      ...(nombre === undefined ? {} : { indexador: INDEXADORES_CORPUS[nombre]! }),
+      completo: flags["completo"] === true,
+    });
+    return ok(renderCorpus(resultado));
   } catch (caught) {
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);
