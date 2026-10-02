@@ -1,0 +1,9 @@
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, beforeEach, expect, it } from "vitest";
+import { callTool, TOOLS } from "../packages/mcp/src/tools.js";
+let home: string; let root: string;
+beforeEach(() => { home = join(tmpdir(), `valmen-mcp-exec-${Date.now()}`); root = join(home, "harness"); mkdirSync(join(home, ".valmen"), { recursive: true }); mkdirSync(join(root, ".valmen"), { recursive: true }); writeFileSync(join(root, ".valmen", "config.yaml"), "project-id: valmen-harness\n"); writeFileSync(join(home, ".valmen", "bindings.local.yaml"), `schema-version: 1\nmachine-id: test\nprojects:\n  valmen-harness:\n    root: ${root}\n`); });
+afterEach(() => rmSync(home, { recursive: true, force: true }));
+it("registra y consulta el contrato de ejecución autorizado", async () => { const args = { proyecto: "valmen-harness", ticket: "FEATURE-MCP-EJECUCION-DIRECTA-20261001", ejecucion: "mcp-01", intento: "try-01", evento: "mcp-event-01", estado: "started", fuente: "mcp", ocurrido_en: "2026-10-01T10:00:00.000Z" }; const context = { paths: { root, ticketsDir: "tickets" }, home }; expect((await callTool(context, "registrar_actividad_ejecucion", args)).isError).toBe(false); const read = await callTool(context, "ver_actividad_ejecucion", { proyecto: args.proyecto, ticket: args.ticket, ejecucion: args.ejecucion }); expect(read.text).toContain("started"); expect(TOOLS.some((tool) => tool.name === "ver_actividad_ejecucion")).toBe(true); });
