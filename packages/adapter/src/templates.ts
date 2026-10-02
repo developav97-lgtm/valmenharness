@@ -86,6 +86,17 @@ Hasta el último paso los tickets son **un plan**: un ticket del grafo no tiene
 en \`intake\` con el flujo de siempre: análisis, plan, aprobación de una persona,
 implementación, entrega y QA — en el orden que dicen las dependencias.
 
+### Antes de registrar: traducir lo nuevo del pedido
+
+Un pedido que nombra algo que el código no tiene —un «parámetro nuevo», un
+permiso, una bandera, una columna, una migración— no se registra con ese hueco.
+Antes de crear el ticket, la palabra se traduce a campo real con búsqueda en el
+código; si el campo no aparece, se pregunta **una vez** a la persona y el ticket
+se registra con la respuesta. Lo que quede sin decidir se escribe en la sección
+\`### Supuestos y decisiones pendientes\` del ticket, cada elemento con su
+pregunta exacta, y el análisis empieza por ahí: planificar sobre la adivinanza
+cuesta compuertas en banda y decisiones que el registro no puede auditar.
+
 ### Estados del ticket
 
 \`\`\`text

@@ -77,6 +77,14 @@ ${TEMPLATE_TITLE_MARKER}
 
 ${TEMPLATE_REQUEST_MARKER}
 
+### Supuestos y decisiones pendientes
+
+<!-- Si el pedido nombra algo que el código no tiene —parámetro, permiso,
+campo, bandera, columna, migración— y no lo especifica, listá cada elemento
+con su pregunta antes de avanzar a análisis; el análisis no planifica sobre
+la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
+Ninguno.
+
 ## Descripción funcional
 
 - Alcance:
