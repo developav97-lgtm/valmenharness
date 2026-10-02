@@ -1,0 +1,23 @@
+{
+  "fecha": "2026-10-01",
+  "feature": "control-jornadas-ejecucion",
+  "estado": "decomposed",
+  "requisitos": 35,
+  "huecos": [],
+  "ciclos": [],
+  "sprints": 8,
+  "nodos": 50,
+  "nuevosPropuestos": 37,
+  "reutilizados": 13,
+  "reutilizadosCerrados": 5,
+  "reutilizadosIntake": 8,
+  "dependenciasOriginalesConservadas": true,
+  "dependenciasEnMismoTramoOAnterior": true,
+  "cliMcpSinHermes": true,
+  "observacionAdopcionSinAutonomia": true,
+  "nuevosSinMaterializar": true,
+  "nodosOriginalArquitecto": 47,
+  "sha256OriginalArquitecto": "e6358c23e5e4307b15e3691987a4004f50b3f2974ff301ce2c98cfaa016c6d85",
+  "sha256GrafoRevisado": "b00694b982587646eb2a76c73ef8e1ebf15f8e267ed424ad4a4e6aef58c8ddeb",
+  "validacion": "Documental y mecánica; sin implementación ni QA funcional"
+}

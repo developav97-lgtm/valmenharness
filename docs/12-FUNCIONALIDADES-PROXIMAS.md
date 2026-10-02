@@ -668,6 +668,31 @@ por sus palabras, y el modelo que los lee decide si sirven. Un buscador que devu
 candidatos buenos y uno malo es útil; uno que no devuelve nada porque las palabras no coinciden
 exactamente no lo es, y por eso la búsqueda no exige que aparezcan todos los términos.
 
+**Contrato de publicación del corpus.** `valmen corpus publicar` entrega tres colecciones
+separadas: `manuales` (cada `*.md`, recorrido recursivo), `memoria` (cada entrada que lee
+`loadMemory`) y `tickets` (solo los cerrados). Cada documento lleva `coleccion`, `id`,
+`origen`, `fecha`, `titulo`, `hash` SHA-256 y `texto`, sin trocear ni embeber. El par
+`origen`/`fecha` permite citar la fuente: ruta relativa —ruta y línea para memoria— y
+fecha declarada —«Última actualización» del manual, fecha de la entrada o último cierre
+del ticket, con `updated` como respaldo—. Una fecha ausente queda vacía.
+
+La pasada incremental compara el contenido contra `.valmen/corpus/estado.json`: entrega
+solo nuevos y cambiados, y declara los desaparecidos como `eliminados`. Sin cambios, el
+lote es vacío; `--completo` republica todos los documentos actuales y sigue declarando
+las bajas conocidas. Borrar el estado también republica todo. El destino de fábrica
+`archivos` anexa documentos a `<corpus-dir>/<coleccion>.jsonl`; las bajas son líneas con
+`coleccion`, `id` y `eliminado: true`. Quien consume conserva la última versión por id.
+El corpus es derivado, nunca fuente de verdad.
+
+El índice es sustituible: `publicarCorpus` recibe un `IndexadorCorpus` síncrono que acepta
+el lote y el directorio, o lanza si falla; el estado se confirma solo después de esa
+aceptación. El CLI elige el registro `INDEXADORES_CORPUS` con `--indexador`, o con la
+primera entrada de `corpus-indexer: [archivos]` en la configuración, y por defecto usa
+`archivos`. `--corpus-dir` cambia el destino y su estado; `--manuales-dir` cambia la
+fuente de manuales. Al cambiar de indexador conviene usar otro directorio de estado o
+`--completo`. El plugin decide la base vectorial y los embeddings, sin agregarlos al
+motor. El proceso `actualizar-manuales` publica al final, después de la auditoría.
+
 Sobre el corpus real de SaiOpenCloud —240 entradas de `decisions.md` y `errors.md`— las consultas
 del dominio devuelven la entrada correcta arriba de todo, y los tres formatos de encabezado que
 conviven en esos documentos se indexan sin migrarlos: **la memoria no se muda**, se lee donde

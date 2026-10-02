@@ -305,6 +305,12 @@ configuración, o cuando el gate se resuelve en código.
 resuelve el routing con la misma precedencia que los demás
 (`packages/adapter/src/routing.ts:109-124`), y cada rol dice qué lo ejecuta.
 
+**Cada rol usa la credencial de su proveedor.** CLI, Mission Control y MCP la
+resuelven en el borde para productor, verificador y escalamiento por separado;
+una cadena puede, por ejemplo, producir y verificar con OpenRouter y escalar con
+OpenCode sin enviar la clave de uno al otro. Los proveedores de suscripción, como
+Codex y Claude Code, conservan su resolución de token nativa.
+
 | Rol | Qué hace |
 |---|---|
 | `producer` | Responde primero todas las proposiciones, con el modelo barato |
