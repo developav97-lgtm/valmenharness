@@ -59,10 +59,21 @@ describe("el catálogo de roles de ejecución", () => {
     }
   });
 
-  it("los cuatro presets dan modelo y esfuerzo a los tres eslabones", () => {
+  it("declara el rol ui-specs, que se resuelve desde la sección playwright", () => {
+    const rol = ROLES.find((candidato) => candidato.id === "ui-specs");
+    expect(rol, "falta el rol ui-specs").toBeDefined();
+    expect(rol?.description).not.toBe("");
+    expect(rol?.consumer).not.toBeNull();
+    // Aditivo: los tres eslabones siguen declarados, con su consumidor.
+    for (const id of ESLABONES) {
+      expect(ROLES.some((candidato) => candidato.id === id)).toBe(true);
+    }
+  });
+
+  it("los cuatro presets dan modelo y esfuerzo a los tres eslabones y al rol de specs", () => {
     for (const preset of PRESETS) {
       const rutas = resolveRouting({ preset: preset.id, roles: {} });
-      for (const id of ESLABONES) {
+      for (const id of [...ESLABONES, "ui-specs"]) {
         const ruta = rutas.find((candidato) => candidato.role === id);
         expect(ruta, `${preset.id}/${id}`).toBeDefined();
         expect(ruta?.model, `${preset.id}/${id}`).not.toBe("");

@@ -252,7 +252,7 @@ function escaparRegex(texto: string): string {
  * La regla mínima está en el encabezado: el prefijo de doble asterisco matchea
  * por sufijo de ruta y cualquier otro patrón por igualdad exacta.
  */
-function esPantalla(archivo: string, patrones: readonly string[]): boolean {
+export function esPantalla(archivo: string, patrones: readonly string[]): boolean {
   for (const patron of patrones) {
     if (patron.startsWith("**/")) {
       const sufijo = patron.slice(3);

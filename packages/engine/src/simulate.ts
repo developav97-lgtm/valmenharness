@@ -31,8 +31,10 @@ import {
 } from "@valmen/gate";
 import { evaluateWithJev } from "@valmen/gate-jev";
 
-import { type LocatedTicket, type RegistryPaths, findAllTickets } from "./discovery.js";
+import { type LocatedTicket, type RegistryPaths, findAllTickets, playwrightConfig } from "./discovery.js";
 import { buildGateState } from "./state.js";
+import { interfazDelTicket } from "./interfaz.js";
+import { testCommands } from "./gate.js";
 
 /** Lo que se midió para un ticket. */
 export interface SimulatedTicket {
@@ -183,9 +185,15 @@ export async function simulateGate(
     // Se expande igual que en una evaluación real: una proposición por
     // criterio. Simular el gate sin expandir mediría algo distinto de lo que
     // corre en producción.
+    const criteria = extractCriteriaSpecs(state["criterios"] ?? "");
     const expanded = gateFor(gate, {
-      criteria: extractCriteriaSpecs(state["criterios"] ?? ""),
+      criteria,
       impacts,
+      interfaz: interfazDelTicket({
+        texto: ticket.text,
+        comandos: testCommands(paths.root),
+        playwright: playwrightConfig(paths.root),
+      }),
     });
 
     let evaluation;

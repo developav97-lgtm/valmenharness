@@ -18,6 +18,11 @@ import {
   fail,
   parseYamlSubset,
 } from "@valmen/core";
+import {
+  type ConfigMap,
+  type PlaywrightConfig,
+  readPlaywrightConfig,
+} from "@valmen/adapter";
 
 /** Un ticket leído de disco, con su ruta relativa a la raíz del proyecto. */
 export interface LocatedTicket {
@@ -142,6 +147,30 @@ export function testTimeout(root: string): number {
 
 /** El tope de siempre para un comando de verificación: 30 segundos. */
 const POR_DEFECTO = 30_000;
+
+/**
+ * La capacidad de pruebas de interfaz declarada por el proyecto, o `null`.
+ *
+ * Vive junto a los otros lectores del mismo archivo —`configList` y
+ * `testTimeout`— para que no aparezca un tercer parser de `config.yaml`: el
+ * análisis del submapa lo hace `readPlaywrightConfig` en el adaptador, con el
+ * mismo parser estricto que el resto. A diferencia de los otros dos, una sección
+ * mal formada **no se interpreta**: `readPlaywrightConfig` falla y el error sube,
+ * porque interpretar «casi bien» una capacidad es resolver algo distinto de lo
+ * que el proyecto escribió.
+ */
+export function playwrightConfig(root: string): PlaywrightConfig | null {
+  let texto: string;
+  try {
+    texto = readFileSync(join(root, ".valmen", "config.yaml"), "utf8");
+  } catch {
+    return null;
+  }
+
+  const documento = parseYamlSubset(texto, { fileName: ".valmen/config.yaml" });
+  if (typeof documento !== "object" || Array.isArray(documento)) return null;
+  return readPlaywrightConfig(documento as ConfigMap);
+}
 
 /** `true` si el directorio tiene al menos un `ticket.md` en su segundo nivel. */
 function contieneTickets(base: string): boolean {

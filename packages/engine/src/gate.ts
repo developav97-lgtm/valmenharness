@@ -15,6 +15,8 @@
  * ticket**: entrega el recibo y deja la decisión pendiente. Un gate no cambia
  * estados por su cuenta.
  */
+import { statSync } from "node:fs";
+
 import {
   EXIT_INVARIANT,
   TicketError,
@@ -46,9 +48,10 @@ import { type CommandCheck } from "@valmen/gate-command";
 import { type CascadeOptions, type EvaluatorId, evaluateGate } from "./evaluators.js";
 
 import type { RunnerResult } from "./result.js";
-import { type RegistryPaths, configList, findTicket, testTimeout } from "./discovery.js";
+import { type RegistryPaths, configList, findTicket, playwrightConfig, testTimeout } from "./discovery.js";
 import { buildGateState, runMechanicalChecks } from "./state.js";
 import { appendReceipt } from "./receipts.js";
+import { interfazDelTicket } from "./interfaz.js";
 
 /** Opciones de una evaluación de gate. */
 export interface GateRunOptions {
@@ -126,9 +129,18 @@ export interface GateRunOptions {
  * sería escribir una orden arbitraria que el gate ejecuta después, y un agente
  * podría ampliar su propia autoridad a través del artefacto que se le pide
  * evaluar. Con la lista, lo máximo que consigue es apuntar a un test que falla.
+ *
+ * Cuando el proyecto declara la sección `playwright:`, su comando **también** se
+ * autoriza: la comprobación previa rechaza un ticket cuya única verificación sea
+ * el verbo si el programa no figura entre los prefijos, y la sección es una
+ * declaración legítima del proyecto. La disponibilidad del verbo la decide la
+ * sección, no esta lista: que el comando esté acá solo evita el falso rechazo.
  */
 export function testCommands(root: string): string[] {
-  return configList(root, "test-commands");
+  const declarados = configList(root, "test-commands");
+  const playwright = playwrightConfig(root);
+  if (playwright === null || declarados.includes(playwright.command)) return declarados;
+  return [...declarados, playwright.command];
 }
 
 /**
@@ -312,7 +324,15 @@ export async function runGate(
   // y una por impacto declarado, en vez de preguntas compuestas que el evaluador
   // no sabe responder. Medido: la compuesta acierta el 7%, las atómicas el 62%.
   const criteria = extractCriteriaSpecs(state["criterios"] ?? "");
-  const gate = gateFor(definition, { criteria, impacts });
+  const gate = gateFor(definition, {
+    criteria,
+    impacts,
+    interfaz: interfazDelTicket({
+      texto: ticket.text,
+      comandos: testCommands(paths.root),
+      playwright: playwrightConfig(paths.root),
+    }),
+  });
 
   // Los comandos que responden las proposiciones del gate mecánico. Se arman
   // después de la comprobación previa, así que acá ya se sabe que hay al menos uno
@@ -323,16 +343,29 @@ export async function runGate(
       criteria,
       testCommands(paths.root),
       testTimeout(paths.root),
+      playwrightConfig(paths.root),
+      {
+        root: paths.root,
+        esArchivo: (ruta) => {
+          try {
+            return statSync(ruta).isFile();
+          } catch {
+            return false;
+          }
+        },
+      },
     );
     if (refused.length > 0) {
       return {
         stdout: "",
         stderr:
-          `El proyecto no autoriza ${refused.length === 1 ? "este comando" : "estos comandos"}:\n` +
+          "Criterios rechazados: el comando debe estar autorizado y el spec de Playwright " +
+          "debe ser un archivo del repositorio.\n" +
           refused.map((linea) => `  ${linea}`).join("\n") +
-          "\nAgregue el prefijo a `test-commands` en `.valmen/config.yaml`, o cambie el " +
-          "criterio. Un comando que el proyecto no declaró no se ejecuta desde un ticket: " +
-          "el ticket lo escribe quien el gate controla.\n",
+          "\nSi el proyecto no autoriza el comando, revise el prefijo en `test-commands` " +
+          "o la sección `playwright:` de `.valmen/config.yaml`. " +
+          "Si el rechazo nombra el spec, corrija su ruta en el criterio. " +
+          "No se ejecutó ningún comando ni se llamó al evaluador.\n",
         exitCode: EXIT_INVARIANT,
       };
     }
