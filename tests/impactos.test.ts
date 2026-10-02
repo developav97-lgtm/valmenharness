@@ -16,7 +16,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { buildGateState, runMechanicalChecks } from "../packages/engine/src/state.js";
-import { ANALYSIS_GATE, PLAN_GATE, gateFor } from "../packages/gate/src/index.js";
+import { ANALYSIS_GATE, PLAN_GATE, gateFor, SIN_INTERFAZ } from "../packages/gate/src/index.js";
 import { renderFixtureTicket, writeFixtureTicket } from "./helpers/fixtures.js";
 
 let lab: string;
@@ -222,6 +222,7 @@ describe("los impactos llegan al evaluador", () => {
     const expandido = gateFor(PLAN_GATE, {
       criteria: [],
       impacts: ["migration_impact"],
+      interfaz: SIN_INTERFAZ,
     });
 
     const ids = expandido.propositions.map((proposition) => proposition.id);
@@ -240,6 +241,7 @@ describe("los impactos llegan al evaluador", () => {
     const expandido = gateFor(PLAN_GATE, {
       criteria: [],
       impacts: ["docker_impact", "sync_impact"],
+      interfaz: SIN_INTERFAZ,
     });
 
     const ids = expandido.propositions.map((proposition) => proposition.id);
@@ -250,6 +252,7 @@ describe("los impactos llegan al evaluador", () => {
     const expandido = gateFor(ANALYSIS_GATE, {
       criteria: [],
       impacts: ["migration_impact"],
+      interfaz: SIN_INTERFAZ,
     });
 
     expect(expandido.propositions.map((proposition) => proposition.id)).not.toContain(
@@ -266,6 +269,7 @@ describe("los impactos llegan al evaluador", () => {
         { text: 'Buscar "104" devuelve la orden "1042".', command: null, manual: true },
       ],
       impacts: [],
+      interfaz: SIN_INTERFAZ,
     });
 
     expect(expandido.id).toBe("plan+criterios");
@@ -274,7 +278,11 @@ describe("los impactos llegan al evaluador", () => {
   });
 
   it("un identificador que el contrato no conoce no se despliega", () => {
-    const expandido = gateFor(PLAN_GATE, { criteria: [], impacts: ["lo_que_sea"] });
+    const expandido = gateFor(PLAN_GATE, {
+      criteria: [],
+      impacts: ["lo_que_sea"],
+      interfaz: SIN_INTERFAZ,
+    });
     expect(expandido.id).toBe("plan");
   });
 
@@ -284,6 +292,7 @@ describe("los impactos llegan al evaluador", () => {
         { text: 'Buscar "104" devuelve la orden "1042".', command: null, manual: true },
       ],
       impacts: ["migration_impact"],
+      interfaz: SIN_INTERFAZ,
     });
 
     const ids = expandido.propositions.map((proposition) => proposition.id);

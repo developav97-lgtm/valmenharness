@@ -22,6 +22,8 @@
  *
  * Ver docs/06-CONTROL-APP.md §2.3 y docs/03-GATES.md §7.
  */
+import { statSync } from "node:fs";
+
 import {
   type CommandCheckSpec,
   type EvaluatedProposition,
@@ -39,6 +41,7 @@ import {
 } from "@valmen/gate";
 import { declaredImpactIds, parseTicket } from "@valmen/core";
 import { apiKeyWithPrecedence, transportById } from "@valmen/credentials";
+import { interfazDelTicket } from "@valmen/engine";
 import { cascadeRouting, gateRouting } from "./routing.js";
 import {
   type EvaluatorId,
@@ -52,6 +55,7 @@ import {
   readReceipts,
   runGate,
   runMechanicalChecks,
+  playwrightConfig,
   testCommands,
   testTimeout,
 } from "@valmen/engine";
@@ -270,13 +274,22 @@ export function listGateCards(paths: RegistryPaths, ticketId: string): GateCard[
     const criteria = extractCriteriaSpecs(parsed.sections["Criterios de aceptación"]);
     const autorizados = testCommands(paths.root);
     const espera = testTimeout(paths.root);
+    const playwright = playwrightConfig(paths.root);
     for (const definicion of Object.values(GATES)) {
       // Con los impactos del ticket: el plan de uno que toca la migración tiene
       // más proposiciones que el de un bugfix, y el número que muestra la
       // pantalla tiene que ser el que se va a evaluar.
       proposiciones.set(
         definicion.id,
-        gateFor(definicion, { criteria, impacts: declaredImpactIds(parsed) }).propositions,
+        gateFor(definicion, {
+          criteria,
+          impacts: declaredImpactIds(parsed),
+          interfaz: interfazDelTicket({
+            texto: ticket.text,
+            comandos: autorizados,
+            playwright,
+          }),
+        }).propositions,
       );
       // Los comandos salen de los criterios del ticket, igual que en el motor. Se
       // leían de `definicion.commandChecks`, un campo que ninguna definición
@@ -286,7 +299,16 @@ export function listGateCards(paths: RegistryPaths, ticketId: string): GateCard[
       comandos.set(
         definicion.id,
         definicion.commandPropositions === true
-          ? commandChecksFor(criteria, autorizados, espera).checks
+          ? commandChecksFor(criteria, autorizados, espera, playwright, {
+              root: paths.root,
+              esArchivo: (ruta) => {
+                try {
+                  return statSync(ruta).isFile();
+                } catch {
+                  return false;
+                }
+              },
+            }).checks
           : [],
       );
     }

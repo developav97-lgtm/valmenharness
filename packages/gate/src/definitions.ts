@@ -35,6 +35,11 @@ export const PLAN_GATE: GateDefinition = {
   // Y una por impacto declarado: el plan de un ticket que toca la migración tiene
   // que decir cómo se revierte, y el de uno que no, no.
   impactPropositions: true,
+  // Y la declaración de interfaz cuando el plan toca una pantalla y el proyecto
+  // declara la capacidad en `test-commands`: el agente propone, la persona decide
+  // al aprobar el plan. El gate de análisis no la despliega porque protege el
+  // estado donde el plan todavía no existe.
+  interfazProposition: true,
   // Solo tiene sentido antes de que la transición ocurra. Un ticket ya aprobado
   // o cerrado pasó por aquí, y volver a evaluarlo mide otra cosa.
   appliesTo: ["planned"],

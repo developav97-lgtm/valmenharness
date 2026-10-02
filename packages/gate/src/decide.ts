@@ -180,6 +180,11 @@ export interface GateDefinition {
    * ticket y el ticket lo escribe quien el gate tiene que controlar.
    */
   readonly commandPropositions?: boolean;
+  /**
+   * Si despliega la proposición de declaración de Playwright cuando el plan toca
+   * una pantalla y el proyecto declara la capacidad.
+   */
+  readonly interfazProposition?: boolean;
   readonly policy: GatePolicy;
   readonly mechanicalChecks: readonly MechanicalCheck[];
   /**

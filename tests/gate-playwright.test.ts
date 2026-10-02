@@ -2,17 +2,19 @@
  * El verbo `playwright` de los criterios, y la evidencia de la corrida.
  *
  * Un criterio de interfaz declara su spec con el verbo —`<!-- test: playwright
- * tests/pos/creacion-manual.spec.ts -->`— y la compuerta lo resuelve contra el
- * prefijo que el proyecto declara en `test-commands`: del criterio solo viaja la
- * ruta del spec y el programa sale de la configuración. Lo que se afirma acá es
- * eso, que sin un prefijo de Playwright el criterio se rechaza sin correr nada, y
- * que el recibo guarda el resultado de cada comando con la evidencia que dejó.
+ * tests/pos/creacion-manual.spec.ts -->`— y la compuerta lo resuelve contra la
+ * sección `playwright:` que el proyecto declara en `.valmen/config.yaml`: del
+ * criterio solo viaja la ruta del spec y el programa sale de la configuración. Lo
+ * que se afirma acá es eso, que sin la sección el criterio se rechaza sin correr
+ * nada, y que el recibo guarda el resultado de cada comando con la evidencia que
+ * dejó.
  */
 import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
+  statSync,
   utimesSync,
   writeFileSync,
 } from "node:fs";
@@ -56,6 +58,31 @@ function comandos(prefixes: readonly string[]): void {
   );
 }
 
+/**
+ * Escribe la configuración con la sección `playwright:` declarada.
+ *
+ * El verbo no se resuelve contra `test-commands`: se declara en su propia sección,
+ * que es donde el proyecto describe el programa, el navegador y su tope.
+ */
+function seccionPlaywright(options: {
+  readonly command: string;
+  readonly project?: string;
+  readonly timeout?: number;
+}): void {
+  mkdirSync(join(lab, ".valmen"), { recursive: true });
+  const lineas = [
+    "name: Laboratorio",
+    "test-commands:",
+    "  - npx vitest run",
+    "playwright:",
+    `  command: ${options.command}`,
+    ...(options.project === undefined ? [] : [`  project: ${options.project}`]),
+    ...(options.timeout === undefined ? [] : [`  timeout: ${options.timeout}`]),
+    "",
+  ];
+  writeFileSync(join(lab, ".valmen", "config.yaml"), lineas.join("\n"), "utf8");
+}
+
 /** El criterio del verbo: solo su ruta viaja, el programa sale de la config. */
 const CRITERIO_VERBO =
   "- [ ] La pantalla de creación manual guarda la orden.\n" +
@@ -77,24 +104,35 @@ function runnerPlaywright(): void {
 beforeEach(() => {
   lab = mkdtempSync(join(tmpdir(), "valmen-playwright-"));
   mkdirSync(join(lab, "tickets"), { recursive: true });
+  mkdirSync(join(lab, "tests/pos"), { recursive: true });
+  writeFileSync(join(lab, "tests/pos/creacion-manual.spec.ts"), "// Spec del repositorio\n");
 });
 
 afterEach(() => {
   rmSync(lab, { recursive: true, force: true });
 });
 
-describe("el verbo se resuelve contra el comando declarado", () => {
+describe("el verbo se resuelve contra la sección declarada", () => {
   it("corre el comando de la configuración con la ruta del spec y aprueba", async () => {
-    comandos(["node playwright"]);
+    seccionPlaywright({ command: "node playwright" });
     ticket(CRITERIO_VERBO);
     runnerPlaywright();
 
     const criterios = extractCriteriaSpecs(CRITERIO_VERBO);
-    const { checks, refused } = commandChecksFor(criterios, ["node playwright"]);
+    const { checks, refused } = commandChecksFor(criterios, ["node"], undefined, {
+      command: "node playwright",
+      project: "chromium",
+      timeoutMs: 30_000,
+    }, { root: lab, esArchivo: (ruta) => statSync(ruta).isFile() });
 
     expect(refused).toEqual([]);
     expect(checks[0]?.command).toBe("node");
-    expect(checks[0]?.args).toEqual(["playwright", "tests/pos/creacion-manual.spec.ts"]);
+    expect(checks[0]?.args).toEqual([
+      "playwright",
+      "--project",
+      "chromium",
+      "tests/pos/creacion-manual.spec.ts",
+    ]);
     expect(checks[0]?.artifactDirs).toEqual(["test-results", "playwright-report"]);
 
     const resultado = await correr();
@@ -103,10 +141,10 @@ describe("el verbo se resuelve contra el comando declarado", () => {
     expect(resultado.stdout).toContain("APPROVE");
   });
 
-  it("sin un prefijo de Playwright declarado rechaza el criterio sin correr nada", async () => {
-    // La decisión es rechazo: el verbo no inventa el programa. Sin un prefijo
-    // declarado que lo contenga, el criterio nombra algo que el proyecto no
-    // autorizó y la compuerta lo dice sin ejecutar nada.
+  it("sin la sección declarada rechaza el criterio sin correr nada", async () => {
+    // La decisión es rechazo: el verbo no inventa el programa. Sin la sección
+    // `playwright:` el criterio nombra una capacidad que el proyecto no declaró y
+    // la compuerta lo dice sin ejecutar nada.
     comandos(["node"]);
     ticket(CRITERIO_VERBO);
     runnerPlaywright();
@@ -114,9 +152,9 @@ describe("el verbo se resuelve contra el comando declarado", () => {
     const resultado = await correr();
 
     expect(resultado.exitCode).toBe(3);
-    expect(resultado.stderr).toContain("no autoriza");
+    expect(resultado.stderr).toContain("el comando debe estar autorizado");
     expect(resultado.stderr).toContain("playwright");
-    expect(resultado.stderr).toContain("test-commands");
+    expect(resultado.stderr).toContain("playwright:");
     expect(readReceipts(PATHS(), TICKET)).toEqual([]);
   });
 });
@@ -166,7 +204,7 @@ describe("el recibo guarda lo que la corrida dejó", () => {
   });
 
   it("referencia la evidencia que la corrida dejó en el directorio del check", async () => {
-    comandos(["node playwright"]);
+    seccionPlaywright({ command: "node playwright" });
     ticket(CRITERIO_VERBO);
     runnerPlaywright();
 
@@ -182,7 +220,7 @@ describe("el recibo guarda lo que la corrida dejó", () => {
   it("un archivo de evidencia anterior al arranque queda fuera del recibo", async () => {
     // Listar el directorio entero atribuiría al recibo la traza de una corrida
     // anterior: una afirmación falsa con forma de prueba.
-    comandos(["node playwright"]);
+    seccionPlaywright({ command: "node playwright" });
     ticket(CRITERIO_VERBO);
     runnerPlaywright();
 

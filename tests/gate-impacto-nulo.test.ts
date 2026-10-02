@@ -16,7 +16,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { ANALYSIS_GATE, expandGate } from "../packages/gate/src/dynamic.js";
+import { ANALYSIS_GATE, expandGate, SIN_INTERFAZ } from "../packages/gate/src/dynamic.js";
 import { decide, DEFAULT_POLICY, type PropositionAnswer } from "../packages/gate/src/decide.js";
 
 const RESPUESTAS = (
@@ -37,7 +37,11 @@ const RESPUESTAS = (
 
 describe("expandGate con el conjunto de impactos vacío", () => {
   it("riesgos_cubren_impactos queda descriptiva: en el recibo, sin banda ni media", () => {
-    const expandido = expandGate(ANALYSIS_GATE, { criteria: [], impacts: [] });
+    const expandido = expandGate(ANALYSIS_GATE, {
+      criteria: [],
+      impacts: [],
+      interfaz: SIN_INTERFAZ,
+    });
     const riesgos = expandido.propositions.find((p) => p.id === "riesgos_cubren_impactos");
     expect(riesgos).toBeDefined();
     expect(riesgos?.verdict).toBe(false);
@@ -70,6 +74,7 @@ describe("expandGate con el conjunto de impactos vacío", () => {
     const expandido = expandGate(ANALYSIS_GATE, {
       criteria: [],
       impacts: ["sync_impact"],
+      interfaz: SIN_INTERFAZ,
     });
     const riesgos = expandido.propositions.find((p) => p.id === "riesgos_cubren_impactos");
     expect(riesgos?.verdict ?? true).toBe(true);
@@ -90,7 +95,11 @@ describe("expandGate con el conjunto de impactos vacío", () => {
   });
 
   it("la expansión sin criterios ni impactos conserva el resto de las fijas sin cambio", () => {
-    const expandido = expandGate(ANALYSIS_GATE, { criteria: [], impacts: [] });
+    const expandido = expandGate(ANALYSIS_GATE, {
+      criteria: [],
+      impacts: [],
+      interfaz: SIN_INTERFAZ,
+    });
     const ids = expandido.propositions.map((p) => p.id);
     expect(ids).toContain("diagnostico_explica_el_sintoma");
     expect(ids).toContain("causa_especifica");

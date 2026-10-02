@@ -16,6 +16,7 @@
 import type { CommandCheckSpec, GateDefinition, Proposition } from "./decide.js";
 import { DEFAULT_POLICY } from "./decide.js";
 import { ANALYSIS_GATE, PLAN_GATE } from "./definitions.js";
+import { type RepositorioDeSpecs, specDelRepositorio } from "./specs.js";
 
 /** Máximo de criterios que se despliegan como proposiciones individuales. */
 export const MAX_CRITERIA_PROPOSITIONS = 12;
@@ -135,11 +136,31 @@ export function criterionProposition(index: number, criterion: CriterionSpec): P
  * El verbo `playwright` de las anotaciones `<!-- test: … -->`.
  *
  * Un criterio de interfaz puede declarar su spec con el verbo —`playwright
- * tests/pos/creacion-manual.spec.ts`— y la compuerta lo resuelve contra el
- * prefijo que el proyecto declara en `test-commands`: del criterio solo viaja la
- * ruta del spec, y el programa sale siempre de la configuración.
+ * tests/pos/creacion-manual.spec.ts`— y la compuerta lo resuelve contra la
+ * sección `playwright:` que el proyecto declara en `.valmen/config.yaml`: del
+ * criterio solo viaja la ruta del spec, y el programa, el navegador y el tope de
+ * tiempo salen siempre de la configuración. Sin esa sección el verbo no existe y
+ * el criterio se rechaza nombrándola.
  */
 export const VERBO_PLAYWRIGHT = "playwright";
+
+/**
+ * La declaración de la sección `playwright:` que el verbo necesita.
+ *
+ * Es la parte de `.valmen/config.yaml` que el gate usa, sin arrastrar el modelo:
+ * el programa y sus argumentos fijos, el navegador por defecto y el tiempo que se
+ * espera al check. Está declarada acá —y no importada del adaptador— para que el
+ * paquete del gate no dependa de la capa que lee el disco; el tipo del adaptador
+ * es estructuralmente compatible.
+ */
+export interface PlaywrightDeclaration {
+  /** El programa y sus argumentos fijos, tal como se declararon. */
+  readonly command: string;
+  /** El navegador que el check agrega como `--project`. */
+  readonly project: string;
+  /** El tope propio del check del verbo, en milisegundos. */
+  readonly timeoutMs: number;
+}
 
 /**
  * Los directorios donde Playwright deja su evidencia por defecto.
@@ -178,9 +199,18 @@ export function commandChecksFor(
   /**
    * Cuánto se espera a cada comando. Sin esto, una suite dentro de `docker
    * compose` se corta a los 30 segundos y el gate informa un timeout que parece
-   * un fallo del comando.
+   * un fallo del comando. No aplica al verbo `playwright`, que trae el suyo en la
+   * declaración de la sección.
    */
   timeoutMs?: number,
+  /**
+   * La declaración de la sección `playwright:` del proyecto, o `null` si no la
+   * escribió. Sin ella el verbo no se resuelve y el criterio se rechaza: la
+   * ausencia de la sección es la declaración de que la capacidad está apagada.
+   */
+  playwright?: PlaywrightDeclaration | null,
+  /** Raíz y consulta de archivo inyectadas: el gate no toca el disco. */
+  repositorio?: RepositorioDeSpecs,
 ): { readonly checks: readonly CommandCheckSpec[]; readonly refused: readonly string[] } {
   const checks: CommandCheckSpec[] = [];
   const refused: string[] = [];
@@ -195,10 +225,27 @@ export function commandChecksFor(
       return;
     }
 
-    // (a) El criterio ya empieza con un prefijo autorizado —es el caso del
-    //     prefijo completo escrito en el criterio— y se arma igual que siempre:
-    //     la resolución del verbo no lo toca.
-    if (autorizado(partes, allowed)) {
+    const declarado = playwright == null ? [] : partirComando(playwright.command);
+    const comandoCompleto =
+      playwright != null && declarado.length > 0 && autorizado(partes, [playwright.command]);
+
+    // (a) El prefijo completo conserva su invocación. Solo los argumentos con
+    // forma de spec se comprueban; los filtros por título siguen siendo válidos.
+    // Autorizar el verbo pelado no puede saltarse la comprobación de su ruta.
+    if (
+      autorizado(partes, allowed) &&
+      (partes[0] !== VERBO_PLAYWRIGHT || (comandoCompleto && declarado.length > 1))
+    ) {
+      if (comandoCompleto) {
+        const motivos = partes.slice(declarado.length)
+          .filter((parte) => /\.spec\.(?:ts|js|tsx|mjs)$/.test(parte))
+          .map((ruta) => specDelRepositorio(ruta, repositorio))
+          .flatMap((spec) => "motivo" in spec ? [spec.motivo] : []);
+        if (motivos.length > 0) {
+          refused.push(`criterio ${index + 1}: ${criterion.command} — ${motivos.join("; ")}`);
+          return;
+        }
+      }
       checks.push({
         propositionId: proposicion,
         command: partes[0] as string,
@@ -209,33 +256,43 @@ export function commandChecksFor(
       return;
     }
 
-    // (b) El criterio nombra el verbo `playwright`: se resuelve contra el prefijo
-    //     declarado que lo contiene. **El programa sale de la configuración** y
-    //     del criterio solo viaja la ruta del spec —más lo que la siga—, porque un
-    //     programa tomado del criterio dejaría de estar protegido por el mecanismo
-    //     de prefijos y el ticket elegiría qué se corre.
+    // (b) El criterio nombra el verbo `playwright`: se resuelve solo contra la
+    //     sección `playwright:` de la configuración. **El programa sale de esa
+    //     declaración** y del criterio solo viaja la ruta del spec —más lo que la
+    //     siga—. El navegador por defecto se agrega como `--project` y el tope es
+    //     el propio de la sección, no el de los tests de backend.
     if (partes[0] === VERBO_PLAYWRIGHT) {
-      const prefijo = allowed
-        .map((linea) => partirComando(linea))
-        .find((piezas) => piezas.includes(VERBO_PLAYWRIGHT));
-
-      if (prefijo !== undefined && prefijo.length > 0) {
-        checks.push({
-          propositionId: proposicion,
-          command: prefijo[0] as string,
-          args: [...prefijo.slice(1), ...partes.slice(1)],
-          ...(timeoutMs === undefined ? {} : { timeoutMs }),
-          description: criterion.text,
-          artifactDirs: DIRECTORIOS_DE_EVIDENCIA_DE_PLAYWRIGHT,
-        });
-        return;
+      if (playwright !== undefined && playwright !== null && playwright.command !== "") {
+        if (declarado.length > 0) {
+          const spec = specDelRepositorio(partes[1], repositorio);
+          if ("motivo" in spec) {
+            refused.push(`criterio ${index + 1}: ${criterion.command} — ${spec.motivo}`);
+            return;
+          }
+          checks.push({
+            propositionId: proposicion,
+            command: declarado[0] as string,
+            args: [
+              ...declarado.slice(1),
+              "--project",
+              playwright.project,
+              spec.ruta,
+              ...partes.slice(2),
+            ],
+            timeoutMs: playwright.timeoutMs,
+            description: criterion.text,
+            artifactDirs: DIRECTORIOS_DE_EVIDENCIA_DE_PLAYWRIGHT,
+          });
+          return;
+        }
       }
 
-      // (c) El verbo se nombró y el proyecto no declaró ningún prefijo que lo
-      //     contenga: el criterio se rechaza nombrando el verbo, sin correr nada.
+      // (c) El verbo se nombró y el proyecto no declaró la sección: el criterio se
+      //     rechaza nombrando la sección que falta, sin correr nada.
       refused.push(
         `criterio ${index + 1}: ${criterion.command} — el verbo ${VERBO_PLAYWRIGHT} ` +
-          "necesita que el proyecto declare su comando en test-commands",
+          "necesita que el proyecto declare su comando en la sección `playwright:` de " +
+          ".valmen/config.yaml",
       );
       return;
     }
@@ -344,6 +401,67 @@ const PREGUNTAS_DE_IMPACTO: Readonly<
 /** El orden canónico de las preguntas: el mismo del contrato. */
 const ORDEN_DE_IMPACTOS = ["sync_impact", "migration_impact", "docker_impact"] as const;
 
+/**
+ * La capacidad de interfaz que un sujeto declara a la expansión del gate.
+ *
+ * El tercer campo es obligatorio por la misma razón que los otros dos: quien
+ * expande un gate tiene que decir qué pantallas toca el plan y si el proyecto
+ * declara la capacidad, porque un sitio nuevo que la omita preguntaría de menos
+ * en silencio. Quien no lo calcula lo declara con `SIN_INTERFAZ`, para que se
+ * lea la decisión y no una omisión.
+ */
+export interface InterfazDelSujeto {
+  /** `true` si el ticket cita al menos una ruta que el patrón de pantalla reconoce. */
+  readonly requiereDeclaracion: boolean;
+  /** Las rutas de pantalla citadas, en orden alfabético. */
+  readonly pantallas: readonly string[];
+}
+
+/**
+ * La declaración explícita de que no se calcula la interfaz del sujeto.
+ *
+ * Existe para los sitios que pasan el gate **sin expandir** a propósito: una
+ * constante con su motivo escrita en el llamado dice la decisión; omitir el
+ * campo diría una omisión.
+ */
+export const SIN_INTERFAZ: InterfazDelSujeto = { requiereDeclaracion: false, pantallas: [] };
+
+/**
+ * El identificador de la proposición que pide la declaración sobre Playwright.
+ *
+ * Es el único asunto que la expansión de interfaz agrega al gate de plan: ni
+ * criterios con el verbo, ni una segunda pregunta sobre la herramienta.
+ */
+export const PROPOSICION_PLAYWRIGHT = "recomendacion_playwright";
+
+/**
+ * La proposición atómica que pide la declaración del agente.
+ *
+ * El plan toca una pantalla y el proyecto declara Playwright en `test-commands`:
+ * el agente declara en el plan si recomienda cubrir los criterios de interfaz con
+ * Playwright y por qué, y **las dos respuestas valen** —recomendar y no recomendar
+ * son declaraciones completas—. Solo la ausencia de declaración puede quedar en
+ * banda: el `no` describe la ausencia de la declaración, no la ausencia de la
+ * herramienta, y por eso la proposición no exige adoptar Playwright.
+ */
+export function playwrightProposition(pantallas: readonly string[]): Proposition {
+  return {
+    id: PROPOSICION_PLAYWRIGHT,
+    kind: "noul",
+    weight: 1,
+    description: "El plan declara si recomienda cubrir la interfaz con Playwright",
+    instructions:
+      "`plan` declara, para las pantallas que el ticket cita (" +
+      pantallas.join(", ") +
+      "), si recomienda o no cubrir sus criterios de interfaz con Playwright, y por qué. " +
+      "Las dos respuestas valen: lo que se pide es la declaración, no adoptar la herramienta.",
+    criteria: {
+      yes: "El plan declara su posición —recomendar o no recomendar Playwright— y la justifica con un motivo.",
+      no: "El plan no dice nada sobre Playwright ni sobre cómo se probará la interfaz.",
+    },
+  };
+}
+
 /** La proposición atómica de un impacto declarado. */
 export function impactProposition(impacto: string): Proposition | null {
   const pregunta = PREGUNTAS_DE_IMPACTO[impacto];
@@ -397,9 +515,25 @@ export function expandGate(gate: GateDefinition, context: GateContext): GateDefi
           .filter((proposition): proposition is Proposition => proposition !== null)
       : [];
 
-  if (atomicas.length === 0 && porImpacto.length === 0 && porComando.length === 0 && context.impacts.length > 0)
+  // La proposición de interfaz se despliega solo si el gate la declara y el
+  // sujeto la pide: un plan que no toca pantalla, o un proyecto sin la capacidad
+  // declarada en `test-commands`, no recibe la pregunta. Sin la capacidad no hay
+  // nada que proponer, y preguntarlo sería penalizar la ausencia de Playwright.
+  const porInterfaz =
+    gate.interfazProposition === true && context.interfaz.requiereDeclaracion
+      ? [playwrightProposition(context.interfaz.pantallas)]
+      : [];
+
+  if (atomicas.length === 0 && porImpacto.length === 0 && porComando.length === 0 && porInterfaz.length === 0 && context.impacts.length > 0)
     return gate;
-  if (atomicas.length === 0 && porImpacto.length === 0 && porComando.length === 0 && context.impacts.length === 0 && !PROPOSICIONES_QUE_PIDEN_IMPACTOS.some((id) => gate.propositions.some((proposition) => proposition.id === id && proposition.verdict !== false)))
+  if (
+    atomicas.length === 0 &&
+    porImpacto.length === 0 &&
+    porComando.length === 0 &&
+    porInterfaz.length === 0 &&
+    context.impacts.length === 0 &&
+    !PROPOSICIONES_QUE_PIDEN_IMPACTOS.some((id) => gate.propositions.some((proposition) => proposition.id === id && proposition.verdict !== false))
+  )
     return gate;
 
   // Cuando el sujeto declara criterios, el veredicto lo dan **las proposiciones
@@ -451,6 +585,7 @@ export function expandGate(gate: GateDefinition, context: GateContext): GateDefi
     atomicas.length > 0 ? "criterios" : "",
     porImpacto.length > 0 ? "impactos" : "",
     porComando.length > 0 ? "mecanico" : "",
+    porInterfaz.length > 0 ? "interfaz" : "",
   ]
     .filter((parte) => parte !== "")
     .join("+");
@@ -458,7 +593,7 @@ export function expandGate(gate: GateDefinition, context: GateContext): GateDefi
   return {
     ...gate,
     id: `${gate.id}+${sufijo}`,
-    propositions: [...atomicas, ...porImpacto, ...porComando, ...propositionsFinales],
+    propositions: [...atomicas, ...porImpacto, ...porComando, ...porInterfaz, ...propositionsFinales],
   };
 }
 
@@ -477,16 +612,18 @@ export const PROPOSICIONES_QUE_PIDEN_IMPACTOS: readonly string[] = [
 /**
  * Contexto del sujeto que un gate puede necesitar para expandirse.
  *
- * Los dos campos son obligatorios a propósito: quien expande un gate tiene que
- * decir qué criterios **y** qué impactos declara el ticket. Dejarlos opcionales
- * haría que un sitio nuevo los omitiera sin que nada lo dijera, y el gate
- * preguntaría de menos en silencio —que es exactamente el defecto que esta
- * expansión existe para cerrar—.
+ * Los tres campos son obligatorios a propósito: quien expande un gate tiene que
+ * decir qué criterios, qué impactos y qué capacidad de interfaz declara el
+ * ticket. Dejarlos opcionales haría que un sitio nuevo los omitiera sin que nada
+ * lo dijera, y el gate preguntaría de menos en silencio —que es exactamente el
+ * defecto que esta expansión existe para cerrar—.
  */
 export interface GateContext {
   readonly criteria: readonly CriterionSpec[];
   /** Identificadores del contrato: `sync_impact`, `migration_impact`, `docker_impact`. */
   readonly impacts: readonly string[];
+  /** La capacidad de interfaz que el sujeto declara; `SIN_INTERFAZ` si no se calcula. */
+  readonly interfaz: InterfazDelSujeto;
 }
 
 /** Obtiene un gate expandido con el contexto del sujeto. */
