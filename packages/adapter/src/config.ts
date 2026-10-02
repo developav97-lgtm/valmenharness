@@ -146,6 +146,80 @@ export function readHermesConfig(config: ConfigMap): HermesConfig {
   };
 }
 
+/**
+ * La capacidad de pruebas de interfaz que el proyecto declara.
+ *
+ * Es opt-in y vive en una sección propia —`playwright:`— y no como un prefijo
+ * más de `test-commands`: esa lista autoriza comandos arbitrarios del ticket, y
+ * esta sección **describe** la capacidad —el programa, el navegador, su tope de
+ * tiempo y el modelo que escribe los specs—. Sin la sección, el verbo
+ * `playwright` no existe para el proyecto, y esa ausencia es una declaración.
+ */
+export interface PlaywrightConfig {
+  /** El programa y sus argumentos fijos; su presencia no vacía enciende el verbo. */
+  readonly command: string;
+  /** El navegador que Playwright usa por defecto, que el check agrega como `--project`. */
+  readonly project: string;
+  /** El tope del check del verbo, en milisegundos. Distinto del de backend. */
+  readonly timeoutMs: number;
+  /** El proveedor del modelo recomendado para escribir y mantener los specs. */
+  readonly provider: string;
+  /** El modelo recomendado para escribir los specs; vacío cae al preset. */
+  readonly model: string;
+}
+
+/** El navegador por defecto de una sección `playwright:` que no lo declara. */
+const PLAYWRIGHT_PROJECT_DEFAULT = "chromium";
+
+/** Los segundos por defecto del check del verbo, si la sección no declara tope. */
+const PLAYWRIGHT_TIMEOUT_SEGUNDOS_DEFAULT = 30;
+
+/** El proveedor por defecto del rol de specs, si la sección no lo declara. */
+const PLAYWRIGHT_PROVIDER_DEFAULT = "openrouter";
+
+/**
+ * Lee la sección `playwright:` de `.valmen/config.yaml`.
+ *
+ * Devuelve `null` cuando el proyecto no la declara: la ausencia es la
+ * declaración de que la capacidad está apagada, y por eso el verbo se rechaza en
+ * vez de resolverse contra otro sitio. Una sección declarada con una forma
+ * inválida —sin comando, con un tope que no es un número positivo— falla en voz
+ * alta nombrando la clave, como el resto del archivo: es preferible que el
+ * harness no arranque a que resuelva una capacidad distinta de la que se
+ * escribió.
+ */
+export function readPlaywrightConfig(config: ConfigMap): PlaywrightConfig | null {
+  if (config["playwright"] === undefined) return null;
+  const playwright = readMap(config, "playwright");
+
+  const command = readString(playwright, "command", "");
+  if (command === "") {
+    fail(
+      'config.yaml: "playwright.command" es obligatorio: es lo que declara la capacidad de pruebas de interfaz.',
+    );
+  }
+
+  const timeout = readString(
+    playwright,
+    "timeout",
+    String(PLAYWRIGHT_TIMEOUT_SEGUNDOS_DEFAULT),
+  );
+  const segundos = Number(timeout);
+  if (!Number.isFinite(segundos) || segundos <= 0) {
+    fail(
+      'config.yaml: "playwright.timeout" debe ser un número de segundos mayor que cero.',
+    );
+  }
+
+  return {
+    command,
+    project: readString(playwright, "project", PLAYWRIGHT_PROJECT_DEFAULT),
+    timeoutMs: Math.round(segundos * 1000),
+    provider: readString(playwright, "provider", PLAYWRIGHT_PROVIDER_DEFAULT),
+    model: readString(playwright, "model", ""),
+  };
+}
+
 /** Identidad que viaja con la política compartible del proyecto. */
 export interface SharedProjectPolicy {
   readonly projectId: string | null;

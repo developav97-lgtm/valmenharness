@@ -27,7 +27,7 @@ import { join } from "node:path";
 
 import { fail } from "@valmen/core";
 
-import { type ConfigMap, parseConfig, readMap, readString } from "./config.js";
+import { type ConfigMap, type PlaywrightConfig, parseConfig, readMap, readPlaywrightConfig, readString } from "./config.js";
 
 /** Esfuerzo de razonamiento de un rol. */
 export type Effort = "auto" | "low" | "medium" | "high";
@@ -121,6 +121,16 @@ export const ROLES: readonly RoleSpec[] = [
     description: "Responde otra vez lo que la verificación no respaldó",
     consumer: "valmen gate --evaluator cascade",
   },
+  {
+    // El rol que **escribe y mantiene los specs de interfaz**. Su modelo no sale
+    // de un preset fijo sino de la sección `playwright:` de `.valmen/config.yaml`:
+    // cada proyecto declara el suyo, y el rol existe para que ese modelo llegue al
+    // enrutado con su origen `proyecto`. El consumidor es la resolución que viaja
+    // al agente que trabaja un ticket de pruebas de interfaz.
+    id: "ui-specs",
+    description: "Escribe y mantiene los specs de interfaz del proyecto",
+    consumer: "valmen routing show --role ui-specs",
+  },
 ];
 
 /** Un modelo asignado a un rol. */
@@ -188,6 +198,11 @@ export const PRESETS: readonly Preset[] = [
         model: "anthropic/claude-opus-4.6",
         effort: "high",
       },
+      "ui-specs": {
+        provider: "openrouter",
+        model: "openai/gpt-5.6-luna-pro",
+        effort: "high",
+      },
     },
   },
   {
@@ -229,6 +244,11 @@ export const PRESETS: readonly Preset[] = [
         model: "moonshotai/kimi-k3",
         effort: "medium",
       },
+      "ui-specs": {
+        provider: "openrouter",
+        model: "moonshotai/kimi-k3",
+        effort: "medium",
+      },
     },
   },
   {
@@ -259,6 +279,11 @@ export const PRESETS: readonly Preset[] = [
       escalation: {
         provider: "openrouter",
         model: "deepseek/deepseek-v4-flash",
+        effort: "auto",
+      },
+      "ui-specs": {
+        provider: "openrouter",
+        model: "z-ai/glm-5.3-flash",
         effort: "auto",
       },
     },
@@ -302,6 +327,7 @@ export const PRESETS: readonly Preset[] = [
       producer: { provider: "claude-code", model: "claude-sonnet-5", effort: "auto" },
       verifier: { provider: "claude-code", model: "claude-sonnet-5", effort: "auto" },
       escalation: { provider: "claude-code", model: "claude-opus-4-8", effort: "high" },
+      "ui-specs": { provider: "claude-code", model: "claude-sonnet-5", effort: "auto" },
     },
   },
 ];
@@ -447,8 +473,16 @@ function analizarRouting(text: string, tolerante: boolean): RoutingAnalizado {
  * preset, y el valor del sistema es el último recurso. La columna `source` es la
  * que hace visible esa precedencia en la pantalla: sin ella, un override
  * olvidado en el proyecto explicaría un cambio de preset que "no hace nada".
+ *
+ * La sección `playwright:` de `config.yaml` entra como una declaración del
+ * proyecto más: para el rol `ui-specs` gana a lo que venga del preset, pierde
+ * contra el override de `routing.yaml` —el mismo rango que las otras dos— y se
+ * resuelve con origen `proyecto` cuando es la fuente elegida.
  */
-export function resolveRouting(routing: Routing): ResolvedRoute[] {
+export function resolveRouting(
+  routing: Routing,
+  playwright: PlaywrightConfig | null = null,
+): ResolvedRoute[] {
   const preset = presetById(routing.preset);
 
   return ROLES.map((spec) => {
@@ -468,15 +502,24 @@ export function resolveRouting(routing: Routing): ResolvedRoute[] {
           ? { provider: "openrouter", model: DEFAULT_GATE_JUDGE, effort: "auto" as Effort }
           : undefined;
 
-    const elegido = override ?? delPreset ?? delSistema;
+    // La declaración del proyecto para el rol de specs, solo si nombra un modelo.
+    // El esfuerzo no se declara en la sección y queda `auto`.
+    const dePlaywright =
+      spec.id === "ui-specs" && playwright !== null && playwright.model !== ""
+        ? { provider: playwright.provider, model: playwright.model, effort: "auto" as Effort }
+        : undefined;
+
+    const elegido = override ?? dePlaywright ?? delPreset ?? delSistema;
     const source: RouteSource =
       override !== undefined
         ? "proyecto"
-        : delPreset !== undefined
-          ? "preset"
-          : delSistema !== undefined
-            ? "sistema"
-            : "sin-asignar";
+        : dePlaywright !== undefined
+          ? "proyecto"
+          : delPreset !== undefined
+            ? "preset"
+            : delSistema !== undefined
+              ? "sistema"
+              : "sin-asignar";
 
     return {
       role: spec.id,
@@ -567,7 +610,10 @@ export function gateRoutingFor(
   root: string,
   options: { readonly preset?: string } = {},
 ): GateRouting {
-  const rutas = resolveRouting(routingConPreset(readProjectRouting(root), options.preset));
+  const rutas = resolveRouting(
+    routingConPreset(readProjectRouting(root), options.preset),
+    playwrightConfigOf(root),
+  );
   const evaluador = rutas.find((ruta) => ruta.role === "gate-evaluator");
   const juez = rutas.find((ruta) => ruta.role === "gate-judge");
 
@@ -607,6 +653,59 @@ export function architectRoutingFor(root: string): ArchitectRouting {
     effort: arquitecto?.effort ?? "auto",
     source: arquitecto?.source ?? "sistema",
   };
+}
+
+/** El modelo resuelto del rol `ui-specs`. */
+export interface UiSpecsRouting {
+  readonly provider: string;
+  readonly model: string;
+  readonly effort: Effort;
+  /** De dónde salió el modelo. */
+  readonly source: RouteSource;
+}
+
+/**
+ * El modelo que escribe y mantiene los specs de interfaz.
+ *
+ * Se resuelve leyendo la sección `playwright:` de `.valmen/config.yaml`, que es
+ * donde el proyecto declara el modelo recomendado para los specs (R-S4-003), y
+ * pasándola a `resolveRouting`: el override de `routing.yaml` sigue ganando, y la
+ * sección da el valor del proyecto cuando no lo hay. Ver `docs/03-GATES.md`.
+ */
+export function uiSpecsRoutingFor(root: string): UiSpecsRouting {
+  const rutas = resolveRouting(readProjectRouting(root), playwrightConfigOf(root));
+  const specs = rutas.find((ruta) => ruta.role === "ui-specs");
+  return {
+    provider: specs?.provider ?? DEFAULT_PROVIDER,
+    model: specs?.model ?? "",
+    effort: specs?.effort ?? "auto",
+    source: specs?.source ?? "sin-asignar",
+  };
+}
+
+/**
+ * La sección `playwright:` de `.valmen/config.yaml`, o `null`.
+ *
+ * Es la vía por la que el adaptador conoce la declaración sin depender del motor
+ * —la lectura del archivo la hace el motor, que es su capa—. Un archivo ausente o
+ * ilegible devuelve `null`: no tener sección no es un error, es no haber
+ * declarado la capacidad.
+ */
+export function playwrightConfigOf(root: string): PlaywrightConfig | null {
+  let texto: string;
+  try {
+    texto = readFileSync(join(root, ".valmen", "config.yaml"), "utf8");
+  } catch {
+    return null;
+  }
+  if (texto.trim() === "") return null;
+  try {
+    return readPlaywrightConfig(parseConfig(texto));
+  } catch {
+    // El archivo lo valida el motor en su camino; acá un error de forma no debe
+    // romper la resolución de los demás roles.
+    return null;
+  }
 }
 
 /**
@@ -652,7 +751,10 @@ export function cascadeRoutingFor(
   root: string,
   options: { readonly preset?: string } = {},
 ): CascadeRouting {
-  const rutas = resolveRouting(routingConPreset(readProjectRouting(root), options.preset));
+  const rutas = resolveRouting(
+    routingConPreset(readProjectRouting(root), options.preset),
+    playwrightConfigOf(root),
+  );
   const eslabon = (role: string): CascadeStep => {
     const ruta = rutas.find((candidato) => candidato.role === role);
     return {

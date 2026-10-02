@@ -738,10 +738,25 @@ La anotación `test:` tiene dos formas que la compuerta corre y una que declara 
 comando escrito con un prefijo que el proyecto autoriza, el verbo `playwright` con la ruta del
 spec, y `verify: manual` cuando la verifica una persona. El verbo no lleva un programa: un
 criterio de interfaz se escribe `<!-- test: playwright tests/pos/creacion-manual.spec.ts -->` y
-la compuerta lo resuelve contra el prefijo que el proyecto declara en `test-commands` —`npx
-playwright test`, o el que sea—, de modo que del criterio solo viaja la ruta del spec y el
-programa sigue saliendo de la configuración. Sin un prefijo que contenga `playwright`, el
-criterio se rechaza nombrando el verbo y no corre nada.
+la compuerta lo resuelve contra la sección `playwright:` del proyecto, de modo que del criterio
+solo viaja la ruta del spec y el programa, el navegador y su tope de tiempo salen de la
+configuración. Sin esa sección, el criterio se rechaza nombrando la sección y no corre nada.
+
+**El spec tiene que ser un archivo regular del repositorio.** El verbo exige una ruta
+relativa y canónica a la raíz del proyecto, sin segmentos `.` ni `..` ni separadores vacíos,
+y el archivo tiene que existir; puede estar en cualquier directorio del repositorio.
+Sin ruta, sin repositorio declarado, con una ruta absoluta, no canónica, fuera del árbol,
+inexistente o que nombra un directorio, el criterio se rechaza antes de correr nada. El
+motivo identifica la ruta y la regla incumplida; el motor devuelve el código del invariante
+sin llamar a un modelo ni emitir un recibo. La forma se comprueba en código puro y el motor
+y la vista aportan la misma consulta de archivo regular.
+
+Si el criterio escribe el comando completo de la sección `playwright:`, se comprueban
+igualmente sus argumentos con forma de spec: `.spec.ts`, `.spec.js`, `.spec.tsx` y `.spec.mjs`.
+Los demás argumentos, incluidos los filtros por título, conservan su comportamiento.
+Esto comprueba forma y existencia, no el contenido del test ni que esté versionado en Git.
+La evidencia viene de la ejecución del archivo, no de la sesión del agente: el MCP interactivo
+puede servir para explorar y grabar, pero no sustituye el spec guardado que corre el gate.
 
 El recibo guarda lo que la corrida dejó, y no solo el `1.00` del criterio: por cada comando
 anota su invocación, el código de salida esperado y obtenido, su duración y su salida capturada,
@@ -768,10 +783,64 @@ Tres decisiones lo sostienen:
    criterio(s)» y la compuerta aprobaba sin evaluar nada—. Si no hay nada que correr, el
    veredicto lo dice.
 
+**La capacidad se declara en una sección propia, y su ausencia la apaga.** El verbo no se
+resuelve contra `test-commands` —esa lista autoriza comandos arbitrarios del ticket— sino
+contra `playwright:` en `.valmen/config.yaml`:
+
+```yaml
+playwright:
+  command: npx playwright test   # el programa y sus argumentos fijos
+  project: chromium              # el navegador por defecto, que el check agrega como --project
+  timeout: 180                   # el tope propio del check, en segundos
+  provider: openrouter           # el modelo recomendado para escribir los specs
+  model: moonshotai/kimi-k3
+```
+
+Sin la sección, el verbo no existe para el proyecto y el criterio se rechaza nombrando
+`playwright:` de `.valmen/config.yaml`; con ella, el comando del check sale de `command`, el
+navegador se agrega como `--project` y el tope es el de la sección —distinto del `test-timeout`
+de backend, que no se pisa—. El comando de la sección también se autoriza como prefijo, para
+que la comprobación previa no rechace un proyecto cuya única verificación sea el verbo.
+
 **La entrega exige el recibo.** `in_progress → awaiting_user_tests` no avanza sin un recibo
 de este gate, y el recibo tiene que ser del **estado actual** del ticket: lleva el hash de lo
 que se congeló, así que si alguien toca el plan después de correr los tests, lo que se probó
 ya no es lo que se entrega y hay que volver a correrlo.
+
+### 5.1septies El agente propone, la persona decide
+
+El gate de plan puede desplegar una proposición más, y no es sobre el plan sino sobre una
+decisión que hoy vive en la conversación: cuando un plan toca una pantalla, ¿conviene cubrir
+sus criterios de interfaz con Playwright? El disparador se decide **en código** —nunca con el
+modelo— y necesita las dos mitades:
+
+1. **El ticket cita una pantalla.** Se extraen las rutas que el ticket escribe entre backticks
+   en `## Diagnóstico` y `## Plan`, se les quita el sufijo `:línea` y cada una se cruza contra
+   el matcher de pantalla del proyecto —por defecto `**/*.component.ts` y
+   `**/*.component.html`, el mismo de la auditoría de manuales—. Un plan que no nombra ningún
+   archivo no recibe la pregunta: el gate no adivina pantallas en prosa libre.
+2. **El proyecto declara la capacidad.** El verbo `playwright` tiene que resolverse contra la
+   sección `playwright:` de `.valmen/config.yaml`, la misma que ya resuelve la compuerta
+   mecánica. Sin capacidad declarada no hay nada que proponer, y la pregunta no aparece:
+   **la ausencia de Playwright no se pregunta ni se penaliza**.
+
+Cuando las dos mitades se cumplen, el gate despliega **una** proposición atómica —
+`recomendacion_playwright`, que deja el gate como `plan+…+interfaz` en el recibo— y pide la
+declaración: si el plan recomienda o no cubrir los criterios de interfaz con Playwright, y
+por qué. **Las dos respuestas valen**: recomendar es una declaración completa, y declarar que
+no se recomienda también lo es —el `no` describe la ausencia de la declaración, no la ausencia
+de la herramienta—. Solo quedarse sin declarar puede caer en banda. El gate no agrega ninguna
+otra proposición sobre Playwright: no hay una segunda pregunta que convierta la herramienta en
+un requisito por la puerta de atrás.
+
+El modelo recomendado que la sección declara —`provider` y `model`— alimenta el rol `ui-specs`
+del enrutado, que resuelve con origen `proyecto`. El override del proyecto en `routing.yaml`
+sigue ganando: la precedencia es override → sección → preset.
+
+Y **la prueba no la escribe el harness**: la compuerta pregunta y no crea criterios, ni
+modifica el ticket —una corrida real no toca el archivo—. La prueba con el verbo la escribe el
+agente en los criterios cuando corresponde, y la confirma la persona al aprobar el plan, que
+es exactamente el estado que este gate protege.
 
 ### 5.2 Calibración: la banda media es información
 

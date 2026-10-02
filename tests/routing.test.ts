@@ -108,6 +108,10 @@ describe("el catálogo de roles", () => {
       "producer",
       "verifier",
       "escalation",
+      // El rol que escribe los specs de interfaz. Su modelo no sale de un preset
+      // fijo sino de la sección `playwright:` del proyecto, y entró acá para que
+      // esa declaración llegue al enrutado con su origen `proyecto`.
+      "ui-specs",
     ]);
     expect(ROLES.every((rol) => rol.description !== "")).toBe(true);
   });
