@@ -1923,6 +1923,7 @@
       <nav>
           <a href="#/tickets" data-vista="tickets"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Tickets</a>
           <a href="#/features" data-vista="features"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h7v7H4zM13 5h7v4h-7zM13 11h7v8h-7zM4 14h7v5H4z"/></svg>Features</a>
+          <a href="#/portafolio" data-vista="portafolio"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h7l2 2h9v13H3Z"/></svg>Portafolio</a>
           <a href="#/procesos" data-vista="procesos"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h9a4 4 0 0 1 0 8H9"/><path d="M8 5 5 7l3 2"/><path d="M14 17h5"/></svg>Procesos</a>
           <a href="#/estandares" data-vista="estandares"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16"/><path d="M5 7l7-3 7 3"/><path d="M5 7v5a7 7 0 0 0 7 7 7 7 0 0 0 7-7V7"/></svg>Estándares</a>
           <a href="#/configurar" data-vista="configurar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M4 12h2M18 12h2M12 4v2M12 18v2M6.5 6.5l1.5 1.5M16 16l1.5 1.5M17.5 6.5 16 8M8 16l-1.5 1.5"/></svg>Configurar</a>
@@ -5173,6 +5174,65 @@
         }
       }
 
+      async function vistaPortafolio() {
+        const cont = $("contenido");
+        cont.textContent = "Cargando portafolio…";
+        const datos = await api("GET", "/api/portafolio");
+        cont.textContent = "";
+        const r = datos.summary;
+        cont.append(el("p", `Solo lectura · Consumo de compuertas del ${datos.range.desde} al ${datos.range.hasta}.`, "descripcion"));
+        if (!datos.available) {
+          cont.append(el("div", datos.reason, "vacio"));
+          return;
+        }
+        const tarjetas = el("div", undefined, "tarjetas");
+        for (const [rotulo, valor] of [
+          ["Proyectos disponibles", `${r.available} de ${r.projects}`],
+          ["Compuertas pendientes", r.gatesPending],
+          ["Corridas detenidas", r.waiting],
+          ["Consumo del rango (USD)", r.costUsd.toFixed(6)],
+        ]) {
+          const tarjeta = el("div", undefined, "tarjeta");
+          tarjeta.append(el("div", String(valor), "valor"), el("div", rotulo, "rotulo"));
+          tarjetas.append(tarjeta);
+        }
+        cont.append(tarjetas);
+        if (r.unavailable > 0) cont.append(el("p", "Totales parciales: hay proyectos no disponibles.", "resultado"));
+        if (datos.projects.length === 0) {
+          cont.append(el("div", "No hay proyectos declarados en el catálogo local.", "vacio"));
+          return;
+        }
+        const tabla = el("table");
+        const cabecera = el("thead");
+        const titulos = el("tr");
+        for (const texto of ["Proyecto", "Disponibilidad", "Compuertas pendientes", "Corridas detenidas", "Consumo (USD)"]) titulos.append(el("th", texto));
+        cabecera.append(titulos);
+        const cuerpo = el("tbody");
+        for (const proyecto of datos.projects) {
+          const fila = el("tr");
+          const nombre = el("td");
+          nombre.append(el("div", proyecto.name, "nombre"), el("div", proyecto.projectId, "id"), el("div", proyecto.root, "ruta"));
+          if (proyecto.current) nombre.append(el("span", "Instancia actual", "etiqueta"));
+          fila.append(nombre);
+          const estado = el("td");
+          estado.append(el("div", proyecto.available ? "Disponible" : "No disponible", "etiqueta"));
+          if (proyecto.reason) estado.append(el("div", proyecto.reason, "descripcion"));
+          fila.append(estado);
+          const compuertas = el("td", proyecto.available ? `${proyecto.gatesPending} compuertas pendientes` : "—");
+          if (proyecto.available) compuertas.append(el("div", `${proyecto.correctionsPending} correcciones pendientes`, "descripcion"));
+          fila.append(compuertas, el("td", proyecto.available ? `${proyecto.waiting} corridas detenidas` : "—"));
+          const consumo = el("td", proyecto.usage ? `USD ${proyecto.usage.costUsd.toFixed(6)}` : "—");
+          if (proyecto.usage) {
+            consumo.append(el("div", `${proyecto.usage.evaluations} evaluaciones`, "descripcion"));
+            if (proyecto.usage.unreadable > 0) consumo.append(el("div", `${proyecto.usage.unreadable} recibos ilegibles no contados`, "resultado"));
+          }
+          fila.append(consumo);
+          cuerpo.append(fila);
+        }
+        tabla.append(cabecera, cuerpo);
+        cont.append(tabla);
+      }
+
       async function vistaProcesos() {
         const cont = $("contenido");
         cont.textContent = "";
@@ -6637,10 +6697,6 @@
             if (!elCambioTocaLaVista(rutas)) return;
             marcarActualizado();
             const [nombre, id] = location.hash.replace(/^#\//, "").split("/");
-            if (nombre === "ticket" && bandaDeFasesActual?.id === id) {
-              void bandaDeFasesActual.refrescar();
-              return;
-            }
             // Conservando la vista: refrescar no es navegar, y nadie tiene por qué
             // perder dónde estaba leyendo.
             void navegar({ conservarVista: true });
@@ -6675,6 +6731,7 @@
         features: "Features",
         feature: "Feature",
         procesos: "Procesos",
+        portafolio: "Portafolio",
         estandares: "Estándares",
         configurar: "Configurar",
         modelos: "Modelos",
@@ -6843,6 +6900,7 @@
           else if (nombre === "proveedores") await vistaProveedores();
           else if (nombre === "features") await vistaFeatures();
           else if (nombre === "procesos") await vistaProcesos();
+          else if (nombre === "portafolio") await vistaPortafolio();
           else if (nombre === "estandares") await vistaEstandares();
           else await vistaTickets();
         } catch (error) {

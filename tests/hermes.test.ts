@@ -84,7 +84,8 @@ function sesion(
   db: DatabaseSync,
   id: string,
   opciones: {
-    readonly cwd?: string;
+    readonly cwd?: string | null;
+    readonly gitRepoRoot?: string | null;
     readonly startedAt?: number;
     readonly coste?: number | null;
     readonly costeReal?: number | null;
@@ -98,12 +99,13 @@ function sesion(
        git_repo_root, api_call_count, tool_call_count, input_tokens, output_tokens,
        reasoning_tokens, cache_read_tokens, estimated_cost_usd, actual_cost_usd,
        cost_status, started_at, ended_at, end_reason)
-     VALUES (?, 'slack', ?, NULL, 'deepseek-v4.1-flash', 'opencode-go', ?, NULL, 12, 5,
+     VALUES (?, 'slack', ?, NULL, 'deepseek-v4.1-flash', 'opencode-go', ?, ?, 12, 5,
              ?, 300, 40, 200, ?, ?, 'estimated', ?, ?, NULL)`,
   ).run(
     id,
     opciones.title ?? "Sesión de trabajo",
-    opciones.cwd ?? "/proyectos/tienda",
+    opciones.cwd === undefined ? "/proyectos/tienda" : opciones.cwd,
+    opciones.gitRepoRoot ?? null,
     opciones.tokens ?? 4000,
     opciones.coste === undefined ? 0.07 : opciones.coste,
     opciones.costeReal === undefined ? 0 : opciones.costeReal,
@@ -464,6 +466,28 @@ describe.skipIf(sqlite === null)("las sesiones de Hermes", () => {
     expect(leerSesionesDeHermes("/proyectos/tienda", { home: lab })).toEqual([]);
   });
 
+  it("excluye sesiones sin ruta y rutas que solo comparten el prefijo", () => {
+    const db = crearBase(base);
+    sesion(db, "20261001_100000_sin_cwd", { cwd: "" });
+    sesion(db, "20261001_100001_sin_ruta", { cwd: null });
+    sesion(db, "20261001_100002_hermano", { cwd: "/proyectos/tienda-extra" });
+    sesion(db, "20261001_100003_git_ajeno", {
+      cwd: "/otro/proyecto",
+      gitRepoRoot: "/proyectos/tienda-extra",
+    });
+    sesion(db, "20261001_100004_dentro", { cwd: "/proyectos/tienda/submodulo" });
+    sesion(db, "20261001_100005_por_git", {
+      cwd: "/otro/proyecto",
+      gitRepoRoot: "/proyectos/tienda",
+    });
+    db.close();
+
+    expect(leerSesionesDeHermes("/proyectos/tienda", { home: lab }).map((s) => s.id).sort()).toEqual([
+      "20261001_100004_dentro",
+      "20261001_100005_por_git",
+    ]);
+  });
+
   it("un coste desconocido no se convierte en cero", () => {
     // Es el caso del proveedor por suscripción: hay tokens y no hay precio.
     const db = crearBase(base);
@@ -473,6 +497,25 @@ describe.skipIf(sqlite === null)("las sesiones de Hermes", () => {
     const sesiones = leerSesionesDeHermes("/proyectos/tienda", { home: lab });
     expect(sesiones[0]?.costUsd).toBeNull();
     expect(sesiones[0]?.inputTokens).toBe(4000);
+  });
+
+  it("una sesión abierta no se clasifica como fallida sin un motivo de error", () => {
+    const db = crearBase(base);
+    sesion(db, "20261001_110000_abierta", { ended: false });
+    sesion(db, "20261001_110001_finalizada", { ended: true });
+    db.prepare("UPDATE sessions SET end_reason = 'provider error' WHERE id = ?").run(
+      "20261001_110001_finalizada",
+    );
+    db.close();
+
+    const porId = new Map(
+      leerSesionesDeHermes("/proyectos/tienda", { home: lab }).map((sesion) => [
+        sesion.id,
+        sesion.failed,
+      ]),
+    );
+    expect(porId.get("20261001_110000_abierta")).toBe(false);
+    expect(porId.get("20261001_110001_finalizada")).toBe(true);
   });
 
   it("el coste real manda sobre el estimado", () => {

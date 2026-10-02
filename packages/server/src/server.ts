@@ -22,6 +22,8 @@ import {
 } from "node:http";
 import { type FSWatcher, readFileSync, watch } from "node:fs";
 import { extname, join } from "node:path";
+import { homedir } from "node:os";
+import { listPortfolioRows, portfolioRange, summarizePortfolio } from "./portafolio.js";
 
 import {
   type RegistryPaths,
@@ -47,6 +49,7 @@ import {
   filterTickets,
   findTicket,
   listTickets,
+  listAuthorizedProjects,
   readTicket,
   renderReport,
   summarize,
@@ -57,6 +60,7 @@ import {
 import { type JsonObject, nextStates, parseTicket, toFailure } from "@valmen/core";
 import {
   architectRoutingFor,
+  machineBindingsPath,
   leerEventosDeFaseKanban,
   tareasDeTicketKanban,
 } from "@valmen/adapter";
@@ -136,6 +140,8 @@ export interface ServerContext {
    * `docs/tickets` y la interfaz tiene que mostrar ese, no uno vacío.
    */
   readonly paths?: RegistryPaths;
+  /** Catálogo local inyectable; nunca se toma de una petición. */
+  readonly bindingsFile?: string;
   readonly credentialsFile: string;
   readonly env: NodeJS.ProcessEnv;
   /** Inyectable para que las pruebas no salgan a la red. */
@@ -161,6 +167,7 @@ export function defaultContext(root: string): ServerContext {
     root,
     paths: choosePaths(root),
     credentialsFile: credentialsPath(),
+    bindingsFile: machineBindingsPath(homedir()),
     env: process.env,
   };
 }
@@ -462,6 +469,41 @@ export async function handleApi(
     // Un modelo rechazado no es un error del servidor: la pantalla lo muestra
     // donde el usuario escribió, igual que hace con una clave que no conecta.
     return { status: 200, body: resultado };
+  }
+
+  // GET /api/portafolio?desde=&hasta=
+  if (method === "GET" && path === "/api/portafolio") {
+    for (const key of query.keys()) {
+      if (key !== "desde" && key !== "hasta") {
+        return { status: 400, body: { error: "El portafolio solo admite `desde` y `hasta`; no acepta rutas ni selección de proyecto." } };
+      }
+    }
+    const desde = valorDeQuery(query, "desde");
+    const hasta = valorDeQuery(query, "hasta");
+    const range = portfolioRange({
+      ...(desde === undefined ? {} : { desde }),
+      ...(hasta === undefined ? {} : { hasta }),
+    });
+    const validDate = (date: string): boolean =>
+      /^\d{4}-\d{2}-\d{2}$/.test(date) &&
+      !Number.isNaN(Date.parse(date)) && new Date(date).toISOString().slice(0, 10) === date;
+    if (!validDate(range.desde) || !validDate(range.hasta) || range.desde > range.hasta) {
+      return { status: 400, body: { error: "El rango debe contener fechas válidas YYYY-MM-DD, con `desde` anterior o igual a `hasta`." } };
+    }
+    const catalog = listAuthorizedProjects({
+      bindingsFile: context.bindingsFile ?? machineBindingsPath(homedir()),
+    });
+    const projects = listPortfolioRows(catalog, context.root, range);
+    return {
+      status: 200,
+      body: {
+        available: catalog.available,
+        reason: catalog.reason,
+        range,
+        projects,
+        summary: summarizePortfolio(projects),
+      },
+    };
   }
 
   // GET /api/processes

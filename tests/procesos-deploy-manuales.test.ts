@@ -80,10 +80,21 @@ describe("el proceso actualizar-manuales declara la auditoría con citas", () =>
     expect(auditoria?.kind).toBe("command");
     expect(auditoria?.run).toContain("valmen manuales auditar");
 
-    // Va al final: la dependencia R-S3-002 agrega su paso en el mismo archivo y
-    // el cambio de este ticket es aditivo.
+    // La publicación se añade después de la auditoría, sin reordenar lo anterior.
     const ids = manuales.definition.steps.map((step) => step.id);
-    expect(ids[ids.length - 1]).toBe("auditar-manuales");
+    expect(ids[ids.length - 2]).toBe("auditar-manuales");
+  });
+});
+
+describe("el proceso actualizar-manuales publica el corpus al final", () => {
+  it("declara publicar-corpus como comando con el directorio y evidencia stdout", () => {
+    const manuales = requireProcess(REPO, "actualizar-manuales");
+    const paso = manuales.definition.steps.at(-1);
+    expect(paso?.id).toBe("publicar-corpus");
+    expect(paso?.kind).toBe("command");
+    expect(paso?.run).toContain("valmen corpus publicar");
+    expect(paso?.run).toContain("--manuales-dir {manualesdir}");
+    expect(paso?.evidence).toEqual(["stdout"]);
   });
 });
 

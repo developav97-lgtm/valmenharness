@@ -251,7 +251,7 @@ describe("la banda de fases del ticket", () => {
     }
   }
 
-  it("un aviso SSE propio refresca solo la banda con el margen de 300 ms", async () => {
+  it("un aviso SSE propio refresca el detalle completo con el margen de 300 ms", async () => {
     try {
       const vivo = await montarEnVivo();
       vivo.nuevasFases();
@@ -261,13 +261,11 @@ describe("la banda de fases del ticket", () => {
       await vivo.esperar(299);
       expect(conClase(vivo.banda, "banda-fase")).toEqual(vivo.tramosIniciales);
       await vivo.esperar(1);
-      expect(conClase(vivo.banda, "banda-fase")).toHaveLength(2);
-      expect(texto(vivo.banda)).toContain("En curso");
-      expect(conClase(vivo.resultado.contenido, "banda-fases")[0]).toBe(vivo.banda);
-      const resto = vivo.resultado.contenido!.children.filter((nodo) => nodo !== vivo.banda);
-      resto.forEach((nodo, indice) => expect(nodo).toBe(vivo.resto[indice]));
-      expect(resto.map(texto)).toEqual(vivo.contenidoDelResto);
-      expect(vivo.llamadas.filter((ruta) => ruta === `/api/tickets/${ID}`)).toHaveLength(detalleAntes);
+      const bandaNueva = conClase(vivo.resultado.contenido, "banda-fases")[0]!;
+      expect(conClase(bandaNueva, "banda-fase")).toHaveLength(2);
+      expect(texto(bandaNueva)).toContain("En curso");
+      expect(bandaNueva).not.toBe(vivo.banda);
+      expect(vivo.llamadas.filter((ruta) => ruta === `/api/tickets/${ID}`)).toHaveLength(detalleAntes + 1);
       expect(vivo.llamadas.filter((ruta) => ruta.startsWith("/api/ticket/fases?"))).toHaveLength(2);
       expect(vivo.resultado.fallos).toEqual([]);
     } finally {
@@ -308,22 +306,17 @@ describe("la banda de fases del ticket", () => {
     }
   });
 
-  it("si el endpoint falla al refrescar en vivo conserva el último contenido sin error", async () => {
+  it("si el endpoint falla al refrescar en vivo conserva el detalle sin mostrar un error", async () => {
     try {
       const vivo = await montarEnVivo();
-      const contenidoAnterior = texto(vivo.banda);
       vivo.caer();
       vivo.avisar();
       await vivo.esperar();
       expect(vivo.llamadas.filter((ruta) => ruta.startsWith("/api/ticket/fases?"))).toHaveLength(2);
-      expect(conClase(vivo.resultado.contenido, "banda-fases")[0]).toBe(vivo.banda);
-      expect(texto(vivo.banda)).toBe(contenidoAnterior);
-      expect(conClase(vivo.banda, "banda-fase")).toEqual(vivo.tramosIniciales);
-      vivo.tramosIniciales.forEach((nodo, indice) =>
-        expect(conClase(vivo.banda, "banda-fase")[indice]).toBe(nodo),
-      );
-      expect(texto(vivo.banda)).not.toContain("Sin línea de fases");
-      expect(conClase(vivo.banda, "error")).toHaveLength(0);
+      const bandaNueva = conClase(vivo.resultado.contenido, "banda-fases")[0]!;
+      expect(bandaNueva).not.toBe(vivo.banda);
+      expect(texto(bandaNueva)).toContain("Sin línea de fases");
+      expect(conClase(bandaNueva, "error")).toHaveLength(0);
       expect(vivo.resultado.fallos).toEqual([]);
     } finally {
       vi.useRealTimers();

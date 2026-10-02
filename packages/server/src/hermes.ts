@@ -20,7 +20,7 @@
  */
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { createRequire } from "node:module";
 
 /**
@@ -175,6 +175,7 @@ export const HERRAMIENTAS_DE_LECTURA: readonly string[] = [
   "buscar_memoria",
   "ver_estandares",
   "revisar_presentacion",
+  "ver_actividad_ejecucion",
 ];
 
 /** Las que escriben el registro, que son las que convierten una sesión en trabajo. */
@@ -203,6 +204,7 @@ export const HERRAMIENTAS_QUE_ESCRIBEN: readonly string[] = [
   "cerrar_qa",
   "preparar_cierre",
   "anexar_ticket_a_feature",
+  "registrar_actividad_ejecucion",
 ];
 
 /**
@@ -377,6 +379,24 @@ interface FilaSesion {
   readonly end_reason: string | null;
 }
 
+/**
+ * `true` cuando una ruta declarada por Hermes está dentro del proyecto pedido.
+ *
+ * No basta con `startsWith`: `/proyectos/tienda-extra` comparte el prefijo de
+ * `/proyectos/tienda` y no por eso es parte de su línea de tiempo. Una ruta
+ * ausente tampoco prueba pertenencia; incluirla haría que una sesión sin `cwd`
+ * apareciera en todos los proyectos que consulten la misma base.
+ */
+function estaDentroDelProyecto(ruta: string | null, directorio: string): boolean {
+  if (ruta === null || ruta.trim() === "") return false;
+
+  const diferencia = relative(resolve(directorio), resolve(ruta));
+  return (
+    diferencia === "" ||
+    (!isAbsolute(diferencia) && diferencia !== ".." && !diferencia.startsWith(`..${sep}`))
+  );
+}
+
 /** El número de una columna que puede venir nula. */
 function n(valor: number | null | undefined): number {
   return typeof valor === "number" && Number.isFinite(valor) ? valor : 0;
@@ -432,10 +452,8 @@ export function leerSesionesDeHermes(
 
       for (const fila of filas) {
         const delProyecto =
-          fila.cwd === null ||
-          fila.cwd === "" ||
-          fila.cwd.startsWith(directory) ||
-          (fila.git_repo_root ?? "").startsWith(directory);
+          estaDentroDelProyecto(fila.cwd, directory) ||
+          estaDentroDelProyecto(fila.git_repo_root, directory);
         if (!delProyecto) continue;
 
         const tickets = ticketsDeSesion(db, fila.id);
@@ -480,9 +498,7 @@ export function leerSesionesDeHermes(
           ticket,
           tickets,
           compartida,
-          failed:
-            fila.ended_at === null ||
-            (fila.end_reason ?? "").toLowerCase().includes("error"),
+          failed: (fila.end_reason ?? "").toLowerCase().includes("error"),
         });
       }
     } catch {
