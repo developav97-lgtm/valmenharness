@@ -220,12 +220,14 @@ describe("el catálogo de herramientas", () => {
     expect(propiedades?.["evaluator"]?.enum).toEqual([...EVALUATOR_IDS]);
   });
 
-  it("declara las treinta y nueve herramientas, cada una con descripción y esquema", () => {
+  it("declara las cuarenta y una herramientas, cada una con descripción y esquema", () => {
     // El orden es el de la lectura: alta, consulta, validación, movimiento,
     // anotación, compuertas, features, procesos, reportes, y al final el ciclo de
     // QA y el cierre. Estaba intercalado por historia —cada herramienta nueva
     // entraba donde se pudiera— y leer el catálogo costaba más de lo que debería.
     expect(TOOLS.map((tool) => tool.name)).toEqual([
+      "registrar_actividad_ejecucion",
+      "ver_actividad_ejecucion",
       "crear_ticket",
       "ver_ticket",
       "listar_tickets",
@@ -279,7 +281,16 @@ describe("el catálogo de herramientas", () => {
     // ningún esquema, así que un cliente que validara rechazaba la llamada y el
     // agente concluía que no podía trabajar sobre otro repositorio. Un test cuyo
     // nombre afirma más de lo que hace es peor que no tenerlo.
+    //
+    // Excepción declarada: las dos herramientas de ejecución directa
+    // (`registrar_actividad_ejecucion`, `ver_actividad_ejecucion`) no aceptan
+    // `root` a propósito — resuelven el proyecto por el binding local
+    // (`resolveAuthorizedProject`), no por una ruta arbitraria: la ejecución
+    // directa se limita a proyectos autorizados, y un `root` que ignoraría la
+    // implementación sería configuración muerta que el esquema promete.
+    const SIN_ROOT = new Set(["registrar_actividad_ejecucion", "ver_actividad_ejecucion"]);
     for (const tool of TOOLS) {
+      if (SIN_ROOT.has(tool.name)) continue;
       const propiedades = tool.inputSchema["properties"] as
         Record<string, unknown> | undefined;
       expect(propiedades, `${tool.name} no declara properties`).toBeDefined();

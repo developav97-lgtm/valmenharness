@@ -48,6 +48,7 @@ const REESCRIBEN = [
 
 /** Las únicas que un cliente puede ejecutar sin preguntar. */
 const SOLO_LECTURA = [
+  "ver_actividad_ejecucion",
   "ver_ticket",
   "listar_tickets",
   "validar_ticket",
@@ -67,6 +68,7 @@ const SOLO_LECTURA = [
 
 /** Las que no se pueden repetir sin cambiar el resultado. */
 const NO_IDEMPOTENTES = [
+  "registrar_actividad_ejecucion",
   "crear_ticket",
   "mover_ticket",
   "anotar_punto",
@@ -92,8 +94,8 @@ const NO_IDEMPOTENTES = [
 ];
 
 describe("las anotaciones de las herramientas", () => {
-  it("las treinta y nueve declaran las cuatro, con un booleano cada una", () => {
-    expect(TOOLS).toHaveLength(39);
+  it("las cuarenta y una declaran las cuatro, con un booleano cada una", () => {
+    expect(TOOLS).toHaveLength(41);
     for (const tool of TOOLS) {
       const a = tool.annotations;
       expect(a, `${tool.name} no declara anotaciones`).toBeDefined();
@@ -108,7 +110,7 @@ describe("las anotaciones de las herramientas", () => {
     }
   });
 
-  it("marca de solo lectura exactamente las quince que no escriben", () => {
+  it("marca de solo lectura exactamente las dieciséis que no escriben", () => {
     const leen = TOOLS.filter((t) => t.annotations.readOnlyHint)
       .map((t) => t.name)
       .sort();
@@ -146,7 +148,7 @@ describe("las anotaciones de las herramientas", () => {
     expect(reescriben).toEqual([...REESCRIBEN].sort());
   });
 
-  it("declara no idempotentes exactamente las veintidós que anexan o mueven", () => {
+  it("declara no idempotentes exactamente las veintitrés que anexan o mueven", () => {
     const noIdempotentes = TOOLS.filter((t) => !t.annotations.idempotentHint)
       .map((t) => t.name)
       .sort();
@@ -171,7 +173,7 @@ describe("las anotaciones de las herramientas", () => {
       catalogo,
     )) as { tools: readonly { name: string; annotations: Record<string, boolean> }[] };
 
-    expect(resultado.tools).toHaveLength(39);
+    expect(resultado.tools).toHaveLength(41);
     for (const tool of resultado.tools) {
       expect(Object.keys(tool.annotations).sort()).toEqual([
         "destructiveHint",

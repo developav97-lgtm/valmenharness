@@ -32,6 +32,7 @@ import {
   WORKFLOW_STATES,
   parseTicket,
   toFailure,
+  createExecutionIdentity,
 } from "@valmen/core";
 import {
   CAMPOS_ORDENABLES,
@@ -92,10 +93,14 @@ import {
   isCascadeTaskId,
   renderCascadeTask,
   runCascadeTask,
+  createExecutionContract,
+  resolveAuthorizedProject,
+  EXECUTION_ACTIVITY_STATES,
+  type ExecutionActivityState,
 } from "@valmen/engine";
 import { gateFor, gateById } from "@valmen/gate";
 import { architectRoutingFor, cascadeRoutingFor, gateRoutingFor } from "@valmen/adapter";
-import { apiKeyWithPrecedence } from "@valmen/credentials";
+import { apiKeyWithPrecedence, transportById } from "@valmen/credentials";
 import {
   buildIndex,
   guardarConsumoDeSesiones,
@@ -144,6 +149,8 @@ export interface ToolContext {
   readonly jev?: Parameters<typeof runGate>[1]["jev"];
   readonly judge?: Parameters<typeof runGate>[1]["judge"];
   readonly now?: (() => Date) | undefined;
+  /** Casa inyectable para resolver el binding local en pruebas. */
+  readonly home?: string | undefined;
 }
 
 function bien(texto: string, data?: Record<string, unknown>): ToolResult {
@@ -270,6 +277,41 @@ const GASTA: ToolAnnotations = {
 
 /** El catálogo de herramientas. */
 export const TOOLS: readonly ToolDefinition[] = [
+  {
+    name: "registrar_actividad_ejecucion",
+    annotations: ANEXA,
+    title: "Registrar actividad de una ejecución",
+    description: "Anexa un hecho de actividad de una ejecución directa al proyecto autorizado. No modifica el workflow, gates ni QA del ticket.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        proyecto: { type: "string", description: "project-id declarado en el binding local." },
+        ticket: { type: "string", description: "Identificador del ticket ejecutado." },
+        ejecucion: { type: "string", description: "Identificador portable de la ejecución." },
+        intento: { type: "string", description: "Identificador del intento." },
+        evento: { type: "string", description: "Identificador idempotente del evento." },
+        estado: { type: "string", enum: [...EXECUTION_ACTIVITY_STATES] },
+        fuente: { type: "string", description: "Origen que observó la actividad." },
+        ocurrido_en: { type: "string", description: "Fecha ISO 8601 del hecho." },
+      },
+      required: ["proyecto", "ticket", "ejecucion", "intento", "evento", "estado", "fuente", "ocurrido_en"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "ver_actividad_ejecucion",
+    annotations: SOLO_LEE,
+    title: "Ver actividad de una ejecución",
+    description: "Lee la actividad persistida de una ejecución directa en el proyecto autorizado.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        proyecto: { type: "string" }, ticket: { type: "string" }, ejecucion: { type: "string" },
+        intento: { type: "string", description: "Limita la lectura a un intento." },
+      },
+      required: ["proyecto", "ticket", "ejecucion"], additionalProperties: false,
+    },
+  },
   {
     name: "crear_ticket",
     annotations: ANEXA,
@@ -1897,6 +1939,28 @@ export async function callTool(
 
   try {
     switch (nombre) {
+      case "registrar_actividad_ejecucion": {
+        const projectId = texto(args, "proyecto") as string;
+        const project = resolveAuthorizedProject({ projectId, ...(contexto.home === undefined ? {} : { home: contexto.home }) });
+        const state = texto(args, "estado") as string;
+        if (!EXECUTION_ACTIVITY_STATES.includes(state as ExecutionActivityState)) throw new Error(`estado debe ser uno de: ${EXECUTION_ACTIVITY_STATES.join(", ")}.`);
+        const event = createExecutionContract(project).recordActivity({
+          eventId: texto(args, "evento") as string,
+          identity: createExecutionIdentity({ projectId, ticketId: texto(args, "ticket") as string, executionId: texto(args, "ejecucion") as string }),
+          attemptId: texto(args, "intento") as string, state: state as ExecutionActivityState,
+          source: texto(args, "fuente") as string, occurredAt: texto(args, "ocurrido_en") as string,
+        });
+        return bien(event.appended ? `Actividad registrada: ${state}.` : `Actividad ya registrada: ${state}.`, { cursor: event.event.cursor });
+      }
+      case "ver_actividad_ejecucion": {
+        const projectId = texto(args, "proyecto") as string;
+        const project = resolveAuthorizedProject({ projectId, ...(contexto.home === undefined ? {} : { home: contexto.home }) });
+        const activity = createExecutionContract(project).readActivity(
+          createExecutionIdentity({ projectId, ticketId: texto(args, "ticket") as string, executionId: texto(args, "ejecucion") as string }),
+          texto(args, "intento", false),
+        );
+        return bien(activity.length === 0 ? "No hay actividad registrada." : activity.map((item) => `${item.cursor}\t${item.state}\t${item.attemptId}`).join("\n"), { actividad: [...activity] });
+      }
       case "crear_ticket": {
         const alta = createTicket({
           paths,
@@ -2611,11 +2675,16 @@ export async function callTool(
         // lee el routing, igual que en el CLI y en la pantalla.
         const cascade =
           evaluator === "cascade" ? cascadeRoutingFor(paths.root, preset) : undefined;
+        const credentialResolver =
+          cascade === undefined ? undefined : credentialForCascade(contexto);
 
         const resultado = await runGate(paths, {
           gateId,
           ticketId: id,
           ...(apiKey === null ? {} : { apiKey }),
+          ...(credentialResolver === undefined
+            ? {}
+            : { credentialForProvider: credentialResolver }),
           ...(evaluator === undefined ? {} : { evaluator }),
           ...(contexto.jev === undefined ? {} : { jev: contexto.jev }),
           ...(contexto.judge === undefined ? {} : { judge: contexto.judge }),
@@ -2684,8 +2753,6 @@ export async function callTool(
         // CLI: si el MCP y el comando usaran modelos distintos, el recibo de una
         // corrida no describiría la otra.
         const chain = cascadeRoutingFor(paths.root);
-        const apiKey = apiKeyDe(contexto, chain.producer.provider);
-
         const corrida = await runCascadeTask({
           paths,
           task: brutaTarea,
@@ -2694,7 +2761,7 @@ export async function callTool(
             ...(pregunta === undefined ? {} : { pregunta }),
           },
           chain,
-          ...(apiKey === null ? {} : { apiKey }),
+          credentialForProvider: credentialForCascade(contexto),
           ...(contexto.judge === undefined ? {} : { judge: contexto.judge }),
           ...(contexto.jev === undefined ? {} : { jev: contexto.jev }),
           ...(contexto.now === undefined ? {} : { now: contexto.now }),
@@ -2759,4 +2826,12 @@ export async function callTool(
 function apiKeyDe(contexto: ToolContext, provider: string): string | null {
   if (provider === "") return null;
   return apiKeyWithPrecedence(provider, contexto.credentialsFile);
+}
+
+/** Las suscripciones llevan su token en el transporte, no en el YAML del proyecto. */
+function credentialForCascade(contexto: ToolContext): (provider: string) => string | undefined {
+  return (provider) => {
+    if (transportById(provider).credential !== undefined) return undefined;
+    return apiKeyDe(contexto, provider) ?? undefined;
+  };
 }
