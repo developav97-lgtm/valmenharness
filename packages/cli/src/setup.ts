@@ -23,8 +23,10 @@ import {
   PRESETS,
   ROLES,
   type Effort,
+  playwrightConfigOf,
   presetById,
   readProjectRouting,
+  resolveRouting,
 } from "@valmen/adapter";
 import type { RegistryPaths } from "@valmen/engine";
 import {
@@ -224,7 +226,13 @@ export function routingCommand(
           "Arreglalo a mano, o volvé al preset con `valmen routing set --preset <id>`.",
       );
     }
-    const rutas = estado.roles;
+    // La sección `playwright:` da el modelo del rol `ui-specs`; se pasa para que
+    // la tabla muestre el mismo valor con su origen `proyecto` que resuelve el
+    // motor, y no un rol sin asignar que oculta la declaración del proyecto.
+    const rutas = resolveRouting(
+      readProjectRouting(paths.root),
+      playwrightConfigOf(paths.root),
+    );
     const probabilistico = rutas.some(
       (r) => r.role === "gate-evaluator" && r.probabilistic,
     );
