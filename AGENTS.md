@@ -34,6 +34,12 @@ Si el pedido nombra algo que el código no tiene —parámetro, permiso, campo, 
 
 **Por qué:** BUGFIX-RESTAURANTE-MESERO-BORRAR-BONIFICAR-20260929 pidió «el nuevo parámetro bonificado» sin especificarlo: tres corridas de compuerta de plan y dos escaladas hasta que el PO resolvió usar el parámetro bonus que ya vive en AdmInvoiceParam.
 
+## Escalada tras dos bloqueos semánticos equivalentes
+
+Tras dos bloqueos consecutivos del mismo gate por la misma proposición semántica, cuando el artefacto ya incorpora la corrección comprobable, se documentan ambos recibos y la evidencia; una autorización explícita vigente del PO permite continuar sin una tercera corrida. La aprobación queda atribuida a esa política humana, nunca al modelo.
+
+**Por qué:** Evita gastar una tercera llamada idéntica y deja evidencia para calibrar el evaluador, sin que la compuerta amplíe su propia autoridad.
+
 ## Cómo se trabaja en este repositorio
 
 Este repositorio **es** el harness, no un proyecto que lo usa, y se gestiona con

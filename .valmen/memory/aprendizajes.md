@@ -41,3 +41,13 @@ En FEATURE-ADAPTER-CAPACIDADES-20261001, el gate analysis bloqueó cuatro veces 
 - **Tickets:** FEATURE-MC-PANEL-HERRAMIENTAS-20261001
 
 En FEATURE-MC-PANEL-HERRAMIENTAS-20261001, el gate analysis bloqueó tres veces diagnostico_explica_el_sintoma (~0.07) aunque la clasificación fue completa y las demás proposiciones aprobaron. La solicitud materializada sólo expresa requisitos R-ACT-003/R-VIV-005, no un defecto observable previo; el diagnóstico comprobó que falta la proyección/UI requerida. Refinar el gate para declarar inaplicable o reformular esa proposición cuando la solicitud sea funcionalidad nueva sin síntoma reportado; no se debe forzar un síntoma inventado ni aprobar manualmente el recibo.
+
+### [AP-006] Dos bloqueos semánticos iguales no justifican una tercera corrida
+
+- **Fecha:** 2026-10-03
+- **Estado:** regla
+- **Clasificado:** 2026-10-03
+- **Estado:** pendiente
+- **Tickets:** FEATURE-ENGINE-VENTANAS-JORNADA-20261001, FEATURE-ENGINE-AUTORIZACION-JORNADAS-20261001
+
+Los gates analysis de FEATURE-ENGINE-VENTANAS-JORNADA-20261001 y FEATURE-ENGINE-AUTORIZACION-JORNADAS-20261001 bloquearon por diagnostico_explica_el_sintoma aunque el diagnóstico ya nombra comportamiento, causa, archivos y riesgos. Por decisión del PO, tras dos bloqueos equivalentes con el artefacto corregido, se documenta la evidencia y se aprueba por política humana; no se repite una tercera llamada. Se revisará y afinará el evaluador posteriormente.
