@@ -9,6 +9,7 @@ import { createExecutionIdentity, EXIT_SCHEMA, toFailure } from "@valmen/core";
 import {
   createExecutionContract,
   EXECUTION_ACTIVITY_STATES,
+  readJourneyRoadmap,
   resolveAuthorizedProject,
   type ExecutionActivityState,
 } from "@valmen/engine";
@@ -21,28 +22,26 @@ export interface ExecutionCommandOptions {
 
 type Flags = Readonly<Record<string, string | true>>;
 
-/** Ejecuta `valmen execution record|list` sobre un proyecto declarado localmente. */
+/** Ejecuta `valmen execution record|list|journeys` sobre un proyecto declarado localmente. */
 export function executionCommand(
   args: readonly string[],
   flags: Flags,
   options: ExecutionCommandOptions = {},
 ): CommandResult {
   const action = args[0];
-  if (action !== "record" && action !== "list") {
+  if (action !== "record" && action !== "list" && action !== "journeys") {
     return {
       stdout: "",
-      stderr: "execution requiere record o list.",
+      stderr: "execution requiere record, list o journeys.",
       exitCode: EXIT_SCHEMA,
     };
   }
 
   const projectId = value(flags, "project");
-  const ticketId = value(flags, "ticket");
-  const executionId = value(flags, "execution");
-  if (projectId === undefined || ticketId === undefined || executionId === undefined) {
+  if (projectId === undefined) {
     return {
       stdout: "",
-      stderr: "execution requiere --project, --ticket y --execution.",
+      stderr: "execution requiere --project.",
       exitCode: EXIT_SCHEMA,
     };
   }
@@ -52,6 +51,21 @@ export function executionCommand(
       projectId,
       ...(options.home === undefined ? {} : { home: options.home }),
     });
+    if (action === "journeys") {
+      const roadmap = readJourneyRoadmap(project);
+      return {
+        stdout: flags.json === true
+          ? `${JSON.stringify(roadmap, null, 2)}\n`
+          : renderJourneys(roadmap),
+        stderr: "",
+        exitCode: 0,
+      };
+    }
+    const ticketId = value(flags, "ticket");
+    const executionId = value(flags, "execution");
+    if (ticketId === undefined || executionId === undefined) {
+      return { stdout: "", stderr: "execution record y list requieren --ticket y --execution.", exitCode: EXIT_SCHEMA };
+    }
     const contract = createExecutionContract(project);
     const identity = createExecutionIdentity({ projectId, ticketId, executionId });
     const attemptId = value(flags, "attempt");
@@ -108,6 +122,13 @@ export function executionCommand(
     const failure = toFailure(caught);
     return { stdout: "", stderr: failure.message, exitCode: failure.exitCode };
   }
+}
+
+function renderJourneys(roadmap: ReturnType<typeof readJourneyRoadmap>): string {
+  if (roadmap.journeys.length === 0) return "No hay jornadas registradas.\n";
+  return roadmap.journeys.flatMap((journey) => journey.tickets.map((ticket) =>
+    `${journey.journeyId}\t${ticket.order}\t${ticket.ticketId}\t${ticket.activity}\t${ticket.condition}`,
+  )).join("\n") + "\n";
 }
 
 function value(flags: Flags, name: string): string | undefined {

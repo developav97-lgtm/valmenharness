@@ -75,4 +75,10 @@ describe("execution por CLI", () => {
     expect(outcome.exitCode).not.toBe(0);
     expect(outcome.stderr).toContain('no está declarado');
   });
+
+  it("consulta jornadas mediante la proyección común del motor", () => {
+    const outcome = command(["journeys"], { project, json: true });
+    expect(outcome).toMatchObject({ exitCode: 0 });
+    expect(outcome.stdout).toContain('"journeys": []');
+  });
 });

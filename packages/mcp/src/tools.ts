@@ -94,6 +94,7 @@ import {
   renderCascadeTask,
   runCascadeTask,
   createExecutionContract,
+  readJourneyRoadmap,
   resolveAuthorizedProject,
   EXECUTION_ACTIVITY_STATES,
   type ExecutionActivityState,
@@ -310,6 +311,17 @@ export const TOOLS: readonly ToolDefinition[] = [
         intento: { type: "string", description: "Limita la lectura a un intento." },
       },
       required: ["proyecto", "ticket", "ejecucion"], additionalProperties: false,
+    },
+  },
+  {
+    name: "ver_jornadas",
+    annotations: SOLO_LEE,
+    title: "Ver hoja de ruta de jornadas",
+    description: "Lee las jornadas persistidas del proyecto autorizado sin iniciar ni autorizar despacho.",
+    inputSchema: {
+      type: "object",
+      properties: { proyecto: { type: "string", description: "project-id declarado en el binding local." } },
+      required: ["proyecto"], additionalProperties: false,
     },
   },
   {
@@ -1960,6 +1972,15 @@ export async function callTool(
           texto(args, "intento", false),
         );
         return bien(activity.length === 0 ? "No hay actividad registrada." : activity.map((item) => `${item.cursor}\t${item.state}\t${item.attemptId}`).join("\n"), { actividad: [...activity] });
+      }
+      case "ver_jornadas": {
+        const projectId = texto(args, "proyecto") as string;
+        const project = resolveAuthorizedProject({ projectId, ...(contexto.home === undefined ? {} : { home: contexto.home }) });
+        const roadmap = readJourneyRoadmap(project);
+        return bien(
+          roadmap.journeys.length === 0 ? "No hay jornadas registradas." : `Jornadas: ${roadmap.journeys.length}.`,
+          { jornadas: roadmap },
+        );
       }
       case "crear_ticket": {
         const alta = createTicket({

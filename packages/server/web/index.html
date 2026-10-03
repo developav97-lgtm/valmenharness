@@ -1935,6 +1935,7 @@
           <a href="#/tickets" data-vista="tickets"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Tickets</a>
           <a href="#/features" data-vista="features"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h7v7H4zM13 5h7v4h-7zM13 11h7v8h-7zM4 14h7v5H4z"/></svg>Features</a>
           <a href="#/portafolio" data-vista="portafolio"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h7l2 2h9v13H3Z"/></svg>Portafolio</a>
+          <a href="#/jornadas" data-vista="jornadas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><path d="M7 4v4M12 10v4M17 16v4"/></svg>Jornadas</a>
           <a href="#/procesos" data-vista="procesos"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h9a4 4 0 0 1 0 8H9"/><path d="M8 5 5 7l3 2"/><path d="M14 17h5"/></svg>Procesos</a>
           <a href="#/estandares" data-vista="estandares"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16"/><path d="M5 7l7-3 7 3"/><path d="M5 7v5a7 7 0 0 0 7 7 7 7 0 0 0 7-7V7"/></svg>Estándares</a>
           <a href="#/configurar" data-vista="configurar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M4 12h2M18 12h2M12 4v2M12 18v2M6.5 6.5l1.5 1.5M16 16l1.5 1.5M17.5 6.5 16 8M8 16l-1.5 1.5"/></svg>Configurar</a>
@@ -5379,6 +5380,52 @@
         cont.append(tabla);
       }
 
+      async function vistaJornadas() {
+        const cont = $("contenido");
+        cont.textContent = "";
+        if (proyectoSeleccionado === "") {
+          cont.append(el("div", "Selecciona un proyecto disponible para consultar sus jornadas.", "vacio"));
+          return;
+        }
+        cont.append(el("h2", "Hoja de ruta de jornadas"));
+        const datos = await api("GET", "/api/journeys");
+        if ((datos.journeys ?? []).length === 0) {
+          cont.append(el("div", "No hay jornadas registradas para este proyecto.", "vacio"));
+          return;
+        }
+        cont.append(el("div", `Observación: ${(datos.authorization.observationSources ?? []).join(", ") || "sin fuentes"} · Despacho declarado: ${(datos.authorization.dispatchExecutors ?? []).join(", ") || "ninguno"}.`, "nota"));
+        for (const jornada of datos.journeys) {
+          cont.append(el("h3", `Jornada ${jornada.journeyId}`), el("div", `Revisión ${jornada.revisionId} · recibida ${jornada.receivedAt}`, "ruta"));
+          const tabla = el("table");
+          const encabezado = el("thead");
+          const fila = el("tr");
+          for (const titulo of ["Orden", "Ticket", "Inicio", "Actividad", "Duración", "Espera / dependencia", "Ventana", "Último dato"])
+            fila.append(el("th", titulo));
+          encabezado.append(fila);
+          const cuerpo = el("tbody");
+          for (const ticket of jornada.tickets) {
+            const tr = el("tr");
+            const inicio = ticket.actualAt ?? ticket.scheduledAt ?? ticket.condition;
+            const espera = ticket.waitingFor.length > 0 ? `espera ${ticket.waitingFor.join(", ")}` : ticket.dependsOn.join(", ") || "—";
+            const ventana = ticket.window === null ? "—" : `${ticket.window.windowId}: ${ticket.window.status.state}`;
+            const duracion = ticket.durationMs === null ? "—" : `${Math.floor(ticket.durationMs / 60000)} min`;
+            tr.append(
+              el("td", String(ticket.order), "cifra"),
+              el("td", ticket.ticketId, "id"),
+              el("td", inicio),
+              el("td", ticket.activity),
+              el("td", duracion),
+              el("td", espera),
+              el("td", ventana),
+              el("td", ticket.lastReceivedAt ?? "—"),
+            );
+            cuerpo.append(tr);
+          }
+          tabla.append(encabezado, cuerpo);
+          cont.append(tabla);
+        }
+      }
+
       async function vistaProcesos() {
         const cont = $("contenido");
         cont.textContent = "";
@@ -6878,6 +6925,7 @@
         feature: "Feature",
         procesos: "Procesos",
         portafolio: "Portafolio",
+        jornadas: "Jornadas",
         estandares: "Estándares",
         configurar: "Configurar",
         modelos: "Modelos",
@@ -7047,6 +7095,7 @@
           else if (nombre === "features") await vistaFeatures();
           else if (nombre === "procesos") await vistaProcesos();
           else if (nombre === "portafolio") await vistaPortafolio();
+          else if (nombre === "jornadas") await vistaJornadas();
           else if (nombre === "estandares") await vistaEstandares();
           else await vistaTickets();
         } catch (error) {

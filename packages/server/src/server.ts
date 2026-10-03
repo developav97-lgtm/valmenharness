@@ -58,6 +58,7 @@ import {
   ticketsPath,
   transition,
   readReceipts,
+  readJourneyRoadmap,
 } from "@valmen/engine";
 import { type JsonObject, nextStates, parseTicket, toFailure } from "@valmen/core";
 import {
@@ -918,6 +919,20 @@ export async function handleApi(
             }
           : { available: true, directory, ...linea, compuertas },
     };
+  }
+
+  // GET /api/journeys
+  //
+  // Hoja de ruta de solo lectura. La selección del proyecto ya se resolvió al
+  // construir el contexto de esta petición: no admite rutas ni perfiles de la
+  // query porque esa sería una segunda puerta para saltar el binding autorizado.
+  if (method === "GET" && path === "/api/journeys") {
+    try {
+      const project = proyectoAutorizadoParaEjecucion(context);
+      return { status: 200, body: readJourneyRoadmap(project) };
+    } catch (caught) {
+      return { status: 400, body: { error: toFailure(caught).message } };
+    }
   }
 
   // GET /api/standards

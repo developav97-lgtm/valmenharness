@@ -57,6 +57,7 @@ const RUTAS = [
   "GET /api/report",
   "GET /api/ticket/fases",
   "GET /api/timeline",
+  "GET /api/journeys",
   "GET /api/standards",
   "POST /api/standards/:id/decision",
 ] as const;
