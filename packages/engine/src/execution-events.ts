@@ -7,17 +7,27 @@
  * que una reconexión puede leerlo completo y reconstruir exactamente el orden
  * en que el harness recibió los hechos.
  */
-import { closeSync, constants, fsyncSync, mkdirSync, openSync, readFileSync, writeSync } from "node:fs";
+import {
+  closeSync,
+  constants,
+  fsyncSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  writeSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 
 import {
   EXECUTION_ID_RE,
   MutationLock,
+  createModelReference,
   createSessionReference,
   createExecutionIdentity,
   ensureSecurePath,
   executionScopeKey,
   type ExecutionIdentity,
+  type ModelReference,
   type SessionReference,
 } from "@valmen/core";
 
@@ -42,6 +52,8 @@ export interface ExecutionEventInput {
     readonly executor: SessionReference;
     readonly origin?: SessionReference;
   };
+  /** Modelo declarado u observado; solo aplica a los hechos `model.*`. */
+  readonly model?: ModelReference;
 }
 
 /** Hecho persistido, con el orden que le asignó el harness al recibirlo. */
@@ -108,6 +120,7 @@ export function appendExecutionEvent(
                 : { origin: createSessionReference(input.session.origin) }),
             }),
           }),
+      ...(input.model === undefined ? {} : { model: createModelReference(input.model) }),
       receivedAt,
       cursor: history.length + 1,
     });
@@ -134,7 +147,9 @@ export function readExecutionEvents(project: AuthorizedProject): readonly Execut
     .map((line, index) => parseStoredEvent(project, line, index + 1));
   for (const [index, event] of events.entries()) {
     if (event.cursor !== index + 1) {
-      throw new Error("El historial de eventos tiene cursores no consecutivos o fuera de orden.");
+      throw new Error(
+        "El historial de eventos tiene cursores no consecutivos o fuera de orden.",
+      );
     }
   }
   return events;
@@ -146,8 +161,13 @@ export function readExecutionEvents(project: AuthorizedProject): readonly Execut
  * La agrupación usa proyecto y ejecución, no solo ticket: un ticket puede
  * tener reintentos y dos proyectos pueden compartir el mismo identificador.
  */
-export function replayExecutionEvents(project: AuthorizedProject): readonly ExecutionReplay[] {
-  const groups = new Map<string, { identity: ExecutionIdentity; events: ExecutionEvent[] }>();
+export function replayExecutionEvents(
+  project: AuthorizedProject,
+): readonly ExecutionReplay[] {
+  const groups = new Map<
+    string,
+    { identity: ExecutionIdentity; events: ExecutionEvent[] }
+  >();
   for (const event of readExecutionEvents(project)) {
     const key = executionScopeKey(event.identity);
     const group = groups.get(key);
@@ -157,10 +177,12 @@ export function replayExecutionEvents(project: AuthorizedProject): readonly Exec
       group.events.push(event);
     }
   }
-  return [...groups.values()].map((group) => Object.freeze({
-    identity: group.identity,
-    events: Object.freeze(group.events),
-  }));
+  return [...groups.values()].map((group) =>
+    Object.freeze({
+      identity: group.identity,
+      events: Object.freeze(group.events),
+    }),
+  );
 }
 
 function appendJsonLine(project: AuthorizedProject, event: ExecutionEvent): void {
@@ -180,20 +202,30 @@ function appendJsonLine(project: AuthorizedProject, event: ExecutionEvent): void
   }
 }
 
-function parseStoredEvent(project: AuthorizedProject, line: string, lineNumber: number): ExecutionEvent {
+function parseStoredEvent(
+  project: AuthorizedProject,
+  line: string,
+  lineNumber: number,
+): ExecutionEvent {
   let value: unknown;
   try {
     value = JSON.parse(line);
   } catch {
-    throw new Error(`El historial de eventos tiene JSON inválido en la línea ${lineNumber}.`);
+    throw new Error(
+      `El historial de eventos tiene JSON inválido en la línea ${lineNumber}.`,
+    );
   }
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error(`El historial de eventos tiene un evento inválido en la línea ${lineNumber}.`);
+    throw new Error(
+      `El historial de eventos tiene un evento inválido en la línea ${lineNumber}.`,
+    );
   }
   const record = value as Record<string, unknown>;
   const input: ExecutionEventInput = {
     eventId: stringField(record, "eventId", lineNumber),
-    identity: createExecutionIdentity(objectField(record, "identity", lineNumber) as ExecutionIdentity),
+    identity: createExecutionIdentity(
+      objectField(record, "identity", lineNumber) as ExecutionIdentity,
+    ),
     attemptId: stringField(record, "attemptId", lineNumber),
     kind: stringField(record, "kind", lineNumber),
     source: stringField(record, "source", lineNumber),
@@ -201,6 +233,9 @@ function parseStoredEvent(project: AuthorizedProject, line: string, lineNumber: 
     ...(record["session"] === undefined
       ? {}
       : { session: sessionField(record["session"], lineNumber) }),
+    ...(record["model"] === undefined
+      ? {}
+      : { model: modelField(record["model"], lineNumber) }),
   };
   const event: ExecutionEvent = Object.freeze({
     ...input,
@@ -217,14 +252,18 @@ function parseStoredEvent(project: AuthorizedProject, line: string, lineNumber: 
 
 function assertInput(project: AuthorizedProject, input: ExecutionEventInput): void {
   if (!EXECUTION_EVENT_ID_RE.test(input.eventId)) {
-    throw new Error("eventId debe ser un identificador portable no vacío, sin rutas ni espacios.");
+    throw new Error(
+      "eventId debe ser un identificador portable no vacío, sin rutas ni espacios.",
+    );
   }
   const identity = createExecutionIdentity(input.identity);
   if (identity.projectId !== project.projectId) {
     throw new Error("La identidad del evento no pertenece al proyecto autorizado.");
   }
   if (!EXECUTION_ID_RE.test(input.attemptId)) {
-    throw new Error("attemptId debe ser un identificador portable no vacío, sin rutas ni espacios.");
+    throw new Error(
+      "attemptId debe ser un identificador portable no vacío, sin rutas ni espacios.",
+    );
   }
   if (!EXECUTION_EVENT_LABEL_RE.test(input.kind)) {
     throw new Error("kind debe ser una etiqueta en minúsculas, sin espacios.");
@@ -242,6 +281,16 @@ function assertInput(project: AuthorizedProject, input: ExecutionEventInput): vo
     createSessionReference(input.session.executor);
     if (input.session.origin !== undefined) createSessionReference(input.session.origin);
   }
+  const isModelEvent = input.kind === "model.configured" || input.kind === "model.observed";
+  if (isModelEvent && input.model === undefined) {
+    throw new Error(`${input.kind} requiere una referencia de modelo.`);
+  }
+  if (!isModelEvent && input.model !== undefined) {
+    throw new Error(
+      "La referencia de modelo solo aplica a eventos model.configured o model.observed.",
+    );
+  }
+  if (input.model !== undefined) createModelReference(input.model);
   assertIsoInstant(input.occurredAt, "occurredAt");
 }
 
@@ -253,15 +302,18 @@ function assertIsoInstant(value: string, field: string): void {
 }
 
 function sameEvent(event: ExecutionEvent, input: ExecutionEventInput): boolean {
-  return event.eventId === input.eventId
-    && event.attemptId === input.attemptId
-    && event.kind === input.kind
-    && event.source === input.source
-    && event.occurredAt === input.occurredAt
-    && event.identity.projectId === input.identity.projectId
-    && event.identity.ticketId === input.identity.ticketId
-    && event.identity.executionId === input.identity.executionId
-    && sameSession(event.session, input.session);
+  return (
+    event.eventId === input.eventId &&
+    event.attemptId === input.attemptId &&
+    event.kind === input.kind &&
+    event.source === input.source &&
+    event.occurredAt === input.occurredAt &&
+    event.identity.projectId === input.identity.projectId &&
+    event.identity.ticketId === input.identity.ticketId &&
+    event.identity.executionId === input.identity.executionId &&
+    sameSession(event.session, input.session) &&
+    sameModel(event.model, input.model)
+  );
 }
 
 function sameSession(
@@ -269,34 +321,55 @@ function sameSession(
   right: ExecutionEventInput["session"],
 ): boolean {
   if (left === undefined || right === undefined) return left === right;
-  return sameSessionReference(left.executor, right.executor)
-    && (left.origin === undefined || right.origin === undefined
+  return (
+    sameSessionReference(left.executor, right.executor) &&
+    (left.origin === undefined || right.origin === undefined
       ? left.origin === right.origin
-      : sameSessionReference(left.origin, right.origin));
+      : sameSessionReference(left.origin, right.origin))
+  );
 }
 
 function sameSessionReference(left: SessionReference, right: SessionReference): boolean {
-  return left.adapter === right.adapter
-    && left.scope === right.scope
-    && left.sessionId === right.sessionId;
+  return (
+    left.adapter === right.adapter &&
+    left.scope === right.scope &&
+    left.sessionId === right.sessionId
+  );
 }
 
-function sessionField(value: unknown, lineNumber: number): NonNullable<ExecutionEventInput["session"]> {
+function sameModel(
+  left: ModelReference | undefined,
+  right: ModelReference | undefined,
+): boolean {
+  return left === undefined || right === undefined
+    ? left === right
+    : left.provider === right.provider && left.model === right.model;
+}
+
+function sessionField(
+  value: unknown,
+  lineNumber: number,
+): NonNullable<ExecutionEventInput["session"]> {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
     throw new Error(`La línea ${lineNumber} declara una sesión inválida.`);
   }
   const record = value as Record<string, unknown>;
   const executor = sessionReferenceField(record["executor"], "executor", lineNumber);
-  const origin = record["origin"] === undefined
-    ? undefined
-    : sessionReferenceField(record["origin"], "origin", lineNumber);
+  const origin =
+    record["origin"] === undefined
+      ? undefined
+      : sessionReferenceField(record["origin"], "origin", lineNumber);
   return {
     executor,
     ...(origin === undefined ? {} : { origin }),
   };
 }
 
-function sessionReferenceField(value: unknown, field: string, lineNumber: number): SessionReference {
+function sessionReferenceField(
+  value: unknown,
+  field: string,
+  lineNumber: number,
+): SessionReference {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
     throw new Error(`La línea ${lineNumber} declara ${field} inválido.`);
   }
@@ -308,19 +381,44 @@ function sessionReferenceField(value: unknown, field: string, lineNumber: number
   });
 }
 
-function stringField(record: Record<string, unknown>, field: string, lineNumber: number): string {
+function modelField(value: unknown, lineNumber: number): ModelReference {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`La línea ${lineNumber} declara un modelo inválido.`);
+  }
+  const record = value as Record<string, unknown>;
+  return createModelReference({
+    provider: stringField(record, "provider", lineNumber),
+    model: stringField(record, "model", lineNumber),
+  });
+}
+
+function stringField(
+  record: Record<string, unknown>,
+  field: string,
+  lineNumber: number,
+): string {
   const value = record[field];
-  if (typeof value !== "string") throw new Error(`La línea ${lineNumber} no declara ${field}.`);
+  if (typeof value !== "string")
+    throw new Error(`La línea ${lineNumber} no declara ${field}.`);
   return value;
 }
 
-function numberField(record: Record<string, unknown>, field: string, lineNumber: number): number {
+function numberField(
+  record: Record<string, unknown>,
+  field: string,
+  lineNumber: number,
+): number {
   const value = record[field];
-  if (typeof value !== "number") throw new Error(`La línea ${lineNumber} no declara ${field}.`);
+  if (typeof value !== "number")
+    throw new Error(`La línea ${lineNumber} no declara ${field}.`);
   return value;
 }
 
-function objectField(record: Record<string, unknown>, field: string, lineNumber: number): Record<string, unknown> {
+function objectField(
+  record: Record<string, unknown>,
+  field: string,
+  lineNumber: number,
+): Record<string, unknown> {
   const value = record[field];
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
     throw new Error(`La línea ${lineNumber} no declara ${field}.`);

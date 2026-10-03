@@ -19,6 +19,7 @@ export * from "./project-resolution.js";
 export * from "./execution-events.js";
 export * from "./execution-activity.js";
 export * from "./execution-sessions.js";
+export * from "./execution-models.js";
 export * from "./execution-contract.js";
 export * from "./execution-status.js";
 export * from "./diff.js";

@@ -4,7 +4,10 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createExecutionIdentity } from "../packages/core/src/execution-identity.js";
-import { createExecutionContract, resolveAuthorizedProject } from "../packages/engine/src/index.js";
+import {
+  createExecutionContract,
+  resolveAuthorizedProject,
+} from "../packages/engine/src/index.js";
 
 const ticketId = "FEATURE-ENGINE-CONTRATO-EJECUCION-20261001";
 let home: string;
@@ -15,14 +18,22 @@ beforeEach(() => {
   root = join(home, "harness");
   mkdirSync(join(home, ".valmen"), { recursive: true });
   mkdirSync(join(root, ".valmen"), { recursive: true });
-  writeFileSync(join(root, ".valmen", "config.yaml"), "project-id: valmen-harness\n", "utf8");
-  writeFileSync(join(home, ".valmen", "bindings.local.yaml"), [
-    "schema-version: 1",
-    "machine-id: qa-mac",
-    "projects:",
-    "  valmen-harness:",
-    `    root: ${root}`,
-  ].join("\n"), "utf8");
+  writeFileSync(
+    join(root, ".valmen", "config.yaml"),
+    "project-id: valmen-harness\n",
+    "utf8",
+  );
+  writeFileSync(
+    join(home, ".valmen", "bindings.local.yaml"),
+    [
+      "schema-version: 1",
+      "machine-id: qa-mac",
+      "projects:",
+      "  valmen-harness:",
+      `    root: ${root}`,
+    ].join("\n"),
+    "utf8",
+  );
 });
 afterEach(() => rmSync(home, { recursive: true, force: true }));
 
@@ -53,7 +64,9 @@ describe("contrato portable de ejecución", () => {
 
   it("mantiene la validación del proyecto autorizado en cada puerta", () => {
     const contract = createExecutionContract(project());
-    expect(() => contract.readActivity(identity("saiopencloud"))).toThrow("no pertenece al proyecto autorizado");
+    expect(() => contract.readActivity(identity("saiopencloud"))).toThrow(
+      "no pertenece al proyecto autorizado",
+    );
   });
 
   it("reconcilia el mismo reenvío sin que cada puerta duplique el evento", () => {
@@ -71,5 +84,34 @@ describe("contrato portable de ejecución", () => {
     expect(first.recordActivity(input).appended).toBe(true);
     expect(second.recordActivity(input).appended).toBe(false);
     expect(second.readActivity(identity())).toHaveLength(1);
+  });
+
+  it("expone a cada puerta los modelos configurado y efectivo sin confundirlos", () => {
+    const cli = createExecutionContract(project());
+    const mcp = createExecutionContract(project());
+
+    cli.recordConfiguredModel({
+      eventId: "configured-01",
+      identity: identity(),
+      attemptId: "attempt-01",
+      model: { provider: "codex", model: "gpt-6.1-sol" },
+      source: "routing",
+      occurredAt: "2026-10-03T10:00:00.000Z",
+    });
+    cli.observeEffectiveModel({
+      eventId: "observed-01",
+      identity: identity(),
+      attemptId: "attempt-01",
+      model: { provider: "codex", model: "gpt-6.1-pro" },
+      source: "codex",
+      occurredAt: "2026-10-03T10:01:00.000Z",
+    });
+
+    expect(mcp.readConfiguredModels(identity()).map((entry) => entry.model.model)).toEqual([
+      "gpt-6.1-sol",
+    ]);
+    expect(mcp.readEffectiveModels(identity()).map((entry) => entry.model.model)).toEqual([
+      "gpt-6.1-pro",
+    ]);
   });
 });

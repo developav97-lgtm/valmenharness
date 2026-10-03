@@ -13,7 +13,19 @@ import {
   type ExecutionActivity,
   type ExecutionActivityInput,
 } from "./execution-activity.js";
-import { replayExecutionEvents, type AppendExecutionEventResult, type ExecutionReplay } from "./execution-events.js";
+import {
+  replayExecutionEvents,
+  type AppendExecutionEventResult,
+  type ExecutionReplay,
+} from "./execution-events.js";
+import {
+  declareConfiguredExecutionModel,
+  observeEffectiveExecutionModel,
+  readConfiguredExecutionModels,
+  readEffectiveExecutionModels,
+  type ExecutionModel,
+  type ExecutionModelInput,
+} from "./execution-models.js";
 import { type AuthorizedProject } from "./project-resolution.js";
 
 /** Operaciones de ejecución que comparten todas las puertas. */
@@ -23,7 +35,26 @@ export interface ExecutionContract {
     input: ExecutionActivityInput,
     options?: { readonly receivedAt?: string | undefined },
   ): AppendExecutionEventResult;
-  readActivity(identity: ExecutionIdentity, attemptId?: string): readonly ExecutionActivity[];
+  readActivity(
+    identity: ExecutionIdentity,
+    attemptId?: string,
+  ): readonly ExecutionActivity[];
+  recordConfiguredModel(
+    input: ExecutionModelInput,
+    options?: { readonly receivedAt?: string | undefined },
+  ): AppendExecutionEventResult;
+  observeEffectiveModel(
+    input: ExecutionModelInput,
+    options?: { readonly receivedAt?: string | undefined },
+  ): AppendExecutionEventResult;
+  readConfiguredModels(
+    identity: ExecutionIdentity,
+    attemptId?: string,
+  ): readonly ExecutionModel[];
+  readEffectiveModels(
+    identity: ExecutionIdentity,
+    attemptId?: string,
+  ): readonly ExecutionModel[];
   replay(): readonly ExecutionReplay[];
 }
 
@@ -43,6 +74,18 @@ export function createExecutionContract(project: AuthorizedProject): ExecutionCo
     ) => recordExecutionActivity(project, input, options),
     readActivity: (identity: ExecutionIdentity, attemptId?: string) =>
       readExecutionActivity(project, identity, attemptId),
+    recordConfiguredModel: (
+      input: ExecutionModelInput,
+      options: { readonly receivedAt?: string | undefined } = {},
+    ) => declareConfiguredExecutionModel(project, input, options),
+    observeEffectiveModel: (
+      input: ExecutionModelInput,
+      options: { readonly receivedAt?: string | undefined } = {},
+    ) => observeEffectiveExecutionModel(project, input, options),
+    readConfiguredModels: (identity: ExecutionIdentity, attemptId?: string) =>
+      readConfiguredExecutionModels(project, identity, attemptId),
+    readEffectiveModels: (identity: ExecutionIdentity, attemptId?: string) =>
+      readEffectiveExecutionModels(project, identity, attemptId),
     replay: () => replayExecutionEvents(project),
   });
 }
