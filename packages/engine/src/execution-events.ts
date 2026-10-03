@@ -13,10 +13,12 @@ import { dirname, join } from "node:path";
 import {
   EXECUTION_ID_RE,
   MutationLock,
+  createSessionReference,
   createExecutionIdentity,
   ensureSecurePath,
   executionScopeKey,
   type ExecutionIdentity,
+  type SessionReference,
 } from "@valmen/core";
 
 import { type AuthorizedProject } from "./project-resolution.js";
@@ -35,6 +37,11 @@ export interface ExecutionEventInput {
   readonly kind: string;
   readonly source: string;
   readonly occurredAt: string;
+  /** Vínculo explícito de una sesión ejecutora; solo aplica a `session.linked`. */
+  readonly session?: {
+    readonly executor: SessionReference;
+    readonly origin?: SessionReference;
+  };
 }
 
 /** Hecho persistido, con el orden que le asignó el harness al recibirlo. */
@@ -91,6 +98,16 @@ export function appendExecutionEvent(
     const event: ExecutionEvent = Object.freeze({
       ...input,
       identity: createExecutionIdentity(input.identity),
+      ...(input.session === undefined
+        ? {}
+        : {
+            session: Object.freeze({
+              executor: createSessionReference(input.session.executor),
+              ...(input.session.origin === undefined
+                ? {}
+                : { origin: createSessionReference(input.session.origin) }),
+            }),
+          }),
       receivedAt,
       cursor: history.length + 1,
     });
@@ -181,6 +198,9 @@ function parseStoredEvent(project: AuthorizedProject, line: string, lineNumber: 
     kind: stringField(record, "kind", lineNumber),
     source: stringField(record, "source", lineNumber),
     occurredAt: stringField(record, "occurredAt", lineNumber),
+    ...(record["session"] === undefined
+      ? {}
+      : { session: sessionField(record["session"], lineNumber) }),
   };
   const event: ExecutionEvent = Object.freeze({
     ...input,
@@ -212,6 +232,16 @@ function assertInput(project: AuthorizedProject, input: ExecutionEventInput): vo
   if (!EXECUTION_EVENT_LABEL_RE.test(input.source)) {
     throw new Error("source debe ser una etiqueta en minúsculas, sin espacios.");
   }
+  if (input.kind === "session.linked" && input.session === undefined) {
+    throw new Error("session.linked requiere una referencia de sesión ejecutora.");
+  }
+  if (input.kind !== "session.linked" && input.session !== undefined) {
+    throw new Error("La referencia de sesión solo aplica a eventos session.linked.");
+  }
+  if (input.session !== undefined) {
+    createSessionReference(input.session.executor);
+    if (input.session.origin !== undefined) createSessionReference(input.session.origin);
+  }
   assertIsoInstant(input.occurredAt, "occurredAt");
 }
 
@@ -230,7 +260,52 @@ function sameEvent(event: ExecutionEvent, input: ExecutionEventInput): boolean {
     && event.occurredAt === input.occurredAt
     && event.identity.projectId === input.identity.projectId
     && event.identity.ticketId === input.identity.ticketId
-    && event.identity.executionId === input.identity.executionId;
+    && event.identity.executionId === input.identity.executionId
+    && sameSession(event.session, input.session);
+}
+
+function sameSession(
+  left: ExecutionEventInput["session"],
+  right: ExecutionEventInput["session"],
+): boolean {
+  if (left === undefined || right === undefined) return left === right;
+  return sameSessionReference(left.executor, right.executor)
+    && (left.origin === undefined || right.origin === undefined
+      ? left.origin === right.origin
+      : sameSessionReference(left.origin, right.origin));
+}
+
+function sameSessionReference(left: SessionReference, right: SessionReference): boolean {
+  return left.adapter === right.adapter
+    && left.scope === right.scope
+    && left.sessionId === right.sessionId;
+}
+
+function sessionField(value: unknown, lineNumber: number): NonNullable<ExecutionEventInput["session"]> {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`La línea ${lineNumber} declara una sesión inválida.`);
+  }
+  const record = value as Record<string, unknown>;
+  const executor = sessionReferenceField(record["executor"], "executor", lineNumber);
+  const origin = record["origin"] === undefined
+    ? undefined
+    : sessionReferenceField(record["origin"], "origin", lineNumber);
+  return {
+    executor,
+    ...(origin === undefined ? {} : { origin }),
+  };
+}
+
+function sessionReferenceField(value: unknown, field: string, lineNumber: number): SessionReference {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`La línea ${lineNumber} declara ${field} inválido.`);
+  }
+  const record = value as Record<string, unknown>;
+  return createSessionReference({
+    adapter: stringField(record, "adapter", lineNumber),
+    scope: stringField(record, "scope", lineNumber),
+    sessionId: stringField(record, "sessionId", lineNumber),
+  });
 }
 
 function stringField(record: Record<string, unknown>, field: string, lineNumber: number): string {

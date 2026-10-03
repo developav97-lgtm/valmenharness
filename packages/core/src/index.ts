@@ -8,6 +8,7 @@
 
 export * from "./contract.js";
 export * from "./execution-identity.js";
+export * from "./session-reference.js";
 export * from "./transitions.js";
 export * from "./feature.js";
 export * from "./tickets-yaml.js";
