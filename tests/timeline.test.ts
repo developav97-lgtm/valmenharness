@@ -27,8 +27,12 @@ import { createRequire } from "node:module";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { ticketDeTexto } from "../packages/server/src/timeline.js";
-import { mensajesDelRegistroEnTexto } from "../packages/server/src/timeline.js";
+import {
+  guardarFotoEnTicket,
+  mensajesDelRegistroEnTexto,
+  ticketDeTexto,
+} from "../packages/server/src/timeline.js";
+import { writeFixtureTicket } from "./helpers/fixtures.js";
 
 const requerir = createRequire(import.meta.url);
 
@@ -372,6 +376,61 @@ describe("leer la línea de tiempo", () => {
     expect(r).not.toBeNull();
     expect(r?.sessions).toHaveLength(0);
     expect(r?.totalCostUsd).toBe(0);
+  });
+});
+
+describe("guardar la foto de consumo", () => {
+  it("omite una sesión sin modelo sin bloquear el cierre", () => {
+    if (sqlite() === null) return;
+
+    const ticketId = "BUGFIX-POS-MODELO-VACIO-20261002";
+    writeFixtureTicket(lab, { id: ticketId });
+    escribirBase({
+      directorio: lab,
+      sesiones: [
+        {
+          id: "ses_sin_modelo",
+          title: `Ticket: ${ticketId}`,
+          cost: 0.01,
+          modelo: "",
+          mensajes: [
+            {
+              id: "m1",
+              data: mensaje(0.01, { providerID: "", modelID: "" }),
+              partes: [{ tool: "valmen_cerrar_ticket", status: "completed" }],
+            },
+          ],
+        },
+      ],
+    });
+
+    const modulo = sqlite();
+    if (modulo === null) return;
+    const db = new modulo.DatabaseSync(
+      join(lab, ".local", "share", "opencode", "opencode.db"),
+    );
+    db.prepare("UPDATE part SET data = ? WHERE message_id = ?").run(
+      JSON.stringify({
+        type: "tool",
+        tool: "valmen_cerrar_ticket",
+        state: {
+          status: "completed",
+          time: { start: 1 },
+          input: { id: ticketId },
+        },
+      }),
+      "m1",
+    );
+    db.close();
+
+    const foto = guardarFotoEnTicket(
+      { root: lab, ticketsDir: "tickets" },
+      ticketId,
+      { home: lab },
+    );
+
+    expect(foto?.entradas).toEqual([]);
+    expect(foto?.detalle).toContain("0 sesión(es) nuevas de 1");
   });
 });
 

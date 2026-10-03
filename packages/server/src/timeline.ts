@@ -1084,7 +1084,12 @@ export function guardarFotoEnTicket(
   // pasada duplicaría lo que ya estaba: el bloque es append-only y no se corrige
   // después.
   const yaEstaban = sesionesRegistradas(paths, ticketId);
-  const pendientes = linea.sessions.filter((sesion) => !yaEstaban.has(sesion.id));
+  // Una sesión sin modelo no se puede atribuir con honestidad. No bloquea el
+  // cierre: puede coexistir con el consumo manual que documenta una sesión
+  // compartida, pero no se inventa un modelo vacío para hacerla pasar.
+  const pendientes = linea.sessions.filter(
+    (sesion) => !yaEstaban.has(sesion.id) && sesion.model.trim() !== "",
+  );
 
   const entradas: string[] = [];
   for (const sesion of pendientes) {

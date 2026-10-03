@@ -119,6 +119,27 @@ export function declaredFunctionalFiles(
 }
 
 /**
+ * Un ticket sin puntos no tiene por qué inventar un hallazgo solo para QA.
+ * En ese caso el árbol de trabajo declara por sí mismo qué archivos funcionales
+ * se validaron; el historial (`tickets/`) y el estado del harness (`.valmen/`)
+ * nunca entran al hash.
+ */
+function modifiedFunctionalFiles(root: string, ticketPath: string): string[] {
+  const result = spawnSync("git", ["diff", "--name-only", "--diff-filter=ACMR", "HEAD"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  if (result.status !== 0) return [];
+  return result.stdout
+    .split("\n")
+    .map((path) => path.trim())
+    .filter((path) => path !== "" && !path.startsWith("tickets/") && !path.startsWith(".valmen/"))
+    .map((path) => validateFunctionalFile(path, ticketPath, root))
+    .sort();
+}
+
+/**
  * El hash del contenido de los archivos declarados.
  *
  * Devuelve `worktree:sha256:<64 hex>`. Falla con código 5 —referencia— si algún
@@ -131,9 +152,10 @@ export function calculateWorktreeReference(
   ticketPath: string,
   root: string,
 ): string {
-  const archivos = declaredFunctionalFiles(document, ticketPath, root);
+  const declarados = declaredFunctionalFiles(document, ticketPath, root);
+  const archivos = declarados.length > 0 ? declarados : modifiedFunctionalFiles(root, ticketPath);
   if (archivos.length === 0) {
-    fail("No hay archivos funcionales declarados para calcular el hash.", EXIT_REFERENCE);
+    fail("No hay archivos funcionales modificados para calcular el hash.", EXIT_REFERENCE);
   }
 
   const hash = createHash("sha256");

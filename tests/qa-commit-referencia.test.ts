@@ -21,7 +21,9 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { parseTicket } from "@valmen/core";
 import { addEvidence, addPoint, qaClose, qaStart } from "../packages/engine/src/append.js";
+import { calculateWorktreeReference } from "../packages/engine/src/references.js";
 import { writeFixtureTicket } from "./helpers/fixtures.js";
 
 const TICKET = "BUGFIX-QA-COMMIT-REFERENCIA-20260928";
@@ -212,5 +214,17 @@ describe("qa-start con --build-reference commit:<sha>", () => {
         buildReference: "commit:abc123",
       }),
     ).toThrow(/40 hex/);
+  });
+});
+
+describe("referencia de worktree sin puntos", () => {
+  it("usa los archivos funcionales modificados y excluye el registro del ticket", () => {
+    const ruta = join(lab, "tickets", "2026", TICKET, "ticket.md");
+    writeFileSync(join(lab, ARCHIVO), "version lista para QA\n", "utf8");
+    const documento = parseTicket(readFileSync(ruta, "utf8"));
+
+    expect(calculateWorktreeReference(documento, ruta, lab)).toMatch(
+      /^worktree:sha256:[0-9a-f]{64}$/,
+    );
   });
 });
