@@ -116,6 +116,10 @@ describe("portafolio de proyectos", () => {
         name: "Proyecto uno",
         current: true,
         available: true,
+        sources: {
+          machine: { available: true, reason: null, label: "laboratorio" },
+          registry: { available: true, reason: null, label: "Registro local" },
+        },
         gatesPending: 1,
         correctionsPending: 1,
         waiting: 1,
@@ -131,6 +135,10 @@ describe("portafolio de proyectos", () => {
       {
         projectId: "ausente",
         available: false,
+        sources: {
+          machine: { available: false, label: "laboratorio" },
+          registry: { available: false, reason: "No disponible porque la máquina no pudo validar el binding.", label: "Registro local" },
+        },
         gatesPending: null,
         waiting: null,
         usage: null,

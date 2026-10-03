@@ -19,6 +19,11 @@ export interface PortfolioRow {
   readonly current: boolean;
   readonly available: boolean;
   readonly reason: string | null;
+  /** Señales independientes: no se deducen de uso ni de coste. */
+  readonly sources: {
+    readonly machine: { readonly label: string; readonly available: boolean; readonly reason: string | null };
+    readonly registry: { readonly label: "Registro local"; readonly available: boolean; readonly reason: string | null };
+  };
   readonly gatesPending: number | null;
   readonly correctionsPending: number | null;
   readonly waiting: number | null;
@@ -54,6 +59,14 @@ export function listPortfolioRows(
       current: resolve(project.root) === resolve(currentRoot),
       available: false,
       reason: project.reason,
+      sources: {
+        machine: { label: project.machineId, available: false, reason: project.reason },
+        registry: {
+          label: "Registro local",
+          available: false,
+          reason: "No disponible porque la máquina no pudo validar el binding.",
+        },
+      },
       gatesPending: null,
       correctionsPending: null,
       waiting: null,
@@ -72,6 +85,10 @@ export function listPortfolioRows(
         name: readString(readConfig(project.root), "name", basename(project.root)),
         available: true,
         reason: null,
+        sources: {
+          machine: { label: project.machineId, available: true, reason: null },
+          registry: { label: "Registro local", available: true, reason: null },
+        },
         gatesPending: currentReceipts(receipts).filter(
           (receipt) => receipt.escalatedTo === "human" && receipt.humanDecision === null,
         ).length,
@@ -86,6 +103,14 @@ export function listPortfolioRows(
       return {
         ...unavailable,
         reason: `No se pudieron leer los datos del proyecto "${project.projectId}".`,
+        sources: {
+          machine: { label: project.machineId, available: true, reason: null },
+          registry: {
+            label: "Registro local",
+            available: false,
+            reason: `No se pudieron leer los datos del proyecto "${project.projectId}".`,
+          },
+        },
       };
     }
   });

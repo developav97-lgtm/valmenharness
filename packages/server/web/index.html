@@ -5288,7 +5288,15 @@
           if (proyecto.current) nombre.append(el("span", "Instancia actual", "etiqueta"));
           fila.append(nombre);
           const estado = el("td");
-          estado.append(el("div", proyecto.available ? "Disponible" : "No disponible", "etiqueta"));
+          const fuentes = proyecto.sources ?? {
+            machine: { label: "Máquina", available: proyecto.available, reason: proyecto.reason },
+            registry: { label: "Registro local", available: proyecto.available, reason: proyecto.reason },
+          };
+          for (const [tipo, fuente] of Object.entries(fuentes)) {
+            const etiqueta = tipo === "machine" ? "Máquina" : "Fuente";
+            estado.append(el("div", `${etiqueta}: ${fuente.label} · ${fuente.available ? "Disponible" : "No disponible"}`, "etiqueta"));
+            if (fuente.reason) estado.append(el("div", fuente.reason, "descripcion"));
+          }
           if (proyecto.reason) estado.append(el("div", proyecto.reason, "descripcion"));
           fila.append(estado);
           const compuertas = el("td", proyecto.available ? `${proyecto.gatesPending} compuertas pendientes` : "—");
