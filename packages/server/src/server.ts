@@ -52,6 +52,7 @@ import {
   listAuthorizedProjects,
   readTicket,
   renderReport,
+  resolveAuthorizedProject,
   summarize,
   ticketsPath,
   transition,
@@ -222,6 +223,19 @@ function transitionsOf(
 function valorDeQuery(query: URLSearchParams, nombre: string): string | undefined {
   const valor = query.get(nombre);
   return valor === null || valor === "" ? undefined : valor;
+}
+
+/** Convierte el identificador del navegador en un contexto ya autorizado. */
+function contextoDeProyecto(
+  context: ServerContext,
+  projectId: string | undefined,
+): ServerContext {
+  if (projectId === undefined) return context;
+  const project = resolveAuthorizedProject({
+    projectId,
+    ...(context.bindingsFile === undefined ? {} : { bindingsFile: context.bindingsFile }),
+  });
+  return { ...context, root: project.root, paths: project.paths };
 }
 
 /** La línea complementaria del board, sin mezclarla con los eventos del registro. */
@@ -1728,6 +1742,23 @@ async function handleRequest(
 
   try {
     if (url.pathname.startsWith("/api/")) {
+      const selected = request.headers["x-valmen-project"];
+      if (Array.isArray(selected) || selected === "") {
+        send(response, 400, { error: "X-Valmen-Project debe contener un único project-id." }, "application/json; charset=utf-8");
+        return;
+      }
+      if (url.pathname === "/api/portafolio" && selected !== undefined) {
+        send(response, 400, { error: "El portafolio es una vista conjunta y no admite selección de proyecto." }, "application/json; charset=utf-8");
+        return;
+      }
+      let requestContext: ServerContext;
+      try {
+        requestContext = contextoDeProyecto(context, selected);
+      } catch (caught) {
+        const error = caught instanceof Error ? caught.message : String(caught);
+        send(response, 403, { error }, "application/json; charset=utf-8");
+        return;
+      }
       let body: unknown = {};
       if (method === "PUT" || method === "POST") {
         body = await readJson(request);
@@ -1736,7 +1767,7 @@ async function handleRequest(
         method,
         url.pathname,
         body,
-        context,
+        requestContext,
         url.searchParams,
       );
       send(response, resultado.status, resultado.body, "application/json; charset=utf-8");

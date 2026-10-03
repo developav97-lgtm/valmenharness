@@ -24,6 +24,8 @@ export interface AuthorizedProject {
 export interface ResolveAuthorizedProjectRequest {
   readonly projectId: string;
   readonly home?: string | undefined;
+  /** Archivo de bindings inyectable para bordes que ya lo resolvieron. */
+  readonly bindingsFile?: string | undefined;
 }
 export interface ResolveProjectForHermesProfileRequest {
   readonly profile: string;
@@ -35,11 +37,14 @@ export function resolveAuthorizedProject(
   request: ResolveAuthorizedProjectRequest,
 ): AuthorizedProject {
   const home = request.home ?? homedir();
-  const bindings = readBindings(home);
+  const bindings = readBindings({
+    home,
+    ...(request.bindingsFile === undefined ? {} : { bindingsFile: request.bindingsFile }),
+  });
   const binding = bindings.projects[request.projectId];
   if (binding === undefined) {
     fail(
-      `El proyecto "${request.projectId}" no está declarado en ${machineBindingsPath(home)}.`,
+      `El proyecto "${request.projectId}" no está declarado en ${request.bindingsFile ?? machineBindingsPath(home)}.`,
     );
   }
   return validateProject(request.projectId, bindings.machineId, binding);
@@ -129,15 +134,15 @@ export function resolveProjectForHermesProfile(
   request: ResolveProjectForHermesProfileRequest,
 ): AuthorizedProject | null {
   const home = request.home ?? homedir();
-  const bindings = readBindings(home);
+  const bindings = readBindings({ home });
   const projectId = Object.entries(bindings.projects).find(
     ([, binding]) => binding.hermesProfile === request.profile,
   )?.[0];
   return projectId === undefined ? null : resolveAuthorizedProject({ projectId, home });
 }
 
-function readBindings(home: string) {
-  const path = machineBindingsPath(home);
+function readBindings(request: { readonly home: string; readonly bindingsFile?: string }) {
+  const path = request.bindingsFile ?? machineBindingsPath(request.home);
   try {
     return parseMachineBindings(readFileSync(path, "utf8"));
   } catch (error) {

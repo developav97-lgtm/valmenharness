@@ -181,6 +181,17 @@
         text-transform: uppercase;
         letter-spacing: 0.08em;
       }
+      .visualmente-oculto {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
       .lateral .pie .ruta {
         font-family: var(--mono);
         font-size: 11px;
@@ -1934,6 +1945,10 @@
 
       <div class="pie">
         <div class="rotulo">Proyecto</div>
+        <label class="visualmente-oculto" for="selector-proyectos">Proyecto activo</label>
+        <select id="selector-proyectos" aria-label="Proyecto activo" title="Cambiar proyecto">
+          <option value="">Vista conjunta</option>
+        </select>
         <div class="ruta" id="raiz">…</div>
         <div class="latido"><span class="punto"></span><span id="actualizado">conectando…</span></div>
       </div>
@@ -1992,13 +2007,24 @@
       }
 
       async function enviar(method, ruta, cuerpo) {
+        const url = new URL(ruta, "http://127.0.0.1");
+        const vistaConjunta = url.pathname === "/api/portafolio";
+        const seleccionDeLaPeticion = proyectoSeleccionado;
         const respuesta = await fetch(ruta, {
           method,
-          headers: cuerpo === undefined ? {} : { "Content-Type": "application/json" },
+          headers: {
+            ...(cuerpo === undefined ? {} : { "Content-Type": "application/json" }),
+            ...(vistaConjunta || seleccionDeLaPeticion === ""
+              ? {}
+              : { "X-Valmen-Project": seleccionDeLaPeticion }),
+          },
           body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
         });
         const datos = await respuesta.json();
         if (!respuesta.ok) throw new Error(datos.error ?? `HTTP ${respuesta.status}`);
+        if (!vistaConjunta && seleccionDeLaPeticion !== proyectoSeleccionado) {
+          throw RESPUESTA_DE_PROYECTO_OBSOLETA;
+        }
         return datos;
       }
 
@@ -2012,10 +2038,57 @@
 
       /** El responsable de las decisiones humanas: se recuerda entre visitas. */
       let responsable = localStorage.getItem("valmen.actor") ?? "";
+      let proyectoSeleccionado = localStorage.getItem("valmen.project") ?? "";
+      const RESPUESTA_DE_PROYECTO_OBSOLETA = Symbol("respuesta de proyecto obsoleta");
       const guardarResponsable = (valor) => {
         responsable = valor;
         localStorage.setItem("valmen.actor", valor);
       };
+
+      function mostrarProyecto(salud) {
+        const raiz = $("raiz");
+        if (raiz === null) return;
+        const partes = String(salud.root).split("/").filter((parte) => parte !== "");
+        raiz.textContent = partes[partes.length - 1] ?? salud.root;
+        raiz.title = salud.root;
+      }
+
+      async function refrescarProyectoVisible() {
+        try {
+          mostrarProyecto(await api("GET", "/api/health"));
+        } catch (error) {
+          if (error !== RESPUESTA_DE_PROYECTO_OBSOLETA) throw error;
+        }
+      }
+
+      function seleccionarProyecto(projectId) {
+        proyectoSeleccionado = projectId;
+        if (projectId === "") localStorage.removeItem("valmen.project");
+        else localStorage.setItem("valmen.project", projectId);
+        void refrescarProyectoVisible();
+        if (projectId === "") location.hash = "#/portafolio";
+        void navegar();
+      }
+
+      async function cargarSelectorDeProyectos() {
+        const selector = $("selector-proyectos");
+        if (selector === null) return;
+        const datos = await api("GET", "/api/portafolio");
+        if (!Array.isArray(datos.projects)) return;
+        selector.replaceChildren(new Option("Vista conjunta", ""));
+        for (const proyecto of datos.projects) {
+          if (proyecto.available) selector.append(new Option(proyecto.name, proyecto.projectId));
+        }
+        const existe = datos.projects.some(
+          (proyecto) => proyecto.available && proyecto.projectId === proyectoSeleccionado,
+        );
+        if (proyectoSeleccionado !== "" && !existe) {
+          proyectoSeleccionado = "";
+          localStorage.removeItem("valmen.project");
+        }
+        selector.value = proyectoSeleccionado;
+        selector.addEventListener("change", () => seleccionarProyecto(selector.value));
+      }
 
       // ── Vista: tickets ────────────────────────────────────────────────────
 
@@ -6904,6 +6977,7 @@
           else if (nombre === "estandares") await vistaEstandares();
           else await vistaTickets();
         } catch (error) {
+          if (error === RESPUESTA_DE_PROYECTO_OBSOLETA) return;
           const cont = $("contenido");
           cont.textContent = "";
           cont.append(el("div", `No se pudo cargar la vista: ${error.message}`, "vacio"));
@@ -6924,16 +6998,8 @@
       });
       window.addEventListener("hashchange", () => void navegar());
 
-      void api("GET", "/api/health").then((salud) => {
-        const raiz = $("raiz");
-        if (raiz === null) return;
-        // El nombre del proyecto y no la ruta entera: en la barra lateral una
-        // ruta larga se parte en tres renglones y desplaza lo que sí se mira. La
-        // ruta completa queda en el `title`, que es donde se consulta.
-        const partes = String(salud.root).split("/").filter((parte) => parte !== "");
-        raiz.textContent = partes[partes.length - 1] ?? salud.root;
-        raiz.title = salud.root;
-      });
+      void refrescarProyectoVisible();
+      void cargarSelectorDeProyectos();
       montarPliegue();
       conectarEventos();
       void marcarPendientes();

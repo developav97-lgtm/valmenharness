@@ -528,7 +528,7 @@ function textoDe(nodo, acumulado = []) {
  */
 /**
  * @param {string} rutaHtml
- * @param {{ hash?: string, respuesta?: (ruta: string) => unknown }} [opciones]
+ * @param {{ hash?: string, respuesta?: (ruta: string, init?: RequestInit) => unknown, localStorage?: Record<string, string> }} [opciones]
  */
 export async function ejecutarInterfaz(rutaHtml, opciones = {}) {
   const codigo = /<script type="module">([\s\S]*?)<\/script>/.exec(
@@ -563,10 +563,11 @@ export async function ejecutarInterfaz(rutaHtml, opciones = {}) {
   globalThis.document = documento;
   globalThis.window = { addEventListener: () => {}, location: { hash: "" } };
   globalThis.location = globalThis.window.location;
+  const storage = new Map(Object.entries(opciones.localStorage ?? {}));
   globalThis.localStorage = {
-    getItem: () => null,
-    setItem: () => {},
-    removeItem: () => {},
+    getItem: (key) => storage.get(key) ?? null,
+    setItem: (key, value) => storage.set(key, String(value)),
+    removeItem: (key) => storage.delete(key),
   };
   globalThis.EventSource = class {
     addEventListener() {}
@@ -582,10 +583,10 @@ export async function ejecutarInterfaz(rutaHtml, opciones = {}) {
       this.value = valor;
     }
   };
-  globalThis.fetch = async (url) => ({
+  globalThis.fetch = async (url, init) => ({
     ok: true,
     status: 200,
-    json: async () => responder(String(url)),
+    json: async () => responder(String(url), init),
     text: async () => "",
   });
 

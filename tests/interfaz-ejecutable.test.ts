@@ -70,6 +70,26 @@ describe("la interfaz de Mission Control", () => {
     });
   });
 
+  it("envía el proyecto seleccionado como identidad lógica de cada consulta", async () => {
+    const consultas: { ruta: string; project: string | undefined }[] = [];
+    await ejecutarInterfaz(HTML, {
+      hash: "#/tickets",
+      localStorage: { "valmen.project": "dos" },
+      respuesta: (ruta, init) => {
+        const headers = new Headers(init?.headers);
+        consultas.push({ ruta, project: headers.get("X-Valmen-Project") ?? undefined });
+        if (ruta.includes("/api/health")) return { root: "/proyectos/dos" };
+        if (ruta.includes("/api/standards")) return { proposals: [] };
+        if (ruta.includes("/api/tickets")) return { summary: {}, tickets: [] };
+        return {};
+      },
+    });
+
+    expect(consultas.filter((consulta) => consulta.ruta.includes("/api/tickets"))).toEqual(
+      expect.arrayContaining([expect.objectContaining({ project: "dos" })]),
+    );
+  });
+
   it("el verificador distingue una interfaz rota de una que funciona", () => {
     // Una prueba que solo confirma que el script pasa no dice nada sobre el
     // script: si el verificador no supiera fallar, este test y el anterior
