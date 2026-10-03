@@ -53,11 +53,21 @@ export interface JourneyTicketInput {
   readonly authorizationIds: readonly string[];
 }
 
+/** Intervalo absoluto con zona IANA conservada para explicar el horario local. */
+export interface JourneyWindowInput {
+  readonly windowId: string;
+  readonly startsAt: string;
+  readonly endsAt: string;
+  readonly timeZone: string;
+}
+
 export interface JourneyRevisionInput {
   readonly revisionId: string;
   readonly journeyId: string;
   readonly occurredAt: string;
   readonly tickets: readonly JourneyTicketInput[];
+  /** Opcional para que las revisiones previas sigan siendo legibles. */
+  readonly windows?: readonly JourneyWindowInput[] | undefined;
 }
 
 export interface JourneyRevision extends Readonly<JourneyRevisionInput> {
@@ -138,6 +148,7 @@ export function readJourneys(project: AuthorizedProject): readonly Journey[] {
       journeyId: revision.journeyId,
       occurredAt: revision.occurredAt,
       tickets: revision.tickets,
+      windows: revision.windows,
       projectId: revision.projectId,
       receivedAt: revision.receivedAt,
       cursor: revision.cursor,
@@ -178,6 +189,7 @@ function appendJourneyRevision(
       journeyId: input.journeyId,
       occurredAt: input.occurredAt,
       tickets: freezeTickets(input.tickets),
+      windows: freezeWindows(input.windows ?? []),
       kind,
       projectId: project.projectId,
       receivedAt,
@@ -233,6 +245,7 @@ function parseStoredRevision(
     journeyId: stringField(record, "journeyId", lineNumber),
     occurredAt: stringField(record, "occurredAt", lineNumber),
     tickets: ticketsField(record["tickets"], lineNumber),
+    windows: record["windows"] === undefined ? [] : windowsField(record["windows"], lineNumber),
   };
   assertInput(input);
   const receivedAt = stringField(record, "receivedAt", lineNumber);
@@ -244,6 +257,7 @@ function parseStoredRevision(
   return Object.freeze({
     ...input,
     tickets: freezeTickets(input.tickets),
+    windows: freezeWindows(input.windows ?? []),
     kind,
     projectId: storedProjectId,
     receivedAt,
@@ -264,6 +278,26 @@ function assertInput(input: JourneyRevisionInput): void {
     if (orders.has(ticket.order)) throw new Error("Una jornada no puede repetir el orden de un ticket.");
     ids.add(ticket.ticketId);
     orders.add(ticket.order);
+  }
+  assertWindows(input.windows ?? []);
+}
+
+function assertWindows(windows: readonly JourneyWindowInput[]): void {
+  const ids = new Set<string>();
+  for (const window of windows) {
+    assertPortableId(window.windowId, "windowId");
+    if (ids.has(window.windowId)) throw new Error("Una jornada no puede repetir una ventana.");
+    ids.add(window.windowId);
+    assertIsoInstant(window.startsAt, "window.startsAt");
+    assertIsoInstant(window.endsAt, "window.endsAt");
+    if (Date.parse(window.endsAt) <= Date.parse(window.startsAt)) {
+      throw new Error("window.endsAt debe ser posterior a window.startsAt.");
+    }
+    try {
+      new Intl.DateTimeFormat("en-US", { timeZone: window.timeZone }).format(0);
+    } catch {
+      throw new Error("window.timeZone debe ser una zona horaria IANA reconocida.");
+    }
   }
 }
 
@@ -339,13 +373,23 @@ function freezeTickets(tickets: readonly JourneyTicketInput[]): readonly Journey
     .sort((left, right) => left.order - right.order));
 }
 
+function freezeWindows(windows: readonly JourneyWindowInput[]): readonly JourneyWindowInput[] {
+  return Object.freeze(windows.map((window) => Object.freeze({
+    windowId: window.windowId,
+    startsAt: window.startsAt,
+    endsAt: window.endsAt,
+    timeZone: window.timeZone,
+  })));
+}
+
 function sameRevision(
   revision: JourneyRevision,
   input: JourneyRevisionInput,
   kind: JourneyRevisionKind,
 ): boolean {
   return revision.kind === kind && revision.journeyId === input.journeyId &&
-    revision.occurredAt === input.occurredAt && sameTickets(revision.tickets, input.tickets);
+    revision.occurredAt === input.occurredAt && sameTickets(revision.tickets, input.tickets) &&
+    JSON.stringify(freezeWindows(revision.windows ?? [])) === JSON.stringify(freezeWindows(input.windows ?? []));
 }
 
 function sameTickets(left: readonly JourneyTicketInput[], right: readonly JourneyTicketInput[]): boolean {
@@ -355,6 +399,22 @@ function sameTickets(left: readonly JourneyTicketInput[], right: readonly Journe
 function ticketsField(value: unknown, lineNumber: number): readonly JourneyTicketInput[] {
   if (!Array.isArray(value)) throw new Error(`La línea ${lineNumber} no declara tickets.`);
   return value.map((item) => ticketField(item, lineNumber));
+}
+
+function windowsField(value: unknown, lineNumber: number): readonly JourneyWindowInput[] {
+  if (!Array.isArray(value)) throw new Error(`La línea ${lineNumber} no declara windows.`);
+  return value.map((item) => {
+    if (item === null || typeof item !== "object" || Array.isArray(item)) {
+      throw new Error(`La línea ${lineNumber} declara una ventana inválida.`);
+    }
+    const record = item as Record<string, unknown>;
+    return {
+      windowId: stringField(record, "windowId", lineNumber),
+      startsAt: stringField(record, "startsAt", lineNumber),
+      endsAt: stringField(record, "endsAt", lineNumber),
+      timeZone: stringField(record, "timeZone", lineNumber),
+    };
+  });
 }
 
 function ticketField(value: unknown, lineNumber: number): JourneyTicketInput {

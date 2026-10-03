@@ -18,6 +18,7 @@ export * from "./discovery.js";
 export * from "./project-resolution.js";
 export * from "./execution-events.js";
 export * from "./journeys.js";
+export * from "./journey-windows.js";
 export * from "./execution-activity.js";
 export * from "./execution-sessions.js";
 export * from "./execution-models.js";
