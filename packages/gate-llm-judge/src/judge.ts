@@ -28,12 +28,9 @@
 import type { Proposition, PropositionAnswer } from "@valmen/gate";
 import { GateDefinitionError } from "@valmen/gate";
 import {
-  CredentialError,
+  callChat,
+  ChatError,
   DEFAULT_PROVIDER,
-  extraHeaders,
-  resolveApiKey,
-  resolveChatEndpoint,
-  structuredOutputOf,
 } from "@valmen/credentials";
 
 /**
@@ -285,198 +282,52 @@ export interface JudgeOptions {
 
 /** Evalúa proposiciones con un modelo de chat. */
 export async function evaluateWithJudge(options: JudgeOptions): Promise<JudgeEvaluation> {
-  const fetchImpl = options.fetchImpl ?? fetch;
   const model = options.model ?? DEFAULT_JUDGE_MODEL;
   const proveedor = options.provider ?? DEFAULT_PROVIDER;
-
-  // El endpoint y las cabeceras salen del catálogo. Un modelo cuyo dialecto no
-  // esté implementado falla aquí, antes de gastar una llamada.
-  const endpoint = resolveChatEndpoint(proveedor, model);
-  const extra = extraHeaders(proveedor);
-  // Pedir la salida estructurada como el proveedor sepa: OpenRouter acepta un
-  // `json_schema` y lo hace cumplir; DeepSeek lo rechaza con un 400 y solo
-  // admite `json_object`, así que el esquema viaja en el prompt. Verificado con
-  // una llamada real a cada uno.
-  const dialecto = structuredOutputOf(proveedor);
 
   if (options.propositions.length === 0) {
     throw new GateDefinitionError("Un gate debe declarar al menos una proposición.");
   }
 
-  // La credencial se resuelve con el mismo código que usa Jev, para que una
-  // clave configurada funcione igual con cualquier evaluador.
-  let apiKey = options.apiKey;
-  if (apiKey === undefined) {
-    try {
-      apiKey = resolveApiKey(proveedor);
-    } catch (caught) {
-      if (caught instanceof CredentialError) {
-        throw new JudgeError(caught.message, "CREDENTIAL_MISSING");
-      }
-      throw caught;
-    }
-  }
-
   const schema = buildSchema(options.propositions);
-  const started = Date.now();
-  let response: Response;
-
+  let respuesta;
   try {
-    response = await fetchImpl(endpoint.url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        ...extra,
+    // El adaptador común resuelve credencial, endpoint y dialecto. Así el juez
+    // recibe siempre el mismo contenido, venga de OpenRouter, Codex, Claude o
+    // un proveedor compatible, sin reconstruir aquí cada protocolo.
+    respuesta = await callChat({
+      provider: proveedor,
+      model,
+      temperature: options.temperature ?? 0,
+      timeoutMs: options.timeoutMs ?? TIMEOUT_JUEZ_MS,
+      ...(options.apiKey === undefined ? {} : { apiKey: options.apiKey }),
+      ...(options.fetchImpl === undefined ? {} : { fetchImpl: options.fetchImpl }),
+      ...(options.effort === undefined ? {} : { effort: options.effort }),
+      ...(options.signal === undefined ? {} : { signal: options.signal }),
+      messages: [
+        { role: "system", content: systemPrompt() },
+        { role: "user", content: userPrompt(options.state, options.propositions) },
+      ],
+      structured: {
+        name: "gate_judgement",
+        description: "El juicio de cada proposición.",
+        schema,
       },
-      body: JSON.stringify({
-        model,
-        temperature: options.temperature ?? 0,
-        ...(options.effort === undefined || options.effort === "auto"
-          ? {}
-          : { reasoning: { effort: options.effort } }),
-        messages: [
-          { role: "system", content: systemPrompt() },
-          {
-            role: "user",
-            content: userPrompt(options.state, options.propositions),
-          },
-        ],
-        // Dos formas de pedir la misma respuesta, según lo que el proveedor
-        // sepa imponer. Medido contra los dos:
-        //
-        // - OpenRouter acepta `json_schema` y lo hace cumplir.
-        // - DeepSeek lo rechaza con un 400, y con `json_object` **no impone
-        //   nada**: devolvía `cumple` en vez de `holds` por estar la
-        //   conversación en español, y ni la instrucción explícita ni un ejemplo
-        //   relleno lo cambiaron. Con `tools` + `tool_choice` sí: el esquema se
-        //   impone del lado del servidor y las claves salen como se pidieron.
-        //
-        // Por eso el dialecto sin esquema usa la vía de herramienta y no
-        // `json_object`, que era la suposición razonable y resultó falsa.
-        ...(dialecto === "json-schema"
-          ? {
-              response_format: {
-                type: "json_schema",
-                json_schema: { name: "gate_judgement", strict: true, schema },
-              },
-            }
-          : {
-              tools: [
-                {
-                  type: "function",
-                  function: {
-                    name: "gate_judgement",
-                    description: "El juicio de cada proposición.",
-                    parameters: schema,
-                  },
-                },
-              ],
-              tool_choice: {
-                type: "function",
-                function: { name: "gate_judgement" },
-              },
-            }),
-      }),
-      signal: options.signal ?? AbortSignal.timeout(options.timeoutMs ?? TIMEOUT_JUEZ_MS),
     });
   } catch (caught) {
-    const detail = caught instanceof Error ? caught.message : String(caught);
-    // Un timeout se reporta como tal: el código dice si hay que reintentar o si
-    // el evaluador no sirve para este gate.
-    const esTimeout = /abort|timeout/i.test(detail);
-    // El mensaje nunca incluye cabeceras: llevan la credencial.
-    throw new JudgeError(
-      esTimeout
-        ? `El juez superó el tiempo máximo de ${options.timeoutMs ?? TIMEOUT_JUEZ_MS} ms.`
-        : `Fallo de transporte: ${detail}`,
-      esTimeout ? "TIMEOUT" : "TRANSPORT",
-    );
-  }
-
-  // La latencia se mide después de leer el cuerpo: `fetch` resuelve al recibir
-  // las cabeceras, y en un modelo que razona el cuerpo puede tardar treinta veces
-  // más. Medir antes registraba en el recibo una duración que no era la real.
-  let text: string;
-  try {
-    text = await response.text();
-  } catch (caught) {
-    const detail = caught instanceof Error ? caught.message : String(caught);
-    const esTimeout = /abort|timeout/i.test(detail);
-    throw new JudgeError(
-      esTimeout
-        ? `El juez superó el tiempo máximo de ${options.timeoutMs ?? TIMEOUT_JUEZ_MS} ms mientras se leía la respuesta.`
-        : `Fallo al leer la respuesta: ${detail}`,
-      esTimeout ? "TIMEOUT" : "TRANSPORT",
-    );
-  }
-  const latencyMs = Date.now() - started;
-
-  if (!response.ok) {
-    const code =
-      response.status === 401 || response.status === 403
-        ? "AUTH"
-        : response.status === 429
-          ? "RATE_LIMIT"
-          : response.status >= 500
-            ? "SERVER"
-            : "INVALID_REQUEST";
-    throw new JudgeError(
-      `El juez respondió HTTP ${response.status}: ${text.slice(0, 300)}`,
-      code,
-    );
-  }
-
-  let payload: unknown;
-  try {
-    payload = JSON.parse(text) as unknown;
-  } catch {
-    throw new JudgeError("La respuesta del juez no es JSON.", "MALFORMED_RESPONSE");
-  }
-
-  const data = payload as {
-    model?: string;
-    choices?: {
-      message?: {
-        content?: string;
-        tool_calls?: {
-          function?: { name?: string; arguments?: string };
-        }[];
-      };
-    }[];
-    usage?: {
-      prompt_tokens?: number;
-      completion_tokens?: number;
-      cost?: number;
-    };
-  };
-
-  // El contenido llega en `content` por la vía del esquema y en
-  // `tool_calls[0].function.arguments` por la de herramienta. Se aceptan las dos
-  // y se prefiere la herramienta cuando está, porque es la que el proveedor
-  // eligió para responder.
-  const mensaje = data.choices?.[0]?.message;
-  const content = mensaje?.tool_calls?.[0]?.function?.arguments ?? mensaje?.content;
-  if (typeof content !== "string") {
-    throw new JudgeError("La respuesta del juez no trae contenido.", "MALFORMED_RESPONSE");
+    if (caught instanceof ChatError) {
+      throw new JudgeError(caught.message, caught.code);
+    }
+    throw caught;
   }
 
   let juicio: Record<string, { holds?: unknown; confidence?: unknown; reason?: unknown }>;
   try {
-    juicio = JSON.parse(content) as typeof juicio;
+    juicio = JSON.parse(respuesta.content) as typeof juicio;
   } catch {
-    // Se incluye la forma de lo que llegó: sin esto, «el contenido no es JSON»
-    // no distingue entre una respuesta vacía, una en prosa y un `tool_calls` que
-    // el lector no supo encontrar —que fue exactamente el caso al cambiar de vía.
-    const mensaje = (
-      JSON.parse(text) as {
-        choices?: { message?: Record<string, unknown> }[];
-      }
-    ).choices?.[0]?.message;
     throw new JudgeError(
-      `El juez no respetó el esquema: el contenido no es JSON. ` +
-        `El mensaje traía las claves [${Object.keys(mensaje ?? {}).join(", ")}] ` +
-        `y el contenido era ${JSON.stringify(content)?.slice(0, 120) ?? "nada"}. ` +
+      `El juez no respetó el esquema: el contenido no es JSON y era ` +
+        `${JSON.stringify(respuesta.content).slice(0, 120)}. ` +
         "Un juez que no respeta el formato no puede decidir un gate.",
       "MALFORMED_RESPONSE",
     );
@@ -502,7 +353,7 @@ export async function evaluateWithJudge(options: JudgeOptions): Promise<JudgeEva
     const primeras = Object.keys(juicio).slice(0, 6).join(", ");
     throw new JudgeError(
       `El juez no respondió correctamente: ${faltantes.join(", ")}. ` +
-        `Devolvió las claves [${primeras}]: ${content.slice(0, 300)}`,
+        `Devolvió las claves [${primeras}]: ${respuesta.content.slice(0, 300)}`,
       "MISSING_ANSWER",
     );
   }
@@ -535,15 +386,15 @@ export async function evaluateWithJudge(options: JudgeOptions): Promise<JudgeEva
   return {
     answers,
     model: {
-      provider: "openrouter",
+      provider: proveedor,
       model,
-      resolvedVersion: data.model ?? model,
+      resolvedVersion: respuesta.model,
     },
     usage: {
-      inputTokens: data.usage?.prompt_tokens ?? 0,
-      outputTokens: data.usage?.completion_tokens ?? 0,
-      costUsd: data.usage?.cost ?? 0,
+      inputTokens: respuesta.usage.inputTokens,
+      outputTokens: respuesta.usage.outputTokens,
+      costUsd: respuesta.usage.costUsd ?? 0,
     },
-    latencyMs,
+    latencyMs: respuesta.latencyMs,
   };
 }

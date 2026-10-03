@@ -24,7 +24,12 @@
  * herramientas cambian de forma y el historial tiene otro esquema—, y una
  * traducción a medias produce peticiones que el proveedor acepta y responde mal.
  */
-import { ChatError, type ChatMessage, type ChatResult } from "./chat.js";
+import {
+  ChatError,
+  type ChatMessage,
+  type ChatResult,
+  type StructuredRequest,
+} from "./chat.js";
 
 /** Un evento del stream, ya parseado. */
 interface SseEvent {
@@ -125,6 +130,8 @@ export interface ResponsesRequest {
   readonly messages: readonly ChatMessage[];
   readonly maxTokens?: number | undefined;
   readonly effort?: "auto" | "low" | "medium" | "high" | undefined;
+  /** Forma estructurada nativa del endpoint Responses. */
+  readonly structured?: StructuredRequest | undefined;
   readonly signal?: AbortSignal | undefined;
 }
 
@@ -160,6 +167,16 @@ export async function callResponses(
     store: false,
   };
   if (sistema !== "") cuerpo["instructions"] = sistema;
+  if (request.structured !== undefined) {
+    cuerpo["text"] = {
+      format: {
+        type: "json_schema",
+        name: request.structured.name,
+        strict: true,
+        schema: request.structured.schema,
+      },
+    };
+  }
   // **`max_output_tokens` no se manda**, y no es un olvido: medido contra el
   // backend de codex, responde `400 Unsupported parameter: max_output_tokens`.
   // `instructions`, `reasoning`, `input`, `stream` y `store` sí los acepta.

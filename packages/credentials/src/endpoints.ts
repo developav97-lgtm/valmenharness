@@ -188,6 +188,9 @@ export const TRANSPORTS: readonly Transport[] = [
     name: "opencode Go",
     baseUrl: "https://opencode.ai/zen/go/v1",
     defaultProtocol: "openai-chat",
+    // Zen Go rechaza el esquema JSON estricto; la salida se pide como
+    // herramienta forzada, que conserva el contrato del juez.
+    structuredOutput: "json-object",
     notDefault: [
       { prefix: "gpt-", protocol: "openai-responses" },
       { prefix: "grok-", protocol: "openai-responses" },

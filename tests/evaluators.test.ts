@@ -275,6 +275,20 @@ function chatResponse(content: unknown, model = "proveedor/modelo-v1"): Response
   );
 }
 
+/** Flujo SSE mínimo que devuelve el dialecto `/responses` de Codex. */
+function responsesStream(content: unknown): Response {
+  const texto = JSON.stringify(content);
+  return new Response(
+    [
+      `event: response.output_text.delta\ndata: ${JSON.stringify({ delta: texto })}\n\n`,
+      "event: response.completed\ndata: " +
+        JSON.stringify({ response: { usage: { input_tokens: 700, output_tokens: 55 } } }) +
+        "\n\n",
+    ].join(""),
+    { status: 200, headers: { "Content-Type": "text/event-stream" } },
+  );
+}
+
 describe("evaluador con juez de chat", () => {
   it("mapea la confianza declarada a una probabilidad", () => {
     // Es el punto delicado del evaluador: el motor decide con umbrales sobre
@@ -306,6 +320,55 @@ describe("evaluador con juez de chat", () => {
     expect(resultado.answers[1]?.choice).toBe("completo");
     expect(resultado.model.resolvedVersion).toBe("proveedor/modelo-v1");
     expect(resultado.usage.costUsd).toBe(0.000875);
+  });
+
+  it("evalúa un juicio mediante el flujo responses de Codex", async () => {
+    const fetchImpl = (async () =>
+      responsesStream({ p1: { holds: true, confidence: 1, reason: "evidencia" } })) as unknown as typeof fetch;
+
+    const resultado = await evaluateWithJudge({
+      propositions: [NOUL],
+      state: {},
+      apiKey: "k",
+      provider: "codex",
+      model: "gpt-6-luna",
+      fetchImpl,
+    });
+
+    expect(resultado.answers).toEqual([
+      {
+        id: "p1",
+        kind: "noul",
+        value: 1,
+        confidence: 1,
+      },
+    ]);
+    expect(resultado.model).toMatchObject({ provider: "codex", model: "gpt-6-luna" });
+    expect(resultado.usage).toEqual({ inputTokens: 700, outputTokens: 55, costUsd: 0 });
+  });
+
+  it("conserva el proveedor declarado en el recibo del juez", async () => {
+    const fetchImpl = (async () =>
+      chatResponse({ p1: { holds: true, confidence: 1, reason: "evidencia" } })) as unknown as typeof fetch;
+
+    const resultado = await evaluateWithJudge({
+      propositions: [NOUL], state: {}, apiKey: "k", provider: "opencode-go", model: "deepseek-v4.1-flash", fetchImpl,
+    });
+
+    expect(resultado.model.provider).toBe("opencode-go");
+  });
+
+  it("pide a opencode-go la forma estructurada mediante herramienta", async () => {
+    let requestBody: Record<string, unknown> | undefined;
+    const fetchImpl = (async (_url: string, init?: RequestInit) => {
+      requestBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      return chatResponse({ p1: { holds: true, confidence: 1, reason: "evidencia" } });
+    }) as unknown as typeof fetch;
+
+    await evaluateWithJudge({ propositions: [NOUL], state: {}, apiKey: "k", provider: "opencode-go", model: "deepseek-v4.1-flash", fetchImpl });
+
+    expect(requestBody?.tools).toBeDefined();
+    expect(requestBody?.response_format).toBeUndefined();
   });
 
   it("rechaza una respuesta que no respeta el esquema", async () => {

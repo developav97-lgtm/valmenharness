@@ -246,6 +246,37 @@ describe("callResponses", () => {
     expect(cuerpo["max_output_tokens"]).toBeUndefined();
   });
 
+  it("traslada el esquema estructurado al formato nativo de Responses", async () => {
+    let cuerpo: Record<string, unknown> = {};
+    const fetchFalso = (async (_url: string, init: { body: string }) => {
+      cuerpo = JSON.parse(init.body) as Record<string, unknown>;
+      return new Response(exito, { status: 200 });
+    }) as unknown as typeof fetch;
+
+    await callResponses(
+      {
+        url: "https://ejemplo/responses",
+        headers: {},
+        model: "gpt-x",
+        messages: [{ role: "user", content: "ok" }],
+        structured: {
+          name: "juicio",
+          schema: { type: "object", properties: {}, additionalProperties: false },
+        },
+      },
+      fetchFalso,
+    );
+
+    expect(cuerpo["text"]).toEqual({
+      format: {
+        type: "json_schema",
+        name: "juicio",
+        strict: true,
+        schema: { type: "object", properties: {}, additionalProperties: false },
+      },
+    });
+  });
+
   it("un error del proveedor sale con su cuerpo", async () => {
     const fetchFalso = (async () =>
       new Response('{"detail":"The model is not supported"}', {
