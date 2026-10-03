@@ -25,3 +25,11 @@ El guardia del modo pregunta se colgo de las dos puertas de escritura de core, y
 - **Tickets:** FEATURE-ENGINE-MODELO-INTENTO-20261001
 
 FEATURE-ENGINE-MODELO-INTENTO-20261001 cubre el contrato de modelos configurado y efectivo por intento; el requisito R-ACT-004 usa la palabra vista, pero la representación UI pertenece a tickets posteriores. La compuerta de plan bloqueó cuatro veces por exigir renderizado, aun cuando el plan entregaba ExecutionContract y pruebas del contrato. Al refinar la compuerta, distinguir requisito final de la porción explícitamente asignada al ticket y tratar la UI dependiente como cobertura futura, no como omisión del plan de motor.
+
+### [AP-004] Una contradicción interna del evaluador no debe producir un bloqueo automático
+
+- **Fecha:** 2026-10-03
+- **Estado:** pendiente
+- **Tickets:** FEATURE-ADAPTER-CAPACIDADES-20261001
+
+En FEATURE-ADAPTER-CAPACIDADES-20261001, el gate analysis bloqueó cuatro veces diagnostico_explica_el_sintoma (0.04, 0.02, 0.08) mientras el mismo recibo clasificaba el análisis como completa y daba >=0.97 a causa_especifica, nombra_archivos_reales y riesgos_cubren_impactos. El refinamiento debe detectar esa contradicción: si clasificación es completa y las tres comprobaciones estructurales superan approveAt, una única proposición semántica contradictoria no puede decidir block; se degrada a review y exige decisión humana. La corrección se valida con una prueba determinista del vector de recibo anterior, que debe devolver review, y con un caso control donde falla causa o archivos, que debe seguir devolviendo block.
