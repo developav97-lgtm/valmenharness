@@ -37,6 +37,8 @@ const RUTAS = [
   "GET /api/health",
   "GET /api/tickets",
   "GET /api/tickets/:id",
+  "GET /api/tickets/:id/executions",
+  "GET /api/tickets/:id/executions/:executionId/messages",
   "GET /api/tickets/:id/gates",
   "POST /api/tickets/:id/gates/:receiptId/decision",
   "POST /api/tickets/:id/gates/:gate/run",

@@ -27,6 +27,7 @@ import { listPortfolioRows, portfolioRange, summarizePortfolio } from "./portafo
 
 import {
   type RegistryPaths,
+  type AuthorizedProject,
   ESQUEMA_DESCOMPOSICION,
   SISTEMA_DESCOMPOSICION,
   advanceFeature,
@@ -112,6 +113,7 @@ import {
 } from "./routing.js";
 import { listFeatureRows, readFeatureDetail, summarizeFeatures } from "./features.js";
 import { guardarFotoEnTicket, leerLineaDeTiempo } from "./timeline.js";
+import { readExecutionPanel, readExecutionVisibleMessages } from "./execution-panel.js";
 import {
   approveGate,
   listGateRows,
@@ -141,6 +143,8 @@ export interface ServerContext {
    * `docs/tickets` y la interfaz tiene que mostrar ese, no uno vacío.
    */
   readonly paths?: RegistryPaths;
+  /** Proyecto ya autorizado por el encabezado de esta petición, si lo hubo. */
+  readonly authorizedProject?: AuthorizedProject;
   /** Catálogo local inyectable; nunca se toma de una petición. */
   readonly bindingsFile?: string;
   readonly credentialsFile: string;
@@ -235,7 +239,27 @@ function contextoDeProyecto(
     projectId,
     ...(context.bindingsFile === undefined ? {} : { bindingsFile: context.bindingsFile }),
   });
-  return { ...context, root: project.root, paths: project.paths };
+  return { ...context, root: project.root, paths: project.paths, authorizedProject: project };
+}
+
+function proyectoAutorizadoParaEjecucion(context: ServerContext): AuthorizedProject {
+  if (context.authorizedProject !== undefined) return context.authorizedProject;
+  const catalogo = listAuthorizedProjects(
+    context.bindingsFile === undefined ? {} : { bindingsFile: context.bindingsFile },
+  );
+  const project = catalogo.projects.find((entry) => entry.available && entry.root === context.root);
+  if (project === undefined || !project.available) {
+    throw new Error("El proyecto actual debe estar declarado y disponible en los bindings locales para consultar ejecuciones.");
+  }
+  return project;
+}
+
+function enteroDeQuery(query: URLSearchParams, name: string): number | undefined {
+  const value = valorDeQuery(query, name);
+  if (value === undefined) return undefined;
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < 0) throw new Error(`El parámetro \`${name}\` debe ser un entero no negativo.`);
+  return parsed;
 }
 
 /** La línea complementaria del board, sin mezclarla con los eventos del registro. */
@@ -996,6 +1020,47 @@ export async function handleApi(
         filename: `tickets-cerrados-${desde}-a-${hasta}.md`,
       },
     };
+  }
+
+  // GET /api/tickets/:id/executions
+  if (
+    method === "GET" && partes.length === 4 && partes[0] === "api" &&
+    partes[1] === "tickets" && partes[3] === "executions"
+  ) {
+    const ticket = partes[2] as string;
+    if (readTicket(paths, ticket) === null) return { status: 404, body: { error: `No existe el ticket "${ticket}".` } };
+    try {
+      return { status: 200, body: { ticket, executions: readExecutionPanel(proyectoAutorizadoParaEjecucion(context), ticket) } };
+    } catch (caught) {
+      return { status: 400, body: { error: toFailure(caught).message } };
+    }
+  }
+
+  // GET /api/tickets/:ticket/executions/:execution/messages?attempt=&session=&after=&limit=
+  if (
+    method === "GET" && partes.length === 6 && partes[0] === "api" &&
+    partes[1] === "tickets" && partes[3] === "executions" && partes[5] === "messages"
+  ) {
+    const ticket = partes[2] as string;
+    const attemptId = valorDeQuery(query, "attempt");
+    const sessionId = valorDeQuery(query, "session");
+    if (attemptId === undefined || sessionId === undefined) {
+      return { status: 400, body: { error: "Faltan los parámetros `attempt` o `session`." } };
+    }
+    try {
+      const afterId = enteroDeQuery(query, "after");
+      const limit = enteroDeQuery(query, "limit");
+      return {
+        status: 200,
+        body: readExecutionVisibleMessages({
+          project: proyectoAutorizadoParaEjecucion(context), ticketId: ticket,
+          executionId: partes[4] as string, attemptId, sessionId,
+          ...(afterId === undefined ? {} : { afterId }), ...(limit === undefined ? {} : { limit }),
+        }),
+      };
+    } catch (caught) {
+      return { status: 400, body: { error: toFailure(caught).message } };
+    }
   }
 
   // GET /api/tickets/:id

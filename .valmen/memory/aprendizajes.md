@@ -33,3 +33,11 @@ FEATURE-ENGINE-MODELO-INTENTO-20261001 cubre el contrato de modelos configurado 
 - **Tickets:** FEATURE-ADAPTER-CAPACIDADES-20261001
 
 En FEATURE-ADAPTER-CAPACIDADES-20261001, el gate analysis bloqueó cuatro veces diagnostico_explica_el_sintoma (0.04, 0.02, 0.08) mientras el mismo recibo clasificaba el análisis como completa y daba >=0.97 a causa_especifica, nombra_archivos_reales y riesgos_cubren_impactos. El refinamiento debe detectar esa contradicción: si clasificación es completa y las tres comprobaciones estructurales superan approveAt, una única proposición semántica contradictoria no puede decidir block; se degrada a review y exige decisión humana. La corrección se valida con una prueba determinista del vector de recibo anterior, que debe devolver review, y con un caso control donde falla causa o archivos, que debe seguir devolviendo block.
+
+### [AP-005] Gate de análisis no aplica a requisito nuevo sin síntoma
+
+- **Fecha:** 2026-10-03
+- **Estado:** pendiente
+- **Tickets:** FEATURE-MC-PANEL-HERRAMIENTAS-20261001
+
+En FEATURE-MC-PANEL-HERRAMIENTAS-20261001, el gate analysis bloqueó tres veces diagnostico_explica_el_sintoma (~0.07) aunque la clasificación fue completa y las demás proposiciones aprobaron. La solicitud materializada sólo expresa requisitos R-ACT-003/R-VIV-005, no un defecto observable previo; el diagnóstico comprobó que falta la proyección/UI requerida. Refinar el gate para declarar inaplicable o reformular esa proposición cuando la solicitud sea funcionalidad nueva sin síntoma reportado; no se debe forzar un síntoma inventado ni aprobar manualmente el recibo.

@@ -4332,6 +4332,18 @@
         cont.append(acordeonTransiciones.caja);
         cont.append(acordeonHistorial.caja);
 
+        const acordeonEjecucion = acordeon("Actividad del ejecutor");
+        const zonaEjecucion = el("div", "Leyendo ejecuciones declaradas…", "vacio");
+        acordeonEjecucion.cuerpo.append(zonaEjecucion);
+        cont.append(acordeonEjecucion.caja);
+        void pintarActividadDelEjecutor(id).then((nodo) => {
+          zonaEjecucion.textContent = "";
+          zonaEjecucion.append(nodo);
+        }).catch((fallo) => {
+          zonaEjecucion.textContent = "";
+          zonaEjecucion.append(el("div", fallo.message, "resultado"));
+        });
+
         // ── Línea de tiempo y coste ──
         const acordeonLinea = acordeon("Línea de tiempo y coste");
         cont.append(acordeonLinea.caja);
@@ -4405,6 +4417,59 @@
             : seccionDeTicket(t.sections["Release"]),
         );
         cont.append(release.caja);
+      }
+
+      /** La foto no abre conversaciones: cada sesión pide su propia página al pulsar. */
+      async function pintarActividadDelEjecutor(ticketId) {
+        const datos = await api("GET", `/api/tickets/${encodeURIComponent(ticketId)}/executions`);
+        const zona = el("div");
+        if ((datos.executions ?? []).length === 0) {
+          zona.append(el("div", "No hay ejecuciones declaradas para este ticket.", "vacio"));
+          return zona;
+        }
+        for (const ejecucion of datos.executions) {
+          const caja = el("div", undefined, "seccion-ticket");
+          caja.append(el("strong", `Ejecución ${ejecucion.identity.executionId}`));
+          caja.append(el("div", `Workflow: ${ejecucion.status.validatedStatus ?? "desconocido"} · actividad: ${ejecucion.status.liveness}`, "resultado"));
+          for (const intento of ejecucion.attempts) {
+            const intentoNodo = el("div", undefined, "resultado");
+            intentoNodo.append(el("strong", `Intento ${intento.attemptId}`));
+            for (const actividad of intento.activity) intentoNodo.append(el("div", `${actividad.state} · ${actividad.source} · ${actividad.occurredAt}`));
+            for (const modelo of intento.configuredModels) intentoNodo.append(el("div", `Modelo configurado: ${modelo.model.provider}/${modelo.model.model}`));
+            for (const modelo of intento.effectiveModels) intentoNodo.append(el("div", `Modelo efectivo: ${modelo.model.provider}/${modelo.model.model}`));
+            for (const sesion of intento.sessions) {
+              const sesionNodo = el("div", undefined, "nota");
+              sesionNodo.append(el("div", `Sesión ejecutora: ${sesion.executor.adapter}/${sesion.executor.scope}/${sesion.executor.sessionId}`));
+              if (sesion.capabilities !== null) sesionNodo.append(el("div", sesion.capabilities.capabilities.map((c) => `${c.capability}: ${c.available ? "disponible" : c.limitation}`).join(" · "), "resultado"));
+              if (!sesion.messages.available) {
+                sesionNodo.append(el("div", sesion.messages.reason, "resultado"));
+              } else {
+                const mensajes = el("div");
+                const cargar = el("button", "Cargar mensajes visibles");
+                let cursor = 0;
+                cargar.addEventListener("click", async () => {
+                  cargar.disabled = true;
+                  try {
+                    const ruta = `/api/tickets/${encodeURIComponent(ticketId)}/executions/${encodeURIComponent(ejecucion.identity.executionId)}/messages?attempt=${encodeURIComponent(intento.attemptId)}&session=${encodeURIComponent(sesion.executor.sessionId)}&after=${cursor}&limit=100`;
+                    const pagina = await api("GET", ruta);
+                    for (const mensaje of pagina.messages) mensajes.append(el("div", `${mensaje.role}: ${mensaje.content}`, "resultado"));
+                    cursor = pagina.nextCursor;
+                    cargar.textContent = pagina.messages.length === 0 ? "No hay más mensajes" : "Cargar más mensajes";
+                    cargar.disabled = pagina.messages.length === 0;
+                  } catch (fallo) {
+                    mensajes.append(el("div", fallo.message, "error"));
+                    cargar.disabled = false;
+                  }
+                });
+                sesionNodo.append(cargar, mensajes);
+              }
+              intentoNodo.append(sesionNodo);
+            }
+            caja.append(intentoNodo);
+          }
+          zona.append(caja);
+        }
+        return zona;
       }
 
       // ── Línea de tiempo del ticket ────────────────────────────────────────
