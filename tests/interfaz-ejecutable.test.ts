@@ -45,6 +45,34 @@ const SCRIPT = join(RAIZ, "scripts", "verificar-interfaz.mjs");
 const HTML = join(RAIZ, "packages", "server", "web", "index.html");
 
 describe("la interfaz de Mission Control", () => {
+  it("declara paletas clara y oscura, y un foco visible para el teclado", () => {
+    const html = readFileSync(HTML, "utf8");
+    const temaClaro = /@media\s*\(prefers-color-scheme:\s*light\)\s*\{([\s\S]*?)\n\s*\}/.exec(html)?.[1];
+
+    // Antes de este ticket solo existía :root con la paleta oscura: quien
+    // prefiriera claro recibía la misma superficie oscura. Se exige una paleta
+    // completa y semántica, no colores en los controles individuales.
+    expect(temaClaro).toBeDefined();
+    for (const variable of [
+      "--fondo:", "--panel:", "--panel-alto:", "--borde:",
+      "--texto:", "--tenue:", "--acento:", "--ok:", "--alerta:", "--error:",
+    ]) expect(temaClaro).toContain(variable);
+
+    // Enlaces, botones, resúmenes y campos se recorren por Tab. La misma señal
+    // visual evita que el foco dependa de cómo lo pinte cada navegador.
+    expect(html).toMatch(/a:focus-visible,[\s\S]*button:focus-visible,[\s\S]*summary:focus-visible,[\s\S]*input:focus-visible,[\s\S]*select:focus-visible,[\s\S]*textarea:focus-visible\s*\{/);
+    expect(html).toMatch(/:focus-visible[\s\S]*outline:/);
+  });
+
+  it("reconcilia ejecución por cursor paginado sin abrir conversaciones", () => {
+    const html = readFileSync(HTML, "utf8");
+    const reconciliacion = /async function reconciliarEventosDeEjecucion[\s\S]*?\n\s*function puedeRefrescar/.exec(html)?.[0];
+
+    expect(reconciliacion).toContain("/api/execution-events?after=${encodeURIComponent(cursor)}&limit=100");
+    expect(reconciliacion).not.toContain("/messages");
+    expect(reconciliacion).toContain("guardarCursorDeEjecucion");
+  });
+
   it("se ejecuta sin errores y pinta la vista del ticket", () => {
     const resultado = spawnSync(process.execPath, [SCRIPT, HTML], {
       encoding: "utf8",

@@ -31,8 +31,46 @@
         --lateral: 232px;
         --radio: 8px;
       }
+      /* La preferencia de tema pertenece al sistema: no se guarda una segunda
+         decisión local ni se cambia el contrato de la vista. Todos los controles
+         consumen estas variables semánticas, por lo que el tema claro conserva
+         la misma jerarquía y los mismos estados que el oscuro. */
+      @media (prefers-color-scheme: light) {
+        :root {
+          --fondo: #f7f8fb;
+          --panel: #ffffff;
+          --panel-alto: #eef1f7;
+          --panel-hover: #e6ebf5;
+          --borde: #cfd6e4;
+          --borde-suave: #e1e5ed;
+          --texto: #172033;
+          --tenue: #57627a;
+          --acento: #2f63d9;
+          --acento-suave: rgba(47, 99, 217, 0.14);
+          --acento-halo: rgba(47, 99, 217, 0.08);
+          --acento-2: #7050d7;
+          --halo-ok: 0 0 0 3px rgba(22, 128, 58, 0.15);
+          --alerta-suave: rgba(146, 95, 0, 0.14);
+          --barra: rgba(247, 248, 251, 0.88);
+          --ok: #16803a;
+          --alerta: #925f00;
+          --error: #c83a31;
+        }
+      }
       * {
         box-sizing: border-box;
+      }
+      /* El foco por teclado debe ser igual de reconocible en enlaces, botones,
+         resúmenes y campos. El texto y los roles siguen expresando los estados;
+         el anillo solo señala dónde actuará el teclado. */
+      a:focus-visible,
+      button:focus-visible,
+      summary:focus-visible,
+      input:focus-visible,
+      select:focus-visible,
+      textarea:focus-visible {
+        outline: 2px solid var(--acento);
+        outline-offset: 2px;
       }
       body {
         margin: 0;
