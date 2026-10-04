@@ -10,7 +10,14 @@
  * equivocado. Es preferible que el harness no arranque a que arranque con una
  * configuración distinta de la que el usuario escribió.
  */
-import { PROJECT_ID_RE, type YamlValue, fail, parseYamlSubset } from "@valmen/core";
+import {
+  PROJECT_ID_RE,
+  RISK_LEVELS,
+  TICKET_TYPES,
+  type YamlValue,
+  fail,
+  parseYamlSubset,
+} from "@valmen/core";
 
 /** Valor admitido en la configuración. */
 export type ConfigValue = YamlValue;
@@ -264,6 +271,138 @@ export function readVerifyDevConfig(config: ConfigMap): VerifyDevConfig | null {
     url,
     branch: branch ?? "",
   };
+}
+
+/** Condiciones que un proyecto puede exigir antes de ofrecer trabajo autónomo. */
+export const AUTONOMOUS_REQUIREMENTS = [
+  "plan-approved",
+  "tests-declared",
+  "no-critical-impacts",
+] as const;
+
+/** Causas de parada que la política puede declarar. */
+export const AUTONOMOUS_STOP_CONDITIONS = [
+  "gate-blocked-twice",
+  "test-failure",
+  "secret-detected",
+  "budget-exceeded",
+] as const;
+
+/** Política declarativa que los ejecutores autónomos posteriores consumirán. */
+export interface AutonomousConfig {
+  readonly enabled: boolean;
+  readonly eligible: {
+    readonly types: readonly string[];
+    readonly maxRisk: string;
+    readonly require: readonly string[];
+    readonly excludedModules: readonly string[];
+  };
+  readonly limits: {
+    readonly maxConcurrent: number;
+    readonly maxPerDay: number;
+    readonly budgetPerTicket: number;
+    readonly stopOn: readonly string[];
+  };
+}
+
+const AUTONOMOUS_OFF: AutonomousConfig = Object.freeze({
+  enabled: false,
+  eligible: Object.freeze({
+    types: Object.freeze([]),
+    maxRisk: "",
+    require: Object.freeze([]),
+    excludedModules: Object.freeze([]),
+  }),
+  limits: Object.freeze({
+    maxConcurrent: 0,
+    maxPerDay: 0,
+    budgetPerTicket: 0,
+    stopOn: Object.freeze([]),
+  }),
+});
+
+function autonomousMap(config: ConfigMap, key: string): ConfigMap {
+  const value = config[key];
+  if (typeof value === "string" || Array.isArray(value) || value === undefined) {
+    fail(`config.yaml: "autonomous.${key}" debe ser un mapa.`);
+  }
+  return value;
+}
+
+function autonomousList(map: ConfigMap, key: string, path: string): string[] {
+  const value = map[key];
+  if (!Array.isArray(value) || !value.every((item): item is string => typeof item === "string")) {
+    fail(`config.yaml: "autonomous.${path}" debe ser una lista de textos.`);
+  }
+  if (value.length === 0 || new Set(value).size !== value.length) {
+    fail(`config.yaml: "autonomous.${path}" debe ser una lista no vacía sin duplicados.`);
+  }
+  return value;
+}
+
+function autonomousPositive(map: ConfigMap, key: string, path: string, integer: boolean): number {
+  const value = map[key];
+  const number = typeof value === "string" ? Number(value) : Number.NaN;
+  if (!Number.isFinite(number) || number <= 0 || (integer && !Number.isInteger(number))) {
+    fail(
+      `config.yaml: "autonomous.${path}" debe ser un ${integer ? "entero" : "decimal"} mayor que cero.`,
+    );
+  }
+  return number;
+}
+
+/**
+ * Lee la política de autonomía. La ausencia queda apagada: declarar una política
+ * es una decisión humana, y el lector no selecciona ni ejecuta tickets.
+ */
+export function readAutonomousConfig(config: ConfigMap): AutonomousConfig {
+  if (config["autonomous"] === undefined) return AUTONOMOUS_OFF;
+  const autonomous = readMap(config, "autonomous");
+  const enabledRaw = autonomous["enabled"];
+  if (enabledRaw !== "true" && enabledRaw !== "false") {
+    fail('config.yaml: "autonomous.enabled" debe ser true o false.');
+  }
+  if (enabledRaw === "false") return AUTONOMOUS_OFF;
+
+  const eligible = autonomousMap(autonomous, "eligible");
+  const limits = autonomousMap(autonomous, "limits");
+  const types = autonomousList(eligible, "types", "eligible.types");
+  const maxRisk = eligible["max-risk"];
+  const requirements = autonomousList(eligible, "require", "eligible.require");
+  const excludedModules = autonomousList(eligible, "excluded-modules", "eligible.excluded-modules");
+  const stopOn = autonomousList(limits, "stop-on", "limits.stop-on");
+
+  if (!types.every((type) => (TICKET_TYPES as readonly string[]).includes(type))) {
+    fail('config.yaml: "autonomous.eligible.types" contiene un tipo de ticket desconocido.');
+  }
+  if (typeof maxRisk !== "string" || !(RISK_LEVELS as readonly string[]).includes(maxRisk)) {
+    fail('config.yaml: "autonomous.eligible.max-risk" debe ser un riesgo conocido.');
+  }
+  if (!requirements.every((item) => (AUTONOMOUS_REQUIREMENTS as readonly string[]).includes(item))) {
+    fail('config.yaml: "autonomous.eligible.require" contiene una condición desconocida.');
+  }
+  if (!excludedModules.every((item) => /^[a-z][a-z0-9-]{0,63}$/.test(item))) {
+    fail('config.yaml: "autonomous.eligible.excluded-modules" contiene un módulo inválido.');
+  }
+  if (!stopOn.every((item) => (AUTONOMOUS_STOP_CONDITIONS as readonly string[]).includes(item))) {
+    fail('config.yaml: "autonomous.limits.stop-on" contiene una condición de parada desconocida.');
+  }
+
+  return Object.freeze({
+    enabled: true,
+    eligible: Object.freeze({
+      types: Object.freeze(types),
+      maxRisk,
+      require: Object.freeze(requirements),
+      excludedModules: Object.freeze(excludedModules),
+    }),
+    limits: Object.freeze({
+      maxConcurrent: autonomousPositive(limits, "max-concurrent", "limits.max-concurrent", true),
+      maxPerDay: autonomousPositive(limits, "max-per-day", "limits.max-per-day", true),
+      budgetPerTicket: autonomousPositive(limits, "budget-per-ticket", "limits.budget-per-ticket", false),
+      stopOn: Object.freeze(stopOn),
+    }),
+  });
 }
 
 /** Identidad que viaja con la política compartible del proyecto. */

@@ -20,8 +20,10 @@ import {
 } from "@valmen/core";
 import {
   type ConfigMap,
+  type AutonomousConfig,
   type PlaywrightConfig,
   type VerifyDevConfig,
+  readAutonomousConfig,
   readPlaywrightConfig,
   readVerifyDevConfig,
 } from "@valmen/adapter";
@@ -186,6 +188,19 @@ export function verifyDevConfig(root: string): VerifyDevConfig | null {
   const documento = parseYamlSubset(texto, { fileName: ".valmen/config.yaml" });
   if (typeof documento !== "object" || Array.isArray(documento)) return null;
   return readVerifyDevConfig(documento as ConfigMap);
+}
+
+/** Política declarada para ejecutores autónomos, apagada si falta la sección. */
+export function autonomousConfig(root: string): AutonomousConfig {
+  let texto: string;
+  try {
+    texto = readFileSync(join(root, ".valmen", "config.yaml"), "utf8");
+  } catch {
+    return readAutonomousConfig({});
+  }
+  const documento = parseYamlSubset(texto, { fileName: ".valmen/config.yaml" });
+  if (typeof documento !== "object" || Array.isArray(documento)) return readAutonomousConfig({});
+  return readAutonomousConfig(documento as ConfigMap);
 }
 
 /** `true` si el directorio tiene al menos un `ticket.md` en su segundo nivel. */

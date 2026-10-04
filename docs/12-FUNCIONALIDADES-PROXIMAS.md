@@ -512,20 +512,36 @@ Elegibilidad automática, por configuración:
 autonomous:
   enabled: true
   eligible:
-    types: [BUGFIX, CHORE, DOCS, IMPROVEMENT]
-    max_risk: normal
-    require: [plan_approved, tests_exist, no_critical_impacts]
-    excluded_modules: [offline-sync, sincsaicloud, auth, deploy]
+    types:
+      - BUGFIX
+      - CHORE
+      - DOCS
+      - IMPROVEMENT
+    max-risk: normal
+    require:
+      - plan-approved
+      - tests-declared
+      - no-critical-impacts
+    excluded-modules:
+      - offline-sync
+      - sincsaicloud
+      - auth
+      - deploy
   limits:
-    max_concurrent: 2
-    max_per_day: 8
-    budget_per_ticket: 5.00
-    stop_on: [gate_blocked_twice, test_failure, secret_detected]
+    max-concurrent: 2
+    max-per-day: 8
+    budget-per-ticket: 5.00
+    stop-on:
+      - gate-blocked-twice
+      - test-failure
+      - secret-detected
 ```
 
 **Por qué importa.** Es el Nivel 4. Y la clave de que sea **seguro** es que la elegibilidad es
 una decisión de configuración auditable, no del modelo: el agente no elige qué ticket tomar
-libremente, el motor le ofrece una lista de tickets que cumplen criterios que tú definiste.
+libremente, el motor le ofrece una lista de tickets que cumplen criterios que tú definiste. La
+sección solo declara la política; un ejecutor posterior la consume y no se habilita ningún
+despacho por copiar este bloque al archivo.
 
 **Esfuerzo:** 3–4 semanas. Es la fase más delicada; se construye al final, con las métricas
 de acierto de gates ya medidas.
