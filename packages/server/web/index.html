@@ -5381,15 +5381,30 @@
         cont.append(tabla);
       }
 
+      // Una respuesta de jornadas puede llegar después de que la persona cambió
+      // de proyecto o de vista. La revisión no representa datos del servidor:
+      // solo identifica la última solicitud que todavía tiene derecho a pintar.
+      let revisionVistaJornadas = 0;
+
       async function vistaJornadas() {
+        const revision = ++revisionVistaJornadas;
+        const proyectoDeLaSolicitud = proyectoSeleccionado;
         const cont = $("contenido");
         cont.textContent = "";
-        if (proyectoSeleccionado === "") {
+        if (proyectoDeLaSolicitud === "") {
           cont.append(el("div", "Selecciona un proyecto disponible para consultar sus jornadas.", "vacio"));
           return;
         }
         cont.append(el("h2", "Hoja de ruta de jornadas"));
         const datos = await api("GET", "/api/journeys");
+        // No se pinta una foto que ya no pertenece al proyecto o a la vista
+        // actual. El guard de api cubre el primer caso; este cubre además una
+        // navegación a otra pantalla mientras la petición seguía en vuelo.
+        if (
+          revision !== revisionVistaJornadas ||
+          proyectoDeLaSolicitud !== proyectoSeleccionado ||
+          location.hash.replace(/^#\//, "").split("/")[0] !== "jornadas"
+        ) return;
         if ((datos.journeys ?? []).length === 0) {
           cont.append(el("div", "No hay jornadas registradas para este proyecto.", "vacio"));
           return;
@@ -6834,6 +6849,101 @@
       let refrescoPendiente = null;
       let ocupado = false;
       let suscripcionDeEventos = null;
+      const cursoresDeEjecucion = new Map();
+      const reconciliacionesDeEjecucion = new Map();
+      const prefijoCursorDeEjecucion = "valmen.execution-cursor.";
+
+      function leerCursorDeEjecucion(projectId) {
+        const enMemoria = cursoresDeEjecucion.get(projectId);
+        if (Number.isSafeInteger(enMemoria) && enMemoria >= 0) return enMemoria;
+        try {
+          const guardado = typeof sessionStorage === "undefined"
+            ? null
+            : sessionStorage.getItem(prefijoCursorDeEjecucion + projectId);
+          const cursor = Number(guardado);
+          if (Number.isSafeInteger(cursor) && cursor >= 0) {
+            cursoresDeEjecucion.set(projectId, cursor);
+            return cursor;
+          }
+        } catch {
+          // El almacenamiento puede estar bloqueado por el navegador. La copia
+          // en memoria conserva la misma protección durante esta pestaña.
+        }
+        return 0;
+      }
+
+      function guardarCursorDeEjecucion(projectId, cursor, opciones = {}) {
+        if (!Number.isSafeInteger(cursor) || cursor < 0) return false;
+        const anterior = leerCursorDeEjecucion(projectId);
+        // Una página lenta no puede hacer retroceder el cursor. La única
+        // excepción es la frontera inválida declarada por el servidor: después
+        // de pedir la foto actual se vuelve a anclar en su último cursor.
+        if (!opciones.reiniciar && cursor <= anterior) return false;
+        cursoresDeEjecucion.set(projectId, cursor);
+        try {
+          if (typeof sessionStorage !== "undefined") {
+            sessionStorage.setItem(prefijoCursorDeEjecucion + projectId, String(cursor));
+          }
+        } catch {
+          // La memoria ya contiene el cursor para la sesión presente.
+        }
+        return cursor !== anterior;
+      }
+
+      function cursorDelMensajeDeEjecucion(mensaje) {
+        let cursor = Number(mensaje.lastEventId);
+        try {
+          const dato = JSON.parse(mensaje.data);
+          if (Number.isSafeInteger(dato.cursor)) cursor = dato.cursor;
+        } catch {
+          // En un SSE malformado solo queda el identificador del evento.
+        }
+        return Number.isSafeInteger(cursor) && cursor >= 0 ? cursor : null;
+      }
+
+      async function reconciliarEventosDeEjecucion(projectId) {
+        const pendiente = reconciliacionesDeEjecucion.get(projectId);
+        if (pendiente !== undefined) return pendiente;
+
+        const reconciliacion = (async () => {
+          let cursor = leerCursorDeEjecucion(projectId);
+          let huboCambios = false;
+          for (;;) {
+            const pagina = await api(
+              "GET",
+              `/api/execution-events?after=${encodeURIComponent(cursor)}&limit=100`,
+            );
+            if (projectId !== proyectoSeleccionado) return false;
+
+            if (pagina.cursorValid === false) {
+              const frontera = Number(pagina.latestCursor);
+              if (Number.isSafeInteger(frontera) && frontera >= 0) {
+                guardarCursorDeEjecucion(projectId, frontera, { reiniciar: true });
+              }
+              // La foto completa de jornadas reancla el navegador cuando el
+              // registro local fue rotado y su cursor ya no existe.
+              return true;
+            }
+
+            for (const evento of pagina.events ?? []) {
+              const cursorDelEvento = Number(evento.cursor);
+              if (guardarCursorDeEjecucion(projectId, cursorDelEvento)) huboCambios = true;
+            }
+            const siguiente = Number(pagina.nextCursor);
+            if (!Number.isSafeInteger(siguiente) || siguiente < cursor) return huboCambios;
+            if (pagina.hasMore !== true || siguiente === cursor) return huboCambios;
+            cursor = siguiente;
+          }
+        })();
+        reconciliacionesDeEjecucion.set(projectId, reconciliacion);
+        try {
+          return await reconciliacion;
+        } finally {
+          if (reconciliacionesDeEjecucion.get(projectId) === reconciliacion) {
+            reconciliacionesDeEjecucion.delete(projectId);
+          }
+        }
+      }
 
       function puedeRefrescar() {
         if (ocupado) return false;
@@ -6895,11 +7005,30 @@
           const marca = $("actualizado");
           if (marca !== null) marca.textContent = "sin conexión";
         };
-        eventos.addEventListener("execution", () => {
-          if (suscripcionDeEventos === eventos) programarRefrescoPorEvento([]);
+        eventos.addEventListener("execution", (mensaje) => {
+          if (suscripcionDeEventos !== eventos) return;
+          const cursor = cursorDelMensajeDeEjecucion(mensaje);
+          if (cursor !== null && guardarCursorDeEjecucion(proyectoSeleccionado, cursor)) {
+            programarRefrescoPorEvento([]);
+          }
         });
         eventos.addEventListener("reconcile", () => {
-          if (suscripcionDeEventos === eventos) programarRefrescoPorEvento([]);
+          const projectId = proyectoSeleccionado;
+          if (projectId === "" || suscripcionDeEventos !== eventos) return;
+          void reconciliarEventosDeEjecucion(projectId)
+            .then((huboCambios) => {
+              if (huboCambios && suscripcionDeEventos === eventos && projectId === proyectoSeleccionado) {
+                programarRefrescoPorEvento([]);
+              }
+            })
+            .catch((error) => {
+              // Cambiar de proyecto invalida a propósito la respuesta anterior;
+              // no es un error visible ni una razón para repintar datos ajenos.
+              if (error !== RESPUESTA_DE_PROYECTO_OBSOLETA) {
+                const marca = $("actualizado");
+                if (marca !== null) marca.textContent = "sin conexión";
+              }
+            });
         });
         eventos.onmessage = (mensaje) => {
           if (suscripcionDeEventos !== eventos) return;
@@ -7087,6 +7216,7 @@
         bandaDeFasesActual = null;
         const ruta = location.hash.replace(/^#\//, "") || "tickets";
         const [nombre, parametro] = ruta.split("/");
+        if (nombre !== "jornadas") revisionVistaJornadas += 1;
 
         // Navegar de verdad empieza arriba; **refrescar** no mueve a nadie.
         const antes = opciones.conservarVista === true ? instantaneaDeLaVista() : null;

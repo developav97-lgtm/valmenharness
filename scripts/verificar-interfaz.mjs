@@ -528,7 +528,7 @@ function textoDe(nodo, acumulado = []) {
  */
 /**
  * @param {string} rutaHtml
- * @param {{ hash?: string, respuesta?: (ruta: string, init?: RequestInit) => unknown, localStorage?: Record<string, string> }} [opciones]
+ * @param {{ hash?: string, respuesta?: (ruta: string, init?: RequestInit) => unknown, localStorage?: Record<string, string>, sessionStorage?: Record<string, string> }} [opciones]
  */
 export async function ejecutarInterfaz(rutaHtml, opciones = {}) {
   const codigo = /<script type="module">([\s\S]*?)<\/script>/.exec(
@@ -561,7 +561,12 @@ export async function ejecutarInterfaz(rutaHtml, opciones = {}) {
   };
 
   globalThis.document = documento;
-  globalThis.window = { addEventListener: () => {}, location: { hash: "" } };
+  const oyentesDeVentana = new Map();
+  globalThis.window = {
+    addEventListener: (tipo, accion) => oyentesDeVentana.set(tipo, accion),
+    dispatchEvent: (evento) => oyentesDeVentana.get(evento.type)?.(evento),
+    location: { hash: "" },
+  };
   globalThis.location = globalThis.window.location;
   const storage = new Map(Object.entries(opciones.localStorage ?? {}));
   globalThis.localStorage = {
@@ -569,8 +574,20 @@ export async function ejecutarInterfaz(rutaHtml, opciones = {}) {
     setItem: (key, value) => storage.set(key, String(value)),
     removeItem: (key) => storage.delete(key),
   };
+  const session = new Map(Object.entries(opciones.sessionStorage ?? {}));
+  globalThis.sessionStorage = {
+    getItem: (key) => session.get(key) ?? null,
+    setItem: (key, value) => session.set(key, String(value)),
+    removeItem: (key) => session.delete(key),
+  };
   globalThis.EventSource = class {
-    addEventListener() {}
+    constructor() {
+      this.oyentes = new Map();
+    }
+    addEventListener(tipo, accion) {
+      this.oyentes.set(tipo, accion);
+    }
+    close() {}
   };
   globalThis.Option = class {
     constructor(etiqueta, valor) {

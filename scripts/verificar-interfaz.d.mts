@@ -38,7 +38,11 @@ export interface OpcionesDeInterfaz {
   /** El `location.hash` que decide qué vista se ejecuta. */
   readonly hash?: string;
   /** Qué responde cada ruta. Sin esto, la vista del ticket. */
-  readonly respuesta?: (ruta: string) => unknown;
+  readonly respuesta?: (ruta: string, init?: RequestInit) => unknown;
+  /** Estado inicial del proyecto que la persona tiene seleccionado. */
+  readonly localStorage?: Record<string, string>;
+  /** Cursor de eventos que sobrevive una reconexión dentro de la pestaña. */
+  readonly sessionStorage?: Record<string, string>;
 }
 
 /** Monta el entorno, importa el módulo de la interfaz y devuelve lo que pintó. */
