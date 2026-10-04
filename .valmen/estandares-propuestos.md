@@ -56,7 +56,19 @@ pasan a `.valmen/rules/estandares-<área>.md`, que es lo que llega al
 - **Estado:** descartado
 - **Decidido:** 2026-10-03 · «si una compuerta no pasa dos veces aun colocando lo necesario como en este caso se aprueba y se coloca eso documentado y si toca agregarlo al aprendizaje también se agrega para luego poder hacer revision y afinacion esto aplica para tdos los tickets»
 - **Tickets:** FEATURE-ENGINE-VENTANAS-JORNADA-20261001, FEATURE-ENGINE-AUTORIZACION-JORNADAS-20261001
+- **Nota:** duplicado de EST-004 — misma regla y misma frase del PO; se conserva descartada para que no se vuelva a proponer.
 
 **Regla:** Los gates analysis de FEATURE-ENGINE-VENTANAS-JORNADA-20261001 y FEATURE-ENGINE-AUTORIZACION-JORNADAS-20261001 bloquearon por diagnostico_explica_el_sintoma aunque el diagnóstico ya nombra comportamiento, causa, archivos y riesgos. Por decisión del PO, tras dos bloqueos equivalentes con el artefacto corregido, se documenta la evidencia y se aprueba por política humana; no se repite una tercera llamada. Se revisará y afinará el evaluador posteriormente.
 
 **Por qué:** Sale del aprendizaje AP-006 (2026-10-03), visto en FEATURE-ENGINE-VENTANAS-JORNADA-20261001, FEATURE-ENGINE-AUTORIZACION-JORNADAS-20261001.
+
+### [EST-006] Una contradicción interna del evaluador no debe producir un bloqueo automático
+
+- **Área:** proceso
+- **Propuesto:** 2026-10-04
+- **Estado:** propuesto
+- **Tickets:** FEATURE-ADAPTER-CAPACIDADES-20261001
+
+**Regla:** En FEATURE-ADAPTER-CAPACIDADES-20261001, el gate analysis bloqueó cuatro veces diagnostico_explica_el_sintoma (0.04, 0.02, 0.08) mientras el mismo recibo clasificaba el análisis como completa y daba >=0.97 a causa_especifica, nombra_archivos_reales y riesgos_cubren_impactos. El refinamiento debe detectar esa contradicción: si clasificación es completa y las tres comprobaciones estructurales superan approveAt, una única proposición semántica contradictoria no puede decidir block; se degrada a review y exige decisión humana. La corrección se valida con una prueba determinista del vector de recibo anterior, que debe devolver review, y con un caso control donde falla causa o archivos, que debe seguir devolviendo block.
+
+**Por qué:** Sale del aprendizaje AP-004 (2026-10-03), visto en FEATURE-ADAPTER-CAPACIDADES-20261001.

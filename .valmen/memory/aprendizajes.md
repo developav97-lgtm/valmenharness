@@ -21,6 +21,8 @@ El guardia del modo pregunta se colgo de las dos puertas de escritura de core, y
 ### [AP-003] Las compuertas de plan deben respetar el alcance asignado por el grafo
 
 - **Fecha:** 2026-10-03
+- **Estado:** caso
+- **Clasificado:** 2026-10-04
 - **Estado:** pendiente
 - **Tickets:** FEATURE-ENGINE-MODELO-INTENTO-20261001
 
@@ -29,6 +31,8 @@ FEATURE-ENGINE-MODELO-INTENTO-20261001 cubre el contrato de modelos configurado 
 ### [AP-004] Una contradicción interna del evaluador no debe producir un bloqueo automático
 
 - **Fecha:** 2026-10-03
+- **Estado:** regla
+- **Clasificado:** 2026-10-04
 - **Estado:** pendiente
 - **Tickets:** FEATURE-ADAPTER-CAPACIDADES-20261001
 
@@ -37,6 +41,8 @@ En FEATURE-ADAPTER-CAPACIDADES-20261001, el gate analysis bloqueó cuatro veces 
 ### [AP-005] Gate de análisis no aplica a requisito nuevo sin síntoma
 
 - **Fecha:** 2026-10-03
+- **Estado:** caso
+- **Clasificado:** 2026-10-04
 - **Estado:** pendiente
 - **Tickets:** FEATURE-MC-PANEL-HERRAMIENTAS-20261001
 
@@ -47,7 +53,14 @@ En FEATURE-MC-PANEL-HERRAMIENTAS-20261001, el gate analysis bloqueó tres veces 
 - **Fecha:** 2026-10-03
 - **Estado:** regla
 - **Clasificado:** 2026-10-03
-- **Estado:** pendiente
 - **Tickets:** FEATURE-ENGINE-VENTANAS-JORNADA-20261001, FEATURE-ENGINE-AUTORIZACION-JORNADAS-20261001
 
 Los gates analysis de FEATURE-ENGINE-VENTANAS-JORNADA-20261001 y FEATURE-ENGINE-AUTORIZACION-JORNADAS-20261001 bloquearon por diagnostico_explica_el_sintoma aunque el diagnóstico ya nombra comportamiento, causa, archivos y riesgos. Por decisión del PO, tras dos bloqueos equivalentes con el artefacto corregido, se documenta la evidencia y se aprueba por política humana; no se repite una tercera llamada. Se revisará y afinará el evaluador posteriormente.
+
+### [AP-007] Una compuerta en bloque no impide el avance si la aprobación no queda en el recibo
+
+- **Fecha:** 2026-10-04
+- **Estado:** pendiente
+- **Tickets:** FEATURE-ADAPTER-CAPACIDADES-20261001, FEATURE-ADAPTER-HERMES-LECTURA-20261001, FEATURE-ADAPTER-OPENCODE-CODEX-20261001, FEATURE-CONFIG-ELEGIBILIDAD-AUTONOMA-20260926, FEATURE-ENGINE-AUTORIZACION-JORNADAS-20261001, FEATURE-ENGINE-MODELO-INTENTO-20261001, FEATURE-ENGINE-RUN-AUTONOMO-20260926, FEATURE-ENGINE-VENTANAS-JORNADA-20261001, FEATURE-GATE-VERIFY-DEV-20260926, FEATURE-MC-CONTEXTO-UI-20261001, FEATURE-MC-DISPONIBILIDAD-FUENTES-20261001, FEATURE-MC-PANEL-HERRAMIENTAS-20261001, FEATURE-SERVER-EVENTOS-INCREMENTALES-20261001, SECURITY-ENGINE-COLISIONES-ESCRITURA-20260926
+
+Revisión del fin de semana (2026-10-02 a 2026-10-04) sobre los tickets del feature control-jornadas-ejecucion: 14 de ellos avanzaron de intake a analyzed, planned y approved con recibos de compuerta en block o en review, y sin ninguna aprobación registrada — ni evento de compuerta en el ticket, ni campo humanDecision en el recibo. Los casos van de una corrida en block (RUN-AUTONOMO, COLISIONES) a seis (MODELO-INTENTO, plan) y tres (ADAPTER-CAPACIDADES, ADAPTER-HERMES-LECTURA, MC-PANEL-HERRAMIENTAS, MC-CONTEXTO-UI, analysis). En el mismo rango hay 22 recibos que sí traen humanDecision, así que el registro tiene las dos formas conviviendo y no hay manera de saber por el ticket cuál se aplicó. EST-004 exige que la aprobación quede atribuida a la política humana y nunca al modelo, pero no dice dónde se escribe; y el motor rechaza anotar un punto en un ticket cerrado con QA aprobada, así que la constancia posterior tampoco puede quedar en el ticket. Lo que falta es que el movimiento de estado que ocurre con la compuerta en block escriba la firma en el recibo y en los eventos, o que el movimiento se rechace. Mientras eso no exista, un informe que lea sólo los tickets no puede distinguir un ticket aprobado a mano de uno aprobado por el modelo.
