@@ -27,6 +27,7 @@ const complete = [
   "      - deploy",
   "  limits:",
   "    max-concurrent: 2",
+  "    collision-policy: serialize",
   "    max-per-day: 8",
   "    budget-per-ticket: 5.00",
   "    stop-on:",
@@ -49,7 +50,7 @@ describe("autonomous", () => {
       enabled: false,
       executor: null,
       eligible: { types: [], require: [] },
-      limits: { maxConcurrent: 0, stopOn: [] },
+      limits: { maxConcurrent: 0, collisionPolicy: "block", stopOn: [] },
     });
     expect(autonomousConfig(root).enabled).toBe(false);
   });
@@ -69,6 +70,7 @@ describe("autonomous", () => {
       },
       limits: {
         maxConcurrent: 2,
+        collisionPolicy: "serialize",
         maxPerDay: 8,
         budgetPerTicket: 5,
         stopOn: ["gate-blocked-twice", "test-failure", "secret-detected"],
@@ -82,7 +84,14 @@ describe("autonomous", () => {
       [complete.replace("max-risk: normal", "max-risk: extremo"), /max-risk/],
       [complete.replace("- tests-declared", "- todo-vale"), /eligible.require/],
       [complete.replace("max-concurrent: 2", "max-concurrent: 0"), /max-concurrent/],
-      [complete.replace("budget-per-ticket: 5.00", "budget-per-ticket: cero"), /budget-per-ticket/],
+      [
+        complete.replace("collision-policy: serialize", "collision-policy: seguir"),
+        /collision-policy/,
+      ],
+      [
+        complete.replace("budget-per-ticket: 5.00", "budget-per-ticket: cero"),
+        /budget-per-ticket/,
+      ],
       [complete.replace("- test-failure", "- continuar-siempre"), /limits.stop-on/],
     ];
     for (const [yaml, message] of cases) {
@@ -91,9 +100,9 @@ describe("autonomous", () => {
   });
 
   it("rechaza las claves históricas con guion bajo antes de interpretar la política", () => {
-    expect(() => readAutonomousConfig(parseConfig(complete.replace("max-risk", "max_risk")))).toThrow(
-      /max_risk.*no es válida/,
-    );
+    expect(() =>
+      readAutonomousConfig(parseConfig(complete.replace("max-risk", "max_risk"))),
+    ).toThrow(/max_risk.*no es válida/);
   });
 
   it("acepta solo ejecutores conocidos y nunca una orden de shell en la política", () => {
@@ -102,10 +111,12 @@ describe("autonomous", () => {
       "  executor:\n    id: codex\n    model: gpt-6-sol\n    effort: high\n  eligible:",
     );
     expect(readAutonomousConfig(parseConfig(configured)).executor).toEqual({
-      id: "codex", model: "gpt-6-sol", effort: "high",
+      id: "codex",
+      model: "gpt-6-sol",
+      effort: "high",
     });
-    expect(() => readAutonomousConfig(parseConfig(configured.replace("id: codex", "id: sh -c")))).toThrow(
-      /executor.id/,
-    );
+    expect(() =>
+      readAutonomousConfig(parseConfig(configured.replace("id: codex", "id: sh -c"))),
+    ).toThrow(/executor.id/);
   });
 });

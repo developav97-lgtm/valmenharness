@@ -61,6 +61,7 @@ export * from "./manifest.js";
 export * from "./process.js";
 export * from "./run-state.js";
 export * from "./autonomous-run.js";
+export * from "./autonomous-collisions.js";
 export * from "./calibration.js";
 export * from "./release.js";
 export * from "./evaluators.js";

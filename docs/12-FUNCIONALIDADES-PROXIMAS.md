@@ -533,6 +533,7 @@ autonomous:
       - deploy
   limits:
     max-concurrent: 2
+    collision-policy: serialize  # warn, serialize o block; se aplica antes de paralelizar
     max-per-day: 8
     budget-per-ticket: 5.00
     stop-on:

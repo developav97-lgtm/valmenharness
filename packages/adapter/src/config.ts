@@ -247,9 +247,7 @@ export function readVerifyDevConfig(config: ConfigMap): VerifyDevConfig | null {
   const verifyDev = readMap(config, "verify-dev");
   const url = verifyDev["url"];
   if (typeof url !== "string" || url === "") {
-    fail(
-      'config.yaml: "verify-dev.url" es obligatoria para criterios `verify: dev`.',
-    );
+    fail('config.yaml: "verify-dev.url" es obligatoria para criterios `verify: dev`.');
   }
 
   try {
@@ -294,6 +292,12 @@ export const AUTONOMOUS_EXECUTORS = ["codex", "opencode", "claude"] as const;
 /** Esfuerzos que los adaptadores pueden traducir a su propia invocación. */
 export const AUTONOMOUS_EXECUTOR_EFFORTS = ["low", "medium", "high"] as const;
 
+/** Decisiones disponibles cuando dos tickets declaran que escriben la misma ruta. */
+export const AUTONOMOUS_COLLISION_POLICIES = ["warn", "serialize", "block"] as const;
+
+/** Política de colisión, compartida por configuración y el planificador del motor. */
+export type AutonomousCollisionPolicy = (typeof AUTONOMOUS_COLLISION_POLICIES)[number];
+
 /** Un ejecutor opt-in para `valmen run`; no admite una cadena de shell libre. */
 export interface AutonomousExecutorConfig {
   readonly id: (typeof AUTONOMOUS_EXECUTORS)[number];
@@ -314,6 +318,8 @@ export interface AutonomousConfig {
   };
   readonly limits: {
     readonly maxConcurrent: number;
+    /** Qué hacer antes de permitir que un futuro despachador ejecute rutas comunes. */
+    readonly collisionPolicy: AutonomousCollisionPolicy;
     readonly maxPerDay: number;
     readonly budgetPerTicket: number;
     readonly stopOn: readonly string[];
@@ -331,6 +337,9 @@ const AUTONOMOUS_OFF: AutonomousConfig = Object.freeze({
   }),
   limits: Object.freeze({
     maxConcurrent: 0,
+    // La autonomía apagada no despacha nada; `block` conserva además el valor
+    // más conservador para quien inspeccione el contrato sin activarlo.
+    collisionPolicy: "block",
     maxPerDay: 0,
     budgetPerTicket: 0,
     stopOn: Object.freeze([]),
@@ -347,7 +356,10 @@ function autonomousMap(config: ConfigMap, key: string): ConfigMap {
 
 function autonomousList(map: ConfigMap, key: string, path: string): string[] {
   const value = map[key];
-  if (!Array.isArray(value) || !value.every((item): item is string => typeof item === "string")) {
+  if (
+    !Array.isArray(value) ||
+    !value.every((item): item is string => typeof item === "string")
+  ) {
     fail(`config.yaml: "autonomous.${path}" debe ser una lista de textos.`);
   }
   if (value.length === 0 || new Set(value).size !== value.length) {
@@ -356,7 +368,12 @@ function autonomousList(map: ConfigMap, key: string, path: string): string[] {
   return value;
 }
 
-function autonomousPositive(map: ConfigMap, key: string, path: string, integer: boolean): number {
+function autonomousPositive(
+  map: ConfigMap,
+  key: string,
+  path: string,
+  integer: boolean,
+): number {
   const value = map[key];
   const number = typeof value === "string" ? Number(value) : Number.NaN;
   if (!Number.isFinite(number) || number <= 0 || (integer && !Number.isInteger(number))) {
@@ -410,23 +427,53 @@ export function readAutonomousConfig(config: ConfigMap): AutonomousConfig {
   const types = autonomousList(eligible, "types", "eligible.types");
   const maxRisk = eligible["max-risk"];
   const requirements = autonomousList(eligible, "require", "eligible.require");
-  const excludedModules = autonomousList(eligible, "excluded-modules", "eligible.excluded-modules");
+  const excludedModules = autonomousList(
+    eligible,
+    "excluded-modules",
+    "eligible.excluded-modules",
+  );
   const stopOn = autonomousList(limits, "stop-on", "limits.stop-on");
+  const collisionPolicy = limits["collision-policy"];
 
   if (!types.every((type) => (TICKET_TYPES as readonly string[]).includes(type))) {
-    fail('config.yaml: "autonomous.eligible.types" contiene un tipo de ticket desconocido.');
+    fail(
+      'config.yaml: "autonomous.eligible.types" contiene un tipo de ticket desconocido.',
+    );
   }
-  if (typeof maxRisk !== "string" || !(RISK_LEVELS as readonly string[]).includes(maxRisk)) {
+  if (
+    typeof maxRisk !== "string" ||
+    !(RISK_LEVELS as readonly string[]).includes(maxRisk)
+  ) {
     fail('config.yaml: "autonomous.eligible.max-risk" debe ser un riesgo conocido.');
   }
-  if (!requirements.every((item) => (AUTONOMOUS_REQUIREMENTS as readonly string[]).includes(item))) {
+  if (
+    !requirements.every((item) =>
+      (AUTONOMOUS_REQUIREMENTS as readonly string[]).includes(item),
+    )
+  ) {
     fail('config.yaml: "autonomous.eligible.require" contiene una condición desconocida.');
   }
   if (!excludedModules.every((item) => /^[a-z][a-z0-9-]{0,63}$/.test(item))) {
-    fail('config.yaml: "autonomous.eligible.excluded-modules" contiene un módulo inválido.');
+    fail(
+      'config.yaml: "autonomous.eligible.excluded-modules" contiene un módulo inválido.',
+    );
   }
-  if (!stopOn.every((item) => (AUTONOMOUS_STOP_CONDITIONS as readonly string[]).includes(item))) {
-    fail('config.yaml: "autonomous.limits.stop-on" contiene una condición de parada desconocida.');
+  if (
+    !stopOn.every((item) =>
+      (AUTONOMOUS_STOP_CONDITIONS as readonly string[]).includes(item),
+    )
+  ) {
+    fail(
+      'config.yaml: "autonomous.limits.stop-on" contiene una condición de parada desconocida.',
+    );
+  }
+  if (
+    typeof collisionPolicy !== "string" ||
+    !(AUTONOMOUS_COLLISION_POLICIES as readonly string[]).includes(collisionPolicy)
+  ) {
+    fail(
+      'config.yaml: "autonomous.limits.collision-policy" debe ser warn, serialize o block.',
+    );
   }
 
   return Object.freeze({
@@ -439,9 +486,20 @@ export function readAutonomousConfig(config: ConfigMap): AutonomousConfig {
       excludedModules: Object.freeze(excludedModules),
     }),
     limits: Object.freeze({
-      maxConcurrent: autonomousPositive(limits, "max-concurrent", "limits.max-concurrent", true),
+      maxConcurrent: autonomousPositive(
+        limits,
+        "max-concurrent",
+        "limits.max-concurrent",
+        true,
+      ),
+      collisionPolicy: collisionPolicy as AutonomousCollisionPolicy,
       maxPerDay: autonomousPositive(limits, "max-per-day", "limits.max-per-day", true),
-      budgetPerTicket: autonomousPositive(limits, "budget-per-ticket", "limits.budget-per-ticket", false),
+      budgetPerTicket: autonomousPositive(
+        limits,
+        "budget-per-ticket",
+        "limits.budget-per-ticket",
+        false,
+      ),
       stopOn: Object.freeze(stopOn),
     }),
   });
