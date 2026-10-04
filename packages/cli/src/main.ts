@@ -72,6 +72,7 @@ import { runProcess } from "./process.js";
 import { runManuales } from "./manuales.js";
 import { runCorpus } from "./corpus.js";
 import { executionCommand } from "./execution.js";
+import { runAutonomousCommand } from "./run.js";
 import {
   type RegistryPaths,
   CASCADE_TASK_IDS,
@@ -127,6 +128,8 @@ Uso: valmen <comando> [opciones]
 Comandos:
   validate --all            Valida todos los tickets del registro.
   validate --id <ID>        Valida un ticket concreto.
+  run --ticket <ID> | --queue
+                            Despacha un ticket elegible hasta awaiting_user_tests.
   active                    Lista los tickets no cerrados (alias: list).
   resume [--id <ID>]        Imprime el contexto para retomar un ticket.
                             Sin --id y con varios activos, no elige: pide uno.
@@ -1108,13 +1111,13 @@ export function resolvePaths(options: Options): RegistryPaths {
 export function dispatch(options: Options): CommandResult {
   const [command, ...rest] = options.positionals;
 
-  // `gate` es el único comando que habla con un proveedor externo, así que es
-  // asíncrono. Se detecta aquí para dar un error claro en vez de devolver un
+  // `gate` y `run` pueden hablar con proveedores externos, así que son
+  // asíncronos. Se detectan aquí para dar un error claro en vez de devolver un
   // resultado vacío si alguien lo invoca por esta vía síncrona.
-  if (command === "gate") {
+  if (command === "gate" || command === "run") {
     return {
       stdout: "",
-      stderr: "El comando gate es asíncrono; use `runGate` o la línea de comandos.",
+      stderr: `El comando ${command} es asíncrono; use la línea de comandos.`,
       exitCode: EXIT_SCHEMA,
     };
   }
@@ -1612,6 +1615,8 @@ export async function run(argv: readonly string[]): Promise<number> {
       result = runTransition(resolvePaths(options), options.flags);
     } else if (command !== undefined && ESCRITURA.has(command)) {
       result = runAppend(command, resolvePaths(options), options.flags);
+    } else if (command === "run") {
+      result = await runAutonomousCommand(resolvePaths(options), options.flags);
     } else if (command === "gate") {
       const gateId = rest[0];
       const rawId = options.flags["id"];

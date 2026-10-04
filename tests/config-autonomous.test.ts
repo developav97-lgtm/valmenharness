@@ -47,6 +47,7 @@ describe("autonomous", () => {
   it("queda apagada cuando la sección no existe", () => {
     expect(readAutonomousConfig(parseConfig("name: Laboratorio\n"))).toMatchObject({
       enabled: false,
+      executor: null,
       eligible: { types: [], require: [] },
       limits: { maxConcurrent: 0, stopOn: [] },
     });
@@ -59,6 +60,7 @@ describe("autonomous", () => {
 
     expect(autonomousConfig(root)).toEqual({
       enabled: true,
+      executor: null,
       eligible: {
         types: ["BUGFIX", "DOCS"],
         maxRisk: "normal",
@@ -91,6 +93,19 @@ describe("autonomous", () => {
   it("rechaza las claves históricas con guion bajo antes de interpretar la política", () => {
     expect(() => readAutonomousConfig(parseConfig(complete.replace("max-risk", "max_risk")))).toThrow(
       /max_risk.*no es válida/,
+    );
+  });
+
+  it("acepta solo ejecutores conocidos y nunca una orden de shell en la política", () => {
+    const configured = complete.replace(
+      "  eligible:",
+      "  executor:\n    id: codex\n    model: gpt-6-sol\n    effort: high\n  eligible:",
+    );
+    expect(readAutonomousConfig(parseConfig(configured)).executor).toEqual({
+      id: "codex", model: "gpt-6-sol", effort: "high",
+    });
+    expect(() => readAutonomousConfig(parseConfig(configured.replace("id: codex", "id: sh -c")))).toThrow(
+      /executor.id/,
     );
   });
 });

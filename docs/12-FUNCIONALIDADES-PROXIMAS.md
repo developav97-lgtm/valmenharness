@@ -511,6 +511,10 @@ Elegibilidad automática, por configuración:
 ```yaml
 autonomous:
   enabled: true
+  executor:
+    id: codex                 # codex, opencode o claude; no admite un shell libre
+    model: gpt-6-sol
+    effort: high
   eligible:
     types:
       - BUGFIX
@@ -536,6 +540,15 @@ autonomous:
       - test-failure
       - secret-detected
 ```
+
+`valmen run --ticket <ID>` y `valmen run --queue` consumen esta política de
+forma secuencial. Un ticket debe haber llegado a `approved` por el flujo normal:
+la política exige `plan-approved`, así que el comando no puede inventar la
+aprobación de una persona. El ejecutor recibe el ticket y las skills para
+implementar y probar; al volver, el harness corre `qa-mechanical` y solo entrega
+en `awaiting_user_tests` si ese recibo es fresco. No hace QA, commit, push,
+migraciones, concurrencia, reintentos ni cierre: esas decisiones pertenecen a
+las piezas posteriores de la autonomía acotada.
 
 **Por qué importa.** Es el Nivel 4. Y la clave de que sea **seguro** es que la elegibilidad es
 una decisión de configuración auditable, no del modelo: el agente no elige qué ticket tomar

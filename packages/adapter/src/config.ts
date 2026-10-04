@@ -288,9 +288,24 @@ export const AUTONOMOUS_STOP_CONDITIONS = [
   "budget-exceeded",
 ] as const;
 
+/** Ejecutores locales conocidos; el comando se construye en código, nunca en YAML. */
+export const AUTONOMOUS_EXECUTORS = ["codex", "opencode", "claude"] as const;
+
+/** Esfuerzos que los adaptadores pueden traducir a su propia invocación. */
+export const AUTONOMOUS_EXECUTOR_EFFORTS = ["low", "medium", "high"] as const;
+
+/** Un ejecutor opt-in para `valmen run`; no admite una cadena de shell libre. */
+export interface AutonomousExecutorConfig {
+  readonly id: (typeof AUTONOMOUS_EXECUTORS)[number];
+  readonly model: string;
+  readonly effort: (typeof AUTONOMOUS_EXECUTOR_EFFORTS)[number];
+}
+
 /** Política declarativa que los ejecutores autónomos posteriores consumirán. */
 export interface AutonomousConfig {
   readonly enabled: boolean;
+  /** Ausente hasta que el proyecto declare cómo despachar; la política sola no ejecuta nada. */
+  readonly executor: AutonomousExecutorConfig | null;
   readonly eligible: {
     readonly types: readonly string[];
     readonly maxRisk: string;
@@ -307,6 +322,7 @@ export interface AutonomousConfig {
 
 const AUTONOMOUS_OFF: AutonomousConfig = Object.freeze({
   enabled: false,
+  executor: null,
   eligible: Object.freeze({
     types: Object.freeze([]),
     maxRisk: "",
@@ -351,6 +367,31 @@ function autonomousPositive(map: ConfigMap, key: string, path: string, integer: 
   return number;
 }
 
+function autonomousExecutor(autonomous: ConfigMap): AutonomousExecutorConfig | null {
+  if (autonomous["executor"] === undefined) return null;
+  const executor = autonomousMap(autonomous, "executor");
+  const id = executor["id"];
+  const model = executor["model"];
+  const effort = executor["effort"];
+  if (typeof id !== "string" || !(AUTONOMOUS_EXECUTORS as readonly string[]).includes(id)) {
+    fail('config.yaml: "autonomous.executor.id" debe ser un ejecutor conocido.');
+  }
+  if (typeof model !== "string" || model.trim() === "") {
+    fail('config.yaml: "autonomous.executor.model" es obligatorio.');
+  }
+  if (
+    typeof effort !== "string" ||
+    !(AUTONOMOUS_EXECUTOR_EFFORTS as readonly string[]).includes(effort)
+  ) {
+    fail('config.yaml: "autonomous.executor.effort" debe ser low, medium o high.');
+  }
+  return Object.freeze({
+    id: id as AutonomousExecutorConfig["id"],
+    model,
+    effort: effort as AutonomousExecutorConfig["effort"],
+  });
+}
+
 /**
  * Lee la política de autonomía. La ausencia queda apagada: declarar una política
  * es una decisión humana, y el lector no selecciona ni ejecuta tickets.
@@ -390,6 +431,7 @@ export function readAutonomousConfig(config: ConfigMap): AutonomousConfig {
 
   return Object.freeze({
     enabled: true,
+    executor: autonomousExecutor(autonomous),
     eligible: Object.freeze({
       types: Object.freeze(types),
       maxRisk,
