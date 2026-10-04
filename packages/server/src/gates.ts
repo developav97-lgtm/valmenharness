@@ -50,6 +50,7 @@ import {
   appendEvent,
   appendReceipt,
   buildGateState,
+  claveDeCorrida,
   currentReceipts,
   findTicket,
   readReceipts,
@@ -582,7 +583,13 @@ export function recordHumanDecision(
   input: HumanDecisionInput,
 ): HumanDecisionOutcome {
   const recibos = readReceipts(paths, ticketId);
-  const vigente = currentReceipts(recibos).find((recibo) => recibo.id === receiptId);
+  // Se busca el recibo vigente por su **clave de corrida**, no solo por el
+  // identificador: con el formato viejo, `GR-<fecha>-<compuerta>` lo comparten
+  // varios tickets, y buscar por id a secas encontraría el recibo de otro. Acepta
+  // tanto el identificador viejo —sin ticket ni intento— como el nuevo.
+  const vigente = currentReceipts(recibos).find(
+    (recibo) => recibo.id === receiptId || claveDeCorrida(recibo) === receiptId,
+  );
 
   if (vigente === undefined) {
     return {

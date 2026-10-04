@@ -25,6 +25,7 @@ import { type GateReceipt } from "@valmen/gate";
 
 import { type CalibrationReport, calibrate, humanReferences } from "./calibration.js";
 import { type RegistryPaths } from "./discovery.js";
+import { claveDeCorrida, ticketDeClave } from "./receipts.js";
 
 /** Los recibos de todo el registro, en orden de escritura. */
 export function readAllReceipts(paths: RegistryPaths): GateReceipt[] {
@@ -113,11 +114,18 @@ function fechaDe(recibo: GateReceipt): string {
  * Un recibo se anexa dos veces cuando una persona decide sobre un gate escalado:
  * la segunda línea trae la decisión humana. Contar las dos inflaría el consumo y
  * contaría dos veces la misma evaluación.
+ *
+ * La clave es la corrida —identificador y sujeto—, no solo el identificador: el
+ * id viejo no nombraba ticket ni intento, así que colapsar por él contaba una
+ * sola evaluación donde hubo varias —los reintentos del mismo día del mismo
+ * gate— y cruzaba tickets distintos que corrieron el mismo gate el mismo día.
+ * Dos corridas distintas del mismo gate del mismo ticket el mismo día tienen
+ * identificadores distintos y sobreviven las dos.
  */
 function vigentes(recibos: readonly GateReceipt[]): GateReceipt[] {
-  const porId = new Map<string, GateReceipt>();
-  for (const recibo of recibos) porId.set(recibo.id, recibo);
-  return [...porId.values()];
+  const porCorrida = new Map<string, GateReceipt>();
+  for (const recibo of recibos) porCorrida.set(claveDeCorrida(recibo), recibo);
+  return [...porCorrida.values()];
 }
 
 /** Cuenta el consumo del harness en un rango de fechas, ambas incluidas. */
@@ -201,16 +209,27 @@ export function usageReport(
   for (const recibo of enRango) {
     const lista = sujetosPorCompuerta.get(recibo.gate) ?? [];
     // Una compuerta puede haberse evaluado varias veces sobre el mismo ticket: la
-    // última es la que decidió, y las anteriores son historia.
-    const indice = lista.findIndex((sujeto) => sujeto.id === recibo.subject.id);
-    const sujeto = { id: recibo.subject.id, outcome: recibo.outcome };
+    // última es la que decidió, y las anteriores son historia. Se identifica la
+    // evaluación por la clave de corrida —id y sujeto—, no solo por el sujeto: un
+    // reintento del mismo día conserva el ticket y cambia el intento, y colapsar
+    // por sujeto contaría como una sola corrida lo que fueron dos. La calibración
+    // tiene que leer lo mismo que el informe.
+    const clave = claveDeCorrida(recibo);
+    const indice = lista.findIndex((sujeto) => sujeto.id === clave);
+    const sujeto = { id: clave, outcome: recibo.outcome };
     if (indice === -1) lista.push(sujeto);
     else lista[indice] = sujeto;
     sujetosPorCompuerta.set(recibo.gate, lista);
   }
 
   const calibration = [...sujetosPorCompuerta.entries()]
-    .map(([gate, sujetos]) => calibrate(gate, sujetos, referencias))
+    .map(([gate, sujetos]) =>
+      calibrate(
+        gate,
+        sujetos.map((sujeto) => ({ ...sujeto, id: ticketDeClave(sujeto.id) })),
+        referencias,
+      ),
+    )
     .filter((informe) => informe.compared > 0)
     .sort((a, b) => (a.gate < b.gate ? -1 : 1));
 

@@ -24,6 +24,7 @@
  * análisis se hizo a las prisas, y es la que este informe destaca.
  */
 import { type RegistryPaths } from "./discovery.js";
+import { claveDeCorrida } from "./receipts.js";
 import { type ReportEntry, closedTickets } from "./report.js";
 import { readTicket } from "./tickets.js";
 import { readAllReceipts } from "./usage.js";
@@ -114,10 +115,13 @@ function ciclosDeQa(qa: readonly Record<string, unknown>[]): number {
 function recibosPorTicket(
   recibos: ReturnType<typeof readAllReceipts>,
 ): Map<string, RecibosDeTicket> {
+  // Se colapsa por corrida —id y sujeto—, no solo por identificador: los recibos
+  // viejos comparten id entre tickets distintos, y colapsar por id perdía las
+  // corridas de todos menos uno.
   const vigentes = new Map<string, (typeof recibos)[number]>();
   for (const recibo of recibos) {
     if (recibo.gate === "(ilegible)") continue;
-    vigentes.set(recibo.id, recibo);
+    vigentes.set(claveDeCorrida(recibo), recibo);
   }
 
   const porTicket = new Map<string, RecibosDeTicket>();

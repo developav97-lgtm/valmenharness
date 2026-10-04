@@ -298,6 +298,12 @@ export function buildReceipt(input: ReceiptInput): GateReceipt {
  * Devuelve un recibo nuevo: los recibos son inmutables una vez emitidos. La
  * decisión humana se añade, nunca reemplaza el veredicto del evaluador, porque
  * saber que el modelo dudó y una persona aprobó es información, no ruido.
+ *
+ * Y **el actor de la decisión es la persona**, no el modelo. Antes se copiaba
+ * `actor` del veredicto —`model`— y un gate escalado y aprobado por el PO seguía
+ * contando como decisión del modelo; el recibo tiene que poder decir quién
+ * decidió de verdad. El veredicto del evaluador queda en `outcome`, `reason` y
+ * `propositions`: eso no se toca.
  */
 export function withHumanDecision(receipt: GateReceipt, human: HumanDecision): GateReceipt {
   if (receipt.escalatedTo !== "human") {
@@ -308,7 +314,7 @@ export function withHumanDecision(receipt: GateReceipt, human: HumanDecision): G
   if (receipt.humanDecision !== null) {
     throw new Error(`El recibo ${receipt.id} ya tiene una decisión humana registrada.`);
   }
-  return { ...receipt, humanDecision: human };
+  return { ...receipt, actor: "human", humanDecision: human };
 }
 
 /** Línea compacta del recibo, para el registro de actividad. */

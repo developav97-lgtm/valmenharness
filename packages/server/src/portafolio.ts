@@ -21,8 +21,16 @@ export interface PortfolioRow {
   readonly reason: string | null;
   /** Señales independientes: no se deducen de uso ni de coste. */
   readonly sources: {
-    readonly machine: { readonly label: string; readonly available: boolean; readonly reason: string | null };
-    readonly registry: { readonly label: "Registro local"; readonly available: boolean; readonly reason: string | null };
+    readonly machine: {
+      readonly label: string;
+      readonly available: boolean;
+      readonly reason: string | null;
+    };
+    readonly registry: {
+      readonly label: "Registro local";
+      readonly available: boolean;
+      readonly reason: string | null;
+    };
   };
   readonly gatesPending: number | null;
   readonly correctionsPending: number | null;
@@ -89,6 +97,9 @@ export function listPortfolioRows(
           machine: { label: project.machineId, available: true, reason: null },
           registry: { label: "Registro local", available: true, reason: null },
         },
+        // `currentReceipts` colapsa por corrida —id y sujeto—, así que los
+        // recibos viejos que comparten identificador entre tickets no se mezclan
+        // ni se pierden.
         gatesPending: currentReceipts(receipts).filter(
           (receipt) => receipt.escalatedTo === "human" && receipt.humanDecision === null,
         ).length,

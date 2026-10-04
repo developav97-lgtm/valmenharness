@@ -57,7 +57,7 @@ import {
   verifyDevConfig,
 } from "./discovery.js";
 import { buildGateState, runMechanicalChecks } from "./state.js";
-import { appendReceipt } from "./receipts.js";
+import { appendReceipt, readReceipts } from "./receipts.js";
 import { interfazDelTicket } from "./interfaz.js";
 
 /** Opciones de una evaluación de gate. */
@@ -265,6 +265,43 @@ function avisoDeForma(
       "el plan cubre. Partilo en criterios atómicos —una afirmación verificable cada uno— y " +
       "volvé a evaluar. El veredicto no cambia: sigue en revisión hasta que la banda se despeje.",
   ];
+}
+
+/**
+ * El identificador por defecto de un recibo:
+ * `GR-<fecha>-<ticket>-<compuerta>-<intento>`.
+ *
+ * Antes era `GR-<fecha>-<compuerta>`, sin ticket ni intento, y eso era un
+ * identificador de día donde hacía falta uno de corrida: dos corridas del mismo
+ * gate del mismo ticket el mismo día —un reintento tras un bloqueo— o dos
+ * tickets distintos que corrían el mismo gate el mismo día compartían
+ * identificador, y el colapso que existe para que la decisión humana no borre el
+ * veredicto del modelo terminaba borrando corridas enteras y cruzando tickets.
+ * El ticket va en el identificador porque dos tickets distintos que corren el
+ * mismo gate el mismo día no pueden compartirlo: el número de intento es por
+ * ticket y compuerta, así que sin el ticket en la clave los dos empezarían en 1.
+ *
+ * El intento es el próximo número libre para ese ticket y esa compuerta, leído de
+ * los recibos ya escritos. Se toman los números de todos los ids —viejos y
+ * nuevos— para no reutilizar uno: un recibo nuevo que repitiera el id de uno
+ * viejo lo pisaría en el colapso, que es justo el defecto que se arregla. El
+ * `receiptId` explícito sigue siendo el camino para forzar un identificador.
+ */
+function defaultReceiptId(
+  paths: RegistryPaths,
+  ticketId: string,
+  gateId: string,
+  now: () => Date,
+): string {
+  const fecha = now().toISOString().slice(0, 10).replace(/-/g, "");
+  const prefijo = `GR-${fecha}-${ticketId}-${gateId}`;
+  const patron = new RegExp(`^${prefijo}-(\\d+)$`);
+  let mayor = 0;
+  for (const recibo of readReceipts(paths, ticketId)) {
+    const coincidencia = patron.exec(recibo.id);
+    if (coincidencia !== null) mayor = Math.max(mayor, Number(coincidencia[1]));
+  }
+  return `${prefijo}-${mayor + 1}`;
 }
 
 export async function runGate(
@@ -498,9 +535,7 @@ export async function runGate(
   ];
 
   const receipt = buildReceipt({
-    id:
-      options.receiptId ??
-      `GR-${now().toISOString().slice(0, 10).replace(/-/g, "")}-${options.gateId}`,
+    id: options.receiptId ?? defaultReceiptId(paths, options.ticketId, options.gateId, now),
     gate: definition.id,
     propositions: definition.propositions,
     policy: definition.policy,
@@ -518,7 +553,9 @@ export async function runGate(
     latencyMs: evaluation.latencyMs,
     decidedAt: now().toISOString(),
     notes: notas,
-    ...(evaluation.escalations === undefined ? {} : { escalations: evaluation.escalations }),
+    ...(evaluation.escalations === undefined
+      ? {}
+      : { escalations: evaluation.escalations }),
     ...(evaluation.commandResults === undefined
       ? {}
       : { commandResults: evaluation.commandResults }),
@@ -549,7 +586,8 @@ export async function runGate(
     command: "checks deterministas, sin coste",
     jev: "Jev, probabilidades tipadas",
     "llm-judge": "modelo de chat con salida estructurada",
-    cascade: "cascada verificada: produce el modelo barato y el verificador escala lo no respaldado",
+    cascade:
+      "cascada verificada: produce el modelo barato y el verificador escala lo no respaldado",
   }[evaluation.evaluator];
   lines.push("", `  Evaluación (${etiquetaEvaluador})`);
   for (const item of decision.propositions) {
