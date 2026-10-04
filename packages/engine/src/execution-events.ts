@@ -75,6 +75,25 @@ export interface ExecutionReplay {
   readonly events: readonly ExecutionEvent[];
 }
 
+/** Máximo de hechos que una lectura incremental entrega en una sola página. */
+export const MAX_EXECUTION_EVENT_PAGE_SIZE = 100;
+
+/** Página verificable del historial, sin exponer mensajes de sesiones. */
+export interface ExecutionEventPage {
+  /** Cursor que el consumidor pidió reanudar. */
+  readonly after: number;
+  /** Hechos estrictamente posteriores a `after`, en orden de recepción. */
+  readonly events: readonly ExecutionEvent[];
+  /** Frontera que el consumidor puede persistir después de aplicar esta página. */
+  readonly nextCursor: number;
+  /** Último cursor disponible al construir la página. */
+  readonly latestCursor: number;
+  /** Aún quedan hechos después de `nextCursor`. */
+  readonly hasMore: boolean;
+  /** `false` cuando `after` apunta más allá del historial actual. */
+  readonly cursorValid: boolean;
+}
+
 /** Ruta única del historial de eventos de un proyecto. */
 export function executionEventsPath(project: AuthorizedProject): string {
   return join(project.root, ".valmen", "executions", "events.jsonl");
@@ -153,6 +172,52 @@ export function readExecutionEvents(project: AuthorizedProject): readonly Execut
     }
   }
   return events;
+}
+
+/**
+ * Lee una porción posterior al cursor de recepción.
+ *
+ * El cursor pertenece al log del proyecto autorizado y es consecutivo: pedir
+ * una frontera futura no equivale a una lista vacía, sino a una reconexión que
+ * debe volver a tomar una foto actual antes de continuar. El límite protege al
+ * transporte de convertir un heartbeat en una proyección completa.
+ */
+export function readExecutionEventPage(
+  project: AuthorizedProject,
+  after = 0,
+  options: { readonly limit?: number | undefined } = {},
+): ExecutionEventPage {
+  if (!Number.isSafeInteger(after) || after < 0) {
+    throw new Error("after debe ser un cursor entero no negativo.");
+  }
+  const limit = options.limit ?? MAX_EXECUTION_EVENT_PAGE_SIZE;
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > MAX_EXECUTION_EVENT_PAGE_SIZE) {
+    throw new Error(`limit debe ser un entero entre 1 y ${MAX_EXECUTION_EVENT_PAGE_SIZE}.`);
+  }
+
+  const history = readExecutionEvents(project);
+  const latestCursor = history.at(-1)?.cursor ?? 0;
+  if (after > latestCursor) {
+    return Object.freeze({
+      after,
+      events: Object.freeze([]),
+      nextCursor: latestCursor,
+      latestCursor,
+      hasMore: false,
+      cursorValid: false,
+    });
+  }
+
+  const events = Object.freeze(history.slice(after, after + limit));
+  const nextCursor = events.at(-1)?.cursor ?? after;
+  return Object.freeze({
+    after,
+    events,
+    nextCursor,
+    latestCursor,
+    hasMore: nextCursor < latestCursor,
+    cursorValid: true,
+  });
 }
 
 /**

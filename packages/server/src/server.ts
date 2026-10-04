@@ -57,6 +57,8 @@ import {
   summarize,
   ticketsPath,
   transition,
+  createExecutionContract,
+  executionEventsPath,
   readReceipts,
   readJourneyRoadmap,
 } from "@valmen/engine";
@@ -935,6 +937,28 @@ export async function handleApi(
     }
   }
 
+  // GET /api/execution-events?after=&limit=
+  //
+  // Contrato incremental para el cliente que ya resolvió su proyecto mediante
+  // X-Valmen-Project. No expone rutas de disco ni sesiones: la frontera y los
+  // hechos pertenecen al historial append-only del proyecto autorizado.
+  if (method === "GET" && path === "/api/execution-events") {
+    try {
+      const after = enteroDeQuery(query, "after") ?? 0;
+      const limit = enteroDeQuery(query, "limit");
+      const options = limit === undefined ? {} : { limit };
+      return {
+        status: 200,
+        body: createExecutionContract(proyectoAutorizadoParaEjecucion(context)).readEvents(
+          after,
+          options,
+        ),
+      };
+    } catch (caught) {
+      return { status: 400, body: { error: toFailure(caught).message } };
+    }
+  }
+
   // GET /api/standards
   //
   // Los estándares en vigor y las propuestas pendientes. Es la vista que faltaba:
@@ -1699,7 +1723,80 @@ function serveStatic(path: string, context: ServerContext): ApiResponse | null {
  * un agente o un editor pueden cambiarlo en cualquier momento. Empujar el aviso
  * es lo que hace que la pantalla deje de ser una foto.
  */
-const suscriptores = new Set<ServerResponse>();
+interface SuscriptorDeEventos {
+  readonly response: ServerResponse;
+  /** Ausente para conservar el aviso genérico que ya consumen otras vistas. */
+  readonly project?: AuthorizedProject;
+  /** Último cursor enviado al cliente de un proyecto. */
+  cursor: number;
+}
+
+const suscriptores = new Set<SuscriptorDeEventos>();
+
+function escribirSse(
+  response: ServerResponse,
+  input: { readonly event?: string; readonly id?: number; readonly data: unknown },
+): void {
+  if (input.id !== undefined) response.write(`id: ${input.id}\n`);
+  if (input.event !== undefined) response.write(`event: ${input.event}\n`);
+  response.write(`data: ${JSON.stringify(input.data)}\n\n`);
+}
+
+function publicarReconciliacion(
+  subscriber: SuscriptorDeEventos,
+  reason: "connected" | "cursor_invalid" | "page_limit",
+  after: number,
+): void {
+  if (subscriber.project === undefined) return;
+  const page = createExecutionContract(subscriber.project).readEvents(after);
+  escribirSse(subscriber.response, {
+    event: "reconcile",
+    data: {
+      kind: "reconcile",
+      reason,
+      after,
+      latestCursor: page.latestCursor,
+      cursorValid: page.cursorValid,
+    },
+  });
+}
+
+/** Emite solo la siguiente página; el cliente pide las restantes por la API. */
+function publicarEventosPendientes(
+  subscriber: SuscriptorDeEventos,
+  emptyReason?: "connected",
+): void {
+  if (subscriber.project === undefined) return;
+  const page = createExecutionContract(subscriber.project).readEvents(subscriber.cursor);
+  if (!page.cursorValid) {
+    publicarReconciliacion(subscriber, "cursor_invalid", subscriber.cursor);
+    subscriber.cursor = page.latestCursor;
+    return;
+  }
+  for (const event of page.events) {
+    escribirSse(subscriber.response, { event: "execution", id: event.cursor, data: event });
+  }
+  subscriber.cursor = page.nextCursor;
+  if (page.events.length === 0 && emptyReason !== undefined) {
+    publicarReconciliacion(subscriber, emptyReason, subscriber.cursor);
+  }
+  if (page.hasMore) {
+    publicarReconciliacion(subscriber, "page_limit", subscriber.cursor);
+    // La foto del consumidor cubre hasta esta frontera; repetir la misma página
+    // en cada cambio no sería una lectura incremental.
+    subscriber.cursor = page.latestCursor;
+  }
+}
+
+function cambioTocaEventosDeEjecucion(
+  project: AuthorizedProject,
+  rutas: readonly string[],
+): boolean {
+  const events = executionEventsPath(project);
+  return rutas.some(
+    (ruta) => ruta === events || events.startsWith(`${ruta}/`) || ruta.startsWith(`${events}/`),
+  );
+}
 
 /**
  * Avisa a todos los suscriptores de que algo cambió, **y qué**.
@@ -1712,11 +1809,17 @@ const suscriptores = new Set<ServerResponse>();
  */
 function broadcast(rutas: readonly string[] = []): void {
   const aviso = JSON.stringify({ kind: "changed", paths: [...rutas].slice(0, 50) });
-  for (const cliente of suscriptores) {
+  for (const subscriber of suscriptores) {
     try {
-      cliente.write(`data: ${aviso}\n\n`);
+      if (
+        subscriber.project !== undefined &&
+        cambioTocaEventosDeEjecucion(subscriber.project, rutas)
+      ) {
+        publicarEventosPendientes(subscriber);
+      }
+      subscriber.response.write(`data: ${aviso}\n\n`);
     } catch {
-      suscriptores.delete(cliente);
+      suscriptores.delete(subscriber);
     }
   }
 }
@@ -1734,27 +1837,49 @@ function broadcast(rutas: readonly string[] = []): void {
  * redibujara tres veces.
  */
 function vigilar(context: ServerContext, paths: RegistryPaths): () => void {
-  const objetivos = [ticketsPath(paths), join(context.root, ".valmen")];
+  const roots = new Set<string>([context.root]);
+  try {
+    for (const project of listAuthorizedProjects(
+      context.bindingsFile === undefined ? {} : { bindingsFile: context.bindingsFile },
+    ).projects) {
+      if (project.available) roots.add(project.root);
+    }
+  } catch {
+    // El servidor conserva la vigilancia de su raíz incluso si el catálogo local
+    // aún no existe o no se puede leer.
+  }
+  const objetivos = [...roots].flatMap((root) => [
+    ticketsPath(root === context.root ? paths : choosePaths(root)),
+    join(root, ".valmen"),
+  ]);
   const vigías: FSWatcher[] = [];
   let pendiente: NodeJS.Timeout | null = null;
   // Las rutas del lote que se está juntando. Una mutación del harness escribe el
   // ticket, el índice y el recibo en milisegundos: se avisa una vez, con las tres.
   const tocadas = new Set<string>();
 
+  const registrarCambio = (objetivo: string, archivo: string | Buffer | null) => {
+    if (archivo !== null) tocadas.add(join(objetivo, String(archivo)));
+    if (pendiente !== null) clearTimeout(pendiente);
+    pendiente = setTimeout(() => {
+      pendiente = null;
+      const rutas = [...tocadas];
+      tocadas.clear();
+      broadcast(rutas);
+    }, 250);
+  };
+
   for (const objetivo of objetivos) {
     try {
       vigías.push(
-        watch(objetivo, { recursive: true }, (_evento, archivo) => {
-          if (archivo !== null) tocadas.add(join(objetivo, String(archivo)));
-          if (pendiente !== null) clearTimeout(pendiente);
-          pendiente = setTimeout(() => {
-            pendiente = null;
-            const rutas = [...tocadas];
-            tocadas.clear();
-            broadcast(rutas);
-          }, 250);
-        }),
+        watch(objetivo, { recursive: true }, (_evento, archivo) => registrarCambio(objetivo, archivo)),
       );
+      // La vigía recursiva informa cambios dentro de directorios existentes;
+      // esta segunda vigía del raíz cubre la creación inicial de `executions/`
+      // en sistemas que no registran todavía sus hijos nuevos en la recursiva.
+      if (objetivo.endsWith("/.valmen")) {
+        vigías.push(watch(objetivo, (_evento, archivo) => registrarCambio(objetivo, archivo)));
+      }
     } catch {
       // Un directorio que todavía no existe no es un error: el registro se crea
       // en el primer ticket y `.valmen/` al adoptar. La pantalla simplemente no
@@ -1795,6 +1920,25 @@ async function handleRequest(
   // El flujo de eventos no es una respuesta con cuerpo y fin: se queda abierto.
   // Por eso se atiende antes del despacho normal, que siempre responde y cierra.
   if (url.pathname === "/api/events") {
+    let project: AuthorizedProject | undefined;
+    let cursor = 0;
+    try {
+      const projectId = valorDeQuery(url.searchParams, "project");
+      if (projectId !== undefined) {
+        project = proyectoAutorizadoParaEjecucion(contextoDeProyecto(context, projectId));
+        const requested = request.headers["last-event-id"] ?? valorDeQuery(url.searchParams, "after");
+        if (Array.isArray(requested)) throw new Error("Last-Event-ID debe contener un único cursor.");
+        if (requested !== undefined && !/^\d+$/.test(requested)) {
+          throw new Error("El cursor SSE debe ser un entero no negativo.");
+        }
+        cursor = requested === undefined ? 0 : Number(requested);
+        if (!Number.isSafeInteger(cursor)) throw new Error("El cursor SSE es demasiado grande.");
+      }
+    } catch (caught) {
+      const error = caught instanceof Error ? caught.message : String(caught);
+      send(response, 403, { error }, "application/json; charset=utf-8");
+      return;
+    }
     response.writeHead(200, {
       "Content-Type": "text/event-stream; charset=utf-8",
       "Cache-Control": "no-store",
@@ -1803,19 +1947,21 @@ async function handleRequest(
     // Sin latido, un proxy o el propio navegador pueden cerrar la conexión por
     // inactividad, y la pantalla dejaría de actualizarse en silencio.
     response.write("retry: 3000\n\n");
-    suscriptores.add(response);
+    const subscriber: SuscriptorDeEventos = { response, ...(project === undefined ? {} : { project }), cursor };
+    suscriptores.add(subscriber);
+    if (project !== undefined) publicarEventosPendientes(subscriber, "connected");
 
     const latido = setInterval(() => {
       try {
         response.write(": latido\n\n");
       } catch {
-        suscriptores.delete(response);
+        suscriptores.delete(subscriber);
       }
     }, 25_000);
 
     request.on("close", () => {
       clearInterval(latido);
-      suscriptores.delete(response);
+      suscriptores.delete(subscriber);
     });
     return;
   }

@@ -35,6 +35,7 @@ const WEB = readFileSync(
  */
 const RUTAS = [
   "GET /api/health",
+  "GET /api/events",
   "GET /api/tickets",
   "GET /api/tickets/:id",
   "GET /api/tickets/:id/executions",
@@ -189,6 +190,11 @@ describe("las rutas declaradas, contra el despachador", () => {
 
     for (const ruta of RUTAS) {
       const [metodo, camino] = ruta.split(" ") as [string, string];
+      // SSE queda abierto y se despacha antes de `handleApi`; comprobarlo con
+      // este helper convertiría la prueba de rutas en una conexión sin fin.
+      // `journeys-api.test.ts` e `incremental-events-api.test.ts` lo verifican
+      // contra el servidor HTTP real.
+      if (camino === "/api/events") continue;
       const concreto = camino.replace(/:([a-zA-Z]+)/g, "de-prueba");
       const respuesta = await handleApi(metodo, concreto, {}, contexto());
       const cuerpo = JSON.stringify(respuesta.body);

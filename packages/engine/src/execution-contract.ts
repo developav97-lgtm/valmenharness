@@ -14,8 +14,10 @@ import {
   type ExecutionActivityInput,
 } from "./execution-activity.js";
 import {
+  readExecutionEventPage,
   replayExecutionEvents,
   type AppendExecutionEventResult,
+  type ExecutionEventPage,
   type ExecutionReplay,
 } from "./execution-events.js";
 import {
@@ -55,6 +57,10 @@ export interface ExecutionContract {
     identity: ExecutionIdentity,
     attemptId?: string,
   ): readonly ExecutionModel[];
+  readEvents(
+    after?: number,
+    options?: { readonly limit?: number | undefined },
+  ): ExecutionEventPage;
   replay(): readonly ExecutionReplay[];
 }
 
@@ -86,6 +92,10 @@ export function createExecutionContract(project: AuthorizedProject): ExecutionCo
       readConfiguredExecutionModels(project, identity, attemptId),
     readEffectiveModels: (identity: ExecutionIdentity, attemptId?: string) =>
       readEffectiveExecutionModels(project, identity, attemptId),
+    readEvents: (
+      after = 0,
+      options: { readonly limit?: number | undefined } = {},
+    ) => readExecutionEventPage(project, after, options),
     replay: () => replayExecutionEvents(project),
   });
 }

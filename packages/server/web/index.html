@@ -2066,6 +2066,7 @@
         proyectoSeleccionado = projectId;
         if (projectId === "") localStorage.removeItem("valmen.project");
         else localStorage.setItem("valmen.project", projectId);
+        conectarEventos();
         void refrescarProyectoVisible();
         if (projectId === "") location.hash = "#/portafolio";
         void navegar();
@@ -6832,6 +6833,7 @@
        */
       let refrescoPendiente = null;
       let ocupado = false;
+      let suscripcionDeEventos = null;
 
       function puedeRefrescar() {
         if (ocupado) return false;
@@ -6841,20 +6843,66 @@
         return !["INPUT", "TEXTAREA", "SELECT"].includes(foco.tagName);
       }
 
+      function programarRefrescoPorEvento(rutas) {
+        // Los contadores de la navegación se actualizan siempre: son un número
+        // chico y dicen si hay algo esperando, aunque la vista no se repinte.
+        void marcarPendientes();
+
+        if (!elCambioTocaLaVista(rutas)) return;
+
+        if (!puedeRefrescar()) {
+          // La persona está escribiendo, tiene un diálogo abierto, o el harness
+          // está en medio de una mutación: no se le mueve la pantalla, y se le
+          // dice que hay algo nuevo para mirar cuando quiera.
+          avisarQueHayCambios();
+          return;
+        }
+
+        clearTimeout(refrescoPendiente);
+        // Un margen corto: una mutación escribe el ticket, el índice y el
+        // recibo en milisegundos, y sin él la vista se reharía tres veces.
+        refrescoPendiente = setTimeout(() => {
+          if (!puedeRefrescar()) {
+            avisarQueHayCambios();
+            return;
+          }
+          if (!elCambioTocaLaVista(rutas)) return;
+          marcarActualizado();
+          // Conservando la vista: refrescar no es navegar, y nadie tiene por qué
+          // perder dónde estaba leyendo.
+          void navegar({ conservarVista: true });
+        }, 300);
+      }
+
       function conectarEventos() {
-        const eventos = new EventSource("/api/events");
+        if (suscripcionDeEventos !== null) suscripcionDeEventos.close();
+        const ruta =
+          proyectoSeleccionado === ""
+            ? "/api/events"
+            : `/api/events?project=${encodeURIComponent(proyectoSeleccionado)}`;
+        const eventos = new EventSource(ruta);
+        suscripcionDeEventos = eventos;
         // «conectando…» es cierto hasta que la conexión abre, y después es una
         // mentira tranquila: la pantalla se queda diciendo que está conectando
         // cuando ya está conectada y lo único que pasa es que nadie escribió.
         eventos.onopen = () => {
+          if (suscripcionDeEventos !== eventos) return;
           const marca = $("actualizado");
           if (marca !== null) marca.textContent = "en vivo";
         };
         eventos.onerror = () => {
+          if (suscripcionDeEventos !== eventos) return;
           const marca = $("actualizado");
           if (marca !== null) marca.textContent = "sin conexión";
         };
+        eventos.addEventListener("execution", () => {
+          if (suscripcionDeEventos === eventos) programarRefrescoPorEvento([]);
+        });
+        eventos.addEventListener("reconcile", () => {
+          if (suscripcionDeEventos === eventos) programarRefrescoPorEvento([]);
+        });
         eventos.onmessage = (mensaje) => {
+          if (suscripcionDeEventos !== eventos) return;
           // Lo que cambió viene en el aviso. Si no se puede leer, se asume que
           // toca todo: refrescar de más es molesto, refrescar de menos miente.
           let rutas = [];
@@ -6865,35 +6913,7 @@
             rutas = [];
           }
 
-          // Los contadores de la navegación se actualizan siempre: son un número
-          // chico y dicen si hay algo esperando, aunque la vista no se repinte.
-          void marcarPendientes();
-
-          if (!elCambioTocaLaVista(rutas)) return;
-
-          if (!puedeRefrescar()) {
-            // La persona está escribiendo, tiene un diálogo abierto, o el harness
-            // está en medio de una mutación: no se le mueve la pantalla, y se le
-            // dice que hay algo nuevo para mirar cuando quiera.
-            avisarQueHayCambios();
-            return;
-          }
-
-          clearTimeout(refrescoPendiente);
-          // Un margen corto: una mutación escribe el ticket, el índice y el
-          // recibo en milisegundos, y sin él la vista se reharía tres veces.
-          refrescoPendiente = setTimeout(() => {
-            if (!puedeRefrescar()) {
-              avisarQueHayCambios();
-              return;
-            }
-            if (!elCambioTocaLaVista(rutas)) return;
-            marcarActualizado();
-            const [nombre, id] = location.hash.replace(/^#\//, "").split("/");
-            // Conservando la vista: refrescar no es navegar, y nadie tiene por qué
-            // perder dónde estaba leyendo.
-            void navegar({ conservarVista: true });
-          }, 300);
+          programarRefrescoPorEvento(rutas);
         };
       }
 

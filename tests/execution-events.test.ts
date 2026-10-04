@@ -7,6 +7,7 @@ import { createExecutionIdentity } from "../packages/core/src/execution-identity
 import {
   appendExecutionEvent,
   executionEventsPath,
+  readExecutionEventPage,
   readExecutionEvents,
   replayExecutionEvents,
   resolveAuthorizedProject,
@@ -91,5 +92,18 @@ describe("eventos persistidos de ejecución", () => {
     expect(() => appendExecutionEvent(project(), event("evt-01", {
       identity: createExecutionIdentity({ projectId: "saiopencloud", ticketId, executionId: "exec-01" }),
     }))).toThrow("no pertenece al proyecto autorizado");
+  });
+
+  it("entrega páginas posteriores al cursor y obliga a reconciliar una frontera futura", () => {
+    appendExecutionEvent(project(), event("evt-01"));
+    appendExecutionEvent(project(), event("evt-02"));
+
+    expect(readExecutionEventPage(project(), 0, { limit: 1 })).toMatchObject({
+      after: 0, nextCursor: 1, latestCursor: 2, hasMore: true, cursorValid: true,
+      events: [{ eventId: "evt-01", cursor: 1 }],
+    });
+    expect(readExecutionEventPage(project(), 3)).toMatchObject({
+      after: 3, nextCursor: 2, latestCursor: 2, hasMore: false, cursorValid: false, events: [],
+    });
   });
 });
