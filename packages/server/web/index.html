@@ -5385,6 +5385,33 @@
       // de proyecto o de vista. La revisión no representa datos del servidor:
       // solo identifica la última solicitud que todavía tiene derecho a pintar.
       let revisionVistaJornadas = 0;
+      const frescuraPorProyecto = new Map();
+
+      async function leerFrescuraDeFuentes(projectId) {
+        try {
+          const frescura = await api("GET", "/api/execution-freshness");
+          if (projectId === proyectoSeleccionado) frescuraPorProyecto.set(projectId, frescura);
+          return frescura;
+        } catch (error) {
+          if (error === RESPUESTA_DE_PROYECTO_OBSOLETA) throw error;
+          return frescuraPorProyecto.get(projectId) ?? {
+            sources: [],
+            error: "No se pudo actualizar la frescura de las fuentes.",
+          };
+        }
+      }
+
+      function descripcionDeFrescura(fuente) {
+        const estado = fuente.state === "fresh"
+          ? "actualizada"
+          : fuente.state === "stale"
+            ? "desactualizada"
+            : "no disponible";
+        const ultimo = fuente.lastReceivedAt === null || fuente.lastReceivedAt === undefined
+          ? "sin dato previo"
+          : `último dato ${fuente.lastReceivedAt}`;
+        return `${fuente.source}: ${estado} · ${ultimo}${fuente.reason ? ` · ${fuente.reason}` : ""}`;
+      }
 
       async function vistaJornadas() {
         const revision = ++revisionVistaJornadas;
@@ -5396,7 +5423,10 @@
           return;
         }
         cont.append(el("h2", "Hoja de ruta de jornadas"));
-        const datos = await api("GET", "/api/journeys");
+        const [datos, frescura] = await Promise.all([
+          api("GET", "/api/journeys"),
+          leerFrescuraDeFuentes(proyectoDeLaSolicitud),
+        ]);
         // No se pinta una foto que ya no pertenece al proyecto o a la vista
         // actual. El guard de api cubre el primer caso; este cubre además una
         // navegación a otra pantalla mientras la petición seguía en vuelo.
@@ -5405,6 +5435,12 @@
           proyectoDeLaSolicitud !== proyectoSeleccionado ||
           location.hash.replace(/^#\//, "").split("/")[0] !== "jornadas"
         ) return;
+        const panel = $("actualizado")?.textContent ?? "sin conexión";
+        cont.append(el("div", `Panel: ${panel}`, "nota"));
+        if (frescura.error) cont.append(el("div", frescura.error, "resultado"));
+        for (const fuente of frescura.sources ?? []) {
+          cont.append(el("div", `Fuente ${descripcionDeFrescura(fuente)}`, "nota"));
+        }
         if ((datos.journeys ?? []).length === 0) {
           cont.append(el("div", "No hay jornadas registradas para este proyecto.", "vacio"));
           return;

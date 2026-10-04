@@ -117,6 +117,7 @@ import {
 import { listFeatureRows, readFeatureDetail, summarizeFeatures } from "./features.js";
 import { guardarFotoEnTicket, leerLineaDeTiempo } from "./timeline.js";
 import { readExecutionPanel, readExecutionVisibleMessages } from "./execution-panel.js";
+import { readSourceFreshness } from "./source-freshness.js";
 import {
   approveGate,
   listGateRows,
@@ -932,6 +933,18 @@ export async function handleApi(
     try {
       const project = proyectoAutorizadoParaEjecucion(context);
       return { status: 200, body: readJourneyRoadmap(project) };
+    } catch (caught) {
+      return { status: 400, body: { error: toFailure(caught).message } };
+    }
+  }
+
+  // GET /api/execution-freshness
+  // La fuente se resuelve por el mismo contexto autorizado que Jornadas; nunca
+  // por un perfil o ruta que el navegador pueda elegir.
+  if (method === "GET" && path === "/api/execution-freshness") {
+    try {
+      const project = proyectoAutorizadoParaEjecucion(context);
+      return { status: 200, body: { projectId: project.projectId, sources: readSourceFreshness(project) } };
     } catch (caught) {
       return { status: 400, body: { error: toFailure(caught).message } };
     }
