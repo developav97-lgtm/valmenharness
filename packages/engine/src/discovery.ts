@@ -21,7 +21,9 @@ import {
 import {
   type ConfigMap,
   type PlaywrightConfig,
+  type VerifyDevConfig,
   readPlaywrightConfig,
+  readVerifyDevConfig,
 } from "@valmen/adapter";
 
 /** Un ticket leído de disco, con su ruta relativa a la raíz del proyecto. */
@@ -170,6 +172,20 @@ export function playwrightConfig(root: string): PlaywrightConfig | null {
   const documento = parseYamlSubset(texto, { fileName: ".valmen/config.yaml" });
   if (typeof documento !== "object" || Array.isArray(documento)) return null;
   return readPlaywrightConfig(documento as ConfigMap);
+}
+
+/** El ambiente desplegado que respalda criterios `verify: dev`, o `null`. */
+export function verifyDevConfig(root: string): VerifyDevConfig | null {
+  let texto: string;
+  try {
+    texto = readFileSync(join(root, ".valmen", "config.yaml"), "utf8");
+  } catch {
+    return null;
+  }
+
+  const documento = parseYamlSubset(texto, { fileName: ".valmen/config.yaml" });
+  if (typeof documento !== "object" || Array.isArray(documento)) return null;
+  return readVerifyDevConfig(documento as ConfigMap);
 }
 
 /** `true` si el directorio tiene al menos un `ticket.md` en su segundo nivel. */

@@ -220,6 +220,52 @@ export function readPlaywrightConfig(config: ConfigMap): PlaywrightConfig | null
   };
 }
 
+/** Ambiente desplegado que una persona usa al declarar `verify: dev`. */
+export interface VerifyDevConfig {
+  /** URL HTTP(S) del ambiente de desarrollo que se va a comprobar. */
+  readonly url: string;
+  /** Rama que alimenta el ambiente, si el proyecto necesita declararla. */
+  readonly branch: string;
+}
+
+/**
+ * Lee la declaración del ambiente que respalda `<!-- verify: dev -->`.
+ *
+ * La sección es opt-in: un proyecto que no declara criterios dev no necesita
+ * conocerla. Pero cuando existe, `url` no admite una forma incompleta; prometer
+ * una prueba contra un ambiente inexistente es peor que dejar el criterio manual.
+ */
+export function readVerifyDevConfig(config: ConfigMap): VerifyDevConfig | null {
+  if (config["verify-dev"] === undefined) return null;
+  const verifyDev = readMap(config, "verify-dev");
+  const url = verifyDev["url"];
+  if (typeof url !== "string" || url === "") {
+    fail(
+      'config.yaml: "verify-dev.url" es obligatoria para criterios `verify: dev`.',
+    );
+  }
+
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      fail('config.yaml: "verify-dev.url" debe usar http o https.');
+    }
+  } catch (caught) {
+    if (caught instanceof Error && caught.message.includes("verify-dev.url")) throw caught;
+    fail('config.yaml: "verify-dev.url" debe ser una URL HTTP(S) válida.');
+  }
+
+  const branch = verifyDev["branch"];
+  if (branch !== undefined && typeof branch !== "string") {
+    fail('config.yaml: "verify-dev.branch" debe ser un texto.');
+  }
+
+  return {
+    url,
+    branch: branch ?? "",
+  };
+}
+
 /** Identidad que viaja con la política compartible del proyecto. */
 export interface SharedProjectPolicy {
   readonly projectId: string | null;

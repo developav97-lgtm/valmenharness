@@ -48,7 +48,14 @@ import { type CommandCheck } from "@valmen/gate-command";
 import { type CascadeOptions, type EvaluatorId, evaluateGate } from "./evaluators.js";
 
 import type { RunnerResult } from "./result.js";
-import { type RegistryPaths, configList, findTicket, playwrightConfig, testTimeout } from "./discovery.js";
+import {
+  type RegistryPaths,
+  configList,
+  findTicket,
+  playwrightConfig,
+  testTimeout,
+  verifyDevConfig,
+} from "./discovery.js";
 import { buildGateState, runMechanicalChecks } from "./state.js";
 import { appendReceipt } from "./receipts.js";
 import { interfazDelTicket } from "./interfaz.js";
@@ -155,6 +162,7 @@ export function testCommands(root: string): string[] {
 function revisarCriteriosVerificables(
   criteria: readonly CriterionSpec[],
   root: string,
+  verifyDev: ReturnType<typeof verifyDevConfig>,
 ): string | null {
   const sinDeclarar = criteria.filter(
     (criterio) => criterio.command === null && !criterio.manual,
@@ -167,6 +175,18 @@ function revisarCriteriosVerificables(
       "`<!-- verify: manual -->`. Un criterio sin ninguna de las dos cosas deja la " +
       "verificación a la interpretación de quien lo lea, y se resuelve a favor de " +
       "«seguramente está bien».\n"
+    );
+  }
+
+  if (criteria.some((criterio) => criterio.dev) && verifyDev === null) {
+    return (
+      "Un criterio declara `<!-- verify: dev -->`, pero el proyecto no declara el ambiente de desarrollo.\n" +
+      "Agregue a `.valmen/config.yaml`:\n\n" +
+      "  verify-dev:\n" +
+      "    url: https://dev.ejemplo.test\n" +
+      "    branch: dev  # opcional\n\n" +
+      "La validación dev es una promesa explícita a la persona: sin URL no se puede " +
+      "saber qué ambiente debe comprobar.\n"
     );
   }
 
@@ -311,9 +331,11 @@ export async function runGate(
   // proyecto autoriza—, porque un gate que corre lo que le escriben en el ticket
   // sería un gate que obedece al artefacto que evalúa.
   if (definition.commandPropositions === true) {
+    const dev = verifyDevConfig(paths.root);
     const problema = revisarCriteriosVerificables(
       extractCriteriaSpecs(state["criterios"] ?? ""),
       paths.root,
+      dev,
     );
     if (problema !== null) {
       return { stdout: "", stderr: problema, exitCode: EXIT_INVARIANT };

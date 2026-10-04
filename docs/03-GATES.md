@@ -732,11 +732,14 @@ comando:
       <!-- test: python BackEnd/manage.py test ModInventory -->
 - [ ] La pantalla muestra el saldo actualizado
       <!-- verify: manual -->
+- [ ] La pantalla conserva el flujo de pago en el ambiente desplegado
+      <!-- verify: dev -->
 ```
 
 La anotación `test:` tiene dos formas que la compuerta corre y una que declara una persona: un
 comando escrito con un prefijo que el proyecto autoriza, el verbo `playwright` con la ruta del
-spec, y `verify: manual` cuando la verifica una persona. El verbo no lleva un programa: un
+spec, `verify: manual` cuando la verifica una persona y `verify: dev` cuando la persona la
+prueba en un ambiente desplegado. El verbo no lleva un programa: un
 criterio de interfaz se escribe `<!-- test: playwright tests/pos/creacion-manual.spec.ts -->` y
 la compuerta lo resuelve contra la sección `playwright:` del proyecto, de modo que del criterio
 solo viaja la ruta del spec y el programa, el navegador y su tope de tiempo salen de la
@@ -782,6 +785,22 @@ Tres decisiones lo sostienen:
    defecto que este proyecto ya pagó una vez —una sección de criterios vacía pasaba como «1
    criterio(s)» y la compuerta aprobaba sin evaluar nada—. Si no hay nada que correr, el
    veredicto lo dice.
+
+**`verify: dev` declara un ambiente, no una ejecución remota.** La persona prueba la pantalla;
+el harness no navega ni sondea esa URL. El proyecto debe declarar la referencia antes de que el
+gate acepte un criterio de ese tipo:
+
+```yaml
+verify-dev:
+  url: "https://dev.ejemplo.test" # obligatoria; HTTP(S)
+  branch: dev                     # opcional
+```
+
+Sin `verify-dev.url`, `qa-mechanical` rechaza el criterio antes de correr comandos o consultar
+un modelo. El resultado del PO debe identificar que la prueba fue en dev —por ejemplo,
+`Resultado del PO: validado en dev y conforme`— para pasar a QA. `verify: dev` se comporta como
+una validación humana para el gate mecánico y queda fuera de la integración autónoma cuando
+R-S5-006 la implemente; esta declaración no integra, despliega ni comprueba salud del ambiente.
 
 **La capacidad se declara en una sección propia, y su ausencia la apaga.** El verbo no se
 resuelve contra `test-commands` —esa lista autoriza comandos arbitrarios del ticket— sino

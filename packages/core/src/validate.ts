@@ -289,6 +289,9 @@ export function hasPlanGate(ticket: ParsedTicket): boolean {
 export function hasRecordedUserTestOutcome(ticket: ParsedTicket): boolean {
   const outcomeRe =
     /(?:resultado(?: comunicado)?(?: (?:del|por el))? po|omisi[oó]n expl[ií]cita(?: (?:y )?documentada)?(?: de pruebas)?(?: (?:del|por el))? po)\s*:\s*(.+)/i;
+  const requiresDevVerification = /<!--\s*verify\s*:\s*dev\s*-->/i.test(
+    ticket.sections["Criterios de aceptación"],
+  );
 
   for (const rawLine of meaningfulMarkdown(ticket.sections.Pruebas).split("\n")) {
     const line = stripListMarker(rawLine).trim();
@@ -296,6 +299,7 @@ export function hasRecordedUserTestOutcome(ticket: ParsedTicket): boolean {
     if (match === null) continue;
     const outcome = rstripChars((match[1] as string).trim(), " .;:-").toLowerCase();
     if (isPlaceholder(outcome, PLACEHOLDERS_WITH_DASH)) continue;
+    if (requiresDevVerification && !/\bdev\b/.test(outcome)) continue;
     return true;
   }
   return false;

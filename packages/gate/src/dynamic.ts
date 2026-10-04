@@ -43,11 +43,15 @@ export function extractCriteria(section: string): string[] {
  *       <!-- test: npx vitest run tests/api.test.ts -->
  * - [ ] La pantalla muestra el saldo actualizado
  *       <!-- verify: manual -->
+ * - [ ] La pantalla conserva el flujo de pago en desarrollo
+ *       <!-- verify: dev -->
  * ```
  *
  * Sin la segunda anotación, un criterio que nadie puede automatizar queda
  * ambiguo, y la ambigüedad se resuelve sola a favor de «seguramente está bien».
- * Declararlo manual no lo hace verificable: lo hace **explícito**.
+ * Declararlo manual o dev no lo hace verificable: lo hace **explícito**. `dev`
+ * conserva además que la persona debe validar sobre el ambiente desplegado que
+ * el proyecto declaró; no es una variante cosmética de `manual`.
  */
 export interface CriterionSpec {
   /** El texto del criterio, sin la anotación. */
@@ -56,6 +60,8 @@ export interface CriterionSpec {
   readonly command: string | null;
   /** `true` si declara que se verifica a mano. */
   readonly manual: boolean;
+  /** `true` si la verificación humana se hace en el ambiente dev declarado. */
+  readonly dev?: boolean;
 }
 
 /** Las anotaciones que puede llevar un criterio. */
@@ -79,10 +85,14 @@ export function extractCriteriaSpecs(section: string): CriterionSpec[] {
 
     let command: string | null = null;
     let manual = false;
+    let dev = false;
     const text = sinVineta
       .replace(ANOTACION_RE, (_todo, tipo: string, valor: string) => {
         if (tipo.toLowerCase() === "test") command = valor.trim();
-        else manual = true;
+        else {
+          manual = true;
+          dev = valor.trim().toLowerCase() === "dev";
+        }
         return "";
       })
       .trim();
@@ -96,12 +106,13 @@ export function extractCriteriaSpecs(section: string): CriterionSpec[] {
         ...anterior,
         command: command ?? anterior.command,
         manual: manual || anterior.manual,
+        dev: dev || anterior.dev === true,
       };
       continue;
     }
 
     if (text.length < 12) continue;
-    specs.push({ text, command, manual });
+    specs.push({ text, command, manual, dev });
   }
 
   return specs.slice(0, MAX_CRITERIA_PROPOSITIONS);
