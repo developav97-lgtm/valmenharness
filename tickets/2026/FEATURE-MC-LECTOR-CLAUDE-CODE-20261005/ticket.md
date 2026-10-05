@@ -240,9 +240,20 @@ Ninguno.
 Se implementó antes de registrar el ticket (modo directo, por su orden) y el plan se
 aprobó después, ratificándola. Commiteada el 2026-10-05 por orden del PO («Si dale»), en
 cuatro commits que pasan sus tests por separado, en este orden: `8473d74` (pieza 1,
-interfaz), `7a59a58` (pieza 2, lector), `a7796e6` (pieza 4, prefijo `claude:`) y `ee68d17`
+interfaz), `7a59a58` (pieza 2, lector), `a7796e6` (pieza 4, prefijo `claude:`) y `94ca437`
 (pieza 3, integración). La integración va al final porque la foto de consumo necesita el
-prefijo; el registro del ticket va en un quinto commit.
+prefijo; el registro del ticket va en un quinto commit. Ninguno está publicado.
+
+**Lo que el commit de integración (`94ca437`) lleva además, y que no es de este ticket:**
+se hizo como `ee68d17` y su mensaje se enmendó después, con el mismo árbol, para
+describirlo. En el mismo árbol de trabajo corría la sesión del chip `task_14cd1de3`, que
+el PO inició para corregir el desglose harness/exploración de opencode (coste de
+exploración negativo al pedir un ticket), y su corrección en `timeline.ts` y en
+`tests/timeline.test.ts` (3 tests) ya estaba editada cuando se hizo `git add` de esos
+archivos, así que entró en ese commit. El plan la excluía y se declara aquí: no se
+verificó con los criterios de este ticket. Consecuencias para el registro: `EVIDENCE-001`
+hashea el árbol **previo** a esa corrección, y la cifra de «2119 tests» es la de ese
+momento; el árbol commiteado da 2122 en verde, también en un worktree aislado.
 
 - Pieza 1, interfaz: `packages/server/web/index.html` (`pintarLineaDeTiempo`:
   `tablaDeCompuertas` se pinta con 0 sesiones y con `available: false`; el aviso nombra a
