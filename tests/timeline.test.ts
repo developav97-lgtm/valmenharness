@@ -20,7 +20,7 @@
  * Es la única forma de probar la interpretación sin depender de la base real de
  * quien ejecuta los tests, que además cambia mientras trabaja.
  */
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createRequire } from "node:module";
@@ -32,6 +32,15 @@ import {
   mensajesDelRegistroEnTexto,
   ticketDeTexto,
 } from "../packages/server/src/timeline.js";
+import { parseTicket } from "../packages/core/src/index.js";
+import { addAiUsage } from "../packages/engine/src/append.js";
+import {
+  escribirSesionDeClaude,
+  llamada,
+  mensajeDelAsistente,
+  mensajeDelUsuario,
+  texto,
+} from "./helpers/claude.js";
 import { writeFixtureTicket } from "./helpers/fixtures.js";
 
 const requerir = createRequire(import.meta.url);
@@ -566,6 +575,502 @@ describe("las sesiones de codex", () => {
   });
 });
 
+describe("las sesiones de Claude Code", () => {
+  const TICKET = "IMPROVEMENT-POS-MENSAJE-ORDEN-NO-FACTURADA-20261005";
+  const OTRO = "BUGFIX-RESTAURANTE-BONIFICADO-DESMARQUE-20261005";
+  const SESION = "9d55ce3b-5c13-4e93-af45-77a4977bd5c6";
+
+  /**
+   * Una sesión que pide el ticket, lo mueve dos veces y lo cierra, con números que
+   * se suman a mano: dos mensajes únicos, el primero repetido en tres líneas.
+   */
+  function lineasDeTrabajo(root: string, ticket: string, opciones: { modelo?: string | null } = {}) {
+    return [
+      mensajeDelUsuario(`Trabaja el ticket ${ticket}`, { cwd: root }),
+      ...mensajeDelAsistente(
+        {
+          id: "msg_1",
+          ...(opciones.modelo === undefined ? {} : { modelo: opciones.modelo }),
+          uso: { input: 10, creacion: 1000, lectura: 50_000, salida: 400 },
+          bloques: [
+            texto("Lo muevo."),
+            llamada("t1", "mcp__valmen__mover_ticket", { id: ticket, to: "analyzed" }),
+            llamada("t2", "mcp__valmen__evaluar_compuerta", { id: ticket, gate: "analysis" }),
+          ],
+        },
+        { cwd: root },
+      ),
+      ...mensajeDelAsistente(
+        {
+          id: "msg_2",
+          ...(opciones.modelo === undefined ? {} : { modelo: opciones.modelo }),
+          uso: { input: 20, creacion: 2000, lectura: 60_000, salida: 600 },
+          bloques: [texto("Listo.")],
+        },
+        { cwd: root },
+      ),
+    ];
+  }
+
+  it("sin base de opencode, la línea del ticket trae la sesión con sus tokens y sin coste", async () => {
+    escribirSesionDeClaude(lab, {
+      root: "/proyecto",
+      id: SESION,
+      lineas: lineasDeTrabajo("/proyecto", TICKET),
+    });
+
+    const { leerLineaDeTiempo } = await cargar();
+    const linea = leerLineaDeTiempo("/proyecto", { home: lab, ticketId: TICKET });
+
+    expect(linea?.sessions).toHaveLength(1);
+    const sesion = linea?.sessions[0];
+    expect(sesion?.source).toBe("claude");
+    expect(sesion?.id).toBe(SESION);
+    expect(sesion?.model).toBe("claude-sonnet-5-5");
+    // El proveedor hace falta: `guardarFotoEnTicket` descarta lo que no tiene modelo.
+    expect(sesion?.provider).toBe("anthropic");
+    // Y el coste no se inventa: el plan Max no tiene precio por token. Ni cero.
+    expect(sesion?.costUsd).toBeNull();
+    expect(sesion?.inputTokens).toBe(10 + 1000 + 20 + 2000);
+    expect(sesion?.cacheReadTokens).toBe(50_000 + 60_000);
+    expect(sesion?.outputTokens).toBe(400 + 600);
+    // El razonamiento ya va dentro de la salida: declararlo otra vez lo sumaría doble.
+    expect(sesion?.reasoningTokens).toBe(0);
+    expect(sesion?.intervenciones).toBe(2);
+    expect(sesion?.mensajes).toBe(2);
+    expect(sesion?.mensajesDelRegistro).toBe(1);
+
+    expect(linea?.sesionesSinCoste).toBe(1);
+    expect(linea?.totalCostUsd).toBe(0);
+    expect(linea?.totalTokens).toEqual({
+      input: 3030,
+      output: 1000,
+      reasoning: 0,
+      cacheRead: 110_000,
+    });
+    // «1 de 2 mensajes tocaron el registro»: lo que sí se puede afirmar sin coste.
+    expect(linea?.desglose.harnessMensajes).toBe(1);
+    expect(linea?.desglose.exploracionMensajes).toBe(1);
+  });
+
+  it("con base de opencode, suma a sus sesiones y no pisa las que ya había", async () => {
+    if (sqlite() === null) return;
+    // Una sesión de opencode que trabajó **este** ticket y una que trabajó otro.
+    escribirBase({
+      directorio: "/proyecto",
+      sesiones: [
+        {
+          id: "ses_mia",
+          title: "Implementación",
+          cost: 0.05,
+          mensajes: [
+            { id: "m1", data: mensaje(0.05), partes: [{ tool: "valmen_mover_ticket", status: "completed" }] },
+          ],
+        },
+        {
+          id: "ses_ajena",
+          title: "Otra cosa",
+          cost: 0.5,
+          mensajes: [
+            { id: "m2", data: mensaje(0.5), partes: [{ tool: "valmen_mover_ticket", status: "completed" }] },
+          ],
+        },
+      ],
+    });
+    const db = new (sqlite() as NonNullable<ReturnType<typeof sqlite>>).DatabaseSync(
+      join(lab, ".local", "share", "opencode", "opencode.db"),
+    );
+    const conArgumentos = (id: string): string =>
+      JSON.stringify({
+        type: "tool",
+        tool: "valmen_mover_ticket",
+        state: { status: "completed", time: { start: 1 }, input: { id } },
+      });
+    db.prepare("UPDATE part SET data = ? WHERE message_id = ?").run(conArgumentos(TICKET), "m1");
+    db.prepare("UPDATE part SET data = ? WHERE message_id = ?").run(conArgumentos(OTRO), "m2");
+    db.close();
+
+    // Lo que se comprueba es **lo que Claude Code agrega** al desglose, midiendo
+    // antes y después: el reparto de opencode ya está acotado a las sesiones del
+    // ticket y se prueba más abajo.
+    const { leerLineaDeTiempo } = await cargar();
+    const antes = leerLineaDeTiempo("/proyecto", { home: lab, ticketId: TICKET });
+
+    escribirSesionDeClaude(lab, {
+      root: "/proyecto",
+      id: SESION,
+      lineas: lineasDeTrabajo("/proyecto", TICKET),
+    });
+    escribirSesionDeClaude(lab, {
+      root: "/proyecto",
+      id: "de-otro-ticket",
+      lineas: lineasDeTrabajo("/proyecto", OTRO),
+    });
+
+    const linea = leerLineaDeTiempo("/proyecto", { home: lab, ticketId: TICKET });
+
+    expect(linea?.sessions.map((s) => `${s.source}:${s.id}`).sort()).toEqual([
+      `claude:${SESION}`,
+      "opencode:ses_mia",
+    ]);
+    // El coste de opencode es el suyo; el de Claude Code no existe y no suma nada.
+    expect(linea?.totalCostUsd).toBeCloseTo(0.05, 6);
+    expect(linea?.sesionesSinCoste).toBe(1);
+    expect(linea?.totalTokens.cacheRead).toBe(110_000);
+    // Y los mensajes de Claude Code entran al desglose sin inventarle coste: de sus
+    // dos mensajes, uno tocó el registro y uno no.
+    expect(linea!.desglose.harnessMensajes - antes!.desglose.harnessMensajes).toBe(1);
+    expect(linea!.desglose.exploracionMensajes - antes!.desglose.exploracionMensajes).toBe(1);
+    expect(linea!.desglose.harnessUsd).toBeCloseTo(antes!.desglose.harnessUsd, 9);
+  });
+
+  /**
+   * `escribirBase` deja las llamadas al harness sin argumentos: acá se les pone el
+   * ticket que nombran, que es lo que decide a qué ticket pertenece la sesión.
+   */
+  function nombrarTicketEnLlamadas(ticketPorMensaje: Record<string, string>): void {
+    const modulo = sqlite();
+    if (modulo === null) return;
+    const db = new modulo.DatabaseSync(join(lab, ".local", "share", "opencode", "opencode.db"));
+    for (const [messageId, ticket] of Object.entries(ticketPorMensaje)) {
+      db.prepare("UPDATE part SET data = ? WHERE message_id = ?").run(
+        JSON.stringify({
+          type: "tool",
+          tool: "valmen_mover_ticket",
+          state: { status: "completed", time: { start: 1 }, input: { id: ticket } },
+        }),
+        messageId,
+      );
+    }
+    db.close();
+  }
+
+  it("el desglose del ticket no arrastra el reparto de una sesión de opencode de otro ticket", async () => {
+    if (sqlite() === null) return;
+    // Solo hay sesiones de opencode de **otro** ticket, con llamadas al harness y
+    // coste; las del ticket pedido son de Claude Code y no traen coste.
+    escribirBase({
+      directorio: "/proyecto",
+      sesiones: [
+        {
+          id: "ses_ajena",
+          title: "Otra cosa",
+          cost: 0.75,
+          mensajes: [
+            { id: "ma1", data: mensaje(0.5), partes: [{ tool: "valmen_mover_ticket", status: "completed" }] },
+            { id: "ma2", data: mensaje(0.25), partes: [{ tool: "read", status: "completed" }] },
+          ],
+        },
+      ],
+    });
+    nombrarTicketEnLlamadas({ ma1: OTRO });
+    escribirSesionDeClaude(lab, {
+      root: "/proyecto",
+      id: SESION,
+      lineas: lineasDeTrabajo("/proyecto", TICKET),
+    });
+
+    const { leerLineaDeTiempo } = await cargar();
+    const linea = leerLineaDeTiempo("/proyecto", { home: lab, ticketId: TICKET });
+
+    expect(linea?.sessions.map((s) => `${s.source}:${s.id}`)).toEqual([`claude:${SESION}`]);
+    expect(linea?.totalCostUsd).toBe(0);
+    // Ni el coste ni los mensajes de la sesión ajena entran: la exploración no puede
+    // salir negativa por restarle al total del ticket el harness de todo el proyecto.
+    expect(linea?.desglose.harnessUsd).toBe(0);
+    expect(linea?.desglose.exploracionUsd).toBeGreaterThanOrEqual(0);
+    expect(linea?.desglose.costeNoAtribuibleUsd).toBe(0);
+    // Los mensajes son los de la sesión de Claude Code: uno tocó el registro y uno no.
+    expect(linea?.desglose.harnessMensajes).toBe(1);
+    expect(linea?.desglose.exploracionMensajes).toBe(1);
+
+    // Sin pedir el ticket el reparto sigue siendo el del proyecto entero: la
+    // atribución acota lo que se pide por ticket, no lo que se lee.
+    const proyecto = leerLineaDeTiempo("/proyecto", { home: lab });
+    expect(proyecto?.desglose.harnessUsd).toBeCloseTo(0.5, 9);
+    expect(proyecto?.desglose.exploracionUsd).toBeCloseTo(0.25, 9);
+  });
+
+  it("con una sesión de opencode del ticket y otra ajena, el desglose suma solo la del ticket", async () => {
+    if (sqlite() === null) return;
+    escribirBase({
+      directorio: "/proyecto",
+      sesiones: [
+        {
+          id: "ses_mia",
+          title: "Implementación",
+          cost: 0.08,
+          mensajes: [
+            { id: "m1", data: mensaje(0.05), partes: [{ tool: "valmen_mover_ticket", status: "completed" }] },
+            { id: "m3", data: mensaje(0.03), partes: [{ tool: "read", status: "completed" }] },
+          ],
+        },
+        {
+          id: "ses_ajena",
+          title: "Otra cosa",
+          cost: 0.75,
+          mensajes: [
+            { id: "ma1", data: mensaje(0.5), partes: [{ tool: "valmen_mover_ticket", status: "completed" }] },
+            { id: "ma2", data: mensaje(0.25), partes: [{ tool: "read", status: "completed" }] },
+          ],
+        },
+      ],
+    });
+    nombrarTicketEnLlamadas({ m1: TICKET, ma1: OTRO });
+    escribirSesionDeClaude(lab, {
+      root: "/proyecto",
+      id: SESION,
+      lineas: lineasDeTrabajo("/proyecto", TICKET),
+    });
+
+    const { leerLineaDeTiempo } = await cargar();
+    const linea = leerLineaDeTiempo("/proyecto", { home: lab, ticketId: TICKET });
+
+    expect(linea?.sessions.map((s) => `${s.source}:${s.id}`).sort()).toEqual([
+      `claude:${SESION}`,
+      "opencode:ses_mia",
+    ]);
+    expect(linea?.totalCostUsd).toBeCloseTo(0.08, 9);
+    // El coste de la sesión del ticket se reparte entre sus dos mensajes: 0.05 del
+    // harness y 0.03 de exploración. Nada de la sesión ajena.
+    expect(linea?.desglose.harnessUsd).toBeCloseTo(0.05, 9);
+    expect(linea?.desglose.exploracionUsd).toBeCloseTo(0.03, 9);
+    // Un mensaje del harness y uno de exploración en opencode, y lo mismo en Claude Code.
+    expect(linea?.desglose.harnessMensajes).toBe(2);
+    expect(linea?.desglose.exploracionMensajes).toBe(2);
+  });
+
+  it("sin base de opencode, no tapa a codex ni a Hermes: las fuentes se unen", async () => {
+    // Antes la primera fuente que daba algo —codex— dejaba a las demás fuera, y con
+    // Claude Code como agente de los tickets eso escondería sus sesiones.
+    const fecha = new Date().toISOString().slice(0, 10);
+    const [anio, mes, dia] = fecha.split("-") as [string, string, string];
+    const directorio = join(lab, ".codex", "sessions", anio, mes, dia);
+    mkdirSync(directorio, { recursive: true });
+    writeFileSync(
+      join(directorio, `rollout-${fecha}T10-00-00-codex-uno.jsonl`),
+      [
+        JSON.stringify({
+          type: "session_meta",
+          payload: { id: "codex-uno", timestamp: `${fecha}T10:00:00.000Z`, cwd: "/proyecto" },
+        }),
+        JSON.stringify({ payload: { text: `cerré ${TICKET}` } }),
+        JSON.stringify({
+          type: "event_msg",
+          payload: {
+            type: "token_count",
+            info: {
+              total_token_usage: {
+                input_tokens: 2000,
+                cached_input_tokens: 1000,
+                output_tokens: 100,
+                reasoning_output_tokens: 10,
+              },
+            },
+          },
+        }),
+      ].join("\n"),
+      "utf8",
+    );
+    escribirSesionDeClaude(lab, {
+      root: "/proyecto",
+      id: SESION,
+      lineas: lineasDeTrabajo("/proyecto", TICKET),
+    });
+
+    const { leerLineaDeTiempo } = await cargar();
+    const linea = leerLineaDeTiempo("/proyecto", { home: lab, ticketId: TICKET });
+
+    expect(linea?.sessions.map((s) => s.source).sort()).toEqual(["claude", "codex"]);
+    expect(linea?.sesionesSinCoste).toBe(2);
+    expect(linea?.totalCostUsd).toBe(0);
+    expect(linea?.totalTokens.input).toBe(1000 + 3030);
+  });
+
+  it("una sesión compartida aparece marcada y no entra en los totales", async () => {
+    escribirSesionDeClaude(lab, {
+      root: "/proyecto",
+      id: SESION,
+      lineas: [
+        ...lineasDeTrabajo("/proyecto", TICKET),
+        ...mensajeDelAsistente(
+          {
+            id: "msg_3",
+            bloques: [llamada("t9", "mcp__valmen__mover_ticket", { id: OTRO, to: "analyzed" })],
+          },
+          { cwd: "/proyecto" },
+        ),
+      ],
+    });
+
+    const { leerLineaDeTiempo } = await cargar();
+    const linea = leerLineaDeTiempo("/proyecto", { home: lab, ticketId: TICKET });
+
+    expect(linea?.sessions).toHaveLength(1);
+    expect(linea?.sessions[0]?.reparto?.map((t) => t.id).sort()).toEqual([OTRO, TICKET].sort());
+    expect(linea?.sesionesCompartidas).toBe(1);
+    expect(linea?.totalTokens).toEqual({ input: 0, output: 0, reasoning: 0, cacheRead: 0 });
+    expect(linea?.desglose.harnessMensajes).toBe(0);
+  });
+
+  describe("guardar el consumo en el ticket", () => {
+    const paths = () => ({ root: lab, ticketsDir: "tickets" });
+
+    function consumo(): Record<string, unknown>[] {
+      const ruta = join(lab, "tickets", "2026", TICKET, "ticket.md");
+      return (parseTicket(readFileSync(ruta, "utf8")).blocks["Consumo de IA"] ?? []) as Record<
+        string,
+        unknown
+      >[];
+    }
+
+    it("escribe la sesión con `claude:<id>`, el modelo con su proveedor y los tokens medidos", () => {
+      writeFixtureTicket(lab, { id: TICKET, type: "IMPROVEMENT", module: "POS" });
+      escribirSesionDeClaude(lab, {
+        root: lab,
+        id: SESION,
+        lineas: lineasDeTrabajo(lab, TICKET),
+      });
+
+      const foto = guardarFotoEnTicket(paths(), TICKET, { home: lab });
+
+      expect(foto?.entradas).toHaveLength(1);
+      const [entrada] = consumo();
+      expect(entrada?.["source"]).toBe(`claude:${SESION}`);
+      expect(entrada?.["session_reference"]).toBe(SESION);
+      expect(entrada?.["model"]).toBe("anthropic/claude-sonnet-5-5");
+      expect(entrada?.["input_tokens"]).toBe(3030);
+      expect(entrada?.["output_tokens"]).toBe(1000);
+      // El total es entrada + salida, sin la caché leída: la misma regla que el resto.
+      expect(entrada?.["total_tokens"]).toBe(4030);
+      // Sin coste en dólares: el campo queda en `null`, que no es cero.
+      expect(entrada?.["estimated_cost_usd"]).toBeNull();
+      expect(entrada?.["confidence"]).toBe("high");
+      const notas = String(entrada?.["notes"]);
+      expect(notas).toContain("suscripción");
+      expect(notas).toContain("creación de caché");
+      expect(notas).toContain("110000");
+      expect(notas).not.toContain("Razonamiento 0");
+    });
+
+    it("no duplica una sesión que el ticket ya tiene, aunque la registraran a mano", () => {
+      // El caso real: el ticket ya tenía `CONSUMO-001`, registrado a mano con fuente
+      // `manual:` y la misma referencia de sesión.
+      writeFixtureTicket(lab, { id: TICKET, type: "IMPROVEMENT", module: "POS" });
+      addAiUsage({
+        paths: paths(),
+        ticketId: TICKET,
+        source: "manual:claude-code-transcripcion-9d55ce3b",
+        confidence: "high",
+        sessionReference: SESION,
+        model: "anthropic/claude-sonnet-5-5",
+        inputTokens: "10963091",
+        outputTokens: "91021",
+        totalTokens: "11054112",
+      });
+      escribirSesionDeClaude(lab, {
+        root: lab,
+        id: SESION,
+        lineas: lineasDeTrabajo(lab, TICKET),
+      });
+
+      const foto = guardarFotoEnTicket(paths(), TICKET, { home: lab });
+
+      expect(foto?.entradas).toEqual([]);
+      expect(foto?.detalle).toContain("0 sesión(es) nuevas de 1");
+      expect(foto?.detalle).toContain("1 ya estaban registradas");
+      expect(consumo()).toHaveLength(1);
+      expect(consumo()[0]?.["source"]).toBe("manual:claude-code-transcripcion-9d55ce3b");
+    });
+
+    it("volver a tomar la foto no repite lo ya escrito", () => {
+      writeFixtureTicket(lab, { id: TICKET, type: "IMPROVEMENT", module: "POS" });
+      escribirSesionDeClaude(lab, {
+        root: lab,
+        id: SESION,
+        lineas: lineasDeTrabajo(lab, TICKET),
+      });
+
+      guardarFotoEnTicket(paths(), TICKET, { home: lab });
+      const segunda = guardarFotoEnTicket(paths(), TICKET, { home: lab });
+
+      expect(segunda?.entradas).toEqual([]);
+      expect(consumo()).toHaveLength(1);
+    });
+
+    it("una sesión sin modelo no se registra: no se le inventa uno", () => {
+      writeFixtureTicket(lab, { id: TICKET, type: "IMPROVEMENT", module: "POS" });
+      escribirSesionDeClaude(lab, {
+        root: lab,
+        id: SESION,
+        lineas: lineasDeTrabajo(lab, TICKET, { modelo: null }),
+      });
+
+      const foto = guardarFotoEnTicket(paths(), TICKET, { home: lab });
+
+      expect(foto?.entradas).toEqual([]);
+      expect(foto?.detalle).toContain("0 sesión(es) nuevas de 1");
+      expect(consumo()).toEqual([]);
+    });
+
+    it("una sesión compartida se registra sin números y con la lista de tickets", () => {
+      writeFixtureTicket(lab, { id: TICKET, type: "IMPROVEMENT", module: "POS" });
+      escribirSesionDeClaude(lab, {
+        root: lab,
+        id: SESION,
+        lineas: [
+          ...lineasDeTrabajo(lab, TICKET),
+          ...mensajeDelAsistente(
+            {
+              id: "msg_3",
+              bloques: [llamada("t9", "mcp__valmen__mover_ticket", { id: OTRO, to: "analyzed" })],
+            },
+            { cwd: lab },
+          ),
+        ],
+      });
+
+      const foto = guardarFotoEnTicket(paths(), TICKET, { home: lab });
+
+      expect(foto?.entradas).toHaveLength(1);
+      const [entrada] = consumo();
+      expect(entrada?.["source"]).toBe(`claude:${SESION}`);
+      expect(entrada?.["input_tokens"]).toBeNull();
+      expect(entrada?.["output_tokens"]).toBeNull();
+      expect(entrada?.["model"]).toBeNull();
+      expect(String(entrada?.["notes"])).toContain("compartida");
+      expect(String(entrada?.["notes"])).toContain(OTRO);
+    });
+
+    it("con varios modelos o subagentes lo dice en las notas y registra el dominante", () => {
+      writeFixtureTicket(lab, { id: TICKET, type: "IMPROVEMENT", module: "POS" });
+      escribirSesionDeClaude(lab, {
+        root: lab,
+        id: SESION,
+        lineas: lineasDeTrabajo(lab, TICKET),
+        subagentes: [
+          mensajeDelAsistente(
+            {
+              id: "msg_sub",
+              modelo: "claude-haiku-4-5",
+              uso: { input: 1, creacion: 10, lectura: 100, salida: 5 },
+              bloques: [texto("exploro")],
+            },
+            { cwd: lab },
+          ),
+        ],
+      });
+
+      guardarFotoEnTicket(paths(), TICKET, { home: lab });
+
+      const [entrada] = consumo();
+      expect(entrada?.["model"]).toBe("anthropic/claude-sonnet-5-5");
+      expect(String(entrada?.["notes"])).toContain("claude-haiku-4-5 (1 mensajes)");
+      expect(String(entrada?.["notes"])).toContain("1 subagente(s)");
+    });
+  });
+});
+
 describe("las sesiones de opencode 2.0.16 (session_v2)", () => {
   /**
    * Escribe la forma v2: la sesión en `session_v2` y sus mensajes en
@@ -725,6 +1230,77 @@ describe("las sesiones de opencode 2.0.16 (session_v2)", () => {
     expect(linea?.sessions).toHaveLength(1);
     expect(linea?.desglose.harnessUsd).toBeCloseTo(0.02, 6);
     expect(linea?.sessions[0]?.intervenciones).toBe(1);
+  });
+
+  it("el desglose del ticket suma solo sus sesiones v2 y no las de otro ticket", async () => {
+    const ticket = "BUGFIX-POS-UNO-20260101";
+    const otro = "BUGFIX-POS-DOS-20260102";
+    // Una sesión v2 de **otro** ticket con llamadas al harness y coste, una del
+    // ticket pedido, y una sesión de Claude Code del ticket, sin coste.
+    escribirBaseV2({
+      directorio: "/proyecto",
+      sesiones: [
+        {
+          id: "ses_v2_ajena",
+          title: `Ticket: ${otro}`,
+          cost: 0.5,
+          mensajes: [
+            { tipo: "user", data: { text: `Ticket: ${otro}. Implementá el plan.` } },
+            {
+              tipo: "assistant",
+              data: mensajeV2(0.3, [toolV2("valmen_mover_ticket", { id: otro })]),
+            },
+            { tipo: "assistant", data: mensajeV2(0.2, [{ type: "text", text: "listo" }]) },
+          ],
+        },
+        {
+          id: "ses_v2_propia",
+          title: `Ticket: ${ticket}`,
+          cost: 0.06,
+          mensajes: [
+            {
+              tipo: "assistant",
+              data: mensajeV2(0.04, [toolV2("valmen_mover_ticket", { id: ticket })]),
+            },
+            { tipo: "assistant", data: mensajeV2(0.02, [{ type: "text", text: "listo" }]) },
+          ],
+        },
+      ],
+    });
+    escribirSesionDeClaude(lab, {
+      root: "/proyecto",
+      id: "claude-v2-del-ticket",
+      lineas: [
+        mensajeDelUsuario(`Trabaja el ticket ${ticket}`, { cwd: "/proyecto" }),
+        ...mensajeDelAsistente(
+          {
+            id: "msg_1",
+            bloques: [llamada("t1", "mcp__valmen__mover_ticket", { id: ticket, to: "analyzed" })],
+          },
+          { cwd: "/proyecto" },
+        ),
+        ...mensajeDelAsistente(
+          { id: "msg_2", bloques: [texto("Listo.")] },
+          { cwd: "/proyecto" },
+        ),
+      ],
+    });
+
+    const { leerLineaDeTiempo } = await cargar();
+    const linea = leerLineaDeTiempo("/proyecto", { home: lab, ticketId: ticket });
+
+    expect(linea?.sessions.map((s) => `${s.source}:${s.id}`).sort()).toEqual([
+      "claude:claude-v2-del-ticket",
+      "opencode:ses_v2_propia",
+    ]);
+    expect(linea?.totalCostUsd).toBeCloseTo(0.06, 9);
+    // Del coste del ticket: 0.04 en el mensaje del harness y 0.02 en el otro. Nada
+    // de los 0.5 de la sesión ajena.
+    expect(linea?.desglose.harnessUsd).toBeCloseTo(0.04, 9);
+    expect(linea?.desglose.exploracionUsd).toBeCloseTo(0.02, 9);
+    // Un mensaje del harness y uno de exploración en la v2, y lo mismo en Claude Code.
+    expect(linea?.desglose.harnessMensajes).toBe(2);
+    expect(linea?.desglose.exploracionMensajes).toBe(2);
   });
 
   it("una sesión presente en session y en session_v2 aparece una sola vez", async () => {

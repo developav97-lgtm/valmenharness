@@ -4625,12 +4625,24 @@
           0,
         );
 
+        // Las llamadas al registro de las sesiones de Claude Code, que no entran en
+        // `datos.intervenciones` (esa lista es por llamada y con coste, y Claude
+        // Code no guarda el coste de cada mensaje). Una compartida no se suma: su
+        // trabajo es de varios tickets.
+        const llamadasDeClaude = sesiones
+          .filter((s) => s.source === "claude" && s.reparto === undefined)
+          .reduce((suma, s) => suma + s.intervenciones, 0);
+
         const resumen = el("div", undefined, "meta");
         resumen.append(
           el("span", `coste $${coste.toFixed(6)}`, "etiqueta"),
           el("span", `${(tokens / 1e6).toFixed(1)}M tokens`, "etiqueta"),
           el("span", `${sesiones.length} sesión(es)`, "etiqueta"),
-          el("span", `${datos.intervenciones.length} intervención(es) sobre el registro`, "etiqueta"),
+          el(
+            "span",
+            `${datos.intervenciones.length + llamadasDeClaude} intervención(es) sobre el registro`,
+            "etiqueta",
+          ),
         );
         // El costo de decidir también es costo del ticket: las compuertas que el
         // harness pagó van al total, separadas para que se lea qué fue decisión
@@ -4659,7 +4671,10 @@
             el(
               "span",
               `${datos.sesionesCompartidas} compartida(s) entre varios tickets ` +
-                `($${(datos.costeCompartidoUsd ?? 0).toFixed(4)} sin sumar)`,
+                // Un coste cero que no existe —suscripción— se leería como «gratis».
+                ((datos.costeCompartidoUsd ?? 0) > 0
+                  ? `($${datos.costeCompartidoUsd.toFixed(4)} sin sumar)`
+                  : "(sin sumar)"),
               "etiqueta",
             ),
           );
@@ -4696,7 +4711,17 @@
                 ? sesion.agent || "—"
                 : `${sesion.agent || "—"} · compartida entre ${cuantos} tickets`,
             ),
-            el("td", sesion.model === "" ? "—" : sesion.model, "id"),
+            el(
+              "td",
+              sesion.model === ""
+                ? "—"
+                : // Una sesión con subagentes o con un cambio de modelo trae varios:
+                  // `model` es el que más produjo y el resto se cuenta.
+                  (sesion.modelos ?? []).length > 1
+                  ? `${sesion.model} (+${sesion.modelos.length - 1})`
+                  : sesion.model,
+              "id",
+            ),
             el("td", `${(suyos / 1e6).toFixed(2)}M`, "id"),
             el(
               "td",
@@ -4720,11 +4745,17 @@
         }
 
         if (datos.intervenciones.length === 0) {
+          // Claude Code cuenta sus llamadas al registro una por una, pero no guarda
+          // el coste de cada mensaje: sus llamadas están en la fila de la sesión y
+          // no en esta lista. Decir que «ninguna llamó» sería falso.
           zona.append(
             el(
               "div",
-              "Ninguna de esas sesiones llamó a una herramienta del registro desde acá: " +
-                "el trabajo se hizo por el CLI o desde otro agente.",
+              llamadasDeClaude > 0
+                ? `Las sesiones de Claude Code hicieron ${llamadasDeClaude} llamada(s) al ` +
+                    "registro; no guardan el coste por llamada, así que se cuentan por sesión."
+                : "Ninguna de esas sesiones llamó a una herramienta del registro desde acá: " +
+                    "el trabajo se hizo por el CLI o desde otro agente.",
               "resultado",
             ),
           );

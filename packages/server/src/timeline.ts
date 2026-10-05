@@ -27,6 +27,7 @@ import { join } from "node:path";
 import { parseTicket } from "@valmen/core";
 import { type RegistryPaths, addAiUsage, findTicket } from "@valmen/engine";
 
+import { leerSesionesDeClaude, type SesionDeClaude } from "./claude.js";
 import { leerSesionesDeCodex } from "./codex.js";
 import { leerSesionesDeHermes, HERRAMIENTAS_DE_LECTURA, HERRAMIENTAS_QUE_ESCRIBEN } from "./hermes.js";
 
@@ -93,7 +94,7 @@ export interface SesionDeAgente {
    * ticket se puede hacer desde codex. El dato se muestra porque una sesión sin
    * coste solo se entiende sabiendo de dónde viene.
    */
-  readonly source: "opencode" | "codex" | "hermes";
+  readonly source: "opencode" | "codex" | "claude" | "hermes";
   readonly agent: string;
   readonly provider: string;
   readonly model: string;
@@ -145,6 +146,20 @@ export interface SesionDeAgente {
    */
   readonly mensajes?: number;
   readonly mensajesDelRegistro?: number;
+  /**
+   * Los modelos que intervinieron, cuando la sesión trae más de uno.
+   *
+   * Una sesión de Claude Code puede cambiar de modelo a mitad o llevar subagentes
+   * en otro, y `model` es solo el que más produjo. La lista es lo que permite decir
+   * el resto al registrar el consumo, en vez de adjudicarle todo al primero.
+   */
+  readonly modelos?: readonly {
+    readonly model: string;
+    readonly mensajes: number;
+    readonly outputTokens: number;
+  }[];
+  /** Subagentes cuyo gasto ya está sumado en esta sesión. */
+  readonly subagentes?: number;
   /**
    * Los tickets que sirvió la sesión, cuando sirvió a más de uno.
    *
@@ -322,6 +337,18 @@ interface Llamada {
 }
 
 /**
+ * Lo que una sesión de opencode aporta al desglose harness/exploración.
+ *
+ * Se lleva por sesión y se suma al final: el filtro por ticket decide qué sesiones
+ * quedan, y solo esas cuentan.
+ */
+interface AgregadoDeSesion {
+  mensajes: number;
+  mensajesDelHarness: number;
+  costeHarness: number;
+}
+
+/**
  * Lee la línea de tiempo de un proyecto.
  *
  * `directory` es la carpeta del proyecto tal como opencode la registró: la raíz del
@@ -341,19 +368,25 @@ export function leerLineaDeTiempo(
 
   if (db === null) {
     // Sin base de opencode puede haber igual consumo: un proyecto que trabaja
-    // desde codex o desde Hermes y nada más. Devolver `null` ahí borraría su línea
-    // de tiempo entera, que es lo que pasaba antes de que existieran estos lectores.
-    const sesiones = leerSesionesDeCodex(directory, {
+    // desde codex, desde Claude Code o desde Hermes y nada más. Devolver `null` ahí
+    // borraría su línea de tiempo entera, que es lo que pasaba antes de que
+    // existieran estos lectores.
+    //
+    // Se leen **todos** y se unen: con Claude Code como agente de los tickets, un
+    // proyecto con historial de codex y sesiones nuevas de Claude no puede mostrar
+    // solo las del primero que encuentre.
+    const opciones = {
       ...(options.home === undefined ? {} : { home: options.home }),
       ...(options.ticketId === undefined ? {} : { ticketId: options.ticketId }),
-    });
-    if (sesiones.length > 0) return lineaSoloDeCodex(sesiones, directory);
-
-    const deHermes = leerSesionesDeHermes(directory, {
-      ...(options.home === undefined ? {} : { home: options.home }),
-      ...(options.ticketId === undefined ? {} : { ticketId: options.ticketId }),
-    });
-    return deHermes.length === 0 ? null : lineaSoloDeHermes(deHermes, directory);
+    };
+    const deCodex = leerSesionesDeCodex(directory, opciones);
+    const deClaude = leerSesionesDeClaude(directory, opciones);
+    const deHermes = leerSesionesDeHermes(directory, opciones);
+    return unirLineas([
+      ...(deCodex.length === 0 ? [] : [lineaSoloDeCodex(deCodex, directory)]),
+      ...(deClaude.length === 0 ? [] : [lineaSoloDeClaude(deClaude, directory)]),
+      ...(deHermes.length === 0 ? [] : [lineaSoloDeHermes(deHermes, directory)]),
+    ]);
   }
 
   try {
@@ -403,6 +436,115 @@ function lineaSoloDeCodex(
       harnessMensajes: 0,
       exploracionMensajes: 0,
       costeNoAtribuibleUsd: 0,
+    },
+  };
+}
+
+/**
+ * Una sesión de Claude Code, como la muestra la línea de tiempo.
+ *
+ * El proveedor es `anthropic` y no es un adorno: `guardarFotoEnTicket` descarta las
+ * sesiones sin modelo y arma `proveedor/modelo` con los dos. El coste es `null`
+ * —el plan Max es una suscripción, no hay precio por token— y el razonamiento queda
+ * en cero porque ya va dentro de la salida.
+ */
+function sesionDeClaude(sesion: SesionDeClaude): SesionDeAgente {
+  return {
+    id: sesion.id,
+    title: sesion.title === "" ? "Sesión de Claude Code" : sesion.title,
+    source: "claude",
+    agent: "claude-code",
+    provider: "anthropic",
+    model: sesion.model,
+    costUsd: null,
+    inputTokens: sesion.inputTokens,
+    outputTokens: sesion.outputTokens,
+    reasoningTokens: 0,
+    cacheReadTokens: sesion.cacheReadTokens,
+    startedAt: sesion.startedAt,
+    intervenciones: sesion.intervenciones,
+    fallidas: sesion.fallidas,
+    mensajes: sesion.mensajes,
+    mensajesDelRegistro: sesion.mensajesDelRegistro,
+    modelos: sesion.modelos,
+    subagentes: sesion.subagentes,
+    // El reparto son los tickets que la sesión **trabajó**: el lector ya dejó solo
+    // esos. Una compartida queda fuera de los totales, como las de Hermes.
+    ...(sesion.compartida ? { reparto: sesion.tickets } : {}),
+  };
+}
+
+/** La línea de tiempo de un proyecto del que solo hay sesiones de Claude Code. */
+function lineaSoloDeClaude(
+  sesiones: readonly SesionDeClaude[],
+  directory: string,
+): LineaDeTiempo {
+  const propias = sesiones.filter((s) => !s.compartida);
+  return {
+    source: `claude:${directory}`,
+    sessions: sesiones.map(sesionDeClaude),
+    intervenciones: [],
+    totalCostUsd: 0,
+    sesionesSinCoste: sesiones.length,
+    sesionesCompartidas: sesiones.length - propias.length,
+    costeCompartidoUsd: 0,
+    totalTokens: {
+      input: propias.reduce((suma, s) => suma + s.inputTokens, 0),
+      output: propias.reduce((suma, s) => suma + s.outputTokens, 0),
+      reasoning: 0,
+      cacheRead: propias.reduce((suma, s) => suma + s.cacheReadTokens, 0),
+    },
+    desglose: {
+      harnessUsd: 0,
+      exploracionUsd: 0,
+      // Sin coste por mensaje no hay nada que repartir en dólares; lo que sí se
+      // afirma es cuántos mensajes tocaron el registro y cuántos no.
+      harnessMensajes: propias.reduce((suma, s) => suma + s.mensajesDelRegistro, 0),
+      exploracionMensajes: propias.reduce(
+        (suma, s) => suma + (s.mensajes - s.mensajesDelRegistro),
+        0,
+      ),
+      costeNoAtribuibleUsd: 0,
+    },
+  };
+}
+
+/**
+ * Une las líneas de tiempo de varios agentes cuando no hay base de opencode.
+ *
+ * Con una sola devuelve esa misma, sin tocarla; con varias suma sesiones, totales y
+ * desglose. `null` solo cuando no hay ninguna: es «no hay datos», que la pantalla
+ * distingue de un cero.
+ */
+function unirLineas(lineas: readonly LineaDeTiempo[]): LineaDeTiempo | null {
+  const [primera, ...resto] = lineas;
+  if (primera === undefined) return null;
+  if (resto.length === 0) return primera;
+
+  const suma = (elegir: (linea: LineaDeTiempo) => number): number =>
+    lineas.reduce((total, linea) => total + elegir(linea), 0);
+  return {
+    source: lineas.map((linea) => linea.source).join(" + "),
+    sessions: lineas
+      .flatMap((linea) => [...linea.sessions])
+      .sort((a, b) => a.startedAt - b.startedAt),
+    intervenciones: [],
+    totalCostUsd: suma((l) => l.totalCostUsd),
+    sesionesSinCoste: suma((l) => l.sesionesSinCoste),
+    sesionesCompartidas: suma((l) => l.sesionesCompartidas),
+    costeCompartidoUsd: suma((l) => l.costeCompartidoUsd),
+    totalTokens: {
+      input: suma((l) => l.totalTokens.input),
+      output: suma((l) => l.totalTokens.output),
+      reasoning: suma((l) => l.totalTokens.reasoning),
+      cacheRead: suma((l) => l.totalTokens.cacheRead),
+    },
+    desglose: {
+      harnessUsd: suma((l) => l.desglose.harnessUsd),
+      exploracionUsd: suma((l) => l.desglose.exploracionUsd),
+      harnessMensajes: suma((l) => l.desglose.harnessMensajes),
+      exploracionMensajes: suma((l) => l.desglose.exploracionMensajes),
+      costeNoAtribuibleUsd: suma((l) => l.desglose.costeNoAtribuibleUsd),
     },
   };
 }
@@ -714,9 +856,27 @@ function consultar(
     }
   }
 
-  let costeHarness = 0;
+  // Los agregados del desglose se llevan **por sesión** y se suman al final, sobre
+  // las que sobreviven al filtro por ticket: sumarlos acá, sobre todo el proyecto,
+  // mezclaba el reparto del proyecto entero con el total del ticket y dejaba la
+  // exploración en negativo.
+  const agregadoPorSesion = new Map<string, AgregadoDeSesion>();
+  const agregadoDe = (sessionId: string): AgregadoDeSesion => {
+    const existente = agregadoPorSesion.get(sessionId);
+    if (existente !== undefined) return existente;
+    const nuevo: AgregadoDeSesion = { mensajes: 0, mensajesDelHarness: 0, costeHarness: 0 };
+    agregadoPorSesion.set(sessionId, nuevo);
+    return nuevo;
+  };
+  for (const entrada of porMensaje.values()) {
+    agregadoDe(entrada.sessionId).mensajes += 1;
+  }
   for (const messageId of delHarness) {
-    costeHarness += porMensaje.get(messageId)?.mensaje.cost ?? 0;
+    const entrada = porMensaje.get(messageId);
+    if (entrada === undefined) continue;
+    const agregado = agregadoDe(entrada.sessionId);
+    agregado.mensajesDelHarness += 1;
+    agregado.costeHarness += entrada.mensaje.cost ?? 0;
   }
 
   // ── Las sesiones de opencode 2.0.16 (`session_v2`) ─────────────────────────
@@ -735,9 +895,6 @@ function consultar(
   // mención —el título o el primer mensaje del usuario, que es como el orquestador
   // le entrega el ticket al ejecutor—. Mencionar en un mensaje intermedio no
   // atribuye: un ticket citado de pasada no fue trabajado por esta vía.
-  let costeHarnessV2 = 0;
-  let mensajesV2 = 0;
-  let mensajesV2DelHarness = 0;
   const aNumero = (valor: unknown): number =>
     typeof valor === "number" && Number.isFinite(valor) ? valor : 0;
   for (const fila of filasV2) {
@@ -747,6 +904,7 @@ function consultar(
 
       let intervencionesV2 = 0;
       let fallidasV2 = 0;
+      const agregadoV2 = agregadoDe(fila.id);
       let agente = "";
       let modelo = "";
       let primerTextoDeUsuario: string | null = null;
@@ -773,7 +931,7 @@ function consultar(
           continue;
         }
 
-        mensajesV2 += 1;
+        agregadoV2.mensajes += 1;
         const coste = typeof datos["cost"] === "number" ? (datos["cost"] as number) : 0;
         const delModelo = datos["model"] as Record<string, unknown> | undefined;
         if (modelo === "" && delModelo && typeof delModelo["id"] === "string") {
@@ -825,8 +983,8 @@ function consultar(
           }
         }
         if (elMensajeTocoElHarness) {
-          mensajesV2DelHarness += 1;
-          costeHarnessV2 += coste;
+          agregadoV2.mensajesDelHarness += 1;
+          agregadoV2.costeHarness += coste;
         }
       }
 
@@ -859,7 +1017,6 @@ function consultar(
         fallidas: fallidasV2,
       });
     }
-    costeHarness += costeHarnessV2;
 
   // Las sesiones de codex, si las hay. Se leen después de las de opencode porque
   // son otro almacén, y se suman a la misma lista: quien mira quiere el consumo de
@@ -884,6 +1041,23 @@ function consultar(
       intervenciones: sesion.intervenciones,
       fallidas: 0,
     });
+  }
+
+  // Las de Claude Code, que es el agente con el que el PO resuelve los tickets. Su
+  // coste es desconocido —plan Max— y sus mensajes se cuentan igual que los de
+  // Hermes: cuántos tocaron el registro y cuántos no, sin repartir un coste que no
+  // existe. Una sesión compartida queda fuera de los totales y de ese conteo.
+  let mensajesDeClaude = 0;
+  let mensajesDelRegistroDeClaude = 0;
+  for (const sesion of leerSesionesDeClaude(directory, {
+    ...(home === undefined ? {} : { home }),
+    ...(ticketId === undefined ? {} : { ticketId }),
+  })) {
+    sesiones.set(`claude:${sesion.id}`, sesionDeClaude(sesion));
+    if (!sesion.compartida) {
+      mensajesDeClaude += sesion.mensajes;
+      mensajesDelRegistroDeClaude += sesion.mensajesDelRegistro;
+    }
   }
 
   // Las de Hermes —el puente al celular—, que ejecuta con su propio agente: llamó
@@ -941,15 +1115,33 @@ function consultar(
   // al harness que lo nombra; para codex, una sesión que lo menciona—.
   if (ticketId !== undefined) {
     for (const [clave, sesion] of sesiones) {
-      // Las de codex y Hermes ya vienen filtradas por el ticket desde su lector:
-      // ahí la pertenencia se decide por mención —una sesión de Hermes que llama a
-      // `mover_ticket` con el identificador es de ese ticket—, que es lo que hay.
+      // Las de codex, Claude Code y Hermes ya vienen filtradas por el ticket desde
+      // su lector: ahí la pertenencia se decide por lo que cada transcripción
+      // permite —una sesión de Hermes o de Claude Code que llama a `mover_ticket`
+      // con el identificador es de ese ticket—, que es lo que hay.
       const tocaElTicket =
         sesion.source === "codex" ||
+        sesion.source === "claude" ||
         sesion.source === "hermes" ||
         sesionesDelTicket.has(clave);
       if (!tocaElTicket) sesiones.delete(clave);
     }
+  }
+
+  // El desglose de opencode se suma **después** del filtro, sobre las sesiones que
+  // quedaron: lo mismo que `totalCostUsd`, para que sus tramos se puedan restar. Una
+  // sesión de otro ticket no aporta coste ni mensajes, y sin sesiones de opencode
+  // del ticket todo queda en cero.
+  let costeHarness = 0;
+  let mensajesDeOpencode = 0;
+  let mensajesDeOpencodeDelHarness = 0;
+  for (const [clave, sesion] of sesiones) {
+    if (sesion.source !== "opencode") continue;
+    const agregado = agregadoPorSesion.get(clave);
+    if (agregado === undefined) continue;
+    costeHarness += agregado.costeHarness;
+    mensajesDeOpencode += agregado.mensajes;
+    mensajesDeOpencodeDelHarness += agregado.mensajesDelHarness;
   }
 
   // Las compartidas quedan fuera de los totales: su gasto es de todos los
@@ -987,9 +1179,15 @@ function consultar(
       // llamarlo exploración era afirmar algo que nadie midió. Se declara aparte,
       // con sus intervenciones contadas.
       exploracionUsd: totalCostUsd - costeHarness - costeDeHermes,
-      harnessMensajes: delHarness.size + intervencionesDeHermes + mensajesV2DelHarness,
+      harnessMensajes:
+        mensajesDeOpencodeDelHarness +
+        intervencionesDeHermes +
+        mensajesDelRegistroDeClaude,
       exploracionMensajes:
-        porMensaje.size - delHarness.size + (mensajesDeHermes - intervencionesDeHermes) + (mensajesV2 - mensajesV2DelHarness),
+        mensajesDeOpencode -
+        mensajesDeOpencodeDelHarness +
+        (mensajesDeHermes - intervencionesDeHermes) +
+        (mensajesDeClaude - mensajesDelRegistroDeClaude),
       costeNoAtribuibleUsd: costeDeHermes,
     },
   };
@@ -1048,6 +1246,30 @@ export function renderDesglose(desglose: DesgloseDeTrabajo, totalUsd: number): s
   return `Total $${totalUsd.toFixed(6)}: ${partes.join("; ")}.`;
 }
 
+/**
+ * Lo que hay que saber para leer los tokens de una sesión de Claude Code.
+ *
+ * Sus números no se parecen a los de otros agentes y el registro los compara: la
+ * entrada incluye la creación de caché y la salida incluye el razonamiento, y la
+ * caché leída queda fuera del total porque es el mismo contexto repetido en cada
+ * turno. Si hubo varios modelos o subagentes se dice, porque el campo `model` solo
+ * puede llevar uno.
+ */
+function detalleDeTokensDeClaude(sesion: SesionDeAgente): string {
+  const modelos = sesion.modelos ?? [];
+  return (
+    "La entrada incluye la creación de caché y la salida incluye el razonamiento. " +
+    `Caché leída ${sesion.cacheReadTokens} tokens. ` +
+    (modelos.length > 1
+      ? `Modelos: ${modelos.map((m) => `${m.model} (${m.mensajes} mensajes)`).join(", ")}; ` +
+        "el registrado es el que más produjo. "
+      : "") +
+    ((sesion.subagentes ?? 0) > 0
+      ? `Incluye el gasto de ${sesion.subagentes} subagente(s). `
+      : "")
+  );
+}
+
 /** Lo que se escribió en el ticket al guardar la foto. */
 export interface FotoGuardada {
   readonly entradas: readonly string[];
@@ -1095,7 +1317,12 @@ export function guardarFotoEnTicket(
   for (const sesion of pendientes) {
     // La base es la de la sesión, no la de la vista: un `hermes:` que apunta a
     // `opencode.db` dice una cosa y muestra otra, y deja el costo sin verificar.
-    const base = sesion.source === "codex" ? sesion.id : (sesion.fuente ?? linea.source);
+    // Para codex y Claude Code la referencia es el identificador de la sesión: no
+    // tienen una base que citar, solo una transcripción que se encuentra por él.
+    const base =
+      sesion.source === "codex" || sesion.source === "claude"
+        ? sesion.id
+        : (sesion.fuente ?? linea.source);
     const reparto = sesion.reparto;
     entradas.push(
       addAiUsage({
@@ -1131,8 +1358,10 @@ export function guardarFotoEnTicket(
                 `${sesion.intervenciones} intervención(es) sobre el registro, ` +
                 `${sesion.fallidas} con fallo. ` +
                 mensajesDelRegistroEnTexto(sesion) +
-                `Razonamiento ${sesion.reasoningTokens} tokens, ` +
-                `caché leída ${sesion.cacheReadTokens} tokens. ` +
+                (sesion.source === "claude"
+                  ? detalleDeTokensDeClaude(sesion)
+                  : `Razonamiento ${sesion.reasoningTokens} tokens, ` +
+                    `caché leída ${sesion.cacheReadTokens} tokens. `) +
                 `Sesión "${sesion.title}".` +
                 (sesion.costUsd === null
                   ? " Proveedor por suscripción: no hay coste por token, se registran los tokens."

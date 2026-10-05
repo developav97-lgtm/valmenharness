@@ -143,3 +143,65 @@ describe("la línea de tiempo del ticket sin sesiones", () => {
     expect(vista.texto).not.toContain("Las compuertas sí constan");
   });
 });
+
+describe("la línea de tiempo del ticket con sesiones de Claude Code", () => {
+  const sesion = (extra: Record<string, unknown> = {}) => ({
+    id: "9d55ce3b-5c13-4e93-af45-77a4977bd5c6",
+    title: "Sesión de Claude Code",
+    source: "claude",
+    agent: "claude-code",
+    provider: "anthropic",
+    model: "claude-sonnet-5-5",
+    costUsd: null,
+    inputTokens: 383_573,
+    outputTokens: 91_021,
+    reasoningTokens: 0,
+    cacheReadTokens: 10_579_518,
+    startedAt: 1_759_689_065_000,
+    intervenciones: 36,
+    fallidas: 0,
+    ...extra,
+  });
+
+  it("cuenta sus llamadas al registro y no dice que ninguna sesión llamó", async () => {
+    // Claude Code cuenta cada llamada pero no guarda el coste del mensaje, así que
+    // la lista por llamada queda vacía. Sin esto la pantalla decía «0 intervenciones»
+    // al lado de una fila que decía 36, y «ninguna de esas sesiones llamó…».
+    const vista = await pintar({
+      available: true,
+      source: "claude:/proyecto",
+      sessions: [sesion()],
+      ...SIN_TOTALES,
+      sesionesSinCoste: 1,
+      compuertas: COMPUERTAS,
+    });
+
+    expect(vista.fallos).toEqual([]);
+    expect(vista.texto).toContain("36 intervención(es) sobre el registro");
+    expect(vista.texto).toContain("Las sesiones de Claude Code hicieron 36 llamada(s) al registro");
+    expect(vista.texto).not.toContain("Ninguna de esas sesiones llamó");
+    expect(vista.texto).toContain("suscripción");
+  });
+
+  it("una sesión compartida no suma sus llamadas: son de varios tickets", async () => {
+    const vista = await pintar({
+      available: true,
+      source: "claude:/proyecto",
+      sessions: [
+        sesion({
+          reparto: [
+            { id: ID, peso: 6, trabajado: true },
+            { id: "BUGFIX-OTRO-DOS-20261005", peso: 3, trabajado: true },
+          ],
+        }),
+      ],
+      ...SIN_TOTALES,
+      sesionesSinCoste: 1,
+      sesionesCompartidas: 1,
+      compuertas: [],
+    });
+
+    expect(vista.texto).toContain("0 intervención(es) sobre el registro");
+    expect(vista.texto).toContain("compartida entre 2 tickets");
+  });
+});
