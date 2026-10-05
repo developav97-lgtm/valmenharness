@@ -40,6 +40,13 @@ Tras dos bloqueos consecutivos del mismo gate por la misma proposición semánti
 
 **Por qué:** Evita gastar una tercera llamada idéntica y deja evidencia para calibrar el evaluador, sin que la compuerta amplíe su propia autoridad.
 
+## Una contradicción interna del evaluador no debe producir un bloqueo automático
+
+En FEATURE-ADAPTER-CAPACIDADES-20261001, el gate analysis bloqueó cuatro veces diagnostico_explica_el_sintoma (0.04, 0.02, 0.08) mientras el mismo recibo clasificaba el análisis como completa y daba >=0.97 a causa_especifica, nombra_archivos_reales y riesgos_cubren_impactos. El refinamiento debe detectar esa contradicción: si clasificación es completa y las tres comprobaciones estructurales superan approveAt, una única proposición semántica contradictoria no puede decidir block; se degrada a review y exige decisión humana. La corrección se valida con una prueba determinista del vector de recibo anterior, que debe devolver review, y con un caso control donde falla causa o archivos, que debe seguir devolviendo block.
+
+**Por qué:** Sale del aprendizaje AP-004 (2026-10-03), visto en FEATURE-ADAPTER-CAPACIDADES-20261001.
+**Visto en:** FEATURE-ADAPTER-CAPACIDADES-20261001 (2026-10-04)
+
 ## Cómo se trabaja en este repositorio
 
 Este repositorio **es** el harness, no un proyecto que lo usa, y se gestiona con

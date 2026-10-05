@@ -66,7 +66,8 @@ pasan a `.valmen/rules/estandares-<área>.md`, que es lo que llega al
 
 - **Área:** proceso
 - **Propuesto:** 2026-10-04
-- **Estado:** propuesto
+- **Estado:** aceptado
+- **Decidido:** 2026-10-05
 - **Tickets:** FEATURE-ADAPTER-CAPACIDADES-20261001
 
 **Regla:** En FEATURE-ADAPTER-CAPACIDADES-20261001, el gate analysis bloqueó cuatro veces diagnostico_explica_el_sintoma (0.04, 0.02, 0.08) mientras el mismo recibo clasificaba el análisis como completa y daba >=0.97 a causa_especifica, nombra_archivos_reales y riesgos_cubren_impactos. El refinamiento debe detectar esa contradicción: si clasificación es completa y las tres comprobaciones estructurales superan approveAt, una única proposición semántica contradictoria no puede decidir block; se degrada a review y exige decisión humana. La corrección se valida con una prueba determinista del vector de recibo anterior, que debe devolver review, y con un caso control donde falla causa o archivos, que debe seguir devolviendo block.
