@@ -28,6 +28,8 @@ export interface MachineProjectBinding {
 export interface MachineBindings {
   readonly schemaVersion: typeof MACHINE_BINDINGS_SCHEMA_VERSION;
   readonly machineId: string;
+  /** Límite local y compartido de ejecuciones administradas. */
+  readonly managedExecutionCapacity: number;
   readonly projects: Readonly<Record<string, MachineProjectBinding>>;
 }
 
@@ -44,7 +46,11 @@ export function parseMachineBindings(text: string): MachineBindings {
     keyMessage: "no es válida (minúsculas, dígitos y guiones).",
   });
   const root = asMap(value, `${MACHINE_BINDINGS_FILE} debe tener un mapa en la raíz.`);
-  assertOnlyKeys(root, ["schema-version", "machine-id", "projects"], MACHINE_BINDINGS_FILE);
+  assertOnlyKeys(
+    root,
+    ["schema-version", "machine-id", "managed-execution-capacity", "projects"],
+    MACHINE_BINDINGS_FILE,
+  );
 
   const schemaVersion = requiredString(root, "schema-version", MACHINE_BINDINGS_FILE);
   if (schemaVersion !== MACHINE_BINDINGS_SCHEMA_VERSION) {
@@ -59,6 +65,11 @@ export function parseMachineBindings(text: string): MachineBindings {
       `${MACHINE_BINDINGS_FILE}: "machine-id" debe ser un identificador lógico en minúsculas (letras, números y guiones).`,
     );
   }
+  const managedExecutionCapacity = positiveInteger(
+    root["managed-execution-capacity"],
+    "managed-execution-capacity",
+    1,
+  );
 
   const projects = asMap(
     root.projects,
@@ -95,8 +106,18 @@ export function parseMachineBindings(text: string): MachineBindings {
   return Object.freeze({
     schemaVersion: MACHINE_BINDINGS_SCHEMA_VERSION,
     machineId,
+    managedExecutionCapacity,
     projects: Object.freeze(parsed),
   });
+}
+
+function positiveInteger(value: YamlValue | undefined, key: string, fallback: number): number {
+  if (value === undefined || value === "") return fallback;
+  const parsed = typeof value === "string" ? Number(value) : Number.NaN;
+  if (!Number.isSafeInteger(parsed) || parsed < 1) {
+    fail(`${MACHINE_BINDINGS_FILE}: "${key}" debe ser un entero positivo.`);
+  }
+  return parsed;
 }
 
 function asMap(value: YamlValue | undefined, message: string): Record<string, YamlValue> {

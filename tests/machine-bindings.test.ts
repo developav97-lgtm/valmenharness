@@ -123,4 +123,29 @@ describe("bindings por máquina", () => {
       ),
     ).toThrow(expected);
   });
+
+  it("declara la capacidad administrada solo en el binding local", () => {
+    const base = [
+      "schema-version: 1",
+      "machine-id: qa-machine",
+      "projects:",
+      "  valmen-harness:",
+      "    root: /tmp/harness",
+      "",
+    ];
+    expect(parseMachineBindings(base.join("\n")).managedExecutionCapacity).toBe(1);
+    expect(parseMachineBindings([
+      "schema-version: 1",
+      "machine-id: qa-machine",
+      "managed-execution-capacity: 3",
+      "projects:",
+      "  valmen-harness:",
+      "    root: /tmp/harness",
+      "",
+    ].join("\n")).managedExecutionCapacity).toBe(3);
+    expect(() => parseMachineBindings(base.map((line) =>
+      line === "projects:" ? "managed-execution-capacity: 0\nprojects:" : line,
+    ).join("\n"))).toThrow("entero positivo");
+    expect(() => parseConfig("managed-execution-capacity: 2\n")).toThrow("bindings.local.yaml");
+  });
 });

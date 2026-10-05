@@ -21,6 +21,7 @@ export * from "./journeys.js";
 export * from "./journey-windows.js";
 export * from "./journey-authorization.js";
 export * from "./journey-selection.js";
+export * from "./machine-capacity.js";
 export * from "./journey-roadmap.js";
 export * from "./execution-activity.js";
 export * from "./execution-sessions.js";

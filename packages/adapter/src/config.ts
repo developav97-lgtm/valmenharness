@@ -49,6 +49,11 @@ export function parseConfig(text: string): ConfigMap {
       'config.yaml: "machine-bindings" pertenece a ~/.valmen/bindings.local.yaml y no se versiona con la política del proyecto.',
     );
   }
+  if (value["managed-execution-capacity"] !== undefined) {
+    fail(
+      'config.yaml: "managed-execution-capacity" pertenece a ~/.valmen/bindings.local.yaml y no se versiona con la política del proyecto.',
+    );
+  }
   return value;
 }
 
