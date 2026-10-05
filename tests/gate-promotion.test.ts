@@ -27,7 +27,9 @@ function config(text: string): void {
   writeFileSync(join(lab, ".valmen", "config.yaml"), text, "utf8");
 }
 
-function calibration(overrides: Partial<Parameters<typeof evidenceFromCalibration>[0]> = {}) {
+type Calibration = Parameters<typeof evidenceFromCalibration>[0];
+
+function calibration(overrides: Partial<Calibration> = {}): Calibration {
   return {
     gate: "analysis",
     compared: 30,

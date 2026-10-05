@@ -13,6 +13,7 @@ import {
   readJourneyRevisions,
   reviseJourney,
   resolveAuthorizedProject,
+  type JourneyRevisionInput,
 } from "../packages/engine/src/index.js";
 
 let home: string;
@@ -43,7 +44,7 @@ function ticket(number: number) {
   return `FEATURE-JOURNEY-TICKET-${number}-20261003`;
 }
 
-function revision(revisionId: string, overrides: Record<string, unknown> = {}) {
+function revision(revisionId: string, overrides: Partial<JourneyRevisionInput> = {}): JourneyRevisionInput {
   return {
     revisionId,
     journeyId: "morning-20261003",

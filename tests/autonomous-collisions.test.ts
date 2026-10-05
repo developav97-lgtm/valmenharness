@@ -16,7 +16,7 @@ function ticketPath(id: string): string {
 }
 
 function writeTicket(id: string, files: readonly string[], plan = ""): void {
-  writeFixtureTicket(root, { id, workflowStatus: "approved", plan: plan || undefined });
+  writeFixtureTicket(root, { id, workflowStatus: "approved", ...(plan === "" ? {} : { plan }) });
   const path = ticketPath(id);
   const text = readFileSync(path, "utf8");
   const points =

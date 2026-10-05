@@ -83,7 +83,8 @@ describe("selector de proyectos", () => {
     const response = await api(createMissionControl(context), "/api/tickets", "dos");
 
     expect(response.status).toBe(200);
-    expect((await response.json()).tickets.map((ticket: { id: string }) => ticket.id)).toEqual([
+    const body = (await response.json()) as { tickets: { id: string }[] };
+    expect(body.tickets.map((ticket) => ticket.id)).toEqual([
       "FEATURE-DOS-20261001",
     ]);
   });
@@ -92,6 +93,6 @@ describe("selector de proyectos", () => {
     const response = await api(createMissionControl(context), "/api/tickets", "ajeno");
 
     expect(response.status).toBe(403);
-    expect((await response.json()).error).toContain("no está declarado");
+    expect(((await response.json()) as { error: string }).error).toContain("no está declarado");
   });
 });
