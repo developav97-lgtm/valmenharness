@@ -16,62 +16,62 @@ Usa el plan que ya pagas. El harness detecta, reutiliza o lanza el flujo de logi
 
 | Proveedor | Método | Qué se reutiliza |
 |---|---|---|
-| **Claude (plan Pro/Max)** | OAuth de Claude Code | El token que su CLI ya guardó: **en macOS el llavero** (entrada `Claude Code-credentials`) y en Linux `~/.claude/.credentials.json`. Si no hay sesión, no se lanza ningún flujo: se dice qué correr. **Solo Haiku responde por este camino** (medido el 2026-10-05, ver abajo). |
+| **Claude (plan Pro/Max)** | CLI oficial (`claude -p`) | **Nada**: el harness no lee ningún token. Invoca el CLI, que es dueño de su sesión. Si no hay sesión, no se lanza ningún flujo: se dice qué correr (`claude auth login`). Ver abajo por qué no es una llamada HTTP directa. |
 | **ChatGPT / Codex (plan Plus/Pro)** | OAuth de Codex | Igual, desde `~/.codex/auth.json`. |
 | **opencode go (Zen)** | Token de sesión de opencode | Igual, desde la config de opencode. |
 | **GitHub Copilot** | OAuth de dispositivo | Flujo de device code. |
 | **Gemini (plan Google AI)** | OAuth | Flujo en navegador. |
 
-> **Dónde vive el token de Claude Code, y por qué importa.** Se descubrió mirando una máquina
-> real: el archivo no existía y la sesión estaba viva en el llavero. Un lector que solo mirara
-> el archivo habría dicho «Claude Code no está autenticado» con la sesión perfectamente
-> válida, y el usuario habría ido a buscar el problema donde no estaba. Y cuando el token
-> caduca, el harness **no lo renueva**: el `refresh_token` es de su CLI, y dos clientes
-> renovando a la vez invalidan la sesión del otro. Se dice con la fecha y con el comando que lo
-> arregla —`claude`, una vez—.
+> **Claude va por el CLI oficial y no por HTTP.** Medido el 2026-10-05 con una sesión Max
+> vigente, la llamada directa a `api.anthropic.com/v1/messages` con el token de la suscripción
+> solo dejaba pasar a `claude-haiku-4-5-20251001` (HTTP 200); `claude-sonnet-5`,
+> `claude-sonnet-5-5`, `claude-opus-4-8`, `claude-opus-5-5`, `claude-fable-5` y `claude-fable-5-1`
+> daban HTTP 429 `rate_limit_error`, mensaje «Error», en ~270 ms. En paralelo,
+> `claude -p --model claude-sonnet-5-5` —el CLI oficial, la misma cuenta, el mismo minuto—
+> respondía bien. Por la rapidez y el mensaje genérico **no es cuota**: es el rechazo a llamadas
+> directas de un cliente que no es el CLI oficial. El harness **no imita** las cabeceras ni el
+> prompt de sistema de Claude Code para sortearlo —sería esquivar una restricción del proveedor—.
 >
-> **El llavero puede tener dos entradas con el mismo servicio.** En esa misma máquina había una
-> vieja de cuenta `root` —un token Pro caducado el 2026-04-29— y la vigente, de cuenta igual al
-> usuario del sistema (plan max), creada por `claude auth login`. `security find-generic-password`
-> sin `-a` devuelve la primera que encuentra, y el harness decía «la sesión caducó» con
-> `claude auth status` en `loggedIn: true`. El lector busca primero con la cuenta del usuario
-> del sistema y solo si no existe cae a la búsqueda sin cuenta.
-
-> **Medido el 2026-10-05: por este camino solo pasa Haiku.** Con una sesión Max vigente,
-> `valmen provider test claude-code --model <modelo>` —una llamada directa a
-> `api.anthropic.com/v1/messages` con el token de suscripción— dio:
+> Por eso `claude-code` es un **transporte por CLI** (`packages/credentials/src/claude-cli.ts`):
+> ejecuta `claude -p` como subproceso y la llamada la hace el CLI con su propia sesión.
 >
-> | Modelo | Resultado |
-> |---|---|
-> | `claude-haiku-4-5-20251001` | HTTP 200 |
-> | `claude-sonnet-5`, `claude-sonnet-5-5`, `claude-opus-4-8`, `claude-opus-5-5`, `claude-fable-5`, `claude-fable-5-1` | HTTP 429 `rate_limit_error`, mensaje «Error», en ~270 ms |
+> - **El harness no lee ninguna credencial de Claude.** Desaparecen el llavero de macOS (y su
+>   problema de entradas duplicadas con el mismo servicio), el token que caduca a las ocho horas
+>   y el riesgo de pelear el `refresh_token` con su dueño. «Configurado» es lo que diga
+>   `claude auth status`, que además **no gasta cuota**.
+> - **El esfuerzo viaja** (`--effort`), cosa que el dialecto HTTP no podía combinar con la salida
+>   estructurada. La salida estructurada va por `--json-schema`.
+> - **Aislamiento.** `claude -p` es un agente, no un modelo desnudo. Se invoca sin herramientas
+>   (`--tools ""`), sin fuentes de configuración (`--setting-sources ""`), sin MCP
+>   (`--strict-mcp-config`), sin sesión persistente, con prompt de sistema propio y desde un
+>   directorio temporal: responde el modelo y no un agente con el `CLAUDE.md` de quien lo lanzó.
+>   Nunca `--bare`, que no lee la sesión de la suscripción. El prompt viaja por la entrada
+>   estándar —un argumento tiene tope de tamaño—.
+> - **Facturación.** `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN` y los selectores de Bedrock y
+>   Vertex se quitan del entorno del subproceso: con ellos el CLI facturaría por token en lugar
+>   de usar el plan, sin que nadie lo decidiera. (`ANTHROPIC_API_KEY` sigue sirviendo al
+>   proveedor `anthropic`, §1.2, que va por HTTP y se factura por token.)
+> - **Coste.** No se registra: el `total_cost_usd` del CLI es el equivalente a la tarifa de la
+>   API y el plan no lo cobra, así que anotarlo como gasto sería un número con forma de medición.
+> - **Procesos.** Se lanza en su propio grupo y, al pasar el tiempo máximo o abortar, se mata el
+>   grupo entero: un hijo del CLI que conserve las tuberías abiertas no deja la llamada colgada.
+> - **Latencia.** Arrancar un proceso por llamada cuesta ~1,5–4 s medidos el 2026-10-05; una salida
+>   estructurada con esfuerzo `high` tardó 3,3 s (Sonnet 5.5) y 4,1 s (Opus 5.5).
+> - **Modelos.** Responden por el CLI los siete que el catálogo declara: `claude-opus-5-5`,
+>   `claude-sonnet-5-5`, `claude-fable-5-1`, `claude-haiku-4-5-20251001`, `claude-opus-4-8`,
+>   `claude-sonnet-5` y `claude-fable-5`. `claude-opus-5-5` pide un CLI ≥ 2.1.280.
+>   `valmen provider test claude-code [--model <modelo>]`, y el botón «Probar» de Mission Control
+>   —del proveedor y de cada modelo—, van por este camino. `VALMEN_CLAUDE_BIN` apunta a una
+>   instalación de `claude` fuera del `PATH`.
 >
-> En paralelo, `claude -p --model claude-sonnet-5-5` (el CLI oficial, la misma cuenta) respondió
-> bien. Por la rapidez y el mensaje genérico **no es cuota**: es el rechazo a llamadas directas
-> de un cliente que no es el CLI oficial. El harness **no imita** las cabeceras ni el prompt de
-> sistema de Claude Code para sortearlo —sería esquivar una restricción del proveedor—. Las
-> salidas legítimas son el CLI oficial o una clave de API (proveedor `anthropic`, §1.2).
+> `packages/credentials/src/claude-code.ts` —el lector del llavero y del archivo— queda sin
+> consumidor en el camino de chat y se conserva por ahora. `EXPLICACION_429_CLAUDE_CODE` sigue
+> anexándose al 429 del dialecto de Anthropic cuando alguien le pasa un token de suscripción como
+> clave, que es donde ese rechazo sigue pudiendo ocurrir.
 >
-> Lo que el harness hace al respecto, sin cambiar la red: el 429 de este proveedor lleva, detrás
-> del mensaje del proveedor que sigue viajando tal cual, la explicación de arriba
-> (`EXPLICACION_429_CLAUDE_CODE`, en `packages/credentials/src/claude-code.ts`), y la prueba de
-> proveedor sin modelo —el botón «Probar» de Mission Control y `valmen provider test claude-code`—
-> usa `claude-haiku-4-5-20251001`. Por eso su «Conexión verificada» quiere decir que la credencial
-> fue aceptada y Haiku respondió; **no** que los demás modelos del plan sirvan por este camino. Un
-> HTTP 400 de este dialecto se presenta como «credencial aceptada» —para validar el cuerpo ya
-> aceptó la credencial— y un 401 o 403 como «error de credencial».
->
-> **Propuesta, sin implementar: un transporte que invoque el CLI oficial.** Un transporte
-> `claude-cli` ejecutaría `claude -p --model <modelo>` como subproceso, de modo que la llamada la
-> haga el CLI con su propia sesión: el harness dejaría de leer el token y del refresco seguiría
-> encargándose su dueño. Quedaría por resolver, antes de decidir: (1) la salida estructurada, que
-> hoy va por herramienta forzada y ahí tendría que ir por `--output-format json` y
-> `--json-schema` —ambos existen en `claude --help`—, con validación del esquema y reintento;
-> (2) aislar la sesión para que el CLI no cargue el `CLAUDE.md` ni las herramientas del
-> directorio donde corre (`--tools`, `--no-session-persistence`, `--setting-sources`,
-> directorio vacío); (3) la latencia de arrancar un proceso por llamada, que importa en un gate de
-> catorce proposiciones; y (4) que usar la suscripción para automatización cae en la advertencia
-> de abajo —el CLI oficial no la quita—, así que es una decisión del PO.
+> **Sigue valiendo la advertencia de abajo:** el CLI oficial es la forma documentada de uso
+> programático, pero usar una suscripción para automatización consume su límite de uso y puede
+> estar sujeto a los términos del plan. Es una decisión del PO.
 
 **Regla de convivencia:** el harness **lee** esas credenciales pero **no las reescribe ni las
 rota**. Si detecta que el archivo de auth del CLI cambió, recarga. Esto evita el modo de
@@ -167,10 +167,9 @@ providers:
     base_url: https://api.anthropic.com/v1
     auth: { kind: api-key, ref: ANTHROPIC_API_KEY }
 
-  claude-code:                        # suscripción vía OAuth
-    transport: anthropic-messages
-    base_url: https://api.anthropic.com/v1
-    auth: { kind: oauth, source: claude-cli }   # llavero en macOS, archivo en Linux
+  claude-code:                        # suscripción, por el CLI oficial
+    transport: claude-cli             # `claude -p` como subproceso: sin HTTP ni credencial en el harness
+    auth: { kind: cli, source: claude-cli }   # la sesión es del CLI (`claude auth status`)
 
   codex:                              # suscripción vía OAuth
     transport: openai-responses
@@ -327,17 +326,12 @@ de API: `suscripcion`. Los cuatro roles van a Claude, incluido el evaluador —q
 probabilístico, y por eso `valmen routing show` lo advierte solo—. Se elige con
 `valmen routing set --preset suscripcion`.
 
-> **El preset `suscripcion` no es ejecutable tal como está.** Medido el 2026-10-05, por el camino
-> directo de `claude-code` solo `claude-haiku-4-5-20251001` responde (§1.1). El preset declara
-> `claude-sonnet-5` para el orquestador, el evaluador de gates, el juez, el productor, el
-> verificador y `ui-specs`, y `claude-opus-4-8` para `architect` y `escalation`: con una sesión Max
-> vigente todos esos modelos dan HTTP 429 «Error» al primer intento, y un gate o una descomposición
-> que los use falla aunque `claude auth status` diga `loggedIn: true`. No es un problema de cuota
-> ni de sesión. Las opciones, mientras no exista un transporte por el CLI oficial (propuesta en
-> §1.1), son poner Haiku en los roles que lo toleren, o usar el proveedor `anthropic` con una clave
-> de API para los modelos grandes. El preset se mantiene declarado para no cambiar el
-> comportamiento sin decisión del PO; `valmen provider test claude-code --model <modelo>` dice, por
-> modelo, si pasa.
+> **El preset `suscripcion` ya es ejecutable en lo que toca al transporte.** Sus identificadores
+> (`claude-sonnet-5` y `claude-opus-4-8`) responden por el CLI oficial —medido el 2026-10-05—,
+> donde por el camino HTTP directo daban HTTP 429 (§1.1). Lo que **no** cambia es lo que el propio
+> preset ya declara: con Claude de evaluador el gate deja de ser reproducible, y la cascada
+> verificada sigue rechazándose porque el verificador no emite probabilidades.
+> `valmen provider test claude-code --model <modelo>` dice, por modelo, si pasa.
 
 Estos dos últimos son ejemplos de lo que un proyecto puede escribir, no presets que
 vengan incluidos: los tres que trae el harness están arriba, y solo cubren los roles

@@ -14,7 +14,7 @@
  * arreglarlo en un sitio y arreglarlo en tres. Ver `scripts/probe-deepseek-tools.md`.
  */
 import { CodexCredentialError, readCodexCredential } from "./codex.js";
-import { ClaudeCodeCredentialError, readClaudeCodeCredential } from "./claude-code.js";
+import { type ClaudeCliRunner, callClaudeCli } from "./claude-cli.js";
 import { anthropicAuthHeaders, callAnthropic } from "./anthropic.js";
 import { CredentialError, resolveApiKey } from "./credentials.js";
 import { callResponses } from "./responses.js";
@@ -104,6 +104,8 @@ export interface ChatOptions {
    */
   readonly apiKey?: string;
   readonly fetchImpl?: typeof fetch;
+  /** Quien ejecuta el CLI de los proveedores que se hablan por él. Para pruebas. */
+  readonly cliRunner?: ClaudeCliRunner;
   readonly signal?: AbortSignal;
 }
 
@@ -121,17 +123,6 @@ export interface ChatOptions {
  */
 function resolveCredentialFor(proveedor: string): string {
   const transport = transportById(proveedor);
-
-  if (transport.credential === "claude-code") {
-    try {
-      return readClaudeCodeCredential().accessToken;
-    } catch (caught) {
-      if (caught instanceof ClaudeCodeCredentialError) {
-        throw new ChatError(caught.message, "CREDENTIAL_MISSING");
-      }
-      throw caught;
-    }
-  }
 
   if (transport.credential === "codex") {
     try {
@@ -175,6 +166,22 @@ export class ChatError extends Error {
 export async function callChat(options: ChatOptions): Promise<ChatResult> {
   const fetchImpl = options.fetchImpl ?? fetch;
   const proveedor = options.provider ?? DEFAULT_PROVIDER;
+
+  // Un proveedor que se habla por el CLI oficial de su dueño no tiene endpoint ni
+  // credencial que resolver aquí: el CLI es quien tiene la sesión. Se decide antes
+  // que nada porque lo demás de esta función es HTTP.
+  if (transportById(proveedor).cli !== undefined) {
+    return callClaudeCli({
+      model: options.model,
+      messages: options.messages,
+      structured: options.structured,
+      effort: options.effort,
+      maxTokens: options.maxTokens,
+      timeoutMs: options.timeoutMs,
+      signal: options.signal,
+      runner: options.cliRunner,
+    });
+  }
 
   // El endpoint y las cabeceras salen del catálogo. Un modelo cuyo dialecto no
   // esté implementado falla aquí, antes de gastar una llamada.

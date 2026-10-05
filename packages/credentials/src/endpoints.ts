@@ -85,12 +85,21 @@ interface Transport {
    * De dónde sale la credencial, cuando no es una clave del harness.
    *
    * `codex` no tiene clave: usa tokens OAuth de su CLI, en su propio archivo, y su
-   * backend pide además una cabecera con la cuenta. Y `claude-code` tampoco: su
-   * token vive en el llavero del sistema —en macOS— o en su archivo, y va en otra
-   * cabecera que una clave. Se declara aquí y no se adivina por el identificador
-   * del proveedor, que sería una lista de casos particulares escondida en el código.
+   * backend pide además una cabecera con la cuenta. Se declara aquí y no se adivina
+   * por el identificador del proveedor, que sería una lista de casos particulares
+   * escondida en el código. (`claude-code` ya no lee credencial: ver `cli`.)
    */
-  readonly credential?: "codex" | "claude-code";
+  readonly credential?: "codex";
+  /**
+   * El proveedor se habla por el CLI oficial de su dueño y no por HTTP.
+   *
+   * Existe por `claude-code`: medido el 2026-10-05, la API directa con el token de la
+   * suscripción solo dejaba pasar a Haiku (los demás, HTTP 429 «Error»), mientras que
+   * `claude -p` con la misma cuenta respondía en todos. El CLI es además dueño de su
+   * sesión, así que el harness no lee ninguna credencial de este proveedor. Ver
+   * `claude-cli.ts`.
+   */
+  readonly cli?: "claude";
   /**
    * El dialecto del proveedor entero, cuando no es el de chat.
    *
@@ -161,15 +170,17 @@ export const TRANSPORTS: readonly Transport[] = [
     defaultProtocol: "anthropic-messages",
   },
   {
-    // La suscripción de Claude Code. Su token no es una clave: va en
-    // `Authorization: Bearer` con la cabecera `anthropic-beta`, y lo resuelve
-    // `readClaudeCodeCredential`, que sabe que en macOS vive en el llavero del
-    // sistema y no en un archivo.
+    // La suscripción de Claude Code, por el **CLI oficial** (`claude -p`) y no por
+    // HTTP. La API directa con el token OAuth rechazaba con 429 a Sonnet, Opus y
+    // Fable (ver `claude-cli.ts`); el CLI, con la misma cuenta, responde en todos.
+    // `baseUrl` y `defaultProtocol` se conservan porque describen el dialecto de lo
+    // que el CLI habla por dentro —y de ahí que la salida estructurada sea
+    // `tool-call`—, pero `callChat` no los usa para este proveedor.
     id: "claude-code",
     name: "Claude Code (suscripción)",
     baseUrl: "https://api.anthropic.com/v1",
     defaultProtocol: "anthropic-messages",
-    credential: "claude-code",
+    cli: "claude",
   },
   {
     // Codex es una suscripción de ChatGPT y **sí tiene API**: `/responses` con
@@ -260,6 +271,13 @@ export function transportById(id: string): Transport {
  */
 export function resolveChatEndpoint(providerId: string, model: string): HttpEndpoint {
   const transport = transportById(providerId);
+  // Sin URL que devolver: devolver la de la API sería decir que se llama por ahí.
+  if (transport.cli !== undefined) {
+    fail(
+      `${transport.name} se habla por el CLI oficial (\`claude -p\`) y no tiene un ` +
+        "endpoint HTTP. Quien llama debe usar `callChat`, que lo resuelve.",
+    );
+  }
   const protocol = protocolFor(transport, model);
 
   // Tres dialectos, y cada uno tiene su ruta. Los demás siguen sin implementarse, y

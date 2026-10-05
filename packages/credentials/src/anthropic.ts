@@ -27,6 +27,10 @@
  * dos cosas son incompatibles en este dialecto —`tool_choice` forzado con
  * `thinking` activo se rechaza—, así que el `effort` del routing no se traduce
  * aquí. Los modelos de Claude deciden su esfuerzo sin que se lo pidan.
+ *
+ * Esto vale para este dialecto, el de la API con clave (`anthropic`). El proveedor
+ * `claude-code` ya no pasa por aquí: va por el CLI oficial (`claude-cli.ts`), donde
+ * el esfuerzo sí viaja (`--effort`).
  */
 import {
   ChatError,

@@ -12,3 +12,4 @@ export * from "./responses.js";
 export * from "./anthropic.js";
 export * from "./codex.js";
 export * from "./claude-code.js";
+export * from "./claude-cli.js";

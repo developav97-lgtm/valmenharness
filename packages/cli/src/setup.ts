@@ -169,8 +169,11 @@ export async function providerCommand(
             ...(opciones.env === undefined ? {} : { env: opciones.env }),
           });
     const que = modelo === undefined ? "la credencial sirve" : `"${modelo}" responde`;
+    // Un proveedor que se habla por el CLI no tiene un estado HTTP que mostrar: se dice
+    // por dónde se habló en vez de imprimir «HTTP null».
+    const via = prueba.status === null ? "CLI oficial" : `HTTP ${prueba.status}`;
     return prueba.ok
-      ? ok(`${proveedor}: ${que} (HTTP ${prueba.status}, ${prueba.latencyMs} ms).\n`)
+      ? ok(`${proveedor}: ${que} (${via}, ${prueba.latencyMs} ms).\n`)
       : fallo(`${proveedor}: ${prueba.detail}`);
   }
 
@@ -512,13 +515,17 @@ export async function doctorCommand(
           : `Credencial ${proveedor.id}`,
       estado: "aviso",
       detalle:
-        proveedor.auth === "subscription"
-          ? `el routing la usa y no hay sesión: en macOS suele estar en el llavero, y en Linux en ${proveedor.tokenSource ?? "el archivo de su CLI"}`
-          : "el routing la usa y no tiene clave",
+        proveedor.cli !== undefined
+          ? "el routing la usa y el CLI de Claude no tiene sesión (o no está en el PATH)"
+          : proveedor.auth === "subscription"
+            ? `el routing la usa y no hay sesión: en macOS suele estar en el llavero, y en Linux en ${proveedor.tokenSource ?? "el archivo de su CLI"}`
+            : "el routing la usa y no tiene clave",
       arreglo:
-        proveedor.auth === "subscription"
-          ? "Autenticate en su CLI: el harness lee el token, no lo pide."
-          : `valmen provider set ${proveedor.id} --key <clave>`,
+        proveedor.cli !== undefined
+          ? "claude auth login   (el harness no lee ni guarda el token: lo tiene el CLI)"
+          : proveedor.auth === "subscription"
+            ? "Autenticate en su CLI: el harness lee el token, no lo pide."
+            : `valmen provider set ${proveedor.id} --key <clave>`,
     });
   }
 
@@ -542,9 +549,11 @@ export async function doctorCommand(
       estado: "aviso",
       detalle: `el rol gate-evaluator usa ${evaluador.provider}, sin credencial: los gates de juicio van a fallar`,
       arreglo:
-        proveedorEvaluador.auth === "subscription"
-          ? `Autenticate en su CLI: el harness lee el token, no lo pide.`
-          : `valmen provider set ${proveedorEvaluador.id} --key <clave>`,
+        proveedorEvaluador.cli !== undefined
+          ? "claude auth login   (el harness no lee ni guarda el token: lo tiene el CLI)"
+          : proveedorEvaluador.auth === "subscription"
+            ? `Autenticate en su CLI: el harness lee el token, no lo pide.`
+            : `valmen provider set ${proveedorEvaluador.id} --key <clave>`,
     });
   }
 

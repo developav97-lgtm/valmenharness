@@ -432,7 +432,10 @@ export async function runTicketGate(
   // primero— y nada cambia para quien usa la configuración por defecto.
   const apiKey = apiKeyWithPrecedence(routing.evaluatorProvider, request.credentialsFile);
   const credentialResolver = (provider: string): string | undefined => {
-    if (transportById(provider).credential !== undefined) return undefined;
+    // Las suscripciones resuelven su credencial en su transporte —o, la de Claude,
+    // la tiene el CLI—: una clave del archivo no es un bearer token.
+    const transport = transportById(provider);
+    if (transport.credential !== undefined || transport.cli !== undefined) return undefined;
     return apiKeyWithPrecedence(provider, request.credentialsFile) ?? undefined;
   };
 

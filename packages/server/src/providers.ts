@@ -21,11 +21,13 @@ import { dirname, join } from "node:path";
 
 import { yamlBlockOf, yamlFieldOf } from "@valmen/core";
 import {
-  EXPLICACION_429_CLAUDE_CODE,
+  ChatError,
+  type ClaudeCliRunner,
+  type ClaudeCliStatusRunner,
   type Protocol,
   anthropicAuthHeaders,
-  hayCredencialDeClaudeCode,
-  readClaudeCodeCredential,
+  callClaudeCli,
+  readClaudeCliAuth,
   readCodexCredential,
 } from "@valmen/credentials";
 
@@ -81,7 +83,15 @@ export interface ProviderSpec {
    * mandar. Se declara por nombre para que quien resuelva la credencial sepa que
    * este proveedor no se lee como los demás.
    */
-  readonly credential?: "codex" | "claude-code";
+  readonly credential?: "codex";
+  /**
+   * El proveedor se habla —y se prueba— por el CLI oficial de su dueño, no por HTTP.
+   *
+   * Es el caso de `claude-code`: el harness no lee ninguna credencial suya, porque el
+   * CLI es el dueño de la sesión. Su estado sale de `claude auth status` y su prueba
+   * de una llamada real por `claude -p`. Ver `@valmen/credentials` (`claude-cli.ts`).
+   */
+  readonly cli?: "claude";
   /**
    * El dialecto del proveedor, cuando no es el de chat.
    *
@@ -135,15 +145,11 @@ export interface ProviderEntry extends ProviderSpec {
 }
 
 /**
- * El modelo con el que se prueba la credencial de Claude Code cuando nadie elige
- * uno.
+ * El modelo con el que se prueba Claude Code cuando nadie elige uno.
  *
- * La API de Anthropic exige `model`: sin él responde HTTP 400 `model: Field
- * required`, que **parece** un fallo de credencial y prueba lo contrario —para
- * validar el cuerpo ya aceptó la credencial—. El botón «Probar» de la lista de
- * proveedores no pide un modelo, así que la prueba a nivel de proveedor lleva uno
- * propio. Haiku porque, medido el 2026-10-05, es el único que la suscripción
- * acepta en llamadas directas (ver `EXPLICACION_429_CLAUDE_CODE`), y el más barato.
+ * El botón «Probar» de la lista de proveedores no pide un modelo, así que la prueba a
+ * nivel de proveedor lleva uno propio. Haiku porque es el más barato: lo que importa
+ * es que la sesión sirva, no con qué modelo.
  */
 export const MODELO_DE_PRUEBA_CLAUDE_CODE = "claude-haiku-4-5-20251001";
 
@@ -209,38 +215,27 @@ const CATALOGO: readonly ProviderSpec[] = [
   },
   {
     // La suscripción de Claude Code: sin factura por token, con el plan que la
-    // persona ya paga. Su token **no** vive en un archivo en macOS —está en el
-    // llavero—, así que el estado no se decide leyendo `tokenSource`: se le
-    // pregunta al lector, que sabe dónde buscarlo en cada sistema.
+    // persona ya paga, **por el CLI oficial**. La API directa con el token OAuth solo
+    // dejaba pasar a Haiku —el resto, HTTP 429—, y `claude -p` con la misma cuenta
+    // responde en todos. El harness no lee ninguna credencial: el estado sale de
+    // `claude auth status` y la prueba de una llamada real. Ver `claude-cli.ts`.
     id: "claude-code",
     name: "Claude Code (suscripción)",
     auth: "subscription",
-    credential: "claude-code",
+    cli: "claude",
     envVar: "ANTHROPIC_API_KEY",
-    tokenSource: "~/.claude/.credentials.json",
     protocol: "anthropic-messages",
-    // No publica catálogo con un token de sesión, así que los identificadores se
-    // declaran. Son los vigentes de su CLI, y se pueden escribir otros.
+    // El CLI no publica catálogo, así que los identificadores se declaran. Son los
+    // que respondieron por `claude -p` el 2026-10-05, y se pueden escribir otros.
     knownModels: [
-      "claude-sonnet-5",
-      "claude-opus-4-8",
-      "claude-fable-5",
+      "claude-opus-5-5",
+      "claude-sonnet-5-5",
+      "claude-fable-5-1",
       "claude-haiku-4-5-20251001",
+      "claude-opus-4-8",
+      "claude-sonnet-5",
+      "claude-fable-5",
     ],
-    probe: {
-      url: "https://api.anthropic.com/v1/messages",
-      expect: 200,
-      method: "POST",
-      // `model` y `max_tokens` son obligatorios en este dialecto. El modelo es el
-      // de prueba del proveedor: `testProviderModel` lo reemplaza por el que se
-      // quiera comprobar, y la prueba sin modelo usa este.
-      body: {
-        model: MODELO_DE_PRUEBA_CLAUDE_CODE,
-        max_tokens: 1,
-        messages: [{ role: "user", content: "ok" }],
-      },
-      headers: { "anthropic-version": "2023-06-01", "anthropic-beta": "oauth-2025-04-20" },
-    },
   },
   {
     // Codex es una suscripción de ChatGPT, y **sí tiene API**: su catálogo está en
@@ -352,12 +347,16 @@ export interface ProviderStatus {
   /** El campo del archivo tiene el nombre anterior. Se informa, no se corrige. */
   readonly legacyFieldName: boolean;
   readonly tokenSource?: string;
+  /** El proveedor se habla por el CLI oficial de su dueño: no hay credencial que leer. */
+  readonly cli?: "claude";
   /**
    * `true` si el proveedor declara un endpoint contra el que probar la clave.
    *
    * Un proveedor de suscripción no lo tiene: su credencial es el token que ya
    * vive en el CLI, y no hay URL a la que preguntar. Ofrecer un botón que
    * siempre falla es peor que no ofrecerlo, porque parece un error del usuario.
+   * (Los que se hablan por el CLI sí son probeables: se prueba su sesión y un
+   * modelo, sin URL.)
    */
   readonly probeable: boolean;
   /** El host contra el que se va a tocar al probar, para poder decirlo. */
@@ -430,10 +429,17 @@ function readKeyFromFile(
  */
 export const PROVIDERS: readonly ProviderEntry[] = CATALOGO.map((spec) => ({
   ...spec,
-  probeable: spec.probe !== undefined,
-  probeHost: spec.probe === undefined ? null : new URL(spec.probe.url).host,
+  // Por el CLI también se puede probar —la sesión y un modelo concreto—, aunque no
+  // haya un endpoint HTTP que declarar.
+  probeable: spec.probe !== undefined || spec.cli !== undefined,
+  probeHost:
+    spec.cli !== undefined
+      ? "el CLI local `claude`"
+      : spec.probe === undefined
+        ? null
+        : new URL(spec.probe.url).host,
   listable: spec.modelsUrl !== undefined,
-  testable: spec.probe?.method === "POST",
+  testable: spec.probe?.method === "POST" || spec.cli !== undefined,
 }));
 
 /**
@@ -453,6 +459,21 @@ export function listProviders(
   // está sin configurar es lo que hay que hacer, y enterrarlo bajo ocho filas
   // verdes obliga a buscarlo.
   return PROVIDERS.map((spec): ProviderStatus => {
+    // Un proveedor que se habla por el CLI de su dueño no tiene clave que mirar ni en
+    // el entorno ni en el archivo: su estado es el de la sesión del CLI. Se decide
+    // primero porque `ANTHROPIC_API_KEY` en el entorno haría creer «configurado» a la
+    // suscripción cuando el CLI, con esa variable, facturaría por token.
+    if (spec.cli !== undefined) {
+      const sesion = readClaudeCliAuth({ env });
+      return {
+        ...spec,
+        configured: sesion.loggedIn,
+        source: sesion.loggedIn ? "cli" : "none",
+        keyLength: null,
+        legacyFieldName: false,
+      };
+    }
+
     const desdeEntorno = env[spec.envVar];
     const enEntorno = typeof desdeEntorno === "string" && desdeEntorno.trim() !== "";
     const enArchivo = readKeyFromFile(text, spec.id);
@@ -484,11 +505,6 @@ export function listProviders(
         existe = readFileSync(expandido, "utf8").length > 0;
       } catch {
         existe = false;
-      }
-      // Claude Code guarda su sesión en el llavero en macOS: preguntarle al lector
-      // es lo único que dice la verdad en los dos sistemas.
-      if (!existe && spec.credential === "claude-code") {
-        existe = hayCredencialDeClaudeCode();
       }
       return {
         ...spec,
@@ -741,17 +757,71 @@ function prefijoDeVeredicto(aceptada: boolean | null, ok: boolean): string {
 }
 
 /**
- * Lo que se añade al mensaje del proveedor cuando se conoce la causa de un
- * rechazo que, a simple vista, parece otra cosa.
+ * Prueba un proveedor que se habla por el CLI de su dueño.
  *
- * El 429 de la suscripción de Claude Code no suele ser cuota: ver
- * `EXPLICACION_429_CLAUDE_CODE`. Se añade **detrás** del texto del proveedor, que
- * sigue viajando tal cual.
+ * Dos pasos, en este orden: la sesión —`claude auth status`, que responde desde su
+ * estado local y **no gasta cuota**— y, si hay sesión, una llamada real mínima. El
+ * primero existe para que «no hay sesión» salga con el comando que lo arregla en vez
+ * de como un fallo del modelo; el segundo, porque una sesión presente no prueba que
+ * el modelo responda.
+ *
+ * Sin `modelo` se prueba el proveedor con el modelo de prueba; con él, esa pareja.
+ * No hay `status` HTTP que devolver —el CLI no lo expone en el éxito—, y se dice por
+ * dónde se habló en el propio mensaje.
  */
-function notaDeRechazo(spec: ProviderSpec, status: number): string {
-  return spec.credential === "claude-code" && status === 429
-    ? ` ${EXPLICACION_429_CLAUDE_CODE}`
-    : "";
+async function probarPorCli(
+  modelo: string | null,
+  options: {
+    readonly env?: NodeJS.ProcessEnv;
+    readonly timeoutMs?: number;
+    readonly cliRunner?: ClaudeCliRunner;
+    readonly cliStatusRunner?: ClaudeCliStatusRunner;
+  },
+): Promise<ProbeResult> {
+  const inicio = Date.now();
+  const sesion = readClaudeCliAuth({
+    ...(options.env === undefined ? {} : { env: options.env }),
+    ...(options.cliStatusRunner === undefined ? {} : { runner: options.cliStatusRunner }),
+  });
+  if (!sesion.loggedIn) {
+    return {
+      ok: false,
+      status: null,
+      detail: sesion.detail,
+      latencyMs: Date.now() - inicio,
+      credentialAccepted: false,
+    };
+  }
+
+  const probado = modelo ?? MODELO_DE_PRUEBA_CLAUDE_CODE;
+  try {
+    const respuesta = await callClaudeCli({
+      model: probado,
+      messages: [{ role: "user", content: "Responde solo: ok" }],
+      timeoutMs: options.timeoutMs ?? 90_000,
+      ...(options.env === undefined ? {} : { env: options.env }),
+      ...(options.cliRunner === undefined ? {} : { runner: options.cliRunner }),
+    });
+    return {
+      ok: true,
+      status: null,
+      detail:
+        modelo === null
+          ? `${sesion.detail} Responde por el CLI oficial (${respuesta.model}).`
+          : `Responde por el CLI oficial (${respuesta.model}).`,
+      latencyMs: Date.now() - inicio,
+      credentialAccepted: true,
+    };
+  } catch (caught) {
+    const codigo = caught instanceof ChatError ? caught.code : null;
+    return {
+      ok: false,
+      status: null,
+      detail: caught instanceof Error ? caught.message : String(caught),
+      latencyMs: Date.now() - inicio,
+      credentialAccepted: codigo === "AUTH" ? false : null,
+    };
+  }
 }
 
 /** El modelo con el que el proveedor se prueba cuando nadie elige uno, si declara uno. */
@@ -786,6 +856,9 @@ export async function probeProvider(
      * necesita parecer una variable de entorno.
      */
     readonly apiKey?: string;
+    /** Quien ejecuta el CLI de los proveedores que se hablan por él. Para pruebas. */
+    readonly cliRunner?: ClaudeCliRunner;
+    readonly cliStatusRunner?: ClaudeCliStatusRunner;
   } = {},
 ): Promise<ProbeResult> {
   const spec = PROVIDERS.find((provider) => provider.id === id);
@@ -796,6 +869,9 @@ export async function probeProvider(
       detail: `Proveedor desconocido: "${id}".`,
       latencyMs: 0,
     };
+  }
+  if (spec.cli !== undefined) {
+    return probarPorCli(null, options);
   }
   if (spec.probe === undefined) {
     return {
@@ -883,8 +959,7 @@ export async function probeProvider(
             ? `: ${cuerpo}`
             : respuesta.status === 401 || respuesta.status === 403
               ? ": la credencial no es válida o no tiene permisos."
-              : ".") +
-          notaDeRechazo(spec, respuesta.status),
+              : "."),
       latencyMs: latencia,
     };
   } catch (caught) {
@@ -904,16 +979,15 @@ export async function probeProvider(
 /**
  * Por qué no hay credencial de un proveedor de CLI.
  *
- * Sin esto, una sesión ausente se probaba igual y el proveedor contestaba
- * `x-api-key header is required`: un mensaje que habla de una cabecera y manda a
- * buscar el problema al sitio equivocado. El lector sí sabe qué pasa —archivo,
- * llavero, token caducado— y esto lo trae.
+ * Sin esto, una sesión ausente se probaba igual y el proveedor contestaba con un
+ * mensaje que habla de una cabecera y manda a buscar el problema al sitio
+ * equivocado. El lector sí sabe qué pasa —archivo ausente, token caducado— y esto
+ * lo trae. Solo aplica a `codex`: `claude-code` no lee credencial (ver `cli`).
  */
 function motivoSinCredencial(spec: ProviderSpec): string | null {
   if (spec.credential === undefined) return null;
   try {
-    if (spec.credential === "claude-code") readClaudeCodeCredential();
-    else readCodexCredential();
+    readCodexCredential();
     return null;
   } catch (caught) {
     return caught instanceof Error ? caught.message : String(caught);
@@ -935,16 +1009,6 @@ function resolveForProbe(
       // Un error de credencial no se convierte en una excepción aquí: quien llama
       // decide qué hacer sin ella, y el archivo de codex puede no existir en una
       // máquina que nunca lo usó.
-      return null;
-    }
-  }
-
-  if (spec.credential === "claude-code") {
-    try {
-      // El lector sabe que en macOS el token está en el llavero: mirar solo
-      // `tokenSource` diría «no configurado» con la sesión viva.
-      return readClaudeCodeCredential().accessToken;
-    } catch {
       return null;
     }
   }
@@ -1229,6 +1293,9 @@ export async function testProviderModel(
     readonly env?: NodeJS.ProcessEnv;
     readonly fetchImpl?: typeof fetch;
     readonly timeoutMs?: number;
+    /** Quien ejecuta el CLI de los proveedores que se hablan por él. Para pruebas. */
+    readonly cliRunner?: ClaudeCliRunner;
+    readonly cliStatusRunner?: ClaudeCliStatusRunner;
   } = {},
 ): Promise<ProbeResult> {
   const spec = PROVIDERS.find((provider) => provider.id === id);
@@ -1247,6 +1314,9 @@ export async function testProviderModel(
       detail: "Falta el identificador del modelo.",
       latencyMs: 0,
     };
+  }
+  if (spec.cli !== undefined) {
+    return probarPorCli(model.trim(), options);
   }
   if (spec.probe === undefined || spec.probe.method !== "POST") {
     // Sin un endpoint de chat no hay nada que probar. Se dice en vez de devolver
@@ -1344,8 +1414,7 @@ export async function testProviderModel(
       : // El mensaje del proveedor, sin parafrasear: «Model is unavailable» no
         // es «la credencial no vale», y se arreglan distinto.
         prefijoDeVeredicto(aceptada, ok) +
-        `${spec.name} respondió HTTP ${respuesta.status}${texto === "" ? "." : `: ${texto}`}` +
-        notaDeRechazo(spec, respuesta.status),
+        `${spec.name} respondió HTTP ${respuesta.status}${texto === "" ? "." : `: ${texto}`}`,
     latencyMs,
   };
 }

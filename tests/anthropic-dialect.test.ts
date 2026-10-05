@@ -52,6 +52,7 @@ import {
   structuredOutputOf,
 } from "../packages/credentials/src/endpoints.js";
 import { ChatError, callChat } from "../packages/credentials/src/chat.js";
+import type { ClaudeCliRun } from "../packages/credentials/src/claude-cli.js";
 
 let lab: string;
 
@@ -115,13 +116,18 @@ describe("el dialecto de Anthropic", () => {
     expect(resolveChatEndpoint("anthropic", "claude-sonnet-5").url).toBe(
       "https://api.anthropic.com/v1/messages",
     );
-    expect(resolveChatEndpoint("claude-code", "claude-opus-4-8").url).toBe(
-      "https://api.anthropic.com/v1/messages",
-    );
     // Y los Claude de la pasarela de opencode, que estaban declarados desde el
     // principio y no tenían camino.
     expect(resolveChatEndpoint("opencode-zen", "claude-sonnet-4-6").url).toBe(
       "https://opencode.ai/zen/v1/messages",
+    );
+  });
+
+  it("`claude-code` no tiene endpoint HTTP: se habla por el CLI oficial", () => {
+    // Medido el 2026-10-05: la API directa con el token de la suscripción solo dejaba
+    // pasar a Haiku. Devolver aquí la URL de la API sería decir que se llama por ahí.
+    expect(() => resolveChatEndpoint("claude-code", "claude-opus-4-8")).toThrowError(
+      /CLI oficial/,
     );
   });
 
@@ -540,46 +546,71 @@ describe("el llavero de macOS", () => {
 });
 
 describe("la llamada completa por Claude", () => {
-  it("resuelve la credencial de la suscripción y no pide clave en el archivo", async () => {
-    // El camino real: `callChat` con el proveedor `claude-code` tiene que leer el
-    // token del CLI, no buscar una clave que nunca va a estar en el archivo del
-    // harness. Es el mismo fallo que tuvo codex.
+  it("`claude-code` va por el CLI oficial: ni HTTP ni credencial que leer", async () => {
+    // El camino real: `callChat` con el proveedor `claude-code` invoca `claude -p` y no
+    // busca ninguna credencial —ni en el archivo del harness ni en el llavero—, porque
+    // la sesión es del CLI. Antes leía el token OAuth y llamaba a la API directa, que
+    // rechazaba con 429 a Sonnet, Opus y Fable.
     //
-    // El `$HOME` se mueve al laboratorio porque `callChat` resuelve la credencial
-    // del `$HOME` —es lo correcto para el CLI, que corre en la máquina del
-    // usuario— y una prueba no puede leer la sesión real de quien la ejecuta.
+    // El `$HOME` se mueve al laboratorio, vacío, para que si algo intentara leer una
+    // credencial no encontrara la real de quien corre la prueba.
     const hogar = process.env["HOME"];
     process.env["HOME"] = lab;
-    const ruta = claudeCodeCredentialsPath(lab);
-    mkdirSync(join(ruta, ".."), { recursive: true });
-    writeFileSync(
-      ruta,
-      JSON.stringify({
-        claudeAiOauth: {
-          // valmen:allow-secret — token inventado del test, no una credencial real
-          accessToken: "sk-ant-oat01-abc",
-          expiresAt: Date.now() + 3_600_000,
-        },
-      }),
-      "utf8",
-    );
 
     try {
-      const { llamadas, fetch: falso } = fetchQueCaptura(respuestaConTexto("listo"));
+      const { llamadas, fetch: falso } = fetchQueCaptura(
+        respuestaConTexto("no debe usarse"),
+      );
+      const ejecuciones: ClaudeCliRun[] = [];
       const resultado = await callChat({
         provider: "claude-code",
-        model: "claude-sonnet-5",
+        model: "claude-sonnet-5-5",
         messages: [{ role: "user", content: "hola" }],
         fetchImpl: falso,
+        cliRunner: async (run) => {
+          ejecuciones.push(run);
+          return {
+            status: 0,
+            stdout: JSON.stringify({
+              is_error: false,
+              result: "listo",
+              usage: { input_tokens: 2, output_tokens: 1 },
+              modelUsage: { "claude-sonnet-5-5": {} },
+            }),
+            stderr: "",
+            timedOut: false,
+            spawnError: null,
+          };
+        },
       });
 
       expect(resultado.content).toBe("listo");
-      const cabeceras = cabecerasDe(llamadas[0]?.init as RequestInit);
-      expect(cabeceras["Authorization"]).toBe("Bearer sk-ant-oat01-abc");
-      expect(cabeceras["anthropic-version"]).toBe("2023-06-01");
+      expect(resultado.model).toBe("claude-sonnet-5-5");
+      expect(llamadas).toHaveLength(0);
+      expect(ejecuciones).toHaveLength(1);
+      expect(ejecuciones[0]?.args).toContain("claude-sonnet-5-5");
+      expect(ejecuciones[0]?.stdin).toBe("hola");
     } finally {
       if (hogar === undefined) delete process.env["HOME"];
       else process.env["HOME"] = hogar;
     }
+  });
+
+  it("`anthropic` con una clave sigue yendo por HTTP a `/messages`", async () => {
+    const { llamadas, fetch: falso } = fetchQueCaptura(respuestaConTexto("listo"));
+    const resultado = await callChat({
+      provider: "anthropic",
+      model: "claude-sonnet-5",
+      messages: [{ role: "user", content: "hola" }],
+      // valmen:allow-secret — clave inventada del test, no una credencial real
+      apiKey: "sk-ant-api03-de-prueba",
+      fetchImpl: falso,
+    });
+
+    expect(resultado.content).toBe("listo");
+    expect(llamadas[0]?.url).toBe("https://api.anthropic.com/v1/messages");
+    const cabeceras = cabecerasDe(llamadas[0]?.init as RequestInit);
+    expect(cabeceras["x-api-key"]).toBe("sk-ant-api03-de-prueba");
+    expect(cabeceras["anthropic-version"]).toBe("2023-06-01");
   });
 });

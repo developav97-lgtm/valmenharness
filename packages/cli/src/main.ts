@@ -32,7 +32,8 @@ function credentialForCascade(
   credentialsFile: string | undefined,
 ): (provider: string) => string | undefined {
   return (provider) => {
-    if (transportById(provider).credential !== undefined) return undefined;
+    const transport = transportById(provider);
+    if (transport.credential !== undefined || transport.cli !== undefined) return undefined;
     return apiKeyWithPrecedence(provider, credentialsFile) ?? undefined;
   };
 }
