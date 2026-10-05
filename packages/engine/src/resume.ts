@@ -9,6 +9,7 @@ import type { ParsedTicket } from "@valmen/core";
 
 import { procedenciaDeTicket, type Procedencia } from "./provenance.js";
 import { duracionEnTexto, duracionesPorEtapa, type EtapaDeTicket } from "./etapas.js";
+import { computeNextStep, renderNextStep, type NextStep } from "./next-step.js";
 import { readReceipts } from "./receipts.js";
 import type { RegistryPaths } from "./discovery.js";
 
@@ -45,6 +46,12 @@ export interface ResumeContext {
   readonly plan: string;
   readonly openPoints: readonly ResumePoint[];
   readonly lastReceipt: ResumeReceipt | null;
+  /**
+   * Lo que toca hacer ahora, calculado por el motor a partir del estado, lo escrito en
+   * el ticket y los recibos. Es lo primero que un agente que retoma debe leer: sin
+   * esto, «continúa con el ticket» obliga a adivinar el orden y dónde detenerse.
+   */
+  readonly nextStep: NextStep;
   readonly readInstruction: string;
   /**
    * Lo que tardó cada etapa, desde los eventos del ticket.
@@ -107,6 +114,7 @@ export function buildResumeContext(
       severity: String(point["severity"]),
     })),
     lastReceipt,
+    nextStep: computeNextStep(paths, ticket, recibos),
     etapas: duracionesPorEtapa(ticket.blocks.Eventos ?? []),
     readInstruction:
       "Lee las secciones completas bajo demanda con ver_ticket usando el mismo identificador.",
@@ -140,6 +148,10 @@ export function renderResumeContext(context: ResumeContext): string {
       );
     }
   }
+
+  // Justo debajo del estado y antes del plan, que puede ser largo: es lo primero que
+  // hay que leer, y enterrado al final se pasaba de largo.
+  lines.push(...renderNextStep(context.nextStep));
 
   lines.push("Plan vigente:", context.plan || "(sin plan registrado)", "Puntos abiertos:");
   if (context.openPoints.length === 0) {

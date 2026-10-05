@@ -484,7 +484,7 @@ valmen create --id --title --type --module --request   # alta, en intake
 valmen validate --all | --id <ID>     # el contrato del ticket
 valmen active                         # los no cerrados (alias: list)
 valmen show <ID>                      # el resumen de un ticket
-valmen resume [--id <ID>]             # contexto para retomar
+valmen resume [--id <ID>]             # contexto para retomar, y el SIGUIENTE PASO
 valmen transition --id --entity --to  # mueve estados, con la tabla del contrato
 valmen index [--check]                # el índice derivado
 valmen report [--desde --hasta --type --q]   # cierres, por fecha de CIERRE
@@ -565,6 +565,53 @@ con su agente —opencode, codex, Claude Code—, y el agente necesita poder dar
 ticket, validarlo, evaluar la compuerta y mover el estado. Sin esto, cada ticket empieza
 con alguien copiando un comando.
 
+### El siguiente paso: «continúa con el ticket X» alcanza
+
+`valmen resume` y `reanudar_ticket` imprimen, justo debajo del estado, el **siguiente
+paso** del ticket. Lo calcula `packages/engine/src/next-step.ts` a partir de tres cosas —el
+estado, lo que ya está escrito en el ticket y los recibos de las compuertas— y con las
+mismas comprobaciones que `transition` usa para permitir o negar cada salto, así que lo
+que se le dice al agente es lo que el motor le va a exigir.
+
+**Por qué existe.** Medido el 2026-10-05, una sesión que solo recibió «continúa con el
+ticket X» fue directa a editar el código desde `intake` en una corrida, y en otra escribió
+el diagnóstico y ofreció «avanzar los gates» sin saber que el plan lo aprueba una persona;
+en ninguna cargó una skill. El proceso vivía en los prompts —los que genera el harness para
+sus corridas programadas miden unas 2 100 palabras— y no en el harness. Con el siguiente
+paso en el motor, la misma sesión de laboratorio, con **solo** «Continúa con el ticket…»,
+cargó `planificacion`, escribió el diagnóstico y el plan en el ticket, corrió las
+compuertas, corrigió lo que le rechazaron y **se detuvo en la aprobación del plan** sin
+tocar el código; y con la aprobación en el pedido siguiente, implementó con las pruebas
+primero, verificó, y se detuvo en las pruebas del responsable.
+
+| Estado | Qué dice el siguiente paso |
+|---|---|
+| `intake` | Memoria, leer el código real, escribir `## Diagnóstico` en el ticket, validar y mover a `analyzed`. **No tocar el código.** |
+| `analyzed` | Evaluar `analysis`; si bloqueó, una sola pasada de mejora; si espera a una persona, **alto**; si pasó, escribir `## Plan` y los criterios con su `<!-- test: -->`. |
+| `planned` | Evaluar `plan`; con el plan aprobado, **alto**: la aprobación es de una persona y se escribe la línea que el motor exige. |
+| `approved`, `in_progress` | Implementar solo el plan, con pruebas; correr `qa-mechanical`; un recibo anterior al último cambio no vale; registrar el consumo de IA; entregar. |
+| `awaiting_user_tests`, `in_qa`, `closed`, `blocked` | **Alto**: lo decide o lo hace una persona. |
+
+Tres decisiones de diseño:
+
+1. **Es determinista** y no interviene un modelo: es una proyección del ticket, como el
+   resto del contexto de `resume`.
+2. **Dice dónde detenerse.** Un paso que termina en una decisión humana se declara como
+   `DETENTE AQUÍ`, con el comando que la registra. Una delegación escrita de la persona
+   permite registrarla al agente; sin ella, no.
+3. **No nombra tecnologías ni rutas del proyecto.** Cita las skills de proceso que el
+   harness publica (`planificacion`, `pruebas-unitarias`, `revision-final`) solo si el
+   proyecto las tiene, y ofrece las de dominio sin nombrarlas.
+
+La plantilla de `AGENTS.md` que genera el harness lleva el mismo protocolo en
+«Continuar un ticket», para los agentes que no usan el MCP: `reanudar_ticket` primero, hacer
+el paso, volver a llamarla, y seguir solo hasta el primer alto.
+
+**Lo que no cambia:** una corrida llega hasta el primer alto y ahí se detiene. Que «hasta el
+final» pase por las compuertas humanas sin que se repita la autorización en cada pedido es
+una decisión de política del proyecto —una delegación declarada una vez— y no está
+implementada.
+
 ### Las veintiocho herramientas
 
 | Herramienta | Qué hace | Reutiliza |
@@ -577,7 +624,7 @@ con alguien copiando un comando.
 | `anotar_punto` | Un hallazgo, con `actual`, `expected` y los archivos que toca | `addPoint` |
 | `mover_punto` | El ciclo del punto, independiente del ticket | `transition` |
 | `anotar_evidencia` | La prueba de algo hecho, enlazada al punto que la originó | `addEvidence` |
-| `reanudar_ticket` | Contexto para retomar trabajo empezado | `valmen resume` |
+| `reanudar_ticket` | Contexto para retomar trabajo empezado **y el siguiente paso** | `valmen resume` |
 | `evaluar_compuerta` | Evalúa un gate y escribe el recibo | `runGate` |
 | `simular_compuerta` | Mide un gate sobre el histórico, para calibrar | `simulateGate` |
 | `ver_features` | Las features, o una con su brief y sus artefactos | `featureList` / `featureShow` |

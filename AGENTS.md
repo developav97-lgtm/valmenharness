@@ -134,11 +134,36 @@ respuesta. No lo abre por su cuenta, ni siquiera cuando el trabajo cumple de
 sobra las condiciones para tenerlo.
 
 Un pedido de trabajo no es un pedido de registro. Cuando alguien dice
-"hagámoslo", el modo por defecto es el directo: se hace y se prueba.
+"hagámoslo", el modo por defecto es el directo: se hace y se prueba. Eso vale para un
+pedido **que no nombra un ticket**: si nombra uno que ya existe, ese ticket manda y el
+orden es el de «Continuar un ticket», justo debajo.
 
 Cuando sí se pide, esto es lo que lo justifica: dos o más pasos de
 implementación con archivos distintos, o un progreso que conviene recuperar tras
 una interrupción. Un cambio trivial y comprendido no crea artefactos durables.
+
+### Continuar un ticket
+
+Un pedido como «continúa con el ticket X», «sigue con X» o «trabaja X» nombra un
+ticket que ya existe, y entonces **el ticket manda, no el modo directo**. El orden es
+siempre el mismo y no hace falta que el pedido lo repita:
+
+1. `reanudar_ticket` (CLI: `valmen resume --id <ID>`) **primero**. Devuelve el estado
+   y el **siguiente paso**, que el motor calcula a partir del estado, lo escrito en el
+   ticket y los recibos de las compuertas: qué escribir, qué skill cargar, qué
+   compuerta correr y dónde detenerse.
+2. Hacer ese paso y volver a llamar a `reanudar_ticket` para el siguiente. Es el
+   motor quien dice cuándo seguir; no se adivina el orden ni se salta una fase.
+3. Seguir hasta el primer **alto** que el siguiente paso declare —una decisión de una
+   persona, o las pruebas del responsable— y entregar ahí: qué se hizo, qué evidencia
+   hay y qué decisión se necesita. Un alto no se supera: ni se aprueba lo que decide
+   una persona, ni se mueve el ticket para esquivarlo.
+
+Mientras el ticket no esté `approved`, **el código de la aplicación no se toca**: el
+diagnóstico y el plan se escriben **en el ticket**. Un diagnóstico que se queda en la
+conversación no existe para el registro, y una implementación sin plan aprobado salta
+justo la compuerta que existe para evitarlo. Las skills que el siguiente paso nombra
+se cargan antes de empezar esa fase.
 
 Una funcionalidad que excede un ticket —un módulo con varias pantallas, reportes
 y configuración— se registra como **feature**: brief, spec con requisitos, diseño,

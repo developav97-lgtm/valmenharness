@@ -729,10 +729,14 @@ export const TOOLS: readonly ToolDefinition[] = [
     annotations: SOLO_LEE,
     title: "Reanudar un ticket",
     description:
-      "Devuelve el contexto para retomar un ticket. Por defecto entrega un resumen " +
-      "compacto, determinista y estructurado con estado, plan, puntos abiertos y último " +
-      "recibo; usa `modo: completo` para leer el ticket entero. Sin `id`, si hay más de " +
-      "un ticket activo **no elige**: devuelve la lista y hay que decidir cuál.",
+      "Empieza SIEMPRE por aquí cuando te pidan continuar, retomar o trabajar un ticket " +
+      "existente. Devuelve el contexto para retomarlo —estado, plan, puntos abiertos y " +
+      "último recibo— y, justo debajo del estado, el **siguiente paso** que calcula el " +
+      "motor: qué escribir en el ticket, qué skill cargar, qué compuerta correr y dónde " +
+      "detenerse a esperar una decisión humana. Después de hacer ese paso, vuelve a " +
+      "llamarla para el siguiente. Por defecto entrega un resumen compacto y determinista; " +
+      "usa `modo: completo` para leer el ticket entero. Sin `id`, si hay más de un ticket " +
+      "activo **no elige**: devuelve la lista y hay que decidir cuál.",
     inputSchema: conRoot({
       properties: {
         id: { type: "string", description: "Identificador del ticket." },
