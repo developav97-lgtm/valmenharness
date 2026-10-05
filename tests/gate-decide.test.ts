@@ -16,6 +16,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  ANALYSIS_GATE,
   DEFAULT_POLICY,
   type Proposition,
   type PropositionAnswer,
@@ -217,6 +218,69 @@ describe("la asimetría de la decisión", () => {
     // El motivo dice de dónde salió el veredicto: en un gate expandido con
     // criterios, las dimensiones fijas no votan y no pueden parecer que sí.
     expect(decision.reason).toContain("todas las proposiciones claras");
+  });
+});
+
+// ── Contradicción aislada del análisis ─────────────────────────────────────
+
+describe("la contradicción aislada del gate de análisis", () => {
+  const respuestasAp004: PropositionAnswer[] = [
+    { id: "diagnostico_explica_el_sintoma", kind: "noul", value: 0.04 },
+    { id: "causa_especifica", kind: "noul", value: 0.97 },
+    { id: "nombra_archivos_reales", kind: "noul", value: 0.97 },
+    { id: "riesgos_cubren_impactos", kind: "noul", value: 0.97 },
+    { id: "clasificacion", kind: "choice", choice: "completa", confidence: 0.99 },
+  ];
+
+  it("degrada AP-004 a revisión humana, sin aprobarlo", () => {
+    const decision = decide(
+      ANALYSIS_GATE.propositions,
+      respuestasAp004,
+      ANALYSIS_GATE.policy,
+      ANALYSIS_GATE.isolatedBlockReview,
+    );
+
+    expect(decision.outcome).toBe("review");
+    expect(decision.blocking).toEqual(["diagnostico_explica_el_sintoma"]);
+    expect(decision.reason).toContain("contradicción");
+  });
+
+  it.each(["causa_especifica", "nombra_archivos_reales"] as const)(
+    "conserva el bloqueo si falla %s",
+    (id) => {
+      const answers = respuestasAp004.map((answer) =>
+        answer.id === id ? { ...answer, value: 0.04 } : answer,
+      );
+
+      const decision = decide(
+        ANALYSIS_GATE.propositions,
+        answers,
+        ANALYSIS_GATE.policy,
+        ANALYSIS_GATE.isolatedBlockReview,
+      );
+
+      expect(decision.outcome).toBe("block");
+      expect(decision.blocking).toContain(id);
+      expect(decision.blocking).toContain("diagnostico_explica_el_sintoma");
+    },
+  );
+
+  it("conserva el bloqueo si la clasificación no está completa", () => {
+    const answers: PropositionAnswer[] = respuestasAp004.map((answer) =>
+      answer.id === "clasificacion"
+        ? { id: "clasificacion", kind: "choice", choice: "falta_causa", confidence: 0.99 }
+        : answer,
+    );
+
+    const decision = decide(
+      ANALYSIS_GATE.propositions,
+      answers,
+      ANALYSIS_GATE.policy,
+      ANALYSIS_GATE.isolatedBlockReview,
+    );
+
+    expect(decision.outcome).toBe("block");
+    expect(decision.blocking).toContain("clasificacion");
   });
 });
 

@@ -524,7 +524,12 @@ export async function runGate(
     // presentable: una excepción sin capturar en la capa de comando revienta el
     // proceso y deja al usuario sin saber qué pasó.
     try {
-      decision = decide(gate.propositions, evaluation.answers, gate.policy as GatePolicy);
+      decision = decide(
+        gate.propositions,
+        evaluation.answers,
+        gate.policy as GatePolicy,
+        gate.isolatedBlockReview,
+      );
     } catch (caught) {
       const failure = toFailure(caught);
       return {

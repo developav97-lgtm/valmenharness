@@ -198,6 +198,18 @@ export const ANALYSIS_GATE: GateDefinition = {
   criteriaPropositions: false,
   appliesTo: ["analyzed"],
   policy: DEFAULT_POLICY,
+  // AP-004 mostró un falso bloqueo: solo la proposición del síntoma cayó bajo
+  // el umbral, aunque la clasificación y las tres evidencias estructurales
+  // aprobaban. La excepción no aprueba el ticket: lo entrega a una persona.
+  isolatedBlockReview: {
+    blockingId: "diagnostico_explica_el_sintoma",
+    classificationId: "clasificacion",
+    requiredApprovedIds: [
+      "causa_especifica",
+      "nombra_archivos_reales",
+      "riesgos_cubren_impactos",
+    ],
+  },
   mechanicalChecks: [
     {
       id: "solicitud_preservada",

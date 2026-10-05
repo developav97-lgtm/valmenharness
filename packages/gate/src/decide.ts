@@ -123,6 +123,23 @@ export interface MechanicalCheck {
 }
 
 /**
+ * Excepción declarativa para un único bloqueo que contradice el resto de la
+ * evidencia del mismo recibo.
+ *
+ * No relaja el veto por defecto: solo se aplica si existe exactamente un
+ * bloqueo, coincide con `blockingId`, la clasificación declarada aprueba y
+ * cada identificador de `requiredApprovedIds` supera el umbral de la política.
+ * El resultado es `review`, nunca `approve`, para conservar la decisión humana.
+ */
+export interface IsolatedBlockReviewRule {
+  readonly blockingId: string;
+  /** La clasificación que debe resolver con efecto `approve`. */
+  readonly classificationId: string;
+  /** Evidencia estructural que debe superar `approveAt`. */
+  readonly requiredApprovedIds: readonly string[];
+}
+
+/**
  * Un gate declarado.
  *
  * `appliesTo` es la precondición de estado. Existe porque un gate no debe dar
@@ -186,6 +203,11 @@ export interface GateDefinition {
    */
   readonly interfazProposition?: boolean;
   readonly policy: GatePolicy;
+  /**
+   * Regla estrecha para degradar un bloqueo internamente contradictorio a
+   * revisión humana. Ausente significa que el veto absoluto se conserva.
+   */
+  readonly isolatedBlockReview?: IsolatedBlockReviewRule;
   readonly mechanicalChecks: readonly MechanicalCheck[];
   /**
    * Comandos que responden proposiciones de forma determinista.
@@ -344,6 +366,7 @@ export function decide(
   propositions: readonly Proposition[],
   answers: readonly PropositionAnswer[],
   policy: GatePolicy = DEFAULT_POLICY,
+  isolatedBlockReview?: IsolatedBlockReviewRule,
 ): GateDecision {
   validatePolicy(policy);
 
@@ -375,6 +398,18 @@ export function decide(
     (item) => decides(item) && item.effect?.outcome === "block" && !item.inBand,
   );
   if (blocking.length > 0) {
+    if (isIsolatedBlockContradiction(blocking, evaluated, policy, isolatedBlockReview)) {
+      return {
+        outcome: "review",
+        reason:
+          `contradicción interna: ${blocking[0]?.id} bloquea mientras la clasificación ` +
+          "y la evidencia estructural requerida aprobaron; se degrada a revisión humana",
+        actor: "model",
+        propositions: evaluated,
+        blocking: blocking.map((item) => item.id),
+        inBand: [],
+      };
+    }
     return {
       outcome: "block",
       reason: blocking.map((item) => item.reason).join("; "),
@@ -419,6 +454,36 @@ export function decide(
     blocking: [],
     inBand: [],
   };
+}
+
+/**
+ * `true` solo para la excepción declarada por un gate concreto.
+ *
+ * Las dimensiones requeridas se comprueban por valor y por efecto: así no
+ * basta con que estén fuera de banda, sino que deben aprobar de verdad según
+ * la política que recibió esta decisión.
+ */
+function isIsolatedBlockContradiction(
+  blocking: readonly EvaluatedProposition[],
+  evaluated: readonly EvaluatedProposition[],
+  policy: GatePolicy,
+  rule: IsolatedBlockReviewRule | undefined,
+): boolean {
+  if (rule === undefined || blocking.length !== 1 || blocking[0]?.id !== rule.blockingId) {
+    return false;
+  }
+
+  const classification = evaluated.find((item) => item.id === rule.classificationId);
+  if (classification?.effect?.outcome !== "approve") return false;
+
+  return rule.requiredApprovedIds.every((id) => {
+    const item = evaluated.find((candidate) => candidate.id === id);
+    return (
+      item !== undefined &&
+      item.value >= policy.approveAt &&
+      item.effect?.outcome === "approve"
+    );
+  });
 }
 
 /**

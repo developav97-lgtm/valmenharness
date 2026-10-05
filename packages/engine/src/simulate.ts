@@ -210,7 +210,12 @@ export async function simulateGate(
 
     let decision: GateDecision;
     try {
-      decision = decide(expanded.propositions, evaluation.answers, expanded.policy);
+      decision = decide(
+        expanded.propositions,
+        evaluation.answers,
+        expanded.policy,
+        expanded.isolatedBlockReview,
+      );
     } catch (caught) {
       errors.push({ id: ticket.id, message: toFailure(caught).message });
       continue;
