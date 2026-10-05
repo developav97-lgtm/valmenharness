@@ -93,6 +93,67 @@ export function readMap(config: ConfigMap, key: string): ConfigMap {
   return value;
 }
 
+/** Solicitud declarativa para promover un gate híbrido a automático. */
+export interface GatePromotionRequest {
+  readonly mode: "auto";
+  readonly minimumSample: number;
+  readonly minimumAgreement: number;
+}
+
+/**
+ * Lee las promociones que una persona solicita en la configuración del proyecto.
+ *
+ * La solicitud no cambia ningún gate por sí sola: el motor la cruza con la
+ * evidencia append-only de calibración. Mantener esa separación evita que un
+ * cambio de YAML se convierta en una aprobación sin números verificables.
+ */
+export function readGatePromotions(
+  config: ConfigMap,
+  knownGateIds: readonly string[],
+): Readonly<Record<string, GatePromotionRequest>> {
+  if (config["gate-promotions"] === undefined) return {};
+  const promotions = readMap(config, "gate-promotions");
+  const result: Record<string, GatePromotionRequest> = {};
+
+  for (const [gateId, raw] of Object.entries(promotions)) {
+    if (!knownGateIds.includes(gateId)) {
+      fail(`config.yaml: "gate-promotions.${gateId}" nombra un gate desconocido.`);
+    }
+    if (typeof raw === "string" || Array.isArray(raw)) {
+      fail(`config.yaml: "gate-promotions.${gateId}" debe ser un mapa.`);
+    }
+    const allowed = new Set(["mode", "minimum-sample", "minimum-agreement"]);
+    for (const key of Object.keys(raw)) {
+      if (!allowed.has(key)) {
+        fail(`config.yaml: "gate-promotions.${gateId}.${key}" no es una clave válida.`);
+      }
+    }
+
+    if (raw["mode"] !== "auto") {
+      fail(`config.yaml: "gate-promotions.${gateId}.mode" debe ser auto.`);
+    }
+    const minimumSample = Number(raw["minimum-sample"]);
+    if (!Number.isInteger(minimumSample) || minimumSample <= 0) {
+      fail(
+        `config.yaml: "gate-promotions.${gateId}.minimum-sample" debe ser un entero positivo.`,
+      );
+    }
+    const minimumAgreement = Number(raw["minimum-agreement"]);
+    if (
+      !Number.isFinite(minimumAgreement) ||
+      minimumAgreement < 0 ||
+      minimumAgreement > 1
+    ) {
+      fail(
+        `config.yaml: "gate-promotions.${gateId}.minimum-agreement" debe estar entre 0 y 1.`,
+      );
+    }
+    result[gateId] = Object.freeze({ mode: "auto", minimumSample, minimumAgreement });
+  }
+
+  return Object.freeze(result);
+}
+
 /**
  * La configuración del puente con Hermes.
  *

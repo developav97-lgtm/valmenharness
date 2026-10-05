@@ -1102,6 +1102,35 @@ intuición: **si el gate automático coincide con el humano en el 100% de N caso
 automatiza.** Y si deja de coincidir, el sistema lo detecta y vuelve a `hybrid`
 automáticamente si así se configura:
 
+### 9.1 Promoción verificable implementada
+
+La configuración no cambia el modo por sí sola. Cada gate híbrido que se quiera
+promover declara el umbral y necesita una evidencia append-only generada por una
+calibración contra los ciclos de QA humanos:
+
+```yaml
+# .valmen/config.yaml
+gate-promotions:
+  analysis:
+    mode: auto
+    minimum-sample: 30
+    minimum-agreement: 0.90
+```
+
+Se registra con el comando siguiente; evalúa el histórico solicitado, calcula la
+calibración y anexa el resumen con la referencia humana en
+`.valmen/gate-promotion-evidence.jsonl`:
+
+```bash
+valmen promote-gate analysis --limit 30
+```
+
+El motor usa `auto` solamente si la **última** evidencia del mismo gate tiene la
+muestra decidida mínima, la coincidencia requerida y cero falsos aprobados en
+impacto crítico. Si falta la evidencia o una calibración posterior deja de cumplir,
+el modo efectivo vuelve a `hybrid` y explica el motivo. Una evidencia de otro gate
+no puede habilitarlo.
+
 ```yaml
 plan:
   mode: hybrid

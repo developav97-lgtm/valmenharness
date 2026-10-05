@@ -43,6 +43,7 @@ import {
   budgetCommand,
   buildIndex,
   calibrateReport,
+  recordGatePromotion,
   deliverManifest,
   listActive,
   adoptProject,
@@ -192,6 +193,8 @@ Comandos:
       --dry-run             Muestra qué escribiría, sin escribir.
   gate <gate> --id <ID>     Evalúa un gate contra un ticket.
       --evaluator <id>      auto (por defecto) · command · jev · llm-judge · cascade
+  promote-gate <gate>       Calibra el gate contra decisiones humanas y anexa la
+      --limit <n>           evidencia que una solicitud gate-promotions necesita.
   cascada --tarea <id>      Corre una tarea de la cascada verificada y deja el recibo
                             en .valmen/cascada/. La tarea es clasificacion o exploracion.
       --solicitud <texto>   Lo que hay que clasificar (tarea clasificacion).
@@ -1592,6 +1595,62 @@ export async function run(argv: readonly string[]): Promise<number> {
           }
         } else if (result === undefined) {
           result = { stdout: "", stderr: "", exitCode: 0 };
+        }
+      }
+    } else if (command === "promote-gate") {
+      const gateId = rest[0];
+      if (gateId === undefined) {
+        result = {
+          stdout: "",
+          stderr: "promote-gate requiere un identificador de gate.",
+          exitCode: EXIT_SCHEMA,
+        };
+      } else {
+        let definition;
+        try {
+          definition = gateById(gateId);
+        } catch (caught) {
+          const failure = toFailure(caught);
+          result = { stdout: "", stderr: failure.message, exitCode: EXIT_SCHEMA };
+          definition = null;
+        }
+        if (definition !== null && definition !== undefined && definition.mode !== "hybrid") {
+          result = {
+            stdout: "",
+            stderr: `El gate ${gateId} ya es ${definition.mode}; solo se pueden promover gates híbridos.`,
+            exitCode: EXIT_SCHEMA,
+          };
+          definition = null;
+        }
+        if (definition !== null && definition !== undefined) {
+          const rawLimit = options.flags["limit"];
+          if (
+            typeof rawLimit === "string" &&
+            (!/^[1-9][0-9]*$/.test(rawLimit) || !Number.isSafeInteger(Number(rawLimit)))
+          ) {
+            result = {
+              stdout: "",
+              stderr: "--limit debe ser un entero positivo.",
+              exitCode: EXIT_SCHEMA,
+            };
+            definition = null;
+          }
+          const limit = typeof rawLimit === "string" ? Number(rawLimit) : undefined;
+          if (definition === null) {
+            // La validación de forma evita que un límite ambiguo altere qué
+            // decisiones humanas entran en la calibración.
+          } else {
+            const paths = resolvePaths(options);
+            const report = await simulateGate(paths, {
+              gate: definition,
+              ...(limit === undefined || Number.isNaN(limit) ? {} : { limit }),
+              onProgress: (done, total) => {
+                if (done % 5 === 0) process.stderr.write(`  ${done}/${total}\r`);
+              },
+            });
+            process.stderr.write("            \r");
+            result = recordGatePromotion(paths, gateId, report);
+          }
         }
       }
     } else if (command === "execution") {

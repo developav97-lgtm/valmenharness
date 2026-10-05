@@ -67,6 +67,7 @@ export * from "./release.js";
 export * from "./evaluators.js";
 export * from "./cascade.js";
 export * from "./gate.js";
+export * from "./gate-promotion.js";
 export * from "./simulate.js";
 export * from "./resume.js";
 export * from "./ask.js";

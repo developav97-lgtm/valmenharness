@@ -65,9 +65,11 @@ import {
   type ResumeMode,
   type TicketBudget,
   abandonRun,
+  appendPromotionEvidence,
   approveGate,
   buildManifest,
   calibrate,
+  evidenceFromCalibration,
   humanReferences,
   listRuns,
   loadProcesses,
@@ -2337,6 +2339,32 @@ export function calibrateReport(
     referencias,
   );
   return ok(renderCalibration(informe));
+}
+
+/**
+ * `promote-gate`: conserva la calibración que respalda una solicitud de modo
+ * automático. El comando registra evidencia; la resolución posterior sigue
+ * siendo la que decide si los umbrales del YAML permiten activar el modo.
+ */
+export function recordGatePromotion(
+  paths: RegistryPaths,
+  gate: string,
+  simulación: SimulationReport,
+): CommandResult {
+  const referencias = humanReferences(paths);
+  const informe = calibrate(
+    gate,
+    simulación.tickets.map((ticket) => ({
+      id: ticket.id,
+      outcome: ticket.decision.outcome,
+    })),
+    referencias,
+  );
+  const evidencia = evidenceFromCalibration(informe, "ciclos QA del registro");
+  const ruta = appendPromotionEvidence(paths, evidencia);
+  return ok(
+    `${renderCalibration(informe)}Evidencia de promoción anexada: ${ruta.replace(`${paths.root}/`, "")}\n`,
+  );
 }
 
 /**

@@ -59,6 +59,7 @@ import {
 import { buildGateState, runMechanicalChecks } from "./state.js";
 import { appendReceipt, readReceipts } from "./receipts.js";
 import { interfazDelTicket } from "./interfaz.js";
+import { resolveGateMode } from "./gate-promotion.js";
 
 /** Opciones de una evaluación de gate. */
 export interface GateRunOptions {
@@ -318,6 +319,14 @@ export async function runGate(
     return { stdout: "", stderr: failure.message, exitCode: 2 };
   }
 
+  let effectiveMode;
+  try {
+    effectiveMode = resolveGateMode(paths, definition.id);
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return { stdout: "", stderr: failure.message, exitCode: failure.exitCode };
+  }
+
   const ticket = findTicket(paths, options.ticketId);
   if (ticket === undefined) {
     return {
@@ -526,11 +535,33 @@ export async function runGate(
     }
   }
 
+  // Un gate promovido a automático no puede escalar una banda a una persona: su
+  // garantía es fallar cerrado. Sin esta conversión `auto` sería una etiqueta de
+  // pantalla y seguiría dejando pasar la misma rama híbrida a revisión humana.
+  if (
+    effectiveMode.mode === "auto" &&
+    effectiveMode.evidence !== null &&
+    decision.outcome === "review"
+  ) {
+    decision = {
+      ...decision,
+      outcome: "block",
+      actor: "engine",
+      reason: `${decision.reason}; el gate automático bloquea la banda de revisión hasta una nueva calibración`,
+    };
+  }
+
   // La causa probable de una banda de revisión, cuando la banda la causan los
   // criterios y no el plan. Se calcula acá y no dentro de `decide`: decidir es del
   // gate, y esto no decide — explica por qué el número salió así.
   const notas = [
     ...(options.notes ?? []),
+    ...(effectiveMode.evidence === null
+      ? []
+      : [
+          `Modo efectivo ${effectiveMode.mode}: ${effectiveMode.reason}; evidencia ${effectiveMode.evidence.id}; ` +
+            `referencia humana ${effectiveMode.evidence.humanReference} (${effectiveMode.evidence.humanTickets.join(", ") || "sin tickets comparables"}).`,
+        ]),
     ...avisoDeForma(decision, criteria, gate.policy as GatePolicy),
   ];
 
@@ -568,6 +599,7 @@ export async function runGate(
   const expandido = gate.propositions.length !== definition.propositions.length;
   const lines: string[] = [
     `Gate ${definition.id} — ${options.ticketId}`,
+    `  Modo efectivo: ${effectiveMode.mode} — ${effectiveMode.reason}`,
     !expandido
       ? definition.criteriaPropositions === true || criteria.length === 0
         ? "  El ticket no declara criterios; el gate se evalúa sin expansión"

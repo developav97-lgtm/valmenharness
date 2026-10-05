@@ -56,6 +56,7 @@ import {
   readReceipts,
   runGate,
   runMechanicalChecks,
+  resolveGateMode,
   playwrightConfig,
   testCommands,
   testTimeout,
@@ -83,6 +84,10 @@ export interface GateCard {
   readonly title: string;
   readonly transition: string;
   readonly mode: GateDefinition["mode"];
+  /** Por qué el modo configurado está activo o degradado. */
+  readonly modeReason: string;
+  /** Evidencia de calibración usada para la promoción, si la hubo. */
+  readonly promotionEvidenceId: string | null;
   readonly appliesTo: readonly string[];
   /** `true` si el ticket está en un estado donde este gate tiene sentido. */
   readonly applies: boolean;
@@ -322,11 +327,15 @@ export function listGateCards(paths: RegistryPaths, ticketId: string): GateCard[
 
   const routing = gateRouting(paths.root);
 
-  return Object.values(GATES).map((definicion) => ({
+  return Object.values(GATES).map((definicion) => {
+    const effective = resolveGateMode(paths, definicion.id);
+    return {
     id: definicion.id,
     title: definicion.title,
     transition: definicion.transition,
-    mode: definicion.mode,
+    mode: effective.mode,
+    modeReason: effective.reason,
+    promotionEvidenceId: effective.evidence?.id ?? null,
     appliesTo: definicion.appliesTo,
     applies: workflow !== "" && definicion.appliesTo.includes(workflow),
     workflowStatus: workflow,
@@ -346,7 +355,8 @@ export function listGateCards(paths: RegistryPaths, ticketId: string): GateCard[
       source: routing.source,
       probabilistic: routing.probabilistic,
     },
-  }));
+    };
+  });
 }
 
 /** El resultado de ejecutar un gate desde la interfaz. */
