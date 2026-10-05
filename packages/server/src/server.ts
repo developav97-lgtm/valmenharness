@@ -917,8 +917,12 @@ export async function handleApi(
               available: false,
               directory,
               reason:
-                "No se encontró la contabilidad de opencode. Sin ella no hay forma " +
-                "de saber qué modelo intervino ni cuánto costó.",
+                "No se encontró la contabilidad de ningún agente (opencode, codex, Claude " +
+                "Code ni Hermes). Sin ella no hay forma de saber qué modelo intervino ni " +
+                "cuánto costó.",
+              // Los recibos no dependen de la contabilidad del cliente: el harness
+              // los escribió y la pantalla puede mostrarlos aunque no haya sesiones.
+              compuertas,
             }
           : { available: true, directory, ...linea, compuertas },
     };

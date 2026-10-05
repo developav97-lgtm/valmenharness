@@ -4537,12 +4537,53 @@
         } catch {
           return null;
         }
+        // Las compuertas se pintan con sesiones o sin ellas: el harness las pagó y
+        // las conoce de primera mano, y que ninguna sesión se haya podido leer no
+        // las borra. Esta vista las escondía cuando no había sesiones, y un ticket
+        // trabajado desde un agente que el harness aún no lee quedaba sin ningún
+        // dato aunque sus recibos existieran.
+        const compuertas = datos.compuertas ?? [];
+        const costeCompuertas = compuertas.reduce((suma, c) => suma + (c.costUsd ?? 0), 0);
+        const tablaDeCompuertas = () => {
+          const tablaCompuertas = el("table", undefined, "tabla-intervenciones");
+          const cabCompuertas = el("tr");
+          for (const titulo of ["compuerta", "resultado", "actor", "modelo", "tokens", "coste"]) {
+            cabCompuertas.append(el("th", titulo));
+          }
+          tablaCompuertas.append(cabCompuertas);
+          for (const c of compuertas) {
+            const fila = el("tr");
+            fila.append(
+              el("td", c.gate, "id"),
+              el("td", c.outcome),
+              el("td", c.actor),
+              el("td", c.model ?? "mecánico (sin modelo)", "id"),
+              el("td", `${((c.inputTokens + c.outputTokens) / 1e3).toFixed(1)}K`, "id"),
+              el("td", `$${(c.costUsd ?? 0).toFixed(6)}`, "cifra"),
+            );
+            tablaCompuertas.append(fila);
+          }
+          return tablaCompuertas;
+        };
+
         if (datos.available !== true) {
-          return el(
+          const aviso = el(
             "div",
             `Sin datos de consumo: ${datos.reason ?? "no se encontró la contabilidad del cliente."}`,
             "nota",
           );
+          if (compuertas.length === 0) return aviso;
+          const zonaSinDatos = el("div");
+          zonaSinDatos.append(
+            aviso,
+            el(
+              "div",
+              `Las compuertas sí constan: ${compuertas.length} ($${costeCompuertas.toFixed(6)}).`,
+              "resultado",
+            ),
+            tablaDeCompuertas(),
+          );
+          return zonaSinDatos;
         }
 
         const zona = el("div");
@@ -4557,11 +4598,22 @@
             el(
               "div",
               "Ninguna sesión trabajó este ticket: ni de opencode, ni de codex, ni de " +
-                "Hermes. El consumo se registra buscando el identificador en lo que hizo cada " +
-                "sesión, así que un ticket que se trabajó a mano no tiene nada que mostrar.",
+                "Claude Code, ni de Hermes. El consumo se registra buscando el identificador " +
+                "en lo que hizo cada sesión, así que un ticket que se trabajó a mano no " +
+                "tiene nada que mostrar.",
               "vacio",
             ),
           );
+          if (compuertas.length > 0) {
+            zona.append(
+              el(
+                "div",
+                `El harness sí evaluó ${compuertas.length} compuerta(s) ($${costeCompuertas.toFixed(6)}):`,
+                "resultado",
+              ),
+              tablaDeCompuertas(),
+            );
+          }
           return zona;
         }
 
@@ -4583,8 +4635,6 @@
         // El costo de decidir también es costo del ticket: las compuertas que el
         // harness pagó van al total, separadas para que se lea qué fue decisión
         // y qué fue trabajo.
-        const compuertas = datos.compuertas ?? [];
-        const costeCompuertas = compuertas.reduce((suma, c) => suma + (c.costUsd ?? 0), 0);
         if (compuertas.length > 0) {
           resumen.append(
             el(
@@ -4666,25 +4716,7 @@
         // un ticket sin llamadas al registro —el caso del cron— igual pagó sus
         // compuertas, y ocultarlas sería mostrar un costo de menos.
         if (compuertas.length > 0) {
-          const tablaCompuertas = el("table", undefined, "tabla-intervenciones");
-          const cabCompuertas = el("tr");
-          for (const titulo of ["compuerta", "resultado", "actor", "modelo", "tokens", "coste"]) {
-            cabCompuertas.append(el("th", titulo));
-          }
-          tablaCompuertas.append(cabCompuertas);
-          for (const c of compuertas) {
-            const fila = el("tr");
-            fila.append(
-              el("td", c.gate, "id"),
-              el("td", c.outcome),
-              el("td", c.actor),
-              el("td", c.model ?? "mecánico (sin modelo)", "id"),
-              el("td", `${((c.inputTokens + c.outputTokens) / 1e3).toFixed(1)}K`, "id"),
-              el("td", `$${(c.costUsd ?? 0).toFixed(6)}`, "cifra"),
-            );
-            tablaCompuertas.append(fila);
-          }
-          zona.append(tablaCompuertas);
+          zona.append(tablaDeCompuertas());
         }
 
         if (datos.intervenciones.length === 0) {
