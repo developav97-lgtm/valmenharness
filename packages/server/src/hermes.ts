@@ -216,7 +216,7 @@ export const HERRAMIENTAS_QUE_ESCRIBEN: readonly string[] = [
  * sirve: `mover_ticket` termina en `ver_ticket`, y una herramienta que escribe
  * pasaría por lectura.
  */
-function nombreDeHerramienta(nombre: string): string {
+export function nombreDeHerramienta(nombre: string): string {
   const corte = nombre.lastIndexOf("__");
   const base = corte === -1 ? nombre : nombre.slice(corte + 2);
   return base.replace(/^valmen_/, "");
@@ -264,7 +264,7 @@ const INVOCACION_DEL_CLI_RE =
  * cuenta mensajes y no decide nada, así que lo más que puede pasar es sumar un
  * mensaje de más al conteo del registro.
  */
-function subcomandoDeValmen(texto: string): string | null {
+export function subcomandoDeValmen(texto: string): string | null {
   for (const match of texto.matchAll(INVOCACION_DEL_CLI_RE)) {
     const resto = texto.slice((match.index ?? 0) + match[0].length);
     const segmento = resto.split(/[;&|()"']/)[0] ?? "";
@@ -526,7 +526,7 @@ const HERRAMIENTAS_DE_SHELL: readonly string[] = ["terminal", "shell", "bash", "
  * responde por los tickets que **nombra su propio segmento** (`;`, `&&`, `|`
  * separan), no por los que el mensaje entero menciona.
  */
-function segmentoInvocaCli(segmento: string): boolean {
+export function segmentoInvocaCli(segmento: string): boolean {
   return segmento.match(INVOCACION_DEL_CLI_RE) !== null;
 }
 
