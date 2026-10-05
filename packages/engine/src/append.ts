@@ -726,6 +726,10 @@ const FUENTES_DE_CONSUMO: Readonly<Record<string, string | null>> = {
   hermes:
     "espera la ruta de la base de Hermes (`~/.hermes/state.db` o `~/.hermes/profiles/<perfil>/state.db`)",
   codex: null,
+  // La referencia es el identificador de la sesión —el nombre de su transcripción
+  // `~/.claude/projects/<proyecto>/<id>.jsonl`—, como en `codex`: no hay una base que
+  // citar, solo una sesión que se encuentra por su id.
+  claude: null,
   manual: null,
   process: null,
 };

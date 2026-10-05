@@ -163,7 +163,7 @@ estaba. Un punto puede llegar a `verified` con el ciclo QA **abierto**: no exige
 > **Dos precondiciones que el harness agrega a la referencia.** `close-attempt`
 > exige además que `## Consumo de IA` tenga al menos una entrada, y que el prefijo
 > de cada `source` apunte a la base que nombra (`opencode:`, `hermes:`, `codex:`,
-> `manual:`, `process:`). `ticket.py` acepta el bloque vacío y cualquier texto en
+> `claude:`, `manual:`, `process:`). `ticket.py` acepta el bloque vacío y cualquier texto en
 > `source`. Es deliberado, y es la única divergencia de este comando: el consumo se
 > declaraba obligatorio en las reglas y nada lo comprobaba, y el registro real ya
 > tenía un ticket cerrado cuyo cierre decía que una sesión de Hermes había

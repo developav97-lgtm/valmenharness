@@ -328,7 +328,7 @@ dice si la clave sirve, sin gastar un gate.
 
 **El cierre se rechaza por el consumo.** Es a propósito: `## Consumo de IA` tiene que tener al
 menos una entrada, con los números de la sesión y una fuente que apunte de verdad a donde
-salieron (`opencode:`, `hermes:`, `codex:`, `manual:`, `process:`). Se registra con
+salieron (`opencode:`, `hermes:`, `codex:`, `claude:`, `manual:`, `process:`). Se registra con
 `valmen add-ai-usage`, o con la herramienta `registrar_consumo_ia` desde el agente.
 
 **Quiero ver qué está pasando sin terminal.** `valmen serve` levanta Mission Control en

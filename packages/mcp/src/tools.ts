@@ -674,7 +674,8 @@ export const TOOLS: readonly ToolDefinition[] = [
       "ejecutor y además lo verificó otro agente, van dos.\n\n" +
       "La fuente dice de dónde salieron los números y tiene que apuntar de verdad ahí: " +
       "`opencode:<ruta de opencode.db>`, `hermes:<ruta de su state.db>`, " +
-      "`codex:<identificador de la sesión>` o `manual:<motivo>`, que es el caso " +
+      "`codex:<identificador de la sesión>`, `claude:<identificador de la sesión de " +
+      "Claude Code>` o `manual:<motivo>`, que es el caso " +
       "declarado de una sesión que no expone agregado de tokens. Un `hermes:` que " +
       "apunta a la base de OpenCode se rechaza: diría una cosa y mostraría otra.\n\n" +
       "Si una sesión sirvió **varios** tickets, se registra con `manual:` y sin " +

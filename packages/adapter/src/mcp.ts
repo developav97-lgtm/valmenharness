@@ -770,7 +770,7 @@ repartirlo: el registro no puede decir qué costó cada uno. Al cerrar, \`## Con
 IA\` lleva una entrada por sesión que trabajó el ticket, con los números de la sesión
 y no de una estimación —el cierre se rechaza sin consumo—, y el prefijo de \`source\`
 tiene que concordar con la base que citás: \`hermes:\` la de Hermes, \`opencode:\` la
-de OpenCode. Si una sesión sirvió varios tickets, va una entrada de referencia **sin
+de OpenCode, \`claude:\` y \`codex:\` el id de la sesión. Si una sesión sirvió varios tickets, va una entrada de referencia **sin
 números** que la nombre y diga dónde quedó su costo completo: un reparto inventado
 es peor que un hueco declarado, porque el hueco se ve.
 

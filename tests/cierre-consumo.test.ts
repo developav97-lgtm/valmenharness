@@ -142,6 +142,7 @@ describe("el cierre y el consumo de IA", () => {
       "manual:sesión compartida entre cinco tickets, sin reparto",
       "process:cierre-sprint-2",
       "codex:01a0d522-ff58-7752-b2e5-e199eebbef53",
+      "claude:9d55ce3b-5c13-4e93-af45-77a4977bd5c6",
     ]) {
       expect(() =>
         addAiUsage({ paths: PATHS(), ticketId: ID, source, confidence: "high" }),
@@ -157,6 +158,22 @@ describe("el cierre y el consumo de IA", () => {
         source,
       ).toThrowError(/source/);
     }
+  });
+
+  it("rechaza `claude:` sin referencia, igual que el resto de orígenes", () => {
+    ticketCerrable();
+    // Sin identificador de sesión no hay forma de volver a la transcripción: es un
+    // prefijo con la apariencia de una fuente y nada que verificar.
+    for (const source of ["claude:", "claude:   ", "claude"]) {
+      expect(
+        () => addAiUsage({ paths: PATHS(), ticketId: ID, source, confidence: "high" }),
+        source,
+      ).toThrowError(/source/);
+    }
+    // El mensaje nombra el origen entre los conocidos, para que se pueda corregir.
+    expect(() =>
+      addAiUsage({ paths: PATHS(), ticketId: ID, source: "claudee:x", confidence: "high" }),
+    ).toThrowError(/claude/);
   });
 
   it("rechaza una fuente que dice una cosa y apunta a otra", () => {

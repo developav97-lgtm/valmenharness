@@ -227,9 +227,9 @@ Comandos:
                             Anexa consumo de IA. El resto de campos son opcionales.
                             La fuente es <origen>:<referencia>, con origen
                             opencode —la ruta de opencode.db—, hermes —la de su
-                            base—, codex —la sesión— o manual —una sesión sin
-                            agregado, con el motivo en --notes—. Sin consumo el
-                            ticket no cierra.
+                            base—, codex o claude —el id de la sesión— o manual
+                            —una sesión sin agregado, con el motivo en --notes—.
+                            Sin consumo el ticket no cierra.
   gate-decide --id <ID> --receipt <GR-…> --decision <approve|reject> --actor <nombre>
                             Registra la decisión humana sobre un gate escalado.
       --reason <texto>      Queda en el recibo y en el historial del ticket.

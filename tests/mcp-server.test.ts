@@ -919,6 +919,53 @@ describe("anotar evidencia", () => {
   });
 });
 
+describe("registrar el consumo de una sesión de Claude Code", () => {
+  const SESION = "9d55ce3b-5c13-4e93-af45-77a4977bd5c6";
+
+  it("la descripción de la herramienta lista `claude:` junto a los demás orígenes", () => {
+    const herramienta = TOOLS.find((t) => t.name === "registrar_consumo_ia");
+    expect(herramienta?.description).toContain("`claude:<identificador de la sesión de Claude Code>`");
+    // Y siguen estando los que ya estaban: agregar uno no quita otro.
+    for (const origen of ["`opencode:", "`hermes:", "`codex:", "`manual:"]) {
+      expect(herramienta?.description).toContain(origen);
+    }
+  });
+
+  it("acepta `claude:<id>` y lo deja escrito con la referencia de la sesión", async () => {
+    const ruta = await crear();
+    const resultado = await callTool(contexto, "registrar_consumo_ia", {
+      id: ID,
+      source: `claude:${SESION}`,
+      confidence: "high",
+      session_reference: SESION,
+      model: "anthropic/claude-sonnet-5-5",
+      input_tokens: 383_573,
+      output_tokens: 91_021,
+      total_tokens: 474_594,
+      notes: "Plan Max: sin coste en dólares.",
+    });
+
+    expect(resultado.isError, resultado.text).toBe(false);
+    const consumo = parseTicket(readFileSync(ruta, "utf8")).blocks["Consumo de IA"] as
+      readonly Record<string, unknown>[];
+    expect(consumo[0]?.["source"]).toBe(`claude:${SESION}`);
+    expect(consumo[0]?.["estimated_cost_usd"]).toBeNull();
+  });
+
+  it("rechaza `claude:` sin referencia, como los demás orígenes", async () => {
+    await crear();
+    for (const source of ["claude:", "claude:   ", "claude"]) {
+      const resultado = await callTool(contexto, "registrar_consumo_ia", {
+        id: ID,
+        source,
+        confidence: "high",
+      });
+      expect(resultado.isError, source).toBe(true);
+      expect(resultado.text, source).toContain("source");
+    }
+  });
+});
+
 // ── Filtros de la lista ─────────────────────────────────────────────────────
 
 describe("listar con filtros", () => {

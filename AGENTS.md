@@ -362,7 +362,7 @@ una entrada por sesión que trabajó el ticket, con los números de la sesión y
 una estimación. Sin consumo el motor no prepara el cierre —no es una
 recomendación: se rechaza—, y la fuente tiene que decir de dónde salieron los
 números con un prefijo que apunte de verdad ahí: `opencode:` su base,
-`hermes:` la suya, `codex:` la sesión, `manual:` una sesión sin agregado —con el
+`hermes:` la suya, `codex:` y `claude:` la sesión, `manual:` una sesión sin agregado —con el
 motivo en las notas— y `process:` una corrida del harness. Un `hermes:` que apunta
 a la base de OpenCode diría una cosa y mostraría otra, y el costo dejaría de ser
 verificable. Y una sesión que sirvió **varios** tickets se declara con `manual:` y
