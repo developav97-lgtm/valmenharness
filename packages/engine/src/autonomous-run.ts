@@ -19,6 +19,14 @@ import { extractCriteriaSpecs } from "@valmen/gate";
 import { type AutonomousExecutorConfig } from "@valmen/adapter";
 
 import { autonomousConfig, type RegistryPaths } from "./discovery.js";
+import { budgetForTicket, readBudgetPolicy } from "./budget.js";
+import { scanPendingChanges } from "./secrets.js";
+import { currentReceipts, readReceipts } from "./receipts.js";
+import {
+  recordAutonomousStop,
+  type AutonomousStopReason,
+  type AutonomousStopReceipt,
+} from "./autonomous-stops.js";
 import { allDocuments } from "./mutate.js";
 import { runGate } from "./gate.js";
 import { transition } from "./transition.js";
@@ -42,13 +50,16 @@ export interface AutonomousRunRequest {
   readonly ticketId?: string;
   readonly queue?: boolean;
   readonly execute?: (command: AutonomousExecutorCommand) => AutonomousExecutorResult;
+  /** Reloj inyectable para que el recibo de parada sea reproducible en pruebas. */
+  readonly now?: (() => Date) | undefined;
 }
 
 export interface AutonomousRunResult {
   readonly ticketId: string;
-  readonly status: "delivered" | "executor-failed" | "verification-failed";
+  readonly status: "delivered" | "executor-failed" | "verification-failed" | "stopped";
   readonly detail: string;
   readonly executor: AutonomousExecutorCommand;
+  readonly stop?: AutonomousStopReceipt | undefined;
 }
 
 interface Candidate {
@@ -140,6 +151,71 @@ function execute(command: AutonomousExecutorCommand, root: string): AutonomousEx
   };
 }
 
+function permitsStop(
+  policy: ReturnType<typeof autonomousConfig>,
+  reason: AutonomousStopReason,
+): boolean {
+  return policy.limits.stopOn.includes(reason);
+}
+
+function budgetStop(
+  paths: RegistryPaths,
+  ticketId: string,
+  policy: ReturnType<typeof autonomousConfig>,
+): string | null {
+  if (!permitsStop(policy, "budget-exceeded")) return null;
+  const budget = budgetForTicket(paths, ticketId, readBudgetPolicy(paths.root));
+  if (budget.costUsd >= policy.limits.budgetPerTicket) {
+    return (
+      `El costo acumulado ($${budget.costUsd.toFixed(4)}) alcanzó el límite ` +
+      `por ticket ($${policy.limits.budgetPerTicket.toFixed(4)}).`
+    );
+  }
+  if (budget.enabled && budget.tier === "pause") {
+    return `El presupuesto adaptativo alcanzó el corte de pausa: ${budget.reason}.`;
+  }
+  return null;
+}
+
+function preflightStop(
+  paths: RegistryPaths,
+  ticketId: string,
+  policy: ReturnType<typeof autonomousConfig>,
+): { readonly reason: AutonomousStopReason; readonly detail: string } | null {
+  if (permitsStop(policy, "gate-blocked-twice")) {
+    const blocked = currentReceipts(readReceipts(paths, ticketId)).filter(
+      (receipt) => receipt.outcome === "block",
+    );
+    if (blocked.length >= 2) {
+      return {
+        reason: "gate-blocked-twice",
+        detail: `El ticket conserva ${blocked.length} bloqueos vigentes de compuerta; no se reintenta solo.`,
+      };
+    }
+  }
+
+  const budget = budgetStop(paths, ticketId, policy);
+  return budget === null ? null : { reason: "budget-exceeded", detail: budget };
+}
+
+function stopResult(
+  paths: RegistryPaths,
+  ticketId: string,
+  executor: AutonomousExecutorCommand,
+  reason: AutonomousStopReason,
+  detail: string,
+  now: Date,
+): AutonomousRunResult {
+  const stop = recordAutonomousStop(paths, {
+    ticketId,
+    reason,
+    detail,
+    workflowStatus: "in_progress",
+    now,
+  });
+  return { ticketId, status: "stopped", detail, executor, stop };
+}
+
 /** Selecciona y ejecuta una única entrada, sin paralelismo ni reintentos. */
 export async function runAutonomous(request: AutonomousRunRequest): Promise<AutonomousRunResult> {
   if (request.ticketId === undefined && request.queue !== true) {
@@ -172,13 +248,62 @@ export async function runAutonomous(request: AutonomousRunRequest): Promise<Auto
 
   const command = autonomousExecutorCommand(policy.executor, request.paths.root, promptFor(selected.id));
   transition({ paths: request.paths, ticketId: selected.id, entity: "ticket", to: "in_progress" });
+
+  const before = preflightStop(request.paths, selected.id, policy);
+  if (before !== null) {
+    return stopResult(
+      request.paths,
+      selected.id,
+      command,
+      before.reason,
+      before.detail,
+      request.now?.() ?? new Date(),
+    );
+  }
+
   const result = (request.execute ?? ((item) => execute(item, request.paths.root)))(command);
   if (result.status !== 0) {
     return { ticketId: selected.id, status: "executor-failed", detail: result.stderr || "El ejecutor terminó con error.", executor: command };
   }
 
+  if (permitsStop(policy, "secret-detected")) {
+    const secrets = scanPendingChanges(request.paths.root);
+    if (secrets.findings.length > 0) {
+      return stopResult(
+        request.paths,
+        selected.id,
+        command,
+        "secret-detected",
+        `Se detectó al menos un secreto en ${secrets.scanned} cambio(s) pendiente(s); el valor no se registró.`,
+        request.now?.() ?? new Date(),
+      );
+    }
+  }
+
+  const afterBudget = budgetStop(request.paths, selected.id, policy);
+  if (afterBudget !== null) {
+    return stopResult(
+      request.paths,
+      selected.id,
+      command,
+      "budget-exceeded",
+      afterBudget,
+      request.now?.() ?? new Date(),
+    );
+  }
+
   const gate = await runGate(request.paths, { gateId: "qa-mechanical", ticketId: selected.id });
   if (gate.exitCode !== 0) {
+    if (permitsStop(policy, "test-failure")) {
+      return stopResult(
+        request.paths,
+        selected.id,
+        command,
+        "test-failure",
+        "La verificación mecánica falló; revise el recibo qa-mechanical antes de corregir o reintentar.",
+        request.now?.() ?? new Date(),
+      );
+    }
     return { ticketId: selected.id, status: "verification-failed", detail: gate.stderr, executor: command };
   }
   transition({ paths: request.paths, ticketId: selected.id, entity: "ticket", to: "awaiting_user_tests" });

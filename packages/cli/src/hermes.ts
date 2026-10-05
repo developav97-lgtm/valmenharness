@@ -63,6 +63,7 @@ import { EXIT_SCHEMA, declaredImpactIds, parseTicket } from "@valmen/core";
 import { blockOf, credentialsPath, fieldOf } from "@valmen/credentials";
 import {
   appendApproval,
+  autonomousStopsAvisados,
   buildGateState,
   corridasAvisadas,
   currentReceipts,
@@ -72,7 +73,9 @@ import {
   mintApproval,
   pendingApprovals,
   readReceipts,
+  readAutonomousStops,
   renderBrief,
+  renderAutonomousStopNotification,
   renderGateNotification,
   renderProcessNotification,
   renderTestMessage,
@@ -689,6 +692,14 @@ const ESPERA_REINTENTO_MS = 60 * 60 * 1000;
 export type PendienteDeAvisar =
   | { readonly kind: "gate"; readonly ticket: string; readonly receipt: string }
   | {
+      readonly kind: "autonomous-stop";
+      readonly ticket: string;
+      readonly receipt: string;
+      readonly reason: string;
+      readonly detail: string;
+      readonly stoppedAt: string;
+    }
+  | {
       readonly kind: "proceso";
       readonly runId: string;
       readonly processId: string;
@@ -734,6 +745,22 @@ export function pendientesDeAvisar(paths: RegistryPaths, now: Date): PendienteDe
       runId: corrida.runId,
       processId: corrida.processId,
       step: corrida.pendingStep ?? "(sin paso)",
+    });
+  }
+
+  // Una parada autónoma no espera una aprobación remota, pero sí requiere que
+  // alguien se entere. El mismo vigilante es el único escritor de la marca de
+  // entrega, para que `run` no envíe Telegram por un camino paralelo.
+  const paradasAvisadas = autonomousStopsAvisados(paths);
+  for (const stop of readAutonomousStops(paths)) {
+    if (paradasAvisadas.has(stop.id)) continue;
+    salida.push({
+      kind: "autonomous-stop",
+      ticket: stop.ticketId,
+      receipt: stop.id,
+      reason: stop.reason,
+      detail: stop.detail,
+      stoppedAt: stop.stoppedAt,
     });
   }
 
@@ -813,6 +840,35 @@ export function hermesNotifyPendientes(request: NotifyPendingRequest): CommandRe
   const fallidos: { que: string; motivo: string }[] = [];
 
   for (const pendiente of pendientes) {
+    if (pendiente.kind === "autonomous-stop") {
+      const entrega = hermesSendChannel({
+        target: to,
+        ...(request.runner === undefined ? {} : { runner: request.runner }),
+      }).notify(
+        renderAutonomousStopNotification({
+          ticketId: pendiente.ticket,
+          receiptId: pendiente.receipt,
+          reason: pendiente.reason,
+          detail: pendiente.detail,
+          stoppedAt: pendiente.stoppedAt,
+        }),
+      );
+
+      if (!entrega.delivered) {
+        fallidos.push({ que: `${pendiente.ticket} · ${pendiente.receipt}`, motivo: entrega.detail });
+        continue;
+      }
+
+      appendApproval(request.paths, {
+        kind: "autonomous-stop-notice",
+        receiptId: pendiente.receipt,
+        ticketId: pendiente.ticket,
+        notifiedAt: request.now.toISOString(),
+      });
+      notificados.push(`${pendiente.ticket} · parada ${pendiente.reason}`);
+      continue;
+    }
+
     if (pendiente.kind === "proceso") {
       const corrida = waitingRuns(request.paths.root).find(
         (c) => c.runId === pendiente.runId,

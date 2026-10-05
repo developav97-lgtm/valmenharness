@@ -35,11 +35,13 @@ import {
 } from "../packages/gate/src/index.js";
 import {
   appendReceipt,
+  autonomousStopsAvisados,
   buildGateState,
   currentReceipts,
   pendingApprovals,
   readApprovalLog,
   readReceipts,
+  recordAutonomousStop,
   writeRun,
   type CommandRunner,
   type RegistryPaths,
@@ -786,5 +788,68 @@ describe("un proceso detenido", () => {
     expect(readApprovalLog(paths).filter((e) => e.kind === "process-notice")).toHaveLength(
       1,
     );
+  });
+});
+
+describe("una ejecución autónoma detenida", () => {
+  const CONFIG = {
+    enabled: true,
+    gateTarget: "telegram",
+    budgetTarget: "",
+    tokenHours: 24,
+    allowedRisk: ["low", "normal"],
+  };
+
+  function detener(): string {
+    return recordAutonomousStop(paths, {
+      ticketId: TICKET,
+      reason: "secret-detected",
+      detail: "Se detectó un secreto; el valor no se registró.",
+      workflowStatus: "in_progress",
+      now: AHORA,
+    }).id;
+  }
+
+  function avisar(extra: Partial<Parameters<typeof hermesNotifyPendientes>[0]> = {}) {
+    return hermesNotifyPendientes({
+      paths,
+      config: CONFIG,
+      secret: SECRETO,
+      now: AHORA,
+      runner: runnerOk().runner,
+      ...extra,
+    });
+  }
+
+  it("entra al vigilante y se marca solo después de una entrega", () => {
+    const receipt = detener();
+    expect(pendientesDeAvisar(paths, AHORA)).toEqual([
+      expect.objectContaining({ kind: "autonomous-stop", ticket: TICKET, receipt }),
+    ]);
+
+    const { runner, cuerpos } = runnerOk();
+    const result = avisar({ runner });
+
+    expect(result.exitCode).toBe(0);
+    expect(cuerpos[0]).toContain("EJECUCIÓN AUTÓNOMA DETENIDA");
+    expect(cuerpos[0]).toContain("no se reintentará solo");
+    expect(autonomousStopsAvisados(paths)).toEqual(new Set([receipt]));
+    expect(pendientesDeAvisar(paths, AHORA)).toEqual([]);
+  });
+
+  it("conserva la parada pendiente si Telegram/Hermes no entrega", () => {
+    detener();
+    const fallen: CommandRunner = () => ({
+      status: null,
+      stdout: "",
+      stderr: "",
+      failed: true,
+    });
+
+    const result = avisar({ runner: fallen });
+
+    expect(result.stdout).toContain("no se pudieron entregar");
+    expect(autonomousStopsAvisados(paths)).toEqual(new Set());
+    expect(pendientesDeAvisar(paths, AHORA)).toHaveLength(1);
   });
 });

@@ -468,6 +468,42 @@ export function renderProcessNotification(
   };
 }
 
+/** Una parada automática que requiere revisión, pero no se aprueba por chat. */
+export interface AutonomousStopNotificationInput {
+  readonly ticketId: string;
+  readonly receiptId: string;
+  readonly reason: string;
+  readonly detail: string;
+  readonly stoppedAt: string;
+}
+
+/**
+ * Redacta el aviso seguro de una parada autónoma.
+ *
+ * El detalle viene del recibo, que por contrato ya está redactado: esta función
+ * no recibe diffs, salida del ejecutor ni hallazgos que puedan contener secretos.
+ */
+export function renderAutonomousStopNotification(
+  input: AutonomousStopNotificationInput,
+): NotificationPayload {
+  return {
+    key: `autonomous-stop:${input.receiptId}`,
+    subject: `Ejecución detenida · ${input.ticketId}`,
+    body: [
+      "⏸ EJECUCIÓN AUTÓNOMA DETENIDA",
+      "",
+      `  ticket   ${input.ticketId}`,
+      `  motivo   ${input.reason}`,
+      `  desde    ${input.stoppedAt.slice(0, 16).replace("T", " ")}`,
+      "",
+      input.detail,
+      "",
+      "El ticket conserva un estado válido y no se reintentará solo. Revisá el recibo",
+      "de parada en la máquina antes de decidir cómo continuar.",
+    ].join("\n"),
+  };
+}
+
 /**
  * El parte: lo que pasó y lo que espera, en un mensaje.
  *

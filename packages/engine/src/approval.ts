@@ -89,7 +89,11 @@ export interface ConsumedApproval {
 }
 
 export type ApprovalLogEntry =
-  IssuedApproval | ConsumedApproval | UndeliveredApproval | ProcessNotice;
+  | IssuedApproval
+  | ConsumedApproval
+  | UndeliveredApproval
+  | ProcessNotice
+  | AutonomousStopNotice;
 
 /**
  * Un aviso de algo que se detuvo y que **no se decide a distancia**.
@@ -110,6 +114,14 @@ export interface ProcessNotice {
   readonly processId: string;
   /** El paso donde se detuvo. */
   readonly step: string;
+  readonly notifiedAt: string;
+}
+
+/** Un aviso entregado por el vigilante para una parada autónoma. */
+export interface AutonomousStopNotice {
+  readonly kind: "autonomous-stop-notice";
+  readonly receiptId: string;
+  readonly ticketId: string;
   readonly notifiedAt: string;
 }
 
@@ -390,7 +402,8 @@ export function readApprovalLog(paths: RegistryPaths): ApprovalLogEntry[] {
         valor.kind === "approval-issued" ||
         valor.kind === "approval-consumed" ||
         valor.kind === "approval-undelivered" ||
-        valor.kind === "process-notice"
+        valor.kind === "process-notice" ||
+        valor.kind === "autonomous-stop-notice"
       ) {
         entradas.push(valor);
       }
@@ -409,6 +422,15 @@ export function appendApproval(paths: RegistryPaths, entry: ApprovalLogEntry): s
   mkdirSync(dirname(path), { recursive: true });
   appendFileSync(path, `${JSON.stringify(entry)}\n`, "utf8");
   return path;
+}
+
+/** Recibos de parada cuyo aviso ya llegó; evita duplicados del vigilante. */
+export function autonomousStopsAvisados(paths: RegistryPaths): Set<string> {
+  return new Set(
+    readApprovalLog(paths)
+      .filter((entry): entry is AutonomousStopNotice => entry.kind === "autonomous-stop-notice")
+      .map((entry) => entry.receiptId),
+  );
 }
 
 /** Un token emitido que todavía se puede usar. */
@@ -496,7 +518,7 @@ export function ultimoIntento(
     // Un aviso de proceso no tiene código y no entra en esta cuenta: su vida es
     // otra —se avisa una vez y la corrida sigue detenida— y mezclarlo movería
     // la ventana de reintento de un gate sin motivo.
-    if (e.kind === "process-notice") return [];
+    if (e.kind === "process-notice" || e.kind === "autonomous-stop-notice") return [];
     if (!codigos.has(e.code)) return [];
     if (e.kind === "approval-issued") return [e.issuedAt];
     if (e.kind === "approval-undelivered") return [e.attemptedAt];
