@@ -34,6 +34,7 @@ import {
   type ChatResult,
   type StructuredRequest,
 } from "./chat.js";
+import { EXPLICACION_429_CLAUDE_CODE } from "./claude-code.js";
 
 /** Cómo se pide una respuesta en este dialecto. */
 export interface AnthropicRequest {
@@ -183,8 +184,16 @@ export async function callAnthropic(
     // El cuerpo del proveedor, recortado y tal cual: «credit balance is too low»
     // no es «invalid x-api-key», y parafrasearlo esconde lo que hace falta para
     // arreglarlo.
+    //
+    // Con un token de suscripción (`Authorization: Bearer sk-ant-oat…`), un 429 se
+    // acompaña de lo medido: no suele ser cuota sino el rechazo a llamadas directas
+    // de un cliente que no es el CLI oficial. Se detecta por la cabecera y no por
+    // el proveedor porque este dialecto no sabe quién lo llama.
+    const conToken =
+      request.headers["Authorization"]?.startsWith("Bearer sk-ant-oat") === true;
     throw new ChatError(
-      `El proveedor respondió HTTP ${respuesta.status}: ${texto.slice(0, 300)}`,
+      `El proveedor respondió HTTP ${respuesta.status}: ${texto.slice(0, 300)}` +
+        (respuesta.status === 429 && conToken ? ` ${EXPLICACION_429_CLAUDE_CODE}` : ""),
       code,
     );
   }

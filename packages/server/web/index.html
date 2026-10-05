@@ -519,6 +519,10 @@
       .resultado.error {
         color: var(--error);
       }
+      /* La credencial fue aceptada pero la petición de prueba no: ni verde ni rojo. */
+      .resultado.alerta {
+        color: var(--alerta);
+      }
       .etiqueta {
         display: inline-block;
         font-size: 11px;
@@ -6040,7 +6044,11 @@
               `/api/providers/${selProveedor.value}/models/test`,
               { model: modelo },
             );
-            resultadoPrueba.className = r.ok ? "resultado ok" : "resultado error";
+            resultadoPrueba.className = r.ok
+              ? "resultado ok"
+              : r.credentialAccepted === true
+                ? "resultado alerta"
+                : "resultado error";
             resultadoPrueba.textContent = `${r.detail} · ${r.latencyMs} ms`;
           } catch (fallo) {
             resultadoPrueba.className = "resultado error";
@@ -6831,7 +6839,9 @@
         salida.textContent = "probando…";
         try {
           const r = await api("POST", `/api/providers/${p.id}/probe`);
-          salida.className = `resultado ${r.ok ? "ok" : "error"}`;
+          // Un 400 con la credencial aceptada no es un error de credencial: se
+          // muestra aparte para que no mande a buscar la clave donde no está.
+          salida.className = `resultado ${r.ok ? "ok" : r.credentialAccepted === true ? "alerta" : "error"}`;
           salida.textContent = `${r.detail} · ${r.latencyMs} ms`;
         } catch (error) {
           salida.className = "resultado error";

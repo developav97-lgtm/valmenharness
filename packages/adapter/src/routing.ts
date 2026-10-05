@@ -295,6 +295,11 @@ export const PRESETS: readonly Preset[] = [
     // reproducibilidad —es el precio de no tener una clave de OpenRouter—. El
     // aviso lo da la interfaz sola, porque sale del modelo declarado y no de una
     // bandera escrita a mano.
+    //
+    // **No es ejecutable tal como está**: medido el 2026-10-05, por el camino directo
+    // de `claude-code` solo `claude-haiku-4-5-20251001` responde, y los modelos de
+    // abajo dan HTTP 429 «Error» aunque la sesión esté vigente. Se deja declarado
+    // hasta que el PO decida (docs/04-PROVEEDORES.md, §1.1 y §4.3).
     id: "suscripcion",
     description:
       "Los planes que ya se pagan: Claude Code para todo. El gate pasa a juicio de un modelo.",

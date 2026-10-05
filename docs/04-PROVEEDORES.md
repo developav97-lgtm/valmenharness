@@ -16,8 +16,11 @@ Usa el plan que ya pagas. El harness detecta, reutiliza o lanza el flujo de logi
 
 | Proveedor | Método | Qué se reutiliza |
 |---|---|---|
-| **Claude (plan Pro/Max)** | OAuth de Claude Code | El token que su CLI ya guardó: **en macOS el llavero** (entrada `Claude Code-credentials`) y en Linux `~/.claude/.credentials.json`. Si no hay sesión, no se lanza ningún flujo: se dice qué correr. |
+| **Claude (plan Pro/Max)** | OAuth de Claude Code | El token que su CLI ya guardó: **en macOS el llavero** (entrada `Claude Code-credentials`) y en Linux `~/.claude/.credentials.json`. Si no hay sesión, no se lanza ningún flujo: se dice qué correr. **Solo Haiku responde por este camino** (medido el 2026-10-05, ver abajo). |
 | **ChatGPT / Codex (plan Plus/Pro)** | OAuth de Codex | Igual, desde `~/.codex/auth.json`. |
+| **opencode go (Zen)** | Token de sesión de opencode | Igual, desde la config de opencode. |
+| **GitHub Copilot** | OAuth de dispositivo | Flujo de device code. |
+| **Gemini (plan Google AI)** | OAuth | Flujo en navegador. |
 
 > **Dónde vive el token de Claude Code, y por qué importa.** Se descubrió mirando una máquina
 > real: el archivo no existía y la sesión estaba viva en el llavero. Un lector que solo mirara
@@ -26,9 +29,49 @@ Usa el plan que ya pagas. El harness detecta, reutiliza o lanza el flujo de logi
 > caduca, el harness **no lo renueva**: el `refresh_token` es de su CLI, y dos clientes
 > renovando a la vez invalidan la sesión del otro. Se dice con la fecha y con el comando que lo
 > arregla —`claude`, una vez—.
-| **opencode go (Zen)** | Token de sesión de opencode | Igual, desde la config de opencode. |
-| **GitHub Copilot** | OAuth de dispositivo | Flujo de device code. |
-| **Gemini (plan Google AI)** | OAuth | Flujo en navegador. |
+>
+> **El llavero puede tener dos entradas con el mismo servicio.** En esa misma máquina había una
+> vieja de cuenta `root` —un token Pro caducado el 2026-04-29— y la vigente, de cuenta igual al
+> usuario del sistema (plan max), creada por `claude auth login`. `security find-generic-password`
+> sin `-a` devuelve la primera que encuentra, y el harness decía «la sesión caducó» con
+> `claude auth status` en `loggedIn: true`. El lector busca primero con la cuenta del usuario
+> del sistema y solo si no existe cae a la búsqueda sin cuenta.
+
+> **Medido el 2026-10-05: por este camino solo pasa Haiku.** Con una sesión Max vigente,
+> `valmen provider test claude-code --model <modelo>` —una llamada directa a
+> `api.anthropic.com/v1/messages` con el token de suscripción— dio:
+>
+> | Modelo | Resultado |
+> |---|---|
+> | `claude-haiku-4-5-20251001` | HTTP 200 |
+> | `claude-sonnet-5`, `claude-sonnet-5-5`, `claude-opus-4-8`, `claude-opus-5-5`, `claude-fable-5`, `claude-fable-5-1` | HTTP 429 `rate_limit_error`, mensaje «Error», en ~270 ms |
+>
+> En paralelo, `claude -p --model claude-sonnet-5-5` (el CLI oficial, la misma cuenta) respondió
+> bien. Por la rapidez y el mensaje genérico **no es cuota**: es el rechazo a llamadas directas
+> de un cliente que no es el CLI oficial. El harness **no imita** las cabeceras ni el prompt de
+> sistema de Claude Code para sortearlo —sería esquivar una restricción del proveedor—. Las
+> salidas legítimas son el CLI oficial o una clave de API (proveedor `anthropic`, §1.2).
+>
+> Lo que el harness hace al respecto, sin cambiar la red: el 429 de este proveedor lleva, detrás
+> del mensaje del proveedor que sigue viajando tal cual, la explicación de arriba
+> (`EXPLICACION_429_CLAUDE_CODE`, en `packages/credentials/src/claude-code.ts`), y la prueba de
+> proveedor sin modelo —el botón «Probar» de Mission Control y `valmen provider test claude-code`—
+> usa `claude-haiku-4-5-20251001`. Por eso su «Conexión verificada» quiere decir que la credencial
+> fue aceptada y Haiku respondió; **no** que los demás modelos del plan sirvan por este camino. Un
+> HTTP 400 de este dialecto se presenta como «credencial aceptada» —para validar el cuerpo ya
+> aceptó la credencial— y un 401 o 403 como «error de credencial».
+>
+> **Propuesta, sin implementar: un transporte que invoque el CLI oficial.** Un transporte
+> `claude-cli` ejecutaría `claude -p --model <modelo>` como subproceso, de modo que la llamada la
+> haga el CLI con su propia sesión: el harness dejaría de leer el token y del refresco seguiría
+> encargándose su dueño. Quedaría por resolver, antes de decidir: (1) la salida estructurada, que
+> hoy va por herramienta forzada y ahí tendría que ir por `--output-format json` y
+> `--json-schema` —ambos existen en `claude --help`—, con validación del esquema y reintento;
+> (2) aislar la sesión para que el CLI no cargue el `CLAUDE.md` ni las herramientas del
+> directorio donde corre (`--tools`, `--no-session-persistence`, `--setting-sources`,
+> directorio vacío); (3) la latencia de arrancar un proceso por llamada, que importa en un gate de
+> catorce proposiciones; y (4) que usar la suscripción para automatización cae en la advertencia
+> de abajo —el CLI oficial no la quita—, así que es una decisión del PO.
 
 **Regla de convivencia:** el harness **lee** esas credenciales pero **no las reescribe ni las
 rota**. Si detecta que el archivo de auth del CLI cambió, recarga. Esto evita el modo de
@@ -283,6 +326,18 @@ Y el que viene incluido para un equipo que trabaja **solo** con Claude Code, sin
 de API: `suscripcion`. Los cuatro roles van a Claude, incluido el evaluador —que deja de ser
 probabilístico, y por eso `valmen routing show` lo advierte solo—. Se elige con
 `valmen routing set --preset suscripcion`.
+
+> **El preset `suscripcion` no es ejecutable tal como está.** Medido el 2026-10-05, por el camino
+> directo de `claude-code` solo `claude-haiku-4-5-20251001` responde (§1.1). El preset declara
+> `claude-sonnet-5` para el orquestador, el evaluador de gates, el juez, el productor, el
+> verificador y `ui-specs`, y `claude-opus-4-8` para `architect` y `escalation`: con una sesión Max
+> vigente todos esos modelos dan HTTP 429 «Error» al primer intento, y un gate o una descomposición
+> que los use falla aunque `claude auth status` diga `loggedIn: true`. No es un problema de cuota
+> ni de sesión. Las opciones, mientras no exista un transporte por el CLI oficial (propuesta en
+> §1.1), son poner Haiku en los roles que lo toleren, o usar el proveedor `anthropic` con una clave
+> de API para los modelos grandes. El preset se mantiene declarado para no cambiar el
+> comportamiento sin decisión del PO; `valmen provider test claude-code --model <modelo>` dice, por
+> modelo, si pasa.
 
 Estos dos últimos son ejemplos de lo que un proyecto puede escribir, no presets que
 vengan incluidos: los tres que trae el harness están arriba, y solo cubren los roles

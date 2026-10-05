@@ -38,8 +38,12 @@ import {
   callAnthropic,
 } from "../packages/credentials/src/anthropic.js";
 import {
+  CLAUDE_KEYCHAIN_SERVICE,
   ClaudeCodeCredentialError,
+  EXPLICACION_429_CLAUDE_CODE,
+  type EjecutarSecurity,
   claudeCodeCredentialsPath,
+  desdeLlavero,
   hayCredencialDeClaudeCode,
   readClaudeCodeCredential,
 } from "../packages/credentials/src/claude-code.js";
@@ -47,7 +51,7 @@ import {
   resolveChatEndpoint,
   structuredOutputOf,
 } from "../packages/credentials/src/endpoints.js";
-import { callChat } from "../packages/credentials/src/chat.js";
+import { ChatError, callChat } from "../packages/credentials/src/chat.js";
 
 let lab: string;
 
@@ -228,6 +232,59 @@ describe("el dialecto de Anthropic", () => {
     ).rejects.toThrowError(/credit balance is too low/);
   });
 
+  it("un 429 con token de suscripción explica que no suele ser cuota", async () => {
+    // Medido el 2026-10-05: con una sesión Max vigente, las llamadas directas solo
+    // pasan con Haiku; con los modelos grandes responde 429 «Error» en ~270 ms,
+    // y el CLI oficial responde bien con la misma cuenta. El mensaje del
+    // proveedor viaja tal cual y la explicación se añade detrás.
+    const cuerpoReal = JSON.stringify({
+      type: "error",
+      error: { type: "rate_limit_error", message: "Error" },
+    });
+    const { fetch: falso } = fetchQueCaptura(new Response(cuerpoReal, { status: 429 }));
+
+    const error = await callAnthropic(
+      {
+        url: "https://api.anthropic.com/v1/messages",
+        // valmen:allow-secret — token inventado del test, no una credencial real
+        headers: anthropicAuthHeaders("sk-ant-oat01-abc"),
+        model: "claude-sonnet-5-5",
+        messages: [{ role: "user", content: "hola" }],
+      },
+      falso,
+    ).catch((caught: unknown) => caught as ChatError);
+
+    expect(error).toBeInstanceOf(ChatError);
+    expect((error as ChatError).code).toBe("RATE_LIMIT");
+    expect((error as ChatError).message).toContain(cuerpoReal);
+    expect((error as ChatError).message).toContain(EXPLICACION_429_CLAUDE_CODE);
+    expect((error as ChatError).message).toContain("`anthropic`");
+    // Nunca el token.
+    expect((error as ChatError).message).not.toContain("sk-ant-oat01-abc");
+  });
+
+  it("un 429 con clave de API no lleva la nota de la suscripción", async () => {
+    // Con una clave de API un 429 sí puede ser cuota, y decir lo contrario
+    // mandaría a buscar el problema donde no está.
+    const { fetch: falso } = fetchQueCaptura(
+      new Response('{"type":"error","error":{"type":"rate_limit_error"}}', { status: 429 }),
+    );
+
+    const error = await callAnthropic(
+      {
+        url: "https://api.anthropic.com/v1/messages",
+        // valmen:allow-secret — clave inventada del test
+        headers: anthropicAuthHeaders("sk-ant-api03-abc"),
+        model: "claude-sonnet-5",
+        messages: [{ role: "user", content: "hola" }],
+      },
+      falso,
+    ).catch((caught: unknown) => caught as ChatError);
+
+    expect((error as ChatError).code).toBe("RATE_LIMIT");
+    expect((error as ChatError).message).not.toContain("CLI oficial");
+  });
+
   it("una respuesta sin contenido dice qué bloques traía", async () => {
     const respuesta = new Response(
       JSON.stringify({ content: [], stop_reason: "max_tokens", usage: {} }),
@@ -346,6 +403,139 @@ describe("la credencial de Claude Code", () => {
     expect(() => readClaudeCodeCredential(lab, Date.now(), SIN_LLAVERO)).toThrowError(
       /no son JSON válido/,
     );
+  });
+});
+
+describe("el llavero de macOS", () => {
+  const USUARIO = "juan";
+  const AHORA = Date.parse("2026-10-05T12:00:00Z");
+
+  /**
+   * Lo que guarda cada entrada del llavero, como lo deja el CLI.
+   *
+   * Son las dos de la máquina donde se vio el fallo: la vieja, de la cuenta
+   * `root`, con un token Pro caducado el 2026-04-29, y la vigente, de la cuenta
+   * del usuario, con el plan max.
+   */
+  const ENTRADA_VIEJA = JSON.stringify({
+    claudeAiOauth: {
+      // valmen:allow-secret — token inventado del test, no una credencial real
+      accessToken: "sk-ant-oat01-vieja",
+      expiresAt: Date.parse("2026-04-29T00:00:00Z"),
+      subscriptionType: "pro",
+    },
+  });
+  const ENTRADA_VIGENTE = JSON.stringify({
+    claudeAiOauth: {
+      // valmen:allow-secret — token inventado del test, no una credencial real
+      accessToken: "sk-ant-oat01-vigente",
+      expiresAt: AHORA + 3_600_000,
+      subscriptionType: "max",
+    },
+  });
+
+  /** El valor de `-a` en los argumentos, o `null` si no lo traen. */
+  function cuentaDe(argumentos: readonly string[]): string | null {
+    const indice = argumentos.indexOf("-a");
+    return indice === -1 ? null : (argumentos[indice + 1] ?? null);
+  }
+
+  /**
+   * Un `security` con varias entradas del mismo servicio.
+   *
+   * Imita lo que hace el real: con `-a` devuelve la entrada de esa cuenta, y sin
+   * `-a` devuelve **la primera que encuentra**, que es la vieja. Guarda los
+   * argumentos de cada llamada para poder comprobar en qué orden se buscó.
+   */
+  function llaveroConDosEntradas(entradas: Readonly<Record<string, string>>): {
+    readonly ejecutar: EjecutarSecurity;
+    readonly llamadas: (readonly string[])[];
+  } {
+    const llamadas: (readonly string[])[] = [];
+    const ejecutar: EjecutarSecurity = (argumentos) => {
+      llamadas.push(argumentos);
+      if (argumentos[0] !== "find-generic-password") return null;
+      if (argumentos[argumentos.indexOf("-s") + 1] !== CLAUDE_KEYCHAIN_SERVICE) return null;
+      const cuenta = cuentaDe(argumentos);
+      if (cuenta === null) return Object.values(entradas)[0] ?? null;
+      return entradas[cuenta] ?? null;
+    };
+    return { ejecutar, llamadas };
+  }
+
+  it("con dos entradas del mismo servicio gana la del usuario", () => {
+    const { ejecutar, llamadas } = llaveroConDosEntradas({
+      root: ENTRADA_VIEJA,
+      [USUARIO]: ENTRADA_VIGENTE,
+    });
+
+    expect(desdeLlavero(USUARIO, ejecutar, "darwin")).toBe(ENTRADA_VIGENTE);
+    // Se buscó primero la cuenta del usuario y no hizo falta nada más.
+    expect(llamadas).toHaveLength(1);
+    expect(cuentaDe(llamadas[0] as readonly string[])).toBe(USUARIO);
+  });
+
+  it("la sesión vigente no se confunde con la caducada de otra cuenta", () => {
+    // El síntoma original: `claude auth status` dice loggedIn y el harness decía
+    // «La sesión de Claude Code caducó el 2026-04-29».
+    const { ejecutar } = llaveroConDosEntradas({
+      root: ENTRADA_VIEJA,
+      [USUARIO]: ENTRADA_VIGENTE,
+    });
+
+    const credencial = readClaudeCodeCredential(lab, AHORA, () =>
+      desdeLlavero(USUARIO, ejecutar, "darwin"),
+    );
+    expect(credencial.accessToken).toBe("sk-ant-oat01-vigente");
+    expect(credencial.subscriptionType).toBe("max");
+    expect(credencial.source).toBe("llavero");
+
+    // Y el caso control: la búsqueda sin cuenta, que era la de antes, devuelve la
+    // caducada y reproduce el mensaje equivocado.
+    expect(() =>
+      readClaudeCodeCredential(lab, AHORA, () =>
+        ejecutar(["find-generic-password", "-s", CLAUDE_KEYCHAIN_SERVICE, "-w"]),
+      ),
+    ).toThrowError(/caducó el 2026-04-29/);
+  });
+
+  it("sin entrada del usuario cae a la búsqueda sin cuenta", () => {
+    // Una instalación que guardó su sesión con otra cuenta no puede quedar rota.
+    const { ejecutar, llamadas } = llaveroConDosEntradas({ otra: ENTRADA_VIGENTE });
+
+    expect(desdeLlavero(USUARIO, ejecutar, "darwin")).toBe(ENTRADA_VIGENTE);
+    expect(llamadas.map(cuentaDe)).toEqual([USUARIO, null]);
+  });
+
+  it("sin nombre de usuario busca sin cuenta, como antes", () => {
+    const { ejecutar, llamadas } = llaveroConDosEntradas({ otra: ENTRADA_VIGENTE });
+
+    expect(desdeLlavero(null, ejecutar, "darwin")).toBe(ENTRADA_VIGENTE);
+    expect(llamadas.map(cuentaDe)).toEqual([null]);
+  });
+
+  it("una entrada del usuario vacía no tapa a la que sí tiene contenido", () => {
+    // `otra` va primero porque es la que `security` encuentra sin `-a`.
+    const { ejecutar } = llaveroConDosEntradas({
+      otra: ENTRADA_VIGENTE,
+      [USUARIO]: "  \n",
+    });
+
+    expect(desdeLlavero(USUARIO, ejecutar, "darwin")).toBe(ENTRADA_VIGENTE);
+  });
+
+  it("sin ninguna entrada devuelve null", () => {
+    const { ejecutar } = llaveroConDosEntradas({});
+
+    expect(desdeLlavero(USUARIO, ejecutar, "darwin")).toBeNull();
+  });
+
+  it("fuera de macOS no ejecuta nada", () => {
+    const { ejecutar, llamadas } = llaveroConDosEntradas({ [USUARIO]: ENTRADA_VIGENTE });
+
+    expect(desdeLlavero(USUARIO, ejecutar, "linux")).toBeNull();
+    expect(desdeLlavero(USUARIO, ejecutar, "win32")).toBeNull();
+    expect(llamadas).toHaveLength(0);
   });
 });
 

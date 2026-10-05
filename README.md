@@ -35,6 +35,12 @@ reescribe nunca: el `refresh_token` es de su CLI, y dos clientes renovando a la 
 sesión. Con una clave de API, en cambio: `valmen provider set anthropic --key sk-ant-…`, que
 **prueba antes de guardar** y no escribe nada si la clave no sirve.
 
+> **Ojo con los modelos grandes.** Medido el 2026-10-05 con una sesión Max vigente, por este camino
+> solo responde `claude-haiku-4-5-20251001`; con Sonnet, Opus y Fable el proveedor contesta 429
+> «Error», que no es cuota, aunque `claude -p` responda bien con la misma cuenta. Hoy el preset
+> `suscripcion` no es ejecutable tal como viene; el detalle y las salidas están en
+> `docs/04-PROVEEDORES.md` (§1.1 y §4.3).
+
 | Proveedor | Cómo se autentica | Para quién |
 |---|---|---|
 | `claude-code` | suscripción, leída de su CLI | quien ya paga Claude Code |

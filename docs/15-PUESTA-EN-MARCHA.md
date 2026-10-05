@@ -154,6 +154,12 @@ valmen routing clear architect               # vuelve al preset
 Presets: `quality`, `balanced`, `economy`, `suscripcion`. Se cambia en cualquier momento y
 aplica en la corrida siguiente: no hay que reiniciar nada.
 
+> **`suscripcion` no es ejecutable tal como está.** Medido el 2026-10-05, por la suscripción de
+> Claude Code solo responde Haiku por el camino directo; los modelos que declara el preset
+> (`claude-sonnet-5`, `claude-opus-4-8`) dan HTTP 429 «Error», que no es cuota. Comprobá cada
+> modelo con `valmen provider test claude-code --model <modelo>`. Ver `docs/04-PROVEEDORES.md`
+> (§1.1 y §4.3).
+
 > **Lo que se gana y lo que se pierde.** El evaluador por defecto es `typesafe/jev-1.13`, que
 > emite **probabilidades calibradas**: el veredicto de un gate es entonces un conjunto de
 > comparaciones numéricas y sale igual dos veces. Con Claude como evaluador el gate pasa a ser

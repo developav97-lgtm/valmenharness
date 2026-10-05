@@ -21,6 +21,7 @@ import { dirname, join } from "node:path";
 
 import { yamlBlockOf, yamlFieldOf } from "@valmen/core";
 import {
+  EXPLICACION_429_CLAUDE_CODE,
   type Protocol,
   anthropicAuthHeaders,
   hayCredencialDeClaudeCode,
@@ -133,6 +134,19 @@ export interface ProviderEntry extends ProviderSpec {
   readonly testable: boolean;
 }
 
+/**
+ * El modelo con el que se prueba la credencial de Claude Code cuando nadie elige
+ * uno.
+ *
+ * La API de Anthropic exige `model`: sin él responde HTTP 400 `model: Field
+ * required`, que **parece** un fallo de credencial y prueba lo contrario —para
+ * validar el cuerpo ya aceptó la credencial—. El botón «Probar» de la lista de
+ * proveedores no pide un modelo, así que la prueba a nivel de proveedor lleva uno
+ * propio. Haiku porque, medido el 2026-10-05, es el único que la suscripción
+ * acepta en llamadas directas (ver `EXPLICACION_429_CLAUDE_CODE`), y el más barato.
+ */
+export const MODELO_DE_PRUEBA_CLAUDE_CODE = "claude-haiku-4-5-20251001";
+
 /** El catálogo tal como se declara: sin lo que se puede derivar de él. */
 const CATALOGO: readonly ProviderSpec[] = [
   {
@@ -217,9 +231,14 @@ const CATALOGO: readonly ProviderSpec[] = [
       url: "https://api.anthropic.com/v1/messages",
       expect: 200,
       method: "POST",
-      // El cuerpo se completa en la prueba con el modelo que se quiera comprobar;
-      // `max_tokens` es obligatorio en este dialecto.
-      body: { max_tokens: 1, messages: [{ role: "user", content: "ok" }] },
+      // `model` y `max_tokens` son obligatorios en este dialecto. El modelo es el
+      // de prueba del proveedor: `testProviderModel` lo reemplaza por el que se
+      // quiera comprobar, y la prueba sin modelo usa este.
+      body: {
+        model: MODELO_DE_PRUEBA_CLAUDE_CODE,
+        max_tokens: 1,
+        messages: [{ role: "user", content: "ok" }],
+      },
       headers: { "anthropic-version": "2023-06-01", "anthropic-beta": "oauth-2025-04-20" },
     },
   },
@@ -672,6 +691,77 @@ function upsertKey(text: string, provider: string, apiKey: string): string {
   return lineas.join("\n");
 }
 
+/** Lo que devuelve una prueba contra un proveedor. */
+export interface ProbeResult {
+  readonly ok: boolean;
+  readonly status: number | null;
+  readonly detail: string;
+  readonly latencyMs: number;
+  /**
+   * Lo que la respuesta dice **de la credencial**, separado de si la prueba pasó.
+   *
+   * `true` si el proveedor la aceptó aunque la petición fallara por otra razón;
+   * `false` si la rechazó; `null` si la respuesta no lo dice. Existe porque un
+   * 400 `model: Field required` parecía un error de credencial y es lo contrario:
+   * la pantalla tiene que poder mostrarlos distinto.
+   */
+  readonly credentialAccepted?: boolean | null;
+}
+
+/**
+ * Qué dice un estado HTTP sobre la credencial, cuando se puede saber.
+ *
+ * Solo se afirma lo comprobado. En el dialecto de Anthropic la autenticación se
+ * resuelve **antes** de validar el cuerpo, así que un 400 o un 422 es que la
+ * petición está mal formada y, para llegar ahí, la credencial ya pasó. En los
+ * otros proveedores no se midió, y un 400 puede ser un endpoint mal declarado: se
+ * deja en `null` en vez de suponer.
+ */
+function veredictoDeCredencial(
+  spec: ProviderSpec,
+  status: number,
+  ok: boolean,
+): boolean | null {
+  if (ok) return true;
+  if (status === 401 || status === 403) return false;
+  if (spec.protocol === "anthropic-messages" && (status === 400 || status === 422)) {
+    return true;
+  }
+  return null;
+}
+
+/** El principio del mensaje de un fallo, para decir de qué clase es. */
+function prefijoDeVeredicto(aceptada: boolean | null, ok: boolean): string {
+  if (ok) return "";
+  if (aceptada === true) {
+    return "Credencial aceptada; la petición de prueba no lo fue (no es un error de credencial). ";
+  }
+  if (aceptada === false) return "Error de credencial. ";
+  return "";
+}
+
+/**
+ * Lo que se añade al mensaje del proveedor cuando se conoce la causa de un
+ * rechazo que, a simple vista, parece otra cosa.
+ *
+ * El 429 de la suscripción de Claude Code no suele ser cuota: ver
+ * `EXPLICACION_429_CLAUDE_CODE`. Se añade **detrás** del texto del proveedor, que
+ * sigue viajando tal cual.
+ */
+function notaDeRechazo(spec: ProviderSpec, status: number): string {
+  return spec.credential === "claude-code" && status === 429
+    ? ` ${EXPLICACION_429_CLAUDE_CODE}`
+    : "";
+}
+
+/** El modelo con el que el proveedor se prueba cuando nadie elige uno, si declara uno. */
+function modeloDePruebaDe(spec: ProviderSpec): string | null {
+  const body = spec.probe?.body;
+  if (typeof body !== "object" || body === null) return null;
+  const modelo = (body as { model?: unknown }).model;
+  return typeof modelo === "string" && modelo !== "" ? modelo : null;
+}
+
 /**
  * Prueba la conectividad de un proveedor.
  *
@@ -697,12 +787,7 @@ export async function probeProvider(
      */
     readonly apiKey?: string;
   } = {},
-): Promise<{
-  readonly ok: boolean;
-  readonly status: number | null;
-  readonly detail: string;
-  readonly latencyMs: number;
-}> {
+): Promise<ProbeResult> {
   const spec = PROVIDERS.find((provider) => provider.id === id);
   if (spec === undefined) {
     return {
@@ -776,21 +861,30 @@ export async function probeProvider(
       cuerpo = cuerpo.split(clave).join("***");
     }
 
+    const aceptada = veredictoDeCredencial(spec, respuesta.status, ok);
+    const modeloDePrueba = modeloDePruebaDe(spec);
+
     // Nunca se devuelve la respuesta entera sin recortar: podría contener la
     // clave reflejada por un proveedor mal implementado.
     return {
       ok,
       status: respuesta.status,
+      credentialAccepted: aceptada,
       detail: ok
-        ? `Conexión verificada (HTTP ${respuesta.status}).`
-        : // Con el cuerpo del proveedor delante, la interpretación sobra: se
+        ? `Conexión verificada (HTTP ${respuesta.status})` +
+          // Se dice con qué modelo, para que «verificada» no se lea como «todos los
+          // modelos del proveedor funcionan»: no es lo que se comprobó.
+          (modeloDePrueba === null ? "." : ` con el modelo de prueba ${modeloDePrueba}.`)
+        : prefijoDeVeredicto(aceptada, ok) +
+          // Con el cuerpo del proveedor delante, la interpretación sobra: se
           // añade solo cuando no dijo nada.
           `El proveedor respondió HTTP ${respuesta.status}` +
           (cuerpo !== ""
             ? `: ${cuerpo}`
             : respuesta.status === 401 || respuesta.status === 403
               ? ": la credencial no es válida o no tiene permisos."
-              : "."),
+              : ".") +
+          notaDeRechazo(spec, respuesta.status),
       latencyMs: latencia,
     };
   } catch (caught) {
@@ -1136,12 +1230,7 @@ export async function testProviderModel(
     readonly fetchImpl?: typeof fetch;
     readonly timeoutMs?: number;
   } = {},
-): Promise<{
-  readonly ok: boolean;
-  readonly status: number | null;
-  readonly detail: string;
-  readonly latencyMs: number;
-}> {
+): Promise<ProbeResult> {
   const spec = PROVIDERS.find((provider) => provider.id === id);
   if (spec === undefined) {
     return {
@@ -1243,15 +1332,20 @@ export async function testProviderModel(
   // La credencial se tacha: un proveedor puede devolverla reflejada en su error.
   if (clave !== null && clave !== "") texto = texto.split(clave).join("***");
 
+  const ok = respuesta.status === spec.probe.expect;
+  const aceptada = veredictoDeCredencial(spec, respuesta.status, ok);
+
   return {
-    ok: respuesta.status === spec.probe.expect,
+    ok,
     status: respuesta.status,
-    detail:
-      respuesta.status === spec.probe.expect
-        ? `${spec.name} acepta "${model}" (HTTP ${respuesta.status}).`
-        : // El mensaje del proveedor, sin parafrasear: «Model is unavailable» no
-          // es «la credencial no vale», y se arreglan distinto.
-          `${spec.name} respondió HTTP ${respuesta.status}${texto === "" ? "." : `: ${texto}`}`,
+    credentialAccepted: aceptada,
+    detail: ok
+      ? `${spec.name} acepta "${model}" (HTTP ${respuesta.status}).`
+      : // El mensaje del proveedor, sin parafrasear: «Model is unavailable» no
+        // es «la credencial no vale», y se arreglan distinto.
+        prefijoDeVeredicto(aceptada, ok) +
+        `${spec.name} respondió HTTP ${respuesta.status}${texto === "" ? "." : `: ${texto}`}` +
+        notaDeRechazo(spec, respuesta.status),
     latencyMs,
   };
 }
