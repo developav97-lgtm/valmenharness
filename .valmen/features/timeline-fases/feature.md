@@ -2,9 +2,9 @@
 schema_version: 2
 id: timeline-fases
 title: Ver por ticket la duración de cada fase y la transición en vivo
-state: decomposed
+state: complete
 created: 2026-09-29
-updated: 2026-09-29
+updated: 2026-10-05
 ---
 
 # Ver por ticket la duración de cada fase y la transición en vivo
