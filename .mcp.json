@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "valmen": {
+      "command": "valmen-mcp",
+      "args": [],
+      "cwd": "."
+    }
+  }
+}

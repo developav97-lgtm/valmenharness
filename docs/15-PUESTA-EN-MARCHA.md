@@ -168,10 +168,57 @@ aplica en la corrida siguiente: no hay que reiniciar nada.
 
 ---
 
-## 4. Conectar el agente
+## 4. Elegir la ruta de trabajo
 
-El harness se usa por **dos puertas**, y las dos llaman al mismo motor: el CLI (`valmen …`) y
-el servidor MCP. Con el MCP conectado, el agente no necesita que le dictes comandos.
+La puesta en marcha no obliga a instalar un agente concreto, Hermes ni Mission Control. Elegir
+una ruta según las herramientas que de verdad estén disponibles; las tres llaman al mismo motor,
+pero cada una tiene requisitos y comprobaciones propios.
+
+### Ruta CLI mínima
+
+Con una terminal y `valmen` en el `PATH`, `adopt`, `sync` y `doctor` dejan operable el flujo de
+tickets. La observación directa requiere además que esta máquina haya declarado el proyecto en
+`~/.valmen/bindings.local.yaml`: el `project-id` compartido tiene que coincidir con la raíz local
+autorizada. Ese binding es local y no se versiona ni se copia desde otra máquina.
+
+Comprobar la puerta directa sin crear una actividad ni una jornada:
+
+```bash
+valmen execution journeys --project <project-id> --json
+```
+
+El resultado puede ser una lista vacía: confirma que la consulta resolvió el proyecto autorizado.
+Si informa que el proyecto no está declarado, falta el binding local; no sustituirlo por una ruta
+en el comando ni asumir que el directorio actual está autorizado. La ruta CLI no necesita Hermes,
+Telegram, Mission Control, un worker ni un proveedor semántico.
+
+Para comprobar el recorrido de adopción sin crear ni modificar tickets de este proyecto, usar la
+verificación temporal:
+
+```bash
+valmen onboarding verify
+```
+
+Prepara una raíz efímera, corre `adopt`, `sync` y `doctor` ahí, y la elimina al terminar. Informa
+por separado si MCP, Hermes o un proveedor semántico no están disponibles; no los instala, no
+conecta perfiles, no ejecuta gates y no aprueba tickets.
+
+### Ruta MCP
+
+Elegir MCP sólo cuando el agente o cliente realmente lo soporte. Primero, sin escribir nada,
+`valmen mcp` imprime el fragmento que corresponde al cliente. Con autorización para modificar la
+configuración del cliente, aplicar `valmen mcp --install`; conserva los servidores existentes.
+
+```bash
+valmen mcp
+valmen mcp --install
+```
+
+Reiniciar el cliente y comprobar que expone `registrar_actividad_ejecucion` y
+`ver_actividad_ejecucion`. Ambas herramientas piden un `proyecto` declarado en el binding local;
+registrar actividad no aprueba gates ni habilita despacho. Si el chat no tiene terminal ni una
+conexión MCP accesible, debe declararlo como herramienta ausente: no puede afirmar que instaló o
+conectó un servidor local.
 
 ```bash
 valmen mcp --install     # opencode.json y .mcp.json de Claude Code
@@ -188,7 +235,7 @@ valmen mcp               # imprime el fragmento exacto de cada agente, sin escri
 | **Hermes** | `~/.hermes/config.yaml` o `~/.hermes/profiles/<perfil>/config.yaml` | global, o por perfil: cada entrada lleva la raíz de su proyecto |
 
 `--install` **conserva** lo que ya estuviera declarado en esos archivos: agrega la entrada del
-harness y deja el resto igual.
+harness y deja el resto igual. No es requisito de la ruta CLI.
 
 Reiniciá el agente después de instalarlo. En Claude Code, `/mcp` tiene que listar `valmen`
 como conectado; si no, `valmen mcp` imprime la ruta que se escribió en `.mcp.json` y ese es el
@@ -293,10 +340,17 @@ indico otra.
    Hermes. No elijas por mí y no configures ninguna credencial sin que te lo diga.
 5. Cuando te conteste, aplicá lo que decidí con `valmen provider set` y `valmen routing set`,
    y mostrame `valmen routing show`.
-6. Conectá el MCP con `valmen mcp --install` y decime qué tengo que reiniciar.
-7. Al final, volvé a correr `valmen doctor` y mostrame qué quedó y qué falta.
-8. No crees tickets, no escribas en el registro y no apruebes nada: eso también lo decide una
-   persona, y es justamente lo que el harness protege.
+6. Si tengo terminal, comprobá la ruta directa con `valmen execution journeys --project
+   <project-id> --json`; si falta el binding local, detenete e informalo sin usar una ruta libre.
+7. Preguntame si querés MCP. Sólo si lo autorizás y puedo modificar la configuración real del
+   cliente, ejecutá `valmen mcp --install`, reiniciá el cliente y comprobá que aparecen
+   `registrar_actividad_ejecucion` y `ver_actividad_ejecucion`. Si no tengo terminal o MCP,
+   declaralo como herramienta ausente; no afirmes una conexión ficticia.
+8. Preguntame por separado si querés Hermes. No lo conectes, no actives notificaciones ni
+   programes trabajo sin esa decisión explícita.
+9. Al final, volvé a correr `valmen doctor` y mostrame qué quedó y qué falta.
+10. No crees tickets, no escribas en el registro y no apruebes nada: eso también lo decide una
+    persona, y es justamente lo que el harness protege.
 ```
 
 Lo que el agente **no** puede hacer, ni con este texto ni con otro: aprobar una compuerta,
@@ -343,10 +397,17 @@ autenticación**: la frontera de confianza es la red—.
 ```bash
 valmen doctor          # sin ✗ : los avisos son opcionales de verdad
 valmen routing show    # los cuatro roles con proveedor y modelo
+valmen execution journeys --project <project-id> --json  # observa sin Hermes ni jornada
 valmen mcp             # el fragmento que tu agente tiene que tener declarado
 valmen validate --all  # el registro, contra el contrato
 ```
 
-Y la prueba de verdad: **pedile al agente que cree un ticket**. Si aparece en
-`valmen active` con su estado, la puerta del agente está conectada y el motor está escribiendo
-donde tiene que escribir.
+Y para comprobar la guía completa sin afectar el registro de trabajo, corré:
+
+```bash
+valmen onboarding verify
+```
+
+El resultado confirma el contrato mecánico de CLI y declara las capacidades opcionales que no se
+pudieron comprobar. Crear tickets reales sigue siendo una decisión de la persona que gestiona el
+proyecto, no una prueba de instalación.

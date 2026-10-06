@@ -18,6 +18,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { USAGE } from "../packages/cli/src/main.js";
+import { TOOLS } from "../packages/mcp/src/tools.js";
 
 const REPO = process.cwd();
 const DOCUMENTO = "docs/15-PUESTA-EN-MARCHA.md";
@@ -45,6 +46,15 @@ function ayudaDeHermes(): string {
   if (inicio === -1) return "";
   const resto = USAGE.slice(inicio);
   const fin = resto.indexOf("\n  serve ");
+  return fin === -1 ? resto : resto.slice(0, fin);
+}
+
+/** Las rutas elegibles entre la conexión MCP y el primer ticket. */
+function bloqueDeRutasDeAdopcion(): string {
+  const inicio = documento.indexOf("## 4. Elegir la ruta de trabajo");
+  if (inicio === -1) return "";
+  const resto = documento.slice(inicio);
+  const fin = resto.indexOf("\n## 5.");
   return fin === -1 ? resto : resto.slice(0, fin);
 }
 
@@ -76,5 +86,21 @@ describe("la ayuda del CLI declara el perfil", () => {
     expect(bloque, "la ayuda no declara el nombre por defecto").toContain(
       "valmen-<perfil>",
     );
+  });
+});
+
+describe("las rutas portables de adopción", () => {
+  it("distingue CLI y MCP sin convertir Hermes en requisito", () => {
+    const bloque = bloqueDeRutasDeAdopcion();
+
+    expect(bloque, "la guía no separa las rutas de adopción").not.toBe("");
+    expect(bloque).toContain("### Ruta CLI mínima");
+    expect(bloque).toContain("valmen execution journeys --project <project-id> --json");
+    expect(bloque).toContain("### Ruta MCP");
+    expect(bloque).toContain("registrar_actividad_ejecucion");
+    expect(bloque).toContain("ver_actividad_ejecucion");
+    expect(TOOLS.some((tool) => tool.name === "registrar_actividad_ejecucion")).toBe(true);
+    expect(TOOLS.some((tool) => tool.name === "ver_actividad_ejecucion")).toBe(true);
+    expect(documento).toContain("## 6. Decidir desde el celular (opcional)");
   });
 });

@@ -16,7 +16,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -24,6 +24,8 @@ import {
   detectLegacyConfigs,
   detectMemorySources,
   extractRules,
+  machineBindingsPath,
+  parseMachineBindings,
   parseConfig,
   profileProject,
   proposeConfig,
@@ -245,6 +247,128 @@ describe("comando adopt", () => {
     expect(generated).not.toContain("## Gates configurados");
     // Con registro declarado, sí se anuncia.
     expect(generated).toContain("## Registro de trabajo");
+  });
+});
+
+describe("binding local durante adopt", () => {
+  function prepararProyectoConIdentidad(): void {
+    write(
+      ".valmen/config.yaml",
+      "name: Demo\nproject-id: demo\ntickets-dir: tickets\ngates: []\n",
+    );
+  }
+
+  it("crea el primer binding local con el machine-id explícito", () => {
+    prepararProyectoConIdentidad();
+    const home = join(lab, "home");
+
+    const result = adoptProject(lab, "Demo", { home, machineId: "equipo-pruebas" });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("Binding local creado");
+    expect(parseMachineBindings(readFileSync(machineBindingsPath(home), "utf8"))).toEqual({
+      schemaVersion: "1",
+      machineId: "equipo-pruebas",
+      managedExecutionCapacity: 1,
+      projects: { demo: { root: resolve(lab) } },
+    });
+  });
+
+  it("repite una adopción idéntica sin reescribir bindings de otros proyectos", () => {
+    prepararProyectoConIdentidad();
+    const home = join(lab, "home");
+    mkdirSync(join(home, ".valmen"), { recursive: true });
+    writeFileSync(
+      machineBindingsPath(home),
+      [
+        "schema-version: 1",
+        "machine-id: equipo-pruebas",
+        "managed-execution-capacity: 1",
+        "projects:",
+        "  demo:",
+        `    root: ${resolve(lab)}`,
+        "  otro-proyecto:",
+        "    root: /tmp/otro-proyecto",
+        "    hermes-profile: otro",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    const before = readFileSync(machineBindingsPath(home), "utf8");
+
+    const result = adoptProject(lab, "Demo", { home });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("Binding local ya declarado");
+    expect(readFileSync(machineBindingsPath(home), "utf8")).toBe(before);
+  });
+
+  it("informa el conflicto de raíz sin escribir el binding existente", () => {
+    prepararProyectoConIdentidad();
+    const home = join(lab, "home");
+    mkdirSync(join(home, ".valmen"), { recursive: true });
+    writeFileSync(
+      machineBindingsPath(home),
+      [
+        "schema-version: 1",
+        "machine-id: equipo-pruebas",
+        "managed-execution-capacity: 1",
+        "projects:",
+        "  demo:",
+        "    root: /tmp/otra-raiz",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    const before = readFileSync(machineBindingsPath(home), "utf8");
+
+    const result = adoptProject(lab, "Demo", { home });
+
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stderr).toContain("conflicto");
+    expect(readFileSync(machineBindingsPath(home), "utf8")).toBe(before);
+  });
+
+  it("informa el conflicto de perfil sin escribir el binding existente", () => {
+    prepararProyectoConIdentidad();
+    const home = join(lab, "home");
+    mkdirSync(join(home, ".valmen"), { recursive: true });
+    writeFileSync(
+      machineBindingsPath(home),
+      [
+        "schema-version: 1",
+        "machine-id: equipo-pruebas",
+        "managed-execution-capacity: 1",
+        "projects:",
+        "  demo:",
+        `    root: ${resolve(lab)}`,
+        "    hermes-profile: perfil-ajeno",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    const before = readFileSync(machineBindingsPath(home), "utf8");
+
+    const result = adoptProject(lab, "Demo", { home });
+
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stderr).toContain("conflicto");
+    expect(readFileSync(machineBindingsPath(home), "utf8")).toBe(before);
+  });
+
+  it("simula el binding sin crear archivos locales", () => {
+    prepararProyectoConIdentidad();
+    const home = join(lab, "home");
+
+    const result = adoptProject(lab, "Demo", {
+      dryRun: true,
+      home,
+      machineId: "equipo-pruebas",
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("Binding local propuesto");
+    expect(existsSync(machineBindingsPath(home))).toBe(false);
   });
 });
 

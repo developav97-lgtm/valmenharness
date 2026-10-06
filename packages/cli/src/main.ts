@@ -58,6 +58,7 @@ import {
 } from "./commands.js";
 import { runFeature } from "./features.js";
 import { doctorCommand, providerCommand, routingCommand } from "./setup.js";
+import { verifyOnboarding } from "./onboarding-verify.js";
 import {
   runHermes,
   hermesNotify,
@@ -187,7 +188,9 @@ Comandos:
   migrate [--dry-run]       Lleva el registro al esquema vigente y limpia del
                             routing los roles que el harness ya no ejecuta.
   sync [--check]            Proyecta .valmen/ a AGENTS.md.
-  adopt [--dry-run]         Incorpora el harness a un proyecto existente.
+  adopt [--dry-run] [--machine-id <id>]
+                            Incorpora el harness a un proyecto existente.
+  onboarding verify         Comprueba la ruta CLI en una raíz temporal aislada.
   template list             Las plantillas por stack disponibles.
   template show <nombre>    Imprime lo que una plantilla escribe. Leerla es el paso.
   template apply <nombre>   Escribe sus reglas en .valmen/ (no pisa lo que existe).
@@ -566,6 +569,8 @@ export const VALUE_OPTIONS = [
   "--event-id",
   "--state",
   "--occurred-at",
+  // `adopt --machine-id`: identidad que permite crear el primer binding local.
+  "--machine-id",
 ] as const;
 
 /**
@@ -1289,6 +1294,10 @@ export function dispatch(options: Options): CommandResult {
     case "adopt":
       return adoptProject(options.root, basename(options.root), {
         dryRun: options.flags["dry-run"] === true,
+        machineId:
+          typeof options.flags["machine-id"] === "string"
+            ? options.flags["machine-id"]
+            : undefined,
       });
 
     case "sync":
@@ -1615,7 +1624,11 @@ export async function run(argv: readonly string[]): Promise<number> {
           result = { stdout: "", stderr: failure.message, exitCode: EXIT_SCHEMA };
           definition = null;
         }
-        if (definition !== null && definition !== undefined && definition.mode !== "hybrid") {
+        if (
+          definition !== null &&
+          definition !== undefined &&
+          definition.mode !== "hybrid"
+        ) {
           result = {
             stdout: "",
             stderr: `El gate ${gateId} ya es ${definition.mode}; solo se pueden promover gates híbridos.`,
@@ -1667,6 +1680,16 @@ export async function run(argv: readonly string[]): Promise<number> {
       result = routingCommand(resolvePaths(options), options.flags, rest[0], rest[1]);
     } else if (command === "doctor") {
       result = await doctorCommand(resolvePaths(options));
+    } else if (command === "onboarding") {
+      if (rest[0] !== "verify" || rest.length !== 1) {
+        result = {
+          stdout: "",
+          stderr: "onboarding requiere el verbo verify.",
+          exitCode: EXIT_SCHEMA,
+        };
+      } else {
+        result = await verifyOnboarding(options.root);
+      }
     } else if (command === "feature") {
       result = await runFeature(options.root, rest, options.flags);
     } else if (command === "gate-decide") {
@@ -1700,8 +1723,7 @@ export async function run(argv: readonly string[]): Promise<number> {
         if (typeof rawEvaluator === "string" && evaluator === undefined) {
           result = {
             stdout: "",
-            stderr:
-              `Evaluador desconocido: "${rawEvaluator}". Use ${EVALUATOR_IDS.join(", ")}.`,
+            stderr: `Evaluador desconocido: "${rawEvaluator}". Use ${EVALUATOR_IDS.join(", ")}.`,
             exitCode: EXIT_SCHEMA,
           };
           throw new Error("__handled__");
@@ -1736,10 +1758,10 @@ export async function run(argv: readonly string[]): Promise<number> {
           cascade === undefined ? undefined : credentialForCascade(archivoCredenciales);
         const apiKey =
           cascade === undefined
-            ? apiKeyWithPrecedence(
+            ? (apiKeyWithPrecedence(
                 routing.evaluatorProvider === "" ? "openrouter" : routing.evaluatorProvider,
                 archivoCredenciales,
-              ) ?? undefined
+              ) ?? undefined)
             : undefined;
 
         result = await runGate(rutas, {
@@ -1788,9 +1810,13 @@ export async function run(argv: readonly string[]): Promise<number> {
             ? options.flags["credentials"]
             : undefined;
         const solicitud =
-          typeof options.flags["solicitud"] === "string" ? options.flags["solicitud"] : undefined;
+          typeof options.flags["solicitud"] === "string"
+            ? options.flags["solicitud"]
+            : undefined;
         const pregunta =
-          typeof options.flags["pregunta"] === "string" ? options.flags["pregunta"] : undefined;
+          typeof options.flags["pregunta"] === "string"
+            ? options.flags["pregunta"]
+            : undefined;
 
         try {
           const corrida = await runCascadeTask({
@@ -1825,7 +1851,11 @@ export async function run(argv: readonly string[]): Promise<number> {
     // `__handled__` no es un fallo: el comando ya dejó su resultado escrito y lo
     // único que falta es imprimirlo. Un rechazo de validación con su mensaje
     // —«Evaluador desconocido: …»— llegaba al usuario como `Error: __handled__`.
-    if (caught instanceof Error && caught.message === "__handled__" && result !== undefined) {
+    if (
+      caught instanceof Error &&
+      caught.message === "__handled__" &&
+      result !== undefined
+    ) {
       if (result.stdout !== "") process.stdout.write(result.stdout);
       if (result.stderr !== "") process.stderr.write(`Error: ${result.stderr}\n`);
       return result.exitCode;

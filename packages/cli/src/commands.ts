@@ -7,6 +7,7 @@
  * sin cambios. Ver docs/09-MIGRACION-SAICLOUD.md.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 
 import {
@@ -36,7 +37,10 @@ import {
   listBlueprints,
   renderRuleExtraction,
   parseConfig,
+  machineBindingsPath,
+  prepareMachineProjectBinding,
   parseRoutingTolerante,
+  readSharedProjectPolicy,
   readHermesConfig,
   profileProject,
   projectFiles,
@@ -873,7 +877,7 @@ export function templateCommand(
 export function adoptProject(
   root: string,
   projectName: string,
-  options: { dryRun?: boolean } = {},
+  options: { dryRun?: boolean; home?: string | undefined; machineId?: string | undefined } = {},
 ): CommandResult {
   const dryRun = options.dryRun === true;
 
@@ -890,6 +894,39 @@ export function adoptProject(
   const config = proposeConfig(profile, ticketsDir);
   const alreadyAdopted = existsSync(plan.configPath);
   const extraccion = extractRules(root);
+
+  let binding:
+    | ReturnType<typeof prepareMachineProjectBinding>
+    | undefined;
+  let bindingPath: string | undefined;
+  if (alreadyAdopted) {
+    try {
+      const sharedPolicy = readSharedProjectPolicy(
+        parseConfig(readFileSync(plan.configPath, "utf8")),
+      );
+      if (sharedPolicy.projectId !== null) {
+        bindingPath = machineBindingsPath(options.home ?? homedir());
+        binding = prepareMachineProjectBinding(readIfExists(bindingPath), {
+          projectId: sharedPolicy.projectId,
+          root: resolve(root),
+          ...(options.machineId === undefined ? {} : { machineId: options.machineId }),
+        });
+      }
+    } catch (caught) {
+      const failure = toFailure(caught);
+      return error(failure.message, failure.exitCode);
+    }
+  }
+
+  if (binding?.status === "conflict") {
+    return error(`Binding local en conflicto: ${binding.message}\n`, EXIT_INVARIANT);
+  }
+  if (binding?.status === "missing-machine-id") {
+    return error(
+      "No se creó binding local: el primer alta requiere --machine-id <identidad>.\n",
+      EXIT_INVARIANT,
+    );
+  }
 
   const lines: string[] = [
     dryRun ? "Adopción (simulación)" : "Adopción",
@@ -976,6 +1013,18 @@ export function adoptProject(
 
   lines.push("", "Se creará:", `  ${relative(root, plan.configPath)}`);
 
+  if (bindingPath !== undefined && binding !== undefined) {
+    if (binding.status === "created") {
+      lines.push(
+        "",
+        dryRun ? "Binding local propuesto:" : "Binding local creado:",
+        `  ${bindingPath}`,
+      );
+    } else if (binding.status === "already-declared") {
+      lines.push("", "Binding local ya declarado; no se reescribió.");
+    }
+  }
+
   // Las reglas del AGENTS.md previo se extraen antes de decidir si se escribe la
   // configuración: es el paso que evita que `valmen sync` —el que el propio
   // `adopt` indica como siguiente— recomponga el documento sin las reglas que el
@@ -990,6 +1039,10 @@ export function adoptProject(
       mkdirSync(dirname(destino), { recursive: true });
       atomicWrite(destino, file.content);
     }
+  }
+
+  if (!dryRun && binding?.status === "created" && bindingPath !== undefined) {
+    atomicWrite(bindingPath, binding.text);
   }
 
   if (alreadyAdopted) {

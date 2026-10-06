@@ -22,11 +22,17 @@ import { EXIT_SCHEMA, toFailure } from "@valmen/core";
 import {
   PRESETS,
   ROLES,
+  codexAdapterCapabilities,
   type Effort,
+  hermesAdapterCapabilities,
+  openCodeAdapterCapabilities,
+  parseConfig,
   playwrightConfigOf,
   presetById,
+  readExecutionCapabilities,
   readProjectRouting,
   resolveRouting,
+  type AdapterCapabilities,
 } from "@valmen/adapter";
 import type { RegistryPaths } from "@valmen/engine";
 import {
@@ -377,6 +383,14 @@ interface Hallazgo {
   readonly arreglo?: string;
 }
 
+/** Perfil estático: describe el lector, no una instalación ni una autorización. */
+function adapterCapabilities(source: string): AdapterCapabilities | null {
+  if (source === "hermes") return hermesAdapterCapabilities();
+  if (source === "opencode") return openCodeAdapterCapabilities();
+  if (source === "codex") return codexAdapterCapabilities();
+  return null;
+}
+
 /**
  * `doctor`: qué le falta a esta máquina y a este proyecto.
  *
@@ -390,11 +404,12 @@ export async function doctorCommand(
   opciones: { readonly env?: NodeJS.ProcessEnv } = {},
 ): Promise<CommandResult> {
   const env = opciones.env ?? process.env;
-  const hallazgos: Hallazgo[] = [];
+  const basicos: Hallazgo[] = [];
+  const opcionales: Hallazgo[] = [];
 
   // 1. Node.
   const mayor = Number.parseInt(process.versions.node.split(".")[0] ?? "0", 10);
-  hallazgos.push({
+  basicos.push({
     que: "Node",
     estado: mayor >= 22 ? "ok" : "falta",
     detalle: `v${process.versions.node}`,
@@ -406,7 +421,7 @@ export async function doctorCommand(
   // 2. El proyecto declaró sus reglas.
   const config = join(paths.root, ".valmen", "config.yaml");
   const adoptado = existsSync(config);
-  hallazgos.push({
+  basicos.push({
     que: "Proyecto adoptado",
     estado: adoptado ? "ok" : "falta",
     detalle: adoptado ? config : "no hay .valmen/config.yaml",
@@ -418,7 +433,7 @@ export async function doctorCommand(
   // 3. El registro.
   const registro = join(paths.root, paths.ticketsDir);
   const hayRegistro = existsSync(registro);
-  hallazgos.push({
+  basicos.push({
     que: "Registro",
     estado: hayRegistro ? "ok" : "aviso",
     detalle: hayRegistro
@@ -431,7 +446,7 @@ export async function doctorCommand(
 
   // 4. Las reglas proyectadas a los agentes que las leen.
   const agents = join(paths.root, "AGENTS.md");
-  hallazgos.push({
+  basicos.push({
     que: "AGENTS.md",
     estado: existsSync(agents) ? "ok" : "falta",
     detalle: existsSync(agents) ? agents : "no está generado",
@@ -451,10 +466,10 @@ export async function doctorCommand(
     } catch {
       declarado = false;
     }
-    hallazgos.push({
+    opcionales.push({
       que: `MCP en ${agente}`,
-      estado: declarado ? "ok" : "falta",
-      detalle: declarado ? relativa : `${relativa} sin declarar`,
+      estado: declarado ? "ok" : "aviso",
+      detalle: declarado ? relativa : `${relativa} no está seleccionado para esta ruta`,
       ...(declarado ? {} : { arreglo: "valmen mcp --install    # y --global para codex" }),
     });
   }
@@ -469,7 +484,7 @@ export async function doctorCommand(
   const conProveedorRaro = rutas.filter(
     (r) => r.provider !== "" && !proveedoresConocidos.has(r.provider),
   );
-  hallazgos.push({
+  basicos.push({
     que: "Routing",
     estado: sinModelo.length > 0 || conProveedorRaro.length > 0 ? "falta" : "ok",
     detalle:
@@ -492,7 +507,7 @@ export async function doctorCommand(
   const conCredencial = proveedores.filter((p) => p.auth !== "none");
   const configurados = conCredencial.filter((p) => p.configured);
   const usados = new Set(rutas.map((r) => r.provider).filter((p) => p !== ""));
-  hallazgos.push({
+  basicos.push({
     que: "Credenciales",
     estado: configurados.length > 0 || usados.size === 0 ? "ok" : "falta",
     detalle:
@@ -508,7 +523,7 @@ export async function doctorCommand(
 
   for (const proveedor of conCredencial) {
     if (proveedor.configured || !usados.has(proveedor.id)) continue;
-    hallazgos.push({
+    basicos.push({
       que:
         proveedor.auth === "subscription"
           ? `Suscripción ${proveedor.id}`
@@ -544,7 +559,7 @@ export async function doctorCommand(
     proveedorEvaluador !== undefined &&
     !proveedorEvaluador.configured
   ) {
-    hallazgos.push({
+    basicos.push({
       que: "Evaluador de gates",
       estado: "aviso",
       detalle: `el rol gate-evaluator usa ${evaluador.provider}, sin credencial: los gates de juicio van a fallar`,
@@ -557,16 +572,94 @@ export async function doctorCommand(
     });
   }
 
-  // 8. Hermes, que es opcional.
+  // 8. La selección explícita conserva el consentimiento separado de la
+  // compatibilidad del lector y de la presencia de archivos en la máquina.
+  let hermesSelected = false;
+  if (adoptado) {
+    try {
+      const execution = readExecutionCapabilities(
+        parseConfig(readFileSync(config, "utf8")),
+      );
+      const selected = (source: string, kind: "Observación" | "Despacho"): void => {
+        const label =
+          kind === "Observación" ? "Observación seleccionada" : "Despacho seleccionado";
+        const profile = adapterCapabilities(source);
+        const capability =
+          kind === "Observación" ? ("read-activity" as const) : ("dispatch" as const);
+        if (profile === null) {
+          opcionales.push({
+            que: `${label}: ${source}`,
+            estado: "aviso",
+            detalle: "compatibilidad no declarada; no se asume soporte.",
+          });
+          return;
+        }
+        const declared = profile.capabilities.find(
+          (entry) => entry.capability === capability,
+        );
+        if (declared === undefined || !declared.available) {
+          opcionales.push({
+            que: `${label}: ${source}`,
+            estado: "aviso",
+            detalle: declared?.limitation ?? "capacidad no declarada por el adaptador.",
+          });
+          return;
+        }
+        opcionales.push({
+          que: `${label}: ${source}`,
+          estado: "aviso",
+          detalle: `${declared.limitation ?? "sin limitación declarada"} Estado local no sondeado.`,
+        });
+      };
+
+      if (execution.observationSources.length === 0) {
+        opcionales.push({
+          que: "Observación no seleccionada",
+          estado: "aviso",
+          detalle: "el flujo CLI no leerá fuentes externas.",
+        });
+      } else {
+        for (const source of execution.observationSources) {
+          if (source === "hermes") hermesSelected = true;
+          selected(source, "Observación");
+        }
+      }
+      if (execution.dispatchExecutors.length === 0) {
+        opcionales.push({
+          que: "Despacho no seleccionado",
+          estado: "aviso",
+          detalle: "el flujo CLI no iniciará ejecutores.",
+        });
+      } else {
+        for (const executor of execution.dispatchExecutors) {
+          if (executor === "hermes") hermesSelected = true;
+          selected(executor, "Despacho");
+        }
+      }
+    } catch (caught) {
+      const failure = toFailure(caught);
+      opcionales.push({
+        que: "Capacidades opcionales",
+        estado: "aviso",
+        detalle: `no se pudo leer la selección: ${failure.message}`,
+      });
+    }
+  }
+
+  // 9. Hermes, que es opcional y solo se exige para una ruta que lo seleccionó.
   const hermesConfig = join(
     env["HERMES_HOME"] ?? join(homedir(), ".hermes"),
     "config.yaml",
   );
   const hayHermes = existsSync(hermesConfig);
-  hallazgos.push({
-    que: "Hermes (opcional)",
-    estado: hayHermes ? "ok" : "aviso",
-    detalle: hayHermes ? hermesConfig : "no está instalado o no tiene configuración",
+  opcionales.push({
+    que: hermesSelected ? "Hermes seleccionado" : "Hermes no seleccionado",
+    estado: "aviso",
+    detalle: hayHermes
+      ? `${hermesConfig} está disponible, pero no prueba conexión ni despacho.`
+      : hermesSelected
+        ? "está seleccionado, pero no está instalado o no tiene configuración."
+        : "no está instalado o no tiene configuración; el flujo CLI no lo requiere.",
     ...(hayHermes
       ? {}
       : { arreglo: "valmen hermes connect    # cuando quieras decidir desde el celular" }),
@@ -574,8 +667,8 @@ export async function doctorCommand(
 
   const icono = (estado: Hallazgo["estado"]): string =>
     estado === "ok" ? "✓" : estado === "aviso" ? "·" : "✗";
-  const pendientes = hallazgos.filter((h) => h.estado !== "ok");
-  const faltantes = hallazgos.filter((h) => h.estado === "falta");
+  const pendientes = [...basicos, ...opcionales].filter((h) => h.estado !== "ok");
+  const faltantes = basicos.filter((h) => h.estado === "falta");
   // El orden de los pasos no es el de la pantalla: `adopt` escribe lo que `sync`
   // proyecta y lo que el MCP necesita, así que va primero, y el registro —que en
   // un proyecto nuevo todavía no existe— va último, cuando ya hay con qué crearlo.
@@ -595,7 +688,11 @@ export async function doctorCommand(
   const lineas = [
     `Diagnóstico de ${paths.root}`,
     "",
-    ...hallazgos.map((h) => `  ${icono(h.estado)} ${columna(h.que, 22)}${h.detalle}`),
+    "Flujo básico CLI",
+    ...basicos.map((h) => `  ${icono(h.estado)} ${columna(h.que, 22)}${h.detalle}`),
+    "",
+    "Capacidades opcionales",
+    ...opcionales.map((h) => `  ${icono(h.estado)} ${columna(h.que, 22)}${h.detalle}`),
   ];
 
   if (pendientes.length === 0) {
@@ -603,7 +700,7 @@ export async function doctorCommand(
       "",
       "  Todo en orden. El próximo paso es el trabajo: `valmen create` o `valmen feature new`.",
     );
-  } else {
+  } else if (pasos.length > 0) {
     lineas.push("", "  Qué hacer, en orden:");
     const vistos = new Set<string>();
     let n = 1;

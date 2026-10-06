@@ -33,9 +33,101 @@ export interface MachineBindings {
   readonly projects: Readonly<Record<string, MachineProjectBinding>>;
 }
 
+/** Resultado de preparar una alta local sin tocar el disco. */
+export type MachineBindingPreparation =
+  | { readonly status: "created"; readonly text: string }
+  | { readonly status: "already-declared" }
+  | { readonly status: "missing-machine-id" }
+  | { readonly status: "conflict"; readonly message: string };
+
+/** Datos necesarios para declarar un proyecto en la máquina actual. */
+export interface MachineProjectBindingRequest {
+  readonly projectId: string;
+  readonly root: string;
+  readonly machineId?: string | undefined;
+  readonly hermesProfile?: string | undefined;
+}
+
 /** Ruta por defecto del archivo de bindings de un usuario. */
 export function machineBindingsPath(home: string): string {
   return join(home, ".valmen", MACHINE_BINDINGS_FILE);
+}
+
+/**
+ * Prepara el alta de un binding sin escribirlo.
+ *
+ * Repetir una entrada idéntica no devuelve texto para que el llamador no
+ * reescriba la configuración local. Una identidad distinta para el mismo
+ * proyecto tampoco se fusiona: corresponde a otra decisión de la persona.
+ */
+export function prepareMachineProjectBinding(
+  existingText: string | null,
+  request: MachineProjectBindingRequest,
+): MachineBindingPreparation {
+  if (existingText === null) {
+    if (request.machineId === undefined || request.machineId === "") {
+      return { status: "missing-machine-id" };
+    }
+    const text = renderMachineBindings({
+      schemaVersion: MACHINE_BINDINGS_SCHEMA_VERSION,
+      machineId: request.machineId,
+      managedExecutionCapacity: 1,
+      projects: {
+        [request.projectId]: {
+          root: request.root,
+          ...(request.hermesProfile === undefined ? {} : { hermesProfile: request.hermesProfile }),
+        },
+      },
+    });
+    parseMachineBindings(text);
+    return { status: "created", text };
+  }
+
+  const bindings = parseMachineBindings(existingText);
+  const previous = bindings.projects[request.projectId];
+  const requested: MachineProjectBinding = {
+    root: request.root,
+    ...(request.hermesProfile === undefined ? {} : { hermesProfile: request.hermesProfile }),
+  };
+
+  if (previous !== undefined) {
+    if (
+      previous.root === requested.root &&
+      previous.hermesProfile === requested.hermesProfile
+    ) {
+      return { status: "already-declared" };
+    }
+    return {
+      status: "conflict",
+      message:
+        `El binding local de "${request.projectId}" ya declara una raíz o perfil distinto; ` +
+        "no se sobrescribió.",
+    };
+  }
+
+  const text = renderMachineBindings({
+    ...bindings,
+    projects: { ...bindings.projects, [request.projectId]: requested },
+  });
+  parseMachineBindings(text);
+  return { status: "created", text };
+}
+
+/** Render estable para el archivo local que la operación pura acaba de preparar. */
+export function renderMachineBindings(bindings: MachineBindings): string {
+  const lines = [
+    `schema-version: ${bindings.schemaVersion}`,
+    `machine-id: ${bindings.machineId}`,
+    `managed-execution-capacity: ${bindings.managedExecutionCapacity}`,
+    "projects:",
+  ];
+  for (const [projectId, binding] of Object.entries(bindings.projects)) {
+    lines.push(`  ${projectId}:`, `    root: ${binding.root}`);
+    if (binding.hermesProfile !== undefined) {
+      lines.push(`    hermes-profile: ${binding.hermesProfile}`);
+    }
+  }
+  return `${lines.join("\n")}\n`;
 }
 
 /** Analiza el esquema cerrado de `~/.valmen/bindings.local.yaml`. */

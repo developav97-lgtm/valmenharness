@@ -2,9 +2,9 @@
 schema_version: 2
 id: control-jornadas-ejecucion
 title: Control portable de jornadas y ejecución en vivo
-state: decomposed
+state: complete
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-05
 ---
 
 # Control portable de jornadas y ejecución en vivo

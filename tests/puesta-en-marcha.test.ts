@@ -229,4 +229,99 @@ describe("doctor", () => {
     expect(resultado.stdout).toContain("proveedor desconocido");
     expect(resultado.stdout).toContain("orchestrator=inventado");
   });
+
+  it("mantiene operativo el flujo CLI cuando MCP y Hermes no están seleccionados", async () => {
+    proyecto();
+    writeFileSync(join(lab, "AGENTS.md"), "# Demo\n", "utf8");
+
+    const resultado = await doctorCommand(PATHS(), {
+      env: { OPENROUTER_API_KEY: "de-prueba", HERMES_HOME: lab },
+    });
+
+    expect(resultado.exitCode).toBe(0);
+    expect(resultado.stdout).toContain("Flujo básico CLI");
+    expect(resultado.stdout).toContain("Capacidades opcionales");
+    expect(resultado.stdout).toContain("MCP en Claude Code");
+    expect(resultado.stdout).toContain("Hermes no seleccionado");
+  });
+
+  it("no muestra una lista de acciones vacía cuando solo quedan avisos informativos", async () => {
+    proyecto();
+    writeFileSync(join(lab, "AGENTS.md"), "# Demo\n", "utf8");
+    writeFileSync(join(lab, ".mcp.json"), '{"mcpServers":{"valmen":{}}}\n', "utf8");
+    writeFileSync(join(lab, "opencode.json"), '{"mcp":{"valmen":{}}}\n', "utf8");
+    mkdirSync(join(lab, "tickets"), { recursive: true });
+    writeFileSync(join(lab, "config.yaml"), "profiles: {}\n", "utf8");
+
+    const resultado = await doctorCommand(PATHS(), {
+      env: { OPENROUTER_API_KEY: "de-prueba", HERMES_HOME: lab },
+    });
+
+    expect(resultado.exitCode).toBe(0);
+    expect(resultado.stdout).not.toContain("Qué hacer, en orden:");
+  });
+
+  it("declara la compatibilidad y los límites de las capacidades seleccionadas", async () => {
+    proyecto();
+    writeFileSync(join(lab, "AGENTS.md"), "# Demo\n", "utf8");
+    writeFileSync(
+      join(lab, ".valmen", "config.yaml"),
+      [
+        "name: Demo",
+        "tickets-dir: tickets",
+        "gates: []",
+        "execution:",
+        "  observation-sources:",
+        "    - opencode",
+        "  dispatch-executors:",
+        "    - hermes",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const resultado = await doctorCommand(PATHS(), {
+      env: { OPENROUTER_API_KEY: "de-prueba", HERMES_HOME: lab },
+    });
+
+    expect(resultado.stdout).toContain("Observación seleccionada: opencode");
+    expect(resultado.stdout).toContain("Solo metadatos incrementales");
+    expect(resultado.stdout).toContain("Despacho seleccionado: hermes");
+    expect(resultado.stdout).toContain(
+      "requiere la integración Hermes de jornadas autorizada",
+    );
+  });
+
+  it("declara una fuente seleccionada sin perfil conocido sin inventar soporte", async () => {
+    proyecto();
+    writeFileSync(join(lab, "AGENTS.md"), "# Demo\n", "utf8");
+    writeFileSync(
+      join(lab, ".valmen", "config.yaml"),
+      "name: Demo\ntickets-dir: tickets\ngates: []\nexecution:\n  observation-sources:\n    - fuente-local\n",
+      "utf8",
+    );
+
+    const resultado = await doctorCommand(PATHS(), {
+      env: { OPENROUTER_API_KEY: "de-prueba", HERMES_HOME: lab },
+    });
+
+    expect(resultado.stdout).toContain("Observación seleccionada: fuente-local");
+    expect(resultado.stdout).toContain("compatibilidad no declarada");
+  });
+
+  it("diagnostica una raíz temporal sin modificar un archivo ajeno", async () => {
+    proyecto();
+    writeFileSync(join(lab, "AGENTS.md"), "# Demo\n", "utf8");
+    const ajeno = join(tmpdir(), `valmen-doctor-ajeno-${Date.now()}.txt`);
+    writeFileSync(ajeno, "no tocar\n", "utf8");
+
+    try {
+      await doctorCommand(PATHS(), {
+        env: { OPENROUTER_API_KEY: "de-prueba", HERMES_HOME: lab },
+      });
+      expect(readFileSync(ajeno, "utf8")).toBe("no tocar\n");
+    } finally {
+      rmSync(ajeno, { force: true });
+    }
+  });
 });
