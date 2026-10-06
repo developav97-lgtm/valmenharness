@@ -98,6 +98,172 @@ export function readMap(config: ConfigMap, key: string): ConfigMap {
   return value;
 }
 
+/** Etapas semánticas que pueden recibir preguntas adicionales de Jev. */
+export const JEV_STAGES = ["analysis", "plan", "integration"] as const;
+
+/** Una etapa a la que un proyecto puede añadir validación semántica. */
+export type JevStage = (typeof JEV_STAGES)[number];
+
+/**
+ * Pregunta adicional declarada por el proyecto.
+ *
+ * La configuración solo describe la pregunta y sus límites; no declara efectos
+ * ni modos de gate. Así, añadirla puede sumar una condición o contexto, pero no
+ * reemplazar lo que ya decide la compuerta ni promoverla a automática.
+ */
+export interface JevPropositionConfig {
+  readonly id: string;
+  readonly description: string;
+  readonly instructions: string;
+  readonly criteria: Readonly<{ yes: string; no: string }>;
+  readonly weight: number;
+  readonly approveAt: number;
+  readonly blockAt: number;
+  readonly verdict: "required" | "inform";
+}
+
+/** Las preguntas adicionales, agrupadas por etapa y siempre completas. */
+export type JevPropositions = Readonly<
+  Record<JevStage, readonly JevPropositionConfig[]>
+>;
+
+const JEV_PROPOSITION_ID_RE = /^custom-[a-z][a-z0-9-]{0,62}$/;
+
+function jevMap(value: ConfigValue | undefined, path: string): ConfigMap {
+  if (value === undefined || typeof value === "string" || Array.isArray(value)) {
+    fail(`config.yaml: "${path}" debe ser un mapa.`);
+  }
+  return value;
+}
+
+function jevText(map: ConfigMap, key: string, path: string): string {
+  const value = map[key];
+  if (typeof value !== "string") {
+    fail(`config.yaml: "${path}.${key}" debe ser un texto.`);
+  }
+  if (value.trim() === "") {
+    fail(`config.yaml: "${path}.${key}" no puede estar vacío.`);
+  }
+  return value;
+}
+
+function jevNumber(map: ConfigMap, key: string, path: string): number {
+  const value = Number(jevText(map, key, path));
+  if (!Number.isFinite(value)) {
+    fail(`config.yaml: "${path}.${key}" debe ser un número.`);
+  }
+  return value;
+}
+
+function jevProposition(value: ConfigValue, path: string): JevPropositionConfig {
+  const item = jevMap(value, path);
+  const allowed = new Set([
+    "id",
+    "description",
+    "instructions",
+    "criteria",
+    "weight",
+    "approve-at",
+    "block-at",
+    "verdict",
+  ]);
+  for (const key of Object.keys(item)) {
+    if (!allowed.has(key)) fail(`config.yaml: "${path}.${key}" no es una clave válida.`);
+  }
+
+  const id = jevText(item, "id", path);
+  if (!JEV_PROPOSITION_ID_RE.test(id)) {
+    fail(
+      `config.yaml: "${path}.id" debe usar el prefijo reservado custom- y minúsculas.`,
+    );
+  }
+
+  const criteria = jevMap(item["criteria"], `${path}.criteria`);
+  for (const key of Object.keys(criteria)) {
+    if (key !== "yes" && key !== "no") {
+      fail(`config.yaml: "${path}.criteria.${key}" no es una clave válida.`);
+    }
+  }
+
+  const weight = jevNumber(item, "weight", path);
+  if (weight <= 0) fail(`config.yaml: "${path}.weight" debe ser positivo.`);
+
+  const approveAt = jevNumber(item, "approve-at", path);
+  const blockAt = jevNumber(item, "block-at", path);
+  if (approveAt < 0 || approveAt > 1) {
+    fail(`config.yaml: "${path}.approve-at" debe estar entre 0 y 1.`);
+  }
+  if (blockAt < 0 || blockAt > 1) {
+    fail(`config.yaml: "${path}.block-at" debe estar entre 0 y 1.`);
+  }
+  if (blockAt >= approveAt) {
+    fail(
+      `config.yaml: "${path}.block-at" debe ser menor que approve-at para conservar una banda de revisión.`,
+    );
+  }
+
+  const verdict = jevText(item, "verdict", path);
+  if (verdict !== "required" && verdict !== "inform") {
+    fail(`config.yaml: "${path}.verdict" debe ser required o inform.`);
+  }
+
+  return Object.freeze({
+    id,
+    description: jevText(item, "description", path),
+    instructions: jevText(item, "instructions", path),
+    criteria: Object.freeze({
+      yes: jevText(criteria, "yes", `${path}.criteria`),
+      no: jevText(criteria, "no", `${path}.criteria`),
+    }),
+    weight,
+    approveAt,
+    blockAt,
+    verdict,
+  });
+}
+
+/**
+ * Lee las preguntas semánticas adicionales declaradas por etapa.
+ *
+ * Ausencia significa que el proyecto no suma ninguna pregunta: las compuertas y
+ * su autoridad actual siguen idénticas. El consumidor posterior debe añadir las
+ * `required` por conjunción y conservar las `inform` como contexto del recibo.
+ */
+export function readJevPropositions(config: ConfigMap): JevPropositions {
+  if (config["jev-propositions"] === undefined) {
+    return Object.freeze({ analysis: Object.freeze([]), plan: Object.freeze([]), integration: Object.freeze([]) });
+  }
+  const declared = readMap(config, "jev-propositions");
+  for (const stage of Object.keys(declared)) {
+    if (!(JEV_STAGES as readonly string[]).includes(stage)) {
+      fail(`config.yaml: "jev-propositions.${stage}" nombra una etapa desconocida.`);
+    }
+  }
+
+  const result = {} as Record<JevStage, readonly JevPropositionConfig[]>;
+  for (const stage of JEV_STAGES) {
+    const raw = declared[stage];
+    if (raw === undefined) {
+      result[stage] = Object.freeze([]);
+      continue;
+    }
+    if (!Array.isArray(raw)) {
+      fail(`config.yaml: "jev-propositions.${stage}" debe ser una lista.`);
+    }
+    const ids = new Set<string>();
+    const propositions = raw.map((item, index) => {
+      const proposition = jevProposition(item, `jev-propositions.${stage}[${index}]`);
+      if (ids.has(proposition.id)) {
+        fail(`config.yaml: "jev-propositions.${stage}[${index}].id" está duplicado.`);
+      }
+      ids.add(proposition.id);
+      return proposition;
+    });
+    result[stage] = Object.freeze(propositions);
+  }
+  return Object.freeze(result);
+}
+
 /** Solicitud declarativa para promover un gate híbrido a automático. */
 export interface GatePromotionRequest {
   readonly mode: "auto";
