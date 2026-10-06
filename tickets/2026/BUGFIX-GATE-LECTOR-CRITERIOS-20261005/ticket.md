@@ -4,8 +4,8 @@ id: BUGFIX-GATE-LECTOR-CRITERIOS-20261005
 title: Leer solo ítems de lista como criterios y evaluarlos todos sin recorte
 type: BUGFIX
 module: GATE
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -136,12 +136,35 @@ Contrato de pruebas para el responsable. Todos los comandos se ejecutan desde la
 
 Validación manual (criterio `verify: manual`, el último): confirmar que 2 y 3 dan lo indicado en su máquina. Para ver el defecto corregido con un caso real, `git stash push packages/gate/src/dynamic.ts packages/engine/src/evaluators.ts packages/engine/src/gate.ts` y repetir el comando 1: deben fallar 10 pruebas; `git stash pop` las deja de nuevo en verde.
 
+- Resultado comunicado por el PO: delegó la ejecución de las pruebas al agente («Son puros comandos, puedes ejecutarlos tu y con eso registramos las pruebas si el resultado es el esperado»); el agente las ejecutó con el resultado esperado en los cinco pasos (EVIDENCE-001) y el PO respondió «Si» a la propuesta de commitear con ese resultado. Commit `dda9d8190105807175b73b3479e24d4660e96e15`.
+
 Los comandos 1 a 3 y la prueba sin el cambio los ejecutó el agente a pedido del PO (EVIDENCE-001), que delegó así la ejecución manual. Evidencia obtenida: recibo vigente `GR-20261006-BUGFIX-GATE-LECTOR-CRITERIOS-20261005-qa-mechanical-2` (approve, 10 de 10 comandos con código 0); `npx vitest run` base antes del cambio, 135 archivos y 2133 pruebas; después, 136 y 2143; `revisar_secretos` sin hallazgos. Limitación: la suite se corrió con los cambios sin commitear de la otra sesión presentes en el árbol.
 
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-06",
+    "build_reference": "worktree:sha256:a26e8d4e184ab543332410c46c572977848f9703af48cb0aa9eaec8da2f08bb6",
+    "environment": "Máquina local del PO, macOS (Darwin), Node 24, repositorio /Users/juanandrade/Desktop/ValmenHarness en main, commit dda9d8190105807175b73b3479e24d4660e96e15; sin red, base de datos ni servicios; con cambios sin commitear de otra sesión en el árbol. La referencia es el hash de los 8 archivos funcionales del commit (docs/03-GATES.md, packages/engine/src/evaluators.ts, packages/engine/src/gate.ts, packages/gate/src/dynamic.ts, tests/evaluators.test.ts, tests/fixtures/lector-criterios-recibos.json, tests/gate-lector-criterios.test.ts, tests/gate-mecanico.test.ts), con el algoritmo de calculateWorktreeReference sobre el contenido de git show.",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-06",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "Aprueba el QA del ticket"
+  }
+]
 ```
 
 ## Evidencia
@@ -168,7 +191,19 @@ Los comandos 1 a 3 y la prueba sin el cambio los ejecutó el agente a pedido del
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-06",
+    "technical_summary": "`extractCriteriaSpecs` (packages/gate/src/dynamic.ts) retira los comentarios HTML antes de leer, abre un criterio solo con viñeta, une a su criterio la línea pegada a una viñeta, interpreta `test:` y `verify:` aunque ocupen varias líneas y ya no recorta a 12. `evaluateGate` (packages/engine/src/evaluators.ts) reparte los criterios en tandas de a lo sumo `MAX_CRITERIA_PROPOSITIONS`, con las proposiciones fijas en la primera, y suma respuestas, escalamientos, consumo y latencia; el recibo anota cuántas tandas (gate.ts). `qa-mechanical` corre todos los comandos declarados. 10 pruebas de regresión con vectores de seis recibos reales, que fallan sin el cambio; contrato documentado en docs/03-GATES.md. Commit dda9d81.",
+    "functional_summary": "Las compuertas dejan de evaluar como criterio el comentario de la plantilla, que bloqueaba o frenaba planes correctos con un 0.01 que no era del plan, y dejan de ignorar en silencio los criterios que pasan de 12: se evalúan todos y el recibo dice en cuántas tandas. Quien lee un recibo ve solo los criterios que el ticket declaró.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "Sin impacto de release: cambio interno del motor de compuertas, sin migración ni despliegue. Queda unreleased."
+  }
+]
 ```
 
 ## Consumo de IA
@@ -189,6 +224,21 @@ Los comandos 1 a 3 y la prueba sin el cambio los ejecutó el agente a pedido del
     "source": "claude:75c206ac-a96e-436c-b868-1364f7d7cd32",
     "confidence": "high",
     "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-06",
+    "session_reference": "666e4a95-21b9-4503-8d5c-3bc5fcc3e56a",
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. Sesión **compartida**: trabajó 20 tickets (BUGFIX-ENGINE-FIRMA-DE-COMPUERTA-20261004 ×10, SECURITY-ENGINE-CIERRE-AUTORIZADO-20260926 ×10, INTEGRATION-GIT-INTEGRACION-AUTONOMA-20260926 ×8, INTEGRATION-HERMES-DESPACHO-JORNADA-20261001 ×8, FEATURE-ENGINE-REGLAS-INTEGRACION-20260926 ×7), así que su costo no se reparte y acá no se registran números. Costo completo de la sesión: no declarado por el proveedor, 1970451 tokens. Registralo en el ticket cuya sesión sea propia, o declaralo compartido donde corresponda. Sesión \"AI development harness review\".",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "claude:666e4a95-21b9-4503-8d5c-3bc5fcc3e56a",
+    "confidence": "high",
+    "id": "CONSUMO-002"
   }
 ]
 ```
@@ -272,6 +322,69 @@ Sin publicar todavía.
     "action": "evidence-added",
     "actor": "cli",
     "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-05",
+    "at": "2026-10-06T02:17:46.186Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-05",
+    "at": "2026-10-06T02:18:27.392Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-05",
+    "at": "2026-10-06T02:20:41.629Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-10-05",
+    "at": "2026-10-06T02:20:44.254Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-05",
+    "at": "2026-10-06T02:20:50.255Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-05",
+    "at": "2026-10-06T02:20:50.320Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-05",
+    "at": "2026-10-06T02:20:52.351Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
