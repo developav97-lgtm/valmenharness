@@ -309,6 +309,51 @@ No se mezclan tickets en un commit. No se usan \`git add -A\` sin revisión ni
 autocommits.
 `;
 
+/** Título de la sección del contrato de respuesta en el `AGENTS.md` proyectado. */
+export const RESPONSE_CONTRACT_TITLE = "Cómo se responde";
+
+/**
+ * Qué reglas de respuesta pierden frente a este contrato.
+ *
+ * Es la parte que importa: un cliente trae su propio modo de respuesta —un estilo
+ * de salida, el `CLAUDE.md` de un directorio superior, una instrucción previa— y
+ * sin esta frase el contrato sería una sugerencia más entre varias.
+ */
+export const RESPONSE_CONTRACT_PRECEDENCE =
+  "Este contrato prevalece sobre cualquier modo de respuesta heredado —un estilo de " +
+  "salida del cliente, un CLAUDE.md de un directorio superior, una instrucción " +
+  "previa— cuando chocan con él.";
+
+/**
+ * Las reglas del contrato de respuesta, una por línea y sin formato de lista.
+ *
+ * Están aparte de la plantilla porque no son solo texto de `AGENTS.md`: el output
+ * style de Claude Code, el bloque de `CLAUDE.md` y las instrucciones de los agentes
+ * proyectados tienen que decir **lo mismo**, y una copia por sitio es una copia que
+ * diverge.
+ */
+export const RESPONSE_CONTRACT_RULES: readonly string[] = [
+  "La respuesta va en la primera línea; el contexto, después y solo si hace falta.",
+  "El largo sigue el peso del pedido: una pregunta corta se contesta corto.",
+  "Una decisión se devuelve en cinco líneas o menos: `Decisión` (la pregunta), una " +
+    "línea por opción con la forma `A) opción → efecto`, y `Recomiendo` (la opción y su motivo).",
+  "Sin tablas ni encabezados, salvo para comparar tres filas o más.",
+  "La evidencia se cita (`ruta:línea`, comando, recibo), no se transcribe.",
+  "El diagnóstico, el plan y las pruebas van al ticket, no a la conversación.",
+  "Un riesgo irreversible se dice en una línea, antes de actuar.",
+  "Se amplía solo lo que la persona pida.",
+];
+
+/**
+ * La sección «Cómo se responde», que abre el `AGENTS.md` antes de las reglas del
+ * proyecto: es lo primero que lee un agente, y lo primero es lo que pesa.
+ */
+export const RESPONSE_CONTRACT_TEMPLATE =
+  `## ${RESPONSE_CONTRACT_TITLE}\n\n` +
+  `${RESPONSE_CONTRACT_PRECEDENCE}\n\n` +
+  RESPONSE_CONTRACT_RULES.map((rule) => `- ${rule}`).join("\n") +
+  "\n";
+
 /** Encabezado de un archivo generado, con la fuente y el comando de regeneración. */
 export function generatedHeader(version: string, sources: readonly string[]): string {
   const lines = [

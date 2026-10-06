@@ -15,6 +15,12 @@ import { fail } from "@valmen/core";
 
 import { type ConfigMap, readList } from "./config.js";
 import { readAgents, renderAllAgents } from "./agents.js";
+import {
+  type AgentsMdSize,
+  agentsMdWarning,
+  measureAgentsMd,
+  readAgentsMdBudget,
+} from "./agents-size.js";
 import { loadProjectModel, projectAgentsMd } from "./project.js";
 import {
   type SkillRuntime,
@@ -22,6 +28,7 @@ import {
   SKILL_RUNTIME_IDS,
   readSkills,
   renderAllSkills,
+  withRoutedRules,
 } from "./skills.js";
 
 /**
@@ -78,6 +85,14 @@ export interface Projection {
    */
   readonly agentCount: number;
   readonly skillCount: number;
+  /**
+   * Cuánto pesa el `AGENTS.md` proyectado y si pasa del presupuesto del proyecto
+   * (`agents-md-budget`). Se mide aquí, sobre el contenido que se va a escribir, y
+   * no en quien lo imprime: lo ven igual la CLI y Mission Control.
+   */
+  readonly agentsMd: AgentsMdSize;
+  /** Avisos de la proyección que no la impiden, como pasarse del presupuesto. */
+  readonly warnings: readonly string[];
 }
 
 /**
@@ -97,7 +112,9 @@ export function projectFiles(
 ): Projection {
   const model = loadProjectModel(root, projectName, configText);
   const agents = readAgents(root);
-  const skills = readSkills(root);
+  // Las reglas que `rules-to-skills` encamina entran aquí a sus skills, con la misma
+  // función que usa el prompt MCP: lo que el archivo y el cliente leen no diverge.
+  const skills = withRoutedRules(readSkills(root), model);
 
   // A qué runtimes se proyecta. Un proyecto que trabaja con un solo agente puede
   // declararlo y no recibir los archivos de los otros tres: mantener
@@ -118,8 +135,12 @@ export function projectFiles(
     ...skills.map((skill) => `.valmen/skills/${skill.id}/SKILL.md`),
   ];
 
+  const agentsMd = projectAgentsMd(model);
+  const size = measureAgentsMd(agentsMd, readAgentsMdBudget(model.config));
+  const warning = agentsMdWarning(size);
+
   const files: ProjectedFile[] = [
-    { path: "AGENTS.md", content: projectAgentsMd(model) },
+    { path: "AGENTS.md", content: agentsMd },
     ...renderAllAgents(agents, sources).filter((file) => enAlcance(file.path)),
     ...renderAllSkills(skills).filter((file) => enAlcance(file.path)),
   ];
@@ -140,5 +161,7 @@ export function projectFiles(
     ruleCount: model.rules.length,
     agentCount: agents.length,
     skillCount: skills.length,
+    agentsMd: size,
+    warnings: warning === null ? [] : [warning],
   };
 }

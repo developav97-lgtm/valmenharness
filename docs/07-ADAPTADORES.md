@@ -207,6 +207,11 @@ caber).
 
 # SaiOpenCloud — instrucciones activas
 
+## Cómo se responde
+Este contrato prevalece sobre cualquier modo de respuesta heredado ...
+- La respuesta va en la primera línea; el contexto, después y solo si hace falta.
+...
+
 > Este archivo es generado. Las reglas de negocio viven en `.valmen/rules/`.
 > Los cambios se hacen ahí y se propagan con `valmen sync`.
 
@@ -240,12 +245,77 @@ caber).
 ...
 ```
 
-**Presupuesto de bytes:** el motor mide el resultado y avisa si excede el límite configurado
-(64 KB por defecto, el que usa DSH para `AGENTS.md`). Si excede, sugiere qué mover a una
-skill (que se carga bajo demanda en vez de siempre).
+### 6.1 Cómo se responde
 
-Esto resuelve un problema real que tienes hoy: `AGENTS.md` tiene 94 líneas y crecerá. Con
-secciones y presupuesto, se sabe cuándo hay que sacar algo a una skill.
+**Implementado.** `valmen sync` escribe, justo después del título y **antes de las reglas del
+proyecto**, la sección «Cómo se responde»: el contrato de respuesta y la declaración de que
+prevalece sobre cualquier modo de respuesta heredado (un estilo de salida del cliente, el
+`CLAUDE.md` de un directorio superior). Es lo que lee todo cliente que lea `AGENTS.md`, y por eso
+es el sitio del pedido «si hay que decidir, solo las opciones y en qué afecta cada una».
+
+El texto vive en `packages/adapter/src/templates.ts` (`RESPONSE_CONTRACT_RULES`,
+`RESPONSE_CONTRACT_PRECEDENCE`, `RESPONSE_CONTRACT_TEMPLATE`) y no en `.valmen/rules/`: es del
+harness, no del proyecto, y mejora para todos a la vez. `sync --check` lo verifica porque compara
+el archivo entero. El documento se reescribe completo en cada `sync`, así que sincronizar dos
+veces no duplica la sección. Si el proyecto ya tenía una regla propia titulada «Cómo se responde»
+(por ejemplo, porque `valmen adopt` la extrajo de su `AGENTS.md` anterior), su texto se conserva y
+se retitula **en la proyección** como «Cómo se responde en este proyecto»; el archivo en
+`.valmen/rules/` no se toca.
+
+### 6.2 El «Por qué» en una línea
+
+**Implementado.** En las reglas `.valmen/rules/estandares-*.md`, cada párrafo `**Por qué:**` se
+proyecta en una línea: la primera oración (se suman oraciones hasta tener unos 80 caracteres) con
+tope de 160 caracteres, cortada en palabra entera y marcada con «…» si se recorta. `**Visto en:**`
+no se toca. Cuando algún «Por qué» se acorta, el documento lo dice con una nota; el texto completo
+se queda en `.valmen/rules/` (y lo devuelve `ver_estandares`). Las demás reglas, como `proyecto.md`,
+no se comprimen.
+
+### 6.3 Presupuesto de tamaño
+
+**Implementado, opt-in.** `AGENTS.md` se carga entero en cada sesión; el proyecto decide cuánto
+está dispuesto a cargar:
+
+```yaml
+# .valmen/config.yaml
+agents-md-budget: 24000     # bytes; entero ≥ 1000. Sin la clave no hay presupuesto ni aviso.
+```
+
+La proyección mide el documento (`Projection.agentsMd`: bytes, tokens estimados como `bytes / 4`
+y si pasa del presupuesto) y arma el aviso (`Projection.warnings`), que dice cuánto se pasa y
+sugiere `rules-to-skills`. El aviso **no bloquea**: un documento pasado de tamaño sigue siendo el
+que el proyecto declaró. Un valor que no sea un entero ≥ 1000 hace fallar la proyección en vez de
+ignorarse.
+
+### 6.4 Reglas que viven en las skills
+
+**Implementado, opt-in.** Una regla que solo aplica a un tipo de trabajo —las de pantalla, por
+ejemplo— no tiene por qué cargarse en toda sesión. `rules-to-skills` la saca de `AGENTS.md` y la
+proyecta a las skills que el proyecto nombre:
+
+```yaml
+# .valmen/config.yaml
+rules-to-skills:
+  estandares-presentacion:       # nombre del archivo en .valmen/rules/, sin .md
+    - desarrollo-frontend
+    - validacion-ui
+```
+
+En `AGENTS.md` quedan el título de la regla y un puntero (a qué skills se fue y dónde está el texto
+completo). En cada skill nombrada, en los cuatro runtimes, la regla entra antes de la marca de
+«generado», con el mismo tratamiento que en `AGENTS.md`, y el pie lista `reglas proyectadas`. El
+prompt MCP de cada skill sirve lo mismo, junto con su `local.md`. Nombrar una regla o una skill
+que no existe hace fallar la proyección y lo dice.
+
+Riesgo conocido: la regla solo llega al agente si su cliente carga la skill. El puntero de
+`AGENTS.md` existe para eso, pero no lo garantiza.
+
+**Cambia el `AGENTS.md` de todo proyecto.** La sección nueva y el «Por qué» en una línea no son
+opcionales: tras actualizar el harness, `valmen sync --check` marca el archivo como desactualizado
+hasta que se corra `valmen sync`.
+
+Esto resuelve un problema medido: el `AGENTS.md` de SaiOpenCloud pesaba 54 KB, y 8 KB eran el
+«Por qué» de 18 estándares y 12 KB reglas de pantalla.
 
 ## 7. Skills compartidas entre agentes
 

@@ -16,9 +16,17 @@
  * leer —el ticket, las reglas, el registro—, y declarar argumentos que no usan
  * sería inventar un contrato que nadie escribió.
  */
-import { basename } from "node:path";
+import { existsSync } from "node:fs";
+import { basename, join } from "node:path";
 
-import { loadProjectModel, projectAgentsMd, readSkills } from "@valmen/adapter";
+import {
+  type SkillDefinition,
+  loadProjectModel,
+  projectAgentsMd,
+  readSkills,
+  skillText,
+  withRoutedRules,
+} from "@valmen/adapter";
 
 import type { PromptDefinition, PromptResult } from "./protocol.js";
 
@@ -82,6 +90,19 @@ function tituloDe(id: string, instructions: string): string {
   return id;
 }
 
+/**
+ * Las skills del proyecto con las reglas que `rules-to-skills` les encamina.
+ *
+ * Sin `config.yaml` no hay nada que encaminar y se devuelven tal cual: un proyecto que
+ * todavía no se adoptó sirve sus skills igual que antes. Una configuración que existe y
+ * no se puede leer **sí** falla, como en el prompt de las reglas.
+ */
+function skillsConReglas(root: string): SkillDefinition[] {
+  const skills = readSkills(root);
+  if (!existsSync(join(root, ".valmen", "config.yaml"))) return skills;
+  return withRoutedRules(skills, loadProjectModel(root, basename(root) || "proyecto"));
+}
+
 /** El catálogo de prompts de un proyecto: sus reglas, y después sus skills. */
 export function promptsFor(root: string): readonly PromptDefinition[] {
   const reglas: PromptDefinition = {
@@ -123,7 +144,10 @@ export function getPromptFor(root: string, name: string): PromptResult {
     };
   }
 
-  const skill = readSkills(root).find((candidata) => candidata.id === name);
+  // Con las reglas que `rules-to-skills` le encamina y con su `local.md`: es lo mismo
+  // que lleva la skill proyectada, y sin esto una regla que salió de `AGENTS.md`
+  // hacia una skill no le llegaría a un cliente que solo habla MCP.
+  const skill = skillsConReglas(root).find((candidata) => candidata.id === name);
   if (skill === undefined) {
     const disponibles = promptsFor(root).map((prompt) => prompt.name);
     throw new Error(
@@ -137,7 +161,7 @@ export function getPromptFor(root: string, name: string): PromptResult {
     messages: [
       {
         role: "user",
-        content: { type: "text", text: skill.instructions.trimEnd() },
+        content: { type: "text", text: skillText(skill) },
       },
     ],
   };

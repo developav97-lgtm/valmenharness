@@ -18,8 +18,16 @@ import { fail } from "@valmen/core";
 
 import { type ConfigMap, parseConfig, readList, readString } from "./config.js";
 import {
+  compactPorQue,
+  isStandardRule,
+  retitleCollision,
+  routedRulePointer,
+  routedRules,
+} from "./rule-projection.js";
+import {
   DELIVERY_TEMPLATE,
   INVARIANTS_TEMPLATE,
+  RESPONSE_CONTRACT_TEMPLATE,
   WORKFLOW_TEMPLATE,
   generatedHeader,
 } from "./templates.js";
@@ -129,7 +137,7 @@ export function loadProjectModel(
  * Si el archivo no tiene título, su contenido se incluye tal cual: el proyecto
  * decide si quiere una sección con nombre o no.
  */
-function demoteTitle(content: string): string {
+export function demoteTitle(content: string): string {
   const trimmed = content.trim();
   const match = /^#\s+([^\n]*)\n+/.exec(trimmed);
   if (match === null) return trimmed;
@@ -143,14 +151,18 @@ function demoteTitle(content: string): string {
  *
  * 1. Cabecera de archivo generado, con la procedencia de cada fuente.
  * 2. Título e identidad del proyecto.
- * 3. Las reglas del proyecto, tal cual las escribió el equipo.
- * 4. El flujo de trabajo del harness.
- * 5. Los invariantes de operación.
- * 6. La entrega y la documentación.
+ * 3. Cómo se responde: el contrato de respuesta y su precedencia.
+ * 4. Las reglas del proyecto, con el «Por qué» de los estándares en una línea y sin
+ *    las que `rules-to-skills` encamina a skills (queda un puntero).
+ * 5. El flujo de trabajo del harness.
+ * 6. Los invariantes de operación.
+ * 7. La entrega y la documentación.
  *
  * Las reglas del proyecto van **antes** que las del harness a propósito: quien
  * lee el archivo necesita saber de qué sistema se trata antes de leer cómo se
- * trabaja en él.
+ * trabaja en él. Y el contrato de respuesta va **antes** que todo eso: es lo
+ * primero que lee un agente, y lo primero es lo que pesa cuando choca con un modo
+ * de respuesta heredado.
  *
  * La función es pura y determinista: el mismo modelo produce siempre el mismo
  * texto. Esa propiedad es la que hace posible `valmen sync --check`.
@@ -163,6 +175,7 @@ export function projectAgentsMd(model: ProjectModel): string {
   const title =
     model.description === "" ? model.name : `${model.name} — ${model.description}`;
   parts.push(`# ${title}\n`);
+  parts.push(RESPONSE_CONTRACT_TEMPLATE);
 
   if (model.rules.length === 0) {
     parts.push(
@@ -172,11 +185,34 @@ export function projectAgentsMd(model: ProjectModel): string {
     );
   }
 
+  // Las reglas se proyectan primero y se emiten después: la nota de que hay «Por
+  // qué» resumidos tiene que ir **antes** de la primera regla y solo se sabe si
+  // hace falta cuando ya se recorrieron todas.
+  const encaminadas = routedRules(model.config);
+  let acortados = 0;
+  const reglas: string[] = [];
   for (const rule of model.rules) {
-    const body = demoteTitle(rule.content);
+    const destino = encaminadas[rule.name] ?? [];
+    let content = rule.content;
+    if (destino.length > 0) {
+      content = routedRulePointer(rule, destino);
+    } else if (isStandardRule(rule)) {
+      const compacta = compactPorQue(content);
+      content = compacta.text;
+      acortados += compacta.shortened;
+    }
+    const body = retitleCollision(demoteTitle(content));
     if (body === "") continue;
-    parts.push(`${body}\n`);
+    reglas.push(`${body}\n`);
   }
+
+  if (acortados > 0) {
+    parts.push(
+      "> El «Por qué» de cada estándar va resumido en una línea; el texto completo está\n" +
+        "> en `.valmen/rules/`.\n",
+    );
+  }
+  parts.push(...reglas);
 
   parts.push(WORKFLOW_TEMPLATE);
   parts.push(INVARIANTS_TEMPLATE);

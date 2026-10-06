@@ -26,7 +26,8 @@ import { fileURLToPath } from "node:url";
 
 import { fail } from "@valmen/core";
 
-import { ADAPTER_VERSION } from "./project.js";
+import { ADAPTER_VERSION, type ProjectModel, demoteTitle } from "./project.js";
+import { compactPorQue, isStandardRule, routedRules } from "./rule-projection.js";
 
 /** Una skill del proyecto, ya analizada. */
 export interface SkillDefinition {
@@ -52,6 +53,23 @@ export interface SkillDefinition {
    * y la proyección lo concatena al final.
    */
   readonly local: string | null;
+  /**
+   * Las reglas del proyecto que `rules-to-skills` encamina a esta skill, ya
+   * proyectadas.
+   *
+   * Opcional a propósito: una skill que nadie encamina no las lleva, y se proyecta
+   * byte a byte como antes de que existiera el mecanismo. Se cargan con
+   * `withRoutedRules`, no con `readSkills`, porque necesitan el modelo del proyecto.
+   */
+  readonly rules?: readonly SkillRule[];
+}
+
+/** Una regla del proyecto proyectada dentro de una skill. */
+export interface SkillRule {
+  /** Ruta de la regla, relativa a la raíz: de dónde sale el texto. */
+  readonly source: string;
+  /** El texto ya proyectado: título degradado a nivel 2 y «Por qué» en una línea. */
+  readonly text: string;
 }
 
 /** El nombre de una skill, tal como lo valida el estándar. */
@@ -248,12 +266,14 @@ export interface RenderedSkill {
  * cliente. La marca va **al final**, que es legal y se ve al abrirla.
  */
 export function renderSkill(skill: SkillDefinition, runtime: SkillRuntime): RenderedSkill {
+  const reglas = skill.rules ?? [];
   const aviso = [
     "",
     "---",
     "",
     `<!-- GENERADO POR valmen v${ADAPTER_VERSION} — NO EDITAR A MANO -->`,
     `<!-- fuente:   .valmen/skills/${skill.id}/SKILL.md -->`,
+    ...reglas.map((regla) => `<!-- reglas proyectadas: ${regla.source} -->`),
     "<!-- regenerar: valmen sync -->",
     "<!-- verificar:  valmen sync --check -->",
     "",
@@ -263,8 +283,11 @@ export function renderSkill(skill: SkillDefinition, runtime: SkillRuntime): Rend
   // señala dónde termina lo que el harness reescribe, y `local.md` es lo único
   // que el harness no toca. Con la marca en medio, un archivo sin `local.md`
   // sigue terminando igual que siempre.
+  // Las reglas encaminadas son parte de lo que el harness genera, así que van antes
+  // de la marca y no después de ella con lo que es del proyecto.
+  const cuerpo = [skill.instructions, ...reglas.map((regla) => regla.text)].join("\n\n");
   const partes = [
-    `---\nname: ${skill.id}\ndescription: ${skill.description}\n---\n\n${skill.instructions}\n${aviso}`,
+    `---\nname: ${skill.id}\ndescription: ${skill.description}\n---\n\n${cuerpo}\n${aviso}`,
   ];
   if (skill.local !== null && skill.local.trim() !== "") partes.push(skill.local.trim());
 
@@ -272,6 +295,77 @@ export function renderSkill(skill: SkillDefinition, runtime: SkillRuntime): Rend
     path: `${SKILL_RUNTIMES[runtime]}/${skill.id}/SKILL.md`,
     content: partes.join("\n"),
   };
+}
+
+/**
+ * Suma a cada skill las reglas del proyecto que `rules-to-skills` le encamina.
+ *
+ * Es el otro lado del puntero que `projectAgentsMd` deja en `AGENTS.md`: la regla
+ * sale de ahí y entra aquí, con el mismo tratamiento (título degradado, «Por qué» en
+ * una línea). Es una función aparte de `readSkills` porque necesita el modelo del
+ * proyecto, y la comparten la proyección a archivos y el prompt MCP de cada skill: si
+ * cada una armara su copia, el cliente MCP leería unas reglas y el archivo otras.
+ *
+ * Falla si una regla o una skill nombradas no existen: una regla que el proyecto
+ * creyó mover y que no llegó a ninguna skill dejó de estar vigente para quien la
+ * necesita, y no avisa.
+ */
+export function withRoutedRules(
+  skills: readonly SkillDefinition[],
+  model: Pick<ProjectModel, "config" | "rules">,
+): SkillDefinition[] {
+  const encaminadas = routedRules(model.config);
+  const nombres = Object.keys(encaminadas);
+  if (nombres.length === 0) return [...skills];
+
+  const reglasPorNombre = new Map(model.rules.map((regla) => [regla.name, regla]));
+  const idsDeSkills = new Set(skills.map((skill) => skill.id));
+
+  for (const nombre of nombres) {
+    if (!reglasPorNombre.has(nombre)) {
+      const hay = model.rules.map((regla) => regla.name).join(", ") || "ninguna";
+      fail(
+        `config.yaml: "rules-to-skills.${nombre}" nombra una regla que no existe en ` +
+          `.valmen/rules/. Las que hay: ${hay}.`,
+      );
+    }
+    for (const id of encaminadas[nombre] as readonly string[]) {
+      if (!idsDeSkills.has(id)) {
+        const hay = [...idsDeSkills].join(", ") || "ninguna";
+        fail(
+          `config.yaml: "rules-to-skills.${nombre}" nombra la skill "${id}", que no existe ` +
+            `en .valmen/skills/. Las que hay: ${hay}.`,
+        );
+      }
+    }
+  }
+
+  return skills.map((skill) => {
+    const reglas: SkillRule[] = [];
+    // Siguen el orden de los archivos de reglas, como en `AGENTS.md`.
+    for (const regla of model.rules) {
+      if (!(encaminadas[regla.name] ?? []).includes(skill.id)) continue;
+      // La misma regla de compactación que en `AGENTS.md`: solo los estándares.
+      const contenido = isStandardRule(regla)
+        ? compactPorQue(regla.content).text
+        : regla.content;
+      reglas.push({ source: regla.source, text: demoteTitle(contenido) });
+    }
+    return reglas.length === 0 ? skill : { ...skill, rules: reglas };
+  });
+}
+
+/**
+ * Todo lo que una skill dice, en el orden en que se lee: sus instrucciones, las
+ * reglas que se le encaminaron y lo propio del proyecto (`local.md`).
+ *
+ * Es lo que sirve el prompt MCP de la skill. Una skill sin reglas encaminadas ni
+ * `local.md` devuelve exactamente sus instrucciones.
+ */
+export function skillText(skill: SkillDefinition): string {
+  const partes = [skill.instructions, ...(skill.rules ?? []).map((regla) => regla.text)];
+  if (skill.local !== null && skill.local.trim() !== "") partes.push(skill.local.trim());
+  return partes.join("\n\n").trimEnd();
 }
 
 /**

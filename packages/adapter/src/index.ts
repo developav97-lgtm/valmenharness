@@ -12,6 +12,8 @@ export * from "./capabilities.js";
 export * from "./machine-bindings.js";
 export * from "./templates.js";
 export * from "./project.js";
+export * from "./rule-projection.js";
+export * from "./agents-size.js";
 export * from "./projection.js";
 export * from "./adopt.js";
 export * from "./adopt-rules.js";
