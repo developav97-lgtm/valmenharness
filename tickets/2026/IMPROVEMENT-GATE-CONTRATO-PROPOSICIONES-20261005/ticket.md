@@ -61,6 +61,27 @@ marcados con `[x]`); hay que reconstruir el estado o armar un plan con las misma
 —primera línea de aprobación pendiente, diagnóstico de unos 12 000 caracteres— y comparar con y
 sin esa línea antes de tocar la proposición. Con dos casos, ya no se puede descartar que sea el
 contenido de la proposición y no el artefacto, y tampoco aprobar ni bloquear a mano sobre ese número.
+
+Tercer vector, el primero **reproducible** (autorizado por el PO el 2026-10-06 para anexar la
+mayor evidencia posible; no es una decisión pendiente): los recibos
+`GR-20261006-IMPROVEMENT-ADAPTER-CONTRATO-RESPUESTA-20261005-plan-1` (0.006, block por otras tres
+proposiciones ya corregidas) y `…-plan-2` (0.003, approve), gate `plan`, cascada, con la clasificación
+«completo». A diferencia de los dos primeros, el estado evaluado **sí se conservó**: los tres estados
+(`analysis-1`, `plan-1`, `plan-2`) se reconstruyeron y su `stateHash` coincide con el del recibo
+(`697144…`, `e28bd9ba…`, `86d55075…`). Con un proyecto de prueba aparte y el mismo evaluador:
+V0 = estado de `plan-2` da 0.003 de nuevo (reproduce); V1 = sin la línea de aprobación pendiente da
+0.003 (R-CPRE-012 no es la causa); V2 = el diagnóstico con una línea que lista los 13 archivos del plan
+da 0.993, con un diagnóstico más largo (R-CPRE-003 tampoco es la causa).
+Causa comprobada en ese caso: `packages/gate/src/definitions.ts:74-85` describe «El plan responde a lo que
+dice el diagnóstico» pero sus `instructions` y `criteria` preguntan si **los archivos** de `plan` e
+`investigacion` coinciden y marcan «no» si el plan «modifica archivos que `investigacion` no menciona,
+o al contrario»; un plan que crea pruebas o módulos nuevos incumple eso por construcción. Es un
+desajuste descripción↔pregunta, el asunto de R-CPRE-004, y el valor no se movió cuando el plan mejoró
+(se le agregó trazabilidad hallazgo→paso). Los dos casos anteriores no se pueden reconstruir por hash;
+con el texto actual de esos tickets sus planes también nombran pruebas y documentación que su
+diagnóstico no nombra (indicio, no prueba). Límites, pistas y cómo reproducir, con los estados
+(`estados/*.json`) y los recibos completos (`recibos/*.jsonl`): `docs/evidencia-gate-20261006/LEEME.md`.
+Aprendizaje asociado: AP-010, que corrige la hipótesis de AP-008.
 ## Descripción funcional
 
 - Alcance:
