@@ -51,6 +51,8 @@ export interface NoulProposition {
   readonly criteria?: { readonly yes: string; readonly no: string };
   /** Peso relativo en la decisión. Por defecto 1. */
   readonly weight?: number;
+  /** Umbrales propios de una pregunta adicional, decididos en código. */
+  readonly policy?: GatePolicy;
   /** Solo se evalúa si la condición se cumple sobre el sujeto. */
   readonly when?: string;
   /**
@@ -281,6 +283,8 @@ export interface EvaluatedProposition {
   readonly id: string;
   readonly kind: PropositionKind;
   readonly weight: number;
+  /** Umbrales efectivos con los que se decidió una proposición booleana. */
+  readonly policy?: GatePolicy;
   /** El valor que se comparó contra los umbrales. */
   readonly value: number;
   /**
@@ -517,6 +521,8 @@ function evaluateNoul(
   answer: PropositionAnswer,
   policy: GatePolicy,
 ): EvaluatedProposition {
+  const effectivePolicy = proposition.policy ?? policy;
+  validatePolicy(effectivePolicy);
   const value = answer.value;
   if (typeof value !== "number" || value < 0 || value > 1) {
     throw new GateDefinitionError(
@@ -528,7 +534,7 @@ function evaluateNoul(
   const weight = proposition.weight ?? 1;
   const formatted = value.toFixed(2);
 
-  if (value <= policy.blockAt) {
+  if (value <= effectivePolicy.blockAt) {
     return {
       id: proposition.id,
       kind: "noul",
@@ -536,6 +542,7 @@ function evaluateNoul(
         ? {}
         : { description: proposition.description }),
       weight,
+      policy: effectivePolicy,
       value,
       label: `${proposition.id}=${formatted}`,
       inBand: false,
@@ -545,7 +552,7 @@ function evaluateNoul(
     };
   }
 
-  if (value >= policy.approveAt) {
+  if (value >= effectivePolicy.approveAt) {
     return {
       id: proposition.id,
       kind: "noul",
@@ -553,6 +560,7 @@ function evaluateNoul(
         ? {}
         : { description: proposition.description }),
       weight,
+      policy: effectivePolicy,
       value,
       label: `${proposition.id}=${formatted}`,
       inBand: false,
@@ -569,13 +577,14 @@ function evaluateNoul(
       ? {}
       : { description: proposition.description }),
     weight,
+    policy: effectivePolicy,
     value,
     label: `${proposition.id}=${formatted}`,
     inBand: true,
     effect: { outcome: "review" },
     reason:
       `${proposition.id}=${formatted} en banda de revisión ` +
-      `(${policy.blockAt}–${policy.approveAt})`,
+      `(${effectivePolicy.blockAt}–${effectivePolicy.approveAt})`,
     verdict: proposition.verdict !== false,
   };
 }

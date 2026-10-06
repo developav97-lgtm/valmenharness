@@ -15,7 +15,8 @@
  * ticket**: entrega el recibo y deja la decisión pendiente. Un gate no cambia
  * estados por su cuenta.
  */
-import { statSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
+import { join } from "node:path";
 
 import {
   EXIT_INVARIANT,
@@ -44,6 +45,7 @@ import {
   summarizeReceipt,
   weightedMean,
 } from "@valmen/gate";
+import { parseConfig, readJevPropositions, type JevStage } from "@valmen/adapter";
 import { evaluateWithJev } from "@valmen/gate-jev";
 import { type CommandCheck } from "@valmen/gate-command";
 import { type CascadeOptions, type EvaluatorId, evaluateGate } from "./evaluators.js";
@@ -61,6 +63,54 @@ import { buildGateState, runMechanicalChecks } from "./state.js";
 import { appendReceipt, readReceipts } from "./receipts.js";
 import { interfazDelTicket } from "./interfaz.js";
 import { resolveGateMode } from "./gate-promotion.js";
+
+/** Convierte preguntas ya validadas en proposiciones que el motor puro decide. */
+function configuredPropositions(
+  root: string,
+  stage: JevStage,
+): import("@valmen/gate").NoulProposition[] {
+  let text: string;
+  try {
+    text = readFileSync(join(root, ".valmen", "config.yaml"), "utf8");
+  } catch {
+    return [];
+  }
+  return readJevPropositions(parseConfig(text))[stage].map((proposition) => ({
+    id: proposition.id,
+    kind: "noul" as const,
+    description: proposition.description,
+    instructions: proposition.instructions,
+    criteria: proposition.criteria,
+    weight: proposition.weight,
+    policy: { approveAt: proposition.approveAt, blockAt: proposition.blockAt },
+    verdict: proposition.verdict === "required",
+  }));
+}
+
+function stageForGate(id: string): JevStage | null {
+  return id === "analysis" || id === "plan" ? id : null;
+}
+
+/** Material que la integración futura debe decidir antes de invocar Git. */
+export interface IntegrationValidation {
+  readonly state: Readonly<Record<string, string>>;
+  readonly propositions: readonly import("@valmen/gate").NoulProposition[];
+}
+
+export function buildIntegrationValidation(paths: RegistryPaths, ticketId: string): IntegrationValidation {
+  const ticket = findTicket(paths, ticketId);
+  if (ticket === undefined) throw new TicketError("La ruta canónica solicitada no existe.");
+  const parsed = parseTicket(ticket.text);
+  return {
+    state: Object.freeze({
+      ...buildGateState(ticket.text),
+      solicitudOriginal: parsed.sections["Solicitud original"].trim(),
+      planAprobado: parsed.sections.Plan.trim(),
+      alcanceDeclarado: parsed.sections["Descripción funcional"].trim(),
+    }),
+    propositions: Object.freeze(configuredPropositions(paths.root, "integration")),
+  };
+}
 
 /** Opciones de una evaluación de gate. */
 export interface GateRunOptions {
@@ -393,15 +443,23 @@ export async function runGate(
   // y una por impacto declarado, en vez de preguntas compuestas que el evaluador
   // no sabe responder. Medido: la compuesta acierta el 7%, las atómicas el 62%.
   const criteria = extractCriteriaSpecs(state["criterios"] ?? "");
-  const gate = gateFor(definition, {
-    criteria,
-    impacts,
-    interfaz: interfazDelTicket({
-      texto: ticket.text,
-      comandos: testCommands(paths.root),
-      playwright: playwrightConfig(paths.root),
-    }),
-  });
+  let gate;
+  try {
+    const stage = stageForGate(definition.id);
+    gate = gateFor(definition, {
+      criteria,
+      impacts,
+      interfaz: interfazDelTicket({
+        texto: ticket.text,
+        comandos: testCommands(paths.root),
+        playwright: playwrightConfig(paths.root),
+      }),
+      ...(stage === null ? {} : { additional: configuredPropositions(paths.root, stage) }),
+    });
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return { stdout: "", stderr: failure.message, exitCode: failure.exitCode };
+  }
 
   // Los comandos que responden las proposiciones del gate mecánico. Se arman
   // después de la comprobación previa, así que acá ya se sabe que hay al menos uno

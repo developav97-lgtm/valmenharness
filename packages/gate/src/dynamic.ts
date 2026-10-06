@@ -13,8 +13,8 @@
  *
  * Ver docs/03-GATES.md §5.1quater.
  */
-import type { CommandCheckSpec, GateDefinition, Proposition } from "./decide.js";
-import { DEFAULT_POLICY } from "./decide.js";
+import type { CommandCheckSpec, GateDefinition, NoulProposition, Proposition } from "./decide.js";
+import { DEFAULT_POLICY, GateDefinitionError } from "./decide.js";
 import { ANALYSIS_GATE, PLAN_GATE } from "./definitions.js";
 import { type RepositorioDeSpecs, specDelRepositorio } from "./specs.js";
 
@@ -593,14 +593,26 @@ export function expandGate(gate: GateDefinition, context: GateContext): GateDefi
     gate.interfazProposition === true && context.interfaz.requiereDeclaracion
       ? [playwrightProposition(context.interfaz.pantallas)]
       : [];
+  const adicionales = context.additional ?? [];
 
-  if (atomicas.length === 0 && porImpacto.length === 0 && porComando.length === 0 && porInterfaz.length === 0 && context.impacts.length > 0)
+  const ids = new Set(gate.propositions.map((proposition) => proposition.id));
+  for (const proposition of [...atomicas, ...porImpacto, ...porComando, ...porInterfaz, ...adicionales]) {
+    if (ids.has(proposition.id)) {
+      throw new GateDefinitionError(
+        `La proposición adicional "${proposition.id}" colisiona con una proposición del gate.`,
+      );
+    }
+    ids.add(proposition.id);
+  }
+
+  if (atomicas.length === 0 && porImpacto.length === 0 && porComando.length === 0 && porInterfaz.length === 0 && adicionales.length === 0 && context.impacts.length > 0)
     return gate;
   if (
     atomicas.length === 0 &&
     porImpacto.length === 0 &&
     porComando.length === 0 &&
     porInterfaz.length === 0 &&
+    adicionales.length === 0 &&
     context.impacts.length === 0 &&
     !PROPOSICIONES_QUE_PIDEN_IMPACTOS.some((id) => gate.propositions.some((proposition) => proposition.id === id && proposition.verdict !== false))
   )
@@ -656,6 +668,7 @@ export function expandGate(gate: GateDefinition, context: GateContext): GateDefi
     porImpacto.length > 0 ? "impactos" : "",
     porComando.length > 0 ? "mecanico" : "",
     porInterfaz.length > 0 ? "interfaz" : "",
+    adicionales.length > 0 ? "adicionales" : "",
   ]
     .filter((parte) => parte !== "")
     .join("+");
@@ -663,7 +676,7 @@ export function expandGate(gate: GateDefinition, context: GateContext): GateDefi
   return {
     ...gate,
     id: `${gate.id}+${sufijo}`,
-    propositions: [...atomicas, ...porImpacto, ...porComando, ...porInterfaz, ...propositionsFinales],
+    propositions: [...atomicas, ...porImpacto, ...porComando, ...porInterfaz, ...adicionales, ...propositionsFinales],
   };
 }
 
@@ -694,6 +707,8 @@ export interface GateContext {
   readonly impacts: readonly string[];
   /** La capacidad de interfaz que el sujeto declara; `SIN_INTERFAZ` si no se calcula. */
   readonly interfaz: InterfazDelSujeto;
+  /** Preguntas ya validadas por el adaptador para esta etapa. */
+  readonly additional?: readonly NoulProposition[];
 }
 
 /** Obtiene un gate expandido con el contexto del sujeto. */

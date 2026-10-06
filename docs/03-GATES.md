@@ -1183,6 +1183,42 @@ impacto crítico. Si falta la evidencia o una calibración posterior deja de cum
 el modo efectivo vuelve a `hybrid` y explica el motivo. Una evidencia de otro gate
 no puede habilitarlo.
 
+### 9.2 Proposiciones Jev adicionales por etapa
+
+Un proyecto puede sumar preguntas semánticas a las etapas `analysis`, `plan` e
+`integration` mediante `jev-propositions`. La ausencia de esta sección conserva
+las preguntas, los recibos y el comportamiento actual.
+
+```yaml
+# .valmen/config.yaml
+jev-propositions:
+  integration:
+    - id: custom-alcance-aprobado
+      description: El cambio respeta el alcance aprobado.
+      instructions: Compara la solicitud, el plan y el cambio entregado.
+      criteria:
+        yes: El cambio corresponde al plan aprobado.
+        no: El cambio agrega trabajo fuera del alcance declarado.
+      weight: 2
+      approve-at: 0.90
+      block-at: 0.10
+      verdict: required
+```
+
+Cada pregunta usa un identificador `custom-…`, es atómica y declara su peso y
+umbrales. `required` agrega una condición por conjunción; `inform` deja la respuesta
+en el recibo sin votar. En `analysis` y `plan` el motor carga la sección, expande las
+preguntas de esa única etapa y aplica cada par `approve-at`/`block-at` en código. La
+respuesta, los umbrales efectivos y el coste de la evaluación quedan en el recibo de
+la corrida, junto a los campos históricos compatibles.
+
+Esta configuración no puede declarar efectos, cambiar el modo de una compuerta,
+reemplazar una pregunta base ni promover un gate a automático. La etapa `integration`
+prepara para su consumidor el estado congelado con solicitud original, plan aprobado y
+alcance declarado; una `required` bajo su umbral de bloqueo debe detener ese consumidor
+antes de cualquier operación Git. Declararla no activa integración, commits ni pushes
+por sí sola.
+
 ```yaml
 plan:
   mode: hybrid
