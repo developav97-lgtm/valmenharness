@@ -1,0 +1,614 @@
+feature: autonomia-confiable
+generated_by:
+  provider: codex
+  model: gpt-6.1-sol
+sprints:
+  - id: S1
+    goal: "Entregar compuertas sin defectos, con pruebas deterministas y compatibilidad del registro histórico. Registrar la evidencia de salida en verify.md."
+    tickets:
+      - id: BUGFIX-CORE-LECTOR-CRITERIOS-20261005
+        title: Leer como criterios solo los ítems de lista
+        depends_on: []
+      - id: BUGFIX-ENGINE-CRITERIOS-POR-TANDAS-20261005
+        title: Evaluar todos los criterios en tandas sin recortes
+        depends_on:
+          - BUGFIX-CORE-LECTOR-CRITERIOS-20261005
+      - id: BUGFIX-GATE-CONTRADICCION-DESCRIPTIVA-20261005
+        title: Corregir la excepción por contradicción con clasificación descriptiva
+        depends_on: []
+      - id: BUGFIX-ENGINE-FIRMA-DE-COMPUERTA-20261004
+        title: Exigir una decisión humana registrada para avanzar block o review
+        depends_on: []
+      - id: FEATURE-GATE-MOTIVOS-RESPUESTAS-20261005
+        title: Incluir el motivo de cada respuesta en el contrato del evaluador
+        depends_on: []
+      - id: FEATURE-ENGINE-RECIBOS-CON-MOTIVOS-20261005
+        title: Persistir motivos y evaluador sin romper recibos históricos
+        depends_on:
+          - FEATURE-GATE-MOTIVOS-RESPUESTAS-20261005
+      - id: BUGFIX-GATECOMMAND-FALLOS-ENTORNO-20261005
+        title: Distinguir fallos del entorno y pruebas fallidas por runner
+        depends_on: []
+      - id: FEATURE-CONFIG-PATRONES-ENTORNO-20261005
+        title: Declarar patrones adicionales de fallo del entorno
+        depends_on: []
+      - id: INTEGRATION-ENGINE-PATRONES-ENTORNO-20261005
+        title: Pasar los patrones del proyecto al ejecutor mecánico
+        depends_on:
+          - BUGFIX-GATECOMMAND-FALLOS-ENTORNO-20261005
+          - FEATURE-CONFIG-PATRONES-ENTORNO-20261005
+      - id: FEATURE-CONFIG-MIGRACION-PRUEBAS-20260926
+        title: Declarar la preparación del ambiente de pruebas
+        depends_on: []
+      - id: FEATURE-ENGINE-MIGRACION-ANTES-TESTS-20260926
+        title: Preparar el ambiente antes de ejecutar todos los criterios
+        depends_on:
+          - FEATURE-CONFIG-MIGRACION-PRUEBAS-20260926
+      - id: BUGFIX-ENGINE-REUTILIZAR-COMPUERTA-20261005
+        title: Reutilizar el recibo cuando el estado del ticket no cambió
+        depends_on:
+          - FEATURE-ENGINE-RECIBOS-CON-MOTIVOS-20261005
+      - id: CHORE-CORE-REGRESION-REGISTROS-20261005
+        title: Validar ambos registros históricos con el nuevo lector
+        depends_on:
+          - BUGFIX-CORE-LECTOR-CRITERIOS-20261005
+      - id: CHORE-ENGINE-REGRESION-COMPUERTAS-20261005
+        title: "Probar tandas, firmas, preparación y recibos históricos"
+        depends_on:
+          - BUGFIX-ENGINE-CRITERIOS-POR-TANDAS-20261005
+          - BUGFIX-ENGINE-FIRMA-DE-COMPUERTA-20261004
+          - FEATURE-ENGINE-RECIBOS-CON-MOTIVOS-20261005
+          - INTEGRATION-ENGINE-PATRONES-ENTORNO-20261005
+          - FEATURE-ENGINE-MIGRACION-ANTES-TESTS-20260926
+          - BUGFIX-ENGINE-REUTILIZAR-COMPUERTA-20261005
+      - id: DOCS-SPEC-VERIFICAR-S1-20261005
+        title: Registrar la evidencia de salida de compuertas sin defectos
+        depends_on:
+          - CHORE-CORE-REGRESION-REGISTROS-20261005
+          - CHORE-ENGINE-REGRESION-COMPUERTAS-20261005
+          - BUGFIX-GATE-CONTRADICCION-DESCRIPTIVA-20261005
+  - id: S2
+    goal: "Entregar proposiciones aplicables y atómicas, evidencia suficiente, revisión previa en código y medición continua de precisión. Mantener cascade donde corresponde y documentar la salida en verify.md."
+    tickets:
+      - id: FEATURE-CONFIG-APLICABILIDAD-PROPOSICIONES-20261005
+        title: Declarar los tipos de ticket aplicables a cada proposición
+        depends_on:
+          - DOCS-SPEC-VERIFICAR-S1-20261005
+      - id: FEATURE-GATE-FILTRAR-PROPOSICIONES-20261005
+        title: Excluir del voto las proposiciones ajenas al tipo de ticket
+        depends_on:
+          - FEATURE-CONFIG-APLICABILIDAD-PROPOSICIONES-20261005
+      - id: IMPROVEMENT-CONFIG-DIAGNOSTICO-POR-TIPO-20261005
+        title: Separar el diagnóstico de correcciones y funcionalidad nueva
+        depends_on:
+          - FEATURE-CONFIG-APLICABILIDAD-PROPOSICIONES-20261005
+      - id: FEATURE-ENGINE-EVIDENCIA-FUNCIONAL-20261005
+        title: Incluir la descripción funcional en el estado del evaluador
+        depends_on:
+          - DOCS-SPEC-VERIFICAR-S1-20261005
+      - id: IMPROVEMENT-CONFIG-CONTRATO-PROPOSICIONES-20261005
+        title: Alinear preguntas y descripciones con criterios de sí y no
+        depends_on:
+          - IMPROVEMENT-CONFIG-DIAGNOSTICO-POR-TIPO-20261005
+      - id: IMPROVEMENT-CONFIG-IMPACTOS-ATOMICOS-20261005
+        title: Descomponer la evaluación de impactos en proposiciones atómicas
+        depends_on:
+          - IMPROVEMENT-CONFIG-CONTRATO-PROPOSICIONES-20261005
+      - id: IMPROVEMENT-ADAPTER-PLANTILLA-EVIDENCIA-20261005
+        title: Pedir en la plantilla la evidencia que evalúan las compuertas
+        depends_on:
+          - IMPROVEMENT-CONFIG-IMPACTOS-ATOMICOS-20261005
+          - FEATURE-ENGINE-EVIDENCIA-FUNCIONAL-20261005
+      - id: BUGFIX-ENGINE-CRITERIOS-POR-TICKET-20261005
+        title: Materializar criterios acotados a la porción de cada ticket
+        depends_on:
+          - IMPROVEMENT-ADAPTER-PLANTILLA-EVIDENCIA-20261005
+      - id: FEATURE-CORE-REVISION-PREVIA-20261005
+        title: Revisar sin modelo el ticket y avisar si supera doce criterios
+        depends_on:
+          - DOCS-SPEC-VERIFICAR-S1-20261005
+      - id: FEATURE-CORE-VOTOS-PLAN-20261005
+        title: Decidir en código las comprobaciones mecánicas del plan
+        depends_on:
+          - FEATURE-CORE-REVISION-PREVIA-20261005
+      - id: INTEGRATION-ENGINE-PRECHECK-Y-VOTOS-20261005
+        title: Ejecutar la revisión previa y combinar los votos del plan
+        depends_on:
+          - FEATURE-CORE-VOTOS-PLAN-20261005
+          - FEATURE-GATE-FILTRAR-PROPOSICIONES-20261005
+      - id: FEATURE-CONFIG-UMBRALES-ESPECIFICOS-20261005
+        title: Configurar umbrales por evaluador y proposición
+        depends_on:
+          - FEATURE-CONFIG-APLICABILIDAD-PROPOSICIONES-20261005
+      - id: FEATURE-GATE-RESOLVER-UMBRALES-20261005
+        title: Aplicar los umbrales del evaluador y de cada proposición
+        depends_on:
+          - FEATURE-CONFIG-UMBRALES-ESPECIFICOS-20261005
+      - id: FEATURE-ENGINE-CALIBRACION-HUMANA-20261005
+        title: Calibrar umbrales con recibos y decisiones humanas auditables
+        depends_on:
+          - FEATURE-GATE-RESOLVER-UMBRALES-20261005
+          - BUGFIX-ENGINE-FIRMA-DE-COMPUERTA-20261004
+      - id: FEATURE-ENGINE-METRICAS-PRECISION-20261005
+        title: Medir continuamente precisión y revisiones sin cambios
+        depends_on:
+          - FEATURE-ENGINE-CALIBRACION-HUMANA-20261005
+      - id: SECURITY-GATE-EVIDENCIA-DE-APROBACIONES-20261005
+        title: Excluir afirmaciones del ticket sobre aprobaciones y compuertas
+        depends_on:
+          - FEATURE-ENGINE-EVIDENCIA-FUNCIONAL-20261005
+      - id: CHORE-CORE-REGRESION-VALIDACIONES-20261005
+        title: Comprobar las validaciones nuevas contra ambos registros
+        depends_on:
+          - FEATURE-CORE-VOTOS-PLAN-20261005
+      - id: DOCS-SPEC-VERIFICAR-S2-20261005
+        title: "Registrar precisión, calibración y salida de compuertas"
+        depends_on:
+          - BUGFIX-ENGINE-CRITERIOS-POR-TICKET-20261005
+          - INTEGRATION-ENGINE-PRECHECK-Y-VOTOS-20261005
+          - FEATURE-ENGINE-METRICAS-PRECISION-20261005
+          - SECURITY-GATE-EVIDENCIA-DE-APROBACIONES-20261005
+          - CHORE-CORE-REGRESION-VALIDACIONES-20261005
+  - id: S3
+    goal: "Entregar aprobaciones verificables, despliegues con aprobación consumible, cierre validado y consumo sin duplicados. Validar ambos registros históricos y registrar la salida en verify.md."
+    tickets:
+      - id: FEATURE-CORE-IDENTIDAD-EJECUCION-20261001
+        title: Representar la identidad de ejecución interactiva o desatendida
+        depends_on:
+          - DOCS-SPEC-VERIFICAR-S2-20261005
+      - id: FEATURE-CONFIG-FUENTES-APROBACION-20261005
+        title: Declarar las fuentes de aprobación permitidas por proyecto
+        depends_on:
+          - DOCS-SPEC-VERIFICAR-S2-20261005
+      - id: SECURITY-ENGINE-APROBACION-PLAN-20261005
+        title: "Registrar actor, fuente, frase y sesión de la aprobación del plan"
+        depends_on:
+          - FEATURE-CORE-IDENTIDAD-EJECUCION-20261001
+          - FEATURE-CONFIG-FUENTES-APROBACION-20261005
+      - id: SECURITY-CORE-TRANSICION-APPROVED-20261005
+        title: Exigir aprobación registrada para entrar en approved
+        depends_on:
+          - SECURITY-ENGINE-APROBACION-PLAN-20261005
+      - id: SECURITY-ENGINE-APROBACION-DESPLIEGUE-20261005
+        title: Validar la frase con versión y consumir la aprobación de despliegue
+        depends_on:
+          - SECURITY-ENGINE-APROBACION-PLAN-20261005
+      - id: SECURITY-MC-ESCRITURAS-AUTENTICADAS-20261005
+        title: Rechazar escrituras sin autenticación fuera de localhost
+        depends_on:
+          - DOCS-SPEC-VERIFICAR-S2-20261005
+      - id: BUGFIX-CORE-CIERRE-CRITERIOS-20261005
+        title: Exigir criterios verificados y marcados antes del cierre
+        depends_on:
+          - DOCS-SPEC-VERIFICAR-S2-20261005
+      - id: BUGFIX-ENGINE-CONSUMO-SIN-DUPLICADOS-20261005
+        title: Impedir cargar una sesión completa a varios tickets
+        depends_on:
+          - DOCS-SPEC-VERIFICAR-S2-20261005
+      - id: IMPROVEMENT-HERMES-COSTO-CONSUMO-20261005
+        title: Registrar el costo de Hermes o el motivo de su ausencia
+        depends_on:
+          - BUGFIX-ENGINE-CONSUMO-SIN-DUPLICADOS-20261005
+      - id: IMPROVEMENT-CODEX-COSTO-CONSUMO-20261005
+        title: Registrar el costo de Codex o el motivo de su ausencia
+        depends_on:
+          - BUGFIX-ENGINE-CONSUMO-SIN-DUPLICADOS-20261005
+      - id: CHORE-CORE-REGRESION-CONTROL-20261005
+        title: Validar aprobaciones y cierre contra ambos registros históricos
+        depends_on:
+          - SECURITY-CORE-TRANSICION-APPROVED-20261005
+          - BUGFIX-CORE-CIERRE-CRITERIOS-20261005
+      - id: CHORE-ENGINE-PRUEBAS-CONTROL-20261005
+        title: Probar rechazo de chat desatendido y consumo único de aprobaciones
+        depends_on:
+          - SECURITY-ENGINE-APROBACION-PLAN-20261005
+          - SECURITY-ENGINE-APROBACION-DESPLIEGUE-20261005
+          - BUGFIX-ENGINE-CONSUMO-SIN-DUPLICADOS-20261005
+      - id: DOCS-SPEC-VERIFICAR-S3-20261005
+        title: Registrar la evidencia de aprobaciones y control en código
+        depends_on:
+          - CHORE-CORE-REGRESION-CONTROL-20261005
+          - CHORE-ENGINE-PRUEBAS-CONTROL-20261005
+          - SECURITY-MC-ESCRITURAS-AUTENTICADAS-20261005
+          - IMPROVEMENT-HERMES-COSTO-CONSUMO-20261005
+          - IMPROVEMENT-CODEX-COSTO-CONSUMO-20261005
+  - id: S4
+    goal: Entregar el contrato de respuesta concisa en paralelo e independientemente de los demás sprints. Medir en verify.md la media de Claude Code en SaiOpenCloud contra el objetivo de menos de 150 palabras.
+    tickets:
+      - id: IMPROVEMENT-ADAPTER-CONTRATO-RESPUESTA-20261005
+        title: Abrir el AGENTS.md proyectado con el contrato de respuesta
+        depends_on: []
+      - id: IMPROVEMENT-ADAPTER-PRESUPUESTO-AGENTS-20261005
+        title: Acotar el tamaño del AGENTS.md proyectado
+        depends_on:
+          - IMPROVEMENT-ADAPTER-CONTRATO-RESPUESTA-20261005
+      - id: FEATURE-CLI-CLAUDE-OUTPUT-STYLE-20261005
+        title: Generar y activar el output style sin pisar configuración existente
+        depends_on: []
+      - id: SYNC-CLI-CLAUDE-IMPORT-AGENTS-20261005
+        title: Mantener un bloque corto de CLAUDE.md que importe AGENTS.md
+        depends_on:
+          - IMPROVEMENT-ADAPTER-CONTRATO-RESPUESTA-20261005
+      - id: IMPROVEMENT-ADAPTER-INFORMES-AGENTES-20261005
+        title: Pedir informes de diez líneas como máximo a los agentes generados
+        depends_on: []
+      - id: IMPROVEMENT-MCP-RESUMEN-SIGUIENTE-PASO-20261005
+        title: Devolver resumen y siguiente paso en el dato estructurado de MCP
+        depends_on: []
+      - id: SYNC-CLI-CODEX-VERBOSIDAD-20261005
+        title: Proyectar la verbosidad que soporte el cliente Codex
+        depends_on: []
+      - id: SYNC-CLI-OPENCODE-VERBOSIDAD-20261005
+        title: Proyectar la verbosidad que soporte el cliente OpenCode
+        depends_on: []
+      - id: DOCS-SPEC-VERIFICAR-S4-20261005
+        title: Medir concisión y registrar la salida del contrato de respuesta
+        depends_on:
+          - IMPROVEMENT-ADAPTER-PRESUPUESTO-AGENTS-20261005
+          - FEATURE-CLI-CLAUDE-OUTPUT-STYLE-20261005
+          - SYNC-CLI-CLAUDE-IMPORT-AGENTS-20261005
+          - IMPROVEMENT-ADAPTER-INFORMES-AGENTES-20261005
+          - IMPROVEMENT-MCP-RESUMEN-SIGUIENTE-PASO-20261005
+          - SYNC-CLI-CODEX-VERBOSIDAD-20261005
+          - SYNC-CLI-OPENCODE-VERBOSIDAD-20261005
+  - id: S5
+    goal: "Conectar el motor de jornadas existente sin redefinirlo, después del cierre de S1–S3. Nacer apagado, detener preparación en aprobación humana y llevar tres tickets a awaiting_user_tests con Telegram y commits individuales, sin push ni aprobaciones por prompt."
+    tickets:
+      - id: FEATURE-CONFIG-JORNADA-Y-RAMA-20261005
+        title: Configurar jornada apagada y rama de trabajo no protegida
+        depends_on:
+          - DOCS-SPEC-VERIFICAR-S3-20261005
+      - id: INTEGRATION-ENGINE-JORNADA-DIARIA-20261005
+        title: Armar la jornada del día desde el motor existente
+        depends_on:
+          - FEATURE-CONFIG-JORNADA-Y-RAMA-20261005
+      - id: FEATURE-CLI-AVANCE-JORNADA-20261005
+        title: Exponer el avance de jornada sin llamada de modelo
+        depends_on:
+          - INTEGRATION-ENGINE-JORNADA-DIARIA-20261005
+      - id: INTEGRATION-LAUNCHD-RELOJ-JORNADA-20261005
+        title: Instalar el disparador launchd de la jornada sin modelo
+        depends_on:
+          - FEATURE-CLI-AVANCE-JORNADA-20261005
+      - id: FEATURE-ENGINE-JORNADA-PREPARACION-20261005
+        title: Llevar intake a planned y parar en la aprobación del plan
+        depends_on:
+          - INTEGRATION-ENGINE-JORNADA-DIARIA-20261005
+      - id: FEATURE-ENGINE-APROBACION-LOTE-20261005
+        title: Procesar planes en lote con tokens y actores verificables
+        depends_on:
+          - FEATURE-ENGINE-JORNADA-PREPARACION-20261005
+      - id: INTEGRATION-TELEGRAM-APROBACION-PLANES-20261005
+        title: Aprobar planes en lote desde Telegram mediante enlace firmado
+        depends_on:
+          - FEATURE-ENGINE-APROBACION-LOTE-20261005
+      - id: FEATURE-ENGINE-JORNADA-EJECUCION-20261005
+        title: Llevar approved hasta las pruebas del responsable
+        depends_on:
+          - INTEGRATION-ENGINE-JORNADA-DIARIA-20261005
+      - id: FEATURE-ENGINE-DESPACHO-POR-FASE-20261005
+        title: Elegir modelo por fase y propagar la identidad desatendida
+        depends_on:
+          - INTEGRATION-ENGINE-JORNADA-DIARIA-20261005
+      - id: FEATURE-ENGINE-TOPES-Y-PARADA-20261005
+        title: Respetar topes y detener la jornada cuando falla el ejecutor
+        depends_on:
+          - FEATURE-ENGINE-DESPACHO-POR-FASE-20261005
+      - id: IMPROVEMENT-ENGINE-VIGILANTE-JORNADA-20261005
+        title: "Avisar arranque, review, pruebas, fallos y parte diario por Telegram"
+        depends_on:
+          - FEATURE-ENGINE-TOPES-Y-PARADA-20261005
+          - FEATURE-ENGINE-JORNADA-EJECUCION-20261005
+      - id: FEATURE-ENGINE-REGLAS-INTEGRACION-20260926
+        title: Validar las reglas del commit por ticket sin push
+        depends_on:
+          - FEATURE-CONFIG-JORNADA-Y-RAMA-20261005
+      - id: INTEGRATION-GIT-INTEGRACION-AUTONOMA-20260926
+        title: Crear un commit por ticket en la rama de jornada sin push
+        depends_on:
+          - FEATURE-ENGINE-REGLAS-INTEGRACION-20260926
+      - id: SECURITY-ENGINE-JORNADA-SIN-AUTOAPROBACION-20261005
+        title: "Impedir aprobaciones de análisis, plan o QA por instrucciones"
+        depends_on:
+          - FEATURE-ENGINE-JORNADA-PREPARACION-20261005
+          - FEATURE-ENGINE-JORNADA-EJECUCION-20261005
+          - FEATURE-ENGINE-DESPACHO-POR-FASE-20261005
+      - id: INTEGRATION-HERMES-DESPACHO-JORNADA-20261001
+        title: Conectar Hermes como despachador opcional sin modelo para el reloj
+        depends_on:
+          - FEATURE-CLI-AVANCE-JORNADA-20261005
+          - FEATURE-ENGINE-DESPACHO-POR-FASE-20261005
+          - SECURITY-ENGINE-JORNADA-SIN-AUTOAPROBACION-20261005
+      - id: DOCS-SPEC-VERIFICAR-S5-20261005
+        title: Verificar una jornada de tres tickets sin aprobaciones del agente
+        depends_on:
+          - INTEGRATION-LAUNCHD-RELOJ-JORNADA-20261005
+          - INTEGRATION-TELEGRAM-APROBACION-PLANES-20261005
+          - IMPROVEMENT-ENGINE-VIGILANTE-JORNADA-20261005
+          - INTEGRATION-GIT-INTEGRACION-AUTONOMA-20260926
+          - INTEGRATION-HERMES-DESPACHO-JORNADA-20261001
+  - id: S6
+    goal: "Entregar QA de backend autorizada por personas, apagada por defecto y aislada en worktrees. Incluir FEATURE sin impactos, excluir controles y scripts, y exigir veinte coincidencias en sombra antes del cierre por política. Mantener core sin red y registrar evidencia reproducible en verify.md."
+    tickets:
+      - id: FEATURE-CONFIG-QA-SOMBRA-20261005
+        title: Configurar QA por agente apagada y su periodo en sombra
+        depends_on:
+          - DOCS-SPEC-VERIFICAR-S5-20261005
+      - id: SECURITY-ENGINE-CIERRE-AUTORIZADO-20260926
+        title: Exigir autorización humana persistida para el cierre por QA
+        depends_on:
+          - DOCS-SPEC-VERIFICAR-S3-20261005
+          - FEATURE-CONFIG-QA-SOMBRA-20261005
+      - id: SECURITY-ENGINE-AUTORIZACIONES-FIRMADAS-20261005
+        title: Guardar autorizaciones y revocaciones append-only con HMAC
+        depends_on:
+          - SECURITY-ENGINE-CIERRE-AUTORIZADO-20260926
+      - id: SECURITY-MC-AUTORIZACION-QA-20261005
+        title: Crear y revocar autorizaciones de QA con persona autenticada
+        depends_on:
+          - SECURITY-ENGINE-AUTORIZACIONES-FIRMADAS-20261005
+          - SECURITY-MC-ESCRITURAS-AUTENTICADAS-20261005
+      - id: SECURITY-TELEGRAM-AUTORIZACION-QA-20261005
+        title: Crear y revocar autorizaciones de QA mediante enlace firmado
+        depends_on:
+          - SECURITY-ENGINE-AUTORIZACIONES-FIRMADAS-20261005
+      - id: FEATURE-CORE-ELEGIBILIDAD-QA-20261005
+        title: Decidir elegibilidad backend y excluir controles y scripts de pruebas
+        depends_on:
+          - FEATURE-CONFIG-QA-SOMBRA-20261005
+      - id: SECURITY-QAAGENT-WORKTREE-LIMPIO-20261005
+        title: Crear worktrees limpios y usar scripts del commit base
+        depends_on:
+          - FEATURE-CORE-ELEGIBILIDAD-QA-20261005
+      - id: FEATURE-QAAGENT-PRUEBA-CONTRA-BASE-20261005
+        title: Probar que la regresión falla en base y pasa en lo entregado
+        depends_on:
+          - SECURITY-QAAGENT-WORKTREE-LIMPIO-20261005
+      - id: FEATURE-QAAGENT-EVIDENCIA-REPRODUCIBLE-20261005
+        title: "Emitir evidencia para reproducir worktrees, comandos y resultados"
+        depends_on:
+          - FEATURE-QAAGENT-PRUEBA-CONTRA-BASE-20261005
+      - id: FEATURE-CONFIG-HOSTS-HTTP-20261005
+        title: Declarar los hosts permitidos para criterios HTTP
+        depends_on:
+          - FEATURE-CONFIG-QA-SOMBRA-20261005
+      - id: FEATURE-GATEHTTP-CONTRATO-Y-ASERCIONES-20261005
+        title: Crear gate-http con contrato común y gramática cerrada
+        depends_on:
+          - FEATURE-CONFIG-HOSTS-HTTP-20261005
+      - id: SECURITY-GATEHTTP-PETICIONES-PERMITIDAS-20261005
+        title: Ejecutar HTTP solo hacia hosts permitidos sin saltos de red
+        depends_on:
+          - FEATURE-GATEHTTP-CONTRATO-Y-ASERCIONES-20261005
+      - id: INTEGRATION-ENGINE-COMPUERTA-QA-AGENT-20261005
+        title: Conectar qa-agent y HTTP con recibos reproducibles
+        depends_on:
+          - FEATURE-QAAGENT-EVIDENCIA-REPRODUCIBLE-20261005
+          - SECURITY-GATEHTTP-PETICIONES-PERMITIDAS-20261005
+          - SECURITY-ENGINE-AUTORIZACIONES-FIRMADAS-20261005
+      - id: SECURITY-ENGINE-QA-ATRIBUCION-POLITICA-20261005
+        title: Atribuir el ciclo de QA a la autorización humana vigente
+        depends_on:
+          - INTEGRATION-ENGINE-COMPUERTA-QA-AGENT-20261005
+      - id: FEATURE-ENGINE-QA-PERIODO-SOMBRA-20261005
+        title: Comparar veinte QA humanas sin permitir cierre durante la sombra
+        depends_on:
+          - SECURITY-ENGINE-QA-ATRIBUCION-POLITICA-20261005
+      - id: IMPROVEMENT-ADAPTER-CONTRATO-QA-HUMANA-20261005
+        title: Declarar la entrega por QA y la autorización como acción humana
+        depends_on:
+          - DOCS-SPEC-VERIFICAR-S3-20261005
+      - id: CHORE-CORE-REGRESION-QA-20261005
+        title: Probar elegibilidad y compatibilidad con ambos registros históricos
+        depends_on:
+          - FEATURE-CORE-ELEGIBILIDAD-QA-20261005
+      - id: DOCS-SPEC-VERIFICAR-S6-20261005
+        title: Registrar reproducción y veinte coincidencias de QA en sombra
+        depends_on:
+          - SECURITY-MC-AUTORIZACION-QA-20261005
+          - SECURITY-TELEGRAM-AUTORIZACION-QA-20261005
+          - FEATURE-ENGINE-QA-PERIODO-SOMBRA-20261005
+          - IMPROVEMENT-ADAPTER-CONTRATO-QA-HUMANA-20261005
+          - CHORE-CORE-REGRESION-QA-20261005
+coverage:
+  - requirement: R-CDEF-001
+    covered_by:
+      - BUGFIX-CORE-LECTOR-CRITERIOS-20261005
+  - requirement: R-CDEF-002
+    covered_by:
+      - BUGFIX-ENGINE-CRITERIOS-POR-TANDAS-20261005
+      - FEATURE-CORE-REVISION-PREVIA-20261005
+      - FEATURE-ENGINE-MIGRACION-ANTES-TESTS-20260926
+  - requirement: R-CDEF-003
+    covered_by:
+      - BUGFIX-GATE-CONTRADICCION-DESCRIPTIVA-20261005
+  - requirement: R-CDEF-004
+    covered_by:
+      - BUGFIX-ENGINE-FIRMA-DE-COMPUERTA-20261004
+  - requirement: R-CDEF-005
+    covered_by:
+      - FEATURE-GATE-MOTIVOS-RESPUESTAS-20261005
+      - FEATURE-ENGINE-RECIBOS-CON-MOTIVOS-20261005
+  - requirement: R-CDEF-006
+    covered_by:
+      - BUGFIX-GATECOMMAND-FALLOS-ENTORNO-20261005
+      - FEATURE-CONFIG-PATRONES-ENTORNO-20261005
+      - INTEGRATION-ENGINE-PATRONES-ENTORNO-20261005
+  - requirement: R-CDEF-007
+    covered_by:
+      - FEATURE-CONFIG-MIGRACION-PRUEBAS-20260926
+      - FEATURE-ENGINE-MIGRACION-ANTES-TESTS-20260926
+  - requirement: R-CDEF-008
+    covered_by:
+      - BUGFIX-ENGINE-REUTILIZAR-COMPUERTA-20261005
+  - requirement: R-CPRE-001
+    covered_by:
+      - FEATURE-CONFIG-APLICABILIDAD-PROPOSICIONES-20261005
+      - FEATURE-GATE-FILTRAR-PROPOSICIONES-20261005
+  - requirement: R-CPRE-002
+    covered_by:
+      - IMPROVEMENT-CONFIG-DIAGNOSTICO-POR-TIPO-20261005
+      - FEATURE-GATE-FILTRAR-PROPOSICIONES-20261005
+  - requirement: R-CPRE-003
+    covered_by:
+      - FEATURE-ENGINE-EVIDENCIA-FUNCIONAL-20261005
+  - requirement: R-CPRE-004
+    covered_by:
+      - IMPROVEMENT-CONFIG-CONTRATO-PROPOSICIONES-20261005
+  - requirement: R-CPRE-005
+    covered_by:
+      - IMPROVEMENT-CONFIG-IMPACTOS-ATOMICOS-20261005
+  - requirement: R-CPRE-006
+    covered_by:
+      - IMPROVEMENT-ADAPTER-PLANTILLA-EVIDENCIA-20261005
+  - requirement: R-CPRE-007
+    covered_by:
+      - BUGFIX-ENGINE-CRITERIOS-POR-TICKET-20261005
+  - requirement: R-CPRE-008
+    covered_by:
+      - FEATURE-CORE-REVISION-PREVIA-20261005
+      - INTEGRATION-ENGINE-PRECHECK-Y-VOTOS-20261005
+  - requirement: R-CPRE-009
+    covered_by:
+      - FEATURE-CORE-VOTOS-PLAN-20261005
+      - INTEGRATION-ENGINE-PRECHECK-Y-VOTOS-20261005
+  - requirement: R-CPRE-010
+    covered_by:
+      - FEATURE-CONFIG-UMBRALES-ESPECIFICOS-20261005
+      - FEATURE-GATE-RESOLVER-UMBRALES-20261005
+      - FEATURE-ENGINE-CALIBRACION-HUMANA-20261005
+  - requirement: R-CPRE-011
+    covered_by:
+      - FEATURE-ENGINE-METRICAS-PRECISION-20261005
+      - DOCS-SPEC-VERIFICAR-S2-20261005
+  - requirement: R-CPRE-012
+    covered_by:
+      - SECURITY-GATE-EVIDENCIA-DE-APROBACIONES-20261005
+  - requirement: R-CTRL-001
+    covered_by:
+      - FEATURE-CORE-IDENTIDAD-EJECUCION-20261001
+      - FEATURE-CONFIG-FUENTES-APROBACION-20261005
+      - SECURITY-ENGINE-APROBACION-PLAN-20261005
+      - SECURITY-CORE-TRANSICION-APPROVED-20261005
+      - CHORE-ENGINE-PRUEBAS-CONTROL-20261005
+  - requirement: R-CTRL-002
+    covered_by:
+      - SECURITY-ENGINE-APROBACION-DESPLIEGUE-20261005
+      - CHORE-ENGINE-PRUEBAS-CONTROL-20261005
+  - requirement: R-CTRL-003
+    covered_by:
+      - SECURITY-MC-ESCRITURAS-AUTENTICADAS-20261005
+  - requirement: R-CTRL-004
+    covered_by:
+      - BUGFIX-CORE-CIERRE-CRITERIOS-20261005
+  - requirement: R-CTRL-005
+    covered_by:
+      - BUGFIX-ENGINE-CONSUMO-SIN-DUPLICADOS-20261005
+  - requirement: R-CTRL-006
+    covered_by:
+      - IMPROVEMENT-HERMES-COSTO-CONSUMO-20261005
+      - IMPROVEMENT-CODEX-COSTO-CONSUMO-20261005
+  - requirement: R-RESP-001
+    covered_by:
+      - IMPROVEMENT-ADAPTER-CONTRATO-RESPUESTA-20261005
+  - requirement: R-RESP-002
+    covered_by:
+      - FEATURE-CLI-CLAUDE-OUTPUT-STYLE-20261005
+  - requirement: R-RESP-003
+    covered_by:
+      - SYNC-CLI-CLAUDE-IMPORT-AGENTS-20261005
+  - requirement: R-RESP-004
+    covered_by:
+      - IMPROVEMENT-ADAPTER-INFORMES-AGENTES-20261005
+  - requirement: R-RESP-005
+    covered_by:
+      - IMPROVEMENT-ADAPTER-PRESUPUESTO-AGENTS-20261005
+  - requirement: R-RESP-006
+    covered_by:
+      - IMPROVEMENT-MCP-RESUMEN-SIGUIENTE-PASO-20261005
+  - requirement: R-RESP-007
+    covered_by:
+      - SYNC-CLI-CODEX-VERBOSIDAD-20261005
+      - SYNC-CLI-OPENCODE-VERBOSIDAD-20261005
+  - requirement: R-JORN-001
+    covered_by:
+      - FEATURE-CONFIG-JORNADA-Y-RAMA-20261005
+      - INTEGRATION-ENGINE-JORNADA-DIARIA-20261005
+  - requirement: R-JORN-002
+    covered_by:
+      - FEATURE-CLI-AVANCE-JORNADA-20261005
+      - INTEGRATION-LAUNCHD-RELOJ-JORNADA-20261005
+      - INTEGRATION-HERMES-DESPACHO-JORNADA-20261001
+  - requirement: R-JORN-003
+    covered_by:
+      - FEATURE-ENGINE-JORNADA-PREPARACION-20261005
+  - requirement: R-JORN-004
+    covered_by:
+      - FEATURE-ENGINE-APROBACION-LOTE-20261005
+      - INTEGRATION-TELEGRAM-APROBACION-PLANES-20261005
+  - requirement: R-JORN-005
+    covered_by:
+      - FEATURE-ENGINE-JORNADA-EJECUCION-20261005
+      - DOCS-SPEC-VERIFICAR-S5-20261005
+  - requirement: R-JORN-006
+    covered_by:
+      - FEATURE-ENGINE-DESPACHO-POR-FASE-20261005
+  - requirement: R-JORN-007
+    covered_by:
+      - FEATURE-ENGINE-TOPES-Y-PARADA-20261005
+      - IMPROVEMENT-ENGINE-VIGILANTE-JORNADA-20261005
+  - requirement: R-JORN-008
+    covered_by:
+      - IMPROVEMENT-ENGINE-VIGILANTE-JORNADA-20261005
+  - requirement: R-JORN-009
+    covered_by:
+      - FEATURE-CONFIG-JORNADA-Y-RAMA-20261005
+      - FEATURE-ENGINE-REGLAS-INTEGRACION-20260926
+      - INTEGRATION-GIT-INTEGRACION-AUTONOMA-20260926
+  - requirement: R-JORN-010
+    covered_by:
+      - SECURITY-ENGINE-JORNADA-SIN-AUTOAPROBACION-20261005
+      - DOCS-SPEC-VERIFICAR-S5-20261005
+  - requirement: R-JORN-011
+    covered_by:
+      - INTEGRATION-HERMES-DESPACHO-JORNADA-20261001
+  - requirement: R-QAAG-001
+    covered_by:
+      - SECURITY-ENGINE-CIERRE-AUTORIZADO-20260926
+      - SECURITY-ENGINE-AUTORIZACIONES-FIRMADAS-20261005
+      - SECURITY-MC-AUTORIZACION-QA-20261005
+      - SECURITY-TELEGRAM-AUTORIZACION-QA-20261005
+  - requirement: R-QAAG-002
+    covered_by:
+      - FEATURE-CORE-ELEGIBILIDAD-QA-20261005
+      - CHORE-CORE-REGRESION-QA-20261005
+  - requirement: R-QAAG-003
+    covered_by:
+      - SECURITY-QAAGENT-WORKTREE-LIMPIO-20261005
+      - INTEGRATION-ENGINE-COMPUERTA-QA-AGENT-20261005
+  - requirement: R-QAAG-004
+    covered_by:
+      - FEATURE-QAAGENT-PRUEBA-CONTRA-BASE-20261005
+  - requirement: R-QAAG-005
+    covered_by:
+      - FEATURE-QAAGENT-EVIDENCIA-REPRODUCIBLE-20261005
+      - INTEGRATION-ENGINE-COMPUERTA-QA-AGENT-20261005
+      - DOCS-SPEC-VERIFICAR-S6-20261005
+  - requirement: R-QAAG-006
+    covered_by:
+      - SECURITY-ENGINE-QA-ATRIBUCION-POLITICA-20261005
+  - requirement: R-QAAG-007
+    covered_by:
+      - FEATURE-CONFIG-HOSTS-HTTP-20261005
+      - FEATURE-GATEHTTP-CONTRATO-Y-ASERCIONES-20261005
+      - SECURITY-GATEHTTP-PETICIONES-PERMITIDAS-20261005
+      - INTEGRATION-ENGINE-COMPUERTA-QA-AGENT-20261005
+  - requirement: R-QAAG-008
+    covered_by:
+      - FEATURE-CONFIG-QA-SOMBRA-20261005
+      - FEATURE-ENGINE-QA-PERIODO-SOMBRA-20261005
+      - DOCS-SPEC-VERIFICAR-S6-20261005
+  - requirement: R-QAAG-009
+    covered_by:
+      - IMPROVEMENT-ADAPTER-CONTRATO-QA-HUMANA-20261005
+gaps: []

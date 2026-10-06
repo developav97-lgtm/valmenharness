@@ -1,0 +1,78 @@
+# Revisión de la descomposición — autonomia-confiable
+
+**Arquitecto:** `codex/gpt-6.1-sol`, 2026-10-05. El primer intento con esfuerzo
+`high` superó el tope de 5 minutos; el segundo, con esfuerzo `medium` solo para
+esa corrida (`.valmen/routing.yaml` restaurado idéntico después), devolvió 89
+tickets en 6 sprints con los 53 requisitos cubiertos. La salida original queda en
+[revision/tickets-arquitecto.yaml](revision/tickets-arquitecto.yaml).
+
+**Propuesta revisada:** 45 tickets (38 nuevos y 7 reutilizados), mismos 6
+sprints, 53 requisitos cubiertos, sin huecos ni ciclos. Validada con
+`parseTicketsYaml` y `assertDecomposable` de `@valmen/core`.
+
+## Por qué se consolidó
+
+1. **Un requisito partido en tres.** El arquitecto separó casi cada requisito en
+   configuración, motor e integración (por ejemplo
+   `BUGFIX-GATECOMMAND-FALLOS-ENTORNO`, `FEATURE-CONFIG-PATRONES-ENTORNO` e
+   `INTEGRATION-ENGINE-PATRONES-ENTORNO`). Cada ticket cuesta análisis, plan,
+   aprobación del responsable y QA; una pieza que no se prueba sola no justifica
+   ese recorrido.
+2. **Regresión y verificación como tickets aparte.** Seis `CHORE-*-REGRESION-*` y
+   seis `DOCS-SPEC-VERIFICAR-S*`. La regresión va en los criterios de cada ticket.
+   La evidencia de salida de cada sprint se escribe en `verify.md`; solo la salida
+   de S1 a S3 queda como ticket
+   (`CHORE-ENGINE-SALIDA-COMPUERTAS-CONTROL-20261005`), porque es la compuerta
+   que el brief exige antes de S5 y S6.
+3. **Tipo `SYNC` mal usado.** `SYNC-CLI-*` nombraba cambios de `valmen sync`; en
+   este registro `SYNC` es sincronización de datos y dispara compuertas humanas
+   de impacto.
+4. **Un ticket cerrado como nodo nuevo.** `FEATURE-CORE-IDENTIDAD-EJECUCION-20261001`
+   ya está cerrado en `control-jornadas-ejecucion`; R-CTRL-001 lo consume, no lo
+   rehace.
+5. **Cadenas de sprint innecesarias.** S2 esperaba la salida de S1, S3 la de S2 y
+   S6 la de S5. Ahora cada ticket espera solo lo que usa; S5 y S6 esperan la
+   salida de S1 a S3, como pide el brief, y solo
+   `SECURITY-ENGINE-QA-POR-POLITICA-20261005` espera la fase de ejecución de S5.
+
+## Correspondencia
+
+| Ticket revisado | Absorbe del arquitecto |
+|---|---|
+| BUGFIX-GATE-LECTOR-CRITERIOS | BUGFIX-CORE-LECTOR-CRITERIOS, BUGFIX-ENGINE-CRITERIOS-POR-TANDAS, CHORE-CORE-REGRESION-REGISTROS |
+| FEATURE-GATE-MOTIVOS-RECIBO | FEATURE-GATE-MOTIVOS-RESPUESTAS, FEATURE-ENGINE-RECIBOS-CON-MOTIVOS |
+| BUGFIX-GATECOMMAND-FALLOS-ENTORNO | el mismo, FEATURE-CONFIG-PATRONES-ENTORNO, INTEGRATION-ENGINE-PATRONES-ENTORNO |
+| FEATURE-GATE-APLICABILIDAD-POR-TIPO | FEATURE-CONFIG-APLICABILIDAD-PROPOSICIONES, FEATURE-GATE-FILTRAR-PROPOSICIONES |
+| IMPROVEMENT-GATE-DIAGNOSTICO-POR-TIPO | IMPROVEMENT-CONFIG-DIAGNOSTICO-POR-TIPO, FEATURE-ENGINE-EVIDENCIA-FUNCIONAL |
+| IMPROVEMENT-GATE-CONTRATO-PROPOSICIONES | IMPROVEMENT-CONFIG-CONTRATO-PROPOSICIONES, IMPROVEMENT-CONFIG-IMPACTOS-ATOMICOS, SECURITY-GATE-EVIDENCIA-DE-APROBACIONES |
+| IMPROVEMENT-CORE-PLANTILLA-Y-MATERIALIZACION | IMPROVEMENT-ADAPTER-PLANTILLA-EVIDENCIA, BUGFIX-ENGINE-CRITERIOS-POR-TICKET |
+| FEATURE-ENGINE-REVISION-PREVIA | FEATURE-CORE-REVISION-PREVIA, FEATURE-CORE-VOTOS-PLAN, INTEGRATION-ENGINE-PRECHECK-Y-VOTOS, CHORE-CORE-REGRESION-VALIDACIONES |
+| FEATURE-GATE-UMBRALES-POR-EVALUADOR | FEATURE-CONFIG-UMBRALES-ESPECIFICOS, FEATURE-GATE-RESOLVER-UMBRALES |
+| FEATURE-ENGINE-CALIBRACION-Y-PRECISION | FEATURE-ENGINE-CALIBRACION-HUMANA, FEATURE-ENGINE-METRICAS-PRECISION |
+| SECURITY-ENGINE-APROBACION-PLAN | FEATURE-CONFIG-FUENTES-APROBACION, SECURITY-ENGINE-APROBACION-PLAN |
+| SECURITY-CORE-TRANSICION-APPROVED | el mismo, CHORE-CORE-REGRESION-CONTROL |
+| SECURITY-ENGINE-APROBACION-DESPLIEGUE | el mismo, CHORE-ENGINE-PRUEBAS-CONTROL |
+| BUGFIX-ENGINE-CONSUMO-FIABLE | BUGFIX-ENGINE-CONSUMO-SIN-DUPLICADOS, IMPROVEMENT-HERMES-COSTO-CONSUMO, IMPROVEMENT-CODEX-COSTO-CONSUMO |
+| CHORE-ENGINE-SALIDA-COMPUERTAS-CONTROL | DOCS-SPEC-VERIFICAR-S1, -S2, -S3, CHORE-ENGINE-REGRESION-COMPUERTAS |
+| IMPROVEMENT-ADAPTER-CONTRATO-RESPUESTA | el mismo, IMPROVEMENT-ADAPTER-PRESUPUESTO-AGENTS |
+| FEATURE-ADAPTER-CLAUDE-CODE-RESPUESTA | FEATURE-CLI-CLAUDE-OUTPUT-STYLE, SYNC-CLI-CLAUDE-IMPORT-AGENTS |
+| IMPROVEMENT-ADAPTER-AGENTES-Y-VERBOSIDAD | IMPROVEMENT-ADAPTER-INFORMES-AGENTES, SYNC-CLI-CODEX-VERBOSIDAD, SYNC-CLI-OPENCODE-VERBOSIDAD |
+| FEATURE-ENGINE-JORNADA-DIARIA | FEATURE-CONFIG-JORNADA-Y-RAMA, INTEGRATION-ENGINE-JORNADA-DIARIA |
+| FEATURE-CLI-AVANCE-JORNADA | el mismo, INTEGRATION-LAUNCHD-RELOJ-JORNADA |
+| FEATURE-ENGINE-APROBACION-LOTE | el mismo, INTEGRATION-TELEGRAM-APROBACION-PLANES |
+| FEATURE-ENGINE-JORNADA-EJECUCION | el mismo, FEATURE-ENGINE-DESPACHO-POR-FASE |
+| SECURITY-ENGINE-CIERRE-AUTORIZADO (reutilizado) | el mismo, FEATURE-CONFIG-QA-SOMBRA (config), SECURITY-ENGINE-AUTORIZACIONES-FIRMADAS |
+| SECURITY-MC-AUTORIZACION-QA | el mismo, SECURITY-TELEGRAM-AUTORIZACION-QA |
+| SECURITY-ENGINE-COMPUERTA-QA-AGENT | SECURITY-QAAGENT-WORKTREE-LIMPIO, FEATURE-QAAGENT-PRUEBA-CONTRA-BASE, FEATURE-QAAGENT-EVIDENCIA-REPRODUCIBLE |
+| SECURITY-GATEHTTP-CRITERIO-HTTP | FEATURE-CONFIG-HOSTS-HTTP, FEATURE-GATEHTTP-CONTRATO-Y-ASERCIONES, SECURITY-GATEHTTP-PETICIONES-PERMITIDAS |
+| SECURITY-ENGINE-QA-POR-POLITICA | INTEGRATION-ENGINE-COMPUERTA-QA-AGENT, SECURITY-ENGINE-QA-ATRIBUCION-POLITICA |
+| IMPROVEMENT-ADAPTER-CONTRATO-QA-AGENTS | IMPROVEMENT-ADAPTER-CONTRATO-QA-HUMANA, CHORE-CORE-REGRESION-QA |
+
+Los demás tickets conservan el alcance que les dio el arquitecto, con el
+identificador ajustado al módulo que tocan. Se eliminan sin reemplazo
+DOCS-SPEC-VERIFICAR-S4, -S5 y -S6: su evidencia se registra en `verify.md`.
+
+## Estado
+
+El 2026-10-05 el responsable eligió el grafo revisado: «Si vamos con A en ambas
+que es tu recomendación». Se materializa en `intake`.
