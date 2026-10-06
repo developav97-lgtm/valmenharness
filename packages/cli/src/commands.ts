@@ -52,6 +52,7 @@ import {
   SKILL_RUNTIME_IDS,
   RUNTIME_DIRS,
   derivaPublicada,
+  describeAgentsMdSize,
   descripcionDeDeriva,
   instalarPublicadas,
   publicadas,
@@ -657,6 +658,22 @@ function lineaDeComparadas(root: string): string {
 }
 
 /**
+ * Cuánto pesa el `AGENTS.md` proyectado y, si pasa del presupuesto del proyecto, el
+ * aviso. Es lo que dice `sync` para que el tamaño sea una decisión y no algo que
+ * crece sin que nadie lo vea.
+ *
+ * El aviso **no** cambia el código de salida: un documento pasado de tamaño sigue
+ * siendo el que el proyecto declaró, y negarse a escribirlo dejaría a los agentes
+ * con el anterior.
+ */
+function lineasDeTamano(proyeccion: Projection): string[] {
+  return [
+    `AGENTS.md: ${describeAgentsMdSize(proyeccion.agentsMd)}`,
+    ...proyeccion.warnings.map((aviso) => `Aviso: ${aviso}`),
+  ];
+}
+
+/**
  * `sync`: proyecta `.valmen/` a los archivos que leen los agentes.
  *
  * El valor está en la **fuente única**: `AGENTS.md` deja de ser un archivo que
@@ -714,10 +731,16 @@ export function syncProject(
         );
       }
       if (deriva.length > 0) partes.push(descripcionDeDeriva(deriva));
+      // El aviso de tamaño también cuenta cuando hay otra cosa que arreglar: es lo
+      // que se vería de todos modos tras el próximo `sync`.
+      partes.push(...proyeccion.warnings.map((aviso) => `Aviso: ${aviso}`));
       return error(partes.join("\n"));
     }
 
-    return ok(`Archivos generados al día.\n${lineaDeComparadas(root)}\n`);
+    return ok(
+      `Archivos generados al día.\n${lineaDeComparadas(root)}\n` +
+        `${lineasDeTamano(proyeccion).join("\n")}\n`,
+    );
   }
 
   for (const file of projected) {
@@ -727,6 +750,7 @@ export function syncProject(
   const lines = [
     "Sincronización",
     `  AGENTS.md                (${proyeccion.ruleCount} archivo(s) de reglas del proyecto)`,
+    `  tamaño de AGENTS.md      ${describeAgentsMdSize(proyeccion.agentsMd)}`,
   ];
 
   if (proyeccion.agentCount > 0) {
@@ -763,6 +787,8 @@ export function syncProject(
   if (proyeccion.ruleCount === 0) {
     lines.push("  Añada reglas en .valmen/rules/ para que se incluyan en AGENTS.md.");
   }
+
+  for (const aviso of proyeccion.warnings) lines.push(`  Aviso: ${aviso}`);
 
   return ok(lines.join("\n") + "\n");
 }

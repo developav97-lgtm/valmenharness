@@ -33,6 +33,7 @@ import {
   skillText,
   withRoutedRules,
 } from "../packages/adapter/src/index.js";
+import { syncProject } from "../packages/cli/src/commands.js";
 import { getPromptFor } from "../packages/mcp/src/prompts.js";
 
 let lab: string;
@@ -606,5 +607,82 @@ describe("compatibilidad hacia atrás", () => {
     projectFiles(lab, "Demo");
 
     expect(fuentes.map(huella)).toEqual(antes);
+  });
+});
+
+describe("valmen sync informa el tamaño", () => {
+  /** La línea de tamaño tal como la imprime el comando, calculada del archivo que dejó. */
+  function tamanoEscrito(presupuesto: number | null): string {
+    const contenido = readFileSync(join(lab, "AGENTS.md"), "utf8");
+    return describeAgentsMdSize(measureAgentsMd(contenido, presupuesto));
+  }
+
+  it("al escribir, dice cuánto pesa el AGENTS.md que escribió y no avisa si no hay presupuesto", () => {
+    scaffold({ "estandares-backend.md": BACKEND });
+
+    const resultado = syncProject(lab, "Demo", false);
+
+    expect(resultado.exitCode).toBe(0);
+    expect(resultado.stdout).toContain(`  tamaño de AGENTS.md      ${tamanoEscrito(null)}`);
+    expect(resultado.stdout).toMatch(/[\d ]+ B \(~[\d ]+ tokens\)/);
+    expect(resultado.stdout).not.toContain("presupuesto");
+    expect(resultado.stdout).not.toContain("Aviso");
+  });
+
+  it("al escribir, avisa cuando pasa del presupuesto y aun así escribe y sale en 0", () => {
+    scaffold({ "estandares-backend.md": BACKEND }, "name: Demo\nagents-md-budget: 1000\n");
+
+    const resultado = syncProject(lab, "Demo", false);
+
+    expect(resultado.exitCode).toBe(0);
+    expect(resultado.stdout).toContain("presupuesto 1 000 B");
+    expect(resultado.stdout).toContain("  Aviso: AGENTS.md pasa del presupuesto");
+    expect(resultado.stdout).toContain("rules-to-skills");
+    // El documento se escribió: el aviso no bloquea.
+    expect(readFileSync(join(lab, "AGENTS.md"), "utf8")).toContain("GENERADO POR valmen");
+  });
+
+  it("no avisa cuando cabe en el presupuesto, pero lo muestra", () => {
+    scaffold(
+      { "estandares-backend.md": BACKEND },
+      "name: Demo\nagents-md-budget: 200000\n",
+    );
+
+    const resultado = syncProject(lab, "Demo", false);
+
+    expect(resultado.stdout).toContain("presupuesto 200 000 B");
+    expect(resultado.stdout).not.toContain("Aviso");
+  });
+
+  it("con --check al día, repite el tamaño y el aviso sin cambiar el código de salida", () => {
+    scaffold({ "estandares-backend.md": BACKEND }, "name: Demo\nagents-md-budget: 1000\n");
+    syncProject(lab, "Demo", false);
+
+    const resultado = syncProject(lab, "Demo", true);
+
+    expect(resultado.exitCode).toBe(0);
+    expect(resultado.stdout).toContain(`AGENTS.md: ${tamanoEscrito(1000)}`);
+    expect(resultado.stdout).toContain("Aviso: AGENTS.md pasa del presupuesto");
+  });
+
+  it("con --check desactualizado, el aviso viaja junto al error", () => {
+    scaffold({ "estandares-backend.md": BACKEND }, "name: Demo\nagents-md-budget: 1000\n");
+
+    const resultado = syncProject(lab, "Demo", true);
+
+    expect(resultado.exitCode).not.toBe(0);
+    expect(resultado.stderr + resultado.stdout).toContain("AGENTS.md (falta)");
+    expect(resultado.stderr + resultado.stdout).toContain(
+      "Aviso: AGENTS.md pasa del presupuesto",
+    );
+  });
+
+  it("un presupuesto inválido hace fallar el comando y lo dice", () => {
+    scaffold({}, "name: Demo\nagents-md-budget: mucho\n");
+
+    const resultado = syncProject(lab, "Demo", false);
+
+    expect(resultado.exitCode).not.toBe(0);
+    expect(resultado.stderr + resultado.stdout).toContain('"agents-md-budget"');
   });
 });

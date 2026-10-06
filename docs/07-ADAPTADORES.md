@@ -283,7 +283,10 @@ agents-md-budget: 24000     # bytes; entero ≥ 1000. Sin la clave no hay presup
 
 La proyección mide el documento (`Projection.agentsMd`: bytes, tokens estimados como `bytes / 4`
 y si pasa del presupuesto) y arma el aviso (`Projection.warnings`), que dice cuánto se pasa y
-sugiere `rules-to-skills`. El aviso **no bloquea**: un documento pasado de tamaño sigue siendo el
+sugiere `rules-to-skills`. `valmen sync` imprime la línea «tamaño de AGENTS.md» (bytes, tokens
+estimados y presupuesto si lo hay) y el aviso; con `--check`, el resultado al día repite
+`AGENTS.md: <tamaño>` y el aviso, y un resultado desactualizado lo lleva junto al error. El aviso
+**no bloquea**: un documento pasado de tamaño sigue siendo el
 que el proyecto declaró. Un valor que no sea un entero ≥ 1000 hace fallar la proyección en vez de
 ignorarse.
 
