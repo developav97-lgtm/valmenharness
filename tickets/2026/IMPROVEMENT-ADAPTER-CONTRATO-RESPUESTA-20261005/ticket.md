@@ -144,7 +144,7 @@ Ninguno.
       <!-- test: npx vitest run tests/agents-md-tamano.test.ts tests/adapters.test.ts tests/skills.test.ts tests/skills-publicadas.test.ts tests/config-view.test.ts tests/mcp-prompts.test.ts -->
 - [x] 9. Se entregan las medidas de bytes y tokens estimados del AGENTS.md de SaiOpenCloud antes (54 425 B) y después, medidas sobre una copia, y el PO las lee
       <!-- verify: manual -->
-- [ ] 10. `valmen sync` imprime el tamaño del AGENTS.md y el aviso de presupuesto (condicionado al paso 11; si `commands.ts` sigue con cambios ajenos queda sin marcar y se dice en la entrega)
+- [x] 10. `valmen sync` imprime el tamaño del AGENTS.md y el aviso de presupuesto (condicionado al paso 11; si `commands.ts` sigue con cambios ajenos queda sin marcar y se dice en la entrega)
       <!-- verify: manual -->
 
 ## Puntos
@@ -191,6 +191,17 @@ Con la regla de pantalla en las skills, cada una de las dos pasa de ~3,9 KB a ~1
 
 Anexo pedido por el PO, que no es trabajo de este ticket: la evidencia de `corresponde_a_la_investigacion` quedó en `docs/evidencia-gate-20261006/` y en un tercer vector de `IMPROVEMENT-GATE-CONTRATO-PROPOSICIONES-20261005`, más el aprendizaje AP-010. Resultado: la causa es la proposición (pregunta por archivos iguales y un plan que crea archivos nuevos incumple su cláusula «no»), no la línea de aprobación ni el largo del diagnóstico.
 
+### Reapertura: paso 11 (criterio 10), 2026-10-06
+
+El PO eligió reabrir este ticket para cablear el aviso en `valmen sync` («vamos con las recomendadas» y «las recomendadas», 2026-10-06) y hacerlo cuando `commands.ts` quedara libre. Quedó libre con el commit `95f7cb1` de la otra sesión (`git diff --quiet -- packages/cli/src/commands.ts` confirmó el archivo limpio antes de editarlo), y el ticket pasó `closed → changes_requested → in_progress` con ese motivo. Sigue `unreleased`.
+
+- `packages/cli/src/commands.ts`: `lineasDeTamano` (nueva) y cuatro cambios en `syncProject`, sin tocar nada más del archivo (27 líneas agregadas, 1 cambiada). Al escribir, el informe suma `tamaño de AGENTS.md <bytes> B (~<tokens> tokens)` —con el presupuesto si hay— y, si se pasa, `Aviso: …`. Con `--check` al día repite `AGENTS.md: <tamaño>` y el aviso; desactualizado, el aviso viaja junto al error. El aviso no cambia el código de salida. Importa `describeAgentsMdSize` del adaptador; el dato sale de `Projection.agentsMd` y `Projection.warnings`, que ya existían.
+- `tests/agents-md-tamano.test.ts`: seis pruebas nuevas en «valmen sync informa el tamaño» (al escribir sin y con presupuesto, presupuesto holgado, `--check` al día, `--check` desactualizado y presupuesto inválido). Quitar la línea de tamaño, el aviso al escribir o el tamaño en `--check` hace fallar entre 1 y 3 de ellas.
+- `docs/07-ADAPTADORES.md` §6.3: dice qué imprime `valmen sync`.
+- Salida real sobre la copia de SaiOpenCloud (scratchpad) con `agents-md-budget: 30000` y la regla de pantalla en las skills: `tamaño de AGENTS.md  41 083 B (~10 271 tokens), presupuesto 30 000 B` y `Aviso: AGENTS.md pasa del presupuesto: 41 083 B … contra 30 000 B, 11 083 B de más`; `--check` repite ambos y sale en 0. En este repositorio, `--check`: `AGENTS.md: 22 995 B (~5 749 tokens)`.
+- El `AGENTS.md` de este repositorio no cambia: el contenido proyectado es el mismo.
+- Consumo de IA: `CONSUMO-001` cubre la sesión hasta 2026-10-06T03:49Z y esta reapertura es posterior, así que su gasto no está sumado en esa entrada; el motor no admite una segunda entrada para la misma sesión.
+
 ## Pruebas
 
 Estado: corridas locales en verde; la confirmación de las pruebas es del responsable.
@@ -226,6 +237,26 @@ Corrida del responsable delegada al agente (2026-10-06, ~03:55Z). El PO dijo, co
 
 El criterio 10 (`valmen sync` imprime el tamaño y el aviso) no se verificó y sigue sin marcar: `packages/cli/src/commands.ts` conserva cambios sin commitear de otra sesión, y la decisión A del PO fue no editarlo mientras fuera así.
 
+### Segundo ciclo: paso 11 (reapertura, 2026-10-06)
+
+Contrato para el responsable, desde `/Users/juanandrade/Desktop/ValmenHarness`, sin red ni servicios:
+
+| # | Comando | Resultado esperado |
+|---|---|---|
+| 7 | `npx vitest run tests/agents-md-tamano.test.ts` | 45 pruebas en verde; las seis de «valmen sync informa el tamaño» fallan si se quita la línea de tamaño o el aviso |
+| 8 | `npx vitest run` | 142 archivos y 2 231 pruebas en verde, 48 omitidas |
+| 9 | `npx tsc --noEmit -p tsconfig.json` | sin salida y código 0 |
+
+Validación manual (criterio 10): en un proyecto cuyo `.valmen/config.yaml` declare `agents-md-budget: 1000`, `valmen sync` imprime `tamaño de AGENTS.md … presupuesto 1 000 B` y una línea `Aviso: AGENTS.md pasa del presupuesto…` y sale en 0; sin esa clave imprime solo el tamaño. Se comprobó con `syncProject` sobre la copia de SaiOpenCloud; el CLI compilado (`dist`) puede estar viejo hasta correr `npm run build`.
+
+Corrida del responsable delegada al agente (2026-10-06, segundo ciclo). El PO dijo, con sus palabras: «corre los comandos y si el resultado es el esperado te aprubo para que documentes, cierres y hagas commit y push». El agente corrió las pruebas 7 a 9 desde cero y el resultado fue el esperado:
+
+- Prueba 7 (`npx vitest run tests/agents-md-tamano.test.ts`): 1 archivo y 45 pruebas en verde.
+- Prueba 8 (`npx vitest run`): 142 archivos y 2 231 pruebas en verde, 48 omitidas.
+- Prueba 9 (`npx tsc --noEmit -p tsconfig.json`): código 0.
+- Validación manual del criterio 10: la salida real de `syncProject` sobre la copia de SaiOpenCloud con `agents-md-budget: 30000` imprime la línea de tamaño y el aviso y sale en 0 (arriba, en `## Implementación`); con presupuesto 1000 lo comprueban las pruebas de `valmen sync informa el tamaño`. El criterio 10 se marca por esa verificación y por la aprobación del PO; él no vio la salida por separado.
+- Resultado del PO: delegó la corrida en el agente y la condicionó con las palabras de arriba; el agente la corrió y el resultado fue el esperado; la condición se cumplió.
+
 ## QA
 
 ```json
@@ -249,6 +280,48 @@ El criterio 10 (`valmen sync` imprime el tamaño y el aviso) no se verificó y s
     "findings": [],
     "correction": null,
     "po_confirmation": "si los corres tu y el resultado es el esperado te apruebo para que se apruebe QA y se pueda cerrar"
+  },
+  {
+    "id": "QA-003",
+    "date": "2026-10-06",
+    "build_reference": "worktree:sha256:e38cdc37548db9d15f436aee0752a324d8c7fa119083c5bc08e9c47bfcb63a43",
+    "environment": "macOS (Darwin 27.0.0), Node v26.10.0, vitest 2.1.9, repositorio /Users/juanandrade/Desktop/ValmenHarness en main, commit 5f1bfce335cc3a5e1cc63bdbfa69815665e9f277, con cambios sin commitear de otra sesión en el árbol que no se tocaron; sin red, base de datos ni servicios. Los proyectos de prueba son carpetas temporales creadas por las pruebas; SaiOpenCloud solo se midió sobre una copia de su .valmen/ en el scratchpad de la sesión. La referencia es el hash de los 12 archivos funcionales del commit (AGENTS.md, docs/07-ADAPTADORES.md, packages/adapter/src/agents-size.ts, index.ts, project.ts, projection.ts, rule-projection.ts, skills.ts, templates.ts, packages/mcp/src/prompts.ts, tests/agents-md-tamano.test.ts, tests/respuesta-agents-md.test.ts), con el algoritmo de calculateWorktreeReference sobre el contenido de git show; el contenido del commit es idéntico al del árbol de trabajo que se probó.",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-004",
+    "date": "2026-10-06",
+    "build_reference": null,
+    "environment": null,
+    "result": "changes_requested",
+    "findings": [
+      "El criterio 10 (valmen sync imprime el tamaño del AGENTS.md y el aviso de presupuesto) quedó sin cumplir porque commands.ts tenía cambios de otra sesión; esos cambios se commitearon en 95f7cb1 y el archivo está limpio. El PO eligió reabrir este ticket para cablear las líneas en syncProject, probarlas y volver a cerrarlo."
+    ],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-005",
+    "date": "2026-10-06",
+    "build_reference": "worktree:sha256:f82880905706b324e192aba2d982c3b48593f2cea5852f5fc05e014e3addb8d4",
+    "environment": "macOS (Darwin 27.0.0), Node v26.10.0, vitest 2.1.9, repositorio /Users/juanandrade/Desktop/ValmenHarness en main, commit e790413b4a13452aad046afc4cf67b68b3020185 (sobre 5f1bfce), sin cambios ajenos pendientes salvo tickets/index.md y el ticket de otra sesión; sin red, base de datos ni servicios. Los proyectos de prueba son carpetas temporales creadas por las pruebas; SaiOpenCloud solo se midió sobre una copia de su .valmen/ en el scratchpad de la sesión. La referencia es el hash de los 13 archivos funcionales del commit (AGENTS.md, docs/07-ADAPTADORES.md, packages/adapter/src/agents-size.ts, index.ts, project.ts, projection.ts, rule-projection.ts, skills.ts, templates.ts, packages/cli/src/commands.ts, packages/mcp/src/prompts.ts, tests/agents-md-tamano.test.ts, tests/respuesta-agents-md.test.ts), con el algoritmo de calculateWorktreeReference sobre el contenido de git show; el contenido del commit es idéntico al del árbol de trabajo que se probó.",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-006",
+    "date": "2026-10-06",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "corre los comandos y si el resultado es el esperado te aprubo para que documentes, cierres y hagas commit y push"
   }
 ]
 ```
@@ -263,6 +336,14 @@ El criterio 10 (`valmen sync` imprime el tamaño y el aviso) no se verificó y s
     "kind": "automated-test",
     "description": "Corrida del agente a pedido del PO, desde /Users/juanandrade/Desktop/ValmenHarness, 2026-10-06. (1) npx vitest run tests/respuesta-agents-md.test.ts tests/agents-md-tamano.test.ts tests/dogfooding-registro.test.ts: 3 archivos, 54 pruebas en verde. (2) npx vitest run tests/agents-md-tamano.test.ts tests/adapters.test.ts tests/skills.test.ts tests/skills-publicadas.test.ts tests/config-view.test.ts tests/mcp-prompts.test.ts: 6 archivos, 138 pruebas en verde. (3) npx vitest run: 141 archivos y 2221 pruebas en verde, 48 omitidas (línea base antes del cambio: 138 archivos y 2161 pruebas). (4) npx tsc --noEmit -p tsconfig.json: código 0. (5) Estado del índice exportado con git checkout-index, sin el trabajo ajeno: tsc en 0 y 153 pruebas de ocho archivos en verde. (6) Gate qa-mechanical: recibo GR-20261006-IMPROVEMENT-ADAPTER-CONTRATO-RESPUESTA-20261005-qa-mechanical-2 en approve, 8 de 8 criterios con test. Mutaciones sobre project.ts (sin contrato, sin compactación, sin encaminamiento, sin retitulado) hacen fallar 9, 2, 2 y 1 pruebas y el archivo se restauró idéntico. Commit 5f1bfce335cc3a5e1cc63bdbfa69815665e9f277.",
     "reference": "worktree:sha256:e38cdc37548db9d15f436aee0752a324d8c7fa119083c5bc08e9c47bfcb63a43",
+    "point_id": null
+  },
+  {
+    "id": "EVIDENCE-002",
+    "date": "2026-10-06",
+    "kind": "automated-test",
+    "description": "Segundo ciclo (reapertura por el criterio 10), corrida del agente a pedido del PO, desde /Users/juanandrade/Desktop/ValmenHarness, 2026-10-06. (7) npx vitest run tests/agents-md-tamano.test.ts: 1 archivo, 45 pruebas en verde (6 nuevas de «valmen sync informa el tamaño»). (8) npx vitest run: 142 archivos y 2231 pruebas en verde, 48 omitidas. (9) npx tsc --noEmit -p tsconfig.json: código 0. Mutaciones sobre syncProject (sin aviso al escribir, sin línea de tamaño, sin tamaño en --check) hacen fallar 1, 3 y 1 pruebas y el archivo se restauró idéntico. Salida real de syncProject sobre una copia de SaiOpenCloud con agents-md-budget: 30000 y la regla de pantalla en las skills: «tamaño de AGENTS.md  41 083 B (~10 271 tokens), presupuesto 30 000 B» y «Aviso: AGENTS.md pasa del presupuesto … 11 083 B de más», con salida 0; --check repite ambos. Commit e790413b4a13452aad046afc4cf67b68b3020185.",
+    "reference": "worktree:sha256:f82880905706b324e192aba2d982c3b48593f2cea5852f5fc05e014e3addb8d4",
     "point_id": null
   }
 ]
@@ -288,6 +369,17 @@ El criterio 10 (`valmen sync` imprime el tamaño y el aviso) no se verificó y s
     "qa_waiver_reason": null,
     "po_confirmation": null,
     "release_impact": "Queda unreleased: el cambio vive en main sin etiqueta ni publicación; lo recibe cada proyecto en su próximo valmen sync, y sync --check lo marca desactualizado hasta entonces. Si algún proyecto lo rechaza se revierte el commit 5f1bfce y se vuelve a correr valmen sync."
+  },
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-002",
+    "date": "2026-10-06",
+    "technical_summary": "En packages/adapter: templates.ts exporta el contrato (RESPONSE_CONTRACT_*), rule-projection.ts (nuevo, puro) compacta el «Por qué» de los estandares-*, lee rules-to-skills, deja el puntero y retitula una colisión con «Cómo se responde», agents-size.ts (nuevo, puro) lee agents-md-budget y mide bytes y tokens (bytes/4), project.ts compone todo en projectAgentsMd, skills.ts suma las reglas encaminadas a SkillDefinition.rules con withRoutedRules y skillText, y projection.ts expone Projection.agentsMd y Projection.warnings. packages/mcp/src/prompts.ts sirve cada skill con sus reglas encaminadas y su local.md. En packages/cli/src/commands.ts, syncProject imprime el tamaño y el aviso (lineasDeTamano) y no cambia el código de salida. sync --check verifica la sección porque compara el archivo entero; el AGENTS.md de este repositorio se regeneró con la misma función. Pruebas nuevas en tests/respuesta-agents-md.test.ts y tests/agents-md-tamano.test.ts (56). Commits: 5f1bfce (R-RESP-001 y R-RESP-005) y e790413 (criterio 10, tras reabrir).",
+    "functional_summary": "Todo proyecto que monte el harness recibe, en el AGENTS.md que lee cada cliente, la sección «Cómo se responde» antes de sus reglas: la respuesta en la primera línea, las decisiones como opciones con su efecto y una recomendación en cinco líneas o menos, la evidencia citada y no transcrita, y la declaración de que eso prevalece sobre cualquier modo de respuesta heredado. El documento pesa menos: el «Por qué» de los estándares va en una línea y el proyecto puede declarar un presupuesto de tamaño y mandar las reglas de pantalla a las skills de interfaz. Y `valmen sync` dice cuánto pesa el AGENTS.md y avisa cuando pasa del presupuesto, tanto al escribir como con --check, sin bloquear. Medido sobre una copia de SaiOpenCloud: de 54 425 B (~13 607 tokens) a 49 520 B sin configurar nada y a 41 083 B (~10 271 tokens) con la regla de pantalla en las skills; la meta de ~22 KB queda para el ticket de compactación de las plantillas del harness (IMPROVEMENT-ADAPTER-PLANTILLAS-COMPACTAS-20261006).",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "Queda unreleased: el cambio vive en main sin etiqueta ni publicación; lo recibe cada proyecto en su próximo valmen sync, y sync --check lo marca desactualizado hasta entonces. Si algún proyecto lo rechaza se revierten los commits 5f1bfce y e790413 y se vuelve a correr valmen sync."
   }
 ]
 ```
@@ -444,6 +536,96 @@ Sin publicar todavía.
     "id": "EVENT-014",
     "date": "2026-10-05",
     "at": "2026-10-06T03:54:33.140Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-05",
+    "at": "2026-10-06T04:20:20.165Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: closed -> changes_requested. Reapertura por hallazgo: El criterio 10 (valmen sync imprime el tamaño del AGENTS.md y el aviso de presupuesto) quedó sin cumplir porque commands.ts tenía cambios de otra sesión; esos cambios se commitearon en 95f7cb1 y el archivo está limpio. El PO eligió reabrir este ticket para cablear las líneas en syncProject, probarlas y volver a cerrarlo."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-05",
+    "at": "2026-10-06T04:20:35.393Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: changes_requested -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-05",
+    "at": "2026-10-06T04:23:21.086Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-05",
+    "at": "2026-10-06T04:26:00.401Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-05",
+    "at": "2026-10-06T04:26:09.436Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-005."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-05",
+    "at": "2026-10-06T04:26:13.150Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-05",
+    "at": "2026-10-06T04:26:15.858Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-006 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-05",
+    "at": "2026-10-06T04:26:17.507Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-05",
+    "at": "2026-10-06T04:26:25.614Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-05",
+    "at": "2026-10-06T04:26:27.283Z",
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: qa_approved -> closed."
