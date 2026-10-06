@@ -38,6 +38,15 @@ con su pregunta antes de avanzar a análisis; el análisis no planifica sobre
 la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
 Ninguno.
 
+Vector real para el análisis (no es una decisión pendiente): el recibo
+`GR-20261006-BUGFIX-GATE-LECTOR-CRITERIOS-20261005-plan-1` (gate `plan`, cascada) dio
+`corresponde_a_la_investigacion` = 0.00 —descriptiva, no decide— con la clasificación
+«completo» y todo lo demás ≥ 0.94, el mismo patrón de AP-004 y AP-005. Hipótesis sin
+comprobar, relacionadas con R-CPRE-004 y R-CPRE-012: el plan se evaluó con la línea «pendiente
+de la aprobación explícita del PO» en su primer renglón, y el diagnóstico es largo. El
+análisis debe reproducirlo con ese estado (stateHash `7aa937859f2f2e2acc5fe7ac2345433dc4da78391e2866b8ee6f6099d2d6f827`)
+antes de proponer un cambio.
+
 ## Descripción funcional
 
 - Alcance:
