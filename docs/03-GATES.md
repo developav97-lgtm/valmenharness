@@ -680,6 +680,26 @@ señalar el trabajo que necesita una mirada.
 2. Medir la coincidencia: de las veces que el gate dijo `approve`, ¿cuántas el humano aprobó?
 3. Promover a `auto` solo para tickets de riesgo `low` cuando la coincidencia supere el 98%.
 
+#### Qué cuenta como criterio y cuántos se evalúan
+
+Una proposición por criterio solo sirve si «criterio» significa lo que el ticket declaró.
+`extractCriteriaSpecs` lee la sección «Criterios de aceptación» con tres reglas:
+
+- **Solo un ítem de lista es un criterio**: viñeta con casilla, guion o número. Un
+  comentario HTML —el de la plantilla incluido— no lo es, ocupe una línea o varias; las
+  únicas anotaciones que se interpretan son `<!-- test: … -->` y `<!-- verify: … -->`,
+  que pueden ir en la línea del criterio, en la de abajo o repartidas en dos.
+- **Una línea pegada a una viñeta**, sin línea en blanco de por medio, es la continuación
+  de ese criterio y se une a él; tras una línea en blanco no es criterio.
+- **Ningún criterio se descarta por cantidad.** El lector ya no corta en 12: el gate `plan`
+  evalúa los criterios en tandas de a lo sumo `MAX_CRITERIA_PROPOSITIONS` (12), con las
+  proposiciones fijas en la primera, y el recibo anota «N criterios evaluados en K tandas».
+  Con 12 o menos la evaluación es una sola llamada, como siempre. `qa-mechanical` corre
+  todos los comandos declarados.
+
+Lo midió el recibo de `IMPROVEMENT-SKILLS-PUBLICADAS-20260926`: 13 criterios declarados, 12
+proposiciones evaluadas y 3 de ellas eran las líneas del comentario de la plantilla.
+
 ### 5.1quinquies Los impactos dejan de ser decorativos
 
 Un ticket que toca una migración y un bugfix de una línea no son el mismo riesgo, y hasta ahora

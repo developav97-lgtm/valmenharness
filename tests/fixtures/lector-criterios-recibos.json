@@ -1,0 +1,127 @@
+{
+  "nota": "Vectores reales de R-CDEF-001/002: la sección que evaluaron seis recibos con el comentario de la plantilla leído como criterio, y la de IMPROVEMENT-SKILLS-PUBLICADAS-20260926, que declara 13 criterios y el recibo evaluó 12 (3 falsos).",
+  "recibos": [
+    {
+      "ticket": "BUGFIX-GATE-CONTRADICCION-ANALYSIS-20261005",
+      "recibo": "GR-20261005-BUGFIX-GATE-CONTRADICCION-ANALYSIS-20261005-plan-1",
+      "resultado": "block",
+      "comentario": [
+        "<!-- Una afirmación verificable por criterio. Una frase con «y» son dos criterios:",
+        "cada uno se despliega como una proposición propia, y una que agrupa varias",
+        "afirmaciones cae en banda de revisión aunque el plan la cubra entera. -->"
+      ],
+      "criterios": [
+        "El vector AP-004 con síntoma bloqueado, clasificación `completa` y causa, archivos y riesgos aprobados devuelve `review`, nunca `approve`.",
+        "Si `causa_especifica` o `nombra_archivos_reales` bloquea, el mismo gate analysis devuelve `block`.",
+        "Un gate que no declara la excepción conserva el veto absoluto ante un bloqueo aislado.",
+        "La suite completa mantiene el comportamiento de los gates y de sus recibos."
+      ],
+      "seccion": "<!-- Una afirmación verificable por criterio. Una frase con «y» son dos criterios:\ncada uno se despliega como una proposición propia, y una que agrupa varias\nafirmaciones cae en banda de revisión aunque el plan la cubra entera. -->\n\n- [ ] El vector AP-004 con síntoma bloqueado, clasificación `completa` y causa, archivos y riesgos aprobados devuelve `review`, nunca `approve`.\n- [ ] Si `causa_especifica` o `nombra_archivos_reales` bloquea, el mismo gate analysis devuelve `block`.\n- [ ] Un gate que no declara la excepción conserva el veto absoluto ante un bloqueo aislado.\n- [ ] La suite completa mantiene el comportamiento de los gates y de sus recibos."
+    },
+    {
+      "ticket": "IMPROVEMENT-SKILLS-PUBLICADAS-20260926",
+      "recibo": "GR-20260927-plan",
+      "resultado": "review",
+      "comentario": [
+        "<!-- Una afirmación verificable por criterio. Una frase con «y» son dos criterios:",
+        "cada uno se despliega como una proposición propia, y una que agrupa varias",
+        "afirmaciones cae en banda de revisión aunque el plan la cubra entera. -->"
+      ],
+      "criterios": [
+        "El catálogo publicado existe con su versión: `skills/planificacion/SKILL.md` declara `version:` y `origen: valmen` — `test -f skills/planificacion/SKILL.md && grep -q '^version:' skills/planificacion/SKILL.md`.",
+        "El adaptador expone la versión publicada: `versionPublicada(\"planificacion\")` devuelve la del catálogo — `npx vitest run tests/skills-publicadas.test.ts`.",
+        "`adopt` instala la publicada en el proyecto adoptado: tras adoptar un registro temporal, `.valmen/skills/planificacion/SKILL.md` coincide con el catálogo — `npx vitest run tests/skills-publicadas.test.ts`.",
+        "`sync --check` calla cuando la copia coincide con la publicada: la salida no nombra la skill — `npx vitest run tests/skills-publicadas.test.ts`.",
+        "`sync --check` nombra la deriva con las dos versiones: con la copia del proyecto en una versión anterior, la salida nombra `planificacion` y ambas versiones — `npx vitest run tests/skills-publicadas.test.ts`.",
+        "`sync --check` detecta la edición a mano: con el contenido de la publicada alterado, la salida dice que la copia fue editada — `npx vitest run tests/skills-publicadas.test.ts`.",
+        "`sync` actualiza la copia sin pisar lo local: tras sincronizar, la copia queda igual al catálogo y `local.md` conserva su contenido — `npx vitest run tests/skills-publicadas.test.ts`.",
+        "La proyección concatena `local.md`: el archivo proyectado en `.opencode/skills/planificacion/SKILL.md` termina con el contenido de `local.md` — `npx vitest run tests/skills-publicadas.test.ts`.",
+        "El check ignora las skills del proyecto: `.valmen/skills/desarrollo-backend/` no aparece en la salida del check de versión — `npx vitest run tests/skills-publicadas.test.ts`."
+      ],
+      "seccion": "<!-- Una afirmación verificable por criterio. Una frase con «y» son dos criterios:\ncada uno se despliega como una proposición propia, y una que agrupa varias\nafirmaciones cae en banda de revisión aunque el plan la cubra entera. -->\n\n- [ ] El catálogo publicado existe con su versión: `skills/planificacion/SKILL.md` declara `version:` y `origen: valmen` — `test -f skills/planificacion/SKILL.md && grep -q '^version:' skills/planificacion/SKILL.md`.\n- [ ] El adaptador expone la versión publicada: `versionPublicada(\"planificacion\")` devuelve la del catálogo — `npx vitest run tests/skills-publicadas.test.ts`.\n- [ ] `adopt` instala la publicada en el proyecto adoptado: tras adoptar un registro temporal, `.valmen/skills/planificacion/SKILL.md` coincide con el catálogo — `npx vitest run tests/skills-publicadas.test.ts`.\n- [ ] `sync --check` calla cuando la copia coincide con la publicada: la salida no nombra la skill — `npx vitest run tests/skills-publicadas.test.ts`.\n- [ ] `sync --check` nombra la deriva con las dos versiones: con la copia del proyecto en una versión anterior, la salida nombra `planificacion` y ambas versiones — `npx vitest run tests/skills-publicadas.test.ts`.\n- [ ] `sync --check` detecta la edición a mano: con el contenido de la publicada alterado, la salida dice que la copia fue editada — `npx vitest run tests/skills-publicadas.test.ts`.\n- [ ] `sync` actualiza la copia sin pisar lo local: tras sincronizar, la copia queda igual al catálogo y `local.md` conserva su contenido — `npx vitest run tests/skills-publicadas.test.ts`.\n- [ ] La proyección concatena `local.md`: el archivo proyectado en `.opencode/skills/planificacion/SKILL.md` termina con el contenido de `local.md` — `npx vitest run tests/skills-publicadas.test.ts`.\n- [ ] El check ignora las skills del proyecto: `.valmen/skills/desarrollo-backend/` no aparece en la salida del check de versión — `npx vitest run tests/skills-publicadas.test.ts`."
+    },
+    {
+      "ticket": "BUGFIX-POS-EDICION-MANUAL-AJUSTES-20260929",
+      "recibo": "GR-20260929-plan",
+      "resultado": "review",
+      "comentario": [
+        "<!-- Una afirmación verificable por criterio. Una frase con «y» son dos criterios:",
+        "cada uno se despliega como una proposición propia, y una que agrupa varias",
+        "afirmaciones cae en banda de revisión aunque el plan la cubra entera. -->"
+      ],
+      "criterios": [
+        "El botón «Editar factura» solo se ve en la vista de factura con el modo soporte activo (Ctrl+Shift+D) y desaparece al desactivarlo",
+        "El botón «Editar factura» sigue sin verse para rol distinto de ADMIN, para factura transmitida y para devolución",
+        "En la creación manual los campos calculados —subtotal, valor bruto, descuento, bonificación, IVA, ICO, licores, INPP, IBUA, ICUI y total— se ven con la presentación de lectura: fondo propio, borde discontinuo y cursor por defecto",
+        "En la edición de factura los mismos campos calculados se ven con la presentación de lectura igual que en la creación",
+        "Digitando un precio con calma —p. ej. 30000, una tecla por segundo— el foco se mantiene en el campo precio desde la primera hasta la última tecla, sin volver a hacer clic",
+        "Tras terminar de digitar el precio, el total de la factura recalcula y refleja el precio nuevo sin editar otra cosa"
+      ],
+      "seccion": "<!-- Una afirmación verificable por criterio. Una frase con «y» son dos criterios:\ncada uno se despliega como una proposición propia, y una que agrupa varias\nafirmaciones cae en banda de revisión aunque el plan la cubra entera. -->\n\n- [ ] El botón «Editar factura» solo se ve en la vista de factura con el modo soporte activo (Ctrl+Shift+D) y desaparece al desactivarlo\n- [ ] El botón «Editar factura» sigue sin verse para rol distinto de ADMIN, para factura transmitida y para devolución\n- [ ] En la creación manual los campos calculados —subtotal, valor bruto, descuento, bonificación, IVA, ICO, licores, INPP, IBUA, ICUI y total— se ven con la presentación de lectura: fondo propio, borde discontinuo y cursor por defecto\n- [ ] En la edición de factura los mismos campos calculados se ven con la presentación de lectura igual que en la creación\n- [ ] Digitando un precio con calma —p. ej. 30000, una tecla por segundo— el foco se mantiene en el campo precio desde la primera hasta la última tecla, sin volver a hacer clic\n- [ ] Tras terminar de digitar el precio, el total de la factura recalcula y refleja el precio nuevo sin editar otra cosa"
+    },
+    {
+      "ticket": "FEATURE-EDICION-REORGANIZACION-20260928",
+      "recibo": "GR-20260929-plan",
+      "resultado": "review",
+      "comentario": [
+        "<!-- Una afirmación verificable por criterio. Una frase con «y» son dos criterios:",
+        "cada uno se despliega como una proposición propia, y una que agrupa varias",
+        "afirmaciones cae en banda de revisión aunque el plan la cubra entera. -->"
+      ],
+      "criterios": [
+        "La vista de factura ofrece el botón «Editar factura» visible cuando el documento es editable y lo oculta cuando no (incluido el no transmitida y la devolución)",
+        "La edición se abre sin el atajo Ctrl+Shift+D, con el botón, desde los dos módulos (POS Comercial y POS Restaurante)",
+        "Al entrar en modo editar el formulario es el de creación manual, con los bloques de identidad en solo lectura y la factura preseleccionada (tercero, sucursal, líneas y formas de pago cargadas)",
+        "La preselección trae el carácter del documento marcado y bloqueado (venta o consumo), y no lo pide de nuevo",
+        "Al guardar la edición se llama al endpoint `utilities/manual-invoice/edit` y la factura queda con los cambios; al cancelar no se altera",
+        "La edición de una factura de consumo reescrita mantiene su liquidación por ICO sin IVA, y la de una venta su IVA sin ICO: los impuestos reescritos no campan de carácter",
+        "La pestaña Formas de pago de la vista de factura deja de ofrecer la edición (solo lectura siempre) y la edición de pagos existe solo dentro del modo editar",
+        "El endpoint `utilities/manual-invoice/edit` responde bajo el módulo de restaurante (ruta registrada) y rechaza la electrónica transmitida igual que en POS"
+      ],
+      "seccion": "<!-- Una afirmación verificable por criterio. Una frase con «y» son dos criterios:\ncada uno se despliega como una proposición propia, y una que agrupa varias\nafirmaciones cae en banda de revisión aunque el plan la cubra entera. -->\n\n- [ ] La vista de factura ofrece el botón «Editar factura» visible cuando el documento es editable y lo oculta cuando no (incluido el no transmitida y la devolución)\n- [ ] La edición se abre sin el atajo Ctrl+Shift+D, con el botón, desde los dos módulos (POS Comercial y POS Restaurante)\n- [ ] Al entrar en modo editar el formulario es el de creación manual, con los bloques de identidad en solo lectura y la factura preseleccionada (tercero, sucursal, líneas y formas de pago cargadas)\n- [ ] La preselección trae el carácter del documento marcado y bloqueado (venta o consumo), y no lo pide de nuevo\n- [ ] Al guardar la edición se llama al endpoint `utilities/manual-invoice/edit` y la factura queda con los cambios; al cancelar no se altera\n- [ ] La edición de una factura de consumo reescrita mantiene su liquidación por ICO sin IVA, y la de una venta su IVA sin ICO: los impuestos reescritos no campan de carácter\n- [ ] La pestaña Formas de pago de la vista de factura deja de ofrecer la edición (solo lectura siempre) y la edición de pagos existe solo dentro del modo editar\n- [ ] El endpoint `utilities/manual-invoice/edit` responde bajo el módulo de restaurante (ruta registrada) y rechaza la electrónica transmitida igual que en POS"
+    },
+    {
+      "ticket": "FEATURE-RELLENO-ANULACION-PANTALLA-20260928",
+      "recibo": "GR-20260929-plan",
+      "resultado": "review",
+      "comentario": [
+        "<!-- Una afirmación verificable por criterio. Una frase con «y» son dos criterios:",
+        "cada uno se despliega como una proposición propia, y una que agrupa varias",
+        "afirmaciones cae en banda de revisión aunque el plan la cubra entera. -->"
+      ],
+      "criterios": [
+        "Al terminar una corrida con facturas generadas, la pantalla del relleno ofrece la anulación con el recuento de facturas marcadas de la corrida",
+        "La anulación exige elegir el consecutivo de devolución de la sucursal de la corrida y no ofrece la corrida sin él",
+        "El botón de anulación pide confirmación que enuncia cuántas facturas se van a anular antes de permitir correrla",
+        "Mientras la anulación corre, la pantalla lo muestra y no permite un segundo disparo",
+        "Al terminar, la pantalla muestra cuántas devoluciones se generaron con su número, cuántas facturas ya estaban anuladas y cuáles fallaron con su número y su causa",
+        "La anulación se llama con el token de la corrida recién terminada y el endpoint responde con las listas del contrato en `ModPos.tests.test_refill_cancel`",
+        "La sección de anulación no se ofrece cuando la corrida no generó facturas marcadas"
+      ],
+      "seccion": "<!-- Una afirmación verificable por criterio. Una frase con «y» son dos criterios:\ncada uno se despliega como una proposición propia, y una que agrupa varias\nafirmaciones cae en banda de revisión aunque el plan la cubra entera. -->\n\n- [ ] Al terminar una corrida con facturas generadas, la pantalla del relleno ofrece la anulación con el recuento de facturas marcadas de la corrida\n- [ ] La anulación exige elegir el consecutivo de devolución de la sucursal de la corrida y no ofrece la corrida sin él\n- [ ] El botón de anulación pide confirmación que enuncia cuántas facturas se van a anular antes de permitir correrla\n- [ ] Mientras la anulación corre, la pantalla lo muestra y no permite un segundo disparo\n- [ ] Al terminar, la pantalla muestra cuántas devoluciones se generaron con su número, cuántas facturas ya estaban anuladas y cuáles fallaron con su número y su causa\n- [ ] La anulación se llama con el token de la corrida recién terminada y el endpoint responde con las listas del contrato en `ModPos.tests.test_refill_cancel`\n- [ ] La sección de anulación no se ofrece cuando la corrida no generó facturas marcadas"
+    },
+    {
+      "ticket": "IMPROVEMENT-POS-MENSAJE-ORDEN-NO-FACTURADA-20261005",
+      "recibo": "GR-20261005-IMPROVEMENT-POS-MENSAJE-ORDEN-NO-FACTURADA-20261005-plan-1",
+      "resultado": "review",
+      "comentario": [
+        "<!-- Una afirmación verificable por criterio. Una frase con «y» son dos criterios:",
+        "cada uno se despliega como una proposición propia, y una que agrupa varias",
+        "afirmaciones cae en banda de revisión aunque el plan la cubra entera. -->"
+      ],
+      "criterios": [
+        "Al volver a la pestaña con una orden existente que tiene cambios sin confirmar, el aviso ya no muestra el texto anterior.",
+        "El aviso dice que la orden no se ha facturado.",
+        "El aviso conserva la instrucción de confirmar los cambios antes de seguir para no perderlos.",
+        "El aviso muestra exactamente la redacción que el PO aprobó en el plan.",
+        "Con cambios sin confirmar, el aviso sigue sin sobreescribir la orden con el estado del backend.",
+        "El mesero ve el aviso con la redacción aprobada al volver a la pestaña de una orden guardada que tiene productos sin confirmar."
+      ],
+      "seccion": "<!-- Una afirmación verificable por criterio. Una frase con «y» son dos criterios:\ncada uno se despliega como una proposición propia, y una que agrupa varias\nafirmaciones cae en banda de revisión aunque el plan la cubra entera. -->\n\n- [ ] Al volver a la pestaña con una orden existente que tiene cambios sin confirmar, el aviso ya no muestra el texto anterior.\n- [ ] El aviso dice que la orden no se ha facturado.\n- [ ] El aviso conserva la instrucción de confirmar los cambios antes de seguir para no perderlos.\n- [ ] El aviso muestra exactamente la redacción que el PO aprobó en el plan.\n- [ ] Con cambios sin confirmar, el aviso sigue sin sobreescribir la orden con el estado del backend.\n- [ ] El mesero ve el aviso con la redacción aprobada al volver a la pestaña de una orden guardada que tiene productos sin confirmar."
+    }
+  ],
+  "skills": {
+    "ticket": "IMPROVEMENT-SKILLS-PUBLICADAS-20260926",
+    "seccion": "\n- [x] El catálogo publicado existe en el repositorio del harness: el archivo `skills/planificacion/SKILL.md`.\n      <!-- test: npx vitest run tests/skills-publicadas.test.ts -->\n- [x] El catálogo declara su versión: el frontmatter de `skills/planificacion/SKILL.md` incluye `version:`.\n      <!-- test: npx vitest run tests/skills-publicadas.test.ts -->\n- [x] El catálogo declara su origen: el frontmatter de `skills/planificacion/SKILL.md` incluye `origen: valmen`.\n      <!-- test: npx vitest run tests/skills-publicadas.test.ts -->\n- [x] El adaptador expone la versión publicada: `versionPublicada(\"planificacion\")` devuelve la del catálogo.\n      <!-- test: npx vitest run tests/skills-publicadas.test.ts -->\n- [x] `adopt` instala la publicada en el proyecto adoptado: tras adoptar un registro temporal, `.valmen/skills/planificacion/SKILL.md` coincide con el catálogo.\n      <!-- test: npx vitest run tests/skills-publicadas.test.ts -->\n- [x] `sync --check` imprime `Archivos generados al día.` cuando la copia del proyecto coincide con la publicada.\n      <!-- test: npx vitest run tests/skills-publicadas.test.ts -->\n- [x] `sync --check` nombra la deriva con las dos versiones cuando la copia del proyecto está en una versión anterior.\n      <!-- test: npx vitest run tests/skills-publicadas.test.ts -->\n- [x] `sync --check` nombra la copia editada a mano cuando el contenido de la publicada fue alterado.\n      <!-- test: npx vitest run tests/skills-publicadas.test.ts -->\n- [x] `sync` deja la copia del proyecto igual al catálogo publicado.\n      <!-- test: npx vitest run tests/skills-publicadas.test.ts -->\n- [x] `sync` conserva el contenido de `local.md` tras actualizar la copia.\n      <!-- test: npx vitest run tests/skills-publicadas.test.ts -->\n- [x] La proyección concatena `local.md`: el archivo proyectado en `.opencode/skills/planificacion/SKILL.md` termina con el contenido de `local.md`.\n      <!-- test: npx vitest run tests/skills-publicadas.test.ts -->\n- [x] El check de versión compara las skills publicadas: su salida nombra `planificacion` entre las comparadas.\n      <!-- test: npx vitest run tests/skills-publicadas.test.ts -->\n- [x] La capa global queda instalada: con un `HERMES_HOME` temporal, la instalación escribe `skills/planificacion/SKILL.md`.\n      <!-- test: npx vitest run tests/skills-publicadas.test.ts -->\n\n"
+  }
+}

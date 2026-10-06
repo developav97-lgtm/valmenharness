@@ -335,3 +335,28 @@ describe("el comando de un criterio", () => {
     expect(commandChecksFor(criterios, ["node"]).checks).toEqual([]);
   });
 });
+
+describe("más criterios que el tope (R-CDEF-002)", () => {
+  it("R-CDEF-002 qa-mechanical corre los 31 comandos declarados, sin tope", async () => {
+    comandos(["node"]);
+    ticket(
+      Array.from(
+        { length: 31 },
+        (_, i) =>
+          `- [ ] El criterio número ${String(i + 1).padStart(2, "0")} pasa su comando\n` +
+          `      <!-- test: ${pasa} -->`,
+      ).join("\n"),
+    );
+
+    const resultado = await correr();
+
+    expect(resultado.exitCode).toBe(0);
+    expect(resultado.stdout).toContain("APPROVE");
+    const recibo = readReceipts(PATHS(), TICKET)[0] as unknown as {
+      propositions: { id: string; value: number }[];
+    };
+    const comandosCorridos = recibo.propositions.filter((p) => p.id.startsWith("criterio_"));
+    expect(comandosCorridos).toHaveLength(31);
+    expect(comandosCorridos.every((p) => p.value === 1)).toBe(true);
+  });
+});

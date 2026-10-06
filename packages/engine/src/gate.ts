@@ -25,6 +25,7 @@ import {
   toFailure,
 } from "@valmen/core";
 import {
+  MAX_CRITERIA_PROPOSITIONS,
   type CommandCheckSpec,
   type CriterionSpec,
   type GateDecision,
@@ -568,6 +569,14 @@ export async function runGate(
             `referencia humana ${effectiveMode.evidence.humanReference} (${effectiveMode.evidence.humanTickets.join(", ") || "sin tickets comparables"}).`,
         ]),
     ...avisoDeForma(decision, criteria, gate.policy as GatePolicy),
+    // Más criterios que una tanda: se evaluaron todos, repartidos. Sin esta nota el
+    // recibo no diría que el evaluador respondió en más de una llamada.
+    ...((evaluation.tandas ?? 1) > 1
+      ? [
+          `${criteria.length} criterios evaluados en ${evaluation.tandas} tandas de hasta ` +
+            `${MAX_CRITERIA_PROPOSITIONS}.`,
+        ]
+      : []),
   ];
 
   const receipt = buildReceipt({

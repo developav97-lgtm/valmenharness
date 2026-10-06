@@ -21,7 +21,11 @@
  *
  * Ver docs/03-GATES.md §4.
  */
-import type { GateDefinition, Proposition, PropositionAnswer } from "@valmen/gate";
+import {
+  MAX_CRITERIA_PROPOSITIONS,
+  type GateDefinition,
+  type Proposition,
+} from "@valmen/gate";
 import {
   evaluateWithCommands,
   type CommandCheck,
@@ -93,6 +97,15 @@ export interface EvaluationOutcome {
     readonly costUsd: number;
   } | null;
   readonly latencyMs: number;
+  /**
+   * En cuántas llamadas al evaluador semántico se repartió la evaluación.
+   *
+   * Es 1 con `MAX_CRITERIA_PROPOSITIONS` criterios o menos. Más de 1 significa que
+   * el ticket declara más criterios que una tanda: se evaluaron todos, y el recibo
+   * lo dice para que ese reparto no sea invisible. Ausente si no hubo evaluador
+   * semántico.
+   */
+  readonly tandas?: number;
   /** Evidencia de los checks mecánicos, si los hubo. */
   readonly commandResults?: readonly import("@valmen/gate-command").CommandCheckResult[];
   /**
@@ -213,7 +226,7 @@ export async function evaluateGate(options: SelectOptions): Promise<EvaluationOu
   // un gate declara que el evaluador es de juicio pero no deja nada para juzgar,
   // es un error de configuración.
   if (chosen !== "command" && checks.length === 0) {
-    return runSemantic(chosen, options);
+    return runSemanticEnTandas(chosen, options);
   }
 
   // División del trabajo: los comandos responden sus proposiciones y **solo las
@@ -253,7 +266,7 @@ export async function evaluateGate(options: SelectOptions): Promise<EvaluationOu
   }
 
   const semantico = chosen === "command" ? (options.semantic ?? "jev") : chosen;
-  const parcial = await runSemantic(semantico, {
+  const parcial = await runSemanticEnTandas(semantico, {
     ...options,
     gate: { ...options.gate, propositions: pendientes },
   });
@@ -268,6 +281,7 @@ export async function evaluateGate(options: SelectOptions): Promise<EvaluationOu
     latencyMs: parcial.latencyMs + outcome.results.reduce((t, r) => t + r.durationMs, 0),
     commandResults: outcome.results,
     ...(parcial.escalations === undefined ? {} : { escalations: parcial.escalations }),
+    ...(parcial.tandas === undefined ? {} : { tandas: parcial.tandas }),
   };
 }
 
@@ -278,6 +292,72 @@ export async function evaluateGate(options: SelectOptions): Promise<EvaluationOu
  * silencio a otro evaluador: pedir la cascada y recibir un juez de chat sin
  * decirlo sería cobrar como cascada lo que no lo es.
  */
+/**
+ * Reparte las proposiciones en tandas de a lo sumo `MAX_CRITERIA_PROPOSITIONS`
+ * criterios.
+ *
+ * Las que no son de criterio viajan en la primera, así que un ticket con 12
+ * criterios o menos sigue siendo una sola llamada, la de siempre. El tope existe
+ * por el costo y la precisión de **una** llamada; no es una razón para dejar
+ * criterios sin preguntar.
+ */
+function partirEnTandas(propositions: readonly Proposition[]): Proposition[][] {
+  const criterios = propositions.filter((proposition) => proposition.id.startsWith("criterio_"));
+  if (criterios.length <= MAX_CRITERIA_PROPOSITIONS) return [[...propositions]];
+
+  const otras = propositions.filter((proposition) => !proposition.id.startsWith("criterio_"));
+  const tandas: Proposition[][] = [];
+  for (let desde = 0; desde < criterios.length; desde += MAX_CRITERIA_PROPOSITIONS) {
+    const tanda = criterios.slice(desde, desde + MAX_CRITERIA_PROPOSITIONS);
+    tandas.push(desde === 0 ? [...otras, ...tanda] : tanda);
+  }
+  return tandas;
+}
+
+/**
+ * Ejecuta el evaluador semántico en tantas llamadas como pidan los criterios.
+ *
+ * Las tandas corren en orden y se suman: las respuestas, los escalamientos, el
+ * consumo y la latencia. El modelo que se informa es el de la primera, porque todas
+ * usan el mismo.
+ */
+async function runSemanticEnTandas(
+  chosen: "jev" | "llm-judge" | "cascade",
+  options: SelectOptions,
+): Promise<EvaluationOutcome> {
+  const tandas = partirEnTandas(options.gate.propositions);
+  if (tandas.length === 1) return { ...(await runSemantic(chosen, options)), tandas: 1 };
+
+  const partes: EvaluationOutcome[] = [];
+  for (const propositions of tandas) {
+    partes.push(
+      await runSemantic(chosen, { ...options, gate: { ...options.gate, propositions } }),
+    );
+  }
+
+  const primera = partes[0] as EvaluationOutcome;
+  const conUso = partes.flatMap((parte) => (parte.usage === null ? [] : [parte.usage]));
+  const escalamientos = partes.flatMap((parte) => parte.escalations ?? []);
+  return {
+    evaluator: primera.evaluator,
+    answers: partes.flatMap((parte) => parte.answers),
+    model: primera.model,
+    usage:
+      conUso.length === 0
+        ? null
+        : {
+            inputTokens: conUso.reduce((total, uso) => total + uso.inputTokens, 0),
+            outputTokens: conUso.reduce((total, uso) => total + uso.outputTokens, 0),
+            costUsd: conUso.reduce((total, uso) => total + uso.costUsd, 0),
+          },
+    latencyMs: partes.reduce((total, parte) => total + parte.latencyMs, 0),
+    ...(partes.some((parte) => parte.escalations !== undefined)
+      ? { escalations: escalamientos }
+      : {}),
+    tandas: tandas.length,
+  };
+}
+
 /** Ejecuta un evaluador semántico, con la degradación de Jev a juez. */
 async function runSemantic(
   chosen: "jev" | "llm-judge" | "cascade",

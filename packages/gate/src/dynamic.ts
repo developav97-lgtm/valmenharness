@@ -18,15 +18,22 @@ import { DEFAULT_POLICY } from "./decide.js";
 import { ANALYSIS_GATE, PLAN_GATE } from "./definitions.js";
 import { type RepositorioDeSpecs, specDelRepositorio } from "./specs.js";
 
-/** Máximo de criterios que se despliegan como proposiciones individuales. */
+/**
+ * Cuántos criterios se evalúan en una misma llamada al evaluador.
+ *
+ * Es el tamaño de una **tanda**, no un tope del lector: un ticket con más
+ * criterios los evalúa todos, en varias tandas (`evaluateGate`), y `qa-mechanical`
+ * corre todos los comandos que declaran. Cortar la lista acá —como se hacía— dejaba
+ * sin preguntar los criterios del final sin que nada lo dijera.
+ */
 export const MAX_CRITERIA_PROPOSITIONS = 12;
 
 /**
  * Extrae los criterios de aceptación como ítems individuales.
  *
- * Reconoce las viñetas con casilla —el formato que usa el contrato— y también
- * las numeradas, porque un ticket escrito a mano puede usar cualquiera de las
- * dos. Descarta lo que sea demasiado corto para ser un criterio real.
+ * Un criterio es un **ítem de lista**: viñeta con casilla —el formato que usa el
+ * contrato—, viñeta simple o numerada, porque un ticket escrito a mano puede usar
+ * cualquiera. Descarta lo que sea demasiado corto para ser un criterio real.
  */
 export function extractCriteria(section: string): string[] {
   return extractCriteriaSpecs(section).map((spec) => spec.text);
@@ -64,58 +71,110 @@ export interface CriterionSpec {
   readonly dev?: boolean;
 }
 
+/** La viñeta que abre un criterio: casilla, guion o número. */
+const VINETA_RE = /^\s*(?:[-*+]\s+\[[ xX]\]|\d+[.)]|[-*+]\s+)\s*/;
+
+/**
+ * Un comentario HTML, de una o de varias líneas. Si no cierra, llega al final de
+ * la sección: un comentario abierto no puede tragarse nada fuera de ella.
+ */
+const COMENTARIO_RE = /<!--[\s\S]*?(?:-->|$)/g;
+
 /** Las anotaciones que puede llevar un criterio. */
-const ANOTACION_RE = /<!--\s*(test|verify)\s*:\s*([\s\S]*?)\s*-->/gi;
+const ANOTACION_RE = /^<!--\s*(test|verify)\s*:\s*([\s\S]*?)\s*-->$/i;
+
+/** Dónde quedó una anotación dentro del texto ya limpio. */
+const MARCA_RE = /\u0000(\d+)\u0000/g;
+
+interface Anotacion {
+  readonly tipo: string;
+  readonly valor: string;
+}
+
+interface Candidato {
+  text: string;
+  command: string | null;
+  manual: boolean;
+  dev: boolean;
+}
 
 /**
  * Los criterios de una sección, con sus anotaciones.
  *
- * La anotación va en la línea del criterio o en la de abajo —como en el ejemplo—
- * porque un criterio con su texto y su comando en el mismo renglón se vuelve
- * ilegible, y lo que se lee es el criterio.
+ * Solo una línea que empieza con viñeta abre un criterio. Un comentario HTML que
+ * no es una anotación `test:` o `verify:` —como el de la plantilla— no cuenta: el
+ * modelo lo evaluaba como criterio y lo daba por incumplido. La anotación va en la
+ * línea del criterio o en la de abajo, y puede ocupar varias líneas: un criterio
+ * con su texto y su comando en el mismo renglón se vuelve ilegible, y lo que se lee
+ * es el criterio. Una línea pegada a una viñeta, sin línea en blanco de por medio,
+ * es la continuación de ese criterio y se une a él.
  */
 export function extractCriteriaSpecs(section: string): CriterionSpec[] {
-  const specs: CriterionSpec[] = [];
+  // Primero se retiran los comentarios: los que son anotación dejan una marca en su
+  // lugar y el resto desaparece, sin importar en cuántas líneas se escriba.
+  const anotaciones: Anotacion[] = [];
+  const limpia = section.replace(COMENTARIO_RE, (comentario) => {
+    const coincidencia = ANOTACION_RE.exec(comentario);
+    if (coincidencia === null) return "";
+    anotaciones.push({
+      tipo: (coincidencia[1] as string).toLowerCase(),
+      // El salto de línea y su sangría separan palabras; los espacios dentro de unas
+      // comillas son del comando y no se tocan.
+      valor: (coincidencia[2] as string).replace(/\s*\n\s*/g, " ").trim(),
+    });
+    return `\u0000${anotaciones.length - 1}\u0000`;
+  });
 
-  for (const line of section.split("\n")) {
-    const sinVineta = line
-      .replace(/^\s*(?:[-*+]\s+\[[ xX]\]|\d+[.)]|[-*+]\s+)\s*/, "")
-      .trim();
-    if (sinVineta === "") continue;
+  const candidatos: Candidato[] = [];
+  let abierto = false;
 
-    let command: string | null = null;
-    let manual = false;
-    let dev = false;
-    const text = sinVineta
-      .replace(ANOTACION_RE, (_todo, tipo: string, valor: string) => {
-        if (tipo.toLowerCase() === "test") command = valor.trim();
-        else {
-          manual = true;
-          dev = valor.trim().toLowerCase() === "dev";
-        }
-        return "";
-      })
-      .trim();
+  const anotar = (candidato: Candidato, linea: string): void => {
+    for (const marca of linea.matchAll(MARCA_RE)) {
+      const anotacion = anotaciones[Number(marca[1])] as Anotacion;
+      if (anotacion.tipo === "test") candidato.command = anotacion.valor;
+      else {
+        candidato.manual = true;
+        candidato.dev = anotacion.valor.toLowerCase() === "dev";
+      }
+    }
+  };
+
+  for (const linea of limpia.split("\n")) {
+    const texto = linea.replace(MARCA_RE, "").trim();
+    const ultimo = candidatos[candidatos.length - 1];
 
     // Una línea que solo lleva anotaciones pertenece al criterio de arriba: es la
     // forma en que se escribe, y sin esto la anotación se perdería por corta.
-    if (text === "") {
-      const anterior = specs[specs.length - 1];
-      if (anterior === undefined) continue;
-      specs[specs.length - 1] = {
-        ...anterior,
-        command: command ?? anterior.command,
-        manual: manual || anterior.manual,
-        dev: dev || anterior.dev === true,
-      };
+    if (texto === "") {
+      if (ultimo !== undefined && linea.includes("\u0000")) anotar(ultimo, linea);
+      else abierto = false;
       continue;
     }
 
-    if (text.length < 12) continue;
-    specs.push({ text, command, manual, dev });
+    if (VINETA_RE.test(linea)) {
+      const candidato: Candidato = {
+        text: linea.replace(MARCA_RE, "").replace(VINETA_RE, "").trim(),
+        command: null,
+        manual: false,
+        dev: false,
+      };
+      anotar(candidato, linea);
+      candidatos.push(candidato);
+      abierto = true;
+      continue;
+    }
+
+    // Sin viñeta: es la continuación del criterio de arriba si no hay una línea en
+    // blanco entre ambas; en cualquier otro caso no es un criterio.
+    if (abierto && ultimo !== undefined) {
+      ultimo.text = `${ultimo.text} ${texto}`;
+      anotar(ultimo, linea);
+    }
   }
 
-  return specs.slice(0, MAX_CRITERIA_PROPOSITIONS);
+  return candidatos
+    .filter((candidato) => candidato.text.length >= 12)
+    .map(({ text, command, manual, dev }) => ({ text, command, manual, dev }));
 }
 
 /**

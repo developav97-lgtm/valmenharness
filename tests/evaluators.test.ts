@@ -655,3 +655,76 @@ describe("el comando escribe y lee dentro de la raíz", () => {
     expect(resultado.stdout.trim()).toBe("hola");
   });
 });
+
+// ── Más criterios que el tope (R-CDEF-002) ──────────────────────────────────
+
+describe("evaluación en tandas", () => {
+  const criterios = (n: number): Proposition[] =>
+    Array.from({ length: n }, (_, i) => ({
+      id: `criterio_${String(i + 1).padStart(2, "0")}`,
+      kind: "noul" as const,
+      instructions: `se cumple el criterio ${i + 1}`,
+    }));
+
+  /** Un juez que anota qué proposiciones recibió en cada llamada. */
+  function juezContador(recibidas: string[][]): never {
+    return (async ({ propositions }: { propositions: readonly Proposition[] }) => {
+      recibidas.push(propositions.map((proposicion) => proposicion.id));
+      return {
+        answers: propositions.map((proposicion) =>
+          proposicion.kind === "choice"
+            ? { id: proposicion.id, kind: "choice" as const, choice: "completo" }
+            : { id: proposicion.id, kind: "noul" as const, value: 0.95 },
+        ),
+        model: { provider: "x", model: "juez", resolvedVersion: "j1" },
+        usage: { inputTokens: 100, outputTokens: 10, costUsd: 0.25 },
+        latencyMs: 40,
+      };
+    }) as never;
+  }
+
+  it("R-CDEF-002 tandas: 31 criterios se preguntan en tres llamadas, cada uno una vez", async () => {
+    const recibidas: string[][] = [];
+    const resultado = await evaluateGate({
+      gate: gate([NOUL, ELECCION, ...criterios(31)]),
+      state: {},
+      root: lab,
+      evaluator: "llm-judge",
+      judge: juezContador(recibidas),
+    });
+
+    expect(recibidas).toHaveLength(3);
+    // Las fijas viajan solo en la primera tanda.
+    expect(recibidas[0]).toContain("p1");
+    expect(recibidas[0]).toContain("p2");
+    expect(recibidas[1]).not.toContain("p1");
+    expect(recibidas[2]).not.toContain("p2");
+    for (const tanda of recibidas) {
+      expect(tanda.filter((id) => id.startsWith("criterio_")).length).toBeLessThanOrEqual(12);
+    }
+
+    const ids = resultado.answers.map((respuesta) => respuesta.id);
+    expect(ids).toHaveLength(33);
+    expect(new Set(ids).size).toBe(33);
+    expect(resultado.tandas).toBe(3);
+    // El consumo es la suma de las tres llamadas, no el de una.
+    expect(resultado.usage).toEqual({ inputTokens: 300, outputTokens: 30, costUsd: 0.75 });
+    expect(resultado.latencyMs).toBe(120);
+  });
+
+  it("R-CDEF-002 una tanda: con 12 criterios o menos hay una sola llamada, como antes", async () => {
+    const recibidas: string[][] = [];
+    const resultado = await evaluateGate({
+      gate: gate([NOUL, ELECCION, ...criterios(12)]),
+      state: {},
+      root: lab,
+      evaluator: "llm-judge",
+      judge: juezContador(recibidas),
+    });
+
+    expect(recibidas).toHaveLength(1);
+    expect(recibidas[0]).toHaveLength(14);
+    expect(resultado.tandas).toBe(1);
+    expect(resultado.usage).toEqual({ inputTokens: 100, outputTokens: 10, costUsd: 0.25 });
+  });
+});
