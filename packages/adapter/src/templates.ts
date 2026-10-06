@@ -18,225 +18,75 @@
  */
 export const WORKFLOW_TEMPLATE = `## Flujo de trabajo
 
-El registro de trabajo vive en \`<registro>/YYYY/<TICKET-ID>/ticket.md\`. Un ticket
-conserva su historial completo: no se reemplaza por archivos de sesión ni se
-mueve cuando cambia de estado.
+El registro de trabajo vive en \`<registro>/YYYY/<TICKET-ID>/ticket.md\`. Un ticket conserva su historial completo: no se reemplaza por archivos de sesión ni se mueve cuando cambia de estado.
 
 ### Modo directo, sin registro
 
-Consultas, diagnósticos, exploración, cambios visuales o de contenido que no
-alteran funcionalidad, prototipos desechables, y cambios de la propia
-configuración del harness.
+Consultas, diagnósticos, exploración, cambios visuales o de contenido que no alteran funcionalidad, prototipos desechables y la configuración del propio harness.
 
-**El modo directo no relaja los gates de impacto.** Un cambio que se vaya a
-aplicar **sobre un proyecto real** y toque sincronización, migraciones,
-contenedores, autenticación o despliegue exige ticket, plan aprobado y gate
-humano, aunque el pedido haya sido "cámbiame este texto". El agente lo dice y se
-detiene: no sigue sin el ticket, y tampoco lo abre por su cuenta.
+**El modo directo no relaja los gates de impacto.** Un cambio que se vaya a aplicar **sobre un proyecto real** y toque sincronización, migraciones, contenedores, autenticación o despliegue exige ticket, plan aprobado y gate humano, aunque el pedido haya sido "cámbiame este texto". El agente lo dice y se detiene: no sigue sin el ticket, y tampoco lo abre por su cuenta.
 
-Esa condición no es un tecnicismo, y sin ella esta regla se contradice con la de
-arriba. Los gates de impacto protegen los datos y los clientes de un proyecto en
-uso: son irreversibles para alguien que no está en la conversación. En un
-repositorio que **es** el producto que se construye —y que lo declara en sus
-reglas— la protección equivalente son las pruebas antes de decir que algo
-funciona y la confirmación antes de commitear, así que su modo directo no se
-interrumpe al escribir autenticación. Para un proyecto adoptado la condición se
-cumple siempre, y la regla le sigue valiendo igual que antes.
+Esos gates protegen datos y clientes de un proyecto en uso. En un repositorio que **es** el producto que se construye —y que lo declara en sus reglas— la protección equivalente son las pruebas antes de decir que algo funciona y la confirmación antes de commitear.
 
 ### Autorización antes de acción
 
-Investigar, explicar, revisar, auditar, comparar y proponer son operaciones
-**read-only** salvo que el pedido autorice explícitamente un cambio. Es el
-primer paso del protocolo, no una recomendación.
+Investigar, explicar, revisar, auditar, comparar y proponer son operaciones **read-only** salvo que el pedido autorice explícitamente un cambio. Es el primer paso del protocolo, no una recomendación.
 
 ### Quién decide que hace falta un ticket
 
-**La persona, no el agente.** Abrir un ticket escribe en el repositorio, y
-escribir exige autorización: la regla que vale para el código vale para el
-registro. El agente puede proponerlo —una línea, con el motivo— y esperar
-respuesta. No lo abre por su cuenta, ni siquiera cuando el trabajo cumple de
-sobra las condiciones para tenerlo.
+**La persona, no el agente.** Abrir un ticket escribe en el repositorio, y escribir exige autorización. El agente puede proponerlo —una línea, con el motivo— y esperar respuesta; no lo abre por su cuenta, ni siquiera cuando el trabajo cumple de sobra las condiciones.
 
-Un pedido de trabajo no es un pedido de registro. Cuando alguien dice
-"hagámoslo", el modo por defecto es el directo: se hace y se prueba. Eso vale para un
-pedido **que no nombra un ticket**: si nombra uno que ya existe, ese ticket manda y el
-orden es el de «Continuar un ticket», justo debajo.
-
-Cuando sí se pide, esto es lo que lo justifica: dos o más pasos de
-implementación con archivos distintos, o un progreso que conviene recuperar tras
-una interrupción. Un cambio trivial y comprendido no crea artefactos durables.
+Un pedido de trabajo no es un pedido de registro. Cuando alguien dice "hagámoslo", el modo por defecto es el directo: se hace y se prueba. Eso vale para un pedido **que no nombra un ticket**; si nombra uno que ya existe, ese ticket manda.
 
 ### Continuar un ticket
 
-Un pedido como «continúa con el ticket X», «sigue con X» o «trabaja X» nombra un
-ticket que ya existe, y entonces **el ticket manda, no el modo directo**. El orden es
-siempre el mismo y no hace falta que el pedido lo repita:
+Un pedido como «continúa con el ticket X» nombra un ticket que ya existe, y entonces **el ticket manda, no el modo directo**:
 
-1. \`reanudar_ticket\` (CLI: \`valmen resume --id <ID>\`) **primero**. Devuelve el estado
-   y el **siguiente paso**, que el motor calcula a partir del estado, lo escrito en el
-   ticket y los recibos de las compuertas: qué escribir, qué skill cargar, qué
-   compuerta correr y dónde detenerse.
-2. Hacer ese paso y volver a llamar a \`reanudar_ticket\` para el siguiente. Es el
-   motor quien dice cuándo seguir; no se adivina el orden ni se salta una fase.
-3. Seguir hasta el primer **alto** que el siguiente paso declare —una decisión de una
-   persona, o las pruebas del responsable— y entregar ahí: qué se hizo, qué evidencia
-   hay y qué decisión se necesita. Un alto no se supera: ni se aprueba lo que decide
-   una persona, ni se mueve el ticket para esquivarlo.
+1. \`reanudar_ticket\` (CLI: \`valmen resume --id <ID>\`) **primero**: devuelve el estado y el **siguiente paso** que calcula el motor —qué escribir, qué skill cargar, qué compuerta correr y dónde detenerse—.
+2. Hacer ese paso y volver a llamarla. No se adivina el orden ni se salta una fase.
+3. Seguir hasta el primer **alto** que el paso declare —una decisión de una persona, o las pruebas del responsable— y entregar ahí: qué se hizo, qué evidencia hay y qué decisión falta. Un alto no se supera: ni se aprueba lo que decide una persona, ni se mueve el ticket para esquivarlo.
 
-Mientras el ticket no esté \`approved\`, **el código de la aplicación no se toca**: el
-diagnóstico y el plan se escriben **en el ticket**. Un diagnóstico que se queda en la
-conversación no existe para el registro, y una implementación sin plan aprobado salta
-justo la compuerta que existe para evitarlo. Las skills que el siguiente paso nombra
-se cargan antes de empezar esa fase.
+Mientras el ticket no esté \`approved\`, **el código de la aplicación no se toca**: el diagnóstico y el plan se escriben **en el ticket**, porque lo que queda en la conversación no existe para el registro. Las skills que el paso nombra se cargan antes de empezar la fase.
 
-Una funcionalidad que excede un ticket —un módulo con varias pantallas, reportes
-y configuración— se registra como **feature**: brief, spec con requisitos, diseño,
-descomposición en tickets con grafo de dependencias y seguimiento del conjunto. Si
-quien la pide prefiere tickets sueltos, se hacen tickets sueltos: la forma del
-registro la decide quien lo pide, no el agente que lo recibe.
-
-El recorrido tiene un orden y se sigue **siempre igual** —está escrito en la skill
-\`feature\`, que se lee antes de empezar—:
-
-\`\`\`text
-valmen feature new <slug> --title "…"     el brief, en draft
-spec/<dominio>/spec.md                    los requisitos, en RFC 2119
-valmen feature decompose <slug>           el arquitecto propone el grafo
-   ↳ se revisa con la persona             es el momento barato de corregir
-valmen feature materialize <slug>         los tickets existen, en intake
-\`\`\`
-
-Hasta el último paso los tickets son **un plan**: un ticket del grafo no tiene
-\`ticket.md\`, no está en \`intake\` y ninguna compuerta lo mira. Y cada ticket nace
-en \`intake\` con el flujo de siempre: análisis, plan, aprobación de una persona,
-implementación, entrega y QA — en el orden que dicen las dependencias.
+Una funcionalidad que excede un ticket se registra como **feature**, con el recorrido de la skill \`feature\`, que se lee antes de empezar. La forma del registro la decide quien lo pide, no el agente.
 
 ### Antes de registrar: traducir lo nuevo del pedido
 
-Un pedido que nombra algo que el código no tiene —un «parámetro nuevo», un
-permiso, una bandera, una columna, una migración— no se registra con ese hueco.
-Antes de crear el ticket, la palabra se traduce a campo real con búsqueda en el
-código; si el campo no aparece, se pregunta **una vez** a la persona y el ticket
-se registra con la respuesta. Lo que quede sin decidir se escribe en la sección
-\`### Supuestos y decisiones pendientes\` del ticket, cada elemento con su
-pregunta exacta, y el análisis empieza por ahí: planificar sobre la adivinanza
-cuesta compuertas en banda y decisiones que el registro no puede auditar.
+Un pedido que nombra algo que el código no tiene —un «parámetro nuevo», un permiso, una bandera, una columna, una migración— no se registra con ese hueco. Antes de crear el ticket se traduce a campo real con búsqueda en el código; si no aparece, se pregunta **una vez** a la persona. Lo que quede sin decidir va a \`### Supuestos y decisiones pendientes\` del ticket, cada elemento con su pregunta exacta, y el análisis no planifica sobre la adivinanza.
 
 ### Estados del ticket
 
-\`\`\`text
-ticket:  intake → analyzed → planned → approved → in_progress
-                 ↘ blocked ──────────────────────↗
-         → awaiting_user_tests → in_qa ─┬→ changes_requested → in_progress ↗
-                                       └→ qa_approved → closed
-                                                          ↘ changes_requested
-                                                            (solo unreleased)
-point:   open → analyzed → in_progress → awaiting_retest → verified → closed
-         ↘ not_reproducible | deferred | duplicate   (requieren motivo)
-release: not_applicable | unreleased → planned → released
-\`\`\`
-
-Las tres máquinas de estado son **independientes**. Confundir "cerrado" con
-"publicado" es el error clásico: un ticket puede estar cerrado y seguir sin
-publicar.
-
-No existe el estado \`completed\`: es ambiguo. Cada estado tiene una salida
-obligatoria verificable.
+\`intake → analyzed → planned → approved → in_progress → awaiting_user_tests → in_qa → qa_approved → closed\`, con \`blocked\` y \`changes_requested\` como desvíos. El motor rechaza un salto ilegal; las tres máquinas (ticket, punto, release) son independientes: un ticket cerrado puede seguir sin publicar. No existe el estado \`completed\`. El detalle está en la skill \`planificacion\`.
 
 ### Gates
 
-Un gate es una condición que debe cumplirse antes de avanzar. Puede ser
-mecánico, automático o humano.
-
-| Qué se valida | Cómo |
-|---|---|
-| Esquema del ticket, plan real, criterios verificables | Mecánico: lo decide el código |
-| Cobertura de requisitos, coherencia del plan con la investigación | Automático: un modelo responde proposiciones y el código aplica umbrales |
-| Despliegue, release, seguridad, migraciones | Humano: aprobación explícita, sin excepción |
-
-**Un gate nunca le pregunta a un modelo si aprueba.** Le pregunta hechos
-verificables y el código decide. Cada decisión deja un recibo con la evidencia
-que vio el evaluador, sus respuestas y su coste.
+Un gate es una condición que debe cumplirse antes de avanzar: mecánico (lo decide el código), automático (un modelo responde proposiciones y el código aplica umbrales) o humano (despliegue, release, seguridad y migraciones: aprobación explícita, sin excepción). **Un gate nunca le pregunta a un modelo si aprueba**: le pregunta hechos verificables, y cada decisión deja un recibo con la evidencia, las respuestas y el coste.
 
 ### Antes de diagnosticar, buscar en la memoria
 
-El proyecto acumula lo que ya decidió y lo que ya falló. Antes de investigar un
-ticket, \`buscar_memoria\` con el módulo y el síntoma:
-
-> el problema que estás por diagnosticar puede estar resuelto desde hace meses,
-> con su causa raíz escrita y el porqué de la decisión.
-
-Buscar cuesta una llamada. No buscar cuesta rediagnosticar algo que alguien ya pagó
-por entender, y volver a decidir lo que ya se decidió. Cuando la búsqueda devuelve
-algo, el diagnóstico lo **cita**: un ticket que repite un error conocido se explica
-mucho mejor diciendo cuál es y por qué volvió.
-
-Y lo que este trabajo enseñe —una causa raíz que costó encontrar, un patrón que se
-repite— se guarda con \`guardar_aprendizaje\` cuando se descubre, no al final.
+Antes de investigar un ticket, \`buscar_memoria\` con el módulo y el síntoma: el problema puede estar resuelto desde hace meses, con su causa raíz escrita. Cuando devuelve algo, el diagnóstico lo **cita**. Lo que el trabajo enseñe —una causa raíz que costó encontrar, un patrón que se repite— se guarda con \`guardar_aprendizaje\` cuando se descubre, no al final.
 
 ### Los estándares del proyecto, y cómo crecen
 
-Los estándares viven en \`.valmen/rules/estandares-<área>.md\` y llegan acá en el
-\`valmen sync\`: alineación, formato de montos, tema claro y oscuro, convenciones
-de código. Se leen **antes** de escribir la primera línea de una pantalla o de un
-modelo, no después de que alguien corrija: la regla que no se lee se descubre por
-una devolución, y esa devolución ya se pagó.
+Viven en \`.valmen/rules/estandares-<área>.md\` y llegan acá en el \`valmen sync\`. Se leen **antes** de escribir la primera línea de una pantalla o de un modelo, no después de una devolución.
 
-Cuando el trabajo enseñe algo que no está escrito —hubo que aclararlo dos veces,
-una corrección reveló que la regla existía solo en la cabeza de alguien, apareció
-un caso que ninguna regla cubre—, se propone con \`proponer_estandar\`:
-la regla en imperativo, el motivo con el caso concreto, y los tickets donde se
-vio. La propuesta **no está en vigor** hasta que una persona la acepte; no la
-apliques como si lo estuviera.
+Cuando el trabajo enseñe algo que no está escrito —hubo que aclararlo dos veces, una corrección reveló una regla que vivía en la cabeza de alguien—, se propone con \`proponer_estandar\`: la regla en imperativo, el motivo con el caso concreto y los tickets donde se vio. **No está en vigor** hasta que una persona la acepte con \`decidir_estandar\`, citando **sus** palabras; si no dio ninguna, se le pide, no se escribe por ella.
 
-Y la decisión se puede pedir por donde sea. Si la persona dice «aceptá los
-estándares propuestos», se aceptan con \`decidir_estandar\` —o
-\`valmen estandar aceptar pendientes --instruccion "…"\`— citando **sus** palabras:
-el registro guarda la frase que autorizó la regla. Si no dio ninguna, se le pide;
-no se escribe por ella.
-
-Si el cambio toca pantallas, antes de entregar se corre \`revisar_presentacion\`:
-avisa de los colores escritos a mano en lo que el cambio agrega, que son los que
-rompen el modo oscuro. No bloquea, y un color legítimo —una marca, una
-impresión— se marca en la línea con \`valmen:allow-color\` y su motivo.
+Si el cambio toca pantallas, antes de entregar se corre \`revisar_presentacion\`: avisa de los colores escritos a mano, que rompen el modo oscuro. Un color legítimo se marca en la línea con \`valmen:allow-color\` y su motivo.
 
 ### Cómo se verifica un criterio
 
-Cada criterio de aceptación declara **cómo se verifica**, en un comentario debajo:
-
-\`\`\`markdown
-- [ ] El endpoint rechaza cantidades negativas con HTTP 400
-      <!-- test: python BackEnd/manage.py test ModInventory -->
-- [ ] La pantalla muestra el saldo actualizado
-      <!-- verify: manual -->
-\`\`\`
-
-El gate \`qa-mechanical\` corre los declarados antes de que el ticket pase a las
-pruebas del responsable, y la entrega no avanza sin ese recibo. Los comandos
-permitidos los declara el proyecto en \`test-commands\` (\`.valmen/config.yaml\`), y
-el prefijo se compara por palabra completa. El tiempo máximo de cada comando son
-30 segundos, y se cambia con \`test-timeout\` (en segundos): una suite que corre
-dentro de \`docker compose\` tarda más, y el gate la corta con un error que parece
-del comando y no del tope. Un criterio sin anotación detiene el
-gate: la ambigüedad se resuelve sola a favor de «seguramente está bien», y un
-criterio que solo verifica una persona se marca \`verify: manual\` —que es una
-declaración, no una omisión—.
+Cada criterio de aceptación declara cómo se verifica, en un comentario debajo: \`<!-- test: <comando> -->\` o \`<!-- verify: manual -->\`. El gate \`qa-mechanical\` corre los comandos declarados y se detiene ante un criterio sin anotación. Los comandos permitidos y el tiempo máximo salen de \`test-commands\` y \`test-timeout\` en \`.valmen/config.yaml\`; el detalle está en la skill \`planificacion\`.
 
 ### Acciones que nunca se automatizan
 
-| Acción | Por qué |
-|---|---|
-| Aprobar un despliegue a producción | Irreversible para clientes activos. Exige frase literal. |
-| Crear un tag de release publicado | Una release publicada es inmutable. |
-| Force-push, reset destructivo, borrar tags | Riesgo de pérdida de trabajo irreversible. |
-| Ampliar la autoridad de edición fuera del alcance declarado | Es el consentimiento que un modelo no puede darse a sí mismo. |
-| Marcar QA como eximida | Exige motivo y confirmación explícita. |
-| Modificar el gate que lo evalúa | Un gate no puede ampliar su propia autoridad. |
-| Modificar credenciales o configuración de hosts permitidos | Regla dura. |
+Se pueden **preparar** —dry-run, comandos listos, evidencia reunida—, pero las ejecuta una persona:
 
-Estas acciones pueden **prepararse** automáticamente —dry-run, comandos listos,
-evidencia reunida— pero su ejecución requiere una persona. El sistema entrega el
-trabajo hecho y la decisión pendiente.
+- Aprobar un despliegue a producción (exige frase literal) y crear un tag de release publicado.
+- Force-push, reset destructivo, borrar tags.
+- Ampliar la autoridad de edición fuera del alcance declarado, o modificar el gate que lo evalúa: un gate no amplía su propia autoridad.
+- Marcar QA como eximida (exige motivo y confirmación explícita).
+- Modificar credenciales o la configuración de hosts permitidos.
 `;
 
 /**
@@ -265,48 +115,13 @@ export const INVARIANTS_TEMPLATE = `## Invariantes de operación
 /** Sección de cierre: cómo se documenta y se entrega. */
 export const DELIVERY_TEMPLATE = `## Entrega y documentación
 
-Al terminar una implementación, se entrega el contrato de pruebas: comandos
-exactos, directorio de ejecución, resultado esperado, validaciones manuales y
-requisitos de ambiente. El ticket pasa a \`awaiting_user_tests\` y solo avanza con
-el resultado del responsable o con una omisión explícita y documentada.
+Al terminar una implementación se entrega el contrato de pruebas: comandos exactos, directorio de ejecución, resultado esperado, validaciones manuales y requisitos de ambiente. El ticket pasa a \`awaiting_user_tests\` y solo avanza con el resultado del responsable o con una omisión explícita y documentada. Los criterios que se verificaron quedan marcados con \`- [x]\`; el detalle está en la skill \`revision-final\`.
 
-Y **los criterios que se verificaron quedan marcados** con \`- [x]\` en el ticket.
-Una casilla sin marcar en un ticket entregado —o peor, cerrado— dice que nadie
-comprobó ese criterio: el registro afirma a la vez que el trabajo está aprobado y
-que hay criterios que nadie miró. Los que se corren por comando se marcan cuando
-el recibo del gate mecánico dice que pasaron; los \`verify: manual\`, cuando quien
-prueba confirma el resultado, no antes. Un criterio que dejó de aplicar no se
-marca en falso: se dice por qué en la entrega.
+Los commits se crean solo tras la confirmación de las pruebas. Antes de commitear se revisa el estado del repositorio y se excluyen los archivos ajenos al ticket sin modificarlos; los cambios ajenos conocidos no bloquean la entrega. No se mezclan tickets en un commit, ni se usa \`git add -A\` sin revisión, ni autocommits.
 
-Los commits se crean solo tras la confirmación de las pruebas. Antes de
-commitear, revisar el estado del repositorio, identificar los archivos
-atribuibles al ticket y excluir los ajenos sin modificarlos. Los cambios ajenos
-conocidos no bloquean la entrega.
+**El consumo de IA queda registrado antes de cerrar**: \`## Consumo de IA\` lleva una entrada por sesión con los números de la sesión, no una estimación, y sin él el motor rechaza el cierre. Una sesión que sirvió **varios** tickets se declara \`manual:\` sin números: un reparto a ojo es un número inventado con forma de medición. Por eso, **una sesión por ticket**. Cómo se cita la fuente de los números está en la skill \`revision-final\`.
 
-Y **el consumo de IA queda registrado antes de cerrar**: \`## Consumo de IA\` lleva
-una entrada por sesión que trabajó el ticket, con los números de la sesión y no de
-una estimación. Sin consumo el motor no prepara el cierre —no es una
-recomendación: se rechaza—, y la fuente tiene que decir de dónde salieron los
-números con un prefijo que apunte de verdad ahí: \`opencode:\` su base,
-\`hermes:\` la suya, \`codex:\` y \`claude:\` la sesión, \`manual:\` una sesión sin agregado —con el
-motivo en las notas— y \`process:\` una corrida del harness. Un \`hermes:\` que apunta
-a la base de OpenCode diría una cosa y mostraría otra, y el costo dejaría de ser
-verificable. Y una sesión que sirvió **varios** tickets se declara con \`manual:\` y
-sin números, diciendo cuáles y dónde quedó su gasto completo: un reparto a ojo es
-un número inventado con forma de medición, y el hueco declarado se ve.
-
-**Una sesión por ticket**, además, es lo que hace posible ese número: una
-conversación que atendió cinco tickets tiene un solo costo y ningún modo de
-repartirlo, así que el consumo por ticket se vuelve una estimación justo donde el
-registro promete un dato.
-
-Y antes de commitear, \`valmen secrets\`: un secreto commiteado no se descommitea
-—queda en el historial aunque el commit siguiente lo borre—. Si el hallazgo es
-legítimo (una prueba, un ejemplo), la línea se marca con \`valmen:allow-secret\` y
-deja de aparecer.
-
-No se mezclan tickets en un commit. No se usan \`git add -A\` sin revisión ni
-autocommits.
+Antes de commitear, \`valmen secrets\`: un secreto commiteado queda en el historial aunque el commit siguiente lo borre. Un hallazgo legítimo se marca en la línea con \`valmen:allow-secret\`.
 `;
 
 /** Título de la sección del contrato de respuesta en el `AGENTS.md` proyectado. */

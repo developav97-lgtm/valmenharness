@@ -1,7 +1,7 @@
 ---
 name: revision-final
 description: Usar cuando un cambio parece listo para entregar al responsable, cuando se pida una revisión de código o antes de abrir un ciclo de validación. Revisa calidad y trazabilidad; no autoriza publicaciones.
-version: 1.0.0
+version: 1.1.0
 origen: valmen
 ---
 
@@ -38,6 +38,22 @@ Antes de entregar y antes de cerrar, **cada criterio de aceptación que se verif
 - Un criterio que dejó de aplicar **no se borra ni se marca en falso**: se dice por qué en la entrega, y si el alcance cambió, eso se resuelve en el plan.
 
 Marcarlos es parte de entregar, como escribir los comandos exactos: es lo que permite leer un ticket cerrado dentro de un año y saber qué se comprobó.
+
+## El consumo de IA se registra antes de cerrar
+
+`## Consumo de IA` lleva una entrada por sesión que trabajó el ticket, con **los números de la sesión y no de una estimación**. Sin consumo el motor no prepara el cierre: no es una recomendación, se rechaza.
+
+La fuente dice de dónde salieron los números, con un prefijo que apunte de verdad ahí:
+
+- `opencode:` su base de datos.
+- `hermes:` la suya.
+- `codex:` y `claude:` la sesión del cliente.
+- `manual:` una sesión sin agregado, con el motivo en las notas.
+- `process:` una corrida del harness.
+
+Un `hermes:` que apunta a la base de OpenCode diría una cosa y mostraría otra, y el costo dejaría de ser verificable.
+
+Una sesión que sirvió **varios** tickets se declara con `manual:` y sin números, diciendo cuáles y dónde quedó su gasto completo: un reparto a ojo es un número inventado con forma de medición, y el hueco declarado se ve. **Una sesión por ticket** es lo que hace posible el número: una conversación que atendió cinco tickets tiene un solo costo y ningún modo de repartirlo.
 
 ## Informe y siguiente estado
 

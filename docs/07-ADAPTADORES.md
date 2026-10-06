@@ -320,6 +320,39 @@ hasta que se corra `valmen sync`.
 Esto resuelve un problema medido: el `AGENTS.md` de SaiOpenCloud pesaba 54 KB, y 8 KB eran el
 «Por qué» de 18 estándares y 12 KB reglas de pantalla.
 
+### 6.5 Plantillas compactas
+
+**Implementado.** Las tres plantillas fijas del harness (`WORKFLOW_TEMPLATE`,
+`INVARIANTS_TEMPLATE` y `DELIVERY_TEMPLATE`, en `packages/adapter/src/templates.ts`) son texto igual
+en todo proyecto, y pesaban 15 464 B de cada `AGENTS.md`. Se reparten en dos mitades:
+
+| Se queda en `AGENTS.md` (frena una acción) | Va a una skill publicada, con un puntero de una línea |
+|---|---|
+| autorización antes de acción; modo directo y sus gates de impacto; quién decide el ticket | recorrido de feature → `feature` |
+| «Continuar un ticket» y no tocar el código sin `approved`; traducir lo nuevo del pedido | estados del ticket, del punto y de la release → `planificacion` |
+| gates; memoria; estándares; acciones que nunca se automatizan; invariantes | cómo se verifica un criterio (`test`/`verify`, `test-commands`, `test-timeout`, `qa-mechanical`) → `planificacion` |
+| contrato de pruebas; commits; consumo de IA registrado antes de cerrar; secretos | marcado de criterios y reglas de la fuente del consumo de IA → `revision-final` |
+
+La regla de reparto es la de §8: lo que **frena una acción** se carga siempre, porque es lo único que
+lee un agente sin skills; lo que es **procedimiento de una fase** vive en la skill y la plantilla lo
+nombra. Lo que se mueve lo sigue exigiendo el motor (`qa-mechanical` detiene al criterio sin
+anotación, `preparar_cierre` rechaza un cierre sin consumo, `mover_ticket` rechaza un salto ilegal),
+así que un cliente que no carga skills lo descubre por el rechazo y no por la lectura.
+
+Medido: las tres plantillas pasan de 15 464 B a 9 082 B (−6 382 B). Sobre una copia de `.valmen/` de
+SaiOpenCloud con `rules-to-skills` de su regla de pantalla, su `AGENTS.md` pasa de 41 083 B
+(~10 271 tokens) a 34 701 B (~8 676 tokens), −15,5 %; el de este repositorio, de 22 995 B a 16 613 B.
+Los ~22 KB completos de SaiOpenCloud no salen de aquí: ~16 KB son texto propio del proyecto
+(`proyecto.md`, estándares, stack), que no se toca desde el harness.
+
+`tests/plantillas-compactas.test.ts` fija el tope de las tres plantillas (9 400 B), las siete acciones,
+los pasos de «Continuar un ticket», las reglas de entrega, los punteros y que cada skill trae el detalle.
+
+**Cambia el `AGENTS.md` y dos skills de todo proyecto.** `planificacion` y `revision-final` pasan a la
+versión 1.1.0: tras actualizar el harness, `valmen sync --check` marca `AGENTS.md` como desactualizado y
+nombra las dos skills con el motivo `version` hasta que se corra `valmen sync`, que las instala y
+regenera el documento.
+
 ## 7. Skills compartidas entre agentes
 
 **Implementado.** La fuente es `.valmen/skills/<id>/SKILL.md`, con el formato del estándar
@@ -402,6 +435,10 @@ planifica, prueba, revisa o entrega, es del harness.** Hoy publica cuatro —`pl
 `pruebas-unitarias`, `revision-final` y `feature`—; `descomposicion` quedó fuera porque la de
 SaiOpenCloud se declara a sí misma «las reglas de reparto de SaiOpenCloud y no las generales»,
 y una skill que miente en el proyecto siguiente no se publica.
+
+`planificacion` y `revision-final` van en la versión 1.1.0: reciben el detalle que salió de las
+plantillas de `AGENTS.md` (estados y verificación de criterios; consumo de IA), según §6.5. Un
+proyecto con la 1.0.0 ve el motivo `version` en `sync --check` hasta correr `valmen sync`.
 
 ### Cómo se extiende sin bifurcar
 

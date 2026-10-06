@@ -1,7 +1,7 @@
 ---
 name: planificacion
 description: Usar antes de implementar un ticket, o cuando se pida diseñar, revisar o ajustar su plan. Aplica a funcionalidades, errores, mejoras, sincronización, integraciones, seguridad y cambios de despliegue o runtime.
-version: 1.0.0
+version: 1.1.0
 origen: valmen
 ---
 
@@ -76,6 +76,37 @@ Solo tras recibirla, registrar en `## Plan` la línea de aprobación explícita 
 Si la compuerta no se exige, registrar la razón concreta. Esa excepción **no aplica a los impactos críticos**: pasar la validación mecánica no demuestra autorización.
 
 Mover el estado con el harness, no editando el campo a mano: un salto que la tabla del contrato no permite se rechaza. Preservar el historial de aprobaciones al ajustar el plan; un cambio material necesita aprobación renovada antes de implementar.
+
+## Estados del ticket
+
+```text
+ticket:  intake → analyzed → planned → approved → in_progress
+                 ↘ blocked ──────────────────────↗
+         → awaiting_user_tests → in_qa ─┬→ changes_requested → in_progress ↗
+                                       └→ qa_approved → closed
+                                                          ↘ changes_requested
+                                                            (solo unreleased)
+point:   open → analyzed → in_progress → awaiting_retest → verified → closed
+         ↘ not_reproducible | deferred | duplicate   (requieren motivo)
+release: not_applicable | unreleased → planned → released
+```
+
+Las tres máquinas de estado son **independientes**. Confundir «cerrado» con «publicado» es el error clásico: un ticket puede estar cerrado y seguir sin publicar. No existe el estado `completed`: es ambiguo, y cada estado tiene una salida obligatoria verificable. Se mueve con el harness (`mover_ticket`), que rechaza un salto que la tabla no permite; entrar a `approved` exige antes la aprobación de una persona registrada.
+
+## Cómo se verifica un criterio
+
+Cada criterio de aceptación declara **cómo se verifica**, en un comentario debajo:
+
+```markdown
+- [ ] El endpoint rechaza cantidades negativas con HTTP 400
+      <!-- test: python BackEnd/manage.py test ModInventory -->
+- [ ] La pantalla muestra el saldo actualizado
+      <!-- verify: manual -->
+```
+
+El gate `qa-mechanical` corre los comandos declarados antes de que el ticket pase a las pruebas del responsable, y la entrega no avanza sin ese recibo. Los comandos permitidos los declara el proyecto en `test-commands` (`.valmen/config.yaml`), y el prefijo se compara por palabra completa. El tiempo máximo de cada comando son 30 segundos y se cambia con `test-timeout` (en segundos): una suite que corre dentro de `docker compose` tarda más, y el gate la corta con un error que parece del comando y no del tope.
+
+Un criterio sin anotación detiene el gate: la ambigüedad se resuelve sola a favor de «seguramente está bien». Un criterio que solo verifica una persona se marca `verify: manual`, que es una declaración, no una omisión.
 
 ## Handoff
 
