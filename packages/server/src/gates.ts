@@ -52,6 +52,7 @@ import {
   buildGateState,
   claveDeCorrida,
   currentReceipts,
+  describirDecisionHumana,
   findTicket,
   readReceipts,
   runGate,
@@ -653,9 +654,13 @@ export function recordHumanDecision(
       paths,
       ticketId,
       input.decision === "approve" ? "gate-approved" : "gate-rejected",
-      input.decision === "approve"
-        ? `Gate ${vigente.gate} aprobado por ${input.actor.trim()}${input.reason.trim() === "" ? "." : `: ${input.reason.trim()}`}`
-        : `Gate ${vigente.gate} rechazado por ${input.actor.trim()}${input.reason.trim() === "" ? "." : `: ${input.reason.trim()}`}`,
+      // El mismo texto que `transition` escribe cuando la decisión quedó solo en el
+      // recibo: con una sola redacción, el avance reconoce este evento por el recibo
+      // que cita y no agrega un duplicado.
+      describirDecisionHumana(
+        vigente,
+        conDecision.humanDecision as NonNullable<GateReceipt["humanDecision"]>,
+      ),
     );
   } catch (caught) {
     // La decisión ya está en el recibo, que es donde no se puede perder. Si el

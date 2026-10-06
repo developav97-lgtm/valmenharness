@@ -43,7 +43,7 @@ import {
 import { type GateReceipt, extractCriteriaSpecs, hashState } from "@valmen/gate";
 
 import type { RegistryPaths } from "./discovery.js";
-import { currentReceipts } from "./receipts.js";
+import { currentReceipts, veredictoDeCompuerta } from "./receipts.js";
 import { buildGateState } from "./state.js";
 
 /** Lo que toca hacer ahora con un ticket. */
@@ -64,39 +64,6 @@ export interface NextStep {
   readonly alto: string | null;
   /** Lo que **no** se hace en esta fase. */
   readonly noHacer: readonly string[];
-}
-
-/** Qué dice una compuerta sobre el ticket, según su último recibo. */
-type Veredicto =
-  | { readonly tipo: "sin-recibo" }
-  | { readonly tipo: "bloqueada"; readonly recibo: GateReceipt }
-  | { readonly tipo: "espera-persona"; readonly recibo: GateReceipt }
-  | { readonly tipo: "aprobada"; readonly recibo: GateReceipt };
-
-/**
- * Lo que dice el último recibo de una compuerta.
- *
- * La decisión humana manda sobre el veredicto del evaluador, porque el registro es
- * append-only y la decisión se anexa después: una persona que aprobó una banda de
- * revisión la deja aprobada, y una que rechazó un «approve» la deja bloqueada. Sin
- * decisión humana, un recibo escalado espera a una persona aunque su veredicto sea
- * `approve`: es el modo por defecto de una compuerta.
- */
-function veredictoDe(recibos: readonly GateReceipt[], compuerta: string): Veredicto {
-  // `currentReceipts` devuelve del más nuevo al más viejo, ya con la decisión humana
-  // colapsada sobre su recibo.
-  const recibo = currentReceipts(recibos).find((candidato) => candidato.gate === compuerta);
-  if (recibo === undefined) return { tipo: "sin-recibo" };
-  if (recibo.humanDecision !== null) {
-    return recibo.humanDecision.decision === "approve"
-      ? { tipo: "aprobada", recibo }
-      : { tipo: "bloqueada", recibo };
-  }
-  if (recibo.outcome === "block") return { tipo: "bloqueada", recibo };
-  if (recibo.escalatedTo === "human" || recibo.outcome === "review") {
-    return { tipo: "espera-persona", recibo };
-  }
-  return { tipo: "aprobada", recibo };
 }
 
 /** Las skills de proceso del harness, por fase. Los ids son los del catálogo publicado. */
@@ -209,6 +176,18 @@ export function computeNextStep(
   const decidir = (recibo: GateReceipt): string =>
     `\`valmen gate-decide --id ${id} --receipt ${recibo.id} --decision approve|reject ` +
     `--actor <nombre> --reason <texto>\``;
+  // El avance a `planned` y a `approved` con la compuerta en `block` sin decisión humana lo
+  // rechaza `transition` (R-CDEF-004): este paso dice cómo se autoriza, para que quien se
+  // topa con el rechazo no tenga que adivinarlo. Con una decisión ya registrada no hay
+  // nada que autorizar.
+  const autorizarBloqueo = (recibo: GateReceipt, destino: string): readonly string[] =>
+    recibo.humanDecision !== null
+      ? []
+      : [
+          "Si una persona autoriza seguir pese al bloqueo, el motor no deja avanzar sin su " +
+            `decisión registrada: ${decidir(recibo)} con su frase literal en \`--reason\`, y ` +
+            `después ${mover(destino)}. ${SALVEDAD_DE_DELEGACION}`,
+        ];
 
   switch (estado) {
     case "intake": {
@@ -243,7 +222,7 @@ export function computeNextStep(
     }
 
     case "analyzed": {
-      const veredicto = veredictoDe(recibos, "analysis");
+      const veredicto = veredictoDeCompuerta(recibos, "analysis");
       if (veredicto.tipo === "sin-recibo") {
         return paso(
           "compuerta de análisis",
@@ -261,6 +240,7 @@ export function computeNextStep(
             "Mejora el diagnóstico en una sola pasada —sin perseguir el número reescribiendo el " +
               "artefacto— y vuelve a evaluarla. Si sigue sin pasar, deja el ticket en `analyzed` y " +
               "pide la decisión de una persona.",
+            ...autorizarBloqueo(veredicto.recibo, "planned"),
           ],
           { skills: skillsDe(paths.root, "analisis"), noHacer: [NO_CODIGO_SIN_APROBAR] },
         );
@@ -293,7 +273,7 @@ export function computeNextStep(
     }
 
     case "planned": {
-      const veredicto = veredictoDe(recibos, "plan");
+      const veredicto = veredictoDeCompuerta(recibos, "plan");
       const sinVerificar = criteriosSinVerificacion(ticket);
       const aprobadoEnPlan = hasPlanGate(ticket);
       const critico = isCriticalPlanGate(ticket)
@@ -325,6 +305,7 @@ export function computeNextStep(
             `La compuerta \`plan\` no pasó (${citar(veredicto.recibo)}).`,
             "Corrige el plan en una sola pasada y vuelve a evaluarla. Si sigue sin pasar, deja el " +
               "ticket en `planned` y pide la decisión de una persona.",
+            ...autorizarBloqueo(veredicto.recibo, "approved"),
           ],
           { skills: skillsDe(paths.root, "plan"), noHacer: [NO_CODIGO_SIN_APROBAR] },
         );

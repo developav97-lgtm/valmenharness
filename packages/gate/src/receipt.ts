@@ -293,7 +293,7 @@ export function buildReceipt(input: ReceiptInput): GateReceipt {
 }
 
 /**
- * Anexa la decisión de una persona a un recibo escalado.
+ * Anexa la decisión de una persona a un recibo escalado o bloqueado.
  *
  * Devuelve un recibo nuevo: los recibos son inmutables una vez emitidos. La
  * decisión humana se añade, nunca reemplaza el veredicto del evaluador, porque
@@ -304,15 +304,39 @@ export function buildReceipt(input: ReceiptInput): GateReceipt {
  * contando como decisión del modelo; el recibo tiene que poder decir quién
  * decidió de verdad. El veredicto del evaluador queda en `outcome`, `reason` y
  * `propositions`: eso no se toca.
+ *
+ * **Un recibo `block` también admite la decisión.** Solo `review` escala, así que
+ * antes un bloqueo que el PO autorizó seguir no tenía dónde dejar su frase, y el
+ * ticket avanzaba sin rastro: es lo que pasó 9 veces en el registro real
+ * (R-CDEF-004). El recibo conserva `outcome` y `escalatedTo`: la persona anula el
+ * veredicto, no lo borra. Aprobar un `block` exige la **frase literal** de quien
+ * autoriza, porque es lo único que dice después por qué se siguió pese al bloqueo.
+ *
+ * El `block` de `qa-mechanical` queda fuera: es un comando que falló, un hecho y no
+ * una opinión, y aprobarlo entregaría trabajo que no pasa sus pruebas.
  */
 export function withHumanDecision(receipt: GateReceipt, human: HumanDecision): GateReceipt {
-  if (receipt.escalatedTo !== "human") {
+  const bloqueo = receipt.outcome === "block";
+  if (bloqueo && receipt.gate === "qa-mechanical") {
+    throw new Error(
+      `El recibo ${receipt.id} es de la compuerta mecánica y bloqueó: un comando que falló ` +
+        "es un hecho y no una opinión, así que no admite una decisión humana. Corrige lo que " +
+        "falla y vuelve a correrla.",
+    );
+  }
+  if (receipt.escalatedTo !== "human" && !bloqueo) {
     throw new Error(
       `El recibo ${receipt.id} no fue escalado a una persona y no admite una decisión humana.`,
     );
   }
   if (receipt.humanDecision !== null) {
     throw new Error(`El recibo ${receipt.id} ya tiene una decisión humana registrada.`);
+  }
+  if (bloqueo && human.decision === "approve" && human.reason.trim() === "") {
+    throw new Error(
+      `Aprobar el recibo ${receipt.id}, que bloqueó, exige la frase literal de quien ` +
+        "autoriza (`--reason`): sin ella el registro no dice por qué se siguió pese al bloqueo.",
+    );
   }
   return { ...receipt, actor: "human", humanDecision: human };
 }

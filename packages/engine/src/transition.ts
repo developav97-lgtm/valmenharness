@@ -49,7 +49,12 @@ import { hashState } from "@valmen/gate";
 
 import { type RegistryPaths, findTicket } from "./discovery.js";
 import { finalizeMutation, readAndValidate } from "./mutate.js";
-import { readReceipts } from "./receipts.js";
+import {
+  describirDecisionHumana,
+  readReceipts,
+  tieneEventoDeDecision,
+  veredictoDeCompuerta,
+} from "./receipts.js";
 import { buildGateState } from "./state.js";
 
 /** Las entidades que se pueden mover. */
@@ -127,6 +132,7 @@ export function transition(request: TransitionRequest): TransitionOutcome {
       text: plan.text,
       action: `${entity}-transition`,
       details: plan.details,
+      ...(plan.eventosPrevios === undefined ? {} : { eventosPrevios: plan.eventosPrevios }),
       ...(request.now === undefined ? {} : { now: request.now }),
     });
 
@@ -137,6 +143,14 @@ export function transition(request: TransitionRequest): TransitionOutcome {
 /** El texto nuevo y la línea informativa de una transición. */
 interface Plan {
   readonly text: string;
+  readonly details: string;
+  /** Eventos que se anexan antes del de la transición, en la misma escritura. */
+  readonly eventosPrevios?: readonly EventoPrevio[] | undefined;
+}
+
+/** Un evento que acompaña a una transición sin ser parte de ella. */
+interface EventoPrevio {
+  readonly action: string;
   readonly details: string;
 }
 
@@ -205,6 +219,103 @@ function exigirVerificacionMecanica(document: ParsedTicket, paths: RegistryPaths
   }
 }
 
+/**
+ * Las compuertas cuyo veredicto hay que respetar al entrar a un estado.
+ *
+ * Se ata al **destino** y no al par origen→destino porque `blocked` sale hacia
+ * `planned` y `approved` desde cualquier origen sin recordar de dónde vino: una
+ * regla sobre `analyzed → planned` se esquiva con `analyzed → blocked → planned`, y
+ * el registro real lo tiene.
+ */
+const COMPUERTA_DE_DESTINO: Readonly<Record<string, string>> = {
+  planned: "analysis",
+  approved: "plan",
+};
+
+/** Corta un motivo largo para citarlo en un mensaje. */
+function resumir(texto: string): string {
+  const limpio = texto.replace(/\s+/g, " ").trim();
+  return limpio.length > 200 ? `${limpio.slice(0, 197)}...` : limpio;
+}
+
+/**
+ * Entrar a `planned` o `approved` exige una decisión humana si la compuerta de esa
+ * fase no aprobó (R-CDEF-004).
+ *
+ * Mira el **último** recibo vigente de la compuerta, con la decisión humana ya
+ * colapsada sobre su corrida: si el último es `block` o `review` y nadie lo firmó, o
+ * una persona lo rechazó, el movimiento se rechaza. Hubo recibos `block` anteriores
+ * que se corrigieron y se volvieron a evaluar hasta un `approve`: eso es el flujo
+ * sano y no se toca. Sin ningún recibo no hace nada; el hueco de avanzar sin pasar por
+ * la compuerta es de otra regla (R-CTRL-001), no de ésta.
+ *
+ * Rechazar —y no firmar al avanzar— es a propósito: quien mueve el ticket es el
+ * agente, y un `transition` que recibiera actor y frase le dejaría firmarse a sí mismo
+ * en una sola llamada. La firma es un acto previo de la persona, por el camino que ya
+ * existe (`recordHumanDecision`), y el avance la **lee**.
+ *
+ * Lo que sí deja el avance es la constancia: si procede por una decisión humana y el
+ * ticket no tiene el evento que cita ese recibo —la decisión quedó solo en el recibo,
+ * o anotar el evento falló—, devuelve el evento para que se anexe en la misma
+ * escritura. La decisión vale aunque el ticket haya cambiado después del recibo: tras
+ * dos bloqueos, lo normal es un artefacto ya corregido que la persona autoriza sin una
+ * tercera corrida.
+ */
+function exigirDecisionDeCompuerta(
+  document: ParsedTicket,
+  paths: RegistryPaths,
+  to: string,
+): readonly EventoPrevio[] {
+  const compuerta = COMPUERTA_DE_DESTINO[to];
+  if (compuerta === undefined) return [];
+
+  const id = document.fields.id;
+  const veredicto = veredictoDeCompuerta(readReceipts(paths, id), compuerta);
+  if (veredicto.tipo === "sin-recibo") return [];
+
+  if (veredicto.tipo === "aprobada") {
+    const decision = veredicto.recibo.humanDecision;
+    // Aprobada por el evaluador: no hay firma que dejar, y el ticket lo dice por su
+    // ausencia.
+    if (decision === null) return [];
+    if (tieneEventoDeDecision(document.blocks.Eventos ?? [], veredicto.recibo)) return [];
+    return [
+      {
+        action: "gate-approved",
+        details: describirDecisionHumana(veredicto.recibo, decision),
+      },
+    ];
+  }
+
+  const { recibo } = veredicto;
+  const decision = recibo.humanDecision;
+  if (decision !== null) {
+    fail(
+      `No se puede pasar a \`${to}\`: ${decision.actor} rechazó la compuerta \`${compuerta}\` ` +
+        `(recibo ${recibo.id}): ${decision.reason.trim() === "" ? "sin motivo registrado" : resumir(decision.reason)}.\n` +
+        "Corrige lo que pidió y vuelve a evaluar la compuerta.",
+      EXIT_INVARIANT,
+    );
+  }
+
+  fail(
+    `No se puede pasar a \`${to}\`: el último recibo de la compuerta \`${compuerta}\` ` +
+      `(${recibo.id}) está en \`${recibo.outcome}\` y no tiene una decisión humana registrada` +
+      `${recibo.reason.trim() === "" ? "" : ` (${resumir(recibo.reason)})`}.\n` +
+      "Ni el modelo ni quien mueve el ticket la sustituyen. Preséntale el veredicto a la persona " +
+      "y, con su frase literal, registra su decisión:\n" +
+      `  valmen gate-decide --id ${id} --receipt ${recibo.id} --decision approve ` +
+      '--actor <nombre> --reason "<frase literal>"\n' +
+      (recibo.outcome === "block"
+        ? "Un bloqueo también se puede autorizar así: la frase queda en el recibo y en el ticket. "
+        : "") +
+      "Después repite el movimiento. Solo si quien pidió el trabajo te delegó esa aprobación " +
+      "por escrito la registras tú; nunca se escribe como palabras suyas algo que no dijo. Si el " +
+      "artefacto ya se corrigió, vuelve a evaluar la compuerta en vez de pedir la firma.",
+    EXIT_INVARIANT,
+  );
+}
+
 // ── Ticket ──────────────────────────────────────────────────────────────────
 
 function applyTicket(
@@ -259,6 +370,10 @@ function applyTicket(
       "approved requiere un plan proporcional estructurado con al menos dos pasos reales.",
       EXIT_INVARIANT,
     );
+  }
+  let eventosPrevios: readonly EventoPrevio[] = [];
+  if (to === "planned" || to === "approved") {
+    eventosPrevios = exigirDecisionDeCompuerta(document, request.paths, to);
   }
   if (to === "awaiting_user_tests") {
     exigirVerificacionMecanica(document, request.paths);
@@ -360,7 +475,7 @@ function applyTicket(
 
   let details = `Workflow: ${current} -> ${to}.`;
   if (reopening) details += ` Reapertura por hallazgo: ${motivo}`;
-  return { text, details };
+  return { text, details, ...(eventosPrevios.length === 0 ? {} : { eventosPrevios }) };
 }
 
 // ── Release ─────────────────────────────────────────────────────────────────

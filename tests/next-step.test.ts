@@ -195,6 +195,28 @@ describe("analyzed: la compuerta de análisis", () => {
     expect(paso.alto).toBeNull();
   });
 
+  it("bloqueada: dice cómo se autoriza seguir, porque el motor no deja avanzar sin esa decisión (R-CDEF-004)", () => {
+    const sinDecision = texto(
+      siguiente({ workflowStatus: "analyzed" }, [
+        recibo({ gate: "analysis", outcome: "block" }),
+      ]),
+    );
+    const rechazada = texto(
+      siguiente({ workflowStatus: "analyzed" }, [
+        recibo({ gate: "analysis", outcome: "approve", decision: "reject" }),
+      ]),
+    );
+
+    expect(sinDecision).toContain("autoriza seguir pese al bloqueo");
+    expect(sinDecision).toContain(
+      "valmen gate-decide --id " + ID + " --receipt GR-2026-10-05-",
+    );
+    expect(sinDecision).toContain("`mover_ticket` a `planned`");
+    expect(sinDecision).toContain("te delegó esa aprobación por escrito");
+    // Con una decisión ya registrada no hay nada que autorizar: el comando fallaría.
+    expect(rechazada).not.toContain("autoriza seguir pese al bloqueo");
+  });
+
   it("escalada a una persona: se detiene, con el comando que registra la decisión", () => {
     const paso = siguiente({ workflowStatus: "analyzed" }, [
       recibo({ gate: "analysis", outcome: "approve", escalado: true }),
@@ -295,6 +317,18 @@ describe("planned: la compuerta del plan y la aprobación de una persona", () =>
     expect(t).toContain("no pasó");
     expect(t).toContain("el rollback no alcanza");
     expect(t).toContain("una sola pasada");
+  });
+
+  it("bloqueada: dice cómo se autoriza seguir antes de pasar a approved (R-CDEF-004)", () => {
+    const t = texto(
+      siguiente({ workflowStatus: "planned" }, [
+        recibo({ gate: "plan", outcome: "block" }),
+      ]),
+    );
+
+    expect(t).toContain("autoriza seguir pese al bloqueo");
+    expect(t).toContain("valmen gate-decide --id " + ID + " --receipt GR-2026-10-05-");
+    expect(t).toContain("`mover_ticket` a `approved`");
   });
 
   it("escalada y sin la línea de aprobación: se detiene y dice la línea exacta, sin escribirla", () => {

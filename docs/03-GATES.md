@@ -1047,6 +1047,38 @@ Es el objeto que hace auditable todo el sistema. Se escribe **append-only** en
   `escalatedTo: "human"`: el primero sube el modelo, el segundo sube la decisión
   (`packages/engine/src/gate.ts:516-530`).
 
+### 7.1 La decisión humana sobre un recibo y el avance del ticket
+
+`valmen gate-decide`, Mission Control y el enlace firmado de Telegram registran lo mismo, con
+la misma función (`recordHumanDecision`): la decisión se **anexa** al recibo como `humanDecision`
+—actor, decisión, frase, canal y fecha— y el ticket recibe un evento `gate-approved` o
+`gate-rejected` que cita el recibo, `(recibo <id>, canal <c>, decidida <fecha>)`. El veredicto del
+evaluador (`outcome`, `escalatedTo`) no se reescribe: la persona lo anula, no lo borra.
+
+- **Quién puede firmar qué.** Un recibo `review` y un recibo `block`. Sobre un `block`, aprobar
+  exige la **frase literal** de quien autoriza (`--reason`), porque es lo único que dice después
+  por qué se siguió pese al bloqueo. El `block` de `qa-mechanical` no admite decisión humana: es
+  un comando que falló, un hecho y no una opinión.
+- **Entrar a `planned` o `approved` la exige.** Si el último recibo vigente de `analysis` (para
+  `planned`) o de `plan` (para `approved`) está en `block` o `review` sin decisión humana, o una
+  persona lo rechazó, `transition` rechaza el movimiento y dice el recibo, su veredicto y el
+  comando exacto para registrar la decisión. La regla se ata al **destino** y no al par
+  origen→destino, porque `blocked` sale hacia `planned` y `approved` desde cualquier origen sin
+  recordar de dónde vino. Rechazar y no firmar al avanzar es a propósito: quien mueve el ticket
+  es el agente, y un `transition` que recibiera actor y frase le dejaría firmarse a sí mismo.
+  Lo que ya era legal sigue siéndolo: un último recibo `approve` tras varios bloqueos avanza sin
+  firma, y sin ningún recibo de la compuerta tampoco aplica (ese hueco es de la aprobación del
+  plan, R-CTRL-001).
+- **Qué queda en el ticket.** Si el avance procede por una decisión humana y el ticket no tiene
+  el evento que cita ese recibo —la decisión quedó solo en el recibo, o anotarla falló—, el propio
+  movimiento lo anexa en la misma escritura, **antes** del evento de la transición. El `details`
+  de la transición no cambia (`Workflow: a -> b.`): `etapas.ts` lo reconoce solo si es exactamente
+  esa frase. Así, un informe que lea solo el ticket distingue una transición firmada por una
+  persona —tiene su `gate-approved`— de una que aprobó el evaluador —no lo tiene—.
+- **Lo que no hace.** No autentica a quien firma: el actor y la frase son texto que escribe quien
+  registra, y no se atan al hash del plan ni se rechazan en una ejecución desatendida. Eso es de
+  R-CTRL-001 (SECURITY-ENGINE-APROBACION-PLAN-20261005).
+
 ## 8. Gates del pipeline completo
 
 | Gate              | Transición                          | Modo por defecto | Qué valida                                                                                                         |

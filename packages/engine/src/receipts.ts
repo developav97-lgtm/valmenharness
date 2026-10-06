@@ -24,6 +24,7 @@
 import { appendFileSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
+import { type JsonObject } from "@valmen/core";
 import { type GateReceipt } from "@valmen/gate";
 
 import { type RegistryPaths } from "./discovery.js";
@@ -99,6 +100,86 @@ export function claveDeCorrida(receipt: GateReceipt): string {
 export function ticketDeClave(clave: string): string {
   const partes = clave.split("\u0000");
   return partes.length >= 3 ? (partes[2] ?? clave) : clave;
+}
+
+/** Qué dice una compuerta sobre el ticket, según su último recibo. */
+export type VeredictoDeCompuerta =
+  | { readonly tipo: "sin-recibo" }
+  | { readonly tipo: "bloqueada"; readonly recibo: GateReceipt }
+  | { readonly tipo: "espera-persona"; readonly recibo: GateReceipt }
+  | { readonly tipo: "aprobada"; readonly recibo: GateReceipt };
+
+/**
+ * Lo que dice el último recibo de una compuerta.
+ *
+ * La decisión humana manda sobre el veredicto del evaluador, porque el registro es
+ * append-only y la decisión se anexa después: una persona que aprobó una banda de
+ * revisión o un bloqueo la deja aprobada, y una que rechazó un «approve» la deja
+ * bloqueada. Sin decisión humana, un recibo escalado espera a una persona aunque su
+ * veredicto sea `approve`: es el modo por defecto de una compuerta.
+ *
+ * Es la misma lectura que orienta al agente (`next-step`) y la que `transition`
+ * impone al entrar a `planned` y `approved` (R-CDEF-004): lo que se le dice al
+ * agente y lo que el motor le exige no pueden divergir.
+ */
+export function veredictoDeCompuerta(
+  recibos: readonly GateReceipt[],
+  compuerta: string,
+): VeredictoDeCompuerta {
+  // `currentReceipts` devuelve del más nuevo al más viejo, ya con la decisión humana
+  // colapsada sobre su recibo.
+  const recibo = currentReceipts(recibos).find((candidato) => candidato.gate === compuerta);
+  if (recibo === undefined) return { tipo: "sin-recibo" };
+  if (recibo.humanDecision !== null) {
+    return recibo.humanDecision.decision === "approve"
+      ? { tipo: "aprobada", recibo }
+      : { tipo: "bloqueada", recibo };
+  }
+  if (recibo.outcome === "block") return { tipo: "bloqueada", recibo };
+  if (recibo.escalatedTo === "human" || recibo.outcome === "review") {
+    return { tipo: "espera-persona", recibo };
+  }
+  return { tipo: "aprobada", recibo };
+}
+
+/** Las acciones con las que el ticket guarda una decisión humana sobre una compuerta. */
+const ACCIONES_DE_DECISION = ["gate-approved", "gate-rejected"];
+
+/**
+ * El texto del evento que deja una decisión humana en el ticket.
+ *
+ * Es **uno solo** para quien decide (`recordHumanDecision`) y para quien avanza
+ * (`transition`, cuando la decisión estaba solo en el recibo): si fueran dos
+ * redacciones, `tieneEventoDeDecision` no podría reconocer la de la otra. Lleva el
+ * actor, la frase, el canal y la fecha de la decisión, y cita el recibo con la
+ * forma `(recibo <id>,` que esa búsqueda espera. Sin frase lo dice, en vez de
+ * dejar un hueco que se lea como una frase vacía.
+ */
+export function describirDecisionHumana(
+  recibo: Pick<GateReceipt, "id" | "gate" | "outcome">,
+  decision: NonNullable<GateReceipt["humanDecision"]>,
+): string {
+  const aprobada = decision.decision === "approve";
+  const pese = aprobada && recibo.outcome === "block" ? " pese al bloqueo" : "";
+  const frase =
+    decision.reason.trim() === "" ? "sin frase registrada" : decision.reason.trim();
+  return (
+    `Gate ${recibo.gate} ${aprobada ? "aprobado" : "rechazado"} por ${decision.actor}${pese} ` +
+    `(recibo ${recibo.id}, canal ${decision.channel}, decidida ${decision.decidedAt}): ${frase}`
+  );
+}
+
+/** `true` si el ticket ya guarda un evento de decisión humana que cita ese recibo. */
+export function tieneEventoDeDecision(
+  eventos: readonly JsonObject[],
+  recibo: Pick<GateReceipt, "id">,
+): boolean {
+  const cita = `(recibo ${recibo.id},`;
+  return eventos.some(
+    (evento) =>
+      ACCIONES_DE_DECISION.includes(String(evento["action"])) &&
+      String(evento["details"]).includes(cita),
+  );
 }
 
 /**

@@ -164,6 +164,18 @@ export interface MutationRequest {
   /** Acción del evento, en el vocabulario del contrato. */
   readonly action: string;
   readonly details: string;
+  /**
+   * Eventos que se anexan **antes** del principal, en la misma escritura.
+   *
+   * Existen para la constancia de una decisión humana al avanzar (R-CDEF-004): la
+   * firma no puede ir en el `details` de la transición, que `etapas.ts` reconoce solo
+   * si es exactamente `Workflow: a -> b.`, y escribirla en una llamada aparte dejaría
+   * dos escrituras sin atomicidad común. Sin ellos, el comportamiento es el de siempre.
+   */
+  readonly eventosPrevios?: readonly {
+    readonly action: string;
+    readonly details: string;
+  }[];
   readonly now?: () => Date;
 }
 
@@ -191,6 +203,9 @@ export function finalizeMutation(request: MutationRequest): MutationResult {
   // 2. El evento se anexa al final. `newEvent` numera por longitud, así que el
   //    identificador es el siguiente de la serie sin tener que buscarlo.
   const eventos = [...(document.blocks.Eventos ?? [])] as JsonObject[];
+  for (const previo of request.eventosPrevios ?? []) {
+    eventos.push(newEvent(eventos, previo.action, previo.details, ACTOR, momento));
+  }
   eventos.push(newEvent(eventos, action, details, ACTOR, momento));
 
   // 3 y 4. El bloque y la fecha, y la revalidación completa del resultado.
