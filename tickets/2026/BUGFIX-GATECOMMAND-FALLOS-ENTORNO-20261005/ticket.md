@@ -35,6 +35,20 @@ con su pregunta antes de avanzar a análisis; el análisis no planifica sobre
 la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
 Ninguno.
 
+Vector real para el análisis (no es una decisión pendiente): BUGFIX-ENGINE-FIRMA-DE-COMPUERTA-20261004
+(commit `a0ea22d`) hizo que `transition()` exija una decisión humana al entrar a `planned` y
+`approved` con la compuerta en `block` o `review`, y dejó **fuera** a `qa-mechanical` a propósito:
+un comando que falló es un hecho y no una opinión, así que `withHumanDecision` no admite decisión
+sobre su `block`. Pero este ticket (R-CDEF-006) va a producir un `review` de `qa-mechanical` para la
+falla del entorno, y hoy `exigirVerificacionMecanica` (`packages/engine/src/transition.ts`) solo
+rechaza el `block`: un `review` sin firma dejaría pasar `in_progress → awaiting_user_tests`, es decir,
+entregar a la persona trabajo que no llegó a probarse. Lo que el análisis tiene que decidir: que la
+entrega con un `review` mecánico exija la decisión humana registrada (el recibo `review` ya admite
+la decisión por `valmen gate-decide`, porque `buildReceipt` lo escala), con el mismo mensaje y la
+misma constancia en el ticket que ya existen: `veredictoDeCompuerta` y `describirDecisionHumana`
+(`packages/engine/src/receipts.ts`) y `eventosPrevios` (`packages/engine/src/mutate.ts`). La prueba
+`R-CDEF-004 compuerta mecánica` (`tests/firma-de-compuerta.test.ts`) fija el límite actual.
+
 ## Descripción funcional
 
 - Alcance:

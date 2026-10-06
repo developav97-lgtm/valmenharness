@@ -105,6 +105,9 @@ sprints:
           - SECURITY-MC-ESCRITURAS-AUTENTICADAS-20261005
           - BUGFIX-ENGINE-CIERRE-CRITERIOS-20261005
           - BUGFIX-ENGINE-CONSUMO-FIABLE-20261005
+      - id: FEATURE-MC-FIRMA-DE-BLOQUEO-20261005
+        title: Mission Control ofrece firmar un recibo en block con la frase literal de quien autoriza
+        depends_on: []
   - id: S4
     goal: "Respuesta concisa en todos los clientes, independiente de los demás sprints."
     tickets:

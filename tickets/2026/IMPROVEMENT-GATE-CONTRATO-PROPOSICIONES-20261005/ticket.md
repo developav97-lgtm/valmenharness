@@ -47,6 +47,20 @@ de la aprobación explícita del PO» en su primer renglón, y el diagnóstico e
 análisis debe reproducirlo con ese estado (stateHash `7aa937859f2f2e2acc5fe7ac2345433dc4da78391e2866b8ee6f6099d2d6f827`)
 antes de proponer un cambio.
 
+Segundo vector real para el análisis, mismo patrón (no es una decisión pendiente): el recibo
+`GR-20261006-BUGFIX-ENGINE-FIRMA-DE-COMPUERTA-20261004-plan-1` (gate `plan`, cascada) dio
+`corresponde_a_la_investigacion` = 0.01 —descriptiva, no decide— con la clasificación «completo» y
+las otras 21 proposiciones entre 0.97 y 0.99; el verificador le dio 0.69 a la respuesta del modelo
+barato y el modelo superior la dejó en 0.01, así que no fue un tropiezo de un solo modelo.
+Coincide con las dos hipótesis del primer vector: el plan abría con una línea sobre la
+aprobación del PO («pendiente de su frase literal», R-CPRE-012) y el diagnóstico era largo
+(R-CPRE-003). stateHash evaluado: `a34d94d1c5855dad26893756bb81e138052d9d0a0bc9cbbcf6f35d73ba79a643`.
+Advertencia para reproducirlo: el texto que se evaluó no se conservó, porque el recibo guarda el
+hash y no el estado, y ese ticket cambió después (nota de corrección en el diagnóstico y criterios
+marcados con `[x]`); hay que reconstruir el estado o armar un plan con las mismas características
+—primera línea de aprobación pendiente, diagnóstico de unos 12 000 caracteres— y comparar con y
+sin esa línea antes de tocar la proposición. Con dos casos, ya no se puede descartar que sea el
+contenido de la proposición y no el artefacto, y tampoco aprobar ni bloquear a mano sobre ese número.
 ## Descripción funcional
 
 - Alcance:
