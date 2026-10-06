@@ -1,4 +1,3 @@
-# Propuesta del arquitecto consolidada en revisión; ver revision-descomposicion.md.
 feature: autonomia-confiable
 generated_by:
   provider: codex
@@ -46,7 +45,7 @@ sprints:
         depends_on:
           - FEATURE-GATE-APLICABILIDAD-POR-TIPO-20261005
       - id: IMPROVEMENT-GATE-CONTRATO-PROPOSICIONES-20261005
-        title: Alinear proposiciones, partir impactos y excluir afirmaciones sobre aprobaciones
+        title: "Alinear proposiciones, partir impactos y excluir afirmaciones sobre aprobaciones"
         depends_on:
           - IMPROVEMENT-GATE-DIAGNOSTICO-POR-TIPO-20261005
       - id: IMPROVEMENT-CORE-PLANTILLA-Y-MATERIALIZACION-20261005
@@ -71,7 +70,7 @@ sprints:
     goal: "Control en el código: aprobación del plan registrada, despliegue con frase consumible, escrituras autenticadas, cierre con criterios marcados y consumo fiable. Cierra con la medición de salida de S1 a S3."
     tickets:
       - id: SECURITY-ENGINE-APROBACION-PLAN-20261005
-        title: Registrar la aprobación del plan con actor, fuente, frase y hash
+        title: "Registrar la aprobación del plan con actor, fuente, frase y hash"
         depends_on:
           - BUGFIX-ENGINE-FIRMA-DE-COMPUERTA-20261004
       - id: SECURITY-CORE-TRANSICION-APPROVED-20261005
@@ -115,7 +114,7 @@ sprints:
         title: Abrir AGENTS.md con el contrato de respuesta y acotar su tamaño
         depends_on: []
       - id: FEATURE-ADAPTER-CLAUDE-CODE-RESPUESTA-20261005
-        title: Generar el output style, activarlo y mantener el bloque de CLAUDE.md
+        title: "Generar el output style, activarlo y mantener el bloque de CLAUDE.md"
         depends_on:
           - IMPROVEMENT-ADAPTER-CONTRATO-RESPUESTA-20261005
       - id: IMPROVEMENT-ADAPTER-AGENTES-Y-VERBOSIDAD-20261005
@@ -153,7 +152,7 @@ sprints:
         depends_on:
           - FEATURE-ENGINE-JORNADA-EJECUCION-20261005
       - id: IMPROVEMENT-ENGINE-VIGILANTE-JORNADA-20261005
-        title: Avisar pruebas pendientes, fallos y parte diario por Telegram
+        title: "Avisar pruebas pendientes, fallos y parte diario por Telegram"
         depends_on:
           - FEATURE-ENGINE-TOPES-Y-PARADA-20261005
       - id: FEATURE-ENGINE-REGLAS-INTEGRACION-20260926
@@ -179,7 +178,7 @@ sprints:
     goal: "QA por agente en backend bajo autorización firmada, apagada por defecto, en worktree limpio, con criterio HTTP y promoción tras veinte coincidencias en sombra."
     tickets:
       - id: SECURITY-ENGINE-CIERRE-AUTORIZADO-20260926
-        title: Guardar autorizaciones de QA firmadas, append-only y revocables
+        title: "Guardar autorizaciones de QA firmadas, append-only y revocables"
         depends_on:
           - CHORE-ENGINE-SALIDA-COMPUERTAS-CONTROL-20261005
       - id: SECURITY-MC-AUTORIZACION-QA-20261005
@@ -191,7 +190,7 @@ sprints:
         depends_on:
           - SECURITY-ENGINE-CIERRE-AUTORIZADO-20260926
       - id: SECURITY-ENGINE-COMPUERTA-QA-AGENT-20261005
-        title: Correr qa-agent en worktree limpio, contra la base y con recibo reproducible
+        title: "Correr qa-agent en worktree limpio, contra la base y con recibo reproducible"
         depends_on:
           - FEATURE-ENGINE-ELEGIBILIDAD-QA-20261005
       - id: SECURITY-GATEHTTP-CRITERIO-HTTP-20261005
@@ -213,6 +212,9 @@ sprints:
         title: Declarar en AGENTS.md la QA por agente y la autorización como acción humana
         depends_on:
           - SECURITY-ENGINE-QA-POR-POLITICA-20261005
+      - id: FEATURE-MC-POLITICAS-AUTONOMAS-20260926
+        title: Editar políticas autónomas desde Mission Control
+        depends_on: []
 coverage:
   - requirement: R-CDEF-001
     covered_by:

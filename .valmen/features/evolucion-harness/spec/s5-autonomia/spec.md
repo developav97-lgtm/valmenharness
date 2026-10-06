@@ -1,9 +1,8 @@
 # S5 — Autonomía acotada
 
-Requisitos de la quinta ola: tickets elegibles ejecutados de punta a punta sin
-intervención —incluida la integración—, con la elegibilidad decidida por
-configuración auditable, las migraciones al esquema de pruebas declaradas por
-proyecto, y la evidencia de calibración delante. Se construye al final, con las
+Requisitos de la quinta ola: tickets elegibles ejecutados de punta a punta hasta
+las pruebas del responsable, con la elegibilidad decidida por configuración
+auditable y la evidencia de calibración delante. Se construye al final, con las
 olas anteriores en producción.
 
 ### Requirement: R-S5-001 — Elegibilidad por configuración — DEBE existir una sección `autonomous:` en `.valmen/config.yaml` que declare:
@@ -20,8 +19,7 @@ ofrece solo lo que cumple los criterios declarados.
 `valmen run` DEBE llevar un ticket elegible desde su estado actual hasta
 `awaiting_user_tests` sin intervención: análisis, plan, gates automáticos,
 implementación y entrega del contrato de pruebas. La prueba del responsable y
-cualquier gate de riesgo alto SIGUEN siendo de una persona, salvo lo que declara
-R-S5-006 y R-S5-010.
+cualquier gate de riesgo alto SIGUEN siendo de una persona.
 
 ### Requirement: R-S5-003 — Colisiones de escritura antes de paralelizar — DEBE contrastar los archivos que cada plan declara tocar y aplicar la política
 
@@ -44,32 +42,6 @@ secreto detectado, presupuesto superado), la ejecución DEBE detenerse dejando
 el ticket en un estado válido del contrato, con el motivo en el recibo y el
 aviso emitido. Una corrida detenida NO DEBE reintentarse sola.
 
-### Requirement: R-S5-006 — Integración desatendida (commit y push) bajo condiciones — `valmen run` DEBE poder commitear y hacer push sin intervención cuando **todas**
-
-`valmen run` DEBE poder commitear y hacer push sin intervención cuando **todas**
-estas condiciones se cumplen, y NO DEBE integrar cuando alguna falte:
-
-1. El tipo del ticket está en la lista de tipos integrables (por defecto
-   BUGFIX, CHORE, DOCS, IMPROVEMENT).
-2. El riesgo es `normal` o menor, y no hay impactos de migración, contenedores,
-   autenticación, sincronización ni despliegue.
-3. El diff **no toca archivos de interfaz** — el cambio es de backend, pruebas
-   o documentación. Un cambio que toca una pantalla nunca se integra solo.
-4. Los criterios declarados con `<!-- test: … -->` existen y **pasan**, con su
-   recibo del gate mecánico. Un criterio `verify: manual` o `verify: dev` deja
-   el ticket fuera de la integración automática.
-5. La validación semántica aprueba (R-S5-007).
-6. `valmen secrets` y `valmen drift` no reportan hallazgos sobre el cambio.
-
-La rama destino DEBE ser la declarada por el proyecto y NO DEBE ser una rama de
-producción: `dev` sí, `main`/`production` no — y el motor NO DEBE aceptar una
-configuración que apunte a producción. El push DEBE ser al remoto configurado,
-nunca `--force`, y NO DEBE crear ni mover tags de release.
-
-Un proyecto que no declare `autonomous.integration` (o lo declare en `false`)
-NO DEBE integrar nada: el comportamiento de hoy, donde la persona confirma el
-commit, sigue siendo el defecto.
-
 ### Requirement: R-S5-007 — Validación semántica ampliada por etapa — El proyecto DEBE poder declarar proposiciones adicionales de Jev por etapa del
 
 El proyecto DEBE poder declarar proposiciones adicionales de Jev por etapa del
@@ -83,54 +55,24 @@ compuerta: una proposición no puede desbloquear lo que otra bloqueó, ni
 promover un gate a automático. Añadir validación endurece o informa; nunca
 relaja.
 
-Para la integración desatendida, la proposición que decide DEBE verificar que lo
-implementado corresponde al plan aprobado y a la solicitud original, y que no
-hay cambios fuera del alcance declarado.
+Cuando un consumidor prepare una validación de integración, la proposición que
+decide DEBE verificar que lo implementado corresponde al plan aprobado y a la
+solicitud original, y que no hay cambios fuera del alcance declarado.
 
-### Requirement: R-S5-008 — Migración automática al esquema de pruebas — El proyecto DEBE poder declarar en `.valmen/config.yaml` la migración que se
+## Requisitos trasladados
 
-El proyecto DEBE poder declarar en `.valmen/config.yaml` la migración que se
-ejecuta para dejar el esquema de pruebas al día, con su comando exacto, el
-esquema destino y si corre sola:
+Los siguientes requisitos salieron de esta feature el 2026-10-06, por decisión
+del PO, porque sus tickets ahora pertenecen a `autonomia-confiable`. Esta
+referencia conserva el historial; no declara que esa feature mantenga el mismo
+alcance literal ni habilita por sí misma integración, push o cierre automáticos.
 
-```yaml
-migrations:
-  auto: false          # el defecto es no ejecutar nada
-  command: "python BackEnd/manage.py migrate --schema={schema}"
-  schema: dev
-  allowed-schemas: [dev, test, staging]   # nunca un esquema de producción
-```
-
-Reglas:
-
-- El esquema destino DEBE estar en `allowed-schemas`. Un esquema fuera de esa
-  lista detiene la corrida con el motivo; el motor NO DEBE ejecutar una
-  migración contra producción aunque la configuración lo pida.
-- La ejecución DEBE quedar en el recibo con el comando exacto, el esquema, el
-  resultado y la duración, y DEBE correr **antes** de las pruebas que dependen
-  del esquema.
-- Un fallo DEBE detener la corrida y avisar; NO DEBE continuar con el esquema a
-  medias ni reintentar sola.
-- `auto: false` significa que el comando se prepara y se informa, pero lo
-  ejecuta una persona.
-
-### Requirement: R-S5-009 — Todo lo anterior se configura desde la interfaz — adicionales por etapa DEBEN poder verse y editarse desde Mission Control, con
-
-Las secciones `autonomous`, `migrations`, `playwright` y las proposiciones
-adicionales por etapa DEBEN poder verse y editarse desde Mission Control, con
-las mismas validaciones del archivo: un valor que el motor rechazaría en el
-YAML DEBE rechazarse también en la pantalla. La pantalla NO DEBE permitir
-declarar una rama de producción como destino de push ni un esquema fuera de la
-lista permitida.
-
-### Requirement: R-S5-010 — Cierre desatendido con autorización permanente — El cierre de un ticket elegible PUEDE automatizarse **solo** cuando la persona
-
-El cierre de un ticket elegible PUEDE automatizarse **solo** cuando la persona
-dejó una autorización permanente y registrada con sus palabras —el equivalente
-a «si es de backend y las pruebas pasan, cerralo»—, escrita con
-`--instruccion` y conservada en el recibo del cierre.
-
-Sin esa autorización, el cierre sigue pidiendo la confirmación de la persona, y
-el agente NO DEBE escribir por ella. La autorización DEBE poder revocarse, DEBE
-aplicar solo a los tipos y condiciones declarados, y NO DEBE cubrir nunca: QA
-eximida, release, despliegue, ni un ticket con puntos abiertos.
+- `R-S5-006` — integración desatendida: seguimiento en
+  `FEATURE-ENGINE-REGLAS-INTEGRACION-20260926` e
+  `INTEGRATION-GIT-INTEGRACION-AUTONOMA-20260926`.
+- `R-S5-008` — preparación y migración del ambiente de pruebas: seguimiento en
+  `FEATURE-CONFIG-MIGRACION-PRUEBAS-20260926` e
+  `FEATURE-ENGINE-MIGRACION-ANTES-TESTS-20260926`.
+- `R-S5-009` — configuración de políticas desde Mission Control: seguimiento
+  en `FEATURE-MC-POLITICAS-AUTONOMAS-20260926`.
+- `R-S5-010` — autorización persistida para cierre: seguimiento en
+  `SECURITY-ENGINE-CIERRE-AUTORIZADO-20260926`.

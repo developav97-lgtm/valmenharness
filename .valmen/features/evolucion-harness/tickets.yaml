@@ -119,16 +119,6 @@ sprints:
         depends_on:
           - FEATURE-ENGINE-RUN-AUTONOMO-20260926
           - IMPROVEMENT-ENGINE-PRESUPUESTOS-ADAPTATIVOS-20260926
-      - id: FEATURE-ENGINE-REGLAS-INTEGRACION-20260926
-        title: Decidir integración automática por cambio y criterios
-        depends_on:
-          - FEATURE-GATE-VERIFY-DEV-20260926
-          - FEATURE-CONFIG-ELEGIBILIDAD-AUTONOMA-20260926
-      - id: INTEGRATION-GIT-INTEGRACION-AUTONOMA-20260926
-        title: Hacer commit y push solo bajo condiciones seguras
-        depends_on:
-          - FEATURE-ENGINE-REGLAS-INTEGRACION-20260926
-          - SECURITY-ENGINE-PARADA-SEGURA-20260926
       - id: FEATURE-CONFIG-PROPOSICIONES-JEV-20260926
         title: Declarar proposiciones Jev por etapa
         depends_on:
@@ -138,36 +128,6 @@ sprints:
         depends_on:
           - FEATURE-CONFIG-PROPOSICIONES-JEV-20260926
           - FEATURE-ENGINE-RUN-AUTONOMO-20260926
-      - id: FEATURE-CONFIG-MIGRACION-PRUEBAS-20260926
-        title: Declarar migraciones con esquema permitido y auto apagado
-        depends_on:
-          - FEATURE-CONFIG-ELEGIBILIDAD-AUTONOMA-20260926
-      - id: FEATURE-ENGINE-MIGRACION-ANTES-TESTS-20260926
-        title: Ejecutar migraciones autorizadas antes de pruebas
-        depends_on:
-          - FEATURE-CONFIG-MIGRACION-PRUEBAS-20260926
-          - FEATURE-ENGINE-RUN-AUTONOMO-20260926
-      - id: SECURITY-ENGINE-CIERRE-AUTORIZADO-20260926
-        title: Cerrar tickets solo con autorización permanente
-        depends_on:
-          - FEATURE-CONFIG-ELEGIBILIDAD-AUTONOMA-20260926
-          - FEATURE-ENGINE-RUN-AUTONOMO-20260926
-          - FEATURE-ENGINE-VALIDAR-PROPOSICIONES-JEV-20260926
-      - id: FEATURE-MC-POLITICAS-AUTONOMAS-20260926
-        title: Editar políticas autónomas desde Mission Control
-        depends_on:
-          - FEATURE-CONFIG-PERFIL-UI-20260926
-          - FEATURE-CONFIG-ELEGIBILIDAD-AUTONOMA-20260926
-          - FEATURE-ENGINE-RUN-AUTONOMO-20260926
-          - SECURITY-ENGINE-COLISIONES-ESCRITURA-20260926
-          - FEATURE-GATE-CALIBRACION-EVIDENCIA-20260926
-          - SECURITY-ENGINE-PARADA-SEGURA-20260926
-          - FEATURE-ENGINE-REGLAS-INTEGRACION-20260926
-          - FEATURE-CONFIG-PROPOSICIONES-JEV-20260926
-          - FEATURE-ENGINE-VALIDAR-PROPOSICIONES-JEV-20260926
-          - FEATURE-CONFIG-MIGRACION-PRUEBAS-20260926
-          - FEATURE-ENGINE-MIGRACION-ANTES-TESTS-20260926
-          - SECURITY-ENGINE-CIERRE-AUTORIZADO-20260926
       - id: IMPROVEMENT-GATE-CRITERIO-ATOMICO-20260926
         title: Hacer legible por que un plan queda en banda y avisar del criterio compuesto
         depends_on: []
@@ -245,22 +205,8 @@ coverage:
   - requirement: R-S5-005
     covered_by:
       - SECURITY-ENGINE-PARADA-SEGURA-20260926
-  - requirement: R-S5-006
-    covered_by:
-      - FEATURE-ENGINE-REGLAS-INTEGRACION-20260926
-      - INTEGRATION-GIT-INTEGRACION-AUTONOMA-20260926
   - requirement: R-S5-007
     covered_by:
       - FEATURE-CONFIG-PROPOSICIONES-JEV-20260926
       - FEATURE-ENGINE-VALIDAR-PROPOSICIONES-JEV-20260926
-  - requirement: R-S5-008
-    covered_by:
-      - FEATURE-CONFIG-MIGRACION-PRUEBAS-20260926
-      - FEATURE-ENGINE-MIGRACION-ANTES-TESTS-20260926
-  - requirement: R-S5-009
-    covered_by:
-      - FEATURE-MC-POLITICAS-AUTONOMAS-20260926
-  - requirement: R-S5-010
-    covered_by:
-      - SECURITY-ENGINE-CIERRE-AUTORIZADO-20260926
 gaps: []
