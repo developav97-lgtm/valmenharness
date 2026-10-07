@@ -32,3 +32,19 @@ roles:
     provider: codex
     model: gpt-6-sol
     effort: medium
+  agent-analysis:
+    provider: claude-code
+    model: claude-opus-5-5
+    effort: high
+  agent-plan:
+    provider: claude-code
+    model: claude-opus-5-5
+    effort: high
+  agent-implementation:
+    provider: claude-code
+    model: claude-sonnet-5-5
+    effort: high
+  agent-verification:
+    provider: claude-code
+    model: claude-haiku-4-5-20251001
+    effort: auto

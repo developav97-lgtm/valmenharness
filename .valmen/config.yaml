@@ -48,3 +48,44 @@ providers:
       - gpt-5.6-sol
       - gpt-5.6-luna
       - gpt-6-astra
+
+# ── Ejecución autónoma (decidido por el PO el 2026-10-07) ─────────────────────
+# Quién puede lanzar el despacho de una jornada. Declarar un ejecutor aquí es
+# una decisión humana: sin esta lista, ninguna jornada ejecuta nada.
+# OJO: el ejecutor `claude` se lanza con `--permission-mode bypassPermissions`.
+# Por eso la política de abajo excluye SECURITY y los módulos de auth y despliegue.
+execution:
+  dispatch-executors:
+    - claude
+  dispatcher: machine
+  work-branch: valmen/jornada-<AAAAMMDD>
+
+autonomous:
+  enabled: true
+  executor:
+    id: claude
+    model: claude-sonnet-5-5
+    effort: high
+  eligible:
+    types:
+      - BUGFIX
+      - IMPROVEMENT
+      - CHORE
+      - FEATURE
+    max-risk: normal
+    require:
+      - plan-approved
+      - tests-declared
+      - no-critical-impacts
+    excluded-modules:
+      - auth
+      - deploy
+  limits:
+    max-concurrent: 1
+    collision-policy: serialize
+    max-per-day: 3
+    budget-per-ticket: 5
+    max-minutes: 60
+    stop-on:
+      - test-failure
+      - secret-detected
