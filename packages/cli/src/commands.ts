@@ -62,6 +62,7 @@ import {
 import {
   type BudgetPolicy,
   armarJornada,
+  avanzarJornada,
   registrarAprobacionDePlan,
   resolveAuthorizedProject,
   type CommandRunner,
@@ -172,6 +173,13 @@ import {
  * idénticas permitiría que una cambiara sin la otra y que el servidor dejara de
  * entender lo que el CLI produce.
  */
+import {
+  escribirPlist,
+  etiquetaDelDisparador,
+  instruccionesDelDisparador,
+  renderLaunchdPlist,
+} from "./journey-trigger.js";
+
 export type CommandResult = RunnerResult;
 
 /** Escribe en stdout y termina con éxito. */
@@ -2706,6 +2714,74 @@ export function budgetCommand(
   }
 
   return { stdout, stderr: "", exitCode };
+}
+
+/**
+ * `journey advance --project <id> [--journey <id>]`: el avance que invoca un disparador.
+ *
+ * No llama a ningún modelo y es idempotente: la identidad es la jornada, así que dos avances
+ * seguidos no despachan un segundo ticket. Sin jornada del día lo dice y sale bien.
+ */
+export async function journeyAdvanceCommand(
+  flags: Readonly<Record<string, string | true>>,
+  opciones: { readonly home?: string; readonly execute?: Parameters<typeof avanzarJornada>[0]["execute"]; readonly ahora?: () => Date } = {},
+): Promise<CommandResult> {
+  const proyecto = typeof flags["project"] === "string" ? flags["project"] : undefined;
+  if (proyecto === undefined) return error("journey advance requiere --project <id>.", EXIT_SCHEMA);
+  try {
+    const home = opciones.home ?? homedir();
+    const project = resolveAuthorizedProject({ projectId: proyecto, home });
+    const avance = await avanzarJornada({
+      project,
+      home,
+      ...(typeof flags["journey"] === "string" ? { journeyId: flags["journey"] } : {}),
+      ...(opciones.execute === undefined ? {} : { execute: opciones.execute }),
+      ...(opciones.ahora === undefined ? {} : { ahora: opciones.ahora }),
+    });
+    return ok(`${avance.journeyId}: ${avance.estado}${avance.ticketId === null ? "" : ` (${avance.ticketId})`}. ${avance.detalle}\n`);
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/**
+ * `journey install-trigger --project <id> [--every <min>] [--write] [--dir <carpeta>]`.
+ *
+ * Prepara la tarea periódica de launchd: imprime el plist y los comandos para activarla.
+ * Con `--write` escribe solo el archivo. Nunca ejecuta `launchctl`.
+ */
+export function journeyInstallTriggerCommand(
+  flags: Readonly<Record<string, string | true>>,
+  entorno: { readonly node?: string; readonly cliMain?: string; readonly home?: string } = {},
+): CommandResult {
+  const proyecto = typeof flags["project"] === "string" ? flags["project"] : undefined;
+  if (proyecto === undefined) return error("journey install-trigger requiere --project <id>.", EXIT_SCHEMA);
+  const cadaCrudo = typeof flags["every"] === "string" ? Number(flags["every"]) : 15;
+  if (!Number.isFinite(cadaCrudo) || cadaCrudo < 1) {
+    return error("--every debe ser un número de minutos de al menos 1.", EXIT_SCHEMA);
+  }
+  const home = entorno.home ?? homedir();
+  const directorio = typeof flags["dir"] === "string" ? flags["dir"] : join(home, "Library", "LaunchAgents");
+  const request = {
+    projectId: proyecto,
+    everyMinutes: cadaCrudo,
+    node: entorno.node ?? process.execPath,
+    cliMain: entorno.cliMain ?? (process.argv[1] ?? "valmen"),
+    logDir: join(home, "Library", "Logs"),
+  };
+  const ruta = join(directorio, `${etiquetaDelDisparador(proyecto)}.plist`);
+  try {
+    const plist = renderLaunchdPlist(request);
+    if (flags["write"] === true) {
+      const escrita = escribirPlist(directorio, request);
+      return ok(`Plist escrito en ${escrita}. No se activó nada.\n${instruccionesDelDisparador(proyecto, escrita)}\n`);
+    }
+    return ok(`${plist}\nSin --write no se escribió nada. Archivo previsto: ${ruta}\n${instruccionesDelDisparador(proyecto, ruta)}\n`);
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
 }
 
 /**

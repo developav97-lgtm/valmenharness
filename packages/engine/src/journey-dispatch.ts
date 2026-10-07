@@ -159,7 +159,7 @@ function recordActivity(
   state: "started" | "finished" | "failed",
 ): void {
   recordExecutionActivity(request.project, {
-    eventId: dispatchEventId(identity.executionId, request.attemptId, state),
+    eventId: dispatchEventId(identity.ticketId, identity.executionId, request.attemptId, state),
     identity,
     attemptId: request.attemptId,
     state,
@@ -169,9 +169,11 @@ function recordActivity(
 }
 
 /** Mantiene los IDs portables y acotados aunque la puerta aporte IDs largos. */
-function dispatchEventId(executionId: string, attemptId: string, state: string): string {
+function dispatchEventId(ticketId: string, executionId: string, attemptId: string, state: string): string {
+  // El ticket entra al digest: una jornada despacha varios tickets con la misma ejecución e
+  // intento, y sin él el segundo ticket chocaba con el evento del primero.
   const digest = createHash("sha256")
-    .update(`${executionId}\u0000${attemptId}\u0000${state}`)
+    .update(`${ticketId}\u0000${executionId}\u0000${attemptId}\u0000${state}`)
     .digest("hex")
     .slice(0, 32);
   return `journey-dispatch-${state}-${digest}`;

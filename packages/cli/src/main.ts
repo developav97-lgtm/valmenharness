@@ -105,6 +105,8 @@ import {
 import {
   guardarConsumoDeSesiones,
   approvePlanCommand,
+  journeyAdvanceCommand,
+  journeyInstallTriggerCommand,
   journeyPlanCommand,
   precheckCommand,
   precisionCommand,
@@ -213,6 +215,12 @@ Comandos:
   journey plan --project <id> (--feature <slug> | --tickets <a,b,c>) [--max <n>] [--to <destino>]
                             Arma la jornada del día en el registro de jornadas y envía el
                             plan por Telegram. No despacha ni reserva capacidad.
+  journey advance --project <id> [--journey <id>]
+                            Avanza la jornada una vez: sin modelo e idempotente (un segundo
+                            avance no despacha otro ticket). Pensado para un disparador.
+  journey install-trigger --project <id> [--every <min>] [--write] [--dir <carpeta>]
+                            Prepara la tarea periódica de launchd: imprime el plist y los
+                            comandos; con --write escribe solo el archivo. No ejecuta launchctl.
   approve-plan --id <ID> --actor <nombre> [--source <fuente>] --quote "<frase>"
                             Registra la aprobación del plan con actor, fuente, frase y hash
                             del plan. Una sesión desatendida no puede registrarla.
@@ -549,6 +557,10 @@ export const VALUE_OPTIONS = [
   "--tickets",
   // El tope de tickets de una jornada.
   "--max",
+  // El avance de una jornada concreta, el intervalo del disparador y su carpeta.
+  "--journey",
+  "--every",
+  "--dir",
   // `manuales pendientes`: dónde viven los manuales y qué archivos son pantalla.
   // Sin esto en la lista, `--manuales-dir docs/…` se leería como bandera booleana
   // y la ruta quedaría como argumento suelto.
@@ -1883,7 +1895,11 @@ export async function run(argv: readonly string[]): Promise<number> {
       result =
         rest[0] === "plan"
           ? journeyPlanCommand(options.flags)
-          : { stdout: "", stderr: "journey admite: plan.\n", exitCode: EXIT_SCHEMA };
+          : rest[0] === "advance"
+            ? await journeyAdvanceCommand(options.flags)
+            : rest[0] === "install-trigger"
+              ? journeyInstallTriggerCommand(options.flags)
+              : { stdout: "", stderr: "journey admite: plan, advance e install-trigger.\n", exitCode: EXIT_SCHEMA };
     } else if (command === "approve-plan") {
       result = approvePlanCommand(resolvePaths(options), options.flags);
     } else if (command === "precheck") {
