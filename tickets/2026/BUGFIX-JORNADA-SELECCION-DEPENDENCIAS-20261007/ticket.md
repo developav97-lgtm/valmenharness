@@ -4,8 +4,8 @@ id: BUGFIX-JORNADA-SELECCION-DEPENDENCIAS-20261007
 title: La jornada despacha tickets no elegibles y con dependencias sin cerrar
 type: BUGFIX
 module: JORNADA
-workflow_status: in_qa
-qa_status: in_qa
+workflow_status: qa_approved
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -97,7 +97,7 @@ Hallazgos del 2026-10-07 al correr `valmen journey advance --project valmen-harn
   {
     "id": "POINT-001",
     "title": "La jornada despacha un ticket no elegible y no sigue con el resto",
-    "status": "open",
+    "status": "verified",
     "severity": "normal",
     "actual": "`valmen journey advance --fase preparacion` eligió un SECURITY aunque `autonomous.eligible.types` no lo incluye; el avance quedó en «despachado… no-elegible» sin probar el siguiente (journey-preparation.ts, siguienteAPreparar sin política).",
     "expected": "Se salta el ticket no elegible, se elige el siguiente elegible y el avance informa cada omitido con su motivo.",
@@ -115,14 +115,16 @@ Hallazgos del 2026-10-07 al correr `valmen journey advance --project valmen-harn
     "diagnosis": null,
     "solution": null,
     "tests": [],
-    "qa_cycles": [],
+    "qa_cycles": [
+      "QA-003"
+    ],
     "terminal_reason": null,
     "related_ticket": null
   },
   {
     "id": "POINT-002",
     "title": "La condición «dependencies» ignora las dependencias fuera de la jornada",
-    "status": "open",
+    "status": "verified",
     "severity": "normal",
     "actual": "Se despachó FEATURE-ADAPTER-SKILLS-UX-20261007 con una dependencia en intake fuera de la jornada: armarJornada descarta las dependencias que no van en ella (journey-plan.ts:132) y la selección solo lee las de la jornada.",
     "expected": "Cualquier dependencia del grafo de la feature que no esté en closed bloquea el despacho, esté o no en la jornada.",
@@ -135,7 +137,9 @@ Hallazgos del 2026-10-07 al correr `valmen journey advance --project valmen-harn
     "diagnosis": null,
     "solution": null,
     "tests": [],
-    "qa_cycles": [],
+    "qa_cycles": [
+      "QA-003"
+    ],
     "terminal_reason": null,
     "related_ticket": null
   }
@@ -173,6 +177,36 @@ Hallazgos del 2026-10-07 al correr `valmen journey advance --project valmen-harn
     "findings": [],
     "correction": null,
     "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-07",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "Si dale A y despues B"
+  },
+  {
+    "id": "QA-003",
+    "date": "2026-10-07",
+    "build_reference": "commit:6d348befa1e0bc4b7470eca33976bd74e7672db5",
+    "environment": "macOS 27.0.1, Node v26.10.0, checkout principal en la rama main, vitest 2.1.9; retest de POINT-001 y POINT-002 con las pruebas de la jornada",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-004",
+    "date": "2026-10-07",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "Si la a"
   }
 ]
 ```
@@ -195,7 +229,24 @@ Hallazgos del 2026-10-07 al correr `valmen journey advance --project valmen-harn
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-07",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "Si la A"
+  },
+  {
+    "id": "RETEST-002",
+    "date": "2026-10-07",
+    "point_id": "POINT-002",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "Si la A"
+  }
+]
 ```
 
 ## Cierre
@@ -359,6 +410,114 @@ Sin publicar todavía.
     "action": "qa-started",
     "actor": "cli",
     "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:05:23.740Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:07:15.362Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:07:15.806Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-002: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:07:17.861Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:07:18.140Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-002: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:07:20.818Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:07:21.049Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-002: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:07:27.826Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:07:29.828Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:07:30.399Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-002 para POINT-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-025",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:08:45.365Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-004 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-026",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:08:47.426Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
   }
 ]
 ```
