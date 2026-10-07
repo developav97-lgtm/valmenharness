@@ -4,7 +4,7 @@ id: FEATURE-MC-PERFILES-MODELOS-20261007
 title: Crear, editar y elegir perfiles desde Mission Control
 type: FEATURE
 module: MC
-workflow_status: planned
+workflow_status: approved
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -74,7 +74,7 @@ Ninguno.
 ## Plan
 
 - Alcance y exclusiones: se extienden `packages/server/src/routing.ts` (validación del id), `packages/server/src/server.ts` (tres endpoints), `packages/server/web/index.html` (sección «Perfiles» en `vistaModelos`), `scripts/verificar-interfaz.mjs` (respuesta simulada de `/api/perfiles`) y `tests/routing.test.ts`; se crea una sola suite de pantalla, `tests/perfiles-pantalla.test.ts`, con el patrón de `tests/politicas-autonomas-pantalla.test.ts`. **Fuera**: traducir el origen `perfil` en la tabla de roles, marcar los roles que anulan el perfil y el modelo realmente usado (FEATURE-MC-VISTA-MODELOS-EFECTIVOS-20261007); comandos del CLI y de Hermes (FEATURE-CLI-PERFILES-MODELOS-20261007); la resolución y su precedencia (FEATURE-ADAPTER-RESOLUCION-PERFIL-20261007, cerrado); borrar perfiles; cambiar `.valmen/routing.yaml` o los overrides del proyecto.
-- Gate de plan y aprobación: pendiente de la aprobación explícita del PO; el ticket se detiene en `planned` hasta recibirla.
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 - Decisión técnica (sujeta a la aprobación del plan): la API vive bajo `/api/perfiles` y devuelve los datos tal como los producen las funciones existentes:
   - `GET /api/perfiles` → `200 { perfiles: PerfilDeModelos[], seleccion: SeleccionDePerfil, ejecutores: EJECUTORES_CON_PERFIL, roles: ROLES }`; si el archivo no se puede leer, `200 { error, perfiles: PERFILES_INCORPORADOS, seleccion: sin elección, … }` para que la pantalla diga qué falla.
   - `PUT /api/perfiles` con `{ id, description, base?, roles }` → si viene `base`, `derivarPerfil` sobre ese perfil con los `roles` como cambios; si no, los `roles` completos; llama a `guardarPerfil` con `filePath: context.credentialsFile`, `env` y `fetchImpl` del contexto → `200 { ok, errores, written }`; cuerpo mal formado o `base` inexistente → `400 { error }`.
@@ -216,6 +216,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:40:27.792Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"La A\",\"planHash\":\"sha256:2773ace4e31f26db7eea0de5ded110918503162de9f7cc300a9dcfa4fdea8494\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:40:28.148Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:2773ace4e31f26db7eea0de5ded110918503162de9f7cc300a9dcfa4fdea8494."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:40:28.148Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
   }
 ]
 ```
