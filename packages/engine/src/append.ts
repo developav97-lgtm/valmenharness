@@ -43,7 +43,7 @@ import {
 import { markFromReceipt } from "./criteria-marks.js";
 import { currentReceipts, readReceipts } from "./receipts.js";
 import { type RegistryPaths, findTicket } from "./discovery.js";
-import { finalizeMutation, readAndValidate } from "./mutate.js";
+import { documentsForReport, finalizeMutation, readAndValidate } from "./mutate.js";
 import { declaredFunctionalFiles, resolveReference, validateFunctionalFile } from "./references.js";
 
 /** El estado de un ticket, tal como lo ve un comando de anexado. */
@@ -312,6 +312,36 @@ function costoOpcional(valor: string | undefined): number | null {
   return Number.parseFloat(valor);
 }
 
+/**
+ * ¿Qué otro ticket ya tiene esta sesión con números? (R-CTRL-005)
+ *
+ * Una sesión con números de consumo es de **un** ticket: cargarla completa a dos cuenta su
+ * costo dos veces. Devuelve el identificador del ticket que ya la tiene con algún número
+ * —tokens o costo—, distinto de `ticketId`, o `null`. Las entradas sin números —la
+ * declaración `manual:` de una sesión compartida— no cuentan.
+ */
+export function sessionNumbersOwner(
+  paths: RegistryPaths,
+  sessionReference: string,
+  ticketId: string,
+): string | null {
+  for (const registro of documentsForReport(paths)) {
+    if (registro.document === null || registro.document.fields.id === ticketId) continue;
+    const tiene = (registro.document.blocks["Consumo de IA"] ?? []).some(
+      (entrada) =>
+        entrada["session_reference"] === sessionReference &&
+        // Una corrida de proceso reparte su gasto a propósito entre los tickets que declara
+        // (`process:`): es una imputación en partes, no una carga completa.
+        !String(entrada["source"] ?? "").startsWith("process:") &&
+        ["input_tokens", "output_tokens", "total_tokens", "estimated_cost_usd"].some(
+          (clave) => entrada[clave] !== null && entrada[clave] !== undefined,
+        ),
+    );
+    if (tiene) return registro.document.fields.id;
+  }
+  return null;
+}
+
 export function addAiUsage(request: AddAiUsageRequest): string {
   const source = validateText(request.source, "source");
   const confidence = validateText(request.confidence, "confidence");
@@ -342,6 +372,22 @@ export function addAiUsage(request: AddAiUsageRequest): string {
   const problema = problemaDeFuente(source);
   if (problema !== null) {
     fail(`source: ${problema}`);
+  }
+
+  // Una sesión con números es de un solo ticket: cargarla completa a dos cuenta su costo
+  // dos veces (R-CTRL-005). Una sesión compartida se declara sin números.
+  const conNumeros =
+    inputTokens !== null || outputTokens !== null || totalTokens !== null || estimatedCostUsd !== null;
+  if (sessionReference !== null && conNumeros && !source.startsWith("process:")) {
+    const dueno = sessionNumbersOwner(request.paths, sessionReference, request.ticketId);
+    if (dueno !== null) {
+      fail(
+        `La sesión «${sessionReference}» ya tiene números de consumo en ${dueno}. Una sesión ` +
+          "no se carga completa a más de un ticket: si atendió varios, se declara con `manual:` " +
+          "y sin números en cada uno, y los números quedan en el ticket cuya sesión sea propia.",
+        EXIT_INVARIANT,
+      );
+    }
   }
 
   return conTicket(request.paths, request.ticketId, request.now, (contexto) => {

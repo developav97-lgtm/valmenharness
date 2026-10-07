@@ -983,6 +983,39 @@ describe("las sesiones de Claude Code", () => {
       expect(consumo()[0]?.["source"]).toBe("manual:claude-code-transcripcion-9d55ce3b");
     });
 
+    it("una sesión que otro ticket ya tiene con números se declara aquí sin números y no falla (R-CTRL-005)", () => {
+      writeFixtureTicket(lab, { id: TICKET, type: "IMPROVEMENT", module: "POS" });
+      writeFixtureTicket(lab, { id: OTRO, type: "BUGFIX", module: "RESTAURANTE" });
+      // El otro ticket ya cargó la sesión completa, con sus números.
+      addAiUsage({
+        paths: paths(),
+        ticketId: OTRO,
+        source: `claude:${SESION}`,
+        confidence: "high",
+        sessionReference: SESION,
+        model: "anthropic/claude-sonnet-5-5",
+        inputTokens: "3030",
+        outputTokens: "1000",
+        totalTokens: "4030",
+      });
+      escribirSesionDeClaude(lab, {
+        root: lab,
+        id: SESION,
+        lineas: lineasDeTrabajo(lab, TICKET),
+      });
+
+      const foto = guardarFotoEnTicket(paths(), TICKET, { home: lab });
+
+      // No falla: declara la sesión sin números, diciendo dónde están.
+      expect(foto?.entradas).toHaveLength(1);
+      const [entrada] = consumo();
+      expect(entrada?.["session_reference"]).toBe(SESION);
+      expect(entrada?.["input_tokens"]).toBeNull();
+      expect(entrada?.["total_tokens"]).toBeNull();
+      expect(entrada?.["estimated_cost_usd"]).toBeNull();
+      expect(String(entrada?.["notes"])).toContain(`ya cargada con números en ${OTRO}`);
+    });
+
     it("volver a tomar la foto no repite lo ya escrito", () => {
       writeFixtureTicket(lab, { id: TICKET, type: "IMPROVEMENT", module: "POS" });
       escribirSesionDeClaude(lab, {

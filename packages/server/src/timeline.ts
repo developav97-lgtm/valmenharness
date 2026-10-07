@@ -25,7 +25,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 
 import { parseTicket } from "@valmen/core";
-import { type RegistryPaths, addAiUsage, findTicket } from "@valmen/engine";
+import { type RegistryPaths, addAiUsage, findTicket, sessionNumbersOwner } from "@valmen/engine";
 
 import { leerSesionesDeClaude, type SesionDeClaude } from "./claude.js";
 import { leerSesionesDeCodex } from "./codex.js";
@@ -1290,6 +1290,18 @@ export interface FotoGuardada {
  * cliente, que es un registro y no una estimación. Un `low` ahí estaría
  * describiendo mal la procedencia, que es justo lo que el campo existe para decir.
  */
+/**
+ * Por qué una sesión no tiene costo: «suscripción» o «desconocido» (R-CTRL-006).
+ *
+ * Un costo ausente no se suma como cero, porque se leería como «gratis». Codex y Claude Code
+ * se usan por suscripción, que no factura por token; de cualquier otro origen sin costo
+ * solo se puede decir que se desconoce. No se calcula con una tabla de precios que nadie
+ * verificó: se declara la causa.
+ */
+export function marcaDeCosto(sesion: { readonly source: string }): "suscripción" | "desconocido" {
+  return sesion.source === "codex" || sesion.source === "claude" ? "suscripción" : "desconocido";
+}
+
 export function guardarFotoEnTicket(
   paths: RegistryPaths,
   ticketId: string,
@@ -1324,6 +1336,10 @@ export function guardarFotoEnTicket(
         ? sesion.id
         : (sesion.fuente ?? linea.source);
     const reparto = sesion.reparto;
+    // Una sesión que ya tiene números en otro ticket se declara aquí sin números: cargarla
+    // completa a dos tickets cuenta su costo dos veces (R-CTRL-005), y fallar el cierre por
+    // la duplicación de otro ticket sería castigar a este.
+    const dueno = reparto === undefined ? sessionNumbersOwner(paths, sesion.id, ticketId) : null;
     entradas.push(
       addAiUsage({
         paths,
@@ -1336,7 +1352,7 @@ export function guardarFotoEnTicket(
         // con forma de medición: el hueco declarado se ve, el reparto inventado
         // no. Los números quedan en la entrada de la sesión que sí es de un
         // ticket, o en la nota de esta.
-        ...(reparto === undefined
+        ...(reparto === undefined && dueno === null
           ? {
               model:
                 sesion.provider === ""
@@ -1364,10 +1380,18 @@ export function guardarFotoEnTicket(
                     `caché leída ${sesion.cacheReadTokens} tokens. `) +
                 `Sesión "${sesion.title}".` +
                 (sesion.costUsd === null
-                  ? " Proveedor por suscripción: no hay coste por token, se registran los tokens."
+                  ? ` Costo: ${marcaDeCosto(sesion)}; no es cero, el origen no declara un costo por token. ` +
+                    "Se registran los tokens."
                   : ""),
             }
-          : {
+          : reparto === undefined
+            ? {
+                notes:
+                  `Agente ${sesion.agent || "(sin declarar)"}. Sesión **ya cargada con números en ` +
+                  `${dueno}**: una sesión no se carga completa a más de un ticket, así que acá se ` +
+                  `declara sin números. Sesión "${sesion.title}".`,
+              }
+            : {
               notes:
                 `Agente ${sesion.agent || "(sin declarar)"}. Sesión **compartida**: ` +
                 `trabajó ${reparto.length} tickets ` +

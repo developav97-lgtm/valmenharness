@@ -73,6 +73,14 @@ export interface ValueReport {
   readonly byCode: number;
   /** De esas, las que una persona revirtió. */
   readonly reversedByHuman: number;
+  /**
+   * Sesiones con números cargadas a más de un ticket (R-CTRL-005).
+   *
+   * El informe cuenta cada una **una sola vez** —la del primer ticket, en el orden de
+   * cierre— y las lista aquí, porque sumar el costo completo de la misma sesión en dos
+   * tickets lo cuenta dos veces. El histórico las tiene: se señalan, no se reescriben.
+   */
+  readonly duplicatedSessions: readonly { readonly session: string; readonly tickets: readonly string[] }[];
 }
 
 /** Los recibos de un ticket, ya colapsados a su versión vigente. */
@@ -173,16 +181,37 @@ export function ticketValueReport(
 
   const recibos = recibosPorTicket(readAllReceipts(paths));
   const tickets: TicketValue[] = [];
+  const duenos = new Map<string, string>();
+  const duplicadas = new Map<string, string[]>();
 
   for (const entrada of cerrados) {
     const detalle = readTicket(paths, entrada.ticketId);
     const suyos = recibos.get(entrada.ticketId);
 
-    const sesionesUsd = (detalle?.usage ?? []).reduce(
+    // Una sesión con números se cuenta en un solo ticket: la primera vez que aparece.
+    const propias = (detalle?.usage ?? []).filter((uso) => {
+      const referencia = typeof uso["session_reference"] === "string" ? uso["session_reference"] : null;
+      const conNumeros = ["input_tokens", "output_tokens", "total_tokens", "estimated_cost_usd"].some(
+        (clave) => uso[clave] !== null && uso[clave] !== undefined,
+      );
+      // Un `process:` reparte el gasto de una corrida entre sus tickets a propósito: cada
+      // ticket tiene su parte, no la sesión completa.
+      if (referencia === null || !conNumeros || String(uso["source"] ?? "").startsWith("process:")) {
+        return true;
+      }
+      const dueno = duenos.get(referencia);
+      if (dueno === undefined || dueno === entrada.ticketId) {
+        duenos.set(referencia, entrada.ticketId);
+        return true;
+      }
+      duplicadas.set(referencia, [...(duplicadas.get(referencia) ?? [dueno]), entrada.ticketId]);
+      return false;
+    });
+    const sesionesUsd = propias.reduce(
       (suma, uso) => suma + numero(uso["estimated_cost_usd"]),
       0,
     );
-    const sessionsUnknown = (detalle?.usage ?? []).filter(
+    const sessionsUnknown = propias.filter(
       (uso) =>
         uso["estimated_cost_usd"] === null || uso["estimated_cost_usd"] === undefined,
     ).length;
@@ -228,6 +257,10 @@ export function ticketValueReport(
     partial: tickets.filter((ticket) => ticket.partial).map((ticket) => ticket.ticketId),
     byCode: todos.reduce((suma, suyo) => suma + suyo.byCode, 0),
     reversedByHuman: todos.reduce((suma, suyo) => suma + suyo.revertidas, 0),
+    duplicatedSessions: [...duplicadas.entries()].map(([session, ids]) => ({
+      session,
+      tickets: [...new Set(ids)],
+    })),
   };
 }
 
@@ -318,6 +351,18 @@ export function renderValue(
     lineas.push(
       `  Vueltas atrás     ${report.withReturns.length} ticket(s) con más de una ` +
         `(${porcentaje}%)  →  revisar la calidad del análisis`,
+    );
+  }
+
+  if (report.duplicatedSessions.length > 0) {
+    lineas.push(
+      "",
+      `  ${report.duplicatedSessions.length} sesión(es) con números cargadas a más de un ticket: ` +
+        "se cuentan una sola vez, en el primero.",
+      ...report.duplicatedSessions.map(
+        (duplicada) => `    · ${duplicada.session}: ${duplicada.tickets.join(", ")}`,
+      ),
+      "  Una sesión compartida se declara con `manual:` y sin números en cada ticket.",
     );
   }
 
