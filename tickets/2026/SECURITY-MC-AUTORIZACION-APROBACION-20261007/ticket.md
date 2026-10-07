@@ -4,7 +4,7 @@ id: SECURITY-MC-AUTORIZACION-APROBACION-20261007
 title: Crear y revocar autorizaciones de aprobación desde Mission Control y código firmado
 type: SECURITY
 module: MC
-workflow_status: in_progress
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -73,15 +73,15 @@ Ninguno.
 
 ## Criterios de aceptación
 
-- [ ] Desde Mission Control una persona crea una autorización con todos sus términos y la frase literal, y la ve listada con su estado
+- [x] Desde Mission Control una persona crea una autorización con todos sus términos y la frase literal, y la ve listada con su estado
       <!-- test: npx vitest run tests/autorizacion-aprobacion-canales.test.ts -->
-- [ ] Crear o revocar por HTTP exige el token fuera de la máquina local, y se rechaza en una sesión desatendida o con la frase literal vacía
+- [x] Crear o revocar por HTTP exige el token fuera de la máquina local, y se rechaza en una sesión desatendida o con la frase literal vacía
       <!-- test: npx vitest run tests/autorizacion-aprobacion-canales.test.ts -->
-- [ ] El código firmado se canjea una sola vez, vale 24 horas, se invalida si cambia un término y solo sirve si `enlace-firmado` está declarada
+- [x] El código firmado se canjea una sola vez, vale 24 horas, se invalida si cambia un término y solo sirve si `enlace-firmado` está declarada
       <!-- test: npx vitest run tests/autorizacion-aprobacion-canales.test.ts -->
-- [ ] No existe herramienta MCP que cree, amplíe o revoque una autorización de aprobación
+- [x] No existe herramienta MCP que cree, amplíe o revoque una autorización de aprobación
       <!-- test: npx vitest run tests/autorizacion-aprobacion.test.ts tests/autorizacion-aprobacion-canales.test.ts -->
-- [ ] Revocar una autorización vale desde ese momento, y un código emitido y revocado antes de canjearse deja de servir
+- [x] Revocar una autorización vale desde ese momento, y un código emitido y revocado antes de canjearse deja de servir
       <!-- test: npx vitest run tests/autorizacion-aprobacion-canales.test.ts -->
 - [ ] El panel de Mission Control se ve y funciona en modo claro y oscuro
       <!-- verify: manual -->
@@ -94,11 +94,18 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+- `packages/engine/src/approval-authorization-link.ts` (nuevo): código firmado de un solo uso (24 h) con los términos congelados (tipos, módulos, riesgo, impactos, etapas, modo, cupo y días) en sus claims; el canje verifica firma, vigencia, uso previo y hash de términos, crea la autorización con la fuente `enlace-firmado` (solo si el proyecto la declara en `approval-authorization-sources`) y consume el código después; `revocarCodigoDeAutorizacionDeAprobacion`. Registro propio `.valmen/approval/links.jsonl`, separado del de planes. Una sesión desatendida no puede emitir, canjear ni revocar.
+- `packages/server/src/approval-autorizaciones.ts` (nuevo) y `server.ts`: `GET/POST /api/approval/authorizations` y `POST /api/approval/authorizations/revoke` con la fuente `mission-control`; la frase literal nunca puede ir vacía; el token de escritura lo exige el despacho existente y el motor rechaza una sesión desatendida.
+- `packages/server/web/index.html`: panel «Aprobación automática de planes» en Configuración (lista con estado, formulario con tipos, módulos, riesgo, impactos, etapas, modo, cupo, vigencia, responsable y frase, y revocar con frase), con variables de color del tema.
+- `packages/cli/src/commands.ts` y `main.ts`: `approval-authorize link`, `redeem` y `revoke-code`.
+- `tests/autorizacion-aprobacion-canales.test.ts` (nuevo): servidor real sin token, desatendido, sin frase, código de un solo uso, vencido, alterado, revocado, fuente no declarada y sin herramienta MCP de escritura.
 
 ## Pruebas
 
-Pendiente de ejecución.
+- Directorio: raíz del repositorio. `npx vitest run tests/autorizacion-aprobacion-canales.test.ts tests/autorizacion-aprobacion.test.ts` → pasan.
+- Suite completa: `npx vitest run` → 195 archivos, 2826 pruebas pasan, 48 omitidas. `npx tsc --noEmit -p tsconfig.json` y `npx eslint` sin errores; `valmen secrets` sin hallazgos.
+- Visual (hecho por el agente en el navegador): crear y listar una autorización en Configuración → «Aprobación automática de planes». Manual (responsable): revisarlo en claro y oscuro, crear y revocar con su frase, y emitir/canjear un código con `valmen approval-authorize link` y `redeem` (declarar `enlace-firmado` en `approval-authorization-sources`).
+<!-- verify: manual -->
 
 ## QA
 
@@ -209,6 +216,15 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-07",
+    "at": "2026-10-07T19:48:00.586Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
