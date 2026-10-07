@@ -4,7 +4,7 @@ id: SECURITY-ENGINE-COMPUERTA-QA-AGENT-20261005
 title: Correr qa-agent en worktree limpio, contra la base y con recibo reproducible
 type: SECURITY
 module: ENGINE
-workflow_status: planned
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -54,7 +54,7 @@ Ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 - Alcance: la compuerta `qa-agent` en árbol limpio, su contraste contra el código base y su recibo reproducible. Exclusiones: cerrar el ticket por política, el periodo en sombra y cualquier herramienta MCP.
 - Pasos ordenados:
   1. Crear `packages/engine/src/qa-agent-git.ts` con `ejecutarGitDeQaAgent(argumentos, cwd)` y `motivoDeGitDeQaAgent(argumentos)`: lista cerrada (`worktree add --detach`, `worktree remove --force`, `rev-parse`, `diff --name-only`, `show`), con `-c core.hooksPath=/dev/null`, que rechaza cualquier otra operación o bandera antes de lanzar nada.
@@ -67,17 +67,17 @@ Ninguno.
 
 ## Criterios de aceptación
 
-- [ ] La compuerta usa el script de pruebas y la configuración del commit base aunque el árbol de trabajo los haya editado sin commitear
+- [x] La compuerta usa el script de pruebas y la configuración del commit base aunque el árbol de trabajo los haya editado sin commitear
       <!-- test: npx vitest run tests/qa-agent.test.ts -->
-- [ ] Solo corre los comandos exactos que el proyecto autoriza y rechaza uno no autorizado
+- [x] Solo corre los comandos exactos que el proyecto autoriza y rechaza uno no autorizado
       <!-- test: npx vitest run tests/qa-agent.test.ts -->
-- [ ] En un BUGFIX, una prueba nueva que pasa también contra el código base no aprueba y el motivo dice que no reproduce el defecto
+- [x] En un BUGFIX, una prueba nueva que pasa también contra el código base no aprueba y el motivo dice que no reproduce el defecto
       <!-- test: npx vitest run tests/qa-agent.test.ts -->
-- [ ] El recibo guarda los SHA base y entregado, el hash del árbol, cada comando con su invocación, código de salida, duración, cola y sha256 de la salida, el resultado contra el base y el id y hash de la autorización
+- [x] El recibo guarda los SHA base y entregado, el hash del árbol, cada comando con su invocación, código de salida, duración, cola y sha256 de la salida, el resultado contra el base y el id y hash de la autorización
       <!-- test: npx vitest run tests/qa-agent.test.ts -->
-- [ ] Repetir los comandos del recibo sobre el mismo árbol da los mismos códigos de salida
+- [x] Repetir los comandos del recibo sobre el mismo árbol da los mismos códigos de salida
       <!-- test: npx vitest run tests/qa-agent.test.ts -->
-- [ ] Los worktrees se eliminan tras éxito y tras fallo, el árbol de trabajo queda intacto y un ticket no elegible no corre nada
+- [x] Los worktrees se eliminan tras éxito y tras fallo, el árbol de trabajo queda intacto y un ticket no elegible no corre nada
       <!-- test: npx vitest run tests/qa-agent.test.ts -->
 
 ## Puntos
@@ -88,11 +88,19 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+- `packages/engine/src/qa-agent-git.ts` (nuevo): lista cerrada y propia de git (`worktree add --detach`, `worktree remove --force`, `rev-parse`, `diff --name-only`, `show <commit>:<ruta>`), con hooks apagados; todo lo demás se rechaza antes de lanzar nada. No amplía la lista de las jornadas.
+- `packages/engine/src/qa-agent.ts` (nuevo): `correrQaAgent` exige elegibilidad, crea el worktree entregado fuera del repositorio, impone `.valmen/config.yaml` y los scripts de `test-commands` del commit base, corre solo los comandos de los criterios que el base autoriza (entorno mínimo, tope `test-timeout`), contrasta las pruebas nuevas de un BUGFIX contra un worktree del base (al menos una debe fallar), corre `qa-agent.regression-commands` y elimina siempre los worktrees.
+- `packages/engine/src/qa-agent-receipt.ts` (nuevo): recibo con SHA base y entregado, hash del árbol, cada comando (invocación, código, duración, cola, sha256), resultado contra el base y autorización citada; archivo append-only `.valmen/qa/agent-receipts.jsonl` y `reproducirReciboQaAgent`.
+- `packages/adapter/src/config.ts`: `readQaAgentConfig` (`qa-agent.regression-commands`). `packages/engine/src/qa-eligibility.ts`: `scriptsDeComandos` exportado.
+- `packages/cli/src/commands.ts` y `main.ts`: `valmen qa-agent --id --base --delivered` (no escribe en el ticket; sale con error si no aprueba).
+- `tests/qa-agent.test.ts`: repositorios git reales; un caso por criterio.
 
 ## Pruebas
 
-Pendiente de ejecución.
+- Directorio: raíz del repositorio. `npx vitest run tests/qa-agent.test.ts` → 13 pruebas pasan (repositorios git temporales y comandos `node` reales).
+- Suite completa: `npx vitest run` → 188 archivos, 2743 pruebas pasan, 48 omitidas. `npx tsc --noEmit -p tsconfig.json` y `npx eslint` sin errores; `valmen secrets` sin hallazgos.
+- Manual (responsable): `valmen qa-agent --id <ID> --base <commit> --delivered <commit>` sobre un ticket de prueba elegible y revisar el recibo en `.valmen/qa/agent-receipts.jsonl`.
+<!-- verify: manual -->
 
 ## QA
 
@@ -158,6 +166,51 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-06",
+    "at": "2026-10-07T04:49:01.952Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"La A\",\"planHash\":\"sha256:5a2dd57696bc1f5bbd52cd84d9025eba4ddea2580c5cc07b11b79b09c2f0d8da\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-06",
+    "at": "2026-10-07T04:49:06.813Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:5a2dd57696bc1f5bbd52cd84d9025eba4ddea2580c5cc07b11b79b09c2f0d8da."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-06",
+    "at": "2026-10-07T04:49:06.813Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-06",
+    "at": "2026-10-07T04:49:07.072Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-06",
+    "at": "2026-10-07T04:58:13.571Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
