@@ -21,3 +21,5 @@
 {"kind":"decision","ticketId":"IMPROVEMENT-GATE-DIAGNOSTICO-POR-TIPO-20261005","detail":"analysis review → approve (GR-20261007-IMPROVEMENT-GATE-DIAGNOSTICO-POR-TIPO-20261005-analysis-1): El criterio dice que una proposición de contexto en banda de revisión no debe bloquear el avance","at":"2026-10-07T00:52:17.752Z"}
 {"kind":"note","ticketId":"IMPROVEMENT-GATE-DIAGNOSTICO-POR-TIPO-20261005","detail":"avanzó a in_progress (analyzed → planned → approved → in_progress)","at":"2026-10-07T00:52:52.613Z"}
 {"kind":"close","ticketId":"IMPROVEMENT-GATE-DIAGNOSTICO-POR-TIPO-20261005","detail":"QA aprobado y ticket cerrado","at":"2026-10-07T00:56:14.424Z"}
+{"kind":"note","ticketId":"IMPROVEMENT-GATE-CONTRATO-PROPOSICIONES-20261005","detail":"avanzó a in_progress (analyzed → planned → approved → in_progress)","at":"2026-10-07T00:58:09.520Z"}
+{"kind":"close","ticketId":"IMPROVEMENT-GATE-CONTRATO-PROPOSICIONES-20261005","detail":"QA aprobado y ticket cerrado","at":"2026-10-07T01:01:12.849Z"}
