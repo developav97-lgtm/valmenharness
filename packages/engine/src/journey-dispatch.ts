@@ -15,6 +15,11 @@ import {
   type AutonomousRunResult,
 } from "./autonomous-run.js";
 import { autonomousConfig } from "./discovery.js";
+import { readFileSync } from "node:fs";
+
+import { parseConfig, readIntegrationConfig, resolveWorkBranch } from "@valmen/adapter";
+
+import { asegurarRamaDeTrabajo, esRepositorioGit, estadoDelArbolDeTrabajo } from "./integration-commit.js";
 import { motivoDeTope } from "./journey-limits.js";
 import { resolverModeloDeFase } from "./journey-phases.js";
 import { recordExecutionActivity } from "./execution-activity.js";
@@ -89,6 +94,29 @@ export async function dispatchJourney(request: JourneyDispatchRequest): Promise<
     );
     if (!ya) return withoutStart(selection, tope);
   }
+  // Si el proyecto es un repositorio git, cada ticket queda en su propio commit sobre la rama
+  // de trabajo (R-JORN-009): la rama se asegura y el árbol debe estar limpio **antes** de reservar.
+  let integracion: { ramaDeTrabajo: string; ramasProtegidas: readonly string[] } | undefined;
+  if (selection.dispatchCandidate !== null && esRepositorioGit(request.project.root)) {
+    const config = readIntegrationConfig(
+      parseConfig(readFileSync(`${request.project.root}/.valmen/config.yaml`, "utf8")),
+    );
+    const ramaDeTrabajo = resolveWorkBranch(config.workBranch, new Date(request.at));
+    try {
+      asegurarRamaDeTrabajo({ root: request.project.root, ramaDeTrabajo, ramasProtegidas: config.protectedBranches });
+    } catch (error) {
+      return withoutStart(selection, error instanceof Error ? error.message : String(error));
+    }
+    const sucios = estadoDelArbolDeTrabajo(request.project.root);
+    if (sucios.length > 0) {
+      return withoutStart(
+        selection,
+        `El árbol de trabajo no está limpio (${sucios.slice(0, 5).join(", ")}${sucios.length > 5 ? "…" : ""}): ` +
+          "la jornada no despacha un ticket sobre cambios de otro.",
+      );
+    }
+    integracion = { ramaDeTrabajo, ramasProtegidas: config.protectedBranches };
+  }
   const candidate = selection.dispatchCandidate;
   if (candidate === null) {
     const manual = selection.manualCandidate;
@@ -141,6 +169,7 @@ export async function dispatchJourney(request: JourneyDispatchRequest): Promise<
       ticketId: candidate.ticketId,
       fase: "implementation",
       ...(modelo === null ? {} : { modelo }),
+      ...(integracion === undefined ? {} : { integracion }),
       ...(request.execute === undefined ? {} : { execute: request.execute }),
       ...(request.now === undefined ? {} : { now: request.now }),
     });

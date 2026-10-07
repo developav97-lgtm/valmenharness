@@ -30,6 +30,13 @@ import {
   type AutonomousStopReceipt,
 } from "./autonomous-stops.js";
 import { allDocuments } from "./mutate.js";
+import {
+  asegurarRamaDeTrabajo,
+  estadoDelArbolDeTrabajo,
+  hashDeArchivos,
+  integrarTicket,
+  repartirCambios,
+} from "./integration-commit.js";
 import { registrarFase } from "./journey-phases.js";
 import { UNATTENDED_ENV } from "./plan-approval.js";
 import { runGate } from "./gate.js";
@@ -64,6 +71,14 @@ export interface AutonomousRunRequest {
   readonly modelo?: ModeloDeFase | undefined;
   /** La fase que se ejecuta; por defecto `implementation`. */
   readonly fase?: FaseDelAgente | undefined;
+  /**
+   * Con el contexto de integración, cada ticket que termina queda en su propio commit sobre la
+   * rama de trabajo (R-JORN-009). Sin él se entrega como siempre, sin commitear.
+   */
+  readonly integracion?: {
+    readonly ramaDeTrabajo: string;
+    readonly ramasProtegidas: readonly string[];
+  } | undefined;
   /** Reloj inyectable para que el recibo de parada sea reproducible en pruebas. */
   readonly now?: (() => Date) | undefined;
 }
@@ -74,6 +89,8 @@ export interface AutonomousRunResult {
   readonly detail: string;
   readonly executor: AutonomousExecutorCommand;
   readonly stop?: AutonomousStopReceipt | undefined;
+  /** El commit del ticket, si se integró (R-JORN-009). */
+  readonly commit?: string | undefined;
 }
 
 interface Candidate {
@@ -314,6 +331,24 @@ async function runAutonomousInner(request: AutonomousRunRequest): Promise<Autono
     ? policy.executor
     : { ...policy.executor, model: request.modelo.model, effort: request.modelo.effort as typeof policy.executor.effort };
   const command = autonomousExecutorCommand(executorDeFase, request.paths.root, promptFor(selected.id));
+  // La integración parte de un árbol limpio en la rama de trabajo: lo comprueba antes de mover el
+  // ticket, porque la propia transición edita el ticket y lo ensuciaría.
+  let arbolLimpioAlEmpezar = true;
+  if (request.integracion !== undefined) {
+    asegurarRamaDeTrabajo({
+      root: request.paths.root,
+      ramaDeTrabajo: request.integracion.ramaDeTrabajo,
+      ramasProtegidas: request.integracion.ramasProtegidas,
+    });
+    arbolLimpioAlEmpezar = estadoDelArbolDeTrabajo(request.paths.root).length === 0;
+    if (!arbolLimpioAlEmpezar) {
+      throw Object.assign(
+        new Error("El árbol de trabajo no está limpio: la jornada no despacha un ticket sobre cambios de otro."),
+        { exitCode: EXIT_INVARIANT },
+      );
+    }
+  }
+
   transition({ paths: request.paths, ticketId: selected.id, entity: "ticket", to: "in_progress" });
 
   const before = preflightStop(request.paths, selected.id, policy);
@@ -378,6 +413,14 @@ async function runAutonomousInner(request: AutonomousRunRequest): Promise<Autono
     );
   }
 
+  // El árbol que se va a probar: el contenido de los archivos funcionales justo antes de
+  // `qa-mechanical`. El commit tiene que contener exactamente esto.
+  const archivosFuncionales =
+    request.integracion === undefined
+      ? []
+      : repartirCambios(estadoDelArbolDeTrabajo(request.paths.root), request.paths, selected.id).funcionales;
+  const hashProbado = hashDeArchivos(request.paths.root, archivosFuncionales);
+
   const gate = await runGate(request.paths, { gateId: "qa-mechanical", ticketId: selected.id });
   if (gate.exitCode !== 0) {
     if (permitsStop(policy, "test-failure")) {
@@ -412,5 +455,31 @@ async function runAutonomousInner(request: AutonomousRunRequest): Promise<Autono
     );
   }
   transition({ paths: request.paths, ticketId: selected.id, entity: "ticket", to: "awaiting_user_tests" });
+
+  // El commit por ticket (R-JORN-009): solo con el contexto de integración y tras las pruebas.
+  if (request.integracion !== undefined) {
+    const recibos = currentReceipts(readReceipts(request.paths, selected.id)).filter((r) => r.gate === "qa-mechanical");
+    const integrado = integrarTicket({
+      paths: request.paths,
+      ticketId: selected.id,
+      titulo: parseTicket(selected.text).fields.title,
+      ramaDeTrabajo: request.integracion.ramaDeTrabajo,
+      ramasProtegidas: request.integracion.ramasProtegidas,
+      arbolLimpioAlEmpezar,
+      hashProbado,
+      recibo: recibos[0]?.id ?? "sin recibo",
+    });
+    if (integrado.estado === "rechazado") {
+      return stopResult(
+        request.paths,
+        selected.id,
+        command,
+        "verification-failed",
+        `No se commiteó el ticket: ${integrado.motivos.join(" ")}`,
+        request.now?.() ?? new Date(),
+      );
+    }
+    return { ticketId: selected.id, status: "delivered", detail: gate.stdout, executor: command, commit: integrado.commit };
+  }
   return { ticketId: selected.id, status: "delivered", detail: gate.stdout, executor: command };
 }
