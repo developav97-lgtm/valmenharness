@@ -330,6 +330,9 @@ Comandos:
   process approve <gate> --actor <nombre>
                             Aprueba un gate de proceso. No retoma nada por sí solo.
       --reason <texto>      Queda registrado con la aprobación.
+      --run <corrida>       Un gate que exige frase (como deploy) se aprueba para una corrida
+      --phrase <frase>      detenida, con la frase exacta y la versión de esa corrida.
+                            La aprobación se consume al usarse.
   process runs              Las corridas, con las detenidas primero.
   process show-run <corrida>
                             El detalle de una corrida.
@@ -499,6 +502,8 @@ export const VALUE_OPTIONS = [
   "--solicitud",
   "--pregunta",
   "--port",
+  // La aprobación de un gate que exige frase: la corrida y la frase literal.
+  "--phrase",
   // `transition` mueve el estado de una entidad, y sus banderas llevan valor.
   "--entity",
   "--to",

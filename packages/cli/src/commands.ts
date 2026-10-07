@@ -2141,11 +2141,18 @@ export function approveProcessGate(
   try {
     const rawActor = flags["actor"];
     const rawReason = flags["reason"];
+    const rawRun = flags["run"];
+    const rawPhrase = flags["phrase"];
     const aprobacion = approveGate(
       root,
       gate,
       typeof rawActor === "string" ? rawActor : "",
       typeof rawReason === "string" ? rawReason : "",
+      new Date(),
+      {
+        ...(typeof rawRun === "string" ? { runId: rawRun } : {}),
+        ...(typeof rawPhrase === "string" ? { phrase: rawPhrase } : {}),
+      },
     );
     return ok(
       `Gate "${gate}" aprobado por ${aprobacion.actor} el ${aprobacion.at}.\n` +

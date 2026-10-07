@@ -41,6 +41,7 @@ import { type RegistryPaths, choosePaths, findTicket } from "./discovery.js";
 import {
   type ProcessRunState,
   type RunStepState,
+  consumeApproval,
   gateApproved,
   newRunId,
   writeRun,
@@ -616,6 +617,7 @@ export function runProcess(request: RunProcessRequest): ProcessRun {
       maxDepth: request.maxDepth ?? 8,
       profundidad: request.depth ?? 0,
       onGate: request.onGate ?? "wait",
+      runId: request.resume?.runId ?? null,
       // Los pasos del hijo entran **antes** que el paso que lo invoca, que es el
       // orden en que corrieron.
       expandir: (outcomes) => resultados.push(...outcomes),
@@ -853,6 +855,8 @@ function ejecutarPaso(contexto: {
   profundidad: number;
   /** Qué hacer con un gate que nadie aprobó. */
   onGate: "wait" | "skip";
+  /** La corrida que se retoma, o `null` en una corrida nueva: una aprobación con frase es de una corrida. */
+  runId: string | null;
   /** Dónde meter los pasos de un sub-proceso, para que se vean en el resumen. */
   expandir?: ((outcomes: readonly StepOutcome[]) => void) | undefined;
 }): StepOutcome {
@@ -942,7 +946,12 @@ function ejecutarPaso(contexto: {
     //
     // Se comprueba si ya está aprobado en el registro de gates del proyecto: así
     // retomar un proceso cuyo gate se aprobó mientras tanto no vuelve a pedirlo.
-    const aprobado = gateApproved(root, paso.target);
+    const aprobado = gateApproved(root, paso.target, {
+      runId: contexto.runId,
+      params: contexto.valores,
+    });
+    // Una aprobación con frase se gasta al usarse: no habilita otra corrida.
+    if (aprobado !== null) consumeApproval(root, aprobado);
     const estado: StepOutcome["status"] =
       aprobado !== null ? "ok" : contexto.onGate === "wait" ? "waiting" : "skipped";
     return anunciar({

@@ -583,7 +583,7 @@ export async function handleApi(
     partes[4] === "approve"
   ) {
     const gate = partes[3] as string;
-    const datos = body as { actor?: unknown; reason?: unknown };
+    const datos = body as { actor?: unknown; reason?: unknown; run?: unknown; phrase?: unknown };
     const actor = typeof datos.actor === "string" ? datos.actor.trim() : "";
     if (actor === "") {
       return {
@@ -597,6 +597,11 @@ export async function handleApi(
         gate,
         actor,
         typeof datos.reason === "string" ? datos.reason : "",
+        new Date(),
+        {
+          ...(typeof datos.run === "string" ? { runId: datos.run } : {}),
+          ...(typeof datos.phrase === "string" ? { phrase: datos.phrase } : {}),
+        },
       );
       return {
         status: 200,

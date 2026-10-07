@@ -27,7 +27,7 @@ import type { StepUsage } from "./process.js";
 import { mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
-import { EXIT_HISTORY, EXIT_SCHEMA, atomicWrite, fail } from "@valmen/core";
+import { EXIT_HISTORY, EXIT_INVARIANT, EXIT_SCHEMA, atomicWrite, fail, parseYamlSubset } from "@valmen/core";
 
 /** En qué punto está una corrida. */
 export const RUN_STATUSES = [
@@ -224,6 +224,25 @@ export interface GateApproval {
   readonly actor: string;
   readonly reason: string;
   readonly at: string;
+  /**
+   * La corrida y la versión que esta aprobación habilita, y la frase con la que se aprobó.
+   *
+   * Solo las lleva la aprobación de un gate que declara `require_phrase` (R-CTRL-002); son
+   * opcionales para no invalidar el archivo que ya existe. Una aprobación sin `runId` no
+   * habilita un gate que exige frase: aprobar «el despliegue» en abstracto es justo lo que
+   * permitía que la de la 1.4.0 sirviera para la 1.5.0.
+   */
+  readonly runId?: string;
+  readonly version?: string;
+  readonly phrase?: string;
+  /** Cuándo se usó. Una aprobación consumida no habilita otra corrida. */
+  readonly consumedAt?: string;
+}
+
+/** A qué corrida pertenece quien pregunta si un gate está aprobado. */
+export interface CorridaDeAprobacion {
+  readonly runId: string | null;
+  readonly params: Readonly<Record<string, string>>;
 }
 
 /** Dónde viven las aprobaciones. */
@@ -253,24 +272,101 @@ export function readApprovals(root: string): GateApproval[] {
 }
 
 /**
+ * La frase que un gate exige para aprobarse, o `null` si no declara `require_phrase`.
+ *
+ * Sale de `.valmen/gates/<gate>.yaml`. Un archivo ilegible se trata como «no exige»: es lo
+ * que ya pasaba antes de que la frase se comprobara, y el cierre del riesgo es que el gate
+ * de despliegue la declara.
+ */
+export function readRequiredPhrase(root: string, gate: string): string | null {
+  for (const extension of ["yaml", "yml"]) {
+    const texto = readIfExists(join(root, ".valmen", "gates", `${gate}.${extension}`));
+    if (texto === null) continue;
+    try {
+      const documento = parseYamlSubset(texto, { fileName: `${gate}.${extension}` });
+      if (typeof documento !== "object" || Array.isArray(documento)) return null;
+      const frase = (documento as Record<string, unknown>)["require_phrase"];
+      return typeof frase === "string" && frase.trim() !== "" ? frase : null;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+/** Sustituye `{nombre}` por el parámetro de la corrida; uno que falta es un error, no un hueco. */
+function resolverFrase(plantilla: string, params: Readonly<Record<string, string>>): string {
+  return plantilla.replace(/\{(\w+)\}/g, (_, nombre: string) => {
+    if (!Object.hasOwn(params, nombre)) {
+      fail(
+        `La frase del gate usa {${nombre}} y la corrida no tiene ese parámetro: ` +
+          `tiene ${Object.keys(params).sort().join(", ") || "(ninguno)"}.`,
+        EXIT_INVARIANT,
+      );
+    }
+    return params[nombre] as string;
+  });
+}
+
+/**
  * Si un gate está aprobado, y por quién.
  *
- * Devuelve `null` si no lo está, que es lo que el motor necesita para detenerse.
- * La última aprobación manda: si alguien aprobó, el proceso corrió, y el gate se
- * aprobó otra vez para la siguiente corrida, la que vale es la nueva.
+ * Devuelve `null` si no lo está, que es lo que el motor necesita para detenerse. En un gate
+ * sin frase la última aprobación manda, como siempre. En uno que **exige frase** solo vale
+ * una aprobación **sin consumir** de la **misma corrida** y la **misma versión**: sin
+ * corrida, `null`.
  */
-export function gateApproved(root: string, gate: string): GateApproval | null {
+export function gateApproved(
+  root: string,
+  gate: string,
+  corrida?: CorridaDeAprobacion,
+): GateApproval | null {
   const aprobaciones = readApprovals(root).filter((entrada) => entrada.gate === gate);
-  return aprobaciones.length === 0
-    ? null
-    : (aprobaciones[aprobaciones.length - 1] as GateApproval);
+  if (readRequiredPhrase(root, gate) === null) {
+    return aprobaciones.length === 0
+      ? null
+      : (aprobaciones[aprobaciones.length - 1] as GateApproval);
+  }
+  if (corrida === undefined || corrida.runId === null) return null;
+  const validas = aprobaciones.filter(
+    (entrada) =>
+      entrada.consumedAt === undefined &&
+      entrada.runId === corrida.runId &&
+      entrada.version === corrida.params["version"],
+  );
+  return validas.length === 0 ? null : (validas[validas.length - 1] as GateApproval);
+}
+
+/**
+ * Gasta una aprobación: tras usarse, no habilita otra corrida (R-CTRL-002).
+ *
+ * Solo aplica a las que llevan frase; las de un gate sin ella no se consumen, que es el
+ * comportamiento de siempre.
+ */
+export function consumeApproval(
+  root: string,
+  aprobacion: GateApproval,
+  ahora: Date = new Date(),
+): void {
+  if (aprobacion.runId === undefined) return;
+  const todas = readApprovals(root).map((entrada) =>
+    entrada.gate === aprobacion.gate &&
+    entrada.at === aprobacion.at &&
+    entrada.runId === aprobacion.runId &&
+    entrada.consumedAt === undefined
+      ? { ...entrada, consumedAt: ahora.toISOString() }
+      : entrada,
+  );
+  atomicWrite(approvalsPath(root), `${JSON.stringify(todas, null, 2)}\n`);
 }
 
 /**
  * Registra la aprobación de un gate.
  *
  * El responsable es obligatorio: aprobar sin nombre no es auditable, y es la misma
- * regla que el harness aplica a las decisiones de un gate de ticket.
+ * regla que el harness aplica a las decisiones de un gate de ticket. Si el gate declara
+ * `require_phrase`, además hacen falta la corrida detenida y la frase exacta con sus
+ * variables resueltas por los parámetros de esa corrida.
  */
 export function approveGate(
   root: string,
@@ -278,15 +374,47 @@ export function approveGate(
   actor: string,
   reason: string,
   ahora: Date = new Date(),
+  contexto: { readonly runId?: string; readonly phrase?: string } = {},
 ): GateApproval {
   if (actor.trim() === "") {
     fail("Aprobar un gate necesita un responsable: falta --actor.", EXIT_SCHEMA);
+  }
+  let atadura: Pick<GateApproval, "runId" | "version" | "phrase"> = {};
+  const exigida = readRequiredPhrase(root, gate);
+  if (exigida !== null) {
+    if (contexto.runId === undefined || contexto.runId.trim() === "") {
+      fail(
+        `El gate "${gate}" exige una frase y se aprueba para una corrida: falta --run <corrida>.`,
+        EXIT_SCHEMA,
+      );
+    }
+    const corrida = readRun(root, contexto.runId);
+    if (corrida === null) fail(`No existe la corrida "${contexto.runId}".`, EXIT_SCHEMA);
+    if (corrida.status !== "waiting") {
+      fail(
+        `La corrida "${contexto.runId}" no está esperando una aprobación (estado ${corrida.status}).`,
+        EXIT_INVARIANT,
+      );
+    }
+    const esperada = resolverFrase(exigida, corrida.params);
+    if ((contexto.phrase ?? "").trim() !== esperada) {
+      fail(
+        `La frase no coincide: para aprobar el gate "${gate}" de esta corrida hay que escribir exactamente «${esperada}».`,
+        EXIT_INVARIANT,
+      );
+    }
+    atadura = {
+      runId: corrida.runId,
+      ...(corrida.params["version"] === undefined ? {} : { version: corrida.params["version"] }),
+      phrase: esperada,
+    };
   }
   const aprobacion: GateApproval = {
     gate,
     actor: actor.trim(),
     reason: reason.trim(),
     at: ahora.toISOString(),
+    ...atadura,
   };
   const todas = [...readApprovals(root), aprobacion];
   mkdirSync(join(root, ".valmen", "gates"), { recursive: true });
