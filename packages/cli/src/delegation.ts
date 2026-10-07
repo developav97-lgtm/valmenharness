@@ -41,6 +41,7 @@ import {
   delegationProgress,
   grantDelegation,
   hardGateStop,
+  markManualCriteria,
   qaClose,
   qaStart,
   readReceipts,
@@ -399,6 +400,9 @@ export async function closeDelegated(
         );
       }
       palabrasDelPo = o.poConfirmation;
+      // Los criterios manuales los verificó el PO: se marcan con sus palabras literales,
+      // que quedan en el evento. El agente no marca por su cuenta lo que solo el PO verifica.
+      markManualCriteria(paths, ticketId, o.poConfirmation);
     }
 
     // ── QA ────────────────────────────────────────────────────────────────

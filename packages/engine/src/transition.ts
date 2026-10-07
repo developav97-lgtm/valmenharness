@@ -47,6 +47,7 @@ import {
 
 import { hashState } from "@valmen/gate";
 
+import { unmarkedCriteria, unmarkedMessage } from "./criteria-marks.js";
 import { type RegistryPaths, findTicket } from "./discovery.js";
 import { finalizeMutation, readAndValidate } from "./mutate.js";
 import {
@@ -431,6 +432,11 @@ function applyTicket(
     if (qaStatus === "approved" && !hasApprovedQaCycle(document.blocks.QA ?? [])) {
       fail("closed requiere un ciclo QA aprobado y confirmado.", EXIT_INVARIANT);
     }
+    // Cada criterio, marcado o declarado «no aplica» con su motivo (R-CTRL-004): un cierre
+    // con criterios sin marcar afirma a la vez que el ticket está aprobado y que hay
+    // criterios que nadie miró.
+    const sinMarcar = unmarkedCriteria(document.text);
+    if (sinMarcar.length > 0) fail(unmarkedMessage(sinMarcar), EXIT_INVARIANT);
     const cierreCoherente = (document.blocks.Cierre ?? []).some(
       (entrada) => entrada.qa_status === qaStatus,
     );

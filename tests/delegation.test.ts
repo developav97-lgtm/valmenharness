@@ -417,6 +417,25 @@ describe("cierre delegado", () => {
     expect(r.exitCode, r.stderr).toBe(0);
     expect(estadoDe(A)).toBe("awaiting_user_tests");
     expect(r.stdout).toContain("La pantalla se ve como el prototipo");
+
+    // Cuando el PO confirma con sus palabras, el criterio manual se marca y el ticket cierra
+    // (R-CTRL-004); el agente no lo marcó antes.
+    expect(readFileSync(join(lab, "tickets", "2026", A, "ticket.md"), "utf8")).toContain(
+      "- [ ] La pantalla se ve como el prototipo",
+    );
+    const palabrasPo = "«Lo vi y es igual al prototipo» — Juan, 2026-10-06";
+    const cierre = await closeDelegated(
+      PATHS(),
+      resolveDelegation(lab, undefined),
+      A,
+      { ...CIERRE, files: ["src/a.ts"], poConfirmation: palabrasPo },
+      deps({}),
+    );
+    expect(cierre.exitCode, cierre.stderr).toBe(0);
+    expect(estadoDe(A)).toBe("closed");
+    const ticket = readFileSync(join(lab, "tickets", "2026", A, "ticket.md"), "utf8");
+    expect(ticket).toContain("- [x] La pantalla se ve como el prototipo");
+    expect(ticket).toContain(palabrasPo);
   });
 
   it("desde awaiting_user_tests exige las palabras literales del PO y cierra con el HEAD", async () => {

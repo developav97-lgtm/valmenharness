@@ -65,6 +65,7 @@ export * from "./revision-previa.js";
 export * from "./thresholds.js";
 export * from "./precision.js";
 export * from "./umbrales-propuestos.js";
+export * from "./criteria-marks.js";
 export * from "./spec.js";
 export * from "./decompose.js";
 export * from "./report.js";

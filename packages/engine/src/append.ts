@@ -40,6 +40,8 @@ import {
   validateTitle,
 } from "@valmen/core";
 
+import { markFromReceipt } from "./criteria-marks.js";
+import { currentReceipts, readReceipts } from "./receipts.js";
 import { type RegistryPaths, findTicket } from "./discovery.js";
 import { finalizeMutation, readAndValidate } from "./mutate.js";
 import { declaredFunctionalFiles, resolveReference, validateFunctionalFile } from "./references.js";
@@ -840,6 +842,24 @@ export function closeAttempt(request: CloseAttemptRequest): string {
       }
     }
 
+    // Los criterios con `test:` que el último recibo de `qa-mechanical` pasó se marcan
+    // aquí, en la misma mutación, y el evento cita el recibo (R-CTRL-004). Un criterio
+    // manual no se marca: lo marca quien lo probó.
+    let texto = contexto.document.text;
+    let marcas = "";
+    if (qaStatus === "approved") {
+      const recibo = currentReceipts(readReceipts(request.paths, request.ticketId)).find(
+        (r) => r.gate === "qa-mechanical",
+      );
+      const marcado = markFromReceipt(texto, recibo);
+      if (marcado.marked.length > 0 && recibo !== undefined) {
+        texto = marcado.text;
+        marcas =
+          ` Criterios marcados desde el recibo ${recibo.id} de qa-mechanical: ` +
+          `${marcado.marked.map((m) => `C${m.index}`).join(", ")}.`;
+      }
+    }
+
     const cierres = (contexto.document.blocks.Cierre ?? []).map((entrada) => ({
       ...entrada,
     }));
@@ -857,9 +877,9 @@ export function closeAttempt(request: CloseAttemptRequest): string {
     });
 
     return {
-      texto: replaceBlock(contexto.document.text, "Cierre", cierres),
+      texto: replaceBlock(texto, "Cierre", cierres),
       accion: "close-attempted",
-      detalles: `Se agregó ${id}.`,
+      detalles: `Se agregó ${id}.${marcas}`,
       salida: `Intento de cierre agregado: ${id}`,
     };
   });

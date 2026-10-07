@@ -1232,6 +1232,9 @@ async function hastaInQa(): Promise<string> {
   await paso(contexto, "mover_ticket", { id: ID, to: "approved" });
   await paso(contexto, "mover_ticket", { id: ID, to: "in_progress" });
   escribir(ruta, "Pruebas", "- Resultado del PO: probado en la sucursal y conforme.");
+  // El PO probó y confirmó: sus criterios quedan marcados, que es lo que el cierre exige
+  // (R-CTRL-004). Un criterio manual lo marca quien lo probó, no el agente.
+  writeFileSync(ruta, readFileSync(ruta, "utf8").replace(/^- \[ \]/gm, "- [x]"), "utf8");
   // La verificación mecánica es precondición de la entrega. Acá los criterios
   // declaran verificación manual, así que el gate no corre nada y deja constancia.
   await paso(contexto, "evaluar_compuerta", { gate: "qa-mechanical", id: ID });
@@ -1361,6 +1364,13 @@ describe("el ciclo entero del ticket", () => {
       confirmacion_po: "Aprobado, quedó bien",
     });
     await paso(contexto, "mover_ticket", { id: ID, to: "qa_approved" });
+    // El criterio manual lo marca quien lo probó, con su confirmación; el que declara un
+    // `test:` lo marca el motor desde el recibo al preparar el cierre (R-CTRL-004).
+    writeFileSync(
+      ruta,
+      readFileSync(ruta, "utf8").replace('- [ ] Buscar "999"', '- [x] Buscar "999"'),
+      "utf8",
+    );
     await paso(contexto, "registrar_consumo_ia", {
       id: ID,
       source: "manual:sesión del test, sin contabilidad que leer",
@@ -1384,6 +1394,9 @@ describe("el ciclo entero del ticket", () => {
     const ticket = parseTicket(readFileSync(ruta, "utf8"));
     expect(ticket.fields.workflow_status).toBe("closed");
     expect(ticket.fields.qa_status).toBe("approved");
+    // El criterio con `test:` quedó marcado por el motor desde el recibo, y el evento lo cita.
+    expect(readFileSync(ruta, "utf8")).toContain('- [x] Buscar "104" devuelve la orden "1042".');
+    expect(JSON.stringify(ticket.blocks.Eventos)).toContain("Criterios marcados desde el recibo");
     expect(ticket.blocks.QA).toHaveLength(2);
     expect(ticket.blocks.Retests).toHaveLength(1);
     expect(ticket.blocks.Cierre).toHaveLength(1);
