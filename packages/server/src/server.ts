@@ -20,6 +20,7 @@ import {
   type Server,
   type ServerResponse,
 } from "node:http";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { type FSWatcher, readFileSync, watch } from "node:fs";
 import { extname, join } from "node:path";
 import { homedir } from "node:os";
@@ -147,6 +148,13 @@ export interface ServerContext {
    * `docs/tickets` y la interfaz tiene que mostrar ese, no uno vacío.
    */
   readonly paths?: RegistryPaths;
+  /**
+   * El token que exige toda escritura (R-CTRL-003).
+   *
+   * Lo fija `valmen serve` solo cuando escucha fuera de la máquina local. Ausente, el
+   * servidor es el de siempre: la frontera de confianza es la máquina.
+   */
+  readonly writeToken?: string;
   /** Proyecto ya autorizado por el encabezado de esta petición, si lo hubo. */
   readonly authorizedProject?: AuthorizedProject;
   /** Catálogo local inyectable; nunca se toma de una petición. */
@@ -178,6 +186,42 @@ export function defaultContext(root: string): ServerContext {
     credentialsFile: credentialsPath(),
     bindingsFile: machineBindingsPath(homedir()),
     env: process.env,
+  };
+}
+
+/** ¿Es una dirección de escucha de esta máquina? */
+export function esAnfitrionLocal(anfitrion: string): boolean {
+  return anfitrion === "localhost" || anfitrion === "::1" || /^127\./.test(anfitrion);
+}
+
+/** Los métodos que no escriben: el resto exige token cuando el servidor está abierto a la red. */
+const METODOS_DE_LECTURA = new Set(["GET", "HEAD", "OPTIONS"]);
+
+/**
+ * Rechaza una escritura sin el token cuando el servidor escucha fuera de la máquina local
+ * (R-CTRL-003). Devuelve el 401 o `null` si la petición puede seguir.
+ *
+ * Se decide en un solo punto, antes del despacho: repartida por endpoint, la comprobación
+ * se olvidaría justo en el que se agregue después. La comparación es de tiempo constante
+ * —sobre el hash de ambos, que tienen la misma longitud— y la respuesta no dice nada del
+ * token esperado.
+ */
+export function exigirTokenEnEscritura(
+  context: Pick<ServerContext, "writeToken">,
+  method: string,
+  authorization: string | undefined,
+): { readonly status: 401; readonly body: { readonly error: string } } | null {
+  if (context.writeToken === undefined || METODOS_DE_LECTURA.has(method.toUpperCase())) return null;
+  const recibido = /^Bearer (.+)$/.exec(authorization ?? "")?.[1] ?? "";
+  const hash = (texto: string): Buffer => createHash("sha256").update(texto, "utf8").digest();
+  if (timingSafeEqual(hash(recibido), hash(context.writeToken))) return null;
+  return {
+    status: 401,
+    body: {
+      error:
+        "Este servidor escucha fuera de la máquina local y las escrituras exigen un token: " +
+        "envíalo en `Authorization: Bearer <token>`.",
+    },
   };
 }
 
@@ -1938,6 +1982,12 @@ async function handleRequest(
 ): Promise<void> {
   const url = new URL(request.url ?? "/", "http://127.0.0.1");
   const method = request.method ?? "GET";
+
+  const sinToken = exigirTokenEnEscritura(context, method, request.headers["authorization"]);
+  if (sinToken !== null) {
+    send(response, sinToken.status, sinToken.body, "application/json; charset=utf-8");
+    return;
+  }
 
   // El flujo de eventos no es una respuesta con cuerpo y fin: se queda abierto.
   // Por eso se atiende antes del despacho normal, que siempre responde y cierra.

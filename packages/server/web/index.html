@@ -2099,20 +2099,49 @@
         }
       }
 
-      async function enviar(method, ruta, cuerpo) {
+      /**
+       * El token de escritura (R-CTRL-003): solo lo pide un servidor abierto a la red.
+       * Se recuerda en este navegador y se envía en toda escritura.
+       */
+      function tokenDeEscritura() {
+        try {
+          return localStorage.getItem("valmen.token") ?? "";
+        } catch {
+          return "";
+        }
+      }
+
+      async function enviar(method, ruta, cuerpo, yaPidioToken = false) {
         const url = new URL(ruta, "http://127.0.0.1");
         const vistaConjunta = url.pathname === "/api/portafolio";
         const seleccionDeLaPeticion = proyectoSeleccionado;
+        const token = method === "GET" ? "" : tokenDeEscritura();
         const respuesta = await fetch(ruta, {
           method,
           headers: {
             ...(cuerpo === undefined ? {} : { "Content-Type": "application/json" }),
+            ...(token === "" ? {} : { Authorization: `Bearer ${token}` }),
             ...(vistaConjunta || seleccionDeLaPeticion === ""
               ? {}
               : { "X-Valmen-Project": seleccionDeLaPeticion }),
           },
           body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
         });
+        // Un servidor abierto a la red responde 401 a una escritura sin token: se pide
+        // una vez y se repite. Si el token sigue sin valer, el error se muestra tal cual.
+        if (respuesta.status === 401 && method !== "GET" && !yaPidioToken && typeof prompt === "function") {
+          const dado = prompt(
+            "Este servidor escucha en la red y las escrituras exigen un token. Pégalo aquí (lo imprimió `valmen serve` al arrancar):",
+          );
+          if (dado !== null && dado.trim() !== "") {
+            try {
+              localStorage.setItem("valmen.token", dado.trim());
+            } catch {
+              // Sin almacenamiento, el token sirve solo para esta petición.
+            }
+            return enviar(method, ruta, cuerpo, true);
+          }
+        }
         const datos = await respuesta.json();
         if (!respuesta.ok) throw new Error(datos.error ?? `HTTP ${respuesta.status}`);
         if (!vistaConjunta && seleccionDeLaPeticion !== proyectoSeleccionado) {

@@ -13,6 +13,7 @@
  * devuelve un `CommandResult` en vez de escribir directamente, lo que hace que
  * todos los comandos sean testeables sin capturar la salida del proceso.
  */
+import { randomBytes } from "node:crypto";
 import { realpathSync } from "node:fs";
 import { networkInterfaces } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
@@ -97,6 +98,7 @@ import {
   type ServerContext,
   createMissionControl,
   defaultContext,
+  esAnfitrionLocal,
   loadStatics,
   recordHumanDecision,
 } from "@valmen/server";
@@ -1517,8 +1519,6 @@ export async function run(argv: readonly string[]): Promise<number> {
         return result.exitCode;
       }
 
-      const contexto: ServerContext = { ...defaultContext(options.root), statics };
-      const servidor = createMissionControl(contexto);
       const puertoFinal = Number.isNaN(puerto) ? 4173 : puerto;
 
       // Solo en la interfaz de loopback por defecto: la frontera de confianza es
@@ -1527,6 +1527,22 @@ export async function run(argv: readonly string[]): Promise<number> {
       // ejemplo— y por eso se pide con `--host` y se avisa de lo que implica.
       const anfitrion =
         typeof options.flags["host"] === "string" ? options.flags["host"] : "127.0.0.1";
+
+      // Fuera de la máquina local las escrituras exigen un token (R-CTRL-003): el de
+      // `VALMEN_TOKEN` si existe, o uno aleatorio que se imprime una vez. No se guarda en disco.
+      // valmen:allow-secret — el token se genera aquí o viene de VALMEN_TOKEN; no hay valor escrito.
+      const token = esAnfitrionLocal(anfitrion)
+        ? undefined
+        : (process.env["VALMEN_TOKEN"] ?? "").trim() !== ""
+          ? (process.env["VALMEN_TOKEN"] as string).trim()
+          : randomBytes(32).toString("base64url");
+      const tokenDeEntorno = (process.env["VALMEN_TOKEN"] ?? "").trim() !== "";
+      const contexto: ServerContext = {
+        ...defaultContext(options.root),
+        statics,
+        ...(token === undefined ? {} : { writeToken: token }),
+      };
+      const servidor = createMissionControl(contexto);
 
       await new Promise<void>((resolve, reject) => {
         servidor.once("error", reject);
@@ -1543,9 +1559,12 @@ export async function run(argv: readonly string[]): Promise<number> {
           "",
           ...(abierto
             ? [
-                "  Escucha en la red: cualquiera que llegue a esa dirección puede leer el",
-                "  registro y decidir compuertas. No hay autenticación — la frontera de",
-                "  confianza es tu red. Detenlo con Ctrl-C cuando termines.",
+                "  Escucha en la red: cualquiera que llegue puede LEER el registro. Las",
+                "  escrituras (mover tickets, decidir compuertas, aprobar procesos, editar la",
+                "  configuración) exigen el token de abajo. El tráfico no va cifrado: el token",
+                "  viaja en claro, así que úsalo solo en una red de confianza.",
+                `  token de escritura   ${token ?? ""}${tokenDeEntorno ? "   (el de VALMEN_TOKEN)" : "   (generado; no se guarda)"}`,
+                "  Detenlo con Ctrl-C cuando termines.",
               ]
             : ["  Escucha solo en 127.0.0.1. Detenlo con Ctrl-C."]),
           "",
