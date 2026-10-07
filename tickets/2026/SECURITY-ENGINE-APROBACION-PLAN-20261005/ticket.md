@@ -4,7 +4,7 @@ id: SECURITY-ENGINE-APROBACION-PLAN-20261005
 title: Registrar la aprobación del plan con actor, fuente, frase y hash
 type: SECURITY
 module: ENGINE
-workflow_status: intake
+workflow_status: planned
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -13,7 +13,7 @@ migration_impact: false
 docker_impact: false
 risk_level: normal
 created: 2026-10-05
-updated: 2026-10-05
+updated: 2026-10-06
 related_ticket: null
 target_release: null
 released_in: null
@@ -38,31 +38,44 @@ Ninguno.
 
 ## Descripción funcional
 
-- Alcance:
-- Usuario o rol afectado:
-- Comportamiento actual:
-- Comportamiento esperado:
+- Alcance: que el motor sepa **registrar** y **verificar** la aprobación de un plan como un evento del ticket con actor, fuente, frase literal y el hash del plan aprobado (R-CTRL-001, mitad de registro): una función del motor, el comando `valmen approve-plan`, la lectura de las fuentes aceptadas desde `config.yaml` y la comprobación de vigencia (la aprobación deja de valer si el plan cambia). El requisito R-CTRL-001 se cubre en dos tickets del grafo (`tickets.yaml`): este registra y verifica; `SECURITY-CORE-TRANSICION-APPROVED-20261005`, que depende de este, hace que `transition --to approved` lo **exija**. Por eso este ticket no modifica `validate.ts` ni `transition.ts` y no cambia ninguna transición.
+- Usuario o rol afectado: la persona que aprueba un plan (el PO) y el agente que hoy se apoya en una frase escrita en `## Plan`, que cualquiera puede escribir.
+- Comportamiento actual: `hasPlanGate` acepta una línea de `## Plan` con «aprobado explícitamente por el PO»; es texto libre sin actor, fuente ni vínculo con el contenido aprobado, y el propio agente puede escribirla (la corrida delegada lo hace citando la delegación).
+- Comportamiento esperado: `valmen approve-plan --id X --actor <nombre> --source <fuente> --quote "<frase>"` anexa al ticket un evento `plan-approved` con actor, fuente, frase y el hash del `## Plan` vigente; una función de lectura devuelve, para un ticket, si hay aprobación vigente (la última coincide con el hash actual) o por qué no. La fuente debe estar entre las que el proyecto declara en `plan-approval-sources`; sin declaración rige `mission-control` y `cli`. Una sesión marcada como desatendida no puede registrarla.
 
 ## Diagnóstico
 
-- Archivos y flujo investigados:
-- Causa raíz o hipótesis:
-- Riesgos y compatibilidad:
-- Impactos de sync, migración, Docker o despliegue:
+- Archivos y flujo investigados: la exigencia actual vive en `hasPlanGate` (`packages/core/src/validate.ts:253`), que solo lee líneas del plan, y en la rama de `approved` de `transition` (`packages/engine/src/transition.ts:354`); `packages/cli/src/delegation.ts:240` escribe esa misma línea en nombre de la delegación. Los eventos del ticket se anexan con el patrón de `packages/engine/src/append.ts` y las decisiones humanas de compuerta ya dejan un evento citando el recibo (`packages/engine/src/receipts.ts:158`), de modo que el formato de evento firmado tiene precedente. No existe hoy una marca de sesión desatendida: `packages/engine/src/journey-dispatch.ts` despacha pero no identifica al ejecutor.
+- Causa raíz o hipótesis: la aprobación se modeló como una propiedad del texto del plan y no como un hecho con autor; por eso no tiene actor, no se ata al contenido y el agente puede producirla. Comprobado: `hasPlanGate` no consulta ningún evento ni hash. La investigación identifica además los archivos nuevos que el plan crea (`plan-approval.ts`, la función de fuentes en `config.ts` y el comando en `main.ts`) porque ningún módulo del motor registra aprobaciones hoy. Hipótesis a decidir con el PO: cómo se reconoce una sesión desatendida; se propone una variable de entorno `VALMEN_UNATTENDED=1` que fijan los despachadores, advirtiendo que es una barrera de proceso y no criptográfica —quien controla el entorno puede quitarla—, y que la defensa fuerte es que las fuentes aceptadas excluyan al ejecutor.
+- Riesgos y compatibilidad: es un cambio de seguridad del flujo de aprobación; por eso exige tu aprobación del plan. No toca tickets existentes: los que ya pasaron por `approved` siguen validando porque este ticket no cambia `transition` ni `validate`. El hash se calcula sobre el texto normalizado de `## Plan` sin la línea «Gate de plan y aprobación» (si no, escribirla invalidaría la aprobación). La corrida delegada seguirá funcionando hasta el ticket siguiente, donde se decide cómo registra su aprobación citando las palabras del PO como fuente `delegacion`.
+- Impactos de sync, migración, Docker o despliegue: ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación:
+- Gate de plan y aprobación: pendiente
+- Alcance: el registro y la verificación de la aprobación del plan, el comando y la lectura de fuentes aceptadas. Exclusiones: exigirla en `transition`, la corrida delegada, y cualquier cambio a tickets ya aprobados.
 - Pasos ordenados:
-  <!-- Cada paso nombra archivo, símbolo o comando. Un paso que no dice dónde ni
-       con qué se toca no se puede ejecutar ni revisar, y la compuerta lo lee así. -->
-  1.
-  2.
-- Rollback:
+  1. Crear `packages/engine/src/plan-approval.ts` con `hashDelPlan(document)` (sha256 del `## Plan` normalizado, sin la línea de gate), `registrarAprobacionDePlan(request)` (valida actor y frase no vacíos, fuente aceptada y sesión no desatendida; anexa el evento `plan-approved` con actor, fuente, frase y hash) y `aprobacionDePlanVigente(document)` (lee **solo los eventos** `plan-approved`, nunca las líneas de `## Plan`, y devuelve `vigente`, `sin-aprobacion` o `plan-cambiado` con el motivo; una frase de aprobación escrita en el plan da `sin-aprobacion`).
+  2. En `packages/adapter/src/config.ts` agregar `readPlanApprovalSources(config)` (clave `plan-approval-sources`, por defecto `mission-control` y `cli`; un valor vacío o inválido falla nombrando la clave).
+  3. Agregar el comando `approve-plan --id <ID> --actor <nombre> --source <fuente> --quote "<frase>"` en `packages/cli/src/main.ts` y `commands.ts`, que rechaza una sesión con `VALMEN_UNATTENDED` fijada y devuelve el código de invariante.
+  4. Exportar el módulo desde `packages/engine/src/index.ts` y documentar la clave y el comando en la skill `planificacion` (fuente en `.valmen/skills/planificacion/SKILL.md`).
+  5. Crear `tests/aprobacion-de-plan.test.ts`: registro correcto con los cuatro datos, rechazo de fuente no declarada, de frase vacía y de sesión desatendida, vigencia tras editar el plan (`plan-cambiado`), que un ticket con la frase «aprobado explícitamente por el PO» en `## Plan` y sin evento da `sin-aprobacion`, que escribir la línea de gate no invalida, y que un ticket ya aprobado sigue validando; correr `npx vitest run tests/aprobacion-de-plan.test.ts`, la suite completa y `npx tsc --noEmit -p tsconfig.json`.
+- Rollback: revertir el commit del ticket; el evento nuevo es aditivo y ningún flujo existente lo lee todavía.
 
 ## Criterios de aceptación
 
-- [ ] R-CTRL-001: La transición a approved DEBE exigir una aprobación del plan registrada con actor y fuente
+- [ ] Registrar la aprobación anexa un evento con actor, fuente, frase literal y el hash del plan
+      <!-- test: npx vitest run tests/aprobacion-de-plan.test.ts -->
+- [ ] Una fuente que el proyecto no declara se rechaza, y sin declaración rigen `mission-control` y `cli`
+      <!-- test: npx vitest run tests/aprobacion-de-plan.test.ts -->
+- [ ] Una sesión marcada como desatendida no puede registrar la aprobación
+      <!-- test: npx vitest run tests/aprobacion-de-plan.test.ts -->
+- [ ] Si el plan cambia después de la aprobación, esta deja de valer y el motivo lo dice
+      <!-- test: npx vitest run tests/aprobacion-de-plan.test.ts -->
+- [ ] Una frase escrita en `## Plan` no cuenta como aprobación registrada
+      <!-- test: npx vitest run tests/aprobacion-de-plan.test.ts -->
+- [ ] Los tickets que ya pasaron por `approved` siguen validando
+      <!-- test: npx vitest run tests/aprobacion-de-plan.test.ts -->
 
 ## Puntos
 
@@ -124,6 +137,24 @@ Sin publicar todavía.
     "action": "created",
     "actor": "cli",
     "details": "Ticket creado sin sobrescribir historial."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-002",
+    "date": "2026-10-06",
+    "at": "2026-10-07T02:26:00.793Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: intake -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-003",
+    "date": "2026-10-06",
+    "at": "2026-10-07T02:26:21.197Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: analyzed -> planned."
   }
 ]
 ```
