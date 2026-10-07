@@ -35,6 +35,7 @@ import {
   perfilElegido,
   perfilesPath,
   readProjectPerfiles,
+  readSeleccionDePerfil,
   renderPerfiles,
   rutasDelProyecto,
   parseRouting,
@@ -998,5 +999,138 @@ describe("la resolución del perfil elegido", () => {
       expect(gate.evaluatorModel).toBe("moonshotai/kimi-k3");
       expect(gate.source).toBe("perfil");
     }
+  });
+});
+
+describe("la API de perfiles", () => {
+  const contextoConCatalogo = () => ({ ...context(), fetchImpl: fetchCatalogos() });
+  const cuerpoDe = <T>(r: { body: unknown }) => r.body as T;
+  type Resultado = { ok: boolean; errores: string[]; written: boolean };
+
+  it("R-PERF-002 API lista sin archivo", async () => {
+    const r = await handleApi("GET", "/api/perfiles", {}, contextoConCatalogo());
+    expect(r.status).toBe(200);
+    const cuerpo = cuerpoDe<{ perfiles: { id: string; origen: string }[]; seleccion: unknown; ejecutores: string[] }>(r);
+    expect(cuerpo.perfiles.map((p) => p.id)).toEqual(PERFILES_INCORPORADOS.map((p) => p.id));
+    expect(cuerpo.perfiles.every((p) => p.origen === "incorporado")).toBe(true);
+    expect(cuerpo.seleccion).toEqual({ proyecto: null, ejecutores: {} });
+    expect(cuerpo.ejecutores).toEqual(["claude", "codex", "opencode", "hermes"]);
+  });
+
+  it("R-PERF-002 API lista con archivo", async () => {
+    await guardarPerfil(lab, perfilMixto(), opcionesDePerfil());
+    elegirPerfil(lab, { perfil: "mixto" });
+    const r = await handleApi("GET", "/api/perfiles", {}, contextoConCatalogo());
+    const cuerpo = cuerpoDe<{ perfiles: { id: string; origen: string }[]; seleccion: { proyecto: string } }>(r);
+    expect(cuerpo.perfiles.find((p) => p.id === "mixto")?.origen).toBe("proyecto");
+    expect(cuerpo.seleccion.proyecto).toBe("mixto");
+  });
+
+  it("R-PERF-002 API archivo ilegible", async () => {
+    writeFileSync(perfilesPath(lab), "perfiles:\n  Mal Id:\n    description: x\n");
+    const r = await handleApi("GET", "/api/perfiles", {}, contextoConCatalogo());
+    expect(r.status).toBe(200);
+    const cuerpo = cuerpoDe<{ error: string; perfiles: unknown[] }>(r);
+    expect(cuerpo.error).toContain("Mal Id");
+    expect(cuerpo.perfiles).toHaveLength(PERFILES_INCORPORADOS.length);
+  });
+
+  it("R-PERF-002 API crea a partir de otro", async () => {
+    const r = await handleApi(
+      "PUT",
+      "/api/perfiles",
+      {
+        id: "mi-perfil",
+        description: "Claude con Codex",
+        base: "claude-code-completo",
+        roles: { "agent-implementation": { provider: "codex", model: "gpt-6-sol", effort: "high" } },
+      },
+      contextoConCatalogo(),
+    );
+    expect(cuerpoDe<Resultado>(r)).toEqual({ ok: true, errores: [], written: true });
+    const guardado = readProjectPerfiles(lab).find((p) => p.id === "mi-perfil");
+    const base = perfilIncorporado("claude-code-completo");
+    expect(guardado?.roles["agent-implementation"]?.provider).toBe("codex");
+    expect(guardado?.roles["agent-plan"]).toEqual(base.roles["agent-plan"]);
+    expect(guardado?.roles["orchestrator"]).toEqual(base.roles["orchestrator"]);
+  });
+
+  it("R-PERF-002 API id inválido", async () => {
+    const r = await handleApi(
+      "PUT",
+      "/api/perfiles",
+      { id: "Mi Perfil", description: "", base: "codex-completo", roles: {} },
+      contextoConCatalogo(),
+    );
+    const cuerpo = cuerpoDe<Resultado>(r);
+    expect(cuerpo.ok).toBe(false);
+    expect(cuerpo.errores.join("\n")).toContain("kebab-case");
+    expect(existsSync(perfilesPath(lab))).toBe(false);
+  });
+
+  it("R-PERF-002 API modelo inexistente", async () => {
+    const r = await handleApi(
+      "PUT",
+      "/api/perfiles",
+      {
+        id: "con-error",
+        description: "",
+        base: "codex-completo",
+        roles: { "agent-plan": { provider: "codex", model: "gpt-9-inventado", effort: "high" } },
+      },
+      contextoConCatalogo(),
+    );
+    const cuerpo = cuerpoDe<Resultado>(r);
+    expect(cuerpo.ok).toBe(false);
+    expect(cuerpo.errores.join("\n")).toContain("rol agent-plan: el modelo gpt-9-inventado");
+    expect(existsSync(perfilesPath(lab))).toBe(false);
+  });
+
+  it("R-PERF-002 API edita", async () => {
+    await guardarPerfil(lab, perfilMixto(), opcionesDePerfil());
+    const completo = readProjectPerfiles(lab).find((p) => p.id === "mixto")!;
+    const r = await handleApi(
+      "PUT",
+      "/api/perfiles",
+      {
+        id: "mixto",
+        description: "Editado",
+        roles: { ...completo.roles, "agent-implementation": { provider: "codex", model: "gpt-6-luna", effort: "low" } },
+      },
+      contextoConCatalogo(),
+    );
+    expect(cuerpoDe<Resultado>(r).written).toBe(true);
+    const editado = readProjectPerfiles(lab).filter((p) => p.id === "mixto");
+    expect(editado).toHaveLength(1);
+    expect(editado[0]?.roles["agent-implementation"]).toEqual({ provider: "codex", model: "gpt-6-luna", effort: "low" });
+    expect(editado[0]?.description).toBe("Editado");
+  });
+
+  it("R-PERF-002 API elige para el proyecto", async () => {
+    const r = await handleApi("PUT", "/api/perfiles/seleccion", { perfil: "codex-completo" }, context());
+    expect(cuerpoDe<Resultado>(r).written).toBe(true);
+    expect(readSeleccionDePerfil(lab)).toEqual({ proyecto: "codex-completo", ejecutores: {} });
+  });
+
+  it("R-PERF-002 API elige por ejecutor", async () => {
+    await handleApi("PUT", "/api/perfiles/seleccion", { perfil: "codex-completo" }, context());
+    const r = await handleApi("PUT", "/api/perfiles/seleccion", { perfil: "opencode-go", ejecutor: "hermes" }, context());
+    expect(cuerpoDe<Resultado>(r).written).toBe(true);
+    expect(readSeleccionDePerfil(lab)).toEqual({ proyecto: "codex-completo", ejecutores: { hermes: "opencode-go" } });
+  });
+
+  it("R-PERF-002 API cuerpo mal formado", async () => {
+    const malos: [string, unknown][] = [
+      ["/api/perfiles", { description: "", roles: {} }],
+      ["/api/perfiles", { id: "x", description: "", roles: "no" }],
+      ["/api/perfiles", { id: "x", description: "", base: "no-existe", roles: {} }],
+      ["/api/perfiles/seleccion", { perfil: 3 }],
+      ["/api/perfiles/seleccion", { perfil: "codex-completo", ejecutor: 7 }],
+    ];
+    for (const [ruta, cuerpo] of malos) {
+      const r = await handleApi("PUT", ruta, cuerpo, contextoConCatalogo());
+      expect(r.status, JSON.stringify(cuerpo)).toBe(400);
+    }
+    expect(existsSync(perfilesPath(lab))).toBe(false);
   });
 });

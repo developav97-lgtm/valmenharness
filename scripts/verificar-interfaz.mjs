@@ -452,6 +452,19 @@ function respuesta(ruta) {
     };
   }
   if (ruta.includes("/api/providers")) return { providers: [] };
+  if (ruta.includes("/api/perfiles")) {
+    return {
+      perfiles: ["claude-code-completo", "codex-completo", "opencode-go"].map((id) => ({
+        id,
+        description: id,
+        origen: "incorporado",
+        roles: {},
+      })),
+      seleccion: { proyecto: null, ejecutores: {} },
+      ejecutores: ["claude", "codex", "opencode", "hermes"],
+      roles: [],
+    };
+  }
   if (ruta.includes("/api/routing")) {
     return {
       routing: {
