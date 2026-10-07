@@ -27,11 +27,10 @@ import {
   hermesAdapterCapabilities,
   openCodeAdapterCapabilities,
   parseConfig,
-  playwrightConfigOf,
   presetById,
   readExecutionCapabilities,
   readProjectRouting,
-  resolveRouting,
+  rutasDelProyecto,
   type AdapterCapabilities,
 } from "@valmen/adapter";
 import type { RegistryPaths } from "@valmen/engine";
@@ -238,10 +237,7 @@ export function routingCommand(
     // La sección `playwright:` da el modelo del rol `ui-specs`; se pasa para que
     // la tabla muestre el mismo valor con su origen `proyecto` que resuelve el
     // motor, y no un rol sin asignar que oculta la declaración del proyecto.
-    const rutas = resolveRouting(
-      readProjectRouting(paths.root),
-      playwrightConfigOf(paths.root),
-    );
+    const rutas = rutasDelProyecto(paths.root);
     const probabilistico = rutas.some(
       (r) => r.role === "gate-evaluator" && r.probabilistic,
     );

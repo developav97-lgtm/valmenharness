@@ -17,8 +17,7 @@ import {
   type FaseDelAgente,
   type ModeloDeFase,
   modeloDeFase,
-  readProjectRouting,
-  resolveRouting,
+  rutasDelProyecto,
 } from "@valmen/adapter";
 
 import { autonomousConfig } from "./discovery.js";
@@ -88,5 +87,5 @@ export function leerFases(root: string): RegistroDeFase[] {
 export function resolverModeloDeFase(root: string, fase: FaseDelAgente): ModeloDeFase | null {
   const politica = autonomousConfig(root);
   if (politica.executor === null) return null;
-  return modeloDeFase(resolveRouting(readProjectRouting(root)), fase, politica.executor);
+  return modeloDeFase(rutasDelProyecto(root, { ejecutor: politica.executor.id }), fase, politica.executor);
 }
