@@ -17,7 +17,11 @@ import {
   ESQUEMA_DESCOMPOSICION,
   SISTEMA_DESCOMPOSICION,
   advanceFeature,
+  attachFeatureAsset,
   attachTicketToFeature,
+  completeFeature,
+  externalLinkWarnings,
+  listFeatureAssets,
   choosePaths,
   createFeature,
   decomposeFeature,
@@ -27,6 +31,7 @@ import {
   readFeature,
   renderAttachedTicket,
   renderDecomposition,
+  writeFeatureVerify,
 } from "@valmen/engine";
 
 import { type CommandResult, materializeCommand } from "./commands.js";
@@ -48,6 +53,7 @@ function progreso(row: FeatureRow): string {
     ["diseño", row.artifacts.hasDesign],
     ["tickets", row.artifacts.hasDecomposition],
     ["verificación", row.artifacts.hasVerify],
+    ["adjuntos", row.artifacts.hasAssets],
   ] as const;
   const hechos = marcas.filter(([, hecho]) => hecho).map(([nombre]) => nombre);
   return hechos.length === 0 ? "—" : hechos.join(", ");
@@ -121,6 +127,7 @@ export function featureShow(root: string, slug: string | undefined): CommandResu
     ["diseño", `${carpeta}/design.md`, row.artifacts.hasDesign],
     ["tickets", `${carpeta}/tickets.yaml`, row.artifacts.hasDecomposition],
     ["verificación", `${carpeta}/verify.md`, row.artifacts.hasVerify],
+    ["adjuntos", `${carpeta}/assets/manifest.json`, row.artifacts.hasAssets],
   ] as const;
 
   const cabecera = [
@@ -131,7 +138,136 @@ export function featureShow(root: string, slug: string | undefined): CommandResu
     ...rutas.map(([nombre, ruta, hecho]) => `  ${hecho ? "✓" : "·"} ${ruta}  (${nombre})`),
   ].join("\n");
 
-  return ok(`${cabecera}\n\n${text.trimEnd()}\n`);
+  let avisos = "";
+  try {
+    const lista = externalLinkWarnings(root, slug);
+    if (lista.length > 0) avisos = `\nAvisos:\n${lista.map((a) => `  ! ${a}`).join("\n")}\n`;
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+
+  return ok(`${cabecera}\n\n${text.trimEnd()}\n${avisos}`);
+}
+
+/**
+ * `feature advance <slug> --to <estado>`: mueve el estado de la feature.
+ *
+ * Existía `advanceFeature` en el motor y nada lo exponía: la corrida de
+ * precarga-catalogos lo llamó con un script de node. `--to complete` pasa por la
+ * comprobación de cierre (verify.md y tickets cerrados), no por el avance a secas.
+ */
+function featureAdvance(
+  root: string,
+  slug: string | undefined,
+  flags: Readonly<Record<string, string | true>>,
+): CommandResult {
+  if (slug === undefined || slug === "") {
+    return error("feature advance requiere la feature: valmen feature advance <slug> --to <estado>.", EXIT_SCHEMA);
+  }
+  const destino = flags["to"];
+  if (typeof destino !== "string" || destino.trim() === "") {
+    return error("feature advance requiere --to <estado>.", EXIT_SCHEMA);
+  }
+  try {
+    const paths = choosePaths(root);
+    const fila =
+      destino.trim() === "complete"
+        ? completeFeature({ paths, slug, allowPendingPo: flags["pendientes-del-po"] === true })
+        : advanceFeature({ root, slug, to: destino.trim() });
+    const via = fila.via === undefined || fila.via.length === 0 ? "" : ` (pasó por ${fila.via.join(", ")})`;
+    return ok(`Feature ${slug}: ${fila.state}${via}.\n`);
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/** `feature verify <slug> [--rewrite]`: escribe verify.md desde el registro de tickets. */
+function featureVerify(
+  root: string,
+  slug: string | undefined,
+  flags: Readonly<Record<string, string | true>>,
+): CommandResult {
+  if (slug === undefined || slug === "") {
+    return error("feature verify requiere la feature: valmen feature verify <slug>.", EXIT_SCHEMA);
+  }
+  try {
+    const ruta = writeFeatureVerify({
+      paths: choosePaths(root),
+      slug,
+      rewrite: flags["rewrite"] === true,
+    });
+    return ok(`verify.md escrito: ${ruta}\n`);
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/**
+ * `feature asset add|list <slug>`: los adjuntos de una feature.
+ *
+ * `add` copia el archivo que se le da; nunca baja un enlace. Un diseño que solo
+ * existe en un artefacto privado se exporta primero y se anexa el archivo, con
+ * `--origin-url` para dejar de dónde salió.
+ */
+function featureAsset(
+  root: string,
+  accion: string | undefined,
+  slug: string | undefined,
+  flags: Readonly<Record<string, string | true>>,
+): CommandResult {
+  if (slug === undefined || slug === "") {
+    return error(
+      "feature asset requiere la feature: valmen feature asset add|list <slug>.",
+      EXIT_SCHEMA,
+    );
+  }
+  const texto = (nombre: string): string | undefined => {
+    const valor = flags[nombre];
+    return typeof valor === "string" && valor.trim() !== "" ? valor.trim() : undefined;
+  };
+  try {
+    if (accion === "list") {
+      const lista = listFeatureAssets(root, slug);
+      const avisos = externalLinkWarnings(root, slug);
+      const cuerpo =
+        lista.length === 0
+          ? `La feature ${slug} no tiene adjuntos.\n`
+          : lista
+              .map(
+                (a) =>
+                  `${a.path} | ${a.kind} | ${a.bytes} bytes | sha256 ${a.sha256.slice(0, 12)}… | ` +
+                  `${a.description}${a.originUrl === null ? "" : ` | origen ${a.originUrl}`}`,
+              )
+              .join("\n") + "\n";
+      return ok(cuerpo + avisos.map((a) => `! ${a}\n`).join(""));
+    }
+    if (accion === "add") {
+      const archivo = texto("file");
+      if (archivo === undefined) return error("feature asset add requiere --file <ruta>.", EXIT_SCHEMA);
+      const resultado = attachFeatureAsset({
+        root,
+        slug,
+        source: archivo,
+        name: texto("name"),
+        description: texto("description") ?? "",
+        originUrl: texto("origin-url"),
+      });
+      const { asset } = resultado;
+      return ok(
+        resultado.alreadyPresent
+          ? `${asset.path} ya estaba en ${slug} con el mismo contenido: no se escribió nada.\n`
+          : `Adjunto anexado: .valmen/features/${slug}/${asset.path} (${asset.kind}, ` +
+              `${asset.bytes} bytes, sha256 ${asset.sha256}).\n`,
+      );
+    }
+    return error("feature asset requiere add o list.", EXIT_SCHEMA);
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
 }
 
 /**
@@ -378,16 +514,25 @@ export async function runFeature(
     case "detach":
     case "desanexar":
       return detachCommand(choosePaths(root), resto[0] ?? "", flags);
+    case "advance":
+    case "avanzar":
+      return featureAdvance(root, resto[0], flags);
+    case "verify":
+    case "verificar":
+      return featureVerify(root, resto[0], flags);
+    case "asset":
+    case "adjunto":
+      return featureAsset(root, resto[0], resto[1], flags);
     case undefined:
       return error(
         "feature requiere un subcomando: new, show, list, decompose, materialize, " +
-          "attach o detach.",
+          "attach, detach, asset, advance o verify.",
         EXIT_SCHEMA,
       );
     default:
       return error(
         `Subcomando de feature desconocido: ${sub}. Use new, show, list, decompose, ` +
-          "materialize, attach o detach.",
+          "materialize, attach, detach, asset, advance o verify.",
         EXIT_SCHEMA,
       );
   }

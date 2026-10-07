@@ -160,10 +160,10 @@ describe("el detalle que sale llega a su skill publicada", () => {
     expect(texto).toContain("`test-timeout`");
   });
 
-  it("`revision-final` 1.1.0 trae las reglas de la fuente del consumo de IA", () => {
+  it("`revision-final` trae las reglas de la fuente del consumo de IA", () => {
     const texto = skill("revision-final");
 
-    expect(versionPublicada("revision-final")).toBe("1.1.0");
+    expect(versionPublicada("revision-final")).toBe("1.2.0");
     expect(texto).toContain("## El consumo de IA se registra antes de cerrar");
     for (const prefijo of ["`opencode:`", "`hermes:`", "`codex:`", "`claude:`", "`manual:`", "`process:`"]) {
       expect(texto, `falta el prefijo ${prefijo}`).toContain(prefijo);

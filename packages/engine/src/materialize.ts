@@ -42,6 +42,11 @@ import {
 
 import { components, createTicket, ticketPathFor } from "./create.js";
 import { type RegistryPaths } from "./discovery.js";
+import {
+  assetsForRequirements,
+  externalLinkWarnings,
+  listFeatureAssets,
+} from "./feature-assets.js";
 import { featuresDir } from "./features.js";
 import { type LocatedRequirement, readSpecs } from "./spec.js";
 
@@ -59,6 +64,8 @@ export interface Materialization {
   readonly skipped: readonly string[];
   /** Cuántos requisitos cubre cada uno, para poder informarlo. */
   readonly coverage: Readonly<Record<string, readonly string[]>>;
+  /** Enlaces externos de la feature sin copia local; no bloquean. */
+  readonly warnings?: readonly string[];
 }
 
 /** La ruta del `tickets.yaml` de una feature. */
@@ -146,6 +153,7 @@ function solicitudDe(
   requisitos: readonly LocatedRequirement[],
   cubre: readonly string[],
   objetivo: string,
+  referencias = "",
 ): string {
   // Los requisitos que este ticket cubre salen del **grafo**, no de parecidos de
   // texto: es lo que una persona revisó al aprobar la descomposición.
@@ -165,7 +173,40 @@ function solicitudDe(
     ticket.dependsOn.length === 0 ? "" : `Depende de: ${ticket.dependsOn.join(", ")}.`,
     "Viene de una feature descompuesta en sprints; su plan completo está en el tickets.yaml de la feature.",
   ].filter((linea) => linea !== "");
-  return lineas.join("\n");
+  // Sin adjuntos la solicitud es la de siempre, byte a byte.
+  return lineas.join("\n") + (referencias === "" ? "" : `\n\n${referencias}`);
+}
+
+/**
+ * La sección de referencias de un ticket: los adjuntos de la feature que tiene que
+ * mirar quien implementa y quien valida la pantalla.
+ *
+ * Es cadena vacía cuando la feature no tiene adjuntos, y por eso materializar una
+ * feature sin `assets/` no cambia nada de lo que ya escribía.
+ */
+function referenciasDe(
+  root: string,
+  slug: string,
+  requisitos: readonly LocatedRequirement[],
+  cubre: readonly string[],
+): string {
+  const adjuntos = listFeatureAssets(root, slug);
+  if (adjuntos.length === 0) return "";
+  const fuentes = cubre
+    .map((id) => requisitos.find((r) => r.id === id)?.source)
+    .filter((f): f is string => f !== undefined);
+  const { assets, cited } = assetsForRequirements(root, adjuntos, fuentes);
+  const base = `.valmen/features/${slug}`;
+  return [
+    "### Referencias de diseño",
+    "",
+    cited
+      ? "Adjuntos que citan los requisitos de este ticket. Se construye y se valida contra el original, no contra el texto de la spec:"
+      : "Adjuntos de la feature (ningún requisito de este ticket cita uno en particular). Se construye y se valida contra el original, no contra el texto de la spec:",
+    ...assets.map(
+      (a) => `- \`${base}/${a.path}\` — ${a.description} (sha256 ${a.sha256.slice(0, 12)}…)`,
+    ),
+  ].join("\n");
 }
 
 /**
@@ -303,6 +344,7 @@ export function materializeFeature(
           requirements,
           coverage.get(ticket.id) ?? [],
           objetivos.get(ticket.sprint) ?? "",
+          referenciasDe(paths.root, slug, requirements, coverage.get(ticket.id) ?? []),
         ),
         ...(opciones.now === undefined ? {} : { now: opciones.now }),
       });
@@ -317,7 +359,12 @@ export function materializeFeature(
   const porTicket: Record<string, readonly string[]> = {};
   for (const [id, suyos] of coverage) porTicket[id] = suyos;
 
-  return { created, skipped, coverage: porTicket };
+  return {
+    created,
+    skipped,
+    coverage: porTicket,
+    warnings: externalLinkWarnings(paths.root, slug),
+  };
 }
 
 /** Los sprints del grafo, tal como se declararon. */
@@ -360,6 +407,9 @@ export function renderMaterialization(
       `${resultado.skipped.length} ya estaban en el registro y no se tocaron:`,
       ...resultado.skipped.map((id) => `  · ${id}`),
     );
+  }
+  if ((resultado.warnings ?? []).length > 0) {
+    lineas.push("", "Avisos:", ...(resultado.warnings ?? []).map((aviso) => `  ! ${aviso}`));
   }
   if (!dryRun && resultado.created.length > 0) {
     lineas.push(

@@ -177,6 +177,7 @@ export const HERRAMIENTAS_DE_LECTURA: readonly string[] = [
   "revisar_presentacion",
   "ver_actividad_ejecucion",
   "ver_jornadas",
+  "ver_delegacion",
 ];
 
 /** Las que escriben el registro, que son las que convierten una sesión en trabajo. */
@@ -205,6 +206,11 @@ export const HERRAMIENTAS_QUE_ESCRIBEN: readonly string[] = [
   "cerrar_qa",
   "preparar_cierre",
   "anexar_ticket_a_feature",
+  "anexar_adjunto_a_feature",
+  "avanzar_feature",
+  "delegar_corrida",
+  "avanzar_ticket_delegado",
+  "cerrar_ticket_delegado",
   "registrar_actividad_ejecucion",
 ];
 

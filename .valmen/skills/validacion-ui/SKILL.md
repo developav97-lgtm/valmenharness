@@ -36,6 +36,10 @@ Adaptar el recorrido al cambio y registrar los pasos exactos. Como mínimo, veri
 
 El error recuperable es el que más se omite y el que más se nota en producción: comprobar que la pantalla **dice qué pasó y deja reintentar**, en vez de quedarse en blanco.
 
+## Contra el original, no contra la spec
+
+Cuando el ticket tiene `### Referencias de diseño`, la validación compara la pantalla construida contra esos adjuntos (`.valmen/features/<slug>/assets/`) y registra las diferencias en la evidencia. Si hay referencias y no se comparó contra ellas, la validación no está hecha.
+
 ## Evidencia en el ticket
 
 Por cada ejecución, anexar evidencia al ticket **sin sobrescribir ciclos previos**. La entrada tiene que poder reproducirse e incluir:

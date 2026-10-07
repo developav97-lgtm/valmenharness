@@ -50,6 +50,10 @@ Mientras el ticket no esté \`approved\`, **el código de la aplicación no se t
 
 Una funcionalidad que excede un ticket se registra como **feature**, con el recorrido de la skill \`feature\`, que se lee antes de empezar. La forma del registro la decide quien lo pide, no el agente.
 
+### Corrida delegada
+
+Si el PO delega una feature o varios tickets en un solo pedido, se usa la skill \`corrida-delegada\` (\`valmen delegation\`). Un BLOCK, un gate humano duro y lo que quede fuera del alcance siguen siendo de una persona.
+
 ### Antes de registrar: traducir lo nuevo del pedido
 
 Un pedido que nombra algo que el código no tiene —un «parámetro nuevo», un permiso, una bandera, una columna, una migración— no se registra con ese hueco. Antes de crear el ticket se traduce a campo real con búsqueda en el código; si no aparece, se pregunta **una vez** a la persona. Lo que quede sin decidir va a \`### Supuestos y decisiones pendientes\` del ticket, cada elemento con su pregunta exacta, y el análisis no planifica sobre la adivinanza.

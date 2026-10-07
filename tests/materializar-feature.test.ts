@@ -127,6 +127,16 @@ describe("materializar una feature", () => {
     expect(filas[0]?.module).toBe("INVENTARIO");
   });
 
+  it("sin adjuntos la solicitud no lleva sección de referencias ni avisos", () => {
+    const resultado = materializeFeature(PATHS(), "kardex");
+    const texto = readFileSync(
+      join(lab, "tickets", "2026", "FEATURE-INVENTARIO-API-20260924", "ticket.md"),
+      "utf8",
+    );
+    expect(texto).not.toContain("Referencias de diseño");
+    expect(resultado.warnings).toEqual([]);
+  });
+
   it("la solicitud sale de la spec y del sprint, no de un resumen inventado", () => {
     materializeFeature(PATHS(), "kardex");
     const texto = readFileSync(

@@ -53,6 +53,7 @@ describe("createFeature", () => {
       hasDesign: false,
       hasDecomposition: false,
       hasVerify: false,
+      hasAssets: false,
     });
   });
 
@@ -126,6 +127,7 @@ describe("listFeatures", () => {
       hasDesign: false,
       hasDecomposition: true,
       hasVerify: false,
+      hasAssets: false,
     });
   });
 

@@ -56,6 +56,7 @@ import {
   resumeTicket,
   validateOne,
 } from "./commands.js";
+import { REAL_GIT, runDelegation } from "./delegation.js";
 import { runFeature } from "./features.js";
 import { doctorCommand, providerCommand, routingCommand } from "./setup.js";
 import { verifyOnboarding } from "./onboarding-verify.js";
@@ -263,6 +264,31 @@ Comandos:
                             una fila vacía. No toca el ticket.
   feature detach <slug> --ticket <ID>
                             Lo saca del grafo. El ticket sigue en el registro.
+  feature asset add <slug> --file <ruta> --description <t> [--name <n>] [--origin-url <u>]
+                            Anexa un archivo (diseño, captura, documento del cliente) a la
+                            feature: lo copia a assets/ con su sha256 y lo anota en el
+                            manifiesto. Un enlace no se anexa: se trae una copia local.
+  feature advance <slug> --to <estado> [--pendientes-del-po]
+                            Mueve el estado de la feature por el camino más corto. Con
+                            --to complete exige verify.md y todos los tickets cerrados;
+                            --pendientes-del-po acepta los que esperan al PO.
+  feature verify <slug> [--rewrite]
+                            Escribe verify.md desde el registro de tickets del grafo.
+  delegation grant --feature <slug> | --tickets A,B --quote "<palabras del PO>" [--actor <n>]
+                            Registra la delegación del PO: alcance y sus palabras, citadas
+                            en cada decisión que el agente toma en su nombre.
+  delegation status|next [--delegation <DEL-…>]
+                            Dónde va la delegación; next dice el ticket que sigue.
+  delegation advance --id <ID> [--reason <por qué>] [--evaluator cascade]
+                            Del análisis a in_progress: corre las compuertas, aprueba una
+                            REVIEW solo con --reason y se detiene ante BLOCK o un gate
+                            humano duro. Aprueba el plan citando la delegación.
+  delegation close --id <ID> --files a,b --environment <e> --tests <qué corrió> --tests-passed
+                   --technical-summary <t> --functional-summary <t> --release-impact <t>
+                   [--visual] [--po-confirmation <palabras>]
+                            QA y cierre: punto con --files, QA con el HEAD vigente. Un ticket
+                            visual o con criterios del PO queda en awaiting_user_tests.
+  feature asset list <slug> Lista los adjuntos y avisa de los enlaces externos sin copia.
       --dry-run             Muestra la descomposición sin escribirla.
       --model <id>          Sobrescribe el modelo del rol architect.
       --provider <id>       Sobrescribe el proveedor.
@@ -562,6 +588,14 @@ export const VALUE_OPTIONS = [
   "--sprint",
   "--goal",
   "--depends-on",
+  // `delegation`: el alcance, las palabras del PO y lo que se ejecutó.
+  "--delegation",
+  "--quote",
+  "--tests",
+  "--feature",
+  // `feature asset add`: el archivo local y el enlace del que salió.
+  "--file",
+  "--origin-url",
   // `execution`: identidad y hecho de actividad del contrato portable.
   "--project",
   "--execution",
@@ -1327,6 +1361,86 @@ export function dispatch(options: Options): CommandResult {
 }
 
 /**
+ * Corre una compuerta con el routing del proyecto.
+ *
+ * Es el cuerpo de `valmen gate`, extraído para que quien orquesta compuertas —el
+ * modo de delegación— use **el mismo camino** que el comando: si usaran modelos o
+ * presupuestos distintos, el recibo de una corrida no describiría la otra.
+ */
+export async function runGateFromFlags(
+  rutas: RegistryPaths,
+  gateId: string,
+  ticketId: string,
+  flags: Readonly<Record<string, string | true>>,
+): Promise<CommandResult> {
+  const rawEvaluator = flags["evaluator"];
+  const evaluator = isEvaluatorId(rawEvaluator) ? rawEvaluator : undefined;
+  if (typeof rawEvaluator === "string" && evaluator === undefined) {
+    return {
+      stdout: "",
+      stderr: `Evaluador desconocido: "${rawEvaluator}". Use ${EVALUATOR_IDS.join(", ")}.`,
+      exitCode: EXIT_SCHEMA,
+    };
+  }
+  // El modelo lo decide el routing del proyecto, igual que en la app: si
+  // el botón y el comando usaran modelos distintos, el recibo de una
+  // aprobación no describiría la otra.
+  // El presupuesto del ticket decide con qué preset se evalúa esta compuerta
+  // (R-S1-003): uno que ya lleva el doble de lo típico de su tipo se evalúa
+  // con el preset barato en vez de seguir gastando en los caros, y el recibo
+  // lleva la nota que lo explica para que el modelo distinto no quede mudo.
+  const presupuesto = budgetRouting(rutas, ticketId);
+  const preset = presupuesto.preset === null ? {} : { preset: presupuesto.preset };
+  const routing = gateRoutingFor(rutas.root, preset);
+  // La cascada necesita los tres roles, y su cadena se resuelve acá —donde
+  // se lee el routing— para que el motor reciba los modelos ya decididos y
+  // el recibo registre los que de verdad se usaron. Degradar el gate y no la
+  // cascada dejaría media evaluación con los modelos caros.
+  const cascade =
+    evaluator === "cascade" ? cascadeRoutingFor(rutas.root, preset) : undefined;
+
+  // La credencial se resuelve aquí, en el borde, con el archivo que el
+  // usuario indique. Sin `--credentials` es el del `$HOME`, que es lo normal
+  // para un CLI; con él, un proyecto puede tener el suyo y el comando y la
+  // app dejan de poder discrepar.
+  const archivoCredenciales =
+    typeof flags["credentials"] === "string"
+      ? flags["credentials"]
+      : undefined;
+  const credentialResolver =
+    cascade === undefined ? undefined : credentialForCascade(archivoCredenciales);
+  const apiKey =
+    cascade === undefined
+      ? (apiKeyWithPrecedence(
+          routing.evaluatorProvider === "" ? "openrouter" : routing.evaluatorProvider,
+          archivoCredenciales,
+        ) ?? undefined)
+      : undefined;
+
+  return runGate(rutas, {
+    gateId,
+    ticketId,
+    dryRun: flags["dry-run"] === true,
+    ...(apiKey === undefined ? {} : { apiKey }),
+    ...(credentialResolver === undefined
+      ? {}
+      : { credentialForProvider: credentialResolver }),
+    ...(evaluator === undefined ? {} : { evaluator }),
+    ...(routing.evaluatorModel === "" ? {} : { model: routing.evaluatorModel }),
+    ...(routing.evaluatorProvider === ""
+      ? {}
+      : { provider: routing.evaluatorProvider }),
+    ...(routing.probabilistic ? {} : { semantic: "llm-judge" as const }),
+    ...(routing.evaluatorEffort === "auto"
+      ? {}
+      : { effort: routing.evaluatorEffort }),
+    ...(routing.judgeModel === "" ? {} : { judgeModel: routing.judgeModel }),
+    ...(cascade === undefined ? {} : { cascade }),
+    ...(presupuesto.note === null ? {} : { notes: [presupuesto.note] }),
+  });
+}
+
+/**
  * Ejecuta el CLI y devuelve el código de salida.
  *
  * Es asíncrono porque `gate` consulta a un proveedor externo. Los demás
@@ -1692,6 +1806,24 @@ export async function run(argv: readonly string[]): Promise<number> {
       }
     } else if (command === "feature") {
       result = await runFeature(options.root, rest, options.flags);
+    } else if (command === "delegation") {
+      const rutas = resolvePaths(options);
+      result = await runDelegation(rutas, rest, options.flags, {
+        // La cascada solo se pide en análisis y plan: qa-mechanical lo decide el
+        // código y no tiene proposiciones que un modelo responda.
+        runGate: (gateId, ticketId) => {
+          const sinEvaluador: Record<string, string | true> = { ...options.flags };
+          delete sinEvaluador["evaluator"];
+          return runGateFromFlags(
+            rutas,
+            gateId,
+            ticketId,
+            gateId === "analysis" || gateId === "plan" ? options.flags : sinEvaluador,
+          );
+        },
+        decide: recordHumanDecision,
+        ...REAL_GIT,
+      });
     } else if (command === "gate-decide") {
       result = runGateDecide(resolvePaths(options), options.flags);
     } else if (command === "transition") {
@@ -1718,73 +1850,7 @@ export async function run(argv: readonly string[]): Promise<number> {
           exitCode: EXIT_SCHEMA,
         };
       } else {
-        const rawEvaluator = options.flags["evaluator"];
-        const evaluator = isEvaluatorId(rawEvaluator) ? rawEvaluator : undefined;
-        if (typeof rawEvaluator === "string" && evaluator === undefined) {
-          result = {
-            stdout: "",
-            stderr: `Evaluador desconocido: "${rawEvaluator}". Use ${EVALUATOR_IDS.join(", ")}.`,
-            exitCode: EXIT_SCHEMA,
-          };
-          throw new Error("__handled__");
-        }
-        // El modelo lo decide el routing del proyecto, igual que en la app: si
-        // el botón y el comando usaran modelos distintos, el recibo de una
-        // aprobación no describiría la otra.
-        const rutas = resolvePaths(options);
-        // El presupuesto del ticket decide con qué preset se evalúa esta compuerta
-        // (R-S1-003): uno que ya lleva el doble de lo típico de su tipo se evalúa
-        // con el preset barato en vez de seguir gastando en los caros, y el recibo
-        // lleva la nota que lo explica para que el modelo distinto no quede mudo.
-        const presupuesto = budgetRouting(rutas, ticketId);
-        const preset = presupuesto.preset === null ? {} : { preset: presupuesto.preset };
-        const routing = gateRoutingFor(rutas.root, preset);
-        // La cascada necesita los tres roles, y su cadena se resuelve acá —donde
-        // se lee el routing— para que el motor reciba los modelos ya decididos y
-        // el recibo registre los que de verdad se usaron. Degradar el gate y no la
-        // cascada dejaría media evaluación con los modelos caros.
-        const cascade =
-          evaluator === "cascade" ? cascadeRoutingFor(rutas.root, preset) : undefined;
-
-        // La credencial se resuelve aquí, en el borde, con el archivo que el
-        // usuario indique. Sin `--credentials` es el del `$HOME`, que es lo normal
-        // para un CLI; con él, un proyecto puede tener el suyo y el comando y la
-        // app dejan de poder discrepar.
-        const archivoCredenciales =
-          typeof options.flags["credentials"] === "string"
-            ? options.flags["credentials"]
-            : undefined;
-        const credentialResolver =
-          cascade === undefined ? undefined : credentialForCascade(archivoCredenciales);
-        const apiKey =
-          cascade === undefined
-            ? (apiKeyWithPrecedence(
-                routing.evaluatorProvider === "" ? "openrouter" : routing.evaluatorProvider,
-                archivoCredenciales,
-              ) ?? undefined)
-            : undefined;
-
-        result = await runGate(rutas, {
-          gateId,
-          ticketId,
-          dryRun: options.flags["dry-run"] === true,
-          ...(apiKey === undefined ? {} : { apiKey }),
-          ...(credentialResolver === undefined
-            ? {}
-            : { credentialForProvider: credentialResolver }),
-          ...(evaluator === undefined ? {} : { evaluator }),
-          ...(routing.evaluatorModel === "" ? {} : { model: routing.evaluatorModel }),
-          ...(routing.evaluatorProvider === ""
-            ? {}
-            : { provider: routing.evaluatorProvider }),
-          ...(routing.probabilistic ? {} : { semantic: "llm-judge" as const }),
-          ...(routing.evaluatorEffort === "auto"
-            ? {}
-            : { effort: routing.evaluatorEffort }),
-          ...(routing.judgeModel === "" ? {} : { judgeModel: routing.judgeModel }),
-          ...(cascade === undefined ? {} : { cascade }),
-          ...(presupuesto.note === null ? {} : { notes: [presupuesto.note] }),
-        });
+        result = await runGateFromFlags(resolvePaths(options), gateId, ticketId, options.flags);
       }
     } else if (command === "cascada") {
       // La tarea se valida **antes** de resolver rutas, cadena y credenciales: un

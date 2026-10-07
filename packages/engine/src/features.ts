@@ -16,6 +16,7 @@
  *   design.md                 alternativas y decisión
  *   tickets.yaml              sprints, cobertura y huecos
  *   verify.md                 evidencia, al completar
+ *   assets/manifest.json      adjuntos (diseños, capturas) con su huella
  * ```
  *
  * Igual que el registro de tickets, una feature que no valida **no se oculta**:
@@ -62,6 +63,7 @@ export interface FeatureArtifacts {
   readonly hasDesign: boolean;
   readonly hasDecomposition: boolean;
   readonly hasVerify: boolean;
+  readonly hasAssets: boolean;
 }
 
 /** Una fila de la lista de features. */
@@ -118,6 +120,7 @@ function leerArtefactos(carpeta: string): FeatureArtifacts {
     hasDesign: existsSync(join(carpeta, "design.md")),
     hasDecomposition: existsSync(join(carpeta, "tickets.yaml")),
     hasVerify: existsSync(join(carpeta, "verify.md")),
+    hasAssets: existsSync(join(carpeta, "assets", "manifest.json")),
   };
 }
 

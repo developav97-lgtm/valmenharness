@@ -1,7 +1,7 @@
 ---
 name: feature
 description: Usar cuando alguien pide una funcionalidad que excede un ticket —varias pantallas, reportes, configuración, varios módulos o varios eslabones— y hay que registrarla como feature, escribir su spec, descomponerla en tickets y ponerlos a trabajar. Aplica también cuando alguien dice «necesito crear un feature para…» y explica en lenguaje natural.
-version: 1.0.0
+version: 1.1.0
 origen: valmen
 ---
 
@@ -37,6 +37,12 @@ Y antes de escribir el brief, devolver **el alcance en tus palabras**, en una li
 5. **La revisión del grafo, con la persona.** Es el momento barato de corregir: cuántos tickets salieron, si el orden tiene sentido, si algo quedó fuera. Se lee el `tickets.yaml` o el tablero, y se decide. Un grafo que no le sirve se corrige acá, no después de implementarlo.
 6. **Los tickets.** `valmen feature materialize <slug>` —o el botón «Escribir los que faltan» del tablero— los crea en el registro, en `intake`, con su solicitud armada desde la spec. Hasta este paso el grafo era un plan: un ticket que no existe no se puede trabajar ni mirar por una compuerta.
 7. **El trabajo, ticket por ticket.** Cada uno sigue el flujo normal —análisis, plan, **aprobación de la persona**, implementación, entrega, QA— y **el orden lo dicen las dependencias**: el tablero marca cuál está listo para empezar y cuál espera a otro que no está cerrado.
+
+## Adjuntos: lo que nace con la feature
+
+Un diseño aprobado, una captura, un listado de requisitos o un documento del cliente **se anexan a la feature**; un enlace no es evidencia, porque los agentes que implementan no lo pueden abrir. `valmen feature asset add <slug> --file <ruta> --description "<qué es>" [--origin-url <enlace>]` copia el archivo a `.valmen/features/<slug>/assets/` con su sha256 y lo anota en `manifest.json` (en el MCP: `anexar_adjunto_a_feature`). Si el diseño solo existe como artefacto o enlace, se exporta primero y se anexa el archivo.
+
+La spec cita el adjunto por su ruta (`assets/pantalla.html`). Al materializar, cada ticket hereda una sección `### Referencias de diseño` con las rutas de los adjuntos que citan sus requisitos —o todos, si ninguno cita— y **se construye y se valida contra el original**, no contra el texto de la spec. Un enlace externo sin copia local avisa en `valmen feature show` y en `materialize`.
 
 ## Lo que no se hace
 

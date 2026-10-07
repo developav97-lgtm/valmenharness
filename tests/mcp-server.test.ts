@@ -220,7 +220,7 @@ describe("el catálogo de herramientas", () => {
     expect(propiedades?.["evaluator"]?.enum).toEqual([...EVALUATOR_IDS]);
   });
 
-  it("declara las cuarenta y dos herramientas, cada una con descripción y esquema", () => {
+  it("declara las cuarenta y ocho herramientas, cada una con descripción y esquema", () => {
     // El orden es el de la lectura: alta, consulta, validación, movimiento,
     // anotación, compuertas, features, procesos, reportes, y al final el ciclo de
     // QA y el cierre. Estaba intercalado por historia —cada herramienta nueva
@@ -268,6 +268,12 @@ describe("el catálogo de herramientas", () => {
       "anotar_retest",
       "cerrar_qa",
       "preparar_cierre",
+      "anexar_adjunto_a_feature",
+      "avanzar_feature",
+      "delegar_corrida",
+      "ver_delegacion",
+      "avanzar_ticket_delegado",
+      "cerrar_ticket_delegado",
     ]);
     for (const tool of TOOLS) {
       expect(tool.description.length).toBeGreaterThan(40);

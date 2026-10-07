@@ -1,7 +1,7 @@
 ---
 name: revision-final
 description: Usar cuando un cambio parece listo para entregar al responsable, cuando se pida una revisión de código o antes de abrir un ciclo de validación. Revisa calidad y trazabilidad; no autoriza publicaciones.
-version: 1.1.0
+version: 1.2.0
 origen: valmen
 ---
 
@@ -28,6 +28,10 @@ Las reglas de estilo, las versiones y las convenciones del proyecto salen de `.v
 Clasificar cada hallazgo como **bloqueante o no bloqueante**, con el archivo o comportamiento, el impacto y una recomendación concreta. Un hallazgo sin recomendación es una queja, no una revisión.
 
 Los hallazgos funcionales de la misma solicitud se registran en el ticket como puntos; **no se borran ni se renumeran los ciclos previos**.
+
+## Lo que toca interfaz se compara con el original
+
+Si el ticket trae una sección `### Referencias de diseño` (adjuntos de la feature en `.valmen/features/<slug>/assets/`), antes de entregar la pantalla se compara contra esos archivos, no contra el texto de la spec: las diferencias se corrigen o se declaran en el ticket. Entregar una pantalla que nadie contrastó con el prototipo aprobado es lo que ya obligó a devolverlas.
 
 ## Los criterios se marcan
 

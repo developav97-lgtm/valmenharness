@@ -43,7 +43,13 @@ import {
   type TicketRow,
   type ResumeMode,
   addEvidence,
+  attachFeatureAsset,
   attachTicketToFeature,
+  advanceFeature,
+  completeFeature,
+  grantDelegation,
+  resolveDelegation,
+  writeFeatureVerify,
   detachTicketFromFeature,
   renderAttachedTicket,
   addPoint,
@@ -103,7 +109,11 @@ import { gateFor, gateById, SIN_INTERFAZ } from "@valmen/gate";
 import { architectRoutingFor, cascadeRoutingFor, gateRoutingFor } from "@valmen/adapter";
 import { apiKeyWithPrecedence, transportById } from "@valmen/credentials";
 import {
+  advanceDelegated,
   buildIndex,
+  closeDelegated,
+  delegationDeps,
+  statusDelegated,
   guardarConsumoDeSesiones,
   calibrateReport,
   deliverManifest,
@@ -1753,6 +1763,153 @@ export const TOOLS: readonly ToolDefinition[] = [
       required: ["id", "resumen_tecnico", "resumen_funcional", "qa", "impacto_release"],
     }),
   },
+  {
+    name: "anexar_adjunto_a_feature",
+    // Repetir el mismo archivo con el mismo nombre no escribe nada, y el manifiesto
+    // solo recibe entradas: no reescribe nada que ya existiera.
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+    title: "Anexar un archivo de diseño o referencia a una feature",
+    description:
+      "Copia un archivo local (prototipo exportado, captura, listado de requisitos, documento " +
+      "del cliente) a `.valmen/features/<slug>/assets/` y lo anota en el manifiesto con su " +
+      "sha256. Es lo que hace que los agentes que implementan los tickets de la feature " +
+      "puedan **abrir el original**: un enlace privado no es evidencia y ellos no lo abren. " +
+      "No descarga nada: `archivo` es una ruta local; si el diseño solo existe como enlace, " +
+      "se exporta primero. `origen` guarda el enlace del que salió, y con eso la spec deja " +
+      "de avisar de un enlace sin copia local. Los tickets que `materializar_feature` crea " +
+      "después heredan las rutas.",
+    inputSchema: conRoot({
+      properties: {
+        slug: { type: "string", description: "El identificador de la feature." },
+        archivo: { type: "string", description: "Ruta local del archivo que se copia." },
+        descripcion: {
+          type: "string",
+          description: "Qué es y para qué lo usa quien implementa o valida.",
+        },
+        nombre: { type: "string", description: "Nombre dentro de assets/; por defecto el del archivo." },
+        origen: { type: "string", description: "El enlace del que salió, si lo hubo." },
+      },
+      required: ["slug", "archivo", "descripcion"],
+    }),
+  },
+  {
+    name: "avanzar_feature",
+    annotations: ANEXA,
+    title: "Avanzar el estado de una feature o escribir su verify.md",
+    description:
+      "Con `a` mueve el estado de la feature por el camino más corto —`decomposed` a " +
+      "`complete` pasa por `in_progress`— y dice por dónde pasó. `complete` exige `verify.md` " +
+      "y todos los tickets del grafo cerrados; `pendientes_del_po: true` acepta los que " +
+      "esperan en `awaiting_user_tests` y los deja anotados como pendientes suyos. Con " +
+      "`verify: true` escribe `verify.md` desde el registro de tickets (una fila por " +
+      "ticket); no pisa uno existente salvo con `rewrite: true`.",
+    inputSchema: conRoot({
+      properties: {
+        slug: { type: "string", description: "El identificador de la feature." },
+        a: { type: "string", description: "El estado destino, como `in_progress` o `complete`." },
+        verify: { type: "boolean", description: "Escribir verify.md en vez de avanzar." },
+        rewrite: { type: "boolean", description: "Regenerar un verify.md existente." },
+        pendientes_del_po: {
+          type: "boolean",
+          description: "Aceptar tickets en awaiting_user_tests al completar.",
+        },
+      },
+      required: ["slug"],
+    }),
+  },
+  {
+    name: "delegar_corrida",
+    annotations: ANEXA,
+    title: "Registrar la delegación del PO para una corrida",
+    description:
+      "Registra que el PO delegó una feature completa (`feature`) o una lista de tickets " +
+      "(`tickets`) para que se trabajen uno tras otro: el agente decide las compuertas en " +
+      "REVIEW con motivo, ejecuta las pruebas de consola o Docker y, si dan lo esperado, " +
+      "aprueba el QA y cierra. **Guarda las palabras literales del PO** (`palabras`) y cada " +
+      "decisión posterior las cita. Solo la registra quien las recibió del PO: un agente no " +
+      "se delega a sí mismo. No cubre despliegue, migraciones en producción, seguridad ni " +
+      "force-push, que siguen siendo de una persona.",
+    inputSchema: conRoot({
+      properties: {
+        feature: { type: "string", description: "La feature delegada." },
+        tickets: { type: "array", items: { type: "string" }, description: "Los tickets delegados, en orden." },
+        palabras: { type: "string", description: "Las palabras del PO, tal como las dijo." },
+        actor: { type: "string", description: "Quién es el PO que delega." },
+      },
+      required: ["palabras"],
+    }),
+  },
+  {
+    name: "ver_delegacion",
+    annotations: SOLO_LEE,
+    title: "Ver dónde va una delegación y qué ticket sigue",
+    description:
+      "Dice el alcance y las palabras del PO, qué tickets están cerrados, cuáles esperan al " +
+      "PO, cuál sigue —en el orden de dependencias del grafo— y cuáles están detenidos y por " +
+      "qué (bloqueado, dependencia sin cerrar, gate humano duro). Sin `delegacion` usa la " +
+      "más reciente.",
+    inputSchema: conRoot({
+      properties: {
+        delegacion: { type: "string", description: "El identificador DEL-…; por defecto, la última." },
+        solo_siguiente: { type: "boolean", description: "Devolver únicamente el ticket que sigue." },
+      },
+    }),
+  },
+  {
+    name: "avanzar_ticket_delegado",
+    annotations: GASTA,
+    title: "Llevar un ticket delegado del análisis a in_progress",
+    description:
+      "Con el análisis y el plan **ya escritos en el ticket**, valida, corre las compuertas " +
+      "`analysis` y `plan`, decide una REVIEW por delegación solo con `motivo` —que viaja al " +
+      "recibo junto a las palabras del PO— y avanza hasta `in_progress`, atribuyendo la " +
+      "aprobación del plan a la delegación. **Nunca aprueba un BLOCK**, y se detiene ante un " +
+      "ticket con impacto de sincronización, migración, contenedores, riesgo crítico o " +
+      "seguridad. Declará el evaluador (`cascade` cuando el artefacto tiene sustancia): el " +
+      "recibo lo guarda. Fuera del alcance de la delegación se niega.",
+    inputSchema: conRoot({
+      properties: {
+        id: { type: "string", description: "El identificador del ticket." },
+        delegacion: { type: "string", description: "El DEL-…; por defecto, la última." },
+        motivo: { type: "string", description: "Por qué una REVIEW no debe bloquear." },
+        evaluator: { type: "string", description: `Uno de: ${EVALUATOR_IDS.join(", ")}.` },
+      },
+      required: ["id"],
+    }),
+  },
+  {
+    name: "cerrar_ticket_delegado",
+    annotations: ANEXA,
+    title: "Cerrar un ticket delegado tras sus pruebas",
+    description:
+      "Cuando las pruebas del ticket ya se ejecutaron y dieron lo esperado (`pruebas_ok: true`) " +
+      "y la implementación está commiteada, corre la verificación mecánica, anota el punto " +
+      "**con sus archivos**, arranca el QA con el **HEAD vigente**, aprueba, declara el consumo " +
+      "`manual:` y cierra. Un ticket `visual` o con criterios `verify: manual` sin marcar " +
+      "queda en `awaiting_user_tests` y se sigue con el siguiente. Un ticket que ya espera al " +
+      "PO se cierra solo con `confirmacion_po`, sus palabras literales.",
+    inputSchema: conRoot({
+      properties: {
+        id: { type: "string", description: "El identificador del ticket." },
+        delegacion: { type: "string", description: "El DEL-…; por defecto, la última." },
+        archivos: { type: "array", items: { type: "string" }, description: "Archivos de la implementación." },
+        ambiente: { type: "string", description: "Dónde se probó." },
+        pruebas: { type: "string", description: "Qué se ejecutó y qué dio, en una línea." },
+        pruebas_ok: { type: "boolean", description: "Las pruebas dieron el resultado esperado." },
+        resumen_tecnico: { type: "string" },
+        resumen_funcional: { type: "string" },
+        impacto_release: { type: "string" },
+        visual: { type: "boolean", description: "Es una revisión visual: queda esperando al PO." },
+        confirmacion_po: { type: "string", description: "Las palabras literales del PO al confirmar." },
+      },
+      required: ["id", "ambiente", "pruebas", "resumen_tecnico", "resumen_funcional", "impacto_release"],
+    }),
+  },
 ];
 
 /**
@@ -1944,6 +2101,63 @@ function renderLista(
   });
 
   return [encabezado, ...lineas].join("\n");
+}
+
+/**
+ * Corre una compuerta con el routing del proyecto.
+ *
+ * Es el cuerpo de `evaluar_compuerta`, extraído para que las herramientas de la
+ * delegación evalúen **por el mismo camino**: una compuerta evaluada con otro modelo
+ * según quién la pida no sería la misma compuerta.
+ */
+function correrCompuerta(
+  contexto: ToolContext,
+  gateId: string,
+  id: string,
+  evaluator: Parameters<typeof runGate>[1]["evaluator"],
+): ReturnType<typeof runGate> {
+  const paths = contexto.paths;
+  // El routing del proyecto decide el modelo del rol `gate-evaluator`. Es
+  // la misma resolución que hace Mission Control, porque una compuerta
+  // evaluada con otro modelo según quién la pida no sería la misma
+  // compuerta.
+  // El presupuesto del ticket decide el preset con el que se evalúa (R-S1-003),
+  // y la nota del corte queda en el recibo: es la misma decisión que toman el
+  // CLI y la pantalla.
+  const presupuesto = budgetRouting(paths, id);
+  const preset = presupuesto.preset === null ? {} : { preset: presupuesto.preset };
+  const routing = gateRoutingFor(paths.root, preset);
+  const apiKey = apiKeyDe(contexto, routing.evaluatorProvider);
+  // La cascada suma los roles de ejecución: su cadena se resuelve donde se
+  // lee el routing, igual que en el CLI y en la pantalla.
+  const cascade =
+    evaluator === "cascade" ? cascadeRoutingFor(paths.root, preset) : undefined;
+  const credentialResolver =
+    cascade === undefined ? undefined : credentialForCascade(contexto);
+
+  return runGate(paths, {
+    gateId,
+    ticketId: id,
+    ...(apiKey === null ? {} : { apiKey }),
+    ...(credentialResolver === undefined
+      ? {}
+      : { credentialForProvider: credentialResolver }),
+    ...(evaluator === undefined ? {} : { evaluator }),
+    ...(contexto.jev === undefined ? {} : { jev: contexto.jev }),
+    ...(contexto.judge === undefined ? {} : { judge: contexto.judge }),
+    ...(contexto.now === undefined ? {} : { now: contexto.now }),
+    ...(routing.evaluatorModel === "" ? {} : { model: routing.evaluatorModel }),
+    ...(routing.evaluatorProvider === ""
+      ? {}
+      : { provider: routing.evaluatorProvider }),
+    ...(routing.probabilistic ? {} : { semantic: "llm-judge" as const }),
+    ...(routing.evaluatorEffort === "auto"
+      ? {}
+      : { effort: routing.evaluatorEffort }),
+    ...(routing.judgeModel === "" ? {} : { judgeModel: routing.judgeModel }),
+    ...(cascade === undefined ? {} : { cascade }),
+    ...(presupuesto.note === null ? {} : { notes: [presupuesto.note] }),
+  });
 }
 
 /** Ejecuta una herramienta por nombre. */
@@ -2542,6 +2756,109 @@ export async function callTool(
         return bien(renderAttachedTicket(anexado));
       }
 
+      case "anexar_adjunto_a_feature": {
+        const { asset, alreadyPresent } = attachFeatureAsset({
+          root: paths.root,
+          slug: texto(args, "slug") as string,
+          source: texto(args, "archivo") as string,
+          description: texto(args, "descripcion") as string,
+          name: texto(args, "nombre", false),
+          originUrl: texto(args, "origen", false),
+        });
+        return bien(
+          alreadyPresent
+            ? `${asset.path} ya estaba con el mismo contenido: no se escribió nada.`
+            : `Adjunto anexado: ${asset.path} (${asset.kind}, ${asset.bytes} bytes, sha256 ${asset.sha256}).`,
+        );
+      }
+
+      case "avanzar_feature": {
+        const slug = texto(args, "slug") as string;
+        if (args["verify"] === true) {
+          return bien(
+            `verify.md escrito: ${writeFeatureVerify({ paths, slug, rewrite: args["rewrite"] === true })}`,
+          );
+        }
+        const destino = texto(args, "a") as string;
+        const fila =
+          destino === "complete"
+            ? completeFeature({ paths, slug, allowPendingPo: args["pendientes_del_po"] === true })
+            : advanceFeature({ root: paths.root, slug, to: destino });
+        return bien(
+          `Feature ${slug}: ${fila.state}${fila.via === undefined || fila.via.length === 0 ? "" : ` (pasó por ${fila.via.join(", ")})`}.`,
+        );
+      }
+
+      case "delegar_corrida": {
+        const d = grantDelegation({
+          paths,
+          feature: texto(args, "feature", false),
+          tickets: Array.isArray(args["tickets"]) ? (args["tickets"] as unknown[]).map(String) : undefined,
+          quote: texto(args, "palabras") as string,
+          actor: texto(args, "actor", false),
+        });
+        return bien(`Delegación ${d.id} registrada en .valmen/delegations/${d.id}.jsonl.`);
+      }
+
+      case "ver_delegacion": {
+        const d = resolveDelegation(paths.root, texto(args, "delegacion", false));
+        return delCli(statusDelegated(paths, d, args["solo_siguiente"] === true));
+      }
+
+      case "avanzar_ticket_delegado": {
+        const d = resolveDelegation(paths.root, texto(args, "delegacion", false));
+        const bruto = texto(args, "evaluator", false);
+        if (bruto !== "" && bruto !== undefined && !isEvaluatorId(bruto)) {
+          return mal(`Evaluador desconocido: ${String(bruto)}. Use ${EVALUATOR_IDS.join(", ")}.`);
+        }
+        const evaluator = isEvaluatorId(bruto) ? bruto : undefined;
+        const resultado = await advanceDelegated(
+          paths,
+          d,
+          texto(args, "id") as string,
+          { reason: texto(args, "motivo", false) },
+          delegationDeps(async (gateId, ticketId) => {
+            const corrida = await correrCompuerta(
+              contexto,
+              gateId,
+              ticketId,
+              // La cascada solo en análisis y plan: qa-mechanical lo decide el código.
+              gateId === "analysis" || gateId === "plan" ? evaluator : undefined,
+            );
+            return corrida;
+          }),
+        );
+        return delCli(resultado);
+      }
+
+      case "cerrar_ticket_delegado": {
+        const d = resolveDelegation(paths.root, texto(args, "delegacion", false));
+        const lista = (v: unknown): string[] =>
+          Array.isArray(v) ? (v as unknown[]).map(String) : [];
+        const resultado = await closeDelegated(
+          paths,
+          d,
+          texto(args, "id") as string,
+          {
+            files: lista(args["archivos"]),
+            environment: texto(args, "ambiente", false),
+            tests: texto(args, "pruebas", false),
+            testsPassed: args["pruebas_ok"] === true,
+            technicalSummary: texto(args, "resumen_tecnico", false),
+            functionalSummary: texto(args, "resumen_funcional", false),
+            releaseImpact: texto(args, "impacto_release", false),
+            visual: args["visual"] === true,
+            poConfirmation: texto(args, "confirmacion_po", false),
+            usageSource: undefined,
+            confidence: undefined,
+            model: undefined,
+            notes: undefined,
+          },
+          delegationDeps(async (gateId, ticketId) => correrCompuerta(contexto, gateId, ticketId, undefined)),
+        );
+        return delCli(resultado);
+      }
+
       case "iniciar_qa": {
         const salida = qaStart({
           paths,
@@ -2692,47 +3009,7 @@ export async function callTool(
         }
         const evaluator = isEvaluatorId(bruto) ? bruto : undefined;
 
-        // El routing del proyecto decide el modelo del rol `gate-evaluator`. Es
-        // la misma resolución que hace Mission Control, porque una compuerta
-        // evaluada con otro modelo según quién la pida no sería la misma
-        // compuerta.
-        // El presupuesto del ticket decide el preset con el que se evalúa (R-S1-003),
-        // y la nota del corte queda en el recibo: es la misma decisión que toman el
-        // CLI y la pantalla.
-        const presupuesto = budgetRouting(paths, id);
-        const preset = presupuesto.preset === null ? {} : { preset: presupuesto.preset };
-        const routing = gateRoutingFor(paths.root, preset);
-        const apiKey = apiKeyDe(contexto, routing.evaluatorProvider);
-        // La cascada suma los roles de ejecución: su cadena se resuelve donde se
-        // lee el routing, igual que en el CLI y en la pantalla.
-        const cascade =
-          evaluator === "cascade" ? cascadeRoutingFor(paths.root, preset) : undefined;
-        const credentialResolver =
-          cascade === undefined ? undefined : credentialForCascade(contexto);
-
-        const resultado = await runGate(paths, {
-          gateId,
-          ticketId: id,
-          ...(apiKey === null ? {} : { apiKey }),
-          ...(credentialResolver === undefined
-            ? {}
-            : { credentialForProvider: credentialResolver }),
-          ...(evaluator === undefined ? {} : { evaluator }),
-          ...(contexto.jev === undefined ? {} : { jev: contexto.jev }),
-          ...(contexto.judge === undefined ? {} : { judge: contexto.judge }),
-          ...(contexto.now === undefined ? {} : { now: contexto.now }),
-          ...(routing.evaluatorModel === "" ? {} : { model: routing.evaluatorModel }),
-          ...(routing.evaluatorProvider === ""
-            ? {}
-            : { provider: routing.evaluatorProvider }),
-          ...(routing.probabilistic ? {} : { semantic: "llm-judge" as const }),
-          ...(routing.evaluatorEffort === "auto"
-            ? {}
-            : { effort: routing.evaluatorEffort }),
-          ...(routing.judgeModel === "" ? {} : { judgeModel: routing.judgeModel }),
-          ...(cascade === undefined ? {} : { cascade }),
-          ...(presupuesto.note === null ? {} : { notes: [presupuesto.note] }),
-        });
+        const resultado = await correrCompuerta(contexto, gateId, id, evaluator);
 
         // El veredicto no cambia el estado del ticket —esa es la regla—, así que
         // el informe se devuelve tal cual venga: aprobado, bloqueado o en
