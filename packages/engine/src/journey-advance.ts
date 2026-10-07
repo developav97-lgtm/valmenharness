@@ -7,6 +7,8 @@
  * primero, y un informe de lo que pasó. El avance no llama a ningún modelo: lo único que
  * lanza es el ejecutor que declara la política del proyecto, a través del despacho.
  */
+import { appendApproval } from "./approval.js";
+import { type AutonomousStopReceipt } from "./autonomous-stops.js";
 import { dispatchJourney, type JourneyDispatchRequest } from "./journey-dispatch.js";
 import { type EjecutorDePreparacion, despacharPreparacion } from "./journey-preparation.js";
 import { type EntregaDeAviso } from "./journey-plan.js";
@@ -38,6 +40,35 @@ export interface AvanzarJornadaRequest {
   /** Solo preparación: borde del ejecutor con su entorno, y el envío del aviso de decisión. */
   readonly ejecutarPreparacion?: EjecutorDePreparacion | undefined;
   readonly notificar?: ((texto: string) => EntregaDeAviso) | undefined;
+}
+
+/** El aviso de una parada, en formato de opciones y efecto (R-JORN-007). */
+export function avisoDeParada(parada: AutonomousStopReceipt): string {
+  const detalle = parada.detail.replace(/\s+/g, " ").trim();
+  return [
+    `Decisión: ${parada.ticketId} — la jornada se detuvo por ${parada.reason}: ${detalle.length > 200 ? `${detalle.slice(0, 197)}...` : detalle}`,
+    `A) Liberar y reintentar (valmen journey clear-stop --id ${parada.ticketId} --actor <tú>) → el despacho vuelve a elegirlo`,
+    "B) Dejarlo parado → queda detenido hasta que lo revises; no se reintenta solo",
+    "Recomiendo B: una parada no conviene reintentarla sin haber mirado su motivo.",
+  ].join("\n");
+}
+
+/** Avisa una parada nueva y deja constancia para que el vigilante no la repita. */
+function avisarParada(
+  paths: AuthorizedProject["paths"],
+  parada: AutonomousStopReceipt,
+  notificar: (texto: string) => EntregaDeAviso,
+  ahora: Date,
+): void {
+  const entrega = notificar(avisoDeParada(parada));
+  if (entrega.delivered) {
+    appendApproval(paths, {
+      kind: "autonomous-stop-notice",
+      receiptId: parada.id,
+      ticketId: parada.ticketId,
+      notifiedAt: ahora.toISOString(),
+    });
+  }
 }
 
 /** El identificador de la jornada de un día. */
@@ -74,6 +105,9 @@ export async function avanzarJornada(request: AvanzarJornadaRequest): Promise<Av
       ...(request.ejecutarPreparacion === undefined ? {} : { execute: request.ejecutarPreparacion }),
       ...(request.notificar === undefined ? {} : { notificar: request.notificar }),
     });
+    if (despacho.resultado?.parada !== undefined && request.notificar !== undefined) {
+      avisarParada(request.project.paths, despacho.resultado.parada, request.notificar, ahora);
+    }
     return {
       estado:
         despacho.estado === "preparado"
@@ -98,6 +132,9 @@ export async function avanzarJornada(request: AvanzarJornadaRequest): Promise<Av
     now: () => ahora,
   });
 
+  if (resultado.autonomous?.stop !== undefined && request.notificar !== undefined) {
+    avisarParada(request.project.paths, resultado.autonomous.stop, request.notificar, ahora);
+  }
   const estado: EstadoDeAvance =
     resultado.status === "dispatched"
       ? "despachado"

@@ -73,6 +73,8 @@ describe("autonomous", () => {
         collisionPolicy: "serialize",
         maxPerDay: 8,
         budgetPerTicket: 5,
+        // Sin `max-minutes` declarado rige el tiempo máximo por defecto (R-JORN-007).
+        maxMinutes: 60,
         stopOn: ["gate-blocked-twice", "test-failure", "secret-detected"],
       },
     });

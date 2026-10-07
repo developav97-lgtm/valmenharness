@@ -15,6 +15,7 @@ import {
   type AutonomousRunResult,
 } from "./autonomous-run.js";
 import { autonomousConfig } from "./discovery.js";
+import { motivoDeTope } from "./journey-limits.js";
 import { resolverModeloDeFase } from "./journey-phases.js";
 import { recordExecutionActivity } from "./execution-activity.js";
 import {
@@ -75,6 +76,18 @@ export async function dispatchJourney(request: JourneyDispatchRequest): Promise<
   }
   if (policy.executor === null) {
     return withoutStart(selection, "La autonomía no declara un ejecutor seguro.");
+  }
+  // Los topes de la política se aplican antes de reservar nada (R-JORN-007).
+  const tope = motivoDeTope({ project: request.project, home: request.home, politica: policy, en: request.at });
+  if (tope !== null && selection.dispatchCandidate !== null) {
+    const ya = capacity.reservations.some(
+      (reservation) =>
+        reservation.projectId === request.project.projectId &&
+        reservation.ticketId === selection.dispatchCandidate?.ticketId &&
+        reservation.executionId === request.executionId &&
+        reservation.attemptId === request.attemptId,
+    );
+    if (!ya) return withoutStart(selection, tope);
   }
   const candidate = selection.dispatchCandidate;
   if (candidate === null) {

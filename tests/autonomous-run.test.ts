@@ -216,7 +216,9 @@ describe("run autónomo", () => {
       execute: () => ({ status: 1, stdout: "", stderr: "detenido" }),
     });
     expect(result.ticketId).toBe("BUGFIX-POS-ALFA-20261004");
-    expect(result.status).toBe("executor-failed");
+    // Un fallo del ejecutor deja una parada siempre, sin depender de `stop-on` (R-JORN-007).
+    expect(result.status).toBe("stopped");
+    expect(result.stop?.reason).toBe("executor-failed");
   });
 
   it("no acepta comandos libres y construye argumentos específicos por adaptador", () => {
@@ -248,7 +250,7 @@ describe("run autónomo", () => {
     expect(readAutonomousStops(paths())[0]?.detail).not.toContain("process.exit(1)");
   });
 
-  it("no convierte un fallo de pruebas en parada cuando esa causa no fue declarada", async () => {
+  it("un fallo de pruebas con `test-failure` sin declarar igual deja una parada de verificación (R-JORN-007)", async () => {
     policy(["secret-detected"]);
     const failing = '- [ ] El filtro falla.\n      <!-- test: node -e "process.exit(1)" -->';
     writeFixtureTicket(root, { id: ID, workflowStatus: "approved", criterios: failing , pruebas: PRUEBAS});
@@ -259,8 +261,9 @@ describe("run autónomo", () => {
       execute: () => ({ status: 0, stdout: "hecho", stderr: "" }),
     });
 
-    expect(result.status).toBe("verification-failed");
-    expect(readAutonomousStops(paths())).toEqual([]);
+    expect(result.status).toBe("stopped");
+    expect(result.stop?.reason).toBe("verification-failed");
+    expect(readAutonomousStops(paths())).toHaveLength(1);
   });
 
   it("detiene antes de invocar si conserva dos bloqueos vigentes de compuerta", async () => {

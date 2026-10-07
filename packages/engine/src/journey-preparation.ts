@@ -14,9 +14,11 @@ import { join } from "node:path";
 import { createExecutionIdentity, parseTicket } from "@valmen/core";
 
 import { autonomousExecutorCommand, type AutonomousExecutorCommand } from "./autonomous-run.js";
+import { type AutonomousStopReceipt, paradasActivas, recordAutonomousStop } from "./autonomous-stops.js";
 import { autonomousConfig, findTicket, type RegistryPaths } from "./discovery.js";
 import { recordExecutionActivity } from "./execution-activity.js";
 import { dispatchEventId } from "./journey-dispatch.js";
+import { motivoDeTope } from "./journey-limits.js";
 import { registrarFase, resolverModeloDeFase } from "./journey-phases.js";
 import { readJourneys } from "./journeys.js";
 import {
@@ -41,18 +43,23 @@ export interface ResultadoDePreparacion {
   readonly ticketId: string;
   readonly estado: EstadoDePreparacion;
   readonly detalle: string;
+  /** `true` si el ejecutor superó el tiempo máximo y se cortó. */
+  readonly timedOut?: boolean;
+  /** La parada que quedó registrada, si el fallo la causó (R-JORN-007). */
+  readonly parada?: AutonomousStopReceipt;
 }
 
 export type EjecutorDePreparacion = (
   comando: AutonomousExecutorCommand,
   entorno: Readonly<Record<string, string>>,
-) => { readonly status: number; readonly stdout: string; readonly stderr: string };
+) => { readonly status: number; readonly stdout: string; readonly stderr: string; readonly timedOut?: boolean };
 
 export interface PrepararTicketRequest {
   readonly paths: RegistryPaths;
   readonly ticketId: string;
   readonly execute?: EjecutorDePreparacion | undefined;
   readonly notificar?: ((texto: string) => EntregaDeAviso) | undefined;
+  readonly ahora?: (() => Date) | undefined;
 }
 
 /**
@@ -75,14 +82,27 @@ export function promptDePreparacion(ticketId: string): string {
 
 const ORDEN_DE_RIESGO = ["low", "normal", "high", "critical"];
 
-function ejecutarDeVerdad(comando: AutonomousExecutorCommand, root: string, entorno: Readonly<Record<string, string>>) {
+function ejecutarDeVerdad(
+  comando: AutonomousExecutorCommand,
+  root: string,
+  entorno: Readonly<Record<string, string>>,
+  maxMinutes: number,
+) {
   const resultado = spawnSync(comando.command, comando.args, {
     cwd: root,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
     env: { ...process.env, ...entorno },
+    timeout: Math.round(maxMinutes * 60_000),
+    killSignal: "SIGKILL",
   });
-  return { status: resultado.status ?? 1, stdout: resultado.stdout ?? "", stderr: resultado.stderr ?? "" };
+  const agotado = (resultado.error as NodeJS.ErrnoException | undefined)?.code === "ETIMEDOUT";
+  return {
+    status: agotado ? 124 : (resultado.status ?? 1),
+    stdout: resultado.stdout ?? "",
+    stderr: agotado ? `El ejecutor superó el tiempo máximo de ${maxMinutes} minutos y se cortó.` : (resultado.stderr ?? ""),
+    ...(agotado ? { timedOut: true } : {}),
+  };
 }
 
 /** Las líneas de `git status` del árbol, o `null` si no es un repositorio. */
@@ -121,7 +141,25 @@ export function avisoDeDecision(ticketId: string, compuerta: string, resultado: 
 /** Prepara un ticket: lanza el ejecutor y verifica en código lo que dejó. */
 export function prepararTicket(request: PrepararTicketRequest): ResultadoDePreparacion {
   const inicio = Date.now();
-  const resultado = prepararTicketInner(request);
+  let resultado = prepararTicketInner(request);
+  // Un fallo del ejecutor o una verificación que no se cumple dejan una parada con su motivo
+  // y el ticket no se vuelve a elegir solo (R-JORN-007).
+  if (resultado.estado === "ejecutor-fallo" || resultado.estado === "verificacion-fallo") {
+    const actual = findTicket(request.paths, request.ticketId);
+    const parada = recordAutonomousStop(request.paths, {
+      ticketId: request.ticketId,
+      reason:
+        resultado.timedOut === true
+          ? "executor-timeout"
+          : resultado.estado === "ejecutor-fallo"
+            ? "executor-failed"
+            : "verification-failed",
+      detail: resultado.detalle.replace(/\s+/g, " ").slice(0, 300),
+      workflowStatus: actual === undefined ? "intake" : parseTicket(actual.text).fields.workflow_status,
+      now: request.ahora?.() ?? new Date(),
+    });
+    resultado = { ...resultado, parada };
+  }
   // El registro por fase de una sesión que sí se lanzó (R-JORN-006); las no elegibles no lanzan nada.
   if (resultado.estado !== "no-elegible" && resultado.estado !== "ejecutor-fallo") {
     const politica = autonomousConfig(request.paths.root);
@@ -185,10 +223,15 @@ function prepararTicketInner(request: PrepararTicketRequest): ResultadoDePrepara
   // El ejecutor hereda la marca de sesión desatendida: no puede registrar la aprobación del plan.
   const entorno = { [UNATTENDED_ENV]: "1" };
   const antes = estadoDelArbol(paths.root);
-  const corrida = (request.execute ?? ((c, e) => ejecutarDeVerdad(c, paths.root, e)))(comando, entorno);
-  if (corrida.status !== 0) {
+  const corrida = (request.execute ?? ((c, e) => ejecutarDeVerdad(c, paths.root, e, politica.limits.maxMinutes)))(comando, entorno);
+  if (corrida.status !== 0 || corrida.timedOut === true) {
     registrar("ejecutor-fallo");
-    return { ticketId, estado: "ejecutor-fallo", detalle: corrida.stderr || "El ejecutor terminó con error." };
+    return {
+      ticketId,
+      estado: "ejecutor-fallo",
+      detalle: corrida.stderr || "El ejecutor terminó con error.",
+      ...(corrida.timedOut === true ? { timedOut: true } : {}),
+    };
   }
 
   // Lo que importa se lee del registro, no de lo que el ejecutor diga.
@@ -236,8 +279,11 @@ export function siguienteAPreparar(project: AuthorizedProject, journeyId: string
     return estado !== undefined && estado !== "intake" && estado !== "analyzed";
   };
   const ordenados = [...jornada.tickets].sort((a, b) => a.priority - b.priority || a.order - b.order);
+  // Una parada no se reintenta sola: el ticket espera a que una persona la libere.
+  const parados = new Set(paradasActivas(project.paths).map((parada) => parada.ticketId));
   for (const ticket of ordenados) {
     if (estados.get(ticket.ticketId) !== "intake") continue;
+    if (parados.has(ticket.ticketId)) continue;
     if (ticket.dependsOn.every(preparado)) return ticket.ticketId;
   }
   return null;
@@ -273,6 +319,8 @@ export function despacharPreparacion(request: {
   if (capacidad.availableSlots < 1) {
     return { estado: "sin-candidato", ticketId, resultado: null, detalle: "No hay capacidad disponible en la máquina." };
   }
+  const tope = motivoDeTope({ project, home: request.home, politica, en: request.ahora.toISOString() });
+  if (tope !== null) return { estado: "sin-candidato", ticketId, resultado: null, detalle: tope };
   const identidad = createExecutionIdentity({ projectId: project.projectId, ticketId, executionId: request.journeyId });
   const reserva = claimMachineCapacity({ home: request.home, project, identity: identidad, attemptId: request.attemptId });
   if (!reserva.granted) {
@@ -298,6 +346,7 @@ export function despacharPreparacion(request: {
       ticketId,
       ...(request.execute === undefined ? {} : { execute: request.execute }),
       ...(request.notificar === undefined ? {} : { notificar: request.notificar }),
+      ahora: () => request.ahora,
     });
     registrar(resultado.estado === "plan-listo" || resultado.estado === "decision-pendiente" ? "finished" : "failed");
     return { estado: "preparado", ticketId, resultado, detalle: resultado.detalle };

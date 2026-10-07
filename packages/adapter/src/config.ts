@@ -724,9 +724,14 @@ export interface AutonomousConfig {
     readonly collisionPolicy: AutonomousCollisionPolicy;
     readonly maxPerDay: number;
     readonly budgetPerTicket: number;
+    /** Tiempo máximo de una ejecución del agente, en minutos; una que lo supera se corta. */
+    readonly maxMinutes: number;
     readonly stopOn: readonly string[];
   };
 }
+
+/** El tiempo máximo por ejecución cuando la política no lo declara. */
+export const AUTONOMOUS_DEFAULT_MAX_MINUTES = 60;
 
 const AUTONOMOUS_OFF: AutonomousConfig = Object.freeze({
   enabled: false,
@@ -744,6 +749,7 @@ const AUTONOMOUS_OFF: AutonomousConfig = Object.freeze({
     collisionPolicy: "block",
     maxPerDay: 0,
     budgetPerTicket: 0,
+    maxMinutes: AUTONOMOUS_DEFAULT_MAX_MINUTES,
     stopOn: Object.freeze([]),
   }),
 });
@@ -902,6 +908,10 @@ export function readAutonomousConfig(config: ConfigMap): AutonomousConfig {
         "limits.budget-per-ticket",
         false,
       ),
+      maxMinutes:
+        limits["max-minutes"] === undefined
+          ? AUTONOMOUS_DEFAULT_MAX_MINUTES
+          : autonomousPositive(limits, "max-minutes", "limits.max-minutes", false),
       stopOn: Object.freeze(stopOn),
     }),
   });

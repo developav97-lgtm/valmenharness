@@ -63,6 +63,7 @@ import {
   type BudgetPolicy,
   armarJornada,
   avanzarJornada,
+  liberarParada,
   registrarAprobacionDePlan,
   resolveAuthorizedProject,
   type CommandRunner,
@@ -2739,9 +2740,22 @@ export async function journeyAdvanceCommand(
     if (typeof flags["fase"] === "string" && flags["fase"] !== "preparacion" && flags["fase"] !== "ejecucion") {
       return error("--fase admite: preparacion o ejecucion.", EXIT_SCHEMA);
     }
+    const destino = typeof flags["to"] === "string" ? flags["to"] : "";
     const avance = await avanzarJornada({
       project,
       home,
+      ...(destino === ""
+        ? {}
+        : {
+            notificar: (cuerpo: string) => {
+              const entrega = hermesSendChannel({ target: destino }).notify({
+                subject: "Jornada detenida",
+                body: cuerpo,
+                key: `journey-stop:${cuerpo.split(" — ")[0] ?? ""}`,
+              });
+              return { delivered: entrega.delivered, detail: entrega.detail };
+            },
+          }),
       ...(typeof flags["journey"] === "string" ? { journeyId: flags["journey"] } : {}),
       ...(opciones.execute === undefined ? {} : { execute: opciones.execute }),
       ...(opciones.ejecutarPreparacion === undefined ? {} : { ejecutarPreparacion: opciones.ejecutarPreparacion }),
@@ -2749,6 +2763,32 @@ export async function journeyAdvanceCommand(
       ...(flags["fase"] === "preparacion" || flags["fase"] === "ejecucion" ? { fase: flags["fase"] } : {}),
     });
     return ok(`${avance.journeyId}: ${avance.estado}${avance.ticketId === null ? "" : ` (${avance.ticketId})`}. ${avance.detalle}\n`);
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/**
+ * `journey clear-stop --project <id> --id <ticket> --actor <nombre>`: libera una parada.
+ *
+ * Una parada no se reintenta sola; esta es la decisión de una persona de que el despacho
+ * pueda volver a elegir el ticket. Queda como un renglón más, nada se reescribe.
+ */
+export function journeyClearStopCommand(
+  flags: Readonly<Record<string, string | true>>,
+  opciones: { readonly home?: string } = {},
+): CommandResult {
+  const proyecto = typeof flags["project"] === "string" ? flags["project"] : undefined;
+  const ticket = typeof flags["id"] === "string" ? flags["id"] : undefined;
+  const actor = typeof flags["actor"] === "string" ? flags["actor"] : "";
+  if (proyecto === undefined || ticket === undefined) {
+    return error("journey clear-stop requiere --project <id> y --id <ticket>.", EXIT_SCHEMA);
+  }
+  try {
+    const project = resolveAuthorizedProject({ projectId: proyecto, home: opciones.home ?? homedir() });
+    liberarParada(project.paths, ticket, actor);
+    return ok(`Parada de ${ticket} liberada por ${actor.trim()}: el despacho puede volver a elegirlo.\n`);
   } catch (caught) {
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);

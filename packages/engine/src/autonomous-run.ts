@@ -18,7 +18,7 @@ import {
   parseTicket,
 } from "@valmen/core";
 import { extractCriteriaSpecs } from "@valmen/gate";
-import { type AutonomousExecutorConfig } from "@valmen/adapter";
+import { AUTONOMOUS_DEFAULT_MAX_MINUTES, type AutonomousExecutorConfig } from "@valmen/adapter";
 
 import { autonomousConfig, type RegistryPaths } from "./discovery.js";
 import { budgetForTicket, readBudgetPolicy } from "./budget.js";
@@ -40,6 +40,8 @@ export interface AutonomousExecutorResult {
   readonly status: number;
   readonly stdout: string;
   readonly stderr: string;
+  /** `true` si el ejecutor superó el tiempo máximo y se cortó (R-JORN-007). */
+  readonly timedOut?: boolean;
 }
 
 /** Invocación sin shell: el adaptador decide el binario y cada argumento. */
@@ -154,17 +156,23 @@ function execute(
   command: AutonomousExecutorCommand,
   root: string,
   entorno: Readonly<Record<string, string>> = {},
+  maxMinutes: number = AUTONOMOUS_DEFAULT_MAX_MINUTES,
 ): AutonomousExecutorResult {
   const result = spawnSync(command.command, command.args, {
     cwd: root,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
     env: { ...process.env, ...entorno },
+    // El tiempo máximo de la política: un ejecutor que no termina no puede dejar la jornada colgada.
+    timeout: Math.round(maxMinutes * 60_000),
+    killSignal: "SIGKILL",
   });
+  const agotado = (result.error as NodeJS.ErrnoException | undefined)?.code === "ETIMEDOUT";
   return {
-    status: result.status ?? 1,
+    status: agotado ? 124 : (result.status ?? 1),
     stdout: result.stdout ?? "",
-    stderr: result.stderr ?? "",
+    stderr: agotado ? `El ejecutor superó el tiempo máximo de ${maxMinutes} minutos y se cortó.` : (result.stderr ?? ""),
+    ...(agotado ? { timedOut: true } : {}),
   };
 }
 
@@ -316,9 +324,26 @@ async function runAutonomousInner(request: AutonomousRunRequest): Promise<Autono
 
   // El ejecutor hereda la marca de sesión desatendida: no puede registrar aprobaciones.
   const entorno = { [UNATTENDED_ENV]: "1" };
-  const result = (request.execute ?? ((item, env) => execute(item, request.paths.root, env)))(command, entorno);
+  const result = (request.execute ?? ((item, env) => execute(item, request.paths.root, env, policy.limits.maxMinutes)))(command, entorno);
+  if (result.timedOut === true) {
+    return stopResult(
+      request.paths,
+      selected.id,
+      command,
+      "executor-timeout",
+      `El ejecutor superó el tiempo máximo de ${policy.limits.maxMinutes} minutos y se cortó.`,
+      request.now?.() ?? new Date(),
+    );
+  }
   if (result.status !== 0) {
-    return { ticketId: selected.id, status: "executor-failed", detail: result.stderr || "El ejecutor terminó con error.", executor: command };
+    return stopResult(
+      request.paths,
+      selected.id,
+      command,
+      "executor-failed",
+      `El ejecutor terminó con error (código ${result.status}): ${(result.stderr || "sin salida de error").slice(0, 200)}`,
+      request.now?.() ?? new Date(),
+    );
   }
 
   if (permitsStop(policy, "secret-detected")) {
@@ -359,17 +384,26 @@ async function runAutonomousInner(request: AutonomousRunRequest): Promise<Autono
         request.now?.() ?? new Date(),
       );
     }
-    return { ticketId: selected.id, status: "verification-failed", detail: gate.stderr, executor: command };
+    return stopResult(
+      request.paths,
+      selected.id,
+      command,
+      "verification-failed",
+      `La verificación mecánica falló: ${(gate.stderr || gate.stdout || "sin detalle").slice(0, 200)}`,
+      request.now?.() ?? new Date(),
+    );
   }
   // El contrato de pruebas se comprueba en código: sin él, el responsable no sabe qué correr.
   const despues = allDocuments(request.paths).find(({ ticket }) => ticket.id === selected.id);
   if (despues !== undefined && !contratoDePruebasEscrito(despues.ticket.text)) {
-    return {
-      ticketId: selected.id,
-      status: "verification-failed",
-      detail: "El ticket no trae el contrato de pruebas en `## Pruebas` (comandos exactos entre comillas invertidas); no pasa a awaiting_user_tests.",
-      executor: command,
-    };
+    return stopResult(
+      request.paths,
+      selected.id,
+      command,
+      "verification-failed",
+      "El ticket no trae el contrato de pruebas en `## Pruebas` (comandos exactos entre comillas invertidas); no pasa a awaiting_user_tests.",
+      request.now?.() ?? new Date(),
+    );
   }
   transition({ paths: request.paths, ticketId: selected.id, entity: "ticket", to: "awaiting_user_tests" });
   return { ticketId: selected.id, status: "delivered", detail: gate.stdout, executor: command };

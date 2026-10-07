@@ -16,6 +16,11 @@ export const AUTONOMOUS_STOP_REASONS = [
   "test-failure",
   "secret-detected",
   "budget-exceeded",
+  // Las tres que no dependen de `stop-on`: el requisito pide parar siempre ante un fallo
+  // del propio ejecutor (R-JORN-007).
+  "executor-failed",
+  "executor-timeout",
+  "verification-failed",
 ] as const;
 
 export type AutonomousStopReason = (typeof AUTONOMOUS_STOP_REASONS)[number];
@@ -29,8 +34,18 @@ export interface AutonomousStopReceipt {
   /** Resumen seguro para la persona; nunca contiene el valor de un secreto. */
   readonly detail: string;
   /** La corrida queda en un estado contractual y no vuelve a seleccionarse. */
-  readonly workflowStatus: "in_progress";
+  /** El estado del ticket al parar: `in_progress` en ejecución; el que tenga cuando falla la preparación. */
+  readonly workflowStatus: string;
   readonly stoppedAt: string;
+}
+
+/** La liberación de una parada por una persona: otro renglón, nada se reescribe. */
+export interface AutonomousStopCleared {
+  readonly kind: "autonomous-stop-cleared";
+  readonly version: 1;
+  readonly ticketId: string;
+  readonly actor: string;
+  readonly clearedAt: string;
 }
 
 export function autonomousStopsPath(paths: RegistryPaths): string {
@@ -54,7 +69,7 @@ export function readAutonomousStops(paths: RegistryPaths): AutonomousStopReceipt
         typeof value.ticketId === "string" &&
         typeof value.detail === "string" &&
         typeof value.stoppedAt === "string" &&
-        value.workflowStatus === "in_progress" &&
+        typeof value.workflowStatus === "string" &&
         (AUTONOMOUS_STOP_REASONS as readonly string[]).includes(String(value.reason))
       ) {
         receipts.push(value as AutonomousStopReceipt);
@@ -84,11 +99,65 @@ export function recordAutonomousStop(
     ticketId: input.ticketId,
     reason: input.reason,
     detail: input.detail,
-    workflowStatus: "in_progress",
+    workflowStatus: input.workflowStatus,
     stoppedAt: now.toISOString(),
   };
   const path = autonomousStopsPath(paths);
   mkdirSync(dirname(path), { recursive: true });
   appendFileSync(path, `${JSON.stringify(receipt)}\n`, "utf8");
   return receipt;
+}
+
+/** Los renglones de liberación, en orden. */
+function readCleared(paths: RegistryPaths): AutonomousStopCleared[] {
+  const path = autonomousStopsPath(paths);
+  if (!existsSync(path)) return [];
+  const liberadas: AutonomousStopCleared[] = [];
+  for (const line of readFileSync(path, "utf8").split("\n")) {
+    if (line.trim() === "") continue;
+    try {
+      const value = JSON.parse(line) as Partial<AutonomousStopCleared>;
+      if (value.kind === "autonomous-stop-cleared" && typeof value.ticketId === "string" && typeof value.clearedAt === "string") {
+        liberadas.push(value as AutonomousStopCleared);
+      }
+    } catch {
+      // Una línea interrumpida no invalida las demás.
+    }
+  }
+  return liberadas;
+}
+
+/** Las paradas que una persona todavía no liberó: un ticket con una de ellas no se reintenta solo. */
+export function paradasActivas(paths: RegistryPaths): AutonomousStopReceipt[] {
+  const liberadas = readCleared(paths);
+  return readAutonomousStops(paths).filter(
+    (parada) =>
+      !liberadas.some(
+        (liberada) => liberada.ticketId === parada.ticketId && liberada.clearedAt >= parada.stoppedAt,
+      ),
+  );
+}
+
+/** Libera las paradas de un ticket para que el despacho pueda volver a elegirlo. */
+export function liberarParada(
+  paths: RegistryPaths,
+  ticketId: string,
+  actor: string,
+  now: Date = new Date(),
+): AutonomousStopCleared {
+  if (actor.trim() === "") throw new Error("Liberar una parada necesita un responsable.");
+  if (!paradasActivas(paths).some((parada) => parada.ticketId === ticketId)) {
+    throw new Error(`El ticket ${ticketId} no tiene una parada activa.`);
+  }
+  const entrada: AutonomousStopCleared = {
+    kind: "autonomous-stop-cleared",
+    version: 1,
+    ticketId,
+    actor: actor.trim(),
+    clearedAt: now.toISOString(),
+  };
+  const path = autonomousStopsPath(paths);
+  mkdirSync(dirname(path), { recursive: true });
+  appendFileSync(path, `${JSON.stringify(entrada)}\n`, "utf8");
+  return entrada;
 }

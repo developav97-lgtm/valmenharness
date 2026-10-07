@@ -106,6 +106,7 @@ import {
   guardarConsumoDeSesiones,
   approvePlanCommand,
   journeyAdvanceCommand,
+  journeyClearStopCommand,
   journeyInstallTriggerCommand,
   journeyPlanCommand,
   precheckCommand,
@@ -215,9 +216,11 @@ Comandos:
   journey plan --project <id> (--feature <slug> | --tickets <a,b,c>) [--max <n>] [--to <destino>]
                             Arma la jornada del día en el registro de jornadas y envía el
                             plan por Telegram. No despacha ni reserva capacidad.
-  journey advance --project <id> [--journey <id>] [--fase preparacion|ejecucion]
+  journey advance --project <id> [--journey <id>] [--fase preparacion|ejecucion] [--to <destino>]
                             Avanza la jornada una vez: sin modelo e idempotente (un segundo
                             avance no despacha otro ticket). Pensado para un disparador.
+  journey clear-stop --project <id> --id <ticket> --actor <nombre>
+                            Libera la parada de un ticket: una parada no se reintenta sola.
   journey install-trigger --project <id> [--every <min>] [--write] [--dir <carpeta>]
                             Prepara la tarea periódica de launchd: imprime el plist y los
                             comandos; con --write escribe solo el archivo. No ejecuta launchctl.
@@ -1900,7 +1903,9 @@ export async function run(argv: readonly string[]): Promise<number> {
             ? await journeyAdvanceCommand(options.flags)
             : rest[0] === "install-trigger"
               ? journeyInstallTriggerCommand(options.flags)
-              : { stdout: "", stderr: "journey admite: plan, advance e install-trigger.\n", exitCode: EXIT_SCHEMA };
+              : rest[0] === "clear-stop"
+                ? journeyClearStopCommand(options.flags)
+                : { stdout: "", stderr: "journey admite: plan, advance, install-trigger y clear-stop.\n", exitCode: EXIT_SCHEMA };
     } else if (command === "approve-plan") {
       result = approvePlanCommand(resolvePaths(options), options.flags);
     } else if (command === "precheck") {
