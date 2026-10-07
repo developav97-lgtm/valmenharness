@@ -1086,6 +1086,56 @@ export function readQaAgentConfig(config: ConfigMap): QaAgentConfig {
   return { regressionCommands: readList(qa, "regression-commands", []), mode };
 }
 
+/** Una skill de terceros declarada por el proyecto (R-SKILL-001). */
+export interface ExternalSkill {
+  readonly id: string;
+  /** De dónde sale: una URL de git o una ruta. El harness no la descarga. */
+  readonly source: string;
+  /** Un tag o commit fijado; nunca una rama ni `latest`. */
+  readonly version: string;
+  /** El hash del contenido que se revisará: `sha256:` y 64 hex, o los 64 hex. */
+  readonly sha256: string;
+}
+
+const VERSIONES_MOVILES = new Set(["latest", "main", "master", "head", "develop", "dev", "trunk", "stable", "nightly"]);
+
+/**
+ * Lee `external-skills`: las skills de terceros que el proyecto declara.
+ *
+ * Declarar no instala ni habilita nada. Cada elemento exige `id`, `source`, `version` y `sha256`; la
+ * versión tiene que estar fijada (un tag o un commit), porque una rama o `latest` cambia por debajo de
+ * quien revisó. Cada error empieza por el nombre de la skill. Sin la clave, no hay skills externas.
+ */
+export function readExternalSkills(config: ConfigMap): readonly ExternalSkill[] {
+  const crudo = config["external-skills"];
+  if (crudo === undefined) return [];
+  if (!Array.isArray(crudo)) fail('config.yaml: "external-skills" debe ser una lista de skills.');
+  const ids = new Set<string>();
+  return crudo.map((item, indice) => {
+    if (typeof item === "string" || Array.isArray(item)) {
+      fail(`config.yaml: "external-skills[${indice}]" debe ser un mapa con id, source, version y sha256.`);
+    }
+    const id = typeof item["id"] === "string" ? item["id"].trim() : "";
+    if (!/^[a-z][a-z0-9-]{0,63}$/.test(id)) {
+      fail(`config.yaml: "external-skills[${indice}].id" debe ser un identificador en minúsculas (letras, números y guiones).`);
+    }
+    if (ids.has(id)) fail(`config.yaml: skill ${id}: el id está duplicado en "external-skills".`);
+    ids.add(id);
+    const source = typeof item["source"] === "string" ? item["source"].trim() : "";
+    if (source === "") fail(`config.yaml: skill ${id}: falta la fuente («source»).`);
+    const version = typeof item["version"] === "string" ? item["version"].trim() : "";
+    if (version === "") fail(`config.yaml: skill ${id}: falta la versión fijada («version»).`);
+    if (VERSIONES_MOVILES.has(version.toLowerCase()) || /^[\^~*><=]/.test(version) || version.includes("*") || /\s/.test(version)) {
+      fail(`config.yaml: skill ${id}: la versión «${version}» no está fijada; usa un tag o un commit, nunca una rama, latest ni un rango.`);
+    }
+    const hashCrudo = typeof item["sha256"] === "string" ? item["sha256"].trim().toLowerCase().replace(/^sha256:/, "") : "";
+    if (!/^[0-9a-f]{64}$/.test(hashCrudo)) {
+      fail(`config.yaml: skill ${id}: falta el hash del contenido («sha256» de 64 caracteres hexadecimales).`);
+    }
+    return Object.freeze({ id, source, version, sha256: hashCrudo });
+  });
+}
+
 /** Quién dispara el avance de la jornada (R-JORN-011). */
 export type JourneyDispatcher = "machine" | "hermes";
 

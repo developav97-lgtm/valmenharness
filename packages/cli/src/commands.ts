@@ -73,6 +73,7 @@ import {
   modoEfectivoDeQaAgent,
   promoverQaAgent,
   crearAutorizacion,
+  estadoDeSkillsExternas,
   crearAutorizacionDeAprobacion,
   leerAutorizacionesDeAprobacion,
   revocarAutorizacionDeAprobacion,
@@ -2977,6 +2978,25 @@ export function qaAuthorizeCommand(
       return ok(`Código ${t("code")} revocado: ya no se puede canjear.\n`);
     }
     return error("qa-authorize admite: create, revoke, list, link, redeem o revoke-code.", EXIT_SCHEMA);
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/**
+ * `skills external`: lista las skills de terceros declaradas en `external-skills`.
+ *
+ * Solo lee: no descarga, no instala y no actualiza nada.
+ */
+export function skillsExternalCommand(root: string): CommandResult {
+  try {
+    const skills = estadoDeSkillsExternas(root);
+    if (skills.length === 0) return ok("No hay skills de terceros declaradas (clave external-skills).\n");
+    return ok(
+      skills.map((k) => `${k.id} · ${k.estado} · versión ${k.version} · ${k.source} · sha256:${k.sha256.slice(0, 12)}…`).join("\n") +
+        "\nDeclarar no instala ni habilita nada: la habilitación exige una revisión registrada.\n",
+    );
   } catch (caught) {
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);
