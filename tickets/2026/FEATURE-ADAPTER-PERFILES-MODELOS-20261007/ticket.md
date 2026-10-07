@@ -4,7 +4,7 @@ id: FEATURE-ADAPTER-PERFILES-MODELOS-20261007
 title: Definir perfiles con nombre (Claude Code, Codex, OpenCode Go y personalizados), mixtos, validados contra el catálogo
 type: FEATURE
 module: ADAPTER
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -106,25 +106,25 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1 (R-PERF-001): los perfiles incorporados son exactamente `claude-code-completo`, `codex-completo` y `opencode-go`
+- [x] C1 (R-PERF-001): los perfiles incorporados son exactamente `claude-code-completo`, `codex-completo` y `opencode-go`
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-001 perfiles incorporados" -->
-- [ ] C2 (R-PERF-001): cada perfil incorporado asigna proveedor, modelo no vacío y esfuerzo válido a cada rol de `ROLES`, incluidas las cuatro fases del agente
+- [x] C2 (R-PERF-001): cada perfil incorporado asigna proveedor, modelo no vacío y esfuerzo válido a cada rol de `ROLES`, incluidas las cuatro fases del agente
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-001 incorporados completos" -->
-- [ ] C3 (R-PERF-001): un perfil al que le falta un rol o una fase se rechaza con un error que nombra ese rol
+- [x] C3 (R-PERF-001): un perfil al que le falta un rol o una fase se rechaza con un error que nombra ese rol
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-001 perfil incompleto" -->
-- [ ] C4 (R-PERF-001): un perfil mixto con análisis y plan en `claude-code` e implementación en `codex` se guarda como válido
+- [x] C4 (R-PERF-001): un perfil mixto con análisis y plan en `claude-code` e implementación en `codex` se guarda como válido
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-001 perfil mixto se guarda" -->
-- [ ] C5 (R-PERF-003): guardar un perfil con un modelo ausente del catálogo de su proveedor se rechaza nombrando el rol y el modelo, sin escribir `.valmen/profiles.yaml`
+- [x] C5 (R-PERF-003): guardar un perfil con un modelo ausente del catálogo de su proveedor se rechaza nombrando el rol y el modelo, sin escribir `.valmen/profiles.yaml`
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-003 modelo inexistente" -->
-- [ ] C6 (R-PERF-003): guardar un perfil cuyo proveedor no tiene catálogo disponible se rechaza diciendo que no se pudo comprobar
+- [x] C6 (R-PERF-003): guardar un perfil cuyo proveedor no tiene catálogo disponible se rechaza diciendo que no se pudo comprobar
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-003 catálogo no disponible" -->
-- [ ] C7 (R-PERF-003): todos los modelos de los perfiles incorporados existen en el catálogo de su proveedor
+- [x] C7 (R-PERF-003): todos los modelos de los perfiles incorporados existen en el catálogo de su proveedor
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-003 incorporados en catálogo" -->
-- [ ] C8 (R-PERF-001): un perfil mixto guardado y vuelto a leer conserva el proveedor de cada fase
+- [x] C8 (R-PERF-001): un perfil mixto guardado y vuelto a leer conserva el proveedor de cada fase
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-001 perfil mixto conserva proveedores" -->
-- [ ] C9 (R-PERF-001): los perfiles incorporados conservan en `gate-evaluator` y `verifier` el modelo Jev del preset `balanced`
+- [x] C9 (R-PERF-001): los perfiles incorporados conservan en `gate-evaluator` y `verifier` el modelo Jev del preset `balanced`
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-001 evaluadores sin cambio" -->
-- [ ] C10: la suite completa del repositorio pasa sin cambios en los casos existentes
+- [x] C10: la suite completa del repositorio pasa sin cambios en los casos existentes
       <!-- test: npx vitest run -->
 
 ## Puntos
@@ -135,11 +135,22 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+Hecha según el plan aprobado, sin archivos de código nuevos:
+
+- `packages/adapter/src/routing.ts`: `PerfilDeModelos`, `PERFILES_INCORPORADOS` (`claude-code-completo`, `codex-completo`, `opencode-go`, con los modelos del plan y los evaluadores copiados de `balanced`), `comprobarPerfilCompleto`, `comprobarPerfilContraCatalogo` (pura, catálogo inyectado), `perfilesPath`, `parsePerfiles`, `renderPerfiles`, `readProjectPerfiles`, `listarPerfiles` y `derivarPerfil`. Se exportan por `index.ts` sin renombrar nada.
+- `packages/server/src/routing.ts`: `catalogoParaPerfil` (una consulta a `listProviderModels` por proveedor, con los `candidates` de `config.yaml`) y `guardarPerfil` (completitud, luego catálogo, y solo sin errores escribe `.valmen/profiles.yaml` con `atomicWrite`; rechaza ids incorporados).
+- `tests/routing.test.ts`: `describe("los perfiles de modelos")` con un caso por criterio (R-PERF-001 / R-PERF-003) y uno extra para el id incorporado.
+
+Decisión menor dentro del plan: `comprobarPerfilContraCatalogo` no busca `typesafe/jev-1.13` de `openrouter` en la lista, porque Jev no está en el catálogo de chat (cabecera de `routing.ts`, decisión 4); sin esa excepción ningún perfil con evaluadores incorporados se podría guardar. `guardarPerfil` acepta además `filePath` (credenciales) en las opciones para aislar las pruebas del home.
+
+Sin cambios en `Routing`, `PRESETS`, `parseRouting`, `resolveRouting`, `modeloDeFase` ni `.valmen/routing.yaml`.
 
 ## Pruebas
 
-Pendiente de ejecución.
+- `npx vitest run tests/routing.test.ts -t "R-PERF"` (en `/Users/juanandrade/Desktop/ValmenHarness`): 9 casos en verde (C1–C9). Catálogos de `codex`, `opencode-go` y `openrouter` simulados con `fetchImpl` (límite externo: la red); `claude-code` usa `knownModels` real; disco en directorio temporal.
+- `tsc --noEmit`: sin errores.
+- `npx vitest run`: **verde con `env -u VALMEN_UNATTENDED`** — 193 archivos, 2810 pruebas, 48 omitidas. Con `VALMEN_UNATTENDED=1` (marca de la sesión desatendida) fallan 49 pruebas en 11 archivos de QA/gates por `assertSesionAtendida` (`packages/engine/src/plan-approval.ts:203`); son las mismas 49 sin mis cambios (comparado con `git stash`), no son de este ticket. Si el harness corre `qa-mechanical` con esa variable, C10 fallará por ese motivo y no por el cambio.
+- Limitación: no se probó contra la red real; la validación manual opcional del plan (`valmen provider models codex|opencode-go`) queda para el responsable.
 
 ## QA
 
@@ -232,6 +243,24 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-07",
+    "at": "2026-10-07T18:47:46.662Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-07",
+    "at": "2026-10-07T19:34:22.672Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```

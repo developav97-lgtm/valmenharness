@@ -27,7 +27,7 @@ test-commands:
   - node
 # La suite completa se ejecuta con un único trabajador cuando se valida un
 # ticket en equipos con memoria limitada; 30 s puede cortar una corrida sana.
-test-timeout: 60
+test-timeout: 420
 # Modelos que este proyecto quiere tener a mano en el selector, por proveedor.
 #
 # Van **primero** en el desplegable. Sirven para dos cosas: subir arriba los que

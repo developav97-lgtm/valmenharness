@@ -396,6 +396,291 @@ export function presetById(id: string): Preset {
   return preset;
 }
 
+// ── Perfiles de modelos ─────────────────────────────────────────────────────
+
+/**
+ * Un perfil de modelos: un nombre para una combinación completa de proveedor,
+ * modelo y esfuerzo por rol. A diferencia del preset, puede mezclar proveedores y
+ * la persona puede definir los suyos (R-PERF-001).
+ */
+export interface PerfilDeModelos {
+  readonly id: string;
+  readonly description: string;
+  readonly origen: "incorporado" | "proyecto";
+  readonly roles: Readonly<Record<string, RoleRoute>>;
+}
+
+/** Los roles de evaluación: se copian del preset `balanced`, que mantiene Jev. */
+const ROLES_DE_EVALUACION: readonly string[] = [
+  "gate-evaluator",
+  "gate-judge",
+  "producer",
+  "verifier",
+  "escalation",
+];
+
+function evaluadoresDeBalanced(): Record<string, RoleRoute> {
+  const balanced = presetById("balanced");
+  const roles: Record<string, RoleRoute> = {};
+  for (const rol of ROLES_DE_EVALUACION) {
+    roles[rol] = balanced.roles[rol] as RoleRoute;
+  }
+  return roles;
+}
+
+function rutasDeEjecucion(
+  provider: string,
+  modelos: Readonly<Record<string, readonly [string, Effort]>>,
+): Record<string, RoleRoute> {
+  const roles: Record<string, RoleRoute> = {};
+  for (const [rol, [model, effort]] of Object.entries(modelos)) {
+    roles[rol] = { provider, model, effort };
+  }
+  return roles;
+}
+
+/**
+ * Los perfiles incorporados. Los modelos salen de los catálogos medidos el
+ * 2026-10-07 con `valmen provider models`.
+ */
+export const PERFILES_INCORPORADOS: readonly PerfilDeModelos[] = [
+  {
+    id: "claude-code-completo",
+    description: "Todo el trabajo del agente con Claude Code; los evaluadores siguen en Jev.",
+    origen: "incorporado",
+    roles: {
+      ...evaluadoresDeBalanced(),
+      ...rutasDeEjecucion("claude-code", {
+        orchestrator: ["claude-sonnet-5-5", "auto"],
+        architect: ["claude-opus-5-5", "high"],
+        "ui-specs": ["claude-sonnet-5-5", "medium"],
+        "agent-analysis": ["claude-opus-5-5", "high"],
+        "agent-plan": ["claude-opus-5-5", "high"],
+        "agent-implementation": ["claude-sonnet-5-5", "high"],
+        "agent-verification": ["claude-haiku-4-5-20251001", "auto"],
+      }),
+    },
+  },
+  {
+    id: "codex-completo",
+    description: "Todo el trabajo del agente con Codex; los evaluadores siguen en Jev.",
+    origen: "incorporado",
+    roles: {
+      ...evaluadoresDeBalanced(),
+      ...rutasDeEjecucion("codex", {
+        orchestrator: ["gpt-6-sol", "high"],
+        architect: ["gpt-6.1-sol", "high"],
+        "ui-specs": ["gpt-6-sol", "medium"],
+        "agent-analysis": ["gpt-6-luna", "medium"],
+        "agent-plan": ["gpt-6.1-sol", "high"],
+        "agent-implementation": ["gpt-6-sol", "high"],
+        "agent-verification": ["gpt-6-luna", "medium"],
+      }),
+    },
+  },
+  {
+    id: "opencode-go",
+    description: "Todo el trabajo del agente con OpenCode Go; los evaluadores siguen en Jev.",
+    origen: "incorporado",
+    roles: {
+      ...evaluadoresDeBalanced(),
+      ...rutasDeEjecucion("opencode-go", {
+        orchestrator: ["kimi-k3", "medium"],
+        architect: ["deepseek-v4-pro", "high"],
+        "ui-specs": ["kimi-k3", "medium"],
+        "agent-analysis": ["glm-5.3", "medium"],
+        "agent-plan": ["deepseek-v4-pro", "high"],
+        "agent-implementation": ["kimi-k2.7-code", "high"],
+        "agent-verification": ["glm-5.3-flash", "auto"],
+      }),
+    },
+  },
+];
+
+const ID_DE_PERFIL = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
+
+/**
+ * Los errores de completitud de un perfil: uno por rol de `ROLES` que falte o
+ * esté mal formado, y uno por cada clave que no sea un rol. Vacío si está bien.
+ */
+export function comprobarPerfilCompleto(perfil: PerfilDeModelos): string[] {
+  const errores: string[] = [];
+  for (const rol of Object.keys(perfil.roles)) {
+    if (!ROLES.some((spec) => spec.id === rol)) {
+      errores.push(
+        `perfil ${perfil.id}: "${rol}" no es un rol del harness. ` +
+          `Los roles vigentes son: ${ROLES.map((spec) => spec.id).join(", ")}.`,
+      );
+    }
+  }
+  for (const spec of ROLES) {
+    const ruta = perfil.roles[spec.id];
+    if (ruta === undefined) {
+      errores.push(`rol ${spec.id}: falta en el perfil ${perfil.id}.`);
+      continue;
+    }
+    if (ruta.provider.trim() === "") errores.push(`rol ${spec.id}: el proveedor está vacío.`);
+    if (ruta.model.trim() === "") errores.push(`rol ${spec.id}: el modelo está vacío.`);
+    if (!EFFORTS.includes(ruta.effort)) {
+      errores.push(
+        `rol ${spec.id}: el esfuerzo es "${String(ruta.effort)}" y debe ser uno de: ${EFFORTS.join(", ")}.`,
+      );
+    }
+  }
+  return errores;
+}
+
+/** El catálogo de un proveedor, como lo recibe la comprobación. */
+export type CatalogoDeProveedor =
+  | { readonly ok: true; readonly models: readonly string[] }
+  | { readonly ok: false; readonly error: string }
+  | null;
+
+/**
+ * Comprueba cada modelo del perfil contra el catálogo de su proveedor (R-PERF-003).
+ *
+ * Pura: el catálogo llega inyectado. Un proveedor sin catálogo o con la consulta
+ * caída rechaza —no pasa en silencio—, porque aprobar lo que no se pudo comprobar
+ * sería inventar.
+ */
+export function comprobarPerfilContraCatalogo(
+  perfil: PerfilDeModelos,
+  catalogo: Readonly<Record<string, CatalogoDeProveedor | undefined>>,
+): string[] {
+  const errores: string[] = [];
+  for (const spec of ROLES) {
+    const ruta = perfil.roles[spec.id];
+    if (ruta === undefined) continue;
+    // Jev no está en el catálogo de chat (decisión 4 de la cabecera): vive en el
+    // endpoint de Decisions y se añade aparte, así que no se busca en la lista.
+    if (ruta.provider === DEFAULT_PROVIDER && ruta.model === DEFAULT_GATE_EVALUATOR) continue;
+    const entrada = catalogo[ruta.provider] ?? null;
+    if (entrada === null) {
+      errores.push(
+        `rol ${spec.id}: no se pudo comprobar ${ruta.model} contra ${ruta.provider}: ` +
+          "el proveedor no tiene catálogo disponible.",
+      );
+    } else if (!entrada.ok) {
+      errores.push(
+        `rol ${spec.id}: no se pudo comprobar ${ruta.model} contra ${ruta.provider}: ${entrada.error}`,
+      );
+    } else if (!entrada.models.includes(ruta.model)) {
+      errores.push(
+        `rol ${spec.id}: el modelo ${ruta.model} no existe en el catálogo de ${ruta.provider}.`,
+      );
+    }
+  }
+  return errores;
+}
+
+/** Ruta de `.valmen/profiles.yaml`. */
+export function perfilesPath(root: string): string {
+  return join(root, ".valmen", "profiles.yaml");
+}
+
+/** Lee los perfiles del proyecto desde el texto de `profiles.yaml`. */
+export function parsePerfiles(text: string): PerfilDeModelos[] {
+  const config: ConfigMap = parseConfig(text);
+  const perfiles = readMap(config, "perfiles");
+  const resultado: PerfilDeModelos[] = [];
+  for (const [id, valor] of Object.entries(perfiles)) {
+    if (!ID_DE_PERFIL.test(id)) {
+      fail(`profiles.yaml: el id de perfil "${id}" debe ser kebab-case (minúsculas, dígitos y guiones).`);
+    }
+    if (PERFILES_INCORPORADOS.some((perfil) => perfil.id === id)) {
+      fail(`profiles.yaml: "${id}" es un perfil incorporado y no se puede redefinir.`);
+    }
+    if (typeof valor === "string" || Array.isArray(valor)) {
+      fail(`profiles.yaml: el perfil "${id}" debe ser un mapa.`);
+    }
+    const roles: Record<string, RoleRoute> = {};
+    for (const [rol, ruta] of Object.entries(readMap(valor, "roles"))) {
+      if (typeof ruta === "string" || Array.isArray(ruta)) {
+        fail(`profiles.yaml: el rol "${rol}" del perfil "${id}" debe ser un mapa.`);
+      }
+      const effort = readString(ruta, "effort", "auto");
+      if (!EFFORTS.includes(effort as Effort)) {
+        fail(
+          `profiles.yaml: el esfuerzo de "${rol}" en "${id}" es "${effort}" y debe ser uno de: ` +
+            `${EFFORTS.join(", ")}.`,
+        );
+      }
+      roles[rol] = {
+        provider: readString(ruta, "provider", ""),
+        model: readString(ruta, "model", ""),
+        effort: effort as Effort,
+      };
+    }
+    resultado.push({
+      id,
+      description: readString(valor, "description", ""),
+      origen: "proyecto",
+      roles,
+    });
+  }
+  return resultado;
+}
+
+/** Genera `profiles.yaml`: el único escritor del archivo, con roles ordenados. */
+export function renderPerfiles(perfiles: readonly PerfilDeModelos[]): string {
+  const lineas = [
+    "# Perfiles de modelos del proyecto.",
+    "#",
+    "# Generado por el harness. Los comentarios escritos a mano se pierden al",
+    "# guardar un perfil.",
+    "",
+  ];
+  if (perfiles.length === 0) {
+    lineas.push("perfiles: {}");
+    return lineas.join("\n") + "\n";
+  }
+  lineas.push("perfiles:");
+  for (const perfil of [...perfiles].sort((a, b) => a.id.localeCompare(b.id))) {
+    lineas.push(`  ${perfil.id}:`);
+    if (perfil.description !== "") {
+      lineas.push(`    description: ${perfil.description.replace(/\s+/g, " ").trim()}`);
+    }
+    lineas.push("    roles:");
+    for (const rol of Object.keys(perfil.roles).sort()) {
+      const ruta = perfil.roles[rol] as RoleRoute;
+      lineas.push(
+        `      ${rol}:`,
+        `        provider: ${ruta.provider}`,
+        `        model: ${ruta.model}`,
+        `        effort: ${ruta.effort}`,
+      );
+    }
+  }
+  return lineas.join("\n") + "\n";
+}
+
+/** Los perfiles del proyecto; sin archivo, ninguno. */
+export function readProjectPerfiles(root: string): PerfilDeModelos[] {
+  let texto: string;
+  try {
+    texto = readFileSync(perfilesPath(root), "utf8");
+  } catch {
+    return [];
+  }
+  if (texto.trim() === "") return [];
+  return parsePerfiles(texto);
+}
+
+/** Los perfiles incorporados y los del proyecto, cada uno con su `origen`. */
+export function listarPerfiles(root: string): PerfilDeModelos[] {
+  return [...PERFILES_INCORPORADOS, ...readProjectPerfiles(root)];
+}
+
+/** Un perfil nuevo que copia los roles de la base y aplica solo los cambiados. */
+export function derivarPerfil(
+  base: PerfilDeModelos,
+  id: string,
+  description: string,
+  cambios: Readonly<Record<string, RoleRoute>>,
+): PerfilDeModelos {
+  return { id, description, origen: "proyecto", roles: { ...base.roles, ...cambios } };
+}
+
 /** El routing declarado por un proyecto. */
 export interface Routing {
   readonly preset: string;

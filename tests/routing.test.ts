@@ -17,7 +17,7 @@
  * 4. **El orden "el código primero" no se rompe por configuración.** Un gate que
  *    se resuelve con comandos se sigue resolviendo con comandos.
  */
-import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -25,8 +25,13 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
   EFFORTS,
+  PERFILES_INCORPORADOS,
   PRESETS,
   ROLES,
+  comprobarPerfilCompleto as comprobarCompleto,
+  derivarPerfil,
+  perfilesPath,
+  readProjectPerfiles,
   parseRouting,
   parseRoutingTolerante,
   renderRouting,
@@ -37,6 +42,7 @@ import {
   checkRouting,
   fetchCatalog,
   gateRouting,
+  guardarPerfil,
   presetModels,
   readRouting,
   routingFromForm,
@@ -709,5 +715,125 @@ describe("el proveedor viaja con el modelo", () => {
       roles: { orchestrator: { model: "anthropic/claude-opus-4.6" } },
     });
     expect(texto).toContain("provider: openrouter");
+  });
+});
+
+// ── Los perfiles de modelos ─────────────────────────────────────────────────
+
+/** Los catálogos medidos el 2026-10-07; la red es el límite externo que se simula. */
+const CATALOGOS = {
+  codex: ["gpt-5.5", "gpt-5.6-luna", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-6-astra", "gpt-6-luna", "gpt-6-sol", "gpt-6.1-sol"],
+  "opencode-go": ["deepseek-v4-flash", "deepseek-v4-pro", "glm-5.3", "glm-5.3-flash", "kimi-k3", "kimi-k2.7-code", "gpt-6-luna"],
+  openrouter: ["deepseek/deepseek-v4-flash", "moonshotai/kimi-k3"],
+};
+
+function fetchCatalogos(caidos: readonly string[] = []): typeof fetch {
+  return (async (url: string | URL | Request) => {
+    const direccion = String(url);
+    const clave = direccion.includes("chatgpt.com")
+      ? "codex"
+      : direccion.includes("opencode.ai")
+        ? "opencode-go"
+        : "openrouter";
+    if (caidos.includes(clave)) return new Response("caído", { status: 503 });
+    return new Response(JSON.stringify({ data: CATALOGOS[clave as keyof typeof CATALOGOS].map((id) => ({ id })) }), { status: 200 });
+  }) as unknown as typeof fetch;
+}
+
+function opcionesDePerfil(caidos: readonly string[] = []) {
+  return { env: {}, filePath: join(lab, ".valmen", ".credentials.yaml"), fetchImpl: fetchCatalogos(caidos) };
+}
+
+function perfilIncorporado(id: string) {
+  const perfil = PERFILES_INCORPORADOS.find((p) => p.id === id);
+  if (perfil === undefined) throw new Error(`falta ${id}`);
+  return perfil;
+}
+
+function perfilMixto() {
+  return derivarPerfil(perfilIncorporado("claude-code-completo"), "mixto", "Claude planea, Codex implementa", {
+    "agent-implementation": { provider: "codex", model: "gpt-6-sol", effort: "high" },
+  });
+}
+
+describe("los perfiles de modelos", () => {
+  it("R-PERF-001 perfiles incorporados", () => {
+    expect(PERFILES_INCORPORADOS.map((p) => p.id)).toEqual(["claude-code-completo", "codex-completo", "opencode-go"]);
+    expect(PERFILES_INCORPORADOS.every((p) => p.origen === "incorporado")).toBe(true);
+  });
+
+  it("R-PERF-001 incorporados completos", () => {
+    for (const perfil of PERFILES_INCORPORADOS) {
+      for (const rol of ROLES) {
+        const ruta = perfil.roles[rol.id];
+        expect(ruta, `${perfil.id}/${rol.id}`).toBeDefined();
+        expect(ruta?.provider.length).toBeGreaterThan(0);
+        expect(ruta?.model.length).toBeGreaterThan(0);
+        expect(EFFORTS).toContain(ruta?.effort);
+      }
+      expect(comprobarCompleto(perfil)).toEqual([]);
+    }
+  });
+
+  it("R-PERF-001 perfil incompleto", () => {
+    const { "agent-plan": _quitado, ...resto } = perfilIncorporado("codex-completo").roles;
+    const errores = comprobarCompleto({ ...perfilIncorporado("codex-completo"), id: "roto", origen: "proyecto", roles: resto });
+    expect(errores).toHaveLength(1);
+    expect(errores[0]).toContain("agent-plan");
+  });
+
+  it("R-PERF-001 perfil mixto se guarda", async () => {
+    const resultado = await guardarPerfil(lab, perfilMixto(), opcionesDePerfil());
+    expect(resultado).toEqual({ ok: true, errores: [], written: true });
+    expect(existsSync(perfilesPath(lab))).toBe(true);
+  });
+
+  it("R-PERF-003 modelo inexistente", async () => {
+    const perfil = derivarPerfil(perfilIncorporado("codex-completo"), "con-error", "", {
+      "agent-plan": { provider: "codex", model: "gpt-9-inventado", effort: "high" },
+    });
+    const resultado = await guardarPerfil(lab, perfil, opcionesDePerfil());
+    expect(resultado.ok).toBe(false);
+    expect(resultado.errores.join("\n")).toContain("rol agent-plan: el modelo gpt-9-inventado no existe en el catálogo de codex");
+    expect(existsSync(perfilesPath(lab))).toBe(false);
+  });
+
+  it("R-PERF-003 catálogo no disponible", async () => {
+    const resultado = await guardarPerfil(lab, derivarPerfil(perfilIncorporado("codex-completo"), "sin-red", "", {}), opcionesDePerfil(["codex"]));
+    expect(resultado.ok).toBe(false);
+    expect(resultado.errores.join("\n")).toContain("no se pudo comprobar");
+    expect(existsSync(perfilesPath(lab))).toBe(false);
+  });
+
+  it("R-PERF-003 incorporados en catálogo", async () => {
+    for (const perfil of PERFILES_INCORPORADOS) {
+      const copia = derivarPerfil(perfil, `copia-${perfil.id}`, "", {});
+      const resultado = await guardarPerfil(lab, copia, opcionesDePerfil());
+      expect(resultado.errores, perfil.id).toEqual([]);
+    }
+  });
+
+  it("R-PERF-001 perfil mixto conserva proveedores", async () => {
+    await guardarPerfil(lab, perfilMixto(), opcionesDePerfil());
+    const leido = readProjectPerfiles(lab).find((p) => p.id === "mixto");
+    expect(leido?.origen).toBe("proyecto");
+    expect(leido?.roles["agent-analysis"]?.provider).toBe("claude-code");
+    expect(leido?.roles["agent-plan"]?.provider).toBe("claude-code");
+    expect(leido?.roles["agent-implementation"]?.provider).toBe("codex");
+    expect(leido?.roles).toEqual(perfilMixto().roles);
+  });
+
+  it("R-PERF-001 evaluadores sin cambio", () => {
+    const balanced = PRESETS.find((p) => p.id === "balanced");
+    for (const perfil of PERFILES_INCORPORADOS) {
+      expect(perfil.roles["gate-evaluator"]).toEqual(balanced?.roles["gate-evaluator"]);
+      expect(perfil.roles["verifier"]).toEqual(balanced?.roles["verifier"]);
+    }
+  });
+
+  it("rechaza guardar con el id de un perfil incorporado", async () => {
+    const resultado = await guardarPerfil(lab, { ...perfilMixto(), id: "codex-completo" }, opcionesDePerfil());
+    expect(resultado.ok).toBe(false);
+    expect(existsSync(perfilesPath(lab))).toBe(false);
   });
 });
