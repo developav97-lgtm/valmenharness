@@ -38,3 +38,5 @@
 {"kind":"decision","ticketId":"BUGFIX-ENGINE-CIERRE-CRITERIOS-20261005","detail":"analysis review → approve (GR-20261007-BUGFIX-ENGINE-CIERRE-CRITERIOS-20261005-analysis-1): El criterio dice que una proposición de contexto en banda de revisión no debe bloquear el avance","at":"2026-10-07T01:33:54.941Z"}
 {"kind":"note","ticketId":"BUGFIX-ENGINE-CIERRE-CRITERIOS-20261005","detail":"avanzó a in_progress (analyzed → planned → approved → in_progress)","at":"2026-10-07T01:34:14.992Z"}
 {"kind":"close","ticketId":"BUGFIX-ENGINE-CIERRE-CRITERIOS-20261005","detail":"QA aprobado y ticket cerrado","at":"2026-10-07T01:38:56.686Z"}
+{"kind":"note","ticketId":"BUGFIX-ENGINE-CONSUMO-FIABLE-20261005","detail":"avanzó a in_progress (analyzed → planned → approved → in_progress)","at":"2026-10-07T01:40:45.026Z"}
+{"kind":"close","ticketId":"BUGFIX-ENGINE-CONSUMO-FIABLE-20261005","detail":"QA aprobado y ticket cerrado","at":"2026-10-07T01:45:24.964Z"}
