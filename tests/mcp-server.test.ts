@@ -234,7 +234,7 @@ describe("el catálogo de herramientas", () => {
     expect(propiedades?.["evaluator"]?.enum).toEqual([...EVALUATOR_IDS]);
   });
 
-  it("declara las cincuenta herramientas, cada una con descripción y esquema", () => {
+  it("declara las cincuenta y una herramientas, cada una con descripción y esquema", () => {
     // El orden es el de la lectura: alta, consulta, validación, movimiento,
     // anotación, compuertas, features, procesos, reportes, y al final el ciclo de
     // QA y el cierre. Estaba intercalado por historia —cada herramienta nueva
@@ -254,6 +254,7 @@ describe("el catálogo de herramientas", () => {
       "registrar_consumo_ia",
       "reanudar_ticket",
       "evaluar_compuerta",
+      "ver_recibo",
       "cascada_verificada",
       "simular_compuerta",
       "ver_features",
@@ -348,6 +349,7 @@ describe("el catálogo de herramientas", () => {
       "listar_tickets",
       "reanudar_ticket",
       "evaluar_compuerta",
+      "ver_recibo",
       "cascada_verificada",
       "reporte_consumo",
       "revisar_drift",
@@ -721,7 +723,7 @@ describe("el contenido estructurado", () => {
     expect(campos["type"]).toBe("BUGFIX");
   });
 
-  it("`evaluar_compuerta` devuelve el recibo que acaba de anexar, sin interpretar el informe", async () => {
+  it("`evaluar_compuerta` devuelve un resumen del recibo que acaba de anexar, sin interpretar el informe", async () => {
     const ruta = await crear();
     escribirDiagnostico(ruta);
     escribirCriterio(ruta, 'Buscar "104" devuelve la orden "1042".');
@@ -734,7 +736,14 @@ describe("el contenido estructurado", () => {
 
     // El veredicto se lee del dato: un agente que ramifica por `outcome` no
     // debería tener que buscar la palabra en una tabla de texto.
-    const recibo = resultado.data?.["recibo"] as Record<string, unknown> | null;
+    // El recibo entero se pide aparte con `ver_recibo` (R-RESP-006).
+    const resumen = resultado.data as Record<string, unknown>;
+    expect(["approve", "review", "block"]).toContain(resumen["resultado"]);
+    const completo = await callTool(contexto, "ver_recibo", {
+      id: ID,
+      recibo: resumen["recibo_id"] as string,
+    });
+    const recibo = completo.data?.["recibo"] as Record<string, unknown> | null;
     expect(recibo).not.toBeNull();
     expect(recibo?.["gate"]).toBe("analysis");
     expect(recibo?.["subject"]).toMatchObject({ type: "ticket", id: ID });

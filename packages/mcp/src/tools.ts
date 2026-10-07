@@ -293,8 +293,7 @@ const GASTA: ToolAnnotations = {
   openWorldHint: true,
 };
 
-/** El catálogo de herramientas. */
-export const TOOLS: readonly ToolDefinition[] = [
+const DEFINICIONES: readonly ToolDefinition[] = [
   {
     name: "registrar_actividad_ejecucion",
     annotations: ANEXA,
@@ -880,19 +879,53 @@ export const TOOLS: readonly ToolDefinition[] = [
       },
       required: ["gate", "id"],
     }),
-    // El recibo ya está en disco: el motor lo acaba de anexar. Devolverlo es
-    // leerlo, no construir una segunda forma del veredicto. `null` cuando no se
-    // pudo leer, y entonces el texto dice por qué — una forma estable no puede
-    // depender de que el archivo esté donde se espera.
+    // El recibo ya está en disco: el motor lo acaba de anexar. El dato es un **resumen**
+    // de menos de un kilobyte (R-RESP-006): el recibo entero pesa varios kilobytes por
+    // compuerta y casi nunca hace falta; quien lo necesite lo pide con `ver_recibo`.
     outputSchema: {
       type: "object",
       properties: {
-        recibo: {
-          type: ["object", "null"],
-          description:
-            "El recibo que el motor acaba de anexar a `.valmen/receipts/`, con su " +
-            "veredicto, sus proposiciones y su coste. `null` si no se pudo leer.",
+        resultado: {
+          type: "string",
+          description: "`approve`, `review` o `block`.",
         },
+        motivo: { type: "string", description: "Por qué, en una línea." },
+        en_banda: {
+          type: "array",
+          description: "Las proposiciones en banda de revisión, con su valor (hasta cinco).",
+        },
+        recibo_id: {
+          type: ["string", "null"],
+          description: "El id del recibo, para pedirlo con `ver_recibo`. `null` si no se pudo leer.",
+        },
+      },
+      required: ["resultado", "motivo", "en_banda", "recibo_id"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "ver_recibo",
+    annotations: SOLO_LEE,
+    title: "Ver un recibo de compuerta",
+    description:
+      "Devuelve el recibo completo de una compuerta —proposiciones, respuestas del " +
+      "modelo, evidencia y coste— por su id, o el último del ticket si no se indica. " +
+      "`evaluar_compuerta` devuelve solo un resumen para no cargar el contexto con un " +
+      "recibo que casi nunca hace falta; esta es la forma de pedirlo.",
+    inputSchema: conRoot({
+      properties: {
+        id: { type: "string", description: "Identificador del ticket." },
+        recibo: {
+          type: "string",
+          description: "Id del recibo (`recibo_id` del resumen). Sin él, el último del ticket.",
+        },
+      },
+      required: ["id"],
+    }),
+    outputSchema: {
+      type: "object",
+      properties: {
+        recibo: { type: ["object", "null"], description: "El recibo completo, o `null` si no existe." },
       },
       required: ["recibo"],
       additionalProperties: false,
@@ -1975,6 +2008,32 @@ export const TOOLS: readonly ToolDefinition[] = [
 ];
 
 /**
+ * El catálogo de herramientas.
+ *
+ * Todo `outputSchema` declara `siguiente_paso` (R-RESP-006): lo agrega `callTool` a
+ * todo dato estructurado, y un esquema con `additionalProperties: false` que no lo
+ * declarara rechazaría la respuesta de su propia herramienta.
+ */
+export const TOOLS: readonly ToolDefinition[] = DEFINICIONES.map((definicion) => {
+  const esquema = definicion.outputSchema;
+  if (esquema === undefined) return definicion;
+  const propiedades = (esquema["properties"] ?? {}) as Record<string, unknown>;
+  return {
+    ...definicion,
+    outputSchema: {
+      ...esquema,
+      properties: {
+        ...propiedades,
+        siguiente_paso: {
+          type: "string",
+          description: "Qué hacer a continuación; un cliente que solo lee este dato lo tiene aquí.",
+        },
+      },
+    },
+  };
+});
+
+/**
  * El `CommandResult` del motor, traducido a resultado de herramienta.
  *
  * Un código distinto de cero **no siempre es un fallo**, y confundirlos costó un
@@ -2224,8 +2283,98 @@ function correrCompuerta(
   });
 }
 
-/** Ejecuta una herramienta por nombre. */
+/** Lo máximo que se cuenta de proposiciones en banda en el resumen de una compuerta. */
+const MAX_EN_BANDA = 5;
+const MAX_MOTIVO = 240;
+
+/** El siguiente paso tras una compuerta, según el veredicto. */
+function siguientePasoDeCompuerta(resultado: string): string {
+  if (resultado === "approve") {
+    return "mover_ticket al estado siguiente; si es `approved`, falta la aprobación explícita de una persona en `## Plan`.";
+  }
+  if (resultado === "review") {
+    return "La decisión es de una persona: llévale `motivo` y `en_banda`; no hay herramienta que la sustituya.";
+  }
+  if (resultado === "block") {
+    return "Corrige lo que dice `motivo`, valida el ticket y vuelve a evaluar; el recibo completo está en `ver_recibo`.";
+  }
+  return "Revisa el informe de texto; el recibo no se pudo leer.";
+}
+
+/**
+ * El resumen de un recibo para el dato estructurado de `evaluar_compuerta` (R-RESP-006).
+ *
+ * Acotado a propósito: el motivo se corta y las proposiciones en banda se limitan,
+ * porque el límite de un kilobyte es lo que hace que el dato valga en clientes que
+ * lo pasan entero al modelo.
+ */
+function resumenDeRecibo(recibo: {
+  readonly id: string;
+  readonly outcome: string;
+  readonly reason: string;
+  readonly propositions: readonly { readonly id: string; readonly value: number; readonly inBand: boolean }[];
+}): Record<string, unknown> {
+  const motivo = recibo.reason.replace(/\s+/g, " ").trim();
+  return {
+    resultado: recibo.outcome,
+    motivo: motivo.length > MAX_MOTIVO ? `${motivo.slice(0, MAX_MOTIVO - 1)}…` : motivo,
+    en_banda: recibo.propositions
+      .filter((proposicion) => proposicion.inBand)
+      .slice(0, MAX_EN_BANDA)
+      .map((proposicion) => ({ id: proposicion.id, valor: Number(proposicion.value.toFixed(2)) })),
+    siguiente_paso: siguientePasoDeCompuerta(recibo.outcome),
+    recibo_id: recibo.id,
+  };
+}
+
+/** El siguiente paso de las herramientas cuyo dato no lo decide el resultado. */
+const SIGUIENTE_PASO: Readonly<Record<string, string>> = {
+  crear_ticket: "Abre la ruta del ticket y escribe `## Descripción funcional` y `## Diagnóstico`.",
+  ver_ticket: "Lee las secciones que faltan y continúa con `reanudar_ticket`.",
+  listar_tickets: "Elige un ticket y llama a `reanudar_ticket` con su id.",
+  reanudar_ticket: "Haz el paso que devuelve y vuelve a llamar a `reanudar_ticket`.",
+  mover_ticket: "Llama a `reanudar_ticket` para el paso del estado nuevo.",
+  cascada_verificada: "Usa el resultado de la cascada y, si cierra una transición, evalúa la compuerta.",
+  simular_compuerta: "Si la simulación sale bien, evalúa la compuerta con `evaluar_compuerta`.",
+  revision_previa: "Corrige los hallazgos y evalúa la compuerta; sin hallazgos, evalúala tal cual.",
+  precision_compuertas: "Si hace falta ajustar un umbral, propónlo con `valmen thresholds`; lo decide una persona.",
+  iniciar_qa: "Registra el retest con `anotar_retest` y cierra con `cerrar_qa`.",
+  anotar_retest: "Cierra el ciclo con `cerrar_qa`.",
+  cerrar_qa: "Prepara el cierre con `preparar_cierre`.",
+  preparar_cierre: "Registra el consumo con `registrar_consumo_ia` y pasa el ticket a cerrado.",
+  registrar_consumo_ia: "Mueve el ticket a `closed` con `mover_ticket`.",
+  materializar_feature: "Recorre los tickets de la feature con `reanudar_ticket`.",
+  avanzar_feature: "Llama a `ver_features` para el siguiente tramo.",
+  delegar_corrida: "Avanza con `avanzar_ticket_delegado` sobre el siguiente ticket.",
+};
+
+const SIGUIENTE_PASO_GENERICO =
+  "Sin acción pendiente derivada de esta respuesta; continúa con `reanudar_ticket` para el paso del ticket.";
+
+/**
+ * Ejecuta una herramienta por nombre y garantiza el `siguiente_paso` en su dato.
+ *
+ * Hay clientes que solo le pasan al modelo el dato estructurado, así que lo que solo
+ * dice el texto no existe para ellos (R-RESP-006). El punto común es este, no cada
+ * herramienta: una nueva sin entrada en la tabla recibe el paso genérico en vez de
+ * quedarse sin ninguno.
+ */
 export async function callTool(
+  contexto: ToolContext,
+  nombre: string,
+  args: Record<string, unknown>,
+): Promise<ToolResult> {
+  const resultado = await ejecutarHerramienta(contexto, nombre, args);
+  if (resultado.data === undefined || typeof resultado.data["siguiente_paso"] === "string") {
+    return resultado;
+  }
+  return {
+    ...resultado,
+    data: { ...resultado.data, siguiente_paso: SIGUIENTE_PASO[nombre] ?? SIGUIENTE_PASO_GENERICO },
+  };
+}
+
+async function ejecutarHerramienta(
   contexto: ToolContext,
   nombre: string,
   args: Record<string, unknown>,
@@ -3129,8 +3278,29 @@ export async function callTool(
             "no hay herramienta que la sustituya.\n" +
             "  · `BLOCK` → hay algo que corregir. El motivo dice qué proposición y con " +
             "qué valor; corrige el artefacto y vuelve a evaluar.",
-          { recibo: ultimo === undefined ? null : { ...ultimo } },
+          ultimo === undefined
+            ? { resultado: "desconocido", motivo: "No se pudo leer el recibo que acaba de escribir el motor.", en_banda: [], recibo_id: null }
+            : resumenDeRecibo(ultimo),
         );
+      }
+
+      case "ver_recibo": {
+        const id = texto(args, "id") as string;
+        const pedido = texto(args, "recibo", false);
+        const recibos = readReceipts(paths, id);
+        const recibo =
+          pedido === undefined
+            ? recibos[recibos.length - 1]
+            : recibos.find((candidato) => candidato.id === pedido);
+        if (recibo === undefined) {
+          return bien(
+            pedido === undefined
+              ? `El ticket ${id} no tiene recibos.`
+              : `El ticket ${id} no tiene un recibo con id ${pedido}.`,
+            { recibo: null },
+          );
+        }
+        return bien(JSON.stringify(recibo, null, 2), { recibo: { ...recibo } });
       }
 
       case "cascada_verificada": {
