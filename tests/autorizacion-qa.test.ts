@@ -181,7 +181,7 @@ describe("vigencia y revocación", () => {
 describe("el agente no tiene herramienta para esto", () => {
   it("ninguna herramienta MCP crea, amplía ni revoca una autorización; solo hay una de lectura", () => {
     const relacionadas = TOOLS.filter((t) => /autoriz/i.test(t.name) || /autorizaci[oó]n (de QA|persistida)/i.test(t.description));
-    expect(relacionadas.map((t) => t.name)).toEqual(["ver_autorizaciones_qa"]);
+    expect(relacionadas.map((t) => t.name)).toEqual(["ver_autorizaciones_qa", "ver_autorizaciones_aprobacion"]);
     for (const t of relacionadas) expect(t.annotations.readOnlyHint).toBe(true);
     for (const t of TOOLS) {
       expect(t.name, "una herramienta que escriba autorizaciones").not.toMatch(/(crear|ampliar|revocar|otorgar)_autoriz/i);

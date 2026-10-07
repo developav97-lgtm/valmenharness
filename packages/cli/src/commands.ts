@@ -73,6 +73,9 @@ import {
   modoEfectivoDeQaAgent,
   promoverQaAgent,
   crearAutorizacion,
+  crearAutorizacionDeAprobacion,
+  leerAutorizacionesDeAprobacion,
+  revocarAutorizacionDeAprobacion,
   FUENTE_ENLACE_FIRMADO,
   canjearCodigoDeAutorizacion,
   emitirCodigoDeAutorizacion,
@@ -2974,6 +2977,73 @@ export function qaAuthorizeCommand(
       return ok(`Código ${t("code")} revocado: ya no se puede canjear.\n`);
     }
     return error("qa-authorize admite: create, revoke, list, link, redeem o revoke-code.", EXIT_SCHEMA);
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/**
+ * `approval-authorize create|revoke|list`: la autorización de aprobación automática (R-APRO-001).
+ *
+ * La crea o revoca una persona: se rechaza en una sesión desatendida y desde una fuente que el
+ * proyecto no declara en `approval-authorization-sources`.
+ */
+export function approvalAuthorizeCommand(
+  root: string,
+  accion: string | undefined,
+  flags: Readonly<Record<string, string | true>>,
+  opciones: { readonly ahora?: Date; readonly env?: Readonly<Record<string, string | undefined>> } = {},
+): CommandResult {
+  const t = (n: string): string => (typeof flags[n] === "string" ? (flags[n] as string) : "");
+  const lista = (n: string): string[] => t(n).split(",").map((x) => x.trim()).filter((x) => x !== "");
+  try {
+    if (accion === "create") {
+      const a = crearAutorizacionDeAprobacion({
+        root,
+        actor: t("actor"),
+        quote: t("quote"),
+        types: lista("types"),
+        modules: lista("modules"),
+        maxRisk: t("max-risk") === "" ? "normal" : t("max-risk"),
+        impacts: lista("impacts"),
+        stages: t("stages") === "" ? ["analysis", "plan"] : lista("stages"),
+        mode: t("mode") === "" ? "on-approve" : t("mode"),
+        dailyQuota: Number(t("daily-quota") === "" ? "1" : t("daily-quota")),
+        validDays: Number(t("valid-days") === "" ? "30" : t("valid-days")),
+        source: t("source") === "" ? "cli" : t("source"),
+        ...(opciones.ahora === undefined ? {} : { ahora: opciones.ahora }),
+        ...(opciones.env === undefined ? {} : { env: opciones.env }),
+      });
+      return ok(
+        `Autorización ${a.id} creada por ${a.actor}: tipos ${a.types.join(", ")}; módulos ${a.modules.join(", ")}; ` +
+          `riesgo hasta ${a.maxRisk}; impactos admitidos: ${a.impacts.length === 0 ? "ninguno" : a.impacts.join(", ")}; ` +
+          `etapas ${a.stages.join(", ")}; modo ${a.mode}; cupo ${a.dailyQuota}/día; vigente hasta ${a.validUntil.slice(0, 10)}.\n` +
+          `Revocarla: valmen approval-authorize revoke --id ${a.id} --actor <tú> --reason "<motivo>"\n`,
+      );
+    }
+    if (accion === "revoke") {
+      const r = revocarAutorizacionDeAprobacion({
+        root,
+        id: t("id"),
+        actor: t("actor"),
+        reason: t("reason"),
+        source: t("source") === "" ? "cli" : t("source"),
+        ...(opciones.ahora === undefined ? {} : { ahora: opciones.ahora }),
+        ...(opciones.env === undefined ? {} : { env: opciones.env }),
+      });
+      return ok(`Autorización ${r.id} revocada por ${r.actor}: ninguna aprobación posterior se hace con ella.\n`);
+    }
+    if (accion === "list") {
+      const todas = leerAutorizacionesDeAprobacion(root, opciones.ahora ?? new Date());
+      if (todas.length === 0) return ok("No hay autorizaciones de aprobación automática.\n");
+      return ok(
+        todas
+          .map((a) => `${a.id} · ${a.estado} · ${a.types.join(",")} · ${a.modules.join(",")} · modo ${a.mode} · ${a.actor}: «${a.quote}»`)
+          .join("\n") + "\n",
+      );
+    }
+    return error("approval-authorize admite: create, revoke o list.", EXIT_SCHEMA);
   } catch (caught) {
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);

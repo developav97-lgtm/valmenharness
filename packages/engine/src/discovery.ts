@@ -28,6 +28,7 @@ import {
   readAllowedSchemas,
   readGateThresholds,
   readPlanApprovalSources,
+  readApprovalAuthorizationSources,
   readQaAuthorizationSources,
   type ThresholdOverride,
   readPlaywrightConfig,
@@ -218,6 +219,11 @@ export function gateThresholds(root: string): readonly ThresholdOverride[] {
 export function planApprovalSources(root: string): readonly string[] {
   const config = configDelProyecto(root);
   return readPlanApprovalSources(config ?? {});
+}
+
+/** Los canales desde los que se acepta crear o revocar una autorización de aprobación. */
+export function approvalAuthorizationSources(root: string): readonly string[] {
+  return readApprovalAuthorizationSources(configDelProyecto(root) ?? {});
 }
 
 /** Los canales desde los que se acepta crear o revocar una autorización de QA. */

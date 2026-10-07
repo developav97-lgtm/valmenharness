@@ -1104,6 +1104,30 @@ export function readJourneyDispatcher(config: ConfigMap): JourneyDispatcher {
   return valor;
 }
 
+/** Los canales desde los que se acepta crear o revocar una autorización de aprobación si el proyecto no declara los suyos. */
+export const DEFAULT_APPROVAL_AUTHORIZATION_SOURCES: readonly string[] = ["cli", "mission-control"];
+
+/**
+ * Lee `approval-authorization-sources`: los canales que el agente no controla para crear o revocar
+ * una autorización de aprobación automática (R-APRO-001).
+ *
+ * Una lista vacía o con un nombre inválido **falla**: la ausencia de canales aceptados no puede
+ * significar «cualquiera».
+ */
+export function readApprovalAuthorizationSources(config: ConfigMap): readonly string[] {
+  if (config["approval-authorization-sources"] === undefined) return DEFAULT_APPROVAL_AUTHORIZATION_SOURCES;
+  const fuentes = readList(config, "approval-authorization-sources", []);
+  if (fuentes.length === 0) {
+    fail('config.yaml: "approval-authorization-sources" no puede estar vacía; quite la clave para usar las de siempre.');
+  }
+  for (const fuente of fuentes) {
+    if (!/^[a-z][a-z0-9-]{0,63}$/.test(fuente)) {
+      fail(`config.yaml: "approval-authorization-sources" contiene una fuente inválida: «${fuente}».`);
+    }
+  }
+  return fuentes;
+}
+
 /** Los canales desde los que se acepta crear o revocar una autorización de QA si el proyecto no declara los suyos. */
 export const DEFAULT_QA_AUTHORIZATION_SOURCES: readonly string[] = ["cli", "mission-control"];
 

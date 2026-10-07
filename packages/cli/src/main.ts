@@ -111,6 +111,7 @@ import {
   journeyNotifyPlansCommand,
   journeyPlanCommand,
   planApproveCommand,
+  approvalAuthorizeCommand,
   qaAuthorizeCommand,
   qaAgentCommand,
   qaPolicyCloseCommand,
@@ -236,6 +237,11 @@ Comandos:
   qa-promote --actor <nombre> --quote "<frase>"
                             Decide en código si el ticket es elegible para QA por agente (seis
                             reglas, sin modelo). Sale con 3 si no lo es.
+  approval-authorize create --actor <nombre> --quote "<frase>" --types <a,b> --modules <x,y> [--max-risk <r>] [--impacts <i,j>] [--stages analysis,plan] [--mode on-approve|reviewer] [--daily-quota <n>] [--valid-days <n>]
+  approval-authorize revoke --id <APA-…> --actor <nombre> --reason "<motivo>"
+  approval-authorize list
+                            La autorización de aprobación automática de planes y análisis: la crea o revoca
+                            una persona; nunca SECURITY. Se rechaza en una sesión desatendida.
   qa-authorize create --actor <nombre> --quote "<frase>" --types <a,b> --modules <x,y>
                 [--max-risk low|normal] [--daily-quota <n>] [--valid-days <n>] [--source <canal>]
                             Crea la autorización permanente de QA por agente. Solo una persona:
@@ -658,6 +664,9 @@ export const VALUE_OPTIONS = [
   "--base",
   "--delivered",
   "--types",
+  "--impacts",
+  "--stages",
+  "--mode",
   "--modules",
   "--max-risk",
   "--daily-quota",
@@ -1959,6 +1968,8 @@ export async function run(argv: readonly string[]): Promise<number> {
       result = qaAgentCommand(resolvePaths(options), options.flags);
     } else if (command === "qa-eligibility") {
       result = qaEligibilityCommand(resolvePaths(options), options.flags);
+    } else if (command === "approval-authorize") {
+      result = approvalAuthorizeCommand(resolvePaths(options).root, rest[0], options.flags);
     } else if (command === "qa-authorize") {
       result = qaAuthorizeCommand(resolvePaths(options).root, rest[0], options.flags);
     } else if (command === "plan-approve") {

@@ -226,7 +226,7 @@ describe("el CLI y el agente", () => {
 
   it("ninguna herramienta MCP crea, amplía, revoca ni canjea: solo hay una de lectura", () => {
     const relacionadas = TOOLS.filter((t) => /autoriz/i.test(t.name) || /autorizaci[oó]n (de QA|persistida)|c[oó]digo (firmado|de autorizaci)/i.test(t.description));
-    expect(relacionadas.map((t) => t.name)).toEqual(["ver_autorizaciones_qa"]);
+    expect(relacionadas.map((t) => t.name)).toEqual(["ver_autorizaciones_qa", "ver_autorizaciones_aprobacion"]);
     for (const t of relacionadas) expect(t.annotations.readOnlyHint).toBe(true);
     for (const t of TOOLS) expect(t.name).not.toMatch(/(canjear|emitir|revocar|crear|ampliar)_(codigo|autoriz)/i);
   });

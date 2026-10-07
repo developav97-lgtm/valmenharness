@@ -109,6 +109,7 @@ import {
   createExecutionContract,
   armarJornada,
   leerAutorizaciones,
+  leerAutorizacionesDeAprobacion,
   hermesSendChannel,
   readJourneyRoadmap,
   resolveAuthorizedProject,
@@ -351,6 +352,17 @@ const DEFINICIONES: readonly ToolDefinition[] = [
       "Lista las autorizaciones persistidas de QA por agente con su estado (vigente, revocada, vencida) " +
       "y la frase literal de quien las dio. Es de **solo lectura**: no existe una herramienta que cree, " +
       "amplíe ni revoque una autorización; eso lo hace una persona por el CLI o Mission Control.",
+    inputSchema: conRoot({ properties: {}, required: [] }),
+  },
+  {
+    name: "ver_autorizaciones_aprobacion",
+    annotations: SOLO_LEE,
+    title: "Ver las autorizaciones de aprobación automática",
+    description:
+      "Lista las autorizaciones persistidas de aprobación automática de planes y análisis con su estado " +
+      "(vigente, revocada, vencida) y la frase literal de quien las dio. Es de **solo lectura**: no existe " +
+      "una herramienta que cree, amplíe ni revoque una autorización; eso lo hace una persona por el CLI o " +
+      "Mission Control.",
     inputSchema: conRoot({ properties: {}, required: [] }),
   },
   {
@@ -2467,6 +2479,14 @@ async function ejecutarHerramienta(
           todas.length === 0
             ? "No hay autorizaciones de QA por agente."
             : todas.map((a) => `${a.id} · ${a.estado} · ${a.types.join(",")} · ${a.modules.join(",")} · ${a.actor}: «${a.quote}»`).join("\n"),
+        );
+      }
+      case "ver_autorizaciones_aprobacion": {
+        const todas = leerAutorizacionesDeAprobacion(paths.root, contexto.now?.() ?? new Date());
+        return bien(
+          todas.length === 0
+            ? "No hay autorizaciones de aprobación automática."
+            : todas.map((a) => `${a.id} · ${a.estado} · ${a.types.join(",")} · ${a.modules.join(",")} · modo ${a.mode} · ${a.actor}: «${a.quote}»`).join("\n"),
         );
       }
       case "armar_jornada": {

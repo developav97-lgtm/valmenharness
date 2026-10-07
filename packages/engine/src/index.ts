@@ -104,3 +104,4 @@ export * from "./qa-authorization-link.js";
 export * from "./qa-policy-verify.js";
 export * from "./qa-policy-close.js";
 export * from "./qa-shadow.js";
+export * from "./approval-authorization.js";

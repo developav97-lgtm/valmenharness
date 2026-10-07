@@ -190,7 +190,8 @@ describe("el catálogo de herramientas", () => {
     // aprobación es de una persona. No es un olvido — es la propiedad que este
     // servidor no puede perder, y por eso se afirma sobre los nombres.
     const nombres = TOOLS.map((tool) => tool.name);
-    expect(nombres.filter((nombre) => /aprob|approve/.test(nombre))).toEqual([]);
+    // La única con «aprob» es la de solo lectura de las autorizaciones de aprobación automática.
+    expect(nombres.filter((nombre) => /aprob|approve/.test(nombre))).toEqual(["ver_autorizaciones_aprobacion"]);
   });
 
   it("toda herramienta que emite un veredicto de persona exige sus palabras", () => {
@@ -235,7 +236,7 @@ describe("el catálogo de herramientas", () => {
     expect(propiedades?.["evaluator"]?.enum).toEqual([...EVALUATOR_IDS]);
   });
 
-  it("declara las cincuenta y tres herramientas, cada una con descripción y esquema", () => {
+  it("declara las cincuenta y cuatro herramientas, cada una con descripción y esquema", () => {
     // El orden es el de la lectura: alta, consulta, validación, movimiento,
     // anotación, compuertas, features, procesos, reportes, y al final el ciclo de
     // QA y el cierre. Estaba intercalado por historia —cada herramienta nueva
@@ -245,6 +246,7 @@ describe("el catálogo de herramientas", () => {
       "ver_actividad_ejecucion",
       "ver_jornadas",
       "ver_autorizaciones_qa",
+      "ver_autorizaciones_aprobacion",
       "armar_jornada",
       "crear_ticket",
       "ver_ticket",
