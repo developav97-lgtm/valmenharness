@@ -215,7 +215,7 @@ Comandos:
   journey plan --project <id> (--feature <slug> | --tickets <a,b,c>) [--max <n>] [--to <destino>]
                             Arma la jornada del día en el registro de jornadas y envía el
                             plan por Telegram. No despacha ni reserva capacidad.
-  journey advance --project <id> [--journey <id>]
+  journey advance --project <id> [--journey <id>] [--fase preparacion|ejecucion]
                             Avanza la jornada una vez: sin modelo e idempotente (un segundo
                             avance no despacha otro ticket). Pensado para un disparador.
   journey install-trigger --project <id> [--every <min>] [--write] [--dir <carpeta>]
@@ -559,6 +559,7 @@ export const VALUE_OPTIONS = [
   "--max",
   // El avance de una jornada concreta, el intervalo del disparador y su carpeta.
   "--journey",
+  "--fase",
   "--every",
   "--dir",
   // `manuales pendientes`: dónde viven los manuales y qué archivos son pantalla.

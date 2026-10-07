@@ -8,6 +8,8 @@
  * lanza es el ejecutor que declara la política del proyecto, a través del despacho.
  */
 import { dispatchJourney, type JourneyDispatchRequest } from "./journey-dispatch.js";
+import { type EjecutorDePreparacion, despacharPreparacion } from "./journey-preparation.js";
+import { type EntregaDeAviso } from "./journey-plan.js";
 import { readJourneys } from "./journeys.js";
 import { type AuthorizedProject } from "./project-resolution.js";
 
@@ -28,6 +30,14 @@ export interface AvanzarJornadaRequest {
   readonly ahora?: (() => Date) | undefined;
   /** Borde del proceso externo: lo único que se invoca, inyectable para no lanzar agentes. */
   readonly execute?: JourneyDispatchRequest["execute"];
+  /**
+   * La fase que se avanza: `ejecucion` (la de siempre, tickets `approved`) o `preparacion`
+   * (tickets en `intake` hasta `planned`, sin aprobar nada: R-JORN-003).
+   */
+  readonly fase?: "preparacion" | "ejecucion" | undefined;
+  /** Solo preparación: borde del ejecutor con su entorno, y el envío del aviso de decisión. */
+  readonly ejecutarPreparacion?: EjecutorDePreparacion | undefined;
+  readonly notificar?: ((texto: string) => EntregaDeAviso) | undefined;
 }
 
 /** El identificador de la jornada de un día. */
@@ -51,6 +61,29 @@ export async function avanzarJornada(request: AvanzarJornadaRequest): Promise<Av
       detalle:
         `No hay una jornada ${journeyId} en el proyecto ${request.project.projectId}: ` +
         "se arma con `valmen journey plan`. No se hizo nada.",
+    };
+  }
+
+  if (request.fase === "preparacion") {
+    const despacho = despacharPreparacion({
+      project: request.project,
+      home: request.home,
+      journeyId,
+      attemptId: `${INTENTO_DE_AVANCE}-preparacion`,
+      ahora,
+      ...(request.ejecutarPreparacion === undefined ? {} : { execute: request.ejecutarPreparacion }),
+      ...(request.notificar === undefined ? {} : { notificar: request.notificar }),
+    });
+    return {
+      estado:
+        despacho.estado === "preparado"
+          ? "despachado"
+          : despacho.estado === "ya-despachado"
+            ? "ya-despachado"
+            : "sin-candidato",
+      journeyId,
+      ticketId: despacho.ticketId,
+      detalle: despacho.resultado === null ? despacho.detalle : `${despacho.resultado.estado}: ${despacho.detalle}`,
     };
   }
 

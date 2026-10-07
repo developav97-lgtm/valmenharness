@@ -2724,19 +2724,29 @@ export function budgetCommand(
  */
 export async function journeyAdvanceCommand(
   flags: Readonly<Record<string, string | true>>,
-  opciones: { readonly home?: string; readonly execute?: Parameters<typeof avanzarJornada>[0]["execute"]; readonly ahora?: () => Date } = {},
+  opciones: {
+    readonly home?: string;
+    readonly execute?: Parameters<typeof avanzarJornada>[0]["execute"];
+    readonly ejecutarPreparacion?: Parameters<typeof avanzarJornada>[0]["ejecutarPreparacion"];
+    readonly ahora?: () => Date;
+  } = {},
 ): Promise<CommandResult> {
   const proyecto = typeof flags["project"] === "string" ? flags["project"] : undefined;
   if (proyecto === undefined) return error("journey advance requiere --project <id>.", EXIT_SCHEMA);
   try {
     const home = opciones.home ?? homedir();
     const project = resolveAuthorizedProject({ projectId: proyecto, home });
+    if (typeof flags["fase"] === "string" && flags["fase"] !== "preparacion" && flags["fase"] !== "ejecucion") {
+      return error("--fase admite: preparacion o ejecucion.", EXIT_SCHEMA);
+    }
     const avance = await avanzarJornada({
       project,
       home,
       ...(typeof flags["journey"] === "string" ? { journeyId: flags["journey"] } : {}),
       ...(opciones.execute === undefined ? {} : { execute: opciones.execute }),
+      ...(opciones.ejecutarPreparacion === undefined ? {} : { ejecutarPreparacion: opciones.ejecutarPreparacion }),
       ...(opciones.ahora === undefined ? {} : { ahora: opciones.ahora }),
+      ...(flags["fase"] === "preparacion" || flags["fase"] === "ejecucion" ? { fase: flags["fase"] } : {}),
     });
     return ok(`${avance.journeyId}: ${avance.estado}${avance.ticketId === null ? "" : ` (${avance.ticketId})`}. ${avance.detalle}\n`);
   } catch (caught) {

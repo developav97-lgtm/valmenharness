@@ -169,7 +169,7 @@ function recordActivity(
 }
 
 /** Mantiene los IDs portables y acotados aunque la puerta aporte IDs largos. */
-function dispatchEventId(ticketId: string, executionId: string, attemptId: string, state: string): string {
+export function dispatchEventId(ticketId: string, executionId: string, attemptId: string, state: string): string {
   // El ticket entra al digest: una jornada despacha varios tickets con la misma ejecución e
   // intento, y sin él el segundo ticket chocaba con el evento del primero.
   const digest = createHash("sha256")

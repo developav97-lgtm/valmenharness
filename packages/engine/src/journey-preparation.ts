@@ -1,0 +1,266 @@
+/**
+ * La fase de preparación de la jornada (R-JORN-003): de `intake` a `planned`, y se detiene.
+ *
+ * El despacho de ejecución solo toca tickets ya aprobados. La preparación es otra fase, con
+ * otro prompt y otras verificaciones, y con una prohibición que lo define: **no aprueba nada**.
+ * El ejecutor corre con `VALMEN_UNATTENDED=1` en su entorno, así que no puede registrar la
+ * aprobación del plan (R-CTRL-001); y lo que importa no se toma de su palabra: al terminar se
+ * lee del registro y del árbol de trabajo.
+ */
+import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+
+import { createExecutionIdentity, parseTicket } from "@valmen/core";
+
+import { autonomousExecutorCommand, type AutonomousExecutorCommand } from "./autonomous-run.js";
+import { autonomousConfig, findTicket, type RegistryPaths } from "./discovery.js";
+import { recordExecutionActivity } from "./execution-activity.js";
+import { dispatchEventId } from "./journey-dispatch.js";
+import { readJourneys } from "./journeys.js";
+import {
+  claimMachineCapacity,
+  reconcileMachineCapacity,
+  releaseMachineCapacity,
+} from "./machine-capacity.js";
+import { allDocuments } from "./mutate.js";
+import { aprobacionDePlanVigente, UNATTENDED_ENV } from "./plan-approval.js";
+import { type EntregaDeAviso } from "./journey-plan.js";
+import { type AuthorizedProject } from "./project-resolution.js";
+import { readReceipts, veredictoDeCompuerta } from "./receipts.js";
+
+export type EstadoDePreparacion =
+  | "plan-listo"
+  | "decision-pendiente"
+  | "ejecutor-fallo"
+  | "verificacion-fallo"
+  | "no-elegible";
+
+export interface ResultadoDePreparacion {
+  readonly ticketId: string;
+  readonly estado: EstadoDePreparacion;
+  readonly detalle: string;
+}
+
+export type EjecutorDePreparacion = (
+  comando: AutonomousExecutorCommand,
+  entorno: Readonly<Record<string, string>>,
+) => { readonly status: number; readonly stdout: string; readonly stderr: string };
+
+export interface PrepararTicketRequest {
+  readonly paths: RegistryPaths;
+  readonly ticketId: string;
+  readonly execute?: EjecutorDePreparacion | undefined;
+  readonly notificar?: ((texto: string) => EntregaDeAviso) | undefined;
+}
+
+/**
+ * El prompt de la fase de preparación.
+ *
+ * No ordena aprobar nada —ni una compuerta, ni el plan— ni mover el ticket a `approved`: la
+ * aprobación es de una persona (R-JORN-010). Pide solo transiciones legales de la fase.
+ */
+export function promptDePreparacion(ticketId: string): string {
+  return [
+    `Prepara exclusivamente el ticket ${ticketId} en el registro del proyecto.`,
+    `Empieza con \`valmen resume --id ${ticketId}\` y haz el paso que devuelva.`,
+    "Lee el ticket, AGENTS.md y las skills que el paso nombre antes de escribir.",
+    "Escribe el diagnóstico, el plan y los criterios en el ticket; valida con `valmen validate`.",
+    "Pasa el ticket a `analyzed` y corre la compuerta `analysis` con `--evaluator cascade`; después, a `planned` y corre la compuerta `plan` con `--evaluator cascade`.",
+    "Detente cuando el ticket esté en `planned` con los recibos de las dos compuertas.",
+    "No modifiques código de la aplicación, no hagas commit ni push, y no dejes ninguna decisión humana escrita por ti.",
+  ].join("\n");
+}
+
+const ORDEN_DE_RIESGO = ["low", "normal", "high", "critical"];
+
+function ejecutarDeVerdad(comando: AutonomousExecutorCommand, root: string, entorno: Readonly<Record<string, string>>) {
+  const resultado = spawnSync(comando.command, comando.args, {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    env: { ...process.env, ...entorno },
+  });
+  return { status: resultado.status ?? 1, stdout: resultado.stdout ?? "", stderr: resultado.stderr ?? "" };
+}
+
+/** Las líneas de `git status` del árbol, o `null` si no es un repositorio. */
+function estadoDelArbol(root: string): Set<string> | null {
+  if (!existsSync(join(root, ".git"))) return null;
+  const resultado = spawnSync("git", ["-C", root, "status", "--porcelain", "-uall"], { encoding: "utf8" });
+  if (resultado.status !== 0) return null;
+  return new Set(resultado.stdout.split("\n").filter((linea) => linea.trim() !== ""));
+}
+
+function fueraDelRegistro(antes: Set<string> | null, despues: Set<string> | null, ticketsDir: string): string[] {
+  if (antes === null || despues === null) return [];
+  const permitido = (ruta: string): boolean => ruta.startsWith(`${ticketsDir}/`) || ruta.startsWith(".valmen/");
+  return [...despues]
+    .filter((linea) => !antes.has(linea))
+    .map((linea) => linea.slice(3).trim().replace(/^"|"$/g, ""))
+    .filter((ruta) => !permitido(ruta));
+}
+
+/** El aviso de una decisión pendiente, en formato de opciones y efecto (R-JORN-003). */
+export function avisoDeDecision(ticketId: string, compuerta: string, resultado: string, motivo: string): string {
+  const resumen = motivo.replace(/\s+/g, " ").trim();
+  const bloqueo = resultado === "block";
+  return [
+    `Decisión: ${ticketId} — la compuerta ${compuerta} quedó en ${resultado}: ${resumen.length > 200 ? `${resumen.slice(0, 197)}...` : resumen}`,
+    bloqueo
+      ? "A) Autorizar seguir pese al bloqueo → el ticket continúa y tu frase queda registrada"
+      : "A) Aprobar la revisión → el ticket continúa a la siguiente fase y tu decisión queda registrada",
+    "B) Pedir corrección → el agente rehace el artefacto y vuelve a correr la compuerta",
+    bloqueo
+      ? "Recomiendo B: un bloqueo señala algo comprobable que conviene corregir antes de seguir."
+      : "Recomiendo A si el motivo es de redacción y no señala un hueco de contenido; si lo señala, B.",
+  ].join("\n");
+}
+
+/** Prepara un ticket: lanza el ejecutor y verifica en código lo que dejó. */
+export function prepararTicket(request: PrepararTicketRequest): ResultadoDePreparacion {
+  const { paths, ticketId } = request;
+  const politica = autonomousConfig(paths.root);
+  const ubicado = findTicket(paths, ticketId);
+  const no = (detalle: string): ResultadoDePreparacion => ({ ticketId, estado: "no-elegible", detalle });
+  if (!politica.enabled || politica.executor === null) {
+    return no("La autonomía está apagada o no declara un ejecutor seguro.");
+  }
+  if (ubicado === undefined) return no("El ticket no existe en el registro.");
+  const ticket = parseTicket(ubicado.text);
+  const razones: string[] = [];
+  if (ticket.fields.workflow_status !== "intake") razones.push("no está en intake");
+  if (!politica.eligible.types.includes(ticket.fields.type)) razones.push("su tipo no está habilitado");
+  if (ORDEN_DE_RIESGO.indexOf(ticket.fields.risk_level) > ORDEN_DE_RIESGO.indexOf(politica.eligible.maxRisk)) {
+    razones.push("supera el riesgo máximo");
+  }
+  if (politica.eligible.excludedModules.includes(ticket.fields.module.toLowerCase())) {
+    razones.push("su módulo está excluido");
+  }
+  if (razones.length > 0) return no(`El ticket ${ticketId} no es elegible para preparar: ${razones.join(", ")}.`);
+
+  const comando = autonomousExecutorCommand(politica.executor, paths.root, promptDePreparacion(ticketId));
+  // El ejecutor hereda la marca de sesión desatendida: no puede registrar la aprobación del plan.
+  const entorno = { [UNATTENDED_ENV]: "1" };
+  const antes = estadoDelArbol(paths.root);
+  const corrida = (request.execute ?? ((c, e) => ejecutarDeVerdad(c, paths.root, e)))(comando, entorno);
+  if (corrida.status !== 0) {
+    return { ticketId, estado: "ejecutor-fallo", detalle: corrida.stderr || "El ejecutor terminó con error." };
+  }
+
+  // Lo que importa se lee del registro, no de lo que el ejecutor diga.
+  const despues = findTicket(paths, ticketId);
+  const actual = despues === undefined ? ticket : parseTicket(despues.text);
+  if (aprobacionDePlanVigente(actual).estado === "vigente") {
+    return { ticketId, estado: "verificacion-fallo", detalle: "El ejecutor dejó una aprobación del plan registrada: la aprobación es de una persona." };
+  }
+  const tocados = fueraDelRegistro(antes, estadoDelArbol(paths.root), paths.ticketsDir);
+  if (tocados.length > 0) {
+    return { ticketId, estado: "verificacion-fallo", detalle: `El ejecutor modificó archivos fuera del registro: ${tocados.join(", ")}.` };
+  }
+
+  const recibos = readReceipts(paths, ticketId);
+  for (const compuerta of ["analysis", "plan"]) {
+    const veredicto = veredictoDeCompuerta(recibos, compuerta);
+    if (veredicto.tipo === "bloqueada" || veredicto.tipo === "espera-persona") {
+      const aviso = avisoDeDecision(ticketId, compuerta, veredicto.recibo.outcome, veredicto.recibo.reason);
+      const entrega = request.notificar?.(aviso);
+      return {
+        ticketId,
+        estado: "decision-pendiente",
+        detalle: `${aviso}${entrega === undefined ? "" : entrega.delivered ? "\n(Aviso enviado.)" : `\n(El aviso no se pudo enviar: ${entrega.detail}.)`}`,
+      };
+    }
+    if (veredicto.tipo === "sin-recibo") {
+      return { ticketId, estado: "verificacion-fallo", detalle: `Falta el recibo de la compuerta ${compuerta}.` };
+    }
+  }
+  if (actual.fields.workflow_status !== "planned") {
+    return { ticketId, estado: "verificacion-fallo", detalle: `El ticket quedó en ${actual.fields.workflow_status} y no en planned.` };
+  }
+  return { ticketId, estado: "plan-listo", detalle: "El plan está listo para aprobar; nadie lo aprobó." };
+}
+
+/** El primer ticket de la jornada que se puede preparar ahora, o `null`. */
+export function siguienteAPreparar(project: AuthorizedProject, journeyId: string): string | null {
+  const jornada = readJourneys(project).find((j) => j.journeyId === journeyId);
+  if (jornada === undefined) return null;
+  const estados = new Map(
+    allDocuments(project.paths).map(({ ticket, document }) => [ticket.id, document.fields.workflow_status]),
+  );
+  const preparado = (id: string): boolean => {
+    const estado = estados.get(id);
+    return estado !== undefined && estado !== "intake" && estado !== "analyzed";
+  };
+  const ordenados = [...jornada.tickets].sort((a, b) => a.priority - b.priority || a.order - b.order);
+  for (const ticket of ordenados) {
+    if (estados.get(ticket.ticketId) !== "intake") continue;
+    if (ticket.dependsOn.every(preparado)) return ticket.ticketId;
+  }
+  return null;
+}
+
+export interface DespachoDePreparacion {
+  readonly estado: "preparado" | "ya-despachado" | "sin-candidato";
+  readonly ticketId: string | null;
+  readonly resultado: ResultadoDePreparacion | null;
+  readonly detalle: string;
+}
+
+/** Reserva capacidad, registra la actividad y prepara el siguiente ticket de la jornada. */
+export function despacharPreparacion(request: {
+  readonly project: AuthorizedProject;
+  readonly home: string;
+  readonly journeyId: string;
+  readonly attemptId: string;
+  readonly ahora: Date;
+  readonly execute?: EjecutorDePreparacion | undefined;
+  readonly notificar?: ((texto: string) => EntregaDeAviso) | undefined;
+}): DespachoDePreparacion {
+  const { project } = request;
+  const politica = autonomousConfig(project.root);
+  if (!politica.enabled || politica.executor === null) {
+    return { estado: "sin-candidato", ticketId: null, resultado: null, detalle: "La autonomía está apagada o no declara un ejecutor seguro." };
+  }
+  const capacidad = reconcileMachineCapacity({ home: request.home });
+  const ticketId = siguienteAPreparar(project, request.journeyId);
+  if (ticketId === null) {
+    return { estado: "sin-candidato", ticketId: null, resultado: null, detalle: "No hay un ticket en intake con sus dependencias ya preparadas." };
+  }
+  if (capacidad.availableSlots < 1) {
+    return { estado: "sin-candidato", ticketId, resultado: null, detalle: "No hay capacidad disponible en la máquina." };
+  }
+  const identidad = createExecutionIdentity({ projectId: project.projectId, ticketId, executionId: request.journeyId });
+  const reserva = claimMachineCapacity({ home: request.home, project, identity: identidad, attemptId: request.attemptId });
+  if (!reserva.granted) {
+    return { estado: "sin-candidato", ticketId, resultado: null, detalle: "La capacidad se agotó antes de iniciar." };
+  }
+  if (!reserva.created) {
+    return { estado: "ya-despachado", ticketId, resultado: null, detalle: "La misma identidad ya conserva una reserva." };
+  }
+  const registrar = (estado: "started" | "finished" | "failed"): void => {
+    recordExecutionActivity(project, {
+      eventId: dispatchEventId(ticketId, identidad.executionId, request.attemptId, estado),
+      identity: identidad,
+      attemptId: request.attemptId,
+      state: estado,
+      source: "journey-preparation",
+      occurredAt: request.ahora.toISOString(),
+    });
+  };
+  registrar("started");
+  try {
+    const resultado = prepararTicket({
+      paths: project.paths,
+      ticketId,
+      ...(request.execute === undefined ? {} : { execute: request.execute }),
+      ...(request.notificar === undefined ? {} : { notificar: request.notificar }),
+    });
+    registrar(resultado.estado === "plan-listo" || resultado.estado === "decision-pendiente" ? "finished" : "failed");
+    return { estado: "preparado", ticketId, resultado, detalle: resultado.detalle };
+  } catch (error) {
+    registrar("failed");
+    releaseMachineCapacity({ home: request.home, project, identity: identidad, attemptId: request.attemptId });
+    throw error;
+  }
+}
