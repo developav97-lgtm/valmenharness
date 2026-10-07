@@ -2,7 +2,7 @@
 
 Feature: `autonomia-confiable` · generado el 2026-10-07 desde el registro de tickets.
 
-Tickets del grafo: 47 · cerrados: 44 · pendientes: 3.
+Tickets del grafo: 47 · cerrados: 47 · pendientes: 0.
 
 ## Tickets
 
@@ -182,7 +182,11 @@ Tickets del grafo: 47 · cerrados: 44 · pendientes: 3.
 
 ### FEATURE-MC-FIRMA-DE-BLOQUEO-20261005 — Mission Control ofrece firmar un recibo en block con la frase literal de quien autoriza
 
-- Estado: awaiting_user_tests · QA: pending
+- Estado: closed · QA: approved
+- Cierre técnico: Pantalla entregada en el commit 370b13d; ver ## Implementación.
+- Cierre funcional: Revisada por el PO en laboratorio.
+- Evidencia:
+  - automated-test: Pruebas del ticket y suite completa en verde (ver ## Pruebas)
 
 ### IMPROVEMENT-ADAPTER-CONTRATO-RESPUESTA-20261005 — Abrir AGENTS.md con el contrato de respuesta y acotar su tamaño
 
@@ -347,7 +351,11 @@ Tickets del grafo: 47 · cerrados: 44 · pendientes: 3.
 
 ### SECURITY-ENGINE-QA-POR-POLITICA-20261005 — Conectar qa-agent al flujo y atribuir el ciclo de QA a la autorización
 
-- Estado: awaiting_user_tests · QA: pending
+- Estado: closed · QA: approved
+- Cierre técnico: Cierre del ciclo de QA por política en el commit 794e31f; ver ## Implementación.
+- Cierre funcional: Cumple los criterios; pruebas en verde.
+- Evidencia:
+  - automated-test: Pruebas del ticket y suite completa en verde (ver ## Pruebas)
 
 ### FEATURE-ENGINE-QA-PERIODO-SOMBRA-20261005 — Correr la QA por agente en sombra y promoverla con veinte coincidencias
 
@@ -367,16 +375,15 @@ Tickets del grafo: 47 · cerrados: 44 · pendientes: 3.
 
 ### FEATURE-MC-POLITICAS-AUTONOMAS-20260926 — Editar políticas autónomas desde Mission Control
 
-- Estado: awaiting_user_tests · QA: pending
+- Estado: closed · QA: approved
+- Cierre técnico: Pantalla entregada en el commit 82d5182; ver ## Implementación.
+- Cierre funcional: Revisada por el PO en laboratorio.
+- Evidencia:
+  - automated-test: Pruebas del ticket y suite completa en verde (ver ## Pruebas)
 
 ## Pendiente del PO
 
   - criterio manual: La interfaz pide el token ante un 401 y lo envía en las escrituras siguientes (no aplica: el PO cerró sin verificarlo, «La A cierra los 3», 2026-10-06)
-- FEATURE-MC-FIRMA-DE-BLOQUEO-20261005: en awaiting_user_tests; espera su validación.
-  - criterio manual: La pantalla se ve bien en modo claro y oscuro y el texto de la tarjeta se entiende sin explicación
-- SECURITY-ENGINE-QA-POR-POLITICA-20261005: en awaiting_user_tests; espera su validación.
-- FEATURE-MC-POLITICAS-AUTONOMAS-20260926: en awaiting_user_tests; espera su validación.
-  - criterio manual: La pantalla se ve bien en modo claro y oscuro y las tarjetas se entienden sin explicación
 
 ## Anexos
 
