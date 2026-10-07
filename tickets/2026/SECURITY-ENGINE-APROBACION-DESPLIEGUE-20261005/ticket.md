@@ -4,8 +4,8 @@ id: SECURITY-ENGINE-APROBACION-DESPLIEGUE-20261005
 title: Exigir la frase con versión y consumir la aprobación de despliegue
 type: SECURITY
 module: ENGINE
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -77,7 +77,31 @@ Ninguno.
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación del cierre de SECURITY-ENGINE-APROBACION-DESPLIEGUE-20261005",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta cerrar su QA.",
+    "expected": "Los criterios del ticket se cumplen y sus pruebas dan el resultado esperado.",
+    "evidence": [
+      "EVIDENCE-001"
+    ],
+    "affected_files": [
+      "packages/engine/src/run-state.ts",
+      "packages/engine/src/process.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -98,34 +122,103 @@ Desde la raíz del repositorio, Node 24, sin red y sin ejecutar ningún desplieg
 
 Resultado de la ejecución del agente (2026-10-06): los tres comandos dieron lo esperado.
 
+- Resultado del PO: «La A cierra los 3» — Juan Andrade, 2026-10-06 (cierre de los tres SECURITY tras revisar el resumen de pruebas). Las pruebas del ticket las ejecutó el agente y dieron el resultado esperado (suite completa y pruebas del ticket en verde).
+
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-07",
+    "build_reference": "commit:e617bcd5606691f762d9c485a66445b4fbf04361",
+    "environment": "local (Node 24, vitest)",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-07",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "«La A cierra los 3» — Juan Andrade, 2026-10-06 (cierre de los tres SECURITY tras revisar el resumen de pruebas)"
+  }
+]
 ```
 
 ## Evidencia
 
 ```json
-[]
+[
+  {
+    "id": "EVIDENCE-001",
+    "date": "2026-10-07",
+    "kind": "automated-test",
+    "description": "Pruebas del ticket y suite completa en verde (ver ## Pruebas)",
+    "reference": "worktree:sha256:ebe5fc8ce39e22377abd273917c718d4c2715ffaeaab5caee09ab32ee1d78b72",
+    "point_id": "POINT-001"
+  }
+]
 ```
 
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-07",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "«La A cierra los 3» — Juan Andrade, 2026-10-06 (cierre de los tres SECURITY tras revisar el resumen de pruebas)"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-07",
+    "technical_summary": "run-state.ts exige la frase con la versión, ata la aprobación a corrida y versión y la consume; process.ts la usa en el paso de gate.",
+    "functional_summary": "Aprobar un despliegue exige la frase con la versión y vale una sola vez para su corrida.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "despliegue: cambia cómo se aprueba el gate deploy; las aprobaciones antiguas ya no lo habilitan"
+  }
+]
 ```
 
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-07",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Sesión que atendió varios tickets; sin números por ticket para no repartir a ojo un costo que no se midió.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:sesión de Claude Code, corrida delegada DEL-20261006-001",
+    "confidence": "medium",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -189,6 +282,132 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-06",
+    "at": "2026-10-07T03:03:08.469Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-06",
+    "at": "2026-10-07T03:03:08.695Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-06",
+    "at": "2026-10-07T03:03:08.901Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-06",
+    "at": "2026-10-07T03:03:09.106Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-06",
+    "at": "2026-10-07T03:03:09.312Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-10-06",
+    "at": "2026-10-07T03:03:09.547Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-06",
+    "at": "2026-10-07T03:03:09.804Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-06",
+    "at": "2026-10-07T03:03:10.015Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-06",
+    "at": "2026-10-07T03:03:10.223Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-06",
+    "at": "2026-10-07T03:03:10.431Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-06",
+    "at": "2026-10-07T03:03:10.635Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-06",
+    "at": "2026-10-07T03:03:10.841Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-06",
+    "at": "2026-10-07T03:03:11.821Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-06",
+    "at": "2026-10-07T03:03:12.051Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
