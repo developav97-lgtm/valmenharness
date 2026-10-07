@@ -130,6 +130,13 @@ export function hasSubstantivePlan(planSection: string): boolean {
 }
 
 /**
+ * Las cabeceras de compuerta del plan («Gate de plan y aprobación», «Gate de
+ * análisis») y el encabezado «aprobación del PO». Se reconocen por el inicio de
+ * la línea: un paso que cita `packages/gate/...` no es una cabecera.
+ */
+const ENCABEZADO_DE_COMPUERTA_RE = /^(?:gate de (?:plan|an[aá]lisis)\b|gate no exigible\b|aprobaci[oó]n del po\b)/;
+
+/**
  * `true` si el plan es proporcional y estructurado: al menos dos pasos reales
  * que no sean cabeceras de gate ni marcadores de pendiente.
  */
@@ -138,8 +145,7 @@ export function hasStructuredPlan(planSection: string): boolean {
     if (line.endsWith(":")) return false;
     const normalized = rstripChars(line.toLowerCase(), ". ;:");
     if (isPlaceholder(normalized, PLACEHOLDERS)) return false;
-    if (normalized.includes("gate")) return false;
-    if (normalized.includes("aprobación del po")) return false;
+    if (ENCABEZADO_DE_COMPUERTA_RE.test(normalized)) return false;
     return true;
   });
   return steps.length >= 2;
