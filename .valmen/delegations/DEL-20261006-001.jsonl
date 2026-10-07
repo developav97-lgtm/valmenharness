@@ -69,3 +69,7 @@
 {"kind":"stop","ticketId":"CHORE-ENGINE-SALIDA-COMPUERTAS-CONTROL-20261005","detail":"la compuerta plan dio BLOCK (falló criterio_02=0.06). Un BLOCK no se aprueba por delegación: se corrige el artefacto y se vuelve a correr, o se consulta al PO.","at":"2026-10-07T03:17:10.230Z"}
 {"kind":"note","ticketId":"CHORE-ENGINE-SALIDA-COMPUERTAS-CONTROL-20261005","detail":"avanzó a in_progress (approved → in_progress)","at":"2026-10-07T03:17:44.852Z"}
 {"kind":"close","ticketId":"CHORE-ENGINE-SALIDA-COMPUERTAS-CONTROL-20261005","detail":"QA aprobado y ticket cerrado","at":"2026-10-07T03:19:40.700Z"}
+{"kind":"stop","ticketId":"FEATURE-ENGINE-JORNADA-DIARIA-20261005","detail":"la compuerta analysis cayó en REVIEW (no se evaluó el impacto (decidieron 4 de 5 proposiciones; 1 son contexto y no emiten veredicto)). Si el criterio dice que no debe bloquear, repetí con --reason «por qué» y se aprueba por delegación; si no, es del PO.","at":"2026-10-07T03:21:13.270Z"}
+{"kind":"stop","ticketId":"FEATURE-ENGINE-JORNADA-DIARIA-20261005","detail":"la compuerta plan dio BLOCK (falló criterio_04=0.02). Un BLOCK no se aprueba por delegación: se corrige el artefacto y se vuelve a correr, o se consulta al PO.","at":"2026-10-07T03:22:21.059Z"}
+{"kind":"note","ticketId":"FEATURE-ENGINE-JORNADA-DIARIA-20261005","detail":"avanzó a in_progress (approved → in_progress)","at":"2026-10-07T03:22:59.955Z"}
+{"kind":"close","ticketId":"FEATURE-ENGINE-JORNADA-DIARIA-20261005","detail":"QA aprobado y ticket cerrado","at":"2026-10-07T03:26:50.593Z"}
