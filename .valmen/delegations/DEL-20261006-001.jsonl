@@ -93,3 +93,5 @@
 {"kind":"close","ticketId":"FEATURE-ENGINE-ELEGIBILIDAD-QA-20261005","detail":"QA aprobado y ticket cerrado","at":"2026-10-07T04:30:28.462Z"}
 {"kind":"note","ticketId":"INTEGRATION-HERMES-DESPACHO-JORNADA-20261001","detail":"avanzó a in_progress (approved → in_progress)","at":"2026-10-07T04:32:41.171Z"}
 {"kind":"close","ticketId":"INTEGRATION-HERMES-DESPACHO-JORNADA-20261001","detail":"QA aprobado y ticket cerrado","at":"2026-10-07T04:34:43.862Z"}
+{"kind":"note","ticketId":"FEATURE-ENGINE-QA-PERIODO-SOMBRA-20261005","detail":"avanzó a in_progress (approved → in_progress)","at":"2026-10-07T05:24:25.748Z"}
+{"kind":"close","ticketId":"FEATURE-ENGINE-QA-PERIODO-SOMBRA-20261005","detail":"QA aprobado y ticket cerrado","at":"2026-10-07T05:26:33.756Z"}
