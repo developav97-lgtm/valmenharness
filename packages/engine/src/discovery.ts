@@ -26,6 +26,8 @@ import {
   type VerifyDevConfig,
   readAutonomousConfig,
   readAllowedSchemas,
+  readGateThresholds,
+  type ThresholdOverride,
   readPlaywrightConfig,
   readTestSetupConfig,
   readVerifyDevConfig,
@@ -202,6 +204,12 @@ export function testSetupConfig(root: string): TestSetupConfig | null {
 export function allowedSchemas(root: string): string[] {
   const config = configDelProyecto(root);
   return config === null ? [] : readAllowedSchemas(config);
+}
+
+/** Los umbrales que el proyecto declara por compuerta, evaluador y proposición; vacía si no declara. */
+export function gateThresholds(root: string): readonly ThresholdOverride[] {
+  const config = configDelProyecto(root);
+  return config === null ? [] : readGateThresholds(config, ["analysis", "plan", "qa-mechanical"]);
 }
 
 /** El ambiente desplegado que respalda criterios `verify: dev`, o `null`. */

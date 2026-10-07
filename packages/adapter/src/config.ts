@@ -325,6 +325,100 @@ export function readGatePromotions(
   return Object.freeze(result);
 }
 
+/** Los evaluadores a los que un umbral puede apuntar. */
+export const THRESHOLD_EVALUATORS = ["command", "jev", "llm-judge", "cascade"] as const;
+
+/**
+ * Un umbral que el proyecto declara para una compuerta, un evaluador o una proposición.
+ *
+ * `approvedBy` y `reason` son de la persona que decidió el umbral: el motor no los
+ * escribe nunca, y una entrada sin ellos no se aplica (R-CPRE-010: aplicar un umbral
+ * nuevo lo decide una persona).
+ */
+export interface ThresholdOverride {
+  readonly gate: string;
+  readonly evaluator: string | null;
+  readonly proposition: string | null;
+  readonly approveAt: number;
+  readonly blockAt: number;
+  readonly approvedBy: string | null;
+  readonly reason: string | null;
+}
+
+/**
+ * Lee la lista `gate-thresholds` de `.valmen/config.yaml`.
+ *
+ * Es opt-in: sin la lista no hay umbrales declarados. Una entrada con una forma inválida
+ * falla nombrando la clave, igual que el resto del archivo: interpretar «casi bien» un
+ * umbral es decidir con un número que nadie escribió.
+ */
+export function readGateThresholds(
+  config: ConfigMap,
+  knownGateIds: readonly string[],
+): readonly ThresholdOverride[] {
+  const crudo = config["gate-thresholds"];
+  if (crudo === undefined) return [];
+  if (typeof crudo === "string" || !Array.isArray(crudo)) {
+    fail('config.yaml: "gate-thresholds" debe ser una lista de entradas.');
+  }
+  const permitidas = new Set([
+    "gate",
+    "evaluator",
+    "proposition",
+    "approve-at",
+    "block-at",
+    "approved-by",
+    "reason",
+  ]);
+  return crudo.map((entrada, indice): ThresholdOverride => {
+    const donde = `gate-thresholds[${indice}]`;
+    if (typeof entrada === "string" || Array.isArray(entrada)) {
+      fail(`config.yaml: "${donde}" debe ser un mapa.`);
+    }
+    for (const clave of Object.keys(entrada)) {
+      if (!permitidas.has(clave)) fail(`config.yaml: "${donde}.${clave}" no es una clave válida.`);
+    }
+    const gate = readString(entrada, "gate", "");
+    if (!knownGateIds.includes(gate)) {
+      fail(`config.yaml: "${donde}.gate" nombra una compuerta desconocida: "${gate}".`);
+    }
+    const evaluator = readString(entrada, "evaluator", "");
+    if (evaluator !== "" && !(THRESHOLD_EVALUATORS as readonly string[]).includes(evaluator)) {
+      fail(
+        `config.yaml: "${donde}.evaluator" nombra un evaluador desconocido: "${evaluator}". ` +
+          `Los válidos son ${THRESHOLD_EVALUATORS.join(", ")}.`,
+      );
+    }
+    const numero = (clave: string): number => {
+      const valor = Number(readString(entrada, clave, ""));
+      if (!Number.isFinite(valor) || valor < 0 || valor > 1) {
+        fail(`config.yaml: "${donde}.${clave}" debe ser un número entre 0 y 1.`);
+      }
+      return valor;
+    };
+    const approveAt = numero("approve-at");
+    const blockAt = numero("block-at");
+    if (blockAt >= approveAt) {
+      fail(
+        `config.yaml: "${donde}.block-at" (${blockAt}) debe ser menor que "approve-at" ` +
+          `(${approveAt}): sin separación no hay banda de revisión.`,
+      );
+    }
+    const proposition = readString(entrada, "proposition", "");
+    const approvedBy = readString(entrada, "approved-by", "");
+    const reason = readString(entrada, "reason", "");
+    return {
+      gate,
+      evaluator: evaluator === "" ? null : evaluator,
+      proposition: proposition === "" ? null : proposition,
+      approveAt,
+      blockAt,
+      approvedBy: approvedBy === "" ? null : approvedBy,
+      reason: reason === "" ? null : reason,
+    };
+  });
+}
+
 /**
  * La configuración del puente con Hermes.
  *

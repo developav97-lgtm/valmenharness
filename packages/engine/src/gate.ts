@@ -59,6 +59,7 @@ import {
   type RegistryPaths,
   configList,
   findTicket,
+  gateThresholds,
   playwrightConfig,
   testTimeout,
   verifyDevConfig,
@@ -69,6 +70,7 @@ import { interfazDelTicket } from "./interfaz.js";
 import { resolveGateMode } from "./gate-promotion.js";
 import { runTestSetup } from "./test-setup.js";
 import { decideInCode, renderPreReview, reviewBeforeGate } from "./revision-previa.js";
+import { type ThresholdOutcome, applyThresholds, validateThresholdTargets } from "./thresholds.js";
 
 /** Convierte preguntas ya validadas en proposiciones que el motor puro decide. */
 function configuredPropositions(
@@ -647,6 +649,8 @@ export async function runGate(
 
   let decision: GateDecision;
   let evaluation;
+  // Los umbrales que el proyecto declaró y una persona firmó, aplicados a esta evaluación.
+  let umbrales: ThresholdOutcome = { propositions: [], applied: [], ignored: [] };
 
   if (preparacion !== null && preparacion.failure !== null) {
     evaluation = {
@@ -727,8 +731,13 @@ export async function runGate(
     // presentable: una excepción sin capturar en la capa de comando revienta el
     // proceso y deja al usuario sin saber qué pasó.
     try {
+      // Los umbrales por evaluador y proposición se aplican con el evaluador que
+      // respondió, y solo los que una persona firmó (R-CPRE-010).
+      const declarados = gateThresholds(paths.root);
+      validateThresholdTargets(declarados);
+      umbrales = applyThresholds(gate.propositions, declarados, definition.id, evaluation.evaluator);
       decision = decide(
-        gate.propositions,
+        umbrales.propositions,
         evaluation.answers,
         gate.policy as GatePolicy,
         gate.isolatedBlockReview,
@@ -828,6 +837,7 @@ export async function runGate(
     ...(preparacion === null ? {} : { setup: preparacion }),
     evaluator: evaluation.evaluator,
     notApplicable: noAplican,
+    thresholds: umbrales.applied,
     evaluatorKey: huellaDelEvaluador,
     ...(forzado === undefined ? {} : { forced: forzado }),
   });
@@ -885,6 +895,19 @@ export async function runGate(
     lines.push(
       `    ${marca}  ${item.label.padEnd(38)} ${item.verdict ? "" : "descriptiva"}${peso}${descripcion}`.trimEnd(),
     );
+  }
+
+  // Los umbrales del proyecto: los aplicados dicen quién los decidió; los que no traen
+  // firma no se aplicaron y se dice, para que nadie crea que una entrada sin firma rige.
+  if (umbrales.applied.length > 0 || umbrales.ignored.length > 0) {
+    lines.push("", "  Umbrales del proyecto");
+    for (const u of umbrales.applied) {
+      lines.push(
+        `    ✓  ${u.proposition}: aprueba desde ${u.approveAt}, bloquea hasta ${u.blockAt}` +
+          `${u.evaluator === null ? "" : ` (${u.evaluator})`} — decidido por ${u.approvedBy}: ${u.reason}`,
+      );
+    }
+    for (const nota of umbrales.ignored) lines.push(`    ✗  ${nota}`);
   }
 
   // Las proposiciones que no aplican a este tipo de ticket: el código las separó y el

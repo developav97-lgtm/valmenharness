@@ -134,6 +134,16 @@ export interface SetupRecord {
   readonly failure: string | null;
 }
 
+/** Un umbral aplicado a una proposición, con quién lo decidió: lo que el recibo guarda. */
+export interface AppliedThreshold {
+  readonly proposition: string;
+  readonly evaluator: string | null;
+  readonly approveAt: number;
+  readonly blockAt: number;
+  readonly approvedBy: string;
+  readonly reason: string;
+}
+
 /** Un recibo de gate, append-only y completo. */
 export interface GateReceipt {
   readonly kind: "gate-receipt";
@@ -194,6 +204,8 @@ export interface GateReceipt {
   readonly setup?: SetupRecord;
   /** Con qué evaluador se produjo (`command`, `jev`, `llm-judge`, `cascade`). */
   readonly evaluator?: string;
+  /** Los umbrales del proyecto que se aplicaron, con quién los decidió y por qué (R-CPRE-010). */
+  readonly thresholds?: readonly AppliedThreshold[];
   /** Las proposiciones que no aplican al tipo del ticket: no se enviaron al evaluador (`no_aplica`). */
   readonly notApplicable?: readonly NotApplicableRecord[];
   /**
@@ -317,6 +329,7 @@ export interface ReceiptInput {
   /** La preparación del ambiente que corrió antes de los criterios. */
   readonly setup?: SetupRecord;
   readonly evaluator?: string;
+  readonly thresholds?: readonly AppliedThreshold[];
   readonly notApplicable?: readonly NotApplicableRecord[];
   readonly evaluatorKey?: string;
   readonly forced?: { readonly reason: string; readonly receiptId: string };
@@ -360,6 +373,9 @@ export function buildReceipt(input: ReceiptInput): GateReceipt {
       : { commandResults: input.commandResults }),
     ...(input.setup === undefined ? {} : { setup: input.setup }),
     ...(input.evaluator === undefined ? {} : { evaluator: input.evaluator }),
+    ...(input.thresholds === undefined || input.thresholds.length === 0
+      ? {}
+      : { thresholds: input.thresholds }),
     ...(input.notApplicable === undefined || input.notApplicable.length === 0
       ? {}
       : { notApplicable: input.notApplicable }),
