@@ -253,3 +253,58 @@ export function autorizacionQueCubre(
     ) ?? null
   );
 }
+
+// ── El cupo diario (R-QAAG-002) ──────────────────────────────────────────────
+
+export interface UsoDeCupo {
+  readonly kind: "qa-quota-use";
+  readonly authorizationId: string;
+  readonly ticketId: string;
+  readonly usedAt: string;
+}
+
+export function qaQuotaUsesPath(root: string): string {
+  return join(root, ".valmen", "qa", "uses.jsonl");
+}
+
+function leerUsos(root: string): UsoDeCupo[] {
+  const ruta = qaQuotaUsesPath(root);
+  if (!existsSync(ruta)) return [];
+  const usos: UsoDeCupo[] = [];
+  for (const linea of readFileSync(ruta, "utf8").split("\n")) {
+    if (linea.trim() === "") continue;
+    try {
+      const v = JSON.parse(linea) as UsoDeCupo;
+      if (v.kind === "qa-quota-use") usos.push(v);
+    } catch {
+      // Un renglón truncado no borra los anteriores.
+    }
+  }
+  return usos;
+}
+
+/** Anota que un ticket usó un cupo de la autorización. */
+export function registrarUsoDeCupo(request: {
+  readonly root: string;
+  readonly authorizationId: string;
+  readonly ticketId: string;
+  readonly ahora?: Date;
+}): UsoDeCupo {
+  const uso: UsoDeCupo = {
+    kind: "qa-quota-use",
+    authorizationId: request.authorizationId,
+    ticketId: request.ticketId,
+    usedAt: (request.ahora ?? new Date()).toISOString(),
+  };
+  const ruta = qaQuotaUsesPath(request.root);
+  mkdirSync(dirname(ruta), { recursive: true });
+  appendFileSync(ruta, `${JSON.stringify(uso)}\n`, "utf8");
+  return uso;
+}
+
+/** Cuántos cierres por política le quedan hoy (UTC) a la autorización. */
+export function cupoRestante(root: string, autorizacion: QaAuthorization, ahora: Date = new Date()): number {
+  const dia = ahora.toISOString().slice(0, 10);
+  const usados = leerUsos(root).filter((u) => u.authorizationId === autorizacion.id && u.usedAt.startsWith(dia)).length;
+  return Math.max(0, autorizacion.dailyQuota - usados);
+}

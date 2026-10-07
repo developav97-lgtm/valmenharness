@@ -112,6 +112,7 @@ import {
   journeyPlanCommand,
   planApproveCommand,
   qaAuthorizeCommand,
+  qaEligibilityCommand,
   precheckCommand,
   precisionCommand,
   thresholdsCommand,
@@ -224,6 +225,9 @@ Comandos:
                             avance no despacha otro ticket). Pensado para un disparador.
   journey notify-plans --project <id> --journey <id> [--to <destino>]
                             Emite un código de aprobación por plan listo y uno de lote, y los envía.
+  qa-eligibility --id <ID> [--base <commit>]
+                            Decide en código si el ticket es elegible para QA por agente (seis
+                            reglas, sin modelo). Sale con 3 si no lo es.
   qa-authorize create --actor <nombre> --quote "<frase>" --types <a,b> --modules <x,y>
                 [--max-risk low|normal] [--daily-quota <n>] [--valid-days <n>] [--source <canal>]
                             Crea la autorización permanente de QA por agente. Solo una persona:
@@ -636,6 +640,7 @@ export const VALUE_OPTIONS = [
   // `--id` y `--receipt`, que el token firmado ya trae.
   "--code",
   // La autorización de QA por agente: tipos, módulos, riesgo, cupo y vigencia.
+  "--base",
   "--types",
   "--modules",
   "--max-risk",
@@ -1928,6 +1933,8 @@ export async function run(argv: readonly string[]): Promise<number> {
                 : rest[0] === "clear-stop"
                 ? journeyClearStopCommand(options.flags)
                 : { stdout: "", stderr: "journey admite: plan, advance, install-trigger, notify-plans y clear-stop.\n", exitCode: EXIT_SCHEMA };
+    } else if (command === "qa-eligibility") {
+      result = qaEligibilityCommand(resolvePaths(options), options.flags);
     } else if (command === "qa-authorize") {
       result = qaAuthorizeCommand(resolvePaths(options).root, rest[0], options.flags);
     } else if (command === "plan-approve") {

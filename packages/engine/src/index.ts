@@ -17,6 +17,7 @@ export * from "./fases.js";
 export * from "./discovery.js";
 export * from "./plan-approval-batch.js";
 export * from "./qa-authorization.js";
+export * from "./qa-eligibility.js";
 export * from "./plan-approval.js";
 export * from "./project-resolution.js";
 export * from "./execution-events.js";

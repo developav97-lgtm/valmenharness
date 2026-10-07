@@ -62,6 +62,8 @@ import {
 import {
   type BudgetPolicy,
   aprobarPorCodigo,
+  archivosDelDiff,
+  elegibilidadQa,
   crearAutorizacion,
   leerAutorizaciones,
   revocarAutorizacion,
@@ -2908,6 +2910,39 @@ export function qaAuthorizeCommand(
       );
     }
     return error("qa-authorize admite: create, revoke o list.", EXIT_SCHEMA);
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/**
+ * `qa-eligibility --id <ID> [--base <commit>]`: muestra si un ticket es elegible para QA por agente.
+ *
+ * Decide en código —sin modelo— las seis reglas de R-QAAG-002 y sale con el código de invariante si
+ * el ticket no es elegible. Sin `--base` el diff se toma como vacío.
+ */
+export function qaEligibilityCommand(
+  paths: RegistryPaths,
+  flags: Readonly<Record<string, string | true>>,
+): CommandResult {
+  const id = typeof flags["id"] === "string" ? flags["id"] : "";
+  if (id === "") return error("qa-eligibility requiere --id <TICKET-ID>.", EXIT_SCHEMA);
+  try {
+    const base = typeof flags["base"] === "string" ? flags["base"] : null;
+    const resultado = elegibilidadQa({
+      paths,
+      ticketId: id,
+      archivosDelDiff: base === null ? [] : archivosDelDiff(paths.root, base),
+    });
+    const lineas = [
+      `Elegibilidad para QA por agente — ${id}: ${resultado.elegible ? "ELEGIBLE" : "NO ELEGIBLE"}`,
+      ...resultado.reglas.map((r) => `  ${r.cumple ? "✓" : "✗"} ${r.regla}: ${r.detalle}`),
+      ...(resultado.autorizacion === null ? [] : [`Respaldada por la autorización ${resultado.autorizacion.id}.`]),
+    ];
+    return resultado.elegible
+      ? ok(`${lineas.join("\n")}\n`)
+      : { stdout: `${lineas.join("\n")}\n`, stderr: "", exitCode: EXIT_INVARIANT };
   } catch (caught) {
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);
