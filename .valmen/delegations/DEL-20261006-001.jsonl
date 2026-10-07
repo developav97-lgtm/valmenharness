@@ -75,3 +75,5 @@
 {"kind":"close","ticketId":"FEATURE-ENGINE-JORNADA-DIARIA-20261005","detail":"QA aprobado y ticket cerrado","at":"2026-10-07T03:26:50.593Z"}
 {"kind":"note","ticketId":"FEATURE-CLI-AVANCE-JORNADA-20261005","detail":"avanzó a in_progress (analyzed → planned → approved → in_progress)","at":"2026-10-07T03:28:27.672Z"}
 {"kind":"close","ticketId":"FEATURE-CLI-AVANCE-JORNADA-20261005","detail":"QA aprobado y ticket cerrado","at":"2026-10-07T03:30:55.132Z"}
+{"kind":"note","ticketId":"FEATURE-ENGINE-JORNADA-PREPARACION-20261005","detail":"avanzó a in_progress (analyzed → planned → approved → in_progress)","at":"2026-10-07T03:32:36.418Z"}
+{"kind":"close","ticketId":"FEATURE-ENGINE-JORNADA-PREPARACION-20261005","detail":"QA aprobado y ticket cerrado","at":"2026-10-07T03:35:35.697Z"}
