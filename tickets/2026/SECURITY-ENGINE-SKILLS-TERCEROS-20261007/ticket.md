@@ -4,7 +4,7 @@ id: SECURITY-ENGINE-SKILLS-TERCEROS-20261007
 title: Declarar skills de terceros por proyecto con fuente, versión fijada y hash, sin instalar ni actualizar solas
 type: SECURITY
 module: ENGINE
-workflow_status: intake
+workflow_status: analyzed
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -40,43 +40,39 @@ Ninguno.
 
 ## Descripción funcional
 
-- Alcance:
-- Usuario o rol afectado:
-- Comportamiento actual:
-- Comportamiento esperado:
+- Alcance: poder declarar skills de terceros por proyecto (R-SKILL-001) con su fuente, una versión o commit fijado y el hash de su contenido, validar esa declaración al leer la configuración y listarla; sin instalar, descargar ni actualizar nada. Fuera de alcance: la revisión humana que las habilita (ticket siguiente), proyectar su contenido a los clientes y la integración de skills concretas.
+- Usuario o rol afectado: el responsable del proyecto que quiere usar skills de terceros sin asumir su riesgo a ciegas, y el agente, que no debe poder traer código nuevo a sus propios permisos.
+- Comportamiento actual: las skills del harness viven en `.valmen/skills/<id>/` y se proyectan con `readSkills` y `renderSkill` en `packages/adapter/src/skills.ts`; no existe una forma de declarar una skill ajena con su procedencia, y una skill de terceros copiada a mano a esa carpeta no deja constancia de dónde salió ni de qué versión es.
+- Comportamiento esperado: la clave `external-skills` de `.valmen/config.yaml` lista cada skill con `id`, `source` (URL de git o ruta), `version` (un tag o commit fijado, nunca una rama ni `latest`) y `sha256` del contenido; una declaración sin versión fijada o con una versión móvil se rechaza con el nombre de la skill; `valmen skills external` la lista con su estado («declarada», sin revisión todavía); el harness no descarga ni instala nada por sí mismo.
 
 ## Diagnóstico
 
-- Causa comprobada (con `ruta:línea`):
-- Hipótesis pendientes:
-- Consumidores afectados:
-- Archivos y flujo investigados:
-- Riesgos y compatibilidad:
-- Impactos de sync, migración, Docker o despliegue:
+- Archivos y flujo investigados: las skills propias se leen de `.valmen/skills/` con `readSkills` y se publican con `renderSkill` y `renderAllSkills` en `packages/adapter/src/skills.ts`; la deriva de las skills publicadas respecto del catálogo del harness se mide con `publicadas` y `derivaPublicada` en el mismo archivo; la configuración del proyecto se lee con `parseConfig` y lectores como `readQaAuthorizationSources` en `packages/adapter/src/config.ts`; los comandos del CLI se declaran en `packages/cli/src/main.ts`.
+- Causa raíz o hipótesis: el síntoma es que una skill de terceros entra al proyecto sin que quede escrito de dónde viene ni qué versión es, así que no se puede saber si lo que corre con los permisos del agente es lo que alguien revisó. La causa comprobada es que el modelo de skills del harness solo conoce las skills propias y las del catálogo, ambas versionadas por el propio harness; no tiene un tipo de skill ajena con procedencia y versión fijada. La seguridad sale de exigir versión fijada y hash antes de cualquier uso, y de que la declaración sea un archivo que una persona edita, no algo que el agente instale. Hipótesis a confirmar al implementar: que el formato de lista de mapas del analizador de configuración admita los campos propuestos.
+- Riesgos y compatibilidad: (a) es la puerta de entrada de código de terceros con los permisos del agente, así que se rechaza todo lo que no sea una versión fijada (una rama, `latest`, `main`, un rango); (b) declarar no habilita: la habilitación es el ticket siguiente, con revisión registrada; (c) Consumidores comprobados con búsqueda: nadie lee todavía una clave de skills externas; `readSkills` y la proyección no cambian; (d) un proyecto sin la clave no cambia.
+- Impactos de sync, migración, Docker o despliegue: ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación:
+- Gate de plan y aprobación: pendiente
+- Alcance: la declaración, su validación y su listado. Exclusiones: descargar o instalar, la revisión que habilita y la proyección a los clientes.
 - Pasos ordenados:
-  <!-- Cada paso nombra archivo, símbolo o comando, y los criterios que cubre, por ejemplo
-       «(C1, C2)». Un paso que no dice dónde ni con qué se toca no se puede ejecutar ni
-       revisar, y la compuerta lo lee así. -->
-  1.
-  2.
-- Impactos declarados:
-  <!-- Una línea por cada impacto que el ticket declara, con las palabras de su proposición:
-       sincronización (datos ya sincronizados y clientes que todavía no se actualizaron),
-       migración (orden de aplicación y reversión) o contenedores (imagen y publicación). -->
-- Rollback (obligatorio):
+  1. En `packages/adapter/src/config.ts` agregar `readExternalSkills(config)` y el tipo `ExternalSkill` (`id`, `source`, `version`, `sha256`): cada elemento exige los cuatro campos, un `id` válido y único, un `sha256` de 64 hex y una `version` fija (se rechazan `latest`, `main`, `master`, `HEAD`, rangos con `^`, `~`, `*` y cualquier rama); sin la clave devuelve una lista vacía; exportarla.
+  2. En `packages/engine/src/external-skills.ts` (nuevo) agregar `estadoDeSkillsExternas(root)`, que devuelve cada skill declarada con su estado («declarada» mientras no exista revisión) sin tocar el disco más que para leer la configuración; exportarlo desde `packages/engine/src/index.ts`.
+  3. En `packages/cli/src/commands.ts` y `packages/cli/src/main.ts` agregar `skills external` que lista las declaradas con su fuente, versión y estado, con su ayuda, y que no descarga ni instala nada.
+  4. Crear `tests/skills-externas.test.ts` con un caso por criterio; correr esas pruebas, `npx vitest run` y `npx tsc --noEmit -p tsconfig.json`.
+- Rollback: revertir el commit del ticket; ningún flujo usa todavía la clave y sin ella no hay cambios.
 
-<!-- Los criterios de la sección siguiente se numeran C1…Cn, con una afirmación verificable por criterio
-     —una frase con «y» son dos criterios—, y cada uno lleva debajo su anotación de
-     verificación: un comentario HTML que dice «test:» y el comando, o «verify: manual». La
-     sección no lleva comentarios dentro: un comentario con anotación se leería como la de un
-     criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] R-SKILL-001: Una skill de terceros DEBE declararse por proyecto con fuente y versión fijada
+- [ ] Una skill declarada con fuente, versión fijada y hash se lee y se lista con su estado
+      <!-- test: npx vitest run tests/skills-externas.test.ts -->
+- [ ] Una declaración sin versión, con una rama, `latest` o un rango, o sin hash, se rechaza con el nombre de la skill
+      <!-- test: npx vitest run tests/skills-externas.test.ts -->
+- [ ] Un identificador duplicado se rechaza y un proyecto sin la clave queda sin skills externas
+      <!-- test: npx vitest run tests/skills-externas.test.ts -->
+- [ ] Declarar o listar no descarga, instala ni actualiza nada
+      <!-- test: npx vitest run tests/skills-externas.test.ts -->
 
 ## Puntos
 
@@ -138,6 +134,15 @@ Sin publicar todavía.
     "action": "created",
     "actor": "cli",
     "details": "Ticket creado sin sobrescribir historial."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-002",
+    "date": "2026-10-07",
+    "at": "2026-10-07T18:23:00.114Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: intake -> analyzed."
   }
 ]
 ```
