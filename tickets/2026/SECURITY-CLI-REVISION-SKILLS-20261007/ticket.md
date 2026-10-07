@@ -4,7 +4,7 @@ id: SECURITY-CLI-REVISION-SKILLS-20261007
 title: Registrar la revisión de una persona y deshabilitar la skill si su contenido cambia
 type: SECURITY
 module: CLI
-workflow_status: intake
+workflow_status: analyzed
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -41,43 +41,39 @@ Ninguno.
 
 ## Descripción funcional
 
-- Alcance:
-- Usuario o rol afectado:
-- Comportamiento actual:
-- Comportamiento esperado:
+- Alcance: que una persona registre la revisión de una skill de terceros declarada (R-SKILL-002) y que el harness la deshabilite si su contenido cambia respecto del hash revisado: `valmen skills review <id>` guarda quién revisó, cuándo, con qué frase, qué permisos usa y el hash revisado; el contenido instalado se mide en `.valmen/external-skills/<id>/` y `valmen skills external` muestra el estado de cada skill y el motivo. Fuera de alcance: descargar o instalar la skill (una persona coloca el contenido), proyectarla a los clientes y las skills concretas.
+- Usuario o rol afectado: el responsable que habilita una skill de terceros, y el agente, que no puede revisarse a sí mismo ni habilitar una skill.
+- Comportamiento actual: una skill de terceros declarada en `external-skills` queda en estado «declarada» (`estadoDeSkillsExternas` en `packages/engine/src/external-skills.ts`); no existe una revisión registrada, no se mide el contenido y ninguna skill puede pasar de declarada a habilitada.
+- Comportamiento esperado: el estado de una skill es «declarada» (sin contenido en `.valmen/external-skills/<id>/`), «sin revisión» (hay contenido y no revisión), «habilitada» (hay revisión de una persona con la misma versión y el mismo hash que el contenido y que lo declarado) o «deshabilitada» con el motivo (el contenido cambió respecto del hash revisado, o el hash revisado no es el declarado); `valmen skills review` exige una sesión atendida, responsable, frase literal y los permisos que la skill usa, y solo se puede revisar contenido que coincide con el hash declarado; el registro es append-only.
 
 ## Diagnóstico
 
-- Causa comprobada (con `ruta:línea`):
-- Hipótesis pendientes:
-- Consumidores afectados:
-- Archivos y flujo investigados:
-- Riesgos y compatibilidad:
-- Impactos de sync, migración, Docker o despliegue:
+- Archivos y flujo investigados: la declaración se lee con `readExternalSkills` en `packages/adapter/src/config.ts` y su estado con `estadoDeSkillsExternas` en `packages/engine/src/external-skills.ts`; el comando que la muestra es `skillsExternalCommand` en `packages/cli/src/commands.ts`; la barrera de sesión desatendida es `assertSesionAtendida` en `packages/engine/src/plan-approval.ts`; el patrón de registro append-only con frase literal de una persona es `crearAutorizacion` en `packages/engine/src/qa-authorization.ts`.
+- Causa raíz o hipótesis: el síntoma es que una skill de terceros declarada nunca puede quedar habilitada con garantías, porque nada registra quién revisó qué contenido ni detecta que ese contenido cambió después. La causa comprobada es que `estadoDeSkillsExternas` solo conoce el estado «declarada» y que ningún módulo calcula el hash del contenido instalado ni guarda una revisión. La seguridad sale de atar la habilitación al hash exacto del contenido revisado y a una persona con su frase: cualquier cambio posterior invalida la revisión sin que nadie tenga que acordarse. Hipótesis a confirmar al implementar: que un hash estable del directorio (archivos ordenados por ruta relativa, con separadores POSIX) sea reproducible entre máquinas.
+- Riesgos y compatibilidad: (a) una revisión se hace sobre contenido que ya está en el disco, nunca sobre algo que el agente traiga; (b) el hash del directorio ignora la metadata del sistema de archivos y cubre rutas y bytes; (c) Consumidores comprobados con búsqueda: `estadoDeSkillsExternas` y `skillsExternalCommand` los llaman el CLI y las pruebas de skills externas, que deben seguir pasando con el estado «declarada» cuando no hay contenido; (d) un proyecto sin skills externas no cambia.
+- Impactos de sync, migración, Docker o despliegue: ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación:
+- Gate de plan y aprobación: pendiente
+- Alcance: el hash del contenido instalado, el registro de revisiones y los estados que se derivan. Exclusiones: descargar o instalar la skill y proyectarla a los clientes.
 - Pasos ordenados:
-  <!-- Cada paso nombra archivo, símbolo o comando, y los criterios que cubre, por ejemplo
-       «(C1, C2)». Un paso que no dice dónde ni con qué se toca no se puede ejecutar ni
-       revisar, y la compuerta lo lee así. -->
-  1.
-  2.
-- Impactos declarados:
-  <!-- Una línea por cada impacto que el ticket declara, con las palabras de su proposición:
-       sincronización (datos ya sincronizados y clientes que todavía no se actualizaron),
-       migración (orden de aplicación y reversión) o contenedores (imagen y publicación). -->
-- Rollback (obligatorio):
+  1. En `packages/engine/src/external-skills.ts` agregar `hashDeContenidoDeSkill(dir)` (sha256 sobre las rutas relativas ordenadas y los bytes de cada archivo regular, sin seguir enlaces simbólicos), `registrarRevisionDeSkill` (anexa a `.valmen/external-skills/reviews.jsonl`: id, versión, hash, actor, frase literal, permisos y fecha; exige sesión atendida con `assertSesionAtendida`, un responsable, una frase no vacía, al menos una línea de permisos —o «ninguno» explícito— y que el hash del contenido coincida con el `sha256` declarado) y `leerRevisionesDeSkills`.
+  2. En el mismo `packages/engine/src/external-skills.ts` extender `estadoDeSkillsExternas` para devolver «declarada», «sin-revisión», «habilitada» o «deshabilitada» con su motivo, comparando versión y hash de la última revisión contra lo declarado y contra el hash del contenido en `.valmen/external-skills/<id>/`.
+  3. En `packages/cli/src/commands.ts` y `packages/cli/src/main.ts` agregar `skills review <id> --actor … --quote … --permissions "…"` y mostrar en `skills external` el estado con su motivo, sin descargar ni instalar nada.
+  4. Crear `tests/revision-skills.test.ts` con un caso por criterio (sin contenido, sin revisión, revisión válida que habilita, contenido cambiado que deshabilita con su motivo, hash revisado distinto del declarado, sesión desatendida, frase o permisos vacíos y que el hash del directorio es estable y cubre rutas y bytes); correr esas pruebas, `npx vitest run tests/skills-externas.test.ts` y `npx vitest run`, y `npx tsc --noEmit -p tsconfig.json`.
+- Rollback: revertir el commit del ticket; sin revisiones el estado sigue siendo el de antes y el registro de revisiones es un archivo nuevo.
 
-<!-- Los criterios de la sección siguiente se numeran C1…Cn, con una afirmación verificable por criterio
-     —una frase con «y» son dos criterios—, y cada uno lleva debajo su anotación de
-     verificación: un comentario HTML que dice «test:» y el comando, o «verify: manual». La
-     sección no lleva comentarios dentro: un comentario con anotación se leería como la de un
-     criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] R-SKILL-002: Una skill de terceros DEBE tener una revisión registrada antes de habilitarse
+- [ ] Una persona registra la revisión de una skill con su frase y los permisos que usa, y la skill pasa a habilitada solo si el contenido coincide con el hash declarado
+      <!-- test: npx vitest run tests/revision-skills.test.ts -->
+- [ ] Si el contenido cambia respecto del hash revisado, la skill queda deshabilitada y el estado dice por qué
+      <!-- test: npx vitest run tests/revision-skills.test.ts -->
+- [ ] La revisión se rechaza en una sesión desatendida, sin responsable, sin frase o sin permisos declarados
+      <!-- test: npx vitest run tests/revision-skills.test.ts -->
+- [ ] Una skill declarada sin contenido o sin revisión no queda habilitada
+      <!-- test: npx vitest run tests/revision-skills.test.ts tests/skills-externas.test.ts -->
 
 ## Puntos
 
@@ -139,6 +135,15 @@ Sin publicar todavía.
     "action": "created",
     "actor": "cli",
     "details": "Ticket creado sin sobrescribir historial."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-002",
+    "date": "2026-10-07",
+    "at": "2026-10-07T18:40:04.467Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: intake -> analyzed."
   }
 ]
 ```
