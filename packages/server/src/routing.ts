@@ -24,15 +24,23 @@ import {
   type CascadeRouting,
   type Effort,
   type GateRouting,
+  type PerfilDeModelos,
   type Preset,
   type ResolvedRoute,
   type Routing,
   DEFAULT_GATE_EVALUATOR,
+  PERFILES_INCORPORADOS,
   PRESETS,
   ROLES,
+  type CatalogoDeProveedor,
   cascadeRoutingFor,
+  comprobarPerfilCompleto,
+  comprobarPerfilContraCatalogo,
   gateRoutingFor,
   parseRouting,
+  perfilesPath,
+  readProjectPerfiles,
+  renderPerfiles,
   routingPath,
   presetById,
   renderRouting,
@@ -40,7 +48,8 @@ import {
 } from "@valmen/adapter";
 import { atomicWrite, toFailure } from "@valmen/core";
 
-import { type ConfigDiffLine, diffLines } from "./config.js";
+import { type ConfigDiffLine, diffLines, readConfig, readProviderCandidates } from "./config.js";
+import { listProviderModels } from "./providers.js";
 
 /**
  * Ruta de `.valmen/routing.yaml`.
@@ -326,4 +335,79 @@ export function routingFromForm(input: {
 /** `true` si el proyecto ya tiene archivo de routing. */
 export function hasRouting(root: string): boolean {
   return existsSync(routingPath(root));
+}
+
+// ── Perfiles de modelos ─────────────────────────────────────────────────────
+
+interface OpcionesDePerfil {
+  readonly env?: NodeJS.ProcessEnv;
+  readonly filePath?: string;
+  readonly fetchImpl?: typeof fetch;
+}
+
+/**
+ * El catálogo de cada proveedor que usa el perfil: una consulta por proveedor
+ * distinto, con los `candidates` que el proyecto declara en `config.yaml`.
+ */
+export async function catalogoParaPerfil(
+  root: string,
+  perfil: PerfilDeModelos,
+  opciones: OpcionesDePerfil = {},
+): Promise<Record<string, CatalogoDeProveedor>> {
+  let config: ReturnType<typeof readConfig> | null = null;
+  try {
+    config = readConfig(root);
+  } catch {
+    config = null;
+  }
+  const proveedores = [...new Set(Object.values(perfil.roles).map((ruta) => ruta.provider))];
+  const catalogo: Record<string, CatalogoDeProveedor> = {};
+  for (const proveedor of proveedores) {
+    try {
+      const lista = await listProviderModels(proveedor, {
+        ...(opciones.env === undefined ? {} : { env: opciones.env }),
+        ...(opciones.filePath === undefined ? {} : { filePath: opciones.filePath }),
+        ...(opciones.fetchImpl === undefined ? {} : { fetchImpl: opciones.fetchImpl }),
+        candidates: config === null ? [] : readProviderCandidates(config, proveedor),
+      });
+      catalogo[proveedor] =
+        lista === null
+          ? null
+          : lista.ok
+            ? { ok: true, models: lista.models.map((modelo) => modelo.id) }
+            : { ok: false, error: lista.error };
+    } catch (error) {
+      catalogo[proveedor] = { ok: false, error: toFailure(error).message };
+    }
+  }
+  return catalogo;
+}
+
+/**
+ * Guarda un perfil del proyecto si está completo y cada modelo existe en el
+ * catálogo de su proveedor. Si algo falla, `.valmen/profiles.yaml` no se toca.
+ */
+export async function guardarPerfil(
+  root: string,
+  perfil: PerfilDeModelos,
+  opciones: OpcionesDePerfil = {},
+): Promise<{ readonly ok: boolean; readonly errores: string[]; readonly written: boolean }> {
+  if (PERFILES_INCORPORADOS.some((incorporado) => incorporado.id === perfil.id)) {
+    return {
+      ok: false,
+      errores: [`"${perfil.id}" es un perfil incorporado y no se puede sobrescribir.`],
+      written: false,
+    };
+  }
+  const incompletos = comprobarPerfilCompleto(perfil);
+  if (incompletos.length > 0) return { ok: false, errores: incompletos, written: false };
+  const errores = comprobarPerfilContraCatalogo(
+    perfil,
+    await catalogoParaPerfil(root, perfil, opciones),
+  );
+  if (errores.length > 0) return { ok: false, errores, written: false };
+
+  const guardados = readProjectPerfiles(root).filter((existente) => existente.id !== perfil.id);
+  atomicWrite(perfilesPath(root), renderPerfiles([...guardados, { ...perfil, origen: "proyecto" }]));
+  return { ok: true, errores: [], written: true };
 }
