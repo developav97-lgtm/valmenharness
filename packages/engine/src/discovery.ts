@@ -22,9 +22,12 @@ import {
   type ConfigMap,
   type AutonomousConfig,
   type PlaywrightConfig,
+  type TestSetupConfig,
   type VerifyDevConfig,
   readAutonomousConfig,
+  readAllowedSchemas,
   readPlaywrightConfig,
+  readTestSetupConfig,
   readVerifyDevConfig,
 } from "@valmen/adapter";
 
@@ -174,6 +177,31 @@ export function playwrightConfig(root: string): PlaywrightConfig | null {
   const documento = parseYamlSubset(texto, { fileName: ".valmen/config.yaml" });
   if (typeof documento !== "object" || Array.isArray(documento)) return null;
   return readPlaywrightConfig(documento as ConfigMap);
+}
+
+/** Lee `config.yaml` del proyecto como mapa, o `null` si no existe o la raíz no es un mapa. */
+function configDelProyecto(root: string): ConfigMap | null {
+  let texto: string;
+  try {
+    texto = readFileSync(join(root, ".valmen", "config.yaml"), "utf8");
+  } catch {
+    return null;
+  }
+  const documento = parseYamlSubset(texto, { fileName: ".valmen/config.yaml" });
+  if (typeof documento !== "object" || Array.isArray(documento)) return null;
+  return documento as ConfigMap;
+}
+
+/** La preparación del ambiente de pruebas declarada por el proyecto, o `null`. */
+export function testSetupConfig(root: string): TestSetupConfig | null {
+  const config = configDelProyecto(root);
+  return config === null ? null : readTestSetupConfig(config);
+}
+
+/** Los esquemas contra los que el proyecto permite migrar; vacía si no los declara. */
+export function allowedSchemas(root: string): string[] {
+  const config = configDelProyecto(root);
+  return config === null ? [] : readAllowedSchemas(config);
 }
 
 /** El ambiente desplegado que respalda criterios `verify: dev`, o `null`. */

@@ -503,6 +503,82 @@ export function readVerifyDevConfig(config: ConfigMap): VerifyDevConfig | null {
   };
 }
 
+/**
+ * La preparación del ambiente de pruebas que el proyecto declara.
+ *
+ * Son los comandos que dejan listo el ambiente antes de los criterios: migrar al
+ * esquema de pruebas, reutilizar la base (`--keepdb`), levantar un servicio. Salen de
+ * la configuración del proyecto y **nunca del ticket**: el ticket lo escribe quien la
+ * compuerta controla, y una migración es un cambio de datos.
+ */
+export interface TestSetupConfig {
+  /** El esquema de pruebas contra el que apunta la preparación. */
+  readonly schema: string;
+  /** Los comandos, en el orden en que se corren. */
+  readonly commands: readonly string[];
+  /** Tope por comando en milisegundos, o `null` para usar `test-timeout`. */
+  readonly timeoutMs: number | null;
+}
+
+/**
+ * Lee la sección `test-setup:` de `.valmen/config.yaml`.
+ *
+ * Es opt-in: sin la sección devuelve `null` y el proyecto no cambia. Declarada con una
+ * forma inválida falla nombrando la clave, igual que el resto del archivo: interpretar
+ * «casi bien» una preparación es migrar algo distinto de lo que se escribió.
+ */
+export function readTestSetupConfig(config: ConfigMap): TestSetupConfig | null {
+  if (config["test-setup"] === undefined) return null;
+  const setup = readMap(config, "test-setup");
+
+  const schema = readString(setup, "schema", "");
+  if (schema === "") {
+    fail(
+      'config.yaml: "test-setup.schema" es obligatorio: sin el esquema no se puede comprobar ' +
+        "que la preparación apunta a uno permitido.",
+    );
+  }
+  const commands = readList(setup, "commands", []);
+  if (commands.length === 0 || commands.some((comando) => comando.trim() === "")) {
+    fail('config.yaml: "test-setup.commands" debe ser una lista no vacía de comandos.');
+  }
+
+  let timeoutMs: number | null = null;
+  if (setup["timeout"] !== undefined) {
+    const segundos = Number(readString(setup, "timeout", ""));
+    if (!Number.isFinite(segundos) || segundos <= 0) {
+      fail('config.yaml: "test-setup.timeout" debe ser un número de segundos mayor que cero.');
+    }
+    timeoutMs = Math.round(segundos * 1000);
+  }
+  return { schema, commands, timeoutMs };
+}
+
+/** Lee `allowed-schemas`: los esquemas contra los que se permite migrar. Vacía si falta. */
+export function readAllowedSchemas(config: ConfigMap): string[] {
+  const lista = readList(config, "allowed-schemas", []);
+  if (lista.some((esquema) => esquema.trim() === "")) {
+    fail('config.yaml: "allowed-schemas" no admite elementos vacíos.');
+  }
+  return lista;
+}
+
+/**
+ * ¿Se rechaza esta preparación? Devuelve el motivo, o `null` si se acepta.
+ *
+ * Sin `allowed-schemas` no hay nada permitido: la ausencia de la lista rechaza, no
+ * habilita. Es la frontera que impide migrar contra un esquema que nadie autorizó.
+ */
+export function testSetupRefusal(
+  setup: TestSetupConfig,
+  allowedSchemas: readonly string[],
+): string | null {
+  if (allowedSchemas.includes(setup.schema)) return null;
+  return allowedSchemas.length === 0
+    ? `la preparación apunta al esquema «${setup.schema}» y el proyecto no declara allowed-schemas: no se ejecuta`
+    : `el esquema «${setup.schema}» no está en allowed-schemas (${allowedSchemas.join(", ")}): no se ejecuta`;
+}
+
 /** Condiciones que un proyecto puede exigir antes de ofrecer trabajo autónomo. */
 export const AUTONOMOUS_REQUIREMENTS = [
   "plan-approved",
