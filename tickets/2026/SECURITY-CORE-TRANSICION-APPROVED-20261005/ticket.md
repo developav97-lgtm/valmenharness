@@ -4,7 +4,7 @@ id: SECURITY-CORE-TRANSICION-APPROVED-20261005
 title: Exigir la aprobación registrada para entrar en approved
 type: SECURITY
 module: CORE
-workflow_status: planned
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -52,7 +52,7 @@ Ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan), Juan Andrade, 2026-10-06: «Dale si la A la que me recomendaste»; compuerta `plan` aprobada por el evaluador y registrada en su recibo.
 - Alcance: la exigencia en la transición, el registro en la corrida delegada, los textos de ayuda y los ajustes de pruebas. Exclusiones: `validate`, tickets ya aprobados y la barrera criptográfica del ejecutor.
 - Pasos ordenados:
   1. En `packages/engine/src/transition.ts` reemplazar, en la rama de `approved`, la comprobación de la línea por `aprobacionDePlanVigente(document)`: rechazar con `sin-aprobacion` o `plan-cambiado` y su motivo (con el comando `valmen approve-plan` completo); conservar la exigencia de la línea de constancia y del plan estructurado; cuando procede, anexar un evento que cite al aprobador y el hash.
@@ -64,17 +64,17 @@ Ninguno.
 
 ## Criterios de aceptación
 
-- [ ] Mover un ticket a `approved` con la frase en `## Plan` y sin aprobación registrada se rechaza y el mensaje dice cómo registrarla
+- [x] Mover un ticket a `approved` con la frase en `## Plan` y sin aprobación registrada se rechaza y el mensaje dice cómo registrarla
       <!-- test: npx vitest run tests/transicion-approved-registrada.test.ts -->
-- [ ] Si el plan cambia después de la aprobación, mover a `approved` se rechaza porque el hash no coincide
+- [x] Si el plan cambia después de la aprobación, mover a `approved` se rechaza porque el hash no coincide
       <!-- test: npx vitest run tests/transicion-approved-registrada.test.ts -->
-- [ ] Con la aprobación vigente la transición procede y su evento cita al aprobador
+- [x] Con la aprobación vigente la transición procede y su evento cita al aprobador
       <!-- test: npx vitest run tests/transicion-approved-registrada.test.ts -->
-- [ ] Los tickets que ya pasaron por `approved` siguen validando
+- [x] Los tickets que ya pasaron por `approved` siguen validando
       <!-- test: npx vitest run tests/transicion-approved-registrada.test.ts -->
-- [ ] La corrida delegada registra la aprobación con fuente `delegacion` y las palabras del PO
+- [x] La corrida delegada registra la aprobación con fuente `delegacion` y las palabras del PO
       <!-- test: npx vitest run tests/transicion-approved-registrada.test.ts -->
-- [ ] Una sesión desatendida no puede aprobar el plan que va a ejecutar
+- [x] Una sesión desatendida no puede aprobar el plan que va a ejecutar
       <!-- test: npx vitest run tests/transicion-approved-registrada.test.ts -->
 
 ## Puntos
@@ -85,11 +85,21 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+- `packages/engine/src/transition.ts`: la rama de `approved` exige `aprobacionDePlanVigente`: sin aprobación o con el plan cambiado se rechaza con el motivo y el comando `valmen approve-plan` completo; al proceder anexa el evento `plan-approval-verified` con el aprobador, la fuente y el hash. La línea de constancia y el plan estructurado se siguen pidiendo.
+- `packages/engine/src/plan-approval.ts`: opción `viaDelegacion` y `FUENTE_DELEGACION`: la corrida delegada puede usar la fuente `delegacion` sin que el proyecto la declare; la barrera de sesión desatendida aplica igual.
+- `packages/cli/src/delegation.ts`: `advanceDelegated` registra la aprobación (actor y frase de la delegación, fuente `delegacion`) antes de mover a `approved`.
+- `packages/engine/src/next-step.ts`: el paso de `planned` dice cómo registrar la aprobación; `.valmen/skills/planificacion/SKILL.md` documenta el comando, `plan-approval-sources` y la barrera (la proyección con `valmen sync` queda para quien la ejecute).
+- Pruebas: `tests/transicion-approved-registrada.test.ts` (nuevo, 6), `tests/helpers/aprobacion.ts` (ayudante), y ajustes en `etapas`, `firma-de-compuerta`, `modo-ask`, `mcp-server`, `next-step` y `delegation`.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Desde la raíz del repositorio, Node 24, sin red:
+
+1. `npx vitest run tests/transicion-approved-registrada.test.ts tests/delegation.test.ts` — esperado: 24 pruebas pasan.
+2. `npx vitest run` — esperado: 171 archivos pasan y 1 omitido; 2518 pruebas pasan, 0 fallan.
+3. `npx tsc --noEmit -p tsconfig.json` — sin salida.
+
+Resultado de la ejecución del agente (2026-10-06): los tres comandos dieron lo esperado.
 
 ## QA
 
@@ -155,6 +165,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-06",
+    "at": "2026-10-07T03:10:08.360Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-06",
+    "at": "2026-10-07T03:10:08.616Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-06",
+    "at": "2026-10-07T03:13:48.147Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
