@@ -4,7 +4,7 @@ id: SECURITY-ENGINE-CIERRE-AUTORIZADO-20260926
 title: Cerrar tickets solo con autorización permanente
 type: SECURITY
 module: ENGINE
-workflow_status: planned
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -47,7 +47,7 @@ Nota del registro (2026-10-06): la línea de R-S5-010 quedó truncada al materia
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan), Juan Andrade, 2026-10-06: «si apruebo los planes»; compuerta `plan` aprobada por el evaluador y registrada en su recibo.
 - Alcance: el registro de autorizaciones, su creación y revocación por CLI, la barrera para el agente y la herramienta MCP de solo lectura. Exclusiones: elegibilidad, la compuerta `qa-agent`, el cupo consumido y Mission Control.
 - Pasos ordenados:
   1. Crear `packages/engine/src/qa-authorization.ts` con el registro append-only `.valmen/qa/authorizations.jsonl`: `crearAutorizacion` (valida actor y frase no vacíos, tipos entre `BUGFIX`, `IMPROVEMENT`, `CHORE` y `FEATURE`, riesgo `low` o `normal`, cupo y vigencia positivos, fuente aceptada y sesión no desatendida; calcula el id y el hash de los campos), `revocarAutorizacion` (exige actor y motivo, la misma fuente aceptada y una sesión no desatendida que `crearAutorizacion`, y anexa la revocación), `autorizacionesVigentes(root, ahora)` y `autorizacionQueCubre(root, ticket, ahora)` (tipo, módulo, riesgo, vigencia y revocación al instante).
@@ -59,15 +59,15 @@ Nota del registro (2026-10-06): la línea de R-S5-010 quedó truncada al materia
 
 ## Criterios de aceptación
 
-- [ ] La autorización guarda tipos, módulos, riesgo máximo, cupo diario, vigencia y la frase literal de quien autoriza, con su id y su hash
+- [x] La autorización guarda tipos, módulos, riesgo máximo, cupo diario, vigencia y la frase literal de quien autoriza, con su id y su hash
       <!-- test: npx vitest run tests/autorizacion-qa.test.ts -->
-- [ ] Los tipos `SECURITY`, `SYNC`, `INTEGRATION` y `AGENT` y el riesgo alto se rechazan al crear
+- [x] Los tipos `SECURITY`, `SYNC`, `INTEGRATION` y `AGENT` y el riesgo alto se rechazan al crear
       <!-- test: npx vitest run tests/autorizacion-qa.test.ts -->
-- [ ] Una sesión desatendida y una fuente no declarada no pueden crear ni revocar una autorización
+- [x] Una sesión desatendida y una fuente no declarada no pueden crear ni revocar una autorización
       <!-- test: npx vitest run tests/autorizacion-qa.test.ts -->
-- [ ] La revocación vale desde ese momento y una autorización vencida no cubre ningún ticket
+- [x] La revocación vale desde ese momento y una autorización vencida no cubre ningún ticket
       <!-- test: npx vitest run tests/autorizacion-qa.test.ts -->
-- [ ] No existe una herramienta MCP que cree, amplíe o revoque una autorización
+- [x] No existe una herramienta MCP que cree, amplíe o revoque una autorización
       <!-- test: npx vitest run tests/autorizacion-qa.test.ts tests/mcp-server.test.ts -->
 
 ## Puntos
@@ -78,11 +78,22 @@ Nota del registro (2026-10-06): la línea de R-S5-010 quedó truncada al materia
 
 ## Implementación
 
-Pendiente.
+- `packages/engine/src/qa-authorization.ts` (nuevo): registro append-only `.valmen/qa/authorizations.jsonl`. `crearAutorizacion` guarda tipos (solo `BUGFIX`, `IMPROVEMENT`, `CHORE` y `FEATURE`; nunca `SECURITY`, `SYNC`, `INTEGRATION` ni `AGENT`), módulos concretos (sin comodín), riesgo máximo `low` o `normal`, cupo diario, vigencia, actor, **frase literal**, fuente e id, con un hash de sus campos; `revocarAutorizacion` exige actor y motivo y la misma fuente y sesión atendida que crear, y vale desde su instante; `leerAutorizaciones`, `autorizacionesVigentes` y `autorizacionQueCubre` (tipo, módulo, riesgo, vigencia y revocación). Una edición a mano rompe el hash y la autorización deja de valer; un renglón truncado no borra los anteriores. Ampliar es crear otra, con su propia frase.
+- `packages/adapter/src/config.ts` y `packages/engine/src/discovery.ts`: `qa-authorization-sources` (por defecto `cli` y `mission-control`; vacía o inválida falla nombrando la clave) y `qaAuthorizationSources`.
+- `packages/cli/src/commands.ts` y `main.ts`: `qa-authorize create`, `revoke` y `list` con su ayuda y banderas; crear y revocar salen con el código de invariante en sesión desatendida o desde una fuente no declarada.
+- `packages/mcp/src/tools.ts` y `packages/server/src/hermes.ts`: solo la herramienta de lectura `ver_autorizaciones_qa`; ninguna herramienta MCP crea, amplía ni revoca (lo fija una prueba).
+- `tests/autorizacion-qa.test.ts` (nuevo, 19); catálogo MCP a 53 herramientas.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Desde la raíz del repositorio, Node 24, sin red:
+
+1. `npx vitest run tests/autorizacion-qa.test.ts tests/mcp-server.test.ts tests/mcp-anotaciones.test.ts` — esperado: todas pasan.
+2. `npx vitest run` — esperado: 183 archivos pasan y 1 omitido; 2655 pruebas pasan, 0 fallan.
+3. `npx tsc --noEmit -p tsconfig.json` — sin salida.
+4. Manual (responsable, opcional): `valmen qa-authorize create --actor <tú> --quote "<tus palabras>" --types BUGFIX --modules <módulo>` y `valmen qa-authorize list`; con `VALMEN_UNATTENDED=1` el mismo comando debe rechazarse.
+
+Resultado de la ejecución del agente (2026-10-06): 1–3 dieron lo esperado.
 
 ## QA
 
@@ -147,6 +158,51 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-06",
+    "at": "2026-10-07T04:12:26.121Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"si apruebo los planes\",\"planHash\":\"sha256:09c26842ca2316ab0e9f779f0de290f88749165cca05dd50ec1e7508aa00e959\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-06",
+    "at": "2026-10-07T04:12:26.373Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:09c26842ca2316ab0e9f779f0de290f88749165cca05dd50ec1e7508aa00e959."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-06",
+    "at": "2026-10-07T04:12:26.373Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-06",
+    "at": "2026-10-07T04:12:26.648Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-06",
+    "at": "2026-10-07T04:22:25.929Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
