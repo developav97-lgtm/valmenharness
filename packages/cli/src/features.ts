@@ -353,7 +353,7 @@ export async function featureDecompose(
           // Y el de tiempo también: el tope por defecto de una llamada son 90
           // segundos, que alcanzan para una pregunta y no para esto —un grafo con
           // sus sprints, sus dependencias y su cobertura, razonado a esfuerzo
-          // alto—. Se corta a los cinco minutos en vez de a los noventa.
+          // alto—. Se corta a los quince minutos en vez de a los noventa.
           timeoutMs: TIMEOUT_DESCOMPOSICION_MS,
           effort: routing.effort,
           messages: [
@@ -483,9 +483,10 @@ function detachCommand(
  * Una descomposición no es una pregunta: el modelo razona, reparte requisitos en
  * tickets, decide dependencias y escribe la cobertura. El tope por defecto de una
  * llamada —90 segundos— se queda corto con un modelo que piensa a esfuerzo alto, y
- * el fallo se ve como un timeout que parece un problema del proveedor.
+ * el fallo se ve como un timeout que parece un problema del proveedor. Quince
+ * minutos: una spec de 70 requisitos no cupo en cinco (decidido por el PO el 2026-10-07).
  */
-const TIMEOUT_DESCOMPOSICION_MS = 300_000;
+const TIMEOUT_DESCOMPOSICION_MS = 900_000;
 
 export async function runFeature(
   root: string,
