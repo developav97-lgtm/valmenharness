@@ -113,6 +113,7 @@ import {
   planApproveCommand,
   approvalAuthorizeCommand,
   skillsExternalCommand,
+  skillsReviewCommand,
   qaAuthorizeCommand,
   qaAgentCommand,
   qaPolicyCloseCommand,
@@ -238,6 +239,8 @@ Comandos:
   qa-promote --actor <nombre> --quote "<frase>"
                             Decide en código si el ticket es elegible para QA por agente (seis
                             reglas, sin modelo). Sale con 3 si no lo es.
+  skills review <id> --actor <nombre> --quote "<frase>" --permissions "<permisos>"
+                            Registra la revisión de una persona sobre el contenido actual de la skill; la habilita solo si coincide con el hash declarado.
   skills external
                             Lista las skills de terceros declaradas en external-skills; no descarga ni instala nada.
   approval-authorize create --actor <nombre> --quote "<frase>" --types <a,b> --modules <x,y> [--max-risk <r>] [--impacts <i,j>] [--stages analysis,plan] [--mode on-approve|reviewer] [--daily-quota <n>] [--valid-days <n>]
@@ -667,6 +670,7 @@ export const VALUE_OPTIONS = [
   "--base",
   "--delivered",
   "--types",
+  "--permissions",
   "--impacts",
   "--stages",
   "--mode",
@@ -1975,7 +1979,9 @@ export async function run(argv: readonly string[]): Promise<number> {
       result =
         rest[0] === "external"
           ? skillsExternalCommand(resolvePaths(options).root)
-          : { stdout: "", stderr: "skills admite: external.\n", exitCode: EXIT_SCHEMA };
+          : rest[0] === "review"
+            ? skillsReviewCommand(resolvePaths(options).root, rest[1], options.flags)
+            : { stdout: "", stderr: "skills admite: external o review.\n", exitCode: EXIT_SCHEMA };
     } else if (command === "approval-authorize") {
       result = approvalAuthorizeCommand(resolvePaths(options).root, rest[0], options.flags);
     } else if (command === "qa-authorize") {

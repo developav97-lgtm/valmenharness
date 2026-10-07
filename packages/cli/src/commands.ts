@@ -74,6 +74,7 @@ import {
   promoverQaAgent,
   crearAutorizacion,
   estadoDeSkillsExternas,
+  registrarRevisionDeSkill,
   crearAutorizacionDeAprobacion,
   leerAutorizacionesDeAprobacion,
   revocarAutorizacionDeAprobacion,
@@ -2994,9 +2995,40 @@ export function skillsExternalCommand(root: string): CommandResult {
     const skills = estadoDeSkillsExternas(root);
     if (skills.length === 0) return ok("No hay skills de terceros declaradas (clave external-skills).\n");
     return ok(
-      skills.map((k) => `${k.id} · ${k.estado} · versión ${k.version} · ${k.source} · sha256:${k.sha256.slice(0, 12)}…`).join("\n") +
-        "\nDeclarar no instala ni habilita nada: la habilitación exige una revisión registrada.\n",
+      skills.map((k) => `${k.id} · ${k.estado} · versión ${k.version} · ${k.source} · sha256:${k.sha256.slice(0, 12)}…\n    ${k.motivo}`).join("\n") +
+        "\nDeclarar no instala ni habilita nada: la habilitación exige una revisión registrada sobre el hash del contenido.\n",
     );
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/**
+ * `skills review <id> --actor <nombre> --quote "<frase>" --permissions "<permisos>"`.
+ *
+ * Registra la revisión de una persona sobre el contenido actual de una skill de terceros; se rechaza
+ * en una sesión desatendida y si el contenido no coincide con el hash declarado.
+ */
+export function skillsReviewCommand(
+  root: string,
+  id: string | undefined,
+  flags: Readonly<Record<string, string | true>>,
+  opciones: { readonly ahora?: Date; readonly env?: Readonly<Record<string, string | undefined>> } = {},
+): CommandResult {
+  const t = (n: string): string => (typeof flags[n] === "string" ? (flags[n] as string) : "");
+  if (id === undefined || id === "") return error("skills review requiere el identificador de la skill.", EXIT_SCHEMA);
+  try {
+    const r = registrarRevisionDeSkill({
+      root,
+      id,
+      actor: t("actor"),
+      quote: t("quote"),
+      permissions: t("permissions"),
+      ...(opciones.ahora === undefined ? {} : { ahora: opciones.ahora }),
+      ...(opciones.env === undefined ? {} : { env: opciones.env }),
+    });
+    return ok(`Revisión de ${r.id} registrada por ${r.actor} sobre sha256:${r.sha256.slice(0, 12)}… (versión ${r.skillVersion}). Permisos: ${r.permissions}.\n`);
   } catch (caught) {
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);

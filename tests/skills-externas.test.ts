@@ -75,7 +75,7 @@ describe("declarar no instala nada", () => {
     writeFileSync(join(root, ".valmen", "config.yaml"), yaml(item(buena)), "utf8");
     const antes = readdirSync(root, { recursive: true }).sort();
     const estado = estadoDeSkillsExternas(root);
-    expect(estado).toEqual([{ ...buena, estado: "declarada" }]);
+    expect(estado).toEqual([{ ...buena, estado: "declarada", motivo: "no hay contenido en .valmen/external-skills/ponytail/" }]);
     const r = skillsExternalCommand(root);
     expect(r.exitCode).toBe(0);
     expect(r.stdout).toContain("ponytail · declarada · versión v1.2.0");
