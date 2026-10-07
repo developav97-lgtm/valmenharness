@@ -115,6 +115,7 @@ import {
   routingFromForm,
   writeRouting,
 } from "./routing.js";
+import { crearAutorizacionQa, listarAutorizacionesQa, revocarAutorizacionQa } from "./qa-autorizaciones.js";
 import { listFeatureRows, readFeatureDetail, summarizeFeatures } from "./features.js";
 import { guardarFotoEnTicket, leerLineaDeTiempo } from "./timeline.js";
 import { readExecutionPanel, readExecutionVisibleMessages } from "./execution-panel.js";
@@ -1634,6 +1635,18 @@ export async function handleApi(
     }
 
     return { status: 200, body: applyChanges(context.root, cambios) };
+  }
+
+  // GET/POST /api/qa/authorizations y /revoke  — la autorización de QA por agente (R-QAAG-001).
+  // Las escrituras ya pasaron por `exigirTokenEnEscritura`; el motor rechaza una sesión desatendida.
+  if (path === "/api/qa/authorizations" && method === "GET") {
+    return listarAutorizacionesQa(context.root);
+  }
+  if (path === "/api/qa/authorizations" && method === "POST") {
+    return crearAutorizacionQa(context.root, body, context.env);
+  }
+  if (path === "/api/qa/authorizations/revoke" && method === "POST") {
+    return revocarAutorizacionQa(context.root, body, context.env);
   }
 
   // POST /api/config/sync  — regenera los archivos proyectados

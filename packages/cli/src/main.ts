@@ -234,6 +234,12 @@ Comandos:
                 [--max-risk low|normal] [--daily-quota <n>] [--valid-days <n>] [--source <canal>]
                             Crea la autorización permanente de QA por agente. Solo una persona:
                             una sesión desatendida y una fuente no declarada se rechazan.
+  qa-authorize link --types <a,b> --modules <x,y> [--max-risk <r>] [--daily-quota <n>] [--valid-days <n>]
+                            Emite un código firmado de un solo uso (24 h) con esos términos congelados.
+  qa-authorize redeem --code <código> --actor <nombre> --quote "<frase>"
+                            Lo canjea; exige la fuente enlace-firmado en qa-authorization-sources.
+  qa-authorize revoke-code --code <código> --actor <nombre>
+                            Un código emitido y no canjeado deja de servir.
   qa-authorize revoke --id <QAA-…> --actor <nombre> --reason "<motivo>"
                             La revoca; vale desde ese momento. qa-authorize list las muestra.
   plan-approve --code <código> --actor <nombre> --quote "<frase>"
@@ -644,13 +650,13 @@ export const VALUE_OPTIONS = [
   "--code",
   // La autorización de QA por agente: tipos, módulos, riesgo, cupo y vigencia.
   "--base",
+  "--delivered",
   "--types",
   "--modules",
   "--max-risk",
   "--daily-quota",
   "--valid-days",
   // `hermes brief --dias N`: cuántos días hacia atrás se cuentan los cierres.
-  "--delivered",
   "--dias",
   // `provider` y `routing`: la puesta en marcha sin pasar por la pantalla. Es lo
   // que permite que un agente configure el proyecto —un equipo que trabaja dentro
@@ -1937,14 +1943,14 @@ export async function run(argv: readonly string[]): Promise<number> {
                 : rest[0] === "clear-stop"
                 ? journeyClearStopCommand(options.flags)
                 : { stdout: "", stderr: "journey admite: plan, advance, install-trigger, notify-plans y clear-stop.\n", exitCode: EXIT_SCHEMA };
+    } else if (command === "qa-agent") {
+      result = qaAgentCommand(resolvePaths(options), options.flags);
     } else if (command === "qa-eligibility") {
       result = qaEligibilityCommand(resolvePaths(options), options.flags);
     } else if (command === "qa-authorize") {
       result = qaAuthorizeCommand(resolvePaths(options).root, rest[0], options.flags);
     } else if (command === "plan-approve") {
       result = planApproveCommand(resolvePaths(options), options.flags);
-    } else if (command === "qa-agent") {
-      result = qaAgentCommand(resolvePaths(options), options.flags);
     } else if (command === "approve-plan") {
       result = approvePlanCommand(resolvePaths(options), options.flags);
     } else if (command === "precheck") {

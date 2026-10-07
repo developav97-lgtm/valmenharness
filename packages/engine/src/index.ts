@@ -100,3 +100,4 @@ export * from "./ask.js";
 export * from "./qa-agent-git.js";
 export * from "./qa-agent-receipt.js";
 export * from "./qa-agent.js";
+export * from "./qa-authorization-link.js";

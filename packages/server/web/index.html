@@ -1788,6 +1788,58 @@
         margin-top: 4px;
         word-break: break-word;
       }
+      .qa-agente {
+        background: var(--panel);
+        border: 1px solid var(--borde);
+        border-radius: 8px;
+        padding: 12px 14px;
+        margin: 16px 0;
+      }
+      .qa-agente .qa-fila {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 8px;
+        margin: 8px 0;
+      }
+      .qa-agente label {
+        display: grid;
+        gap: 4px;
+        font-size: 12px;
+        color: var(--tenue);
+      }
+      .qa-agente input {
+        font: inherit;
+        padding: 6px 8px;
+        border: 1px solid var(--borde);
+        border-radius: 6px;
+        background: var(--fondo);
+        color: inherit;
+      }
+      .qa-agente .qa-item {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 8px 0;
+        border-top: 1px solid var(--borde);
+        font-size: 13px;
+      }
+      .qa-agente .qa-estado {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--tenue);
+      }
+      .qa-agente .qa-estado.vigente {
+        color: var(--ok);
+      }
+      .qa-agente .qa-mensaje {
+        font-size: 13px;
+        margin-top: 6px;
+      }
+      .qa-agente .qa-mensaje.mal {
+        color: var(--error);
+      }
       .politicas {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -6975,7 +7027,97 @@
         acciones.append(salida, regenerar, guardar);
 
         cont.append(editor, error, el("h2", "Lo que el harness entiende"), interpretacion);
+        // QA por agente: quién autorizó qué, con su frase literal. Crear y revocar son
+        // escrituras de una persona: llevan el token del servidor y nunca van sin frase.
+        const qaAgente = el("div", undefined, "qa-agente");
+        const pintarQaAgente = async () => {
+          qaAgente.textContent = "";
+          qaAgente.append(el("div", "QA por agente", "titulo-politica"));
+          const mensaje = el("div", "", "qa-mensaje");
+          let datosQa;
+          try {
+            datosQa = await enviar("GET", "/api/qa/authorizations");
+          } catch (falla) {
+            qaAgente.append(el("div", String(falla.message ?? falla), "qa-mensaje mal"));
+            return;
+          }
+          const lista = datosQa.authorizations ?? [];
+          if (lista.length === 0) {
+            qaAgente.append(el("div", "No hay autorizaciones: la QA por agente está apagada.", "nota-politica"));
+          }
+          for (const a of lista) {
+            const fila = el("div", undefined, "qa-item");
+            const detalle = el(
+              "span",
+              `${a.id} · ${a.types.join(", ")} · ${a.modules.join(", ")} · riesgo hasta ${a.maxRisk} · cupo ${a.dailyQuota}/día · hasta ${a.validUntil.slice(0, 10)} · ${a.actor}: «${a.quote}»`,
+            );
+            const derecha = el("span");
+            derecha.append(el("span", a.estado, `qa-estado ${a.estado}`));
+            if (a.estado === "vigente") {
+              const revocar = el("button", "Revocar");
+              revocar.addEventListener("click", async () => {
+                const actor = prompt("¿Quién revoca? (tu nombre)");
+                if (actor === null || actor.trim() === "") return;
+                const frase = prompt("Escribe tu frase literal de revocación:");
+                if (frase === null || frase.trim() === "") return;
+                try {
+                  await enviar("POST", "/api/qa/authorizations/revoke", { id: a.id, actor, quote: frase });
+                  await pintarQaAgente();
+                } catch (falla) {
+                  mensaje.textContent = String(falla.message ?? falla);
+                  mensaje.className = "qa-mensaje mal";
+                }
+              });
+              derecha.append(revocar);
+            }
+            fila.append(detalle, derecha);
+            qaAgente.append(fila);
+          }
+          const campo = (etiqueta, valor, tipo = "text") => {
+            const entrada = el("input");
+            entrada.type = tipo;
+            entrada.value = valor;
+            const rotulo = el("label", etiqueta);
+            rotulo.append(entrada);
+            return { rotulo, entrada };
+          };
+          const tipos = campo("Tipos (BUGFIX, IMPROVEMENT, CHORE, FEATURE)", "BUGFIX");
+          const modulos = campo("Módulos (separados por coma)", "");
+          const riesgo = campo("Riesgo máximo (low o normal)", "normal");
+          const cupo = campo("Cupo diario", "1", "number");
+          const dias = campo("Vigencia en días", "30", "number");
+          const actor = campo("Responsable", "");
+          const frase = campo("Frase literal de quien autoriza", "");
+          const fila1 = el("div", undefined, "qa-fila");
+          fila1.append(tipos.rotulo, modulos.rotulo, riesgo.rotulo, cupo.rotulo, dias.rotulo);
+          const fila2 = el("div", undefined, "qa-fila");
+          fila2.append(actor.rotulo, frase.rotulo);
+          const crear = el("button", "Autorizar");
+          crear.addEventListener("click", async () => {
+            mensaje.className = "qa-mensaje";
+            try {
+              const r = await enviar("POST", "/api/qa/authorizations", {
+                actor: actor.entrada.value,
+                quote: frase.entrada.value,
+                types: tipos.entrada.value,
+                modules: modulos.entrada.value,
+                maxRisk: riesgo.entrada.value,
+                dailyQuota: Number(cupo.entrada.value),
+                validDays: Number(dias.entrada.value),
+              });
+              await pintarQaAgente();
+              qaAgente.append(el("div", `Autorización ${r.authorization.id} creada.`, "qa-mensaje"));
+            } catch (falla) {
+              mensaje.textContent = String(falla.message ?? falla);
+              mensaje.className = "qa-mensaje mal";
+            }
+          });
+          qaAgente.append(fila1, fila2, crear, mensaje);
+        };
+        pintarQaAgente();
+
         cont.append(el("h2", "Políticas autónomas"), politicas);
+        cont.append(el("h2", "Autorización de QA por agente"), qaAgente);
         cont.append(el("h2", "Diferencias antes de guardar"), diff, acciones);
         pintar(datos);
       }

@@ -68,6 +68,10 @@ import {
   elegibilidadQa,
   correrQaAgent,
   crearAutorizacion,
+  FUENTE_ENLACE_FIRMADO,
+  canjearCodigoDeAutorizacion,
+  emitirCodigoDeAutorizacion,
+  revocarCodigoDeAutorizacion,
   leerAutorizaciones,
   revocarAutorizacion,
   armarJornada,
@@ -2870,7 +2874,7 @@ export function qaAuthorizeCommand(
   root: string,
   accion: string | undefined,
   flags: Readonly<Record<string, string | true>>,
-  opciones: { readonly ahora?: Date; readonly env?: Readonly<Record<string, string | undefined>> } = {},
+  opciones: { readonly ahora?: Date; readonly env?: Readonly<Record<string, string | undefined>>; readonly secret?: string | null } = {},
 ): CommandResult {
   const t = (n: string): string => (typeof flags[n] === "string" ? (flags[n] as string) : "");
   const lista = (n: string): string[] => t(n).split(",").map((x) => x.trim()).filter((x) => x !== "");
@@ -2916,7 +2920,55 @@ export function qaAuthorizeCommand(
           .join("\n") + "\n",
       );
     }
-    return error("qa-authorize admite: create, revoke o list.", EXIT_SCHEMA);
+    if (accion === "link") {
+      const secret = opciones.secret === undefined ? approvalSecret() : opciones.secret;
+      if (secret === null) return error("No hay secreto para firmar el código (aprobacion.secret o VALMEN_APPROVAL_SECRET).", EXIT_SCHEMA);
+      if ((opciones.env ?? process.env)["VALMEN_UNATTENDED"] === "1") {
+        return error("Una sesión desatendida no puede emitir un código de autorización de QA: esa autoridad es de una persona.", EXIT_INVARIANT);
+      }
+      const e = emitirCodigoDeAutorizacion({
+        root,
+        secret,
+        terminos: {
+          types: lista("types"),
+          modules: lista("modules"),
+          maxRisk: t("max-risk") === "" ? "normal" : t("max-risk"),
+          dailyQuota: Number(t("daily-quota") === "" ? "1" : t("daily-quota")),
+          validDays: Number(t("valid-days") === "" ? "30" : t("valid-days")),
+        },
+        ...(opciones.ahora === undefined ? {} : { ahora: opciones.ahora }),
+      });
+      return ok(
+        `Código ${e.code} (un solo uso, vale hasta ${e.expiresAt}): tipos ${e.terminos.types.join(", ")}; módulos ${e.terminos.modules.join(", ")}; ` +
+          `riesgo hasta ${e.terminos.maxRisk}; cupo ${e.terminos.dailyQuota}/día; ${e.terminos.validDays} días.\n` +
+          `Canjearlo: valmen qa-authorize redeem --code ${e.code} --actor <tú> --quote "<tu frase>" (exige la fuente ${FUENTE_ENLACE_FIRMADO} en qa-authorization-sources).\n`,
+      );
+    }
+    if (accion === "redeem") {
+      const secret = opciones.secret === undefined ? approvalSecret() : opciones.secret;
+      if (secret === null) return error("No hay secreto para verificar el código (aprobacion.secret o VALMEN_APPROVAL_SECRET).", EXIT_SCHEMA);
+      const a = canjearCodigoDeAutorizacion({
+        root,
+        secret,
+        codigo: t("code"),
+        actor: t("actor"),
+        quote: t("quote"),
+        ...(opciones.ahora === undefined ? {} : { ahora: opciones.ahora }),
+        ...(opciones.env === undefined ? {} : { env: opciones.env }),
+      });
+      return ok(`Autorización ${a.id} creada por ${a.actor} con el código firmado; vigente hasta ${a.validUntil.slice(0, 10)}.\n`);
+    }
+    if (accion === "revoke-code") {
+      revocarCodigoDeAutorizacion({
+        root,
+        codigo: t("code"),
+        actor: t("actor"),
+        ...(opciones.ahora === undefined ? {} : { ahora: opciones.ahora }),
+        ...(opciones.env === undefined ? {} : { env: opciones.env }),
+      });
+      return ok(`Código ${t("code")} revocado: ya no se puede canjear.\n`);
+    }
+    return error("qa-authorize admite: create, revoke, list, link, redeem o revoke-code.", EXIT_SCHEMA);
   } catch (caught) {
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);
@@ -2948,6 +3000,38 @@ export function qaEligibilityCommand(
       ...(resultado.autorizacion === null ? [] : [`Respaldada por la autorización ${resultado.autorizacion.id}.`]),
     ];
     return resultado.elegible
+      ? ok(`${lineas.join("\n")}\n`)
+      : { stdout: `${lineas.join("\n")}\n`, stderr: "", exitCode: EXIT_INVARIANT };
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/**
+ * `qa-agent --id <ID> --base <commit> --delivered <commit>`: la compuerta de QA por agente.
+ *
+ * Prueba en un worktree limpio con la configuración del commit base (R-QAAG-003/004/005), anexa el
+ * recibo y sale con el código de invariante si no aprueba. No escribe en el ticket.
+ */
+export function qaAgentCommand(
+  paths: RegistryPaths,
+  flags: Readonly<Record<string, string | true>>,
+): CommandResult {
+  const texto = (n: string): string => (typeof flags[n] === "string" ? (flags[n] as string) : "");
+  const id = texto("id");
+  if (id === "" || texto("base") === "" || texto("delivered") === "") {
+    return error("qa-agent requiere --id <TICKET-ID>, --base <commit> y --delivered <commit>.", EXIT_SCHEMA);
+  }
+  try {
+    const r = correrQaAgent({ paths, ticketId: id, base: texto("base"), delivered: texto("delivered") });
+    const lineas = [
+      `qa-agent — ${id}: ${r.verdict === "approve" ? "APRUEBA" : "NO APRUEBA"}`,
+      ...r.reasons.map((m) => `  ✗ ${m}`),
+      ...(r.recibo === null ? [] : [`Contra el código base: ${r.recibo.resultadoContraBase}. Comandos: ${r.recibo.commands.length}.`]),
+      ...(r.reciboPath === null ? [] : [`Recibo anexado en ${r.reciboPath}`]),
+    ];
+    return r.verdict === "approve"
       ? ok(`${lineas.join("\n")}\n`)
       : { stdout: `${lineas.join("\n")}\n`, stderr: "", exitCode: EXIT_INVARIANT };
   } catch (caught) {
@@ -3008,38 +3092,6 @@ export function journeyInstallTriggerCommand(
   const request = {
     projectId: proyecto,
     everyMinutes: cadaCrudo,
-/**
- * `qa-agent --id <ID> --base <commit> --delivered <commit>`: la compuerta de QA por agente.
- *
- * Prueba en un worktree limpio con la configuración del commit base (R-QAAG-003/004/005), anexa el
- * recibo y sale con el código de invariante si no aprueba. No escribe en el ticket.
- */
-export function qaAgentCommand(
-  paths: RegistryPaths,
-  flags: Readonly<Record<string, string | true>>,
-): CommandResult {
-  const texto = (n: string): string => (typeof flags[n] === "string" ? (flags[n] as string) : "");
-  const id = texto("id");
-  if (id === "" || texto("base") === "" || texto("delivered") === "") {
-    return error("qa-agent requiere --id <TICKET-ID>, --base <commit> y --delivered <commit>.", EXIT_SCHEMA);
-  }
-  try {
-    const r = correrQaAgent({ paths, ticketId: id, base: texto("base"), delivered: texto("delivered") });
-    const lineas = [
-      `qa-agent — ${id}: ${r.verdict === "approve" ? "APRUEBA" : "NO APRUEBA"}`,
-      ...r.reasons.map((m) => `  ✗ ${m}`),
-      ...(r.recibo === null ? [] : [`Contra el código base: ${r.recibo.resultadoContraBase}. Comandos: ${r.recibo.commands.length}.`]),
-      ...(r.reciboPath === null ? [] : [`Recibo anexado en ${r.reciboPath}`]),
-    ];
-    return r.verdict === "approve"
-      ? ok(`${lineas.join("\n")}\n`)
-      : { stdout: `${lineas.join("\n")}\n`, stderr: "", exitCode: EXIT_INVARIANT };
-  } catch (caught) {
-    const failure = toFailure(caught);
-    return error(failure.message, failure.exitCode);
-  }
-}
-
     node: entorno.node ?? process.execPath,
     cliMain: entorno.cliMain ?? (process.argv[1] ?? "valmen"),
     logDir: join(home, "Library", "Logs"),
