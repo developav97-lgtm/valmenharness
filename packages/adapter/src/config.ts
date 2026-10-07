@@ -1072,12 +1072,18 @@ export function readIntegrationConfig(config: ConfigMap): IntegrationConfig {
 export interface QaAgentConfig {
   /** Comandos de la suite de regresión; cada uno debe estar también autorizado en `test-commands`. */
   readonly regressionCommands: readonly string[];
+  /** `shadow` (por defecto): corre y registra sin cerrar; `close`: puede cerrar si hay una promoción registrada. */
+  readonly mode: "shadow" | "close";
 }
 
 /** Lee `qa-agent.regression-commands`; sin la clave no hay regresión declarada. */
 export function readQaAgentConfig(config: ConfigMap): QaAgentConfig {
   const qa = config["qa-agent"] === undefined ? {} : readMap(config, "qa-agent");
-  return { regressionCommands: readList(qa, "regression-commands", []) };
+  const mode = readString(qa, "mode", "shadow");
+  if (mode !== "shadow" && mode !== "close") {
+    fail(`config.yaml: "qa-agent.mode" debe ser "shadow" o "close", no «${mode}».`);
+  }
+  return { regressionCommands: readList(qa, "regression-commands", []), mode };
 }
 
 /** Quién dispara el avance de la jornada (R-JORN-011). */

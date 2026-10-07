@@ -67,7 +67,11 @@ import {
   archivosDelDiff,
   elegibilidadQa,
   correrQaAgent,
+  TICKETS_PARA_PROMOVER,
   cerrarQaPorPolitica,
+  concordanciaEnSombra,
+  modoEfectivoDeQaAgent,
+  promoverQaAgent,
   crearAutorizacion,
   FUENTE_ENLACE_FIRMADO,
   canjearCodigoDeAutorizacion,
@@ -3003,6 +3007,43 @@ export function qaEligibilityCommand(
     return resultado.elegible
       ? ok(`${lineas.join("\n")}\n`)
       : { stdout: `${lineas.join("\n")}\n`, stderr: "", exitCode: EXIT_INVARIANT };
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/**
+ * `qa-shadow`: la concordancia del periodo en sombra (R-QAAG-008), por ticket, con el modo efectivo.
+ */
+export function qaShadowCommand(paths: RegistryPaths): CommandResult {
+  try {
+    const { comparaciones, discordantes } = concordanciaEnSombra(paths);
+    const modo = modoEfectivoDeQaAgent(paths);
+    const lineas = [
+      `QA por agente — modo efectivo: ${modo.modo}${modo.motivo === null ? "" : ` (${modo.motivo})`}`,
+      `Comparados: ${comparaciones.length} de ${TICKETS_PARA_PROMOVER} · discrepancias: ${discordantes.length}`,
+      ...comparaciones.map((c) => `  ${c.concordante ? "✓" : "✗"} ${c.ticketId}: agente ${c.agente}, responsable ${c.responsable}`),
+    ];
+    return ok(`${lineas.join("\n")}\n`);
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/** `qa-promote --actor <nombre> --quote "<frase>"`: promueve la política a cerrar tickets. */
+export function qaPromoteCommand(
+  paths: RegistryPaths,
+  flags: Readonly<Record<string, string | true>>,
+): CommandResult {
+  const texto = (n: string): string => (typeof flags[n] === "string" ? (flags[n] as string) : "");
+  try {
+    const p = promoverQaAgent({ paths, actor: texto("actor"), quote: texto("quote") });
+    return ok(
+      `Promoción registrada por ${p.actor} con ${p.evidence.total} ticket(s) concordantes. ` +
+        "Para que cierre, declara `qa-agent.mode: close` en .valmen/config.yaml; volver a sombra es poner `shadow`.\n",
+    );
   } catch (caught) {
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);

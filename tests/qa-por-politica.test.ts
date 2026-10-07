@@ -49,6 +49,7 @@ const CONFIG = [
   "  - node",
   "test-timeout: 20",
   "qa-agent:",
+  "  mode: close",
   "  regression-commands:",
   "    - node scripts/regresion.mjs",
   "",
@@ -104,9 +105,16 @@ const ticketMd = () => join(root, "tickets", "2026", ID, "ticket.md");
 const estado = (): string => parseTicket(readFileSync(ticketMd(), "utf8")).fields.workflow_status;
 const cerrar = (extra: Record<string, unknown> = {}) => cerrarQaPorPolitica({ paths: paths(), ticketId: ID, ahora: AHORA, ...extra });
 
+/** La política ya fue promovida (R-QAAG-008): sin eso se queda en sombra. */
+function promover(): void {
+  mkdirSync(join(root, ".valmen", "qa"), { recursive: true });
+  writeFileSync(join(root, ".valmen", "qa", "promotions.jsonl"), `${JSON.stringify({ kind: "qa-agent-promotion", actor: "Juan Andrade", quote: "Promuevo", at: AHORA.toISOString(), evidence: { total: 20, tickets: [] } })}\n`, "utf8");
+}
+
 /** Un ticket elegible con `qa-agent` aprobado: lo que el cierre por política exige. */
 function preparar(dailyQuota = 5) {
   const { base, delivered } = repo();
+  promover();
   ticket();
   const a = crearAutorizacion({
     root, actor: "Juan Andrade", quote: "Autorizo el cierre por agente", types: ["BUGFIX"], modules: ["pos"], maxRisk: "normal",
@@ -158,6 +166,7 @@ describe("lo que impide cerrar, sin dejar un ciclo a medias", () => {
 
   it("sin recibo de qa-agent", () => {
     repo();
+    promover();
     ticket();
     expect(() => cerrar()).toThrow(/No hay recibo de qa-agent/);
     sinCiclo();
@@ -193,7 +202,7 @@ describe("lo que impide cerrar, sin dejar un ciclo a medias", () => {
   it("si el último recibo no aprobó", () => {
     const { base, delivered } = preparar();
     // Un segundo recibo, posterior y bloqueado: el que manda es el último.
-    escribir(".valmen/config.yaml", "name: Demo\n");
+    escribir(".valmen/config.yaml", "name: Demo\nqa-agent:\n  mode: close\n");
     git("add", "-A");
     git("commit", "-q", "-m", "config sin comandos");
     const r = correrQaAgent({ paths: paths(), ticketId: ID, base, delivered: git("rev-parse", "HEAD"), ahora: AHORA });

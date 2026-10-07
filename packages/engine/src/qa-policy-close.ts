@@ -15,6 +15,7 @@ import { ejecutarGitDeQaAgent, type EjecutorGitQa } from "./qa-agent-git.js";
 import { ultimoReciboConLinea } from "./qa-agent-receipt.js";
 import { autorizacionQueCubre, cupoRestante, registrarUsoDeCupo } from "./qa-authorization.js";
 import { elegibilidadQa } from "./qa-eligibility.js";
+import { modoEfectivoDeQaAgent } from "./qa-shadow.js";
 import { transition } from "./transition.js";
 
 export interface CierrePorPolitica {
@@ -38,6 +39,12 @@ export function cerrarQaPorPolitica(request: {
     if (r.status !== 0) fail(`git ${args[0]} falló: ${r.stderr.trim()}`, EXIT_INVARIANT);
     return r.stdout.trim();
   };
+
+  // En sombra la QA por agente corre y registra, pero no cierra (R-QAAG-008).
+  const modo = modoEfectivoDeQaAgent(paths);
+  if (modo.modo !== "close") {
+    fail(`La QA por agente está en sombra: ${modo.motivo}. El responsable sigue aprobando; \`valmen qa-promote\` la promueve tras 20 tickets concordantes.`, EXIT_INVARIANT);
+  }
 
   const ubicado = findTicket(paths, ticketId);
   if (ubicado === undefined) fail(`No existe el ticket ${ticketId}.`, EXIT_INVARIANT);

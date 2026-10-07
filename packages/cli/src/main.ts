@@ -114,6 +114,8 @@ import {
   qaAuthorizeCommand,
   qaAgentCommand,
   qaPolicyCloseCommand,
+  qaPromoteCommand,
+  qaShadowCommand,
   qaEligibilityCommand,
   precheckCommand,
   precisionCommand,
@@ -230,6 +232,8 @@ Comandos:
   qa-eligibility --id <ID> [--base <commit>]
   qa-agent --id <ID> --base <commit> --delivered <commit>
   qa-policy-close --id <ID>
+  qa-shadow
+  qa-promote --actor <nombre> --quote "<frase>"
                             Decide en código si el ticket es elegible para QA por agente (seis
                             reglas, sin modelo). Sale con 3 si no lo es.
   qa-authorize create --actor <nombre> --quote "<frase>" --types <a,b> --modules <x,y>
@@ -1945,6 +1949,10 @@ export async function run(argv: readonly string[]): Promise<number> {
                 : rest[0] === "clear-stop"
                 ? journeyClearStopCommand(options.flags)
                 : { stdout: "", stderr: "journey admite: plan, advance, install-trigger, notify-plans y clear-stop.\n", exitCode: EXIT_SCHEMA };
+    } else if (command === "qa-shadow") {
+      result = qaShadowCommand(resolvePaths(options));
+    } else if (command === "qa-promote") {
+      result = qaPromoteCommand(resolvePaths(options), options.flags);
     } else if (command === "qa-policy-close") {
       result = qaPolicyCloseCommand(resolvePaths(options), options.flags);
     } else if (command === "qa-agent") {
