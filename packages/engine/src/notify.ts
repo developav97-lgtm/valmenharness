@@ -342,6 +342,8 @@ export interface BriefInput {
    * persona sin la información y sin el motivo, que es el peor de los dos mundos.
    */
   readonly notaConsumo: string | null;
+  /** La actividad de la jornada del día; sin ella el parte no cambia. */
+  readonly jornada?: BriefJornada | undefined;
 }
 
 /** Una lista con viñetas, o nada si está vacía. */
@@ -504,6 +506,55 @@ export function renderAutonomousStopNotification(
   };
 }
 
+/** Un ticket que llegó a las pruebas del responsable, listo para avisar (R-JORN-008). */
+export interface TestsReadyNotificationInput {
+  readonly ticketId: string;
+  readonly title: string;
+  /** Los comandos del contrato de pruebas, tal como están en `## Pruebas`. */
+  readonly commands: readonly string[];
+  /** La ruta del ticket, donde está el contrato completo. */
+  readonly contractPath: string;
+  readonly cycle: number;
+}
+
+/** El aviso de que un ticket espera las pruebas del responsable, con su contrato. */
+export function renderTestsReadyNotification(input: TestsReadyNotificationInput): NotificationPayload {
+  return {
+    key: `tests-ready:${input.ticketId}:${input.cycle}`,
+    subject: `Listo para probar · ${input.ticketId}`,
+    body: [
+      "✅ LISTO PARA TUS PRUEBAS",
+      "",
+      `  ticket   ${input.ticketId}`,
+      `  título   ${input.title}`,
+      "",
+      input.commands.length === 0
+        ? "El contrato de pruebas no trae comandos: léelo completo."
+        : "Comandos del contrato:",
+      ...input.commands.map((comando) => `    ${comando}`),
+      "",
+      `Contrato completo: ${input.contractPath} (sección ## Pruebas).`,
+      "Avisar que está listo no aprueba nada: el resultado de las pruebas es tuyo.",
+    ].join("\n"),
+  };
+}
+
+/** La actividad de la jornada del día, para el parte (R-JORN-008). */
+export interface BriefJornada {
+  /** Una línea por fase con sesiones hoy. */
+  readonly fases: readonly {
+    readonly fase: string;
+    readonly sesiones: number;
+    readonly modelos: readonly string[];
+    readonly duracionMs: number;
+    /** `null` si el cliente no reportó el costo: se dice, no se inventa. */
+    readonly costeUsd: number | null;
+  }[];
+  readonly esperanPruebas: readonly string[];
+  readonly esperanPlan: readonly string[];
+  readonly paradas: readonly string[];
+}
+
 /**
  * El parte: lo que pasó y lo que espera, en un mensaje.
  *
@@ -562,6 +613,25 @@ export function renderBrief(input: BriefInput): NotificationPayload {
     // Se dice lo que no se pudo calcular, en vez de omitirlo: un parte al que le
     // falta una línea sin explicar se lee como si esa línea no existiera.
     lineas.push(`💵 Sin el consumo: ${input.notaConsumo}`, "");
+  }
+
+  // La jornada del día: lo hecho por fase y los altos que esperan a una persona.
+  const jornada = input.jornada;
+  if (jornada !== undefined) {
+    const minutos = (ms: number): string => `${Math.max(1, Math.round(ms / 60_000))} min`;
+    lineas.push(
+      ...vinetas(
+        `🛠 Jornada de hoy — ${jornada.fases.reduce((n, f) => n + f.sesiones, 0)} sesión(es):`,
+        jornada.fases.map(
+          (f) =>
+            `${f.fase}: ${f.sesiones} sesión(es), ${f.modelos.join(", ")}, ${minutos(f.duracionMs)}, ` +
+            (f.costeUsd === null ? "costo sin reportar por el cliente" : `$${f.costeUsd.toFixed(4)}`),
+        ),
+      ),
+      ...vinetas(`🧪 ${jornada.esperanPruebas.length} esperan tus pruebas:`, jornada.esperanPruebas),
+      ...vinetas(`📝 ${jornada.esperanPlan.length} plan(es) esperan tu aprobación:`, jornada.esperanPlan),
+      ...vinetas(`⛔ ${jornada.paradas.length} parada(s) activa(s):`, jornada.paradas),
+    );
   }
 
   if (lineas.length === 2) {

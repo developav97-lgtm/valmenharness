@@ -250,6 +250,12 @@ export function contratoDePruebasEscrito(ticketText: string): boolean {
   return /`[^`\n]+`/.test(limpia);
 }
 
+/** Los comandos del contrato de pruebas: lo que va entre comillas invertidas en `## Pruebas`. */
+export function comandosDelContrato(ticketText: string): string[] {
+  const seccion = (parseTicket(ticketText).sections["Pruebas"] ?? "").replace(/<!--[\s\S]*?-->/g, "");
+  return [...seccion.matchAll(/`([^`\n]+)`/g)].map((m) => (m[1] as string).trim()).filter((c) => c !== "");
+}
+
 /**
  * Selecciona y ejecuta una única entrada, sin paralelismo ni reintentos, y deja el registro
  * de la sesión por fase (R-JORN-006).

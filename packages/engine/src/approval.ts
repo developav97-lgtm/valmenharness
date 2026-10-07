@@ -93,7 +93,21 @@ export type ApprovalLogEntry =
   | ConsumedApproval
   | UndeliveredApproval
   | ProcessNotice
-  | AutonomousStopNotice;
+  | AutonomousStopNotice
+  | TestsReadyNotice;
+
+/**
+ * El aviso de que un ticket llegó a las pruebas del responsable (R-JORN-008).
+ *
+ * `cycle` es cuántos ciclos de QA tenía el ticket al avisar: un ticket que se reabre y vuelve a
+ * las pruebas es otro aviso, y uno que sigue en el mismo ciclo no se repite.
+ */
+export interface TestsReadyNotice {
+  readonly kind: "tests-ready-notice";
+  readonly ticketId: string;
+  readonly cycle: number;
+  readonly notifiedAt: string;
+}
 
 /**
  * Un aviso de algo que se detuvo y que **no se decide a distancia**.
@@ -403,7 +417,8 @@ export function readApprovalLog(paths: RegistryPaths): ApprovalLogEntry[] {
         valor.kind === "approval-consumed" ||
         valor.kind === "approval-undelivered" ||
         valor.kind === "process-notice" ||
-        valor.kind === "autonomous-stop-notice"
+        valor.kind === "autonomous-stop-notice" ||
+        valor.kind === "tests-ready-notice"
       ) {
         entradas.push(valor);
       }
@@ -430,6 +445,15 @@ export function autonomousStopsAvisados(paths: RegistryPaths): Set<string> {
     readApprovalLog(paths)
       .filter((entry): entry is AutonomousStopNotice => entry.kind === "autonomous-stop-notice")
       .map((entry) => entry.receiptId),
+  );
+}
+
+/** Los avisos de pruebas listas ya entregados, como `ticket:ciclo`. */
+export function pruebasListasAvisadas(paths: RegistryPaths): Set<string> {
+  return new Set(
+    readApprovalLog(paths)
+      .filter((entry): entry is TestsReadyNotice => entry.kind === "tests-ready-notice")
+      .map((entry) => `${entry.ticketId}:${entry.cycle}`),
   );
 }
 
@@ -518,7 +542,7 @@ export function ultimoIntento(
     // Un aviso de proceso no tiene código y no entra en esta cuenta: su vida es
     // otra —se avisa una vez y la corrida sigue detenida— y mezclarlo movería
     // la ventana de reintento de un gate sin motivo.
-    if (e.kind === "process-notice" || e.kind === "autonomous-stop-notice") return [];
+    if (e.kind === "process-notice" || e.kind === "autonomous-stop-notice" || e.kind === "tests-ready-notice") return [];
     if (!codigos.has(e.code)) return [];
     if (e.kind === "approval-issued") return [e.issuedAt];
     if (e.kind === "approval-undelivered") return [e.attemptedAt];

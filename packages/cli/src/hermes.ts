@@ -64,6 +64,11 @@ import { blockOf, credentialsPath, fieldOf } from "@valmen/credentials";
 import {
   appendApproval,
   autonomousStopsAvisados,
+  comandosDelContrato,
+  leerFases,
+  paradasActivas,
+  pruebasListasAvisadas,
+  renderTestsReadyNotification,
   buildGateState,
   corridasAvisadas,
   currentReceipts,
@@ -86,6 +91,7 @@ import {
   verifyApproval,
   type BriefGate,
   type BriefInput,
+  type BriefJornada,
   type CeilingInput,
   type CommandRunner,
   type PendingApproval,
@@ -704,6 +710,15 @@ export type PendienteDeAvisar =
       readonly runId: string;
       readonly processId: string;
       readonly step: string;
+    }
+  | {
+      /** Un ticket que llegó a las pruebas del responsable (R-JORN-008). */
+      readonly kind: "pruebas-listas";
+      readonly ticket: string;
+      readonly title: string;
+      readonly cycle: number;
+      readonly commands: readonly string[];
+      readonly contractPath: string;
     };
 
 export function pendientesDeAvisar(paths: RegistryPaths, now: Date): PendienteDeAvisar[] {
@@ -761,6 +776,26 @@ export function pendientesDeAvisar(paths: RegistryPaths, now: Date): PendienteDe
       reason: stop.reason,
       detail: stop.detail,
       stoppedAt: stop.stoppedAt,
+    });
+  }
+
+  // Un ticket que llega a `awaiting_user_tests` espera a una persona igual que una compuerta.
+  // La prueba de que ya se avisó es el registro, por ciclo de QA: un ticket reabierto que
+  // vuelve a las pruebas es otro aviso, y el mismo ciclo no se repite.
+  const probadosAvisados = pruebasListasAvisadas(paths);
+  for (const fila of listTickets(paths)) {
+    if (fila.workflowStatus !== "awaiting_user_tests") continue;
+    const ubicado = findTicket(paths, fila.id);
+    if (ubicado === undefined) continue;
+    const ciclo = parseTicket(ubicado.text).blocks.QA?.length ?? 0;
+    if (probadosAvisados.has(`${fila.id}:${ciclo}`)) continue;
+    salida.push({
+      kind: "pruebas-listas",
+      ticket: fila.id,
+      title: fila.title,
+      cycle: ciclo,
+      commands: comandosDelContrato(ubicado.text),
+      contractPath: ubicado.relativePath,
     });
   }
 
@@ -866,6 +901,34 @@ export function hermesNotifyPendientes(request: NotifyPendingRequest): CommandRe
         notifiedAt: request.now.toISOString(),
       });
       notificados.push(`${pendiente.ticket} · parada ${pendiente.reason}`);
+      continue;
+    }
+
+    if (pendiente.kind === "pruebas-listas") {
+      const entrega = hermesSendChannel({
+        target: to,
+        ...(request.runner === undefined ? {} : { runner: request.runner }),
+      }).notify(
+        renderTestsReadyNotification({
+          ticketId: pendiente.ticket,
+          title: pendiente.title,
+          commands: pendiente.commands,
+          contractPath: pendiente.contractPath,
+          cycle: pendiente.cycle,
+        }),
+      );
+      if (!entrega.delivered) {
+        // No se anota: un aviso que no salió no cuenta como avisado y se reintenta.
+        fallidos.push({ que: `${pendiente.ticket} · pruebas listas`, motivo: entrega.detail });
+        continue;
+      }
+      appendApproval(request.paths, {
+        kind: "tests-ready-notice",
+        ticketId: pendiente.ticket,
+        cycle: pendiente.cycle,
+        notifiedAt: request.now.toISOString(),
+      });
+      notificados.push(`${pendiente.ticket} · listo para probar`);
       continue;
     }
 
@@ -1139,7 +1202,33 @@ export function armarParte(request: BriefRequest): BriefInput {
   const config = readIfExists(join(request.paths.root, ".valmen", "config.yaml"));
   const nombre = config === null ? "" : readString(parseConfig(config), "name", "");
 
+  // La jornada del día (R-JORN-008): solo si el proyecto la usa; sin ella el parte es el de siempre.
+  const hoy = request.now.toISOString().slice(0, 10);
+  const sesiones = leerFases(request.paths.root).filter((f) => f.registradoEn.startsWith(hoy));
+  const paradas = paradasActivas(request.paths);
+  const usaJornadas = existsSync(join(request.paths.root, ".valmen", "journeys", "events.jsonl")) || sesiones.length > 0;
+  let jornada: BriefJornada | undefined;
+  if (usaJornadas) {
+    const porFase = new Map<string, typeof sesiones>();
+    for (const sesion of sesiones) porFase.set(sesion.fase, [...(porFase.get(sesion.fase) ?? []), sesion]);
+    const filas = listTickets(request.paths);
+    jornada = {
+      fases: [...porFase.entries()].map(([fase, lista]) => ({
+        fase,
+        sesiones: lista.length,
+        modelos: [...new Set(lista.map((s2) => s2.modelo))],
+        duracionMs: lista.reduce((total, s2) => total + s2.duracionMs, 0),
+        // El cliente no reporta el costo por sesión (codex va por suscripción): no se inventa.
+        costeUsd: null,
+      })),
+      esperanPruebas: filas.filter((f) => f.workflowStatus === "awaiting_user_tests").map((f) => f.id),
+      esperanPlan: filas.filter((f) => f.workflowStatus === "planned").map((f) => f.id),
+      paradas: paradas.map((p) => `${p.ticketId} · ${p.reason}`),
+    };
+  }
+
   return {
+    ...(jornada === undefined ? {} : { jornada }),
     proyecto: nombre === "" ? basenameSeguro(request.paths.root) : nombre,
     fecha: request.now.toISOString().slice(0, 10),
     gates,
