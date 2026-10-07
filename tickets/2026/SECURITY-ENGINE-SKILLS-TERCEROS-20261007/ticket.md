@@ -4,7 +4,7 @@ id: SECURITY-ENGINE-SKILLS-TERCEROS-20261007
 title: Declarar skills de terceros por proyecto con fuente, versión fijada y hash, sin instalar ni actualizar solas
 type: SECURITY
 module: ENGINE
-workflow_status: analyzed
+workflow_status: planned
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -49,7 +49,7 @@ Ninguno.
 
 - Archivos y flujo investigados: las skills propias se leen de `.valmen/skills/` con `readSkills` y se publican con `renderSkill` y `renderAllSkills` en `packages/adapter/src/skills.ts`; la deriva de las skills publicadas respecto del catálogo del harness se mide con `publicadas` y `derivaPublicada` en el mismo archivo; la configuración del proyecto se lee con `parseConfig` y lectores como `readQaAuthorizationSources` en `packages/adapter/src/config.ts`; los comandos del CLI se declaran en `packages/cli/src/main.ts`.
 - Causa raíz o hipótesis: el síntoma es que una skill de terceros entra al proyecto sin que quede escrito de dónde viene ni qué versión es, así que no se puede saber si lo que corre con los permisos del agente es lo que alguien revisó. La causa comprobada es que el modelo de skills del harness solo conoce las skills propias y las del catálogo, ambas versionadas por el propio harness; no tiene un tipo de skill ajena con procedencia y versión fijada. La seguridad sale de exigir versión fijada y hash antes de cualquier uso, y de que la declaración sea un archivo que una persona edita, no algo que el agente instale. Hipótesis a confirmar al implementar: que el formato de lista de mapas del analizador de configuración admita los campos propuestos.
-- Riesgos y compatibilidad: (a) es la puerta de entrada de código de terceros con los permisos del agente, así que se rechaza todo lo que no sea una versión fijada (una rama, `latest`, `main`, un rango); (b) declarar no habilita: la habilitación es el ticket siguiente, con revisión registrada; (c) Consumidores comprobados con búsqueda: nadie lee todavía una clave de skills externas; `readSkills` y la proyección no cambian; (d) un proyecto sin la clave no cambia.
+- Riesgos y compatibilidad: (a) es la puerta de entrada de código de terceros con los permisos del agente, así que se rechaza todo lo que no sea una versión fijada (una rama, `latest`, `main`, un rango); (b) declarar no habilita: la habilitación es el ticket siguiente, con revisión registrada; (c) Archivos que el plan toca además de los de la investigación, todos aditivos: un módulo nuevo del motor para el estado de las skills externas, la reexportación en `packages/engine/src/index.ts`, el comando en `packages/cli/src/commands.ts` y `packages/cli/src/main.ts`, y un archivo de pruebas nuevo. Consumidores comprobados con búsqueda: nadie lee todavía una clave de skills externas; `readSkills` y la proyección no cambian; (d) un proyecto sin la clave no cambia.
 - Impactos de sync, migración, Docker o despliegue: ninguno.
 
 ## Plan
@@ -57,7 +57,7 @@ Ninguno.
 - Gate de plan y aprobación: pendiente
 - Alcance: la declaración, su validación y su listado. Exclusiones: descargar o instalar, la revisión que habilita y la proyección a los clientes.
 - Pasos ordenados:
-  1. En `packages/adapter/src/config.ts` agregar `readExternalSkills(config)` y el tipo `ExternalSkill` (`id`, `source`, `version`, `sha256`): cada elemento exige los cuatro campos, un `id` válido y único, un `sha256` de 64 hex y una `version` fija (se rechazan `latest`, `main`, `master`, `HEAD`, rangos con `^`, `~`, `*` y cualquier rama); sin la clave devuelve una lista vacía; exportarla.
+  1. En `packages/adapter/src/config.ts` agregar `readExternalSkills(config)` y el tipo `ExternalSkill` (`id`, `source`, `version`, `sha256`): cada elemento exige los cuatro campos, un `id` válido y único, un `sha256` de 64 hex y una `version` fija (se rechazan `latest`, `main`, `master`, `HEAD`, rangos con `^`, `~`, `*` y cualquier rama); cada error de rechazo empieza por el nombre de la skill y dice qué campo falla (por ejemplo «skill ponytail: la versión «main» no está fijada»); sin la clave devuelve una lista vacía; exportarla.
   2. En `packages/engine/src/external-skills.ts` (nuevo) agregar `estadoDeSkillsExternas(root)`, que devuelve cada skill declarada con su estado («declarada» mientras no exista revisión) sin tocar el disco más que para leer la configuración; exportarlo desde `packages/engine/src/index.ts`.
   3. En `packages/cli/src/commands.ts` y `packages/cli/src/main.ts` agregar `skills external` que lista las declaradas con su fuente, versión y estado, con su ayuda, y que no descarga ni instala nada.
   4. Crear `tests/skills-externas.test.ts` con un caso por criterio; correr esas pruebas, `npx vitest run` y `npx tsc --noEmit -p tsconfig.json`.
@@ -143,6 +143,24 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: intake -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-003",
+    "date": "2026-10-07",
+    "at": "2026-10-07T18:27:41.659Z",
+    "action": "gate-approved",
+    "actor": "cli",
+    "details": "Gate analysis aprobado por Juan Andrade (recibo GR-20261007-SECURITY-ENGINE-SKILLS-TERCEROS-20261007-analysis-1, canal mission-control, decidida 2026-10-07T18:27:41.656Z): A"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-07",
+    "at": "2026-10-07T18:27:41.924Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: analyzed -> planned."
   }
 ]
 ```

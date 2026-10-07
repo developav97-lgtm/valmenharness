@@ -4,7 +4,7 @@ id: SECURITY-ENGINE-AUTORIZACION-APROBACION-20261007
 title: Guardar autorizaciones de aprobación firmadas, append-only y revocables
 type: SECURITY
 module: ENGINE
-workflow_status: analyzed
+workflow_status: planned
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -154,6 +154,24 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: intake -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-003",
+    "date": "2026-10-07",
+    "at": "2026-10-07T18:27:04.582Z",
+    "action": "gate-approved",
+    "actor": "cli",
+    "details": "Gate analysis aprobado por Juan Andrade (recibo GR-20261007-SECURITY-ENGINE-AUTORIZACION-APROBACION-20261007-analysis-2, canal mission-control, decidida 2026-10-07T18:27:04.579Z): A"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-07",
+    "at": "2026-10-07T18:27:04.881Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: analyzed -> planned."
   }
 ]
 ```
