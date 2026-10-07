@@ -15,3 +15,6 @@
 {"kind":"close","ticketId":"FEATURE-ENGINE-MIGRACION-ANTES-TESTS-20260926","detail":"QA aprobado y ticket cerrado","at":"2026-10-07T00:42:50.396Z"}
 {"kind":"note","ticketId":"BUGFIX-ENGINE-REUTILIZAR-COMPUERTA-20261005","detail":"avanzó a in_progress (analyzed → planned → approved → in_progress)","at":"2026-10-07T00:44:24.393Z"}
 {"kind":"close","ticketId":"BUGFIX-ENGINE-REUTILIZAR-COMPUERTA-20261005","detail":"QA aprobado y ticket cerrado","at":"2026-10-07T00:47:55.200Z"}
+{"kind":"decision","ticketId":"FEATURE-GATE-APLICABILIDAD-POR-TIPO-20261005","detail":"analysis review → approve (GR-20261007-FEATURE-GATE-APLICABILIDAD-POR-TIPO-20261005-analysis-1): El criterio dice que una proposición de contexto en banda de revisión no debe bloquear el avance","at":"2026-10-07T00:49:08.144Z"}
+{"kind":"note","ticketId":"FEATURE-GATE-APLICABILIDAD-POR-TIPO-20261005","detail":"avanzó a in_progress (analyzed → planned → approved → in_progress)","at":"2026-10-07T00:49:37.468Z"}
+{"kind":"close","ticketId":"FEATURE-GATE-APLICABILIDAD-POR-TIPO-20261005","detail":"QA aprobado y ticket cerrado","at":"2026-10-07T00:51:23.834Z"}
