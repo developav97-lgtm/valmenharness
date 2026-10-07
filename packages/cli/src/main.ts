@@ -246,6 +246,12 @@ Comandos:
   approval-authorize create --actor <nombre> --quote "<frase>" --types <a,b> --modules <x,y> [--max-risk <r>] [--impacts <i,j>] [--stages analysis,plan] [--mode on-approve|reviewer] [--daily-quota <n>] [--valid-days <n>]
   approval-authorize revoke --id <APA-…> --actor <nombre> --reason "<motivo>"
   approval-authorize list
+  approval-authorize link --types <a,b> --modules <x,y> [mismos términos que create]
+                            Emite un código firmado de un solo uso (24 h) con esos términos congelados.
+  approval-authorize redeem --code <código> --actor <nombre> --quote "<frase>"
+                            Lo canjea; exige la fuente enlace-firmado en approval-authorization-sources.
+  approval-authorize revoke-code --code <código> --actor <nombre>
+                            Un código emitido y no canjeado deja de servir.
                             La autorización de aprobación automática de planes y análisis: la crea o revoca
                             una persona; nunca SECURITY. Se rechaza en una sesión desatendida.
   qa-authorize create --actor <nombre> --quote "<frase>" --types <a,b> --modules <x,y>

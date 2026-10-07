@@ -115,6 +115,7 @@ import {
   routingFromForm,
   writeRouting,
 } from "./routing.js";
+import { crearAutorizacionDeAprobacionMc, listarAutorizacionesDeAprobacion, revocarAutorizacionDeAprobacionMc } from "./approval-autorizaciones.js";
 import { crearAutorizacionQa, listarAutorizacionesQa, revocarAutorizacionQa } from "./qa-autorizaciones.js";
 import { listFeatureRows, readFeatureDetail, summarizeFeatures } from "./features.js";
 import { guardarFotoEnTicket, leerLineaDeTiempo } from "./timeline.js";
@@ -1648,6 +1649,18 @@ export async function handleApi(
   }
   if (path === "/api/qa/authorizations/revoke" && method === "POST") {
     return revocarAutorizacionQa(context.root, body, context.env);
+  }
+
+  // GET/POST /api/approval/authorizations y /revoke  — la autorización de aprobación automática (R-APRO-001).
+  // Las escrituras ya pasaron por `exigirTokenEnEscritura`; el motor rechaza una sesión desatendida.
+  if (path === "/api/approval/authorizations" && method === "GET") {
+    return listarAutorizacionesDeAprobacion(context.root);
+  }
+  if (path === "/api/approval/authorizations" && method === "POST") {
+    return crearAutorizacionDeAprobacionMc(context.root, body, context.env);
+  }
+  if (path === "/api/approval/authorizations/revoke" && method === "POST") {
+    return revocarAutorizacionDeAprobacionMc(context.root, body, context.env);
   }
 
   // POST /api/config/sync  — regenera los archivos proyectados

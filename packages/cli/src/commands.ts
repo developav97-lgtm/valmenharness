@@ -76,6 +76,10 @@ import {
   estadoDeSkillsExternas,
   registrarRevisionDeSkill,
   crearAutorizacionDeAprobacion,
+  FUENTE_ENLACE_FIRMADO_APROBACION,
+  canjearCodigoDeAutorizacionDeAprobacion,
+  emitirCodigoDeAutorizacionDeAprobacion,
+  revocarCodigoDeAutorizacionDeAprobacion,
   leerAutorizacionesDeAprobacion,
   revocarAutorizacionDeAprobacion,
   FUENTE_ENLACE_FIRMADO,
@@ -3045,11 +3049,63 @@ export function approvalAuthorizeCommand(
   root: string,
   accion: string | undefined,
   flags: Readonly<Record<string, string | true>>,
-  opciones: { readonly ahora?: Date; readonly env?: Readonly<Record<string, string | undefined>> } = {},
+  opciones: { readonly ahora?: Date; readonly env?: Readonly<Record<string, string | undefined>>; readonly secret?: string | null } = {},
 ): CommandResult {
   const t = (n: string): string => (typeof flags[n] === "string" ? (flags[n] as string) : "");
   const lista = (n: string): string[] => t(n).split(",").map((x) => x.trim()).filter((x) => x !== "");
   try {
+    if (accion === "link") {
+      const secret = opciones.secret === undefined ? approvalSecret() : opciones.secret;
+      if (secret === null) return error("No hay secreto para firmar el código (aprobacion.secret o VALMEN_APPROVAL_SECRET).", EXIT_SCHEMA);
+      if ((opciones.env ?? process.env)["VALMEN_UNATTENDED"] === "1") {
+        return error("Una sesión desatendida no puede emitir un código de autorización de aprobación: esa autoridad es de una persona.", EXIT_INVARIANT);
+      }
+      const e = emitirCodigoDeAutorizacionDeAprobacion({
+        root,
+        secret,
+        terminos: {
+          types: lista("types"),
+          modules: lista("modules"),
+          maxRisk: t("max-risk") === "" ? "normal" : t("max-risk"),
+          impacts: lista("impacts"),
+          stages: t("stages") === "" ? ["analysis", "plan"] : lista("stages"),
+          mode: t("mode") === "" ? "on-approve" : t("mode"),
+          dailyQuota: Number(t("daily-quota") === "" ? "1" : t("daily-quota")),
+          validDays: Number(t("valid-days") === "" ? "30" : t("valid-days")),
+        },
+        ...(opciones.ahora === undefined ? {} : { ahora: opciones.ahora }),
+      });
+      return ok(
+        `Código ${e.code} (un solo uso, vale hasta ${e.expiresAt}): tipos ${e.terminos.types.join(", ")}; módulos ${e.terminos.modules.join(", ")}; ` +
+          `riesgo hasta ${e.terminos.maxRisk}; impactos: ${e.terminos.impacts.length === 0 ? "ninguno" : e.terminos.impacts.join(", ")}; ` +
+          `etapas ${e.terminos.stages.join(", ")}; modo ${e.terminos.mode}; cupo ${e.terminos.dailyQuota}/día; ${e.terminos.validDays} días.\n` +
+          `Canjearlo: valmen approval-authorize redeem --code ${e.code} --actor <tú> --quote "<tu frase>" (exige la fuente ${FUENTE_ENLACE_FIRMADO_APROBACION} en approval-authorization-sources).\n`,
+      );
+    }
+    if (accion === "redeem") {
+      const secret = opciones.secret === undefined ? approvalSecret() : opciones.secret;
+      if (secret === null) return error("No hay secreto para verificar el código (aprobacion.secret o VALMEN_APPROVAL_SECRET).", EXIT_SCHEMA);
+      const a = canjearCodigoDeAutorizacionDeAprobacion({
+        root,
+        secret,
+        codigo: t("code"),
+        actor: t("actor"),
+        quote: t("quote"),
+        ...(opciones.ahora === undefined ? {} : { ahora: opciones.ahora }),
+        ...(opciones.env === undefined ? {} : { env: opciones.env }),
+      });
+      return ok(`Autorización ${a.id} creada por ${a.actor} con el código firmado; vigente hasta ${a.validUntil.slice(0, 10)}.\n`);
+    }
+    if (accion === "revoke-code") {
+      revocarCodigoDeAutorizacionDeAprobacion({
+        root,
+        codigo: t("code"),
+        actor: t("actor"),
+        ...(opciones.ahora === undefined ? {} : { ahora: opciones.ahora }),
+        ...(opciones.env === undefined ? {} : { env: opciones.env }),
+      });
+      return ok(`Código ${t("code")} revocado: ya no se puede canjear.\n`);
+    }
     if (accion === "create") {
       const a = crearAutorizacionDeAprobacion({
         root,
@@ -3095,7 +3151,7 @@ export function approvalAuthorizeCommand(
           .join("\n") + "\n",
       );
     }
-    return error("approval-authorize admite: create, revoke o list.", EXIT_SCHEMA);
+    return error("approval-authorize admite: create, revoke, list, link, redeem o revoke-code.", EXIT_SCHEMA);
   } catch (caught) {
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);

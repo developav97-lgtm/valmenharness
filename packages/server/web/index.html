@@ -7116,8 +7116,104 @@
         };
         pintarQaAgente();
 
+        // Aprobación automática: quién autorizó qué, con su frase literal. Crear y revocar son
+        // escrituras de una persona: llevan el token del servidor y nunca van sin frase.
+        const aprobacionAuto = el("div", undefined, "qa-agente");
+        const pintarAprobacionAuto = async () => {
+          aprobacionAuto.textContent = "";
+          aprobacionAuto.append(el("div", "Aprobación automática de planes y análisis", "titulo-politica"));
+          const mensaje = el("div", "", "qa-mensaje");
+          let datosQa;
+          try {
+            datosQa = await enviar("GET", "/api/approval/authorizations");
+          } catch (falla) {
+            aprobacionAuto.append(el("div", String(falla.message ?? falla), "qa-mensaje mal"));
+            return;
+          }
+          const lista = datosQa.authorizations ?? [];
+          if (lista.length === 0) {
+            aprobacionAuto.append(el("div", "No hay autorizaciones: toda aprobación de un plan la hace una persona.", "nota-politica"));
+          }
+          for (const a of lista) {
+            const fila = el("div", undefined, "qa-item");
+            const detalle = el(
+              "span",
+              `${a.id} · ${a.types.join(", ")} · ${a.modules.join(", ")} · riesgo hasta ${a.maxRisk} · impactos: ${a.impacts.length === 0 ? "ninguno" : a.impacts.join(", ")} · ${a.stages.join("+")} · modo ${a.mode} · cupo ${a.dailyQuota}/día · hasta ${a.validUntil.slice(0, 10)} · ${a.actor}: «${a.quote}»`,
+            );
+            const derecha = el("span");
+            derecha.append(el("span", a.estado, `qa-estado ${a.estado}`));
+            if (a.estado === "vigente") {
+              const revocar = el("button", "Revocar");
+              revocar.addEventListener("click", async () => {
+                const actor = prompt("¿Quién revoca? (tu nombre)");
+                if (actor === null || actor.trim() === "") return;
+                const frase = prompt("Escribe tu frase literal de revocación:");
+                if (frase === null || frase.trim() === "") return;
+                try {
+                  await enviar("POST", "/api/approval/authorizations/revoke", { id: a.id, actor, quote: frase });
+                  await pintarAprobacionAuto();
+                } catch (falla) {
+                  mensaje.textContent = String(falla.message ?? falla);
+                  mensaje.className = "qa-mensaje mal";
+                }
+              });
+              derecha.append(revocar);
+            }
+            fila.append(detalle, derecha);
+            aprobacionAuto.append(fila);
+          }
+          const campo = (etiqueta, valor, tipo = "text") => {
+            const entrada = el("input");
+            entrada.type = tipo;
+            entrada.value = valor;
+            const rotulo = el("label", etiqueta);
+            rotulo.append(entrada);
+            return { rotulo, entrada };
+          };
+          const tipos = campo("Tipos (BUGFIX, IMPROVEMENT, CHORE, FEATURE, SYNC, INTEGRATION, AGENT)", "BUGFIX");
+          const modulos = campo("Módulos (separados por coma)", "");
+          const riesgo = campo("Riesgo máximo (low o normal)", "normal");
+          const impactos = campo("Impactos admitidos (sync_impact, migration_impact, docker_impact)", "");
+          const etapas = campo("Etapas (analysis, plan)", "analysis,plan");
+          const modo = campo("Modo (on-approve o reviewer)", "on-approve");
+          const cupo = campo("Cupo diario", "1", "number");
+          const dias = campo("Vigencia en días", "30", "number");
+          const actor = campo("Responsable", "");
+          const frase = campo("Frase literal de quien autoriza", "");
+          const fila1 = el("div", undefined, "qa-fila");
+          fila1.append(tipos.rotulo, modulos.rotulo, riesgo.rotulo, impactos.rotulo, etapas.rotulo, modo.rotulo, cupo.rotulo, dias.rotulo);
+          const fila2 = el("div", undefined, "qa-fila");
+          fila2.append(actor.rotulo, frase.rotulo);
+          const crear = el("button", "Autorizar");
+          crear.addEventListener("click", async () => {
+            mensaje.className = "qa-mensaje";
+            try {
+              const r = await enviar("POST", "/api/approval/authorizations", {
+                actor: actor.entrada.value,
+                quote: frase.entrada.value,
+                types: tipos.entrada.value,
+                modules: modulos.entrada.value,
+                maxRisk: riesgo.entrada.value,
+                impacts: impactos.entrada.value,
+                stages: etapas.entrada.value,
+                mode: modo.entrada.value,
+                dailyQuota: Number(cupo.entrada.value),
+                validDays: Number(dias.entrada.value),
+              });
+              await pintarAprobacionAuto();
+              aprobacionAuto.append(el("div", `Autorización ${r.authorization.id} creada.`, "qa-mensaje"));
+            } catch (falla) {
+              mensaje.textContent = String(falla.message ?? falla);
+              mensaje.className = "qa-mensaje mal";
+            }
+          });
+          aprobacionAuto.append(fila1, fila2, crear, mensaje);
+        };
+        pintarAprobacionAuto();
+
         cont.append(el("h2", "Políticas autónomas"), politicas);
         cont.append(el("h2", "Autorización de QA por agente"), qaAgente);
+        cont.append(el("h2", "Aprobación automática de planes"), aprobacionAuto);
         cont.append(el("h2", "Diferencias antes de guardar"), diff, acciones);
         pintar(datos);
       }
