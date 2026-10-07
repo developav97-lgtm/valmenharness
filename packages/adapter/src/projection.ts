@@ -11,6 +11,9 @@
  * lo genere, que es exactamente lo que una proyección determinista existe para
  * impedir.
  */
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { fail } from "@valmen/core";
 
 import { type ConfigMap, readList } from "./config.js";
@@ -21,6 +24,14 @@ import {
   measureAgentsMd,
   readAgentsMdBudget,
 } from "./agents-size.js";
+import {
+  CLAUDE_MD_PATH,
+  CLAUDE_SETTINGS_PATH,
+  OUTPUT_STYLE_PATH,
+  mergeClaudeMdBlock,
+  mergeOutputStyleSetting,
+  renderOutputStyle,
+} from "./claude-code.js";
 import { loadProjectModel, projectAgentsMd } from "./project.js";
 import {
   type SkillRuntime,
@@ -57,6 +68,15 @@ function readRuntimes(config: ConfigMap): readonly SkillRuntime[] {
     }
     return nombre as SkillRuntime;
   });
+}
+
+/** El texto de un archivo, o `null` si no existe. */
+function leerSiExiste(ruta: string): string | null {
+  try {
+    return readFileSync(ruta, "utf8");
+  } catch {
+    return null;
+  }
 }
 
 /** Un archivo generado, con su ruta relativa a la raíz. */
@@ -139,8 +159,25 @@ export function projectFiles(
   const size = measureAgentsMd(agentsMd, readAgentsMdBudget(model.config));
   const warning = agentsMdWarning(size);
 
+  // Para Claude Code, el estilo de salida es un archivo propio; `settings.json` y
+  // `CLAUDE.md` se fusionan con lo que ya hay, porque también los escribe la persona.
+  const claudeCode: ProjectedFile[] = runtimes.includes("claude")
+    ? [
+        { path: OUTPUT_STYLE_PATH, content: renderOutputStyle() },
+        {
+          path: CLAUDE_SETTINGS_PATH,
+          content: mergeOutputStyleSetting(leerSiExiste(join(root, CLAUDE_SETTINGS_PATH))),
+        },
+        {
+          path: CLAUDE_MD_PATH,
+          content: mergeClaudeMdBlock(leerSiExiste(join(root, CLAUDE_MD_PATH))),
+        },
+      ]
+    : [];
+
   const files: ProjectedFile[] = [
     { path: "AGENTS.md", content: agentsMd },
+    ...claudeCode,
     ...renderAllAgents(agents, sources).filter((file) => enAlcance(file.path)),
     ...renderAllSkills(skills).filter((file) => enAlcance(file.path)),
   ];

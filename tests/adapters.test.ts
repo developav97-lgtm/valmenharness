@@ -363,7 +363,8 @@ describe("proyección por runtime", () => {
     scaffoldCompleto("name: Demo\n");
     const generadas = rutas(lab);
     expect(generadas.filter((path) => path.startsWith(".opencode/"))).toHaveLength(2);
-    expect(generadas.filter((path) => path.startsWith(".claude/"))).toHaveLength(2);
+    // Un agente, una skill y, desde R-RESP-002, el estilo de salida y settings.json.
+    expect(generadas.filter((path) => path.startsWith(".claude/"))).toHaveLength(4);
     expect(generadas.filter((path) => path.startsWith(".codex/"))).toHaveLength(2);
   });
 

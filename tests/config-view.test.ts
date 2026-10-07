@@ -33,6 +33,14 @@ import {
 } from "../packages/server/src/config.js";
 import { handleApi } from "../packages/server/src/server.js";
 
+/** Lo que proyecta un proyecto sin agentes ni skills: AGENTS.md y lo de Claude Code. */
+const ARCHIVOS_GENERADOS = [
+  "AGENTS.md",
+  ".claude/output-styles/valmen.md",
+  ".claude/settings.json",
+  "CLAUDE.md",
+];
+
 const CONFIG = `# Configuración del harness en este proyecto.
 #
 # Generado por \`valmen adopt\`. Revise y ajuste lo que corresponda.
@@ -200,11 +208,7 @@ describe("guardar la configuración", () => {
     // El efecto que la pantalla anuncia es el real: guardado el texto y generado
     // el archivo, ya no queda nada pendiente.
     writeConfig(lab, texto);
-    writeFileSync(
-      join(lab, "AGENTS.md"),
-      projectAgentsMd(loadProjectModel(lab, "x")),
-      "utf8",
-    );
+    syncProjections(lab);
     expect(projectionImpact(lab, texto)?.changesAgentsMd).toBe(false);
   });
 
@@ -213,8 +217,15 @@ describe("guardar la configuración", () => {
       lab,
       CONFIG.replace("name: SaiOpenCloud", "name: Otro"),
     );
-    expect(impacto?.files).toEqual([{ path: "AGENTS.md", stale: true }]);
-    expect(impacto?.stale).toBe(1);
+    // Además de AGENTS.md, Claude Code recibe su estilo de salida, la activación en
+    // settings.json y el bloque de CLAUDE.md: tres archivos más (R-RESP-002 y 003).
+    expect(impacto?.files).toEqual([
+      { path: "AGENTS.md", stale: true },
+      { path: ".claude/output-styles/valmen.md", stale: true },
+      { path: ".claude/settings.json", stale: true },
+      { path: "CLAUDE.md", stale: true },
+    ]);
+    expect(impacto?.stale).toBe(4);
     expect(impacto?.changesAgentsMd).toBe(true);
   });
 });
@@ -223,17 +234,17 @@ describe("guardar la configuración", () => {
 
 describe("regenerar los archivos proyectados", () => {
   it("escribe AGENTS.md y deja de haber nada pendiente", () => {
-    expect(projectionImpact(lab, CONFIG)?.stale).toBe(1);
+    expect(projectionImpact(lab, CONFIG)?.stale).toBe(4);
 
     const resultado = syncProjections(lab);
     expect(resultado.ok).toBe(true);
-    expect(resultado.written).toEqual(["AGENTS.md"]);
+    expect(resultado.written).toEqual(ARCHIVOS_GENERADOS);
     expect(readFileSync(join(lab, "AGENTS.md"), "utf8")).toContain("SaiOpenCloud");
 
     // Y una segunda ejecución no escribe nada: la proyección es determinista.
     const segunda = syncProjections(lab);
     expect(segunda.written).toEqual([]);
-    expect(segunda.unchanged).toEqual(["AGENTS.md"]);
+    expect(segunda.unchanged).toEqual(ARCHIVOS_GENERADOS);
   });
 
   it("el archivo generado es el mismo que produce `valmen sync`", () => {
@@ -271,7 +282,7 @@ describe("regenerar los archivos proyectados", () => {
       impact: { stale: number };
     };
     expect(cuerpo.ok).toBe(true);
-    expect(cuerpo.written).toEqual(["AGENTS.md"]);
+    expect(cuerpo.written).toEqual(ARCHIVOS_GENERADOS);
     expect(cuerpo.impact.stale).toBe(0);
   });
 
