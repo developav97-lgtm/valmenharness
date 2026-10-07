@@ -67,6 +67,7 @@ import {
   archivosDelDiff,
   elegibilidadQa,
   correrQaAgent,
+  cerrarQaPorPolitica,
   crearAutorizacion,
   FUENTE_ENLACE_FIRMADO,
   canjearCodigoDeAutorizacion,
@@ -3002,6 +3003,31 @@ export function qaEligibilityCommand(
     return resultado.elegible
       ? ok(`${lineas.join("\n")}\n`)
       : { stdout: `${lineas.join("\n")}\n`, stderr: "", exitCode: EXIT_INVARIANT };
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/**
+ * `qa-policy-close --id <ID>`: cierra el ciclo de QA por política (R-QAAG-006).
+ *
+ * Exige el recibo de `qa-agent` aprobado del commit actual, la elegibilidad y la autorización
+ * vigente con cupo. Lo puede ejecutar una sesión desatendida: es su razón de ser, y la barrera son
+ * esas condiciones, no la presencia de una persona.
+ */
+export function qaPolicyCloseCommand(
+  paths: RegistryPaths,
+  flags: Readonly<Record<string, string | true>>,
+): CommandResult {
+  const id = typeof flags["id"] === "string" ? flags["id"] : "";
+  if (id === "") return error("qa-policy-close requiere --id <TICKET-ID>.", EXIT_SCHEMA);
+  try {
+    const r = cerrarQaPorPolitica({ paths, ticketId: id });
+    return ok(
+      `QA de ${id} aprobada por política: autorización ${r.authorization.id}, recibo ${r.receipt}, commit ${r.delivered.slice(0, 12)}.\n` +
+        `Para reabrirlo: valmen transition --id ${id} --entity ticket --to changes_requested\n`,
+    );
   } catch (caught) {
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);

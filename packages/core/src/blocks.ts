@@ -33,6 +33,21 @@ const CYCLE_RESULTS = ["pending", "approved", "changes_requested", "failed"];
 /** Niveles de confianza de un registro de consumo de IA. */
 const CONFIDENCE_LEVELS = ["high", "medium", "low"];
 
+/**
+ * La confirmación de un ciclo de QA aprobado por política (R-QAAG-006): nombra la autorización
+ * aplicada y el recibo de `qa-agent`, en vez de una frase de una persona.
+ */
+export const POLICY_CONFIRMATION_RE = /^policy:(QAA-[A-Za-z0-9-]+):(sha256:[0-9a-f]{64})\|recibo:(\S+)$/;
+
+/** Las partes de una confirmación por política, o `null` si no tiene esa forma. */
+export function parsePolicyConfirmation(
+  texto: string | null | undefined,
+): { readonly authorizationId: string; readonly authorizationHash: string; readonly receipt: string } | null {
+  if (typeof texto !== "string") return null;
+  const m = POLICY_CONFIRMATION_RE.exec(texto.trim());
+  return m === null ? null : { authorizationId: m[1] as string, authorizationHash: m[2] as string, receipt: m[3] as string };
+}
+
 /** El identificador de una entrada, o el literal del esquema si falta. */
 function entryId(entry: JsonObject, fallback: string): string {
   return typeof entry["id"] === "string" ? entry["id"] : fallback;
@@ -211,6 +226,11 @@ export function validateQa(entries: readonly JsonObject[]): void {
     }
     if (result === "approved" && entry["po_confirmation"] === null) {
       fail(`${id} aprobado requiere confirmación explícita del PO.`);
+    }
+    // Una confirmación que se declara «por política» debe nombrar la autorización y el recibo.
+    const confirmacion = entry["po_confirmation"];
+    if (typeof confirmacion === "string" && /^policy:/i.test(confirmacion.trim()) && parsePolicyConfirmation(confirmacion) === null) {
+      fail(`${id}.po_confirmation por política debe ser policy:<autorización>:<hash>|recibo:<ruta:línea>.`);
     }
 
     requireStringList(entry["findings"], `${id}.findings`);

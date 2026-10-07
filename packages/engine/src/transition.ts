@@ -50,6 +50,7 @@ import { hashState } from "@valmen/gate";
 import { unmarkedCriteria, unmarkedMessage } from "./criteria-marks.js";
 import { type RegistryPaths, findTicket } from "./discovery.js";
 import { aprobacionDePlanVigente } from "./plan-approval.js";
+import { motivoDeCierrePorPoliticaInvalido, motivoDePruebasPorPoliticaInvalido } from "./qa-policy-verify.js";
 import { finalizeMutation, readAndValidate } from "./mutate.js";
 import {
   describirDecisionHumana,
@@ -404,6 +405,12 @@ function applyTicket(
     exigirVerificacionMecanica(document, request.paths);
   }
 
+  if (to === "in_qa") {
+    // Un resultado «por política» en Pruebas se comprueba contra el registro, no solo por su forma.
+    const invalido = motivoDePruebasPorPoliticaInvalido(request.paths.root, request.ticketId, document);
+    if (invalido !== null) fail(invalido, EXIT_INVARIANT);
+  }
+
   if (to === "in_qa" && !hasRecordedUserTestOutcome(document)) {
     fail(
       "in_qa requiere resultado del PO u omisión explícita documentada en Pruebas.",
@@ -425,6 +432,9 @@ function applyTicket(
   let text = document.text;
 
   if (to === "qa_approved") {
+    // Un cierre por política se comprueba contra el registro, no solo por su forma (R-QAAG-006).
+    const invalido = motivoDeCierrePorPoliticaInvalido(request.paths.root, request.ticketId, document);
+    if (invalido !== null) fail(invalido, EXIT_INVARIANT);
     if (hasApprovedQaCycle(document.blocks.QA ?? [])) {
       if (document.fields.qa_status !== "approved") {
         fail("El historial QA aprobado no coincide con qa_status.", EXIT_INVARIANT);

@@ -101,3 +101,5 @@ export * from "./qa-agent-git.js";
 export * from "./qa-agent-receipt.js";
 export * from "./qa-agent.js";
 export * from "./qa-authorization-link.js";
+export * from "./qa-policy-verify.js";
+export * from "./qa-policy-close.js";

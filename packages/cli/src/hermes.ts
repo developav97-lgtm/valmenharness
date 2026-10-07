@@ -59,7 +59,7 @@ import {
   type HermesEntry,
 } from "@valmen/adapter";
 
-import { EXIT_SCHEMA, declaredImpactIds, parseTicket } from "@valmen/core";
+import { EXIT_SCHEMA, declaredImpactIds, parsePolicyConfirmation, parseTicket } from "@valmen/core";
 import { blockOf, credentialsPath, fieldOf } from "@valmen/credentials";
 import {
   appendApproval,
@@ -67,7 +67,9 @@ import {
   comandosDelContrato,
   leerFases,
   paradasActivas,
+  cierresPorPoliticaAvisados,
   pruebasListasAvisadas,
+  renderPolicyCloseNotification,
   renderTestsReadyNotification,
   buildGateState,
   corridasAvisadas,
@@ -720,6 +722,15 @@ export type PendienteDeAvisar =
       readonly step: string;
     }
   | {
+      /** Un ticket cuyo ciclo de QA cerró por política (R-QAAG-006). */
+      readonly kind: "cierre-por-politica";
+      readonly ticket: string;
+      readonly title: string;
+      readonly cycle: number;
+      readonly authorizationId: string;
+      readonly receipt: string;
+    }
+  | {
       /** Un ticket que llegó a las pruebas del responsable (R-JORN-008). */
       readonly kind: "pruebas-listas";
       readonly ticket: string;
@@ -804,6 +815,26 @@ export function pendientesDeAvisar(paths: RegistryPaths, now: Date): PendienteDe
       cycle: ciclo,
       commands: comandosDelContrato(ubicado.text),
       contractPath: ubicado.relativePath,
+    });
+  }
+
+  // Un ciclo cerrado por política se avisa una vez: «cerrado por política», con el recibo y cómo reabrir.
+  const politicaAvisados = cierresPorPoliticaAvisados(paths);
+  for (const fila of listTickets(paths)) {
+    if (fila.workflowStatus !== "qa_approved" && fila.workflowStatus !== "closed") continue;
+    const ubicado = findTicket(paths, fila.id);
+    if (ubicado === undefined) continue;
+    const qa = parseTicket(ubicado.text).blocks.QA ?? [];
+    const fin = qa[qa.length - 1];
+    const politica = fin === undefined ? null : parsePolicyConfirmation(fin["po_confirmation"] as string | null);
+    if (politica === null || politicaAvisados.has(`${fila.id}:${qa.length}`)) continue;
+    salida.push({
+      kind: "cierre-por-politica",
+      ticket: fila.id,
+      title: fila.title,
+      cycle: qa.length,
+      authorizationId: politica.authorizationId,
+      receipt: politica.receipt,
     });
   }
 
@@ -909,6 +940,33 @@ export function hermesNotifyPendientes(request: NotifyPendingRequest): CommandRe
         notifiedAt: request.now.toISOString(),
       });
       notificados.push(`${pendiente.ticket} · parada ${pendiente.reason}`);
+      continue;
+    }
+
+    if (pendiente.kind === "cierre-por-politica") {
+      const entrega = hermesSendChannel({
+        target: to,
+        ...(request.runner === undefined ? {} : { runner: request.runner }),
+      }).notify(
+        renderPolicyCloseNotification({
+          ticketId: pendiente.ticket,
+          title: pendiente.title,
+          authorizationId: pendiente.authorizationId,
+          receipt: pendiente.receipt,
+          cycle: pendiente.cycle,
+        }),
+      );
+      if (!entrega.delivered) {
+        fallidos.push({ que: `${pendiente.ticket} · cerrado por política`, motivo: entrega.detail });
+        continue;
+      }
+      appendApproval(request.paths, {
+        kind: "policy-close-notice",
+        ticketId: pendiente.ticket,
+        cycle: pendiente.cycle,
+        notifiedAt: request.now.toISOString(),
+      });
+      notificados.push(`${pendiente.ticket} · QA aprobada por política`);
       continue;
     }
 

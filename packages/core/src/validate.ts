@@ -23,6 +23,7 @@ import { EXIT_SCHEMA, fail } from "./errors.js";
 import type { JsonObject, ParsedTicket } from "./parser.js";
 import {
   nextPointId,
+  parsePolicyConfirmation,
   pointIdsRecordedInEvents,
   validateAiUsage,
   validateClosures,
@@ -295,6 +296,9 @@ export function hasRecordedUserTestOutcome(ticket: ParsedTicket): boolean {
 
   for (const rawLine of meaningfulMarkdown(ticket.sections.Pruebas).split("\n")) {
     const line = stripListMarker(rawLine).trim();
+    // El resultado de una verificación por política (R-QAAG-006): nombra la autorización y el recibo.
+    const politica = /^resultado por pol[ií]tica\s*:\s*(\S+)\s*$/i.exec(line);
+    if (politica !== null && parsePolicyConfirmation(politica[1]) !== null) return true;
     const match = outcomeRe.exec(line);
     if (match === null) continue;
     const outcome = rstripChars((match[1] as string).trim(), " .;:-").toLowerCase();

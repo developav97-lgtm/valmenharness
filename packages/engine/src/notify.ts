@@ -539,6 +539,33 @@ export function renderTestsReadyNotification(input: TestsReadyNotificationInput)
   };
 }
 
+export interface PolicyCloseNotificationInput {
+  readonly ticketId: string;
+  readonly title: string;
+  readonly authorizationId: string;
+  readonly receipt: string;
+  readonly cycle: number;
+}
+
+/** «QA aprobada por política»: con el recibo y la forma de reabrir (R-QAAG-006). */
+export function renderPolicyCloseNotification(input: PolicyCloseNotificationInput): NotificationPayload {
+  return {
+    key: `policy-close:${input.ticketId}:${input.cycle}`,
+    subject: `QA aprobada por política · ${input.ticketId}`,
+    body: [
+      "🧾 QA APROBADA POR POLÍTICA",
+      "",
+      `  ticket        ${input.ticketId}`,
+      `  título        ${input.title}`,
+      `  autorización  ${input.authorizationId}`,
+      `  recibo        ${input.receipt}`,
+      "",
+      "No la aprobó el agente: la respaldan tu autorización y el recibo de qa-agent.",
+      `Para reabrirlo: valmen transition --id ${input.ticketId} --entity ticket --to changes_requested`,
+    ].join("\n"),
+  };
+}
+
 /** La actividad de la jornada del día, para el parte (R-JORN-008). */
 export interface BriefJornada {
   /** Una línea por fase con sesiones hoy. */

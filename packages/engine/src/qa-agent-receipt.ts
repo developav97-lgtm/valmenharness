@@ -74,3 +74,34 @@ export function reproducirReciboQaAgent(recibo: ReciboQaAgent): string[] {
   }
   return pasos;
 }
+
+/** El último recibo de un ticket con la línea que ocupa en el archivo (1-based). */
+export function ultimoReciboConLinea(root: string, ticketId: string): { readonly recibo: ReciboQaAgent; readonly linea: number } | null {
+  const ruta = qaAgentReceiptsPath(root);
+  if (!existsSync(ruta)) return null;
+  let ultimo: { recibo: ReciboQaAgent; linea: number } | null = null;
+  readFileSync(ruta, "utf8").split("\n").forEach((texto, indice) => {
+    if (texto.trim() === "") return;
+    try {
+      const r = JSON.parse(texto) as ReciboQaAgent;
+      if (r.kind === "qa-agent-receipt" && r.ticketId === ticketId) ultimo = { recibo: r, linea: indice + 1 };
+    } catch {
+      // Un renglón truncado no cuenta.
+    }
+  });
+  return ultimo;
+}
+
+/** El recibo que ocupa una línea del archivo, o `null`. */
+export function reciboEnLinea(root: string, linea: number): ReciboQaAgent | null {
+  const ruta = qaAgentReceiptsPath(root);
+  if (!existsSync(ruta)) return null;
+  const texto = readFileSync(ruta, "utf8").split("\n")[linea - 1];
+  if (texto === undefined || texto.trim() === "") return null;
+  try {
+    const r = JSON.parse(texto) as ReciboQaAgent;
+    return r.kind === "qa-agent-receipt" ? r : null;
+  } catch {
+    return null;
+  }
+}

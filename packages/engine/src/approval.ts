@@ -91,6 +91,7 @@ export interface ConsumedApproval {
 export type ApprovalLogEntry =
   | IssuedApproval
   | ConsumedApproval
+  | PolicyCloseNotice
   | UndeliveredApproval
   | ProcessNotice
   | AutonomousStopNotice
@@ -124,6 +125,19 @@ export interface ApprovalBatch {
  */
 export interface TestsReadyNotice {
   readonly kind: "tests-ready-notice";
+  readonly ticketId: string;
+  readonly cycle: number;
+  readonly notifiedAt: string;
+}
+
+/**
+ * El aviso de que un ticket cerró su ciclo de QA por política (R-QAAG-006).
+ *
+ * `cycle` es cuántas entradas de QA tenía el ticket al avisar: uno que se reabre y vuelve a cerrar
+ * por política es otro aviso, y el mismo ciclo no se repite.
+ */
+export interface PolicyCloseNotice {
+  readonly kind: "policy-close-notice";
   readonly ticketId: string;
   readonly cycle: number;
   readonly notifiedAt: string;
@@ -439,6 +453,7 @@ export function readApprovalLog(paths: RegistryPaths): ApprovalLogEntry[] {
         valor.kind === "process-notice" ||
         valor.kind === "autonomous-stop-notice" ||
         valor.kind === "tests-ready-notice" ||
+        valor.kind === "policy-close-notice" ||
         valor.kind === "approval-batch"
       ) {
         entradas.push(valor);
@@ -474,6 +489,15 @@ export function pruebasListasAvisadas(paths: RegistryPaths): Set<string> {
   return new Set(
     readApprovalLog(paths)
       .filter((entry): entry is TestsReadyNotice => entry.kind === "tests-ready-notice")
+      .map((entry) => `${entry.ticketId}:${entry.cycle}`),
+  );
+}
+
+/** Los avisos de cierre por política ya entregados, como `ticket:ciclo`. */
+export function cierresPorPoliticaAvisados(paths: RegistryPaths): Set<string> {
+  return new Set(
+    readApprovalLog(paths)
+      .filter((entry): entry is PolicyCloseNotice => entry.kind === "policy-close-notice")
       .map((entry) => `${entry.ticketId}:${entry.cycle}`),
   );
 }
@@ -563,7 +587,7 @@ export function ultimoIntento(
     // Un aviso de proceso no tiene código y no entra en esta cuenta: su vida es
     // otra —se avisa una vez y la corrida sigue detenida— y mezclarlo movería
     // la ventana de reintento de un gate sin motivo.
-    if (e.kind === "process-notice" || e.kind === "autonomous-stop-notice" || e.kind === "tests-ready-notice" || e.kind === "approval-batch") return [];
+    if (e.kind === "process-notice" || e.kind === "autonomous-stop-notice" || e.kind === "tests-ready-notice" || e.kind === "policy-close-notice" || e.kind === "approval-batch") return [];
     if (!codigos.has(e.code)) return [];
     if (e.kind === "approval-issued") return [e.issuedAt];
     if (e.kind === "approval-undelivered") return [e.attemptedAt];

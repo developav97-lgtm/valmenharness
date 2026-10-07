@@ -36,6 +36,8 @@ import {
   hasApprovedQaCycle,
   replaceBlock,
   replaceFrontmatterField,
+  parsePolicyConfirmation,
+  validateReference,
   validateText,
   validateTitle,
 } from "@valmen/core";
@@ -620,6 +622,10 @@ export function qaClose(request: QaCloseRequest): string {
   }
   // Aprobar un ciclo de QA es una decisión de una persona (R-JORN-010): una sesión desatendida no.
   if (result === "approved") assertSesionAtendida("aprobar un ciclo de QA");
+  // La atribución «por política» solo la escribe `qaApproveByPolicy`: nadie la declara con una frase.
+  if (poConfirmation !== null && /^policy:/i.test(poConfirmation.trim())) {
+    fail("Una confirmación «policy:» solo la escribe el cierre por política, no una persona ni el agente.", EXIT_INVARIANT);
+  }
 
   return conTicket(request.paths, request.ticketId, request.now, (contexto) => {
     if (contexto.document.fields.workflow_status !== "in_qa") {
@@ -670,6 +676,81 @@ export function qaClose(request: QaCloseRequest): string {
       accion: "qa-closed",
       detalles: `Se registró ${id} con resultado ${result}.`,
       salida: `Resultado QA registrado: ${id}`,
+    };
+  });
+}
+
+/**
+ * Anota en `## Pruebas` el resultado de una verificación por política: la línea que `in_qa` exige y
+ * que aquí no es de una persona. Solo agrega; no reescribe lo que ya dice la sección.
+ */
+export function anotarResultadoPorPolitica(request: {
+  readonly paths: RegistryPaths;
+  readonly ticketId: string;
+  readonly confirmation: string;
+  readonly now?: (() => Date) | undefined;
+}): string {
+  if (parsePolicyConfirmation(request.confirmation) === null) {
+    fail("La confirmación por política debe ser policy:<autorización>:<hash>|recibo:<ruta:línea>.", EXIT_INVARIANT);
+  }
+  return conTicket(request.paths, request.ticketId, request.now, (contexto) => {
+    const m = /^## Pruebas\n([\s\S]*?)(?=^## )/m.exec(contexto.document.text);
+    if (m === null) fail("El ticket no tiene la sección Pruebas.", EXIT_INVARIANT);
+    const cuerpo = (m[1] as string).replace(/\s+$/, "");
+    const nuevo = `## Pruebas\n${cuerpo}\n\n- Resultado por política: ${request.confirmation}\n\n`;
+    const texto = contexto.document.text.slice(0, m.index) + nuevo + contexto.document.text.slice(m.index + m[0].length);
+    return {
+      texto,
+      accion: "tests-result-by-policy",
+      detalles: "Se anotó el resultado por política en Pruebas.",
+      salida: "Resultado por política anotado",
+    };
+  });
+}
+
+// ── qa-approve-by-policy ────────────────────────────────────────────────────
+
+export interface QaApproveByPolicyRequest {
+  readonly paths: RegistryPaths;
+  readonly ticketId: string;
+  /** `commit:<sha40>` del commit entregado que el recibo de `qa-agent` probó. */
+  readonly buildReference: string;
+  readonly environment: string;
+  /** `policy:<autorización>:<hash>|recibo:<ruta:línea>`. */
+  readonly confirmation: string;
+  readonly now?: (() => Date) | undefined;
+}
+
+/**
+ * Abre y cierra un ciclo de QA aprobado por política en una sola escritura (R-QAAG-006).
+ *
+ * Es atómico a propósito: o queda el ciclo completo, o no queda nada. Quien lo llama (el cierre por
+ * política) ya comprobó elegibilidad, recibo y autorización; esta función solo exige la forma de la
+ * confirmación y el estado `in_qa`, y no pasa por la barrera de sesión atendida de `qaClose`.
+ */
+export function qaApproveByPolicy(request: QaApproveByPolicyRequest): string {
+  if (parsePolicyConfirmation(request.confirmation) === null) {
+    fail("La confirmación por política debe ser policy:<autorización>:<hash>|recibo:<ruta:línea>.", EXIT_INVARIANT);
+  }
+  const environment = validateText(request.environment, "environment");
+  return conTicket(request.paths, request.ticketId, request.now, (contexto) => {
+    if (contexto.document.fields.workflow_status !== "in_qa") {
+      fail("El cierre por política solo se permite cuando el ticket está in_qa.", EXIT_INVARIANT);
+    }
+    const qa = (contexto.document.blocks.QA ?? []).map((entrada) => ({ ...entrada }));
+    if (qa.length % 2 !== 0) fail("Ya existe un ciclo QA pendiente de cierre.", EXIT_INVARIANT);
+    validateReference(request.buildReference, "build_reference");
+    const abre = nextId(qa, "QA");
+    qa.push({ id: abre, date: contexto.date, build_reference: request.buildReference, environment, result: "pending", findings: [], correction: null, po_confirmation: null });
+    const cierra = nextId(qa, "QA");
+    qa.push({ id: cierra, date: contexto.date, build_reference: null, environment: null, result: "approved", findings: [], correction: null, po_confirmation: request.confirmation });
+    let texto = replaceBlock(contexto.document.text, "QA", qa);
+    texto = replaceFrontmatterField(texto, "qa_status", "approved");
+    return {
+      texto,
+      accion: "qa-approved-by-policy",
+      detalles: `Se registró ${abre} y ${cierra} aprobado por política.`,
+      salida: `Ciclo QA aprobado por política: ${cierra}`,
     };
   });
 }
