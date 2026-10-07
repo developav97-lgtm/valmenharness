@@ -482,11 +482,13 @@ function isIsolatedBlockContradiction(
 
   return rule.requiredApprovedIds.every((id) => {
     const item = evaluated.find((candidate) => candidate.id === id);
-    return (
-      item !== undefined &&
-      item.value >= policy.approveAt &&
-      item.effect?.outcome === "approve"
-    );
+    if (item === undefined) return false;
+    // Una proposición descriptiva no vota: se registra y no decide. Exigirle el
+    // umbral convertía un valor sin significado —`riesgos_cubren_impactos` cuando el
+    // ticket no declara impactos— en el motivo para conservar un BLOCK que el resto
+    // del recibo contradice (R-CDEF-003).
+    if (!item.verdict) return true;
+    return item.value >= policy.approveAt && item.effect?.outcome === "approve";
   });
 }
 

@@ -265,6 +265,61 @@ describe("la contradicción aislada del gate de análisis", () => {
     },
   );
 
+  // R-CDEF-003: sin impactos declarados, `riesgos_cubren_impactos` es descriptiva y
+  // su valor no es una medida; no puede impedir la degradación a revisión.
+  const proposicionesConRiesgosDescriptivo = ANALYSIS_GATE.propositions.map((p) =>
+    p.id === "riesgos_cubren_impactos" ? { ...p, verdict: false } : p,
+  );
+
+  it("degrada a revisión aunque la proposición descriptiva requerida tenga un valor bajo", () => {
+    const answers = respuestasAp004.map((answer) =>
+      answer.id === "riesgos_cubren_impactos" ? { ...answer, value: 0.06 } : answer,
+    );
+    const decision = decide(
+      proposicionesConRiesgosDescriptivo,
+      answers,
+      ANALYSIS_GATE.policy,
+      ANALYSIS_GATE.isolatedBlockReview,
+    );
+
+    expect(decision.outcome).toBe("review");
+    expect(decision.blocking).toEqual(["diagnostico_explica_el_sintoma"]);
+  });
+
+  it("el caso de control con la descriptiva sigue en BLOCK si falla la causa específica", () => {
+    const answers = respuestasAp004.map((answer) =>
+      answer.id === "causa_especifica"
+        ? { ...answer, value: 0.04 }
+        : answer.id === "riesgos_cubren_impactos"
+          ? { ...answer, value: 0.06 }
+          : answer,
+    );
+    const decision = decide(
+      proposicionesConRiesgosDescriptivo,
+      answers,
+      ANALYSIS_GATE.policy,
+      ANALYSIS_GATE.isolatedBlockReview,
+    );
+
+    expect(decision.outcome).toBe("block");
+    expect(decision.blocking).toContain("causa_especifica");
+  });
+
+  it("una requerida que vota y no supera approveAt sigue impidiendo la degradación", () => {
+    const answers = respuestasAp004.map((answer) =>
+      answer.id === "riesgos_cubren_impactos" ? { ...answer, value: 0.5 } : answer,
+    );
+    const decision = decide(
+      ANALYSIS_GATE.propositions,
+      answers,
+      ANALYSIS_GATE.policy,
+      ANALYSIS_GATE.isolatedBlockReview,
+    );
+
+    expect(decision.outcome).not.toBe("approve");
+    expect(decision.reason).not.toContain("contradicción");
+  });
+
   it("conserva el bloqueo si la clasificación no está completa", () => {
     const answers: PropositionAnswer[] = respuestasAp004.map((answer) =>
       answer.id === "clasificacion"
