@@ -89,3 +89,5 @@
 {"kind":"close","ticketId":"FEATURE-ENGINE-REGLAS-INTEGRACION-20260926","detail":"QA aprobado y ticket cerrado","at":"2026-10-07T03:58:23.797Z"}
 {"kind":"note","ticketId":"INTEGRATION-GIT-INTEGRACION-AUTONOMA-20260926","detail":"avanzó a in_progress (analyzed → planned → approved → in_progress)","at":"2026-10-07T04:00:08.215Z"}
 {"kind":"close","ticketId":"INTEGRATION-GIT-INTEGRACION-AUTONOMA-20260926","detail":"QA aprobado y ticket cerrado","at":"2026-10-07T04:03:37.450Z"}
+{"kind":"note","ticketId":"FEATURE-ENGINE-ELEGIBILIDAD-QA-20261005","detail":"avanzó a in_progress (analyzed → planned → approved → in_progress)","at":"2026-10-07T04:26:51.005Z"}
+{"kind":"close","ticketId":"FEATURE-ENGINE-ELEGIBILIDAD-QA-20261005","detail":"QA aprobado y ticket cerrado","at":"2026-10-07T04:30:28.462Z"}
