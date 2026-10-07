@@ -1013,3 +1013,57 @@ export function readPlanApprovalSources(config: ConfigMap): readonly string[] {
   }
   return fuentes;
 }
+
+/** Las ramas que nunca se aceptan como rama de trabajo si el proyecto no declara las suyas. */
+export const DEFAULT_PROTECTED_BRANCHES: readonly string[] = ["main", "master", "production"];
+
+/** La rama de trabajo si el proyecto no declara `execution.work-branch`. */
+export const DEFAULT_WORK_BRANCH = "valmen/jornada-<AAAAMMDD>";
+
+export interface IntegrationConfig {
+  /** La plantilla de la rama de trabajo; `<AAAAMMDD>` se reemplaza por la fecha. */
+  readonly workBranch: string;
+  readonly protectedBranches: readonly string[];
+}
+
+const WORK_BRANCH_RE = /^[A-Za-z0-9][A-Za-z0-9._/<>-]*$/;
+
+/** Reemplaza `<AAAAMMDD>` de una plantilla de rama por la fecha. */
+export function resolveWorkBranch(workBranch: string, fecha: Date): string {
+  return workBranch.replaceAll("<AAAAMMDD>", fecha.toISOString().slice(0, 10).replaceAll("-", ""));
+}
+
+/**
+ * Lee `execution.work-branch` y `execution.protected-branches` (R-JORN-009).
+ *
+ * La rama de trabajo no puede ser una protegida: una jornada que commitea en `main` es justo lo
+ * que estas reglas existen para impedir, y se rechaza al leer la configuración, no al commitear.
+ */
+export function readIntegrationConfig(config: ConfigMap): IntegrationConfig {
+  const execution = config["execution"] === undefined ? {} : readMap(config, "execution");
+  const protectedBranches =
+    execution["protected-branches"] === undefined
+      ? [...DEFAULT_PROTECTED_BRANCHES]
+      : readList(execution, "protected-branches", []);
+  if (protectedBranches.some((rama) => rama.trim() === "")) {
+    fail('config.yaml: "execution.protected-branches" no admite elementos vacíos.');
+  }
+  const workBranch = readString(execution, "work-branch", DEFAULT_WORK_BRANCH);
+  if (!WORK_BRANCH_RE.test(workBranch) || workBranch.includes("..") || workBranch.endsWith("/") || workBranch.endsWith(".lock")) {
+    fail(
+      `config.yaml: "execution.work-branch" no es un nombre de rama válido: «${workBranch}». ` +
+        "Use letras, números, `.`, `_`, `-` y `/`, con `<AAAAMMDD>` opcional.",
+    );
+  }
+  // Se compara la plantilla y también la rama resuelta de hoy: `main-<AAAAMMDD>` no es
+  // protegida, pero una plantilla que se resuelve a `main` sí.
+  const resueltaHoy = resolveWorkBranch(workBranch, new Date());
+  const lista = new Set(protectedBranches);
+  if (lista.has(workBranch) || lista.has(resueltaHoy)) {
+    fail(
+      `config.yaml: "execution.work-branch" apunta a una rama protegida («${workBranch}»). ` +
+        `Las protegidas son: ${protectedBranches.join(", ")}.`,
+    );
+  }
+  return { workBranch, protectedBranches };
+}

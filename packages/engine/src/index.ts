@@ -23,6 +23,7 @@ export * from "./journey-windows.js";
 export * from "./journey-authorization.js";
 export * from "./journey-selection.js";
 export * from "./journey-dispatch.js";
+export * from "./integration-rules.js";
 export * from "./journey-advance.js";
 export * from "./journey-limits.js";
 export * from "./journey-phases.js";
