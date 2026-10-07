@@ -61,7 +61,9 @@ import {
 
 import {
   type BudgetPolicy,
+  aprobarPorCodigo,
   armarJornada,
+  emitirAprobacionesDeJornada,
   avanzarJornada,
   liberarParada,
   registrarAprobacionDePlan,
@@ -180,6 +182,8 @@ import {
   instruccionesDelDisparador,
   renderLaunchdPlist,
 } from "./journey-trigger.js";
+
+import { approvalSecret } from "./hermes.js";
 
 export type CommandResult = RunnerResult;
 
@@ -2767,6 +2771,81 @@ export async function journeyAdvanceCommand(
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);
   }
+}
+
+/**
+ * `journey notify-plans --project <id> --journey <id> [--to <destino>]`.
+ *
+ * Emite un código por plan listo de la jornada y uno de lote, y los envía por el canal de avisos
+ * (R-JORN-004). Si el envío falla los códigos siguen valiendo y se dice.
+ */
+export function journeyNotifyPlansCommand(
+  flags: Readonly<Record<string, string | true>>,
+  opciones: { readonly home?: string; readonly secret?: string | null; readonly ahora?: () => Date; readonly runner?: CommandRunner } = {},
+): CommandResult {
+  const proyecto = typeof flags["project"] === "string" ? flags["project"] : undefined;
+  const jornada = typeof flags["journey"] === "string" ? flags["journey"] : undefined;
+  if (proyecto === undefined || jornada === undefined) {
+    return error("journey notify-plans requiere --project <id> y --journey <id>.", EXIT_SCHEMA);
+  }
+  const secret = opciones.secret === undefined ? approvalSecret() : opciones.secret;
+  if (secret === null) {
+    return error(
+      "No hay secreto para firmar los códigos: se declara en el almacén de credenciales (aprobacion.secret) " +
+        "o con VALMEN_APPROVAL_SECRET. El harness nunca lo genera ni lo guarda en el repositorio.",
+      EXIT_SCHEMA,
+    );
+  }
+  try {
+    const project = resolveAuthorizedProject({ projectId: proyecto, home: opciones.home ?? homedir() });
+    const ahora = opciones.ahora?.() ?? new Date();
+    const emision = emitirAprobacionesDeJornada({ project, journeyId: jornada, secret, ahora });
+    const destino = typeof flags["to"] === "string" ? flags["to"] : "";
+    if (destino === "" || emision.planes.length === 0) {
+      return ok(`${emision.mensaje}\n${destino === "" ? "Sin destino: no se envió nada (--to telegram).\n" : ""}`);
+    }
+    const entrega = hermesSendChannel({
+      target: destino,
+      ...(opciones.runner === undefined ? {} : { runner: opciones.runner }),
+    }).notify({ subject: "Planes para aprobar", body: emision.mensaje, key: `plan-codes:${jornada}:${ahora.toISOString()}` });
+    return ok(
+      `${emision.mensaje}\n${entrega.delivered ? `Enviado a ${destino}.` : `Los códigos valen, pero el envío a ${destino} falló: ${entrega.detail}`}\n`,
+    );
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/**
+ * `plan-approve --code <código> --actor <nombre> --quote "<frase>"`: aprueba por código.
+ *
+ * El código de un plan aprueba ese plan; el de un lote aprueba cada uno de sus planes. Registra la
+ * aprobación con fuente `token` y la frase de quien aprueba. Una sesión desatendida no puede.
+ */
+export function planApproveCommand(
+  paths: RegistryPaths,
+  flags: Readonly<Record<string, string | true>>,
+  opciones: { readonly secret?: string | null; readonly ahora?: () => Date; readonly env?: Readonly<Record<string, string | undefined>> } = {},
+): CommandResult {
+  const texto = (n: string): string => (typeof flags[n] === "string" ? (flags[n] as string) : "");
+  if (texto("code") === "") return error("plan-approve requiere --code <código>.", EXIT_SCHEMA);
+  const secret = opciones.secret === undefined ? approvalSecret() : opciones.secret;
+  if (secret === null) return error("No hay secreto para verificar los códigos (aprobacion.secret o VALMEN_APPROVAL_SECRET).", EXIT_SCHEMA);
+  const resultados = aprobarPorCodigo({
+    paths,
+    secret,
+    codigo: texto("code"),
+    actor: texto("actor"),
+    quote: texto("quote"),
+    ahora: opciones.ahora?.() ?? new Date(),
+    ...(opciones.env === undefined ? {} : { env: opciones.env }),
+  });
+  const lineas = resultados.map((r) => `${r.ok ? "✓" : "✗"} ${r.ticket}: ${r.detalle}`);
+  const fallo = resultados.some((r) => !r.ok);
+  return fallo
+    ? { stdout: "", stderr: `${lineas.join("\n")}\n`, exitCode: EXIT_INVARIANT }
+    : ok(`${lineas.join("\n")}\n`);
 }
 
 /**

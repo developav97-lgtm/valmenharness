@@ -94,7 +94,27 @@ export type ApprovalLogEntry =
   | UndeliveredApproval
   | ProcessNotice
   | AutonomousStopNotice
-  | TestsReadyNotice;
+  | TestsReadyNotice
+  | ApprovalBatch;
+
+/** Los gates (en el sentido de sujeto) cuyo código aprueba un plan y no una compuerta (R-JORN-004). */
+export const SUJETO_PLAN = "plan-approval";
+export const SUJETO_LOTE_DE_PLANES = "plan-approval-lote";
+
+/**
+ * Un lote de aprobaciones de plan: un código que reúne los códigos de cada plan.
+ *
+ * Los códigos de cada plan siguen siendo de un solo uso y atados al hash de su plan; el del
+ * lote solo dice cuáles aprobar juntos.
+ */
+export interface ApprovalBatch {
+  readonly kind: "approval-batch";
+  readonly code: string;
+  readonly journeyId: string;
+  readonly items: readonly { readonly ticket: string; readonly code: string; readonly planHash: string }[];
+  readonly issuedAt: string;
+  readonly expiresAt: string;
+}
 
 /**
  * El aviso de que un ticket llegó a las pruebas del responsable (R-JORN-008).
@@ -418,7 +438,8 @@ export function readApprovalLog(paths: RegistryPaths): ApprovalLogEntry[] {
         valor.kind === "approval-undelivered" ||
         valor.kind === "process-notice" ||
         valor.kind === "autonomous-stop-notice" ||
-        valor.kind === "tests-ready-notice"
+        valor.kind === "tests-ready-notice" ||
+        valor.kind === "approval-batch"
       ) {
         entradas.push(valor);
       }
@@ -542,7 +563,7 @@ export function ultimoIntento(
     // Un aviso de proceso no tiene código y no entra en esta cuenta: su vida es
     // otra —se avisa una vez y la corrida sigue detenida— y mezclarlo movería
     // la ventana de reintento de un gate sin motivo.
-    if (e.kind === "process-notice" || e.kind === "autonomous-stop-notice" || e.kind === "tests-ready-notice") return [];
+    if (e.kind === "process-notice" || e.kind === "autonomous-stop-notice" || e.kind === "tests-ready-notice" || e.kind === "approval-batch") return [];
     if (!codigos.has(e.code)) return [];
     if (e.kind === "approval-issued") return [e.issuedAt];
     if (e.kind === "approval-undelivered") return [e.attemptedAt];

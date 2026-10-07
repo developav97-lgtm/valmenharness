@@ -108,7 +108,9 @@ import {
   journeyAdvanceCommand,
   journeyClearStopCommand,
   journeyInstallTriggerCommand,
+  journeyNotifyPlansCommand,
   journeyPlanCommand,
+  planApproveCommand,
   precheckCommand,
   precisionCommand,
   thresholdsCommand,
@@ -219,6 +221,11 @@ Comandos:
   journey advance --project <id> [--journey <id>] [--fase preparacion|ejecucion] [--to <destino>]
                             Avanza la jornada una vez: sin modelo e idempotente (un segundo
                             avance no despacha otro ticket). Pensado para un disparador.
+  journey notify-plans --project <id> --journey <id> [--to <destino>]
+                            Emite un código de aprobación por plan listo y uno de lote, y los envía.
+  plan-approve --code <código> --actor <nombre> --quote "<frase>"
+                            Aprueba el plan (o el lote) de un código, con fuente token: solo si el
+                            proyecto la declara en plan-approval-sources. De un solo uso.
   journey clear-stop --project <id> --id <ticket> --actor <nombre>
                             Libera la parada de un ticket: una parada no se reintenta sola.
   journey install-trigger --project <id> [--every <min>] [--write] [--dir <carpeta>]
@@ -1903,9 +1910,13 @@ export async function run(argv: readonly string[]): Promise<number> {
             ? await journeyAdvanceCommand(options.flags)
             : rest[0] === "install-trigger"
               ? journeyInstallTriggerCommand(options.flags)
-              : rest[0] === "clear-stop"
+              : rest[0] === "notify-plans"
+                ? journeyNotifyPlansCommand(options.flags)
+                : rest[0] === "clear-stop"
                 ? journeyClearStopCommand(options.flags)
-                : { stdout: "", stderr: "journey admite: plan, advance, install-trigger y clear-stop.\n", exitCode: EXIT_SCHEMA };
+                : { stdout: "", stderr: "journey admite: plan, advance, install-trigger, notify-plans y clear-stop.\n", exitCode: EXIT_SCHEMA };
+    } else if (command === "plan-approve") {
+      result = planApproveCommand(resolvePaths(options), options.flags);
     } else if (command === "approve-plan") {
       result = approvePlanCommand(resolvePaths(options), options.flags);
     } else if (command === "precheck") {

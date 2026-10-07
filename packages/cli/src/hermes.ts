@@ -577,6 +577,14 @@ export function decideByCode(request: DecideByCodeRequest): CommandResult {
   }
   const claims = verificado.claims;
 
+  // Un código de aprobación de plan no decide una compuerta: se usa con `valmen plan-approve`.
+  if (claims.gate === "plan-approval" || claims.gate === "plan-approval-lote") {
+    return falla(
+      `El código ${resuelto.pending.code} aprueba un plan, no una compuerta: usa ` +
+        '`valmen plan-approve --code <código> --actor <tú> --quote "<tus palabras>"`.',
+    );
+  }
+
   const ticket = findTicket(request.paths, claims.ticket);
   if (ticket === undefined) {
     return falla(`El ticket ${claims.ticket} ya no está en el registro.`);
