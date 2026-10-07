@@ -73,3 +73,5 @@
 {"kind":"stop","ticketId":"FEATURE-ENGINE-JORNADA-DIARIA-20261005","detail":"la compuerta plan dio BLOCK (falló criterio_04=0.02). Un BLOCK no se aprueba por delegación: se corrige el artefacto y se vuelve a correr, o se consulta al PO.","at":"2026-10-07T03:22:21.059Z"}
 {"kind":"note","ticketId":"FEATURE-ENGINE-JORNADA-DIARIA-20261005","detail":"avanzó a in_progress (approved → in_progress)","at":"2026-10-07T03:22:59.955Z"}
 {"kind":"close","ticketId":"FEATURE-ENGINE-JORNADA-DIARIA-20261005","detail":"QA aprobado y ticket cerrado","at":"2026-10-07T03:26:50.593Z"}
+{"kind":"note","ticketId":"FEATURE-CLI-AVANCE-JORNADA-20261005","detail":"avanzó a in_progress (analyzed → planned → approved → in_progress)","at":"2026-10-07T03:28:27.672Z"}
+{"kind":"close","ticketId":"FEATURE-CLI-AVANCE-JORNADA-20261005","detail":"QA aprobado y ticket cerrado","at":"2026-10-07T03:30:55.132Z"}
