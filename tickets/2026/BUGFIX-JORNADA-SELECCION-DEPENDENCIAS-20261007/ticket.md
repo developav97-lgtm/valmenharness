@@ -5,7 +5,7 @@ title: La jornada despacha tickets no elegibles y con dependencias sin cerrar
 type: BUGFIX
 module: JORNADA
 workflow_status: in_qa
-qa_status: pending
+qa_status: in_qa
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -93,7 +93,53 @@ Hallazgos del 2026-10-07 al correr `valmen journey advance --project valmen-harn
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "La jornada despacha un ticket no elegible y no sigue con el resto",
+    "status": "open",
+    "severity": "normal",
+    "actual": "`valmen journey advance --fase preparacion` eligió un SECURITY aunque `autonomous.eligible.types` no lo incluye; el avance quedó en «despachado… no-elegible» sin probar el siguiente (journey-preparation.ts, siguienteAPreparar sin política).",
+    "expected": "Se salta el ticket no elegible, se elige el siguiente elegible y el avance informa cada omitido con su motivo.",
+    "evidence": [
+      "EVIDENCE-001"
+    ],
+    "affected_files": [
+      "packages/engine/src/autonomous-run.ts",
+      "packages/engine/src/journey-advance.ts",
+      "packages/engine/src/journey-preparation.ts",
+      "packages/engine/src/journey-selection.ts",
+      "tests/jornada-preparacion.test.ts",
+      "tests/journey-selection.test.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [],
+    "terminal_reason": null,
+    "related_ticket": null
+  },
+  {
+    "id": "POINT-002",
+    "title": "La condición «dependencies» ignora las dependencias fuera de la jornada",
+    "status": "open",
+    "severity": "normal",
+    "actual": "Se despachó FEATURE-ADAPTER-SKILLS-UX-20261007 con una dependencia en intake fuera de la jornada: armarJornada descarta las dependencias que no van en ella (journey-plan.ts:132) y la selección solo lee las de la jornada.",
+    "expected": "Cualquier dependencia del grafo de la feature que no esté en closed bloquea el despacho, esté o no en la jornada.",
+    "evidence": [],
+    "affected_files": [
+      "packages/engine/src/materialize.ts",
+      "packages/engine/src/journey-selection.ts",
+      "packages/engine/src/journey-preparation.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -117,13 +163,33 @@ Hallazgos del 2026-10-07 al correr `valmen journey advance --project valmen-harn
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-07",
+    "build_reference": "commit:6d348befa1e0bc4b7470eca33976bd74e7672db5",
+    "environment": "macOS 27.0.1, Node v26.10.0, checkout principal en la rama main, vitest 2.1.9; jornada de prueba con tickets de fixture, sin proyecto real",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  }
+]
 ```
 
 ## Evidencia
 
 ```json
-[]
+[
+  {
+    "id": "EVIDENCE-001",
+    "date": "2026-10-07",
+    "kind": "automated-test",
+    "description": "En el checkout principal (main, merge 6d348be): `npx vitest run tests/journey-selection.test.ts tests/jornada-preparacion.test.ts tests/avance-jornada.test.ts` → 3 archivos, 34 pruebas pasan. Antes del merge, en el worktree: `npx vitest run` → 193 archivos pasan, 1 omitido; 2805 pruebas pasan, 48 omitidas.",
+    "reference": "worktree:sha256:543488198d9095f62e3cac508d808014ddf68c18a1210a03d572f758e6f721e0",
+    "point_id": "POINT-001"
+  }
+]
 ```
 
 ## Retests
@@ -257,6 +323,42 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:03:58.422Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:04:00.274Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:04:08.627Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:04:12.253Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
   }
 ]
 ```
