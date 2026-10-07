@@ -4,7 +4,7 @@ id: SECURITY-MC-AUTORIZACION-APROBACION-20261007
 title: Crear y revocar autorizaciones de aprobación desde Mission Control y código firmado
 type: SECURITY
 module: MC
-workflow_status: planned
+workflow_status: in_progress
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -61,7 +61,7 @@ Ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 - Alcance: Mission Control (lista, crear, revocar) y el código firmado de un solo uso para la autorización de aprobación, sin herramienta MCP de escritura. Exclusiones: aplicar la autorización a un ticket y el agente revisor.
 - Pasos ordenados:
   1. Crear `packages/engine/src/approval-authorization-link.ts` con `emitirCodigoDeAutorizacionDeAprobacion`, `canjearCodigoDeAutorizacionDeAprobacion` y `revocarCodigoDeAutorizacionDeAprobacion`, sobre el registro propio `.valmen/approval/links.jsonl` y un sujeto de firma propio: el código lleva los términos congelados (tipos, módulos, riesgo, impactos, etapas, modo, cupo y días) en sus claims, vale 24 horas, se consume solo después de crear la autorización con la fuente `enlace-firmado`, rechaza un código vencido, usado, revocado o con otro secreto, y una sesión desatendida no puede emitirlo, canjearlo ni revocarlo; exportarlo desde `packages/engine/src/index.ts`.
@@ -173,6 +173,42 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-07",
+    "at": "2026-10-07T19:39:57.355Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"La A\",\"planHash\":\"sha256:9652ffcfb420f0051b9e77ceba457dbf8b355563dea459e7fa76c6a93d50bea2\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-07",
+    "at": "2026-10-07T19:39:57.745Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:9652ffcfb420f0051b9e77ceba457dbf8b355563dea459e7fa76c6a93d50bea2."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-07",
+    "at": "2026-10-07T19:39:57.745Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-07",
+    "at": "2026-10-07T19:39:58.670Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
   }
 ]
 ```

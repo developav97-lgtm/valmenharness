@@ -4,7 +4,7 @@ id: SECURITY-CLI-REVISION-SKILLS-20261007
 title: Registrar la revisión de una persona y deshabilitar la skill si su contenido cambia
 type: SECURITY
 module: CLI
-workflow_status: planned
+workflow_status: in_progress
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -55,7 +55,7 @@ Ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 - Alcance: el hash del contenido instalado, el registro de revisiones y los estados que se derivan. Exclusiones: descargar o instalar la skill y proyectarla a los clientes.
 - Pasos ordenados:
   1. En `packages/engine/src/external-skills.ts` agregar `hashDeContenidoDeSkill(dir)` (sha256 sobre las rutas relativas ordenadas y los bytes de cada archivo regular, sin seguir enlaces simbólicos), `registrarRevisionDeSkill` (anexa a `.valmen/external-skills/reviews.jsonl`: id, versión, hash, actor, frase literal, permisos y fecha; exige sesión atendida con `assertSesionAtendida`, un responsable, una frase no vacía, al menos una línea de permisos —o «ninguno» explícito— y que el hash del contenido coincida con el `sha256` declarado) y `leerRevisionesDeSkills`.
@@ -162,6 +162,42 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-07",
+    "at": "2026-10-07T19:39:59.076Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"La A\",\"planHash\":\"sha256:86f488b968782e0a7c40a261a735255661f4983ca22d802f311c03cabae92cb6\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-07",
+    "at": "2026-10-07T19:39:59.621Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:86f488b968782e0a7c40a261a735255661f4983ca22d802f311c03cabae92cb6."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-07",
+    "at": "2026-10-07T19:39:59.621Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-07",
+    "at": "2026-10-07T19:39:59.961Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
   }
 ]
 ```
