@@ -85,3 +85,5 @@
 {"kind":"stop","ticketId":"IMPROVEMENT-ENGINE-VIGILANTE-JORNADA-20261005","detail":"la compuerta analysis no dejó recibo: dor (1 hallazgo(s)):\n    ✗ «Diagnóstico»: cita `.valmen/approvals.jsonl`, que no existe en el repositorio.\nNo se llamó al evaluador. Corregí lo que falta y volvé a pedir la compuerta; la misma revisión se corre a mano con «valmen precheck analysis --id IMPROVEMENT-ENGINE-VIGILANTE-JORNADA-20261005».","at":"2026-10-07T03:51:44.164Z"}
 {"kind":"note","ticketId":"IMPROVEMENT-ENGINE-VIGILANTE-JORNADA-20261005","detail":"avanzó a in_progress (planned → approved → in_progress)","at":"2026-10-07T03:52:35.487Z"}
 {"kind":"close","ticketId":"IMPROVEMENT-ENGINE-VIGILANTE-JORNADA-20261005","detail":"QA aprobado y ticket cerrado","at":"2026-10-07T03:55:15.015Z"}
+{"kind":"note","ticketId":"FEATURE-ENGINE-REGLAS-INTEGRACION-20260926","detail":"avanzó a in_progress (analyzed → planned → approved → in_progress)","at":"2026-10-07T03:56:38.749Z"}
+{"kind":"close","ticketId":"FEATURE-ENGINE-REGLAS-INTEGRACION-20260926","detail":"QA aprobado y ticket cerrado","at":"2026-10-07T03:58:23.797Z"}
