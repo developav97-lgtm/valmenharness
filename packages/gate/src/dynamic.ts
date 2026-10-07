@@ -677,7 +677,7 @@ export function expandGate(gate: GateDefinition, context: GateContext): GateDefi
   // ausencia de una respuesta que nunca se pidió. Se conservan como
   // descriptivas porque su valor es informativo y queda en el recibo.
   const propositions = gate.propositions.map((proposition) =>
-    atomicas.length > 0 && proposition.verdict !== false
+    atomicas.length > 0 && proposition.verdict !== false && proposition.decidedInCode !== true
       ? { ...proposition, verdict: false }
       : proposition,
   );

@@ -25,6 +25,7 @@ import {
   MAX_CRITERIA_PROPOSITIONS,
   type GateDefinition,
   type Proposition,
+  type PropositionAnswer,
 } from "@valmen/gate";
 import {
   evaluateWithCommands,
@@ -121,6 +122,14 @@ export interface EvaluationOutcome {
 export interface SelectOptions {
   readonly gate: GateDefinition;
   readonly state: unknown;
+  /**
+   * Respuestas que el código ya calculó (R-CPRE-009).
+   *
+   * Las proposiciones con respuesta precalculada no se envían al evaluador: lo que se
+   * puede leer en el texto no se le pregunta a un modelo. Sus respuestas se suman a las
+   * demás y votan igual.
+   */
+  readonly precomputed?: readonly PropositionAnswer[];
   /** Comandos asociados a proposiciones, si el proyecto los declara. */
   readonly checks?: readonly CommandCheck[];
   readonly root: string;
@@ -208,6 +217,29 @@ export function chooseEvaluator(options: {
  * que hay algo mal configurado y hay que verlo, no taparlo.
  */
 export async function evaluateGate(options: SelectOptions): Promise<EvaluationOutcome> {
+  const previas = options.precomputed ?? [];
+  if (previas.length === 0) return evaluateGateBase(options);
+
+  const ids = new Set(previas.map((respuesta) => respuesta.id));
+  const restantes = options.gate.propositions.filter((proposicion) => !ids.has(proposicion.id));
+  // Si el código respondió todo, no hay nada que preguntar: ni una llamada ni un céntimo.
+  if (restantes.length === 0) {
+    return {
+      evaluator: "command",
+      answers: [...previas],
+      model: null,
+      usage: { inputTokens: 0, outputTokens: 0, costUsd: 0 },
+      latencyMs: 0,
+    };
+  }
+  const parcial = await evaluateGateBase({
+    ...options,
+    gate: { ...options.gate, propositions: restantes },
+  });
+  return { ...parcial, answers: [...previas, ...parcial.answers] };
+}
+
+async function evaluateGateBase(options: SelectOptions): Promise<EvaluationOutcome> {
   const checks = options.checks ?? options.gate.commandChecks ?? [];
   const chosen = chooseEvaluator({
     gate: options.gate,

@@ -286,8 +286,17 @@ describe("analyzed: la compuerta de análisis", () => {
 
 describe("planned: la compuerta del plan y la aprobación de una persona", () => {
   it("sin recibo y con criterios sin verificación: primero los criterios", () => {
-    // Los criterios por defecto del fixture no declaran test.
-    const paso = siguiente({ workflowStatus: "planned" });
+    // Criterios sin anotación de verificación: los del fixture por defecto la declaran
+    // (la revisión previa de la compuerta lo exige), así que se pasan explícitos.
+    const paso = siguiente({
+      workflowStatus: "planned",
+      criterios: [
+        '- [ ] Buscar "104" devuelve la orden "1042".',
+        '- [ ] Buscar "1042" sigue devolviendo la orden "1042".',
+        '- [ ] Buscar "999" no devuelve resultados.',
+        "- [ ] El cliente que consulta con el número exacto sigue recibiendo su resultado.",
+      ].join("\n"),
+    });
     const t = texto(paso);
 
     expect(t).toContain("Antes de evaluar: 4 criterio(s) no declaran cómo se verifican");

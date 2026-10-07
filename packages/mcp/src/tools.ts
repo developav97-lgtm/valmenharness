@@ -44,6 +44,8 @@ import {
   type ResumeMode,
   addEvidence,
   attachFeatureAsset,
+  renderPreReview,
+  reviewBeforeGate,
   attachTicketToFeature,
   advanceFeature,
   completeFeature,
@@ -1917,6 +1919,25 @@ export const TOOLS: readonly ToolDefinition[] = [
       required: ["id", "ambiente", "pruebas", "resumen_tecnico", "resumen_funcional", "impacto_release"],
     }),
   },
+  {
+    name: "revision_previa",
+    annotations: SOLO_LEE,
+    title: "Revisar un ticket antes de pedir su compuerta",
+    description:
+      "La misma revisión que el motor corre **sin modelo** antes de llamar al evaluador de la " +
+      "compuerta `analysis` o `plan`, para que se pueda correr a mano y sin gastar una llamada. " +
+      "Dice qué falta: marcadores de plantilla vacíos, `Rollback:` vacío, archivos que el " +
+      "diagnóstico cita y no existen (solo en un repositorio git), criterios sin anotación " +
+      "`test:` o `verify:`, más criterios que el tope y pasos del plan sin ruta, símbolo ni " +
+      "comando. Si algo falta, la compuerta no llamaría al evaluador. No escribe nada.",
+    inputSchema: conRoot({
+      properties: {
+        gate: { type: "string", enum: ["analysis", "plan"], description: "La compuerta que se va a pedir." },
+        id: { type: "string", description: "Identificador del ticket." },
+      },
+      required: ["gate", "id"],
+    }),
+  },
 ];
 
 /**
@@ -2763,6 +2784,16 @@ export async function callTool(
             : {}),
         });
         return bien(renderAttachedTicket(anexado));
+      }
+
+      case "revision_previa": {
+        const ticket = findTicket(paths, texto(args, "id") as string);
+        if (ticket === undefined) return mal("La ruta canónica solicitada no existe.");
+        const gateId = texto(args, "gate") as string;
+        const revision = reviewBeforeGate({ root: paths.root, ticketText: ticket.text, gateId });
+        return bien(renderPreReview(gateId, texto(args, "id") as string, revision), {
+          hallazgos: revision.findings.length,
+        });
       }
 
       case "anexar_adjunto_a_feature": {

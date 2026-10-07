@@ -73,6 +73,7 @@ const PLAN_CON_DECLARACION = [
   "- Declaración de interfaz: este plan **no recomienda** cubrir los criterios de",
   "  interfaz con Playwright, porque el cambio es de estilo declarativo y la",
   "  validación queda como `verify: manual` en los criterios.",
+  "- Rollback: revertir el commit de los estilos.",
 ].join("\n");
 
 /** El diagnóstico que cita una pantalla, con una referencia `:línea`. */

@@ -67,14 +67,16 @@ export function renderFixtureTicket(options: FixtureTicketOptions): string {
       "- Pasos ordenados:",
       "  1. Cambiar en `BackEnd/pos/filters.py` el `lookup_expr` de `number` de `exact` a `icontains`.",
       "  2. Añadir en `BackEnd/pos/tests/test_filters.py` una prueba de búsqueda parcial.",
-      "  3. Verificar que el término enviado no requiere normalización.",
+      "  3. Verificar con `npx vitest run` que el término enviado no requiere normalización.",
       "- Rollback: revertir el cambio de una línea y retirar las pruebas añadidas.",
     ].join("\n"),
+    // Cada criterio declara cómo se verifica: la revisión previa de la compuerta del plan
+    // corta, antes del evaluador, un criterio sin anotación (R-CPRE-008).
     criterios = [
-      '- [ ] Buscar "104" devuelve la orden "1042".',
-      '- [ ] Buscar "1042" sigue devolviendo la orden "1042".',
-      '- [ ] Buscar "999" no devuelve resultados.',
-      "- [ ] El cliente que consulta con el número exacto sigue recibiendo su resultado.",
+      '- [ ] Buscar "104" devuelve la orden "1042".\n      <!-- verify: manual -->',
+      '- [ ] Buscar "1042" sigue devolviendo la orden "1042".\n      <!-- verify: manual -->',
+      '- [ ] Buscar "999" no devuelve resultados.\n      <!-- verify: manual -->',
+      "- [ ] El cliente que consulta con el número exacto sigue recibiendo su resultado.\n      <!-- verify: manual -->",
     ].join("\n"),
     diagnostico = [
       "- Archivos y flujo investigados: `BackEnd/pos/filters.py` define `OrderFilter.number` con `lookup_expr='exact'`; `OrderFilter` se aplica desde el ViewSet de órdenes.",

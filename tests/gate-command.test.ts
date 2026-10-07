@@ -732,10 +732,10 @@ describe("la procedencia del veredicto", () => {
     });
 
     // El ticket del fixture declara cuatro criterios, y el gate de plan despliega
-    // uno por criterio: esos cuatro son los que deciden. Las ocho dimensiones fijas
-    // del gate son contexto.
-    expect(result.stdout).toContain("decidieron 4 de 12 proposiciones");
-    expect(result.stdout).toContain("8 son contexto y no emiten veredicto");
+    // uno por criterio: esos cuatro deciden, y también las cuatro comprobaciones que el
+    // código decide y votan (R-CPRE-009). Las otras cuatro dimensiones fijas son contexto.
+    expect(result.stdout).toContain("decidieron 8 de 12 proposiciones");
+    expect(result.stdout).toContain("4 son contexto y no emiten veredicto");
   });
 
   it("una descriptiva en la banda no se marca como una revisión pendiente", async () => {

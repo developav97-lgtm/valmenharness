@@ -90,6 +90,8 @@ export const PLAN_GATE: GateDefinition = {
       // se midió un 0.37 sobre un plan cuyos pasos sí nombran archivo y acción.
       id: "pasos_ejecutables",
       kind: "noul",
+      // Lo decide el código y vota: ver `decideInCode` (R-CPRE-009).
+      decidedInCode: true,
       // Lo que se lee en el recibo: sin esto, la proposición aparece
       // solo por su identificador y hay que ir al gate para saber qué pregunta.
       description: "Los pasos son ejecutables tal como están escritos",
@@ -103,6 +105,8 @@ export const PLAN_GATE: GateDefinition = {
     {
       id: "criterios_verificables",
       kind: "noul",
+      // Lo decide el código y vota: ver `decideInCode` (R-CPRE-009).
+      decidedInCode: true,
       // Lo que se lee en el recibo: sin esto, la proposición aparece
       // solo por su identificador y hay que ir al gate para saber qué pregunta.
       description: "Los criterios se pueden comprobar sin interpretarlos",
@@ -129,6 +133,8 @@ export const PLAN_GATE: GateDefinition = {
     {
       id: "rollback_suficiente",
       kind: "noul",
+      // Lo decide el código y vota: ver `decideInCode` (R-CPRE-009).
+      decidedInCode: true,
       // Lo que se lee en el recibo: sin esto, la proposición aparece
       // solo por su identificador y hay que ir al gate para saber qué pregunta.
       description: "El rollback deshace el cambio por completo",
@@ -168,12 +174,16 @@ export const PLAN_GATE: GateDefinition = {
       },
     },
     {
-      // Descriptiva: informa el recibo, no veta.
+      // Lo decide el código y vota (R-CPRE-009): un plan sin ningún archivo no aprueba.
       id: "hay_archivos_afectados",
       kind: "noul",
+      decidedInCode: true,
       description: "El plan nombra los archivos que va a tocar",
-      verdict: false,
       instructions: "`plan` nombra los archivos concretos que va a modificar.",
+      criteria: {
+        yes: "El plan nombra al menos un archivo concreto que va a modificar.",
+        no: "El plan no nombra ningún archivo.",
+      },
     },
   ],
 };

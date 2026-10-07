@@ -172,7 +172,7 @@ describe("lector de criterios (R-CDEF-001)", () => {
     writeFixtureTicket(lab, {
       id: TICKET,
       workflowStatus: "planned",
-      plan: "- Pasos ordenados:\n  1. Tocar `packages/gate/src/dynamic.ts`.",
+      plan: "- Pasos ordenados:\n  1. Tocar `packages/gate/src/dynamic.ts`.\n- Rollback: revertir el commit del cambio.",
       criterios: `${PLANTILLA}\n\n${viñetas(2)}`,
     });
     const llamadas: string[][] = [];
@@ -201,7 +201,7 @@ describe("más criterios que el tope (R-CDEF-002)", () => {
     writeFixtureTicket(lab, {
       id: TICKET,
       workflowStatus: "planned",
-      plan: "- Pasos ordenados:\n  1. Tocar `packages/gate/src/dynamic.ts`.",
+      plan: "- Pasos ordenados:\n  1. Tocar `packages/gate/src/dynamic.ts`.\n- Rollback: revertir el commit del cambio.",
       criterios: viñetas(31),
     });
     const llamadas: string[][] = [];

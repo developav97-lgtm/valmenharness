@@ -83,7 +83,7 @@ function ticket(criterios: readonly string[]): void {
   writeFixtureTicket(lab, {
     id: TICKET,
     workflowStatus: "planned",
-    plan: "- Pasos ordenados:\n  1. Tocar `packages/gate/src/criteria.ts`.",
+    plan: "- Pasos ordenados:\n  1. Tocar `packages/gate/src/criteria.ts`.\n- Rollback: revertir el commit del cambio.",
     criterios: criterios
       .map((texto) => `- [ ] ${texto}\n      <!-- verify: manual -->`)
       .join("\n"),

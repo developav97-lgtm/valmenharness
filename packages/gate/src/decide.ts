@@ -65,6 +65,14 @@ export interface NoulProposition {
    */
   readonly appliesTo?: readonly string[];
   /**
+   * `true` si el código decide la proposición y el evaluador no la ve (R-CPRE-009).
+   *
+   * Lo que se puede leer en el texto no se le pregunta a un modelo. Una proposición
+   * decidida en código vota en la decisión y no pasa a descriptiva por tener el ticket
+   * criterios.
+   */
+  readonly decidedInCode?: boolean;
+  /**
    * `false` si la proposición **solo describe** algo y no emite veredicto.
    *
    * Por defecto `true`. La distinción es necesaria y se descubrió con una
@@ -105,6 +113,14 @@ export interface ChoiceProposition {
    * mide la ausencia de algo que nunca se pidió.
    */
   readonly appliesTo?: readonly string[];
+  /**
+   * `true` si el código decide la proposición y el evaluador no la ve (R-CPRE-009).
+   *
+   * Lo que se puede leer en el texto no se le pregunta a un modelo. Una proposición
+   * decidida en código vota en la decisión y no pasa a descriptiva por tener el ticket
+   * criterios.
+   */
+  readonly decidedInCode?: boolean;
   /** `false` si solo describe y no emite veredicto. Ver `NoulProposition`. */
   readonly verdict?: boolean;
 }
@@ -136,6 +152,14 @@ export interface ScoreProposition {
    * mide la ausencia de algo que nunca se pidió.
    */
   readonly appliesTo?: readonly string[];
+  /**
+   * `true` si el código decide la proposición y el evaluador no la ve (R-CPRE-009).
+   *
+   * Lo que se puede leer en el texto no se le pregunta a un modelo. Una proposición
+   * decidida en código vota en la decisión y no pasa a descriptiva por tener el ticket
+   * criterios.
+   */
+  readonly decidedInCode?: boolean;
   /** `false` si solo describe y no emite veredicto. Ver `NoulProposition`. */
   readonly verdict?: boolean;
 }

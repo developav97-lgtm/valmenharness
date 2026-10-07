@@ -70,6 +70,8 @@ import {
   type ResumeMode,
   type TicketBudget,
   abandonRun,
+  renderPreReview,
+  reviewBeforeGate,
   appendPromotionEvidence,
   approveGate,
   buildManifest,
@@ -227,6 +229,35 @@ export function validateAll(paths: RegistryPaths): CommandResult {
 }
 
 /** `validate --id <ID>`: valida un ticket concreto. */
+/**
+ * `precheck <compuerta> --id <ID>`: la revisión previa a mano.
+ *
+ * Es **la misma** que corre la compuerta antes de llamar al evaluador (R-CPRE-008): lo que
+ * dice aquí es lo que la compuerta dirá, sin gastar una llamada. Sale con 3 si falta algo.
+ */
+export function precheckCommand(
+  paths: RegistryPaths,
+  gateId: string | undefined,
+  id: string | undefined,
+): CommandResult {
+  if (gateId !== "analysis" && gateId !== "plan") {
+    return error("precheck requiere la compuerta: analysis o plan.", EXIT_SCHEMA);
+  }
+  if (id === undefined) return error("precheck requiere --id <TICKET-ID>.", EXIT_SCHEMA);
+  const ticket = findTicket(paths, id);
+  if (ticket === undefined) return error("La ruta canónica solicitada no existe.");
+  try {
+    const revision = reviewBeforeGate({ root: paths.root, ticketText: ticket.text, gateId });
+    const informe = renderPreReview(gateId, id, revision);
+    return revision.findings.length === 0
+      ? ok(informe)
+      : { stdout: informe, stderr: "", exitCode: EXIT_INVARIANT };
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
 export function validateOne(paths: RegistryPaths, id: string): CommandResult {
   const ticket = findTicket(paths, id);
   if (ticket === undefined) {

@@ -68,6 +68,7 @@ import { appendReceipt, currentReceipts, readReceipts } from "./receipts.js";
 import { interfazDelTicket } from "./interfaz.js";
 import { resolveGateMode } from "./gate-promotion.js";
 import { runTestSetup } from "./test-setup.js";
+import { decideInCode, renderPreReview, reviewBeforeGate } from "./revision-previa.js";
 
 /** Convierte preguntas ya validadas en proposiciones que el motor puro decide. */
 function configuredPropositions(
@@ -520,6 +521,7 @@ export async function runGate(
   // recibo como `no_aplica` (R-CPRE-001). Si el filtro no deja ninguna no se evalúa:
   // decidir sin proposiciones aprobaría por vacuidad.
   let noAplican: NotApplicableRecord[] = [];
+  const respuestasDeCodigo: PropositionAnswer[] = [];
   // Cuántas proposiciones tenía la compuerta ya expandida, antes de filtrar por tipo: el
   // informe dice si hubo expansión comparando contra la definición, y filtrar no es expandir.
   const totalExpandido = gate.propositions.length;
@@ -537,6 +539,19 @@ export async function runGate(
     }
     noAplican = partido.notApplicable;
     gate = { ...gate, propositions: partido.applicable };
+    // Lo que el código decide no se le pregunta al modelo y vota igual (R-CPRE-009).
+    for (const proposicion of partido.applicable) {
+      if (proposicion.decidedInCode !== true) continue;
+      const valor = decideInCode(proposicion.id, ticket.text);
+      if (valor === null) {
+        return {
+          stdout: "",
+          stderr: `La proposición ${proposicion.id} se declara decidida en código y no hay quien la decida.\n`,
+          exitCode: EXIT_INVARIANT,
+        };
+      }
+      respuestasDeCodigo.push({ id: proposicion.id, kind: "noul", value: valor });
+    }
   } catch (caught) {
     const failure = toFailure(caught);
     return { stdout: "", stderr: failure.message, exitCode: failure.exitCode };
@@ -590,6 +605,28 @@ export async function runGate(
         "No se llamó al evaluador.",
       exitCode: EXIT_INVARIANT,
     };
+  }
+
+  // La revisión previa corre en código, sin modelo, antes de gastar una llamada: un
+  // análisis o un plan con el Rollback vacío, un marcador de plantilla sin llenar, un
+  // archivo citado que no existe o un paso sin ruta ni comando no necesita que un modelo lo
+  // descubra (R-CPRE-008). Si algo falla no se llama al evaluador ni se escribe recibo.
+  if (definition.commandPropositions !== true) {
+    const revision = reviewBeforeGate({
+      root: paths.root,
+      ticketText: ticket.text,
+      gateId: definition.id,
+    });
+    if (revision.findings.length > 0) {
+      return {
+        stdout: "",
+        stderr:
+          renderPreReview(definition.id, options.ticketId, revision) +
+          "No se llamó al evaluador. Corregí lo que falta y volvé a pedir la compuerta; " +
+          `la misma revisión se corre a mano con «valmen precheck ${definition.id} --id ${options.ticketId}».\n`,
+        exitCode: EXIT_INVARIANT,
+      };
+    }
   }
 
   // Un gate mecánico cuyos criterios se verifican todos a mano no tiene nada que
@@ -655,6 +692,7 @@ export async function runGate(
         gate,
         state,
         root: paths.root,
+        ...(respuestasDeCodigo.length === 0 ? {} : { precomputed: respuestasDeCodigo }),
         ...(options.checks !== undefined
           ? { checks: options.checks }
           : comandos.length === 0

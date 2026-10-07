@@ -118,6 +118,20 @@ function escribirCriterio(ruta: string, criterio: string): void {
  * una persona.
  */
 function escribirDiagnostico(ruta: string): void {
+  // La revisión previa corta, antes del evaluador, un marcador de plantilla vacío
+  // (R-CPRE-008): quien escribe un diagnóstico de verdad también llena la descripción.
+  const conDescripcion = readFileSync(ruta, "utf8").replace(
+    /(## Descripción funcional\n\n)[\s\S]*?(?=\n## )/,
+    "$1" +
+      [
+        "- Alcance: la búsqueda por número en el listado de órdenes.",
+        "- Usuario o rol afectado: cajero y administrador de sucursal.",
+        "- Comportamiento actual: solo encuentra con el número exacto.",
+        "- Comportamiento esperado: encuentra por número parcial.",
+      ].join("\n") +
+      "\n",
+  );
+  writeFileSync(ruta, conDescripcion, "utf8");
   const texto = readFileSync(ruta, "utf8");
   const cuerpo = [
     "- Archivos y flujo investigados: `BackEnd/pos/filters.py` define `OrderFilter.number` con `lookup_expr='exact'`.",
@@ -220,7 +234,7 @@ describe("el catálogo de herramientas", () => {
     expect(propiedades?.["evaluator"]?.enum).toEqual([...EVALUATOR_IDS]);
   });
 
-  it("declara las cuarenta y ocho herramientas, cada una con descripción y esquema", () => {
+  it("declara las cuarenta y nueve herramientas, cada una con descripción y esquema", () => {
     // El orden es el de la lectura: alta, consulta, validación, movimiento,
     // anotación, compuertas, features, procesos, reportes, y al final el ciclo de
     // QA y el cierre. Estaba intercalado por historia —cada herramienta nueva
@@ -274,6 +288,7 @@ describe("el catálogo de herramientas", () => {
       "ver_delegacion",
       "avanzar_ticket_delegado",
       "cerrar_ticket_delegado",
+      "revision_previa",
     ]);
     for (const tool of TOOLS) {
       expect(tool.description.length).toBeGreaterThan(40);
@@ -1165,6 +1180,16 @@ function escribir(ruta: string, seccion: string, contenido: string): void {
 
 /** Lo mínimo que un ticket necesita para poder aprobarse. */
 function escribirContenido(ruta: string): void {
+  escribir(
+    ruta,
+    "Descripción funcional",
+    [
+      "- Alcance: la búsqueda por número en el listado de órdenes.",
+      "- Usuario o rol afectado: cajero y administrador de sucursal.",
+      "- Comportamiento actual: solo encuentra con el número exacto.",
+      "- Comportamiento esperado: encuentra por número parcial.",
+    ].join("\n"),
+  );
   escribir(
     ruta,
     "Diagnóstico",

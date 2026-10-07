@@ -102,6 +102,7 @@ import {
 } from "@valmen/server";
 import {
   guardarConsumoDeSesiones,
+  precheckCommand,
   standardsCommand,
   memoryCommand,
   scanPendingSecretsCommand,
@@ -196,6 +197,8 @@ Comandos:
   template show <nombre>    Imprime lo que una plantilla escribe. Leerla es el paso.
   template apply <nombre>   Escribe sus reglas en .valmen/ (no pisa lo que existe).
       --dry-run             Muestra qué escribiría, sin escribir.
+  precheck <gate> --id <ID> Revisión previa a mano (analysis o plan): la misma que corre la
+                            compuerta antes de llamar al evaluador. Sale con 3 si falta algo.
   gate <gate> --id <ID>     Evalúa un gate contra un ticket.
       --force-reason <m>    Repite una compuerta ya evaluada sobre el mismo estado y con el
                             mismo evaluador: sin motivo se rechaza; con él queda en el recibo.
@@ -1829,6 +1832,13 @@ export async function run(argv: readonly string[]): Promise<number> {
         decide: recordHumanDecision,
         ...REAL_GIT,
       });
+    } else if (command === "precheck") {
+      const id = options.flags["id"];
+      result = precheckCommand(
+        resolvePaths(options),
+        rest[0],
+        typeof id === "string" ? id : undefined,
+      );
     } else if (command === "gate-decide") {
       result = runGateDecide(resolvePaths(options), options.flags);
     } else if (command === "transition") {

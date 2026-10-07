@@ -61,6 +61,7 @@ export * from "./feature-assets.js";
 export * from "./feature-verify.js";
 export * from "./delegation.js";
 export * from "./test-setup.js";
+export * from "./revision-previa.js";
 export * from "./spec.js";
 export * from "./decompose.js";
 export * from "./report.js";
