@@ -83,7 +83,9 @@ autonomous:
   limits:
     max-concurrent: 1
     collision-policy: serialize
-    max-per-day: 8
+    # Sin tope diario real: cuántos tickets se hacen en una jornada lo fija el PO al armarla
+    # (`valmen journey plan --max <n>`). El lector exige un número, y este no se alcanza.
+    max-per-day: 1000
     budget-per-ticket: 5
     max-minutes: 60
     stop-on:
