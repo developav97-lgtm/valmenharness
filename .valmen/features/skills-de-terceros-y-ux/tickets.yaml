@@ -1,0 +1,207 @@
+feature: skills-de-terceros-y-ux
+generated_by:
+  provider: codex
+  model: gpt-6.1-sol
+sprints:
+  - id: S1
+    goal: Entregar el diseño técnico basado en rutas y capacidades reales. Resolver con el PO los campos o decisiones que no existan antes de implementar.
+    tickets:
+      - id: DOCS-DOCS-INVENTARIO-20261007
+        title: "Localizar declaraciones, sync, montaje, adopción y registro MCP existentes"
+        depends_on: []
+      - id: DOCS-DOCS-DISENO-20261007
+        title: "Documentar alternativas, límites por módulo y decisiones técnicas"
+        depends_on:
+          - DOCS-DOCS-INVENTARIO-20261007
+  - id: S2
+    goal: "Entregar declaraciones de skills por proyecto y su proyección manual, con revisión obligatoria y sin instalaciones ni actualizaciones implícitas. Cada cambio incluye pruebas de su módulo; core permanece sin red y limita el acceso a disco a fs.ts."
+    tickets:
+      - id: FEATURE-CORE-DECLARACION-SKILLS-20261007
+        title: "Modelar fuente, versión fijada, hash y revisión de skills por proyecto"
+        depends_on:
+          - DOCS-DOCS-DISENO-20261007
+      - id: FEATURE-CORE-VALIDACION-SKILLS-20261007
+        title: Validar declaraciones y rechazar versiones de skills sin fijar
+        depends_on:
+          - FEATURE-CORE-DECLARACION-SKILLS-20261007
+      - id: FEATURE-CORE-LECTURA-SKILLS-20261007
+        title: Leer declaraciones del proyecto mediante fs.ts
+        depends_on:
+          - FEATURE-CORE-VALIDACION-SKILLS-20261007
+      - id: SECURITY-CORE-REVISION-SKILLS-20261007
+        title: Bloquear skills sin revisión registrada de la versión y hash declarados
+        depends_on:
+          - FEATURE-CORE-VALIDACION-SKILLS-20261007
+      - id: SECURITY-CLI-CONSENTIMIENTO-SKILLS-20261007
+        title: Exigir petición humana para instalar o actualizar skills
+        depends_on:
+          - DOCS-DOCS-DISENO-20261007
+          - SECURITY-CORE-REVISION-SKILLS-20261007
+      - id: FEATURE-CLI-OBTENCION-SKILLS-20261007
+        title: Obtener la versión solicitada y comprobar su hash fuera de core
+        depends_on:
+          - FEATURE-CORE-LECTURA-SKILLS-20261007
+          - SECURITY-CLI-CONSENTIMIENTO-SKILLS-20261007
+      - id: FEATURE-ADAPTER-PROYECCION-SKILLS-20261007
+        title: "Proyectar solo skills declaradas, disponibles y revisadas"
+        depends_on:
+          - FEATURE-CORE-LECTURA-SKILLS-20261007
+          - SECURITY-CORE-REVISION-SKILLS-20261007
+      - id: SECURITY-CLI-SYNC-SKILLS-20261007
+        title: Integrar skills en valmen sync sin instalar ni actualizar por sorpresa
+        depends_on:
+          - FEATURE-ADAPTER-PROYECCION-SKILLS-20261007
+          - FEATURE-CLI-OBTENCION-SKILLS-20261007
+  - id: S3
+    goal: "Entregar las revisiones registradas de las dos skills UX y su integración en diseño y revisión de pantallas, con declaraciones fijadas para adopción voluntaria."
+    tickets:
+      - id: SECURITY-DOCS-REVISION-UIUXPROMAX-20261007
+        title: "Revisar UI UX Pro Max y registrar fuente, versión, hash y revisor"
+        depends_on:
+          - DOCS-DOCS-DISENO-20261007
+      - id: SECURITY-DOCS-REVISION-IMPECCABLE-20261007
+        title: "Revisar Impeccable y registrar fuente, versión, hash y revisor"
+        depends_on:
+          - DOCS-DOCS-DISENO-20261007
+      - id: DOCS-DOCS-DECLARACIONES-UX-20261007
+        title: Preparar declaraciones UX revisadas y explicar su habilitación manual
+        depends_on:
+          - SECURITY-CLI-SYNC-SKILLS-20261007
+          - SECURITY-DOCS-REVISION-UIUXPROMAX-20261007
+          - SECURITY-DOCS-REVISION-IMPECCABLE-20261007
+      - id: IMPROVEMENT-DOCS-DISENO-PANTALLAS-20261007
+        title: Integrar UI UX Pro Max e Impeccable en el diseño de pantallas
+        depends_on:
+          - DOCS-DOCS-DECLARACIONES-UX-20261007
+      - id: IMPROVEMENT-DOCS-REVISION-PANTALLAS-20261007
+        title: Integrar ambas skills UX en la revisión de tickets de pantallas
+        depends_on:
+          - DOCS-DOCS-DECLARACIONES-UX-20261007
+  - id: S4
+    goal: "Entregar la oferta opcional de CodeGraph al montar y adoptar proyectos. Verificar rechazo sin cambios, instalación e indexación con confirmación, MCP en los clientes existentes y estado visible en el diagnóstico."
+    tickets:
+      - id: IMPROVEMENT-ADAPTER-ESTADO-CODEGRAPH-20261007
+        title: Detectar instalación e índice de CodeGraph sin efectos laterales
+        depends_on:
+          - DOCS-DOCS-DISENO-20261007
+      - id: FEATURE-CLI-INSTALACION-CODEGRAPH-20261007
+        title: Instalar CodeGraph con versión fijada y confirmación explícita
+        depends_on:
+          - DOCS-DOCS-DISENO-20261007
+          - IMPROVEMENT-ADAPTER-ESTADO-CODEGRAPH-20261007
+      - id: FEATURE-CLI-INDEXACION-CODEGRAPH-20261007
+        title: Indexar el proyecto con CodeGraph solo tras confirmación explícita
+        depends_on:
+          - FEATURE-CLI-INSTALACION-CODEGRAPH-20261007
+      - id: INTEGRATION-CLI-MCP-CODEGRAPH-20261007
+        title: Reutilizar el registro MCP de CodeGraph para cada cliente existente
+        depends_on:
+          - DOCS-DOCS-DISENO-20261007
+          - FEATURE-CLI-INSTALACION-CODEGRAPH-20261007
+      - id: IMPROVEMENT-ADAPTER-PRUEBAS-MCP-CODEGRAPH-20261007
+        title: Verificar la proyección MCP de CodeGraph en los clientes soportados
+        depends_on:
+          - INTEGRATION-CLI-MCP-CODEGRAPH-20261007
+      - id: FEATURE-CLI-DIAGNOSTICO-CODEGRAPH-20261007
+        title: Mostrar el estado de CodeGraph y su índice en el diagnóstico
+        depends_on:
+          - IMPROVEMENT-ADAPTER-ESTADO-CODEGRAPH-20261007
+      - id: FEATURE-CLI-MONTAJE-CODEGRAPH-20261007
+        title: Ofrecer CodeGraph al montar sin modificar el proyecto al rechazarlo
+        depends_on:
+          - FEATURE-CLI-INDEXACION-CODEGRAPH-20261007
+          - IMPROVEMENT-ADAPTER-PRUEBAS-MCP-CODEGRAPH-20261007
+          - FEATURE-CLI-DIAGNOSTICO-CODEGRAPH-20261007
+      - id: FEATURE-CLI-ADOPCION-CODEGRAPH-20261007
+        title: Ofrecer CodeGraph al adoptar respetando instalaciones existentes
+        depends_on:
+          - FEATURE-CLI-INDEXACION-CODEGRAPH-20261007
+          - IMPROVEMENT-ADAPTER-PRUEBAS-MCP-CODEGRAPH-20261007
+          - FEATURE-CLI-DIAGNOSTICO-CODEGRAPH-20261007
+  - id: S5
+    goal: "Entregar una evaluación trazable de cada skill restante, con fuentes comprobadas, decisión y motivo, sin instalar ninguna como consecuencia de la evaluación."
+    tickets:
+      - id: DOCS-DOCS-EVALUACION-PONYTAIL-20261007
+        title: Evaluar Ponytail y registrar la decisión con sus motivos
+        depends_on:
+          - DOCS-DOCS-DISENO-20261007
+      - id: DOCS-DOCS-EVALUACION-ADDYOSMANI-20261007
+        title: Evaluar las skills de Addy Osmani y registrar decisión y motivos
+        depends_on:
+          - DOCS-DOCS-DISENO-20261007
+      - id: DOCS-DOCS-EVALUACION-AWESOMECLAUDESKILLS-20261007
+        title: Evaluar Awesome Claude Skills y registrar decisión y motivos
+        depends_on:
+          - DOCS-DOCS-DISENO-20261007
+      - id: DOCS-DOCS-EVALUACION-ARCHIFY-20261007
+        title: Evaluar Archify y registrar la decisión con sus motivos
+        depends_on:
+          - DOCS-DOCS-DISENO-20261007
+      - id: DOCS-DOCS-EVALUACION-SUPERPOWERS-20261007
+        title: Evaluar piezas de Superpowers sin adoptar su flujo completo
+        depends_on:
+          - DOCS-DOCS-DISENO-20261007
+      - id: DOCS-DOCS-EVALUACION-CAVEMAN-20261007
+        title: Evaluar Caveman y justificar su exclusión por el contrato existente
+        depends_on:
+          - DOCS-DOCS-DISENO-20261007
+  - id: S6
+    goal: "Entregar verify.md con evidencia de los escenarios de la especificación, resultados de npx vitest run y decisiones registradas."
+    tickets:
+      - id: DOCS-DOCS-EVIDENCIA-20261007
+        title: "Registrar evidencia de cobertura, pruebas y decisiones en verify.md"
+        depends_on:
+          - SECURITY-CLI-SYNC-SKILLS-20261007
+          - IMPROVEMENT-DOCS-DISENO-PANTALLAS-20261007
+          - IMPROVEMENT-DOCS-REVISION-PANTALLAS-20261007
+          - FEATURE-CLI-MONTAJE-CODEGRAPH-20261007
+          - FEATURE-CLI-ADOPCION-CODEGRAPH-20261007
+          - DOCS-DOCS-EVALUACION-PONYTAIL-20261007
+          - DOCS-DOCS-EVALUACION-ADDYOSMANI-20261007
+          - DOCS-DOCS-EVALUACION-AWESOMECLAUDESKILLS-20261007
+          - DOCS-DOCS-EVALUACION-ARCHIFY-20261007
+          - DOCS-DOCS-EVALUACION-SUPERPOWERS-20261007
+          - DOCS-DOCS-EVALUACION-CAVEMAN-20261007
+coverage:
+  - requirement: R-SKILL-001
+    covered_by:
+      - FEATURE-CORE-DECLARACION-SKILLS-20261007
+      - FEATURE-CORE-VALIDACION-SKILLS-20261007
+      - FEATURE-CORE-LECTURA-SKILLS-20261007
+      - FEATURE-CLI-OBTENCION-SKILLS-20261007
+      - FEATURE-ADAPTER-PROYECCION-SKILLS-20261007
+      - SECURITY-CLI-SYNC-SKILLS-20261007
+  - requirement: R-SKILL-002
+    covered_by:
+      - FEATURE-CORE-DECLARACION-SKILLS-20261007
+      - SECURITY-CORE-REVISION-SKILLS-20261007
+      - SECURITY-CLI-CONSENTIMIENTO-SKILLS-20261007
+      - FEATURE-ADAPTER-PROYECCION-SKILLS-20261007
+      - SECURITY-DOCS-REVISION-UIUXPROMAX-20261007
+      - SECURITY-DOCS-REVISION-IMPECCABLE-20261007
+  - requirement: R-SKILL-003
+    covered_by:
+      - SECURITY-DOCS-REVISION-UIUXPROMAX-20261007
+      - SECURITY-DOCS-REVISION-IMPECCABLE-20261007
+      - DOCS-DOCS-DECLARACIONES-UX-20261007
+      - IMPROVEMENT-DOCS-DISENO-PANTALLAS-20261007
+      - IMPROVEMENT-DOCS-REVISION-PANTALLAS-20261007
+  - requirement: R-SKILL-004
+    covered_by:
+      - IMPROVEMENT-ADAPTER-ESTADO-CODEGRAPH-20261007
+      - FEATURE-CLI-INSTALACION-CODEGRAPH-20261007
+      - FEATURE-CLI-INDEXACION-CODEGRAPH-20261007
+      - INTEGRATION-CLI-MCP-CODEGRAPH-20261007
+      - IMPROVEMENT-ADAPTER-PRUEBAS-MCP-CODEGRAPH-20261007
+      - FEATURE-CLI-DIAGNOSTICO-CODEGRAPH-20261007
+      - FEATURE-CLI-MONTAJE-CODEGRAPH-20261007
+      - FEATURE-CLI-ADOPCION-CODEGRAPH-20261007
+  - requirement: R-SKILL-005
+    covered_by:
+      - DOCS-DOCS-EVALUACION-PONYTAIL-20261007
+      - DOCS-DOCS-EVALUACION-ADDYOSMANI-20261007
+      - DOCS-DOCS-EVALUACION-AWESOMECLAUDESKILLS-20261007
+      - DOCS-DOCS-EVALUACION-ARCHIFY-20261007
+      - DOCS-DOCS-EVALUACION-SUPERPOWERS-20261007
+      - DOCS-DOCS-EVALUACION-CAVEMAN-20261007
+gaps: []

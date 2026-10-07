@@ -1,0 +1,206 @@
+feature: aprobacion-autonoma-de-planes
+generated_by:
+  provider: codex
+  model: gpt-6.1-sol
+sprints:
+  - id: S1
+    goal: "Entregar el diseño técnico basado en el repositorio real. Mapear campos, canales humanos y perfiles existentes; resolver con el PO cualquier ausencia antes de registrar implementación que dependa de ella."
+    tickets:
+      - id: DOCS-APROBACION-MAPA-REPOSITORIO-20261007
+        title: "Mapear autorizaciones, compuertas, recibos, jornada y perfiles existentes"
+        depends_on: []
+      - id: DOCS-APROBACION-DISENO-20261007
+        title: "Definir autoridad humana, decisiones, revocación y límites por módulo"
+        depends_on:
+          - DOCS-APROBACION-MAPA-REPOSITORIO-20261007
+  - id: S2
+    goal: "Entregar autorizaciones persistidas por proyecto, creadas y revocadas exclusivamente mediante un canal humano no controlable por agentes. El diseño debe validar ese canal en el servidor; no se añade una herramienta MCP. Cada ticket incorpora pruebas de su módulo."
+    tickets:
+      - id: FEATURE-CORE-AUTORIZACION-20261007
+        title: "Modelar autorización humana, modos, alcance y vigencia por proyecto"
+        depends_on:
+          - DOCS-APROBACION-DISENO-20261007
+      - id: FEATURE-CORE-ELEGIBILIDAD-20261007
+        title: Filtrar tipos e impactos declarados y excluir siempre SECURITY
+        depends_on:
+          - FEATURE-CORE-AUTORIZACION-20261007
+      - id: FEATURE-CORE-DECISION-COMPUERTAS-20261007
+        title: Reservar block y review por contradicción a una decisión humana
+        depends_on:
+          - FEATURE-CORE-AUTORIZACION-20261007
+      - id: FEATURE-CORE-PERSISTENCIA-FS-20261007
+        title: Persistir autorizaciones exclusivamente mediante fs.ts
+        depends_on:
+          - FEATURE-CORE-AUTORIZACION-20261007
+      - id: FEATURE-ENGINE-REGISTRAR-AUTORIZACION-20261007
+        title: Registrar la autorización persistida con su autor humano
+        depends_on:
+          - FEATURE-CORE-PERSISTENCIA-FS-20261007
+      - id: FEATURE-ENGINE-REVOCAR-AUTORIZACION-20261007
+        title: Revocar autorizaciones sin conservar permisos en caché
+        depends_on:
+          - FEATURE-ENGINE-REGISTRAR-AUTORIZACION-20261007
+      - id: FEATURE-SERVER-CREAR-AUTORIZACION-20261007
+        title: Crear autorizaciones solo desde el canal humano validado
+        depends_on:
+          - FEATURE-ENGINE-REGISTRAR-AUTORIZACION-20261007
+          - FEATURE-CORE-ELEGIBILIDAD-20261007
+      - id: FEATURE-SERVER-REVOCAR-AUTORIZACION-20261007
+        title: Exponer la revocación inmediata por el canal humano
+        depends_on:
+          - FEATURE-SERVER-CREAR-AUTORIZACION-20261007
+          - FEATURE-ENGINE-REVOCAR-AUTORIZACION-20261007
+  - id: S3
+    goal: "Entregar aprobación automática de análisis y planes con approve vigente, atribución visible y reversión. Mantener el flujo humano sin autorización y las excepciones de seguridad. Cada ticket incorpora pruebas focalizadas sin mezclar módulos."
+    tickets:
+      - id: FEATURE-CORE-EVIDENCIA-APROBACION-20261007
+        title: Modelar atribución y evidencia de cada aprobación automática
+        depends_on:
+          - FEATURE-CORE-AUTORIZACION-20261007
+          - DOCS-APROBACION-DISENO-20261007
+      - id: FEATURE-ENGINE-VALIDAR-APROBACION-20261007
+        title: "Revalidar autoridad, alcance y compuerta al confirmar la aprobación"
+        depends_on:
+          - FEATURE-ENGINE-REVOCAR-AUTORIZACION-20261007
+          - FEATURE-CORE-ELEGIBILIDAD-20261007
+          - FEATURE-CORE-DECISION-COMPUERTAS-20261007
+          - FEATURE-CORE-EVIDENCIA-APROBACION-20261007
+      - id: FEATURE-ENGINE-RECIBO-APROBACION-20261007
+        title: Registrar la aprobación y su autoridad en ticket y recibo
+        depends_on:
+          - FEATURE-ENGINE-VALIDAR-APROBACION-20261007
+      - id: FEATURE-ENGINE-AUTO-ANALISIS-20261007
+        title: Aprobar análisis elegibles con compuerta approve vigente
+        depends_on:
+          - FEATURE-ENGINE-RECIBO-APROBACION-20261007
+          - FEATURE-SERVER-REVOCAR-AUTORIZACION-20261007
+      - id: FEATURE-ENGINE-AUTO-PLAN-20261007
+        title: Aprobar planes elegibles y continuar la transición autorizada
+        depends_on:
+          - FEATURE-ENGINE-RECIBO-APROBACION-20261007
+          - FEATURE-SERVER-REVOCAR-AUTORIZACION-20261007
+      - id: FEATURE-ENGINE-REVERTIR-APROBACION-20261007
+        title: Revertir aprobaciones automáticas conservando su historial
+        depends_on:
+          - FEATURE-ENGINE-RECIBO-APROBACION-20261007
+      - id: FEATURE-CLI-MOSTRAR-APROBACION-20261007
+        title: "Mostrar autor, autorización y recibo de la aprobación automática"
+        depends_on:
+          - FEATURE-ENGINE-RECIBO-APROBACION-20261007
+      - id: FEATURE-CLI-REVERTIR-APROBACION-20261007
+        title: Permitir a la persona revertir una aprobación automática
+        depends_on:
+          - FEATURE-ENGINE-REVERTIR-APROBACION-20261007
+          - FEATURE-CLI-MOSTRAR-APROBACION-20261007
+  - id: S4
+    goal: "Entregar revisión autónoma de review autorizados. La selección usa perfiles-de-modelos disponibles y configuración humana, nunca una elección del productor; exige un modelo distinto. La red queda fuera de core y los resultados pasan por la misma validación y auditoría."
+    tickets:
+      - id: INTEGRATION-ADAPTER-PERFIL-REVISOR-20261007
+        title: Resolver el perfil revisor sin elección del productor ni mismo modelo
+        depends_on:
+          - DOCS-APROBACION-DISENO-20261007
+          - FEATURE-CORE-AUTORIZACION-20261007
+      - id: FEATURE-ADAPTER-EJECUTAR-REVISOR-20261007
+        title: Invocar al revisor y validar su respuesta sin otorgarle autoridad
+        depends_on:
+          - INTEGRATION-ADAPTER-PERFIL-REVISOR-20261007
+      - id: FEATURE-ENGINE-CONFIRMAR-REVISION-20261007
+        title: Confirmar decisiones del revisor solo con autorización aún vigente
+        depends_on:
+          - FEATURE-ADAPTER-EJECUTAR-REVISOR-20261007
+          - FEATURE-ENGINE-RECIBO-APROBACION-20261007
+      - id: FEATURE-ENGINE-REVISAR-ANALISIS-20261007
+        title: Enviar análisis en review al revisor cuando la autorización lo permita
+        depends_on:
+          - FEATURE-ENGINE-CONFIRMAR-REVISION-20261007
+          - FEATURE-ENGINE-AUTO-ANALISIS-20261007
+      - id: FEATURE-ENGINE-REVISAR-PLAN-20261007
+        title: Enviar planes en review al revisor cuando la autorización lo permita
+        depends_on:
+          - FEATURE-ENGINE-CONFIRMAR-REVISION-20261007
+          - FEATURE-ENGINE-AUTO-PLAN-20261007
+  - id: S5
+    goal: "Entregar aprobación durante el montaje de la jornada y ejecución posterior respetando reversiones. Verificar los siete requisitos y conservar cascada, evaluador declarado y avisos existentes por el vigilante de Telegram, sin añadir canales paralelos."
+    tickets:
+      - id: INTEGRATION-ENGINE-JORNADA-ANALISIS-20261007
+        title: Aplicar aprobación de análisis al montar la jornada
+        depends_on:
+          - FEATURE-ENGINE-REVISAR-ANALISIS-20261007
+      - id: INTEGRATION-ENGINE-JORNADA-PLAN-20261007
+        title: Aplicar aprobación de planes al montar la jornada
+        depends_on:
+          - INTEGRATION-ENGINE-JORNADA-ANALISIS-20261007
+          - FEATURE-ENGINE-REVISAR-PLAN-20261007
+      - id: BUGFIX-ENGINE-JORNADA-REVERSIONES-20261007
+        title: Impedir ejecutar planes cuya aprobación se revirtió tras el montaje
+        depends_on:
+          - INTEGRATION-ENGINE-JORNADA-PLAN-20261007
+          - FEATURE-ENGINE-REVERTIR-APROBACION-20261007
+      - id: CHORE-ENGINE-PRUEBAS-AUTORIDAD-20261007
+        title: "Probar revocación en curso, block y el flujo sin autorización"
+        depends_on:
+          - FEATURE-ENGINE-CONFIRMAR-REVISION-20261007
+          - FEATURE-ENGINE-AUTO-ANALISIS-20261007
+          - FEATURE-ENGINE-AUTO-PLAN-20261007
+      - id: CHORE-ENGINE-PRUEBAS-COMPUERTAS-20261007
+        title: "Verificar cascada, evaluador registrado y avisos humanos existentes"
+        depends_on:
+          - INTEGRATION-ENGINE-JORNADA-PLAN-20261007
+          - FEATURE-CORE-DECISION-COMPUERTAS-20261007
+      - id: DOCS-APROBACION-EVIDENCIA-20261007
+        title: Documentar en verify.md la evidencia de los siete requisitos
+        depends_on:
+          - BUGFIX-ENGINE-JORNADA-REVERSIONES-20261007
+          - CHORE-ENGINE-PRUEBAS-AUTORIDAD-20261007
+          - CHORE-ENGINE-PRUEBAS-COMPUERTAS-20261007
+          - FEATURE-CLI-REVERTIR-APROBACION-20261007
+coverage:
+  - requirement: R-APRO-001
+    covered_by:
+      - FEATURE-CORE-AUTORIZACION-20261007
+      - FEATURE-CORE-PERSISTENCIA-FS-20261007
+      - FEATURE-ENGINE-REGISTRAR-AUTORIZACION-20261007
+      - FEATURE-ENGINE-REVOCAR-AUTORIZACION-20261007
+      - FEATURE-SERVER-CREAR-AUTORIZACION-20261007
+      - FEATURE-SERVER-REVOCAR-AUTORIZACION-20261007
+      - FEATURE-ENGINE-VALIDAR-APROBACION-20261007
+      - CHORE-ENGINE-PRUEBAS-AUTORIDAD-20261007
+  - requirement: R-APRO-002
+    covered_by:
+      - FEATURE-ENGINE-VALIDAR-APROBACION-20261007
+      - FEATURE-ENGINE-AUTO-ANALISIS-20261007
+      - FEATURE-ENGINE-AUTO-PLAN-20261007
+      - CHORE-ENGINE-PRUEBAS-COMPUERTAS-20261007
+  - requirement: R-APRO-003
+    covered_by:
+      - INTEGRATION-ADAPTER-PERFIL-REVISOR-20261007
+      - FEATURE-ADAPTER-EJECUTAR-REVISOR-20261007
+      - FEATURE-ENGINE-CONFIRMAR-REVISION-20261007
+      - FEATURE-ENGINE-REVISAR-ANALISIS-20261007
+      - FEATURE-ENGINE-REVISAR-PLAN-20261007
+  - requirement: R-APRO-004
+    covered_by:
+      - FEATURE-CORE-DECISION-COMPUERTAS-20261007
+      - FEATURE-ENGINE-VALIDAR-APROBACION-20261007
+      - FEATURE-ENGINE-CONFIRMAR-REVISION-20261007
+      - CHORE-ENGINE-PRUEBAS-AUTORIDAD-20261007
+  - requirement: R-APRO-005
+    covered_by:
+      - FEATURE-CORE-AUTORIZACION-20261007
+      - FEATURE-CORE-ELEGIBILIDAD-20261007
+      - FEATURE-SERVER-CREAR-AUTORIZACION-20261007
+      - FEATURE-ENGINE-VALIDAR-APROBACION-20261007
+  - requirement: R-APRO-006
+    covered_by:
+      - INTEGRATION-ENGINE-JORNADA-ANALISIS-20261007
+      - INTEGRATION-ENGINE-JORNADA-PLAN-20261007
+      - BUGFIX-ENGINE-JORNADA-REVERSIONES-20261007
+  - requirement: R-APRO-007
+    covered_by:
+      - FEATURE-CORE-EVIDENCIA-APROBACION-20261007
+      - FEATURE-ENGINE-RECIBO-APROBACION-20261007
+      - FEATURE-ENGINE-REVERTIR-APROBACION-20261007
+      - FEATURE-CLI-MOSTRAR-APROBACION-20261007
+      - FEATURE-CLI-REVERTIR-APROBACION-20261007
+      - DOCS-APROBACION-EVIDENCIA-20261007
+gaps: []
