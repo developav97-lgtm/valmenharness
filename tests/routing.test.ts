@@ -17,7 +17,7 @@
  * 4. **El orden "el código primero" no se rompe por configuración.** Un gate que
  *    se resuelve con comandos se sigue resolviendo con comandos.
  */
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -28,10 +28,15 @@ import {
   PERFILES_INCORPORADOS,
   PRESETS,
   ROLES,
+  type ResolvedRoute,
   comprobarPerfilCompleto as comprobarCompleto,
   derivarPerfil,
+  gateRoutingFor,
+  perfilElegido,
   perfilesPath,
   readProjectPerfiles,
+  renderPerfiles,
+  rutasDelProyecto,
   parseRouting,
   parseRoutingTolerante,
   renderRouting,
@@ -40,6 +45,7 @@ import {
 import { listGateCards, runTicketGate } from "../packages/server/src/gates.js";
 import {
   checkRouting,
+  elegirPerfil,
   fetchCatalog,
   gateRouting,
   guardarPerfil,
@@ -50,6 +56,7 @@ import {
   writeRouting,
 } from "../packages/server/src/routing.js";
 import { resetCatalogCache } from "../packages/server/src/routing.js";
+import { resolverModeloDeFase } from "../packages/engine/src/journey-phases.js";
 import { handleApi } from "../packages/server/src/server.js";
 import { writeFixtureTicket } from "./helpers/fixtures.js";
 
@@ -835,5 +842,161 @@ describe("los perfiles de modelos", () => {
     const resultado = await guardarPerfil(lab, { ...perfilMixto(), id: "codex-completo" }, opcionesDePerfil());
     expect(resultado.ok).toBe(false);
     expect(existsSync(perfilesPath(lab))).toBe(false);
+  });
+});
+
+// ── La resolución del perfil elegido ────────────────────────────────────────
+
+function elegir(seleccion: { proyecto: string | null; ejecutores?: Record<string, string> }) {
+  writeFileSync(
+    perfilesPath(lab),
+    renderPerfiles(readProjectPerfiles(lab), { proyecto: seleccion.proyecto, ejecutores: seleccion.ejecutores ?? {} }),
+  );
+}
+
+function fijarRouting(texto: string) {
+  writeFileSync(routingPath(lab), texto);
+}
+
+function rol(rutas: readonly ResolvedRoute[], id: string) {
+  const ruta = rutas.find((r) => r.role === id);
+  if (ruta === undefined) throw new Error(`falta ${id}`);
+  return ruta;
+}
+
+describe("la resolución del perfil elegido", () => {
+  it("R-PERF-002 sin perfil elegido", () => {
+    for (const preset of ["quality", "balanced", "economy"]) {
+      fijarRouting(`preset: ${preset}\nroles: {}\n`);
+      expect(rutasDelProyecto(lab)).toEqual(resolveRouting({ preset, roles: {} }));
+    }
+    const rutas = rutasDelProyecto(lab);
+    expect(rutas.every((r) => r.source !== "perfil" && r.perfil === undefined && r.anulaPerfil === undefined)).toBe(true);
+  });
+
+  it("R-PERF-002 perfil del proyecto gana al preset", () => {
+    fijarRouting("preset: quality\nroles: {}\n");
+    elegir({ proyecto: "claude-code-completo" });
+    const plan = rol(rutasDelProyecto(lab), "agent-plan");
+    expect(plan.model).toBe("claude-opus-5-5");
+    expect(plan.source).toBe("perfil");
+    expect(plan.perfil).toEqual({ id: "claude-code-completo", alcance: "proyecto" });
+  });
+
+  it("R-PERF-002 el preset no sobrescribe el perfil", () => {
+    elegir({ proyecto: "claude-code-completo" });
+    const perfil = perfilIncorporado("claude-code-completo");
+    for (const preset of ["quality", "balanced", "economy"]) {
+      fijarRouting(`preset: ${preset}\nroles: {}\n`);
+      const rutas = rutasDelProyecto(lab);
+      for (const [id, ruta] of Object.entries(perfil.roles)) {
+        expect(rol(rutas, id), `${preset}/${id}`).toMatchObject({ ...ruta, source: "perfil" });
+      }
+    }
+  });
+
+  it("R-PERF-002 perfil por ejecutor", () => {
+    elegir({ proyecto: "claude-code-completo", ejecutores: { hermes: "codex-completo" } });
+    const plan = rol(rutasDelProyecto(lab, { ejecutor: "hermes" }), "agent-plan");
+    expect(plan.perfil).toEqual({ id: "codex-completo", alcance: "ejecutor" });
+    expect(plan.provider).toBe("codex");
+  });
+
+  it("R-PERF-002 ejecutor sin perfil propio", () => {
+    elegir({ proyecto: "claude-code-completo", ejecutores: { hermes: "codex-completo" } });
+    const plan = rol(rutasDelProyecto(lab, { ejecutor: "claude" }), "agent-plan");
+    expect(plan.perfil).toEqual({ id: "claude-code-completo", alcance: "proyecto" });
+  });
+
+  it("R-PERF-005 el override gana al perfil", () => {
+    elegir({ proyecto: "claude-code-completo" });
+    fijarRouting("preset: quality\nroles:\n  agent-plan:\n    provider: codex\n    model: gpt-6-sol\n    effort: high\n");
+    const plan = rol(rutasDelProyecto(lab), "agent-plan");
+    expect(plan).toMatchObject({ source: "proyecto", provider: "codex", model: "gpt-6-sol" });
+    expect(plan.perfil).toBeUndefined();
+  });
+
+  it("R-PERF-005 el rol dice que anula el perfil", () => {
+    elegir({ proyecto: "claude-code-completo" });
+    fijarRouting("preset: quality\nroles:\n  agent-plan:\n    provider: codex\n    model: gpt-6-sol\n    effort: high\n");
+    const rutas = rutasDelProyecto(lab);
+    expect(rol(rutas, "agent-plan").anulaPerfil).toBe("claude-code-completo");
+    expect(rol(rutas, "agent-analysis").anulaPerfil).toBeUndefined();
+  });
+
+  it("R-PERF-002 perfil elegido inexistente", () => {
+    elegir({ proyecto: "fantasma" });
+    expect(() => rutasDelProyecto(lab)).toThrow(/"fantasma" no existe/);
+    expect(() => perfilElegido([], { proyecto: "x", ejecutores: {} })).toThrow(/"x" no existe/);
+  });
+
+  it("R-PERF-002 elegir perfil inexistente", () => {
+    const resultado = elegirPerfil(lab, { perfil: "fantasma" });
+    expect(resultado.ok).toBe(false);
+    expect(resultado.written).toBe(false);
+    expect(resultado.errores.join(" ")).toContain("fantasma");
+    expect(existsSync(perfilesPath(lab))).toBe(false);
+  });
+
+  it("R-PERF-002 elegir para ejecutor desconocido", () => {
+    const resultado = elegirPerfil(lab, { perfil: "codex-completo", ejecutor: "bard" });
+    expect(resultado.ok).toBe(false);
+    expect(resultado.errores.join(" ")).toContain("bard");
+    expect(existsSync(perfilesPath(lab))).toBe(false);
+  });
+
+  it("R-PERF-002 elegir escribe y quitar borra la elección", () => {
+    expect(elegirPerfil(lab, { perfil: "claude-code-completo" }).written).toBe(true);
+    expect(elegirPerfil(lab, { perfil: "codex-completo", ejecutor: "hermes" }).written).toBe(true);
+    expect(rol(rutasDelProyecto(lab, { ejecutor: "hermes" }), "agent-plan").perfil?.id).toBe("codex-completo");
+    elegirPerfil(lab, { perfil: null, ejecutor: "hermes" });
+    elegirPerfil(lab, { perfil: null });
+    expect(rutasDelProyecto(lab).every((r) => r.source !== "perfil")).toBe(true);
+  });
+
+  it("R-PERF-002 guardar conserva la elección", async () => {
+    elegirPerfil(lab, { perfil: "claude-code-completo" });
+    elegirPerfil(lab, { perfil: "codex-completo", ejecutor: "hermes" });
+    const resultado = await guardarPerfil(lab, perfilMixto(), opcionesDePerfil());
+    expect(resultado.written).toBe(true);
+    const texto = readFileSync(perfilesPath(lab), "utf8");
+    expect(texto).toContain("proyecto: claude-code-completo");
+    expect(texto).toContain("hermes: codex-completo");
+    expect(readProjectPerfiles(lab).map((p) => p.id)).toEqual(["mixto"]);
+  });
+
+  it("R-PERF-005 la fase usa el perfil del ejecutor", () => {
+    const real = readFileSync(join(process.cwd(), ".valmen", "config.yaml"), "utf8");
+    writeFileSync(
+      join(lab, ".valmen", "config.yaml"),
+      real.replace("    id: claude\n    model: claude-sonnet-5-5", "    id: codex\n    model: gpt-5.5"),
+    );
+    elegir({ proyecto: "claude-code-completo", ejecutores: { codex: "codex-completo" } });
+    const fase = resolverModeloDeFase(lab, "plan");
+    expect(fase?.origen).toBe("rol");
+    expect(fase?.model).toBe(perfilIncorporado("codex-completo").roles["agent-plan"]?.model);
+    expect(fase?.motivo).toContain("perfil codex-completo");
+  });
+
+  it("R-PERF-005 la API muestra el origen perfil", () => {
+    elegir({ proyecto: "claude-code-completo" });
+    fijarRouting("preset: quality\nroles:\n  agent-plan:\n    provider: codex\n    model: gpt-6-sol\n    effort: high\n");
+    const estado = checkRouting(lab, readFileSync(routingPath(lab), "utf8"));
+    expect(estado.ok).toBe(true);
+    expect(rol(estado.roles, "agent-analysis")).toMatchObject({ source: "perfil", perfil: { id: "claude-code-completo", alcance: "proyecto" } });
+    expect(rol(estado.roles, "agent-plan")).toMatchObject({ source: "proyecto", anulaPerfil: "claude-code-completo" });
+  });
+
+  it("R-PERF-002 la degradación no sobrescribe el perfil", () => {
+    const propio = derivarPerfil(perfilIncorporado("claude-code-completo"), "juez-propio", "", {
+      "gate-evaluator": { provider: "openrouter", model: "moonshotai/kimi-k3", effort: "high" },
+    });
+    writeFileSync(perfilesPath(lab), renderPerfiles([propio], { proyecto: "juez-propio", ejecutores: {} }));
+    fijarRouting("preset: balanced\nroles: {}\n");
+    for (const preset of [undefined, "economy"]) {
+      const gate = gateRoutingFor(lab, preset === undefined ? {} : { preset });
+      expect(gate.evaluatorModel).toBe("moonshotai/kimi-k3");
+      expect(gate.source).toBe("perfil");
+    }
   });
 });

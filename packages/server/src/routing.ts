@@ -25,6 +25,12 @@ import {
   type Effort,
   type GateRouting,
   type PerfilDeModelos,
+  type PerfilElegido,
+  type SeleccionDePerfil,
+  EJECUTORES_CON_PERFIL,
+  listarPerfiles,
+  perfilElegido,
+  readSeleccionDePerfil,
   type Preset,
   type ResolvedRoute,
   type Routing,
@@ -236,6 +242,11 @@ export async function fetchCatalog(fetchImpl: typeof fetch = fetch): Promise<Mod
   return catalog;
 }
 
+/** El perfil elegido para el proyecto, o `null`; un perfil elegido que no existe falla con su id. */
+function perfilDelProyecto(root: string): PerfilElegido | null {
+  return perfilElegido(listarPerfiles(root), readSeleccionDePerfil(root));
+}
+
 /** Analiza un texto de routing sin escribir nada. */
 export function checkRouting(root: string, text: string): RoutingState {
   const guardado = readRoutingText(root);
@@ -268,7 +279,7 @@ export function checkRouting(root: string, text: string): RoutingState {
       ok: true,
       error: "",
       preset: routing.preset,
-      roles: resolveRouting(routing),
+      roles: resolveRouting(routing, null, perfilDelProyecto(root)),
     };
   } catch (caught) {
     return {
@@ -408,6 +419,45 @@ export async function guardarPerfil(
   if (errores.length > 0) return { ok: false, errores, written: false };
 
   const guardados = readProjectPerfiles(root).filter((existente) => existente.id !== perfil.id);
-  atomicWrite(perfilesPath(root), renderPerfiles([...guardados, { ...perfil, origen: "proyecto" }]));
+  atomicWrite(
+    perfilesPath(root),
+    renderPerfiles([...guardados, { ...perfil, origen: "proyecto" }], readSeleccionDePerfil(root)),
+  );
+  return { ok: true, errores: [], written: true };
+}
+
+/**
+ * Elige el perfil del proyecto o, con `ejecutor`, el de un ejecutor; `perfil: null` quita la
+ * elección. Si el perfil no existe o el ejecutor no admite perfil, no escribe nada.
+ */
+export function elegirPerfil(
+  root: string,
+  eleccion: { readonly perfil: string | null; readonly ejecutor?: string },
+): { readonly ok: boolean; readonly errores: string[]; readonly written: boolean } {
+  const { perfil, ejecutor } = eleccion;
+  if (ejecutor !== undefined && !(EJECUTORES_CON_PERFIL as readonly string[]).includes(ejecutor)) {
+    return {
+      ok: false,
+      errores: [
+        `"${ejecutor}" no es un ejecutor con perfil. Los vigentes son: ${EJECUTORES_CON_PERFIL.join(", ")}.`,
+      ],
+      written: false,
+    };
+  }
+  if (perfil !== null && !listarPerfiles(root).some((candidato) => candidato.id === perfil)) {
+    return { ok: false, errores: [`el perfil "${perfil}" no existe.`], written: false };
+  }
+  const vigente = readSeleccionDePerfil(root);
+  let nueva: SeleccionDePerfil;
+  if (ejecutor === undefined) {
+    nueva = { proyecto: perfil, ejecutores: vigente.ejecutores };
+  } else {
+    const { [ejecutor]: _quitado, ...resto } = vigente.ejecutores;
+    nueva = {
+      proyecto: vigente.proyecto,
+      ejecutores: perfil === null ? resto : { ...resto, [ejecutor]: perfil },
+    };
+  }
+  atomicWrite(perfilesPath(root), renderPerfiles(readProjectPerfiles(root), nueva));
   return { ok: true, errores: [], written: true };
 }

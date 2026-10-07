@@ -621,8 +621,79 @@ export function parsePerfiles(text: string): PerfilDeModelos[] {
   return resultado;
 }
 
+const SIN_SELECCION: SeleccionDePerfil = { proyecto: null, ejecutores: {} };
+
+/** Lee la clave `seleccion` de `profiles.yaml`; los ids y los ejecutores se validan. */
+export function parseSeleccionDePerfil(text: string): SeleccionDePerfil {
+  const seleccion = readMap(parseConfig(text), "seleccion");
+  const idValido = (id: string, donde: string): string => {
+    if (!ID_DE_PERFIL.test(id)) {
+      fail(`profiles.yaml: el perfil elegido ${donde} ("${id}") debe ser kebab-case.`);
+    }
+    return id;
+  };
+  const proyecto = readString(seleccion, "proyecto", "");
+  const ejecutores: Record<string, string> = {};
+  for (const [ejecutor, valor] of Object.entries(readMap(seleccion, "ejecutores"))) {
+    if (!(EJECUTORES_CON_PERFIL as readonly string[]).includes(ejecutor)) {
+      fail(
+        `profiles.yaml: "${ejecutor}" no es un ejecutor con perfil. ` +
+          `Los vigentes son: ${EJECUTORES_CON_PERFIL.join(", ")}.`,
+      );
+    }
+    if (typeof valor !== "string") {
+      fail(`profiles.yaml: el perfil elegido para el ejecutor "${ejecutor}" debe ser un texto.`);
+    }
+    ejecutores[ejecutor] = idValido(valor, `para el ejecutor ${ejecutor}`);
+  }
+  return {
+    proyecto: proyecto === "" ? null : idValido(proyecto, "para el proyecto"),
+    ejecutores,
+  };
+}
+
+/** La elección de perfil del proyecto; sin archivo, ninguna. */
+export function readSeleccionDePerfil(root: string): SeleccionDePerfil {
+  let texto: string;
+  try {
+    texto = readFileSync(perfilesPath(root), "utf8");
+  } catch {
+    return SIN_SELECCION;
+  }
+  if (texto.trim() === "") return SIN_SELECCION;
+  return parseSeleccionDePerfil(texto);
+}
+
+/**
+ * El perfil que aplica: el del ejecutor si lo tiene, si no el del proyecto, si no `null`.
+ *
+ * Un id elegido que ya no existe falla con su id y su alcance: caer al preset en silencio
+ * haría creer que el perfil rige cuando nadie lo lee.
+ */
+export function perfilElegido(
+  perfiles: readonly PerfilDeModelos[],
+  seleccion: SeleccionDePerfil,
+  ejecutor?: string,
+): PerfilElegido | null {
+  const delEjecutor = ejecutor === undefined ? undefined : seleccion.ejecutores[ejecutor];
+  const id = delEjecutor ?? seleccion.proyecto;
+  if (id === null || id === undefined) return null;
+  const alcance = delEjecutor !== undefined ? "ejecutor" : "proyecto";
+  const perfil = perfiles.find((candidato) => candidato.id === id);
+  if (perfil === undefined) {
+    fail(
+      `el perfil elegido "${id}" no existe (elegido para ${alcance === "ejecutor" ? `el ejecutor ${ejecutor}` : "el proyecto"}). ` +
+        "Elige otro perfil o quita la elección.",
+    );
+  }
+  return { perfil, alcance };
+}
+
 /** Genera `profiles.yaml`: el único escritor del archivo, con roles ordenados. */
-export function renderPerfiles(perfiles: readonly PerfilDeModelos[]): string {
+export function renderPerfiles(
+  perfiles: readonly PerfilDeModelos[],
+  seleccion: SeleccionDePerfil = SIN_SELECCION,
+): string {
   const lineas = [
     "# Perfiles de modelos del proyecto.",
     "#",
@@ -630,6 +701,18 @@ export function renderPerfiles(perfiles: readonly PerfilDeModelos[]): string {
     "# guardar un perfil.",
     "",
   ];
+  const ejecutoresElegidos = Object.keys(seleccion.ejecutores).sort();
+  if (seleccion.proyecto !== null || ejecutoresElegidos.length > 0) {
+    lineas.push("seleccion:");
+    if (seleccion.proyecto !== null) lineas.push(`  proyecto: ${seleccion.proyecto}`);
+    if (ejecutoresElegidos.length > 0) {
+      lineas.push("  ejecutores:");
+      for (const ejecutor of ejecutoresElegidos) {
+        lineas.push(`    ${ejecutor}: ${seleccion.ejecutores[ejecutor]}`);
+      }
+    }
+    lineas.push("");
+  }
   if (perfiles.length === 0) {
     lineas.push("perfiles: {}");
     return lineas.join("\n") + "\n";
@@ -689,7 +772,22 @@ export interface Routing {
 }
 
 /** De dónde salió el modelo de un rol. */
-export type RouteSource = "proyecto" | "preset" | "sistema" | "sin-asignar";
+export type RouteSource = "proyecto" | "perfil" | "preset" | "sistema" | "sin-asignar";
+
+/** Los ejecutores que pueden tener un perfil propio, tomados de la política de despacho y de Hermes. */
+export const EJECUTORES_CON_PERFIL = ["claude", "codex", "opencode", "hermes"] as const;
+
+/** El perfil elegido para el proyecto y, si la persona quiere, otro por ejecutor. */
+export interface SeleccionDePerfil {
+  readonly proyecto: string | null;
+  readonly ejecutores: Readonly<Record<string, string>>;
+}
+
+/** El perfil que aplica a una resolución y el alcance de la elección que lo trajo. */
+export interface PerfilElegido {
+  readonly perfil: PerfilDeModelos;
+  readonly alcance: "proyecto" | "ejecutor";
+}
 
 /** Un rol con su modelo resuelto. */
 export interface ResolvedRoute {
@@ -700,6 +798,10 @@ export interface ResolvedRoute {
   readonly model: string;
   readonly effort: Effort;
   readonly source: RouteSource;
+  /** Presente cuando el rol sale del perfil elegido: su id y el alcance de la elección. */
+  readonly perfil?: { readonly id: string; readonly alcance: "proyecto" | "ejecutor" };
+  /** El id del perfil elegido cuando un override o `playwright:` gana a un rol que ese perfil declara. */
+  readonly anulaPerfil?: string;
   /**
    * `true` si el modelo de este rol es el único que emite probabilidades.
    *
@@ -817,12 +919,14 @@ function analizarRouting(text: string, tolerante: boolean): RoutingAnalizado {
 export function resolveRouting(
   routing: Routing,
   playwright: PlaywrightConfig | null = null,
+  perfil: PerfilElegido | null = null,
 ): ResolvedRoute[] {
   const preset = presetById(routing.preset);
 
   return ROLES.map((spec) => {
     const override = routing.roles[spec.id];
     const delPreset = preset.roles[spec.id];
+    const delPerfil = perfil?.perfil.roles[spec.id];
 
     // El valor del sistema existe para los dos roles que el harness ya ejecuta:
     // sin él, un preset sin ese rol dejaría el gate sin modelo.
@@ -844,17 +948,19 @@ export function resolveRouting(
         ? { provider: playwright.provider, model: playwright.model, effort: "auto" as Effort }
         : undefined;
 
-    const elegido = override ?? dePlaywright ?? delPreset ?? delSistema;
+    const elegido = override ?? dePlaywright ?? delPerfil ?? delPreset ?? delSistema;
     const source: RouteSource =
       override !== undefined
         ? "proyecto"
         : dePlaywright !== undefined
           ? "proyecto"
-          : delPreset !== undefined
-            ? "preset"
-            : delSistema !== undefined
-              ? "sistema"
-              : "sin-asignar";
+          : delPerfil !== undefined
+            ? "perfil"
+            : delPreset !== undefined
+              ? "preset"
+              : delSistema !== undefined
+                ? "sistema"
+                : "sin-asignar";
 
     return {
       role: spec.id,
@@ -864,6 +970,12 @@ export function resolveRouting(
       model: elegido?.model ?? "",
       effort: elegido?.effort ?? "auto",
       source,
+      ...(source === "perfil" && perfil !== null
+        ? { perfil: { id: perfil.perfil.id, alcance: perfil.alcance } }
+        : {}),
+      ...((source === "proyecto") && delPerfil !== undefined && perfil !== null
+        ? { anulaPerfil: perfil.perfil.id }
+        : {}),
       // Los dos roles que **verifican** —el evaluador de un gate y el verificador
       // de la cascada— son los únicos de los que importa que emitan
       // probabilidades. Cambiarlos por un modelo de chat no rompe nada, pero la
@@ -922,7 +1034,7 @@ export function modeloDeFase(
       motivo: `el rol agent-${fase} es del proveedor ${ruta.provider} y el ejecutor es ${ejecutor.id}`,
     };
   }
-  return { model: ruta.model, effort: ruta.effort === "auto" ? ejecutor.effort : ruta.effort, origen: "rol", motivo: `rol agent-${fase} (${ruta.source})` };
+  return { model: ruta.model, effort: ruta.effort === "auto" ? ejecutor.effort : ruta.effort, origen: "rol", motivo: ruta.perfil === undefined ? `rol agent-${fase} (${ruta.source})` : `rol agent-${fase} (perfil ${ruta.perfil.id}, ejecutor ${ejecutor.id})` };
 }
 
 /** El modelo resuelto de un rol, o `null` si no tiene ninguno. */
@@ -990,14 +1102,34 @@ function routingConPreset(routing: Routing, preset: string | undefined): Routing
   return { preset, roles: routing.roles };
 }
 
+/**
+ * Los roles resueltos del proyecto con todas sus fuentes: override, `playwright:`, perfil
+ * elegido (el del ejecutor, si se da, y si no el del proyecto), preset y sistema.
+ *
+ * Es el único camino que lee los cuatro archivos: la jornada, las compuertas, la cascada y
+ * la vista resuelven con él para que lo que se muestra sea lo que se ejecuta.
+ */
+export function rutasDelProyecto(
+  root: string,
+  options: { readonly ejecutor?: string; readonly preset?: string } = {},
+): ResolvedRoute[] {
+  const seleccion = readSeleccionDePerfil(root);
+  const elegido =
+    seleccion.proyecto === null && Object.keys(seleccion.ejecutores).length === 0
+      ? null
+      : perfilElegido(listarPerfiles(root), seleccion, options.ejecutor);
+  return resolveRouting(
+    routingConPreset(readProjectRouting(root), options.preset),
+    playwrightConfigOf(root),
+    elegido,
+  );
+}
+
 export function gateRoutingFor(
   root: string,
   options: { readonly preset?: string } = {},
 ): GateRouting {
-  const rutas = resolveRouting(
-    routingConPreset(readProjectRouting(root), options.preset),
-    playwrightConfigOf(root),
-  );
+  const rutas = rutasDelProyecto(root, options);
   const evaluador = rutas.find((ruta) => ruta.role === "gate-evaluator");
   const juez = rutas.find((ruta) => ruta.role === "gate-judge");
 
@@ -1029,7 +1161,7 @@ export interface ArchitectRouting {
 
 /** Resuelve el modelo que usará la descomposición en este proyecto. */
 export function architectRoutingFor(root: string): ArchitectRouting {
-  const rutas = resolveRouting(readProjectRouting(root));
+  const rutas = rutasDelProyecto(root);
   const arquitecto = rutas.find((ruta) => ruta.role === "architect");
   return {
     provider: arquitecto?.provider ?? DEFAULT_PROVIDER,
@@ -1057,7 +1189,7 @@ export interface UiSpecsRouting {
  * sección da el valor del proyecto cuando no lo hay. Ver `docs/03-GATES.md`.
  */
 export function uiSpecsRoutingFor(root: string): UiSpecsRouting {
-  const rutas = resolveRouting(readProjectRouting(root), playwrightConfigOf(root));
+  const rutas = rutasDelProyecto(root);
   const specs = rutas.find((ruta) => ruta.role === "ui-specs");
   return {
     provider: specs?.provider ?? DEFAULT_PROVIDER,
@@ -1135,10 +1267,7 @@ export function cascadeRoutingFor(
   root: string,
   options: { readonly preset?: string } = {},
 ): CascadeRouting {
-  const rutas = resolveRouting(
-    routingConPreset(readProjectRouting(root), options.preset),
-    playwrightConfigOf(root),
-  );
+  const rutas = rutasDelProyecto(root, options);
   const eslabon = (role: string): CascadeStep => {
     const ruta = rutas.find((candidato) => candidato.role === role);
     return {

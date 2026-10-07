@@ -4,7 +4,7 @@ id: FEATURE-ADAPTER-RESOLUCION-PERFIL-20261007
 title: Elegir el perfil por proyecto y por ejecutor, que el preset no lo sobrescriba y mostrar el modelo efectivo con su origen
 type: FEATURE
 module: ADAPTER
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -113,33 +113,33 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1 (R-PERF-002): sin perfil elegido, `resolveRouting` devuelve para cada rol el mismo proveedor, modelo, esfuerzo y origen que hoy
+- [x] C1 (R-PERF-002): sin perfil elegido, `resolveRouting` devuelve para cada rol el mismo proveedor, modelo, esfuerzo y origen que hoy
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-002 sin perfil elegido" -->
-- [ ] C2 (R-PERF-002): con `claude-code-completo` elegido para el proyecto y preset `quality`, `agent-plan` resuelve `claude-opus-5-5` con origen `perfil`
+- [x] C2 (R-PERF-002): con `claude-code-completo` elegido para el proyecto y preset `quality`, `agent-plan` resuelve `claude-opus-5-5` con origen `perfil`
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-002 perfil del proyecto gana al preset" -->
-- [ ] C3 (R-PERF-002): cambiar el preset con un perfil elegido no cambia ningún rol que el perfil declara
+- [x] C3 (R-PERF-002): cambiar el preset con un perfil elegido no cambia ningún rol que el perfil declara
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-002 el preset no sobrescribe el perfil" -->
-- [ ] C4 (R-PERF-002): al resolver para el ejecutor `hermes`, el perfil elegido para `hermes` gana al perfil del proyecto
+- [x] C4 (R-PERF-002): al resolver para el ejecutor `hermes`, el perfil elegido para `hermes` gana al perfil del proyecto
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-002 perfil por ejecutor" -->
-- [ ] C5 (R-PERF-002): al resolver para un ejecutor sin elección propia se usa el perfil del proyecto
+- [x] C5 (R-PERF-002): al resolver para un ejecutor sin elección propia se usa el perfil del proyecto
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-002 ejecutor sin perfil propio" -->
-- [ ] C6 (R-PERF-005): un rol fijado en `routing.yaml` gana al perfil elegido con origen `proyecto`
+- [x] C6 (R-PERF-005): un rol fijado en `routing.yaml` gana al perfil elegido con origen `proyecto`
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-005 el override gana al perfil" -->
-- [ ] C7 (R-PERF-005): la ruta de un rol fijado a mano nombra en `anulaPerfil` el perfil que anula
+- [x] C7 (R-PERF-005): la ruta de un rol fijado a mano nombra en `anulaPerfil` el perfil que anula
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-005 el rol dice que anula el perfil" -->
-- [ ] C8 (R-PERF-002): una elección que nombra un perfil inexistente falla con su id en lugar de caer al preset
+- [x] C8 (R-PERF-002): una elección que nombra un perfil inexistente falla con su id en lugar de caer al preset
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-002 perfil elegido inexistente" -->
-- [ ] C9 (R-PERF-002): `elegirPerfil` con un perfil inexistente se rechaza sin escribir el archivo de perfiles (`perfilesPath`)
+- [x] C9 (R-PERF-002): `elegirPerfil` con un perfil inexistente se rechaza sin escribir el archivo de perfiles (`perfilesPath`)
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-002 elegir perfil inexistente" -->
-- [ ] C10 (R-PERF-002): `elegirPerfil` con un ejecutor fuera de `EJECUTORES_CON_PERFIL` se rechaza nombrando el ejecutor
+- [x] C10 (R-PERF-002): `elegirPerfil` con un ejecutor fuera de `EJECUTORES_CON_PERFIL` se rechaza nombrando el ejecutor
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-002 elegir para ejecutor desconocido" -->
-- [ ] C11 (R-PERF-002): guardar un perfil con `guardarPerfil` conserva la elección ya escrita en el archivo de perfiles (`perfilesPath`)
+- [x] C11 (R-PERF-002): guardar un perfil con `guardarPerfil` conserva la elección ya escrita en el archivo de perfiles (`perfilesPath`)
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-002 guardar conserva la elección" -->
-- [ ] C12 (R-PERF-005): `resolverModeloDeFase` usa el perfil elegido para el ejecutor de la política y su motivo nombra ese perfil
+- [x] C12 (R-PERF-005): `resolverModeloDeFase` usa el perfil elegido para el ejecutor de la política y su motivo nombra ese perfil
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-005 la fase usa el perfil del ejecutor" -->
-- [ ] C13 (R-PERF-005): `checkRouting` devuelve origen `perfil` en los roles que salen del perfil elegido
+- [x] C13 (R-PERF-005): `checkRouting` devuelve origen `perfil` en los roles que salen del perfil elegido
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-005 la API muestra el origen perfil" -->
-- [ ] C14 (R-PERF-002): `gateRoutingFor` con el preset de degradación conserva el `gate-evaluator` del perfil elegido
+- [x] C14 (R-PERF-002): `gateRoutingFor` con el preset de degradación conserva el `gate-evaluator` del perfil elegido
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-002 la degradación no sobrescribe el perfil" -->
 - [ ] C15: la suite completa del repositorio pasa sin cambios en los casos existentes
       <!-- test: npx vitest run -->
@@ -152,11 +152,18 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+- `packages/adapter/src/routing.ts`: `RouteSource` suma `perfil`; `ResolvedRoute` suma `perfil` y `anulaPerfil`; nuevos `SeleccionDePerfil`, `PerfilElegido`, `EJECUTORES_CON_PERFIL`, `parseSeleccionDePerfil`, `readSeleccionDePerfil`, `perfilElegido` (falla con el id si el perfil elegido no existe) y `rutasDelProyecto`; `renderPerfiles(perfiles, seleccion?)` emite `seleccion:`; `resolveRouting(routing, playwright, perfil)` con la cadena override → `playwright:` → perfil → preset → sistema. `gateRoutingFor`, `architectRoutingFor`, `uiSpecsRoutingFor` y `cascadeRoutingFor` resuelven con `rutasDelProyecto`; el `motivo` de `modeloDeFase` nombra el perfil y el ejecutor.
+- `packages/engine/src/journey-phases.ts`: `resolverModeloDeFase` resuelve con el ejecutor de la política.
+- `packages/server/src/routing.ts`: `checkRouting` resuelve con el perfil elegido del proyecto; nuevo `elegirPerfil` (valida perfil y ejecutor antes de escribir; `perfil: null` quita la elección); `guardarPerfil` conserva la elección vigente.
+- `packages/cli/src/setup.ts`: `valmen routing show` resuelve con `rutasDelProyecto` (sin comandos ni banderas nuevos).
+- `tests/routing.test.ts`: `describe("la resolución del perfil elegido")`, 15 casos (uno por C1–C14 más escritura y borrado de la elección).
+- Efecto a tener en cuenta: con perfil elegido, el preset de degradación por presupuesto ya no cambia los roles que el perfil declara (C14). En este proyecto los diez roles fijados en `.valmen/routing.yaml` seguirán anulando al perfil.
 
 ## Pruebas
 
-Pendiente de ejecución.
+- `npx vitest run tests/routing.test.ts` (desde `/Users/juanandrade/Desktop/ValmenHarness`): 63 de 63 en verde, incluidos los 15 casos nuevos. `npx tsc --noEmit -p .`: sin errores.
+- `npx vitest run`: 2803 pasan y 53 fallan en 12 archivos (autorizacion-*-canales, delegation, firma-de-compuerta, gate-human-decision, gate-view, hermes-notify, jornada-sin-autoaprobacion, mcp-server, qa-commit-referencia, qa-por-politica, qa-sombra). **Los mismos 53 fallan sin estos cambios** (comparado con `git stash` de `packages` y `tests`; lista idéntica). La causa que muestra gate-view es «Una sesión desatendida no puede decidir una compuerta», propia del entorno de esta sesión. Por eso C15 queda sin marcar: debe correrlo el responsable en una sesión interactiva.
+- Validación manual opcional: elegir `claude-code-completo` con `elegirPerfil` en un proyecto temporal y correr `valmen routing show`; los roles que `routing.yaml` no fija muestran `perfil`.
 
 ## QA
 
@@ -249,6 +256,24 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:24:16.760Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:30:32.776Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
