@@ -105,6 +105,33 @@ export interface CommandResultRecord {
   readonly artifacts?: readonly CommandArtifactRecord[];
 }
 
+/**
+ * Un paso de la preparación del ambiente de pruebas, tal como queda en el recibo.
+ *
+ * La preparación corre **antes** de los criterios (R-CDEF-007). Se guarda cada paso con
+ * su comando, su resultado y su duración, para que el recibo diga en qué estado se
+ * encontró el ambiente cuando se probó.
+ */
+export interface SetupStepRecord {
+  readonly command: string;
+  /** `refused`: no se ejecutó, y `detail` dice por qué (esquema no permitido). */
+  readonly outcome: "ok" | "failed" | "refused";
+  readonly exitCode: number | null;
+  readonly durationMs: number;
+  /** La cola de la salida, donde está lo que falló. */
+  readonly tail: string;
+  readonly outputSha256?: string;
+  readonly detail?: string;
+}
+
+/** La preparación del ambiente que corrió antes de los criterios. */
+export interface SetupRecord {
+  readonly schema: string;
+  readonly steps: readonly SetupStepRecord[];
+  /** El motivo por el que la compuerta terminó como falla del entorno, si fue por esto. */
+  readonly failure: string | null;
+}
+
 /** Un recibo de gate, append-only y completo. */
 export interface GateReceipt {
   readonly kind: "gate-receipt";
@@ -161,6 +188,8 @@ export interface GateReceipt {
    * de que este campo existiera».
    */
   readonly commandResults?: readonly CommandResultRecord[];
+  /** La preparación del ambiente de pruebas que corrió antes de los criterios, si el proyecto la declara. */
+  readonly setup?: SetupRecord;
 }
 
 /** Los dos extremos de un escalamiento, en lo que el recibo necesita. */
@@ -260,6 +289,8 @@ export interface ReceiptInput {
   readonly escalations?: readonly EscalationRecord[];
   /** El resultado de cada comando corrido, si el evaluador fue determinista. */
   readonly commandResults?: readonly CommandResultRecord[];
+  /** La preparación del ambiente que corrió antes de los criterios. */
+  readonly setup?: SetupRecord;
 }
 
 /** Construye un recibo a partir de una decisión. */
@@ -298,6 +329,7 @@ export function buildReceipt(input: ReceiptInput): GateReceipt {
     ...(input.commandResults === undefined || input.commandResults.length === 0
       ? {}
       : { commandResults: input.commandResults }),
+    ...(input.setup === undefined ? {} : { setup: input.setup }),
   };
 }
 

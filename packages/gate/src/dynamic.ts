@@ -381,7 +381,7 @@ export function commandChecksFor(
  * redirecciones, ni tuberías, ni sustitución de variables. Un comando que las
  * necesite se envuelve en un script del proyecto, que es donde eso se revisa.
  */
-function partirComando(linea: string): string[] {
+export function partirComando(linea: string): string[] {
   const partes: string[] = [];
   let actual = "";
   let comilla: string | null = null;

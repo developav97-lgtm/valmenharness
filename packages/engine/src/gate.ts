@@ -63,6 +63,7 @@ import { buildGateState, runMechanicalChecks } from "./state.js";
 import { appendReceipt, readReceipts } from "./receipts.js";
 import { interfazDelTicket } from "./interfaz.js";
 import { resolveGateMode } from "./gate-promotion.js";
+import { runTestSetup } from "./test-setup.js";
 
 /** Convierte preguntas ya validadas en proposiciones que el motor puro decide. */
 function configuredPropositions(
@@ -520,10 +521,35 @@ export async function runGate(
   // `review`, que es la verdad: lo verifican las personas, en el estado siguiente.
   const soloManual = definition.commandPropositions === true && comandos.length === 0;
 
+  // La preparación del ambiente de pruebas que el proyecto declara corre **antes** de
+  // los criterios, una sola vez, y queda en el recibo. Si falla —o si su esquema no
+  // está permitido— los criterios no corren: no probarían nada, y la compuerta termina
+  // como falla del entorno (R-CDEF-007).
+  const preparacion =
+    definition.commandPropositions === true && !soloManual ? runTestSetup(paths.root) : null;
+
   let decision: GateDecision;
   let evaluation;
 
-  if (soloManual) {
+  if (preparacion !== null && preparacion.failure !== null) {
+    evaluation = {
+      evaluator: "command" as const,
+      answers: [],
+      model: null,
+      usage: null,
+      latencyMs: preparacion.steps.reduce((total, paso) => total + paso.durationMs, 0),
+    };
+    decision = {
+      outcome: "review",
+      reason:
+        `falla del entorno: ${preparacion.failure}. Los criterios no se ejecutaron: no es una ` +
+        "prueba fallida",
+      actor: "engine",
+      propositions: [],
+      blocking: [],
+      inBand: [],
+    };
+  } else if (soloManual) {
     evaluation = {
       evaluator: "command" as const,
       answers: [],
@@ -681,6 +707,7 @@ export async function runGate(
     ...(evaluation.commandResults === undefined
       ? {}
       : { commandResults: evaluation.commandResults }),
+    ...(preparacion === null ? {} : { setup: preparacion }),
   });
 
   // Se informa de lo que de verdad se evaluó. Antes decía «N criterio(s)
@@ -736,6 +763,17 @@ export async function runGate(
     lines.push(
       `    ${marca}  ${item.label.padEnd(38)} ${item.verdict ? "" : "descriptiva"}${peso}${descripcion}`.trimEnd(),
     );
+  }
+
+  // La preparación del ambiente, antes de los criterios: en qué estado se encontró.
+  if (preparacion !== null) {
+    lines.push("", `  Preparación del ambiente (esquema ${preparacion.schema})`);
+    for (const paso of preparacion.steps) {
+      lines.push(
+        `    ${paso.outcome === "ok" ? "✓" : "✗"}  ${paso.command}  ` +
+          `${paso.outcome === "refused" ? `no se ejecutó: ${paso.detail ?? ""}` : `salida ${paso.exitCode ?? "—"}  ${paso.durationMs} ms`}`,
+      );
+    }
   }
 
   // El resultado de cada comando corrido, con la evidencia que dejó. Sin esto la
