@@ -599,6 +599,20 @@ export async function runGate(
     }
   }
 
+  // Un comando que no llegó a probar no es una prueba fallida: el resultado es una
+  // revisión y el motivo lo dice, para que nadie lea «bloqueó» donde el entorno falló.
+  const fallasDeEntorno = (evaluation.commandResults ?? []).filter(
+    (resultado) => resultado.environmentFailure !== undefined,
+  );
+  if (fallasDeEntorno.length > 0 && decision.outcome === "review") {
+    decision = {
+      ...decision,
+      reason:
+        `falla del entorno en ${fallasDeEntorno.map((r) => r.propositionId).join(", ")}: ` +
+        `el comando no llegó a probar, no es una prueba fallida; ${decision.reason}`,
+    };
+  }
+
   // Un gate promovido a automático no puede escalar una banda a una persona: su
   // garantía es fallar cerrado. Sin esta conversión `auto` sería una etiqueta de
   // pantalla y seguiría dejando pasar la misma rama híbrida a revisión humana.
@@ -627,6 +641,11 @@ export async function runGate(
             `referencia humana ${effectiveMode.evidence.humanReference} (${effectiveMode.evidence.humanTickets.join(", ") || "sin tickets comparables"}).`,
         ]),
     ...avisoDeForma(decision, criteria, gate.policy as GatePolicy),
+    ...fallasDeEntorno.map(
+      (resultado) =>
+        `${resultado.propositionId}: falla del entorno — ${resultado.environmentFailure}. ` +
+        "No es una prueba fallida: corrija el entorno y vuelva a correr.",
+    ),
     // Más criterios que una tanda: se evaluaron todos, repartidos. Sin esta nota el
     // recibo no diría que el evaluador respondió en más de una llamada.
     ...((evaluation.tandas ?? 1) > 1
@@ -733,6 +752,9 @@ export async function runGate(
           `salida ${resultado.exitCode} (esperado ${resultado.expectedExitCode})  ` +
           `${resultado.durationMs} ms${evidencia}`,
       );
+      if (resultado.environmentFailure !== undefined) {
+        lines.push(`       falla del entorno: ${resultado.environmentFailure}`);
+      }
     }
   }
 

@@ -20,6 +20,7 @@
  * Ver docs/03-GATES.md §4.
  */
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { readdirSync, statSync } from "node:fs";
 import { join, relative, resolve, sep } from "node:path";
 
@@ -90,8 +91,23 @@ export interface CommandCheckResult {
   readonly exitCode: number;
   readonly expectedExitCode: number;
   readonly passed: boolean;
+  /** La **cola** de la salida: ahí está el resumen del runner, no al comienzo. */
   readonly stdout: string;
   readonly stderr: string;
+  /** El sha256 de la salida completa, para poder comprobar la cola contra ella. */
+  readonly stdoutSha256?: string;
+  readonly stderrSha256?: string;
+  /** Bytes de la salida completa, antes de recortar. */
+  readonly stdoutBytes?: number;
+  readonly stderrBytes?: number;
+  /**
+   * Por qué el comando no llegó a probar nada, si ese fue el caso.
+   *
+   * Una falla del entorno no es una prueba fallida: la base de datos de pruebas ya
+   * existía, la conexión se rechazó, el comando no existe o se agotó el tiempo, o la
+   * salida no trae el resumen del runner. Quien decide la trata como revisión.
+   */
+  readonly environmentFailure?: string;
   readonly durationMs: number;
   /**
    * La evidencia que la corrida dejó en los directorios que el check declara.
@@ -113,8 +129,77 @@ export class CommandError extends Error {
   }
 }
 
-/** Límite de salida que se guarda en el recibo, por flujo. */
+/** Límite de salida que se guarda en el recibo, por flujo: los **últimos** caracteres. */
 export const MAX_CAPTURED_OUTPUT = 2000;
+
+/** La cola de un texto: el resumen de una suite está al final, no al comienzo. */
+export function tailOf(texto: string, max: number = MAX_CAPTURED_OUTPUT): string {
+  return texto.length <= max ? texto : texto.slice(texto.length - max);
+}
+
+function sha256De(texto: string): string {
+  return createHash("sha256").update(texto, "utf8").digest("hex");
+}
+
+/**
+ * Los runners de pruebas que se reconocen, con la línea que imprimen al terminar.
+ *
+ * Un comando de uno de ellos que termina **sin** su resumen no llegó a ejecutar la
+ * suite, aunque haya salido con cualquier código. Un programa que no está en la tabla
+ * no se clasifica por resumen: no hay forma de saber qué imprime al probar.
+ */
+const RUNNERS: readonly {
+  readonly id: string;
+  readonly detecta: RegExp;
+  readonly resumen: RegExp;
+}[] = [
+  { id: "vitest", detecta: /\bvitest\b/, resumen: /\bTest Files\s+\d+|\bTests\s+\d+\s+(?:passed|failed)/ },
+  { id: "jest", detecta: /\bjest\b/, resumen: /\bTests:\s+\d+/ },
+  { id: "Django", detecta: /manage\.py\s+test/, resumen: /\bRan\s+\d+\s+tests?\b/ },
+  { id: "pytest", detecta: /\bpytest\b/, resumen: /\b\d+\s+(?:passed|failed|errors?)\b|no tests ran/ },
+  { id: "Karma", detecta: /\bkarma\b|\bng\s+test\b/, resumen: /Executed\s+\d+\s+of\s+\d+/ },
+];
+
+/** Mensajes de una falla del entorno, cuando el comando salió con error. */
+const MENSAJES_DE_ENTORNO: readonly { readonly patron: RegExp; readonly motivo: string }[] = [
+  {
+    patron: /(?:database|base de datos)[^\n]*(?:already exists|ya existe)/i,
+    motivo: "la base de datos de pruebas ya existía",
+  },
+  {
+    patron: /ECONNREFUSED|connection refused|could not connect to server|conexi[oó]n rechazada/i,
+    motivo: "conexión rechazada",
+  },
+  { patron: /command not found|ENOENT/i, motivo: "comando no encontrado" },
+];
+
+/**
+ * ¿Terminó el comando sin haber probado nada?
+ *
+ * Devuelve el motivo de la falla del entorno, o `null` si el comando probó (haya
+ * pasado o no). El orden importa: si el resumen de un runner conocido está en la
+ * salida, la suite corrió y un fallo es una prueba fallida, aunque el texto mencione
+ * una conexión o una base de datos.
+ */
+export function classifyEnvironmentFailure(input: {
+  readonly line: string;
+  readonly exitCode: number;
+  readonly expectedExitCode: number;
+  readonly output: string;
+}): string | null {
+  const runner = RUNNERS.find((candidato) => candidato.detecta.test(input.line));
+  if (runner !== undefined && runner.resumen.test(input.output)) return null;
+
+  if (input.exitCode !== input.expectedExitCode) {
+    for (const { patron, motivo } of MENSAJES_DE_ENTORNO) {
+      if (patron.test(input.output)) return `${motivo}; el comando no llegó a ejecutar pruebas`;
+    }
+  }
+  if (runner !== undefined) {
+    return `la salida no trae el resumen de pruebas de ${runner.id}; el comando no llegó a ejecutar la suite`;
+  }
+  return null;
+}
 
 /** Profundidad máxima del recorrido de un directorio de evidencia. */
 const MAX_PROFUNDIDAD_DE_EVIDENCIA = 3;
@@ -183,6 +268,14 @@ export function listArtifacts(
     .slice(0, MAX_ARCHIVOS_DE_EVIDENCIA);
 }
 
+/** El valor que deja una proposición en la banda de revisión: ni aprueba ni bloquea. */
+const VALOR_DE_REVISION = 0.5;
+
+/** Los checks de criterios de un ticket llevan el id `criterio_NN`. */
+function esCriterio(propositionId: string): boolean {
+  return propositionId.startsWith("criterio_");
+}
+
 /** Ejecuta un check y devuelve su resultado, sin lanzar por un fallo del check. */
 export function runCommandCheck(
   check: CommandCheck,
@@ -244,15 +337,30 @@ export function runCommandCheck(
       ? undefined
       : listArtifacts(options.root, check.artifactDirs, started);
 
+  const invocation = [check.command, ...(check.args ?? [])].join(" ");
+  // La clasificación mira la salida **completa**: el resumen está al final y un
+  // recorte antes de mirar lo perdería.
+  const environmentFailure = classifyEnvironmentFailure({
+    line: invocation,
+    exitCode,
+    expectedExitCode: expected,
+    output: `${stdout}\n${stderr}`,
+  });
+
   return {
     propositionId: check.propositionId,
     description: check.description,
-    invocation: [check.command, ...(check.args ?? [])].join(" "),
+    invocation,
     exitCode,
     expectedExitCode: expected,
     passed: exitCode === expected,
-    stdout: stdout.slice(0, MAX_CAPTURED_OUTPUT),
-    stderr: stderr.slice(0, MAX_CAPTURED_OUTPUT),
+    stdout: tailOf(stdout),
+    stderr: tailOf(stderr),
+    stdoutSha256: sha256De(stdout),
+    stderrSha256: sha256De(stderr),
+    stdoutBytes: Buffer.byteLength(stdout, "utf8"),
+    stderrBytes: Buffer.byteLength(stderr, "utf8"),
+    ...(environmentFailure === null ? {} : { environmentFailure }),
     durationMs: Date.now() - started,
     ...(artifacts === undefined ? {} : { artifacts }),
   };
@@ -298,6 +406,25 @@ export function evaluateWithCommands(
       result = runCommandCheck(check, options);
     } catch (caught) {
       const error = caught as Error;
+      // Un comando de criterio que no existe o se agotó no probó nada: es una falla
+      // del entorno y se revisa, no un error que detiene toda la compuerta. Los checks
+      // fijos de otras compuertas conservan el comportamiento de siempre.
+      if (caught instanceof CommandError && esCriterio(check.propositionId)) {
+        results.push({
+          propositionId: check.propositionId,
+          description: check.description,
+          invocation: [check.command, ...(check.args ?? [])].join(" "),
+          exitCode: -1,
+          expectedExitCode: check.expectExitCode ?? 0,
+          passed: false,
+          stdout: "",
+          stderr: tailOf(error.message),
+          environmentFailure: error.message,
+          durationMs: 0,
+        });
+        answers.push({ id: check.propositionId, kind: "noul", value: VALOR_DE_REVISION });
+        continue;
+      }
       failures.push({
         propositionId: check.propositionId,
         message: error.message,
@@ -306,6 +433,10 @@ export function evaluateWithCommands(
     }
 
     results.push(result);
+    if (result.environmentFailure !== undefined && esCriterio(check.propositionId)) {
+      answers.push({ id: check.propositionId, kind: "noul", value: VALOR_DE_REVISION });
+      continue;
+    }
     // Un comando produce una certeza binaria, no una probabilidad. Se traduce a
     // los extremos del rango para que el motor lo trate como una proposición
     // clara: 1 aprueba, 0 bloquea, y no hay banda media porque no hay duda.

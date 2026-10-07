@@ -91,8 +91,16 @@ export interface CommandResultRecord {
   readonly expectedExitCode: number;
   readonly passed: boolean;
   readonly durationMs: number;
+  /** La cola de la salida, donde está el resumen del runner. */
   readonly stdout: string;
   readonly stderr: string;
+  /** El sha256 de la salida completa, antes de recortar. */
+  readonly stdoutSha256?: string;
+  readonly stderrSha256?: string;
+  readonly stdoutBytes?: number;
+  readonly stderrBytes?: number;
+  /** Por qué el comando no llegó a probar nada, si ese fue el caso. */
+  readonly environmentFailure?: string;
   /** La evidencia que la corrida dejó, si el check declaró sus directorios. */
   readonly artifacts?: readonly CommandArtifactRecord[];
 }
