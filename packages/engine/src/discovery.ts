@@ -28,6 +28,7 @@ import {
   readAllowedSchemas,
   readGateThresholds,
   readPlanApprovalSources,
+  readQaAuthorizationSources,
   type ThresholdOverride,
   readPlaywrightConfig,
   readTestSetupConfig,
@@ -217,6 +218,11 @@ export function gateThresholds(root: string): readonly ThresholdOverride[] {
 export function planApprovalSources(root: string): readonly string[] {
   const config = configDelProyecto(root);
   return readPlanApprovalSources(config ?? {});
+}
+
+/** Los canales desde los que se acepta crear o revocar una autorización de QA. */
+export function qaAuthorizationSources(root: string): readonly string[] {
+  return readQaAuthorizationSources(configDelProyecto(root) ?? {});
 }
 
 /** El ambiente desplegado que respalda criterios `verify: dev`, o `null`. */

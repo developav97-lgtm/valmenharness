@@ -62,6 +62,9 @@ import {
 import {
   type BudgetPolicy,
   aprobarPorCodigo,
+  crearAutorizacion,
+  leerAutorizaciones,
+  revocarAutorizacion,
   armarJornada,
   emitirAprobacionesDeJornada,
   avanzarJornada,
@@ -2846,6 +2849,69 @@ export function planApproveCommand(
   return fallo
     ? { stdout: "", stderr: `${lineas.join("\n")}\n`, exitCode: EXIT_INVARIANT }
     : ok(`${lineas.join("\n")}\n`);
+}
+
+/**
+ * `qa-authorize create|revoke|list`: la autorización persistida de QA por agente (R-QAAG-001).
+ *
+ * Solo la crea o revoca una persona, por el CLI o Mission Control; una sesión desatendida y una
+ * fuente no declarada se rechazan. No existe una herramienta MCP que lo haga.
+ */
+export function qaAuthorizeCommand(
+  root: string,
+  accion: string | undefined,
+  flags: Readonly<Record<string, string | true>>,
+  opciones: { readonly ahora?: Date; readonly env?: Readonly<Record<string, string | undefined>> } = {},
+): CommandResult {
+  const t = (n: string): string => (typeof flags[n] === "string" ? (flags[n] as string) : "");
+  const lista = (n: string): string[] => t(n).split(",").map((x) => x.trim()).filter((x) => x !== "");
+  try {
+    if (accion === "create") {
+      const a = crearAutorizacion({
+        root,
+        actor: t("actor"),
+        quote: t("quote"),
+        types: lista("types"),
+        modules: lista("modules"),
+        maxRisk: t("max-risk") === "" ? "normal" : t("max-risk"),
+        dailyQuota: Number(t("daily-quota") === "" ? "1" : t("daily-quota")),
+        validDays: Number(t("valid-days") === "" ? "30" : t("valid-days")),
+        source: t("source") === "" ? "cli" : t("source"),
+        ...(opciones.ahora === undefined ? {} : { ahora: opciones.ahora }),
+        ...(opciones.env === undefined ? {} : { env: opciones.env }),
+      });
+      return ok(
+        `Autorización ${a.id} creada por ${a.actor}: tipos ${a.types.join(", ")}; módulos ${a.modules.join(", ")}; ` +
+          `riesgo hasta ${a.maxRisk}; cupo ${a.dailyQuota}/día; vigente hasta ${a.validUntil.slice(0, 10)}.\n` +
+          `Revocarla: valmen qa-authorize revoke --id ${a.id} --actor <tú> --reason "<motivo>"\n`,
+      );
+    }
+    if (accion === "revoke") {
+      const r = revocarAutorizacion({
+        root,
+        id: t("id"),
+        actor: t("actor"),
+        reason: t("reason"),
+        source: t("source") === "" ? "cli" : t("source"),
+        ...(opciones.ahora === undefined ? {} : { ahora: opciones.ahora }),
+        ...(opciones.env === undefined ? {} : { env: opciones.env }),
+      });
+      return ok(`Autorización ${r.id} revocada por ${r.actor}: ninguna política posterior cierra tickets con ella.\n`);
+    }
+    if (accion === "list") {
+      const todas = leerAutorizaciones(root, opciones.ahora ?? new Date());
+      if (todas.length === 0) return ok("No hay autorizaciones de QA por agente.\n");
+      return ok(
+        todas
+          .map((a) => `${a.id} · ${a.estado} · ${a.types.join(",")} · ${a.modules.join(",")} · ${a.actor}: «${a.quote}»`)
+          .join("\n") + "\n",
+      );
+    }
+    return error("qa-authorize admite: create, revoke o list.", EXIT_SCHEMA);
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
 }
 
 /**

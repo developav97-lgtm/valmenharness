@@ -235,7 +235,7 @@ describe("el catálogo de herramientas", () => {
     expect(propiedades?.["evaluator"]?.enum).toEqual([...EVALUATOR_IDS]);
   });
 
-  it("declara las cincuenta y dos herramientas, cada una con descripción y esquema", () => {
+  it("declara las cincuenta y tres herramientas, cada una con descripción y esquema", () => {
     // El orden es el de la lectura: alta, consulta, validación, movimiento,
     // anotación, compuertas, features, procesos, reportes, y al final el ciclo de
     // QA y el cierre. Estaba intercalado por historia —cada herramienta nueva
@@ -244,6 +244,7 @@ describe("el catálogo de herramientas", () => {
       "registrar_actividad_ejecucion",
       "ver_actividad_ejecucion",
       "ver_jornadas",
+      "ver_autorizaciones_qa",
       "armar_jornada",
       "crear_ticket",
       "ver_ticket",
@@ -314,7 +315,7 @@ describe("el catálogo de herramientas", () => {
     // (`resolveAuthorizedProject`), no por una ruta arbitraria: la ejecución
     // directa se limita a proyectos autorizados, y un `root` que ignoraría la
     // implementación sería configuración muerta que el esquema promete.
-    const SIN_ROOT = new Set(["registrar_actividad_ejecucion", "ver_actividad_ejecucion", "ver_jornadas", "armar_jornada"]);
+    const SIN_ROOT = new Set(["registrar_actividad_ejecucion", "ver_actividad_ejecucion", "ver_jornadas", "armar_jornada", "ver_autorizaciones_qa"]);
     for (const tool of TOOLS) {
       if (SIN_ROOT.has(tool.name)) continue;
       const propiedades = tool.inputSchema["properties"] as

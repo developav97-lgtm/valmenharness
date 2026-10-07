@@ -111,6 +111,7 @@ import {
   journeyNotifyPlansCommand,
   journeyPlanCommand,
   planApproveCommand,
+  qaAuthorizeCommand,
   precheckCommand,
   precisionCommand,
   thresholdsCommand,
@@ -223,6 +224,12 @@ Comandos:
                             avance no despacha otro ticket). Pensado para un disparador.
   journey notify-plans --project <id> --journey <id> [--to <destino>]
                             Emite un código de aprobación por plan listo y uno de lote, y los envía.
+  qa-authorize create --actor <nombre> --quote "<frase>" --types <a,b> --modules <x,y>
+                [--max-risk low|normal] [--daily-quota <n>] [--valid-days <n>] [--source <canal>]
+                            Crea la autorización permanente de QA por agente. Solo una persona:
+                            una sesión desatendida y una fuente no declarada se rechazan.
+  qa-authorize revoke --id <QAA-…> --actor <nombre> --reason "<motivo>"
+                            La revoca; vale desde ese momento. qa-authorize list las muestra.
   plan-approve --code <código> --actor <nombre> --quote "<frase>"
                             Aprueba el plan (o el lote) de un código, con fuente token: solo si el
                             proyecto la declara en plan-approval-sources. De un solo uso.
@@ -628,6 +635,12 @@ export const VALUE_OPTIONS = [
   // `gate-decide --code`: el código corto que llegó al celular. Reemplaza a
   // `--id` y `--receipt`, que el token firmado ya trae.
   "--code",
+  // La autorización de QA por agente: tipos, módulos, riesgo, cupo y vigencia.
+  "--types",
+  "--modules",
+  "--max-risk",
+  "--daily-quota",
+  "--valid-days",
   // `hermes brief --dias N`: cuántos días hacia atrás se cuentan los cierres.
   "--dias",
   // `provider` y `routing`: la puesta en marcha sin pasar por la pantalla. Es lo
@@ -1915,6 +1928,8 @@ export async function run(argv: readonly string[]): Promise<number> {
                 : rest[0] === "clear-stop"
                 ? journeyClearStopCommand(options.flags)
                 : { stdout: "", stderr: "journey admite: plan, advance, install-trigger, notify-plans y clear-stop.\n", exitCode: EXIT_SCHEMA };
+    } else if (command === "qa-authorize") {
+      result = qaAuthorizeCommand(resolvePaths(options).root, rest[0], options.flags);
     } else if (command === "plan-approve") {
       result = planApproveCommand(resolvePaths(options), options.flags);
     } else if (command === "approve-plan") {

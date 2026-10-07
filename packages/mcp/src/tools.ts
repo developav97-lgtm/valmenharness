@@ -108,6 +108,7 @@ import {
   runCascadeTask,
   createExecutionContract,
   armarJornada,
+  leerAutorizaciones,
   hermesSendChannel,
   readJourneyRoadmap,
   resolveAuthorizedProject,
@@ -341,6 +342,16 @@ const DEFINICIONES: readonly ToolDefinition[] = [
       properties: { proyecto: { type: "string", description: "project-id declarado en el binding local." } },
       required: ["proyecto"], additionalProperties: false,
     },
+  },
+  {
+    name: "ver_autorizaciones_qa",
+    annotations: SOLO_LEE,
+    title: "Ver las autorizaciones de QA por agente",
+    description:
+      "Lista las autorizaciones persistidas de QA por agente con su estado (vigente, revocada, vencida) " +
+      "y la frase literal de quien las dio. Es de **solo lectura**: no existe una herramienta que cree, " +
+      "amplíe ni revoque una autorización; eso lo hace una persona por el CLI o Mission Control.",
+    inputSchema: conRoot({ properties: {}, required: [] }),
   },
   {
     name: "armar_jornada",
@@ -2448,6 +2459,14 @@ async function ejecutarHerramienta(
         return bien(
           roadmap.journeys.length === 0 ? "No hay jornadas registradas." : `Jornadas: ${roadmap.journeys.length}.`,
           { jornadas: roadmap },
+        );
+      }
+      case "ver_autorizaciones_qa": {
+        const todas = leerAutorizaciones(paths.root, contexto.now?.() ?? new Date());
+        return bien(
+          todas.length === 0
+            ? "No hay autorizaciones de QA por agente."
+            : todas.map((a) => `${a.id} · ${a.estado} · ${a.types.join(",")} · ${a.modules.join(",")} · ${a.actor}: «${a.quote}»`).join("\n"),
         );
       }
       case "armar_jornada": {

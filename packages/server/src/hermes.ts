@@ -161,6 +161,7 @@ const TICKET_RE = new RegExp(
  */
 export const HERRAMIENTAS_DE_LECTURA: readonly string[] = [
   "ver_ticket",
+  "ver_autorizaciones_qa",
   "ver_recibo",
   "listar_tickets",
   "validar_ticket",
