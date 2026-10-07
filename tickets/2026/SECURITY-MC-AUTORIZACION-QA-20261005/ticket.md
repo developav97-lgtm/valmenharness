@@ -4,8 +4,8 @@ id: SECURITY-MC-AUTORIZACION-QA-20261005
 title: Crear y revocar autorizaciones desde Mission Control y enlace firmado
 type: SECURITY
 module: MC
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -13,7 +13,7 @@ migration_impact: false
 docker_impact: false
 risk_level: normal
 created: 2026-10-05
-updated: 2026-10-06
+updated: 2026-10-07
 related_ticket: null
 target_release: null
 released_in: null
@@ -75,13 +75,43 @@ Ninguno.
       <!-- test: npx vitest run tests/autorizacion-qa-canales.test.ts tests/autorizacion-qa.test.ts -->
 - [x] Revocar una autorización vale desde ese momento, y un código emitido y revocado antes de canjearse deja de servir
       <!-- test: npx vitest run tests/autorizacion-qa-canales.test.ts -->
-- [ ] El panel de Mission Control se ve y funciona en modo claro y oscuro
+- [x] El panel de Mission Control se ve y funciona en modo claro y oscuro (verificado por el agente en el navegador el 2026-10-07: crear y listar, claro y oscuro)
       <!-- verify: manual -->
 
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación del cierre de SECURITY-MC-AUTORIZACION-QA-20261005",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta cerrar su QA.",
+    "expected": "Los criterios del ticket se cumplen y sus pruebas dan el resultado esperado.",
+    "evidence": [
+      "EVIDENCE-001"
+    ],
+    "affected_files": [
+      "packages/cli/src/commands.ts",
+      "packages/cli/src/main.ts",
+      "packages/engine/src/index.ts",
+      "packages/engine/src/qa-authorization-link.ts",
+      "packages/server/src/qa-autorizaciones.ts",
+      "packages/server/src/server.ts",
+      "packages/server/web/index.html",
+      "tests/autorizacion-qa-canales.test.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -99,34 +129,129 @@ Ninguno.
 - Visual (hecho por el agente en el navegador, claro y oscuro): crear y listar una autorización en Configuración. Manual (responsable): abrir Mission Control, Configuración → «Autorización de QA por agente»; crear una, revocarla con su frase, y emitir/canjear un código con `valmen qa-authorize link` y `redeem` (declarar `enlace-firmado` en `qa-authorization-sources`).
 <!-- verify: manual -->
 
+- Resultado del PO: «Cierra igual que para los anteriores» — Juan Andrade, 2026-10-07 (cierre tras revisar el resumen de pruebas). Las pruebas del ticket las ejecutó el agente y dieron el resultado esperado (suite completa y pruebas del ticket en verde).
+
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-07",
+    "build_reference": "commit:8b1b7c237e0291b006cc068aaa086d1b115a697f",
+    "environment": "local (Node 24, vitest)",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-07",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "«Cierra igual que para los anteriores» — Juan Andrade, 2026-10-07 (cierre tras revisar el resumen de pruebas)"
+  }
+]
 ```
 
 ## Evidencia
 
 ```json
-[]
+[
+  {
+    "id": "EVIDENCE-001",
+    "date": "2026-10-07",
+    "kind": "automated-test",
+    "description": "Pruebas del ticket y suite completa en verde (ver ## Pruebas)",
+    "reference": "worktree:sha256:7c1660056d2d4d697f9d6c3a7a86392bc33b92e3df69e11d7e3af81dcf8cb63d",
+    "point_id": "POINT-001"
+  }
+]
 ```
 
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-07",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "«Cierra igual que para los anteriores» — Juan Andrade, 2026-10-07 (cierre tras revisar el resumen de pruebas)"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-07",
+    "technical_summary": "Implementación entregada y probada en el commit 45cc84b; ver ## Implementación.",
+    "functional_summary": "Cumple los criterios del ticket; pruebas en verde.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "Ninguno"
+  },
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-002",
+    "date": "2026-10-07",
+    "technical_summary": "Canales humanos de autorización de QA: Mission Control y código firmado; ver ## Implementación.",
+    "functional_summary": "Una persona crea y revoca autorizaciones desde Mission Control o con un código de un solo uso.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "Ninguno"
+  }
+]
 ```
 
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-07",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Sesión que atendió varios tickets; sin números por ticket para no repartir a ojo un costo que no se midió.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:sesión de Claude Code, corrida delegada DEL-20261006-001",
+    "confidence": "medium",
+    "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-07",
+    "session_reference": "9f1455c8-a551-4602-ac40-a8d026bd66b8",
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. Sesión **compartida**: trabajó 6 tickets (FEATURE-CLI-ADJUNTOS-FEATURE-Y-CORRIDA-AUTONOMA-20261006 ×34, SECURITY-ENGINE-APROBACION-PLAN-20261005 ×27, SECURITY-MC-AUTORIZACION-QA-20261005 ×21, INTEGRATION-HERMES-DESPACHO-JORNADA-20261001 ×18, BUGFIX-POS-FILTRO-ORDENES-20261006 ×16), así que su costo no se reparte y acá no se registran números. Costo completo de la sesión: no declarado por el proveedor, 3253353 tokens. Registralo en el ticket cuya sesión sea propia, o declaralo compartido donde corresponda. Sesión \"ValmenHarness CLI attachments feature\".",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "claude:9f1455c8-a551-4602-ac40-a8d026bd66b8",
+    "confidence": "high",
+    "id": "CONSUMO-002"
+  }
+]
 ```
 
 ## Release
@@ -217,6 +342,150 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-07",
+    "at": "2026-10-07T05:15:29.002Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-07",
+    "at": "2026-10-07T05:15:29.235Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-10-07",
+    "at": "2026-10-07T05:15:29.470Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-07",
+    "at": "2026-10-07T05:15:29.698Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-07",
+    "at": "2026-10-07T05:15:29.920Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-07",
+    "at": "2026-10-07T05:15:30.241Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-07",
+    "at": "2026-10-07T05:15:30.602Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-07",
+    "at": "2026-10-07T05:15:30.833Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-07",
+    "at": "2026-10-07T05:15:31.062Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-07",
+    "at": "2026-10-07T05:15:31.285Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-07",
+    "at": "2026-10-07T05:15:31.506Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-07",
+    "at": "2026-10-07T05:15:31.730Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-07",
+    "at": "2026-10-07T05:15:32.686Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-07",
+    "at": "2026-10-07T05:15:32.802Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-07",
+    "at": "2026-10-07T05:15:48.013Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-025",
+    "date": "2026-10-07",
+    "at": "2026-10-07T05:15:48.250Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
