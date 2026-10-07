@@ -61,7 +61,9 @@ import {
 
 import {
   type BudgetPolicy,
+  armarJornada,
   registrarAprobacionDePlan,
+  resolveAuthorizedProject,
   type CommandRunner,
   type LocatedTicket,
   type RegistryPaths,
@@ -2704,4 +2706,61 @@ export function budgetCommand(
   }
 
   return { stdout, stderr: "", exitCode };
+}
+
+/**
+ * `journey plan --project <id> (--feature <slug> | --tickets <a,b,c>) [--max <n>] [--to <destino>]`.
+ *
+ * Arma la jornada del día en el registro de jornadas del proyecto y envía el plan por el
+ * canal de avisos (R-JORN-001). El proyecto se resuelve por su binding de la máquina, como
+ * en `ver_jornadas`. Si el aviso falla, la jornada igual queda escrita y se dice.
+ */
+export function journeyPlanCommand(
+  flags: Readonly<Record<string, string | true>>,
+  runner?: CommandRunner,
+): CommandResult {
+  const texto = (nombre: string): string | undefined =>
+    typeof flags[nombre] === "string" ? (flags[nombre] as string) : undefined;
+  const proyecto = texto("project");
+  if (proyecto === undefined) return error("journey plan requiere --project <id>.", EXIT_SCHEMA);
+  try {
+    const project = resolveAuthorizedProject({ projectId: proyecto });
+    const destino = texto("to") ?? "";
+    const tickets = texto("tickets");
+    const maximo = texto("max");
+    const jornada = armarJornada({
+      project,
+      ...(texto("feature") === undefined ? {} : { feature: texto("feature") as string }),
+      ...(tickets === undefined
+        ? {}
+        : { tickets: tickets.split(",").map((id) => id.trim()).filter((id) => id !== "") }),
+      ...(maximo === undefined ? {} : { maximo: Number(maximo) }),
+      ...(destino === ""
+        ? {}
+        : {
+            notificar: (cuerpo: string) => {
+              const entrega = hermesSendChannel({
+                target: destino,
+                ...(runner === undefined ? {} : { runner }),
+              }).notify({ subject: "Plan del día", body: cuerpo, key: `journey-plan:${cuerpo.split(":")[0] ?? ""}` });
+              return { delivered: entrega.delivered, detail: entrega.detail };
+            },
+          }),
+    });
+    const lineas = [jornada.plan];
+    if (jornada.omitidos.length > 0) lineas.push(`Omitidos: ${jornada.omitidos.join("; ")}.`);
+    if (jornada.aviso === null) {
+      lineas.push("Sin destino de aviso: la jornada quedó escrita y no se envió nada (--to telegram).");
+    } else if (jornada.aviso.delivered) {
+      lineas.push(`Aviso enviado a ${destino}. ${jornada.aviso.detail}`);
+    } else {
+      lineas.push(
+        `La jornada quedó escrita, pero el aviso no se pudo enviar a ${destino}: ${jornada.aviso.detail}`,
+      );
+    }
+    return ok(`${lineas.join("\n")}\n`);
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
 }

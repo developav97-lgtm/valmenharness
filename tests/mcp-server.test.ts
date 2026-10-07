@@ -235,7 +235,7 @@ describe("el catálogo de herramientas", () => {
     expect(propiedades?.["evaluator"]?.enum).toEqual([...EVALUATOR_IDS]);
   });
 
-  it("declara las cincuenta y una herramientas, cada una con descripción y esquema", () => {
+  it("declara las cincuenta y dos herramientas, cada una con descripción y esquema", () => {
     // El orden es el de la lectura: alta, consulta, validación, movimiento,
     // anotación, compuertas, features, procesos, reportes, y al final el ciclo de
     // QA y el cierre. Estaba intercalado por historia —cada herramienta nueva
@@ -244,6 +244,7 @@ describe("el catálogo de herramientas", () => {
       "registrar_actividad_ejecucion",
       "ver_actividad_ejecucion",
       "ver_jornadas",
+      "armar_jornada",
       "crear_ticket",
       "ver_ticket",
       "listar_tickets",
@@ -313,7 +314,7 @@ describe("el catálogo de herramientas", () => {
     // (`resolveAuthorizedProject`), no por una ruta arbitraria: la ejecución
     // directa se limita a proyectos autorizados, y un `root` que ignoraría la
     // implementación sería configuración muerta que el esquema promete.
-    const SIN_ROOT = new Set(["registrar_actividad_ejecucion", "ver_actividad_ejecucion", "ver_jornadas"]);
+    const SIN_ROOT = new Set(["registrar_actividad_ejecucion", "ver_actividad_ejecucion", "ver_jornadas", "armar_jornada"]);
     for (const tool of TOOLS) {
       if (SIN_ROOT.has(tool.name)) continue;
       const propiedades = tool.inputSchema["properties"] as
@@ -345,7 +346,11 @@ describe("el catálogo de herramientas", () => {
     // dato es la ruta del recibo y cuántas proposiciones escalaron: los dos los
     // produce el motor, no el informe.
     const conEsquema = TOOLS.filter((t) => t.outputSchema !== undefined).map((t) => t.name);
+    // `armar_jornada` también: su dato es la jornada que el motor acaba de escribir en el
+    // registro de jornadas (la jornada, sus tickets y el resultado del aviso), no una
+    // segunda forma del informe.
     expect(conEsquema).toEqual([
+      "armar_jornada",
       "ver_ticket",
       "listar_tickets",
       "reanudar_ticket",

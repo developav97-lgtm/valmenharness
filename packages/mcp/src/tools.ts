@@ -107,6 +107,8 @@ import {
   renderCascadeTask,
   runCascadeTask,
   createExecutionContract,
+  armarJornada,
+  hermesSendChannel,
   readJourneyRoadmap,
   resolveAuthorizedProject,
   EXECUTION_ACTIVITY_STATES,
@@ -338,6 +340,40 @@ const DEFINICIONES: readonly ToolDefinition[] = [
       type: "object",
       properties: { proyecto: { type: "string", description: "project-id declarado en el binding local." } },
       required: ["proyecto"], additionalProperties: false,
+    },
+  },
+  {
+    name: "armar_jornada",
+    annotations: ANEXA,
+    title: "Armar la jornada del día",
+    description:
+      "Arma la jornada del día en el registro de jornadas del proyecto: elige los tickets de una " +
+      "feature (en orden de dependencias) o de una lista, descarta los cerrados y escribe la " +
+      "jornada `JOR-<AAAAMMDD>`; repetirla el mismo día la revisa y no la duplica. Con `destino` " +
+      "envía el plan del día por el canal de avisos (por ejemplo `telegram`). **No despacha, no " +
+      "reserva capacidad ni concede permisos**: sin un ejecutor autorizado en la política del " +
+      "proyecto no arma nada y dice qué declarar. Programar un día no crea jobs de cron por ticket.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        proyecto: { type: "string", description: "project-id declarado en el binding local." },
+        feature: { type: "string", description: "Slug de la feature cuyos tickets entran, en orden de dependencias." },
+        tickets: { type: "array", items: { type: "string" }, description: "Alternativa a `feature`: ids de tickets en el orden dado." },
+        maximo: { type: "number", description: "Cuántos tickets entran al día." },
+        destino: { type: "string", description: "Canal del aviso del plan, por ejemplo `telegram`." },
+      },
+      required: ["proyecto"], additionalProperties: false,
+    },
+    outputSchema: {
+      type: "object",
+      properties: {
+        jornada: { type: "string", description: "Id de la jornada armada." },
+        revisada: { type: "boolean", description: "`true` si ya existía la del día y se revisó." },
+        tickets: { type: "array", description: "Los tickets del día, en orden, con sus dependencias." },
+        aviso: { type: ["object", "null"], description: "El resultado del envío, o `null` si no se pidió." },
+      },
+      required: ["jornada", "revisada", "tickets", "aviso"],
+      additionalProperties: false,
     },
   },
   {
@@ -2412,6 +2448,48 @@ async function ejecutarHerramienta(
         return bien(
           roadmap.journeys.length === 0 ? "No hay jornadas registradas." : `Jornadas: ${roadmap.journeys.length}.`,
           { jornadas: roadmap },
+        );
+      }
+      case "armar_jornada": {
+        const projectId = texto(args, "proyecto") as string;
+        const project = resolveAuthorizedProject({ projectId, ...(contexto.home === undefined ? {} : { home: contexto.home }) });
+        const destino = texto(args, "destino", false);
+        const lista = Array.isArray(args["tickets"]) ? (args["tickets"] as unknown[]).map(String) : undefined;
+        const jornada = armarJornada({
+          project,
+          ...(texto(args, "feature", false) === undefined ? {} : { feature: texto(args, "feature", false) as string }),
+          ...(lista === undefined ? {} : { tickets: lista }),
+          ...(typeof args["maximo"] === "number" ? { maximo: args["maximo"] } : {}),
+          ...(contexto.now === undefined ? {} : { ahora: contexto.now }),
+          ...(destino === undefined
+            ? {}
+            : {
+                notificar: (cuerpo: string) => {
+                  const entrega = hermesSendChannel({ target: destino }).notify({
+                    subject: "Plan del día",
+                    body: cuerpo,
+                    key: `journey-plan:${cuerpo.split(":")[0] ?? ""}`,
+                  });
+                  return { delivered: entrega.delivered, detail: entrega.detail };
+                },
+              }),
+        });
+        return bien(
+          `${jornada.plan}\n` +
+            (jornada.omitidos.length === 0 ? "" : `Omitidos: ${jornada.omitidos.join("; ")}.\n`) +
+            (jornada.aviso === null
+              ? "Sin destino: no se envió ningún aviso."
+              : jornada.aviso.delivered
+                ? `Aviso enviado. ${jornada.aviso.detail}`
+                : `La jornada quedó escrita, pero el aviso falló: ${jornada.aviso.detail}`),
+          {
+            jornada: jornada.journeyId,
+            revisada: jornada.revisada,
+            tickets: jornada.tickets.map((t) => ({ ...t })),
+            aviso: jornada.aviso === null ? null : { ...jornada.aviso },
+            siguiente_paso:
+              "La jornada está escrita: despacha con el disparador (ticket siguiente) o revisa la hoja de ruta con `ver_jornadas`.",
+          },
         );
       }
       case "crear_ticket": {

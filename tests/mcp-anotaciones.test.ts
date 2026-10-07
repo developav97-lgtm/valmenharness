@@ -75,6 +75,7 @@ const SOLO_LECTURA = [
 
 /** Las que no se pueden repetir sin cambiar el resultado. */
 const NO_IDEMPOTENTES = [
+  "armar_jornada",
   "registrar_actividad_ejecucion",
   "crear_ticket",
   "mover_ticket",
@@ -105,8 +106,8 @@ const NO_IDEMPOTENTES = [
 ];
 
 describe("las anotaciones de las herramientas", () => {
-  it("las cincuenta y una declaran las cuatro, con un booleano cada una", () => {
-    expect(TOOLS).toHaveLength(51);
+  it("las cincuenta y dos declaran las cuatro, con un booleano cada una", () => {
+    expect(TOOLS).toHaveLength(52);
     for (const tool of TOOLS) {
       const a = tool.annotations;
       expect(a, `${tool.name} no declara anotaciones`).toBeDefined();
@@ -159,7 +160,7 @@ describe("las anotaciones de las herramientas", () => {
     expect(reescriben).toEqual([...REESCRIBEN].sort());
   });
 
-  it("declara no idempotentes exactamente las veintisiete que anexan o mueven", () => {
+  it("declara no idempotentes exactamente las veintiocho que anexan o mueven", () => {
     const noIdempotentes = TOOLS.filter((t) => !t.annotations.idempotentHint)
       .map((t) => t.name)
       .sort();
@@ -184,7 +185,7 @@ describe("las anotaciones de las herramientas", () => {
       catalogo,
     )) as { tools: readonly { name: string; annotations: Record<string, boolean> }[] };
 
-    expect(resultado.tools).toHaveLength(51);
+    expect(resultado.tools).toHaveLength(52);
     for (const tool of resultado.tools) {
       expect(Object.keys(tool.annotations).sort()).toEqual([
         "destructiveHint",

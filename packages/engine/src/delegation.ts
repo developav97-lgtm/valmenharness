@@ -224,10 +224,20 @@ export function delegatedTickets(
   if (delegation.scope.feature === null) {
     return delegation.scope.tickets.map((id) => ({ id, dependsOn: [] }));
   }
-  const { tickets } = readDecomposition(paths, delegation.scope.feature);
-  // El grafo ya viene en el orden de los sprints; se ordena por dependencias para
-  // que un ticket nunca salga antes de uno del que depende, aunque el plan lo
-  // haya declarado así.
+  return ordenDelGrafo(paths, delegation.scope.feature);
+}
+
+/**
+ * Los tickets del grafo de una feature, ordenados por dependencias.
+ *
+ * El grafo ya viene en el orden de los sprints; se ordena por dependencias para que un
+ * ticket nunca salga antes de uno del que depende, aunque el plan lo haya declarado así.
+ */
+export function ordenDelGrafo(
+  paths: RegistryPaths,
+  feature: string,
+): { id: string; dependsOn: readonly string[] }[] {
+  const { tickets } = readDecomposition(paths, feature);
   const pendientes = tickets.map((t) => ({ id: t.id, dependsOn: [...t.dependsOn] }));
   const ordenados: { id: string; dependsOn: readonly string[] }[] = [];
   const puestos = new Set<string>();
@@ -238,7 +248,7 @@ export function delegatedTickets(
     );
     if (i === -1) {
       fail(
-        `El grafo de ${delegation.scope.feature} tiene dependencias circulares entre: ` +
+        `El grafo de ${feature} tiene dependencias circulares entre: ` +
           pendientes.map((t) => t.id).join(", "),
         EXIT_INVARIANT,
       );

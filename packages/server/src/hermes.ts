@@ -186,6 +186,7 @@ export const HERRAMIENTAS_DE_LECTURA: readonly string[] = [
 /** Las que escriben el registro, que son las que convierten una sesión en trabajo. */
 export const HERRAMIENTAS_QUE_ESCRIBEN: readonly string[] = [
   "crear_ticket",
+  "armar_jornada",
   "mover_ticket",
   "anotar_punto",
   "mover_punto",
