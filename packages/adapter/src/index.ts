@@ -15,6 +15,7 @@ export * from "./project.js";
 export * from "./rule-projection.js";
 export * from "./agents-size.js";
 export * from "./claude-code.js";
+export * from "./verbosity.js";
 export * from "./projection.js";
 export * from "./adopt.js";
 export * from "./adopt-rules.js";

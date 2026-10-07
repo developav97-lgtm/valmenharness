@@ -32,6 +32,7 @@ import {
   mergeOutputStyleSetting,
   renderOutputStyle,
 } from "./claude-code.js";
+import { CODEX_CONFIG_PATH, mergeCodexVerbosity, readCodexVerbosity } from "./verbosity.js";
 import { loadProjectModel, projectAgentsMd } from "./project.js";
 import {
   type SkillRuntime,
@@ -175,9 +176,25 @@ export function projectFiles(
       ]
     : [];
 
+  // Codex admite la verbosidad en la configuración del proyecto; OpenCode no.
+  const verbosidad = readCodexVerbosity(model.config);
+  const codex: ProjectedFile[] =
+    runtimes.includes("codex") && verbosidad !== "off"
+      ? [
+          {
+            path: CODEX_CONFIG_PATH,
+            content: mergeCodexVerbosity(
+              leerSiExiste(join(root, CODEX_CONFIG_PATH)),
+              verbosidad,
+            ),
+          },
+        ]
+      : [];
+
   const files: ProjectedFile[] = [
     { path: "AGENTS.md", content: agentsMd },
     ...claudeCode,
+    ...codex,
     ...renderAllAgents(agents, sources).filter((file) => enAlcance(file.path)),
     ...renderAllSkills(skills).filter((file) => enAlcance(file.path)),
   ];

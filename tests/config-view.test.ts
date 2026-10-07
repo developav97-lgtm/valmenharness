@@ -33,12 +33,13 @@ import {
 } from "../packages/server/src/config.js";
 import { handleApi } from "../packages/server/src/server.js";
 
-/** Lo que proyecta un proyecto sin agentes ni skills: AGENTS.md y lo de Claude Code. */
+/** Lo que proyecta un proyecto sin agentes ni skills: AGENTS.md, lo de Claude Code y el config.toml de Codex. */
 const ARCHIVOS_GENERADOS = [
   "AGENTS.md",
   ".claude/output-styles/valmen.md",
   ".claude/settings.json",
   "CLAUDE.md",
+  ".codex/config.toml",
 ];
 
 const CONFIG = `# Configuración del harness en este proyecto.
@@ -218,14 +219,15 @@ describe("guardar la configuración", () => {
       CONFIG.replace("name: SaiOpenCloud", "name: Otro"),
     );
     // Además de AGENTS.md, Claude Code recibe su estilo de salida, la activación en
-    // settings.json y el bloque de CLAUDE.md: tres archivos más (R-RESP-002 y 003).
+    // settings.json y el bloque de CLAUDE.md: tres archivos más (R-RESP-002 y 003) y la verbosidad de Codex (R-RESP-007).
     expect(impacto?.files).toEqual([
       { path: "AGENTS.md", stale: true },
       { path: ".claude/output-styles/valmen.md", stale: true },
       { path: ".claude/settings.json", stale: true },
       { path: "CLAUDE.md", stale: true },
+      { path: ".codex/config.toml", stale: true },
     ]);
-    expect(impacto?.stale).toBe(4);
+    expect(impacto?.stale).toBe(5);
     expect(impacto?.changesAgentsMd).toBe(true);
   });
 });
@@ -234,7 +236,7 @@ describe("guardar la configuración", () => {
 
 describe("regenerar los archivos proyectados", () => {
   it("escribe AGENTS.md y deja de haber nada pendiente", () => {
-    expect(projectionImpact(lab, CONFIG)?.stale).toBe(4);
+    expect(projectionImpact(lab, CONFIG)?.stale).toBe(5);
 
     const resultado = syncProjections(lab);
     expect(resultado.ok).toBe(true);

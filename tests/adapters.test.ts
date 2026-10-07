@@ -365,7 +365,8 @@ describe("proyección por runtime", () => {
     expect(generadas.filter((path) => path.startsWith(".opencode/"))).toHaveLength(2);
     // Un agente, una skill y, desde R-RESP-002, el estilo de salida y settings.json.
     expect(generadas.filter((path) => path.startsWith(".claude/"))).toHaveLength(4);
-    expect(generadas.filter((path) => path.startsWith(".codex/"))).toHaveLength(2);
+    // Un agente, una skill y, desde R-RESP-007, el config.toml con la verbosidad.
+    expect(generadas.filter((path) => path.startsWith(".codex/"))).toHaveLength(3);
   });
 
   it("proyecta solo a los declarados", () => {

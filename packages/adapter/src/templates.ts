@@ -173,6 +173,21 @@ export const RESPONSE_CONTRACT_TEMPLATE =
   RESPONSE_CONTRACT_RULES.map((rule) => `- ${rule}`).join("\n") +
   "\n";
 
+/** Título de la sección que limita el informe final de un agente. */
+export const AGENT_REPORT_TITLE = "Informe final";
+
+/**
+ * El límite del informe de un agente proyectado (R-RESP-004).
+ *
+ * Un agente que devuelve un informe largo vuelca su recorrido en la conversación de
+ * quien lo invocó; lo que esa persona necesita es el hallazgo, dónde está y qué
+ * queda por decidir.
+ */
+export const AGENT_REPORT_RULE =
+  "Termina con un informe de diez líneas como máximo: el hallazgo, las rutas " +
+  "(`ruta:línea`) y la decisión pendiente. El recorrido y la evidencia van al ticket, " +
+  "no al informe.";
+
 /** Encabezado de un archivo generado, con la fuente y el comando de regeneración. */
 export function generatedHeader(version: string, sources: readonly string[]): string {
   const lines = [

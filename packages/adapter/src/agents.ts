@@ -17,7 +17,12 @@ import { join } from "node:path";
 
 import { fail } from "@valmen/core";
 
-import { generatedHeader, generatedHeaderToml } from "./templates.js";
+import {
+  AGENT_REPORT_RULE,
+  AGENT_REPORT_TITLE,
+  generatedHeader,
+  generatedHeaderToml,
+} from "./templates.js";
 import { ADAPTER_VERSION } from "./project.js";
 
 /** Permisos de un agente, en términos neutrales al runtime. */
@@ -151,6 +156,16 @@ function tomlString(value: string): string {
 }
 
 /**
+ * Las instrucciones del agente con el límite del informe final al cierre (R-RESP-004).
+ *
+ * Idempotente: una definición que ya trae la sección no la repite.
+ */
+export function withReportLimit(instructions: string): string {
+  if (instructions.includes(`## ${AGENT_REPORT_TITLE}`)) return instructions;
+  return `${instructions.replace(/\s*$/, "")}\n\n## ${AGENT_REPORT_TITLE}\n\n${AGENT_REPORT_RULE}`;
+}
+
+/**
  * Proyecta un agente al formato de Codex (`TOML`).
  *
  * El cuerpo va en una cadena multilínea básica de TOML, que requiere que el
@@ -174,7 +189,7 @@ export function renderCodexAgent(
     `description = ${tomlString(agent.description)}`,
     `sandbox_mode = ${tomlString(agent.permissions.write ? "workspace-write" : "read-only")}`,
     'developer_instructions = """',
-    agent.instructions,
+    withReportLimit(agent.instructions),
     '"""',
     "",
   ];
@@ -199,7 +214,7 @@ export function renderOpencodeAgent(
     `  bash: ${agent.permissions.execute ? "allow" : "ask"}`,
     "---",
     "",
-    agent.instructions,
+    withReportLimit(agent.instructions),
     "",
   ];
 
@@ -225,7 +240,7 @@ export function renderClaudeAgent(
     agent.tools.length > 0 ? `tools: ${agent.tools.join(", ")}` : "tools:",
     "---",
     "",
-    agent.instructions,
+    withReportLimit(agent.instructions),
     "",
   ];
 
