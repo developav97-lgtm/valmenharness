@@ -4,7 +4,7 @@ id: FEATURE-ADAPTER-PERFILES-MODELOS-20261007
 title: Definir perfiles con nombre (Claude Code, Codex, OpenCode Go y personalizados), mixtos, validados contra el catálogo
 type: FEATURE
 module: ADAPTER
-workflow_status: intake
+workflow_status: approved
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -41,34 +41,63 @@ Ninguno.
 
 ## Descripción funcional
 
-- Alcance:
-- Usuario o rol afectado:
-- Comportamiento actual:
-- Comportamiento esperado:
+- Alcance: el contrato de **perfil de modelos con nombre** en `@valmen/adapter` —tipo, tres perfiles incorporados (Claude Code completo, Codex completo, OpenCode Go), perfiles personalizados del proyecto, comprobación de completitud por rol y fase— y su guardado validado contra el catálogo de cada proveedor en `@valmen/server`. Cubre R-PERF-001 y R-PERF-003 de `.valmen/features/perfiles-de-modelos/spec/perfiles/spec.md`. Quedan fuera, porque el grafo (`.valmen/features/perfiles-de-modelos/tickets.yaml`) los asigna a otros tickets: elegir el perfil por proyecto o ejecutor y que el preset no lo pise (FEATURE-ADAPTER-RESOLUCION-PERFIL-20261007), el despacho por proveedor (SECURITY-ENGINE-DESPACHO-POR-PROVEEDOR-20261007), el registro del modelo usado, la pantalla de Mission Control, el CLI y la orquestación con subagentes.
+- Usuario o rol afectado: el PO que configura con qué modelo trabaja cada fase; indirectamente, los consumidores del enrutamiento (compuertas, jornada, chat de configuración) que más adelante leerán el perfil elegido.
+- Comportamiento actual: no existe el concepto de perfil. El proyecto solo elige un **preset** fijo de cuatro (`quality`, `balanced`, `economy`, `suscripcion`) más overrides por rol en `.valmen/routing.yaml`; no se puede guardar una combinación con nombre ni mezclar proveedores salvo rol por rol, y ningún guardado comprueba que el modelo exista en el catálogo de su proveedor.
+- Comportamiento esperado: un perfil tiene nombre y asigna proveedor, modelo y esfuerzo a **cada** rol del enrutamiento, incluidas las cuatro fases del agente; puede mezclar proveedores; hay tres incorporados; la persona puede definir los suyos. Al guardar un perfil, cada modelo se comprueba contra el catálogo de su proveedor y un identificador inexistente se rechaza diciendo qué rol y qué modelo fallan.
 
 ## Diagnóstico
 
-- Causa comprobada (con `ruta:línea`):
-- Hipótesis pendientes:
-- Consumidores afectados:
-- Archivos y flujo investigados:
+- Causa comprobada (con `ruta:línea`): el síntoma del pedido del PO («el preset de calidad no está haciendo nada; tengo que cambiar los modelos manualmente», `.valmen/features/perfiles-de-modelos/feature.md`) se explica por el modelo de datos del enrutamiento, que solo conoce presets inmutables y overrides sueltos:
+  - `packages/adapter/src/routing.ts:183` declara `PRESETS` como constante del código; `presetById` (`routing.ts:389`) rechaza cualquier otro nombre, así que una combinación de la persona no puede tener nombre ni guardarse como unidad.
+  - `packages/adapter/src/routing.ts:400` define `Routing` como `{ preset, roles }`: la única forma de mezclar proveedores es el override por rol, y `resolveRouting` (`routing.ts:532`) hace que ese override gane siempre al preset (`elegido = override ?? …`). En `.valmen/routing.yaml` hoy los diez roles están fijados a mano con preset `quality`, así que cambiar de preset no cambia ningún modelo: es exactamente el «no hace nada» del PO.
+  - Los roles de fase existen (`routing.ts:140-159`, `FASES_DEL_AGENTE` en `routing.ts:595`), pero los presets les dan modelos de `codex` en tres de cuatro (`routing.ts:232-235`, `283-286`, `325-328`) y de `claude-code` solo en `suscripcion` (`routing.ts:377-380`): no hay un «todo Claude Code» utilizable ni un «OpenCode Go».
+  - Ningún camino de guardado comprueba el catálogo: `analizarRouting` (`routing.ts:473-529`) valida rol y esfuerzo, no el modelo; `writeRouting` (`packages/server/src/routing.ts:286`) solo exige que el texto parsee, y el `PUT /api/routing` (`packages/server/src/server.ts:1481`) escribe lo que llegue. El comentario de `routing.ts:17` («verificados contra el catálogo real») habla de los presets escritos en el código, no de lo que guarda la persona.
+- Catálogos medidos el 2026-10-07 con `valmen provider models <id>`: `codex` publica `gpt-5.5`, `gpt-5.6-luna|sol|terra`, `gpt-6-astra`, `gpt-6-luna`, `gpt-6-sol`, `gpt-6.1-sol` (entre otros); `opencode-go` publica, entre otros, `deepseek-v4-flash`, `deepseek-v4-pro`, `glm-5.3`, `glm-5.3-flash`, `kimi-k3`, `kimi-k2.7-code`, `gpt-6-luna`; `claude-code` no publica catálogo y responde con su lista conocida (`packages/server/src/providers.ts:222`, `knownModels`: `claude-opus-5-5`, `claude-sonnet-5-5`, `claude-fable-5-1`, `claude-haiku-4-5-20251001`, `claude-opus-4-8`, `claude-sonnet-5`, `claude-fable-5`). La fuente única del catálogo ya existe: `listProviderModels` (`packages/server/src/providers.ts:1080`) une lo publicado, lo conocido y los `candidates` de `.valmen/config.yaml`, y devuelve `null` si el proveedor no tiene ninguno.
+- Hipótesis pendientes: ninguna sobre la causa. Interpretación de alcance, citada y no inventada: la feature deja «fuera» a «los evaluadores de compuertas (Jev), que no cambian» (`feature.md`, §Alcance), y R-PERF-001 exige asignar «cada rol del enrutamiento»; las dos se cumplen si cada perfil asigna **todos** los roles de `ROLES` (`routing.ts:77`) y los incorporados conservan en los roles de evaluación (`gate-evaluator`, `gate-judge`, `producer`, `verifier`, `escalation`) los valores del preset `balanced`, que usan Jev donde hace falta probabilidad. Los perfiles personalizados pueden cambiarlos, igual que hoy el override.
+- Consumidores afectados: ninguno cambia de comportamiento en este ticket —el perfil se define y se guarda, pero nadie lo **elige** todavía—. Los futuros lectores son `resolveRouting` (`routing.ts:532`), `modeloDeFase` (`routing.ts:622`), `gateRoutingFor`/`cascadeRoutingFor` (`routing.ts:708`, `849`) y la API `/api/routing` (`server.ts:1456-1553`), que se conectan en FEATURE-ADAPTER-RESOLUCION-PERFIL-20261007. Se exporta desde `packages/adapter/src/index.ts:22` (`export * from "./routing.js"`).
+- Archivos y flujo investigados: `packages/adapter/src/routing.ts` (roles, presets, parseo, resolución, `modeloDeFase`, `renderRouting` en `:928`); `packages/adapter/src/config.ts:38` (`parseConfig`, el subconjunto YAML que exige claves en minúscula sin guion bajo, por lo que los nombres de perfil serán kebab-case); `packages/server/src/routing.ts` (`checkRouting` `:231`, `writeRouting` `:286`, `routingFromForm` `:303`); `packages/server/src/providers.ts` (catálogo `PROVIDERS`, `listProviderModels` `:1080`); `packages/cli/src/setup.ts:186-207` (`valmen provider models`); `.valmen/routing.yaml`; `.valmen/config.yaml` (`providers.codex.candidates`); pruebas en `tests/routing.test.ts` (catálogo de roles, presets, parseo, API). Memoria consultada (`buscar_memoria`): sin antecedentes del síntoma; AP-010 advierte que un plan que crea archivos nuevos confunde a la compuerta, por lo que el plan extiende los archivos investigados.
 - Riesgos y compatibilidad:
-- Impactos de sync, migración, Docker o despliegue:
+  - El cambio es aditivo: `Routing`, `PRESETS`, `parseRouting` y `renderRouting` no cambian, y un proyecto sin perfiles personalizados se comporta igual. `.valmen/routing.yaml` no se toca.
+  - `@valmen/adapter` depende solo de `core` y no hace red; la comprobación contra el catálogo se escribe pura en el adapter con el catálogo **inyectado**, y la consulta real (red) queda en `@valmen/server`, que ya la hace.
+  - Un proveedor sin catálogo, o con la consulta caída, no puede «pasar» en silencio: se rechaza diciendo que no se pudo comprobar —«no se inventa», `feature.md` §Restricciones—.
+  - Divergencia detectada para el ticket de despacho: el ejecutor `opencode` se traduce al proveedor `opencode` (`routing.ts:608-612`), pero el catálogo nombra `opencode-go`/`opencode-zen` (`providers.ts:273`, `:300`). El perfil OpenCode Go usará `opencode-go`, que es el que tiene catálogo; reconciliar el ejecutor queda en SECURITY-ENGINE-DESPACHO-POR-PROVEEDOR-20261007 y no se toca acá.
+  - El catálogo de `claude-code` es una lista conocida, no publicada: un modelo nuevo de Claude exige añadirlo a `knownModels` o a `candidates` antes de usarlo en un perfil.
+- Impactos de sync, migración, Docker o despliegue: ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación:
+- Alcance y exclusiones: se extienden los dos archivos investigados —`packages/adapter/src/routing.ts` (contrato puro, sin red) y `packages/server/src/routing.ts` (guardado con el catálogo real)— y su suite `tests/routing.test.ts`. No se crea ningún paquete ni archivo de código nuevo. **Fuera**: elegir un perfil por proyecto o ejecutor y su precedencia sobre el preset, la vista del modelo efectivo, el despacho por proveedor (incluida la divergencia `opencode`/`opencode-go` de `routing.ts:608-612`), el registro del modelo usado, endpoints HTTP y pantallas de Mission Control, comandos de CLI y la orquestación con subagentes; cada uno tiene su ticket en `tickets.yaml`. `Routing`, `PRESETS`, `parseRouting`, `resolveRouting`, `modeloDeFase` y `.valmen/routing.yaml` no cambian.
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
+- Decisión técnica (sujeta a la aprobación del plan): los perfiles personalizados se guardan **por proyecto** en un archivo de datos propio, `.valmen/profiles.yaml`, con el subconjunto YAML de `parseConfig` (`packages/adapter/src/config.ts:38`). Se descarta añadir una sección a `.valmen/routing.yaml` porque `renderRouting` (`routing.ts:928`) lo regenera entero desde el formulario y tendría dos escritores con formas distintas (invariante «un solo escritor»). Forma:
+  ```yaml
+  perfiles:
+    mi-perfil:
+      description: Opus planea, Codex implementa
+      roles:
+        agent-plan:
+          provider: claude-code
+          model: claude-opus-5-5
+          effort: high
+        # … un bloque por cada rol de ROLES
+  ```
 - Pasos ordenados:
-  <!-- Cada paso nombra archivo, símbolo o comando, y los criterios que cubre, por ejemplo
-       «(C1, C2)». Un paso que no dice dónde ni con qué se toca no se puede ejecutar ni
-       revisar, y la compuerta lo lee así. -->
-  1.
-  2.
-- Impactos declarados:
-  <!-- Una línea por cada impacto que el ticket declara, con las palabras de su proposición:
-       sincronización (datos ya sincronizados y clientes que todavía no se actualizaron),
-       migración (orden de aplicación y reversión) o contenedores (imagen y publicación). -->
-- Rollback (obligatorio):
+  1. `packages/adapter/src/routing.ts` — tipos y perfiles incorporados: `interface PerfilDeModelos { id; description; origen: "incorporado" | "proyecto"; roles: Readonly<Record<string, RoleRoute>> }` y `PERFILES_INCORPORADOS` con `claude-code-completo`, `codex-completo` y `opencode-go`. Cada uno asigna **todos** los roles de `ROLES` (`routing.ts:77`): los de evaluación (`gate-evaluator`, `gate-judge`, `producer`, `verifier`, `escalation`) copian los del preset `balanced` (`routing.ts:239-287`), que mantienen Jev, y los de ejecución usan el proveedor del perfil con modelos de los catálogos medidos el 2026-10-07 (ver Diagnóstico):
+     - `claude-code-completo` (proveedor `claude-code`): `orchestrator` `claude-sonnet-5-5`/auto; `architect` `claude-opus-5-5`/high; `ui-specs` `claude-sonnet-5-5`/medium; `agent-analysis` `claude-opus-5-5`/high; `agent-plan` `claude-opus-5-5`/high; `agent-implementation` `claude-sonnet-5-5`/high; `agent-verification` `claude-haiku-4-5-20251001`/auto.
+     - `codex-completo` (proveedor `codex`): `orchestrator` `gpt-6-sol`/high; `architect` `gpt-6.1-sol`/high; `ui-specs` `gpt-6-sol`/medium; `agent-analysis` `gpt-6-luna`/medium; `agent-plan` `gpt-6.1-sol`/high; `agent-implementation` `gpt-6-sol`/high; `agent-verification` `gpt-6-luna`/medium.
+     - `opencode-go` (proveedor `opencode-go`): `orchestrator` `kimi-k3`/medium; `architect` `deepseek-v4-pro`/high; `ui-specs` `kimi-k3`/medium; `agent-analysis` `glm-5.3`/medium; `agent-plan` `deepseek-v4-pro`/high; `agent-implementation` `kimi-k2.7-code`/high; `agent-verification` `glm-5.3-flash`/auto.
+     (C1, C2, C9)
+  2. `packages/adapter/src/routing.ts` — `comprobarPerfilCompleto(perfil): string[]`: devuelve un error por cada rol de `ROLES` que falte o tenga proveedor vacío, modelo vacío o esfuerzo fuera de `EFFORTS`, nombrando el rol; rechaza también un rol que no esté en `ROLES`, con el mismo texto de `analizarRouting` (`routing.ts:486-494`). (C2, C3)
+  3. `packages/adapter/src/routing.ts` — `comprobarPerfilContraCatalogo(perfil, catalogo)`, pura, con el catálogo **inyectado** como `Readonly<Record<string, { ok: true; models: readonly string[] } | { ok: false; error: string } | null>>` por proveedor: un modelo ausente produce «rol <rol>: el modelo <modelo> no existe en el catálogo de <proveedor>»; un proveedor `null` o `ok: false` produce «rol <rol>: no se pudo comprobar <modelo> contra <proveedor>: <motivo>» y también rechaza —no pasa en silencio—. (C5, C6)
+  4. `packages/adapter/src/routing.ts` — archivo de perfiles: `perfilesPath(root)` (`.valmen/profiles.yaml`), `parsePerfiles(text)` sobre `parseConfig`, `renderPerfiles(perfiles)` como escritor canónico (roles ordenados, igual que `renderRouting`), `readProjectPerfiles(root)` (sin archivo → lista vacía, como `readProjectRouting` en `routing.ts:662`), `listarPerfiles(root)` (incorporados + proyecto, con `origen`) y `derivarPerfil(base, id, description, cambios)` que copia los roles de la base y aplica solo los cambiados. `parsePerfiles` rechaza un id que no sea kebab-case o que choque con uno incorporado. (C4, C8)
+  5. `packages/server/src/routing.ts` — `catalogoParaPerfil(root, perfil, opciones)`: llama a `listProviderModels` (`packages/server/src/providers.ts:1080`) una vez por proveedor distinto del perfil, con los `candidates` de `.valmen/config.yaml`, y arma el catálogo del paso 3; `fetchImpl` inyectable para las pruebas. `guardarPerfil(root, perfil, opciones)`: corre `comprobarPerfilCompleto`, luego `comprobarPerfilContraCatalogo`, y solo sin errores reescribe `.valmen/profiles.yaml` con `renderPerfiles` y `atomicWrite` (mismo patrón que `writeRouting`, `server/routing.ts:286`); devuelve `{ ok, errores, written }`. Rechaza guardar un perfil con id incorporado. (C4, C5, C6, C7)
+  6. `tests/routing.test.ts` — nuevo `describe("los perfiles de modelos")` con un caso por criterio, nombrados «R-PERF-001 …» y «R-PERF-003 …». El catálogo de `codex` y `opencode-go` se fija con las listas medidas el 2026-10-07 mediante `fetchImpl` simulado (límite externo: la red); el de `claude-code` sale de `knownModels` real de `providers.ts:222`. El disco se ejercita en un directorio temporal, como ya hace la suite (`mkdtempSync`). (C1–C9)
+  7. Verificación: `npx vitest run tests/routing.test.ts` y luego la suite completa `npx vitest run` para comprobar que lo existente no cambia. (C10)
+- Impactos declarados: ninguno de sincronización, migración ni contenedores (`sync_impact`, `migration_impact` y `docker_impact` en `false`). El cambio es aditivo en código y añade un archivo de datos opcional por proyecto que nada lee todavía.
+- Compatibilidad: sin `.valmen/profiles.yaml` el comportamiento es idéntico al actual; las exportaciones nuevas salen por `packages/adapter/src/index.ts:22` sin renombrar ninguna existente; ningún consumidor (`resolveRouting`, `modeloDeFase`, compuertas, `/api/routing`) lee perfiles en este ticket.
+- Riesgo de entrega: `claude-code` no publica catálogo, así que su comprobación es contra `knownModels`; los modelos que no sean `claude-haiku-4-5-20251001` dieron HTTP 429 por el camino directo el 2026-10-05 (`routing.ts:339-343`). Eso no afecta a guardar el perfil, pero sí a usarlo para `orchestrator`; se documenta para FEATURE-ADAPTER-RESOLUCION-PERFIL-20261007.
+- Rollback (obligatorio): revertir el commit del ticket en `packages/adapter/src/routing.ts`, `packages/server/src/routing.ts` y `tests/routing.test.ts`; si algún proyecto llegó a guardar `.valmen/profiles.yaml`, el archivo queda inerte (nadie lo lee) y se puede borrar sin efecto. No hay datos ni estado que migrar.
+- Pruebas para la entrega: directorio `/Users/juanandrade/Desktop/ValmenHarness`; `npx vitest run tests/routing.test.ts -t "R-PERF"` → todos los casos de perfiles en verde; `npx vitest run` → suite completa en verde, sin cambios en los casos previos. Entorno: Node 24, sin red (el catálogo se simula). Validación manual opcional: `valmen provider models codex` y `valmen provider models opencode-go` siguen listando los modelos que usan los perfiles incorporados.
 
 <!-- Los criterios de la sección siguiente se numeran C1…Cn, con una afirmación verificable por criterio
      —una frase con «y» son dos criterios—, y cada uno lleva debajo su anotación de
@@ -77,8 +106,26 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] R-PERF-001: Un perfil DEBE asignar proveedor, modelo y esfuerzo a cada rol y fase
-- [ ] R-PERF-003: Un modelo DEBE existir en el catálogo de su proveedor
+- [ ] C1 (R-PERF-001): los perfiles incorporados son exactamente `claude-code-completo`, `codex-completo` y `opencode-go`
+      <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-001 perfiles incorporados" -->
+- [ ] C2 (R-PERF-001): cada perfil incorporado asigna proveedor, modelo no vacío y esfuerzo válido a cada rol de `ROLES`, incluidas las cuatro fases del agente
+      <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-001 incorporados completos" -->
+- [ ] C3 (R-PERF-001): un perfil al que le falta un rol o una fase se rechaza con un error que nombra ese rol
+      <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-001 perfil incompleto" -->
+- [ ] C4 (R-PERF-001): un perfil mixto con análisis y plan en `claude-code` e implementación en `codex` se guarda como válido
+      <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-001 perfil mixto se guarda" -->
+- [ ] C5 (R-PERF-003): guardar un perfil con un modelo ausente del catálogo de su proveedor se rechaza nombrando el rol y el modelo, sin escribir `.valmen/profiles.yaml`
+      <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-003 modelo inexistente" -->
+- [ ] C6 (R-PERF-003): guardar un perfil cuyo proveedor no tiene catálogo disponible se rechaza diciendo que no se pudo comprobar
+      <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-003 catálogo no disponible" -->
+- [ ] C7 (R-PERF-003): todos los modelos de los perfiles incorporados existen en el catálogo de su proveedor
+      <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-003 incorporados en catálogo" -->
+- [ ] C8 (R-PERF-001): un perfil mixto guardado y vuelto a leer conserva el proveedor de cada fase
+      <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-001 perfil mixto conserva proveedores" -->
+- [ ] C9 (R-PERF-001): los perfiles incorporados conservan en `gate-evaluator` y `verifier` el modelo Jev del preset `balanced`
+      <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-001 evaluadores sin cambio" -->
+- [ ] C10: la suite completa del repositorio pasa sin cambios en los casos existentes
+      <!-- test: npx vitest run -->
 
 ## Puntos
 
@@ -140,6 +187,51 @@ Sin publicar todavía.
     "action": "created",
     "actor": "cli",
     "details": "Ticket creado sin sobrescribir historial."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-002",
+    "date": "2026-10-07",
+    "at": "2026-10-07T18:14:20.163Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: intake -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-003",
+    "date": "2026-10-07",
+    "at": "2026-10-07T18:16:12.307Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-07",
+    "at": "2026-10-07T18:38:01.820Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"A\",\"planHash\":\"sha256:cbd801a529f2f2b474c65da2e5a6ef186001193b59b24735d44c93ad91ef2ace\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-07",
+    "at": "2026-10-07T18:38:25.871Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:cbd801a529f2f2b474c65da2e5a6ef186001193b59b24735d44c93ad91ef2ace."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-07",
+    "at": "2026-10-07T18:38:25.871Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
   }
 ]
 ```
