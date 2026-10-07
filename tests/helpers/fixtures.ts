@@ -11,6 +11,9 @@
  * de producción que puede cambiar.
  */
 import { mkdirSync, writeFileSync } from "node:fs";
+
+import { parseTicket } from "../../packages/core/src/index.js";
+import { hashDelPlan } from "../../packages/engine/src/plan-approval.js";
 import { join } from "node:path";
 
 /** Campos que un test puede querer variar. */
@@ -51,6 +54,13 @@ export interface FixtureTicketOptions {
    * deja un ejecutor que no entregó el contrato (R-JORN-005).
    */
   readonly pruebas?: string;
+  /**
+   * Si el ticket lleva la aprobación del plan **registrada** (el evento `plan-approved` con el hash
+   * del plan). Por defecto sí en `approved` e `in_progress`: desde R-CTRL-001 un ticket no llega a
+   * esos estados sin ella, y la elegibilidad del run autónomo la exige. Pasar `false` deja un
+   * ticket cuyo plan solo dice «aprobado» en el texto.
+   */
+  readonly aprobacionRegistrada?: boolean;
 }
 
 /**
@@ -60,6 +70,25 @@ export interface FixtureTicketOptions {
  * bloque JSON en `[]`, que es lo que el contrato espera.
  */
 export function renderFixtureTicket(options: FixtureTicketOptions): string {
+  const estado = options.workflowStatus ?? "planned";
+  const registrada = options.aprobacionRegistrada ?? (estado === "approved" || estado === "in_progress");
+  if (!registrada) return renderBase(options, "");
+  // El hash del plan no depende de los eventos: se calcula sobre la versión sin el evento.
+  const hash = hashDelPlan(parseTicket(renderBase(options, "")));
+  const evento = `,
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-002",
+    "date": "2026-09-21",
+    "at": "2026-09-21T12:00:00.000Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": ${JSON.stringify(JSON.stringify({ actor: "Juan Andrade", source: "cli", quote: "Apruebo el plan (fixture)", planHash: hash }))}
+  }`;
+  return renderBase(options, evento);
+}
+
+function renderBase(options: FixtureTicketOptions, eventoExtra: string): string {
   const {
     id,
     workflowStatus = "planned",
@@ -176,7 +205,7 @@ Sin publicar todavía.
     "action": "created",
     "actor": "cli",
     "details": "Ticket creado sin sobrescribir historial."
-  }
+  }${eventoExtra}
 ]
 \`\`\`
 `;

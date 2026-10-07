@@ -41,6 +41,7 @@ import {
 } from "@valmen/core";
 
 import { markFromReceipt } from "./criteria-marks.js";
+import { assertSesionAtendida } from "./plan-approval.js";
 import { currentReceipts, readReceipts } from "./receipts.js";
 import { type RegistryPaths, findTicket } from "./discovery.js";
 import { documentsForReport, finalizeMutation, readAndValidate } from "./mutate.js";
@@ -617,6 +618,8 @@ export function qaClose(request: QaCloseRequest): string {
   if (result === "approved" && poConfirmation === null) {
     fail("La aprobación QA requiere confirmación explícita del PO.", EXIT_INVARIANT);
   }
+  // Aprobar un ciclo de QA es una decisión de una persona (R-JORN-010): una sesión desatendida no.
+  if (result === "approved") assertSesionAtendida("aprobar un ciclo de QA");
 
   return conTicket(request.paths, request.ticketId, request.now, (contexto) => {
     if (contexto.document.fields.workflow_status !== "in_qa") {
@@ -695,6 +698,7 @@ export function addRetest(request: AddRetestRequest): string {
   if (result === "approved" && poConfirmation === null) {
     fail("Un retest aprobado requiere confirmación explícita del PO.", EXIT_INVARIANT);
   }
+  if (result === "approved") assertSesionAtendida("aprobar un retest");
 
   return conTicket(request.paths, request.ticketId, request.now, (contexto) => {
     if (contexto.document.fields.workflow_status !== "in_qa") {

@@ -13,7 +13,6 @@ import { type FaseDelAgente, type ModeloDeFase } from "@valmen/adapter";
 import {
   EXIT_INVARIANT,
   EXIT_SCHEMA,
-  hasPlanGate,
   impactIdsInFields,
   parseTicket,
 } from "@valmen/core";
@@ -38,7 +37,7 @@ import {
   repartirCambios,
 } from "./integration-commit.js";
 import { registrarFase } from "./journey-phases.js";
-import { UNATTENDED_ENV } from "./plan-approval.js";
+import { UNATTENDED_ENV, aprobacionDePlanVigente } from "./plan-approval.js";
 import { runGate } from "./gate.js";
 import { transition } from "./transition.js";
 
@@ -119,8 +118,10 @@ function ineligibility(text: string, policy: ReturnType<typeof autonomousConfig>
     reasons.push("su módulo está excluido");
   }
   for (const requirement of policy.eligible.require) {
-    if (requirement === "plan-approved" && !hasPlanGate(ticket)) {
-      reasons.push("no tiene plan aprobado");
+    // La aprobación es un evento registrado con actor, fuente y hash (R-CTRL-001): la línea
+    // escrita en el plan no la reemplaza.
+    if (requirement === "plan-approved" && aprobacionDePlanVigente(ticket).estado !== "vigente") {
+      reasons.push("no tiene la aprobación del plan registrada");
     }
     if (requirement === "tests-declared") {
       const criteria = extractCriteriaSpecs(ticket.sections["Criterios de aceptación"]);
@@ -159,7 +160,8 @@ export function autonomousExecutorCommand(
   };
 }
 
-function promptFor(ticketId: string): string {
+/** El prompt de la fase de ejecución: no ordena aprobar nada ni mover a un estado ilegal. */
+export function promptFor(ticketId: string): string {
   return [
     `Continúa exclusivamente el ticket ${ticketId} en el registro del proyecto.`,
     "Lee el ticket, AGENTS.md y las skills aplicables antes de modificar código.",

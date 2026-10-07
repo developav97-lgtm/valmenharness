@@ -41,7 +41,7 @@ import {
 } from "@valmen/gate";
 import { declaredImpactIds, parseTicket } from "@valmen/core";
 import { apiKeyWithPrecedence, transportById } from "@valmen/credentials";
-import { interfazDelTicket } from "@valmen/engine";
+import { assertSesionAtendida, interfazDelTicket } from "@valmen/engine";
 import { cascadeRouting, gateRouting } from "./routing.js";
 import {
   type EvaluatorId,
@@ -599,6 +599,8 @@ export function recordHumanDecision(
   receiptId: string,
   input: HumanDecisionInput,
 ): HumanDecisionOutcome {
+  // La decisión de una compuerta es de una persona (R-JORN-010): una sesión desatendida no la toma.
+  assertSesionAtendida("decidir una compuerta");
   const recibos = readReceipts(paths, ticketId);
   // Se busca el recibo vigente por su **clave de corrida**, no solo por el
   // identificador: con el formato viejo, `GR-<fecha>-<compuerta>` lo comparten

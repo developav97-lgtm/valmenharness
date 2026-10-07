@@ -163,7 +163,7 @@ describe("la vigencia", () => {
 
 describe("compatibilidad", () => {
   it("un ticket que ya pasó por approved sigue validando y sigue sin aprobación registrada", () => {
-    writeFixtureTicket(lab, { id: "BUGFIX-POS-VIEJO-20260921", workflowStatus: "approved" });
+    writeFixtureTicket(lab, { id: "BUGFIX-POS-VIEJO-20260921", workflowStatus: "approved", aprobacionRegistrada: false });
     const viejo = findTicket(PATHS(), "BUGFIX-POS-VIEJO-20260921");
     expect(viejo).toBeDefined();
     const documento = parseTicket(viejo?.text ?? "");

@@ -5,8 +5,8 @@
  *
  *   node scripts/programar-tickets.mjs --raiz <repo> --feature <slug> --perfil <perfil> \
  *     --cantidad 5 --inicio 2026-09-28T08:00:00 --cada 2h --deliver slack:D0C49E1UUJD \
- *     --skills a,b --autorizacion '<frase literal del PO>' --autorizado-por 'Juan Andrade' \
- *     --autorizado-el 2026-09-26 [--implementador sesion|opencode] [--nota '<texto>'] \
+ *     --skills a,b \
+ *     [--implementador sesion|opencode] [--nota '<texto>'] \
  *     [--linea-base '<texto>'] [--tickets ID1,ID2] [--sin-aviso] [--dry-run] [--salida <dir>]
  *
  * `--tickets` reprograma una lista explícita, en ese orden, en vez de dejar la elección al
@@ -332,9 +332,6 @@ function main() {
       MCP: String(f.mcp ?? mcpDelPerfil(perfil, "valmen")),
       COMANDOS_PRUEBA: comandosDe(configYaml),
       NOTA_PROYECTO: f.nota ? `- Nota del proyecto: ${f.nota}\n` : "",
-      AUTORIZACION_NOMBRE: String(f["autorizado-por"] ?? "el PO"),
-      AUTORIZACION_FECHA: String(f["autorizado-el"] ?? ""),
-      AUTORIZACION_FRASE: String(f.autorizacion ?? ""),
       IMPLEMENTADOR:
         f.implementador === "opencode"
           ? "la escribe el ejecutor OpenCode, no vos: lanzá UNA sesión limpia en segundo plano desde la raíz con la grafía canónica del entorno (`pwd -P` primero; si el árbol vive con otra grafía —ValmenHarness/Valmen— el ejecutor lee todo como directorio externo y se auto-rechaza). El comando es `opencode run --standalone --auto --model opencode-go/deepseek-v4.1-flash` —sin `--auto` los permisos no surten en sesión no interactiva y la primera corrida muere—, sin `-c`/`-s`, con el id del ticket, la orden de leerlo completo, respetar `AGENTS.md` y las skills del proyecto, implementar el plan paso por paso y correr las pruebas del ticket. Anotá su session id y guardá su log. Mientras corre no edites código: si al verificar hay correcciones, esperá a que termine, corregí y nombralo en la evidencia."

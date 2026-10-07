@@ -186,3 +186,23 @@ export function registrarAprobacionDePlan(request: PlanApprovalRequest): void {
     request.now,
   );
 }
+
+/**
+ * Falla si esta sesión es desatendida: una decisión humana —la de una compuerta, la aprobación de
+ * un ciclo de QA o de un retest— no la toma una sesión sin persona delante (R-JORN-010).
+ *
+ * La barrera es de proceso (la marca la fija quien despacha al ejecutor) y no criptográfica; la
+ * respalda la prueba que recorre las plantillas de prompt y el registro de quién decidió.
+ */
+export function assertSesionAtendida(
+  accion: string,
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): void {
+  const marca = env[UNATTENDED_ENV];
+  if (marca !== undefined && marca !== "") {
+    fail(
+      `Una sesión desatendida no puede ${accion}: esa decisión es de una persona.`,
+      EXIT_INVARIANT,
+    );
+  }
+}
