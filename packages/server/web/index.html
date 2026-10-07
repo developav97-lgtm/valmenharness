@@ -1788,6 +1788,56 @@
         margin-top: 4px;
         word-break: break-word;
       }
+      .politicas {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 12px;
+        margin: 16px 0;
+      }
+      .politica {
+        background: var(--panel);
+        border: 1px solid var(--borde);
+        border-radius: 8px;
+        padding: 12px 14px;
+      }
+      .politica .titulo-politica {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        font-weight: 600;
+      }
+      .politica .estado-politica {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--tenue);
+      }
+      .politica.activa .estado-politica {
+        color: var(--ok);
+      }
+      .politica.error {
+        border-color: var(--error);
+      }
+      .politica.error .estado-politica {
+        color: var(--error);
+      }
+      .politica ul {
+        margin: 8px 0;
+        padding-left: 18px;
+        font-size: 13px;
+      }
+      .politica .error-politica {
+        color: var(--error);
+        font-family: var(--mono);
+        font-size: 12px;
+        margin: 8px 0;
+        word-break: break-word;
+      }
+      .politica .nota-politica {
+        color: var(--tenue);
+        font-size: 12px;
+        margin-top: 8px;
+      }
       .diff {
         font-family: var(--mono);
         font-size: 12px;
@@ -6669,6 +6719,77 @@
           return caja;
         };
 
+        // Las políticas autónomas: lo que el harness entendió de cada una. «Editar» no
+        // abre otro formato: lleva el editor de texto a la línea de la clave, o le agrega
+        // un ejemplo comentado, y guardar sigue siendo el camino que valida y muestra el
+        // efecto. Insertar el ejemplo no activa nada: está comentado.
+        const politicas = el("div", undefined, "politicas");
+        const editarPolitica = (politica) => {
+          const lineas = editor.value.split("\n");
+          const indice = lineas.findIndex((linea) => linea.startsWith(`${politica.clave}:`));
+          if (indice >= 0) {
+            if (typeof editor.setSelectionRange === "function") {
+              const inicio = lineas.slice(0, indice).join("\n").length + (indice > 0 ? 1 : 0);
+              editor.focus();
+              editor.setSelectionRange(inicio, inicio + lineas[indice].length);
+              editor.scrollTop = indice * 18;
+            }
+            return;
+          }
+          if (politica.ejemplo === null) return;
+          const separador = editor.value === "" || editor.value.endsWith("\n") ? "" : "\n";
+          editor.value = `${editor.value}${separador}\n${politica.ejemplo}\n`;
+          analizar();
+        };
+        const pintarPoliticas = (resumen) => {
+          politicas.textContent = "";
+          politicas.hidden = resumen === null;
+          if (resumen === null) return;
+          for (const politica of resumen.policies ?? []) {
+            const tarjeta = el("div", undefined, `politica ${politica.estado}`);
+            const titulo = el("div", undefined, "titulo-politica");
+            titulo.append(
+              el("span", politica.titulo),
+              el("span", politica.estado, "estado-politica"),
+            );
+            tarjeta.append(titulo);
+            if (politica.error !== null) {
+              tarjeta.append(el("div", politica.error, "error-politica"));
+            } else {
+              const lista = el("ul");
+              for (const linea of politica.resumen) lista.append(el("li", linea));
+              tarjeta.append(lista);
+            }
+            if (politica.soloLectura) {
+              tarjeta.append(
+                el(
+                  "div",
+                  "Solo lectura: los umbrales los firma una persona en el archivo, con su nombre y el motivo.",
+                  "nota-politica",
+                ),
+              );
+            } else {
+              const existe = resumen.keys.includes(politica.clave);
+              const editar = el(
+                "button",
+                existe ? "Editar en el archivo" : "Agregar un ejemplo",
+              );
+              editar.addEventListener("click", () => editarPolitica(politica));
+              tarjeta.append(editar);
+              if (!existe) {
+                tarjeta.append(
+                  el(
+                    "div",
+                    "El ejemplo se agrega comentado: no activa nada hasta que lo descomentes y guardes.",
+                    "nota-politica",
+                  ),
+                );
+              }
+            }
+            politicas.append(tarjeta);
+          }
+        };
+
         const pintar = (respuesta) => {
           const { config, impact } = respuesta;
 
@@ -6676,6 +6797,7 @@
           error.textContent = config.ok ? "" : config.error;
           editor.classList.toggle("mal", !config.ok);
 
+          pintarPoliticas(config.summary);
           interpretacion.textContent = "";
           if (config.summary !== null) {
             const s = config.summary;
@@ -6824,6 +6946,7 @@
         acciones.append(salida, regenerar, guardar);
 
         cont.append(editor, error, el("h2", "Lo que el harness entiende"), interpretacion);
+        cont.append(el("h2", "Políticas autónomas"), politicas);
         cont.append(el("h2", "Diferencias antes de guardar"), diff, acciones);
         pintar(datos);
       }

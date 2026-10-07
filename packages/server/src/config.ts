@@ -32,6 +32,8 @@ import {
 } from "@valmen/adapter";
 import { atomicWrite, fail, toFailure } from "@valmen/core";
 
+import { type PoliticaResumida, resumirPoliticas } from "./politicas.js";
+
 /** Ruta del archivo de configuración del proyecto. */
 export function configPath(root: string): string {
   return join(root, ".valmen", "config.yaml");
@@ -47,6 +49,8 @@ export interface ConfigSummary {
   readonly keys: readonly string[];
   /** `true` si el proyecto ya está adoptado: hay configuración escrita. */
   readonly adopted: boolean;
+  /** Lo que el harness entendió de cada política autónoma, con el error exacto si no se entiende. */
+  readonly policies: readonly PoliticaResumida[];
 }
 
 /** El estado de la configuración, tras leerla o tras analizar un texto. */
@@ -83,6 +87,7 @@ function summarize(config: ConfigMap, root: string, adopted: boolean): ConfigSum
     gates: readList(config, "gates", []),
     keys: Object.keys(config),
     adopted,
+    policies: resumirPoliticas(config),
   };
 }
 
