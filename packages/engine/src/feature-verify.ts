@@ -14,7 +14,7 @@
  * espera al PO cuenta como pendiente suyo, y la feature solo se completa con él
  * si se pide expresamente (`allowPendingPo`).
  */
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 import {
@@ -131,6 +131,7 @@ export function renderFeatureVerify(
   title: string,
   estados: readonly FeatureTicketStatus[],
   fecha: string,
+  anexos: readonly { readonly nombre: string; readonly texto: string }[] = [],
 ): string {
   const cerrados = estados.filter(estaCerrado).length;
   const pendientes = estados.filter((e) => !estaCerrado(e));
@@ -170,7 +171,33 @@ export function renderFeatureVerify(
     }
     partes.push("");
   }
+  // La evidencia que no sale de un ticket —la medición de salida de un sprint— va como anexo.
+  // Sin anexos el texto es el de siempre.
+  if (anexos.length > 0) {
+    partes.push("## Anexos", "");
+    for (const anexo of anexos) {
+      partes.push(`### ${anexo.nombre}`, "", anexo.texto.trim(), "");
+    }
+  }
   return partes.join("\n");
+}
+
+/** Los `salida-*.md` de la carpeta de la feature, en orden: evidencia de cierre que va en `verify.md`. */
+export function anexosDeLaFeature(
+  root: string,
+  slug: string,
+): { readonly nombre: string; readonly texto: string }[] {
+  const carpeta = join(featuresDir(root), slug);
+  let nombres: string[];
+  try {
+    nombres = readdirSync(carpeta);
+  } catch {
+    return [];
+  }
+  return nombres
+    .filter((nombre) => /^salida-.+\.md$/.test(nombre))
+    .sort()
+    .map((nombre) => ({ nombre, texto: readFileSync(join(carpeta, nombre), "utf8") }));
 }
 
 export interface WriteFeatureVerifyRequest {
@@ -200,6 +227,7 @@ export function writeFeatureVerify(request: WriteFeatureVerifyRequest): string {
     leida.row.title,
     featureTicketStatuses(paths, slug),
     today(request.now?.() ?? new Date()),
+    anexosDeLaFeature(paths.root, slug),
   );
   atomicWrite(ruta, texto);
   return ruta;

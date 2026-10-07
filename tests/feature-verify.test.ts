@@ -121,6 +121,20 @@ describe("verify.md", () => {
     expect(featureTicketStatuses(PATHS(), "kardex").map((e) => e.id)).toEqual([A, B]);
   });
 
+  it("incluye como anexos los salida-*.md de la carpeta de la feature y sin ellos no cambia", () => {
+    const sin = readFileSync(writeFeatureVerify({ paths: PATHS(), slug: "kardex" }), "utf8");
+    expect(sin).not.toContain("## Anexos");
+
+    writeFileSync(join(lab, FEATURE, "salida-s1.md"), "# Salida de S1\n\nMedido y conforme.\n", "utf8");
+    const con = readFileSync(
+      writeFeatureVerify({ paths: PATHS(), slug: "kardex", rewrite: true }),
+      "utf8",
+    );
+    expect(con).toContain("## Anexos");
+    expect(con).toContain("### salida-s1.md");
+    expect(con).toContain("Medido y conforme.");
+  });
+
   it("no pisa uno existente salvo con rewrite", () => {
     writeFeatureVerify({ paths: PATHS(), slug: "kardex" });
     expect(() => writeFeatureVerify({ paths: PATHS(), slug: "kardex" })).toThrow(/rewrite/);
