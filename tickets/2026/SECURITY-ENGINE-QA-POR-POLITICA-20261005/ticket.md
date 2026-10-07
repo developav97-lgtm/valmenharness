@@ -4,7 +4,7 @@ id: SECURITY-ENGINE-QA-POR-POLITICA-20261005
 title: Conectar qa-agent al flujo y atribuir el ciclo de QA a la autorización
 type: SECURITY
 module: ENGINE
-workflow_status: planned
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -52,7 +52,7 @@ Ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 - Alcance: el cierre del ciclo de QA por política, su validación y su aviso. Exclusiones: el periodo en sombra, decidir qué tickets se intentan y el paso de `qa_approved` a `closed`.
 - Pasos ordenados:
   1. Crear `packages/engine/src/qa-policy-close.ts` con `cerrarQaPorPolitica({ paths, ticketId, ahora, git? })`: evalúa `elegibilidadQa` con el diff base..HEAD, toma el último recibo de `leerRecibosQaAgent`, exige veredicto `approve`, `delivered` igual al HEAD y `treeHash` igual al árbol del HEAD (con la lista cerrada de git de `packages/engine/src/qa-agent-git.ts`), y que su autorización (id y hash) siga vigente según `autorizacionQueCubre`; cualquier incumplimiento lanza un error con el motivo y no escribe nada.
@@ -65,13 +65,13 @@ Ninguno.
 
 ## Criterios de aceptación
 
-- [ ] Un ticket elegible con `qa-agent` aprobado cierra su ciclo de QA por política: el bloque nombra la autorización y el actor `policy`, la validación lo acepta y el ticket queda en `qa_approved`
+- [x] Un ticket elegible con `qa-agent` aprobado cierra su ciclo de QA por política: el bloque nombra la autorización y el actor `policy`, la validación lo acepta y el ticket queda en `qa_approved`
       <!-- test: npx vitest run tests/qa-por-politica.test.ts -->
-- [ ] Sin recibo aprobado, con un recibo de otro commit u otro árbol, con la autorización revocada o sin cupo, o siendo no elegible, no cierra y no deja un ciclo a medias
+- [x] Sin recibo aprobado, con un recibo de otro commit u otro árbol, con la autorización revocada o sin cupo, o siendo no elegible, no cierra y no deja un ciclo a medias
       <!-- test: npx vitest run tests/qa-por-politica.test.ts -->
-- [ ] `qa-close` sigue rechazando a una sesión desatendida y un cierre con `actor: policy` sin autorización o recibo citados no valida
+- [x] `qa-close` sigue rechazando a una sesión desatendida y un cierre con `actor: policy` sin autorización o recibo citados no valida
       <!-- test: npx vitest run tests/qa-por-politica.test.ts -->
-- [ ] El cierre consume un cupo del día y deja un aviso «QA aprobada por política» con el recibo y la forma de reabrir
+- [x] El cierre consume un cupo del día y deja un aviso «QA aprobada por política» con el recibo y la forma de reabrir
       <!-- test: npx vitest run tests/qa-por-politica.test.ts -->
 
 ## Puntos
@@ -82,11 +82,21 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+- `packages/engine/src/qa-policy-close.ts` (nuevo): `cerrarQaPorPolitica` comprueba en código el recibo más reciente de `qa-agent` (aprobado, del HEAD y del árbol actuales), la elegibilidad (con el diff desde el base del recibo) y la autorización (vigente, que cubre al ticket, con cupo); solo entonces anota el resultado en `## Pruebas`, pasa a `in_qa`, escribe el ciclo completo y pasa a `qa_approved`, y consume un cupo.
+- `packages/engine/src/append.ts`: `qaApproveByPolicy` (abre y cierra el ciclo en una sola escritura atómica), `anotarResultadoPorPolitica` (agrega a Pruebas la línea «Resultado por política»), y `qaClose` rechaza cualquier confirmación `policy:`.
+- `packages/core/src/blocks.ts` y `validate.ts`: la confirmación por política (`policy:<autorización>:<hash>|recibo:<ruta:línea>`) tiene forma obligatoria y `in_qa` acepta el resultado por política de Pruebas.
+- `packages/engine/src/qa-policy-verify.ts` (nuevo) y `transition.ts`: al entrar a `in_qa` y a `qa_approved`, la confirmación por política se comprueba contra el registro (autorización con ese hash, recibo de este ticket y aprobado); una cita inexistente no pasa.
+- `packages/engine/src/approval.ts`, `notify.ts` y `packages/cli/src/hermes.ts`: aviso «QA aprobada por política» (con autorización, recibo y cómo reabrir), una vez por ciclo; se deriva del estado del ticket y se registra al entregarse.
+- `packages/cli/src/commands.ts` y `main.ts`: `valmen qa-policy-close --id <ID>`; lo puede ejecutar una sesión desatendida, `qa-close` sigue rechazándola.
+- Decisión del alcance: el ticket queda en `qa_approved`; pasar a `closed` es el paso de siempre. El ciclo se atribuye con la cadena `policy:…` en `po_confirmation` porque el bloque de QA exige claves exactas.
+- `tests/qa-por-politica.test.ts`: repositorios git reales; un caso por criterio.
 
 ## Pruebas
 
-Pendiente de ejecución.
+- Directorio: raíz del repositorio. `npx vitest run tests/qa-por-politica.test.ts` → 10 pruebas pasan.
+- Suite completa: `npx vitest run` → 189 archivos, 2753 pruebas pasan, 48 omitidas. `npx tsc --noEmit -p tsconfig.json` y `npx eslint` sin errores; `valmen secrets` sin hallazgos.
+- Manual (responsable): sobre un ticket de prueba elegible, `valmen qa-agent …` y luego `valmen qa-policy-close --id <ID>`; revisar el bloque de QA y el aviso.
+<!-- verify: manual -->
 
 ## QA
 
@@ -152,6 +162,51 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-07",
+    "at": "2026-10-07T05:16:56.596Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"La A\",\"planHash\":\"sha256:3a59a9e5cb283ebc2692d9215a36d13c83a55fba8dba7139ae9bbadfe4cd9d55\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-07",
+    "at": "2026-10-07T05:16:56.888Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:3a59a9e5cb283ebc2692d9215a36d13c83a55fba8dba7139ae9bbadfe4cd9d55."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-07",
+    "at": "2026-10-07T05:16:56.888Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-07",
+    "at": "2026-10-07T05:16:57.112Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-07",
+    "at": "2026-10-07T05:22:25.280Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
