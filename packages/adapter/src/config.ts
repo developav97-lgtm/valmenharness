@@ -1068,6 +1068,18 @@ export function readIntegrationConfig(config: ConfigMap): IntegrationConfig {
   return { workBranch, protectedBranches };
 }
 
+/** La configuración de la compuerta `qa-agent` (R-QAAG-004). */
+export interface QaAgentConfig {
+  /** Comandos de la suite de regresión; cada uno debe estar también autorizado en `test-commands`. */
+  readonly regressionCommands: readonly string[];
+}
+
+/** Lee `qa-agent.regression-commands`; sin la clave no hay regresión declarada. */
+export function readQaAgentConfig(config: ConfigMap): QaAgentConfig {
+  const qa = config["qa-agent"] === undefined ? {} : readMap(config, "qa-agent");
+  return { regressionCommands: readList(qa, "regression-commands", []) };
+}
+
 /** Quién dispara el avance de la jornada (R-JORN-011). */
 export type JourneyDispatcher = "machine" | "hermes";
 

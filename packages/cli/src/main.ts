@@ -112,6 +112,7 @@ import {
   journeyPlanCommand,
   planApproveCommand,
   qaAuthorizeCommand,
+  qaAgentCommand,
   qaEligibilityCommand,
   precheckCommand,
   precisionCommand,
@@ -226,6 +227,7 @@ Comandos:
   journey notify-plans --project <id> --journey <id> [--to <destino>]
                             Emite un código de aprobación por plan listo y uno de lote, y los envía.
   qa-eligibility --id <ID> [--base <commit>]
+  qa-agent --id <ID> --base <commit> --delivered <commit>
                             Decide en código si el ticket es elegible para QA por agente (seis
                             reglas, sin modelo). Sale con 3 si no lo es.
   qa-authorize create --actor <nombre> --quote "<frase>" --types <a,b> --modules <x,y>
@@ -648,6 +650,7 @@ export const VALUE_OPTIONS = [
   "--daily-quota",
   "--valid-days",
   // `hermes brief --dias N`: cuántos días hacia atrás se cuentan los cierres.
+  "--delivered",
   "--dias",
   // `provider` y `routing`: la puesta en marcha sin pasar por la pantalla. Es lo
   // que permite que un agente configure el proyecto —un equipo que trabaja dentro
@@ -1940,6 +1943,8 @@ export async function run(argv: readonly string[]): Promise<number> {
       result = qaAuthorizeCommand(resolvePaths(options).root, rest[0], options.flags);
     } else if (command === "plan-approve") {
       result = planApproveCommand(resolvePaths(options), options.flags);
+    } else if (command === "qa-agent") {
+      result = qaAgentCommand(resolvePaths(options), options.flags);
     } else if (command === "approve-plan") {
       result = approvePlanCommand(resolvePaths(options), options.flags);
     } else if (command === "precheck") {

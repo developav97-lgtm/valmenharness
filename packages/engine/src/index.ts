@@ -97,3 +97,6 @@ export * from "./simulate.js";
 export * from "./next-step.js";
 export * from "./resume.js";
 export * from "./ask.js";
+export * from "./qa-agent-git.js";
+export * from "./qa-agent-receipt.js";
+export * from "./qa-agent.js";

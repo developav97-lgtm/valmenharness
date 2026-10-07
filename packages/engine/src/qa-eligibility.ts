@@ -47,6 +47,17 @@ export function archivosDelDiff(root: string, base: string, ejecutor?: EjecutorD
   return salida.stdout.split("\n").map((l) => l.trim()).filter((l) => l !== "");
 }
 
+/** Los scripts que nombran los comandos de `test-commands`. */
+export function scriptsDeComandos(comandos: readonly string[]): string[] {
+  const scripts = new Set<string>();
+  for (const comando of comandos) {
+    for (const palabra of comando.split(/\s+/)) {
+      if (/^(\.\/)?[\w./-]+\.(sh|mjs|cjs|js|py|ts)$/.test(palabra)) scripts.add(palabra.replace(/^\.\//, ""));
+    }
+  }
+  return [...scripts];
+}
+
 /** Los scripts que corren las pruebas del proyecto, según `test-commands`. */
 function scriptsDePruebaDe(root: string): string[] {
   let texto: string;
@@ -55,14 +66,7 @@ function scriptsDePruebaDe(root: string): string[] {
   } catch {
     return [];
   }
-  const comandos = readList(parseConfig(texto), "test-commands", []);
-  const scripts = new Set<string>();
-  for (const comando of comandos) {
-    for (const palabra of comando.split(/\s+/)) {
-      if (/^(\.\/)?[\w./-]+\.(sh|mjs|cjs|js|py|ts)$/.test(palabra)) scripts.add(palabra.replace(/^\.\//, ""));
-    }
-  }
-  return [...scripts];
+  return scriptsDeComandos(readList(parseConfig(texto), "test-commands", []));
 }
 
 export interface ReglaDeElegibilidad {

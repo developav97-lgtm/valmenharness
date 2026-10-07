@@ -66,6 +66,7 @@ import {
   aprobarPorCodigo,
   archivosDelDiff,
   elegibilidadQa,
+  correrQaAgent,
   crearAutorizacion,
   leerAutorizaciones,
   revocarAutorizacion,
@@ -3007,6 +3008,38 @@ export function journeyInstallTriggerCommand(
   const request = {
     projectId: proyecto,
     everyMinutes: cadaCrudo,
+/**
+ * `qa-agent --id <ID> --base <commit> --delivered <commit>`: la compuerta de QA por agente.
+ *
+ * Prueba en un worktree limpio con la configuración del commit base (R-QAAG-003/004/005), anexa el
+ * recibo y sale con el código de invariante si no aprueba. No escribe en el ticket.
+ */
+export function qaAgentCommand(
+  paths: RegistryPaths,
+  flags: Readonly<Record<string, string | true>>,
+): CommandResult {
+  const texto = (n: string): string => (typeof flags[n] === "string" ? (flags[n] as string) : "");
+  const id = texto("id");
+  if (id === "" || texto("base") === "" || texto("delivered") === "") {
+    return error("qa-agent requiere --id <TICKET-ID>, --base <commit> y --delivered <commit>.", EXIT_SCHEMA);
+  }
+  try {
+    const r = correrQaAgent({ paths, ticketId: id, base: texto("base"), delivered: texto("delivered") });
+    const lineas = [
+      `qa-agent — ${id}: ${r.verdict === "approve" ? "APRUEBA" : "NO APRUEBA"}`,
+      ...r.reasons.map((m) => `  ✗ ${m}`),
+      ...(r.recibo === null ? [] : [`Contra el código base: ${r.recibo.resultadoContraBase}. Comandos: ${r.recibo.commands.length}.`]),
+      ...(r.reciboPath === null ? [] : [`Recibo anexado en ${r.reciboPath}`]),
+    ];
+    return r.verdict === "approve"
+      ? ok(`${lineas.join("\n")}\n`)
+      : { stdout: `${lineas.join("\n")}\n`, stderr: "", exitCode: EXIT_INVARIANT };
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
     node: entorno.node ?? process.execPath,
     cliMain: entorno.cliMain ?? (process.argv[1] ?? "valmen"),
     logDir: join(home, "Library", "Logs"),
