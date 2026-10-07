@@ -6,3 +6,7 @@
 {"kind":"decision","ticketId":"BUGFIX-GATECOMMAND-FALLOS-ENTORNO-20261005","detail":"analysis review → approve (GR-20261007-BUGFIX-GATECOMMAND-FALLOS-ENTORNO-20261005-analysis-1): El criterio dice que una banda de revisión por proposición de contexto no debe bloquear el avance","at":"2026-10-07T00:33:39.817Z"}
 {"kind":"note","ticketId":"BUGFIX-GATECOMMAND-FALLOS-ENTORNO-20261005","detail":"avanzó a in_progress (analyzed → planned → approved → in_progress)","at":"2026-10-07T00:34:20.611Z"}
 {"kind":"close","ticketId":"BUGFIX-GATECOMMAND-FALLOS-ENTORNO-20261005","detail":"QA aprobado y ticket cerrado","at":"2026-10-07T00:36:07.276Z"}
+{"kind":"decision","ticketId":"FEATURE-CONFIG-MIGRACION-PRUEBAS-20260926","detail":"analysis review → approve (GR-20261007-FEATURE-CONFIG-MIGRACION-PRUEBAS-20260926-analysis-1): El criterio dice que una proposición de contexto en banda de revisión no debe bloquear el avance","at":"2026-10-07T00:37:22.228Z"}
+{"kind":"decision","ticketId":"FEATURE-CONFIG-MIGRACION-PRUEBAS-20260926","detail":"plan review → approve (GR-20261007-FEATURE-CONFIG-MIGRACION-PRUEBAS-20260926-plan-1): El criterio dice que una proposición de contexto en banda de revisión no debe bloquear el avance","at":"2026-10-07T00:37:57.021Z"}
+{"kind":"note","ticketId":"FEATURE-CONFIG-MIGRACION-PRUEBAS-20260926","detail":"avanzó a in_progress (analyzed → planned → approved → in_progress)","at":"2026-10-07T00:37:57.174Z"}
+{"kind":"close","ticketId":"FEATURE-CONFIG-MIGRACION-PRUEBAS-20260926","detail":"QA aprobado y ticket cerrado","at":"2026-10-07T00:39:16.602Z"}
