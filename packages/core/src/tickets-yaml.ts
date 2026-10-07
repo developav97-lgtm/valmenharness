@@ -98,9 +98,12 @@ export function previewTicketsYaml(
     const coverage = comoLista(raiz["coverage"], "coverage").map((crudo, indice) => {
       const donde = `coverage[${indice}]`;
       const mapa = comoMapa(crudo, donde);
+      const coveredBy = comoTextos(mapa["covered_by"], `${donde}.covered_by`);
+      const portions = leerPorciones(mapa["portions"], `${donde}.portions`, coveredBy);
       return {
         requirement: comoTexto(mapa["requirement"], `${donde}.requirement`),
-        coveredBy: comoTextos(mapa["covered_by"], `${donde}.covered_by`),
+        coveredBy,
+        ...(portions === undefined ? {} : { portions }),
       };
     });
 
@@ -189,6 +192,30 @@ function leerTicket(valor: YamlValue, donde: string): FeatureTicket {
       ? {}
       : { dependsOn: comoTextos(dependsOn, `${donde}.depends_on`) }),
   };
+}
+
+/**
+ * Lee las porciones opcionales de una entrada de cobertura.
+ *
+ * Cada porción nombra un ticket de `covered_by` y el texto de la parte que le toca. Un
+ * ticket que no cubre el requisito no puede tener porción de él.
+ */
+function leerPorciones(
+  valor: YamlValue | undefined,
+  donde: string,
+  coveredBy: readonly string[],
+): { readonly ticket: string; readonly text: string }[] | undefined {
+  if (valor === undefined) return undefined;
+  return comoLista(valor, donde).map((crudo, indice) => {
+    const aqui = `${donde}[${indice}]`;
+    const mapa = comoMapa(crudo, aqui);
+    const ticket = comoTexto(mapa["ticket"], `${aqui}.ticket`);
+    const text = comoTexto(mapa["text"], `${aqui}.text`);
+    if (!coveredBy.includes(ticket)) {
+      malo(`${aqui}.ticket: "${ticket}" no está en covered_by de ese requisito.`);
+    }
+    return { ticket, text };
+  });
 }
 
 /** Lee quién generó la descomposición. Ausente es válido: puede ser a mano. */
@@ -308,7 +335,8 @@ export function parseTicketsYaml(
         );
       }
     }
-    coverage.push({ requirement, coveredBy });
+    const portions = leerPorciones(mapa["portions"], `${donde}.portions`, coveredBy);
+    coverage.push({ requirement, coveredBy, ...(portions === undefined ? {} : { portions }) });
   });
 
   const gaps = comoTextos(raiz["gaps"] ?? [], "gaps");
@@ -411,6 +439,13 @@ export function renderTicketsYaml(documento: TicketsDocument): string {
     lineas.push(`  - requirement: ${escalar(entrada.requirement)}`);
     lineas.push("    covered_by:");
     for (const ticket of entrada.coveredBy) lineas.push(`      - ${ticket}`);
+    if (entrada.portions !== undefined && entrada.portions.length > 0) {
+      lineas.push("    portions:");
+      for (const porcion of entrada.portions) {
+        lineas.push(`      - ticket: ${porcion.ticket}`);
+        lineas.push(`        text: ${escalar(porcion.text)}`);
+      }
+    }
   }
 
   if (decomposition.gaps.length === 0) {

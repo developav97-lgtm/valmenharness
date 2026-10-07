@@ -30,6 +30,8 @@ import { EXIT_SCHEMA, type FeatureRequirement, fail } from "@valmen/core";
 
 /** Un requisito con la spec de la que salió, para poder señalarla. */
 export interface LocatedRequirement extends FeatureRequirement {
+  /** El cuerpo del requisito: lo que sigue al encabezado hasta el siguiente. Puede estar vacío. */
+  readonly body?: string;
   /** El dominio: el nombre de la carpeta bajo `spec/`. */
   readonly domain: string;
   /** El archivo, relativo a la raíz del proyecto. */
@@ -84,6 +86,7 @@ export function parseRequirements(
   source: string,
 ): LocatedRequirement[] {
   const requisitos: LocatedRequirement[] = [];
+  const inicios: number[] = [];
   const vistos = new Set<string>();
 
   text.split(/\r?\n/).forEach((linea, indice) => {
@@ -114,9 +117,23 @@ export function parseRequirements(
       domain,
       source,
     });
+    inicios.push(indice);
   });
 
-  return requisitos;
+  // El cuerpo de cada requisito: de su encabezado al siguiente encabezado de requisito
+  // o de sección. Lo usa la materialización para el comportamiento actual (R-CPRE-007).
+  const lineas = text.split(/\r?\n/);
+  return requisitos.map((requisito, i) => {
+    const desde = (inicios[i] as number) + 1;
+    let hasta = lineas.length;
+    for (let j = desde; j < lineas.length; j++) {
+      if (/^#{1,3}\s+(?:Requirement:|\S)/.test(lineas[j] as string) && !/^####/.test(lineas[j] as string)) {
+        hasta = j;
+        break;
+      }
+    }
+    return { ...requisito, body: lineas.slice(desde, hasta).join("\n").trim() };
+  });
 }
 
 /**

@@ -171,6 +171,14 @@ export interface FeatureRequirement {
 export interface CoverageEntry {
   readonly requirement: string;
   readonly coveredBy: readonly string[];
+  /**
+   * Qué parte del requisito cubre cada ticket, cuando lo cubren varios.
+   *
+   * Opcional: sin él, la materialización anota el enunciado como «parte de» ese ticket
+   * y nombra a los demás. Con él, cada ticket recibe exactamente su porción
+   * (R-CPRE-007). Cada `ticket` debe estar en `coveredBy`.
+   */
+  readonly portions?: readonly { readonly ticket: string; readonly text: string }[];
 }
 
 /**

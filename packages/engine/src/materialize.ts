@@ -30,6 +30,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import {
+  type CoverageEntry,
   type NormalizedTicket,
   EXIT_INVARIANT,
   TEMPLATE_CRITERIOS_VACIOS,
@@ -87,6 +88,8 @@ export function readDecomposition(
   tickets: TicketDelGrafo[];
   coverage: Map<string, string[]>;
   requirements: LocatedRequirement[];
+  /** La cobertura tal como el grafo la declara, con las porciones opcionales. */
+  entries: readonly CoverageEntry[];
 } {
   const ruta = decompositionPath(paths.root, slug);
   let texto: string;
@@ -138,6 +141,7 @@ export function readDecomposition(
     })),
     coverage: cobertura,
     requirements: requisitos,
+    entries: vista.document.decomposition.coverage,
   };
 }
 
@@ -154,6 +158,7 @@ function solicitudDe(
   cubre: readonly string[],
   objetivo: string,
   referencias = "",
+  alcance: Alcance = SIN_ALCANCE,
 ): string {
   // Los requisitos que este ticket cubre salen del **grafo**, no de parecidos de
   // texto: es lo que una persona revisó al aprobar la descomposición.
@@ -173,8 +178,98 @@ function solicitudDe(
     ticket.dependsOn.length === 0 ? "" : `Depende de: ${ticket.dependsOn.join(", ")}.`,
     "Viene de una feature descompuesta en sprints; su plan completo está en el tickets.yaml de la feature.",
   ].filter((linea) => linea !== "");
-  // Sin adjuntos la solicitud es la de siempre, byte a byte.
-  return lineas.join("\n") + (referencias === "" ? "" : `\n\n${referencias}`);
+  const comportamiento = comportamientoDe(ticket, suyos, alcance);
+  const fuera = fueraDeAlcanceDe(ticket, cubre, alcance);
+  // Sin adjuntos ni requisitos repartidos la solicitud lleva solo el comportamiento
+  // esperado y el actual, además de lo de siempre.
+  return (
+    lineas.join("\n") +
+    (comportamiento === "" ? "" : `\n\n${comportamiento}`) +
+    (fuera === "" ? "" : `\n\n${fuera}`) +
+    (referencias === "" ? "" : `\n\n${referencias}`)
+  );
+}
+
+/** Lo que `materialize` necesita saber de otros tickets para acotar el de uno. */
+interface Alcance {
+  readonly entries: readonly CoverageEntry[];
+  readonly titles: ReadonlyMap<string, string>;
+}
+
+const SIN_ALCANCE: Alcance = { entries: [], titles: new Map() };
+
+/** La porción de un requisito que el grafo declara para un ticket, si la declara. */
+function porcionDe(entry: CoverageEntry | undefined, ticketId: string): string | undefined {
+  return entry?.portions?.find((p) => p.ticket === ticketId)?.text;
+}
+
+/** Los otros tickets que cubren un requisito. */
+function otrosQueCubren(entry: CoverageEntry | undefined, ticketId: string): string[] {
+  return (entry?.coveredBy ?? []).filter((id) => id !== ticketId);
+}
+
+/** «ID (título)», o solo el id si el grafo no le dio título. */
+function nombreDe(id: string, alcance: Alcance): string {
+  const titulo = alcance.titles.get(id);
+  return titulo === undefined || titulo === "" ? id : `${id} (${titulo})`;
+}
+
+/**
+ * El comportamiento esperado y el actual de un ticket (R-CPRE-007).
+ *
+ * El esperado es el de su porción de cada requisito. El actual solo se escribe si la spec
+ * lo declara —una línea «Comportamiento actual:» en el cuerpo del requisito—: inventarlo
+ * sería escribir lo que nadie dijo, y el análisis lo establece leyendo el código.
+ */
+function comportamientoDe(
+  ticket: TicketDelGrafo,
+  requisitos: readonly LocatedRequirement[],
+  alcance: Alcance,
+): string {
+  if (requisitos.length === 0) return "";
+  const esperado = requisitos.map((r) => {
+    const entry = alcance.entries.find((e) => e.requirement === r.id);
+    return porcionDe(entry, ticket.id) ?? r.statement;
+  });
+  const actuales = requisitos
+    .map((r) => /^Comportamiento actual:\s*(.+)$/im.exec(r.body ?? "")?.[1]?.trim())
+    .filter((texto): texto is string => texto !== undefined && texto !== "");
+  return [
+    `Comportamiento esperado: ${esperado.join(" ")}`,
+    actuales.length > 0
+      ? `Comportamiento actual: ${actuales.join(" ")}`
+      : "Comportamiento actual: la spec no lo declara; se establece en el análisis, leyendo el código.",
+  ].join("\n");
+}
+
+/**
+ * La sección «Fuera de alcance»: lo que el grafo asignó a otros tickets.
+ *
+ * Solo para requisitos que cubre más de un ticket. Es lo que le dice al agente de este
+ * ticket dónde termina su porción, para que no la exceda ni la deje a medias.
+ */
+function fueraDeAlcanceDe(
+  ticket: TicketDelGrafo,
+  cubre: readonly string[],
+  alcance: Alcance,
+): string {
+  const lineas: string[] = [];
+  for (const id of cubre) {
+    const entry = alcance.entries.find((e) => e.requirement === id);
+    for (const otro of otrosQueCubren(entry, ticket.id)) {
+      const porcion = porcionDe(entry, otro);
+      lineas.push(
+        `- ${id}: lo cubre ${nombreDe(otro, alcance)}${porcion === undefined ? "" : ` — ${porcion}`}`,
+      );
+    }
+  }
+  if (lineas.length === 0) return "";
+  return [
+    "### Fuera de alcance",
+    "",
+    "Lo que el grafo asignó a otros tickets y este no hace:",
+    ...lineas,
+  ].join("\n");
 }
 
 /**
@@ -226,6 +321,8 @@ function referenciasDe(
 function criteriosDe(
   requisitos: readonly { readonly id: string; readonly statement: string }[],
   cubre: readonly string[],
+  ticket?: TicketDelGrafo,
+  alcance: Alcance = SIN_ALCANCE,
 ): string {
   return cubre
     .map((id) => requisitos.find((requisito) => requisito.id === id))
@@ -233,7 +330,21 @@ function criteriosDe(
       (requisito): requisito is { id: string; statement: string } =>
         requisito !== undefined,
     )
-    .map((requisito) => `- [ ] ${requisito.id}: ${requisito.statement}`)
+    .map((requisito) => {
+      const entry = alcance.entries.find((e) => e.requirement === requisito.id);
+      const otros = ticket === undefined ? [] : otrosQueCubren(entry, ticket.id);
+      // Un requisito que cubre un solo ticket se escribe como siempre. Uno repartido se
+      // acota a la porción de este ticket: la que el grafo declara, o el enunciado anotado
+      // como parte de él, para que el criterio no exija lo que otro ticket cubre.
+      if (ticket === undefined || otros.length === 0) {
+        return `- [ ] ${requisito.id}: ${requisito.statement}`;
+      }
+      const porcion = porcionDe(entry, ticket.id);
+      return porcion !== undefined
+        ? `- [ ] ${requisito.id}: ${porcion}`
+        : `- [ ] ${requisito.id}: ${requisito.statement} (solo la parte de «${ticket.title || ticket.id}»; ` +
+            `el resto lo cubre ${otros.join(", ")})`;
+    })
     .join("\n");
 }
 
@@ -274,7 +385,11 @@ export function materializeFeature(
   slug: string,
   opciones: { readonly write?: boolean; readonly now?: (() => Date) | undefined } = {},
 ): Materialization {
-  const { tickets, coverage, requirements } = readDecomposition(paths, slug);
+  const { tickets, coverage, requirements, entries } = readDecomposition(paths, slug);
+  const alcance: Alcance = {
+    entries,
+    titles: new Map(tickets.map((t) => [t.id, t.title])),
+  };
   const escribir = opciones.write !== false;
 
   // Se comprueba **todo** antes de escribir el primero: crear tres y fallar en el
@@ -345,13 +460,14 @@ export function materializeFeature(
           coverage.get(ticket.id) ?? [],
           objetivos.get(ticket.sprint) ?? "",
           referenciasDe(paths.root, slug, requirements, coverage.get(ticket.id) ?? []),
+          alcance,
         ),
         ...(opciones.now === undefined ? {} : { now: opciones.now }),
       });
       // Y sus criterios, que ya están escritos en la spec.
       escribirCriterios(
         ticketPathFor(paths, ticket.id),
-        criteriosDe(requirements, coverage.get(ticket.id) ?? []),
+        criteriosDe(requirements, coverage.get(ticket.id) ?? [], ticket, alcance),
       );
     }
   }

@@ -200,7 +200,7 @@ export function computeNextStep(
               "puede estar resuelto, con su causa raíz escrita.",
             "Lee el código real por donde pasa el flujo; no asumas ni diagnostiques de memoria.",
             "Escribe en el ticket `## Descripción funcional` y `## Diagnóstico`: archivos y flujo " +
-              "con `ruta:línea`, causa raíz o hipótesis, riesgos y compatibilidad, y la línea " +
+              "con `ruta:línea`, la causa comprobada, las hipótesis pendientes, los consumidores afectados, riesgos y compatibilidad, y la línea " +
               "`- Impactos de sync, migración, Docker o despliegue: <valor>`.",
             `Valida (\`valmen validate --id ${id}\`) y, en una llamada aparte de la escritura, ` +
               `${mover("analyzed")}.`,

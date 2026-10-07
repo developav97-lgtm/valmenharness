@@ -94,8 +94,10 @@ Ninguno.
 
 ## Diagnóstico
 
+- Causa comprobada (con \`ruta:línea\`):
+- Hipótesis pendientes:
+- Consumidores afectados:
 - Archivos y flujo investigados:
-- Causa raíz o hipótesis:
 - Riesgos y compatibilidad:
 - Impactos de sync, migración, Docker o despliegue:
 
@@ -103,17 +105,24 @@ Ninguno.
 
 - Gate de plan y aprobación:
 - Pasos ordenados:
-  <!-- Cada paso nombra archivo, símbolo o comando. Un paso que no dice dónde ni
-       con qué se toca no se puede ejecutar ni revisar, y la compuerta lo lee así. -->
+  <!-- Cada paso nombra archivo, símbolo o comando, y los criterios que cubre, por ejemplo
+       «(C1, C2)». Un paso que no dice dónde ni con qué se toca no se puede ejecutar ni
+       revisar, y la compuerta lo lee así. -->
   1.
   2.
-- Rollback:
+- Impactos declarados:
+  <!-- Una línea por cada impacto que el ticket declara, con las palabras de su proposición:
+       sincronización (datos ya sincronizados y clientes que todavía no se actualizaron),
+       migración (orden de aplicación y reversión) o contenedores (imagen y publicación). -->
+- Rollback (obligatorio):
 
+<!-- Los criterios de la sección siguiente se numeran C1…Cn, con una afirmación verificable por criterio
+     —una frase con «y» son dos criterios—, y cada uno lleva debajo su anotación de
+     verificación: un comentario HTML que dice «test:» y el comando, o «verify: manual». La
+     sección no lleva comentarios dentro: un comentario con anotación se leería como la de un
+     criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-<!-- Una afirmación verificable por criterio. Una frase con «y» son dos criterios:
-     cada uno se despliega como una proposición propia, y una que agrupa varias
-     afirmaciones cae en banda de revisión aunque el plan la cubra entera. -->
 - [ ]
 
 ## Puntos
