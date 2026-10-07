@@ -4,7 +4,7 @@ id: SECURITY-CLI-REVISION-SKILLS-20261007
 title: Registrar la revisión de una persona y deshabilitar la skill si su contenido cambia
 type: SECURITY
 module: CLI
-workflow_status: analyzed
+workflow_status: planned
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -144,6 +144,24 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: intake -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-003",
+    "date": "2026-10-07",
+    "at": "2026-10-07T19:36:05.926Z",
+    "action": "gate-approved",
+    "actor": "cli",
+    "details": "Gate analysis aprobado por Juan Andrade (recibo GR-20261007-SECURITY-CLI-REVISION-SKILLS-20261007-analysis-1, canal mission-control, decidida 2026-10-07T19:36:05.919Z): A"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-07",
+    "at": "2026-10-07T19:36:06.187Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: analyzed -> planned."
   }
 ]
 ```

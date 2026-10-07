@@ -4,7 +4,7 @@ id: SECURITY-MC-AUTORIZACION-APROBACION-20261007
 title: Crear y revocar autorizaciones de aprobación desde Mission Control y código firmado
 type: SECURITY
 module: MC
-workflow_status: analyzed
+workflow_status: planned
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -155,6 +155,24 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: intake -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-003",
+    "date": "2026-10-07",
+    "at": "2026-10-07T19:35:19.072Z",
+    "action": "gate-approved",
+    "actor": "cli",
+    "details": "Gate analysis aprobado por Juan Andrade (recibo GR-20261007-SECURITY-MC-AUTORIZACION-APROBACION-20261007-analysis-1, canal mission-control, decidida 2026-10-07T19:35:19.067Z): A"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-07",
+    "at": "2026-10-07T19:35:19.772Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: analyzed -> planned."
   }
 ]
 ```
