@@ -4,7 +4,7 @@ id: BUGFIX-CLI-JORNADA-AVANCE-AUTONOMO-20261007
 title: Que el avance de la jornada prepare y ejecute por defecto y se recupere solo de una parada
 type: BUGFIX
 module: CLI
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -82,43 +82,43 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1. `valmen journey advance` sin `--fase` despacha un ticket `approved` y prepara un ticket en `intake` de la misma jornada en una sola pasada.
+- [x] C1. `valmen journey advance` sin `--fase` despacha un ticket `approved` y prepara un ticket en `intake` de la misma jornada en una sola pasada.
       <!-- test: npx vitest run tests/avance-jornada.test.ts -->
-- [ ] C2. Con `--fase ejecucion` o `--fase preparacion` el avance corre solo esa fase, como antes.
+- [x] C2. Con `--fase ejecucion` o `--fase preparacion` el avance corre solo esa fase, como antes.
       <!-- test: npx vitest run tests/avance-jornada.test.ts -->
-- [ ] C3. La salida del avance sin `--fase` tiene una línea por fase con su estado y su ticket.
+- [x] C3. La salida del avance sin `--fase` tiene una línea por fase con su estado y su ticket.
       <!-- test: npx vitest run tests/avance-jornada.test.ts -->
-- [ ] C4. Los cambios sin commitear en el directorio de otro ticket de la jornada y en `tickets/index.md` no detienen el despacho de ejecución.
+- [x] C4. Los cambios sin commitear en el directorio de otro ticket de la jornada y en `tickets/index.md` no detienen el despacho de ejecución.
       <!-- test: npx vitest run tests/integracion-autonoma.test.ts -->
-- [ ] C5. Un cambio sin commitear fuera de esas rutas sigue deteniendo el despacho.
+- [x] C5. Un cambio sin commitear fuera de esas rutas sigue deteniendo el despacho.
       <!-- test: npx vitest run tests/integracion-autonoma.test.ts -->
-- [ ] C6. Las reglas de git admiten `merge --ff-only <rama>`, `merge-base --is-ancestor <a> <b>` y `switch -c <rama> <base>`.
+- [x] C6. Las reglas de git admiten `merge --ff-only <rama>`, `merge-base --is-ancestor <a> <b>` y `switch -c <rama> <base>`.
       <!-- test: npx vitest run tests/reglas-integracion.test.ts -->
-- [ ] C7. Las reglas de git rechazan `merge` sin `--ff-only` o con cualquier otra bandera.
+- [x] C7. Las reglas de git rechazan `merge` sin `--ff-only` o con cualquier otra bandera.
       <!-- test: npx vitest run tests/reglas-integracion.test.ts -->
-- [ ] C8. Si la rama de trabajo no existe, se crea desde `main`.
+- [x] C8. Si la rama de trabajo no existe, se crea desde `main`.
       <!-- test: npx vitest run tests/integracion-autonoma.test.ts -->
-- [ ] C9. Si la rama de trabajo existe atrás de `main`, queda en el mismo commit que `main` antes de despachar.
+- [x] C9. Si la rama de trabajo existe atrás de `main`, queda en el mismo commit que `main` antes de despachar.
       <!-- test: npx vitest run tests/integracion-autonoma.test.ts -->
-- [ ] C10. Si la rama de trabajo divergió de `main`, el despacho se detiene con un mensaje que nombra la rama y la rama no cambia.
+- [x] C10. Si la rama de trabajo divergió de `main`, el despacho se detiene con un mensaje que nombra la rama y la rama no cambia.
       <!-- test: npx vitest run tests/integracion-autonoma.test.ts -->
-- [ ] C11. Una reserva nueva guarda el PID del proceso que la reclamó.
+- [x] C11. Una reserva nueva guarda el PID del proceso que la reclamó.
       <!-- test: npx vitest run tests/machine-capacity.test.ts -->
-- [ ] C12. Una reserva con actividad `started`, proceso inexistente y tope vencido se recupera y queda registrada como `failed` con origen `journey-recovery`.
+- [x] C12. Una reserva con actividad `started`, proceso inexistente y tope vencido se recupera y queda registrada como `failed` con origen `journey-recovery`.
       <!-- test: npx vitest run tests/machine-capacity.test.ts -->
-- [ ] C13. Una reserva con el proceso vivo o dentro del tope se retiene.
+- [x] C13. Una reserva con el proceso vivo o dentro del tope se retiene.
       <!-- test: npx vitest run tests/machine-capacity.test.ts -->
-- [ ] C14. Tras recuperar una reserva huérfana, el avance siguiente despacha el ticket en vez de responder `ya-despachado`.
+- [x] C14. Tras recuperar una reserva huérfana, el avance siguiente despacha el ticket en vez de responder `ya-despachado`.
       <!-- test: npx vitest run tests/avance-jornada.test.ts -->
-- [ ] C15. Cada pasada que no despacha por árbol sucio deja una línea con sus archivos en `.valmen/journeys/arbol-sucio.jsonl`.
+- [x] C15. Cada pasada que no despacha por árbol sucio deja una línea con sus archivos en `.valmen/journeys/arbol-sucio.jsonl`.
       <!-- test: npx vitest run tests/vigilante-jornada.test.ts -->
-- [ ] C16. El vigilante no avisa tras una sola pasada sucia.
+- [x] C16. El vigilante no avisa tras una sola pasada sucia.
       <!-- test: npx vitest run tests/vigilante-jornada.test.ts -->
-- [ ] C17. Tras dos pasadas sucias consecutivas el vigilante envía un aviso con los archivos que causan la parada.
+- [x] C17. Tras dos pasadas sucias consecutivas el vigilante envía un aviso con los archivos que causan la parada.
       <!-- test: npx vitest run tests/vigilante-jornada.test.ts -->
-- [ ] C18. El mismo episodio de árbol sucio no se avisa dos veces.
+- [x] C18. El mismo episodio de árbol sucio no se avisa dos veces.
       <!-- test: npx vitest run tests/vigilante-jornada.test.ts -->
-- [ ] C19. La suite completa queda en verde.
+- [x] C19. La suite completa queda en verde.
       <!-- test: npx vitest run -->
 
 ## Puntos
@@ -129,11 +129,29 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+Implementado el plan aprobado, paso por paso, con la prueba escrita junto a cada cambio.
+
+1. `packages/engine/src/journey-advance.ts`: `avanzarJornada` corre ejecución y luego preparación si no hay `fase`; con `fase`, solo esa. `AvanceDeJornada.fases` trae una entrada por fase; `estado`/`ticketId`/`detalle` son los de la primera fase que despachó (o la ejecución). El error de una fase queda en su línea y no impide la otra (con `fase` explícita se propaga como antes). `journeyAdvanceCommand` imprime una línea por fase (`packages/cli/src/commands.ts`).
+2. `packages/engine/src/integration-commit.ts`: `estadoDelArbolDeTrabajo` acepta `propias` (`rutasPropiasDeLaJornada`: directorio de los demás tickets de la jornada e índice). `dispatchJourney`, `asegurarRamaDeTrabajo` y `runAutonomous` (`integracion.propias`) las excluyen del chequeo; al commitear, el índice sigue viajando con el ticket y el registro de los otros tickets no se commitea ni cuenta como ajeno.
+3. `packages/engine/src/integration-rules.ts`: se admiten solo `merge --ff-only <rama>`, `merge-base --is-ancestor <a> <b>` y `switch -c <rama> <base>`; cualquier otra forma de `merge` o `merge-base` se rechaza.
+4. `asegurarRamaDeTrabajo`: crea desde `main` si no existe, avanza con `merge --ff-only main` si está atrás (también estando ya en ella) y falla nombrando la rama, sin tocarla, si divergió; si `main` no existe, se detiene diciéndolo.
+5. `packages/engine/src/machine-capacity.ts`: la reserva guarda `pid`; `reconcileMachineCapacity` acepta `ahora` y `procesoVivo` y recupera una reserva `started`/`active` con PID ausente (o sin PID) y `limits.maxMinutes` + 5 min vencidos, registrando `activity.failed` con `source: "journey-recovery"`. Ajuste necesario: el `started` del despacho y de la preparación lleva el momento del avance en su `eventId` (`dispatchEventId`), para que una identidad recuperada y re-despachada no herede el `failed` de la recuperación como última actividad.
+6. Árbol sucio: `packages/engine/src/journey-dirty-tree.ts` (nuevo) registra en `.valmen/journeys/arbol-sucio.jsonl` una línea por pasada; `journey-dispatch.ts` la escribe; `hermes.ts` suma el pendiente `arbol-sucio` (dos pasadas sucias consecutivas, episodio identificado por la primera, sin `journey-dirty-tree-notice` en `approvals.jsonl`), `notify.ts` el renderizador (hasta diez archivos) y `approval.ts` la marca, anotada solo si el aviso se entregó.
+
+Desviación respecto del texto del plan: el índice (`tickets/index.md`) se excluye del chequeo de árbol limpio al empezar, pero al commitear se mantiene como parte del registro del ticket (como antes), porque excluirlo del commit dejaba el árbol sucio tras cada ticket (lo detectó la prueba existente «el segundo arranca limpio»).
+
+Cambio de una prueba existente: `tests/integracion-autonoma.test.ts` («una rama de trabajo protegida…») ya no espera un rechazo del avance sino el error en la línea de la fase de ejecución, porque el plan fija que el error de una fase no detiene la otra.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Contrato de entrega (Node 24 y `git` en el PATH; desde la raíz del repositorio):
+
+- `npx vitest run tests/avance-jornada.test.ts tests/machine-capacity.test.ts tests/reglas-integracion.test.ts tests/integracion-autonoma.test.ts tests/vigilante-jornada.test.ts`; esperado: todo en verde.
+- `npx vitest run`; esperado: todo en verde. Hay que correrlo sin `VALMEN_UNATTENDED` ni las variables de sesión de agente: con ellas, 53 pruebas de aprobación humana (ajenas a este ticket) fallan por diseño.
+- `npx tsc -b`; esperado: sin salida.
+- Validación manual: una pasada real de `valmen journey advance --project <id>` sin `--fase` con un ticket `approved` y otro en `intake`; esperado: dos líneas, una por fase.
+
+Resultado de la sesión de implementación: `npx vitest run` con 196 archivos en verde (2905 pruebas, 48 omitidas) y `npx tsc -b` sin errores.
 
 ## QA
 
@@ -226,6 +244,24 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-07",
+    "at": "2026-10-07T22:45:32.566Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-07",
+    "at": "2026-10-07T23:32:53.658Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```

@@ -6,6 +6,7 @@
  * despachan un segundo ticket, sin jornada no hace nada, no llama a ningún modelo— y que la
  * tarea de launchd se **prepara** sin que el harness la active jamás.
  */
+import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -19,10 +20,12 @@ import {
 import {
   armarJornada,
   avanzarJornada,
+  claimMachineCapacity,
+  recordExecutionActivity,
   jornadaDelDia,
   resolveAuthorizedProject,
 } from "../packages/engine/src/index.js";
-import { parseTicket } from "../packages/core/src/index.js";
+import { createExecutionIdentity, parseTicket } from "../packages/core/src/index.js";
 import { writeFixtureTicket } from "./helpers/fixtures.js";
 
 const projectId = "avance-lab";
@@ -187,6 +190,113 @@ describe("el avance", () => {
     // El único proceso externo que el avance puede lanzar es el ejecutor declarado (codex).
     expect(comandos.every((c) => c.includes("codex"))).toBe(true);
     expect(comandos.length).toBeLessThanOrEqual(1);
+  });
+});
+
+describe("el avance sin --fase", () => {
+  const C = "FEATURE-AVANCE-TRES-20261005";
+  const preparador = () => vi.fn(() => ({ status: 0, stdout: "preparado", stderr: "" }));
+  const ejecutor = () => vi.fn(() => ({ status: 0, stdout: "hecho", stderr: "" }));
+
+  beforeEach(() => {
+    writeFixtureTicket(root, { id: C, workflowStatus: "intake", type: "FEATURE", module: "AVANCE", criterios: CRITERIO, pruebas: PRUEBAS });
+    armarJornada({ project: proyecto(), tickets: [A, C], ahora: () => AHORA });
+  });
+
+  it("despacha el ticket aprobado y prepara el que está en intake en una sola pasada", async () => {
+    const execute = ejecutor();
+    const ejecutarPreparacion = preparador();
+    const avance = await avanzarJornada({ project: proyecto(), home, ahora: () => AHORA, execute, ejecutarPreparacion });
+
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(ejecutarPreparacion).toHaveBeenCalledTimes(1);
+    expect(avance.fases).toEqual([
+      expect.objectContaining({ fase: "ejecucion", estado: "despachado", ticketId: A }),
+      expect.objectContaining({ fase: "preparacion", estado: "despachado", ticketId: C }),
+    ]);
+    // El resumen conserva lo de la primera fase que despachó.
+    expect(avance).toMatchObject({ estado: "despachado", ticketId: A });
+    expect(estado(A)).toBe("awaiting_user_tests");
+  });
+
+  it("un error de una fase no impide correr la otra y queda en su línea", async () => {
+    const ejecutarPreparacion = preparador();
+    const avance = await avanzarJornada({
+      project: proyecto(),
+      home,
+      ahora: () => AHORA,
+      execute: () => {
+        throw new Error("el ejecutor se cayó");
+      },
+      ejecutarPreparacion,
+    });
+    expect(avance.fases[0]).toMatchObject({ fase: "ejecucion", estado: "sin-candidato" });
+    expect(avance.fases[0]?.detalle).toContain("el ejecutor se cayó");
+    expect(ejecutarPreparacion).toHaveBeenCalledTimes(1);
+    expect(avance.fases[1]).toMatchObject({ fase: "preparacion", ticketId: C });
+  });
+
+  it("con --fase ejecucion corre solo la ejecución", async () => {
+    const execute = ejecutor();
+    const ejecutarPreparacion = preparador();
+    const avance = await avanzarJornada({ project: proyecto(), home, ahora: () => AHORA, fase: "ejecucion", execute, ejecutarPreparacion });
+    expect(avance.fases.map((f) => f.fase)).toEqual(["ejecucion"]);
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(ejecutarPreparacion).not.toHaveBeenCalled();
+  });
+
+  it("con --fase preparacion corre solo la preparación", async () => {
+    const execute = ejecutor();
+    const ejecutarPreparacion = preparador();
+    const avance = await avanzarJornada({ project: proyecto(), home, ahora: () => AHORA, fase: "preparacion", execute, ejecutarPreparacion });
+    expect(avance.fases.map((f) => f.fase)).toEqual(["preparacion"]);
+    expect(avance).toMatchObject({ estado: "despachado", ticketId: C });
+    expect(ejecutarPreparacion).toHaveBeenCalledTimes(1);
+    expect(execute).not.toHaveBeenCalled();
+    expect(estado(A)).toBe("approved");
+  });
+
+  it("la salida del comando trae una línea por fase con su estado y su ticket", async () => {
+    const resultado = await journeyAdvanceCommand(
+      { project: projectId },
+      { home, ahora: () => AHORA, execute: ejecutor(), ejecutarPreparacion: preparador() },
+    );
+    expect(resultado.exitCode).toBe(0);
+    const lineas = resultado.stdout.trim().split("\n");
+    expect(lineas).toHaveLength(2);
+    expect(lineas[0]).toMatch(/ejecucion: despachado \(FEATURE-AVANCE-UNO-20261005\)/);
+    expect(lineas[1]).toMatch(/preparacion: despachado \(FEATURE-AVANCE-TRES-20261005\)/);
+  });
+});
+
+describe("la recuperación de una reserva huérfana", () => {
+  it("tras recuperarla, el avance siguiente despacha el ticket en vez de responder ya-despachado", async () => {
+    armar();
+    // Una corrida anterior murió entre `started` y el registro final: reserva y actividad quedaron.
+    const identidad = createExecutionIdentity({ projectId, ticketId: A, executionId: jornadaDelDia(AHORA) });
+    claimMachineCapacity({ home, project: proyecto(), identity: identidad, attemptId: "avance-1" });
+    recordExecutionActivity(proyecto(), {
+      eventId: "huerfana-started",
+      identity: identidad,
+      attemptId: "avance-1",
+      state: "started",
+      source: "journey-dispatch",
+      occurredAt: "2026-10-06T05:00:00.000Z",
+    });
+    // El proceso que la reservó ya no existe.
+    const muerto = spawnSync(process.execPath, ["-e", ""]).pid as number;
+    const ruta = join(home, ".valmen", "machine-capacity.json");
+    const guardado = JSON.parse(readFileSync(ruta, "utf8"));
+    guardado.reservations[0].pid = muerto;
+    writeFileSync(ruta, JSON.stringify(guardado), "utf8");
+
+    const execute = vi.fn(() => ({ status: 0, stdout: "hecho", stderr: "" }));
+    const avance = await avanzarJornada({ project: proyecto(), home, ahora: () => AHORA, fase: "ejecucion", execute });
+
+    expect(avance.estado).toBe("despachado");
+    expect(avance.ticketId).toBe(A);
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(estado(A)).toBe("awaiting_user_tests");
   });
 });
 

@@ -2796,6 +2796,14 @@ export async function journeyAdvanceCommand(
       ...(opciones.ahora === undefined ? {} : { ahora: opciones.ahora }),
       ...(flags["fase"] === "preparacion" || flags["fase"] === "ejecucion" ? { fase: flags["fase"] } : {}),
     });
+    // Sin `--fase` corren las dos y se informa una línea por fase.
+    if (avance.fases.length > 1) {
+      return ok(
+        avance.fases
+          .map((f) => `${avance.journeyId} · ${f.fase}: ${f.estado}${f.ticketId === null ? "" : ` (${f.ticketId})`}. ${f.detalle.replace(/\s+/g, " ").trim()}\n`)
+          .join(""),
+      );
+    }
     return ok(`${avance.journeyId}: ${avance.estado}${avance.ticketId === null ? "" : ` (${avance.ticketId})`}. ${avance.detalle}\n`);
   } catch (caught) {
     const failure = toFailure(caught);

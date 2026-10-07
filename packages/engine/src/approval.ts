@@ -95,6 +95,7 @@ export type ApprovalLogEntry =
   | UndeliveredApproval
   | ProcessNotice
   | AutonomousStopNotice
+  | JourneyDirtyTreeNotice
   | TestsReadyNotice
   | ApprovalBatch;
 
@@ -170,6 +171,19 @@ export interface AutonomousStopNotice {
   readonly kind: "autonomous-stop-notice";
   readonly receiptId: string;
   readonly ticketId: string;
+  readonly notifiedAt: string;
+}
+
+/**
+ * El aviso de que una jornada lleva más de una pasada detenida por árbol sucio.
+ *
+ * `episodio` es la hora de la primera pasada sucia de la racha: el mismo episodio no se avisa dos
+ * veces, y un árbol que se limpia y se vuelve a ensuciar es otro.
+ */
+export interface JourneyDirtyTreeNotice {
+  readonly kind: "journey-dirty-tree-notice";
+  readonly journeyId: string;
+  readonly episodio: string;
   readonly notifiedAt: string;
 }
 
@@ -452,6 +466,7 @@ export function readApprovalLog(paths: RegistryPaths): ApprovalLogEntry[] {
         valor.kind === "approval-undelivered" ||
         valor.kind === "process-notice" ||
         valor.kind === "autonomous-stop-notice" ||
+        valor.kind === "journey-dirty-tree-notice" ||
         valor.kind === "tests-ready-notice" ||
         valor.kind === "policy-close-notice" ||
         valor.kind === "approval-batch"
@@ -481,6 +496,15 @@ export function autonomousStopsAvisados(paths: RegistryPaths): Set<string> {
     readApprovalLog(paths)
       .filter((entry): entry is AutonomousStopNotice => entry.kind === "autonomous-stop-notice")
       .map((entry) => entry.receiptId),
+  );
+}
+
+/** Los episodios de árbol sucio ya avisados, como `jornada:episodio`. */
+export function arbolesSuciosAvisados(paths: RegistryPaths): Set<string> {
+  return new Set(
+    readApprovalLog(paths)
+      .filter((entry): entry is JourneyDirtyTreeNotice => entry.kind === "journey-dirty-tree-notice")
+      .map((entry) => `${entry.journeyId}:${entry.episodio}`),
   );
 }
 
@@ -587,7 +611,7 @@ export function ultimoIntento(
     // Un aviso de proceso no tiene código y no entra en esta cuenta: su vida es
     // otra —se avisa una vez y la corrida sigue detenida— y mezclarlo movería
     // la ventana de reintento de un gate sin motivo.
-    if (e.kind === "process-notice" || e.kind === "autonomous-stop-notice" || e.kind === "tests-ready-notice" || e.kind === "policy-close-notice" || e.kind === "approval-batch") return [];
+    if (e.kind === "process-notice" || e.kind === "autonomous-stop-notice" || e.kind === "journey-dirty-tree-notice" || e.kind === "tests-ready-notice" || e.kind === "policy-close-notice" || e.kind === "approval-batch") return [];
     if (!codigos.has(e.code)) return [];
     if (e.kind === "approval-issued") return [e.issuedAt];
     if (e.kind === "approval-undelivered") return [e.attemptedAt];

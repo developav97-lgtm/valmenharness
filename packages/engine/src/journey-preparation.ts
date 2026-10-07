@@ -341,7 +341,7 @@ export function despacharPreparacion(request: {
   if (!politica.enabled || politica.executor === null) {
     return { estado: "sin-candidato", ticketId: null, resultado: null, detalle: "La autonomía está apagada o no declara un ejecutor seguro.", omitidos: [] };
   }
-  const capacidad = reconcileMachineCapacity({ home: request.home });
+  const capacidad = reconcileMachineCapacity({ home: request.home, ahora: () => request.ahora });
   const { ticketId, omitidos } = elegirAPreparar(project, request.journeyId);
   if (ticketId === null) {
     return { estado: "sin-candidato", ticketId: null, resultado: null, detalle: "No hay un ticket en intake elegible y con sus dependencias ya preparadas.", omitidos };
@@ -361,7 +361,13 @@ export function despacharPreparacion(request: {
   }
   const registrar = (estado: "started" | "finished" | "failed"): void => {
     recordExecutionActivity(project, {
-      eventId: dispatchEventId(ticketId, identidad.executionId, request.attemptId, estado),
+      eventId: dispatchEventId(
+        ticketId,
+        identidad.executionId,
+        request.attemptId,
+        estado,
+        estado === "started" ? request.ahora.toISOString() : undefined,
+      ),
       identity: identidad,
       attemptId: request.attemptId,
       state: estado,

@@ -34,6 +34,7 @@ import {
   estadoDelArbolDeTrabajo,
   hashDeArchivos,
   integrarTicket,
+  type RutasPropias,
   repartirCambios,
 } from "./integration-commit.js";
 import { registrarFase } from "./journey-phases.js";
@@ -77,6 +78,8 @@ export interface AutonomousRunRequest {
   readonly integracion?: {
     readonly ramaDeTrabajo: string;
     readonly ramasProtegidas: readonly string[];
+    /** Rutas que la propia jornada deja sin commitear: no detienen ni se commitean. */
+    readonly propias?: RutasPropias | undefined;
   } | undefined;
   /** Reloj inyectable para que el recibo de parada sea reproducible en pruebas. */
   readonly now?: (() => Date) | undefined;
@@ -354,8 +357,9 @@ async function runAutonomousInner(request: AutonomousRunRequest): Promise<Autono
       root: request.paths.root,
       ramaDeTrabajo: request.integracion.ramaDeTrabajo,
       ramasProtegidas: request.integracion.ramasProtegidas,
+      ...(request.integracion.propias === undefined ? {} : { propias: request.integracion.propias }),
     });
-    arbolLimpioAlEmpezar = estadoDelArbolDeTrabajo(request.paths.root).length === 0;
+    arbolLimpioAlEmpezar = estadoDelArbolDeTrabajo(request.paths.root, undefined, request.integracion.propias).length === 0;
     if (!arbolLimpioAlEmpezar) {
       throw Object.assign(
         new Error("El árbol de trabajo no está limpio: la jornada no despacha un ticket sobre cambios de otro."),
@@ -430,10 +434,15 @@ async function runAutonomousInner(request: AutonomousRunRequest): Promise<Autono
 
   // El árbol que se va a probar: el contenido de los archivos funcionales justo antes de
   // `qa-mechanical`. El commit tiene que contener exactamente esto.
+  // Al commitear, el índice del registro sí viaja con el ticket (lo regenera su transición).
+  const propiasAlCommitear: RutasPropias | undefined =
+    request.integracion?.propias === undefined
+      ? undefined
+      : (ruta) => ruta !== `${request.paths.ticketsDir}/index.md` && (request.integracion?.propias?.(ruta) ?? false);
   const archivosFuncionales =
     request.integracion === undefined
       ? []
-      : repartirCambios(estadoDelArbolDeTrabajo(request.paths.root), request.paths, selected.id).funcionales;
+      : repartirCambios(estadoDelArbolDeTrabajo(request.paths.root, undefined, propiasAlCommitear), request.paths, selected.id).funcionales;
   const hashProbado = hashDeArchivos(request.paths.root, archivosFuncionales);
 
   const gate = await runGate(request.paths, { gateId: "qa-mechanical", ticketId: selected.id });
@@ -481,6 +490,7 @@ async function runAutonomousInner(request: AutonomousRunRequest): Promise<Autono
       ramaDeTrabajo: request.integracion.ramaDeTrabajo,
       ramasProtegidas: request.integracion.ramasProtegidas,
       arbolLimpioAlEmpezar,
+      ...(propiasAlCommitear === undefined ? {} : { propias: propiasAlCommitear }),
       hashProbado,
       recibo: recibos[0]?.id ?? "sin recibo",
     });

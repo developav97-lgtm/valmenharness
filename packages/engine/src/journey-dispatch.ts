@@ -19,7 +19,14 @@ import { readFileSync } from "node:fs";
 
 import { parseConfig, readIntegrationConfig, resolveWorkBranch } from "@valmen/adapter";
 
-import { asegurarRamaDeTrabajo, esRepositorioGit, estadoDelArbolDeTrabajo } from "./integration-commit.js";
+import {
+  asegurarRamaDeTrabajo,
+  esRepositorioGit,
+  estadoDelArbolDeTrabajo,
+  rutasPropiasDeLaJornada,
+} from "./integration-commit.js";
+import { registrarPasadaDeArbol } from "./journey-dirty-tree.js";
+import { readJourneys } from "./journeys.js";
 import { motivoDeTope } from "./journey-limits.js";
 import { resolverModeloDeFase } from "./journey-phases.js";
 import { recordExecutionActivity } from "./execution-activity.js";
@@ -66,7 +73,10 @@ export interface JourneyDispatchResult {
  */
 export async function dispatchJourney(request: JourneyDispatchRequest): Promise<JourneyDispatchResult> {
   const policy = autonomousConfig(request.project.root);
-  const capacity = reconcileMachineCapacity({ home: request.home });
+  const capacity = reconcileMachineCapacity({
+    home: request.home,
+    ...(request.now === undefined ? {} : { ahora: request.now }),
+  });
   const executor = policy.enabled && policy.executor !== null ? policy.executor.id : undefined;
   const selection = selectJourneyTickets({
     project: request.project,
@@ -96,26 +106,48 @@ export async function dispatchJourney(request: JourneyDispatchRequest): Promise<
   }
   // Si el proyecto es un repositorio git, cada ticket queda en su propio commit sobre la rama
   // de trabajo (R-JORN-009): la rama se asegura y el árbol debe estar limpio **antes** de reservar.
-  let integracion: { ramaDeTrabajo: string; ramasProtegidas: readonly string[] } | undefined;
+  let integracion:
+    | { ramaDeTrabajo: string; ramasProtegidas: readonly string[]; propias: ReturnType<typeof rutasPropiasDeLaJornada> }
+    | undefined;
   if (selection.dispatchCandidate !== null && esRepositorioGit(request.project.root)) {
     const config = readIntegrationConfig(
       parseConfig(readFileSync(`${request.project.root}/.valmen/config.yaml`, "utf8")),
     );
     const ramaDeTrabajo = resolveWorkBranch(config.workBranch, new Date(request.at));
+    // La preparación deja el registro de los demás tickets de la jornada sin commitear: no es de
+    // otra sesión y no debe detener la ejecución.
+    const ticketsDeLaJornada =
+      readJourneys(request.project)
+        .find((jornada) => jornada.journeyId === request.journeyId)
+        ?.tickets.map((ticket) => ticket.ticketId) ?? [];
+    const propias = rutasPropiasDeLaJornada(
+      request.project.paths,
+      ticketsDeLaJornada,
+      selection.dispatchCandidate.ticketId,
+    );
+    const sinDespachar = (archivos: readonly string[], mensaje: string): JourneyDispatchResult => {
+      registrarPasadaDeArbol(request.project.root, { journeyId: request.journeyId, at: request.at, archivos });
+      return withoutStart(selection, mensaje);
+    };
+    const mensajeDeSucios = (sucios: readonly string[]): string =>
+      `El árbol de trabajo no está limpio (${sucios.slice(0, 5).join(", ")}${sucios.length > 5 ? "…" : ""}): ` +
+      "la jornada no despacha un ticket sobre cambios de otro.";
     try {
-      asegurarRamaDeTrabajo({ root: request.project.root, ramaDeTrabajo, ramasProtegidas: config.protectedBranches });
+      asegurarRamaDeTrabajo({
+        root: request.project.root,
+        ramaDeTrabajo,
+        ramasProtegidas: config.protectedBranches,
+        propias,
+      });
     } catch (error) {
-      return withoutStart(selection, error instanceof Error ? error.message : String(error));
+      const sucios = estadoDelArbolDeTrabajo(request.project.root, undefined, propias);
+      const mensaje = error instanceof Error ? error.message : String(error);
+      return sucios.length > 0 ? sinDespachar(sucios, mensaje) : withoutStart(selection, mensaje);
     }
-    const sucios = estadoDelArbolDeTrabajo(request.project.root);
-    if (sucios.length > 0) {
-      return withoutStart(
-        selection,
-        `El árbol de trabajo no está limpio (${sucios.slice(0, 5).join(", ")}${sucios.length > 5 ? "…" : ""}): ` +
-          "la jornada no despacha un ticket sobre cambios de otro.",
-      );
-    }
-    integracion = { ramaDeTrabajo, ramasProtegidas: config.protectedBranches };
+    const sucios = estadoDelArbolDeTrabajo(request.project.root, undefined, propias);
+    if (sucios.length > 0) return sinDespachar(sucios, mensajeDeSucios(sucios));
+    registrarPasadaDeArbol(request.project.root, { journeyId: request.journeyId, at: request.at, limpio: true });
+    integracion = { ramaDeTrabajo, ramasProtegidas: config.protectedBranches, propias };
   }
   const candidate = selection.dispatchCandidate;
   if (candidate === null) {
@@ -205,7 +237,13 @@ function recordActivity(
   state: "started" | "finished" | "failed",
 ): void {
   recordExecutionActivity(request.project, {
-    eventId: dispatchEventId(identity.ticketId, identity.executionId, request.attemptId, state),
+    eventId: dispatchEventId(
+      identity.ticketId,
+      identity.executionId,
+      request.attemptId,
+      state,
+      state === "started" ? request.at : undefined,
+    ),
     identity,
     attemptId: request.attemptId,
     state,
@@ -215,11 +253,21 @@ function recordActivity(
 }
 
 /** Mantiene los IDs portables y acotados aunque la puerta aporte IDs largos. */
-export function dispatchEventId(ticketId: string, executionId: string, attemptId: string, state: string): string {
+export function dispatchEventId(
+  ticketId: string,
+  executionId: string,
+  attemptId: string,
+  state: string,
+  /**
+   * El inicio lleva el momento del avance: una identidad que se recuperó y se vuelve a despachar
+   * necesita un `started` nuevo, o su última actividad seguiría siendo el `failed` de la recuperación.
+   */
+  momento?: string,
+): string {
   // El ticket entra al digest: una jornada despacha varios tickets con la misma ejecución e
   // intento, y sin él el segundo ticket chocaba con el evento del primero.
   const digest = createHash("sha256")
-    .update(`${ticketId}\u0000${executionId}\u0000${attemptId}\u0000${state}`)
+    .update(`${ticketId}\u0000${executionId}\u0000${attemptId}\u0000${state}${momento === undefined ? "" : `\u0000${momento}`}`)
     .digest("hex")
     .slice(0, 32);
   return `journey-dispatch-${state}-${digest}`;

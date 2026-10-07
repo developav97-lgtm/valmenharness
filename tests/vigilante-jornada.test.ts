@@ -6,7 +6,7 @@
  * canal caído no lo da por avisado, y el parte muestra la actividad por fase diciendo cuando el
  * costo no se reportó, sin cambiar su texto cuando no hay jornada.
  */
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -20,6 +20,8 @@ import {
 import {
   type CommandRunner,
   type RegistryPaths,
+  leerPasadasDeArbol,
+  registrarPasadaDeArbol,
   recordAutonomousStop,
   registrarFase,
   renderBrief,
@@ -95,6 +97,91 @@ describe("un ticket que llega a las pruebas del responsable", () => {
   it("un ticket que no está en las pruebas no genera aviso", () => {
     writeFixtureTicket(raiz, { id: A, workflowStatus: "in_progress" });
     expect(pendientesDeAvisar(paths, AHORA).filter((p) => p.kind === "pruebas-listas")).toEqual([]);
+  });
+});
+
+describe("una jornada detenida por árbol sucio", () => {
+  const JORNADA = "JOR-20261007";
+  const sucia = (at: string, archivos = ["src/suelto.ts", "src/otro.ts"]) =>
+    registrarPasadaDeArbol(raiz, { journeyId: JORNADA, at, archivos });
+  const limpia = (at: string) => registrarPasadaDeArbol(raiz, { journeyId: JORNADA, at, limpio: true });
+  const arbolSucio = () => pendientesDeAvisar(paths, AHORA).filter((p) => p.kind === "arbol-sucio");
+
+  it("cada pasada deja una línea en el registro, con sus archivos o marcada como limpia", () => {
+    sucia("2026-10-07T08:00:00.000Z");
+    limpia("2026-10-07T08:15:00.000Z");
+    const lineas = readFileSync(join(raiz, ".valmen", "journeys", "arbol-sucio.jsonl"), "utf8").trim().split("\n");
+    expect(lineas).toHaveLength(2);
+    expect(JSON.parse(lineas[0] as string)).toEqual({ journeyId: JORNADA, at: "2026-10-07T08:00:00.000Z", archivos: ["src/suelto.ts", "src/otro.ts"] });
+    expect(JSON.parse(lineas[1] as string)).toEqual({ journeyId: JORNADA, at: "2026-10-07T08:15:00.000Z", limpio: true });
+    expect(leerPasadasDeArbol(raiz)).toHaveLength(2);
+  });
+
+  it("no avisa tras una sola pasada sucia", () => {
+    sucia("2026-10-07T08:00:00.000Z");
+    const { runner: r, cuerpos } = runner();
+    expect(arbolSucio()).toEqual([]);
+    avisar(r);
+    expect(cuerpos).toHaveLength(0);
+  });
+
+  it("tras dos pasadas sucias consecutivas avisa con los archivos que causan la parada", () => {
+    sucia("2026-10-07T08:00:00.000Z", ["a.ts"]);
+    sucia("2026-10-07T08:15:00.000Z", ["src/suelto.ts", "src/otro.ts"]);
+    const { runner: r, cuerpos } = runner();
+    avisar(r);
+    expect(cuerpos).toHaveLength(1);
+    expect(cuerpos[0]).toContain(JORNADA);
+    expect(cuerpos[0]).toContain("src/suelto.ts");
+    expect(cuerpos[0]).toContain("src/otro.ts");
+    expect(cuerpos[0]).not.toContain("a.ts\n");
+  });
+
+  it("nombra hasta diez archivos y dice cuántos más hay", () => {
+    const muchos = Array.from({ length: 13 }, (_, i) => `src/f${String(i).padStart(2, "0")}.ts`);
+    sucia("2026-10-07T08:00:00.000Z", muchos);
+    sucia("2026-10-07T08:15:00.000Z", muchos);
+    const { runner: r, cuerpos } = runner();
+    avisar(r);
+    expect(cuerpos[0]).toContain("src/f09.ts");
+    expect(cuerpos[0]).not.toContain("src/f10.ts");
+    expect(cuerpos[0]).toContain("y 3 más");
+  });
+
+  it("el mismo episodio no se avisa dos veces, ni aunque sigan pasando pasadas sucias", () => {
+    sucia("2026-10-07T08:00:00.000Z");
+    sucia("2026-10-07T08:15:00.000Z");
+    const { runner: r, cuerpos } = runner();
+    avisar(r);
+    sucia("2026-10-07T08:30:00.000Z");
+    avisar(r);
+    expect(cuerpos).toHaveLength(1);
+    expect(arbolSucio()).toEqual([]);
+  });
+
+  it("un árbol que se limpia y se vuelve a ensuciar es otro episodio", () => {
+    sucia("2026-10-07T08:00:00.000Z");
+    sucia("2026-10-07T08:15:00.000Z");
+    const { runner: r, cuerpos } = runner();
+    avisar(r);
+    limpia("2026-10-07T08:30:00.000Z");
+    expect(arbolSucio()).toEqual([]);
+    sucia("2026-10-07T08:45:00.000Z");
+    expect(arbolSucio()).toEqual([]);
+    sucia("2026-10-07T09:00:00.000Z");
+    avisar(r);
+    expect(cuerpos).toHaveLength(2);
+  });
+
+  it("si el canal falla no se anota y se reintenta en la siguiente corrida", () => {
+    sucia("2026-10-07T08:00:00.000Z");
+    sucia("2026-10-07T08:15:00.000Z");
+    avisar(runner(true).runner);
+    expect(arbolSucio()).toHaveLength(1);
+    const sano = runner();
+    avisar(sano.runner);
+    expect(sano.cuerpos).toHaveLength(1);
+    expect(arbolSucio()).toEqual([]);
   });
 });
 

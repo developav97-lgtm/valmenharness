@@ -63,7 +63,11 @@ import { EXIT_SCHEMA, declaredImpactIds, parsePolicyConfirmation, parseTicket } 
 import { blockOf, credentialsPath, fieldOf } from "@valmen/credentials";
 import {
   appendApproval,
+  arbolesSuciosAvisados,
   autonomousStopsAvisados,
+  episodioDeArbolSucio,
+  leerPasadasDeArbol,
+  renderDirtyTreeNotification,
   comandosDelContrato,
   leerFases,
   paradasActivas,
@@ -716,6 +720,14 @@ export type PendienteDeAvisar =
       readonly stoppedAt: string;
     }
   | {
+      /** Una jornada que lleva dos pasadas seguidas sin despachar por árbol sucio. */
+      readonly kind: "arbol-sucio";
+      readonly journeyId: string;
+      readonly episodio: string;
+      readonly pasadas: number;
+      readonly archivos: readonly string[];
+    }
+  | {
       readonly kind: "proceso";
       readonly runId: string;
       readonly processId: string;
@@ -796,6 +808,17 @@ export function pendientesDeAvisar(paths: RegistryPaths, now: Date): PendienteDe
       detail: stop.detail,
       stoppedAt: stop.stoppedAt,
     });
+  }
+
+  // Un árbol sucio que detiene la jornada dos pasadas seguidas lo causó otra sesión, y solo esa
+  // persona puede arreglarlo: se avisa una vez por episodio, con los archivos.
+  const pasadas = leerPasadasDeArbol(paths.root);
+  const suciosAvisados = arbolesSuciosAvisados(paths);
+  for (const journeyId of new Set(pasadas.map((p) => p.journeyId))) {
+    const episodio = episodioDeArbolSucio(pasadas, journeyId);
+    if (episodio === null || episodio.pasadas < 2) continue;
+    if (suciosAvisados.has(`${journeyId}:${episodio.episodio}`)) continue;
+    salida.push({ kind: "arbol-sucio", journeyId, ...episodio });
   }
 
   // Un ticket que llega a `awaiting_user_tests` espera a una persona igual que una compuerta.
@@ -967,6 +990,33 @@ export function hermesNotifyPendientes(request: NotifyPendingRequest): CommandRe
         notifiedAt: request.now.toISOString(),
       });
       notificados.push(`${pendiente.ticket} · QA aprobada por política`);
+      continue;
+    }
+
+    if (pendiente.kind === "arbol-sucio") {
+      const entrega = hermesSendChannel({
+        target: to,
+        ...(request.runner === undefined ? {} : { runner: request.runner }),
+      }).notify(
+        renderDirtyTreeNotification({
+          journeyId: pendiente.journeyId,
+          episodio: pendiente.episodio,
+          pasadas: pendiente.pasadas,
+          archivos: pendiente.archivos,
+        }),
+      );
+      if (!entrega.delivered) {
+        // No se anota: un aviso que no salió no cuenta como avisado y se reintenta.
+        fallidos.push({ que: `${pendiente.journeyId} · árbol sucio`, motivo: entrega.detail });
+        continue;
+      }
+      appendApproval(request.paths, {
+        kind: "journey-dirty-tree-notice",
+        journeyId: pendiente.journeyId,
+        episodio: pendiente.episodio,
+        notifiedAt: request.now.toISOString(),
+      });
+      notificados.push(`${pendiente.journeyId} · árbol sucio`);
       continue;
     }
 
