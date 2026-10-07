@@ -16,6 +16,13 @@ export interface NodoFalso {
   /** El texto del nodo. Los de texto lo llevan; los elementos, no. */
   readonly _texto?: string;
   readonly className?: string;
+  /** El valor de un campo de texto: una prueba lo escribe antes de disparar `input`. */
+  value?: string;
+  readonly placeholder?: string;
+  /** Un botón deshabilitado no se debería poder pulsar. */
+  disabled?: boolean;
+  /** Los oyentes que la interfaz registró, por tipo de evento. */
+  readonly _oyentes?: Record<string, ((evento: unknown) => unknown)[]>;
 }
 
 /** Lo que devuelve ejecutar la interfaz. */
@@ -50,6 +57,12 @@ export function ejecutarInterfaz(
   rutaHtml: string,
   opciones?: OpcionesDeInterfaz,
 ): Promise<ResultadoDeInterfaz>;
+
+/** Dispara un evento sobre un nodo, llamando a sus oyentes, y espera a que terminen. */
+export function disparar(nodo: NodoFalso, tipo: string, evento?: Record<string, unknown>): Promise<void>;
+
+/** Todos los nodos del árbol que cumplen el predicado. */
+export function buscarNodos(raiz: NodoFalso | undefined, predicado: (nodo: NodoFalso) => boolean): NodoFalso[];
 
 /** Las vistas que la interfaz sabe pintar, con el hash que las abre. */
 export const VISTAS: readonly (readonly [string, string])[];

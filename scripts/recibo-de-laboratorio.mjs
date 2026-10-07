@@ -9,7 +9,10 @@
  * artefacto: con un hash inventado, la comprobación de obsolescencia rechazaría la
  * decisión y el contrato estaría midiendo otra cosa.
  *
- * Uso: `node scripts/recibo-de-laboratorio.mjs <raíz> <ticket> <id-del-recibo>`
+ * Uso: `node scripts/recibo-de-laboratorio.mjs <raíz> <ticket> <id-del-recibo> [review|block] [compuerta]`
+ *
+ * Con `block` el valor cae bajo `blockAt` y el recibo queda bloqueado, para ver cómo la
+ * pantalla ofrece firmarlo. `compuerta` es `plan` por omisión.
  */
 import { appendFileSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -17,7 +20,7 @@ import { dirname, join } from "node:path";
 import { DEFAULT_POLICY, buildReceipt, decide } from "../packages/gate/dist/index.js";
 import { buildGateState } from "../packages/engine/dist/index.js";
 
-const [root, ticket, recibo] = process.argv.slice(2);
+const [root, ticket, recibo, resultado = "review", compuerta = "plan"] = process.argv.slice(2);
 if (root === undefined || ticket === undefined || recibo === undefined) {
   throw new Error("faltan argumentos: <raíz> <ticket> <id-del-recibo>");
 }
@@ -28,11 +31,13 @@ const proposiciones = [
 ];
 // 0.72 cae entre `blockAt` y `approveAt`, así que el veredicto es `review` y el
 // recibo queda escalado a una persona. Es el único caso que tiene sentido avisar.
-const respuestas = [{ id: "cubre_todos_los_criterios", kind: "noul", value: 0.72 }];
+const respuestas = [
+  { id: "cubre_todos_los_criterios", kind: "noul", value: resultado === "block" ? 0.02 : 0.72 },
+];
 
 const construido = buildReceipt({
   id: recibo,
-  gate: "plan",
+  gate: compuerta,
   propositions: proposiciones,
   policy: DEFAULT_POLICY,
   subject: { type: "ticket", id: ticket, revision: "1" },

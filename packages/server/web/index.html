@@ -3854,6 +3854,74 @@
           acciones.append(motivo, aprobar, rechazar);
           humana.append(acciones);
           cont.append(humana);
+        } else if (recibo.outcome === "block") {
+          // Un bloqueo también admite la firma de una persona (R-CDEF-004): tras dos
+          // bloqueos del mismo motivo, lo normal es un artefacto ya corregido que se autoriza
+          // sin una tercera corrida. Solo se ofrece «Autorizar», con la frase literal
+          // obligatoria; «Rechazar» un bloqueo no cambia nada, y el de la compuerta mecánica
+          // es un comando que falló: un hecho, no una opinión.
+          const humana = el("div", undefined, "decision-humana");
+          if (recibo.gate === "qa-mechanical") {
+            humana.append(
+              el(
+                "div",
+                "La compuerta mecánica bloqueó porque un comando falló, y eso es un hecho y no " +
+                  "una opinión: no admite una decisión humana. Corrige lo que falla y vuelve a correrla.",
+                "resultado",
+              ),
+            );
+          } else {
+            humana.append(
+              el(
+                "div",
+                "El evaluador bloqueó. Si decides seguir de todos modos —por ejemplo tras dos " +
+                  "bloqueos por el mismo motivo, con el artefacto ya corregido—, tu autorización " +
+                  "queda en el registro con tu frase literal. Autorizar no avanza el ticket: la " +
+                  "transición es otro paso. También se puede autorizar un bloqueo obsoleto.",
+                "resultado",
+              ),
+            );
+
+            const acciones = el("div", undefined, "acciones");
+            acciones.style.justifyContent = "flex-start";
+            acciones.style.marginTop = "10px";
+
+            const frase = document.createElement("input");
+            frase.type = "text";
+            frase.placeholder = "Frase literal de quien autoriza (obligatoria)";
+            frase.style.flex = "1 1 320px";
+
+            const autorizar = el("button", "Autorizar seguir pese al bloqueo", "principal");
+            // Sin la frase el motor rechaza la decisión: el botón no se habilita antes.
+            autorizar.disabled = true;
+            frase.addEventListener("input", () => {
+              autorizar.disabled = frase.value.trim() === "";
+            });
+            autorizar.addEventListener("click", async () => {
+              if (responsable.trim() === "") {
+                alert(
+                  "Escribe el responsable antes de decidir: una decisión humana sin nombre no es auditable.",
+                );
+                return;
+              }
+              autorizar.disabled = true;
+              try {
+                await api(
+                  "POST",
+                  `/api/tickets/${ticketId}/gates/${recibo.receiptId}/decision`,
+                  { decision: "approve", actor: responsable, reason: frase.value },
+                );
+                await alDecidir();
+              } catch (error) {
+                alert(error.message);
+                autorizar.disabled = false;
+              }
+            });
+
+            acciones.append(frase, autorizar);
+            humana.append(acciones);
+          }
+          cont.append(humana);
         }
 
         const detalles = el("details");

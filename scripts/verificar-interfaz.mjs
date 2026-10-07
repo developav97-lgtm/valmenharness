@@ -98,7 +98,12 @@ class Nodo {
   replaceChildren(...nodos) {
     this.children = nodos;
   }
-  addEventListener() {}
+  // Los oyentes se guardan para que una prueba pueda pulsar un botón o escribir en un campo
+  // (`disparar`): sin esto la interfaz solo se podía mirar, no usar.
+  addEventListener(tipo, accion) {
+    this._oyentes ??= {};
+    (this._oyentes[tipo] ??= []).push(accion);
+  }
   removeEventListener() {}
   setAttribute(clave, valor) {
     this.attrs[clave] = String(valor);
@@ -507,6 +512,25 @@ function respuesta(ruta) {
     };
   }
   return {};
+}
+
+/**
+ * Dispara un evento sobre un nodo, como lo haría el navegador: llama a sus oyentes.
+ *
+ * Devuelve cuando terminaron, también los asíncronos: un clic que llama a la API no ha
+ * terminado hasta que su promesa se resuelve.
+ */
+export async function disparar(nodo, tipo, evento = {}) {
+  for (const accion of nodo._oyentes?.[tipo] ?? []) await accion({ type: tipo, target: nodo, ...evento });
+  for (let i = 0; i < 20; i += 1) await new Promise((r) => setImmediate(r));
+}
+
+/** Todos los nodos del árbol que cumplen el predicado. */
+export function buscarNodos(raiz, predicado, encontrados = []) {
+  if (!raiz || typeof raiz !== "object") return encontrados;
+  if (predicado(raiz)) encontrados.push(raiz);
+  for (const hijo of raiz.children ?? []) buscarNodos(hijo, predicado, encontrados);
+  return encontrados;
 }
 
 /** Recorre el árbol y devuelve todo el texto y las clases que contiene. */
