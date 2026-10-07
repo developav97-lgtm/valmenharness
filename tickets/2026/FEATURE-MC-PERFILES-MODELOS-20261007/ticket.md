@@ -4,8 +4,8 @@ id: FEATURE-MC-PERFILES-MODELOS-20261007
 title: Crear, editar y elegir perfiles desde Mission Control
 type: FEATURE
 module: MC
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -133,15 +133,45 @@ Ninguno.
       <!-- test: npx vitest run tests/perfiles-pantalla.test.ts -t "R-PERF-002 pantalla archivo ilegible" -->
 - [x] C17: el recorrido de todas las vistas de Mission Control termina sin fallos
       <!-- test: node scripts/verificar-interfaz.mjs -->
-- [ ] C18: en el navegador se crea, edita y elige un perfil sobre un proyecto de prueba y el archivo de perfiles (`perfilesPath`) refleja cada paso
+- [x] C18: en el navegador se crea, edita y elige un perfil sobre un proyecto de prueba y el archivo de perfiles (`perfilesPath`) refleja cada paso (verificado por el agente en el navegador el 2026-10-07 sobre un proyecto de laboratorio: crear a partir de un incorporado, editar un modelo y elegirlo para el proyecto y para un ejecutor; `profiles.yaml` reflejó cada paso)
       <!-- verify: manual -->
-- [ ] C19: la suite completa del repositorio pasa sin cambios en los casos existentes
+- [x] C19: la suite completa del repositorio pasa sin cambios en los casos existentes
       <!-- test: npx vitest run -->
 
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación del cierre de FEATURE-MC-PERFILES-MODELOS-20261007",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta cerrar su QA.",
+    "expected": "Los criterios del ticket se cumplen y sus pruebas dan el resultado esperado.",
+    "evidence": [
+      "EVIDENCE-001"
+    ],
+    "affected_files": [
+      "packages/adapter/src/routing.ts",
+      "packages/server/src/routing.ts",
+      "packages/server/src/server.ts",
+      "packages/server/web/index.html",
+      "scripts/verificar-interfaz.mjs",
+      "tests/api-rutas.test.ts",
+      "tests/perfiles-pantalla.test.ts",
+      "tests/routing.test.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -170,34 +200,144 @@ Ejecutadas el 2026-10-07 en `/Users/juanandrade/Desktop/ValmenHarness` (Node 24,
 
 Contrato de entrega: directorio `/Users/juanandrade/Desktop/ValmenHarness`; comandos de arriba; manual: abrir Modelos, crear `mi-perfil` a partir de `claude-code-completo` cambiando `agent-implementation` a `codex`/`gpt-6-sol`, guardarlo, ver el rechazo con un modelo inventado, elegirlo para el proyecto y `codex-completo` para `hermes`, y comprobar el archivo de perfiles de un proyecto de prueba (no de este repositorio).
 
+- Resultado del PO: «A» — Juan Andrade, 2026-10-07 (cierra tras revisar el resumen de pruebas y la vista Modelos). Las pruebas del ticket las ejecutó el agente y dieron el resultado esperado (suite completa y pruebas del ticket en verde).
+
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-07",
+    "build_reference": "commit:7c8580f3c0ee99fe4ca15265b443ac021c84e3a3",
+    "environment": "local (Node 24, vitest)",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-07",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "«A» — Juan Andrade, 2026-10-07 (cierra tras revisar el resumen de pruebas y la vista Modelos)"
+  }
+]
 ```
 
 ## Evidencia
 
 ```json
-[]
+[
+  {
+    "id": "EVIDENCE-001",
+    "date": "2026-10-07",
+    "kind": "automated-test",
+    "description": "Pruebas del ticket y suite completa en verde (ver ## Pruebas)",
+    "reference": "worktree:sha256:fbf3c2bd12cf321ac15cfe7ad598cebe3722422767dcd4e8bb6729ec93ace0d2",
+    "point_id": "POINT-001"
+  }
+]
 ```
 
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-07",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "«A» — Juan Andrade, 2026-10-07 (cierra tras revisar el resumen de pruebas y la vista Modelos)"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-07",
+    "technical_summary": "Implementación en el commit 2eda710; ver ## Implementación.",
+    "functional_summary": "Cumple los criterios; verificación mecánica y suite en verde; vista Modelos comprobada por el agente.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "Ninguno"
+  },
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-002",
+    "date": "2026-10-07",
+    "technical_summary": "Endpoints /api/perfiles y sección Perfiles en la vista Modelos; ver ## Implementación.",
+    "functional_summary": "Se crean, editan y eligen perfiles de modelos desde Mission Control.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "Ninguno"
+  }
+]
 ```
 
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-07",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Sesión que atendió varios tickets; sin números por ticket para no repartir a ojo un costo que no se midió.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:sesión de Claude Code, corrida delegada DEL-20261006-001",
+    "confidence": "medium",
+    "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-07",
+    "session_reference": "8883674a-4e63-4edc-88f1-87c0c4f37242",
+    "model": "anthropic/claude-opus-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 11 intervención(es) sobre el registro, 0 con fallo. 11 de 28 mensajes tocaron el registro. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 2620192 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 104153,
+    "output_tokens": 19486,
+    "total_tokens": 123639,
+    "estimated_cost_usd": null,
+    "source": "claude:8883674a-4e63-4edc-88f1-87c0c4f37242",
+    "confidence": "high",
+    "id": "CONSUMO-002"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-07",
+    "session_reference": "41cb9ba2-c488-472d-bfbb-39364724d1b8",
+    "model": "anthropic/claude-sonnet-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 3 intervención(es) sobre el registro, 0 con fallo. 3 de 28 mensajes tocaron el registro. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 2557352 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 99242,
+    "output_tokens": 24973,
+    "total_tokens": 124215,
+    "estimated_cost_usd": null,
+    "source": "claude:41cb9ba2-c488-472d-bfbb-39364724d1b8",
+    "confidence": "high",
+    "id": "CONSUMO-003"
+  }
+]
 ```
 
 ## Release
@@ -279,6 +419,159 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:52:27.182Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:52:27.510Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:52:27.768Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:52:28.003Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:52:28.247Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:52:28.583Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:52:28.993Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:52:29.242Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:52:29.510Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:52:29.764Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:52:29.999Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:52:30.247Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:52:31.805Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:52:32.015Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:52:32.122Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001. Criterios marcados desde el recibo GR-20261007-FEATURE-MC-PERFILES-MODELOS-20261007-qa-mechanical-2 de qa-mechanical: C19."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:53:33.562Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-025",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:53:33.814Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
