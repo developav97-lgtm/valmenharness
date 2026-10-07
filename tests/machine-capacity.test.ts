@@ -1,4 +1,4 @@
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -9,6 +9,7 @@ import {
   claimMachineCapacity,
   readMachineCapacity,
   reconcileMachineCapacity,
+  readExecutionActivity,
   recordExecutionActivity,
   releaseMachineCapacity,
   resolveAuthorizedProject,
@@ -140,5 +141,80 @@ describe("capacidad compartida por máquina", () => {
       identity: identity("first", "exec-01"),
       attemptId: "attempt-01",
     })).toThrow("binding local");
+  });
+});
+
+describe("reservas huérfanas", () => {
+  const INICIO = "2026-10-05T12:00:00.000Z";
+  /** El tope por defecto es de 60 minutos más 5 de margen. */
+  const dentroDelTope = () => new Date("2026-10-05T13:00:00.000Z");
+  const topeVencido = () => new Date("2026-10-05T13:06:00.000Z");
+  const muerto = () => false;
+  const vivo = () => true;
+
+  function huerfana(state: "started" | "active" = "started") {
+    const id = identity("first", "exec-huerfana");
+    claimMachineCapacity({ home, project: project("first"), identity: id, attemptId: "attempt-01" });
+    recordExecutionActivity(project("first"), {
+      eventId: "activity-orphan",
+      identity: id,
+      attemptId: "attempt-01",
+      state,
+      source: "test",
+      occurredAt: INICIO,
+    });
+    return id;
+  }
+
+  it("la reserva nueva guarda el PID del proceso que la reclamó", () => {
+    claimMachineCapacity({ home, project: project("first"), identity: identity("first", "exec-01"), attemptId: "attempt-01" });
+    expect(readMachineCapacity({ home, project: project("first") }).reservations[0]).toMatchObject({ pid: process.pid });
+    const guardado = JSON.parse(readFileSync(join(home, ".valmen", "machine-capacity.json"), "utf8"));
+    expect(guardado.reservations[0].pid).toBe(process.pid);
+  });
+
+  it("recupera una reserva started con el proceso inexistente y el tope vencido, y registra failed con su origen", () => {
+    const id = huerfana("started");
+    const r = reconcileMachineCapacity({ home, ahora: topeVencido, procesoVivo: muerto });
+    expect(r.recovered).toEqual([expect.objectContaining({ executionId: "exec-huerfana" })]);
+    expect(r.availableSlots).toBe(1);
+    const ultima = readExecutionActivity(project("first"), id, "attempt-01").at(-1);
+    expect(ultima).toMatchObject({ state: "failed", source: "journey-recovery" });
+  });
+
+  it("también recupera una reserva active", () => {
+    huerfana("active");
+    expect(reconcileMachineCapacity({ home, ahora: topeVencido, procesoVivo: muerto }).recovered).toHaveLength(1);
+  });
+
+  it("recupera una reserva sin PID (formato anterior) solo por tope vencido más margen", () => {
+    huerfana();
+    const ruta = join(home, ".valmen", "machine-capacity.json");
+    const guardado = JSON.parse(readFileSync(ruta, "utf8"));
+    delete guardado.reservations[0].pid;
+    writeFileSync(ruta, JSON.stringify(guardado), "utf8");
+    expect(reconcileMachineCapacity({ home, ahora: dentroDelTope }).recovered).toEqual([]);
+    expect(reconcileMachineCapacity({ home, ahora: topeVencido }).recovered).toHaveLength(1);
+  });
+
+  it("retiene la reserva si el proceso sigue vivo, aunque el tope haya vencido", () => {
+    huerfana();
+    const r = reconcileMachineCapacity({ home, ahora: topeVencido, procesoVivo: vivo });
+    expect(r.recovered).toEqual([]);
+    expect(r.availableSlots).toBe(0);
+  });
+
+  it("retiene la reserva dentro del tope, aunque el proceso no exista", () => {
+    huerfana();
+    const r = reconcileMachineCapacity({ home, ahora: dentroDelTope, procesoVivo: muerto });
+    expect(r.recovered).toEqual([]);
+    expect(r.availableSlots).toBe(0);
+  });
+
+  it("una identidad recuperada puede reclamarse otra vez y registrar su propio started", () => {
+    const id = huerfana();
+    reconcileMachineCapacity({ home, ahora: topeVencido, procesoVivo: muerto });
+    expect(claimMachineCapacity({ home, project: project("first"), identity: id, attemptId: "attempt-01" }))
+      .toMatchObject({ granted: true, created: true });
   });
 });

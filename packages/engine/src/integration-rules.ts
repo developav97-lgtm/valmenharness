@@ -84,7 +84,17 @@ export function reglasDeIntegracion(estado: IntegrationState): IntegrationVerdic
 }
 
 /** Las operaciones de git que la jornada puede pedir. Todo lo demás se rechaza. */
-const OPERACIONES_PERMITIDAS = ["status", "rev-parse", "diff", "add", "commit", "switch", "checkout"] as const;
+const OPERACIONES_PERMITIDAS = [
+  "status",
+  "rev-parse",
+  "diff",
+  "add",
+  "commit",
+  "switch",
+  "checkout",
+  "merge",
+  "merge-base",
+] as const;
 
 /** Banderas que no se admiten en ninguna operación. */
 const BANDERAS_PROHIBIDAS = new Set(["--force", "-f", "--force-with-lease", "--hard", "--no-verify", "--amend"]);
@@ -107,8 +117,14 @@ export function motivoDeGitProhibido(argumentos: readonly string[]): string | nu
   if (operacion === "checkout" && !(resto[0] === "-b" && resto.length === 2)) {
     return "git checkout solo se admite como `checkout -b <rama>`.";
   }
-  if (operacion === "switch" && resto.length !== 1 && !(resto[0] === "-c" && resto.length === 2)) {
-    return "git switch solo se admite como `switch <rama>` o `switch -c <rama>`.";
+  if (operacion === "switch" && resto.length !== 1 && !(resto[0] === "-c" && (resto.length === 2 || resto.length === 3))) {
+    return "git switch solo se admite como `switch <rama>` o `switch -c <rama> [<base>]`.";
+  }
+  if (operacion === "merge" && !(resto[0] === "--ff-only" && resto.length === 2 && !resto[1]?.startsWith("-"))) {
+    return "git merge solo se admite como `merge --ff-only <rama>`.";
+  }
+  if (operacion === "merge-base" && !(resto[0] === "--is-ancestor" && resto.length === 3)) {
+    return "git merge-base solo se admite como `merge-base --is-ancestor <a> <b>`.";
   }
   return null;
 }

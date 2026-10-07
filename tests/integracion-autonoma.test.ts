@@ -215,7 +215,131 @@ describe("lo que impide el commit", () => {
 
   it("una rama de trabajo protegida en la configuración se rechaza al leerla", async () => {
     politica(["  work-branch: main"]);
-    await expect(avanzar(implementador())).rejects.toThrow(/protegida/);
+    // Un error de una fase no detiene la otra: queda en la línea de su fase.
+    const r = await avanzar(implementador());
+    expect(r.fases.map((f) => f.fase)).toEqual(["ejecucion", "preparacion"]);
+    expect(r.fases[0]?.detalle).toMatch(/protegida/);
+    expect(estado(A)).toBe("approved");
+  });
+});
+
+/** Un commit con un archivo, en la rama en la que esté el árbol. */
+function commitear(archivo: string, mensaje: string): void {
+  writeFileSync(join(root, archivo), `${mensaje}\n`, "utf8");
+  git("add", "--", archivo);
+  git("commit", "-q", "-m", mensaje);
+}
+
+describe("el registro que deja la preparación convive con la ejecución", () => {
+  it("cambios sin commitear en el directorio de otro ticket de la jornada y en el índice no detienen el despacho", async () => {
+    git("switch", "-q", "-c", RAMA);
+    const registroDeB = join(root, "tickets", "2026", B, "ticket.md");
+    writeFileSync(registroDeB, `${readFileSync(registroDeB, "utf8")}\nNota de la preparación.\n`, "utf8");
+    writeFileSync(join(root, "tickets", "index.md"), "# índice regenerado\n", "utf8");
+
+    const r = await avanzar(implementador());
+    expect(r.fases[0]?.estado).toBe("despachado");
+    expect(r.ticketId).toBe(A);
+    expect(estado(A)).toBe("awaiting_user_tests");
+    // El commit de A no arrastra el registro de B, que sigue sin commitear.
+    const enCommit = git("show", "--name-only", "--format=", "HEAD").split("\n");
+    expect(enCommit.some((f) => f.includes(`/${B}/`))).toBe(false);
+    expect(git("status", "--porcelain", "-uall", "--", `tickets/2026/${B}`)).toContain(B);
+  });
+
+  it("un cambio sin commitear fuera de esas rutas sigue deteniendo el despacho", async () => {
+    git("switch", "-q", "-c", RAMA);
+    const registroDeB = join(root, "tickets", "2026", B, "ticket.md");
+    writeFileSync(registroDeB, `${readFileSync(registroDeB, "utf8")}\nNota.\n`, "utf8");
+    writeFileSync(join(root, "suelto.ts"), "export const x = 1;\n", "utf8");
+
+    const r = await avanzar(implementador());
+    expect(r.fases[0]?.estado).toBe("sin-candidato");
+    expect(r.fases[0]?.detalle).toContain("suelto.ts");
+    expect(r.fases[0]?.detalle).not.toContain(B);
+    expect(estado(A)).toBe("approved");
+  });
+
+  it("un cambio en el registro del propio candidato sí cuenta como sucio", async () => {
+    git("switch", "-q", "-c", RAMA);
+    const registroDeA = join(root, "tickets", "2026", A, "ticket.md");
+    writeFileSync(registroDeA, `${readFileSync(registroDeA, "utf8")}\nNota.\n`, "utf8");
+    const r = await avanzar(implementador());
+    expect(r.fases[0]?.estado).toBe("sin-candidato");
+    expect(r.fases[0]?.detalle).toContain(A);
+  });
+});
+
+describe("el registro de las pasadas sucias", () => {
+  const pasadas = () =>
+    readFileSync(join(root, ".valmen", "journeys", "arbol-sucio.jsonl"), "utf8")
+      .trim()
+      .split("\n")
+      .map((linea) => JSON.parse(linea) as Record<string, unknown>);
+
+  it("cada pasada que no despacha por árbol sucio deja una línea con sus archivos, y la limpia lo marca", async () => {
+    git("switch", "-q", "-c", RAMA);
+    writeFileSync(join(root, "suelto.ts"), "export const x = 1;\n", "utf8");
+    await avanzar(implementador());
+    await avanzar(implementador());
+    expect(pasadas()).toEqual([
+      { journeyId: "JOR-20261006", at: AHORA.toISOString(), archivos: ["suelto.ts"] },
+      { journeyId: "JOR-20261006", at: AHORA.toISOString(), archivos: ["suelto.ts"] },
+    ]);
+
+    rmSync(join(root, "suelto.ts"));
+    const r = await avanzar(implementador());
+    expect(r.fases[0]?.estado).toBe("despachado");
+    expect(pasadas().at(-1)).toEqual({ journeyId: "JOR-20261006", at: AHORA.toISOString(), limpio: true });
+  });
+});
+
+describe("la rama de trabajo se deja al día con main antes de despachar", () => {
+  it("si no existe, se crea desde main y no desde la rama en la que estaba el árbol", async () => {
+    git("switch", "-q", "-c", "otra");
+    commitear("otra.ts", "trabajo de otra rama");
+    const r = await avanzar(implementador());
+    expect(r.fases[0]?.estado).toBe("despachado");
+    expect(git("rev-parse", "--abbrev-ref", "HEAD")).toBe(RAMA);
+    expect(git("log", "--format=%s", "main..HEAD").split("\n")).toHaveLength(1);
+    expect(git("ls-tree", "-r", "--name-only", "HEAD").split("\n")).not.toContain("otra.ts");
+  });
+
+  it("si existe atrás de main, queda en el mismo commit que main antes de despachar", async () => {
+    git("branch", RAMA);
+    commitear("nuevo-en-main.ts", "avance de main");
+    const principal = git("rev-parse", "main");
+    const r = await avanzar(implementador());
+    expect(r.fases[0]?.estado).toBe("despachado");
+    expect(git("rev-parse", "--abbrev-ref", "HEAD")).toBe(RAMA);
+    // El ticket se leyó desde un árbol que ya traía lo de main, y el commit de A cuelga de main.
+    expect(git("rev-parse", "HEAD~1")).toBe(principal);
+    expect(git("log", "--format=%s", "main..HEAD").split("\n")).toHaveLength(1);
+  });
+
+  it("si ya está en la rama de trabajo y quedó atrás de main, también la avanza", async () => {
+    git("switch", "-q", "-c", RAMA);
+    git("switch", "-q", "main");
+    commitear("nuevo-en-main.ts", "avance de main");
+    git("switch", "-q", RAMA);
+    expect(git("rev-parse", RAMA)).not.toBe(git("rev-parse", "main"));
+    const r = await avanzar(implementador());
+    expect(r.fases[0]?.estado).toBe("despachado");
+    expect(git("rev-parse", "HEAD~1")).toBe(git("rev-parse", "main"));
+  });
+
+  it("si la rama divergió de main, el despacho se detiene nombrándola y no la toca", async () => {
+    git("switch", "-q", "-c", RAMA);
+    commitear("propio.ts", "commit propio de la rama");
+    const antes = git("rev-parse", RAMA);
+    git("switch", "-q", "main");
+    commitear("de-main.ts", "avance de main");
+    const r = await avanzar(implementador());
+    expect(r.fases[0]?.estado).toBe("sin-candidato");
+    expect(r.fases[0]?.detalle).toContain(RAMA);
+    expect(r.fases[0]?.detalle).toContain("divergió");
+    expect(git("rev-parse", RAMA)).toBe(antes);
+    expect(git("rev-parse", "--abbrev-ref", "HEAD")).toBe("main");
     expect(estado(A)).toBe("approved");
   });
 });

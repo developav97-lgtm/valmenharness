@@ -35,8 +35,29 @@ export function esRepositorioGit(root: string): boolean {
   return existsSync(join(root, ".git"));
 }
 
-/** Los archivos cambiados del árbol de trabajo, sin el estado del harness. */
-export function estadoDelArbolDeTrabajo(root: string, ejecutor?: EjecutorDeGit): string[] {
+/** Rutas que la propia jornada deja sin commitear (el registro que escribe la preparación). */
+export type RutasPropias = (ruta: string) => boolean;
+
+/**
+ * Las rutas que deja la preparación de los demás tickets de la jornada: su directorio en el
+ * registro y el índice. El candidato no entra: sus cambios sí son atribuibles al despacho.
+ */
+export function rutasPropiasDeLaJornada(
+  paths: RegistryPaths,
+  ticketsDeLaJornada: readonly string[],
+  candidato: string | null,
+): RutasPropias {
+  const otros = ticketsDeLaJornada.filter((id) => id !== candidato);
+  return (ruta) =>
+    ruta === `${paths.ticketsDir}/index.md` ||
+    (ruta.startsWith(`${paths.ticketsDir}/`) && otros.some((id) => ruta.includes(`/${id}/`)));
+}
+
+/**
+ * Los archivos cambiados del árbol de trabajo, sin el estado del harness ni las rutas propias de
+ * la jornada, si se indican.
+ */
+export function estadoDelArbolDeTrabajo(root: string, ejecutor?: EjecutorDeGit, propias?: RutasPropias): string[] {
   const salida = ejecutarGitPermitido(root, ["status", "--porcelain", "-uall"], ejecutor);
   if (salida.status !== 0) fail(`git status falló: ${salida.stderr.trim()}`, EXIT_INVARIANT);
   return salida.stdout
@@ -46,6 +67,7 @@ export function estadoDelArbolDeTrabajo(root: string, ejecutor?: EjecutorDeGit):
     .map((ruta) => (ruta.includes(" -> ") ? (ruta.split(" -> ")[1] as string) : ruta))
     .map((ruta) => ruta.replace(/^"|"$/g, ""))
     .filter((ruta) => !esDelHarness(ruta))
+    .filter((ruta) => propias === undefined || !propias(ruta))
     .sort();
 }
 
@@ -101,39 +123,69 @@ export function hashDeArchivosEnCommit(root: string, commit: string, archivos: r
   });
 }
 
+/** Las ramas que la jornada nace o avanza desde: `main`, literal del pedido. */
+export const RAMA_BASE = "main";
+
 /**
- * Se asegura de estar en la rama de trabajo antes de despachar un ticket.
+ * Deja la rama de trabajo al día con `main` y el árbol parado en ella antes de despachar.
  *
- * Cambia o crea la rama solo con el árbol limpio: mover una rama con cambios del ticket anterior
- * los mezclaría con el siguiente.
+ * Si no existe se crea desde `main`; si existe y es ancestro de `main` se avanza con
+ * `merge --ff-only`; si divergió no se toca y se dice. Mover o avanzar la rama exige el árbol
+ * limpio: hacerlo con cambios del ticket anterior los mezclaría con el siguiente.
  */
 export function asegurarRamaDeTrabajo(request: {
   readonly root: string;
   readonly ramaDeTrabajo: string;
   readonly ramasProtegidas: readonly string[];
   readonly ejecutor?: EjecutorDeGit;
+  readonly propias?: RutasPropias;
 }): { readonly rama: string; readonly cambiada: boolean } {
-  if (request.ramasProtegidas.includes(request.ramaDeTrabajo)) {
-    fail(`La rama de trabajo (${request.ramaDeTrabajo}) es una rama protegida.`, EXIT_INVARIANT);
+  const { root, ramaDeTrabajo, ejecutor } = request;
+  if (request.ramasProtegidas.includes(ramaDeTrabajo)) {
+    fail(`La rama de trabajo (${ramaDeTrabajo}) es una rama protegida.`, EXIT_INVARIANT);
   }
-  const actual = ramaActual(request.root, request.ejecutor);
-  if (actual === request.ramaDeTrabajo) return { rama: actual, cambiada: false };
-  const sucios = estadoDelArbolDeTrabajo(request.root, request.ejecutor);
+  const git = (...argumentos: string[]) => ejecutarGitPermitido(root, argumentos, ejecutor);
+  const existe = (rama: string): boolean =>
+    git("rev-parse", "--verify", "--quiet", `refs/heads/${rama}`).status === 0;
+  if (!existe(RAMA_BASE)) {
+    fail(`No existe la rama base ${RAMA_BASE}: la jornada no puede dejar ${ramaDeTrabajo} al día.`, EXIT_INVARIANT);
+  }
+  const actual = ramaActual(root, ejecutor);
+  const rama = existe(ramaDeTrabajo);
+  const alDia = rama && git("merge-base", "--is-ancestor", RAMA_BASE, ramaDeTrabajo).status === 0;
+  if (rama && !alDia && git("merge-base", "--is-ancestor", ramaDeTrabajo, RAMA_BASE).status !== 0) {
+    fail(
+      `La rama de trabajo ${ramaDeTrabajo} divergió de ${RAMA_BASE}: tiene commits que ${RAMA_BASE} no tiene y ` +
+        `${RAMA_BASE} tiene commits que ella no tiene. La jornada no la toca; resuélvelo a mano.`,
+      EXIT_INVARIANT,
+    );
+  }
+  if (actual === ramaDeTrabajo && alDia) return { rama: actual, cambiada: false };
+
+  const sucios = estadoDelArbolDeTrabajo(root, ejecutor, request.propias);
   if (sucios.length > 0) {
     fail(
-      `No se puede pasar a la rama de trabajo ${request.ramaDeTrabajo}: el árbol no está limpio ` +
+      `No se puede pasar a la rama de trabajo ${ramaDeTrabajo}: el árbol no está limpio ` +
         `(${sucios.slice(0, 5).join(", ")}${sucios.length > 5 ? "…" : ""}).`,
       EXIT_INVARIANT,
     );
   }
-  const existe = ejecutarGitPermitido(request.root, ["rev-parse", "--verify", "--quiet", `refs/heads/${request.ramaDeTrabajo}`], request.ejecutor).status === 0;
-  const cambio = ejecutarGitPermitido(
-    request.root,
-    existe ? ["switch", request.ramaDeTrabajo] : ["switch", "-c", request.ramaDeTrabajo],
-    request.ejecutor,
-  );
-  if (cambio.status !== 0) fail(`No se pudo pasar a la rama de trabajo: ${cambio.stderr.trim()}`, EXIT_INVARIANT);
-  return { rama: request.ramaDeTrabajo, cambiada: true };
+  if (!rama) {
+    const creada = git("switch", "-c", ramaDeTrabajo, RAMA_BASE);
+    if (creada.status !== 0) fail(`No se pudo crear la rama de trabajo: ${creada.stderr.trim()}`, EXIT_INVARIANT);
+    return { rama: ramaDeTrabajo, cambiada: true };
+  }
+  if (actual !== ramaDeTrabajo) {
+    const cambio = git("switch", ramaDeTrabajo);
+    if (cambio.status !== 0) fail(`No se pudo pasar a la rama de trabajo: ${cambio.stderr.trim()}`, EXIT_INVARIANT);
+  }
+  if (!alDia) {
+    const avance = git("merge", "--ff-only", RAMA_BASE);
+    if (avance.status !== 0) {
+      fail(`No se pudo avanzar ${ramaDeTrabajo} hasta ${RAMA_BASE}: ${avance.stderr.trim()}`, EXIT_INVARIANT);
+    }
+  }
+  return { rama: ramaDeTrabajo, cambiada: true };
 }
 
 export interface IntegrarTicketRequest {
@@ -148,6 +200,8 @@ export interface IntegrarTicketRequest {
   readonly hashProbado: string;
   readonly recibo: string;
   readonly ejecutor?: EjecutorDeGit;
+  /** Rutas propias de la jornada: ni detienen ni se commitean con este ticket. */
+  readonly propias?: RutasPropias;
   /** Cuántos secretos hay en el cambio; por defecto lo mide el escáner del harness. */
   readonly secretos?: () => number;
 }
@@ -180,7 +234,7 @@ export function repartirCambios(
 /** Commitea un ticket terminado si las reglas lo permiten y el árbol es el que se probó. */
 export function integrarTicket(request: IntegrarTicketRequest): ResultadoDeIntegracion {
   const { paths } = request;
-  const cambiados = estadoDelArbolDeTrabajo(paths.root, request.ejecutor);
+  const cambiados = estadoDelArbolDeTrabajo(paths.root, request.ejecutor, request.propias);
   const { funcionales, delRegistro, ajenos } = repartirCambios(cambiados, paths, request.ticketId);
   const atribuibles = [...funcionales, ...delRegistro];
 

@@ -1,4 +1,5 @@
 /** Capacidad local compartida entre los proyectos autorizados de una máquina. */
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -11,7 +12,8 @@ import {
 } from "@valmen/core";
 import { machineBindingsPath, parseMachineBindings } from "@valmen/adapter";
 
-import { readExecutionActivity } from "./execution-activity.js";
+import { autonomousConfig } from "./discovery.js";
+import { readExecutionActivity, recordExecutionActivity } from "./execution-activity.js";
 import { resolveAuthorizedProject, type AuthorizedProject } from "./project-resolution.js";
 
 const SCHEMA_VERSION = "1";
@@ -23,7 +25,12 @@ export interface MachineCapacityReservation {
   readonly ticketId: string;
   readonly executionId: string;
   readonly attemptId: string;
+  /** El proceso del avance que la reclamó; las reservas anteriores no lo traen. */
+  readonly pid?: number;
 }
+
+/** Minutos de margen sobre el tope de la política antes de dar por muerta una corrida. */
+const MARGEN_DE_RECUPERACION_MINUTOS = 5;
 
 export interface MachineCapacitySnapshot {
   readonly machineId: string;
@@ -79,7 +86,7 @@ export function claimMachineCapacity(request: {
   readonly attemptId: string;
 }): ClaimMachineCapacityResult {
   assertIdentity(request.project, request.identity);
-  const reservation = reservationFor(request.project, request.identity, request.attemptId);
+  const reservation = { ...reservationFor(request.project, request.identity, request.attemptId), pid: process.pid };
   return MutationLock.run(capacityDirectory(request.home), () => {
     const context = contextFor(request.home, request.project);
     let stored = readStored(request.home, context.machineId);
@@ -122,11 +129,32 @@ export function releaseMachineCapacity(request: {
   });
 }
 
+/** ¿Existe un proceso con este PID? Una señal 0 no mata nada: solo comprueba. */
+function procesoExiste(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === "EPERM";
+  }
+}
+
 /**
- * Recupera solo reservas cuyo proyecto autorizado informó término persistido.
- * La ausencia de actividad no prueba que un worker dejó de ejecutarse.
+ * Recupera reservas cuyo proyecto autorizado informó término persistido, y las huérfanas.
+ *
+ * Una reserva es huérfana si su última actividad sigue en `started` o `active`, el proceso que la
+ * reclamó ya no existe (o la reserva no lo registró) y pasó el tope de la política más un margen
+ * desde esa actividad. Se exigen las dos condiciones: la ausencia de actividad por sí sola no
+ * prueba que un worker dejó de ejecutarse. Al recuperarla se registra `failed` con origen
+ * `journey-recovery`.
  */
-export function reconcileMachineCapacity(request: { readonly home: string }): ReconcileMachineCapacityResult {
+export function reconcileMachineCapacity(request: {
+  readonly home: string;
+  readonly ahora?: (() => Date) | undefined;
+  readonly procesoVivo?: ((pid: number) => boolean) | undefined;
+}): ReconcileMachineCapacityResult {
+  const ahora = request.ahora?.() ?? new Date();
+  const procesoVivo = request.procesoVivo ?? procesoExiste;
   return MutationLock.run(capacityDirectory(request.home), () => {
     const context = contextFor(request.home);
     const stored = readStored(request.home, context.machineId);
@@ -139,12 +167,27 @@ export function reconcileMachineCapacity(request: { readonly home: string }): Re
         return true;
       }
       if (project.machineId !== context.machineId) return true;
-      const activity = readExecutionActivity(
-        project,
-        createExecutionIdentity(reservation),
-        reservation.attemptId,
-      ).at(-1);
-      if (activity?.state !== "finished" && activity?.state !== "failed") return true;
+      const identity = createExecutionIdentity(reservation);
+      const activity = readExecutionActivity(project, identity, reservation.attemptId).at(-1);
+      if (activity?.state === "finished" || activity?.state === "failed") {
+        recovered.push(reservation);
+        return false;
+      }
+      if (activity?.state !== "started" && activity?.state !== "active") return true;
+      if (reservation.pid !== undefined && procesoVivo(reservation.pid)) return true;
+      const tope = (autonomousConfig(project.root).limits.maxMinutes + MARGEN_DE_RECUPERACION_MINUTOS) * 60_000;
+      if (ahora.getTime() - new Date(activity.occurredAt).getTime() < tope) return true;
+      recordExecutionActivity(project, {
+        eventId: `journey-recovery-failed-${createHash("sha256")
+          .update(`${reservation.ticketId}\u0000${reservation.executionId}\u0000${reservation.attemptId}\u0000${activity.cursor}`)
+          .digest("hex")
+          .slice(0, 32)}`,
+        identity,
+        attemptId: reservation.attemptId,
+        state: "failed",
+        source: "journey-recovery",
+        occurredAt: ahora.toISOString(),
+      });
       recovered.push(reservation);
       return false;
     });
@@ -263,6 +306,7 @@ function parseReservation(value: unknown, machineId: string): MachineCapacityRes
     ticketId: item.ticketId,
     executionId: item.executionId,
     attemptId: item.attemptId,
+    ...(typeof item.pid === "number" && Number.isInteger(item.pid) && item.pid > 0 ? { pid: item.pid } : {}),
   });
 }
 

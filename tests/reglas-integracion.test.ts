@@ -155,3 +155,38 @@ describe("el git que una jornada puede ejecutar", () => {
     expect(ejecutor).toHaveBeenCalledWith(["status", "--porcelain"], "/x");
   });
 });
+
+describe("el avance de la rama de trabajo hacia main", () => {
+  it("admite merge --ff-only, merge-base --is-ancestor y switch -c con base", () => {
+    for (const argumentos of [
+      ["merge", "--ff-only", "main"],
+      ["merge-base", "--is-ancestor", "main", "valmen/jornada-20261007"],
+      ["switch", "-c", "valmen/jornada-20261007", "main"],
+    ]) {
+      expect(motivoDeGitProhibido(argumentos), argumentos.join(" ")).toBeNull();
+    }
+  });
+
+  it("rechaza merge sin --ff-only o con cualquier otra bandera", () => {
+    for (const argumentos of [
+      ["merge", "main"],
+      ["merge", "--no-ff", "main"],
+      ["merge", "--squash", "main"],
+      ["merge", "--abort"],
+      ["merge", "--ff-only"],
+      ["merge", "--ff-only", "--no-commit", "main"],
+      ["merge", "--ff-only", "main", "otra"],
+      ["merge", "--ff-only", "--abort"],
+      ["merge", "main", "--ff-only"],
+    ]) {
+      expect(motivoDeGitProhibido(argumentos), argumentos.join(" ")).toContain("merge");
+    }
+  });
+
+  it("rechaza merge-base fuera de --is-ancestor y switch -c con más argumentos", () => {
+    expect(motivoDeGitProhibido(["merge-base", "main", "x"])).toContain("merge-base");
+    expect(motivoDeGitProhibido(["merge-base", "--is-ancestor", "main"])).toContain("merge-base");
+    expect(motivoDeGitProhibido(["switch", "-c", "a", "main", "extra"])).toContain("switch");
+  });
+});
+
