@@ -273,7 +273,8 @@ export function buildReceipt(input: ReceiptInput): GateReceipt {
     stateHash: hashState(input.state),
     policy: input.policy,
     mechanicalChecks: input.mechanicalChecks,
-    modelAnswers: input.answers,
+    // El motivo va explícito: `null` quiere decir que el evaluador no lo dio.
+    modelAnswers: input.answers.map((answer) => ({ ...answer, reason: answer.reason ?? null })),
     propositions: input.decision.propositions,
     model: input.model ?? null,
     usage: input.usage ?? null,

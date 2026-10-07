@@ -276,6 +276,14 @@ export interface PropositionAnswer {
   readonly score?: number;
   readonly confidence?: number;
   readonly probabilities?: Readonly<Record<string, number>>;
+  /**
+   * Por qué respondió así el evaluador, en sus palabras.
+   *
+   * `null` significa «el evaluador no lo dio» —un evaluador determinista, o un
+   * modelo que no devolvió texto—, y es distinto de la ausencia del campo, que en un
+   * recibo nuevo significaría «se perdió» (R-CDEF-005).
+   */
+  readonly reason?: string | null;
 }
 
 /** Una proposición evaluada, con el detalle que explica la decisión. */

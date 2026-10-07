@@ -280,6 +280,17 @@ export interface JudgeOptions {
   readonly timeoutMs?: number;
 }
 
+/** Cuántos caracteres de motivo se guardan: es texto del modelo y puede ser largo. */
+export const MOTIVO_MAX = 500;
+
+/** El motivo que devolvió el modelo, recortado, o `null` si no devolvió texto. */
+function motivoDe(valor: unknown): string | null {
+  if (typeof valor !== "string") return null;
+  const texto = valor.trim();
+  if (texto === "") return null;
+  return texto.length > MOTIVO_MAX ? texto.slice(0, MOTIVO_MAX) : texto;
+}
+
 /** Evalúa proposiciones con un modelo de chat. */
 export async function evaluateWithJudge(options: JudgeOptions): Promise<JudgeEvaluation> {
   const model = options.model ?? DEFAULT_JUDGE_MODEL;
@@ -363,8 +374,10 @@ export async function evaluateWithJudge(options: JudgeOptions): Promise<JudgeEva
       holds?: boolean;
       choice?: string;
       confidence?: number;
+      reason?: unknown;
     };
     const confianza = typeof respuesta.confidence === "number" ? respuesta.confidence : 0.5;
+    const reason = motivoDe(respuesta.reason);
 
     if (proposition.kind === "choice" && typeof respuesta.choice === "string") {
       return {
@@ -372,6 +385,7 @@ export async function evaluateWithJudge(options: JudgeOptions): Promise<JudgeEva
         kind: "choice",
         choice: respuesta.choice,
         confidence: confianza,
+        reason,
       };
     }
 
@@ -380,6 +394,7 @@ export async function evaluateWithJudge(options: JudgeOptions): Promise<JudgeEva
       kind: "noul",
       value: confidenceToProbability(respuesta.holds === true, confianza),
       confidence: confianza,
+      reason,
     };
   });
 

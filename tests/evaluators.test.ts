@@ -341,6 +341,8 @@ describe("evaluador con juez de chat", () => {
         kind: "noul",
         value: 1,
         confidence: 1,
+        // El motivo del modelo viaja en la respuesta (R-CDEF-005).
+        reason: "evidencia",
       },
     ]);
     expect(resultado.model).toMatchObject({ provider: "codex", model: "gpt-6-luna" });
