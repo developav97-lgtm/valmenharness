@@ -38,6 +38,7 @@ import {
   buildReceipt,
   commandChecksFor,
   criterionPropositionId,
+  criterioDeclarado,
   decide,
   extractCriteriaSpecs,
   gateById,
@@ -232,7 +233,7 @@ function revisarCriteriosVerificables(
   verifyDev: ReturnType<typeof verifyDevConfig>,
 ): string | null {
   const sinDeclarar = criteria.filter(
-    (criterio) => criterio.command === null && !criterio.manual,
+    (criterio) => !criterioDeclarado(criterio),
   );
   if (sinDeclarar.length > 0) {
     return (

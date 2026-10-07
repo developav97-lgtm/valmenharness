@@ -16,7 +16,7 @@ import {
   impactIdsInFields,
   parseTicket,
 } from "@valmen/core";
-import { extractCriteriaSpecs } from "@valmen/gate";
+import { criterioDeclarado, extractCriteriaSpecs } from "@valmen/gate";
 import { AUTONOMOUS_DEFAULT_MAX_MINUTES, type AutonomousExecutorConfig } from "@valmen/adapter";
 
 import { autonomousConfig, type RegistryPaths } from "./discovery.js";
@@ -125,7 +125,7 @@ function ineligibility(text: string, policy: ReturnType<typeof autonomousConfig>
     }
     if (requirement === "tests-declared") {
       const criteria = extractCriteriaSpecs(ticket.sections["Criterios de aceptación"]);
-      if (criteria.length === 0 || criteria.some((criterion) => criterion.command === null && !criterion.manual)) {
+      if (criteria.length === 0 || criteria.some((criterion) => !criterioDeclarado(criterion))) {
         reasons.push("no declara cómo verificar todos los criterios");
       }
     }

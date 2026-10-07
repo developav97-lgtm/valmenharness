@@ -40,7 +40,7 @@ import {
   hasSubstantivePlan,
   isCriticalPlanGate,
 } from "@valmen/core";
-import { type GateReceipt, extractCriteriaSpecs, hashState } from "@valmen/gate";
+import { type GateReceipt, criterioDeclarado, extractCriteriaSpecs, hashState } from "@valmen/gate";
 
 import type { RegistryPaths } from "./discovery.js";
 import { aprobacionDePlanVigente } from "./plan-approval.js";
@@ -139,7 +139,7 @@ function citar(recibo: GateReceipt): string {
 function criteriosSinVerificacion(ticket: ParsedTicket): number {
   const criterios = extractCriteriaSpecs(ticket.sections["Criterios de aceptación"] ?? "");
   if (criterios.length === 0) return -1;
-  return criterios.filter((criterio) => criterio.command === null && !criterio.manual)
+  return criterios.filter((criterio) => !criterioDeclarado(criterio))
     .length;
 }
 

@@ -1090,3 +1090,57 @@ export function readQaAuthorizationSources(config: ConfigMap): readonly string[]
   }
   return fuentes;
 }
+
+/** La verificación de criterios por petición HTTP que el proyecto autoriza (R-QAAG-007). */
+export interface QaHttpConfig {
+  /** Las URL base permitidas, sin ruta ni credenciales (por ejemplo `http://localhost:8000`). */
+  readonly hosts: readonly string[];
+  /** Los métodos que un criterio puede declarar; por defecto solo `GET`. */
+  readonly methods: readonly string[];
+  readonly timeoutSeconds: number;
+  /** El **nombre** de la variable de entorno que trae la credencial; nunca su valor. */
+  readonly credentialEnv: string | null;
+}
+
+const METODOS_HTTP = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"];
+
+/**
+ * Lee la sección `qa-http` de `.valmen/config.yaml`; ausente devuelve `null` y todo criterio
+ * `http:` se rechaza con el mensaje de qué declarar.
+ *
+ * El host, la credencial y el plazo salen de aquí y **nunca** del ticket: quien escribe el
+ * criterio no elige a qué servidor se le habla.
+ */
+export function readQaHttpConfig(config: ConfigMap): QaHttpConfig | null {
+  if (config["qa-http"] === undefined) return null;
+  const mapa = readMap(config, "qa-http");
+  const hosts = readList(mapa, "hosts", []);
+  if (hosts.length === 0) fail('config.yaml: "qa-http.hosts" debe listar al menos una URL base.');
+  for (const host of hosts) {
+    let url: URL;
+    try {
+      url = new URL(host);
+    } catch {
+      fail(`config.yaml: "qa-http.hosts" contiene una URL inválida: «${host}».`);
+    }
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      fail(`config.yaml: "qa-http.hosts" solo admite http o https: «${host}».`);
+    }
+    if (url.username !== "" || url.password !== "") {
+      fail(`config.yaml: "qa-http.hosts" no admite credenciales dentro de la URL: «${host}».`);
+    }
+  }
+  const methods = mapa["methods"] === undefined ? ["GET"] : readList(mapa, "methods", []).map((m) => m.toUpperCase());
+  if (methods.length === 0 || methods.some((m) => !METODOS_HTTP.includes(m))) {
+    fail(`config.yaml: "qa-http.methods" debe usar métodos entre ${METODOS_HTTP.join(", ")}.`);
+  }
+  const timeoutSeconds = mapa["timeout-seconds"] === undefined ? 10 : Number(readString(mapa, "timeout-seconds", ""));
+  if (!Number.isFinite(timeoutSeconds) || timeoutSeconds <= 0 || timeoutSeconds > 120) {
+    fail('config.yaml: "qa-http.timeout-seconds" debe ser un número de segundos entre 0 y 120.');
+  }
+  const credencial = readString(mapa, "credential-env", "");
+  if (credencial !== "" && !/^[A-Z_][A-Z0-9_]*$/.test(credencial)) {
+    fail('config.yaml: "qa-http.credential-env" debe ser el nombre de una variable de entorno en mayúsculas.');
+  }
+  return { hosts, methods, timeoutSeconds, credentialEnv: credencial === "" ? null : credencial };
+}

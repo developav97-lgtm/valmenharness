@@ -19,7 +19,7 @@ import { existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 import { parseTicket, stripHtmlComments } from "@valmen/core";
-import { extractCriteriaSpecs } from "@valmen/gate";
+import { criterioDeclarado, extractCriteriaSpecs } from "@valmen/gate";
 
 /** Un hallazgo de la revisión: qué es y qué falta. */
 export interface PreReviewFinding {
@@ -202,7 +202,7 @@ export function reviewBeforeGate(input: {
     });
 
     const criterios = extractCriteriaSpecs(s["Criterios de aceptación"] ?? "");
-    for (const criterio of criterios.filter((c) => c.command === null && !c.manual)) {
+    for (const criterio of criterios.filter((c) => !criterioDeclarado(c))) {
       findings.push({
         id: "criterio_sin_anotacion",
         message: `«Criterios»: «${criterio.text.slice(0, 80)}» no declara cómo se verifica (<!-- test: … --> o <!-- verify: manual -->).`,
@@ -267,7 +267,7 @@ export function decideInCode(propositionId: string, ticketText: string): number 
     }
     case "criterios_verificables": {
       const criterios = extractCriteriaSpecs(s["Criterios de aceptación"] ?? "");
-      return criterios.length > 0 && criterios.every((c) => c.command !== null || c.manual)
+      return criterios.length > 0 && criterios.every((c) => criterioDeclarado(c))
         ? CUMPLE
         : 0;
     }

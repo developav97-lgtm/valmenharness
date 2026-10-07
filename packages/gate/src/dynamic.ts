@@ -71,6 +71,17 @@ export interface CriterionSpec {
   readonly manual: boolean;
   /** `true` si la verificación humana se hace en el ambiente dev declarado. */
   readonly dev?: boolean;
+  /**
+   * La petición HTTP declarada con `<!-- http: MÉTODO ruta expect: … -->`, sin interpretar
+   * (R-QAAG-007). Del ticket solo viajan método, ruta y expectativas: el host y la credencial
+   * salen de la configuración del proyecto. Lo verifica el verificador HTTP, no `qa-mechanical`.
+   */
+  readonly http?: string;
+}
+
+/** ¿Declara el criterio cómo se verifica: un comando, a mano o una petición HTTP? */
+export function criterioDeclarado(criterio: Pick<CriterionSpec, "command" | "manual" | "http">): boolean {
+  return criterio.command !== null || criterio.manual || (criterio.http !== undefined && criterio.http !== "");
 }
 
 /** La viñeta que abre un criterio: casilla, guion o número. */
@@ -83,7 +94,7 @@ const VINETA_RE = /^\s*(?:[-*+]\s+\[[ xX]\]|\d+[.)]|[-*+]\s+)\s*/;
 const COMENTARIO_RE = /<!--[\s\S]*?(?:-->|$)/g;
 
 /** Las anotaciones que puede llevar un criterio. */
-const ANOTACION_RE = /^<!--\s*(test|verify)\s*:\s*([\s\S]*?)\s*-->$/i;
+const ANOTACION_RE = /^<!--\s*(test|verify|http)\s*:\s*([\s\S]*?)\s*-->$/i;
 
 /** Dónde quedó una anotación dentro del texto ya limpio. */
 const MARCA_RE = /\u0000(\d+)\u0000/g;
@@ -98,6 +109,7 @@ interface Candidato {
   command: string | null;
   manual: boolean;
   dev: boolean;
+  http: string | null;
 }
 
 /**
@@ -134,6 +146,7 @@ export function extractCriteriaSpecs(section: string): CriterionSpec[] {
     for (const marca of linea.matchAll(MARCA_RE)) {
       const anotacion = anotaciones[Number(marca[1])] as Anotacion;
       if (anotacion.tipo === "test") candidato.command = anotacion.valor;
+      else if (anotacion.tipo === "http") candidato.http = anotacion.valor;
       else {
         candidato.manual = true;
         candidato.dev = anotacion.valor.toLowerCase() === "dev";
@@ -159,6 +172,7 @@ export function extractCriteriaSpecs(section: string): CriterionSpec[] {
         command: null,
         manual: false,
         dev: false,
+        http: null,
       };
       anotar(candidato, linea);
       candidatos.push(candidato);
@@ -176,7 +190,14 @@ export function extractCriteriaSpecs(section: string): CriterionSpec[] {
 
   return candidatos
     .filter((candidato) => candidato.text.length >= 12)
-    .map(({ text, command, manual, dev }) => ({ text, command, manual, dev }));
+    .map(({ text, command, manual, dev, http }) => ({
+      text,
+      command,
+      manual,
+      dev,
+      // Solo si lo declara: los criterios sin `http:` conservan exactamente su forma de siempre.
+      ...(http === null ? {} : { http }),
+    }));
 }
 
 /**
