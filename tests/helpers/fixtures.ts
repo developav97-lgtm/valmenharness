@@ -46,6 +46,11 @@ export interface FixtureTicketOptions {
   readonly qaStatus?: string;
   readonly targetRelease?: string;
   readonly releasedIn?: string;
+  /**
+   * El contrato de pruebas de `## Pruebas`. Sin él queda el marcador de pendiente, que es lo que
+   * deja un ejecutor que no entregó el contrato (R-JORN-005).
+   */
+  readonly pruebas?: string;
 }
 
 /**
@@ -149,7 +154,7 @@ Pendiente.
 
 ## Pruebas
 
-Pendiente de ejecución.
+${options.pruebas ?? "Pendiente de ejecución."}
 
 ${vacio("QA")}
 ${vacio("Evidencia")}

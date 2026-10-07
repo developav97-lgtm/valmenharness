@@ -15,6 +15,7 @@ import {
   type AutonomousRunResult,
 } from "./autonomous-run.js";
 import { autonomousConfig } from "./discovery.js";
+import { resolverModeloDeFase } from "./journey-phases.js";
 import { recordExecutionActivity } from "./execution-activity.js";
 import {
   claimMachineCapacity,
@@ -121,9 +122,12 @@ export async function dispatchJourney(request: JourneyDispatchRequest): Promise<
 
   recordActivity(request, identity, "started");
   try {
+    const modelo = resolverModeloDeFase(request.project.root, "implementation");
     const autonomous = await runAutonomous({
       paths: request.project.paths,
       ticketId: candidate.ticketId,
+      fase: "implementation",
+      ...(modelo === null ? {} : { modelo }),
       ...(request.execute === undefined ? {} : { execute: request.execute }),
       ...(request.now === undefined ? {} : { now: request.now }),
     });

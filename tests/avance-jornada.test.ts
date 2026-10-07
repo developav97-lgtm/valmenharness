@@ -29,6 +29,7 @@ const projectId = "avance-lab";
 const A = "FEATURE-AVANCE-UNO-20261005";
 const B = "FEATURE-AVANCE-DOS-20261005";
 const AHORA = new Date("2026-10-06T08:00:00.000Z");
+const PRUEBAS = "Contrato de entrega: ejecutar `node -e \"process.exit(0)\"` desde la raíz; esperado: código de salida 0.";
 const CRITERIO = '- [ ] El laboratorio termina correctamente.\n      <!-- test: node -e "process.exit(0)" -->';
 
 let home: string;
@@ -87,7 +88,7 @@ beforeEach(() => {
   );
   politica(true);
   for (const id of [A, B]) {
-    writeFixtureTicket(root, { id, workflowStatus: "approved", type: "FEATURE", module: "AVANCE", criterios: CRITERIO });
+    writeFixtureTicket(root, { id, workflowStatus: "approved", type: "FEATURE", module: "AVANCE", criterios: CRITERIO , pruebas: PRUEBAS});
   }
 });
 

@@ -21,6 +21,7 @@ const projectId = "dispatch-lab";
 const waiting = "FEATURE-DISPATCH-WAITING-20261005";
 const dependent = "FEATURE-DISPATCH-DEPENDENT-20261005";
 const independent = "FEATURE-DISPATCH-INDEPENDENT-20261005";
+const PRUEBAS = "Contrato de entrega: ejecutar `node -e \"process.exit(0)\"` desde la raíz; esperado: código de salida 0.";
 const criteria = '- [ ] El laboratorio termina correctamente.\n      <!-- test: node -e "process.exit(0)" -->';
 
 let home: string;
@@ -104,7 +105,7 @@ function writeTicket(id: string, workflowStatus: string, ticketCriteria = criter
     workflowStatus,
     type: "FEATURE",
     module: "DISPATCH",
-    criterios: ticketCriteria,
+    criterios: ticketCriteria, pruebas: PRUEBAS,
   });
 }
 

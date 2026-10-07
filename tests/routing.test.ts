@@ -112,6 +112,12 @@ describe("el catálogo de roles", () => {
       // fijo sino de la sección `playwright:` del proyecto, y entró acá para que
       // esa declaración llegue al enrutado con su origen `proyecto`.
       "ui-specs",
+      // Los cuatro roles de fase del agente que ejecuta la jornada (R-JORN-006): su
+      // consumidor es `valmen journey advance`, que lanza cada sesión con el modelo de su fase.
+      "agent-analysis",
+      "agent-plan",
+      "agent-implementation",
+      "agent-verification",
     ]);
     expect(ROLES.every((rol) => rol.description !== "")).toBe(true);
   });

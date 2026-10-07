@@ -8,6 +8,8 @@
  */
 import { spawnSync } from "node:child_process";
 
+import { type FaseDelAgente, type ModeloDeFase } from "@valmen/adapter";
+
 import {
   EXIT_INVARIANT,
   EXIT_SCHEMA,
@@ -28,6 +30,8 @@ import {
   type AutonomousStopReceipt,
 } from "./autonomous-stops.js";
 import { allDocuments } from "./mutate.js";
+import { registrarFase } from "./journey-phases.js";
+import { UNATTENDED_ENV } from "./plan-approval.js";
 import { runGate } from "./gate.js";
 import { transition } from "./transition.js";
 
@@ -49,7 +53,15 @@ export interface AutonomousRunRequest {
   /** Un ticket concreto o la siguiente entrada elegible de la cola. */
   readonly ticketId?: string;
   readonly queue?: boolean;
-  readonly execute?: (command: AutonomousExecutorCommand) => AutonomousExecutorResult;
+  /** Borde del ejecutor; recibe también el entorno con que se lanza (`VALMEN_UNATTENDED`). */
+  readonly execute?: (
+    command: AutonomousExecutorCommand,
+    entorno?: Readonly<Record<string, string>>,
+  ) => AutonomousExecutorResult;
+  /** El modelo de la fase resuelto por el enrutamiento; sin él rige el de la política. */
+  readonly modelo?: ModeloDeFase | undefined;
+  /** La fase que se ejecuta; por defecto `implementation`. */
+  readonly fase?: FaseDelAgente | undefined;
   /** Reloj inyectable para que el recibo de parada sea reproducible en pruebas. */
   readonly now?: (() => Date) | undefined;
 }
@@ -138,11 +150,16 @@ function promptFor(ticketId: string): string {
   ].join("\n");
 }
 
-function execute(command: AutonomousExecutorCommand, root: string): AutonomousExecutorResult {
+function execute(
+  command: AutonomousExecutorCommand,
+  root: string,
+  entorno: Readonly<Record<string, string>> = {},
+): AutonomousExecutorResult {
   const result = spawnSync(command.command, command.args, {
     cwd: root,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
+    env: { ...process.env, ...entorno },
   });
   return {
     status: result.status ?? 1,
@@ -216,8 +233,40 @@ function stopResult(
   return { ticketId, status: "stopped", detail, executor, stop };
 }
 
-/** Selecciona y ejecuta una única entrada, sin paralelismo ni reintentos. */
+/** ¿El ticket trae el contrato de pruebas escrito en `## Pruebas`? */
+export function contratoDePruebasEscrito(ticketText: string): boolean {
+  const seccion = parseTicket(ticketText).sections["Pruebas"] ?? "";
+  const limpia = seccion.replace(/<!--[\s\S]*?-->/g, "").trim();
+  if (limpia === "" || /^pendiente\.?$/i.test(limpia)) return false;
+  // El contrato son comandos exactos: al menos uno entre comillas invertidas.
+  return /`[^`\n]+`/.test(limpia);
+}
+
+/**
+ * Selecciona y ejecuta una única entrada, sin paralelismo ni reintentos, y deja el registro
+ * de la sesión por fase (R-JORN-006).
+ */
 export async function runAutonomous(request: AutonomousRunRequest): Promise<AutonomousRunResult> {
+  const inicio = Date.now();
+  const resultado = await runAutonomousInner(request);
+  const politica = autonomousConfig(request.paths.root);
+  if (politica.executor !== null) {
+    const modelo = request.modelo;
+    registrarFase(request.paths.root, {
+      ticketId: resultado.ticketId,
+      fase: request.fase ?? "implementation",
+      ejecutor: politica.executor.id,
+      modelo: modelo?.model ?? politica.executor.model,
+      esfuerzo: modelo?.effort ?? politica.executor.effort,
+      origenDelModelo: modelo === undefined ? "política (sin modelo de fase resuelto)" : `${modelo.origen}: ${modelo.motivo}`,
+      duracionMs: Date.now() - inicio,
+      resultado: resultado.status,
+    });
+  }
+  return resultado;
+}
+
+async function runAutonomousInner(request: AutonomousRunRequest): Promise<AutonomousRunResult> {
   if (request.ticketId === undefined && request.queue !== true) {
     throw Object.assign(new Error("run requiere --ticket o --queue."), { exitCode: EXIT_SCHEMA });
   }
@@ -246,7 +295,11 @@ export async function runAutonomous(request: AutonomousRunRequest): Promise<Auto
     throw Object.assign(new Error(`El ticket ${selected.id} no es elegible: ${selected.reasons.join(", ")}.`), { exitCode: EXIT_INVARIANT });
   }
 
-  const command = autonomousExecutorCommand(policy.executor, request.paths.root, promptFor(selected.id));
+  // El modelo de la fase, si el enrutamiento lo resolvió; si no, el de la política.
+  const executorDeFase = request.modelo === undefined
+    ? policy.executor
+    : { ...policy.executor, model: request.modelo.model, effort: request.modelo.effort as typeof policy.executor.effort };
+  const command = autonomousExecutorCommand(executorDeFase, request.paths.root, promptFor(selected.id));
   transition({ paths: request.paths, ticketId: selected.id, entity: "ticket", to: "in_progress" });
 
   const before = preflightStop(request.paths, selected.id, policy);
@@ -261,7 +314,9 @@ export async function runAutonomous(request: AutonomousRunRequest): Promise<Auto
     );
   }
 
-  const result = (request.execute ?? ((item) => execute(item, request.paths.root)))(command);
+  // El ejecutor hereda la marca de sesión desatendida: no puede registrar aprobaciones.
+  const entorno = { [UNATTENDED_ENV]: "1" };
+  const result = (request.execute ?? ((item, env) => execute(item, request.paths.root, env)))(command, entorno);
   if (result.status !== 0) {
     return { ticketId: selected.id, status: "executor-failed", detail: result.stderr || "El ejecutor terminó con error.", executor: command };
   }
@@ -305,6 +360,16 @@ export async function runAutonomous(request: AutonomousRunRequest): Promise<Auto
       );
     }
     return { ticketId: selected.id, status: "verification-failed", detail: gate.stderr, executor: command };
+  }
+  // El contrato de pruebas se comprueba en código: sin él, el responsable no sabe qué correr.
+  const despues = allDocuments(request.paths).find(({ ticket }) => ticket.id === selected.id);
+  if (despues !== undefined && !contratoDePruebasEscrito(despues.ticket.text)) {
+    return {
+      ticketId: selected.id,
+      status: "verification-failed",
+      detail: "El ticket no trae el contrato de pruebas en `## Pruebas` (comandos exactos entre comillas invertidas); no pasa a awaiting_user_tests.",
+      executor: command,
+    };
   }
   transition({ paths: request.paths, ticketId: selected.id, entity: "ticket", to: "awaiting_user_tests" });
   return { ticketId: selected.id, status: "delivered", detail: gate.stdout, executor: command };

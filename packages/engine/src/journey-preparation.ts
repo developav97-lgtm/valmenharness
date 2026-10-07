@@ -17,6 +17,7 @@ import { autonomousExecutorCommand, type AutonomousExecutorCommand } from "./aut
 import { autonomousConfig, findTicket, type RegistryPaths } from "./discovery.js";
 import { recordExecutionActivity } from "./execution-activity.js";
 import { dispatchEventId } from "./journey-dispatch.js";
+import { registrarFase, resolverModeloDeFase } from "./journey-phases.js";
 import { readJourneys } from "./journeys.js";
 import {
   claimMachineCapacity,
@@ -119,6 +120,29 @@ export function avisoDeDecision(ticketId: string, compuerta: string, resultado: 
 
 /** Prepara un ticket: lanza el ejecutor y verifica en código lo que dejó. */
 export function prepararTicket(request: PrepararTicketRequest): ResultadoDePreparacion {
+  const inicio = Date.now();
+  const resultado = prepararTicketInner(request);
+  // El registro por fase de una sesión que sí se lanzó (R-JORN-006); las no elegibles no lanzan nada.
+  if (resultado.estado !== "no-elegible" && resultado.estado !== "ejecutor-fallo") {
+    const politica = autonomousConfig(request.paths.root);
+    if (politica.executor !== null) {
+      const modelo = resolverModeloDeFase(request.paths.root, "analysis");
+      registrarFase(request.paths.root, {
+        ticketId: request.ticketId,
+        fase: "analysis",
+        ejecutor: politica.executor.id,
+        modelo: modelo?.model ?? politica.executor.model,
+        esfuerzo: modelo?.effort ?? politica.executor.effort,
+        origenDelModelo: modelo === null ? "política" : `${modelo.origen}: ${modelo.motivo}`,
+        duracionMs: Date.now() - inicio,
+        resultado: resultado.estado,
+      });
+    }
+  }
+  return resultado;
+}
+
+function prepararTicketInner(request: PrepararTicketRequest): ResultadoDePreparacion {
   const { paths, ticketId } = request;
   const politica = autonomousConfig(paths.root);
   const ubicado = findTicket(paths, ticketId);
@@ -139,12 +163,31 @@ export function prepararTicket(request: PrepararTicketRequest): ResultadoDePrepa
   }
   if (razones.length > 0) return no(`El ticket ${ticketId} no es elegible para preparar: ${razones.join(", ")}.`);
 
-  const comando = autonomousExecutorCommand(politica.executor, paths.root, promptDePreparacion(ticketId));
+  // La preparación usa el modelo de la fase de análisis (barato donde repite); el de
+  // implementación es del despacho de ejecución. El origen del modelo queda en el registro.
+  const modelo = resolverModeloDeFase(paths.root, "analysis");
+  const executorDeFase =
+    modelo === null ? politica.executor : { ...politica.executor, model: modelo.model, effort: modelo.effort as typeof politica.executor.effort };
+  const comando = autonomousExecutorCommand(executorDeFase, paths.root, promptDePreparacion(ticketId));
+  const inicio = Date.now();
+  const registrar = (resultado: string): void => {
+    registrarFase(paths.root, {
+      ticketId,
+      fase: "analysis",
+      ejecutor: politica.executor?.id ?? "",
+      modelo: executorDeFase.model,
+      esfuerzo: executorDeFase.effort,
+      origenDelModelo: modelo === null ? "política" : `${modelo.origen}: ${modelo.motivo}`,
+      duracionMs: Date.now() - inicio,
+      resultado,
+    });
+  };
   // El ejecutor hereda la marca de sesión desatendida: no puede registrar la aprobación del plan.
   const entorno = { [UNATTENDED_ENV]: "1" };
   const antes = estadoDelArbol(paths.root);
   const corrida = (request.execute ?? ((c, e) => ejecutarDeVerdad(c, paths.root, e)))(comando, entorno);
   if (corrida.status !== 0) {
+    registrar("ejecutor-fallo");
     return { ticketId, estado: "ejecutor-fallo", detalle: corrida.stderr || "El ejecutor terminó con error." };
   }
 

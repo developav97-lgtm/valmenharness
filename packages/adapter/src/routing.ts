@@ -131,6 +131,31 @@ export const ROLES: readonly RoleSpec[] = [
     description: "Escribe y mantiene los specs de interfaz del proyecto",
     consumer: "valmen routing show --role ui-specs",
   },
+  // Los cuatro roles de **fase** del agente que ejecuta la jornada (R-JORN-006): análisis,
+  // plan, implementación y verificación. Su proveedor es el del **ejecutor** (`codex`,
+  // `claude-code`…) y su modelo el que ese cliente entiende; el despacho los lee con
+  // `modeloDeFase` y los registra por sesión. Preparar un ticket no tiene por qué costar
+  // como implementarlo: el modelo barato analiza y verifica, el fuerte planea e implementa.
+  {
+    id: "agent-analysis",
+    description: "Modelo del agente que analiza un ticket en la fase de preparación",
+    consumer: "valmen journey advance",
+  },
+  {
+    id: "agent-plan",
+    description: "Modelo del agente que escribe el plan en la fase de preparación",
+    consumer: "valmen journey advance",
+  },
+  {
+    id: "agent-implementation",
+    description: "Modelo del agente que implementa un ticket aprobado en la fase de ejecución",
+    consumer: "valmen journey advance",
+  },
+  {
+    id: "agent-verification",
+    description: "Modelo del agente que verifica y corrige las pruebas antes de entregar",
+    consumer: "valmen journey advance",
+  },
 ];
 
 /** Un modelo asignado a un rol. */
@@ -203,6 +228,11 @@ export const PRESETS: readonly Preset[] = [
         model: "openai/gpt-5.6-luna-pro",
         effort: "high",
       },
+      // Los roles de fase del agente de la jornada: barato donde repite, fuerte donde decide.
+      "agent-analysis": { provider: "codex", model: "gpt-6-luna", effort: "medium" },
+      "agent-plan": { provider: "codex", model: "gpt-6-sol", effort: "high" },
+      "agent-implementation": { provider: "codex", model: "gpt-6-sol", effort: "high" },
+      "agent-verification": { provider: "codex", model: "gpt-6-luna", effort: "medium" },
     },
   },
   {
@@ -249,6 +279,11 @@ export const PRESETS: readonly Preset[] = [
         model: "moonshotai/kimi-k3",
         effort: "medium",
       },
+      // Los roles de fase del agente de la jornada: barato donde repite, fuerte donde decide.
+      "agent-analysis": { provider: "codex", model: "gpt-6-luna", effort: "medium" },
+      "agent-plan": { provider: "codex", model: "gpt-6-sol", effort: "medium" },
+      "agent-implementation": { provider: "codex", model: "gpt-6-sol", effort: "high" },
+      "agent-verification": { provider: "codex", model: "gpt-6-luna", effort: "medium" },
     },
   },
   {
@@ -286,6 +321,11 @@ export const PRESETS: readonly Preset[] = [
         model: "z-ai/glm-5.3-flash",
         effort: "auto",
       },
+      // Los roles de fase del agente de la jornada: barato donde repite, fuerte donde decide.
+      "agent-analysis": { provider: "codex", model: "gpt-6-luna", effort: "medium" },
+      "agent-plan": { provider: "codex", model: "gpt-6-luna", effort: "medium" },
+      "agent-implementation": { provider: "codex", model: "gpt-6-luna", effort: "high" },
+      "agent-verification": { provider: "codex", model: "gpt-6-luna", effort: "medium" },
     },
   },
   {
@@ -333,6 +373,11 @@ export const PRESETS: readonly Preset[] = [
       verifier: { provider: "claude-code", model: "claude-sonnet-5", effort: "auto" },
       escalation: { provider: "claude-code", model: "claude-opus-4-8", effort: "high" },
       "ui-specs": { provider: "claude-code", model: "claude-sonnet-5", effort: "auto" },
+      // Los roles de fase del agente de la jornada: barato donde repite, fuerte donde decide.
+      "agent-analysis": { provider: "claude-code", model: "claude-haiku-4-5-20251001", effort: "auto" },
+      "agent-plan": { provider: "claude-code", model: "claude-sonnet-5", effort: "auto" },
+      "agent-implementation": { provider: "claude-code", model: "claude-sonnet-5", effort: "high" },
+      "agent-verification": { provider: "claude-code", model: "claude-haiku-4-5-20251001", effort: "auto" },
     },
   },
 ];
@@ -544,6 +589,55 @@ export function resolveRouting(
         (elegido?.model ?? "").startsWith("typesafe/"),
     };
   });
+}
+
+/** Las fases del agente de la jornada y el rol de enrutamiento de cada una. */
+export const FASES_DEL_AGENTE = ["analysis", "plan", "implementation", "verification"] as const;
+export type FaseDelAgente = (typeof FASES_DEL_AGENTE)[number];
+
+/** El modelo con el que se lanza el ejecutor de una fase y de dónde salió. */
+export interface ModeloDeFase {
+  readonly model: string;
+  readonly effort: string;
+  /** `rol` si salió del enrutamiento; `politica` si cayó al modelo del ejecutor, con el motivo. */
+  readonly origen: "rol" | "politica";
+  readonly motivo: string;
+}
+
+/** El proveedor del enrutamiento que corresponde a cada ejecutor de la política. */
+const PROVEEDOR_DEL_EJECUTOR: Readonly<Record<string, string>> = {
+  codex: "codex",
+  claude: "claude-code",
+  opencode: "opencode",
+};
+
+/**
+ * El modelo y el esfuerzo con los que se lanza el ejecutor de una fase (R-JORN-006).
+ *
+ * Se usa el del rol de la fase solo si su proveedor es el del ejecutor: un identificador de
+ * otro proveedor no lo entiende el cliente. Si no coincide o el rol no tiene modelo, cae al
+ * de la política y **lo dice**, porque un modelo que no es el declarado sin decirlo es
+ * justo lo que impide auditar el costo.
+ */
+export function modeloDeFase(
+  rutas: readonly ResolvedRoute[],
+  fase: FaseDelAgente,
+  ejecutor: { readonly id: string; readonly model: string; readonly effort: string },
+): ModeloDeFase {
+  const ruta = routeFor(rutas, `agent-${fase}`);
+  const proveedor = PROVEEDOR_DEL_EJECUTOR[ejecutor.id] ?? ejecutor.id;
+  if (ruta === null || ruta.model === "") {
+    return { model: ejecutor.model, effort: ejecutor.effort, origen: "politica", motivo: `el rol agent-${fase} no tiene modelo` };
+  }
+  if (ruta.provider !== proveedor) {
+    return {
+      model: ejecutor.model,
+      effort: ejecutor.effort,
+      origen: "politica",
+      motivo: `el rol agent-${fase} es del proveedor ${ruta.provider} y el ejecutor es ${ejecutor.id}`,
+    };
+  }
+  return { model: ruta.model, effort: ruta.effort === "auto" ? ejecutor.effort : ruta.effort, origen: "rol", motivo: `rol agent-${fase} (${ruta.source})` };
 }
 
 /** El modelo resuelto de un rol, o `null` si no tiene ninguno. */
