@@ -4,7 +4,7 @@ id: SECURITY-CLI-REVISION-SKILLS-20261007
 title: Registrar la revisión de una persona y deshabilitar la skill si su contenido cambia
 type: SECURITY
 module: CLI
-workflow_status: in_progress
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -66,13 +66,13 @@ Ninguno.
 
 ## Criterios de aceptación
 
-- [ ] Una persona registra la revisión de una skill con su frase y los permisos que usa, y la skill pasa a habilitada solo si el contenido coincide con el hash declarado
+- [x] Una persona registra la revisión de una skill con su frase y los permisos que usa, y la skill pasa a habilitada solo si el contenido coincide con el hash declarado
       <!-- test: npx vitest run tests/revision-skills.test.ts -->
-- [ ] Si el contenido cambia respecto del hash revisado, la skill queda deshabilitada y el estado dice por qué
+- [x] Si el contenido cambia respecto del hash revisado, la skill queda deshabilitada y el estado dice por qué
       <!-- test: npx vitest run tests/revision-skills.test.ts -->
-- [ ] La revisión se rechaza en una sesión desatendida, sin responsable, sin frase o sin permisos declarados
+- [x] La revisión se rechaza en una sesión desatendida, sin responsable, sin frase o sin permisos declarados
       <!-- test: npx vitest run tests/revision-skills.test.ts -->
-- [ ] Una skill declarada sin contenido o sin revisión no queda habilitada
+- [x] Una skill declarada sin contenido o sin revisión no queda habilitada
       <!-- test: npx vitest run tests/revision-skills.test.ts tests/skills-externas.test.ts -->
 
 ## Puntos
@@ -83,11 +83,16 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+- `packages/engine/src/external-skills.ts`: `hashDeContenidoDeSkill` (sha256 sobre las rutas relativas ordenadas y los bytes de cada archivo regular; sin `.git` ni enlaces simbólicos), `registrarRevisionDeSkill` (append-only en `.valmen/external-skills/reviews.jsonl` con id, versión, hash, responsable, frase literal, permisos y fecha; exige sesión atendida, responsable, frase y permisos, y que el contenido exista y coincida con el sha256 declarado) y `leerRevisionesDeSkills`. `estadoDeSkillsExternas` ahora devuelve «declarada» (sin contenido), «sin-revisión», «habilitada» o «deshabilitada» con su motivo; si el contenido cambia después de la revisión, se deshabilita y el estado dice qué hash se revisó y cuál hay ahora.
+- `packages/cli/src/commands.ts` y `main.ts`: `valmen skills review <id> --actor --quote --permissions` y `skills external` con el estado y su motivo. No descarga ni instala nada: el contenido lo coloca una persona en `.valmen/external-skills/<id>/`.
+- `tests/revision-skills.test.ts` (nuevo) y ajuste de `tests/skills-externas.test.ts` al campo `motivo`.
 
 ## Pruebas
 
-Pendiente de ejecución.
+- Directorio: raíz del repositorio. `npx vitest run tests/revision-skills.test.ts tests/skills-externas.test.ts` → 26 pruebas pasan.
+- Suite completa: `npx vitest run` → 194 archivos, 2810 pruebas pasan, 48 omitidas. `npx tsc --noEmit -p tsconfig.json` y `npx eslint` sin errores; `valmen secrets` sin hallazgos.
+- Manual (responsable): colocar el contenido de una skill en `.valmen/external-skills/<id>/`, declarar su sha256 y correr `valmen skills review <id> --actor … --quote … --permissions …` y `valmen skills external`.
+<!-- verify: manual -->
 
 ## QA
 
@@ -198,6 +203,15 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-07",
+    "at": "2026-10-07T19:43:00.355Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
