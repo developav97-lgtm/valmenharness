@@ -4,7 +4,7 @@ id: SECURITY-ENGINE-SKILLS-TERCEROS-20261007
 title: Declarar skills de terceros por proyecto con fuente, versión fijada y hash, sin instalar ni actualizar solas
 type: SECURITY
 module: ENGINE
-workflow_status: planned
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -54,7 +54,7 @@ Ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 - Alcance: la declaración, su validación y su listado. Exclusiones: descargar o instalar, la revisión que habilita y la proyección a los clientes.
 - Pasos ordenados:
   1. En `packages/adapter/src/config.ts` agregar `readExternalSkills(config)` y el tipo `ExternalSkill` (`id`, `source`, `version`, `sha256`): cada elemento exige los cuatro campos, un `id` válido y único, un `sha256` de 64 hex y una `version` fija (se rechazan `latest`, `main`, `master`, `HEAD`, rangos con `^`, `~`, `*` y cualquier rama); cada error de rechazo empieza por el nombre de la skill y dice qué campo falla (por ejemplo «skill ponytail: la versión «main» no está fijada»); sin la clave devuelve una lista vacía; exportarla.
@@ -65,13 +65,13 @@ Ninguno.
 
 ## Criterios de aceptación
 
-- [ ] Una skill declarada con fuente, versión fijada y hash se lee y se lista con su estado
+- [x] Una skill declarada con fuente, versión fijada y hash se lee y se lista con su estado
       <!-- test: npx vitest run tests/skills-externas.test.ts -->
-- [ ] Una declaración sin versión, con una rama, `latest` o un rango, o sin hash, se rechaza con el nombre de la skill
+- [x] Una declaración sin versión, con una rama, `latest` o un rango, o sin hash, se rechaza con el nombre de la skill
       <!-- test: npx vitest run tests/skills-externas.test.ts -->
-- [ ] Un identificador duplicado se rechaza y un proyecto sin la clave queda sin skills externas
+- [x] Un identificador duplicado se rechaza y un proyecto sin la clave queda sin skills externas
       <!-- test: npx vitest run tests/skills-externas.test.ts -->
-- [ ] Declarar o listar no descarga, instala ni actualiza nada
+- [x] Declarar o listar no descarga, instala ni actualiza nada
       <!-- test: npx vitest run tests/skills-externas.test.ts -->
 
 ## Puntos
@@ -82,11 +82,18 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+- `packages/adapter/src/config.ts`: `readExternalSkills` lee `external-skills`; cada elemento exige `id` (minúsculas y guiones, único), `source`, `version` fijada (se rechazan `latest`, `main`, `master`, `HEAD`, ramas habituales, rangos con `^`, `~`, `>`, `<`, `=` o `*`) y `sha256` de 64 hex; todo error empieza por el nombre de la skill. Sin la clave no hay skills externas.
+- `packages/engine/src/external-skills.ts` (nuevo): `estadoDeSkillsExternas` devuelve cada skill con su estado «declarada»; solo lee la configuración.
+- `packages/cli/src/commands.ts` y `main.ts`: `valmen skills external` lista las declaradas; no descarga, instala ni actualiza nada y avisa que la habilitación exige una revisión registrada.
+- `tests/skills-externas.test.ts` (nuevo): declaración válida, rechazos con el nombre de la skill, duplicados, forma inválida y que lista y estado no cambian el disco.
+- La revisión que habilita, la proyección a los clientes y las skills concretas son de otros tickets.
 
 ## Pruebas
 
-Pendiente de ejecución.
+- Directorio: raíz del repositorio. `npx vitest run tests/skills-externas.test.ts` → 16 pruebas pasan.
+- Suite completa: `npx vitest run` → 193 archivos, 2800 pruebas pasan, 48 omitidas. `npx tsc --noEmit -p tsconfig.json` y `npx eslint` sin errores; `valmen secrets` sin hallazgos.
+- Manual (responsable): declarar una skill en `external-skills` de `.valmen/config.yaml` y correr `valmen skills external`.
+<!-- verify: manual -->
 
 ## QA
 
@@ -161,6 +168,51 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-07",
+    "at": "2026-10-07T18:29:55.351Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"La A\",\"planHash\":\"sha256:58262a369a2651c4d1a2daf234cc7005c3b8b5edaa26eaa0f0c5d530b3a095fb\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-07",
+    "at": "2026-10-07T18:29:55.596Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:58262a369a2651c4d1a2daf234cc7005c3b8b5edaa26eaa0f0c5d530b3a095fb."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-07",
+    "at": "2026-10-07T18:29:55.596Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-07",
+    "at": "2026-10-07T18:29:55.846Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-07",
+    "at": "2026-10-07T18:34:55.355Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
