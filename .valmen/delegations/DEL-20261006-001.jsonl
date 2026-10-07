@@ -91,3 +91,5 @@
 {"kind":"close","ticketId":"INTEGRATION-GIT-INTEGRACION-AUTONOMA-20260926","detail":"QA aprobado y ticket cerrado","at":"2026-10-07T04:03:37.450Z"}
 {"kind":"note","ticketId":"FEATURE-ENGINE-ELEGIBILIDAD-QA-20261005","detail":"avanzó a in_progress (analyzed → planned → approved → in_progress)","at":"2026-10-07T04:26:51.005Z"}
 {"kind":"close","ticketId":"FEATURE-ENGINE-ELEGIBILIDAD-QA-20261005","detail":"QA aprobado y ticket cerrado","at":"2026-10-07T04:30:28.462Z"}
+{"kind":"note","ticketId":"INTEGRATION-HERMES-DESPACHO-JORNADA-20261001","detail":"avanzó a in_progress (approved → in_progress)","at":"2026-10-07T04:32:41.171Z"}
+{"kind":"close","ticketId":"INTEGRATION-HERMES-DESPACHO-JORNADA-20261001","detail":"QA aprobado y ticket cerrado","at":"2026-10-07T04:34:43.862Z"}
