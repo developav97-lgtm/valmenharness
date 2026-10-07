@@ -35,9 +35,10 @@ const REPO = process.cwd();
 
 /**
  * Tope de las tres plantillas juntas, en bytes. Eran 15 464 B; el borrador compacto
- * medido pesa 9 162 B y el tope deja el margen de las frases que otras pruebas fijan.
+ * medido pesa 9 162 B y el tope deja el margen de las frases que otras pruebas fijan. Subió de 9 400 a
+ * 9 800 B con R-QAAG-009, que agrega dos reglas de QA por agente (unos 420 B).
  */
-const TOPE_BYTES = 9400;
+const TOPE_BYTES = 9800;
 
 /** Texto sin saltos de línea ni espacios repetidos: se afirma la frase, no dónde corta el renglón. */
 const plano = (texto: string): string => texto.replace(/\s+/g, " ");
@@ -49,7 +50,7 @@ const skill = (id: string): string =>
   plano(readFileSync(join(REPO, "skills", id, "SKILL.md"), "utf8"));
 
 describe("el tope de las plantillas fijas", () => {
-  it("suman 9 400 B o menos, desde 15 464 B", () => {
+  it("suman 9 800 B o menos, desde 15 464 B", () => {
     const bytes = [WORKFLOW_TEMPLATE, INVARIANTS_TEMPLATE, DELIVERY_TEMPLATE]
       .map((plantilla) => Buffer.byteLength(plantilla, "utf8"))
       .reduce((suma, tamano) => suma + tamano, 0);
@@ -82,6 +83,17 @@ describe("lo que frena una acción se queda en la plantilla", () => {
     expect(workflow, "estas acciones se preparan, no se ejecutan sin una persona").toMatch(
       /ejecutan? una persona/i,
     );
+  });
+
+  it("declara la QA por agente como vía de entrega y su autorización como acción humana (R-QAAG-009)", () => {
+    expect(delivery, "«Entrega y documentación» no dice que un agente puede ejecutar la QA").toMatch(/La QA puede ejecutarla un agente/);
+    expect(delivery).toMatch(/autorización vigente que creó una persona/);
+    expect(delivery).toMatch(/sombra/);
+    expect(delivery).toMatch(/sin autorización vigente, la QA es de una persona/i);
+    const acciones = workflow.slice(workflow.indexOf("### Acciones que nunca se automatizan"));
+    expect(acciones).toMatch(/autorización permanente de QA por agente/);
+    expect(acciones).toMatch(/promover la política a cerrar tickets/);
+    expect(acciones).toMatch(/sin herramienta MCP/);
   });
 
   it("conserva los tres pasos de «Continuar un ticket» y no toca el código sin `approved`", () => {

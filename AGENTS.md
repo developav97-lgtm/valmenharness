@@ -189,6 +189,7 @@ Se pueden **preparar** —dry-run, comandos listos, evidencia reunida—, pero l
 - Force-push, reset destructivo, borrar tags.
 - Ampliar la autoridad de edición fuera del alcance declarado, o modificar el gate que lo evalúa: un gate no amplía su propia autoridad.
 - Marcar QA como eximida (exige motivo y confirmación explícita).
+- Crear o ampliar una autorización permanente de QA por agente, o promover la política a cerrar tickets (sin herramienta MCP).
 - Modificar credenciales o la configuración de hosts permitidos.
 
 ## Invariantes de operación
@@ -212,6 +213,8 @@ Se pueden **preparar** —dry-run, comandos listos, evidencia reunida—, pero l
 Al terminar una implementación se entrega el contrato de pruebas: comandos exactos, directorio de ejecución, resultado esperado, validaciones manuales y requisitos de ambiente. El ticket pasa a `awaiting_user_tests` y solo avanza con el resultado del responsable o con una omisión explícita y documentada. Los criterios que se verificaron quedan marcados con `- [x]`; el detalle está en la skill `revision-final`.
 
 Los commits se crean solo tras la confirmación de las pruebas. Antes de commitear se revisa el estado del repositorio y se excluyen los archivos ajenos al ticket sin modificarlos; los cambios ajenos conocidos no bloquean la entrega. No se mezclan tickets en un commit, ni se usa `git add -A` sin revisión, ni autocommits.
+
+**La QA puede ejecutarla un agente** solo bajo una autorización vigente que creó una persona: `qa-agent` prueba en un worktree limpio y el ciclo se atribuye a la autorización. Empieza en sombra hasta que una persona promueva la política; sin autorización vigente, la QA es de una persona.
 
 **El consumo de IA queda registrado antes de cerrar**: `## Consumo de IA` lleva una entrada por sesión con los números de la sesión, no una estimación, y sin él el motor rechaza el cierre. Una sesión que sirvió **varios** tickets se declara `manual:` sin números: un reparto a ojo es un número inventado con forma de medición. Por eso, **una sesión por ticket**. Cómo se cita la fuente de los números está en la skill `revision-final`.
 
