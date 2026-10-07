@@ -35,3 +35,6 @@
 {"kind":"stop","ticketId":"FEATURE-ENGINE-CALIBRACION-Y-PRECISION-20261005","detail":"la compuerta plan dio BLOCK (falló criterio_06=0.09). Un BLOCK no se aprueba por delegación: se corrige el artefacto y se vuelve a correr, o se consulta al PO.","at":"2026-10-07T01:27:35.018Z"}
 {"kind":"note","ticketId":"FEATURE-ENGINE-CALIBRACION-Y-PRECISION-20261005","detail":"avanzó a in_progress (approved → in_progress)","at":"2026-10-07T01:28:16.291Z"}
 {"kind":"close","ticketId":"FEATURE-ENGINE-CALIBRACION-Y-PRECISION-20261005","detail":"QA aprobado y ticket cerrado","at":"2026-10-07T01:32:11.549Z"}
+{"kind":"decision","ticketId":"BUGFIX-ENGINE-CIERRE-CRITERIOS-20261005","detail":"analysis review → approve (GR-20261007-BUGFIX-ENGINE-CIERRE-CRITERIOS-20261005-analysis-1): El criterio dice que una proposición de contexto en banda de revisión no debe bloquear el avance","at":"2026-10-07T01:33:54.941Z"}
+{"kind":"note","ticketId":"BUGFIX-ENGINE-CIERRE-CRITERIOS-20261005","detail":"avanzó a in_progress (analyzed → planned → approved → in_progress)","at":"2026-10-07T01:34:14.992Z"}
+{"kind":"close","ticketId":"BUGFIX-ENGINE-CIERRE-CRITERIOS-20261005","detail":"QA aprobado y ticket cerrado","at":"2026-10-07T01:38:56.686Z"}
