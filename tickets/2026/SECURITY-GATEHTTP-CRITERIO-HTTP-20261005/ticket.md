@@ -4,7 +4,7 @@ id: SECURITY-GATEHTTP-CRITERIO-HTTP-20261005
 title: Verificar criterios HTTP contra hosts permitidos con gramática cerrada
 type: SECURITY
 module: GATEHTTP
-workflow_status: planned
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -52,7 +52,7 @@ Ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan), Juan Andrade, 2026-10-06: «si apruebo los planes»; compuerta `plan` aprobada por el evaluador y registrada en su recibo.
 - Alcance: la anotación `http:`, la configuración `qa-http`, el verificador con su gramática cerrada y su resultado. Exclusiones: la compuerta `qa-agent`, el árbol limpio y el cierre de tickets.
 - Pasos ordenados:
   1. En `packages/gate/src/dynamic.ts` hacer que `extractCriteriaSpecs` reconozca la anotación `http:` y agregue el campo opcional `http` (la petición declarada, sin interpretar) a `CriterionSpec`, de modo que un criterio `http:` cuente como declarado y no como manual; ajustar `packages/gate/src/criteria.ts` si lee el campo.
@@ -63,15 +63,15 @@ Ninguno.
 
 ## Criterios de aceptación
 
-- [ ] Un criterio `http:` válido se verifica contra el host de la configuración y el resultado guarda status, latencia y hash del cuerpo
+- [x] Un criterio `http:` válido se verifica contra el host de la configuración y el resultado guarda status, latencia y hash del cuerpo
       <!-- test: npx vitest run tests/criterio-http.test.ts -->
-- [ ] Un host fuera de la lista, un esquema o host dentro de la ruta y un método no declarado se rechazan sin hacer la petición
+- [x] Un host fuera de la lista, un esquema o host dentro de la ruta y un método no declarado se rechazan sin hacer la petición
       <!-- test: npx vitest run tests/criterio-http.test.ts -->
-- [ ] Una redirección a otro host no se sigue y una aserción fuera de la gramática cerrada se rechaza
+- [x] Una redirección a otro host no se sigue y una aserción fuera de la gramática cerrada se rechaza
       <!-- test: npx vitest run tests/criterio-http.test.ts -->
-- [ ] El resultado no contiene cabeceras de autenticación, cookies ni la credencial
+- [x] El resultado no contiene cabeceras de autenticación, cookies ni la credencial
       <!-- test: npx vitest run tests/criterio-http.test.ts -->
-- [ ] Un proyecto sin `qa-http` rechaza el criterio con el mensaje de qué declarar, y los criterios `test:` y `verify:` no cambian
+- [x] Un proyecto sin `qa-http` rechaza el criterio con el mensaje de qué declarar, y los criterios `test:` y `verify:` no cambian
       <!-- test: npx vitest run tests/criterio-http.test.ts tests/gate-plan-aviso.test.ts -->
 
 ## Puntos
@@ -82,11 +82,21 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+- `packages/gate/src/dynamic.ts`: `extractCriteriaSpecs` reconoce `<!-- http: … -->` y agrega el campo opcional `http` a `CriterionSpec` (solo cuando el criterio lo declara: los demás conservan su forma exacta); `criterioDeclarado` cuenta un criterio `http:` como declarado y se usa en `autonomous-run.ts`, `gate.ts`, `next-step.ts` y `revision-previa.ts`, que antes lo habrían tratado como «sin anotación».
+- `packages/adapter/src/config.ts`: `readQaHttpConfig` (sección `qa-http`: `hosts` como URL base sin credenciales, `methods` con defecto `GET`, `timeout-seconds` con defecto 10 y `credential-env`, el **nombre** de la variable de entorno; ausente devuelve `null`).
+- `packages/engine/src/http-criterion.ts` (nuevo): `parsearCriterioHttp` (rechaza esquema, host, `//`, `@`, barra invertida y espacios en la ruta) y `verificarCriterioHttp`: valida método y host contra la configuración antes de abrir una conexión, no sigue redirecciones, aplica el plazo, evalúa la gramática cerrada (`status=`, `json.ruta==`, `!=`, `.length==`, `>=`, `<=`) y devuelve status, latencia, hash del cuerpo y cada aserción, sin cabeceras de autenticación ni cookies. `SIN_QA_HTTP` dice qué declarar.
+- Desviación del plan, dicha: el verificador vive en el motor y no en `@valmen/gate-command`, cuyo contrato declarado es «sin red»; mezclarlos habría roto esa promesa.
+- `tests/criterio-http.test.ts` (nuevo, 18, con un servidor HTTP local). `qa-mechanical` sigue sin ejecutar peticiones: el verificador lo llamará la compuerta de QA por agente.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Desde la raíz del repositorio, Node 24; las pruebas levantan un servidor HTTP local en un puerto libre y no salen a internet:
+
+1. `npx vitest run tests/criterio-http.test.ts tests/gate-plan-aviso.test.ts` — esperado: todas pasan.
+2. `npx vitest run` — esperado: 184 archivos pasan y 1 omitido; 2673 pruebas pasan, 0 fallan.
+3. `npx tsc --noEmit -p tsconfig.json` — sin salida.
+
+Resultado de la ejecución del agente (2026-10-06): los tres comandos dieron lo esperado.
 
 ## QA
 
@@ -152,6 +162,51 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-06",
+    "at": "2026-10-07T04:12:27.036Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"si apruebo los planes\",\"planHash\":\"sha256:54f894560c323f2dafbfb96ec88cc88e372ad7bd28d517ffbd2a96c3fd81ea12\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-06",
+    "at": "2026-10-07T04:12:27.263Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:54f894560c323f2dafbfb96ec88cc88e372ad7bd28d517ffbd2a96c3fd81ea12."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-06",
+    "at": "2026-10-07T04:12:27.263Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-06",
+    "at": "2026-10-07T04:12:27.512Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-06",
+    "at": "2026-10-07T04:25:14.048Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
