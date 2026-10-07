@@ -49,6 +49,7 @@ import { hashState } from "@valmen/gate";
 
 import { unmarkedCriteria, unmarkedMessage } from "./criteria-marks.js";
 import { type RegistryPaths, findTicket } from "./discovery.js";
+import { aprobacionDePlanVigente } from "./plan-approval.js";
 import { finalizeMutation, readAndValidate } from "./mutate.js";
 import {
   describirDecisionHumana,
@@ -375,6 +376,29 @@ function applyTicket(
   let eventosPrevios: readonly EventoPrevio[] = [];
   if (to === "planned" || to === "approved") {
     eventosPrevios = exigirDecisionDeCompuerta(document, request.paths, to);
+  }
+  if (to === "approved") {
+    // La aprobación es un hecho registrado con autor y atado al plan, no una frase del
+    // plan (R-CTRL-001). La línea de arriba sigue siendo la constancia legible, pero ya
+    // no basta: sin el evento vigente, o con el plan cambiado, no se entra a `approved`.
+    const aprobacion = aprobacionDePlanVigente(document);
+    if (aprobacion.estado !== "vigente") {
+      fail(
+        `approved requiere la aprobación del plan registrada.\n${aprobacion.motivo}\n` +
+          "Regístrala con las palabras literales de quien aprueba:\n" +
+          `  valmen approve-plan --id ${document.fields.id} --actor "<nombre>" --source cli --quote "<frase>"`,
+        EXIT_INVARIANT,
+      );
+    }
+    eventosPrevios = [
+      ...eventosPrevios,
+      {
+        action: "plan-approval-verified",
+        details:
+          `Aprobación del plan vigente: ${aprobacion.aprobacion.actor} (fuente ${aprobacion.aprobacion.source}), ` +
+          `plan ${aprobacion.aprobacion.planHash}.`,
+      },
+    ];
   }
   if (to === "awaiting_user_tests") {
     exigirVerificacionMecanica(document, request.paths);

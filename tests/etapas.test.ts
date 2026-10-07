@@ -31,6 +31,7 @@ import { parseTicket } from "../packages/core/src/index.js";
 import { duracionEnTexto, duracionesPorEtapa } from "../packages/engine/src/etapas.js";
 import { transition } from "../packages/engine/src/transition.js";
 import { writeFixtureTicket } from "./helpers/fixtures.js";
+import { aprobarPlanEnPrueba } from "./helpers/aprobacion.js";
 
 /** La acción con la que el motor escribe una transición de ticket. */
 const ACCION_TRANSICION = "ticket-transition";
@@ -61,6 +62,7 @@ function eventosDelTicket(): Record<string, unknown>[] {
 
 /** Mueve el ticket en el laboratorio, con la hora que se le pida. */
 function mover(to: string, at: string): void {
+  if (to === "approved") aprobarPlanEnPrueba(PATHS(), TICKET);
   transition({
     paths: PATHS(),
     ticketId: TICKET,
@@ -110,7 +112,10 @@ describe("la duración por etapa", () => {
     const eventos = eventosDelTicket();
     // Primero, que la acción sea la del motor: si esto cambia, las pruebas de
     // abajo están armadas con una forma vieja y hay que enterarse acá.
-    expect(eventos[1]?.["action"]).toBe(ACCION_TRANSICION);
+    // Entre la creación y la transición ahora hay un evento más: la aprobación registrada
+    // del plan (R-CTRL-001), que no es una transición y no abre etapa.
+    expect(eventos.find((e) => e["action"] === ACCION_TRANSICION)).toBeDefined();
+    expect(eventos.some((e) => e["action"] === "plan-approved")).toBe(true);
 
     const etapas = duracionesPorEtapa(eventos);
     expect(etapas.map((e) => e.estado)).toEqual(["intake", "approved", "in_progress"]);

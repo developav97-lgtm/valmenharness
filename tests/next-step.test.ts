@@ -391,13 +391,15 @@ describe("planned: la compuerta del plan y la aprobación de una persona", () =>
     expect(t).toContain("valmen gate-decide");
   });
 
-  it("aprobada por una persona y con la línea puesta: solo mover a `approved`", () => {
+  it("aprobada por una persona y con la línea puesta, pero sin el registro: falta registrarla", () => {
     const paso = siguiente({ workflowStatus: "planned" }, [
       recibo({ gate: "plan", outcome: "review", escalado: true, decision: "approve" }),
     ]);
 
+    // Desde R-CTRL-001 la línea del plan ya no basta: hace falta el evento con actor y hash.
     expect(paso.alto).toBeNull();
-    expect(texto(paso)).toContain("La aprobación del plan está registrada");
+    expect(texto(paso)).toContain("falta el registro con actor y hash");
+    expect(texto(paso)).toContain("valmen approve-plan");
     expect(texto(paso)).toContain("`approved`");
   });
 

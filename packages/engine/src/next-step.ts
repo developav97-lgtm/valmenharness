@@ -43,6 +43,7 @@ import {
 import { type GateReceipt, extractCriteriaSpecs, hashState } from "@valmen/gate";
 
 import type { RegistryPaths } from "./discovery.js";
+import { aprobacionDePlanVigente } from "./plan-approval.js";
 import { currentReceipts, veredictoDeCompuerta } from "./receipts.js";
 import { buildGateState } from "./state.js";
 
@@ -96,6 +97,11 @@ const NO_CODIGO_SIN_APROBAR =
 const NO_GIT_NI_ALCANCE =
   "commit, push, PR, tag ni despliegue, salvo que te lo pidan; ni tocar nada fuera del " +
   "alcance del plan aprobado";
+
+/** El registro de la aprobación del plan: un evento con actor, fuente, frase y hash (R-CTRL-001). */
+const REGISTRAR_APROBACION =
+  "regístrala como evento con `valmen approve-plan --id <ID> --actor <nombre> --source cli " +
+  "--quote \"<sus palabras literales>\"` (una frase en `## Plan` ya no basta)";
 
 /** La salvedad de las decisiones humanas: quién puede registrarlas. */
 const SALVEDAD_DE_DELEGACION =
@@ -325,7 +331,7 @@ export function computeNextStep(
           alto:
             `la aprobación del plan es de una persona (${citar(veredicto.recibo)}). Preséntale ` +
             "el plan y el veredicto, y espera su respuesta. Cuando la dé: escribe en `## Plan` la " +
-            `línea ${lineaAprobacion}, regístrala con ${decidir(veredicto.recibo)} y ` +
+            `línea ${lineaAprobacion}, regístrala con ${decidir(veredicto.recibo)}, ${REGISTRAR_APROBACION} y ` +
             `${mover("approved")}.${critico} ${SALVEDAD_DE_DELEGACION}`,
           noHacer: [NO_CODIGO_SIN_APROBAR],
         });
@@ -333,11 +339,15 @@ export function computeNextStep(
       return paso(
         "aprobación del plan",
         aprobadoEnPlan
-          ? [`La aprobación del plan está registrada: ${mover("approved")}.`]
+          ? [
+              aprobacionDePlanVigente(ticket).estado === "vigente"
+                ? `La aprobación del plan está registrada: ${mover("approved")}.`
+                : `La línea de aprobación está en el plan, pero falta el registro con actor y hash: ${REGISTRAR_APROBACION}, y ${mover("approved")}.`,
+            ]
           : [
               `El plan pasó la compuerta (${citar(veredicto.recibo)}). Escribe en \`## Plan\` la ` +
                 `línea ${lineaAprobacion} —solo si una persona la dio; si no, el ticket no puede ` +
-                `pasar a \`approved\` y hay que pedirla—, y ${mover("approved")} en una llamada aparte.${critico}`,
+                `pasar a \`approved\` y hay que pedirla—, ${REGISTRAR_APROBACION} y ${mover("approved")} en una llamada aparte.${critico}`,
             ],
         { noHacer: [NO_CODIGO_SIN_APROBAR] },
       );

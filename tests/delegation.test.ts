@@ -273,6 +273,11 @@ describe("compuertas por delegación", () => {
     expect(ticket).toContain("aprobado explícitamente por el PO");
     expect(ticket).toMatch(/delegación DEL-\d{8}-001/);
     expect(ticket).toContain(PALABRAS);
+    // Y la aprobación queda **registrada** (R-CTRL-001): evento con la fuente `delegacion` y
+    // las palabras del PO, que es lo que el motor exige para entrar a `approved`.
+    const aprobacion = /"action": "plan-approved"[\s\S]*?"details": "((?:[^"\\]|\\.)*)"/.exec(ticket)?.[1] ?? "";
+    expect(aprobacion).toContain("delegacion");
+    expect(aprobacion).toContain("Corre la feature completa");
   });
 
   it("una REVIEW sin motivo detiene la corrida y no decide nada", async () => {

@@ -56,6 +56,7 @@ import {
   type PropositionAnswer,
 } from "../packages/gate/src/index.js";
 import { recordHumanDecision } from "../packages/server/src/gates.js";
+import { aprobarPlanEnPrueba } from "./helpers/aprobacion.js";
 import { writeFixtureTicket } from "./helpers/fixtures.js";
 
 const TICKET = "BUGFIX-POS-FILTRO-ORDENES-20260921";
@@ -131,6 +132,7 @@ function emitir(gate: string, outcome: "approve" | "block" | "review"): GateRece
 
 /** Mueve el ticket del laboratorio. */
 function mover(to: string, now?: string): void {
+  if (to === "approved") aprobarPlanEnPrueba(PATHS(), TICKET);
   transition({
     paths: PATHS(),
     ticketId: TICKET,

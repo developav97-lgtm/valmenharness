@@ -37,6 +37,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { spawnSync } from "node:child_process";
 
 import { parseTicket } from "../packages/core/src/index.js";
+import { aprobarPlanEnPrueba } from "./helpers/aprobacion.js";
 import { writeFixtureTicket } from "./helpers/fixtures.js";
 import { TEMPLATE_CRITERIOS_VACIOS } from "../packages/core/src/template.js";
 import { TOOLS, callTool } from "../packages/mcp/src/tools.js";
@@ -1170,6 +1171,11 @@ async function paso(
   nombre: string,
   args: Record<string, unknown>,
 ): Promise<void> {
+  // Entrar a `approved` exige la aprobación registrada (R-CTRL-001): la persona la registra
+  // con `valmen approve-plan` justo antes, y la prueba hace lo mismo.
+  if (nombre === "mover_ticket" && args["to"] === "approved") {
+    aprobarPlanEnPrueba(ctx.paths, String(args["id"]));
+  }
   const resultado = await callTool(ctx, nombre, args);
   expect(resultado.isError, `${nombre}: ${resultado.text}`).toBe(false);
 }

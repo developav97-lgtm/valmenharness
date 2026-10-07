@@ -123,7 +123,18 @@ export interface PlanApprovalRequest {
   readonly quote: string;
   readonly env?: Readonly<Record<string, string | undefined>>;
   readonly now?: () => Date;
+  /**
+   * La registra la corrida delegada, con las palabras del PO que quedaron en su registro.
+   *
+   * Habilita la fuente `delegacion` aunque el proyecto no la declare; no salta la barrera de
+   * sesión desatendida. La corrida delegada es la única que lo pasa: desde la línea de
+   * comandos no existe forma de pedirlo.
+   */
+  readonly viaDelegacion?: boolean;
 }
+
+/** La fuente con que la corrida delegada registra la aprobación. */
+export const FUENTE_DELEGACION = "delegacion";
 
 /**
  * Registra la aprobación del plan vigente.
@@ -148,7 +159,8 @@ export function registrarAprobacionDePlan(request: PlanApprovalRequest): void {
     fail("Aprobar un plan necesita la frase literal de quien aprueba: falta --quote.", EXIT_SCHEMA);
   }
   const fuentes = planApprovalSources(request.paths.root);
-  if (!fuentes.includes(request.source)) {
+  const porDelegacion = request.viaDelegacion === true && request.source === FUENTE_DELEGACION;
+  if (!porDelegacion && !fuentes.includes(request.source)) {
     fail(
       `La fuente «${request.source}» no está entre las que el proyecto acepta para aprobar un plan: ` +
         `${fuentes.join(", ")}. Se declaran con \`plan-approval-sources\` en .valmen/config.yaml.`,

@@ -73,6 +73,14 @@ Solo tras recibirla, registrar en `## Plan` la línea de aprobación explícita 
 ```markdown
 - Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 ```
+**La línea no basta**: el motor solo deja entrar a `approved` si hay una aprobación **registrada** —un evento con actor, fuente, frase literal y el hash del plan aprobado—. Se registra con las palabras literales de quien aprueba:
+
+```bash
+valmen approve-plan --id <ID> --actor "<nombre>" --source cli --quote "<sus palabras>"
+```
+
+Si el plan cambia después, la aprobación deja de valer y hay que registrar otra. Las fuentes aceptadas son `mission-control` y `cli`, y el proyecto las cambia con `plan-approval-sources` en `.valmen/config.yaml`; una sesión desatendida (`VALMEN_UNATTENDED`) no puede registrarla, y la corrida delegada la registra con fuente `delegacion` y las palabras del PO.
+
 Si la compuerta no se exige, registrar la razón concreta. Esa excepción **no aplica a los impactos críticos**: pasar la validación mecánica no demuestra autorización.
 
 Mover el estado con el harness, no editando el campo a mano: un salto que la tabla del contrato no permite se rechaza. Preservar el historial de aprobaciones al ajustar el plan; un cambio material necesita aprobación renovada antes de implementar.

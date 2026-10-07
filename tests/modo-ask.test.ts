@@ -41,6 +41,7 @@ import { askCommand } from "../packages/cli/src/commands.js";
 import { dispatch, parseArgs } from "../packages/cli/src/main.js";
 import { TOOLS } from "../packages/mcp/src/tools.js";
 import { toolsInMode } from "../packages/mcp/src/main.js";
+import { aprobarPlanEnPrueba } from "./helpers/aprobacion.js";
 import { writeFixtureTicket } from "./helpers/fixtures.js";
 
 let lab: string;
@@ -209,6 +210,7 @@ describe("fuera del modo pregunta", () => {
   });
 
   it("mover un estado se aplica al frontmatter del ticket", () => {
+    aprobarPlanEnPrueba(PATHS(), EXISTENTE);
     transition({ paths: PATHS(), ticketId: EXISTENTE, entity: "ticket", to: "approved" });
 
     expect(readFileSync(rutaDe(EXISTENTE), "utf8")).toContain("workflow_status: approved");

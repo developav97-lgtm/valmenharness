@@ -30,6 +30,9 @@ import { extractCriteriaSpecs } from "@valmen/gate";
 import {
   type Delegation,
   type RegistryPaths,
+  FUENTE_DELEGACION,
+  aprobacionDePlanVigente,
+  registrarAprobacionDePlan,
   addAiUsage,
   addEvidence,
   addPoint,
@@ -235,6 +238,19 @@ export async function advanceDelegated(
       if (stop !== null) return parada(paths, delegation, ticketId, stop);
       // La aprobación del plan se atribuye a la política humana —la delegación— y
       // cita sus palabras: nunca al modelo.
+      // La aprobación registrada: el motor la exige para entrar a `approved` (R-CTRL-001).
+      // Se registra con las palabras del PO que dejó la delegación, y solo si el plan vigente
+      // no tiene ya una aprobación que valga.
+      if (aprobacionDePlanVigente(parseTicket(leer(paths, ticketId))).estado !== "vigente") {
+        registrarAprobacionDePlan({
+          paths,
+          ticketId,
+          actor: delegation.actor,
+          source: FUENTE_DELEGACION,
+          quote: delegation.quote.replaceAll("\n", " "),
+          viaDelegacion: true,
+        });
+      }
       if (!hasPlanGate(parseTicket(leer(paths, ticketId)))) {
         const linea =
           `- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan), por ` +
