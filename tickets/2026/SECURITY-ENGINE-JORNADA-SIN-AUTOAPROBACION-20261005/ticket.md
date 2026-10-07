@@ -4,7 +4,7 @@ id: SECURITY-ENGINE-JORNADA-SIN-AUTOAPROBACION-20261005
 title: Retirar las aprobaciones por prompt y las transiciones ilegales de las plantillas
 type: SECURITY
 module: ENGINE
-workflow_status: planned
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -52,7 +52,7 @@ Ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan), Juan Andrade, 2026-10-06: «si apruebo los planes»; compuerta `plan` aprobada por el evaluador y registrada en su recibo.
 - Alcance: la plantilla de prompt, la barrera en código de las decisiones humanas desatendidas, la elegibilidad por aprobación registrada y la prueba que recorre las plantillas. Exclusiones: QA por política, aprobación en lote y las tandas ya agendadas.
 - Pasos ordenados:
   1. Reescribir `templates/programar/prompt-eslabon.md` sin las secciones que aprueban: preparar hasta `planned` y detenerse, ejecutar hasta `awaiting_user_tests`, y declarar que toda aprobación es de una persona o de la política del proyecto; quitar el uso de los marcadores `AUTORIZACION_*` en `scripts/programar-tickets.mjs` y mantener el resto de los marcadores.
@@ -63,13 +63,13 @@ Ninguno.
 
 ## Criterios de aceptación
 
-- [ ] Ninguna plantilla de prompt de la jornada ordena aprobar compuertas, escribir la aprobación del responsable, cerrar QA como delegado ni mover un ticket a un estado ilegal
+- [x] Ninguna plantilla de prompt de la jornada ordena aprobar compuertas, escribir la aprobación del responsable, cerrar QA como delegado ni mover un ticket a un estado ilegal
       <!-- test: npx vitest run tests/jornada-sin-autoaprobacion.test.ts -->
-- [ ] Una sesión con `VALMEN_UNATTENDED` no puede registrar una decisión humana de compuerta ni aprobar un ciclo de QA o un retest
+- [x] Una sesión con `VALMEN_UNATTENDED` no puede registrar una decisión humana de compuerta ni aprobar un ciclo de QA o un retest
       <!-- test: npx vitest run tests/jornada-sin-autoaprobacion.test.ts -->
-- [ ] La misma operación sin la marca de sesión desatendida sigue funcionando para una persona
+- [x] La misma operación sin la marca de sesión desatendida sigue funcionando para una persona
       <!-- test: npx vitest run tests/jornada-sin-autoaprobacion.test.ts -->
-- [ ] El run autónomo solo considera aprobado un plan con la aprobación registrada vigente, no uno con la línea escrita
+- [x] El run autónomo solo considera aprobado un plan con la aprobación registrada vigente, no uno con la línea escrita
       <!-- test: npx vitest run tests/jornada-sin-autoaprobacion.test.ts tests/autonomous-run.test.ts -->
 
 ## Puntos
@@ -80,11 +80,22 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+- `templates/programar/prompt-eslabon.md`: reescrita. Dice quién decide (la sesión prepara y ejecuta, nunca decide; corre como desatendida), pide solo transiciones legales —`intake → analyzed → planned` y `approved → in_progress → awaiting_user_tests`—, manda detenerse en `planned` y entrega el veredicto con opciones y efecto si una compuerta queda en REVIEW o BLOCK, y termina en `awaiting_user_tests`. Desaparecen las secciones que aprobaban compuertas con `gate-decide`, escribían la aprobación «delegada», cerraban QA con `qa-close` y pasaban a `in_qa`. Conserva los marcadores que rellena el script. `scripts/programar-tickets.mjs`: quitadas las banderas y marcadores `AUTORIZACION_*`, que ya no existen.
+- `packages/engine/src/plan-approval.ts`: `assertSesionAtendida`. Se usa en `recordHumanDecision` (`packages/server/src/gates.ts`), en `qaClose` y en `addRetest` aprobados (`packages/engine/src/append.ts`): una sesión con `VALMEN_UNATTENDED` los rechaza diciendo que esa decisión es de una persona; sin la marca siguen funcionando. La corrida delegada atendida no se ve afectada.
+- `packages/engine/src/autonomous-run.ts`: la elegibilidad `plan-approved` exige `aprobacionDePlanVigente` (la aprobación registrada con actor, fuente y hash), no la línea del plan; `promptFor` exportado.
+- Pruebas: `tests/jornada-sin-autoaprobacion.test.ts` (nuevo, 10; la guarda de plantillas detecta las siete clases de orden prohibida en la plantilla vieja y ninguna en las nuevas). `tests/helpers/fixtures.ts`: los tickets en `approved` e `in_progress` llevan por defecto el evento de aprobación registrada, con la opción `aprobacionRegistrada: false` para el caso heredado.
+- Efecto a tener en cuenta: las tandas ya agendadas en cron conservan el prompt viejo hasta reprogramarlas; reprogramarlas con la plantilla nueva es lo que quita el permiso de aprobar.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Desde la raíz del repositorio, Node 24, sin red:
+
+1. `npx vitest run tests/jornada-sin-autoaprobacion.test.ts tests/autonomous-run.test.ts tests/aprobacion-de-plan.test.ts` — esperado: todas pasan.
+2. `npx vitest run` — esperado: 182 archivos pasan y 1 omitido; 2636 pruebas pasan, 0 fallan.
+3. `npx tsc --noEmit -p tsconfig.json` — sin salida.
+4. Manual (responsable): leer `templates/programar/prompt-eslabon.md` y confirmar que ninguna instrucción aprueba, delega ni salta estados; reprogramar las tandas agendadas con la plantilla nueva.
+
+Resultado de la ejecución del agente (2026-10-06): 1–3 dieron lo esperado.
 
 ## QA
 
@@ -150,6 +161,51 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-06",
+    "at": "2026-10-07T04:12:25.125Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"si apruebo los planes\",\"planHash\":\"sha256:4f2d262b7c96b7686458090fb2f3d830d76729350a4d2532f88942fc9e681b72\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-06",
+    "at": "2026-10-07T04:12:25.449Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:4f2d262b7c96b7686458090fb2f3d830d76729350a4d2532f88942fc9e681b72."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-06",
+    "at": "2026-10-07T04:12:25.449Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-06",
+    "at": "2026-10-07T04:12:25.716Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-06",
+    "at": "2026-10-07T04:19:47.922Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
