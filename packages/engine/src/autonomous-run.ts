@@ -105,18 +105,31 @@ function riskAtMost(actual: string, maximum: string): boolean {
     RISK_ORDER.indexOf(maximum as (typeof RISK_ORDER)[number]);
 }
 
+/**
+ * Las razones de política que no dependen de la fase: tipo, riesgo y módulo. La preparación, la
+ * selección de la jornada y la cola autónoma comparten esta única lectura de la política.
+ */
+export function razonesDePolitica(
+  fields: { readonly type: string; readonly risk_level: string; readonly module: string },
+  policy: ReturnType<typeof autonomousConfig>,
+): string[] {
+  const reasons: string[] = [];
+  if (!policy.eligible.types.includes(fields.type)) reasons.push("su tipo no está habilitado");
+  if (!riskAtMost(fields.risk_level, policy.eligible.maxRisk)) {
+    reasons.push("supera el riesgo máximo");
+  }
+  if (policy.eligible.excludedModules.includes(fields.module.toLowerCase())) {
+    reasons.push("su módulo está excluido");
+  }
+  return reasons;
+}
+
 /** Razones mecánicas por las que un ticket no pertenece a la cola. */
 function ineligibility(text: string, policy: ReturnType<typeof autonomousConfig>): string[] {
   const ticket = parseTicket(text);
   const reasons: string[] = [];
   if (ticket.fields.workflow_status !== "approved") reasons.push("no está en approved");
-  if (!policy.eligible.types.includes(ticket.fields.type)) reasons.push("su tipo no está habilitado");
-  if (!riskAtMost(ticket.fields.risk_level, policy.eligible.maxRisk)) {
-    reasons.push("supera el riesgo máximo");
-  }
-  if (policy.eligible.excludedModules.includes(ticket.fields.module.toLowerCase())) {
-    reasons.push("su módulo está excluido");
-  }
+  reasons.push(...razonesDePolitica(ticket.fields, policy));
   for (const requirement of policy.eligible.require) {
     // La aprobación es un evento registrado con actor, fuente y hash (R-CTRL-001): la línea
     // escrita en el plan no la reemplaza.

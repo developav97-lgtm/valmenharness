@@ -13,7 +13,7 @@ import { join } from "node:path";
 
 import { createExecutionIdentity, parseTicket } from "@valmen/core";
 
-import { autonomousExecutorCommand, type AutonomousExecutorCommand } from "./autonomous-run.js";
+import { autonomousExecutorCommand, razonesDePolitica, type AutonomousExecutorCommand } from "./autonomous-run.js";
 import { type AutonomousStopReceipt, paradasActivas, recordAutonomousStop } from "./autonomous-stops.js";
 import { autonomousConfig, findTicket, type RegistryPaths } from "./discovery.js";
 import { recordExecutionActivity } from "./execution-activity.js";
@@ -26,6 +26,7 @@ import {
   reconcileMachineCapacity,
   releaseMachineCapacity,
 } from "./machine-capacity.js";
+import { dependenciasEnGrafos } from "./materialize.js";
 import { allDocuments } from "./mutate.js";
 import { aprobacionDePlanVigente, UNATTENDED_ENV } from "./plan-approval.js";
 import { type EntregaDeAviso } from "./journey-plan.js";
@@ -79,8 +80,6 @@ export function promptDePreparacion(ticketId: string): string {
     "No modifiques código de la aplicación, no hagas commit ni push, y no dejes ninguna decisión humana escrita por ti.",
   ].join("\n");
 }
-
-const ORDEN_DE_RIESGO = ["low", "normal", "high", "critical"];
 
 function ejecutarDeVerdad(
   comando: AutonomousExecutorCommand,
@@ -192,13 +191,7 @@ function prepararTicketInner(request: PrepararTicketRequest): ResultadoDePrepara
   const ticket = parseTicket(ubicado.text);
   const razones: string[] = [];
   if (ticket.fields.workflow_status !== "intake") razones.push("no está en intake");
-  if (!politica.eligible.types.includes(ticket.fields.type)) razones.push("su tipo no está habilitado");
-  if (ORDEN_DE_RIESGO.indexOf(ticket.fields.risk_level) > ORDEN_DE_RIESGO.indexOf(politica.eligible.maxRisk)) {
-    razones.push("supera el riesgo máximo");
-  }
-  if (politica.eligible.excludedModules.includes(ticket.fields.module.toLowerCase())) {
-    razones.push("su módulo está excluido");
-  }
+  razones.push(...razonesDePolitica(ticket.fields, politica));
   if (razones.length > 0) return no(`El ticket ${ticketId} no es elegible para preparar: ${razones.join(", ")}.`);
 
   // La preparación usa el modelo de la fase de análisis (barato donde repite); el de
@@ -267,26 +260,61 @@ function prepararTicketInner(request: PrepararTicketRequest): ResultadoDePrepara
   return { ticketId, estado: "plan-listo", detalle: "El plan está listo para aprobar; nadie lo aprobó." };
 }
 
-/** El primer ticket de la jornada que se puede preparar ahora, o `null`. */
-export function siguienteAPreparar(project: AuthorizedProject, journeyId: string): string | null {
+export interface OmitidoDePreparacion {
+  readonly ticketId: string;
+  readonly motivo: string;
+}
+
+export interface EleccionDePreparacion {
+  readonly ticketId: string | null;
+  /** Los tickets en `intake` que se saltaron antes de elegir, cada uno con su motivo. */
+  readonly omitidos: readonly OmitidoDePreparacion[];
+}
+
+/**
+ * Elige el primer ticket de la jornada que se puede preparar ahora y deja constancia de por qué
+ * se saltó cada uno de los anteriores: una parada, una política que no lo admite o una
+ * dependencia —de la jornada o del grafo de su feature— que todavía no está preparada.
+ */
+export function elegirAPreparar(project: AuthorizedProject, journeyId: string): EleccionDePreparacion {
   const jornada = readJourneys(project).find((j) => j.journeyId === journeyId);
-  if (jornada === undefined) return null;
-  const estados = new Map(
-    allDocuments(project.paths).map(({ ticket, document }) => [ticket.id, document.fields.workflow_status]),
-  );
+  if (jornada === undefined) return { ticketId: null, omitidos: [] };
+  const documentos = new Map(allDocuments(project.paths).map(({ ticket, document }) => [ticket.id, document]));
   const preparado = (id: string): boolean => {
-    const estado = estados.get(id);
+    const estado = documentos.get(id)?.fields.workflow_status;
     return estado !== undefined && estado !== "intake" && estado !== "analyzed";
   };
+  const politica = autonomousConfig(project.root);
   const ordenados = [...jornada.tickets].sort((a, b) => a.priority - b.priority || a.order - b.order);
   // Una parada no se reintenta sola: el ticket espera a que una persona la libere.
   const parados = new Set(paradasActivas(project.paths).map((parada) => parada.ticketId));
+  const omitidos: OmitidoDePreparacion[] = [];
   for (const ticket of ordenados) {
-    if (estados.get(ticket.ticketId) !== "intake") continue;
-    if (parados.has(ticket.ticketId)) continue;
-    if (ticket.dependsOn.every(preparado)) return ticket.ticketId;
+    const documento = documentos.get(ticket.ticketId);
+    if (documento?.fields.workflow_status !== "intake") continue;
+    if (parados.has(ticket.ticketId)) {
+      omitidos.push({ ticketId: ticket.ticketId, motivo: "tiene una parada activa" });
+      continue;
+    }
+    const politicas = razonesDePolitica(documento.fields, politica);
+    if (politicas.length > 0) {
+      omitidos.push({ ticketId: ticket.ticketId, motivo: `no es elegible: ${politicas.join(", ")}` });
+      continue;
+    }
+    const dependencias = new Set([...ticket.dependsOn, ...dependenciasEnGrafos(project.paths, ticket.ticketId)]);
+    const pendientes = [...dependencias].filter((dependencia) => !preparado(dependencia));
+    if (pendientes.length > 0) {
+      omitidos.push({ ticketId: ticket.ticketId, motivo: `dependencias sin preparar: ${pendientes.join(", ")}` });
+      continue;
+    }
+    return { ticketId: ticket.ticketId, omitidos };
   }
-  return null;
+  return { ticketId: null, omitidos };
+}
+
+/** El primer ticket de la jornada que se puede preparar ahora, o `null`. */
+export function siguienteAPreparar(project: AuthorizedProject, journeyId: string): string | null {
+  return elegirAPreparar(project, journeyId).ticketId;
 }
 
 export interface DespachoDePreparacion {
@@ -294,6 +322,8 @@ export interface DespachoDePreparacion {
   readonly ticketId: string | null;
   readonly resultado: ResultadoDePreparacion | null;
   readonly detalle: string;
+  /** Los tickets saltados antes de elegir, para que el avance diga por qué. */
+  readonly omitidos: readonly OmitidoDePreparacion[];
 }
 
 /** Reserva capacidad, registra la actividad y prepara el siguiente ticket de la jornada. */
@@ -309,25 +339,25 @@ export function despacharPreparacion(request: {
   const { project } = request;
   const politica = autonomousConfig(project.root);
   if (!politica.enabled || politica.executor === null) {
-    return { estado: "sin-candidato", ticketId: null, resultado: null, detalle: "La autonomía está apagada o no declara un ejecutor seguro." };
+    return { estado: "sin-candidato", ticketId: null, resultado: null, detalle: "La autonomía está apagada o no declara un ejecutor seguro.", omitidos: [] };
   }
   const capacidad = reconcileMachineCapacity({ home: request.home });
-  const ticketId = siguienteAPreparar(project, request.journeyId);
+  const { ticketId, omitidos } = elegirAPreparar(project, request.journeyId);
   if (ticketId === null) {
-    return { estado: "sin-candidato", ticketId: null, resultado: null, detalle: "No hay un ticket en intake con sus dependencias ya preparadas." };
+    return { estado: "sin-candidato", ticketId: null, resultado: null, detalle: "No hay un ticket en intake elegible y con sus dependencias ya preparadas.", omitidos };
   }
   if (capacidad.availableSlots < 1) {
-    return { estado: "sin-candidato", ticketId, resultado: null, detalle: "No hay capacidad disponible en la máquina." };
+    return { estado: "sin-candidato", ticketId, resultado: null, detalle: "No hay capacidad disponible en la máquina.", omitidos };
   }
   const tope = motivoDeTope({ project, home: request.home, politica, en: request.ahora.toISOString() });
-  if (tope !== null) return { estado: "sin-candidato", ticketId, resultado: null, detalle: tope };
+  if (tope !== null) return { estado: "sin-candidato", ticketId, resultado: null, detalle: tope, omitidos };
   const identidad = createExecutionIdentity({ projectId: project.projectId, ticketId, executionId: request.journeyId });
   const reserva = claimMachineCapacity({ home: request.home, project, identity: identidad, attemptId: request.attemptId });
   if (!reserva.granted) {
-    return { estado: "sin-candidato", ticketId, resultado: null, detalle: "La capacidad se agotó antes de iniciar." };
+    return { estado: "sin-candidato", ticketId, resultado: null, detalle: "La capacidad se agotó antes de iniciar.", omitidos };
   }
   if (!reserva.created) {
-    return { estado: "ya-despachado", ticketId, resultado: null, detalle: "La misma identidad ya conserva una reserva." };
+    return { estado: "ya-despachado", ticketId, resultado: null, detalle: "La misma identidad ya conserva una reserva.", omitidos };
   }
   const registrar = (estado: "started" | "finished" | "failed"): void => {
     recordExecutionActivity(project, {
@@ -349,7 +379,7 @@ export function despacharPreparacion(request: {
       ahora: () => request.ahora,
     });
     registrar(resultado.estado === "plan-listo" || resultado.estado === "decision-pendiente" ? "finished" : "failed");
-    return { estado: "preparado", ticketId, resultado, detalle: resultado.detalle };
+    return { estado: "preparado", ticketId, resultado, detalle: resultado.detalle, omitidos };
   } catch (error) {
     registrar("failed");
     releaseMachineCapacity({ home: request.home, project, identity: identidad, attemptId: request.attemptId });

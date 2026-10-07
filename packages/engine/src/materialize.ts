@@ -26,7 +26,7 @@
  *    todos antes de escribir el primero: crear los primeros y fallar en el quinto
  *    deja un registro a medio hacer que hay que deshacer a mano.
  */
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 import {
@@ -143,6 +143,41 @@ export function readDecomposition(
     requirements: requisitos,
     entries: vista.document.decomposition.coverage,
   };
+}
+
+/**
+ * Las dependencias que el grafo de **cualquier** feature declara para un ticket.
+ *
+ * Es el lector de la selección de la jornada, así que tolera lo que `readDecomposition` no:
+ * una feature sin `tickets.yaml`, ilegible o con huecos de cobertura no hace caer la selección,
+ * solo aporta lo que sí se puede leer.
+ */
+export function dependenciasEnGrafos(paths: RegistryPaths, ticketId: string): string[] {
+  let features: string[];
+  try {
+    features = readdirSync(featuresDir(paths.root));
+  } catch {
+    return [];
+  }
+  const dependencias = new Set<string>();
+  for (const slug of features) {
+    let texto: string;
+    try {
+      texto = readFileSync(decompositionPath(paths.root, slug), "utf8");
+    } catch {
+      continue;
+    }
+    try {
+      const vista = previewTicketsYaml(texto, []);
+      if (vista === null) continue;
+      for (const ticket of decompositionTickets(vista.document.decomposition)) {
+        if (ticket.id === ticketId) ticket.dependsOn.forEach((dependencia) => dependencias.add(dependencia));
+      }
+    } catch {
+      continue;
+    }
+  }
+  return [...dependencias];
 }
 
 /**
