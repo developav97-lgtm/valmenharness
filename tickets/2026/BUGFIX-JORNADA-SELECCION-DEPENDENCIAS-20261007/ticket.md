@@ -4,7 +4,7 @@ id: BUGFIX-JORNADA-SELECCION-DEPENDENCIAS-20261007
 title: La jornada despacha tickets no elegibles y con dependencias sin cerrar
 type: BUGFIX
 module: JORNADA
-workflow_status: qa_approved
+workflow_status: closed
 qa_status: approved
 release_status: unreleased
 user_visible: false
@@ -252,7 +252,19 @@ Hallazgos del 2026-10-07 al correr `valmen journey advance --project valmen-harn
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-07",
+    "technical_summary": "La elección de qué ticket prepara o despacha la jornada ahora aplica la política de autonomía (tipo, riesgo, módulo, función compartida razonesDePolitica) antes de reservar nada, salta los no elegibles y los reporta como omitidos en el avance. La selección suma a las dependencias de la jornada las que declara el tickets.yaml de cualquier feature (lector tolerante dependenciasEnGrafos) y bloquea todo lo que no esté en closed. Nueva razón de selección «eligibility», solo para el despachador y con la autonomía encendida.",
+    "functional_summary": "El avance de la jornada ya no se detiene en un ticket que la política no admite: lo salta, sigue con el siguiente elegible y dice por qué omitió cada uno. Tampoco despacha un ticket cuya dependencia, esté o no en la jornada, siga sin cerrar.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "Queda unreleased; no hay publicación asociada."
+  }
+]
 ```
 
 ## Consumo de IA
@@ -273,6 +285,21 @@ Hallazgos del 2026-10-07 al correr `valmen journey advance --project valmen-harn
     "source": "claude:local_46d2e259-126b-4801-ba52-2030ab09f45d",
     "confidence": "medium",
     "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-07",
+    "session_reference": "59bd3b9c-cba5-4dfd-b763-3b4f4ae065f2",
+    "model": "anthropic/claude-sonnet-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 45 intervención(es) sobre el registro, 7 con fallo. 38 de 115 mensajes tocaron el registro. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 18872197 tokens. Sesión \"Corregir selección de la jornada: saltar no elegibles y respetar dependencias\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 165661,
+    "output_tokens": 53289,
+    "total_tokens": 218950,
+    "estimated_cost_usd": null,
+    "source": "claude:59bd3b9c-cba5-4dfd-b763-3b4f4ae065f2",
+    "confidence": "high",
+    "id": "CONSUMO-002"
   }
 ]
 ```
@@ -518,6 +545,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-027",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:09:46.734Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-028",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:09:46.838Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-029",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:10:06.302Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
