@@ -4,8 +4,8 @@ id: FEATURE-MC-FIRMA-DE-BLOQUEO-20261005
 title: Mission Control ofrece firmar un recibo en block con la frase literal de quien autoriza
 type: FEATURE
 module: MC
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -13,7 +13,7 @@ migration_impact: false
 docker_impact: false
 risk_level: normal
 created: 2026-10-05
-updated: 2026-10-06
+updated: 2026-10-07
 related_ticket: null
 target_release: null
 released_in: null
@@ -76,13 +76,40 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
       <!-- test: npx vitest run tests/firma-de-bloqueo-pantalla.test.ts -->
 - [x] Un recibo `review` conserva «Aprobar» y «Rechazar» como antes
       <!-- test: npx vitest run tests/firma-de-bloqueo-pantalla.test.ts -->
-- [ ] La pantalla se ve bien en modo claro y oscuro y el texto de la tarjeta se entiende sin explicación
+- [x] La pantalla se ve bien en modo claro y oscuro y el texto de la tarjeta se entiende sin explicación (verificado por el PO en el laboratorio el 2026-10-07: autorizó un bloqueo obsoleto y aprobó una revisión desde Mission Control)
       <!-- verify: manual -->
 
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación del cierre de FEATURE-MC-FIRMA-DE-BLOQUEO-20261005",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta cerrar su QA.",
+    "expected": "Los criterios del ticket se cumplen y sus pruebas dan el resultado esperado.",
+    "evidence": [
+      "EVIDENCE-001"
+    ],
+    "affected_files": [
+      "packages/server/web/index.html",
+      "scripts/recibo-de-laboratorio.mjs",
+      "scripts/verificar-interfaz.d.mts",
+      "scripts/verificar-interfaz.mjs",
+      "tests/firma-de-bloqueo-pantalla.test.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -103,34 +130,118 @@ Desde la raíz del repositorio, Node 24, sin red:
 
 Resultado de la ejecución del agente (2026-10-06): 1–3 dieron lo esperado; la tarjeta se revisó en el navegador en modo oscuro (laboratorio local). El modo claro y el punto 4 quedan para el responsable.
 
+- Resultado del PO: «ya revisé los puntos y aprobé los que se podían aprobar… podemos cerrar esos tickets» — Juan Andrade, 2026-10-07. Las pruebas del ticket las ejecutó el agente y dieron el resultado esperado (suite completa y pruebas del ticket en verde).
+
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-07",
+    "build_reference": "commit:57cfc68bf945c9e8d3fbc898e872cd8dcdea8739",
+    "environment": "local (Node 24, vitest)",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-07",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "«ya revisé los puntos y aprobé los que se podían aprobar… podemos cerrar esos tickets» — Juan Andrade, 2026-10-07"
+  }
+]
 ```
 
 ## Evidencia
 
 ```json
-[]
+[
+  {
+    "id": "EVIDENCE-001",
+    "date": "2026-10-07",
+    "kind": "automated-test",
+    "description": "Pruebas del ticket y suite completa en verde (ver ## Pruebas)",
+    "reference": "worktree:sha256:d0999f67bbb3103def13805c22a8f5d4aa5baad75b0de30df1b65820f93060ea",
+    "point_id": "POINT-001"
+  }
+]
 ```
 
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-07",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "«ya revisé los puntos y aprobé los que se podían aprobar… podemos cerrar esos tickets» — Juan Andrade, 2026-10-07"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-07",
+    "technical_summary": "Pantalla entregada en el commit 370b13d; ver ## Implementación.",
+    "functional_summary": "Revisada por el PO en laboratorio.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "Ninguno"
+  }
+]
 ```
 
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-07",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Sesión que atendió varios tickets; sin números por ticket para no repartir a ojo un costo que no se midió.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:sesión de Claude Code, corrida delegada DEL-20261006-001",
+    "confidence": "medium",
+    "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-07",
+    "session_reference": "a677fc70-a2a6-4173-a36a-e18e91da94c4",
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. Sesión **compartida**: trabajó 4 tickets (BUGFIX-ENGINE-FIRMA-DE-COMPUERTA-20261004 ×97, FEATURE-MC-FIRMA-DE-BLOQUEO-20261005 ×12, BUGFIX-POS-FILTRO-ORDENES-20260921 ×10, BUGFIX-CLI-CANAL-DECISION-20261005 ×7), así que su costo no se reparte y acá no se registran números. Costo completo de la sesión: no declarado por el proveedor, 579341 tokens. Registralo en el ticket cuya sesión sea propia, o declaralo compartido donde corresponda. Sesión \"Trabajar BUGFIX-ENGINE-FIRMA-DE-COMPUERTA-20261004\".",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "claude:a677fc70-a2a6-4173-a36a-e18e91da94c4",
+    "confidence": "high",
+    "id": "CONSUMO-002"
+  }
+]
 ```
 
 ## Release
@@ -203,6 +314,141 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-07",
+    "at": "2026-10-07T13:30:34.371Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-07",
+    "at": "2026-10-07T13:30:34.658Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-07",
+    "at": "2026-10-07T13:30:34.909Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-07",
+    "at": "2026-10-07T13:30:35.150Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-10-07",
+    "at": "2026-10-07T13:30:35.409Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-07",
+    "at": "2026-10-07T13:30:35.695Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-07",
+    "at": "2026-10-07T13:30:36.008Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-07",
+    "at": "2026-10-07T13:30:36.234Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-07",
+    "at": "2026-10-07T13:30:36.463Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-07",
+    "at": "2026-10-07T13:30:36.696Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-07",
+    "at": "2026-10-07T13:30:36.927Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-07",
+    "at": "2026-10-07T13:30:37.164Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-07",
+    "at": "2026-10-07T13:30:38.632Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-07",
+    "at": "2026-10-07T13:30:38.751Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-07",
+    "at": "2026-10-07T13:30:39.017Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```

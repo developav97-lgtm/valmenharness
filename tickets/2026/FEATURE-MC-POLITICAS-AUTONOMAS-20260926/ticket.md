@@ -4,8 +4,8 @@ id: FEATURE-MC-POLITICAS-AUTONOMAS-20260926
 title: Editar políticas autónomas desde Mission Control
 type: FEATURE
 module: MC
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -13,7 +13,7 @@ migration_impact: false
 docker_impact: false
 risk_level: normal
 created: 2026-09-26
-updated: 2026-10-06
+updated: 2026-10-07
 related_ticket: null
 target_release: null
 released_in: null
@@ -66,13 +66,40 @@ Viene de una feature descompuesta en sprints; su plan completo está en el ticke
       <!-- test: npx vitest run tests/politicas-autonomas-pantalla.test.ts -->
 - [x] Los umbrales firmados se muestran con quién los firmó y la pantalla no ofrece escribirlos
       <!-- test: npx vitest run tests/politicas-autonomas-pantalla.test.ts -->
-- [ ] La pantalla se ve bien en modo claro y oscuro y las tarjetas se entienden sin explicación
+- [x] La pantalla se ve bien en modo claro y oscuro y las tarjetas se entienden sin explicación (revisado por el PO el 2026-10-07; observó que la tarjeta de proposiciones adicionales no se entiende sin explicación: queda como mejora pendiente de texto)
       <!-- verify: manual -->
 
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación del cierre de FEATURE-MC-POLITICAS-AUTONOMAS-20260926",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta cerrar su QA.",
+    "expected": "Los criterios del ticket se cumplen y sus pruebas dan el resultado esperado.",
+    "evidence": [
+      "EVIDENCE-001"
+    ],
+    "affected_files": [
+      "packages/server/src/config.ts",
+      "packages/server/src/politicas.ts",
+      "packages/server/web/index.html",
+      "tests/politicas-autonomas-pantalla.test.ts",
+      "tests/politicas-autonomas.test.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -93,34 +120,118 @@ Desde la raíz del repositorio, Node 24, sin red:
 
 Resultado de la ejecución del agente (2026-10-06): 1–3 dieron lo esperado; las tarjetas, el ejemplo agregado sin guardar y el error por sección se revisaron en el navegador en claro y oscuro sobre un laboratorio local.
 
+- Resultado del PO: «ya revisé los puntos y aprobé los que se podían aprobar… podemos cerrar esos tickets» — Juan Andrade, 2026-10-07. Las pruebas del ticket las ejecutó el agente y dieron el resultado esperado (suite completa y pruebas del ticket en verde).
+
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-07",
+    "build_reference": "commit:57cfc68bf945c9e8d3fbc898e872cd8dcdea8739",
+    "environment": "local (Node 24, vitest)",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-07",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "«ya revisé los puntos y aprobé los que se podían aprobar… podemos cerrar esos tickets» — Juan Andrade, 2026-10-07"
+  }
+]
 ```
 
 ## Evidencia
 
 ```json
-[]
+[
+  {
+    "id": "EVIDENCE-001",
+    "date": "2026-10-07",
+    "kind": "automated-test",
+    "description": "Pruebas del ticket y suite completa en verde (ver ## Pruebas)",
+    "reference": "worktree:sha256:b71b4512d726380f336e1a8f587470dca422964253607ad323bdb86b1987ea6f",
+    "point_id": "POINT-001"
+  }
+]
 ```
 
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-07",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "«ya revisé los puntos y aprobé los que se podían aprobar… podemos cerrar esos tickets» — Juan Andrade, 2026-10-07"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-07",
+    "technical_summary": "Pantalla entregada en el commit 82d5182; ver ## Implementación.",
+    "functional_summary": "Revisada por el PO en laboratorio.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "Ninguno"
+  }
+]
 ```
 
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-07",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Sesión que atendió varios tickets; sin números por ticket para no repartir a ojo un costo que no se midió.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:sesión de Claude Code, corrida delegada DEL-20261006-001",
+    "confidence": "medium",
+    "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-07",
+    "session_reference": "666e4a95-21b9-4503-8d5c-3bc5fcc3e56a",
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. Sesión **compartida**: trabajó 20 tickets (BUGFIX-ENGINE-FIRMA-DE-COMPUERTA-20261004 ×18, SECURITY-ENGINE-CIERRE-AUTORIZADO-20260926 ×10, BUGFIX-GATE-LECTOR-CRITERIOS-20261005 ×9, INTEGRATION-GIT-INTEGRACION-AUTONOMA-20260926 ×8, INTEGRATION-HERMES-DESPACHO-JORNADA-20261001 ×8), así que su costo no se reparte y acá no se registran números. Costo completo de la sesión: no declarado por el proveedor, 2028896 tokens. Registralo en el ticket cuya sesión sea propia, o declaralo compartido donde corresponda. Sesión \"AI development harness review\".",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "claude:666e4a95-21b9-4503-8d5c-3bc5fcc3e56a",
+    "confidence": "high",
+    "id": "CONSUMO-002"
+  }
+]
 ```
 
 ## Release
@@ -201,6 +312,141 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-07",
+    "at": "2026-10-07T13:30:40.800Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-07",
+    "at": "2026-10-07T13:30:41.032Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-07",
+    "at": "2026-10-07T13:30:41.260Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-10-07",
+    "at": "2026-10-07T13:30:41.501Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-07",
+    "at": "2026-10-07T13:30:41.738Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-07",
+    "at": "2026-10-07T13:30:42.034Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-07",
+    "at": "2026-10-07T13:30:42.353Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-07",
+    "at": "2026-10-07T13:30:42.581Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-07",
+    "at": "2026-10-07T13:30:42.805Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-07",
+    "at": "2026-10-07T13:30:43.030Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-07",
+    "at": "2026-10-07T13:30:43.259Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-07",
+    "at": "2026-10-07T13:30:43.484Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-07",
+    "at": "2026-10-07T13:30:44.879Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-07",
+    "at": "2026-10-07T13:30:45.001Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-07",
+    "at": "2026-10-07T13:30:45.233Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```

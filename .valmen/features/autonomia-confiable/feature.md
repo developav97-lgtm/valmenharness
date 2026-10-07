@@ -2,9 +2,9 @@
 schema_version: 2
 id: autonomia-confiable
 title: Autonomía confiable: compuertas precisas, control en código y jornadas con QA por agente
-state: decomposed
+state: complete
 created: 2026-10-05
-updated: 2026-10-05
+updated: 2026-10-07
 ---
 
 # Autonomía confiable: compuertas precisas, control en código y jornadas con QA por agente
