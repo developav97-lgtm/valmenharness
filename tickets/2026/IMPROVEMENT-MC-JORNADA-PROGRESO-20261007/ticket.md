@@ -4,7 +4,7 @@ id: IMPROVEMENT-MC-JORNADA-PROGRESO-20261007
 title: Mostrar en Jornadas el avance real de cada ticket y la próxima pasada
 type: IMPROVEMENT
 module: MC
-workflow_status: planned
+workflow_status: approved
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -62,7 +62,7 @@ Las seis fases que nombra el pedido no existen como campo: se traducen a `workfl
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente de la aprobación explícita del PO; la aprobación del plan resuelve también los dos puntos de `### Supuestos y decisiones pendientes` (mapeo de «entregado» y próxima pasada estimada).
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan); la aprobación resuelve los dos puntos de «Supuestos y decisiones pendientes».
 - Alcance y exclusiones: proyección de fase por ticket, registro y lectura de pasadas, y la vista Jornadas. No se tocan `packages/engine/src/journey-advance.ts`, el despacho, la selección, el disparador generado, el plist instalado ni `.valmen/config.yaml`.
 - Dependencias: implementar después de que BUGFIX-CLI-JORNADA-AVANCE-AUTONOMO-20261007 integre su cambio en `journeyAdvanceCommand`.
 - Pasos ordenados (TDD: la prueba que falla va antes de cada cambio; responsable, la sesión de implementación):
@@ -203,6 +203,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-07",
+    "at": "2026-10-07T22:02:23.338Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"A (resuelve los dos supuestos del ticket: el mapeo de entregado y la próxima pasada estimada)\",\"planHash\":\"sha256:4d9e0ad187e04e17b05381a1df3b3621000524ff9f8cb83dae1e1cacdc2d341b\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-07",
+    "at": "2026-10-07T22:02:23.692Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:4d9e0ad187e04e17b05381a1df3b3621000524ff9f8cb83dae1e1cacdc2d341b."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-07",
+    "at": "2026-10-07T22:02:23.692Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
   }
 ]
 ```
