@@ -4,7 +4,7 @@ id: FEATURE-MC-PERFILES-MODELOS-20261007
 title: Crear, editar y elegir perfiles desde Mission Control
 type: FEATURE
 module: MC
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -99,39 +99,39 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1 (R-PERF-002): `GET /api/perfiles` sin archivo de perfiles devuelve los tres incorporados y ninguna elección
+- [x] C1 (R-PERF-002): `GET /api/perfiles` sin archivo de perfiles devuelve los tres incorporados y ninguna elección
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-002 API lista sin archivo" -->
-- [ ] C2 (R-PERF-002): `GET /api/perfiles` devuelve los perfiles del proyecto con origen `proyecto` y la elección guardada
+- [x] C2 (R-PERF-002): `GET /api/perfiles` devuelve los perfiles del proyecto con origen `proyecto` y la elección guardada
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-002 API lista con archivo" -->
-- [ ] C3 (R-PERF-002): `PUT /api/perfiles` con `base` y un rol cambiado guarda un perfil que conserva los demás roles de la base
+- [x] C3 (R-PERF-002): `PUT /api/perfiles` con `base` y un rol cambiado guarda un perfil que conserva los demás roles de la base
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-002 API crea a partir de otro" -->
-- [ ] C4 (R-PERF-002): guardar un perfil con un id que no es kebab-case se rechaza sin escribir el archivo de perfiles
+- [x] C4 (R-PERF-002): guardar un perfil con un id que no es kebab-case se rechaza sin escribir el archivo de perfiles
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-002 API id inválido" -->
-- [ ] C5 (R-PERF-003): `PUT /api/perfiles` con un modelo ausente del catálogo responde `ok: false` con un error que nombra el rol y el modelo
+- [x] C5 (R-PERF-003): `PUT /api/perfiles` con un modelo ausente del catálogo responde `ok: false` con un error que nombra el rol y el modelo
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-002 API modelo inexistente" -->
-- [ ] C6 (R-PERF-002): `PUT /api/perfiles` sobre un perfil del proyecto existente reemplaza sus modelos
+- [x] C6 (R-PERF-002): `PUT /api/perfiles` sobre un perfil del proyecto existente reemplaza sus modelos
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-002 API edita" -->
-- [ ] C7 (R-PERF-002): `PUT /api/perfiles/seleccion` sin ejecutor deja el perfil elegido para el proyecto
+- [x] C7 (R-PERF-002): `PUT /api/perfiles/seleccion` sin ejecutor deja el perfil elegido para el proyecto
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-002 API elige para el proyecto" -->
-- [ ] C8 (R-PERF-002): `PUT /api/perfiles/seleccion` con `ejecutor: "hermes"` elige para Hermes sin cambiar la elección del proyecto
+- [x] C8 (R-PERF-002): `PUT /api/perfiles/seleccion` con `ejecutor: "hermes"` elige para Hermes sin cambiar la elección del proyecto
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-002 API elige por ejecutor" -->
-- [ ] C9 (R-PERF-002): `PUT /api/perfiles` y `PUT /api/perfiles/seleccion` con cuerpo mal formado responden 400 sin escribir
+- [x] C9 (R-PERF-002): `PUT /api/perfiles` y `PUT /api/perfiles/seleccion` con cuerpo mal formado responden 400 sin escribir
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-002 API cuerpo mal formado" -->
-- [ ] C10 (R-PERF-002): la vista Modelos muestra una fila por perfil con su origen
+- [x] C10 (R-PERF-002): la vista Modelos muestra una fila por perfil con su origen
       <!-- test: npx vitest run tests/perfiles-pantalla.test.ts -t "R-PERF-002 pantalla lista" -->
-- [ ] C11 (R-PERF-002): la vista marca el perfil elegido para el proyecto y el elegido para cada ejecutor
+- [x] C11 (R-PERF-002): la vista marca el perfil elegido para el proyecto y el elegido para cada ejecutor
       <!-- test: npx vitest run tests/perfiles-pantalla.test.ts -t "R-PERF-002 pantalla marca la elección" -->
-- [ ] C12 (R-PERF-002): cambiar el perfil del proyecto en la vista llama a `PUT /api/perfiles/seleccion` con ese perfil
+- [x] C12 (R-PERF-002): cambiar el perfil del proyecto en la vista llama a `PUT /api/perfiles/seleccion` con ese perfil
       <!-- test: npx vitest run tests/perfiles-pantalla.test.ts -t "R-PERF-002 pantalla elige" -->
-- [ ] C13 (R-PERF-002): «Crear a partir de este» abre un editor con los modelos de la base y al guardar llama a `PUT /api/perfiles` con esa base
+- [x] C13 (R-PERF-002): «Crear a partir de este» abre un editor con los modelos de la base y al guardar llama a `PUT /api/perfiles` con esa base
       <!-- test: npx vitest run tests/perfiles-pantalla.test.ts -t "R-PERF-002 pantalla crea" -->
-- [ ] C14 (R-PERF-002): los perfiles incorporados no ofrecen «Editar»
+- [x] C14 (R-PERF-002): los perfiles incorporados no ofrecen «Editar»
       <!-- test: npx vitest run tests/perfiles-pantalla.test.ts -t "R-PERF-002 pantalla incorporados" -->
-- [ ] C15 (R-PERF-003): un guardado rechazado muestra cada error con el rol y el modelo y deja el editor abierto
+- [x] C15 (R-PERF-003): un guardado rechazado muestra cada error con el rol y el modelo y deja el editor abierto
       <!-- test: npx vitest run tests/perfiles-pantalla.test.ts -t "R-PERF-002 pantalla rechazo" -->
-- [ ] C16 (R-PERF-002): si `GET /api/perfiles` trae `error`, la sección lo muestra y la tabla de roles se sigue pintando
+- [x] C16 (R-PERF-002): si `GET /api/perfiles` trae `error`, la sección lo muestra y la tabla de roles se sigue pintando
       <!-- test: npx vitest run tests/perfiles-pantalla.test.ts -t "R-PERF-002 pantalla archivo ilegible" -->
-- [ ] C17: el recorrido de todas las vistas de Mission Control termina sin fallos
+- [x] C17: el recorrido de todas las vistas de Mission Control termina sin fallos
       <!-- test: node scripts/verificar-interfaz.mjs -->
 - [ ] C18: en el navegador se crea, edita y elige un perfil sobre un proyecto de prueba y el archivo de perfiles (`perfilesPath`) refleja cada paso
       <!-- verify: manual -->
@@ -146,11 +146,29 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+Se implementó el plan aprobado sin salirse de él:
+
+- `packages/adapter/src/routing.ts`: `ID_DE_PERFIL` se exporta (sin renombrar).
+- `packages/server/src/routing.ts`: `guardarPerfil` rechaza, antes de consultar el catálogo y sin escribir, un id que no es kebab-case (C4).
+- `packages/server/src/server.ts`: `GET /api/perfiles`, `PUT /api/perfiles` y `PUT /api/perfiles/seleccion` en `handleApi`, delegando en `listarPerfiles`, `derivarPerfil`, `guardarPerfil` y `elegirPerfil`; un `profiles.yaml` ilegible devuelve `200` con `error` y los incorporados; cuerpo mal formado o `base` inexistente, `400`.
+- `packages/server/web/index.html`: sección «Perfiles» (`seccionPerfiles`) en `vistaModelos`, antes de «Preset»: filas con origen y marcas de elección, selectores de elección por proyecto y por ejecutor, «Crear a partir de este», «Editar» solo en los del proyecto y editor con «Guardar el perfil» que muestra los errores tal como llegan. Estilos con variables existentes.
+- `scripts/verificar-interfaz.mjs`: respuesta simulada de `/api/perfiles`.
+- Pruebas: `tests/routing.test.ts` (`describe("la API de perfiles")`, 10 casos) y `tests/perfiles-pantalla.test.ts` (8 casos).
+
+Fuera de lo planeado, nada. Se añadieron además dos casos extra a los criterios (archivo ilegible en la API y elección por ejecutor en la pantalla).
 
 ## Pruebas
 
-Pendiente de ejecución.
+Ejecutadas el 2026-10-07 en `/Users/juanandrade/Desktop/ValmenHarness` (Node 24, sin red):
+
+- `npx vitest run tests/routing.test.ts tests/perfiles-pantalla.test.ts -t "R-PERF-002"` → 29 casos en verde.
+- `npx vitest run tests/routing.test.ts` → 73 en verde.
+- `node scripts/verificar-interfaz.mjs` → «Interfaz verificada», 11 vistas.
+- `revisar_presentacion` → sin colores fijos.
+- `npx vitest run` (C19) → **no queda en verde por motivos ajenos al ticket**: 13 archivos / 54 casos fallan (api-rutas, autorizacion-*-canales, delegation, firma-de-compuerta, gate-human-decision, gate-view, hermes-notify, jornada-sin-autoaprobacion, mcp-server, qa-commit-referencia, qa-por-politica, qa-sombra). Con los cambios del ticket guardados con `git stash` fallan exactamente los mismos 54 (13 archivos), así que no los introduce este ticket. Esas pruebas escriben en el repositorio real (comentarios en `.valmen/config.yaml`, `.valmen/approval/`, `.valmen/qa/`); se revirtió ese efecto.
+- C18 (navegador) queda para el responsable.
+
+Contrato de entrega: directorio `/Users/juanandrade/Desktop/ValmenHarness`; comandos de arriba; manual: abrir Modelos, crear `mi-perfil` a partir de `claude-code-completo` cambiando `agent-implementation` a `codex`/`gpt-6-sol`, guardarlo, ver el rechazo con un modelo inventado, elegirlo para el proyecto y `codex-completo` para `hermes`, y comprobar el archivo de perfiles de un proyecto de prueba (no de este repositorio).
 
 ## QA
 
@@ -243,6 +261,24 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:40:29.105Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:49:29.858Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
