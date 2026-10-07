@@ -4,7 +4,7 @@ id: SECURITY-MC-AUTORIZACION-QA-20261005
 title: Crear y revocar autorizaciones desde Mission Control y enlace firmado
 type: SECURITY
 module: MC
-workflow_status: planned
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -52,7 +52,7 @@ Ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 - Alcance: Mission Control (lista, crear, revocar) y el código firmado de un solo uso para la autorización de QA por agente, sin herramienta MCP de escritura. Exclusiones: la elegibilidad, la compuerta `qa-agent`, el cierre por política y cualquier cambio a las reglas de `crearAutorizacion`.
 - Pasos ordenados:
   1. Crear `packages/engine/src/qa-authorization-link.ts` con `SUJETO_AUTORIZACION_QA = "qa-authorization"`, `hashDeTerminos(terminos)` (JSON canónico de tipos, módulos, riesgo máximo, cupo y días), `emitirCodigoDeAutorizacion({ paths, secret, terminos, ahora })` con `mintApproval` (vale 24 horas, registra el emitido con `appendApproval`) y `canjearCodigoDeAutorizacion({ paths, secret, codigo, actor, quote, ahora, env })`, que verifica firma y vigencia, compara el hash de los términos, rechaza un código ya consumido, llama a `crearAutorizacion` con la fuente `enlace-firmado` y solo después anexa `approval-consumed`. Agregar `revocarCodigoDeAutorizacion({ paths, codigo, actor, ahora })`, que anexa `approval-consumed` con decisión `reject` y hace que un código emitido y no canjeado deje de servir desde ese momento. Exportarlo desde `packages/engine/src/index.ts` (archivo del motor que ya reexporta cada módulo).
@@ -65,15 +65,15 @@ Ninguno.
 
 ## Criterios de aceptación
 
-- [ ] Desde Mission Control una persona crea una autorización con tipos, módulos, riesgo máximo, cupo, vigencia y frase literal, y la ve listada con su estado
+- [x] Desde Mission Control una persona crea una autorización con tipos, módulos, riesgo máximo, cupo, vigencia y frase literal, y la ve listada con su estado
       <!-- test: npx vitest run tests/autorizacion-qa-canales.test.ts -->
-- [ ] Crear o revocar por HTTP exige el token fuera de la máquina local, y se rechaza en una sesión desatendida o con la frase literal vacía
+- [x] Crear o revocar por HTTP exige el token fuera de la máquina local, y se rechaza en una sesión desatendida o con la frase literal vacía
       <!-- test: npx vitest run tests/autorizacion-qa-canales.test.ts -->
-- [ ] El código firmado se canjea una sola vez, vale 24 horas, se invalida si cambia un término y solo sirve si `enlace-firmado` está declarada
+- [x] El código firmado se canjea una sola vez, vale 24 horas, se invalida si cambia un término y solo sirve si `enlace-firmado` está declarada
       <!-- test: npx vitest run tests/autorizacion-qa-canales.test.ts -->
-- [ ] No existe herramienta MCP que cree, amplíe ni revoque una autorización, y el CLI la rechaza en una ejecución desatendida
+- [x] No existe herramienta MCP que cree, amplíe ni revoque una autorización, y el CLI la rechaza en una ejecución desatendida
       <!-- test: npx vitest run tests/autorizacion-qa-canales.test.ts tests/autorizacion-qa.test.ts -->
-- [ ] Revocar una autorización vale desde ese momento, y un código emitido y revocado antes de canjearse deja de servir
+- [x] Revocar una autorización vale desde ese momento, y un código emitido y revocado antes de canjearse deja de servir
       <!-- test: npx vitest run tests/autorizacion-qa-canales.test.ts -->
 - [ ] El panel de Mission Control se ve y funciona en modo claro y oscuro
       <!-- verify: manual -->
@@ -86,11 +86,18 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+- `packages/engine/src/qa-authorization-link.ts` (nuevo): código firmado de un solo uso (24 h) con los términos congelados en las claims (`emitirCodigoDeAutorizacion`), canje que verifica firma, vigencia, uso previo y hash de términos y llama a `crearAutorizacion` con la fuente `enlace-firmado` (solo si el proyecto la declara) y consume el código después; `revocarCodigoDeAutorizacion`. Registro propio `.valmen/qa/links.jsonl`, append-only, separado del de aprobaciones de planes para que ningún vigilante lo trate como pendiente.
+- `packages/server/src/qa-autorizaciones.ts` (nuevo) y `server.ts`: `GET/POST /api/qa/authorizations` y `POST /api/qa/authorizations/revoke`, con la fuente `mission-control`; la frase literal nunca puede ir vacía; el token de escritura lo exige el despacho existente y el motor rechaza una sesión desatendida.
+- `packages/server/web/index.html`: panel «Autorización de QA por agente» en Configuración (lista con estado, formulario con todos los términos y la frase, botón de revocar que pide la frase), solo con variables de color del tema.
+- `packages/cli/src/commands.ts` y `main.ts`: `qa-authorize link`, `redeem` y `revoke-code`; rechazados en una sesión desatendida. La fuente `enlace-firmado` ya era un nombre válido en `qa-authorization-sources` y no se agrega al defecto (`cli`, `mission-control`).
+- `tests/autorizacion-qa-canales.test.ts`: servidor real, sin token, desatendido, sin frase, código de un solo uso, vencido, alterado, revocado, fuente no declarada y que el MCP no escribe.
 
 ## Pruebas
 
-Pendiente de ejecución.
+- Directorio: raíz del repositorio. `npx vitest run tests/autorizacion-qa-canales.test.ts tests/autorizacion-qa.test.ts` → pruebas pasan (16 y las existentes).
+- Suite completa: `npx vitest run` → 188 archivos, 2743 pruebas pasan, 48 omitidas. `npx tsc --noEmit -p tsconfig.json` y `npx eslint` sin errores; `valmen secrets` sin hallazgos.
+- Visual (hecho por el agente en el navegador, claro y oscuro): crear y listar una autorización en Configuración. Manual (responsable): abrir Mission Control, Configuración → «Autorización de QA por agente»; crear una, revocarla con su frase, y emitir/canjear un código con `valmen qa-authorize link` y `redeem` (declarar `enlace-firmado` en `qa-authorization-sources`).
+<!-- verify: manual -->
 
 ## QA
 
@@ -165,6 +172,51 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-06",
+    "at": "2026-10-07T04:49:01.343Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"La A\",\"planHash\":\"sha256:54a915df90ba439b32b3b79fa7aeed7171fc159a8e5e4e7c9c25c6c0c2d85a75\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-06",
+    "at": "2026-10-07T04:49:06.304Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:54a915df90ba439b32b3b79fa7aeed7171fc159a8e5e4e7c9c25c6c0c2d85a75."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-06",
+    "at": "2026-10-07T04:49:06.304Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-06",
+    "at": "2026-10-07T04:49:06.548Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-06",
+    "at": "2026-10-07T04:58:35.432Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
