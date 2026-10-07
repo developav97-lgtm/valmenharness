@@ -17,7 +17,7 @@ sprints:
     goal: "Un ticket elegible con la compuerta en approve se aprueba solo, atribuido a la autorización, con elegibilidad decidida en código y visible."
     tickets:
       - id: FEATURE-ENGINE-ELEGIBILIDAD-APROBACION-20261007
-        title: "Decidir en código la elegibilidad: tipos declarados incl. SYNC, INTEGRATION y AGENT, impactos explícitos, nunca SECURITY, block ni despliegue"
+        title: "Decidir en código la elegibilidad con los tipos declarados (incluye SYNC, INTEGRATION y AGENT), impactos explícitos y sin SECURITY, block ni despliegue"
         depends_on:
           - SECURITY-ENGINE-AUTORIZACION-APROBACION-20261007
       - id: SECURITY-ENGINE-APROBACION-POR-AUTORIZACION-20261007
