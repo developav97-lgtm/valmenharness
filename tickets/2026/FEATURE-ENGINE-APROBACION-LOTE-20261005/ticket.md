@@ -4,7 +4,7 @@ id: FEATURE-ENGINE-APROBACION-LOTE-20261005
 title: Aprobar planes en lote desde Telegram con enlace firmado
 type: FEATURE
 module: ENGINE
-workflow_status: planned
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -52,7 +52,7 @@ Ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan), Juan Andrade, 2026-10-06: «si apruebo los planes»; compuerta `plan` aprobada por el evaluador y registrada en su recibo.
 - Alcance: tokens de aprobación de plan y de lote, su emisión por jornada, su consumo con registro según R-CTRL-001 y el aviso por Telegram. Exclusiones: ejecución, despliegues, riesgo alto o crítico y tickets de seguridad.
 - Pasos ordenados:
   1. En `packages/engine/src/approval.ts` agregar los claims de plan (`planHash` y la clase de sujeto `plan`) y las funciones `mintPlanApproval` y `verifyPlanApproval`: el token cubre ticket y hash del plan, se rechaza para tickets que `motivoDeTecho` excluye y para tipo `SECURITY`, conserva el nonce, el uso único y el registro append-only; los tokens antiguos se verifican como hasta ahora.
@@ -64,15 +64,15 @@ Ninguno.
 
 ## Criterios de aceptación
 
-- [ ] Tres planes listos emiten un código por plan y uno de lote en un solo mensaje
+- [x] Tres planes listos emiten un código por plan y uno de lote en un solo mensaje
       <!-- test: npx vitest run tests/aprobacion-de-lote.test.ts -->
-- [ ] Aprobar el lote registra una aprobación por ticket con fuente `token` y la frase de quien aprueba, y cada ticket queda elegible para ejecutar
+- [x] Aprobar el lote registra una aprobación por ticket con fuente `token` y la frase de quien aprueba, y cada ticket queda elegible para ejecutar
       <!-- test: npx vitest run tests/aprobacion-de-lote.test.ts -->
-- [ ] Un plan editado después de emitir el código no se aprueba con él
+- [x] Un plan editado después de emitir el código no se aprueba con él
       <!-- test: npx vitest run tests/aprobacion-de-lote.test.ts -->
-- [ ] Un código se usa una sola vez y un ticket de riesgo alto o de tipo `SECURITY` no recibe código
+- [x] Un código se usa una sola vez y un ticket de riesgo alto o de tipo `SECURITY` no recibe código
       <!-- test: npx vitest run tests/aprobacion-de-lote.test.ts -->
-- [ ] Sin `token` en `plan-approval-sources` la aprobación por código se rechaza, y un token de compuerta no sirve como aprobación de plan
+- [x] Sin `token` en `plan-approval-sources` la aprobación por código se rechaza, y un token de compuerta no sirve como aprobación de plan
       <!-- test: npx vitest run tests/aprobacion-de-lote.test.ts -->
 
 ## Puntos
@@ -83,11 +83,22 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+- `packages/engine/src/approval.ts`: sujetos `plan-approval` y `plan-approval-lote` y la entrada `approval-batch` (un código de lote que reúne los códigos de cada plan), reconocida al leer el registro y excluida del cálculo de intentos de compuertas.
+- `packages/engine/src/plan-approval-batch.ts` (nuevo): `emitirAprobacionesDeJornada` emite, con el mismo HMAC y techo de riesgo de siempre, un código por plan listo de la jornada —atado al hash de su plan— y uno de lote; no emite para riesgo alto, impactos de sincronización, migración o contenedores, ni para tickets `SECURITY`, ni para planes sin la compuerta aprobada, y dice por qué. `aprobarPorCodigo` verifica el código, comprueba que el plan no cambió, registra la aprobación por `registrarAprobacionDePlan` con fuente `token` y la frase de quien aprueba, y consume el código solo después de registrar; el lote aprueba cada plan por separado. La fuente `token` solo vale si el proyecto la declara en `plan-approval-sources` (se comprueba antes de consumir nada) y una sesión desatendida no puede aprobar.
+- `packages/cli/src/commands.ts`, `main.ts` y `hermes.ts`: `journey notify-plans` (emite y envía; un envío fallido deja los códigos válidos y lo dice) y `plan-approve`; `gate-decide --code` rechaza un código de plan diciendo que use `plan-approve`.
+- `tests/aprobacion-de-lote.test.ts` (nuevo, 12 pruebas).
+- Ajuste frente al plan: no hizo falta tocar `packages/adapter/src/config.ts` —la lista de fuentes ya admite cualquier nombre válido y el valor por defecto sigue sin incluir `token`, que es justo lo que se quiere—.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Desde la raíz del repositorio, Node 24, sin red y sin enviar mensajes reales:
+
+1. `npx vitest run tests/aprobacion-de-lote.test.ts` — esperado: 12 pruebas pasan.
+2. `npx vitest run` — esperado: 181 archivos pasan y 1 omitido; 2626 pruebas pasan, 0 fallan.
+3. `npx tsc --noEmit -p tsconfig.json` — sin salida.
+4. Manual (responsable, opcional): con `plan-approval-sources` que incluya `token` y `VALMEN_APPROVAL_SECRET` definido, `valmen journey notify-plans --project <id> --journey <JOR-…> --to telegram` y aprobar un plan con `valmen plan-approve --code <código> --actor <tú> --quote "<tus palabras>"`.
+
+Resultado de la ejecución del agente (2026-10-06): 1–3 dieron lo esperado.
 
 ## QA
 
@@ -153,6 +164,51 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-06",
+    "at": "2026-10-07T04:12:23.808Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"si apruebo los planes\",\"planHash\":\"sha256:333a9d805e769e24dfa2074b691ad459559d510a801a8975c182328c15ee4cff\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-06",
+    "at": "2026-10-07T04:12:24.298Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:333a9d805e769e24dfa2074b691ad459559d510a801a8975c182328c15ee4cff."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-06",
+    "at": "2026-10-07T04:12:24.298Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-06",
+    "at": "2026-10-07T04:12:24.611Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-06",
+    "at": "2026-10-07T04:15:51.928Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
