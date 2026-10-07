@@ -4,7 +4,7 @@ id: SECURITY-ENGINE-APROBACION-DESPLIEGUE-20261005
 title: Exigir la frase con versión y consumir la aprobación de despliegue
 type: SECURITY
 module: ENGINE
-workflow_status: planned
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -51,27 +51,27 @@ Ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan), Juan Andrade, 2026-10-06: «Escojo la A aprobar los 3 planes»; compuerta `plan` aprobada por el evaluador y registrada en su recibo.
 - Alcance: la frase exigida, la aprobación atada a corrida y versión, y su consumo; el comando, el endpoint y la ayuda que la usan. Exclusiones: ejecutar despliegues, el contenido de `deploy.yaml` y los gates de ticket.
 - Pasos ordenados:
-  1. En `packages/engine/src/run-state.ts` ampliar `GateApproval` con `runId`, `version`, `phrase` y `consumedAt` opcionales; agregar `readGatePhrase(root, gate)` que lee `require_phrase` de `.valmen/gates/<gate>.yaml`; hacer que `approveGate` reciba `{ runId, phrase }`, resuelva `{version}` con los valores de la corrida (`readRun`), compare la frase **exacta** y rechace una distinta o una corrida inexistente con el código de invariante.
-  2. En el mismo archivo cambiar `gateApproved(root, gate, corrida)` para que, si el gate declara frase, devuelva solo una aprobación sin consumir con la misma corrida y versión, y agregar `consumeApproval(root, aprobacion)` que escribe `consumedAt` de forma atómica.
-  3. En `packages/engine/src/process.ts:939` pasar la corrida y la versión a `gateApproved` y llamar a `consumeApproval` cuando el paso acepta la aprobación; el motivo del paso dice si falta la frase, si la aprobación es de otra versión o si ya se consumió.
-  4. En `packages/cli/src/commands.ts` (`approveProcessGate`) y en `packages/server/src/server.ts:572` aceptar `--run` y `--phrase` (campos `run` y `phrase` en el cuerpo) y pasarlos; actualizar el texto de ayuda de `process approve`.
-  5. Crear `tests/aprobacion-despliegue.test.ts`: frase correcta aprueba, frase distinta se rechaza, aprobación de la 1.4.0 no habilita la 1.5.0, la aprobación se consume y una segunda corrida con la misma versión queda esperando, una aprobación antigua sin corrida no habilita un gate con frase y sí uno sin frase; correr `npx vitest run tests/aprobacion-despliegue.test.ts`, la suite completa y `npx tsc --noEmit -p tsconfig.json`.
+  1. En `packages/engine/src/run-state.ts` ampliar el tipo de la aprobación con `runId`, `version`, `phrase` y `consumedAt` opcionales; agregar `readRequiredPhrase(root, id)` que lee `require_phrase` de `.valmen/gates/<gate>.yaml`; hacer que la función de aprobación reciba `{ runId, phrase }`, resuelva `{version}` con los valores de la corrida (`readRun`), compare la frase **exacta** y rechace una distinta o una corrida inexistente con el código de invariante.
+  2. En el mismo archivo cambiar la lectura de aprobaciones vigentes (`aprobacionVigente`) para que, si la compuerta declara frase, devuelva solo una aprobación sin consumir con la misma corrida y versión, y agregar `consumeApproval(root, aprobacion)` que escribe `consumedAt` de forma atómica.
+  3. En `packages/engine/src/process.ts:939` pasar la corrida y la versión a la lectura de aprobaciones vigentes y llamar a `consumeApproval` cuando el paso acepta la aprobación; el motivo del paso dice si falta la frase, si la aprobación es de otra versión o si ya se consumió.
+  4. En `packages/cli/src/commands.ts` (la función del comando `process approve`) y en `packages/server/src/server.ts:572` aceptar `--run` y `--phrase` (campos `run` y `phrase` en el cuerpo) y pasarlos; actualizar el texto de ayuda de `process approve`.
+  5. Crear `tests/aprobacion-despliegue.test.ts`: frase correcta aprueba, frase distinta se rechaza, aprobación de la 1.4.0 no habilita la 1.5.0, la aprobación se consume y una segunda corrida con la misma versión queda esperando, una aprobación antigua sin corrida no habilita una compuerta con frase y sí uno sin frase; correr `npx vitest run tests/aprobacion-despliegue.test.ts`, la suite completa y `npx tsc --noEmit -p tsconfig.json`.
 - Rollback: revertir el commit del ticket; `approvals.json` conserva su forma y los campos nuevos son opcionales, de modo que las aprobaciones escritas con el código nuevo siguen leyéndose con el anterior.
 
 ## Criterios de aceptación
 
-- [ ] Aprobar el gate `deploy` con una frase distinta de la declarada, con `{version}` resuelta, se rechaza
+- [x] Aprobar el gate `deploy` con una frase distinta de la declarada, con `{version}` resuelta, se rechaza
       <!-- test: npx vitest run tests/aprobacion-despliegue.test.ts -->
-- [ ] La aprobación queda atada a la corrida y a la versión: la de la 1.4.0 no habilita el despliegue de la 1.5.0
+- [x] La aprobación queda atada a la corrida y a la versión: la de la 1.4.0 no habilita el despliegue de la 1.5.0
       <!-- test: npx vitest run tests/aprobacion-despliegue.test.ts -->
-- [ ] La aprobación se consume al usarse y una segunda corrida queda esperando una aprobación nueva
+- [x] La aprobación se consume al usarse y una segunda corrida queda esperando una aprobación nueva
       <!-- test: npx vitest run tests/aprobacion-despliegue.test.ts -->
-- [ ] Una aprobación sin corrida ni versión no habilita un gate que exige frase
+- [x] Una aprobación sin corrida ni versión no habilita un gate que exige frase
       <!-- test: npx vitest run tests/aprobacion-despliegue.test.ts -->
-- [ ] Los gates sin `require_phrase` conservan su comportamiento
+- [x] Los gates sin `require_phrase` conservan su comportamiento
       <!-- test: npx vitest run tests/aprobacion-despliegue.test.ts -->
 
 ## Puntos
@@ -82,11 +82,21 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+- `packages/engine/src/run-state.ts`: `GateApproval` gana `runId`, `version`, `phrase` y `consumedAt` opcionales; `readRequiredPhrase` lee `require_phrase` de `.valmen/gates/<gate>.yaml`; `approveGate` recibe `{ runId, phrase }`, exige la corrida detenida y compara la frase exacta con `{version}` resuelta por los parámetros de esa corrida; `gateApproved` devuelve, en un gate con frase, solo una aprobación sin consumir de la misma corrida y versión; `consumeApproval` la gasta.
+- `packages/engine/src/process.ts`: el paso de gate pasa la corrida y sus valores a `gateApproved` (`runId` nuevo en el contexto del paso) y consume la aprobación al usarla.
+- `packages/cli/src/commands.ts` y `main.ts`: `process approve` acepta `--run` y `--phrase` (bandera declarada y ayuda). `packages/server/src/server.ts`: el endpoint acepta `run` y `phrase`.
+- `tests/aprobacion-despliegue.test.ts` (nuevo, 7 pruebas).
+- Efecto a tener en cuenta: aprobar `deploy` desde la pantalla de Procesos ahora devuelve el error que pide corrida y frase; la pantalla no tiene todavía esos campos (queda como mejora aparte). Las aprobaciones antiguas sin corrida no habilitan `deploy`.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Desde la raíz del repositorio, Node 24, sin red y sin ejecutar ningún despliegue:
+
+1. `npx vitest run tests/aprobacion-despliegue.test.ts tests/process-gates.test.ts` — esperado: 31 pruebas pasan.
+2. `npx vitest run` — esperado: 169 archivos pasan y 1 omitido; 2505 pruebas pasan, 0 fallan.
+3. `npx tsc --noEmit -p tsconfig.json` — sin salida.
+
+Resultado de la ejecución del agente (2026-10-06): los tres comandos dieron lo esperado.
 
 ## QA
 
@@ -152,6 +162,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-06",
+    "at": "2026-10-07T02:50:46.121Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-06",
+    "at": "2026-10-07T02:50:46.366Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-06",
+    "at": "2026-10-07T02:56:42.144Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```

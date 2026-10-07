@@ -4,7 +4,7 @@ id: SECURITY-MC-ESCRITURAS-AUTENTICADAS-20261005
 title: Rechazar escrituras sin autenticación fuera de la máquina local
 type: SECURITY
 module: MC
-workflow_status: planned
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -51,7 +51,7 @@ Ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan), Juan Andrade, 2026-10-06: «Escojo la A aprobar los 3 planes»; compuerta `plan` aprobada por el evaluador y registrada en su recibo.
 - Alcance: la comprobación del token en el servidor, su generación en el arranque, el envío desde la interfaz y la ayuda. Exclusiones: TLS, usuarios múltiples, autenticación de lectura y el servidor MCP.
 - Pasos ordenados:
   1. En `packages/server/src/server.ts` agregar a `ServerContext` los campos opcionales `listenHost` y `token`, y la función exportada `exigirTokenEnEscritura(context, request)` que, si el servidor escucha fuera de la máquina local y el método escribe, compara el `Authorization: Bearer` con el token en tiempo constante y devuelve el 401 con un cuerpo que no revela el token; llamarla al inicio de `handleRequest`, antes del despacho de `/api/`.
@@ -63,13 +63,13 @@ Ninguno.
 
 ## Criterios de aceptación
 
-- [ ] Con escucha fuera de la máquina local, un POST de escritura sin token responde 401 y no registra nada
+- [x] Con escucha fuera de la máquina local, un POST de escritura sin token responde 401 y no registra nada
       <!-- test: npx vitest run tests/escrituras-autenticadas.test.ts -->
-- [ ] Un token incorrecto también responde 401 y la respuesta no revela el token
+- [x] Un token incorrecto también responde 401 y la respuesta no revela el token
       <!-- test: npx vitest run tests/escrituras-autenticadas.test.ts -->
-- [ ] Con el token correcto la escritura procede y las lecturas no lo exigen
+- [x] Con el token correcto la escritura procede y las lecturas no lo exigen
       <!-- test: npx vitest run tests/escrituras-autenticadas.test.ts -->
-- [ ] Con escucha local nada cambia: las escrituras pasan sin token
+- [x] Con escucha local nada cambia: las escrituras pasan sin token
       <!-- test: npx vitest run tests/escrituras-autenticadas.test.ts -->
 - [ ] La interfaz pide el token ante un 401 y lo envía en las escrituras siguientes
       <!-- verify: manual -->
@@ -82,11 +82,21 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+- `packages/server/src/server.ts`: `ServerContext.writeToken`, `esAnfitrionLocal` y `exigirTokenEnEscritura` (rechaza con 401 todo método que no sea GET, HEAD u OPTIONS sin `Authorization: Bearer <token>`; comparación de tiempo constante sobre el hash; el cuerpo no revela el token), llamada al inicio de `handleRequest`, antes del despacho de `/api/`.
+- `packages/cli/src/main.ts`: `serve` calcula si la dirección es local; si no, usa `VALMEN_TOKEN` o genera uno aleatorio de 32 bytes, lo pasa en el contexto y lo imprime una vez; el aviso de «no hay autenticación» pasa a explicar que las escrituras exigen token y que el tráfico no va cifrado.
+- `packages/server/web/index.html`: `enviar` manda el token guardado en las escrituras y, ante un 401, lo pide una vez y repite la petición.
+- `tests/escrituras-autenticadas.test.ts` (nuevo, 7 pruebas contra el servidor real).
 
 ## Pruebas
 
-Pendiente de ejecución.
+Desde la raíz del repositorio, Node 24, sin red externa:
+
+1. `npx vitest run tests/escrituras-autenticadas.test.ts` — esperado: 7 pruebas pasan.
+2. `npx vitest run` — esperado: 170 archivos pasan y 1 omitido; 2512 pruebas pasan, 0 fallan.
+3. `npx tsc --noEmit -p tsconfig.json` — sin salida.
+4. Manual (responsable): `VALMEN_TOKEN=lo-que-quieras valmen serve --host 0.0.0.0`, abrir la dirección de red, editar algo en Configuración y guardar: la pantalla debe pedir el token una vez y, con él, guardar.
+
+Resultado de la ejecución del agente (2026-10-06): 1–3 dieron lo esperado; en el navegador contra un servidor de laboratorio con `--host 0.0.0.0`, una escritura sin token respondió 401, la pantalla pidió el token una vez y con él el cambio se guardó. Falta tu confirmación del punto 4.
 
 ## QA
 
@@ -152,6 +162,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-06",
+    "at": "2026-10-07T02:50:29.838Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-06",
+    "at": "2026-10-07T02:50:30.067Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-06",
+    "at": "2026-10-07T02:59:00.904Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```

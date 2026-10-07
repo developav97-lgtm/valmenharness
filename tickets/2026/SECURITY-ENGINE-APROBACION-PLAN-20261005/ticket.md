@@ -4,7 +4,7 @@ id: SECURITY-ENGINE-APROBACION-PLAN-20261005
 title: Registrar la aprobación del plan con actor, fuente, frase y hash
 type: SECURITY
 module: ENGINE
-workflow_status: planned
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -52,7 +52,7 @@ Ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan), Juan Andrade, 2026-10-06: «Escojo la A aprobar los 3 planes»; compuerta `plan` aprobada por el evaluador y registrada en su recibo.
 - Alcance: el registro y la verificación de la aprobación del plan, el comando y la lectura de fuentes aceptadas. Exclusiones: exigirla en `transition`, la corrida delegada, y cualquier cambio a tickets ya aprobados.
 - Pasos ordenados:
   1. Crear `packages/engine/src/plan-approval.ts` con `hashDelPlan(document)` (sha256 del `## Plan` normalizado, sin la línea de gate), `registrarAprobacionDePlan(request)` (valida actor y frase no vacíos, fuente aceptada y sesión no desatendida; anexa el evento `plan-approved` con actor, fuente, frase y hash) y `aprobacionDePlanVigente(document)` (lee **solo los eventos** `plan-approved`, nunca las líneas de `## Plan`, y devuelve `vigente`, `sin-aprobacion` o `plan-cambiado` con el motivo; una frase de aprobación escrita en el plan da `sin-aprobacion`).
@@ -64,17 +64,17 @@ Ninguno.
 
 ## Criterios de aceptación
 
-- [ ] Registrar la aprobación anexa un evento con actor, fuente, frase literal y el hash del plan
+- [x] Registrar la aprobación anexa un evento con actor, fuente, frase literal y el hash del plan
       <!-- test: npx vitest run tests/aprobacion-de-plan.test.ts -->
-- [ ] Una fuente que el proyecto no declara se rechaza, y sin declaración rigen `mission-control` y `cli`
+- [x] Una fuente que el proyecto no declara se rechaza, y sin declaración rigen `mission-control` y `cli`
       <!-- test: npx vitest run tests/aprobacion-de-plan.test.ts -->
-- [ ] Una sesión marcada como desatendida no puede registrar la aprobación
+- [x] Una sesión marcada como desatendida no puede registrar la aprobación
       <!-- test: npx vitest run tests/aprobacion-de-plan.test.ts -->
-- [ ] Si el plan cambia después de la aprobación, esta deja de valer y el motivo lo dice
+- [x] Si el plan cambia después de la aprobación, esta deja de valer y el motivo lo dice
       <!-- test: npx vitest run tests/aprobacion-de-plan.test.ts -->
-- [ ] Una frase escrita en `## Plan` no cuenta como aprobación registrada
+- [x] Una frase escrita en `## Plan` no cuenta como aprobación registrada
       <!-- test: npx vitest run tests/aprobacion-de-plan.test.ts -->
-- [ ] Los tickets que ya pasaron por `approved` siguen validando
+- [x] Los tickets que ya pasaron por `approved` siguen validando
       <!-- test: npx vitest run tests/aprobacion-de-plan.test.ts -->
 
 ## Puntos
@@ -85,11 +85,21 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+- `packages/engine/src/plan-approval.ts` (nuevo): `hashDelPlan` (sha256 del `## Plan` normalizado, sin la línea de gate), `registrarAprobacionDePlan` (valida actor, frase, fuente aceptada y sesión no desatendida; anexa el evento `plan-approved` con actor, fuente, frase y hash) y `aprobacionDePlanVigente` (lee solo eventos: `vigente`, `sin-aprobacion` o `plan-cambiado` con motivo).
+- `packages/adapter/src/config.ts`: `readPlanApprovalSources` (clave `plan-approval-sources`, por defecto `mission-control` y `cli`; vacía o inválida falla). `packages/engine/src/discovery.ts`: `planApprovalSources`. `packages/engine/src/index.ts`: exporta el módulo.
+- `packages/cli/src/commands.ts` y `main.ts`: comando `approve-plan --id --actor [--source] --quote` y su ayuda.
+- `tests/aprobacion-de-plan.test.ts` (nuevo, 11 pruebas).
+- Desviación del plan, registrada: la documentación de la clave y del comando en la skill `planificacion` (paso 4) se difiere al ticket siguiente de la cadena, donde la aprobación registrada pasa a ser obligatoria; editarla ahora obliga a un `valmen sync` que reescribe la configuración personal de Claude Code de este repositorio.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Desde la raíz del repositorio, Node 24, sin red:
+
+1. `npx vitest run tests/aprobacion-de-plan.test.ts` — esperado: 11 pruebas pasan.
+2. `npx vitest run` — esperado: 168 archivos pasan y 1 omitido; 2498 pruebas pasan, 0 fallan.
+3. `npx tsc --noEmit -p tsconfig.json` — sin salida.
+
+Resultado de la ejecución del agente (2026-10-06): los tres comandos dieron lo esperado.
 
 ## QA
 
@@ -155,6 +165,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-06",
+    "at": "2026-10-07T02:50:28.818Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-06",
+    "at": "2026-10-07T02:50:29.103Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-06",
+    "at": "2026-10-07T02:53:33.633Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
