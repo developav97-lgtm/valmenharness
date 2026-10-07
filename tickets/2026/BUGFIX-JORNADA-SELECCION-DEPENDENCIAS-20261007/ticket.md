@@ -4,7 +4,7 @@ id: BUGFIX-JORNADA-SELECCION-DEPENDENCIAS-20261007
 title: La jornada despacha tickets no elegibles y con dependencias sin cerrar
 type: BUGFIX
 module: JORNADA
-workflow_status: awaiting_user_tests
+workflow_status: in_qa
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -111,6 +111,7 @@ Hallazgos del 2026-10-07 al correr `valmen journey advance --project valmen-harn
 - `npx vitest run tests/journey-selection.test.ts tests/jornada-preparacion.test.ts` → 23 pruebas pasan, 5 nuevas.
 - `npx vitest run` → 193 archivos pasan, 1 omitido; 2805 pruebas pasan, 48 omitidas.
 - Pruebas nuevas: salto de un SECURITY no elegible con constancia en el avance; dependencia del grafo en `intake` fuera de la jornada bloquea la preparación y la selección, en `blocked`, `in_progress` y `approved`, y se libera en `closed`; grafo ilegible no rompe la selección; con la autonomía encendida se salta al no elegible.
+- Resultado del PO: aprobado el 2026-10-07 — «A, pruebas ok, commitea».
 - Validación manual (opcional): en una jornada con un SECURITY y un FEATURE en `intake`, `valmen journey advance --project valmen-harness --fase preparacion` debe preparar el FEATURE y listar el SECURITY en «Omitidos».
 
 ## QA
@@ -140,7 +141,23 @@ Hallazgos del 2026-10-07 al correr `valmen journey advance --project valmen-harn
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-07",
+    "session_reference": "local_46d2e259-126b-4801-ba52-2030ab09f45d",
+    "model": "anthropic/claude-sonnet-5-5",
+    "reasoning_effort": null,
+    "notes": "Sesión de Claude Code (app de escritorio, esfuerzo medium) dedicada solo a este ticket: apertura, análisis, plan, implementación y entrega, con 2 compuertas cascade y 1 qa-mechanical. No se registran tokens ni costo: la herramienta no expone el agregado de la sesión (solo la ventana de contexto, ~187k tokens al registrar, que no es consumo acumulado) y el plan es por suscripción Max, así que el costo se omite. Las llamadas de la cascada tienen su coste en los recibos de las compuertas.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "claude:local_46d2e259-126b-4801-ba52-2030ab09f45d",
+    "confidence": "medium",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -222,6 +239,24 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:01:15.675Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-07",
+    "at": "2026-10-07T20:01:29.376Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
   }
 ]
 ```
