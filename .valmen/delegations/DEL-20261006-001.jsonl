@@ -28,3 +28,5 @@
 {"kind":"close","ticketId":"IMPROVEMENT-CORE-PLANTILLA-Y-MATERIALIZACION-20261005","detail":"QA aprobado y ticket cerrado","at":"2026-10-07T01:10:24.459Z"}
 {"kind":"note","ticketId":"FEATURE-ENGINE-REVISION-PREVIA-20261005","detail":"avanzó a in_progress (analyzed → planned → approved → in_progress)","at":"2026-10-07T01:12:57.757Z"}
 {"kind":"close","ticketId":"FEATURE-ENGINE-REVISION-PREVIA-20261005","detail":"QA aprobado y ticket cerrado","at":"2026-10-07T01:20:29.051Z"}
+{"kind":"note","ticketId":"FEATURE-GATE-UMBRALES-POR-EVALUADOR-20261005","detail":"avanzó a in_progress (analyzed → planned → approved → in_progress)","at":"2026-10-07T01:22:25.976Z"}
+{"kind":"close","ticketId":"FEATURE-GATE-UMBRALES-POR-EVALUADOR-20261005","detail":"QA aprobado y ticket cerrado","at":"2026-10-07T01:24:54.928Z"}
