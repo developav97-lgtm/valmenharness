@@ -27,6 +27,7 @@ import {
   readAutonomousConfig,
   readAllowedSchemas,
   readGateThresholds,
+  readPlanApprovalSources,
   type ThresholdOverride,
   readPlaywrightConfig,
   readTestSetupConfig,
@@ -210,6 +211,12 @@ export function allowedSchemas(root: string): string[] {
 export function gateThresholds(root: string): readonly ThresholdOverride[] {
   const config = configDelProyecto(root);
   return config === null ? [] : readGateThresholds(config, ["analysis", "plan", "qa-mechanical"]);
+}
+
+/** Las fuentes desde las que el proyecto acepta aprobar un plan. */
+export function planApprovalSources(root: string): readonly string[] {
+  const config = configDelProyecto(root);
+  return readPlanApprovalSources(config ?? {});
 }
 
 /** El ambiente desplegado que respalda criterios `verify: dev`, o `null`. */

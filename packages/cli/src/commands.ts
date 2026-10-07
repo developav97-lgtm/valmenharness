@@ -61,6 +61,7 @@ import {
 
 import {
   type BudgetPolicy,
+  registrarAprobacionDePlan,
   type CommandRunner,
   type LocatedTicket,
   type RegistryPaths,
@@ -231,6 +232,34 @@ export function validateAll(paths: RegistryPaths): CommandResult {
   }
 
   return ok(`Tickets válidos: ${tickets.length}\n`);
+}
+
+/**
+ * `approve-plan --id <ID> --actor <nombre> --source <fuente> --quote "<frase>"`.
+ *
+ * Registra la aprobación del plan vigente como un evento con actor, fuente, frase literal
+ * y el hash del plan (R-CTRL-001). La frase es de quien aprueba: el agente no la inventa.
+ */
+export function approvePlanCommand(
+  paths: RegistryPaths,
+  flags: Readonly<Record<string, string | true>>,
+): CommandResult {
+  const texto = (nombre: string): string => (typeof flags[nombre] === "string" ? (flags[nombre] as string) : "");
+  const id = texto("id");
+  if (id === "") return error("approve-plan requiere --id <TICKET-ID>.", EXIT_SCHEMA);
+  try {
+    registrarAprobacionDePlan({
+      paths,
+      ticketId: id,
+      actor: texto("actor"),
+      source: texto("source") === "" ? "cli" : texto("source"),
+      quote: texto("quote"),
+    });
+    return ok(`Aprobación del plan de ${id} registrada por ${texto("actor").trim()}.\n`);
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
 }
 
 /** `validate --id <ID>`: valida un ticket concreto. */

@@ -979,3 +979,27 @@ function readCapabilityList(config: ConfigMap, key: string): string[] {
   }
   return values;
 }
+
+/** Las fuentes de aprobación del plan que rigen si el proyecto no declara `plan-approval-sources`. */
+export const DEFAULT_PLAN_APPROVAL_SOURCES: readonly string[] = ["mission-control", "cli"];
+
+/**
+ * Lee `plan-approval-sources`: desde dónde se acepta que una persona apruebe un plan.
+ *
+ * Sin la clave rigen `mission-control` y `cli`. Una lista vacía o con un nombre inválido
+ * **falla**: una lista de fuentes que se interpreta «casi bien» deja pasar una que nadie
+ * autorizó, y la ausencia de fuentes aceptadas no puede significar «cualquiera».
+ */
+export function readPlanApprovalSources(config: ConfigMap): readonly string[] {
+  if (config["plan-approval-sources"] === undefined) return DEFAULT_PLAN_APPROVAL_SOURCES;
+  const fuentes = readList(config, "plan-approval-sources", []);
+  if (fuentes.length === 0) {
+    fail('config.yaml: "plan-approval-sources" no puede estar vacía; quite la clave para usar las de siempre.');
+  }
+  for (const fuente of fuentes) {
+    if (!/^[a-z][a-z0-9-]{0,63}$/.test(fuente)) {
+      fail(`config.yaml: "plan-approval-sources" contiene una fuente inválida: «${fuente}».`);
+    }
+  }
+  return fuentes;
+}

@@ -102,6 +102,7 @@ import {
 } from "@valmen/server";
 import {
   guardarConsumoDeSesiones,
+  approvePlanCommand,
   precheckCommand,
   precisionCommand,
   thresholdsCommand,
@@ -206,6 +207,9 @@ Comandos:
   thresholds <gate> [--evaluator <id>]
                             Propone umbrales desde las decisiones humanas ya registradas,
                             con su acierto simulado. No aplica nada: lo firma una persona.
+  approve-plan --id <ID> --actor <nombre> [--source <fuente>] --quote "<frase>"
+                            Registra la aprobación del plan con actor, fuente, frase y hash
+                            del plan. Una sesión desatendida no puede registrarla.
   precheck <gate> --id <ID> Revisión previa a mano (analysis o plan): la misma que corre la
                             compuerta antes de llamar al evaluador. Sale con 3 si falta algo.
   gate <gate> --id <ID>     Evalúa un gate contra un ticket.
@@ -1845,6 +1849,8 @@ export async function run(argv: readonly string[]): Promise<number> {
       result = precisionCommand(resolvePaths(options), options.flags);
     } else if (command === "thresholds") {
       result = thresholdsCommand(resolvePaths(options), rest[0], options.flags);
+    } else if (command === "approve-plan") {
+      result = approvePlanCommand(resolvePaths(options), options.flags);
     } else if (command === "precheck") {
       const id = options.flags["id"];
       result = precheckCommand(
