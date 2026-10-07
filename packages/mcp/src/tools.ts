@@ -46,6 +46,11 @@ import {
   attachFeatureAsset,
   renderPreReview,
   reviewBeforeGate,
+  precisionReport,
+  proposeThresholds,
+  readCurrentReceipts,
+  renderPrecision,
+  renderProposal,
   attachTicketToFeature,
   advanceFeature,
   completeFeature,
@@ -1116,6 +1121,18 @@ export const TOOLS: readonly ToolDefinition[] = [
           type: "number",
           description: "Evalúa solo los primeros n tickets. Sin él, todo el registro.",
         },
+        umbrales: {
+          type: "boolean",
+          description:
+            "En vez de simular con un modelo, propone umbrales a partir de las decisiones " +
+            "humanas ya registradas en los recibos: no cuesta una llamada ni aplica nada. " +
+            "Con pocas decisiones o pocos rechazos dice que la evidencia es insuficiente. " +
+            "Aplicar un umbral lo decide una persona, firmándolo en la configuración.",
+        },
+        evaluator: {
+          type: "string",
+          description: "Con `umbrales`, el evaluador a calibrar: command, jev, llm-judge o cascade.",
+        },
       },
       required: ["gate"],
     }),
@@ -1938,6 +1955,23 @@ export const TOOLS: readonly ToolDefinition[] = [
       required: ["gate", "id"],
     }),
   },
+  {
+    name: "precision_compuertas",
+    annotations: SOLO_LEE,
+    title: "Medir la precisión de las compuertas",
+    description:
+      "Lee los recibos del registro y dice, por compuerta y por evaluador: cuántas corridas " +
+      "aprobaron, fueron a revisión o bloquearon; la **tasa de banda**; qué parte de las " +
+      "revisiones que una persona decidió se aprobó sin cambios; y los bloqueos por tipo de " +
+      "ticket. No llama a ningún modelo ni cuesta nada. `desde` y `hasta` (YYYY-MM-DD) acotan " +
+      "el período.",
+    inputSchema: conRoot({
+      properties: {
+        desde: { type: "string", description: "Fecha YYYY-MM-DD desde la que se cuenta." },
+        hasta: { type: "string", description: "Fecha YYYY-MM-DD hasta la que se cuenta." },
+      },
+    }),
+  },
 ];
 
 /**
@@ -2453,6 +2487,14 @@ export async function callTool(
 
       case "calibrar_compuerta": {
         const gateId = texto(args, "gate") as string;
+        // Proponer umbrales desde las decisiones humanas no simula ni gasta: lee los recibos.
+        if (args["umbrales"] === true) {
+          return bien(
+            renderProposal(
+              proposeThresholds(readCurrentReceipts(paths), gateId, texto(args, "evaluator", false)),
+            ),
+          );
+        }
         const limite = args["limite"];
         // Medir y contrastar son dos pasos del mismo acto: la simulación produce
         // el informe y la calibración lo lee contra lo que decidieron las
@@ -2784,6 +2826,11 @@ export async function callTool(
             : {}),
         });
         return bien(renderAttachedTicket(anexado));
+      }
+
+      case "precision_compuertas": {
+        const opciones = { desde: texto(args, "desde", false), hasta: texto(args, "hasta", false) };
+        return bien(renderPrecision(precisionReport(readCurrentReceipts(paths), opciones), opciones));
       }
 
       case "revision_previa": {

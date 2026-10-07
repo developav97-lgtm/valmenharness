@@ -69,6 +69,7 @@ const SOLO_LECTURA = [
   "revisar_presentacion",
   "ver_delegacion",
   "revision_previa",
+  "precision_compuertas",
 ];
 
 /** Las que no se pueden repetir sin cambiar el resultado. */
@@ -103,8 +104,8 @@ const NO_IDEMPOTENTES = [
 ];
 
 describe("las anotaciones de las herramientas", () => {
-  it("las cuarenta y nueve declaran las cuatro, con un booleano cada una", () => {
-    expect(TOOLS).toHaveLength(49);
+  it("las cincuenta declaran las cuatro, con un booleano cada una", () => {
+    expect(TOOLS).toHaveLength(50);
     for (const tool of TOOLS) {
       const a = tool.annotations;
       expect(a, `${tool.name} no declara anotaciones`).toBeDefined();
@@ -119,7 +120,7 @@ describe("las anotaciones de las herramientas", () => {
     }
   });
 
-  it("marca de solo lectura exactamente las diecinueve que no escriben", () => {
+  it("marca de solo lectura exactamente las veinte que no escriben", () => {
     const leen = TOOLS.filter((t) => t.annotations.readOnlyHint)
       .map((t) => t.name)
       .sort();
@@ -182,7 +183,7 @@ describe("las anotaciones de las herramientas", () => {
       catalogo,
     )) as { tools: readonly { name: string; annotations: Record<string, boolean> }[] };
 
-    expect(resultado.tools).toHaveLength(49);
+    expect(resultado.tools).toHaveLength(50);
     for (const tool of resultado.tools) {
       expect(Object.keys(tool.annotations).sort()).toEqual([
         "destructiveHint",

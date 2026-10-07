@@ -72,6 +72,11 @@ import {
   abandonRun,
   renderPreReview,
   reviewBeforeGate,
+  precisionReport,
+  proposeThresholds,
+  readCurrentReceipts,
+  renderPrecision,
+  renderProposal,
   appendPromotionEvidence,
   approveGate,
   buildManifest,
@@ -252,6 +257,57 @@ export function precheckCommand(
     return revision.findings.length === 0
       ? ok(informe)
       : { stdout: informe, stderr: "", exitCode: EXIT_INVARIANT };
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/**
+ * `precision [--desde <fecha>] [--hasta <fecha>]`: la precisión de las compuertas.
+ *
+ * Lee los recibos del registro —no llama a ningún modelo ni cuesta nada— y dice, por
+ * compuerta y por evaluador, la tasa de banda, las revisiones que una persona aprobó sin
+ * cambios y los bloqueos por tipo de ticket (R-CPRE-011).
+ */
+export function precisionCommand(
+  paths: RegistryPaths,
+  flags: Readonly<Record<string, string | true>>,
+): CommandResult {
+  const texto = (nombre: string): string | undefined =>
+    typeof flags[nombre] === "string" ? (flags[nombre] as string) : undefined;
+  const opciones = { desde: texto("desde"), hasta: texto("hasta") };
+  for (const [nombre, valor] of Object.entries(opciones)) {
+    if (valor !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(valor)) {
+      return error(`--${nombre} debe ser una fecha YYYY-MM-DD.`, EXIT_SCHEMA);
+    }
+  }
+  try {
+    return ok(renderPrecision(precisionReport(readCurrentReceipts(paths), opciones), opciones));
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/**
+ * `thresholds <compuerta> [--evaluator <id>]`: propone umbrales desde las decisiones humanas.
+ *
+ * No aplica nada y no cuesta una llamada: lee las decisiones que las personas ya dejaron en
+ * los recibos y dice qué `approve-at` habría acertado, con la entrada de configuración sin
+ * firma. Aplicarlo lo decide una persona (R-CPRE-010).
+ */
+export function thresholdsCommand(
+  paths: RegistryPaths,
+  gateId: string | undefined,
+  flags: Readonly<Record<string, string | true>>,
+): CommandResult {
+  if (gateId !== "analysis" && gateId !== "plan") {
+    return error("thresholds requiere la compuerta: analysis o plan.", EXIT_SCHEMA);
+  }
+  const evaluator = typeof flags["evaluator"] === "string" ? (flags["evaluator"] as string) : undefined;
+  try {
+    return ok(renderProposal(proposeThresholds(readCurrentReceipts(paths), gateId, evaluator)));
   } catch (caught) {
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);

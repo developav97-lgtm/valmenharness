@@ -103,6 +103,8 @@ import {
 import {
   guardarConsumoDeSesiones,
   precheckCommand,
+  precisionCommand,
+  thresholdsCommand,
   standardsCommand,
   memoryCommand,
   scanPendingSecretsCommand,
@@ -197,6 +199,13 @@ Comandos:
   template show <nombre>    Imprime lo que una plantilla escribe. Leerla es el paso.
   template apply <nombre>   Escribe sus reglas en .valmen/ (no pisa lo que existe).
       --dry-run             Muestra qué escribiría, sin escribir.
+  precision [--desde <f>] [--hasta <f>]
+                            Precisión de las compuertas por evaluador: tasa de banda,
+                            revisiones aprobadas sin cambios y bloqueos por tipo. Lee los
+                            recibos; no llama a ningún modelo.
+  thresholds <gate> [--evaluator <id>]
+                            Propone umbrales desde las decisiones humanas ya registradas,
+                            con su acierto simulado. No aplica nada: lo firma una persona.
   precheck <gate> --id <ID> Revisión previa a mano (analysis o plan): la misma que corre la
                             compuerta antes de llamar al evaluador. Sale con 3 si falta algo.
   gate <gate> --id <ID>     Evalúa un gate contra un ticket.
@@ -1832,6 +1841,10 @@ export async function run(argv: readonly string[]): Promise<number> {
         decide: recordHumanDecision,
         ...REAL_GIT,
       });
+    } else if (command === "precision") {
+      result = precisionCommand(resolvePaths(options), options.flags);
+    } else if (command === "thresholds") {
+      result = thresholdsCommand(resolvePaths(options), rest[0], options.flags);
     } else if (command === "precheck") {
       const id = options.flags["id"];
       result = precheckCommand(
