@@ -162,6 +162,13 @@ export interface MechanicalCheck {
  */
 export interface IsolatedBlockReviewRule {
   readonly blockingId: string;
+  /**
+   * Otras proposiciones cuyo bloqueo aislado se trata igual que `blockingId`.
+   *
+   * Existe porque una misma pregunta tiene una versión por tipo de ticket: solo una
+   * aplica a cada ticket, y las dos describen el mismo hueco.
+   */
+  readonly alsoBlockingIds?: readonly string[];
   /** La clasificación que debe resolver con efecto `approve`. */
   readonly classificationId: string;
   /** Evidencia estructural que debe superar `approveAt`. */
@@ -508,7 +515,13 @@ function isIsolatedBlockContradiction(
   policy: GatePolicy,
   rule: IsolatedBlockReviewRule | undefined,
 ): boolean {
-  if (rule === undefined || blocking.length !== 1 || blocking[0]?.id !== rule.blockingId) {
+  if (
+    rule === undefined ||
+    blocking.length !== 1 ||
+    !([rule.blockingId, ...(rule.alsoBlockingIds ?? [])] as readonly (string | undefined)[]).includes(
+      blocking[0]?.id,
+    )
+  ) {
     return false;
   }
 

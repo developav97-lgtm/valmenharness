@@ -16,7 +16,12 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { ANALYSIS_GATE, expandGate, SIN_INTERFAZ } from "../packages/gate/src/dynamic.js";
+import {
+  ANALYSIS_GATE,
+  expandGate,
+  partitionByApplicability,
+  SIN_INTERFAZ,
+} from "../packages/gate/src/dynamic.js";
 import { decide, DEFAULT_POLICY, type PropositionAnswer } from "../packages/gate/src/decide.js";
 
 const RESPUESTAS = (
@@ -54,7 +59,8 @@ describe("expandGate con el conjunto de impactos vacío", () => {
     // El evaluador contesta la proposición como siempre —la marca no la retira
     // del recibo—, pero su valor no decide: ni banda ni media.
     const veredicto = decide(
-      expandido.propositions,
+      // Lo que se evalúa en un ticket BUGFIX: las proposiciones de otros tipos no se envían.
+      partitionByApplicability(expandido.propositions, "BUGFIX").applicable,
       RESPUESTAS({
         diagnostico_explica_el_sintoma: 0.95,
         causa_especifica: 0.94,
@@ -79,7 +85,8 @@ describe("expandGate con el conjunto de impactos vacío", () => {
     const riesgos = expandido.propositions.find((p) => p.id === "riesgos_cubren_impactos");
     expect(riesgos?.verdict ?? true).toBe(true);
     const veredicto = decide(
-      expandido.propositions,
+      // Lo que se evalúa en un ticket BUGFIX: las proposiciones de otros tipos no se envían.
+      partitionByApplicability(expandido.propositions, "BUGFIX").applicable,
       RESPUESTAS({
         diagnostico_explica_el_sintoma: 0.95,
         causa_especifica: 0.94,

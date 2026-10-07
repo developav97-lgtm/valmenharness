@@ -520,6 +520,9 @@ export async function runGate(
   // recibo como `no_aplica` (R-CPRE-001). Si el filtro no deja ninguna no se evalúa:
   // decidir sin proposiciones aprobaría por vacuidad.
   let noAplican: NotApplicableRecord[] = [];
+  // Cuántas proposiciones tenía la compuerta ya expandida, antes de filtrar por tipo: el
+  // informe dice si hubo expansión comparando contra la definición, y filtrar no es expandir.
+  const totalExpandido = gate.propositions.length;
   try {
     const tipo = parseTicket(ticket.text).fields.type;
     const partido = partitionByApplicability(gate.propositions, tipo);
@@ -795,7 +798,7 @@ export async function runGate(
   // desplegados» siempre que el ticket declarara criterios, aunque el gate no
   // los desplegara: el informe afirmaba algo que el recibo contradecía, y el
   // recibo es el que tiene la evidencia.
-  const expandido = gate.propositions.length !== definition.propositions.length;
+  const expandido = totalExpandido !== definition.propositions.length;
   const lines: string[] = [
     `Gate ${definition.id} — ${options.ticketId}`,
     `  Modo efectivo: ${effectiveMode.mode} — ${effectiveMode.reason}`,

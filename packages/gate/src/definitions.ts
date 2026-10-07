@@ -203,6 +203,8 @@ export const ANALYSIS_GATE: GateDefinition = {
   // aprobaban. La excepción no aprueba el ticket: lo entrega a una persona.
   isolatedBlockReview: {
     blockingId: "diagnostico_explica_el_sintoma",
+    // El par para tickets que no son correcciones: su bloqueo aislado se degrada igual.
+    alsoBlockingIds: ["diagnostico_ubica_el_cambio"],
     classificationId: "clasificacion",
     requiredApprovedIds: [
       "causa_especifica",
@@ -226,6 +228,9 @@ export const ANALYSIS_GATE: GateDefinition = {
     {
       id: "diagnostico_explica_el_sintoma",
       kind: "noul",
+      // Solo en una corrección: una funcionalidad nueva no tiene síntoma que explicar, y
+      // exigírselo la bloqueaba por algo que no puede cumplir (R-CPRE-002).
+      appliesTo: ["BUGFIX", "SECURITY"],
       description: "El diagnóstico explica por qué ocurre el síntoma",
       weight: 3,
       instructions:
@@ -234,6 +239,24 @@ export const ANALYSIS_GATE: GateDefinition = {
       criteria: {
         yes: "La causa descrita produce exactamente el síntoma reportado.",
         no: "La causa descrita no explica el síntoma, o el síntoma descrito es otro.",
+      },
+    },
+    {
+      id: "diagnostico_ubica_el_cambio",
+      kind: "noul",
+      // El par de la anterior para todo lo que no es una corrección: una funcionalidad
+      // nueva o una mejora se juzga por si la investigación dice **dónde** falta el
+      // comportamiento esperado, no por un síntoma que no tiene.
+      appliesTo: ["FEATURE", "IMPROVEMENT", "SYNC", "INTEGRATION", "AGENT", "CLAUDIO", "CHORE", "DOCS"],
+      description: "La investigación nombra dónde falta el comportamiento esperado",
+      weight: 3,
+      instructions:
+        "`investigacion` nombra el archivo o el símbolo donde falta, o donde debe agregarse, " +
+        "el comportamiento esperado que `descripcion_funcional` describe, y dice por qué falta " +
+        "ahí. No se exige un síntoma: este ticket no es una corrección y no hay un error que reproducir.",
+      criteria: {
+        yes: "La investigación señala el archivo o símbolo concreto donde falta el comportamiento esperado.",
+        no: "La investigación no dice dónde falta el comportamiento esperado, o describe algo que no es lo que el ticket pide.",
       },
     },
     {

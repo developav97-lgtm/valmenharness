@@ -33,6 +33,9 @@ export function buildGateState(text: string): Record<string, string> {
         .map((impacto) => impactName(impacto))
         .join(", ") || "ninguno",
     solicitud: sections["Solicitud original"].trim(),
+    // El comportamiento actual y el esperado que el ticket declara: sin esto el
+    // evaluador juzga una funcionalidad sin saber qué falta (R-CPRE-003).
+    descripcion_funcional: sections["Descripción funcional"].trim(),
     investigacion: sections["Diagnóstico"].trim(),
     plan: sections["Plan"].trim(),
     criterios: sections["Criterios de aceptación"].trim(),

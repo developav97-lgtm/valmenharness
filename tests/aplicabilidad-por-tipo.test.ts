@@ -121,13 +121,16 @@ describe("en la compuerta real", () => {
     expect(e.recibidas()).not.toContain("solo_correcciones");
     expect(e.recibidas().length).toBeGreaterThan(0);
     const recibo = readReceipts(PATHS(), "FEATURE-POS-FILTRO-ORDENES-20260921")[0];
-    expect(recibo?.notApplicable).toEqual([
-      { id: "solo_correcciones", status: "no_aplica", appliesTo: ["BUGFIX"], ticketType: "FEATURE" },
-    ]);
+    expect(recibo?.notApplicable).toContainEqual({
+      id: "solo_correcciones",
+      status: "no_aplica",
+      appliesTo: ["BUGFIX"],
+      ticketType: "FEATURE",
+    });
     expect(resultado.stdout).toContain("No aplican a un ticket FEATURE");
   });
 
-  it("sobre un BUGFIX sí se evalúa y el recibo no trae no_aplica", async () => {
+  it("sobre un BUGFIX sí se evalúa y el recibo no la registra como no_aplica", async () => {
     writeFixtureTicket(lab, { id: "BUGFIX-POS-FILTRO-ORDENES-20260921", type: "BUGFIX", workflowStatus: "analyzed" });
     const e = espia();
 
@@ -139,7 +142,8 @@ describe("en la compuerta real", () => {
 
     expect(resultado.exitCode, resultado.stderr).toBe(0);
     expect(e.recibidas()).toContain("solo_correcciones");
-    expect(readReceipts(PATHS(), "BUGFIX-POS-FILTRO-ORDENES-20260921")[0]?.notApplicable).toBeUndefined();
+    const noAplican = readReceipts(PATHS(), "BUGFIX-POS-FILTRO-ORDENES-20260921")[0]?.notApplicable ?? [];
+    expect(noAplican.map((registro) => registro.id)).not.toContain("solo_correcciones");
   });
 
   it("si el filtro no deja ninguna proposición, no se aprueba por vacuidad", async () => {

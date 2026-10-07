@@ -17,6 +17,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   ANALYSIS_GATE,
+  partitionByApplicability,
   DEFAULT_POLICY,
   type Proposition,
   type PropositionAnswer,
@@ -224,6 +225,10 @@ describe("la asimetría de la decisión", () => {
 // ── Contradicción aislada del análisis ─────────────────────────────────────
 
 describe("la contradicción aislada del gate de análisis", () => {
+  // Lo que el evaluador recibe en un ticket BUGFIX: las proposiciones que no aplican a su
+  // tipo no se envían (R-CPRE-001), y `decide` exige respuesta para todas las que sí.
+  const PROPOSICIONES_BUGFIX = partitionByApplicability(ANALYSIS_GATE.propositions, "BUGFIX").applicable;
+
   const respuestasAp004: PropositionAnswer[] = [
     { id: "diagnostico_explica_el_sintoma", kind: "noul", value: 0.04 },
     { id: "causa_especifica", kind: "noul", value: 0.97 },
@@ -234,7 +239,7 @@ describe("la contradicción aislada del gate de análisis", () => {
 
   it("degrada AP-004 a revisión humana, sin aprobarlo", () => {
     const decision = decide(
-      ANALYSIS_GATE.propositions,
+      PROPOSICIONES_BUGFIX,
       respuestasAp004,
       ANALYSIS_GATE.policy,
       ANALYSIS_GATE.isolatedBlockReview,
@@ -253,7 +258,7 @@ describe("la contradicción aislada del gate de análisis", () => {
       );
 
       const decision = decide(
-        ANALYSIS_GATE.propositions,
+        PROPOSICIONES_BUGFIX,
         answers,
         ANALYSIS_GATE.policy,
         ANALYSIS_GATE.isolatedBlockReview,
@@ -267,7 +272,7 @@ describe("la contradicción aislada del gate de análisis", () => {
 
   // R-CDEF-003: sin impactos declarados, `riesgos_cubren_impactos` es descriptiva y
   // su valor no es una medida; no puede impedir la degradación a revisión.
-  const proposicionesConRiesgosDescriptivo = ANALYSIS_GATE.propositions.map((p) =>
+  const proposicionesConRiesgosDescriptivo = PROPOSICIONES_BUGFIX.map((p) =>
     p.id === "riesgos_cubren_impactos" ? { ...p, verdict: false } : p,
   );
 
@@ -310,7 +315,7 @@ describe("la contradicción aislada del gate de análisis", () => {
       answer.id === "riesgos_cubren_impactos" ? { ...answer, value: 0.5 } : answer,
     );
     const decision = decide(
-      ANALYSIS_GATE.propositions,
+      PROPOSICIONES_BUGFIX,
       answers,
       ANALYSIS_GATE.policy,
       ANALYSIS_GATE.isolatedBlockReview,
@@ -328,7 +333,7 @@ describe("la contradicción aislada del gate de análisis", () => {
     );
 
     const decision = decide(
-      ANALYSIS_GATE.propositions,
+      PROPOSICIONES_BUGFIX,
       answers,
       ANALYSIS_GATE.policy,
       ANALYSIS_GATE.isolatedBlockReview,
