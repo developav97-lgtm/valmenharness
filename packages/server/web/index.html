@@ -848,6 +848,18 @@
       /* Proveedor y modelo, con el modelo en un desplegable que se puede
          escribir: una lista de cientos de modelos sin búsqueda es una lista que
          nadie recorre, y un `select` no deja teclear. */
+      .fila-perfil, .fila-rol-perfil, .elecciones-perfil {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        padding: 6px 0;
+        border-bottom: 1px solid var(--borde-suave);
+      }
+      .origen-perfil, .marca-perfil { color: var(--tenue); font-size: 12px; }
+      .marca-perfil { color: var(--acento); }
+      .editor-perfil label { display: block; margin: 6px 0; }
+
       .par-modelo {
         display: flex;
         gap: 8px;
@@ -6483,7 +6495,9 @@
               "harness no es un runtime de agentes y no puede imponerle el suyo.",
           ),
         );
-        cont.append(nota, el("h2", "Preset"));
+        cont.append(nota);
+        await seccionPerfiles(cont, catalogo);
+        cont.append(el("h2", "Preset"));
 
         const presets = el("div", undefined, "presets");
         const explicacion = el("div", undefined, "resultado");
@@ -6742,6 +6756,204 @@
         });
 
         await refrescar();
+      }
+
+      // ── Perfiles de modelos ──────────────────────────────────────────────
+
+      /**
+       * La sección «Perfiles» de la vista Modelos: ver, crear a partir de otro,
+       * editar y elegir. Solo habla con `/api/perfiles`; el archivo lo escribe el
+       * servidor con las mismas funciones que usa el código.
+       */
+      async function seccionPerfiles(cont, catalogo) {
+        cont.append(el("h2", "Perfiles"));
+        const salida = el("div", undefined, "resultado");
+        const lista = el("div", undefined, "perfiles");
+        const editor = el("div", undefined, "editor-perfil");
+        cont.append(lista, salida, editor);
+
+        salida.textContent = "Cargando perfiles…";
+        let datos;
+        try {
+          datos = await api("GET", "/api/perfiles");
+        } catch (fallo) {
+          salida.className = "resultado error";
+          salida.textContent = fallo.message;
+          return;
+        }
+        salida.textContent = "";
+        if (datos.error) {
+          salida.className = "resultado error";
+          salida.textContent = datos.error;
+        }
+        const { perfiles, seleccion, ejecutores, roles } = datos;
+
+        const recargar = async () => {
+          await vistaModelos();
+        };
+
+        const elegir = async (perfil, ejecutor) => {
+          salida.className = "resultado";
+          salida.textContent = "Guardando la elección…";
+          try {
+            const cuerpo = ejecutor === undefined ? { perfil } : { perfil, ejecutor };
+            const r = await api("PUT", "/api/perfiles/seleccion", cuerpo);
+            if (r.written) {
+              await recargar();
+            } else {
+              salida.className = "resultado error";
+              salida.textContent = r.errores.join(" ");
+            }
+          } catch (fallo) {
+            salida.className = "resultado error";
+            salida.textContent = fallo.message;
+          }
+        };
+
+        const abrirEditor = (base, editando) => {
+          editor.textContent = "";
+          const copia = {};
+          for (const rol of roles) {
+            const ruta = base.roles[rol.id];
+            copia[rol.id] = {
+              provider: ruta?.provider ?? "",
+              model: ruta?.model ?? "",
+              effort: ruta?.effort ?? "auto",
+            };
+          }
+          editor.append(
+            el("h3", editando ? `Editar ${base.id}` : `Nuevo perfil a partir de ${base.id}`),
+          );
+
+          const etiquetaId = el("label", "Id del perfil");
+          const campoId = document.createElement("input");
+          campoId.type = "text";
+          campoId.value = editando ? base.id : "";
+          campoId.disabled = editando;
+          campoId.spellcheck = false;
+          campoId.placeholder = "mi-perfil";
+          etiquetaId.append(campoId);
+
+          const etiquetaDesc = el("label", "Descripción");
+          const campoDesc = document.createElement("input");
+          campoDesc.type = "text";
+          campoDesc.value = editando ? base.description : "";
+          etiquetaDesc.append(campoDesc);
+          editor.append(etiquetaId, etiquetaDesc);
+
+          for (const rol of roles) {
+            const fila = el("div", undefined, "fila-rol-perfil");
+            fila.append(el("div", rol.id, "rol"));
+            fila.append(
+              selectorDeModelo({
+                provider: copia[rol.id].provider,
+                model: copia[rol.id].model,
+                catalog: catalogo,
+                onProvider: (id) => {
+                  copia[rol.id].provider = id;
+                },
+                onModel: (id) => {
+                  copia[rol.id].model = id;
+                },
+              }),
+            );
+            const etiquetaEsfuerzo = el("label", `Esfuerzo de ${rol.id}`);
+            const esfuerzo = document.createElement("select");
+            for (const valor of ["auto", "low", "medium", "high"]) {
+              esfuerzo.append(new Option(valor, valor));
+            }
+            esfuerzo.value = copia[rol.id].effort;
+            esfuerzo.addEventListener("change", () => {
+              copia[rol.id].effort = esfuerzo.value;
+            });
+            etiquetaEsfuerzo.append(esfuerzo);
+            fila.append(etiquetaEsfuerzo);
+            editor.append(fila);
+          }
+
+          const guardarPerfil = el("button", "Guardar el perfil");
+          const cancelar = el("button", "Cancelar");
+          const resultado = el("div", undefined, "resultado");
+          cancelar.addEventListener("click", () => {
+            editor.textContent = "";
+          });
+          guardarPerfil.addEventListener("click", async () => {
+            guardarPerfil.disabled = true;
+            resultado.className = "resultado";
+            resultado.textContent = "Guardando…";
+            try {
+              const cuerpo = {
+                id: campoId.value.trim(),
+                description: campoDesc.value.trim(),
+                roles: copia,
+              };
+              if (!editando) cuerpo.base = base.id;
+              const r = await api("PUT", "/api/perfiles", cuerpo);
+              if (r.written) {
+                await recargar();
+                return;
+              }
+              // Cada línea tal como llega: dice el rol y el modelo que no existe.
+              resultado.className = "resultado error";
+              resultado.textContent = "";
+              for (const linea of r.errores) resultado.append(el("div", linea));
+            } catch (fallo) {
+              resultado.className = "resultado error";
+              resultado.textContent = fallo.message;
+            } finally {
+              guardarPerfil.disabled = false;
+            }
+          });
+          editor.append(guardarPerfil, cancelar, resultado);
+        };
+
+        for (const perfil of perfiles) {
+          const delProyecto = perfil.origen === "proyecto";
+          const fila = el("div", undefined, "fila-perfil");
+          fila.append(
+            el("strong", perfil.id),
+            el("span", delProyecto ? "del proyecto" : "incorporado", "origen-perfil"),
+            el("span", perfil.description, "descripcion"),
+          );
+          if (seleccion.proyecto === perfil.id) {
+            fila.append(el("span", "elegido para el proyecto", "marca-perfil"));
+          }
+          for (const ejecutor of ejecutores) {
+            if (seleccion.ejecutores[ejecutor] === perfil.id) {
+              fila.append(el("span", `elegido para ${ejecutor}`, "marca-perfil"));
+            }
+          }
+          const crear = el("button", "Crear a partir de este");
+          crear.addEventListener("click", () => abrirEditor(perfil, false));
+          fila.append(crear);
+          if (delProyecto) {
+            const editar = el("button", "Editar");
+            editar.addEventListener("click", () => abrirEditor(perfil, true));
+            fila.append(editar);
+          }
+          lista.append(fila);
+        }
+
+        const selectorDeEleccion = (titulo, actual, ejecutor) => {
+          const etiqueta = el("label", titulo);
+          const sel = document.createElement("select");
+          sel.append(new Option(ejecutor === undefined ? "sin perfil" : "sin perfil propio", ""));
+          for (const perfil of perfiles) sel.append(new Option(perfil.id, perfil.id));
+          sel.value = actual ?? "";
+          sel.addEventListener("change", () => {
+            void elegir(sel.value === "" ? null : sel.value, ejecutor);
+          });
+          etiqueta.append(sel);
+          return etiqueta;
+        };
+        const elecciones = el("div", undefined, "elecciones-perfil");
+        elecciones.append(selectorDeEleccion("Perfil del proyecto", seleccion.proyecto, undefined));
+        for (const ejecutor of ejecutores) {
+          elecciones.append(
+            selectorDeEleccion(`Perfil de ${ejecutor}`, seleccion.ejecutores[ejecutor], ejecutor),
+          );
+        }
+        cont.insertBefore(elecciones, salida);
       }
 
       // ── Vista: configuración ──────────────────────────────────────────────

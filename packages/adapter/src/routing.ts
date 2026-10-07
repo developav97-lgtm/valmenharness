@@ -497,7 +497,7 @@ export const PERFILES_INCORPORADOS: readonly PerfilDeModelos[] = [
   },
 ];
 
-const ID_DE_PERFIL = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
+export const ID_DE_PERFIL = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
 
 /**
  * Los errores de completitud de un perfil: uno por rol de `ROLES` que falte o

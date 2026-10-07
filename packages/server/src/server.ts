@@ -65,6 +65,14 @@ import {
 } from "@valmen/engine";
 import { type JsonObject, nextStates, parseTicket, toFailure } from "@valmen/core";
 import {
+  EJECUTORES_CON_PERFIL,
+  PERFILES_INCORPORADOS,
+  ROLES,
+  type PerfilDeModelos,
+  type RoleRoute,
+  derivarPerfil,
+  listarPerfiles,
+  readSeleccionDePerfil,
   architectRoutingFor,
   machineBindingsPath,
   leerEventosDeFaseKanban,
@@ -108,7 +116,9 @@ import {
 import {
   type RoutingState,
   checkRouting,
+  elegirPerfil,
   fetchCatalog,
+  guardarPerfil,
   hasRouting,
   readRouting,
   resetCatalogCache,
@@ -1529,6 +1539,107 @@ export async function handleApi(
       texto,
     );
     return { status: 200, body: { routing: resultado, text: texto } };
+  }
+
+  // GET /api/perfiles  — perfiles incorporados y del proyecto, y la elección vigente
+  if (method === "GET" && path === "/api/perfiles") {
+    try {
+      return {
+        status: 200,
+        body: {
+          perfiles: listarPerfiles(context.root),
+          seleccion: readSeleccionDePerfil(context.root),
+          ejecutores: EJECUTORES_CON_PERFIL,
+          roles: ROLES,
+        },
+      };
+    } catch (caught) {
+      // Un profiles.yaml ilegible no debe ser un 500 sin cuerpo: la pantalla dice qué falla.
+      return {
+        status: 200,
+        body: {
+          error: caught instanceof Error ? caught.message : String(caught),
+          perfiles: PERFILES_INCORPORADOS,
+          seleccion: { proyecto: null, ejecutores: {} },
+          ejecutores: EJECUTORES_CON_PERFIL,
+          roles: ROLES,
+        },
+      };
+    }
+  }
+
+  // PUT /api/perfiles/seleccion  — elige (o quita, con null) el perfil del proyecto o de un ejecutor
+  if (method === "PUT" && path === "/api/perfiles/seleccion") {
+    const datos = (body ?? {}) as { perfil?: unknown; ejecutor?: unknown };
+    if (
+      (datos.perfil !== null && typeof datos.perfil !== "string") ||
+      (datos.ejecutor !== undefined && typeof datos.ejecutor !== "string")
+    ) {
+      return {
+        status: 400,
+        body: { error: "Se espera `perfil` (texto o null) y, opcional, `ejecutor` (texto)." },
+      };
+    }
+    try {
+      const resultado = elegirPerfil(context.root, {
+        perfil: datos.perfil,
+        ...(datos.ejecutor === undefined ? {} : { ejecutor: datos.ejecutor }),
+      });
+      return { status: 200, body: resultado };
+    } catch (caught) {
+      return {
+        status: 400,
+        body: { error: caught instanceof Error ? caught.message : String(caught) },
+      };
+    }
+  }
+
+  // PUT /api/perfiles  — guarda un perfil del proyecto, nuevo o editado, si el catálogo lo respalda
+  if (method === "PUT" && path === "/api/perfiles") {
+    const datos = (body ?? {}) as {
+      id?: unknown;
+      description?: unknown;
+      base?: unknown;
+      roles?: unknown;
+    };
+    if (
+      typeof datos.id !== "string" ||
+      typeof datos.description !== "string" ||
+      (datos.base !== undefined && typeof datos.base !== "string") ||
+      typeof datos.roles !== "object" ||
+      datos.roles === null ||
+      Array.isArray(datos.roles)
+    ) {
+      return {
+        status: 400,
+        body: { error: "Se esperan `id`, `description`, `roles` y, opcional, `base`." },
+      };
+    }
+    const roles = datos.roles as Record<string, RoleRoute>;
+    try {
+      let perfil: PerfilDeModelos;
+      if (datos.base === undefined) {
+        perfil = { id: datos.id, description: datos.description, origen: "proyecto", roles };
+      } else {
+        const baseId = datos.base;
+        const base = listarPerfiles(context.root).find((candidato) => candidato.id === baseId);
+        if (base === undefined) {
+          return { status: 400, body: { error: `el perfil base "${baseId}" no existe.` } };
+        }
+        perfil = derivarPerfil(base, datos.id, datos.description, roles);
+      }
+      const resultado = await guardarPerfil(context.root, perfil, {
+        filePath: context.credentialsFile,
+        env: context.env,
+        ...(context.fetchImpl === undefined ? {} : { fetchImpl: context.fetchImpl }),
+      });
+      return { status: 200, body: resultado };
+    } catch (caught) {
+      return {
+        status: 400,
+        body: { error: caught instanceof Error ? caught.message : String(caught) },
+      };
+    }
   }
 
   // POST /api/routing/preview  — el texto que produciría el formulario

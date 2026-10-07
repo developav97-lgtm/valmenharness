@@ -28,6 +28,7 @@ import {
   type PerfilElegido,
   type SeleccionDePerfil,
   EJECUTORES_CON_PERFIL,
+  ID_DE_PERFIL,
   listarPerfiles,
   perfilElegido,
   readSeleccionDePerfil,
@@ -407,6 +408,15 @@ export async function guardarPerfil(
     return {
       ok: false,
       errores: [`"${perfil.id}" es un perfil incorporado y no se puede sobrescribir.`],
+      written: false,
+    };
+  }
+  if (!ID_DE_PERFIL.test(perfil.id)) {
+    return {
+      ok: false,
+      errores: [
+        `el id de perfil "${perfil.id}" debe ser kebab-case (minúsculas, dígitos y guiones).`,
+      ],
       written: false,
     };
   }
