@@ -226,10 +226,12 @@ describe("los impactos llegan al evaluador", () => {
     });
 
     const ids = expandido.propositions.map((proposition) => proposition.id);
-    expect(ids).toContain("migration_impact");
+    // Cada impacto se despliega en dos proposiciones atómicas (R-CPRE-005).
+    expect(ids).toContain("migration_impact_orden");
+    expect(ids).toContain("migration_impact_reversion");
     // Y la proposición dice qué falta, no «el impacto está bien considerado»:
     // eso no se puede computar.
-    const proposicion = expandido.propositions.find((p) => p.id === "migration_impact");
+    const proposicion = expandido.propositions.find((p) => p.id === "migration_impact_reversion");
     expect(proposicion?.instructions).toContain("cómo se revierte");
     // La compuerta deja constancia de que se expandió por impacto.
     expect(expandido.id).toBe("plan+impactos");
@@ -245,7 +247,9 @@ describe("los impactos llegan al evaluador", () => {
     });
 
     const ids = expandido.propositions.map((proposition) => proposition.id);
-    expect(ids.indexOf("sync_impact")).toBeLessThan(ids.indexOf("docker_impact"));
+    expect(ids.indexOf("sync_impact_clientes_desactualizados")).toBeLessThan(
+      ids.indexOf("docker_impact_imagen"),
+    );
   });
 
   it("la compuerta de análisis no los despliega: protege el estado anterior al plan", () => {
@@ -255,9 +259,9 @@ describe("los impactos llegan al evaluador", () => {
       interfaz: SIN_INTERFAZ,
     });
 
-    expect(expandido.propositions.map((proposition) => proposition.id)).not.toContain(
-      "migration_impact",
-    );
+    expect(
+      expandido.propositions.map((proposition) => proposition.id).filter((id) => id.startsWith("migration_impact")),
+    ).toEqual([]);
     expect(expandido.id).toBe("analysis");
   });
 
@@ -274,7 +278,9 @@ describe("los impactos llegan al evaluador", () => {
 
     expect(expandido.id).toBe("plan+criterios");
     expect(expandido.propositions.map((p) => p.id)).toContain("criterio_01");
-    expect(expandido.propositions.map((p) => p.id)).not.toContain("migration_impact");
+    expect(
+      expandido.propositions.map((p) => p.id).filter((id) => id.startsWith("migration_impact")),
+    ).toEqual([]);
   });
 
   it("un identificador que el contrato no conoce no se despliega", () => {
@@ -297,7 +303,8 @@ describe("los impactos llegan al evaluador", () => {
 
     const ids = expandido.propositions.map((proposition) => proposition.id);
     expect(ids).toContain("criterio_01");
-    expect(ids).toContain("migration_impact");
+    expect(ids).toContain("migration_impact_orden");
+    expect(ids).toContain("migration_impact_reversion");
     expect(expandido.id).toBe("plan+criterios+impactos");
   });
 });

@@ -273,8 +273,8 @@ describe("el despliegue de la proposición en el gate de plan", () => {
     // Cada expansión aporta lo suyo, en el orden del ensamblado, y las fijas
     // quedan detrás.
     const ids = expandido.propositions.map((p) => p.id);
-    expect(ids.indexOf("criterio_01")).toBeLessThan(ids.indexOf("migration_impact"));
-    expect(ids.indexOf("migration_impact")).toBeLessThan(ids.indexOf(PROPOSICION_PLAYWRIGHT));
+    expect(ids.indexOf("criterio_01")).toBeLessThan(ids.indexOf("migration_impact_orden"));
+    expect(ids.indexOf("migration_impact_reversion")).toBeLessThan(ids.indexOf(PROPOSICION_PLAYWRIGHT));
     expect(ids).toContain("clasificacion");
   });
 

@@ -274,22 +274,28 @@ export const ANALYSIS_GATE: GateDefinition = {
     {
       id: "nombra_archivos_reales",
       kind: "noul",
-      // Lo que se lee en el recibo: sin esto, la proposición aparece
-      // solo por su identificador y hay que ir al gate para saber qué pregunta.
-      description: "Los archivos que nombra son los del síntoma",
+      // La descripción y la instrucción piden lo mismo: lo que se lee en el recibo es
+      // lo que se le preguntó al evaluador (R-CPRE-004).
+      description: "Los archivos que cita contienen el comportamiento descrito",
       instructions:
-        "Los archivos que `investigacion` cita son los que contendrían el comportamiento " +
-        "descrito, según lo que el propio texto explica del sistema.",
+        "Los archivos que `investigacion` cita contienen el comportamiento que `solicitud` y " +
+        "`descripcion_funcional` describen, según lo que el propio texto explica del sistema.",
+      criteria: {
+        yes: "Cada archivo citado es donde está —o donde debe estar— el comportamiento descrito.",
+        no: "Los archivos citados no tienen relación con el comportamiento descrito, o no se cita ninguno.",
+      },
     },
     {
       id: "riesgos_cubren_impactos",
       kind: "noul",
-      // Lo que se lee en el recibo: sin esto, la proposición aparece
-      // solo por su identificador y hay que ir al gate para saber qué pregunta.
-      description: "Los riesgos cubren los impactos declarados",
+      description: "El diagnóstico declara el efecto del cambio sobre otros consumidores del componente",
       instructions:
         "`investigacion` declara el efecto del cambio sobre otros consumidores del mismo " +
-        "componente o endpoint.",
+        "componente o endpoint, o declara que no hay ninguno.",
+      criteria: {
+        yes: "Nombra qué otros consumidores del componente o endpoint resultan afectados, o declara que ninguno lo es.",
+        no: "No dice nada del efecto sobre otros consumidores del componente o endpoint.",
+      },
     },
     {
       id: "clasificacion",

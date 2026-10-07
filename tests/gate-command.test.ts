@@ -333,11 +333,11 @@ describe("un impacto declarado cambia lo que se pregunta", () => {
     return runGate(PATHS(), {
       gateId: "plan",
       ticketId: TICKET,
-      jev: evaluator({ ...allPropositions(0.95), migration_impact: 0.05 }, 1.0),
+      jev: evaluator({ ...allPropositions(0.95), migration_impact_reversion: 0.05 }, 1.0),
       dryRun: true,
     }).then((result) => {
       // El resto del plan está impecable; lo único que falta es la migración.
-      expect(result.stdout).toContain("migration_impact");
+      expect(result.stdout).toContain("migration_impact_reversion");
       expect(result.stdout).not.toContain("RESULTADO: APPROVE");
       expect(result.exitCode).toBe(3);
     });
