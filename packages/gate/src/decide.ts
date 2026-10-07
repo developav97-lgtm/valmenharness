@@ -56,6 +56,15 @@ export interface NoulProposition {
   /** Solo se evalúa si la condición se cumple sobre el sujeto. */
   readonly when?: string;
   /**
+   * Los tipos de ticket a los que aplica la proposición. Ausente = todos.
+   *
+   * La aplicabilidad la decide el código: una proposición que no aplica al tipo del
+   * ticket no se envía al evaluador y el recibo la registra como `no_aplica`
+   * (R-CPRE-001). Preguntar por un síntoma a una funcionalidad nueva no mide calidad:
+   * mide la ausencia de algo que nunca se pidió.
+   */
+  readonly appliesTo?: readonly string[];
+  /**
    * `false` si la proposición **solo describe** algo y no emite veredicto.
    *
    * Por defecto `true`. La distinción es necesaria y se descubrió con una
@@ -87,6 +96,15 @@ export interface ChoiceProposition {
    */
   readonly effects?: Readonly<Record<string, GateEffect>>;
   readonly when?: string;
+  /**
+   * Los tipos de ticket a los que aplica la proposición. Ausente = todos.
+   *
+   * La aplicabilidad la decide el código: una proposición que no aplica al tipo del
+   * ticket no se envía al evaluador y el recibo la registra como `no_aplica`
+   * (R-CPRE-001). Preguntar por un síntoma a una funcionalidad nueva no mide calidad:
+   * mide la ausencia de algo que nunca se pidió.
+   */
+  readonly appliesTo?: readonly string[];
   /** `false` si solo describe y no emite veredicto. Ver `NoulProposition`. */
   readonly verdict?: boolean;
 }
@@ -109,6 +127,15 @@ export interface ScoreProposition {
    */
   readonly levels: Readonly<Record<number, GateEffect>>;
   readonly when?: string;
+  /**
+   * Los tipos de ticket a los que aplica la proposición. Ausente = todos.
+   *
+   * La aplicabilidad la decide el código: una proposición que no aplica al tipo del
+   * ticket no se envía al evaluador y el recibo la registra como `no_aplica`
+   * (R-CPRE-001). Preguntar por un síntoma a una funcionalidad nueva no mide calidad:
+   * mide la ausencia de algo que nunca se pidió.
+   */
+  readonly appliesTo?: readonly string[];
   /** `false` si solo describe y no emite veredicto. Ver `NoulProposition`. */
   readonly verdict?: boolean;
 }

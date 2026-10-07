@@ -13,6 +13,8 @@
  *
  * Ver docs/03-GATES.md §5.1quater.
  */
+import { TICKET_TYPES } from "@valmen/core";
+
 import type { CommandCheckSpec, GateDefinition, NoulProposition, Proposition } from "./decide.js";
 import { DEFAULT_POLICY, GateDefinitionError } from "./decide.js";
 import { ANALYSIS_GATE, PLAN_GATE } from "./definitions.js";
@@ -709,6 +711,57 @@ export interface GateContext {
   readonly interfaz: InterfazDelSujeto;
   /** Preguntas ya validadas por el adaptador para esta etapa. */
   readonly additional?: readonly NoulProposition[];
+}
+
+/** Una proposición que no aplica al tipo del ticket, tal como queda en el recibo. */
+export interface NotApplicableRecord {
+  readonly id: string;
+  readonly status: "no_aplica";
+  /** Los tipos que la proposición declara. */
+  readonly appliesTo: readonly string[];
+  /** El tipo del ticket evaluado. */
+  readonly ticketType: string;
+}
+
+/**
+ * Separa las proposiciones que aplican al tipo del ticket de las que no.
+ *
+ * Es la decisión de aplicabilidad (R-CPRE-001) y es **del código**: una proposición
+ * que no aplica no llega al evaluador. Sin `appliesTo` aplica a todos los tipos. Un
+ * `appliesTo` que no es una lista no vacía de tipos del contrato es un error de
+ * definición y se dice: ignorarlo dejaría la proposición aplicando donde su autor no
+ * quería, o desaparecida sin que nadie lo notara.
+ */
+export function partitionByApplicability(
+  propositions: readonly Proposition[],
+  ticketType: string,
+): { readonly applicable: Proposition[]; readonly notApplicable: NotApplicableRecord[] } {
+  const applicable: Proposition[] = [];
+  const notApplicable: NotApplicableRecord[] = [];
+  for (const proposition of propositions) {
+    const tipos = proposition.appliesTo;
+    if (tipos === undefined) {
+      applicable.push(proposition);
+      continue;
+    }
+    if (tipos.length === 0) {
+      throw new GateDefinitionError(
+        `La proposición "${proposition.id}" declara appliesTo vacío: sin tipos no aplicaría a ninguno.`,
+      );
+    }
+    const desconocidos = tipos.filter(
+      (tipo) => !(TICKET_TYPES as readonly string[]).includes(tipo),
+    );
+    if (desconocidos.length > 0) {
+      throw new GateDefinitionError(
+        `La proposición "${proposition.id}" declara appliesTo con tipos que no existen: ` +
+          `${desconocidos.join(", ")}. Los del contrato son ${TICKET_TYPES.join(", ")}.`,
+      );
+    }
+    if (tipos.includes(ticketType)) applicable.push(proposition);
+    else notApplicable.push({ id: proposition.id, status: "no_aplica", appliesTo: [...tipos], ticketType });
+  }
+  return { applicable, notApplicable };
 }
 
 /** Obtiene un gate expandido con el contexto del sujeto. */

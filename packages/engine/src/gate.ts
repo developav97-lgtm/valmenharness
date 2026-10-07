@@ -44,6 +44,8 @@ import {
   gateFor,
   hashEvaluatorConfig,
   hashState,
+  partitionByApplicability,
+  type NotApplicableRecord,
   summarizeReceipt,
   weightedMean,
 } from "@valmen/gate";
@@ -513,6 +515,30 @@ export async function runGate(
     return { stdout: "", stderr: failure.message, exitCode: failure.exitCode };
   }
 
+  // La aplicabilidad por tipo la decide el código, antes de preguntar nada: una
+  // proposición que no aplica al tipo del ticket no se envía al evaluador y queda en el
+  // recibo como `no_aplica` (R-CPRE-001). Si el filtro no deja ninguna no se evalúa:
+  // decidir sin proposiciones aprobaría por vacuidad.
+  let noAplican: NotApplicableRecord[] = [];
+  try {
+    const tipo = parseTicket(ticket.text).fields.type;
+    const partido = partitionByApplicability(gate.propositions, tipo);
+    if (gate.propositions.length > 0 && partido.applicable.length === 0) {
+      return {
+        stdout: "",
+        stderr:
+          `Ninguna proposición de la compuerta ${definition.id} aplica a un ticket ${tipo}: ` +
+          "evaluarla aprobaría por vacuidad. Revise `appliesTo` de sus proposiciones.\n",
+        exitCode: EXIT_INVARIANT,
+      };
+    }
+    noAplican = partido.notApplicable;
+    gate = { ...gate, propositions: partido.applicable };
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return { stdout: "", stderr: failure.message, exitCode: failure.exitCode };
+  }
+
   // Los comandos que responden las proposiciones del gate mecánico. Se arman
   // después de la comprobación previa, así que acá ya se sabe que hay al menos uno
   // y que todos están autorizados.
@@ -760,6 +786,7 @@ export async function runGate(
       : { commandResults: evaluation.commandResults }),
     ...(preparacion === null ? {} : { setup: preparacion }),
     evaluator: evaluation.evaluator,
+    notApplicable: noAplican,
     evaluatorKey: huellaDelEvaluador,
     ...(forzado === undefined ? {} : { forced: forzado }),
   });
@@ -816,6 +843,16 @@ export async function runGate(
     const descripcion = item.description === undefined ? "" : `  ${item.description}`;
     lines.push(
       `    ${marca}  ${item.label.padEnd(38)} ${item.verdict ? "" : "descriptiva"}${peso}${descripcion}`.trimEnd(),
+    );
+  }
+
+  // Las proposiciones que no aplican a este tipo de ticket: el código las separó y el
+  // evaluador no las vio.
+  if (noAplican.length > 0) {
+    lines.push(
+      "",
+      `  No aplican a un ticket ${noAplican[0]?.ticketType ?? ""} (no se enviaron al evaluador): ` +
+        noAplican.map((registro) => registro.id).join(", "),
     );
   }
 
