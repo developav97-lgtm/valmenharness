@@ -4,269 +4,85 @@ generated_by:
   model: gpt-6.1-sol
 sprints:
   - id: S1
-    goal: Entregar el mapa del código y design.md con contratos y decisiones técnicas. Buscar módulos y campos reales antes de registrar implementación; consultar una vez al PO cualquier ausencia y bloquear los tickets afectados hasta resolverla. Definir pruebas por módulo sin cambiar Jev ni crear paquetes nuevos.
+    goal: "Los perfiles existen, son mixtos y personalizables, se validan contra el catálogo y se resuelven por proyecto y ejecutor con su origen visible."
     tickets:
-      - id: DOCS-PERFILES-MAPA-CONFIGURACION-20261007
-        title: "Localizar routing, catálogos y selección de modelos existentes"
+      - id: FEATURE-ADAPTER-PERFILES-MODELOS-20261007
+        title: "Definir perfiles con nombre (Claude Code, Codex, OpenCode Go y personalizados), mixtos, validados contra el catálogo"
         depends_on: []
-      - id: DOCS-PERFILES-MAPA-EJECUCION-20261007
-        title: "Localizar despacho, permisos, registro y sesiones interactivas"
-        depends_on: []
-      - id: DOCS-PERFILES-DISENO-CONFIGURACION-20261007
-        title: "Decidir contratos de perfiles, validación y precedencia de selección"
+      - id: FEATURE-ADAPTER-RESOLUCION-PERFIL-20261007
+        title: "Elegir el perfil por proyecto y por ejecutor, que el preset no lo sobrescriba y mostrar el modelo efectivo con su origen"
         depends_on:
-          - DOCS-PERFILES-MAPA-CONFIGURACION-20261007
-      - id: DOCS-PERFILES-DISENO-EJECUCION-20261007
-        title: "Decidir despacho, evidencia y delegación interactiva por fase"
-        depends_on:
-          - DOCS-PERFILES-MAPA-EJECUCION-20261007
-          - DOCS-PERFILES-DISENO-CONFIGURACION-20261007
+          - FEATURE-ADAPTER-PERFILES-MODELOS-20261007
   - id: S2
-    goal: "Entregar perfiles incorporados y personalizados que se puedan crear, editar y seleccionar desde el CLI, con modelo efectivo y origen visibles. Rechazar modelos ajenos al catálogo de su proveedor. Core permanece puro salvo la persistencia en fs.ts; cada ticket incluye sus pruebas de módulo con Vitest."
+    goal: "Cada fase se despacha al ejecutor y modelo de su proveedor, sin caídas silenciosas, y el modelo usado queda registrado."
     tickets:
-      - id: FEATURE-CORE-CONTRATO-PERFIL-20261007
-        title: "Definir perfiles con proveedor, modelo y esfuerzo por rol y fase"
+      - id: SECURITY-ENGINE-DESPACHO-POR-PROVEEDOR-20261007
+        title: "Lanzar cada fase con el ejecutor y el modelo de su proveedor, y detenerse si no está autorizado"
         depends_on:
-          - DOCS-PERFILES-DISENO-CONFIGURACION-20261007
-      - id: FEATURE-ADAPTER-CATALOGOS-PERFILES-20261007
-        title: Exponer los catálogos existentes de cada proveedor
+          - FEATURE-ADAPTER-RESOLUCION-PERFIL-20261007
+      - id: FEATURE-ENGINE-REGISTRO-MODELO-FASE-20261007
+        title: "Registrar el modelo realmente usado por fase, compararlo con el declarado y decir «sin reportar» el costo ausente"
         depends_on:
-          - FEATURE-CORE-CONTRATO-PERFIL-20261007
-      - id: FEATURE-CORE-VALIDACION-PERFIL-20261007
-        title: Validar asignaciones completas y modelos contra catálogos recibidos
-        depends_on:
-          - FEATURE-CORE-CONTRATO-PERFIL-20261007
-      - id: FEATURE-CORE-RESOLUCION-PERFIL-20261007
-        title: Resolver el perfil efectivo por proyecto y ejecutor con su origen
-        depends_on:
-          - FEATURE-CORE-CONTRATO-PERFIL-20261007
-      - id: FEATURE-CORE-PERFILES-INCORPORADOS-20261007
-        title: "Añadir perfiles completos de Claude Code, Codex y OpenCode Go"
-        depends_on:
-          - FEATURE-CORE-VALIDACION-PERFIL-20261007
-          - FEATURE-ADAPTER-CATALOGOS-PERFILES-20261007
-      - id: FEATURE-CORE-PERSISTENCIA-PERFILES-20261007
-        title: Leer y guardar perfiles personalizados únicamente mediante fs.ts
-        depends_on:
-          - FEATURE-CORE-CONTRATO-PERFIL-20261007
-      - id: FEATURE-CORE-PERSISTENCIA-SELECCION-20261007
-        title: Persistir la selección por proyecto y ejecutor mediante fs.ts
-        depends_on:
-          - FEATURE-CORE-RESOLUCION-PERFIL-20261007
-      - id: FEATURE-ENGINE-CREAR-PERFIL-20261007
-        title: Crear perfiles y rechazar modelos inválidos antes de guardarlos
-        depends_on:
-          - FEATURE-CORE-VALIDACION-PERFIL-20261007
-          - FEATURE-CORE-PERSISTENCIA-PERFILES-20261007
-          - FEATURE-ADAPTER-CATALOGOS-PERFILES-20261007
-      - id: FEATURE-ENGINE-EDITAR-PERFIL-20261007
-        title: Editar perfiles sin guardar cambios que fallen la validación
-        depends_on:
-          - FEATURE-CORE-VALIDACION-PERFIL-20261007
-          - FEATURE-CORE-PERSISTENCIA-PERFILES-20261007
-          - FEATURE-ADAPTER-CATALOGOS-PERFILES-20261007
-      - id: FEATURE-ENGINE-ELEGIR-PERFIL-20261007
-        title: Listar y elegir perfiles por proyecto y ejecutor
-        depends_on:
-          - FEATURE-CORE-PERFILES-INCORPORADOS-20261007
-          - FEATURE-CORE-PERSISTENCIA-PERFILES-20261007
-          - FEATURE-CORE-PERSISTENCIA-SELECCION-20261007
-      - id: FEATURE-ENGINE-MODELOS-EFECTIVOS-20261007
-        title: "Consultar proveedor, modelo, esfuerzo y origen efectivos por fase"
-        depends_on:
-          - FEATURE-ENGINE-ELEGIR-PERFIL-20261007
-          - FEATURE-CORE-RESOLUCION-PERFIL-20261007
-      - id: FEATURE-CLI-CREAR-PERFIL-20261007
-        title: Permitir crear perfiles personalizados desde el CLI
-        depends_on:
-          - FEATURE-ENGINE-CREAR-PERFIL-20261007
-      - id: FEATURE-CLI-EDITAR-PERFIL-20261007
-        title: Permitir editar perfiles personalizados desde el CLI
-        depends_on:
-          - FEATURE-ENGINE-EDITAR-PERFIL-20261007
-      - id: FEATURE-CLI-ELEGIR-PERFIL-20261007
-        title: Permitir listar y elegir perfiles por proyecto y ejecutor
-        depends_on:
-          - FEATURE-ENGINE-ELEGIR-PERFIL-20261007
-      - id: FEATURE-CLI-MODELOS-EFECTIVOS-20261007
-        title: Mostrar el modelo efectivo y su origen para cada fase
-        depends_on:
-          - FEATURE-ENGINE-MODELOS-EFECTIVOS-20261007
+          - SECURITY-ENGINE-DESPACHO-POR-PROVEEDOR-20261007
   - id: S3
-    goal: "Ejecutar fases con el ejecutor del proveedor y el modelo del perfil, incluidos perfiles mixtos, sin caídas silenciosas al modelo del ejecutor ni ampliación de permisos. Verificar cada adaptación con pruebas de módulo y conservar sin cambios los evaluadores de compuertas."
+    goal: "La persona elige perfiles y ve qué modelo corre cada fase, en Mission Control, el CLI y Hermes."
     tickets:
-      - id: FEATURE-CORE-DESTINO-FASE-20261007
-        title: Resolver el ejecutor de cada fase según el proveedor del perfil
+      - id: FEATURE-MC-PERFILES-MODELOS-20261007
+        title: "Crear, editar y elegir perfiles desde Mission Control"
         depends_on:
-          - DOCS-PERFILES-DISENO-EJECUCION-20261007
-          - FEATURE-CORE-RESOLUCION-PERFIL-20261007
-      - id: FEATURE-CORE-EVIDENCIA-MODELO-20261007
-        title: Definir evidencia por fase sin confundir modelo pedido y usado
+          - FEATURE-ADAPTER-RESOLUCION-PERFIL-20261007
+      - id: FEATURE-MC-VISTA-MODELOS-EFECTIVOS-20261007
+        title: "Mostrar el modelo efectivo, su origen y el realmente usado por fase"
         depends_on:
-          - DOCS-PERFILES-DISENO-EJECUCION-20261007
-          - FEATURE-CORE-CONTRATO-PERFIL-20261007
-      - id: FEATURE-ADAPTER-FASES-CLAUDE-20261007
-        title: Ejecutar fases en Claude Code y capturar el modelo realmente usado
+          - FEATURE-ENGINE-REGISTRO-MODELO-FASE-20261007
+          - FEATURE-MC-PERFILES-MODELOS-20261007
+      - id: FEATURE-CLI-PERFILES-MODELOS-20261007
+        title: "Listar, mostrar y elegir perfiles por CLI y desde Hermes"
         depends_on:
-          - FEATURE-CORE-DESTINO-FASE-20261007
-          - FEATURE-CORE-EVIDENCIA-MODELO-20261007
-      - id: FEATURE-ADAPTER-FASES-CODEX-20261007
-        title: Ejecutar fases en Codex y capturar el modelo realmente usado
-        depends_on:
-          - FEATURE-CORE-DESTINO-FASE-20261007
-          - FEATURE-CORE-EVIDENCIA-MODELO-20261007
-      - id: FEATURE-ADAPTER-FASES-OPENCODE-20261007
-        title: Ejecutar fases en OpenCode Go y capturar el modelo realmente usado
-        depends_on:
-          - FEATURE-CORE-DESTINO-FASE-20261007
-          - FEATURE-CORE-EVIDENCIA-MODELO-20261007
-      - id: SECURITY-ENGINE-AUTORIZACION-FASE-20261007
-        title: Comprobar permisos existentes antes de ejecutar cada fase del perfil
-        depends_on:
-          - FEATURE-CORE-DESTINO-FASE-20261007
-          - DOCS-PERFILES-MAPA-EJECUCION-20261007
-      - id: FEATURE-ENGINE-DESPACHO-FASES-20261007
-        title: "Despachar cada fase al ejecutor, modelo y esfuerzo resueltos"
-        depends_on:
-          - FEATURE-ENGINE-MODELOS-EFECTIVOS-20261007
-          - SECURITY-ENGINE-AUTORIZACION-FASE-20261007
-          - FEATURE-ADAPTER-FASES-CLAUDE-20261007
-          - FEATURE-ADAPTER-FASES-CODEX-20261007
-          - FEATURE-ADAPTER-FASES-OPENCODE-20261007
+          - FEATURE-ENGINE-REGISTRO-MODELO-FASE-20261007
   - id: S4
-    goal: "Entregar selección por proyecto y ejecutor en Mission Control y Hermes, junto con vistas del modelo efectivo y del realmente usado. Registrar evidencia por fase mediante la persistencia existente; los costos no reportados se muestran como sin reportar y nunca se estiman."
+    goal: "Una sesión interactiva delega cada fase a un subagente con el modelo del perfil cuando el cliente lo admite."
     tickets:
-      - id: FEATURE-ENGINE-REGISTRO-FASES-20261007
-        title: Registrar por fase el modelo usado y el costo solo cuando se reporte
+      - id: FEATURE-ADAPTER-CONTEXTO-FASES-SUBAGENTE-20261007
+        title: "Proveer a la sesión el modelo de cada fase y avisar si el cliente no admite subagentes"
         depends_on:
-          - FEATURE-ENGINE-DESPACHO-FASES-20261007
-          - FEATURE-CORE-EVIDENCIA-MODELO-20261007
-      - id: FEATURE-SERVER-SELECCION-PERFILES-20261007
-        title: Exponer selección de perfiles y consulta del modelo efectivo
+          - FEATURE-ADAPTER-RESOLUCION-PERFIL-20261007
+      - id: FEATURE-ENGINE-ORQUESTACION-INTERACTIVA-20261007
+        title: "Delegar cada fase a un subagente con el modelo del perfil sin cambiar el modelo de la sesión anfitriona"
         depends_on:
-          - FEATURE-ENGINE-ELEGIR-PERFIL-20261007
-          - FEATURE-ENGINE-MODELOS-EFECTIVOS-20261007
-      - id: FEATURE-SERVER-EVIDENCIA-FASES-20261007
-        title: Exponer la evidencia registrada del modelo usado por fase
+          - FEATURE-ADAPTER-CONTEXTO-FASES-SUBAGENTE-20261007
+          - SECURITY-ENGINE-DESPACHO-POR-PROVEEDOR-20261007
+      - id: IMPROVEMENT-ADAPTER-CONTRATO-PERFILES-20261007
+        title: "Documentar en AGENTS.md y en la skill de flujo cómo se ejecuta por fases"
         depends_on:
-          - FEATURE-ENGINE-REGISTRO-FASES-20261007
-      - id: FEATURE-MISSIONCONTROL-SELECCION-PERFILES-20261007
-        title: Elegir el perfil del proyecto para Mission Control
-        depends_on:
-          - FEATURE-SERVER-SELECCION-PERFILES-20261007
-      - id: FEATURE-MISSIONCONTROL-VISTA-MODELOS-20261007
-        title: "Mostrar modelos efectivos, origen y evidencia de uso por fase"
-        depends_on:
-          - FEATURE-SERVER-SELECCION-PERFILES-20261007
-          - FEATURE-SERVER-EVIDENCIA-FASES-20261007
-      - id: FEATURE-HERMES-SELECCION-PERFILES-20261007
-        title: Elegir el perfil del proyecto para Hermes
-        depends_on:
-          - FEATURE-ENGINE-ELEGIR-PERFIL-20261007
-      - id: FEATURE-HERMES-VISTA-MODELOS-20261007
-        title: "Mostrar modelos efectivos, origen y evidencia de uso por fase"
-        depends_on:
-          - FEATURE-ENGINE-MODELOS-EFECTIVOS-20261007
-          - FEATURE-ENGINE-REGISTRO-FASES-20261007
-      - id: FEATURE-CLI-EVIDENCIA-FASES-20261007
-        title: Consultar el modelo usado por fase y los costos sin reportar
-        depends_on:
-          - FEATURE-ENGINE-REGISTRO-FASES-20261007
-  - id: S5
-    goal: "Delegar cada fase de una sesión interactiva a un subagente con el modelo del perfil, reutilizando despacho, permisos y registro. No cambiar el modelo de la sesión anfitriona. Entregar verify.md con evidencia de los siete requisitos y resultados de npx vitest run."
-    tickets:
-      - id: FEATURE-ADAPTER-CONTEXTO-SUBAGENTE-20261007
-        title: Preparar subagentes de fase sin alterar la sesión anfitriona
-        depends_on:
-          - DOCS-PERFILES-DISENO-EJECUCION-20261007
-          - FEATURE-ADAPTER-FASES-CLAUDE-20261007
-          - FEATURE-ADAPTER-FASES-CODEX-20261007
-          - FEATURE-ADAPTER-FASES-OPENCODE-20261007
-      - id: FEATURE-ENGINE-DELEGACION-INTERACTIVA-20261007
-        title: Orquestar cada fase interactiva con un subagente del perfil
-        depends_on:
-          - FEATURE-ADAPTER-CONTEXTO-SUBAGENTE-20261007
-          - FEATURE-ENGINE-DESPACHO-FASES-20261007
-          - FEATURE-ENGINE-REGISTRO-FASES-20261007
-      - id: FEATURE-MISSIONCONTROL-DELEGACION-INTERACTIVA-20261007
-        title: Conectar sesiones interactivas con la delegación por perfil
-        depends_on:
-          - FEATURE-MISSIONCONTROL-SELECCION-PERFILES-20261007
-          - FEATURE-ENGINE-DELEGACION-INTERACTIVA-20261007
-      - id: FEATURE-HERMES-DELEGACION-INTERACTIVA-20261007
-        title: Conectar sesiones interactivas con la delegación por perfil
-        depends_on:
-          - FEATURE-HERMES-SELECCION-PERFILES-20261007
-          - FEATURE-ENGINE-DELEGACION-INTERACTIVA-20261007
-      - id: DOCS-PERFILES-EVIDENCIA-VERIFICACION-20261007
-        title: Documentar en verify.md la evidencia de los siete requisitos
-        depends_on:
-          - FEATURE-CLI-CREAR-PERFIL-20261007
-          - FEATURE-CLI-EDITAR-PERFIL-20261007
-          - FEATURE-CLI-ELEGIR-PERFIL-20261007
-          - FEATURE-CLI-MODELOS-EFECTIVOS-20261007
-          - FEATURE-CLI-EVIDENCIA-FASES-20261007
-          - FEATURE-MISSIONCONTROL-VISTA-MODELOS-20261007
-          - FEATURE-HERMES-VISTA-MODELOS-20261007
-          - FEATURE-MISSIONCONTROL-DELEGACION-INTERACTIVA-20261007
-          - FEATURE-HERMES-DELEGACION-INTERACTIVA-20261007
+          - FEATURE-ENGINE-ORQUESTACION-INTERACTIVA-20261007
 coverage:
   - requirement: R-PERF-001
     covered_by:
-      - FEATURE-CORE-CONTRATO-PERFIL-20261007
-      - FEATURE-CORE-VALIDACION-PERFIL-20261007
-      - FEATURE-CORE-RESOLUCION-PERFIL-20261007
-      - FEATURE-CORE-PERFILES-INCORPORADOS-20261007
+      - FEATURE-ADAPTER-PERFILES-MODELOS-20261007
   - requirement: R-PERF-002
     covered_by:
-      - FEATURE-CORE-PERSISTENCIA-PERFILES-20261007
-      - FEATURE-CORE-PERSISTENCIA-SELECCION-20261007
-      - FEATURE-ENGINE-CREAR-PERFIL-20261007
-      - FEATURE-ENGINE-EDITAR-PERFIL-20261007
-      - FEATURE-ENGINE-ELEGIR-PERFIL-20261007
-      - FEATURE-CLI-CREAR-PERFIL-20261007
-      - FEATURE-CLI-EDITAR-PERFIL-20261007
-      - FEATURE-CLI-ELEGIR-PERFIL-20261007
-      - FEATURE-SERVER-SELECCION-PERFILES-20261007
-      - FEATURE-MISSIONCONTROL-SELECCION-PERFILES-20261007
-      - FEATURE-HERMES-SELECCION-PERFILES-20261007
+      - FEATURE-ADAPTER-RESOLUCION-PERFIL-20261007
+      - FEATURE-MC-PERFILES-MODELOS-20261007
+      - FEATURE-CLI-PERFILES-MODELOS-20261007
   - requirement: R-PERF-003
     covered_by:
-      - FEATURE-ADAPTER-CATALOGOS-PERFILES-20261007
-      - FEATURE-CORE-VALIDACION-PERFIL-20261007
-      - FEATURE-ENGINE-CREAR-PERFIL-20261007
-      - FEATURE-ENGINE-EDITAR-PERFIL-20261007
+      - FEATURE-ADAPTER-PERFILES-MODELOS-20261007
   - requirement: R-PERF-004
     covered_by:
-      - FEATURE-CORE-DESTINO-FASE-20261007
-      - FEATURE-ADAPTER-FASES-CLAUDE-20261007
-      - FEATURE-ADAPTER-FASES-CODEX-20261007
-      - FEATURE-ADAPTER-FASES-OPENCODE-20261007
-      - SECURITY-ENGINE-AUTORIZACION-FASE-20261007
-      - FEATURE-ENGINE-DESPACHO-FASES-20261007
+      - SECURITY-ENGINE-DESPACHO-POR-PROVEEDOR-20261007
   - requirement: R-PERF-005
     covered_by:
-      - FEATURE-CORE-RESOLUCION-PERFIL-20261007
-      - FEATURE-ENGINE-MODELOS-EFECTIVOS-20261007
-      - FEATURE-CLI-MODELOS-EFECTIVOS-20261007
-      - FEATURE-SERVER-SELECCION-PERFILES-20261007
-      - FEATURE-MISSIONCONTROL-VISTA-MODELOS-20261007
-      - FEATURE-HERMES-VISTA-MODELOS-20261007
+      - FEATURE-ADAPTER-RESOLUCION-PERFIL-20261007
+      - FEATURE-MC-VISTA-MODELOS-EFECTIVOS-20261007
+      - FEATURE-CLI-PERFILES-MODELOS-20261007
   - requirement: R-PERF-006
     covered_by:
-      - FEATURE-CORE-EVIDENCIA-MODELO-20261007
-      - FEATURE-ADAPTER-FASES-CLAUDE-20261007
-      - FEATURE-ADAPTER-FASES-CODEX-20261007
-      - FEATURE-ADAPTER-FASES-OPENCODE-20261007
-      - FEATURE-ENGINE-REGISTRO-FASES-20261007
-      - FEATURE-SERVER-EVIDENCIA-FASES-20261007
-      - FEATURE-CLI-EVIDENCIA-FASES-20261007
-      - FEATURE-MISSIONCONTROL-VISTA-MODELOS-20261007
-      - FEATURE-HERMES-VISTA-MODELOS-20261007
+      - FEATURE-ENGINE-REGISTRO-MODELO-FASE-20261007
+      - FEATURE-MC-VISTA-MODELOS-EFECTIVOS-20261007
   - requirement: R-PERF-007
     covered_by:
-      - FEATURE-ADAPTER-CONTEXTO-SUBAGENTE-20261007
-      - FEATURE-ENGINE-DELEGACION-INTERACTIVA-20261007
-      - FEATURE-MISSIONCONTROL-DELEGACION-INTERACTIVA-20261007
-      - FEATURE-HERMES-DELEGACION-INTERACTIVA-20261007
+      - FEATURE-ADAPTER-CONTEXTO-FASES-SUBAGENTE-20261007
+      - FEATURE-ENGINE-ORQUESTACION-INTERACTIVA-20261007
+      - IMPROVEMENT-ADAPTER-CONTRATO-PERFILES-20261007
 gaps: []
