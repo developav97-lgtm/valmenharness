@@ -190,6 +190,92 @@ describe("selección elegible de jornadas", () => {
     ]));
   });
 
+  it("una dependencia del grafo de la feature fuera de la jornada bloquea hasta que esté cerrada", () => {
+    const externo = "FEATURE-JOURNEY-EXTERNO-20261005";
+    writeClosedTicket(waiting);
+    writeTicket(dependent, "approved");
+    writeTicket(independent, "planned");
+    writeFixtureTicket(root, { id: externo, workflowStatus: "intake", type: "FEATURE", module: "JOURNEY" });
+    mkdirSync(join(root, ".valmen", "features", "jornada"), { recursive: true });
+    writeFileSync(
+      join(root, ".valmen", "features", "jornada", "tickets.yaml"),
+      `feature: jornada\ngenerated_by:\n  provider: codex\n  model: m\nsprints:\n  - id: S1\n    goal: g\n    tickets:\n      - id: ${dependent}\n        title: t\n        depends_on:\n          - ${externo}\ncoverage:\n  - requirement: R-1\n    covered_by:\n      - ${dependent}\n`,
+      "utf8",
+    );
+    createSelectionJourney();
+
+    expect(select().dispatchCandidate).toBeNull();
+    expect(select().blocked).toEqual(expect.arrayContaining([
+      expect.objectContaining({ ticketId: dependent, reasons: ["dependency"] }),
+    ]));
+    // También bloquea en los estados que no son cierre.
+    for (const estado of ["blocked", "in_progress", "approved"]) {
+      writeFixtureTicket(root, { id: externo, workflowStatus: estado, type: "FEATURE", module: "JOURNEY" });
+      expect(select().dispatchCandidate).toBeNull();
+    }
+    writeClosedTicket(externo);
+    expect(select().dispatchCandidate).toMatchObject({ ticketId: dependent });
+  });
+
+  it("un grafo de feature ilegible no hace caer la selección", () => {
+    writeClosedTicket(waiting);
+    writeTicket(dependent, "approved");
+    writeTicket(independent, "planned");
+    mkdirSync(join(root, ".valmen", "features", "rota"), { recursive: true });
+    writeFileSync(join(root, ".valmen", "features", "rota", "tickets.yaml"), ": : no es yaml {", "utf8");
+    createSelectionJourney();
+    expect(select().dispatchCandidate).toMatchObject({ ticketId: dependent });
+  });
+
+  it("con la autonomía encendida salta al ticket no elegible y ofrece el siguiente elegible", () => {
+    writeFileSync(
+      join(root, ".valmen", "config.yaml"),
+      [
+        `project-id: ${projectId}`,
+        "execution:",
+        "  observation-sources:",
+        "    - hermes",
+        "  dispatch-executors:",
+        "    - hermes",
+        "autonomous:",
+        "  enabled: true",
+        "  executor:",
+        "    id: codex",
+        "    model: gpt-6-sol",
+        "    effort: high",
+        "  eligible:",
+        "    types:",
+        "      - FEATURE",
+        "    max-risk: normal",
+        "    require:",
+        "      - tests-declared",
+        "    excluded-modules:",
+        "      - auth",
+        "  limits:",
+        "    max-concurrent: 1",
+        "    collision-policy: serialize",
+        "    max-per-day: 3",
+        "    budget-per-ticket: 1",
+        "    stop-on:",
+        "      - test-failure",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    // El ticket no elegible supera el riesgo máximo de la política (los ids fijan tipo y módulo).
+    writeFixtureTicket(root, { id: waiting, workflowStatus: "approved", type: "FEATURE", module: "JOURNEY", riskLevel: "high" });
+    writeTicket(dependent, "planned");
+    writeTicket(independent, "approved");
+    createSelectionJourney();
+
+    const result = select();
+    expect(result.manualCandidate).toMatchObject({ ticketId: waiting });
+    expect(result.dispatchCandidate).toMatchObject({ ticketId: independent });
+    expect(result.blocked).toEqual(expect.arrayContaining([
+      expect.objectContaining({ ticketId: waiting, reasons: ["eligibility"] }),
+    ]));
+  });
+
   it("con capacidad agotada conserva la oferta manual y no altera jornada ni tickets", () => {
     writeTicket(waiting, "awaiting_user_tests");
     writeTicket(dependent, "approved");

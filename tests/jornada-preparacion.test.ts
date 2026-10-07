@@ -31,6 +31,7 @@ import {
   readReceipts,
   registrarAprobacionDePlan,
   resolveAuthorizedProject,
+  elegirAPreparar,
   siguienteAPreparar,
   type EjecutorDePreparacion,
 } from "../packages/engine/src/index.js";
@@ -255,6 +256,59 @@ describe("el avance de preparación", () => {
     expect(siguienteAPreparar(proyecto(), "JOR-20261006")).toBeNull();
     writeFixtureTicket(root, { id: A, workflowStatus: "planned", type: "FEATURE", module: "PREP" });
     expect(siguienteAPreparar(proyecto(), "JOR-20261006")).toBe(B);
+  });
+
+  it("salta un ticket no elegible, prepara el siguiente y dice por qué omitió el primero", async () => {
+    const SEC = "SECURITY-PREP-TRES-20261005";
+    writeFixtureTicket(root, { id: SEC, workflowStatus: "intake", type: "SECURITY", module: "PREP" });
+    git("add", "-A");
+    git("commit", "-q", "-m", "ticket no elegible");
+    armar([SEC, A, B]);
+    expect(elegirAPreparar(proyecto(), "JOR-20261006")).toEqual({
+      ticketId: A,
+      omitidos: [{ ticketId: SEC, motivo: "no es elegible: su tipo no está habilitado" }],
+    });
+    const avance = await avanzarJornada({ project: proyecto(), home, ahora: () => AHORA, fase: "preparacion", ejecutarPreparacion: modelo() });
+    expect(avance.estado).toBe("despachado");
+    expect(avance.ticketId).toBe(A);
+    expect(avance.detalle).toContain(`Omitidos: ${SEC} (no es elegible: su tipo no está habilitado)`);
+    expect(estado(SEC)).toBe("intake");
+  });
+
+  it("una dependencia del grafo de la feature que no va en la jornada bloquea la preparación", () => {
+    const EXTERNO = "SECURITY-PREP-EXTERNO-20261005";
+    writeFixtureTicket(root, { id: EXTERNO, workflowStatus: "intake", type: "SECURITY", module: "PREP" });
+    mkdirSync(join(root, ".valmen", "features", "prep"), { recursive: true });
+    writeFileSync(
+      join(root, ".valmen", "features", "prep", "tickets.yaml"),
+      [
+        "feature: prep",
+        "generated_by:",
+        "  provider: codex",
+        "  model: m",
+        "sprints:",
+        "  - id: S1",
+        "    goal: g",
+        "    tickets:",
+        `      - id: ${A}`,
+        "        title: t",
+        "        depends_on:",
+        `          - ${EXTERNO}`,
+        "coverage:",
+        "  - requirement: R-1",
+        "    covered_by:",
+        `      - ${A}`,
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    armar([A, B]);
+    const eleccion = elegirAPreparar(proyecto(), "JOR-20261006");
+    expect(eleccion.ticketId).toBe(B);
+    expect(eleccion.omitidos).toEqual([{ ticketId: A, motivo: `dependencias sin preparar: ${EXTERNO}` }]);
+    // Con la dependencia ya preparada deja de bloquear (control).
+    writeFixtureTicket(root, { id: EXTERNO, workflowStatus: "planned", type: "SECURITY", module: "PREP" });
+    expect(elegirAPreparar(proyecto(), "JOR-20261006").ticketId).toBe(A);
   });
 
   it("prepara el primer ticket y el siguiente avance toma el otro, una vez cada uno", async () => {

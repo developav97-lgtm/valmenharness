@@ -117,7 +117,11 @@ export async function avanzarJornada(request: AvanzarJornadaRequest): Promise<Av
             : "sin-candidato",
       journeyId,
       ticketId: despacho.ticketId,
-      detalle: despacho.resultado === null ? despacho.detalle : `${despacho.resultado.estado}: ${despacho.detalle}`,
+      detalle:
+        (despacho.resultado === null ? despacho.detalle : `${despacho.resultado.estado}: ${despacho.detalle}`) +
+        (despacho.omitidos.length === 0
+          ? ""
+          : ` Omitidos: ${despacho.omitidos.map((o) => `${o.ticketId} (${o.motivo})`).join("; ")}.`),
     };
   }
 
