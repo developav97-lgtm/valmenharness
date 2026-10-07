@@ -117,11 +117,14 @@ describe("R-1: dos corridas del mismo gate del mismo ticket el mismo día", () =
       jev: evaluator(0.95),
       now: EL_MISMO_DIA,
     });
+    // Repetir el mismo estado con el mismo evaluador se rechaza (R-CDEF-008); acá lo que
+    // se prueba es la identidad de los recibos de un reintento, así que se fuerza.
     await runGate(PATHS(), {
       gateId: "plan",
       ticketId: UNO,
       jev: evaluator(0.95),
       now: EL_MISMO_DIA,
+      forceReason: "reintento deliberado para probar la identidad de los recibos",
     });
 
     const historia = readReceipts(PATHS(), UNO);
@@ -141,11 +144,14 @@ describe("R-1: dos corridas del mismo gate del mismo ticket el mismo día", () =
       jev: evaluator(0.95),
       now: EL_MISMO_DIA,
     });
+    // Repetir el mismo estado con el mismo evaluador se rechaza (R-CDEF-008); acá lo que
+    // se prueba es la identidad de los recibos de un reintento, así que se fuerza.
     await runGate(PATHS(), {
       gateId: "plan",
       ticketId: UNO,
       jev: evaluator(0.95),
       now: EL_MISMO_DIA,
+      forceReason: "reintento deliberado para probar la identidad de los recibos",
     });
 
     const ids = readReceipts(PATHS(), UNO).map((recibo) => recibo.id);

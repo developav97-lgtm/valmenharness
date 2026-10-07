@@ -379,6 +379,8 @@ export interface GateRunRequest {
   readonly judge?: Parameters<typeof runGate>[1]["judge"];
   readonly now?: () => Date;
   readonly receiptId?: string;
+  /** El motivo para repetir una compuerta ya evaluada sobre el mismo estado (R-CDEF-008). */
+  readonly forceReason?: string;
   /**
    * El archivo de credenciales del servidor.
    *
@@ -450,6 +452,7 @@ export async function runTicketGate(
     ...(request.judge === undefined ? {} : { judge: request.judge }),
     ...(request.now === undefined ? {} : { now: request.now }),
     ...(request.receiptId === undefined ? {} : { receiptId: request.receiptId }),
+    ...(request.forceReason === undefined ? {} : { forceReason: request.forceReason }),
     ...(routing.evaluatorModel === "" ? {} : { model: routing.evaluatorModel }),
     ...(routing.evaluatorProvider === "" ? {} : { provider: routing.evaluatorProvider }),
     ...(routing.probabilistic ? {} : { semantic: "llm-judge" as const }),

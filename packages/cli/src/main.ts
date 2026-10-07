@@ -197,6 +197,8 @@ Comandos:
   template apply <nombre>   Escribe sus reglas en .valmen/ (no pisa lo que existe).
       --dry-run             Muestra qué escribiría, sin escribir.
   gate <gate> --id <ID>     Evalúa un gate contra un ticket.
+      --force-reason <m>    Repite una compuerta ya evaluada sobre el mismo estado y con el
+                            mismo evaluador: sin motivo se rechaza; con él queda en el recibo.
       --evaluator <id>      auto (por defecto) · command · jev · llm-judge · cascade
   promote-gate <gate>       Calibra el gate contra decisiones humanas y anexa la
       --limit <n>           evidencia que una solicitud gate-promotions necesita.
@@ -593,6 +595,8 @@ export const VALUE_OPTIONS = [
   "--quote",
   "--tests",
   "--feature",
+  // `gate --force-reason`: el motivo para repetir una compuerta sobre el mismo estado.
+  "--force-reason",
   // `feature asset add`: el archivo local y el enlace del que salió.
   "--file",
   "--origin-url",
@@ -1437,6 +1441,7 @@ export async function runGateFromFlags(
     ...(routing.judgeModel === "" ? {} : { judgeModel: routing.judgeModel }),
     ...(cascade === undefined ? {} : { cascade }),
     ...(presupuesto.note === null ? {} : { notes: [presupuesto.note] }),
+    ...(typeof flags["force-reason"] === "string" ? { forceReason: flags["force-reason"] } : {}),
   });
 }
 

@@ -502,6 +502,8 @@ describe("el recibo", () => {
       ticketId: TICKET,
       jev: evaluator(allPropositions(0.95), 0.5),
       receiptId: "GR-0002",
+      // Mismo estado y mismo evaluador: repetirlo exige un motivo (R-CDEF-008).
+      forceReason: "probar que el registro de recibos solo agrega",
     });
 
     const receipts = readReceipts(PATHS(), TICKET);

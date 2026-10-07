@@ -863,6 +863,13 @@ export const TOOLS: readonly ToolDefinition[] = [
             "el rol verifier y solo lo no respaldado se escala al rol escalation.",
           enum: EVALUATOR_IDS,
         },
+        forzar: {
+          type: "string",
+          description:
+            "El motivo para repetir una compuerta ya evaluada por un modelo sobre el mismo " +
+            "estado del ticket y con el mismo evaluador. Sin él la repetición se rechaza sin " +
+            "llamar al modelo; con él se evalúa y el motivo queda escrito en el recibo nuevo.",
+        },
       },
       required: ["gate", "id"],
     }),
@@ -2115,6 +2122,7 @@ function correrCompuerta(
   gateId: string,
   id: string,
   evaluator: Parameters<typeof runGate>[1]["evaluator"],
+  forceReason?: string,
 ): ReturnType<typeof runGate> {
   const paths = contexto.paths;
   // El routing del proyecto decide el modelo del rol `gate-evaluator`. Es
@@ -2157,6 +2165,7 @@ function correrCompuerta(
     ...(routing.judgeModel === "" ? {} : { judgeModel: routing.judgeModel }),
     ...(cascade === undefined ? {} : { cascade }),
     ...(presupuesto.note === null ? {} : { notes: [presupuesto.note] }),
+    ...(forceReason === undefined || forceReason.trim() === "" ? {} : { forceReason }),
   });
 }
 
@@ -3009,7 +3018,13 @@ export async function callTool(
         }
         const evaluator = isEvaluatorId(bruto) ? bruto : undefined;
 
-        const resultado = await correrCompuerta(contexto, gateId, id, evaluator);
+        const resultado = await correrCompuerta(
+          contexto,
+          gateId,
+          id,
+          evaluator,
+          texto(args, "forzar", false),
+        );
 
         // El veredicto no cambia el estado del ticket —esa es la regla—, así que
         // el informe se devuelve tal cual venga: aprobado, bloqueado o en

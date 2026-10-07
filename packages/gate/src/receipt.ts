@@ -190,6 +190,17 @@ export interface GateReceipt {
   readonly commandResults?: readonly CommandResultRecord[];
   /** La preparación del ambiente de pruebas que corrió antes de los criterios, si el proyecto la declara. */
   readonly setup?: SetupRecord;
+  /** Con qué evaluador se produjo (`command`, `jev`, `llm-judge`, `cascade`). */
+  readonly evaluator?: string;
+  /**
+   * La huella de la configuración del evaluador de esta corrida.
+   *
+   * Junto con `stateHash` dice si dos corridas son la misma pregunta: mismo estado del
+   * ticket y mismo evaluador. Sin ella no se puede reconocer una repetición.
+   */
+  readonly evaluatorKey?: string;
+  /** Si la corrida repite una anterior a propósito: el motivo y el recibo que repite. */
+  readonly forced?: { readonly reason: string; readonly receiptId: string };
 }
 
 /** Los dos extremos de un escalamiento, en lo que el recibo necesita. */
@@ -260,6 +271,16 @@ export function hashState(state: unknown): string {
   return `sha256:${createHash("sha256").update(stableStringify(state)).digest("hex")}`;
 }
 
+/**
+ * La huella de la configuración con la que se evalúa: sha256 de un JSON estable.
+ *
+ * Dos corridas con el mismo `stateHash` y la misma huella hacen la misma pregunta al
+ * mismo evaluador; repetir la segunda solo busca otra respuesta (R-CDEF-008).
+ */
+export function hashEvaluatorConfig(config: unknown): string {
+  return `sha256:${createHash("sha256").update(stableStringify(config)).digest("hex")}`;
+}
+
 /** Calcula el hash de la definición de un gate. */
 export function hashGate(propositions: readonly Proposition[], policy: GatePolicy): string {
   return `sha256:${createHash("sha256")
@@ -291,6 +312,9 @@ export interface ReceiptInput {
   readonly commandResults?: readonly CommandResultRecord[];
   /** La preparación del ambiente que corrió antes de los criterios. */
   readonly setup?: SetupRecord;
+  readonly evaluator?: string;
+  readonly evaluatorKey?: string;
+  readonly forced?: { readonly reason: string; readonly receiptId: string };
 }
 
 /** Construye un recibo a partir de una decisión. */
@@ -330,6 +354,9 @@ export function buildReceipt(input: ReceiptInput): GateReceipt {
       ? {}
       : { commandResults: input.commandResults }),
     ...(input.setup === undefined ? {} : { setup: input.setup }),
+    ...(input.evaluator === undefined ? {} : { evaluator: input.evaluator }),
+    ...(input.evaluatorKey === undefined ? {} : { evaluatorKey: input.evaluatorKey }),
+    ...(input.forced === undefined ? {} : { forced: input.forced }),
   };
 }
 

@@ -42,6 +42,8 @@ import {
   extractCriteriaSpecs,
   gateById,
   gateFor,
+  hashEvaluatorConfig,
+  hashState,
   summarizeReceipt,
   weightedMean,
 } from "@valmen/gate";
@@ -60,7 +62,7 @@ import {
   verifyDevConfig,
 } from "./discovery.js";
 import { buildGateState, runMechanicalChecks } from "./state.js";
-import { appendReceipt, readReceipts } from "./receipts.js";
+import { appendReceipt, currentReceipts, readReceipts } from "./receipts.js";
 import { interfazDelTicket } from "./interfaz.js";
 import { resolveGateMode } from "./gate-promotion.js";
 import { runTestSetup } from "./test-setup.js";
@@ -177,6 +179,13 @@ export interface GateRunOptions {
   readonly notes?: readonly string[];
   readonly now?: () => Date;
   readonly receiptId?: string;
+  /**
+   * El motivo para repetir una compuerta ya evaluada sobre el mismo estado.
+   *
+   * Sin él, pedir otra vez lo mismo se rechaza antes de llamar al modelo (R-CDEF-008).
+   * Un motivo vacío no fuerza nada; el no vacío queda escrito en el recibo nuevo.
+   */
+  readonly forceReason?: string;
 }
 
 /** Ejecuta un gate y devuelve el recibo con el informe. */
@@ -422,6 +431,48 @@ export async function runGate(
     const failure = toFailure(caught);
     return { stdout: "", stderr: failure.message, exitCode: failure.exitCode };
   }
+
+  // Una compuerta no se vuelve a evaluar sobre el mismo estado con el mismo evaluador:
+  // repetirla solo busca otro número y cada repetición cuesta una llamada. Se comprueba
+  // **antes** de llamar a nadie y no escribe recibo: un rechazo no es un veredicto. Solo
+  // cuenta lo que produjo un modelo; lo que decide el código depende de un ambiente que
+  // el hash del ticket no ve, y volver a correrlo tras arreglar el entorno es legítimo.
+  const huellaDelEvaluador = hashEvaluatorConfig({
+    evaluator: options.evaluator ?? null,
+    model: options.model ?? null,
+    provider: options.provider ?? null,
+    effort: options.effort ?? null,
+    judgeModel: options.judgeModel ?? null,
+    semantic: options.semantic ?? null,
+    cascade: options.cascade === undefined ? null : JSON.parse(JSON.stringify(options.cascade)),
+  });
+  const hashDelEstado = hashState(state);
+  const previo = currentReceipts(readReceipts(paths, options.ticketId)).find(
+    (recibo) => recibo.gate === definition.id,
+  );
+  const esRepeticion =
+    previo !== undefined &&
+    previo.stateHash === hashDelEstado &&
+    previo.evaluatorKey === huellaDelEvaluador &&
+    previo.evaluator !== undefined &&
+    previo.evaluator !== "command";
+  const motivoDeForzado = options.forceReason?.trim() ?? "";
+  if (esRepeticion && motivoDeForzado === "") {
+    return {
+      stdout: "",
+      stderr:
+        `La compuerta ${definition.id} ya se evaluó sobre este mismo estado del ticket con la ` +
+        `misma configuración del evaluador (recibo ${previo.id}: ${previo.outcome}). Repetirla ` +
+        "solo busca otro número y cuesta una llamada. Cambie el ticket para que cambie lo que " +
+        "se evalúa, o dé un motivo explícito con --force-reason «…» y quedará escrito en el " +
+        "recibo nuevo.\n",
+      exitCode: EXIT_INVARIANT,
+    };
+  }
+  const forzado =
+    esRepeticion && previo !== undefined
+      ? { reason: motivoDeForzado, receiptId: previo.id }
+      : undefined;
 
   // El gate mecánico no le pregunta nada a nadie: corre lo que los criterios
   // declaran. Antes de correr nada se comprueba que se pueda —cada criterio tiene
@@ -708,6 +759,9 @@ export async function runGate(
       ? {}
       : { commandResults: evaluation.commandResults }),
     ...(preparacion === null ? {} : { setup: preparacion }),
+    evaluator: evaluation.evaluator,
+    evaluatorKey: huellaDelEvaluador,
+    ...(forzado === undefined ? {} : { forced: forzado }),
   });
 
   // Se informa de lo que de verdad se evaluó. Antes decía «N criterio(s)
@@ -837,6 +891,13 @@ export async function runGate(
     lines.push(
       "",
       "  Va a revisión humana. El ticket NO avanza: el gate no cambia estados.",
+    );
+  }
+
+  if (forzado !== undefined) {
+    lines.push(
+      "",
+      `  Repetición forzada del recibo ${forzado.receiptId}: ${forzado.reason}`,
     );
   }
 

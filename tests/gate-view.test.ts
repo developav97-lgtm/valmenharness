@@ -294,6 +294,8 @@ describe("ejecutar un gate desde la interfaz", () => {
     // día y gate, así que "el último recibo del gate" es el de antes: devolverlo
     // mostraría una aprobación vieja como recién emitida.
     const fallida = await runTicketGate(PATHS(), TICKET, "plan", {
+      // Mismo estado y mismo evaluador: sin motivo se rechazaría antes de llamar al evaluador.
+      forceReason: "reintento para probar el fallo del evaluador",
       jev: (async () => {
         throw new Error("el proveedor no responde");
       }) as unknown as typeof import("../packages/gate-jev/src/index.js").evaluateWithJev,
