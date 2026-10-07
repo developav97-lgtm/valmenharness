@@ -4,7 +4,7 @@ id: SECURITY-ENGINE-AUTORIZACION-APROBACION-20261007
 title: Guardar autorizaciones de aprobación firmadas, append-only y revocables
 type: SECURITY
 module: ENGINE
-workflow_status: planned
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -60,7 +60,7 @@ Ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 - Alcance: el registro, su lectura, el cupo, el comando de CLI y la herramienta MCP de solo lectura. Exclusiones: Mission Control y el código firmado, aplicar la autorización a un ticket y el agente revisor.
 - Pasos ordenados:
   1. En `packages/adapter/src/config.ts` agregar `readApprovalAuthorizationSources` (clave `approval-authorization-sources`; por defecto `cli` y `mission-control`; una lista vacía o un nombre inválido falla) y exportarla.
@@ -72,17 +72,17 @@ Ninguno.
 
 ## Criterios de aceptación
 
-- [ ] Una persona crea una autorización con tipos, módulos, riesgo máximo, impactos, etapa, modo, cupo, vigencia y su frase literal, y queda leída con su estado
+- [x] Una persona crea una autorización con tipos, módulos, riesgo máximo, impactos, etapa, modo, cupo, vigencia y su frase literal, y queda leída con su estado
       <!-- test: npx vitest run tests/autorizacion-aprobacion.test.ts -->
-- [ ] SECURITY no se puede autorizar, y un impacto de migración, contenedores o despliegue solo se admite si la autorización lo lista
+- [x] SECURITY no se puede autorizar, y un impacto de migración, contenedores o despliegue solo se admite si la autorización lo lista
       <!-- test: npx vitest run tests/autorizacion-aprobacion.test.ts -->
-- [ ] Se rechaza crear o revocar en una sesión desatendida o desde una fuente no declarada
+- [x] Se rechaza crear o revocar en una sesión desatendida o desde una fuente no declarada
       <!-- test: npx vitest run tests/autorizacion-aprobacion.test.ts -->
-- [ ] La revocación vale desde ese momento y una edición a mano del registro se detecta por su hash
+- [x] La revocación vale desde ese momento y una edición a mano del registro se detecta por su hash
       <!-- test: npx vitest run tests/autorizacion-aprobacion.test.ts -->
-- [ ] No existe herramienta MCP que cree, amplíe o revoque una autorización de aprobación; solo hay una de lectura
+- [x] No existe herramienta MCP que cree, amplíe o revoque una autorización de aprobación; solo hay una de lectura
       <!-- test: npx vitest run tests/autorizacion-aprobacion.test.ts -->
-- [ ] El cupo diario se cuenta por autorización y se agota
+- [x] El cupo diario se cuenta por autorización y se agota
       <!-- test: npx vitest run tests/autorizacion-aprobacion.test.ts -->
 
 ## Puntos
@@ -93,11 +93,19 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+- `packages/engine/src/approval-authorization.ts` (nuevo): registro append-only `.valmen/approval/authorizations.jsonl` con `crearAutorizacionDeAprobacion`, `revocarAutorizacionDeAprobacion`, `leerAutorizacionesDeAprobacion` y `autorizacionDeAprobacionQueCubre`. Admite BUGFIX, IMPROVEMENT, CHORE, FEATURE, SYNC, INTEGRATION y AGENT, nunca SECURITY; riesgo `low` o `normal`; impactos solo si la autorización los lista; etapas análisis y plan; modo `on-approve` o `reviewer`; cupo diario (`registrarUsoDeCupoDeAprobacion`, `cupoRestanteDeAprobacion` en `uses.jsonl`), vigencia y frase literal, con un hash que delata una edición a mano. Se rechaza en una sesión desatendida y desde una fuente no declarada.
+- `packages/adapter/src/config.ts` y `packages/engine/src/discovery.ts`: `readApprovalAuthorizationSources` (`approval-authorization-sources`; por defecto `cli` y `mission-control`) y `approvalAuthorizationSources`.
+- `packages/cli/src/commands.ts` y `main.ts`: `valmen approval-authorize create|revoke|list`.
+- `packages/mcp/src/tools.ts` y `packages/server/src/hermes.ts`: herramienta de solo lectura `ver_autorizaciones_aprobacion` (54 herramientas); ninguna escribe autorizaciones.
+- `tests/autorizacion-aprobacion.test.ts` (nuevo) y ajustes de conteo en `mcp-server`, `mcp-anotaciones` y las dos pruebas de autorización de QA.
+- Aplicar la autorización a un ticket, Mission Control y el agente revisor son de los tickets siguientes.
 
 ## Pruebas
 
-Pendiente de ejecución.
+- Directorio: raíz del repositorio. `npx vitest run tests/autorizacion-aprobacion.test.ts` → 12 pruebas pasan.
+- Suite completa: `npx vitest run` → 192 archivos, 2784 pruebas pasan, 48 omitidas. `npx tsc --noEmit -p tsconfig.json` y `npx eslint` sin errores; `valmen secrets` sin hallazgos.
+- Manual (responsable): `valmen approval-authorize create --actor … --quote "…" --types BUGFIX --modules pos` y `valmen approval-authorize list`.
+<!-- verify: manual -->
 
 ## QA
 
@@ -172,6 +180,51 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-07",
+    "at": "2026-10-07T18:29:54.527Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"La A\",\"planHash\":\"sha256:84a5cecf0000061578831a205c7bdf95d030e22a088f536898ee8474c05b36b9\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-07",
+    "at": "2026-10-07T18:29:54.828Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:84a5cecf0000061578831a205c7bdf95d030e22a088f536898ee8474c05b36b9."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-07",
+    "at": "2026-10-07T18:29:54.828Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-07",
+    "at": "2026-10-07T18:29:55.103Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-07",
+    "at": "2026-10-07T18:33:08.530Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
