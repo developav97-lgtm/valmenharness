@@ -239,7 +239,7 @@ Comandos:
                             proyecto la declara en plan-approval-sources. De un solo uso.
   journey clear-stop --project <id> --id <ticket> --actor <nombre>
                             Libera la parada de un ticket: una parada no se reintenta sola.
-  journey install-trigger --project <id> [--every <min>] [--write] [--dir <carpeta>]
+  journey install-trigger --project <id> [--every <min>] [--via machine|hermes] [--write] [--dir <carpeta>]
                             Prepara la tarea periódica de launchd: imprime el plist y los
                             comandos; con --write escribe solo el archivo. No ejecuta launchctl.
   approve-plan --id <ID> --actor <nombre> [--source <fuente>] --quote "<frase>"
@@ -582,6 +582,7 @@ export const VALUE_OPTIONS = [
   "--journey",
   "--fase",
   "--every",
+  "--via",
   "--dir",
   // `manuales pendientes`: dónde viven los manuales y qué archivos son pantalla.
   // Sin esto en la lista, `--manuales-dir docs/…` se leería como bandera booleana

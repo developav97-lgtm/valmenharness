@@ -42,6 +42,8 @@ import {
   parseRoutingTolerante,
   readSharedProjectPolicy,
   readHermesConfig,
+  readJourneyDispatcher,
+  type JourneyDispatcher,
   profileProject,
   projectFiles,
   proposeConfig,
@@ -182,9 +184,13 @@ import {
  * entender lo que el CLI produce.
  */
 import {
+  comandoDeJobHermes,
   escribirPlist,
+  escribirScriptHermes,
   etiquetaDelDisparador,
   instruccionesDelDisparador,
+  nombreDelJobHermes,
+  renderHermesJobScript,
   renderLaunchdPlist,
 } from "./journey-trigger.js";
 
@@ -2976,10 +2982,12 @@ export function journeyClearStopCommand(
 }
 
 /**
- * `journey install-trigger --project <id> [--every <min>] [--write] [--dir <carpeta>]`.
+ * `journey install-trigger --project <id> [--every <min>] [--via machine|hermes] [--write] [--dir <carpeta>]`.
  *
- * Prepara la tarea periódica de launchd: imprime el plist y los comandos para activarla.
- * Con `--write` escribe solo el archivo. Nunca ejecuta `launchctl`.
+ * Prepara el disparador del avance: con el despachador `machine` (por defecto) la tarea de
+ * launchd; con `hermes` (`execution.dispatcher` o `--via`) el job de Hermes sin agente.
+ * Imprime el archivo y los comandos para activarlo. Con `--write` escribe solo el archivo.
+ * Nunca ejecuta `launchctl` ni `hermes`.
  */
 export function journeyInstallTriggerCommand(
   flags: Readonly<Record<string, string | true>>,
@@ -2991,8 +2999,11 @@ export function journeyInstallTriggerCommand(
   if (!Number.isFinite(cadaCrudo) || cadaCrudo < 1) {
     return error("--every debe ser un número de minutos de al menos 1.", EXIT_SCHEMA);
   }
+  const via = flags["via"];
+  if (via !== undefined && via !== "machine" && via !== "hermes") {
+    return error('--via debe ser "machine" o "hermes".', EXIT_SCHEMA);
+  }
   const home = entorno.home ?? homedir();
-  const directorio = typeof flags["dir"] === "string" ? flags["dir"] : join(home, "Library", "LaunchAgents");
   const request = {
     projectId: proyecto,
     everyMinutes: cadaCrudo,
@@ -3000,8 +3011,21 @@ export function journeyInstallTriggerCommand(
     cliMain: entorno.cliMain ?? (process.argv[1] ?? "valmen"),
     logDir: join(home, "Library", "Logs"),
   };
-  const ruta = join(directorio, `${etiquetaDelDisparador(proyecto)}.plist`);
   try {
+    const despachador = via ?? despachadorDelProyecto(proyecto, home);
+    if (despachador === "hermes") {
+      const directorio = typeof flags["dir"] === "string" ? flags["dir"] : join(home, ".hermes", "scripts");
+      const ruta = join(directorio, `${nombreDelJobHermes(proyecto)}.sh`);
+      const comando = comandoDeJobHermes(proyecto, cadaCrudo, ruta);
+      const activar = `Para registrarlo (lo ejecutas tú; el harness no corre hermes):\n  ${comando}`;
+      if (flags["write"] === true) {
+        const escrita = escribirScriptHermes(directorio, request);
+        return ok(`Script del job escrito en ${escrita}. No se registró nada en Hermes.\n${activar}\n`);
+      }
+      return ok(`${renderHermesJobScript(request)}\nSin --write no se escribió nada. Archivo previsto: ${ruta}\n${activar}\n`);
+    }
+    const directorio = typeof flags["dir"] === "string" ? flags["dir"] : join(home, "Library", "LaunchAgents");
+    const ruta = join(directorio, `${etiquetaDelDisparador(proyecto)}.plist`);
     const plist = renderLaunchdPlist(request);
     if (flags["write"] === true) {
       const escrita = escribirPlist(directorio, request);
@@ -3012,6 +3036,22 @@ export function journeyInstallTriggerCommand(
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);
   }
+}
+
+/**
+ * El despachador que el proyecto declara. Si el proyecto no se resuelve en esta máquina no hay
+ * declaración que leer y rige el disparador de la máquina; una declaración inválida sí falla.
+ */
+function despachadorDelProyecto(proyecto: string, home: string): JourneyDispatcher {
+  let raiz: string;
+  try {
+    raiz = resolveAuthorizedProject({ projectId: proyecto, home }).paths.root;
+  } catch {
+    return "machine";
+  }
+  const configPath = join(raiz, ".valmen", "config.yaml");
+  if (!existsSync(configPath)) return "machine";
+  return readJourneyDispatcher(parseConfig(readFileSync(configPath, "utf8")));
 }
 
 /**

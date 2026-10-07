@@ -5,7 +5,7 @@
  * dice los comandos exactos, y escribe el archivo solo cuando se lo piden. Activar la tarea
  * (`launchctl bootstrap`) lo hace una persona; el harness nunca lo ejecuta por su cuenta.
  */
-import { mkdirSync } from "node:fs";
+import { chmodSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 
 import { atomicWrite } from "@valmen/core";
@@ -72,5 +72,40 @@ export function escribirPlist(directorio: string, request: DisparadorRequest): s
   mkdirSync(directorio, { recursive: true });
   const ruta = join(directorio, `${etiquetaDelDisparador(request.projectId)}.plist`);
   atomicWrite(ruta, renderLaunchdPlist(request));
+  return ruta;
+}
+
+/** El nombre del job de Hermes de un proyecto. */
+export function nombreDelJobHermes(projectId: string): string {
+  return `valmen-jornada-${projectId}`;
+}
+
+/**
+ * El script del job de Hermes sin agente: ejecuta `journey advance` y nada más.
+ *
+ * No lleva credenciales ni llama a ningún modelo; el avance conserva sus topes, paradas y autorización.
+ */
+export function renderHermesJobScript(request: DisparadorRequest): string {
+  const comillas = (texto: string): string => `'${texto.replaceAll("'", "'\\''")}'`;
+  return [
+    "#!/usr/bin/env bash",
+    `# Job de Hermes sin agente (--no-agent): avanza la jornada de ${request.projectId}. Generado por \`valmen journey install-trigger\`.`,
+    "set -uo pipefail",
+    `exec ${comillas(request.node)} ${comillas(request.cliMain)} journey advance --project ${comillas(request.projectId)}`,
+    "",
+  ].join("\n");
+}
+
+/** El comando exacto que registra el job en Hermes; lo ejecuta una persona. */
+export function comandoDeJobHermes(projectId: string, everyMinutes: number, rutaScript: string): string {
+  return `hermes cron create --no-agent --name ${nombreDelJobHermes(projectId)} --script ${rutaScript} "every ${Math.round(everyMinutes)}m"`;
+}
+
+/** Escribe solo el script del job (ejecutable); devuelve su ruta. No registra nada en Hermes. */
+export function escribirScriptHermes(directorio: string, request: DisparadorRequest): string {
+  mkdirSync(directorio, { recursive: true });
+  const ruta = join(directorio, `${nombreDelJobHermes(request.projectId)}.sh`);
+  atomicWrite(ruta, renderHermesJobScript(request));
+  chmodSync(ruta, 0o755);
   return ruta;
 }
