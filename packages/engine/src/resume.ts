@@ -5,6 +5,7 @@
  * no interviene un modelo. Así el agente recibe lo necesario para continuar y
  * puede pedir el documento íntegro solo cuando lo necesita.
  */
+import { fasesDeSesion, type ClienteDeSesion, type FasesDeSesion } from "@valmen/adapter";
 import type { ParsedTicket } from "@valmen/core";
 
 import { procedenciaDeTicket, type Procedencia } from "./provenance.js";
@@ -62,6 +63,8 @@ export interface ResumeContext {
    */
   readonly etapas: readonly EtapaDeTicket[];
   readonly provenance: Procedencia | null;
+  /** El modelo de cada fase para esta sesión y con qué lanzar su subagente (R-PERF-007). */
+  readonly fases: FasesDeSesion;
   /** Solo se incluye en modo completo; conserva los bytes leídos del ticket. */
   readonly documentoCompleto?: string;
 }
@@ -78,6 +81,7 @@ export function buildResumeContext(
   paths: RegistryPaths,
   ticket: ParsedTicket,
   modo: ResumeMode = "compacto",
+  cliente?: ClienteDeSesion,
 ): ResumeContext {
   const { fields } = ticket;
   const recibos = readReceipts(paths, fields.id);
@@ -119,8 +123,25 @@ export function buildResumeContext(
     readInstruction:
       "Lee las secciones completas bajo demanda con ver_ticket usando el mismo identificador.",
     provenance: procedenciaDeTicket(paths.root, fields.id),
+    fases: fasesDeSesion(paths.root, {
+      ...(cliente === undefined ? {} : { cliente }),
+      estado: fields.workflow_status,
+    }),
     ...(modo === "completo" ? { documentoCompleto: ticket.text } : {}),
   };
+}
+
+function renderFases(fases: FasesDeSesion): string[] {
+  const lines = [`Modelos por fase (cliente: ${fases.cliente ?? "no declarado"}):`];
+  for (const f of fases.fases) {
+    const marca = f.fase === fases.faseActual ? "→" : "-";
+    const origen = f.origen.perfil === undefined ? f.origen.source : `perfil ${f.origen.perfil.id}`;
+    const destino = f.subagente === null ? (f.aviso ?? "sin subagente") : `subagente ${f.subagente}`;
+    lines.push(`${marca} ${f.fase}: ${f.provider}/${f.model} (${f.effort}, ${origen}) — ${destino}`);
+  }
+  if (fases.nota !== null) lines.push(`Nota: ${fases.nota}`);
+  if (fases.aviso !== null) lines.push(`Aviso: ${fases.aviso}`);
+  return lines;
 }
 
 /** Representación legible del contexto compacto, en orden estable. */
@@ -163,6 +184,8 @@ export function renderResumeContext(context: ResumeContext): string {
       );
     }
   }
+
+  lines.push(...renderFases(context.fases));
 
   if (context.lastReceipt === null) {
     lines.push("Último recibo de compuerta: ninguno.");

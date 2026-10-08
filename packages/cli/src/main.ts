@@ -156,7 +156,9 @@ Comandos:
   run --ticket <ID> | --queue
                             Despacha un ticket elegible hasta awaiting_user_tests.
   active                    Lista los tickets no cerrados (alias: list).
-  resume [--id <ID>]        Imprime el contexto para retomar un ticket.
+  resume [--id <ID>] [--cliente <claude|codex|opencode|hermes>]
+                            Imprime el contexto para retomar un ticket, con el
+                            modelo de cada fase según el cliente de la sesión.
                             Sin --id y con varios activos, no elige: pide uno.
   ask <pregunta>            El modo pregunta: el motor no concede permisos de
       --id <ID>             escritura, así que no se pueden crear tickets, mover
@@ -637,6 +639,7 @@ export const VALUE_OPTIONS = [
   // valor y no está acá se lee como booleana y su valor queda como argumento
   // suelto: el comando corre con la mitad de lo que se le pidió y sin decir nada.
   "--limite",
+  "--cliente",
   "--body",
   "--files",
   // `estandar proponer`: las tres banderas del estándar. La prueba que compara la
@@ -1328,7 +1331,8 @@ export function dispatch(options: Options): CommandResult {
     case "resume": {
       const rawId = options.flags["id"];
       const id = typeof rawId === "string" ? rawId : undefined;
-      return resumeTicket(paths, id);
+      const rawCliente = options.flags["cliente"];
+      return resumeTicket(paths, id, undefined, typeof rawCliente === "string" ? rawCliente : undefined);
     }
 
     case "ask": {

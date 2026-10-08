@@ -53,6 +53,8 @@ import {
   routingPath,
   SKILL_RUNTIME_IDS,
   RUNTIME_DIRS,
+  EJECUTORES_CON_PERFIL,
+  type ClienteDeSesion,
   derivaPublicada,
   describeAgentsMdSize,
   descripcionDeDeriva,
@@ -451,7 +453,12 @@ export function resumeTicket(
   paths: RegistryPaths,
   id: string | undefined,
   modo: ResumeMode = "compacto",
+  cliente?: string,
 ): CommandResult & { readonly data?: Record<string, unknown> } {
+  if (cliente !== undefined && !(EJECUTORES_CON_PERFIL as readonly string[]).includes(cliente)) {
+    return error(`El cliente "${cliente}" no es válido. Valores admitidos: ${EJECUTORES_CON_PERFIL.join(", ")}.`);
+  }
+  const cliente_ = cliente as ClienteDeSesion | undefined;
   if (id !== undefined) {
     const ticket = findTicket(paths, id);
     if (ticket === undefined) {
@@ -459,7 +466,7 @@ export function resumeTicket(
     }
     const failure = validationError(ticket, id);
     if (failure !== undefined) return error(failure.message, failure.exitCode);
-    return resultadoReanudacion(paths, parseTicket(ticket.text), modo);
+    return resultadoReanudacion(paths, parseTicket(ticket.text), modo, cliente_);
   }
 
   const activos = activosOrdenados(paths);
@@ -477,15 +484,16 @@ export function resumeTicket(
       exitCode: EXIT_AMBIGUOUS,
     };
   }
-  return resultadoReanudacion(paths, activos.rows[0]?.document as ParsedTicket, modo);
+  return resultadoReanudacion(paths, activos.rows[0]?.document as ParsedTicket, modo, cliente_);
 }
 
 function resultadoReanudacion(
   paths: RegistryPaths,
   document: ParsedTicket,
   modo: ResumeMode,
+  cliente?: ClienteDeSesion,
 ): CommandResult & { readonly data?: Record<string, unknown> } {
-  const context = buildResumeContext(paths, document, modo);
+  const context = buildResumeContext(paths, document, modo, cliente);
   return {
     stdout: renderResumeContext(context),
     stderr: "",

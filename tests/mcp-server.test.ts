@@ -49,6 +49,7 @@ import {
   parseOptions,
   pathsFor,
 } from "../packages/mcp/src/main.js";
+import { EJECUTORES_CON_PERFIL } from "../packages/adapter/src/index.js";
 import { respuestaDeHerramienta } from "../packages/mcp/src/protocol.js";
 
 const ID = "BUGFIX-POS-FILTRO-PARCIAL-20260922";
@@ -1764,5 +1765,27 @@ describe("features, procesos y reportes", () => {
     });
     expect(resultado.isError).toBe(false);
     expect(resultado.text.toLowerCase()).toContain("calibración");
+  });
+});
+
+describe("R-PERF-007 reanudar_ticket con el cliente de la sesión", () => {
+  const herramienta = () => TOOLS.find((t) => t.name === "reanudar_ticket");
+
+  it("R-PERF-007 reanudar con cliente", async () => {
+    await crear();
+    const resultado = await callTool(contexto, "reanudar_ticket", { id: ID, cliente: "claude" });
+    expect(resultado.isError).toBe(false);
+    expect(resultado.data?.["fases"]).toMatchObject({ cliente: "claude", admiteSubagentes: true });
+    expect(resultado.text).toContain("Modelos por fase (cliente: claude)");
+  });
+
+  it("R-PERF-007 esquema de salida", () => {
+    const propiedades = herramienta()?.outputSchema?.["properties"] as Record<string, unknown>;
+    expect(propiedades).toHaveProperty("fases");
+  });
+
+  it("R-PERF-007 esquema de entrada", () => {
+    const propiedades = herramienta()?.inputSchema["properties"] as Record<string, { enum?: string[] }>;
+    expect(propiedades["cliente"]?.enum).toEqual([...EJECUTORES_CON_PERFIL]);
   });
 });

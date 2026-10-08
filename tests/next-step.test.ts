@@ -11,12 +11,13 @@
  * El texto no se compara entero —sería frágil y diría poco—: se comprueba lo que un
  * agente necesita encontrar en cada estado, y lo que **no** puede aparecer.
  */
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { resumeTicket } from "../packages/cli/src/commands.js";
 import { parseTicket } from "../packages/core/src/index.js";
 import {
   type NextStep,
@@ -27,7 +28,7 @@ import { appendReceipt } from "../packages/engine/src/receipts.js";
 import { buildResumeContext, renderResumeContext } from "../packages/engine/src/resume.js";
 import { buildGateState } from "../packages/engine/src/state.js";
 import { type GateReceipt, hashState } from "../packages/gate/src/receipt.js";
-import { type FixtureTicketOptions, renderFixtureTicket } from "./helpers/fixtures.js";
+import { type FixtureTicketOptions, renderFixtureTicket, writeFixtureTicket } from "./helpers/fixtures.js";
 
 const ID = "BUGFIX-POS-SIGUIENTE-20261005";
 
@@ -680,5 +681,42 @@ describe("integrado en `resume`", () => {
 
     expect(renderResumeContext(contexto)).toBe(actual.text);
     expect(contexto.nextStep.fase).toBe("implementación");
+  });
+});
+
+describe("R-PERF-007 modelos por fase en el contexto de reanudación", () => {
+  const perfiles = (): string => join(root, ".valmen", "profiles.yaml");
+
+  function preparar(): void {
+    mkdirSync(join(root, ".valmen"), { recursive: true });
+    writeFileSync(perfiles(), "seleccion:\n  proyecto: claude-code-completo\n\nperfiles: {}\n");
+    writeFixtureTicket(root, { id: ID, workflowStatus: "intake" });
+  }
+
+  it("R-PERF-007 bloque de modelos por fase", () => {
+    preparar();
+    const resultado = resumeTicket(paths(), ID, "compacto", "claude");
+    expect(resultado.exitCode).toBe(0);
+    expect(resultado.stdout).toContain("Modelos por fase (cliente: claude):");
+    expect(resultado.stdout).toMatch(/^→ analysis: .*subagente opus/m);
+    expect(resultado.stdout).toMatch(/^- plan: .*subagente opus/m);
+    expect(resultado.stdout.indexOf("Plan vigente")).toBeLessThan(resultado.stdout.indexOf("Modelos por fase"));
+  });
+
+  it("R-PERF-007 cliente desconocido", () => {
+    preparar();
+    const resultado = resumeTicket(paths(), ID, "compacto", "gemini");
+    expect(resultado.exitCode).not.toBe(0);
+    expect(resultado.stderr).toContain("claude, codex, opencode, hermes");
+  });
+
+  it("R-PERF-007 solo lectura", () => {
+    preparar();
+    writeFileSync(join(root, ".valmen", "routing.yaml"), "preset: balanced\nroles: {}\n");
+    const archivos = [perfiles(), join(root, ".valmen", "routing.yaml"), join(root, "tickets", "2026", ID, "ticket.md")];
+    const antes = archivos.map((a) => readFileSync(a));
+    resumeTicket(paths(), ID, "compacto", "claude");
+    resumeTicket(paths(), ID, "compacto", "codex");
+    expect(archivos.map((a) => readFileSync(a))).toEqual(antes);
   });
 });

@@ -4,7 +4,7 @@ id: FEATURE-ADAPTER-CONTEXTO-FASES-SUBAGENTE-20261007
 title: Proveer a la sesión el modelo de cada fase y avisar si el cliente no admite subagentes
 type: FEATURE
 module: ADAPTER
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -101,41 +101,41 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1 (R-PERF-007): `fasesDeSesion` devuelve las cuatro fases de `FASES_DEL_AGENTE`, en ese orden, con rol, proveedor, modelo, esfuerzo y origen iguales a los de `rutasDelProyecto` para `agent-<fase>`
+- [x] C1 (R-PERF-007): `fasesDeSesion` devuelve las cuatro fases de `FASES_DEL_AGENTE`, en ese orden, con rol, proveedor, modelo, esfuerzo y origen iguales a los de `rutasDelProyecto` para `agent-<fase>`
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-007 cuatro fases" -->
-- [ ] C2 (R-PERF-007): con cliente `claude` y `claude-code-completo` elegido para el proyecto, la fase `plan` lleva `subagente: "opus"`
+- [x] C2 (R-PERF-007): con cliente `claude` y `claude-code-completo` elegido para el proyecto, la fase `plan` lleva `subagente: "opus"`
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-007 subagente opus" -->
-- [ ] C3 (R-PERF-007): con cliente `claude`, el resultado lleva la nota de que el alias usa la versión vigente de la familia en el cliente
+- [x] C3 (R-PERF-007): con cliente `claude`, el resultado lleva la nota de que el alias usa la versión vigente de la familia en el cliente
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-007 nota del alias" -->
-- [ ] C4 (R-PERF-007): con cliente `codex`, `opencode` o `hermes`, `admiteSubagentes` es `false` y ninguna fase lleva subagente
+- [x] C4 (R-PERF-007): con cliente `codex`, `opencode` o `hermes`, `admiteSubagentes` es `false` y ninguna fase lleva subagente
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-007 cliente sin subagentes" -->
-- [ ] C5 (R-PERF-007): con un cliente que no admite subagentes, el aviso dice «el cliente <id> no admite subagentes con modelo propio: las fases usan el modelo de la sesión»
+- [x] C5 (R-PERF-007): con un cliente que no admite subagentes, el aviso dice «el cliente <id> no admite subagentes con modelo propio: las fases usan el modelo de la sesión»
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-007 aviso cliente sin subagentes" -->
-- [ ] C6 (R-PERF-007): con cliente `claude` y un perfil mixto que asigna la implementación a `codex`, la fase `implementation` lleva `subagente: null`
+- [x] C6 (R-PERF-007): con cliente `claude` y un perfil mixto que asigna la implementación a `codex`, la fase `implementation` lleva `subagente: null`
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-007 fase de otro proveedor sin subagente" -->
-- [ ] C7 (R-PERF-007): en ese perfil mixto, el aviso de la fase `implementation` nombra el proveedor `codex` y remite al despacho por proveedor
+- [x] C7 (R-PERF-007): en ese perfil mixto, el aviso de la fase `implementation` nombra el proveedor `codex` y remite al despacho por proveedor
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-007 aviso fase de otro proveedor" -->
-- [ ] C8 (R-PERF-007): con cliente `claude` y un modelo de `claude-code` sin familia reconocible, la fase lleva `subagente: null` y un aviso que nombra el modelo
+- [x] C8 (R-PERF-007): con cliente `claude` y un modelo de `claude-code` sin familia reconocible, la fase lleva `subagente: null` y un aviso que nombra el modelo
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-007 modelo sin alias" -->
-- [ ] C9 (R-PERF-007): con un perfil elegido que no existe, `fasesDeSesion` no lanza y devuelve `fases: []` con el mensaje de `perfilElegido` en `aviso`
+- [x] C9 (R-PERF-007): con un perfil elegido que no existe, `fasesDeSesion` no lanza y devuelve `fases: []` con el mensaje de `perfilElegido` en `aviso`
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-007 perfil elegido inexistente" -->
-- [ ] C10 (R-PERF-007): sin cliente, las fases se listan con `subagente: null` y el aviso dice que no se declaró el cliente y que las fases usan el modelo de la sesión
+- [x] C10 (R-PERF-007): sin cliente, las fases se listan con `subagente: null` y el aviso dice que no se declaró el cliente y que las fases usan el modelo de la sesión
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-007 sin cliente" -->
-- [ ] C11 (R-PERF-007): `faseDelEstado` asigna `analysis` a `intake`, `plan` a `analyzed`, `implementation` a `approved`/`in_progress`/`changes_requested`, `verification` a `awaiting_user_tests`/`in_qa` y `null` al resto
+- [x] C11 (R-PERF-007): `faseDelEstado` asigna `analysis` a `intake`, `plan` a `analyzed`, `implementation` a `approved`/`in_progress`/`changes_requested`, `verification` a `awaiting_user_tests`/`in_qa` y `null` al resto
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-007 fase del estado" -->
-- [ ] C12 (R-PERF-007): `resumeTicket` con cliente `claude` imprime el bloque «Modelos por fase (cliente: claude)» con `→` delante de la fase actual
+- [x] C12 (R-PERF-007): `resumeTicket` con cliente `claude` imprime el bloque «Modelos por fase (cliente: claude)» con `→` delante de la fase actual
       <!-- test: npx vitest run tests/next-step.test.ts -t "R-PERF-007 bloque de modelos por fase" -->
-- [ ] C13 (R-PERF-007): `resumeTicket` con un cliente fuera de `EJECUTORES_CON_PERFIL` devuelve error con los valores admitidos
+- [x] C13 (R-PERF-007): `resumeTicket` con un cliente fuera de `EJECUTORES_CON_PERFIL` devuelve error con los valores admitidos
       <!-- test: npx vitest run tests/next-step.test.ts -t "R-PERF-007 cliente desconocido" -->
-- [ ] C14 (R-PERF-007): `resumeTicket` con cliente deja idénticos los bytes de `routing.yaml`, `profiles.yaml` y el ticket
+- [x] C14 (R-PERF-007): `resumeTicket` con cliente deja idénticos los bytes de `routing.yaml`, `profiles.yaml` y el ticket
       <!-- test: npx vitest run tests/next-step.test.ts -t "R-PERF-007 solo lectura" -->
-- [ ] C15 (R-PERF-007): `reanudar_ticket` con `cliente: "claude"` devuelve `data.fases` con `cliente` igual a `claude`
+- [x] C15 (R-PERF-007): `reanudar_ticket` con `cliente: "claude"` devuelve `data.fases` con `cliente` igual a `claude`
       <!-- test: npx vitest run tests/mcp-server.test.ts -t "R-PERF-007 reanudar con cliente" -->
-- [ ] C16 (R-PERF-007): el `outputSchema` de `reanudar_ticket` declara la propiedad `fases`
+- [x] C16 (R-PERF-007): el `outputSchema` de `reanudar_ticket` declara la propiedad `fases`
       <!-- test: npx vitest run tests/mcp-server.test.ts -t "R-PERF-007 esquema de salida" -->
-- [ ] C17 (R-PERF-007): el `inputSchema` de `reanudar_ticket` declara `cliente` con el `enum` de `EJECUTORES_CON_PERFIL`
+- [x] C17 (R-PERF-007): el `inputSchema` de `reanudar_ticket` declara `cliente` con el `enum` de `EJECUTORES_CON_PERFIL`
       <!-- test: npx vitest run tests/mcp-server.test.ts -t "R-PERF-007 esquema de entrada" -->
-- [ ] C18 (R-PERF-007): `valmen resume --id <ID> --cliente claude` imprime el bloque «Modelos por fase» en la terminal
+- [x] C18 (R-PERF-007): `valmen resume --id <ID> --cliente claude` imprime el bloque «Modelos por fase» en la terminal
       <!-- verify: manual -->
 - [ ] C19 (R-PERF-007): la suite completa pasa
       <!-- test: npx vitest run -->
@@ -148,11 +148,20 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+- `packages/adapter/src/routing.ts`: `ClienteDeSesion`, tabla `SUBAGENTES_DEL_CLIENTE` (solo `claude` con alias `opus|sonnet|haiku|fable`; `codex`, `opencode` y `hermes` con su limitación), `FaseDeSesion`, `FasesDeSesion`, `faseDelEstado` y `fasesDeSesion` (solo lectura; captura el error de `perfilElegido` y lo devuelve como aviso).
+- `packages/engine/src/resume.ts`: `buildResumeContext(..., cliente?)` añade `fases`; `renderResumeContext` imprime «Modelos por fase (cliente: …)» después del plan, con `→` en la fase actual.
+- `packages/cli/src/commands.ts`: `resumeTicket(..., cliente?)` valida contra `EJECUTORES_CON_PERFIL`. `packages/cli/src/main.ts`: bandera `--cliente`, ayuda y registro en `VALUE_OPTIONS` (sin esto la bandera se leía como booleana; lo cazó `tests/cli.test.ts`).
+- `packages/mcp/src/tools.ts`: `reanudar_ticket` acepta `cliente` (enum) y declara `fases` en `outputSchema`.
+- Pruebas añadidas en `tests/routing.test.ts`, `tests/next-step.test.ts` y `tests/mcp-server.test.ts` (bloques `R-PERF-007`).
 
 ## Pruebas
 
-Pendiente de ejecución.
+Directorio `/Users/juanandrade/Desktop/ValmenHarness`, Node 24, sin red.
+
+- `npx vitest run tests/routing.test.ts -t "R-PERF-007"`, `npx vitest run tests/next-step.test.ts -t "R-PERF-007"` y `npx vitest run tests/mcp-server.test.ts -t "R-PERF-007"` → 17 pruebas en verde.
+- `npx vitest run tests/cli.test.ts` → en verde (cubre `--cliente` en `VALUE_OPTIONS`).
+- Manual (C18): tras `npm run build`, `node packages/cli/dist/main.js --root . resume --id FEATURE-ADAPTER-CONTEXTO-FASES-SUBAGENTE-20261007 --cliente claude` imprime «Modelos por fase (cliente: claude)» con `→ implementation` y los subagentes `opus`, `opus`, `sonnet`, `haiku`; con `--cliente codex`, el aviso de que no admite subagentes con modelo propio.
+- **C19 sin marcar**: `npx vitest run` completa da 53 fallos en 12 archivos (autorizacion-aprobacion-canales, autorizacion-qa-canales, delegation, firma-de-compuerta, gate-human-decision, gate-view, hermes-notify, jornada-sin-autoaprobacion, mcp-server, qa-commit-referencia, qa-por-politica, qa-sombra) que **ya fallaban sin los cambios del ticket** (comparado con `git stash` de `packages` y `tests`: mismos 53). No son de este alcance; el responsable decide si C19 se exime o se espera su corrección.
 
 ## QA
 
@@ -245,6 +254,24 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-07",
+    "at": "2026-10-08T01:03:59.791Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-07",
+    "at": "2026-10-08T01:18:09.346Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```

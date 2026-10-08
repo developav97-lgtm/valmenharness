@@ -30,7 +30,10 @@ import {
   ROLES,
   type ResolvedRoute,
   comprobarPerfilCompleto as comprobarCompleto,
+  FASES_DEL_AGENTE,
   derivarPerfil,
+  faseDelEstado,
+  fasesDeSesion,
   gateRoutingFor,
   perfilElegido,
   perfilesPath,
@@ -1132,5 +1135,98 @@ describe("la API de perfiles", () => {
       expect(r.status, JSON.stringify(cuerpo)).toBe(400);
     }
     expect(existsSync(perfilesPath(lab))).toBe(false);
+  });
+});
+
+describe("R-PERF-007 modelos por fase para la sesión", () => {
+  it("R-PERF-007 cuatro fases", () => {
+    elegir({ proyecto: "claude-code-completo" });
+    const rutas = rutasDelProyecto(lab, { ejecutor: "claude" });
+    const sesion = fasesDeSesion(lab, { cliente: "claude" });
+    expect(sesion.fases.map((f) => f.fase)).toEqual([...FASES_DEL_AGENTE]);
+    for (const f of sesion.fases) {
+      const ruta = rol(rutas, `agent-${f.fase}`);
+      expect(f).toMatchObject({ rol: ruta.role, provider: ruta.provider, model: ruta.model, effort: ruta.effort });
+      expect(f.origen).toEqual({ source: ruta.source, perfil: ruta.perfil });
+    }
+  });
+
+  it("R-PERF-007 subagente opus", () => {
+    elegir({ proyecto: "claude-code-completo" });
+    const sesion = fasesDeSesion(lab, { cliente: "claude" });
+    const plan = sesion.fases.find((f) => f.fase === "plan");
+    expect(plan?.subagente).toBe("opus");
+    expect(plan?.origen.perfil?.id).toBe("claude-code-completo");
+    expect(sesion.fases.find((f) => f.fase === "verification")?.subagente).toBe("haiku");
+  });
+
+  it("R-PERF-007 nota del alias", () => {
+    elegir({ proyecto: "claude-code-completo" });
+    expect(fasesDeSesion(lab, { cliente: "claude" }).nota).toContain("versión vigente de la familia");
+  });
+
+  it("R-PERF-007 cliente sin subagentes", () => {
+    elegir({ proyecto: "claude-code-completo" });
+    for (const cliente of ["codex", "opencode", "hermes"] as const) {
+      const sesion = fasesDeSesion(lab, { cliente });
+      expect(sesion.admiteSubagentes, cliente).toBe(false);
+      expect(sesion.fases.every((f) => f.subagente === null), cliente).toBe(true);
+    }
+  });
+
+  it("R-PERF-007 aviso cliente sin subagentes", () => {
+    const sesion = fasesDeSesion(lab, { cliente: "codex" });
+    expect(sesion.aviso).toBe(
+      "el cliente codex no admite subagentes con modelo propio: las fases usan el modelo de la sesión",
+    );
+  });
+
+  it("R-PERF-007 fase de otro proveedor sin subagente", () => {
+    writeFileSync(perfilesPath(lab), renderPerfiles([perfilMixto()], { proyecto: "mixto", ejecutores: {} }));
+    const sesion = fasesDeSesion(lab, { cliente: "claude" });
+    expect(sesion.fases.find((f) => f.fase === "implementation")?.subagente).toBeNull();
+    expect(sesion.fases.find((f) => f.fase === "plan")?.subagente).toBe("opus");
+  });
+
+  it("R-PERF-007 aviso fase de otro proveedor", () => {
+    writeFileSync(perfilesPath(lab), renderPerfiles([perfilMixto()], { proyecto: "mixto", ejecutores: {} }));
+    const aviso = fasesDeSesion(lab, { cliente: "claude" }).fases.find((f) => f.fase === "implementation")?.aviso;
+    expect(aviso).toContain("codex");
+    expect(aviso).toContain("R-PERF-004");
+  });
+
+  it("R-PERF-007 modelo sin alias", () => {
+    const raro = derivarPerfil(perfilIncorporado("claude-code-completo"), "raro", "", {
+      "agent-plan": { provider: "claude-code", model: "modelo-desconocido-1", effort: "high" },
+    });
+    writeFileSync(perfilesPath(lab), renderPerfiles([raro], { proyecto: "raro", ejecutores: {} }));
+    const plan = fasesDeSesion(lab, { cliente: "claude" }).fases.find((f) => f.fase === "plan");
+    expect(plan?.subagente).toBeNull();
+    expect(plan?.aviso).toContain("modelo-desconocido-1");
+  });
+
+  it("R-PERF-007 perfil elegido inexistente", () => {
+    elegir({ proyecto: "fantasma" });
+    const sesion = fasesDeSesion(lab, { cliente: "claude" });
+    expect(sesion.fases).toEqual([]);
+    expect(sesion.aviso).toMatch(/"fantasma" no existe/);
+  });
+
+  it("R-PERF-007 sin cliente", () => {
+    elegir({ proyecto: "claude-code-completo" });
+    const sesion = fasesDeSesion(lab);
+    expect(sesion.cliente).toBeNull();
+    expect(sesion.fases).toHaveLength(4);
+    expect(sesion.fases.every((f) => f.subagente === null)).toBe(true);
+    expect(sesion.aviso).toContain("No se declaró el cliente");
+    expect(sesion.aviso).toContain("modelo de la sesión");
+  });
+
+  it("R-PERF-007 fase del estado", () => {
+    expect(faseDelEstado("intake")).toBe("analysis");
+    expect(faseDelEstado("analyzed")).toBe("plan");
+    for (const e of ["approved", "in_progress", "changes_requested"]) expect(faseDelEstado(e), e).toBe("implementation");
+    for (const e of ["awaiting_user_tests", "in_qa"]) expect(faseDelEstado(e), e).toBe("verification");
+    for (const e of ["planned", "qa_approved", "closed", "blocked", "otro"]) expect(faseDelEstado(e), e).toBeNull();
   });
 });

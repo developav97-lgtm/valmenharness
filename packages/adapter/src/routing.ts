@@ -1037,6 +1037,153 @@ export function modeloDeFase(
   return { model: ruta.model, effort: ruta.effort === "auto" ? ejecutor.effort : ruta.effort, origen: "rol", motivo: ruta.perfil === undefined ? `rol agent-${fase} (${ruta.source})` : `rol agent-${fase} (perfil ${ruta.perfil.id}, ejecutor ${ejecutor.id})` };
 }
 
+/** El cliente que abrió una sesión interactiva: los mismos ids que tienen perfil propio. */
+export type ClienteDeSesion = (typeof EJECUTORES_CON_PERFIL)[number];
+
+/**
+ * Qué clientes lanzan un subagente con modelo propio y cómo se lo nombran.
+ *
+ * Solo `claude` tiene evidencia (la herramienta `Agent` acepta el alias de la familia); el
+ * resto se declara sin subagentes con su limitación: el costo de un error es un aviso de
+ * más, nunca un subagente que el cliente no sepa lanzar. Ampliarlo es una entrada de tabla.
+ */
+const SUBAGENTES_DEL_CLIENTE: Readonly<
+  Record<
+    ClienteDeSesion,
+    | { readonly proveedor: string; readonly alias: (model: string) => string | null }
+    | { readonly limitacion: string }
+  >
+> = {
+  claude: {
+    proveedor: "claude-code",
+    alias: (model) => /opus|sonnet|haiku|fable/.exec(model.toLowerCase())?.[0] ?? null,
+  },
+  codex: { limitacion: "Codex no declara subagentes con modelo propio" },
+  opencode: { limitacion: "OpenCode no declara subagentes con modelo propio" },
+  hermes: { limitacion: "Hermes despacha por su propia política, no por subagentes con modelo propio" },
+};
+
+/** Una fase vista desde la sesión: lo que resuelve el perfil y con qué se lanzaría el subagente. */
+export interface FaseDeSesion {
+  readonly fase: FaseDelAgente;
+  readonly rol: string;
+  readonly provider: string;
+  readonly model: string;
+  readonly effort: string;
+  readonly origen: {
+    readonly source: RouteSource;
+    readonly perfil?: { readonly id: string; readonly alcance: "proyecto" | "ejecutor" };
+  };
+  /** El alias con que el cliente lanza el subagente, o `null` si no se puede. */
+  readonly subagente: string | null;
+  /** Por qué no hay subagente, o qué hay que saber de él. */
+  readonly aviso: string | null;
+}
+
+/** Los modelos por fase que se entregan a una sesión interactiva. */
+export interface FasesDeSesion {
+  readonly cliente: ClienteDeSesion | null;
+  readonly admiteSubagentes: boolean;
+  /** La fase que corresponde al estado del ticket, si la hay. */
+  readonly faseActual: FaseDelAgente | null;
+  readonly fases: readonly FaseDeSesion[];
+  readonly nota: string | null;
+  readonly aviso: string | null;
+}
+
+/** La fase del agente que toca en un estado del ticket; `null` si el estado no es de ninguna. */
+export function faseDelEstado(estado: string): FaseDelAgente | null {
+  switch (estado) {
+    case "intake":
+      return "analysis";
+    case "analyzed":
+      return "plan";
+    case "approved":
+    case "in_progress":
+    case "changes_requested":
+      return "implementation";
+    case "awaiting_user_tests":
+    case "in_qa":
+      return "verification";
+    default:
+      return null;
+  }
+}
+
+/**
+ * El modelo de cada fase para una sesión abierta a mano, y con qué lanzar su subagente.
+ *
+ * Solo informa: no escribe ni cambia el modelo de la sesión. Si el perfil elegido no existe
+ * devuelve el mensaje como aviso en vez de lanzar, porque `resume` es la herramienta para
+ * retomar y no puede caerse por eso.
+ */
+export function fasesDeSesion(
+  root: string,
+  opciones: { readonly cliente?: ClienteDeSesion; readonly estado?: string } = {},
+): FasesDeSesion {
+  const cliente = opciones.cliente ?? null;
+  const declaracion = cliente === null ? null : SUBAGENTES_DEL_CLIENTE[cliente];
+  const admiteSubagentes = declaracion !== null && "alias" in declaracion;
+  const faseActual = opciones.estado === undefined ? null : faseDelEstado(opciones.estado);
+  const base = { cliente, admiteSubagentes, faseActual };
+
+  let rutas: ResolvedRoute[];
+  try {
+    rutas = rutasDelProyecto(root, cliente === null ? {} : { ejecutor: cliente });
+  } catch (cause) {
+    return { ...base, fases: [], nota: null, aviso: cause instanceof Error ? cause.message : String(cause) };
+  }
+
+  const fases = FASES_DEL_AGENTE.map((fase): FaseDeSesion => {
+    const rol = `agent-${fase}`;
+    const ruta = routeFor(rutas, rol);
+    const provider = ruta?.provider ?? "";
+    const model = ruta?.model ?? "";
+    let subagente: string | null = null;
+    let aviso: string | null = null;
+    if (declaracion === null) {
+      aviso = "sin cliente declarado: la fase usa el modelo de la sesión";
+    } else if (!("alias" in declaracion)) {
+      aviso = `${declaracion.limitacion}: la fase usa el modelo de la sesión`;
+    } else if (provider !== declaracion.proveedor) {
+      aviso =
+        `la fase es del proveedor ${provider === "" ? "(sin asignar)" : provider}, no del cliente ` +
+        `${cliente}: no se delega como subagente, se despacha por proveedor (R-PERF-004)`;
+    } else {
+      subagente = declaracion.alias(model);
+      if (subagente === null) aviso = `el modelo ${model === "" ? "(sin modelo)" : model} no tiene alias en el cliente ${cliente}`;
+    }
+    return {
+      fase,
+      rol,
+      provider,
+      model,
+      effort: ruta?.effort ?? "auto",
+      origen: {
+        source: ruta?.source ?? "sin-asignar",
+        ...(ruta?.perfil === undefined ? {} : { perfil: ruta.perfil }),
+      },
+      subagente,
+      aviso,
+    };
+  });
+
+  return {
+    ...base,
+    fases,
+    nota:
+      declaracion !== null && "alias" in declaracion
+        ? "El alias corre la versión vigente de la familia en el cliente, que puede no ser la exacta del perfil; el esfuerzo no se aplica al subagente."
+        : null,
+    aviso:
+      cliente === null
+        ? "No se declaró el cliente de la sesión: las fases usan el modelo de la sesión. Pásalo con --cliente."
+        : admiteSubagentes
+          ? null
+          : `el cliente ${cliente} no admite subagentes con modelo propio: las fases usan el modelo de la sesión`,
+  };
+}
+
 /** El modelo resuelto de un rol, o `null` si no tiene ninguno. */
 export function routeFor(
   routes: readonly ResolvedRoute[],

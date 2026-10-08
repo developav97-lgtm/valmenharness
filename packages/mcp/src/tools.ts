@@ -117,7 +117,7 @@ import {
   type ExecutionActivityState,
 } from "@valmen/engine";
 import { gateFor, gateById, SIN_INTERFAZ } from "@valmen/gate";
-import { architectRoutingFor, cascadeRoutingFor, gateRoutingFor } from "@valmen/adapter";
+import { EJECUTORES_CON_PERFIL, architectRoutingFor, cascadeRoutingFor, gateRoutingFor } from "@valmen/adapter";
 import { apiKeyWithPrecedence, transportById } from "@valmen/credentials";
 import {
   advanceDelegated,
@@ -821,6 +821,13 @@ const DEFINICIONES: readonly ToolDefinition[] = [
           enum: ["compacto", "completo"],
           description: "`compacto` por defecto; `completo` devuelve el ticket íntegro.",
         },
+        cliente: {
+          type: "string",
+          enum: [...EJECUTORES_CON_PERFIL],
+          description:
+            "El cliente de esta sesión. Con él, el contexto lista el modelo de cada fase y el " +
+            "subagente con que el cliente la lanzaría, o avisa si no los admite.",
+        },
       },
     }),
     outputSchema: {
@@ -875,6 +882,7 @@ const DEFINICIONES: readonly ToolDefinition[] = [
         },
         readInstruction: { type: "string" },
         provenance: { anyOf: [{ type: "object" }, { type: "null" }] },
+        fases: { type: "object" },
         documentoCompleto: { type: "string" },
       },
       required: [
@@ -3318,6 +3326,7 @@ async function ejecutarHerramienta(
           paths,
           texto(args, "id", false),
           modo as ResumeMode | undefined,
+          texto(args, "cliente", false),
         );
         // "Hay varios activos, indique uno" no es un fallo del comando: es una
         // pregunta, y el agente tiene que poder leerla como algo que puede
