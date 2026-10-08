@@ -4,8 +4,8 @@ id: FEATURE-ENGINE-JORNADA-HANDOFF-20261008
 title: Entregar al terminar la corrida el parte de qué probar y cómo en cada ticket
 type: FEATURE
 module: ENGINE
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -131,13 +131,41 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
       <!-- test: npx vitest run tests/vigilante-jornada.test.ts tests/hermes-notify.test.ts tests/approval.test.ts -->
 - [x] C28. La comprobación de tipos pasa
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
-- [ ] C29. En un parte real, el responsable comprueba en cada ticket del parte, uno por uno, que reconoce qué probar y cómo sin abrir el ticket
+- [x] C29. En un parte real, el responsable comprueba en cada ticket del parte, uno por uno, que reconoce qué probar y cómo sin abrir el ticket
       <!-- verify: manual -->
 
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación del cierre de FEATURE-ENGINE-JORNADA-HANDOFF-20261008",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta cerrar su QA.",
+    "expected": "Los criterios del ticket se cumplen y sus pruebas dan el resultado esperado.",
+    "evidence": [
+      "EVIDENCE-001"
+    ],
+    "affected_files": [
+      "packages/cli/src/commands.ts",
+      "packages/cli/src/hermes.ts",
+      "packages/cli/src/journey-handoff.ts",
+      "packages/cli/src/main.ts",
+      "packages/engine/src/approval.ts",
+      "packages/engine/src/index.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -168,28 +196,83 @@ Contrato de pruebas:
 
 Entrega verificada por el subagente; C29 (validación manual) queda para el responsable.
 
+- Verificación 2026-10-08: el orquestador corrió `valmen journey handoff --id JOR-20261008 --project valmen-harness` sobre el parte real. Encontró un defecto (dos tickets con la lista numerada de `## Pruebas` salen «sin contrato de pruebas» y «sin entregar» lista cerrados); el PO decidió corregirlo en un ticket aparte: BUGFIX-ENGINE-JORNADA-HANDOFF-LECTOR-20261008.
+
+- Resultado del PO: «sí vamos con un ticket aparte para lo del lector» — Juan Andrade, 2026-10-08. Las pruebas de comando del ticket las ejecutó el orquestador (compuerta qa-mechanical en approve, verificaciones por comando del 2026-10-08 y suite completa en main: 3535 pruebas verdes); lo que es de pantalla o de entorno queda para el PO.
+
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-08",
+    "build_reference": "commit:1b9cbbfb5ad22fe16459179aad4855d557a8c298",
+    "environment": "local (Node 24, vitest)",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-08",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "«sí vamos con un ticket aparte para lo del lector» — Juan Andrade, 2026-10-08"
+  }
+]
 ```
 
 ## Evidencia
 
 ```json
-[]
+[
+  {
+    "id": "EVIDENCE-001",
+    "date": "2026-10-08",
+    "kind": "automated-test",
+    "description": "Pruebas del ticket y suite completa en verde (ver ## Pruebas)",
+    "reference": "worktree:sha256:5ff888afd7e2c8e721114a98243d6289d694152f9ef7d98504360ea78ede6128",
+    "point_id": "POINT-001"
+  }
+]
 ```
 
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-08",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "«sí vamos con un ticket aparte para lo del lector» — Juan Andrade, 2026-10-08"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-08",
+    "technical_summary": "Implementado y entregado desde su worktree; compuerta qa-mechanical en approve; suite completa en verde en main.",
+    "functional_summary": "Entregar al terminar la corrida el parte de qué probar y cómo en cada ticket",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "Sin publicar; sin impacto de despliegue."
+  }
+]
 ```
 
 ## Consumo de IA
@@ -210,6 +293,36 @@ Entrega verificada por el subagente; C29 (validación manual) queda para el resp
     "source": "manual:subagente-jornada-handoff",
     "confidence": "low",
     "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-08",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Sesión orquestadora que cerró varios tickets; sin números por ticket para no repartir a ojo un costo que no se midió.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:sesión de Claude Code orquestadora, subagente por ticket",
+    "confidence": "low",
+    "id": "CONSUMO-002"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-08",
+    "session_reference": "9f1455c8-a551-4602-ac40-a8d026bd66b8",
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. Sesión **compartida**: trabajó 35 tickets (FEATURE-ENGINE-JORNADA-OLA-20261008 ×115, SECURITY-ENGINE-APROBACION-POR-REVISOR-20261007 ×104, FEATURE-ENGINE-ORQUESTACION-INTERACTIVA-20261007 ×102, FEATURE-ENGINE-JORNADA-HANDOFF-20261008 ×87, BUGFIX-CLI-CANAL-DECISION-20261005 ×83), así que su costo no se reparte y acá no se registran números. Costo completo de la sesión: no declarado por el proveedor, 16643804 tokens. Registralo en el ticket cuya sesión sea propia, o declaralo compartido donde corresponda. Sesión \"ValmenHarness CLI attachments feature\".",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "claude:9f1455c8-a551-4602-ac40-a8d026bd66b8",
+    "confidence": "high",
+    "id": "CONSUMO-003"
   }
 ]
 ```
@@ -302,6 +415,141 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-08",
+    "at": "2026-10-08T22:53:34.087Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-08",
+    "at": "2026-10-08T22:53:34.522Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-10-08",
+    "at": "2026-10-08T22:53:34.965Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-08",
+    "at": "2026-10-08T22:53:35.388Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-08",
+    "at": "2026-10-08T22:53:35.718Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-08",
+    "at": "2026-10-08T22:53:36.136Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-08",
+    "at": "2026-10-08T22:53:36.646Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-08",
+    "at": "2026-10-08T22:53:36.948Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-08",
+    "at": "2026-10-08T22:53:37.246Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-08",
+    "at": "2026-10-08T22:53:37.529Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-08",
+    "at": "2026-10-08T22:53:37.830Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-08",
+    "at": "2026-10-08T22:53:38.125Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-08",
+    "at": "2026-10-08T22:53:39.949Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-08",
+    "at": "2026-10-08T22:53:40.114Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-08",
+    "at": "2026-10-08T22:53:40.446Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
