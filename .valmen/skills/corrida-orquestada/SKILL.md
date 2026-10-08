@@ -13,9 +13,8 @@ La sesión que el PO abre es el **orquestador**: reparte los tickets de la jorna
 
 Algunos comandos de este recorrido los entregan tickets hermanos. Mientras falten, **no los reemplazas con git a mano**: te detienes en ese paso, lo dices al PO y sigues con lo que sí existe.
 
-- `valmen journey next --wave`, `journey brief`, `journey worktree create|remove`: ya en el CLI.
+- `valmen journey next --wave`, `journey brief`, `journey worktree create|remove` y `journey handoff`: ya en el CLI.
 - `valmen journey worktree integrate`: FEATURE-ENGINE-INTEGRACION-RAMA-20261008. Sin él, la rama del subagente queda entregada y sin integrar: avisa.
-- `valmen journey handoff`: FEATURE-ENGINE-JORNADA-HANDOFF-20261008. Sin él, el parte lo armas leyendo la sección `## Pruebas` de cada ticket.
 - Aprobación automática por autorización: SECURITY-ENGINE-APROBACION-POR-AUTORIZACION-20261007. Mientras no exista, **todos los planes van en lote al PO**.
 
 ## Pedir la ola
