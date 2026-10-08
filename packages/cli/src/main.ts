@@ -883,6 +883,13 @@ export function parseArgs(
 
 /** Resuelve las rutas del registro a partir de las opciones. */
 /**
+ * Canal con el que el CLI firma una decisión humana. Existe porque
+ * `recordHumanDecision` rellena con `mission-control` cuando no recibe canal, y
+ * una decisión tomada en la terminal quedaba atribuida a la pantalla.
+ */
+export const CANAL_CLI = "cli";
+
+/**
  * `gate decide`: registra la decisión de una persona sobre un gate escalado.
  *
  * Faltaba, y su ausencia dejaba el trabajo a medias en las dos direcciones: la
@@ -973,6 +980,7 @@ export function runGateDecide(
     decision,
     actor,
     reason: flag(flags, "reason") ?? "",
+    channel: CANAL_CLI,
   });
 
   if (!resultado.ok) {

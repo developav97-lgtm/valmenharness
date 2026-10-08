@@ -4,7 +4,7 @@ id: BUGFIX-CLI-CANAL-DECISION-20261005
 title: La decisión de una compuerta tomada por el CLI queda registrada con el canal mission-control
 type: BUGFIX
 module: CLI
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -86,21 +86,21 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
 <!-- Una afirmación verificable por criterio. Una frase con «y» son dos criterios:
      cada uno se despliega como una proposición propia, y una que agrupa varias
      afirmaciones cae en banda de revisión aunque el plan la cubra entera. -->
-- [ ] Una decisión tomada con `valmen gate-decide --id --receipt` queda en el recibo con `humanDecision.channel` igual a `cli`.
+- [x] Una decisión tomada con `valmen gate-decide --id --receipt` queda en el recibo con `humanDecision.channel` igual a `cli`.
       <!-- test: npx vitest run tests/gate-human-decision.test.ts -->
-- [ ] El evento `gate-approved` que el CLI anexa al ticket dice «canal cli».
+- [x] El evento `gate-approved` que el CLI anexa al ticket dice «canal cli».
       <!-- test: npx vitest run tests/gate-human-decision.test.ts -->
-- [ ] `recordHumanDecision` sin canal explícito sigue registrando `mission-control`.
+- [x] `recordHumanDecision` sin canal explícito sigue registrando `mission-control`.
       <!-- test: npx vitest run tests/gate-human-decision.test.ts -->
-- [ ] La decisión por código desde Telegram sigue registrando `hermes-celular`.
+- [x] La decisión por código desde Telegram sigue registrando `hermes-celular`.
       <!-- test: npx vitest run tests/hermes-notify.test.ts -->
-- [ ] La corrida delegada sigue pasando sus pruebas sin cambios.
+- [x] La corrida delegada sigue pasando sus pruebas sin cambios.
       <!-- test: npx vitest run tests/delegation.test.ts -->
-- [ ] La constancia de firma en el evento del ticket sigue pasando sus pruebas sin cambios.
+- [x] La constancia de firma en el evento del ticket sigue pasando sus pruebas sin cambios.
       <!-- test: npx vitest run tests/firma-de-compuerta.test.ts -->
-- [ ] El proyecto compila sin errores de tipos.
+- [x] El proyecto compila sin errores de tipos.
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
-- [ ] Ningún recibo ni evento ya registrado se reescribe.
+- [x] Ningún recibo ni evento ya registrado se reescribe.
       <!-- verify: manual -->
 
 ## Puntos
@@ -111,11 +111,19 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
 
 ## Implementación
 
-Pendiente.
+- `packages/cli/src/main.ts`: constante exportada `CANAL_CLI = "cli"` y `channel: CANAL_CLI` en la llamada a `recordHumanDecision` de la rama `--id/--receipt` de `runGateDecide`.
+- `tests/gate-human-decision.test.ts`: `describe` «el canal de la decisión» (canal `cli` en recibo y evento; caso control `mission-control` sin canal).
+- El canal del CLI es fiable desde el commit de este ticket (2026-10-08); las decisiones anteriores tomadas por el CLI quedan como `mission-control` (append-only, no se corrigen).
 
 ## Pruebas
 
-Pendiente de ejecución.
+Directorio: `/Users/juanandrade/Desktop/ValmenHarness/.claude/worktrees/ticket-canal-decision` (Node 24, `npm install` hecho).
+
+- `npx vitest run tests/gate-human-decision.test.ts` (9 en verde)
+- `npx vitest run tests/hermes-notify.test.ts tests/delegation.test.ts tests/firma-de-compuerta.test.ts` (75 en verde)
+- `npx tsc --noEmit -p tsconfig.json` (sin errores)
+
+Validación manual: `valmen gate-decide --id <ID> --receipt <recibo escalado> --decision approve --actor <nombre> --reason <frase>` sobre un ticket de prueba y leer «canal cli» en el evento. El diff no toca recibos ni eventos previos.
 
 ## QA
 
@@ -144,7 +152,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-08",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": null,
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual: sesión de implementación (subagente Sonnet 5.5), sin números expuestos",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -208,6 +232,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:21:10.997Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:22:53.410Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:22:53.877Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```

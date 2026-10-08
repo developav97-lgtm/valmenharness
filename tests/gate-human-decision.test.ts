@@ -14,7 +14,7 @@
  * rechaza en vez de anexar una segunda. Esa línea no se toca —el diseño la ordena
  * exactamente una vez— y el rechazo es la garantía de que no se anexa dos veces.
  */
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -35,6 +35,8 @@ import {
   type RegistryPaths,
 } from "../packages/engine/src/index.js";
 import { recordHumanDecision } from "../packages/server/src/gates.js";
+import { runGateDecide } from "../packages/cli/src/main.js";
+import { writeFixtureTicket } from "./helpers/fixtures.js";
 
 const TICKET = "BUGFIX-POS-FILTRO-ORDENES-20260921";
 
@@ -178,5 +180,44 @@ describe("la decisión cambia el actor del recibo vigente", () => {
     decidir(id);
 
     expect(currentReceipts(readReceipts(PATHS(), TICKET))[0]?.actor).toBe("human");
+  });
+});
+
+describe("el canal de la decisión", () => {
+  const ID = `GR-20261004-${TICKET}-plan-1`;
+
+  function ticketConRecibo(): void {
+    writeFixtureTicket(lab, { id: TICKET, workflowStatus: "planned" });
+    appendReceipt(PATHS(), TICKET, reciboEscalado(ID));
+  }
+
+  it("gate-decide por el CLI firma con canal cli en el recibo y en el evento", () => {
+    ticketConRecibo();
+
+    const r = runGateDecide(PATHS(), {
+      id: TICKET,
+      receipt: ID,
+      decision: "approve",
+      actor: "Juan Andrade",
+      reason: "decidido desde la terminal",
+    });
+    expect(r.exitCode).toBe(0);
+
+    const vigente = currentReceipts(readReceipts(PATHS(), TICKET))[0];
+    expect(vigente?.humanDecision?.channel).toBe("cli");
+
+    const texto = readFileSync(join(lab, "tickets", "2026", TICKET, "ticket.md"), "utf8");
+    expect(texto).toContain("canal cli");
+    expect(texto).not.toContain("canal mission-control");
+  });
+
+  it("recordHumanDecision sin canal sigue escribiendo mission-control", () => {
+    ticketConRecibo();
+
+    expect(decidir(ID).ok).toBe(true);
+
+    expect(currentReceipts(readReceipts(PATHS(), TICKET))[0]?.humanDecision?.channel).toBe(
+      "mission-control",
+    );
   });
 });
