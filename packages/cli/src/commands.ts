@@ -1803,7 +1803,10 @@ export function materializeCommand(
 ): CommandResult {
   try {
     const dryRun = flags["dry-run"] === true;
-    const resultado = materializeFeature(paths, slug, { write: !dryRun });
+    const resultado = materializeFeature(paths, slug, {
+      write: !dryRun,
+      allowExternalLinks: flags["allow-external-links"] === true,
+    });
     return ok(renderMaterialization(slug, resultado, { dryRun }));
   } catch (caught) {
     const failure = toFailure(caught);

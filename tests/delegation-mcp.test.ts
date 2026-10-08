@@ -6,7 +6,7 @@
  * cerrar la feature. La lógica está probada en `delegation.test.ts`; acá se prueba
  * el cable.
  */
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -74,6 +74,21 @@ describe("herramientas MCP de la delegación y del cierre de feature", () => {
     });
     expect(r.isError).toBe(false);
     expect(r.text).toContain("assets/pantalla.png");
+  });
+
+  it("anexar por MCP actualiza las referencias", async () => {
+    const origen = join(lab, "pantalla.png");
+    writeFileSync(origen, Buffer.from([1, 2, 3, 4]));
+    const r = await callTool(contexto(), "anexar_adjunto_a_feature", {
+      slug: "kardex",
+      archivo: origen,
+      descripcion: "Captura aprobada",
+    });
+    expect(r.isError).toBe(false);
+    expect(r.text).toContain(A);
+    const ticket = readFileSync(join(lab, "tickets", "2026", A, "ticket.md"), "utf8");
+    expect(ticket).toContain("### Referencias de diseño");
+    expect(ticket).toContain(".valmen/features/kardex/assets/pantalla.png");
   });
 
   it("registra la delegación y dice qué ticket sigue", async () => {

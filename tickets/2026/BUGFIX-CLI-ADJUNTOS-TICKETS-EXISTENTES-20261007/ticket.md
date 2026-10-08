@@ -4,7 +4,7 @@ id: BUGFIX-CLI-ADJUNTOS-TICKETS-EXISTENTES-20261007
 title: Los adjuntos de diseño anexados después de materializar no llegan a los tickets
 type: BUGFIX
 module: CLI
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -73,37 +73,37 @@ Ninguno.
 
 ## Criterios de aceptación
 
-- [ ] C1: Anexar un adjunto después de materializar escribe `### Referencias de diseño` en un ticket existente en `intake`.
+- [x] C1: Anexar un adjunto después de materializar escribe `### Referencias de diseño` en un ticket existente en `intake`.
   <!-- test: npx vitest run tests/feature-assets.test.ts -t "anexar después de materializar actualiza las referencias" -->
-- [ ] C2: El refresco deja en el ticket un evento `design-references-updated` con las rutas de los adjuntos.
+- [x] C2: El refresco deja en el ticket un evento `design-references-updated` con las rutas de los adjuntos.
   <!-- test: npx vitest run tests/feature-assets.test.ts -t "deja un evento design-references-updated" -->
-- [ ] C3: El refresco no modifica un ticket en `in_progress` y lo informa como omitido con su estado.
+- [x] C3: El refresco no modifica un ticket en `in_progress` y lo informa como omitido con su estado.
   <!-- test: npx vitest run tests/feature-assets.test.ts -t "no toca un ticket que empezó la implementación" -->
-- [ ] C4: El refresco conserva intacto el resto de la solicitud original, incluida `### Supuestos y decisiones pendientes`.
+- [x] C4: El refresco conserva intacto el resto de la solicitud original, incluida `### Supuestos y decisiones pendientes`.
   <!-- test: npx vitest run tests/feature-assets.test.ts -t "conserva el resto de la solicitud" -->
-- [ ] C5: Refrescar sin cambios en los adjuntos no reescribe el ticket ni agrega eventos.
+- [x] C5: Refrescar sin cambios en los adjuntos no reescribe el ticket ni agrega eventos.
   <!-- test: npx vitest run tests/feature-assets.test.ts -t "refrescar sin cambios no escribe" -->
-- [ ] C6: `valmen feature asset refresh <slug> --dry-run` informa los tickets que actualizaría sin escribirlos.
+- [x] C6: `valmen feature asset refresh <slug> --dry-run` informa los tickets que actualizaría sin escribirlos.
   <!-- test: npx vitest run tests/feature-assets.test.ts -t "el refresco en seco informa sin escribir" -->
-- [ ] C7: Materializar una feature con un enlace externo sin copia local falla sin crear ningún ticket.
+- [x] C7: Materializar una feature con un enlace externo sin copia local falla sin crear ningún ticket.
   <!-- test: npx vitest run tests/feature-assets.test.ts -t "materialize se detiene ante un enlace externo sin copia" -->
-- [ ] C8: Con `allowExternalLinks` materializar crea los tickets e informa los avisos.
+- [x] C8: Con `allowExternalLinks` materializar crea los tickets e informa los avisos.
   <!-- test: npx vitest run tests/feature-assets.test.ts -t "con permiso explícito materialize crea y avisa" -->
-- [ ] C9: Materializar en seco con enlaces sin copia devuelve los avisos sin fallar.
+- [x] C9: Materializar en seco con enlaces sin copia devuelve los avisos sin fallar.
   <!-- test: npx vitest run tests/feature-assets.test.ts -t "en seco informa los enlaces sin fallar" -->
-- [ ] C10: Anexar un archivo `.dc.html` se rechaza sin escribir copia ni manifiesto.
+- [x] C10: Anexar un archivo `.dc.html` se rechaza sin escribir copia ni manifiesto.
   <!-- test: npx vitest run tests/feature-assets.test.ts -t "rechaza un .dc.html" -->
-- [ ] C11: Anexar un `.html` que carga `support.js` o usa `x-dc` se rechaza con el pedido de la versión autónoma.
+- [x] C11: Anexar un `.html` que carga `support.js` o usa `x-dc` se rechaza con el pedido de la versión autónoma.
   <!-- test: npx vitest run tests/feature-assets.test.ts -t "rechaza un html que depende del lienzo" -->
-- [ ] C12: Un ticket recibe solo los adjuntos citados en el cuerpo de los requisitos que cubre, aunque el mismo `spec.md` cite otros.
+- [x] C12: Un ticket recibe solo los adjuntos citados en el cuerpo de los requisitos que cubre, aunque el mismo `spec.md` cite otros.
   <!-- test: npx vitest run tests/feature-assets.test.ts -t "la cita se resuelve por requisito" -->
-- [ ] C13: Si ningún requisito del ticket cita un adjunto, el ticket recibe los citados en el `spec.md` de su dominio.
+- [x] C13: Si ningún requisito del ticket cita un adjunto, el ticket recibe los citados en el `spec.md` de su dominio.
   <!-- test: npx vitest run tests/feature-assets.test.ts -t "sin cita en el requisito usa la del archivo" -->
-- [ ] C14: La herramienta MCP `anexar_adjunto_a_feature` actualiza las referencias de los tickets existentes elegibles.
+- [x] C14: La herramienta MCP `anexar_adjunto_a_feature` actualiza las referencias de los tickets existentes elegibles.
   <!-- test: npx vitest run tests/delegation-mcp.test.ts -t "anexar por MCP actualiza las referencias" -->
-- [ ] C15: El proyecto compila sin errores de tipos.
+- [x] C15: El proyecto compila sin errores de tipos.
   <!-- test: npx tsc --noEmit -p tsconfig.json -->
-- [ ] C16: La skill `feature` documenta el refresco, la bandera de enlaces y el rechazo del `.dc.html`.
+- [x] C16: La skill `feature` documenta el refresco, la bandera de enlaces y el rechazo del `.dc.html`.
   <!-- verify: manual -->
 - [ ] C17: Sobre una copia de la feature `superadmin-ampliacion` de SaiOpenCloud, `valmen feature asset refresh` deja `### Referencias de diseño` en sus tickets que no empezaron la implementación.
   <!-- verify: manual -->
@@ -116,11 +116,19 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+- `packages/engine/src/feature-assets.ts`: `esFuenteDeLienzo` y rechazo en `attachFeatureAsset` (P3); `assetsForRequirements` resuelve la cita en tres niveles (requisito, archivo, todos) (P4).
+- `packages/engine/src/materialize.ts`: `refreshDesignReferences`, `refreshAfterAttach` y `renderDesignReferencesRefresh` (P1); `materializeFeature` se detiene ante enlaces externos sin copia salvo `allowExternalLinks` y refresca los tickets existentes elegibles (P2).
+- Consumidores: `packages/cli/src/features.ts` (`asset add` refresca, `asset refresh [--dry-run]`), `packages/cli/src/commands.ts` y `main.ts` (`--allow-external-links`, ayuda), `packages/mcp/src/tools.ts` (`permitirEnlacesExternos`, refresco al anexar), `packages/server/src/server.ts` (`allowExternalLinks`).
+- Documentación: `skills/feature/SKILL.md` y su copia en `.valmen/skills/feature/SKILL.md`; `valmen sync` corrido desde el worktree usa el paquete del checkout principal y no ve el cambio hasta integrar.
+- Pruebas: `tests/feature-assets.test.ts` (nuevas y ajuste de «materialize lo informa sin bloquear») y `tests/delegation-mcp.test.ts`.
 
 ## Pruebas
 
-Pendiente de ejecución.
+- Directorio: `/Users/juanandrade/Desktop/ValmenHarness/.claude/worktrees/ticket-adjuntos-tickets-existentes`.
+- Comando: `npx vitest run tests/feature-assets.test.ts tests/materializar-feature.test.ts tests/plantilla-y-materializacion.test.ts tests/delegation-mcp.test.ts`. Resultado: 55 pruebas pasan.
+- Comando: `npx tsc --noEmit -p tsconfig.json`. Resultado: sin errores.
+- Validación manual (C17, sin verificar): sobre una copia de SaiOpenCloud `superadmin-ampliacion`, correr `valmen feature asset refresh superadmin-ampliacion --dry-run` y luego sin `--dry-run`, y comprobar que los tickets que no empezaron la implementación tienen `### Referencias de diseño` y el evento `design-references-updated`.
+- Ambiente: Node 24, `npm ci` hecho; `npx tsc --build tsconfig.build.json` antes si el CLI no ve los exports nuevos.
 
 ## QA
 
@@ -149,7 +157,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-08",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": null,
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual: subagente de implementación claude-sonnet-5-5, sin números de sesión expuestos",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -213,6 +237,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:23:51.877Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:29:33.291Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:29:37.351Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```

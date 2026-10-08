@@ -56,6 +56,19 @@ export interface FeatureAsset {
 
 const NOMBRE_VALIDO = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
+/**
+ * `true` si el HTML es la fuente de un lienzo de diseño y no un archivo autónomo.
+ *
+ * La fuente (`*.dc.html`) depende de `./support.js`, de `<x-dc>` y de `sc-for`, así
+ * que no se abre en el navegador para comparar: no sirve como referencia.
+ */
+export function esFuenteDeLienzo(nombre: string, contenido: Buffer): boolean {
+  if (/\.dc\.html?$/i.test(nombre)) return true;
+  if (!/\.html?$/i.test(nombre)) return false;
+  const texto = contenido.toString("utf8");
+  return /support\.js/.test(texto) || /<x-dc[\s>]/.test(texto) || /\bsc-for\b/.test(texto);
+}
+
 const TIPOS: Readonly<Record<string, string>> = {
   ".png": "imagen",
   ".jpg": "imagen",
@@ -204,6 +217,14 @@ export function attachFeatureAsset(request: AttachFeatureAssetRequest): Attached
   }
 
   const contenido = readFileSync(request.source);
+  if (esFuenteDeLienzo(nombre, contenido)) {
+    fail(
+      `${nombre} es la fuente de un lienzo de diseño (depende de support.js, x-dc o sc-for) ` +
+        "y no se puede abrir en el navegador para comparar. Exportá la versión autónoma del " +
+        "diseño (un HTML único, o capturas en imagen) y anexá ese archivo.",
+      EXIT_SCHEMA,
+    );
+  }
   const huella = sha256De(contenido);
   const ruta = `assets/${nombre}`;
   const destino = join(featureAssetsDir(root, slug), nombre);
@@ -273,8 +294,8 @@ function textosDeLaFeature(root: string, slug: string): { ruta: string; texto: s
  * Avisos por cada enlace externo de la feature que no tiene copia local.
  *
  * Un enlace está cubierto cuando algún adjunto lo declara como `origin_url`. El
- * aviso no bloquea: hay enlaces que son simple bibliografía; lo que se señala es
- * que, si el enlace era el diseño, los agentes no lo pueden abrir.
+ * aviso lo emite esta función; quien se detiene es `materializeFeature`, salvo permiso
+ * explícito, porque si el enlace era el diseño los agentes no lo pueden abrir.
  */
 export function externalLinkWarnings(root: string, slug: string): string[] {
   const cubiertos = listFeatureAssets(root, slug)
@@ -298,29 +319,39 @@ export function externalLinkWarnings(root: string, slug: string): string[] {
   return avisos;
 }
 
+/** Desde dónde se resolvió la cita de los adjuntos de un ticket. */
+export type NivelDeCita = "requisito" | "archivo" | "todos";
+
 /**
- * Los adjuntos que citan los requisitos de un ticket.
+ * Los adjuntos que citan los requisitos de un ticket, en tres niveles.
  *
- * Una spec cita un adjunto escribiendo su ruta (`assets/pantalla.html`) en
- * cualquier parte del archivo del dominio. Si ningún archivo de los requisitos
- * cubiertos cita alguno, el ticket recibe todos: sobrar referencias es mejor que
- * dejar al agente construyendo desde el texto.
+ * Una spec cita un adjunto escribiendo su ruta (`assets/pantalla.html`). Se busca
+ * primero en el enunciado y el cuerpo de los requisitos que el ticket cubre; si
+ * ninguno lo cita, en el `spec.md` del dominio; y si tampoco, el ticket recibe
+ * todos: sobrar referencias es mejor que dejar al agente construyendo desde el
+ * texto. El nivel por requisito evita que un ticket reciba las pantallas de todo
+ * un dominio cuando su requisito nombra la suya.
  */
 export function assetsForRequirements(
   root: string,
   assets: readonly FeatureAsset[],
-  sources: readonly string[],
-): { assets: FeatureAsset[]; cited: boolean } {
-  if (assets.length === 0) return { assets: [], cited: false };
-  const textos = [...new Set(sources)].map((fuente) => {
+  requisitos: readonly { readonly statement: string; readonly body?: string; readonly source: string }[],
+): { assets: FeatureAsset[]; cited: boolean; level: NivelDeCita } {
+  if (assets.length === 0) return { assets: [], cited: false, level: "todos" };
+
+  const delRequisito = requisitos.map((r) => `${r.statement}\n${r.body ?? ""}`);
+  const porRequisito = assets.filter((a) => delRequisito.some((t) => t.includes(a.path)));
+  if (porRequisito.length > 0) return { assets: porRequisito, cited: true, level: "requisito" };
+
+  const textos = [...new Set(requisitos.map((r) => r.source))].map((fuente) => {
     try {
       return readFileSync(join(root, fuente), "utf8");
     } catch {
       return "";
     }
   });
-  const citados = assets.filter((a) => textos.some((t) => t.includes(a.path)));
-  return citados.length > 0
-    ? { assets: citados, cited: true }
-    : { assets: [...assets], cited: false };
+  const porArchivo = assets.filter((a) => textos.some((t) => t.includes(a.path)));
+  return porArchivo.length > 0
+    ? { assets: porArchivo, cited: true, level: "archivo" }
+    : { assets: [...assets], cited: false, level: "todos" };
 }

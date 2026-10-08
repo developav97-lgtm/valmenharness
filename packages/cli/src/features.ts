@@ -18,6 +18,9 @@ import {
   SISTEMA_DESCOMPOSICION,
   advanceFeature,
   attachFeatureAsset,
+  refreshAfterAttach,
+  refreshDesignReferences,
+  renderDesignReferencesRefresh,
   attachTicketToFeature,
   completeFeature,
   externalLinkWarnings,
@@ -256,14 +259,22 @@ function featureAsset(
         originUrl: texto("origin-url"),
       });
       const { asset } = resultado;
+      if (resultado.alreadyPresent) {
+        return ok(`${asset.path} ya estaba en ${slug} con el mismo contenido: no se escribió nada.\n`);
+      }
+      const refresco = refreshAfterAttach(choosePaths(root), slug);
       return ok(
-        resultado.alreadyPresent
-          ? `${asset.path} ya estaba en ${slug} con el mismo contenido: no se escribió nada.\n`
-          : `Adjunto anexado: .valmen/features/${slug}/${asset.path} (${asset.kind}, ` +
-              `${asset.bytes} bytes, sha256 ${asset.sha256}).\n`,
+        `Adjunto anexado: .valmen/features/${slug}/${asset.path} (${asset.kind}, ` +
+          `${asset.bytes} bytes, sha256 ${asset.sha256}).\n` +
+          (refresco === null ? "" : renderDesignReferencesRefresh(slug, refresco)),
       );
     }
-    return error("feature asset requiere add o list.", EXIT_SCHEMA);
+    if (accion === "refresh") {
+      const dryRun = flags["dry-run"] === true;
+      const refresco = refreshDesignReferences(choosePaths(root), slug, { write: !dryRun });
+      return ok(renderDesignReferencesRefresh(slug, refresco, { dryRun }));
+    }
+    return error("feature asset requiere add, list o refresh.", EXIT_SCHEMA);
   } catch (caught) {
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);

@@ -12,7 +12,7 @@
  *    igual que siempre.
  */
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -24,7 +24,7 @@ import {
   externalLinkWarnings,
   listFeatureAssets,
 } from "../packages/engine/src/feature-assets.js";
-import { materializeFeature } from "../packages/engine/src/materialize.js";
+import { materializeFeature, refreshDesignReferences } from "../packages/engine/src/materialize.js";
 
 let lab: string;
 const PATHS = (): RegistryPaths => ({ root: lab, ticketsDir: "tickets" });
@@ -192,11 +192,26 @@ describe("enlaces externos sin copia local", () => {
     expect(externalLinkWarnings(lab, "kardex")).toEqual([]);
   });
 
-  it("materialize lo informa sin bloquear", () => {
+  it("materialize se detiene ante un enlace externo sin copia", () => {
     escribirSpec(spec("Prototipo: https://claude.ai/artifact/abc\n"));
-    const resultado = materializeFeature(PATHS(), "kardex");
+    expect(() => materializeFeature(PATHS(), "kardex")).toThrow(/enlace\(s\) externo\(s\)/);
+    expect(existsSync(join(lab, "tickets", "2026", "FEATURE-INVENTARIO-PANTALLA-20260924"))).toBe(
+      false,
+    );
+  });
+
+  it("con permiso explícito materialize crea y avisa", () => {
+    escribirSpec(spec("Prototipo: https://claude.ai/artifact/abc\n"));
+    const resultado = materializeFeature(PATHS(), "kardex", { allowExternalLinks: true });
     expect(resultado.created).toHaveLength(1);
     expect(resultado.warnings).toHaveLength(1);
+  });
+
+  it("en seco informa los enlaces sin fallar", () => {
+    escribirSpec(spec("Prototipo: https://claude.ai/artifact/abc\n"));
+    const resultado = materializeFeature(PATHS(), "kardex", { write: false });
+    expect(resultado.warnings).toHaveLength(1);
+    expect(existsSync(join(lab, "tickets", "2026"))).toBe(false);
   });
 });
 
@@ -231,5 +246,197 @@ describe("referencias en los tickets materializados", () => {
     const ticket = ticketMaterializado();
     expect(ticket).toContain("### Referencias de diseño");
     expect(ticket).toContain(".valmen/features/kardex/assets/pantalla.png");
+  });
+});
+
+const ID = "FEATURE-INVENTARIO-PANTALLA-20260924";
+const rutaTicket = (): string => join(lab, "tickets", "2026", ID, "ticket.md");
+
+function anexarPantalla(nombre = "pantalla.png", bytes: Buffer = PNG): void {
+  attachFeatureAsset({
+    root: lab,
+    slug: "kardex",
+    source: origen(nombre, bytes),
+    description: `Captura ${nombre}`,
+  });
+}
+
+describe("adjuntos anexados después de materializar", () => {
+  it("anexar después de materializar actualiza las referencias", () => {
+    materializeFeature(PATHS(), "kardex");
+    expect(readFileSync(rutaTicket(), "utf8")).not.toContain("### Referencias de diseño");
+    anexarPantalla();
+    const r = refreshDesignReferences(PATHS(), "kardex");
+    expect(r.updated).toEqual([ID]);
+    const ticket = readFileSync(rutaTicket(), "utf8");
+    expect(ticket).toContain("### Referencias de diseño");
+    expect(ticket).toContain(".valmen/features/kardex/assets/pantalla.png");
+  });
+
+  it("deja un evento design-references-updated", () => {
+    materializeFeature(PATHS(), "kardex");
+    anexarPantalla();
+    refreshDesignReferences(PATHS(), "kardex");
+    const ticket = readFileSync(rutaTicket(), "utf8");
+    expect(ticket).toContain('"action": "design-references-updated"');
+    expect(ticket).toContain("assets/pantalla.png");
+  });
+
+  it("no toca un ticket que empezó la implementación", () => {
+    materializeFeature(PATHS(), "kardex");
+    const antes = readFileSync(rutaTicket(), "utf8");
+    const plan = [
+      "## Plan",
+      "",
+      "- Gate de plan y aprobación: aprobado explícitamente por el PO (gate de plan).",
+      "- Paso 1: escribir la pantalla del kardex.",
+      "- Paso 2: probar la pantalla del kardex.",
+      "",
+      "## Criterios de aceptación",
+    ].join("\n");
+    writeFileSync(
+      rutaTicket(),
+      antes
+        .replace("workflow_status: intake", "workflow_status: in_progress")
+        .replace(/## Plan[\s\S]*?## Criterios de aceptación/, plan),
+    );
+    const congelado = readFileSync(rutaTicket(), "utf8");
+    anexarPantalla();
+    const r = refreshDesignReferences(PATHS(), "kardex");
+    expect(r.updated).toEqual([]);
+    expect(r.skipped).toEqual([{ id: ID, state: "in_progress" }]);
+    expect(readFileSync(rutaTicket(), "utf8")).toBe(congelado);
+  });
+
+  it("conserva el resto de la solicitud", () => {
+    materializeFeature(PATHS(), "kardex");
+    const antes = readFileSync(rutaTicket(), "utf8");
+    anexarPantalla();
+    refreshDesignReferences(PATHS(), "kardex");
+    const despues = readFileSync(rutaTicket(), "utf8");
+    const seccion = (t: string): string =>
+      t.slice(t.indexOf("## Solicitud original"), t.indexOf("## Descripción funcional"));
+    expect(seccion(despues)).toContain("### Supuestos y decisiones pendientes");
+    expect(seccion(despues).replace(/### Referencias de diseño[\s\S]*?(?=### Supuestos)/, "")).toBe(
+      seccion(antes),
+    );
+    // Un segundo adjunto reemplaza el bloque, no lo duplica.
+    anexarPantalla("otra.png", Buffer.from([7, 7]));
+    refreshDesignReferences(PATHS(), "kardex");
+    const tercera = readFileSync(rutaTicket(), "utf8");
+    expect(tercera.match(/### Referencias de diseño/g)).toHaveLength(1);
+    expect(tercera).toContain("assets/otra.png");
+  });
+
+  it("refrescar sin cambios no escribe", () => {
+    materializeFeature(PATHS(), "kardex");
+    anexarPantalla();
+    refreshDesignReferences(PATHS(), "kardex");
+    const antes = readFileSync(rutaTicket(), "utf8");
+    const r = refreshDesignReferences(PATHS(), "kardex");
+    expect(r.updated).toEqual([]);
+    expect(r.unchanged).toEqual([ID]);
+    expect(readFileSync(rutaTicket(), "utf8")).toBe(antes);
+  });
+
+  it("el refresco en seco informa sin escribir", () => {
+    materializeFeature(PATHS(), "kardex");
+    anexarPantalla();
+    const antes = readFileSync(rutaTicket(), "utf8");
+    const r = refreshDesignReferences(PATHS(), "kardex", { write: false });
+    expect(r.updated).toEqual([ID]);
+    expect(readFileSync(rutaTicket(), "utf8")).toBe(antes);
+  });
+
+  it("materialize refresca los tickets que ya existían", () => {
+    materializeFeature(PATHS(), "kardex");
+    anexarPantalla();
+    const r = materializeFeature(PATHS(), "kardex");
+    expect(r.refreshed).toEqual([ID]);
+  });
+});
+
+describe("fuente del lienzo de diseño", () => {
+  it("rechaza un .dc.html", () => {
+    expect(() =>
+      attachFeatureAsset({
+        root: lab,
+        slug: "kardex",
+        source: origen("pantalla.dc.html", Buffer.from("<html></html>")),
+        description: "d",
+      }),
+    ).toThrow(/versión autónoma/);
+    expect(existsSync(join(lab, FEATURE, "assets"))).toBe(false);
+  });
+
+  it("rechaza un html que depende del lienzo", () => {
+    for (const html of [
+      '<script src="./support.js"></script>',
+      "<x-dc><div sc-for=\"i in items\"></div></x-dc>",
+    ]) {
+      expect(() =>
+        attachFeatureAsset({
+          root: lab,
+          slug: "kardex",
+          source: origen("proto.html", Buffer.from(`<html>${html}</html>`)),
+          description: "d",
+        }),
+      ).toThrow(/versión autónoma/);
+    }
+    expect(existsSync(join(lab, FEATURE, "assets"))).toBe(false);
+  });
+});
+
+const GRAFO_DOS = [
+  "feature: kardex",
+  "sprints:",
+  "  - id: S1",
+  "    goal: Pantallas del kardex",
+  "    tickets:",
+  "      - id: FEATURE-INVENTARIO-PANTALLA-20260924",
+  "        title: Pantalla del kardex",
+  "        depends_on: []",
+  "      - id: FEATURE-INVENTARIO-SALIDAS-20260924",
+  "        title: Pantalla de salidas",
+  "        depends_on: []",
+  "coverage:",
+  "  - requirement: R-INV-001",
+  "    covered_by:",
+  "      - FEATURE-INVENTARIO-PANTALLA-20260924",
+  "  - requirement: R-INV-002",
+  "    covered_by:",
+  "      - FEATURE-INVENTARIO-SALIDAS-20260924",
+  "gaps: []",
+  "",
+].join("\n");
+
+describe("la cita de un adjunto se resuelve por requisito", () => {
+  it("la cita se resuelve por requisito", () => {
+    anexarPantalla("uno.png");
+    anexarPantalla("dos.png", Buffer.from([2, 2]));
+    anexarPantalla("tres.png", Buffer.from([3, 3]));
+    writeFileSync(join(lab, FEATURE, "tickets.yaml"), GRAFO_DOS, "utf8");
+    escribirSpec(
+      "### Requirement: R-INV-001 — El sistema DEBE registrar cada movimiento\n\nVer `assets/uno.png`.\n\n" +
+        "### Requirement: R-INV-002 — El sistema DEBE listar las salidas\n\nVer `assets/dos.png`.\n",
+    );
+    // El ticket solo cubre R-INV-001 en este grafo.
+    const ticket = ticketMaterializado();
+    expect(ticket).toContain("assets/uno.png");
+    expect(ticket).not.toContain("assets/dos.png");
+    expect(ticket).not.toContain("assets/tres.png");
+  });
+
+  it("sin cita en el requisito usa la del archivo", () => {
+    anexarPantalla("uno.png");
+    anexarPantalla("dos.png", Buffer.from([2, 2]));
+    writeFileSync(join(lab, FEATURE, "tickets.yaml"), GRAFO_DOS, "utf8");
+    escribirSpec(
+      "### Requirement: R-INV-001 — El sistema DEBE registrar cada movimiento\n\nSin cita.\n\n" +
+        "### Requirement: R-INV-002 — El sistema DEBE listar las salidas\n\nVer `assets/dos.png`.\n",
+    );
+    const ticket = ticketMaterializado();
+    expect(ticket).toContain("assets/dos.png");
+    expect(ticket).not.toContain("assets/uno.png");
   });
 });

@@ -747,7 +747,10 @@ export async function handleApi(
     const slug = partes[2] as string;
     const dryRun = (body as { dryRun?: unknown }).dryRun === true;
     try {
-      const resultado = materializeFeature(paths, slug, { write: !dryRun });
+      const resultado = materializeFeature(paths, slug, {
+        write: !dryRun,
+        allowExternalLinks: (body as { allowExternalLinks?: unknown }).allowExternalLinks === true,
+      });
       return {
         status: 200,
         body: {

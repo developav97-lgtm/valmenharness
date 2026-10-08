@@ -44,6 +44,8 @@ import {
   type ResumeMode,
   addEvidence,
   attachFeatureAsset,
+  refreshAfterAttach,
+  renderDesignReferencesRefresh,
   renderPreReview,
   reviewBeforeGate,
   precisionReport,
@@ -1708,6 +1710,9 @@ const DEFINICIONES: readonly ToolDefinition[] = [
       "para que existan, estén en `intake` y se puedan trabajar. **Un ticket que ya existe " +
       "no se toca** —volver a correrlo no pisa nada— y un grafo con requisitos sin cubrir " +
       "se rechaza: escribir esa descomposición dejaría tickets con la cobertura a medias. " +
+      "Con enlaces externos de diseño sin copia local también se detiene, salvo " +
+      "`permitirEnlacesExternos`. Lo único que sí actualiza en un ticket existente es su " +
+      "bloque `### Referencias de diseño`, mientras no empezó la implementación. " +
       "La solicitud de cada ticket se arma con las palabras de la spec —los requisitos que " +
       "el grafo dice que cubre— y el objetivo de su sprint.",
     inputSchema: conRoot({
@@ -1716,6 +1721,11 @@ const DEFINICIONES: readonly ToolDefinition[] = [
         dryRun: {
           type: "boolean",
           description: "Decir qué crearía, sin escribir nada.",
+        },
+        permitirEnlacesExternos: {
+          type: "boolean",
+          description:
+            "Crear los tickets aunque la spec cite enlaces externos sin copia local; sin esto se detiene.",
         },
       },
       required: ["slug"],
@@ -1935,7 +1945,9 @@ const DEFINICIONES: readonly ToolDefinition[] = [
       "No descarga nada: `archivo` es una ruta local; si el diseño solo existe como enlace, " +
       "se exporta primero. `origen` guarda el enlace del que salió, y con eso la spec deja " +
       "de avisar de un enlace sin copia local. Los tickets que `materializar_feature` crea " +
-      "después heredan las rutas.",
+      "después heredan las rutas, y los ya escritos que no empezaron la implementación " +
+      "reciben la sección `### Referencias de diseño` al anexar. Un `.dc.html` (fuente del " +
+      "lienzo de diseño) se rechaza: hay que exportar la versión autónoma.",
     inputSchema: conRoot({
       properties: {
         slug: { type: "string", description: "El identificador de la feature." },
@@ -3111,7 +3123,10 @@ async function ejecutarHerramienta(
       case "materializar_feature": {
         const slug = texto(args, "slug") as string;
         const dryRun = args["dryRun"] === true;
-        const resultado = materializeFeature(paths, slug, { write: !dryRun });
+        const resultado = materializeFeature(paths, slug, {
+          write: !dryRun,
+          allowExternalLinks: args["permitirEnlacesExternos"] === true,
+        });
         return bien(renderMaterialization(slug, resultado, { dryRun }), {
           creados: [...resultado.created],
           yaEstaban: [...resultado.skipped],
@@ -3165,10 +3180,14 @@ async function ejecutarHerramienta(
           name: texto(args, "nombre", false),
           originUrl: texto(args, "origen", false),
         });
+        if (alreadyPresent) {
+          return bien(`${asset.path} ya estaba con el mismo contenido: no se escribió nada.`);
+        }
+        const slugAnexo = texto(args, "slug") as string;
+        const refresco = refreshAfterAttach(paths, slugAnexo);
         return bien(
-          alreadyPresent
-            ? `${asset.path} ya estaba con el mismo contenido: no se escribió nada.`
-            : `Adjunto anexado: ${asset.path} (${asset.kind}, ${asset.bytes} bytes, sha256 ${asset.sha256}).`,
+          `Adjunto anexado: ${asset.path} (${asset.kind}, ${asset.bytes} bytes, sha256 ${asset.sha256}).` +
+            (refresco === null ? "" : `\n${renderDesignReferencesRefresh(slugAnexo, refresco)}`),
         );
       }
 

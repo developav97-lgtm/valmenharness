@@ -42,7 +42,11 @@ Y antes de escribir el brief, devolver **el alcance en tus palabras**, en una li
 
 Un diseño aprobado, una captura, un listado de requisitos o un documento del cliente **se anexan a la feature**; un enlace no es evidencia, porque los agentes que implementan no lo pueden abrir. `valmen feature asset add <slug> --file <ruta> --description "<qué es>" [--origin-url <enlace>]` copia el archivo a `.valmen/features/<slug>/assets/` con su sha256 y lo anota en `manifest.json` (en el MCP: `anexar_adjunto_a_feature`). Si el diseño solo existe como artefacto o enlace, se exporta primero y se anexa el archivo.
 
-La spec cita el adjunto por su ruta (`assets/pantalla.html`). Al materializar, cada ticket hereda una sección `### Referencias de diseño` con las rutas de los adjuntos que citan sus requisitos —o todos, si ninguno cita— y **se construye y se valida contra el original**, no contra el texto de la spec. Un enlace externo sin copia local avisa en `valmen feature show` y en `materialize`.
+La spec cita el adjunto por su ruta (`assets/pantalla.html`). Cada ticket hereda una sección `### Referencias de diseño` con las rutas de los adjuntos que citan **sus requisitos** —si ninguno cita, los que cita el `spec.md` de su dominio; y si tampoco, todos— y **se construye y se valida contra el original**, no contra el texto de la spec.
+
+Un adjunto anexado **después de materializar** llega solo: `asset add` (y `anexar_adjunto_a_feature`) actualiza la sección de los tickets de la feature en `intake`, `analyzed`, `planned` o `blocked`, deja el evento `design-references-updated` e informa los que no tocó porque ya empezaron la implementación. `valmen feature asset refresh <slug> [--dry-run]` repite ese refresco a pedido.
+
+Un enlace externo sin copia local **detiene** `valmen feature materialize` sin crear ningún ticket; si el enlace es solo bibliografía, `--allow-external-links` (MCP: `permitirEnlacesExternos`) deja seguir. `--dry-run` solo informa. Un `.dc.html` (la fuente del lienzo de diseño, que depende de `support.js`, `x-dc` y `sc-for`) se rechaza al anexarlo: se exporta la versión autónoma y se anexa esa.
 
 ## Lo que no se hace
 
