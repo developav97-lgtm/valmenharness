@@ -336,6 +336,39 @@ describe("esperas", () => {
     expect(resultado.enEspera).toMatchObject([{ ticketId: A, motivo: "aprobacion-del-plan" }]);
   });
 
+  it("un plan parado en su worktree espera la aprobación aunque el checkout principal diga intake", () => {
+    ticketEn(entorno.root, A, "intake");
+    ticketEn(entorno.root, B, "intake");
+    crearJornada(entorno, [enJornada(A, 1), enJornada(B, 2)]);
+    const propio = worktreeDelTicket(entorno.root, A);
+    ticketEn(propio.ruta, A, "planned");
+    actividad(A, "started", 1);
+    const resultado = ola({ worktrees: [{ path: propio.ruta, branch: propio.rama }] });
+    expect(resultado.enCurso).toEqual([]);
+    expect(resultado.enEspera).toMatchObject([{ ticketId: A, motivo: "aprobacion-del-plan" }]);
+    expect(ids(resultado.listos)).toEqual([B]);
+  });
+
+  it("control: si el worktree está en análisis o implementación sigue contando en curso", () => {
+    ticketEn(entorno.root, A, "intake");
+    crearJornada(entorno, [enJornada(A, 1)]);
+    const propio = worktreeDelTicket(entorno.root, A);
+    for (const estado of ["intake", "analyzed", "approved", "in_progress"]) {
+      ticketEn(propio.ruta, A, estado);
+      const resultado = ola({ worktrees: [{ path: propio.ruta, branch: propio.rama }] });
+      expect(ids(resultado.enCurso), estado).toEqual([A]);
+    }
+  });
+
+  it("control: un worktree sin registro legible del ticket sigue contando en curso", () => {
+    ticketEn(entorno.root, A, "intake");
+    crearJornada(entorno, [enJornada(A, 1)]);
+    const propio = worktreeDelTicket(entorno.root, A);
+    mkdirSync(propio.ruta, { recursive: true });
+    const resultado = ola({ worktrees: [{ path: propio.ruta, branch: propio.rama }] });
+    expect(ids(resultado.enCurso)).toEqual([A]);
+  });
+
   it("C14: un ticket bloqueado o con parada activa no se ofrece, muestra el motivo y vuelve al liberar la parada", () => {
     ticketEn(entorno.root, A, "blocked");
     ticketEn(entorno.root, B, "intake");

@@ -10,7 +10,7 @@
  * worktree de git de la rama del ticket y una actividad de ejecución abierta.
  */
 import { execFileSync } from "node:child_process";
-import { realpathSync } from "node:fs";
+import { readdirSync, readFileSync, realpathSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 import { readExecutionEvents } from "./execution-events.js";
@@ -249,8 +249,17 @@ export function calcularOlaDeJornada(request: CalcularOlaRequest): OlaDeJornada 
       continue;
     }
 
+    // Con worktree por ticket, el plan que espera a una persona vive en el registro del worktree
+    // mientras el checkout principal sigue en `intake`: se lee ahí, para que un plan parado no
+    // ocupe un cupo de la ola.
+    const worktreeDelTicket = worktrees.find((item) => esWorktreeDelTicket(item, project.root, ticket.ticketId));
+    const estadoEnWorktree =
+      worktreeDelTicket === undefined
+        ? null
+        : estadoDelTicketEnWorktree(worktreeDelTicket.path, project.paths.ticketsDir, ticket.ticketId);
+
     // Un plan sin aprobar no se ofrece ni cuenta como en curso, tenga o no worktree o actividad.
-    if (estado === "planned") {
+    if (estado === "planned" || estadoEnWorktree === "planned") {
       espera(ticket.ticketId, estado, "aprobacion-del-plan", "El plan espera la aprobación de una persona.");
       continue;
     }
@@ -388,6 +397,29 @@ function senalesDeCurso(
     senales.push({ senal: "actividad", fuente: actividad.fuente, hora: actividad.hora });
   }
   return senales;
+}
+
+/**
+ * El `workflow_status` del ticket en el registro de su worktree, o `null` si no se puede leer.
+ * Solo lectura: busca `<tickets>/<año>/<id>/ticket.md` y lee la línea del encabezado.
+ */
+export function estadoDelTicketEnWorktree(rutaDelWorktree: string, ticketsDir: string, ticketId: string): string | null {
+  const base = join(rutaDelWorktree, ticketsDir);
+  try {
+    for (const anio of readdirSync(base)) {
+      try {
+        const texto = readFileSync(join(base, anio, ticketId, "ticket.md"), "utf8");
+        const encabezado = texto.split(/\r?\n---\r?\n/)[0] ?? "";
+        const coincidencia = /^workflow_status:\s*(\S+)/m.exec(encabezado);
+        if (coincidencia !== null) return coincidencia[1] ?? null;
+      } catch {
+        // Ese año no tiene el ticket.
+      }
+    }
+  } catch {
+    return null;
+  }
+  return null;
 }
 
 function mismaRuta(izquierda: string, derecha: string): boolean {
