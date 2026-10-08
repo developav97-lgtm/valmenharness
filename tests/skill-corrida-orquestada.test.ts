@@ -116,18 +116,17 @@ describe("lo que manda", () => {
     expect(t).toMatch(/único contexto/);
   });
 
-  it("C8: aprueba por `approval-eligibility` y autorizaciones vigentes, o en lote al PO", () => {
-    expect(t).toContain("`valmen approval-eligibility --id <ID> --stage plan`");
+  it("C8: aprueba por autorización con `journey approve-eligible`, o en lote al PO", () => {
+    expect(t).toContain("`valmen journey approve-eligible --journey <id>`");
     expect(t).toContain("`valmen approval-authorize list`");
-    expect(t).toContain("`valmen qa-authorize list`");
-    expect(t).toMatch(/Elegible y con autorización vigente/);
+    expect(t).toMatch(/atribuidos a la autorización, nunca al modelo/);
     expect(t).toMatch(/en lote al PO/);
     expect(t).toContain("`valmen approve-plan");
     expect(t).toMatch(/Sin frase literal no hay aprobación/);
   });
 
-  it("C9: SECURITY y despliegue nunca se aprueban solos", () => {
-    expect(t).toMatch(/SECURITY y despliegue nunca se aprueban solos/);
+  it("C9: SECURITY, despliegue y un block nunca se aprueban solos", () => {
+    expect(t).toMatch(/SECURITY, despliegue y un `block` nunca se aprueban solos/);
   });
 
   it("C10: integra de a uno y retira el worktree", () => {
@@ -155,7 +154,6 @@ describe("lo que manda", () => {
     for (const ticket of Object.values(PENDIENTES)) {
       expect(texto, `la skill no nombra ${ticket}`).toContain(ticket);
     }
-    expect(texto).toContain("SECURITY-ENGINE-APROBACION-POR-AUTORIZACION-20261007");
   });
 
   it("C16: se detiene ante un BLOCK, una compuerta humana dura y lo que queda fuera del alcance", () => {
@@ -185,9 +183,10 @@ describe("lo que prohíbe (C15)", () => {
   });
 
   it("control: una copia sin la regla de SECURITY no pasa la afirmación", () => {
-    const sinRegla = plano(texto).replace(/SECURITY y despliegue nunca se aprueban solos/, "");
-    expect(sinRegla).not.toMatch(/SECURITY y despliegue nunca se aprueban solos/);
-    expect(plano(texto)).toMatch(/SECURITY y despliegue nunca se aprueban solos/);
+    const regla = /SECURITY, despliegue y un `block` nunca se aprueban solos/;
+    const sinRegla = plano(texto).replace(regla, "");
+    expect(sinRegla).not.toMatch(regla);
+    expect(plano(texto)).toMatch(regla);
   });
 });
 
