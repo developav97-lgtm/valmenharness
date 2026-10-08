@@ -5729,6 +5729,22 @@
         return `${fuente.source}: ${estado} · ${ultimo}${fuente.reason ? ` · ${fuente.reason}` : ""}`;
       }
 
+      const FASES_DE_TICKET = {
+        waiting: "En espera",
+        preparing: "En preparación",
+        "plan-ready": "Plan listo para aprobar",
+        implementing: "Implementando",
+        verifying: "Verificando",
+        delivered: "Entregado",
+        stopped: "Detenido",
+      };
+
+      function celdaDeFase(ticket) {
+        const celda = el("td", FASES_DE_TICKET[ticket.phase] ?? "—");
+        if (ticket.phase === "stopped" && ticket.stopReason) celda.append(el("div", ticket.stopReason, "nota"));
+        return celda;
+      }
+
       async function vistaJornadas() {
         const revision = ++revisionVistaJornadas;
         const proyectoDeLaSolicitud = proyectoSeleccionado;
@@ -5761,13 +5777,24 @@
           cont.append(el("div", "No hay jornadas registradas para este proyecto.", "vacio"));
           return;
         }
-        cont.append(el("div", `Observación: ${(datos.authorization.observationSources ?? []).join(", ") || "sin fuentes"} · Despacho declarado: ${(datos.authorization.dispatchExecutors ?? []).join(", ") || "ninguno"}.`, "nota"));
+        const fuentesObservadas = datos.authorization.observationSources ?? [];
+        const despachoDeclarado = (datos.authorization.dispatchExecutors ?? []).join(", ") || "ninguno";
+        cont.append(el("div", fuentesObservadas.length === 0
+          ? `Observación externa: ninguna fuente declarada; la actividad mostrada la registra el propio despacho de la jornada · Despacho declarado: ${despachoDeclarado}.`
+          : `Observación: ${fuentesObservadas.join(", ")} · Despacho declarado: ${despachoDeclarado}.`, "nota"));
         for (const jornada of datos.journeys) {
           cont.append(el("h3", `Jornada ${jornada.journeyId}`), el("div", `Revisión ${jornada.revisionId} · recibida ${jornada.receivedAt}`, "ruta"));
+          const ultimaPasada = jornada.passes?.last ?? null;
+          cont.append(el("div", ultimaPasada === null
+            ? "Sin pasadas registradas"
+            : `Última pasada: ${ultimaPasada.at} · ${ultimaPasada.estado} — ${ultimaPasada.detalle}`, "nota"));
+          cont.append(el("div", jornada.passes?.next
+            ? `Próxima pasada (estimada): ${jornada.passes.next}`
+            : "Próxima pasada: sin cadencia conocida todavía", "nota"));
           const tabla = el("table");
           const encabezado = el("thead");
           const fila = el("tr");
-          for (const titulo of ["Orden", "Ticket", "Inicio", "Actividad", "Duración", "Espera / dependencia", "Ventana", "Último dato"])
+          for (const titulo of ["Orden", "Ticket", "Inicio", "Fase", "Actividad", "Duración", "Espera / dependencia", "Ventana", "Último dato"])
             fila.append(el("th", titulo));
           encabezado.append(fila);
           const cuerpo = el("tbody");
@@ -5781,6 +5808,7 @@
               el("td", String(ticket.order), "cifra"),
               el("td", ticket.ticketId, "id"),
               el("td", inicio),
+              celdaDeFase(ticket),
               el("td", ticket.activity),
               el("td", duracion),
               el("td", espera),

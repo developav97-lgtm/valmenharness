@@ -91,6 +91,8 @@ import {
   armarJornada,
   emitirAprobacionesDeJornada,
   avanzarJornada,
+  jornadaDelDia,
+  registrarPasada,
   liberarParada,
   registrarAprobacionDePlan,
   resolveAuthorizedProject,
@@ -2775,27 +2777,64 @@ export async function journeyAdvanceCommand(
       return error("--fase admite: preparacion o ejecucion.", EXIT_SCHEMA);
     }
     const destino = typeof flags["to"] === "string" ? flags["to"] : "";
-    const avance = await avanzarJornada({
-      project,
-      home,
-      ...(destino === ""
-        ? {}
-        : {
-            notificar: (cuerpo: string) => {
-              const entrega = hermesSendChannel({ target: destino }).notify({
-                subject: "Jornada detenida",
-                body: cuerpo,
-                key: `journey-stop:${cuerpo.split(" — ")[0] ?? ""}`,
-              });
-              return { delivered: entrega.delivered, detail: entrega.detail };
-            },
-          }),
-      ...(typeof flags["journey"] === "string" ? { journeyId: flags["journey"] } : {}),
-      ...(opciones.execute === undefined ? {} : { execute: opciones.execute }),
-      ...(opciones.ejecutarPreparacion === undefined ? {} : { ejecutarPreparacion: opciones.ejecutarPreparacion }),
-      ...(opciones.ahora === undefined ? {} : { ahora: opciones.ahora }),
-      ...(flags["fase"] === "preparacion" || flags["fase"] === "ejecucion" ? { fase: flags["fase"] } : {}),
+    const journeyId = typeof flags["journey"] === "string" ? flags["journey"] : jornadaDelDia((opciones.ahora ?? (() => new Date()))());
+    let avance: Awaited<ReturnType<typeof avanzarJornada>>;
+    try {
+      avance = await avanzarJornada({
+        project,
+        home,
+        ...(destino === ""
+          ? {}
+          : {
+              notificar: (cuerpo: string) => {
+                const entrega = hermesSendChannel({ target: destino }).notify({
+                  subject: "Jornada detenida",
+                  body: cuerpo,
+                  key: `journey-stop:${cuerpo.split(" — ")[0] ?? ""}`,
+                });
+                return { delivered: entrega.delivered, detail: entrega.detail };
+              },
+            }),
+        ...(typeof flags["journey"] === "string" ? { journeyId: flags["journey"] } : {}),
+        ...(opciones.execute === undefined ? {} : { execute: opciones.execute }),
+        ...(opciones.ejecutarPreparacion === undefined ? {} : { ejecutarPreparacion: opciones.ejecutarPreparacion }),
+        ...(opciones.ahora === undefined ? {} : { ahora: opciones.ahora }),
+        ...(flags["fase"] === "preparacion" || flags["fase"] === "ejecucion" ? { fase: flags["fase"] } : {}),
+      });
+    } catch (caught) {
+      // Un avance que falla también deja su pasada, para que la pantalla no lo confunda con silencio.
+      const mensaje = caught instanceof Error ? caught.message : String(caught);
+      const falla = toFailure(caught);
+      const aviso = anexarPasada(project.root, { journeyId, estado: "error", ticketId: null, detalle: mensaje });
+      return error(aviso === "" ? falla.message : `${falla.message}\n${aviso}`, falla.exitCode);
+    }
+    const aviso = anexarPasada(project.root, {
+      journeyId: avance.journeyId,
+      estado: avance.estado,
+      ticketId: avance.ticketId,
+      detalle: avance.detalle,
+      ...(avance.fases.length > 0 ? { fases: avance.fases } : {}),
     });
+    const resultado = avanceComoResultado(avance);
+    return aviso === "" ? resultado : { ...resultado, stderr: `${aviso}\n` };
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/** Anexa la pasada; un fallo al escribirla se informa y nunca cambia el resultado del avance. */
+function anexarPasada(root: string, pasada: Parameters<typeof registrarPasada>[1]): string {
+  try {
+    registrarPasada(root, pasada);
+    return "";
+  } catch (caught) {
+    return `No se pudo registrar la pasada: ${caught instanceof Error ? caught.message : String(caught)}`;
+  }
+}
+
+function avanceComoResultado(avance: Awaited<ReturnType<typeof avanzarJornada>>): CommandResult {
+  {
     // Sin `--fase` corren las dos y se informa una línea por fase.
     if (avance.fases.length > 1) {
       return ok(
@@ -2805,9 +2844,6 @@ export async function journeyAdvanceCommand(
       );
     }
     return ok(`${avance.journeyId}: ${avance.estado}${avance.ticketId === null ? "" : ` (${avance.ticketId})`}. ${avance.detalle}\n`);
-  } catch (caught) {
-    const failure = toFailure(caught);
-    return error(failure.message, failure.exitCode);
   }
 }
 
