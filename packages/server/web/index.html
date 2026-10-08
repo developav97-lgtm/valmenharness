@@ -23,6 +23,8 @@
         --acento-2: #8f6bff;
         --halo-ok: 0 0 0 3px rgba(70, 185, 90, 0.14);
         --alerta-suave: rgba(214, 160, 34, 0.16);
+        --ok-suave: rgba(70, 185, 90, 0.16);
+        --error-suave: rgba(242, 105, 92, 0.16);
         --barra: rgba(13, 16, 20, 0.86);
         --ok: #46b95a;
         --alerta: #d6a022;
@@ -51,6 +53,8 @@
           --acento-2: #7050d7;
           --halo-ok: 0 0 0 3px rgba(22, 128, 58, 0.15);
           --alerta-suave: rgba(146, 95, 0, 0.14);
+          --ok-suave: rgba(22, 128, 58, 0.14);
+          --error-suave: rgba(200, 58, 49, 0.12);
           --barra: rgba(247, 248, 251, 0.88);
           --ok: #16803a;
           --alerta: #925f00;
@@ -2066,6 +2070,137 @@
         white-space: pre-wrap;
         margin-bottom: 16px;
       }
+      /* ── Vista Corrida ─────────────────────────────────────────────────── */
+      .corrida-barra {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        margin-bottom: 16px;
+        background: var(--panel-alto);
+        border: 1px solid var(--borde);
+        border-radius: var(--radio);
+      }
+      .corrida-cuenta {
+        font-weight: 620;
+        font-size: 15px;
+      }
+      .corrida-agente {
+        width: 100%;
+        margin-bottom: 24px;
+      }
+      .corrida-desplazable {
+        overflow-x: auto;
+        max-width: 100%;
+      }
+      .corrida-agente td:last-child {
+        white-space: nowrap;
+      }
+      .corrida-agente .nota-agente {
+        color: var(--tenue);
+        font-size: 12px;
+        margin-top: 2px;
+        overflow-wrap: anywhere;
+      }
+      .corrida-punto {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 8px;
+        background: var(--tenue);
+      }
+      .corrida-punto.trabajando {
+        background: var(--ok);
+        box-shadow: var(--halo-ok);
+      }
+      .corrida-punto.esperando {
+        background: var(--alerta);
+      }
+      .corrida-fase,
+      .corrida-estado {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 12px;
+        background: var(--acento-suave);
+        color: var(--acento);
+      }
+      .corrida-estado.ok {
+        background: var(--ok-suave);
+        color: var(--ok);
+      }
+      .corrida-estado.error {
+        background: var(--error-suave);
+        color: var(--error);
+      }
+      .corrida-inferida {
+        margin-left: 6px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        background: var(--alerta-suave);
+        color: var(--alerta);
+      }
+      .corrida-cola {
+        display: grid;
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+      .corrida-ola {
+        background: var(--panel);
+        border: 1px solid var(--borde);
+        border-radius: var(--radio);
+        padding: 12px 16px;
+      }
+      .corrida-ola .rotulo {
+        font-size: 11.5px;
+        color: var(--tenue);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 6px;
+      }
+      .corrida-item {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 12px;
+        align-items: center;
+        padding: 4px 0;
+        overflow-wrap: anywhere;
+      }
+      @media (max-width: 640px) {
+        .corrida-agente,
+        .corrida-agente tbody,
+        .corrida-agente tr,
+        .corrida-agente td {
+          display: block;
+          width: 100%;
+        }
+        .corrida-agente thead {
+          display: none;
+        }
+        .corrida-agente tr {
+          background: var(--panel);
+          border: 1px solid var(--borde);
+          border-radius: var(--radio);
+          padding: 8px 12px;
+          margin-bottom: 12px;
+        }
+        .corrida-agente td {
+          border: 0;
+          padding: 4px 0;
+          overflow-wrap: anywhere;
+        }
+        .corrida-agente td::before {
+          content: attr(data-rotulo);
+          display: block;
+          font-size: 11px;
+          color: var(--tenue);
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+        }
+      }
       details {
         margin-top: 12px;
       }
@@ -2091,7 +2226,7 @@
           <a href="#/tickets" data-vista="tickets"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Tickets</a>
           <a href="#/features" data-vista="features"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h7v7H4zM13 5h7v4h-7zM13 11h7v8h-7zM4 14h7v5H4z"/></svg>Features</a>
           <a href="#/portafolio" data-vista="portafolio"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h7l2 2h9v13H3Z"/></svg>Portafolio</a>
-          <a href="#/jornadas" data-vista="jornadas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><path d="M7 4v4M12 10v4M17 16v4"/></svg>Jornadas</a>
+          <a href="#/corrida" data-vista="corrida"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><path d="M7 4v4M12 10v4M17 16v4"/></svg>Corrida</a>
           <a href="#/procesos" data-vista="procesos"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h9a4 4 0 0 1 0 8H9"/><path d="M8 5 5 7l3 2"/><path d="M14 17h5"/></svg>Procesos</a>
           <a href="#/estandares" data-vista="estandares"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16"/><path d="M5 7l7-3 7 3"/><path d="M5 7v5a7 7 0 0 0 7 7 7 7 0 0 0 7-7V7"/></svg>Estándares</a>
           <a href="#/configurar" data-vista="configurar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M4 12h2M18 12h2M12 4v2M12 18v2M6.5 6.5l1.5 1.5M16 16l1.5 1.5M17.5 6.5 16 8M8 16l-1.5 1.5"/></svg>Configurar</a>
@@ -5745,50 +5880,34 @@
         return celda;
       }
 
-      async function vistaJornadas() {
-        const revision = ++revisionVistaJornadas;
-        const proyectoDeLaSolicitud = proyectoSeleccionado;
-        const cont = $("contenido");
-        cont.textContent = "";
-        if (proyectoDeLaSolicitud === "") {
-          cont.append(el("div", "Selecciona un proyecto disponible para consultar sus jornadas.", "vacio"));
-          return;
-        }
-        cont.append(el("h2", "Hoja de ruta de jornadas"));
-        const [datos, frescura] = await Promise.all([
-          api("GET", "/api/journeys"),
-          leerFrescuraDeFuentes(proyectoDeLaSolicitud),
-        ]);
-        // No se pinta una foto que ya no pertenece al proyecto o a la vista
-        // actual. El guard de api cubre el primer caso; este cubre además una
-        // navegación a otra pantalla mientras la petición seguía en vuelo.
-        if (
-          revision !== revisionVistaJornadas ||
-          proyectoDeLaSolicitud !== proyectoSeleccionado ||
-          location.hash.replace(/^#\//, "").split("/")[0] !== "jornadas"
-        ) return;
+      /**
+       * Detalle de la jornada (pasadas, frescura de fuentes y la tabla de su hoja
+       * de ruta). Vive al pie de la vista Corrida, plegado: es el dato del despacho
+       * de la jornada, y cuando el trabajo lo hace una sesión dice poco.
+       */
+      function pintarDetalleDeJornadas(destino, datos, frescura) {
         const panel = $("actualizado")?.textContent ?? "sin conexión";
-        cont.append(el("div", `Panel: ${panel}`, "nota"));
-        if (frescura.error) cont.append(el("div", frescura.error, "resultado"));
+        destino.append(el("div", `Panel: ${panel}`, "nota"));
+        if (frescura.error) destino.append(el("div", frescura.error, "resultado"));
         for (const fuente of frescura.sources ?? []) {
-          cont.append(el("div", `Fuente ${descripcionDeFrescura(fuente)}`, "nota"));
+          destino.append(el("div", `Fuente ${descripcionDeFrescura(fuente)}`, "nota"));
         }
         if ((datos.journeys ?? []).length === 0) {
-          cont.append(el("div", "No hay jornadas registradas para este proyecto.", "vacio"));
+          destino.append(el("div", "No hay jornadas registradas para este proyecto.", "vacio"));
           return;
         }
-        const fuentesObservadas = datos.authorization.observationSources ?? [];
-        const despachoDeclarado = (datos.authorization.dispatchExecutors ?? []).join(", ") || "ninguno";
-        cont.append(el("div", fuentesObservadas.length === 0
+        const fuentesObservadas = datos.authorization?.observationSources ?? [];
+        const despachoDeclarado = (datos.authorization?.dispatchExecutors ?? []).join(", ") || "ninguno";
+        destino.append(el("div", fuentesObservadas.length === 0
           ? `Observación externa: ninguna fuente declarada; la actividad mostrada la registra el propio despacho de la jornada · Despacho declarado: ${despachoDeclarado}.`
           : `Observación: ${fuentesObservadas.join(", ")} · Despacho declarado: ${despachoDeclarado}.`, "nota"));
         for (const jornada of datos.journeys) {
-          cont.append(el("h3", `Jornada ${jornada.journeyId}`), el("div", `Revisión ${jornada.revisionId} · recibida ${jornada.receivedAt}`, "ruta"));
+          destino.append(el("h3", `Jornada ${jornada.journeyId}`), el("div", `Revisión ${jornada.revisionId} · recibida ${jornada.receivedAt}`, "ruta"));
           const ultimaPasada = jornada.passes?.last ?? null;
-          cont.append(el("div", ultimaPasada === null
+          destino.append(el("div", ultimaPasada === null
             ? "Sin pasadas registradas"
             : `Última pasada: ${ultimaPasada.at} · ${ultimaPasada.estado} — ${ultimaPasada.detalle}`, "nota"));
-          cont.append(el("div", jornada.passes?.next
+          destino.append(el("div", jornada.passes?.next
             ? `Próxima pasada (estimada): ${jornada.passes.next}`
             : "Próxima pasada: sin cadencia conocida todavía", "nota"));
           const tabla = el("table");
@@ -5818,8 +5937,346 @@
             cuerpo.append(tr);
           }
           tabla.append(encabezado, cuerpo);
-          cont.append(tabla);
+          // La tabla del despacho tiene nueve columnas: en un celular se
+          // desplaza dentro de su caja, no arrastra la página.
+          const desplazable = el("div", undefined, "corrida-desplazable");
+          desplazable.append(tabla);
+          destino.append(desplazable);
         }
+      }
+
+      // ── Vista Corrida ────────────────────────────────────────────────────
+      // La sesión de Claude Code es el orquestador y reparte tickets en
+      // subagentes. La vista solo lee: agentes vivos, cola y lo entregado.
+      const CLAVE_SIMULTANEOS = "valmen.corrida.simultaneos";
+      const SIMULTANEOS_POR_DEFECTO = 3;
+      const REFRESCO_DE_CORRIDA_MS = 5000;
+      const ESTADOS_ENTREGADOS = ["awaiting_user_tests", "in_qa", "qa_approved", "closed"];
+      const ESTADOS_CERRADOS = ["qa_approved", "closed"];
+      const ESTADOS_QUE_ESPERAN_AL_PO = ["awaiting_user_tests", "blocked", "changes_requested"];
+      let refrescoDeCorrida = null;
+
+      /** Los agentes con trabajo en curso: trabajando, o esperando un permiso. */
+      function agentesVivos(agentes) {
+        return (agentes ?? []).filter((a) => a.estado === "trabajando" || a.estado === "esperando");
+      }
+
+      /**
+       * Ola de cada ticket de la cola: 1 si no depende de nada pendiente, o 1 más la
+       * mayor ola de lo que espera. Una dependencia que no está en la cola y no está
+       * hecha (por ejemplo, la que corre un agente) cuenta como ola 1.
+       * `hechos` son los tickets ya entregados, que no hacen esperar.
+       */
+      function olasDeCola(tickets, hechos = new Set()) {
+        const porId = new Map(tickets.map((t) => [t.ticketId, t]));
+        const memo = new Map();
+        const ola = (id, visitando) => {
+          if (memo.has(id)) return memo.get(id);
+          const ticket = porId.get(id);
+          if (ticket === undefined) return 1; // pendiente fuera de la cola
+          if (visitando.has(id)) return 1; // ciclo: no se cuelga
+          visitando.add(id);
+          const pendientes = (ticket.dependsOn ?? []).filter((d) => !hechos.has(d));
+          const valor = pendientes.length === 0 ? 1 : 1 + Math.max(...pendientes.map((d) => ola(d, visitando)));
+          visitando.delete(id);
+          memo.set(id, valor);
+          return valor;
+        };
+        return tickets
+          .map((t) => ({
+            ticketId: t.ticketId,
+            ola: ola(t.ticketId, new Set()),
+            esperaA: (t.dependsOn ?? []).filter((d) => !hechos.has(d)),
+          }))
+          .sort((a, b) => a.ola - b.ola);
+      }
+
+      /** La fase de un agente: la confirmada tal cual, o la inferida con su rótulo. */
+      function fraseDeFase(agente) {
+        if (agente.faseConfirmada) return { texto: agente.faseConfirmada, inferida: false };
+        if (agente.faseInferida) return { texto: agente.faseInferida, inferida: true };
+        return { texto: "—", inferida: false };
+      }
+
+      /** Los tickets de la corrida: los de la jornada y los que algún agente trabaja. */
+      function idsDeLaCorrida(agentes, filas) {
+        const ids = [];
+        for (const fila of filas ?? []) if (!ids.includes(fila.ticketId)) ids.push(fila.ticketId);
+        for (const agente of agentes ?? []) if (agente.ticket && !ids.includes(agente.ticket)) ids.push(agente.ticket);
+        return ids;
+      }
+
+      function estadoDeRegistro(ticketId, tickets) {
+        return (tickets ?? []).find((t) => t.id === ticketId)?.workflowStatus ?? null;
+      }
+
+      /** Los seis KPI de la corrida, derivados de agentes, jornada y registro. */
+      function kpisDeCorrida({ agentes, tickets, filas }) {
+        const vivos = agentesVivos(agentes);
+        const ids = idsDeLaCorrida(agentes, filas);
+        const estados = new Map(ids.map((id) => [id, estadoDeRegistro(id, tickets)]));
+        const conAgente = new Set(vivos.map((a) => a.ticket).filter(Boolean));
+        const entregados = ids.filter((id) => ESTADOS_ENTREGADOS.includes(estados.get(id)));
+        const cerrados = ids.filter((id) => ESTADOS_CERRADOS.includes(estados.get(id)));
+        const esperan = new Set(ids.filter((id) => ESTADOS_QUE_ESPERAN_AL_PO.includes(estados.get(id))));
+        for (const agente of vivos) {
+          if (agente.estado === "esperando") esperan.add(agente.ticket ?? agente.agente);
+        }
+        const aprobaciones = ids.filter((id) => estados.get(id) === "planned");
+        const cola = (filas ?? []).filter((fila) => {
+          const estado = estados.get(fila.ticketId);
+          return !conAgente.has(fila.ticketId) && !ESTADOS_ENTREGADOS.includes(estado) && fila.phase !== "delivered";
+        });
+        return {
+          entregados: entregados.length,
+          cerrados: cerrados.length,
+          esperanAlPO: esperan.size,
+          trabajando: vivos.filter((a) => a.estado === "trabajando").length,
+          enCola: cola.length,
+          aprobacionesPendientes: aprobaciones.length,
+          cola,
+          entregadosIds: entregados,
+        };
+      }
+
+      function haceCuanto(iso, ahora = Date.now()) {
+        const t = Date.parse(iso ?? "");
+        if (Number.isNaN(t)) return "—";
+        const s = Math.max(0, Math.round((ahora - t) / 1000));
+        if (s < 60) return `hace ${s} s`;
+        if (s < 3600) return `hace ${Math.floor(s / 60)} min`;
+        return `hace ${Math.floor(s / 3600)} h`;
+      }
+
+      function horaDe(iso) {
+        const t = new Date(iso ?? "");
+        if (Number.isNaN(t.getTime())) return "";
+        return t.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      }
+
+      function leerSimultaneos() {
+        try {
+          const guardado = Number.parseInt(localStorage.getItem(CLAVE_SIMULTANEOS) ?? "", 10);
+          if (Number.isInteger(guardado) && guardado >= 1 && guardado <= 8) return guardado;
+        } catch {
+          // Sin almacenamiento, se usa el valor por defecto.
+        }
+        return SIMULTANEOS_POR_DEFECTO;
+      }
+
+      function guardarSimultaneos(valor) {
+        try {
+          localStorage.setItem(CLAVE_SIMULTANEOS, String(valor));
+        } catch {
+          // Es solo una preferencia de este navegador.
+        }
+      }
+
+      function etiquetaDeEstadoRegistro(estado) {
+        const clase = ESTADOS_CERRADOS.includes(estado)
+          ? "corrida-estado ok"
+          : estado === "blocked" || estado === "changes_requested"
+            ? "corrida-estado error"
+            : "corrida-estado";
+        return el("span", estado ?? "sin registro", clase);
+      }
+
+      function celdaConRotulo(rotulo, contenido) {
+        const celda = el("td");
+        celda.setAttribute("data-rotulo", rotulo);
+        if (typeof contenido === "string") celda.textContent = contenido;
+        else celda.append(contenido);
+        return celda;
+      }
+
+      function tablaDeAgentes(vivos, ahora) {
+        const tabla = el("table", undefined, "corrida-agente");
+        const encabezado = el("thead");
+        const fila = el("tr");
+        for (const titulo of ["Ticket", "Fase", "Herramienta", "Modelo", "Tiempo"]) fila.append(el("th", titulo));
+        encabezado.append(fila);
+        const cuerpo = el("tbody");
+        for (const agente of vivos) {
+          const tr = el("tr");
+          const ticket = el("div");
+          const punto = el("span", undefined, `corrida-punto ${agente.estado}`);
+          punto.setAttribute("title", agente.estado);
+          ticket.append(punto, el("span", agente.ticket ?? agente.agente, "id"));
+          if (agente.descripcion) ticket.append(el("div", agente.descripcion, "nota-agente"));
+          const fase = fraseDeFase(agente);
+          const celdaFase = el("div");
+          celdaFase.append(el("span", fase.texto, "corrida-fase"));
+          if (fase.inferida) celdaFase.append(el("span", "inferida", "corrida-inferida"));
+          const hora = horaDe(agente.ultimaHerramientaEn);
+          const herramienta = agente.ultimaHerramienta
+            ? `${agente.ultimaHerramienta}${hora === "" ? "" : ` · ${hora}`}`
+            : "—";
+          const modelo = [agente.modelo, agente.esfuerzo].filter(Boolean).join(" · ") || "—";
+          tr.append(
+            celdaConRotulo("Ticket", ticket),
+            celdaConRotulo("Fase", celdaFase),
+            celdaConRotulo("Herramienta", herramienta),
+            celdaConRotulo("Modelo", modelo),
+            celdaConRotulo("Tiempo", agente.ultimaHerramientaEn ? haceCuanto(agente.ultimaHerramientaEn, ahora) : "—"),
+          );
+          cuerpo.append(tr);
+        }
+        tabla.append(encabezado, cuerpo);
+        return tabla;
+      }
+
+      async function vistaCorrida() {
+        const revision = ++revisionVistaJornadas;
+        const proyectoDeLaSolicitud = proyectoSeleccionado;
+        const cont = $("contenido");
+        const sigueVigente = () =>
+          revision === revisionVistaJornadas &&
+          proyectoDeLaSolicitud === proyectoSeleccionado &&
+          ["corrida", "jornadas"].includes(location.hash.replace(/^#\//, "").split("/")[0]);
+        if (proyectoDeLaSolicitud === "") {
+          cont.textContent = "";
+          cont.append(el("div", "Selecciona un proyecto disponible para consultar su corrida.", "vacio"));
+          return;
+        }
+        let avisoDeAgentes = null;
+        const [agentesRespuesta, jornadas, registro, frescura] = await Promise.all([
+          api("GET", "/api/corrida/agentes").catch((error) => {
+            if (error === RESPUESTA_DE_PROYECTO_OBSOLETA) throw error;
+            avisoDeAgentes = `No se pudo leer la actividad de los agentes: ${error.message}`;
+            return null;
+          }),
+          api("GET", "/api/journeys"),
+          api("GET", "/api/tickets"),
+          leerFrescuraDeFuentes(proyectoDeLaSolicitud),
+        ]);
+        // No se pinta una foto que ya no pertenece al proyecto o a la vista actual.
+        if (!sigueVigente()) return;
+
+        const lista = Array.isArray(agentesRespuesta) ? agentesRespuesta : agentesRespuesta?.agentes;
+        const agentes = Array.isArray(lista) ? lista : [];
+        const tickets = Array.isArray(registro?.tickets) ? registro.tickets : [];
+        const filas = (jornadas?.journeys ?? []).flatMap((j) => j.tickets ?? []);
+        const vivos = agentesVivos(agentes);
+        const kpis = kpisDeCorrida({ agentes, tickets, filas });
+        const ahora = Date.now();
+
+        cont.textContent = "";
+        cont.append(el("h2", "Corrida"));
+
+        // Barra: agentes vivos frente a los simultáneos que quiere el PO. El valor
+        // vive solo en este navegador: no hay ninguna llamada de escritura.
+        const barra = el("div", undefined, "corrida-barra");
+        const cuenta = el("span", undefined, "corrida-cuenta");
+        const selector = document.createElement("select");
+        selector.id = "corrida-simultaneos";
+        selector.setAttribute("aria-label", "Agentes simultáneos");
+        const actual = leerSimultaneos();
+        for (let n = 1; n <= 8; n += 1) {
+          const opcion = el("option", String(n));
+          opcion.value = String(n);
+          selector.append(opcion);
+        }
+        selector.value = String(actual);
+        const pintarCuenta = (simultaneos) => {
+          cuenta.textContent = `${vivos.length} de ${simultaneos} agentes`;
+        };
+        pintarCuenta(actual);
+        selector.addEventListener("change", () => {
+          const valor = Number.parseInt(selector.value, 10);
+          if (!Number.isInteger(valor)) return;
+          guardarSimultaneos(valor);
+          pintarCuenta(valor);
+        });
+        const etiqueta = el("label", "Simultáneos");
+        etiqueta.htmlFor = "corrida-simultaneos";
+        barra.append(cuenta, etiqueta, selector, el("span", "Se recuerda solo en este navegador.", "resultado"));
+        cont.append(barra);
+
+        if (avisoDeAgentes !== null) cont.append(el("div", avisoDeAgentes, "nota alerta"));
+
+        const hayJornada = filas.length > 0;
+        if (!hayJornada && agentes.length === 0) {
+          cont.append(el("div", "No hay corrida en marcha: ninguna jornada programada y ningún agente activo. Cuando la sesión reparta tickets en subagentes aparecerán aquí.", "vacio"));
+        } else {
+          const tarjetas = el("div", undefined, "tarjetas");
+          for (const [rotulo, valor] of [
+            ["entregados", kpis.entregados],
+            ["cerrados", kpis.cerrados],
+            ["esperan al PO", kpis.esperanAlPO],
+            ["trabajando", kpis.trabajando],
+            ["en cola", kpis.enCola],
+            ["aprobaciones pendientes", kpis.aprobacionesPendientes],
+          ]) {
+            const tarjeta = el("div", undefined, "tarjeta");
+            tarjeta.append(el("div", String(valor), "valor"), el("div", rotulo, "rotulo"));
+            tarjetas.append(tarjeta);
+          }
+          cont.append(tarjetas);
+
+          cont.append(el("h3", "Agentes vivos"));
+          if (vivos.length === 0) cont.append(el("div", "Ningún agente trabajando ahora.", "vacio"));
+          else cont.append(tablaDeAgentes(vivos, ahora));
+
+          cont.append(el("h3", "Cola"));
+          if (kpis.cola.length === 0) {
+            cont.append(el("div", hayJornada ? "La cola está vacía." : "Sin jornada programada: no hay cola.", "vacio"));
+          } else {
+            const hechos = new Set(kpis.entregadosIds);
+            const olas = olasDeCola(kpis.cola, hechos);
+            const contenedor = el("div", undefined, "corrida-cola");
+            for (const numero of [...new Set(olas.map((o) => o.ola))]) {
+              const grupo = el("div", undefined, "corrida-ola");
+              grupo.append(el("div", `Ola ${numero}`, "rotulo"));
+              for (const item of olas.filter((o) => o.ola === numero)) {
+                const linea = el("div", undefined, "corrida-item");
+                linea.append(el("span", item.ticketId, "id"));
+                linea.append(el("span", item.esperaA.length === 0 ? "sin espera" : `espera a ${item.esperaA.join(", ")}`, "resultado"));
+                grupo.append(linea);
+              }
+              contenedor.append(grupo);
+            }
+            cont.append(contenedor);
+          }
+
+          cont.append(el("h3", "Entregados"));
+          if (kpis.entregadosIds.length === 0) cont.append(el("div", "Todavía no se entregó ningún ticket de la corrida.", "vacio"));
+          else {
+            const contenedor = el("div", undefined, "corrida-cola");
+            for (const id of kpis.entregadosIds) {
+              const linea = el("div", undefined, "corrida-item");
+              linea.append(el("span", id, "id"), etiquetaDeEstadoRegistro(estadoDeRegistro(id, tickets)));
+              contenedor.append(linea);
+            }
+            cont.append(contenedor);
+          }
+        }
+
+        // Al pie, plegado: lo que antes era la vista Jornadas.
+        const detalle = el("details");
+        detalle.append(el("summary", "Detalle de la jornada: pasadas y frescura de las fuentes"));
+        pintarDetalleDeJornadas(detalle, jornadas ?? {}, frescura);
+        cont.append(detalle);
+
+        programarRefrescoDeCorrida();
+      }
+
+      /**
+       * Mientras la vista está abierta, vuelve a pintar cada 5 s. Se
+       * cancela en `navegar`; no se repinta bajo un diálogo ni con un campo en foco.
+       */
+      function programarRefrescoDeCorrida() {
+        clearTimeout(refrescoDeCorrida);
+        // Sin la API de visibilidad (un entorno sin navegador) no hay refresco.
+        if (!("visibilityState" in document)) return;
+        refrescoDeCorrida = setTimeout(() => {
+          if (!["corrida", "jornadas"].includes(location.hash.replace(/^#\//, "").split("/")[0])) return;
+          // Una pestaña oculta no consulta: espera a volver a verse.
+          if (document.visibilityState !== "visible" || !puedeRefrescar()) {
+            programarRefrescoDeCorrida();
+            return;
+          }
+          void navegar({ conservarVista: true });
+        }, REFRESCO_DE_CORRIDA_MS);
       }
 
       async function vistaProcesos() {
@@ -7919,7 +8376,8 @@
         feature: "Feature",
         procesos: "Procesos",
         portafolio: "Portafolio",
-        jornadas: "Jornadas",
+        jornadas: "Corrida",
+        corrida: "Corrida",
         estandares: "Estándares",
         configurar: "Configurar",
         modelos: "Modelos",
@@ -8061,7 +8519,8 @@
         bandaDeFasesActual = null;
         const ruta = location.hash.replace(/^#\//, "") || "tickets";
         const [nombre, parametro] = ruta.split("/");
-        if (nombre !== "jornadas") revisionVistaJornadas += 1;
+        clearTimeout(refrescoDeCorrida);
+        if (nombre !== "jornadas" && nombre !== "corrida") revisionVistaJornadas += 1;
 
         // Navegar de verdad empieza arriba; **refrescar** no mueve a nadie.
         const antes = opciones.conservarVista === true ? instantaneaDeLaVista() : null;
@@ -8090,7 +8549,7 @@
           else if (nombre === "features") await vistaFeatures();
           else if (nombre === "procesos") await vistaProcesos();
           else if (nombre === "portafolio") await vistaPortafolio();
-          else if (nombre === "jornadas") await vistaJornadas();
+          else if (nombre === "corrida" || nombre === "jornadas") await vistaCorrida();
           else if (nombre === "estandares") await vistaEstandares();
           else await vistaTickets();
         } catch (error) {
