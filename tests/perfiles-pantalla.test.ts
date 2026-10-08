@@ -34,7 +34,24 @@ interface Escenario {
   readonly seleccion?: { proyecto: string | null; ejecutores: Record<string, string> };
   readonly error?: string;
   readonly guardado?: unknown;
+  readonly fases?: (ejecutor: string | null) => Record<string, unknown>;
+  readonly rolDePerfil?: boolean;
 }
+
+const FASE_BASE = {
+  provider: "claude-code",
+  model: "claude-sonnet-5-5",
+  effort: "high",
+  origen: { source: "sistema" },
+  usado: null,
+};
+const FASES = ["analysis", "plan", "implementation", "verification"].map((fase) => ({ ...FASE_BASE, fase, rol: `agent-${fase}` }));
+const respuestaFases = (fases: readonly Record<string, unknown>[], ejecutor: string | null = null, aviso: string | null = null) => ({
+  ejecutor,
+  ejecutores: EJECUTORES,
+  fases,
+  aviso,
+});
 
 const ROUTING = {
   preset: "balanced",
@@ -70,6 +87,14 @@ async function pintar(escenario: Escenario = {}) {
             { id: "codex", name: "Codex", configured: true, listable: false },
           ],
         };
+      }
+      if (url.pathname === "/api/modelos/fases") {
+        const ejecutor = url.searchParams.get("ejecutor");
+        return escenario.fases === undefined ? respuestaFases(FASES, ejecutor) : escenario.fases(ejecutor);
+      }
+      if (url.pathname === "/api/routing" && escenario.rolDePerfil === true) {
+        const rol = { ...ROUTING.roles[0], source: "perfil", perfil: { id: "mi-perfil", alcance: "proyecto" } };
+        return { routing: { ...ROUTING, roles: [rol] }, adopted: false, catalog: { source: "presets", models: [] } };
       }
       if (url.pathname === "/api/routing") return { routing: ROUTING, adopted: false, catalog: { source: "presets", models: [] } };
       if (url.pathname === "/api/routing/preview") return { text: "", routing: { ...ROUTING, diff: [] } };
@@ -185,5 +210,84 @@ describe("la sección Perfiles", () => {
     expect(vista.texto).toContain("Mal Id");
     expect(vista.texto).toContain("Modelo por rol");
     expect(vista.texto).toContain("gate-evaluator");
+  });
+});
+
+describe("la sección Modelo por fase", () => {
+  const filasFase = (v: Vista) => nodos(v, (n) => n.tagName === "TR" && clase(n, "modelo-fase") === false && buscarNodos(n, (x) => clase(x, "fase-nombre")).length > 0);
+  const textoFila = (n: NodoFalso) => buscarNodos(n, () => true).map(textoDe).join(" | ");
+  const con = (extra: Record<string, unknown>[]) => FASES.map((f, i) => ({ ...f, ...(extra[i] ?? {}) }));
+
+  it("C10: pinta una fila por fase", async () => {
+    const { vista } = await pintar();
+    expect(vista.fallos).toEqual([]);
+    expect(vista.texto).toContain("Modelo por fase");
+    expect(filasFase(vista)).toHaveLength(4);
+  });
+
+  it("C11: el origen es legible, con perfil y alcance", async () => {
+    const perfil = (alcance: string) => ({ source: "perfil", perfil: { id: "mi-perfil", alcance } });
+    const { vista } = await pintar({
+      fases: (ejecutor) =>
+        respuestaFases(con([{ origen: perfil("ejecutor") }, { origen: perfil("proyecto") }, { origen: { source: "proyecto" } }]), ejecutor),
+    });
+    const textos = filasFase(vista).map(textoFila);
+    expect(textos[0]).toContain("perfil mi-perfil (ejecutor)");
+    expect(textos[1]).toContain("perfil mi-perfil (proyecto)");
+    expect(textos[2]).toContain("definido en el proyecto");
+    expect(textos[0]).toContain("claude-sonnet-5-5");
+  });
+
+  it("C12-C16: lo usado, con ticket, sin reportar, costo, discrepancia y sin registros", async () => {
+    const usado = (extra: Record<string, unknown>) => ({
+      modeloUsado: "claude-sonnet-5-5",
+      modelo: "claude-sonnet-5-5",
+      coincide: true,
+      costeUsd: 0.25,
+      ticketId: "T-7",
+      ejecutor: "claude",
+      registradoEn: "2026-10-02T10:00:00.000Z",
+      ...extra,
+    });
+    const { vista } = await pintar({
+      fases: () =>
+        respuestaFases([
+          { ...FASES[0], usado: usado({}) },
+          { ...FASES[1], usado: usado({ modeloUsado: null, coincide: null, costeUsd: null }) },
+          { ...FASES[2], usado: usado({ modeloUsado: "claude-opus-5-5", coincide: false, modelo: "claude-sonnet-5-5" }) },
+          FASES[3] as Record<string, unknown>,
+        ]),
+    });
+    const [a, b, c, d] = filasFase(vista).map(textoFila) as [string, string, string, string];
+    expect(a).toContain("ticket T-7");
+    expect(a).toContain("costo: US$ 0.2500 (reportado por el cliente)");
+    expect(a).not.toContain("discrepancia");
+    expect(b).toContain("sin reportar");
+    expect(b).toContain("costo: sin reportar");
+    expect(c).toContain("claude-opus-5-5");
+    expect(c).toContain("discrepancia: se declaró claude-sonnet-5-5");
+    expect(clase(filasFase(vista)[2] as NodoFalso, "discrepancia")).toBe(true);
+    expect(clase(filasFase(vista)[0] as NodoFalso, "discrepancia")).toBe(false);
+    expect(d).toContain("sin registros");
+  });
+
+  it("C17: cambiar el ejecutor vuelve a pedir la ruta con ese ejecutor", async () => {
+    const { vista, llamadas } = await pintar();
+    const sel = selectDe(etiqueta(vista, "Ejecutor").parentNode as NodoFalso);
+    sel.value = "claude";
+    await disparar(sel, "change");
+    const pedidas = llamadas.filter((l) => l.ruta === "/api/modelos/fases");
+    expect(pedidas.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("C18: un aviso se pinta como texto", async () => {
+    const { vista } = await pintar({ fases: () => respuestaFases([], null, "profiles.yaml ilegible") });
+    expect(vista.texto).toContain("profiles.yaml ilegible");
+    expect(filasFase(vista)).toHaveLength(0);
+  });
+
+  it("C19: «Modelo por rol» traduce el origen perfil", async () => {
+    const { vista } = await pintar({ rolDePerfil: true });
+    expect(vista.texto).toContain("perfil mi-perfil (proyecto)");
   });
 });

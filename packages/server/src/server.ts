@@ -62,10 +62,13 @@ import {
   executionEventsPath,
   readReceipts,
   readJourneyRoadmap,
+  leerFases,
 } from "@valmen/engine";
 import { type JsonObject, nextStates, parseTicket, toFailure } from "@valmen/core";
 import {
   EJECUTORES_CON_PERFIL,
+  type ClienteDeSesion,
+  fasesDeSesion,
   PERFILES_INCORPORADOS,
   ROLES,
   type PerfilDeModelos,
@@ -1601,6 +1604,58 @@ export async function handleApi(
         },
       };
     }
+  }
+
+  // GET /api/modelos/fases?ejecutor=  — el modelo efectivo de cada fase con su origen y el último usado
+  //
+  // Solo lectura. Une lo que resuelve el perfil (`fasesDeSesion`) con lo que el cliente reportó
+  // haber usado (`fases.jsonl`): de cada fase, el registro más reciente —y del ejecutor pedido,
+  // si se pidió—. Un `profiles.yaml` ilegible llega como `aviso`, no como 500.
+  if (method === "GET" && path === "/api/modelos/fases") {
+    const ejecutor = valorDeQuery(query, "ejecutor");
+    if (ejecutor !== undefined && !(EJECUTORES_CON_PERFIL as readonly string[]).includes(ejecutor)) {
+      return {
+        status: 400,
+        body: { error: `"${ejecutor}" no es un ejecutor con perfil. Los vigentes son: ${EJECUTORES_CON_PERFIL.join(", ")}.` },
+      };
+    }
+    const sesion = fasesDeSesion(context.root, ejecutor === undefined ? {} : { cliente: ejecutor as ClienteDeSesion });
+    const registros = leerFases(context.root).filter((r) => ejecutor === undefined || r.ejecutor === ejecutor);
+    const fases = sesion.fases.map((fase) => {
+      let ultimo: (typeof registros)[number] | null = null;
+      for (const registro of registros) {
+        if (registro.fase === fase.fase && (ultimo === null || registro.registradoEn >= ultimo.registradoEn)) ultimo = registro;
+      }
+      return {
+        fase: fase.fase,
+        rol: fase.rol,
+        provider: fase.provider,
+        model: fase.model,
+        effort: fase.effort,
+        origen: fase.origen,
+        usado:
+          ultimo === null
+            ? null
+            : {
+                modeloUsado: ultimo.modeloUsado,
+                modelo: ultimo.modelo,
+                coincide: ultimo.coincide,
+                costeUsd: ultimo.costeUsd,
+                ticketId: ultimo.ticketId,
+                ejecutor: ultimo.ejecutor,
+                registradoEn: ultimo.registradoEn,
+              },
+      };
+    });
+    return {
+      status: 200,
+      body: {
+        ejecutor: ejecutor ?? null,
+        ejecutores: EJECUTORES_CON_PERFIL,
+        fases,
+        aviso: sesion.fases.length === 0 ? sesion.aviso : null,
+      },
+    };
   }
 
   // PUT /api/perfiles/seleccion  — elige (o quita, con null) el perfil del proyecto o de un ejecutor

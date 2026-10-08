@@ -4,7 +4,7 @@ id: FEATURE-MC-VISTA-MODELOS-EFECTIVOS-20261007
 title: Mostrar el modelo efectivo, su origen y el realmente usado por fase
 type: FEATURE
 module: MC
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -90,61 +90,61 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1: R-PERF-005: `GET /api/modelos/fases` responde una entrada por cada una de las cuatro fases del agente con proveedor, modelo y esfuerzo efectivos.
+- [x] C1: R-PERF-005: `GET /api/modelos/fases` responde una entrada por cada una de las cuatro fases del agente con proveedor, modelo y esfuerzo efectivos.
       <!-- test: npx vitest run tests/routing.test.ts -->
-- [ ] C2: R-PERF-005: cada fase de la respuesta trae su origen (`proyecto`, `perfil`, `preset`, `sistema` o `sin-asignar`).
+- [x] C2: R-PERF-005: cada fase de la respuesta trae su origen (`proyecto`, `perfil`, `preset`, `sistema` o `sin-asignar`).
       <!-- test: npx vitest run tests/routing.test.ts -->
-- [ ] C3: R-PERF-005: con `?ejecutor=<id>` y un perfil elegido para ese ejecutor, el origen de la fase nombra ese perfil con alcance `ejecutor`.
+- [x] C3: R-PERF-005: con `?ejecutor=<id>` y un perfil elegido para ese ejecutor, el origen de la fase nombra ese perfil con alcance `ejecutor`.
       <!-- test: npx vitest run tests/routing.test.ts -->
-- [ ] C4: Un `ejecutor` que no está en `EJECUTORES_CON_PERFIL` responde 400 con el mensaje de los ejecutores vigentes.
+- [x] C4: Un `ejecutor` que no está en `EJECUTORES_CON_PERFIL` responde 400 con el mensaje de los ejecutores vigentes.
       <!-- test: npx vitest run tests/routing.test.ts -->
-- [ ] C5: Un `profiles.yaml` ilegible responde 200 con el error como `aviso` y sin fases, no un 500.
+- [x] C5: Un `profiles.yaml` ilegible responde 200 con el error como `aviso` y sin fases, no un 500.
       <!-- test: npx vitest run tests/routing.test.ts -->
-- [ ] C6: R-PERF-006: cada fase trae en `usado` el registro más reciente de `fases.jsonl` de esa fase, con `modeloUsado`, `coincide`, `costeUsd`, `ticketId` y `registradoEn`.
+- [x] C6: R-PERF-006: cada fase trae en `usado` el registro más reciente de `fases.jsonl` de esa fase, con `modeloUsado`, `coincide`, `costeUsd`, `ticketId` y `registradoEn`.
       <!-- test: npx vitest run tests/routing.test.ts -->
-- [ ] C7: R-PERF-006: con `ejecutor`, `usado` solo considera los registros de ese ejecutor.
+- [x] C7: R-PERF-006: con `ejecutor`, `usado` solo considera los registros de ese ejecutor.
       <!-- test: npx vitest run tests/routing.test.ts -->
-- [ ] C8: R-PERF-006: una fase sin registros responde `usado: null`.
+- [x] C8: R-PERF-006: una fase sin registros responde `usado: null`.
       <!-- test: npx vitest run tests/routing.test.ts -->
-- [ ] C9: La ruta `GET /api/modelos/fases` está declarada en la lista de rutas del contrato.
+- [x] C9: La ruta `GET /api/modelos/fases` está declarada en la lista de rutas del contrato.
       <!-- test: npx vitest run tests/api-rutas.test.ts -->
-- [ ] C10: R-PERF-005: la vista Modelos pinta la sección «Modelo por fase» con una fila por fase.
+- [x] C10: R-PERF-005: la vista Modelos pinta la sección «Modelo por fase» con una fila por fase.
       <!-- test: npx vitest run tests/perfiles-pantalla.test.ts -->
-- [ ] C11: R-PERF-005: la fila muestra el modelo efectivo con su origen legible, incluido «perfil <id> (ejecutor)» o «perfil <id> (proyecto)».
+- [x] C11: R-PERF-005: la fila muestra el modelo efectivo con su origen legible, incluido «perfil <id> (ejecutor)» o «perfil <id> (proyecto)».
       <!-- test: npx vitest run tests/perfiles-pantalla.test.ts -->
-- [ ] C12: R-PERF-006: la fila muestra el último modelo usado con el ticket donde corrió.
+- [x] C12: R-PERF-006: la fila muestra el último modelo usado con el ticket donde corrió.
       <!-- test: npx vitest run tests/perfiles-pantalla.test.ts -->
-- [ ] C13: R-PERF-006: un `modeloUsado` nulo se muestra como «sin reportar».
+- [x] C13: R-PERF-006: un `modeloUsado` nulo se muestra como «sin reportar».
       <!-- test: npx vitest run tests/perfiles-pantalla.test.ts -->
-- [ ] C14: R-PERF-006: un `costeUsd` nulo se muestra como «sin reportar» y uno numérico se rotula como reportado por el cliente.
+- [x] C14: R-PERF-006: un `costeUsd` nulo se muestra como «sin reportar» y uno numérico se rotula como reportado por el cliente.
       <!-- test: npx vitest run tests/perfiles-pantalla.test.ts -->
-- [ ] C15: R-PERF-006: una fila con `coincide: false` se marca como discrepancia entre declarado y usado.
+- [x] C15: R-PERF-006: una fila con `coincide: false` se marca como discrepancia entre declarado y usado.
       <!-- test: npx vitest run tests/perfiles-pantalla.test.ts -->
-- [ ] C16: Una fase con `usado: null` muestra «sin registros».
+- [x] C16: Una fase con `usado: null` muestra «sin registros».
       <!-- test: npx vitest run tests/perfiles-pantalla.test.ts -->
-- [ ] C17: Cambiar el ejecutor en el selector de la sección vuelve a pedir `/api/modelos/fases` con ese `ejecutor`.
+- [x] C17: Cambiar el ejecutor en el selector de la sección vuelve a pedir `/api/modelos/fases` con ese `ejecutor`.
       <!-- test: npx vitest run tests/perfiles-pantalla.test.ts -->
-- [ ] C18: Un `aviso` de la respuesta se pinta en la sección como texto.
+- [x] C18: Un `aviso` de la respuesta se pinta en la sección como texto.
       <!-- test: npx vitest run tests/perfiles-pantalla.test.ts -->
-- [ ] C19: La columna Origen de «Modelo por rol» traduce el origen `perfil` a un texto legible en vez de la palabra cruda.
+- [x] C19: La columna Origen de «Modelo por rol» traduce el origen `perfil` a un texto legible en vez de la palabra cruda.
       <!-- test: npx vitest run tests/perfiles-pantalla.test.ts -->
-- [ ] C20: Las pruebas existentes de la sección Perfiles siguen en verde.
+- [x] C20: Las pruebas existentes de la sección Perfiles siguen en verde.
       <!-- test: npx vitest run tests/perfiles-pantalla.test.ts -->
-- [ ] C21: El tipado del proyecto compila sin errores.
+- [x] C21: El tipado del proyecto compila sin errores.
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
-- [ ] C22: Los estilos nuevos no usan colores escritos a mano (`revisar_presentacion` sin hallazgos nuevos).
+- [x] C22: Los estilos nuevos no usan colores escritos a mano (`revisar_presentacion` sin hallazgos nuevos).
       <!-- verify: manual -->
-- [ ] C23: En tema claro el texto de la sección «Modelo por fase» se lee con contraste suficiente.
+- [x] C23: En tema claro el texto de la sección «Modelo por fase» se lee con contraste suficiente.
       <!-- verify: manual -->
-- [ ] C24: En tema claro una fila con discrepancia se distingue de una fila sin discrepancia.
+- [x] C24: En tema claro una fila con discrepancia se distingue de una fila sin discrepancia.
       <!-- verify: manual -->
-- [ ] C25: En tema oscuro el texto de la sección «Modelo por fase» se lee con contraste suficiente.
+- [x] C25: En tema oscuro el texto de la sección «Modelo por fase» se lee con contraste suficiente.
       <!-- verify: manual -->
-- [ ] C26: En tema oscuro una fila con discrepancia se distingue de una fila sin discrepancia.
+- [x] C26: En tema oscuro una fila con discrepancia se distingue de una fila sin discrepancia.
       <!-- verify: manual -->
-- [ ] C27: Con 375 px de ancho la sección no provoca desplazamiento horizontal de la página.
+- [x] C27: Con 375 px de ancho la sección no provoca desplazamiento horizontal de la página.
       <!-- verify: manual -->
-- [ ] C28: Con 375 px de ancho cada fase se lee completa, apilada.
+- [x] C28: Con 375 px de ancho cada fase se lee completa, apilada.
       <!-- verify: manual -->
 
 ## Puntos
@@ -155,11 +155,19 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+- `packages/server/src/server.ts`: ruta de solo lectura `GET /api/modelos/fases?ejecutor=` (fasesDeSesion + último registro de `leerFases` por fase y ejecutor; 400 para ejecutor desconocido; aviso 200 si `profiles.yaml` es ilegible).
+- `packages/server/web/index.html`: sección «Modelo por fase» (`seccionModeloPorFase`) en la vista Modelos con selector de ejecutor, origen legible, usado con ticket, «sin reportar», costo rotulado «reportado por el cliente», marca de discrepancia y «sin registros»; clave `perfil` en el mapa `ORIGEN` de «Modelo por rol»; estilos solo con variables del tema y apilado bajo 640 px.
+- Pruebas: `tests/routing.test.ts` (bloque «la API de modelos por fase»), `tests/perfiles-pantalla.test.ts` (bloque «la sección Modelo por fase»), `tests/api-rutas.test.ts` (ruta declarada).
 
 ## Pruebas
 
-Pendiente de ejecución.
+Directorio: raíz del repositorio. Ambiente: Node 24, navegador moderno, sin red.
+
+1. `npx vitest run tests/routing.test.ts tests/perfiles-pantalla.test.ts tests/api-rutas.test.ts tests/interfaz-ejecutable.test.ts` — esperado: todo en verde (corrido: 4 archivos, 138 pruebas, verde; `interfaz-ejecutable` exige `npm run build` antes).
+2. `npx tsc --noEmit -p tsconfig.json` — esperado: sin errores (corrido: limpio).
+3. Manual: `npm run build && node packages/cli/dist/main.js serve --port <libre>` y abrir `#/modelos`: (a) en claro, «Modelo por fase» muestra las cuatro fases con efectivo, origen y usado; (b) elegir `claude` en «Ejecutor» cambia origen y usado; (c) en oscuro, texto legible y la fila con discrepancia se distingue; (d) a 375 px cada fase se apila completa y la sección no desborda.
+   Verificado por el agente en el navegador (claro, oscuro, 375 px) con un registro de ejemplo temporal con discrepancia en `fases.jsonl` (ya revertido). Nota: a 375 px la página completa ya desbordaba antes de este cambio por la barra lateral fija (232 px) y la sección Perfiles; la sección nueva no desborda.
+4. `revisar_presentacion` revisó 0 archivos desde el checkout principal; se comprobó a mano que las líneas añadidas a `index.html` no traen colores escritos a mano. `valmen secrets`: sin hallazgos.
 
 ## QA
 
@@ -188,7 +196,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-08",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": null,
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:sesion-subagente-implementacion-sonnet",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -252,6 +276,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:49:48.758Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:58:15.655Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:58:15.966Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```

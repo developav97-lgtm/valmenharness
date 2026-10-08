@@ -37,6 +37,7 @@ const RUTAS = [
   "GET /api/health",
   "GET /api/corrida/agentes",
   "GET /api/perfiles",
+  "GET /api/modelos/fases",
   "PUT /api/perfiles",
   "PUT /api/perfiles/seleccion",
   "GET /api/events",
