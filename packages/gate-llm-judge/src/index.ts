@@ -7,3 +7,4 @@
  */
 
 export * from "./judge.js";
+export * from "./reviewer.js";

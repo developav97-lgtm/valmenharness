@@ -121,6 +121,19 @@ export const ROLES: readonly RoleSpec[] = [
     description: "Responde otra vez lo que la verificación no respaldó",
     consumer: "valmen gate --evaluator cascade",
   },
+  // El rol que **revisa un `review`** de análisis o plan (R-APRO-003). No evalúa
+  // proposiciones como el `gate-judge`: decide, sobre un recibo ya emitido, si el
+  // artefacto respalda las proposiciones que quedaron en duda. Su modelo tiene que
+  // ser **distinto** del que produjo el artefacto, y por eso es un rol propio y no
+  // el `gate-judge` reutilizado: en el preset `suscripcion` el `gate-judge` y el
+  // `agent-plan` son el mismo `claude-sonnet-5`, y copiar el juez no garantizaría
+  // la separación.
+  {
+    id: "reviewer",
+    description:
+      "Decide un `review` de análisis o plan con un modelo distinto al que lo produjo",
+    consumer: "valmen review-agent",
+  },
   {
     // El rol que **escribe y mantiene los specs de interfaz**. Su modelo no sale
     // de un preset fijo sino de la sección `playwright:` de `.valmen/config.yaml`:
@@ -223,6 +236,13 @@ export const PRESETS: readonly Preset[] = [
         model: "anthropic/claude-opus-4.6",
         effort: "high",
       },
+      // El revisor de un `review`: el más fuerte del catálogo y de otra familia que
+      // los modelos que producen análisis y plan en este preset (`gpt-6-*`).
+      reviewer: {
+        provider: "openrouter",
+        model: "anthropic/claude-opus-4.6",
+        effort: "high",
+      },
       "ui-specs": {
         provider: "openrouter",
         model: "openai/gpt-5.6-luna-pro",
@@ -274,6 +294,13 @@ export const PRESETS: readonly Preset[] = [
         model: "moonshotai/kimi-k3",
         effort: "medium",
       },
+      // El revisor de un `review`, distinto de los `agent-analysis` y `agent-plan`
+      // de este preset. Los perfiles incorporados lo heredan de aquí.
+      reviewer: {
+        provider: "openrouter",
+        model: "openai/gpt-5.6-luna-pro",
+        effort: "medium",
+      },
       "ui-specs": {
         provider: "openrouter",
         model: "moonshotai/kimi-k3",
@@ -315,6 +342,13 @@ export const PRESETS: readonly Preset[] = [
         provider: "openrouter",
         model: "deepseek/deepseek-v4-flash",
         effort: "auto",
+      },
+      // Decidir un `review` no es el volumen que ahorra este preset: el revisor es el
+      // mismo que en `balanced`, que sigue siendo distinto de sus modelos de fase.
+      reviewer: {
+        provider: "openrouter",
+        model: "openai/gpt-5.6-luna-pro",
+        effort: "medium",
       },
       "ui-specs": {
         provider: "openrouter",
@@ -372,6 +406,9 @@ export const PRESETS: readonly Preset[] = [
       producer: { provider: "claude-code", model: "claude-sonnet-5", effort: "auto" },
       verifier: { provider: "claude-code", model: "claude-sonnet-5", effort: "auto" },
       escalation: { provider: "claude-code", model: "claude-opus-4-8", effort: "high" },
+      // El revisor de este preset no es Claude: los `agent-analysis` y `agent-plan` ya
+      // lo son, y el revisor tiene que ser otro modelo que el que produjo el artefacto.
+      reviewer: { provider: "codex", model: "gpt-6-sol", effort: "medium" },
       "ui-specs": { provider: "claude-code", model: "claude-sonnet-5", effort: "auto" },
       // Los roles de fase del agente de la jornada: barato donde repite, fuerte donde decide.
       "agent-analysis": { provider: "claude-code", model: "claude-haiku-4-5-20251001", effort: "auto" },
@@ -410,13 +447,20 @@ export interface PerfilDeModelos {
   readonly roles: Readonly<Record<string, RoleRoute>>;
 }
 
-/** Los roles de evaluación: se copian del preset `balanced`, que mantiene Jev. */
+/**
+ * Los roles de evaluación: se copian del preset `balanced`, que mantiene Jev.
+ *
+ * Incluye `reviewer`: decide un `review` sobre las mismas compuertas que evalúan los
+ * otros, y su modelo —distinto de los de fase de cada perfil incorporado— sale del
+ * mismo preset.
+ */
 const ROLES_DE_EVALUACION: readonly string[] = [
   "gate-evaluator",
   "gate-judge",
   "producer",
   "verifier",
   "escalation",
+  "reviewer",
 ];
 
 function evaluadoresDeBalanced(): Record<string, RoleRoute> {
@@ -1190,6 +1234,62 @@ export function routeFor(
   role: string,
 ): ResolvedRoute | null {
   return routes.find((ruta) => ruta.role === role) ?? null;
+}
+
+/**
+ * El identificador de un modelo, normalizado para compararlo.
+ *
+ * Un mismo modelo se nombra distinto según quién lo sirve: `anthropic/claude-sonnet-5`
+ * en OpenRouter, `claude-sonnet-5` en la suscripción, `claude-opus-4.6` y
+ * `claude-opus-4-6` según el catálogo. Comparar cadenas crudas diría «distinto» de lo
+ * que es el mismo modelo, y el revisor se revisaría a sí mismo. Se quita el prefijo de
+ * proveedor (`vendor/`), se pasa a minúsculas y `.` y `_` cuentan como `-`.
+ */
+export function normalizarModelo(model: string): string {
+  const sinProveedor = model.trim().split("/").pop() ?? "";
+  return sinProveedor.toLowerCase().replace(/[._]/g, "-");
+}
+
+/** La elección del modelo revisor: la ruta, o el motivo por el que no se puede elegir. */
+export type EleccionDelRevisor =
+  | { readonly ok: true; readonly route: ResolvedRoute }
+  | { readonly ok: false; readonly motivo: string };
+
+/**
+ * Elige el modelo del rol `reviewer` **solo si** es distinto de todos los que
+ * produjeron el artefacto (R-APRO-003).
+ *
+ * Es pura y no llama a nada: devuelve la ruta o el motivo. Rechaza en tres casos, y los
+ * tres son del lado seguro —no hay revisor antes que un revisor que no se pueda
+ * defender—: el rol no tiene modelo; no se sabe quién produjo el artefacto (suponerlo
+ * sería inventar), o el revisor coincide con alguno de los productores.
+ */
+export function modeloDelRevisor(
+  rutas: readonly ResolvedRoute[],
+  productores: readonly string[],
+): EleccionDelRevisor {
+  const ruta = routeFor(rutas, "reviewer");
+  if (ruta === null || ruta.model.trim() === "") {
+    return { ok: false, motivo: "el rol reviewer no tiene modelo: asigná uno en el enrutado" };
+  }
+  const conocidos = productores.map(normalizarModelo).filter((modelo) => modelo !== "");
+  if (conocidos.length === 0) {
+    return {
+      ok: false,
+      motivo:
+        "productor desconocido: el ticket no tiene ningún registro de fase con el modelo que " +
+        "produjo el artefacto, y sin saberlo no se puede garantizar que el revisor sea otro",
+    };
+  }
+  if (conocidos.includes(normalizarModelo(ruta.model))) {
+    return {
+      ok: false,
+      motivo:
+        `el revisor es el mismo modelo que produjo el artefacto (${ruta.model}): ` +
+        "elegí otro en el rol reviewer",
+    };
+  }
+  return { ok: true, route: ruta };
 }
 
 /** Ruta de `.valmen/routing.yaml`. */

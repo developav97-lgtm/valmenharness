@@ -125,6 +125,9 @@ describe("el catálogo de roles", () => {
       "producer",
       "verifier",
       "escalation",
+      // El rol que revisa un `review` de análisis o plan (R-APRO-003) con un modelo
+      // distinto del que lo produjo: su consumidor es `valmen review-agent`.
+      "reviewer",
       // El rol que escribe los specs de interfaz. Su modelo no sale de un preset
       // fijo sino de la sección `playwright:` del proyecto, y entró acá para que
       // esa declaración llegue al enrutado con su origen `proyecto`.
@@ -137,6 +140,8 @@ describe("el catálogo de roles", () => {
       "agent-verification",
     ]);
     expect(ROLES.every((rol) => rol.description !== "")).toBe(true);
+    // C1: el rol revisor declara su consumidor, `valmen review-agent`.
+    expect(ROLES.find((rol) => rol.id === "reviewer")?.consumer).toBe("valmen review-agent");
   });
 
   it("los presets solo asignan modelos a los roles que se ejecutan", () => {
@@ -177,9 +182,12 @@ describe("el catálogo de roles", () => {
 
     const sinClaves = PRESETS.find((preset) => preset.id === "suscripcion");
     expect(sinClaves?.roles["gate-evaluator"]?.provider).toBe("claude-code");
-    // Y los cuatro roles resuelven a un proveedor que no pide clave de API.
-    for (const ruta of Object.values(sinClaves?.roles ?? {})) {
-      expect(ruta.provider).toBe("claude-code");
+    // Y los roles resuelven a un proveedor que no pide clave de API. El revisor es la
+    // excepción deliberada del plan de FEATURE-ADAPTER-AGENTE-REVISOR-20261007: va por
+    // `codex`, que tampoco pide clave —usa la sesión de la suscripción— y es de otra
+    // familia que los modelos de fase de este preset, que son de Claude.
+    for (const [rol, ruta] of Object.entries(sinClaves?.roles ?? {})) {
+      expect(ruta.provider, rol).toBe(rol === "reviewer" ? "codex" : "claude-code");
       expect(ruta.model).not.toBe("");
     }
   });
@@ -188,6 +196,14 @@ describe("el catálogo de roles", () => {
     const economico = PRESETS.find((preset) => preset.id === "economy");
     const caros = ["anthropic/claude-opus-4.6", "openai/gpt-5.6-luna-pro"];
     for (const [rol, ruta] of Object.entries(economico?.roles ?? {})) {
+      // El revisor es la excepción deliberada del plan de FEATURE-ADAPTER-AGENTE-REVISOR-20261007:
+      // decide un `review` que de otro modo espera a una persona, se llama pocas veces y su
+      // modelo es el de `balanced`. Se compara contra ese preset para que la excepción no
+      // se desvíe sola.
+      if (rol === "reviewer") {
+        expect(ruta.model).toBe(PRESETS.find((p) => p.id === "balanced")?.roles["reviewer"]?.model);
+        continue;
+      }
       expect(caros, rol).not.toContain(ruta.model);
     }
   });
@@ -735,7 +751,9 @@ describe("el proveedor viaja con el modelo", () => {
 const CATALOGOS = {
   codex: ["gpt-5.5", "gpt-5.6-luna", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-6-astra", "gpt-6-luna", "gpt-6-sol", "gpt-6.1-sol"],
   "opencode-go": ["deepseek-v4-flash", "deepseek-v4-pro", "glm-5.3", "glm-5.3-flash", "kimi-k3", "kimi-k2.7-code", "gpt-6-luna"],
-  openrouter: ["deepseek/deepseek-v4-flash", "moonshotai/kimi-k3"],
+  // `openai/gpt-5.6-luna-pro` es el modelo del rol `reviewer` en `balanced`, que los perfiles
+  // incorporados heredan.
+  openrouter: ["deepseek/deepseek-v4-flash", "moonshotai/kimi-k3", "openai/gpt-5.6-luna-pro"],
 };
 
 function fetchCatalogos(caidos: readonly string[] = []): typeof fetch {

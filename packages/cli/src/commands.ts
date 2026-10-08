@@ -207,6 +207,12 @@ import {
   revisarUx,
   scanPendingColors,
   usageReport,
+  ETAPAS_REVISABLES,
+  type EtapaRevisable,
+  type PreparacionDeRevision,
+  type ResultadoDeRevision,
+  ejecutarRevisor,
+  prepararRevision,
 } from "@valmen/engine";
 
 /**
@@ -3400,6 +3406,112 @@ export function qaEligibilityCommand(
   } catch (caught) {
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);
+  }
+}
+
+/** El revisor y los productores de una revisión, en una línea cada uno. */
+function lineasDeRevision(
+  preparacion: PreparacionDeRevision | ResultadoDeRevision,
+): string[] {
+  const productores =
+    preparacion.productores.length === 0
+      ? "ninguno registrado"
+      : preparacion.productores.map((p) => `${p.modelo} (${p.ejecutor}, fase ${p.fase})`).join(", ");
+  const revisor =
+    preparacion.revisor === null
+      ? "sin resolver"
+      : "source" in preparacion.revisor
+        ? `${preparacion.revisor.provider} ${preparacion.revisor.model} (esfuerzo ${preparacion.revisor.effort}, origen ${preparacion.revisor.source})`
+        : `${preparacion.revisor.provider} ${preparacion.revisor.model} (esfuerzo ${preparacion.revisor.effort}, versión ${preparacion.revisor.resolvedVersion})`;
+  return [
+    `Recibo:       ${preparacion.reciboId ?? "ninguno"}`,
+    `Productores:  ${productores}`,
+    `Revisor:      ${revisor}`,
+    `Proposiciones en banda media: ${preparacion.proposiciones.length}`,
+    ...preparacion.proposiciones.map(
+      (p) =>
+        `  - ${p.id} (valor ${p.valor.toFixed(2)})` +
+        `${p.descripcion === undefined ? "" : `: ${p.descripcion}`}` +
+        `${p.motivo === null ? "" : ` — ${p.motivo}`}`,
+    ),
+  ];
+}
+
+/**
+ * `review-agent --id <ID> --stage analysis|plan [--dry-run] [--json]`: el revisor de un `review`.
+ *
+ * Es de solo lectura (R-APRO-003): elige al revisor —un modelo distinto del que produjo el
+ * artefacto—, le pasa el artefacto y las proposiciones en banda media, e imprime su decisión.
+ * No la guarda ni mueve el ticket. Con `--dry-run` muestra productor, revisor y proposiciones
+ * sin llamar al modelo. Sale con 3 si la revisión no procede (el recibo no está en `review`,
+ * el productor se desconoce o coincide con el revisor) o si el modelo no contesta en el esquema.
+ */
+export async function reviewAgentCommand(
+  paths: RegistryPaths,
+  flags: Readonly<Record<string, string | true>>,
+  opciones: Parameters<typeof ejecutarRevisor>[1] = {},
+): Promise<CommandResult> {
+  const id = typeof flags["id"] === "string" ? flags["id"] : "";
+  if (id === "") return error("review-agent requiere --id <TICKET-ID>.", EXIT_SCHEMA);
+  const etapa = typeof flags["stage"] === "string" ? flags["stage"] : "";
+  if (!(ETAPAS_REVISABLES as readonly string[]).includes(etapa)) {
+    return error(
+      `review-agent requiere --stage ${ETAPAS_REVISABLES.join("|")}.`,
+      EXIT_SCHEMA,
+    );
+  }
+  const json = flags["json"] === true;
+  const dryRun = flags["dry-run"] === true;
+
+  try {
+    const preparacion = prepararRevision({ paths, ticketId: id, etapa: etapa as EtapaRevisable });
+
+    if (!preparacion.ok) {
+      const cuerpo = json
+        ? `${JSON.stringify({ modo: dryRun ? "dry-run" : "ejecucion", ejecutado: false, ...preparacion }, null, 2)}\n`
+        : `Revisión de ${id} — etapa ${etapa}: NO PROCEDE\n${lineasDeRevision(preparacion).join("\n")}\n` +
+          `Motivo: ${preparacion.motivo}\nNo se llamó al modelo.\n`;
+      return { stdout: cuerpo, stderr: "", exitCode: EXIT_INVARIANT };
+    }
+
+    if (dryRun) {
+      return ok(
+        json
+          ? `${JSON.stringify({ modo: "dry-run", ejecutado: false, ...preparacion }, null, 2)}\n`
+          : `Revisión de ${id} — etapa ${etapa} (dry-run: no se llamó al modelo)\n` +
+              `${lineasDeRevision(preparacion).join("\n")}\n` +
+              `Artefacto a enviar: ${preparacion.artefacto.length} caracteres.\n`,
+      );
+    }
+
+    const resultado = await ejecutarRevisor(preparacion, opciones);
+    if (json) {
+      return ok(`${JSON.stringify({ modo: "ejecucion", ejecutado: true, registrado: false, ...resultado }, null, 2)}\n`);
+    }
+    return ok(
+      [
+        `Revisión de ${id} — etapa ${etapa}`,
+        ...lineasDeRevision(resultado),
+        `Decisión del revisor: ${resultado.decision}`,
+        `Razón: ${resultado.reason}`,
+        ...resultado.porProposicion.map(
+          (p) => `  ${p.respaldada ? "respaldada " : "SIN respaldo"} ${p.id}: ${p.motivo}`,
+        ),
+        `Consumo: ${resultado.usage.inputTokens} tokens de entrada, ${resultado.usage.outputTokens} de salida, ` +
+          `${resultado.usage.costUsd} USD, ${resultado.latencyMs} ms.`,
+        "No se registró: la decisión no se guardó en el recibo ni en el ticket, no movió el estado y no consumió cupo.",
+        "",
+      ].join("\n"),
+    );
+  } catch (caught) {
+    const failure = toFailure(caught);
+    const delModelo = caught instanceof Error && caught.name === "JudgeError";
+    return error(
+      delModelo
+        ? `El revisor no devolvió una decisión válida: ${failure.message}\nNo se registró nada.`
+        : failure.message,
+      delModelo ? EXIT_INVARIANT : failure.exitCode,
+    );
   }
 }
 

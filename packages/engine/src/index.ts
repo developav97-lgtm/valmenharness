@@ -94,6 +94,7 @@ export * from "./calibration.js";
 export * from "./release.js";
 export * from "./evaluators.js";
 export * from "./cascade.js";
+export * from "./reviewer.js";
 export * from "./gate.js";
 export * from "./gate-promotion.js";
 export * from "./simulate.js";

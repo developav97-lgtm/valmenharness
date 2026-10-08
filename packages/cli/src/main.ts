@@ -121,6 +121,7 @@ import {
   qaPolicyCloseCommand,
   qaPromoteCommand,
   qaShadowCommand,
+  reviewAgentCommand,
   qaEligibilityCommand,
   approvalEligibilityCommand,
   precheckCommand,
@@ -242,6 +243,14 @@ Comandos:
   approval-eligibility --id <ID> --stage analysis|plan [--json]
                             Decide en código si el análisis o el plan del ticket puede aprobarse por una
                             autorización (sin modelo y sin escribir nada). Sale con 3 si no lo es.
+  review-agent --id <ID> --stage analysis|plan [--dry-run] [--json]
+                            El revisor de un review (R-APRO-003), de solo lectura: toma el
+                            último recibo en review, elige el modelo del rol reviewer solo si
+                            es distinto del que produjo el análisis y el plan, y le pasa el
+                            artefacto y las proposiciones en banda media. Imprime su decisión
+                            (approve o reject) y aclara que no se registró. --dry-run muestra
+                            productor, revisor y proposiciones sin llamar al modelo. Sale con 3
+                            si la revisión no procede.
   qa-eligibility --id <ID> [--base <commit>]
   qa-agent --id <ID> --base <commit> --delivered <commit>
   qa-policy-close --id <ID>
@@ -694,6 +703,8 @@ export const VALUE_OPTIONS = [
   "--permissions",
   "--impacts",
   "--stages",
+  // `review-agent --stage`: la etapa cuyo review se revisa (analysis o plan).
+  "--stage",
   "--mode",
   "--modules",
   "--max-risk",
@@ -1991,6 +2002,8 @@ export async function run(argv: readonly string[]): Promise<number> {
                 : rest[0] === "clear-stop"
                 ? journeyClearStopCommand(options.flags)
                 : { stdout: "", stderr: "journey admite: plan, advance, install-trigger, notify-plans y clear-stop.\n", exitCode: EXIT_SCHEMA };
+    } else if (command === "review-agent") {
+      result = await reviewAgentCommand(resolvePaths(options), options.flags);
     } else if (command === "qa-shadow") {
       result = qaShadowCommand(resolvePaths(options));
     } else if (command === "qa-promote") {
