@@ -4,7 +4,7 @@ id: FEATURE-ENGINE-ORQUESTACION-INTERACTIVA-20261007
 title: Delegar cada fase a un subagente con el modelo del perfil sin cambiar el modelo de la sesión anfitriona
 type: FEATURE
 module: ENGINE
-workflow_status: planned
+workflow_status: approved
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -76,7 +76,7 @@ Memoria consultada (`buscar_memoria` «subagente modelo del perfil por fase sesi
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente; lo aprueba explícitamente el PO (compuerta de plan). El agente se detiene en `planned`.
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 - Alcance y exclusiones: solo la instrucción de delegar la fase actual en la sesión interactiva (`resume` / `reanudar_ticket`). Se modifican `packages/engine/src/resume.ts` y `packages/mcp/src/tools.ts`, y las suites `tests/next-step.test.ts`, `tests/mcp-server.test.ts` y `tests/journey-brief.test.ts`. **Fuera**: `fasesDeSesion` y la tabla de clientes (`packages/adapter/src/routing.ts`), `next-step.ts` (no nombra clientes por diseño), `journey-brief.ts`, la skill `corrida-orquestada`, `AGENTS.md` y las plantillas (IMPROVEMENT-ADAPTER-CONTRATO-PERFILES-20261007), el despacho por proveedor y el registro del modelo usado (FEATURE-ENGINE-REGISTRO-MODELO-FASE-20261007). No se crean archivos de código ni de prueba.
 - Decisiones para el PO al aprobar:
   - Dónde trabaja el subagente interactivo. A) Worktree propio, reusando `valmen journey worktree create|integrate --id <ID>` y el brief tal cual → un solo escritor garantizado, una integración más por fase. B) El checkout de la sesión, con la sesión esperando → sin integración, pero el brief actual prohíbe tocar el checkout principal y habría que cambiar `journey-brief.ts`. Recomiendo A: no toca el brief y respeta «un solo escritor»; el plan está escrito para A.
@@ -223,6 +223,33 @@ Sin publicar todavía.
     "action": "gate-approved",
     "actor": "cli",
     "details": "Gate plan aprobado por Juan Andrade (recibo GR-20261008-FEATURE-ENGINE-ORQUESTACION-INTERACTIVA-20261007-plan-3, canal cli, decidida 2026-10-08T21:39:25.868Z): A"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:40:24.761Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"La A (aprueba el plan de ORQUESTACION-INTERACTIVA con el subagente en su propio worktree)\",\"planHash\":\"sha256:ea16baa8db7dae9a5e1453b47541a5628996a9e089a53d34765871b8a879f78f\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:40:25.108Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:ea16baa8db7dae9a5e1453b47541a5628996a9e089a53d34765871b8a879f78f."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:40:25.108Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
   }
 ]
 ```
