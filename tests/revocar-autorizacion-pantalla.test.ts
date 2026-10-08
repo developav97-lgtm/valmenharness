@@ -125,7 +125,7 @@ describe("el botón Revocar de las autorizaciones", () => {
     actor.value = "Juan Andrade";
     await disparar(botones(vista, "Confirmar revocación")[0] as NodoFalso, "click");
     expect(llamadas.filter((l) => l.metodo === "POST")).toEqual([]);
-    const avisos = nodos(vista, (n) => String(n.className ?? "").includes("qa-mensaje mal")).map((n) => String(n.textContent ?? n._texto));
+    const avisos = nodos(vista, (n) => String(n.className ?? "").includes("qa-mensaje mal")).map(textoDe);
     expect(avisos).toContain("Escribe tu nombre y tu frase literal para revocar.");
   });
 
