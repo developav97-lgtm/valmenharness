@@ -4,7 +4,7 @@ id: FEATURE-ENGINE-JORNADA-OLA-20261008
 title: Calcular la ola de tickets listos y el brief de cada uno para la corrida orquestada
 type: FEATURE
 module: ENGINE
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -76,79 +76,79 @@ Ningún elemento del pedido falta en el código: `--concurrency` es lo que este 
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1. La ola ordena los listos por prioridad y posición de la jornada
+- [x] C1. La ola ordena los listos por prioridad y posición de la jornada
       <!-- test: npx vitest run tests/journey-wave.test.ts -->
-- [ ] C2. Un ticket cuyas dependencias están en `awaiting_user_tests`, `in_qa`, `qa_approved` o `closed` sale como listo
+- [x] C2. Un ticket cuyas dependencias están en `awaiting_user_tests`, `in_qa`, `qa_approved` o `closed` sale como listo
       <!-- test: npx vitest run tests/journey-wave.test.ts -->
-- [ ] C3. Un ticket con una dependencia en otro estado, o ausente del registro, espera y el motivo nombra la dependencia y su estado
+- [x] C3. Un ticket con una dependencia en otro estado, o ausente del registro, espera y el motivo nombra la dependencia y su estado
       <!-- test: npx vitest run tests/journey-wave.test.ts -->
-- [ ] C4. Una dependencia del grafo de la feature que no va en la jornada también deja esperando al ticket
+- [x] C4. Una dependencia del grafo de la feature que no va en la jornada también deja esperando al ticket
       <!-- test: npx vitest run tests/journey-wave.test.ts -->
-- [ ] C5. Un ticket en `awaiting_user_tests`, `in_qa`, `qa_approved` o `closed` no se ofrece y figura entre los entregados
+- [x] C5. Un ticket en `awaiting_user_tests`, `in_qa`, `qa_approved` o `closed` no se ofrece y figura entre los entregados
       <!-- test: npx vitest run tests/journey-wave.test.ts -->
-- [ ] C6. Un ticket en `in_progress` cuenta como en curso y no se ofrece
+- [x] C6. Un ticket en `in_progress` cuenta como en curso y no se ofrece
       <!-- test: npx vitest run tests/journey-wave.test.ts -->
-- [ ] C7. Un ticket con un worktree de git de su rama sugerida cuenta como en curso aunque el registro diga `intake`
+- [x] C7. Un ticket con un worktree de git de su rama sugerida cuenta como en curso aunque el registro diga `intake`
       <!-- test: npx vitest run tests/journey-wave.test.ts -->
-- [ ] C8. Un ticket cuya última actividad de ejecución es `started`, `active` o `waiting` cuenta como en curso y la salida muestra su fuente y su hora
+- [x] C8. Un ticket cuya última actividad de ejecución es `started`, `active` o `waiting` cuenta como en curso y la salida muestra su fuente y su hora
       <!-- test: npx vitest run tests/journey-wave.test.ts -->
-- [ ] C9. Una actividad `finished`, la rama de otro ticket y el worktree del checkout principal no cuentan como en curso
+- [x] C9. Una actividad `finished`, la rama de otro ticket y el worktree del checkout principal no cuentan como en curso
       <!-- test: npx vitest run tests/journey-wave.test.ts -->
-- [ ] C10. La ola no pasa de 3 tickets por defecto contando los que ya están en curso
+- [x] C10. La ola no pasa de 3 tickets por defecto contando los que ya están en curso
       <!-- test: npx vitest run tests/journey-wave.test.ts -->
-- [ ] C11. `--concurrency N` cambia el tope de la ola
+- [x] C11. `--concurrency N` cambia el tope de la ola
       <!-- test: npx vitest run tests/journey-wave.test.ts -->
-- [ ] C12. Un `--concurrency` que no es un entero de al menos 1 se rechaza con el código de error de esquema
+- [x] C12. Un `--concurrency` que no es un entero de al menos 1 se rechaza con el código de error de esquema
       <!-- test: npx vitest run tests/journey-ola-cli.test.ts -->
-- [ ] C13. Un ticket `planned` espera la aprobación del plan, no se ofrece y no cuenta como en curso
+- [x] C13. Un ticket `planned` espera la aprobación del plan, no se ofrece y no cuenta como en curso
       <!-- test: npx vitest run tests/journey-wave.test.ts -->
-- [ ] C14. Un ticket bloqueado o con una parada activa no se ofrece y muestra su motivo, y vuelve a ofrecerse al liberar la parada
+- [x] C14. Un ticket bloqueado o con una parada activa no se ofrece y muestra su motivo, y vuelve a ofrecerse al liberar la parada
       <!-- test: npx vitest run tests/journey-wave.test.ts -->
-- [ ] C15. Un ticket cuya ventana no permite despachar no se ofrece
+- [x] C15. Un ticket cuya ventana no permite despachar no se ofrece
       <!-- test: npx vitest run tests/journey-wave.test.ts -->
-- [ ] C16. Un ticket que la jornada no contiene, por ejemplo el que `--max` dejó fuera, nunca se ofrece
+- [x] C16. Un ticket que la jornada no contiene, por ejemplo el que `--max` dejó fuera, nunca se ofrece
       <!-- test: npx vitest run tests/journey-wave.test.ts -->
-- [ ] C17. Sin jornada vigente, o con un `--journey` inexistente, el comando falla y manda a `valmen journey plan`
+- [x] C17. Sin jornada vigente, o con un `--journey` inexistente, el comando falla y manda a `valmen journey plan`
       <!-- test: npx vitest run tests/journey-ola-cli.test.ts -->
-- [ ] C18. `journey next --wave` deja idéntico todo el árbol del registro
+- [x] C18. `journey next --wave` deja idéntico todo el árbol del registro
       <!-- test: npx vitest run tests/journey-ola-cli.test.ts -->
-- [ ] C19. El brief sugiere la ruta del worktree y la rama del ticket, y la ola reconoce esa rama como del ticket
+- [x] C19. El brief sugiere la ruta del worktree y la rama del ticket, y la ola reconoce esa rama como del ticket
       <!-- test: npx vitest run tests/journey-brief.test.ts -->
-- [ ] C20. El brief incluye el siguiente paso que `valmen resume` calcula para el estado del ticket
+- [x] C20. El brief incluye el siguiente paso que `valmen resume` calcula para el estado del ticket
       <!-- test: npx vitest run tests/journey-brief.test.ts -->
-- [ ] C21. El brief da el modelo, el esfuerzo y el alias de subagente del perfil de la fase del lanzamiento
+- [x] C21. El brief da el modelo, el esfuerzo y el alias de subagente del perfil de la fase del lanzamiento
       <!-- test: npx vitest run tests/journey-brief.test.ts -->
-- [ ] C22. Si el perfil de la fase es de otro proveedor, el brief lo avisa y no inventa un alias
+- [x] C22. Si el perfil de la fase es de otro proveedor, el brief lo avisa y no inventa un alias
       <!-- test: npx vitest run tests/journey-brief.test.ts -->
-- [ ] C23. El brief nombra las skills de proceso que la fase carga
+- [x] C23. El brief nombra las skills de proceso que la fase carga
       <!-- test: npx vitest run tests/journey-brief.test.ts -->
-- [ ] C24. El brief nombra las compuertas de la fase con su evaluador: `cascade` para análisis y plan, `command` para `qa-mechanical`
+- [x] C24. El brief nombra las compuertas de la fase con su evaluador: `cascade` para análisis y plan, `command` para `qa-mechanical`
       <!-- test: npx vitest run tests/journey-brief.test.ts -->
-- [ ] C25. El brief declara el contrato de entrega: pruebas con comandos exactos, criterios marcados, consumo de IA, `valmen secrets` y commit solo en la rama del worktree
+- [x] C25. El brief declara el contrato de entrega: pruebas con comandos exactos, criterios marcados, consumo de IA, `valmen secrets` y commit solo en la rama del worktree
       <!-- test: npx vitest run tests/journey-brief.test.ts -->
-- [ ] C26. El brief prohíbe aprobar lo que decide una persona
+- [x] C26. El brief prohíbe aprobar lo que decide una persona
       <!-- test: npx vitest run tests/journey-brief.test.ts -->
-- [ ] C27. El brief prohíbe tocar el checkout principal y nombra su ruta
+- [x] C27. El brief prohíbe tocar el checkout principal y nombra su ruta
       <!-- test: npx vitest run tests/journey-brief.test.ts -->
-- [ ] C28. El brief prohíbe correr la suite completa y manda a correr los archivos de prueba del ticket
+- [x] C28. El brief prohíbe correr la suite completa y manda a correr los archivos de prueba del ticket
       <!-- test: npx vitest run tests/journey-brief.test.ts -->
-- [ ] C29. El brief de un ticket SECURITY lo declara solo de persona, y el de un FEATURE no lleva ese bloque
+- [x] C29. El brief de un ticket SECURITY lo declara solo de persona, y el de un FEATURE no lleva ese bloque
       <!-- test: npx vitest run tests/journey-brief.test.ts -->
-- [ ] C30. Un ticket en `planned`, `awaiting_user_tests`, `in_qa`, `qa_approved`, `closed` o `blocked` produce un brief marcado como no lanzable con su motivo
+- [x] C30. Un ticket en `planned`, `awaiting_user_tests`, `in_qa`, `qa_approved`, `closed` o `blocked` produce un brief marcado como no lanzable con su motivo
       <!-- test: npx vitest run tests/journey-brief.test.ts -->
-- [ ] C31. `journey brief` de un ticket inexistente falla con un mensaje que nombra el id
+- [x] C31. `journey brief` de un ticket inexistente falla con un mensaje que nombra el id
       <!-- test: npx vitest run tests/journey-ola-cli.test.ts -->
-- [ ] C32. `journey brief` deja idéntico todo el árbol del registro
+- [x] C32. `journey brief` deja idéntico todo el árbol del registro
       <!-- test: npx vitest run tests/journey-ola-cli.test.ts -->
-- [ ] C33. `--concurrency` consume su valor en `parseArgs` y la ayuda documenta `journey next` y `journey brief`
+- [x] C33. `--concurrency` consume su valor en `parseArgs` y la ayuda documenta `journey next` y `journey brief`
       <!-- test: npx vitest run tests/journey-ola-cli.test.ts -->
-- [ ] C34. Sin `--project`, los dos comandos resuelven el proyecto por el `project-id` de la configuración de la raíz
+- [x] C34. Sin `--project`, los dos comandos resuelven el proyecto por el `project-id` de la configuración de la raíz
       <!-- test: npx vitest run tests/journey-ola-cli.test.ts -->
-- [ ] C35. Un subcomando de `journey` desconocido responde con la lista que incluye `next` y `brief`
+- [x] C35. Un subcomando de `journey` desconocido responde con la lista que incluye `next` y `brief`
       <!-- test: npx vitest run tests/journey-ola-cli.test.ts -->
-- [ ] C36. La selección, el despacho, el siguiente paso y la ayuda del CLI siguen pasando sus pruebas tras las dos extracciones
+- [x] C36. La selección, el despacho, el siguiente paso y la ayuda del CLI siguen pasando sus pruebas tras las dos extracciones
       <!-- test: npx vitest run tests/journey-selection.test.ts tests/journey-dispatch.test.ts tests/next-step.test.ts tests/cli.test.ts -->
-- [ ] C37. El código nuevo compila sin errores de tipos
+- [x] C37. El código nuevo compila sin errores de tipos
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
 
 ## Puntos
@@ -159,19 +159,29 @@ Ningún elemento del pedido falta en el código: `--concurrency` es lo que este 
 
 ## Implementación
 
-Pendiente.
+Se implementó el plan aprobado sin salirse de su alcance ni de sus exclusiones.
+
+- `packages/engine/src/journey-selection.ts`: la regla de ventana de `baseReasons` se extrajo a `razonesDeVentana(ticket, windows, at)` (exportada) y `compareTicket` se exportó; `baseReasons` la llama y el comportamiento no cambia. `packages/engine/src/resume.ts`: `renderFases` se exportó.
+- `packages/engine/src/journey-wave.ts` (nuevo): `slugDeTicket`, `worktreeDelTicket`, `esWorktreeDelTicket` (acepta el nombre corto y el id completo, nunca el checkout principal), `parsearWorktrees`, `listarWorktreesDeGit` (con aviso si git falla), `calcularOlaDeJornada` y `renderOlaDeJornada`, con `OLA_CONCURRENCIA_POR_DEFECTO = 3`. Orden de clasificación por ticket: ausente, entregado (`awaiting_user_tests`, `in_qa`, `qa_approved`, `closed`), detenido (parada activa o `blocked`, por `faseDelTicket`), `planned` (espera de aprobación, antes de mirar worktree o actividad), en curso (`in_progress`, worktree de la rama o última actividad abierta), dependencias (las de la jornada más `dependenciasEnGrafos`), ventana y listo; los listos se ordenan con `compareTicket` y se recortan a `concurrency` menos los en curso, y el resto espera por cupo. Solo se clasifican los tickets de `journey.tickets`.
+- `packages/engine/src/journey-brief.ts` (nuevo): `armarBriefDeSubagente` y `renderBriefDeSubagente`, con worktree y comando `git worktree add`, el siguiente paso y los modelos de `buildResumeContext` (cliente `claude` por defecto), modelo, esfuerzo y alias de la fase, skills, tabla de compuertas por fase con evaluador, contrato de entrega, prohibiciones, bloque SECURITY solo para tickets SECURITY y `lanzable` solo en `intake`, `analyzed`, `approved`, `in_progress` y `changes_requested`.
+- `packages/engine/src/index.ts`: dos líneas `export *`.
+- `packages/cli/src/commands.ts`: `journeyNextCommand` y `journeyBriefCommand`, dentro de `withAccessMode("ask", ...)`, con `--project` o el `project-id` de `<raíz>/.valmen/config.yaml`, validación de `--concurrency` (entero de al menos 1, si no `EXIT_SCHEMA`) y de `--cliente`; no escriben en el registro ni llaman a `anexarPasada`. `packages/cli/src/main.ts`: ramas `next` y `brief` del despacho de `journey`, mensaje de subcomandos ampliado, `--concurrency` en `VALUE_OPTIONS` y dos entradas de `USAGE`.
+- Pruebas nuevas: `tests/journey-wave.test.ts` (26), `tests/journey-brief.test.ts` (14), `tests/journey-ola-cli.test.ts` (12) y el ayudante `tests/helpers/ola.ts`.
+
+Decisiones del PO que el plan dejó abiertas, resueltas con lo asumido en el plan: rama `valmen/ticket-<nombre>`; un subagente nunca aprueba SECURITY; `in_qa` y `qa_approved` cuentan como entregados además de `awaiting_user_tests` y `closed`.
 
 ## Pruebas
 
-Contrato de pruebas (se ejecuta al implementar):
+Contrato de pruebas:
 
 - Directorio: raíz del checkout o del worktree del ticket, con `node_modules` (en un worktree sin él, enlazar el del checkout principal o correr `npm install`). Requisitos: Node 24 y `git` en el PATH.
-- `npx vitest run tests/journey-wave.test.ts tests/journey-brief.test.ts tests/journey-ola-cli.test.ts`: los tres archivos en verde.
-- `npx vitest run tests/journey-selection.test.ts tests/journey-dispatch.test.ts tests/next-step.test.ts tests/cli.test.ts`: regresión de lo tocado, en verde.
-- `npx tsc --noEmit -p tsconfig.json`: sin errores.
+- `npx vitest run tests/journey-wave.test.ts tests/journey-brief.test.ts tests/journey-ola-cli.test.ts`: los tres archivos en verde. Resultado obtenido: 3 archivos, 52 pruebas pasadas.
+- `npx vitest run tests/journey-selection.test.ts tests/journey-dispatch.test.ts tests/next-step.test.ts tests/cli.test.ts`: regresión de lo tocado, en verde. Resultado obtenido: 4 archivos, 88 pruebas pasadas.
+- `npx tsc --noEmit -p tsconfig.json`: sin errores (obtenido).
 - Validación manual: con una jornada armada por el PO, `valmen journey next --wave --concurrency 2` y `valmen journey brief --id <ID>` imprimen la ola y el brief, y `git status` no cambia después de correrlos.
+- No se corrió la suite completa (`npx vitest run`): la corre el orquestador al integrar.
 
-Pendiente de ejecución.
+Entrega verificada por el subagente; la validación manual queda para el responsable.
 
 ## QA
 
@@ -200,7 +210,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-08",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Subagente de Claude Code dedicado solo a este ticket; la sesión no expone agregado de tokens",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:subagente-jornada-ola",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -264,6 +290,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:25:25.867Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:48:08.765Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:48:09.070Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
