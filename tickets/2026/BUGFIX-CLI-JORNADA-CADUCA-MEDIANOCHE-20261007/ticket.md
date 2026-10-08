@@ -4,7 +4,7 @@ id: BUGFIX-CLI-JORNADA-CADUCA-MEDIANOCHE-20261007
 title: Que la jornada siga viva hasta terminar sus tickets en vez de caducar a medianoche UTC
 type: BUGFIX
 module: CLI
-workflow_status: intake
+workflow_status: planned
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -35,34 +35,32 @@ Ninguno.
 
 ## Descripción funcional
 
-- Alcance:
-- Usuario o rol afectado:
-- Comportamiento actual:
-- Comportamiento esperado:
+- Alcance: el avance de la jornada (`valmen journey advance`, que invoca el disparador periódico), el armado de la jornada (`valmen journey plan` y la herramienta MCP `armar_jornada`) y el vigilante de avisos (`pendientesDeAvisar` / `hermesNotifyPendientes`). Queda fuera cambiar el formato del identificador `JOR-AAAAMMDD` (sigue en UTC) y el despacho en sí (`dispatchJourney`, `despacharPreparacion`).
+- Usuario o rol afectado: el PO que programa tickets una vez con `valmen journey plan` y espera que el disparador los lleve hasta el final sin volver a armar la jornada.
+- Comportamiento actual: a las 00:00 UTC (19:00 en Colombia) el avance busca `JOR-<fecha nueva>`, no la encuentra y responde `sin-jornada` sin despachar ni preparar nada, aunque la jornada del día anterior tenga tickets sin cerrar. Armar la jornada del día nuevo solo contiene los tickets que se nombran en ese armado: los pendientes de la anterior se pierden si no se repiten a mano. Nadie avisa cuando una jornada termina.
+- Comportamiento esperado: si no existe la jornada del día, el avance usa la jornada más reciente que todavía tenga tickets sin cerrar; armar la jornada de un día nuevo hereda los tickets pendientes de esa jornada anterior; y cuando la jornada más reciente ya no tiene tickets pendientes se da por terminada y el vigilante lo avisa una sola vez por el canal de avisos (Telegram).
 
 ## Diagnóstico
 
-- Causa comprobada (con `ruta:línea`):
-- Hipótesis pendientes:
-- Consumidores afectados:
-- Archivos y flujo investigados:
-- Riesgos y compatibilidad:
-- Impactos de sync, migración, Docker o despliegue:
+- Causa comprobada (con `ruta:línea`): el avance calcula la jornada solo por la fecha UTC: `packages/engine/src/journey-advance.ts:86-88` (`jornadaDelDia` = `JOR-` + `toISOString().slice(0,10)`) y `packages/engine/src/journey-advance.ts:96` la usa cuando no llega `journeyId`; si esa jornada no existe en el historial, `packages/engine/src/journey-advance.ts:98-102` devuelve `sin-jornada` sin mirar otras jornadas. El CLI repite el mismo cálculo para la pasada de error en `packages/cli/src/commands.ts:2788`. En el armado, `packages/engine/src/journey-plan.ts:137-139` decide el identificador por la fecha UTC y `packages/engine/src/journey-plan.ts:106-118` arma la lista solo con los tickets pedidos: nada consulta la jornada anterior. Comprobado en el registro: `.valmen/journeys/events.jsonl` tiene `JOR-20261007` con tickets sin cerrar y hubo que crear `JOR-20261008` a mano (cursor 11, `2026-10-08T01:00:55Z`).
+- Hipótesis pendientes: ninguna sobre la causa. Sobre la herencia: un ticket ya despachado bajo la jornada anterior y heredado por la nueva no se despacha dos veces, porque la selección solo elige tickets en `approved` (`packages/engine/src/journey-selection.ts:167`); se cubre igual con una prueba (C4).
+- Consumidores afectados: `journeyAdvanceCommand` (`packages/cli/src/commands.ts:2770-2830`) y la pasada que anexa (`registrarPasada`, que usa `avance.journeyId`); `journeyPlanCommand` (`packages/cli/src/commands.ts:3459`); la herramienta MCP `armar_jornada` (`packages/mcp/src/tools.ts:2505`); el vigilante `pendientesDeAvisar` (`packages/cli/src/hermes.ts:755`) y su envío en `hermesNotifyPendientes` (`packages/cli/src/hermes.ts:902`, rama `arbol-sucio` en `:996` como modelo); el registro de avisos de `packages/engine/src/approval.ts` (tipos `:171-188`, lector con lista de tipos `:462-472`, `arbolesSuciosAvisados` `:503`, exclusión de avisos `:614`); los renderizadores de `packages/engine/src/notify.ts:520`. Pruebas existentes: `tests/avance-jornada.test.ts:156-178,357-386` (casos `sin-jornada`), `tests/jornada-diaria.test.ts:147-150`, `tests/vigilante-jornada.test.ts`.
+- Archivos y flujo investigados: disparador → `journeyAdvanceCommand` → `avanzarJornada` → `readJourneys` (`packages/engine/src/journeys.ts:143`, proyecta la última foto de cada jornada en orden de creación) → `avanzarEjecucion` / `avanzarPreparacion` con `executionId = journeyId`. Armado: `journeyPlanCommand` / `armar_jornada` → `armarJornada` → `createJourney` / `reviseJourney`. Avisos: `hermesNotifyPendientes` → `pendientesDeAvisar` → `appendApproval` como marca de entregado. `buscar_memoria` («jornada caduca medianoche UTC sin-jornada disparador») no devolvió antecedentes de este síntoma.
+- Riesgos y compatibilidad: (1) el vigilante podría avisar de golpe todas las jornadas históricas ya cerradas; se acota a la jornada más reciente del historial y con una marca `journey-finished-notice` por jornada. (2) Los casos de prueba actuales de `sin-jornada` deben seguir valiendo cuando no hay ninguna jornada con pendientes. (3) El historial de jornadas es append-only: heredar escribe una foto nueva de la jornada del día, nunca edita la anterior. (4) Una línea `journey-finished-notice` en `approvals.jsonl` escrita por la versión nueva la ignora una versión anterior, porque el lector filtra por tipos conocidos (`approval.ts:462-472`). (5) Si `--journey` se pasa explícito, se respeta tal cual (sin búsqueda).
+- Impactos de sync, migración, Docker o despliegue: ninguno — cambio del motor y del CLI del harness; no hay sincronización, migraciones, contenedores ni despliegue.
 
 ## Plan
 
-- Gate de plan y aprobación:
+- Gate de plan y aprobación: pendiente de la aprobación explícita del PO; no se implementa hasta que la registre una persona.
 - Pasos ordenados:
-  <!-- Cada paso nombra archivo, símbolo o comando, y los criterios que cubre, por ejemplo
-       «(C1, C2)». Un paso que no dice dónde ni con qué se toca no se puede ejecutar ni
-       revisar, y la compuerta lo lee así. -->
-  1.
-  2.
-- Impactos declarados:
-  <!-- Una línea por cada impacto que el ticket declara, con las palabras de su proposición:
-       sincronización (datos ya sincronizados y clientes que todavía no se actualizaron),
-       migración (orden de aplicación y reversión) o contenedores (imagen y publicación). -->
-- Rollback (obligatorio):
+  1. `packages/engine/src/journey-advance.ts`: nueva función exportada `jornadaVigente(project, ahora)` que devuelve la jornada del día si existe; si no, la más reciente por orden de creación de `readJourneys` con al menos un ticket que exista en el registro y no esté `closed` (leído con `findTicket` + `parseTicket`); si no hay ninguna, `null`. `avanzarJornada` la usa cuando no llega `journeyId`; con `null` devuelve `sin-jornada` y el detalle nombra la jornada más reciente como terminada cuando la hay. (C1, C2, C3)
+  2. `packages/cli/src/commands.ts:2788`: la pasada de error usa `jornadaVigente` en vez de `jornadaDelDia` para que la pasada registre la misma jornada que el avance. (C1)
+  3. `packages/engine/src/journey-plan.ts`: al **crear** la jornada de un día nuevo (no al revisarla), `armarJornada` antepone los tickets pendientes de `jornadaVigente` anterior (otro id), en su orden y con sus dependencias, sin duplicar los pedidos; el tope `maximo` se aplica a la lista combinada. `JornadaArmada` gana `heredados: { desde: string; tickets: string[] } | null` y `renderPlanDelDia` añade la línea «Heredados de JOR-…: …». `journeyPlanCommand` y `armar_jornada` (MCP) muestran esa línea y el MCP la devuelve en sus datos. (C4, C5, C6)
+  4. `packages/engine/src/approval.ts`: tipo `JourneyFinishedNotice` (`kind: "journey-finished-notice"`, `journeyId`, `notifiedAt`), añadido al lector, a la exclusión de `:614` y una función `jornadasTerminadasAvisadas(paths)`. `packages/engine/src/notify.ts`: `renderJourneyFinishedNotification({ journeyId, tickets })`. (C7, C8)
+  5. `packages/cli/src/hermes.ts`: `pendientesDeAvisar` agrega `kind: "jornada-terminada"` solo para la jornada más reciente del historial cuando todos sus tickets están `closed` y no tiene marca; `hermesNotifyPendientes` la envía y anota la marca solo si la entrega salió (mismo patrón que `arbol-sucio`). (C7, C8, C9)
+  6. Pruebas en `tests/avance-jornada.test.ts`, `tests/jornada-diaria.test.ts` y `tests/vigilante-jornada.test.ts` para cada criterio; correr la suite completa y `npx tsc --build tsconfig.build.json`. (C1–C10)
+- Impactos declarados: ninguno (sin sincronización, migración ni contenedores).
+- Rollback (obligatorio): revertir el commit del ticket. El historial de jornadas no cambia de formato y las marcas `journey-finished-notice` ya escritas las ignora la versión anterior, así que no hay datos que deshacer.
 
 <!-- Los criterios de la sección siguiente se numeran C1…Cn, con una afirmación verificable por criterio
      —una frase con «y» son dos criterios—, y cada uno lleva debajo su anotación de
@@ -71,7 +69,26 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ]
+- [ ] C1. Sin jornada del día, el avance despacha el ticket aprobado de la jornada más reciente que tiene tickets sin cerrar
+      <!-- test: npx vitest run tests/avance-jornada.test.ts -->
+- [ ] C2. Si existe la jornada del día, el avance la usa aunque otra jornada anterior tenga pendientes
+      <!-- test: npx vitest run tests/avance-jornada.test.ts -->
+- [ ] C3. Sin ninguna jornada con tickets pendientes, el avance devuelve sin-jornada sin invocar al ejecutor
+      <!-- test: npx vitest run tests/avance-jornada.test.ts -->
+- [ ] C4. Un ticket ya en in_progress heredado de la jornada anterior no se despacha otra vez
+      <!-- test: npx vitest run tests/avance-jornada.test.ts -->
+- [ ] C5. Crear la jornada de un día nuevo incluye primero los tickets pendientes de la jornada anterior sin duplicarlos
+      <!-- test: npx vitest run tests/jornada-diaria.test.ts -->
+- [ ] C6. El plan del día nombra los tickets heredados y la jornada de la que vienen
+      <!-- test: npx vitest run tests/jornada-diaria.test.ts -->
+- [ ] C7. El vigilante avisa una vez que la jornada más reciente terminó cuando todos sus tickets están cerrados
+      <!-- test: npx vitest run tests/vigilante-jornada.test.ts -->
+- [ ] C8. Una segunda pasada del vigilante no repite el aviso de jornada terminada
+      <!-- test: npx vitest run tests/vigilante-jornada.test.ts -->
+- [ ] C9. Un aviso de jornada terminada que no se entregó vuelve a salir en la pasada siguiente del vigilante
+      <!-- test: npx vitest run tests/vigilante-jornada.test.ts -->
+- [ ] C10. El proyecto compila sin errores de tipos
+      <!-- test: npx tsc --build tsconfig.build.json -->
 
 ## Puntos
 
@@ -133,6 +150,24 @@ Sin publicar todavía.
     "action": "created",
     "actor": "cli",
     "details": "Ticket creado sin sobrescribir historial."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-002",
+    "date": "2026-10-07",
+    "at": "2026-10-08T01:21:02.590Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: intake -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-003",
+    "date": "2026-10-07",
+    "at": "2026-10-08T01:21:27.700Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: analyzed -> planned."
   }
 ]
 ```
