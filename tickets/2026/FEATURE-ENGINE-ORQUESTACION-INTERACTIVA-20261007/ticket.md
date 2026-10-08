@@ -214,6 +214,15 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:39:25.872Z",
+    "action": "gate-approved",
+    "actor": "cli",
+    "details": "Gate plan aprobado por Juan Andrade (recibo GR-20261008-FEATURE-ENGINE-ORQUESTACION-INTERACTIVA-20261007-plan-3, canal cli, decidida 2026-10-08T21:39:25.868Z): A"
   }
 ]
 ```
