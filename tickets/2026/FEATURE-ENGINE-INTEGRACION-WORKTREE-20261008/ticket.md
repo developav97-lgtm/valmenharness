@@ -4,7 +4,7 @@ id: FEATURE-ENGINE-INTEGRACION-WORKTREE-20261008
 title: Crear y quitar el worktree de un ticket con un comando
 type: FEATURE
 module: ENGINE
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -78,47 +78,47 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1. `nombresDeWorktree` deriva la carpeta `.claude/worktrees/ticket-<slug>` y la rama `valmen/ticket-<slug>` del identificador, sin tipo, módulo ni fecha
+- [x] C1. `nombresDeWorktree` deriva la carpeta `.claude/worktrees/ticket-<slug>` y la rama `valmen/ticket-<slug>` del identificador, sin tipo, módulo ni fecha
       <!-- test: npx vitest run tests/worktree-git.test.ts -->
-- [ ] C2. `nombresDeWorktree` rechaza un identificador con barras, `..` o fuera del formato de ticket
+- [x] C2. `nombresDeWorktree` rechaza un identificador con barras, `..` o fuera del formato de ticket
       <!-- test: npx vitest run tests/worktree-git.test.ts -->
-- [ ] C3. La lista cerrada de git de los worktrees rechaza las invocaciones que publican o reescriben historia (push, fetch, pull, reset, rebase, clean, tag, remote, --force, -D, --hard)
+- [x] C3. La lista cerrada de git de los worktrees rechaza las invocaciones que publican o reescriben historia (push, fetch, pull, reset, rebase, clean, tag, remote, --force, -D, --hard)
       <!-- test: npx vitest run tests/worktree-git.test.ts -->
-- [ ] C4. `create` deja el worktree `.claude/worktrees/ticket-<slug>` con la rama `valmen/ticket-<slug>` apuntando al mismo commit que `main`
+- [x] C4. `create` deja el worktree `.claude/worktrees/ticket-<slug>` con la rama `valmen/ticket-<slug>` apuntando al mismo commit que `main`
       <!-- test: npx vitest run tests/worktree-integracion.test.ts -->
-- [ ] C5. `create` clona `node_modules` de modo que los enlaces de `node_modules/@valmen` resuelven dentro del worktree
+- [x] C5. `create` clona `node_modules` de modo que los enlaces de `node_modules/@valmen` resuelven dentro del worktree
       <!-- test: npx vitest run tests/worktree-integracion.test.ts -->
-- [ ] C6. `create` se niega, sin dejar worktree ni rama, si el clon de `node_modules` no queda contenido en el worktree
+- [x] C6. `create` se niega, sin dejar worktree ni rama, si el clon de `node_modules` no queda contenido en el worktree
       <!-- test: npx vitest run tests/worktree-integracion.test.ts -->
-- [ ] C7. `create` compila en el worktree con la receta de build (`npx tsc --build tsconfig.build.json` seguido de `node scripts/copy-web.mjs`)
+- [x] C7. `create` compila en el worktree con la receta de build (`npx tsc --build tsconfig.build.json` seguido de `node scripts/copy-web.mjs`)
       <!-- test: npx vitest run tests/worktree-integracion.test.ts -->
-- [ ] C8. Si la compilación falla, `create` no deja worktree ni rama
+- [x] C8. Si la compilación falla, `create` no deja worktree ni rama
       <!-- test: npx vitest run tests/worktree-integracion.test.ts -->
-- [ ] C9. `create` se niega, sin tocarlos, si el worktree o la rama del ticket ya existen
+- [x] C9. `create` se niega, sin tocarlos, si el worktree o la rama del ticket ya existen
       <!-- test: npx vitest run tests/worktree-integracion.test.ts -->
-- [ ] C10. `create` se niega si el ticket no está registrado en `main`
+- [x] C10. `create` se niega si el ticket no está registrado en `main`
       <!-- test: npx vitest run tests/worktree-integracion.test.ts -->
-- [ ] C11. `create` reserva un cupo de la capacidad de la máquina para el ticket cuando el proyecto está declarado en ella
+- [x] C11. `create` reserva un cupo de la capacidad de la máquina para el ticket cuando el proyecto está declarado en ella
       <!-- test: npx vitest run tests/worktree-integracion.test.ts -->
-- [ ] C12. `create` se niega, sin dejar worktree ni rama, cuando la capacidad de la máquina no tiene cupo
+- [x] C12. `create` se niega, sin dejar worktree ni rama, cuando la capacidad de la máquina no tiene cupo
       <!-- test: npx vitest run tests/worktree-integracion.test.ts -->
-- [ ] C13. `create` y `remove` se niegan a correr desde un worktree enlazado y señalan el checkout principal
+- [x] C13. `create` y `remove` se niegan a correr desde un worktree enlazado y señalan el checkout principal
       <!-- test: npx vitest run tests/worktree-integracion.test.ts -->
-- [ ] C14. `remove` deja al ticket integrado sin worktree ni rama
+- [x] C14. `remove` deja al ticket integrado sin worktree ni rama
       <!-- test: npx vitest run tests/worktree-integracion.test.ts -->
-- [ ] C15. `remove` libera el cupo reservado para el ticket
+- [x] C15. `remove` libera el cupo reservado para el ticket
       <!-- test: npx vitest run tests/worktree-integracion.test.ts -->
-- [ ] C16. `remove` se niega, conservando el worktree y la rama, si la rama no está integrada en `main`
+- [x] C16. `remove` se niega, conservando el worktree y la rama, si la rama no está integrada en `main`
       <!-- test: npx vitest run tests/worktree-integracion.test.ts -->
-- [ ] C17. `remove` se niega, conservando el worktree y la rama, si el worktree tiene cambios sin commit
+- [x] C17. `remove` se niega, conservando el worktree y la rama, si el worktree tiene cambios sin commit
       <!-- test: npx vitest run tests/worktree-integracion.test.ts -->
-- [ ] C18. Los comandos git y de proceso que lanzan `create` y `remove` salen todos de las listas cerradas, sin push, fetch, reset ni banderas de fuerza
+- [x] C18. Los comandos git y de proceso que lanzan `create` y `remove` salen todos de las listas cerradas, sin push, fetch, reset ni banderas de fuerza
       <!-- test: npx vitest run tests/worktree-integracion.test.ts -->
-- [ ] C19. `valmen journey worktree create|remove` figura en la ayuda y toda bandera documentada con valor está en `VALUE_OPTIONS`
+- [x] C19. `valmen journey worktree create|remove` figura en la ayuda y toda bandera documentada con valor está en `VALUE_OPTIONS`
       <!-- test: npx vitest run tests/worktree-cli.test.ts tests/cli.test.ts -->
-- [ ] C20. `journey worktree` sin subcomando, con uno desconocido o sin `--id` sale con 2 y dice qué se admite
+- [x] C20. `journey worktree` sin subcomando, con uno desconocido o sin `--id` sale con 2 y dice qué se admite
       <!-- test: npx vitest run tests/worktree-cli.test.ts tests/cli.test.ts -->
-- [ ] C21. La comprobación de tipos pasa
+- [x] C21. La comprobación de tipos pasa
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
 
 ## Puntos
@@ -129,11 +129,23 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+- `packages/engine/src/worktree-git.ts` (nuevo): `nombresDeWorktree` (slug = identificador sin tipo, módulo ni fecha; con solo tipo-módulo-fecha usa el módulo), `motivoDeGitDeWorktree` y `ejecutarGitDeWorktree` (lista cerrada propia, sin tocar `OPERACIONES_PERMITIDAS` ni `BANDERAS_PROHIBIDAS`), `exigirCheckoutPrincipal` (git-dir igual a git-common-dir) y `motivoDeProcesoDeWorktree` / `ejecutarProcesoDeWorktree` (`cp -Rc|-R` de `node_modules`, `npx tsc --build tsconfig.build.json`, `node scripts/copy-web.mjs`). Reutiliza `EjecutorDeGit`; los git corren con los hooks apagados.
+- `packages/engine/src/worktree.ts` (nuevo): `crearWorktree` (checkout principal, ticket registrado en `main`, carpeta y rama libres, cupo `worktree` si el proyecto está declarado, `worktree add -b`, `cp -Rc` con caída a `cp -R`, verificación por `realpath` de `node_modules/@valmen`, build; cualquier fallo deshace en orden inverso) y `quitarWorktree` (checkout principal, rama ancestro de `main`, worktree limpio con `estadoDelArbolDeTrabajo`, `worktree remove` sin force, `branch -d`, libera la reserva por proyecto, ticket y attemptId `worktree`).
+- `packages/engine/src/index.ts`: dos exports. `packages/cli/src/worktree.ts` (nuevo): `journeyWorktreeCommand` con la tabla `SUBCOMANDOS_DE_WORKTREE` (`create`, `remove`; salida 2 por entrada inválida, 3 por rechazo). `packages/cli/src/main.ts`: import, rama `worktree` del despacho de `journey`, mensaje «journey admite» y 3 líneas de ayuda.
+- Pruebas: `tests/worktree-git.test.ts`, `tests/worktree-integracion.test.ts` (repositorio git de laboratorio real, `cp` real, build simulado), `tests/worktree-cli.test.ts` y el ayudante `tests/helpers/worktree-lab.ts`.
+- Decisiones menores sobre el plan: (1) `quitarWorktree` exige que el checkout principal esté en `main`, para que `branch -d` no deje la rama huérfana tras quitar el worktree; (2) `remove` rechaza una carpeta que existe pero git no registra como worktree; (3) sin `node_modules` en el principal, `create` se niega y deshace.
+- Criterio sin marcar: ninguno; los 21 se verificaron con los comandos declarados (no hizo falta la suite completa).
 
 ## Pruebas
 
-Contrato previsto, aún sin ejecutar. Directorio: raíz del repositorio (o el worktree del ticket). Requisitos: Node 24, git 2.38 o más, `dist` construido (`npm run build`). Comandos: `npx vitest run tests/worktree-git.test.ts tests/worktree-integracion.test.ts tests/worktree-cli.test.ts tests/cli.test.ts tests/integracion-autonoma.test.ts tests/machine-capacity.test.ts` (todo en verde) y `npx tsc --noEmit -p tsconfig.json` (sin salida). Validación manual en un clon de laboratorio: `node packages/cli/dist/main.js journey worktree create --id <ID>`, commit en la rama, integración a mano, `remove --id <ID>`.
+Directorio: raíz del repositorio (o el worktree del ticket). Requisitos: Node 24, git 2.38 o más, `dist` construido (`npm run build`). Los tests crean repositorios git de laboratorio en carpetas temporales: no tocan el repositorio real.
+
+Comandos:
+
+1. `npx vitest run tests/worktree-git.test.ts tests/worktree-integracion.test.ts tests/worktree-cli.test.ts tests/cli.test.ts tests/integracion-autonoma.test.ts tests/machine-capacity.test.ts`. Esperado: 6 archivos y 131 pruebas en verde (la última corrida completa dio 131 de 131).
+2. `npx tsc --noEmit -p tsconfig.json`. Esperado: sin salida. Si no ve los exports nuevos, correr antes `npx tsc --build tsconfig.build.json`.
+
+Validación manual en un clon de laboratorio (nunca en el checkout real): clonar el repositorio a una carpeta temporal, `npm ci && npm run build`, y desde ella `node packages/cli/dist/main.js journey worktree create --id <ID>` (esperado: carpeta `.claude/worktrees/ticket-<slug>`, rama `valmen/ticket-<slug>`, salida 0); hacer un commit en esa rama y integrarla a mano (`git merge --ff-only valmen/ticket-<slug>`); `journey worktree remove --id <ID>` (esperado: worktree y rama borrados, cupo liberado). Controles: `remove` antes de integrar y con un archivo sin commit salen con 3 y conservan todo.
 
 ## QA
 
@@ -162,7 +174,23 @@ Contrato previsto, aún sin ejecutar. Directorio: raíz del repositorio (o el wo
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-08",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Subagente de Claude Code dedicado solo a este ticket; la sesión no expone agregado de tokens",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:subagente-claude-code",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -280,6 +308,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:25:31.321Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:48:01.751Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:48:02.073Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
