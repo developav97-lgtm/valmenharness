@@ -378,7 +378,7 @@ Comandos:
                             Crea una feature en draft, en .valmen/features/.
   feature decompose <slug>  Propone el grafo de tickets con el modelo del rol
                             architect y escribe tickets.yaml. Pasa a decomposed.
-  feature materialize <slug> [--dry-run]
+  feature materialize <slug> [--dry-run] [--allow-external-links]
                             Escribe en el registro los tickets del grafo que falten,
                             en intake. Los que ya existen no se tocan.
   feature attach <slug> --ticket <ID> [--sprint S6 --goal "…"] [--depends-on A,B]
@@ -391,7 +391,9 @@ Comandos:
   feature asset add <slug> --file <ruta> --description <t> [--name <n>] [--origin-url <u>]
                             Anexa un archivo (diseño, captura, documento del cliente) a la
                             feature: lo copia a assets/ con su sha256 y lo anota en el
-                            manifiesto. Un enlace no se anexa: se trae una copia local.
+                            manifiesto. Un enlace no se anexa: se trae una copia local. Rechaza la
+                            fuente de un lienzo (.dc.html). Actualiza las referencias de
+                            diseño de los tickets que no empezaron la implementación.
   feature advance <slug> --to <estado> [--pendientes-del-po]
                             Mueve el estado de la feature por el camino más corto. Con
                             --to complete exige verify.md y todos los tickets cerrados;
@@ -412,6 +414,9 @@ Comandos:
                    [--visual] [--po-confirmation <palabras>]
                             QA y cierre: punto con --files, QA con el HEAD vigente. Un ticket
                             visual o con criterios del PO queda en awaiting_user_tests.
+  feature asset refresh <slug> [--dry-run]
+                            Vuelve a escribir "Referencias de diseño" en los tickets de la
+                            feature que no empezaron la implementación.
   feature asset list <slug> Lista los adjuntos y avisa de los enlaces externos sin copia.
       --dry-run             Muestra la descomposición sin escribirla.
       --model <id>          Sobrescribe el modelo del rol architect.

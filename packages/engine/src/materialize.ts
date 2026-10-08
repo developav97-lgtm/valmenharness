@@ -17,8 +17,10 @@
  *
  * Tres reglas que lo hacen seguro de correr dos veces:
  *
- * 1. **Un ticket que ya existe no se toca.** Se informa y se sigue. Volver a
- *    correrlo después de trabajar un rato no puede pisar lo trabajado.
+ * 1. **Un ticket que ya existe no se toca**, con una sola excepción: el bloque
+ *    `### Referencias de diseño`, que el motor escribe y refresca mientras el ticket
+ *    no empezó la implementación (`refreshDesignReferences`). Volver a correrlo
+ *    después de trabajar un rato no puede pisar lo trabajado.
  * 2. **Un grafo con huecos no se escribe.** Si hay requisitos sin ticket que los
  *    cubra, la descomposición todavía no está terminada y escribirla dejaría
  *    tickets que nacen con la cobertura a medias.
@@ -42,7 +44,8 @@ import {
 } from "@valmen/core";
 
 import { components, createTicket, ticketPathFor } from "./create.js";
-import { type RegistryPaths } from "./discovery.js";
+import { finalizeMutation, readAndValidate } from "./mutate.js";
+import { type RegistryPaths, findTicket } from "./discovery.js";
 import {
   assetsForRequirements,
   externalLinkWarnings,
@@ -65,8 +68,137 @@ export interface Materialization {
   readonly skipped: readonly string[];
   /** Cuántos requisitos cubre cada uno, para poder informarlo. */
   readonly coverage: Readonly<Record<string, readonly string[]>>;
-  /** Enlaces externos de la feature sin copia local; no bloquean. */
+  /** Enlaces externos sin copia local; solo llegan aquí con permiso explícito o en seco. */
   readonly warnings?: readonly string[];
+  /** Los tickets existentes cuyas referencias de diseño se actualizaron. */
+  readonly refreshed?: readonly string[];
+}
+
+/** Los estados en que un ticket todavía no empezó la implementación. */
+const ESTADOS_REFRESCABLES: ReadonlySet<string> = new Set([
+  "intake",
+  "analyzed",
+  "planned",
+  "blocked",
+]);
+
+/** Lo que dejó un refresco de referencias de diseño. */
+export interface DesignReferencesRefresh {
+  /** Tickets cuya sección se escribió (o se escribiría en seco). */
+  readonly updated: readonly string[];
+  /** Tickets elegibles que ya tenían exactamente esa sección. */
+  readonly unchanged: readonly string[];
+  /** Tickets que no se tocaron, con su estado. */
+  readonly skipped: readonly { readonly id: string; readonly state: string }[];
+}
+
+const ENCABEZADO_REFERENCIAS = /^### Referencias de diseño[ \t]*$/m;
+
+/** Reemplaza (o inserta) el bloque de referencias dentro de `## Solicitud original`. */
+function conReferencias(texto: string, bloque: string): string {
+  if (bloque === "") return texto;
+  const inicio = /^## Solicitud original[ \t]*$/m.exec(texto);
+  if (inicio === null) return texto;
+  const desdeSeccion = inicio.index + inicio[0].length;
+  const siguiente = /^## /m.exec(texto.slice(desdeSeccion));
+  const finSeccion = siguiente === null ? texto.length : desdeSeccion + siguiente.index;
+  const cuerpo = texto.slice(desdeSeccion, finSeccion);
+
+  const existente = ENCABEZADO_REFERENCIAS.exec(cuerpo);
+  if (existente !== null) {
+    const desde = desdeSeccion + existente.index;
+    const resto = texto.slice(desde + existente[0].length, finSeccion);
+    const fin = /^###? /m.exec(resto);
+    const hasta = fin === null ? finSeccion : desde + existente[0].length + fin.index;
+    return `${texto.slice(0, desde)}${bloque}\n\n${texto.slice(hasta)}`;
+  }
+  const supuestos = /^### Supuestos y decisiones pendientes/m.exec(cuerpo);
+  const punto = supuestos === null ? finSeccion : desdeSeccion + supuestos.index;
+  return `${texto.slice(0, punto).replace(/\s*$/, "")}\n\n${bloque}\n\n${texto.slice(punto)}`;
+}
+
+/**
+ * Actualiza `### Referencias de diseño` en los tickets ya escritos de una feature.
+ *
+ * Un adjunto anexado después de materializar no llega solo a los tickets: esto lo
+ * lleva, de forma determinista y sin que un agente edite a mano. Solo toca tickets
+ * que no empezaron la implementación (`intake`, `analyzed`, `planned`, `blocked`):
+ * un plan aprobado contra otras referencias cambiaría materialmente. Reemplaza solo
+ * el bloque que el motor genera, deja un evento `design-references-updated` y no
+ * escribe nada si el bloque ya es el que corresponde.
+ */
+export function refreshDesignReferences(
+  paths: RegistryPaths,
+  slug: string,
+  opciones: { readonly write?: boolean; readonly now?: (() => Date) | undefined } = {},
+): DesignReferencesRefresh {
+  const { tickets, coverage, requirements } = readDecomposition(paths, slug);
+  const updated: string[] = [];
+  const unchanged: string[] = [];
+  const skipped: { id: string; state: string }[] = [];
+  for (const ticket of tickets) {
+    if (!ticket.exists) continue;
+    const located = findTicket(paths, ticket.id);
+    if (located === undefined) continue;
+    const document = readAndValidate(paths, located);
+    const estado = String(document.fields.workflow_status);
+    if (!ESTADOS_REFRESCABLES.has(estado)) {
+      skipped.push({ id: ticket.id, state: estado });
+      continue;
+    }
+    const { texto, rutas } = referenciasDe(paths.root, slug, requirements, coverage.get(ticket.id) ?? []);
+    const nuevo = conReferencias(document.text, texto);
+    if (nuevo === document.text) {
+      unchanged.push(ticket.id);
+      continue;
+    }
+    updated.push(ticket.id);
+    if (opciones.write === false) continue;
+    finalizeMutation({
+      paths,
+      located,
+      document,
+      text: nuevo,
+      action: "design-references-updated",
+      details: `Referencias de diseño actualizadas: ${rutas.join(", ")}.`,
+      ...(opciones.now === undefined ? {} : { now: opciones.now }),
+    });
+  }
+  return { updated, unchanged, skipped };
+}
+
+/**
+ * El refresco que sigue a anexar un adjunto: `null` si la feature todavía no se
+ * descompuso (no hay tickets que actualizar) y el refresco en otro caso.
+ */
+export function refreshAfterAttach(
+  paths: RegistryPaths,
+  slug: string,
+): DesignReferencesRefresh | null {
+  if (!existsSync(decompositionPath(paths.root, slug))) return null;
+  return refreshDesignReferences(paths, slug);
+}
+
+/** El informe de un refresco, en texto. */
+export function renderDesignReferencesRefresh(
+  slug: string,
+  r: DesignReferencesRefresh,
+  opciones: { readonly dryRun?: boolean } = {},
+): string {
+  const lineas = [
+    opciones.dryRun === true
+      ? `Se actualizarían las referencias de diseño de ${r.updated.length} ticket(s) de ${slug}:`
+      : `Referencias de diseño actualizadas en ${r.updated.length} ticket(s) de ${slug}:`,
+    ...r.updated.map((id) => `  · ${id}`),
+  ];
+  if (r.unchanged.length > 0) lineas.push(`${r.unchanged.length} ya estaban al día.`);
+  if (r.skipped.length > 0) {
+    lineas.push(
+      `${r.skipped.length} no se tocaron porque ya empezaron la implementación:`,
+      ...r.skipped.map((t) => `  · ${t.id} (${t.state})`),
+    );
+  }
+  return `${lineas.join("\n")}\n`;
 }
 
 /** La ruta del `tickets.yaml` de una feature. */
@@ -319,24 +451,33 @@ function referenciasDe(
   slug: string,
   requisitos: readonly LocatedRequirement[],
   cubre: readonly string[],
-): string {
+): { texto: string; rutas: string[] } {
   const adjuntos = listFeatureAssets(root, slug);
-  if (adjuntos.length === 0) return "";
-  const fuentes = cubre
-    .map((id) => requisitos.find((r) => r.id === id)?.source)
-    .filter((f): f is string => f !== undefined);
-  const { assets, cited } = assetsForRequirements(root, adjuntos, fuentes);
+  if (adjuntos.length === 0) return { texto: "", rutas: [] };
+  const suyos = cubre
+    .map((id) => requisitos.find((r) => r.id === id))
+    .filter((r): r is LocatedRequirement => r !== undefined);
+  const { assets, level } = assetsForRequirements(root, adjuntos, suyos);
   const base = `.valmen/features/${slug}`;
-  return [
-    "### Referencias de diseño",
-    "",
-    cited
-      ? "Adjuntos que citan los requisitos de este ticket. Se construye y se valida contra el original, no contra el texto de la spec:"
-      : "Adjuntos de la feature (ningún requisito de este ticket cita uno en particular). Se construye y se valida contra el original, no contra el texto de la spec:",
-    ...assets.map(
-      (a) => `- \`${base}/${a.path}\` — ${a.description} (sha256 ${a.sha256.slice(0, 12)}…)`,
-    ),
-  ].join("\n");
+  const intro = {
+    requisito:
+      "Adjuntos que citan los requisitos de este ticket. Se construye y se valida contra el original, no contra el texto de la spec:",
+    archivo:
+      "Adjuntos que cita la spec del dominio de este ticket (ningún requisito suyo cita uno en particular). Se construye y se valida contra el original, no contra el texto de la spec:",
+    todos:
+      "Adjuntos de la feature (ningún requisito de este ticket cita uno en particular). Se construye y se valida contra el original, no contra el texto de la spec:",
+  }[level];
+  return {
+    texto: [
+      "### Referencias de diseño",
+      "",
+      intro,
+      ...assets.map(
+        (a) => `- \`${base}/${a.path}\` — ${a.description} (sha256 ${a.sha256.slice(0, 12)}…)`,
+      ),
+    ].join("\n"),
+    rutas: assets.map((a) => `${base}/${a.path}`),
+  };
 }
 
 /**
@@ -418,7 +559,12 @@ function escribirCriterios(ruta: string, criterios: string): boolean {
 export function materializeFeature(
   paths: RegistryPaths,
   slug: string,
-  opciones: { readonly write?: boolean; readonly now?: (() => Date) | undefined } = {},
+  opciones: {
+    readonly write?: boolean;
+    readonly now?: (() => Date) | undefined;
+    /** Crear los tickets aunque la feature cite enlaces externos sin copia local. */
+    readonly allowExternalLinks?: boolean;
+  } = {},
 ): Materialization {
   const { tickets, coverage, requirements, entries } = readDecomposition(paths, slug);
   const alcance: Alcance = {
@@ -426,6 +572,21 @@ export function materializeFeature(
     titles: new Map(tickets.map((t) => [t.id, t.title])),
   };
   const escribir = opciones.write !== false;
+
+  // Un enlace de diseño sin copia local no pasa en silencio: los agentes no lo pueden
+  // abrir y construirían las pantallas desde el texto. Se detiene antes de escribir
+  // el primero; `--dry-run` solo informa, y la bandera explícita deja seguir.
+  const avisos = externalLinkWarnings(paths.root, slug);
+  if (escribir && avisos.length > 0 && opciones.allowExternalLinks !== true) {
+    fail(
+      `La feature ${slug} cita ${avisos.length} enlace(s) externo(s) sin copia local y por eso ` +
+        "**no se creó ningún ticket**:\n" +
+        avisos.map((aviso) => `  · ${aviso}`).join("\n") +
+        "\nAnexá el archivo del diseño con «valmen feature asset add», o, si el enlace es solo " +
+        "bibliografía, materializá con --allow-external-links.",
+      EXIT_INVARIANT,
+    );
+  }
 
   // Se comprueba **todo** antes de escribir el primero: crear tres y fallar en el
   // cuarto deja el registro a medio hacer y el trabajo de deshacerlo a mano.
@@ -494,7 +655,7 @@ export function materializeFeature(
           requirements,
           coverage.get(ticket.id) ?? [],
           objetivos.get(ticket.sprint) ?? "",
-          referenciasDe(paths.root, slug, requirements, coverage.get(ticket.id) ?? []),
+          referenciasDe(paths.root, slug, requirements, coverage.get(ticket.id) ?? []).texto,
           alcance,
         ),
         ...(opciones.now === undefined ? {} : { now: opciones.now }),
@@ -510,11 +671,20 @@ export function materializeFeature(
   const porTicket: Record<string, readonly string[]> = {};
   for (const [id, suyos] of coverage) porTicket[id] = suyos;
 
+  // Los que ya existían reciben las referencias que les falten, si no empezaron.
+  const refreshed =
+    escribir && skipped.length > 0
+      ? refreshDesignReferences(paths, slug, {
+          ...(opciones.now === undefined ? {} : { now: opciones.now }),
+        }).updated
+      : [];
+
   return {
     created,
     skipped,
     coverage: porTicket,
-    warnings: externalLinkWarnings(paths.root, slug),
+    warnings: avisos,
+    refreshed,
   };
 }
 
@@ -557,6 +727,13 @@ export function renderMaterialization(
       "",
       `${resultado.skipped.length} ya estaban en el registro y no se tocaron:`,
       ...resultado.skipped.map((id) => `  · ${id}`),
+    );
+  }
+  if ((resultado.refreshed ?? []).length > 0) {
+    lineas.push(
+      "",
+      `Referencias de diseño actualizadas en ${(resultado.refreshed ?? []).length} de ellos:`,
+      ...(resultado.refreshed ?? []).map((id) => `  · ${id}`),
     );
   }
   if ((resultado.warnings ?? []).length > 0) {
