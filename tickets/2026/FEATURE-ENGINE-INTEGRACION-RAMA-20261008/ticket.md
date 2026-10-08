@@ -4,7 +4,7 @@ id: FEATURE-ENGINE-INTEGRACION-RAMA-20261008
 title: Integrar la rama de un worktree al checkout principal uniendo los registros append-only
 type: FEATURE
 module: ENGINE
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -80,61 +80,61 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1. Unir dos versiones de `.valmen/executions/events.jsonl` conserva cada evento de las dos por `eventId`, sin duplicar el que ya estaba
+- [x] C1. Unir dos versiones de `.valmen/executions/events.jsonl` conserva cada evento de las dos por `eventId`, sin duplicar el que ya estaba
       <!-- test: npx vitest run tests/worktree-registros.test.ts -->
-- [ ] C2. Tras unir `.valmen/executions/events.jsonl`, los cursores son consecutivos de 1 a N
+- [x] C2. Tras unir `.valmen/executions/events.jsonl`, los cursores son consecutivos de 1 a N
       <!-- test: npx vitest run tests/worktree-registros.test.ts -->
-- [ ] C3. Al unir `.valmen/executions/events.jsonl`, lo único que cambia respecto de las dos versiones es el cursor de los eventos entrantes
+- [x] C3. Al unir `.valmen/executions/events.jsonl`, lo único que cambia respecto de las dos versiones es el cursor de los eventos entrantes
       <!-- test: npx vitest run tests/worktree-registros.test.ts -->
-- [ ] C4. Un mismo `eventId` con contenido distinto en las dos versiones no se une y se informa como conflicto
+- [x] C4. Un mismo `eventId` con contenido distinto en las dos versiones no se une y se informa como conflicto
       <!-- test: npx vitest run tests/worktree-registros.test.ts -->
-- [ ] C5. Un registro donde una versión editó o borró una línea previa no se une y se informa como conflicto
+- [x] C5. Un registro donde una versión editó o borró una línea previa no se une y se informa como conflicto
       <!-- test: npx vitest run tests/worktree-registros.test.ts -->
-- [ ] C6. Los registros sin `eventId` (`.valmen/journeys/pasadas.jsonl`, `.valmen/receipts/<ID>.jsonl`) se unen por línea idéntica, sin duplicar
+- [x] C6. Los registros sin `eventId` (`.valmen/journeys/pasadas.jsonl`, `.valmen/receipts/<ID>.jsonl`) se unen por línea idéntica, sin duplicar
       <!-- test: npx vitest run tests/worktree-registros.test.ts -->
-- [ ] C7. Un registro que las dos versiones crearon sin base común se une tomando la base vacía
+- [x] C7. Un registro que las dos versiones crearon sin base común se une tomando la base vacía
       <!-- test: npx vitest run tests/worktree-registros.test.ts -->
-- [ ] C8. `esRegistroUnible` rechaza `ticket.md`, el código y cualquier ruta fuera de la lista cerrada de registros
+- [x] C8. `esRegistroUnible` rechaza `ticket.md`, el código y cualquier ruta fuera de la lista cerrada de registros
       <!-- test: npx vitest run tests/worktree-registros.test.ts -->
-- [ ] C9. `integrate` se niega, sin modificar nada, si el checkout principal está sucio
+- [x] C9. `integrate` se niega, sin modificar nada, si el checkout principal está sucio
       <!-- test: npx vitest run tests/worktree-integrar.test.ts -->
-- [ ] C10. `integrate` se niega si un archivo con cambios sin commit del checkout principal también lo cambia la rama
+- [x] C10. `integrate` se niega si un archivo con cambios sin commit del checkout principal también lo cambia la rama
       <!-- test: npx vitest run tests/worktree-integrar.test.ts -->
-- [ ] C11. `integrate` se niega si la rama cambia archivos que una jornada no commitea (credenciales o configuración del harness)
+- [x] C11. `integrate` se niega si la rama cambia archivos que una jornada no commitea (credenciales o configuración del harness)
       <!-- test: npx vitest run tests/worktree-integrar.test.ts -->
-- [ ] C12. `integrate` se niega si el worktree tiene cambios sin commit
+- [x] C12. `integrate` se niega si el worktree tiene cambios sin commit
       <!-- test: npx vitest run tests/worktree-integrar.test.ts -->
-- [ ] C13. `integrate` sobre una rama ya integrada responde «nada que integrar», sale con 0 y no modifica `main`
+- [x] C13. `integrate` sobre una rama ya integrada responde «nada que integrar», sale con 0 y no modifica `main`
       <!-- test: npx vitest run tests/worktree-integrar.test.ts -->
-- [ ] C14. `integrate` se niega si el checkout principal no está en `main`
+- [x] C14. `integrate` se niega si el checkout principal no está en `main`
       <!-- test: npx vitest run tests/worktree-integrar.test.ts -->
-- [ ] C15. `integrate` se niega a correr desde un worktree enlazado y señala el checkout principal
+- [x] C15. `integrate` se niega a correr desde un worktree enlazado y señala el checkout principal
       <!-- test: npx vitest run tests/worktree-integrar.test.ts -->
-- [ ] C16. `integrate` se niega si la rama o el worktree del ticket no existen
+- [x] C16. `integrate` se niega si la rama o el worktree del ticket no existen
       <!-- test: npx vitest run tests/worktree-integrar.test.ts -->
-- [ ] C17. `integrate` avanza `main` con `merge --ff-only` cuando `main` no se movió desde que nació la rama, sin commit de merge
+- [x] C17. `integrate` avanza `main` con `merge --ff-only` cuando `main` no se movió desde que nació la rama, sin commit de merge
       <!-- test: npx vitest run tests/worktree-integrar.test.ts -->
-- [ ] C18. Ante un conflicto fuera de los registros append-only, `integrate` no modifica `main`, lista los archivos en conflicto y sale con 3
+- [x] C18. Ante un conflicto fuera de los registros append-only, `integrate` no modifica `main`, lista los archivos en conflicto y sale con 3
       <!-- test: npx vitest run tests/worktree-integrar.test.ts -->
-- [ ] C19. `integrate` hace `merge --no-ff` cuando `main` avanzó, y el commit resultante tiene dos padres
+- [x] C19. `integrate` hace `merge --no-ff` cuando `main` avanzó, y el commit resultante tiene dos padres
       <!-- test: npx vitest run tests/worktree-integrar.test.ts -->
-- [ ] C20. En el merge, las dos versiones de `.valmen/executions/events.jsonl` quedan unidas por `eventId` con cursores consecutivos
+- [x] C20. En el merge, las dos versiones de `.valmen/executions/events.jsonl` quedan unidas por `eventId` con cursores consecutivos
       <!-- test: npx vitest run tests/worktree-integrar.test.ts -->
-- [ ] C21. Si la unión de un registro es imposible, `integrate` ejecuta `merge --abort`, deja `main` como estaba y sale con 3
+- [x] C21. Si la unión de un registro es imposible, `integrate` ejecuta `merge --abort`, deja `main` como estaba y sale con 3
       <!-- test: npx vitest run tests/worktree-integrar.test.ts -->
-- [ ] C22. `integrate` regenera `tickets/index.md` y el resultado coincide con el que produce `valmen index`
+- [x] C22. `integrate` regenera `tickets/index.md` y el resultado coincide con el que produce `valmen index`
       <!-- test: npx vitest run tests/worktree-integrar.test.ts -->
-- [ ] C23. `integrate` recompila el checkout principal con la receta de build tras integrar
+- [x] C23. `integrate` recompila el checkout principal con la receta de build tras integrar
       <!-- test: npx vitest run tests/worktree-integrar.test.ts -->
-- [ ] C24. Si la recompilación falla, `integrate` conserva la integración, sale con 3 y lo dice
+- [x] C24. Si la recompilación falla, `integrate` conserva la integración, sale con 3 y lo dice
       <!-- test: npx vitest run tests/worktree-integrar.test.ts -->
-- [ ] C25. `valmen journey worktree integrate` figura en la ayuda y toda bandera documentada con valor está en `VALUE_OPTIONS`
+- [x] C25. `valmen journey worktree integrate` figura en la ayuda y toda bandera documentada con valor está en `VALUE_OPTIONS`
       <!-- test: npx vitest run tests/worktree-cli.test.ts tests/cli.test.ts -->
-- [ ] C26. `journey worktree` con un subcomando desconocido o sin `--id` sale con 2 y el mensaje incluye `integrate` entre los admitidos
+- [x] C26. `journey worktree` con un subcomando desconocido o sin `--id` sale con 2 y el mensaje incluye `integrate` entre los admitidos
       <!-- test: npx vitest run tests/worktree-cli.test.ts tests/cli.test.ts -->
-- [ ] C27. Los comandos git y de proceso que lanza `integrate` salen todos de las listas cerradas, sin push, fetch, reset ni banderas de fuerza
+- [x] C27. Los comandos git y de proceso que lanza `integrate` salen todos de las listas cerradas, sin push, fetch, reset ni banderas de fuerza
       <!-- test: npx vitest run tests/worktree-integrar.test.ts -->
-- [ ] C28. La comprobación de tipos pasa
+- [x] C28. La comprobación de tipos pasa
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
 
 ## Puntos
@@ -145,11 +145,24 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+- `packages/engine/src/integration-rules.ts`: se exporta `motivoDeArchivoProhibido`; no se tocan `OPERACIONES_PERMITIDAS` ni `BANDERAS_PROHIBIDAS`.
+- `packages/engine/src/worktree-integracion-git.ts` (nuevo): `motivoDeGitDeIntegracion` y `ejecutarGitDeIntegracion`, lista cerrada que se suma a `motivoDeGitDeWorktree` (`show`, `diff --name-only -z`, `merge-base`, `merge-tree --write-tree --name-only --no-messages`, `merge --ff-only|--no-ff --no-commit|--abort`, `add --`, `commit -m`); rechaza antes de lanzar.
+- `packages/engine/src/worktree-registros.ts` (nuevo): `esRegistroUnible` (lista cerrada) y `unirRegistro` (base prefijo de ambas versiones, deduplica por `eventId` con la noción de `sameEvent`, renumera solo el cursor de los entrantes, línea idéntica para registros sin `eventId`).
+- `packages/engine/src/worktree-integrar.ts` (nuevo): `integrarWorktree` con las barreras del plan, avance directo o `merge --no-ff --no-commit` con `merge-tree` previo, unión de registros con `atomicWrite`, `merge --abort` ante unión imposible, índice regenerado con `renderIndex`, recompilación con `ejecutarProcesoDeWorktree`.
+- `packages/engine/src/index.ts`: exporta los tres módulos nuevos. `packages/cli/src/worktree.ts`: subcomando `integrate`. `packages/cli/src/main.ts`: solo la línea de ayuda; el mensaje «journey admite» no cambia porque lista `worktree`, y el de `journey worktree` sale de la tabla de subcomandos.
+- Pruebas nuevas: `tests/worktree-registros.test.ts`, `tests/worktree-integrar.test.ts` y casos de `integrate` en `tests/worktree-cli.test.ts` (ajustados los que enumeraban solo create y remove).
+- Limitación conocida (decisión para el PO): si la rama edita una línea previa de un registro y git la fusiona sin conflicto textual (porque `main` añadió líneas lejos de ella), `integrate` no lo detecta: la unión solo corre sobre los registros que git marca en conflicto.
 
 ## Pruebas
 
-Contrato previsto, aún sin ejecutar. Directorio: raíz del repositorio (o el worktree del ticket). Requisitos: Node 24, git 2.38 o más, `dist` construido (`npm run build`) y el ticket FEATURE-ENGINE-INTEGRACION-WORKTREE-20261008 integrado. Comandos: `npx vitest run tests/worktree-registros.test.ts tests/worktree-integrar.test.ts tests/worktree-cli.test.ts tests/cli.test.ts tests/reglas-integracion.test.ts tests/integracion-autonoma.test.ts` (todo en verde) y `npx tsc --noEmit -p tsconfig.json` (sin salida). Validación manual en un clon de laboratorio: `node packages/cli/dist/main.js journey worktree create --id <ID>`, commit en la rama, `integrate --id <ID>` (fusión, índice y recompilación).
+Directorio: raíz del repositorio (o del worktree del ticket). Requisitos: Node 24, git 2.38 o más, `dist` construido (`npm run build`) y el ticket FEATURE-ENGINE-INTEGRACION-WORKTREE-20261008 integrado.
+
+Comandos:
+
+1. `npx vitest run tests/worktree-registros.test.ts tests/worktree-integrar.test.ts tests/worktree-cli.test.ts tests/cli.test.ts tests/reglas-integracion.test.ts tests/integracion-autonoma.test.ts` — esperado: todos en verde (los repositorios son de laboratorio en carpetas temporales).
+2. `npx tsc --noEmit -p tsconfig.json` — esperado: sin salida.
+
+Validación manual (en un clon de laboratorio, NO en el checkout real): `node packages/cli/dist/main.js journey worktree create --id <ID>`, un commit en `.claude/worktrees/ticket-<slug>`, y `node packages/cli/dist/main.js journey worktree integrate --id <ID>` desde el checkout principal limpio y en `main`: debe integrar (avance directo o merge), regenerar el índice y recompilar. Con un cambio sin commit en el principal debe negarse con salida 3.
 
 ## QA
 
@@ -178,7 +191,23 @@ Contrato previsto, aún sin ejecutar. Directorio: raíz del repositorio (o el wo
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-08",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Subagente de Claude Code dedicado solo a este ticket; la sesión no expone agregado de tokens",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:subagente-sin-agregado",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -269,6 +298,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:58:46.562Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-08",
+    "at": "2026-10-08T16:14:02.547Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-10-08",
+    "at": "2026-10-08T16:14:02.845Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
