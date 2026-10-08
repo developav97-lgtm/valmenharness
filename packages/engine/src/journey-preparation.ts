@@ -19,7 +19,7 @@ import { type AutonomousStopReceipt, paradasActivas, recordAutonomousStop } from
 import { autonomousConfig, findTicket, type RegistryPaths } from "./discovery.js";
 import { recordExecutionActivity } from "./execution-activity.js";
 import { motivoDeTope } from "./journey-limits.js";
-import { registrarFase, resolverModeloDeFase } from "./journey-phases.js";
+import { registrarFase, resolverDespachoDeFase } from "./journey-phases.js";
 import { readJourneys } from "./journeys.js";
 import {
   claimMachineCapacity,
@@ -38,6 +38,7 @@ export type EstadoDePreparacion =
   | "decision-pendiente"
   | "ejecutor-fallo"
   | "verificacion-fallo"
+  | "no-autorizado"
   | "no-elegible";
 
 export interface ResultadoDePreparacion {
@@ -141,6 +142,16 @@ export function avisoDeDecision(ticketId: string, compuerta: string, resultado: 
 export function prepararTicket(request: PrepararTicketRequest): ResultadoDePreparacion {
   const inicio = Date.now();
   let resultado = prepararTicketInner(request);
+  if (resultado.estado === "no-autorizado") {
+    const parada = recordAutonomousStop(request.paths, {
+      ticketId: request.ticketId,
+      reason: "executor-unauthorized",
+      detail: resultado.detalle.replace(/\s+/g, " ").slice(0, 300),
+      workflowStatus: "intake",
+      now: request.ahora?.() ?? new Date(),
+    });
+    return { ...resultado, parada };
+  }
   // Un fallo del ejecutor o una verificación que no se cumple dejan una parada con su motivo
   // y el ticket no se vuelve a elegir solo (R-JORN-007).
   if (resultado.estado === "ejecutor-fallo" || resultado.estado === "verificacion-fallo") {
@@ -159,18 +170,18 @@ export function prepararTicket(request: PrepararTicketRequest): ResultadoDePrepa
     });
     resultado = { ...resultado, parada };
   }
-  // El registro por fase de una sesión que sí se lanzó (R-JORN-006); las no elegibles no lanzan nada.
-  if (resultado.estado !== "no-elegible" && resultado.estado !== "ejecutor-fallo") {
-    const politica = autonomousConfig(request.paths.root);
-    if (politica.executor !== null) {
-      const modelo = resolverModeloDeFase(request.paths.root, "analysis");
+  // El registro por fase de una sesión que sí se lanzó (R-JORN-006); las no elegibles y las
+  // detenidas por el despacho no lanzan nada.
+  if (resultado.estado !== "no-elegible" && resultado.estado !== "no-autorizado" && resultado.estado !== "ejecutor-fallo") {
+    const despacho = resolverDespachoDeFase(request.paths.root, "analysis");
+    if (despacho?.ok === true) {
       registrarFase(request.paths.root, {
         ticketId: request.ticketId,
         fase: "analysis",
-        ejecutor: politica.executor.id,
-        modelo: modelo?.model ?? politica.executor.model,
-        esfuerzo: modelo?.effort ?? politica.executor.effort,
-        origenDelModelo: modelo === null ? "política" : `${modelo.origen}: ${modelo.motivo}`,
+        ejecutor: despacho.ejecutor,
+        modelo: despacho.model,
+        esfuerzo: despacho.effort,
+        origenDelModelo: `${despacho.origen}: ${despacho.motivo}`,
         duracionMs: Date.now() - inicio,
         resultado: resultado.estado,
       });
@@ -194,21 +205,31 @@ function prepararTicketInner(request: PrepararTicketRequest): ResultadoDePrepara
   razones.push(...razonesDePolitica(ticket.fields, politica));
   if (razones.length > 0) return no(`El ticket ${ticketId} no es elegible para preparar: ${razones.join(", ")}.`);
 
-  // La preparación usa el modelo de la fase de análisis (barato donde repite); el de
-  // implementación es del despacho de ejecución. El origen del modelo queda en el registro.
-  const modelo = resolverModeloDeFase(paths.root, "analysis");
-  const executorDeFase =
-    modelo === null ? politica.executor : { ...politica.executor, model: modelo.model, effort: modelo.effort as typeof politica.executor.effort };
+  // R-PERF-004: la preparación se lanza con el ejecutor del proveedor del rol agent-analysis y
+  // su modelo; si ese ejecutor no está autorizado o el proveedor no es conocido, no se lanza nada.
+  const despacho = resolverDespachoDeFase(paths.root, "analysis");
+  if (despacho === null || !despacho.ok) {
+    return {
+      ticketId,
+      estado: "no-autorizado",
+      detalle: `El despacho de la fase analysis se detuvo: ${despacho === null ? "la autonomía no declara un ejecutor seguro" : despacho.motivo}.`,
+    };
+  }
+  const executorDeFase = {
+    id: despacho.ejecutor as typeof politica.executor.id,
+    model: despacho.model,
+    effort: despacho.effort as typeof politica.executor.effort,
+  };
   const comando = autonomousExecutorCommand(executorDeFase, paths.root, promptDePreparacion(ticketId));
   const inicio = Date.now();
   const registrar = (resultado: string): void => {
     registrarFase(paths.root, {
       ticketId,
       fase: "analysis",
-      ejecutor: politica.executor?.id ?? "",
+      ejecutor: executorDeFase.id,
       modelo: executorDeFase.model,
       esfuerzo: executorDeFase.effort,
-      origenDelModelo: modelo === null ? "política" : `${modelo.origen}: ${modelo.motivo}`,
+      origenDelModelo: `${despacho.origen}: ${despacho.motivo}`,
       duracionMs: Date.now() - inicio,
       resultado,
     });

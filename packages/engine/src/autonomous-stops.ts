@@ -21,6 +21,9 @@ export const AUTONOMOUS_STOP_REASONS = [
   "executor-failed",
   "executor-timeout",
   "verification-failed",
+  // El ejecutor de la fase no está autorizado o su proveedor no es un ejecutor conocido
+  // (R-PERF-004); no depende de `stop-on`.
+  "executor-unauthorized",
 ] as const;
 
 export type AutonomousStopReason = (typeof AUTONOMOUS_STOP_REASONS)[number];

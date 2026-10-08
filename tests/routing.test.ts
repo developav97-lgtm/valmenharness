@@ -41,6 +41,7 @@ import {
   readSeleccionDePerfil,
   renderPerfiles,
   rutasDelProyecto,
+  despachoDeFase,
   parseRouting,
   parseRoutingTolerante,
   renderRouting,
@@ -60,7 +61,7 @@ import {
   writeRouting,
 } from "../packages/server/src/routing.js";
 import { resetCatalogCache } from "../packages/server/src/routing.js";
-import { resolverModeloDeFase } from "../packages/engine/src/journey-phases.js";
+import { resolverDespachoDeFase, resolverModeloDeFase } from "../packages/engine/src/journey-phases.js";
 import { handleApi } from "../packages/server/src/server.js";
 import { writeFixtureTicket } from "./helpers/fixtures.js";
 
@@ -1246,5 +1247,38 @@ describe("R-PERF-007 modelos por fase para la sesión", () => {
     for (const e of ["approved", "in_progress", "changes_requested"]) expect(faseDelEstado(e), e).toBe("implementation");
     for (const e of ["awaiting_user_tests", "in_qa"]) expect(faseDelEstado(e), e).toBe("verification");
     for (const e of ["planned", "qa_approved", "closed", "blocked", "otro"]) expect(faseDelEstado(e), e).toBeNull();
+  });
+});
+
+describe("R-PERF-004 despacho de fase por proveedor", () => {
+  const politica = { id: "claude", model: "claude-sonnet-5-5", effort: "high" };
+  const rutas = (provider: string, model: string) =>
+    resolveRouting({ preset: "balanced", roles: { "agent-plan": { provider, model, effort: "medium" } } });
+
+  it("R-PERF-004 C5: un proveedor sin ejecutor declarado se rechaza con un motivo que nombra el proveedor", () => {
+    const d = despachoDeFase(rutas("openrouter", "x/y"), "plan", politica, ["claude", "codex", "opencode"]);
+    expect(d.ok).toBe(false);
+    if (!d.ok) expect(d.motivo).toContain("openrouter");
+  });
+
+  it("R-PERF-004 C6: el ejecutor sale del proveedor del perfil, no del nombre del modelo", () => {
+    // Un modelo que se llama como Claude pero lo sirve codex: manda el proveedor.
+    const d = despachoDeFase(rutas("codex", "claude-sonnet-5-5"), "plan", politica, ["claude", "codex"]);
+    expect(d).toMatchObject({ ok: true, ejecutor: "codex", model: "claude-sonnet-5-5", effort: "medium", origen: "rol" });
+    // Y un modelo con nombre de otro proveedor no autoriza nada: sin codex autorizado se rechaza.
+    const sin = despachoDeFase(rutas("codex", "claude-sonnet-5-5"), "plan", politica, ["claude"]);
+    expect(sin.ok).toBe(false);
+    if (!sin.ok) expect(sin.motivo).toContain("codex");
+  });
+
+  it("R-PERF-004 C5: un rol sin modelo conserva ejecutor y modelo de la política, pero el ejecutor debe estar autorizado", () => {
+    const vacias = resolveRouting({ preset: "balanced", roles: {} }).filter((r) => r.role !== "agent-plan");
+    expect(despachoDeFase(vacias, "plan", politica, ["claude"])).toMatchObject({ ok: true, ejecutor: "claude", origen: "politica" });
+    expect(despachoDeFase(vacias, "plan", politica, ["codex"]).ok).toBe(false);
+  });
+
+  it("R-PERF-004 C11: con la configuración actual del proyecto, la implementación se despacha a claude con claude-sonnet-5-5", () => {
+    const d = resolverDespachoDeFase(process.cwd(), "implementation");
+    expect(d).toMatchObject({ ok: true, ejecutor: "claude", model: "claude-sonnet-5-5" });
   });
 });
