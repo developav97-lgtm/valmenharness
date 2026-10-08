@@ -64,6 +64,13 @@ import {
 } from "@valmen/adapter";
 
 import {
+  type CodegraphIndexResult,
+  type CodegraphState,
+  codegraphIndexCommand,
+  probeCodegraph,
+  runCodegraphIndex,
+} from "./codegraph.js";
+import {
   type BudgetPolicy,
   aprobarPorCodigo,
   archivosDelDiff,
@@ -1074,10 +1081,112 @@ export function templateCommand(
   return error(`template no conoce el verbo "${verbo}".`, EXIT_SCHEMA);
 }
 
+/** El comando con el que el paquete de CodeGraph se instala; lo corre la persona, no el harness. */
+const CODEGRAPH_INSTALL_COMMAND = "npm install -g @colbymchenry/codegraph";
+
+/**
+ * La sección «CodeGraph» de `valmen adopt`: el estado y lo que corresponde
+ * ofrecer, sin ejecutar nada.
+ *
+ * Es pura: recibe el estado ya sondeado y, si la persona confirmó con
+ * `--codegraph` y no es una simulación, el resultado de indexar. CodeGraph es
+ * opcional, así que ninguna rama cambia el código de salida de `adopt`.
+ */
+function codegraphOfferLines(
+  estado: CodegraphState,
+  contexto: {
+    readonly root: string;
+    readonly confirmado: boolean;
+    readonly dryRun: boolean;
+    readonly resultado: CodegraphIndexResult | null;
+  },
+): string[] {
+  const { confirmado, dryRun, resultado } = contexto;
+  const comando = codegraphIndexCommand(contexto.root, estado);
+  const lines: string[] = ["", "CodeGraph (opcional)"];
+
+  switch (estado.estado) {
+    case "no-instalado":
+      lines.push(
+        "  estado            no instalado",
+        "  El harness no instala software global: instálelo usted con",
+        `    ${CODEGRAPH_INSTALL_COMMAND}`,
+        "  y después, para indexar este proyecto:",
+        "    valmen adopt --codegraph",
+      );
+      if (confirmado) {
+        lines.push("", "  Se pidió --codegraph, pero CodeGraph no está instalado: no se indexó nada.");
+      }
+      return lines;
+
+    case "al-dia":
+      lines.push(
+        "  estado            instalado, indexado y al día",
+        "  Nada que hacer: el índice está al día.",
+      );
+      if (confirmado) lines.push("  Se pidió --codegraph: no hubo nada que indexar.");
+      return lines;
+
+    case "ilegible":
+      lines.push(
+        `  estado            no se pudo leer (${estado.motivo})`,
+        "  Revise el estado a mano con `codegraph status`; mientras no se lea, no se indexa nada.",
+      );
+      if (confirmado) lines.push("", "  Se pidió --codegraph, pero sin saber el estado no se indexó nada.");
+      return lines;
+
+    case "sin-indice":
+    case "desactualizado": {
+      lines.push(
+        estado.estado === "sin-indice"
+          ? "  estado            instalado, sin índice"
+          : `  estado            instalado, índice desactualizado (${estado.added} nuevos, ${estado.modified} modificados, ${estado.removed} borrados)`,
+      );
+      if (!confirmado) {
+        lines.push(
+          `  Para ${estado.estado === "sin-indice" ? "indexar" : "actualizar el índice de"} este proyecto (ejecuta \`${comando}\`):`,
+          "    valmen adopt --codegraph",
+        );
+        return lines;
+      }
+      if (dryRun) {
+        lines.push(`  Se ejecutaría: ${comando}`, "  (simulación: no se lanzó nada)");
+        return lines;
+      }
+      if (resultado === null) return lines;
+      if (resultado.error === null) {
+        lines.push(
+          `  Indexado: ${resultado.comando}`,
+          "  Para registrar el servidor MCP de CodeGraph en los clientes del proyecto:",
+          "    valmen mcp --install",
+        );
+        return lines;
+      }
+      lines.push(
+        resultado.exitCode === null
+          ? `  Falló \`${resultado.comando}\`: ${resultado.error}`
+          : `  Falló \`${resultado.comando}\` con código ${resultado.exitCode}: ${resultado.error}`,
+        "  La adopción siguió: nada de lo escrito se deshizo. Revise con `codegraph status` y repita `valmen adopt --codegraph`.",
+      );
+      return lines;
+    }
+  }
+}
+
 export function adoptProject(
   root: string,
   projectName: string,
-  options: { dryRun?: boolean; home?: string | undefined; machineId?: string | undefined } = {},
+  options: {
+    dryRun?: boolean;
+    home?: string | undefined;
+    machineId?: string | undefined;
+    /** La confirmación de la persona (`--codegraph`): indexar el proyecto con CodeGraph. */
+    codegraph?: boolean;
+    /** El sondeo de CodeGraph; inyectable para no depender del binario de la máquina. */
+    probeCodegraph?: () => CodegraphState;
+    /** Quien indexa; inyectable para que las pruebas nunca lancen el binario real. */
+    runCodegraph?: (root: string, estado: CodegraphState) => CodegraphIndexResult | null;
+  } = {},
 ): CommandResult {
   const dryRun = options.dryRun === true;
 
@@ -1127,6 +1236,24 @@ export function adoptProject(
       EXIT_INVARIANT,
     );
   }
+
+  // La oferta de CodeGraph se arma al final de cada salida —ya adoptado, simulación
+  // y adopción nueva—, cuando lo demás ya está escrito: un proyecto ya montado
+  // también la recibe y puede confirmarla. Sin `--codegraph` solo se sondea
+  // (`codegraph status`, de solo lectura); indexar exige la bandera y que no sea una
+  // simulación, y ocurre una sola vez porque cada camino de salida llama esto una vez.
+  const seccionCodegraph = (): string[] => {
+    const estado = (options.probeCodegraph ?? (() => probeCodegraph(root)))();
+    const confirmado = options.codegraph === true;
+    // Solo `sin-indice` y `desactualizado` tienen algo que indexar: en los demás
+    // estados no se llama al ejecutor, así que no hay forma de lanzar nada.
+    const hayQueIndexar = codegraphIndexCommand(root, estado) !== null;
+    const resultado =
+      confirmado && !dryRun && hayQueIndexar
+        ? (options.runCodegraph ?? runCodegraphIndex)(root, estado)
+        : null;
+    return codegraphOfferLines(estado, { root, confirmado, dryRun, resultado });
+  };
 
   const lines: string[] = [
     dryRun ? "Adopción (simulación)" : "Adopción",
@@ -1256,6 +1383,7 @@ export function adoptProject(
         .split("\n")
         .slice(0, 12)
         .map((line) => `  ${line}`),
+      ...seccionCodegraph(),
     );
     return ok(lines.join("\n") + "\n");
   }
@@ -1267,6 +1395,7 @@ export function adoptProject(
       ...config.split("\n").map((line) => `  ${line}`),
       "",
       "  Ejecute sin --dry-run para aplicarlo.",
+      ...seccionCodegraph(),
     );
     return ok(lines.join("\n") + "\n");
   }
@@ -1307,6 +1436,8 @@ export function adoptProject(
         : "  reemplaza sin perder nada.",
     );
   }
+
+  lines.push(...seccionCodegraph());
 
   return ok(lines.join("\n") + "\n");
 }

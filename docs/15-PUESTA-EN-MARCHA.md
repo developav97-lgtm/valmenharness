@@ -69,6 +69,23 @@ trabajo de la persona que conoce el sistema, no del instalador.
 diagnostica y **dice el comando exacto**. Sale con código 2 si falta algo bloqueante, así que
 sirve en un guion de instalación.
 
+### CodeGraph (opcional)
+
+CodeGraph (`@colbymchenry/codegraph`) indexa el código del proyecto para que el agente lo
+consulte. No es requisito de nada: `valmen adopt` solo **ofrece** y dice en
+qué estado está (no instalado, sin índice, al día, desactualizado o ilegible). No instala ni indexa
+por su cuenta; cada paso lo autorizás vos:
+
+```bash
+npm install -g @colbymchenry/codegraph   # lo corrés vos: el harness no instala software global
+valmen adopt --codegraph                 # indexa: `codegraph init` la primera vez, `sync` si está desactualizado
+valmen mcp --install                     # registra el servidor MCP de CodeGraph (ver «Ruta MCP»)
+```
+
+`valmen adopt --codegraph` también sirve en un proyecto que ya está adoptado: indexa sin tocar
+`.valmen/config.yaml`. Con `--dry-run` dice qué ejecutaría y no lanza nada; si CodeGraph falla,
+lo informa con su código y la adopción no se deshace. Sin la bandera, `adopt` nunca indexa.
+
 ---
 
 ## 3. Elegir el proveedor y los modelos
@@ -348,8 +365,11 @@ indico otra.
    declaralo como herramienta ausente; no afirmes una conexión ficticia.
 8. Preguntame por separado si querés Hermes. No lo conectes, no actives notificaciones ni
    programes trabajo sin esa decisión explícita.
-9. Al final, volvé a correr `valmen doctor` y mostrame qué quedó y qué falta.
-10. No crees tickets, no escribas en el registro y no apruebes nada: eso también lo decide una
+9. Preguntame si querés CodeGraph. Sólo si lo autorizás, corré `valmen adopt --codegraph`; no
+   instales nada global sin que te lo diga: si no está instalado, mostrame el comando
+   (`npm install -g @colbymchenry/codegraph`) y esperá mi respuesta.
+10. Al final, volvé a correr `valmen doctor` y mostrame qué quedó y qué falta.
+11. No crees tickets, no escribas en el registro y no apruebes nada: eso también lo decide una
     persona, y es justamente lo que el harness protege.
 ```
 
