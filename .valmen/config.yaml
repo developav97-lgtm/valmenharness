@@ -81,7 +81,7 @@ autonomous:
       - auth
       - deploy
   limits:
-    max-concurrent: 1
+    max-concurrent: 3
     collision-policy: serialize
     # Sin tope diario real: cuántos tickets se hacen en una jornada lo fija el PO al armarla
     # (`valmen journey plan --max <n>`). El lector exige un número, y este no se alcanza.
