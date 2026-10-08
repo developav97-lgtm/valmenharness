@@ -119,7 +119,7 @@ Ninguno.
       <!-- test: npx vitest run tests/elegibilidad-aprobacion.test.ts -->
 - [x] C19. Sin autorización, la aprobación de una persona con `approve-plan` y la entrada a `approved` se comportan como antes
       <!-- test: npx vitest run tests/aprobacion-de-plan.test.ts -->
-- [x] C20. `valmen approve-by-authorization` imprime la autorización usada o las reglas que fallan
+- [ ] C20. `valmen approve-by-authorization` imprime la autorización usada o las reglas que fallan
       <!-- verify: manual -->
 - [x] C21. La comprobación de tipos del monorepo pasa
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
