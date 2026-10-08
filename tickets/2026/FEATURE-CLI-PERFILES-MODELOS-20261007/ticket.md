@@ -4,7 +4,7 @@ id: FEATURE-CLI-PERFILES-MODELOS-20261007
 title: Listar, mostrar y elegir perfiles por CLI y desde Hermes
 type: FEATURE
 module: CLI
-workflow_status: planned
+workflow_status: approved
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -66,7 +66,7 @@ Ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente de la aprobación explícita del PO tras la compuerta de plan.
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 - Alcance: el comando `valmen perfiles [list|show <id>|elegir <id>|quitar] [--cliente <ejecutor>]` en el CLI, el id y el alcance del perfil en la columna de origen de `valmen routing show`, y la herramienta MCP de solo lectura `ver_perfiles` para Hermes. Todo reutiliza funciones que ya existen (`listarPerfiles`, `readSeleccionDePerfil`, `fasesDeSesion`, `renderFases`, `elegirPerfil`); no se cambia cómo se resuelve ni cómo se guarda un perfil. Exclusiones: crear o editar perfiles por CLI, una herramienta MCP que elija perfil, Mission Control y la resolución del perfil.
 - Quién elige y qué autoridad tiene: elegir o quitar un perfil escribe la clave `seleccion` de `.valmen/profiles.yaml`, configuración del proyecto; lo hace una persona con `valmen perfiles elegir` (o desde Mission Control, como hoy). Ninguna herramienta MCP escribe ese archivo, así que ni Hermes ni un agente cambian el perfil por su cuenta: `ver_perfiles` devuelve el comando exacto para que la persona lo corra. El cambio solo acepta ids que ya existen y ejecutores de `EJECUTORES_CON_PERFIL`; no crea perfiles, no toca `.valmen/routing.yaml`, `.valmen/config.yaml`, credenciales ni hosts permitidos, y no amplía la autoridad de ninguna compuerta ni de ningún agente.
 - Pasos ordenados:
@@ -227,6 +227,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:52:13.535Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"La A (aprueba el plan de CLI-PERFILES-MODELOS: Hermes solo lee, elegir perfil es una acción de la persona por el CLI)\",\"planHash\":\"sha256:91540cd6c9ae78548790cec13a0db7ade6ef995888141f2a1b2949bf76811135\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:52:13.867Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:91540cd6c9ae78548790cec13a0db7ade6ef995888141f2a1b2949bf76811135."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:52:13.867Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
   }
 ]
 ```
