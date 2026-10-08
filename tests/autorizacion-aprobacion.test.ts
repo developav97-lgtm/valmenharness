@@ -21,7 +21,8 @@ import {
   registrarUsoDeCupoDeAprobacion,
   revocarAutorizacionDeAprobacion,
 } from "../packages/engine/src/index.js";
-import { TOOLS } from "../packages/mcp/src/tools.js";
+import { pathsFor } from "../packages/mcp/src/main.js";
+import { TOOLS, callTool } from "../packages/mcp/src/tools.js";
 
 const AHORA = new Date("2026-10-07T08:00:00.000Z");
 const FRASE = "Autorizo aprobar solos los planes de bajo riesgo de pos y de inventario";
@@ -143,6 +144,24 @@ describe("quién puede escribir el registro", () => {
     const lista = approvalAuthorizeCommand(root, "list", {}, { ahora: AHORA });
     expect(lista.stdout).toContain(FRASE);
     expect(approvalAuthorizeCommand(root, "otra", {}).exitCode).not.toBe(0);
+  });
+
+  it("C6. list muestra el comando de revocación junto a cada vigente y no junto a las revocadas", () => {
+    const vigente = crear();
+    const revocada = crear({ quote: FRASE + " (otra)" });
+    revocarAutorizacionDeAprobacion({ root, id: revocada.id, actor: "Juan Andrade", reason: "ya no", source: "cli", ahora: AHORA, env: {} });
+    const lista = approvalAuthorizeCommand(root, "list", {}, { ahora: AHORA }).stdout;
+    expect(lista).toContain(`revertir: valmen approval-authorize revoke --id ${vigente.id} --actor`);
+    expect(lista).not.toContain(`revoke --id ${revocada.id}`);
+  });
+
+  it("C7. la herramienta ver_autorizaciones_aprobacion muestra el comando de revocación de cada vigente", async () => {
+    const vigente = crear();
+    const revocada = crear({ quote: FRASE + " (otra)" });
+    revocarAutorizacionDeAprobacion({ root, id: revocada.id, actor: "Juan Andrade", reason: "ya no", source: "cli", ahora: AHORA, env: {} });
+    const r = await callTool({ paths: pathsFor(root), credentialsFile: undefined, now: () => AHORA }, "ver_autorizaciones_aprobacion", {});
+    expect(r.text).toContain(`revertir: valmen approval-authorize revoke --id ${vigente.id} --actor`);
+    expect(r.text).not.toContain(`revoke --id ${revocada.id}`);
   });
 
   it("no existe herramienta MCP que cree, amplíe o revoque: solo una de lectura", () => {

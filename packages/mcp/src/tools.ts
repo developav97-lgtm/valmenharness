@@ -112,6 +112,7 @@ import {
   createExecutionContract,
   armarJornada,
   leerAutorizaciones,
+  comandoDeRevocacionDeAprobacion,
   leerAutorizacionesDeAprobacion,
   hermesSendChannel,
   readJourneyRoadmap,
@@ -2536,7 +2537,13 @@ async function ejecutarHerramienta(
         return bien(
           todas.length === 0
             ? "No hay autorizaciones de aprobación automática."
-            : todas.map((a) => `${a.id} · ${a.estado} · ${a.types.join(",")} · ${a.modules.join(",")} · modo ${a.mode} · ${a.actor}: «${a.quote}»`).join("\n"),
+            : todas
+                .map(
+                  (a) =>
+                    `${a.id} · ${a.estado} · ${a.types.join(",")} · ${a.modules.join(",")} · modo ${a.mode} · ${a.actor}: «${a.quote}»` +
+                    (a.estado === "vigente" ? `\n    revertir: ${comandoDeRevocacionDeAprobacion(a.id)}` : ""),
+                )
+                .join("\n"),
         );
       }
       case "armar_jornada": {

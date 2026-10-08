@@ -12,7 +12,7 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { approvalEligibilityCommand, approveByAuthorizationCommand } from "../packages/cli/src/commands.js";
+import { approvalAuthorizationApprovalsCommand, approvalEligibilityCommand, approveByAuthorizationCommand } from "../packages/cli/src/commands.js";
 import { USAGE, parseArgs } from "../packages/cli/src/main.js";
 import {
   DEFAULT_POLICY,
@@ -28,6 +28,8 @@ import {
   approvalAuthorizationsPath,
   approvalQuotaUsesPath,
   aprobarPorAutorizacion,
+  contarAprobacionesDelDia,
+  listarAprobacionesAutomaticas,
   appendEvent,
   hashDelPlan,
   aprobacionDePlanVigente,
@@ -957,6 +959,96 @@ describe("aprobar por autorización", () => {
     expect(approveByAuthorizationCommand(paths(), { stage: "plan" }).exitCode).toBe(2);
     expect(USAGE).toContain("approve-by-authorization --id <ID> --stage analysis|plan");
     expect(parseArgs(["approve-by-authorization", "--id", ID, "--stage", "plan"]).flags).toEqual({ id: ID, stage: "plan" });
+  });
+
+  describe("R-APRO-007. las aprobaciones automáticas son visibles y reversibles", () => {
+    const humana = (id: string): void =>
+      appendEvent(
+        paths(),
+        id,
+        "plan-approved",
+        JSON.stringify({ actor: "Juan Andrade", source: "cli", quote: "apruebo", planHash: hashDelPlan(doc(id)) }),
+        () => AHORA,
+      );
+
+    function conUnaAutomatica() {
+      planificado();
+      guardarVigente("plan", APPROVE);
+      guardarVigente("analysis", APPROVE);
+      const a = autorizar({ dailyQuota: 3 });
+      const res = aprobar();
+      return { a, recibo: res.receiptId };
+    }
+
+    it("C1. lista la aprobación con ticket, etapa, autorización, recibo y modo", () => {
+      const { a, recibo } = conUnaAutomatica();
+      const { aprobaciones, omitidos } = listarAprobacionesAutomaticas(paths(), { ahora: AHORA });
+      expect(omitidos).toEqual([]);
+      expect(aprobaciones).toHaveLength(1);
+      expect(aprobaciones[0]).toMatchObject({
+        ticket: ID,
+        etapa: "plan",
+        autorizacion: a.id,
+        hash: a.hash,
+        recibo,
+        modo: "on-approve",
+        estado: "vigente",
+      });
+    });
+
+    it("C2. una aprobación de plan registrada por una persona no se lista, y el parte la cuenta como humana", () => {
+      conUnaAutomatica();
+      planificado({ tipo: "FEATURE" });
+      humana(`FEATURE-${SUFIJO}`);
+      const { aprobaciones } = listarAprobacionesAutomaticas(paths(), { ahora: AHORA });
+      expect(aprobaciones.map((x) => x.ticket)).toEqual([ID]);
+      expect(contarAprobacionesDelDia(paths(), "2026-10-07")).toEqual({ automaticas: 1, humanas: 1 });
+      expect(contarAprobacionesDelDia(paths(), "2026-10-06")).toEqual({ automaticas: 0, humanas: 0 });
+    });
+
+    it("C3. tras revocar, la aprobación sigue listada con su atribución y el estado revocada", () => {
+      const { a } = conUnaAutomatica();
+      revocarAutorizacionDeAprobacion({ root, id: a.id, actor: "Juan Andrade", reason: "ya no", source: "cli", ahora: new Date(AHORA.getTime() + 1000), env: {} });
+      const { aprobaciones } = listarAprobacionesAutomaticas(paths(), { ahora: new Date(AHORA.getTime() + 2000) });
+      expect(aprobaciones).toHaveLength(1);
+      expect(aprobaciones[0]).toMatchObject({ autorizacion: a.id, hash: a.hash, estado: "revocada" });
+    });
+
+    it("C4. tras revocar, aprobarPorAutorizacion rechaza una aprobación posterior con ella", () => {
+      const { a } = conUnaAutomatica();
+      // Control: con la autorización vigente, la elegibilidad de la etapa analysis la cita.
+      expect(evaluar({ etapa: "analysis" }).autorizacion?.id).toBe(a.id);
+      revocarAutorizacionDeAprobacion({ root, id: a.id, actor: "Juan Andrade", reason: "ya no", source: "cli", ahora: new Date(AHORA.getTime() + 1000), env: {} });
+      const despues = new Date(AHORA.getTime() + 2000);
+      const usosAntes = usos();
+      expect(() => aprobarPorAutorizacion({ paths: paths(), ticketId: ID, etapa: "analysis", ahora: despues, env: {} })).toThrow(/autorizaci/i);
+      expect(usos()).toBe(usosAntes);
+      expect(eventos(ID, "analysis-approved")).toHaveLength(0);
+    });
+
+    it("C5. approval-authorize approvals imprime una línea por aprobación con autorización, recibo y modo", () => {
+      const { a, recibo } = conUnaAutomatica();
+      const r = approvalAuthorizationApprovalsCommand(paths());
+      expect(r.exitCode).toBe(0);
+      const lineas = r.stdout.trim().split("\n");
+      expect(lineas).toHaveLength(1);
+      expect(lineas[0]).toContain(ID);
+      expect(lineas[0]).toContain(a.id);
+      expect(lineas[0]).toContain(recibo);
+      expect(lineas[0]).toContain("modo on-approve");
+      expect(USAGE).toContain("approval-authorize approvals");
+    });
+
+    it("C10. un ticket ilegible no impide listar las demás y se dice cuántos se omitieron", () => {
+      conUnaAutomatica();
+      const roto = join(root, "tickets", "2026", "BUGFIX-ROTO-20261007");
+      mkdirSync(roto, { recursive: true });
+      writeFileSync(join(roto, "ticket.md"), "---\nschema_version: 2\n---\n## Eventos\n\n```json\n{no es json\n```\n", "utf8");
+      const { aprobaciones, omitidos } = listarAprobacionesAutomaticas(paths(), { ahora: AHORA });
+      expect(aprobaciones).toHaveLength(1);
+      expect(omitidos).toEqual(["BUGFIX-ROTO-20261007"]);
+      expect(approvalAuthorizationApprovalsCommand(paths()).stdout).toContain("Se omitieron 1 ticket(s)");
+    });
   });
 });
 
