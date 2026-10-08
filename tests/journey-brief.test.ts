@@ -187,4 +187,9 @@ describe("brief de subagente", () => {
       armarBriefDeSubagente({ project: entorno.project(), ticketId: "FEATURE-JOURNEY-FANTASMA-20261008" }),
     ).toThrow(/FEATURE-JOURNEY-FANTASMA-20261008/);
   });
+
+  it("R-PERF-007 C15: el brief no lleva el bloque de delegación", () => {
+    const { texto } = brief("approved", { cliente: "claude" });
+    expect(texto).not.toContain("Delegación de la fase");
+  });
 });

@@ -1780,6 +1780,20 @@ describe("R-PERF-007 reanudar_ticket con el cliente de la sesión", () => {
     expect(resultado.text).toContain("Modelos por fase (cliente: claude)");
   });
 
+  it("R-PERF-007 C12: reanudar con cliente devuelve la delegación a subagente", async () => {
+    mkdirSync(join(lab, ".valmen"), { recursive: true });
+    writeFileSync(join(lab, ".valmen", "profiles.yaml"), "seleccion:\n  proyecto: claude-code-completo\n\nperfiles: {}\n");
+    writeFixtureTicket(lab, { id: ID, workflowStatus: "analyzed" });
+    const resultado = await callTool(contexto, "reanudar_ticket", { id: ID, cliente: "claude" });
+    expect(resultado.isError).toBe(false);
+    expect(resultado.data?.["delegacion"]).toMatchObject({ modo: "subagente", fase: "plan", alias: "opus" });
+  });
+
+  it("R-PERF-007 C13: el esquema de salida declara delegacion", () => {
+    const propiedades = herramienta()?.outputSchema?.["properties"] as Record<string, unknown>;
+    expect(propiedades).toHaveProperty("delegacion");
+  });
+
   it("R-PERF-007 esquema de salida", () => {
     const propiedades = herramienta()?.outputSchema?.["properties"] as Record<string, unknown>;
     expect(propiedades).toHaveProperty("fases");

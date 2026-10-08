@@ -4,7 +4,7 @@ id: FEATURE-ENGINE-ORQUESTACION-INTERACTIVA-20261007
 title: Delegar cada fase a un subagente con el modelo del perfil sin cambiar el modelo de la sesión anfitriona
 type: FEATURE
 module: ENGINE
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -99,41 +99,41 @@ Memoria consultada (`buscar_memoria` «subagente modelo del perfil por fase sesi
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1 (R-PERF-007): con cliente `claude`, `claude-code-completo` y el ticket en `analyzed`, `delegacionDeFase` devuelve `modo: "subagente"` con `fase: "plan"` y `alias: "opus"`
+- [x] C1 (R-PERF-007): con cliente `claude`, `claude-code-completo` y el ticket en `analyzed`, `delegacionDeFase` devuelve `modo: "subagente"` con `fase: "plan"` y `alias: "opus"`
       <!-- test: npx vitest run tests/next-step.test.ts -t "R-PERF-007 C1:" -->
-- [ ] C2 (R-PERF-007): las instrucciones de delegación citan `valmen journey brief --id <ID> --cliente claude` como contexto del subagente
+- [x] C2 (R-PERF-007): las instrucciones de delegación citan `valmen journey brief --id <ID> --cliente claude` como contexto del subagente
       <!-- test: npx vitest run tests/next-step.test.ts -t "R-PERF-007 C2:" -->
-- [ ] C3 (R-PERF-007): las instrucciones de delegación dicen que la sesión no cambia su modelo
+- [x] C3 (R-PERF-007): las instrucciones de delegación dicen que la sesión no cambia su modelo
       <!-- test: npx vitest run tests/next-step.test.ts -t "R-PERF-007 C3:" -->
-- [ ] C4 (R-PERF-007): las instrucciones de delegación crean el worktree con `valmen journey worktree create` antes de lanzar el subagente
+- [x] C4 (R-PERF-007): las instrucciones de delegación crean el worktree con `valmen journey worktree create` antes de lanzar el subagente
       <!-- test: npx vitest run tests/next-step.test.ts -t "R-PERF-007 C4:" -->
-- [ ] C5 (R-PERF-007): las instrucciones de delegación mandan integrar con `valmen journey worktree integrate` y volver a llamar `resume` al recibir el informe
+- [x] C5 (R-PERF-007): las instrucciones de delegación mandan integrar con `valmen journey worktree integrate` y volver a llamar `resume` al recibir el informe
       <!-- test: npx vitest run tests/next-step.test.ts -t "R-PERF-007 C5:" -->
-- [ ] C6 (R-PERF-007): con cliente `codex`, `delegacionDeFase` devuelve `modo: "sesion"` con un motivo que dice que la fase se hace con el modelo de la sesión
+- [x] C6 (R-PERF-007): con cliente `codex`, `delegacionDeFase` devuelve `modo: "sesion"` con un motivo que dice que la fase se hace con el modelo de la sesión
       <!-- test: npx vitest run tests/next-step.test.ts -t "R-PERF-007 C6:" -->
-- [ ] C7 (R-PERF-007): con cliente `claude` y un perfil mixto que asigna la implementación a `codex`, `delegacionDeFase` de un ticket en `approved` devuelve `modo: "sesion"`
+- [x] C7 (R-PERF-007): con cliente `claude` y un perfil mixto que asigna la implementación a `codex`, `delegacionDeFase` de un ticket en `approved` devuelve `modo: "sesion"`
       <!-- test: npx vitest run tests/next-step.test.ts -t "R-PERF-007 C7:" -->
-- [ ] C8 (R-PERF-007): con el ticket en `planned`, `delegacionDeFase` devuelve `modo: "sesion"` y `fase: null`
+- [x] C8 (R-PERF-007): con el ticket en `planned`, `delegacionDeFase` devuelve `modo: "sesion"` y `fase: null`
       <!-- test: npx vitest run tests/next-step.test.ts -t "R-PERF-007 C8:" -->
-- [ ] C9 (R-PERF-007): `resumeTicket` con cliente `claude` imprime «Delegación de la fase plan:» entre el siguiente paso y «Plan vigente»
+- [x] C9 (R-PERF-007): `resumeTicket` con cliente `claude` imprime «Delegación de la fase plan:» entre el siguiente paso y «Plan vigente»
       <!-- test: npx vitest run tests/next-step.test.ts -t "R-PERF-007 C9:" -->
-- [ ] C10 (R-PERF-007): `resumeTicket` sin cliente imprime el bloque de delegación con el motivo de cliente no declarado
+- [x] C10 (R-PERF-007): `resumeTicket` sin cliente imprime el bloque de delegación con el motivo de cliente no declarado
       <!-- test: npx vitest run tests/next-step.test.ts -t "R-PERF-007 C10:" -->
-- [ ] C11 (R-PERF-007): `resumeTicket` devuelve `data.delegacion` con el mismo `modo` que imprime
+- [x] C11 (R-PERF-007): `resumeTicket` devuelve `data.delegacion` con el mismo `modo` que imprime
       <!-- test: npx vitest run tests/next-step.test.ts -t "R-PERF-007 C11:" -->
-- [ ] C12 (R-PERF-007): `reanudar_ticket` con `cliente: "claude"` devuelve `delegacion` con `modo: "subagente"` en un ticket en `analyzed`
+- [x] C12 (R-PERF-007): `reanudar_ticket` con `cliente: "claude"` devuelve `delegacion` con `modo: "subagente"` en un ticket en `analyzed`
       <!-- test: npx vitest run tests/mcp-server.test.ts -t "R-PERF-007 C12:" -->
-- [ ] C13 (R-PERF-007): el `outputSchema` de `reanudar_ticket` declara la propiedad `delegacion`
+- [x] C13 (R-PERF-007): el `outputSchema` de `reanudar_ticket` declara la propiedad `delegacion`
       <!-- test: npx vitest run tests/mcp-server.test.ts -t "R-PERF-007 C13:" -->
-- [ ] C14 (R-PERF-007): `resumeTicket` con cliente deja idénticos los bytes de `profiles.yaml` y del ticket
+- [x] C14 (R-PERF-007): `resumeTicket` con cliente deja idénticos los bytes de `profiles.yaml` y del ticket
       <!-- test: npx vitest run tests/next-step.test.ts -t "R-PERF-007 C14:" -->
-- [ ] C15 (R-PERF-007): el brief de `journey brief` no contiene el bloque «Delegación de la fase»
+- [x] C15 (R-PERF-007): el brief de `journey brief` no contiene el bloque «Delegación de la fase»
       <!-- test: npx vitest run tests/journey-brief.test.ts -t "R-PERF-007 C15:" -->
-- [ ] C16 (R-PERF-007): el monorepo compila sin errores de tipos
+- [x] C16 (R-PERF-007): el monorepo compila sin errores de tipos
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
 - [ ] C17 (R-PERF-007): en una sesión de Claude Code abierta con Sonnet, `valmen resume --id <ticket en analyzed> --cliente claude` lleva a lanzar el plan en un subagente `opus` sin cambiar el modelo de la sesión
       <!-- verify: manual -->
-- [ ] C18 (R-PERF-007): con cliente `claude` y un perfil mixto que asigna la implementación a `codex`, el `motivo` que `delegacionDeFase` devuelve para un ticket en `approved` contiene «despacha por proveedor»
+- [x] C18 (R-PERF-007): con cliente `claude` y un perfil mixto que asigna la implementación a `codex`, el `motivo` que `delegacionDeFase` devuelve para un ticket en `approved` contiene «despacha por proveedor»
       <!-- test: npx vitest run tests/next-step.test.ts -t "R-PERF-007 C18:" -->
 
 ## Puntos
@@ -144,11 +144,18 @@ Memoria consultada (`buscar_memoria` «subagente modelo del perfil por fase sesi
 
 ## Implementación
 
-Pendiente.
+- `packages/engine/src/resume.ts`: `delegacionDeFase`, tipo `DelegacionDeFase`, `renderDelegacion`; `ResumeContext.delegacion`; el bloque «Delegación de la fase» se imprime tras el siguiente paso y antes del plan vigente.
+- `packages/mcp/src/tools.ts`: `reanudar_ticket` documenta la delegación y su `outputSchema` suma `delegacion`.
+- Pruebas: `tests/next-step.test.ts` (C1-C11, C14, C18), `tests/mcp-server.test.ts` (C12, C13), `tests/journey-brief.test.ts` (C15).
+- Limitación: C17 (sesión real de Claude Code con Sonnet) no se verificó; queda para el PO.
 
 ## Pruebas
 
-Pendiente de ejecución.
+- Directorio: raíz del repositorio (o del worktree `.claude/worktrees/ticket-orquestacion-interactiva`).
+- Comandos: `npx vitest run tests/next-step.test.ts tests/mcp-server.test.ts tests/journey-brief.test.ts tests/mcp-resumen-siguiente-paso.test.ts` y `npx tsc --noEmit -p tsconfig.json`.
+- Resultado esperado: 163 pruebas en verde y cero errores de tipos (resultado obtenido en la implementación).
+- Validación manual (C17): tras `npm run build`, en una sesión de Claude Code abierta con Sonnet, `node packages/cli/dist/main.js resume --id <ticket en analyzed> --cliente claude` debe mostrar «Delegación de la fase plan:» con el subagente `opus`, sin cambiar el modelo de la sesión.
+- Ambiente: Node 24, sin red ni credenciales.
 
 ## QA
 
@@ -177,7 +184,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-08",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Sesión de subagente sonnet de implementación; no expone números de tokens.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:subagente-sonnet-implementacion-20261008",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -250,6 +273,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:41:17.075Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:43:29.576Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:43:33.608Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
   }
 ]
 ```

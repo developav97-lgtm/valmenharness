@@ -816,7 +816,9 @@ const DEFINICIONES: readonly ToolDefinition[] = [
       "detenerse a esperar una decisión humana. Después de hacer ese paso, vuelve a " +
       "llamarla para el siguiente. Por defecto entrega un resumen compacto y determinista; " +
       "usa `modo: completo` para leer el ticket entero. Sin `id`, si hay más de un ticket " +
-      "activo **no elige**: devuelve la lista y hay que decidir cuál.",
+      "activo **no elige**: devuelve la lista y hay que decidir cuál. Con `cliente`, el " +
+      "contexto dice si la fase se delega a un subagente con el modelo del perfil y " +
+      "cómo; la sesión no cambia su modelo.",
     inputSchema: conRoot({
       properties: {
         id: { type: "string", description: "Identificador del ticket." },
@@ -887,6 +889,7 @@ const DEFINICIONES: readonly ToolDefinition[] = [
         readInstruction: { type: "string" },
         provenance: { anyOf: [{ type: "object" }, { type: "null" }] },
         fases: { type: "object" },
+        delegacion: { type: "object" },
         documentoCompleto: { type: "string" },
       },
       required: [
