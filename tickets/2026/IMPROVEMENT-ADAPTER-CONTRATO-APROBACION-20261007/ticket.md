@@ -4,7 +4,7 @@ id: IMPROVEMENT-ADAPTER-CONTRATO-APROBACION-20261007
 title: Declarar en AGENTS.md la aprobación autónoma y su autorización como acción humana
 type: IMPROVEMENT
 module: ADAPTER
-workflow_status: planned
+workflow_status: approved
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -13,7 +13,7 @@ migration_impact: false
 docker_impact: false
 risk_level: normal
 created: 2026-10-07
-updated: 2026-10-07
+updated: 2026-10-08
 related_ticket: null
 target_release: null
 released_in: null
@@ -63,7 +63,7 @@ Ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación: compuerta `plan` con el evaluador `cascade`; la aprobación del plan queda pendiente de una persona y no se registra en esta sesión.
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 - Alcance: dos adiciones de texto a `WORKFLOW_TEMPLATE` en `packages/adapter/src/templates.ts`, el tope de tamaño de las plantillas y sus pruebas. Exclusiones: el motor de aprobación automática (S2), el agente revisor (S3), la jornada (S4), las skills `planificacion` y `corrida-delegada`, y ejecutar `valmen sync` en los proyectos.
 - Texto propuesto (medido: 326 B + 96 B; las plantillas pasan de 9 744 B a 10 166 B):
   - Párrafo nuevo bajo «### Gates», después de `packages/adapter/src/templates.ts:67`: «Un análisis o un plan se aprueba sin una persona solo bajo una **autorización de aprobación** vigente que creó una persona (`valmen approval-authorize`): la aprobación se atribuye a la autorización, nunca al agente. Sin ella aprueba una persona; SECURITY, un `block` y un despliegue a producción, siempre una persona.»
@@ -178,6 +178,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-08",
+    "at": "2026-10-08T22:14:33.342Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"y sí apruebo el plan CONTRATO-APROBACION (La B de cierre: prueba y cierra lo que puedas con comandos)\",\"planHash\":\"sha256:e34f30771d1da8b2871426aff89d6e9c4d3cc253318184ca85cb9404c9ecfdb0\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-08",
+    "at": "2026-10-08T22:14:33.651Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:e34f30771d1da8b2871426aff89d6e9c4d3cc253318184ca85cb9404c9ecfdb0."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-08",
+    "at": "2026-10-08T22:14:33.651Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
   }
 ]
 ```
