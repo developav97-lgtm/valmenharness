@@ -4,7 +4,7 @@ id: IMPROVEMENT-ADAPTER-CONTRATO-CORRIDA-20261008
 title: Declarar en AGENTS.md cómo se pide y se orquesta una corrida
 type: IMPROVEMENT
 module: ADAPTER
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -71,29 +71,29 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1: `WORKFLOW_TEMPLATE` declara que la corrida se pide en la sesión con 3 a la vez por defecto
+- [x] C1: `WORKFLOW_TEMPLATE` declara que la corrida se pide en la sesión con 3 a la vez por defecto
       <!-- test: npx vitest run tests/plantillas-compactas.test.ts -->
-- [ ] C2: `WORKFLOW_TEMPLATE` declara que esa sesión es el orquestador y lanza un subagente por ticket
+- [x] C2: `WORKFLOW_TEMPLATE` declara que esa sesión es el orquestador y lanza un subagente por ticket
       <!-- test: npx vitest run tests/plantillas-compactas.test.ts -->
-- [ ] C3: `WORKFLOW_TEMPLATE` declara que cada subagente trabaja en su worktree y su rama
+- [x] C3: `WORKFLOW_TEMPLATE` declara que cada subagente trabaja en su worktree y su rama
       <!-- test: npx vitest run tests/plantillas-compactas.test.ts -->
-- [ ] C4: `WORKFLOW_TEMPLATE` declara que solo el orquestador toca el checkout principal
+- [x] C4: `WORKFLOW_TEMPLATE` declara que solo el orquestador toca el checkout principal
       <!-- test: npx vitest run tests/plantillas-compactas.test.ts -->
-- [ ] C5: `WORKFLOW_TEMPLATE` declara que el subagente corre las pruebas de su ticket y no la suite completa
+- [x] C5: `WORKFLOW_TEMPLATE` declara que el subagente corre las pruebas de su ticket y no la suite completa
       <!-- test: npx vitest run tests/plantillas-compactas.test.ts -->
-- [ ] C6: `WORKFLOW_TEMPLATE` declara que la aprobación sale de la política por tipo de ticket
+- [x] C6: `WORKFLOW_TEMPLATE` declara que la aprobación sale de la política por tipo de ticket
       <!-- test: npx vitest run tests/plantillas-compactas.test.ts -->
-- [ ] C7: `WORKFLOW_TEMPLATE` declara que SECURITY y despliegue son siempre de una persona
+- [x] C7: `WORKFLOW_TEMPLATE` declara que SECURITY y despliegue son siempre de una persona
       <!-- test: npx vitest run tests/plantillas-compactas.test.ts -->
-- [ ] C8: la sección nueva no contiene `git push`, `--force` ni `--no-verify` (caso de control)
+- [x] C8: la sección nueva no contiene `git push`, `--force` ni `--no-verify` (caso de control)
       <!-- test: npx vitest run tests/plantillas-compactas.test.ts -->
-- [ ] C9: el `AGENTS.md` que proyecta `projectAgentsMd` contiene la sección «Corrida orquestada»
+- [x] C9: el `AGENTS.md` que proyecta `projectAgentsMd` contiene la sección «Corrida orquestada»
       <!-- test: npx vitest run tests/adapters.test.ts -->
-- [ ] C10: las tres plantillas fijas suman 10 400 B o menos
+- [x] C10: las tres plantillas fijas suman 10 400 B o menos
       <!-- test: npx vitest run tests/plantillas-compactas.test.ts -->
-- [ ] C11: las pruebas existentes de la plantilla siguen pasando sin cambiar sus frases
+- [x] C11: las pruebas existentes de la plantilla siguen pasando sin cambiar sus frases
       <!-- test: npx vitest run tests/plantillas-compactas.test.ts tests/respuesta-agents-md.test.ts -->
-- [ ] C12: el `AGENTS.md` proyectado sigue dentro de su presupuesto de tamaño
+- [x] C12: el `AGENTS.md` proyectado sigue dentro de su presupuesto de tamaño
       <!-- test: npx vitest run tests/agents-md-tamano.test.ts -->
 
 ## Puntos
@@ -104,11 +104,20 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+- `packages/adapter/src/templates.ts`: sección «### Corrida orquestada» en `WORKFLOW_TEMPLATE`, después de «Corrida delegada», sin tocar la frase existente ni citar comandos.
+- `tests/plantillas-compactas.test.ts`: `TOPE_BYTES` de 9 800 a 10 400 B con su comentario y «Por qué», título del caso actualizado y bloque nuevo «la corrida orquestada» (C1 a C8, con caso de control).
+- `tests/adapters.test.ts`: `projectAgentsMd` proyecta la sección (C9).
+- `AGENTS.md` regenerado con `sync` del worktree (no a mano); CLAUDE.md y skills no cambiaron. Las tres plantillas pesan 10 334 B.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Contrato de entrega, desde la raíz del worktree (Node 24, `node_modules` instalados):
+
+- `npx vitest run tests/plantillas-compactas.test.ts tests/adapters.test.ts tests/agents-md-tamano.test.ts tests/respuesta-agents-md.test.ts` — esperado: 4 archivos y 105 pruebas en verde (resultado obtenido).
+- `npx tsc --noEmit -p tsconfig.json` — esperado: sin errores (obtenido).
+- `node packages/cli/dist/main.js sync --check` — esperado: archivos al día, sin diferencias (obtenido).
+- Validación manual: leer «Corrida orquestada» en `AGENTS.md` y confirmar que coincide con la sección 2.1 de `docs/propuesta-corrida-orquestada.md`.
+- Suite completa: no corrida por este agente; la corre el orquestador al integrar.
 
 ## QA
 
@@ -137,7 +146,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-08",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Subagente de Claude Code dedicado solo a este ticket; la sesión no expone agregado de tokens",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:subagente-ticket-contrato-corrida",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -201,6 +226,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-08",
+    "at": "2026-10-08T16:06:10.827Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-08",
+    "at": "2026-10-08T16:09:18.528Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-08",
+    "at": "2026-10-08T16:09:19.833Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
