@@ -602,6 +602,14 @@ export interface BriefJornada {
     readonly duracionMs: number;
     /** `null` si el cliente no reportó el costo: se dice, no se inventa. */
     readonly costeUsd: number | null;
+    /** Los modelos que el cliente reportó haber usado (vacío = ninguno reportado). */
+    readonly modelosUsados?: readonly string[];
+    /** Pares declarado → usado de las sesiones cuyo usado difiere del declarado. */
+    readonly distintos?: readonly { readonly declarado: string; readonly usado: string }[];
+    /** Sesiones de la fase sin modelo usado reportado. */
+    readonly sinReportarModelo?: number;
+    /** Sesiones de la fase sin costo reportado. */
+    readonly sinReportarCoste?: number;
   }[];
   readonly esperanPruebas: readonly string[];
   readonly esperanPlan: readonly string[];
@@ -675,11 +683,23 @@ export function renderBrief(input: BriefInput): NotificationPayload {
     lineas.push(
       ...vinetas(
         `🛠 Jornada de hoy — ${jornada.fases.reduce((n, f) => n + f.sesiones, 0)} sesión(es):`,
-        jornada.fases.map(
-          (f) =>
-            `${f.fase}: ${f.sesiones} sesión(es), ${f.modelos.join(", ")}, ${minutos(f.duracionMs)}, ` +
-            (f.costeUsd === null ? "costo sin reportar por el cliente" : `$${f.costeUsd.toFixed(4)}`),
-        ),
+        jornada.fases.map((f) => {
+          const sinCoste = f.sinReportarCoste ?? 0;
+          const costo =
+            f.costeUsd === null
+              ? "costo sin reportar por el cliente"
+              : `$${f.costeUsd.toFixed(4)}${sinCoste > 0 ? ` (${sinCoste} sin reportar)` : ""}`;
+          const usados = f.modelosUsados ?? [];
+          const sinModelo = f.sinReportarModelo ?? 0;
+          const extra: string[] = [];
+          if (usados.length > 0) extra.push(`usado: ${usados.join(", ")}`);
+          for (const par of f.distintos ?? []) extra.push(`⚠ distinto al declarado: ${par.declarado} → ${par.usado}`);
+          if (sinModelo > 0) extra.push(`modelo usado sin reportar en ${sinModelo} sesión(es)`);
+          return (
+            `${f.fase}: ${f.sesiones} sesión(es), ${f.modelos.join(", ")}, ${minutos(f.duracionMs)}, ${costo}` +
+            (extra.length === 0 ? "" : ` · ${extra.join(" · ")}`)
+          );
+        }),
       ),
       ...vinetas(`🧪 ${jornada.esperanPruebas.length} esperan tus pruebas:`, jornada.esperanPruebas),
       ...vinetas(`📝 ${jornada.esperanPlan.length} plan(es) esperan tu aprobación:`, jornada.esperanPlan),

@@ -18,6 +18,7 @@ import {
   type FaseDelAgente,
   type ModeloDeFase,
   despachoDeFase,
+  mismoModelo,
   modeloDeFase,
   parseConfig,
   readExecutionCapabilities,
@@ -32,7 +33,14 @@ export interface RegistroDeFase {
   readonly ticketId: string;
   readonly fase: FaseDelAgente;
   readonly ejecutor: string;
+  /** El modelo que el harness pidió (declarado por el despacho). */
   readonly modelo: string;
+  /** El modelo que el cliente reportó haber usado; `null` = sin reportar. */
+  readonly modeloUsado: string | null;
+  /** ¿El usado es el declarado? `null` si el cliente no reportó el modelo. */
+  readonly coincide: boolean | null;
+  /** El costo que reportó el cliente (equivalente, no factura); `null` = sin reportar. */
+  readonly costeUsd: number | null;
   readonly esfuerzo: string;
   /** De dónde salió el modelo: el rol de la fase o la política, y el motivo. */
   readonly origenDelModelo: string;
@@ -48,15 +56,23 @@ export function fasesPath(root: string): string {
 /** Anexa el registro de una sesión. */
 export function registrarFase(
   root: string,
-  registro: Omit<RegistroDeFase, "kind" | "version" | "registradoEn"> & { readonly registradoEn?: string },
+  registro: Omit<RegistroDeFase, "kind" | "version" | "registradoEn" | "modeloUsado" | "coincide" | "costeUsd"> & {
+    readonly registradoEn?: string;
+    readonly modeloUsado?: string | null;
+    readonly costeUsd?: number | null;
+  },
 ): RegistroDeFase {
   if (!(FASES_DEL_AGENTE as readonly string[]).includes(registro.fase)) {
     throw new Error(`Fase desconocida: ${registro.fase}.`);
   }
+  const modeloUsado = registro.modeloUsado ?? null;
   const completo: RegistroDeFase = {
     kind: "journey-phase",
     version: 1,
     ...registro,
+    modeloUsado,
+    coincide: modeloUsado === null ? null : mismoModelo(modeloUsado, registro.modelo),
+    costeUsd: registro.costeUsd ?? null,
     registradoEn: registro.registradoEn ?? new Date().toISOString(),
   };
   const ruta = fasesPath(root);
@@ -75,7 +91,13 @@ export function leerFases(root: string): RegistroDeFase[] {
     try {
       const valor = JSON.parse(linea) as Partial<RegistroDeFase>;
       if (valor.kind === "journey-phase" && valor.version === 1 && typeof valor.ticketId === "string") {
-        registros.push(valor as RegistroDeFase);
+        // Un renglón anterior no trae los campos nuevos: se lee como «sin reportar».
+        registros.push({
+          ...(valor as RegistroDeFase),
+          modeloUsado: typeof valor.modeloUsado === "string" ? valor.modeloUsado : null,
+          coincide: typeof valor.coincide === "boolean" ? valor.coincide : null,
+          costeUsd: typeof valor.costeUsd === "number" ? valor.costeUsd : null,
+        });
       }
     } catch {
       // Un renglón truncado no borra los hechos anteriores.

@@ -8,7 +8,7 @@
  */
 import { spawnSync } from "node:child_process";
 
-import { type DespachoDeFase, type FaseDelAgente, type ModeloDeFase } from "@valmen/adapter";
+import { type DespachoDeFase, type FaseDelAgente, type ModeloDeFase, reporteDelEjecutor } from "@valmen/adapter";
 
 import {
   EXIT_INVARIANT,
@@ -175,7 +175,7 @@ export function autonomousExecutorCommand(
   }
   return {
     command: "claude",
-    args: ["--model", executor.model, "--permission-mode", "bypassPermissions", "--print", prompt],
+    args: ["--model", executor.model, "--permission-mode", "bypassPermissions", "--output-format", "json", "--print", prompt],
   };
 }
 
@@ -300,7 +300,7 @@ export function comandosDelContrato(ticketText: string): string[] {
  */
 export async function runAutonomous(request: AutonomousRunRequest): Promise<AutonomousRunResult> {
   const inicio = Date.now();
-  const contexto: { despacho?: DespachoDeFase } = {};
+  const contexto: { despacho?: DespachoDeFase; stdout?: string } = {};
   const resultado = await runAutonomousInner(request, contexto);
   const politica = autonomousConfig(request.paths.root);
   if (politica.executor !== null) {
@@ -320,6 +320,10 @@ export async function runAutonomous(request: AutonomousRunRequest): Promise<Auto
             : `sin despacho: ${despacho.motivo}`,
       duracionMs: Date.now() - inicio,
       resultado: resultado.status,
+      // Lo que el cliente reportó; sin salida (despacho detenido o fallo) queda «sin reportar».
+      ...(despacho?.ok === true && contexto.stdout !== undefined
+        ? reporteDelEjecutor(despacho.ejecutor, despacho.model, contexto.stdout)
+        : { modeloUsado: null, costeUsd: null }),
     });
   }
   return resultado;
@@ -327,7 +331,7 @@ export async function runAutonomous(request: AutonomousRunRequest): Promise<Auto
 
 async function runAutonomousInner(
   request: AutonomousRunRequest,
-  contexto: { despacho?: DespachoDeFase },
+  contexto: { despacho?: DespachoDeFase; stdout?: string },
 ): Promise<AutonomousRunResult> {
   if (request.ticketId === undefined && request.queue !== true) {
     throw Object.assign(new Error("run requiere --ticket o --queue."), { exitCode: EXIT_SCHEMA });
@@ -415,6 +419,7 @@ async function runAutonomousInner(
   // El ejecutor hereda la marca de sesión desatendida: no puede registrar aprobaciones.
   const entorno = { [UNATTENDED_ENV]: "1" };
   const result = (request.execute ?? ((item, env) => execute(item, request.paths.root, env, policy.limits.maxMinutes)))(command, entorno);
+  contexto.stdout = result.stdout;
   if (result.timedOut === true) {
     return stopResult(
       request.paths,

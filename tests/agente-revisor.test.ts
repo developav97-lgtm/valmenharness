@@ -870,3 +870,18 @@ describe("el enrutado que usa la preparación", () => {
     expect(rutasDelProyecto(lab).find((r) => r.role === "reviewer")?.source).toBe("proyecto");
   });
 });
+
+describe("los productores registrados (R-PERF-006)", () => {
+  it("C15: productoresDelTicket usa el modelo usado cuando el registro lo trae, y el declarado si no", async () => {
+    const { productoresDelTicket } = await import("../packages/engine/src/reviewer.js");
+    registrarFase(lab, {
+      ticketId: ID, fase: "plan", ejecutor: "claude", modelo: "claude-opus-5-5", modeloUsado: "claude-sonnet-5-5",
+      esfuerzo: "high", origenDelModelo: "rol", duracionMs: 1, resultado: "ok",
+    });
+    registrarFase(lab, {
+      ticketId: ID, fase: "analysis", ejecutor: "claude", modelo: "claude-opus-5-5",
+      esfuerzo: "high", origenDelModelo: "rol", duracionMs: 1, resultado: "ok",
+    });
+    expect(productoresDelTicket(lab, ID).map((p) => p.modelo)).toEqual(["claude-sonnet-5-5", "claude-opus-5-5"]);
+  });
+});

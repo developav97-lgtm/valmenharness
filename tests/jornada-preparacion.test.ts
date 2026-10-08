@@ -26,6 +26,7 @@ import {
   armarJornada,
   avanzarJornada,
   createJourney,
+  leerFases,
   prepararTicket,
   promptDePreparacion,
   readReceipts,
@@ -189,6 +190,23 @@ describe("preparar un ticket", () => {
     const resultado = prepararTicket({ paths: PATHS(), ticketId: A, execute: modelo({ tocarCodigo: true }) });
     expect(resultado.estado).toBe("verificacion-fallo");
     expect(resultado.detalle).toContain("src/app.ts");
+  });
+
+  it("C10: registra en la fase analysis el modelo usado que reportó el ejecutor", () => {
+    const config = readFileSync(join(root, ".valmen", "config.yaml"), "utf8").replace("    - codex\n", "    - codex\n    - claude\n");
+    writeFileSync(join(root, ".valmen", "config.yaml"), config, "utf8");
+    writeFileSync(
+      join(root, ".valmen", "routing.yaml"),
+      "preset: balanced\nroles:\n  agent-analysis:\n    provider: claude-code\n    model: claude-sonnet-5-5\n    effort: high\n",
+      "utf8",
+    );
+    const json = JSON.stringify({ type: "result", total_cost_usd: 0.1, modelUsage: { "claude-sonnet-5-5": {} } });
+    const interno = modelo();
+    const resultado = prepararTicket({ paths: PATHS(), ticketId: A, execute: (c, e) => ({ ...interno(c, e), stdout: json }) });
+    expect(resultado.estado).toBe("plan-listo");
+    expect(leerFases(root).find((f) => f.ticketId === A && f.fase === "analysis")).toMatchObject({
+      modelo: "claude-sonnet-5-5", modeloUsado: "claude-sonnet-5-5", coincide: true, costeUsd: 0.1,
+    });
   });
 
   it("R-PERF-004 C7: con un proveedor no autorizado la preparación no lanza el preparador", () => {

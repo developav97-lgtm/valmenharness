@@ -42,6 +42,8 @@ import {
   renderPerfiles,
   rutasDelProyecto,
   despachoDeFase,
+  mismoModelo,
+  reporteDelEjecutor,
   parseRouting,
   parseRoutingTolerante,
   renderRouting,
@@ -1280,5 +1282,47 @@ describe("R-PERF-004 despacho de fase por proveedor", () => {
   it("R-PERF-004 C11: con la configuración actual del proyecto, la implementación se despacha a claude con claude-sonnet-5-5", () => {
     const d = resolverDespachoDeFase(process.cwd(), "implementation");
     expect(d).toMatchObject({ ok: true, ejecutor: "claude", model: "claude-sonnet-5-5" });
+  });
+});
+
+describe("el reporte del ejecutor (R-PERF-006)", () => {
+  const salida = JSON.stringify({
+    type: "result",
+    total_cost_usd: 0.0421,
+    modelUsage: { "claude-haiku-4-5-20251001": {}, "claude-sonnet-5-5": {} },
+  });
+
+  it("C2: toma de modelUsage el modelo que coincide con el declarado", () => {
+    expect(reporteDelEjecutor("claude", "claude-sonnet-5-5", salida).modeloUsado).toBe("claude-sonnet-5-5");
+    expect(reporteDelEjecutor("claude", "claude-haiku-4-5", salida).modeloUsado).toBe("claude-haiku-4-5-20251001");
+    expect(reporteDelEjecutor("claude", "otro", salida).modeloUsado).toBe("claude-haiku-4-5-20251001");
+  });
+
+  it("C3: toma el costo de total_cost_usd, también de una lista cuyo último result vale", () => {
+    expect(reporteDelEjecutor("claude", "claude-sonnet-5-5", salida).costeUsd).toBe(0.0421);
+    const lista = JSON.stringify([{ type: "system" }, JSON.parse(salida)]);
+    expect(reporteDelEjecutor("claude", "claude-sonnet-5-5", lista)).toEqual({ modeloUsado: "claude-sonnet-5-5", costeUsd: 0.0421 });
+    const negativo = JSON.stringify({ total_cost_usd: -1, modelUsage: {} });
+    expect(reporteDelEjecutor("claude", "x", negativo)).toEqual({ modeloUsado: null, costeUsd: null });
+  });
+
+  it("C4: una salida truncada o ilegible deja ambos en null", () => {
+    for (const mala of ["", "hecho", salida.slice(0, 20), "null"]) {
+      expect(reporteDelEjecutor("claude", "claude-sonnet-5-5", mala)).toEqual({ modeloUsado: null, costeUsd: null });
+    }
+  });
+
+  it("C5: codex y opencode quedan en null aunque la salida parezca de Claude", () => {
+    for (const ejecutor of ["codex", "opencode"]) {
+      expect(reporteDelEjecutor(ejecutor, "gpt-6-sol", salida)).toEqual({ modeloUsado: null, costeUsd: null });
+    }
+  });
+
+  it("mismoModelo admite alias, sufijo de fecha y prefijo de proveedor, y no confunde modelos", () => {
+    expect(mismoModelo("claude-haiku-4-5", "claude-haiku-4-5-20251001")).toBe(true);
+    expect(mismoModelo("anthropic/claude-sonnet-5.5", "claude-sonnet-5-5")).toBe(true);
+    expect(mismoModelo("claude-sonnet-5", "claude-sonnet-5-5")).toBe(true);
+    expect(mismoModelo("claude-opus-5-5", "claude-sonnet-5-5")).toBe(false);
+    expect(mismoModelo("", "claude-sonnet-5-5")).toBe(false);
   });
 });
