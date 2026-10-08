@@ -100,7 +100,7 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
       <!-- test: npx vitest run tests/firma-de-compuerta.test.ts -->
 - [x] El proyecto compila sin errores de tipos.
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
-- [x] Ningún recibo ni evento ya registrado se reescribe.
+- [ ] Ningún recibo ni evento ya registrado se reescribe.
       <!-- verify: manual -->
 
 ## Puntos
