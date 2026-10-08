@@ -5907,9 +5907,6 @@
           destino.append(el("div", ultimaPasada === null
             ? "Sin pasadas registradas"
             : `Última pasada: ${ultimaPasada.at} · ${ultimaPasada.estado} — ${ultimaPasada.detalle}`, "nota"));
-          destino.append(el("div", jornada.passes?.next
-            ? `Próxima pasada (estimada): ${jornada.passes.next}`
-            : "Próxima pasada: sin cadencia conocida todavía", "nota"));
           const tabla = el("table");
           const encabezado = el("thead");
           const fila = el("tr");

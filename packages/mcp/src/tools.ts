@@ -2563,7 +2563,7 @@ async function ejecutarHerramienta(
             aviso: jornada.aviso === null ? null : { ...jornada.aviso },
             heredados: jornada.heredados === null ? null : { desde: jornada.heredados.desde, tickets: [...jornada.heredados.tickets] },
             siguiente_paso:
-              "La jornada está escrita: despacha con el disparador (ticket siguiente) o revisa la hoja de ruta con `ver_jornadas`.",
+              "La jornada está escrita: lista la ola con `valmen journey next --wave` (la sesión orquestadora la reparte) o revisa la hoja de ruta con `ver_jornadas`.",
           },
         );
       }

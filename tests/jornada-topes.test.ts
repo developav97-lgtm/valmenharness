@@ -1,6 +1,9 @@
 /**
  * Los topes y las paradas de la jornada (R-JORN-007).
  *
+ * El avance de ejecución se retiró: los topes se ejercitan con la preparación manual (que los
+ * respeta) y la verificación y el tiempo máximo con `runAutonomous` directo.
+ *
  * Lo que se afirma: la jornada se frena sola —por día, por concurrencia y por tiempo—, un
  * fallo del ejecutor o de la verificación deja una parada que se avisa en formato de decisión,
  * y una parada no se reintenta sola: solo una persona la libera.
@@ -21,6 +24,8 @@ import {
   readApprovalLog,
   readAutonomousStops,
   resolveAuthorizedProject,
+  resolverModeloDeFase,
+  runAutonomous,
 } from "../packages/engine/src/index.js";
 import { writeFixtureTicket } from "./helpers/fixtures.js";
 
@@ -113,29 +118,51 @@ beforeEach(() => {
 afterEach(() => rmSync(home, { recursive: true, force: true }));
 
 const avanzar = (extra: Partial<Parameters<typeof avanzarJornada>[0]> = {}) =>
-  avanzarJornada({ project: proyecto(), home, ahora: () => AHORA, ...extra });
+  avanzarJornada({ project: proyecto(), home, ahora: () => AHORA, fase: "preparacion", ...extra });
+
+/** La preparación necesita tickets en intake. */
+function enIntake(...ids: string[]): void {
+  for (const id of ids) writeFixtureTicket(root, { id, workflowStatus: "intake", type: "FEATURE", module: "TOPES" });
+}
+
+const preparador = () => vi.fn(() => ({ status: 0, stdout: "preparado", stderr: "" }));
+
+/** Ejecuta A como lo hacía el avance: fase de implementación con el modelo del enrutamiento. */
+async function ejecutar(execute?: Parameters<typeof runAutonomous>[0]["execute"]) {
+  const modelo = resolverModeloDeFase(root, "implementation");
+  return runAutonomous({
+    paths: proyecto().paths,
+    ticketId: A,
+    fase: "implementation",
+    ...(modelo === null ? {} : { modelo }),
+    ...(execute === undefined ? {} : { execute }),
+    now: () => AHORA,
+  });
+}
 
 describe("los topes", () => {
   it("el máximo por día impide iniciar otra sesión y lo dice", async () => {
     politica({ perDay: 1 });
-    const primero = await avanzar({ execute: implementador() });
+    enIntake(A, B);
+    const primero = await avanzar({ ejecutarPreparacion: preparador() });
     expect(primero.estado).toBe("despachado");
-    const segundo = await avanzar({ execute: implementador() });
+    const segundo = await avanzar({ ejecutarPreparacion: preparador() });
     expect(segundo.estado).toBe("sin-candidato");
     expect(segundo.detalle).toContain("Tope diario alcanzado");
-    expect(estado(B)).toBe("approved");
+    expect(estado(B)).toBe("intake");
   });
 
   it("el máximo concurrente impide iniciar mientras otra sesión está activa y lo dice", async () => {
+    enIntake(A, B);
     let interno: Awaited<ReturnType<typeof avanzar>> | null = null;
     const ejecutor = () => {
       // Mientras la primera sesión corre, otro avance (capacidad de la máquina: 3) choca con el tope de la política (1).
-      void avanzarJornada({
-        project: proyecto(), home, ahora: () => AHORA, execute: () => ({ status: 0, stdout: "no debe correr", stderr: "" }),
-      }).then((r) => { interno = r; });
-      return implementador()();
+      void avanzar({ ejecutarPreparacion: () => ({ status: 0, stdout: "no debe correr", stderr: "" }) }).then((r) => {
+        interno = r;
+      });
+      return { status: 0, stdout: "preparado", stderr: "" };
     };
-    await avanzar({ execute: ejecutor });
+    await avanzar({ ejecutarPreparacion: ejecutor });
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect((interno as Awaited<ReturnType<typeof avanzar>> | null)?.detalle ?? "").toContain("Tope concurrente alcanzado");
   });
@@ -152,25 +179,25 @@ describe("el tiempo máximo y los fallos", () => {
     const path = process.env["PATH"];
     process.env["PATH"] = `${bin}:${path ?? ""}`;
     try {
-      const avisos: string[] = [];
-      const avance = await avanzar({ notificar: (t) => { avisos.push(t); return { delivered: true, detail: "ok" }; } });
-      expect(avance.estado).toBe("despachado");
+      const corrida = await ejecutar();
+      expect(corrida.status).toBe("stopped");
       const parada = readAutonomousStops({ root, ticketsDir: "tickets" })[0];
       expect(parada?.reason).toBe("executor-timeout");
       expect(parada?.detail).toContain("tiempo máximo");
-      expect(avisos).toHaveLength(1);
     } finally {
       process.env["PATH"] = path;
     }
   }, 30_000);
 
-  it("un fallo del ejecutor registra la parada y la avisa en formato de opciones y efecto", async () => {
+  it("un fallo del ejecutor de la preparación registra la parada y la avisa en formato de opciones y efecto", async () => {
+    enIntake(A);
     const avisos: string[] = [];
     await avanzar({
-      execute: () => ({ status: 3, stdout: "", stderr: "se cayó" }),
+      ejecutarPreparacion: () => ({ status: 3, stdout: "", stderr: "se cayó" }),
       notificar: (t) => { avisos.push(t); return { delivered: true, detail: "ok" }; },
     });
     const parada = readAutonomousStops({ root, ticketsDir: "tickets" })[0];
+    expect(parada?.ticketId).toBe(A);
     expect(parada?.reason).toBe("executor-failed");
     const lineas = (avisos[0] ?? "").split("\n");
     expect(lineas[0]).toMatch(/^Decisión: FEATURE-TOPES-UNO-20261005 — la jornada se detuvo por executor-failed/);
@@ -182,7 +209,7 @@ describe("el tiempo máximo y los fallos", () => {
   });
 
   it("una verificación fallida (sin contrato de pruebas) deja una parada de verificación", async () => {
-    await avanzar({ execute: implementador({ contrato: false }) });
+    await ejecutar(implementador({ contrato: false }));
     expect(readAutonomousStops({ root, ticketsDir: "tickets" })[0]?.reason).toBe("verification-failed");
   });
 });

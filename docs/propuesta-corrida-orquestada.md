@@ -109,6 +109,17 @@ perfiles de modelos y su resolución, autorizaciones de QA y de aprobación,
 por Telegram, `registrar_actividad_ejecucion`, la corrida delegada
 (`valmen delegation`) para lo que sigue siendo de una persona.
 
+> **Nota de ejecución (CHORE-CLI-RETIRO-DISPARADOR-JORNADA-20261008).** El retiro se hizo con ese
+> ticket, con estas decisiones del PO: se **retira** el disparador (`journey install-trigger` y su
+> plist/job de Hermes, que ahora responden con un aviso de retiro y salida 2), el avance de ejecución
+> (`journey advance` sin fase y con `--fase ejecucion`), `dispatchJourney`, la clave
+> `execution.dispatcher` y el registro y el aviso de árbol sucio (ahora un aviso que se calcula al
+> consultar `journey next --wave` y `journey brief`). Se **conserva** (D1 a D4): `journey clear-stop`
+> y las paradas (D1), la caducidad de la jornada con `jornadaVigente` y la herencia de pendientes (D2),
+> `journey advance --fase preparacion` como preparación manual (D3) y el aviso de árbol sucio al
+> consultar (D4), además de `journey plan`, la hoja de ruta, `--max`, los topes, la reserva de
+> capacidad, los avisos del vigilante y la política `autonomous:`.
+
 Los tickets aprobados que quedaron sin implementar siguen valiendo:
 ELEGIBILIDAD-APROBACION y AGENTE-REVISOR son la aprobación automática que el
 orquestador usa en el paso 3; CODEGRAPH-MONTAJE es independiente.

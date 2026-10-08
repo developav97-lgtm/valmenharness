@@ -177,7 +177,10 @@ export interface AutonomousStopNotice {
 }
 
 /**
- * El aviso de que una jornada lleva más de una pasada detenida por árbol sucio.
+ * El aviso de que una jornada llevaba más de una pasada detenida por árbol sucio.
+ *
+ * Compatibilidad: el aviso se retiró (el árbol sucio ahora se avisa al consultar la ola), pero
+ * el registro de avisos es append-only y el lector sigue entendiendo las líneas históricas.
  *
  * `episodio` es la hora de la primera pasada sucia de la racha: el mismo episodio no se avisa dos
  * veces, y un árbol que se limpia y se vuelve a ensuciar es otro.
@@ -515,15 +518,6 @@ export function autonomousStopsAvisados(paths: RegistryPaths): Set<string> {
     readApprovalLog(paths)
       .filter((entry): entry is AutonomousStopNotice => entry.kind === "autonomous-stop-notice")
       .map((entry) => entry.receiptId),
-  );
-}
-
-/** Los episodios de árbol sucio ya avisados, como `jornada:episodio`. */
-export function arbolesSuciosAvisados(paths: RegistryPaths): Set<string> {
-  return new Set(
-    readApprovalLog(paths)
-      .filter((entry): entry is JourneyDirtyTreeNotice => entry.kind === "journey-dirty-tree-notice")
-      .map((entry) => `${entry.journeyId}:${entry.episodio}`),
   );
 }
 

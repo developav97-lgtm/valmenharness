@@ -152,22 +152,22 @@ export const ROLES: readonly RoleSpec[] = [
   {
     id: "agent-analysis",
     description: "Modelo del agente que analiza un ticket en la fase de preparación",
-    consumer: "valmen journey advance",
+    consumer: "valmen journey brief",
   },
   {
     id: "agent-plan",
     description: "Modelo del agente que escribe el plan en la fase de preparación",
-    consumer: "valmen journey advance",
+    consumer: "valmen journey brief",
   },
   {
     id: "agent-implementation",
     description: "Modelo del agente que implementa un ticket aprobado en la fase de ejecución",
-    consumer: "valmen journey advance",
+    consumer: "valmen journey brief",
   },
   {
     id: "agent-verification",
     description: "Modelo del agente que verifica y corrige las pruebas antes de entregar",
-    consumer: "valmen journey advance",
+    consumer: "valmen journey brief",
   },
 ];
 

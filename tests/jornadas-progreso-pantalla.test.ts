@@ -66,10 +66,10 @@ describe("la vista Jornadas muestra el avance", () => {
     expect(texto).toContain("Última pasada: 2026-10-07T08:15:00.000Z · despachado — Se despachó FEATURE-UNO-20261007.");
   });
 
-  it("la próxima pasada rotulada como estimada, o que no hay cadencia conocida", async () => {
-    expect(await abrir(jornada(conPasadas))).toContain("Próxima pasada (estimada): 2026-10-07T08:30:00.000Z");
-    const sinCadencia = await abrir(jornada({ last: conPasadas.last, cadenceMs: null, next: null }));
-    expect(sinCadencia).toContain("Próxima pasada: sin cadencia conocida todavía");
+  it("no muestra la próxima pasada estimada (ya no hay disparador) y sí la última, o que no hay pasadas", async () => {
+    const conProxima = await abrir(jornada(conPasadas));
+    expect(conProxima).not.toContain("Próxima pasada");
+    expect(conProxima).toContain("Última pasada:");
     expect(await abrir(jornada({ last: null, cadenceMs: null, next: null }))).toContain("Sin pasadas registradas");
   });
 

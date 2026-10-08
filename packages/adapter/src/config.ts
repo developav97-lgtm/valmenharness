@@ -1136,24 +1136,6 @@ export function readExternalSkills(config: ConfigMap): readonly ExternalSkill[] 
   });
 }
 
-/** Quién dispara el avance de la jornada (R-JORN-011). */
-export type JourneyDispatcher = "machine" | "hermes";
-
-/**
- * Lee `execution.dispatcher`: `machine` (el disparador de la máquina, por defecto) o `hermes`.
- *
- * Sin la clave la jornada corre con el disparador de la máquina. Cualquier otro valor falla: un
- * despachador mal escrito no puede caer a un defecto en silencio.
- */
-export function readJourneyDispatcher(config: ConfigMap): JourneyDispatcher {
-  const execution = config["execution"] === undefined ? {} : readMap(config, "execution");
-  const valor = readString(execution, "dispatcher", "machine");
-  if (valor !== "machine" && valor !== "hermes") {
-    fail(`config.yaml: "execution.dispatcher" debe ser "machine" o "hermes", no «${valor}».`);
-  }
-  return valor;
-}
-
 /** Los canales desde los que se acepta crear o revocar una autorización de aprobación si el proyecto no declara los suyos. */
 export const DEFAULT_APPROVAL_AUTHORIZATION_SOURCES: readonly string[] = ["cli", "mission-control"];
 

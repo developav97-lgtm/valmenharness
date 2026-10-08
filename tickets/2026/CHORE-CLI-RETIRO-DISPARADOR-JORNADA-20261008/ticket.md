@@ -4,7 +4,7 @@ id: CHORE-CLI-RETIRO-DISPARADOR-JORNADA-20261008
 title: Retirar el disparador por launchd y el bucle desatendido de la jornada
 type: CHORE
 module: CLI
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -100,71 +100,71 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1. Antes del retiro el CLI ya ofrece el subcomando `journey next --wave` al que apunta el aviso de retiro
+- [x] C1. Antes del retiro el CLI ya ofrece el subcomando `journey next --wave` al que apunta el aviso de retiro
       <!-- test: npx vitest run tests/retiro-disparador.test.ts -->
-- [ ] C2. La skill de la corrida orquestada existe en `.valmen/skills`
+- [x] C2. La skill de la corrida orquestada existe en `.valmen/skills`
       <!-- verify: manual -->
-- [ ] C3. `journey install-trigger` responde en español que está retirado, nombra `journey next --wave` y sale con código 2
+- [x] C3. `journey install-trigger` responde en español que está retirado, nombra `journey next --wave` y sale con código 2
       <!-- test: npx vitest run tests/retiro-disparador.test.ts -->
-- [ ] C4. `journey install-trigger --write` no escribe ni el plist ni el script del job
+- [x] C4. `journey install-trigger --write` no escribe ni el plist ni el script del job
       <!-- test: npx vitest run tests/retiro-disparador.test.ts -->
-- [ ] C5. `journey advance` sin fase responde con el aviso de retiro, sale con código 2 y no despacha ni anexa una pasada
+- [x] C5. `journey advance` sin fase responde con el aviso de retiro, sale con código 2 y no despacha ni anexa una pasada
       <!-- test: npx vitest run tests/retiro-disparador.test.ts -->
-- [ ] C6. `journey advance --fase ejecucion` responde con el mismo aviso de retiro y no despacha ni anexa una pasada
+- [x] C6. `journey advance --fase ejecucion` responde con el mismo aviso de retiro y no despacha ni anexa una pasada
       <!-- test: npx vitest run tests/retiro-disparador.test.ts -->
-- [ ] C7. El archivo `packages/cli/src/journey-trigger.ts` ya no existe y ningún paquete exporta el renderizado del plist
+- [x] C7. El archivo `packages/cli/src/journey-trigger.ts` ya no existe y ningún paquete exporta el renderizado del plist
       <!-- test: npx vitest run tests/retiro-disparador.test.ts -->
-- [ ] C8. La ayuda del CLI marca `install-trigger` y el avance de ejecución como retirados y apunta a `journey next --wave`
+- [x] C8. La ayuda del CLI marca `install-trigger` y el avance de ejecución como retirados y apunta a `journey next --wave`
       <!-- test: npx vitest run tests/retiro-disparador.test.ts tests/cli.test.ts -->
-- [ ] C9. `@valmen/adapter` ya no exporta `readJourneyDispatcher`
+- [x] C9. `@valmen/adapter` ya no exporta `readJourneyDispatcher`
       <!-- test: npx vitest run tests/retiro-disparador.test.ts -->
-- [ ] C10. Un `config.yaml` que todavía declara `execution.dispatcher: hermes` se carga sin error
+- [x] C10. Un `config.yaml` que todavía declara `execution.dispatcher: hermes` se carga sin error
       <!-- test: npx vitest run tests/retiro-disparador.test.ts -->
-- [ ] C11. El `.valmen/config.yaml` del repositorio ya no declara `dispatcher`
+- [x] C11. El `.valmen/config.yaml` del repositorio ya no declara `dispatcher`
       <!-- test: npx vitest run tests/retiro-disparador.test.ts -->
-- [ ] C12. `@valmen/engine` ya no exporta `dispatchJourney` y el archivo `journey-dispatch.ts` no existe
+- [x] C12. `@valmen/engine` ya no exporta `dispatchJourney` y el archivo `journey-dispatch.ts` no existe
       <!-- test: npx vitest run tests/retiro-disparador.test.ts -->
-- [ ] C13. `journey advance --fase preparacion` lleva un ticket de `intake` a `planned` sin registrar ninguna aprobación
+- [x] C13. `journey advance --fase preparacion` lleva un ticket de `intake` a `planned` sin registrar ninguna aprobación
       <!-- test: npx vitest run tests/jornada-preparacion.test.ts tests/retiro-disparador.test.ts -->
-- [ ] C14. Pasada la medianoche UTC, `jornadaVigente` sigue eligiendo la jornada más reciente con tickets pendientes
+- [x] C14. Pasada la medianoche UTC, `jornadaVigente` sigue eligiendo la jornada más reciente con tickets pendientes
       <!-- test: npx vitest run tests/avance-jornada.test.ts -->
-- [ ] C15. `advertenciaDeArbolSucio` devuelve un aviso que nombra los archivos ajenos cuando el árbol está sucio y `null` cuando está limpio
+- [x] C15. `advertenciaDeArbolSucio` devuelve un aviso que nombra los archivos ajenos cuando el árbol está sucio y `null` cuando está limpio
       <!-- test: npx vitest run tests/retiro-disparador.test.ts -->
-- [ ] C16. `advertenciaDeArbolSucio` no escribe ningún archivo del registro
+- [x] C16. `advertenciaDeArbolSucio` no escribe ningún archivo del registro
       <!-- test: npx vitest run tests/retiro-disparador.test.ts -->
-- [ ] C17. `journey next --wave` con el árbol sucio imprime el aviso y sigue listando la ola
+- [x] C17. `journey next --wave` con el árbol sucio imprime el aviso y sigue listando la ola
       <!-- test: npx vitest run tests/retiro-disparador.test.ts -->
-- [ ] C18. El vigilante no produce un aviso de árbol sucio aunque exista un `arbol-sucio.jsonl` histórico con dos pasadas sucias
+- [x] C18. El vigilante no produce un aviso de árbol sucio aunque exista un `arbol-sucio.jsonl` histórico con dos pasadas sucias
       <!-- test: npx vitest run tests/vigilante-jornada.test.ts -->
-- [ ] C19. El vigilante sigue avisando una parada autónoma y una jornada terminada
+- [x] C19. El vigilante sigue avisando una parada autónoma y una jornada terminada
       <!-- test: npx vitest run tests/vigilante-jornada.test.ts tests/retiro-disparador.test.ts -->
-- [ ] C20. `readApprovalLog` sigue leyendo una línea histórica `journey-dirty-tree-notice` sin error
+- [x] C20. `readApprovalLog` sigue leyendo una línea histórica `journey-dirty-tree-notice` sin error
       <!-- test: npx vitest run tests/retiro-disparador.test.ts -->
-- [ ] C21. La vista Jornadas no muestra la próxima pasada estimada y sí muestra la última pasada
+- [x] C21. La vista Jornadas no muestra la próxima pasada estimada y sí muestra la última pasada
       <!-- test: npx vitest run tests/jornadas-progreso-pantalla.test.ts -->
-- [ ] C22. Los cuatro roles de fase del enrutamiento declaran `valmen journey brief` como consumidor
+- [x] C22. Los cuatro roles de fase del enrutamiento declaran `valmen journey brief` como consumidor
       <!-- test: npx vitest run tests/routing.test.ts tests/jornada-ejecucion.test.ts -->
-- [ ] C23. La respuesta de `armar_jornada` apunta a `journey next --wave` en vez de al disparador
+- [x] C23. La respuesta de `armar_jornada` apunta a `journey next --wave` en vez de al disparador
       <!-- test: npx vitest run tests/jornada-diaria.test.ts tests/mcp-server.test.ts -->
-- [ ] C24. `journey plan` sigue respetando `--max` y heredando los pendientes de la jornada anterior
+- [x] C24. `journey plan` sigue respetando `--max` y heredando los pendientes de la jornada anterior
       <!-- test: npx vitest run tests/jornada-diaria.test.ts -->
-- [ ] C25. La hoja de ruta sigue sirviéndose por `ver_jornadas`, `GET /api/journeys` y `valmen execution journeys`
+- [x] C25. La hoja de ruta sigue sirviéndose por `ver_jornadas`, `GET /api/journeys` y `valmen execution journeys`
       <!-- test: npx vitest run tests/journey-roadmap.test.ts tests/journeys-api.test.ts tests/execution-cli.test.ts tests/execution-mcp.test.ts -->
-- [ ] C26. `journey clear-stop` libera la parada de un ticket y la preparación vuelve a elegirlo
+- [x] C26. `journey clear-stop` libera la parada de un ticket y la preparación vuelve a elegirlo
       <!-- test: npx vitest run tests/jornada-topes.test.ts -->
-- [ ] C27. Los topes de la política siguen frenando la preparación y lo dicen
+- [x] C27. Los topes de la política siguen frenando la preparación y lo dicen
       <!-- test: npx vitest run tests/jornada-topes.test.ts -->
-- [ ] C28. La reserva de capacidad compartida sigue limitando las sesiones simultáneas
+- [x] C28. La reserva de capacidad compartida sigue limitando las sesiones simultáneas
       <!-- test: npx vitest run tests/machine-capacity.test.ts tests/journey-selection.test.ts -->
-- [ ] C29. Una sesión desatendida sigue sin poder registrar la aprobación de un plan ni de un ciclo de QA
+- [x] C29. Una sesión desatendida sigue sin poder registrar la aprobación de un plan ni de un ciclo de QA
       <!-- test: npx vitest run tests/jornada-sin-autoaprobacion.test.ts -->
-- [ ] C30. Ningún documento vigente ni skill instruye a usar `install-trigger` o el avance de ejecución
+- [x] C30. Ningún documento vigente ni skill instruye a usar `install-trigger` o el avance de ejecución
       <!-- test: npx vitest run tests/retiro-disparador.test.ts -->
-- [ ] C31. La comprobación de tipos del repositorio no produce salida
+- [x] C31. La comprobación de tipos del repositorio no produce salida
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
-- [ ] C32. La construcción y el lint de los archivos tocados terminan sin errores
+- [x] C32. La construcción y el lint de los archivos tocados terminan sin errores
       <!-- verify: manual -->
-- [ ] C33. La entrega incluye los comandos exactos para desinstalar la tarea de launchd y el job de Hermes y el que comprueba que ninguno queda activo, para que el PO los ejecute
+- [x] C33. La entrega incluye los comandos exactos para desinstalar la tarea de launchd y el job de Hermes y el que comprueba que ninguno queda activo, para que el PO los ejecute
       <!-- verify: manual -->
 
 ## Puntos
@@ -175,16 +175,26 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+Se implementó el plan aprobado paso por paso, sobre la rama que ya traía la ola, el worktree, el parte y la skill (paso 1: `journey next --wave`, `journey brief` y `journey handoff` existen en `packages/cli/src/main.ts` y la skill `corrida-orquestada` en `.valmen/skills`).
+
+- Retirado (aviso en español, salida 2, no escribe nada): `journey install-trigger` y `journey advance` sin fase o con `--fase ejecucion` (`retiroDelDisparador` en `packages/cli/src/commands.ts`); se borró `packages/cli/src/journey-trigger.ts` y `despachadorDelProyecto`.
+- Borrado: `readJourneyDispatcher` y `JourneyDispatcher` (`packages/adapter/src/config.ts`), la línea `dispatcher: machine` de `.valmen/config.yaml`, `packages/engine/src/journey-dispatch.ts` (`dispatchEventId` se mudó a `journey-preparation.ts` con el mismo digest), `avanzarEjecucion` y la opción `execute` de `journey-advance.ts` (`avanzarJornada` solo prepara), el registro de pasadas sucias, el tipo `arbol-sucio` del vigilante, `renderDirtyTreeNotification` y `arbolesSuciosAvisados`.
+- Árbol sucio como aviso: `advertenciaDeArbolSucio(root, propias?)` en `packages/engine/src/journey-dirty-tree.ts` (solo lee); `journey next --wave` y `journey brief` lo imprimen al final de su salida sin escribir nada.
+- Vista y textos: sin la línea «Próxima pasada» en `packages/server/web/index.html`; los cuatro roles de fase declaran `valmen journey brief`; `armar_jornada` apunta a `journey next --wave`.
+- Conservado y probado: `journey plan`/`armar_jornada`, la hoja de ruta, `journey advance --fase preparacion`, `journey clear-stop`, `jornadaVigente`, los topes, la reserva de capacidad, `journey-selection`, los avisos del vigilante, la política `autonomous:` y `valmen run`. `JourneyDirtyTreeNotice` queda solo para leer el registro histórico de avisos.
+- Pruebas migradas: se borraron `tests/despachador-hermes.test.ts` y `tests/journey-dispatch.test.ts` (solo probaban lo retirado); `tests/avance-jornada.test.ts` quedó en preparación, pasadas y jornada vigente; `tests/jornada-ejecucion.test.ts` e `tests/integracion-autonoma.test.ts` pasaron a `runAutonomous`; los topes de `tests/jornada-topes.test.ts` se ejercitan con la preparación (que los respeta) y la verificación y el tiempo máximo con `runAutonomous`; el bloqueo por árbol sucio y el registro de pasadas sucias se borraron; `tests/vigilante-jornada.test.ts` tiene el control del `arbol-sucio.jsonl` histórico; `tests/journey-ola-cli.test.ts` actualiza el mensaje «journey admite». Nueva `tests/retiro-disparador.test.ts` (20 casos).
+- Nota para el PO: `tests/journey-ola-cli.test.ts` esperaba un mensaje «journey admite» sin `handoff` (ya desactualizado en la base); se alineó con el mensaje nuevo. `tests/routing.test.ts:808` tiene un error de lint preexistente (`_quitado`), ajeno al ticket.
+- Documentación: nota de ejecución en `docs/propuesta-corrida-orquestada.md` (D1 a D4).
+- Decisión de orden: `tests/retiro-disparador.test.ts` se escribió junto con el código y no antes (no se observó en rojo previamente).
 
 ## Pruebas
 
-Contrato previsto, que se completa al entregar:
+Contrato de entrega:
 
 - Directorio: la raíz del repositorio o del worktree, con `node_modules` instalado y `npm run build` al día. Node 24. No hace falta red ni modelo.
-- Comandos: `npx vitest run tests/retiro-disparador.test.ts` (todo en verde); regresión de lo conservado, `npx vitest run tests/avance-jornada.test.ts tests/jornada-preparacion.test.ts tests/jornada-topes.test.ts tests/jornada-diaria.test.ts tests/jornada-sin-autoaprobacion.test.ts tests/jornada-ejecucion.test.ts tests/integracion-autonoma.test.ts tests/vigilante-jornada.test.ts tests/machine-capacity.test.ts tests/journey-selection.test.ts tests/journey-roadmap.test.ts tests/journey-passes.test.ts tests/journeys-api.test.ts tests/jornadas-progreso-pantalla.test.ts tests/routing.test.ts tests/mcp-server.test.ts tests/mcp-anotaciones.test.ts tests/execution-cli.test.ts tests/cli.test.ts`; tipos, `npx tsc --noEmit -p tsconfig.json` sin salida.
-- Resultado esperado: todas las pruebas pasan; `tests/despachador-hermes.test.ts` y `tests/journey-dispatch.test.ts` ya no existen y ninguna otra prueba conservada se borró para ponerla en verde.
-- Validación manual del responsable, en un clon de laboratorio y no en el checkout real: `valmen journey install-trigger --project <id>` y `valmen journey advance --project <id>` responden con el aviso de retiro y salen con 2; `valmen journey advance --project <id> --fase preparacion` sigue funcionando; `valmen journey next --wave` con un archivo ajeno sin commitear imprime el aviso de árbol sucio. Después, en su máquina, desinstalar el disparador si aún existe: `launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.valmen.jornada.<proyecto>.plist` y `hermes cron remove valmen-jornada-<proyecto>`; el harness no ejecuta ninguno de los dos. Comprobación de que no queda nada activo: `launchctl list | grep com.valmen.jornada` y `hermes cron list | grep valmen-jornada` no deben devolver líneas.
+- Comandos: `npx vitest run tests/retiro-disparador.test.ts` (todo en verde, 20 casos); regresión de lo conservado, `npx vitest run tests/avance-jornada.test.ts tests/jornada-preparacion.test.ts tests/jornada-topes.test.ts tests/jornada-diaria.test.ts tests/jornada-sin-autoaprobacion.test.ts tests/jornada-ejecucion.test.ts tests/integracion-autonoma.test.ts tests/vigilante-jornada.test.ts tests/machine-capacity.test.ts tests/journey-selection.test.ts tests/journey-roadmap.test.ts tests/journey-passes.test.ts tests/journeys-api.test.ts tests/jornadas-progreso-pantalla.test.ts tests/routing.test.ts tests/mcp-server.test.ts tests/mcp-anotaciones.test.ts tests/execution-cli.test.ts tests/execution-mcp.test.ts tests/cli.test.ts tests/journey-ola-cli.test.ts` (22 archivos, 351 pruebas en verde); tipos, `npx tsc --noEmit -p tsconfig.json` sin salida; `npm run build` y `npx eslint` sobre los archivos tocados sin errores nuevos.
+- Resultado esperado: todas las pruebas pasan; `tests/despachador-hermes.test.ts` y `tests/journey-dispatch.test.ts` ya no existen y ninguna otra prueba conservada se borró para ponerla en verde. La suite completa no se corrió en esta sesión (la corre quien integra).
+- Validación manual del responsable, en un clon de laboratorio y no en el checkout real: `valmen journey install-trigger --project <id>` y `valmen journey advance --project <id>` responden con el aviso de retiro y salen con 2; `valmen journey advance --project <id> --fase preparacion` sigue funcionando; `valmen journey next --wave` con un archivo ajeno sin commitear imprime el aviso de árbol sucio. Después, en su máquina, desinstalar el disparador si aún existe (el harness no ejecuta ninguno de los dos): `launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.valmen.jornada.<proyecto>.plist` y `hermes cron remove valmen-jornada-<proyecto>`. Comprobación de que no queda nada activo: `launchctl list | grep com.valmen.jornada` y `hermes cron list | grep valmen-jornada` no deben devolver líneas. La confirmación del PO queda como resultado de esta prueba manual.
 - Ambiente: los tickets de la ola, el worktree, el parte y la skill ya integrados en la rama de partida.
 
 ## QA
@@ -214,7 +224,23 @@ Contrato previsto, que se completa al entregar:
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-08",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": null,
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual: Subagente de Claude Code dedicado solo a este ticket; la sesión no expone agregado de tokens",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -278,6 +304,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-08",
+    "at": "2026-10-08T16:13:29.797Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-08",
+    "at": "2026-10-08T16:26:23.404Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-08",
+    "at": "2026-10-08T16:26:23.717Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
