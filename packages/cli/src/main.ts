@@ -113,6 +113,7 @@ import {
   journeyNextCommand,
   journeyClearStopCommand,
   journeyInstallTriggerCommand,
+  journeyApproveEligibleCommand,
   journeyNotifyPlansCommand,
   journeyPlanCommand,
   planApproveCommand,
@@ -257,6 +258,9 @@ Comandos:
                             entregar. Lo guarda; con --to lo envía una vez. No cierra nada.
   journey notify-plans --project <id> --journey <id> [--to <destino>]
                             Emite un código de aprobación por plan listo y uno de lote, y los envía.
+  journey approve-eligible --journey <id> [--project <id>]
+                            Aprueba por autorización los planes elegibles de la jornada y lista los
+                            pendientes con su decisión (opciones y efecto). Sesión atendida.
   approval-eligibility --id <ID> --stage analysis|plan [--json]
                             Decide en código si el análisis o el plan del ticket puede aprobarse por una
                             autorización (sin modelo y sin escribir nada). Sale con 3 si no lo es.
@@ -2055,11 +2059,13 @@ export async function run(argv: readonly string[]): Promise<number> {
               ? journeyInstallTriggerCommand(options.flags)
               : rest[0] === "notify-plans"
                 ? journeyNotifyPlansCommand(options.flags)
+                : rest[0] === "approve-eligible"
+                ? journeyApproveEligibleCommand(options.flags, { root: resolvePaths(options).root })
                 : rest[0] === "clear-stop"
                 ? journeyClearStopCommand(options.flags)
                 : rest[0] === "worktree"
                 ? journeyWorktreeCommand(resolvePaths(options), rest.slice(1), options.flags)
-                : { stdout: "", stderr: "journey admite: plan, advance (solo --fase preparacion), next, brief, handoff, notify-plans, clear-stop, worktree e install-trigger (retirado).\n", exitCode: EXIT_SCHEMA };
+                : { stdout: "", stderr: "journey admite: plan, advance (solo --fase preparacion), next, brief, handoff, notify-plans, approve-eligible, clear-stop, worktree e install-trigger (retirado).\n", exitCode: EXIT_SCHEMA };
     } else if (command === "review-agent") {
       result = await reviewAgentCommand(resolvePaths(options), options.flags);
     } else if (command === "qa-shadow") {

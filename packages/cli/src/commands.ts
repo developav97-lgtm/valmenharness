@@ -100,6 +100,7 @@ import {
   leerAutorizaciones,
   revocarAutorizacion,
   armarJornada,
+  aprobarPlanesElegiblesDeJornada,
   emitirAprobacionesDeJornada,
   advertenciaDeArbolSucio,
   avanzarJornada,
@@ -3040,6 +3041,39 @@ export function journeyNotifyPlansCommand(
     return ok(
       `${emision.mensaje}\n${entrega.delivered ? `Enviado a ${destino}.` : `Los códigos valen, pero el envío a ${destino} falló: ${entrega.detail}`}\n`,
     );
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/**
+ * `journey approve-eligible --journey <id> [--project <id>]`: aprueba por autorización los planes
+ * elegibles de la jornada y lista los pendientes con su decisión (R-APRO-006). Es atendida.
+ */
+export function journeyApproveEligibleCommand(
+  flags: Readonly<Record<string, string | true>>,
+  opciones: {
+    readonly home?: string;
+    readonly root?: string;
+    readonly ahora?: () => Date;
+    readonly env?: Readonly<Record<string, string | undefined>>;
+  } = {},
+): CommandResult {
+  const jornada = typeof flags["journey"] === "string" ? flags["journey"] : undefined;
+  if (jornada === undefined) return error("journey approve-eligible requiere --journey <id>.", EXIT_SCHEMA);
+  try {
+    const project = proyectoDeLaOla(flags, {
+      ...(opciones.home === undefined ? {} : { home: opciones.home }),
+      ...(opciones.root === undefined ? {} : { root: opciones.root }),
+    });
+    const r = aprobarPlanesElegiblesDeJornada({
+      project,
+      journeyId: jornada,
+      ...(opciones.ahora === undefined ? {} : { ahora: opciones.ahora() }),
+      ...(opciones.env === undefined ? {} : { env: opciones.env }),
+    });
+    return ok(`${r.mensaje}\n`);
   } catch (caught) {
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);

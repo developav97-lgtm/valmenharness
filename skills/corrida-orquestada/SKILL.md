@@ -11,10 +11,10 @@ La sesión que el PO abre es el **orquestador**: reparte los tickets de la jorna
 
 ## Dependencias
 
-Algunos comandos de este recorrido los entregan tickets hermanos. Mientras falten, **no los reemplazas con git a mano**: te detienes en ese paso, lo dices al PO y sigues con lo que sí existe.
+Si un comando de este recorrido falta, **no lo reemplazas con git a mano**: te detienes en ese paso, lo dices al PO y sigues con lo que sí existe.
 
 - `valmen journey next --wave`, `journey brief`, `journey worktree create|integrate|remove` y `journey handoff`: ya en el CLI.
-- Aprobación automática por autorización: SECURITY-ENGINE-APROBACION-POR-AUTORIZACION-20261007. Mientras no exista, **todos los planes van en lote al PO**.
+- Aprobación por autorización: `valmen approval-eligibility`, `approve-by-authorization` y `journey approve-eligible`, ya en el CLI.
 
 ## Pedir la ola
 
@@ -32,13 +32,12 @@ El subagente trabaja solo en su worktree, recorre `valmen resume --id <ID>` y se
 
 ## Aprobar
 
-Por cada plan listo, antes de pedirle nada al PO:
+Con los planes de la ola listos, antes de pedirle nada al PO y en sesión atendida (la orden se niega en una desatendida):
 
-1. `valmen approval-eligibility --id <ID> --stage plan` decide en código si es elegible (sale con 3 si no).
-2. `valmen approval-authorize list` y `valmen qa-authorize list` muestran las autorizaciones vigentes.
-3. **Elegible y con autorización vigente** (cuando exista el registro de la dependencia): se aprueba atribuida a la autorización, nunca al modelo.
-4. **Todo lo demás, en lote al PO**: junta los planes de la ola, resume cada uno en dos líneas y espera su frase. El PO aprueba con `valmen approve-plan --id <ID> --actor <nombre> --quote "<su frase>"` por ticket. Sin frase literal no hay aprobación; no la completes.
-5. **SECURITY y despliegue nunca se aprueban solos**: se detienen para una persona, con o sin autorización.
+1. `valmen journey approve-eligible --journey <id>` aprueba por autorización los planes elegibles —atribuidos a la autorización, nunca al modelo— y los deja en `approved`. Imprime los pendientes con su decisión en opciones y efecto. `valmen approval-authorize list` muestra las autorizaciones vigentes; `valmen approval-eligibility --id <ID> --stage plan` explica un ticket suelto.
+2. `valmen journey notify-plans --project <id> --journey <id> --to telegram` avisa al PO de los pendientes: emite código solo para los que siguen en `planned`.
+3. **Todo lo demás, en lote al PO**: junta los pendientes, resume cada uno en dos líneas y espera su frase. El PO aprueba con `valmen plan-approve --code <código> --actor <nombre> --quote "<su frase>"` o, por ticket, con `valmen approve-plan --id <ID> --actor <nombre> --quote "<su frase>"`. Sin frase literal no hay aprobación; no la completes.
+4. **SECURITY, despliegue y un `block` nunca se aprueban solos**: la orden los deja pendientes para una persona, con o sin autorización. Un pendiente «derivable al revisor» sigue siendo del PO: no se le pide nada al revisor desde la jornada.
 
 ## Integrar
 

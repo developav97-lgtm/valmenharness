@@ -23,9 +23,17 @@ import {
   verifyApproval,
   type IssuedApproval,
 } from "./approval.js";
+import { elegibilidadDeAprobacion, aprobarPorAutorizacion } from "./approval-eligibility.js";
 import { type RegistryPaths, findTicket, planApprovalSources } from "./discovery.js";
 import { readJourneys } from "./journeys.js";
-import { aprobacionDePlanVigente, hashDelPlan, registrarAprobacionDePlan } from "./plan-approval.js";
+import {
+  FUENTE_AUTORIZACION,
+  aprobacionDePlanVigente,
+  assertSesionAtendida,
+  hashDelPlan,
+  registrarAprobacionDePlan,
+} from "./plan-approval.js";
+import { transition } from "./transition.js";
 import { type AuthorizedProject } from "./project-resolution.js";
 import { readReceipts, veredictoDeCompuerta } from "./receipts.js";
 
@@ -281,3 +289,108 @@ export function aprobarPorCodigo(request: {
   return resultados;
 }
 
+
+export interface PlanAprobadoPorAutorizacion {
+  readonly ticket: string;
+  readonly title: string;
+  readonly autorizacion: string;
+}
+
+export interface PlanPendienteDeJornada {
+  readonly ticket: string;
+  readonly title: string;
+  /** Todo lo que impide aprobarlo por autorización. */
+  readonly motivos: readonly string[];
+  /** Solo la compuerta en `review` lo separa de una autorización de modo revisor. */
+  readonly derivableAlRevisor: boolean;
+}
+
+export interface AprobacionDeJornada {
+  readonly aprobados: readonly PlanAprobadoPorAutorizacion[];
+  readonly pendientes: readonly PlanPendienteDeJornada[];
+  readonly mensaje: string;
+}
+
+/**
+ * Aprueba por autorización los planes elegibles de una jornada y deja el resto para una persona
+ * (R-APRO-006).
+ *
+ * No decide nada nuevo: la elegibilidad es `elegibilidadDeAprobacion` y el registro es
+ * `aprobarPorAutorizacion`, con todas sus barreras (SECURITY, despliegue, `block`, recibo viejo,
+ * cupo y sesión atendida). Esta función solo recorre la jornada, mueve a `approved` lo aprobado y
+ * redacta la decisión pendiente. Un fallo en un ticket lo deja pendiente sin cortar el lote.
+ */
+export function aprobarPlanesElegiblesDeJornada(request: {
+  readonly project: AuthorizedProject;
+  readonly journeyId: string;
+  readonly ahora?: Date;
+  readonly env?: Readonly<Record<string, string | undefined>>;
+}): AprobacionDeJornada {
+  const env = request.env ?? process.env;
+  // La barrera de sesión va antes de leer nada: una sesión desatendida no aprueba ni una línea.
+  assertSesionAtendida("aprobar los planes elegibles de una jornada", env);
+  const ahora = request.ahora ?? new Date();
+  const { project } = request;
+  const jornada = readJourneys(project).find((j) => j.journeyId === request.journeyId);
+  if (jornada === undefined) {
+    throw new Error(`La jornada "${request.journeyId}" no existe en el proyecto autorizado.`);
+  }
+  const aprobados: PlanAprobadoPorAutorizacion[] = [];
+  const pendientes: PlanPendienteDeJornada[] = [];
+
+  for (const entrada of [...jornada.tickets].sort((a, b) => a.priority - b.priority || a.order - b.order)) {
+    const ticket = entrada.ticketId;
+    const ubicado = findTicket(project.paths, ticket);
+    if (ubicado === undefined) continue;
+    const documento = parseTicket(ubicado.text);
+    if (documento.fields.workflow_status !== "planned") continue;
+    const title = documento.fields.title;
+    const vigente = aprobacionDePlanVigente(documento);
+    // Aprobado por una persona o por otra vía: no es de esta orden.
+    if (vigente.estado === "vigente" && vigente.aprobacion.source !== FUENTE_AUTORIZACION) continue;
+
+    try {
+      let autorizacion: string;
+      if (vigente.estado === "vigente") {
+        // Quedó registrada pero no se movió: se termina el movimiento sin otro cupo ni otro evento.
+        autorizacion = vigente.aprobacion.authorizationId ?? "?";
+      } else {
+        const e = elegibilidadDeAprobacion({ paths: project.paths, ticketId: ticket, etapa: "plan", ahora });
+        if (!e.elegible) {
+          pendientes.push({
+            ticket,
+            title,
+            motivos: e.reglas.filter((r) => !r.cumple).map((r) => `${r.regla}: ${r.detalle}`),
+            derivableAlRevisor: e.derivableAlRevisor,
+          });
+          continue;
+        }
+        autorizacion = aprobarPorAutorizacion({ paths: project.paths, ticketId: ticket, etapa: "plan", ahora, env }).autorizacion.id;
+      }
+      transition({ paths: project.paths, ticketId: ticket, entity: "ticket", to: "approved", now: () => ahora });
+      aprobados.push({ ticket, title, autorizacion });
+    } catch (error) {
+      pendientes.push({
+        ticket,
+        title,
+        motivos: [error instanceof Error ? error.message : String(error)],
+        derivableAlRevisor: false,
+      });
+    }
+  }
+
+  const lineas = [
+    `Planes aprobados por autorización — ${request.journeyId}: ${aprobados.length}; pendientes de una persona: ${pendientes.length}`,
+    ...aprobados.map((a) => `✓ ${a.ticket} — ${a.title}: aprobado por la autorización ${a.autorizacion}`),
+  ];
+  for (const p of pendientes) {
+    lineas.push(
+      `Decisión: aprobar el plan de ${p.ticket} — ${p.title}`,
+      ...p.motivos.map((m) => `  ✗ ${m}`),
+      ...(p.derivableAlRevisor ? ["  (derivable al revisor: no se le pidió nada)"] : []),
+      `  A) lo apruebas con valmen approve-plan --id ${p.ticket} --actor <tú> --quote "<tus palabras>" → pasa a approved y entra en la ola`,
+      `  B) no lo apruebas → queda en planned y la ola no lo ofrece`,
+    );
+  }
+  return { aprobados, pendientes, mensaje: lineas.join("\n") };
+}
