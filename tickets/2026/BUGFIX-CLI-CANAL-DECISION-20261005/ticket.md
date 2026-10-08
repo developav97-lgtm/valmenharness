@@ -4,7 +4,7 @@ id: BUGFIX-CLI-CANAL-DECISION-20261005
 title: La decisión de una compuerta tomada por el CLI queda registrada con el canal mission-control
 type: BUGFIX
 module: CLI
-workflow_status: intake
+workflow_status: planned
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -13,7 +13,7 @@ migration_impact: false
 docker_impact: false
 risk_level: normal
 created: 2026-10-05
-updated: 2026-10-05
+updated: 2026-10-08
 related_ticket: null
 target_release: null
 released_in: null
@@ -36,34 +36,72 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
 
 ## Descripción funcional
 
-- Alcance:
-- Usuario o rol afectado:
-- Comportamiento actual:
-- Comportamiento esperado:
+- Alcance: la decisión humana sobre una compuerta escalada que se toma con `valmen gate-decide --id <ID> --receipt <recibo>` (la rama sin `--code`). Queda fuera la rama `--code` (Telegram), Mission Control y la corrida delegada, que ya declaran su canal.
+- Usuario o rol afectado: el PO o responsable que decide compuertas desde la terminal, y quien audita después el recibo o el evento `gate-approved`/`gate-rejected` del ticket para saber por qué canal se firmó.
+- Comportamiento actual: la decisión tomada por el CLI queda en `humanDecision.channel` del recibo como `mission-control`, y el evento del ticket dice «canal mission-control». La atribución es falsa.
+- Comportamiento esperado: la decisión tomada por el CLI queda con canal `cli` en el recibo y en el evento del ticket; los otros canales (`mission-control`, `hermes-celular`, `delegation`) no cambian.
 
 ## Diagnóstico
 
 - Archivos y flujo investigados:
-- Causa raíz o hipótesis:
-- Riesgos y compatibilidad:
-- Impactos de sync, migración, Docker o despliegue:
+  - `packages/cli/src/main.ts:892` `runGateDecide`: con `--code` delega en `decideByCode` (`main.ts:950`); sin `--code`, valida `--id`, `--receipt`, `--decision`, `--actor` y llama `recordHumanDecision(paths, ticketId, receiptId, { decision, actor, reason })` en `main.ts:972-976` **sin `channel`**.
+  - `packages/server/src/gates.ts:596` `recordHumanDecision`: `HumanDecisionInput.channel` es opcional (`gates.ts:575`) y se completa con `input.channel ?? "mission-control"` en `gates.ts:635`; el recibo con la decisión se anexa (`appendReceipt`) y luego `appendEvent` escribe `gate-approved`/`gate-rejected` con el texto de `describirDecisionHumana`.
+  - `packages/engine/src/receipts.ts:168` `describirDecisionHumana`: redacta «(recibo …, canal ${decision.channel}, decidida …)», la frase que termina en el evento del ticket.
+  - `packages/gate/src/receipt.ts:257`: `humanDecision.channel` es un `string` libre; no hay enumeración que ampliar.
+- Consumidores de `recordHumanDecision` (todos afectados por el defecto o por su corrección):
+  - CLI `gate-decide` — `packages/cli/src/main.ts:972` (el que falla: no pasa canal).
+  - Mission Control — `packages/server/src/server.ts:1437-1442`: pasa `channel` solo si el cuerpo lo trae; si no, cae en el defecto `mission-control`, que es correcto para ese canal. Depende del defecto: **no se toca**.
+  - Telegram/Hermes — `packages/cli/src/hermes.ts:639-646` (`decideByCode`): pasa `CANAL_REMOTO` = `hermes-celular` (`hermes.ts:554`); lo fija `tests/hermes-notify.test.ts:313`.
+  - Corrida delegada — `packages/cli/src/delegation.ts:183` pasa `channel: "delegation"`; `main.ts:2004` inyecta `recordHumanDecision` como `decide`.
+  - Lectores del canal: `describirDecisionHumana` (`packages/engine/src/receipts.ts:168`) y el avance que reconoce el evento por recibo (`packages/engine/src/transition.ts:258`); leen el valor tal cual, sin compararlo con una lista.
+- Causa raíz (comprobada): `runGateDecide` no pasa `channel` y `recordHumanDecision` rellena el hueco con `mission-control`. No hay otra ruta: el CLI no tiene bandera de canal ni constante propia.
+- Hipótesis pendientes: ninguna sobre la causa. Queda la decisión del valor (`cli`, recomendado) en «Supuestos y decisiones pendientes»; el plan usa `cli` y no otro valor.
+- Memoria: `buscar_memoria` («canal decisión compuerta CLI mission-control») no devolvió un caso previo de este síntoma; los aprendizajes AP-007 y AP-009 (`.valmen/memory/aprendizajes.md:60`, `:76`) tratan la firma en el recibo, no el canal.
+- Riesgos y compatibilidad: cambio de una línea en un solo llamador; el campo es texto libre, así que `cli` no rompe lectores ni el formato del recibo. Los recibos y eventos ya escritos con «canal mission-control» por el CLI no se reescriben (append-only) ni se pueden distinguir de los de Mission Control; el canal es fiable desde el commit de este ticket. Riesgo de choque: `tests/firma-de-compuerta.test.ts:300` ya usa `channel: "cli"` como dato de prueba, lo que confirma el valor y no choca. Coordinación: el aviso del registro sobre cambios sin commitear en `main.ts` ya no aplica (el checkout principal solo tiene `.valmen/journeys/events.jsonl` modificado al 2026-10-08).
+- Impactos de sync, migración, Docker o despliegue: ninguno — cambio en el CLI local y su prueba; sin datos migrados, contenedores ni despliegue.
 
 ## Plan
 
-- Gate de plan y aprobación:
+- Gate de plan y aprobación: pendiente — compuerta `plan` con evaluador `cascade` y aprobación explícita del PO antes de `approved`. El plan usa el valor `cli`, recomendado en «Supuestos y decisiones pendientes»; si el PO elige otro, el plan se ajusta y se reaprueba.
+- Alcance: solo la rama `--id/--receipt` de `runGateDecide` y sus pruebas. Exclusiones: no se cambia el defecto `mission-control` de `recordHumanDecision` (lo usa Mission Control), ni Hermes, ni la corrida delegada, ni se reescriben recibos o eventos históricos.
 - Pasos ordenados:
   <!-- Cada paso nombra archivo, símbolo o comando. Un paso que no dice dónde ni
        con qué se toca no se puede ejecutar ni revisar, y la compuerta lo lee así. -->
-  1.
-  2.
-- Rollback:
+  1. En `packages/cli/src/main.ts`, junto a `runGateDecide`, declarar y exportar la constante `CANAL_CLI = "cli"` con un comentario que diga por qué existe; en la llamada a `recordHumanDecision` (`main.ts:972`) agregar `channel: CANAL_CLI`. Cubre los criterios 1 y 2.
+  2. En `tests/gate-human-decision.test.ts`, agregar un `describe` que llame `runGateDecide` (importado de `packages/cli/src/main.ts`) con `--id`, `--receipt`, `--decision approve`, `--actor` y `--reason` sobre un recibo escalado y un ticket creado en el laboratorio (mismo patrón de `ticketEn` en `tests/firma-de-compuerta.test.ts`), y que compruebe `humanDecision.channel === "cli"` en el recibo vigente. Cubre el criterio 1.
+  3. En el mismo `describe` de `tests/gate-human-decision.test.ts`, comprobar que el evento `gate-approved` del ticket contiene «canal cli» y no «canal mission-control». Cubre el criterio 2.
+  4. En `tests/gate-human-decision.test.ts`, agregar el caso control: `recordHumanDecision` sin `channel` sigue escribiendo `mission-control` (el camino de Mission Control en `packages/server/src/server.ts:1437`). Cubre el criterio 3.
+  5. Correr `npx vitest run tests/gate-human-decision.test.ts` y esperar todas las pruebas en verde. Cubre los criterios 1, 2 y 3.
+  6. Correr `npx vitest run tests/hermes-notify.test.ts` para comprobar que la rama `--code` sigue firmando `hermes-celular`. Cubre el criterio 4.
+  7. Correr `npx vitest run tests/delegation.test.ts` para comprobar que la corrida delegada (`packages/cli/src/delegation.ts:183`) no cambia. Cubre el criterio 5.
+  8. Correr `npx vitest run tests/firma-de-compuerta.test.ts` para comprobar que la constancia de firma en el evento sigue igual. Cubre el criterio 6.
+  9. Correr `npx tsc --noEmit -p tsconfig.json` y esperar cero errores. Cubre el criterio 7.
+  10. Verificación manual en el laboratorio: revisar con `git diff` que ningún archivo bajo `.valmen/receipts/` ni ningún bloque `## Eventos` previo cambió, y dejar en la entrega la fecha desde la cual el canal del CLI es fiable. Cubre el criterio 8.
+  11. Entrega: escribir en `## Pruebas` el contrato —comandos de los pasos 5 a 9, directorio de ejecución el worktree (`/Users/juanandrade/Desktop/ValmenHarness/.claude/worktrees/ticket-canal-decision`), resultado esperado (todas en verde, `tsc` sin errores), validación manual (correr `valmen gate-decide --id <ID> --receipt <recibo escalado> --decision approve --actor <nombre> --reason <frase>` sobre un ticket de prueba y leer «canal cli» en el evento) y requisitos de ambiente (Node 24, `npm install` hecho)—; correr la compuerta `qa-mechanical` con `valmen gate qa-mechanical --id BUGFIX-CLI-CANAL-DECISION-20261005 --evaluator command`, registrar el consumo de IA, correr `valmen secrets` y commitear solo `packages/cli/src/main.ts`, `tests/gate-human-decision.test.ts` y el ticket en la rama del worktree.
+- Dependencias: ninguna externa. La decisión del valor del canal es del PO (ver «Supuestos y decisiones pendientes»).
+- Rollback: revertir el commit del ticket en la rama (`git revert <hash>`): el CLI vuelve a escribir `mission-control`. Los recibos escritos con `cli` mientras tanto quedan como están (append-only) y siguen siendo legibles porque `humanDecision.channel` es texto libre (`packages/gate/src/receipt.ts:257`).
 
 ## Criterios de aceptación
 
 <!-- Una afirmación verificable por criterio. Una frase con «y» son dos criterios:
      cada uno se despliega como una proposición propia, y una que agrupa varias
      afirmaciones cae en banda de revisión aunque el plan la cubra entera. -->
-- [ ]
+- [ ] Una decisión tomada con `valmen gate-decide --id --receipt` queda en el recibo con `humanDecision.channel` igual a `cli`.
+      <!-- test: npx vitest run tests/gate-human-decision.test.ts -->
+- [ ] El evento `gate-approved` que el CLI anexa al ticket dice «canal cli».
+      <!-- test: npx vitest run tests/gate-human-decision.test.ts -->
+- [ ] `recordHumanDecision` sin canal explícito sigue registrando `mission-control`.
+      <!-- test: npx vitest run tests/gate-human-decision.test.ts -->
+- [ ] La decisión por código desde Telegram sigue registrando `hermes-celular`.
+      <!-- test: npx vitest run tests/hermes-notify.test.ts -->
+- [ ] La corrida delegada sigue pasando sus pruebas sin cambios.
+      <!-- test: npx vitest run tests/delegation.test.ts -->
+- [ ] La constancia de firma en el evento del ticket sigue pasando sus pruebas sin cambios.
+      <!-- test: npx vitest run tests/firma-de-compuerta.test.ts -->
+- [ ] El proyecto compila sin errores de tipos.
+      <!-- test: npx tsc --noEmit -p tsconfig.json -->
+- [ ] Ningún recibo ni evento ya registrado se reescribe.
+      <!-- verify: manual -->
 
 ## Puntos
 
@@ -125,6 +163,24 @@ Sin publicar todavía.
     "action": "created",
     "actor": "cli",
     "details": "Ticket creado sin sobrescribir historial."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-002",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:13:15.518Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: intake -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-003",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:14:12.455Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: analyzed -> planned."
   }
 ]
 ```
