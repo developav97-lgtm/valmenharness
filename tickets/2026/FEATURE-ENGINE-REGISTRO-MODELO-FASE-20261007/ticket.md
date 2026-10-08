@@ -4,7 +4,7 @@ id: FEATURE-ENGINE-REGISTRO-MODELO-FASE-20261007
 title: Registrar el modelo realmente usado por fase, compararlo con el declarado y decir «sin reportar» el costo ausente
 type: FEATURE
 module: ENGINE
-workflow_status: planned
+workflow_status: approved
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -82,7 +82,7 @@ Ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente — compuerta `plan` con evaluador `cascade` y aprobación explícita del PO antes de `approved`.
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 - Alcance: contrato de motor de R-PERF-006 para las sesiones desatendidas (preparación de la jornada y `valmen run`) y su lectura en el parte diario y en el revisor. Fuera: la vista de Mission Control (FEATURE-MC-VISTA-MODELOS-EFECTIVOS-20261007), el CLI de perfiles (FEATURE-CLI-PERFILES-MODELOS-20261007), la sesión interactiva con subagentes (FEATURE-ENGINE-ORQUESTACION-INTERACTIVA-20261007, cuyo modelo real ya lee `packages/server/src/agentes.ts`) y el cableado a `packages/engine/src/execution-models.ts`.
 - Dependencias: SECURITY-ENGINE-DESPACHO-POR-PROVEEDOR-20261007 ya integrado en `main` (`despachoDeFase` en `packages/adapter/src/routing.ts`); se reutiliza sin cambiarlo.
 - Responsable: subagente de implementación (sonnet) en el worktree `valmen/ticket-registro-modelo-fase`; pruebas del responsable y QA, el PO.
@@ -222,6 +222,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:35:33.293Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"A, apruebo (plan de REGISTRO-MODELO-FASE: el costo de Claude con suscripción se registra como reportado por el cliente)\",\"planHash\":\"sha256:b1a5302b2dba1b98efff1e63a21e9cbfa0233eea5ac24234624cf74440e91a6d\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:35:33.636Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:b1a5302b2dba1b98efff1e63a21e9cbfa0233eea5ac24234624cf74440e91a6d."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:35:33.636Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
   }
 ]
 ```
