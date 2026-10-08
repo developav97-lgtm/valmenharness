@@ -4,7 +4,7 @@ id: FEATURE-ADAPTER-SKILLS-UX-20261007
 title: Integrar UI UX Pro Max en el diseño e Impeccable en la revisión de pantallas, con el informe como evidencia sin bloquear
 type: FEATURE
 module: ADAPTER
-workflow_status: planned
+workflow_status: approved
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -59,7 +59,7 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente de la aprobación explícita del PO; el ticket se detiene en `planned` con el recibo de la compuerta `plan`.
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 - Alcance: el informe de UX como evidencia, su comando y su herramienta MCP, y la guía de uso de UI UX Pro Max e Impeccable en las skills del catálogo y en el texto del flujo. Exclusiones: descargar, instalar, actualizar o proyectar las skills de terceros a los runtimes; cualquier bloqueo de entrega por el informe; cambios en `revisar_presentacion`, que sigue siendo de solo lectura.
 - Dependencias: SECURITY-ENGINE-SKILLS-TERCEROS-20261007 y SECURITY-CLI-REVISION-SKILLS-20261007, ambos `closed`, que aportan `readExternalSkills` y `estadoDeSkillsExternas`.
 - Pasos ordenados:
@@ -171,6 +171,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-07",
+    "at": "2026-10-08T01:02:31.093Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"La a (aprueba los cuatro planes: contexto de fases, CodeGraph estado, CodeGraph montaje y skills de UX)\",\"planHash\":\"sha256:cd9b0cb05ed862a8b7d917774534617107918277897fe2e85fe8ed6b106926d7\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-07",
+    "at": "2026-10-08T01:02:31.680Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:cd9b0cb05ed862a8b7d917774534617107918277897fe2e85fe8ed6b106926d7."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-07",
+    "at": "2026-10-08T01:02:31.680Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
   }
 ]
 ```

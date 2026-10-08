@@ -4,7 +4,7 @@ id: FEATURE-CLI-CODEGRAPH-MONTAJE-20261007
 title: Ofrecer instalar e indexar CodeGraph al montar o adoptar, solo con confirmación
 type: FEATURE
 module: CLI
-workflow_status: planned
+workflow_status: approved
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -62,7 +62,7 @@ Ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación: compuerta `plan` con evaluador `cascade`; la aprobación del plan es del PO y está pendiente —este ticket no la registra—.
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 - Alcance y exclusiones: ofrecer CodeGraph en `valmen adopt` y en la guía de puesta en marcha, e indexar solo con `--codegraph`. Fuera: instalar el binario (el harness imprime el comando y lo corre la persona), registrar el MCP y la línea del doctor (FEATURE-CLI-CODEGRAPH-ESTADO-20261007), `codegraph uninit`, clientes MCP que el harness no escribe y cualquier diálogo interactivo.
 - Dependencias: FEATURE-CLI-CODEGRAPH-ESTADO-20261007 implementado (`readCodegraphStatus` en `packages/adapter/src/codegraph.ts` y `probeCodegraph` en `packages/cli/src/codegraph.ts`). Si cambia su forma al implementarse, este plan se ajusta antes de empezar.
 - Pasos ordenados:
@@ -195,6 +195,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-07",
+    "at": "2026-10-08T01:02:29.730Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"La a (aprueba los cuatro planes: contexto de fases, CodeGraph estado, CodeGraph montaje y skills de UX)\",\"planHash\":\"sha256:fbcab5202be6167082de969a628772d630b5647c1c194e129efaf9e4965e1a04\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-07",
+    "at": "2026-10-08T01:02:30.429Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:fbcab5202be6167082de969a628772d630b5647c1c194e129efaf9e4965e1a04."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-07",
+    "at": "2026-10-08T01:02:30.429Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
   }
 ]
 ```

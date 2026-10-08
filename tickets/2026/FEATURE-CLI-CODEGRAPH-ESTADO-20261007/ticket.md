@@ -4,7 +4,7 @@ id: FEATURE-CLI-CODEGRAPH-ESTADO-20261007
 title: Mostrar en el diagnóstico si CodeGraph está instalado, indexado y al día, y registrar su MCP en los clientes del proyecto
 type: FEATURE
 module: CLI
-workflow_status: planned
+workflow_status: approved
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -61,7 +61,7 @@ Ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación: compuerta `plan` con evaluador `cascade`; la aprobación del plan es del PO y está pendiente —este ticket no la registra—.
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 - Alcance y exclusiones: diagnóstico del estado de CodeGraph y registro de su MCP en los clientes que `valmen mcp` ya maneja. Fuera: instalar CodeGraph, correr `codegraph init`/`index`/`sync`, ofrecerlo en `adopt` (FEATURE-CLI-CODEGRAPH-MONTAJE-20261007), clientes que el harness no escribe hoy (Cursor, Hermes) y `codegraph install`, que escribe la configuración global de la persona.
 - Pasos ordenados:
   1. `packages/adapter/src/codegraph.ts` (nuevo, exportado desde `packages/adapter/src/index.ts`): `CODEGRAPH_SERVER_ID = "codegraph"`, `codegraphEntry()` → `mcpEntry("codegraph", ["serve", "--mcp"])`, y la función pura `readCodegraphStatus(resultado)` que traduce la salida de `codegraph status --json` —o el error al lanzarlo— a un estado: `no-instalado` (ENOENT), `sin-indice` (`initialized:false`), `al-dia` (`pendingChanges` en 0/0/0), `desactualizado` (con los conteos) o `ilegible` (JSON inválido, salida distinta de 0, tope de tiempo). (C1, C2, C3, C4, C5)
@@ -189,6 +189,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-07",
+    "at": "2026-10-08T01:02:28.120Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"La a (aprueba los cuatro planes: contexto de fases, CodeGraph estado, CodeGraph montaje y skills de UX)\",\"planHash\":\"sha256:c43f72fadb7d3ed5019fb1e1e8036b31ff12313502f8aa1765bdd0302c4542d4\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-07",
+    "at": "2026-10-08T01:02:28.825Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:c43f72fadb7d3ed5019fb1e1e8036b31ff12313502f8aa1765bdd0302c4542d4."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-07",
+    "at": "2026-10-08T01:02:28.825Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
   }
 ]
 ```

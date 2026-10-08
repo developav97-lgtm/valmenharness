@@ -4,7 +4,7 @@ id: FEATURE-ADAPTER-CONTEXTO-FASES-SUBAGENTE-20261007
 title: Proveer a la sesión el modelo de cada fase y avisar si el cliente no admite subagentes
 type: FEATURE
 module: ADAPTER
-workflow_status: planned
+workflow_status: approved
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -75,7 +75,7 @@ Ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación: compuerta `plan` con el evaluador `cascade`; pendiente de la aprobación explícita de una persona (PO) antes de `approved`. Este ticket no la registra.
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 - Pasos ordenados:
   <!-- Cada paso nombra archivo, símbolo o comando, y los criterios que cubre, por ejemplo
        «(C1, C2)». Un paso que no dice dónde ni con qué se toca no se puede ejecutar ni
@@ -218,6 +218,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-07",
+    "at": "2026-10-08T01:02:26.902Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"La a (aprueba los cuatro planes: contexto de fases, CodeGraph estado, CodeGraph montaje y skills de UX)\",\"planHash\":\"sha256:75a1ba6f3790facc5ad20d1e3fddaa17f86c890749d63d97af5b2813153db837\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-07",
+    "at": "2026-10-08T01:02:27.508Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:75a1ba6f3790facc5ad20d1e3fddaa17f86c890749d63d97af5b2813153db837."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-07",
+    "at": "2026-10-08T01:02:27.508Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
   }
 ]
 ```
