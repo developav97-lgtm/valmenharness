@@ -62,7 +62,7 @@ import { journeyWorktreeCommand } from "./worktree.js";
 import { REAL_GIT, runDelegation } from "./delegation.js";
 import { runFeature } from "./features.js";
 import { probeCodegraph } from "./codegraph.js";
-import { doctorCommand, providerCommand, routingCommand } from "./setup.js";
+import { doctorCommand, perfilesCommand, providerCommand, routingCommand } from "./setup.js";
 import { verifyOnboarding } from "./onboarding-verify.js";
 import {
   runHermes,
@@ -520,6 +520,13 @@ Comandos:
                             "set <rol> --provider <p> --model <m> [--effort <e>]"
                             cambia uno; "clear <rol>" lo devuelve al preset. Escribe
                             .valmen/routing.yaml, el mismo archivo que la pantalla.
+  perfiles [list|show|elegir|quitar]
+                            Los perfiles de modelos y cuál rige. "list" los muestra
+                            con la elección y el modelo de cada fase (--cliente
+                            <ejecutor> lo resuelve para ese ejecutor); "show <id>"
+                            un perfil rol por rol; "elegir <id>" y "quitar" escriben
+                            solo la elección en .valmen/profiles.yaml, y los corre
+                            una persona (--cliente <ejecutor> para uno solo).
   doctor                    Qué le falta a esta máquina y a este proyecto, con el
                             comando exacto que lo arregla. No escribe nada: es lo
                             primero que corre un agente al que le piden configurar
@@ -1991,6 +1998,8 @@ export async function run(argv: readonly string[]): Promise<number> {
       );
     } else if (command === "routing") {
       result = routingCommand(resolvePaths(options), options.flags, rest[0], rest[1]);
+    } else if (command === "perfiles") {
+      result = perfilesCommand(resolvePaths(options), options.flags, rest[0], rest[1]);
     } else if (command === "doctor") {
       result = await doctorCommand(resolvePaths(options));
     } else if (command === "onboarding") {

@@ -20,8 +20,13 @@ import { join } from "node:path";
 
 import { EXIT_SCHEMA, toFailure } from "@valmen/core";
 import {
+  EJECUTORES_CON_PERFIL,
   PRESETS,
   ROLES,
+  fasesDeSesion,
+  listarPerfiles,
+  readSeleccionDePerfil,
+  type ClienteDeSesion,
   codexAdapterCapabilities,
   type Effort,
   hermesAdapterCapabilities,
@@ -34,8 +39,9 @@ import {
   type AdapterCapabilities,
   CODEGRAPH_SERVER_ID,
 } from "@valmen/adapter";
-import type { RegistryPaths } from "@valmen/engine";
+import { renderFases, type RegistryPaths } from "@valmen/engine";
 import {
+  elegirPerfil,
   listProviderModels,
   listProviders,
   probeProvider,
@@ -251,7 +257,11 @@ export function routingCommand(
     for (const ruta of rutas) {
       lineas.push(
         `  ${columna(ruta.role, 16)}${columna(ruta.provider === "" ? "—" : ruta.provider, 16)}` +
-          `${columna(ruta.model === "" ? "—" : ruta.model, 32)}${ruta.source}`,
+          `${columna(ruta.model === "" ? "—" : ruta.model, 32)}${
+            ruta.perfil === undefined
+              ? ruta.source
+              : `perfil ${ruta.perfil.id} (${ruta.perfil.alcance})`
+          }`,
       );
     }
     if (!probabilistico) {
@@ -370,6 +380,108 @@ export function routingCommand(
   }
 
   return fallo(`Acción desconocida: "${accion}". Use show, set o clear.`);
+}
+
+/**
+ * `perfiles`: qué perfiles de modelos hay, cuál rige y qué modelo corre cada fase.
+ *
+ * Listar y mostrar solo leen. Elegir y quitar escriben únicamente la clave
+ * `seleccion` de `.valmen/profiles.yaml`, con el mismo escritor que Mission Control
+ * (`elegirPerfil`): no crean perfiles ni tocan el routing. El MCP solo llama a
+ * `list` y `show`; elegir es de una persona.
+ */
+export function perfilesCommand(
+  paths: RegistryPaths,
+  flags: Readonly<Record<string, string | true>>,
+  subcomando: string | undefined,
+  id: string | undefined,
+): CommandResult {
+  const accion = subcomando ?? "list";
+  const cliente = bandera(flags, "cliente");
+  if (cliente !== undefined && !(EJECUTORES_CON_PERFIL as readonly string[]).includes(cliente)) {
+    return fallo(
+      `"${cliente}" no es un ejecutor con perfil. Los vigentes son: ${EJECUTORES_CON_PERFIL.join(", ")}.`,
+    );
+  }
+
+  try {
+    if (accion === "list") {
+      const perfiles = listarPerfiles(paths.root);
+      const seleccion = readSeleccionDePerfil(paths.root);
+      const lineas = ["Perfiles de modelos:", ""];
+      for (const perfil of perfiles) {
+        const marcas: string[] = [];
+        if (seleccion.proyecto === perfil.id) marcas.push("elegido para el proyecto");
+        for (const [ejecutor, elegido] of Object.entries(seleccion.ejecutores)) {
+          if (elegido === perfil.id) marcas.push(`elegido para ${ejecutor}`);
+        }
+        lineas.push(
+          `  ${columna(perfil.id, 28)}${columna(perfil.origen, 12)}${marcas.join(", ")}`,
+        );
+        if (perfil.description !== "") lineas.push(`    ${perfil.description}`);
+      }
+      for (const elegido of [seleccion.proyecto, ...Object.values(seleccion.ejecutores)]) {
+        if (elegido !== null && !perfiles.some((p) => p.id === elegido)) {
+          lineas.push("", `  Aviso: el perfil elegido "${elegido}" no existe.`);
+        }
+      }
+      lineas.push(
+        "",
+        ...renderFases(
+          fasesDeSesion(paths.root, cliente === undefined ? {} : { cliente: cliente as ClienteDeSesion }),
+        ),
+        "",
+        "  Ver uno:      valmen perfiles show <id>",
+        "  Elegir:       valmen perfiles elegir <id> [--cliente <ejecutor>]   (lo hace una persona)",
+        "  Quitar:       valmen perfiles quitar [--cliente <ejecutor>]",
+      );
+      return ok(`${lineas.join("\n")}\n`);
+    }
+
+    if (accion === "show") {
+      if (id === undefined) return fallo("perfiles show requiere el id: valmen perfiles show <id>.");
+      const perfil = listarPerfiles(paths.root).find((candidato) => candidato.id === id);
+      if (perfil === undefined) return fallo(`El perfil "${id}" no existe.`);
+      const lineas = [
+        `Perfil ${perfil.id} (${perfil.origen})`,
+        ...(perfil.description === "" ? [] : [perfil.description]),
+        "",
+        `  ${columna("rol", 16)}${columna("proveedor", 16)}${columna("modelo", 32)}esfuerzo`,
+      ];
+      for (const rol of Object.keys(perfil.roles).sort()) {
+        const ruta = perfil.roles[rol];
+        if (ruta === undefined) continue;
+        lineas.push(
+          `  ${columna(rol, 16)}${columna(ruta.provider, 16)}${columna(ruta.model, 32)}${ruta.effort}`,
+        );
+      }
+      return ok(`${lineas.join("\n")}\n`);
+    }
+
+    if (accion === "elegir" || accion === "quitar") {
+      if (accion === "elegir" && id === undefined) {
+        return fallo("perfiles elegir requiere el id: valmen perfiles elegir <id>.");
+      }
+      const perfil = accion === "elegir" ? (id as string) : null;
+      const resultado = elegirPerfil(paths.root, {
+        perfil,
+        ...(cliente === undefined ? {} : { ejecutor: cliente }),
+      });
+      if (!resultado.ok) return fallo(resultado.errores.join("\n"));
+      const alcance = cliente === undefined ? "el proyecto" : `el ejecutor ${cliente}`;
+      return ok(
+        (perfil === null
+          ? `Se quitó la elección de perfil de ${alcance}.\n`
+          : `Perfil ${perfil} elegido para ${alcance}.\n`) +
+          "Cambia los modelos de las compuertas y de las fases en la próxima corrida; " +
+          "se guarda en .valmen/profiles.yaml.\n",
+      );
+    }
+  } catch (caught) {
+    return fallo(toFailure(caught).message);
+  }
+
+  return fallo(`Acción desconocida: "${accion}". Use list, show, elegir o quitar.`);
 }
 
 /** Una línea del diagnóstico: qué se miró, cómo salió y qué hacer. */

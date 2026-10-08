@@ -17,7 +17,7 @@
  *    es un programa que decide por su cuenta; lo que hace falta es que un agente
  *    lea qué falta y lo ejecute.
  */
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -27,6 +27,7 @@ import type { RegistryPaths } from "../packages/engine/src/discovery.js";
 import { readProjectRouting } from "../packages/adapter/src/index.js";
 import {
   doctorCommand,
+  perfilesCommand,
   providerCommand,
   routingCommand,
 } from "../packages/cli/src/setup.js";
@@ -126,6 +127,143 @@ describe("routing", () => {
     // El aviso sale del modelo declarado y no de una bandera escrita a mano.
     expect(visto.stdout).toContain("no apunta al evaluador probabilístico");
     expect(visto.stdout).toContain("gate-evaluator  claude-code");
+  });
+});
+
+describe("perfiles", () => {
+  const perfilesYaml = () => join(lab, ".valmen", "profiles.yaml");
+  const PROPIO =
+    "perfiles:\n  mio:\n    description: El mío\n    roles:\n      architect:\n" +
+    "        provider: claude-code\n        model: claude-opus-5-5\n        effort: high\n";
+
+  function conPerfilPropio(): void {
+    proyecto();
+    writeFileSync(join(lab, ".valmen", "routing.yaml"), "preset: balanced\n", "utf8");
+    writeFileSync(perfilesYaml(), PROPIO, "utf8");
+  }
+
+  it("C1 lista los incorporados y los del proyecto con su origen", () => {
+    conPerfilPropio();
+    const r = perfilesCommand(PATHS(), {}, undefined, undefined);
+    expect(r.exitCode).toBe(0);
+    expect(r.stdout).toMatch(/claude-code-completo\s+incorporado/);
+    expect(r.stdout).toMatch(/mio\s+proyecto/);
+  });
+
+  it("C2 C3 C4 marca la elección del proyecto y la del ejecutor, y lista las fases", () => {
+    conPerfilPropio();
+    perfilesCommand(PATHS(), {}, "elegir", "claude-code-completo");
+    perfilesCommand(PATHS(), { cliente: "codex" }, "elegir", "mio");
+    const r = perfilesCommand(PATHS(), { cliente: "claude" }, "list", undefined);
+    expect(r.stdout).toMatch(/claude-code-completo\s+incorporado\s+elegido para el proyecto/);
+    expect(r.stdout).toContain("elegido para codex");
+    expect(r.stdout).toContain("Modelos por fase (cliente: claude)");
+    expect(r.stdout).toContain("perfil claude-code-completo");
+  });
+
+  it("C5 show muestra cada rol con proveedor, modelo y esfuerzo", () => {
+    conPerfilPropio();
+    const r = perfilesCommand(PATHS(), {}, "show", "mio");
+    expect(r.exitCode).toBe(0);
+    expect(r.stdout).toMatch(/architect\s+claude-code\s+claude-opus-5-5\s+high/);
+  });
+
+  it("C6 show con un id inexistente falla y lo dice", () => {
+    conPerfilPropio();
+    const r = perfilesCommand(PATHS(), {}, "show", "nada");
+    expect(r.exitCode).not.toBe(0);
+    expect(r.stderr).toContain('"nada" no existe');
+  });
+
+  it("C7 C8 elegir escribe el perfil del proyecto y conserva los del proyecto", () => {
+    conPerfilPropio();
+    const r = perfilesCommand(PATHS(), {}, "elegir", "mio");
+    expect(r.exitCode).toBe(0);
+    expect(r.stdout).toContain("próxima corrida");
+    const texto = readFileSync(perfilesYaml(), "utf8");
+    expect(texto).toContain("proyecto: mio");
+    expect(texto).toContain("description: El mío");
+    expect(texto).toContain("model: claude-opus-5-5");
+  });
+
+  it("C9 elegir para un ejecutor no cambia el del proyecto", () => {
+    conPerfilPropio();
+    perfilesCommand(PATHS(), {}, "elegir", "mio");
+    const r = perfilesCommand(PATHS(), { cliente: "codex" }, "elegir", "claude-code-completo");
+    expect(r.exitCode).toBe(0);
+    const texto = readFileSync(perfilesYaml(), "utf8");
+    expect(texto).toContain("proyecto: mio");
+    expect(texto).toMatch(/codex: claude-code-completo/);
+  });
+
+  it("C10 un id inexistente falla y no modifica el archivo", () => {
+    conPerfilPropio();
+    const antes = readFileSync(perfilesYaml(), "utf8");
+    const r = perfilesCommand(PATHS(), {}, "elegir", "nada");
+    expect(r.exitCode).not.toBe(0);
+    expect(r.stderr).toContain("no existe");
+    expect(readFileSync(perfilesYaml(), "utf8")).toBe(antes);
+
+    rmSync(perfilesYaml());
+    perfilesCommand(PATHS(), {}, "elegir", "nada");
+    expect(existsSync(perfilesYaml())).toBe(false);
+  });
+
+  it("C11 un ejecutor sin perfil falla y no escribe", () => {
+    conPerfilPropio();
+    const antes = readFileSync(perfilesYaml(), "utf8");
+    const r = perfilesCommand(PATHS(), { cliente: "pepe" }, "elegir", "mio");
+    expect(r.exitCode).not.toBe(0);
+    expect(r.stderr).toContain("no es un ejecutor con perfil");
+    expect(readFileSync(perfilesYaml(), "utf8")).toBe(antes);
+  });
+
+  it("C12 C13 quitar quita la elección del proyecto o la de un ejecutor, no la otra", () => {
+    conPerfilPropio();
+    perfilesCommand(PATHS(), {}, "elegir", "mio");
+    perfilesCommand(PATHS(), { cliente: "codex" }, "elegir", "claude-code-completo");
+
+    const delEjecutor = perfilesCommand(PATHS(), { cliente: "codex" }, "quitar", undefined);
+    expect(delEjecutor.exitCode).toBe(0);
+    let texto = readFileSync(perfilesYaml(), "utf8");
+    expect(texto).toContain("proyecto: mio");
+    expect(texto).not.toContain("codex:");
+
+    const delProyecto = perfilesCommand(PATHS(), {}, "quitar", undefined);
+    expect(delProyecto.exitCode).toBe(0);
+    texto = readFileSync(perfilesYaml(), "utf8");
+    expect(texto).not.toContain("seleccion:");
+    expect(texto).toContain("mio:");
+  });
+
+  it("C14 elegir y quitar dejan routing.yaml y config.yaml con los mismos bytes", () => {
+    conPerfilPropio();
+    const rutas = [join(lab, ".valmen", "routing.yaml"), join(lab, ".valmen", "config.yaml")];
+    const antes = rutas.map((ruta) => readFileSync(ruta));
+    perfilesCommand(PATHS(), {}, "elegir", "mio");
+    perfilesCommand(PATHS(), { cliente: "claude" }, "elegir", "claude-code-completo");
+    perfilesCommand(PATHS(), {}, "quitar", undefined);
+    perfilesCommand(PATHS(), { cliente: "claude" }, "quitar", undefined);
+    rutas.forEach((ruta, i) => expect(readFileSync(ruta).equals(antes[i] as Buffer)).toBe(true));
+  });
+
+  it("C15 un profiles.yaml ilegible sale con el mensaje y sin excepción", () => {
+    proyecto();
+    writeFileSync(perfilesYaml(), "perfiles:\n  - esto no es un mapa\n  [roto\n", "utf8");
+    let r: ReturnType<typeof perfilesCommand> | undefined;
+    expect(() => {
+      r = perfilesCommand(PATHS(), {}, undefined, undefined);
+    }).not.toThrow();
+    expect(r?.exitCode).not.toBe(0);
+    expect((r?.stderr ?? "").length).toBeGreaterThan(0);
+  });
+
+  it("C16 routing show nombra el perfil y su alcance en el rol que sale de él", () => {
+    conPerfilPropio();
+    perfilesCommand(PATHS(), {}, "elegir", "claude-code-completo");
+    const r = routingCommand(PATHS(), {}, "show", undefined);
+    expect(r.exitCode).toBe(0);
+    expect(r.stdout).toContain("perfil claude-code-completo (proyecto)");
   });
 });
 

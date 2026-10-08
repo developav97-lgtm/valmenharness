@@ -137,6 +137,7 @@ import {
   featureShow,
   listProcesses,
   listProcessRuns,
+  perfilesCommand,
   reportClosed,
   resumeTicket,
   scanPendingSecretsCommand,
@@ -2099,6 +2100,27 @@ const DEFINICIONES: readonly ToolDefinition[] = [
     }),
   },
   {
+    name: "ver_perfiles",
+    annotations: SOLO_LEE,
+    title: "Ver los perfiles de modelos",
+    description:
+      "Solo lee. Sin `id` lista los perfiles de modelos (incorporados y del proyecto) con su " +
+      "origen y la elección vigente, y el modelo efectivo de cada fase con su origen; con `id` " +
+      "muestra ese perfil rol por rol con proveedor, modelo y esfuerzo; `cliente` resuelve las " +
+      "fases para ese ejecutor. No elige ni cambia nada: elegir un perfil lo hace una persona " +
+      "con `valmen perfiles elegir <id> [--cliente <ejecutor>]`.",
+    inputSchema: conRoot({
+      properties: {
+        id: { type: "string", description: "El perfil a mostrar. Sin él, la lista." },
+        cliente: {
+          type: "string",
+          enum: [...EJECUTORES_CON_PERFIL],
+          description: "El ejecutor para el que se resuelven las fases.",
+        },
+      },
+    }),
+  },
+  {
     name: "precision_compuertas",
     annotations: SOLO_LEE,
     title: "Medir la precisión de las compuertas",
@@ -3383,6 +3405,19 @@ async function ejecutarHerramienta(
           now: contexto.now,
         });
         return bien(salida);
+      }
+
+      case "ver_perfiles": {
+        const id = texto(args, "id", false);
+        const cliente = texto(args, "cliente", false);
+        return delCli(
+          perfilesCommand(
+            paths,
+            cliente === undefined ? {} : { cliente },
+            id === undefined ? "list" : "show",
+            id,
+          ),
+        );
       }
 
       case "reanudar_ticket": {

@@ -237,7 +237,7 @@ describe("el catálogo de herramientas", () => {
     expect(propiedades?.["evaluator"]?.enum).toEqual([...EVALUATOR_IDS]);
   });
 
-  it("declara las cincuenta y cinco herramientas, cada una con descripción y esquema", () => {
+  it("declara las cincuenta y seis herramientas, cada una con descripción y esquema", () => {
     // El orden es el de la lectura: alta, consulta, validación, movimiento,
     // anotación, compuertas, features, procesos, reportes, y al final el ciclo de
     // QA y el cierre. Estaba intercalado por historia —cada herramienta nueva
@@ -297,6 +297,7 @@ describe("el catálogo de herramientas", () => {
       "avanzar_ticket_delegado",
       "cerrar_ticket_delegado",
       "revision_previa",
+      "ver_perfiles",
       "precision_compuertas",
     ]);
     for (const tool of TOOLS) {
@@ -1802,5 +1803,58 @@ describe("R-PERF-007 reanudar_ticket con el cliente de la sesión", () => {
   it("R-PERF-007 esquema de entrada", () => {
     const propiedades = herramienta()?.inputSchema["properties"] as Record<string, { enum?: string[] }>;
     expect(propiedades["cliente"]?.enum).toEqual([...EJECUTORES_CON_PERFIL]);
+  });
+});
+
+describe("ver_perfiles: Hermes lee los perfiles, no los cambia", () => {
+  const perfiles = () => join(lab, ".valmen", "profiles.yaml");
+  const sembrar = () => {
+    mkdirSync(join(lab, ".valmen"), { recursive: true });
+    writeFileSync(
+      perfiles(),
+      "seleccion:\n  proyecto: claude-code-completo\n\nperfiles: {}\n",
+    );
+  };
+
+  it("C19 se declara de solo lectura", () => {
+    const herramienta = TOOLS.find((t) => t.name === "ver_perfiles");
+    expect(herramienta?.annotations?.readOnlyHint).toBe(true);
+  });
+
+  it("C20 sin id lista los perfiles con su origen y la elección vigente", async () => {
+    sembrar();
+    const resultado = await callTool(contexto, "ver_perfiles", {});
+    expect(resultado.isError).toBe(false);
+    expect(resultado.text).toContain("claude-code-completo");
+    expect(resultado.text).toContain("incorporado");
+    expect(resultado.text).toContain("elegido para el proyecto");
+  });
+
+  it("C21 con id muestra los roles con proveedor, modelo y esfuerzo", async () => {
+    sembrar();
+    const resultado = await callTool(contexto, "ver_perfiles", { id: "claude-code-completo" });
+    expect(resultado.isError).toBe(false);
+    expect(resultado.text).toContain("architect");
+    expect(resultado.text).toContain("claude-opus-5-5");
+    expect(resultado.text).toContain("esfuerzo");
+  });
+
+  it("C22 con cliente da el modelo efectivo de cada fase con su origen", async () => {
+    sembrar();
+    const resultado = await callTool(contexto, "ver_perfiles", { cliente: "claude" });
+    expect(resultado.isError).toBe(false);
+    expect(resultado.text).toContain("Modelos por fase (cliente: claude)");
+    expect(resultado.text).toContain("perfil claude-code-completo");
+  });
+
+  it("C23 no crea ni modifica profiles.yaml", async () => {
+    const antes = existsSync(perfiles());
+    await callTool(contexto, "ver_perfiles", {});
+    expect(existsSync(perfiles())).toBe(antes);
+    sembrar();
+    const bytes = readFileSync(perfiles(), "utf8");
+    await callTool(contexto, "ver_perfiles", { id: "claude-code-completo", cliente: "claude" });
+    await callTool(contexto, "ver_perfiles", {});
+    expect(readFileSync(perfiles(), "utf8")).toBe(bytes);
   });
 });
