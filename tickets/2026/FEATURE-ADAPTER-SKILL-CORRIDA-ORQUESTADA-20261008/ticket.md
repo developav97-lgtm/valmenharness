@@ -4,7 +4,7 @@ id: FEATURE-ADAPTER-SKILL-CORRIDA-ORQUESTADA-20261008
 title: Skill que guía a la sesión orquestadora para repartir los tickets en subagentes
 type: FEATURE
 module: ADAPTER
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -65,45 +65,45 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
 
 ## Criterios de aceptación
 
-- [ ] C1: la skill `corrida-orquestada` existe en el catálogo y declara `version` y `origen: valmen`
+- [x] C1: la skill `corrida-orquestada` existe en el catálogo y declara `version` y `origen: valmen`
       <!-- test: npx vitest run tests/skill-corrida-orquestada.test.ts -->
-- [ ] C2: el catálogo `publicadas()` incluye la skill y la distingue de las del stack
+- [x] C2: el catálogo `publicadas()` incluye la skill y la distingue de las del stack
       <!-- test: npx vitest run tests/skill-corrida-orquestada.test.ts -->
-- [ ] C3: la skill pesa 6 500 B o menos
+- [x] C3: la skill pesa 6 500 B o menos
       <!-- test: npx vitest run tests/skill-corrida-orquestada.test.ts -->
-- [ ] C4: la skill manda a pedir la ola con `valmen journey next --wave`
+- [x] C4: la skill manda a pedir la ola con `valmen journey next --wave`
       <!-- test: npx vitest run tests/skill-corrida-orquestada.test.ts -->
-- [ ] C5: la skill fija 3 simultáneos por defecto y deja al PO cambiarlo al pedirlo o con `--concurrency`
+- [x] C5: la skill fija 3 simultáneos por defecto y deja al PO cambiarlo al pedirlo o con `--concurrency`
       <!-- test: npx vitest run tests/skill-corrida-orquestada.test.ts -->
-- [ ] C6: la skill manda lanzar un subagente por ticket en segundo plano y en su propio worktree
+- [x] C6: la skill manda lanzar un subagente por ticket en segundo plano y en su propio worktree
       <!-- test: npx vitest run tests/skill-corrida-orquestada.test.ts -->
-- [ ] C7: la skill manda entregar al subagente el texto de `valmen journey brief` como su contexto
+- [x] C7: la skill manda entregar al subagente el texto de `valmen journey brief` como su contexto
       <!-- test: npx vitest run tests/skill-corrida-orquestada.test.ts -->
-- [ ] C8: la skill decide la aprobación con `valmen approval-eligibility` y las autorizaciones vigentes, sola si es elegible y en lote para el PO si no
+- [x] C8: la skill decide la aprobación con `valmen approval-eligibility` y las autorizaciones vigentes, sola si es elegible y en lote para el PO si no
       <!-- test: npx vitest run tests/skill-corrida-orquestada.test.ts -->
-- [ ] C9: la skill declara que SECURITY y despliegue nunca se aprueban solos y se detienen para una persona
+- [x] C9: la skill declara que SECURITY y despliegue nunca se aprueban solos y se detienen para una persona
       <!-- test: npx vitest run tests/skill-corrida-orquestada.test.ts -->
-- [ ] C10: la skill integra de a uno con `valmen journey worktree integrate` y retira el worktree con `valmen journey worktree remove`
+- [x] C10: la skill integra de a uno con `valmen journey worktree integrate` y retira el worktree con `valmen journey worktree remove`
       <!-- test: npx vitest run tests/skill-corrida-orquestada.test.ts -->
-- [ ] C11: la skill manda correr la suite completa una sola vez, después de integrar
+- [x] C11: la skill manda correr la suite completa una sola vez, después de integrar
       <!-- test: npx vitest run tests/skill-corrida-orquestada.test.ts -->
-- [ ] C12: la skill cierra la corrida con `valmen journey handoff`
+- [x] C12: la skill cierra la corrida con `valmen journey handoff`
       <!-- test: npx vitest run tests/skill-corrida-orquestada.test.ts -->
-- [ ] C13: la skill declara que solo el orquestador toca el checkout principal
+- [x] C13: la skill declara que solo el orquestador toca el checkout principal
       <!-- test: npx vitest run tests/skill-corrida-orquestada.test.ts -->
-- [ ] C14: la skill nombra de qué ticket hermano sale cada comando que aún no existe
+- [x] C14: la skill nombra de qué ticket hermano sale cada comando que aún no existe
       <!-- test: npx vitest run tests/skill-corrida-orquestada.test.ts -->
-- [ ] C15: la skill no autoriza push, force ni saltar hooks, ni que un subagente integre o apruebe
+- [x] C15: la skill no autoriza push, force ni saltar hooks, ni que un subagente integre o apruebe
       <!-- test: npx vitest run tests/skill-corrida-orquestada.test.ts -->
-- [ ] C16: la skill manda detenerse ante un BLOCK, una compuerta humana dura y lo que quede fuera del alcance
+- [x] C16: la skill manda detenerse ante un BLOCK, una compuerta humana dura y lo que quede fuera del alcance
       <!-- test: npx vitest run tests/skill-corrida-orquestada.test.ts -->
-- [ ] C17: `valmen sync` instala la skill en `.valmen/skills/` idéntica al catálogo
+- [x] C17: `valmen sync` instala la skill en `.valmen/skills/` idéntica al catálogo
       <!-- test: npx vitest run tests/skill-corrida-orquestada.test.ts -->
-- [ ] C18: `valmen resume` no trata la skill como de dominio, y una skill propia sigue tratándose como de dominio
+- [x] C18: `valmen resume` no trata la skill como de dominio, y una skill propia sigue tratándose como de dominio
       <!-- test: npx vitest run tests/next-step.test.ts -->
-- [ ] C19: las plantillas del AGENTS.md siguen bajo 9 800 B y apuntan a la skill `corrida-orquestada`
+- [x] C19: las plantillas del AGENTS.md siguen bajo 9 800 B y apuntan a la skill `corrida-orquestada`
       <!-- test: npx vitest run tests/plantillas-compactas.test.ts -->
-- [ ] C20: cada comando `valmen` que cita la skill existe en la ayuda del CLI o figura como pendiente de un ticket hermano
+- [x] C20: cada comando `valmen` que cita la skill existe en la ayuda del CLI o figura como pendiente de un ticket hermano
       <!-- test: npx vitest run tests/skill-corrida-orquestada.test.ts -->
 - [ ] C21: el recorrido de la skill coincide con la sección 2 de la propuesta
       <!-- verify: manual -->
@@ -116,7 +116,12 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
 
 ## Implementación
 
-Pendiente.
+- `skills/corrida-orquestada/SKILL.md` (nuevo, 4 947 B, versión 1.0.0): cuándo se usa, dependencias, pedir la ola, lanzar subagentes, aprobar, integrar, suite completa una sola vez, reglas duras y cierre. Por decisión del PO, mientras no exista la aprobación automática por autorización todos los planes van en lote al PO, que los aprueba con `valmen approve-plan` por ticket citando su frase. Los comandos pendientes (`journey worktree integrate`: FEATURE-ENGINE-INTEGRACION-RAMA-20261008; `journey handoff`: FEATURE-ENGINE-JORNADA-HANDOFF-20261008) figuran en «Dependencias» con su ticket.
+- `.valmen/skills/corrida-orquestada/SKILL.md`: instalada por `valmen sync`, idéntica al catálogo; `sync --check` al día.
+- `packages/engine/src/next-step.ts`: `corrida-orquestada` en `SKILLS_PUBLICADAS`; caso en `tests/next-step.test.ts` con control (skill propia sigue siendo de dominio).
+- `packages/adapter/src/templates.ts`: la frase de «Corrida delegada» apunta a `corrida-orquestada`; para no pasar el tope de 9 800 B se acortó la frase (se quitó la mención `valmen delegation`, que sigue en la skill `corrida-delegada`). `tests/plantillas-compactas.test.ts` afirma el puntero.
+- `tests/skill-corrida-orquestada.test.ts` (nuevo): C1 a C17 y C20, con casos de control; extrae cada `valmen <comando>` de la skill y lo compara con `USAGE` de `main.ts` o con la lista de pendientes (y exige que un pendiente que ya exista se retire de la lista).
+- C21 queda para el responsable (verificación manual).
 
 ## Pruebas
 
@@ -156,7 +161,23 @@ Directorio de ejecución: la raíz del worktree (o del repositorio tras integrar
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-08",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Subagente de Claude Code dedicado solo a este ticket; la sesión no expone agregado de tokens",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:subagente-sin-agregado",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -220,6 +241,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:53:27.915Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-08",
+    "at": "2026-10-08T16:08:47.695Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-08",
+    "at": "2026-10-08T16:08:50.067Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```

@@ -52,7 +52,7 @@ Una funcionalidad que excede un ticket se registra como **feature**, con el reco
 
 ### Corrida delegada
 
-Si el PO delega una feature o varios tickets en un solo pedido, se usa la skill \`corrida-delegada\` (\`valmen delegation\`). Un BLOCK, un gate humano duro y lo que quede fuera del alcance siguen siendo de una persona.
+Si el PO delega una feature o varios tickets: skill \`corrida-delegada\`, o \`corrida-orquestada\` con subagentes en paralelo. Un BLOCK, un gate humano duro y lo que quede fuera del alcance siguen siendo de una persona.
 
 ### Antes de registrar: traducir lo nuevo del pedido
 

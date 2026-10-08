@@ -85,6 +85,7 @@ const SKILLS_PUBLICADAS = new Set([
   "programar-trabajo-de-tickets",
   "manuales-usuario-final",
   "corrida-delegada",
+  "corrida-orquestada",
 ]);
 
 /** Lo que no se hace mientras el ticket no esté aprobado. */
