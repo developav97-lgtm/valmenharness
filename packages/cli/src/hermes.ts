@@ -83,7 +83,9 @@ import {
   currentReceipts,
   findTicket,
   hermesSendChannel,
+  contarAprobacionesDelDia,
   listTickets,
+  listarAprobacionesAutomaticas,
   mintApproval,
   pendingApprovals,
   readReceipts,
@@ -1391,8 +1393,28 @@ export function armarParte(request: BriefRequest): BriefInput {
     };
   }
 
+  // Las aprobaciones del día, tolerando el fallo: el parte no puede caerse por un ticket ilegible.
+  let aprobaciones: BriefInput["aprobaciones"];
+  try {
+    const dia = request.now.toISOString().slice(0, 10);
+    const cuenta = contarAprobacionesDelDia(request.paths, dia);
+    if (cuenta.automaticas > 0 || cuenta.humanas > 0) {
+      aprobaciones = {
+        automaticas: listarAprobacionesAutomaticas(request.paths, { dia }).aprobaciones.map((a) => ({
+          ticket: a.ticket,
+          etapa: a.etapa,
+          autorizacion: a.autorizacion,
+        })),
+        humanas: cuenta.humanas,
+      };
+    }
+  } catch {
+    aprobaciones = undefined;
+  }
+
   return {
     ...(jornada === undefined ? {} : { jornada }),
+    ...(aprobaciones === undefined ? {} : { aprobaciones }),
     proyecto: nombre === "" ? basenameSeguro(request.paths.root) : nombre,
     fecha: request.now.toISOString().slice(0, 10),
     gates,

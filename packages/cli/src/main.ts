@@ -117,6 +117,7 @@ import {
   journeyPlanCommand,
   planApproveCommand,
   approvalAuthorizeCommand,
+  approvalAuthorizationApprovalsCommand,
   skillsExternalCommand,
   skillsReviewCommand,
   uxReviewCommand,
@@ -286,6 +287,7 @@ Comandos:
   approval-authorize create --actor <nombre> --quote "<frase>" --types <a,b> --modules <x,y> [--max-risk <r>] [--impacts <i,j>] [--stages analysis,plan] [--mode on-approve|reviewer] [--daily-quota <n>] [--valid-days <n>]
   approval-authorize revoke --id <APA-…> --actor <nombre> --reason "<motivo>"
   approval-authorize list
+  approval-authorize approvals
   approval-authorize link --types <a,b> --modules <x,y> [mismos términos que create]
                             Emite un código firmado de un solo uso (24 h) con esos términos congelados.
   approval-authorize redeem --code <código> --actor <nombre> --quote "<frase>"
@@ -2075,7 +2077,10 @@ export async function run(argv: readonly string[]): Promise<number> {
             ? skillsReviewCommand(resolvePaths(options).root, rest[1], options.flags)
             : { stdout: "", stderr: "skills admite: external o review.\n", exitCode: EXIT_SCHEMA };
     } else if (command === "approval-authorize") {
-      result = approvalAuthorizeCommand(resolvePaths(options).root, rest[0], options.flags);
+      result =
+        rest[0] === "approvals"
+          ? approvalAuthorizationApprovalsCommand(resolvePaths(options))
+          : approvalAuthorizeCommand(resolvePaths(options).root, rest[0], options.flags);
     } else if (command === "qa-authorize") {
       result = qaAuthorizeCommand(resolvePaths(options).root, rest[0], options.flags);
     } else if (command === "plan-approve") {

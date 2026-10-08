@@ -89,7 +89,9 @@ import {
   canjearCodigoDeAutorizacionDeAprobacion,
   emitirCodigoDeAutorizacionDeAprobacion,
   revocarCodigoDeAutorizacionDeAprobacion,
+  comandoDeRevocacionDeAprobacion,
   leerAutorizacionesDeAprobacion,
+  listarAprobacionesAutomaticas,
   revocarAutorizacionDeAprobacion,
   FUENTE_ENLACE_FIRMADO,
   canjearCodigoDeAutorizacion,
@@ -3369,11 +3371,32 @@ export function approvalAuthorizeCommand(
       if (todas.length === 0) return ok("No hay autorizaciones de aprobación automática.\n");
       return ok(
         todas
-          .map((a) => `${a.id} · ${a.estado} · ${a.types.join(",")} · ${a.modules.join(",")} · modo ${a.mode} · ${a.actor}: «${a.quote}»`)
+          .map(
+            (a) =>
+              `${a.id} · ${a.estado} · ${a.types.join(",")} · ${a.modules.join(",")} · modo ${a.mode} · ${a.actor}: «${a.quote}»` +
+              (a.estado === "vigente" ? `\n    revertir: ${comandoDeRevocacionDeAprobacion(a.id)}` : ""),
+          )
           .join("\n") + "\n",
       );
     }
     return error("approval-authorize admite: create, revoke, list, link, redeem o revoke-code.", EXIT_SCHEMA);
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/** `approval-authorize approvals`: las aprobaciones automáticas registradas, con su autorización (R-APRO-007). */
+export function approvalAuthorizationApprovalsCommand(paths: RegistryPaths): CommandResult {
+  try {
+    const { aprobaciones, omitidos } = listarAprobacionesAutomaticas(paths);
+    const lineas = aprobaciones.map(
+      (a) =>
+        `${a.ticket} · ${a.etapa} · ${a.autorizacion} (${a.hash.slice(0, 19)}…) · recibo ${a.recibo === "" ? "(sin recibo)" : a.recibo} · modo ${a.modo} · ${a.en} · autorización ${a.estado}`,
+    );
+    if (lineas.length === 0) lineas.push("No hay aprobaciones automáticas registradas.");
+    if (omitidos.length > 0) lineas.push(`Se omitieron ${omitidos.length} ticket(s) ilegibles: ${omitidos.join(", ")}.`);
+    return ok(lineas.join("\n") + "\n");
   } catch (caught) {
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);

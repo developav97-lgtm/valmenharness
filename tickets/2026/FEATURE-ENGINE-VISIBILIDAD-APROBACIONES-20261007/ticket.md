@@ -4,7 +4,7 @@ id: FEATURE-ENGINE-VISIBILIDAD-APROBACIONES-20261007
 title: Listar las aprobaciones automáticas, contarlas aparte en el parte diario y mostrar la reversión
 type: FEATURE
 module: ENGINE
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -76,29 +76,29 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1. `listarAprobacionesAutomaticas` devuelve cada aprobación de fuente `autorizacion` con su ticket, etapa, autorización, recibo y modo.
+- [x] C1. `listarAprobacionesAutomaticas` devuelve cada aprobación de fuente `autorizacion` con su ticket, etapa, autorización, recibo y modo.
       <!-- test: npx vitest run tests/elegibilidad-aprobacion.test.ts -->
-- [ ] C2. Una aprobación de plan registrada por una persona no aparece en la lista de aprobaciones automáticas.
+- [x] C2. Una aprobación de plan registrada por una persona no aparece en la lista de aprobaciones automáticas.
       <!-- test: npx vitest run tests/elegibilidad-aprobacion.test.ts -->
-- [ ] C3. Tras revocar la autorización, la aprobación ya registrada sigue listada con su atribución y el estado `revocada`.
+- [x] C3. Tras revocar la autorización, la aprobación ya registrada sigue listada con su atribución y el estado `revocada`.
       <!-- test: npx vitest run tests/elegibilidad-aprobacion.test.ts -->
-- [ ] C4. Tras revocar la autorización, `aprobarPorAutorizacion` rechaza una aprobación posterior con ella.
+- [x] C4. Tras revocar la autorización, `aprobarPorAutorizacion` rechaza una aprobación posterior con ella.
       <!-- test: npx vitest run tests/elegibilidad-aprobacion.test.ts -->
-- [ ] C5. `valmen approval-authorize approvals` imprime una línea por aprobación automática con autorización, recibo y modo.
+- [x] C5. `valmen approval-authorize approvals` imprime una línea por aprobación automática con autorización, recibo y modo.
       <!-- test: npx vitest run tests/elegibilidad-aprobacion.test.ts -->
-- [ ] C6. `valmen approval-authorize list` muestra el comando de revocación junto a cada autorización vigente.
+- [x] C6. `valmen approval-authorize list` muestra el comando de revocación junto a cada autorización vigente.
       <!-- test: npx vitest run tests/autorizacion-aprobacion.test.ts -->
-- [ ] C7. La herramienta `ver_autorizaciones_aprobacion` muestra el comando de revocación junto a cada autorización vigente.
+- [x] C7. La herramienta `ver_autorizaciones_aprobacion` muestra el comando de revocación junto a cada autorización vigente.
       <!-- test: npx vitest run tests/autorizacion-aprobacion.test.ts -->
-- [ ] C8. `renderBrief` imprime las aprobaciones automáticas del día en una línea aparte de las humanas.
+- [x] C8. `renderBrief` imprime las aprobaciones automáticas del día en una línea aparte de las humanas.
       <!-- test: npx vitest run tests/notify.test.ts -->
-- [ ] C9. `renderBrief` no imprime la línea de aprobaciones cuando no hubo ninguna.
+- [x] C9. `renderBrief` no imprime la línea de aprobaciones cuando no hubo ninguna.
       <!-- test: npx vitest run tests/notify.test.ts -->
-- [ ] C10. Un ticket ilegible no impide listar las aprobaciones automáticas de los demás.
+- [x] C10. Un ticket ilegible no impide listar las aprobaciones automáticas de los demás.
       <!-- test: npx vitest run tests/elegibilidad-aprobacion.test.ts -->
-- [ ] C11. `armarParte` cuenta las aprobaciones automáticas del día separadas de las humanas.
+- [x] C11. `armarParte` cuenta las aprobaciones automáticas del día separadas de las humanas.
       <!-- test: npx vitest run tests/hermes-notify.test.ts -->
-- [ ] C12. El proyecto compila sin errores de tipos.
+- [x] C12. El proyecto compila sin errores de tipos.
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
 - [ ] C13. El parte real del proyecto (`valmen hermes brief`) muestra las aprobaciones automáticas del día cuando las hay.
       <!-- verify: manual -->
@@ -111,11 +111,25 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+Solo lectura; no cambia eventos, registros ni transiciones.
+
+- `packages/engine/src/approval-eligibility.ts`: `listarAprobacionesAutomaticas` (une cada evento `plan-approved`/`analysis-approved` de fuente `autorizacion` con su autorización: modo y estado; omite y cuenta los tickets ilegibles) y `contarAprobacionesDelDia` (`{ automaticas, humanas }`; humana = todo `plan-approved` cuya fuente no es `autorizacion`, la delegación incluida).
+- `packages/engine/src/approval-authorization.ts`: `comandoDeRevocacionDeAprobacion`.
+- `packages/cli/src/commands.ts` y `packages/cli/src/main.ts`: `valmen approval-authorize approvals` (ruta mínima en main + línea de USAGE) y `revertir: …` junto a cada autorización vigente en `approval-authorize list`.
+- `packages/mcp/src/tools.ts`: `ver_autorizaciones_aprobacion` muestra la reversión de cada vigente (sin herramientas nuevas: los conteos de MCP no cambian).
+- `packages/engine/src/notify.ts` y `packages/cli/src/hermes.ts`: `BriefInput.aprobaciones` opcional; `renderBrief` imprime las automáticas y las humanas en líneas separadas solo si hubo alguna; `armarParte` lo llena tolerando el fallo.
+- Sin clave de configuración nueva (supuesto aprobado por el PO).
+- Limitación: el registro real no tiene aprobaciones automáticas todavía, así que C13 solo se pudo comprobar para la línea de humanas.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Directorio: la raíz del worktree del ticket (o del repositorio tras integrar).
+
+1. `npx vitest run tests/elegibilidad-aprobacion.test.ts tests/autorizacion-aprobacion.test.ts tests/notify.test.ts tests/hermes-notify.test.ts` — esperado: todo en verde (C1–C11).
+2. `npx tsc --noEmit -p tsconfig.json` — esperado: sin errores (C12).
+3. Validación manual (C13, sin marcar): con una aprobación automática del día en el registro real, `valmen hermes brief` muestra «🤖 N aprobación(es) automática(s) hoy» y, aparte, «✍ M aprobación(es) humana(s) hoy». Además `valmen approval-authorize approvals` lista cada una con autorización, recibo y modo, y `valmen approval-authorize list` muestra `revertir:` bajo cada vigente.
+Ambiente: Node 24, `npm ci`, dist compilado (`npx tsc --build tsconfig.build.json`).
+Corrido por el agente: los cuatro archivos (153 pruebas) y tsc en verde; también tests/mcp-server y mcp-anotaciones y los 20 archivos que citan el parte o USAGE (408 pruebas).
 
 ## QA
 
@@ -144,7 +158,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-08",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": null,
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual: sesión de implementación Sonnet 5.5, sin números expuestos",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -208,6 +238,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:45:56.142Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:49:15.861Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:49:18.770Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```

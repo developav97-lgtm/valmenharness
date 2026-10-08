@@ -41,7 +41,7 @@ import {
   leerAutorizacionesDeAprobacion,
   registrarUsoDeCupoDeAprobacion,
 } from "./approval-authorization.js";
-import { type RegistryPaths, findTicket } from "./discovery.js";
+import { type RegistryPaths, findAllTickets, findTicket } from "./discovery.js";
 import { appendEvent } from "./mutate.js";
 import {
   type AprobacionDePlan,
@@ -441,4 +441,113 @@ export function motivoDeAprobacionPorAutorizacionInvalida(
     return `La autorización ${authorizationId} no tiene un cupo registrado para aprobar el plan de este ticket. ${regla}`;
   }
   return null;
+}
+
+// ── Visibilidad de las aprobaciones automáticas (R-APRO-007) ─────────────────
+
+/** Una aprobación automática registrada en un ticket, unida a su autorización. */
+export interface AprobacionAutomaticaListada {
+  readonly ticket: string;
+  readonly etapa: string;
+  readonly autorizacion: string;
+  readonly hash: string;
+  readonly recibo: string;
+  /** Modo de la autorización; `desconocido` si ya no existe en el registro con ese id. */
+  readonly modo: string;
+  /** Estado actual de la autorización; `desconocida` si no existe con ese id. */
+  readonly estado: string;
+  /** Instante del evento. */
+  readonly en: string;
+  /** Día (YYYY-MM-DD) del evento. */
+  readonly dia: string;
+}
+
+export interface ListaDeAprobacionesAutomaticas {
+  readonly aprobaciones: readonly AprobacionAutomaticaListada[];
+  /** Tickets ilegibles que se omitieron. */
+  readonly omitidos: readonly string[];
+}
+
+const texto = (v: unknown): string => (typeof v === "string" ? v : "");
+
+/**
+ * Lista las aprobaciones de análisis o plan hechas por autorización, de todos los tickets. Solo
+ * lee. Un ticket ilegible se omite y se cuenta en `omitidos`: la lista no debe caerse por uno.
+ */
+export function listarAprobacionesAutomaticas(
+  paths: RegistryPaths,
+  opciones: { readonly dia?: string; readonly ahora?: Date } = {},
+): ListaDeAprobacionesAutomaticas {
+  const autorizaciones = leerAutorizacionesDeAprobacion(paths.root, opciones.ahora ?? new Date());
+  const aprobaciones: AprobacionAutomaticaListada[] = [];
+  const omitidos: string[] = [];
+  for (const t of findAllTickets(paths)) {
+    let documento: ParsedTicket;
+    try {
+      documento = parseTicket(t.text);
+    } catch {
+      omitidos.push(t.id);
+      continue;
+    }
+    for (const accion of Object.values(ACCION_DE_ETAPA)) {
+      for (const e of documento.blocks.Eventos ?? []) {
+        if (e["action"] !== accion) continue;
+        let d: Record<string, unknown>;
+        try {
+          d = JSON.parse(String(e["details"])) as Record<string, unknown>;
+        } catch {
+          continue;
+        }
+        if (d["source"] !== FUENTE_AUTORIZACION) continue;
+        const en = texto(e["at"]);
+        const dia = texto(e["date"]) || en.slice(0, 10);
+        if (opciones.dia !== undefined && dia !== opciones.dia) continue;
+        const id = texto(d["authorizationId"]);
+        const hash = texto(d["authorizationHash"]);
+        const a = autorizaciones.find((x) => x.id === id && x.hash === hash) ?? autorizaciones.find((x) => x.id === id);
+        aprobaciones.push({
+          ticket: t.id,
+          etapa: texto(d["stage"]) || (accion === PLAN_APPROVED_ACTION ? "plan" : "analysis"),
+          autorizacion: id,
+          hash,
+          recibo: texto(d["receiptId"]),
+          modo: a?.mode ?? "desconocido",
+          estado: a === undefined ? "desconocida" : a.hash === hash ? a.estado : "hash-no-coincide",
+          en,
+          dia,
+        });
+      }
+    }
+  }
+  aprobaciones.sort((x, y) => (x.en < y.en ? -1 : x.en > y.en ? 1 : 0));
+  return { aprobaciones, omitidos };
+}
+
+/**
+ * Cuenta las aprobaciones de plan de un día: las de fuente `autorizacion` son automáticas; todas
+ * las demás (cli, delegacion, ...) son de una persona. Un ticket ilegible se omite.
+ */
+export function contarAprobacionesDelDia(paths: RegistryPaths, dia: string): { automaticas: number; humanas: number } {
+  const { aprobaciones } = listarAprobacionesAutomaticas(paths, { dia });
+  let humanas = 0;
+  for (const t of findAllTickets(paths)) {
+    let documento: ParsedTicket;
+    try {
+      documento = parseTicket(t.text);
+    } catch {
+      continue;
+    }
+    for (const e of documento.blocks.Eventos ?? []) {
+      if (e["action"] !== PLAN_APPROVED_ACTION) continue;
+      if ((texto(e["date"]) || texto(e["at"]).slice(0, 10)) !== dia) continue;
+      let fuente: unknown;
+      try {
+        fuente = (JSON.parse(String(e["details"])) as Record<string, unknown>)["source"];
+      } catch {
+        fuente = undefined;
+      }
+      if (fuente !== FUENTE_AUTORIZACION) humanas += 1;
+    }
+  }
+  return { automaticas: aprobaciones.length, humanas };
 }

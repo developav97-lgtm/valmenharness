@@ -346,6 +346,13 @@ export interface BriefInput {
   readonly notaConsumo: string | null;
   /** La actividad de la jornada del día; sin ella el parte no cambia. */
   readonly jornada?: BriefJornada | undefined;
+  /** Las aprobaciones del día: las automáticas (con su autorización) aparte de las humanas. */
+  readonly aprobaciones?:
+    | {
+        readonly automaticas: readonly { readonly ticket: string; readonly etapa: string; readonly autorizacion: string }[];
+        readonly humanas: number;
+      }
+    | undefined;
 }
 
 /** Una lista con viñetas, o nada si está vacía. */
@@ -674,6 +681,20 @@ export function renderBrief(input: BriefInput): NotificationPayload {
     // Se dice lo que no se pudo calcular, en vez de omitirlo: un parte al que le
     // falta una línea sin explicar se lee como si esa línea no existiera.
     lineas.push(`💵 Sin el consumo: ${input.notaConsumo}`, "");
+  }
+
+  // Las aprobaciones del día (R-APRO-007): las automáticas visibles y aparte de las humanas.
+  const aprobaciones = input.aprobaciones;
+  if (aprobaciones !== undefined && (aprobaciones.automaticas.length > 0 || aprobaciones.humanas > 0)) {
+    if (aprobaciones.automaticas.length > 0) {
+      lineas.push(
+        ...vinetas(
+          `🤖 ${aprobaciones.automaticas.length} aprobación(es) automática(s) hoy:`,
+          aprobaciones.automaticas.map((a) => `${a.ticket} · ${a.etapa} · ${a.autorizacion}`),
+        ),
+      );
+    }
+    if (aprobaciones.humanas > 0) lineas.push(`✍ ${aprobaciones.humanas} aprobación(es) humana(s) hoy`, "");
   }
 
   // La jornada del día: lo hecho por fase y los altos que esperan a una persona.

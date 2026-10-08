@@ -247,6 +247,11 @@ export function revocarAutorizacionDeAprobacion(request: RevocarAutorizacionDeAp
   return revocacion;
 }
 
+/** El comando que revierte una autorización vigente: desde ese instante nada se aprueba con ella. */
+export function comandoDeRevocacionDeAprobacion(id: string): string {
+  return `valmen approval-authorize revoke --id ${id} --actor <tú> --reason "<motivo>"`;
+}
+
 /** Todas las autorizaciones con su estado a `ahora`; una con el hash roto no se lista como vigente. */
 export function leerAutorizacionesDeAprobacion(root: string, ahora: Date = new Date()): AutorizacionDeAprobacionConEstado[] {
   const registro = leerRegistro(root);
