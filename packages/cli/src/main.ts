@@ -214,8 +214,10 @@ Comandos:
   migrate [--dry-run]       Lleva el registro al esquema vigente y limpia del
                             routing los roles que el harness ya no ejecuta.
   sync [--check]            Proyecta .valmen/ a AGENTS.md.
-  adopt [--dry-run] [--machine-id <id>]
-                            Incorpora el harness a un proyecto existente.
+  adopt [--dry-run] [--machine-id <id>] [--codegraph]
+                            Incorpora el harness a un proyecto existente. Ofrece
+                            CodeGraph; con --codegraph lo indexa (init o sync), solo
+                            si ya está instalado: sin la bandera nunca se ejecuta.
   onboarding verify         Comprueba la ruta CLI en una raíz temporal aislada.
   template list             Las plantillas por stack disponibles.
   template show <nombre>    Imprime lo que una plantilla escribe. Leerla es el paso.
@@ -1454,6 +1456,7 @@ export function dispatch(options: Options): CommandResult {
           typeof options.flags["machine-id"] === "string"
             ? options.flags["machine-id"]
             : undefined,
+        codegraph: options.flags["codegraph"] === true,
       });
 
     case "sync":

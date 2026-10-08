@@ -4,7 +4,7 @@ id: FEATURE-CLI-CODEGRAPH-MONTAJE-20261007
 title: Ofrecer instalar e indexar CodeGraph al montar o adoptar, solo con confirmación
 type: FEATURE
 module: CLI
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -86,35 +86,35 @@ Ninguno.
 
 - [ ] R-SKILL-004: CodeGraph DEBERÍA ofrecerse al montar o adoptar un proyecto (solo la parte de «Ofrecer instalar e indexar CodeGraph al montar o adoptar, solo con confirmación»; el resto lo cubre FEATURE-CLI-CODEGRAPH-ESTADO-20261007)
       <!-- verify: manual -->
-- [ ] C1. Sin el binario `codegraph`, `valmen adopt` muestra la sección «CodeGraph» como no instalado.
+- [x] C1. Sin el binario `codegraph`, `valmen adopt` muestra la sección «CodeGraph» como no instalado.
       <!-- test: npx vitest run tests/codegraph-montaje.test.ts -->
-- [ ] C2. Sin el binario `codegraph`, la sección ofrece `npm install -g @colbymchenry/codegraph` seguido de `valmen adopt --codegraph`.
+- [x] C2. Sin el binario `codegraph`, la sección ofrece `npm install -g @colbymchenry/codegraph` seguido de `valmen adopt --codegraph`.
       <!-- test: npx vitest run tests/codegraph-montaje.test.ts -->
-- [ ] C3. Con CodeGraph instalado y sin índice, `valmen adopt` sin `--codegraph` ofrece `valmen adopt --codegraph` para indexar.
+- [x] C3. Con CodeGraph instalado y sin índice, `valmen adopt` sin `--codegraph` ofrece `valmen adopt --codegraph` para indexar.
       <!-- test: npx vitest run tests/codegraph-montaje.test.ts -->
-- [ ] C4. Con el índice al día, la sección dice que no hay nada que hacer.
+- [x] C4. Con el índice al día, la sección dice que no hay nada que hacer.
       <!-- test: npx vitest run tests/codegraph-montaje.test.ts -->
-- [ ] C5. Sin `--codegraph`, `valmen adopt` no lanza ningún comando de CodeGraph distinto de `status`.
+- [x] C5. Sin `--codegraph`, `valmen adopt` no lanza ningún comando de CodeGraph distinto de `status`.
       <!-- test: npx vitest run tests/codegraph-montaje.test.ts -->
-- [ ] C6. Con `--codegraph` y sin índice, `valmen adopt` lanza `codegraph init` sobre la raíz una sola vez.
+- [x] C6. Con `--codegraph` y sin índice, `valmen adopt` lanza `codegraph init` sobre la raíz una sola vez.
       <!-- test: npx vitest run tests/codegraph-montaje.test.ts -->
-- [ ] C7. Con `--codegraph` y el índice desactualizado, `valmen adopt` lanza `codegraph sync` sobre la raíz.
+- [x] C7. Con `--codegraph` y el índice desactualizado, `valmen adopt` lanza `codegraph sync` sobre la raíz.
       <!-- test: npx vitest run tests/codegraph-montaje.test.ts -->
-- [ ] C8. Con `--codegraph --dry-run`, `valmen adopt` dice qué comando ejecutaría y no lo lanza.
+- [x] C8. Con `--codegraph --dry-run`, `valmen adopt` dice qué comando ejecutaría y no lo lanza.
       <!-- test: npx vitest run tests/codegraph-montaje.test.ts -->
-- [ ] C9. Con `--codegraph` y CodeGraph no instalado o ilegible, `valmen adopt` no lanza ningún comando de indexación.
+- [x] C9. Con `--codegraph` y CodeGraph no instalado o ilegible, `valmen adopt` no lanza ningún comando de indexación.
       <!-- test: npx vitest run tests/codegraph-montaje.test.ts -->
-- [ ] C10. En un proyecto ya adoptado, `valmen adopt --codegraph` indexa sin sobrescribir `.valmen/config.yaml`.
+- [x] C10. En un proyecto ya adoptado, `valmen adopt --codegraph` indexa sin sobrescribir `.valmen/config.yaml`.
       <!-- test: npx vitest run tests/codegraph-montaje.test.ts -->
-- [ ] C11. Un `codegraph init` que falla se informa con su código y `valmen adopt` sigue saliendo con 0.
+- [x] C11. Un `codegraph init` que falla se informa con su código y `valmen adopt` sigue saliendo con 0.
       <!-- test: npx vitest run tests/codegraph-montaje.test.ts -->
-- [ ] C12. `valmen --help` lista `--codegraph` en la línea de `adopt`.
+- [x] C12. `valmen --help` lista `--codegraph` en la línea de `adopt`.
       <!-- test: npx vitest run tests/codegraph-montaje.test.ts -->
-- [ ] C13. El texto para el agente de `docs/15-PUESTA-EN-MARCHA.md` pide preguntar a la persona antes de correr `valmen adopt --codegraph`.
+- [x] C13. El texto para el agente de `docs/15-PUESTA-EN-MARCHA.md` pide preguntar a la persona antes de correr `valmen adopt --codegraph`.
       <!-- verify: manual -->
-- [ ] C14. Las pruebas existentes de adopción y de skills publicadas siguen pasando sin cambios.
+- [x] C14. Las pruebas existentes de adopción y de skills publicadas siguen pasando sin cambios.
       <!-- test: npx vitest run tests/adopt.test.ts tests/skills-publicadas.test.ts -->
-- [ ] C15. En una carpeta temporal real, `valmen adopt --codegraph` crea `.codegraph/` y una segunda corrida informa el índice al día.
+- [x] C15. En una carpeta temporal real, `valmen adopt --codegraph` crea `.codegraph/` y una segunda corrida informa el índice al día.
       <!-- verify: manual -->
 
 ## Puntos
@@ -125,11 +125,35 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+Se implementó el plan aprobado sin salirse de su alcance. Una sola desviación de forma, sin efecto en el alcance: la sección «CodeGraph» se agrega al **final** de cada salida de `adopt` (ya adoptado, simulación y adopción nueva) y no antes del corte de «ya adoptado». Así la indexación ocurre después de escribir la adopción —un fallo a mitad de la escritura no deja un índice en un proyecto a medio montar— y los tres caminos la reciben igual. Cada camino la llama una sola vez, por lo que `init`/`sync` se lanza una sola vez.
+
+- `packages/cli/src/codegraph.ts` (el del ticket ESTADO): `runCodegraphIndex(root, estado, env)` lanza `codegraph init <raíz>` si el estado es `sin-indice` o `codegraph sync <raíz>` si es `desactualizado`, con `spawnSync` y tope de 600 s (`CODEGRAPH_INDEX_TIMEOUT_MS`), y devuelve `{ comando, exitCode, error }`; en `al-dia`, `no-instalado` o `ilegible` devuelve `null` sin lanzar nada. Un fallo, un binario ausente o un tope vencido no lanzan excepción: quedan en el resultado. Se suman `codegraphIndexArgs`/`codegraphIndexCommand` (el comando que corresponde a un estado, una sola fuente para lanzar y para mostrar) y `mostrarArgumento` (una raíz con espacios se muestra entre comillas pero se pasa entera).
+- `packages/cli/src/commands.ts`: `adoptProject` acepta `codegraph?: boolean` (la confirmación), `probeCodegraph?` y `runCodegraph?` (inyectables; por defecto la sonda real de solo lectura y `runCodegraphIndex`). La función pura `codegraphOfferLines` arma la sección «CodeGraph (opcional)»: no instalado → `npm install -g @colbymchenry/codegraph` (lo corre la persona; el harness solo lo imprime) y luego `valmen adopt --codegraph`; sin índice o desactualizado → `valmen adopt --codegraph` con el comando que ejecutaría; al día → «Nada que hacer»; ilegible → el motivo y `codegraph status` para revisarlo a mano. Indexar exige `codegraph === true`, `dryRun === false` y un estado con algo que indexar —en los demás estados ni siquiera se llama al ejecutor—. Con `--dry-run` imprime «Se ejecutaría: codegraph init <raíz>». Un fallo se informa con su código y `adopt` sigue saliendo con 0 sin deshacer lo escrito. Tras indexar con éxito recuerda `valmen mcp --install`.
+- `packages/cli/src/main.ts`: el despacho de `adopt` pasa `codegraph: options.flags["codegraph"] === true`; la ayuda lista `adopt [--dry-run] [--machine-id <id>] [--codegraph]` y dice que sin la bandera solo se ofrece. `--codegraph` es booleana: no entra en `VALUE_OPTIONS`.
+- `docs/15-PUESTA-EN-MARCHA.md`: sección «CodeGraph (opcional)» con los tres pasos (instalar con el comando del paquete, `valmen adopt --codegraph`, `valmen mcp --install`) y, en el texto para el agente, el paso 9 «Preguntame si querés CodeGraph. Sólo si lo autorizás, corré `valmen adopt --codegraph`; no instales nada global sin que te lo diga» (los pasos siguientes se renumeran 10 y 11). `README.md` no cambia.
+- `tests/codegraph-montaje.test.ts` (nuevo, 32 pruebas): `adoptProject` con sonda y ejecutor inyectados para los cinco estados, sin bandera, con `--codegraph`, con `--codegraph --dry-run`, en un proyecto ya adoptado y con un ejecutor que falla o vence; `runCodegraphIndex` contra un `codegraph` **falso** (un guion que se antepone al `PATH` y solo anota lo que le piden: nada se instala ni se descarga); la cadena completa `dispatch(parseArgs([...]))` con ese falso (oferta, `--codegraph` crea `.codegraph/`, repetir informa «al día» sin relanzar `init`); la ayuda y la guía. `tests/adopt.test.ts` y `tests/skills-publicadas.test.ts` quedan sin cambios.
+
+Limitaciones conocidas: (1) `adopt` sin inyección ahora sondea con `codegraph status --json` (solo lectura, tope de 10 s), así que las pruebas existentes de adopción tardan unos 0,5 s más por llamada cuando el binario está instalado; no dependen de él para pasar. (2) El tiempo de `codegraph init` en un proyecto grande sigue sin medirse; si vence el tope de 600 s se informa como fallo y no se repite. (3) Los dos criterios `verify: manual` (C13, C15) los comprobó el agente (el texto de la guía y una corrida real en `mktemp -d`); el criterio `R-SKILL-004` queda sin marcar para la persona que prueba.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Ejecutadas por el agente de implementación el 2026-10-07 en `.claude/worktrees/ticket-codegraph-montaje` (rama `valmen/ticket-codegraph-montaje`, copia aislada del repositorio):
+
+- `npx vitest run tests/codegraph-montaje.test.ts tests/adopt.test.ts tests/skills-publicadas.test.ts` → 3 archivos, 89 pruebas, todas verdes (las dos suites existentes sin modificar: C14).
+- Guardas de lo que se editó: `npx vitest run tests/cli.test.ts tests/docs-perfil-hermes.test.ts tests/verificacion-puesta-en-marcha.test.ts tests/codegraph-estado.test.ts` → 4 archivos, 43 pruebas verdes (ayuda del CLI, guía de puesta en marcha, `onboarding verify` y el ticket ESTADO).
+- `npx tsc --noEmit -p tsconfig.json` y `npx tsc --build tsconfig.build.json` → sin errores. ESLint sobre los archivos tocados → sin hallazgos.
+- Las pruebas nuevas se comprobaron como capaces de fallar: indexar sin la confirmación rompe C5, C10 y C15; indexar en simulación rompe las dos de C8; lanzar `sync` en vez de `init` rompe nueve.
+- Suite completa: **no se corrió** (la corre el orquestador al integrar; hay otras sesiones en paralelo).
+- Manual con el CLI compilado de este worktree (`node packages/cli/dist/main.js`, CodeGraph 0.9.9 ya instalado, sin descargar nada) en `mktemp -d` con un `package.json` (C15): `adopt --root <dir>` ofrece indexar y no crea `.codegraph/`; `--codegraph --dry-run` dice «Se ejecutaría: codegraph init <dir>» y no crea nada; `--codegraph` indexa, crea `.codegraph/` y recuerda `valmen mcp --install`; repetir `--codegraph` dice «indexado y al día / Nada que hacer» y no relanza `init`. `node packages/cli/dist/main.js onboarding verify` → salida 0, sigue sin indexar.
+
+### Contrato de entrega para el responsable
+
+- Directorio: la raíz del repositorio (`/Users/juanandrade/Desktop/ValmenHarness`) con esta rama integrada.
+- `npx vitest run tests/codegraph-montaje.test.ts tests/adopt.test.ts tests/skills-publicadas.test.ts` → esperado: 3 archivos, 89 pruebas verdes.
+- `npx tsc --noEmit -p tsconfig.json` y `npx vitest run` → esperado: sin errores ni regresiones.
+- Manual (CodeGraph ≥ 0.9.9 en el `PATH`): `d=$(mktemp -d); echo '{"name":"demo"}' > $d/package.json; valmen adopt --root $d` → la sección «CodeGraph» ofrece `valmen adopt --codegraph` y `ls -A $d` no muestra `.codegraph/`; `valmen adopt --root $d --codegraph` → «Indexado: codegraph init …» y existe `$d/.codegraph`; repetirlo → «Nada que hacer» sin relanzar `init`. Con `--dry-run` solo dice qué ejecutaría. Con CodeGraph fuera del `PATH` la sección ofrece `npm install -g @colbymchenry/codegraph`.
+- Ambiente: CodeGraph ≥ 0.9.9 en el `PATH` solo para la prueba manual; las automáticas no lo necesitan.
+- Pendiente de la persona: marcar `R-SKILL-004` (verify: manual) tras la prueba manual. Rollback: revertir el commit; un índice ya creado se quita con `codegraph uninit <raíz>` o borrando `.codegraph/`.
 
 ## QA
 
@@ -158,7 +182,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-08",
+    "session_reference": null,
+    "model": "claude-sonnet-5-5",
+    "reasoning_effort": null,
+    "notes": "Subagente de Claude Code dedicado solo a este ticket; la sesión no expone agregado de tokens",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:subagente-claude-code-codegraph-montaje",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -222,6 +262,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-07",
+    "at": "2026-10-08T04:33:47.609Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-07",
+    "at": "2026-10-08T04:49:09.947Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-07",
+    "at": "2026-10-08T04:49:13.764Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
