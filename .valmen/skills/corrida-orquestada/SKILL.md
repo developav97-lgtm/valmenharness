@@ -1,7 +1,7 @@
 ---
 name: corrida-orquestada
 description: Usar cuando el PO pide ejecutar la jornada de hoy o una feature repartiendo los tickets en subagentes simultáneos, cada uno en su worktree —«ejecuta la jornada», «ejecuta el feature X de corrido»—, o cuando haya que retomar esa corrida. Para tickets uno tras otro sin subagentes, ver corrida-delegada.
-version: 1.0.0
+version: 1.1.0
 origen: valmen
 ---
 

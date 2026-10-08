@@ -77,7 +77,7 @@ afterEach(() => {
 describe("la skill en el catálogo", () => {
   it("C1: declara nombre, versión y origen", () => {
     expect(texto).toMatch(/^name:\s*corrida-orquestada$/m);
-    expect(texto).toMatch(/^version:\s*1\.0\.0$/m);
+    expect(texto).toMatch(/^version:\s*1\.1\.0$/m);
     expect(texto).toMatch(/^origen:\s*valmen$/m);
   });
 

@@ -1,7 +1,7 @@
 ---
 name: feature
 description: Usar cuando alguien pide una funcionalidad que excede un ticket —varias pantallas, reportes, configuración, varios módulos o varios eslabones— y hay que registrarla como feature, escribir su spec, descomponerla en tickets y ponerlos a trabajar. Aplica también cuando alguien dice «necesito crear un feature para…» y explica en lenguaje natural.
-version: 1.1.0
+version: 1.2.0
 origen: valmen
 ---
 
