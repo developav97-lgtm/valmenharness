@@ -23,6 +23,7 @@ export * from "./routing.js";
 export * from "./agents.js";
 export * from "./skills.js";
 export * from "./mcp.js";
+export * from "./codegraph.js";
 export * from "./hermes-relay.js";
 export * from "./blueprints.js";
 export * from "./kanban.js";

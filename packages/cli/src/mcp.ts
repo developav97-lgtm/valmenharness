@@ -35,8 +35,10 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 
 import {
+  CODEGRAPH_SERVER_ID,
   type McpEntry,
   MCP_SERVER_ID,
+  codegraphEntry,
   buildHermesEntry,
   claudeServer,
   codexToml,
@@ -53,6 +55,7 @@ import {
   readIfExists,
 } from "@valmen/adapter";
 
+import type { CodegraphState } from "./codegraph.js";
 import type { CommandResult } from "./commands.js";
 
 /** Lo que se descubrió del entorno. */
@@ -71,6 +74,11 @@ export interface McpRequest {
    * runtime. Lo que cambia con el modo es el permiso que el servidor concede.
    */
   readonly ask?: boolean;
+  /**
+   * El estado de CodeGraph en la máquina. Si está instalado, se declara también su
+   * servidor; sin él, no: un servidor que no arrancaría es peor que ninguno.
+   */
+  readonly codegraph?: CodegraphState;
 }
 
 function ok(stdout: string): CommandResult {
@@ -176,6 +184,9 @@ export function mcpCommand(request: McpRequest): CommandResult {
     "",
   ];
 
+  const grafo = request.codegraph !== undefined && request.codegraph.estado !== "no-instalado";
+  const entradaGrafo = codegraphEntry();
+
   if (request.json) {
     const opencode = mergeOpencodeConfig(readIfExists(rutaOpencode), entry);
     return ok(
@@ -190,6 +201,31 @@ export function mcpCommand(request: McpRequest): CommandResult {
           },
           codex: { path: rutaCodex, snippet: codexToml(entry) },
           dsh: { path: rutaDsh, snippet: dshSnippet(entry) },
+          ...(grafo
+            ? {
+                codegraph: {
+                  executable: entradaGrafo.command,
+                  args: entradaGrafo.args,
+                  opencode: {
+                    path: rutaOpencode,
+                    content: mergeOpencodeConfig(
+                      opencode.content,
+                      entradaGrafo,
+                      CODEGRAPH_SERVER_ID,
+                    ).content,
+                  },
+                  claude: {
+                    path: rutaClaude,
+                    content: mergeClaudeConfig(
+                      mergeClaudeConfig(readIfExists(rutaClaude), entry).content,
+                      entradaGrafo,
+                      CODEGRAPH_SERVER_ID,
+                    ).content,
+                  },
+                  codex: { path: rutaCodex, snippet: codexToml(entradaGrafo, CODEGRAPH_SERVER_ID) },
+                },
+              }
+            : {}),
         },
         null,
         2,
@@ -208,14 +244,20 @@ export function mcpCommand(request: McpRequest): CommandResult {
       "  Aplícalo con `valmen mcp --install`, que además conserva los servidores",
       "  MCP que ya estuvieran declarados.",
     );
-  } else {
-    const fusion = mergeOpencodeConfig(readIfExists(rutaOpencode), entry);
-    if (fusion.changed) {
-      writeFileSync(rutaOpencode, fusion.content, "utf8");
-      lineas.push(`  ${fusion.note}`);
-    } else {
-      lineas.push(`  sin cambios: ${fusion.note}`);
+    if (grafo) {
+      lineas.push(
+        "",
+        indent(
+          JSON.stringify(
+            { mcp: { [CODEGRAPH_SERVER_ID]: opencodeServer(entradaGrafo) } },
+            null,
+            2,
+          ),
+        ),
+      );
     }
+  } else {
+    escribirFusion(rutaOpencode, mergeOpencodeConfig, entry, grafo ? entradaGrafo : null, lineas);
   }
 
   lineas.push("");
@@ -238,14 +280,20 @@ export function mcpCommand(request: McpRequest): CommandResult {
       "  Aplícalo con `valmen mcp --install`, que además conserva los servidores",
       "  MCP que ya estuvieran declarados.",
     );
-  } else {
-    const fusion = mergeClaudeConfig(readIfExists(rutaClaude), entry);
-    if (fusion.changed) {
-      writeFileSync(rutaClaude, fusion.content, "utf8");
-      lineas.push(`  ${fusion.note}`);
-    } else {
-      lineas.push(`  sin cambios: ${fusion.note}`);
+    if (grafo) {
+      lineas.push(
+        "",
+        indent(
+          JSON.stringify(
+            { mcpServers: { [CODEGRAPH_SERVER_ID]: claudeServer(entradaGrafo) } },
+            null,
+            2,
+          ),
+        ),
+      );
     }
+  } else {
+    escribirFusion(rutaClaude, mergeClaudeConfig, entry, grafo ? entradaGrafo : null, lineas);
   }
 
   lineas.push("");
@@ -267,14 +315,9 @@ export function mcpCommand(request: McpRequest): CommandResult {
       "  Añádelo a ese archivo, o vuelve a ejecutar con `--global` para que se",
       "  añada al final. Es tu configuración de usuario: no se toca sin pedirlo.",
     );
+    if (grafo) lineas.push("", indent(codexToml(entradaGrafo, CODEGRAPH_SERVER_ID)));
   } else {
-    const fusion = mergeCodexConfig(readIfExists(rutaCodex), entry);
-    if (fusion.changed) {
-      writeFileSync(rutaCodex, fusion.content, "utf8");
-      lineas.push(`  ${fusion.note}`);
-    } else {
-      lineas.push(`  sin cambios: ${fusion.note}`);
-    }
+    escribirFusion(rutaCodex, mergeCodexConfig, entry, grafo ? entradaGrafo : null, lineas);
   }
 
   lineas.push("");
@@ -299,6 +342,12 @@ export function mcpCommand(request: McpRequest): CommandResult {
   );
 
   lineas.push("");
+  lineas.push(
+    grafo
+      ? "CodeGraph está instalado: su servidor `codegraph` se declara junto al de `valmen`."
+      : "CodeGraph no está instalado (o no se sondeó): no se declara el servidor `codegraph`, porque no arrancaría.",
+  );
+  lineas.push("");
   lineas.push(...hermesSnippet(request));
 
   lineas.push(
@@ -313,6 +362,36 @@ export function mcpCommand(request: McpRequest): CommandResult {
   );
 
   return ok(lineas.join("\n"));
+}
+
+type Fusion = (
+  texto: string | null,
+  entry: McpEntry,
+  serverId?: string,
+) => { readonly content: string; readonly changed: boolean; readonly note: string };
+
+/**
+ * Fusiona el servidor del harness y, si se pide, el de CodeGraph, y escribe el
+ * archivo una sola vez y solo si algo cambió: repetir el comando no lo toca.
+ */
+function escribirFusion(
+  ruta: string,
+  fusionar: Fusion,
+  entry: McpEntry,
+  grafo: McpEntry | null,
+  lineas: string[],
+): void {
+  const inicial = readIfExists(ruta);
+  const primera = fusionar(inicial, entry);
+  const segunda = grafo === null ? null : fusionar(primera.content, grafo, CODEGRAPH_SERVER_ID);
+  const final = segunda?.content ?? primera.content;
+  if (final !== inicial && (primera.changed || segunda?.changed === true)) {
+    writeFileSync(ruta, final, "utf8");
+  }
+  for (const f of [primera, segunda]) {
+    if (f === null) continue;
+    lineas.push(f.changed ? `  ${f.note}` : `  sin cambios: ${f.note}`);
+  }
 }
 
 /** Indenta un bloque, para que se lea como parte de la salida. */

@@ -4,7 +4,7 @@ id: FEATURE-CLI-CODEGRAPH-ESTADO-20261007
 title: Mostrar en el diagnóstico si CodeGraph está instalado, indexado y al día, y registrar su MCP en los clientes del proyecto
 type: FEATURE
 module: CLI
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -84,31 +84,31 @@ Ninguno.
 
 - [ ] R-SKILL-004: CodeGraph DEBERÍA ofrecerse al montar o adoptar un proyecto (solo la parte de «Mostrar en el diagnóstico si CodeGraph está instalado, indexado y al día, y registrar su MCP en los clientes del proyecto»; el resto lo cubre FEATURE-CLI-CODEGRAPH-MONTAJE-20261007)
       <!-- verify: manual -->
-- [ ] C1. Sin el binario `codegraph`, `valmen doctor` muestra la línea «CodeGraph» como no instalado, con estado de aviso.
+- [x] C1. Sin el binario `codegraph`, `valmen doctor` muestra la línea «CodeGraph» como no instalado, con estado de aviso.
       <!-- test: npx vitest run tests/codegraph-estado.test.ts -->
-- [ ] C2. Con CodeGraph instalado y sin índice, `valmen doctor` dice que falta indexar y propone `codegraph init`.
+- [x] C2. Con CodeGraph instalado y sin índice, `valmen doctor` dice que falta indexar y propone `codegraph init`.
       <!-- test: npx vitest run tests/codegraph-estado.test.ts -->
-- [ ] C3. Con índice y `pendingChanges` en cero, la línea «CodeGraph» sale en estado ok.
+- [x] C3. Con índice y `pendingChanges` en cero, la línea «CodeGraph» sale en estado ok.
       <!-- test: npx vitest run tests/codegraph-estado.test.ts -->
-- [ ] C4. Con cambios pendientes, la línea muestra los conteos y propone `codegraph sync`.
+- [x] C4. Con cambios pendientes, la línea muestra los conteos y propone `codegraph sync`.
       <!-- test: npx vitest run tests/codegraph-estado.test.ts -->
-- [ ] C5. Una salida de `codegraph status` que no es JSON válido, o que sale con código distinto de 0, se informa como estado ilegible y no como al día.
+- [x] C5. Una salida de `codegraph status` que no es JSON válido, o que sale con código distinto de 0, se informa como estado ilegible y no como al día.
       <!-- test: npx vitest run tests/codegraph-estado.test.ts -->
-- [ ] C6. `valmen doctor` no crea `.codegraph/` ni ningún otro archivo en un proyecto sin índice.
+- [x] C6. `valmen doctor` no crea `.codegraph/` ni ningún otro archivo en un proyecto sin índice.
       <!-- test: npx vitest run tests/codegraph-estado.test.ts -->
-- [ ] C7. Ningún estado de CodeGraph cambia el código de salida de `valmen doctor`.
+- [x] C7. Ningún estado de CodeGraph cambia el código de salida de `valmen doctor`.
       <!-- test: npx vitest run tests/codegraph-estado.test.ts -->
-- [ ] C8. Con CodeGraph instalado, el doctor muestra por `.mcp.json` y por `opencode.json` si el servidor `codegraph` está declarado.
+- [x] C8. Con CodeGraph instalado, el doctor muestra por `.mcp.json` y por `opencode.json` si el servidor `codegraph` está declarado.
       <!-- test: npx vitest run tests/codegraph-estado.test.ts -->
-- [ ] C9. Con CodeGraph instalado, `valmen mcp --install` deja en `.mcp.json` y `opencode.json` la entrada `codegraph` con `codegraph serve --mcp` y conserva la de `valmen`.
+- [x] C9. Con CodeGraph instalado, `valmen mcp --install` deja en `.mcp.json` y `opencode.json` la entrada `codegraph` con `codegraph serve --mcp` y conserva la de `valmen`.
       <!-- test: npx vitest run tests/codegraph-estado.test.ts -->
-- [ ] C10. Repetir `valmen mcp --install` no modifica los archivos ya fusionados.
+- [x] C10. Repetir `valmen mcp --install` no modifica los archivos ya fusionados.
       <!-- test: npx vitest run tests/codegraph-estado.test.ts -->
-- [ ] C11. Sin CodeGraph instalado, `valmen mcp --install` no declara el servidor `codegraph`.
+- [x] C11. Sin CodeGraph instalado, `valmen mcp --install` no declara el servidor `codegraph`.
       <!-- test: npx vitest run tests/codegraph-estado.test.ts -->
-- [ ] C12. Con CodeGraph instalado, `valmen mcp --install --global` añade `[mcp_servers.codegraph]` al `config.toml` de codex.
+- [x] C12. Con CodeGraph instalado, `valmen mcp --install --global` añade `[mcp_servers.codegraph]` al `config.toml` de codex.
       <!-- test: npx vitest run tests/codegraph-estado.test.ts -->
-- [ ] C13. Las pruebas existentes del registro MCP y del doctor siguen pasando sin cambios.
+- [x] C13. Las pruebas existentes del registro MCP y del doctor siguen pasando sin cambios.
       <!-- test: npx vitest run tests/mcp-registration.test.ts tests/puesta-en-marcha.test.ts -->
 
 ## Puntos
@@ -119,11 +119,34 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+Se implementó el plan aprobado sin desviaciones de alcance.
+
+- `packages/adapter/src/codegraph.ts` (nuevo, exportado desde `index.ts`): `CODEGRAPH_SERVER_ID`, `codegraphEntry()` y la función pura `readCodegraphStatus` con los cinco estados (`no-instalado`, `sin-indice`, `al-dia`, `desactualizado`, `ilegible`). Un JSON sin `initialized` o sin conteos válidos es `ilegible`, nunca «al día».
+- `packages/adapter/src/mcp.ts`: `mergeOpencodeConfig`, `mergeClaudeConfig`, `mergeCodexConfig` y `codexToml` reciben `serverId` (por defecto `MCP_SERVER_ID`). Para `valmen` la salida y las notas no cambian; para otro servidor la nota lo nombra entre paréntesis.
+- `packages/cli/src/codegraph.ts` (nuevo): `probeCodegraph(root, env)` lanza solo `codegraph status --json` con tope de 10 s. Recibe el `env` del doctor, de modo que las pruebas existentes (`env: {}`) no dependen del binario de la máquina.
+- `packages/cli/src/setup.ts`: `doctorCommand` acepta `codegraph?: () => CodegraphState`; añade a «Capacidades opcionales» la línea «CodeGraph» (ok solo si está al día; `codegraph init` / `codegraph sync` como arreglo) y, si está instalado, «MCP codegraph en <cliente>» leyendo la clave del JSON. No entra en `basicos` ni cambia el código de salida.
+- `packages/cli/src/mcp.ts` y `main.ts`: `McpRequest.codegraph`; con CodeGraph instalado, `--install` fusiona `codegraph` junto a `valmen` en `.mcp.json` y `opencode.json` (un solo write y solo si cambió), `--global` lo añade a codex, sin `--install` se imprime el fragmento y `--json` lo incluye; sin CodeGraph se dice en una línea que no se declara.
+- `tests/codegraph-estado.test.ts` (nuevo, 17 pruebas). `--global` corre con `HOME` en una carpeta temporal.
+
+Limitación conocida: `mergeCodexConfig` no crea `~/.codex/`; es comportamiento previo y no se tocó (la prueba crea la carpeta).
 
 ## Pruebas
 
-Pendiente de ejecución.
+Ejecutadas por el agente de implementación el 2026-10-07 en `/Users/juanandrade/Desktop/ValmenHarness`:
+
+- `npx vitest run tests/codegraph-estado.test.ts tests/mcp-registration.test.ts tests/puesta-en-marcha.test.ts` → 3 archivos, 59 pruebas, todas verdes (las dos suites existentes sin modificar: C13).
+- Typecheck: `npx tsc -p tsconfig.json --noEmit --composite false --incremental false` y `npx tsc --build tsconfig.build.json` → sin errores. (`npx tsc -b` a secas no compila nada en este repositorio: el tsconfig raíz no lista archivos.)
+- Suite completa `npx vitest run`: 13 archivos con fallos antes de la última corrección de mi prueba; los 12 ajenos (`autorizacion-*-canales`, `delegation`, `firma-de-compuerta`, `gate-human-decision`, `gate-view`, `hermes-notify`, `jornada-sin-autoaprobacion`, `mcp-server`, `qa-commit-referencia`, `qa-por-politica`, `qa-sombra`) **fallan igual sin estos cambios** (comparado con `git stash`), no son de este ticket. Hay que decidir aparte qué hacer con ellos.
+- Manual con el CLI compilado: `node packages/cli/dist/main.js doctor` aquí muestra «CodeGraph» con cambios pendientes (3 añadidos, 5 modificados) y `codegraph sync`; en `mktemp -d` con `--root` muestra «instalado, falta indexar» con `codegraph init` y la carpeta queda vacía (sin `.codegraph/`).
+
+### Contrato de entrega para el responsable
+
+- Directorio: `/Users/juanandrade/Desktop/ValmenHarness`.
+- `npx vitest run tests/codegraph-estado.test.ts tests/mcp-registration.test.ts tests/puesta-en-marcha.test.ts` → esperado: 59 pruebas verdes.
+- `npx tsc --build tsconfig.build.json` → esperado: sin salida.
+- Manual: `valmen doctor` muestra la línea «CodeGraph»; tras `codegraph sync` debe salir `✓` al día. `d=$(mktemp -d); valmen doctor --root $d` muestra «falta indexar» y `ls -A $d` sigue vacío. `valmen mcp --install` en una copia del proyecto deja la clave `codegraph` junto a `valmen`; repetirlo dice «sin cambios».
+- Ambiente: CodeGraph ≥ 0.9.9 en el `PATH` solo para la prueba manual.
+- Pendiente de la persona: marcar el criterio `R-SKILL-004` (verify: manual) tras la prueba manual.
 
 ## QA
 
@@ -216,6 +239,24 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-07",
+    "at": "2026-10-08T02:05:30.418Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-07",
+    "at": "2026-10-08T02:16:06.740Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```

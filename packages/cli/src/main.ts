@@ -59,6 +59,7 @@ import {
 } from "./commands.js";
 import { REAL_GIT, runDelegation } from "./delegation.js";
 import { runFeature } from "./features.js";
+import { probeCodegraph } from "./codegraph.js";
 import { doctorCommand, providerCommand, routingCommand } from "./setup.js";
 import { verifyOnboarding } from "./onboarding-verify.js";
 import {
@@ -1682,6 +1683,7 @@ export async function run(argv: readonly string[]): Promise<number> {
         global: options.flags["global"] === true,
         json: options.flags["json"] === true,
         ask: options.flags["ask"] === true,
+        codegraph: probeCodegraph(options.root),
       });
     } else if (command === "hermes") {
       // Hermes es el único destino que no vive en el proyecto: su configuración

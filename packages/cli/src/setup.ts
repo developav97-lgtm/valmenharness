@@ -32,6 +32,7 @@ import {
   readProjectRouting,
   rutasDelProyecto,
   type AdapterCapabilities,
+  CODEGRAPH_SERVER_ID,
 } from "@valmen/adapter";
 import type { RegistryPaths } from "@valmen/engine";
 import {
@@ -46,6 +47,7 @@ import {
 } from "@valmen/server";
 
 import type { CommandResult } from "./commands.js";
+import { type CodegraphState, probeCodegraph } from "./codegraph.js";
 
 /** Un resultado con salida, en la forma que espera el CLI. */
 function ok(stdout: string): CommandResult {
@@ -397,7 +399,11 @@ function adapterCapabilities(source: string): AdapterCapabilities | null {
  */
 export async function doctorCommand(
   paths: RegistryPaths,
-  opciones: { readonly env?: NodeJS.ProcessEnv } = {},
+  opciones: {
+    readonly env?: NodeJS.ProcessEnv;
+    /** El sondeo de CodeGraph; inyectable para no depender del binario de la máquina. */
+    readonly codegraph?: () => CodegraphState;
+  } = {},
 ): Promise<CommandResult> {
   const env = opciones.env ?? process.env;
   const basicos: Hallazgo[] = [];
@@ -660,6 +666,71 @@ export async function doctorCommand(
       ? {}
       : { arreglo: "valmen hermes connect    # cuando quieras decidir desde el celular" }),
   });
+
+  // 10. CodeGraph, opcional: solo informa. Se sondea con `codegraph status`, que
+  //     no escribe, y nada de esto entra en `basicos` ni cambia el código de salida.
+  const grafo = (opciones.codegraph ?? (() => probeCodegraph(paths.root, env)))();
+  const lineaGrafo = ((): Hallazgo => {
+    switch (grafo.estado) {
+      case "al-dia":
+        return { que: "CodeGraph", estado: "ok", detalle: "instalado, indexado y al día" };
+      case "no-instalado":
+        return {
+          que: "CodeGraph",
+          estado: "aviso",
+          detalle: "no instalado; el flujo CLI no lo requiere",
+        };
+      case "sin-indice":
+        return {
+          que: "CodeGraph",
+          estado: "aviso",
+          detalle: "instalado, falta indexar este proyecto",
+          arreglo: "codegraph init",
+        };
+      case "desactualizado":
+        return {
+          que: "CodeGraph",
+          estado: "aviso",
+          detalle: `índice con cambios pendientes: ${grafo.added} añadidos, ${grafo.modified} modificados, ${grafo.removed} eliminados`,
+          arreglo: "codegraph sync",
+        };
+      case "ilegible":
+        return {
+          que: "CodeGraph",
+          estado: "aviso",
+          detalle: `estado ilegible: ${grafo.motivo}`,
+        };
+    }
+  })();
+  opcionales.push(lineaGrafo);
+
+  if (grafo.estado !== "no-instalado") {
+    for (const [agente, relativa, clave] of [
+      ["Claude Code", ".mcp.json", "mcpServers"],
+      ["opencode", "opencode.json", "mcp"],
+    ] as const) {
+      let declarado = false;
+      try {
+        const documento: unknown = JSON.parse(readFileSync(join(paths.root, relativa), "utf8"));
+        const seccion =
+          typeof documento === "object" && documento !== null
+            ? (documento as Record<string, unknown>)[clave]
+            : undefined;
+        declarado =
+          typeof seccion === "object" &&
+          seccion !== null &&
+          Object.hasOwn(seccion, CODEGRAPH_SERVER_ID);
+      } catch {
+        declarado = false;
+      }
+      opcionales.push({
+        que: `MCP codegraph en ${agente}`,
+        estado: declarado ? "ok" : "aviso",
+        detalle: declarado ? relativa : `${relativa} no declara el servidor codegraph`,
+        ...(declarado ? {} : { arreglo: "valmen mcp --install" }),
+      });
+    }
+  }
 
   const icono = (estado: Hallazgo["estado"]): string =>
     estado === "ok" ? "✓" : estado === "aviso" ? "·" : "✗";

@@ -139,9 +139,9 @@ export function claudeServer(entry: McpEntry): Record<string, unknown> {
 }
 
 /** El texto de la entrada TOML, como la espera `codex`. */
-export function codexToml(entry: McpEntry): string {
+export function codexToml(entry: McpEntry, serverId: string = MCP_SERVER_ID): string {
   return [
-    `[mcp_servers.${MCP_SERVER_ID}]`,
+    `[mcp_servers.${serverId}]`,
     `command = ${tomlString(entry.command)}`,
     `args = [${entry.args.map(tomlString).join(", ")}]`,
     `cwd = ${tomlString(RELATIVE_CWD)}`,
@@ -172,11 +172,15 @@ export interface MergeResult {
  * más rápida de borrar la configuración de otra persona, y un error de sintaxis
  * es algo que su dueño tiene que ver y arreglar.
  */
-export function mergeOpencodeConfig(texto: string | null, entry: McpEntry): MergeResult {
+function mergeOpencodeConfigInterno(
+  texto: string | null,
+  entry: McpEntry,
+  serverId: string = MCP_SERVER_ID,
+): MergeResult {
   if (texto === null) {
     const nuevo = {
       $schema: "https://opencode.ai/config.json",
-      mcp: { [MCP_SERVER_ID]: opencodeServer(entry) },
+      mcp: { [serverId]: opencodeServer(entry) },
     };
     return {
       content: JSON.stringify(nuevo, null, 2) + "\n",
@@ -211,7 +215,7 @@ export function mergeOpencodeConfig(texto: string | null, entry: McpEntry): Merg
       : {};
 
   const deseado = opencodeServer(entry);
-  const actual = seccion[MCP_SERVER_ID];
+  const actual = seccion[serverId];
   if (actual !== undefined && JSON.stringify(actual) === JSON.stringify(deseado)) {
     return {
       content: texto,
@@ -220,7 +224,7 @@ export function mergeOpencodeConfig(texto: string | null, entry: McpEntry): Merg
     };
   }
 
-  documento["mcp"] = { ...seccion, [MCP_SERVER_ID]: deseado };
+  documento["mcp"] = { ...seccion, [serverId]: deseado };
   return {
     content: JSON.stringify(documento, null, 2) + "\n",
     changed: true,
@@ -239,9 +243,13 @@ export function mergeOpencodeConfig(texto: string | null, entry: McpEntry): Merg
  * estuviera declarado, y un archivo ilegible no se toca: es la configuración de
  * otra persona, y probablemente la de sus otros servidores.
  */
-export function mergeClaudeConfig(texto: string | null, entry: McpEntry): MergeResult {
+function mergeClaudeConfigInterno(
+  texto: string | null,
+  entry: McpEntry,
+  serverId: string = MCP_SERVER_ID,
+): MergeResult {
   if (texto === null) {
-    const nuevo = { mcpServers: { [MCP_SERVER_ID]: claudeServer(entry) } };
+    const nuevo = { mcpServers: { [serverId]: claudeServer(entry) } };
     return {
       content: JSON.stringify(nuevo, null, 2) + "\n",
       changed: true,
@@ -275,7 +283,7 @@ export function mergeClaudeConfig(texto: string | null, entry: McpEntry): MergeR
       : {};
 
   const deseado = claudeServer(entry);
-  const actual = seccion[MCP_SERVER_ID];
+  const actual = seccion[serverId];
   if (actual !== undefined && JSON.stringify(actual) === JSON.stringify(deseado)) {
     return {
       content: texto,
@@ -284,7 +292,7 @@ export function mergeClaudeConfig(texto: string | null, entry: McpEntry): MergeR
     };
   }
 
-  documento["mcpServers"] = { ...seccion, [MCP_SERVER_ID]: deseado };
+  documento["mcpServers"] = { ...seccion, [serverId]: deseado };
   return {
     content: JSON.stringify(documento, null, 2) + "\n",
     changed: true,
@@ -303,8 +311,12 @@ export function mergeClaudeConfig(texto: string | null, entry: McpEntry): MergeR
  * reescribirlo entero desde una estructura perdería comentarios y orden. Aquí
  * solo se añade un bloque al final si no estaba.
  */
-export function mergeCodexConfig(texto: string | null, entry: McpEntry): MergeResult {
-  const bloque = codexToml(entry);
+function mergeCodexConfigInterno(
+  texto: string | null,
+  entry: McpEntry,
+  serverId: string = MCP_SERVER_ID,
+): MergeResult {
+  const bloque = codexToml(entry, serverId);
   if (texto === null) {
     return {
       content: `${bloque}\n`,
@@ -316,11 +328,11 @@ export function mergeCodexConfig(texto: string | null, entry: McpEntry): MergeRe
   // La comprobación es por cabecera de sección: si ya existe, se deja como está
   // aunque su contenido difiera. Cambiar la configuración de otro runtime sin
   // que nadie lo pida es peor que informar de que ya hay una.
-  if (new RegExp(`^\\[mcp_servers\\.${MCP_SERVER_ID}\\]`, "m").test(texto)) {
+  if (new RegExp(`^\\[mcp_servers\\.${serverId}\\]`, "m").test(texto)) {
     return {
       content: texto,
       changed: false,
-      note: `ya había una entrada [mcp_servers.${MCP_SERVER_ID}]; no se tocó`,
+      note: `ya había una entrada [mcp_servers.${serverId}]; no se tocó`,
     };
   }
 
@@ -330,6 +342,38 @@ export function mergeCodexConfig(texto: string | null, entry: McpEntry): MergeRe
     changed: true,
     note: "se añadió el servidor al final del archivo",
   };
+}
+
+/** Nombra el servidor en la nota cuando no es el del harness. */
+function nombrando(r: MergeResult, serverId: string): MergeResult {
+  return serverId === MCP_SERVER_ID ? r : { ...r, note: `${r.note} (${serverId})` };
+}
+
+/** Fusiona la entrada del servidor `serverId` en un `opencode.json`. */
+export function mergeOpencodeConfig(
+  texto: string | null,
+  entry: McpEntry,
+  serverId: string = MCP_SERVER_ID,
+): MergeResult {
+  return nombrando(mergeOpencodeConfigInterno(texto, entry, serverId), serverId);
+}
+
+/** Fusiona la entrada del servidor `serverId` en un `.mcp.json`. */
+export function mergeClaudeConfig(
+  texto: string | null,
+  entry: McpEntry,
+  serverId: string = MCP_SERVER_ID,
+): MergeResult {
+  return nombrando(mergeClaudeConfigInterno(texto, entry, serverId), serverId);
+}
+
+/** Fusiona la entrada del servidor `serverId` en el `config.toml` de codex. */
+export function mergeCodexConfig(
+  texto: string | null,
+  entry: McpEntry,
+  serverId: string = MCP_SERVER_ID,
+): MergeResult {
+  return nombrando(mergeCodexConfigInterno(texto, entry, serverId), serverId);
 }
 
 /** Lee un archivo de configuración, o `null` si no existe. */
