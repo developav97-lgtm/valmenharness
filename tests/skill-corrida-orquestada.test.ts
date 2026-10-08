@@ -27,7 +27,6 @@ const TOPE_BYTES = 6500;
 
 /** Comandos que la skill cita y que aún no están en el CLI, con el ticket que los entrega. */
 const PENDIENTES: Readonly<Record<string, string>> = {
-  "journey worktree integrate": "FEATURE-ENGINE-INTEGRACION-RAMA-20261008",
 };
 
 const texto = readFileSync(CATALOGO, "utf8");

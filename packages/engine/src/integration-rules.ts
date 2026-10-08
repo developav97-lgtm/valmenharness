@@ -43,7 +43,7 @@ const PROHIBIDOS: readonly RegExp[] = [
 ];
 
 /** ¿Está este archivo fuera del proyecto o es una ruta que no se commitea? */
-function motivoDeArchivoProhibido(archivo: string): string | null {
+export function motivoDeArchivoProhibido(archivo: string): string | null {
   if (archivo.startsWith("/") || archivo.split("/").includes("..")) {
     return `${archivo} está fuera del proyecto`;
   }

@@ -306,9 +306,9 @@ Comandos:
                             proyecto la declara en plan-approval-sources. De un solo uso.
   journey clear-stop --project <id> --id <ticket> --actor <nombre>
                             Libera la parada de un ticket: una parada no se reintenta sola.
-  journey worktree create|remove --id <ID>
-                            Crea o quita el worktree .claude/worktrees/ticket-<slug> (rama
-                            valmen/ticket-<slug>) del ticket, solo desde el checkout principal.
+  journey worktree create|integrate|remove --id <ID>
+                            Crea, integra a main o quita el worktree .claude/worktrees/ticket-<slug>
+                            (rama valmen/ticket-<slug>) del ticket, solo desde el checkout principal.
   journey install-trigger --project <id> [--every <min>] [--via machine|hermes] [--write] [--dir <carpeta>]
                             Prepara la tarea periódica de launchd: imprime el plist y los
                             comandos; con --write escribe solo el archivo. No ejecuta launchctl.

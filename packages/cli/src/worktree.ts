@@ -9,6 +9,7 @@ import {
   type EjecutorDeProceso,
   type RegistryPaths,
   crearWorktree,
+  integrarWorktree,
   quitarWorktree,
 } from "@valmen/engine";
 import { EXIT_OK, EXIT_SCHEMA, toFailure } from "@valmen/core";
@@ -38,6 +39,17 @@ export const SUBCOMANDOS_DE_WORKTREE: Readonly<Record<string, Subcomando>> = Obj
       `Worktree creado: ${r.carpeta} (rama ${r.rama}, desde main en ${r.commit.slice(0, 12)}).`,
       `Cupo de la máquina: ${r.reserva === "reservada" ? "reservado" : "sin reservar"}.`,
       ...r.avisos.map((a) => `Aviso: ${a}`),
+    ].join("\n");
+  },
+  integrate: (paths, ticketId, opciones) => {
+    const r = integrarWorktree(motor(paths, ticketId, opciones));
+    if (r.modo === "nada-que-integrar") return `Nada que integrar: ${r.rama} ya está en main.`;
+    return [
+      r.modo === "avance-directo"
+        ? `Rama ${r.rama} integrada en main por avance directo (${r.commit.slice(0, 12)}).`
+        : `Rama ${r.rama} integrada en main con merge --no-ff (${r.commit.slice(0, 12)}).`,
+      `Registros unidos: ${r.registrosUnidos.length === 0 ? "ninguno" : r.registrosUnidos.join(", ")}.`,
+      `Índice de tickets: ${r.indiceRegenerado ? "regenerado" : "sin cambios"}. Recompilado.`,
     ].join("\n");
   },
   remove: (paths, ticketId, opciones) => {
