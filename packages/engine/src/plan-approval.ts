@@ -51,6 +51,12 @@ export function hashDelPlan(document: ParsedTicket): string {
  */
 export const FUENTE_AUTORIZACION = "autorizacion";
 
+/**
+ * La fuente de una aprobación atribuida al agente revisor (R-APRO-003). Solo la escribe
+ * `registrarDecisionDelRevisor`: ningún camino que reciba la fuente de fuera puede declararla.
+ */
+export const FUENTE_REVISOR = "revisor";
+
 /** Lo que dice una aprobación registrada. */
 export interface AprobacionDePlan {
   readonly actor: string;
@@ -60,6 +66,8 @@ export interface AprobacionDePlan {
   /** Solo en una aprobación por autorización: la autorización que la respalda. */
   readonly authorizationId?: string;
   readonly authorizationHash?: string;
+  /** Solo en una aprobación del revisor: el modelo que decidió. */
+  readonly reviewerModel?: string;
 }
 
 /** Por qué la aprobación vigente no vale, o que vale. */
@@ -82,7 +90,7 @@ function leerAprobacion(evento: JsonObject): AprobacionDePlan | null {
       typeof quote === "string" &&
       typeof planHash === "string"
     ) {
-      const { authorizationId, authorizationHash } = datos;
+      const { authorizationId, authorizationHash, reviewerModel } = datos;
       return {
         actor,
         source,
@@ -90,6 +98,7 @@ function leerAprobacion(evento: JsonObject): AprobacionDePlan | null {
         planHash,
         ...(typeof authorizationId === "string" ? { authorizationId } : {}),
         ...(typeof authorizationHash === "string" ? { authorizationHash } : {}),
+        ...(typeof reviewerModel === "string" ? { reviewerModel } : {}),
       };
     }
   } catch {
@@ -180,6 +189,14 @@ export function registrarAprobacionDePlan(request: PlanApprovalRequest): void {
     fail(
       `La fuente «${FUENTE_AUTORIZACION}» no se declara: la escribe solo la aprobación por autorización ` +
         "(`valmen approve-by-authorization`), que comprueba la autorización y consume su cupo.",
+      EXIT_INVARIANT,
+    );
+  }
+  // La fuente `revisor` es de `registrarDecisionDelRevisor`: por aquí tampoco se puede forjar (C20).
+  if (request.source === FUENTE_REVISOR) {
+    fail(
+      `La fuente «${FUENTE_REVISOR}» no se declara: la escribe solo el registro de la decisión del revisor ` +
+        "(`valmen review-agent --record`), que comprueba la separación de modelos, la autorización y consume su cupo.",
       EXIT_INVARIANT,
     );
   }

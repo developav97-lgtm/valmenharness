@@ -50,7 +50,8 @@ import { hashState } from "@valmen/gate";
 import { unmarkedCriteria, unmarkedMessage } from "./criteria-marks.js";
 import { type RegistryPaths, findTicket } from "./discovery.js";
 import { motivoDeAprobacionPorAutorizacionInvalida } from "./approval-eligibility.js";
-import { FUENTE_AUTORIZACION, aprobacionDePlanVigente } from "./plan-approval.js";
+import { FUENTE_AUTORIZACION, FUENTE_REVISOR, aprobacionDePlanVigente } from "./plan-approval.js";
+import { type ReciboConRevisor, motivoDeDecisionDelRevisorInvalida } from "./reviewer.js";
 import { motivoDeCierrePorPoliticaInvalido, motivoDePruebasPorPoliticaInvalido } from "./qa-policy-verify.js";
 import { finalizeMutation, readAndValidate } from "./mutate.js";
 import {
@@ -269,6 +270,7 @@ function exigirDecisionDeCompuerta(
   document: ParsedTicket,
   paths: RegistryPaths,
   to: string,
+  ahora: Date = new Date(),
 ): readonly EventoPrevio[] {
   const compuerta = COMPUERTA_DE_DESTINO[to];
   if (compuerta === undefined) return [];
@@ -293,6 +295,15 @@ function exigirDecisionDeCompuerta(
 
   const { recibo } = veredicto;
   const decision = recibo.humanDecision;
+  // La decisión `approve` del revisor, registrada con las barreras del motor, deja avanzar un
+  // `review`; se re-verifica ahora porque una línea del recibo no basta. Un `reject` del revisor no
+  // la deja: sigue esperando a una persona. Un `block` nunca (SECURITY-ENGINE-APROBACION-POR-REVISOR).
+  const delRevisor = (recibo as ReciboConRevisor).reviewerDecision;
+  if (decision === null && recibo.outcome === "review" && delRevisor?.decision === "approve") {
+    const motivo = motivoDeDecisionDelRevisorInvalida(paths.root, document, recibo as ReciboConRevisor, compuerta, ahora);
+    if (motivo === null) return [];
+    fail(`No se puede pasar a \`${to}\`: la decisión del revisor sobre el recibo ${recibo.id} no vale.\n${motivo}`, EXIT_INVARIANT);
+  }
   if (decision !== null) {
     fail(
       `No se puede pasar a \`${to}\`: ${decision.actor} rechazó la compuerta \`${compuerta}\` ` +
@@ -377,7 +388,7 @@ function applyTicket(
   }
   let eventosPrevios: readonly EventoPrevio[] = [];
   if (to === "planned" || to === "approved") {
-    eventosPrevios = exigirDecisionDeCompuerta(document, request.paths, to);
+    eventosPrevios = exigirDecisionDeCompuerta(document, request.paths, to, new Date(request.now?.() ?? new Date()));
   }
   if (to === "approved") {
     // La aprobación es un hecho registrado con autor y atado al plan, no una frase del
@@ -394,8 +405,27 @@ function applyTicket(
     }
     // Una aprobación atribuida a una autorización se re-verifica contra el registro: el evento solo
     // dice que la hubo, y una revocación posterior la anula (R-APRO-002).
-    const porAutorizacion = aprobacion.aprobacion.source === FUENTE_AUTORIZACION;
-    if (porAutorizacion) {
+    const porRevisor = aprobacion.aprobacion.source === FUENTE_REVISOR;
+    const ahoraDeLaTransicion = new Date(request.now?.() ?? new Date());
+    if (porRevisor) {
+      // La fuente `revisor` solo vale con la decisión del revisor en el recibo de plan vigente.
+      const veredictoPlan = veredictoDeCompuerta(readReceipts(request.paths, document.fields.id), "plan");
+      const motivo =
+        veredictoPlan.tipo === "sin-recibo"
+          ? "El ticket no tiene recibo de la compuerta plan que respalde la decisión del revisor."
+          : motivoDeDecisionDelRevisorInvalida(
+              request.paths.root,
+              document,
+              veredictoPlan.recibo as ReciboConRevisor,
+              "plan",
+              ahoraDeLaTransicion,
+            );
+      if (motivo !== null) {
+        fail(`approved requiere la aprobación del plan vigente.\n${motivo}`, EXIT_INVARIANT);
+      }
+    }
+    const porAutorizacion = aprobacion.aprobacion.source === FUENTE_AUTORIZACION || porRevisor;
+    if (porAutorizacion && !porRevisor) {
       const motivo = motivoDeAprobacionPorAutorizacionInvalida(
         request.paths.root,
         document,

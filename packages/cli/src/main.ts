@@ -263,14 +263,17 @@ Comandos:
   approve-by-authorization --id <ID> --stage analysis|plan
                             Registra la aprobación del análisis o del plan atribuida a la autorización
                             vigente que cubre al ticket y consume un cupo. Sale con 3 si una regla falla.
-  review-agent --id <ID> --stage analysis|plan [--dry-run] [--json]
+  review-agent --id <ID> --stage analysis|plan [--dry-run] [--record] [--json]
                             El revisor de un review (R-APRO-003), de solo lectura: toma el
                             último recibo en review, elige el modelo del rol reviewer solo si
                             es distinto del que produjo el análisis y el plan, y le pasa el
                             artefacto y las proposiciones en banda media. Imprime su decisión
-                            (approve o reject) y aclara que no se registró. --dry-run muestra
-                            productor, revisor y proposiciones sin llamar al modelo. Sale con 3
-                            si la revisión no procede.
+                            (approve o reject) y, sin --record, aclara que no se registró. --dry-run muestra
+                            productor, revisor y proposiciones sin llamar al modelo. --record
+                            guarda la decisión como del revisor (recibo y evento), tras las
+                            barreras del motor: otro modelo, recibo vigente, nunca un block y
+                            autorización de modo reviewer. Un approve consume un cupo; un reject
+                            no. Sale con 3 si la revisión o el registro no proceden.
   qa-eligibility --id <ID> [--base <commit>]
   qa-agent --id <ID> --base <commit> --delivered <commit>
   qa-policy-close --id <ID>

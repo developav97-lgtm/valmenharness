@@ -216,6 +216,7 @@ import {
   type PreparacionDeRevision,
   type ResultadoDeRevision,
   ejecutarRevisor,
+  registrarDecisionDelRevisor,
   prepararRevision,
 } from "@valmen/engine";
 import {
@@ -3469,7 +3470,8 @@ function lineasDeRevision(
  *
  * Es de solo lectura (R-APRO-003): elige al revisor —un modelo distinto del que produjo el
  * artefacto—, le pasa el artefacto y las proposiciones en banda media, e imprime su decisión.
- * No la guarda ni mueve el ticket. Con `--dry-run` muestra productor, revisor y proposiciones
+ * No la guarda ni mueve el ticket, salvo con `--record` (SECURITY-ENGINE-APROBACION-POR-REVISOR), que
+ * la registra como decisión del revisor tras las barreras del motor. Con `--dry-run` muestra productor, revisor y proposiciones
  * sin llamar al modelo. Sale con 3 si la revisión no procede (el recibo no está en `review`,
  * el productor se desconoce o coincide con el revisor) o si el modelo no contesta en el esquema.
  */
@@ -3512,8 +3514,14 @@ export async function reviewAgentCommand(
     }
 
     const resultado = await ejecutarRevisor(preparacion, opciones);
+    const guardada =
+      flags["record"] === true
+        ? registrarDecisionDelRevisor({ paths, ticketId: id, resultado })
+        : null;
     if (json) {
-      return ok(`${JSON.stringify({ modo: "ejecucion", ejecutado: true, registrado: false, ...resultado }, null, 2)}\n`);
+      return ok(
+        `${JSON.stringify({ modo: "ejecucion", ejecutado: true, registrado: guardada !== null, ...resultado, ...(guardada === null ? {} : { registro: guardada }) }, null, 2)}\n`,
+      );
     }
     return ok(
       [
@@ -3526,7 +3534,14 @@ export async function reviewAgentCommand(
         ),
         `Consumo: ${resultado.usage.inputTokens} tokens de entrada, ${resultado.usage.outputTokens} de salida, ` +
           `${resultado.usage.costUsd} USD, ${resultado.latencyMs} ms.`,
-        "No se registró: la decisión no se guardó en el recibo ni en el ticket, no movió el estado y no consumió cupo.",
+        ...(guardada === null
+          ? ["No se registró: la decisión no se guardó en el recibo ni en el ticket, no movió el estado y no consumió cupo."]
+          : [
+              `Registrada como decisión del revisor en el recibo ${guardada.receiptId} (autorización ${guardada.authorizationId}).`,
+              guardada.decision === "approve"
+                ? `Consumió un cupo; quedan ${guardada.cupoRestante} hoy. Evento: ${guardada.accion}.`
+                : `No consumió cupo (quedan ${guardada.cupoRestante} hoy): el recibo sigue esperando a una persona.`,
+            ]),
         "",
       ].join("\n"),
     );
