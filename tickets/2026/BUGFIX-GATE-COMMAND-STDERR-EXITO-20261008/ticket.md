@@ -4,7 +4,7 @@ id: BUGFIX-GATE-COMMAND-STDERR-EXITO-20261008
 title: El gate qa-mechanical marca falla de entorno a toda suite que pasa porque no lee stderr con exit 0
 type: BUGFIX
 module: GATE
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -69,23 +69,23 @@ Memoria consultada (`buscar_memoria` «qa-mechanical falla del entorno stderr ex
 
 ## Criterios de aceptación
 
-- [ ] C1. Un criterio cuyo comando incluye `manage.py test`, sale con 0 e imprime su resumen solo por stderr responde 1 en `evaluateWithCommands`.
+- [x] C1. Un criterio cuyo comando incluye `manage.py test`, sale con 0 e imprime su resumen solo por stderr responde 1 en `evaluateWithCommands`.
       <!-- test: npx vitest run tests/comando-fallo-entorno.test.ts -->
-- [ ] C2. Ese mismo resultado no lleva `environmentFailure`.
+- [x] C2. Ese mismo resultado no lleva `environmentFailure`.
       <!-- test: npx vitest run tests/comando-fallo-entorno.test.ts -->
-- [ ] C3. Con salida 0, el resultado de `runCommandCheck` guarda en `stderr` la cola de lo que el comando escribió por stderr.
+- [x] C3. Con salida 0, el resultado de `runCommandCheck` guarda en `stderr` la cola de lo que el comando escribió por stderr.
       <!-- test: npx vitest run tests/comando-fallo-entorno.test.ts -->
-- [ ] C4. Con salida 0, `stderrBytes` refleja los bytes reales escritos por stderr.
+- [x] C4. Con salida 0, `stderrBytes` refleja los bytes reales escritos por stderr.
       <!-- test: npx vitest run tests/comando-fallo-entorno.test.ts -->
-- [ ] C5. Un runner conocido que sale con 0 sin su resumen en stdout ni en stderr sigue respondiendo 0.5 con `environmentFailure`.
+- [x] C5. Un runner conocido que sale con 0 sin su resumen en stdout ni en stderr sigue respondiendo 0.5 con `environmentFailure`.
       <!-- test: npx vitest run tests/comando-fallo-entorno.test.ts -->
-- [ ] C6. Un comando inexistente en un criterio sigue respondiendo 0.5 sin detener la compuerta.
+- [x] C6. Un comando inexistente en un criterio sigue respondiendo 0.5 sin detener la compuerta.
       <!-- test: npx vitest run tests/comando-fallo-entorno.test.ts -->
-- [ ] C7. Un comando que agota el tiempo en un criterio sigue respondiendo 0.5 con el motivo de tiempo máximo.
+- [x] C7. Un comando que agota el tiempo en un criterio sigue respondiendo 0.5 con el motivo de tiempo máximo.
       <!-- test: npx vitest run tests/comando-fallo-entorno.test.ts -->
-- [ ] C8. Las pruebas existentes del evaluador por comando siguen pasando.
+- [x] C8. Las pruebas existentes del evaluador por comando siguen pasando.
       <!-- test: npx vitest run tests/evaluators.test.ts -->
-- [ ] C9. El proyecto compila sin errores de tipos.
+- [x] C9. El proyecto compila sin errores de tipos.
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
 - [ ] C10. En SaiOpenCloud, `valmen gate qa-mechanical` sobre un criterio Django en Docker que pasa da APPROVE sin `environmentFailure`.
       <!-- verify: manual -->
@@ -98,11 +98,14 @@ Memoria consultada (`buscar_memoria` «qa-mechanical falla del entorno stderr ex
 
 ## Implementación
 
-Pendiente.
+`runCommandCheck` (`packages/gate-command/src/command.ts`) usa `spawnSync` en lugar de `execFileSync`: lee `stdout` y `stderr` también con salida 0, de modo que la clasificación ve el resumen de Django. Se conserva `COMMAND_NOT_FOUND` (ENOENT) y `COMMAND_TIMEOUT` (ETIMEDOUT/SIGTERM). Pruebas nuevas en `tests/comando-fallo-entorno.test.ts` (ayudante `comando` con canal stderr).
 
 ## Pruebas
 
-Pendiente de ejecución.
+- Directorio: raíz del worktree/checkout, Node 24.
+- `npx vitest run tests/comando-fallo-entorno.test.ts tests/evaluators.test.ts` -> verde (51 pruebas).
+- `npx tsc --noEmit -p tsconfig.json` -> sin errores.
+- Manual (C10, sin marcar, del PO): tras `npm run build`, en SaiOpenCloud correr `valmen gate qa-mechanical` sobre un ticket con un criterio `docker compose run --rm -T ... python manage.py test ...` que pasa; esperado APPROVE sin `environmentFailure`. Requiere Docker.
 
 ## QA
 
@@ -131,7 +134,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-08",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": null,
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual: implementación en subagente sonnet, sin números expuestos",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -195,6 +214,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:21:17.385Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:22:42.412Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:22:46.538Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```

@@ -19,7 +19,7 @@
  *
  * Ver docs/03-GATES.md §4.
  */
-import { execFileSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readdirSync, statSync } from "node:fs";
 import { join, relative, resolve, sep } from "node:path";
@@ -283,51 +283,39 @@ export function runCommandCheck(
 ): CommandCheckResult {
   const expected = check.expectExitCode ?? 0;
   const started = Date.now();
-  let exitCode: number;
-  let stdout = "";
-  let stderr = "";
+  // `spawnSync` devuelve stdout y stderr también con salida 0: unittest (Django)
+  // imprime su resumen por stderr, y con `execFileSync` esa rama lo descartaba.
+  const result = spawnSync(check.command, [...(check.args ?? [])], {
+    cwd: check.cwd === undefined ? options.root : `${options.root}/${check.cwd}`,
+    encoding: "utf8",
+    timeout: check.timeoutMs ?? 30_000,
+    // La salida puede ser grande: se acota lo que se guarda.
+    maxBuffer: 4 * 1024 * 1024,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  const spawnError = result.error as (Error & { code?: string }) | undefined;
 
-  try {
-    stdout = execFileSync(check.command, [...(check.args ?? [])], {
-      cwd: check.cwd === undefined ? options.root : `${options.root}/${check.cwd}`,
-      encoding: "utf8",
-      timeout: check.timeoutMs ?? 30_000,
-      // La salida puede ser grande: se acota lo que se guarda.
-      maxBuffer: 4 * 1024 * 1024,
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-    exitCode = 0;
-  } catch (caught) {
-    const error = caught as {
-      status?: number | null;
-      stdout?: string;
-      stderr?: string;
-      signal?: string;
-      code?: string;
-    };
-
-    // Un fallo de arranque no es un check que falla: es un check que no se pudo
-    // ejecutar. Distinguirlos importa, porque un comando mal escrito no debe
-    // contarse como una proposición falsa.
-    if (error.code === "ENOENT") {
-      throw new CommandError(
-        `No se encontró el comando "${check.command}". Un check que no se puede ` +
-          "ejecutar no es un check fallido.",
-        "COMMAND_NOT_FOUND",
-      );
-    }
-    if (error.signal === "SIGTERM" || error.code === "ETIMEDOUT") {
-      throw new CommandError(
-        `El comando "${check.command}" superó el tiempo máximo de ` +
-          `${check.timeoutMs ?? 30_000} ms.`,
-        "COMMAND_TIMEOUT",
-      );
-    }
-
-    exitCode = error.status ?? 1;
-    stdout = error.stdout ?? "";
-    stderr = error.stderr ?? "";
+  // Un fallo de arranque no es un check que falla: es un check que no se pudo
+  // ejecutar. Distinguirlos importa, porque un comando mal escrito no debe
+  // contarse como una proposición falsa.
+  if (spawnError?.code === "ENOENT") {
+    throw new CommandError(
+      `No se encontró el comando "${check.command}". Un check que no se puede ` +
+        "ejecutar no es un check fallido.",
+      "COMMAND_NOT_FOUND",
+    );
   }
+  if (result.signal === "SIGTERM" || spawnError?.code === "ETIMEDOUT") {
+    throw new CommandError(
+      `El comando "${check.command}" superó el tiempo máximo de ` +
+        `${check.timeoutMs ?? 30_000} ms.`,
+      "COMMAND_TIMEOUT",
+    );
+  }
+
+  const exitCode: number = result.status ?? 1;
+  const stdout: string = result.stdout ?? "";
+  const stderr: string = result.stderr ?? "";
 
   // La evidencia se recolecta después de correr —también cuando el comando
   // falla, que es cuando más importa— y se filtra por marca de tiempo posterior
