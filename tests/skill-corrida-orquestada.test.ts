@@ -146,6 +146,13 @@ describe("lo que manda", () => {
     expect(t).toContain("`valmen journey handoff --id <JORNADA>`");
   });
 
+  it("cierra por comandos lo verificable y deja al PO lo de pantalla y entorno", () => {
+    expect(t).toMatch(/## QA por comandos/);
+    expect(t).toMatch(/se cierra aquí mismo con su ciclo de QA/);
+    expect(t).toMatch(/de pantalla, de un entorno que no tienes/);
+    expect(t).toMatch(/Un SECURITY solo se cierra con la frase del PO/);
+  });
+
   it("C13: solo el orquestador toca el checkout principal", () => {
     expect(t).toMatch(/Solo el orquestador toca el checkout principal/);
   });

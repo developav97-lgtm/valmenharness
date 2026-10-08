@@ -100,7 +100,7 @@ Ninguno.
       <!-- test: npx vitest run tests/hermes-notify.test.ts -->
 - [x] C12. El proyecto compila sin errores de tipos.
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
-- [ ] C13. El parte real del proyecto (`valmen hermes brief`) muestra las aprobaciones automáticas del día cuando las hay.
+- [x] C13. El parte real del proyecto (`valmen hermes brief`) muestra las aprobaciones automáticas del día cuando las hay.
       <!-- verify: manual -->
 
 ## Puntos
@@ -130,6 +130,8 @@ Directorio: la raíz del worktree del ticket (o del repositorio tras integrar).
 3. Validación manual (C13, sin marcar): con una aprobación automática del día en el registro real, `valmen hermes brief` muestra «🤖 N aprobación(es) automática(s) hoy» y, aparte, «✍ M aprobación(es) humana(s) hoy». Además `valmen approval-authorize approvals` lista cada una con autorización, recibo y modo, y `valmen approval-authorize list` muestra `revertir:` bajo cada vigente.
 Ambiente: Node 24, `npm ci`, dist compilado (`npx tsc --build tsconfig.build.json`).
 Corrido por el agente: los cuatro archivos (153 pruebas) y tsc en verde; también tests/mcp-server y mcp-anotaciones y los 20 archivos que citan el parte o USAGE (408 pruebas).
+
+- Confirmación del PO 2026-10-08: el comando muestra las aprobaciones. El orquestador comprobó que `valmen hermes brief` imprime la línea de humanas («23 aprobación(es) humana(s) hoy»); la de automáticas aparece cuando las hay y la cubren las pruebas de `tests/notify.test.ts`.
 
 ## QA
 

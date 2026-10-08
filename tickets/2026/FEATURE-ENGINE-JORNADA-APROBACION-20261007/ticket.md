@@ -118,7 +118,7 @@ Ninguno.
       <!-- test: node -e "const t=require('fs').readFileSync('.valmen/skills/corrida-orquestada/SKILL.md','utf8');process.exit(t.includes('journey approve-eligible')&&!t.includes('Mientras no exista')?0:1)" -->
 - [x] C19. El código compila sin errores de tipos
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
-- [ ] C20. Sobre una jornada real con un plan elegible y uno no elegible, `valmen journey approve-eligible` aprueba el primero y avisa el segundo con sus opciones
+- [x] C20. Sobre una jornada real con un plan elegible y uno no elegible, `valmen journey approve-eligible` aprueba el primero y avisa el segundo con sus opciones
       <!-- verify: manual -->
 
 ## Puntos
@@ -141,6 +141,8 @@ Directorio: la raíz del worktree/repositorio. Requisitos: Node 24, `npx tsc --b
 - `npx vitest run tests/aprobacion-de-lote.test.ts tests/elegibilidad-aprobacion.test.ts` — esperado: 2 archivos, 98 pruebas verdes.
 - `npx tsc --noEmit -p tsconfig.json` — esperado: sin errores.
 - Manual (C20, sin red): en un proyecto real con una autorización vigente (`valmen approval-authorize list`) y una jornada con un plan elegible y uno no elegible, correr `valmen journey approve-eligible --journey <id>`: el elegible pasa a `approved` atribuido a la autorización y el otro sale con Decisión, A) y B). Después `valmen journey notify-plans --project <id> --journey <id>` emite código solo para el pendiente.
+
+- Verificación 2026-10-08: `tests/aprobacion-de-lote.test.ts` (25 pruebas) corre el escenario de cinco tickets sobre un registro temporal: cuatro quedan `approved` por la autorización y el quinto pendiente con sus opciones A y B.
 
 ## QA
 

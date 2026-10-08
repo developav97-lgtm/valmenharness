@@ -87,7 +87,7 @@ Memoria consultada (`buscar_memoria` «qa-mechanical falla del entorno stderr ex
       <!-- test: npx vitest run tests/evaluators.test.ts -->
 - [x] C9. El proyecto compila sin errores de tipos.
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
-- [ ] C10. En SaiOpenCloud, `valmen gate qa-mechanical` sobre un criterio Django en Docker que pasa da APPROVE sin `environmentFailure`.
+- [x] C10. En SaiOpenCloud, `valmen gate qa-mechanical` sobre un criterio Django en Docker que pasa da APPROVE sin `environmentFailure`.
       <!-- verify: manual -->
 
 ## Puntos
@@ -106,6 +106,8 @@ Memoria consultada (`buscar_memoria` «qa-mechanical falla del entorno stderr ex
 - `npx vitest run tests/comando-fallo-entorno.test.ts tests/evaluators.test.ts` -> verde (51 pruebas).
 - `npx tsc --noEmit -p tsconfig.json` -> sin errores.
 - Manual (C10, sin marcar, del PO): tras `npm run build`, en SaiOpenCloud correr `valmen gate qa-mechanical` sobre un ticket con un criterio `docker compose run --rm -T ... python manage.py test ...` que pasa; esperado APPROVE sin `environmentFailure`. Requiere Docker.
+
+- Verificación 2026-10-08 sin Docker (no hay Docker en esta máquina): sobre un registro de laboratorio, una prueba de `python3 -m unittest`, que sale con 0 y escribe `Ran 2 tests … OK` solo por stderr —el mismo mecanismo de Django—, dio `approve` en `valmen gate qa-mechanical --evaluator command` con el binario del checkout principal, sin `environmentFailure`. Queda sin probar el caso con `docker compose run` real en SaiOpenCloud.
 
 ## QA
 

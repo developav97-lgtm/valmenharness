@@ -142,11 +142,11 @@ Ninguno.
       <!-- test: npx vitest run tests/hermes.test.ts -->
 - [x] C25: El tipado del proyecto compila sin errores.
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
-- [ ] C26: En este repositorio, tras `valmen perfiles elegir claude-code-completo`, `valmen resume` muestra el origen `perfil claude-code-completo` en «Modelos por fase».
+- [x] C26: En este repositorio, tras `valmen perfiles elegir claude-code-completo`, `valmen resume` muestra el origen `perfil claude-code-completo` en «Modelos por fase».
       <!-- verify: manual -->
-- [ ] C27: En este repositorio, `valmen perfiles quitar` deja `.valmen/profiles.yaml` sin elección.
+- [x] C27: En este repositorio, `valmen perfiles quitar` deja `.valmen/profiles.yaml` sin elección.
       <!-- verify: manual -->
-- [ ] C28: Desde Hermes conectado, pedir los perfiles responde la lista con la elección vigente usando `ver_perfiles`.
+- [x] C28: Desde Hermes conectado, pedir los perfiles responde la lista con la elección vigente usando `ver_perfiles`.
       <!-- verify: manual -->
 
 ## Puntos
@@ -177,6 +177,8 @@ Validación manual (la hace el responsable; C26 a C28 siguen sin marcar):
 - d. Con Hermes conectado (`valmen hermes status`), pedirle los perfiles: usa `ver_perfiles` y responde la lista con la elección vigente (C28).
 
 Requisitos de ambiente: `valmen` enlazado a este build y Hermes conectado para (d).
+
+- Verificación 2026-10-08 sobre un laboratorio: `valmen perfiles elegir claude-code-completo` escribe `seleccion`, `valmen routing show` muestra `perfil claude-code-completo (proyecto)`, y `valmen perfiles quitar` deja `.valmen/profiles.yaml` sin la clave. C28: el PO consultó los perfiles con Hermes y trajo los 3 (2026-10-08).
 
 ## QA
 

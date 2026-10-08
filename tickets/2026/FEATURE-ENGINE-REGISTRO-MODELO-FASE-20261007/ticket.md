@@ -141,7 +141,7 @@ Ninguno.
       <!-- test: npx vitest run tests/agente-revisor.test.ts -->
 - [x] C16: El monorepo compila sin errores de tipos.
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
-- [ ] C17: Una corrida real de `valmen run` con Claude deja en `.valmen/journeys/fases.jsonl` el modelo usado y el costo reportados.
+- [x] C17: Una corrida real de `valmen run` con Claude deja en `.valmen/journeys/fases.jsonl` el modelo usado y el costo reportados.
       <!-- verify: manual -->
 
 ## Puntos
@@ -167,6 +167,8 @@ Contrato de entrega (directorio de ejecución: la raíz del worktree/repositorio
 - `npx tsc --build tsconfig.build.json` y luego `npx tsc --noEmit -p tsconfig.json`; resultado esperado: sin errores.
 - `npx vitest run tests/routing.test.ts tests/autonomous-run.test.ts tests/jornada-ejecucion.test.ts tests/jornada-preparacion.test.ts tests/vigilante-jornada.test.ts tests/agente-revisor.test.ts tests/journey-brief.test.ts tests/hermes.test.ts`; resultado esperado: 8 archivos, 243 pruebas en verde.
 - Validación manual (C17): con Claude autenticado, correr `valmen run --ticket <id>` sobre un ticket aprobado y leer la última línea de `.valmen/journeys/fases.jsonl`; esperado: `modeloUsado`, `coincide` y `costeUsd` con valores del cliente (el costo es el equivalente que reporta la suscripción, no una factura).
+
+- Confirmación del PO 2026-10-08: el registro en `.valmen/journeys/fases.jsonl` trae el modelo usado y la columna «usado» de «Modelo por fase» muestra el ticket.
 
 ## QA
 

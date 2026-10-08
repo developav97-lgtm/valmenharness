@@ -105,7 +105,7 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
       <!-- test: npx vitest run tests/plantillas-compactas.test.ts -->
 - [x] C20: cada comando `valmen` que cita la skill existe en la ayuda del CLI o figura como pendiente de un ticket hermano
       <!-- test: npx vitest run tests/skill-corrida-orquestada.test.ts -->
-- [ ] C21: el recorrido de la skill coincide con la sección 2 de la propuesta
+- [x] C21: el recorrido de la skill coincide con la sección 2 de la propuesta
       <!-- verify: manual -->
 
 ## Puntos
@@ -133,6 +133,8 @@ Directorio de ejecución: la raíz del worktree (o del repositorio tras integrar
 - `npx valmen secrets` — esperado: sin hallazgos.
 - Manual: leer `skills/corrida-orquestada/SKILL.md` y comparar su recorrido con la sección 2 de `docs/propuesta-corrida-orquestada.md`.
 - Los comandos `journey next --wave`, `journey brief`, `journey worktree` y `journey handoff` no se ejecutan en este ticket: pertenecen a los tickets hermanos.
+
+- Verificación 2026-10-08: el orquestador comparó el recorrido de la skill con la sección 2.1 de `docs/propuesta-corrida-orquestada.md`; faltaba el paso de QA por comandos y se añadió a la skill («QA por comandos»).
 
 ## QA
 

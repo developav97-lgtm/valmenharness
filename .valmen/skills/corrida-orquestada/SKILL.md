@@ -59,6 +59,10 @@ Los subagentes corren solo las pruebas de su ticket. **Tras integrar la ola**, e
 - Una REVIEW no se aprueba por el modelo: la decide una persona.
 - El estado vive en el registro, no en la conversación: ante la duda, `valmen resume --id <ID>`.
 
+## QA por comandos
+
+Un ticket entregado cuyos criterios se verifican todos por comando se cierra aquí mismo con su ciclo de QA, citando la frase del PO que lo autoriza; si hay QA por agente vigente y promovida, la hace el agente. Lo que es de pantalla, de un entorno que no tienes (Docker, Hermes, un cliente real) o `verify: manual` queda en `awaiting_user_tests` y va al parte con dónde y cómo probarlo. Un SECURITY solo se cierra con la frase del PO. No marques `[x]` un criterio manual que no verificaste.
+
 ## Cerrar
 
 Al terminar la jornada (o al cortarla con el máximo): `valmen journey handoff --id <JORNADA>` genera el parte de pruebas por ticket en `awaiting_user_tests`: qué probar y cómo. Entrégalo al PO con lo que quedó detenido y por qué: planes sin frase, BLOCK, conflictos, ramas sin integrar.
