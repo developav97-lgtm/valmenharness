@@ -4,7 +4,7 @@ id: SECURITY-ENGINE-APROBACION-POR-REVISOR-20261007
 title: Guardar la decisión del revisor como suya, rechazar el mismo modelo y reservar los block a una persona
 type: SECURITY
 module: ENGINE
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -89,55 +89,55 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1. R-APRO-003: un `approve` del revisor queda en una versión nueva del recibo como `reviewerDecision` con el modelo revisor, y `humanDecision` sigue en `null`
+- [x] C1. R-APRO-003: un `approve` del revisor queda en una versión nueva del recibo como `reviewerDecision` con el modelo revisor, y `humanDecision` sigue en `null`
       <!-- test: npx vitest run tests/agente-revisor.test.ts -->
-- [ ] C2. El `approve` del revisor anexa un evento de etapa de fuente `revisor` cuyo actor nombra al modelo revisor y a la autorización, no a una persona
+- [x] C2. El `approve` del revisor anexa un evento de etapa de fuente `revisor` cuyo actor nombra al modelo revisor y a la autorización, no a una persona
       <!-- test: npx vitest run tests/agente-revisor.test.ts -->
-- [ ] C3. Un `approve` registrado consume exactamente un cupo de la autorización
+- [x] C3. Un `approve` registrado consume exactamente un cupo de la autorización
       <!-- test: npx vitest run tests/agente-revisor.test.ts -->
-- [ ] C4. Un BUGFIX con el `approve` del revisor registrado sobre el recibo de `plan` entra a `approved` con `transition`
+- [x] C4. Un BUGFIX con el `approve` del revisor registrado sobre el recibo de `plan` entra a `approved` con `transition`
       <!-- test: npx vitest run tests/agente-revisor.test.ts -->
-- [ ] C5. Un ticket con el `approve` del revisor registrado sobre el recibo de `analysis` entra a `planned` con `transition`
+- [x] C5. Un ticket con el `approve` del revisor registrado sobre el recibo de `analysis` entra a `planned` con `transition`
       <!-- test: npx vitest run tests/agente-revisor.test.ts -->
-- [ ] C6. Un `reject` del revisor queda en el recibo y `transition` sigue exigiendo la decisión de una persona
+- [x] C6. Un `reject` del revisor queda en el recibo y `transition` sigue exigiendo la decisión de una persona
       <!-- test: npx vitest run tests/agente-revisor.test.ts -->
-- [ ] C7. Un `reject` del revisor no consume cupo
+- [x] C7. Un `reject` del revisor no consume cupo
       <!-- test: npx vitest run tests/agente-revisor.test.ts -->
-- [ ] C8. Si el modelo revisor coincide con un productor registrado, el registro se rechaza sin escribir nada
+- [x] C8. Si el modelo revisor coincide con un productor registrado, el registro se rechaza sin escribir nada
       <!-- test: npx vitest run tests/agente-revisor.test.ts -->
-- [ ] C9. Si el ticket no tiene productor registrado, el registro se rechaza sin escribir nada
+- [x] C9. Si el ticket no tiene productor registrado, el registro se rechaza sin escribir nada
       <!-- test: npx vitest run tests/agente-revisor.test.ts -->
-- [ ] C10. Si el `stateHash` del recibo no coincide con el ticket actual, el registro se rechaza sin escribir nada
+- [x] C10. Si el `stateHash` del recibo no coincide con el ticket actual, el registro se rechaza sin escribir nada
       <!-- test: npx vitest run tests/agente-revisor.test.ts -->
-- [ ] C11. `prepararRevision` rechaza un recibo con `stateHash` desactualizado sin elegir ni llamar al revisor
+- [x] C11. `prepararRevision` rechaza un recibo con `stateHash` desactualizado sin elegir ni llamar al revisor
       <!-- test: npx vitest run tests/agente-revisor.test.ts -->
-- [ ] C12. R-APRO-004: un recibo `block` no admite el registro del revisor y no se escribe nada
+- [x] C12. R-APRO-004: un recibo `block` no admite el registro del revisor y no se escribe nada
       <!-- test: npx vitest run tests/agente-revisor.test.ts -->
-- [ ] C13. Un recibo `review` sin proposiciones en banda media, o con otra proposición que no aprobó, no admite el registro del revisor
+- [x] C13. Un recibo `review` sin proposiciones en banda media, o con otra proposición que no aprobó, no admite el registro del revisor
       <!-- test: npx vitest run tests/agente-revisor.test.ts -->
-- [ ] C14. Una decisión cuyas proposiciones no son exactamente las de la banda media del recibo se rechaza
+- [x] C14. Una decisión cuyas proposiciones no son exactamente las de la banda media del recibo se rechaza
       <!-- test: npx vitest run tests/agente-revisor.test.ts -->
-- [ ] C15. Un ticket SECURITY no admite el registro del revisor y no consume cupo
+- [x] C15. Un ticket SECURITY no admite el registro del revisor y no consume cupo
       <!-- test: npx vitest run tests/agente-revisor.test.ts -->
-- [ ] C16. Una autorización de modo `on-approve` no habilita el registro del revisor
+- [x] C16. Una autorización de modo `on-approve` no habilita el registro del revisor
       <!-- test: npx vitest run tests/agente-revisor.test.ts -->
-- [ ] C17. Una autorización con el cupo del día agotado no habilita el registro del revisor
+- [x] C17. Una autorización con el cupo del día agotado no habilita el registro del revisor
       <!-- test: npx vitest run tests/agente-revisor.test.ts -->
-- [ ] C18. Una sesión desatendida no puede registrar la decisión del revisor
+- [x] C18. Una sesión desatendida no puede registrar la decisión del revisor
       <!-- test: npx vitest run tests/agente-revisor.test.ts -->
-- [ ] C19. Revocar la autorización después del registro hace que `transition` rechace el avance
+- [x] C19. Revocar la autorización después del registro hace que `transition` rechace el avance
       <!-- test: npx vitest run tests/agente-revisor.test.ts -->
-- [ ] C20. `registrarAprobacionDePlan` rechaza la fuente `revisor`
+- [x] C20. `registrarAprobacionDePlan` rechaza la fuente `revisor`
       <!-- test: npx vitest run tests/aprobacion-de-plan.test.ts -->
-- [ ] C21. Registrar dos veces sobre el mismo recibo no escribe otra versión ni consume otro cupo
+- [x] C21. Registrar dos veces sobre el mismo recibo no escribe otra versión ni consume otro cupo
       <!-- test: npx vitest run tests/agente-revisor.test.ts -->
-- [ ] C22. La aprobación por autorización y los recibos sin `reviewerDecision` se comportan como antes
+- [x] C22. La aprobación por autorización y los recibos sin `reviewerDecision` se comportan como antes
       <!-- test: npx vitest run tests/elegibilidad-aprobacion.test.ts tests/transicion-approved-registrada.test.ts -->
-- [ ] C23. `hasPlanGate` acepta la aprobación de fuente `revisor` en un FEATURE y la rechaza en un SECURITY
+- [x] C23. `hasPlanGate` acepta la aprobación de fuente `revisor` en un FEATURE y la rechaza en un SECURITY
       <!-- test: npx vitest run tests/aprobacion-de-plan.test.ts -->
-- [ ] C24. `valmen review-agent --record` imprime la decisión registrada con la autorización y el cupo restante
+- [x] C24. `valmen review-agent --record` imprime la decisión registrada con la autorización y el cupo restante
       <!-- test: npx vitest run tests/agente-revisor.test.ts -->
-- [ ] C25. El proyecto compila sin errores de tipos
+- [x] C25. El proyecto compila sin errores de tipos
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
 
 ## Puntos
@@ -148,11 +148,24 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+- `packages/engine/src/plan-approval.ts`: `FUENTE_REVISOR` y `registrarAprobacionDePlan` la rechaza siempre; `leerAprobacion` conserva `reviewerModel` (C20).
+- `packages/engine/src/approval-eligibility.ts`: `motivoDeAprobacionPorAutorizacionInvalida` recibe `etapa` opcional (por defecto `plan`), se reutiliza sin duplicar la re-verificación (C19, C22).
+- `packages/engine/src/reviewer.ts`: `barrerasDelRegistro` (todas las barreras que fallan), `registrarDecisionDelRevisor` (única función que escribe: sesión atendida, barreras, cupo solo en `approve`, nueva versión del recibo con `reviewerDecision` y `humanDecision` en `null`, evento de fuente `revisor` o `reviewer-rejected`), `motivoDeDecisionDelRevisorInvalida` (re-verificación) y `prepararRevision` rechaza un recibo con `stateHash` desactualizado antes de elegir revisor (C1-C18, C21).
+- `packages/engine/src/transition.ts`: `exigirDecisionDeCompuerta` acepta un `approve` del revisor re-verificado (un `reject` o un `block` siguen pidiendo a una persona); `approved` re-verifica la fuente `revisor` contra el recibo de plan y la autorización (C4, C5, C6, C19).
+- `packages/core/src/validate.ts`: `hasPlanGate` acepta la fuente `revisor` (nunca en SECURITY) (C23).
+- `packages/cli/src/commands.ts` y `main.ts`: `review-agent --record` (C24).
+- `tests/agente-revisor.test.ts` y `tests/aprobacion-de-plan.test.ts`: caso de control y un caso por barrera; el helper de recibos usa el `stateHash` real del ticket.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Directorio: la raíz del worktree/repositorio (`/Users/juanandrade/Desktop/ValmenHarness`, o el worktree `.claude/worktrees/ticket-aprobacion-por-revisor`). No requiere red ni claves: el modelo se simula con un `fetch` falso.
+
+1. `npx vitest run tests/agente-revisor.test.ts tests/aprobacion-de-plan.test.ts tests/elegibilidad-aprobacion.test.ts tests/transicion-approved-registrada.test.ts` — esperado: 4 archivos, 165 pruebas en verde.
+2. `npx tsc --noEmit -p tsconfig.json` — esperado: sin salida y código 0.
+
+Validación manual (C24, la cubre también `tests/agente-revisor.test.ts`): en un proyecto con un recibo `plan` en `review`, una autorización de modo `reviewer` (`valmen approval-authorize`) y un productor distinto registrado, `valmen review-agent --id <ID> --stage plan --record` imprime «Registrada como decisión del revisor en el recibo … (autorización APA-…)» y los cupos que quedan; sin `--record` sigue imprimiendo «No se registró». Un recibo `block`, un SECURITY o el mismo modelo salen con código 3 sin escribir.
+
+Limitación: la llamada real al modelo revisor no se probó (se simula la red); el PO decide si la prueba con un proveedor real es necesaria.
 
 ## QA
 
@@ -181,7 +194,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-08",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Sesión de subagente (claude-sonnet-5-5, implementación); sin agregado de tokens expuesto, no se estima.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:subagente-implementacion-sonnet-5-5",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -254,6 +283,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:44:01.606Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:52:38.916Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:52:39.354Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```

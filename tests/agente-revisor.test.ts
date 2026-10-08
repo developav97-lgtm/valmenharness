@@ -22,15 +22,29 @@ import {
   rutasDelProyecto,
 } from "../packages/adapter/src/index.js";
 import { reviewAgentCommand, run } from "../packages/cli/src/index.js";
+import { buildGateState } from "../packages/engine/src/state.js";
+import { findTicket } from "../packages/engine/src/discovery.js";
 import { appendReceipt } from "../packages/engine/src/receipts.js";
 import { registrarFase } from "../packages/engine/src/journey-phases.js";
 import {
   type PreparacionDeRevision,
+  type ResultadoDeRevision,
   type RevisionPreparada,
   ejecutarRevisor,
   prepararRevision,
+  registrarDecisionDelRevisor,
 } from "../packages/engine/src/reviewer.js";
-import type { GateReceipt } from "../packages/gate/src/index.js";
+import {
+  approvalAuthorizationsPath,
+  approvalQuotaUsesPath,
+  crearAutorizacionDeAprobacion,
+  readReceipts,
+  registrarUsoDeCupoDeAprobacion,
+  revocarAutorizacionDeAprobacion,
+  transition,
+} from "../packages/engine/src/index.js";
+import { parseTicket } from "../packages/core/src/index.js";
+import { type GateReceipt, hashState } from "../packages/gate/src/index.js";
 import {
   JudgeError,
   MOTIVO_MAX,
@@ -84,7 +98,15 @@ const PROPOSICIONES_DE_UN_REVIEW = [
   }),
 ];
 
+/** El `stateHash` que la compuerta le daría hoy al ticket: el del texto que hay en el laboratorio. */
+function hashActual(ticketId: string = ID): string {
+  const ubicado = findTicket({ root: lab, ticketsDir: "tickets" }, ticketId);
+  if (ubicado === undefined) throw new Error(`no existe ${ticketId}`);
+  return hashState(buildGateState(ubicado.text));
+}
+
 interface OpcionesDeRecibo {
+  readonly ticketId?: string;
   readonly gate?: string;
   readonly id?: string;
   readonly outcome?: "approve" | "review" | "block";
@@ -94,7 +116,7 @@ interface OpcionesDeRecibo {
 }
 
 function recibo(opciones: OpcionesDeRecibo = {}): GateReceipt {
-  const { gate = "plan", id = `GR-2026-10-07-${ID}-${gate}-1`, outcome = "review" } = opciones;
+  const { ticketId = ID, gate = "plan", id = `GR-2026-10-07-${ticketId}-${gate}-1`, outcome = "review" } = opciones;
   return {
     kind: "gate-receipt",
     receiptVersion: 1,
@@ -102,12 +124,12 @@ function recibo(opciones: OpcionesDeRecibo = {}): GateReceipt {
     id,
     gate,
     gateHash: "sha256:test",
-    subject: { type: "ticket", id: ID, revision: "1" },
+    subject: { type: "ticket", id: ticketId, revision: "1" },
     outcome,
     reason: "motivo de prueba",
     actor: "model",
     decidedAt: "2026-10-07T12:00:00.000Z",
-    stateHash: "sha256:test",
+    stateHash: hashActual(ticketId),
     policy: { approveAt: 0.9, blockAt: 0.1 },
     mechanicalChecks: [],
     modelAnswers: [],
@@ -551,7 +573,6 @@ describe("reviewWithModel envía solo lo que corresponde", () => {
   });
 
   it("C6: un artefacto con una credencial no se envía a un modelo", async () => {
-    conRecibos(recibo());
     productor("analysis", "claude-opus-5-5");
     const ruta = join(lab, "tickets", "2026", ID, "ticket.md");
     // La clave se arma en la prueba: un literal con su forma sería un hallazgo de `valmen secrets`.
@@ -561,6 +582,8 @@ describe("reviewWithModel envía solo lo que corresponde", () => {
       `- Rollback: usar la clave ${clave}`,
     );
     writeFileSync(ruta, texto, "utf8");
+    // El recibo evalúa el texto que ya tiene la credencial: si no, sería un recibo viejo (C11).
+    conRecibos(recibo());
 
     const preparacion = prepararRevision({ paths: PATHS(), ticketId: ID, etapa: "plan" });
     expect(preparacion.ok).toBe(false);
@@ -883,5 +906,371 @@ describe("los productores registrados (R-PERF-006)", () => {
       esfuerzo: "high", origenDelModelo: "rol", duracionMs: 1, resultado: "ok",
     });
     expect(productoresDelTicket(lab, ID).map((p) => p.modelo)).toEqual(["claude-sonnet-5-5", "claude-opus-5-5"]);
+  });
+});
+
+
+// ── Registrar la decisión del revisor como suya (SECURITY-ENGINE-APROBACION-POR-REVISOR-20261007) ──
+
+describe("la decisión del revisor se registra", () => {
+  const AHORA = new Date();
+  const ID_ANALISIS = "BUGFIX-ENGINE-PRUEBA-REVISOR-ANALISIS-20261007";
+  const ID_BUG = "BUGFIX-ENGINE-PRUEBA-REVISOR-20261007";
+  const ID_SECURITY = "SECURITY-ENGINE-PRUEBA-REVISOR-20261007";
+
+  const autorizar = (extra: Partial<Parameters<typeof crearAutorizacionDeAprobacion>[0]> = {}) =>
+    crearAutorizacionDeAprobacion({
+      root: lab,
+      actor: "Juan Andrade",
+      quote: "Autorizo que un revisor decida los review de engine",
+      types: ["FEATURE", "BUGFIX"],
+      modules: ["engine"],
+      maxRisk: "normal",
+      mode: "reviewer",
+      dailyQuota: 3,
+      validDays: 30,
+      source: "cli",
+      ahora: AHORA,
+      env: {},
+      ...extra,
+    });
+
+  /** El resultado de un revisor armado sin red: sirve para probar las barreras del motor. */
+  function manual(
+    sobre: Partial<ResultadoDeRevision> = {},
+    ticketId: string = ID,
+    etapa: "plan" | "analysis" = "plan",
+  ): ResultadoDeRevision {
+    return {
+      ticketId,
+      etapa,
+      reciboId: `GR-2026-10-07-${ticketId}-${etapa}-1`,
+      decision: "approve",
+      reason: "El plan respalda cada proposición.",
+      porProposicion: IDS_EN_DUDA.map((id) => ({ id, respaldada: true, motivo: "ok" })),
+      revisor: { provider: "openrouter", model: REVISOR_POR_DEFECTO, resolvedVersion: "openai/gpt-5.6-luna-pro-20261001", effort: "high" },
+      productores: [],
+      proposiciones: [],
+      usage: { inputTokens: 900, outputTokens: 80, costUsd: 0.0012 },
+      latencyMs: 5,
+      ...sobre,
+    };
+  }
+
+  /** Lo que cuesta de verdad: prepara, ejecuta con la red simulada y devuelve la decisión del modelo. */
+  async function decidir(
+    valor: "approve" | "reject",
+    ticketId: string = ID,
+    etapa: "plan" | "analysis" = "plan",
+  ): Promise<ResultadoDeRevision> {
+    const preparacion = prepararRevision({ paths: PATHS(), ticketId, etapa });
+    if (!preparacion.ok) throw new Error(`no se preparó: ${preparacion.motivo}`);
+    const { fetchImpl } = red(() => respuestaDeChat(decision(valor, IDS_EN_DUDA, valor === "approve")));
+    return ejecutarRevisor(preparacion, { apiKey: "k", fetchImpl });
+  }
+
+  const registrar = (resultado: ResultadoDeRevision, env: Record<string, string | undefined> = {}, ticketId: string = ID) =>
+    registrarDecisionDelRevisor({ paths: PATHS(), ticketId, resultado, ahora: AHORA, env });
+  const usos = (): number => {
+    try {
+      return readFileSync(approvalQuotaUsesPath(lab), "utf8").split("\n").filter((l) => l.trim() !== "").length;
+    } catch {
+      return 0;
+    }
+  };
+  const documento = (id: string = ID) => {
+    const u = findTicket(PATHS(), id);
+    return parseTicket(u?.text ?? "");
+  };
+  const eventos = (accion: string, id: string = ID) => (documento(id).blocks.Eventos ?? []).filter((e) => e["action"] === accion);
+  const versiones = (id: string = ID): number => readReceipts(PATHS(), id).length;
+  const ultimoRecibo = (id: string = ID) => readReceipts(PATHS(), id).at(-1) as GateReceipt & {
+    reviewerDecision?: { decision: string; revisor: { model: string }; authorizationId: string; receiptStateHash: string };
+  };
+  const mover = (to: string, id: string = ID, ms = 1000) =>
+    transition({ paths: PATHS(), ticketId: id, entity: "ticket", to, now: () => new Date(AHORA.getTime() + ms) });
+
+  /** El caso de control: recibo de plan en review con dos proposiciones en banda, autorización con cupo, otro modelo. */
+  function preparar(id: string = ID): void {
+    appendReceipt(PATHS(), id, recibo({ ticketId: id }));
+    productor("plan", "claude-opus-5-5", id);
+    autorizar();
+  }
+  const bugfix = (): void => {
+    writeFixtureTicket(lab, { id: ID_BUG, workflowStatus: "planned", type: "BUGFIX", module: "ENGINE" });
+  };
+
+  it("control, C1, C2, C3: el approve queda como del revisor, con su evento y un cupo consumido", async () => {
+    preparar();
+    const resultado = await decidir("approve");
+
+    const guardada = registrar(resultado);
+
+    expect(guardada.decision).toBe("approve");
+    expect(guardada.cupoRestante).toBe(2);
+    expect(versiones()).toBe(2);
+    const r = ultimoRecibo();
+    expect(r.id).toBe(resultado.reciboId);
+    expect(r.reviewerDecision?.decision).toBe("approve");
+    expect(r.reviewerDecision?.revisor.model).toBe(REVISOR_POR_DEFECTO);
+    expect(r.reviewerDecision?.receiptStateHash).toBe(r.stateHash);
+    // No es una persona ni un veredicto nuevo del evaluador.
+    expect(r.humanDecision).toBeNull();
+    expect(r.outcome).toBe("review");
+    const evento = eventos("plan-approved").at(-1);
+    const datos = JSON.parse(String(evento?.["details"])) as Record<string, string>;
+    expect(datos["source"]).toBe("revisor");
+    expect(datos["actor"]).toContain(REVISOR_POR_DEFECTO);
+    expect(datos["actor"]).toContain(datos["authorizationId"] as string);
+    expect(datos["actor"]).not.toContain("Juan Andrade");
+    expect(usos()).toBe(1);
+  });
+
+  it("C4: un BUGFIX con el approve registrado sobre el plan entra a approved", async () => {
+    bugfix();
+    preparar(ID_BUG);
+    // Control de la barrera: sin la decisión, el review sigue esperando a una persona.
+    expect(() => mover("approved", ID_BUG)).toThrow(/gate-decide/);
+
+    registrar(await decidir("approve", ID_BUG), {}, ID_BUG);
+    mover("approved", ID_BUG);
+
+    expect(documento(ID_BUG).fields.workflow_status).toBe("approved");
+    const verificado = eventos("plan-approval-verified", ID_BUG).at(-1);
+    expect(String(verificado?.["details"])).toContain("revisor");
+  });
+
+  it("C5: el approve del revisor sobre el análisis deja pasar a planned", async () => {
+    writeFixtureTicket(lab, { id: ID_ANALISIS, workflowStatus: "analyzed", type: "BUGFIX", module: "ENGINE" });
+    appendReceipt(PATHS(), ID_ANALISIS, recibo({ ticketId: ID_ANALISIS, gate: "analysis" }));
+    productor("analysis", "claude-opus-5-5", ID_ANALISIS);
+    autorizar();
+    expect(() => mover("planned", ID_ANALISIS)).toThrow(/gate-decide/);
+
+    registrar(await decidir("approve", ID_ANALISIS, "analysis"), {}, ID_ANALISIS);
+    mover("planned", ID_ANALISIS);
+
+    expect(documento(ID_ANALISIS).fields.workflow_status).toBe("planned");
+    expect(eventos("analysis-approved", ID_ANALISIS)).toHaveLength(1);
+  });
+
+  it("C6, C7: un reject queda en el recibo, no consume cupo y transition sigue pidiendo a una persona", async () => {
+    preparar();
+    const guardada = registrar(await decidir("reject"));
+
+    expect(guardada.decision).toBe("reject");
+    expect(ultimoRecibo().reviewerDecision?.decision).toBe("reject");
+    expect(ultimoRecibo().humanDecision).toBeNull();
+    expect(usos()).toBe(0);
+    expect(guardada.cupoRestante).toBe(3);
+    expect(eventos("plan-approved")).toHaveLength(0);
+    expect(() => mover("approved")).toThrow(/gate-decide/);
+  });
+
+  describe("cada barrera rechaza sin escribir ni consumir cupo", () => {
+    function noEscribe(fn: () => unknown, patron: RegExp): void {
+      const antes = instantanea();
+      expect(fn).toThrow(patron);
+      expect(instantanea()).toEqual(antes);
+      expect(usos()).toBe(0);
+    }
+
+    it("C8: el mismo modelo que produjo el plan, aun con otro prefijo de proveedor", () => {
+      preparar();
+      noEscribe(
+        () => registrar(manual({ revisor: { provider: "openrouter", model: "anthropic/claude-opus-5-5", resolvedVersion: "claude-opus-5-5", effort: "high" } })),
+        /mismo modelo que produjo/,
+      );
+    });
+
+    it("C8: la versión que sirvió el proveedor también cuenta contra los productores", () => {
+      preparar();
+      noEscribe(
+        () => registrar(manual({ revisor: { provider: "openrouter", model: REVISOR_POR_DEFECTO, resolvedVersion: "claude-opus-5-5", effort: "high" } })),
+        /mismo modelo que produjo/,
+      );
+    });
+
+    it("C9: sin productor registrado", () => {
+      conRecibos(recibo());
+      autorizar();
+      noEscribe(() => registrar(manual()), /sin productor|no tiene productor registrado/);
+    });
+
+    it("C10: el ticket cambió después del recibo", () => {
+      preparar();
+      const ruta = join(lab, "tickets", "2026", ID, "ticket.md");
+      writeFileSync(ruta, readFileSync(ruta, "utf8").replace("- Rollback: revertir", "- Rollback: no revertir"), "utf8");
+      noEscribe(() => registrar(manual()), /otro texto del ticket/);
+    });
+
+    it("C11: prepararRevision rechaza el recibo desactualizado sin elegir revisor", () => {
+      conRecibos(recibo());
+      productor("plan", "claude-opus-5-5");
+      const ruta = join(lab, "tickets", "2026", ID, "ticket.md");
+      writeFileSync(ruta, readFileSync(ruta, "utf8").replace("- Rollback: revertir", "- Rollback: no revertir"), "utf8");
+      const preparacion = prepararRevision({ paths: PATHS(), ticketId: ID, etapa: "plan" });
+      expect(preparacion.ok).toBe(false);
+      if (!preparacion.ok) {
+        expect(preparacion.motivo).toMatch(/otro texto del ticket/);
+        expect(preparacion.revisor).toBeNull();
+      }
+    });
+
+    it("C12: un block no admite el registro, ni aunque la autorización lo cubra", () => {
+      conRecibos(recibo({ outcome: "block", escalado: false }));
+      productor("plan", "claude-opus-5-5");
+      autorizar();
+      noEscribe(() => registrar(manual()), /block/);
+    });
+
+    it("C13: un review sin proposiciones en banda media no admite el registro", () => {
+      conRecibos(recibo({ propositions: [PROPOSICIONES_DE_UN_REVIEW[0] as GateReceipt["propositions"][number]] }));
+      productor("plan", "claude-opus-5-5");
+      autorizar();
+      noEscribe(() => registrar(manual({ porProposicion: [] })), /ninguna quedó en banda media/);
+    });
+
+    it("C13: otra proposición fuera de banda que no aprobó no admite el registro", () => {
+      const noAprobada = { ...(proposicion("otra", { valor: 0.2, enBanda: false }) as object), effect: { outcome: "block" } } as GateReceipt["propositions"][number];
+      conRecibos(recibo({ propositions: [...PROPOSICIONES_DE_UN_REVIEW, noAprobada] }));
+      productor("plan", "claude-opus-5-5");
+      autorizar();
+      noEscribe(() => registrar(manual()), /otra no aprobó/);
+    });
+
+    it("C14: una decisión que no cubre exactamente la banda media", () => {
+      preparar();
+      noEscribe(() => registrar(manual({ porProposicion: [{ id: "riesgos_cubren_impactos", respaldada: true, motivo: "ok" }] })), /la decisión cubre/);
+      noEscribe(
+        () => registrar(manual({ porProposicion: [...IDS_EN_DUDA, "inventada"].map((id) => ({ id, respaldada: true, motivo: "ok" })) })),
+        /la decisión cubre/,
+      );
+    });
+
+    it("C14: un approve con una proposición sin respaldo se rechaza", () => {
+      preparar();
+      noEscribe(
+        () => registrar(manual({ porProposicion: [{ id: IDS_EN_DUDA[0] as string, respaldada: false, motivo: "no" }, { id: IDS_EN_DUDA[1] as string, respaldada: true, motivo: "ok" }] })),
+        /exige que cada proposición esté respaldada/,
+      );
+    });
+
+    it("C15: un SECURITY no admite el registro del revisor", () => {
+      writeFixtureTicket(lab, { id: ID_SECURITY, workflowStatus: "planned", type: "SECURITY", module: "ENGINE" });
+      appendReceipt(PATHS(), ID_SECURITY, recibo({ ticketId: ID_SECURITY }));
+      productor("plan", "claude-opus-5-5", ID_SECURITY);
+      autorizar();
+      noEscribe(() => registrar(manual({}, ID_SECURITY), {}, ID_SECURITY), /SECURITY/);
+    });
+
+    it("C16: una autorización de modo on-approve no habilita el registro", () => {
+      conRecibos(recibo());
+      productor("plan", "claude-opus-5-5");
+      autorizar({ mode: "on-approve" });
+      noEscribe(() => registrar(manual()), /modo reviewer/);
+    });
+
+    it("C17: con el cupo del día agotado no se registra", () => {
+      preparar();
+      const otra = autorizar({ dailyQuota: 1 });
+      registrarUsoDeCupoDeAprobacion({ root: lab, authorizationId: otra.id, ticketId: "BUGFIX-ENGINE-OTRO-20261007", stage: "plan", ahora: AHORA });
+      // Las dos autorizaciones cubren al ticket: la primera con cupo decide, así que se revoca para aislar la barrera.
+      const todas = readFileSync(approvalAuthorizationsPath(lab), "utf8");
+      const primera = (JSON.parse(todas.split("\n")[0] as string) as { id: string }).id;
+      revocarAutorizacionDeAprobacion({ root: lab, id: primera, actor: "Juan Andrade", reason: "aislar", source: "cli", ahora: AHORA, env: {} });
+      const antes = usos();
+      const fotos = instantanea();
+      expect(() => registrar(manual())).toThrow(/cupo/);
+      expect(instantanea()).toEqual(fotos);
+      expect(usos()).toBe(antes);
+    });
+
+    it("C18: una sesión desatendida no puede registrar", () => {
+      preparar();
+      noEscribe(() => registrar(manual(), { VALMEN_UNATTENDED: "1" }), /desatendida/);
+    });
+  });
+
+  it("C19: revocar la autorización después del registro hace que transition rechace el avance", async () => {
+    bugfix();
+    appendReceipt(PATHS(), ID_BUG, recibo({ ticketId: ID_BUG }));
+    productor("plan", "claude-opus-5-5", ID_BUG);
+    const a = autorizar();
+    registrar(await decidir("approve", ID_BUG), {}, ID_BUG);
+    // Control: antes de revocar, el mismo avance sí procede (se prueba en C4); aquí se revoca primero.
+    revocarAutorizacionDeAprobacion({ root: lab, id: a.id, actor: "Juan Andrade", reason: "ya no", source: "cli", ahora: new Date(AHORA.getTime() + 500), env: {} });
+
+    expect(() => mover("approved", ID_BUG, 2000)).toThrow(/ya no está vigente/);
+    expect(documento(ID_BUG).fields.workflow_status).toBe("planned");
+  });
+
+  it("C19: si el productor registrado pasa a ser el revisor, transition rechaza el avance", async () => {
+    bugfix();
+    preparar(ID_BUG);
+    registrar(await decidir("approve", ID_BUG), {}, ID_BUG);
+    productor("plan", REVISOR_POR_DEFECTO, ID_BUG);
+
+    expect(() => mover("approved", ID_BUG)).toThrow(/mismo modelo que produjo/);
+  });
+
+  it("C19: una línea de recibo con reviewerDecision forjada sobre un block no deja avanzar", () => {
+    bugfix();
+    const bloqueado = recibo({ ticketId: ID_BUG, outcome: "block", escalado: false });
+    productor("plan", "claude-opus-5-5", ID_BUG);
+    const a = autorizar();
+    appendReceipt(PATHS(), ID_BUG, {
+      ...bloqueado,
+      reviewerDecision: { decision: "approve", reason: "forjada", porProposicion: [], revisor: manual().revisor, productores: [], authorizationId: a.id, authorizationHash: a.hash, receiptStateHash: bloqueado.stateHash, usage: manual().usage, decidedAt: AHORA.toISOString() },
+    } as GateReceipt);
+    expect(() => mover("approved", ID_BUG)).toThrow(/block|Ni el modelo/);
+  });
+
+  it("C21: registrar dos veces sobre el mismo recibo no escribe otra versión ni consume otro cupo", async () => {
+    preparar();
+    const resultado = await decidir("approve");
+    registrar(resultado);
+    const antes = instantanea();
+
+    expect(() => registrar(resultado)).toThrow(/ya tiene la decisión del revisor/);
+
+    expect(instantanea()).toEqual(antes);
+    expect(versiones()).toBe(2);
+    expect(usos()).toBe(1);
+  });
+
+  it("C24: valmen review-agent --record imprime la decisión registrada con la autorización y el cupo restante", async () => {
+    preparar();
+    const { fetchImpl } = red(() => respuestaDeChat(decision("approve", IDS_EN_DUDA)));
+
+    const r = await reviewAgentCommand(PATHS(), { id: ID, stage: "plan", record: true }, { apiKey: "k", fetchImpl });
+
+    expect(r.exitCode).toBe(0);
+    expect(r.stdout).toContain("Decisión del revisor: approve");
+    expect(r.stdout).toContain("Registrada como decisión del revisor");
+    expect(r.stdout).toMatch(/autorización APA-/);
+    expect(r.stdout).toContain("quedan 2 hoy");
+    expect(r.stdout).not.toContain("No se registró");
+    expect(ultimoRecibo().reviewerDecision?.decision).toBe("approve");
+    expect(usos()).toBe(1);
+  });
+
+  it("C24: sin --record el comando sigue sin escribir", async () => {
+    preparar();
+    const { fetchImpl } = red(() => respuestaDeChat(decision("approve", IDS_EN_DUDA)));
+    const antes = instantanea();
+    const r = await reviewAgentCommand(PATHS(), { id: ID, stage: "plan" }, { apiKey: "k", fetchImpl });
+    expect(r.stdout).toContain("No se registró");
+    expect(instantanea()).toEqual(antes);
+  });
+
+  it("C24: --record sobre un block sale con error y no escribe", async () => {
+    conRecibos(recibo({ outcome: "block", escalado: false }));
+    productor("plan", "claude-opus-5-5");
+    autorizar();
+    const antes = instantanea();
+    const r = await reviewAgentCommand(PATHS(), { id: ID, stage: "plan", record: true }, { apiKey: "k", fetchImpl: red(() => respuestaDeChat(decision("approve", IDS_EN_DUDA))).fetchImpl });
+    expect(r.exitCode).toBe(3);
+    expect(instantanea()).toEqual(antes);
   });
 });

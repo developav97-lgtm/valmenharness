@@ -122,6 +122,22 @@ describe("la fuente autorizacion (R-APRO-002)", () => {
     expect(hasPlanGate(conEvento("SECURITY", "autorizacion"))).toBe(false);
     // Control: el mismo evento con la fuente de una persona no reemplaza la frase del PO.
     expect(hasPlanGate(conEvento("FEATURE", "cli"))).toBe(false);
+    // C23. La fuente revisor cumple igual en un FEATURE y nunca en un SECURITY.
+    expect(hasPlanGate(conEvento("FEATURE", "revisor"))).toBe(true);
+    expect(hasPlanGate(conEvento("SECURITY", "revisor"))).toBe(false);
+  });
+
+  it("C20. registrarAprobacionDePlan rechaza la fuente revisor, esté o no declarada, y no escribe", () => {
+    writeFileSync(
+      join(lab, ".valmen", "config.yaml"),
+      "name: Demo\nplan-approval-sources:\n  - revisor\n  - cli\n",
+      "utf8",
+    );
+    expect(() => aprobar({ source: "revisor" })).toThrow(/no se declara/);
+    expect(() => aprobar({ source: "revisor", viaDelegacion: true })).toThrow(/no se declara/);
+    expect((ticket().blocks.Eventos ?? []).some((e) => e["action"] === "plan-approved")).toBe(false);
+    // Control: la misma llamada con una fuente aceptada sí registra.
+    expect(() => aprobar({ source: "cli" })).not.toThrow();
   });
 });
 

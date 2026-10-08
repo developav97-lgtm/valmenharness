@@ -419,6 +419,7 @@ export function motivoDeAprobacionPorAutorizacionInvalida(
   documento: ParsedTicket,
   aprobacion: AprobacionDePlan,
   ahora: Date = new Date(),
+  etapa: string = "plan",
 ): string | null {
   const regla = "Una persona la registra con `valmen approve-plan`.";
   if (documento.fields.type.toUpperCase() === "SECURITY") {
@@ -437,8 +438,8 @@ export function motivoDeAprobacionPorAutorizacionInvalida(
   if (autorizacion.estado !== "vigente") {
     return `La autorización ${authorizationId} ya no está vigente (${autorizacion.estado}): su aprobación pendiente quedó anulada. ${regla}`;
   }
-  if (!hayUsoDeCupoDeAprobacion(root, authorizationId, documento.fields.id, "plan")) {
-    return `La autorización ${authorizationId} no tiene un cupo registrado para aprobar el plan de este ticket. ${regla}`;
+  if (!hayUsoDeCupoDeAprobacion(root, authorizationId, documento.fields.id, etapa)) {
+    return `La autorización ${authorizationId} no tiene un cupo registrado para aprobar ${etapa === "plan" ? "el plan" : "el análisis"} de este ticket. ${regla}`;
   }
   return null;
 }

@@ -252,7 +252,7 @@ export function isCriticalPlanGate(ticket: ParsedTicket): boolean {
   );
 }
 
-/** `true` si la última aprobación de plan del bloque `Eventos` es de fuente `autorizacion` y cita su id. */
+/** `true` si la última aprobación de plan del bloque `Eventos` es de fuente `autorizacion` o `revisor` y cita su id. */
 function hasAuthorizationPlanApproval(ticket: ParsedTicket): boolean {
   const approvals = (ticket.blocks.Eventos ?? []).filter((event) => event["action"] === "plan-approved");
   const last = approvals[approvals.length - 1];
@@ -260,7 +260,7 @@ function hasAuthorizationPlanApproval(ticket: ParsedTicket): boolean {
   try {
     const details = JSON.parse(String(last["details"])) as Record<string, unknown>;
     return (
-      details["source"] === "autorizacion" &&
+      (details["source"] === "autorizacion" || details["source"] === "revisor") &&
       typeof details["authorizationId"] === "string" &&
       details["authorizationId"] !== ""
     );
