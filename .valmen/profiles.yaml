@@ -1,0 +1,11 @@
+# Perfiles de modelos del proyecto.
+#
+# Generado por el harness. Los comentarios escritos a mano se pierden al
+# guardar un perfil.
+
+seleccion:
+  proyecto: claude-code-completo
+  ejecutores:
+    claude: claude-code-completo
+
+perfiles: {}
