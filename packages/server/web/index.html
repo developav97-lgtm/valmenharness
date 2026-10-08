@@ -1840,6 +1840,17 @@
         border-top: 1px solid var(--borde);
         font-size: 13px;
       }
+      .qa-agente .qa-revocar {
+        flex-basis: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+      .qa-agente .qa-revocar input {
+        flex: 1 1 200px;
+        min-width: 0;
+      }
       .qa-agente .qa-estado {
         font-size: 11px;
         text-transform: uppercase;
@@ -2438,6 +2449,52 @@
         if (texto !== undefined) nodo.textContent = texto;
         if (clase !== undefined) nodo.className = clase;
         return nodo;
+      }
+
+      /**
+       * El botón «Revocar» de una autorización abre en su fila los campos de nombre y de frase
+       * literal. No usa `prompt()`: el navegador integrado no lo admite y el botón quedaba mudo.
+       */
+      function conRevocacion(fila, revocar, mensaje, enviarRevocacion) {
+        let abierta = null;
+        revocar.addEventListener("click", () => {
+          if (abierta !== null) {
+            abierta.remove();
+            abierta = null;
+            return;
+          }
+          const caja = el("div", undefined, "qa-revocar");
+          const actor = el("input");
+          actor.type = "text";
+          actor.placeholder = "Tu nombre";
+          actor.value = responsable;
+          const frase = el("input");
+          frase.type = "text";
+          frase.placeholder = "Tu frase literal de revocación";
+          const confirmar = el("button", "Confirmar revocación");
+          const cancelar = el("button", "Cancelar");
+          cancelar.addEventListener("click", () => {
+            caja.remove();
+            abierta = null;
+          });
+          confirmar.addEventListener("click", async () => {
+            if (actor.value.trim() === "" || frase.value.trim() === "") {
+              mensaje.textContent = "Escribe tu nombre y tu frase literal para revocar.";
+              mensaje.className = "qa-mensaje mal";
+              return;
+            }
+            try {
+              await enviarRevocacion(actor.value.trim(), frase.value.trim());
+            } catch (falla) {
+              mensaje.textContent = String(falla.message ?? falla);
+              mensaje.className = "qa-mensaje mal";
+            }
+          });
+          caja.append(actor, frase, confirmar, cancelar);
+          fila.append(caja);
+          abierta = caja;
+          actor.focus();
+        });
       }
 
       /** El responsable de las decisiones humanas: se recuerda entre visitas. */
@@ -7952,18 +8009,9 @@
             derecha.append(el("span", a.estado, `qa-estado ${a.estado}`));
             if (a.estado === "vigente") {
               const revocar = el("button", "Revocar");
-              revocar.addEventListener("click", async () => {
-                const actor = prompt("¿Quién revoca? (tu nombre)");
-                if (actor === null || actor.trim() === "") return;
-                const frase = prompt("Escribe tu frase literal de revocación:");
-                if (frase === null || frase.trim() === "") return;
-                try {
-                  await enviar("POST", "/api/qa/authorizations/revoke", { id: a.id, actor, quote: frase });
-                  await pintarQaAgente();
-                } catch (falla) {
-                  mensaje.textContent = String(falla.message ?? falla);
-                  mensaje.className = "qa-mensaje mal";
-                }
+              conRevocacion(fila, revocar, mensaje, async (actor, frase) => {
+                await enviar("POST", "/api/qa/authorizations/revoke", { id: a.id, actor, quote: frase });
+                await pintarQaAgente();
               });
               derecha.append(revocar);
             }
@@ -8041,18 +8089,9 @@
             derecha.append(el("span", a.estado, `qa-estado ${a.estado}`));
             if (a.estado === "vigente") {
               const revocar = el("button", "Revocar");
-              revocar.addEventListener("click", async () => {
-                const actor = prompt("¿Quién revoca? (tu nombre)");
-                if (actor === null || actor.trim() === "") return;
-                const frase = prompt("Escribe tu frase literal de revocación:");
-                if (frase === null || frase.trim() === "") return;
-                try {
-                  await enviar("POST", "/api/approval/authorizations/revoke", { id: a.id, actor, quote: frase });
-                  await pintarAprobacionAuto();
-                } catch (falla) {
-                  mensaje.textContent = String(falla.message ?? falla);
-                  mensaje.className = "qa-mensaje mal";
-                }
+              conRevocacion(fila, revocar, mensaje, async (actor, frase) => {
+                await enviar("POST", "/api/approval/authorizations/revoke", { id: a.id, actor, quote: frase });
+                await pintarAprobacionAuto();
               });
               derecha.append(revocar);
             }
