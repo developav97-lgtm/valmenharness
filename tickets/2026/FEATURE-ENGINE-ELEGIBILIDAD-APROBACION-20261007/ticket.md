@@ -4,7 +4,7 @@ id: FEATURE-ENGINE-ELEGIBILIDAD-APROBACION-20261007
 title: Decidir en código la elegibilidad con los tipos declarados (incluye SYNC, INTEGRATION y AGENT), impactos explícitos y sin SECURITY, block ni despliegue
 type: FEATURE
 module: ENGINE
-workflow_status: approved
+workflow_status: in_progress
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -205,6 +205,15 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-07",
+    "at": "2026-10-08T03:20:19.758Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
   }
 ]
 ```
