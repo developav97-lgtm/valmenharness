@@ -4,7 +4,7 @@ id: SECURITY-ENGINE-APROBACION-POR-AUTORIZACION-20261007
 title: Registrar la aprobación de análisis y plan atribuida a la autorización cuando la compuerta está en approve vigente
 type: SECURITY
 module: ENGINE
-workflow_status: planned
+workflow_status: approved
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -60,7 +60,7 @@ Ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente; ticket SECURITY, la aprobación del plan es solo de una persona (gate humano duro, aun con una autorización vigente).
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 - Alcance: registrar la aprobación atribuida a la autorización, su verificación al avanzar a `approved`, el comando de la CLI y sus pruebas. Exclusiones: las de la descripción funcional (revisor, visibilidad, jornada, MCP).
 - Pasos ordenados:
   1. En `packages/engine/src/approval-eligibility.ts`, junto a `elegibilidadDeAprobacion`, agregar `aprobarPorAutorizacion({ paths, ticketId, etapa, ahora?, env? })`, la única función del módulo que escribe (actualizar la cabecera para decirlo). Orden: `assertSesionAtendida` de `packages/engine/src/plan-approval.ts` primero, antes de leer nada (C14); luego `elegibilidadDeAprobacion` y, si no es elegible, falla con `EXIT_INVARIANT` citando cada regla que no cumple, sin escribir ni consumir cupo (C6, C7, C8, C9, C10, C11); luego la regla nueva `recibo-vigente`: el recibo `approve` de `veredictoDeCompuerta` debe tener `stateHash === hashState(buildGateState(texto))` (las funciones de `packages/engine/src/state.ts` que ya usa `packages/engine/src/transition.ts:208`), y si no coincide falla pidiendo volver a correr la compuerta (C5). Si la etapa ya tiene una aprobación por autorización vigente para el mismo hash del plan, no escribe ni consume (C13). Si todo cumple: `registrarUsoDeCupoDeAprobacion` de `packages/engine/src/approval-authorization.ts` (C12) y después `appendEvent` de `packages/engine/src/mutate.ts` con la acción `plan-approved` (etapa `plan`) o `analysis-approved` (etapa `analysis`) y `details` JSON `{ actor: "autorización <id>", source: "autorizacion", quote: <frase literal de la autorización>, planHash: hashDelPlan(...), authorizationId, authorizationHash, stage, receiptId, receiptStateHash }` (C1, C18). Se exporta por `packages/engine/src/index.ts`.
@@ -202,6 +202,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:21:36.933Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"La A (aprueba el plan de SECURITY-ENGINE-APROBACION-POR-AUTORIZACION con los dos defectos: análisis registrado con cupo y revocación tardía que anula)\",\"planHash\":\"sha256:67aae11f5a82eb7bffd0e0267902636b00c68a68dfbb82c67da93066196a48e5\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:21:38.443Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:67aae11f5a82eb7bffd0e0267902636b00c68a68dfbb82c67da93066196a48e5."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:21:38.443Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
   }
 ]
 ```
