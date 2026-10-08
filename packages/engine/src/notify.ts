@@ -27,6 +27,8 @@
  */
 import { spawnSync } from "node:child_process";
 
+import { type ParteDeJornada } from "./journey-handoff.js";
+
 /** Lo que se quiere notificar. */
 export interface NotificationPayload {
   /** Una línea, para el encabezado del mensaje. */
@@ -728,5 +730,81 @@ export function renderBrief(input: BriefInput): NotificationPayload {
     key: `parte:${input.fecha}`,
     subject: `Parte de ${input.proyecto} · ${input.fecha}`,
     body: lineas.join("\n").trimEnd(),
+  };
+}
+
+/** El tope de caracteres de un parte enviado por mensajería (Telegram acota el largo de un mensaje). */
+export const TOPE_DEL_PARTE = 3500;
+
+/**
+ * El aviso del parte de la jornada: qué probar y cómo en cada ticket, los cerrados por política y
+ * lo que falta entregar. Recorta por tickets completos hasta el tope y dice cuántos dejó fuera.
+ */
+export function renderJourneyHandoffNotification(
+  parte: ParteDeJornada,
+  opciones: { readonly maxCaracteres?: number } = {},
+): NotificationPayload {
+  const tope = opciones.maxCaracteres ?? TOPE_DEL_PARTE;
+  const unidades: { readonly seccion: number; readonly lineas: string[] }[] = [];
+  for (const e of parte.esperanPruebas) {
+    const lineas = [`• ${e.ticketId} — ${e.title}`, `    ticket: ${e.ruta}`];
+    if (e.omitidoPorSecreto.length > 0) {
+      lineas.push(`    contrato omitido: se encontró ${e.omitidoPorSecreto.join(", ")}; léelo en el ticket.`);
+    } else if (e.sinContrato) {
+      lineas.push("    sin contrato de pruebas: el ticket no trae comandos, léelo en su ruta.");
+    } else {
+      if (e.directorio !== null) lineas.push(`    directorio: ${e.directorio}`);
+      lineas.push(...e.probar.map((linea) => `    probar: ${linea}`));
+    }
+    lineas.push(...e.manuales.map((linea) => `    manual: ${linea.replace(/^(?:validación manual|manual)\s*:\s*/i, "")}`));
+    unidades.push({ seccion: 0, lineas });
+  }
+  for (const c of parte.cerradosPorPolitica) {
+    unidades.push({
+      seccion: 1,
+      lineas: [`• ${c.ticketId} — ${c.title}`, `    autorización ${c.autorizacion} · recibo ${c.recibo}`],
+    });
+  }
+  for (const s of parte.sinEntregar) unidades.push({ seccion: 2, lineas: [`• ${s.ticketId} [${s.estado}]`] });
+
+  const titulos = [
+    "ESPERAN TUS PRUEBAS",
+    "CERRADOS POR POLÍTICA DE QA (no los aprobó el agente: los respaldan tu autorización y el recibo)",
+    "SIN ENTREGAR TODAVÍA",
+  ];
+  const cierre = "Este aviso no aprueba nada ni cierra ningún ticket.";
+  const encabezado = [
+    "📋 PARTE DE LA JORNADA",
+    "",
+    `  jornada  ${parte.journeyId}`,
+    `  esperan tus pruebas ${parte.esperanPruebas.length} · cerrados por política ${parte.cerradosPorPolitica.length} · sin entregar ${parte.sinEntregar.length}`,
+  ];
+
+  const componer = (cuantos: number): string => {
+    const lineas = [...encabezado];
+    let seccionActual = -1;
+    for (const unidad of unidades.slice(0, cuantos)) {
+      if (unidad.seccion !== seccionActual) {
+        seccionActual = unidad.seccion;
+        lineas.push("", `${titulos[unidad.seccion]}:`);
+      }
+      lineas.push(...unidad.lineas);
+    }
+    if (cuantos < unidades.length) {
+      lineas.push("", `… y ${unidades.length - cuantos} más. Parte completo: valmen journey handoff --id ${parte.journeyId} --saved`);
+    }
+    lineas.push("", cierre);
+    return lineas.join("\n");
+  };
+
+  let cuantos = unidades.length;
+  while (cuantos > 0 && componer(cuantos).length > tope) cuantos -= 1;
+  let body = componer(cuantos);
+  // Un solo ticket más largo que el tope: se corta el texto, pero la frase final no se pierde.
+  if (body.length > tope) body = `${body.slice(0, Math.max(0, tope - cierre.length - 1))}\n${cierre}`.slice(0, tope);
+  return {
+    key: `journey-handoff:${parte.journeyId}`,
+    subject: `Parte de la jornada · ${parte.journeyId}`,
+    body,
   };
 }

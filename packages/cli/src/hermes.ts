@@ -76,6 +76,10 @@ import {
   paradasActivas,
   cierresPorPoliticaAvisados,
   pruebasListasAvisadas,
+  partesDeJornadaAvisados,
+  huellaDelParte,
+  renderJourneyHandoffNotification,
+  TOPE_DEL_PARTE,
   renderPolicyCloseNotification,
   renderTestsReadyNotification,
   buildGateState,
@@ -103,6 +107,7 @@ import {
   type BriefJornada,
   type CeilingInput,
   type CommandRunner,
+  type ParteDeJornada,
   type PendingApproval,
   type RegistryPaths,
 } from "@valmen/engine";
@@ -888,6 +893,45 @@ export function pendientesDeAvisar(paths: RegistryPaths, now: Date): PendienteDe
   }
 
   return salida;
+}
+
+/** Cómo terminó el envío del parte de una jornada. */
+export type EnvioDelParte =
+  | { readonly estado: "enviado"; readonly detalle: string }
+  | { readonly estado: "ya-enviado"; readonly detalle: string }
+  | { readonly estado: "fallido"; readonly detalle: string };
+
+/**
+ * Envía el parte de una jornada por el canal de Hermes, una vez por contenido.
+ *
+ * Es el camino del vigilante para este aviso: la prueba de que ya salió es el registro de
+ * aprobaciones (`journey-handoff-notice`, por jornada y huella). Un envío que el canal no entregó
+ * no se anota, así que el reintento lo vuelve a mandar. No participa de `pendientesDeAvisar`: el
+ * parte solo sale cuando una persona lo pide con un destino.
+ */
+export function avisarParteDeJornada(request: {
+  readonly paths: RegistryPaths;
+  readonly parte: ParteDeJornada;
+  readonly to: string;
+  readonly now: Date;
+  readonly runner?: CommandRunner | undefined;
+}): EnvioDelParte {
+  const huella = huellaDelParte(request.parte);
+  if (partesDeJornadaAvisados(request.paths).has(`${request.parte.journeyId}:${huella}`)) {
+    return { estado: "ya-enviado", detalle: `el parte de ${request.parte.journeyId} con este contenido ya salió` };
+  }
+  const entrega = hermesSendChannel({
+    target: request.to,
+    ...(request.runner === undefined ? {} : { runner: request.runner }),
+  }).notify(renderJourneyHandoffNotification(request.parte, { maxCaracteres: TOPE_DEL_PARTE }));
+  if (!entrega.delivered) return { estado: "fallido", detalle: entrega.detail };
+  appendApproval(request.paths, {
+    kind: "journey-handoff-notice",
+    journeyId: request.parte.journeyId,
+    huella,
+    notifiedAt: request.now.toISOString(),
+  });
+  return { estado: "enviado", detalle: entrega.detail };
 }
 
 /** Los avisos que salieron y todavía esperan una decisión. */

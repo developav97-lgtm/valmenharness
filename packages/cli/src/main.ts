@@ -57,6 +57,7 @@ import {
   resumeTicket,
   validateOne,
 } from "./commands.js";
+import { journeyHandoffCommand } from "./journey-handoff.js";
 import { journeyWorktreeCommand } from "./worktree.js";
 import { REAL_GIT, runDelegation } from "./delegation.js";
 import { runFeature } from "./features.js";
@@ -247,6 +248,10 @@ Comandos:
   journey brief --id <ID> [--cliente <c>] [--project <id>]
                             El brief autocontenido de un ticket para un subagente: worktree, siguiente
                             paso, modelo, compuertas, contrato de entrega y prohibiciones. Solo lectura.
+  journey handoff --id <jornada> [--project <id>] [--to <destino>] [--saved]
+                            El parte final de la corrida: qué probar y cómo en cada ticket
+                            que espera tus pruebas, los cerrados por política y los sin
+                            entregar. Lo guarda; con --to lo envía una vez. No cierra nada.
   journey notify-plans --project <id> --journey <id> [--to <destino>]
                             Emite un código de aprobación por plan listo y uno de lote, y los envía.
   approval-eligibility --id <ID> --stage analysis|plan [--json]
@@ -2012,6 +2017,8 @@ export async function run(argv: readonly string[]): Promise<number> {
               ? journeyNextCommand(options.flags, { root: resolvePaths(options).root })
               : rest[0] === "brief"
                 ? journeyBriefCommand(options.flags, { root: resolvePaths(options).root })
+            : rest[0] === "handoff"
+                ? journeyHandoffCommand(options.flags, { root: resolvePaths(options).root })
             : rest[0] === "install-trigger"
               ? journeyInstallTriggerCommand(options.flags)
               : rest[0] === "notify-plans"
@@ -2020,7 +2027,7 @@ export async function run(argv: readonly string[]): Promise<number> {
                 ? journeyClearStopCommand(options.flags)
                 : rest[0] === "worktree"
                 ? journeyWorktreeCommand(resolvePaths(options), rest.slice(1), options.flags)
-                : { stdout: "", stderr: "journey admite: plan, advance, next, brief, install-trigger, notify-plans, clear-stop y worktree.\n", exitCode: EXIT_SCHEMA };
+                : { stdout: "", stderr: "journey admite: plan, advance, next, brief, handoff, install-trigger, notify-plans, clear-stop y worktree.\n", exitCode: EXIT_SCHEMA };
     } else if (command === "review-agent") {
       result = await reviewAgentCommand(resolvePaths(options), options.flags);
     } else if (command === "qa-shadow") {
