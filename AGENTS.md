@@ -125,17 +125,17 @@ Consultas, diagnósticos, exploración, cambios visuales o de contenido que no a
 
 **El modo directo no relaja los gates de impacto.** Un cambio que se vaya a aplicar **sobre un proyecto real** y toque sincronización, migraciones, contenedores, autenticación o despliegue exige ticket, plan aprobado y gate humano, aunque el pedido haya sido "cámbiame este texto". El agente lo dice y se detiene: no sigue sin el ticket, y tampoco lo abre por su cuenta.
 
-Esos gates protegen datos y clientes de un proyecto en uso. En un repositorio que **es** el producto que se construye —y que lo declara en sus reglas— la protección equivalente son las pruebas antes de decir que algo funciona y la confirmación antes de commitear.
+Esos gates protegen datos y clientes de un proyecto en uso. En un repositorio que **es** el producto —y lo declara en sus reglas— la protección equivalente son las pruebas antes de decir que algo funciona y la confirmación antes de commitear.
 
 ### Autorización antes de acción
 
-Investigar, explicar, revisar, auditar, comparar y proponer son operaciones **read-only** salvo que el pedido autorice explícitamente un cambio. Es el primer paso del protocolo, no una recomendación.
+Investigar, explicar, revisar, auditar, comparar y proponer son operaciones **read-only** salvo que el pedido autorice explícitamente un cambio. Es el primer paso, no una recomendación.
 
 ### Quién decide que hace falta un ticket
 
-**La persona, no el agente.** Abrir un ticket escribe en el repositorio, y escribir exige autorización. El agente puede proponerlo —una línea, con el motivo— y esperar respuesta; no lo abre por su cuenta, ni siquiera cuando el trabajo cumple de sobra las condiciones.
+**La persona, no el agente.** Abrir un ticket escribe en el repositorio, y escribir exige autorización. El agente puede proponerlo —una línea, con el motivo— y esperar respuesta; no lo abre por su cuenta, aunque se cumplan de sobra las condiciones.
 
-Un pedido de trabajo no es un pedido de registro. Cuando alguien dice "hagámoslo", el modo por defecto es el directo: se hace y se prueba. Eso vale para un pedido **que no nombra un ticket**; si nombra uno que ya existe, ese ticket manda.
+Un pedido de trabajo no es un pedido de registro. Ante "hagámoslo", el modo por defecto es el directo: se hace y se prueba. Vale para un pedido **que no nombra un ticket**; si nombra uno existente, ese ticket manda.
 
 ### Continuar un ticket
 
@@ -145,13 +145,13 @@ Un pedido como «continúa con el ticket X» nombra un ticket que ya existe, y e
 2. Hacer ese paso y volver a llamarla. No se adivina el orden ni se salta una fase. Si trae «Delegación de la fase», la hace un subagente con ese modelo sin cambiar el de la sesión; quien recibió el brief la hace él.
 3. Seguir hasta el primer **alto** que el paso declare —una decisión de una persona, o las pruebas del responsable— y entregar ahí: qué se hizo, qué evidencia hay y qué decisión falta. Un alto no se supera: ni se aprueba lo que decide una persona, ni se mueve el ticket para esquivarlo.
 
-Mientras el ticket no esté `approved`, **el código de la aplicación no se toca**: el diagnóstico y el plan se escriben **en el ticket**, porque lo que queda en la conversación no existe para el registro. Las skills que el paso nombra se cargan antes de empezar la fase.
+Mientras el ticket no esté `approved`, **el código de la aplicación no se toca**: el diagnóstico y el plan se escriben **en el ticket**; lo que queda en la conversación no existe para el registro. Las skills que el paso nombra se cargan antes.
 
-Una funcionalidad que excede un ticket se registra como **feature**, con el recorrido de la skill `feature`, que se lee antes de empezar. La forma del registro la decide quien lo pide, no el agente.
+Una funcionalidad que excede un ticket se registra como **feature**, con el recorrido de la skill `feature`, que se lee antes. La forma del registro la decide quien lo pide.
 
 ### Corrida delegada
 
-Si el PO delega una feature o varios tickets: skill `corrida-delegada`, o `corrida-orquestada` con subagentes en paralelo. Un BLOCK, un gate humano duro y lo que quede fuera del alcance siguen siendo de una persona.
+Si el PO delega una feature o varios tickets: skill `corrida-delegada`, o `corrida-orquestada` con subagentes en paralelo. Un BLOCK, un gate humano duro y lo que quede fuera del alcance son de una persona.
 
 ### Corrida orquestada
 
@@ -159,41 +159,44 @@ Se pide en la sesión: «ejecuta el feature X» o «los tickets de hoy, con N a 
 
 ### Antes de registrar: traducir lo nuevo del pedido
 
-Un pedido que nombra algo que el código no tiene —un «parámetro nuevo», un permiso, una bandera, una columna, una migración— no se registra con ese hueco. Antes de crear el ticket se traduce a campo real con búsqueda en el código; si no aparece, se pregunta **una vez** a la persona. Lo que quede sin decidir va a `### Supuestos y decisiones pendientes` del ticket, cada elemento con su pregunta exacta, y el análisis no planifica sobre la adivinanza.
+Un pedido que nombra algo que el código no tiene —un «parámetro nuevo», un permiso, una bandera, una columna, una migración— no se registra con ese hueco: antes de crear el ticket se traduce a campo real con búsqueda en el código; si no aparece, se pregunta **una vez**. Lo que quede sin decidir va a `### Supuestos y decisiones pendientes` del ticket, cada elemento con su pregunta exacta, y el análisis no planifica sobre la adivinanza.
 
 ### Estados del ticket
 
-`intake → analyzed → planned → approved → in_progress → awaiting_user_tests → in_qa → qa_approved → closed`, con `blocked` y `changes_requested` como desvíos. El motor rechaza un salto ilegal; las tres máquinas (ticket, punto, release) son independientes: un ticket cerrado puede seguir sin publicar. No existe el estado `completed`. El detalle está en la skill `planificacion`.
+`intake → analyzed → planned → approved → in_progress → awaiting_user_tests → in_qa → qa_approved → closed`, con `blocked` y `changes_requested` como desvíos. El motor rechaza un salto ilegal; las tres máquinas (ticket, punto, release) son independientes. No existe el estado `completed`. El detalle está en la skill `planificacion`.
 
 ### Gates
 
-Un gate es una condición que debe cumplirse antes de avanzar: mecánico (lo decide el código), automático (un modelo responde proposiciones y el código aplica umbrales) o humano (despliegue, release, seguridad y migraciones: aprobación explícita, sin excepción). **Un gate nunca le pregunta a un modelo si aprueba**: le pregunta hechos verificables, y cada decisión deja un recibo con la evidencia, las respuestas y el coste.
+Un gate es una condición previa a avanzar: mecánico (lo decide el código), automático (un modelo responde proposiciones y el código aplica umbrales) o humano (despliegue, release, seguridad y migraciones: aprobación explícita, sin excepción). **Un gate nunca le pregunta a un modelo si aprueba**: le pregunta hechos verificables, y cada decisión deja un recibo con la evidencia, las respuestas y el coste.
+
+Un análisis o un plan se aprueba sin una persona solo bajo una **autorización de aprobación** vigente que creó una persona (`valmen approval-authorize`); la aprobación se atribuye a ella, nunca al agente. Sin ella aprueba una persona; SECURITY, un `block` y un despliegue a producción, siempre.
 
 ### Antes de diagnosticar, buscar en la memoria
 
-Antes de investigar un ticket, `buscar_memoria` con el módulo y el síntoma: el problema puede estar resuelto desde hace meses, con su causa raíz escrita. Cuando devuelve algo, el diagnóstico lo **cita**. Lo que el trabajo enseñe —una causa raíz que costó encontrar, un patrón que se repite— se guarda con `guardar_aprendizaje` cuando se descubre, no al final.
+Antes de investigar un ticket, `buscar_memoria` con el módulo y el síntoma: puede estar resuelto, con su causa raíz escrita. Si devuelve algo, el diagnóstico lo **cita**. Lo que el trabajo enseñe —una causa raíz que costó, un patrón que se repite— se guarda con `guardar_aprendizaje` al descubrirlo, no al final.
 
 ### Los estándares del proyecto, y cómo crecen
 
-Viven en `.valmen/rules/estandares-<área>.md` y llegan acá en el `valmen sync`. Se leen **antes** de escribir la primera línea de una pantalla o de un modelo, no después de una devolución.
+Viven en `.valmen/rules/estandares-<área>.md` y llegan con `valmen sync`. Se leen **antes** de escribir la primera línea de una pantalla o un modelo.
 
-Cuando el trabajo enseñe algo que no está escrito —hubo que aclararlo dos veces, una corrección reveló una regla que vivía en la cabeza de alguien—, se propone con `proponer_estandar`: la regla en imperativo, el motivo con el caso concreto y los tickets donde se vio. **No está en vigor** hasta que una persona la acepte con `decidir_estandar`, citando **sus** palabras; si no dio ninguna, se le pide, no se escribe por ella.
+Cuando el trabajo enseñe algo no escrito —hubo que aclararlo dos veces, una corrección reveló una regla que vivía en la cabeza de alguien—, se propone con `proponer_estandar`: la regla en imperativo, el motivo con el caso concreto y los tickets donde se vio. **No está en vigor** hasta que una persona la acepte con `decidir_estandar`, citando **sus** palabras; si no dio ninguna, se le pide, no se escribe por ella.
 
-Si el cambio toca pantallas, antes de entregar se corre `revisar_presentacion`: avisa de los colores escritos a mano, que rompen el modo oscuro. Un color legítimo se marca en la línea con `valmen:allow-color` y su motivo. Con UI UX Pro Max e Impeccable: `valmen ux review`.
+Si el cambio toca pantallas, antes de entregar se corre `revisar_presentacion`: avisa de los colores a mano, que rompen el modo oscuro; uno legítimo se marca con `valmen:allow-color` y su motivo. `valmen ux review` aplica UI UX Pro Max e Impeccable.
 
 ### Cómo se verifica un criterio
 
-Cada criterio de aceptación declara cómo se verifica, en un comentario debajo: `<!-- test: <comando> -->` o `<!-- verify: manual -->`. El gate `qa-mechanical` corre los comandos declarados y se detiene ante un criterio sin anotación. Los comandos permitidos y el tiempo máximo salen de `test-commands` y `test-timeout` en `.valmen/config.yaml`; el detalle está en la skill `planificacion`.
+Cada criterio de aceptación declara cómo se verifica, en un comentario debajo: `<!-- test: <comando> -->` o `<!-- verify: manual -->`. El gate `qa-mechanical` corre los comandos declarados y se detiene ante un criterio sin anotación. Comandos permitidos y tiempo máximo salen de `test-commands` y `test-timeout` en `.valmen/config.yaml`; el detalle está en la skill `planificacion`.
 
 ### Acciones que nunca se automatizan
 
-Se pueden **preparar** —dry-run, comandos listos, evidencia reunida—, pero las ejecuta una persona:
+Se pueden **preparar** (dry-run, comandos listos, evidencia), pero las ejecuta una persona:
 
 - Aprobar un despliegue a producción (exige frase literal) y crear un tag de release publicado.
 - Force-push, reset destructivo, borrar tags.
 - Ampliar la autoridad de edición fuera del alcance declarado, o modificar el gate que lo evalúa: un gate no amplía su propia autoridad.
 - Marcar QA como eximida (exige motivo y confirmación explícita).
 - Crear o ampliar una autorización permanente de QA por agente, o promover la política a cerrar tickets (sin herramienta MCP).
+- Crear o ampliar una autorización de aprobación (sin herramienta MCP).
 - Modificar credenciales o la configuración de hosts permitidos.
 
 ## Invariantes de operación
@@ -216,7 +219,7 @@ Se pueden **preparar** —dry-run, comandos listos, evidencia reunida—, pero l
 
 Al terminar una implementación se entrega el contrato de pruebas: comandos exactos, directorio de ejecución, resultado esperado, validaciones manuales y requisitos de ambiente. El ticket pasa a `awaiting_user_tests` y solo avanza con el resultado del responsable o con una omisión explícita y documentada. Los criterios que se verificaron quedan marcados con `- [x]`; el detalle está en la skill `revision-final`.
 
-Los commits se crean solo tras la confirmación de las pruebas. Antes de commitear se revisa el estado del repositorio y se excluyen los archivos ajenos al ticket sin modificarlos; los cambios ajenos conocidos no bloquean la entrega. No se mezclan tickets en un commit, ni se usa `git add -A` sin revisión, ni autocommits.
+Los commits se crean solo tras la confirmación de las pruebas. Antes se revisa el estado del repositorio y se excluyen los archivos ajenos al ticket sin modificarlos; los ajenos conocidos no bloquean la entrega. No se mezclan tickets en un commit, ni se usa `git add -A` sin revisión, ni autocommits.
 
 **La QA puede ejecutarla un agente** solo bajo una autorización vigente que creó una persona: `qa-agent` prueba en un worktree limpio y el ciclo se atribuye a la autorización. Empieza en sombra hasta que una persona promueva la política; sin autorización vigente, la QA es de una persona.
 
