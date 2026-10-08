@@ -141,8 +141,8 @@ Un pedido de trabajo no es un pedido de registro. Cuando alguien dice "hagámosl
 
 Un pedido como «continúa con el ticket X» nombra un ticket que ya existe, y entonces **el ticket manda, no el modo directo**:
 
-1. `reanudar_ticket` (CLI: `valmen resume --id <ID>`) **primero**: devuelve el estado y el **siguiente paso** que calcula el motor —qué escribir, qué skill cargar, qué compuerta correr y dónde detenerse—.
-2. Hacer ese paso y volver a llamarla. No se adivina el orden ni se salta una fase.
+1. `reanudar_ticket` (CLI: `valmen resume --id <ID>`) **primero**: devuelve el estado y el **siguiente paso** que calcula el motor.
+2. Hacer ese paso y volver a llamarla. No se adivina el orden ni se salta una fase. Si trae «Delegación de la fase», la hace un subagente con ese modelo sin cambiar el de la sesión; quien recibió el brief la hace él.
 3. Seguir hasta el primer **alto** que el paso declare —una decisión de una persona, o las pruebas del responsable— y entregar ahí: qué se hizo, qué evidencia hay y qué decisión falta. Un alto no se supera: ni se aprueba lo que decide una persona, ni se mueve el ticket para esquivarlo.
 
 Mientras el ticket no esté `approved`, **el código de la aplicación no se toca**: el diagnóstico y el plan se escriben **en el ticket**, porque lo que queda en la conversación no existe para el registro. Las skills que el paso nombra se cargan antes de empezar la fase.

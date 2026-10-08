@@ -237,3 +237,32 @@ describe("el detalle que sale llega a su skill publicada", () => {
     expect(skill("revision-final")).toContain("## Los criterios se marcan");
   });
 });
+
+describe("la delegación de la fase en el contrato", () => {
+  const continuar = (): string => {
+    const desde = workflow.indexOf("### Continuar un ticket");
+    return workflow.slice(desde, workflow.indexOf("###", desde + 5));
+  };
+
+  it("C1: con «Delegación de la fase», la fase la hace un subagente con ese modelo", () => {
+    expect(continuar()).toContain("«Delegación de la fase», la hace un subagente con ese modelo");
+  });
+
+  it("C2: no se cambia el modelo de la sesión", () => {
+    expect(continuar()).toContain("sin cambiar el de la sesión");
+  });
+
+  it("C3: quien recibió el brief hace la fase él", () => {
+    expect(continuar()).toContain("quien recibió el brief la hace él");
+  });
+
+  it("C4: la skill corrida-delegada lanza el subagente que indica la delegación", () => {
+    expect(skill("corrida-delegada")).toContain(
+      "«Delegación de la fase», lanza el subagente que indica",
+    );
+  });
+
+  it("C5: la skill corrida-delegada no cambia el modelo de la sesión", () => {
+    expect(skill("corrida-delegada")).toContain("no cambies el modelo de esta sesión");
+  });
+});

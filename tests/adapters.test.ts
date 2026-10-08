@@ -169,6 +169,13 @@ describe("proyección a AGENTS.md", () => {
     expect(projectAgentsMd(loadProjectModel(lab, "Demo"))).toBe(first);
   });
 
+  it("C7: proyecta la delegación de la fase en «Continuar un ticket»", () => {
+    scaffold({ "10-stack.md": "# Stack\n\n- Django.\n" }, "name: Demo\n");
+    const output = projectAgentsMd(loadProjectModel(lab, "Demo"));
+
+    expect(output).toContain("Delegación de la fase");
+  });
+
   it("declara que el archivo es generado y de dónde viene", () => {
     scaffold({ "10-stack.md": "# Stack\n\n- Django.\n" }, "name: Demo\n");
     const output = projectAgentsMd(loadProjectModel(lab, "Demo"));
