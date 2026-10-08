@@ -63,7 +63,7 @@ import {
   writeRouting,
 } from "../packages/server/src/routing.js";
 import { resetCatalogCache } from "../packages/server/src/routing.js";
-import { resolverDespachoDeFase, resolverModeloDeFase } from "../packages/engine/src/journey-phases.js";
+import { registrarFase, resolverDespachoDeFase, resolverModeloDeFase } from "../packages/engine/src/journey-phases.js";
 import { handleApi } from "../packages/server/src/server.js";
 import { writeFixtureTicket } from "./helpers/fixtures.js";
 
@@ -1324,5 +1324,125 @@ describe("el reporte del ejecutor (R-PERF-006)", () => {
     expect(mismoModelo("claude-sonnet-5", "claude-sonnet-5-5")).toBe(true);
     expect(mismoModelo("claude-opus-5-5", "claude-sonnet-5-5")).toBe(false);
     expect(mismoModelo("", "claude-sonnet-5-5")).toBe(false);
+  });
+});
+
+describe("la API de modelos por fase", () => {
+  type Usado = {
+    modeloUsado: string | null;
+    coincide: boolean | null;
+    costeUsd: number | null;
+    ticketId: string;
+    registradoEn: string;
+  } | null;
+  type Fase = {
+    fase: string;
+    provider: string;
+    model: string;
+    effort: string;
+    origen: { source: string; perfil?: { id: string; alcance: string } };
+    usado: Usado;
+  };
+  type Cuerpo = { ejecutor: string | null; ejecutores: string[]; fases: Fase[]; aviso: string | null; error?: string };
+  const pedir = async (ruta = "/api/modelos/fases") => {
+    const [path, consulta] = ruta.split("?");
+    const r = await handleApi("GET", path as string, {}, context(), new URLSearchParams(consulta ?? ""));
+    return { status: r.status, cuerpo: r.body as Cuerpo };
+  };
+  const registro = (fase: string, ejecutor: string, extra: Record<string, unknown>) =>
+    registrarFase(lab, {
+      ticketId: "T-1",
+      fase: fase as (typeof FASES_DEL_AGENTE)[number],
+      ejecutor,
+      modelo: "claude-sonnet-5-5",
+      esfuerzo: "high",
+      origenDelModelo: "agent-implementation",
+      duracionMs: 1,
+      resultado: "ok",
+      ...extra,
+    });
+
+  it("C1: una entrada por fase con proveedor, modelo y esfuerzo efectivos", async () => {
+    const { status, cuerpo } = await pedir();
+    expect(status).toBe(200);
+    expect(cuerpo.fases.map((f) => f.fase)).toEqual([...FASES_DEL_AGENTE]);
+    for (const f of cuerpo.fases) {
+      expect(typeof f.provider).toBe("string");
+      expect(typeof f.model).toBe("string");
+      expect(typeof f.effort).toBe("string");
+    }
+    expect(cuerpo.ejecutores).toEqual(["claude", "codex", "opencode", "hermes"]);
+    expect(cuerpo.aviso).toBeNull();
+  });
+
+  it("C2: cada fase trae su origen; el perfil del proyecto nombra su id y alcance", async () => {
+    const sinPerfil = await pedir();
+    for (const f of sinPerfil.cuerpo.fases) {
+      expect(["proyecto", "perfil", "preset", "sistema", "sin-asignar"]).toContain(f.origen.source);
+    }
+    elegirPerfil(lab, { perfil: "claude-code-completo" });
+    const { cuerpo } = await pedir();
+    expect(cuerpo.fases.every((f) => f.origen.source === "perfil")).toBe(true);
+    expect(cuerpo.fases[0]?.origen.perfil).toEqual({ id: "claude-code-completo", alcance: "proyecto" });
+  });
+
+  it("C3: con ejecutor y perfil elegido para él, el origen nombra ese perfil con alcance ejecutor", async () => {
+    elegirPerfil(lab, { perfil: "claude-code-completo" });
+    elegirPerfil(lab, { perfil: "codex-completo", ejecutor: "codex" });
+    const { cuerpo } = await pedir("/api/modelos/fases?ejecutor=codex");
+    expect(cuerpo.ejecutor).toBe("codex");
+    expect(cuerpo.fases[0]?.origen.perfil).toEqual({ id: "codex-completo", alcance: "ejecutor" });
+  });
+
+  it("C4: un ejecutor desconocido responde 400 con los vigentes", async () => {
+    const { status, cuerpo } = await pedir("/api/modelos/fases?ejecutor=nadie");
+    expect(status).toBe(400);
+    expect(cuerpo.error).toContain("claude, codex, opencode, hermes");
+  });
+
+  it("C5: un profiles.yaml ilegible responde 200 con aviso y sin fases", async () => {
+    writeFileSync(perfilesPath(lab), "perfiles:\n  Mal Id:\n    description: x\n");
+    const { status, cuerpo } = await pedir();
+    expect(status).toBe(200);
+    expect(cuerpo.fases).toEqual([]);
+    expect(cuerpo.aviso).toContain("Mal Id");
+  });
+
+  it("C6: usado es el registro más reciente de la fase, con sus campos", async () => {
+    registro("implementation", "claude", { registradoEn: "2026-10-01T10:00:00.000Z", modeloUsado: "claude-opus-5-5", costeUsd: 1 });
+    registro("implementation", "claude", { registradoEn: "2026-10-02T10:00:00.000Z", modeloUsado: "claude-sonnet-5-5", costeUsd: 0.25 });
+    const { cuerpo } = await pedir();
+    const usado = cuerpo.fases.find((f) => f.fase === "implementation")?.usado;
+    expect(usado).toMatchObject({
+      modeloUsado: "claude-sonnet-5-5",
+      coincide: true,
+      costeUsd: 0.25,
+      ticketId: "T-1",
+      registradoEn: "2026-10-02T10:00:00.000Z",
+    });
+  });
+
+  it("C6: modeloUsado nulo y coincide falso viajan tal cual", async () => {
+    registro("plan", "claude", { registradoEn: "2026-10-02T10:00:00.000Z" });
+    registro("verification", "claude", { registradoEn: "2026-10-02T10:00:00.000Z", modeloUsado: "claude-haiku-4-5", costeUsd: null });
+    const { cuerpo } = await pedir();
+    expect(cuerpo.fases.find((f) => f.fase === "plan")?.usado).toMatchObject({ modeloUsado: null, coincide: null, costeUsd: null });
+    expect(cuerpo.fases.find((f) => f.fase === "verification")?.usado).toMatchObject({ coincide: false });
+  });
+
+  it("C7: con ejecutor, usado solo considera los registros de ese ejecutor", async () => {
+    registro("implementation", "claude", { registradoEn: "2026-10-01T10:00:00.000Z", modeloUsado: "claude-sonnet-5-5" });
+    registro("implementation", "codex", { registradoEn: "2026-10-03T10:00:00.000Z", modeloUsado: "gpt-6-sol" });
+    const todos = (await pedir()).cuerpo.fases.find((f) => f.fase === "implementation")?.usado;
+    expect(todos?.modeloUsado).toBe("gpt-6-sol");
+    const claude = (await pedir("/api/modelos/fases?ejecutor=claude")).cuerpo.fases.find((f) => f.fase === "implementation")?.usado;
+    expect(claude?.modeloUsado).toBe("claude-sonnet-5-5");
+    const opencode = (await pedir("/api/modelos/fases?ejecutor=opencode")).cuerpo.fases.find((f) => f.fase === "implementation")?.usado;
+    expect(opencode).toBeNull();
+  });
+
+  it("C8: una fase sin registros responde usado null", async () => {
+    const { cuerpo } = await pedir();
+    expect(cuerpo.fases.every((f) => f.usado === null)).toBe(true);
   });
 });

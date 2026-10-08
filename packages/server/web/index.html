@@ -2033,6 +2033,89 @@
         font-size: 12px;
         color: var(--tenue);
       }
+      /* ── Modelos: modelo por fase ─────────────────────────────────────── */
+      .modelo-fase {
+        width: 100%;
+        margin-bottom: 24px;
+      }
+      .modelo-fase td {
+        vertical-align: top;
+        overflow-wrap: anywhere;
+      }
+      @media (min-width: 641px) {
+        .modelo-fase td:first-child {
+          overflow-wrap: normal;
+          white-space: nowrap;
+        }
+      }
+      .modelo-fase .fase-nombre,
+      .modelo-fase .modelo-id {
+        font-family: var(--mono);
+        font-size: 12px;
+      }
+      .modelo-fase .detalle-fase {
+        color: var(--tenue);
+        font-size: 12px;
+        margin-top: 2px;
+      }
+      .modelo-fase tr.discrepancia {
+        background: var(--alerta-suave);
+      }
+      .modelo-fase tr.discrepancia td:first-child {
+        box-shadow: inset 3px 0 0 var(--alerta);
+      }
+      .modelo-fase .marca-discrepancia {
+        color: var(--alerta);
+        font-weight: 620;
+        font-size: 12px;
+        margin-top: 2px;
+      }
+      .selector-ejecutor {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+      .selector-ejecutor select {
+        min-width: 0;
+        max-width: 100%;
+      }
+      @media (max-width: 640px) {
+        .modelo-fase,
+        .modelo-fase tbody,
+        .modelo-fase tr,
+        .modelo-fase td {
+          display: block;
+          width: 100%;
+        }
+        .modelo-fase thead {
+          display: none;
+        }
+        .modelo-fase tr {
+          background: var(--panel);
+          border: 1px solid var(--borde);
+          border-radius: var(--radio);
+          padding: 8px 12px;
+          margin-bottom: 12px;
+        }
+        .modelo-fase tr.discrepancia {
+          background: var(--alerta-suave);
+          border-color: var(--alerta);
+        }
+        .modelo-fase td {
+          border: 0;
+          padding: 4px 0;
+        }
+        .modelo-fase td::before {
+          content: attr(data-rotulo);
+          display: block;
+          font-size: 11px;
+          color: var(--tenue);
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+        }
+      }
       .presets {
         display: flex;
         gap: 10px;
@@ -6979,6 +7062,7 @@
         );
         cont.append(nota);
         await seccionPerfiles(cont, catalogo);
+        await seccionModeloPorFase(cont);
         cont.append(el("h2", "Preset"));
 
         const presets = el("div", undefined, "presets");
@@ -7102,6 +7186,7 @@
 
           const ORIGEN = {
             proyecto: "definido en este proyecto",
+            perfil: rol.perfil ? `perfil ${rol.perfil.id} (${rol.perfil.alcance})` : "perfil",
             preset: `del preset ${preset}`,
             sistema: "valor del sistema",
             "sin-asignar": "sin asignar",
@@ -7247,6 +7332,124 @@
        * editar y elegir. Solo habla con `/api/perfiles`; el archivo lo escribe el
        * servidor con las mismas funciones que usa el código.
        */
+      /**
+       * «Modelo por fase»: el modelo efectivo de cada fase del agente con su origen, y al lado
+       * el último que el cliente reportó haber usado (R-PERF-005, R-PERF-006).
+       *
+       * Solo lee `GET /api/modelos/fases`. El costo es el que reportó el cliente
+       * (equivalente de suscripción, no factura) y se rotula así.
+       */
+      async function seccionModeloPorFase(cont) {
+        cont.append(el("h2", "Modelo por fase"));
+        const barra = el("div", undefined, "selector-ejecutor");
+        const salida = el("div", undefined, "resultado");
+        const zona = el("div");
+        cont.append(barra, salida, zona);
+
+        const ORIGEN_FASE = {
+          proyecto: "definido en el proyecto",
+          preset: "del preset",
+          sistema: "valor del sistema",
+          "sin-asignar": "sin asignar",
+        };
+        const origenLegible = (origen) =>
+          origen.source === "perfil" && origen.perfil
+            ? `perfil ${origen.perfil.id} (${origen.perfil.alcance})`
+            : (ORIGEN_FASE[origen.source] ?? origen.source);
+
+        const pintar = (datos) => {
+          zona.textContent = "";
+          if (datos.aviso) {
+            salida.className = "resultado error";
+            salida.textContent = datos.aviso;
+          } else {
+            salida.className = "resultado";
+            salida.textContent = "";
+          }
+          if (!datos.fases || datos.fases.length === 0) return;
+          const tabla = el("table", undefined, "modelo-fase");
+          const cabecera = el("tr");
+          for (const columna of ["Fase", "Efectivo", "Origen", "Usado"]) cabecera.append(el("th", columna));
+          const thead = el("thead");
+          thead.append(cabecera);
+          const tbody = el("tbody");
+          for (const fase of datos.fases) {
+            const u = fase.usado;
+            const tr = el("tr", undefined, u !== null && u.coincide === false ? "discrepancia" : undefined);
+            const celda = (rotulo) => {
+              const td = el("td");
+              td.setAttribute("data-rotulo", rotulo);
+              return td;
+            };
+
+            const cFase = celda("Fase");
+            cFase.append(el("div", fase.fase, "fase-nombre"));
+            const cEfectivo = celda("Efectivo");
+            cEfectivo.append(
+              el("div", fase.model === "" ? "(sin modelo)" : fase.model, "modelo-id"),
+              el("div", `${fase.provider === "" ? "(sin proveedor)" : fase.provider} · esfuerzo ${fase.effort}`, "detalle-fase"),
+            );
+            const cOrigen = celda("Origen");
+            cOrigen.append(el("span", origenLegible(fase.origen), "resultado"));
+
+            const cUsado = celda("Usado");
+            if (u === null) {
+              cUsado.append(el("span", "sin registros", "resultado"));
+            } else {
+              cUsado.append(
+                el("div", u.modeloUsado === null ? "sin reportar" : u.modeloUsado, "modelo-id"),
+                el("div", `ticket ${u.ticketId} · ${u.ejecutor}`, "detalle-fase"),
+                el(
+                  "div",
+                  u.costeUsd === null ? "costo: sin reportar" : `costo: US$ ${u.costeUsd.toFixed(4)} (reportado por el cliente)`,
+                  "detalle-fase",
+                ),
+              );
+              if (u.coincide === false) {
+                cUsado.append(el("div", `discrepancia: se declaró ${u.modelo}`, "marca-discrepancia"));
+              }
+            }
+            tr.append(cFase, cEfectivo, cOrigen, cUsado);
+            tbody.append(tr);
+          }
+          tabla.append(thead, tbody);
+          zona.append(tabla);
+        };
+
+        const cargar = async (ejecutor) => {
+          salida.className = "resultado";
+          salida.textContent = "Cargando el modelo por fase…";
+          try {
+            pintar(
+              await api(
+                "GET",
+                ejecutor === "" ? "/api/modelos/fases" : "/api/modelos/fases?ejecutor=" + encodeURIComponent(ejecutor),
+              ),
+            );
+          } catch (fallo) {
+            zona.textContent = "";
+            salida.className = "resultado error";
+            salida.textContent = fallo.message;
+          }
+        };
+
+        let datos;
+        try {
+          datos = await api("GET", "/api/modelos/fases");
+        } catch (fallo) {
+          salida.className = "resultado error";
+          salida.textContent = fallo.message;
+          return;
+        }
+        const etiquetaEjecutor = el("label", "Ejecutor");
+        const selector = document.createElement("select");
+        selector.append(new Option("sin ejecutor", ""));
+        for (const id of datos.ejecutores ?? []) selector.append(new Option(id, id));
+        selector.addEventListener("change", () => void cargar(selector.value));
+        barra.append(etiquetaEjecutor, selector);
+        pintar(datos);
+      }
+
       async function seccionPerfiles(cont, catalogo) {
         cont.append(el("h2", "Perfiles"));
         const salida = el("div", undefined, "resultado");
