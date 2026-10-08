@@ -42,13 +42,19 @@ const CRITERIO: Proposition = { id: "criterio_01", kind: "noul", instructions: "
 const FIJA: Proposition = { id: "fija_01", kind: "noul", instructions: "se cumple" };
 
 /** Un «comando de pruebas» que imprime lo dado y sale con el código dado. */
-function comando(propositionId: string, salida: string, codigo: number, extra: string[] = []) {
+function comando(
+  propositionId: string,
+  salida: string,
+  codigo: number,
+  extra: string[] = [],
+  porStderr = "",
+) {
   return {
     propositionId,
     command: "node",
     args: [
       "-e",
-      `process.stdout.write(${JSON.stringify(salida)}); process.exit(${codigo})`,
+      `process.stdout.write(${JSON.stringify(salida)}); process.stderr.write(${JSON.stringify(porStderr)}); process.exit(${codigo})`,
       ...extra,
     ],
     description: "prueba",
@@ -149,6 +155,28 @@ describe("la compuerta de criterios ante una falla del entorno", () => {
       { root: lab },
     );
     expect(answers[0]?.value).toBe(1);
+  });
+
+  it("Django que sale con 0 e imprime su resumen solo por stderr aprueba", () => {
+    const { answers, results } = evaluateWithCommands(
+      [CRITERIO],
+      [comando("criterio_01", "", 0, ["manage.py", "test"], "Ran 4 tests in 0.1s\n\nOK")],
+      { root: lab },
+    );
+    expect(answers).toEqual([{ id: "criterio_01", kind: "noul", value: 1 }]);
+    expect(results[0]?.environmentFailure).toBeUndefined();
+    expect(results[0]?.stderr).toContain("Ran 4 tests");
+    expect(results[0]?.stderrBytes).toBeGreaterThan(0);
+  });
+
+  it("un runner conocido con salida 0 sin resumen en ningún canal sigue en revisión", () => {
+    const { answers, results } = evaluateWithCommands(
+      [CRITERIO],
+      [comando("criterio_01", "hola", 0, ["manage.py", "test"], "aviso")],
+      { root: lab },
+    );
+    expect(answers[0]?.value).toBe(0.5);
+    expect(results[0]?.environmentFailure).toBeDefined();
   });
 
   it("un check que no es de criterio conserva el comportamiento anterior", () => {
