@@ -103,7 +103,7 @@ Ninguno.
       <!-- test: npx vitest run tests/actividad-agentes.test.ts -->
 - [x] C16: El tipado del servidor compila y las rutas existentes siguen respondiendo igual.
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
-- [ ] C17: Con `valmen serve` y una corrida real, la ruta lista a los subagentes activos.
+- [x] C17: Con `valmen serve` y una corrida real, la ruta lista a los subagentes activos.
       <!-- verify: manual -->
 
 ## Puntos
@@ -132,6 +132,8 @@ Desde la raíz del repositorio (Node 24, sin red; ninguna prueba lee el HOME rea
 Validación manual (C17): con una corrida real de subagentes abierta, `valmen serve` y `curl http://127.0.0.1:<puerto>/api/corrida/agentes` debe listar los subagentes activos con su ticket, estado, rama y última herramienta; `?sesion=<id>` fuerza otra sesión y `?sesion=../x` devuelve 400.
 
 Resultado de la corrida del implementador: todo en verde (67 pruebas; tsc limpio; secretos limpios). La suite completa no se corrió (la corre el orquestador al integrar).
+
+- Verificación 2026-10-08: con `valmen serve` real, `GET /api/corrida/agentes` lista los subagentes de esta sesión (48) y `?sesion=../x` responde 400.
 
 ## QA
 

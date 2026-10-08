@@ -104,7 +104,7 @@ Ninguno.
       <!-- test: npx vitest run tests/respuesta-agents-md.test.ts tests/next-step.test.ts tests/skills-publicadas.test.ts -->
 - [x] C10: el `AGENTS.md` proyectado sigue dentro de su presupuesto de tamaño
       <!-- test: npx vitest run tests/agents-md-tamano.test.ts -->
-- [ ] C11: el `AGENTS.md` del repositorio queda regenerado por `valmen sync` y `valmen sync --check` no da diferencias tras integrar
+- [x] C11: el `AGENTS.md` del repositorio queda regenerado por `valmen sync` y `valmen sync --check` no da diferencias tras integrar
       <!-- verify: manual -->
 
 ## Puntos
@@ -129,6 +129,8 @@ Desde la raíz del worktree (Node 24, `node_modules` instalados):
 3. `node -e "..."` de C6 : imprime `iguales` (corrido).
 4. `valmen secrets` : sin hallazgos (corrido).
 5. Manual (C11, no verificado): leer «Continuar un ticket» en `AGENTS.md` y el paso 1 de la skill frente a `packages/engine/src/resume.ts:195-202`; tras integrar, `valmen sync --check` sin diferencias en el checkout principal.
+
+- Verificación 2026-10-08: `AGENTS.md` y el paso 1 de `corrida-delegada` dicen lo mismo que `resume.ts:195-210`; `valmen sync --check` sin diferencias.
 
 ## QA
 

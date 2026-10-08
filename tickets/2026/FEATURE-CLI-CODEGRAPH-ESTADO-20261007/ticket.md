@@ -82,7 +82,7 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] R-SKILL-004: CodeGraph DEBERÍA ofrecerse al montar o adoptar un proyecto (solo la parte de «Mostrar en el diagnóstico si CodeGraph está instalado, indexado y al día, y registrar su MCP en los clientes del proyecto»; el resto lo cubre FEATURE-CLI-CODEGRAPH-MONTAJE-20261007)
+- [x] R-SKILL-004: CodeGraph DEBERÍA ofrecerse al montar o adoptar un proyecto (solo la parte de «Mostrar en el diagnóstico si CodeGraph está instalado, indexado y al día, y registrar su MCP en los clientes del proyecto»; el resto lo cubre FEATURE-CLI-CODEGRAPH-MONTAJE-20261007)
       <!-- verify: manual -->
 - [x] C1. Sin el binario `codegraph`, `valmen doctor` muestra la línea «CodeGraph» como no instalado, con estado de aviso.
       <!-- test: npx vitest run tests/codegraph-estado.test.ts -->
@@ -147,6 +147,8 @@ Ejecutadas por el agente de implementación el 2026-10-07 en `/Users/juanandrade
 - Manual: `valmen doctor` muestra la línea «CodeGraph»; tras `codegraph sync` debe salir `✓` al día. `d=$(mktemp -d); valmen doctor --root $d` muestra «falta indexar» y `ls -A $d` sigue vacío. `valmen mcp --install` en una copia del proyecto deja la clave `codegraph` junto a `valmen`; repetirlo dice «sin cambios».
 - Ambiente: CodeGraph ≥ 0.9.9 en el `PATH` solo para la prueba manual.
 - Pendiente de la persona: marcar el criterio `R-SKILL-004` (verify: manual) tras la prueba manual.
+
+- Verificación 2026-10-08: el ofrecimiento al montar o adoptar lo entrega FEATURE-CLI-CODEGRAPH-MONTAJE-20261007 y se comprobó con CodeGraph 0.9.9 (ver ese ticket).
 
 ## QA
 

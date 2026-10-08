@@ -131,7 +131,7 @@ Memoria consultada (`buscar_memoria` «subagente modelo del perfil por fase sesi
       <!-- test: npx vitest run tests/journey-brief.test.ts -t "R-PERF-007 C15:" -->
 - [x] C16 (R-PERF-007): el monorepo compila sin errores de tipos
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
-- [ ] C17 (R-PERF-007): en una sesión de Claude Code abierta con Sonnet, `valmen resume --id <ticket en analyzed> --cliente claude` lleva a lanzar el plan en un subagente `opus` sin cambiar el modelo de la sesión
+- [x] C17 (R-PERF-007): en una sesión de Claude Code abierta con Sonnet, `valmen resume --id <ticket en analyzed> --cliente claude` lleva a lanzar el plan en un subagente `opus` sin cambiar el modelo de la sesión
       <!-- verify: manual -->
 - [x] C18 (R-PERF-007): con cliente `claude` y un perfil mixto que asigna la implementación a `codex`, el `motivo` que `delegacionDeFase` devuelve para un ticket en `approved` contiene «despacha por proveedor»
       <!-- test: npx vitest run tests/next-step.test.ts -t "R-PERF-007 C18:" -->
@@ -156,6 +156,8 @@ Memoria consultada (`buscar_memoria` «subagente modelo del perfil por fase sesi
 - Resultado esperado: 163 pruebas en verde y cero errores de tipos (resultado obtenido en la implementación).
 - Validación manual (C17): tras `npm run build`, en una sesión de Claude Code abierta con Sonnet, `node packages/cli/dist/main.js resume --id <ticket en analyzed> --cliente claude` debe mostrar «Delegación de la fase plan:» con el subagente `opus`, sin cambiar el modelo de la sesión.
 - Ambiente: Node 24, sin red ni credenciales.
+
+- Verificación 2026-10-08: `valmen resume --id <ticket en analyzed> --cliente claude` sobre un registro de laboratorio imprime «Delegación de la fase plan» hacia el subagente `opus` (perfil `claude-code/claude-opus-5-5`) y dice que la sesión no cambia de modelo.
 
 ## QA
 

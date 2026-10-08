@@ -100,7 +100,7 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
       <!-- test: npx vitest run tests/firma-de-compuerta.test.ts -->
 - [x] El proyecto compila sin errores de tipos.
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
-- [ ] Ningún recibo ni evento ya registrado se reescribe.
+- [x] Ningún recibo ni evento ya registrado se reescribe.
       <!-- verify: manual -->
 
 ## Puntos
@@ -124,6 +124,8 @@ Directorio: `/Users/juanandrade/Desktop/ValmenHarness/.claude/worktrees/ticket-c
 - `npx tsc --noEmit -p tsconfig.json` (sin errores)
 
 Validación manual: `valmen gate-decide --id <ID> --receipt <recibo escalado> --decision approve --actor <nombre> --reason <frase>` sobre un ticket de prueba y leer «canal cli» en el evento. El diff no toca recibos ni eventos previos.
+
+- Verificación 2026-10-08: `git show --numstat` de los commits del ticket: 0 líneas borradas en `.valmen/receipts`; las líneas borradas de `ticket.md` son el texto de sus propios criterios, ningún evento.
 
 ## QA
 

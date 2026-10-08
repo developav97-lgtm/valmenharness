@@ -105,7 +105,7 @@ Ninguno.
   <!-- test: npx tsc --noEmit -p tsconfig.json -->
 - [x] C16: La skill `feature` documenta el refresco, la bandera de enlaces y el rechazo del `.dc.html`.
   <!-- verify: manual -->
-- [ ] C17: Sobre una copia de la feature `superadmin-ampliacion` de SaiOpenCloud, `valmen feature asset refresh` deja `### Referencias de diseño` en sus tickets que no empezaron la implementación.
+- [x] C17: Sobre una copia de la feature `superadmin-ampliacion` de SaiOpenCloud, `valmen feature asset refresh` deja `### Referencias de diseño` en sus tickets que no empezaron la implementación.
   <!-- verify: manual -->
 
 ## Puntos
@@ -129,6 +129,8 @@ Ninguno.
 - Comando: `npx tsc --noEmit -p tsconfig.json`. Resultado: sin errores.
 - Validación manual (C17, sin verificar): sobre una copia de SaiOpenCloud `superadmin-ampliacion`, correr `valmen feature asset refresh superadmin-ampliacion --dry-run` y luego sin `--dry-run`, y comprobar que los tickets que no empezaron la implementación tienen `### Referencias de diseño` y el evento `design-references-updated`.
 - Ambiente: Node 24, `npm ci` hecho; `npx tsc --build tsconfig.build.json` antes si el CLI no ve los exports nuevos.
+
+- Verificación 2026-10-08 sobre una copia de SaiOpenCloud: `feature asset refresh superadmin-ampliacion --dry-run` y sin `--dry-run` omiten los 50 tickets ya empezados con su estado; con un ticket devuelto a intake lo actualiza (evento `design-references-updated`, bloque `### Referencias de diseño`) y repetirlo no cambia nada.
 
 ## QA
 

@@ -137,7 +137,7 @@ Ninguno.
       <!-- test: npx vitest run tests/mcp-server.test.ts -t "R-PERF-007 esquema de entrada" -->
 - [x] C18 (R-PERF-007): `valmen resume --id <ID> --cliente claude` imprime el bloque «Modelos por fase» en la terminal
       <!-- verify: manual -->
-- [ ] C19 (R-PERF-007): la suite completa pasa
+- [x] C19 (R-PERF-007): la suite completa pasa
       <!-- test: npx vitest run -->
 
 ## Puntos
@@ -162,6 +162,8 @@ Directorio `/Users/juanandrade/Desktop/ValmenHarness`, Node 24, sin red.
 - `npx vitest run tests/cli.test.ts` → en verde (cubre `--cliente` en `VALUE_OPTIONS`).
 - Manual (C18): tras `npm run build`, `node packages/cli/dist/main.js --root . resume --id FEATURE-ADAPTER-CONTEXTO-FASES-SUBAGENTE-20261007 --cliente claude` imprime «Modelos por fase (cliente: claude)» con `→ implementation` y los subagentes `opus`, `opus`, `sonnet`, `haiku`; con `--cliente codex`, el aviso de que no admite subagentes con modelo propio.
 - **C19 sin marcar**: `npx vitest run` completa da 53 fallos en 12 archivos (autorizacion-aprobacion-canales, autorizacion-qa-canales, delegation, firma-de-compuerta, gate-human-decision, gate-view, hermes-notify, jornada-sin-autoaprobacion, mcp-server, qa-commit-referencia, qa-por-politica, qa-sombra) que **ya fallaban sin los cambios del ticket** (comparado con `git stash` de `packages` y `tests`: mismos 53). No son de este alcance; el responsable decide si C19 se exime o se espera su corrección.
+
+- Verificación 2026-10-08: `npx vitest run` completo en `main` con todo integrado: 3531 pruebas verdes.
 
 ## QA
 

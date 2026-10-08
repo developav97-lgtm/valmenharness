@@ -119,7 +119,7 @@ Ninguno.
       <!-- test: npx vitest run tests/elegibilidad-aprobacion.test.ts -->
 - [x] C19. Sin autorización, la aprobación de una persona con `approve-plan` y la entrada a `approved` se comportan como antes
       <!-- test: npx vitest run tests/aprobacion-de-plan.test.ts -->
-- [ ] C20. `valmen approve-by-authorization` imprime la autorización usada o las reglas que fallan
+- [x] C20. `valmen approve-by-authorization` imprime la autorización usada o las reglas que fallan
       <!-- verify: manual -->
 - [x] C21. La comprobación de tipos del monorepo pasa
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
@@ -147,6 +147,8 @@ Ninguno.
 - `npx tsc --noEmit -p tsconfig.json`: sin errores (C21).
 - Validación manual (C20), sobre un registro temporal con un ticket `planned`, su recibo `plan` en approve y una autorización creada con `valmen approval-authorize`: `valmen approve-by-authorization --id <ID> --stage plan` imprime la autorización usada y el cupo que queda; sin autorización sale con 3 y lista las reglas que fallan. Después `valmen transition --id <ID> --entity ticket --to approved` entra; si antes se revoca la autorización, se rechaza.
 - Verificado también con la prueba del comando `approveByAuthorizationCommand` (salida y códigos de salida).
+
+- Verificación 2026-10-08 con el CLI real sobre un registro de laboratorio sin autorización: `valmen approve-by-authorization --id <ID> --stage plan` lista las reglas que fallan (`autorizacion`, `cupo`) y sale con 3 sin registrar nada; la ruta con autorización vigente la cubren las pruebas de `tests/elegibilidad-aprobacion.test.ts` y `tests/aprobacion-de-plan.test.ts`.
 
 ## QA
 

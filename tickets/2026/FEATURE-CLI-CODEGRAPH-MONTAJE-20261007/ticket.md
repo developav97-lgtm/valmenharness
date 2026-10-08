@@ -84,7 +84,7 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] R-SKILL-004: CodeGraph DEBERÍA ofrecerse al montar o adoptar un proyecto (solo la parte de «Ofrecer instalar e indexar CodeGraph al montar o adoptar, solo con confirmación»; el resto lo cubre FEATURE-CLI-CODEGRAPH-ESTADO-20261007)
+- [x] R-SKILL-004: CodeGraph DEBERÍA ofrecerse al montar o adoptar un proyecto (solo la parte de «Ofrecer instalar e indexar CodeGraph al montar o adoptar, solo con confirmación»; el resto lo cubre FEATURE-CLI-CODEGRAPH-ESTADO-20261007)
       <!-- verify: manual -->
 - [x] C1. Sin el binario `codegraph`, `valmen adopt` muestra la sección «CodeGraph» como no instalado.
       <!-- test: npx vitest run tests/codegraph-montaje.test.ts -->
@@ -154,6 +154,8 @@ Ejecutadas por el agente de implementación el 2026-10-07 en `.claude/worktrees/
 - Manual (CodeGraph ≥ 0.9.9 en el `PATH`): `d=$(mktemp -d); echo '{"name":"demo"}' > $d/package.json; valmen adopt --root $d` → la sección «CodeGraph» ofrece `valmen adopt --codegraph` y `ls -A $d` no muestra `.codegraph/`; `valmen adopt --root $d --codegraph` → «Indexado: codegraph init …» y existe `$d/.codegraph`; repetirlo → «Nada que hacer» sin relanzar `init`. Con `--dry-run` solo dice qué ejecutaría. Con CodeGraph fuera del `PATH` la sección ofrece `npm install -g @colbymchenry/codegraph`.
 - Ambiente: CodeGraph ≥ 0.9.9 en el `PATH` solo para la prueba manual; las automáticas no lo necesitan.
 - Pendiente de la persona: marcar `R-SKILL-004` (verify: manual) tras la prueba manual. Rollback: revertir el commit; un índice ya creado se quita con `codegraph uninit <raíz>` o borrando `.codegraph/`.
+
+- Verificación 2026-10-08 con CodeGraph 0.9.9 sobre una carpeta temporal: `valmen adopt` ofrece `--codegraph` sin crear `.codegraph/`; `--dry-run` dice «Se ejecutaría: codegraph init»; con `--codegraph` indexa y recuerda `valmen mcp --install`; repetirlo dice «Nada que hacer».
 
 ## QA
 
