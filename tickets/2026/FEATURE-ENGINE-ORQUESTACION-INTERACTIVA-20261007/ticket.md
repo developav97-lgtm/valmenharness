@@ -4,7 +4,7 @@ id: FEATURE-ENGINE-ORQUESTACION-INTERACTIVA-20261007
 title: Delegar cada fase a un subagente con el modelo del perfil sin cambiar el modelo de la sesión anfitriona
 type: FEATURE
 module: ENGINE
-workflow_status: intake
+workflow_status: planned
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -13,7 +13,7 @@ migration_impact: false
 docker_impact: false
 risk_level: normal
 created: 2026-10-07
-updated: 2026-10-07
+updated: 2026-10-08
 related_ticket: null
 target_release: null
 released_in: null
@@ -47,34 +47,50 @@ Ninguno.
 
 ## Descripción funcional
 
-- Alcance:
-- Usuario o rol afectado:
-- Comportamiento actual:
-- Comportamiento esperado:
+- Alcance: reducido a lo que falta tras medir lo que ya existe en `main`. Que el contexto de reanudación de una sesión interactiva (`valmen resume --cliente <c>` / `reanudar_ticket` con `cliente`) le **instruya** a la sesión anfitriona delegar la fase actual a un subagente con el alias del modelo del perfil —con qué comando sacar su contexto, qué hacer con el resultado y que no cambie su propio modelo—, y que, cuando no se puede delegar (cliente sin subagentes, fase de otro proveedor, modelo sin alias, cliente no declarado o estado sin fase), le diga explícitamente que hace la fase con el modelo de la sesión o por qué vía se despacha. Fuera: proveer los modelos por fase y avisar (ya hecho, FEATURE-ADAPTER-CONTEXTO-FASES-SUBAGENTE-20261007), documentarlo en `AGENTS.md` y skills (IMPROVEMENT-ADAPTER-CONTRATO-PERFILES-20261007), el despacho por proveedor (SECURITY-ENGINE-DESPACHO-POR-PROVEEDOR-20261007) y la corrida orquestada de jornada o feature (`corrida-orquestada`, ya hecha).
+- Usuario o rol afectado: la persona que abre una sesión de Claude Code con un modelo (p. ej. Sonnet) y pide «continúa con el ticket X»; el agente de esa sesión, que lee `resume`.
+- Comportamiento actual: `resume` ya lista «Modelos por fase» con `→` en la fase actual y `subagente opus` (`packages/engine/src/resume.ts:134`, impreso en `:188`, después del plan), pero el siguiente paso (`:175`, `packages/engine/src/next-step.ts:502`) no dice que haya que delegar: la sesión lee los modelos como dato y hace la fase ella misma con el modelo con que se abrió. El escenario «Cliente con subagentes» de R-PERF-007 (la fase de plan la ejecuta un subagente Opus y la sesión recibe el resultado) no ocurre en la sesión interactiva; solo ocurre en la corrida orquestada, que exige que el PO pida una jornada o una feature.
+- Comportamiento esperado: con `--cliente claude` y un ticket en `analyzed` cuyo plan el perfil asigna a `claude-opus-5-5`, el contexto lleva, justo debajo del siguiente paso, un bloque «Delegación de la fase» que manda lanzar un subagente con modelo `opus` pasándole el texto de `valmen journey brief --id <ID> --cliente claude`, esperar su informe, no cambiar el modelo de la sesión y volver a llamar `resume`; con `--cliente codex` el bloque dice que la fase se hace en la sesión con su modelo; en `planned` (alto humano) no hay delegación.
 
 ## Diagnóstico
 
-- Causa comprobada (con `ruta:línea`):
-- Hipótesis pendientes:
-- Consumidores afectados:
-- Archivos y flujo investigados:
+Memoria consultada (`buscar_memoria` «subagente modelo del perfil por fase sesión anfitriona»): solo AP-003 (respetar el alcance que el grafo asignó a los tickets hermanos) y AP-007; ninguna causa raíz previa del síntoma.
+
+- Medición de lo que ya existe (solapamiento pedido por el PO):
+  - Modelos por fase y avisos para la sesión: **hecho**. `fasesDeSesion` y `faseDelEstado` (`packages/adapter/src/routing.ts:1201`, `:1226`) resuelven por fase proveedor, modelo, esfuerzo, origen y alias (`SUBAGENTES_DEL_CLIENTE`, `claude` → `opus|sonnet|haiku|fable`), con aviso para cliente sin subagentes, fase de otro proveedor, modelo sin alias y cliente no declarado; `resume`, `--cliente` y `reanudar_ticket` lo exponen (`packages/engine/src/resume.ts:126`, `packages/cli/src/main.ts:167`, `packages/mcp/src/tools.ts:808`, `:889`). Ticket FEATURE-ADAPTER-CONTEXTO-FASES-SUBAGENTE-20261007 en `awaiting_user_tests`.
+  - Brief autocontenido de un subagente con el modelo y el alias de su fase: **hecho**. `armarBriefDeSubagente` y `renderBriefDeSubagente` (`packages/engine/src/journey-brief.ts:59`, `:94`, «Alias de subagente» en `:119`), CLI `journey brief --id <ID> [--cliente <c>]` (`packages/cli/src/main.ts:249`).
+  - Delegación por subagentes en una corrida de jornada o feature: **hecho**. Skill `skills/corrida-orquestada/SKILL.md:23-31` («Pide el modelo y esfuerzo que el brief declara para la fase»), con `journey next --wave` y `journey worktree create|integrate|remove` (`packages/cli/src/main.ts:310`).
+  - Despacho desatendido al ejecutor del proveedor: **hecho** (SECURITY-ENGINE-DESPACHO-POR-PROVEEDOR-20261007, `awaiting_user_tests`).
+  - **Falta**: la instrucción de delegar en la sesión interactiva de un solo ticket. Es exactamente lo que FEATURE-ADAPTER-CONTEXTO-FASES-SUBAGENTE-20261007 dejó fuera de su alcance a este ticket («instruir o ejecutar la delegación en subagentes y el texto del siguiente paso»).
+- Causa comprobada (con `ruta:línea`): `buildResumeContext` (`packages/engine/src/resume.ts:78`) calcula `fases` pero ningún campo convierte la fase actual en una instrucción; `renderResumeContext` (`resume.ts:148`) imprime el siguiente paso en `:175` sin delegación y los modelos en `:188`, como información al final. `computeNextStep` (`packages/engine/src/next-step.ts:152`) no nombra clientes ni modelos por diseño, así que la instrucción no debe ir ahí sino en `resume.ts`, que ya conoce el cliente. La descripción de `reanudar_ticket` (`packages/mcp/src/tools.ts:808`) tampoco menciona la delegación.
+- Hipótesis pendientes: ninguna sobre la causa. Decisión que queda para el PO al aprobar el plan (ver «Decisiones para el PO» en `## Plan`): si el subagente interactivo trabaja en un worktree (reusa `journey brief`, que lo exige) o en el checkout de la sesión.
+- Consumidores afectados: `valmen resume` (`packages/cli/src/commands.ts`, `resumeTicket` y `resultadoReanudacion`, que devuelven el contexto como `data`); `reanudar_ticket` del MCP (`packages/mcp/src/tools.ts:808` y su manejador `:3378`, que lo devuelve como `structuredContent` contra un `outputSchema` con `additionalProperties: false`, `:889`); `armarBriefDeSubagente` (`packages/engine/src/journey-brief.ts:59`), que usa `buildResumeContext` pero imprime solo `renderNextStep` y `renderFases` (`journey-brief.ts:113-117`), por lo que el subagente **no** recibe la instrucción de delegar; las pruebas `tests/next-step.test.ts:703`, `tests/mcp-server.test.ts:1772` y `tests/journey-brief.test.ts`. Mission Control no consume `resume`.
+- Archivos y flujo investigados: «continúa con el ticket X» → `reanudar_ticket`/`valmen resume` → `resumeTicket` → `buildResumeContext` (`computeNextStep` + `fasesDeSesion`) → `renderResumeContext`; y el camino orquestado `journey brief` → `armarBriefDeSubagente`. Leídos: `packages/engine/src/resume.ts`, `packages/engine/src/next-step.ts:152,502-523`, `packages/engine/src/journey-brief.ts`, `packages/adapter/src/routing.ts:1160-1260`, `packages/mcp/src/tools.ts:808-890`, `packages/cli/src/main.ts:167,249,310`, `skills/corrida-orquestada/SKILL.md`, la spec `.valmen/features/perfiles-de-modelos/spec/perfiles/spec.md:81-97` y los tickets hermanos.
 - Riesgos y compatibilidad:
-- Impactos de sync, migración, Docker o despliegue:
+  - **Delegación recursiva.** Si el subagente llamara `resume --cliente claude`, volvería a recibir la orden de delegar. Mitigación: el brief no imprime el bloque (solo `renderNextStep` y `renderFases`), el bloque solo aparece con cliente declarado, y su texto dice que un subagente que recibió un brief hace la fase él mismo.
+  - **Modelo de la sesión.** R-PERF-007 prohíbe cambiarlo: la instrucción dice explícitamente que la sesión no cambia su modelo, y `resume` sigue de solo lectura (prueba de bytes existente, `tests/next-step.test.ts:729`).
+  - **Alto humano.** En `planned`, `blocked` o `closed`, `faseDelEstado` da `null` y no se instruye delegación: no se delega lo que decide una persona.
+  - **Alias, no id exacto.** El subagente corre la versión vigente de la familia; ya lo declara la nota de `fasesDeSesion` y se repite en el bloque.
+  - Compatibilidad: campo `delegacion` aditivo en `ResumeContext` y en el `outputSchema`; sin `--cliente`, el bloque dice que no hay cliente declarado y la salida previa no cambia en lo demás.
+- Impactos de sync, migración, Docker o despliegue: ninguno; cambia el texto y los datos de solo lectura del contexto de reanudación, sin datos sincronizados, migraciones, contenedores ni despliegue.
 
 ## Plan
 
-- Gate de plan y aprobación:
+- Gate de plan y aprobación: pendiente; lo aprueba explícitamente el PO (compuerta de plan). El agente se detiene en `planned`.
+- Alcance y exclusiones: solo la instrucción de delegar la fase actual en la sesión interactiva (`resume` / `reanudar_ticket`). Se modifican `packages/engine/src/resume.ts` y `packages/mcp/src/tools.ts`, y las suites `tests/next-step.test.ts`, `tests/mcp-server.test.ts` y `tests/journey-brief.test.ts`. **Fuera**: `fasesDeSesion` y la tabla de clientes (`packages/adapter/src/routing.ts`), `next-step.ts` (no nombra clientes por diseño), `journey-brief.ts`, la skill `corrida-orquestada`, `AGENTS.md` y las plantillas (IMPROVEMENT-ADAPTER-CONTRATO-PERFILES-20261007), el despacho por proveedor y el registro del modelo usado (FEATURE-ENGINE-REGISTRO-MODELO-FASE-20261007). No se crean archivos de código ni de prueba.
+- Decisiones para el PO al aprobar:
+  - Dónde trabaja el subagente interactivo. A) Worktree propio, reusando `valmen journey worktree create|integrate --id <ID>` y el brief tal cual → un solo escritor garantizado, una integración más por fase. B) El checkout de la sesión, con la sesión esperando → sin integración, pero el brief actual prohíbe tocar el checkout principal y habría que cambiar `journey-brief.ts`. Recomiendo A: no toca el brief y respeta «un solo escritor»; el plan está escrito para A.
+  - Si todo esto se considera cubierto por la corrida orquestada, la alternativa es cerrar este ticket como duplicado; no lo recomiendo, porque el escenario de un solo ticket interactivo de R-PERF-007 hoy no instruye delegar.
 - Pasos ordenados:
-  <!-- Cada paso nombra archivo, símbolo o comando, y los criterios que cubre, por ejemplo
-       «(C1, C2)». Un paso que no dice dónde ni con qué se toca no se puede ejecutar ni
-       revisar, y la compuerta lo lee así. -->
-  1.
-  2.
-- Impactos declarados:
-  <!-- Una línea por cada impacto que el ticket declara, con las palabras de su proposición:
-       sincronización (datos ya sincronizados y clientes que todavía no se actualizaron),
-       migración (orden de aplicación y reversión) o contenedores (imagen y publicación). -->
-- Rollback (obligatorio):
+  1. `packages/engine/src/resume.ts` — función pura exportada `delegacionDeFase(fases: FasesDeSesion, id: string): DelegacionDeFase` junto a `renderFases`, con `DelegacionDeFase = { modo: "subagente", fase, alias, model, instrucciones: string[] } | { modo: "sesion", fase: FaseDelAgente | null, motivo: string }`. Con `fases.faseActual === null` → `modo: "sesion"` y motivo «el estado no es de una fase del agente: no se delega lo que decide una persona». Con la fase actual con `subagente !== null` → `modo: "subagente"` e instrucciones, en este orden: crear el worktree con `valmen journey worktree create --id <ID>`; lanzar un subagente con modelo `<alias>` cuyo único contexto es el texto de `valmen journey brief --id <ID> --cliente <cliente>`; no cambiar el modelo de esta sesión; al recibir el informe, integrar con `valmen journey worktree integrate --id <ID>` y volver a llamar `resume`; si eres el subagente y te llegó un brief, haz la fase tú y no delegues. En otro caso → `modo: "sesion"` con el motivo igual al `aviso` de la fase (o el de `fases.aviso`), terminando en «haz la fase en esta sesión con su modelo». (C1, C2, C3, C4, C5, C6, C7, C8, C18)
+  2. `packages/engine/src/resume.ts` — `ResumeContext` (`:39`) suma `delegacion: DelegacionDeFase`; `buildResumeContext` (`:78`) la calcula con `delegacionDeFase(fases, fields.id)`; `renderResumeContext` (`:148`) imprime el bloque «Delegación de la fase <fase>:» justo después de `renderNextStep` (`:175`) y antes de «Plan vigente», con una línea por instrucción o la línea del motivo. (C9, C10, C11)
+  3. `packages/mcp/src/tools.ts` — en `reanudar_ticket` (`:808`), la `description` añade una frase: «con `cliente`, el contexto dice si la fase se delega a un subagente con el modelo del perfil y cómo; la sesión no cambia su modelo»; el `outputSchema` (`:889`) suma la propiedad `delegacion` (`type: "object"`, no requerida). El manejador (`:3378`) no cambia. (C12, C13)
+  4. Pruebas en suites existentes, con el prefijo «R-PERF-007 Cn:» en el nombre: `tests/next-step.test.ts`, dentro de `describe("R-PERF-007 modelos por fase en el contexto de reanudación")` (`:703`), los casos de `delegacionDeFase` y de `resumeTicket` en `intake`, `analyzed`, `planned`, con `claude`, `codex`, sin cliente y con perfil mixto (C1–C11, C14, C18); `tests/mcp-server.test.ts`, en el `describe` de `:1772` (C12, C13); `tests/journey-brief.test.ts`, que el brief no contiene «Delegación de la fase» (C15).
+  5. Verificación: `npx vitest run tests/next-step.test.ts tests/mcp-server.test.ts tests/journey-brief.test.ts tests/mcp-resumen-siguiente-paso.test.ts` y `npx tsc --noEmit -p tsconfig.json`, con cero fallos y cero errores (C16, y regresión de C1–C15).
+  6. Entrega: escribir en `## Pruebas` el contrato (comandos del paso 5, directorio: raíz del worktree o del repositorio tras integrar, resultado esperado en verde, validación manual C17 con `node packages/cli/dist/main.js resume --id <ticket en analyzed> --cliente claude` tras `npm run build`, requisito de ambiente: Node 24, sin red ni credenciales), marcar `- [x]` lo verificado, registrar el consumo de IA, correr `valmen secrets` y la compuerta `qa-mechanical`, y pasar a `awaiting_user_tests`. El commit, solo en la rama del worktree tras la confirmación. (C17)
+- Impactos declarados: ninguno de sincronización (no hay datos sincronizados ni clientes sin actualizar afectados), migración (sin orden de aplicación ni reversión de esquema) ni contenedores (sin imagen ni publicación); `sync_impact`, `migration_impact` y `docker_impact` en `false`. `resume` sigue de solo lectura y no cambia el modelo de la sesión anfitriona.
+- Compatibilidad: `delegacion` es un campo nuevo y opcional en el esquema; las llamadas existentes a `buildResumeContext(paths, ticket, modo)` compilan igual.
+- Rollback (obligatorio): `git revert <hash>` del commit del ticket en `packages/engine/src/resume.ts`, `packages/mcp/src/tools.ts` y las tres suites. No hay estado escrito, datos ni archivos nuevos que deshacer: `resume` vuelve a mostrar los modelos por fase sin la instrucción de delegar.
 
 <!-- Los criterios de la sección siguiente se numeran C1…Cn, con una afirmación verificable por criterio
      —una frase con «y» son dos criterios—, y cada uno lleva debajo su anotación de
@@ -83,7 +99,42 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] R-PERF-007: Una sesión interactiva DEBERÍA delegar cada fase a un subagente con el modelo del perfil (solo la parte de «Delegar cada fase a un subagente con el modelo del perfil sin cambiar el modelo de la sesión anfitriona»; el resto lo cubre FEATURE-ADAPTER-CONTEXTO-FASES-SUBAGENTE-20261007, IMPROVEMENT-ADAPTER-CONTRATO-PERFILES-20261007)
+- [ ] C1 (R-PERF-007): con cliente `claude`, `claude-code-completo` y el ticket en `analyzed`, `delegacionDeFase` devuelve `modo: "subagente"` con `fase: "plan"` y `alias: "opus"`
+      <!-- test: npx vitest run tests/next-step.test.ts -t "R-PERF-007 C1:" -->
+- [ ] C2 (R-PERF-007): las instrucciones de delegación citan `valmen journey brief --id <ID> --cliente claude` como contexto del subagente
+      <!-- test: npx vitest run tests/next-step.test.ts -t "R-PERF-007 C2:" -->
+- [ ] C3 (R-PERF-007): las instrucciones de delegación dicen que la sesión no cambia su modelo
+      <!-- test: npx vitest run tests/next-step.test.ts -t "R-PERF-007 C3:" -->
+- [ ] C4 (R-PERF-007): las instrucciones de delegación crean el worktree con `valmen journey worktree create` antes de lanzar el subagente
+      <!-- test: npx vitest run tests/next-step.test.ts -t "R-PERF-007 C4:" -->
+- [ ] C5 (R-PERF-007): las instrucciones de delegación mandan integrar con `valmen journey worktree integrate` y volver a llamar `resume` al recibir el informe
+      <!-- test: npx vitest run tests/next-step.test.ts -t "R-PERF-007 C5:" -->
+- [ ] C6 (R-PERF-007): con cliente `codex`, `delegacionDeFase` devuelve `modo: "sesion"` con un motivo que dice que la fase se hace con el modelo de la sesión
+      <!-- test: npx vitest run tests/next-step.test.ts -t "R-PERF-007 C6:" -->
+- [ ] C7 (R-PERF-007): con cliente `claude` y un perfil mixto que asigna la implementación a `codex`, `delegacionDeFase` de un ticket en `approved` devuelve `modo: "sesion"`
+      <!-- test: npx vitest run tests/next-step.test.ts -t "R-PERF-007 C7:" -->
+- [ ] C8 (R-PERF-007): con el ticket en `planned`, `delegacionDeFase` devuelve `modo: "sesion"` y `fase: null`
+      <!-- test: npx vitest run tests/next-step.test.ts -t "R-PERF-007 C8:" -->
+- [ ] C9 (R-PERF-007): `resumeTicket` con cliente `claude` imprime «Delegación de la fase plan:» entre el siguiente paso y «Plan vigente»
+      <!-- test: npx vitest run tests/next-step.test.ts -t "R-PERF-007 C9:" -->
+- [ ] C10 (R-PERF-007): `resumeTicket` sin cliente imprime el bloque de delegación con el motivo de cliente no declarado
+      <!-- test: npx vitest run tests/next-step.test.ts -t "R-PERF-007 C10:" -->
+- [ ] C11 (R-PERF-007): `resumeTicket` devuelve `data.delegacion` con el mismo `modo` que imprime
+      <!-- test: npx vitest run tests/next-step.test.ts -t "R-PERF-007 C11:" -->
+- [ ] C12 (R-PERF-007): `reanudar_ticket` con `cliente: "claude"` devuelve `delegacion` con `modo: "subagente"` en un ticket en `analyzed`
+      <!-- test: npx vitest run tests/mcp-server.test.ts -t "R-PERF-007 C12:" -->
+- [ ] C13 (R-PERF-007): el `outputSchema` de `reanudar_ticket` declara la propiedad `delegacion`
+      <!-- test: npx vitest run tests/mcp-server.test.ts -t "R-PERF-007 C13:" -->
+- [ ] C14 (R-PERF-007): `resumeTicket` con cliente deja idénticos los bytes de `profiles.yaml` y del ticket
+      <!-- test: npx vitest run tests/next-step.test.ts -t "R-PERF-007 C14:" -->
+- [ ] C15 (R-PERF-007): el brief de `journey brief` no contiene el bloque «Delegación de la fase»
+      <!-- test: npx vitest run tests/journey-brief.test.ts -t "R-PERF-007 C15:" -->
+- [ ] C16 (R-PERF-007): el monorepo compila sin errores de tipos
+      <!-- test: npx tsc --noEmit -p tsconfig.json -->
+- [ ] C17 (R-PERF-007): en una sesión de Claude Code abierta con Sonnet, `valmen resume --id <ticket en analyzed> --cliente claude` lleva a lanzar el plan en un subagente `opus` sin cambiar el modelo de la sesión
+      <!-- verify: manual -->
+- [ ] C18 (R-PERF-007): con cliente `claude` y un perfil mixto que asigna la implementación a `codex`, el `motivo` que `delegacionDeFase` devuelve para un ticket en `approved` contiene «despacha por proveedor»
+      <!-- test: npx vitest run tests/next-step.test.ts -t "R-PERF-007 C18:" -->
 
 ## Puntos
 
@@ -145,6 +196,24 @@ Sin publicar todavía.
     "action": "created",
     "actor": "cli",
     "details": "Ticket creado sin sobrescribir historial."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-002",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:32:22.753Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: intake -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-003",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:33:28.998Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: analyzed -> planned."
   }
 ]
 ```
