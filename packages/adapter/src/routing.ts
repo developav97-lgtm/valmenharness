@@ -1312,6 +1312,50 @@ export function normalizarModelo(model: string): string {
   return sinProveedor.toLowerCase().replace(/[._]/g, "-");
 }
 
+/**
+ * ¿Es el mismo modelo? Compara identificadores normalizados y admite que uno sea el prefijo
+ * del otro (`claude-haiku-4-5` frente a `claude-haiku-4-5-20251001`, alias frente a sufijo de fecha).
+ */
+export function mismoModelo(a: string, b: string): boolean {
+  const x = normalizarModelo(a);
+  const y = normalizarModelo(b);
+  if (x === "" || y === "") return false;
+  return x === y || x.startsWith(`${y}-`) || y.startsWith(`${x}-`);
+}
+
+/** Lo que el cliente reportó de una sesión: `null` es «sin reportar», nunca un valor deducido. */
+export interface ReporteDelEjecutor {
+  readonly modeloUsado: string | null;
+  readonly costeUsd: number | null;
+}
+
+/**
+ * Lee de la salida de un ejecutor el modelo que el cliente dice haber usado y el costo que
+ * reportó. Solo Claude (`--output-format json`) expone ambos; Codex y OpenCode, o una salida
+ * ilegible o truncada, devuelven `null` en los dos: no se deduce de la configuración.
+ */
+export function reporteDelEjecutor(ejecutor: string, modeloDeclarado: string, stdout: string): ReporteDelEjecutor {
+  const vacio: ReporteDelEjecutor = { modeloUsado: null, costeUsd: null };
+  if (ejecutor !== "claude") return vacio;
+  let datos: unknown;
+  try {
+    datos = JSON.parse(stdout) as unknown;
+  } catch {
+    return vacio;
+  }
+  const resultado: unknown = Array.isArray(datos)
+    ? [...datos].reverse().find((item) => (item as { type?: string } | null)?.type === "result")
+    : datos;
+  if (typeof resultado !== "object" || resultado === null) return vacio;
+  const campos = resultado as { modelUsage?: unknown; total_cost_usd?: unknown };
+  const usados =
+    typeof campos.modelUsage === "object" && campos.modelUsage !== null ? Object.keys(campos.modelUsage) : [];
+  const modeloUsado = usados.find((id) => mismoModelo(id, modeloDeclarado)) ?? usados[0] ?? null;
+  const costo = campos.total_cost_usd;
+  const costeUsd = typeof costo === "number" && Number.isFinite(costo) && costo >= 0 ? costo : null;
+  return { modeloUsado, costeUsd };
+}
+
 /** La elección del modelo revisor: la ruta, o el motivo por el que no se puede elegir. */
 export type EleccionDelRevisor =
   | { readonly ok: true; readonly route: ResolvedRoute }

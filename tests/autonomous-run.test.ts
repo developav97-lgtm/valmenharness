@@ -236,6 +236,19 @@ describe("run autónomo", () => {
     expect(command.args).not.toContain("--dangerously-bypass-approvals-and-sandbox");
   });
 
+  it("C1: el ejecutor de Claude se lanza con --output-format json", () => {
+    const command = autonomousExecutorCommand(
+      { id: "claude", model: "claude-sonnet-5-5", effort: "high" },
+      root,
+      "instrucción",
+    );
+    expect(command.command).toBe("claude");
+    const i = command.args.indexOf("--output-format");
+    expect(i).toBeGreaterThanOrEqual(0);
+    expect(command.args[i + 1]).toBe("json");
+    expect(command.args).toContain("--print");
+  });
+
   it("detiene ante un fallo de pruebas declarado, deja recibo y no entrega", async () => {
     const failing = '- [ ] El filtro falla.\n      <!-- test: node -e "process.exit(1)" -->';
     writeFixtureTicket(root, { id: ID, workflowStatus: "approved", criterios: failing , pruebas: PRUEBAS});

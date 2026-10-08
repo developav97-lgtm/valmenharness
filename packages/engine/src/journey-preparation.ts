@@ -12,6 +12,7 @@ import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
+import { reporteDelEjecutor } from "@valmen/adapter";
 import { createExecutionIdentity, parseTicket } from "@valmen/core";
 
 import { autonomousExecutorCommand, razonesDePolitica, type AutonomousExecutorCommand } from "./autonomous-run.js";
@@ -141,7 +142,8 @@ export function avisoDeDecision(ticketId: string, compuerta: string, resultado: 
 /** Prepara un ticket: lanza el ejecutor y verifica en código lo que dejó. */
 export function prepararTicket(request: PrepararTicketRequest): ResultadoDePreparacion {
   const inicio = Date.now();
-  let resultado = prepararTicketInner(request);
+  const contexto: { stdout?: string } = {};
+  let resultado = prepararTicketInner(request, contexto);
   if (resultado.estado === "no-autorizado") {
     const parada = recordAutonomousStop(request.paths, {
       ticketId: request.ticketId,
@@ -184,13 +186,17 @@ export function prepararTicket(request: PrepararTicketRequest): ResultadoDePrepa
         origenDelModelo: `${despacho.origen}: ${despacho.motivo}`,
         duracionMs: Date.now() - inicio,
         resultado: resultado.estado,
+        // Lo que el cliente reportó; sin salida de la corrida queda «sin reportar».
+        ...(contexto.stdout === undefined
+          ? { modeloUsado: null, costeUsd: null }
+          : reporteDelEjecutor(despacho.ejecutor, despacho.model, contexto.stdout)),
       });
     }
   }
   return resultado;
 }
 
-function prepararTicketInner(request: PrepararTicketRequest): ResultadoDePreparacion {
+function prepararTicketInner(request: PrepararTicketRequest, contexto: { stdout?: string }): ResultadoDePreparacion {
   const { paths, ticketId } = request;
   const politica = autonomousConfig(paths.root);
   const ubicado = findTicket(paths, ticketId);
@@ -222,7 +228,7 @@ function prepararTicketInner(request: PrepararTicketRequest): ResultadoDePrepara
   };
   const comando = autonomousExecutorCommand(executorDeFase, paths.root, promptDePreparacion(ticketId));
   const inicio = Date.now();
-  const registrar = (resultado: string): void => {
+  const registrar = (resultado: string, stdout?: string): void => {
     registrarFase(paths.root, {
       ticketId,
       fase: "analysis",
@@ -232,14 +238,18 @@ function prepararTicketInner(request: PrepararTicketRequest): ResultadoDePrepara
       origenDelModelo: `${despacho.origen}: ${despacho.motivo}`,
       duracionMs: Date.now() - inicio,
       resultado,
+      ...(stdout === undefined
+        ? { modeloUsado: null, costeUsd: null }
+        : reporteDelEjecutor(executorDeFase.id, executorDeFase.model, stdout)),
     });
   };
   // El ejecutor hereda la marca de sesión desatendida: no puede registrar la aprobación del plan.
   const entorno = { [UNATTENDED_ENV]: "1" };
   const antes = estadoDelArbol(paths.root);
   const corrida = (request.execute ?? ((c, e) => ejecutarDeVerdad(c, paths.root, e, politica.limits.maxMinutes)))(comando, entorno);
+  contexto.stdout = corrida.stdout;
   if (corrida.status !== 0 || corrida.timedOut === true) {
-    registrar("ejecutor-fallo");
+    registrar("ejecutor-fallo", corrida.stdout);
     return {
       ticketId,
       estado: "ejecutor-fallo",

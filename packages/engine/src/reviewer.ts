@@ -130,8 +130,10 @@ export function productoresDelTicket(root: string, ticketId: string): ProductorR
   for (const registro of leerFases(root)) {
     if (registro.ticketId !== ticketId) continue;
     if (registro.fase !== "analysis" && registro.fase !== "plan") continue;
-    if (typeof registro.modelo !== "string" || registro.modelo.trim() === "") continue;
-    productores.push({ fase: registro.fase, ejecutor: registro.ejecutor, modelo: registro.modelo });
+    // El que el cliente reportó haber usado manda sobre el pedido: es quien produjo el artefacto.
+    const modelo = typeof registro.modeloUsado === "string" && registro.modeloUsado.trim() !== "" ? registro.modeloUsado : registro.modelo;
+    if (typeof modelo !== "string" || modelo.trim() === "") continue;
+    productores.push({ fase: registro.fase, ejecutor: registro.ejecutor, modelo });
   }
   return productores;
 }

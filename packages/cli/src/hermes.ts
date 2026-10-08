@@ -1373,8 +1373,17 @@ export function armarParte(request: BriefRequest): BriefInput {
         sesiones: lista.length,
         modelos: [...new Set(lista.map((s2) => s2.modelo))],
         duracionMs: lista.reduce((total, s2) => total + s2.duracionMs, 0),
-        // El cliente no reporta el costo por sesión (codex va por suscripción): no se inventa.
-        costeUsd: null,
+        // La suma de lo que el cliente reportó (costo equivalente, no factura); si ninguna sesión
+        // lo reportó queda null y el parte dice «sin reportar»: no se inventa.
+        costeUsd: lista.some((s2) => s2.costeUsd !== null)
+          ? lista.reduce((total, s2) => total + (s2.costeUsd ?? 0), 0)
+          : null,
+        modelosUsados: [...new Set(lista.flatMap((s2) => (s2.modeloUsado === null ? [] : [s2.modeloUsado])))],
+        distintos: lista
+          .filter((s2) => s2.coincide === false && s2.modeloUsado !== null)
+          .map((s2) => ({ declarado: s2.modelo, usado: s2.modeloUsado as string })),
+        sinReportarModelo: lista.filter((s2) => s2.modeloUsado === null).length,
+        sinReportarCoste: lista.filter((s2) => s2.costeUsd === null).length,
       })),
       esperanPruebas: filas.filter((f) => f.workflowStatus === "awaiting_user_tests").map((f) => f.id),
       esperanPlan: filas.filter((f) => f.workflowStatus === "planned").map((f) => f.id),

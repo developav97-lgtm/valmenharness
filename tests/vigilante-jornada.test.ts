@@ -137,6 +137,26 @@ describe("el parte diario de la jornada", () => {
     expect(texto).toContain("implementation: 1 sesión(es), gpt-6-sol, 20 min, costo sin reportar por el cliente");
   });
 
+  it("C11-C14: compara el usado con el declarado, dice sin reportar y suma el costo reportado", () => {
+    const comun = { ticketId: A, ejecutor: "claude", esfuerzo: "high", origenDelModelo: "rol", resultado: "ok" };
+    registrarFase(raiz, { ...comun, fase: "analysis", modelo: "claude-opus-5-5", modeloUsado: "claude-sonnet-5-5", costeUsd: 0.1, duracionMs: 60_000, registradoEn: "2026-10-06T09:00:00.000Z" });
+    registrarFase(raiz, { ...comun, fase: "analysis", modelo: "claude-opus-5-5", duracionMs: 60_000, registradoEn: "2026-10-06T09:30:00.000Z" });
+    registrarFase(raiz, { ...comun, fase: "implementation", modelo: "claude-haiku-4-5", modeloUsado: "claude-haiku-4-5-20251001", costeUsd: 0.2, duracionMs: 60_000, registradoEn: "2026-10-06T10:00:00.000Z" });
+    registrarFase(raiz, { ...comun, fase: "plan", modelo: "claude-opus-5-5", duracionMs: 60_000, registradoEn: "2026-10-06T11:00:00.000Z" });
+    const lineas = renderBrief(parte()).body.split("\n");
+    const analisis = lineas.find((l) => l.includes("analysis:")) ?? "";
+    expect(analisis).toContain("⚠ distinto al declarado: claude-opus-5-5 → claude-sonnet-5-5");
+    expect(analisis).toContain("modelo usado sin reportar en 1 sesión(es)");
+    expect(analisis).toContain("$0.1000 (1 sin reportar)");
+    const impl = lineas.find((l) => l.includes("implementation:")) ?? "";
+    expect(impl).toContain("usado: claude-haiku-4-5-20251001");
+    expect(impl).not.toContain("distinto");
+    expect(impl).toContain("$0.2000");
+    const plan = lineas.find((l) => l.includes("plan:")) ?? "";
+    expect(plan).toContain("costo sin reportar por el cliente");
+    expect(plan).toContain("modelo usado sin reportar en 1 sesión(es)");
+  });
+
   it("lista los planes que esperan aprobación, los tickets que esperan pruebas y las paradas activas", () => {
     mkdirSync(join(raiz, ".valmen", "journeys"), { recursive: true });
     writeFileSync(join(raiz, ".valmen", "journeys", "events.jsonl"), "", "utf8");

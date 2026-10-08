@@ -9,7 +9,7 @@
  * declara un rol por fase y cada sesión usa el modelo de la suya (o cae al de la política
  * diciéndolo); y cada sesión deja su registro por fase.
  */
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -28,10 +28,12 @@ import {
   leerFases,
   prepararTicket,
   readAutonomousStops,
+  registrarFase,
   resolveAuthorizedProject,
   resolverModeloDeFase,
   runAutonomous,
 } from "../packages/engine/src/index.js";
+
 import { writeFixtureTicket } from "./helpers/fixtures.js";
 
 const projectId = "ejec-lab";
@@ -352,5 +354,48 @@ describe("el registro por fase", () => {
     expect(typeof registro?.duracionMs).toBe("number");
     expect(registro?.esfuerzo).not.toBe("");
     expect(registro?.origenDelModelo).not.toBe("");
+  });
+});
+
+describe("el modelo usado y el costo por fase (R-PERF-006)", () => {
+  const base = {
+    ticketId: A, fase: "implementation" as const, ejecutor: "claude", modelo: "claude-sonnet-5-5", esfuerzo: "high",
+    origenDelModelo: "rol", duracionMs: 1, resultado: "delivered",
+  };
+
+  it("C6: coincide es false cuando el usado difiere del declarado", () => {
+    expect(registrarFase(root, { ...base, modeloUsado: "claude-opus-5-5", costeUsd: 0.5 })).toMatchObject({ coincide: false, costeUsd: 0.5 });
+  });
+
+  it("C7: coincide es true con otro nombre del mismo modelo, y null si no hay usado", () => {
+    expect(registrarFase(root, { ...base, modelo: "claude-haiku-4-5", modeloUsado: "claude-haiku-4-5-20251001" }).coincide).toBe(true);
+    expect(registrarFase(root, base)).toMatchObject({ modeloUsado: null, coincide: null, costeUsd: null });
+  });
+
+  it("C8: un renglón anterior sin los campos nuevos se lee como sin reportar", () => {
+    mkdirSync(join(root, ".valmen", "journeys"), { recursive: true });
+    appendFileSync(
+      join(root, ".valmen", "journeys", "fases.jsonl"),
+      JSON.stringify({ kind: "journey-phase", version: 1, ...base, registradoEn: "2026-10-01T00:00:00.000Z" }) + "\n",
+    );
+    expect(leerFases(root)[0]).toMatchObject({ modelo: "claude-sonnet-5-5", modeloUsado: null, coincide: null, costeUsd: null });
+  });
+
+  it("C9: runAutonomous registra el modelo usado y el costo que reportó el ejecutor", async () => {
+    politica("gpt-6-politica", ["codex", "claude"]);
+    enrutamiento({ "agent-implementation": ["claude-code", "claude-sonnet-5-5", "high"] });
+    const json = JSON.stringify({ type: "result", total_cost_usd: 0.25, modelUsage: { "claude-opus-5-5": {} } });
+    const interno = implementador({ contrato: true });
+    await ejecutar((c, e) => ({ ...interno(c, e), stdout: json }));
+    expect(leerFases(root).find((f) => f.ticketId === A)).toMatchObject({
+      modelo: "claude-sonnet-5-5", modeloUsado: "claude-opus-5-5", coincide: false, costeUsd: 0.25,
+    });
+  });
+
+  it("C9: con salida ilegible la fase sigue y queda sin reportar", async () => {
+    politica("gpt-6-politica", ["codex", "claude"]);
+    enrutamiento({ "agent-implementation": ["claude-code", "claude-sonnet-5-5", "high"] });
+    await ejecutar(implementador({ contrato: true }));
+    expect(leerFases(root).find((f) => f.ticketId === A)).toMatchObject({ modeloUsado: null, coincide: null, costeUsd: null });
   });
 });

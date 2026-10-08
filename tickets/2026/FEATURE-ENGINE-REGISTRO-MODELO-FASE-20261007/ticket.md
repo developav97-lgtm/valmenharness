@@ -4,7 +4,7 @@ id: FEATURE-ENGINE-REGISTRO-MODELO-FASE-20261007
 title: Registrar el modelo realmente usado por fase, compararlo con el declarado y decir «sin reportar» el costo ausente
 type: FEATURE
 module: ENGINE
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -109,37 +109,37 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1: El ejecutor de Claude de la jornada se lanza con `--output-format json`.
+- [x] C1: El ejecutor de Claude de la jornada se lanza con `--output-format json`.
       <!-- test: npx vitest run tests/autonomous-run.test.ts -->
-- [ ] C2: `reporteDelEjecutor` toma de la salida JSON de Claude el modelo de `modelUsage` que coincide con el declarado.
+- [x] C2: `reporteDelEjecutor` toma de la salida JSON de Claude el modelo de `modelUsage` que coincide con el declarado.
       <!-- test: npx vitest run tests/routing.test.ts -->
-- [ ] C3: `reporteDelEjecutor` toma de la salida JSON de Claude el costo de `total_cost_usd`.
+- [x] C3: `reporteDelEjecutor` toma de la salida JSON de Claude el costo de `total_cost_usd`.
       <!-- test: npx vitest run tests/routing.test.ts -->
-- [ ] C4: Una salida truncada o ilegible deja `modeloUsado` y `costeUsd` en `null`.
+- [x] C4: Una salida truncada o ilegible deja `modeloUsado` y `costeUsd` en `null`.
       <!-- test: npx vitest run tests/routing.test.ts -->
-- [ ] C5: Un ejecutor `codex` u `opencode` deja `modeloUsado` y `costeUsd` en `null`.
+- [x] C5: Un ejecutor `codex` u `opencode` deja `modeloUsado` y `costeUsd` en `null`.
       <!-- test: npx vitest run tests/routing.test.ts -->
-- [ ] C6: `registrarFase` guarda `coincide: false` cuando el modelo usado difiere del declarado.
+- [x] C6: `registrarFase` guarda `coincide: false` cuando el modelo usado difiere del declarado.
       <!-- test: npx vitest run tests/jornada-ejecucion.test.ts -->
-- [ ] C7: `registrarFase` guarda `coincide: true` cuando el usado es el declarado con otro nombre del mismo modelo (alias o sufijo de fecha).
+- [x] C7: `registrarFase` guarda `coincide: true` cuando el usado es el declarado con otro nombre del mismo modelo (alias o sufijo de fecha).
       <!-- test: npx vitest run tests/jornada-ejecucion.test.ts -->
-- [ ] C8: `leerFases` lee un renglón anterior sin los campos nuevos con `modeloUsado`, `coincide` y `costeUsd` en `null`.
+- [x] C8: `leerFases` lee un renglón anterior sin los campos nuevos con `modeloUsado`, `coincide` y `costeUsd` en `null`.
       <!-- test: npx vitest run tests/jornada-ejecucion.test.ts -->
-- [ ] C9: `runAutonomous` registra en la fase el modelo usado y el costo que reportó el ejecutor.
+- [x] C9: `runAutonomous` registra en la fase el modelo usado y el costo que reportó el ejecutor.
       <!-- test: npx vitest run tests/jornada-ejecucion.test.ts -->
-- [ ] C10: La preparación de la jornada registra en la fase `analysis` el modelo usado que reportó el ejecutor.
+- [x] C10: La preparación de la jornada registra en la fase `analysis` el modelo usado que reportó el ejecutor.
       <!-- test: npx vitest run tests/jornada-preparacion.test.ts -->
-- [ ] C11: El parte señala la fase cuyo modelo usado difiere del declarado, con los dos modelos.
+- [x] C11: El parte señala la fase cuyo modelo usado difiere del declarado, con los dos modelos.
       <!-- test: npx vitest run tests/vigilante-jornada.test.ts -->
-- [ ] C12: El parte dice «modelo usado sin reportar» en la fase cuyas sesiones no reportaron modelo.
+- [x] C12: El parte dice «modelo usado sin reportar» en la fase cuyas sesiones no reportaron modelo.
       <!-- test: npx vitest run tests/vigilante-jornada.test.ts -->
-- [ ] C13: El parte dice «costo sin reportar por el cliente» en la fase sin costo reportado.
+- [x] C13: El parte dice «costo sin reportar por el cliente» en la fase sin costo reportado.
       <!-- test: npx vitest run tests/vigilante-jornada.test.ts -->
-- [ ] C14: El parte suma el costo reportado de la fase y dice cuántas sesiones quedaron sin reportar.
+- [x] C14: El parte suma el costo reportado de la fase y dice cuántas sesiones quedaron sin reportar.
       <!-- test: npx vitest run tests/vigilante-jornada.test.ts -->
-- [ ] C15: `productoresDelTicket` usa el modelo usado cuando el registro lo trae.
+- [x] C15: `productoresDelTicket` usa el modelo usado cuando el registro lo trae.
       <!-- test: npx vitest run tests/agente-revisor.test.ts -->
-- [ ] C16: El monorepo compila sin errores de tipos.
+- [x] C16: El monorepo compila sin errores de tipos.
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
 - [ ] C17: Una corrida real de `valmen run` con Claude deja en `.valmen/journeys/fases.jsonl` el modelo usado y el costo reportados.
       <!-- verify: manual -->
@@ -152,11 +152,21 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+- `packages/adapter/src/routing.ts`: `mismoModelo` y `reporteDelEjecutor` (lee `--output-format json` de Claude; Codex/OpenCode o salida ilegible devuelven `null`).
+- `packages/engine/src/autonomous-run.ts`: Claude se lanza con `--output-format json`; `runAutonomous` pasa el `stdout` al registro de fase.
+- `packages/engine/src/journey-preparation.ts`: la fase `analysis` registra lo reportado por la corrida.
+- `packages/engine/src/journey-phases.ts`: `RegistroDeFase` gana `modeloUsado`, `coincide` y `costeUsd` (opcionales en `version: 1`; un renglón viejo se lee como `null`).
+- `packages/engine/src/notify.ts` y `packages/cli/src/hermes.ts`: el parte compara usado y declarado por fase, suma el costo reportado («reportado por el cliente», costo equivalente de la suscripción, no factura) y dice «sin reportar».
+- `packages/engine/src/reviewer.ts`: `productoresDelTicket` prefiere el modelo usado.
+- Pruebas: `tests/routing.test.ts`, `tests/autonomous-run.test.ts`, `tests/jornada-ejecucion.test.ts`, `tests/jornada-preparacion.test.ts`, `tests/vigilante-jornada.test.ts`, `tests/agente-revisor.test.ts`.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Contrato de entrega (directorio de ejecución: la raíz del worktree/repositorio; requisitos: Node 24 y dependencias instaladas):
+
+- `npx tsc --build tsconfig.build.json` y luego `npx tsc --noEmit -p tsconfig.json`; resultado esperado: sin errores.
+- `npx vitest run tests/routing.test.ts tests/autonomous-run.test.ts tests/jornada-ejecucion.test.ts tests/jornada-preparacion.test.ts tests/vigilante-jornada.test.ts tests/agente-revisor.test.ts tests/journey-brief.test.ts tests/hermes.test.ts`; resultado esperado: 8 archivos, 243 pruebas en verde.
+- Validación manual (C17): con Claude autenticado, correr `valmen run --ticket <id>` sobre un ticket aprobado y leer la última línea de `.valmen/journeys/fases.jsonl`; esperado: `modeloUsado`, `coincide` y `costeUsd` con valores del cliente (el costo es el equivalente que reporta la suscripción, no una factura).
 
 ## QA
 
@@ -185,7 +195,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-08",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": null,
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:sesión de implementación con subagente sonnet (claude-sonnet-5-5), sin números de la sesión",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -249,6 +275,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:35:50.882Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:38:28.247Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:38:28.540Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
