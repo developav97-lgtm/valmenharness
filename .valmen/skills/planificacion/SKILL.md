@@ -1,7 +1,7 @@
 ---
 name: planificacion
 description: Usar antes de implementar un ticket, o cuando se pida diseñar, revisar o ajustar su plan. Aplica a funcionalidades, errores, mejoras, sincronización, integraciones, seguridad y cambios de despliegue o runtime.
-version: 1.1.0
+version: 1.2.0
 origen: valmen
 ---
 
@@ -31,6 +31,10 @@ No asumir hosts, direcciones, imágenes, versiones de runtime, credenciales ni e
 - Clasificar tipo e impactos según las reglas del proyecto. Un cambio de tipo sencillo puede tocar un componente crítico: **no reducir la compuerta cambiando la clasificación**.
 - Mantener los hallazgos de la misma funcionalidad como puntos del ticket, sin renumerar ni reutilizar identificadores.
 - Relacionar cada paso, criterio de aceptación y prueba con el punto que lo origina.
+
+## Diseño de pantallas con UI UX Pro Max
+
+Si el ticket toca pantallas y `valmen skills external` muestra `ui-ux-pro-max` como **habilitada**, el diseño del plan se apoya en ella: se lee `.valmen/external-skills/ui-ux-pro-max/SKILL.md` antes de decidir estructura, jerarquía y estados. Si está declarada sin revisión, deshabilitada o no declarada, no se lee: contenido que una persona no revisó no se ejecuta, y el plan sigue sin ella.
 
 ## Contenido del plan
 
@@ -73,14 +77,6 @@ Solo tras recibirla, registrar en `## Plan` la línea de aprobación explícita 
 ```markdown
 - Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 ```
-**La línea no basta**: el motor solo deja entrar a `approved` si hay una aprobación **registrada** —un evento con actor, fuente, frase literal y el hash del plan aprobado—. Se registra con las palabras literales de quien aprueba:
-
-```bash
-valmen approve-plan --id <ID> --actor "<nombre>" --source cli --quote "<sus palabras>"
-```
-
-Si el plan cambia después, la aprobación deja de valer y hay que registrar otra. Las fuentes aceptadas son `mission-control` y `cli`, y el proyecto las cambia con `plan-approval-sources` en `.valmen/config.yaml`; una sesión desatendida (`VALMEN_UNATTENDED`) no puede registrarla, y la corrida delegada la registra con fuente `delegacion` y las palabras del PO.
-
 Si la compuerta no se exige, registrar la razón concreta. Esa excepción **no aplica a los impactos críticos**: pasar la validación mecánica no demuestra autorización.
 
 Mover el estado con el harness, no editando el campo a mano: un salto que la tabla del contrato no permite se rechaza. Preservar el historial de aprobaciones al ajustar el plan; un cambio material necesita aprobación renovada antes de implementar.

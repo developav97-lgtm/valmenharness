@@ -76,7 +76,7 @@ Viven en \`.valmen/rules/estandares-<área>.md\` y llegan acá en el \`valmen sy
 
 Cuando el trabajo enseñe algo que no está escrito —hubo que aclararlo dos veces, una corrección reveló una regla que vivía en la cabeza de alguien—, se propone con \`proponer_estandar\`: la regla en imperativo, el motivo con el caso concreto y los tickets donde se vio. **No está en vigor** hasta que una persona la acepte con \`decidir_estandar\`, citando **sus** palabras; si no dio ninguna, se le pide, no se escribe por ella.
 
-Si el cambio toca pantallas, antes de entregar se corre \`revisar_presentacion\`: avisa de los colores escritos a mano, que rompen el modo oscuro. Un color legítimo se marca en la línea con \`valmen:allow-color\` y su motivo.
+Si el cambio toca pantallas, antes de entregar se corre \`revisar_presentacion\`: avisa de los colores escritos a mano, que rompen el modo oscuro. Un color legítimo se marca en la línea con \`valmen:allow-color\` y su motivo. Con UI UX Pro Max e Impeccable: \`valmen ux review\`.
 
 ### Cómo se verifica un criterio
 

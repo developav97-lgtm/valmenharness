@@ -196,6 +196,7 @@ import {
   renderLearnings,
   renderColorReport,
   scanPendingChanges,
+  revisarUx,
   scanPendingColors,
   usageReport,
 } from "@valmen/engine";
@@ -3036,6 +3037,32 @@ export function qaAuthorizeCommand(
       return ok(`Código ${t("code")} revocado: ya no se puede canjear.\n`);
     }
     return error("qa-authorize admite: create, revoke, list, link, redeem o revoke-code.", EXIT_SCHEMA);
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/**
+ * `ux review --id <ID> [--report <ruta>] [--staged]`: anexa al ticket la revisión de UX del cambio.
+ *
+ * Es evidencia, no un gate: sale con 0 con o sin hallazgos.
+ */
+export function uxReviewCommand(
+  paths: RegistryPaths,
+  flags: Readonly<Record<string, string | true>>,
+): CommandResult {
+  try {
+    const id = flags["id"];
+    if (typeof id !== "string" || id === "") return error("ux review requiere --id <TICKET-ID>.", EXIT_SCHEMA);
+    const informe = flags["report"];
+    const revision = revisarUx({
+      paths,
+      ticketId: id,
+      informe: typeof informe === "string" && informe !== "" ? informe : undefined,
+      staged: flags["staged"] === true,
+    });
+    return ok(`${revision.descripcion}\n${revision.evidencia ?? "No se anexó evidencia."}\n`);
   } catch (caught) {
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);

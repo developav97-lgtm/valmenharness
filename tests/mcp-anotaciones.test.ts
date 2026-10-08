@@ -84,6 +84,7 @@ const NO_IDEMPOTENTES = [
   "anotar_punto",
   "mover_punto",
   "anotar_evidencia",
+  "revisar_ux",
   "evaluar_compuerta",
   "cascada_verificada",
   "simular_compuerta",
@@ -108,8 +109,8 @@ const NO_IDEMPOTENTES = [
 ];
 
 describe("las anotaciones de las herramientas", () => {
-  it("las cincuenta y cuatro declaran las cuatro, con un booleano cada una", () => {
-    expect(TOOLS).toHaveLength(54);
+  it("las cincuenta y cinco declaran las cuatro, con un booleano cada una", () => {
+    expect(TOOLS).toHaveLength(55);
     for (const tool of TOOLS) {
       const a = tool.annotations;
       expect(a, `${tool.name} no declara anotaciones`).toBeDefined();
@@ -187,7 +188,7 @@ describe("las anotaciones de las herramientas", () => {
       catalogo,
     )) as { tools: readonly { name: string; annotations: Record<string, boolean> }[] };
 
-    expect(resultado.tools).toHaveLength(54);
+    expect(resultado.tools).toHaveLength(55);
     for (const tool of resultado.tools) {
       expect(Object.keys(tool.annotations).sort()).toEqual([
         "destructiveHint",

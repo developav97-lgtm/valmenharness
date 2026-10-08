@@ -115,6 +115,7 @@ import {
   approvalAuthorizeCommand,
   skillsExternalCommand,
   skillsReviewCommand,
+  uxReviewCommand,
   qaAuthorizeCommand,
   qaAgentCommand,
   qaPolicyCloseCommand,
@@ -244,6 +245,8 @@ Comandos:
                             reglas, sin modelo). Sale con 3 si no lo es.
   skills review <id> --actor <nombre> --quote "<frase>" --permissions "<permisos>"
                             Registra la revisión de una persona sobre el contenido actual de la skill; la habilita solo si coincide con el hash declarado.
+  ux review --id <ID> [--report <ruta>] [--staged]
+                            Anexa al ticket la revisión de UX de los archivos de interfaz del cambio (UI UX Pro Max e Impeccable si están habilitadas); es evidencia y sale con 0 con o sin hallazgos.
   skills external
                             Lista las skills de terceros declaradas en external-skills; no descarga ni instala nada.
   approval-authorize create --actor <nombre> --quote "<frase>" --types <a,b> --modules <x,y> [--max-risk <r>] [--impacts <i,j>] [--stages analysis,plan] [--mode on-approve|reviewer] [--daily-quota <n>] [--valid-days <n>]
@@ -565,6 +568,8 @@ export const VALUE_OPTIONS = [
   "--id",
   "--limit",
   "--evaluator",
+  // El informe de Impeccable que `ux review` anexa.
+  "--report",
   // El tipo de ticket del informe de presupuestos.
   "--tipo",
   // La corrida de la cascada: la tarea y su entrada.
@@ -1987,6 +1992,11 @@ export async function run(argv: readonly string[]): Promise<number> {
       result = qaAgentCommand(resolvePaths(options), options.flags);
     } else if (command === "qa-eligibility") {
       result = qaEligibilityCommand(resolvePaths(options), options.flags);
+    } else if (command === "ux") {
+      result =
+        rest[0] === "review"
+          ? uxReviewCommand(resolvePaths(options), options.flags)
+          : { stdout: "", stderr: "ux admite: review.\n", exitCode: EXIT_SCHEMA };
     } else if (command === "skills") {
       result =
         rest[0] === "external"

@@ -193,6 +193,7 @@ export const HERRAMIENTAS_QUE_ESCRIBEN: readonly string[] = [
   "anotar_punto",
   "mover_punto",
   "anotar_evidencia",
+  "revisar_ux",
   "registrar_consumo_ia",
   "evaluar_compuerta",
   "cascada_verificada",

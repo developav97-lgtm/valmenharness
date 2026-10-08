@@ -4,7 +4,7 @@ id: FEATURE-ADAPTER-SKILLS-UX-20261007
 title: Integrar UI UX Pro Max en el diseño e Impeccable en la revisión de pantallas, con el informe como evidencia sin bloquear
 type: FEATURE
 module: ADAPTER
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -74,23 +74,23 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
 
 ## Criterios de aceptación
 
-- [ ] C1. (R-SKILL-003) Con un cambio que modifica un archivo de interfaz y las dos skills habilitadas, `revisarUx` anexa al ticket una evidencia de tipo `ux-review` que nombra ambas skills como habilitadas
+- [x] C1. (R-SKILL-003) Con un cambio que modifica un archivo de interfaz y las dos skills habilitadas, `revisarUx` anexa al ticket una evidencia de tipo `ux-review` que nombra ambas skills como habilitadas
       <!-- test: npx vitest run tests/revision-ux.test.ts -->
-- [ ] C2. Con una skill no declarada, sin revisión o deshabilitada, la evidencia dice su estado y su motivo
+- [x] C2. Con una skill no declarada, sin revisión o deshabilitada, la evidencia dice su estado y su motivo
       <!-- test: npx vitest run tests/revision-ux.test.ts -->
-- [ ] C3. Con colores fijos en el cambio, la evidencia cuenta los hallazgos y la revisión termina sin error
+- [x] C3. Con colores fijos en el cambio, la evidencia cuenta los hallazgos y la revisión termina sin error
       <!-- test: npx vitest run tests/revision-ux.test.ts -->
-- [ ] C4. Un cambio sin archivos de interfaz no anexa ninguna evidencia
+- [x] C4. Un cambio sin archivos de interfaz no anexa ninguna evidencia
       <!-- test: npx vitest run tests/revision-ux.test.ts -->
-- [ ] C5. El informe de Impeccable que se pasa queda como referencia de la evidencia
+- [x] C5. El informe de Impeccable que se pasa queda como referencia de la evidencia
       <!-- test: npx vitest run tests/revision-ux.test.ts -->
-- [ ] C6. `valmen ux review --id <ID>` sale con código 0 cuando hay hallazgos
+- [x] C6. `valmen ux review --id <ID>` sale con código 0 cuando hay hallazgos
       <!-- test: npx vitest run tests/revision-ux.test.ts -->
-- [ ] C7. La herramienta MCP `revisar_ux` anexa la misma evidencia que el comando
+- [x] C7. La herramienta MCP `revisar_ux` anexa la misma evidencia que el comando
       <!-- test: npx vitest run tests/revision-ux.test.ts -->
-- [ ] C8. Las skills `planificacion` y `revision-final` del catálogo nombran UI UX Pro Max e Impeccable con su condición de habilitadas
+- [x] C8. Las skills `planificacion` y `revision-final` del catálogo nombran UI UX Pro Max e Impeccable con su condición de habilitadas
       <!-- verify: manual -->
-- [ ] C9. La suite completa pasa sin regresiones
+- [x] C9. La suite completa pasa sin regresiones
       <!-- test: npx vitest run -->
 
 ## Puntos
@@ -101,11 +101,24 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
 
 ## Implementación
 
-Pendiente.
+- `packages/engine/src/ux-review.ts` (nuevo, exportado en `index.ts`): `SKILLS_DE_UX` y `revisarUx`. Sin archivos de interfaz no escribe; con ellos anexa la evidencia `ux-review` con archivos, colores fijos, estado y motivo de cada skill (o «no declarada») e informe. Nunca falla por hallazgos; sí rechaza un informe que no existe.
+- `packages/cli/src/commands.ts`, `main.ts`: `uxReviewCommand` y `ux review --id <ID> [--report <ruta>] [--staged]`, salida 0; `--report` registrada en `VALUE_OPTIONS`.
+- `packages/mcp/src/tools.ts`: herramienta `revisar_ux` (ANEXA); `packages/server/src/hermes.ts`: clasificada entre las que escriben.
+- `skills/planificacion` 1.2.0 y `skills/revision-final` 1.3.0, con la misma edición en `.valmen/skills/` (se editó en vez de copiar: la copia de `planificacion` del proyecto tenía un párrafo propio sobre `approve-plan` que una copia habría borrado). Línea en `packages/adapter/src/templates.ts` recortada a «Con UI UX Pro Max e Impeccable: `valmen ux review`.» por el tope de 9 800 B de las plantillas. `valmen sync` aplicado; `AGENTS.md` regenerado.
+- Tests: `tests/revision-ux.test.ts` (C1–C7); actualizados `plantillas-compactas` (versiones), `mcp-server` y `mcp-anotaciones` (55 herramientas, orden del catálogo).
+
+### Desviación del plan
+
+El plan decía que la referencia de la evidencia es el informe. `addEvidence` solo admite `commit:<sha40>` o `worktree:sha256:<hash>` como referencia, así que la ruta del informe va en la descripción de la evidencia («Informe de Impeccable: <ruta>») y la referencia queda vacía. C5 se verifica así.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Directorio: raíz del repositorio. Requisitos: Node 24, sin red. Con `VALMEN_UNATTENDED=1` en el entorno fallan ~60 pruebas de decisiones humanas de compuertas (ajenas a este ticket); correr con `env -u VALMEN_UNATTENDED`.
+
+- `npx vitest run tests/revision-ux.test.ts` → 7 pasan (C1–C7).
+- `env -u VALMEN_UNATTENDED npx vitest run` → 200 archivos y 2 973 pruebas pasan, 48 omitidas (C9).
+- `npx tsc --noEmit -p tsconfig.json` → sin errores. `valmen sync --check` → al día.
+- Manual (C8): `skills/planificacion/SKILL.md` y `skills/revision-final/SKILL.md` nombran UI UX Pro Max e Impeccable con la condición de habilitadas. Además, en un ticket de prueba con un `.html` modificado, `valmen ux review --id <ID>` anexa una evidencia `ux-review` y sale con 0.
 
 ## QA
 
@@ -198,6 +211,24 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-07",
+    "at": "2026-10-08T02:59:17.921Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-07",
+    "at": "2026-10-08T03:12:30.294Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```

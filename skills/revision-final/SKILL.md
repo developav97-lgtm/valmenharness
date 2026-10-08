@@ -1,7 +1,7 @@
 ---
 name: revision-final
 description: Usar cuando un cambio parece listo para entregar al responsable, cuando se pida una revisión de código o antes de abrir un ciclo de validación. Revisa calidad y trazabilidad; no autoriza publicaciones.
-version: 1.2.0
+version: 1.3.0
 origen: valmen
 ---
 
@@ -32,6 +32,10 @@ Los hallazgos funcionales de la misma solicitud se registran en el ticket como p
 ## Lo que toca interfaz se compara con el original
 
 Si el ticket trae una sección `### Referencias de diseño` (adjuntos de la feature en `.valmen/features/<slug>/assets/`), antes de entregar la pantalla se compara contra esos archivos, no contra el texto de la spec: las diferencias se corrigen o se declaran en el ticket. Entregar una pantalla que nadie contrastó con el prototipo aprobado es lo que ya obligó a devolverlas.
+
+## Lo que toca interfaz se revisa con Impeccable
+
+Antes de entregar un cambio con pantallas, si `valmen skills external` muestra `impeccable` como **habilitada**, se revisa con ella leyendo `.valmen/external-skills/impeccable/SKILL.md`; el informe se guarda junto al ticket y se anexa con `valmen ux review --id <ID> --report <ruta>` (herramienta `revisar_ux`). Sin la skill habilitada se corre igual, sin `--report`, y la evidencia dice su estado. El informe es evidencia: no bloquea la entrega, y los hallazgos que contiene se corrigen o se declaran en el ticket.
 
 ## Los criterios se marcan
 

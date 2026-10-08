@@ -1,7 +1,7 @@
 ---
 name: planificacion
 description: Usar antes de implementar un ticket, o cuando se pida diseñar, revisar o ajustar su plan. Aplica a funcionalidades, errores, mejoras, sincronización, integraciones, seguridad y cambios de despliegue o runtime.
-version: 1.1.0
+version: 1.2.0
 origen: valmen
 ---
 
@@ -31,6 +31,10 @@ No asumir hosts, direcciones, imágenes, versiones de runtime, credenciales ni e
 - Clasificar tipo e impactos según las reglas del proyecto. Un cambio de tipo sencillo puede tocar un componente crítico: **no reducir la compuerta cambiando la clasificación**.
 - Mantener los hallazgos de la misma funcionalidad como puntos del ticket, sin renumerar ni reutilizar identificadores.
 - Relacionar cada paso, criterio de aceptación y prueba con el punto que lo origina.
+
+## Diseño de pantallas con UI UX Pro Max
+
+Si el ticket toca pantallas y `valmen skills external` muestra `ui-ux-pro-max` como **habilitada**, el diseño del plan se apoya en ella: se lee `.valmen/external-skills/ui-ux-pro-max/SKILL.md` antes de decidir estructura, jerarquía y estados. Si está declarada sin revisión, deshabilitada o no declarada, no se lee: contenido que una persona no revisó no se ejecuta, y el plan sigue sin ella.
 
 ## Contenido del plan
 

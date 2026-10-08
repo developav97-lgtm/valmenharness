@@ -71,6 +71,7 @@ import {
   listProposals,
   renderColorReport,
   scanPendingColors,
+  revisarUx,
   listTickets,
   loadMemory,
   addAiUsage,
@@ -1640,6 +1641,31 @@ const DEFINICIONES: readonly ToolDefinition[] = [
     }),
   },
   {
+    name: "revisar_ux",
+    annotations: ANEXA,
+    title: "Anexar la revisión de UX de un cambio con pantallas",
+    description:
+      "Anexa al ticket una evidencia `ux-review` con los archivos de interfaz del cambio, los " +
+      "colores fijos y el estado de UI UX Pro Max (diseño) e Impeccable (revisión): " +
+      "habilitada, sin revisión, deshabilitada o no declarada. Si se pasa el informe de " +
+      "Impeccable, queda como referencia. Es evidencia, **no bloquea**; si el cambio no toca " +
+      "pantallas no escribe nada. No instala ni habilita skills.",
+    inputSchema: conRoot({
+      properties: {
+        id: { type: "string", description: "Identificador del ticket." },
+        informe: {
+          type: "string",
+          description: "Ruta del informe de Impeccable, guardado junto al ticket.",
+        },
+        staged: {
+          type: "boolean",
+          description: "Mirar solo lo que está en el índice (`git add`), no todo el cambio.",
+        },
+      },
+      required: ["id"],
+    }),
+  },
+  {
     name: "revisar_presentacion",
     annotations: SOLO_LEE,
     title: "Colores fijos en lo que estás por entregar",
@@ -3053,6 +3079,17 @@ async function ejecutarHerramienta(
         }
         lineas.push(`Decisión registrada con la frase: «${instruccion}»`);
         return bien(lineas.join("\n"));
+      }
+
+      case "revisar_ux": {
+        const revision = revisarUx({
+          paths,
+          ticketId: texto(args, "id") as string,
+          informe: texto(args, "informe", false),
+          staged: args["staged"] === true,
+          now: contexto.now,
+        });
+        return bien(`${revision.descripcion}\n${revision.evidencia ?? "No se anexó evidencia."}`);
       }
 
       case "revisar_presentacion": {

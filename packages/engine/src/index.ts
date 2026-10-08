@@ -47,6 +47,7 @@ export * from "./diff.js";
 export * from "./drift.js";
 export * from "./secrets.js";
 export * from "./presentation.js";
+export * from "./ux-review.js";
 export * from "./standards.js";
 export * from "./memory.js";
 export * from "./learnings.js";
