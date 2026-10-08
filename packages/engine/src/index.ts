@@ -30,6 +30,8 @@ export * from "./journey-dirty-tree.js";
 export * from "./http-criterion.js";
 export * from "./integration-commit.js";
 export * from "./integration-rules.js";
+export * from "./worktree-git.js";
+export * from "./worktree.js";
 export * from "./journey-advance.js";
 export * from "./journey-limits.js";
 export * from "./journey-phases.js";

@@ -57,6 +57,7 @@ import {
   resumeTicket,
   validateOne,
 } from "./commands.js";
+import { journeyWorktreeCommand } from "./worktree.js";
 import { REAL_GIT, runDelegation } from "./delegation.js";
 import { runFeature } from "./features.js";
 import { probeCodegraph } from "./codegraph.js";
@@ -292,6 +293,9 @@ Comandos:
                             proyecto la declara en plan-approval-sources. De un solo uso.
   journey clear-stop --project <id> --id <ticket> --actor <nombre>
                             Libera la parada de un ticket: una parada no se reintenta sola.
+  journey worktree create|remove --id <ID>
+                            Crea o quita el worktree .claude/worktrees/ticket-<slug> (rama
+                            valmen/ticket-<slug>) del ticket, solo desde el checkout principal.
   journey install-trigger --project <id> [--every <min>] [--via machine|hermes] [--write] [--dir <carpeta>]
                             Prepara la tarea periódica de launchd: imprime el plist y los
                             comandos; con --write escribe solo el archivo. No ejecuta launchctl.
@@ -2001,7 +2005,9 @@ export async function run(argv: readonly string[]): Promise<number> {
                 ? journeyNotifyPlansCommand(options.flags)
                 : rest[0] === "clear-stop"
                 ? journeyClearStopCommand(options.flags)
-                : { stdout: "", stderr: "journey admite: plan, advance, install-trigger, notify-plans y clear-stop.\n", exitCode: EXIT_SCHEMA };
+                : rest[0] === "worktree"
+                ? journeyWorktreeCommand(resolvePaths(options), rest.slice(1), options.flags)
+                : { stdout: "", stderr: "journey admite: plan, advance, install-trigger, notify-plans, clear-stop y worktree.\n", exitCode: EXIT_SCHEMA };
     } else if (command === "review-agent") {
       result = await reviewAgentCommand(resolvePaths(options), options.flags);
     } else if (command === "qa-shadow") {
