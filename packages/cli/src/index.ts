@@ -14,6 +14,7 @@
 export * from "./commands.js";
 export * from "./features.js";
 export * from "./delegation.js";
+export { perfilesCommand } from "./setup.js";
 export { executionCommand } from "./execution.js";
 export type { ExecutionCommandOptions } from "./execution.js";
 export { parseArgs, dispatch, resolvePaths, run } from "./main.js";

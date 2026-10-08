@@ -4,7 +4,7 @@ id: FEATURE-CLI-PERFILES-MODELOS-20261007
 title: Listar, mostrar y elegir perfiles por CLI y desde Hermes
 type: FEATURE
 module: CLI
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -92,55 +92,55 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1: R-PERF-002: `valmen perfiles` lista los perfiles incorporados y los del proyecto, cada uno con su origen.
+- [x] C1: R-PERF-002: `valmen perfiles` lista los perfiles incorporados y los del proyecto, cada uno con su origen.
       <!-- test: npx vitest run tests/puesta-en-marcha.test.ts -->
-- [ ] C2: R-PERF-002: la lista marca el perfil elegido para el proyecto.
+- [x] C2: R-PERF-002: la lista marca el perfil elegido para el proyecto.
       <!-- test: npx vitest run tests/puesta-en-marcha.test.ts -->
-- [ ] C3: R-PERF-002: la lista marca el perfil elegido para cada ejecutor.
+- [x] C3: R-PERF-002: la lista marca el perfil elegido para cada ejecutor.
       <!-- test: npx vitest run tests/puesta-en-marcha.test.ts -->
-- [ ] C4: R-PERF-005: la lista incluye el modelo efectivo de cada fase con su origen, resuelto para el `--cliente` si viene.
+- [x] C4: R-PERF-005: la lista incluye el modelo efectivo de cada fase con su origen, resuelto para el `--cliente` si viene.
       <!-- test: npx vitest run tests/puesta-en-marcha.test.ts -->
-- [ ] C5: R-PERF-002: `valmen perfiles show <id>` muestra cada rol del perfil con proveedor, modelo y esfuerzo.
+- [x] C5: R-PERF-002: `valmen perfiles show <id>` muestra cada rol del perfil con proveedor, modelo y esfuerzo.
       <!-- test: npx vitest run tests/puesta-en-marcha.test.ts -->
-- [ ] C6: `valmen perfiles show` con un id que no existe sale con código distinto de cero y lo dice.
+- [x] C6: `valmen perfiles show` con un id que no existe sale con código distinto de cero y lo dice.
       <!-- test: npx vitest run tests/puesta-en-marcha.test.ts -->
-- [ ] C7: R-PERF-002: `valmen perfiles elegir <id>` escribe el perfil elegido para el proyecto en `.valmen/profiles.yaml`.
+- [x] C7: R-PERF-002: `valmen perfiles elegir <id>` escribe el perfil elegido para el proyecto en `.valmen/profiles.yaml`.
       <!-- test: npx vitest run tests/puesta-en-marcha.test.ts -->
-- [ ] C8: `valmen perfiles elegir` conserva los perfiles del proyecto ya guardados en `.valmen/profiles.yaml`.
+- [x] C8: `valmen perfiles elegir` conserva los perfiles del proyecto ya guardados en `.valmen/profiles.yaml`.
       <!-- test: npx vitest run tests/puesta-en-marcha.test.ts -->
-- [ ] C9: R-PERF-002: `valmen perfiles elegir <id> --cliente <ejecutor>` escribe la elección de ese ejecutor sin cambiar la del proyecto.
+- [x] C9: R-PERF-002: `valmen perfiles elegir <id> --cliente <ejecutor>` escribe la elección de ese ejecutor sin cambiar la del proyecto.
       <!-- test: npx vitest run tests/puesta-en-marcha.test.ts -->
-- [ ] C10: `valmen perfiles elegir` con un id que no existe sale con error y no crea ni modifica `.valmen/profiles.yaml`.
+- [x] C10: `valmen perfiles elegir` con un id que no existe sale con error y no crea ni modifica `.valmen/profiles.yaml`.
       <!-- test: npx vitest run tests/puesta-en-marcha.test.ts -->
-- [ ] C11: `valmen perfiles elegir` con un ejecutor que no admite perfil sale con error y no escribe.
+- [x] C11: `valmen perfiles elegir` con un ejecutor que no admite perfil sale con error y no escribe.
       <!-- test: npx vitest run tests/puesta-en-marcha.test.ts -->
-- [ ] C12: `valmen perfiles quitar` quita la elección del proyecto.
+- [x] C12: `valmen perfiles quitar` quita la elección del proyecto.
       <!-- test: npx vitest run tests/puesta-en-marcha.test.ts -->
-- [ ] C13: `valmen perfiles quitar --cliente <ejecutor>` quita solo la elección de ese ejecutor.
+- [x] C13: `valmen perfiles quitar --cliente <ejecutor>` quita solo la elección de ese ejecutor.
       <!-- test: npx vitest run tests/puesta-en-marcha.test.ts -->
-- [ ] C14: Elegir o quitar un perfil deja `.valmen/routing.yaml` y `.valmen/config.yaml` con los mismos bytes.
+- [x] C14: Elegir o quitar un perfil deja `.valmen/routing.yaml` y `.valmen/config.yaml` con los mismos bytes.
       <!-- test: npx vitest run tests/puesta-en-marcha.test.ts -->
-- [ ] C15: Con un `.valmen/profiles.yaml` ilegible, `valmen perfiles` sale con el mensaje del error y código distinto de cero, sin excepción.
+- [x] C15: Con un `.valmen/profiles.yaml` ilegible, `valmen perfiles` sale con el mensaje del error y código distinto de cero, sin excepción.
       <!-- test: npx vitest run tests/puesta-en-marcha.test.ts -->
-- [ ] C16: R-PERF-005: `valmen routing show` muestra, en un rol que sale de un perfil, el id del perfil y su alcance.
+- [x] C16: R-PERF-005: `valmen routing show` muestra, en un rol que sale de un perfil, el id del perfil y su alcance.
       <!-- test: npx vitest run tests/puesta-en-marcha.test.ts -->
-- [ ] C17: La ayuda del CLI documenta el comando `perfiles`.
+- [x] C17: La ayuda del CLI documenta el comando `perfiles`.
       <!-- test: npx vitest run tests/cli.test.ts -->
-- [ ] C18: Las banderas con valor que documenta la ayuda siguen declaradas en la lista del CLI.
+- [x] C18: Las banderas con valor que documenta la ayuda siguen declaradas en la lista del CLI.
       <!-- test: npx vitest run tests/cli.test.ts -->
-- [ ] C19: El catálogo MCP declara `ver_perfiles` con la anotación de solo lectura.
+- [x] C19: El catálogo MCP declara `ver_perfiles` con la anotación de solo lectura.
       <!-- test: npx vitest run tests/mcp-anotaciones.test.ts -->
-- [ ] C20: R-PERF-002: `ver_perfiles` sin `id` devuelve la lista de perfiles con su origen y la elección vigente.
+- [x] C20: R-PERF-002: `ver_perfiles` sin `id` devuelve la lista de perfiles con su origen y la elección vigente.
       <!-- test: npx vitest run tests/mcp-server.test.ts -->
-- [ ] C21: R-PERF-002: `ver_perfiles` con `id` devuelve los roles de ese perfil con proveedor, modelo y esfuerzo.
+- [x] C21: R-PERF-002: `ver_perfiles` con `id` devuelve los roles de ese perfil con proveedor, modelo y esfuerzo.
       <!-- test: npx vitest run tests/mcp-server.test.ts -->
-- [ ] C22: R-PERF-005: `ver_perfiles` con `cliente` devuelve el modelo efectivo de cada fase con su origen para ese ejecutor.
+- [x] C22: R-PERF-005: `ver_perfiles` con `cliente` devuelve el modelo efectivo de cada fase con su origen para ese ejecutor.
       <!-- test: npx vitest run tests/mcp-server.test.ts -->
-- [ ] C23: Llamar a `ver_perfiles` no crea ni modifica `.valmen/profiles.yaml`.
+- [x] C23: Llamar a `ver_perfiles` no crea ni modifica `.valmen/profiles.yaml`.
       <!-- test: npx vitest run tests/mcp-server.test.ts -->
-- [ ] C24: `ver_perfiles` figura en la lista de herramientas de lectura que clasifica las sesiones de Hermes.
+- [x] C24: `ver_perfiles` figura en la lista de herramientas de lectura que clasifica las sesiones de Hermes.
       <!-- test: npx vitest run tests/hermes.test.ts -->
-- [ ] C25: El tipado del proyecto compila sin errores.
+- [x] C25: El tipado del proyecto compila sin errores.
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
 - [ ] C26: En este repositorio, tras `valmen perfiles elegir claude-code-completo`, `valmen resume` muestra el origen `perfil claude-code-completo` en «Modelos por fase».
       <!-- verify: manual -->
@@ -157,11 +157,26 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+- `packages/cli/src/setup.ts`: `perfilesCommand` (list, show, elegir, quitar; `--cliente`), que reutiliza `listarPerfiles`, `readSeleccionDePerfil`, `fasesDeSesion`, `renderFases` y `elegirPerfil`; los errores salen como mensaje, no como excepción. `routing show` pinta `perfil <id> (<alcance>)` en el origen.
+- `packages/cli/src/main.ts`: ayuda y despacho de `perfiles` (mínimo). `packages/cli/src/index.ts`: exporta `perfilesCommand`.
+- `packages/mcp/src/tools.ts`: herramienta `ver_perfiles` (SOLO_LEE) que solo llama a `list` o `show`; ninguna herramienta MCP escribe `profiles.yaml`. `packages/server/src/hermes.ts`: `ver_perfiles` en `HERRAMIENTAS_DE_LECTURA`.
+- Pruebas: `tests/puesta-en-marcha.test.ts`, `tests/cli.test.ts`, `tests/mcp-server.test.ts`, `tests/mcp-anotaciones.test.ts` (conteos 55 a 56 y 23 a 24).
 
 ## Pruebas
 
-Pendiente de ejecución.
+Directorio: raíz del repositorio (Node 24).
+
+1. `npx vitest run tests/puesta-en-marcha.test.ts tests/cli.test.ts tests/mcp-server.test.ts tests/mcp-anotaciones.test.ts tests/mcp-resumen-siguiente-paso.test.ts tests/hermes.test.ts tests/routing.test.ts` — esperado: 7 archivos, 262 pruebas en verde (corrido).
+2. `npx tsc --noEmit -p tsconfig.json` — esperado: sin errores (corrido).
+3. `valmen secrets` — sin hallazgos (corrido).
+
+Validación manual (la hace el responsable; C26 a C28 siguen sin marcar):
+- a. `valmen perfiles` y `valmen perfiles show claude-code-completo`: lista con origen y fases; roles con proveedor, modelo y esfuerzo.
+- b. `valmen perfiles elegir claude-code-completo`; luego `valmen routing show` y `valmen resume --id FEATURE-CLI-PERFILES-MODELOS-20261007 --cliente claude` muestran `perfil claude-code-completo` (C26).
+- c. `valmen perfiles quitar` deja `.valmen/profiles.yaml` sin la clave `seleccion` (C27).
+- d. Con Hermes conectado (`valmen hermes status`), pedirle los perfiles: usa `ver_perfiles` y responde la lista con la elección vigente (C28).
+
+Requisitos de ambiente: `valmen` enlazado a este build y Hermes conectado para (d).
 
 ## QA
 
@@ -190,7 +205,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-08",
+    "session_reference": null,
+    "model": "claude-sonnet-5-5",
+    "reasoning_effort": null,
+    "notes": "Sesion de implementacion en subagente; la sesion no expone numeros.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:subagente-implementacion-20261008",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -254,6 +285,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:52:36.494Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:56:18.793Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:56:19.079Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```

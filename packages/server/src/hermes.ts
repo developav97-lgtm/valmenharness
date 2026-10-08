@@ -183,6 +183,7 @@ export const HERRAMIENTAS_DE_LECTURA: readonly string[] = [
   "ver_delegacion",
   "revision_previa",
   "precision_compuertas",
+  "ver_perfiles",
 ];
 
 /** Las que escriben el registro, que son las que convierten una sesión en trabajo. */

@@ -131,6 +131,11 @@ describe("dispatch", () => {
     expect(result.stdout.split("\n")[0]).toBe("valmen — harness agéntico");
   });
 
+  it("C17 la ayuda documenta el comando perfiles", () => {
+    const result = dispatch(parseArgs([]));
+    expect(result.stdout).toContain("perfiles [list|show|elegir|quitar]");
+  });
+
   it("rechaza un comando desconocido", () => {
     const result = dispatch(parseArgs(["pepe"]));
     expect(result.exitCode).toBe(EXIT_SCHEMA);
