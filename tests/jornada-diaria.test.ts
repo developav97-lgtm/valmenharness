@@ -253,3 +253,41 @@ describe("la herramienta MCP y la ausencia de cron por ticket", () => {
     expect(rastros).toEqual([]);
   });
 });
+
+describe("armar la jornada de un día nuevo", () => {
+  const AYER = new Date("2026-10-06T22:00:00.000Z");
+  const HOY = new Date("2026-10-07T01:00:00.000Z");
+  const fijarEstado = (id: string, estadoNuevo: string): void => {
+    const ruta = join(root, "tickets", "2026", id, "ticket.md");
+    writeFileSync(ruta, readFileSync(ruta, "utf8").replace(/^workflow_status: .*$/m, `workflow_status: ${estadoNuevo}`), "utf8");
+  };
+
+  it("incluye primero los pendientes de la jornada anterior sin duplicarlos", () => {
+    armarJornada({ project: proyecto(), tickets: [A, B], ahora: () => AYER });
+    fijarEstado(A, "closed");
+    const nueva = armarJornada({ project: proyecto(), tickets: [B, C], ahora: () => HOY });
+
+    expect(nueva.revisada).toBe(false);
+    expect(nueva.tickets.map((t) => t.ticketId)).toEqual([B, C]);
+    expect(nueva.heredados).toBeNull();
+
+    const otra = armarJornada({ project: proyecto(), tickets: [C], ahora: () => new Date("2026-10-08T01:00:00.000Z") });
+    // B y C siguen pendientes: C se pidió y no se duplica; B se hereda primero.
+    expect(otra.tickets.map((t) => t.ticketId)).toEqual([B, C]);
+    expect(otra.heredados).toEqual({ desde: nueva.journeyId, tickets: [B] });
+  });
+
+  it("el plan nombra los heredados y la jornada de la que vienen; revisar el día no hereda", () => {
+    const ayer = armarJornada({ project: proyecto(), tickets: [A, B], ahora: () => AYER });
+    const hoy = armarJornada({ project: proyecto(), tickets: [C], ahora: () => HOY });
+
+    expect(hoy.tickets.map((t) => t.ticketId)).toEqual([A, B, C]);
+    expect(hoy.heredados).toEqual({ desde: ayer.journeyId, tickets: [A, B] });
+    expect(hoy.plan).toContain(`Heredados de ${ayer.journeyId}: ${A}, ${B}`);
+
+    const revisada = armarJornada({ project: proyecto(), tickets: [C], ahora: () => HOY });
+    expect(revisada.revisada).toBe(true);
+    expect(revisada.heredados).toBeNull();
+    expect(revisada.tickets.map((t) => t.ticketId)).toEqual([C]);
+  });
+});

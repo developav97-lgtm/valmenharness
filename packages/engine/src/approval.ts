@@ -96,6 +96,7 @@ export type ApprovalLogEntry =
   | ProcessNotice
   | AutonomousStopNotice
   | JourneyDirtyTreeNotice
+  | JourneyFinishedNotice
   | TestsReadyNotice
   | ApprovalBatch;
 
@@ -184,6 +185,13 @@ export interface JourneyDirtyTreeNotice {
   readonly kind: "journey-dirty-tree-notice";
   readonly journeyId: string;
   readonly episodio: string;
+  readonly notifiedAt: string;
+}
+
+/** El aviso de que una jornada terminó: todos sus tickets están cerrados. Uno por jornada. */
+export interface JourneyFinishedNotice {
+  readonly kind: "journey-finished-notice";
+  readonly journeyId: string;
   readonly notifiedAt: string;
 }
 
@@ -467,6 +475,7 @@ export function readApprovalLog(paths: RegistryPaths): ApprovalLogEntry[] {
         valor.kind === "process-notice" ||
         valor.kind === "autonomous-stop-notice" ||
         valor.kind === "journey-dirty-tree-notice" ||
+        valor.kind === "journey-finished-notice" ||
         valor.kind === "tests-ready-notice" ||
         valor.kind === "policy-close-notice" ||
         valor.kind === "approval-batch"
@@ -505,6 +514,15 @@ export function arbolesSuciosAvisados(paths: RegistryPaths): Set<string> {
     readApprovalLog(paths)
       .filter((entry): entry is JourneyDirtyTreeNotice => entry.kind === "journey-dirty-tree-notice")
       .map((entry) => `${entry.journeyId}:${entry.episodio}`),
+  );
+}
+
+/** Las jornadas cuyo aviso de terminada ya salió. */
+export function jornadasTerminadasAvisadas(paths: RegistryPaths): Set<string> {
+  return new Set(
+    readApprovalLog(paths)
+      .filter((entry): entry is JourneyFinishedNotice => entry.kind === "journey-finished-notice")
+      .map((entry) => entry.journeyId),
   );
 }
 
@@ -611,7 +629,7 @@ export function ultimoIntento(
     // Un aviso de proceso no tiene código y no entra en esta cuenta: su vida es
     // otra —se avisa una vez y la corrida sigue detenida— y mezclarlo movería
     // la ventana de reintento de un gate sin motivo.
-    if (e.kind === "process-notice" || e.kind === "autonomous-stop-notice" || e.kind === "journey-dirty-tree-notice" || e.kind === "tests-ready-notice" || e.kind === "policy-close-notice" || e.kind === "approval-batch") return [];
+    if (e.kind === "process-notice" || e.kind === "autonomous-stop-notice" || e.kind === "journey-dirty-tree-notice" || e.kind === "journey-finished-notice" || e.kind === "tests-ready-notice" || e.kind === "policy-close-notice" || e.kind === "approval-batch") return [];
     if (!codigos.has(e.code)) return [];
     if (e.kind === "approval-issued") return [e.issuedAt];
     if (e.kind === "approval-undelivered") return [e.attemptedAt];

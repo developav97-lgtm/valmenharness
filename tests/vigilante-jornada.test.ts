@@ -234,3 +234,51 @@ describe("el parte diario de la jornada", () => {
     expect(texto).not.toContain("esperan tu aprobación");
   });
 });
+
+describe("una jornada terminada", () => {
+  const escribirJornada = (journeyId: string, tickets: string[]) => {
+    mkdirSync(join(raiz, ".valmen", "journeys"), { recursive: true });
+    const linea = {
+      kind: "journey.created", revisionId: `${journeyId}-alta`, journeyId, occurredAt: AHORA.toISOString(),
+      tickets: tickets.map((ticketId, i) => ({ ticketId, order: i + 1, priority: i + 1, dependsOn: [] })),
+      windows: [], projectId: "vig-lab", receivedAt: AHORA.toISOString(), cursor: 1,
+    };
+    writeFileSync(join(raiz, ".valmen", "journeys", "events.jsonl"), `${JSON.stringify(linea)}\n`, "utf8");
+  };
+  const terminadas = () => pendientesDeAvisar(paths, AHORA).filter((p) => p.kind === "jornada-terminada");
+
+  it("se avisa una vez cuando todos sus tickets están cerrados, y no se repite", () => {
+    writeFixtureTicket(raiz, { id: A, workflowStatus: "closed" });
+    writeFixtureTicket(raiz, { id: B, workflowStatus: "closed" });
+    escribirJornada("JOR-20261006", [A, B]);
+    const { runner: r, cuerpos } = runner();
+
+    avisar(r);
+    expect(cuerpos).toHaveLength(1);
+    expect(cuerpos[0]).toContain("JORNADA TERMINADA");
+    expect(cuerpos[0]).toContain("JOR-20261006");
+
+    avisar(r);
+    expect(cuerpos).toHaveLength(1);
+    expect(terminadas()).toEqual([]);
+  });
+
+  it("con un ticket sin cerrar no se avisa", () => {
+    writeFixtureTicket(raiz, { id: A, workflowStatus: "closed" });
+    writeFixtureTicket(raiz, { id: B, workflowStatus: "in_progress" });
+    escribirJornada("JOR-20261006", [A, B]);
+    expect(terminadas()).toEqual([]);
+  });
+
+  it("si el canal falla no se anota y vuelve a salir en la pasada siguiente", () => {
+    writeFixtureTicket(raiz, { id: A, workflowStatus: "closed" });
+    escribirJornada("JOR-20261006", [A]);
+    avisar(runner(true).runner);
+    expect(terminadas()).toHaveLength(1);
+
+    const sano = runner();
+    avisar(sano.runner);
+    expect(sano.cuerpos).toHaveLength(1);
+    expect(terminadas()).toEqual([]);
+  });
+});

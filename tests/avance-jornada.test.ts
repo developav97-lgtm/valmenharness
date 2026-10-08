@@ -23,6 +23,7 @@ import {
   claimMachineCapacity,
   recordExecutionActivity,
   jornadaDelDia,
+  jornadaVigente,
   leerPasadas,
   pasadasPath,
   resolveAuthorizedProject,
@@ -36,6 +37,11 @@ const B = "FEATURE-AVANCE-DOS-20261005";
 const AHORA = new Date("2026-10-06T08:00:00.000Z");
 const PRUEBAS = "Contrato de entrega: ejecutar `node -e \"process.exit(0)\"` desde la raíz; esperado: código de salida 0.";
 const CRITERIO = '- [ ] El laboratorio termina correctamente.\n      <!-- test: node -e "process.exit(0)" -->';
+
+function fijarEstado(id: string, estadoNuevo: string): void {
+  const ruta = join(root, "tickets", "2026", id, "ticket.md");
+  writeFileSync(ruta, readFileSync(ruta, "utf8").replace(/^workflow_status: .*$/m, `workflow_status: ${estadoNuevo}`), "utf8");
+}
 
 let home: string;
 let root: string;
@@ -384,5 +390,57 @@ describe("el registro de pasadas", () => {
     expect(resultado.exitCode).toBe(0);
     expect(resultado.stdout).toContain("sin-jornada");
     expect(resultado.stderr).toContain("No se pudo registrar la pasada");
+  });
+});
+
+describe("la jornada vigente cuando cambia el día UTC", () => {
+  const AYER = new Date("2026-10-06T22:00:00.000Z");
+  const HOY = new Date("2026-10-07T01:00:00.000Z");
+  const armarAyer = () => armarJornada({ project: proyecto(), tickets: [A, B], ahora: () => AYER });
+
+  it("sin jornada del día, despacha el ticket aprobado de la jornada más reciente con pendientes", async () => {
+    armarAyer();
+    const execute = vi.fn(() => ({ status: 0, stdout: "hecho", stderr: "" }));
+    const avance = await avanzarJornada({ project: proyecto(), home, ahora: () => HOY, execute });
+
+    expect(avance.journeyId).toBe(jornadaDelDia(AYER));
+    expect(avance.estado).toBe("despachado");
+    expect(avance.ticketId).toBe(A);
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(jornadaVigente(proyecto(), HOY)).toBe(jornadaDelDia(AYER));
+  });
+
+  it("con jornada del día la usa aunque una anterior tenga pendientes", () => {
+    armarAyer();
+    armarJornada({ project: proyecto(), tickets: [B], ahora: () => HOY });
+    expect(jornadaVigente(proyecto(), HOY)).toBe(jornadaDelDia(HOY));
+  });
+
+  it("sin ninguna jornada con pendientes devuelve sin-jornada sin invocar al ejecutor", async () => {
+    armarAyer();
+    fijarEstado(A, "closed");
+    fijarEstado(B, "closed");
+    const execute = vi.fn();
+    const avance = await avanzarJornada({ project: proyecto(), home, ahora: () => HOY, execute });
+
+    expect(avance.estado).toBe("sin-jornada");
+    expect(avance.detalle).toContain(`${jornadaDelDia(AYER)}, no tiene tickets pendientes`);
+    expect(jornadaVigente(proyecto(), HOY)).toBeNull();
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it("un ticket en in_progress heredado de la jornada anterior no se despacha otra vez", async () => {
+    armarAyer();
+    fijarEstado(A, "in_progress");
+    const nueva = armarJornada({ project: proyecto(), tickets: [B], ahora: () => HOY });
+    expect(nueva.heredados?.tickets).toEqual([A]);
+
+    const execute = vi.fn(() => ({ status: 0, stdout: "hecho", stderr: "" }));
+    const avance = await avanzarJornada({ project: proyecto(), home, ahora: () => HOY, execute });
+
+    expect(avance.journeyId).toBe(jornadaDelDia(HOY));
+    expect(avance.ticketId).toBe(B);
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(estado(A)).toBe("in_progress");
   });
 });

@@ -94,6 +94,7 @@ import {
   emitirAprobacionesDeJornada,
   avanzarJornada,
   jornadaDelDia,
+  jornadaVigente,
   registrarPasada,
   liberarParada,
   registrarAprobacionDePlan,
@@ -2785,7 +2786,7 @@ export async function journeyAdvanceCommand(
       return error("--fase admite: preparacion o ejecucion.", EXIT_SCHEMA);
     }
     const destino = typeof flags["to"] === "string" ? flags["to"] : "";
-    const journeyId = typeof flags["journey"] === "string" ? flags["journey"] : jornadaDelDia((opciones.ahora ?? (() => new Date()))());
+    const journeyId = typeof flags["journey"] === "string" ? flags["journey"] : (jornadaVigente(project, (opciones.ahora ?? (() => new Date()))()) ?? jornadaDelDia((opciones.ahora ?? (() => new Date()))()));
     let avance: Awaited<ReturnType<typeof avanzarJornada>>;
     try {
       avance = await avanzarJornada({

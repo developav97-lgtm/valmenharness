@@ -157,6 +157,40 @@ export function readJourneys(project: AuthorizedProject): readonly Journey[] {
   return [...current.values()];
 }
 
+/**
+ * La jornada creada más recientemente, con su última foto, leída solo desde la raíz del registro.
+ *
+ * Es para el vigilante de avisos, que conoce las rutas y no el proyecto autorizado: no valida el
+ * historial (eso es de `readJourneys`) y devuelve `null` si falta o no se puede leer.
+ */
+export function ultimaJornadaDelRegistro(
+  root: string,
+): { readonly journeyId: string; readonly tickets: readonly string[] } | null {
+  let texto: string;
+  try {
+    texto = readFileSync(join(root, ".valmen", "journeys", "events.jsonl"), "utf8");
+  } catch {
+    return null;
+  }
+  const actual = new Map<string, string[]>();
+  for (const linea of texto.split("\n")) {
+    if (linea.trim() === "") continue;
+    try {
+      const valor = JSON.parse(linea) as { journeyId?: unknown; tickets?: unknown };
+      if (typeof valor.journeyId !== "string" || !Array.isArray(valor.tickets)) continue;
+      const ordenados = (valor.tickets as { ticketId?: unknown; order?: unknown }[])
+        .filter((t) => typeof t.ticketId === "string")
+        .sort((a, b) => Number(a.order) - Number(b.order))
+        .map((t) => t.ticketId as string);
+      actual.set(valor.journeyId, ordenados);
+    } catch {
+      // Una línea ilegible no impide leer el resto.
+    }
+  }
+  const ultima = [...actual.entries()].at(-1);
+  return ultima === undefined ? null : { journeyId: ultima[0], tickets: ultima[1] };
+}
+
 function appendJourneyRevision(
   project: AuthorizedProject,
   input: JourneyRevisionInput,

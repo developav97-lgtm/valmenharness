@@ -4,7 +4,7 @@ id: BUGFIX-CLI-JORNADA-CADUCA-MEDIANOCHE-20261007
 title: Que la jornada siga viva hasta terminar sus tickets en vez de caducar a medianoche UTC
 type: BUGFIX
 module: CLI
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -69,25 +69,25 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1. Sin jornada del día, el avance despacha el ticket aprobado de la jornada más reciente que tiene tickets sin cerrar
+- [x] C1. Sin jornada del día, el avance despacha el ticket aprobado de la jornada más reciente que tiene tickets sin cerrar
       <!-- test: npx vitest run tests/avance-jornada.test.ts -->
-- [ ] C2. Si existe la jornada del día, el avance la usa aunque otra jornada anterior tenga pendientes
+- [x] C2. Si existe la jornada del día, el avance la usa aunque otra jornada anterior tenga pendientes
       <!-- test: npx vitest run tests/avance-jornada.test.ts -->
-- [ ] C3. Sin ninguna jornada con tickets pendientes, el avance devuelve sin-jornada sin invocar al ejecutor
+- [x] C3. Sin ninguna jornada con tickets pendientes, el avance devuelve sin-jornada sin invocar al ejecutor
       <!-- test: npx vitest run tests/avance-jornada.test.ts -->
-- [ ] C4. Un ticket ya en in_progress heredado de la jornada anterior no se despacha otra vez
+- [x] C4. Un ticket ya en in_progress heredado de la jornada anterior no se despacha otra vez
       <!-- test: npx vitest run tests/avance-jornada.test.ts -->
-- [ ] C5. Crear la jornada de un día nuevo incluye primero los tickets pendientes de la jornada anterior sin duplicarlos
+- [x] C5. Crear la jornada de un día nuevo incluye primero los tickets pendientes de la jornada anterior sin duplicarlos
       <!-- test: npx vitest run tests/jornada-diaria.test.ts -->
-- [ ] C6. El plan del día nombra los tickets heredados y la jornada de la que vienen
+- [x] C6. El plan del día nombra los tickets heredados y la jornada de la que vienen
       <!-- test: npx vitest run tests/jornada-diaria.test.ts -->
-- [ ] C7. El vigilante avisa una vez que la jornada más reciente terminó cuando todos sus tickets están cerrados
+- [x] C7. El vigilante avisa una vez que la jornada más reciente terminó cuando todos sus tickets están cerrados
       <!-- test: npx vitest run tests/vigilante-jornada.test.ts -->
-- [ ] C8. Una segunda pasada del vigilante no repite el aviso de jornada terminada
+- [x] C8. Una segunda pasada del vigilante no repite el aviso de jornada terminada
       <!-- test: npx vitest run tests/vigilante-jornada.test.ts -->
-- [ ] C9. Un aviso de jornada terminada que no se entregó vuelve a salir en la pasada siguiente del vigilante
+- [x] C9. Un aviso de jornada terminada que no se entregó vuelve a salir en la pasada siguiente del vigilante
       <!-- test: npx vitest run tests/vigilante-jornada.test.ts -->
-- [ ] C10. El proyecto compila sin errores de tipos
+- [x] C10. El proyecto compila sin errores de tipos
       <!-- test: npx tsc --build tsconfig.build.json -->
 
 ## Puntos
@@ -98,11 +98,23 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+- `packages/engine/src/journey-advance.ts`: `ticketsPendientesDeJornada` y `jornadaVigente(project, ahora)` (la del día si existe; si no, la más reciente con tickets existentes sin cerrar; si no, `null`). `avanzarJornada` la usa sin `journeyId` (un `journeyId` explícito se respeta); con `null` devuelve `sin-jornada` y nombra la jornada más reciente como terminada.
+- `packages/cli/src/commands.ts`: la pasada de error de `journeyAdvanceCommand` usa `jornadaVigente`.
+- `packages/engine/src/journey-plan.ts`: al crear la jornada de un día nuevo se anteponen los pendientes de la vigente anterior (orden y dependencias propios, sin duplicar pedidos, `maximo` sobre la lista combinada); `JornadaArmada.heredados` y la línea «Heredados de JOR-…» en `renderPlanDelDia`. `packages/mcp/src/tools.ts`: `armar_jornada` devuelve `heredados`.
+- `packages/engine/src/approval.ts`: `JourneyFinishedNotice` (`journey-finished-notice`), lector, exclusión del conteo de intentos y `jornadasTerminadasAvisadas`. `packages/engine/src/notify.ts`: `renderJourneyFinishedNotification`.
+- `packages/engine/src/journeys.ts`: `ultimaJornadaDelRegistro(root)`, lectura tolerante solo por raíz, porque `pendientesDeAvisar` recibe rutas y no un proyecto autorizado (desviación menor del plan, que no la nombraba).
+- `packages/cli/src/hermes.ts`: `pendientesDeAvisar` agrega `jornada-terminada` solo para la jornada más reciente con todos sus tickets existentes cerrados y sin marca; `hermesNotifyPendientes` anota la marca solo si la entrega salió.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Contrato de entrega (desde la raíz del repositorio, Node 24):
+
+- `npx vitest run tests/avance-jornada.test.ts tests/jornada-diaria.test.ts tests/vigilante-jornada.test.ts` — esperado: todo pasa (53 pruebas; C1–C9).
+- `npx tsc --build tsconfig.build.json` — esperado: sin salida (C10).
+- `npx vitest run` — esperado: sin fallos nuevos. Hay 53 fallos previos («Una sesión desatendida no puede decidir una compuerta») en hermes-notify, delegation, gate-*, firma-de-compuerta y autorizacion-*; son de ambiente, no de este ticket.
+- Validación manual: ninguna. Requisitos de ambiente: ninguno.
+
+Resultado: las tres suites del ticket pasan (53/53); `npx tsc --build tsconfig.build.json` sale sin errores; la suite completa tiene 53 fallos, los mismos 53 (mismos archivos y conteos) con y sin este cambio (comprobado con `git stash -u`), todos de la sesión desatendida.
 
 ## QA
 
@@ -195,6 +207,24 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-07",
+    "at": "2026-10-08T02:20:58.080Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-07",
+    "at": "2026-10-08T02:37:15.267Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```

@@ -7,12 +7,15 @@
  * primero, y un informe de lo que pasó. El avance no llama a ningún modelo: lo único que
  * lanza es el ejecutor que declara la política del proyecto, a través del despacho.
  */
+import { parseTicket } from "@valmen/core";
+
 import { appendApproval } from "./approval.js";
 import { type AutonomousStopReceipt } from "./autonomous-stops.js";
+import { findTicket } from "./discovery.js";
 import { dispatchJourney, type JourneyDispatchRequest } from "./journey-dispatch.js";
 import { type EjecutorDePreparacion, despacharPreparacion } from "./journey-preparation.js";
 import { type EntregaDeAviso } from "./journey-plan.js";
-import { readJourneys } from "./journeys.js";
+import { type Journey, readJourneys } from "./journeys.js";
 import { type AuthorizedProject } from "./project-resolution.js";
 
 export type EstadoDeAvance = "sin-jornada" | "despachado" | "ya-despachado" | "sin-candidato";
@@ -38,7 +41,7 @@ export interface AvanceDeJornada {
 export interface AvanzarJornadaRequest {
   readonly project: AuthorizedProject;
   readonly home: string;
-  /** La jornada a avanzar; sin ella, la del día (`JOR-<AAAAMMDD>`). */
+  /** La jornada a avanzar; sin ella, la vigente (`jornadaVigente`). */
   readonly journeyId?: string | undefined;
   readonly ahora?: (() => Date) | undefined;
   /** Borde del proceso externo: lo único que se invoca, inyectable para no lanzar agentes. */
@@ -87,18 +90,51 @@ export function jornadaDelDia(fecha: Date): string {
   return `JOR-${fecha.toISOString().slice(0, 10).replaceAll("-", "")}`;
 }
 
+/**
+ * Los tickets de una jornada que existen en el registro y no están cerrados.
+ *
+ * Un ticket que ya no existe no cuenta como pendiente: no hay nada que avanzar en él.
+ */
+export function ticketsPendientesDeJornada(project: AuthorizedProject, jornada: Journey): string[] {
+  const pendientes: string[] = [];
+  for (const entrada of jornada.tickets) {
+    const ubicado = findTicket(project.paths, entrada.ticketId);
+    if (ubicado === undefined) continue;
+    if (parseTicket(ubicado.text).fields.workflow_status !== "closed") pendientes.push(entrada.ticketId);
+  }
+  return pendientes;
+}
+
+/**
+ * La jornada que el avance debe usar: la del día si existe; si no, la más reciente (por orden de
+ * creación) que todavía tenga tickets sin cerrar; si no hay ninguna, `null`.
+ */
+export function jornadaVigente(project: AuthorizedProject, ahora: Date): string | null {
+  const jornadas = readJourneys(project);
+  const delDia = jornadaDelDia(ahora);
+  if (jornadas.some((jornada) => jornada.journeyId === delDia)) return delDia;
+  const vigente = [...jornadas].reverse().find((jornada) => ticketsPendientesDeJornada(project, jornada).length > 0);
+  return vigente?.journeyId ?? null;
+}
+
 /** El identificador del intento: uno por jornada, para que el segundo avance reconozca al primero. */
 const INTENTO_DE_AVANCE = "avance-1";
 
 /** Avanza la jornada una vez: las dos fases por defecto, o solo la indicada. */
 export async function avanzarJornada(request: AvanzarJornadaRequest): Promise<AvanceDeJornada> {
   const ahora = request.ahora?.() ?? new Date();
-  const journeyId = request.journeyId ?? jornadaDelDia(ahora);
+  // Un `journeyId` explícito se respeta tal cual, sin búsqueda.
+  const journeyId = request.journeyId ?? jornadaVigente(request.project, ahora) ?? jornadaDelDia(ahora);
 
   if (!readJourneys(request.project).some((jornada) => jornada.journeyId === journeyId)) {
+    const ultima = readJourneys(request.project).at(-1);
+    const terminada =
+      request.journeyId === undefined && ultima !== undefined
+        ? ` La jornada más reciente, ${ultima.journeyId}, no tiene tickets pendientes: está terminada.`
+        : "";
     const detalle =
       `No hay una jornada ${journeyId} en el proyecto ${request.project.projectId}: ` +
-      "se arma con `valmen journey plan`. No se hizo nada.";
+      `se arma con \`valmen journey plan\`.${terminada} No se hizo nada.`;
     return { estado: "sin-jornada", journeyId, ticketId: null, detalle, fases: [] };
   }
 

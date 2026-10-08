@@ -66,6 +66,9 @@ import {
   arbolesSuciosAvisados,
   autonomousStopsAvisados,
   episodioDeArbolSucio,
+  jornadasTerminadasAvisadas,
+  renderJourneyFinishedNotification,
+  ultimaJornadaDelRegistro,
   leerPasadasDeArbol,
   renderDirtyTreeNotification,
   comandosDelContrato,
@@ -728,6 +731,12 @@ export type PendienteDeAvisar =
       readonly archivos: readonly string[];
     }
   | {
+      /** La jornada más reciente del historial, con todos sus tickets cerrados. */
+      readonly kind: "jornada-terminada";
+      readonly journeyId: string;
+      readonly tickets: readonly string[];
+    }
+  | {
       readonly kind: "proceso";
       readonly runId: string;
       readonly processId: string;
@@ -819,6 +828,23 @@ export function pendientesDeAvisar(paths: RegistryPaths, now: Date): PendienteDe
     if (episodio === null || episodio.pasadas < 2) continue;
     if (suciosAvisados.has(`${journeyId}:${episodio.episodio}`)) continue;
     salida.push({ kind: "arbol-sucio", journeyId, ...episodio });
+  }
+
+  // Una jornada terminada se avisa una vez, y solo la más reciente: avisar todo el historial de
+  // jornadas cerradas inundaría el canal la primera vez.
+  const ultimaJornada = ultimaJornadaDelRegistro(paths.root);
+  if (ultimaJornada !== null && !jornadasTerminadasAvisadas(paths).has(ultimaJornada.journeyId)) {
+    const estados = ultimaJornada.tickets.flatMap((ticketId) => {
+      const ubicado = findTicket(paths, ticketId);
+      return ubicado === undefined ? [] : [parseTicket(ubicado.text).fields.workflow_status];
+    });
+    if (estados.length > 0 && estados.every((estado) => estado === "closed")) {
+      salida.push({
+        kind: "jornada-terminada",
+        journeyId: ultimaJornada.journeyId,
+        tickets: ultimaJornada.tickets,
+      });
+    }
   }
 
   // Un ticket que llega a `awaiting_user_tests` espera a una persona igual que una compuerta.
@@ -1017,6 +1043,25 @@ export function hermesNotifyPendientes(request: NotifyPendingRequest): CommandRe
         notifiedAt: request.now.toISOString(),
       });
       notificados.push(`${pendiente.journeyId} · árbol sucio`);
+      continue;
+    }
+
+    if (pendiente.kind === "jornada-terminada") {
+      const entrega = hermesSendChannel({
+        target: to,
+        ...(request.runner === undefined ? {} : { runner: request.runner }),
+      }).notify(renderJourneyFinishedNotification({ journeyId: pendiente.journeyId, tickets: pendiente.tickets }));
+      if (!entrega.delivered) {
+        // No se anota: un aviso que no salió no cuenta como avisado y se reintenta.
+        fallidos.push({ que: `${pendiente.journeyId} · jornada terminada`, motivo: entrega.detail });
+        continue;
+      }
+      appendApproval(request.paths, {
+        kind: "journey-finished-notice",
+        journeyId: pendiente.journeyId,
+        notifiedAt: request.now.toISOString(),
+      });
+      notificados.push(`${pendiente.journeyId} · jornada terminada`);
       continue;
     }
 

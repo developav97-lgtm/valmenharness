@@ -539,6 +539,30 @@ export function renderDirtyTreeNotification(input: DirtyTreeNotificationInput): 
   };
 }
 
+/** Una jornada cuyos tickets quedaron todos cerrados. */
+export interface JourneyFinishedNotificationInput {
+  readonly journeyId: string;
+  readonly tickets: readonly string[];
+}
+
+/** El aviso de que la jornada terminó: no queda ningún ticket pendiente. */
+export function renderJourneyFinishedNotification(input: JourneyFinishedNotificationInput): NotificationPayload {
+  return {
+    key: `journey-finished:${input.journeyId}`,
+    subject: `Jornada terminada · ${input.journeyId}`,
+    body: [
+      "✅ JORNADA TERMINADA",
+      "",
+      `  jornada  ${input.journeyId}`,
+      `  tickets  ${input.tickets.length} cerrado(s)`,
+      ...input.tickets.map((ticket) => `    ${ticket}`),
+      "",
+      "No queda ningún ticket pendiente: el avance no hará nada hasta que armes otra jornada",
+      "(valmen journey plan).",
+    ].join("\n"),
+  };
+}
+
 /** Un ticket que llegó a las pruebas del responsable, listo para avisar (R-JORN-008). */
 export interface TestsReadyNotificationInput {
   readonly ticketId: string;

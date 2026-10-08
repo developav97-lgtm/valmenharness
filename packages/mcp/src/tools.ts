@@ -394,6 +394,7 @@ const DEFINICIONES: readonly ToolDefinition[] = [
         revisada: { type: "boolean", description: "`true` si ya existía la del día y se revisó." },
         tickets: { type: "array", description: "Los tickets del día, en orden, con sus dependencias." },
         aviso: { type: ["object", "null"], description: "El resultado del envío, o `null` si no se pidió." },
+        heredados: { type: ["object", "null"], description: "Los tickets pendientes heredados de la jornada anterior, o `null`." },
       },
       required: ["jornada", "revisada", "tickets", "aviso"],
       additionalProperties: false,
@@ -2534,6 +2535,7 @@ async function ejecutarHerramienta(
             revisada: jornada.revisada,
             tickets: jornada.tickets.map((t) => ({ ...t })),
             aviso: jornada.aviso === null ? null : { ...jornada.aviso },
+            heredados: jornada.heredados === null ? null : { desde: jornada.heredados.desde, tickets: [...jornada.heredados.tickets] },
             siguiente_paso:
               "La jornada está escrita: despacha con el disparador (ticket siguiente) o revisa la hoja de ruta con `ver_jornadas`.",
           },

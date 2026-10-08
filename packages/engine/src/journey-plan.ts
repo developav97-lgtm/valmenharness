@@ -14,6 +14,7 @@ import { EXIT_INVARIANT, EXIT_SCHEMA, fail, parseTicket } from "@valmen/core";
 
 import { ordenDelGrafo } from "./delegation.js";
 import { autonomousConfig, findTicket } from "./discovery.js";
+import { jornadaVigente, ticketsPendientesDeJornada } from "./journey-advance.js";
 import { readJourneyAuthorization } from "./journey-authorization.js";
 import {
   type JourneyTicketInput,
@@ -50,6 +51,8 @@ export interface JornadaArmada {
   readonly executor: string;
   readonly plan: string;
   readonly aviso: EntregaDeAviso | null;
+  /** Los tickets pendientes que la jornada nueva heredó de la anterior; `null` si no heredó. */
+  readonly heredados: { readonly desde: string; readonly tickets: readonly string[] } | null;
 }
 
 /** El mensaje cuando la política no autoriza a ningún ejecutor: dice qué declarar. */
@@ -68,6 +71,7 @@ export function renderPlanDelDia(
   tickets: JornadaArmada["tickets"],
   executor: string,
   revisada: boolean,
+  heredados: JornadaArmada["heredados"] = null,
 ): string {
   const lineas = tickets.map((ticket, indice) => {
     const deps = ticket.dependsOn.length === 0 ? "" : ` (tras ${ticket.dependsOn.join(", ")})`;
@@ -75,7 +79,8 @@ export function renderPlanDelDia(
   });
   return (
     `Plan del día ${journeyId}${revisada ? " (revisado)" : ""}: ${tickets.length} ticket(s), ` +
-    `ejecutor ${executor}.\n${lineas.join("\n")}`
+    `ejecutor ${executor}.\n${lineas.join("\n")}` +
+    (heredados === null ? "" : `\nHeredados de ${heredados.desde}: ${heredados.tickets.join(", ")}`)
   );
 }
 
@@ -116,6 +121,36 @@ export function armarJornada(request: ArmarJornadaRequest): JornadaArmada {
     }
     elegidos.push({ id: pedido.id, title: documento.fields.title, dependsOn: pedido.dependsOn });
   }
+
+  // La jornada de un día nuevo hereda los pendientes de la vigente anterior, antes que los pedidos;
+  // revisar la del día no hereda nada. El tope aplica a la lista combinada.
+  const ahora = request.ahora?.() ?? new Date();
+  const journeyId = `JOR-${fechaCompacta(ahora)}`;
+  const revisada = readJourneys(project).some((jornada) => jornada.journeyId === journeyId);
+  let heredados: JornadaArmada["heredados"] = null;
+  if (!revisada) {
+    const anteriorId = jornadaVigente(project, ahora);
+    const anterior = readJourneys(project).find((jornada) => jornada.journeyId === anteriorId);
+    if (anterior !== undefined) {
+      const pendientes = new Set(ticketsPendientesDeJornada(project, anterior));
+      const pedidosIds = new Set(elegidos.map((ticket) => ticket.id));
+      const previos: typeof elegidos = [];
+      for (const entrada of [...anterior.tickets].sort((a, b) => a.order - b.order)) {
+        if (!pendientes.has(entrada.ticketId) || pedidosIds.has(entrada.ticketId)) continue;
+        const ubicado = findTicket(project.paths, entrada.ticketId);
+        if (ubicado === undefined) continue;
+        previos.push({
+          id: entrada.ticketId,
+          title: parseTicket(ubicado.text).fields.title,
+          dependsOn: entrada.dependsOn,
+        });
+      }
+      if (previos.length > 0) {
+        elegidos.unshift(...previos);
+        heredados = { desde: anterior.journeyId, tickets: previos.map((ticket) => ticket.id) };
+      }
+    }
+  }
   const delDia = request.maximo === undefined ? elegidos : elegidos.slice(0, request.maximo);
   if (delDia.length === 0) {
     fail("No hay tickets pendientes para armar la jornada.", EXIT_INVARIANT);
@@ -134,9 +169,6 @@ export function armarJornada(request: ArmarJornadaRequest): JornadaArmada {
     authorizationIds: [executor],
   }));
 
-  const ahora = request.ahora?.() ?? new Date();
-  const journeyId = `JOR-${fechaCompacta(ahora)}`;
-  const revisada = readJourneys(project).some((jornada) => jornada.journeyId === journeyId);
   const ocurrido = ahora.toISOString();
   const entrada = {
     revisionId: `${journeyId}-${revisada ? `rev-${ahora.getTime()}` : "alta"}`,
@@ -152,10 +184,10 @@ export function armarJornada(request: ArmarJornadaRequest): JornadaArmada {
     title: ticket.title,
     dependsOn: ticket.dependsOn.filter((dependencia) => enLaJornada.has(dependencia)),
   }));
-  const plan = renderPlanDelDia(journeyId, tickets, executor, revisada);
+  const plan = renderPlanDelDia(journeyId, tickets, executor, revisada, heredados);
 
   // El aviso va **después** de escribir: si el canal falla, la jornada ya existe y el
   // resultado lo dice; deshacerla por un aviso perdido sería castigar el trabajo hecho.
   const aviso = request.notificar === undefined ? null : request.notificar(plan);
-  return { journeyId, revisada, tickets, omitidos, executor, plan, aviso };
+  return { journeyId, revisada, tickets, omitidos, executor, plan, aviso, heredados };
 }
