@@ -4,7 +4,7 @@ id: IMPROVEMENT-ADAPTER-CONTRATO-PERFILES-20261007
 title: Documentar en AGENTS.md y en la skill de flujo cómo se ejecuta por fases
 type: IMPROVEMENT
 module: ADAPTER
-workflow_status: planned
+workflow_status: approved
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -64,7 +64,7 @@ Ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente; lo aprueba una persona (el PO) antes de implementar.
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 - Alcance: una frase en el paso 2 de «Continuar un ticket» de `WORKFLOW_TEMPLATE` (`packages/adapter/src/templates.ts`), con el recorte del inciso del paso 1 para no subir el tope; una frase en el paso 1 de `skills/corrida-delegada/SKILL.md` y su copia `.valmen/skills/corrida-delegada/SKILL.md`; las pruebas. Exclusiones: el motor (`resume.ts`, `journey-brief.ts`, `routing.ts`), la skill `corrida-orquestada` y la sección «Corrida orquestada» (ya lo dicen), el tope `TOPE_BYTES` y `valmen sync` en otros proyectos.
 - Pasos ordenados:
   1. Pruebas en rojo en `tests/plantillas-compactas.test.ts`: un `describe` nuevo sobre la sección «Continuar un ticket» de `WORKFLOW_TEMPLATE` aplanado que afirma que, con «Delegación de la fase», la fase la hace un subagente con ese modelo (C1), sin cambiar el modelo de la sesión (C2), y que quien recibió el brief hace la fase él (C3); y, con el ayudante `skill("corrida-delegada")` del mismo archivo, que la skill nombra «Delegación de la fase» con el subagente que indica (C4) y que no se cambia el modelo de la sesión (C5). (C1 a C5)
@@ -185,6 +185,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-08",
+    "at": "2026-10-08T22:03:12.114Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"La A (aprueba el plan de CONTRATO-PERFILES quitando el inciso del paso 1 sin subir el tope)\",\"planHash\":\"sha256:ad04bd5ac66ff83a6b22d8fb73ebf13c6473adbfa1584548f884d78f239e1e07\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-08",
+    "at": "2026-10-08T22:03:12.471Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:ad04bd5ac66ff83a6b22d8fb73ebf13c6473adbfa1584548f884d78f239e1e07."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-08",
+    "at": "2026-10-08T22:03:12.471Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
   }
 ]
 ```

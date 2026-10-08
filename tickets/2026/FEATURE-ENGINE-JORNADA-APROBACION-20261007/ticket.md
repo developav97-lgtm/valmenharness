@@ -4,7 +4,7 @@ id: FEATURE-ENGINE-JORNADA-APROBACION-20261007
 title: Aprobar los planes elegibles al preparar la jornada y dejar para una persona el resto con su aviso
 type: FEATURE
 module: ENGINE
-workflow_status: planned
+workflow_status: approved
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -59,7 +59,7 @@ Ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente; lo aprueba una persona (PO). Este plan no se aprueba por autorización.
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 - Alcance: una función de motor que aprueba por autorización los planes elegibles de una jornada y los mueve a `approved`, una orden `valmen journey approve-eligible` que la expone al orquestador, el aviso de los pendientes en formato de opciones y efecto, y la actualización de la skill `corrida-orquestada`. Exclusiones: las de la descripción funcional.
 - Decisiones que este plan toma y la persona confirma al aprobarlo: (a) la orden es atendida —hereda `assertSesionAtendida`—, así que la «preparación» que aprueba es la del orquestador en sesión, no una corrida desatendida; (b) el aviso de los pendientes sale por la orden existente `journey notify-plans --to telegram`, que ya excluye lo aprobado, y no se agrega un tipo nuevo al vigilante; (c) un ticket `derivableAlRevisor` queda pendiente con esa marca y no se le pide nada al revisor.
 - Pasos ordenados:
@@ -199,6 +199,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-08",
+    "at": "2026-10-08T22:03:11.300Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"La A (aprueba el plan de JORNADA-APROBACION completo, con el aviso por journey notify-plans)\",\"planHash\":\"sha256:f3520cfab49284823d472a795f83b4abb3738958401a82965c56fd10085dd804\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-08",
+    "at": "2026-10-08T22:03:11.695Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:f3520cfab49284823d472a795f83b4abb3738958401a82965c56fd10085dd804."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-08",
+    "at": "2026-10-08T22:03:11.695Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
   }
 ]
 ```
