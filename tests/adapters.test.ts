@@ -218,6 +218,7 @@ describe("proyección a AGENTS.md", () => {
     // Las secciones que hacen útil el documento para un agente nuevo.
     expect(output).toContain("Autorización antes de acción");
     expect(output).toContain("Acciones que nunca se automatizan");
+    expect(output).toContain("autorización de aprobación");
     expect(output).toContain("### Corrida orquestada");
     expect(output.toLowerCase()).toContain("los bloques append-only no se reescriben");
   });

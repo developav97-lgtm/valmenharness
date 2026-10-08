@@ -114,6 +114,14 @@ describe("lo que frena una acción se queda en la plantilla", () => {
     );
   });
 
+  it("declara la autorización de aprobación como condición y como acción humana (R-APRO-001)", () => {
+    expect(workflow, "C1").toMatch(/se aprueba sin una persona solo bajo una \*\*autorización de aprobación\*\* vigente que creó una persona/);
+    expect(workflow, "C2").toMatch(/se atribuye a ella, nunca al agente/);
+    expect(workflow, "C3").toMatch(/SECURITY, un `block` y un despliegue a producción, siempre\./);
+    const acciones = workflow.slice(workflow.indexOf("### Acciones que nunca se automatizan"));
+    expect(acciones, "C4").toMatch(/Crear o ampliar una autorización de aprobación \(sin herramienta MCP\)/);
+  });
+
   it("declara la QA por agente como vía de entrega y su autorización como acción humana (R-QAAG-009)", () => {
     expect(delivery, "«Entrega y documentación» no dice que un agente puede ejecutar la QA").toMatch(/La QA puede ejecutarla un agente/);
     expect(delivery).toMatch(/autorización vigente que creó una persona/);

@@ -4,7 +4,7 @@ id: IMPROVEMENT-ADAPTER-CONTRATO-APROBACION-20261007
 title: Declarar en AGENTS.md la aprobación autónoma y su autorización como acción humana
 type: IMPROVEMENT
 module: ADAPTER
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -83,21 +83,21 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1 (R-APRO-001): `WORKFLOW_TEMPLATE` declara que un análisis o un plan solo se aprueba sin una persona bajo una autorización de aprobación vigente que creó una persona
+- [x] C1 (R-APRO-001): `WORKFLOW_TEMPLATE` declara que un análisis o un plan solo se aprueba sin una persona bajo una autorización de aprobación vigente que creó una persona
       <!-- test: npx vitest run tests/plantillas-compactas.test.ts -->
-- [ ] C2 (R-APRO-001): `WORKFLOW_TEMPLATE` declara que esa aprobación se atribuye a la autorización, nunca al agente
+- [x] C2 (R-APRO-001): `WORKFLOW_TEMPLATE` declara que esa aprobación se atribuye a la autorización, nunca al agente
       <!-- test: npx vitest run tests/plantillas-compactas.test.ts -->
-- [ ] C3 (R-APRO-004, R-APRO-005): `WORKFLOW_TEMPLATE` declara que SECURITY, un `block` y un despliegue a producción siempre los aprueba una persona
+- [x] C3 (R-APRO-004, R-APRO-005): `WORKFLOW_TEMPLATE` declara que SECURITY, un `block` y un despliegue a producción siempre los aprueba una persona
       <!-- test: npx vitest run tests/plantillas-compactas.test.ts -->
-- [ ] C4 (R-APRO-001): «Acciones que nunca se automatizan» nombra crear o ampliar una autorización de aprobación, sin herramienta MCP
+- [x] C4 (R-APRO-001): «Acciones que nunca se automatizan» nombra crear o ampliar una autorización de aprobación, sin herramienta MCP
       <!-- test: npx vitest run tests/plantillas-compactas.test.ts -->
-- [ ] C5: las pruebas existentes de las acciones que nunca se automatizan y de R-QAAG-009 siguen pasando sin cambiar sus frases
+- [x] C5: las pruebas existentes de las acciones que nunca se automatizan y de R-QAAG-009 siguen pasando sin cambiar sus frases
       <!-- test: npx vitest run tests/plantillas-compactas.test.ts -->
-- [ ] C6: las tres plantillas fijas suman 10 200 B o menos
+- [x] C6: las tres plantillas fijas suman 10 400 B o menos (tope sin cambios; caben 10 390 B)
       <!-- test: npx vitest run tests/plantillas-compactas.test.ts -->
-- [ ] C7: el `AGENTS.md` que proyecta `projectAgentsMd` contiene la regla de la autorización de aprobación
+- [x] C7: el `AGENTS.md` que proyecta `projectAgentsMd` contiene la regla de la autorización de aprobación
       <!-- test: npx vitest run tests/adapters.test.ts -->
-- [ ] C8: el `AGENTS.md` proyectado sigue dentro de su presupuesto de tamaño
+- [x] C8: el `AGENTS.md` proyectado sigue dentro de su presupuesto de tamaño
       <!-- test: npx vitest run tests/agents-md-tamano.test.ts -->
 
 ## Puntos
@@ -108,11 +108,16 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+- `packages/adapter/src/templates.ts`: párrafo de la autorización de aprobación bajo «### Gates» y línea en «Acciones que nunca se automatizan» (+412 B). El espacio real era 7 B (las plantillas pesaban 10 393 B con tope 10 400, no 9 744/9 800 del plan), así que se recortaron ~415 B de redacción ya existente sin tocar frases que fijan las pruebas; el tope `TOPE_BYTES` queda en 10 400. Resultado: 10 390 B.
+- `AGENTS.md` regenerado con `node packages/cli/dist/main.js sync`.
+- Pruebas: caso R-APRO-001 en `tests/plantillas-compactas.test.ts` y aserción en `tests/adapters.test.ts`.
 
 ## Pruebas
 
-Pendiente de ejecución.
+- Directorio: raíz del worktree. Comando: `npx vitest run tests/plantillas-compactas.test.ts tests/adapters.test.ts tests/agents-md-tamano.test.ts tests/respuesta-agents-md.test.ts` y `npx tsc --noEmit -p tsconfig.json`.
+- Resultado esperado: todo en verde; plantillas 10 390 B <= 10 400 B.
+- Validación manual: leer el párrafo bajo «### Gates» y la línea nueva en «Acciones que nunca se automatizan» de `AGENTS.md`.
+- Ambiente: Node 24; `npm run build` antes de `sync`.
 
 ## QA
 
@@ -141,7 +146,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-08",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": null,
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual: sin números de la sesión del subagente",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -205,6 +226,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-08",
+    "at": "2026-10-08T22:16:44.563Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-08",
+    "at": "2026-10-08T22:17:02.360Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-08",
+    "at": "2026-10-08T22:17:02.641Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
