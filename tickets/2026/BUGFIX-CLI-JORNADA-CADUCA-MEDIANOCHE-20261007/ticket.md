@@ -4,7 +4,7 @@ id: BUGFIX-CLI-JORNADA-CADUCA-MEDIANOCHE-20261007
 title: Que la jornada siga viva hasta terminar sus tickets en vez de caducar a medianoche UTC
 type: BUGFIX
 module: CLI
-workflow_status: planned
+workflow_status: approved
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -51,7 +51,7 @@ Ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente de la aprobación explícita del PO; no se implementa hasta que la registre una persona.
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 - Pasos ordenados:
   1. `packages/engine/src/journey-advance.ts`: nueva función exportada `jornadaVigente(project, ahora)` que devuelve la jornada del día si existe; si no, la más reciente por orden de creación de `readJourneys` con al menos un ticket que exista en el registro y no esté `closed` (leído con `findTicket` + `parseTicket`); si no hay ninguna, `null`. `avanzarJornada` la usa cuando no llega `journeyId`; con `null` devuelve `sin-jornada` y el detalle nombra la jornada más reciente como terminada cuando la hay. (C1, C2, C3)
   2. `packages/cli/src/commands.ts:2788`: la pasada de error usa `jornadaVigente` en vez de `jornadaDelDia` para que la pasada registre la misma jornada que el avance. (C1)
@@ -168,6 +168,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-07",
+    "at": "2026-10-08T02:20:47.459Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"A (aprueba los tres planes: caducidad a medianoche, elegibilidad de aprobación y agente revisor)\",\"planHash\":\"sha256:40f2a204c2bf5aef5c5d80d5a22042b5a27c2af25ea4e574ec31892383dd1e9c\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-07",
+    "at": "2026-10-08T02:20:48.107Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:40f2a204c2bf5aef5c5d80d5a22042b5a27c2af25ea4e574ec31892383dd1e9c."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-07",
+    "at": "2026-10-08T02:20:48.107Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
   }
 ]
 ```

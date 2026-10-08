@@ -4,7 +4,7 @@ id: FEATURE-ENGINE-ELEGIBILIDAD-APROBACION-20261007
 title: Decidir en código la elegibilidad con los tipos declarados (incluye SYNC, INTEGRATION y AGENT), impactos explícitos y sin SECURITY, block ni despliegue
 type: FEATURE
 module: ENGINE
-workflow_status: planned
+workflow_status: approved
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -63,7 +63,7 @@ Ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación: la decide el PO antes de `approved`; el tipo FEATURE exige su aprobación explícita.
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 - Alcance: la función de elegibilidad, su exportación, el comando de solo lectura y sus pruebas. Exclusiones: las del alcance de la descripción funcional.
 - Pasos ordenados:
   1. Crear `packages/engine/src/approval-eligibility.ts` con `elegibilidadDeAprobacion({ paths, ticketId, etapa, ahora? })` y los tipos `ReglaDeElegibilidadDeAprobacion` y `ResultadoDeElegibilidadDeAprobacion` (`elegible`, `reglas`, `autorizacion: { id, hash } | null`, `derivableAlRevisor`). Reglas, en este orden y todas evaluadas: `etapa` (solo `analysis` o `plan`; otra falla con su motivo); `tipo` (SECURITY nunca, C1); `despliegue` (la línea de impactos del diagnóstico nombra despliegue o deploy y no dice ninguno: nunca, C4); `qa-mechanical` (su último recibo vigente en `block`: nunca, C3); `compuerta` (con `veredictoDeCompuerta` sobre la compuerta de la etapa: `block` o rechazo humano nunca, C2; `review` no elegible, C8; sin recibo no elegible; `approve` cumple); `autorizacion` (entre las vigentes de `autorizacionesDeAprobacionVigentes`, la primera que cubre tipo, módulo, riesgo, impactos de `declaredImpactIds` y etapa; si ninguna, el detalle nombra la primera dimensión que falla en cada vigente, C5, C6, C7); `cupo` (`cupoRestanteDeAprobacion` mayor que cero, C9). `derivableAlRevisor` es verdadero solo si todo cumple salvo la compuerta en `review` y la autorización es de modo `reviewer` (C8). Exportarlo desde `packages/engine/src/index.ts`. (C1–C10)
@@ -178,6 +178,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-07",
+    "at": "2026-10-08T02:20:48.941Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"A (aprueba los tres planes: caducidad a medianoche, elegibilidad de aprobación y agente revisor)\",\"planHash\":\"sha256:d7418daf0caca4de6d6f6310626cd849bc12df9883047f2e74754357f5763754\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-07",
+    "at": "2026-10-08T02:20:49.981Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:d7418daf0caca4de6d6f6310626cd849bc12df9883047f2e74754357f5763754."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-07",
+    "at": "2026-10-08T02:20:49.981Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
   }
 ]
 ```

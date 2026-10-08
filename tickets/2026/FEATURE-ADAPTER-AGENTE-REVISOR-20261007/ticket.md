@@ -4,7 +4,7 @@ id: FEATURE-ADAPTER-AGENTE-REVISOR-20261007
 title: Definir el rol revisor y ejecutarlo con un modelo distinto al que produjo el artefacto
 type: FEATURE
 module: ADAPTER
-workflow_status: planned
+workflow_status: approved
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -62,7 +62,7 @@ Ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación: la decide el PO antes de `approved`; el tipo FEATURE exige su aprobación explícita.
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 - Alcance: el rol `reviewer` y su modelo por preset y perfil, la resolución del productor y la elección del revisor, la ejecución del revisor, el comando de solo lectura y sus pruebas. Exclusiones: las de la descripción funcional.
 - Pasos ordenados:
   1. En `packages/adapter/src/routing.ts`: agregar a `ROLES` el rol `reviewer` («Decide un `review` de análisis o plan con un modelo distinto al que lo produjo», consumidor `valmen review-agent`); darle modelo en los cuatro `PRESETS` (`quality`: `openrouter` `anthropic/claude-opus-4.6`; `balanced` y `economy`: `openrouter` `openai/gpt-5.6-luna-pro`; `suscripcion`: `codex` `gpt-6-sol`), y sumarlo a `ROLES_DE_EVALUACION` para que los perfiles incorporados lo hereden de `balanced`. Agregar `normalizarModelo(model)` y `modeloDelRevisor(rutas, productores)` que devuelve `{ ok: true, route }` o `{ ok: false, motivo }` cuando el rol no tiene modelo, cuando `productores` está vacío («productor desconocido») o cuando coincide con alguno («el revisor es el mismo modelo que produjo el artefacto: elegí otro en el rol reviewer»). (C1, C2, C3, C4, C5)
@@ -186,6 +186,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-07",
+    "at": "2026-10-08T02:20:50.903Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"A (aprueba los tres planes: caducidad a medianoche, elegibilidad de aprobación y agente revisor)\",\"planHash\":\"sha256:b6fe8e13b02bd90f8ac98288b51266e009be81225f95214dd2302d255c664ba2\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-07",
+    "at": "2026-10-08T02:20:52.144Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:b6fe8e13b02bd90f8ac98288b51266e009be81225f95214dd2302d255c664ba2."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-07",
+    "at": "2026-10-08T02:20:52.144Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
   }
 ]
 ```
