@@ -4,7 +4,7 @@ id: FEATURE-ENGINE-VISIBILIDAD-APROBACIONES-20261007
 title: Listar las aprobaciones automáticas, contarlas aparte en el parte diario y mostrar la reversión
 type: FEATURE
 module: ENGINE
-workflow_status: planned
+workflow_status: approved
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -57,7 +57,7 @@ Ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente. Corre la compuerta `plan` con el evaluador `cascade` y espera la aprobación explícita de una persona (`valmen approve-plan`); el agente no aprueba este plan.
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 - Alcance: solo lectura sobre lo que ya registra `aprobarPorAutorizacion`; no cambia eventos, registros `.jsonl`, transiciones ni la elegibilidad. Excluido: clave de configuración nueva, agente revisor, jornada que aprueba al armarse.
 - Pasos ordenados:
   1. En `packages/engine/src/approval-eligibility.ts`, agregar la función exportada `listarAprobacionesAutomaticas(paths, { desde?, ahora? })`: recorre `findAllTickets` de `packages/engine/src/discovery.ts`, lee de `## Eventos` las acciones de `ACCION_DE_ETAPA` (`plan-approved`, `analysis-approved`) con `source: autorizacion` y devuelve por cada una ticket, etapa, `authorizationId`, `authorizationHash`, `receiptId`, fecha (`at` del evento), modo y estado actual de la autorización (unidos con `leerAutorizacionesDeAprobacion` de `packages/engine/src/approval-authorization.ts`). Un ticket ilegible se omite y se cuenta en `omitidos`, sin lanzar. Agregar `contarAprobacionesDelDia(paths, dia)` que devuelve `{ automaticas, humanas }`, donde humana es todo `plan-approved` cuya fuente no es `autorizacion`. Se exporta por el `export *` ya presente en `packages/engine/src/index.ts`. (C1, C2, C3, C10)
@@ -181,6 +181,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:45:37.012Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"La A (aprueba el plan de VISIBILIDAD-APROBACIONES: sin clave de configuración, la revocación cubre el modo manual; las aprobaciones por delegación cuentan como humanas)\",\"planHash\":\"sha256:98b06c35fa0cd1ce2c7e4b3193735b5d1c4371f88ac759afa9c804cfca972bef\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:45:37.315Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:98b06c35fa0cd1ce2c7e4b3193735b5d1c4371f88ac759afa9c804cfca972bef."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:45:37.315Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
   }
 ]
 ```
