@@ -4,7 +4,7 @@ id: SECURITY-ENGINE-DESPACHO-POR-PROVEEDOR-20261007
 title: Lanzar cada fase con el ejecutor y el modelo de su proveedor, y detenerse si no está autorizado
 type: SECURITY
 module: ENGINE
-workflow_status: planned
+workflow_status: approved
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -72,7 +72,7 @@ Memoria consultada (`buscar_memoria` «despacho de fase por proveedor ejecutor m
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente. Ticket SECURITY: la compuerta de plan y la aprobación son de una persona (PO), sin excepción y aun con autorización vigente; el agente se detiene en `planned`.
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 - Alcance y exclusiones: solo el despacho desatendido de fases (`runAutonomous`, `prepararTicket`, `valmen run`). No se toca `.valmen/config.yaml`, `.valmen/profiles.yaml` ni `.valmen/routing.yaml`, no se amplía `execution.dispatch-executors`, no se añaden ejecutores a `AUTONOMOUS_EXECUTORS` y no se registra el modelo observado (ticket siguiente del sprint).
 - Decisión para el PO al aprobar: si el rol `agent-<fase>` no tiene modelo, el plan conserva el ejecutor y el modelo de `autonomous.executor` (no hay cambio de proveedor, solo falta de dato) y lo dice en el registro de fase; la alternativa es detenerse también en ese caso.
 - Pasos ordenados:
@@ -201,6 +201,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:22:56.413Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"La A (aprueba el plan de SECURITY-ENGINE-DESPACHO-POR-PROVEEDOR: una fase sin modelo en el perfil usa el ejecutor y modelo de la política, anotado en el registro)\",\"planHash\":\"sha256:249018dcec80c7b30dc19a8f6e5d220e2297a06b85105b08e1da684141da174a\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:22:56.969Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:249018dcec80c7b30dc19a8f6e5d220e2297a06b85105b08e1da684141da174a."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:22:56.969Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
   }
 ]
 ```
