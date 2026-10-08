@@ -4,6 +4,9 @@
  * Se usa un repositorio git de laboratorio de verdad: lo que se afirma es lo que queda en el
  * historial —un commit por ticket, en la rama de trabajo, con el árbol que se probó, sin tocar
  * `main` ni publicar nada—, no lo que el código dice que hace.
+ *
+ * El avance desatendido se retiró: cada caso corre `runAutonomous` con el contexto de integración
+ * que arma `ejecutar` (la rama de trabajo de la configuración, como lo hacía el despacho).
  */
 import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -12,14 +15,17 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { parseConfig, readIntegrationConfig, resolveWorkBranch } from "../packages/adapter/src/index.js";
 import { parseTicket } from "../packages/core/src/index.js";
 import {
   armarJornada,
-  avanzarJornada,
+  esRepositorioGit,
   hashDeArchivos,
   integrarTicket,
   readAutonomousStops,
   resolveAuthorizedProject,
+  rutasPropiasDeLaJornada,
+  runAutonomous,
 } from "../packages/engine/src/index.js";
 import { writeFixtureTicket } from "./helpers/fixtures.js";
 
@@ -119,13 +125,31 @@ beforeEach(() => {
 
 afterEach(() => rmSync(home, { recursive: true, force: true }));
 
-const avanzar = (execute: ReturnType<typeof implementador>) =>
-  avanzarJornada({ project: proyecto(), home, ahora: () => AHORA, execute });
+/** Corre un ticket con el contexto de integración de la configuración, como lo hacía el despacho. */
+async function ejecutar(execute: ReturnType<typeof implementador>, ticketId: string = A) {
+  let integracion: Parameters<typeof runAutonomous>[0]["integracion"];
+  if (esRepositorioGit(root)) {
+    const config = readIntegrationConfig(parseConfig(readFileSync(join(root, ".valmen", "config.yaml"), "utf8")));
+    integracion = {
+      ramaDeTrabajo: resolveWorkBranch(config.workBranch, AHORA),
+      ramasProtegidas: config.protectedBranches,
+      propias: rutasPropiasDeLaJornada(proyecto().paths, [A, B], ticketId),
+    };
+  }
+  return runAutonomous({
+    paths: proyecto().paths,
+    ticketId,
+    fase: "implementation",
+    execute,
+    now: () => AHORA,
+    ...(integracion === undefined ? {} : { integracion }),
+  });
+}
 
 describe("un commit por ticket", () => {
   it("dos tickets seguidos dejan dos commits en la rama de trabajo, cada uno con sus archivos, y el segundo arranca limpio", async () => {
-    const primero = await avanzar(implementador());
-    expect(primero.estado).toBe("despachado");
+    const primero = await ejecutar(implementador(), A);
+    expect(primero.status).toBe("delivered");
     expect(git("rev-parse", "--abbrev-ref", "HEAD")).toBe(RAMA);
     const commits1 = git("log", "--format=%s", "main..HEAD").split("\n");
     expect(commits1).toHaveLength(1);
@@ -137,8 +161,8 @@ describe("un commit por ticket", () => {
     // Y el árbol quedó limpio: el segundo ticket arranca sin cambios del primero.
     expect(git("status", "--porcelain", "-uall", "--", "src", "tickets")).toBe("");
 
-    const segundo = await avanzar(implementador());
-    expect(segundo.estado).toBe("despachado");
+    const segundo = await ejecutar(implementador(), B);
+    expect(segundo.status).toBe("delivered");
     const commits2 = git("log", "--format=%s", "main..HEAD").split("\n");
     expect(commits2).toHaveLength(2);
     expect(commits2[0]).toContain(B);
@@ -149,15 +173,15 @@ describe("un commit por ticket", () => {
 
   it("main no recibe commits y no hay push, tags ni remotos", async () => {
     const base = git("rev-parse", "main");
-    await avanzar(implementador());
-    await avanzar(implementador());
+    await ejecutar(implementador(), A);
+    await ejecutar(implementador(), B);
     expect(git("rev-parse", "main")).toBe(base);
     expect(git("tag")).toBe("");
     expect(git("remote")).toBe("");
   });
 
   it("el commit contiene exactamente el árbol que se probó", async () => {
-    await avanzar(implementador());
+    await ejecutar(implementador(), A);
     expect(readFileSync(join(root, "src", "uno.ts"), "utf8")).toBe(git("show", "HEAD:src/uno.ts") + "\n");
   });
 });
@@ -165,8 +189,8 @@ describe("un commit por ticket", () => {
 describe("lo que impide el commit", () => {
   it("un archivo prohibido en el cambio no se commitea y queda una parada con el motivo", async () => {
     const base = git("rev-parse", "HEAD");
-    const r = await avanzar(implementador({ archivo: () => ".env" }));
-    expect(r.estado).toBe("despachado");
+    const r = await ejecutar(implementador({ archivo: () => ".env" }));
+    expect(r.status).not.toBe("delivered");
     expect(git("rev-parse", "HEAD")).toBe(base);
     const parada = readAutonomousStops({ root, ticketsDir: "tickets" })[0];
     expect(parada?.reason).toBe("verification-failed");
@@ -197,28 +221,16 @@ describe("lo que impide el commit", () => {
     expect(git("rev-parse", "HEAD")).toBe(base);
   });
 
-  it("un árbol sucio al empezar impide despachar y lo dice", async () => {
-    git("switch", "-q", "-c", RAMA);
+  it("desde main con cambios sin commitear no cambia de rama ni ejecuta el ticket", async () => {
     writeFileSync(join(root, "suelto.ts"), "export const x = 1;\n", "utf8");
-    const r = await avanzar(implementador());
-    expect(r.estado).toBe("sin-candidato");
-    expect(r.detalle).toContain("no está limpio");
-    expect(estado(A)).toBe("approved");
-  });
-
-  it("desde main con cambios sin commitear no cambia de rama ni despacha", async () => {
-    writeFileSync(join(root, "suelto.ts"), "export const x = 1;\n", "utf8");
-    const r = await avanzar(implementador());
-    expect(r.estado).toBe("sin-candidato");
+    await expect(ejecutar(implementador(), A)).rejects.toThrow();
     expect(git("rev-parse", "--abbrev-ref", "HEAD")).toBe("main");
+    expect(estado(A)).toBe("approved");
   });
 
   it("una rama de trabajo protegida en la configuración se rechaza al leerla", async () => {
     politica(["  work-branch: main"]);
-    // Un error de una fase no detiene la otra: queda en la línea de su fase.
-    const r = await avanzar(implementador());
-    expect(r.fases.map((f) => f.fase)).toEqual(["ejecucion", "preparacion"]);
-    expect(r.fases[0]?.detalle).toMatch(/protegida/);
+    await expect(ejecutar(implementador(), A)).rejects.toThrow(/protegida/);
     expect(estado(A)).toBe("approved");
   });
 });
@@ -231,86 +243,39 @@ function commitear(archivo: string, mensaje: string): void {
 }
 
 describe("el registro que deja la preparación convive con la ejecución", () => {
-  it("cambios sin commitear en el directorio de otro ticket de la jornada y en el índice no detienen el despacho", async () => {
+  it("cambios sin commitear en el directorio de otro ticket de la jornada y en el índice no detienen la ejecución", async () => {
     git("switch", "-q", "-c", RAMA);
     const registroDeB = join(root, "tickets", "2026", B, "ticket.md");
     writeFileSync(registroDeB, `${readFileSync(registroDeB, "utf8")}\nNota de la preparación.\n`, "utf8");
     writeFileSync(join(root, "tickets", "index.md"), "# índice regenerado\n", "utf8");
 
-    const r = await avanzar(implementador());
-    expect(r.fases[0]?.estado).toBe("despachado");
-    expect(r.ticketId).toBe(A);
+    const r = await ejecutar(implementador(), A);
+    expect(r.status).toBe("delivered");
     expect(estado(A)).toBe("awaiting_user_tests");
     // El commit de A no arrastra el registro de B, que sigue sin commitear.
     const enCommit = git("show", "--name-only", "--format=", "HEAD").split("\n");
     expect(enCommit.some((f) => f.includes(`/${B}/`))).toBe(false);
     expect(git("status", "--porcelain", "-uall", "--", `tickets/2026/${B}`)).toContain(B);
   });
-
-  it("un cambio sin commitear fuera de esas rutas sigue deteniendo el despacho", async () => {
-    git("switch", "-q", "-c", RAMA);
-    const registroDeB = join(root, "tickets", "2026", B, "ticket.md");
-    writeFileSync(registroDeB, `${readFileSync(registroDeB, "utf8")}\nNota.\n`, "utf8");
-    writeFileSync(join(root, "suelto.ts"), "export const x = 1;\n", "utf8");
-
-    const r = await avanzar(implementador());
-    expect(r.fases[0]?.estado).toBe("sin-candidato");
-    expect(r.fases[0]?.detalle).toContain("suelto.ts");
-    expect(r.fases[0]?.detalle).not.toContain(B);
-    expect(estado(A)).toBe("approved");
-  });
-
-  it("un cambio en el registro del propio candidato sí cuenta como sucio", async () => {
-    git("switch", "-q", "-c", RAMA);
-    const registroDeA = join(root, "tickets", "2026", A, "ticket.md");
-    writeFileSync(registroDeA, `${readFileSync(registroDeA, "utf8")}\nNota.\n`, "utf8");
-    const r = await avanzar(implementador());
-    expect(r.fases[0]?.estado).toBe("sin-candidato");
-    expect(r.fases[0]?.detalle).toContain(A);
-  });
 });
 
-describe("el registro de las pasadas sucias", () => {
-  const pasadas = () =>
-    readFileSync(join(root, ".valmen", "journeys", "arbol-sucio.jsonl"), "utf8")
-      .trim()
-      .split("\n")
-      .map((linea) => JSON.parse(linea) as Record<string, unknown>);
-
-  it("cada pasada que no despacha por árbol sucio deja una línea con sus archivos, y la limpia lo marca", async () => {
-    git("switch", "-q", "-c", RAMA);
-    writeFileSync(join(root, "suelto.ts"), "export const x = 1;\n", "utf8");
-    await avanzar(implementador());
-    await avanzar(implementador());
-    expect(pasadas()).toEqual([
-      { journeyId: "JOR-20261006", at: AHORA.toISOString(), archivos: ["suelto.ts"] },
-      { journeyId: "JOR-20261006", at: AHORA.toISOString(), archivos: ["suelto.ts"] },
-    ]);
-
-    rmSync(join(root, "suelto.ts"));
-    const r = await avanzar(implementador());
-    expect(r.fases[0]?.estado).toBe("despachado");
-    expect(pasadas().at(-1)).toEqual({ journeyId: "JOR-20261006", at: AHORA.toISOString(), limpio: true });
-  });
-});
-
-describe("la rama de trabajo se deja al día con main antes de despachar", () => {
+describe("la rama de trabajo se deja al día con main antes de ejecutar", () => {
   it("si no existe, se crea desde main y no desde la rama en la que estaba el árbol", async () => {
     git("switch", "-q", "-c", "otra");
     commitear("otra.ts", "trabajo de otra rama");
-    const r = await avanzar(implementador());
-    expect(r.fases[0]?.estado).toBe("despachado");
+    const r = await ejecutar(implementador(), A);
+    expect(r.status).toBe("delivered");
     expect(git("rev-parse", "--abbrev-ref", "HEAD")).toBe(RAMA);
     expect(git("log", "--format=%s", "main..HEAD").split("\n")).toHaveLength(1);
     expect(git("ls-tree", "-r", "--name-only", "HEAD").split("\n")).not.toContain("otra.ts");
   });
 
-  it("si existe atrás de main, queda en el mismo commit que main antes de despachar", async () => {
+  it("si existe atrás de main, queda en el mismo commit que main antes de ejecutar", async () => {
     git("branch", RAMA);
     commitear("nuevo-en-main.ts", "avance de main");
     const principal = git("rev-parse", "main");
-    const r = await avanzar(implementador());
-    expect(r.fases[0]?.estado).toBe("despachado");
+    const r = await ejecutar(implementador(), A);
+    expect(r.status).toBe("delivered");
     expect(git("rev-parse", "--abbrev-ref", "HEAD")).toBe(RAMA);
     // El ticket se leyó desde un árbol que ya traía lo de main, y el commit de A cuelga de main.
     expect(git("rev-parse", "HEAD~1")).toBe(principal);
@@ -323,21 +288,18 @@ describe("la rama de trabajo se deja al día con main antes de despachar", () =>
     commitear("nuevo-en-main.ts", "avance de main");
     git("switch", "-q", RAMA);
     expect(git("rev-parse", RAMA)).not.toBe(git("rev-parse", "main"));
-    const r = await avanzar(implementador());
-    expect(r.fases[0]?.estado).toBe("despachado");
+    const r = await ejecutar(implementador(), A);
+    expect(r.status).toBe("delivered");
     expect(git("rev-parse", "HEAD~1")).toBe(git("rev-parse", "main"));
   });
 
-  it("si la rama divergió de main, el despacho se detiene nombrándola y no la toca", async () => {
+  it("si la rama divergió de main, la ejecución se detiene nombrándola y no la toca", async () => {
     git("switch", "-q", "-c", RAMA);
     commitear("propio.ts", "commit propio de la rama");
     const antes = git("rev-parse", RAMA);
     git("switch", "-q", "main");
     commitear("de-main.ts", "avance de main");
-    const r = await avanzar(implementador());
-    expect(r.fases[0]?.estado).toBe("sin-candidato");
-    expect(r.fases[0]?.detalle).toContain(RAMA);
-    expect(r.fases[0]?.detalle).toContain("divergió");
+    await expect(ejecutar(implementador(), A)).rejects.toThrow(new RegExp(`${RAMA}[\\s\\S]*divergió|divergió[\\s\\S]*${RAMA}`));
     expect(git("rev-parse", RAMA)).toBe(antes);
     expect(git("rev-parse", "--abbrev-ref", "HEAD")).toBe("main");
     expect(estado(A)).toBe("approved");
@@ -347,8 +309,8 @@ describe("la rama de trabajo se deja al día con main antes de despachar", () =>
 describe("un proyecto que no es un repositorio git", () => {
   it("conserva su comportamiento: entrega sin commitear", async () => {
     rmSync(join(root, ".git"), { recursive: true, force: true });
-    const r = await avanzar(implementador());
-    expect(r.estado).toBe("despachado");
+    const r = await ejecutar(implementador(), A);
+    expect(r.status).toBe("delivered");
     expect(estado(A)).toBe("awaiting_user_tests");
   });
 });

@@ -25,7 +25,6 @@ export * from "./journeys.js";
 export * from "./journey-windows.js";
 export * from "./journey-authorization.js";
 export * from "./journey-selection.js";
-export * from "./journey-dispatch.js";
 export * from "./journey-dirty-tree.js";
 export * from "./http-criterion.js";
 export * from "./integration-commit.js";

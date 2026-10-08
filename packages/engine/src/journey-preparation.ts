@@ -8,6 +8,7 @@
  * lee del registro y del árbol de trabajo.
  */
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
@@ -17,7 +18,6 @@ import { autonomousExecutorCommand, razonesDePolitica, type AutonomousExecutorCo
 import { type AutonomousStopReceipt, paradasActivas, recordAutonomousStop } from "./autonomous-stops.js";
 import { autonomousConfig, findTicket, type RegistryPaths } from "./discovery.js";
 import { recordExecutionActivity } from "./execution-activity.js";
-import { dispatchEventId } from "./journey-dispatch.js";
 import { motivoDeTope } from "./journey-limits.js";
 import { registrarFase, resolverModeloDeFase } from "./journey-phases.js";
 import { readJourneys } from "./journeys.js";
@@ -391,4 +391,30 @@ export function despacharPreparacion(request: {
     releaseMachineCapacity({ home: request.home, project, identity: identidad, attemptId: request.attemptId });
     throw error;
   }
+}
+
+/**
+ * Mantiene los IDs portables y acotados aunque la puerta aporte IDs largos.
+ *
+ * Vivía en el despacho de ejecución, ya retirado. Conserva el mismo digest y el prefijo
+ * `journey-dispatch-`: los eventos históricos del registro de ejecuciones lo llevan.
+ */
+export function dispatchEventId(
+  ticketId: string,
+  executionId: string,
+  attemptId: string,
+  state: string,
+  /**
+   * El inicio lleva el momento del avance: una identidad que se recuperó y se vuelve a despachar
+   * necesita un `started` nuevo, o su última actividad seguiría siendo el `failed` de la recuperación.
+   */
+  momento?: string,
+): string {
+  // El ticket entra al digest: una jornada despacha varios tickets con la misma ejecución e
+  // intento, y sin él el segundo ticket chocaba con el evento del primero.
+  const digest = createHash("sha256")
+    .update(`${ticketId}\u0000${executionId}\u0000${attemptId}\u0000${state}${momento === undefined ? "" : `\u0000${momento}`}`)
+    .digest("hex")
+    .slice(0, 32);
+  return `journey-dispatch-${state}-${digest}`;
 }

@@ -133,7 +133,7 @@ describe("el catálogo de roles", () => {
       // esa declaración llegue al enrutado con su origen `proyecto`.
       "ui-specs",
       // Los cuatro roles de fase del agente que ejecuta la jornada (R-JORN-006): su
-      // consumidor es `valmen journey advance`, que lanza cada sesión con el modelo de su fase.
+      // consumidor es `valmen journey brief`, que entrega al subagente el modelo de su fase.
       "agent-analysis",
       "agent-plan",
       "agent-implementation",

@@ -42,8 +42,6 @@ import {
   parseRoutingTolerante,
   readSharedProjectPolicy,
   readHermesConfig,
-  readJourneyDispatcher,
-  type JourneyDispatcher,
   profileProject,
   projectFiles,
   proposeConfig,
@@ -100,7 +98,10 @@ import {
   revocarAutorizacion,
   armarJornada,
   emitirAprobacionesDeJornada,
+  advertenciaDeArbolSucio,
   avanzarJornada,
+  readJourneys,
+  rutasPropiasDeLaJornada,
   jornadaDelDia,
   jornadaVigente,
   registrarPasada,
@@ -228,16 +229,6 @@ import {
  * idénticas permitiría que una cambiara sin la otra y que el servidor dejara de
  * entender lo que el CLI produce.
  */
-import {
-  comandoDeJobHermes,
-  escribirPlist,
-  escribirScriptHermes,
-  etiquetaDelDisparador,
-  instruccionesDelDisparador,
-  nombreDelJobHermes,
-  renderHermesJobScript,
-  renderLaunchdPlist,
-} from "./journey-trigger.js";
 
 import { approvalSecret } from "./hermes.js";
 
@@ -2907,29 +2898,43 @@ export function budgetCommand(
   return { stdout, stderr: "", exitCode };
 }
 
+/** La respuesta fija de lo retirado con el disparador: no escribe nada y dice qué usar. */
+function retiroDelDisparador(que: string): CommandResult {
+  return error(
+    `${que} se retiró: la jornada ya no se ejecuta con un disparador periódico ni con un avance desatendido. ` +
+      "Se ejecuta desde una sesión orquestadora: `valmen journey next --wave` lista la ola, " +
+      "`valmen journey brief --id <ID>` entrega el encargo de cada ticket y la skill `corrida-orquestada` " +
+      "describe el recorrido. La preparación manual de planes sigue: `valmen journey advance --project <id> --fase preparacion`. " +
+      "No se escribió nada. Si una tarea de launchd o un job de Hermes sigue disparando este comando, " +
+      "desinstálalo: `launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.valmen.jornada.<proyecto>.plist` " +
+      "y `hermes cron remove valmen-jornada-<proyecto>`.",
+    EXIT_SCHEMA,
+  );
+}
+
 /**
- * `journey advance --project <id> [--journey <id>]`: el avance que invoca un disparador.
+ * `journey advance --project <id> --fase preparacion [--journey <id>]`: la preparación manual de planes.
  *
- * No llama a ningún modelo y es idempotente: la identidad es la jornada, así que dos avances
- * seguidos no despachan un segundo ticket. Sin jornada del día lo dice y sale bien.
+ * Solo la preparación sigue viva: lleva los tickets en `intake` hasta `planned` sin aprobar nada.
+ * Sin fase y con `--fase ejecucion` responde con el aviso de retiro y no escribe nada.
  */
 export async function journeyAdvanceCommand(
   flags: Readonly<Record<string, string | true>>,
   opciones: {
     readonly home?: string;
-    readonly execute?: Parameters<typeof avanzarJornada>[0]["execute"];
     readonly ejecutarPreparacion?: Parameters<typeof avanzarJornada>[0]["ejecutarPreparacion"];
     readonly ahora?: () => Date;
   } = {},
 ): Promise<CommandResult> {
   const proyecto = typeof flags["project"] === "string" ? flags["project"] : undefined;
   if (proyecto === undefined) return error("journey advance requiere --project <id>.", EXIT_SCHEMA);
+  if (typeof flags["fase"] === "string" && flags["fase"] !== "preparacion" && flags["fase"] !== "ejecucion") {
+    return error("--fase admite: preparacion (la ejecución se retiró).", EXIT_SCHEMA);
+  }
+  if (flags["fase"] !== "preparacion") return retiroDelDisparador("`journey advance` sin fase y con `--fase ejecucion`");
   try {
     const home = opciones.home ?? homedir();
     const project = resolveAuthorizedProject({ projectId: proyecto, home });
-    if (typeof flags["fase"] === "string" && flags["fase"] !== "preparacion" && flags["fase"] !== "ejecucion") {
-      return error("--fase admite: preparacion o ejecucion.", EXIT_SCHEMA);
-    }
     const destino = typeof flags["to"] === "string" ? flags["to"] : "";
     const journeyId = typeof flags["journey"] === "string" ? flags["journey"] : (jornadaVigente(project, (opciones.ahora ?? (() => new Date()))()) ?? jornadaDelDia((opciones.ahora ?? (() => new Date()))()));
     let avance: Awaited<ReturnType<typeof avanzarJornada>>;
@@ -2950,10 +2955,9 @@ export async function journeyAdvanceCommand(
               },
             }),
         ...(typeof flags["journey"] === "string" ? { journeyId: flags["journey"] } : {}),
-        ...(opciones.execute === undefined ? {} : { execute: opciones.execute }),
         ...(opciones.ejecutarPreparacion === undefined ? {} : { ejecutarPreparacion: opciones.ejecutarPreparacion }),
         ...(opciones.ahora === undefined ? {} : { ahora: opciones.ahora }),
-        ...(flags["fase"] === "preparacion" || flags["fase"] === "ejecucion" ? { fase: flags["fase"] } : {}),
+        fase: "preparacion",
       });
     } catch (caught) {
       // Un avance que falla también deja su pasada, para que la pantalla no lo confunda con silencio.
@@ -2988,17 +2992,7 @@ function anexarPasada(root: string, pasada: Parameters<typeof registrarPasada>[1
 }
 
 function avanceComoResultado(avance: Awaited<ReturnType<typeof avanzarJornada>>): CommandResult {
-  {
-    // Sin `--fase` corren las dos y se informa una línea por fase.
-    if (avance.fases.length > 1) {
-      return ok(
-        avance.fases
-          .map((f) => `${avance.journeyId} · ${f.fase}: ${f.estado}${f.ticketId === null ? "" : ` (${f.ticketId})`}. ${f.detalle.replace(/\s+/g, " ").trim()}\n`)
-          .join(""),
-      );
-    }
-    return ok(`${avance.journeyId}: ${avance.estado}${avance.ticketId === null ? "" : ` (${avance.ticketId})`}. ${avance.detalle}\n`);
-  }
+  return ok(`${avance.journeyId}: ${avance.estado}${avance.ticketId === null ? "" : ` (${avance.ticketId})`}. ${avance.detalle}\n`);
 }
 
 /**
@@ -3702,6 +3696,16 @@ export function proyectoDeLaOla(
   return resolveAuthorizedProject({ projectId: derivado, home });
 }
 
+/** El aviso de árbol sucio para la salida de la ola y del brief: se calcula al consultar y no escribe nada. */
+function avisoDeArbolSucio(root: string, propias?: Parameters<typeof advertenciaDeArbolSucio>[1]): string {
+  try {
+    const aviso = advertenciaDeArbolSucio(root, propias);
+    return aviso === null ? "" : `\n${aviso}\n`;
+  } catch {
+    return "";
+  }
+}
+
 /**
  * `journey next --wave [--concurrency <n>] [--journey <id>] [--project <id>]`: los tickets de la
  * jornada que se pueden despachar ahora a subagentes. Solo lectura: no escribe en el registro.
@@ -3728,7 +3732,9 @@ export function journeyNextCommand(
         ...(concurrency === undefined ? {} : { concurrency }),
         ...(opciones.ahora === undefined ? {} : { ahora: opciones.ahora }),
       });
-      return ok(renderOlaDeJornada(ola));
+      const jornada = readJourneys(project).find((j) => j.journeyId === ola.journeyId);
+      const propias = rutasPropiasDeLaJornada(project.paths, jornada?.tickets.map((t) => t.ticketId) ?? [], null);
+      return ok(renderOlaDeJornada(ola) + avisoDeArbolSucio(project.root, propias));
     });
   } catch (caught) {
     const failure = toFailure(caught);
@@ -3758,7 +3764,7 @@ export function journeyBriefCommand(
         ticketId,
         ...(cliente === undefined ? {} : { cliente: cliente as ClienteDeSesion }),
       });
-      return ok(renderBriefDeSubagente(brief));
+      return ok(renderBriefDeSubagente(brief) + avisoDeArbolSucio(project.root));
     });
   } catch (caught) {
     const failure = toFailure(caught);
@@ -3767,76 +3773,12 @@ export function journeyBriefCommand(
 }
 
 /**
- * `journey install-trigger --project <id> [--every <min>] [--via machine|hermes] [--write] [--dir <carpeta>]`.
- *
- * Prepara el disparador del avance: con el despachador `machine` (por defecto) la tarea de
- * launchd; con `hermes` (`execution.dispatcher` o `--via`) el job de Hermes sin agente.
- * Imprime el archivo y los comandos para activarlo. Con `--write` escribe solo el archivo.
- * Nunca ejecuta `launchctl` ni `hermes`.
+ * `journey install-trigger`: retirado. Responde con el aviso de retiro y no escribe nada, ni el
+ * plist de launchd ni el script del job de Hermes.
  */
-export function journeyInstallTriggerCommand(
-  flags: Readonly<Record<string, string | true>>,
-  entorno: { readonly node?: string; readonly cliMain?: string; readonly home?: string } = {},
-): CommandResult {
-  const proyecto = typeof flags["project"] === "string" ? flags["project"] : undefined;
-  if (proyecto === undefined) return error("journey install-trigger requiere --project <id>.", EXIT_SCHEMA);
-  const cadaCrudo = typeof flags["every"] === "string" ? Number(flags["every"]) : 15;
-  if (!Number.isFinite(cadaCrudo) || cadaCrudo < 1) {
-    return error("--every debe ser un número de minutos de al menos 1.", EXIT_SCHEMA);
-  }
-  const via = flags["via"];
-  if (via !== undefined && via !== "machine" && via !== "hermes") {
-    return error('--via debe ser "machine" o "hermes".', EXIT_SCHEMA);
-  }
-  const home = entorno.home ?? homedir();
-  const request = {
-    projectId: proyecto,
-    everyMinutes: cadaCrudo,
-    node: entorno.node ?? process.execPath,
-    cliMain: entorno.cliMain ?? (process.argv[1] ?? "valmen"),
-    logDir: join(home, "Library", "Logs"),
-  };
-  try {
-    const despachador = via ?? despachadorDelProyecto(proyecto, home);
-    if (despachador === "hermes") {
-      const directorio = typeof flags["dir"] === "string" ? flags["dir"] : join(home, ".hermes", "scripts");
-      const ruta = join(directorio, `${nombreDelJobHermes(proyecto)}.sh`);
-      const comando = comandoDeJobHermes(proyecto, cadaCrudo, ruta);
-      const activar = `Para registrarlo (lo ejecutas tú; el harness no corre hermes):\n  ${comando}`;
-      if (flags["write"] === true) {
-        const escrita = escribirScriptHermes(directorio, request);
-        return ok(`Script del job escrito en ${escrita}. No se registró nada en Hermes.\n${activar}\n`);
-      }
-      return ok(`${renderHermesJobScript(request)}\nSin --write no se escribió nada. Archivo previsto: ${ruta}\n${activar}\n`);
-    }
-    const directorio = typeof flags["dir"] === "string" ? flags["dir"] : join(home, "Library", "LaunchAgents");
-    const ruta = join(directorio, `${etiquetaDelDisparador(proyecto)}.plist`);
-    const plist = renderLaunchdPlist(request);
-    if (flags["write"] === true) {
-      const escrita = escribirPlist(directorio, request);
-      return ok(`Plist escrito en ${escrita}. No se activó nada.\n${instruccionesDelDisparador(proyecto, escrita)}\n`);
-    }
-    return ok(`${plist}\nSin --write no se escribió nada. Archivo previsto: ${ruta}\n${instruccionesDelDisparador(proyecto, ruta)}\n`);
-  } catch (caught) {
-    const failure = toFailure(caught);
-    return error(failure.message, failure.exitCode);
-  }
-}
-
-/**
- * El despachador que el proyecto declara. Si el proyecto no se resuelve en esta máquina no hay
- * declaración que leer y rige el disparador de la máquina; una declaración inválida sí falla.
- */
-function despachadorDelProyecto(proyecto: string, home: string): JourneyDispatcher {
-  let raiz: string;
-  try {
-    raiz = resolveAuthorizedProject({ projectId: proyecto, home }).paths.root;
-  } catch {
-    return "machine";
-  }
-  const configPath = join(raiz, ".valmen", "config.yaml");
-  if (!existsSync(configPath)) return "machine";
-  return readJourneyDispatcher(parseConfig(readFileSync(configPath, "utf8")));
+export function journeyInstallTriggerCommand(flags: Readonly<Record<string, string | true>> = {}): CommandResult {
+  void flags; // ninguna bandera cambia la respuesta: no se escribe nada
+  return retiroDelDisparador("`journey install-trigger`");
 }
 
 /**

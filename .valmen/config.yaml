@@ -58,7 +58,6 @@ providers:
 execution:
   dispatch-executors:
     - claude
-  dispatcher: machine
   work-branch: valmen/jornada-<AAAAMMDD>
 
 autonomous:

@@ -1,84 +1,31 @@
 /**
- * El registro de las pasadas que no despacharon por árbol sucio.
+ * El aviso de árbol sucio de la ola.
  *
- * El despacho anexa una línea por pasada —los archivos que lo ensucian, o `limpio`— y el
- * vigilante la lee para avisar cuando la parada dura más de una pasada. Es estado del harness,
- * append-only: nadie reescribe una línea, y el episodio se identifica por su primera pasada.
+ * Antes el despacho desatendido se negaba a arrancar sobre un árbol con archivos ajenos y
+ * registraba cada pasada sucia. Con la corrida orquestada cada ticket vive en su worktree, así
+ * que un árbol sucio ya no impide nada: se **avisa al consultar** la ola o el brief. El aviso se
+ * calcula al momento, no escribe ningún archivo y no deja registro.
+ *
+ * El registro histórico `.valmen/journeys/arbol-sucio.jsonl` ya no lo escribe nadie ni lo lee
+ * nadie; sus líneas quedan como historia (son append-only).
  */
-import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { esRepositorioGit, estadoDelArbolDeTrabajo, type RutasPropias } from "./integration-commit.js";
 
-export interface PasadaSucia {
-  readonly journeyId: string;
-  readonly at: string;
-  readonly archivos: readonly string[];
-}
-
-export interface PasadaLimpia {
-  readonly journeyId: string;
-  readonly at: string;
-  readonly limpio: true;
-}
-
-export type PasadaDeArbol = PasadaSucia | PasadaLimpia;
-
-/** Ruta del registro, bajo el estado del harness (`.valmen/journeys/`). */
-export function arbolSucioPath(root: string): string {
-  return join(root, ".valmen", "journeys", "arbol-sucio.jsonl");
-}
-
-/** Anexa una pasada. */
-export function registrarPasadaDeArbol(root: string, pasada: PasadaDeArbol): void {
-  const path = arbolSucioPath(root);
-  mkdirSync(dirname(path), { recursive: true });
-  appendFileSync(path, `${JSON.stringify(pasada)}\n`, "utf8");
-}
-
-/** Las pasadas registradas, en orden; una línea ilegible no impide leer el resto. */
-export function leerPasadasDeArbol(root: string): PasadaDeArbol[] {
-  const path = arbolSucioPath(root);
-  if (!existsSync(path)) return [];
-  const salida: PasadaDeArbol[] = [];
-  for (const linea of readFileSync(path, "utf8").split("\n")) {
-    if (linea.trim() === "") continue;
-    try {
-      const valor = JSON.parse(linea) as Record<string, unknown>;
-      if (typeof valor["journeyId"] !== "string" || typeof valor["at"] !== "string") continue;
-      if (valor["limpio"] === true) {
-        salida.push({ journeyId: valor["journeyId"], at: valor["at"], limpio: true });
-      } else if (Array.isArray(valor["archivos"])) {
-        salida.push({
-          journeyId: valor["journeyId"],
-          at: valor["at"],
-          archivos: valor["archivos"].filter((a): a is string => typeof a === "string"),
-        });
-      }
-    } catch {
-      // Una línea a medio escribir no borra las anteriores.
-    }
-  }
-  return salida;
-}
+const MAX_ARCHIVOS_DEL_AVISO = 10;
 
 /**
- * El episodio de árbol sucio en curso de una jornada: la racha final de pasadas sucias.
- * Devuelve `null` si la última pasada fue limpia o no hay pasadas.
+ * El texto del aviso si el árbol de trabajo tiene archivos ajenos a la jornada, o `null` si está
+ * limpio o la raíz no es un repositorio git. Solo lee: nunca escribe en el registro.
  */
-export function episodioDeArbolSucio(
-  pasadas: readonly PasadaDeArbol[],
-  journeyId: string,
-): { readonly episodio: string; readonly pasadas: number; readonly archivos: readonly string[] } | null {
-  const propias = pasadas.filter((p) => p.journeyId === journeyId);
-  let primera: PasadaSucia | undefined;
-  let cuenta = 0;
-  let ultima: PasadaSucia | undefined;
-  for (let i = propias.length - 1; i >= 0; i--) {
-    const p = propias[i] as PasadaDeArbol;
-    if ("limpio" in p) break;
-    primera = p;
-    ultima ??= p;
-    cuenta++;
-  }
-  if (primera === undefined || ultima === undefined) return null;
-  return { episodio: primera.at, pasadas: cuenta, archivos: ultima.archivos };
+export function advertenciaDeArbolSucio(root: string, propias?: RutasPropias): string | null {
+  if (!esRepositorioGit(root)) return null;
+  const archivos = estadoDelArbolDeTrabajo(root, undefined, propias);
+  if (archivos.length === 0) return null;
+  const mostrados = archivos.slice(0, MAX_ARCHIVOS_DEL_AVISO);
+  const resto = archivos.length - mostrados.length;
+  return [
+    `Aviso: el árbol de trabajo tiene ${archivos.length} archivo(s) sin commitear que no son de la jornada. No bloquea la ola; commitéalos o descártalos antes de integrar:`,
+    ...mostrados.map((archivo) => `  ${archivo}`),
+    ...(resto > 0 ? [`  … y ${resto} más`] : []),
+  ].join("\n");
 }

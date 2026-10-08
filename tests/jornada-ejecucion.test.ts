@@ -1,6 +1,9 @@
 /**
  * La fase de ejecución de la jornada y el modelo por fase (R-JORN-005 y R-JORN-006).
  *
+ * El avance desatendido se retiró: la ejecución se ejercita ahora con `runAutonomous` directo, que
+ * es lo que usa `valmen run` y lo que ejecuta cada subagente de la corrida orquestada.
+ *
  * Lo que se afirma: un ticket aprobado llega a las pruebas del responsable **con su contrato de
  * entrega escrito** o no llega; el ejecutor corre como sesión desatendida; el enrutamiento
  * declara un rol por fase y cada sesión usa el modelo de la suya (o cae al de la política
@@ -22,10 +25,11 @@ import {
 import { parseTicket } from "../packages/core/src/index.js";
 import {
   armarJornada,
-  avanzarJornada,
   leerFases,
   prepararTicket,
   resolveAuthorizedProject,
+  resolverModeloDeFase,
+  runAutonomous,
 } from "../packages/engine/src/index.js";
 import { writeFixtureTicket } from "./helpers/fixtures.js";
 
@@ -131,29 +135,38 @@ function implementador(opciones: { contrato: boolean; entornos?: Record<string, 
   };
 }
 
+/** Ejecuta el ticket como lo hacía el avance: con el modelo de la fase de implementación. */
+async function ejecutar(execute: Parameters<typeof runAutonomous>[0]["execute"]) {
+  const modelo = resolverModeloDeFase(root, "implementation");
+  return runAutonomous({
+    paths: proyecto().paths,
+    ticketId: A,
+    fase: "implementation",
+    ...(modelo === null ? {} : { modelo }),
+    ...(execute === undefined ? {} : { execute }),
+    now: () => AHORA,
+  });
+}
+
 describe("la ejecución llega a las pruebas del responsable", () => {
   it("con el contrato escrito y qa-mechanical en verde queda en awaiting_user_tests", async () => {
-    const avance = await avanzarJornada({
-      project: proyecto(), home, ahora: () => AHORA, execute: implementador({ contrato: true }),
-    });
-    expect(avance.estado).toBe("despachado");
+    const avance = await ejecutar(implementador({ contrato: true }));
+    expect(avance.status).toBe("delivered");
     expect(estado(A)).toBe("awaiting_user_tests");
     const recibos = readFileSync(join(root, ".valmen", "receipts", `${A}.jsonl`), "utf8");
     expect(recibos).toContain('"gate":"qa-mechanical"');
   });
 
   it("si el ejecutor no deja el contrato de pruebas, la verificación falla y no pasa a awaiting_user_tests", async () => {
-    const avance = await avanzarJornada({
-      project: proyecto(), home, ahora: () => AHORA, execute: implementador({ contrato: false }),
-    });
-    expect(avance.estado).toBe("despachado");
+    const avance = await ejecutar(implementador({ contrato: false }));
+    expect(avance.status).not.toBe("delivered");
     expect(estado(A)).toBe("in_progress");
-    expect(avance.detalle).toMatch(/contrato de pruebas|verification-failed/);
+    expect(`${avance.status} ${avance.detail}`).toMatch(/contrato de pruebas|verification-failed/);
   });
 
   it("el ejecutor corre con VALMEN_UNATTENDED", async () => {
     const entornos: Record<string, string>[] = [];
-    await avanzarJornada({ project: proyecto(), home, ahora: () => AHORA, execute: implementador({ contrato: true, entornos }) });
+    await ejecutar(implementador({ contrato: true, entornos }));
     expect(entornos[0]?.["VALMEN_UNATTENDED"]).toBe("1");
   });
 });
@@ -162,7 +175,7 @@ describe("el enrutamiento por fase", () => {
   it("declara un rol por fase, con consumidor, y todos los presets les dan modelo", () => {
     for (const fase of FASES_DEL_AGENTE) {
       const rol = ROLES.find((r) => r.id === `agent-${fase}`);
-      expect(rol?.consumer, fase).toBe("valmen journey advance");
+      expect(rol?.consumer, fase).toBe("valmen journey brief");
       for (const preset of PRESETS) expect(preset.roles[`agent-${fase}`], `${preset.id}/${fase}`).toBeDefined();
     }
   });
@@ -173,10 +186,8 @@ describe("el enrutamiento por fase", () => {
       "agent-implementation": ["codex", "gpt-6-fuerte", "high"],
     });
     const comandos: string[] = [];
-    const avance = await avanzarJornada({
-      project: proyecto(), home, ahora: () => AHORA, execute: implementador({ contrato: true, comandos }),
-    });
-    expect(avance.estado).toBe("despachado");
+    const avance = await ejecutar(implementador({ contrato: true, comandos }));
+    expect(avance.status).toBe("delivered");
     expect(comandos[0]).toContain("--model gpt-6-fuerte");
 
     // La preparación de otro ticket usa el modelo de la fase de análisis.
@@ -201,7 +212,7 @@ describe("el enrutamiento por fase", () => {
   it("un rol de otro proveedor que el ejecutor cae al modelo de la política y el registro lo dice", async () => {
     enrutamiento({ "agent-implementation": ["openrouter", "openai/gpt-5.6-luna-pro", "high"] });
     const comandos: string[] = [];
-    await avanzarJornada({ project: proyecto(), home, ahora: () => AHORA, execute: implementador({ contrato: true, comandos }) });
+    await ejecutar(implementador({ contrato: true, comandos }));
     expect(comandos[0]).toContain("--model gpt-6-politica");
     const registro = leerFases(root).find((f) => f.ticketId === A);
     expect(registro?.modelo).toBe("gpt-6-politica");
@@ -218,7 +229,7 @@ describe("el enrutamiento por fase", () => {
 
 describe("el registro por fase", () => {
   it("cada sesión deja ticket, fase, modelo, esfuerzo, duración y resultado", async () => {
-    await avanzarJornada({ project: proyecto(), home, ahora: () => AHORA, execute: implementador({ contrato: true }) });
+    await ejecutar(implementador({ contrato: true }));
     const registro = leerFases(root).find((f) => f.ticketId === A);
     expect(registro).toMatchObject({
       kind: "journey-phase",

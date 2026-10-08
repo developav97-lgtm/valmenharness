@@ -508,39 +508,6 @@ export function renderAutonomousStopNotification(
   };
 }
 
-/** Una jornada detenida por árbol sucio durante más de una pasada. */
-export interface DirtyTreeNotificationInput {
-  readonly journeyId: string;
-  readonly episodio: string;
-  readonly pasadas: number;
-  readonly archivos: readonly string[];
-}
-
-const MAX_ARCHIVOS_DEL_AVISO = 10;
-
-/** El aviso de que la jornada no despacha porque el árbol tiene cambios sin commitear. */
-export function renderDirtyTreeNotification(input: DirtyTreeNotificationInput): NotificationPayload {
-  const mostrados = input.archivos.slice(0, MAX_ARCHIVOS_DEL_AVISO);
-  const resto = input.archivos.length - mostrados.length;
-  return {
-    key: `journey-dirty-tree:${input.journeyId}:${input.episodio}`,
-    subject: `Jornada detenida por árbol sucio · ${input.journeyId}`,
-    body: [
-      "⏸ JORNADA DETENIDA POR ÁRBOL SUCIO",
-      "",
-      `  jornada  ${input.journeyId}`,
-      `  desde    ${input.episodio.slice(0, 16).replace("T", " ")} (${input.pasadas} pasadas seguidas)`,
-      "",
-      "Cambios sin commitear que la causan:",
-      ...mostrados.map((archivo) => `    ${archivo}`),
-      ...(resto > 0 ? [`    … y ${resto} más`] : []),
-      "",
-      "La jornada no despacha un ticket sobre cambios de otra sesión. Commitéalos o descártalos",
-      "y el siguiente avance sigue solo.",
-    ].join("\n"),
-  };
-}
-
 /** Una jornada cuyos tickets quedaron todos cerrados. */
 export interface JourneyFinishedNotificationInput {
   readonly journeyId: string;

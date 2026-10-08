@@ -239,9 +239,10 @@ Comandos:
   journey plan --project <id> (--feature <slug> | --tickets <a,b,c>) [--max <n>] [--to <destino>]
                             Arma la jornada del día en el registro de jornadas y envía el
                             plan por Telegram. No despacha ni reserva capacidad.
-  journey advance --project <id> [--journey <id>] [--fase preparacion|ejecucion] [--to <destino>]
-                            Avanza la jornada una vez: sin modelo e idempotente (un segundo
-                            avance no despacha otro ticket). Pensado para un disparador.
+  journey advance --project <id> --fase preparacion [--journey <id>] [--to <destino>]
+                            Prepara a mano los planes de la jornada (intake hasta planned, sin aprobar
+                            nada). Sin fase y con --fase ejecucion está RETIRADO: no hace nada; la
+                            ejecución es de la sesión orquestadora (journey next --wave).
   journey next --wave [--concurrency <n>] [--journey <id>] [--project <id>]
                             Los tickets de la jornada listos para despachar ahora a subagentes
                             (3 a la vez por defecto, contando los que ya están en curso). Solo lectura.
@@ -309,9 +310,9 @@ Comandos:
   journey worktree create|remove --id <ID>
                             Crea o quita el worktree .claude/worktrees/ticket-<slug> (rama
                             valmen/ticket-<slug>) del ticket, solo desde el checkout principal.
-  journey install-trigger --project <id> [--every <min>] [--via machine|hermes] [--write] [--dir <carpeta>]
-                            Prepara la tarea periódica de launchd: imprime el plist y los
-                            comandos; con --write escribe solo el archivo. No ejecuta launchctl.
+  journey install-trigger --project <id>
+                            RETIRADO: ya no hay disparador periódico. Responde con el aviso, sale
+                            con 2 y no escribe nada. Usa journey next --wave y journey brief --id.
   approve-plan --id <ID> --actor <nombre> [--source <fuente>] --quote "<frase>"
                             Registra la aprobación del plan con actor, fuente, frase y hash
                             del plan. Una sesión desatendida no puede registrarla.
@@ -2027,7 +2028,7 @@ export async function run(argv: readonly string[]): Promise<number> {
                 ? journeyClearStopCommand(options.flags)
                 : rest[0] === "worktree"
                 ? journeyWorktreeCommand(resolvePaths(options), rest.slice(1), options.flags)
-                : { stdout: "", stderr: "journey admite: plan, advance, next, brief, handoff, install-trigger, notify-plans, clear-stop y worktree.\n", exitCode: EXIT_SCHEMA };
+                : { stdout: "", stderr: "journey admite: plan, advance (solo --fase preparacion), next, brief, handoff, notify-plans, clear-stop, worktree e install-trigger (retirado).\n", exitCode: EXIT_SCHEMA };
     } else if (command === "review-agent") {
       result = await reviewAgentCommand(resolvePaths(options), options.flags);
     } else if (command === "qa-shadow") {

@@ -163,6 +163,6 @@ describe("proyecto y ayuda", () => {
       stderr.mockRestore();
     }
     expect(codigo).toBe(EXIT_SCHEMA);
-    expect(escrituras.join("")).toContain("journey admite: plan, advance, next, brief, install-trigger, notify-plans, clear-stop y worktree.");
+    expect(escrituras.join("")).toContain("journey admite: plan, advance (solo --fase preparacion), next, brief, handoff, notify-plans, clear-stop, worktree e install-trigger (retirado).");
   });
 });
