@@ -4,7 +4,7 @@ id: BUGFIX-CLI-CANAL-DECISION-20261005
 title: La decisión de una compuerta tomada por el CLI queda registrada con el canal mission-control
 type: BUGFIX
 module: CLI
-workflow_status: planned
+workflow_status: approved
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -62,7 +62,7 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente — compuerta `plan` con evaluador `cascade` y aprobación explícita del PO antes de `approved`. El plan usa el valor `cli`, recomendado en «Supuestos y decisiones pendientes»; si el PO elige otro, el plan se ajusta y se reaprueba.
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 - Alcance: solo la rama `--id/--receipt` de `runGateDecide` y sus pruebas. Exclusiones: no se cambia el defecto `mission-control` de `recordHumanDecision` (lo usa Mission Control), ni Hermes, ni la corrida delegada, ni se reescriben recibos o eventos históricos.
 - Pasos ordenados:
   <!-- Cada paso nombra archivo, símbolo o comando. Un paso que no dice dónde ni
@@ -181,6 +181,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:20:31.627Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"La A (aprueba los 3 planes de bugfix con las recomendaciones)\",\"planHash\":\"sha256:9832d12a700ffdbab2a00649153f6bd3b3349be387378d95107dca08ac2711e0\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:20:32.115Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:9832d12a700ffdbab2a00649153f6bd3b3349be387378d95107dca08ac2711e0."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:20:32.115Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
   }
 ]
 ```

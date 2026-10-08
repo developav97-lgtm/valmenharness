@@ -4,7 +4,7 @@ id: BUGFIX-GATE-COMMAND-STDERR-EXITO-20261008
 title: El gate qa-mechanical marca falla de entorno a toda suite que pasa porque no lee stderr con exit 0
 type: BUGFIX
 module: GATE
-workflow_status: planned
+workflow_status: approved
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -55,7 +55,7 @@ Memoria consultada (`buscar_memoria` «qa-mechanical falla del entorno stderr ex
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente de aprobación explícita del PO; el ticket toca el evaluador de una compuerta, así que no se aprueba por política ni por agente.
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 - Alcance: solo la captura de stdout y stderr en `runCommandCheck` de `packages/gate-command/src/command.ts` y sus pruebas. Exclusiones: la tabla `RUNNERS`, `MENSAJES_DE_ENTORNO`, `VALOR_DE_REVISION`, los umbrales y la autoridad de la compuerta `qa-mechanical`, los recibos ya emitidos y la revisión de los tickets de SaiOpenCloud cerrados a mano.
 - Pasos ordenados:
   1. En `packages/gate-command/src/command.ts`, función `runCommandCheck`, reemplazar `execFileSync` por `spawnSync` (de `node:child_process`) con las mismas opciones (`cwd`, `encoding: "utf8"`, `timeout`, `maxBuffer`, `stdio`), y leer `result.stdout` y `result.stderr` en ambos desenlaces, para que la clasificación (`classifyEnvironmentFailure`, llamada en la línea 343) reciba stderr también con salida 0 (C1, C2, C3).
@@ -168,6 +168,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:20:32.518Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"La A (aprueba los 3 planes de bugfix con las recomendaciones)\",\"planHash\":\"sha256:c7eb2ca1ef0b80c974cabcf387e6f957f7196539c24b7fcca84230eb9739ddc3\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:20:32.967Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:c7eb2ca1ef0b80c974cabcf387e6f957f7196539c24b7fcca84230eb9739ddc3."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:20:32.967Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
   }
 ]
 ```

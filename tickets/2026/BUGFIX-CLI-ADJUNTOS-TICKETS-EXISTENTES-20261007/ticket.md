@@ -4,7 +4,7 @@ id: BUGFIX-CLI-ADJUNTOS-TICKETS-EXISTENTES-20261007
 title: Los adjuntos de diseño anexados después de materializar no llegan a los tickets
 type: BUGFIX
 module: CLI
-workflow_status: planned
+workflow_status: approved
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -57,7 +57,7 @@ Ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente de aprobación explícita del PO; el plan se detiene en `planned`. Decisiones que la aprobación fija (con la opción recomendada ya planificada): (D1) estados que se refrescan: `intake`, `analyzed`, `planned` y `blocked` — `approved` queda fuera porque su plan aprobado cambiaría materialmente; (D2) materializar con enlaces externos sin copia falla salvo bandera explícita `--allow-external-links`, y `--dry-run` informa sin fallar; (D3) un `.dc.html` o un HTML que depende del lienzo se rechaza al anexarlo (no se genera la versión autónoma: el motor no renderiza); (D4) la cita se resuelve por cuerpo del requisito, luego por archivo del dominio, luego todos.
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 - Alcance y exclusiones: motor (`packages/engine/src/feature-assets.ts`, `packages/engine/src/materialize.ts`), CLI, MCP y servidor como consumidores. No se tocan tickets en `approved` o posteriores, no se edita el contrato de 15 secciones ni los bloques append-only, y no se refrescan los tickets de SaiOpenCloud dentro de este ticket (se hace después, a pedido, con el comando nuevo).
 - Pasos ordenados:
   1. Cita por requisito (P4): en `packages/engine/src/feature-assets.ts`, `assetsForRequirements` recibe los requisitos cubiertos (`LocatedRequirement` con `body`, de `packages/engine/src/spec.ts`) y resuelve en tres niveles: citados en enunciado o cuerpo del requisito → citados en el `spec.md` del dominio → todos; `referenciasDe` en `packages/engine/src/materialize.ts` le pasa los requisitos y el texto de la sección dice qué nivel aplicó. (C12, C13)
@@ -186,6 +186,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:20:33.403Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"La A (aprueba los 3 planes de bugfix con las recomendaciones)\",\"planHash\":\"sha256:71733a7080017c5ed26087f843914deb0a578c64488aa9eb6f8a804e5d3b34c2\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:20:33.834Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:71733a7080017c5ed26087f843914deb0a578c64488aa9eb6f8a804e5d3b34c2."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:20:33.834Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
   }
 ]
 ```
