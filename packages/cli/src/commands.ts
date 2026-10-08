@@ -72,6 +72,7 @@ import {
   type BudgetPolicy,
   aprobarPorCodigo,
   archivosDelDiff,
+  aprobarPorAutorizacion,
   elegibilidadDeAprobacion,
   elegibilidadQa,
   correrQaAgent,
@@ -3552,6 +3553,41 @@ export function approvalEligibilityCommand(
       ...(resultado.derivableAlRevisor ? ["Derivable al revisor: solo la compuerta en review impide la aprobación y la autorización es de modo reviewer."] : []),
     ];
     return { stdout: `${lineas.join("\n")}\n`, stderr: "", exitCode: salida };
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/**
+ * `approve-by-authorization`: registra la aprobación del análisis o del plan atribuida a la
+ * autorización vigente que cubre al ticket y consume un cupo (R-APRO-002). Dice qué autorización
+ * usó y cuánto cupo queda, o las reglas que fallan.
+ */
+export function approveByAuthorizationCommand(
+  paths: RegistryPaths,
+  flags: Readonly<Record<string, string | true>>,
+  opciones: { readonly ahora?: Date; readonly env?: Readonly<Record<string, string | undefined>> } = {},
+): CommandResult {
+  const id = typeof flags["id"] === "string" ? flags["id"] : "";
+  if (id === "") return error("approve-by-authorization requiere --id <TICKET-ID>.", EXIT_SCHEMA);
+  const etapa = typeof flags["stage"] === "string" ? flags["stage"] : "";
+  if (etapa === "") return error("approve-by-authorization requiere --stage analysis|plan.", EXIT_SCHEMA);
+  try {
+    const r = aprobarPorAutorizacion({
+      paths,
+      ticketId: id,
+      etapa,
+      ...(opciones.ahora === undefined ? {} : { ahora: opciones.ahora }),
+      ...(opciones.env === undefined ? {} : { env: opciones.env }),
+    });
+    const lineas = [
+      r.registrada
+        ? `Aprobación de ${etapa} registrada para ${id}, atribuida a la autorización ${r.autorizacion.id} (${r.autorizacion.hash}).`
+        : `${id} ya tenía una aprobación de ${etapa} vigente de la autorización ${r.autorizacion.id}; no se escribió nada ni se consumió cupo.`,
+      `Recibo ${r.receiptId}. Cupo que queda hoy en la autorización: ${r.cupoRestante}.`,
+    ];
+    return { stdout: `${lineas.join("\n")}\n`, stderr: "", exitCode: EXIT_OK };
   } catch (caught) {
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);

@@ -11,7 +11,7 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { parseTicket } from "../packages/core/src/index.js";
+import { hasPlanGate, parseTicket } from "../packages/core/src/index.js";
 import {
   aprobacionDePlanVigente,
   hashDelPlan,
@@ -80,6 +80,48 @@ describe("registrar la aprobación", () => {
   it("exige responsable y frase", () => {
     expect(() => aprobar({ actor: "  " })).toThrow(/responsable/);
     expect(() => aprobar({ quote: "" })).toThrow(/frase literal/);
+  });
+});
+
+describe("la fuente autorizacion (R-APRO-002)", () => {
+  it("C16. registrarAprobacionDePlan la rechaza siempre: ni declarada en el proyecto ni por delegación", () => {
+    expect(() => aprobar({ source: "autorizacion" })).toThrow(/no se declara/);
+    writeFileSync(
+      join(lab, ".valmen", "config.yaml"),
+      "name: Demo\nplan-approval-sources:\n  - autorizacion\n  - cli\n",
+      "utf8",
+    );
+    expect(() => aprobar({ source: "autorizacion" })).toThrow(/no se declara/);
+    expect(() => aprobar({ source: "autorizacion", viaDelegacion: true })).toThrow(/no se declara/);
+    expect((ticket().blocks.Eventos ?? []).some((e) => e["action"] === "plan-approved")).toBe(false);
+    // Control: la misma llamada con una fuente aceptada sí registra.
+    expect(() => aprobar({ source: "cli" })).not.toThrow();
+  });
+
+  it("hasPlanGate acepta el evento de fuente autorizacion en un FEATURE, pero nunca en un SECURITY", () => {
+    const evento = (id: string, fuente: string): string =>
+      JSON.stringify({ actor: "autorización APA-1", source: fuente, quote: "q", planHash: "sha256:x", authorizationId: "APA-1", authorizationHash: "sha256:y" });
+    const conEvento = (tipo: string, fuente: string): ReturnType<typeof parseTicket> => {
+      const id = `${tipo}-ENGINE-GATE-AUTORIZACION-20261007`;
+      writeFixtureTicket(lab, {
+        id,
+        workflowStatus: "planned",
+        type: tipo,
+        module: "ENGINE",
+        aprobacionRegistrada: false,
+        plan: "- Pasos ordenados:\n  1. Hacer una cosa real en `a.ts`.\n  2. Hacer otra cosa real en `b.ts`.\n- Rollback: revertir.",
+      });
+      const ruta = join(lab, "tickets", "2026", id, "ticket.md");
+      const texto = readFileSync(ruta, "utf8");
+      const nuevo = `,\n  {\n    "kind": "ticket-event",\n    "id": "EVENT-002",\n    "date": "2026-10-07",\n    "action": "plan-approved",\n    "actor": "cli",\n    "details": ${JSON.stringify(evento(id, fuente))}\n  }\n]`;
+      writeFileSync(ruta, texto.replace(/\n\]\n```\n$/, `${nuevo}\n\`\`\`\n`), "utf8");
+      const u = findTicket(PATHS(), id);
+      return parseTicket(u?.text ?? "");
+    };
+    expect(hasPlanGate(conEvento("FEATURE", "autorizacion"))).toBe(true);
+    expect(hasPlanGate(conEvento("SECURITY", "autorizacion"))).toBe(false);
+    // Control: el mismo evento con la fuente de una persona no reemplaza la frase del PO.
+    expect(hasPlanGate(conEvento("FEATURE", "cli"))).toBe(false);
   });
 });
 
@@ -162,6 +204,16 @@ describe("la vigencia", () => {
 });
 
 describe("compatibilidad", () => {
+  it("C19. sin autorización, approve-plan sigue registrando la aprobación de una persona con la forma de siempre", () => {
+    aprobar();
+    const evento = (ticket().blocks.Eventos ?? []).find((e) => e["action"] === "plan-approved");
+    const datos = JSON.parse(String(evento?.["details"])) as Record<string, string>;
+    expect(Object.keys(datos).sort()).toEqual(["actor", "planHash", "quote", "source"]);
+    const estado = aprobacionDePlanVigente(ticket());
+    expect(estado.estado).toBe("vigente");
+    if (estado.estado === "vigente") expect(estado.aprobacion).toEqual({ actor: "Juan Andrade", source: "cli", quote: FRASE, planHash: hashDelPlan(ticket()) });
+  });
+
   it("un ticket que ya pasó por approved sigue validando y sigue sin aprobación registrada", () => {
     writeFixtureTicket(lab, { id: "BUGFIX-POS-VIEJO-20260921", workflowStatus: "approved", aprobacionRegistrada: false });
     const viejo = findTicket(PATHS(), "BUGFIX-POS-VIEJO-20260921");

@@ -49,7 +49,8 @@ import { hashState } from "@valmen/gate";
 
 import { unmarkedCriteria, unmarkedMessage } from "./criteria-marks.js";
 import { type RegistryPaths, findTicket } from "./discovery.js";
-import { aprobacionDePlanVigente } from "./plan-approval.js";
+import { motivoDeAprobacionPorAutorizacionInvalida } from "./approval-eligibility.js";
+import { FUENTE_AUTORIZACION, aprobacionDePlanVigente } from "./plan-approval.js";
 import { motivoDeCierrePorPoliticaInvalido, motivoDePruebasPorPoliticaInvalido } from "./qa-policy-verify.js";
 import { finalizeMutation, readAndValidate } from "./mutate.js";
 import {
@@ -391,12 +392,28 @@ function applyTicket(
         EXIT_INVARIANT,
       );
     }
+    // Una aprobación atribuida a una autorización se re-verifica contra el registro: el evento solo
+    // dice que la hubo, y una revocación posterior la anula (R-APRO-002).
+    const porAutorizacion = aprobacion.aprobacion.source === FUENTE_AUTORIZACION;
+    if (porAutorizacion) {
+      const motivo = motivoDeAprobacionPorAutorizacionInvalida(
+        request.paths.root,
+        document,
+        aprobacion.aprobacion,
+        new Date(request.now?.() ?? new Date()),
+      );
+      if (motivo !== null) {
+        fail(`approved requiere la aprobación del plan vigente.\n${motivo}`, EXIT_INVARIANT);
+      }
+    }
     eventosPrevios = [
       ...eventosPrevios,
       {
         action: "plan-approval-verified",
-        details:
-          `Aprobación del plan vigente: ${aprobacion.aprobacion.actor} (fuente ${aprobacion.aprobacion.source}), ` +
+        details: porAutorizacion
+          ? `Aprobación del plan vigente: ${aprobacion.aprobacion.actor} (fuente ${aprobacion.aprobacion.source}, ` +
+            `hash ${aprobacion.aprobacion.authorizationHash ?? "?"}), plan ${aprobacion.aprobacion.planHash}.`
+          : `Aprobación del plan vigente: ${aprobacion.aprobacion.actor} (fuente ${aprobacion.aprobacion.source}), ` +
           `plan ${aprobacion.aprobacion.planHash}.`,
       },
     ];
