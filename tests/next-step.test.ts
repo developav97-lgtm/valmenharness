@@ -585,6 +585,22 @@ describe("las skills: las del harness que el proyecto tiene, y las de dominio", 
     expect(t).not.toContain("desarrollo-de-algo");
   });
 
+  it("`corrida-orquestada` es del harness y no cuenta como de dominio", () => {
+    skill("planificacion");
+    skill("corrida-orquestada");
+
+    const paso = siguiente({ workflowStatus: "intake", diagnostico: DIAGNOSTICO_VACIO });
+
+    expect(paso.skillsDeDominio).toBe(false);
+    expect(texto(paso)).not.toContain("las skills de dominio del proyecto");
+
+    // Caso de control: con una skill propia, sigue tratándose como de dominio.
+    skill("desarrollo-de-algo");
+    expect(
+      siguiente({ workflowStatus: "intake", diagnostico: DIAGNOSTICO_VACIO }).skillsDeDominio,
+    ).toBe(true);
+  });
+
   it("un estado de espera no pide cargar nada", () => {
     skill("planificacion");
     skill("desarrollo-de-algo");

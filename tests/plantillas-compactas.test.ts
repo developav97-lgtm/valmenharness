@@ -142,6 +142,11 @@ describe("lo que sale de la plantilla deja un puntero a su skill", () => {
     );
   });
 
+  it("apunta a `corrida-orquestada`, publicada, para los subagentes en paralelo", () => {
+    expect(workflow).toContain("`corrida-orquestada`");
+    expect(publicadas().map((publicada) => publicada.id)).toContain("corrida-orquestada");
+  });
+
   it("apunta solo a skills que el harness publica", () => {
     const ids = new Set(publicadas().map((publicada) => publicada.id));
     const nombradas = [...workflow.matchAll(/skill `([a-z-]+)`/g), ...delivery.matchAll(/skill `([a-z-]+)`/g)]
