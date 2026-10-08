@@ -5,7 +5,12 @@
  * no interviene un modelo. Así el agente recibe lo necesario para continuar y
  * puede pedir el documento íntegro solo cuando lo necesita.
  */
-import { fasesDeSesion, type ClienteDeSesion, type FasesDeSesion } from "@valmen/adapter";
+import {
+  fasesDeSesion,
+  type ClienteDeSesion,
+  type FaseDelAgente,
+  type FasesDeSesion,
+} from "@valmen/adapter";
 import type { ParsedTicket } from "@valmen/core";
 
 import { procedenciaDeTicket, type Procedencia } from "./provenance.js";
@@ -65,9 +70,26 @@ export interface ResumeContext {
   readonly provenance: Procedencia | null;
   /** El modelo de cada fase para esta sesión y con qué lanzar su subagente (R-PERF-007). */
   readonly fases: FasesDeSesion;
+  /** Si la fase actual se delega a un subagente con el modelo del perfil, y cómo (R-PERF-007). */
+  readonly delegacion: DelegacionDeFase;
   /** Solo se incluye en modo completo; conserva los bytes leídos del ticket. */
   readonly documentoCompleto?: string;
 }
+
+/** Qué hace la sesión anfitriona con la fase actual: delegarla o hacerla ella misma. */
+export type DelegacionDeFase =
+  | {
+      readonly modo: "subagente";
+      readonly fase: FaseDelAgente;
+      readonly alias: string;
+      readonly model: string;
+      readonly instrucciones: readonly string[];
+    }
+  | {
+      readonly modo: "sesion";
+      readonly fase: FaseDelAgente | null;
+      readonly motivo: string;
+    };
 
 const ESTADOS_PUNTO_ABIERTO = new Set([
   "open",
@@ -97,6 +119,11 @@ export function buildResumeContext(
           decidedAt: ultimo.decidedAt,
         };
 
+  const fases = fasesDeSesion(paths.root, {
+    ...(cliente === undefined ? {} : { cliente }),
+    estado: fields.workflow_status,
+  });
+
   return {
     modo,
     id: fields.id,
@@ -123,12 +150,64 @@ export function buildResumeContext(
     readInstruction:
       "Lee las secciones completas bajo demanda con ver_ticket usando el mismo identificador.",
     provenance: procedenciaDeTicket(paths.root, fields.id),
-    fases: fasesDeSesion(paths.root, {
-      ...(cliente === undefined ? {} : { cliente }),
-      estado: fields.workflow_status,
-    }),
+    fases,
+    delegacion: delegacionDeFase(fases, fields.id),
     ...(modo === "completo" ? { documentoCompleto: ticket.text } : {}),
   };
+}
+
+/**
+ * Lo que la sesión interactiva hace con la fase actual (R-PERF-007).
+ *
+ * Es una instrucción y no un cambio: `resume` sigue de solo lectura y la sesión nunca cambia
+ * su modelo. Solo se delega si el cliente admite subagentes y la fase es de su proveedor; un
+ * estado sin fase del agente es un alto humano y no se delega.
+ */
+export function delegacionDeFase(fases: FasesDeSesion, id: string): DelegacionDeFase {
+  const actual = fases.faseActual;
+  if (actual === null) {
+    return {
+      modo: "sesion",
+      fase: null,
+      motivo: "el estado no es de una fase del agente: no se delega lo que decide una persona",
+    };
+  }
+  const fase = fases.fases.find((f) => f.fase === actual);
+  if (fase === undefined) {
+    return {
+      modo: "sesion",
+      fase: actual,
+      motivo: `${fases.aviso ?? "no hay modelo resuelto para la fase"}; haz la fase en esta sesión con el modelo de la sesión`,
+    };
+  }
+  if (fase.subagente === null) {
+    return {
+      modo: "sesion",
+      fase: actual,
+      motivo: `${fase.aviso ?? fases.aviso ?? "la fase no se delega"}; haz la fase en esta sesión con el modelo de la sesión`,
+    };
+  }
+  const cliente = fases.cliente ?? "";
+  return {
+    modo: "subagente",
+    fase: actual,
+    alias: fase.subagente,
+    model: fase.model,
+    instrucciones: [
+      `1. Crea el worktree del ticket: valmen journey worktree create --id ${id}`,
+      `2. Lanza un subagente con el modelo ${fase.subagente} (perfil: ${fase.provider}/${fase.model}) cuyo único contexto es el texto de: valmen journey brief --id ${id} --cliente ${cliente}`,
+      "3. No cambies el modelo de esta sesión: solo el subagente corre con el modelo de la fase.",
+      `4. Al recibir su informe, integra con: valmen journey worktree integrate --id ${id} y vuelve a llamar resume.`,
+      "5. Si eres el subagente y te llegó un brief, haz la fase tú y no delegues.",
+    ],
+  };
+}
+
+export function renderDelegacion(delegacion: DelegacionDeFase): string[] {
+  if (delegacion.modo === "sesion") {
+    return [`Delegación de la fase${delegacion.fase === null ? "" : ` ${delegacion.fase}`}: ${delegacion.motivo}.`];
+  }
+  return [`Delegación de la fase ${delegacion.fase}:`, ...delegacion.instrucciones];
 }
 
 export function renderFases(fases: FasesDeSesion): string[] {
@@ -173,6 +252,7 @@ export function renderResumeContext(context: ResumeContext): string {
   // Justo debajo del estado y antes del plan, que puede ser largo: es lo primero que
   // hay que leer, y enterrado al final se pasaba de largo.
   lines.push(...renderNextStep(context.nextStep));
+  lines.push(...renderDelegacion(context.delegacion));
 
   lines.push("Plan vigente:", context.plan || "(sin plan registrado)", "Puntos abiertos:");
   if (context.openPoints.length === 0) {

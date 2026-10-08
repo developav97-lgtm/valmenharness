@@ -25,8 +25,9 @@ import {
   renderNextStep,
 } from "../packages/engine/src/next-step.js";
 import { appendReceipt } from "../packages/engine/src/receipts.js";
-import { buildResumeContext, renderResumeContext } from "../packages/engine/src/resume.js";
+import { buildResumeContext, delegacionDeFase, renderResumeContext } from "../packages/engine/src/resume.js";
 import { buildGateState } from "../packages/engine/src/state.js";
+import { PERFILES_INCORPORADOS, derivarPerfil, renderPerfiles } from "../packages/adapter/src/index.js";
 import { type GateReceipt, hashState } from "../packages/gate/src/receipt.js";
 import { type FixtureTicketOptions, renderFixtureTicket, writeFixtureTicket } from "./helpers/fixtures.js";
 
@@ -734,5 +735,90 @@ describe("R-PERF-007 modelos por fase en el contexto de reanudación", () => {
     resumeTicket(paths(), ID, "compacto", "claude");
     resumeTicket(paths(), ID, "compacto", "codex");
     expect(archivos.map((a) => readFileSync(a))).toEqual(antes);
+  });
+
+  describe("delegación de la fase", () => {
+    const sesionDe = (estado: string, cliente?: "claude" | "codex") => {
+      mkdirSync(join(root, ".valmen"), { recursive: true });
+      writeFileSync(perfiles(), "seleccion:\n  proyecto: claude-code-completo\n\nperfiles: {}\n");
+      writeFixtureTicket(root, { id: ID, workflowStatus: estado });
+      return resumeTicket(paths(), ID, "compacto", cliente);
+    };
+    const delegacion = (estado: string, cliente?: "claude" | "codex") =>
+      sesionDe(estado, cliente).data?.["delegacion"] as ReturnType<typeof delegacionDeFase>;
+    const instrucciones = (): string => {
+      const d = delegacion("analyzed", "claude");
+      return d.modo === "subagente" ? d.instrucciones.join("\n") : "";
+    };
+    const mixto = (): void => {
+      const perfil = derivarPerfil((PERFILES_INCORPORADOS.find((p) => p.id === "claude-code-completo") as (typeof PERFILES_INCORPORADOS)[number]), "mixto", "Claude planea, Codex implementa", {
+        "agent-implementation": { provider: "codex", model: "gpt-6-sol", effort: "high" },
+      });
+      mkdirSync(join(root, ".valmen"), { recursive: true });
+      writeFileSync(perfiles(), renderPerfiles([perfil], { proyecto: "mixto", ejecutores: {} }));
+      writeFixtureTicket(root, { id: ID, workflowStatus: "approved" });
+    };
+    const ticketAprobado = () => {
+      mixto();
+      return resumeTicket(paths(), ID, "compacto", "claude").data?.["delegacion"] as ReturnType<typeof delegacionDeFase>;
+    };
+
+    it("R-PERF-007 C1: claude en analyzed delega el plan a opus", () => {
+      expect(delegacion("analyzed", "claude")).toMatchObject({ modo: "subagente", fase: "plan", alias: "opus" });
+    });
+    it("R-PERF-007 C2: cita el brief con el cliente", () => {
+      expect(instrucciones()).toContain(`valmen journey brief --id ${ID} --cliente claude`);
+    });
+    it("R-PERF-007 C3: la sesión no cambia su modelo", () => {
+      expect(instrucciones()).toContain("No cambies el modelo de esta sesión");
+    });
+    it("R-PERF-007 C4: crea el worktree antes de lanzar el subagente", () => {
+      const t = instrucciones();
+      expect(t).toContain(`valmen journey worktree create --id ${ID}`);
+      expect(t.indexOf("worktree create")).toBeLessThan(t.indexOf("Lanza un subagente"));
+    });
+    it("R-PERF-007 C5: integra y vuelve a llamar resume", () => {
+      const t = instrucciones();
+      expect(t).toContain(`valmen journey worktree integrate --id ${ID}`);
+      expect(t).toContain("vuelve a llamar resume");
+    });
+    it("R-PERF-007 C6: codex hace la fase con el modelo de la sesión", () => {
+      const d = delegacion("analyzed", "codex");
+      expect(d.modo).toBe("sesion");
+      expect((d as { motivo: string }).motivo).toContain("con el modelo de la sesión");
+    });
+    it("R-PERF-007 C7: fase de otro proveedor no se delega", () => {
+      expect(ticketAprobado().modo).toBe("sesion");
+    });
+    it("R-PERF-007 C8: planned es un alto humano", () => {
+      expect(delegacion("planned", "claude")).toMatchObject({ modo: "sesion", fase: null });
+    });
+    it("R-PERF-007 C9: el bloque va entre el siguiente paso y el plan vigente", () => {
+      const out = sesionDe("analyzed", "claude").stdout;
+      expect(out).toContain("Delegación de la fase plan:");
+      expect(out.indexOf("Delegación de la fase plan:")).toBeGreaterThan(out.indexOf("Siguiente paso"));
+      expect(out.indexOf("Delegación de la fase plan:")).toBeLessThan(out.indexOf("Plan vigente"));
+    });
+    it("R-PERF-007 C10: sin cliente dice que no está declarado", () => {
+      expect(sesionDe("analyzed").stdout).toMatch(/Delegación de la fase plan: sin cliente declarado/);
+    });
+    it("R-PERF-007 C11: data.delegacion coincide con lo impreso", () => {
+      const r = sesionDe("analyzed", "claude");
+      expect(r.stdout).toContain("Delegación de la fase plan:\n1. Crea el worktree");
+      expect((r.data?.["delegacion"] as { modo: string }).modo).toBe("subagente");
+      const s = sesionDe("analyzed", "codex");
+      expect(s.stdout).toContain("Delegación de la fase plan: Codex no declara");
+      expect((s.data?.["delegacion"] as { modo: string }).modo).toBe("sesion");
+    });
+    it("R-PERF-007 C14: con cliente no cambia los bytes de profiles.yaml ni del ticket", () => {
+      sesionDe("analyzed");
+      const archivos = [perfiles(), join(root, "tickets", "2026", ID, "ticket.md")];
+      const antes = archivos.map((a) => readFileSync(a));
+      resumeTicket(paths(), ID, "compacto", "claude");
+      expect(archivos.map((a) => readFileSync(a))).toEqual(antes);
+    });
+    it("R-PERF-007 C18: el motivo de otro proveedor dice despacha por proveedor", () => {
+      expect((ticketAprobado() as { motivo: string }).motivo).toContain("despacha por proveedor");
+    });
   });
 });
