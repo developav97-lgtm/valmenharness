@@ -40,6 +40,8 @@ export * from "./journey-plan.js";
 export * from "./journey-preparation.js";
 export * from "./machine-capacity.js";
 export * from "./journey-roadmap.js";
+export * from "./journey-wave.js";
+export * from "./journey-brief.js";
 export * from "./execution-activity.js";
 export * from "./execution-sessions.js";
 export * from "./execution-models.js";

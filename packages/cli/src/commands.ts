@@ -214,6 +214,12 @@ import {
   ejecutarRevisor,
   prepararRevision,
 } from "@valmen/engine";
+import {
+  armarBriefDeSubagente,
+  calcularOlaDeJornada,
+  renderBriefDeSubagente,
+  renderOlaDeJornada,
+} from "@valmen/engine";
 
 /**
  * Resultado de un comando: qué escribir y con qué código salir.
@@ -3669,6 +3675,91 @@ export function journeyClearStopCommand(
     const project = resolveAuthorizedProject({ projectId: proyecto, home: opciones.home ?? homedir() });
     liberarParada(project.paths, ticket, actor);
     return ok(`Parada de ${ticket} liberada por ${actor.trim()}: el despacho puede volver a elegirlo.\n`);
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/**
+ * El proyecto de `journey next` y `journey brief`: `--project`, o el `project-id` de la
+ * configuración de la raíz. Falla con un mensaje si no hay ninguno de los dos.
+ */
+function proyectoDeLaOla(
+  flags: Readonly<Record<string, string | true>>,
+  opciones: { readonly home?: string; readonly root?: string },
+): ReturnType<typeof resolveAuthorizedProject> {
+  const home = opciones.home ?? homedir();
+  const explicito = typeof flags["project"] === "string" ? flags["project"] : undefined;
+  if (explicito !== undefined) return resolveAuthorizedProject({ projectId: explicito, home });
+  const configPath = join(opciones.root ?? process.cwd(), ".valmen", "config.yaml");
+  const derivado = existsSync(configPath)
+    ? readSharedProjectPolicy(parseConfig(readFileSync(configPath, "utf8"))).projectId
+    : null;
+  if (derivado === null) {
+    throw new TicketError("Falta --project <id>: la raíz no declara un project-id en .valmen/config.yaml.", EXIT_SCHEMA);
+  }
+  return resolveAuthorizedProject({ projectId: derivado, home });
+}
+
+/**
+ * `journey next --wave [--concurrency <n>] [--journey <id>] [--project <id>]`: los tickets de la
+ * jornada que se pueden despachar ahora a subagentes. Solo lectura: no escribe en el registro.
+ */
+export function journeyNextCommand(
+  flags: Readonly<Record<string, string | true>>,
+  opciones: { readonly home?: string; readonly root?: string; readonly ahora?: () => Date } = {},
+): CommandResult {
+  if (flags["wave"] !== true) return error("journey next requiere --wave.", EXIT_SCHEMA);
+  let concurrency: number | undefined;
+  if (flags["concurrency"] !== undefined) {
+    const crudo = flags["concurrency"];
+    concurrency = typeof crudo === "string" && /^\d+$/.test(crudo) ? Number(crudo) : Number.NaN;
+    if (!Number.isSafeInteger(concurrency) || concurrency < 1) {
+      return error("--concurrency debe ser un entero de al menos 1.", EXIT_SCHEMA);
+    }
+  }
+  try {
+    return withAccessMode("ask", () => {
+      const project = proyectoDeLaOla(flags, opciones);
+      const ola = calcularOlaDeJornada({
+        project,
+        ...(typeof flags["journey"] === "string" ? { journeyId: flags["journey"] } : {}),
+        ...(concurrency === undefined ? {} : { concurrency }),
+        ...(opciones.ahora === undefined ? {} : { ahora: opciones.ahora }),
+      });
+      return ok(renderOlaDeJornada(ola));
+    });
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/**
+ * `journey brief --id <ID> [--cliente <c>] [--project <id>]`: el brief autocontenido de un ticket
+ * para un subagente. Solo lectura: no crea el worktree ni lanza nada.
+ */
+export function journeyBriefCommand(
+  flags: Readonly<Record<string, string | true>>,
+  opciones: { readonly home?: string; readonly root?: string } = {},
+): CommandResult {
+  const ticketId = typeof flags["id"] === "string" ? flags["id"] : undefined;
+  if (ticketId === undefined) return error("journey brief requiere --id <ID>.", EXIT_SCHEMA);
+  const cliente = flags["cliente"];
+  if (cliente !== undefined && (typeof cliente !== "string" || !(EJECUTORES_CON_PERFIL as readonly string[]).includes(cliente))) {
+    return error(`El cliente "${String(cliente)}" no es válido. Valores admitidos: ${EJECUTORES_CON_PERFIL.join(", ")}.`, EXIT_SCHEMA);
+  }
+  try {
+    return withAccessMode("ask", () => {
+      const project = proyectoDeLaOla(flags, opciones);
+      const brief = armarBriefDeSubagente({
+        project,
+        ticketId,
+        ...(cliente === undefined ? {} : { cliente: cliente as ClienteDeSesion }),
+      });
+      return ok(renderBriefDeSubagente(brief));
+    });
   } catch (caught) {
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);

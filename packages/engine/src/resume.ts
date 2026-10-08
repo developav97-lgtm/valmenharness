@@ -131,7 +131,7 @@ export function buildResumeContext(
   };
 }
 
-function renderFases(fases: FasesDeSesion): string[] {
+export function renderFases(fases: FasesDeSesion): string[] {
   const lines = [`Modelos por fase (cliente: ${fases.cliente ?? "no declarado"}):`];
   for (const f of fases.fases) {
     const marca = f.fase === fases.faseActual ? "→" : "-";

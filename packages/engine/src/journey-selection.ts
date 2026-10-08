@@ -122,7 +122,7 @@ export function selectJourneyTickets(request: JourneySelectionRequest): JourneyS
   });
 }
 
-function compareTicket(left: JourneyTicketInput, right: JourneyTicketInput): number {
+export function compareTicket(left: JourneyTicketInput, right: JourneyTicketInput): number {
   return left.priority - right.priority || left.order - right.order;
 }
 
@@ -150,17 +150,27 @@ function baseReasons(
     reasons.push("dependency");
   }
 
+  reasons.push(...razonesDeVentana(ticket, windows, at));
+  return reasons;
+}
+
+/**
+ * La regla de ventana de un ticket: `["window"]` si exige una ventana que no declara, o si la que
+ * declara no existe o no permite despachar ahora; vacío si no hay nada que objetar.
+ */
+export function razonesDeVentana(
+  ticket: JourneyTicketInput,
+  windows: readonly { readonly windowId: string; readonly startsAt: string; readonly endsAt: string; readonly timeZone: string }[],
+  at: string,
+): JourneySelectionReason[] {
   const requiresWindow =
     ticket.start.condition === "window" || ticket.start.condition === "dependencies-and-window";
-  if (requiresWindow && ticket.windowId === undefined) {
-    reasons.push("window");
-  } else if (ticket.windowId !== undefined) {
+  if (requiresWindow && ticket.windowId === undefined) return ["window"];
+  if (ticket.windowId !== undefined) {
     const window = windows.find((item) => item.windowId === ticket.windowId);
-    if (window === undefined || !evaluateJourneyWindow(window, at).allowsNewDispatch) {
-      reasons.push("window");
-    }
+    if (window === undefined || !evaluateJourneyWindow(window, at).allowsNewDispatch) return ["window"];
   }
-  return reasons;
+  return [];
 }
 
 function workflowReason(workflow: string): JourneySelectionReason | null {

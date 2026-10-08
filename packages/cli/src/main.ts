@@ -108,6 +108,8 @@ import {
   guardarConsumoDeSesiones,
   approvePlanCommand,
   journeyAdvanceCommand,
+  journeyBriefCommand,
+  journeyNextCommand,
   journeyClearStopCommand,
   journeyInstallTriggerCommand,
   journeyNotifyPlansCommand,
@@ -239,6 +241,12 @@ Comandos:
   journey advance --project <id> [--journey <id>] [--fase preparacion|ejecucion] [--to <destino>]
                             Avanza la jornada una vez: sin modelo e idempotente (un segundo
                             avance no despacha otro ticket). Pensado para un disparador.
+  journey next --wave [--concurrency <n>] [--journey <id>] [--project <id>]
+                            Los tickets de la jornada listos para despachar ahora a subagentes
+                            (3 a la vez por defecto, contando los que ya están en curso). Solo lectura.
+  journey brief --id <ID> [--cliente <c>] [--project <id>]
+                            El brief autocontenido de un ticket para un subagente: worktree, siguiente
+                            paso, modelo, compuertas, contrato de entrega y prohibiciones. Solo lectura.
   journey notify-plans --project <id> --journey <id> [--to <destino>]
                             Emite un código de aprobación por plan listo y uno de lote, y los envía.
   approval-eligibility --id <ID> --stage analysis|plan [--json]
@@ -639,6 +647,7 @@ export const VALUE_OPTIONS = [
   "--max",
   // El avance de una jornada concreta, el intervalo del disparador y su carpeta.
   "--journey",
+  "--concurrency",
   "--fase",
   "--every",
   "--via",
@@ -1999,6 +2008,10 @@ export async function run(argv: readonly string[]): Promise<number> {
           ? journeyPlanCommand(options.flags)
           : rest[0] === "advance"
             ? await journeyAdvanceCommand(options.flags)
+            : rest[0] === "next"
+              ? journeyNextCommand(options.flags, { root: resolvePaths(options).root })
+              : rest[0] === "brief"
+                ? journeyBriefCommand(options.flags, { root: resolvePaths(options).root })
             : rest[0] === "install-trigger"
               ? journeyInstallTriggerCommand(options.flags)
               : rest[0] === "notify-plans"
@@ -2007,7 +2020,7 @@ export async function run(argv: readonly string[]): Promise<number> {
                 ? journeyClearStopCommand(options.flags)
                 : rest[0] === "worktree"
                 ? journeyWorktreeCommand(resolvePaths(options), rest.slice(1), options.flags)
-                : { stdout: "", stderr: "journey admite: plan, advance, install-trigger, notify-plans, clear-stop y worktree.\n", exitCode: EXIT_SCHEMA };
+                : { stdout: "", stderr: "journey admite: plan, advance, next, brief, install-trigger, notify-plans, clear-stop y worktree.\n", exitCode: EXIT_SCHEMA };
     } else if (command === "review-agent") {
       result = await reviewAgentCommand(resolvePaths(options), options.flags);
     } else if (command === "qa-shadow") {
