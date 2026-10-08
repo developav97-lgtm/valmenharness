@@ -4,7 +4,7 @@ id: FEATURE-ENGINE-ELEGIBILIDAD-APROBACION-20261007
 title: Decidir en código la elegibilidad con los tipos declarados (incluye SYNC, INTEGRATION y AGENT), impactos explícitos y sin SECURITY, block ni despliegue
 type: FEATURE
 module: ENGINE
-workflow_status: in_progress
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -75,27 +75,27 @@ Ninguno.
 
 ## Criterios de aceptación
 
-- [ ] C1. Un ticket SECURITY no es elegible aunque una autorización vigente listara su módulo y su riesgo (R-APRO-004)
+- [x] C1. Un ticket SECURITY no es elegible aunque una autorización vigente listara su módulo y su riesgo (R-APRO-004)
       <!-- test: npx vitest run tests/elegibilidad-aprobacion.test.ts -->
-- [ ] C2. Un recibo `block` de la compuerta de la etapa deja el ticket no elegible con una autorización vigente que lo cubre (R-APRO-004)
+- [x] C2. Un recibo `block` de la compuerta de la etapa deja el ticket no elegible con una autorización vigente que lo cubre (R-APRO-004)
       <!-- test: npx vitest run tests/elegibilidad-aprobacion.test.ts -->
-- [ ] C3. Un último recibo `block` de `qa-mechanical` deja el ticket no elegible (R-APRO-004)
+- [x] C3. Un último recibo `block` de `qa-mechanical` deja el ticket no elegible (R-APRO-004)
       <!-- test: npx vitest run tests/elegibilidad-aprobacion.test.ts -->
-- [ ] C4. Un ticket cuyo diagnóstico declara despliegue no es elegible bajo ninguna autorización (R-APRO-005)
+- [x] C4. Un ticket cuyo diagnóstico declara despliegue no es elegible bajo ninguna autorización (R-APRO-005)
       <!-- test: npx vitest run tests/elegibilidad-aprobacion.test.ts -->
-- [ ] C5. Un ticket INTEGRATION con una autorización que solo cubre BUGFIX no es elegible y el motivo nombra el tipo (R-APRO-005)
+- [x] C5. Un ticket INTEGRATION con una autorización que solo cubre BUGFIX no es elegible y el motivo nombra el tipo (R-APRO-005)
       <!-- test: npx vitest run tests/elegibilidad-aprobacion.test.ts -->
-- [ ] C6. Un ticket SYNC, INTEGRATION o AGENT es elegible cuando la autorización lista su tipo y la compuerta está en `approve` (R-APRO-005)
+- [x] C6. Un ticket SYNC, INTEGRATION o AGENT es elegible cuando la autorización lista su tipo y la compuerta está en `approve` (R-APRO-005)
       <!-- test: npx vitest run tests/elegibilidad-aprobacion.test.ts -->
-- [ ] C7. Un ticket con impacto de migración o de contenedores solo es elegible si la autorización lista ese impacto (R-APRO-005)
+- [x] C7. Un ticket con impacto de migración o de contenedores solo es elegible si la autorización lista ese impacto (R-APRO-005)
       <!-- test: npx vitest run tests/elegibilidad-aprobacion.test.ts -->
-- [ ] C8. Un recibo en `review` no es elegible y solo se marca derivable al revisor cuando la autorización es de modo `reviewer`
+- [x] C8. Un recibo en `review` no es elegible y solo se marca derivable al revisor cuando la autorización es de modo `reviewer`
       <!-- test: npx vitest run tests/elegibilidad-aprobacion.test.ts -->
-- [ ] C9. Una autorización con el cupo diario agotado deja el ticket no elegible
+- [x] C9. Una autorización con el cupo diario agotado deja el ticket no elegible
       <!-- test: npx vitest run tests/elegibilidad-aprobacion.test.ts -->
-- [ ] C10. El resultado devuelve todas las reglas que fallan con su motivo y, si es elegible, el id y el hash de la autorización
+- [x] C10. El resultado devuelve todas las reglas que fallan con su motivo y, si es elegible, el id y el hash de la autorización
       <!-- test: npx vitest run tests/elegibilidad-aprobacion.test.ts -->
-- [ ] C11. `valmen approval-eligibility` muestra la decisión y sus reglas sin escribir en el registro
+- [x] C11. `valmen approval-eligibility` muestra la decisión y sus reglas sin escribir en el registro
       <!-- test: npx vitest run tests/elegibilidad-aprobacion.test.ts -->
 - [ ] C12. La suite completa y la comprobación de tipos pasan
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
@@ -108,11 +108,22 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+- `packages/engine/src/approval-eligibility.ts` (nuevo): `elegibilidadDeAprobacion({ paths, ticketId, etapa, ahora? })`, de solo lectura y sin modelo. Devuelve siempre las siete reglas, en orden: `etapa` (solo `analysis` o `plan`), `tipo` (SECURITY nunca), `despliegue` (la línea de impactos del diagnóstico, leída con `diagnosedImpacts`, nombra despliegue o deploy y no dice «ninguno»), `qa-mechanical` (su último recibo vigente en block), `compuerta` (`veredictoDeCompuerta` sobre la compuerta de la etapa: block, rechazo humano, review o ausencia de recibo no cumplen; approve cumple, y si lo aprobó una persona el detalle dice que no necesita la autorización), `autorizacion` y `cupo`. La cobertura de la autorización la decide `autorizacionDeAprobacionQueCubre`, sin cambiarla; el detalle de la regla, cuando ninguna cubre, nombra la primera dimensión que falla en cada autorización vigente (tipo, módulo, riesgo, impactos o etapa). Un riesgo desconocido nunca se asume cubierto, y SECURITY no consulta autorizaciones. `autorizacion` (id y hash) solo se devuelve si el ticket es elegible; `derivableAlRevisor` es verdadero solo si lo único que falla es la compuerta en review y la autorización que cubre es de modo `reviewer`.
+- `packages/engine/src/index.ts`: exporta el módulo nuevo.
+- `packages/cli/src/commands.ts`: `approvalEligibilityCommand`, que imprime el veredicto, una línea por regla y la autorización (o el mensaje de derivable), o el resultado completo con `--json`; sale con 3 si el ticket no es elegible y no escribe nada.
+- `packages/cli/src/main.ts`: el despacho de `valmen approval-eligibility --id <ID> --stage analysis|plan [--json]`, su línea de ayuda y `--stage` en `VALUE_OPTIONS` (sin ella, la prueba de la ayuda y el CLI leerían `--stage` como bandera booleana).
+- `tests/elegibilidad-aprobacion.test.ts` (nuevo): 47 pruebas sobre un registro temporal, un caso por criterio (C1–C11), un caso de control elegible y los bordes (recibo de otra etapa, block corregido y reevaluado, block aprobado o review rechazado por una persona, autorización revocada o vencida, riesgo desconocido, etapa inválida, el cupo de ayer, el CLI y la lectura de `--stage`).
+- Límites que quedan para los tickets siguientes: si hay varias autorizaciones que cubren al ticket se usa la primera, y si esa tiene el cupo agotado el ticket queda no elegible aunque otra cubra con cupo (lado seguro; el ticket que consuma la decisión puede elegir); un `review` derivable no consume cupo aquí; la detección de despliegue es por palabra en la línea del diagnóstico, así que «ninguno, salvo despliegue» se lee como ninguno.
 
 ## Pruebas
 
-Pendiente de ejecución.
+- Directorio: raíz del repositorio (o el worktree del ticket), con las dependencias instaladas y `npm run build` al día (el tipado resuelve `@valmen/engine` por su `dist`).
+- `npx vitest run tests/elegibilidad-aprobacion.test.ts` → 47 pruebas pasan (C1 a C11). Comprobadas por mutación: se desactivó cada barrera por separado (SECURITY, block de la compuerta, qa-mechanical, despliegue, cupo, modo reviewer, impactos) y la prueba correspondiente falló cada vez.
+- `npx vitest run tests/cli.test.ts` → 20 pruebas pasan (la ayuda y `VALUE_OPTIONS` siguen coherentes con el comando nuevo).
+- `npx tsc --noEmit -p tsconfig.json` y `npx eslint` sobre los archivos del ticket → sin errores.
+- C12: la comprobación de tipos (el comando que declara el criterio) pasa. La suite completa (`npx vitest run`) no la corrió el agente de este ticket: la corre el orquestador al integrar, para no abrir dos suites a la vez; por eso C12 queda sin marcar hasta ese resultado.
+- Manual (responsable): `valmen approval-eligibility --id FEATURE-ENGINE-ELEGIBILIDAD-APROBACION-20261007 --stage plan` desde la raíz del proyecto con el CLI construido: debe mostrar una línea por regla, con `✓` en etapa, tipo, despliegue, qa-mechanical y compuerta, y `✗` en autorización y cupo mientras no haya una autorización vigente (`valmen approval-authorize list`); sale con 3. Con `--json` imprime el resultado completo. En ningún caso modifica `tickets/` ni `.valmen/`.
+<!-- verify: manual -->
 
 ## QA
 
@@ -141,7 +152,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-08",
+    "session_reference": null,
+    "model": "claude-sonnet-5-5",
+    "reasoning_effort": null,
+    "notes": "Subagente de Claude Code dedicado solo a este ticket; la sesión no expone agregado de tokens",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:subagente-claude-code-elegibilidad",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -214,6 +241,24 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-07",
+    "at": "2026-10-08T04:48:52.205Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-07",
+    "at": "2026-10-08T04:48:57.074Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```

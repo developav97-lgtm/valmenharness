@@ -122,6 +122,7 @@ import {
   qaPromoteCommand,
   qaShadowCommand,
   qaEligibilityCommand,
+  approvalEligibilityCommand,
   precheckCommand,
   precisionCommand,
   thresholdsCommand,
@@ -236,6 +237,9 @@ Comandos:
                             avance no despacha otro ticket). Pensado para un disparador.
   journey notify-plans --project <id> --journey <id> [--to <destino>]
                             Emite un código de aprobación por plan listo y uno de lote, y los envía.
+  approval-eligibility --id <ID> --stage analysis|plan [--json]
+                            Decide en código si el análisis o el plan del ticket puede aprobarse por una
+                            autorización (sin modelo y sin escribir nada). Sale con 3 si no lo es.
   qa-eligibility --id <ID> [--base <commit>]
   qa-agent --id <ID> --base <commit> --delivered <commit>
   qa-policy-close --id <ID>
@@ -693,6 +697,8 @@ export const VALUE_OPTIONS = [
   "--max-risk",
   "--daily-quota",
   "--valid-days",
+  // `approval-eligibility --stage`: la etapa (analysis o plan) cuya compuerta se quiere aprobar.
+  "--stage",
   // `hermes brief --dias N`: cuántos días hacia atrás se cuentan los cierres.
   "--dias",
   // `provider` y `routing`: la puesta en marcha sin pasar por la pantalla. Es lo
@@ -1990,6 +1996,8 @@ export async function run(argv: readonly string[]): Promise<number> {
       result = qaPolicyCloseCommand(resolvePaths(options), options.flags);
     } else if (command === "qa-agent") {
       result = qaAgentCommand(resolvePaths(options), options.flags);
+    } else if (command === "approval-eligibility") {
+      result = approvalEligibilityCommand(resolvePaths(options), options.flags);
     } else if (command === "qa-eligibility") {
       result = qaEligibilityCommand(resolvePaths(options), options.flags);
     } else if (command === "ux") {

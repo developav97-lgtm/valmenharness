@@ -110,3 +110,4 @@ export * from "./qa-shadow.js";
 export * from "./approval-authorization.js";
 export * from "./external-skills.js";
 export * from "./approval-authorization-link.js";
+export * from "./approval-eligibility.js";

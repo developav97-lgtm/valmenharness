@@ -67,6 +67,7 @@ import {
   type BudgetPolicy,
   aprobarPorCodigo,
   archivosDelDiff,
+  elegibilidadDeAprobacion,
   elegibilidadQa,
   correrQaAgent,
   TICKETS_PARA_PROMOVER,
@@ -3265,6 +3266,46 @@ export function qaEligibilityCommand(
     return resultado.elegible
       ? ok(`${lineas.join("\n")}\n`)
       : { stdout: `${lineas.join("\n")}\n`, stderr: "", exitCode: EXIT_INVARIANT };
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/**
+ * `approval-eligibility --id <ID> --stage analysis|plan [--json]`: muestra si el análisis o el plan de
+ * un ticket puede aprobarse por una autorización (R-APRO-004 y R-APRO-005).
+ *
+ * Decide en código —sin modelo— y es de solo lectura: no registra la aprobación, no consume cupo ni
+ * mueve el ticket. Sale con el código de invariante si el ticket no es elegible.
+ */
+export function approvalEligibilityCommand(
+  paths: RegistryPaths,
+  flags: Readonly<Record<string, string | true>>,
+  opciones: { readonly ahora?: Date } = {},
+): CommandResult {
+  const id = typeof flags["id"] === "string" ? flags["id"] : "";
+  if (id === "") return error("approval-eligibility requiere --id <TICKET-ID>.", EXIT_SCHEMA);
+  const etapa = typeof flags["stage"] === "string" ? flags["stage"] : "";
+  if (etapa === "") return error("approval-eligibility requiere --stage analysis|plan.", EXIT_SCHEMA);
+  try {
+    const resultado = elegibilidadDeAprobacion({
+      paths,
+      ticketId: id,
+      etapa,
+      ...(opciones.ahora === undefined ? {} : { ahora: opciones.ahora }),
+    });
+    const salida = resultado.elegible ? EXIT_OK : EXIT_INVARIANT;
+    if (flags["json"] === true) {
+      return { stdout: `${JSON.stringify(resultado, null, 2)}\n`, stderr: "", exitCode: salida };
+    }
+    const lineas = [
+      `Elegibilidad para aprobar por autorización — ${id} (${etapa}): ${resultado.elegible ? "ELEGIBLE" : "NO ELEGIBLE"}`,
+      ...resultado.reglas.map((r) => `  ${r.cumple ? "✓" : "✗"} ${r.regla}: ${r.detalle}`),
+      ...(resultado.autorizacion === null ? [] : [`Respaldada por la autorización ${resultado.autorizacion.id} (${resultado.autorizacion.hash}).`]),
+      ...(resultado.derivableAlRevisor ? ["Derivable al revisor: solo la compuerta en review impide la aprobación y la autorización es de modo reviewer."] : []),
+    ];
+    return { stdout: `${lineas.join("\n")}\n`, stderr: "", exitCode: salida };
   } catch (caught) {
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);
