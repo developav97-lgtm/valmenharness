@@ -1,7 +1,7 @@
 ---
 name: corrida-orquestada
 description: Usar cuando el PO pide ejecutar la jornada de hoy o una feature repartiendo los tickets en subagentes simultáneos, cada uno en su worktree —«ejecuta la jornada», «ejecuta el feature X de corrido»—, o cuando haya que retomar esa corrida. Para tickets uno tras otro sin subagentes, ver corrida-delegada.
-version: 1.1.0
+version: 1.2.0
 origen: valmen
 ---
 
@@ -18,7 +18,7 @@ Si un comando de este recorrido falta, **no lo reemplazas con git a mano**: te d
 
 ## Pedir la ola
 
-`valmen journey next --wave [--concurrency N]` lista los tickets listos de la jornada, contando los que ya están en curso. Son **3 simultáneos por defecto**; el PO los cambia al pedir la corrida («de a 5») o con `--concurrency N`. Si no hay jornada, `valmen journey plan` la arma. No lances más de lo que devuelve la ola.
+`valmen journey next --wave [--concurrency N]` lista los tickets listos de la jornada, contando los que ya están en curso. Son **3 simultáneos por defecto**; el PO los cambia al pedir la corrida («de a 5») o con `--concurrency N`. Si no hay jornada, la arma `valmen journey plan --project <id> --feature <slug>` (o `--tickets a,b,c`, y `--max <n>` si el PO fija cuántos). No lances más de lo que devuelve la ola.
 
 ## Lanzar los subagentes
 

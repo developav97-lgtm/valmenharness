@@ -77,7 +77,7 @@ afterEach(() => {
 describe("la skill en el catálogo", () => {
   it("C1: declara nombre, versión y origen", () => {
     expect(texto).toMatch(/^name:\s*corrida-orquestada$/m);
-    expect(texto).toMatch(/^version:\s*1\.1\.0$/m);
+    expect(texto).toMatch(/^version:\s*1\.2\.0$/m);
     expect(texto).toMatch(/^origen:\s*valmen$/m);
   });
 
@@ -151,6 +151,11 @@ describe("lo que manda", () => {
     expect(t).toMatch(/se cierra aquí mismo con su ciclo de QA/);
     expect(t).toMatch(/de pantalla, de un entorno que no tienes/);
     expect(t).toMatch(/Un SECURITY solo se cierra con la frase del PO/);
+  });
+
+  it("arma la jornada desde un feature o desde una lista de tickets", () => {
+    expect(t).toContain("`valmen journey plan --project <id> --feature <slug>`");
+    expect(t).toContain("`--tickets a,b,c`");
   });
 
   it("C13: solo el orquestador toca el checkout principal", () => {
