@@ -9,7 +9,7 @@
  * declara un rol por fase y cada sesión usa el modelo de la suya (o cae al de la política
  * diciéndolo); y cada sesión deja su registro por fase.
  */
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -27,6 +27,7 @@ import {
   armarJornada,
   leerFases,
   prepararTicket,
+  readAutonomousStops,
   resolveAuthorizedProject,
   resolverModeloDeFase,
   runAutonomous,
@@ -43,7 +44,7 @@ let home: string;
 let root: string;
 const proyecto = () => resolveAuthorizedProject({ projectId, home });
 
-function politica(modelo = "gpt-6-politica"): void {
+function politica(modelo = "gpt-6-politica", autorizados: readonly string[] = ["codex"]): void {
   writeFileSync(
     join(root, ".valmen", "config.yaml"),
     [
@@ -52,7 +53,7 @@ function politica(modelo = "gpt-6-politica"): void {
       "  - node",
       "execution:",
       "  dispatch-executors:",
-      "    - codex",
+      ...autorizados.map((e) => `    - ${e}`),
       "autonomous:",
       "  enabled: true",
       "  executor:",
@@ -209,15 +210,125 @@ describe("el enrutamiento por fase", () => {
     expect(fases.find((f) => f.ticketId === B)?.modelo).toBe("gpt-6-barato");
   });
 
-  it("un rol de otro proveedor que el ejecutor cae al modelo de la política y el registro lo dice", async () => {
-    enrutamiento({ "agent-implementation": ["openrouter", "openai/gpt-5.6-luna-pro", "high"] });
+  it("R-PERF-004 C1: una fase de proveedor codex con codex autorizado se lanza con el binario codex", async () => {
+    enrutamiento({ "agent-implementation": ["codex", "gpt-6-fuerte", "high"] });
+    const comandos: string[] = [];
+    const avance = await ejecutar(implementador({ contrato: true, comandos }));
+    expect(avance.status).toBe("delivered");
+    expect(comandos).toHaveLength(1);
+    expect(comandos[0]?.startsWith("codex ")).toBe(true);
+  });
+
+  it("R-PERF-004 C2: esa fase se lanza con el modelo que el perfil asigna al rol", async () => {
+    enrutamiento({ "agent-implementation": ["codex", "gpt-6-fuerte", "high"] });
     const comandos: string[] = [];
     await ejecutar(implementador({ contrato: true, comandos }));
-    expect(comandos[0]).toContain("--model gpt-6-politica");
+    expect(comandos[0]).toContain("--model gpt-6-fuerte");
+    expect(comandos[0]).not.toContain("gpt-6-politica");
+  });
+
+  it("R-PERF-004 C3: un ejecutor fuera de dispatch-executors no invoca a ningún ejecutor", async () => {
+    enrutamiento({ "agent-implementation": ["claude-code", "claude-sonnet-5-5", "high"] });
+    const comandos: string[] = [];
+    const avance = await ejecutar(implementador({ contrato: true, comandos }));
+    expect(comandos).toHaveLength(0);
+    expect(avance.status).toBe("stopped");
+    expect(estado(A)).toBe("approved");
+  });
+
+  it("R-PERF-004 C4: esa fase deja un recibo executor-unauthorized que nombra el ejecutor y la fase", async () => {
+    enrutamiento({ "agent-implementation": ["claude-code", "claude-sonnet-5-5", "high"] });
+    await ejecutar(implementador({ contrato: true }));
+    const parada = readAutonomousStops(proyecto().paths).find((p) => p.ticketId === A);
+    expect(parada?.reason).toBe("executor-unauthorized");
+    expect(parada?.detail).toContain("claude");
+    expect(parada?.detail).toContain("implementation");
+    expect(parada?.workflowStatus).toBe("approved");
+  });
+
+  it("R-PERF-004 C4: un proveedor sin ejecutor conocido detiene el despacho sin caer a la política", async () => {
+    enrutamiento({ "agent-implementation": ["openrouter", "openai/gpt-5.6-luna-pro", "high"] });
+    const comandos: string[] = [];
+    const avance = await ejecutar(implementador({ contrato: true, comandos }));
+    expect(comandos).toHaveLength(0);
+    expect(avance.status).toBe("stopped");
+    const parada = readAutonomousStops(proyecto().paths).find((p) => p.ticketId === A);
+    expect(parada?.reason).toBe("executor-unauthorized");
+    expect(parada?.detail).toContain("openrouter");
+  });
+
+  it("R-PERF-004 C8: el registro de fase anota el ejecutor que realmente se lanzó", async () => {
+    politica("gpt-6-politica", ["codex", "claude"]);
+    enrutamiento({ "agent-implementation": ["claude-code", "claude-sonnet-5-5", "high"] });
+    const comandos: string[] = [];
+    await ejecutar(implementador({ contrato: true, comandos }));
+    expect(comandos[0]?.startsWith("claude ")).toBe(true);
+    expect(comandos[0]).toContain("--model claude-sonnet-5-5");
     const registro = leerFases(root).find((f) => f.ticketId === A);
-    expect(registro?.modelo).toBe("gpt-6-politica");
-    expect(registro?.origenDelModelo).toContain("politica");
-    expect(registro?.origenDelModelo).toContain("openrouter");
+    expect(registro).toMatchObject({ ejecutor: "claude", modelo: "claude-sonnet-5-5" });
+  });
+
+  it("R-PERF-004 C8: si el despacho se detuvo el registro no anota ningún ejecutor lanzado", async () => {
+    enrutamiento({ "agent-implementation": ["claude-code", "claude-sonnet-5-5", "high"] });
+    await ejecutar(implementador({ contrato: true }));
+    const registro = leerFases(root).find((f) => f.ticketId === A);
+    expect(registro?.ejecutor).toBe("ninguno");
+    expect(registro?.resultado).toBe("stopped");
+  });
+
+  it("R-PERF-004 C9: ni el comando, ni el recibo de parada, ni el registro de fase contienen una credencial del entorno", async () => {
+    const ficticia = `sk-ficticia-${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
+    const anterior = process.env["VALMEN_TEST_CREDENCIAL_FICTICIA"];
+    process.env["VALMEN_TEST_CREDENCIAL_FICTICIA"] = ficticia;
+    try {
+      const comandos: string[] = [];
+      const entornos: Record<string, string>[] = [];
+      enrutamiento({ "agent-implementation": ["codex", "gpt-6-fuerte", "high"] });
+      await ejecutar(implementador({ contrato: true, comandos, entornos }));
+      // Y una corrida detenida, que es la que deja el recibo de parada.
+      const B = "FEATURE-EJEC-TRES-20261005";
+      writeFixtureTicket(root, { id: B, workflowStatus: "approved", type: "FEATURE", module: "EJEC", criterios: CRITERIO, pruebas: PRUEBAS });
+      enrutamiento({ "agent-implementation": ["openrouter", "x/y", "high"] });
+      await runAutonomous({ paths: proyecto().paths, ticketId: B, now: () => AHORA });
+      expect(comandos.join("\n")).not.toContain(ficticia);
+      // El entorno del ejecutor es solo la marca de sesión desatendida; la credencial hereda del proceso, no del argumento.
+      expect(Object.keys(entornos[0] ?? {})).toEqual(["VALMEN_UNATTENDED"]);
+      for (const archivo of [join(root, ".valmen", "autonomous-stops.jsonl"), join(root, ".valmen", "journeys", "fases.jsonl")]) {
+        if (existsSync(archivo)) expect(readFileSync(archivo, "utf8")).not.toContain(ficticia);
+      }
+      expect(existsSync(join(root, ".valmen", "autonomous-stops.jsonl"))).toBe(true);
+    } finally {
+      if (anterior === undefined) delete process.env["VALMEN_TEST_CREDENCIAL_FICTICIA"];
+      else process.env["VALMEN_TEST_CREDENCIAL_FICTICIA"] = anterior;
+    }
+  });
+
+  it("R-PERF-004 C10: runAutonomous sin modelo explícito resuelve el despacho de implementación desde el perfil", async () => {
+    enrutamiento({ "agent-implementation": ["codex", "gpt-6-fuerte", "high"] });
+    const comandos: string[] = [];
+    const avance = await runAutonomous({
+      paths: proyecto().paths,
+      ticketId: A,
+      execute: implementador({ contrato: true, comandos }),
+      now: () => AHORA,
+    });
+    expect(avance.status).toBe("delivered");
+    expect(comandos[0]).toContain("--model gpt-6-fuerte");
+  });
+
+  it("R-PERF-004 C3: un modelo explícito del llamador no salta la autorización", async () => {
+    enrutamiento({ "agent-implementation": ["claude-code", "claude-sonnet-5-5", "high"] });
+    const comandos: string[] = [];
+    const modelo = { model: "gpt-6-x", effort: "high", origen: "rol" as const, motivo: "forzado" };
+    const avance = await runAutonomous({
+      paths: proyecto().paths,
+      ticketId: A,
+      modelo,
+      execute: implementador({ contrato: true, comandos }),
+      now: () => AHORA,
+    });
+    expect(comandos).toHaveLength(0);
+    expect(avance.status).toBe("stopped");
   });
 
   it("modeloDeFase usa el rol cuando el proveedor coincide con el ejecutor", () => {

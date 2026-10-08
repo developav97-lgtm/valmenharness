@@ -41,4 +41,16 @@ describe("recibos de parada autónoma", () => {
     expect(readAutonomousStops(paths())).toEqual([first, second]);
     expect(autonomousStopsPath(paths())).toContain(".valmen/autonomous-stops.jsonl");
   });
+
+  it("R-PERF-004 C13: readAutonomousStops conserva un recibo executor-unauthorized", () => {
+    const parada = recordAutonomousStop(paths(), {
+      ticketId: "SECURITY-ENGINE-DESPACHO-20261008",
+      reason: "executor-unauthorized",
+      detail: "el ejecutor codex de agent-implementation no está autorizado en execution.dispatch-executors",
+      workflowStatus: "approved",
+      now: NOW,
+    });
+    expect(readAutonomousStops(paths())).toEqual([parada]);
+    expect(parada.reason).toBe("executor-unauthorized");
+  });
 });

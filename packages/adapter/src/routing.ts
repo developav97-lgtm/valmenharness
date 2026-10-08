@@ -1081,6 +1081,68 @@ export function modeloDeFase(
   return { model: ruta.model, effort: ruta.effort === "auto" ? ejecutor.effort : ruta.effort, origen: "rol", motivo: ruta.perfil === undefined ? `rol agent-${fase} (${ruta.source})` : `rol agent-${fase} (perfil ${ruta.perfil.id}, ejecutor ${ejecutor.id})` };
 }
 
+/** El despacho de una fase: el ejecutor, el modelo y el esfuerzo con que se lanza, o por qué no se lanza. */
+export type DespachoDeFase =
+  | {
+      readonly ok: true;
+      readonly ejecutor: string;
+      readonly model: string;
+      readonly effort: string;
+      /** `rol` si salió del perfil o el enrutado; `politica` si el rol no tiene modelo. */
+      readonly origen: "rol" | "politica";
+      readonly motivo: string;
+    }
+  | { readonly ok: false; readonly motivo: string };
+
+/**
+ * Con qué ejecutor y modelo se despacha una fase desatendida (R-PERF-004).
+ *
+ * El ejecutor sale del **proveedor** que el perfil o el enrutado asignan al rol `agent-<fase>`
+ * —nunca del nombre del modelo— y debe estar en `execution.dispatch-executors`. Un proveedor
+ * sin ejecutor conocido o un ejecutor no autorizado devuelven el motivo: no hay caída a otro
+ * ejecutor. Un rol sin modelo conserva el ejecutor y modelo de la política (falta de dato, no
+ * cambio de proveedor) y lo dice. El motivo solo lleva ids de proveedor, ejecutor, fase y rol.
+ */
+export function despachoDeFase(
+  rutas: readonly ResolvedRoute[],
+  fase: FaseDelAgente,
+  politica: { readonly id: string; readonly model: string; readonly effort: string },
+  autorizados: readonly string[],
+): DespachoDeFase {
+  const ruta = routeFor(rutas, `agent-${fase}`);
+  const noAutorizado = (ejecutor: string): DespachoDeFase => ({
+    ok: false,
+    motivo: `el ejecutor ${ejecutor} de agent-${fase} no está autorizado en execution.dispatch-executors`,
+  });
+  if (ruta === null || ruta.model === "") {
+    if (!autorizados.includes(politica.id)) return noAutorizado(politica.id);
+    return {
+      ok: true,
+      ejecutor: politica.id,
+      model: politica.model,
+      effort: politica.effort,
+      origen: "politica",
+      motivo: `el rol agent-${fase} no tiene modelo; se usa el ejecutor ${politica.id} y el modelo de la política`,
+    };
+  }
+  const ejecutor = Object.entries(PROVEEDOR_DEL_EJECUTOR).find(([, proveedor]) => proveedor === ruta.provider)?.[0];
+  if (ejecutor === undefined) {
+    return { ok: false, motivo: `el proveedor ${ruta.provider} de agent-${fase} no está declarado como ejecutor` };
+  }
+  if (!autorizados.includes(ejecutor)) return noAutorizado(ejecutor);
+  return {
+    ok: true,
+    ejecutor,
+    model: ruta.model,
+    effort: ruta.effort === "auto" ? politica.effort : ruta.effort,
+    origen: "rol",
+    motivo:
+      ruta.perfil === undefined
+        ? `rol agent-${fase} (${ruta.source}), ejecutor ${ejecutor}`
+        : `rol agent-${fase} (perfil ${ruta.perfil.id}), ejecutor ${ejecutor}`,
+  };
+}
+
 /** El cliente que abrió una sesión interactiva: los mismos ids que tienen perfil propio. */
 export type ClienteDeSesion = (typeof EJECUTORES_CON_PERFIL)[number];
 

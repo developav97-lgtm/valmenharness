@@ -13,10 +13,14 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 import {
+  type DespachoDeFase,
   FASES_DEL_AGENTE,
   type FaseDelAgente,
   type ModeloDeFase,
+  despachoDeFase,
   modeloDeFase,
+  parseConfig,
+  readExecutionCapabilities,
   rutasDelProyecto,
 } from "@valmen/adapter";
 
@@ -88,4 +92,17 @@ export function resolverModeloDeFase(root: string, fase: FaseDelAgente): ModeloD
   const politica = autonomousConfig(root);
   if (politica.executor === null) return null;
   return modeloDeFase(rutasDelProyecto(root, { ejecutor: politica.executor.id }), fase, politica.executor);
+}
+
+/**
+ * El despacho de una fase (R-PERF-004): ejecutor del proveedor del perfil, su modelo, y la
+ * comprobación contra `execution.dispatch-executors` en el momento de lanzar. `null` si la
+ * autonomía no declara ejecutor.
+ */
+export function resolverDespachoDeFase(root: string, fase: FaseDelAgente): DespachoDeFase | null {
+  const politica = autonomousConfig(root);
+  if (politica.executor === null) return null;
+  const ruta = join(root, ".valmen", "config.yaml");
+  const autorizados = existsSync(ruta) ? readExecutionCapabilities(parseConfig(readFileSync(ruta, "utf8"))).dispatchExecutors : [];
+  return despachoDeFase(rutasDelProyecto(root, { ejecutor: politica.executor.id }), fase, politica.executor, autorizados);
 }

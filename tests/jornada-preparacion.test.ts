@@ -191,6 +191,28 @@ describe("preparar un ticket", () => {
     expect(resultado.detalle).toContain("src/app.ts");
   });
 
+  it("R-PERF-004 C7: con un proveedor no autorizado la preparación no lanza el preparador", () => {
+    writeFileSync(
+      join(root, ".valmen", "routing.yaml"),
+      "preset: balanced\nroles:\n  agent-analysis:\n    provider: claude-code\n    model: claude-sonnet-5-5\n    effort: high\n",
+      "utf8",
+    );
+    let lanzado = 0;
+    const resultado = prepararTicket({
+      paths: PATHS(),
+      ticketId: A,
+      execute: (c, e) => {
+        lanzado += 1;
+        return modelo()(c, e);
+      },
+    });
+    expect(lanzado).toBe(0);
+    expect(resultado.estado).toBe("no-autorizado");
+    expect(resultado.parada?.reason).toBe("executor-unauthorized");
+    expect(resultado.parada?.detail).toContain("analysis");
+    expect(estado(A)).toBe("intake");
+  });
+
   it("un fallo del ejecutor se informa y no se reintenta solo", () => {
     const resultado = prepararTicket({ paths: PATHS(), ticketId: A, execute: modelo({ salida: 2 }) });
     expect(resultado.estado).toBe("ejecutor-fallo");

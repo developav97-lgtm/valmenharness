@@ -4,7 +4,7 @@ id: SECURITY-ENGINE-DESPACHO-POR-PROVEEDOR-20261007
 title: Lanzar cada fase con el ejecutor y el modelo de su proveedor, y detenerse si no está autorizado
 type: SECURITY
 module: ENGINE
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -94,33 +94,33 @@ Memoria consultada (`buscar_memoria` «despacho de fase por proveedor ejecutor m
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1 (R-PERF-004): una fase cuyo rol es del proveedor `codex`, con `codex` autorizado, se lanza con el binario `codex`.
+- [x] C1 (R-PERF-004): una fase cuyo rol es del proveedor `codex`, con `codex` autorizado, se lanza con el binario `codex`.
       <!-- test: npx vitest run tests/jornada-ejecucion.test.ts -t "R-PERF-004 C1:" -->
-- [ ] C2 (R-PERF-004): esa fase se lanza con el modelo que el perfil asigna al rol.
+- [x] C2 (R-PERF-004): esa fase se lanza con el modelo que el perfil asigna al rol.
       <!-- test: npx vitest run tests/jornada-ejecucion.test.ts -t "R-PERF-004 C2:" -->
-- [ ] C3 (R-PERF-004): una fase cuyo ejecutor no está en `execution.dispatch-executors` no invoca a ningún ejecutor.
+- [x] C3 (R-PERF-004): una fase cuyo ejecutor no está en `execution.dispatch-executors` no invoca a ningún ejecutor.
       <!-- test: npx vitest run tests/jornada-ejecucion.test.ts -t "R-PERF-004 C3:" -->
-- [ ] C4 (R-PERF-004): esa fase deja un recibo de parada `executor-unauthorized` que nombra el ejecutor y la fase.
+- [x] C4 (R-PERF-004): esa fase deja un recibo de parada `executor-unauthorized` que nombra el ejecutor y la fase.
       <!-- test: npx vitest run tests/jornada-ejecucion.test.ts -t "R-PERF-004 C4:" -->
-- [ ] C5 (R-PERF-004): un proveedor sin ejecutor declarado se rechaza con un motivo que nombra el proveedor.
+- [x] C5 (R-PERF-004): un proveedor sin ejecutor declarado se rechaza con un motivo que nombra el proveedor.
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-004 C5:" -->
-- [ ] C6 (R-PERF-004): el ejecutor sale del proveedor del perfil, no del nombre del modelo.
+- [x] C6 (R-PERF-004): el ejecutor sale del proveedor del perfil, no del nombre del modelo.
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-004 C6:" -->
-- [ ] C7 (R-PERF-004): la preparación de análisis con un proveedor no autorizado no lanza el preparador.
+- [x] C7 (R-PERF-004): la preparación de análisis con un proveedor no autorizado no lanza el preparador.
       <!-- test: npx vitest run tests/jornada-preparacion.test.ts -t "R-PERF-004 C7:" -->
-- [ ] C8 (R-PERF-004): el registro de fase anota el ejecutor que realmente se lanzó.
+- [x] C8 (R-PERF-004): el registro de fase anota el ejecutor que realmente se lanzó.
       <!-- test: npx vitest run tests/jornada-ejecucion.test.ts -t "R-PERF-004 C8:" -->
-- [ ] C9 (R-PERF-004): ni el comando, ni el recibo de parada, ni el registro de fase contienen el valor de una credencial del entorno.
+- [x] C9 (R-PERF-004): ni el comando, ni el recibo de parada, ni el registro de fase contienen el valor de una credencial del entorno.
       <!-- test: npx vitest run tests/jornada-ejecucion.test.ts -t "R-PERF-004 C9:" -->
-- [ ] C10 (R-PERF-004): `runAutonomous` sin modelo explícito, como lo llama `valmen run`, resuelve el despacho de implementación desde el perfil.
+- [x] C10 (R-PERF-004): `runAutonomous` sin modelo explícito, como lo llama `valmen run`, resuelve el despacho de implementación desde el perfil.
       <!-- test: npx vitest run tests/jornada-ejecucion.test.ts -t "R-PERF-004 C10:" -->
-- [ ] C11 (R-PERF-004): con la configuración actual del proyecto, la implementación se despacha a `claude` con `claude-sonnet-5-5`.
+- [x] C11 (R-PERF-004): con la configuración actual del proyecto, la implementación se despacha a `claude` con `claude-sonnet-5-5`.
       <!-- test: npx vitest run tests/routing.test.ts -t "R-PERF-004 C11:" -->
-- [ ] C12 (R-PERF-004): el monorepo compila sin errores de tipos.
+- [x] C12 (R-PERF-004): el monorepo compila sin errores de tipos.
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
-- [ ] C13 (R-PERF-004): `readAutonomousStops` conserva un recibo `executor-unauthorized`.
+- [x] C13 (R-PERF-004): `readAutonomousStops` conserva un recibo `executor-unauthorized`.
       <!-- test: npx vitest run tests/autonomous-stops.test.ts -t "R-PERF-004 C13:" -->
-- [ ] C14 (R-PERF-004): el contrato de entrega queda escrito en `## Pruebas` con comandos, directorio, resultado esperado y requisitos de ambiente.
+- [x] C14 (R-PERF-004): el contrato de entrega queda escrito en `## Pruebas` con comandos, directorio, resultado esperado y requisitos de ambiente.
       <!-- verify: manual -->
 
 ## Puntos
@@ -131,11 +131,21 @@ Memoria consultada (`buscar_memoria` «despacho de fase por proveedor ejecutor m
 
 ## Implementación
 
-Pendiente.
+- `packages/adapter/src/routing.ts`: `despachoDeFase` (puro). El ejecutor sale del proveedor del rol `agent-<fase>` con la inversa de `PROVEEDOR_DEL_EJECUTOR`, nunca del nombre del modelo; proveedor desconocido o ejecutor fuera de `execution.dispatch-executors` devuelven el motivo (solo ids). Rol sin modelo: ejecutor y modelo de la política, anotado en el registro de fase (decisión del PO al aprobar), también exige autorización.
+- `packages/engine/src/journey-phases.ts`: `resolverDespachoDeFase` (lee `config.yaml` y el perfil del ejecutor de la política).
+- `packages/engine/src/autonomous-stops.ts`: razón `executor-unauthorized`.
+- `packages/engine/src/autonomous-run.ts`: `runAutonomous` resuelve siempre el despacho desde el perfil (también para `valmen run`); `request.modelo` queda obsoleto y no salta la autorización. Si no está autorizado: recibo de parada, ticket en `approved`, ningún ejecutor lanzado. El registro de fase anota el ejecutor lanzado (`ninguno` si se detuvo). El entorno sigue siendo solo `VALMEN_UNATTENDED`.
+- `packages/engine/src/journey-preparation.ts`: la preparación (análisis) usa el mismo despacho; si no está autorizado devuelve el estado `no-autorizado` con la parada `executor-unauthorized` y no llama al preparador.
+- Pruebas: `tests/routing.test.ts`, `tests/jornada-ejecucion.test.ts` (se reescribió la prueba de la caída a la política para que afirme la parada), `tests/jornada-preparacion.test.ts`, `tests/autonomous-stops.test.ts`; `tests/autonomous-run.test.ts` declara `dispatch-executors: [codex]` en su laboratorio, que antes dependía de que nadie lo comprobara.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Directorio de ejecución: raíz del repositorio (o del worktree). Requisito de ambiente: Node 24, sin credenciales reales.
+
+1. `npx vitest run tests/routing.test.ts tests/jornada-ejecucion.test.ts tests/jornada-preparacion.test.ts tests/jornada-topes.test.ts tests/autonomous-stops.test.ts tests/autonomous-run.test.ts` — esperado: 6 archivos, 139 pruebas, 0 fallos.
+2. `npx tsc --noEmit -p tsconfig.json` — esperado: sin errores.
+
+Validación manual (C14): revisar que esta sección lleve los comandos, el directorio, el resultado esperado y el requisito de ambiente. Revisión de seguridad sugerida al PO: confirmar que `.valmen/config.yaml` sigue con `dispatch-executors: [claude]` y que un perfil con un rol de otro proveedor detiene la fase con `executor-unauthorized` en `.valmen/autonomous-stops.jsonl`.
 
 ## QA
 
@@ -164,7 +174,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-08",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Sesión de implementación sin agregado expuesto.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual: subagente implementación (claude-sonnet-5-5); sin números de sesión disponibles",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -228,6 +254,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:23:27.911Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:27:16.303Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:27:17.193Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```

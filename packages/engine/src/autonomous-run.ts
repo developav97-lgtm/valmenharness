@@ -8,7 +8,7 @@
  */
 import { spawnSync } from "node:child_process";
 
-import { type FaseDelAgente, type ModeloDeFase } from "@valmen/adapter";
+import { type DespachoDeFase, type FaseDelAgente, type ModeloDeFase } from "@valmen/adapter";
 
 import {
   EXIT_INVARIANT,
@@ -37,7 +37,7 @@ import {
   type RutasPropias,
   repartirCambios,
 } from "./integration-commit.js";
-import { registrarFase } from "./journey-phases.js";
+import { registrarFase, resolverDespachoDeFase } from "./journey-phases.js";
 import { UNATTENDED_ENV, aprobacionDePlanVigente } from "./plan-approval.js";
 import { runGate } from "./gate.js";
 import { transition } from "./transition.js";
@@ -67,7 +67,10 @@ export interface AutonomousRunRequest {
     command: AutonomousExecutorCommand,
     entorno?: Readonly<Record<string, string>>,
   ) => AutonomousExecutorResult;
-  /** El modelo de la fase resuelto por el enrutamiento; sin él rige el de la política. */
+  /**
+   * Obsoleto desde R-PERF-004: el ejecutor y el modelo se resuelven siempre desde el perfil en
+   * el momento de lanzar, y una resolución externa no puede saltarse la autorización.
+   */
   readonly modelo?: ModeloDeFase | undefined;
   /** La fase que se ejecuta; por defecto `implementation`. */
   readonly fase?: FaseDelAgente | undefined;
@@ -297,17 +300,24 @@ export function comandosDelContrato(ticketText: string): string[] {
  */
 export async function runAutonomous(request: AutonomousRunRequest): Promise<AutonomousRunResult> {
   const inicio = Date.now();
-  const resultado = await runAutonomousInner(request);
+  const contexto: { despacho?: DespachoDeFase } = {};
+  const resultado = await runAutonomousInner(request, contexto);
   const politica = autonomousConfig(request.paths.root);
   if (politica.executor !== null) {
-    const modelo = request.modelo;
+    const despacho = contexto.despacho;
     registrarFase(request.paths.root, {
       ticketId: resultado.ticketId,
       fase: request.fase ?? "implementation",
-      ejecutor: politica.executor.id,
-      modelo: modelo?.model ?? politica.executor.model,
-      esfuerzo: modelo?.effort ?? politica.executor.effort,
-      origenDelModelo: modelo === undefined ? "política (sin modelo de fase resuelto)" : `${modelo.origen}: ${modelo.motivo}`,
+      // El ejecutor que realmente se lanzó; si el despacho se detuvo, ninguno.
+      ejecutor: despacho?.ok === true && resultado.stop?.reason !== "executor-unauthorized" ? despacho.ejecutor : "ninguno",
+      modelo: despacho?.ok === true ? despacho.model : politica.executor.model,
+      esfuerzo: despacho?.ok === true ? despacho.effort : politica.executor.effort,
+      origenDelModelo:
+        despacho === undefined
+          ? "política (sin despacho resuelto)"
+          : despacho.ok
+            ? `${despacho.origen}: ${despacho.motivo}`
+            : `sin despacho: ${despacho.motivo}`,
       duracionMs: Date.now() - inicio,
       resultado: resultado.status,
     });
@@ -315,7 +325,10 @@ export async function runAutonomous(request: AutonomousRunRequest): Promise<Auto
   return resultado;
 }
 
-async function runAutonomousInner(request: AutonomousRunRequest): Promise<AutonomousRunResult> {
+async function runAutonomousInner(
+  request: AutonomousRunRequest,
+  contexto: { despacho?: DespachoDeFase },
+): Promise<AutonomousRunResult> {
   if (request.ticketId === undefined && request.queue !== true) {
     throw Object.assign(new Error("run requiere --ticket o --queue."), { exitCode: EXIT_SCHEMA });
   }
@@ -344,10 +357,27 @@ async function runAutonomousInner(request: AutonomousRunRequest): Promise<Autono
     throw Object.assign(new Error(`El ticket ${selected.id} no es elegible: ${selected.reasons.join(", ")}.`), { exitCode: EXIT_INVARIANT });
   }
 
-  // El modelo de la fase, si el enrutamiento lo resolvió; si no, el de la política.
-  const executorDeFase = request.modelo === undefined
-    ? policy.executor
-    : { ...policy.executor, model: request.modelo.model, effort: request.modelo.effort as typeof policy.executor.effort };
+  // R-PERF-004: el ejecutor y el modelo salen del proveedor del perfil, y el ejecutor tiene que
+  // estar autorizado en `execution.dispatch-executors` justo al lanzar. Si no, no se lanza nada.
+  const fase = request.fase ?? "implementation";
+  const despacho = resolverDespachoDeFase(request.paths.root, fase);
+  if (despacho !== null) contexto.despacho = despacho;
+  if (despacho === null || !despacho.ok) {
+    const detalle = despacho === null ? "La autonomía no declara un ejecutor seguro." : `El despacho de la fase ${fase} se detuvo: ${despacho.motivo}.`;
+    const stop = recordAutonomousStop(request.paths, {
+      ticketId: selected.id,
+      reason: "executor-unauthorized",
+      detail: detalle,
+      workflowStatus: "approved",
+      now: request.now?.() ?? new Date(),
+    });
+    return { ticketId: selected.id, status: "stopped", detail: detalle, executor: { command: "", args: [] }, stop };
+  }
+  const executorDeFase: AutonomousExecutorConfig = {
+    id: despacho.ejecutor as AutonomousExecutorConfig["id"],
+    model: despacho.model,
+    effort: despacho.effort as AutonomousExecutorConfig["effort"],
+  };
   const command = autonomousExecutorCommand(executorDeFase, request.paths.root, promptFor(selected.id));
   // La integración parte de un árbol limpio en la rama de trabajo: lo comprueba antes de mover el
   // ticket, porque la propia transición edita el ticket y lo ensuciaría.
