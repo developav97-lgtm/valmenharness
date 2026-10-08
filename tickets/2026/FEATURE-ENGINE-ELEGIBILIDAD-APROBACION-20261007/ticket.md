@@ -97,7 +97,7 @@ Ninguno.
       <!-- test: npx vitest run tests/elegibilidad-aprobacion.test.ts -->
 - [x] C11. `valmen approval-eligibility` muestra la decisión y sus reglas sin escribir en el registro
       <!-- test: npx vitest run tests/elegibilidad-aprobacion.test.ts -->
-- [ ] C12. La suite completa y la comprobación de tipos pasan
+- [x] C12. La suite completa y la comprobación de tipos pasan
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
 
 ## Puntos
