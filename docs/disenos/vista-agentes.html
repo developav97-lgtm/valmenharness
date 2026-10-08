@@ -1,0 +1,560 @@
+<meta charset="utf-8">
+<title>Vista Agentes</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Chakra+Petch:wght@500;600&family=Caveat:wght@600&display=swap">
+<style>
+  /* Plan: el marco es la consola del harness (tokens de index.html); cada mundo
+     es una pieza cerrada con su paleta, su tipografía y sus paneles. */
+  :root {
+    --fondo: #f7f8fb; --panel: #ffffff; --panel-alto: #eef1f7; --borde: #cfd6e4; --borde-suave: #e1e5ed;
+    --texto: #172033; --tenue: #57627a; --acento: #2f63d9; --acento-suave: rgba(47,99,217,.14);
+    --ok: #16803a; --ok-suave: rgba(22,128,58,.14); --alerta: #925f00; --alerta-suave: rgba(146,95,0,.14);
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --fraunces: "Fraunces", Georgia, serif; --chakra: "Chakra Petch", "Segoe UI", sans-serif;
+    --caveat: "Caveat", "Comic Sans MS", cursive;
+    --radio: 8px;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --fondo: #0d1014; --panel: #14181f; --panel-alto: #1b202a; --borde: #262c38; --borde-suave: #1e232d;
+    --texto: #e8eaf0; --tenue: #8a92a6; --acento: #5b8dff; --acento-suave: rgba(91,141,255,.14);
+    --ok: #46b95a; --ok-suave: rgba(70,185,90,.16); --alerta: #d6a022; --alerta-suave: rgba(214,160,34,.16);
+    color-scheme: dark; } }
+  :root[data-theme="dark"] {
+    --fondo: #0d1014; --panel: #14181f; --panel-alto: #1b202a; --borde: #262c38; --borde-suave: #1e232d;
+    --texto: #e8eaf0; --tenue: #8a92a6; --acento: #5b8dff; --acento-suave: rgba(91,141,255,.14);
+    --ok: #46b95a; --ok-suave: rgba(70,185,90,.16); --alerta: #d6a022; --alerta-suave: rgba(214,160,34,.16);
+    color-scheme: dark; }
+
+  body { background: var(--fondo); color: var(--texto); font: 14px/1.5 var(--sans); margin: 0; }
+  .marco { max-width: 1100px; margin: 0 auto; padding-block: 20px; padding-inline: 16px; display: grid; gap: 16px; }
+  h1 { font-size: 20px; font-weight: 600; margin: 0; }
+  p { margin: 0; color: var(--tenue); }
+  .cabecera { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+  .cuenta { font-family: var(--mono); color: var(--tenue); }
+
+  .galeria { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
+  .mundo { text-align: left; font: inherit; color: var(--texto); background: var(--panel); border: 1px solid var(--borde-suave); border-radius: var(--radio); padding: 0; cursor: pointer; overflow: hidden; display: grid; grid-template-rows: auto auto; }
+  .mundo[aria-pressed="true"] { border-color: var(--acento); box-shadow: 0 0 0 2px var(--acento-suave); }
+  .mundo:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+  .mundo canvas { width: 100%; height: auto; display: block; image-rendering: pixelated; }
+  .mundo .nombre { padding: 8px 12px 2px; font-weight: 600; }
+  .mundo .lema { padding: 0 12px 10px; font-size: 12.5px; color: var(--tenue); }
+
+  .barra { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; background: var(--panel); border: 1px solid var(--borde-suave); border-radius: var(--radio); padding: 8px 12px; }
+  .barra label { color: var(--tenue); }
+  .barra button { font: inherit; padding: 6px 10px; border-radius: var(--radio); border: 1px solid var(--borde); background: var(--panel); color: var(--texto); cursor: pointer; }
+  .barra button:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+  .barra input[type=range] { width: 120px; }
+  .barra .derecha { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+
+  .aviso { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; border-radius: var(--radio); padding: 10px 12px; border: 1px solid transparent; }
+  .aviso.pregunta { background: var(--alerta-suave); border-color: var(--alerta); }
+  .aviso.respuesta { background: var(--ok-suave); border-color: var(--ok); }
+  .aviso .quien { font-weight: 600; }
+  .aviso .texto { font-family: var(--mono); font-size: 12.5px; color: var(--tenue); }
+  .aviso .hace { margin-left: auto; color: var(--tenue); font-size: 12px; }
+
+  .lienzo { border: 1px solid var(--borde-suave); border-radius: var(--radio); overflow: hidden; background: var(--panel-alto); }
+  #c { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+
+  .paneles { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+  .tarjeta { border-radius: var(--radio); padding: 12px 14px; min-width: 0; border: 1px solid var(--borde-suave); background: var(--panel); }
+  .tarjeta h2 { font-size: 13px; font-weight: 600; margin: 0 0 8px; letter-spacing: .06em; text-transform: uppercase; color: var(--tenue); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; font-weight: 500; padding: 4px 6px; border-bottom: 1px solid rgba(128,128,128,.35); opacity: .8; }
+  td { padding: 5px 6px; border-bottom: 1px solid rgba(128,128,128,.2); vertical-align: top; }
+  td.id, td.mono { font-family: var(--mono); font-size: 12px; }
+  .punto { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; background: #8a92a6; }
+  .punto.trabajando { background: #46b95a; } .punto.esperando { background: #e8b84a; } .punto.termino { background: #5b8dff; }
+  .etiqueta { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; background: rgba(128,128,128,.18); }
+  tr.principal td { font-weight: 600; }
+
+  /* Paneles por mundo: una pizarra, una telemetría, un tablero de salidas, una bitácora. */
+  .paneles[data-mundo="pasteleria"] .tarjeta { background: #2f4a3a; color: #f3eadb; border-color: #8a5f3b; border-width: 4px; font-family: var(--fraunces); }
+  .paneles[data-mundo="pasteleria"] h2 { color: #f6e7c9; font-family: var(--fraunces); text-transform: none; letter-spacing: 0; font-size: 18px; }
+  .paneles[data-mundo="pasteleria"] .etiqueta { background: rgba(246,231,201,.18); }
+  .paneles[data-mundo="control"] .tarjeta { background: #080d1a; color: #9fd3ff; border-color: #223a6e; font-family: var(--chakra); }
+  .paneles[data-mundo="control"] h2 { color: #8fb4ff; font-family: var(--chakra); }
+  .paneles[data-mundo="control"] td.id, .paneles[data-mundo="control"] td.mono { color: #dfe9ff; }
+  .paneles[data-mundo="control"] .etiqueta { background: #101d3f; color: #ffb84a; }
+  .paneles[data-mundo="invernadero"] .tarjeta { background: #fbf7e8; color: #3b4a2f; border-color: #a67c52; font-family: var(--sans);
+    background-image: repeating-linear-gradient(transparent 0 27px, rgba(166,124,82,.25) 27px 28px); }
+  .paneles[data-mundo="invernadero"] h2 { color: #3f8f4a; font-family: var(--caveat); text-transform: none; letter-spacing: 0; font-size: 24px; }
+  .paneles[data-mundo="invernadero"] th { color: #7a8a6f; }
+  .paneles[data-mundo="invernadero"] .etiqueta { background: rgba(63,143,74,.15); }
+  .paneles[data-mundo="invernadero"] td.id, .paneles[data-mundo="invernadero"] td.mono { font-size: 11.5px; }
+
+  details { color: var(--tenue); } summary { cursor: pointer; }
+</style>
+
+<div class="marco">
+  <div class="cabecera">
+    <div>
+      <h1>Agentes</h1>
+      <p>Prototipo de la vista. Tres mundos sobre los mismos datos que devuelve <code>/api/corrida/agentes</code>; se elige uno al inicio y se recuerda en este navegador.</p>
+    </div>
+    <div class="cuenta" id="cuenta">3 de 3 agentes · ola 2</div>
+  </div>
+
+  <div class="galeria" id="galeria" role="group" aria-label="Mundo"></div>
+
+  <div class="barra">
+    <span id="lema"></span>
+    <div class="derecha">
+      <button id="btn-play" type="button">Pausar</button>
+      <button id="btn-reset" type="button">Reiniciar</button>
+      <label for="vel">Velocidad</label>
+      <input id="vel" type="range" min="1" max="8" step="1" value="3">
+    </div>
+  </div>
+
+  <div id="avisos"></div>
+
+  <div class="lienzo"><canvas id="c" width="960" height="480" aria-label="Escena animada de los agentes"></canvas></div>
+
+  <div class="paneles" id="paneles" data-mundo="pasteleria">
+    <div class="tarjeta">
+      <h2 id="t-agentes">Comandas</h2>
+      <table id="tabla"><thead><tr><th>Agente</th><th>Ticket</th><th>Fase</th><th>Última herramienta</th></tr></thead><tbody></tbody></table>
+    </div>
+    <div class="tarjeta">
+      <h2 id="t-cola">Vitrina</h2>
+      <table id="cola"><thead><tr><th>Ticket</th><th>Estado</th></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+
+  <details><summary>Qué se decidió en este prototipo</summary>
+    <p style="margin-top:8px">La vista se llama «Agentes»; el proceso se sigue llamando «ejecución». La sesión principal siempre tiene su puesto propio (el pase, la dirección, el semillero). La pregunta pendiente solo avisa a quién le toca y desde cuándo (opción A); mostrar el texto real de la pregunta y la respuesta es un ticket aparte (opción B). Los ocho estados del ticket son las ocho estaciones en todos los mundos; los dos que decide una persona se marcan siempre.</p>
+  </details>
+</div>
+
+<script>
+(() => {
+  const W = 960, H = 480;
+  const ESTACIONES = [
+    { id: "intake", rotulo: "Intake" }, { id: "analyzed", rotulo: "Análisis" }, { id: "planned", rotulo: "Plan" },
+    { id: "approved", rotulo: "Aprobación", humano: true }, { id: "in_progress", rotulo: "Implementación" },
+    { id: "awaiting_user_tests", rotulo: "Pruebas", humano: true }, { id: "in_qa", rotulo: "QA" }, { id: "closed", rotulo: "Entrega" },
+  ];
+  const HERRAMIENTAS = ["Read", "Grep", "Edit", "Bash", "Write", "mcp__valmen__evaluar_compuerta", "mcp__valmen__mover_ticket", "mcp__valmen__anotar_evidencia"];
+  const SANS = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  const MONO = 'ui-monospace, Menlo, monospace';
+  const FR = '"Fraunces", Georgia, serif', CH = '"Chakra Petch", sans-serif', CV = '"Caveat", cursive';
+
+  const MUNDOS = {
+    pasteleria: { nombre: "Pastelería", lema: "Cada ticket es un pastel que recorre el obrador hasta la vitrina.",
+      nombres: ["Pedidos", "Recetario", "Báscula", "Mostrador de Anita", "Horno", "Degustación", "Control", "Vitrina"],
+      paneles: ["Comandas", "Vitrina"], gate: "timbre en el mostrador de Anita", sombrero: "toque" },
+    control: { nombre: "Centro de control", lema: "Turno de noche: las misiones en la pared, los operadores en consola.",
+      nombres: ["Ingreso", "Análisis", "Plan", "Autorización", "Ejecución", "Pruebas", "QA", "Cierre"],
+      paneles: ["Telemetría", "Misiones"], gate: "línea 1 abierta", sombrero: "auricular" },
+    invernadero: { nombre: "Invernadero", lema: "Cada ticket es una planta: se siembra, se riega con permiso y se cosecha.",
+      nombres: ["Semilla", "Brote", "Hojas", "Riego de Anita", "Crecimiento", "Floración", "Fruto", "Cosecha"],
+      paneles: ["Bitácora de cultivo", "Cosecha"], gate: "la regadera espera a Anita", sombrero: "paja" },
+  };
+
+  // ── Dibujo básico ───────────────────────────────────────────────────────
+  let ctx;
+  const R = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); };
+  const T = (s, x, y, o = {}) => { ctx.font = `${o.peso || ""} ${o.tam || 12}px ${o.fuente || SANS}`.trim(); ctx.fillStyle = o.color || "#333"; ctx.textAlign = o.alinear || "center"; ctx.textBaseline = "alphabetic"; ctx.fillText(s, x, y); };
+  const C = (x, y, r, c) => { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); };
+  function bitmap(filas, x, y, pal, esc = 3, desde = 0, hasta = 99) {
+    for (let r = desde; r < Math.min(filas.length, hasta); r++) {
+      const f = filas[r];
+      for (let c = 0; c < f.length; c++) { const k = f[c]; if (k === "." || !pal[k]) continue; ctx.fillStyle = pal[k]; ctx.fillRect(x + c * esc, y + r * esc, esc, esc); }
+    }
+  }
+  const corto = (id) => id.split("-").slice(0, 2).join("-");
+
+  // ── Personajes: 12×16 píxeles, cuatro cuadros de marcha, sombrero por mundo ──
+  const BASE = [
+    "....HHHH....", "...HHHHHH...", "...SSSSSS...", "...SESSES...", "...SSSSSS...", "....SSSS....",
+    "..CCCCCCCC..", ".CCCCCCCCCC.", ".SCCCCCCCCS.", ".CCAAAAAACC.", "..CAAAAAAC..", "..AAAAAAAA..",
+  ];
+  const PIERNAS = [
+    ["..PPP..PPP..", "..PPP..PPP..", "..BBB..BBB..", "..BBB..BBB.."],
+    [".PPP....PPP.", ".PPP....PPP.", ".BBB....BBB.", "BBB......BBB"],
+    ["....PPPP....", "....PPPP....", "....BBBB....", "....BBBB...."],
+  ];
+  const SOMBREROS = {
+    toque: { dy: -5, filas: ["...WWWWWW...", "..WWWWWWWW..", "..WWWWWWWW..", "..WWWWWWWW..", "...WWWWWW...", "...WWWWWW...", "...WWWWWW..."] },
+    auricular: { dy: 0, filas: ["...KKKKKK...", "..K......K..", "..K......K..", "..K.....KK..", "........KKK."] },
+    gorra: { dy: -2, filas: ["...KKKKKK...", "..KKKKKKKK..", "..KKYYYYKK..", ".KKKKKKKKKK."] },
+    paja: { dy: -3, filas: ["....YYYY....", "...YYYYYY...", "...YYYYYY...", "YYYYYYYYYYYY"] },
+    gafas: { dy: 3, filas: ["...KK.KK....", "...K.K.K...."] },
+  };
+  function personaje(a, cx, feetY, o = {}) {
+    const esc = 3, x = cx - 18, y = feetY - 48;
+    const cuadro = a.moviendo ? [0, 1, 0, 2][Math.floor(a.paso) % 4] : 0;
+    const bob = a.moviendo ? 0 : Math.round(Math.sin(a.paso * 2) * 1.2);
+    const filas = BASE.concat(PIERNAS[cuadro]);
+    const pal = { H: a.pelo, S: a.piel, E: "#15171c", C: o.camisa || a.color, A: o.delantal || a.color, P: o.pantalon || "#2b3140", B: "#1b1d24", W: "#fbfbf7", K: "#1d2129", Y: "#e8b84a" };
+    bitmap(filas, x, y + bob, pal, esc, 0, o.sentado ? 12 : 99);
+    const h = SOMBREROS[o.sombrero];
+    if (h) bitmap(h.filas, x, y + bob + h.dy * esc, { W: o.sombreroColor || pal.W, K: o.sombreroColor || pal.K, Y: o.bandaColor || pal.Y }, esc);
+    if (a.principal) R(cx - 3, y + bob + 22, 6, 6, "#e8b84a");
+    return y + bob;
+  }
+
+  // ── Simulación: misma forma que AgenteDeCorrida (agente, ticket, estado, herramienta, fase) ──
+  const COLORES = ["#2f9e6b", "#c0623a", "#7a5fd1", "#2b7bd1", "#d4537e"];
+  const PELOS = ["#3a2a1f", "#1b1b1b", "#8a3b1a", "#c9a24a", "#5b3a21"], PIELES = ["#f1c9a5", "#c68642", "#8d5524", "#ffdbac", "#e0ac69"];
+  let S, mundo = "pasteleria";
+  const M = () => MUNDOS[mundo];
+  function nuevoAgente(k, ticket) {
+    return { id: "a" + k, nombre: Math.random().toString(16).slice(2, 6), color: COLORES[k % COLORES.length], pelo: PELOS[k % PELOS.length], piel: PIELES[k % PIELES.length],
+      ticket, estado: "trabajando", herramienta: "Read", paso: Math.random() * 6, idx: k, x: 0, y: 0, moviendo: false, finEn: null };
+  }
+  function reiniciar() {
+    S = { t: 0, siguiente: 2.5, pregunta: null, respuesta: null, entregados: [], efectos: [], fin: null,
+      tickets: [
+        { id: "BUGFIX-RESTAURANTE-MESERO-20260929", etapa: 1 }, { id: "FEATURE-ADAPTER-CAPACIDADES-20261001", etapa: 4 },
+        { id: "IMPROVEMENT-CLI-RESUMEN-20261003", etapa: 2 }, { id: "CHORE-ENGINE-LOGS-20261005", etapa: 0, enCola: true },
+        { id: "FEATURE-SERVER-AVISOS-20261006", etapa: 0, enCola: true },
+      ].map((t) => ({ ...t, vx: 0, vy: 0, entregado: false })),
+      agentes: [{ id: "principal", nombre: "Sesión principal", principal: true, color: "#2a2f3a", pelo: "#1b1b1b", piel: "#e0ac69", ticket: null, estado: "trabajando", herramienta: "Agent", paso: 0, idx: -1, x: 0, y: 0, moviendo: false, finEn: null }],
+    };
+    for (let k = 0; k < 3; k++) S.agentes.push(nuevoAgente(k, k));
+    ajustarAlMundo();
+  }
+  const posicionTicket = (tk) => {
+    if (mundo === "control") return { x: 24 + tk.etapa * 116 + 54, y: 165 };
+    return { x: 0, y: 0 };
+  };
+  function objetivo(a) {
+    const tk = a.ticket === null ? null : S.tickets[a.ticket];
+    const desp = ((a.idx % 3) - 1) * 22;
+    if (a.finEn !== null) return mundo === "control" ? { x: 130 + a.idx * 175, y: 420 } : mundo === "invernadero" ? { x: 110, y: 296 } : { x: 100, y: 364 };
+    if (mundo === "pasteleria") return a.principal ? { x: 64, y: 364 } : { x: 180 + tk.etapa * 101 + desp, y: 364 };
+    if (mundo === "invernadero") return a.principal ? { x: 75, y: 296 } : { x: 150 + tk.etapa * 100 + 30 + desp / 2, y: 296 };
+    if (mundo === "control") return a.principal ? { x: 480, y: 282 } : { x: 130 + a.idx * 175, y: 420 };
+    return { x: 480, y: 282 };
+  }
+  function ajustarAlMundo() {
+    for (const a of S.agentes) { const o = objetivo(a); a.x = o.x; a.y = o.y; a.moviendo = false; }
+    for (const tk of S.tickets) { const p = posicionTicket(tk); tk.vx = p.x; tk.vy = p.y; }
+  }
+  function acercar(obj, kx, ky, tx, ty, v) {
+    const dx = tx - obj[kx], dy = ty - obj[ky], d = Math.hypot(dx, dy);
+    if (d <= 1) { obj[kx] = tx; obj[ky] = ty; return false; }
+    obj[kx] += dx / d * Math.min(v, d); obj[ky] += dy / d * Math.min(v, d); return true;
+  }
+  function avanzar(dt) {
+    S.t += dt;
+    for (const a of S.agentes) {
+      const o = objetivo(a);
+      a.moviendo = acercar(a, "x", "y", o.x, o.y, 90 * dt);
+      a.paso += dt * (a.moviendo ? 8 : 2);
+    }
+    for (const tk of S.tickets) { const p = posicionTicket(tk); tk.moviendo = acercar(tk, "vx", "vy", p.x, p.y, 120 * dt); }
+    S.efectos = S.efectos.filter((e) => (e.vida -= dt) > 0);
+    for (const e of S.efectos) { e.y += e.vy * dt; e.x += (e.vx || 0) * dt; }
+    S.agentes = S.agentes.filter((a) => a.finEn === null || a.finEn === undefined || S.t < a.finEn);
+
+    if (S.pregunta === null) {
+      const w = S.agentes.filter((a) => a.estado === "esperando" && a.ticket !== null && !a.moviendo).sort((p, q) => p.esperaDesde - q.esperaDesde)[0];
+      if (w) { const tk = S.tickets[w.ticket]; S.pregunta = { quien: "Anita", agente: w.id, ticket: tk.id, desde: S.t, que: ESTACIONES[tk.etapa].id === "approved" ? "¿Apruebo el plan?" : "¿Pasaron tus pruebas?" }; }
+    }
+    if (S.pregunta && !S.respuesta && S.t - S.pregunta.desde > 8) {
+      S.respuesta = { quien: "Anita", texto: S.pregunta.que === "¿Apruebo el plan?" ? "Sí, aprobado. Sigue con el plan." : "Pasaron. Cierra el ciclo.", en: S.t, agente: S.pregunta.agente };
+      const ag = S.agentes.find((a) => a.id === S.pregunta.agente); if (ag) ag.estado = "trabajando";
+      if (mundo === "invernadero" && ag) for (let i = 0; i < 14; i++) S.efectos.push({ tipo: "gota", x: ag.x - 40 + Math.random() * 30, y: 240 + Math.random() * 20, vy: 60 + Math.random() * 40, vida: 1.2 + Math.random() });
+    }
+    if (S.respuesta && S.t - S.respuesta.en > 4) { S.pregunta = null; S.respuesta = null; }
+
+    if (S.fin !== null) { if (S.t > S.fin) reiniciar(); return; }
+    if (S.t < S.siguiente) return;
+    S.siguiente = S.t + 2.6 + Math.random() * 1.6;
+    const vivos = S.agentes.filter((a) => !a.principal && a.ticket !== null && a.estado === "trabajando" && !a.moviendo);
+    if (vivos.length === 0) {
+      if (S.tickets.every((t) => t.entregado) && S.agentes.length === 1) S.fin = S.t + 6;
+      return;
+    }
+    const a = vivos[Math.floor(Math.random() * vivos.length)];
+    const tk = S.tickets[a.ticket];
+    tk.etapa += 1;
+    a.herramienta = HERRAMIENTAS[Math.floor(Math.random() * HERRAMIENTAS.length)];
+    const est = ESTACIONES[tk.etapa];
+    if (est.humano) { a.estado = "esperando"; a.esperaDesde = S.t; }
+    if (est.id === "closed") {
+      a.estado = "termino"; a.finEn = S.t + 5; tk.entregado = true; S.entregados.push(tk.id);
+      const libre = S.tickets.findIndex((t) => t.enCola);
+      if (libre >= 0) {
+        S.tickets[libre].enCola = false;
+        const usados = new Set(S.agentes.map((b) => b.idx));
+        let idx = 0; while (usados.has(idx)) idx += 1;
+        const nuevo = nuevoAgente(idx, libre);
+        const p = S.agentes[0]; nuevo.x = p.x + 30; nuevo.y = p.y;
+        S.agentes.push(nuevo);
+      }
+    }
+  }
+
+  // ── Mundo 1: Pastelería (vista lateral del obrador) ────────────────────
+  const PX = (i) => 180 + i * 101;
+  function dibujarPasteleria(miniatura) {
+    const t = S.t, preg = S.pregunta, resp = S.respuesta;
+    R(0, 0, W, 296, "#f7ecda"); R(0, 140, W, 3, "#e2c6a4");
+    for (let x = 0; x < W; x += 20) R(x, 296, 20, 20, ((x / 20) | 0) % 2 ? "#e6c7a6" : "#f3dfc6");
+    R(0, 316, W, H - 316, "#c79864");
+    for (let y = 316; y < H; y += 22) { R(0, y, W, 2, "#a7764c"); for (let x = (((y / 22) | 0) % 2) * 70; x < W; x += 140) R(x, y, 2, 22, "#a7764c"); }
+    R(700, 38, 150, 96, "#8a5f3b"); R(706, 44, 138, 84, "#bfe0f3"); R(773, 44, 4, 84, "#8a5f3b"); R(706, 84, 138, 4, "#8a5f3b"); C(828, 66, 10, "#ffe08a");
+    R(392, 22, 176, 48, "#5b3a21"); R(396, 26, 168, 40, "#7a5433"); T("LA COMANDA", 480, 54, { fuente: FR, tam: 22, color: "#f6e7c9", peso: "700" });
+    R(130, 112, 330, 8, "#8a5f3b");
+    for (let i = 0; i < 7; i++) { const x = 150 + i * 44; R(x, 82, 22, 30, ["#f2d9a6", "#e7b27a", "#d99a6a"][i % 3]); R(x, 78, 22, 6, "#b23b3b"); }
+    R(16, 146, 96, 26, "#5b3a21"); T("EL PASE", 64, 164, { fuente: FR, tam: 13, color: "#f6e7c9", peso: "600" });
+    T("sesión principal", 64, 184, { tam: 10, color: "#7a5433" });
+
+    for (let i = 0; i < 8; i++) {
+      const x = PX(i), esperando = S.agentes.some((a) => a.ticket !== null && S.tickets[a.ticket].etapa === i && a.estado === "esperando");
+      const trabajando = S.agentes.some((a) => a.ticket !== null && S.tickets[a.ticket].etapa === i && a.estado === "trabajando" && !a.moviendo);
+      T(M().nombres[i], x, 286, { fuente: FR, tam: 12, color: ESTACIONES[i].humano ? "#b23b3b" : "#7a5433", peso: "600" });
+      switch (i) {
+        case 0: R(x - 32, 168, 64, 52, "#c9a071"); R(x - 28, 172, 56, 44, "#e8d2ae"); R(x - 22, 178, 16, 20, "#fffaf0"); R(x - 2, 182, 16, 20, "#fffaf0"); R(x + 14, 176, 10, 14, "#ffe8a6"); R(x - 16, 176, 3, 3, "#b23b3b"); R(x + 4, 180, 3, 3, "#b23b3b"); break;
+        case 1: R(x - 30, 196, 60, 6, "#8a5f3b"); for (let k = 0; k < 5; k++) R(x - 26 + k * 11, 170, 9, 26, ["#b23b3b", "#2f4a3a", "#2b7bd1", "#d99a6a", "#7a5fd1"][k]); break;
+        case 2: R(x - 34, 160, 68, 56, "#5b3a21"); R(x - 30, 164, 60, 48, "#2f4a3a"); R(x - 22, 174, 40, 2, "#e7e1cf"); R(x - 22, 184, 28, 2, "#e7e1cf"); R(x - 22, 194, 36, 2, "#e7e1cf"); R(x - 22, 204, 20, 2, "#e7e1cf"); break;
+        case 3: {
+          R(x - 38, 150, 76, 112, "#8a5f3b"); R(x - 32, 156, 64, 100, "#fbf3e6"); R(x - 32, 156, 18, 100, "#b23b3b"); R(x + 14, 156, 18, 100, "#b23b3b");
+          R(x - 24, 132, 48, 16, "#5b3a21"); T("ANITA", x, 144, { tam: 10, color: "#f6e7c9", peso: "600" });
+          if (resp) { R(x - 8, 196, 16, 18, "#e0ac69"); R(x - 9, 192, 18, 6, "#5b3a21"); R(x - 4, 202, 2, 2, "#15171c"); R(x + 2, 202, 2, 2, "#15171c"); R(x - 12, 214, 24, 30, "#2f4a3a"); }
+          const on = esperando && Math.floor(t * 3) % 2 === 0;
+          if (esperando) C(x, 262, 12, "rgba(242,165,42,.25)");
+          C(x, 262, 6, on ? "#f2a52a" : esperando ? "#c98a2e" : "#8a7a66");
+          break;
+        }
+        case 4: {
+          R(x - 42, 150, 84, 122, "#3b3a3f"); R(x - 36, 156, 72, 10, "#55545b"); R(x - 30, 176, 60, 46, "#1a1a1d");
+          if (trabajando) { R(x - 28, 178, 56, 42, `rgba(255,140,40,${0.45 + 0.35 * Math.sin(t * 6)})`); R(x - 20, 200, 40, 16, "#ffb13b"); if (!miniatura && Math.random() < 0.08) S.efectos.push({ tipo: "vapor", x: x - 20 + Math.random() * 40, y: 150, vy: -22, vida: 2 }); }
+          R(x - 30, 228, 60, 6, "#9a9aa3"); for (let k = 0; k < 3; k++) C(x - 16 + k * 16, 250, 4, "#c9c9d1");
+          break;
+        }
+        case 5: R(x - 24, 160, 48, 38, "#8a5f3b"); R(x - 20, 164, 40, 30, "#dfe9f3"); R(x - 8, 178, 16, 8, "#b5733e"); R(x - 8, 175, 16, 3, "#f6c9d6"); break;
+        case 6: R(x + 20, 150, 4, 60, "#5b5b63"); R(x - 10, 206, 40, 8, "#5b5b63"); R(x - 8, 214, 36, 16, trabajando ? "rgba(255,235,160,.6)" : "rgba(255,235,160,.25)"); break;
+        case 7: {
+          R(x - 40, 150, 80, 112, "rgba(190,220,240,.25)"); for (const y of [172, 206, 240]) R(x - 40, y, 80, 6, "#8a5f3b");
+          S.entregados.slice(-6).forEach((_, k) => { const cx = x - 22 + (k % 3) * 22, cy = [172, 206, 240][Math.floor(k / 3)]; R(cx - 8, cy - 14, 16, 14, "#f1dcc3"); R(cx - 8, cy - 14, 16, 2, "#d98a9e"); R(cx - 1, cy - 14, 2, 14, "#d98a9e"); });
+          R(x - 36, 150, 3, 112, "rgba(255,255,255,.6)");
+          break;
+        }
+      }
+    }
+    for (const a of S.agentes) {
+      personaje(a, a.x, a.y, { sombrero: "toque", delantal: a.principal ? "#1d2129" : "#fbfbf7", camisa: a.principal ? "#2a2f3a" : a.color, sombreroColor: a.principal ? "#2a2f3a" : undefined });
+      if (a.ticket !== null && a.moviendo) pastel(a.x + 16, a.y - 24, S.tickets[a.ticket].etapa);
+      if (a.estado === "esperando" && !a.moviendo) T("?", a.x + 16, a.y - 44, { fuente: FR, tam: 16, color: "#b23b3b", peso: "700" });
+    }
+    R(128, 352, 816, 48, "#8a5f3b"); R(124, 348, 824, 8, "#efdcc0"); for (let x = 140; x < 944; x += 40) R(x, 364, 2, 30, "#7a5433");
+    R(16, 352, 96, 48, "#8a5f3b"); R(12, 348, 104, 8, "#efdcc0"); R(40, 330, 24, 16, "#fffaf0"); R(44, 334, 16, 2, "#999"); R(44, 338, 12, 2, "#999");
+    for (let i = 0; i < 8; i++) {
+      const x = PX(i);
+      if (i === 0 || i === 3) { R(x + 24, 338, 14, 8, "#e8b84a"); R(x + 29, 334, 4, 4, "#e8b84a"); }
+      if (i === 1) { R(x - 20, 340, 40, 8, "#fffaf0"); R(x - 1, 340, 2, 8, "#8a5f3b"); }
+      if (i === 2) { R(x - 18, 342, 36, 6, "#5b5b63"); R(x - 1, 326, 2, 16, "#5b5b63"); R(x - 16, 324, 12, 3, "#9a9aa3"); R(x + 4, 324, 12, 3, "#9a9aa3"); }
+      if (i === 5) { R(x - 16, 342, 32, 6, "#fffaf0"); R(x + 20, 336, 8, 10, "#dfe9f3"); R(x - 14, 404, 28, 8, "#8a5f3b"); R(x - 12, 412, 4, 20, "#8a5f3b"); R(x + 8, 412, 4, 20, "#8a5f3b"); }
+      if (i === 6) { ctx.strokeStyle = "#5b5b63"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x - 6, 336, 8, 0, 7); ctx.stroke(); R(x + 1, 340, 14, 3, "#5b5b63"); }
+      for (const a of S.agentes) if (a.ticket !== null && !a.moviendo && S.tickets[a.ticket].etapa === i && a.estado !== "termino") pastel(a.x - 10, 348, S.tickets[a.ticket].etapa);
+    }
+    for (const e of S.efectos) if (e.tipo === "vapor") C(e.x, e.y, 3 + (2 - e.vida) * 3, `rgba(255,255,255,${e.vida * 0.3})`);
+  }
+  function pastel(x, b, e) {
+    if (e === 0) { R(x - 14, b - 12, 28, 12, "#9fb4c7"); R(x - 10, b - 16, 20, 6, "#f3e6c8"); return; }
+    if (e === 1) { R(x - 16, b - 4, 32, 4, "#d9b98f"); R(x - 9, b - 16, 18, 12, "#f0dcb0"); return; }
+    R(x - 16, b - 14, 32, 14, "#8e949c"); R(x - 14, b - 12, 28, 2, "#b9bec5");
+    if (e === 2) { R(x - 13, b - 11, 26, 8, "#f3e3bf"); return; }
+    if (e === 3) { R(x - 13, b - 11, 26, 8, "#f3e3bf"); R(x + 8, b - 26, 14, 14, "#fff7dc"); R(x + 10, b - 22, 10, 1, "#999"); R(x + 10, b - 19, 8, 1, "#999"); R(x + 10, b - 16, 9, 1, "#999"); return; }
+    R(x - 13, b - 14, 26, 10, "#b5733e"); R(x - 11, b - 16, 22, 3, "#c98a4e");
+    if (e === 4) return;
+    R(x - 12, b - 19, 24, 5, "#f6c9d6");
+    if (e === 5) return;
+    R(x - 8, b - 22, 3, 3, "#c62828"); R(x + 1, b - 23, 3, 3, "#c62828"); R(x + 7, b - 21, 3, 3, "#c62828"); R(x - 1, b - 31, 2, 9, "#fff"); R(x - 2, b - 34, 4, 4, "#ffb13b");
+    if (e === 6) return;
+    R(x - 18, b - 30, 36, 30, "#f1dcc3"); R(x - 18, b - 30, 36, 4, "#d98a9e"); R(x - 2, b - 30, 4, 30, "#d98a9e"); R(x - 18, b - 16, 36, 3, "#d98a9e");
+  }
+
+  // ── Mundo 2: Centro de control (turno de noche) ─────────────────────────
+  function dibujarControl() {
+    const t = S.t, on = Math.floor(t * 2) % 2 === 0;
+    R(0, 0, W, H, "#080d1a");
+    ctx.strokeStyle = "#121a30"; ctx.lineWidth = 1;
+    for (let k = 0; k <= 12; k++) { ctx.beginPath(); ctx.moveTo(480, 200); ctx.lineTo(k * 80, H); ctx.stroke(); }
+    for (let y = 210, paso = 8; y < H; y += paso, paso *= 1.35) R(0, y, W, 1, "#121a30");
+    for (let i = 0; i < 8; i++) {
+      const x0 = 24 + i * 116, x = x0 + 54, hum = ESTACIONES[i].humano;
+      R(x0, 28, 108, 120, "#0d1730"); ctx.strokeStyle = "#223a6e"; ctx.strokeRect(x0 + .5, 28.5, 108, 120);
+      T(M().nombres[i].toUpperCase(), x, 48, { fuente: CH, tam: 12, color: "#8fb4ff", peso: "600" });
+      T(ESTACIONES[i].id, x, 62, { fuente: MONO, tam: 9, color: "#4b6aa8" });
+      if (hum) { R(x0 + 6, 68, 96, 14, "#3a2a0a"); T("REQUIERE PERSONA", x, 78, { tam: 9, color: "#ffb84a", peso: "600" }); }
+      let fila = 0;
+      for (const tk of S.tickets) {
+        if (tk.enCola || tk.etapa !== i) continue;
+        const a = S.agentes.find((b) => b.ticket === S.tickets.indexOf(tk));
+        const color = a ? a.color : "#5b8dff";
+        R(x0 + 8, 90 + fila * 18, 92, 14, "#101d3f"); R(x0 + 8, 90 + fila * 18, 92 * ((i + 1) / 8), 14, color + "88");
+        T(corto(tk.id), x, 101 + fila * 18, { fuente: MONO, tam: 9, color: "#dfe9ff" }); fila++;
+      }
+      for (let y = 28; y < 148; y += 4) R(x0, y, 108, 1, "rgba(0,0,0,.18)");
+    }
+    R(24, 164, 912, 2, "#223a6e");
+    for (const tk of S.tickets) {
+      if (tk.enCola) continue;
+      const a = S.agentes.find((b) => b.ticket === S.tickets.indexOf(tk));
+      const color = a ? a.color : "#3b58a8";
+      if (a && !a.principal) { ctx.strokeStyle = color + "44"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(tk.vx, 170); ctx.lineTo(a.x, 326); ctx.stroke(); }
+      C(tk.vx, 165, 9, color + "33"); C(tk.vx, 165, 5, tk.entregado ? "#5b8dff" : color);
+      if (tk.moviendo) { R(tk.vx - 18, 164, 12, 2, color + "66"); }
+    }
+    if (S.pregunta) { R(24, 176, 912, 22, on ? "#4a1118" : "#2a0b10"); T(`ESPERANDO A ANITA · LÍNEA 1 · ${corto(S.pregunta.ticket)} · ${S.pregunta.que}`, 480, 191, { fuente: CH, tam: 12, color: "#ff7b7b", peso: "600" }); }
+    else { const n = S.agentes.filter((a) => !a.principal && a.finEn === null).length; R(24, 176, 912, 22, "#0d1730"); T(`TURNO DE NOCHE · ${n} MISIONES ACTIVAS · OLA ${S.entregados.length < 2 ? 2 : 3}`, 480, 191, { fuente: CH, tam: 12, color: "#8fb4ff", peso: "600" }); }
+    // Dirección: escritorio al fondo, director de espaldas delante, tarima debajo.
+    const dir = S.agentes[0];
+    R(430, 204, 36, 20, "#0f1a33"); R(433, 207, 30, 14, "#163a6e"); R(410, 224, 140, 22, "#1e2c55"); R(410, 224, 140, 3, "#3b58a8");
+    R(520, 214, 18, 10, S.pregunta && on ? "#ff4d4d" : "#8b1f1f"); R(523, 210, 12, 4, "#5a1212");
+    if (S.respuesta) T("Anita en línea", 529, 206, { fuente: CH, tam: 9, color: "#7bffa0" });
+    personaje(dir, dir.x, dir.y, { sentado: true, camisa: "#1e2c55", sombrero: "gafas" });
+    R(dir.x - 16, 262, 32, 12, "#223060"); R(380, 274, 200, 10, "#182446");
+    T("DIRECTOR · sesión principal", 480, 298, { fuente: CH, tam: 11, color: "#6f8fd8" });
+    for (const a of S.agentes) {
+      if (a.principal) continue;
+      const x = a.x, tk = S.tickets[a.ticket];
+      const base = a.estado === "esperando" ? (on ? "#f2a52a" : "#7a5212") : a.estado === "termino" ? "#5b8dff" : a.color;
+      R(x - 32, 322, 64, 42, base + "22"); R(x - 28, 326, 56, 34, a.estado === "trabajando" ? base + "77" : base);
+      T(a.estado === "esperando" ? "ESPERA" : a.estado === "termino" ? "CERRADA" : corto(tk.id).split("-")[0], x, 347, { fuente: CH, tam: 10, color: "#eef3ff", peso: "600" });
+      R(x - 52, 360, 104, 36, "#141f3f"); R(x - 52, 360, 104, 3, "#2b4480"); R(x - 20, 366, 40, 6, "#2a3a66");
+      if (a.estado === "trabajando" && !a.moviendo) R(x - 8 + (Math.floor(t * 9) % 2) * 10, 364, 5, 3, a.piel);
+      personaje(a, x, a.y, { sentado: !a.moviendo, sombrero: "auricular" });
+      if (!a.moviendo) R(x - 14, 398, 28, 12, "#223060");
+      T(a.nombre, x, 436, { fuente: MONO, tam: 10, color: "#9fb8ff" }); T(corto(tk.id), x, 450, { fuente: MONO, tam: 9, color: "#6f8fd8" });
+      T(a.herramienta.replace(/^mcp__valmen__/, ""), x, 464, { fuente: MONO, tam: 9, color: "#4b6aa8" });
+    }
+  }
+
+  // ── Mundo 4: Invernadero (canteros y jardineros) ────────────────────────
+  const IX = (i) => 150 + i * 100;
+  function dibujarInvernadero() {
+    const t = S.t;
+    R(0, 0, W, H, "#e4f1e8");
+    for (let x = 0; x < W; x += 96) R(x, 0, 2, 250, "rgba(255,255,255,.75)"); for (let y = 0; y < 250; y += 70) R(0, y, W, 2, "rgba(255,255,255,.75)");
+    R(0, 118, W, 3, "#cfdccf"); C(880, 60, 26, "#ffe08a"); C(880, 60, 34, "rgba(255,224,138,.25)");
+    R(140, 176, 700, 8, "#a67c52");
+    for (let k = 0; k < 11; k++) { const x = 160 + k * 64; R(x, 156, 18, 20, "#c0623a"); R(x + 4, 146, 10, 10, "#5fb36a"); R(x - 2, 150, 8, 6, "#3f8f4a"); }
+    ctx.fillStyle = "#8a5f3b"; ctx.beginPath(); ctx.moveTo(10, 180); ctx.lineTo(75, 130); ctx.lineTo(140, 180); ctx.closePath(); ctx.fill();
+    R(20, 180, 110, 120, "#b98a5a"); R(60, 232, 30, 68, "#7a5433"); R(82, 262, 4, 4, "#e8b84a");
+    T("SEMILLERO", 75, 206, { fuente: CV, tam: 17, color: "#fbf3e6", peso: "600" }); T("sesión principal", 75, 222, { tam: 9, color: "#fbf3e6" });
+    S.tickets.filter((tk) => tk.enCola).forEach((tk, k) => { const x = 30 + k * 30; R(x, 236, 24, 34, "#fbf3e6"); R(x + 4, 242, 16, 14, "#dfe9d0"); R(x + 10, 248, 4, 4, "#5b3a21"); T(corto(tk.id).split("-")[0].slice(0, 5), x + 12, 266, { fuente: MONO, tam: 6, color: "#57627a" }); });
+    R(0, 250, W, 54, "#d9d0b9"); for (let i = 0; i < 160; i++) R((i * 73) % W, 254 + (i * 37) % 46, 2, 2, "#c3b89f");
+    for (let i = 0; i < 8; i++) {
+      const x = IX(i), hum = ESTACIONES[i].humano;
+      R(x - 44, 304, 88, 70, "#8a6440"); R(x - 40, 310, 80, 58, "#5c3d26"); for (let k = 0; k < 18; k++) R(x - 36 + (k * 29) % 72, 314 + (k * 17) % 50, 3, 2, "#6e4a30");
+      R(x - 46, 282, 3, 26, "#7a5433"); R(x - 62, 270, 34, 16, "#fbf3e6");
+      T(M().nombres[i], x, 396, { fuente: CV, tam: 16, color: hum ? "#b23b3b" : "#3b4a2f", peso: "600" }); T(ESTACIONES[i].id, x, 409, { fuente: MONO, tam: 9, color: "#7a8a6f" });
+      if (hum) {
+        const esperando = S.agentes.some((a) => a.ticket !== null && S.tickets[a.ticket].etapa === i && a.estado === "esperando");
+        const cy = esperando ? 226 + Math.sin(t * 3) * 4 : 282;
+        R(x + 20, cy, 18, 14, "#6b8fb3"); R(x + 36, cy + 2, 10, 3, "#6b8fb3"); R(x + 24, cy - 5, 10, 5, "#6b8fb3");
+        if (esperando) T("?", x + 29, cy - 10, { fuente: CV, tam: 20, color: "#b23b3b", peso: "600" });
+      }
+      for (const a of S.agentes) if (a.ticket !== null && S.tickets[a.ticket].etapa === i && !a.moviendo && a.estado !== "termino") planta(x - 6, 318, S.tickets[a.ticket].etapa);
+    }
+    R(850, 414, 90, 48, "#a67c52"); R(856, 420, 78, 36, "#8a6440"); T("COSECHA", 895, 476, { fuente: CV, tam: 15, color: "#3b4a2f", peso: "600" });
+    S.entregados.slice(-9).forEach((_, k) => R(860 + (k % 5) * 14, 426 + Math.floor(k / 5) * 12, 8, 8, "#e24b4a"));
+    for (const a of S.agentes) {
+      const arrod = !a.principal && !a.moviendo && a.ticket !== null && a.estado !== "termino";
+      personaje(a, a.x, arrod ? a.y + 26 : a.y, { sombrero: "paja", bandaColor: a.principal ? "#3f8f4a" : "#e8b84a", delantal: "#4a5e8a", pantalon: "#4a5e8a", sentado: arrod });
+      if (a.ticket !== null && a.moviendo) { R(a.x + 12, a.y - 22, 14, 10, "#c0623a"); planta(a.x + 19, a.y - 22, Math.min(S.tickets[a.ticket].etapa, 2)); }
+      if (a.estado === "esperando" && !a.moviendo) T("?", a.x + 18, a.y - 20, { fuente: CV, tam: 18, color: "#b23b3b", peso: "600" });
+    }
+    for (const e of S.efectos) if (e.tipo === "gota") R(e.x, e.y, 2, 5, "#6b8fb3");
+  }
+  function planta(x, b, e) {
+    const v = "#3f8f4a", v2 = "#5fb36a";
+    if (e === 0) { R(x - 1, b - 2, 3, 3, "#5b3a21"); R(x - 8, b - 16, 16, 12, "#fbf3e6"); R(x - 6, b - 12, 12, 2, "#c3b89f"); R(x - 6, b - 8, 8, 2, "#c3b89f"); return; }
+    R(x - 1, b - 10, 3, 10, v); if (e === 1) { R(x - 6, b - 10, 5, 3, v2); R(x + 2, b - 8, 5, 3, v2); return; }
+    R(x - 1, b - 20, 3, 10, v); R(x - 8, b - 16, 7, 4, v2); R(x + 2, b - 12, 7, 4, v2); if (e === 2) return;
+    R(x - 1, b - 30, 3, 10, v); R(x - 8, b - 26, 7, 4, v2); R(x + 2, b - 22, 7, 4, v2);
+    if (e === 3) { R(x - 4, b - 37, 8, 8, "#d4537e"); R(x - 2, b - 39, 4, 3, "#f4c0d1"); return; }
+    R(x - 1, b - 42, 3, 12, v); R(x - 9, b - 36, 8, 4, v2); R(x + 2, b - 32, 8, 4, v2); if (e === 4) return;
+    R(x - 7, b - 48, 16, 5, "#f4c0d1"); R(x - 5, b - 52, 12, 12, "#ed93b1"); R(x - 1, b - 48, 4, 4, "#ffd166"); if (e === 5) return;
+    R(x - 10, b - 30, 6, 6, "#e24b4a"); R(x + 5, b - 24, 6, 6, "#e24b4a"); R(x - 2, b - 18, 6, 6, "#e24b4a"); if (e === 6) return;
+    R(x - 16, b - 14, 32, 14, "#b98a5a"); R(x - 14, b - 12, 28, 2, "#d9b98f"); R(x - 10, b - 20, 6, 6, "#e24b4a"); R(x - 2, b - 22, 6, 6, "#e24b4a"); R(x + 6, b - 19, 6, 6, "#e24b4a");
+  }
+
+  const DIBUJAR = { pasteleria: dibujarPasteleria, control: dibujarControl, invernadero: dibujarInvernadero };
+
+  // ── Paneles: misma información que la tabla actual de la consola ────────
+  function pintarPaneles() {
+    const m = M();
+    document.getElementById("paneles").dataset.mundo = mundo;
+    document.getElementById("t-agentes").textContent = m.paneles[0];
+    document.getElementById("t-cola").textContent = m.paneles[1];
+    document.getElementById("lema").textContent = m.lema;
+    const tb = document.querySelector("#tabla tbody"); tb.innerHTML = "";
+    for (const a of S.agentes) {
+      const tk = a.ticket === null ? null : S.tickets[a.ticket];
+      const tr = document.createElement("tr"); if (a.principal) tr.className = "principal";
+      const fase = tk ? m.nombres[tk.etapa] : "reparte e integra";
+      tr.innerHTML = `<td><span class="punto ${a.estado}"></span>${a.nombre}</td><td class="id">${tk ? tk.id : "—"}</td><td><span class="etiqueta">${fase}</span></td><td class="mono">${a.herramienta}</td>`;
+      tb.append(tr);
+    }
+    const tc = document.querySelector("#cola tbody"); tc.innerHTML = "";
+    for (const t of S.tickets.filter((t) => t.enCola)) tc.insertAdjacentHTML("beforeend", `<tr><td class="id">${t.id}</td><td><span class="etiqueta">en cola · ola 3</span></td></tr>`);
+    for (const id of S.entregados) tc.insertAdjacentHTML("beforeend", `<tr><td class="id">${id}</td><td><span class="etiqueta">entregado</span></td></tr>`);
+    if (tc.children.length === 0) tc.insertAdjacentHTML("beforeend", `<tr><td colspan="2">Nada en cola ni entregado todavía.</td></tr>`);
+    const vivos = S.agentes.filter((a) => !a.principal && a.finEn === null).length;
+    document.getElementById("cuenta").textContent = `${vivos} de 3 agentes · ola ${S.entregados.length < 2 ? 2 : 3}`;
+    const av = document.getElementById("avisos"); av.innerHTML = "";
+    if (S.pregunta && !S.respuesta) {
+      const hace = Math.max(0, Math.round(S.t - S.pregunta.desde));
+      av.innerHTML = `<div class="aviso pregunta"><span class="quien">Pregunta pendiente para ${S.pregunta.quien}</span><span class="texto">${S.pregunta.ticket} · ${S.pregunta.que}</span><span class="hace">hace ${hace} s · ${m.gate}</span></div>`;
+    } else if (S.respuesta) {
+      av.innerHTML = `<div class="aviso respuesta"><span class="quien">${S.respuesta.quien} respondió</span><span class="texto">${S.respuesta.texto}</span><span class="hace">el agente sigue</span></div>`;
+    }
+  }
+
+  // ── Galería de mundos con miniatura dibujada por el mismo código ───────
+  const cv = document.getElementById("c"), ctxPrincipal = cv.getContext("2d");
+  try { mundo = localStorage.getItem("vista-agentes-mundo") || mundo; } catch {}
+  if (!MUNDOS[mundo]) mundo = "pasteleria";
+  reiniciar();
+  const galeria = document.getElementById("galeria");
+  function miniaturas() {
+    const actual = mundo;
+    for (const [id, m] of Object.entries(MUNDOS)) {
+      const mini = document.getElementById("mini-" + id); if (!mini) continue;
+      mundo = id; ajustarAlMundo();
+      ctx = mini.getContext("2d"); ctx.setTransform(0.25, 0, 0, 0.25, 0, 0); DIBUJAR[id](true); ctx.setTransform(1, 0, 0, 1, 0, 0);
+    }
+    mundo = actual; ajustarAlMundo();
+  }
+  for (const [id, m] of Object.entries(MUNDOS)) {
+    const b = document.createElement("button"); b.type = "button"; b.className = "mundo"; b.id = "mundo-" + id;
+    b.setAttribute("aria-pressed", String(id === mundo));
+    const mini = document.createElement("canvas"); mini.width = 240; mini.height = 120; mini.id = "mini-" + id; mini.setAttribute("aria-hidden", "true");
+    const n = document.createElement("div"); n.className = "nombre"; n.textContent = m.nombre;
+    const l = document.createElement("div"); l.className = "lema"; l.textContent = m.lema;
+    b.append(mini, n, l);
+    b.addEventListener("click", () => {
+      mundo = id; try { localStorage.setItem("vista-agentes-mundo", id); } catch {}
+      for (const x of galeria.children) x.setAttribute("aria-pressed", String(x === b));
+      ajustarAlMundo(); pintarPaneles();
+    });
+    galeria.append(b);
+  }
+
+  // ── Bucle ───────────────────────────────────────────────────────────────
+  let corriendo = true, ultimo = performance.now(), acum = 0;
+  const vel = document.getElementById("vel");
+  document.getElementById("btn-play").addEventListener("click", (e) => { corriendo = !corriendo; e.currentTarget.textContent = corriendo ? "Pausar" : "Reanudar"; });
+  document.getElementById("btn-reset").addEventListener("click", () => { reiniciar(); pintarPaneles(); });
+  const reducido = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function cuadro(ahora) {
+    const dt = Math.min(.05, (ahora - ultimo) / 1000) * (corriendo ? Number(vel.value) / 3 : 0); ultimo = ahora;
+    if (dt > 0) avanzar(dt);
+    ctx = ctxPrincipal; ctx.clearRect(0, 0, W, H); DIBUJAR[mundo](false);
+    acum += dt; if (acum > .5) { acum = 0; pintarPaneles(); }
+    reducido ? setTimeout(() => requestAnimationFrame(cuadro), 250) : requestAnimationFrame(cuadro);
+  }
+  pintarPaneles();
+  const arrancar = () => { miniaturas(); requestAnimationFrame(cuadro); };
+  (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(arrancar, arrancar);
+})();
+</script>

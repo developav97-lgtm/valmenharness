@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "assets": [
+    {
+      "path": "assets/vista-agentes.html",
+      "sha256": "0e54061e5fcc2bfb54c5163a0a4dbd3028a1b074da5ed1a09fe40b87b519b3ee",
+      "bytes": 41932,
+      "kind": "prototipo",
+      "description": "Prototipo aprobado por el PO el 2026-10-08: tres mundos (pastelería, centro de control, invernadero) con simulación, sesión principal y pregunta pendiente",
+      "origin_url": "https://claude.ai/artifact/KLKisZAnVgrErnBuZTjoij",
+      "added": "2026-10-08"
+    }
+  ]
+}

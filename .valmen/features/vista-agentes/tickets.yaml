@@ -1,0 +1,155 @@
+feature: vista-agentes
+generated_by:
+  provider: claude-code
+  model: claude-sonnet-5-5
+sprints:
+  - id: S1
+    goal: "El endpoint devuelve la sesión principal como fila propia y la pregunta pendiente de cada agente, sin copiar texto del transcript."
+    tickets:
+      - id: FEATURE-SERVER-SESION-PRINCIPAL-20261008
+        title: Lector emite la sesión principal como fila propia
+        depends_on: []
+      - id: FEATURE-SERVER-PREGUNTA-PENDIENTE-20261008
+        title: "Fila declara la pregunta pendiente sin copiar su texto, con test de lista blanca"
+        depends_on:
+          - FEATURE-SERVER-SESION-PRINCIPAL-20261008
+  - id: S2
+    goal: "Vista Agentes renombrada, motor de escena con tests deterministas, lienzo montado con selector, aviso y paneles, marco responsivo."
+    tickets:
+      - id: IMPROVEMENT-WEB-VISTA-RENOMBRAR-AGENTES-20261008
+        title: Renombrar Corrida a Agentes y redirigir rutas viejas
+        depends_on: []
+      - id: FEATURE-WEB-MOTOR-ESCENA-20261008
+        title: "Motor de escena con estaciones, movimiento, estados visuales, interfaz de mundo y tests sin lienzo"
+        depends_on:
+          - FEATURE-SERVER-SESION-PRINCIPAL-20261008
+      - id: FEATURE-WEB-VISTA-LIENZO-20261008
+        title: "Vista Agentes con lienzo montado desde el motor, selector de mundo, aviso de pregunta, paneles y estáticos declarados"
+        depends_on:
+          - IMPROVEMENT-WEB-VISTA-RENOMBRAR-AGENTES-20261008
+          - FEATURE-WEB-MOTOR-ESCENA-20261008
+          - FEATURE-SERVER-PREGUNTA-PENDIENTE-20261008
+      - id: IMPROVEMENT-WEB-VISTA-MARCO-RESPONSIVO-20261008
+        title: "Marco con tokens del tema, celular, iPad y reduced-motion"
+        depends_on:
+          - FEATURE-WEB-VISTA-LIENZO-20261008
+  - id: S3
+    goal: "Los tres mundos completos y validados contra el prototipo."
+    tickets:
+      - id: FEATURE-WEB-MUNDO-PASTELERIA-20261008
+        title: "Mundo pastelería con obrador, personajes, señal de pregunta, estático declarado y validación contra el prototipo"
+        depends_on:
+          - FEATURE-WEB-VISTA-LIENZO-20261008
+          - IMPROVEMENT-WEB-VISTA-MARCO-RESPONSIVO-20261008
+      - id: FEATURE-WEB-MUNDO-CONTROL-20261008
+        title: "Mundo centro de control con sala, personajes, señal de pregunta, estático declarado y validación contra el prototipo"
+        depends_on:
+          - FEATURE-WEB-VISTA-LIENZO-20261008
+          - IMPROVEMENT-WEB-VISTA-MARCO-RESPONSIVO-20261008
+      - id: FEATURE-WEB-MUNDO-INVERNADERO-20261008
+        title: "Mundo invernadero con cultivo, personajes, señal de pregunta, estático declarado y validación contra el prototipo"
+        depends_on:
+          - FEATURE-WEB-VISTA-LIENZO-20261008
+          - IMPROVEMENT-WEB-VISTA-MARCO-RESPONSIVO-20261008
+  - id: S4
+    goal: "Opción B: texto de la pregunta y la respuesta, solo con la decisión escrita del PO en el ticket."
+    tickets:
+      - id: FEATURE-SERVER-TEXTO-PREGUNTA-RESPUESTA-20261008
+        title: "Lector expone texto de pregunta y respuesta con lista blanca ampliada, bajo decisión escrita del PO"
+        depends_on:
+          - FEATURE-SERVER-PREGUNTA-PENDIENTE-20261008
+          - FEATURE-WEB-MUNDO-PASTELERIA-20261008
+          - FEATURE-WEB-MUNDO-CONTROL-20261008
+          - FEATURE-WEB-MUNDO-INVERNADERO-20261008
+      - id: FEATURE-WEB-VISTA-TEXTO-PREGUNTA-20261008
+        title: Vista muestra el texto de la pregunta y la respuesta
+        depends_on:
+          - FEATURE-SERVER-TEXTO-PREGUNTA-RESPUESTA-20261008
+coverage:
+  - requirement: R-DAT-001
+    covered_by:
+      - FEATURE-SERVER-SESION-PRINCIPAL-20261008
+  - requirement: R-DAT-002
+    covered_by:
+      - FEATURE-SERVER-PREGUNTA-PENDIENTE-20261008
+  - requirement: R-DAT-003
+    covered_by:
+      - FEATURE-SERVER-PREGUNTA-PENDIENTE-20261008
+  - requirement: R-DAT-004
+    covered_by:
+      - FEATURE-SERVER-TEXTO-PREGUNTA-RESPUESTA-20261008
+      - FEATURE-WEB-VISTA-TEXTO-PREGUNTA-20261008
+  - requirement: R-ESC-001
+    covered_by:
+      - IMPROVEMENT-WEB-VISTA-RENOMBRAR-AGENTES-20261008
+  - requirement: R-ESC-002
+    covered_by:
+      - FEATURE-WEB-MOTOR-ESCENA-20261008
+  - requirement: R-ESC-003
+    covered_by:
+      - FEATURE-WEB-MOTOR-ESCENA-20261008
+  - requirement: R-ESC-004
+    covered_by:
+      - FEATURE-WEB-MOTOR-ESCENA-20261008
+  - requirement: R-ESC-005
+    covered_by:
+      - FEATURE-WEB-VISTA-LIENZO-20261008
+  - requirement: R-ESC-006
+    covered_by:
+      - FEATURE-WEB-MOTOR-ESCENA-20261008
+      - FEATURE-WEB-VISTA-LIENZO-20261008
+  - requirement: R-ESC-007
+    covered_by:
+      - FEATURE-WEB-VISTA-LIENZO-20261008
+      - FEATURE-WEB-VISTA-TEXTO-PREGUNTA-20261008
+  - requirement: R-ESC-008
+    covered_by:
+      - FEATURE-WEB-VISTA-LIENZO-20261008
+  - requirement: R-ESC-009
+    covered_by:
+      - FEATURE-WEB-MOTOR-ESCENA-20261008
+  - requirement: R-ESC-010
+    covered_by:
+      - IMPROVEMENT-WEB-VISTA-MARCO-RESPONSIVO-20261008
+  - requirement: R-ESC-011
+    covered_by:
+      - IMPROVEMENT-WEB-VISTA-MARCO-RESPONSIVO-20261008
+      - FEATURE-WEB-MUNDO-PASTELERIA-20261008
+      - FEATURE-WEB-MUNDO-CONTROL-20261008
+      - FEATURE-WEB-MUNDO-INVERNADERO-20261008
+  - requirement: R-MUN-001
+    covered_by:
+      - FEATURE-WEB-MOTOR-ESCENA-20261008
+      - FEATURE-WEB-MUNDO-PASTELERIA-20261008
+      - FEATURE-WEB-MUNDO-CONTROL-20261008
+      - FEATURE-WEB-MUNDO-INVERNADERO-20261008
+  - requirement: R-MUN-002
+    covered_by:
+      - FEATURE-WEB-MUNDO-PASTELERIA-20261008
+      - FEATURE-WEB-MUNDO-CONTROL-20261008
+      - FEATURE-WEB-MUNDO-INVERNADERO-20261008
+  - requirement: R-MUN-003
+    covered_by:
+      - FEATURE-WEB-MUNDO-PASTELERIA-20261008
+      - FEATURE-WEB-MUNDO-CONTROL-20261008
+      - FEATURE-WEB-MUNDO-INVERNADERO-20261008
+  - requirement: R-MUN-004
+    covered_by:
+      - FEATURE-WEB-MUNDO-PASTELERIA-20261008
+  - requirement: R-MUN-005
+    covered_by:
+      - FEATURE-WEB-MUNDO-CONTROL-20261008
+  - requirement: R-MUN-006
+    covered_by:
+      - FEATURE-WEB-MUNDO-INVERNADERO-20261008
+  - requirement: R-MUN-007
+    covered_by:
+      - FEATURE-WEB-MUNDO-PASTELERIA-20261008
+      - FEATURE-WEB-MUNDO-CONTROL-20261008
+      - FEATURE-WEB-MUNDO-INVERNADERO-20261008
+  - requirement: R-MUN-008
+    covered_by:
+      - FEATURE-WEB-MUNDO-PASTELERIA-20261008
+      - FEATURE-WEB-MUNDO-CONTROL-20261008
+      - FEATURE-WEB-MUNDO-INVERNADERO-20261008
+gaps: []

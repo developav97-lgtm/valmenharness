@@ -1,0 +1,151 @@
+---
+schema_version: 2
+id: FEATURE-SERVER-PREGUNTA-PENDIENTE-20261008
+title: Fila declara la pregunta pendiente sin copiar su texto, con test de lista blanca
+type: FEATURE
+module: SERVER
+workflow_status: intake
+qa_status: pending
+release_status: unreleased
+user_visible: false
+sync_impact: false
+migration_impact: false
+docker_impact: false
+risk_level: normal
+created: 2026-10-08
+updated: 2026-10-08
+related_ticket: null
+target_release: null
+released_in: null
+---
+
+# FEATURE-SERVER-PREGUNTA-PENDIENTE-20261008
+
+## Solicitud original
+
+Parte del sprint: El endpoint devuelve la sesión principal como fila propia y la pregunta pendiente de cada agente, sin copiar texto del transcript.
+- R-DAT-002: Cada fila DEBE declarar su pregunta pendiente sin copiar su texto
+- R-DAT-003: El endpoint NO DEBE copiar contenido del transcript
+Depende de: FEATURE-SERVER-SESION-PRINCIPAL-20261008.
+Viene de una feature descompuesta en sprints; su plan completo está en el tickets.yaml de la feature.
+
+Comportamiento esperado: Cada fila DEBE declarar su pregunta pendiente sin copiar su texto El endpoint NO DEBE copiar contenido del transcript
+Comportamiento actual: la spec no lo declara; se establece en el análisis, leyendo el código.
+
+### Referencias de diseño
+
+Adjuntos de la feature (ningún requisito de este ticket cita uno en particular). Se construye y se valida contra el original, no contra el texto de la spec:
+- `.valmen/features/vista-agentes/assets/vista-agentes.html` — Prototipo aprobado por el PO el 2026-10-08: tres mundos (pastelería, centro de control, invernadero) con simulación, sesión principal y pregunta pendiente (sha256 0e54061e5fcc…)
+
+### Supuestos y decisiones pendientes
+
+<!-- Si el pedido nombra algo que el código no tiene —parámetro, permiso,
+campo, bandera, columna, migración— y no lo especifica, listá cada elemento
+con su pregunta antes de avanzar a análisis; el análisis no planifica sobre
+la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
+Ninguno.
+
+## Descripción funcional
+
+- Alcance:
+- Usuario o rol afectado:
+- Comportamiento actual:
+- Comportamiento esperado:
+
+## Diagnóstico
+
+- Causa comprobada (con `ruta:línea`):
+- Hipótesis pendientes:
+- Consumidores afectados:
+- Archivos y flujo investigados:
+- Riesgos y compatibilidad:
+- Impactos de sync, migración, Docker o despliegue:
+
+## Plan
+
+- Gate de plan y aprobación:
+- Pasos ordenados:
+  <!-- Cada paso nombra archivo, símbolo o comando, y los criterios que cubre, por ejemplo
+       «(C1, C2)». Un paso que no dice dónde ni con qué se toca no se puede ejecutar ni
+       revisar, y la compuerta lo lee así. -->
+  1.
+  2.
+- Impactos declarados:
+  <!-- Una línea por cada impacto que el ticket declara, con las palabras de su proposición:
+       sincronización (datos ya sincronizados y clientes que todavía no se actualizaron),
+       migración (orden de aplicación y reversión) o contenedores (imagen y publicación). -->
+- Rollback (obligatorio):
+
+<!-- Los criterios de la sección siguiente se numeran C1…Cn, con una afirmación verificable por criterio
+     —una frase con «y» son dos criterios—, y cada uno lleva debajo su anotación de
+     verificación: un comentario HTML que dice «test:» y el comando, o «verify: manual». La
+     sección no lleva comentarios dentro: un comentario con anotación se leería como la de un
+     criterio. Ejemplo en la skill planificacion. -->
+## Criterios de aceptación
+
+- [ ] R-DAT-002: Cada fila DEBE declarar su pregunta pendiente sin copiar su texto
+- [ ] R-DAT-003: El endpoint NO DEBE copiar contenido del transcript
+
+## Puntos
+
+```json
+[]
+```
+
+## Implementación
+
+Pendiente.
+
+## Pruebas
+
+Pendiente de ejecución.
+
+## QA
+
+```json
+[]
+```
+
+## Evidencia
+
+```json
+[]
+```
+
+## Retests
+
+```json
+[]
+```
+
+## Cierre
+
+```json
+[]
+```
+
+## Consumo de IA
+
+```json
+[]
+```
+
+## Release
+
+Sin publicar todavía.
+
+## Eventos
+
+```json
+[
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-001",
+    "date": "2026-10-08",
+    "at": "2026-10-08T23:30:58.614Z",
+    "action": "created",
+    "actor": "cli",
+    "details": "Ticket creado sin sobrescribir historial."
+  }
+]
+```
