@@ -4,7 +4,7 @@ id: SECURITY-ENGINE-APROBACION-POR-REVISOR-20261007
 title: Guardar la decisión del revisor como suya, rechazar el mismo modelo y reservar los block a una persona
 type: SECURITY
 module: ENGINE
-workflow_status: analyzed
+workflow_status: planned
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -209,6 +209,24 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: intake -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-003",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:39:25.571Z",
+    "action": "gate-approved",
+    "actor": "cli",
+    "details": "Gate analysis aprobado por Juan Andrade (recibo GR-20261008-SECURITY-ENGINE-APROBACION-POR-REVISOR-20261007-analysis-2, canal cli, decidida 2026-10-08T21:39:25.567Z): A"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:39:37.814Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: analyzed -> planned."
   }
 ]
 ```
