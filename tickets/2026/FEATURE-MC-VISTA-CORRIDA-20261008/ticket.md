@@ -4,7 +4,7 @@ id: FEATURE-MC-VISTA-CORRIDA-20261008
 title: Mostrar en Mission Control la corrida con sus agentes vivos, la cola y lo entregado
 type: FEATURE
 module: MC
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -75,59 +75,59 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1: El menú lateral lleva el enlace «Corrida» a `#/corrida` y ya no lleva «Jornadas».
+- [x] C1: El menú lateral lleva el enlace «Corrida» a `#/corrida` y ya no lleva «Jornadas».
       <!-- test: npx vitest run tests/vista-corrida.test.ts -->
-- [ ] C2: Abrir `#/corrida` pinta la vista Corrida.
+- [x] C2: Abrir `#/corrida` pinta la vista Corrida.
       <!-- test: npx vitest run tests/vista-corrida.test.ts -->
-- [ ] C3: Abrir `#/jornadas` pinta la misma vista Corrida.
+- [x] C3: Abrir `#/jornadas` pinta la misma vista Corrida.
       <!-- test: npx vitest run tests/vista-corrida.test.ts -->
-- [ ] C4: La vista consulta `/api/corrida/agentes`, `/api/journeys` y `/api/tickets`.
+- [x] C4: La vista consulta `/api/corrida/agentes`, `/api/journeys` y `/api/tickets`.
       <!-- test: npx vitest run tests/vista-corrida.test.ts -->
-- [ ] C5: La vista muestra los seis KPI con los rótulos entregados, cerrados, esperan al PO, trabajando, en cola y aprobaciones pendientes.
+- [x] C5: La vista muestra los seis KPI con los rótulos entregados, cerrados, esperan al PO, trabajando, en cola y aprobaciones pendientes.
       <!-- test: npx vitest run tests/vista-corrida.test.ts -->
-- [ ] C6: Los valores de los KPI salen de los agentes, la jornada y los tickets de la respuesta.
+- [x] C6: Los valores de los KPI salen de los agentes, la jornada y los tickets de la respuesta.
       <!-- test: npx vitest run tests/vista-corrida.test.ts -->
-- [ ] C7: La tabla de agentes tiene una fila por agente vivo con ticket, fase, herramienta actual con su hora, modelo y tiempo.
+- [x] C7: La tabla de agentes tiene una fila por agente vivo con ticket, fase, herramienta actual con su hora, modelo y tiempo.
       <!-- test: npx vitest run tests/vista-corrida.test.ts -->
-- [ ] C8: Un agente con estado `termino` no aparece entre los agentes vivos.
+- [x] C8: Un agente con estado `termino` no aparece entre los agentes vivos.
       <!-- test: npx vitest run tests/vista-corrida.test.ts -->
-- [ ] C9: La fase inferida se rotula «inferida» y la confirmada se muestra sin rótulo.
+- [x] C9: La fase inferida se rotula «inferida» y la confirmada se muestra sin rótulo.
       <!-- test: npx vitest run tests/vista-corrida.test.ts -->
-- [ ] C10: La cola agrupa los tickets por ola y dice a qué ticket espera cada uno.
+- [x] C10: La cola agrupa los tickets por ola y dice a qué ticket espera cada uno.
       <!-- test: npx vitest run tests/vista-corrida.test.ts -->
-- [ ] C11: La lista de entregados muestra cada ticket con su estado del registro.
+- [x] C11: La lista de entregados muestra cada ticket con su estado del registro.
       <!-- test: npx vitest run tests/vista-corrida.test.ts -->
-- [ ] C12: El selector de simultáneos arranca en 3 cuando no hay preferencia guardada.
+- [x] C12: El selector de simultáneos arranca en 3 cuando no hay preferencia guardada.
       <!-- test: npx vitest run tests/vista-corrida.test.ts -->
-- [ ] C13: Cambiar el selector guarda la preferencia en el navegador sin enviar ninguna petición de escritura al servidor.
+- [x] C13: Cambiar el selector guarda la preferencia en el navegador sin enviar ninguna petición de escritura al servidor.
       <!-- test: npx vitest run tests/vista-corrida.test.ts -->
-- [ ] C14: La barra de la corrida indica cuántos agentes vivos hay frente al valor del selector.
+- [x] C14: La barra de la corrida indica cuántos agentes vivos hay frente al valor del selector.
       <!-- test: npx vitest run tests/vista-corrida.test.ts -->
-- [ ] C15: Una descripción de agente con marcado HTML se pinta como texto y no crea elementos.
+- [x] C15: Una descripción de agente con marcado HTML se pinta como texto y no crea elementos.
       <!-- test: npx vitest run tests/vista-corrida.test.ts -->
-- [ ] C16: Si `/api/corrida/agentes` falla, la vista pinta la cola y lo entregado y muestra un aviso.
+- [x] C16: Si `/api/corrida/agentes` falla, la vista pinta la cola y lo entregado y muestra un aviso.
       <!-- test: npx vitest run tests/vista-corrida.test.ts -->
-- [ ] C17: Una respuesta que llega después de salir de la vista no pinta nada.
+- [x] C17: Una respuesta que llega después de salir de la vista no pinta nada.
       <!-- test: npx vitest run tests/vista-corrida.test.ts -->
-- [ ] C18: Sin jornada ni agentes, la vista muestra un estado vacío que lo explica.
+- [x] C18: Sin jornada ni agentes, la vista muestra un estado vacío que lo explica.
       <!-- test: npx vitest run tests/vista-corrida.test.ts -->
-- [ ] C19: Con la vista abierta, los datos se actualizan solos cada 5 segundos.
+- [x] C19: Con la vista abierta, los datos se actualizan solos cada 5 segundos.
       <!-- verify: manual -->
-- [ ] C20: Al salir de la vista el refresco automático se detiene.
+- [x] C20: Al salir de la vista el refresco automático se detiene.
       <!-- verify: manual -->
-- [ ] C21: Las pruebas de la vista Jornadas anterior siguen en verde.
+- [x] C21: Las pruebas de la vista Jornadas anterior siguen en verde.
       <!-- test: npx vitest run tests/jornadas-progreso-pantalla.test.ts tests/reconexion-mc.test.ts -->
-- [ ] C22: Toda ruta que llama la interfaz está declarada en la lista de rutas del servidor.
+- [x] C22: Toda ruta que llama la interfaz está declarada en la lista de rutas del servidor.
       <!-- test: npx vitest run tests/api-rutas.test.ts -->
-- [ ] C23: El tipado del proyecto compila sin errores.
+- [x] C23: El tipado del proyecto compila sin errores.
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
-- [ ] C24: Los estilos nuevos no usan colores escritos a mano (revisar_presentacion sin hallazgos nuevos).
+- [x] C24: Los estilos nuevos no usan colores escritos a mano (revisar_presentacion sin hallazgos nuevos).
       <!-- verify: manual -->
-- [ ] C25: En tema claro la vista conserva jerarquía, contraste y estados legibles.
+- [x] C25: En tema claro la vista conserva jerarquía, contraste y estados legibles.
       <!-- verify: manual -->
-- [ ] C26: En tema oscuro la vista conserva jerarquía, contraste y estados legibles.
+- [x] C26: En tema oscuro la vista conserva jerarquía, contraste y estados legibles.
       <!-- verify: manual -->
-- [ ] C27: Con 375 px de ancho no hay desplazamiento horizontal de la página y los agentes se leen apilados.
+- [x] C27: Con 375 px de ancho no hay desplazamiento horizontal de la página y los agentes se leen apilados.
       <!-- verify: manual -->
 
 ## Puntos
@@ -138,11 +138,26 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
 
 ## Implementación
 
-Pendiente.
+- `packages/server/web/index.html`: tokens `--ok-suave` y `--error-suave` en ambos temas; clases `.corrida-*` solo con variables; bajo 640 px la tabla de agentes se apila en tarjetas. `vistaJornadas` pasa a `pintarDetalleDeJornadas` (mismo texto, plegado al pie en un `<details>`, con la tabla dentro de una caja desplazable) y la nueva `vistaCorrida` pinta barra («N de M agentes» y selector 1 a 8, 3 por defecto, guardado solo en `localStorage` bajo `valmen.corrida.simultaneos`), seis KPI, agentes vivos, cola por ola, entregados y el detalle de la jornada. Funciones puras: `agentesVivos`, `olasDeCola`, `fraseDeFase`, `kpisDeCorrida`. Todo texto del servidor entra por `el(tag, texto)`.
+- Contrato real de `GET /api/corrida/agentes` (`packages/server/src/agentes.ts`): `{ agentes: [...] }`, sin hora de inicio; la columna Tiempo muestra «hace N» desde `ultimaHerramientaEn`.
+- Definiciones de los KPI (con el dato disponible): entregados = tickets de la corrida en `awaiting_user_tests`, `in_qa`, `qa_approved` o `closed`; cerrados = los `qa_approved` y `closed` (sin afirmar «por política»); esperan al PO = `awaiting_user_tests`, `blocked`, `changes_requested` más agentes `esperando`; trabajando = agentes `trabajando`; en cola = tickets de la jornada sin agente vivo ni entrega; aprobaciones pendientes = `planned`. «Tickets de la corrida» = los de la jornada y los que algún agente trabaja.
+- Navegación: enlace «Corrida» a `#/corrida`, `TITULOS`, `navegar` llama `vistaCorrida` para `corrida` y `jornadas` (alias). Refresco cada 5 s con un temporizador propio (`refrescoDeCorrida`) cancelado en `navegar`; solo corre si el navegador expone `document.visibilityState` y no consulta con la pestaña oculta ni con un campo o diálogo en uso.
+- `tests/vista-corrida.test.ts` (15 pruebas) y la ruta `GET /api/corrida/agentes` en `RUTAS` de `tests/api-rutas.test.ts`.
+- Fuera de alcance, como se resolvió: el selector no escribe en el servidor y no hay botón «Pausar al cerrar la ola».
+- Observación para el PO: el armazón de Mission Control no tiene barra lateral responsiva (preexistente); a 375 px la vista se lee apilada con la barra lateral plegada con el botón de pliegue.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Contrato de entrega:
+
+- Directorio: raíz del repositorio.
+- `npx vitest run tests/vista-corrida.test.ts tests/jornadas-progreso-pantalla.test.ts tests/reconexion-mc.test.ts tests/api-rutas.test.ts` — esperado: 4 archivos, 27 pruebas en verde (resultado obtenido).
+- `npx tsc --noEmit -p tsconfig.json` — esperado: sin errores (resultado obtenido).
+- `node scripts/verificar-interfaz.mjs` — esperado: «Interfaz verificada» (obtenido; exige `node scripts/copy-web.mjs` si la copia publicada difiere).
+- `revisar_presentacion` sobre el cambio: sin colores fijos (1 archivo de interfaz revisado).
+- Manual: `node scripts/copy-web.mjs && node packages/cli/dist/main.js serve --port 4871`, abrir `#/corrida`, elegir el proyecto. Esperado: barra «N de M agentes», seis KPI, tabla de agentes (con datos reales solo si hay una corrida en curso; sin ella, estado vacío o cola), cola por ola, entregados y el detalle de la jornada plegado. Cambiar el selector lo recuerda al recargar sin ninguna escritura. En claro y oscuro (preferencia del sistema) conserva jerarquía y contraste; con la barra lateral plegada y 375 px no hay desplazamiento horizontal y los agentes se apilan. El refresco cada 5 s solo corre con la pestaña visible; al salir de la vista se detiene.
+- Ambiente: Node 24, navegador moderno, sin red.
+- Verificado en el navegador por el agente con datos de ejemplo (servidor de apoyo con respuestas simuladas de las tres rutas): claro, oscuro, 375 px, refresco (llamadas a ~5 s) y detención al salir (0 llamadas tras salir). No se corrió la suite completa (la corre el orquestador al integrar).
 
 ## QA
 
@@ -171,7 +186,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-08",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Subagente de Claude Code dedicado solo a este ticket; la sesión no expone agregado de tokens",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:subagente-sin-agregado",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -235,6 +266,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:38:19.609Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:52:41.089Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:52:41.418Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```

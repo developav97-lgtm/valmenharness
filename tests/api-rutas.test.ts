@@ -35,6 +35,7 @@ const WEB = readFileSync(
  */
 const RUTAS = [
   "GET /api/health",
+  "GET /api/corrida/agentes",
   "GET /api/perfiles",
   "PUT /api/perfiles",
   "PUT /api/perfiles/seleccion",
