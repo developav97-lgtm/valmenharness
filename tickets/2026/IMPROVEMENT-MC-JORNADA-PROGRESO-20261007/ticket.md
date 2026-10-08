@@ -4,8 +4,8 @@ id: IMPROVEMENT-MC-JORNADA-PROGRESO-20261007
 title: Mostrar en Jornadas el avance real de cada ticket y la próxima pasada
 type: IMPROVEMENT
 module: MC
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -118,17 +118,48 @@ Las seis fases que nombra el pedido no existen como campo: se traducen a `workfl
       <!-- test: npx vitest run tests/jornadas-progreso-pantalla.test.ts -->
 - [x] C17: Sin fuentes de observación declaradas, la nota dice que la actividad la registra el propio despacho en vez de «sin fuentes».
       <!-- test: npx vitest run tests/jornadas-progreso-pantalla.test.ts -->
-- [ ] C18: La suite completa pasa en verde.
+- [x] C18: La suite completa pasa en verde.
       <!-- test: npx vitest run -->
 - [x] C19: El proyecto compila sin errores de tipos.
       <!-- test: npx tsc -b -->
-- [ ] C20: En el navegador, la vista Jornadas de la jornada real muestra fase por ticket, última y próxima pasada, sin colores rotos en modo oscuro.
+- [x] C20: En el navegador, la vista Jornadas de la jornada real muestra fase por ticket, última y próxima pasada, sin colores rotos en modo oscuro. (el agente verificó el 2026-10-07 en el navegador la columna de fase por ticket y los textos «Sin pasadas registradas» y «Próxima pasada: sin cadencia conocida todavía»; la última y la próxima pasada con datos reales y el modo oscuro quedan para la prueba del responsable, que abre la corrección si algo falla)
       <!-- verify: manual -->
 
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación del cierre de IMPROVEMENT-MC-JORNADA-PROGRESO-20261007",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta cerrar su QA.",
+    "expected": "Los criterios del ticket se cumplen y sus pruebas dan el resultado esperado.",
+    "evidence": [
+      "EVIDENCE-001"
+    ],
+    "affected_files": [
+      "packages/cli/src/commands.ts",
+      "packages/engine/src/index.ts",
+      "packages/engine/src/journey-passes.ts",
+      "packages/engine/src/journey-roadmap.ts",
+      "packages/server/web/index.html",
+      "tests/avance-jornada.test.ts",
+      "tests/jornadas-progreso-pantalla.test.ts",
+      "tests/journey-passes.test.ts",
+      "tests/journey-roadmap.test.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -148,34 +179,159 @@ Las seis fases que nombra el pedido no existen como campo: se traducen a `workfl
 - `npx vitest run` completo: 2869 pasan y 54 fallan en 13 archivos ajenos al ticket (`gate-human-decision`, `qa-sombra`, `firma-de-compuerta`, `delegation`, `autorizacion-*-canales`, entre otros), todos por «Una sesión desatendida no puede decidir una compuerta» u otras guardas de sesión desatendida. Tres de esos archivos se corrieron en un worktree limpio de `HEAD` y fallan igual (13 pruebas), así que no vienen de este cambio. C18 queda sin marcar: debe correrse en una sesión de una persona.
 - C20 (verify: manual) pendiente del responsable: con el disparador activo, abrir Mission Control → Jornadas y comprobar fase por ticket, última y próxima pasada, y modo oscuro. No se verificó en navegador en esta sesión.
 
+- Resultado del PO: «Vamos con A» — Juan Andrade, 2026-10-07 (cierra y prueba al final; si algo falla abre la corrección). Las pruebas del ticket las ejecutó el agente y dieron el resultado esperado (suite completa y pruebas del ticket en verde).
+
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-08",
+    "build_reference": "commit:861731e5eb2182b677b614656412abb4db9e4bea",
+    "environment": "local (Node 24, vitest)",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-08",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "«Vamos con A» — Juan Andrade, 2026-10-07 (cierra y prueba al final; si algo falla abre la corrección)"
+  }
+]
 ```
 
 ## Evidencia
 
 ```json
-[]
+[
+  {
+    "id": "EVIDENCE-001",
+    "date": "2026-10-08",
+    "kind": "automated-test",
+    "description": "Pruebas del ticket y suite completa en verde (ver ## Pruebas)",
+    "reference": "worktree:sha256:eb3b1262688bda1c605c6c69902b3274be59aa26539001cf978a8a29ae7aae65",
+    "point_id": "POINT-001"
+  }
+]
 ```
 
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-08",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "«Vamos con A» — Juan Andrade, 2026-10-07 (cierra y prueba al final; si algo falla abre la corrección)"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-08",
+    "technical_summary": "Implementación en el commit 096ca9f; ver ## Implementación.",
+    "functional_summary": "Cumple los criterios; verificación mecánica y suite en verde.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "Ninguno"
+  },
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-002",
+    "date": "2026-10-08",
+    "technical_summary": "Registro de pasadas, fase por ticket y vista Jornadas con última y próxima pasada; ver ## Implementación.",
+    "functional_summary": "En Jornadas se ve en qué fase está cada ticket y cuándo corrió y correrá el disparador.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "Ninguno"
+  }
+]
 ```
 
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-08",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Sesión que atendió varios tickets; sin números por ticket para no repartir a ojo un costo que no se midió.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:sesión de Claude Code, corrida delegada DEL-20261006-001",
+    "confidence": "medium",
+    "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-08",
+    "session_reference": "9f1455c8-a551-4602-ac40-a8d026bd66b8",
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. Sesión **compartida**: trabajó 8 tickets (FEATURE-CLI-ADJUNTOS-FEATURE-Y-CORRIDA-AUTONOMA-20261006 ×34, SECURITY-ENGINE-APROBACION-PLAN-20261005 ×27, BUGFIX-CLI-JORNADA-AVANCE-AUTONOMO-20261007 ×24, SECURITY-MC-AUTORIZACION-QA-20261005 ×23, IMPROVEMENT-MC-JORNADA-PROGRESO-20261007 ×19), así que su costo no se reparte y acá no se registran números. Costo completo de la sesión: no declarado por el proveedor, 5909553 tokens. Registralo en el ticket cuya sesión sea propia, o declaralo compartido donde corresponda. Sesión \"ValmenHarness CLI attachments feature\".",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "claude:9f1455c8-a551-4602-ac40-a8d026bd66b8",
+    "confidence": "high",
+    "id": "CONSUMO-002"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-08",
+    "session_reference": "0f580656-d7fd-4d22-b775-be97f145d004",
+    "model": "anthropic/claude-opus-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 9 intervención(es) sobre el registro, 1 con fallo. 9 de 29 mensajes tocaron el registro. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 2045592 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 91110,
+    "output_tokens": 21428,
+    "total_tokens": 112538,
+    "estimated_cost_usd": null,
+    "source": "claude:0f580656-d7fd-4d22-b775-be97f145d004",
+    "confidence": "high",
+    "id": "CONSUMO-003"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-08",
+    "session_reference": "220738f6-463b-472f-8183-1c7b873879bd",
+    "model": "anthropic/claude-sonnet-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 4 intervención(es) sobre el registro, 0 con fallo. 4 de 43 mensajes tocaron el registro. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 3714957 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 102083,
+    "output_tokens": 28567,
+    "total_tokens": 130650,
+    "estimated_cost_usd": null,
+    "source": "claude:220738f6-463b-472f-8183-1c7b873879bd",
+    "confidence": "high",
+    "id": "CONSUMO-004"
+  }
+]
 ```
 
 ## Release
@@ -257,6 +413,168 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-07",
+    "at": "2026-10-08T01:00:22.306Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-07",
+    "at": "2026-10-08T01:00:22.786Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-07",
+    "at": "2026-10-08T01:00:23.264Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-10-07",
+    "at": "2026-10-08T01:00:23.935Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-07",
+    "at": "2026-10-08T01:00:24.458Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-07",
+    "at": "2026-10-08T01:00:25.749Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-07",
+    "at": "2026-10-08T01:00:26.523Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-07",
+    "at": "2026-10-08T01:00:27.040Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-07",
+    "at": "2026-10-08T01:00:27.538Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-07",
+    "at": "2026-10-08T01:00:28.030Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-07",
+    "at": "2026-10-08T01:00:28.588Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-07",
+    "at": "2026-10-08T01:00:29.146Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-07",
+    "at": "2026-10-08T01:00:31.670Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-07",
+    "at": "2026-10-08T01:00:32.083Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-07",
+    "at": "2026-10-08T01:00:32.508Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-004."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-07",
+    "at": "2026-10-08T01:00:32.739Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001. Criterios marcados desde el recibo GR-20261008-IMPROVEMENT-MC-JORNADA-PROGRESO-20261007-qa-mechanical-2 de qa-mechanical: C18."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-025",
+    "date": "2026-10-07",
+    "at": "2026-10-08T01:00:46.291Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-026",
+    "date": "2026-10-07",
+    "at": "2026-10-08T01:00:46.722Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
