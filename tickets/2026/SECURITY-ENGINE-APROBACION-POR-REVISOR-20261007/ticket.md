@@ -4,7 +4,7 @@ id: SECURITY-ENGINE-APROBACION-POR-REVISOR-20261007
 title: Guardar la decisión del revisor como suya, rechazar el mismo modelo y reservar los block a una persona
 type: SECURITY
 module: ENGINE
-workflow_status: planned
+workflow_status: approved
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -65,7 +65,7 @@ Ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente; el ticket es SECURITY y el plan lo aprueba solo una persona, sin autorización que lo sustituya.
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 - Alcance: guardar la decisión del revisor como suya (en el recibo y en un evento de etapa de fuente `revisor`), las barreras del motor al registrarla, la re-verificación en `transition`, la opción `--record` de `valmen review-agent` y sus pruebas. Exclusiones: las de la descripción funcional; no se cambian las reglas de `elegibilidadDeAprobacion` ni la elección del revisor; no se toca el tipo del recibo del paquete de compuertas ni `withHumanDecision`.
 - Decisiones que este plan toma y la persona confirma al aprobarlo: (a) un `reject` del revisor se guarda pero **no** bloquea: el recibo sigue esperando a una persona y no consume cupo; (b) registrar exige sesión atendida, como `aprobarPorAutorizacion`; (c) un recibo `review` con causas fuera de la banda media (por ejemplo, la contradicción interna de AP-004) no se deriva al revisor y queda para una persona.
 - Pasos ordenados:
@@ -227,6 +227,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:41:42.502Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"La A (aprueba el plan de SECURITY-ENGINE-APROBACION-POR-REVISOR con sus tres decisiones de diseño)\",\"planHash\":\"sha256:b1ab142541f2b2105cb2831d3aee1286ecc0024bc695997a2a1e0def260b14cd\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:41:42.841Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:b1ab142541f2b2105cb2831d3aee1286ecc0024bc695997a2a1e0def260b14cd."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:41:42.841Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
   }
 ]
 ```
