@@ -353,6 +353,11 @@ export function registrarUsoDeCupoDeAprobacion(request: {
   return uso;
 }
 
+/** ¿Hay un uso de cupo de esa autorización para ese ticket y esa etapa? Solo lee el registro de usos. */
+export function hayUsoDeCupoDeAprobacion(root: string, authorizationId: string, ticketId: string, stage: string): boolean {
+  return leerUsos(root).some((u) => u.authorizationId === authorizationId && u.ticketId === ticketId && u.stage === stage);
+}
+
 /** Cuántas aprobaciones le quedan hoy (UTC) a la autorización. */
 export function cupoRestanteDeAprobacion(root: string, autorizacion: ApprovalAuthorization, ahora: Date = new Date()): number {
   const dia = ahora.toISOString().slice(0, 10);

@@ -45,12 +45,21 @@ export function hashDelPlan(document: ParsedTicket): string {
   return `sha256:${createHash("sha256").update(contenido, "utf8").digest("hex")}`;
 }
 
+/**
+ * La fuente de una aprobación atribuida a una autorización vigente (R-APRO-002). Solo la escribe
+ * `aprobarPorAutorizacion`: ningún camino que reciba la fuente de fuera puede declararla.
+ */
+export const FUENTE_AUTORIZACION = "autorizacion";
+
 /** Lo que dice una aprobación registrada. */
 export interface AprobacionDePlan {
   readonly actor: string;
   readonly source: string;
   readonly quote: string;
   readonly planHash: string;
+  /** Solo en una aprobación por autorización: la autorización que la respalda. */
+  readonly authorizationId?: string;
+  readonly authorizationHash?: string;
 }
 
 /** Por qué la aprobación vigente no vale, o que vale. */
@@ -73,7 +82,15 @@ function leerAprobacion(evento: JsonObject): AprobacionDePlan | null {
       typeof quote === "string" &&
       typeof planHash === "string"
     ) {
-      return { actor, source, quote, planHash };
+      const { authorizationId, authorizationHash } = datos;
+      return {
+        actor,
+        source,
+        quote,
+        planHash,
+        ...(typeof authorizationId === "string" ? { authorizationId } : {}),
+        ...(typeof authorizationHash === "string" ? { authorizationHash } : {}),
+      };
     }
   } catch {
     // Un evento con ese nombre pero sin la forma esperada no es una aprobación.
@@ -157,6 +174,14 @@ export function registrarAprobacionDePlan(request: PlanApprovalRequest): void {
   if (actor === "") fail("Aprobar un plan necesita un responsable: falta --actor.", EXIT_SCHEMA);
   if (quote === "") {
     fail("Aprobar un plan necesita la frase literal de quien aprueba: falta --quote.", EXIT_SCHEMA);
+  }
+  // La fuente `autorizacion` es de `aprobarPorAutorizacion`: por aquí no se puede forjar (C16).
+  if (request.source === FUENTE_AUTORIZACION) {
+    fail(
+      `La fuente «${FUENTE_AUTORIZACION}» no se declara: la escribe solo la aprobación por autorización ` +
+        "(`valmen approve-by-authorization`), que comprueba la autorización y consume su cupo.",
+      EXIT_INVARIANT,
+    );
   }
   const fuentes = planApprovalSources(request.paths.root);
   const porDelegacion = request.viaDelegacion === true && request.source === FUENTE_DELEGACION;

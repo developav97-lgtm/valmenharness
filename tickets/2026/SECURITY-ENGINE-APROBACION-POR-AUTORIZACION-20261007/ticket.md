@@ -4,7 +4,7 @@ id: SECURITY-ENGINE-APROBACION-POR-AUTORIZACION-20261007
 title: Registrar la aprobación de análisis y plan atribuida a la autorización cuando la compuerta está en approve vigente
 type: SECURITY
 module: ENGINE
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -81,47 +81,47 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1. R-APRO-002: con la compuerta `plan` en `approve` y una autorización vigente que cubre al ticket, `aprobarPorAutorizacion` registra un evento `plan-approved` cuyo actor y fuente nombran la autorización (id y hash) y no a una persona ni al agente
+- [x] C1. R-APRO-002: con la compuerta `plan` en `approve` y una autorización vigente que cubre al ticket, `aprobarPorAutorizacion` registra un evento `plan-approved` cuyo actor y fuente nombran la autorización (id y hash) y no a una persona ni al agente
       <!-- test: npx vitest run tests/elegibilidad-aprobacion.test.ts -->
-- [ ] C2. Un BUGFIX con esa aprobación registrada entra a `approved` con `transition`
+- [x] C2. Un BUGFIX con esa aprobación registrada entra a `approved` con `transition`
       <!-- test: npx vitest run tests/elegibilidad-aprobacion.test.ts -->
-- [ ] C3. Un FEATURE con esa aprobación registrada entra a `approved` sin la frase «aprobado explícitamente por el PO» en `## Plan`
+- [x] C3. Un FEATURE con esa aprobación registrada entra a `approved` sin la frase «aprobado explícitamente por el PO» en `## Plan`
       <!-- test: npx vitest run tests/elegibilidad-aprobacion.test.ts -->
-- [ ] C4. Un plan editado después de aprobarse por autorización deja de valer y `transition --to approved` se rechaza
+- [x] C4. Un plan editado después de aprobarse por autorización deja de valer y `transition --to approved` se rechaza
       <!-- test: npx vitest run tests/elegibilidad-aprobacion.test.ts -->
-- [ ] C5. Un recibo `approve` cuyo hash de estado no coincide con el ticket actual no permite registrar la aprobación
+- [x] C5. Un recibo `approve` cuyo hash de estado no coincide con el ticket actual no permite registrar la aprobación
       <!-- test: npx vitest run tests/elegibilidad-aprobacion.test.ts -->
-- [ ] C6. Un ticket SECURITY no se aprueba por autorización y no consume cupo
+- [x] C6. Un ticket SECURITY no se aprueba por autorización y no consume cupo
       <!-- test: npx vitest run tests/elegibilidad-aprobacion.test.ts -->
-- [ ] C7. Un ticket cuyo diagnóstico declara despliegue no se aprueba por autorización
+- [x] C7. Un ticket cuyo diagnóstico declara despliegue no se aprueba por autorización
       <!-- test: npx vitest run tests/elegibilidad-aprobacion.test.ts -->
-- [ ] C8. Un ticket con impacto de migración que la autorización no lista no se aprueba por autorización
+- [x] C8. Un ticket con impacto de migración que la autorización no lista no se aprueba por autorización
       <!-- test: npx vitest run tests/elegibilidad-aprobacion.test.ts -->
-- [ ] C9. Un recibo `block` de la compuerta de la etapa impide registrar la aprobación
+- [x] C9. Un recibo `block` de la compuerta de la etapa impide registrar la aprobación
       <!-- test: npx vitest run tests/elegibilidad-aprobacion.test.ts -->
-- [ ] C10. Un recibo `review` de la compuerta de la etapa impide registrar la aprobación
+- [x] C10. Un recibo `review` de la compuerta de la etapa impide registrar la aprobación
       <!-- test: npx vitest run tests/elegibilidad-aprobacion.test.ts -->
-- [ ] C11. Una autorización con el cupo diario agotado impide registrar la aprobación
+- [x] C11. Una autorización con el cupo diario agotado impide registrar la aprobación
       <!-- test: npx vitest run tests/elegibilidad-aprobacion.test.ts -->
-- [ ] C12. Registrar la aprobación consume exactamente un cupo de la autorización
+- [x] C12. Registrar la aprobación consume exactamente un cupo de la autorización
       <!-- test: npx vitest run tests/elegibilidad-aprobacion.test.ts -->
-- [ ] C13. Repetir el registro con la aprobación todavía vigente no escribe otro evento ni consume otro cupo
+- [x] C13. Repetir el registro con la aprobación todavía vigente no escribe otro evento ni consume otro cupo
       <!-- test: npx vitest run tests/elegibilidad-aprobacion.test.ts -->
-- [ ] C14. Una sesión con `VALMEN_UNATTENDED=1` no puede registrar la aprobación por autorización
+- [x] C14. Una sesión con `VALMEN_UNATTENDED=1` no puede registrar la aprobación por autorización
       <!-- test: npx vitest run tests/elegibilidad-aprobacion.test.ts -->
-- [ ] C15. Una autorización revocada después de registrar la aprobación hace que `transition --to approved` se rechace
+- [x] C15. Una autorización revocada después de registrar la aprobación hace que `transition --to approved` se rechace
       <!-- test: npx vitest run tests/elegibilidad-aprobacion.test.ts -->
-- [ ] C16. `registrarAprobacionDePlan` rechaza la fuente `autorizacion`
+- [x] C16. `registrarAprobacionDePlan` rechaza la fuente `autorizacion`
       <!-- test: npx vitest run tests/aprobacion-de-plan.test.ts -->
-- [ ] C17. Un evento `plan-approved` de fuente `autorizacion` sin uso de cupo registrado para el ticket no permite entrar a `approved`
+- [x] C17. Un evento `plan-approved` de fuente `autorizacion` sin uso de cupo registrado para el ticket no permite entrar a `approved`
       <!-- test: npx vitest run tests/elegibilidad-aprobacion.test.ts -->
-- [ ] C18. Con la compuerta `analysis` en `approve`, el registro deja un evento `analysis-approved` atribuido a la autorización
+- [x] C18. Con la compuerta `analysis` en `approve`, el registro deja un evento `analysis-approved` atribuido a la autorización
       <!-- test: npx vitest run tests/elegibilidad-aprobacion.test.ts -->
-- [ ] C19. Sin autorización, la aprobación de una persona con `approve-plan` y la entrada a `approved` se comportan como antes
+- [x] C19. Sin autorización, la aprobación de una persona con `approve-plan` y la entrada a `approved` se comportan como antes
       <!-- test: npx vitest run tests/aprobacion-de-plan.test.ts -->
-- [ ] C20. `valmen approve-by-authorization` imprime la autorización usada o las reglas que fallan
+- [x] C20. `valmen approve-by-authorization` imprime la autorización usada o las reglas que fallan
       <!-- verify: manual -->
-- [ ] C21. La comprobación de tipos del monorepo pasa
+- [x] C21. La comprobación de tipos del monorepo pasa
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
 
 ## Puntos
@@ -132,11 +132,21 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+- `packages/engine/src/approval-eligibility.ts`: `aprobarPorAutorizacion` (sesión atendida primero; elegibilidad completa con todas las reglas que fallan; regla nueva de recibo vigente por `stateHash`; idempotencia; cupo y después evento atribuido con id y hash de la autorización, recibo y hash del plan) y `motivoDeAprobacionPorAutorizacionInvalida` (re-verificación contra el registro: SECURITY, existencia con el mismo hash, vigente ahora, uso de cupo del ticket en la etapa plan).
+- `packages/engine/src/plan-approval.ts`: `FUENTE_AUTORIZACION`; `registrarAprobacionDePlan` la rechaza siempre; `AprobacionDePlan` conserva `authorizationId` y `authorizationHash` opcionales.
+- `packages/engine/src/approval-authorization.ts`: `hayUsoDeCupoDeAprobacion` (solo lectura).
+- `packages/core/src/validate.ts`: `hasPlanGate` acepta la última aprobación `plan-approved` de fuente `autorizacion` con su id, nunca en SECURITY.
+- `packages/engine/src/transition.ts`: al entrar a `approved` re-verifica la aprobación por autorización; una revocación posterior al registro la anula (decisión 2 del PO). La aprobación de `analysis` se registra como `analysis-approved` y consume cupo, sin destrabar nada (decisión 1 del PO).
+- `packages/cli/src/commands.ts` y `main.ts`: `valmen approve-by-authorization --id <ID> --stage analysis|plan`. Sin herramienta MCP.
+- Pruebas: `tests/elegibilidad-aprobacion.test.ts` (describe «aprobar por autorización») y `tests/aprobacion-de-plan.test.ts`.
 
 ## Pruebas
 
-Pendiente de ejecución.
+- Directorio: la raíz del worktree del ticket (o del repositorio tras integrar). No requiere red ni credenciales.
+- `npx vitest run tests/elegibilidad-aprobacion.test.ts tests/aprobacion-de-plan.test.ts`: 81 pruebas, todas en verde (C1 a C19, con caso de control por barrera).
+- `npx tsc --noEmit -p tsconfig.json`: sin errores (C21).
+- Validación manual (C20), sobre un registro temporal con un ticket `planned`, su recibo `plan` en approve y una autorización creada con `valmen approval-authorize`: `valmen approve-by-authorization --id <ID> --stage plan` imprime la autorización usada y el cupo que queda; sin autorización sale con 3 y lista las reglas que fallan. Después `valmen transition --id <ID> --entity ticket --to approved` entra; si antes se revoca la autorización, se rechaza.
+- Verificado también con la prueba del comando `approveByAuthorizationCommand` (salida y códigos de salida).
 
 ## QA
 
@@ -165,7 +175,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-08",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Sesión de implementación del orquestador; el cliente no expone los números.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:implementación en subagente sonnet, sin agregado de la sesión",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -229,6 +255,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:22:35.089Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:30:42.711Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:30:43.042Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```

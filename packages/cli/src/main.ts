@@ -128,6 +128,7 @@ import {
   reviewAgentCommand,
   qaEligibilityCommand,
   approvalEligibilityCommand,
+  approveByAuthorizationCommand,
   precheckCommand,
   precisionCommand,
   thresholdsCommand,
@@ -258,6 +259,9 @@ Comandos:
   approval-eligibility --id <ID> --stage analysis|plan [--json]
                             Decide en código si el análisis o el plan del ticket puede aprobarse por una
                             autorización (sin modelo y sin escribir nada). Sale con 3 si no lo es.
+  approve-by-authorization --id <ID> --stage analysis|plan
+                            Registra la aprobación del análisis o del plan atribuida a la autorización
+                            vigente que cubre al ticket y consume un cupo. Sale con 3 si una regla falla.
   review-agent --id <ID> --stage analysis|plan [--dry-run] [--json]
                             El revisor de un review (R-APRO-003), de solo lectura: toma el
                             último recibo en review, elige el modelo del rol reviewer solo si
@@ -2041,6 +2045,8 @@ export async function run(argv: readonly string[]): Promise<number> {
       result = qaAgentCommand(resolvePaths(options), options.flags);
     } else if (command === "approval-eligibility") {
       result = approvalEligibilityCommand(resolvePaths(options), options.flags);
+    } else if (command === "approve-by-authorization") {
+      result = approveByAuthorizationCommand(resolvePaths(options), options.flags);
     } else if (command === "qa-eligibility") {
       result = qaEligibilityCommand(resolvePaths(options), options.flags);
     } else if (command === "ux") {

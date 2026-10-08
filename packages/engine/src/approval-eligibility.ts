@@ -14,9 +14,20 @@
  * migración o contenedores solo si los lista de forma explícita, etapa y cupo del día.
  *
  * Decidir que un ticket es elegible no lo aprueba, no consume cupo ni mueve su estado: solo dice
- * que se puede intentar. Registrar la aprobación es de quien consume esta decisión.
+ * que se puede intentar. `elegibilidadDeAprobacion` no escribe nada; la única función de este
+ * módulo que escribe es `aprobarPorAutorizacion` (R-APRO-002), que registra la aprobación atribuida
+ * a la autorización y consume un cupo, y `motivoDeAprobacionPorAutorizacionInvalida` la re-verifica
+ * contra el registro al entrar a `approved`.
  */
-import { declaredImpactIds, diagnosedImpacts, parseTicket } from "@valmen/core";
+import {
+  EXIT_INVARIANT,
+  type ParsedTicket,
+  declaredImpactIds,
+  diagnosedImpacts,
+  fail,
+  parseTicket,
+} from "@valmen/core";
+import { hashState } from "@valmen/gate";
 
 import {
   type AutorizacionDeAprobacionConEstado,
@@ -26,9 +37,21 @@ import {
   autorizacionDeAprobacionQueCubre,
   autorizacionesDeAprobacionVigentes,
   cupoRestanteDeAprobacion,
+  hayUsoDeCupoDeAprobacion,
+  leerAutorizacionesDeAprobacion,
+  registrarUsoDeCupoDeAprobacion,
 } from "./approval-authorization.js";
 import { type RegistryPaths, findTicket } from "./discovery.js";
+import { appendEvent } from "./mutate.js";
+import {
+  type AprobacionDePlan,
+  FUENTE_AUTORIZACION,
+  PLAN_APPROVED_ACTION,
+  assertSesionAtendida,
+  hashDelPlan,
+} from "./plan-approval.js";
 import { readReceipts, veredictoDeCompuerta } from "./receipts.js";
+import { buildGateState } from "./state.js";
 
 /** Una condición de la elegibilidad: si se cumple y por qué. */
 export interface ReglaDeElegibilidadDeAprobacion {
@@ -255,4 +278,167 @@ function primeraDimensionQueFalla(
     return `no cubre la etapa ${t.etapa} (cubre ${a.stages.join(", ")})`;
   }
   return "no lo cubre por una razón que esta lectura no identifica";
+}
+
+// ── Registrar la aprobación atribuida a la autorización (R-APRO-002) ─────────
+
+/** La acción del evento de una etapa; `plan` es la que `transition --to approved` lee. */
+const ACCION_DE_ETAPA: Readonly<Record<string, string>> = { plan: PLAN_APPROVED_ACTION, analysis: "analysis-approved" };
+
+export interface AprobarPorAutorizacionRequest {
+  readonly paths: RegistryPaths;
+  readonly ticketId: string;
+  /** `analysis` o `plan`. */
+  readonly etapa: string;
+  readonly ahora?: Date;
+  readonly env?: Readonly<Record<string, string | undefined>>;
+}
+
+export interface ResultadoDeAprobarPorAutorizacion {
+  readonly ticketId: string;
+  readonly etapa: string;
+  /** `false` si ya había una aprobación vigente para este estado y no se escribió nada. */
+  readonly registrada: boolean;
+  readonly autorizacion: { readonly id: string; readonly hash: string };
+  /** Cupos que le quedan hoy a la autorización tras esta aprobación. */
+  readonly cupoRestante: number;
+  readonly accion: string;
+  readonly receiptId: string;
+}
+
+interface DatosDeEvento {
+  readonly source?: unknown;
+  readonly stage?: unknown;
+  readonly planHash?: unknown;
+  readonly receiptStateHash?: unknown;
+  readonly authorizationId?: unknown;
+}
+
+/** Los eventos de la acción, del más viejo al más nuevo, con sus detalles ya leídos. */
+function eventosDe(doc: ParsedTicket, accion: string): DatosDeEvento[] {
+  const salida: DatosDeEvento[] = [];
+  for (const e of doc.blocks.Eventos ?? []) {
+    if (e["action"] !== accion) continue;
+    try {
+      salida.push(JSON.parse(String(e["details"])) as DatosDeEvento);
+    } catch {
+      // Un evento sin la forma esperada no cuenta.
+    }
+  }
+  return salida;
+}
+
+/**
+ * Registra la aprobación del análisis o del plan atribuida a la autorización vigente que cubre al
+ * ticket, y consume un cupo. Si cualquier barrera falla no escribe nada ni consume cupo.
+ *
+ * Orden: la sesión atendida primero (nada se lee antes); la elegibilidad completa, con todas las
+ * reglas que fallan; el recibo `approve` vigente respecto al ticket; y solo entonces el cupo y el
+ * evento. El cupo va antes que el evento a propósito: si la escritura del evento falla se pierde un
+ * cupo, pero no se aprueba nada.
+ */
+export function aprobarPorAutorizacion(request: AprobarPorAutorizacionRequest): ResultadoDeAprobarPorAutorizacion {
+  const { paths, ticketId, etapa } = request;
+  const ahora = request.ahora ?? new Date();
+  assertSesionAtendida("aprobar por autorización", request.env ?? process.env);
+
+  const elegibilidad = elegibilidadDeAprobacion({ paths, ticketId, etapa, ahora });
+  if (!elegibilidad.elegible || elegibilidad.autorizacion === null) {
+    const fallas = elegibilidad.reglas.filter((r) => !r.cumple).map((r) => `  ✗ ${r.regla}: ${r.detalle}`);
+    fail(
+      `${ticketId} no se aprueba por autorización en ${etapa}; no se registró nada ni se consumió cupo:\n${fallas.join("\n")}`,
+      EXIT_INVARIANT,
+    );
+  }
+  const { id: authorizationId, hash: authorizationHash } = elegibilidad.autorizacion;
+
+  const ubicado = findTicket(paths, ticketId);
+  if (ubicado === undefined) throw new Error(`No existe el ticket ${ticketId}.`);
+  const documento = parseTicket(ubicado.text);
+  const accion = ACCION_DE_ETAPA[etapa] as string;
+
+  // El recibo `approve` tiene que haber evaluado el texto que hay ahora (AP-007).
+  const veredicto = veredictoDeCompuerta(readReceipts(paths, ticketId), etapa);
+  if (veredicto.tipo !== "aprobada") throw new Error("La elegibilidad dejó pasar una compuerta que no está aprobada.");
+  const recibo = veredicto.recibo;
+  const estadoActual = hashState(buildGateState(documento.text));
+  if (recibo.stateHash !== estadoActual) {
+    fail(
+      `El recibo ${recibo.id} de la compuerta ${etapa} evaluó otro texto del ticket (cambió después de la compuerta): ` +
+        `no se registró nada. Vuelve a correr la compuerta:\n  valmen gate ${etapa} --id ${ticketId}`,
+      EXIT_INVARIANT,
+    );
+  }
+
+  const planHash = hashDelPlan(documento);
+  const autorizacionVigente = leerAutorizacionesDeAprobacion(paths.root, ahora).find(
+    (a) => a.id === authorizationId && a.hash === authorizationHash,
+  );
+  const cupoDe = (): number =>
+    autorizacionVigente === undefined ? 0 : cupoRestanteDeAprobacion(paths.root, autorizacionVigente, ahora);
+
+  // Repetir con la aprobación todavía vigente no escribe otro evento ni consume otro cupo (C13).
+  const ultimo = eventosDe(documento, accion).at(-1);
+  const sigueVigente =
+    ultimo?.source === FUENTE_AUTORIZACION &&
+    ultimo.authorizationId === authorizationId &&
+    ultimo.planHash === planHash &&
+    ultimo.receiptStateHash === estadoActual &&
+    ultimo.stage === etapa;
+  if (sigueVigente) {
+    return { ticketId, etapa, registrada: false, autorizacion: elegibilidad.autorizacion, cupoRestante: cupoDe(), accion, receiptId: recibo.id };
+  }
+
+  const cubre = autorizacionVigente;
+  if (cubre === undefined) throw new Error("La autorización que cubre al ticket dejó de existir.");
+  registrarUsoDeCupoDeAprobacion({ root: paths.root, authorizationId, ticketId, stage: etapa, ahora });
+  const detalles = {
+    actor: `autorización ${authorizationId}`,
+    source: FUENTE_AUTORIZACION,
+    quote: cubre.quote,
+    planHash,
+    authorizationId,
+    authorizationHash,
+    stage: etapa,
+    receiptId: recibo.id,
+    receiptStateHash: estadoActual,
+  };
+  appendEvent(paths, ticketId, accion, JSON.stringify(detalles), () => ahora);
+  return { ticketId, etapa, registrada: true, autorizacion: elegibilidad.autorizacion, cupoRestante: cupoDe(), accion, receiptId: recibo.id };
+}
+
+/**
+ * Re-verifica, al entrar a `approved`, una aprobación de fuente `autorizacion` contra el registro:
+ * lo que el evento dice no basta, porque cualquiera puede escribir un evento. Devuelve el motivo si
+ * no vale, o `null`. La autorización tiene que existir con el mismo hash y estar vigente **ahora**
+ * —una revocación posterior al registro anula la aprobación—, el ticket no puede ser SECURITY y
+ * tiene que haber un uso de cupo de esa autorización para este ticket y la etapa `plan`.
+ */
+export function motivoDeAprobacionPorAutorizacionInvalida(
+  root: string,
+  documento: ParsedTicket,
+  aprobacion: AprobacionDePlan,
+  ahora: Date = new Date(),
+): string | null {
+  const regla = "Una persona la registra con `valmen approve-plan`.";
+  if (documento.fields.type.toUpperCase() === "SECURITY") {
+    return `Un ticket SECURITY no se aprueba por autorización. ${regla}`;
+  }
+  const { authorizationId, authorizationHash } = aprobacion;
+  if (authorizationId === undefined || authorizationHash === undefined) {
+    return `La aprobación dice que es de una autorización pero no cita su id y su hash. ${regla}`;
+  }
+  const autorizacion = leerAutorizacionesDeAprobacion(root, ahora).find(
+    (a) => a.id === authorizationId && a.hash === authorizationHash,
+  );
+  if (autorizacion === undefined) {
+    return `La autorización ${authorizationId} (${authorizationHash.slice(0, 19)}…) no existe en el registro con ese hash. ${regla}`;
+  }
+  if (autorizacion.estado !== "vigente") {
+    return `La autorización ${authorizationId} ya no está vigente (${autorizacion.estado}): su aprobación pendiente quedó anulada. ${regla}`;
+  }
+  if (!hayUsoDeCupoDeAprobacion(root, authorizationId, documento.fields.id, "plan")) {
+    return `La autorización ${authorizationId} no tiene un cupo registrado para aprobar el plan de este ticket. ${regla}`;
+  }
+  return null;
 }

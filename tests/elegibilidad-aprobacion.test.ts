@@ -12,7 +12,7 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { approvalEligibilityCommand } from "../packages/cli/src/commands.js";
+import { approvalEligibilityCommand, approveByAuthorizationCommand } from "../packages/cli/src/commands.js";
 import { USAGE, parseArgs } from "../packages/cli/src/main.js";
 import {
   DEFAULT_POLICY,
@@ -26,6 +26,14 @@ import {
 import {
   appendReceipt,
   approvalAuthorizationsPath,
+  approvalQuotaUsesPath,
+  aprobarPorAutorizacion,
+  appendEvent,
+  hashDelPlan,
+  aprobacionDePlanVigente,
+  buildGateState,
+  findTicket,
+  transition,
   autorizacionDeAprobacionQueCubre,
   crearAutorizacionDeAprobacion,
   elegibilidadDeAprobacion,
@@ -35,6 +43,7 @@ import {
   type RegistryPaths,
   type ResultadoDeElegibilidadDeAprobacion,
 } from "../packages/engine/src/index.js";
+import { parseTicket } from "../packages/core/src/index.js";
 import { writeFixtureTicket } from "./helpers/fixtures.js";
 
 const AHORA = new Date("2026-10-07T08:00:00.000Z");
@@ -642,3 +651,316 @@ describe("C11. valmen approval-eligibility muestra la decisión y sus reglas sin
     expect(USAGE).toContain("approval-eligibility --id <ID> --stage analysis|plan [--json]");
   });
 });
+
+// ── R-APRO-002: aprobar por autorización ─────────────────────────────────────
+
+describe("aprobar por autorización", () => {
+  const PLAN_SIN_FRASE = [
+    "- Pasos ordenados:",
+    "  1. Cambiar en `BackEnd/pos/filters.py` el `lookup_expr` de `number` de `exact` a `icontains`.",
+    "  2. Añadir en `BackEnd/pos/tests/test_filters.py` una prueba de búsqueda parcial.",
+    "- Rollback: revertir el cambio de una línea.",
+  ].join("\n");
+
+  /** Un ticket en `planned`, sin frase de aprobación en el plan y sin aprobación registrada. */
+  function planificado(opciones: { tipo?: string; impactos?: string[]; diagnostico?: string } = {}): string {
+    const tipo = opciones.tipo ?? "BUGFIX";
+    return writeFixtureTicket(root, {
+      id: `${tipo}-${SUFIJO}`,
+      workflowStatus: "planned",
+      type: tipo,
+      module: "POS",
+      plan: PLAN_SIN_FRASE,
+      aprobacionRegistrada: false,
+      ...(opciones.impactos === undefined ? {} : { impacts: opciones.impactos }),
+      ...(opciones.diagnostico === undefined ? {} : { diagnostico: opciones.diagnostico }),
+    });
+  }
+
+  const rutaDe = (id: string): string => join(root, "tickets", "2026", id, "ticket.md");
+  const doc = (id: string = ID): ReturnType<typeof parseTicket> => {
+    const u = findTicket(paths(), id);
+    if (u === undefined) throw new Error("falta el ticket");
+    return parseTicket(u.text);
+  };
+
+  /** Un recibo cuyo hash de estado es el del ticket **de ahora**, como el que deja la compuerta real. */
+  function guardarVigente(gate: string, valor: number, id: string = ID, intento = 1): GateReceipt {
+    const estado = buildGateState(readFileSync(rutaDe(id), "utf8"));
+    const respuestas: PropositionAnswer[] = [{ id: "cubre_todos_los_criterios", kind: "noul", value: valor }];
+    const r = buildReceipt({
+      id: `GR-20261007-${id}-${gate}-${intento}`,
+      gate,
+      propositions: PROPOSICIONES,
+      policy: DEFAULT_POLICY,
+      subject: { type: "ticket", id, revision: String(intento) },
+      decision: decide(PROPOSICIONES, respuestas, DEFAULT_POLICY),
+      state: estado,
+      answers: respuestas,
+      mechanicalChecks: [],
+      model: null,
+      usage: null,
+      latencyMs: 1,
+      decidedAt: `2026-10-07T0${intento}:00:00.000Z`,
+    });
+    appendReceipt(paths(), id, r);
+    return r;
+  }
+
+  const aprobar = (etapa = "plan", id: string = ID, env: Record<string, string | undefined> = {}) =>
+    aprobarPorAutorizacion({ paths: paths(), ticketId: id, etapa, ahora: AHORA, env });
+  const aprobadoPlan = (id: string = ID) => transition({ paths: paths(), ticketId: id, entity: "ticket", to: "approved", now: () => AHORA });
+  const eventos = (id: string = ID, accion = "plan-approved") => (doc(id).blocks.Eventos ?? []).filter((e) => e["action"] === accion);
+  const usos = (): number => {
+    try {
+      return readFileSync(approvalQuotaUsesPath(root), "utf8").split("\n").filter((l) => l.trim() !== "").length;
+    } catch {
+      return 0;
+    }
+  };
+  const editar = (id: string, de: string, a: string): void => {
+    const texto = readFileSync(rutaDe(id), "utf8");
+    if (!texto.includes(de)) throw new Error("el texto a cambiar no está");
+    writeFileSync(rutaDe(id), texto.replace(de, a), "utf8");
+  };
+
+  it("C1 control: registra un plan-approved atribuido a la autorización, con su id, su hash y el recibo", () => {
+    planificado();
+    const r = guardarVigente("plan", APPROVE);
+    const a = autorizar();
+    const res = aprobar();
+    expect(res.registrada).toBe(true);
+    const [evento] = eventos();
+    const d = JSON.parse(String(evento?.["details"])) as Record<string, string>;
+    expect(d["source"]).toBe("autorizacion");
+    expect(d["actor"]).toBe(`autorización ${a.id}`);
+    expect(d["authorizationId"]).toBe(a.id);
+    expect(d["authorizationHash"]).toBe(a.hash);
+    expect(d["quote"]).toBe(a.quote);
+    expect(d["receiptId"]).toBe(r.id);
+    expect(d["receiptStateHash"]).toBe(r.stateHash);
+    expect(d["actor"]).not.toMatch(/Juan Andrade|agente/i);
+    expect(aprobacionDePlanVigente(doc()).estado).toBe("vigente");
+  });
+
+  it("C2. un BUGFIX con esa aprobación entra a approved con transition", () => {
+    planificado();
+    guardarVigente("plan", APPROVE);
+    autorizar();
+    expect(() => aprobadoPlan()).toThrow(/aprobación del plan registrada|aprobación explícita/);
+    aprobar();
+    aprobadoPlan();
+    expect(doc().fields.workflow_status).toBe("approved");
+    const verificado = (doc().blocks.Eventos ?? []).find((e) => e["action"] === "plan-approval-verified");
+    expect(String(verificado?.["details"])).toContain("autorizacion");
+  });
+
+  it("C3. un FEATURE entra a approved sin la frase «aprobado explícitamente por el PO»", () => {
+    const id = planificado({ tipo: "FEATURE" });
+    guardarVigente("plan", APPROVE, id);
+    autorizar({ types: ["FEATURE"] });
+    expect(doc(id).sections.Plan).not.toMatch(/aprobado explícitamente por el po/i);
+    // Control: sin la aprobación por autorización un FEATURE no entra.
+    expect(() => aprobadoPlan(id)).toThrow(/aprobación explícita/);
+    aprobar("plan", id);
+    aprobadoPlan(id);
+    expect(doc(id).fields.workflow_status).toBe("approved");
+  });
+
+  it("C4. un plan editado después de aprobarse por autorización deja de valer", () => {
+    planificado();
+    guardarVigente("plan", APPROVE);
+    autorizar();
+    aprobar();
+    editar(ID, "- Rollback: revertir el cambio de una línea.", "- Rollback: revertir el cambio de una línea y reabrir.");
+    expect(aprobacionDePlanVigente(doc()).estado).toBe("plan-cambiado");
+    expect(() => aprobadoPlan()).toThrow(/cambió/);
+    expect(doc().fields.workflow_status).toBe("planned");
+  });
+
+  it("C5. un recibo approve cuyo hash de estado no coincide no permite registrar la aprobación", () => {
+    planificado();
+    guardarVigente("plan", APPROVE);
+    autorizar();
+    editar(ID, "- Rollback: revertir el cambio de una línea.", "- Rollback: otro texto que el recibo no evaluó.");
+    expect(() => aprobar()).toThrow(/evaluó otro texto/);
+    expect(eventos()).toHaveLength(0);
+    expect(usos()).toBe(0);
+    // Control: volver a correr la compuerta lo destraba.
+    guardarVigente("plan", APPROVE, ID, 2);
+    expect(aprobar().registrada).toBe(true);
+  });
+
+  it("C6. un ticket SECURITY no se aprueba por autorización y no consume cupo", () => {
+    const id = planificado({ tipo: "SECURITY" });
+    guardarVigente("plan", APPROVE, id);
+    autorizar({ types: ["BUGFIX", "FEATURE"] });
+    expect(() => aprobar("plan", id)).toThrow(/SECURITY/);
+    expect(eventos(id)).toHaveLength(0);
+    expect(usos()).toBe(0);
+  });
+
+  it("C6b. un evento forjado en un SECURITY no destraba approved aunque haya cupo registrado", () => {
+    const id = planificado({ tipo: "SECURITY" });
+    guardarVigente("plan", APPROVE, id);
+    const a = autorizar();
+    // Con la frase humana en el plan, lo que frena el evento forjado es la re-verificación de transition.
+    editar(id, "- Pasos ordenados:", "- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).\n- Pasos ordenados:");
+    registrarUsoDeCupoDeAprobacion({ root, authorizationId: a.id, ticketId: id, stage: "plan", ahora: AHORA });
+    forjarEvento(id, { actor: `autorización ${a.id}`, source: "autorizacion", quote: a.quote, planHash: hashDelPlan(doc(id)), authorizationId: a.id, authorizationHash: a.hash });
+    expect(() => aprobadoPlan(id)).toThrow(/SECURITY/);
+    expect(doc(id).fields.workflow_status).toBe("planned");
+  });
+
+  it("C7. un ticket cuyo diagnóstico declara despliegue no se aprueba por autorización", () => {
+    planificado({ diagnostico: diagnosticoCon("Despliegue a producción del servicio de órdenes.") });
+    guardarVigente("plan", APPROVE);
+    autorizar();
+    expect(() => aprobar()).toThrow(/despliegue/);
+    expect(eventos()).toHaveLength(0);
+    expect(usos()).toBe(0);
+  });
+
+  it("C8. un impacto de migración que la autorización no lista no se aprueba; con él listado, sí", () => {
+    planificado({ impactos: ["migration_impact"], diagnostico: diagnosticoCon("Migración de la columna number.") });
+    guardarVigente("plan", APPROVE);
+    autorizar();
+    expect(() => aprobar()).toThrow(/migration_impact/);
+    expect(usos()).toBe(0);
+    autorizar({ impacts: ["migration_impact"] });
+    expect(aprobar().registrada).toBe(true);
+  });
+
+  it("C9. un recibo block de la compuerta de la etapa impide registrar la aprobación", () => {
+    planificado();
+    guardarVigente("plan", BLOCK);
+    autorizar();
+    expect(() => aprobar()).toThrow(/block/);
+    expect(eventos()).toHaveLength(0);
+    expect(usos()).toBe(0);
+  });
+
+  it("C10. un recibo review de la compuerta de la etapa impide registrar la aprobación", () => {
+    planificado();
+    guardarVigente("plan", REVIEW);
+    autorizar();
+    expect(() => aprobar()).toThrow(/review/);
+    expect(eventos()).toHaveLength(0);
+    expect(usos()).toBe(0);
+  });
+
+  it("C11. una autorización con el cupo diario agotado impide registrar la aprobación", () => {
+    planificado();
+    guardarVigente("plan", APPROVE);
+    const a = autorizar({ dailyQuota: 1 });
+    registrarUsoDeCupoDeAprobacion({ root, authorizationId: a.id, ticketId: "OTRO-POS-X-20261007", stage: "plan", ahora: AHORA });
+    expect(() => aprobar()).toThrow(/cupo/);
+    expect(eventos()).toHaveLength(0);
+    expect(usos()).toBe(1);
+  });
+
+  it("C12. registrar la aprobación consume exactamente un cupo", () => {
+    planificado();
+    guardarVigente("plan", APPROVE);
+    const a = autorizar({ dailyQuota: 3 });
+    const res = aprobar();
+    expect(usos()).toBe(1);
+    expect(res.cupoRestante).toBe(2);
+    const uso = JSON.parse(readFileSync(approvalQuotaUsesPath(root), "utf8").trim()) as Record<string, string>;
+    expect(uso).toMatchObject({ authorizationId: a.id, ticketId: ID, stage: "plan" });
+  });
+
+  it("C13. repetir el registro con la aprobación vigente no escribe otro evento ni consume otro cupo", () => {
+    planificado();
+    guardarVigente("plan", APPROVE);
+    autorizar({ dailyQuota: 3 });
+    aprobar();
+    const antes = readFileSync(rutaDe(ID), "utf8");
+    const repetida = aprobar();
+    expect(repetida.registrada).toBe(false);
+    expect(eventos()).toHaveLength(1);
+    expect(usos()).toBe(1);
+    expect(readFileSync(rutaDe(ID), "utf8")).toBe(antes);
+  });
+
+  it("C14. una sesión con VALMEN_UNATTENDED=1 no puede registrar la aprobación y no lee ni escribe nada", () => {
+    planificado();
+    guardarVigente("plan", APPROVE);
+    autorizar();
+    const antes = fotografia();
+    expect(() => aprobar("plan", ID, { VALMEN_UNATTENDED: "1" })).toThrow(/desatendida/);
+    expect(fotografia()).toEqual(antes);
+    expect(usos()).toBe(0);
+  });
+
+  it("C15. una autorización revocada después de registrar la aprobación hace que approved se rechace", () => {
+    planificado();
+    guardarVigente("plan", APPROVE);
+    const a = autorizar();
+    aprobar();
+    revocarAutorizacionDeAprobacion({ root, id: a.id, actor: "Juan Andrade", reason: "ya no", source: "cli", ahora: new Date(AHORA.getTime() + 1000), env: {} });
+    expect(() =>
+      transition({ paths: paths(), ticketId: ID, entity: "ticket", to: "approved", now: () => new Date(AHORA.getTime() + 2000) }),
+    ).toThrow(/ya no está vigente/);
+    expect(doc().fields.workflow_status).toBe("planned");
+  });
+
+  it("C17. un evento de fuente autorizacion sin uso de cupo registrado no permite entrar a approved", () => {
+    planificado();
+    guardarVigente("plan", APPROVE);
+    const a = autorizar();
+    forjarEvento(ID, { actor: `autorización ${a.id}`, source: "autorizacion", quote: a.quote, planHash: hashDelPlan(doc()), authorizationId: a.id, authorizationHash: a.hash });
+    expect(() => aprobadoPlan()).toThrow(/no tiene un cupo registrado/);
+    expect(doc().fields.workflow_status).toBe("planned");
+    // Control: con el uso registrado por el camino real, el mismo evento sí vale.
+    registrarUsoDeCupoDeAprobacion({ root, authorizationId: a.id, ticketId: ID, stage: "plan", ahora: AHORA });
+    aprobadoPlan();
+    expect(doc().fields.workflow_status).toBe("approved");
+  });
+
+  it("C17b. un evento con un hash de autorización que no existe en el registro se rechaza", () => {
+    planificado();
+    guardarVigente("plan", APPROVE);
+    const a = autorizar();
+    registrarUsoDeCupoDeAprobacion({ root, authorizationId: a.id, ticketId: ID, stage: "plan", ahora: AHORA });
+    forjarEvento(ID, { actor: `autorización ${a.id}`, source: "autorizacion", quote: "x", planHash: hashDelPlan(doc()), authorizationId: a.id, authorizationHash: "sha256:" + "0".repeat(64) });
+    expect(() => aprobadoPlan()).toThrow(/no existe en el registro/);
+  });
+
+  it("C18. con la compuerta analysis en approve, deja un analysis-approved atribuido a la autorización y consume cupo", () => {
+    planificado();
+    guardarVigente("analysis", APPROVE);
+    const a = autorizar({ dailyQuota: 2 });
+    const res = aprobar("analysis");
+    expect(res.accion).toBe("analysis-approved");
+    const [evento] = eventos(ID, "analysis-approved");
+    const d = JSON.parse(String(evento?.["details"])) as Record<string, string>;
+    expect(d).toMatchObject({ source: "autorizacion", authorizationId: a.id, authorizationHash: a.hash, stage: "analysis" });
+    expect(usos()).toBe(1);
+    // No es una aprobación del plan: no destraba approved.
+    expect(eventos()).toHaveLength(0);
+    expect(aprobar("analysis").registrada).toBe(false);
+    expect(usos()).toBe(1);
+  });
+
+  it("C20. approve-by-authorization imprime la autorización usada, o las reglas que fallan", () => {
+    planificado();
+    guardarVigente("plan", APPROVE);
+    const fallida = approveByAuthorizationCommand(paths(), { id: ID, stage: "plan" }, { ahora: AHORA, env: {} });
+    expect(fallida.exitCode).toBe(3);
+    expect(fallida.stderr).toMatch(/autorizacion/);
+    const a = autorizar();
+    const ok = approveByAuthorizationCommand(paths(), { id: ID, stage: "plan" }, { ahora: AHORA, env: {} });
+    expect(ok.exitCode).toBe(0);
+    expect(ok.stdout).toContain(a.id);
+    expect(ok.stdout).toMatch(/Cupo que queda hoy/);
+    expect(approveByAuthorizationCommand(paths(), { stage: "plan" }).exitCode).toBe(2);
+    expect(USAGE).toContain("approve-by-authorization --id <ID> --stage analysis|plan");
+    expect(parseArgs(["approve-by-authorization", "--id", ID, "--stage", "plan"]).flags).toEqual({ id: ID, stage: "plan" });
+  });
+});
+
+/** Escribe a mano un evento plan-approved, como lo haría quien intenta forjar la aprobación. */
+function forjarEvento(id: string, datos: Record<string, string>): void {
+  appendEvent({ root, ticketsDir: "tickets" }, id, "plan-approved", JSON.stringify(datos), () => AHORA);
+}

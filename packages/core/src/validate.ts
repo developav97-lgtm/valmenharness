@@ -252,6 +252,23 @@ export function isCriticalPlanGate(ticket: ParsedTicket): boolean {
   );
 }
 
+/** `true` si la última aprobación de plan del bloque `Eventos` es de fuente `autorizacion` y cita su id. */
+function hasAuthorizationPlanApproval(ticket: ParsedTicket): boolean {
+  const approvals = (ticket.blocks.Eventos ?? []).filter((event) => event["action"] === "plan-approved");
+  const last = approvals[approvals.length - 1];
+  if (last === undefined) return false;
+  try {
+    const details = JSON.parse(String(last["details"])) as Record<string, unknown>;
+    return (
+      details["source"] === "autorizacion" &&
+      typeof details["authorizationId"] === "string" &&
+      details["authorizationId"] !== ""
+    );
+  } catch {
+    return false;
+  }
+}
+
 /**
  * `true` si el plan declara el gate de aprobación.
  *
@@ -274,6 +291,11 @@ export function hasPlanGate(ticket: ParsedTicket): boolean {
       return true;
     }
   }
+
+  // La aprobación atribuida a una autorización (R-APRO-002) también cumple el gate, incluso en un
+  // tipo crítico, pero nunca en SECURITY. Aquí solo se mira su forma; `transition` la re-verifica
+  // contra el registro de autorizaciones y de cupos antes de entrar a `approved`.
+  if (ticket.fields.type.toUpperCase() !== "SECURITY" && hasAuthorizationPlanApproval(ticket)) return true;
 
   if (isCriticalPlanGate(ticket)) return false;
 
