@@ -153,6 +153,10 @@ Una funcionalidad que excede un ticket se registra como **feature**, con el reco
 
 Si el PO delega una feature o varios tickets en un solo pedido, se usa la skill `corrida-delegada` (`valmen delegation`). Un BLOCK, un gate humano duro y lo que quede fuera del alcance siguen siendo de una persona.
 
+### Corrida orquestada
+
+Se pide en la sesión: «ejecuta el feature X» o «los tickets de hoy, con N a la vez» (3 por defecto). Esa sesión es el orquestador y lanza un subagente por ticket, cada uno en su worktree y su rama. Solo el orquestador toca el checkout principal e integra. El subagente corre las pruebas de su ticket, no la suite completa. La aprobación sale de la política por tipo de ticket: automática con autorización vigente y ticket elegible, en lote al PO si no. SECURITY y despliegue son siempre de una persona.
+
 ### Antes de registrar: traducir lo nuevo del pedido
 
 Un pedido que nombra algo que el código no tiene —un «parámetro nuevo», un permiso, una bandera, una columna, una migración— no se registra con ese hueco. Antes de crear el ticket se traduce a campo real con búsqueda en el código; si no aparece, se pregunta **una vez** a la persona. Lo que quede sin decidir va a `### Supuestos y decisiones pendientes` del ticket, cada elemento con su pregunta exacta, y el análisis no planifica sobre la adivinanza.

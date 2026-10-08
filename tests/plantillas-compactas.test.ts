@@ -36,9 +36,11 @@ const REPO = process.cwd();
 /**
  * Tope de las tres plantillas juntas, en bytes. Eran 15 464 B; el borrador compacto
  * medido pesa 9 162 B y el tope deja el margen de las frases que otras pruebas fijan. Subió de 9 400 a
- * 9 800 B con R-QAAG-009, que agrega dos reglas de QA por agente (unos 420 B).
+ * 9 800 B con R-QAAG-009, que agrega dos reglas de QA por agente (unos 420 B), y a
+ * 10 400 B con la sección «Corrida orquestada» (569 B medidos; decisión del PO).
+ * Por qué: la sesión que orquesta una corrida solo puede cumplir el contrato si lo lee en AGENTS.md.
  */
-const TOPE_BYTES = 9800;
+const TOPE_BYTES = 10400;
 
 /** Texto sin saltos de línea ni espacios repetidos: se afirma la frase, no dónde corta el renglón. */
 const plano = (texto: string): string => texto.replace(/\s+/g, " ");
@@ -50,7 +52,7 @@ const skill = (id: string): string =>
   plano(readFileSync(join(REPO, "skills", id, "SKILL.md"), "utf8"));
 
 describe("el tope de las plantillas fijas", () => {
-  it("suman 9 800 B o menos, desde 15 464 B", () => {
+  it("suman 10 400 B o menos, desde 15 464 B", () => {
     const bytes = [WORKFLOW_TEMPLATE, INVARIANTS_TEMPLATE, DELIVERY_TEMPLATE]
       .map((plantilla) => Buffer.byteLength(plantilla, "utf8"))
       .reduce((suma, tamano) => suma + tamano, 0);
@@ -58,6 +60,33 @@ describe("el tope de las plantillas fijas", () => {
     expect(bytes, `las plantillas pesan ${bytes} B y el tope es ${TOPE_BYTES} B`).toBeLessThanOrEqual(
       TOPE_BYTES,
     );
+  });
+});
+
+describe("la corrida orquestada", () => {
+  const inicio = workflow.indexOf("### Corrida orquestada");
+  const seccion = inicio < 0 ? "" : workflow.slice(inicio).split(" ### ")[0] ?? "";
+
+  const afirma = (nombre: string, patron: RegExp): void => {
+    it(nombre, () => {
+      expect(seccion, "la plantilla no tiene la sección «Corrida orquestada»").not.toBe("");
+      expect(seccion).toMatch(patron);
+    });
+  };
+
+  afirma("se pide en la sesión, con 3 a la vez por defecto", /ejecuta el feature X.*N a la vez.*3 por defecto/);
+  afirma("la sesión es el orquestador y lanza un subagente por ticket", /sesión es el orquestador.*un subagente por ticket/);
+  afirma("cada subagente trabaja en su worktree y su rama", /cada uno en su worktree y su rama/);
+  afirma("solo el orquestador toca el checkout principal", /Solo el orquestador toca el checkout principal/);
+  afirma("el subagente corre las pruebas de su ticket, no la suite completa", /pruebas de su ticket, no la suite completa/);
+  afirma("la aprobación sale de la política por tipo de ticket", /política por tipo de ticket.*autorización vigente.*elegible/);
+  afirma("SECURITY y despliegue son siempre de una persona", /SECURITY y despliegue son siempre de una persona/);
+
+  it("control: no nombra git push, --force ni --no-verify", () => {
+    expect(seccion).not.toBe("");
+    for (const prohibido of ["git push", "--force", "--no-verify"]) {
+      expect(seccion).not.toContain(prohibido);
+    }
   });
 });
 
