@@ -97,6 +97,7 @@ export type ApprovalLogEntry =
   | AutonomousStopNotice
   | JourneyDirtyTreeNotice
   | JourneyFinishedNotice
+  | JourneyHandoffNotice
   | TestsReadyNotice
   | ApprovalBatch;
 
@@ -192,6 +193,14 @@ export interface JourneyDirtyTreeNotice {
 export interface JourneyFinishedNotice {
   readonly kind: "journey-finished-notice";
   readonly journeyId: string;
+  readonly notifiedAt: string;
+}
+
+/** El aviso de que el parte de una jornada ya salió. Uno por jornada y contenido (huella). */
+export interface JourneyHandoffNotice {
+  readonly kind: "journey-handoff-notice";
+  readonly journeyId: string;
+  readonly huella: string;
   readonly notifiedAt: string;
 }
 
@@ -476,6 +485,7 @@ export function readApprovalLog(paths: RegistryPaths): ApprovalLogEntry[] {
         valor.kind === "autonomous-stop-notice" ||
         valor.kind === "journey-dirty-tree-notice" ||
         valor.kind === "journey-finished-notice" ||
+        valor.kind === "journey-handoff-notice" ||
         valor.kind === "tests-ready-notice" ||
         valor.kind === "policy-close-notice" ||
         valor.kind === "approval-batch"
@@ -523,6 +533,15 @@ export function jornadasTerminadasAvisadas(paths: RegistryPaths): Set<string> {
     readApprovalLog(paths)
       .filter((entry): entry is JourneyFinishedNotice => entry.kind === "journey-finished-notice")
       .map((entry) => entry.journeyId),
+  );
+}
+
+/** Los partes de jornada ya enviados, como `jornada:huella`. */
+export function partesDeJornadaAvisados(paths: RegistryPaths): Set<string> {
+  return new Set(
+    readApprovalLog(paths)
+      .filter((entry): entry is JourneyHandoffNotice => entry.kind === "journey-handoff-notice")
+      .map((entry) => `${entry.journeyId}:${entry.huella}`),
   );
 }
 
@@ -629,7 +648,7 @@ export function ultimoIntento(
     // Un aviso de proceso no tiene código y no entra en esta cuenta: su vida es
     // otra —se avisa una vez y la corrida sigue detenida— y mezclarlo movería
     // la ventana de reintento de un gate sin motivo.
-    if (e.kind === "process-notice" || e.kind === "autonomous-stop-notice" || e.kind === "journey-dirty-tree-notice" || e.kind === "journey-finished-notice" || e.kind === "tests-ready-notice" || e.kind === "policy-close-notice" || e.kind === "approval-batch") return [];
+    if (e.kind === "process-notice" || e.kind === "autonomous-stop-notice" || e.kind === "journey-dirty-tree-notice" || e.kind === "journey-finished-notice" || e.kind === "journey-handoff-notice" || e.kind === "tests-ready-notice" || e.kind === "policy-close-notice" || e.kind === "approval-batch") return [];
     if (!codigos.has(e.code)) return [];
     if (e.kind === "approval-issued") return [e.issuedAt];
     if (e.kind === "approval-undelivered") return [e.attemptedAt];

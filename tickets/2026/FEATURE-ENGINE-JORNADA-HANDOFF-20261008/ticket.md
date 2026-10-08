@@ -4,7 +4,7 @@ id: FEATURE-ENGINE-JORNADA-HANDOFF-20261008
 title: Entregar al terminar la corrida el parte de qué probar y cómo en cada ticket
 type: FEATURE
 module: ENGINE
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -75,61 +75,61 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1. El parte incluye, por cada ticket de la jornada en `awaiting_user_tests`, su id, su título y la ruta de su ticket
+- [x] C1. El parte incluye, por cada ticket de la jornada en `awaiting_user_tests`, su id, su título y la ruta de su ticket
       <!-- test: npx vitest run tests/jornada-handoff.test.ts -->
-- [ ] C2. La entrada de cada ticket lleva los comandos del contrato de `## Pruebas` junto con su resultado esperado
+- [x] C2. La entrada de cada ticket lleva los comandos del contrato de `## Pruebas` junto con su resultado esperado
       <!-- test: npx vitest run tests/jornada-handoff.test.ts -->
-- [ ] C3. La entrada de cada ticket lleva el directorio de ejecución que declara su contrato
+- [x] C3. La entrada de cada ticket lleva el directorio de ejecución que declara su contrato
       <!-- test: npx vitest run tests/jornada-handoff.test.ts -->
-- [ ] C4. La entrada de cada ticket lleva las validaciones manuales que declara su contrato
+- [x] C4. La entrada de cada ticket lleva las validaciones manuales que declara su contrato
       <!-- test: npx vitest run tests/jornada-handoff.test.ts -->
-- [ ] C5. Un ticket en `awaiting_user_tests` cuyo contrato sigue pendiente sale marcado sin contrato de pruebas y sin comandos inventados
+- [x] C5. Un ticket en `awaiting_user_tests` cuyo contrato sigue pendiente sale marcado sin contrato de pruebas y sin comandos inventados
       <!-- test: npx vitest run tests/jornada-handoff.test.ts -->
-- [ ] C6. Un ticket de la jornada en `qa_approved` o `closed` cuyo último ciclo de QA cerró por política sale marcado como cerrado por política, con la autorización y el recibo
+- [x] C6. Un ticket de la jornada en `qa_approved` o `closed` cuyo último ciclo de QA cerró por política sale marcado como cerrado por política, con la autorización y el recibo
       <!-- test: npx vitest run tests/jornada-handoff.test.ts -->
-- [ ] C7. Un ticket cerrado con la confirmación de una persona no se marca como cerrado por política (control de C6)
+- [x] C7. Un ticket cerrado con la confirmación de una persona no se marca como cerrado por política (control de C6)
       <!-- test: npx vitest run tests/jornada-handoff.test.ts -->
-- [ ] C8. Un ticket en `awaiting_user_tests` que no pertenece a la jornada no aparece en el parte (control de aislamiento)
+- [x] C8. Un ticket en `awaiting_user_tests` que no pertenece a la jornada no aparece en el parte (control de aislamiento)
       <!-- test: npx vitest run tests/jornada-handoff.test.ts -->
-- [ ] C9. Los tickets de la jornada que todavía no se entregaron salen en «sin entregar» con su estado
+- [x] C9. Los tickets de la jornada que todavía no se entregaron salen en «sin entregar» con su estado
       <!-- test: npx vitest run tests/jornada-handoff.test.ts -->
-- [ ] C10. Un contrato de pruebas que contiene una credencial se omite del parte, con el tipo de hallazgo y sin copiar el valor
+- [x] C10. Un contrato de pruebas que contiene una credencial se omite del parte, con el tipo de hallazgo y sin copiar el valor
       <!-- test: npx vitest run tests/jornada-handoff.test.ts -->
-- [ ] C11. Una jornada que no existe falla con un mensaje que la nombra y no escribe nada
+- [x] C11. Una jornada que no existe falla con un mensaje que la nombra y no escribe nada
       <!-- test: npx vitest run tests/jornada-handoff.test.ts -->
-- [ ] C12. El comando guarda el parte en `.valmen/journeys/handoffs.jsonl` como una línea nueva con el id de la jornada y la huella del contenido
+- [x] C12. El comando guarda el parte en `.valmen/journeys/handoffs.jsonl` como una línea nueva con el id de la jornada y la huella del contenido
       <!-- test: npx vitest run tests/jornada-handoff.test.ts -->
-- [ ] C13. Repetir el comando sin cambios en los tickets no añade otra línea
+- [x] C13. Repetir el comando sin cambios en los tickets no añade otra línea
       <!-- test: npx vitest run tests/jornada-handoff.test.ts -->
-- [ ] C14. Un cambio de estado de un ticket entre dos corridas añade una línea nueva y deja la anterior intacta
+- [x] C14. Un cambio de estado de un ticket entre dos corridas añade una línea nueva y deja la anterior intacta
       <!-- test: npx vitest run tests/jornada-handoff.test.ts -->
-- [ ] C15. `--saved` imprime el último parte guardado sin escribir nada
+- [x] C15. `--saved` imprime el último parte guardado sin escribir nada
       <!-- test: npx vitest run tests/jornada-handoff.test.ts -->
-- [ ] C16. El comando deja byte a byte iguales los `ticket.md` y `.valmen/journeys/events.jsonl`
+- [x] C16. El comando deja byte a byte iguales los `ticket.md` y `.valmen/journeys/events.jsonl`
       <!-- test: npx vitest run tests/jornada-handoff.test.ts -->
-- [ ] C17. Sin `--to` no se invoca ningún canal de envío
+- [x] C17. Sin `--to` no se invoca ningún canal de envío
       <!-- test: npx vitest run tests/jornada-handoff.test.ts -->
-- [ ] C18. Con `--to telegram:<id>` el parte sale una vez por `hermes send` hacia ese destino y se anota `journey-handoff-notice` en el registro de aprobaciones
+- [x] C18. Con `--to telegram:<id>` el parte sale una vez por `hermes send` hacia ese destino y se anota `journey-handoff-notice` en el registro de aprobaciones
       <!-- test: npx vitest run tests/jornada-handoff.test.ts -->
-- [ ] C19. Repetir el envío con el mismo contenido no reenvía y el comando lo dice
+- [x] C19. Repetir el envío con el mismo contenido no reenvía y el comando lo dice
       <!-- test: npx vitest run tests/jornada-handoff.test.ts -->
-- [ ] C20. Si el canal falla, el parte queda guardado, el aviso no se anota, el comando dice que no se envió y un reintento con el canal sano lo envía
+- [x] C20. Si el canal falla, el parte queda guardado, el aviso no se anota, el comando dice que no se envió y un reintento con el canal sano lo envía
       <!-- test: npx vitest run tests/jornada-handoff.test.ts -->
-- [ ] C21. El cuerpo enviado no pasa de 3500 caracteres y, cuando recorta, dice cuántos tickets quedaron fuera
+- [x] C21. El cuerpo enviado no pasa de 3500 caracteres y, cuando recorta, dice cuántos tickets quedaron fuera
       <!-- test: npx vitest run tests/jornada-handoff.test.ts -->
-- [ ] C22. El aviso dice que no aprueba nada ni cierra ningún ticket
+- [x] C22. El aviso dice que no aprueba nada ni cierra ningún ticket
       <!-- test: npx vitest run tests/jornada-handoff.test.ts -->
-- [ ] C23. `--saved` junto con `--to` se rechaza sin enviar ni escribir
+- [x] C23. `--saved` junto con `--to` se rechaza sin enviar ni escribir
       <!-- test: npx vitest run tests/jornada-handoff.test.ts -->
-- [ ] C24. Sin `--id` el comando falla con el código de uso y muestra cómo se invoca
+- [x] C24. Sin `--id` el comando falla con el código de uso y muestra cómo se invoca
       <!-- test: npx vitest run tests/jornada-handoff.test.ts -->
-- [ ] C25. Sin `--project`, el proyecto sale del `project-id` de `.valmen/config.yaml` de la raíz
+- [x] C25. Sin `--project`, el proyecto sale del `project-id` de `.valmen/config.yaml` de la raíz
       <!-- test: npx vitest run tests/jornada-handoff.test.ts -->
-- [ ] C26. La ayuda documenta `journey handoff` y sus banderas con valor están declaradas
+- [x] C26. La ayuda documenta `journey handoff` y sus banderas con valor están declaradas
       <!-- test: npx vitest run tests/cli.test.ts -->
-- [ ] C27. Las pruebas existentes del vigilante y del registro de aprobaciones siguen pasando
+- [x] C27. Las pruebas existentes del vigilante y del registro de aprobaciones siguen pasando
       <!-- test: npx vitest run tests/vigilante-jornada.test.ts tests/hermes-notify.test.ts tests/approval.test.ts -->
-- [ ] C28. La comprobación de tipos pasa
+- [x] C28. La comprobación de tipos pasa
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
 - [ ] C29. En un parte real, el responsable comprueba en cada ticket del parte, uno por uno, que reconoce qué probar y cómo sin abrir el ticket
       <!-- verify: manual -->
@@ -142,11 +142,31 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
 
 ## Implementación
 
-Pendiente.
+Hecho según el plan aprobado, sin salirse de su alcance:
+
+- `packages/engine/src/journey-handoff.ts` (nuevo): `armarParteDeJornada`, `huellaDelParte`, `guardarParteDeJornada` (bajo `MutationLock`, no anexa si la huella del último de la jornada es igual) y `leerPartesDeJornada` (ignora líneas ilegibles). Lee la jornada con `readJourneys`, y por ticket en su orden: `awaiting_user_tests` produce la entrada de pruebas (directorio, `probar`, `manuales`, `sinContrato`; si `scanSecrets` encuentra algo en `## Pruebas` omite el contrato y guarda solo el tipo de hallazgo); `qa_approved`/`closed` con el último ciclo en `parsePolicyConfirmation` va a cerrados por política; el resto, o un ticket ilegible (estado `?`), a «sin entregar». Una jornada inexistente falla con `EXIT_INVARIANT` nombrándola. Exportado desde `packages/engine/src/index.ts`.
+- `packages/engine/src/approval.ts`: `JourneyHandoffNotice` (`journey-handoff-notice`), admitido por `readApprovalLog`, excluido de `ultimoIntento` y lector `partesDeJornadaAvisados` (`jornada:huella`).
+- `packages/engine/src/notify.ts`: `renderJourneyHandoffNotification(parte, { maxCaracteres? })` (tope 3500 por defecto, recorta por tickets completos, «… y N más» con cómo ver el parte completo, y cierra con que no aprueba nada ni cierra ningún ticket) y `TOPE_DEL_PARTE`.
+- `packages/cli/src/hermes.ts`: `avisarParteDeJornada` (`enviado` / `ya-enviado` / `fallido`); solo anota el aviso si el canal entregó. No toca `pendientesDeAvisar` ni `hermesNotifyPendientes`.
+- `packages/cli/src/journey-handoff.ts` (nuevo): `journeyHandoffCommand`; `--id` solo con forma `JOR-…` (decisión del PO), `--saved` con `--to` se rechaza, un envío fallido no cambia el código de salida y el mensaje dice que no se envió. `packages/cli/src/commands.ts`: se exporta `proyectoDeLaOla` (una palabra) para reutilizar la resolución de proyecto de la familia `journey`. `packages/cli/src/main.ts`: ayuda, despacho y mensaje de subcomandos; `--id`, `--to` y `--project` ya estaban en `VALUE_OPTIONS` y `--saved` es booleana.
+- `tests/jornada-handoff.test.ts` (nuevo): 31 pruebas, un caso por criterio C1–C25 más controles de cada barrera.
+
+Decisiones de lectura del contrato: una viñeta que empieza por «No …» (p. ej. «No se corrió la suite completa (`npx vitest run`)») no cuenta como comando a correr; «Directorio:» y «Validación manual»/«Manual» se clasifican antes que los comandos. Un ticket cerrado por una persona sale en «sin entregar» con su estado `closed`, como fija el plan («el resto»).
+
+Comprobado por mutación (cada barrera falla sin su guarda): secretos (C10), política contra persona (C6/C7), huella (C13), jornada ajena (C1/C8) y tope (C21).
 
 ## Pruebas
 
-Pendiente de ejecución.
+Contrato de pruebas:
+
+- Directorio: la raíz del repositorio o del worktree del ticket, con `node_modules` instalado y `npm run build` al día. Requisitos: Node 24; las pruebas usan un registro temporal y un canal falso, no mandan mensajes reales.
+- `npx vitest run tests/jornada-handoff.test.ts`: las 31 pruebas pasan. Resultado obtenido: 1 archivo, 31 pruebas pasadas.
+- `npx vitest run tests/cli.test.ts tests/vigilante-jornada.test.ts tests/hermes-notify.test.ts tests/approval.test.ts tests/api-rutas.test.ts`: sin regresión. Resultado obtenido: 5 archivos, 119 pruebas pasadas.
+- `npx tsc --noEmit -p tsconfig.json`: sin salida (obtenido).
+- Validación manual: con el CLI construido, `valmen journey handoff --id <jornada real> --project valmen-harness` imprime los tres bloques (esperan tus pruebas, cerrados por política, sin entregar), deja una línea en `.valmen/journeys/handoffs.jsonl` y no cambia ningún ticket (`git status` solo muestra ese archivo); repetirlo sin cambios no añade otra línea y `--saved` imprime el último guardado. El responsable comprueba, ticket por ticket y sin abrirlo, que sabe qué comandos correr, desde qué directorio, qué resultado esperar y qué validar a mano (C29). Solo si lo decide, el mismo comando con `--to telegram:<su id>` para ver llegar el mensaje (llega recortado a 3500 caracteres si hace falta).
+- No se corrió la suite completa (`npx vitest run`): la corre el orquestador al integrar.
+
+Entrega verificada por el subagente; C29 (validación manual) queda para el responsable.
 
 ## QA
 
@@ -175,7 +195,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-08",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Subagente de Claude Code dedicado solo a este ticket; la sesión no expone agregado de tokens",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:subagente-jornada-handoff",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -239,6 +275,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:51:29.003Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-08",
+    "at": "2026-10-08T16:04:18.911Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-08",
+    "at": "2026-10-08T16:04:20.469Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```

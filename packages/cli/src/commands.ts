@@ -3685,7 +3685,7 @@ export function journeyClearStopCommand(
  * El proyecto de `journey next` y `journey brief`: `--project`, o el `project-id` de la
  * configuración de la raíz. Falla con un mensaje si no hay ninguno de los dos.
  */
-function proyectoDeLaOla(
+export function proyectoDeLaOla(
   flags: Readonly<Record<string, string | true>>,
   opciones: { readonly home?: string; readonly root?: string },
 ): ReturnType<typeof resolveAuthorizedProject> {
