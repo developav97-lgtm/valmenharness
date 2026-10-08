@@ -11,7 +11,8 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { planApproveCommand } from "../packages/cli/src/commands.js";
+import { journeyApproveEligibleCommand, planApproveCommand } from "../packages/cli/src/commands.js";
+import { USAGE } from "../packages/cli/src/main.js";
 import { decideByCode } from "../packages/cli/src/hermes.js";
 import { parseTicket } from "../packages/core/src/index.js";
 import {
@@ -23,7 +24,10 @@ import {
 } from "../packages/gate/src/index.js";
 import {
   aprobacionDePlanVigente,
+  aprobarPlanesElegiblesDeJornada,
+  approvalQuotaUsesPath,
   appendReceipt,
+  crearAutorizacionDeAprobacion,
   aprobarPorCodigo,
   createJourney,
   emitirAprobacionesDeJornada,
@@ -239,5 +243,237 @@ describe("un código de compuerta y uno de plan no se confunden", () => {
     const mal = planApproveCommand(paths, { code: planes[0]?.code ?? "", actor: "Juan Andrade", quote: "ok" }, { secret: SECRETO, ahora: () => AHORA, env: {} });
     expect(mal.exitCode).not.toBe(0);
     expect(readReceipts(paths, IDS[0] as string).length).toBeGreaterThan(0);
+  });
+});
+
+describe("aprobar los elegibles de la jornada (R-APRO-006)", () => {
+  const JOR = "JOR-20261008";
+  const idDe = (n: string) => `FEATURE-${n === "CINCO" ? "OTRO" : "LOTE"}-ELEG${n}-20261008`;
+  const sufijos = ["UNO", "DOS", "TRES", "CUATRO", "CINCO"];
+
+  /** Un plan en `planned` con su recibo de plan en el valor que se pide (approve 0.99, review 0.5, block 0.01). */
+  function plan(id: string, o: { tipo?: string; diagnostico?: string; valor?: number } = {}): void {
+    writeFixtureTicket(root, {
+      id,
+      workflowStatus: "planned",
+      type: o.tipo ?? "FEATURE",
+      module: id.split("-")[1] as string,
+      ...(o.diagnostico === undefined ? {} : { diagnostico: o.diagnostico }),
+    });
+    const proposiciones: Proposition[] = [{ id: "cubre_todos_los_criterios", kind: "noul", instructions: "cubre", weight: 3 }];
+    const respuestas: PropositionAnswer[] = [{ id: "cubre_todos_los_criterios", kind: "noul", value: o.valor ?? 0.99 }];
+    appendReceipt(
+      paths,
+      id,
+      buildReceipt({
+        id: `GR-20261008-${id}-plan-1`,
+        gate: "plan",
+        propositions: proposiciones,
+        policy: DEFAULT_POLICY,
+        subject: { type: "ticket", id, revision: "1" },
+        decision: decide(proposiciones, respuestas, DEFAULT_POLICY),
+        state: buildGateState(readFileSync(join(root, "tickets", "2026", id, "ticket.md"), "utf8")),
+        answers: respuestas,
+        mechanicalChecks: [],
+        model: null,
+        usage: null,
+        latencyMs: 1,
+        decidedAt: AHORA.toISOString(),
+      }),
+    );
+  }
+
+  function jornada(ids: string[]): void {
+    createJourney(proyecto(), {
+      revisionId: "eleg-01",
+      journeyId: JOR,
+      occurredAt: AHORA.toISOString(),
+      tickets: ids.map((id, i) => ({
+        ticketId: id, order: i + 1, priority: i + 1, dependsOn: [], start: { condition: "dependencies" as const }, authorizationIds: ["codex"],
+      })),
+    });
+  }
+
+  const autorizar = (cupo = 10) =>
+    crearAutorizacionDeAprobacion({
+      root,
+      actor: "Juan Andrade",
+      quote: "Autorizo aprobar solos los planes de bajo riesgo de lote",
+      types: ["FEATURE", "BUGFIX"],
+      modules: ["lote"],
+      maxRisk: "normal",
+      dailyQuota: cupo,
+      validDays: 30,
+      source: "cli",
+      ahora: AHORA,
+      env: {},
+    });
+  const correr = (env: Record<string, string | undefined> = {}) =>
+    aprobarPlanesElegiblesDeJornada({ project: proyecto(), journeyId: JOR, ahora: AHORA, env });
+  const estado = (id: string): string => documento(id).fields.workflow_status;
+  const usos = (): number => {
+    try {
+      return readFileSync(approvalQuotaUsesPath(root), "utf8").split("\n").filter((l) => l.trim() !== "").length;
+    } catch {
+      return 0;
+    }
+  };
+
+  /** Cinco tickets: cuatro del módulo que la autorización cubre y el quinto de otro módulo. */
+  function cinco(): string[] {
+    const ids = sufijos.map(idDe);
+    ids.forEach((id) => plan(id));
+    jornada(ids);
+    return ids;
+  }
+
+  it("C1 C2 C3 C4 C11 C12 C13: cuatro de cinco quedan approved por la autorización y el quinto pendiente con sus opciones", () => {
+    const ids = cinco();
+    const a = autorizar();
+    const r = correr();
+    expect(r.aprobados.map((x) => x.ticket)).toEqual(ids.slice(0, 4));
+    for (const id of ids.slice(0, 4)) {
+      expect(estado(id)).toBe("approved");
+      const v = aprobacionDePlanVigente(documento(id));
+      expect(v.estado).toBe("vigente");
+      if (v.estado === "vigente") {
+        expect(v.aprobacion.source).toBe("autorizacion");
+        expect(v.aprobacion.actor).toBe(`autorización ${a.id}`);
+        expect(v.aprobacion.authorizationId).toBe(a.id);
+      }
+    }
+    expect(usos()).toBe(4);
+    expect(estado(ids[4] as string)).toBe("planned");
+    expect(r.pendientes.map((x) => x.ticket)).toEqual([ids[4]]);
+    expect(r.pendientes[0]?.motivos.join("\n")).toContain("autorizacion:");
+    expect(r.mensaje).toContain(`Decisión: aprobar el plan de ${ids[4]}`);
+    expect(r.mensaje).toContain(`A) lo apruebas con valmen approve-plan --id ${ids[4]}`);
+    expect(r.mensaje).toContain("→ pasa a approved");
+    expect(r.mensaje).toContain("B) no lo apruebas → queda en planned");
+  });
+
+  it("C11: un pendiente lista todas las reglas que no cumple", () => {
+    plan(idDe("CINCO"), { valor: 0.01 });
+    jornada([idDe("CINCO")]);
+    autorizar();
+    const motivos = correr().pendientes[0]?.motivos.join("\n") ?? "";
+    expect(motivos).toContain("compuerta:");
+    expect(motivos).toContain("autorizacion:");
+    expect(motivos).toContain("cupo:");
+  });
+
+  it("C17: tras la orden, notify-plans solo emite código para el pendiente", () => {
+    const ids = cinco();
+    autorizar();
+    correr();
+    const emision = emitirAprobacionesDeJornada({ project: proyecto(), journeyId: JOR, secret: SECRETO, ahora: AHORA });
+    expect(emision.planes.map((p) => p.ticket)).toEqual([ids[4]]);
+  });
+
+  it("C5: un SECURITY no se aprueba aunque haya autorización y su control FEATURE del mismo módulo sí", () => {
+    const SEC = "SECURITY-LOTE-ELEGUNO-20261008";
+    plan(SEC, { tipo: "SECURITY" });
+    plan(idDe("DOS"));
+    jornada([SEC, idDe("DOS")]);
+    autorizar();
+    const r = correr();
+    expect(estado(SEC)).toBe("planned");
+    expect(r.pendientes.map((p) => p.ticket)).toEqual([SEC]);
+    expect(r.pendientes[0]?.motivos.join("\n")).toContain("SECURITY");
+    expect(estado(idDe("DOS"))).toBe("approved");
+  });
+
+  it("C6: con la sesión desatendida la orden falla y no aprueba nada", () => {
+    cinco();
+    autorizar();
+    expect(() => correr({ VALMEN_UNATTENDED: "1" })).toThrow(/desatendida/);
+    expect(usos()).toBe(0);
+    for (const s of sufijos) expect(estado(idDe(s))).toBe("planned");
+  });
+
+  it("C7: un block en la compuerta de plan queda pendiente y el control sin block se aprueba", () => {
+    plan(idDe("UNO"), { valor: 0.01 });
+    plan(idDe("DOS"));
+    jornada([idDe("UNO"), idDe("DOS")]);
+    autorizar();
+    const r = correr();
+    expect(estado(idDe("UNO"))).toBe("planned");
+    expect(r.pendientes[0]?.motivos.join("\n")).toContain("block");
+    expect(estado(idDe("DOS"))).toBe("approved");
+  });
+
+  it("C8: un diagnóstico que declara despliegue queda pendiente y el control sin despliegue se aprueba", () => {
+    plan(idDe("UNO"), {
+      diagnostico: [
+        "- Archivos y flujo investigados: `packages/engine/src/x.ts:1` hace lo suyo.",
+        "- Causa raíz o hipótesis: falta la pieza.",
+        "- Riesgos y compatibilidad: ninguno.",
+        "- Impactos de sync, migración, Docker o despliegue: requiere despliegue a producción.",
+      ].join("\n"),
+    });
+    plan(idDe("DOS"));
+    jornada([idDe("UNO"), idDe("DOS")]);
+    autorizar();
+    const r = correr();
+    expect(estado(idDe("UNO"))).toBe("planned");
+    expect(r.pendientes[0]?.motivos.join("\n")).toContain("despliegue:");
+    expect(estado(idDe("DOS"))).toBe("approved");
+  });
+
+  it("C9: un recibo que evaluó otro texto queda pendiente con el motivo y los demás se aprueban", () => {
+    const ids = [idDe("UNO"), idDe("DOS"), idDe("TRES")];
+    ids.forEach((id) => plan(id));
+    const ruta = join(root, "tickets", "2026", ids[0] as string, "ticket.md");
+    writeFileSync(ruta, readFileSync(ruta, "utf8").replace("- Rollback:", "- Paso nuevo después de la compuerta.\n- Rollback:"), "utf8");
+    jornada(ids);
+    autorizar();
+    const r = correr();
+    expect(estado(ids[0] as string)).toBe("planned");
+    expect(r.pendientes[0]?.motivos.join("\n")).toContain("evaluó otro texto");
+    expect(estado(ids[1] as string)).toBe("approved");
+    expect(estado(ids[2] as string)).toBe("approved");
+    expect(usos()).toBe(2);
+  });
+
+  it("C3: sin cupo suficiente se aprueban los que caben y el resto queda pendiente por cupo", () => {
+    const ids = [idDe("UNO"), idDe("DOS"), idDe("TRES")];
+    ids.forEach((id) => plan(id));
+    jornada(ids);
+    autorizar(2);
+    const r = correr();
+    expect(r.aprobados).toHaveLength(2);
+    expect(r.pendientes.map((p) => p.ticket)).toEqual([ids[2]]);
+    expect(r.pendientes[0]?.motivos.join("\n")).toContain("cupo:");
+    expect(usos()).toBe(2);
+  });
+
+  it("C10: correrla dos veces no consume más cupo", () => {
+    cinco();
+    autorizar();
+    correr();
+    const antes = usos();
+    const otra = correr();
+    expect(usos()).toBe(antes);
+    expect(otra.aprobados).toEqual([]);
+  });
+
+  it("C14: la orden con --journey imprime aprobados y pendientes y sale con 0", () => {
+    const ids = cinco();
+    autorizar();
+    const r = journeyApproveEligibleCommand({ project: projectId, journey: JOR }, { home, ahora: () => AHORA, env: {} });
+    expect(r.exitCode).toBe(0);
+    expect(r.stdout).toContain("aprobados por autorización");
+    expect(r.stdout).toContain(`✓ ${ids[0]}`);
+    expect(r.stdout).toContain(`Decisión: aprobar el plan de ${ids[4]}`);
+  });
+
+  it("C15: sin --journey sale con el código de esquema", () => {
+    const r = journeyApproveEligibleCommand({ project: projectId }, { home, env: {} });
+    expect(r.exitCode).toBe(2);
+    expect(r.stderr).toContain("--journey");
+  });
+
+  it("C16: USAGE documenta journey approve-eligible", () => {
+    expect(USAGE).toContain("journey approve-eligible --journey <id>");
   });
 });

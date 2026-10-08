@@ -4,7 +4,7 @@ id: FEATURE-ENGINE-JORNADA-APROBACION-20261007
 title: Aprobar los planes elegibles al preparar la jornada y dejar para una persona el resto con su aviso
 type: FEATURE
 module: ENGINE
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -80,43 +80,43 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1. R-APRO-006: con cinco tickets de la jornada en `planned` y una autorización que cubre cuatro, `aprobarPlanesElegiblesDeJornada` deja cuatro en `approved`
+- [x] C1. R-APRO-006: con cinco tickets de la jornada en `planned` y una autorización que cubre cuatro, `aprobarPlanesElegiblesDeJornada` deja cuatro en `approved`
       <!-- test: npx vitest run tests/aprobacion-de-lote.test.ts -->
-- [ ] C2. Cada plan aprobado por la orden lleva un evento `plan-approved` de fuente `autorizacion` cuyo actor nombra la autorización, no a una persona ni a un modelo
+- [x] C2. Cada plan aprobado por la orden lleva un evento `plan-approved` de fuente `autorizacion` cuyo actor nombra la autorización, no a una persona ni a un modelo
       <!-- test: npx vitest run tests/aprobacion-de-lote.test.ts -->
-- [ ] C3. Cada plan aprobado por la orden consume exactamente un cupo de la autorización
+- [x] C3. Cada plan aprobado por la orden consume exactamente un cupo de la autorización
       <!-- test: npx vitest run tests/aprobacion-de-lote.test.ts -->
-- [ ] C4. En el escenario de cinco tickets, el quinto queda en `planned` y aparece como pendiente
+- [x] C4. En el escenario de cinco tickets, el quinto queda en `planned` y aparece como pendiente
       <!-- test: npx vitest run tests/aprobacion-de-lote.test.ts -->
-- [ ] C5. Un ticket SECURITY cubierto por la autorización no se aprueba y queda pendiente
+- [x] C5. Un ticket SECURITY cubierto por la autorización no se aprueba y queda pendiente
       <!-- test: npx vitest run tests/aprobacion-de-lote.test.ts -->
-- [ ] C6. Con `VALMEN_UNATTENDED` declarado la orden falla sin aprobar ningún plan
+- [x] C6. Con `VALMEN_UNATTENDED` declarado la orden falla sin aprobar ningún plan
       <!-- test: npx vitest run tests/aprobacion-de-lote.test.ts -->
-- [ ] C7. Un ticket con un recibo `block` en la compuerta de `plan` no se aprueba y queda pendiente
+- [x] C7. Un ticket con un recibo `block` en la compuerta de `plan` no se aprueba y queda pendiente
       <!-- test: npx vitest run tests/aprobacion-de-lote.test.ts -->
-- [ ] C8. Un ticket cuyo diagnóstico declara despliegue no se aprueba y queda pendiente
+- [x] C8. Un ticket cuyo diagnóstico declara despliegue no se aprueba y queda pendiente
       <!-- test: npx vitest run tests/aprobacion-de-lote.test.ts -->
-- [ ] C9. Un ticket cuyo recibo de `plan` evaluó otro texto queda pendiente con el motivo y los demás elegibles se aprueban igual
+- [x] C9. Un ticket cuyo recibo de `plan` evaluó otro texto queda pendiente con el motivo y los demás elegibles se aprueban igual
       <!-- test: npx vitest run tests/aprobacion-de-lote.test.ts -->
-- [ ] C10. Correr la orden dos veces no consume más cupo que la primera vez
+- [x] C10. Correr la orden dos veces no consume más cupo que la primera vez
       <!-- test: npx vitest run tests/aprobacion-de-lote.test.ts -->
-- [ ] C11. Un pendiente lista todas las reglas de elegibilidad que no cumple
+- [x] C11. Un pendiente lista todas las reglas de elegibilidad que no cumple
       <!-- test: npx vitest run tests/aprobacion-de-lote.test.ts -->
-- [ ] C12. El aviso de cada pendiente trae la decisión con la opción A de aprobar y su efecto
+- [x] C12. El aviso de cada pendiente trae la decisión con la opción A de aprobar y su efecto
       <!-- test: npx vitest run tests/aprobacion-de-lote.test.ts -->
-- [ ] C13. El aviso de cada pendiente trae la opción B de no aprobar y su efecto
+- [x] C13. El aviso de cada pendiente trae la opción B de no aprobar y su efecto
       <!-- test: npx vitest run tests/aprobacion-de-lote.test.ts -->
-- [ ] C14. `journeyApproveEligibleCommand` con `--journey` imprime aprobados y pendientes y sale con 0
+- [x] C14. `journeyApproveEligibleCommand` con `--journey` imprime aprobados y pendientes y sale con 0
       <!-- test: npx vitest run tests/aprobacion-de-lote.test.ts -->
-- [ ] C15. `journeyApproveEligibleCommand` sin `--journey` sale con el código de esquema
+- [x] C15. `journeyApproveEligibleCommand` sin `--journey` sale con el código de esquema
       <!-- test: npx vitest run tests/aprobacion-de-lote.test.ts -->
-- [ ] C16. `USAGE` documenta `journey approve-eligible`
+- [x] C16. `USAGE` documenta `journey approve-eligible`
       <!-- test: npx vitest run tests/aprobacion-de-lote.test.ts -->
-- [ ] C17. Tras la orden, `emitirAprobacionesDeJornada` emite código solo para los planes pendientes
+- [x] C17. Tras la orden, `emitirAprobacionesDeJornada` emite código solo para los planes pendientes
       <!-- test: npx vitest run tests/aprobacion-de-lote.test.ts -->
-- [ ] C18. La skill `corrida-orquestada` nombra `journey approve-eligible` y ya no declara ausente la aprobación por autorización
+- [x] C18. La skill `corrida-orquestada` nombra `journey approve-eligible` y ya no declara ausente la aprobación por autorización
       <!-- test: node -e "const t=require('fs').readFileSync('.valmen/skills/corrida-orquestada/SKILL.md','utf8');process.exit(t.includes('journey approve-eligible')&&!t.includes('Mientras no exista')?0:1)" -->
-- [ ] C19. El código compila sin errores de tipos
+- [x] C19. El código compila sin errores de tipos
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
 - [ ] C20. Sobre una jornada real con un plan elegible y uno no elegible, `valmen journey approve-eligible` aprueba el primero y avisa el segundo con sus opciones
       <!-- verify: manual -->
@@ -129,11 +129,18 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+- `packages/engine/src/plan-approval-batch.ts`: `aprobarPlanesElegiblesDeJornada` (sesión atendida primero; por ticket en `planned`: `elegibilidadDeAprobacion` y `aprobarPorAutorizacion` sin cambiar sus reglas, luego `transition` a `approved`; un fallo deja el ticket pendiente sin cortar el lote; un plan ya aprobado por autorización pero sin mover solo se mueve, sin otro cupo; el mensaje trae Decisión, A) y B)). Exportada por `index.ts` (ya reexporta el módulo).
+- `packages/cli/src/commands.ts`: `journeyApproveEligibleCommand`; `packages/cli/src/main.ts`: enrutado, mensaje de subcomandos y `USAGE`.
+- `skills/corrida-orquestada/SKILL.md` y su copia en `.valmen/skills/`: la sección «Aprobar» nombra `journey approve-eligible` y `journey notify-plans`; se quitó la dependencia ya integrada. Falta `valmen sync` en el checkout principal (lo regenera el orquestador).
+- `tests/aprobacion-de-lote.test.ts`: describe «aprobar los elegibles de la jornada» con un caso por barrera y su control.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Directorio: la raíz del worktree/repositorio. Requisitos: Node 24, `npx tsc --build tsconfig.build.json` hecho (dist al día).
+
+- `npx vitest run tests/aprobacion-de-lote.test.ts tests/elegibilidad-aprobacion.test.ts` — esperado: 2 archivos, 98 pruebas verdes.
+- `npx tsc --noEmit -p tsconfig.json` — esperado: sin errores.
+- Manual (C20, sin red): en un proyecto real con una autorización vigente (`valmen approval-authorize list`) y una jornada con un plan elegible y uno no elegible, correr `valmen journey approve-eligible --journey <id>`: el elegible pasa a `approved` atribuido a la autorización y el otro sale con Decisión, A) y B). Después `valmen journey notify-plans --project <id> --journey <id>` emite código solo para el pendiente.
 
 ## QA
 
@@ -162,7 +169,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-08",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Sesión de subagente de implementación (Sonnet); la herramienta no expone números de la sesión.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:implementacion",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -226,6 +249,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-08",
+    "at": "2026-10-08T22:03:41.217Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-08",
+    "at": "2026-10-08T22:07:16.512Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-08",
+    "at": "2026-10-08T22:07:16.812Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
