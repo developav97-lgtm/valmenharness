@@ -4,7 +4,7 @@ id: FEATURE-MC-VISTA-MODELOS-EFECTIVOS-20261007
 title: Mostrar el modelo efectivo, su origen y el realmente usado por fase
 type: FEATURE
 module: MC
-workflow_status: planned
+workflow_status: approved
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -65,7 +65,7 @@ Ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente de la aprobación explícita del PO tras la compuerta de plan.
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 - Alcance: una ruta de solo lectura `GET /api/modelos/fases` en el servidor y una sección «Modelo por fase» en la vista Modelos, más la traducción del origen `perfil` en la tabla «Modelo por rol». Exclusiones: no se cambia cómo se resuelve el perfil ni cómo se registra el modelo usado, ni el CLI, Hermes o la vista Corrida.
 - Pasos ordenados:
   1. Dependencias: confirmar con `grep -n "export function fasesDeSesion" packages/adapter/src/routing.ts` y `grep -n "export function leerFases" packages/engine/src/journey-phases.ts` que la resolución por fase y el registro del modelo usado están en la rama; si falta alguno, detenerse (C1, C6).
@@ -225,6 +225,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:47:26.459Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"La A (aprueba el plan de MC-VISTA-MODELOS-EFECTIVOS: último registro por fase, sin historial; costo rotulado como reportado por el cliente)\",\"planHash\":\"sha256:2272731655bff356baee894c94c3a747d3879b798cb0f211e8111ca0ba610730\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:47:26.741Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:2272731655bff356baee894c94c3a747d3879b798cb0f211e8111ca0ba610730."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-08",
+    "at": "2026-10-08T21:47:26.741Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
   }
 ]
 ```
