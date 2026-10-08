@@ -4,7 +4,7 @@ id: IMPROVEMENT-MC-JORNADA-PROGRESO-20261007
 title: Mostrar en Jornadas el avance real de cada ticket y la próxima pasada
 type: IMPROVEMENT
 module: MC
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -84,43 +84,43 @@ Las seis fases que nombra el pedido no existen como campo: se traducen a `workfl
 
 ## Criterios de aceptación
 
-- [ ] C1: `registrarPasada` anexa una línea `journey-pass` a `.valmen/journeys/pasadas.jsonl` sin reescribir las anteriores.
+- [x] C1: `registrarPasada` anexa una línea `journey-pass` a `.valmen/journeys/pasadas.jsonl` sin reescribir las anteriores.
       <!-- test: npx vitest run tests/journey-passes.test.ts -->
-- [ ] C2: `leerPasadas` ignora una línea ilegible y devuelve las demás.
+- [x] C2: `leerPasadas` ignora una línea ilegible y devuelve las demás.
       <!-- test: npx vitest run tests/journey-passes.test.ts -->
-- [ ] C3: Cada `valmen journey advance` deja una pasada con su hora, estado, ticket y detalle.
+- [x] C3: Cada `valmen journey advance` deja una pasada con su hora, estado, ticket y detalle.
       <!-- test: npx vitest run tests/avance-jornada.test.ts -->
-- [ ] C4: Un avance que falla deja una pasada con estado `error` y su mensaje.
+- [x] C4: Un avance que falla deja una pasada con estado `error` y su mensaje.
       <!-- test: npx vitest run tests/avance-jornada.test.ts -->
-- [ ] C5: Con dos o más pasadas, la próxima pasada es la última más la mediana de los intervalos.
+- [x] C5: Con dos o más pasadas, la próxima pasada es la última más la mediana de los intervalos.
       <!-- test: npx vitest run tests/journey-passes.test.ts -->
-- [ ] C6: Con menos de dos pasadas, la cadencia y la próxima pasada son `null`.
+- [x] C6: Con menos de dos pasadas, la cadencia y la próxima pasada son `null`.
       <!-- test: npx vitest run tests/journey-passes.test.ts -->
-- [ ] C7: Un ticket sin eventos de ejecución en `intake` sale con fase `waiting`, no `unknown`.
+- [x] C7: Un ticket sin eventos de ejecución en `intake` sale con fase `waiting`, no `unknown`.
       <!-- test: npx vitest run tests/journey-roadmap.test.ts -->
-- [ ] C8: Un ticket con actividad abierta de `journey-preparation` sale con fase `preparing`.
+- [x] C8: Un ticket con actividad abierta de `journey-preparation` sale con fase `preparing`.
       <!-- test: npx vitest run tests/journey-roadmap.test.ts -->
-- [ ] C9: Un ticket en `planned` sin actividad abierta sale con fase `plan-ready`.
+- [x] C9: Un ticket en `planned` sin actividad abierta sale con fase `plan-ready`.
       <!-- test: npx vitest run tests/journey-roadmap.test.ts -->
-- [ ] C10: Un ticket con actividad abierta de `journey-dispatch` sale con fase `implementing`.
+- [x] C10: Un ticket con actividad abierta de `journey-dispatch` sale con fase `implementing`.
       <!-- test: npx vitest run tests/journey-roadmap.test.ts -->
-- [ ] C11: Un ticket en `awaiting_user_tests` sale con fase `verifying` y uno en `closed` con fase `delivered`.
+- [x] C11: Un ticket en `awaiting_user_tests` sale con fase `verifying` y uno en `closed` con fase `delivered`.
       <!-- test: npx vitest run tests/journey-roadmap.test.ts -->
-- [ ] C12: Un ticket con parada autónoma activa sale con fase `stopped` y el detalle de la parada en `stopReason`.
+- [x] C12: Un ticket con parada autónoma activa sale con fase `stopped` y el detalle de la parada en `stopReason`.
       <!-- test: npx vitest run tests/journey-roadmap.test.ts -->
-- [ ] C13: Cada jornada de la hoja de ruta trae `passes` con la última pasada, la cadencia y la próxima.
+- [x] C13: Cada jornada de la hoja de ruta trae `passes` con la última pasada, la cadencia y la próxima.
       <!-- test: npx vitest run tests/journey-roadmap.test.ts -->
-- [ ] C14: La vista Jornadas muestra la hora y el resultado de la última pasada de cada jornada.
+- [x] C14: La vista Jornadas muestra la hora y el resultado de la última pasada de cada jornada.
       <!-- test: npx vitest run tests/jornadas-progreso-pantalla.test.ts -->
-- [ ] C15: La vista Jornadas muestra la próxima pasada rotulada como estimada, o que no hay cadencia conocida.
+- [x] C15: La vista Jornadas muestra la próxima pasada rotulada como estimada, o que no hay cadencia conocida.
       <!-- test: npx vitest run tests/jornadas-progreso-pantalla.test.ts -->
-- [ ] C16: La tabla de cada jornada muestra la columna «Fase» en español y el motivo debajo de un ticket detenido.
+- [x] C16: La tabla de cada jornada muestra la columna «Fase» en español y el motivo debajo de un ticket detenido.
       <!-- test: npx vitest run tests/jornadas-progreso-pantalla.test.ts -->
-- [ ] C17: Sin fuentes de observación declaradas, la nota dice que la actividad la registra el propio despacho en vez de «sin fuentes».
+- [x] C17: Sin fuentes de observación declaradas, la nota dice que la actividad la registra el propio despacho en vez de «sin fuentes».
       <!-- test: npx vitest run tests/jornadas-progreso-pantalla.test.ts -->
 - [ ] C18: La suite completa pasa en verde.
       <!-- test: npx vitest run -->
-- [ ] C19: El proyecto compila sin errores de tipos.
+- [x] C19: El proyecto compila sin errores de tipos.
       <!-- test: npx tsc -b -->
 - [ ] C20: En el navegador, la vista Jornadas de la jornada real muestra fase por ticket, última y próxima pasada, sin colores rotos en modo oscuro.
       <!-- verify: manual -->
@@ -133,11 +133,20 @@ Las seis fases que nombra el pedido no existen como campo: se traducen a `workfl
 
 ## Implementación
 
-Pendiente.
+- `packages/engine/src/journey-passes.ts` (nuevo, exportado desde `index.ts`): `registrarPasada`, `leerPasadas` (ignora una línea ilegible) y `resumenDePasadas` (última, mediana de los intervalos de hasta 8 pasadas, próxima; `null` con menos de dos).
+- `packages/cli/src/commands.ts`: `journeyAdvanceCommand` anexa una pasada tras `avanzarJornada` (con `fases` si existen) y, si este lanza, una con estado `error` y el mensaje; un fallo al anexar va a stderr sin cambiar el código de salida. `journey-advance.ts` no se tocó.
+- `packages/engine/src/journey-roadmap.ts`: `phase`, `stopReason` y `faseDelTicket` (pura); cada jornada suma `passes: { last, cadenceMs, next }`.
+- `packages/server/web/index.html`: `vistaJornadas` con la última y la próxima pasada, la columna «Fase» con el motivo de un detenido y la nota de observación nueva.
+- Hallazgo no previsto en el diagnóstico: `replayExecutionEvents` agrupa por proyecto y `executionId`, y el despacho usa la jornada como `executionId` para todos sus tickets; el replay agrupaba a todos bajo la identidad del primer ticket y los demás salían `unknown` aunque tuvieran eventos. La proyección ahora toma la identidad más reciente de cada ticket del log (`readExecutionEvents`) en vez del replay. Está dentro de `journey-roadmap.ts`, archivo del plan; lo cubre la prueba de fases (todos los tickets comparten `executionId`).
+- Pruebas nuevas: `tests/journey-passes.test.ts`, `tests/jornadas-progreso-pantalla.test.ts`; ampliadas `tests/journey-roadmap.test.ts` y `tests/avance-jornada.test.ts`.
 
 ## Pruebas
 
-Pendiente de ejecución.
+- `npx vitest run tests/journey-passes.test.ts tests/journey-roadmap.test.ts tests/avance-jornada.test.ts tests/jornadas-progreso-pantalla.test.ts` (raíz del repositorio): en verde.
+- `npx tsc -b`: sin errores.
+- `revisar_presentacion`: sin colores fijos. `valmen secrets`: sin hallazgos.
+- `npx vitest run` completo: 2869 pasan y 54 fallan en 13 archivos ajenos al ticket (`gate-human-decision`, `qa-sombra`, `firma-de-compuerta`, `delegation`, `autorizacion-*-canales`, entre otros), todos por «Una sesión desatendida no puede decidir una compuerta» u otras guardas de sesión desatendida. Tres de esos archivos se corrieron en un worktree limpio de `HEAD` y fallan igual (13 pruebas), así que no vienen de este cambio. C18 queda sin marcar: debe correrse en una sesión de una persona.
+- C20 (verify: manual) pendiente del responsable: con el disparador activo, abrir Mission Control → Jornadas y comprobar fase por ticket, última y próxima pasada, y modo oscuro. No se verificó en navegador en esta sesión.
 
 ## QA
 
@@ -230,6 +239,24 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-07",
+    "at": "2026-10-07T23:33:59.058Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-07",
+    "at": "2026-10-08T00:57:54.977Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```

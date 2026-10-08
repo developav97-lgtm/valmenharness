@@ -23,6 +23,8 @@ import {
   claimMachineCapacity,
   recordExecutionActivity,
   jornadaDelDia,
+  leerPasadas,
+  pasadasPath,
   resolveAuthorizedProject,
 } from "../packages/engine/src/index.js";
 import { createExecutionIdentity, parseTicket } from "../packages/core/src/index.js";
@@ -332,5 +334,55 @@ describe("el disparador de launchd", () => {
 
   it("un intervalo inválido se rechaza", () => {
     expect(journeyInstallTriggerCommand({ project: projectId, every: "0" }, { ...entorno, home }).exitCode).not.toBe(0);
+  });
+});
+
+describe("el registro de pasadas", () => {
+  it("cada avance deja una pasada con su hora, estado, ticket y detalle", async () => {
+    armar();
+    const resultado = await journeyAdvanceCommand(
+      { project: projectId, fase: "ejecucion" },
+      { home, ahora: () => AHORA, execute: () => ({ status: 0, stdout: "hecho", stderr: "" }) },
+    );
+    expect(resultado.exitCode).toBe(0);
+    const pasadas = leerPasadas(root);
+    expect(pasadas).toHaveLength(1);
+    expect(pasadas[0]).toMatchObject({ journeyId: jornadaDelDia(AHORA), estado: "despachado", ticketId: A });
+    expect(pasadas[0]?.detalle).not.toBe("");
+    expect(Number.isFinite(Date.parse(pasadas[0]?.at ?? ""))).toBe(true);
+    await journeyAdvanceCommand({ project: projectId, fase: "ejecucion" }, { home, ahora: () => AHORA, execute: () => ({ status: 0, stdout: "hecho", stderr: "" }) });
+    expect(leerPasadas(root)).toHaveLength(2);
+  });
+
+  it("sin jornada también deja su pasada, con el estado sin-jornada", async () => {
+    await journeyAdvanceCommand({ project: projectId }, { home, ahora: () => AHORA });
+    expect(leerPasadas(root)[0]).toMatchObject({ estado: "sin-jornada", ticketId: null });
+  });
+
+  it("un avance que falla deja una pasada con estado error y su mensaje", async () => {
+    armar();
+    const resultado = await journeyAdvanceCommand(
+      { project: projectId, fase: "ejecucion" },
+      {
+        home,
+        ahora: () => AHORA,
+        execute: () => {
+          throw new Error("se cayó el preparador");
+        },
+      },
+    );
+    // La fase única propaga el error; la pasada lo registra aunque el avance no haya terminado.
+    expect(resultado.exitCode).not.toBe(0);
+    const pasadas = leerPasadas(root);
+    expect(pasadas.at(-1)).toMatchObject({ estado: "error" });
+    expect(pasadas.at(-1)?.detalle).toContain("se cayó el preparador");
+  });
+
+  it("un fallo al anexar la pasada se informa en stderr sin cambiar el código de salida", async () => {
+    mkdirSync(pasadasPath(root), { recursive: true });
+    const resultado = await journeyAdvanceCommand({ project: projectId }, { home, ahora: () => AHORA });
+    expect(resultado.exitCode).toBe(0);
+    expect(resultado.stdout).toContain("sin-jornada");
+    expect(resultado.stderr).toContain("No se pudo registrar la pasada");
   });
 });

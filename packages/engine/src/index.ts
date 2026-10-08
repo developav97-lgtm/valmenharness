@@ -33,6 +33,7 @@ export * from "./integration-rules.js";
 export * from "./journey-advance.js";
 export * from "./journey-limits.js";
 export * from "./journey-phases.js";
+export * from "./journey-passes.js";
 export * from "./journey-plan.js";
 export * from "./journey-preparation.js";
 export * from "./machine-capacity.js";
