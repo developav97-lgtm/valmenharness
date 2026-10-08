@@ -4,7 +4,7 @@ id: FEATURE-SERVER-ACTIVIDAD-AGENTES-20261008
 title: Leer qué hace cada subagente de la corrida a partir de sus transcripts
 type: FEATURE
 module: SERVER
-workflow_status: planned
+workflow_status: approved
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -51,7 +51,7 @@ Ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente de aprobación explícita del PO; el plan no autoriza implementar.
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 - Pasos ordenados:
   1. En `packages/server/src/claude.ts` exportar `carpetasDelProyecto`, `estaDentro` y `archivosDeSubagentes` sin cambiar su cuerpo; correr `npx vitest run tests/claude.test.ts` para confirmar que no hay regresión (C10).
   2. Crear packages/server/src/agentes.ts con `leerAgentesDeCorrida(root, { home, ahora, sesion })`: localiza la sesión orquestadora, lee cada `agent-<id>.meta.json` (agentType, description, toolUseId) y recorre el transcript tolerando líneas cortadas para obtener ticket (primer mensaje de usuario), modelo, esfuerzo, `cwd` como carpeta, `gitBranch` como rama, última herramienta con su hora y `stop_reason` (C1 a C6).
@@ -184,6 +184,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:23:56.042Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"La A (aprueba los 9 planes de la corrida orquestada)\",\"planHash\":\"sha256:6bc38a0006b85d9311f3e270cdfeb45bd82890055d1634b3e4aaebb3cdbca233\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:23:57.692Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:6bc38a0006b85d9311f3e270cdfeb45bd82890055d1634b3e4aaebb3cdbca233."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:23:57.692Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
   }
 ]
 ```

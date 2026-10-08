@@ -4,7 +4,7 @@ id: FEATURE-ENGINE-JORNADA-HANDOFF-20261008
 title: Entregar al terminar la corrida el parte de qué probar y cómo en cada ticket
 type: FEATURE
 module: ENGINE
-workflow_status: planned
+workflow_status: approved
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -52,7 +52,7 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
 
 ## Plan
 
-- Gate de plan y aprobación: compuerta `plan` con el evaluador `cascade`; la aprobación explícita del plan es de una persona y no se registra en esta sesión.
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 - Alcance: el módulo del motor que arma, guarda y lee el parte, el tipo de aviso nuevo del vigilante con su redacción y su envío, el subcomando `journey handoff` y sus pruebas. Exclusiones: cerrar o mover tickets, enviar sin `--to`, la skill del orquestador, la vista de Mission Control, ids de delegación y cambiar `pendientesDeAvisar`.
 - Decisiones de diseño fijadas aquí para que la implementación no las adivine: el parte tiene tres bloques (esperan tus pruebas, cerrados por política de QA, sin entregar) y su huella es el sha256 del contenido sin la hora; el tope del envío es 3500 caracteres y recorta por tickets completos; `--project` es opcional y, si falta, se toma el `project-id` de `.valmen/config.yaml` de la raíz y se resuelve por el binding de la máquina como el resto de la familia `journey`; un envío fallido no cambia el código de salida, como en `journey plan`, y el mensaje dice que no se envió.
 - Pasos ordenados:
@@ -212,6 +212,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:23:44.304Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"La A (aprueba los 9 planes de la corrida orquestada)\",\"planHash\":\"sha256:a8599fd6f863aebd6ff27829ae95ec62dd29ce16a4e1ce79f4d8ccc631aec71b\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:23:46.303Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:a8599fd6f863aebd6ff27829ae95ec62dd29ce16a4e1ce79f4d8ccc631aec71b."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:23:46.303Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
   }
 ]
 ```

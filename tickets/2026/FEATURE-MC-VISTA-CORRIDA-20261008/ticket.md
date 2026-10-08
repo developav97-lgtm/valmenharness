@@ -4,7 +4,7 @@ id: FEATURE-MC-VISTA-CORRIDA-20261008
 title: Mostrar en Mission Control la corrida con sus agentes vivos, la cola y lo entregado
 type: FEATURE
 module: MC
-workflow_status: planned
+workflow_status: approved
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -53,7 +53,7 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente de aprobación explícita del PO; el plan no autoriza implementar.
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 - Pasos ordenados:
   1. Dependencia: confirmar con `grep -n "api/corrida/agentes" packages/server/src/server.ts tests/api-rutas.test.ts` que el ticket FEATURE-SERVER-ACTIVIDAD-AGENTES-20261008 ya está integrado y leer la forma real de la respuesta (envoltorio, campo de tiempo). Si no está, detenerse: este ticket no se implementa antes que su dependencia (C22).
   2. En `packages/server/web/index.html`, sección de estilos: sumar `--ok-suave` y `--error-suave` a `:root` y al bloque de tema claro, y las clases `.corrida-barra`, `.corrida-agente`, `.corrida-punto`, `.corrida-fase` y `.corrida-cola` usando solo variables (reutiliza `.tarjetas` y `.tarjeta` para los KPI); bajo `@media (max-width: 640px)` la tabla de agentes se apila en tarjetas (C24, C25, C26, C27).
@@ -208,6 +208,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:23:52.943Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"La A (aprueba los 9 planes de la corrida orquestada)\",\"planHash\":\"sha256:8080cf4c46407ed33a82da4cfbf9664a2390ee013b29670d4c6769d979f98a8d\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:23:54.565Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:8080cf4c46407ed33a82da4cfbf9664a2390ee013b29670d4c6769d979f98a8d."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:23:54.565Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
   }
 ]
 ```

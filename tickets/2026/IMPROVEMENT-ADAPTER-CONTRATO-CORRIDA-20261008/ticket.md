@@ -4,7 +4,7 @@ id: IMPROVEMENT-ADAPTER-CONTRATO-CORRIDA-20261008
 title: Declarar en AGENTS.md cómo se pide y se orquesta una corrida
 type: IMPROVEMENT
 module: ADAPTER
-workflow_status: planned
+workflow_status: approved
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -51,7 +51,7 @@ Ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación: compuerta `plan` con el evaluador `cascade`; la aprobación queda pendiente de una persona y no se registra en esta sesión.
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 - Alcance: una sección de texto en `WORKFLOW_TEMPLATE` de `packages/adapter/src/templates.ts`, el tope de bytes y sus pruebas. Exclusiones: la skill, el puntero de una línea del hermano, el motor, Mission Control y `valmen sync` en otros proyectos.
 - Pasos ordenados:
   1. Pruebas en rojo en `tests/plantillas-compactas.test.ts`: un caso nuevo sobre `WORKFLOW_TEMPLATE` aplanado que afirma cómo se pide la corrida con 3 a la vez por defecto (C1), que la sesión es el orquestador y lanza un subagente por ticket (C2), que cada subagente trabaja en su worktree y rama (C3), que solo el orquestador toca el checkout principal (C4), que el subagente corre las pruebas de su ticket y no la suite completa (C5), la política de aprobación por tipo de ticket (C6) y que SECURITY y despliegue son siempre de una persona (C7); caso de control: la sección no contiene `git push`, `--force` ni `--no-verify` (C8). (C1 a C8)
@@ -174,6 +174,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:23:58.758Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"La A (aprueba los 9 planes de la corrida orquestada)\",\"planHash\":\"sha256:456eade1dcd50d2b8690b7662a197c057cee33fb208523c8a56dcbd17caaff25\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:23:59.576Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:456eade1dcd50d2b8690b7662a197c057cee33fb208523c8a56dcbd17caaff25."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:23:59.576Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
   }
 ]
 ```

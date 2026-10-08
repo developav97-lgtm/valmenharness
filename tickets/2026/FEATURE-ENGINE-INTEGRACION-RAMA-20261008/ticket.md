@@ -4,7 +4,7 @@ id: FEATURE-ENGINE-INTEGRACION-RAMA-20261008
 title: Integrar la rama de un worktree al checkout principal uniendo los registros append-only
 type: FEATURE
 module: ENGINE
-workflow_status: planned
+workflow_status: approved
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -52,7 +52,7 @@ Ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente; la aprobación es de una persona (PO) tras la compuerta de plan.
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 - Alcance: `integrate` de `journey worktree`, su lista cerrada de operaciones git, la unión de registros append-only y sus pruebas. Exclusiones: las de la descripción funcional. Depende de FEATURE-ENGINE-INTEGRACION-WORKTREE-20261008 solo por el nombre de la rama y el layout del worktree.
 - Pasos ordenados:
   1. En `packages/engine/src/integration-rules.ts` exportar `motivoDeArchivoProhibido` (línea 46) para reutilizar `PROHIBIDOS` sin duplicarlo; no tocar `OPERACIONES_PERMITIDAS` ni `BANDERAS_PROHIBIDAS`: la autoridad git de la jornada no se amplía. (C11)
@@ -242,6 +242,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:23:39.082Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"La A (aprueba los 9 planes de la corrida orquestada)\",\"planHash\":\"sha256:cb375dfc28cad86936393fc254f0601075b5556032f517332e4b11d2d0756d49\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:23:40.200Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:cb375dfc28cad86936393fc254f0601075b5556032f517332e4b11d2d0756d49."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:23:40.200Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
   }
 ]
 ```

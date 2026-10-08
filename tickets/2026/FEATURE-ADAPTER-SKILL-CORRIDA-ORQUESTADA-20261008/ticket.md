@@ -4,7 +4,7 @@ id: FEATURE-ADAPTER-SKILL-CORRIDA-ORQUESTADA-20261008
 title: Skill que guía a la sesión orquestadora para repartir los tickets en subagentes
 type: FEATURE
 module: ADAPTER
-workflow_status: planned
+workflow_status: approved
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -51,7 +51,7 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente de la aprobación explícita del PO; el ticket es de bajo riesgo (texto de una skill, una lista y una frase de plantilla) y sin impactos críticos.
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 - Pasos ordenados:
   1. Crear `skills/corrida-orquestada/SKILL.md` (nuevo) con frontmatter `name: corrida-orquestada`, `description`, `version: 1.0.0` y `origen: valmen`, y un cuerpo de 6 500 B o menos, en este orden: «Cuándo se usa» y quién es el orquestador; «Dependencias» (qué comando sale de qué ticket hermano y qué hacer mientras falte); «Pedir la ola» (`valmen journey next --wave [--concurrency N]`, 3 por defecto, el PO puede pedir otro número); «Lanzar los subagentes» (uno por ticket, en segundo plano, con `isolation: worktree`, `valmen journey worktree create --id <ID>` y el texto de `valmen journey brief --id <ID>` como único contexto del subagente); «Aprobar» (`valmen approval-eligibility --id <ID> --stage plan`, `valmen approval-authorize list`, `valmen qa-authorize list`: sola si hay autorización vigente y es elegible, en lote al PO si no, SECURITY y despliegue nunca); «Integrar» (de a uno con `valmen journey worktree integrate --id <ID>`, conflicto: resolverlo o devolverlo al subagente con el diff, y `valmen journey worktree remove --id <ID>` después); «Suite completa una sola vez tras integrar» (`npx vitest run`); «Reglas duras» (solo el orquestador toca el checkout principal, nunca push ni force, un BLOCK y una compuerta humana dura se detienen); «Cerrar» (`valmen journey handoff --id <JORNADA>`). Cubre C1 a C16.
   2. Ejecutar `npx valmen sync` en el worktree para instalar `.valmen/skills/corrida-orquestada/SKILL.md` (nuevo, lo escribe la instalación) y proyectar a los runtimes, y verificar con `npx valmen sync --check` que quedó al día. Cubre C17.
@@ -193,6 +193,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:23:37.082Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"La A (aprueba los 9 planes de la corrida orquestada)\",\"planHash\":\"sha256:4563ff5b6f2bcb1509856bbb1d41906ef7be86c1fe3eb4449d2417809ee01355\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:23:38.155Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:4563ff5b6f2bcb1509856bbb1d41906ef7be86c1fe3eb4449d2417809ee01355."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:23:38.155Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
   }
 ]
 ```

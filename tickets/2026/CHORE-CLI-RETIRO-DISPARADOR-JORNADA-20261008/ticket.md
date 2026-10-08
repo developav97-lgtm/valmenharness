@@ -4,7 +4,7 @@ id: CHORE-CLI-RETIRO-DISPARADOR-JORNADA-20261008
 title: Retirar el disparador por launchd y el bucle desatendido de la jornada
 type: CHORE
 module: CLI
-workflow_status: planned
+workflow_status: approved
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -71,7 +71,7 @@ Ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación: compuerta de plan con el evaluador cascade; la aprobación del plan es de una persona (PO) y no se registra en esta sesión.
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 - Qué se BORRA: `packages/cli/src/journey-trigger.ts`; `journeyInstallTriggerCommand` y `despachadorDelProyecto` de `packages/cli/src/commands.ts`; `readJourneyDispatcher` y `JourneyDispatcher` de `packages/adapter/src/config.ts`; la línea `dispatcher: machine` de `.valmen/config.yaml`; `dispatchJourney` y sus tipos de `packages/engine/src/journey-dispatch.ts` (el archivo desaparece, `dispatchEventId` se muda a la preparación); `avanzarEjecucion` y la opción `execute` de `journey-advance.ts`; el registro de pasadas sucias de `journey-dirty-tree.ts`, el tipo `arbol-sucio` del vigilante, `renderDirtyTreeNotification` y `arbolesSuciosAvisados`; `tests/despachador-hermes.test.ts` y `tests/journey-dispatch.test.ts`.
 - Qué se DEPRECA con mensaje en español: `journey install-trigger`, `journey advance` sin fase y `journey advance --fase ejecucion` (salida 2, no escriben nada); el valor `ejecucion` de `AvanceDeFase.fase` queda solo para leer pasadas antiguas; el tipo `JourneyDirtyTreeNotice` queda solo para leer el registro de avisos.
 - Qué se CONSERVA y se prueba: `journey plan` y `armar_jornada` con `--max` y herencia de pendientes; la hoja de ruta; `journey advance --fase preparacion`; `journey clear-stop` y las paradas; `jornadaVigente`; los topes (`journey-limits.ts`); la reserva de capacidad (`machine-capacity.ts`); `journey-selection.ts`; los avisos del vigilante; la política `autonomous:`; `valmen run`.
@@ -251,6 +251,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:23:35.829Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"La A (aprueba los 9 planes de la corrida orquestada)\",\"planHash\":\"sha256:e0435402658fc3e0ff3c51a51cc082592f51d86a5aff03c3dc7e08836740c9d2\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:23:36.423Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:e0435402658fc3e0ff3c51a51cc082592f51d86a5aff03c3dc7e08836740c9d2."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:23:36.423Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
   }
 ]
 ```

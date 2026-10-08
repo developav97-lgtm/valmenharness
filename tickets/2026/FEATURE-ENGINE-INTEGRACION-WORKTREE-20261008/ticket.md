@@ -4,7 +4,7 @@ id: FEATURE-ENGINE-INTEGRACION-WORKTREE-20261008
 title: Crear y quitar el worktree de un ticket con un comando
 type: FEATURE
 module: ENGINE
-workflow_status: planned
+workflow_status: approved
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -52,7 +52,7 @@ Ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente; la aprobación es de una persona (PO) tras la compuerta de plan.
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 - Alcance: los subcomandos `create` y `remove` de `journey worktree`, sus listas cerradas de git y de procesos y sus pruebas. Exclusiones: las de la descripción funcional; `integrate` y la unión de registros son del ticket FEATURE-ENGINE-INTEGRACION-RAMA-20261008, que depende de este solo por el nombre de la rama y el layout del worktree.
 - Pasos ordenados:
   1. Crear worktree-git.ts en `packages/engine/src` siguiendo `packages/engine/src/qa-agent-git.ts`: `nombresDeWorktree(ticketId)` (slug = identificador sin tipo, módulo ni fecha; rechaza lo que no cumpla el formato de ticket), `motivoDeGitDeWorktree` y `ejecutarGitDeWorktree` con lista cerrada (lectura: `status`, `rev-parse` con `--abbrev-ref`, `--git-dir`, `--git-common-dir` o una referencia, `cat-file -e`, `merge-base --is-ancestor`, `worktree list --porcelain`, `branch --list`; escritura: `worktree add -b <rama> <carpeta> main`, `worktree remove <carpeta>`, `branch -d`; nunca push, fetch, pull, reset, rebase, clean, tag, remote, force, `-D`, `--hard`) `exigirCheckoutPrincipal(root, git?)` (git-dir igual a git-common-dir; si no, `fail(..., EXIT_INVARIANT)` señalando el checkout principal) y `ejecutarProcesoDeWorktree` con lista cerrada (`cp -Rc`/`cp -R`, `npx tsc --build tsconfig.build.json`, `node scripts/copy-web.mjs`); ambos rechazan con `fail(..., EXIT_INVARIANT)` antes de lanzar y reutilizan el tipo `EjecutorDeGit` de `packages/engine/src/integration-rules.ts`. `motivoDeGitDeWorktree`, `exigirCheckoutPrincipal` y `nombresDeWorktree` son la API que el ticket RAMA importa sin modificarlos: RAMA suma su propia lista de operaciones en un módulo suyo. No tocar `OPERACIONES_PERMITIDAS` ni `BANDERAS_PROHIBIDAS`: la autoridad git de la jornada no se amplía. (C1, C2, C3, C18)
@@ -253,6 +253,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:23:41.085Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"La A (aprueba los 9 planes de la corrida orquestada)\",\"planHash\":\"sha256:abdd729cb59c5200aef8e9c7d5edf4323e808de44972749433ca5e9b62dfe0fb\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:23:42.926Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:abdd729cb59c5200aef8e9c7d5edf4323e808de44972749433ca5e9b62dfe0fb."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:23:42.926Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
   }
 ]
 ```

@@ -4,7 +4,7 @@ id: FEATURE-ENGINE-JORNADA-OLA-20261008
 title: Calcular la ola de tickets listos y el brief de cada uno para la corrida orquestada
 type: FEATURE
 module: ENGINE
-workflow_status: planned
+workflow_status: approved
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -56,7 +56,7 @@ Ningún elemento del pedido falta en el código: `--concurrency` es lo que este 
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente. La compuerta de plan se evalúa con el evaluador cascade y la aprobación del plan es de una persona; esta fase no registra ninguna.
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
 - Alcance: los dos subcomandos, sus dos módulos del motor, las extracciones mínimas de reutilización y las pruebas. Exclusiones: las de la descripción funcional.
 - Pasos ordenados:
   1. En `packages/engine/src/journey-selection.ts` extraer de `baseReasons` la regla de ventana a `razonesDeVentana(ticket, windows, at)` exportada, y exportar `compareTicket`; `baseReasons` la llama y no cambia de comportamiento. En `packages/engine/src/resume.ts` exportar `renderFases`. (C36)
@@ -237,6 +237,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:23:47.823Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"Juan Andrade\",\"source\":\"cli\",\"quote\":\"La A (aprueba los 9 planes de la corrida orquestada)\",\"planHash\":\"sha256:1b7ad9e2fee03d87d1a9ef8224ba29f187d422034a0ae59e3b7f991d20e4941b\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:23:50.183Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: Juan Andrade (fuente cli), plan sha256:1b7ad9e2fee03d87d1a9ef8224ba29f187d422034a0ae59e3b7f991d20e4941b."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:23:50.183Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
   }
 ]
 ```
