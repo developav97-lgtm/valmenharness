@@ -1,7 +1,7 @@
 ---
 name: corrida-delegada
 description: Usar cuando el PO delega, en un solo pedido, una feature completa o una lista de tickets para que se trabajen uno tras otro —el agente decide las compuertas, ejecuta las pruebas, aprueba el QA y cierra—, o cuando haya que activar, verificar o retomar esa corrida. No aplica a un ticket suelto sin delegación.
-version: 1.0.0
+version: 1.1.0
 origen: valmen
 ---
 
@@ -19,7 +19,7 @@ El PO pide una vez —«corre la feature», «haz estos cinco tickets»— y el 
 
 `valmen delegation next` dice cuál sigue (orden de dependencias; salta cerrados y los que esperan al PO). Una sesión de trabajo por ticket cuando se pueda.
 
-1. `valmen resume --id <ID>`, y escribe análisis, plan y criterios **en el ticket**, cada criterio con `<!-- test: -->` o `<!-- verify: manual -->`.
+1. `valmen resume --id <ID>`, y escribe análisis, plan y criterios **en el ticket**, cada criterio con `<!-- test: -->` o `<!-- verify: manual -->`. Si `resume` trae «Delegación de la fase», lanza el subagente que indica; no cambies el modelo de esta sesión.
 2. `valmen delegation advance --id <ID> [--reason "<por qué>"] [--evaluator cascade]`. Corre las compuertas `analysis` y `plan`, aprueba el plan citando la delegación y deja el ticket en `in_progress`. Una **REVIEW** se aprueba solo si el criterio dice que no debe bloquear: pasa ese porqué en `--reason`. Declara el evaluador (`cascade` con sustancia).
 3. Implementa. **Las pruebas por consola o Docker las ejecutas tú**, con su propia base de datos de pruebas si hay más de una sesión.
 4. `valmen secrets` y commit local del ticket. Sin push: solo cuando el PO lo ordene.

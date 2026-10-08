@@ -4,7 +4,7 @@ id: IMPROVEMENT-ADAPTER-CONTRATO-PERFILES-20261007
 title: Documentar en AGENTS.md y en la skill de flujo cómo se ejecuta por fases
 type: IMPROVEMENT
 module: ADAPTER
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -84,25 +84,25 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1: «Continuar un ticket» de `WORKFLOW_TEMPLATE` dice que, con «Delegación de la fase», la fase la hace un subagente con ese modelo (R-PERF-007, parte documental)
+- [x] C1: «Continuar un ticket» de `WORKFLOW_TEMPLATE` dice que, con «Delegación de la fase», la fase la hace un subagente con ese modelo (R-PERF-007, parte documental)
       <!-- test: npx vitest run tests/plantillas-compactas.test.ts -->
-- [ ] C2: «Continuar un ticket» dice que no se cambia el modelo de la sesión
+- [x] C2: «Continuar un ticket» dice que no se cambia el modelo de la sesión
       <!-- test: npx vitest run tests/plantillas-compactas.test.ts -->
-- [ ] C3: «Continuar un ticket» dice que quien recibió el brief hace la fase él
+- [x] C3: «Continuar un ticket» dice que quien recibió el brief hace la fase él
       <!-- test: npx vitest run tests/plantillas-compactas.test.ts -->
-- [ ] C4: el paso 1 de `skills/corrida-delegada/SKILL.md` dice que, con «Delegación de la fase», se lanza el subagente que indica
+- [x] C4: el paso 1 de `skills/corrida-delegada/SKILL.md` dice que, con «Delegación de la fase», se lanza el subagente que indica
       <!-- test: npx vitest run tests/plantillas-compactas.test.ts -->
-- [ ] C5: `skills/corrida-delegada/SKILL.md` dice que no se cambia el modelo de la sesión
+- [x] C5: `skills/corrida-delegada/SKILL.md` dice que no se cambia el modelo de la sesión
       <!-- test: npx vitest run tests/plantillas-compactas.test.ts -->
-- [ ] C6: `.valmen/skills/corrida-delegada/SKILL.md` es idéntica byte a byte a `skills/corrida-delegada/SKILL.md`
+- [x] C6: `.valmen/skills/corrida-delegada/SKILL.md` es idéntica byte a byte a `skills/corrida-delegada/SKILL.md`
       <!-- test: node -e "const f=require('fs');const a=f.readFileSync('skills/corrida-delegada/SKILL.md');const b=f.readFileSync('.valmen/skills/corrida-delegada/SKILL.md');if(!a.equals(b))process.exit(1);console.log('iguales')" -->
-- [ ] C7: el `AGENTS.md` que proyecta `projectAgentsMd` contiene «Delegación de la fase»
+- [x] C7: el `AGENTS.md` que proyecta `projectAgentsMd` contiene «Delegación de la fase»
       <!-- test: npx vitest run tests/adapters.test.ts -->
-- [ ] C8: las tres plantillas fijas suman 10 400 B o menos sin subir `TOPE_BYTES`
+- [x] C8: las tres plantillas fijas suman 10 400 B o menos sin subir `TOPE_BYTES`
       <!-- test: npx vitest run tests/plantillas-compactas.test.ts -->
-- [ ] C9: las pruebas existentes de la plantilla y de `resume` siguen pasando sin cambiar sus frases
+- [x] C9: las pruebas existentes de la plantilla y de `resume` siguen pasando sin cambiar sus frases
       <!-- test: npx vitest run tests/respuesta-agents-md.test.ts tests/next-step.test.ts tests/skills-publicadas.test.ts -->
-- [ ] C10: el `AGENTS.md` proyectado sigue dentro de su presupuesto de tamaño
+- [x] C10: el `AGENTS.md` proyectado sigue dentro de su presupuesto de tamaño
       <!-- test: npx vitest run tests/agents-md-tamano.test.ts -->
 - [ ] C11: el `AGENTS.md` del repositorio queda regenerado por `valmen sync` y `valmen sync --check` no da diferencias tras integrar
       <!-- verify: manual -->
@@ -115,11 +115,20 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+- `packages/adapter/src/templates.ts`: paso 1 de «Continuar un ticket» sin el inciso de 80 B; paso 2 con la frase de la delegación de la fase. `TOPE_BYTES` intacto.
+- `skills/corrida-delegada/SKILL.md` (1.0.0 a 1.1.0) y su copia en `.valmen/skills/` con `cp`.
+- `AGENTS.md` regenerado con `node packages/cli/dist/main.js sync` tras `npm run build`.
+- Pruebas: `describe` nuevo en `tests/plantillas-compactas.test.ts` (C1 a C5) y caso C7 en `tests/adapters.test.ts`.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Desde la raíz del worktree (Node 24, `node_modules` instalados):
+
+1. `npx vitest run tests/plantillas-compactas.test.ts tests/adapters.test.ts tests/agents-md-tamano.test.ts tests/respuesta-agents-md.test.ts tests/next-step.test.ts tests/skills-publicadas.test.ts` : 6 archivos, 194 pruebas en verde (corrido).
+2. `npx tsc --noEmit -p tsconfig.json` : sin errores (corrido).
+3. `node -e "..."` de C6 : imprime `iguales` (corrido).
+4. `valmen secrets` : sin hallazgos (corrido).
+5. Manual (C11, no verificado): leer «Continuar un ticket» en `AGENTS.md` y el paso 1 de la skill frente a `packages/engine/src/resume.ts:195-202`; tras integrar, `valmen sync --check` sin diferencias en el checkout principal.
 
 ## QA
 
@@ -148,7 +157,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-08",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": null,
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual: sesión de implementación sin números expuestos",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -212,6 +237,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-08",
+    "at": "2026-10-08T22:03:47.796Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-08",
+    "at": "2026-10-08T22:05:04.874Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-08",
+    "at": "2026-10-08T22:05:09.591Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
