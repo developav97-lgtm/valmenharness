@@ -4,7 +4,7 @@ id: FEATURE-SERVER-ACTIVIDAD-AGENTES-20261008
 title: Leer qué hace cada subagente de la corrida a partir de sus transcripts
 type: FEATURE
 module: SERVER
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -71,37 +71,37 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1: El lector devuelve una fila por cada `agent-<id>.jsonl` de la sesión orquestadora.
+- [x] C1: El lector devuelve una fila por cada `agent-<id>.jsonl` de la sesión orquestadora.
       <!-- test: npx vitest run tests/actividad-agentes.test.ts -->
-- [ ] C2: Cada fila trae la descripción del `meta.json` del subagente.
+- [x] C2: Cada fila trae la descripción del `meta.json` del subagente.
       <!-- test: npx vitest run tests/actividad-agentes.test.ts -->
-- [ ] C3: Cada fila trae el ticket nombrado en el primer mensaje, o null si no lo nombra.
+- [x] C3: Cada fila trae el ticket nombrado en el primer mensaje, o null si no lo nombra.
       <!-- test: npx vitest run tests/actividad-agentes.test.ts -->
-- [ ] C4: Cada fila trae modelo, esfuerzo, rama y carpeta tomados del transcript.
+- [x] C4: Cada fila trae modelo, esfuerzo, rama y carpeta tomados del transcript.
       <!-- test: npx vitest run tests/actividad-agentes.test.ts -->
-- [ ] C5: Cada fila trae el nombre de la última herramienta usada con su hora.
+- [x] C5: Cada fila trae el nombre de la última herramienta usada con su hora.
       <!-- test: npx vitest run tests/actividad-agentes.test.ts -->
-- [ ] C6: Una línea cortada al final del transcript no impide leer el resto del agente.
+- [x] C6: Una línea cortada al final del transcript no impide leer el resto del agente.
       <!-- test: npx vitest run tests/actividad-agentes.test.ts -->
-- [ ] C7: Un agente con último evento reciente y sin permiso pendiente está `trabajando`.
+- [x] C7: Un agente con último evento reciente y sin permiso pendiente está `trabajando`.
       <!-- test: npx vitest run tests/actividad-agentes.test.ts -->
-- [ ] C8: Un agente con más de 60 s sin eventos, o con una herramienta sin resultado, está `esperando`.
+- [x] C8: Un agente con más de 60 s sin eventos, o con una herramienta sin resultado, está `esperando`.
       <!-- test: npx vitest run tests/actividad-agentes.test.ts -->
-- [ ] C9: Un agente cuyo último mensaje tiene `stop_reason` end_turn está `termino`.
+- [x] C9: Un agente cuyo último mensaje tiene `stop_reason` end_turn está `termino`.
       <!-- test: npx vitest run tests/actividad-agentes.test.ts -->
-- [ ] C10: Exportar las funciones de `claude.ts` no cambia el comportamiento de la lectura de sesiones.
+- [x] C10: Exportar las funciones de `claude.ts` no cambia el comportamiento de la lectura de sesiones.
       <!-- test: npx vitest run tests/claude.test.ts -->
-- [ ] C11: La fila lleva el estado real del ticket leído del registro.
+- [x] C11: La fila lleva el estado real del ticket leído del registro.
       <!-- test: npx vitest run tests/actividad-agentes.test.ts -->
-- [ ] C12: La fase confirmada viene del registro de actividad y la inferida solo aparece cuando falta aquella.
+- [x] C12: La fase confirmada viene del registro de actividad y la inferida solo aparece cuando falta aquella.
       <!-- test: npx vitest run tests/actividad-agentes.test.ts -->
-- [ ] C13: `GET /api/corrida/agentes` responde 200 con la lista de agentes y 200 con lista vacía si no hay sesión orquestadora.
+- [x] C13: `GET /api/corrida/agentes` responde 200 con la lista de agentes y 200 con lista vacía si no hay sesión orquestadora.
       <!-- test: npx vitest run tests/actividad-agentes.test.ts -->
-- [ ] C14: La respuesta no contiene texto de prompts, entradas ni resultados de herramientas del transcript.
+- [x] C14: La respuesta no contiene texto de prompts, entradas ni resultados de herramientas del transcript.
       <!-- test: npx vitest run tests/actividad-agentes.test.ts -->
-- [ ] C15: Un parámetro `sesion` con separadores de ruta se rechaza con 400.
+- [x] C15: Un parámetro `sesion` con separadores de ruta se rechaza con 400.
       <!-- test: npx vitest run tests/actividad-agentes.test.ts -->
-- [ ] C16: El tipado del servidor compila y las rutas existentes siguen respondiendo igual.
+- [x] C16: El tipado del servidor compila y las rutas existentes siguen respondiendo igual.
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
 - [ ] C17: Con `valmen serve` y una corrida real, la ruta lista a los subagentes activos.
       <!-- verify: manual -->
@@ -114,11 +114,24 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+- `packages/server/src/claude.ts`: se exportan `carpetasDelProyecto`, `estaDentro` y `archivosDeSubagentes` sin tocar su cuerpo.
+- `packages/server/src/agentes.ts` (nuevo): `leerAgentesDeCorrida(root, { home, ahora, sesion, paths, project })`. Localiza la sesión orquestadora (la de mayor mtime con carpeta `subagents/`, modificada en las últimas 24 h, o la forzada con `sesion`), lee `meta.json` y recorre cada transcript tolerando líneas cortadas. Cache por (ruta, mtime, tamaño). Estado con reloj inyectado: `termino` (end_turn sin herramienta pendiente), `esperando` (más de 60 s sin eventos o `tool_use` sin resultado), `trabajando`. Esfuerzo: campo `effort` (o `perTurnEffort`) de los eventos del asistente; null si falta.
+- `faseConfirmada`: el registro de actividad de ejecución no guarda una «fase» sino estados (`started`, `active`, `waiting`, `finished`, `failed`); se devuelve el último estado registrado para el ticket (mayor cursor), o null sin proyecto autorizado. `faseInferida` (solo si falta la confirmada) se deduce del nombre de la última herramienta: Edit/Write → implementando, Read/Grep/Glob → analizando, Bash → ejecutando, herramientas de compuerta → compuerta.
+- `packages/server/src/server.ts`: ruta `GET /api/corrida/agentes?sesion=` junto a `/api/journeys`, con `sesion` validada (`^[A-Za-z0-9_-]{1,128}$`, 400 si no) y `ServerContext.home` opcional para inyectar el HOME en pruebas. La respuesta es una lista blanca de campos.
+- `tests/actividad-agentes.test.ts` (nuevo): 21 pruebas con transcripts sintéticos.
+- C17 (validación con `valmen serve` y una corrida real) queda sin marcar: es manual y la hace el responsable.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Desde la raíz del repositorio (Node 24, sin red; ninguna prueba lee el HOME real):
+
+- `npx tsc --noEmit -p tsconfig.json` — esperado: sin errores.
+- `npx vitest run tests/actividad-agentes.test.ts tests/claude.test.ts tests/api-rutas.test.ts tests/api-fases-api.test.ts` — esperado: 4 archivos, 67 pruebas en verde.
+- `valmen secrets` — esperado: sin secretos.
+
+Validación manual (C17): con una corrida real de subagentes abierta, `valmen serve` y `curl http://127.0.0.1:<puerto>/api/corrida/agentes` debe listar los subagentes activos con su ticket, estado, rama y última herramienta; `?sesion=<id>` fuerza otra sesión y `?sesion=../x` devuelve 400.
+
+Resultado de la corrida del implementador: todo en verde (67 pruebas; tsc limpio; secretos limpios). La suite completa no se corrió (la corre el orquestador al integrar).
 
 ## QA
 
@@ -147,7 +160,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-08",
+    "session_reference": null,
+    "model": "anthropic/claude-sonnet-5-5",
+    "reasoning_effort": null,
+    "notes": "Subagente de Claude Code dedicado solo a este ticket; la sesión no expone agregado de tokens",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:subagente",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -211,6 +240,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:25:34.296Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:36:32.118Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-08",
+    "at": "2026-10-08T15:36:41.763Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```

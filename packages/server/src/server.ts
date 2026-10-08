@@ -131,6 +131,7 @@ import { listFeatureRows, readFeatureDetail, summarizeFeatures } from "./feature
 import { guardarFotoEnTicket, leerLineaDeTiempo } from "./timeline.js";
 import { readExecutionPanel, readExecutionVisibleMessages } from "./execution-panel.js";
 import { readSourceFreshness } from "./source-freshness.js";
+import { esSesionValida, leerAgentesDeCorrida } from "./agentes.js";
 import {
   approveGate,
   listGateRows,
@@ -173,6 +174,8 @@ export interface ServerContext {
   readonly bindingsFile?: string;
   readonly credentialsFile: string;
   readonly env: NodeJS.ProcessEnv;
+  /** HOME de donde leer las transcripciones de Claude Code; inyectable para pruebas. */
+  readonly home?: string;
   /** Inyectable para que las pruebas no salgan a la red. */
   readonly fetchImpl?: typeof fetch;
   /**
@@ -1002,6 +1005,35 @@ export async function handleApi(
     } catch (caught) {
       return { status: 400, body: { error: toFailure(caught).message } };
     }
+  }
+
+  // GET /api/corrida/agentes?sesion=
+  //
+  // Qué hace cada subagente de la corrida orquestada, leído de sus transcripts.
+  // Solo lectura y lista blanca de metadatos: nunca texto de prompts ni de
+  // herramientas. `sesion` es un identificador simple, no una ruta.
+  if (method === "GET" && path === "/api/corrida/agentes") {
+    const sesion = valorDeQuery(query, "sesion");
+    if (sesion !== undefined && !esSesionValida(sesion)) {
+      return { status: 400, body: { error: "El parámetro `sesion` debe ser un identificador simple." } };
+    }
+    let project: AuthorizedProject | undefined;
+    try {
+      project = proyectoAutorizadoParaEjecucion(context);
+    } catch {
+      project = undefined; // sin proyecto autorizado la fase confirmada es null
+    }
+    return {
+      status: 200,
+      body: {
+        agentes: leerAgentesDeCorrida(context.root, {
+          paths,
+          ...(context.home === undefined ? {} : { home: context.home }),
+          ...(sesion === undefined ? {} : { sesion }),
+          ...(project === undefined ? {} : { project }),
+        }),
+      },
+    };
   }
 
   // GET /api/execution-freshness

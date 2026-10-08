@@ -149,7 +149,7 @@ function normal(texto: string): string {
  * todo lo que no es alfanumérico, o solo las barras y los puntos. Sin símbolos raros
  * en la ruta dan lo mismo.
  */
-function carpetasDelProyecto(base: string, root: string): string[] {
+export function carpetasDelProyecto(base: string, root: string): string[] {
   const ruta = resolve(root);
   const nombres = new Set(
     [ruta.replace(/[^a-zA-Z0-9]/g, "-"), ruta.replace(/[/\\.]/g, "-")].map(normal),
@@ -175,7 +175,7 @@ function carpetasDelProyecto(base: string, root: string): string[] {
 }
 
 /** `true` si la ruta está dentro del proyecto, o es el proyecto. */
-function estaDentro(ruta: string, root: string): boolean {
+export function estaDentro(ruta: string, root: string): boolean {
   const diferencia = relative(normal(resolve(root)), normal(resolve(ruta)));
   return (
     diferencia === "" ||
@@ -495,7 +495,7 @@ function leerTranscripcion(
 }
 
 /** Los archivos de subagentes de una sesión: `<carpeta>/<id>/subagents/agent-*.jsonl`. */
-function archivosDeSubagentes(rutaDeSesion: string): string[] {
+export function archivosDeSubagentes(rutaDeSesion: string): string[] {
   const carpeta = join(dirname(rutaDeSesion), basename(rutaDeSesion, ".jsonl"), "subagents");
   let nombres: string[];
   try {
