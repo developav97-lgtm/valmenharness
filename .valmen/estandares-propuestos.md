@@ -73,3 +73,15 @@ pasan a `.valmen/rules/estandares-<área>.md`, que es lo que llega al
 **Regla:** En FEATURE-ADAPTER-CAPACIDADES-20261001, el gate analysis bloqueó cuatro veces diagnostico_explica_el_sintoma (0.04, 0.02, 0.08) mientras el mismo recibo clasificaba el análisis como completa y daba >=0.97 a causa_especifica, nombra_archivos_reales y riesgos_cubren_impactos. El refinamiento debe detectar esa contradicción: si clasificación es completa y las tres comprobaciones estructurales superan approveAt, una única proposición semántica contradictoria no puede decidir block; se degrada a review y exige decisión humana. La corrección se valida con una prueba determinista del vector de recibo anterior, que debe devolver review, y con un caso control donde falla causa o archivos, que debe seguir devolviendo block.
 
 **Por qué:** Sale del aprendizaje AP-004 (2026-10-03), visto en FEATURE-ADAPTER-CAPACIDADES-20261001.
+
+### [EST-007] Preguntar al PO con AskUserQuestion por defecto
+
+- **Área:** proceso
+- **Propuesto:** 2026-10-09
+- **Estado:** aceptado
+- **Decidido:** 2026-10-09 · «lo de AskUserQuestion va en ambos proyectos.. la idea es que siempre me pregunte asi por defecto cuando necesite una respuesta no que tenga yo que decirle»
+- **Tickets:** FEATURE-WEB-VISTA-TEXTO-PREGUNTA-20261008, FEATURE-SERVER-TEXTO-PREGUNTA-RESPUESTA-20261008
+
+**Regla:** Cuando el agente necesite una respuesta o una decisión del PO, la hace con la herramienta AskUserQuestion —opciones con su efecto, la recomendada primero y marcada «(Recomendado)»— y no la plantea en texto; solo pide en texto lo que no es una decisión (un dato, un archivo). La respuesta del PO por la herramienta cuenta como su frase literal para registrar la decisión.
+
+**Por qué:** El 2026-10-09 el PO probó el aviso de pregunta de la vista Agentes y tuvo que pedirle al agente «hazme la pregunta con AskUserQuestion»; la vista existe para mostrar esas preguntas, y dijo que quiere que el agente pregunte así siempre por defecto, en ambos proyectos, sin que él tenga que decírselo.
