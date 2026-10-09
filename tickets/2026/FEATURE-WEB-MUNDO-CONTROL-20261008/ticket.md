@@ -4,8 +4,8 @@ id: FEATURE-WEB-MUNDO-CONTROL-20261008
 title: Mundo centro de control con sala, personajes, señal de pregunta, estático declarado y validación contra el prototipo
 type: FEATURE
 module: WEB
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -13,7 +13,7 @@ migration_impact: false
 docker_impact: false
 risk_level: normal
 created: 2026-10-08
-updated: 2026-10-08
+updated: 2026-10-09
 related_ticket: null
 target_release: null
 released_in: null
@@ -200,15 +200,15 @@ Ningún elemento del pedido nombra algo que el código no tenga: estaciones, est
       <!-- verify: manual -->
 - [x] C34 — R-MUN-005: en el navegador, durante ese cambio el operador sigue sentado en su consola sin desplazarse.
       <!-- verify: manual -->
-- [ ] C35 — R-MUN-008: `## Evidencia` contiene la captura de la vista en escritorio y tema claro junto a la del prototipo con el mismo ancho y tema.
+- [ ] C35 — R-MUN-008: `## Evidencia` contiene la captura de la vista en escritorio y tema claro junto a la del prototipo con el mismo ancho y tema. — no aplica: no se produjeron las capturas y el PO validó el mundo a ojo el 2026-10-09
       <!-- verify: manual -->
-- [ ] C36 — R-MUN-008: `## Evidencia` contiene la captura de la vista en escritorio y tema oscuro junto a la del prototipo con el mismo ancho y tema.
+- [ ] C36 — R-MUN-008: `## Evidencia` contiene la captura de la vista en escritorio y tema oscuro junto a la del prototipo con el mismo ancho y tema. — no aplica: no se produjeron las capturas y el PO validó el mundo a ojo el 2026-10-09
       <!-- verify: manual -->
-- [ ] C37 — R-MUN-008: `## Evidencia` contiene la captura de la vista a 390 px y tema claro junto a la del prototipo con el mismo ancho y tema.
+- [ ] C37 — R-MUN-008: `## Evidencia` contiene la captura de la vista a 390 px y tema claro junto a la del prototipo con el mismo ancho y tema. — no aplica: no se produjeron las capturas y el PO validó el mundo a ojo el 2026-10-09
       <!-- verify: manual -->
-- [ ] C38 — R-MUN-008: `## Evidencia` contiene la captura de la vista a 390 px y tema oscuro junto a la del prototipo con el mismo ancho y tema.
+- [ ] C38 — R-MUN-008: `## Evidencia` contiene la captura de la vista a 390 px y tema oscuro junto a la del prototipo con el mismo ancho y tema. — no aplica: no se produjeron las capturas y el PO validó el mundo a ojo el 2026-10-09
       <!-- verify: manual -->
-- [ ] C39 — R-MUN-008: cada diferencia observada con el prototipo queda anotada en `## Evidencia` con su motivo.
+- [ ] C39 — R-MUN-008: cada diferencia observada con el prototipo queda anotada en `## Evidencia` con su motivo. — no aplica: no se produjeron las capturas y el PO validó el mundo a ojo el 2026-10-09
       <!-- verify: manual -->
 - [x] C40 — Las pruebas existentes del lienzo, del motor, de los estáticos, del marco, de la pastelería y de la vista Agentes siguen pasando.
       <!-- test: npx vitest run tests/vista-lienzo.test.ts tests/motor-escena.test.ts tests/estaticos-web.test.ts tests/vista-marco-responsivo.test.ts tests/mundo-pasteleria.test.ts tests/vista-corrida.test.ts -->
@@ -216,7 +216,32 @@ Ningún elemento del pedido nombra algo que el código no tenga: estaciones, est
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación de la entrega de FEATURE-WEB-MUNDO-CONTROL-20261008",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta verificar sus criterios.",
+    "expected": "Los criterios del ticket se cumplen y el PO valida la pantalla.",
+    "evidence": [
+      "EVIDENCE-001"
+    ],
+    "affected_files": [
+      "packages/server/web/agentes/mundos/control.js",
+      "packages/server/web/index.html",
+      "tests/mundo-control.test.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -248,29 +273,81 @@ Validaciones manuales (hechas por el agente, medidas, sin capturas guardadas):
 Pendiente del responsable (C35-C39): capturas lado a lado con el prototipo (`.valmen/features/vista-agentes/assets/vista-agentes.html`) en 1280 y 390 px, tema claro y oscuro, con las diferencias y su motivo en `## Evidencia`. Diferencias ya conocidas: fuente de respaldo (Segoe UI) en lugar de Chakra Petch (decisión 2); franja sin «OLA n» (decisión 5); el operador que cierra camina hasta la dirección durante los 5 s de salida, con el monitor «CERRADA» fijo en su consola (decisión 6); el punto de una misión entregada no queda en la pista, la pantalla 7 lista los entregados.
 
 Requisitos de ambiente: Node 24, `npm install` hecho y `npm run build` previo a `interfaz-ejecutable`.
+- Resultado del PO: «si se ven bien los 3 mundos» · «A cierralos» (2026-10-09; validó la pantalla con una corrida real).
 
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-09",
+    "build_reference": "commit:8881bbddbff8b3b845c4998cb1cfbbc7c4466dd5",
+    "environment": "macOS, Node 24, main tras integrar; Mission Control del PO en el computador y el iPad",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-09",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "«si se ven bien los 3 mundos» · «A cierralos»"
+  }
+]
 ```
 
 ## Evidencia
 
 ```json
-[]
+[
+  {
+    "id": "EVIDENCE-001",
+    "date": "2026-10-09",
+    "kind": "manual-test",
+    "description": "Suite completa en verde y validación del PO con una corrida real en Mission Control",
+    "reference": "worktree:sha256:3dcbcfdc3e67e5184829c6e8d3ab3523db6803755c37b0de3a737845efe6b334",
+    "point_id": "POINT-001"
+  }
+]
 ```
 
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-09",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "«si se ven bien los 3 mundos» · «A cierralos»"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-09",
+    "technical_summary": "Mundo centro de control (mundos/control.js) con pista de misiones, consolas de operadores y franja de turno; las capturas contra el prototipo (C35-C39) no se produjeron y el PO validó el mundo a ojo.",
+    "functional_summary": "Una sala de control donde cada misión avanza por las estaciones del ticket.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "unreleased: entra con la feature vista-agentes"
+  }
+]
 ```
 
 ## Consumo de IA
@@ -291,6 +368,36 @@ Requisitos de ambiente: Node 24, `npm install` hecho y `npm run build` previo a 
     "source": "manual:subagente-implementacion",
     "confidence": "low",
     "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-09",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Subagentes por fase; sin números por ticket.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:sesiones de Claude Code de la corrida orquestada vista-agentes",
+    "confidence": "low",
+    "id": "CONSUMO-002"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-09",
+    "session_reference": "4f9b1b12-ced4-4132-9151-c3a025ede085",
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. Sesión **compartida**: trabajó 15 tickets (FEATURE-SERVER-SESION-PRINCIPAL-20261008 ×130, FEATURE-WEB-VISTA-LIENZO-20261008 ×119, FEATURE-WEB-MOTOR-ESCENA-20261008 ×118, FEATURE-WEB-MUNDO-PASTELERIA-20261008 ×117, IMPROVEMENT-WEB-VISTA-RENOMBRAR-AGENTES-20261008 ×107), así que su costo no se reparte y acá no se registran números. Costo completo de la sesión: no declarado por el proveedor, 6659235 tokens. Registralo en el ticket cuya sesión sea propia, o declaralo compartido donde corresponda. Sesión \"Feature vista-agentes\".",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "claude:4f9b1b12-ced4-4132-9151-c3a025ede085",
+    "confidence": "high",
+    "id": "CONSUMO-003"
   }
 ]
 ```
@@ -401,6 +508,141 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:14.233Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:14.638Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:14.942Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:15.279Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:15.608Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:15.970Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:16.365Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:16.691Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:17.000Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:17.306Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:17.611Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:17.941Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:19.875Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-025",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:20.091Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-026",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:20.465Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
