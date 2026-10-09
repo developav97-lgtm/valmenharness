@@ -284,10 +284,17 @@ export const runClaudeCli: ClaudeCliRunner = (run) =>
     hijo.stdin?.end(run.stdin);
   });
 
+/** Una línea, sin espacios repetidos, de a lo más 300 caracteres. */
+function limpiar(texto: string): string {
+  return texto.replace(/\s+/g, " ").trim().slice(0, 300);
+}
+
 /** La parte del resultado que importa, ya leída. */
 interface ResultadoDelCli {
   readonly is_error?: boolean;
   readonly subtype?: string;
+  readonly terminal_reason?: string;
+  readonly errors?: readonly unknown[];
   readonly api_error_status?: number | null;
   readonly result?: string;
   readonly structured_output?: unknown;
@@ -426,8 +433,24 @@ export async function callClaudeCli(request: ClaudeCliRequest): Promise<ChatResu
       typeof resultado.api_error_status === "number"
         ? `HTTP ${resultado.api_error_status}`
         : "un error";
+    // Cuando el CLI falla sin `result` (un tope de reintentos de salida estructurada, por
+    // ejemplo) lo que explica el fallo está en el subtipo, el motivo de término, `errors` y
+    // stderr: se conserva en el mensaje, y «sin detalle» queda para cuando de verdad no hay nada.
+    const primerError =
+      Array.isArray(resultado.errors) && resultado.errors.length > 0
+        ? limpiar(typeof resultado.errors[0] === "string" ? resultado.errors[0] : JSON.stringify(resultado.errors[0]))
+        : "";
+    const cola = limpiar(salida.stderr);
+    const partes = [
+      texto,
+      resultado.subtype === undefined ? "" : `subtype ${resultado.subtype}`,
+      resultado.terminal_reason === undefined ? "" : `terminal_reason ${resultado.terminal_reason}`,
+      primerError === "" ? "" : `errors[0] ${primerError}`,
+      cola === "" ? "" : `stderr ${cola}`,
+    ].filter((parte) => parte !== "");
+    if (partes.length > 0) partes.push(`código de salida ${salida.status ?? "?"}`);
     throw new ChatError(
-      `${NOMBRE} respondió ${estado}: ${texto === "" ? "sin detalle" : texto}.${REMEDIO[codigo] ?? ""}`,
+      `${NOMBRE} respondió ${estado}: ${partes.length === 0 ? "sin detalle" : partes.join("; ")}.${REMEDIO[codigo] ?? ""}`,
       codigo,
     );
   }

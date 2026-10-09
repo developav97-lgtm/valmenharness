@@ -116,6 +116,15 @@ export interface EvaluationOutcome {
    * significa que la verificación respaldó todo y el modelo caro no se llamó.
    */
   readonly escalations?: readonly import("@valmen/gate").EscalationRecord[];
+  /**
+   * El evaluador que se pidió, cuando no es el que respondió.
+   *
+   * Solo aparece si la cascada falló y la evaluación se degradó al evaluador por defecto:
+   * el recibo declara los dos, porque `evaluator` solo dice quién respondió.
+   */
+  readonly requestedEvaluator?: Exclude<EvaluatorId, "auto">;
+  /** El error real del evaluador pedido, cuando se degradó. Va con `requestedEvaluator`. */
+  readonly evaluatorFailure?: { readonly code: string; readonly message: string };
 }
 
 /** Opciones de la evaluación. */
@@ -354,6 +363,33 @@ function partirEnTandas(propositions: readonly Proposition[]): Proposition[][] {
  * usan el mismo.
  */
 async function runSemanticEnTandas(
+  chosen: "jev" | "llm-judge" | "cascade",
+  options: SelectOptions,
+): Promise<EvaluationOutcome> {
+  if (chosen === "cascade") {
+    try {
+      return await runSemanticEnTandasDe(chosen, options);
+    } catch (caught) {
+      const error = caught as { code?: string; message?: string };
+      // Un fallo de credencial no se tapa con otro evaluador: hay que verlo. Cualquier otro
+      // fallo de la cascada degrada al evaluador por defecto, sin reintentar la cascada: el
+      // fallo de salida estructurada es determinista y repetirlo solo gasta otra llamada.
+      if (error.code === "AUTH" || error.code === "CREDENTIAL_MISSING") throw caught;
+      const respaldo = await runSemanticEnTandasDe("jev", options);
+      return {
+        ...respaldo,
+        requestedEvaluator: "cascade",
+        evaluatorFailure: {
+          code: error.code ?? "UNKNOWN",
+          message: error.message ?? String(caught),
+        },
+      };
+    }
+  }
+  return runSemanticEnTandasDe(chosen, options);
+}
+
+async function runSemanticEnTandasDe(
   chosen: "jev" | "llm-judge" | "cascade",
   options: SelectOptions,
 ): Promise<EvaluationOutcome> {

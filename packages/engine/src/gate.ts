@@ -70,7 +70,13 @@ import { appendReceipt, currentReceipts, readReceipts } from "./receipts.js";
 import { interfazDelTicket } from "./interfaz.js";
 import { resolveGateMode } from "./gate-promotion.js";
 import { runTestSetup } from "./test-setup.js";
-import { decideInCode, renderPreReview, reviewBeforeGate } from "./revision-previa.js";
+import {
+  type CitaComprobada,
+  citedFiles,
+  decideInCode,
+  renderPreReview,
+  reviewBeforeGate,
+} from "./revision-previa.js";
 import { type ThresholdOutcome, applyThresholds, validateThresholdTargets } from "./thresholds.js";
 
 /** Convierte preguntas ya validadas en proposiciones que el motor puro decide. */
@@ -118,6 +124,36 @@ export function buildIntegrationValidation(paths: RegistryPaths, ticketId: strin
       alcanceDeclarado: parsed.sections["Descripción funcional"].trim(),
     }),
     propositions: Object.freeze(configuredPropositions(paths.root, "integration")),
+  };
+}
+
+/** Las citas comprobadas, una por línea con su resultado, para el estado del evaluador. */
+function renderCitas(citas: readonly CitaComprobada[]): string {
+  return citas
+    .map((cita) => `${cita.cita}: ${cita.resultado}${cita.detalle === undefined ? "" : ` (${cita.detalle})`}`)
+    .join("\n");
+}
+
+/** El check mecánico `archivos_existen`: lo decide el código con las citas comprobadas. */
+function chequeoDeArchivosCitados(citas: readonly CitaComprobada[]): MechanicalCheck {
+  const description = "Los archivos citados existen.";
+  if (citas.length === 0) {
+    return {
+      id: "archivos_existen",
+      description,
+      result: "skip",
+      detail: "el diagnóstico no cita rutas comprobables en este repositorio",
+    };
+  }
+  const mal = citas.filter((c) => c.resultado === "no_existe" || c.resultado === "linea_fuera");
+  return {
+    id: "archivos_existen",
+    description,
+    result: mal.length === 0 ? "pass" : "warn",
+    detail:
+      mal.length === 0
+        ? `${citas.filter((c) => c.resultado === "existe").length} ruta(s) citada(s) existen`
+        : `no resuelven: ${mal.map((c) => c.cita).join(", ")}`,
   };
 }
 
@@ -433,6 +469,17 @@ export async function runGate(
     state = buildGateState(ticket.text);
     checks = runMechanicalChecks(ticket.text);
     impacts = declaredImpactIds(parseTicket(ticket.text));
+    // Las rutas que cita el diagnóstico, comprobadas en código: el evaluador recibe el
+    // resultado como dato en vez de adivinar si los archivos existen. Solo en las
+    // compuertas que pasan por la revisión previa, y solo si hay algo citado: sin citas el
+    // estado queda como antes.
+    if ((definition.id === "analysis" || definition.id === "plan") && definition.commandPropositions !== true) {
+      const citas = citedFiles(paths.root, ticket.text);
+      if (citas.length > 0) {
+        state = { ...state, archivos_citados: renderCitas(citas) };
+      }
+      checks = [...checks, chequeoDeArchivosCitados(citas)];
+    }
   } catch (caught) {
     const failure = toFailure(caught);
     return { stdout: "", stderr: failure.message, exitCode: failure.exitCode };
@@ -840,6 +887,12 @@ export async function runGate(
     notApplicable: noAplican,
     thresholds: umbrales.applied,
     evaluatorKey: huellaDelEvaluador,
+    ...(evaluation.requestedEvaluator === undefined
+      ? {}
+      : { requestedEvaluator: evaluation.requestedEvaluator }),
+    ...(evaluation.evaluatorFailure === undefined
+      ? {}
+      : { evaluatorFailure: evaluation.evaluatorFailure }),
     ...(forzado === undefined ? {} : { forced: forzado }),
   });
 
@@ -873,6 +926,13 @@ export async function runGate(
       "cascada verificada: produce el modelo barato y el verificador escala lo no respaldado",
   }[evaluation.evaluator];
   lines.push("", `  Evaluación (${etiquetaEvaluador})`);
+  if (evaluation.requestedEvaluator !== undefined && evaluation.evaluatorFailure !== undefined) {
+    lines.push(
+      `    Evaluador pedido ${evaluation.requestedEvaluator} · efectivo ${evaluation.evaluator}: ` +
+        `el pedido falló (${evaluation.evaluatorFailure.code}) y no se reintentó.`,
+      `    Error: ${evaluation.evaluatorFailure.message}`,
+    );
+  }
   for (const item of decision.propositions) {
     // El orden de las marcas importa y estaba al revés. Se elegía por `inBand`
     // primero, así que una proposición de **contexto** con el valor en la banda

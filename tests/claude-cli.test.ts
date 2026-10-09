@@ -746,3 +746,64 @@ describe("el ejecutor real, contra un «CLI» de laboratorio", () => {
     expect(salidaReal.timedOut).toBe(true);
   });
 });
+
+describe("un error del CLI sin result deja el error real en el mensaje", () => {
+  async function fallo(respuesta: ClaudeCliOutput): Promise<ChatError> {
+    const { runner } = ejecutor(respuesta);
+    try {
+      await callClaudeCli({ model: "claude-sonnet-5-5", messages: USUARIO, runner });
+    } catch (caught) {
+      expect(caught).toBeInstanceOf(ChatError);
+      return caught as ChatError;
+    }
+    throw new Error("se esperaba un ChatError");
+  }
+
+  const SIN_RESULT = {
+    is_error: true,
+    subtype: "error_max_structured_output_retries",
+    terminal_reason: "structured_output_retry_exhausted",
+    result: null,
+    errors: ["Failed to provide valid structured output after 5 attempts"],
+  };
+
+  it("C12. el mensaje contiene el subtipo del error", async () => {
+    const error = await fallo(salida(SIN_RESULT, 1));
+    expect(error.message).toContain("error_max_structured_output_retries");
+  });
+
+  it("C13. el mensaje contiene el código de salida del proceso", async () => {
+    const error = await fallo(salida(SIN_RESULT, 7));
+    expect(error.message).toContain("código de salida 7");
+  });
+
+  it("C14. el mensaje contiene los primeros 300 caracteres de stderr", async () => {
+    const stderr = `${"e".repeat(300)}FIN`;
+    const error = await fallo({ ...salida({ is_error: true, subtype: "error_during_execution" }, 1), stderr });
+    expect(error.message).toContain("e".repeat(300));
+    expect(error.message).not.toContain("FIN");
+  });
+
+  it("C15. el mensaje contiene el primer elemento de errors", async () => {
+    const error = await fallo(salida({ is_error: true, errors: ["primero raro", "segundo"] }, 1));
+    expect(error.message).toContain("primero raro");
+    expect(error.message).not.toContain("segundo");
+  });
+
+  it("C16. control: un 429 con texto conserva RATE_LIMIT", async () => {
+    const error = await fallo(salida({ is_error: true, api_error_status: 429, result: "limit" }, 1));
+    expect(error.code).toBe("RATE_LIMIT");
+    expect(error.message).toContain("limit");
+  });
+
+  it("C17. «sin detalle» solo aparece cuando no hay result, subtype, errors ni stderr", async () => {
+    const vacio = await fallo(salida({ is_error: true }, 1));
+    expect(vacio.message).toContain("sin detalle");
+    const conSubtipo = await fallo(salida({ is_error: true, subtype: "error_during_execution" }, 1));
+    expect(conSubtipo.message).not.toContain("sin detalle");
+    const conErrors = await fallo(salida({ is_error: true, errors: ["x"] }, 1));
+    expect(conErrors.message).not.toContain("sin detalle");
+    const conStderr = await fallo({ ...salida({ is_error: true }, 1), stderr: "algo" });
+    expect(conStderr.message).not.toContain("sin detalle");
+  });
+});

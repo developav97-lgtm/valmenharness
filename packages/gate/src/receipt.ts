@@ -217,6 +217,14 @@ export interface GateReceipt {
   readonly evaluatorKey?: string;
   /** Si la corrida repite una anterior a propósito: el motivo y el recibo que repite. */
   readonly forced?: { readonly reason: string; readonly receiptId: string };
+  /**
+   * El evaluador que se pidió, si no fue el que respondió (la cascada falló y se degradó).
+   *
+   * Es un dato de auditoría y no entra en `stateHash` ni en `gateHash`.
+   */
+  readonly requestedEvaluator?: string;
+  /** El error real del evaluador pedido: su código y su mensaje. Va con `requestedEvaluator`. */
+  readonly evaluatorFailure?: { readonly code: string; readonly message: string };
 }
 
 /** Los dos extremos de un escalamiento, en lo que el recibo necesita. */
@@ -333,6 +341,8 @@ export interface ReceiptInput {
   readonly notApplicable?: readonly NotApplicableRecord[];
   readonly evaluatorKey?: string;
   readonly forced?: { readonly reason: string; readonly receiptId: string };
+  readonly requestedEvaluator?: string;
+  readonly evaluatorFailure?: { readonly code: string; readonly message: string };
 }
 
 /** Construye un recibo a partir de una decisión. */
@@ -381,6 +391,10 @@ export function buildReceipt(input: ReceiptInput): GateReceipt {
       : { notApplicable: input.notApplicable }),
     ...(input.evaluatorKey === undefined ? {} : { evaluatorKey: input.evaluatorKey }),
     ...(input.forced === undefined ? {} : { forced: input.forced }),
+    ...(input.requestedEvaluator === undefined
+      ? {}
+      : { requestedEvaluator: input.requestedEvaluator }),
+    ...(input.evaluatorFailure === undefined ? {} : { evaluatorFailure: input.evaluatorFailure }),
   };
 }
 

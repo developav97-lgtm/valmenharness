@@ -15,7 +15,7 @@
  * La misma función corre a mano (`valmen precheck`): lo que dice a mano es lo que la
  * compuerta dirá, porque es la misma.
  */
-import { existsSync, statSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 import { parseTicket, stripHtmlComments } from "@valmen/core";
@@ -127,13 +127,98 @@ function pareceArchivo(token: string): boolean {
   return /^[\w@.\-/]+\.[A-Za-z0-9]{1,6}(?::\d+(?:-\d+)?)?$/.test(token) && !token.includes("://");
 }
 
-/** ¿La raíz es un repositorio donde se pueden comprobar archivos? */
+/**
+ * ¿La raíz es un repositorio donde se pueden comprobar archivos?
+ *
+ * En un checkout `.git` es un directorio; en un worktree es un archivo cuya primera línea
+ * empieza por «gitdir:». Las dos formas son un repositorio.
+ */
 function esRepositorio(root: string): boolean {
   try {
-    return statSync(join(root, ".git")).isDirectory();
+    const git = join(root, ".git");
+    const estado = statSync(git);
+    if (estado.isDirectory()) return true;
+    if (!estado.isFile()) return false;
+    const primera = readFileSync(git, "utf8").split("\n", 1)[0] ?? "";
+    return primera.trimStart().startsWith("gitdir:");
   } catch {
     return false;
   }
+}
+
+/** Cómo quedó una ruta que cita el diagnóstico. */
+export type ResultadoDeCita = "existe" | "no_existe" | "linea_fuera" | "omitida";
+
+/** Una ruta citada en el diagnóstico, comprobada en código. */
+export interface CitaComprobada {
+  /** La cita tal como está escrita, con su línea si la trae. */
+  readonly cita: string;
+  /** La ruta sin el sufijo de línea. */
+  readonly ruta: string;
+  /** La línea citada (el extremo mayor de un rango), si la trae. */
+  readonly linea?: number;
+  readonly resultado: ResultadoDeCita;
+  /** El motivo, para `linea_fuera` (largo del archivo) y `omitida`. */
+  readonly detalle?: string;
+}
+
+/** El número de líneas de un archivo de texto (sin contar el salto final). */
+function largoEnLineas(ruta: string): number {
+  const texto = readFileSync(ruta, "utf8");
+  if (texto === "") return 0;
+  const partes = texto.split("\n");
+  return texto.endsWith("\n") ? partes.length - 1 : partes.length;
+}
+
+/**
+ * Las rutas que cita el diagnóstico, comprobadas en código contra la raíz.
+ *
+ * Una ruta que empieza por «/» o «../» no es relativa a la raíz —es una ruta de URL o de
+ * otra carpeta— y queda `omitida` con su motivo. Una línea mayor que el largo del archivo
+ * es `linea_fuera`. Fuera de un repositorio no hay dónde comprobar y devuelve una lista
+ * vacía.
+ */
+export function citedFiles(root: string, ticketText: string): CitaComprobada[] {
+  if (!esRepositorio(root)) return [];
+  const diagnostico = lineasDe(secciones(ticketText)["Diagnóstico"] ?? "").join("\n");
+  const vistas = new Set<string>();
+  const resultado: CitaComprobada[] = [];
+  for (const token of citados(diagnostico).filter(pareceRuta)) {
+    if (vistas.has(token)) continue;
+    vistas.add(token);
+    const sufijo = /:(\d+)(?:-(\d+))?$/.exec(token);
+    const ruta = token.replace(/:\d+(?:-\d+)?$/, "");
+    const linea = sufijo === null ? undefined : Number(sufijo[2] ?? sufijo[1]);
+    const base = { cita: token, ruta, ...(linea === undefined ? {} : { linea }) };
+    if (ruta.startsWith("/") || ruta.startsWith("../")) {
+      resultado.push({ ...base, resultado: "omitida", detalle: "no es relativa a la raíz" });
+      continue;
+    }
+    const absoluta = join(root, ruta);
+    if (!existsSync(absoluta)) {
+      resultado.push({ ...base, resultado: "no_existe" });
+      continue;
+    }
+    if (linea !== undefined) {
+      try {
+        if (statSync(absoluta).isFile()) {
+          const largo = largoEnLineas(absoluta);
+          if (linea > largo) {
+            resultado.push({
+              ...base,
+              resultado: "linea_fuera",
+              detalle: `el archivo tiene ${largo} línea(s)`,
+            });
+            continue;
+          }
+        }
+      } catch {
+        // Si no se puede leer, la existencia ya está comprobada: no se inventa un hallazgo.
+      }
+    }
+    resultado.push({ ...base, resultado: "existe" });
+  }
+  return resultado;
 }
 
 /**
@@ -157,17 +242,22 @@ export function reviewBeforeGate(input: {
   findings.push(...marcadoresVacios("Descripción funcional", s["Descripción funcional"] ?? ""));
   findings.push(...marcadoresVacios("Diagnóstico", s["Diagnóstico"] ?? ""));
 
-  const diagnostico = lineasDe(s["Diagnóstico"] ?? "").join("\n");
   if (esRepositorio(input.root)) {
-    const vistos = new Set<string>();
-    for (const token of citados(diagnostico).filter(pareceRuta)) {
-      const ruta = token.replace(/:\d+(?:-\d+)?$/, "");
-      if (vistos.has(ruta)) continue;
-      vistos.add(ruta);
-      if (!existsSync(join(input.root, ruta))) {
+    const sinExistir = new Set<string>();
+    for (const cita of citedFiles(input.root, input.ticketText)) {
+      if (cita.resultado === "omitida") {
+        skipped.push(`archivos citados: \`${cita.ruta}\` ${cita.detalle ?? "no se comprueba"}, no se comprueba`);
+      } else if (cita.resultado === "no_existe") {
+        if (sinExistir.has(cita.ruta)) continue;
+        sinExistir.add(cita.ruta);
         findings.push({
           id: "archivo_inexistente",
-          message: `«Diagnóstico»: cita \`${ruta}\`, que no existe en el repositorio.`,
+          message: `«Diagnóstico»: cita \`${cita.ruta}\`, que no existe en el repositorio.`,
+        });
+      } else if (cita.resultado === "linea_fuera") {
+        findings.push({
+          id: "archivo_inexistente",
+          message: `«Diagnóstico»: cita \`${cita.cita}\`, pero ${cita.detalle ?? "la línea no existe"}.`,
         });
       }
     }
