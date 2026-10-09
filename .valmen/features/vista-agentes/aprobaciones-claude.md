@@ -161,3 +161,12 @@ módulo WEB sí la cubre la autorización APA-20261009-2cf4af.
 El PO pidió además, para ese mismo ticket (2026-10-09): «Dale, aprueba el plan cuando llegue». El plan se aprueba
 por la autorización APA-20261009-2cf4af (atribuida a ella, no a Claude), y los supuestos que traiga se resuelven
 con la opción por defecto propuesta, anotados aquí para la revisión del PO.
+
+- **IMPROVEMENT-WEB-MUNDOS-CORRECCIONES · plan · GR-20261009-IMPROVEMENT-WEB-MUNDOS-CORRECCIONES-20261009-plan-1** ·
+  approve por claude (REVIEW) y aprobación del plan por la autorización APA-20261009-2cf4af. Razón: análisis APPROVE
+  con cascade, seis criterios en banda (0.85-0.90; C34 señalado como compuesto), causas comprobadas en código y en el
+  navegador con datos reales, y plan que parte de causas medidas.
+  Supuestos resueltos por Claude con la opción por defecto, que el PO debe revisar: S1 tope de 9 plantas por cantero,
+  6 pasteles por puesto y 9 en la vitrina; S2 cuentan solo los tickets de la corrida; S3 `blocked` y
+  `changes_requested` no se dibujan en ninguna estación; S4 sin rótulo «+N» al pasar el tope; S5 «PO» reemplaza a
+  «Anita»; S6 las pantallas del centro de control quedan fuera de este ticket.
