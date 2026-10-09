@@ -4,8 +4,8 @@ id: BUGFIX-GATE-CASCADA-SALIDA-ESTRUCTURADA-20261009
 title: La cascada falla porque el productor no entrega todas las proposiciones del esquema
 type: BUGFIX
 module: GATE
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -100,15 +100,42 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
       <!-- test: npx vitest run tests/cascada-productor-reintento.test.ts -->
 - [x] C12. El monorepo compila con `npx tsc --build tsconfig.build.json`.
       <!-- test: npx tsc --build tsconfig.build.json -->
-- [ ] C13. Una corrida real de `valmen gate plan --evaluator cascade` sobre un ticket con más de 12 criterios termina con `evaluator: cascade`.
+- [x] C13. Una corrida real de `valmen gate plan --evaluator cascade` sobre un ticket con más de 12 criterios termina con `evaluator: cascade`. — no aplica: se verifica en la próxima compuerta real con más de 12 criterios por decisión del PO el 2026-10-09
       <!-- verify: manual -->
-- [ ] C14. El comentario de `runSemanticEnTandas` en `packages/engine/src/evaluators.ts` ya no describe el fallo de salida estructurada como determinista.
+- [x] C14. El comentario de `runSemanticEnTandas` en `packages/engine/src/evaluators.ts` ya no describe el fallo de salida estructurada como determinista.
       <!-- verify: manual -->
 
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación delegada de BUGFIX-GATE-CASCADA-SALIDA-ESTRUCTURADA-20261009",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta verificar sus criterios.",
+    "expected": "Los criterios del ticket se cumplen y sus pruebas dan el resultado esperado.",
+    "evidence": [
+      "EVIDENCE-001"
+    ],
+    "affected_files": [
+      "packages/engine/src/cascade.ts",
+      "packages/engine/src/evaluators.ts",
+      "packages/engine/src/gate.ts",
+      "packages/gate/src/receipt.ts",
+      "tests/cascada-productor-reintento.test.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -136,34 +163,118 @@ Validaciones manuales a cargo del responsable:
 
 Requisitos de ambiente: Node 24, `npm install` hecho; para C13, `claude auth status` con sesión.
 
+- Resultado del PO: Cerrar y verificar en uso (Recomendado). Las pruebas del ticket las ejecutó el agente y dieron el resultado esperado: 274 pruebas del ticket y de cascada, evaluadores, gate y recibos en verde; C14 verificado leyendo evaluators.ts:385
+
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-09",
+    "build_reference": "commit:e55085f98a263ecf998b284604c41d69530c2290",
+    "environment": "macOS, Node 24, main tras integrar; suite completa 3952 pruebas en verde",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-09",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "Cerrar y verificar en uso (Recomendado)"
+  }
+]
 ```
 
 ## Evidencia
 
 ```json
-[]
+[
+  {
+    "id": "EVIDENCE-001",
+    "date": "2026-10-09",
+    "kind": "automated-test",
+    "description": "274 pruebas del ticket y de cascada, evaluadores, gate y recibos en verde; C14 verificado leyendo evaluators.ts:385",
+    "reference": "worktree:sha256:d1e7c049065527cad9b9c84177b76a48ca667c44d747463ab52b0cce118916cc",
+    "point_id": "POINT-001"
+  }
+]
 ```
 
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-09",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "Cerrar y verificar en uso (Recomendado)"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-09",
+    "technical_summary": "verifiedCascade repite la tanda una vez con el modelo de escalado cuando el productor agota la salida estructurada (INVALID_REQUEST); el recibo y el informe registran el reintento en producerRetries, y el comentario de runSemanticEnTandas ya no llama determinista a ese fallo.",
+    "functional_summary": "Las compuertas con cascada ya no caen al evaluador débil cuando haiku falla de forma intermitente: reintentan una vez con sonnet.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "unreleased"
+  }
+]
 ```
 
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-09",
+    "session_reference": "4f9b1b12-ced4-4132-9151-c3a025ede085",
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. Sesión **compartida**: trabajó 16 tickets (IMPROVEMENT-ENGINE-CONSUMO-SUBAGENTES-POR-TICKET-20261009 ×61, FEATURE-SERVER-SESION-PRINCIPAL-20261008 ×58, BUGFIX-GATE-CASCADA-SALIDA-ESTRUCTURADA-20261009 ×47, IMPROVEMENT-WEB-VISTA-RENOMBRAR-AGENTES-20261008 ×43, FEATURE-WEB-MOTOR-ESCENA-20261008 ×41), así que su costo no se reparte y acá no se registran números. Costo completo de la sesión: no declarado por el proveedor, 2618680 tokens (sin los subagentes con ticket propio). Registralo en el ticket cuya sesión sea propia, o declaralo compartido donde corresponda. Sesión \"Feature vista-agentes\".",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "claude:4f9b1b12-ced4-4132-9151-c3a025ede085",
+    "confidence": "high",
+    "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-09",
+    "session_reference": "4f9b1b12-ced4-4132-9151-c3a025ede085/agent-a3a6ea9ee3609d8a4",
+    "model": "anthropic/claude-sonnet-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 4 intervención(es) sobre el registro, 0 con fallo. 4 de 15 mensajes tocaron el registro. Subagente de la sesión 4f9b1b12-ced4-4132-9151-c3a025ede085; su gasto no está en la madre. Duró 2 min. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 1255824 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 106980,
+    "output_tokens": 14211,
+    "total_tokens": 121191,
+    "estimated_cost_usd": null,
+    "source": "claude:4f9b1b12-ced4-4132-9151-c3a025ede085/agent-a3a6ea9ee3609d8a4",
+    "confidence": "high",
+    "id": "CONSUMO-002"
+  }
+]
 ```
 
 ## Release
@@ -263,6 +374,150 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-09",
+    "at": "2026-10-09T19:25:18.717Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-10-09",
+    "at": "2026-10-09T19:25:19.078Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-09",
+    "at": "2026-10-09T19:25:19.230Z",
+    "action": "criteria-marked",
+    "actor": "cli",
+    "details": "Criterio(s) manual(es) marcado(s) por la confirmación de quien los probó (1): «C13. Una corrida real de `valmen gate plan --evaluator casca». Palabras: «Cerrar y verificar en uso (Recomendado)»"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-09",
+    "at": "2026-10-09T19:25:19.386Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-09",
+    "at": "2026-10-09T19:25:19.538Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-09",
+    "at": "2026-10-09T19:25:19.696Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-09",
+    "at": "2026-10-09T19:25:19.884Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-09",
+    "at": "2026-10-09T19:25:20.055Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-09",
+    "at": "2026-10-09T19:25:20.309Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-09",
+    "at": "2026-10-09T19:25:20.583Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-09",
+    "at": "2026-10-09T19:25:20.741Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-09",
+    "at": "2026-10-09T19:25:20.886Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-09",
+    "at": "2026-10-09T19:25:21.029Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-09",
+    "at": "2026-10-09T19:25:21.185Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-025",
+    "date": "2026-10-09",
+    "at": "2026-10-09T19:25:21.360Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-026",
+    "date": "2026-10-09",
+    "at": "2026-10-09T19:25:21.526Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
