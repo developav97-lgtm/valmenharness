@@ -909,6 +909,9 @@ export async function runGate(
     ...(evaluation.evaluatorFailure === undefined
       ? {}
       : { evaluatorFailure: evaluation.evaluatorFailure }),
+    ...(evaluation.producerRetries === undefined
+      ? {}
+      : { producerRetries: evaluation.producerRetries }),
     ...(forzado === undefined ? {} : { forced: forzado }),
   });
 
@@ -947,6 +950,12 @@ export async function runGate(
       `    Evaluador pedido ${evaluation.requestedEvaluator} · efectivo ${evaluation.evaluator}: ` +
         `el pedido falló (${evaluation.evaluatorFailure.code}) y no se reintentó.`,
       `    Error: ${evaluation.evaluatorFailure.message}`,
+    );
+  }
+  for (const reintento of evaluation.producerRetries ?? []) {
+    lines.push(
+      `    Productor ${reintento.from.model} falló (${reintento.error.code}); ` +
+        `la tanda se repitió con ${reintento.to.model}.`,
     );
   }
   for (const item of decision.propositions) {

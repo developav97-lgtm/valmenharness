@@ -225,6 +225,18 @@ export interface GateReceipt {
   readonly requestedEvaluator?: string;
   /** El error real del evaluador pedido: su código y su mensaje. Va con `requestedEvaluator`. */
   readonly evaluatorFailure?: { readonly code: string; readonly message: string };
+  /**
+   * Las tandas cuyo productor agotó la salida estructurada y se repitieron una vez con el
+   * modelo de escalado. Dato de auditoría: no entra en `stateHash` ni en `gateHash`.
+   */
+  readonly producerRetries?: readonly ProducerRetryRecord[];
+}
+
+/** Un reintento de la producción: quién falló, quién produjo en su lugar y el error real. */
+export interface ProducerRetryRecord {
+  readonly from: { readonly provider: string; readonly model: string };
+  readonly to: { readonly provider: string; readonly model: string };
+  readonly error: { readonly code: string; readonly message: string };
 }
 
 /** Los dos extremos de un escalamiento, en lo que el recibo necesita. */
@@ -343,6 +355,7 @@ export interface ReceiptInput {
   readonly forced?: { readonly reason: string; readonly receiptId: string };
   readonly requestedEvaluator?: string;
   readonly evaluatorFailure?: { readonly code: string; readonly message: string };
+  readonly producerRetries?: readonly ProducerRetryRecord[];
 }
 
 /** Construye un recibo a partir de una decisión. */
@@ -395,6 +408,9 @@ export function buildReceipt(input: ReceiptInput): GateReceipt {
       ? {}
       : { requestedEvaluator: input.requestedEvaluator }),
     ...(input.evaluatorFailure === undefined ? {} : { evaluatorFailure: input.evaluatorFailure }),
+    ...(input.producerRetries === undefined || input.producerRetries.length === 0
+      ? {}
+      : { producerRetries: input.producerRetries }),
   };
 }
 
