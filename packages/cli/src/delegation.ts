@@ -14,15 +14,10 @@
  * proyecto; el motor guarda el registro y las reglas puras (`engine/delegation`).
  */
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
 
 import {
   EXIT_INVARIANT,
   EXIT_SCHEMA,
-  MutationLock,
-  atomicWrite,
-  hasPlanGate,
-  hasRecordedUserTestOutcome,
   parseTicket,
   toFailure,
 } from "@valmen/core";
@@ -31,31 +26,26 @@ import {
   type Delegation,
   type RegistryPaths,
   FUENTE_DELEGACION,
-  aprobacionDePlanVigente,
-  registrarAprobacionDePlan,
-  addAiUsage,
-  addEvidence,
-  addPoint,
-  addRetest,
   appendDelegationEvent,
   assertInScope,
-  closeAttempt,
   delegationEvents,
   delegationProgress,
   grantDelegation,
   hardGateStop,
   markManualCriteria,
-  qaClose,
-  qaStart,
-  readReceipts,
   resolveDelegation,
-  ticketPathFor,
   transition,
-  veredictoDeCompuerta,
 } from "@valmen/engine";
 import { recordHumanDecision } from "@valmen/server";
 
 import { type CommandResult, validateOne } from "./commands.js";
+import {
+  aprobarPlanConFrase,
+  cerrarConQaDelPo,
+  editarTicket,
+  leer,
+  resolverCompuerta,
+} from "./ceremony.js";
 
 type Flags = Readonly<Record<string, string | true>>;
 
@@ -100,24 +90,6 @@ export function delegationDeps(runGate: DelegationDeps["runGate"]): DelegationDe
   return { runGate, decide: recordHumanDecision, ...REAL_GIT };
 }
 
-/** Edita el texto del ticket bajo el lock del registro. */
-function editarTicket(
-  paths: RegistryPaths,
-  ticketId: string,
-  cambio: (texto: string) => string,
-): void {
-  MutationLock.run(paths.root, () => {
-    const ruta = ticketPathFor(paths, ticketId);
-    const antes = readFileSync(ruta, "utf8");
-    const despues = cambio(antes);
-    if (despues !== antes) atomicWrite(ruta, despues);
-  });
-}
-
-function leer(paths: RegistryPaths, ticketId: string): string {
-  return readFileSync(ticketPathFor(paths, ticketId), "utf8");
-}
-
 /** Una parada: lo que se dice, y a quién le toca. Queda anotada en la delegación. */
 function parada(
   paths: RegistryPaths,
@@ -133,62 +105,33 @@ function parada(
   return error(`DETENIDO en ${ticketId}: ${motivo}`, EXIT_INVARIANT);
 }
 
-/**
- * Deja una compuerta aprobada, o dice por qué no se puede.
- *
- * APPROVE sigue. REVIEW se decide por delegación **solo con un motivo**, que viaja
- * al recibo junto con las palabras del PO. BLOCK nunca se decide: es de una persona.
- */
-async function resolverCompuerta(
+/** La compuerta resuelta por delegación: la cadena es la común de `ceremony.ts`. */
+function resolverPorDelegacion(
   paths: RegistryPaths,
   delegation: Delegation,
   ticketId: string,
   gateId: string,
   motivo: string | undefined,
   deps: DelegationDeps,
-  /** Correrla aunque haya un recibo aprobado: el recibo ata su veredicto al estado del ticket. */
   siempre = false,
 ): Promise<string | null> {
-  let veredicto = veredictoDeCompuerta(readReceipts(paths, ticketId), gateId);
-  if (siempre || veredicto.tipo !== "aprobada") {
-    const corrida = await deps.runGate(gateId, ticketId);
-    veredicto = veredictoDeCompuerta(readReceipts(paths, ticketId), gateId);
-    if (veredicto.tipo === "sin-recibo") {
-      return `la compuerta ${gateId} no dejó recibo: ${(corrida.stderr || corrida.stdout).trim().slice(-300)}`;
-    }
-  }
-  if (veredicto.tipo === "aprobada") return null;
-  if (veredicto.tipo === "bloqueada") {
-    return (
-      `la compuerta ${gateId} dio BLOCK (${veredicto.recibo.reason}). Un BLOCK no se aprueba por ` +
-      "delegación: se corrige el artefacto y se vuelve a correr, o se consulta al PO."
-    );
-  }
-
-  const recibo = veredicto.recibo;
-  if (recibo.outcome === "review" && motivo === undefined) {
-    return (
-      `la compuerta ${gateId} cayó en REVIEW (${recibo.reason}). Si el criterio dice que no debe ` +
-      "bloquear, repetí con --reason «por qué» y se aprueba por delegación; si no, es del PO."
-    );
-  }
-  const razon =
-    `por delegación ${delegation.id} del PO ${delegation.actor}: ` +
-    (motivo ?? `el evaluador aprobó (${recibo.reason}) y la política lo escala a una persona`) +
-    ` — palabras del PO: «${delegation.quote}»`;
-  const resultado = deps.decide(paths, ticketId, recibo.id, {
-    decision: "approve",
-    actor: ACTOR,
-    reason: razon,
-    channel: "delegation",
-  });
-  if (!resultado.ok) return `no se pudo registrar la decisión de ${gateId}: ${resultado.error}`;
-  appendDelegationEvent(paths.root, delegation.id, {
-    kind: "decision",
+  return resolverCompuerta(
+    paths,
     ticketId,
-    detail: `${gateId} ${recibo.outcome} → approve (${recibo.id}): ${motivo ?? "escalado por política"}`,
-  });
-  return null;
+    gateId,
+    motivo,
+    deps,
+    {
+      via: "delegación",
+      actor: ACTOR,
+      canal: "delegation",
+      descripcion: `por delegación ${delegation.id} del PO ${delegation.actor}`,
+      frase: delegation.quote,
+      anotar: (detail) =>
+        appendDelegationEvent(paths.root, delegation.id, { kind: "decision", ticketId, detail }),
+    },
+    siempre,
+  );
 }
 
 export interface AdvanceOptions {
@@ -228,40 +171,27 @@ export async function advanceDelegated(
       if (fallo !== null) return fallo;
     }
     if (estado() === "analyzed") {
-      const stop = await resolverCompuerta(paths, delegation, ticketId, "analysis", options.reason, deps);
+      const stop = await resolverPorDelegacion(paths, delegation, ticketId, "analysis", options.reason, deps);
       if (stop !== null) return parada(paths, delegation, ticketId, stop);
       const fallo = mover("planned");
       if (fallo !== null) return fallo;
     }
     if (estado() === "planned") {
-      const stop = await resolverCompuerta(paths, delegation, ticketId, "plan", options.reason, deps);
+      const stop = await resolverPorDelegacion(paths, delegation, ticketId, "plan", options.reason, deps);
       if (stop !== null) return parada(paths, delegation, ticketId, stop);
       // La aprobación del plan se atribuye a la política humana —la delegación— y
-      // cita sus palabras: nunca al modelo.
-      // La aprobación registrada: el motor la exige para entrar a `approved` (R-CTRL-001).
-      // Se registra con las palabras del PO que dejó la delegación, y solo si el plan vigente
-      // no tiene ya una aprobación que valga.
-      if (aprobacionDePlanVigente(parseTicket(leer(paths, ticketId))).estado !== "vigente") {
-        registrarAprobacionDePlan({
-          paths,
-          ticketId,
-          actor: delegation.actor,
-          source: FUENTE_DELEGACION,
-          quote: delegation.quote.replaceAll("\n", " "),
-          viaDelegacion: true,
-        });
-      }
-      if (!hasPlanGate(parseTicket(leer(paths, ticketId)))) {
-        const linea =
+      // cita sus palabras: nunca al modelo. El motor exige la aprobación registrada para
+      // entrar a `approved` (R-CTRL-001).
+      aprobarPlanConFrase(paths, ticketId, {
+        actor: delegation.actor,
+        source: FUENTE_DELEGACION,
+        quote: delegation.quote,
+        viaDelegacion: true,
+        linea:
           `- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan), por ` +
           `delegación ${delegation.id} del ${delegation.at.slice(0, 10)} («${delegation.quote.replaceAll("\n", " ")}»); ` +
-          "compuerta `plan` decidida y registrada en su recibo.";
-        editarTicket(paths, ticketId, (t) =>
-          /^- Gate de plan y aprobación:.*$/m.test(t)
-            ? t.replace(/^- Gate de plan y aprobación:.*$/m, () => linea)
-            : t.replace(/^## Plan\n/m, () => `## Plan\n\n${linea}\n`),
-        );
-      }
+          "compuerta `plan` decidida y registrada en su recibo.",
+      });
       const fallo = mover("approved");
       if (fallo !== null) return fallo;
     }
@@ -381,7 +311,7 @@ export async function closeDelegated(
       );
       const v = validateOne(paths, ticketId);
       if (v.exitCode !== 0) return v;
-      const stop = await resolverCompuerta(
+      const stop = await resolverPorDelegacion(
         paths,
         delegation,
         ticketId,
@@ -421,86 +351,26 @@ export async function closeDelegated(
       markManualCriteria(paths, ticketId, o.poConfirmation);
     }
 
-    // ── QA ────────────────────────────────────────────────────────────────
-    const actual = (): ReturnType<typeof parseTicket> => parseTicket(leer(paths, ticketId));
-    if (!hasRecordedUserTestOutcome(actual())) {
-      editarTicket(paths, ticketId, (t) =>
-        t.replace(
-          /\n## QA\n/,
-          () =>
-            `\n- Resultado del PO: ${palabrasDelPo}. Las pruebas del ticket las ejecutó el agente y ` +
-            `dieron el resultado esperado: ${tests}\n\n## QA\n`,
-        ),
-      );
-    }
-    if (actual().fields.workflow_status === "awaiting_user_tests") {
-      const v = validateOne(paths, ticketId);
-      if (v.exitCode !== 0) return v;
-      transition({ paths, ticketId, entity: "ticket", to: "in_qa" });
-    }
-    if (actual().blocks.Puntos.length === 0) {
-      if (o.files.length === 0) {
-        return error("delegation close requiere --files para anotar el punto de QA.", EXIT_SCHEMA);
-      }
-      addPoint({
-        paths,
-        ticketId,
-        title: `Verificación delegada de ${ticketId}`,
-        severity: "normal",
-        actual: "La implementación está entregada y falta verificar sus criterios.",
-        expected: "Los criterios del ticket se cumplen y sus pruebas dan el resultado esperado.",
-        affectedFiles: o.files,
-      });
-      for (const to of ["analyzed", "in_progress", "awaiting_retest"]) {
-        transition({ paths, ticketId, entity: "point", pointId: "POINT-001", to });
-      }
-    }
-    if (actual().blocks.Evidencia.length === 0) {
-      addEvidence({
-        paths,
-        ticketId,
-        kind: "automated-test",
-        pointId: "POINT-001",
-        reference: "worktree",
-        description: tests.split("\n")[0] as string,
-      });
-    }
-    if (actual().blocks.QA.length === 0) {
-      qaStart({
-        paths,
-        ticketId,
-        environment,
-        buildReference: `commit:${deps.head(paths.root)}`,
-      });
-    }
-    addRetest({ paths, ticketId, pointId: "POINT-001", result: "approved", poConfirmation: palabrasDelPo });
-    transition({ paths, ticketId, entity: "point", pointId: "POINT-001", to: "closed" });
-    qaClose({ paths, ticketId, result: "approved", poConfirmation: palabrasDelPo });
-    transition({ paths, ticketId, entity: "ticket", to: "qa_approved" });
-    if (actual().blocks["Consumo de IA"].length === 0) {
-      addAiUsage({
-        paths,
-        ticketId,
-        source: o.usageSource ?? `manual:sesión de Claude Code por delegación ${delegation.id}`,
-        confidence: o.confidence ?? "medium",
-        ...(o.model === undefined ? {} : { model: o.model }),
-        notes:
-          o.notes ??
-          "Sesión que atendió varios tickets de la delegación; sin números por ticket para no " +
-            "repartir a ojo un costo que no se midió por ticket.",
-      });
-    }
-    closeAttempt({
-      paths,
-      ticketId,
+    const cierre = cerrarConQaDelPo(paths, ticketId, {
+      palabrasDelPo,
+      files: o.files,
+      environment,
+      tests,
       technicalSummary: o.technicalSummary as string,
       functionalSummary: o.functionalSummary as string,
-      qaStatus: "approved",
       releaseImpact: o.releaseImpact as string,
+      head: deps.head,
+      usageSource: o.usageSource ?? `manual:sesión de Claude Code por delegación ${delegation.id}`,
+      confidence: o.confidence ?? "medium",
+      model: o.model,
+      notes:
+        o.notes ??
+        "Sesión que atendió varios tickets de la delegación; sin números por ticket para no " +
+          "repartir a ojo un costo que no se midió por ticket.",
     });
-    transition({ paths, ticketId, entity: "ticket", to: "closed" });
-    const v = validateOne(paths, ticketId);
-    if (v.exitCode !== 0) return v;
+    if (!cierre.cerrado) {
+      return cierre.resultado ?? parada(paths, delegation, ticketId, cierre.mensaje);
+    }
   } catch (caught) {
     const f = toFailure(caught);
     return parada(paths, delegation, ticketId, f.message);

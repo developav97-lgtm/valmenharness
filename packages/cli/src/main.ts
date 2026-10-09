@@ -59,6 +59,7 @@ import {
 } from "./commands.js";
 import { journeyHandoffCommand } from "./journey-handoff.js";
 import { journeyWorktreeCommand } from "./worktree.js";
+import { approveCommand, closeCommand } from "./ceremony.js";
 import { REAL_GIT, runDelegation } from "./delegation.js";
 import { runFeature } from "./features.js";
 import { probeCodegraph } from "./codegraph.js";
@@ -330,6 +331,16 @@ Comandos:
   approve-plan --id <ID> --actor <nombre> [--source <fuente>] --quote "<frase>"
                             Registra la aprobación del plan con actor, fuente, frase y hash
                             del plan. Una sesión desatendida no puede registrarla.
+  approve --id <ID> --actor <PO> --quote "<frase>" [--reason "<motivo>"]
+                            Resuelve la compuerta plan, registra la aprobación con la frase literal
+                            del PO, escribe la línea del gate y mueve a approved. REVIEW exige
+                            --reason; un BLOCK o un ticket SECURITY se detienen. Retoma al repetirlo.
+  close --id <ID> --po-confirmation "<frase>" --environment <e> --tests "<qué dio>"
+        --technical-summary <t> --functional-summary <f> --release-impact <r>
+        [--files <a,b>] [--source <fuente>] [--confidence <c>] [--model <m>] [--notes <n>]
+                            Lleva un ticket validado por el PO de awaiting_user_tests (o un cierre
+                            a medias: in_qa, qa_approved) a closed. --files si no hay punto;
+                            --source si no hay consumo de IA. Retoma al repetirlo.
   precheck <gate> --id <ID> Revisión previa a mano (analysis o plan): la misma que corre la
                             compuerta antes de llamar al evaluador. Sale con 3 si falta algo.
   gate <gate> --id <ID>     Evalúa un gate contra un ticket.
@@ -2104,6 +2115,14 @@ export async function run(argv: readonly string[]): Promise<number> {
       result = qaAuthorizeCommand(resolvePaths(options).root, rest[0], options.flags);
     } else if (command === "plan-approve") {
       result = planApproveCommand(resolvePaths(options), options.flags);
+    } else if (command === "approve") {
+      const rutas = resolvePaths(options);
+      result = await approveCommand(rutas, options.flags, {
+        runGate: (gateId, ticketId) => runGateFromFlags(rutas, gateId, ticketId, options.flags),
+        decide: recordHumanDecision,
+      });
+    } else if (command === "close") {
+      result = closeCommand(resolvePaths(options), options.flags, { head: REAL_GIT.head });
     } else if (command === "approve-plan") {
       result = approvePlanCommand(resolvePaths(options), options.flags);
     } else if (command === "precheck") {
