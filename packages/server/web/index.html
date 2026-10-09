@@ -2245,6 +2245,25 @@
           grid-template-columns: repeat(2, minmax(0, 1fr));
         }
       }
+      /* Cuaderno del invernadero: paneles de papel rayado; la fuente Caveat no se descarga, cae en Comic Sans MS. */
+      .corrida-paneles[data-mundo="invernadero"] .corrida-panel {
+        background-color: #fbf7e8; /* valmen:allow-color fondo del cuaderno del invernadero */
+        background-image: repeating-linear-gradient(transparent 0 27px, rgba(166, 124, 82, 0.25) 27px 28px); /* valmen:allow-color rayado del cuaderno del invernadero */
+        color: #3b4a2f; /* valmen:allow-color texto del cuaderno del invernadero */
+        border: 1px solid #a67c52; /* valmen:allow-color borde del cuaderno del invernadero */
+        border-radius: 8px;
+        padding: 12px 14px;
+      }
+      .corrida-paneles[data-mundo="invernadero"] .corrida-panel h3 {
+        font-family: "Caveat", "Comic Sans MS", cursive;
+        font-size: 24px;
+        text-transform: none;
+        letter-spacing: 0;
+        color: #3f8f4a; /* valmen:allow-color títulos del cuaderno del invernadero */
+      }
+      .corrida-paneles[data-mundo="invernadero"] .corrida-panel th {
+        color: #7a8a6f; /* valmen:allow-color encabezados del cuaderno del invernadero */
+      }
       /* Telemetría del centro de control: paneles azul noche; la fuente Chakra Petch no se descarga, cae en Segoe UI. */
       .corrida-paneles[data-mundo="control"] .corrida-panel {
         background: #080d1a; /* valmen:allow-color fondo de los paneles del centro de control */
