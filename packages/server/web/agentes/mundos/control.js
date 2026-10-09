@@ -124,11 +124,32 @@ export function franja(agentes) {
   const lista = agentes ?? [];
   const esperando = lista.find((a) => a.principal !== true && preguntaAbierta(a));
   if (esperando) {
-    const que = esperando.estacion === 3 ? "¿Apruebo el plan?" : "¿Pasaron tus pruebas?";
+    const real = esperando.fila?.pregunta?.texto;
+    const reducido = typeof real === "string" ? real.replace(/\s+/g, " ").trim() : "";
+    const que = reducido !== "" ? reducido : esperando.estacion === 3 ? "¿Apruebo el plan?" : "¿Pasaron tus pruebas?";
     return { alerta: true, texto: `ESPERANDO A ANITA · LÍNEA 1 · ${corto(esperando.fila.ticket)} · ${que}` };
   }
   const activas = lista.filter((a) => esOperador(a) && a.estado !== "termino").length;
   return { alerta: false, texto: `TURNO DE NOCHE · ${activas} MISIONES ACTIVAS` };
+}
+
+/**
+ * El texto, o su prefijo más largo (por puntos de código) que con «…» cabe en `anchoPx`.
+ * La fuente del contexto se fija antes de llamarla. Sin medida disponible devuelve el texto.
+ */
+export function ajustarAlAncho(ctx, texto, anchoPx) {
+  const medir = (s) => Number(ctx.measureText?.(s)?.width);
+  const entero = medir(texto);
+  if (Number.isNaN(entero) || entero <= anchoPx) return texto;
+  const puntos = Array.from(texto);
+  let bajo = 0;
+  let alto = puntos.length - 1;
+  while (bajo < alto) {
+    const medio = Math.ceil((bajo + alto) / 2);
+    if (medir(puntos.slice(0, medio).join("") + "…") <= anchoPx) bajo = medio;
+    else alto = medio - 1;
+  }
+  return puntos.slice(0, bajo).join("") + "…";
 }
 
 /** El color de fondo de la franja: alterna a 2 Hz con una pregunta abierta. */
@@ -303,7 +324,10 @@ function dibujar(estado, t = 0) {
   // La franja de turno.
   const aviso = franja(agentes);
   R(24, 176, 912, 22, colorDeFranja(aviso.alerta, t));
-  if (!miniatura) T(aviso.texto, 480, 191, { tam: 12, color: aviso.alerta ? PALETA.alertaTexto : PALETA.nombre, peso: "600" });
+  if (!miniatura) {
+    ctx.font = `600 12px ${CHAKRA}`;
+    T(ajustarAlAncho(ctx, aviso.texto, 896), 480, 191, { tam: 12, color: aviso.alerta ? PALETA.alertaTexto : PALETA.nombre, peso: "600" });
+  }
 
   // La tarima del director: escritorio al fondo, teléfono rojo y el director de espaldas.
   const linea = telefono(agentes, ahoraMs, ventanaMs);

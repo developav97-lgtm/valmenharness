@@ -48,6 +48,11 @@ export function guardarMundoElegido(almacen, id) {
   }
 }
 
+/** El valor si es un texto con algún carácter no blanco; `null` en otro caso. */
+function textoVisible(valor) {
+  return typeof valor === "string" && valor.trim() !== "" ? valor : null;
+}
+
 /** Un aviso por fila con pregunta: abierta, o respondida hace menos de un minuto. */
 export function avisosDePregunta(filas, ahoraMs, mundo) {
   const avisos = [];
@@ -56,26 +61,54 @@ export function avisosDePregunta(filas, ahoraMs, mundo) {
     if (p === null || p === undefined) continue;
     const ticket = fila.ticket ?? fila.agente;
     if (p.respondidaEn === null || p.respondidaEn === undefined) {
-      avisos.push({
+      const pendiente = {
         tipo: "pendiente",
         encabezado: "Pregunta pendiente para una persona",
         quien: "una persona",
         ticket,
         hace: haceCuanto(p.desde, ahoraMs),
         expresion: mundo.pregunta,
-      });
+      };
+      const texto = textoVisible(p.texto);
+      if (texto !== null) pendiente.texto = texto;
+      avisos.push(pendiente);
       continue;
     }
     const respondida = Date.parse(p.respondidaEn);
     if (Number.isNaN(respondida) || ahoraMs - respondida > VENTANA_RESPUESTA_MS) continue;
-    avisos.push({
+    const respondio = {
       tipo: "respondio",
       encabezado: "una persona respondió",
       ticket,
       hace: haceCuanto(p.respondidaEn, ahoraMs),
-    });
+    };
+    const respuesta = textoVisible(p.respuesta);
+    if (respuesta !== null) respondio.respuesta = respuesta;
+    avisos.push(respondio);
   }
   return avisos;
+}
+
+/**
+ * La caja de un aviso. El texto de la pregunta y la respuesta viene de la conversación de un
+ * agente, así que es datos ajenos: cada cadena se asigna solo con `textContent`, nunca como HTML.
+ * El documento llega inyectado para que el módulo siga sin `document` propio.
+ */
+export function cajaDeAviso(doc, aviso) {
+  const nodo = (clase, texto) => {
+    const n = doc.createElement("div");
+    n.className = clase;
+    n.textContent = texto;
+    return n;
+  };
+  const caja = doc.createElement("div");
+  caja.className = `corrida-aviso ${aviso.tipo}`;
+  caja.append(nodo("rotulo", aviso.encabezado));
+  caja.append(nodo("id", `${aviso.ticket} · ${aviso.hace}`));
+  const texto = aviso.texto ?? aviso.respuesta;
+  if (texto) caja.append(nodo("texto", texto));
+  if (aviso.expresion) caja.append(nodo("resultado", aviso.expresion));
+  return caja;
 }
 
 /** El panel «Agentes»: la sesión principal primero y luego los agentes vivos. */

@@ -2225,6 +2225,10 @@
         border-color: var(--alerta);
         border-left-color: var(--alerta);
       }
+      .corrida-aviso .texto {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
       .corrida-aviso.respondio {
         background: var(--ok-suave);
         border-color: var(--ok);
@@ -6454,11 +6458,7 @@
         const pintarAvisos = () => {
           avisos.textContent = "";
           for (const aviso of modulo.avisosDePregunta(agentes, ahora, montaje.mundoActual())) {
-            const caja = el("div", undefined, `corrida-aviso ${aviso.tipo}`);
-            caja.append(el("div", aviso.encabezado, "rotulo"));
-            caja.append(el("div", `${aviso.ticket} · ${aviso.hace}`, "id"));
-            if (aviso.expresion) caja.append(el("div", aviso.expresion, "resultado"));
-            avisos.append(caja);
+            avisos.append(modulo.cajaDeAviso(document, aviso));
           }
         };
         pintarAvisos();
