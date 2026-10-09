@@ -5,7 +5,10 @@
  * `<sesión>/subagents/agent-<id>.jsonl` y `agent-<id>.meta.json`. Este lector es
  * **solo de lectura** y devuelve una lista blanca de metadatos por agente: nunca
  * copia texto de prompts, entradas ni resultados de herramientas, solo el
- * **nombre** de la última herramienta.
+ * **nombre** de la última herramienta. La única excepción es la pregunta al
+ * usuario (`AskUserQuestion`), bajo la decisión escrita del PO (R-DAT-004): su
+ * `question` y los valores de `toolUseResult.answers`, recortados, y solo si el
+ * llamador pasa `conTexto: true`. Nada más del transcript entra a la lista.
  *
  * La **sesión principal** (la del orquestador) viaja como la primera fila, con
  * `principal: true`; su `ticket`, `descripcion` y fases son null porque no se
@@ -42,6 +45,8 @@ import { ticketsDeTexto } from "./hermes.js";
 
 /** Pasados estos milisegundos sin eventos, un agente que no terminó está esperando. */
 export const ESPERA_MAXIMA_MS = 60_000;
+/** Largo máximo, en caracteres, de `pregunta.texto` y de `pregunta.respuesta`. */
+export const LARGO_MAXIMO_TEXTO = 500;
 /** Cuánto tiempo después de contestada se sigue declarando la pregunta (propia: no mueve ESPERA_MAXIMA_MS). */
 export const VENTANA_RESPUESTA_MS = 60_000;
 /** Solo se consideran sesiones con subagentes modificadas dentro de esta ventana. */
@@ -50,12 +55,22 @@ const VENTANA_MS = 24 * 60 * 60 * 1000;
 export type EstadoDeAgente = "trabajando" | "esperando" | "termino";
 
 /**
- * La pregunta al usuario (`AskUserQuestion`) de un agente: solo horas ISO.
- * Nunca lleva el texto de la pregunta ni el de la respuesta.
+ * La pregunta al usuario (`AskUserQuestion`) de un agente: horas ISO y, solo si
+ * se pidió `conTexto` (R-DAT-004), el texto de la pregunta y el de la respuesta,
+ * recortados a LARGO_MAXIMO_TEXTO. Sin `conTexto` solo lleva las horas.
  */
 export interface PreguntaPendiente {
   readonly desde: string;
   readonly respondidaEn: string | null;
+  readonly texto?: string | null;
+  readonly respuesta?: string | null;
+}
+
+/** El texto tal cual hasta LARGO_MAXIMO_TEXTO caracteres; más largo, los primeros 499 y `…`. */
+export function recortar(texto: string): string {
+  const letras = Array.from(texto);
+  if (letras.length <= LARGO_MAXIMO_TEXTO) return texto;
+  return `${letras.slice(0, LARGO_MAXIMO_TEXTO - 1).join("")}…`;
 }
 
 /** La fila pública de un agente: lista blanca, sin contenido del transcript. */
@@ -102,6 +117,10 @@ interface Lectura {
   preguntaDesde: number | null;
   /** Hora absoluta (ms) en que se contestó, o null si sigue abierta. */
   preguntaRespondidaEn: number | null;
+  /** Las `question` de la pregunta elegida, unidas por `\n` y recortadas; null sin ellas. */
+  preguntaTexto: string | null;
+  /** Las respuestas de la pregunta elegida, en el orden de las preguntas, recortadas; null sin ellas. */
+  preguntaRespuesta: string | null;
 }
 
 const CACHE = new Map<string, Lectura>();
@@ -130,6 +149,12 @@ function textoDeUsuario(contenido: unknown): string {
   return partes.join("\n");
 }
 
+/** Une con salto de línea y recorta; null si no hay nada. El recorte ocurre al leer, antes de la caché. */
+function unir(partes: string[] | undefined): string | null {
+  if (partes === undefined || partes.length === 0) return null;
+  return recortar(partes.join("\n"));
+}
+
 /** Recorre el transcript tolerando líneas cortadas. */
 function leerTranscript(contenido: string): Lectura {
   const lectura: Lectura = {
@@ -145,11 +170,17 @@ function leerTranscript(contenido: string): Lectura {
     pendiente: false,
     preguntaDesde: null,
     preguntaRespondidaEn: null,
+    preguntaTexto: null,
+    preguntaRespuesta: null,
   };
   const abiertas = new Set<string>();
   /** Solo las `AskUserQuestion`: id del tool_use → hora del evento. Nunca su entrada. */
   const preguntas = new Map<string, number>();
   const respondidas = new Map<string, number>();
+  /** Solo `input.questions[].question` de cada `AskUserQuestion` (R-DAT-004): nada de header ni options. */
+  const textos = new Map<string, string[]>();
+  /** Solo los valores de `toolUseResult.answers` que corresponden a esas preguntas. */
+  const respuestas = new Map<string, string[]>();
   let primerMensajeVisto = false;
 
   for (const linea of contenido.split("\n")) {
@@ -179,8 +210,22 @@ function leerTranscript(contenido: string): Lectura {
           const dato = objeto(bloque);
           if (dato !== null && dato["type"] === "tool_result" && typeof dato["tool_use_id"] === "string") {
             abiertas.delete(dato["tool_use_id"]);
-            // Se mira solo el id y la hora: ni `content` ni `is_error`.
-            if (tieneMarca && preguntas.has(dato["tool_use_id"])) respondidas.set(dato["tool_use_id"], marca);
+            // De una pregunta se toma la hora y, sin error, `toolUseResult.answers`; nunca `content`.
+            const idPregunta = dato["tool_use_id"];
+            if (tieneMarca && preguntas.has(idPregunta)) {
+              respondidas.set(idPregunta, marca);
+              if (dato["is_error"] !== true) {
+                const answers = objeto(objeto(evento["toolUseResult"])?.["answers"]);
+                const lista: string[] = [];
+                if (answers !== null) {
+                  for (const pregunta of textos.get(idPregunta) ?? []) {
+                    const valor = answers[pregunta];
+                    if (typeof valor === "string" && valor !== "") lista.push(valor);
+                  }
+                }
+                respuestas.set(idPregunta, lista);
+              }
+            }
           }
         }
       }
@@ -212,7 +257,18 @@ function leerTranscript(contenido: string): Lectura {
             }
             if (typeof dato["id"] === "string") {
               abiertas.add(dato["id"]);
-              if (nombre === "AskUserQuestion" && tieneMarca) preguntas.set(dato["id"], marca);
+              if (nombre === "AskUserQuestion" && tieneMarca) {
+                preguntas.set(dato["id"], marca);
+                const lista: string[] = [];
+                const questions = objeto(dato["input"])?.["questions"];
+                if (Array.isArray(questions)) {
+                  for (const q of questions) {
+                    const pregunta = objeto(q)?.["question"];
+                    if (typeof pregunta === "string" && pregunta !== "") lista.push(pregunta);
+                  }
+                }
+                textos.set(dato["id"], lista);
+              }
             }
           }
         }
@@ -231,6 +287,7 @@ function leerTranscript(contenido: string): Lectura {
   }
   if (elegida !== null) {
     lectura.preguntaDesde = preguntas.get(elegida) ?? null;
+    lectura.preguntaTexto = unir(textos.get(elegida));
   } else {
     for (const [id, desde] of preguntas) {
       if (!respondidas.has(id)) continue;
@@ -239,6 +296,8 @@ function leerTranscript(contenido: string): Lectura {
     if (elegida !== null) {
       lectura.preguntaDesde = preguntas.get(elegida) ?? null;
       lectura.preguntaRespondidaEn = respondidas.get(elegida) ?? null;
+      lectura.preguntaTexto = unir(textos.get(elegida));
+      lectura.preguntaRespuesta = unir(respuestas.get(elegida));
     }
   }
   return lectura;
@@ -342,6 +401,11 @@ export interface OpcionesDeLectura {
   readonly paths?: RegistryPaths;
   /** Proyecto autorizado para leer la actividad; sin él la fase confirmada es null. */
   readonly project?: AuthorizedProject;
+  /**
+   * Expone `pregunta.texto` y `pregunta.respuesta` (R-DAT-004). Por defecto no:
+   * el llamador decide, y el servidor solo lo activa cuando escucha en la máquina local.
+   */
+  readonly conTexto?: boolean;
 }
 
 /** Último estado de actividad registrado por ticket (por cursor), o vacío sin proyecto. */
@@ -377,12 +441,16 @@ function estadoDe(lectura: Lectura, ahora: number): EstadoDeAgente {
 }
 
 /** La pregunta a declarar: abierta, contestada dentro de la ventana, o null. */
-function preguntaDe(lectura: Lectura, ahora: number): PreguntaPendiente | null {
+function preguntaDe(lectura: Lectura, ahora: number, conTexto: boolean): PreguntaPendiente | null {
   if (lectura.preguntaDesde === null) return null;
   const desde = new Date(lectura.preguntaDesde).toISOString();
-  if (lectura.preguntaRespondidaEn === null) return { desde, respondidaEn: null };
-  if (ahora - lectura.preguntaRespondidaEn > VENTANA_RESPUESTA_MS) return null;
-  return { desde, respondidaEn: new Date(lectura.preguntaRespondidaEn).toISOString() };
+  let respondidaEn: string | null = null;
+  if (lectura.preguntaRespondidaEn !== null) {
+    if (ahora - lectura.preguntaRespondidaEn > VENTANA_RESPUESTA_MS) return null;
+    respondidaEn = new Date(lectura.preguntaRespondidaEn).toISOString();
+  }
+  if (!conTexto) return { desde, respondidaEn };
+  return { desde, respondidaEn, texto: lectura.preguntaTexto, respuesta: lectura.preguntaRespuesta };
 }
 
 /** Una fila por la sesión principal y otra por cada subagente; vacío si no hay subagentes. */
@@ -395,6 +463,7 @@ export function leerAgentesDeCorrida(
   const ruta = sesionOrquestadora(root, opciones.home ?? homedir(), ahora, opciones.sesion);
   if (ruta === null) return [];
 
+  const conTexto = opciones.conTexto === true;
   const actividad = actividadPorTicket(opciones.project);
   const filas: AgenteDeCorrida[] = [];
 
@@ -416,7 +485,7 @@ export function leerAgentesDeCorrida(
       ticketEstado: null,
       faseConfirmada: null,
       faseInferida: null,
-      pregunta: preguntaDe(principal, ahora),
+      pregunta: preguntaDe(principal, ahora, conTexto),
     });
   }
 
@@ -452,7 +521,7 @@ export function leerAgentesDeCorrida(
       ticketEstado,
       faseConfirmada,
       faseInferida: faseConfirmada === null ? inferirFase(lectura.ultimaHerramienta) : null,
-      pregunta: preguntaDe(lectura, ahora),
+      pregunta: preguntaDe(lectura, ahora, conTexto),
     });
   }
   return filas;

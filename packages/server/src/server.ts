@@ -1017,7 +1017,10 @@ export async function handleApi(
   //
   // Qué hace cada subagente de la corrida orquestada, leído de sus transcripts.
   // Solo lectura y lista blanca de metadatos: nunca texto de prompts ni de
-  // herramientas. `sesion` es un identificador simple, no una ruta.
+  // herramientas. La única excepción es el texto de la pregunta al usuario y su
+  // respuesta (R-DAT-004, decisión escrita del PO), recortados y solo cuando el
+  // servidor escucha en la máquina local: `writeToken` solo existe con `--host`
+  // fuera de loopback. `sesion` es un identificador simple, no una ruta.
   if (method === "GET" && path === "/api/corrida/agentes") {
     const sesion = valorDeQuery(query, "sesion");
     if (sesion !== undefined && !esSesionValida(sesion)) {
@@ -1037,6 +1040,7 @@ export async function handleApi(
           ...(context.home === undefined ? {} : { home: context.home }),
           ...(sesion === undefined ? {} : { sesion }),
           ...(project === undefined ? {} : { project }),
+          conTexto: context.writeToken === undefined,
         }),
       },
     };
