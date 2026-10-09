@@ -15,7 +15,9 @@
  * consulta el registro para ella.
  *
  * El estado se deduce con un reloj inyectable (`ahora`) para ser determinista:
- * `termino` si el último mensaje del asistente cerró con `end_turn`; `esperando`
+ * `termino` si el último mensaje del asistente cerró con `end_turn` o, en un
+ * subagente, si la sesión principal registró su `<task-notification>` de fin
+ * (completed, failed, killed, stopped) sin eventos posteriores; `esperando`
  * si pasaron más de 60 s sin eventos o hay una herramienta sin resultado (un
  * permiso pedido); `trabajando` en otro caso.
  *
@@ -29,7 +31,9 @@ import { homedir } from "node:os";
 import { basename, join } from "node:path";
 
 import {
+  choosePaths,
   createExecutionContract,
+  nombresDeWorktree,
   readExecutionActivity,
   readTicket,
   type AuthorizedProject,
@@ -329,6 +333,89 @@ function leerConCache(ruta: string): Lectura | null {
   return lectura;
 }
 
+const ESTADOS_DE_FIN = new Set(["completed", "failed", "killed", "stopped"]);
+const CACHE_FINES = new Map<string, Map<string, number>>();
+
+/**
+ * Cuándo terminó cada subagente según la sesión principal: de cada evento
+ * `queue-operation` o `user` con un `<task-notification>` se toma solo `<task-id>`,
+ * `<status>` y la hora (lista blanca; nunca `summary`, `result` ni `output-file`).
+ * Vale la hora más reciente con `completed`, `failed`, `killed` o `stopped`;
+ * `running` se ignora. Tolera líneas cortadas.
+ */
+export function finesDeSubagentes(contenido: string): Map<string, number> {
+  const fines = new Map<string, number>();
+  for (const linea of contenido.split("\n")) {
+    if (!linea.includes("<task-notification>")) continue;
+    let evento: Record<string, unknown>;
+    try {
+      evento = JSON.parse(linea) as Record<string, unknown>;
+    } catch {
+      continue;
+    }
+    const tipo = evento["type"];
+    let cuerpo = "";
+    if (tipo === "queue-operation") {
+      cuerpo = typeof evento["content"] === "string" ? evento["content"] : "";
+    } else if (tipo === "user") {
+      cuerpo = textoDeUsuario(objeto(evento["message"])?.["content"]);
+    }
+    if (!cuerpo.includes("<task-notification>")) continue;
+    const id = /<task-id>([A-Za-z0-9_-]{1,128})<\/task-id>/.exec(cuerpo)?.[1];
+    const estado = /<status>([a-z_]+)<\/status>/.exec(cuerpo)?.[1];
+    const marca = typeof evento["timestamp"] === "string" ? Date.parse(evento["timestamp"]) : NaN;
+    if (id === undefined || estado === undefined || !ESTADOS_DE_FIN.has(estado) || !Number.isFinite(marca)) continue;
+    if (marca > (fines.get(id) ?? -Infinity)) fines.set(id, marca);
+  }
+  return fines;
+}
+
+function finesConCache(ruta: string): Map<string, number> {
+  let firma: string;
+  try {
+    const info = statSync(ruta);
+    firma = `${info.mtimeMs}:${info.size}`;
+  } catch {
+    return new Map();
+  }
+  const clave = `${ruta}|${firma}`;
+  const guardada = CACHE_FINES.get(clave);
+  if (guardada !== undefined) return guardada;
+  let fines: Map<string, number>;
+  try {
+    fines = finesDeSubagentes(readFileSync(ruta, "utf8"));
+  } catch {
+    return new Map();
+  }
+  for (const existente of CACHE_FINES.keys()) {
+    if (existente.startsWith(`${ruta}|`)) CACHE_FINES.delete(existente);
+  }
+  CACHE_FINES.set(clave, fines);
+  return fines;
+}
+
+/**
+ * El estado del ticket para la fila de un subagente: el de su copia en el worktree
+ * (`nombresDeWorktree`) si existe, porque ahí escribe el subagente; si no, el del
+ * checkout principal. Solo lectura.
+ */
+export function estadoDelTicket(paths: RegistryPaths, ticket: string): string | null {
+  try {
+    const carpeta = join(paths.root, nombresDeWorktree(ticket).carpeta);
+    if (existsSync(carpeta)) {
+      const estado = readTicket(choosePaths(carpeta), ticket)?.workflowStatus;
+      if (estado !== undefined) return estado;
+    }
+  } catch {
+    // sin worktree legible: se usa el principal
+  }
+  try {
+    return readTicket(paths, ticket)?.workflowStatus ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /** La descripción del `meta.json` del subagente, o null. */
 function descripcionDe(rutaJsonl: string): string | null {
   try {
@@ -489,20 +576,21 @@ export function leerAgentesDeCorrida(
     });
   }
 
+  const fines = finesConCache(ruta);
   for (const archivo of archivosDeSubagentes(ruta)) {
     const lectura = leerConCache(archivo);
     if (lectura === null) continue;
 
-    const estado = estadoDe(lectura, ahora);
+    const fin = fines.get(basename(archivo, ".jsonl").replace(/^agent-/, ""));
+    const estado: EstadoDeAgente =
+      fin !== undefined && (lectura.ultimoEventoEn === null || fin >= lectura.ultimoEventoEn)
+        ? "termino"
+        : estadoDe(lectura, ahora);
 
-    let ticketEstado: string | null = null;
-    if (lectura.ticket !== null && opciones.paths !== undefined) {
-      try {
-        ticketEstado = readTicket(opciones.paths, lectura.ticket)?.workflowStatus ?? null;
-      } catch {
-        ticketEstado = null;
-      }
-    }
+    const ticketEstado =
+      lectura.ticket !== null && opciones.paths !== undefined
+        ? estadoDelTicket(opciones.paths, lectura.ticket)
+        : null;
     const faseConfirmada = lectura.ticket === null ? null : (actividad.get(lectura.ticket) ?? null);
 
     filas.push({
