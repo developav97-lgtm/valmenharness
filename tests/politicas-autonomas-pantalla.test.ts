@@ -47,6 +47,14 @@ async function pintar(texto: string) {
         return { config: { ...checkConfig(RAIZ, texto), text: texto, diff: [] }, impact: null };
       }
       if (url.pathname === "/api/health") return { root: RAIZ };
+      if (url.pathname === "/api/authorizations/options") {
+        return {
+          source: "registry",
+          modules: [{ module: "WEB", tickets: 2 }],
+          approval: { types: ["BUGFIX", "FEATURE"], stages: ["analysis", "plan"], modes: ["on-approve", "reviewer"], impacts: ["sync_impact"] },
+          qa: { types: ["BUGFIX", "FEATURE"] },
+        };
+      }
       return {};
     },
   });
