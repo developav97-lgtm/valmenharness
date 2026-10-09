@@ -69,7 +69,7 @@ const SIN_SECCION = null;
 const PLAN_CON_DECLARACION = [
   "- Pasos ordenados:",
   "  1. Ajustar el modo oscuro en `FrontEnd/src/pos/PantallaOrdenes.component.html`.",
-  "  2. Declarar en `FrontEnd/src/pos/PantallaOrdenes.component.ts` los colores del tema.",
+  "  2. Declarar en `FrontEnd/src/pos/PantallaOrdenes.component.ts` los colores del tema (C1, C2).",
   "- Declaración de interfaz: este plan **no recomienda** cubrir los criterios de",
   "  interfaz con Playwright, porque el cambio es de estilo declarativo y la",
   "  validación queda como `verify: manual` en los criterios.",

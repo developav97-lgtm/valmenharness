@@ -73,7 +73,7 @@ const PLAN_OK = [
   "- Gate de plan y aprobación: pendiente",
   "- Pasos ordenados:",
   "  1. Cambiar en `BackEnd/pos/filters.py` el `lookup_expr` de `number`.",
-  "  2. Añadir en `BackEnd/pos/tests/test_filters.py` una prueba de búsqueda parcial.",
+  "  2. Añadir en `BackEnd/pos/tests/test_filters.py` una prueba de búsqueda parcial (C1–C4).",
   "- Rollback: revertir el cambio de una línea y retirar las pruebas añadidas.",
 ].join("\n");
 
@@ -162,7 +162,7 @@ describe("cada hallazgo corta antes del evaluador", () => {
     writeFixtureTicket(lab, {
       id: TICKET,
       workflowStatus: "planned",
-      plan: PLAN_OK.replace("  2. Añadir en `BackEnd/pos/tests/test_filters.py` una prueba de búsqueda parcial.", "  2. Mejorar el filtro."),
+      plan: PLAN_OK.replace("  2. Añadir en `BackEnd/pos/tests/test_filters.py` una prueba de búsqueda parcial (C1–C4).", "  2. Mejorar el filtro."),
     });
     const e = espia();
 

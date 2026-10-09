@@ -1234,7 +1234,7 @@ function escribirContenido(ruta: string): void {
       "- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).",
       "- Pasos ordenados:",
       "  1. Cambiar en `BackEnd/pos/filters.py` el `lookup_expr` de `number` de `exact` a `icontains`.",
-      "  2. Añadir en `BackEnd/pos/tests/test_filters.py` una prueba de búsqueda parcial.",
+      "  2. Añadir en `BackEnd/pos/tests/test_filters.py` una prueba de búsqueda parcial (C1, C2).",
       "- Rollback: revertir el cambio de una línea y retirar la prueba añadida.",
     ].join("\n"),
   );

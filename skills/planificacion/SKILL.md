@@ -112,6 +112,8 @@ El gate `qa-mechanical` corre los comandos declarados antes de que el ticket pas
 
 Un criterio sin anotación detiene el gate: la ambigüedad se resuelve sola a favor de «seguramente está bien». Un criterio que solo verifica una persona se marca `verify: manual`, que es una declaración, no una omisión.
 
+El gate de plan decide en código, sin preguntarle al modelo, los criterios que se leen en el texto. Un criterio `verify: manual` se cita como «Cn» (o dentro de un rango «Cn–Cm») en el paso del plan que lo verifica: sin esa cita vota 0, y también vota 0 un manual compuesto —una frase con «y» u «o» son dos criterios—, que hay que partir. Un `test:` que solo afirma que la prueba pasa o que el monorepo compila se decide igual: lo cita un paso y el plan nombra el archivo de prueba del comando. El tope de 40 del precheck cuenta afirmaciones y no líneas, así que partir un criterio compuesto no lo supera.
+
 ## Handoff
 
 Entregar el identificador y la ruta del ticket, el plan vigente, el estado de la compuerta, quién es responsable de qué, el orden de trabajo, las pruebas y las decisiones pendientes. **Delegar no amplía los archivos ni las acciones aprobadas.**

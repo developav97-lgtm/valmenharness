@@ -22,7 +22,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { runGate } from "../packages/engine/src/gate.js";
 import { readReceipts } from "../packages/engine/src/receipts.js";
 import type { JevEvaluation } from "../packages/gate-jev/src/index.js";
-import { writeFixtureTicket } from "./helpers/fixtures.js";
+import { CRITERIOS_QUE_EVALUA_EL_MODELO, writeFixtureTicket } from "./helpers/fixtures.js";
 
 // El gate de plan tiene precondición de estado y los 57 tickets reales están
 // cerrados, así que el sujeto se construye: un ticket válido en `planned`.
@@ -33,7 +33,7 @@ let lab: string;
 beforeEach(() => {
   lab = mkdtempSync(join(tmpdir(), "valmen-gate-"));
   mkdirSync(join(lab, "tickets"), { recursive: true });
-  writeFixtureTicket(lab, { id: TICKET });
+  writeFixtureTicket(lab, { id: TICKET, criterios: CRITERIOS_QUE_EVALUA_EL_MODELO });
 });
 
 afterEach(() => {
@@ -349,6 +349,7 @@ describe("un impacto declarado cambia lo que se pregunta", () => {
     writeFixtureTicket(lab, {
       id: TICKET,
       impacts: ["migration_impact"],
+      criterios: CRITERIOS_QUE_EVALUA_EL_MODELO,
       diagnostico: [
         "- Archivos y flujo investigados: `BackEnd/pos/filters.py`, que define el filtro.",
         "- Causa raíz o hipótesis: el lookup compara por igualdad exacta.",

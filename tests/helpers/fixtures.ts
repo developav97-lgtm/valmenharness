@@ -64,6 +64,21 @@ export interface FixtureTicketOptions {
 }
 
 /**
+ * Los cuatro criterios del fixture, declarados con `test:` en vez de `verify: manual`.
+ *
+ * Un criterio manual lo decide el código por su forma y su cita en el plan (sin modelo); uno que
+ * describe un comportamiento y declara su comando sigue yendo al evaluador. Los tests que
+ * necesitan que el evaluador conteste por criterio —para provocar una revisión o un bloqueo—
+ * pasan estos.
+ */
+export const CRITERIOS_QUE_EVALUA_EL_MODELO = [
+  '- [ ] Buscar "104" devuelve la orden "1042".\n      <!-- test: npx vitest run tests/filtros.test.ts -->',
+  '- [ ] Buscar "1042" sigue devolviendo la orden "1042".\n      <!-- test: npx vitest run tests/filtros.test.ts -->',
+  '- [ ] Buscar "999" no devuelve resultados.\n      <!-- test: npx vitest run tests/filtros.test.ts -->',
+  "- [ ] El cliente que consulta con el número exacto sigue recibiendo su resultado.\n      <!-- test: npx vitest run tests/filtros.test.ts -->",
+].join("\n");
+
+/**
  * Construye el texto de un ticket válido en el estado pedido.
  *
  * Las secciones que no aplican a un ticket temprano se dejan vacías y con su
@@ -101,7 +116,7 @@ function renderBase(options: FixtureTicketOptions, eventoExtra: string): string 
       "- Pasos ordenados:",
       "  1. Cambiar en `BackEnd/pos/filters.py` el `lookup_expr` de `number` de `exact` a `icontains`.",
       "  2. Añadir en `BackEnd/pos/tests/test_filters.py` una prueba de búsqueda parcial.",
-      "  3. Verificar con `npx vitest run` que el término enviado no requiere normalización.",
+      "  3. Verificar con `npx vitest run` que el término enviado no requiere normalización. (C1–C4)",
       "- Rollback: revertir el cambio de una línea y retirar las pruebas añadidas.",
     ].join("\n"),
     // Cada criterio declara cómo se verifica: la revisión previa de la compuerta del plan

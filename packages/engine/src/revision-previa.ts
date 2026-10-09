@@ -19,7 +19,13 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 import { parseTicket, stripHtmlComments } from "@valmen/core";
-import { criterioDeclarado, extractCriteriaSpecs } from "@valmen/gate";
+import {
+  type CriterionSpec,
+  afirmacionesDe,
+  criterioDeclarado,
+  esCriterioDePrueba,
+  extractCriteriaSpecs,
+} from "@valmen/gate";
 
 /** Un hallazgo de la revisión: qué es y qué falta. */
 export interface PreReviewFinding {
@@ -34,11 +40,12 @@ export interface PreReviewFinding {
 }
 
 /**
- * Cuántos criterios admite la revisión antes de pedir que el ticket se parta.
+ * Cuántas **afirmaciones** admiten los criterios antes de pedir que el ticket se parta.
  *
  * Es un tope de **revisión**, distinto de las tandas con las que se evalúan los criterios:
  * evaluar todos en varias llamadas no es recortar, y un ticket con más de este número es
- * dos tickets.
+ * dos tickets. Se cuentan afirmaciones y no líneas: partir un criterio compuesto en atómicos
+ * —lo que pide el aviso de forma— no cambia la suma, y así partir no puede pasar el tope.
  */
 export const TOPE_DE_CRITERIOS = 40;
 
@@ -298,10 +305,13 @@ export function reviewBeforeGate(input: {
         message: `«Criterios»: «${criterio.text.slice(0, 80)}» no declara cómo se verifica (<!-- test: … --> o <!-- verify: manual -->).`,
       });
     }
-    if (criterios.length > TOPE_DE_CRITERIOS) {
+    const afirmaciones = criterios.reduce((total, c) => total + afirmacionesDe(c.text), 0);
+    if (afirmaciones > TOPE_DE_CRITERIOS) {
       findings.push({
         id: "mas_criterios_que_el_tope",
-        message: `«Criterios»: son ${criterios.length}, más que el tope de ${TOPE_DE_CRITERIOS}; partí el ticket.`,
+        message:
+          `«Criterios»: son ${afirmaciones} afirmaciones en ${criterios.length} criterio(s), ` +
+          `más que el tope de ${TOPE_DE_CRITERIOS}; partí el ticket.`,
       });
     }
   }
@@ -364,4 +374,57 @@ export function decideInCode(propositionId: string, ticketText: string): number 
     default:
       return null;
   }
+}
+
+/**
+ * Los criterios que los pasos del plan citan como «Cn», sin modelo.
+ *
+ * El identificador se lee con límite de palabra —«C10» no cita C1— y un rango se escribe
+ * «Cn–Cm», «Cn-Cm» o «Cn a Cm» (el segundo extremo admite la «C» o no). Solo se leen los
+ * pasos numerados: una mención suelta en el resto del plan no verifica nada.
+ */
+export function criteriosCitados(plan: string): Set<number> {
+  const citados = new Set<number>();
+  for (const paso of pasosDelPlan(plan)) {
+    for (const rango of paso.matchAll(/\bC(\d+)\s*(?:[–—-]|\ba\b)\s*C?(\d+)\b/g)) {
+      const desde = Number(rango[1]);
+      const hasta = Number(rango[2]);
+      for (let n = Math.min(desde, hasta); n <= Math.max(desde, hasta); n++) citados.add(n);
+    }
+    for (const cita of paso.matchAll(/\bC(\d+)\b/g)) citados.add(Number(cita[1]));
+  }
+  return citados;
+}
+
+/**
+ * Decide en código el voto de un criterio manual o «la prueba pasa» (`criterio_NN`).
+ *
+ * Un manual compuesto vota 0 y pide partirlo; uno que ningún paso cita como «Cn» vota 0, que
+ * es lo que antes detectaba el modelo; un criterio de prueba sin cita vota 0, y también si su
+ * comando nombra un archivo que el plan no nombra. Si no, cumple. `indice` es el `NN`, 1-based.
+ */
+export function decidirCriterioEnCodigo(
+  indice: number,
+  criterio: CriterionSpec,
+  ticketText: string,
+): { readonly valor: number; readonly motivo: string } {
+  const plan = secciones(ticketText)["Plan"] ?? "";
+  const afirmaciones = afirmacionesDe(criterio.text);
+  if (criterio.manual && afirmaciones >= 2) {
+    return { valor: 0, motivo: `agrupa ${afirmaciones} afirmaciones; partilo` };
+  }
+  if (!criteriosCitados(plan).has(indice)) {
+    return { valor: 0, motivo: `ningún paso cita C${indice}` };
+  }
+  if (!criterio.manual && esCriterioDePrueba(criterio)) {
+    const textoDelPlan = lineasDe(plan).join("\n");
+    const archivo = (criterio.command ?? "")
+      .split(/\s+/)
+      .map((token) => token.replace(/^["'`]|["'`]$/g, ""))
+      .find((token) => pareceRuta(token));
+    if (archivo !== undefined && !textoDelPlan.includes(archivo)) {
+      return { valor: 0, motivo: `el plan no nombra \`${archivo}\`` };
+    }
+  }
+  return { valor: CUMPLE, motivo: `C${indice} citado por un paso del plan` };
 }
