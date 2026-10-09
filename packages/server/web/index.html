@@ -2320,7 +2320,7 @@
           <a href="#/tickets" data-vista="tickets"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Tickets</a>
           <a href="#/features" data-vista="features"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h7v7H4zM13 5h7v4h-7zM13 11h7v8h-7zM4 14h7v5H4z"/></svg>Features</a>
           <a href="#/portafolio" data-vista="portafolio"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h7l2 2h9v13H3Z"/></svg>Portafolio</a>
-          <a href="#/corrida" data-vista="corrida"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><path d="M7 4v4M12 10v4M17 16v4"/></svg>Corrida</a>
+          <a href="#/agentes" data-vista="agentes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><path d="M7 4v4M12 10v4M17 16v4"/></svg>Agentes</a>
           <a href="#/procesos" data-vista="procesos"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h9a4 4 0 0 1 0 8H9"/><path d="M8 5 5 7l3 2"/><path d="M14 17h5"/></svg>Procesos</a>
           <a href="#/estandares" data-vista="estandares"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16"/><path d="M5 7l7-3 7 3"/><path d="M5 7v5a7 7 0 0 0 7 7 7 7 0 0 0 7-7V7"/></svg>Estándares</a>
           <a href="#/configurar" data-vista="configurar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M4 12h2M18 12h2M12 4v2M12 18v2M6.5 6.5l1.5 1.5M16 16l1.5 1.5M17.5 6.5 16 8M8 16l-1.5 1.5"/></svg>Configurar</a>
@@ -6269,7 +6269,7 @@
         const sigueVigente = () =>
           revision === revisionVistaJornadas &&
           proyectoDeLaSolicitud === proyectoSeleccionado &&
-          ["corrida", "jornadas"].includes(location.hash.replace(/^#\//, "").split("/")[0]);
+          esRutaDeAgentes(location.hash.replace(/^#\//, "").split("/")[0]);
         if (proyectoDeLaSolicitud === "") {
           cont.textContent = "";
           cont.append(el("div", "Selecciona un proyecto disponible para consultar su corrida.", "vacio"));
@@ -6298,7 +6298,7 @@
         const ahora = Date.now();
 
         cont.textContent = "";
-        cont.append(el("h2", "Corrida"));
+        cont.append(el("h2", "Agentes"));
 
         // Barra: agentes vivos frente a los simultáneos que quiere el PO. El valor
         // vive solo en este navegador: no hay ninguna llamada de escritura.
@@ -6406,7 +6406,7 @@
         // Sin la API de visibilidad (un entorno sin navegador) no hay refresco.
         if (!("visibilityState" in document)) return;
         refrescoDeCorrida = setTimeout(() => {
-          if (!["corrida", "jornadas"].includes(location.hash.replace(/^#\//, "").split("/")[0])) return;
+          if (!esRutaDeAgentes(location.hash.replace(/^#\//, "").split("/")[0])) return;
           // Una pestaña oculta no consulta: espera a volver a verse.
           if (document.visibilityState !== "visible" || !puedeRefrescar()) {
             programarRefrescoDeCorrida();
@@ -8608,6 +8608,13 @@
        * y el título de arriba lo dice con palabras —también cuando la vista es
        * una que no está en la lista, como el detalle de un ticket—.
        */
+      // «Corrida» y «Jornadas» eran los nombres viejos de la vista: siguen
+      // sirviendo como alias, sin reescribir la dirección.
+      const RUTAS_DE_AGENTES = ["agentes", "corrida", "jornadas"];
+      function esRutaDeAgentes(nombre) {
+        return RUTAS_DE_AGENTES.includes(nombre);
+      }
+
       const TITULOS = {
         tickets: "Tickets",
         ticket: "Ticket",
@@ -8615,8 +8622,9 @@
         feature: "Feature",
         procesos: "Procesos",
         portafolio: "Portafolio",
-        jornadas: "Corrida",
-        corrida: "Corrida",
+        agentes: "Agentes",
+        jornadas: "Agentes",
+        corrida: "Agentes",
         estandares: "Estándares",
         configurar: "Configurar",
         modelos: "Modelos",
@@ -8759,7 +8767,7 @@
         const ruta = location.hash.replace(/^#\//, "") || "tickets";
         const [nombre, parametro] = ruta.split("/");
         clearTimeout(refrescoDeCorrida);
-        if (nombre !== "jornadas" && nombre !== "corrida") revisionVistaJornadas += 1;
+        if (!esRutaDeAgentes(nombre)) revisionVistaJornadas += 1;
 
         // Navegar de verdad empieza arriba; **refrescar** no mueve a nadie.
         const antes = opciones.conservarVista === true ? instantaneaDeLaVista() : null;
@@ -8771,6 +8779,7 @@
           // para que la navegación no parezca perderse al abrir uno.
           const activa =
             enlace.dataset.vista === nombre ||
+            (esRutaDeAgentes(nombre) && enlace.dataset.vista === "agentes") ||
             (nombre === "ticket" && enlace.dataset.vista === "tickets") ||
             (nombre === "feature" && enlace.dataset.vista === "features");
           if (activa) enlace.setAttribute("aria-current", "page");
@@ -8788,7 +8797,7 @@
           else if (nombre === "features") await vistaFeatures();
           else if (nombre === "procesos") await vistaProcesos();
           else if (nombre === "portafolio") await vistaPortafolio();
-          else if (nombre === "corrida" || nombre === "jornadas") await vistaCorrida();
+          else if (esRutaDeAgentes(nombre)) await vistaCorrida();
           else if (nombre === "estandares") await vistaEstandares();
           else await vistaTickets();
         } catch (error) {
