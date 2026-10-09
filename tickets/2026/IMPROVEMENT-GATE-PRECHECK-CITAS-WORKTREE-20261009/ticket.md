@@ -4,8 +4,8 @@ id: IMPROVEMENT-GATE-PRECHECK-CITAS-WORKTREE-20261009
 title: Refinar compuertas con precheck de citas en worktrees y error real de cascade en el recibo
 type: IMPROVEMENT
 module: GATE
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -145,7 +145,37 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación de la entrega de IMPROVEMENT-GATE-PRECHECK-CITAS-WORKTREE-20261009",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta verificar sus criterios.",
+    "expected": "Los criterios del ticket se cumplen; lo que exige una corrida real queda declarado.",
+    "evidence": [
+      "EVIDENCE-001"
+    ],
+    "affected_files": [
+      "packages/credentials/src/claude-cli.ts",
+      "packages/engine/src/evaluators.ts",
+      "packages/engine/src/gate.ts",
+      "packages/engine/src/revision-previa.ts",
+      "packages/gate/src/receipt.ts",
+      "tests/claude-cli.test.ts",
+      "tests/gate-cascade-fallo.test.ts",
+      "tests/revision-previa.test.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -168,29 +198,81 @@ Directorio: raíz del repositorio (o del worktree).
 - Validación manual (medida): `node packages/cli/dist/main.js precheck analysis --id FEATURE-WEB-MOTOR-ESCENA-20261008` desde el worktree ya no dice «no es un repositorio git»: da 2 hallazgos de citas relativas a la carpeta de la feature (`spec/s2-motor-escena/spec.md`, `spec/s3-mundos/spec.md`) y omite con motivo `../packages/server/web/agentes/motor.js` y `/agentes/motor.js`.
 - Ambiente: Node 24, `npm install` hecho; sin red ni credenciales (los evaluadores van inyectados). El `valmen` global apunta al checkout principal; para probar este cambio usar `node packages/cli/dist/main.js` tras `npx tsc --build tsconfig.build.json`.
 - No medido: el comportamiento con el CLI real de Claude Code (el error `error_max_structured_output_retries` se simuló con el error capturado el 2026-10-09).
+- Resultado del PO: «entiendo que para cerrar esos dos toca una corrida pero aun no tengo ninguna podriamos cerrarlos como para dejar cerrado todo y ya cuando vaya a correr todo te si hay un error con esas dos yo te abro un bugfix» (2026-10-09).
 
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-09",
+    "build_reference": "commit:078c294419ec6a42e5b248bf6aa8bf2c1355f3cb",
+    "environment": "macOS, Node 24, main; Mission Control del PO en 127.0.0.1:4175",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-09",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "«entiendo que para cerrar esos dos toca una corrida pero aun no tengo ninguna podriamos cerrarlos como para dejar cerrado todo y ya cuando vaya a correr todo te si hay un error con esas dos yo te abro un bugfix»"
+  }
+]
 ```
 
 ## Evidencia
 
 ```json
-[]
+[
+  {
+    "id": "EVIDENCE-001",
+    "date": "2026-10-09",
+    "kind": "automated-test",
+    "description": "Suite completa en verde tras integrar en main y comprobaciones manuales de la jornada",
+    "reference": "worktree:sha256:3eef2f030f7a62ac633db85dece1ae753e8d99b5decdf63fd913558fbcb70f71",
+    "point_id": "POINT-001"
+  }
+]
 ```
 
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-09",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "«entiendo que para cerrar esos dos toca una corrida pero aun no tengo ninguna podriamos cerrarlos como para dejar cerrado todo y ya cuando vaya a correr todo te si hay un error con esas dos yo te abro un bugfix»"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-09",
+    "technical_summary": "El precheck reconoce worktrees (.git como archivo) y comprueba las citas ruta:línea; la cascada ya no reintenta, registra el error real del CLI y el evaluador pedido en el recibo y degrada al evaluador por defecto, salvo AUTH y CREDENTIAL_MISSING.",
+    "functional_summary": "Los análisis y planes hechos desde un worktree ya no bajan por citas que no se comprobaron, y un fallo de la cascada deja su causa escrita en el recibo.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "unreleased: entra con la feature vista-agentes"
+  }
+]
 ```
 
 ## Consumo de IA
@@ -211,6 +293,36 @@ Directorio: raíz del repositorio (o del worktree).
     "source": "manual:subagente de implementación de la corrida orquestada (claude-sonnet-5-5), sin agregado de la sesión",
     "confidence": "low",
     "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-09",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Subagentes por fase; sin números por ticket.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:sesiones de Claude Code de la corrida orquestada vista-agentes",
+    "confidence": "low",
+    "id": "CONSUMO-002"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-09",
+    "session_reference": "4f9b1b12-ced4-4132-9151-c3a025ede085",
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. Sesión **compartida**: trabajó 15 tickets (FEATURE-SERVER-SESION-PRINCIPAL-20261008 ×132, FEATURE-WEB-VISTA-LIENZO-20261008 ×121, FEATURE-WEB-MUNDO-PASTELERIA-20261008 ×119, FEATURE-WEB-MOTOR-ESCENA-20261008 ×118, IMPROVEMENT-WEB-VISTA-RENOMBRAR-AGENTES-20261008 ×107), así que su costo no se reparte y acá no se registran números. Costo completo de la sesión: no declarado por el proveedor, 6712613 tokens. Registralo en el ticket cuya sesión sea propia, o declaralo compartido donde corresponda. Sesión \"Feature vista-agentes\".",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "claude:4f9b1b12-ced4-4132-9151-c3a025ede085",
+    "confidence": "high",
+    "id": "CONSUMO-003"
   }
 ]
 ```
@@ -312,6 +424,141 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:21:05.558Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:21:05.912Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:21:06.367Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:21:06.856Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:21:07.335Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:21:07.995Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:21:08.730Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:21:09.090Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:21:09.410Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:21:09.750Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:21:10.258Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:21:10.819Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:21:12.798Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:21:13.117Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-025",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:21:13.510Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
