@@ -4,8 +4,8 @@ id: IMPROVEMENT-WEB-MUNDOS-CORRECCIONES-20261009
 title: Correcciones de los tres mundos tras la revisión del PO
 type: IMPROVEMENT
 module: WEB
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -13,7 +13,7 @@ migration_impact: false
 docker_impact: false
 risk_level: normal
 created: 2026-10-08
-updated: 2026-10-08
+updated: 2026-10-09
 related_ticket: null
 target_release: null
 released_in: null
@@ -162,7 +162,42 @@ El código no tiene un «tope visual por mundo» ni una lista de tickets por est
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación de la entrega de IMPROVEMENT-WEB-MUNDOS-CORRECCIONES-20261009",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta verificar sus criterios.",
+    "expected": "Los criterios del ticket se cumplen y el PO valida la pantalla.",
+    "evidence": [
+      "EVIDENCE-001"
+    ],
+    "affected_files": [
+      "packages/server/web/agentes/montaje.js",
+      "packages/server/web/agentes/motor.d.ts",
+      "packages/server/web/agentes/motor.js",
+      "packages/server/web/agentes/mundos/control.js",
+      "packages/server/web/agentes/mundos/invernadero.js",
+      "packages/server/web/agentes/mundos/pasteleria.js",
+      "packages/server/web/index.html",
+      "tests/motor-escena.test.ts",
+      "tests/mundo-control.test.ts",
+      "tests/mundo-invernadero.test.ts",
+      "tests/mundo-pasteleria.test.ts",
+      "tests/mundos-correcciones.test.ts",
+      "tests/vista-texto-pregunta.test.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -201,29 +236,81 @@ Validaciones manuales, medidas por el implementador en el navegador (servidor de
 - C33: en el invernadero el fondo de `th` y de todas las celdas es transparente. El fondo de la fila con el ratón encima solo está cubierto por la prueba C32, no medido en el navegador.
 
 Queda para el responsable: la comparación visual contra el prototipo (tamaño de las plantas y pasteles a media escala, orden de las filas) y que los defaults S1-S5 sean los que quiere.
+- Resultado del PO: «si las correcciones de los mundos estan bien» · «A cierralos» (2026-10-09; validó la pantalla con una corrida real).
 
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-09",
+    "build_reference": "commit:8881bbddbff8b3b845c4998cb1cfbbc7c4466dd5",
+    "environment": "macOS, Node 24, main tras integrar; Mission Control del PO en el computador y el iPad",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-09",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "«si las correcciones de los mundos estan bien» · «A cierralos»"
+  }
+]
 ```
 
 ## Evidencia
 
 ```json
-[]
+[
+  {
+    "id": "EVIDENCE-001",
+    "date": "2026-10-09",
+    "kind": "manual-test",
+    "description": "Suite completa en verde y validación del PO con una corrida real en Mission Control",
+    "reference": "worktree:sha256:53ee8f15c43c2645fab44411d9ab1dd7b9b69a2bfe07d0c75c137193b07c883a",
+    "point_id": "POINT-001"
+  }
+]
 ```
 
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-09",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "«si las correcciones de los mundos estan bien» · «A cierralos»"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-09",
+    "technical_summary": "Un ticket por planta y pastel con tope visual, sin «Anita», encabezados de tabla sin tapar la primera fila y consolas sin superponer; el motor deja de recrear a los terminados en cada refresco.",
+    "functional_summary": "Los mundos muestran los tickets reales, sin textos ajenos y sin consolas tapadas.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "unreleased: entra con la feature vista-agentes"
+  }
+]
 ```
 
 ## Consumo de IA
@@ -244,6 +331,36 @@ Queda para el responsable: la comparación visual contra el prototipo (tamaño d
     "source": "manual:subagente de implementación sin agregado de tokens expuesto",
     "confidence": "medium",
     "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-09",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Subagentes por fase; sin números por ticket.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:sesiones de Claude Code de la corrida orquestada vista-agentes",
+    "confidence": "low",
+    "id": "CONSUMO-002"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-09",
+    "session_reference": "4f9b1b12-ced4-4132-9151-c3a025ede085",
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. Sesión **compartida**: trabajó 15 tickets (FEATURE-SERVER-SESION-PRINCIPAL-20261008 ×130, FEATURE-WEB-VISTA-LIENZO-20261008 ×119, FEATURE-WEB-MOTOR-ESCENA-20261008 ×118, FEATURE-WEB-MUNDO-PASTELERIA-20261008 ×117, IMPROVEMENT-WEB-VISTA-RENOMBRAR-AGENTES-20261008 ×107), así que su costo no se reparte y acá no se registran números. Costo completo de la sesión: no declarado por el proveedor, 6659235 tokens. Registralo en el ticket cuya sesión sea propia, o declaralo compartido donde corresponda. Sesión \"Feature vista-agentes\".",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "claude:4f9b1b12-ced4-4132-9151-c3a025ede085",
+    "confidence": "high",
+    "id": "CONSUMO-003"
   }
 ]
 ```
@@ -345,6 +462,141 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:29.658Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:29.962Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:30.280Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:30.563Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:30.871Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:31.363Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:31.919Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:32.251Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:32.604Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:32.913Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:33.239Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:33.553Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:34.788Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:34.979Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-025",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:35.344Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
