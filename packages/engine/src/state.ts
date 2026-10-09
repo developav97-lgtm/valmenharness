@@ -7,6 +7,11 @@
  * la produjo y la comparación "¿cambió el ticket o cambió el modelo?" dejaría de
  * funcionar.
  *
+ * Es también la definición del hash del recibo: los comparadores (aprobación por autorización,
+ * revisor, servidor, Hermes) la recalculan solo con el texto del ticket. Lo que el motor deriva del
+ * disco —como las rutas citadas comprobadas— va al evaluador, **no** a esta función ni al hash:
+ * el texto del diagnóstico, de donde salen las citas, ya está en el hash.
+ *
  * Estaba duplicada en `gate.ts` y en `simulate.ts`. Una calibración hecha con la
  * copia del simulador no describiría al gate real en cuanto las dos se
  * separaran, así que ahora hay una sola.

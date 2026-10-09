@@ -463,10 +463,15 @@ export async function runGate(
   }
 
   let state: Record<string, string>;
+  // Lo que ve el evaluador: el estado del ticket más lo que el motor comprobó en disco. No es lo
+  // que se hashea: el `stateHash` responde «¿cambió el texto del ticket?» y lo recalculan los
+  // comparadores sin acceso al disco.
+  let estadoDelEvaluador: Record<string, string>;
   let checks: MechanicalCheck[];
   let impacts: string[];
   try {
     state = buildGateState(ticket.text);
+    estadoDelEvaluador = state;
     checks = runMechanicalChecks(ticket.text);
     impacts = declaredImpactIds(parseTicket(ticket.text));
     // Las rutas que cita el diagnóstico, comprobadas en código: el evaluador recibe el
@@ -476,7 +481,7 @@ export async function runGate(
     if ((definition.id === "analysis" || definition.id === "plan") && definition.commandPropositions !== true) {
       const citas = citedFiles(paths.root, ticket.text);
       if (citas.length > 0) {
-        state = { ...state, archivos_citados: renderCitas(citas) };
+        estadoDelEvaluador = { ...state, archivos_citados: renderCitas(citas) };
       }
       checks = [...checks, chequeoDeArchivosCitados(citas)];
     }
@@ -742,7 +747,7 @@ export async function runGate(
     try {
       evaluation = await evaluateGate({
         gate,
-        state,
+        state: estadoDelEvaluador,
         root: paths.root,
         ...(respuestasDeCodigo.length === 0 ? {} : { precomputed: respuestasDeCodigo }),
         ...(options.checks !== undefined
