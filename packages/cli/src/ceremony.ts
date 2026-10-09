@@ -43,7 +43,7 @@ import {
 } from "@valmen/engine";
 import type { recordHumanDecision } from "@valmen/server";
 
-import { type CommandResult, validateOne } from "./commands.js";
+import { type CommandResult, guardarConsumoDeSesiones, validateOne } from "./commands.js";
 
 type Flags = Readonly<Record<string, string | true>>;
 
@@ -82,6 +82,8 @@ export interface CeremonyDeps {
   readonly decide: typeof recordHumanDecision;
   /** El HEAD vigente: es lo que `qa-start` compara. */
   readonly head: (root: string) => string;
+  /** Carpeta personal donde viven las sesiones del cliente; se inyecta para probar sin tocar la real. */
+  readonly home?: string;
 }
 
 /** Quién decide una compuerta y con qué palabras: lo que cambia entre la delegación y el atajo. */
@@ -277,7 +279,12 @@ export function cerrarConQaDelPo(
         transition({ paths, ticketId, entity: "point", pointId: "POINT-001", to });
       }
     }
-    if (actual().blocks.Evidencia.length === 0) {
+    // El ciclo de QA con `commit:` exige una evidencia con referencia de árbol: una evidencia
+    // previa sin ella (p. ej. una prueba anotada a mano) no la sustituye.
+    const conArbol = (actual().blocks.Evidencia as readonly { reference?: unknown }[]).some(
+      (e) => typeof e.reference === "string" && e.reference.startsWith("worktree:sha256:"),
+    );
+    if (!conArbol) {
       paso = "evidencia";
       addEvidence({
         paths,
@@ -454,7 +461,7 @@ export async function approveCommand(
 export function closeCommand(
   paths: RegistryPaths,
   flags: Flags,
-  deps: Pick<CeremonyDeps, "head">,
+  deps: Pick<CeremonyDeps, "head" | "home">,
 ): CommandResult {
   const id = texto(flags, "id");
   if (id === undefined) return error("close requiere --id <TICKET-ID>.", EXIT_SCHEMA);
@@ -495,8 +502,11 @@ export function closeCommand(
     if (documento.blocks.Puntos.length === 0 && files.length === 0) {
       return error("close requiere --files con los archivos del punto de QA: no se infieren.", EXIT_SCHEMA);
     }
+    // El consumo real de las sesiones se guarda antes de cerrar, igual que en `close-attempt` y en
+    // la transición a closed (idempotente): sin esto el ticket quedaba solo con el `manual:`.
+    guardarConsumoDeSesiones(paths, id, deps.home === undefined ? {} : { home: deps.home });
     const source = texto(flags, "source");
-    if (documento.blocks["Consumo de IA"].length === 0 && source === undefined) {
+    if (parseTicket(leer(paths, id)).blocks["Consumo de IA"].length === 0 && source === undefined) {
       return error(
         "close requiere --source con la fuente del consumo de IA (`manual:` sin números o la fuente con " +
           "números): el ticket no tiene entrada y no se inventa una.",

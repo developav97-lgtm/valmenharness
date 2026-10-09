@@ -25,6 +25,13 @@ import {
 import { appendReceipt, readReceipts, type RegistryPaths } from "../packages/engine/src/index.js";
 import { buildGateState } from "../packages/engine/src/state.js";
 import { recordHumanDecision } from "../packages/server/src/gates.js";
+import {
+  escribirSesionDeClaude,
+  llamada,
+  mensajeDelAsistente,
+  mensajeDelUsuario,
+  texto as textoDeClaude,
+} from "./helpers/claude.js";
 import { renderFixtureTicket } from "./helpers/fixtures.js";
 
 const ID = "IMPROVEMENT-CLI-ATAJO-20261009";
@@ -299,5 +306,51 @@ describe("valmen close", () => {
     const ticket = leerTicket();
     expect(ticket.match(/Resultado del PO:/g)).toHaveLength(1);
     expect(ticket.match(/"id": "POINT-001"/g)).toHaveLength(1);
+  });
+  it("guarda el consumo real de las sesiones del ticket antes de cerrar, como close-attempt", () => {
+    const home = mkdtempSync(join(tmpdir(), "valmen-home-"));
+    try {
+      const SESION = "9d55ce3b-5c13-4e93-af45-77a4977bd5c6";
+      escribirSesionDeClaude(home, {
+        root: lab,
+        id: SESION,
+        lineas: [
+          mensajeDelUsuario(`Trabaja el ticket ${ID}`, { cwd: lab }),
+          ...mensajeDelAsistente(
+            {
+              id: "msg_1",
+              uso: { input: 10, creacion: 1000, lectura: 50_000, salida: 400 },
+              bloques: [textoDeClaude("Lo muevo."), llamada("t1", "mcp__valmen__mover_ticket", { id: ID, to: "analyzed" })],
+            },
+            { cwd: lab },
+          ),
+        ],
+      });
+      const r = closeCommand(PATHS(), CIERRE, { ...head, home });
+      expect(r.exitCode, r.stderr).toBe(0);
+      expect(estadoDe()).toBe("closed");
+      const ticket = leerTicket();
+      expect(ticket).toContain(`claude:${SESION}`);
+      expect(ticket.match(/"source": "claude:/g)).toHaveLength(1);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  it("crea la evidencia con referencia de árbol aunque el ticket ya traiga otra evidencia sin ella", () => {
+    // El punto de QA hace falta para anotar evidencia: se arma el estado previo a mano.
+    const primera = closeCommand(PATHS(), CIERRE, {
+      head: () => {
+        throw new Error("git no responde");
+      },
+    });
+    expect(primera.exitCode).toBe(3);
+    // La evidencia del intento fallido tiene árbol: se reemplaza por una sin referencia.
+    writeFileSync(RUTA(), leerTicket().replace(/"reference": "worktree:sha256:[0-9a-f]{64}"/, '"reference": null'), "utf8");
+    expect(leerTicket()).not.toContain("worktree:sha256:");
+    const r = closeCommand(PATHS(), CIERRE, head);
+    expect(r.exitCode, r.stderr).toBe(0);
+    expect(estadoDe()).toBe("closed");
+    expect(leerTicket()).toContain("worktree:sha256:");
   });
 });
