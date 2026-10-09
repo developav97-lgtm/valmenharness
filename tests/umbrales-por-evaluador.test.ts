@@ -24,7 +24,7 @@ import { readReceipts } from "../packages/engine/src/receipts.js";
 import { validateThresholdTargets } from "../packages/engine/src/thresholds.js";
 import type { JevEvaluation } from "../packages/gate-jev/src/index.js";
 import { ANALYSIS_GATE, PLAN_GATE } from "../packages/gate/src/index.js";
-import { writeFixtureTicket } from "./helpers/fixtures.js";
+import { CRITERIOS_QUE_EVALUA_EL_MODELO, writeFixtureTicket } from "./helpers/fixtures.js";
 
 const TICKET = "BUGFIX-POS-FILTRO-ORDENES-20260921";
 const PLAN = [
@@ -41,7 +41,7 @@ beforeEach(() => {
   lab = mkdtempSync(join(tmpdir(), "valmen-umbrales-"));
   mkdirSync(join(lab, "tickets"), { recursive: true });
   mkdirSync(join(lab, ".valmen"), { recursive: true });
-  writeFixtureTicket(lab, { id: TICKET, workflowStatus: "planned", plan: PLAN });
+  writeFixtureTicket(lab, { id: TICKET, workflowStatus: "planned", plan: PLAN, criterios: CRITERIOS_QUE_EVALUA_EL_MODELO });
 });
 afterEach(() => {
   rmSync(lab, { recursive: true, force: true });

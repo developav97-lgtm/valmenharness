@@ -31,7 +31,7 @@ import {
   runTicketGate,
 } from "../packages/server/src/gates.js";
 import { handleApi } from "../packages/server/src/server.js";
-import { writeFixtureTicket } from "./helpers/fixtures.js";
+import { CRITERIOS_QUE_EVALUA_EL_MODELO, writeFixtureTicket } from "./helpers/fixtures.js";
 
 const TICKET = "BUGFIX-POS-FILTRO-ORDENES-20260921";
 
@@ -140,7 +140,7 @@ describe("qué gates aplican a un ticket", () => {
   });
 
   it("avisa cuando el código ya sabe que el gate va a bloquear", () => {
-    writeFixtureTicket(lab, { id: TICKET, riskLevel: "critical" });
+    writeFixtureTicket(lab, { id: TICKET, riskLevel: "critical", criterios: CRITERIOS_QUE_EVALUA_EL_MODELO });
     const ticketPath = join(lab, "tickets", "2026", TICKET, "ticket.md");
     // Se quitan las dos palabras que el check reconoce como rollback declarado.
     writeFileSync(
@@ -265,7 +265,7 @@ describe("ejecutar un gate desde la interfaz", () => {
   });
 
   it("un bloqueo por checks mecánicos no emite recibo y explica el motivo", async () => {
-    writeFixtureTicket(lab, { id: TICKET, riskLevel: "critical" });
+    writeFixtureTicket(lab, { id: TICKET, riskLevel: "critical", criterios: CRITERIOS_QUE_EVALUA_EL_MODELO });
     const ticketPath = join(lab, "tickets", "2026", TICKET, "ticket.md");
     writeFileSync(
       ticketPath,
@@ -332,6 +332,11 @@ describe("ejecutar un gate desde la interfaz", () => {
 // ── Decisión humana ─────────────────────────────────────────────────────────
 
 describe("la decisión humana", () => {
+  // El evaluador contesta por criterio: un manual lo decide el código y no llegaría a dudar.
+  beforeEach(() => {
+    writeFixtureTicket(lab, { id: TICKET, criterios: CRITERIOS_QUE_EVALUA_EL_MODELO });
+  });
+
   /** Ejecuta el gate con un evaluador que duda, para forzar la revisión. */
   async function enRevision(): Promise<string> {
     const resultado = await runTicketGate(PATHS(), TICKET, "plan", {
@@ -455,6 +460,11 @@ describe("la decisión humana", () => {
 // ── API ─────────────────────────────────────────────────────────────────────
 
 describe("la API de gates", () => {
+  // El evaluador contesta por criterio: un manual lo decide el código y no llegaría a dudar.
+  beforeEach(() => {
+    writeFixtureTicket(lab, { id: TICKET, criterios: CRITERIOS_QUE_EVALUA_EL_MODELO });
+  });
+
   it("lista los gates y los recibos del ticket", async () => {
     const respuesta = await handleApi("GET", `/api/tickets/${TICKET}/gates`, {}, context());
     expect(respuesta.status).toBe(200);
@@ -578,7 +588,7 @@ describe("un proyecto con el registro en docs/tickets", () => {
     // de fallar, porque parece que no hay nada que hacer.
     const adoptado = mkdtempSync(join(tmpdir(), "valmen-adoptado-"));
     mkdirSync(join(adoptado, "tickets"), { recursive: true });
-    writeFixtureTicket(adoptado, { id: TICKET });
+    writeFixtureTicket(adoptado, { id: TICKET, criterios: CRITERIOS_QUE_EVALUA_EL_MODELO });
     mkdirSync(join(adoptado, "docs"), { recursive: true });
     // El registro se mueve a la ubicación del layout anterior.
     const { renameSync } = await import("node:fs");

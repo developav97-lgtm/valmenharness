@@ -74,6 +74,7 @@ import {
   type CitaComprobada,
   citedFiles,
   decideInCode,
+  decidirCriterioEnCodigo,
   renderPreReview,
   reviewBeforeGate,
 } from "./revision-previa.js";
@@ -577,6 +578,7 @@ export async function runGate(
   // decidir sin proposiciones aprobaría por vacuidad.
   let noAplican: NotApplicableRecord[] = [];
   const respuestasDeCodigo: PropositionAnswer[] = [];
+  const notasDeCodigo: string[] = [];
   // Cuántas proposiciones tenía la compuerta ya expandida, antes de filtrar por tipo: el
   // informe dice si hubo expansión comparando contra la definición, y filtrar no es expandir.
   const totalExpandido = gate.propositions.length;
@@ -597,6 +599,14 @@ export async function runGate(
     // Lo que el código decide no se le pregunta al modelo y vota igual (R-CPRE-009).
     for (const proposicion of partido.applicable) {
       if (proposicion.decidedInCode !== true) continue;
+      const criterioNN = /^criterio_(\d+)$/.exec(proposicion.id);
+      const criterio = criterioNN === null ? undefined : criteria[Number(criterioNN[1]) - 1];
+      if (criterioNN !== null && criterio !== undefined) {
+        const { valor, motivo } = decidirCriterioEnCodigo(Number(criterioNN[1]), criterio, ticket.text);
+        respuestasDeCodigo.push({ id: proposicion.id, kind: "noul", value: valor });
+        if (valor === 0) notasDeCodigo.push(`${proposicion.id} decidido en código: ${motivo}`);
+        continue;
+      }
       const valor = decideInCode(proposicion.id, ticket.text);
       if (valor === null) {
         return {
@@ -847,6 +857,7 @@ export async function runGate(
             `referencia humana ${effectiveMode.evidence.humanReference} (${effectiveMode.evidence.humanTickets.join(", ") || "sin tickets comparables"}).`,
         ]),
     ...avisoDeForma(decision, criteria, gate.policy as GatePolicy),
+    ...notasDeCodigo,
     ...fallasDeEntorno.map(
       (resultado) =>
         `${resultado.propositionId}: falla del entorno — ${resultado.environmentFailure}. ` +

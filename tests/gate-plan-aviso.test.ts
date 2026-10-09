@@ -85,7 +85,9 @@ function ticket(criterios: readonly string[]): void {
     workflowStatus: "planned",
     plan: "- Pasos ordenados:\n  1. Tocar `packages/gate/src/criteria.ts`.\n- Rollback: revertir el commit del cambio.",
     criterios: criterios
-      .map((texto) => `- [ ] ${texto}\n      <!-- verify: manual -->`)
+      // `test:` y no `verify: manual`: un manual lo decide el código por su forma y su cita en el plan,
+      // y este aviso explica la banda que deja el evaluador sobre lo que solo un modelo puede leer.
+      .map((texto) => `- [ ] ${texto}\n      <!-- test: npx vitest run tests/gate-plan-aviso.test.ts -->`)
       .join("\n"),
   });
 }

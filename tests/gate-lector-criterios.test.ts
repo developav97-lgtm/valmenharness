@@ -53,6 +53,16 @@ afterEach(() => {
   rmSync(lab, { recursive: true, force: true });
 });
 
+/** `n` criterios que declaran su comando: los contesta el evaluador, no el código. */
+function viñetasConPrueba(n: number): string {
+  return Array.from(
+    { length: n },
+    (_, i) =>
+      `- [ ] El criterio número ${String(i + 1).padStart(2, "0")} describe un resultado observable\n` +
+      "      <!-- test: npx vitest run tests/gate-lector-criterios.test.ts -->",
+  ).join("\n");
+}
+
 /** `n` viñetas distintas, con la anotación que las declara verificadas a mano. */
 function viñetas(n: number): string {
   return Array.from(
@@ -202,7 +212,7 @@ describe("más criterios que el tope (R-CDEF-002)", () => {
       id: TICKET,
       workflowStatus: "planned",
       plan: "- Pasos ordenados:\n  1. Tocar `packages/gate/src/dynamic.ts`.\n- Rollback: revertir el commit del cambio.",
-      criterios: viñetas(31),
+      criterios: viñetasConPrueba(31),
     });
     const llamadas: string[][] = [];
 

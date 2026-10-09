@@ -18,7 +18,7 @@ import { runGate } from "../packages/engine/src/gate.js";
 import { barrerasDelRegistro } from "../packages/engine/src/reviewer.js";
 import { listGateDecisions } from "../packages/server/src/gates.js";
 import type { JevEvaluation } from "../packages/gate-jev/src/index.js";
-import { writeFixtureTicket } from "./helpers/fixtures.js";
+import { CRITERIOS_QUE_EVALUA_EL_MODELO, writeFixtureTicket } from "./helpers/fixtures.js";
 
 const AHORA = new Date("2026-10-09T08:00:00.000Z");
 const ID = "BUGFIX-POS-STATEHASH-20261009";
@@ -52,6 +52,7 @@ function ticket(cita: string): string {
     type: "BUGFIX",
     module: "POS",
     diagnostico: diag(cita),
+    criterios: CRITERIOS_QUE_EVALUA_EL_MODELO,
   });
 }
 

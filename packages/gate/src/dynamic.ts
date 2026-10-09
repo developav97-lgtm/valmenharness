@@ -17,6 +17,7 @@ import { TICKET_TYPES } from "@valmen/core";
 
 import type { CommandCheckSpec, GateDefinition, NoulProposition, Proposition } from "./decide.js";
 import { DEFAULT_POLICY, GateDefinitionError } from "./decide.js";
+import { seDecideEnCodigo } from "./criteria.js";
 import { ANALYSIS_GATE, PLAN_GATE } from "./definitions.js";
 import { type RepositorioDeSpecs, specDelRepositorio } from "./specs.js";
 
@@ -626,7 +627,11 @@ export function expandGate(gate: GateDefinition, context: GateContext): GateDefi
   // plan es justo lo que ese estado precede. Ver `GateDefinition`.
   const atomicas =
     gate.criteriaPropositions === true
-      ? context.criteria.map((criterion, index) => criterionProposition(index, criterion))
+      ? context.criteria.map((criterion, index) => {
+          const proposicion = criterionProposition(index, criterion);
+          // Un manual y un «la prueba pasa» se leen en el texto del plan: los decide el código.
+          return seDecideEnCodigo(criterion) ? { ...proposicion, decidedInCode: true } : proposicion;
+        })
       : [];
 
   // Un gate mecánico no pregunta por los criterios manuales: esos los verifica

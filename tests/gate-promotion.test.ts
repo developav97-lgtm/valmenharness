@@ -15,7 +15,7 @@ import {
 } from "../packages/engine/src/index.js";
 import { runGate } from "../packages/engine/src/gate.js";
 import { listGateCards } from "../packages/server/src/gates.js";
-import { writeFixtureTicket } from "./helpers/fixtures.js";
+import { CRITERIOS_QUE_EVALUA_EL_MODELO, writeFixtureTicket } from "./helpers/fixtures.js";
 
 let lab: string;
 
@@ -110,7 +110,7 @@ describe("evidencia de promoción", () => {
       "    minimum-sample: 1",
       "    minimum-agreement: 0.9",
     ].join("\n"));
-    writeFixtureTicket(lab, { id: "FEATURE-PROMOTION-20261005", workflowStatus: "planned" });
+    writeFixtureTicket(lab, { id: "FEATURE-PROMOTION-20261005", workflowStatus: "planned", criterios: CRITERIOS_QUE_EVALUA_EL_MODELO });
     const evidence = evidenceFromCalibration(
       calibration({ gate: "plan", compared: 1, decided: 1, agree: 1, rate: 1 }),
       "qa-cycles",

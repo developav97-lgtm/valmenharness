@@ -54,7 +54,7 @@ const CONJUNCIONES = /(?:^|\s)(?:as[íi] como|y|e|o|u)(?=\s)/giu;
  * frase. Los espacios son lo que evita que «apoyo» o «otro» cuenten como
  * conjunción, y por eso el patrón no es una simple búsqueda de la letra.
  */
-function contarAfirmaciones(texto: string): number {
+export function afirmacionesDe(texto: string): number {
   const limpio = texto.trim();
   if (limpio === "") return 0;
 
@@ -74,7 +74,7 @@ export function analizarFormaDeCriterios(
   criteria: readonly CriterionSpec[],
 ): readonly FormaDeCriterio[] {
   return criteria.map((criterion, posicion) => {
-    const afirmaciones = contarAfirmaciones(criterion.text);
+    const afirmaciones = afirmacionesDe(criterion.text);
     const motivos: string[] = [];
 
     if (afirmaciones >= 2) {
@@ -97,4 +97,27 @@ export function analizarFormaDeCriterios(
 /** El identificador de la proposición de un criterio, como lo escribe el gate. */
 export function criterionPropositionId(index: number): string {
   return `criterio_${String(index).padStart(2, "0")}`;
+}
+
+/** Las palabras con que un criterio `test:` afirma que una prueba pasa o que el monorepo compila. */
+const VERBO_DE_PRUEBA = /(?:^|[^\p{L}])(?:pasa|pasan|compila)(?![\p{L}])/iu;
+
+/**
+ * ¿Es un criterio «la prueba pasa» o «el monorepo compila»?
+ *
+ * Declara un comando, afirma una sola cosa y esa cosa es que la prueba pasa o que compila:
+ * lo que el gate mecánico ya ejecuta y el plan solo tiene que citar. Un `test:` que describe
+ * un comportamiento no entra: sigue yendo al evaluador.
+ */
+export function esCriterioDePrueba(criterio: CriterionSpec): boolean {
+  return (
+    criterio.command !== null &&
+    afirmacionesDe(criterio.text) === 1 &&
+    VERBO_DE_PRUEBA.test(criterio.text)
+  );
+}
+
+/** ¿Se decide su proposición en código? Un manual (`dev` incluido) o un criterio de prueba. */
+export function seDecideEnCodigo(criterio: CriterionSpec): boolean {
+  return criterio.manual || esCriterioDePrueba(criterio);
 }
