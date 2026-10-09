@@ -21,7 +21,7 @@ const CONSOLAS = 5;
 const VELOCIDAD_PUNTO_PX_S = 120;
 const MAXIMO_POR_PANTALLA = 3;
 
-/** Cuánto dura la señal «Anita en línea» si el estado no trae la ventana de respuesta. */
+/** Cuánto dura la señal «PO en línea» si el estado no trae la ventana de respuesta. */
 const VENTANA_POR_DEFECTO_MS = 60_000;
 
 const PALETA = {
@@ -127,7 +127,7 @@ export function franja(agentes) {
     const real = esperando.fila?.pregunta?.texto;
     const reducido = typeof real === "string" ? real.replace(/\s+/g, " ").trim() : "";
     const que = reducido !== "" ? reducido : esperando.estacion === 3 ? "¿Apruebo el plan?" : "¿Pasaron tus pruebas?";
-    return { alerta: true, texto: `ESPERANDO A ANITA · LÍNEA 1 · ${corto(esperando.fila.ticket)} · ${que}` };
+    return { alerta: true, texto: `ESPERANDO AL PO · LÍNEA 1 · ${corto(esperando.fila.ticket)} · ${que}` };
   }
   const activas = lista.filter((a) => esOperador(a) && a.estado !== "termino").length;
   return { alerta: false, texto: `TURNO DE NOCHE · ${activas} MISIONES ACTIVAS` };
@@ -159,19 +159,19 @@ export function colorDeFranja(alerta, t = 0) {
 }
 
 /**
- * El teléfono del director: `encendido` con una pregunta abierta y `anitaEnLinea` si alguien respondió
+ * El teléfono del director: `encendido` con una pregunta abierta y `poEnLinea` si alguien respondió
  * hace menos de la ventana (la misma que la ventanilla de la pastelería).
  */
 export function telefono(agentes, ahoraMs, ventanaMs = VENTANA_POR_DEFECTO_MS) {
   const lista = agentes ?? [];
   const encendido = lista.some(preguntaAbierta);
-  const anitaEnLinea = lista.some((a) => {
+  const poEnLinea = lista.some((a) => {
     const respondida = a.fila?.pregunta?.respondidaEn;
     if (respondida === null || respondida === undefined) return false;
     const t = Date.parse(respondida);
     return !Number.isNaN(t) && ahoraMs - t >= 0 && ahoraMs - t <= ventanaMs;
   });
-  return { encendido, anitaEnLinea };
+  return { encendido, poEnLinea };
 }
 
 /** El director: sentado de espaldas al escritorio, camisa azul y gafas. */
@@ -337,7 +337,7 @@ function dibujar(estado, t = 0) {
   R(410, 224, 140, 3, PALETA.tarimaBorde);
   R(520, 214, 18, 10, linea.encendido && encendida ? PALETA.telefonoSuena : PALETA.telefonoQuieto);
   R(523, 210, 12, 4, PALETA.telefonoBase);
-  if (!miniatura && linea.anitaEnLinea) T("Anita en línea", 529, 206, { tam: 9, color: PALETA.enLinea });
+  if (!miniatura && linea.poEnLinea) T("PO en línea", 529, 206, { tam: 9, color: PALETA.enLinea });
   const director = agentes.find((a) => a.principal === true);
   if (director) dibujarPersonaje(ctx, director, director.x, director.y, aparienciaDelDirector());
   R((director?.x ?? PUESTO_PRINCIPAL.x) - 16, 262, 32, 12, PALETA.silla);

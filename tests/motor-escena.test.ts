@@ -162,6 +162,16 @@ describe("C8: salida al terminar", () => {
     expect(escena.agentes.has("a")).toBe(false);
   });
 
+  it("C29: un agente que pasa de trabajando a termino estando en escena sigue en ella hasta SALIDA_MS", () => {
+    const escena = crearEscena(mundoFicticio());
+    actualizar(escena, [fila("a")], 0);
+    actualizar(escena, [fila("a", { estado: "termino" })], 3000);
+    avanzar(escena, 0.1, 3000 + SALIDA_MS - 1);
+    expect(escena.agentes.has("a")).toBe(true);
+    avanzar(escena, 0.1, 3000 + SALIDA_MS);
+    expect(escena.agentes.has("a")).toBe(false);
+  });
+
   it("C8: un agente que deja de venir en las filas también sale", () => {
     const escena = crearEscena(mundoFicticio());
     actualizar(escena, [fila("a")], 0);

@@ -80,3 +80,9 @@ export function crearEscena(mundo: Mundo): Escena;
 export function objetivoDe(mundo: Mundo, agente: Pick<AgenteEnEscena, "principal" | "saleEn" | "estacion" | "carril">): Punto;
 export function actualizar(escena: Escena, filas: readonly FilaDeAgente[], ahoraMs: number): void;
 export function avanzar(escena: Escena, dtSegundos: number, ahoraMs: number): void;
+export function carrilLibre(escena: Escena): number;
+/** Los tickets `{ id, estado }` repartidos por estación (índice de `ESTACIONES`) y recortados al tope. */
+export function ticketsPorEstacion<T extends { estado: string | null }>(
+  tickets: readonly T[] | null | undefined,
+  topes: number | readonly number[],
+): T[][];

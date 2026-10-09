@@ -161,6 +161,7 @@ export function crearMontaje({
   let filasVigentes = [];
   let cola = [];
   let entregados = [];
+  let tickets = [];
   let cuadro = null;
   let ultimo = null;
 
@@ -168,7 +169,7 @@ export function crearMontaje({
     const ctx = canvas?.getContext?.("2d");
     if (!ctx) return;
     mundo.dibujar(
-      { ctx, escena, miniatura: false, cola, entregados, ahoraMs: ahora(), ventanaRespuestaMs: VENTANA_RESPUESTA_MS },
+      { ctx, escena, miniatura: false, cola, entregados, tickets, ahoraMs: ahora(), ventanaRespuestaMs: VENTANA_RESPUESTA_MS },
       escena.t,
     );
   }
@@ -196,6 +197,7 @@ export function crearMontaje({
       filasVigentes = filas;
       cola = Array.isArray(datos?.cola) ? datos.cola : [];
       entregados = Array.isArray(datos?.entregados) ? datos.entregados : [];
+      tickets = Array.isArray(datos?.tickets) ? datos.tickets : [];
       if (escena === null) escena = crearEscena(mundo);
       actualizar(escena, filas, ahoraMs);
       if (cuadro === null) {
@@ -227,6 +229,7 @@ export function crearMontaje({
       filasVigentes = [];
       cola = [];
       entregados = [];
+      tickets = [];
     },
   };
 }

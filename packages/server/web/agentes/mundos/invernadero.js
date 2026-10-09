@@ -6,6 +6,7 @@
 // que flota con «?», las gotas al responder, el cajón «COSECHA» y los jardineros de sombrero de paja.
 // Sin azar y sin reloj propio: la regadera y las gotas salen de `t`. Los colores de este archivo viven en PALETA.
 
+import { ticketsPorEstacion } from "../motor.js";
 import { dibujarPersonaje } from "./sprites.js";
 
 const ANCHO = 960;
@@ -13,7 +14,7 @@ const ALTO = 480;
 const CAVEAT = '"Caveat", "Comic Sans MS", cursive';
 const MONO = "ui-monospace, Menlo, monospace";
 const SANS = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-const ESTACIONES = ["Semilla", "Brote", "Hojas", "Riego de Anita", "Crecimiento", "Floración", "Fruto", "Cosecha"];
+const ESTACIONES = ["Semilla", "Brote", "Hojas", "Riego", "Crecimiento", "Floración", "Fruto", "Cosecha"];
 const IDS_DE_ESTACION = ["intake", "analyzed", "planned", "approved", "in_progress", "awaiting_user_tests", "in_qa", "closed"];
 const HUMANAS = [3, 5];
 const CAMINO_Y = 296;
@@ -61,6 +62,22 @@ const PALETA = {
 
 /** El semillero queda a la izquierda, a la altura del camino de grava. */
 export const PUESTO_PRINCIPAL = { x: 75, y: CAMINO_Y };
+
+/** Cuántas plantas caben en la tierra de un cantero (3×3 a media escala): el máximo visual por estación. */
+export const TOPE_POR_CANTERO = 9;
+
+/**
+ * Las posiciones (base de la planta) de las `n` primeras plantas de un cantero, hasta el tope: tres
+ * columnas por tres filas dentro de la tierra (x ± 40, y de 310 a 368), la fila de atrás primero.
+ */
+export function plantasDelCantero(indice, n) {
+  const x = xDeCantero(indice);
+  const posiciones = [];
+  for (let k = 0; k < Math.min(Math.max(0, n), TOPE_POR_CANTERO); k++) {
+    posiciones.push({ x: x + ((k % 3) - 1) * 26, y: [336, 352, 367][Math.floor(k / 3)] });
+  }
+  return posiciones;
+}
 
 /** La x del centro del cantero de una estación. */
 export function xDeCantero(indice) {
@@ -194,6 +211,7 @@ function dibujar(estado, t = 0) {
   const { ctx, escena, miniatura } = estado;
   const cola = estado.cola ?? [];
   const entregados = estado.entregados ?? [];
+  const deLaEstacion = ticketsPorEstacion(estado.tickets, TOPE_POR_CANTERO);
   const ahoraMs = estado.ahoraMs ?? 0;
   const ventanaMs = estado.ventanaRespuestaMs ?? VENTANA_POR_DEFECTO_MS;
   const agentes = [...(escena?.agentes?.values?.() ?? [])];
@@ -246,7 +264,14 @@ function dibujar(estado, t = 0) {
       R(x + 20, cy, 18, 14, PALETA.agua); R(x + 36, cy + 2, 10, 3, PALETA.agua); R(x + 24, cy - 5, 10, 5, PALETA.agua);
       if (flota && !miniatura) T("?", x + 29, cy - 10, { fuente: CAVEAT, tam: 20, color: PALETA.rojo, peso: "600" });
     }
-    for (const a of agentes) if (a.estacion === i && arrodillado(a)) planta(R, x - 6, 318, a.estacion);
+    // Una planta por ticket de la estación, a media escala y hasta el tope del cantero.
+    for (const p of plantasDelCantero(i, deLaEstacion[i].length)) {
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.scale(0.5, 0.5);
+      planta(R, 0, 0, i);
+      ctx.restore();
+    }
   }
 
   // Cajón de la cosecha con los entregados como tomates.
@@ -271,7 +296,7 @@ export const mundo = {
   id: "invernadero",
   nombre: "Invernadero",
   lema: "Cada ticket es una planta: se siembra, se riega con permiso y se cosecha.",
-  pregunta: "la regadera espera a Anita",
+  pregunta: "la regadera espera al PO",
   estaciones: ESTACIONES,
   puestoPrincipal: PUESTO_PRINCIPAL,
   paneles: { agentes: "Bitácora de cultivo", cola: "Semillero", entregados: "Cosecha" },

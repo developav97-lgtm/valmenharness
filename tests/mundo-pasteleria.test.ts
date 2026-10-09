@@ -17,8 +17,8 @@ import {
   hornoEncendido,
   llevaPregunta,
   mundo,
-  senalDeAnita,
-  vitrina,
+  senalDelMostrador,
+  pastelesDeLaVitrina,
 } from "../packages/server/web/agentes/mundos/pasteleria.js";
 import { cuadroDeMarcha, dibujarPersonaje, rasgosDe } from "../packages/server/web/agentes/mundos/sprites.js";
 
@@ -122,21 +122,21 @@ describe("el mundo pastelería", () => {
 
   it("C8: esperando con pregunta abierta en approved enciende la lámpara", () => {
     const a = agente({ estado: "esperando", estacion: 3, fila: { ticket: "T-1", pregunta: { desde: hace(10), respondidaEn: null } } });
-    expect(senalDeAnita([a], AHORA, VENTANA_RESPUESTA_MS).lampara).toBe(true);
+    expect(senalDelMostrador([a], AHORA, VENTANA_RESPUESTA_MS).lampara).toBe(true);
   });
 
   it("C9: sin pregunta abierta la lámpara está apagada", () => {
-    expect(senalDeAnita([agente({ estacion: 3 })], AHORA, VENTANA_RESPUESTA_MS).lampara).toBe(false);
+    expect(senalDelMostrador([agente({ estacion: 3 })], AHORA, VENTANA_RESPUESTA_MS).lampara).toBe(false);
   });
 
-  it("C10: una pregunta respondida hace 30 s deja a Anita en la ventanilla", () => {
+  it("C10: una pregunta respondida hace 30 s deja al PO en la ventanilla", () => {
     const a = agente({ estacion: 3, fila: { ticket: "T-1", pregunta: { desde: hace(90), respondidaEn: hace(30) } } });
-    expect(senalDeAnita([a], AHORA, VENTANA_RESPUESTA_MS).ventanilla).toBe(true);
+    expect(senalDelMostrador([a], AHORA, VENTANA_RESPUESTA_MS).ventanilla).toBe(true);
   });
 
-  it("C11: una pregunta respondida hace 61 s no deja a Anita en la ventanilla", () => {
+  it("C11: una pregunta respondida hace 61 s no deja al PO en la ventanilla", () => {
     const a = agente({ estacion: 3, fila: { ticket: "T-1", pregunta: { desde: hace(120), respondidaEn: hace(61) } } });
-    expect(senalDeAnita([a], AHORA, VENTANA_RESPUESTA_MS).ventanilla).toBe(false);
+    expect(senalDelMostrador([a], AHORA, VENTANA_RESPUESTA_MS).ventanilla).toBe(false);
   });
 
   it("C12: esperando y quieto lleva la pregunta", () => {
@@ -148,7 +148,7 @@ describe("el mundo pastelería", () => {
   });
 
   it("C14: las estaciones son las ocho del obrador", () => {
-    expect(mundo.estaciones).toEqual(["Pedidos", "Recetario", "Báscula", "Mostrador de Anita", "Horno", "Degustación", "Control", "Vitrina"]);
+    expect(mundo.estaciones).toEqual(["Pedidos", "Recetario", "Báscula", "Mostrador", "Horno", "Degustación", "Control", "Vitrina"]);
   });
 
   it("C15: cada puesto queda en y = 364 y a no más de 22 px de su estación", () => {
@@ -173,9 +173,9 @@ describe("el mundo pastelería", () => {
     expect(hornoEncendido([agente({ estado: "esperando", estacion: 4 })])).toBe(false);
   });
 
-  it("C19: con ocho entregados la vitrina muestra los seis últimos", () => {
-    const ocho = ["a", "b", "c", "d", "e", "f", "g", "h"];
-    expect(vitrina(ocho)).toEqual(["c", "d", "e", "f", "g", "h"]);
+  it("C19: con ocho tickets cerrados la vitrina muestra los ocho", () => {
+    const ocho = ["a", "b", "c", "d", "e", "f", "g", "h"].map((id) => ({ id, estado: "closed" }));
+    expect(pastelesDeLaVitrina(ocho).map((t) => t.id)).toEqual(["a", "b", "c", "d", "e", "f", "g", "h"]);
   });
 
   it("C20: los paneles se llaman Comandas, En espera y Vitrina", () => {

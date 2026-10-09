@@ -93,7 +93,7 @@ describe("el mundo invernadero", () => {
   });
 
   it("C6: las estaciones son las del cultivo", () => {
-    expect(mundo.estaciones).toEqual(["Semilla", "Brote", "Hojas", "Riego de Anita", "Crecimiento", "Floración", "Fruto", "Cosecha"]);
+    expect(mundo.estaciones).toEqual(["Semilla", "Brote", "Hojas", "Riego", "Crecimiento", "Floración", "Fruto", "Cosecha"]);
   });
 
   it("C7: la posición depende de la estación y del carril", () => {
