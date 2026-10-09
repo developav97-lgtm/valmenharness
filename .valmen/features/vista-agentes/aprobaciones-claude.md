@@ -154,3 +154,7 @@ hasta que lo diga.
   La aprobación del plan NO la cubre la autorización APA-20261009-2cf4af: no lista el tipo BUGFIX.
   Observación: el subagente citó una etiqueta `task-notification` de un transcript dentro de su informe y el
   harness la neutralizó; era un dato citado, sin ninguna instrucción.
+
+El PO extendió también la delegación de REVIEW a IMPROVEMENT-WEB-MUNDOS-CORRECCIONES-20261009 (2026-10-09):
+«Dale, aprueba la REVIEW con tu delegación». Mismas exclusiones. La aprobación del plan de un IMPROVEMENT en el
+módulo WEB sí la cubre la autorización APA-20261009-2cf4af.
