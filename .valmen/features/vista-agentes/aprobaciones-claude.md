@@ -146,3 +146,11 @@ El PO extendió la delegación de REVIEW al ticket BUGFIX-SERVER-AGENTES-OBSOLET
 despliegue, QA y decisiones de privacidad siguen siendo del PO). No cubre a los otros tickets abiertos
 (FEATURE-MC-PANTALLA-AUTORIZACIONES, IMPROVEMENT-GATE-PRECHECK-CITAS-WORKTREE, IMPROVEMENT-WEB-MUNDOS-CORRECCIONES)
 hasta que lo diga.
+
+- **BUGFIX-SERVER-AGENTES-OBSOLETOS-Y-ESTADO-WORKTREE · plan · GR-20261009-BUGFIX-SERVER-AGENTES-OBSOLETOS-Y-ESTADO-WORKTREE-20261009-plan-1**
+  · approve por claude (REVIEW). Razón: sin BLOCK, cuatro criterios en banda (C14 0.90, C15 0.86, C17 0.90, C19
+  0.82) por redacción; las dos causas están comprobadas con datos reales (`stop_reason: null` sin cierre; estado en
+  el worktree) y el plan trae la prueba determinista del caso real y su control. El análisis dio APPROVE sin REVIEW.
+  La aprobación del plan NO la cubre la autorización APA-20261009-2cf4af: no lista el tipo BUGFIX.
+  Observación: el subagente citó una etiqueta `task-notification` de un transcript dentro de su informe y el
+  harness la neutralizó; era un dato citado, sin ninguna instrucción.
