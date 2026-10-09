@@ -4,8 +4,8 @@ id: FEATURE-SERVER-TEXTO-PREGUNTA-RESPUESTA-20261008
 title: Lector expone texto de pregunta y respuesta con lista blanca ampliada, bajo decisión escrita del PO
 type: FEATURE
 module: SERVER
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -13,7 +13,7 @@ migration_impact: false
 docker_impact: false
 risk_level: normal
 created: 2026-10-08
-updated: 2026-10-08
+updated: 2026-10-09
 related_ticket: null
 target_release: null
 released_in: null
@@ -155,21 +155,46 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
       <!-- test: npx vitest run tests/mundo-pasteleria.test.ts tests/mundo-control.test.ts tests/mundo-invernadero.test.ts tests/vista-lienzo.test.ts -->
 - [x] C24: el proyecto compila sin errores de tipos
       <!-- test: npx tsc --build tsconfig.build.json -->
-- [ ] C25 (R-DAT-004): en ValmenHarness, `curl -s http://127.0.0.1:4173/api/corrida/agentes` con una `AskUserQuestion` abierta devuelve `pregunta.texto` igual a la pregunta mostrada en Claude Code
+- [x] C25 (R-DAT-004): en ValmenHarness, `curl -s http://127.0.0.1:4173/api/corrida/agentes` con una `AskUserQuestion` abierta devuelve `pregunta.texto` igual a la pregunta mostrada en Claude Code
       <!-- verify: manual -->
-- [ ] C26 (R-DAT-004): en ValmenHarness, el mismo `curl` dentro de los 60 s posteriores a contestar devuelve `pregunta.respuesta` igual a la opción elegida
+- [x] C26 (R-DAT-004): en ValmenHarness, el mismo `curl` dentro de los 60 s posteriores a contestar devuelve `pregunta.respuesta` igual a la opción elegida
       <!-- verify: manual -->
-- [ ] C27 (R-DAT-004): en SaiOpenCloud, el `curl` con `X-Valmen-Project` de SaiOpenCloud y una `AskUserQuestion` abierta devuelve `pregunta.texto` igual a la pregunta mostrada
+- [ ] C27 (R-DAT-004): en SaiOpenCloud, el `curl` con `X-Valmen-Project` de SaiOpenCloud y una `AskUserQuestion` abierta devuelve `pregunta.texto` igual a la pregunta mostrada — no aplica: no probado en SaiOpenCloud y el PO acepta que funciona igual el 2026-10-09
       <!-- verify: manual -->
-- [ ] C28 (R-DAT-004): en SaiOpenCloud, el mismo `curl` dentro de los 60 s posteriores a contestar devuelve `pregunta.respuesta` igual a la opción elegida
+- [ ] C28 (R-DAT-004): en SaiOpenCloud, el mismo `curl` dentro de los 60 s posteriores a contestar devuelve `pregunta.respuesta` igual a la opción elegida — no aplica: no probado en SaiOpenCloud y el PO acepta que funciona igual el 2026-10-09
       <!-- verify: manual -->
-- [ ] C29 (R-DAT-004): con `valmen serve --host 0.0.0.0` y una `AskUserQuestion` abierta, `pregunta` del `curl` no trae la clave `texto`
+- [x] C29 (R-DAT-004): con `valmen serve --host 0.0.0.0` y una `AskUserQuestion` abierta, `pregunta` del `curl` no trae la clave `texto`
       <!-- verify: manual -->
 
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación de la entrega de FEATURE-SERVER-TEXTO-PREGUNTA-RESPUESTA-20261008",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta verificar sus criterios.",
+    "expected": "Los criterios del ticket se cumplen y el servidor expone texto y respuesta solo en loopback.",
+    "evidence": [
+      "EVIDENCE-001"
+    ],
+    "affected_files": [
+      "packages/server/src/agentes.ts",
+      "packages/server/src/server.ts",
+      "tests/actividad-agentes.test.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -191,29 +216,81 @@ Directorio de ejecución: raíz del repositorio (o del worktree). Requisitos: No
   - sin `--host`: la pregunta abierta trae `texto` y `respuesta: null`; la contestada trae `texto` y `respuesta`; ningún centinela aparece en la respuesta.
   - con `--host 0.0.0.0`: `pregunta` trae solo `desde` y `respondidaEn`.
 - Pendiente del responsable (C25–C29, `verify: manual`): repetir con sesiones reales en ValmenHarness y en SaiOpenCloud (`X-Valmen-Project`; la cabecera no se midió) y con `valmen serve --host 0.0.0.0`.
+- Resultado del PO: «A cierralo se supone que debe funcionar igual» (el PO probó C25, C26 y C29 con preguntas reales de AskUserQuestion el 2026-10-09; C27 y C28 en SaiOpenCloud no se probaron).
 
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-09",
+    "build_reference": "commit:846641c9bb1c991cfab4756812557913adfcba9b",
+    "environment": "macOS, Node 24, main; Mission Control del PO en 127.0.0.1:4175 y servidor temporal con --host 0.0.0.0",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-09",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "«A cierralo se supone que debe funcionar igual» (el PO probó C25, C26 y C29 con preguntas reales de AskUserQuestion el 2026-10-09; C27 y C28 en SaiOpenCloud no se probaron)"
+  }
+]
 ```
 
 ## Evidencia
 
 ```json
-[]
+[
+  {
+    "id": "EVIDENCE-001",
+    "date": "2026-10-09",
+    "kind": "manual-test",
+    "description": "Suite completa en verde; curl en ValmenHarness con pregunta abierta y respondida, y servidor con --host 0.0.0.0 sin texto",
+    "reference": "worktree:sha256:8ed5eb77bdf119c01484ffc9a8998c1b7104d2ea914a89d1b6c75a81c9a939fb",
+    "point_id": "POINT-001"
+  }
+]
 ```
 
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-09",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "«A cierralo se supone que debe funcionar igual» (el PO probó C25, C26 y C29 con preguntas reales de AskUserQuestion el 2026-10-09; C27 y C28 en SaiOpenCloud no se probaron)"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-09",
+    "technical_summary": "El lector expone pregunta.texto y pregunta.respuesta (lista blanca ampliada a la question y a answers, recortadas a 500) solo cuando el servidor no tiene writeToken, es decir, en loopback; fuera de loopback la pregunta trae solo desde y respondidaEn.",
+    "functional_summary": "La vista puede mostrar la pregunta de una persona y su respuesta, sin exponerlas si el servidor se abre a la red.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "unreleased: entra con la feature vista-agentes"
+  }
+]
 ```
 
 ## Consumo de IA
@@ -234,6 +311,36 @@ Directorio de ejecución: raíz del repositorio (o del worktree). Requisitos: No
     "source": "manual:subagente-implementacion-sonnet-5-5",
     "confidence": "low",
     "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-09",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Subagentes por fase; sin números por ticket.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:sesiones de Claude Code de la corrida orquestada vista-agentes",
+    "confidence": "low",
+    "id": "CONSUMO-002"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-09",
+    "session_reference": "4f9b1b12-ced4-4132-9151-c3a025ede085",
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. Sesión **compartida**: trabajó 15 tickets (FEATURE-SERVER-SESION-PRINCIPAL-20261008 ×132, FEATURE-WEB-VISTA-LIENZO-20261008 ×121, FEATURE-WEB-MUNDO-PASTELERIA-20261008 ×119, FEATURE-WEB-MOTOR-ESCENA-20261008 ×118, IMPROVEMENT-WEB-VISTA-RENOMBRAR-AGENTES-20261008 ×107), así que su costo no se reparte y acá no se registran números. Costo completo de la sesión: no declarado por el proveedor, 6695870 tokens. Registralo en el ticket cuya sesión sea propia, o declaralo compartido donde corresponda. Sesión \"Feature vista-agentes\".",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "claude:4f9b1b12-ced4-4132-9151-c3a025ede085",
+    "confidence": "high",
+    "id": "CONSUMO-003"
   }
 ]
 ```
@@ -344,6 +451,141 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:17:12.477Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:17:12.858Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:17:13.279Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:17:14.432Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:17:14.846Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:17:15.386Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:17:15.801Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:17:16.335Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:17:16.653Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:17:16.991Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:17:17.948Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:17:18.491Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:17:20.580Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-025",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:17:20.779Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-026",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:17:21.260Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
