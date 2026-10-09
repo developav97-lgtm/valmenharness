@@ -4,7 +4,7 @@ id: BUGFIX-ENGINE-JORNADA-HANDOFF-LECTOR-20261008
 title: El parte reconoce el contrato de pruebas en lista numerada y no lista como sin entregar a los cerrados
 type: BUGFIX
 module: ENGINE
-workflow_status: awaiting_user_tests
+workflow_status: in_qa
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -112,7 +112,27 @@ Ninguno.
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación delegada de BUGFIX-ENGINE-JORNADA-HANDOFF-LECTOR-20261008",
+    "status": "awaiting_retest",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta verificar sus criterios.",
+    "expected": "Los criterios del ticket se cumplen y sus pruebas dan el resultado esperado.",
+    "evidence": [],
+    "affected_files": [
+      "packages/engine/src/journey-handoff.ts",
+      "tests/jornada-handoff.test.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -129,6 +149,8 @@ Directorio: raíz del worktree del ticket (`npm ci` hecho, Node 24); sin servici
 2. `npx vitest run tests/hermes-notify.test.ts` — esperado: 45 pruebas pasan.
 3. `npx tsc --build tsconfig.build.json` — esperado: sin errores.
 4. Manual: `valmen journey handoff --id JOR-20261008 --project valmen-harness` tras integrar; los contratos en lista numerada salen con comandos y «sin entregar» no lista tickets cerrados.
+
+- Resultado del PO: Cerrar el bugfix del parte. Las pruebas del ticket las ejecutó el agente y dieron el resultado esperado: Pruebas del ticket 89/89, cruce con las pruebas de la rama directa 33/33, y valmen journey handoff --id JOR-20261008 da «sin entregar 0» con todos los tickets cerrados
 
 ## QA
 
@@ -275,6 +297,51 @@ Sin publicar todavía.
     "action": "evidence-added",
     "actor": "cli",
     "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-10-09",
+    "at": "2026-10-09T18:23:48.638Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-09",
+    "at": "2026-10-09T18:23:48.818Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-09",
+    "at": "2026-10-09T18:23:48.984Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-09",
+    "at": "2026-10-09T18:23:49.144Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-09",
+    "at": "2026-10-09T18:23:49.274Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
   }
 ]
 ```
