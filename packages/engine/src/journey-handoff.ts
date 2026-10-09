@@ -73,7 +73,7 @@ interface ViñetaDelContrato {
 function viñetas(seccion: string): ViñetaDelContrato[] {
   const salida: string[] = [];
   for (const linea of seccion.replace(/<!--[\s\S]*?-->/g, "").split("\n")) {
-    const inicio = /^[-*]\s+(.*)$/.exec(linea);
+    const inicio = /^(?:[-*]|\d+[.)])\s+(.*)$/.exec(linea);
     if (inicio !== null) {
       salida.push((inicio[1] as string).trim());
     } else if (/^\s+\S/.test(linea) && salida.length > 0) {
@@ -84,6 +84,8 @@ function viñetas(seccion: string): ViñetaDelContrato[] {
 }
 
 const ES_DIRECTORIO = /^directorio\s*:\s*(.*)$/i;
+/** Estados posteriores a `awaiting_user_tests`: el ticket ya se entregó y no cuenta como «sin entregar». */
+const ESTADOS_YA_ENTREGADOS: ReadonlySet<string> = new Set(["in_qa", "qa_approved", "closed"]);
 const ES_MANUAL = /^(?:validaci[oó]n manual|manual)\b/i;
 // «No se corrió la suite completa (`npx vitest run`)» nombra un comando que NO hay que correr.
 const ES_NEGACION = /^no\s/i;
@@ -100,6 +102,16 @@ function leerContrato(seccion: string): Pick<EntradaDePruebas, "directorio" | "p
       manuales.push(texto);
     } else if (!ES_NEGACION.test(texto) && /`[^`\n]+`/.test(texto)) {
       probar.push(texto);
+    }
+  }
+  if (directorio === null) {
+    // El contrato real suele traer el directorio como línea suelta, fuera de toda viñeta.
+    for (const linea of seccion.replace(/<!--[\s\S]*?-->/g, "").split("\n")) {
+      const suelta = ES_DIRECTORIO.exec(linea);
+      if (suelta !== null) {
+        directorio = (suelta[1] as string).trim();
+        break;
+      }
     }
   }
   return { directorio, probar, manuales };
@@ -178,6 +190,7 @@ export function armarParteDeJornada(request: {
         continue;
       }
     }
+    if (ESTADOS_YA_ENTREGADOS.has(estado)) continue;
     sinEntregar.push({ ticketId, estado });
   }
 

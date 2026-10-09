@@ -221,6 +221,101 @@ describe("armar el parte", () => {
   });
 });
 
+const CONTRATO_NUMERADO = [
+  "Directorio: raíz del repositorio.",
+  "",
+  "1. `npx vitest run tests/routing.test.ts` — esperado: todo en verde",
+  "   y sin avisos.",
+  "2. `npx tsc --noEmit -p tsconfig.json` — esperado: sin errores",
+  "3. Manual: abrir #/modelos",
+  "4. No se corrió la suite completa (`npx vitest run`).",
+].join("\n");
+
+describe("lista numerada y estados entregados", () => {
+  const entrada = (contrato: string) => {
+    conContrato(A, contrato);
+    crearJornada(entorno, [enJornada(A, 1)], { journeyId: JORNADA });
+    return parte().esperanPruebas[0];
+  };
+
+  it("C1: el ítem numerado da el comando sin el número", () => {
+    expect(entrada("1. `npx vitest run tests/x.test.ts` — esperado: todo en verde")?.probar).toEqual([
+      "`npx vitest run tests/x.test.ts` — esperado: todo en verde",
+    ]);
+  });
+
+  it("C2: un contrato solo en lista numerada no sale sin contrato", () => {
+    expect(entrada(CONTRATO_NUMERADO)?.sinContrato).toBe(false);
+  });
+
+  it("C3: un ítem numerado Manual sale en manuales y no en probar", () => {
+    const e = entrada(CONTRATO_NUMERADO);
+    expect(e?.manuales).toEqual(["Manual: abrir #/modelos"]);
+    expect(e?.probar.some((l) => l.includes("modelos"))).toBe(false);
+  });
+
+  it("C4: la línea sangrada bajo un ítem numerado se une a él", () => {
+    expect(entrada(CONTRATO_NUMERADO)?.probar[0]).toBe(
+      "`npx vitest run tests/routing.test.ts` — esperado: todo en verde y sin avisos.",
+    );
+  });
+
+  it("C5: un ítem numerado que empieza con No y nombra un comando no entra en probar", () => {
+    const e = entrada(CONTRATO_NUMERADO);
+    expect(e?.probar).toHaveLength(2);
+    expect(e?.probar.some((l) => l.includes("suite completa"))).toBe(false);
+  });
+
+  it("C6: una línea suelta Directorio fuera de toda viñeta da el directorio", () => {
+    expect(entrada(CONTRATO_NUMERADO)?.directorio).toBe("raíz del repositorio.");
+  });
+
+  it("C7: el contrato real de FEATURE-MC-VISTA-MODELOS-EFECTIVOS sale con 2 comandos", () => {
+    const e = entrada(
+      [
+        "Directorio: raíz del worktree del ticket (`npm ci` hecho, Node 24).",
+        "",
+        "1. `npx vitest run tests/routing.test.ts tests/modelos.test.ts` — esperado: todas las pruebas pasan.",
+        "2. `npx tsc --noEmit -p tsconfig.json` — esperado: sin errores.",
+        "3. Manual: abrir la vista de modelos efectivos y comprobar la tabla.",
+      ].join("\n"),
+    );
+    expect(e?.sinContrato).toBe(false);
+    expect(e?.probar).toHaveLength(2);
+  });
+
+  const sinEntregarDe = (id: string, estado: string, persona = true) => {
+    if (persona) ticketEn(entorno.root, id, estado);
+    crearJornada(entorno, [enJornada(id, 1)], { journeyId: JORNADA });
+    return parte().sinEntregar;
+  };
+
+  it("C8: un ticket closed confirmado por una persona no aparece en sinEntregar", () => {
+    expect(sinEntregarDe(PERSONA, "closed")).toEqual([]);
+  });
+
+  it("C9: un ticket qa_approved confirmado por una persona no aparece en sinEntregar", () => {
+    expect(sinEntregarDe(PERSONA, "qa_approved")).toEqual([]);
+  });
+
+  it("C10: un ticket in_qa no aparece en sinEntregar", () => {
+    expect(sinEntregarDe(PERSONA, "in_qa")).toEqual([]);
+  });
+
+  it("C11: un ticket in_progress sigue en sinEntregar", () => {
+    expect(sinEntregarDe(C, "in_progress")).toEqual([{ ticketId: C, estado: "in_progress" }]);
+  });
+
+  it("C12: un ticket changes_requested sigue en sinEntregar", () => {
+    expect(sinEntregarDe(C, "changes_requested")).toEqual([{ ticketId: C, estado: "changes_requested" }]);
+  });
+
+  it("C13: un ticket ilegible sigue en sinEntregar con estado ?", () => {
+    crearJornada(entorno, [enJornada("FEATURE-HANDOFF-FANTASMA-20261008", 1)], { journeyId: JORNADA });
+    expect(parte().sinEntregar).toEqual([{ ticketId: "FEATURE-HANDOFF-FANTASMA-20261008", estado: "?" }]);
+  });
+});
+
 describe("guardar el parte", () => {
   it("C12: el comando guarda una línea con el id de la jornada y la huella", () => {
     armarCorrida();
