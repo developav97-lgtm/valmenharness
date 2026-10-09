@@ -98,3 +98,43 @@ debajo aunque el plan los cubra.
   por claude (REVIEW) y aprobación del plan por la autorización APA-20261009-2cf4af. Razón: sin BLOCK, media
   ponderada 0.926, 38 criterios de una sola afirmación y diez en banda (0.82-0.90) por redacción; el escapado tiene
   prueba (C7, C8, C20, C22, C23) y el caso sin `texto` también.
+
+## Revisión final de las compuertas (2026-10-09)
+
+Resumen: 11 tickets; 22 compuertas de análisis y plan pasaron por REVIEW (más vueltas por criterios). Decidió el PO
+las primeras 13; Claude, por delegación, 9 (más 5 planes aprobados por la autorización APA-20261009-2cf4af). Ningún
+BLOCK. Ninguna aprobación de Claude tocó SECURITY, despliegue ni QA.
+
+Qué refinar, de más a menos peso:
+
+1. **`nombra_archivos_reales` bajo en todos los análisis** (0.29–0.81, 8 de 8). El precheck dice «la raíz no es un
+   repositorio git» desde un worktree y no comprueba las citas `ruta:línea`; el modelo juzga a ciegas. Refinar: que
+   el precheck resuelva git en worktrees (`.git` es un archivo) y verifique en código que cada ruta citada existe;
+   la proposición recibe el resultado, no lo adivina. Es la causa de casi todas las REVIEW de análisis.
+2. **`cascade` falla sin detalle** en el análisis (~8 de 11) y en parte de los planes; cae al evaluador por defecto
+   (jev) y el recibo no deja rastro útil del fallo. Refinar: registrar el error real del CLI en el recibo y
+   reintentar una vez antes de degradar; declarar siempre el evaluador efectivo.
+3. **Criterios manuales y compuestos en banda 0.77–0.90.** Partir criterios no siempre sube la nota (marco
+   responsivo pasó de 4 a 7 en banda) y el evaluador es inconsistente con formas idénticas (C37 de pastelería vs
+   C34–C36). Refinar: las proposiciones por criterio solo para `test:`; los `verify: manual` se validan por forma
+   en código (una afirmación, sin conjunciones). El tope de 40 criterios choca con partir: subirlo o medir
+   afirmaciones, no líneas.
+4. **Autorizaciones:** «todos» en módulos no equivale a nombrarlos (`approval-eligibility`: «no lista el módulo
+   WEB»); un worktree creado antes no ve una autorización sin commitear. Refinar: «todos» debe significar todos, y
+   `journey worktree create` o `approve-by-authorization` deben leer las autorizaciones del checkout principal. La
+   pantalla con casillas ya quedó pendiente como ticket aparte.
+5. **Fricción de la REVIEW:** resolver una REVIEW de plan toma cuatro pasos manuales (`gate-decide`, `approve-plan`,
+   línea en `## Plan`, `transition`). Refinar: un solo comando atribuido que los encadene.
+6. **Criterios de compilación:** `tsc --noEmit -p tsconfig.json` da 10 avisos TS7016 previos (módulos
+   `web/agentes/**` sin `.d.ts`); el PO cambió C24 a `tsc --build tsconfig.build.json`. Refinar: declarar esos
+   módulos y usar un comando estándar de compilación en todos los tickets.
+7. **`revisar_presentacion`** corre sobre el checkout principal y revisa 0 archivos tras el commit, y no revisa
+   `.js`; los mundos dibujan en JS. Se sustituyó por `scanPendingColors`/`valmen ux review` y una prueba propia.
+8. **`journey worktree integrate`** se detiene con cualquier archivo sin commitear en el checkout principal,
+   incluido uno ajeno y sin seguimiento. Refinar: ignorar archivos sin seguimiento ajenos al ticket.
+9. **Proceso:** un subagente movió un ticket a `analyzed` antes de correr la compuerta de análisis (el brief la
+   pone en `intake`); anecdótico, pero el brief debe fijar el orden.
+
+Decisiones de Claude que el PO debe poder revisar (privacidad, sin respaldo de test manual): exposición del texto
+solo sin `--host` (señal `writeToken`), recorte a 500 caracteres y fuentes `input.questions[].question` /
+`toolUseResult.answers`.
