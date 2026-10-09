@@ -201,6 +201,14 @@ describe("la vista Corrida", () => {
     expect(texto).toContain("FEATURE-FIN-20261008 | awaiting_user_tests");
   });
 
+  it("SP-C9: la fila de la sesión principal no cuenta entre los agentes vivos", async () => {
+    const principal = agente("sesion-principal", null, "trabajando", { principal: true, descripcion: null });
+    const { contenido } = await abrir({ agentes: { agentes: [principal, ...AGENTES.agentes] } });
+    const texto = textoDe(contenido as Nodo);
+    expect(texto).toContain("2 de 3 agentes");
+    expect(texto).not.toContain("3 de 3 agentes");
+  });
+
   it("el selector arranca en 3, guarda la preferencia y no escribe en el servidor (C12, C13, C14)", async () => {
     const llamadas: { metodo: string; ruta: string }[] = [];
     const { contenido } = await abrir({}, llamadas);

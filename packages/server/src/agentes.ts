@@ -7,6 +7,10 @@
  * copia texto de prompts, entradas ni resultados de herramientas, solo el
  * **nombre** de la última herramienta.
  *
+ * La **sesión principal** (la del orquestador) viaja como la primera fila, con
+ * `principal: true`; su `ticket`, `descripcion` y fases son null porque no se
+ * consulta el registro para ella.
+ *
  * El estado se deduce con un reloj inyectable (`ahora`) para ser determinista:
  * `termino` si el último mensaje del asistente cerró con `end_turn`; `esperando`
  * si pasaron más de 60 s sin eventos o hay una herramienta sin resultado (un
@@ -46,6 +50,8 @@ export type EstadoDeAgente = "trabajando" | "esperando" | "termino";
 /** La fila pública de un agente: lista blanca, sin contenido del transcript. */
 export interface AgenteDeCorrida {
   readonly agente: string;
+  /** true solo en la fila de la sesión principal (la del orquestador). */
+  readonly principal: boolean;
   readonly ticket: string | null;
   readonly descripcion: string | null;
   readonly modelo: string | null;
@@ -311,7 +317,20 @@ function actividadPorTicket(project: AuthorizedProject | undefined): Map<string,
   return new Map([...resultado].map(([ticket, dato]) => [ticket, dato.estado]));
 }
 
-/** Una fila por subagente de la sesión orquestadora; vacío si no hay ninguna. */
+/** La regla de estado, igual para la sesión principal y para los subagentes. */
+function estadoDe(lectura: Lectura, ahora: number): EstadoDeAgente {
+  if (lectura.cerro && !lectura.pendiente) return "termino";
+  if (
+    lectura.pendiente ||
+    lectura.ultimoEventoEn === null ||
+    ahora - lectura.ultimoEventoEn > ESPERA_MAXIMA_MS
+  ) {
+    return "esperando";
+  }
+  return "trabajando";
+}
+
+/** Una fila por la sesión principal y otra por cada subagente; vacío si no hay subagentes. */
 export function leerAgentesDeCorrida(
   root: string,
   opciones: OpcionesDeLectura = {},
@@ -324,19 +343,32 @@ export function leerAgentesDeCorrida(
   const actividad = actividadPorTicket(opciones.project);
   const filas: AgenteDeCorrida[] = [];
 
+  const principal = leerConCache(ruta);
+  if (principal !== null) {
+    filas.push({
+      agente: basename(ruta, ".jsonl"),
+      principal: true,
+      ticket: null,
+      descripcion: null,
+      modelo: principal.modelo,
+      esfuerzo: principal.esfuerzo,
+      rama: principal.rama,
+      carpeta: principal.carpeta,
+      ultimaHerramienta: principal.ultimaHerramienta,
+      ultimaHerramientaEn:
+        principal.ultimaHerramientaEn === null ? null : new Date(principal.ultimaHerramientaEn).toISOString(),
+      estado: estadoDe(principal, ahora),
+      ticketEstado: null,
+      faseConfirmada: null,
+      faseInferida: null,
+    });
+  }
+
   for (const archivo of archivosDeSubagentes(ruta)) {
     const lectura = leerConCache(archivo);
     if (lectura === null) continue;
 
-    let estado: EstadoDeAgente = "trabajando";
-    if (lectura.cerro && !lectura.pendiente) estado = "termino";
-    else if (
-      lectura.pendiente ||
-      lectura.ultimoEventoEn === null ||
-      ahora - lectura.ultimoEventoEn > ESPERA_MAXIMA_MS
-    ) {
-      estado = "esperando";
-    }
+    const estado = estadoDe(lectura, ahora);
 
     let ticketEstado: string | null = null;
     if (lectura.ticket !== null && opciones.paths !== undefined) {
@@ -350,6 +382,7 @@ export function leerAgentesDeCorrida(
 
     filas.push({
       agente: basename(archivo, ".jsonl").replace(/^agent-/, ""),
+      principal: false,
       ticket: lectura.ticket,
       descripcion: descripcionDe(archivo),
       modelo: lectura.modelo,

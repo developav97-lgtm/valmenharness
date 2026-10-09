@@ -85,11 +85,12 @@ function sesion(
   descripciones: readonly string[] = [],
   id = "orquestadora-1",
   modificado: Date = new Date(T0),
+  principal: readonly string[] = [linea({ t: 0, tipo: "user", texto: "orquesta" })],
 ): void {
   const ruta = escribirSesionDeClaude(home, {
     root,
     id,
-    lineas: [linea({ t: 0, tipo: "user", texto: "orquesta" })],
+    lineas: principal,
     subagentes: agentes,
     modificado,
   });
@@ -103,8 +104,12 @@ function sesion(
   });
 }
 
-const leer = (extra: { ahora?: number; sesion?: string } = {}) =>
+const leerTodo = (extra: { ahora?: number; sesion?: string } = {}) =>
   leerAgentesDeCorrida(root, { home, ahora: T0 + 10_000, ...extra });
+
+/** Solo los subagentes: la fila de la sesión principal se prueba aparte (SP-C1…SP-C8). */
+const leer = (extra: { ahora?: number; sesion?: string } = {}) =>
+  leerTodo(extra).filter((a) => !a.principal);
 
 /** Un agente típico que lleva trabajo reciente y una herramienta ya resuelta. */
 const activo = [
@@ -188,6 +193,97 @@ describe("lector de actividad de subagentes", () => {
   });
 });
 
+describe("sesión principal", () => {
+  const PRINCIPAL = [
+    linea({ t: 0, tipo: "user", texto: `orquesta ${TICKET}` }),
+    linea({ t: 1, tipo: "assistant", modelo: "claude-opus-5-5", esfuerzo: "high", herramienta: { id: "p1", name: "Agent" } }),
+    linea({ t: 2, tipo: "user", resultadoDe: "p1" }),
+  ];
+  const ctx = (): ServerContext => ({
+    root,
+    credentialsFile: join(home, "credentials"),
+    bindingsFile: join(home, "bindings-inexistente.yaml"),
+    env: {},
+    home,
+  });
+
+  it("SP-C1: la primera fila es la sesión principal, con principal true y ticket null", () => {
+    sesion([activo, activo], [], "orquestadora-1", new Date(T0), PRINCIPAL);
+    const [primera] = leerTodo();
+    expect(primera).toMatchObject({ agente: "orquestadora-1", principal: true, ticket: null, descripcion: null });
+  });
+
+  it("SP-C2: las filas que siguen a la principal son los subagentes con principal false", () => {
+    sesion([activo, activo], [], "orquestadora-1", new Date(T0), PRINCIPAL);
+    const resto = leerTodo().slice(1);
+    expect(resto.map((a) => a.agente)).toEqual(["a0", "a1"]);
+    expect(resto.every((a) => a.principal === false)).toBe(true);
+  });
+
+  it("SP-C3: la principal trae su última herramienta y su hora en ISO", () => {
+    sesion([activo], [], "orquestadora-1", new Date(T0), PRINCIPAL);
+    expect(leerTodo()[0]).toMatchObject({
+      ultimaHerramienta: "Agent",
+      ultimaHerramientaEn: iso(1),
+      modelo: "claude-opus-5-5",
+      ticketEstado: null,
+      faseConfirmada: null,
+      faseInferida: null,
+    });
+  });
+
+  it("SP-C4: la principal está termino si su último mensaje cerró con end_turn", () => {
+    sesion([activo], [], "orquestadora-1", new Date(T0), [
+      ...PRINCIPAL,
+      linea({ t: 3, tipo: "assistant", texto: "listo", stop: "end_turn" }),
+    ]);
+    expect(leerTodo({ ahora: T0 + 600_000 })[0]?.estado).toBe("termino");
+  });
+
+  it("SP-C5: la principal está esperando con herramienta sin resultado o más de 60 s, y trabajando si no", () => {
+    sesion([activo], [], "orquestadora-1", new Date(T0), PRINCIPAL);
+    expect(leerTodo({ ahora: T0 + 5_000 })[0]?.estado).toBe("trabajando");
+    expect(leerTodo({ ahora: T0 + 2_000 + 61_000 })[0]?.estado).toBe("esperando");
+    sesion([activo], [], "orquestadora-1", new Date(T0), [
+      PRINCIPAL[0] as string,
+      linea({ t: 1, tipo: "assistant", herramienta: { id: "p9", name: "Bash" } }),
+    ]);
+    expect(leerTodo({ ahora: T0 + 5_000 })[0]?.estado).toBe("esperando");
+  });
+
+  it("SP-C6: una sesión reciente sin carpeta subagents produce la lista vacía", () => {
+    escribirSesionDeClaude(home, { root, id: "sola", lineas: PRINCIPAL, modificado: new Date(T0) });
+    expect(leerTodo()).toEqual([]);
+  });
+
+  it("SP-C7: el endpoint responde 200 con la principal en primera posición", async () => {
+    sesion([activo], [], "orquestadora-1", new Date(T0), PRINCIPAL);
+    const respuesta = await handleApi("GET", "/api/corrida/agentes", {}, ctx());
+    expect(respuesta.status).toBe(200);
+    const agentes = (respuesta.body as { agentes: { agente: string; principal: boolean }[] }).agentes;
+    expect(agentes[0]).toMatchObject({ agente: "orquestadora-1", principal: true });
+    expect(agentes[1]).toMatchObject({ agente: "a0", principal: false });
+  });
+
+  it("SP-C8: la respuesta con la principal no contiene texto de prompts, entradas ni resultados", async () => {
+    sesion([activo], [], "orquestadora-1", new Date(T0), [
+      linea({ t: 0, tipo: "user", texto: `Prompt privado ${SECRETO}` }),
+      linea({ t: 1, tipo: "assistant", texto: SECRETO, herramienta: { id: "p1", name: "Bash" } }),
+      linea({ t: 2, tipo: "user", resultadoDe: "p1" }),
+    ]);
+    const respuesta = await handleApi("GET", "/api/corrida/agentes", {}, ctx());
+    const texto = JSON.stringify(respuesta.body);
+    expect(texto).not.toContain(SECRETO);
+    expect(texto).not.toContain("Prompt privado");
+    expect(Object.keys((respuesta.body as { agentes: object[] }).agentes[0] ?? {}).sort()).toEqual(
+      [
+        "agente", "carpeta", "descripcion", "esfuerzo", "estado", "faseConfirmada", "faseInferida",
+        "modelo", "principal", "rama", "ticket", "ticketEstado", "ultimaHerramienta", "ultimaHerramientaEn",
+      ].sort(),
+    );
+  });
+});
+
 describe("unión con el registro", () => {
   function contexto(): { context: ServerContext; project: ReturnType<typeof resolveAuthorizedProject> } {
     writeFileSync(join(root, ".valmen", "config.yaml"), "project-id: prueba-agentes\n", "utf8");
@@ -216,7 +312,9 @@ describe("unión con el registro", () => {
     const { context } = contexto();
     writeFixtureTicket(root, { id: TICKET, workflowStatus: "in_progress" });
     sesion([activo, [linea({ t: 1, tipo: "user", texto: "Trabaja FEATURE-SERVER-FANTASMA-20261008" }), ...activo.slice(1)]]);
-    const filas = leerAgentesDeCorrida(root, { home, ahora: T0 + 10_000, paths: context.paths! });
+    const filas = leerAgentesDeCorrida(root, { home, ahora: T0 + 10_000, paths: context.paths! }).filter(
+      (a) => !a.principal,
+    );
     expect(filas.map((a) => [a.ticket, a.ticketEstado])).toEqual([
       [TICKET, "in_progress"],
       ["FEATURE-SERVER-FANTASMA-20261008", null],
@@ -229,7 +327,7 @@ describe("unión con el registro", () => {
     sesion([activo]);
     const opciones = { home, ahora: T0 + 10_000, paths: context.paths!, project };
 
-    const sin = leerAgentesDeCorrida(root, opciones)[0];
+    const sin = leerAgentesDeCorrida(root, opciones).filter((a) => !a.principal)[0];
     expect(sin).toMatchObject({ faseConfirmada: null, faseInferida: "implementando" });
 
     recordExecutionActivity(project, {
@@ -240,7 +338,7 @@ describe("unión con el registro", () => {
       source: "cli",
       occurredAt: iso(5),
     });
-    expect(leerAgentesDeCorrida(root, opciones)[0]).toMatchObject({
+    expect(leerAgentesDeCorrida(root, opciones).filter((a) => !a.principal)[0]).toMatchObject({
       faseConfirmada: "waiting",
       faseInferida: null,
     });
@@ -266,9 +364,10 @@ describe("GET /api/corrida/agentes", () => {
     sesion([activo], ["Implementar A"]);
     const respuesta = await handleApi("GET", "/api/corrida/agentes", {}, ctx());
     expect(respuesta.status).toBe(200);
-    const cuerpo = respuesta.body as { agentes: { agente: string; estado: string }[] };
-    expect(cuerpo.agentes).toHaveLength(1);
-    expect(cuerpo.agentes[0]).toMatchObject({ agente: "a0", ticket: TICKET });
+    const cuerpo = respuesta.body as { agentes: { agente: string; estado: string; principal: boolean }[] };
+    const subagentes = cuerpo.agentes.filter((a) => !a.principal);
+    expect(subagentes).toHaveLength(1);
+    expect(subagentes[0]).toMatchObject({ agente: "a0", ticket: TICKET });
   });
 
   it("C13: responde 200 con lista vacía si no hay sesión orquestadora", async () => {
@@ -285,7 +384,7 @@ describe("GET /api/corrida/agentes", () => {
     expect(Object.keys((respuesta.body as { agentes: object[] }).agentes[0] ?? {}).sort()).toEqual(
       [
         "agente", "carpeta", "descripcion", "esfuerzo", "estado", "faseConfirmada", "faseInferida",
-        "modelo", "rama", "ticket", "ticketEstado", "ultimaHerramienta", "ultimaHerramientaEn",
+        "modelo", "principal", "rama", "ticket", "ticketEstado", "ultimaHerramienta", "ultimaHerramientaEn",
       ].sort(),
     );
   });

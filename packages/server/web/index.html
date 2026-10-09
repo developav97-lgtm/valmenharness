@@ -6093,9 +6093,11 @@
       const ESTADOS_QUE_ESPERAN_AL_PO = ["awaiting_user_tests", "blocked", "changes_requested"];
       let refrescoDeCorrida = null;
 
-      /** Los agentes con trabajo en curso: trabajando, o esperando un permiso. */
+      /** Los agentes con trabajo en curso: trabajando, o esperando un permiso. La sesión principal no cuenta. */
       function agentesVivos(agentes) {
-        return (agentes ?? []).filter((a) => a.estado === "trabajando" || a.estado === "esperando");
+        return (agentes ?? []).filter(
+          (a) => a.principal !== true && (a.estado === "trabajando" || a.estado === "esperando"),
+        );
       }
 
       /**
