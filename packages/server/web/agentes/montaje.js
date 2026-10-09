@@ -16,6 +16,9 @@ export const VENTANA_RESPUESTA_MS = 60_000;
 /** El mayor salto de tiempo que un cuadro aplica: una pestaña dormida no teletransporta a nadie. */
 const DT_MAXIMO_S = 0.25;
 
+/** Con movimiento reducido la escena se redibuja a cuatro cuadros por segundo. */
+export const INTERVALO_REDUCIDO_MS = 250;
+
 /** El mismo formato de «hace cuánto» que usa la vista, como función pura. */
 export function haceCuanto(iso, ahoraMs) {
   const t = Date.parse(iso ?? "");
@@ -116,6 +119,7 @@ export function crearMontaje({
   cancelarCuadro,
   visible = () => true,
   ahora = () => Date.now(),
+  reducirMovimiento = () => false,
 }) {
   const ids = mundos.map((m) => m.id);
   let mundo = mundos.find((m) => m.id === leerMundoElegido(almacen, ids)) ?? mundos[0];
@@ -137,6 +141,9 @@ export function crearMontaje({
     // Se pide el siguiente antes de dibujar: un fallo del dibujo no detiene el bucle.
     cuadro = pedirCuadro(cuadroDeAnimacion);
     const t = ahora();
+    // Con movimiento reducido se salta el cuadro sin tocar `ultimo`: el dt se mide
+    // desde el último cuadro dibujado y sigue acotado por DT_MAXIMO_S.
+    if (ultimo !== null && reducirMovimiento() && t - ultimo < INTERVALO_REDUCIDO_MS) return;
     const dt = ultimo === null ? 0 : Math.min(DT_MAXIMO_S, Math.max(0, (t - ultimo) / 1000));
     ultimo = t;
     if (visible()) {

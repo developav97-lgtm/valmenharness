@@ -2181,9 +2181,15 @@
         width: 100%;
         max-width: 960px;
         height: auto;
+        image-rendering: pixelated;
         border: 1px solid var(--borde);
         border-radius: var(--radio);
         margin-bottom: 12px;
+      }
+      .corrida-mundo canvas {
+        max-width: 100%;
+        height: auto;
+        image-rendering: pixelated;
       }
       .corrida-mundos {
         display: flex;
@@ -2213,6 +2219,31 @@
         border: 1px solid var(--borde);
         border-left: 4px solid var(--acento);
         border-radius: var(--radio);
+      }
+      .corrida-aviso.pendiente {
+        background: var(--alerta-suave);
+        border-color: var(--alerta);
+        border-left-color: var(--alerta);
+      }
+      .corrida-aviso.respondio {
+        background: var(--ok-suave);
+        border-color: var(--ok);
+        border-left-color: var(--ok);
+      }
+      .corrida-paneles {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0 24px;
+        align-items: start;
+      }
+      .corrida-panel {
+        min-width: 0;
+        overflow-x: auto;
+      }
+      @media (min-width: 700px) {
+        .corrida-paneles {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
       }
       .corrida-cuenta {
         font-weight: 620;
@@ -6325,8 +6356,11 @@
               } catch {
                 // Sin almacenamiento, el mundo elegido no se recuerda.
               }
+              const consulta =
+                typeof matchMedia === "function" ? matchMedia("(prefers-reduced-motion: reduce)") : null;
               montajeDeAgentes = modulo.crearMontaje({
                 almacen,
+                reducirMovimiento: () => consulta?.matches === true,
                 pedirCuadro: (f) => requestAnimationFrame(f),
                 cancelarCuadro: (id) => cancelAnimationFrame(id),
                 visible: () => document.visibilityState === "visible",
@@ -6494,14 +6528,21 @@
             pintarLienzoDeAgentes(cont, moduloDeEscena, agentes, ahora);
           }
 
-          cont.append(el("h3", "Agentes vivos"));
-          const filasDePanel = moduloDeEscena !== null ? moduloDeEscena.filasDePanelAgentes(agentes) : vivos;
-          if (filasDePanel.length === 0) cont.append(el("div", "Ningún agente trabajando ahora.", "vacio"));
-          else cont.append(tablaDeAgentes(filasDePanel, ahora));
+          const paneles = el("div", undefined, "corrida-paneles");
+          const panelVivos = el("div", undefined, "corrida-panel");
+          const panelCola = el("div", undefined, "corrida-panel");
+          const panelEntregados = el("div", undefined, "corrida-panel");
+          paneles.append(panelVivos, panelCola, panelEntregados);
+          cont.append(paneles);
 
-          cont.append(el("h3", "Cola"));
+          panelVivos.append(el("h3", "Agentes vivos"));
+          const filasDePanel = moduloDeEscena !== null ? moduloDeEscena.filasDePanelAgentes(agentes) : vivos;
+          if (filasDePanel.length === 0) panelVivos.append(el("div", "Ningún agente trabajando ahora.", "vacio"));
+          else panelVivos.append(tablaDeAgentes(filasDePanel, ahora));
+
+          panelCola.append(el("h3", "Cola"));
           if (kpis.cola.length === 0) {
-            cont.append(el("div", hayJornada ? "La cola está vacía." : "Sin jornada programada: no hay cola.", "vacio"));
+            panelCola.append(el("div", hayJornada ? "La cola está vacía." : "Sin jornada programada: no hay cola.", "vacio"));
           } else {
             const hechos = new Set(kpis.entregadosIds);
             const olas = olasDeCola(kpis.cola, hechos);
@@ -6517,11 +6558,11 @@
               }
               contenedor.append(grupo);
             }
-            cont.append(contenedor);
+            panelCola.append(contenedor);
           }
 
-          cont.append(el("h3", "Entregados"));
-          if (kpis.entregadosIds.length === 0) cont.append(el("div", "Todavía no se entregó ningún ticket de la corrida.", "vacio"));
+          panelEntregados.append(el("h3", "Entregados"));
+          if (kpis.entregadosIds.length === 0) panelEntregados.append(el("div", "Todavía no se entregó ningún ticket de la corrida.", "vacio"));
           else {
             const contenedor = el("div", undefined, "corrida-cola");
             for (const id of kpis.entregadosIds) {
@@ -6529,7 +6570,7 @@
               linea.append(el("span", id, "id"), etiquetaDeEstadoRegistro(estadoDeRegistro(id, tickets)));
               contenedor.append(linea);
             }
-            cont.append(contenedor);
+            panelEntregados.append(contenedor);
           }
         }
 
