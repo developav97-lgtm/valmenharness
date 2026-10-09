@@ -66,3 +66,23 @@ debajo aunque el plan los cubra.
   claude (REVIEW) y aprobación del plan por la autorización APA-20261009-2cf4af. Razón: pasos, verificabilidad y
   rollback en 0.99; ningún criterio bajó a zona de bloqueo (24 de 40 entre 0.80 y 0.89 por redacción); partir los
   siete compuestos choca con el tope de 40 y los otros dos mundos pasaron con la misma forma.
+
+- **FEATURE-SERVER-TEXTO-PREGUNTA-RESPUESTA · análisis · GR-20261009-FEATURE-SERVER-TEXTO-PREGUNTA-RESPUESTA-20261008-analysis-1** · approve por claude (REVIEW). Razón: dos puntos en
+  banda (`causa_especifica` 0.89, `nombra_archivos_reales` 0.75, patrón ya visto), el resto aprobado, y el
+  diagnóstico cita lector, endpoint y `--host` con ruta:línea. La decisión de privacidad (R-DAT-004) es la frase
+  literal del PO, no de Claude.
+  Supuestos decididos por Claude y que el PO debe poder revisar (tocan privacidad): sin `--host` en 127.0.0.1 no se
+  expone el texto (la señal es `writeToken`); recorte a 500 caracteres; el texto sale de
+  `input.questions[].question` y la respuesta de `toolUseResult.answers`.
+  Hallazgo de proceso: el subagente movió el ticket a `analyzed` antes de correr la compuerta de análisis; el
+  brief la pone en `intake`.
+
+- **FEATURE-SERVER-TEXTO-PREGUNTA-RESPUESTA · plan · GR-20261009-FEATURE-SERVER-TEXTO-PREGUNTA-RESPUESTA-20261008-plan-2**
+  · approve por claude (REVIEW) y aprobación del plan por la autorización APA-20261009-2cf4af. Razón: tras dos
+  vueltas C17, C19 y C20 salieron de la banda, los nueve restantes están entre 0.84 y 0.89 (forma de redacción) y el
+  plan cubre no filtrado, `--host` y recorte con pruebas concretas.
+
+- **FEATURE-SERVER-TEXTO-PREGUNTA-RESPUESTA · C24** · el PO decidió cambiar el comando del criterio a
+  `npx tsc --build tsconfig.build.json` («Recomiendo A, cambia el comando de C24»), porque `tsc --noEmit -p
+  tsconfig.json` da 10 avisos TS7016 previos (módulos `web/agentes/**` sin declaración importados por las
+  pruebas). Hallazgo para la revisión final: los criterios de compilación deben usar la compilación real.
