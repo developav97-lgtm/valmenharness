@@ -161,11 +161,11 @@ Ninguno.
       <!-- test: npx vitest run tests/vista-corrida.test.ts -->
 - [x] C22: el módulo de `index.html` se ejecuta en el arnés de la interfaz sin rechazos no capturados
       <!-- test: npx vitest run tests/interfaz-ejecutable.test.ts -->
-- [ ] C23 (R-ESC-005): en el navegador el selector ofrece los tres mundos con una miniatura cada uno
+- [x] C23 (R-ESC-005): en el navegador el selector ofrece los tres mundos con una miniatura cada uno
       <!-- verify: manual -->
-- [ ] C24 (R-ESC-005): en el navegador el mundo elegido sigue elegido después de recargar la página
+- [x] C24 (R-ESC-005): en el navegador el mundo elegido sigue elegido después de recargar la página
       <!-- verify: manual -->
-- [ ] C25 (R-ESC-007): en el navegador una pregunta abierta muestra su aviso sobre el lienzo
+- [x] C25 (R-ESC-007): en el navegador una pregunta abierta muestra su aviso sobre el lienzo
       <!-- verify: manual -->
 - [ ] C26 (R-ESC-006): en el navegador los agentes no vuelven al puesto principal tras diez refrescos de 5 s
       <!-- verify: manual -->
