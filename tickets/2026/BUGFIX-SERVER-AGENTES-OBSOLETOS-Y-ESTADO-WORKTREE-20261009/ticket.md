@@ -4,8 +4,8 @@ id: BUGFIX-SERVER-AGENTES-OBSOLETOS-Y-ESTADO-WORKTREE-20261009
 title: El lector muestra agentes terminados como ejecutando y el estado del ticket solo cambia al integrar
 type: BUGFIX
 module: SERVER
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -13,7 +13,7 @@ migration_impact: false
 docker_impact: false
 risk_level: normal
 created: 2026-10-08
-updated: 2026-10-08
+updated: 2026-10-09
 related_ticket: null
 target_release: null
 released_in: null
@@ -119,15 +119,39 @@ Memoria consultada (`buscar_memoria` «agentes de corrida transcript subagente t
       <!-- test: npx vitest run tests/actividad-agentes.test.ts -->
 - [x] C17: La compilación de TypeScript termina con código 0.
       <!-- test: npx tsc --build tsconfig.build.json -->
-- [ ] C18: En la vista Agentes, un subagente real que terminó deja el panel de agentes vivos en el siguiente refresco (5 s).
+- [x] C18: En la vista Agentes, un subagente real que terminó deja el panel de agentes vivos en el siguiente refresco (5 s).
       <!-- verify: manual -->
-- [ ] C19: En un mundo de la vista Agentes, la estación de un ticket pasa a `analyzed` cuando su subagente lo mueve en el worktree, antes de que el orquestador integre.
+- [ ] C19: En un mundo de la vista Agentes, la estación de un ticket pasa a `analyzed` cuando su subagente lo mueve en el worktree, antes de que el orquestador integre. — no aplica: no probado con una corrida real y el PO acepta cerrar y abrir un bugfix si falla el 2026-10-09
       <!-- verify: manual -->
 
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación de la entrega de BUGFIX-SERVER-AGENTES-OBSOLETOS-Y-ESTADO-WORKTREE-20261009",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta verificar sus criterios.",
+    "expected": "Los criterios del ticket se cumplen; lo que exige una corrida real queda declarado.",
+    "evidence": [
+      "EVIDENCE-001"
+    ],
+    "affected_files": [
+      "packages/server/src/agentes.ts",
+      "tests/agentes-obsoletos.test.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -143,29 +167,81 @@ Directorio: raíz del worktree (o del repositorio tras integrar). Requisitos: No
 - `npx tsc --build tsconfig.build.json` — esperado: código 0 (corrido: 0).
 - Medido con datos reales (lector llamado sobre el transcript de la sesión `4f9b1b12-…`, sin abrir la interfaz): el subagente `af690511df61835ff` sale `termino` (antes `esperando`) y `ticketEstado` del ticket de otro subagente sale `in_progress` desde su worktree mientras el principal aún no lo tenía.
 - Manual pendiente (C18, C19): con `valmen serve` desde la raíz del repositorio ya integrado, abrir `#/agentes` durante una corrida: un subagente terminado debe salir del panel en el refresco de 5 s y la estación del ticket debe seguir `analyzed`, `planned`… antes de integrar. No se verificó en navegador.
+- Resultado del PO: «entiendo que para cerrar esos dos toca una corrida pero aun no tengo ninguna podriamos cerrarlos como para dejar cerrado todo y ya cuando vaya a correr todo te si hay un error con esas dos yo te abro un bugfix» (2026-10-09).
 
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-09",
+    "build_reference": "commit:078c294419ec6a42e5b248bf6aa8bf2c1355f3cb",
+    "environment": "macOS, Node 24, main; Mission Control del PO en 127.0.0.1:4175",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-09",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "«entiendo que para cerrar esos dos toca una corrida pero aun no tengo ninguna podriamos cerrarlos como para dejar cerrado todo y ya cuando vaya a correr todo te si hay un error con esas dos yo te abro un bugfix»"
+  }
+]
 ```
 
 ## Evidencia
 
 ```json
-[]
+[
+  {
+    "id": "EVIDENCE-001",
+    "date": "2026-10-09",
+    "kind": "automated-test",
+    "description": "Suite completa en verde tras integrar en main y comprobaciones manuales de la jornada",
+    "reference": "worktree:sha256:ab4babfc77d9089c654386b94cf69f8cf24bed1056579b9e7b6e1ea268e492bd",
+    "point_id": "POINT-001"
+  }
+]
 ```
 
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-09",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "«entiendo que para cerrar esos dos toca una corrida pero aun no tengo ninguna podriamos cerrarlos como para dejar cerrado todo y ya cuando vaya a correr todo te si hay un error con esas dos yo te abro un bugfix»"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-09",
+    "technical_summary": "El lector da por terminado un subagente cuando la sesión principal registra su task-notification (completed, failed, killed o stopped) sin eventos posteriores, y toma el estado del ticket de la copia del worktree del subagente, con el principal como respaldo.",
+    "functional_summary": "Los agentes que ya terminaron dejan de verse como ejecutando y el ticket avanza de estación mientras su subagente trabaja, sin esperar a integrar.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "unreleased: entra con la feature vista-agentes"
+  }
+]
 ```
 
 ## Consumo de IA
@@ -186,6 +262,36 @@ Directorio: raíz del worktree (o del repositorio tras integrar). Requisitos: No
     "source": "manual: subagente de implementación (sonnet) sin agregado de la sesión",
     "confidence": "low",
     "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-09",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Subagentes por fase; sin números por ticket.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:sesiones de Claude Code de la corrida orquestada vista-agentes",
+    "confidence": "low",
+    "id": "CONSUMO-002"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-09",
+    "session_reference": "4f9b1b12-ced4-4132-9151-c3a025ede085",
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. Sesión **compartida**: trabajó 15 tickets (FEATURE-SERVER-SESION-PRINCIPAL-20261008 ×132, FEATURE-WEB-VISTA-LIENZO-20261008 ×121, FEATURE-WEB-MUNDO-PASTELERIA-20261008 ×119, FEATURE-WEB-MOTOR-ESCENA-20261008 ×118, IMPROVEMENT-WEB-VISTA-RENOMBRAR-AGENTES-20261008 ×107), así que su costo no se reparte y acá no se registran números. Costo completo de la sesión: no declarado por el proveedor, 6712613 tokens. Registralo en el ticket cuya sesión sea propia, o declaralo compartido donde corresponda. Sesión \"Feature vista-agentes\".",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "claude:4f9b1b12-ced4-4132-9151-c3a025ede085",
+    "confidence": "high",
+    "id": "CONSUMO-003"
   }
 ]
 ```
@@ -287,6 +393,141 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:20:55.956Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:20:56.314Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:20:56.700Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:20:57.108Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:20:57.569Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:20:58.049Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:20:58.533Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:20:58.943Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:20:59.404Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:20:59.816Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:21:00.224Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:21:00.603Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:21:02.648Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:21:03.091Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-025",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:21:03.710Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
