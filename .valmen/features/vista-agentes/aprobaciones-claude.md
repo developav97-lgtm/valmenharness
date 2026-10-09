@@ -158,3 +158,6 @@ hasta que lo diga.
 El PO extendió también la delegación de REVIEW a IMPROVEMENT-WEB-MUNDOS-CORRECCIONES-20261009 (2026-10-09):
 «Dale, aprueba la REVIEW con tu delegación». Mismas exclusiones. La aprobación del plan de un IMPROVEMENT en el
 módulo WEB sí la cubre la autorización APA-20261009-2cf4af.
+El PO pidió además, para ese mismo ticket (2026-10-09): «Dale, aprueba el plan cuando llegue». El plan se aprueba
+por la autorización APA-20261009-2cf4af (atribuida a ella, no a Claude), y los supuestos que traiga se resuelven
+con la opción por defecto propuesta, anotados aquí para la revisión del PO.
