@@ -86,3 +86,15 @@ debajo aunque el plan los cubra.
   `npx tsc --build tsconfig.build.json` («Recomiendo A, cambia el comando de C24»), porque `tsc --noEmit -p
   tsconfig.json` da 10 avisos TS7016 previos (módulos `web/agentes/**` sin declaración importados por las
   pruebas). Hallazgo para la revisión final: los criterios de compilación deben usar la compilación real.
+
+- **FEATURE-WEB-VISTA-TEXTO-PREGUNTA · análisis · GR-20261009-FEATURE-WEB-VISTA-TEXTO-PREGUNTA-20261008-analysis-1** · approve por claude (REVIEW). Razón: un solo punto bajo
+  (`nombra_archivos_reales` 0.76, patrón ya visto), ubica el cambio 0.95, causa específica 0.91, y el diagnóstico
+  cita los tres consumidores con ruta:línea y el escapado ya existente (`textContent`, `fillText`).
+  Supuestos decididos por Claude con la opción por defecto: el texto va en el aviso de los tres mundos y en la
+  franja del centro de control, sin bocadillo en pastelería ni invernadero (como el prototipo); en la franja se
+  recorta con «…»; sin `texto`, la franja conserva la pregunta inferida de hoy.
+
+- **FEATURE-WEB-VISTA-TEXTO-PREGUNTA · plan · GR-20261009-FEATURE-WEB-VISTA-TEXTO-PREGUNTA-20261008-plan-1** · approve
+  por claude (REVIEW) y aprobación del plan por la autorización APA-20261009-2cf4af. Razón: sin BLOCK, media
+  ponderada 0.926, 38 criterios de una sola afirmación y diez en banda (0.82-0.90) por redacción; el escapado tiene
+  prueba (C7, C8, C20, C22, C23) y el caso sin `texto` también.
