@@ -4,7 +4,7 @@ id: FEATURE-SERVER-TEXTO-PREGUNTA-RESPUESTA-20261008
 title: Lector expone texto de pregunta y respuesta con lista blanca ampliada, bajo decisión escrita del PO
 type: FEATURE
 module: SERVER
-workflow_status: in_progress
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -92,7 +92,7 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
   4. `packages/server/src/agentes.ts`, `leerAgentesDeCorrida`: pasar `opciones.conTexto === true` a `preguntaDe` en la fila principal (`:419`) y en las de subagentes (`:455`). (C6, C14)
   5. `packages/server/src/server.ts`, endpoint `GET /api/corrida/agentes` (`:1033-1040`): pasar `conTexto: context.writeToken === undefined` a `leerAgentesDeCorrida`, y actualizar el comentario `:1016-1020`. (C1, C12, C13)
   6. `tests/actividad-agentes.test.ts`: dar a `linea()` (`:49-80`) una variante con la forma real de `AskUserQuestion` (`input.questions[]` con `question`, `header`, `options[]{label, description}`) y de su resultado (`content` cadena y `toolUseResult.answers`), con centinelas distintos para cada campo fuera de la lista blanca. Nuevo `describe("texto de pregunta y respuesta (R-DAT-004)")` con pruebas `TP-C01`…`TP-C19`, con `ctx()` local y otro `ctx()` con `writeToken`. Reescribir PP-C10 (la entrada de la pregunta: `header`, `label` y `description` no aparecen), PP-C11 (el `content` del resultado no aparece) y PP-C12 (en loopback las claves de `pregunta` son exactamente `desde`, `respondidaEn`, `texto` y `respuesta`). Las pruebas de no filtrado y de ventana se escriben así, todas contra `handleApi("GET", "/api/corrida/agentes", {}, ctx())` en loopback (sin `writeToken`) y con una `AskUserQuestion` respondida en la misma sesión para que la lista blanca ampliada esté activa: `TP-C15` siembra `TP-PROMPT` en el primer mensaje del usuario; `TP-C16` siembra `TP-BASH-IN` en `input.command` de un `tool_use` `Bash`; `TP-C17` siembra `TP-BASH-OUT` en el `content` del `tool_result` de ese `Bash`; cada una comprueba que `JSON.stringify(body)` no contiene su centinela. `TP-C18` usa la pregunta respondida en `T0 + 3 s` y el reloj inyectado en `T0 + 64 s`, y comprueba `pregunta === null`. Las pruebas de los mundos y de `vista-lienzo` no cambian. (C1–C21)
-  7. Verificación: `npx vitest run tests/actividad-agentes.test.ts`, las pruebas de mundos y lienzo, `npx tsc --noEmit -p tsconfig.json` y `valmen secrets`. (C22–C24)
+  7. Verificación: `npx vitest run tests/actividad-agentes.test.ts`, las pruebas de mundos y lienzo, `npx tsc --build tsconfig.build.json` (la compilación real; el PO lo pidió en lugar de `tsc --noEmit -p tsconfig.json`, que da 10 avisos TS7016 previos en las pruebas) y `valmen secrets`. (C22–C24)
   8. Validación manual del responsable, con una sesión de Claude Code que tenga subagentes y una `AskUserQuestion` abierta y luego contestada:
      - ValmenHarness: `valmen serve` (sin `--host`, escucha en 127.0.0.1:4173) y `curl -s http://127.0.0.1:4173/api/corrida/agentes`; con la pregunta abierta se mira `pregunta.texto` y, ya contestada (menos de 60 s), `pregunta.respuesta`. (C25, C26)
      - SaiOpenCloud: el mismo `curl` con `-H 'X-Valmen-Project: <project-id de SaiOpenCloud en los bindings>'`, con la pregunta abierta y luego contestada en una sesión de ese proyecto. (C27, C28)
@@ -153,8 +153,8 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
       <!-- test: npx vitest run tests/actividad-agentes.test.ts -->
 - [x] C23: las pruebas de los tres mundos y del lienzo pasan sin cambios
       <!-- test: npx vitest run tests/mundo-pasteleria.test.ts tests/mundo-control.test.ts tests/mundo-invernadero.test.ts tests/vista-lienzo.test.ts -->
-- [ ] C24: el proyecto compila sin errores de tipos
-      <!-- test: npx tsc --noEmit -p tsconfig.json -->
+- [x] C24: el proyecto compila sin errores de tipos
+      <!-- test: npx tsc --build tsconfig.build.json -->
 - [ ] C25 (R-DAT-004): en ValmenHarness, `curl -s http://127.0.0.1:4173/api/corrida/agentes` con una `AskUserQuestion` abierta devuelve `pregunta.texto` igual a la pregunta mostrada en Claude Code
       <!-- verify: manual -->
 - [ ] C26 (R-DAT-004): en ValmenHarness, el mismo `curl` dentro de los 60 s posteriores a contestar devuelve `pregunta.respuesta` igual a la opción elegida
@@ -186,6 +186,7 @@ Directorio de ejecución: raíz del repositorio (o del worktree). Requisitos: No
 - `npx vitest run tests/actividad-agentes.test.ts` → 60 pruebas pasan (incluye TP-C01…TP-C18, PP-C10/11/12 reescritas). Cubre C1–C22.
 - `npx vitest run tests/mundo-pasteleria.test.ts tests/mundo-control.test.ts tests/mundo-invernadero.test.ts tests/vista-lienzo.test.ts` → 4 archivos, 111 pruebas pasan, sin cambios en ellas (C23).
 - `npx tsc --noEmit -p tsconfig.json` → **no queda en cero**: 10 errores TS7016 (módulos `.js` de `packages/server/web/agentes/**` sin declaración, importados por `tests/mundo-*.test.ts`, `tests/vista-*.test.ts`). Son idénticos con y sin este cambio (se comprobó con `git stash`) y también en el checkout principal; ninguno está en `agentes.ts`, `server.ts` ni `actividad-agentes.test.ts`. Por eso **C24 queda sin marcar**: decide una persona si basta con «sin errores nuevos».
+- Decisión del PO sobre C24 (2026-10-09): «Recomiendo A, cambia el comando de C24». El comando pasó a `npx tsc --build tsconfig.build.json` (compilación real), que pasa sin errores; los 10 avisos TS7016 de las pruebas son previos y quedan para un ticket aparte.
 - Medición manual hecha por el agente (no sustituye C25–C29, que piden una sesión real): con `HOME` temporal, un proyecto temporal y transcripts sintéticos (una `AskUserQuestion` abierta y otra contestada, con centinelas en prompt, `header`, `label`, `description` y `content`), el servidor del worktree (`packages/cli/dist/main.js serve`) respondió por `curl http://127.0.0.1:<puerto>/api/corrida/agentes`:
   - sin `--host`: la pregunta abierta trae `texto` y `respuesta: null`; la contestada trae `texto` y `respuesta`; ningún centinela aparece en la respuesta.
   - con `--host 0.0.0.0`: `pregunta` trae solo `desde` y `respondidaEn`.
@@ -334,6 +335,15 @@ Sin publicar todavía.
     "action": "ai-usage-added",
     "actor": "cli",
     "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-08",
+    "at": "2026-10-09T03:02:32.797Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
