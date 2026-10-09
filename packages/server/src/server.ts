@@ -2339,6 +2339,20 @@ function send(
   response.end(texto);
 }
 
+/**
+ * Los archivos de la interfaz que el servidor local declara como estáticos. Un
+ * archivo que no está aquí no se sirve: el servidor no recorre directorios.
+ */
+export const ARCHIVOS_WEB: readonly string[] = [
+  "index.html",
+  "agentes/motor.js",
+  "agentes/montaje.js",
+  "agentes/mundos/index.js",
+  "agentes/mundos/pasteleria.js",
+  "agentes/mundos/control.js",
+  "agentes/mundos/invernadero.js",
+];
+
 /** Carga los estáticos desde un directorio, para el servidor real. */
 export function loadStatics(
   directory: string,

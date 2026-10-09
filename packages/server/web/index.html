@@ -2176,6 +2176,44 @@
         border: 1px solid var(--borde);
         border-radius: var(--radio);
       }
+      .corrida-lienzo {
+        display: block;
+        width: 100%;
+        max-width: 960px;
+        height: auto;
+        border: 1px solid var(--borde);
+        border-radius: var(--radio);
+        margin-bottom: 12px;
+      }
+      .corrida-mundos {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      .corrida-mundo {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        padding: 6px;
+        background: var(--panel-alto);
+        border: 1px solid var(--borde);
+        border-radius: var(--radio);
+        color: var(--texto);
+        cursor: pointer;
+      }
+      .corrida-mundo[aria-pressed="true"] {
+        border-color: var(--acento);
+      }
+      .corrida-aviso {
+        padding: 10px 14px;
+        margin-bottom: 8px;
+        background: var(--panel-alto);
+        border: 1px solid var(--borde);
+        border-left: 4px solid var(--acento);
+        border-radius: var(--radio);
+      }
       .corrida-cuenta {
         font-weight: 620;
         font-size: 15px;
@@ -6240,7 +6278,7 @@
           const ticket = el("div");
           const punto = el("span", undefined, `corrida-punto ${agente.estado}`);
           punto.setAttribute("title", agente.estado);
-          ticket.append(punto, el("span", agente.ticket ?? agente.agente, "id"));
+          ticket.append(punto, el("span", agente.principal === true ? (agente.nombre ?? agente.agente) : (agente.ticket ?? agente.agente), "id"));
           if (agente.descripcion) ticket.append(el("div", agente.descripcion, "nota-agente"));
           const fase = fraseDeFase(agente);
           const celdaFase = el("div");
@@ -6262,6 +6300,99 @@
         }
         tabla.append(encabezado, cuerpo);
         return tabla;
+      }
+
+      // El lienzo se carga bajo demanda y sin `import` estático: si el archivo no
+      // está (o el módulo corre fuera de un navegador), la vista pinta solo los
+      // paneles. La promesa se memoriza y nunca rechaza.
+      let escenaPromesa = null;
+      let montajeDeAgentes = null;
+      let proyectoDelMontaje = null;
+      let lienzoDeAgentes = null;
+      function cargarEscena() {
+        if (escenaPromesa === null) {
+          // Sin cuadro de animación (el arnés de la interfaz, un entorno sin
+          // navegador) no hay escena que montar: ni se pide el archivo.
+          if (typeof requestAnimationFrame !== "function") {
+            escenaPromesa = Promise.resolve(null);
+            return escenaPromesa;
+          }
+          escenaPromesa = import("/agentes/montaje.js")
+            .then((modulo) => {
+              let almacen = null;
+              try {
+                almacen = localStorage;
+              } catch {
+                // Sin almacenamiento, el mundo elegido no se recuerda.
+              }
+              montajeDeAgentes = modulo.crearMontaje({
+                almacen,
+                pedirCuadro: (f) => requestAnimationFrame(f),
+                cancelarCuadro: (id) => cancelAnimationFrame(id),
+                visible: () => document.visibilityState === "visible",
+              });
+              return modulo;
+            })
+            .catch(() => null);
+        }
+        return escenaPromesa;
+      }
+
+      /** El lienzo, el selector de mundo y los avisos de pregunta; los paneles van aparte. */
+      function pintarLienzoDeAgentes(cont, modulo, agentes, ahora) {
+        const montaje = montajeDeAgentes;
+        if (lienzoDeAgentes === null) {
+          lienzoDeAgentes = document.createElement("canvas");
+          lienzoDeAgentes.width = 960;
+          lienzoDeAgentes.height = 480;
+          lienzoDeAgentes.className = "corrida-lienzo";
+          lienzoDeAgentes.setAttribute("aria-label", "Escena animada de los agentes");
+        }
+        const avisos = el("div", undefined, "corrida-avisos");
+        const pintarAvisos = () => {
+          avisos.textContent = "";
+          for (const aviso of modulo.avisosDePregunta(agentes, ahora, montaje.mundoActual())) {
+            const caja = el("div", undefined, `corrida-aviso ${aviso.tipo}`);
+            caja.append(el("div", aviso.encabezado, "rotulo"));
+            caja.append(el("div", `${aviso.ticket} · ${aviso.hace}`, "id"));
+            if (aviso.expresion) caja.append(el("div", aviso.expresion, "resultado"));
+            avisos.append(caja);
+          }
+        };
+        pintarAvisos();
+        const lema = el("div", montaje.mundoActual().lema, "resultado");
+        const selector = el("div", undefined, "corrida-mundos");
+        selector.setAttribute("role", "group");
+        selector.setAttribute("aria-label", "Mundo de la escena");
+        for (const mundo of montaje.mundos()) {
+          const boton = document.createElement("button");
+          boton.type = "button";
+          boton.className = "corrida-mundo";
+          boton.dataset.mundo = mundo.id;
+          boton.setAttribute("aria-pressed", String(mundo.id === montaje.mundoActual().id));
+          const mini = document.createElement("canvas");
+          mini.width = 160;
+          mini.height = 80;
+          mini.setAttribute("aria-hidden", "true");
+          try {
+            const ctx = mini.getContext("2d");
+            if (ctx) mundo.dibujar({ ctx, escena: { agentes: new Map(), t: 0 }, miniatura: true }, 0);
+          } catch {
+            // Una miniatura que no se dibuja no impide elegir el mundo.
+          }
+          boton.append(mini, el("span", mundo.nombre));
+          boton.addEventListener("click", () => {
+            if (!montaje.elegirMundo(mundo.id)) return;
+            for (const otro of selector.querySelectorAll("button")) {
+              otro.setAttribute("aria-pressed", String(otro.dataset.mundo === mundo.id));
+            }
+            lema.textContent = mundo.lema;
+            pintarAvisos();
+          });
+          selector.append(boton);
+        }
+        cont.append(avisos, lienzoDeAgentes, selector, lema);
+        montaje.montar(lienzoDeAgentes, agentes, ahora);
       }
 
       async function vistaCorrida() {
@@ -6288,6 +6419,7 @@
           api("GET", "/api/tickets"),
           leerFrescuraDeFuentes(proyectoDeLaSolicitud),
         ]);
+        const moduloDeEscena = await cargarEscena();
         // No se pinta una foto que ya no pertenece al proyecto o a la vista actual.
         if (!sigueVigente()) return;
 
@@ -6335,6 +6467,7 @@
 
         const hayJornada = filas.length > 0;
         if (!hayJornada && agentes.length === 0) {
+          montajeDeAgentes?.desmontar();
           cont.append(el("div", "No hay corrida en marcha: ninguna jornada programada y ningún agente activo. Cuando la sesión reparta tickets en subagentes aparecerán aquí.", "vacio"));
         } else {
           const tarjetas = el("div", undefined, "tarjetas");
@@ -6352,9 +6485,19 @@
           }
           cont.append(tarjetas);
 
+          if (moduloDeEscena !== null && montajeDeAgentes !== null) {
+            if (proyectoDelMontaje !== proyectoDeLaSolicitud) {
+              montajeDeAgentes.desmontar();
+              montajeDeAgentes.reiniciar();
+              proyectoDelMontaje = proyectoDeLaSolicitud;
+            }
+            pintarLienzoDeAgentes(cont, moduloDeEscena, agentes, ahora);
+          }
+
           cont.append(el("h3", "Agentes vivos"));
-          if (vivos.length === 0) cont.append(el("div", "Ningún agente trabajando ahora.", "vacio"));
-          else cont.append(tablaDeAgentes(vivos, ahora));
+          const filasDePanel = moduloDeEscena !== null ? moduloDeEscena.filasDePanelAgentes(agentes) : vivos;
+          if (filasDePanel.length === 0) cont.append(el("div", "Ningún agente trabajando ahora.", "vacio"));
+          else cont.append(tablaDeAgentes(filasDePanel, ahora));
 
           cont.append(el("h3", "Cola"));
           if (kpis.cola.length === 0) {
@@ -8769,7 +8912,11 @@
         const ruta = location.hash.replace(/^#\//, "") || "tickets";
         const [nombre, parametro] = ruta.split("/");
         clearTimeout(refrescoDeCorrida);
-        if (!esRutaDeAgentes(nombre)) revisionVistaJornadas += 1;
+        if (!esRutaDeAgentes(nombre)) {
+          revisionVistaJornadas += 1;
+          // El lienzo solo anima mientras la vista Agentes está abierta.
+          montajeDeAgentes?.desmontar();
+        }
 
         // Navegar de verdad empieza arriba; **refrescar** no mueve a nadie.
         const antes = opciones.conservarVista === true ? instantaneaDeLaVista() : null;
