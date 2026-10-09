@@ -117,6 +117,11 @@ export interface EvaluationOutcome {
    */
   readonly escalations?: readonly import("@valmen/gate").EscalationRecord[];
   /**
+   * Una entrada por tanda cuyo productor agotó la salida estructurada y se repitió
+   * con el modelo de escalado. Ausente si ningún productor falló.
+   */
+  readonly producerRetries?: readonly import("@valmen/gate").ProducerRetryRecord[];
+  /**
    * El evaluador que se pidió, cuando no es el que respondió.
    *
    * Solo aparece si la cascada falló y la evaluación se degradó al evaluador por defecto:
@@ -322,6 +327,9 @@ async function evaluateGateBase(options: SelectOptions): Promise<EvaluationOutco
     latencyMs: parcial.latencyMs + outcome.results.reduce((t, r) => t + r.durationMs, 0),
     commandResults: outcome.results,
     ...(parcial.escalations === undefined ? {} : { escalations: parcial.escalations }),
+    ...(parcial.producerRetries === undefined
+      ? {}
+      : { producerRetries: parcial.producerRetries }),
     ...(parcial.tandas === undefined ? {} : { tandas: parcial.tandas }),
   };
 }
@@ -372,8 +380,11 @@ async function runSemanticEnTandas(
     } catch (caught) {
       const error = caught as { code?: string; message?: string };
       // Un fallo de credencial no se tapa con otro evaluador: hay que verlo. Cualquier otro
-      // fallo de la cascada degrada al evaluador por defecto, sin reintentar la cascada: el
-      // fallo de salida estructurada es determinista y repetirlo solo gasta otra llamada.
+      // fallo de la cascada degrada al evaluador por defecto. El fallo de salida estructurada
+      // del productor es intermitente (medido el 2026-10-09: 1 de 4 compuertas y 2 de 8
+      // llamadas), no determinista: `verifiedCascade` ya lo reintentó una vez con el modelo de
+      // escalado, así que si el error llega hasta acá el reintento también falló y la caída a
+      // jev es el último recurso, sin una tercera llamada.
       if (error.code === "AUTH" || error.code === "CREDENTIAL_MISSING") throw caught;
       const respaldo = await runSemanticEnTandasDe("jev", options);
       return {
@@ -406,6 +417,7 @@ async function runSemanticEnTandasDe(
   const primera = partes[0] as EvaluationOutcome;
   const conUso = partes.flatMap((parte) => (parte.usage === null ? [] : [parte.usage]));
   const escalamientos = partes.flatMap((parte) => parte.escalations ?? []);
+  const reintentos = partes.flatMap((parte) => parte.producerRetries ?? []);
   return {
     evaluator: primera.evaluator,
     answers: partes.flatMap((parte) => parte.answers),
@@ -422,6 +434,7 @@ async function runSemanticEnTandasDe(
     ...(partes.some((parte) => parte.escalations !== undefined)
       ? { escalations: escalamientos }
       : {}),
+    ...(reintentos.length === 0 ? {} : { producerRetries: reintentos }),
     tandas: tandas.length,
   };
 }
@@ -531,6 +544,7 @@ async function runCascade(options: SelectOptions): Promise<EvaluationOutcome> {
     usage: corrida.usage,
     latencyMs: corrida.latencyMs,
     escalations: corrida.escalations,
+    ...(corrida.producerRetry === undefined ? {} : { producerRetries: [corrida.producerRetry] }),
   };
 }
 

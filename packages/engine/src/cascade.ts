@@ -186,6 +186,35 @@ export interface CascadeRun {
     readonly costUsd: number;
   };
   readonly latencyMs: number;
+  /**
+   * Presente solo si el productor agotó la salida estructurada y la producción se
+   * repitió una vez con el modelo de escalado: quién falló, quién produjo en su
+   * lugar y el error real del productor.
+   */
+  readonly producerRetry?: ProducerRetry;
+}
+
+/** El reintento único de la producción, tal como queda en el recibo. */
+export interface ProducerRetry {
+  readonly from: { readonly provider: string; readonly model: string };
+  readonly to: { readonly provider: string; readonly model: string };
+  readonly error: { readonly code: string; readonly message: string };
+}
+
+/**
+ * `true` si el error es el agotamiento de la salida estructurada del productor.
+ *
+ * Es intermitente y propio del modelo (medido el 2026-10-09), a diferencia de un
+ * fallo de credencial o de red, que repetir con otro modelo no arregla.
+ */
+function esSalidaEstructuradaAgotada(error: unknown): boolean {
+  const e = error as { code?: unknown; message?: unknown };
+  return (
+    e.code === "INVALID_REQUEST" &&
+    typeof e.message === "string" &&
+    (e.message.includes("structured_output_retry_exhausted") ||
+      e.message.includes("error_max_structured_output_retries"))
+  );
 }
 
 /** El identificador de la proposición con la que se verifica una respuesta. */
@@ -248,17 +277,32 @@ export async function verifiedCascade(options: CascadeRunOptions): Promise<Casca
   const credencialVerificador = credentialFor(options, cadena.verifier.provider);
   const credencialEscalamiento = credentialFor(options, cadena.escalation.provider);
 
-  // Paso 1: producir.
-  const produccion = await judge({
-    propositions: options.propositions,
-    state: options.state,
-    model: cadena.producer.model,
-    provider: cadena.producer.provider,
-    ...(credencialProductor === undefined ? {} : { apiKey: credencialProductor }), // valmen:allow-secret — valor ya resuelto, nunca literal
-    ...(cadena.producer.effort === undefined || cadena.producer.effort === "auto"
-      ? {}
-      : { effort: cadena.producer.effort }),
-  });
+  // Paso 1: producir. Si el productor agota la salida estructurada, la misma
+  // tanda se repite una sola vez con el modelo de escalado.
+  const producir = (paso: CascadeStepOption, credencial: string | undefined) =>
+    judge({
+      propositions: options.propositions,
+      state: options.state,
+      model: paso.model,
+      provider: paso.provider,
+      ...(credencial === undefined ? {} : { apiKey: credencial }), // valmen:allow-secret — valor ya resuelto, nunca literal
+      ...(paso.effort === undefined || paso.effort === "auto" ? {} : { effort: paso.effort }),
+    });
+
+  let produccion: Awaited<ReturnType<typeof judge>>;
+  let producerRetry: ProducerRetry | undefined;
+  try {
+    produccion = await producir(cadena.producer, credencialProductor);
+  } catch (caught) {
+    if (!esSalidaEstructuradaAgotada(caught)) throw caught;
+    const error = caught as { code: string; message: string };
+    produccion = await producir(cadena.escalation, credencialEscalamiento);
+    producerRetry = {
+      from: { provider: cadena.producer.provider, model: cadena.producer.model },
+      to: { provider: cadena.escalation.provider, model: cadena.escalation.model },
+      error: { code: error.code, message: error.message },
+    };
+  }
 
   const producidas = new Map(produccion.answers.map((respuesta) => [respuesta.id, respuesta]));
 
@@ -401,6 +445,7 @@ export async function verifiedCascade(options: CascadeRunOptions): Promise<Casca
       produccion.latencyMs +
       (verificacion?.latencyMs ?? 0) +
       (escalamiento?.latencyMs ?? 0),
+    ...(producerRetry === undefined ? {} : { producerRetry }),
   };
 }
 
