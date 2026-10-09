@@ -4,7 +4,7 @@ id: FEATURE-WEB-MUNDO-PASTELERIA-20261008
 title: Mundo pastelería con obrador, personajes, señal de pregunta, estático declarado y validación contra el prototipo
 type: FEATURE
 module: WEB
-workflow_status: in_progress
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -386,6 +386,15 @@ Sin publicar todavía.
     "action": "ai-usage-added",
     "actor": "cli",
     "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-08",
+    "at": "2026-10-09T02:00:37.200Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
