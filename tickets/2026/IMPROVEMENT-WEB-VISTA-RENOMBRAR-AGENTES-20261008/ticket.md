@@ -4,8 +4,8 @@ id: IMPROVEMENT-WEB-VISTA-RENOMBRAR-AGENTES-20261008
 title: Renombrar Corrida a Agentes y redirigir rutas viejas
 type: IMPROVEMENT
 module: WEB
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -89,23 +89,23 @@ Ninguno.
 
 ## Criterios de aceptación
 
-- [ ] C1 (R-ESC-001): El menú lateral muestra el enlace «Agentes» con `href="#/agentes"` y `data-vista="agentes"`.
+- [x] C1 (R-ESC-001): El menú lateral muestra el enlace «Agentes» con `href="#/agentes"` y `data-vista="agentes"`.
       <!-- test: npx vitest run tests/vista-corrida.test.ts -->
-- [ ] C2: El menú ya no contiene enlaces con `data-vista="corrida"` ni `data-vista="jornadas"`.
+- [x] C2: El menú ya no contiene enlaces con `data-vista="corrida"` ni `data-vista="jornadas"`.
       <!-- test: npx vitest run tests/vista-corrida.test.ts -->
-- [ ] C3: Al abrir `#/agentes` el encabezado de la vista dice «Agentes» y se listan los agentes vivos.
+- [x] C3: Al abrir `#/agentes` el encabezado de la vista dice «Agentes» y se listan los agentes vivos.
       <!-- test: npx vitest run tests/vista-corrida.test.ts -->
-- [ ] C4: Al abrir `#/agentes` el enlace «Agentes» del menú queda con `aria-current="page"`.
+- [x] C4: Al abrir `#/agentes` el enlace «Agentes» del menú queda con `aria-current="page"`.
       <!-- test: npx vitest run tests/vista-corrida.test.ts -->
-- [ ] C5 (R-ESC-001): Al abrir el enlace guardado `#/corrida` se muestra la vista «Agentes» con su enlace marcado como activo.
+- [x] C5 (R-ESC-001): Al abrir el enlace guardado `#/corrida` se muestra la vista «Agentes» con su enlace marcado como activo.
       <!-- test: npx vitest run tests/vista-corrida.test.ts -->
-- [ ] C6 (R-ESC-001): Al abrir el enlace guardado `#/jornadas` se muestra la vista «Agentes» con su enlace marcado como activo.
+- [x] C6 (R-ESC-001): Al abrir el enlace guardado `#/jornadas` se muestra la vista «Agentes» con su enlace marcado como activo.
       <!-- test: npx vitest run tests/vista-corrida.test.ts -->
-- [ ] C7: El título de la barra dice «Agentes» en las tres rutas.
+- [x] C7: El título de la barra dice «Agentes» en las tres rutas.
       <!-- test: npx vitest run tests/vista-corrida.test.ts -->
-- [ ] C8: Con la vista abierta en `#/agentes`, el refresco de 5 s vuelve a consultar `/api/corrida/agentes`.
+- [x] C8: Con la vista abierta en `#/agentes`, el refresco de 5 s vuelve a consultar `/api/corrida/agentes`.
       <!-- test: npx vitest run tests/vista-corrida.test.ts -->
-- [ ] C9: Las pantallas que abren `#/jornadas` (progreso de jornada y reconexión) siguen pasando sus pruebas.
+- [x] C9: Las pantallas que abren `#/jornadas` (progreso de jornada y reconexión) siguen pasando sus pruebas.
       <!-- test: npx vitest run tests/jornadas-progreso-pantalla.test.ts tests/reconexion-mc.test.ts -->
 - [x] C10: En Mission Control, en el navegador, `#/agentes` muestra la vista «Agentes» con su enlace del menú marcado.
       <!-- verify: manual -->
@@ -117,7 +117,31 @@ Ninguno.
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación de la entrega de IMPROVEMENT-WEB-VISTA-RENOMBRAR-AGENTES-20261008",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta verificar sus criterios.",
+    "expected": "Los criterios del ticket se cumplen y sus pruebas dan el resultado esperado.",
+    "evidence": [
+      "EVIDENCE-001"
+    ],
+    "affected_files": [
+      "packages/server/web/index.html",
+      "tests/vista-corrida.test.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -137,28 +161,81 @@ Directorio: raíz del repositorio (o del worktree). Requisito: Node 24, `npm run
 
 Validaciones manuales (C10–C12, pendientes del responsable): abrir Mission Control y visitar `#/agentes`, `#/corrida` y `#/jornadas`; en las tres, el encabezado y el título de barra dicen «Agentes» y el enlace «Agentes» del menú queda marcado; la dirección no se reescribe.
 
+- Resultado del PO: «Sí, cierra el renombrado también» (C10–C12 verificados en el navegador por el orquestador: las tres rutas muestran «Agentes» con el menú marcado y sin reescribir la URL).
+
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-09",
+    "build_reference": "commit:7c3e00a9c6a545e3c56e1ffe96e61bf0879eb6f5",
+    "environment": "macOS, Node 24, main tras integrar; Mission Control en el navegador",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-09",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "Sí, cierra el renombrado también"
+  }
+]
 ```
 
 ## Evidencia
 
 ```json
-[]
+[
+  {
+    "id": "EVIDENCE-001",
+    "date": "2026-10-09",
+    "kind": "automated-test",
+    "description": "Pruebas del ticket y suite completa (3552 pruebas) en verde; C10-C12 verificados en Mission Control",
+    "reference": "worktree:sha256:2aa1599b3d23daeaa1a2171e60a75dc528797d580a85a7630281773a2f858335",
+    "point_id": "POINT-001"
+  }
+]
 ```
 
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-09",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "Sí, cierra el renombrado también"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-09",
+    "technical_summary": "Rutas y nombre de la vista concentrados en una constante en index.html: #/agentes es la ruta; #/corrida y #/jornadas la muestran sin reescribir la URL y con el menú marcado. Endpoint y clases CSS sin cambios.",
+    "functional_summary": "La vista que se llamaba «Corrida» ahora se llama «Agentes» en menú, ruta y título, y los enlaces guardados siguen funcionando.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "unreleased: entra con la feature vista-agentes"
+  }
+]
 ```
 
 ## Consumo de IA
@@ -179,6 +256,36 @@ Validaciones manuales (C10–C12, pendientes del responsable): abrir Mission Con
     "source": "manual: subagente sonnet-5-5 de corrida orquestada, fase implementación; la sesión no expone los números",
     "confidence": "low",
     "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-09",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Subagentes por fase; sin números por ticket.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:sesiones de Claude Code de la corrida orquestada vista-agentes",
+    "confidence": "low",
+    "id": "CONSUMO-002"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-09",
+    "session_reference": "4f9b1b12-ced4-4132-9151-c3a025ede085",
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. Sesión **compartida**: trabajó 4 tickets (FEATURE-SERVER-SESION-PRINCIPAL-20261008 ×120, IMPROVEMENT-WEB-VISTA-RENOMBRAR-AGENTES-20261008 ×105, FEATURE-WEB-MOTOR-ESCENA-20261008 ×102, FEATURE-SERVER-PREGUNTA-PENDIENTE-20261008 ×87), así que su costo no se reparte y acá no se registran números. Costo completo de la sesión: no declarado por el proveedor, 1123304 tokens. Registralo en el ticket cuya sesión sea propia, o declaralo compartido donde corresponda. Sesión \"Feature vista-agentes\".",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "claude:4f9b1b12-ced4-4132-9151-c3a025ede085",
+    "confidence": "high",
+    "id": "CONSUMO-003"
   }
 ]
 ```
@@ -280,6 +387,141 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-08",
+    "at": "2026-10-09T00:22:42.673Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-10-08",
+    "at": "2026-10-09T00:22:43.078Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-08",
+    "at": "2026-10-09T00:22:43.450Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-08",
+    "at": "2026-10-09T00:22:43.773Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-08",
+    "at": "2026-10-09T00:22:44.066Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-08",
+    "at": "2026-10-09T00:22:44.388Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-08",
+    "at": "2026-10-09T00:22:44.722Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-08",
+    "at": "2026-10-09T00:22:45.022Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-08",
+    "at": "2026-10-09T00:22:45.422Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-08",
+    "at": "2026-10-09T00:22:45.732Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-08",
+    "at": "2026-10-09T00:22:46.009Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-08",
+    "at": "2026-10-09T00:22:46.526Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-08",
+    "at": "2026-10-09T00:22:48.581Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-08",
+    "at": "2026-10-09T00:22:48.725Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001. Criterios marcados desde el recibo GR-20261009-IMPROVEMENT-WEB-VISTA-RENOMBRAR-AGENTES-20261008-qa-mechanical-1 de qa-mechanical: C1, C2, C3, C4, C5, C6, C7, C8, C9."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-025",
+    "date": "2026-10-08",
+    "at": "2026-10-09T00:22:49.002Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
