@@ -4,7 +4,7 @@ id: IMPROVEMENT-WEB-VISTA-MARCO-RESPONSIVO-20261008
 title: Marco con tokens del tema, celular, iPad y reduced-motion
 type: IMPROVEMENT
 module: WEB
-workflow_status: in_progress
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -120,21 +120,21 @@ Ninguno.
       <!-- test: npx vitest run tests/vista-marco-responsivo.test.ts -t C10 -->
 - [x] C11 — R-ESC-010: por debajo de 700 px, `.corrida-paneles` pone los paneles en una columna.
       <!-- test: npx vitest run tests/vista-marco-responsivo.test.ts -t C11 -->
-- [ ] C12 — R-ESC-010: a 390 px de ancho, `document.documentElement.scrollWidth` de la vista no supera `innerWidth`.
+- [x] C12 — R-ESC-010: a 390 px de ancho, `document.documentElement.scrollWidth` de la vista no supera `innerWidth`.
       <!-- verify: manual -->
-- [ ] C13 — R-ESC-010: a 768 px de ancho (iPad vertical), `document.documentElement.scrollWidth` de la vista no supera `innerWidth`.
+- [x] C13 — R-ESC-010: a 768 px de ancho (iPad vertical), `document.documentElement.scrollWidth` de la vista no supera `innerWidth`.
       <!-- verify: manual -->
-- [ ] C14 — R-ESC-010: a 1024 px de ancho (iPad horizontal), los paneles «Agentes vivos» y «Cola» comparten la misma fila.
+- [x] C14 — R-ESC-010: a 1024 px de ancho (iPad horizontal), los paneles «Agentes vivos» y «Cola» comparten la misma fila.
       <!-- verify: manual -->
-- [ ] C15 — R-ESC-011: en tema oscuro, la barra de simultáneos de la cabecera toma sus colores de las variables del tema.
+- [x] C15 — R-ESC-011: en tema oscuro, la barra de simultáneos de la cabecera toma sus colores de las variables del tema.
       <!-- verify: manual -->
-- [ ] C16 — R-ESC-011: en tema oscuro, el selector de mundo toma sus colores de las variables del tema.
+- [x] C16 — R-ESC-011: en tema oscuro, el selector de mundo toma sus colores de las variables del tema.
       <!-- verify: manual -->
-- [ ] C17 — R-ESC-011: en tema oscuro, el aviso de pregunta toma sus colores de las variables del tema.
+- [x] C17 — R-ESC-011: en tema oscuro, el aviso de pregunta toma sus colores de las variables del tema.
       <!-- verify: manual -->
-- [ ] C18 — R-ESC-011: en tema oscuro, cada panel toma sus colores de las variables del tema.
+- [x] C18 — R-ESC-011: en tema oscuro, cada panel toma sus colores de las variables del tema.
       <!-- verify: manual -->
-- [ ] C19 — R-ESC-011: `revisar_presentacion` sobre el cambio del ticket no reporta colores a mano.
+- [x] C19 — R-ESC-011: `revisar_presentacion` sobre el cambio del ticket no reporta colores a mano.
       <!-- verify: manual -->
 - [x] C20 — Las pruebas existentes del lienzo, de la vista Agentes y de la interfaz ejecutable siguen pasando.
       <!-- test: npx vitest run tests/vista-lienzo.test.ts tests/vista-corrida.test.ts tests/interfaz-ejecutable.test.ts -->
@@ -311,6 +311,15 @@ Sin publicar todavía.
     "action": "ai-usage-added",
     "actor": "cli",
     "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-08",
+    "at": "2026-10-09T01:14:30.624Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
