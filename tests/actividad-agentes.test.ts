@@ -231,6 +231,15 @@ describe("lector de actividad de subagentes", () => {
 });
 
 describe("sesión principal", () => {
+  // Los endpoints usan el reloj real y los transcripts sintéticos están fechados en T0: se fija la fecha para que
+  // no queden fuera de la ventana de 24 h del lector cuando pasa el calendario.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(T0 + 10_000);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
   const PRINCIPAL = [
     linea({ t: 0, tipo: "user", texto: `orquesta ${TICKET}` }),
     linea({ t: 1, tipo: "assistant", modelo: "claude-opus-5-5", esfuerzo: "high", herramienta: { id: "p1", name: "Agent" } }),
@@ -389,6 +398,15 @@ describe("unión con el registro", () => {
 });
 
 describe("GET /api/corrida/agentes", () => {
+  // Los endpoints usan el reloj real y los transcripts sintéticos están fechados en T0: se fija la fecha para que
+  // no queden fuera de la ventana de 24 h del lector cuando pasa el calendario.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(T0 + 10_000);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
   const ctx = (): ServerContext => ({
     root,
     credentialsFile: join(home, "credentials"),
@@ -438,6 +456,15 @@ describe("GET /api/corrida/agentes", () => {
 });
 
 describe("pregunta pendiente", () => {
+  // Los endpoints usan el reloj real y los transcripts sintéticos están fechados en T0: se fija la fecha para que
+  // no queden fuera de la ventana de 24 h del lector cuando pasa el calendario.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(T0 + 10_000);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
   const ctx = (): ServerContext => ({
     root,
     credentialsFile: join(home, "credentials"),
