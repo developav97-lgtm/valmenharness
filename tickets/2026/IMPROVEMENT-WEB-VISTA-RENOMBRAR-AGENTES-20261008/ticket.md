@@ -4,7 +4,7 @@ id: IMPROVEMENT-WEB-VISTA-RENOMBRAR-AGENTES-20261008
 title: Renombrar Corrida a Agentes y redirigir rutas viejas
 type: IMPROVEMENT
 module: WEB
-workflow_status: in_progress
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -107,11 +107,11 @@ Ninguno.
       <!-- test: npx vitest run tests/vista-corrida.test.ts -->
 - [ ] C9: Las pantallas que abren `#/jornadas` (progreso de jornada y reconexión) siguen pasando sus pruebas.
       <!-- test: npx vitest run tests/jornadas-progreso-pantalla.test.ts tests/reconexion-mc.test.ts -->
-- [ ] C10: En Mission Control, en el navegador, `#/agentes` muestra la vista «Agentes» con su enlace del menú marcado.
+- [x] C10: En Mission Control, en el navegador, `#/agentes` muestra la vista «Agentes» con su enlace del menú marcado.
       <!-- verify: manual -->
-- [ ] C11: En Mission Control, en el navegador, el enlace guardado `#/corrida` muestra la vista «Agentes» con su enlace del menú marcado.
+- [x] C11: En Mission Control, en el navegador, el enlace guardado `#/corrida` muestra la vista «Agentes» con su enlace del menú marcado.
       <!-- verify: manual -->
-- [ ] C12: En Mission Control, en el navegador, el enlace guardado `#/jornadas` muestra la vista «Agentes» con su enlace del menú marcado.
+- [x] C12: En Mission Control, en el navegador, el enlace guardado `#/jornadas` muestra la vista «Agentes» con su enlace del menú marcado.
       <!-- verify: manual -->
 
 ## Puntos
@@ -271,6 +271,15 @@ Sin publicar todavía.
     "action": "ai-usage-added",
     "actor": "cli",
     "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-08",
+    "at": "2026-10-09T00:10:06.796Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
