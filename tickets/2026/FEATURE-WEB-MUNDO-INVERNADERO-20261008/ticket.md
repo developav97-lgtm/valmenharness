@@ -4,8 +4,8 @@ id: FEATURE-WEB-MUNDO-INVERNADERO-20261008
 title: Mundo invernadero con cultivo, personajes, señal de pregunta, estático declarado y validación contra el prototipo
 type: FEATURE
 module: WEB
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -13,7 +13,7 @@ migration_impact: false
 docker_impact: false
 risk_level: normal
 created: 2026-10-08
-updated: 2026-10-08
+updated: 2026-10-09
 related_ticket: null
 target_release: null
 released_in: null
@@ -203,13 +203,13 @@ Ningún elemento del pedido nombra algo que el código no tenga: estaciones, est
       <!-- verify: manual -->
 - [x] C35 — R-MUN-003: en el navegador, al poner `pregunta.respondidaEn` del subagente en `approved` a la hora actual, caen gotas sobre el cantero «Riego de Anita».
       <!-- verify: manual -->
-- [ ] C36 — R-MUN-008: `## Evidencia` contiene la captura de la vista en escritorio y tema claro junto a la del prototipo con el mismo ancho y tema.
+- [ ] C36 — R-MUN-008: `## Evidencia` contiene la captura de la vista en escritorio y tema claro junto a la del prototipo con el mismo ancho y tema. — no aplica: no se produjeron las capturas y el PO validó el mundo a ojo el 2026-10-09
       <!-- verify: manual -->
-- [ ] C37 — R-MUN-008: `## Evidencia` contiene la captura de la vista en escritorio y tema oscuro junto a la del prototipo con el mismo ancho y tema.
+- [ ] C37 — R-MUN-008: `## Evidencia` contiene la captura de la vista en escritorio y tema oscuro junto a la del prototipo con el mismo ancho y tema. — no aplica: no se produjeron las capturas y el PO validó el mundo a ojo el 2026-10-09
       <!-- verify: manual -->
-- [ ] C38 — R-MUN-008: `## Evidencia` contiene la captura de la vista a 390 px y tema claro junto a la del prototipo con el mismo ancho y tema.
+- [ ] C38 — R-MUN-008: `## Evidencia` contiene la captura de la vista a 390 px y tema claro junto a la del prototipo con el mismo ancho y tema. — no aplica: no se produjeron las capturas y el PO validó el mundo a ojo el 2026-10-09
       <!-- verify: manual -->
-- [ ] C39 — R-MUN-008: `## Evidencia` contiene la captura de la vista a 390 px y tema oscuro junto a la del prototipo con el mismo ancho y tema.
+- [ ] C39 — R-MUN-008: `## Evidencia` contiene la captura de la vista a 390 px y tema oscuro junto a la del prototipo con el mismo ancho y tema. — no aplica: no se produjeron las capturas y el PO validó el mundo a ojo el 2026-10-09
       <!-- verify: manual -->
 - [x] C40 — Las pruebas existentes del lienzo, del motor, de los estáticos, del marco, de la pastelería, del centro de control y de la vista Agentes siguen pasando.
       <!-- test: npx vitest run tests/vista-lienzo.test.ts tests/motor-escena.test.ts tests/estaticos-web.test.ts tests/vista-marco-responsivo.test.ts tests/mundo-pasteleria.test.ts tests/mundo-control.test.ts tests/vista-corrida.test.ts -->
@@ -217,7 +217,32 @@ Ningún elemento del pedido nombra algo que el código no tenga: estaciones, est
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación de la entrega de FEATURE-WEB-MUNDO-INVERNADERO-20261008",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta verificar sus criterios.",
+    "expected": "Los criterios del ticket se cumplen y el PO valida la pantalla.",
+    "evidence": [
+      "EVIDENCE-002"
+    ],
+    "affected_files": [
+      "packages/server/web/agentes/mundos/invernadero.js",
+      "packages/server/web/index.html",
+      "tests/mundo-invernadero.test.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -238,11 +263,33 @@ Validaciones manuales (el PO):
 - `npm run build && node packages/cli/dist/main.js serve --port 4191`, abrir `#/agentes`, elegir «Invernadero» y comparar con `.valmen/features/vista-agentes/assets/vista-agentes.html` en 1280 px y 390 px, claro y oscuro (C36-C39, sin marcar).
 - Verificado por el agente en el navegador con `fetch` parcheado (C33-C35): al pasar `ticketEstado` del carril 1 a `awaiting_user_tests` el jardinero camina de x = 579 a 679 (centro del sprite medido, tolerancia de 1 px) llevando la maceta; al poner `respondidaEn` ahora caen 14 gotas entre x = 451 y 480 (cantero «Riego de Anita»). A 390 px no hay desbordamiento horizontal.
 - `revisar_presentacion`: sin colores fijos sin marca (C32).
+- Resultado del PO: «si se ven bien los 3 mundos» · «A cierralos» (2026-10-09; validó la pantalla con una corrida real).
 
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-09",
+    "build_reference": "commit:8881bbddbff8b3b845c4998cb1cfbbc7c4466dd5",
+    "environment": "macOS, Node 24, main tras integrar; Mission Control del PO en el computador y el iPad",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-09",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "«si se ven bien los 3 mundos» · «A cierralos»"
+  }
+]
 ```
 
 ## Evidencia
@@ -256,6 +303,14 @@ Validaciones manuales (el PO):
     "description": "Navegador con fetch parcheado (servidor del worktree): C33 jardinero de x=579 a 679 (centro del sprite), C34 maceta dibujada durante el trayecto, C35 14 gotas en x 451-480 al responder. Sin capturas contra el prototipo (C36-C39, del PO). Diferencias a revisar: Caveat cae en Comic Sans MS (decisión 2); salida del jardinero hacia el semillero (75,296) en vez de (110,296) (decisión 5); lluvia durante la ventana de 60 s y no 2 s (decisión 3); tope de 3 sobres (decisión 4); las tablas y la cola dentro de los paneles conservan el fondo oscuro del marco, a diferencia del cuaderno del prototipo.",
     "reference": null,
     "point_id": null
+  },
+  {
+    "id": "EVIDENCE-002",
+    "date": "2026-10-09",
+    "kind": "manual-test",
+    "description": "Suite completa en verde y validación del PO con una corrida real en Mission Control",
+    "reference": "worktree:sha256:8cca0f08d133480f35ee2f1bbc8bf08e1deb879702f2ab0b6c208d0920470766",
+    "point_id": "POINT-001"
   }
 ]
 ```
@@ -263,13 +318,34 @@ Validaciones manuales (el PO):
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-09",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "«si se ven bien los 3 mundos» · «A cierralos»"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-09",
+    "technical_summary": "Mundo invernadero (mundos/invernadero.js) con canteros, jardinero y regadera sin azar; las capturas contra el prototipo (C36-C39) no se produjeron y el PO validó el mundo a ojo.",
+    "functional_summary": "Un jardín donde cada ticket es una planta que pasa de maceta en maceta.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "unreleased: entra con la feature vista-agentes"
+  }
+]
 ```
 
 ## Consumo de IA
@@ -290,6 +366,36 @@ Validaciones manuales (el PO):
     "source": "manual:subagente-implementacion",
     "confidence": "low",
     "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-09",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Subagentes por fase; sin números por ticket.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:sesiones de Claude Code de la corrida orquestada vista-agentes",
+    "confidence": "low",
+    "id": "CONSUMO-002"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-09",
+    "session_reference": "4f9b1b12-ced4-4132-9151-c3a025ede085",
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. Sesión **compartida**: trabajó 15 tickets (FEATURE-SERVER-SESION-PRINCIPAL-20261008 ×130, FEATURE-WEB-VISTA-LIENZO-20261008 ×119, FEATURE-WEB-MOTOR-ESCENA-20261008 ×118, FEATURE-WEB-MUNDO-PASTELERIA-20261008 ×117, IMPROVEMENT-WEB-VISTA-RENOMBRAR-AGENTES-20261008 ×107), así que su costo no se reparte y acá no se registran números. Costo completo de la sesión: no declarado por el proveedor, 6659235 tokens. Registralo en el ticket cuya sesión sea propia, o declaralo compartido donde corresponda. Sesión \"Feature vista-agentes\".",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "claude:4f9b1b12-ced4-4132-9151-c3a025ede085",
+    "confidence": "high",
+    "id": "CONSUMO-003"
   }
 ]
 ```
@@ -409,6 +515,141 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:22.190Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:22.490Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:22.800Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:23.089Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:23.400Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:23.742Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:24.107Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:24.423Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:24.725Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:25.024Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:25.334Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:25.645Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-025",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:27.283Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-026",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:27.489Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-027",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:27.904Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
