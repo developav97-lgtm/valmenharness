@@ -120,19 +120,52 @@ async function abrir(o: Opciones = {}, llamadas: { metodo: string; ruta: string 
   return resultado;
 }
 
-describe("la vista Corrida", () => {
-  it("el menú lleva «Corrida» a #/corrida y ya no «Jornadas» (C1)", () => {
+describe("la vista Agentes", () => {
+  it("el menú lleva «Agentes» a #/agentes y ya no «Corrida» ni «Jornadas» (C1)", () => {
     const html = readFileSync(HTML, "utf8");
-    expect(html).toMatch(/<a href="#\/corrida" data-vista="corrida">.*Corrida<\/a>/);
+    expect(html).toMatch(/<a href="#\/agentes" data-vista="agentes">.*Agentes<\/a>/);
+    expect(html).not.toContain('data-vista="corrida"');
     expect(html).not.toContain('data-vista="jornadas"');
   });
 
-  it("#/corrida y el alias #/jornadas pintan la misma vista (C2, C3)", async () => {
-    for (const hash of ["#/corrida", "#/jornadas"]) {
-      const { contenido } = await abrir({ hash });
-      const texto = textoDe(contenido as Nodo);
-      expect(texto).toContain("Corrida");
-      expect(texto).toContain("Agentes vivos");
+  it("#/agentes y los alias #/corrida y #/jornadas pintan la misma vista, con el enlace marcado (C2-C7)", async () => {
+    for (const hash of ["#/agentes", "#/corrida", "#/jornadas"]) {
+      const dir = mkdtempSync(join(tmpdir(), "valmen-agentes-"));
+      temporales.push(dir);
+      const html = join(dir, "index.html");
+      writeFileSync(
+        html,
+        readFileSync(HTML, "utf8").replace(
+          '<script type="module">',
+          `<script type="module">
+          globalThis.__enlaces = ["tickets", "agentes", "features"].map((v) => { const a = document.createElement("a"); a.dataset.vista = v; return a; });
+          document.querySelectorAll = (s) => (s === "nav a" ? globalThis.__enlaces : []);
+`,
+        ),
+      );
+      const { contenido } = await ejecutarInterfaz(html, {
+        hash,
+        localStorage: { "valmen.project": PROYECTO },
+        respuesta: (ruta: string) => {
+          const url = new URL(ruta, "http://localhost");
+          if (url.pathname === "/api/health") return { root: RAIZ };
+          if (url.pathname === "/api/portafolio") return { projects: [{ projectId: PROYECTO, name: "Harness", available: true }] };
+          if (url.pathname === "/api/corrida/agentes") return AGENTES;
+          if (url.pathname === "/api/journeys") return JORNADAS;
+          if (url.pathname === "/api/tickets") return TICKETS;
+          return {};
+        },
+      });
+      const g = globalThis as typeof globalThis & {
+        __enlaces: { dataset: { vista: string }; getAttribute: (k: string) => string | null }[];
+        document: { getElementById: (id: string) => Nodo };
+      };
+      const h2 = buscar(contenido as Nodo, (n) => n.tagName === "H2").map(textoDe);
+      expect(h2).toContain("Agentes");
+      expect(textoDe(contenido as Nodo)).toContain("Agentes vivos");
+      expect(textoDe(g.document.getElementById("titulo-vista"))).toBe("Agentes");
+      const marcados = g.__enlaces.filter((e) => e.getAttribute("aria-current") === "page");
+      expect(marcados.map((e) => e.dataset.vista)).toEqual(["agentes"]);
     }
   });
 
@@ -288,7 +321,7 @@ describe("la vista Corrida", () => {
     expect(buscar(contenido as Nodo, (n) => n.className === "tarjetas")).toEqual([]);
   });
 
-  it("repinta cada 5 s mientras está abierta y deja de hacerlo al salir (C19, C20)", async () => {
+  it("repinta cada 5 s mientras está abierta —también en #/agentes— y deja de hacerlo al salir (C8, C19, C20)", async () => {
     const dir = mkdtempSync(join(tmpdir(), "valmen-corrida-"));
     temporales.push(dir);
     const html = join(dir, "index.html");
@@ -299,7 +332,7 @@ describe("la vista Corrida", () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const llamadas: string[] = [];
     const resultado = await ejecutarInterfaz(html, {
-      hash: "#/corrida",
+      hash: "#/agentes",
       localStorage: { "valmen.project": PROYECTO },
       respuesta: (ruta: string) => {
         llamadas.push(ruta);
