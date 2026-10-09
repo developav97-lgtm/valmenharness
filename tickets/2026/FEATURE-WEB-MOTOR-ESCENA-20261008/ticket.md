@@ -4,8 +4,8 @@ id: FEATURE-WEB-MOTOR-ESCENA-20261008
 title: Motor de escena con estaciones, movimiento, estados visuales, interfaz de mundo y tests sin lienzo
 type: FEATURE
 module: WEB
-workflow_status: in_progress
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -146,7 +146,32 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación de la entrega de FEATURE-WEB-MOTOR-ESCENA-20261008",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta verificar sus criterios.",
+    "expected": "Los criterios del ticket se cumplen y sus pruebas dan el resultado esperado.",
+    "evidence": [
+      "EVIDENCE-001"
+    ],
+    "affected_files": [
+      "packages/server/web/agentes/motor.js",
+      "packages/server/web/agentes/motor.d.ts",
+      "tests/motor-escena.test.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -161,29 +186,81 @@ Tres archivos nuevos, sin tocar ninguno existente: `packages/server/web/agentes/
 - Cada criterio se corre aislado con `-t "Cn:"` (lo hace `valmen gate qa-mechanical`).
 - Validaciones manuales: ninguna; el motor no se carga ni se sirve hasta FEATURE-WEB-VISTA-LIENZO-20261008.
 - Requisitos de ambiente: Node 24 y `npm install`; no requiere red, navegador ni `dist`.
+- Resultado del PO: «Recomiendo A, cierra los dos y lanza el lienzo» (aprobó el cierre tras ver las pruebas verdes; antes pidió «Cierra lo que se verifique por comando»).
 
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-09",
+    "build_reference": "commit:d6fad404a8b98fbd5ef45c27cd1fd4151c2d38bc",
+    "environment": "macOS, Node 24, main tras integrar",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-09",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "Recomiendo A, cierra los dos y lanza el lienzo"
+  }
+]
 ```
 
 ## Evidencia
 
 ```json
-[]
+[
+  {
+    "id": "EVIDENCE-001",
+    "date": "2026-10-09",
+    "kind": "automated-test",
+    "description": "Pruebas del ticket y suite completa (216 archivos, 3581 pruebas) en verde tras integrar en main",
+    "reference": "worktree:sha256:8a319bd6894a719f51980aaf313878c7e042beb10c9e06bcb3c2b04d10667de0",
+    "point_id": "POINT-001"
+  }
+]
 ```
 
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-09",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "Recomiendo A, cierra los dos y lanza el lienzo"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-09",
+    "technical_summary": "Motor de escena en cliente (web/agentes/motor.js y su .d.ts): ocho estaciones = ocho estados del ticket, desplazamiento por agente, estados visuales e interfaz de mundo, sin dibujar; agente nuevo en blocked/changes_requested va a intake con marca de desvío. Probado de forma determinista.",
+    "functional_summary": "Base común para que los tres mundos animados muestren a cada agente recorriendo las estaciones de su ticket; aún no hay pantalla hasta el ticket del lienzo.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "unreleased: entra con la feature vista-agentes"
+  }
+]
 ```
 
 ## Consumo de IA
@@ -204,6 +281,36 @@ Tres archivos nuevos, sin tocar ninguno existente: `packages/server/web/agentes/
     "source": "manual:subagente-implementacion-sonnet-5-5",
     "confidence": "low",
     "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-09",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Subagentes por fase; sin números por ticket para no repartir a ojo un costo no medido.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:sesiones de Claude Code de la corrida orquestada vista-agentes",
+    "confidence": "low",
+    "id": "CONSUMO-002"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-09",
+    "session_reference": "4f9b1b12-ced4-4132-9151-c3a025ede085",
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. Sesión **compartida**: trabajó 4 tickets (FEATURE-SERVER-SESION-PRINCIPAL-20261008 ×120, IMPROVEMENT-WEB-VISTA-RENOMBRAR-AGENTES-20261008 ×102, FEATURE-WEB-MOTOR-ESCENA-20261008 ×100, FEATURE-SERVER-PREGUNTA-PENDIENTE-20261008 ×85), así que su costo no se reparte y acá no se registran números. Costo completo de la sesión: no declarado por el proveedor, 1084353 tokens. Registralo en el ticket cuya sesión sea propia, o declaralo compartido donde corresponda. Sesión \"Feature vista-agentes\".",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "claude:4f9b1b12-ced4-4132-9151-c3a025ede085",
+    "confidence": "high",
+    "id": "CONSUMO-003"
   }
 ]
 ```
@@ -305,6 +412,150 @@ Sin publicar todavía.
     "action": "ai-usage-added",
     "actor": "cli",
     "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-08",
+    "at": "2026-10-09T00:19:35.270Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-10-08",
+    "at": "2026-10-09T00:20:39.041Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-08",
+    "at": "2026-10-09T00:21:13.098Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-08",
+    "at": "2026-10-09T00:21:13.407Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-08",
+    "at": "2026-10-09T00:21:13.703Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-08",
+    "at": "2026-10-09T00:21:14.037Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-08",
+    "at": "2026-10-09T00:21:14.448Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-08",
+    "at": "2026-10-09T00:21:14.905Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-08",
+    "at": "2026-10-09T00:21:15.308Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-08",
+    "at": "2026-10-09T00:21:15.704Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-08",
+    "at": "2026-10-09T00:21:16.146Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-08",
+    "at": "2026-10-09T00:21:16.650Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-08",
+    "at": "2026-10-09T00:21:17.055Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-08",
+    "at": "2026-10-09T00:21:19.091Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-025",
+    "date": "2026-10-08",
+    "at": "2026-10-09T00:21:19.277Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-026",
+    "date": "2026-10-08",
+    "at": "2026-10-09T00:21:19.645Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
