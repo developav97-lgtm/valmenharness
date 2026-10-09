@@ -4,8 +4,8 @@ id: BUGFIX-ENGINE-JORNADA-HANDOFF-LECTOR-20261008
 title: El parte reconoce el contrato de pruebas en lista numerada y no lista como sin entregar a los cerrados
 type: BUGFIX
 module: ENGINE
-workflow_status: in_qa
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -116,11 +116,13 @@ Ninguno.
   {
     "id": "POINT-001",
     "title": "Verificación delegada de BUGFIX-ENGINE-JORNADA-HANDOFF-LECTOR-20261008",
-    "status": "awaiting_retest",
+    "status": "closed",
     "severity": "normal",
     "actual": "La implementación está entregada y falta verificar sus criterios.",
     "expected": "Los criterios del ticket se cumplen y sus pruebas dan el resultado esperado.",
-    "evidence": [],
+    "evidence": [
+      "EVIDENCE-002"
+    ],
     "affected_files": [
       "packages/engine/src/journey-handoff.ts",
       "tests/jornada-handoff.test.ts"
@@ -128,7 +130,9 @@ Ninguno.
     "diagnosis": null,
     "solution": null,
     "tests": [],
-    "qa_cycles": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
     "terminal_reason": null,
     "related_ticket": null
   }
@@ -155,7 +159,28 @@ Directorio: raíz del worktree del ticket (`npm ci` hecho, Node 24); sin servici
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-09",
+    "build_reference": "commit:ed72530007e38e269a08630daae46638f95c3791",
+    "environment": "macOS, Node 24, main tras integrar; suite completa 3940 pruebas en verde",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-09",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "Cerrar el bugfix del parte"
+  }
+]
 ```
 
 ## Evidencia
@@ -169,6 +194,14 @@ Directorio: raíz del worktree del ticket (`npm ci` hecho, Node 24); sin servici
     "description": "A/B 2026-10-09 con el mismo pedido en dos worktrees: rama directa (sonnet, 77 s, salida 1,9 k y 0,76 M de caché leída, commit f6727dc en ab/directo-handoff-lector) halló 2 de 3 causas y falló 1 de 44 pruebas de la rama harness (C6, línea Directorio suelta); rama harness (opus y sonnet, ~12 min con 2 esperas del PO, salida 6,6 k y 3,66 M de caché) halló 3 de 3 y pasó las 33 pruebas de la directa. Suite completa verde en ambas. Se integró la rama harness por decisión del PO.",
     "reference": null,
     "point_id": null
+  },
+  {
+    "id": "EVIDENCE-002",
+    "date": "2026-10-09",
+    "kind": "automated-test",
+    "description": "Pruebas del ticket 89/89 y suite completa 3940 en verde tras integrar en main",
+    "reference": "worktree:sha256:6ac5a85758a7603b0a460de5cfaf06f59a386af002a3353703d97b1665b9ae80",
+    "point_id": "POINT-001"
   }
 ]
 ```
@@ -176,19 +209,56 @@ Directorio: raíz del worktree del ticket (`npm ci` hecho, Node 24); sin servici
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-09",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "Cerrar el bugfix del parte"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-09",
+    "technical_summary": "journey-handoff.ts reconoce viñetas numeradas (1. y 1)), lee una línea suelta Directorio: y deja fuera de «sin entregar» los tickets en awaiting_user_tests, in_qa, qa_approved o closed.",
+    "functional_summary": "El parte de la jornada muestra el contrato de pruebas escrito en lista numerada y ya no lista como sin entregar a los tickets cerrados.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "unreleased"
+  }
+]
 ```
 
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-09",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Cierre con la confirmación del PO; Claude Code por orden del PO.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:sesión orquestadora del A/B; los números de los subagentes están en la evidencia del ticket",
+    "confidence": "medium",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -342,6 +412,87 @@ Sin publicar todavía.
     "action": "point-transition",
     "actor": "cli",
     "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-09",
+    "at": "2026-10-09T18:24:21.349Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-09",
+    "at": "2026-10-09T18:24:21.757Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-09",
+    "at": "2026-10-09T18:24:21.929Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-09",
+    "at": "2026-10-09T18:24:22.096Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-09",
+    "at": "2026-10-09T18:24:22.278Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-09",
+    "at": "2026-10-09T18:24:22.442Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-09",
+    "at": "2026-10-09T18:24:22.591Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-09",
+    "at": "2026-10-09T18:24:22.785Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-025",
+    "date": "2026-10-09",
+    "at": "2026-10-09T18:24:22.928Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
