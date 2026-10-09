@@ -39,6 +39,7 @@ interface Ev {
   readonly texto?: string;
   readonly herramienta?: { id: string; name: string };
   readonly resultadoDe?: string;
+  readonly error?: boolean;
   readonly stop?: string;
   readonly modelo?: string;
   readonly esfuerzo?: string;
@@ -56,7 +57,7 @@ function linea(e: Ev): string {
   if (e.tipo === "user") {
     const content =
       e.resultadoDe !== undefined
-        ? [{ type: "tool_result", tool_use_id: e.resultadoDe, content: SECRETO }]
+        ? [{ type: "tool_result", tool_use_id: e.resultadoDe, content: SECRETO, ...(e.error === true ? { is_error: true } : {}) }]
         : (e.texto ?? "");
     return JSON.stringify({ ...base, message: { role: "user", content } });
   }
@@ -278,7 +279,7 @@ describe("sesión principal", () => {
     expect(Object.keys((respuesta.body as { agentes: object[] }).agentes[0] ?? {}).sort()).toEqual(
       [
         "agente", "carpeta", "descripcion", "esfuerzo", "estado", "faseConfirmada", "faseInferida",
-        "modelo", "principal", "rama", "ticket", "ticketEstado", "ultimaHerramienta", "ultimaHerramientaEn",
+        "modelo", "pregunta", "principal", "rama", "ticket", "ticketEstado", "ultimaHerramienta", "ultimaHerramientaEn",
       ].sort(),
     );
   });
@@ -384,7 +385,7 @@ describe("GET /api/corrida/agentes", () => {
     expect(Object.keys((respuesta.body as { agentes: object[] }).agentes[0] ?? {}).sort()).toEqual(
       [
         "agente", "carpeta", "descripcion", "esfuerzo", "estado", "faseConfirmada", "faseInferida",
-        "modelo", "principal", "rama", "ticket", "ticketEstado", "ultimaHerramienta", "ultimaHerramientaEn",
+        "modelo", "pregunta", "principal", "rama", "ticket", "ticketEstado", "ultimaHerramienta", "ultimaHerramientaEn",
       ].sort(),
     );
   });
@@ -397,6 +398,104 @@ describe("GET /api/corrida/agentes", () => {
     }
     const bueno = await handleApi("GET", "/api/corrida/agentes", {}, ctx(), new URLSearchParams({ sesion: "orquestadora-1" }));
     expect(bueno.status).toBe(200);
+  });
+});
+
+describe("pregunta pendiente", () => {
+  const ctx = (): ServerContext => ({
+    root,
+    credentialsFile: join(home, "credentials"),
+    bindingsFile: join(home, "bindings-inexistente.yaml"),
+    env: {},
+    home,
+  });
+  const inicio = linea({ t: 1, tipo: "user", texto: `Implementa ${TICKET}` });
+  const pregunta = (id = "q1", t = 2): string =>
+    linea({ t, tipo: "assistant", herramienta: { id, name: "AskUserQuestion" } });
+  const una = (_: readonly string[]) => leer()[0];
+
+  it("PP-C1: una AskUserQuestion sin resultado declara desde y respondidaEn null", () => {
+    sesion([[inicio, pregunta()]]);
+    expect(una([])?.pregunta).toEqual({ desde: iso(2), respondidaEn: null });
+  });
+
+  it("PP-C2: una AskUserQuestion sin resultado deja la fila esperando", () => {
+    sesion([[inicio, pregunta()]]);
+    expect(una([])?.estado).toBe("esperando");
+  });
+
+  it("PP-C3: respondida hace 20 s declara respondidaEn con la hora del resultado", () => {
+    sesion([[inicio, pregunta(), linea({ t: 3, tipo: "user", resultadoDe: "q1" })]]);
+    const fila = leer({ ahora: T0 + 23_000 })[0];
+    expect(fila?.pregunta).toEqual({ desde: iso(2), respondidaEn: iso(3) });
+  });
+
+  it("PP-C4: respondida hace 20 s deja la fila trabajando", () => {
+    sesion([[inicio, pregunta(), linea({ t: 3, tipo: "user", resultadoDe: "q1" })]]);
+    expect(leer({ ahora: T0 + 23_000 })[0]?.estado).toBe("trabajando");
+  });
+
+  it("PP-C5: respondida hace más de 60 s la pregunta es null", () => {
+    sesion([[inicio, pregunta(), linea({ t: 3, tipo: "user", resultadoDe: "q1" })]]);
+    expect(leer({ ahora: T0 + 3_000 + 61_000 })[0]?.pregunta).toBeNull();
+  });
+
+  it("PP-C6: un Bash abierto sin pregunta deja pregunta null", () => {
+    sesion([[inicio, linea({ t: 2, tipo: "assistant", herramienta: { id: "b1", name: "Bash" } })]]);
+    expect(leer()[0]?.pregunta).toBeNull();
+  });
+
+  it("PP-C7: un Bash abierto sin resultado sigue esperando", () => {
+    sesion([[inicio, linea({ t: 2, tipo: "assistant", herramienta: { id: "b1", name: "Bash" } })]]);
+    expect(leer()[0]?.estado).toBe("esperando");
+  });
+
+  it("PP-C8: la sesión principal declara su AskUserQuestion abierta", () => {
+    sesion([activo], [], "orquestadora-1", new Date(T0), [
+      linea({ t: 0, tipo: "user", texto: "orquesta" }),
+      pregunta("p1", 1),
+    ]);
+    expect(leerTodo()[0]).toMatchObject({ principal: true, pregunta: { desde: iso(1), respondidaEn: null } });
+  });
+
+  it("PP-C9: un tool_result con is_error true cuenta como respondida", () => {
+    sesion([[inicio, pregunta(), linea({ t: 3, tipo: "user", resultadoDe: "q1", error: true })]]);
+    expect(leer({ ahora: T0 + 10_000 })[0]?.pregunta).toEqual({ desde: iso(2), respondidaEn: iso(3) });
+  });
+
+  it("PP-C10: la respuesta del endpoint no contiene el texto de la entrada de la pregunta", async () => {
+    sesion([[inicio, pregunta()]]);
+    const r = await handleApi("GET", "/api/corrida/agentes", {}, ctx());
+    expect(JSON.stringify(r.body)).not.toContain(SECRETO);
+  });
+
+  it("PP-C11: la respuesta del endpoint no contiene el texto del resultado de la pregunta", async () => {
+    sesion([[inicio, pregunta(), linea({ t: 3, tipo: "user", resultadoDe: "q1" })]]);
+    const r = await handleApi("GET", "/api/corrida/agentes", {}, ctx());
+    expect(JSON.stringify(r.body)).not.toContain(SECRETO);
+  });
+
+  it("PP-C12: las claves de pregunta son exactamente desde y respondidaEn", () => {
+    sesion([[inicio, pregunta()]]);
+    expect(Object.keys(leer()[0]?.pregunta ?? {}).sort()).toEqual(["desde", "respondidaEn"]);
+  });
+
+  it("PP-extra: con varias preguntas manda la abierta más reciente; sin abiertas, la última respondida", () => {
+    sesion([[
+      inicio,
+      pregunta("q1", 2),
+      linea({ t: 3, tipo: "user", resultadoDe: "q1" }),
+      pregunta("q2", 4),
+    ]]);
+    expect(leer()[0]?.pregunta).toEqual({ desde: iso(4), respondidaEn: null });
+    sesion([[
+      inicio,
+      pregunta("q1", 2),
+      linea({ t: 3, tipo: "user", resultadoDe: "q1" }),
+      pregunta("q2", 4),
+      linea({ t: 5, tipo: "user", resultadoDe: "q2" }),
+    ]]);
+    expect(leer({ ahora: T0 + 10_000 })[0]?.pregunta).toEqual({ desde: iso(4), respondidaEn: iso(5) });
   });
 });
 
