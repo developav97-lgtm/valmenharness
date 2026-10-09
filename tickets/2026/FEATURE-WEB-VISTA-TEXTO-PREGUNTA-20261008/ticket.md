@@ -4,8 +4,8 @@ id: FEATURE-WEB-VISTA-TEXTO-PREGUNTA-20261008
 title: Vista muestra el texto de la pregunta y la respuesta
 type: FEATURE
 module: WEB
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -13,7 +13,7 @@ migration_impact: false
 docker_impact: false
 risk_level: normal
 created: 2026-10-08
-updated: 2026-10-08
+updated: 2026-10-09
 related_ticket: null
 target_release: null
 released_in: null
@@ -172,7 +172,33 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación de la entrega de FEATURE-WEB-VISTA-TEXTO-PREGUNTA-20261008",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta verificar sus criterios.",
+    "expected": "Los criterios del ticket se cumplen y el PO ve el texto de la pregunta y la respuesta.",
+    "evidence": [
+      "EVIDENCE-002"
+    ],
+    "affected_files": [
+      "packages/server/web/agentes/montaje.js",
+      "packages/server/web/agentes/mundos/control.js",
+      "packages/server/web/index.html",
+      "tests/vista-texto-pregunta.test.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -201,10 +227,33 @@ Directorio de ejecución: raíz del repositorio (o del worktree). Requisitos: No
   - C37: tema oscuro (esquema del sistema oscuro): texto `rgb(232,234,240)` sobre el fondo ámbar suave; legible en la captura.
   - C38: `valmen ux review` → 0 colores fijos (EVIDENCE-001); `git diff` sin colores hex ni `rgb(` nuevos. La herramienta `revisar_presentacion` corre sobre el checkout principal y reportó 0 archivos.
 - Limitaciones de lo medido: el viewport de 390 px dejó la página en 400 px por el menú lateral, que ya era así; el tema claro no se miró; la comparación visual contra el prototipo `vista-agentes.html` y una sesión real con `AskUserQuestion` quedan para el responsable.
+- Resultado del PO: «yo creo que ya podriamos cerrar» (con dos capturas: aviso naranja con el texto de la pregunta y aviso verde con la respuesta) · «Si, la veo» (2026-10-09; probó con preguntas reales de Claude Code en Mission Control, puerto 4175).
+
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-09",
+    "build_reference": "commit:5812b8d00623c6712c61d1edf0444f7ca49deb74",
+    "environment": "macOS, Node 24, main; Mission Control del PO en 127.0.0.1:4175",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-09",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "«yo creo que ya podriamos cerrar» (con dos capturas: aviso naranja con el texto de la pregunta y aviso verde con la respuesta) · «Si, la veo»"
+  }
+]
 ```
 
 ## Evidencia
@@ -218,6 +267,14 @@ Directorio de ejecución: raíz del repositorio (o del worktree). Requisitos: No
     "description": "Revisión de UX de 1 archivo(s) de interfaz (packages/server/web/index.html); 0 color(es) fijo(s). Skills: ui-ux-pro-max no declarada (el proyecto no la declara en external-skills); impeccable no declarada (el proyecto no la declara en external-skills). Sin informe de Impeccable.",
     "reference": null,
     "point_id": null
+  },
+  {
+    "id": "EVIDENCE-002",
+    "date": "2026-10-09",
+    "kind": "manual-test",
+    "description": "Suite completa en verde y dos capturas del PO: pregunta abierta con texto y respuesta",
+    "reference": "worktree:sha256:e381afa0c6e34847c2fea1e9afefecc7a92b6fb5eb94e146365c7e2385127e89",
+    "point_id": "POINT-001"
   }
 ]
 ```
@@ -225,13 +282,34 @@ Directorio de ejecución: raíz del repositorio (o del worktree). Requisitos: No
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-09",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "«yo creo que ya podriamos cerrar» (con dos capturas: aviso naranja con el texto de la pregunta y aviso verde con la respuesta) · «Si, la veo»"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-09",
+    "technical_summary": "El aviso de pregunta lee texto y respuesta de la fila (montaje.js, avisosDePregunta y cajaDeAviso, y la franja de control.js); todo texto se pinta con textContent o fillText, nunca como HTML; sin texto conserva el aviso de antes.",
+    "functional_summary": "El aviso sobre el lienzo muestra la pregunta pendiente con su texto y, al contestar, la respuesta.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "unreleased: entra con la feature vista-agentes"
+  }
+]
 ```
 
 ## Consumo de IA
@@ -252,6 +330,36 @@ Directorio de ejecución: raíz del repositorio (o del worktree). Requisitos: No
     "source": "manual:subagente-implementacion-sonnet-5-5",
     "confidence": "low",
     "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-09",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Subagentes por fase; sin números por ticket.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:sesiones de Claude Code de la corrida orquestada vista-agentes",
+    "confidence": "low",
+    "id": "CONSUMO-002"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-09",
+    "session_reference": "4f9b1b12-ced4-4132-9151-c3a025ede085",
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. Sesión **compartida**: trabajó 15 tickets (FEATURE-SERVER-SESION-PRINCIPAL-20261008 ×132, FEATURE-WEB-VISTA-LIENZO-20261008 ×121, FEATURE-WEB-MUNDO-PASTELERIA-20261008 ×119, FEATURE-WEB-MOTOR-ESCENA-20261008 ×118, IMPROVEMENT-WEB-VISTA-RENOMBRAR-AGENTES-20261008 ×107), así que su costo no se reparte y acá no se registran números. Costo completo de la sesión: no declarado por el proveedor, 6682201 tokens. Registralo en el ticket cuya sesión sea propia, o declaralo compartido donde corresponda. Sesión \"Feature vista-agentes\".",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "claude:4f9b1b12-ced4-4132-9151-c3a025ede085",
+    "confidence": "high",
+    "id": "CONSUMO-003"
   }
 ]
 ```
@@ -371,6 +479,141 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:13:24.551Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:13:25.026Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:13:25.404Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:13:25.770Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:13:26.120Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:13:26.547Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:13:26.958Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:13:27.318Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:13:27.635Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:13:27.965Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:13:28.321Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:13:28.665Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-025",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:13:30.712Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-026",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:13:30.866Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-027",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:13:31.283Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
