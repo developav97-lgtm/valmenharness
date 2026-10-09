@@ -139,7 +139,16 @@ Directorio: raíz del worktree del ticket (`npm ci` hecho, Node 24); sin servici
 ## Evidencia
 
 ```json
-[]
+[
+  {
+    "id": "EVIDENCE-001",
+    "date": "2026-10-09",
+    "kind": "code-inspection",
+    "description": "A/B 2026-10-09 con el mismo pedido en dos worktrees: rama directa (sonnet, 77 s, salida 1,9 k y 0,76 M de caché leída, commit f6727dc en ab/directo-handoff-lector) halló 2 de 3 causas y falló 1 de 44 pruebas de la rama harness (C6, línea Directorio suelta); rama harness (opus y sonnet, ~12 min con 2 esperas del PO, salida 6,6 k y 3,66 M de caché) halló 3 de 3 y pasó las 33 pruebas de la directa. Suite completa verde en ambas. Se integró la rama harness por decisión del PO.",
+    "reference": null,
+    "point_id": null
+  }
+]
 ```
 
 ## Retests
@@ -257,6 +266,15 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-09",
+    "at": "2026-10-09T17:47:51.955Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-001."
   }
 ]
 ```
