@@ -710,3 +710,170 @@ describe("una transcripción que se está escribiendo", () => {
     expect(sesion?.mensajes).toBe(1);
   });
 });
+
+describe("los subagentes con ticket propio", () => {
+  // Los transcripts son sintéticos y viven en el HOME temporal de `beforeEach`: ninguna
+  // prueba de este bloque lee `~/.claude` del HOME real.
+  const AGENTE_A = `${SESION}/agent-a0`;
+  const AGENTE_B = `${SESION}/agent-a1`;
+
+  /**
+   * Un subagente que escribe en el registro de los tickets dados: 5 de entrada, 50 de
+   * creación de caché, 500 de caché leída y 20 de salida. Su prompt nombra los
+   * tickets que se pidan, escriban o no.
+   */
+  function subagente(
+    id: string,
+    escribe: readonly string[],
+    opciones: {
+      readonly prompt?: string;
+      readonly inicio?: string;
+      readonly fin?: string;
+      readonly modelo?: string;
+    } = {},
+  ): string[] {
+    return [
+      mensajeDelUsuario(opciones.prompt ?? `Trabaja ${escribe.join(" y ")}`, {
+        cwd: ROOT,
+        timestamp: opciones.inicio ?? "2026-10-05T18:31:05.000Z",
+      }),
+      ...mensajeDelAsistente(
+        {
+          id: `msg_${id}`,
+          modelo: opciones.modelo ?? "claude-sonnet-5-5",
+          uso: { input: 5, creacion: 50, lectura: 500, salida: 20 },
+          bloques: [
+            texto("Listo."),
+            ...escribe.map((ticket, i) =>
+              llamada(`toolu_${id}_${i}`, "mcp__valmen__mover_ticket", {
+                id: ticket,
+                to: "analyzed",
+              }),
+            ),
+          ],
+        },
+        { cwd: ROOT, timestamp: opciones.fin ?? "2026-10-05T18:31:10.000Z" },
+      ),
+    ];
+  }
+
+  /** Una madre que orquesta: trabaja OTRO y no nombra TICKET en ninguna parte. */
+  const madre = (): string[] => sesionQueTrabajaElTicket("m", OTRO);
+
+  function escribir(subagentes: readonly (readonly string[])[], lineas = madre()): void {
+    escribirSesionDeClaude(home, { root: ROOT, id: SESION, lineas, subagentes });
+  }
+
+  it("un subagente que escribió en un solo ticket es una sesión propia con sus tokens", () => {
+    escribir([subagente("a", [TICKET])]);
+
+    const propias = leerSesionesDeClaude(ROOT, { home, ticketId: TICKET });
+    expect(propias.map((s) => s.id)).toEqual([AGENTE_A]);
+    const [propia] = propias;
+    expect(propia?.sesionMadre).toBe(SESION);
+    expect(propia?.inputTokens).toBe(5 + 50);
+    expect(propia?.cacheReadTokens).toBe(500);
+    expect(propia?.outputTokens).toBe(20);
+    expect(propia?.compartida).toBe(false);
+    expect(propia?.tickets.map((t) => t.id)).toEqual([TICKET]);
+  });
+
+  it("la madre deja de sumar el gasto y el ticket del subagente separado", () => {
+    escribir([subagente("a", [TICKET])]);
+
+    const todas = leerSesionesDeClaude(ROOT, { home });
+    const delMadre = todas.find((s) => s.id === SESION);
+    expect(delMadre?.inputTokens).toBe(2 + 100);
+    expect(delMadre?.outputTokens).toBe(30);
+    expect(delMadre?.cacheReadTokens).toBe(1000);
+    expect(delMadre?.subagentes).toBe(0);
+    expect(delMadre?.tickets.map((t) => t.id)).toEqual([OTRO]);
+    expect(delMadre?.compartida).toBe(false);
+    // Y con el ticket del subagente solo sale el subagente.
+    expect(leerSesionesDeClaude(ROOT, { home, ticketId: TICKET }).map((s) => s.id)).toEqual([
+      AGENTE_A,
+    ]);
+  });
+
+  it("un subagente que escribió en dos tickets sigue sumado en la madre", () => {
+    escribir([subagente("a", [TICKET, OTRO])], sesionQueTrabajaElTicket("m", TICKET));
+
+    const todas = leerSesionesDeClaude(ROOT, { home });
+    expect(todas.map((s) => s.id)).toEqual([SESION]);
+    expect(todas[0]?.subagentes).toBe(1);
+    expect(todas[0]?.inputTokens).toBe(102 + 55);
+    expect(todas[0]?.compartida).toBe(true);
+  });
+
+  it("un subagente sin escrituras en el registro sigue sumado en la madre", () => {
+    escribir([subagente("a", [])]);
+
+    const todas = leerSesionesDeClaude(ROOT, { home });
+    expect(todas.map((s) => s.id)).toEqual([SESION]);
+    expect(todas[0]?.subagentes).toBe(1);
+    expect(todas[0]?.inputTokens).toBe(102 + 55);
+  });
+
+  it("el primer mensaje que nombra otro ticket no atribuye el subagente a ese ticket", () => {
+    escribir([subagente("a", [TICKET], { prompt: `Trabaja ${TICKET}; contexto: ${OTRO}` })], [
+      mensajeDelUsuario("Orquesta", { cwd: ROOT }),
+      ...mensajeDelAsistente({ id: "m1", bloques: [texto("voy")] }, { cwd: ROOT }),
+    ]);
+
+    const [propia] = leerSesionesDeClaude(ROOT, { home, ticketId: TICKET });
+    expect(propia?.tickets.map((t) => t.id)).toEqual([TICKET]);
+    expect(leerSesionesDeClaude(ROOT, { home, ticketId: OTRO })).toEqual([]);
+  });
+
+  it("dos subagentes del mismo ticket son dos sesiones propias", () => {
+    escribir([subagente("a", [TICKET]), subagente("b", [TICKET])]);
+
+    const propias = leerSesionesDeClaude(ROOT, { home, ticketId: TICKET });
+    expect(propias.map((s) => s.id).sort()).toEqual([AGENTE_A, AGENTE_B]);
+    expect(propias.every((s) => s.inputTokens === 55)).toBe(true);
+  });
+
+  it("con ticketId se encuentra el subagente aunque la madre no nombre el ticket", () => {
+    // La madre no contiene TICKET en ningún sitio: el prefiltro mira también a los subagentes.
+    escribir([subagente("a", [TICKET])]);
+
+    expect(leerSesionesDeClaude(ROOT, { home, ticketId: TICKET })).toHaveLength(1);
+  });
+
+  it("la duración sale del primer y del último evento del subagente", () => {
+    escribir([
+      subagente("a", [TICKET], {
+        inicio: "2026-10-05T10:00:00.000Z",
+        fin: "2026-10-05T10:12:00.000Z",
+      }),
+    ]);
+
+    const [propia] = leerSesionesDeClaude(ROOT, { home, ticketId: TICKET });
+    expect((propia?.terminaEn ?? 0) - (propia?.startedAt ?? 0)).toBe(12 * 60 * 1000);
+  });
+
+  it("si la madre ya está contada, sus subagentes no se separan", () => {
+    escribir([subagente("a", [TICKET])], sesionQueTrabajaElTicket("m", TICKET));
+
+    const [madreContada] = leerSesionesDeClaude(ROOT, {
+      home,
+      ticketId: TICKET,
+      madreYaContada: (idMadre) => idMadre === SESION,
+    });
+    expect(madreContada?.id).toBe(SESION);
+    expect(madreContada?.inputTokens).toBe(102 + 55);
+    expect(madreContada?.subagentes).toBe(1);
+  });
+
+  it("un subagente ilegible no tumba la sesión madre ni a los demás", () => {
+    escribir([["esto no es json", "{cortado"], subagente("b", [TICKET])]);
+    // Un «archivo» de subagente que ni se puede leer: una carpeta con su nombre.
+    mkdirSync(
+      join(home, ".claude", "projects", carpetaDeClaude(ROOT), SESION, "subagents", "agent-zz.jsonl"),
+    );
+
+    const todas = leerSesionesDeClaude(ROOT, { home });
+    expect(todas.map((s) => s.id).sort()).toEqual([AGENTE_B, SESION].sort());
+    expect(todas.find((s) => s.id === SESION)?.mensajes).toBe(1);
+  });
+});

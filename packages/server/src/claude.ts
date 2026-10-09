@@ -114,6 +114,13 @@ export interface SesionDeClaude {
   readonly tickets: readonly TicketDeSesion[];
   /** `true` si la sesión sirvió a más de un ticket y su gasto no es de uno solo. */
   readonly compartida: boolean;
+  /**
+   * Solo en la sesión de un subagente separado: el id de la sesión madre que lo
+   * lanzó. Su `id` es `<madre>/agent-<id>` y su gasto ya no está en la madre.
+   */
+  readonly sesionMadre?: string;
+  /** Solo en la sesión de un subagente separado: el último evento, en milisegundos. */
+  readonly terminaEn?: number;
 }
 
 /** Dónde viven las transcripciones de Claude Code. */
@@ -216,6 +223,49 @@ interface Acumulado {
   cwd: string | null;
   titulo: string;
   inicio: number;
+  /** El último evento con marca de tiempo, para la duración de un subagente. */
+  fin: number;
+}
+
+function acumuladoVacio(): Acumulado {
+  return {
+    mensajes: new Map(),
+    llamadas: new Set(),
+    intervenciones: new Set(),
+    mensajesDelRegistro: new Set(),
+    resultadosConError: new Set(),
+    tickets: new Map(),
+    cwd: null,
+    titulo: "",
+    inicio: 0,
+    fin: 0,
+  };
+}
+
+/** Suma `origen` en `destino`: así un subagente sin ticket propio queda en su madre. */
+function fundir(destino: Acumulado, origen: Acumulado): void {
+  for (const [clave, uso] of origen.mensajes) {
+    const previo = destino.mensajes.get(clave);
+    destino.mensajes.set(clave, {
+      model: uso.model !== "" ? uso.model : (previo?.model ?? ""),
+      input: Math.max(previo?.input ?? 0, uso.input),
+      creacion: Math.max(previo?.creacion ?? 0, uso.creacion),
+      lectura: Math.max(previo?.lectura ?? 0, uso.lectura),
+      salida: Math.max(previo?.salida ?? 0, uso.salida),
+    });
+  }
+  for (const clave of origen.llamadas) destino.llamadas.add(clave);
+  for (const clave of origen.intervenciones) destino.intervenciones.add(clave);
+  for (const clave of origen.mensajesDelRegistro) destino.mensajesDelRegistro.add(clave);
+  for (const clave of origen.resultadosConError) destino.resultadosConError.add(clave);
+  for (const [ticket, dato] of origen.tickets) {
+    sumar(destino, ticket, dato.peso, dato.trabajado ? "trabajado" : dato.pedido ? "pedido" : null);
+    if (dato.trabajado && dato.pedido) sumar(destino, ticket, 0, "pedido");
+  }
+  if (origen.inicio !== 0 && (destino.inicio === 0 || origen.inicio < destino.inicio)) {
+    destino.inicio = origen.inicio;
+  }
+  if (origen.fin > destino.fin) destino.fin = origen.fin;
 }
 
 /**
@@ -419,6 +469,7 @@ function leerTranscripcion(
     if (Number.isFinite(marca) && (acumulado.inicio === 0 || marca < acumulado.inicio)) {
       acumulado.inicio = marca;
     }
+    if (Number.isFinite(marca) && marca > acumulado.fin) acumulado.fin = marca;
     if (!esSubagente && acumulado.cwd === null && typeof evento["cwd"] === "string") {
       acumulado.cwd = evento["cwd"];
     }
@@ -541,12 +592,88 @@ function atribucion(acumulado: Acumulado): TicketDeSesion[] {
  * texto crudo **antes** de parsear nada: una transcripción pesa megabytes y la gran
  * mayoría no es del ticket que se mira.
  */
+/** La sesión de Claude Code que sale de un acumulado: totales, modelos y atribución. */
+function sesionDesdeAcumulado(
+  id: string,
+  ruta: string,
+  acumulado: Acumulado,
+  subagentes: number,
+  extra: { readonly sesionMadre?: string; readonly terminaEn?: number } = {},
+): SesionDeClaude {
+  const tickets = atribucion(acumulado);
+  let inputTokens = 0;
+  let cacheReadTokens = 0;
+  let outputTokens = 0;
+  const porModelo = new Map<string, { mensajes: number; outputTokens: number }>();
+  for (const mensaje of acumulado.mensajes.values()) {
+    inputTokens += mensaje.input + mensaje.creacion;
+    cacheReadTokens += mensaje.lectura;
+    outputTokens += mensaje.salida;
+    if (mensaje.model === "") continue;
+    const actual = porModelo.get(mensaje.model) ?? { mensajes: 0, outputTokens: 0 };
+    porModelo.set(mensaje.model, {
+      mensajes: actual.mensajes + 1,
+      outputTokens: actual.outputTokens + mensaje.salida,
+    });
+  }
+  const modelos = [...porModelo.entries()]
+    .map(([model, dato]) => ({ model, ...dato }))
+    .sort(
+      (a, b) =>
+        b.outputTokens - a.outputTokens || b.mensajes - a.mensajes || a.model.localeCompare(b.model),
+    );
+
+  let fallidas = 0;
+  for (const llamada of acumulado.intervenciones) {
+    if (acumulado.resultadosConError.has(llamada)) fallidas += 1;
+  }
+
+  return {
+    id,
+    path: ruta,
+    title: acumulado.titulo,
+    startedAt: acumulado.inicio,
+    model: modelos[0]?.model ?? "",
+    modelos,
+    mensajes: acumulado.mensajes.size,
+    mensajesDelRegistro: acumulado.mensajesDelRegistro.size,
+    inputTokens,
+    cacheReadTokens,
+    outputTokens,
+    intervenciones: acumulado.intervenciones.size,
+    fallidas,
+    subagentes,
+    tickets,
+    compartida: tickets.length > 1,
+    ...extra,
+  };
+}
+
+/**
+ * Lee las sesiones de Claude Code de un proyecto.
+ *
+ * Con `ticketId`, solo las que **trabajaron** ese ticket —o las compartidas que lo
+ * trabajaron, marcadas—: la línea de tiempo de un ticket no tiene por qué cargar
+ * las sesiones que no lo tocaron, y el coste que muestra tiene que ser el suyo.
+ *
+ * Se filtra por fecha de modificación y por una búsqueda del identificador en el
+ * texto crudo **antes** de parsear nada: una transcripción pesa megabytes y la gran
+ * mayoría no es del ticket que se mira.
+ *
+ * Un subagente que **escribió** en el registro de exactamente un ticket se devuelve
+ * como sesión propia (`<sesión>/agent-<id>`, con `sesionMadre`) y su gasto sale de la
+ * madre; el resto —sin escrituras, o con dos tickets— sigue sumado en ella. Su prompt
+ * no atribuye. Si `madreYaContada` dice que la madre ya quedó registrada con números
+ * (que incluyen a sus subagentes), no se separan: contarlos otra vez duplicaría el
+ * gasto en un bloque que no se reescribe.
+ */
 export function leerSesionesDeClaude(
   root: string,
   options: {
     readonly home?: string;
     readonly ticketId?: string;
     readonly dias?: number;
+    readonly madreYaContada?: (idMadre: string) => boolean;
   } = {},
 ): SesionDeClaude[] {
   const base = claudeProjectsPath(options.home ?? homedir());
@@ -581,89 +708,72 @@ export function leerSesionesDeClaude(
       } catch {
         continue;
       }
-      if (options.ticketId !== undefined && !contenido.includes(options.ticketId)) continue;
 
-      const acumulado: Acumulado = {
-        mensajes: new Map(),
-        llamadas: new Set(),
-        intervenciones: new Set(),
-        mensajesDelRegistro: new Set(),
-        resultadosConError: new Set(),
-        tickets: new Map(),
-        cwd: null,
-        titulo: "",
-        inicio: 0,
+      // Los subagentes se leen una vez; uno ilegible no tumba la sesión: se pierde lo
+      // suyo y no más.
+      const archivos = archivosDeSubagentes(ruta);
+      const textos = new Map<string, string>();
+      const leerSubagentes = (): void => {
+        for (const archivo of archivos) {
+          if (textos.has(archivo)) continue;
+          try {
+            textos.set(archivo, readFileSync(archivo, "utf8"));
+          } catch {
+            // ilegible
+          }
+        }
       };
+      if (options.ticketId !== undefined && !contenido.includes(options.ticketId)) {
+        leerSubagentes();
+        const ticketId = options.ticketId;
+        if (![...textos.values()].some((texto) => texto.includes(ticketId))) continue;
+      }
+      leerSubagentes();
+
+      const acumulado = acumuladoVacio();
       leerTranscripcion(contenido, acumulado, options.ticketId, false);
       // Un `cwd` fuera del proyecto es la colisión de dos rutas con el mismo nombre
       // de carpeta. Sin `cwd` no hay con qué desmentir la carpeta, y se acepta.
       if (acumulado.cwd !== null && !estaDentro(acumulado.cwd, root)) continue;
 
-      const subagentes = archivosDeSubagentes(ruta);
-      for (const archivo of subagentes) {
-        try {
-          leerTranscripcion(readFileSync(archivo, "utf8"), acumulado, options.ticketId, true);
-        } catch {
-          // Un subagente ilegible no tumba la sesión: se pierde lo suyo y no más.
+      const separar = options.madreYaContada?.(id) !== true;
+      const propias: SesionDeClaude[] = [];
+      for (const archivo of archivos) {
+        const texto = textos.get(archivo);
+        if (texto === undefined) continue;
+        const propio = acumuladoVacio();
+        leerTranscripcion(texto, propio, options.ticketId, true);
+        const trabajados = atribucion(propio);
+        if (separar && propio.mensajes.size > 0 && trabajados.length === 1) {
+          propias.push(
+            sesionDesdeAcumulado(
+              `${id}/${basename(archivo, ".jsonl")}`,
+              archivo,
+              propio,
+              0,
+              { sesionMadre: id, terminaEn: propio.fin },
+            ),
+          );
+        } else {
+          fundir(acumulado, propio);
         }
+      }
+
+      for (const propia of propias) {
+        if (options.ticketId !== undefined && !propia.tickets.some((t) => t.id === options.ticketId)) {
+          continue;
+        }
+        sesiones.set(propia.id, propia);
       }
 
       // Sin un solo mensaje del asistente no hay nada que medir.
       if (acumulado.mensajes.size === 0) continue;
 
-      const tickets = atribucion(acumulado);
-      const compartida = tickets.length > 1;
-      if (options.ticketId !== undefined && !tickets.some((t) => t.id === options.ticketId)) {
+      const madre = sesionDesdeAcumulado(id, ruta, acumulado, archivos.length - propias.length);
+      if (options.ticketId !== undefined && !madre.tickets.some((t) => t.id === options.ticketId)) {
         continue;
       }
-
-      let inputTokens = 0;
-      let cacheReadTokens = 0;
-      let outputTokens = 0;
-      const porModelo = new Map<string, { mensajes: number; outputTokens: number }>();
-      for (const mensaje of acumulado.mensajes.values()) {
-        inputTokens += mensaje.input + mensaje.creacion;
-        cacheReadTokens += mensaje.lectura;
-        outputTokens += mensaje.salida;
-        if (mensaje.model === "") continue;
-        const actual = porModelo.get(mensaje.model) ?? { mensajes: 0, outputTokens: 0 };
-        porModelo.set(mensaje.model, {
-          mensajes: actual.mensajes + 1,
-          outputTokens: actual.outputTokens + mensaje.salida,
-        });
-      }
-      const modelos = [...porModelo.entries()]
-        .map(([model, dato]) => ({ model, ...dato }))
-        .sort(
-          (a, b) =>
-            b.outputTokens - a.outputTokens ||
-            b.mensajes - a.mensajes ||
-            a.model.localeCompare(b.model),
-        );
-
-      let fallidas = 0;
-      for (const llamada of acumulado.intervenciones) {
-        if (acumulado.resultadosConError.has(llamada)) fallidas += 1;
-      }
-
-      sesiones.set(id, {
-        id,
-        path: ruta,
-        title: acumulado.titulo,
-        startedAt: acumulado.inicio,
-        model: modelos[0]?.model ?? "",
-        modelos,
-        mensajes: acumulado.mensajes.size,
-        mensajesDelRegistro: acumulado.mensajesDelRegistro.size,
-        inputTokens,
-        cacheReadTokens,
-        outputTokens,
-        intervenciones: acumulado.intervenciones.size,
-        fallidas,
-        subagentes: subagentes.length,
-        tickets,
-        compartida,
-      });
+      sesiones.set(id, madre);
     }
   }
 
