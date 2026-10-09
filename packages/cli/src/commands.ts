@@ -201,6 +201,7 @@ import {
   buildResumeContext,
   renderAskContext,
   renderResumeContext,
+  renderResumeQuiet,
   DECISIONES_APRENDIZAJE,
   materializeFeature,
   renderMaterialization,
@@ -472,6 +473,7 @@ export function resumeTicket(
   id: string | undefined,
   modo: ResumeMode = "compacto",
   cliente?: string,
+  quiet = false,
 ): CommandResult & { readonly data?: Record<string, unknown> } {
   if (cliente !== undefined && !(EJECUTORES_CON_PERFIL as readonly string[]).includes(cliente)) {
     return error(`El cliente "${cliente}" no es válido. Valores admitidos: ${EJECUTORES_CON_PERFIL.join(", ")}.`);
@@ -484,7 +486,7 @@ export function resumeTicket(
     }
     const failure = validationError(ticket, id);
     if (failure !== undefined) return error(failure.message, failure.exitCode);
-    return resultadoReanudacion(paths, parseTicket(ticket.text), modo, cliente_);
+    return resultadoReanudacion(paths, parseTicket(ticket.text), modo, cliente_, quiet);
   }
 
   const activos = activosOrdenados(paths);
@@ -502,7 +504,7 @@ export function resumeTicket(
       exitCode: EXIT_AMBIGUOUS,
     };
   }
-  return resultadoReanudacion(paths, activos.rows[0]?.document as ParsedTicket, modo, cliente_);
+  return resultadoReanudacion(paths, activos.rows[0]?.document as ParsedTicket, modo, cliente_, quiet);
 }
 
 function resultadoReanudacion(
@@ -510,10 +512,11 @@ function resultadoReanudacion(
   document: ParsedTicket,
   modo: ResumeMode,
   cliente?: ClienteDeSesion,
+  quiet = false,
 ): CommandResult & { readonly data?: Record<string, unknown> } {
   const context = buildResumeContext(paths, document, modo, cliente);
   return {
-    stdout: renderResumeContext(context),
+    stdout: quiet ? renderResumeQuiet(context) : renderResumeContext(context),
     stderr: "",
     exitCode: 0,
     data: context as unknown as Record<string, unknown>,
@@ -3867,6 +3870,10 @@ export function journeyBriefCommand(
   if (cliente !== undefined && (typeof cliente !== "string" || !(EJECUTORES_CON_PERFIL as readonly string[]).includes(cliente))) {
     return error(`El cliente "${String(cliente)}" no es válido. Valores admitidos: ${EJECUTORES_CON_PERFIL.join(", ")}.`, EXIT_SCHEMA);
   }
+  const out = flags["out"];
+  if (out !== undefined && (typeof out !== "string" || out === "")) {
+    return error("journey brief --out requiere una ruta.", EXIT_SCHEMA);
+  }
   try {
     return withAccessMode("ask", () => {
       const project = proyectoDeLaOla(flags, opciones);
@@ -3875,7 +3882,14 @@ export function journeyBriefCommand(
         ticketId,
         ...(cliente === undefined ? {} : { cliente: cliente as ClienteDeSesion }),
       });
-      return ok(renderBriefDeSubagente(brief) + avisoDeArbolSucio(project.root));
+      const texto = renderBriefDeSubagente(brief) + avisoDeArbolSucio(project.root);
+      if (out === undefined) return ok(texto);
+      // Con --out el brief va a un archivo, el mismo texto byte a byte, y a la conversación
+      // solo vuelve una línea: el orquestador no lo relee en cada turno.
+      const destino = resolve(opciones.root ?? process.cwd(), out);
+      mkdirSync(dirname(destino), { recursive: true });
+      writeFileSync(destino, texto, "utf8");
+      return ok(`Brief escrito en ${destino} (${texto.length} caracteres).\n`);
     });
   } catch (caught) {
     const failure = toFailure(caught);

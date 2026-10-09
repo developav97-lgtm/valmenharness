@@ -168,10 +168,11 @@ Comandos:
   run --ticket <ID> | --queue
                             Despacha un ticket elegible hasta awaiting_user_tests.
   active                    Lista los tickets no cerrados (alias: list).
-  resume [--id <ID>] [--cliente <claude|codex|opencode|hermes>]
+  resume [--id <ID>] [--cliente <claude|codex|opencode|hermes>] [--quiet]
                             Imprime el contexto para retomar un ticket, con el
                             modelo de cada fase según el cliente de la sesión.
                             Sin --id y con varios activos, no elige: pide uno.
+                            --quiet: tres líneas (estado, siguiente paso y alto).
   ask <pregunta>            El modo pregunta: el motor no concede permisos de
       --id <ID>             escritura, así que no se pueden crear tickets, mover
                             estados ni escribir archivos. Imprime el contexto de la
@@ -250,9 +251,10 @@ Comandos:
   journey next --wave [--concurrency <n>] [--journey <id>] [--project <id>]
                             Los tickets de la jornada listos para despachar ahora a subagentes
                             (3 a la vez por defecto, contando los que ya están en curso). Solo lectura.
-  journey brief --id <ID> [--cliente <c>] [--project <id>]
+  journey brief --id <ID> [--cliente <c>] [--project <id>] [--out <ruta>]
                             El brief autocontenido de un ticket para un subagente: worktree, siguiente
-                            paso, modelo, compuertas, contrato de entrega y prohibiciones. Solo lectura.
+                            paso, modelo, compuertas, contrato de entrega y prohibiciones. Con --out lo
+                            escribe en la ruta (mismo texto) e imprime una línea. Solo lectura.
   journey handoff --id <jornada> [--project <id>] [--to <destino>] [--saved]
                             El parte final de la corrida: qué probar y cómo en cada ticket
                             que espera tus pruebas, los cerrados por política y los sin
@@ -680,6 +682,8 @@ export const VALUE_OPTIONS = [
   // El avance de una jornada concreta, el intervalo del disparador y su carpeta.
   "--journey",
   "--concurrency",
+  // `journey brief --out`: el archivo donde escribir el brief.
+  "--out",
   "--fase",
   "--every",
   "--via",
@@ -1410,7 +1414,7 @@ export function dispatch(options: Options): CommandResult {
       const rawId = options.flags["id"];
       const id = typeof rawId === "string" ? rawId : undefined;
       const rawCliente = options.flags["cliente"];
-      return resumeTicket(paths, id, undefined, typeof rawCliente === "string" ? rawCliente : undefined);
+      return resumeTicket(paths, id, undefined, typeof rawCliente === "string" ? rawCliente : undefined, options.flags["quiet"] === true);
     }
 
     case "ask": {

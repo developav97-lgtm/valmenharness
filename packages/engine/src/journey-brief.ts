@@ -216,7 +216,8 @@ function contratoDeEntrega(ticketId: string): string[] {
     `Registra el consumo de IA del ticket antes de pasar a awaiting_user_tests (\`registrar_consumo_ia\` o \`valmen add-ai-usage --id ${ticketId}\`), con los números de la sesión o \`manual:\` sin números si no los expone.`,
     "Corre `valmen secrets` antes de commitear.",
     "Commit solo en la rama del worktree, con `git add` explícito de los archivos del ticket; nunca `git add -A`. Sin push ni merge: integrar es del orquestador.",
-    "Responde en pocas líneas: estado final, hash del commit, archivos tocados, pruebas corridas con su resultado y qué decide una persona.",
+    "Informe final de forma fija, de 8 líneas y 900 caracteres como máximo, una por campo: estado, commit (hash), archivos tocados, pruebas (comando y resultado) y decisión (qué decide una persona).",
+    "No pegues en el informe salidas de comandos ni recibos completos: quedan en el ticket y en `.valmen/receipts/`; el informe los cita.",
   ];
 }
 
