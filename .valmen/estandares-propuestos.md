@@ -85,3 +85,15 @@ pasan a `.valmen/rules/estandares-<área>.md`, que es lo que llega al
 **Regla:** Cuando el agente necesite una respuesta o una decisión del PO, la hace con la herramienta AskUserQuestion —opciones con su efecto, la recomendada primero y marcada «(Recomendado)»— y no la plantea en texto; solo pide en texto lo que no es una decisión (un dato, un archivo). La respuesta del PO por la herramienta cuenta como su frase literal para registrar la decisión.
 
 **Por qué:** El 2026-10-09 el PO probó el aviso de pregunta de la vista Agentes y tuvo que pedirle al agente «hazme la pregunta con AskUserQuestion»; la vista existe para mostrar esas preguntas, y dijo que quiere que el agente pregunte así siempre por defecto, en ambos proyectos, sin que él tenga que decírselo.
+
+### [EST-008] Elegir el modo de trabajo por tamaño: directo con dos reglas o harness completo
+
+- **Área:** proceso
+- **Propuesto:** 2026-10-09
+- **Estado:** aceptado
+- **Decidido:** 2026-10-09 · «Híbrido por tamaño (Recomendado)»
+- **Tickets:** BUGFIX-ENGINE-JORNADA-HANDOFF-LECTOR-20261008
+
+**Regla:** Un bugfix o un cambio chico y acotado se hace en modo directo, sin compuertas, pero con dos reglas obligatorias: reproducir el defecto con datos reales antes de arreglarlo, y añadir pruebas que fallen sin el arreglo y pasen con él. Una funcionalidad, un cambio que toca varios módulos o un pedido ambiguo va por el harness completo (ticket, análisis, plan, aprobación, implementación, QA). Quien registra el trabajo declara el modo elegido y su motivo.
+
+**Por qué:** A/B del 2026-10-09 sobre BUGFIX-ENGINE-JORNADA-HANDOFF-LECTOR-20261008, el mismo pedido en dos worktrees: la rama directa (sonnet, 77 s, 0,76 M de caché leída) halló 2 de 3 causas y falló 1 de 44 pruebas de la otra rama; la rama con harness (opus y sonnet, ~12 min, 3,66 M) halló las 3 causas porque reprodujo el defecto con el parte real, con 13 pruebas. El valor vino del diagnóstico con datos reales y de las pruebas exhaustivas, no de las compuertas (cascade falló en las 4, y las 2 REVIEW fueron de forma). En la feature vista-agentes el harness atrapó huecos reales del plan (C31, C20, C14) y la decisión de privacidad, a un costo de tokens alto.

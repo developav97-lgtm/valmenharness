@@ -70,6 +70,13 @@ Cuando el agente necesite una respuesta o una decisión del PO, la hace con la h
 **Por qué:** El 2026-10-09 el PO probó el aviso de pregunta de la vista Agentes y tuvo que pedirle al agente «hazme la pregunta con AskUserQuestion»…
 **Visto en:** FEATURE-WEB-VISTA-TEXTO-PREGUNTA-20261008, FEATURE-SERVER-TEXTO-PREGUNTA-RESPUESTA-20261008 (2026-10-09)
 
+## Elegir el modo de trabajo por tamaño: directo con dos reglas o harness completo
+
+Un bugfix o un cambio chico y acotado se hace en modo directo, sin compuertas, pero con dos reglas obligatorias: reproducir el defecto con datos reales antes de arreglarlo, y añadir pruebas que fallen sin el arreglo y pasen con él. Una funcionalidad, un cambio que toca varios módulos o un pedido ambiguo va por el harness completo (ticket, análisis, plan, aprobación, implementación, QA). Quien registra el trabajo declara el modo elegido y su motivo.
+
+**Por qué:** A/B del 2026-10-09 sobre BUGFIX-ENGINE-JORNADA-HANDOFF-LECTOR-20261008, el mismo pedido en dos worktrees: la rama directa (sonnet, 77 s…
+**Visto en:** BUGFIX-ENGINE-JORNADA-HANDOFF-LECTOR-20261008 (2026-10-09)
+
 ## Cómo se trabaja en este repositorio
 
 Este repositorio **es** el harness, no un proyecto que lo usa, y se gestiona con
