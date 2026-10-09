@@ -4,8 +4,8 @@ id: FEATURE-WEB-MUNDO-PASTELERIA-20261008
 title: Mundo pastelería con obrador, personajes, señal de pregunta, estático declarado y validación contra el prototipo
 type: FEATURE
 module: WEB
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -13,7 +13,7 @@ migration_impact: false
 docker_impact: false
 risk_level: normal
 created: 2026-10-08
-updated: 2026-10-08
+updated: 2026-10-09
 related_ticket: null
 target_release: null
 released_in: null
@@ -199,17 +199,17 @@ Ningún elemento del pedido nombra algo que el código no tenga: estaciones, est
       <!-- verify: manual -->
 - [x] C33 — R-MUN-004: en el navegador, durante ese trayecto el pastelero lleva en la mano el pastel glaseado (etapa 5).
       <!-- verify: manual -->
-- [ ] C34 — R-MUN-008: `## Evidencia` contiene la captura de la vista en escritorio y tema claro.
+- [ ] C34 — R-MUN-008: `## Evidencia` contiene la captura de la vista en escritorio y tema claro. — no aplica: no se produjeron las capturas y el PO validó el mundo a ojo el 2026-10-09
       <!-- verify: manual -->
-- [ ] C35 — R-MUN-008: `## Evidencia` contiene la captura de la vista en escritorio y tema oscuro.
+- [ ] C35 — R-MUN-008: `## Evidencia` contiene la captura de la vista en escritorio y tema oscuro. — no aplica: no se produjeron las capturas y el PO validó el mundo a ojo el 2026-10-09
       <!-- verify: manual -->
-- [ ] C36 — R-MUN-008: `## Evidencia` contiene la captura de la vista a 390 px y tema claro.
+- [ ] C36 — R-MUN-008: `## Evidencia` contiene la captura de la vista a 390 px y tema claro. — no aplica: no se produjeron las capturas y el PO validó el mundo a ojo el 2026-10-09
       <!-- verify: manual -->
-- [ ] C37 — R-MUN-008: `## Evidencia` contiene la captura de la vista a 390 px y tema oscuro.
+- [ ] C37 — R-MUN-008: `## Evidencia` contiene la captura de la vista a 390 px y tema oscuro. — no aplica: no se produjeron las capturas y el PO validó el mundo a ojo el 2026-10-09
       <!-- verify: manual -->
-- [ ] C38 — R-MUN-008: cada captura de la vista en `## Evidencia` va junto a la del prototipo tomada con el mismo ancho y el mismo tema.
+- [ ] C38 — R-MUN-008: cada captura de la vista en `## Evidencia` va junto a la del prototipo tomada con el mismo ancho y el mismo tema. — no aplica: no se produjeron las capturas y el PO validó el mundo a ojo el 2026-10-09
       <!-- verify: manual -->
-- [ ] C39 — R-MUN-008: cada diferencia observada con el prototipo queda anotada en `## Evidencia` con su motivo.
+- [ ] C39 — R-MUN-008: cada diferencia observada con el prototipo queda anotada en `## Evidencia` con su motivo. — no aplica: no se produjeron las capturas y el PO validó el mundo a ojo el 2026-10-09
       <!-- verify: manual -->
 - [x] C40 — Las pruebas existentes del lienzo, del motor, de los estáticos, del marco, de la vista Agentes y de la interfaz ejecutable siguen pasando.
       <!-- test: npx vitest run tests/vista-lienzo.test.ts tests/motor-escena.test.ts tests/estaticos-web.test.ts tests/vista-marco-responsivo.test.ts tests/vista-corrida.test.ts tests/interfaz-ejecutable.test.ts -->
@@ -217,7 +217,36 @@ Ningún elemento del pedido nombra algo que el código no tenga: estaciones, est
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación de la entrega de FEATURE-WEB-MUNDO-PASTELERIA-20261008",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta verificar sus criterios.",
+    "expected": "Los criterios del ticket se cumplen y el PO valida la pantalla.",
+    "evidence": [
+      "EVIDENCE-001"
+    ],
+    "affected_files": [
+      "packages/server/src/server.ts",
+      "packages/server/web/agentes/montaje.js",
+      "packages/server/web/agentes/mundos/pasteleria.js",
+      "packages/server/web/agentes/mundos/sprites.js",
+      "packages/server/web/index.html",
+      "tests/estaticos-web.test.ts",
+      "tests/mundo-pasteleria.test.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -251,29 +280,81 @@ Validaciones manuales:
 - Pendiente manual (C34-C39): capturas lado a lado con el prototipo, en 1280 y 390 px, claro y oscuro, y las diferencias con su motivo en `## Evidencia`.
 
 Requisitos de ambiente: Node 24, `npm install` hecho y `npm run build` previo a `interfaz-ejecutable`.
+- Resultado del PO: «si se ven bien los 3 mundos» · «A cierralos» (2026-10-09; validó la pantalla con una corrida real).
 
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-09",
+    "build_reference": "commit:8881bbddbff8b3b845c4998cb1cfbbc7c4466dd5",
+    "environment": "macOS, Node 24, main tras integrar; Mission Control del PO en el computador y el iPad",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-09",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "«si se ven bien los 3 mundos» · «A cierralos»"
+  }
+]
 ```
 
 ## Evidencia
 
 ```json
-[]
+[
+  {
+    "id": "EVIDENCE-001",
+    "date": "2026-10-09",
+    "kind": "manual-test",
+    "description": "Suite completa en verde y validación del PO con una corrida real en Mission Control",
+    "reference": "worktree:sha256:59d7f8b5bd3333a108517270c29047a3a68ff9de7fcca5c396b54a360b81b740",
+    "point_id": "POINT-001"
+  }
+]
 ```
 
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-09",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "«si se ven bien los 3 mundos» · «A cierralos»"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-09",
+    "technical_summary": "Mundo pastelería sobre el motor (mundos/pasteleria.js y sprites.js) con paneles Comandas, En espera y Vitrina; las capturas contra el prototipo (C34-C39) no se produjeron y el PO validó el mundo a ojo.",
+    "functional_summary": "Un obrador animado donde cada ticket recorre las mesas hasta la vitrina.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "unreleased: entra con la feature vista-agentes"
+  }
+]
 ```
 
 ## Consumo de IA
@@ -294,6 +375,36 @@ Requisitos de ambiente: Node 24, `npm install` hecho y `npm run build` previo a 
     "source": "manual:subagente-implementacion",
     "confidence": "low",
     "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-09",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Subagentes por fase; sin números por ticket.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:sesiones de Claude Code de la corrida orquestada vista-agentes",
+    "confidence": "low",
+    "id": "CONSUMO-002"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-09",
+    "session_reference": "4f9b1b12-ced4-4132-9151-c3a025ede085",
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. Sesión **compartida**: trabajó 15 tickets (FEATURE-SERVER-SESION-PRINCIPAL-20261008 ×129, FEATURE-WEB-MOTOR-ESCENA-20261008 ×118, FEATURE-WEB-VISTA-LIENZO-20261008 ×118, FEATURE-WEB-MUNDO-PASTELERIA-20261008 ×110, IMPROVEMENT-WEB-VISTA-RENOMBRAR-AGENTES-20261008 ×107), así que su costo no se reparte y acá no se registran números. Costo completo de la sesión: no declarado por el proveedor, 6649907 tokens. Registralo en el ticket cuya sesión sea propia, o declaralo compartido donde corresponda. Sesión \"Feature vista-agentes\".",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "claude:4f9b1b12-ced4-4132-9151-c3a025ede085",
+    "confidence": "high",
+    "id": "CONSUMO-003"
   }
 ]
 ```
@@ -395,6 +506,141 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:06:30.748Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:06:31.046Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:06:31.337Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:06:31.642Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:06:31.945Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:06:32.334Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:06:32.791Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:06:33.130Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:06:33.450Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:06:33.743Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:06:34.041Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:06:34.335Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:06:36.179Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:06:36.352Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-025",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:07:11.597Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
