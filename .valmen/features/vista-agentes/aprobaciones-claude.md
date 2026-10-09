@@ -138,3 +138,11 @@ Qué refinar, de más a menos peso:
 Decisiones de Claude que el PO debe poder revisar (privacidad, sin respaldo de test manual): exposición del texto
 solo sin `--host` (señal `writeToken`), recorte a 500 caracteres y fuentes `input.questions[].question` /
 `toolUseResult.answers`.
+
+## Ampliación de la delegación (2026-10-09)
+
+El PO extendió la delegación de REVIEW al ticket BUGFIX-SERVER-AGENTES-OBSOLETOS-Y-ESTADO-WORKTREE-20261009:
+«Dale, aprueba la REVIEW con tu delegación». Alcance: la REVIEW de ese ticket, mismas exclusiones (SECURITY, `block`,
+despliegue, QA y decisiones de privacidad siguen siendo del PO). No cubre a los otros tickets abiertos
+(FEATURE-MC-PANTALLA-AUTORIZACIONES, IMPROVEMENT-GATE-PRECHECK-CITAS-WORKTREE, IMPROVEMENT-WEB-MUNDOS-CORRECCIONES)
+hasta que lo diga.
