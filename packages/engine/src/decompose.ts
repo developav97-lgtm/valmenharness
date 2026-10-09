@@ -126,6 +126,12 @@ const TOPE_REGLAS = 20_000;
  * Se leen el stack, los estándares en vigor y, si el proyecto escribe uno, su
  * propia skill de descomposición: eso es lo que un proyecto tiene para decir
  * sobre cómo se parte su trabajo.
+ *
+ * La skill va **primero y entera**, y el tope recorta lo demás. Es lo único
+ * escrito para el arquitecto; los estándares se escribieron para quien
+ * implementa. Cuando iba al final, un proyecto con estándares largos la perdía
+ * siempre —SaiOpenCloud declaraba unos 31.000 caracteres— y el arquitecto partía
+ * con la regla genérica.
  */
 export function projectRulesFor(root: string): string {
   const partes: string[] = [];
@@ -158,14 +164,15 @@ ${texto}`);
   }
 
   const skill = leer(join(".valmen", "skills", "descomposicion", "SKILL.md"));
-  if (skill !== "") {
-    partes.push(`### Cómo se descompone en este proyecto\n${skill}`);
-  }
+  const reparto = skill === "" ? "" : `### Cómo se descompone en este proyecto\n${skill}`;
 
   const juntas = partes.join("\n\n");
-  return juntas.length > TOPE_REGLAS
-    ? `${juntas.slice(0, TOPE_REGLAS)}\n\n(reglas recortadas: el proyecto declara más de lo que entra en el prompt)`
-    : juntas;
+  const cupo = Math.max(0, TOPE_REGLAS - reparto.length);
+  const resto =
+    juntas.length > cupo
+      ? `${juntas.slice(0, cupo)}\n\n(reglas recortadas: el proyecto declara más de lo que entra en el prompt)`
+      : juntas;
+  return [reparto, resto].filter((texto) => texto !== "").join("\n\n");
 }
 
 /** El resultado de descomponer. */
@@ -424,8 +431,11 @@ export const SISTEMA_DESCOMPOSICION = [
   "   se te dan.",
   "3. Un ticket no puede estar en dos sprints, y `depends_on` solo puede mencionar",
   "   tickets que existan en el grafo. Sin ciclos.",
-  "4. Un ticket es una unidad revisable: si toca más de un módulo o excede unas",
-  "   pocas horas de trabajo, divídelo.",
+  "4. Un ticket es una unidad revisable y verificable. Propón el menor número de tickets",
+  "   que respete eso: un cambio que cruza capas o archivos para entregar una sola",
+  "   cosa es un ticket, no uno por archivo ni por componente. Divide solo cuando una",
+  "   parte se verifica sola o cuando un impacto crítico —migración, despliegue,",
+  "   sincronización— exige su propia compuerta.",
   "5. El identificador es `<TIPO>-<MODULO>-<DESC>-<YYYYMMDD>`, en mayúsculas.",
   "   El título es **una línea corta** —hasta unos ochenta caracteres— que se lee en",
   "   una tarjeta del tablero. El detalle va en la spec, no en el título: un título",

@@ -23,11 +23,13 @@ import {
   renderTicketsYaml,
 } from "../packages/core/src/index.js";
 import {
+  SISTEMA_DESCOMPOSICION,
   advanceFeature,
   createFeature,
   decomposeFeature,
   decompositionPrompt,
   parseRequirements,
+  projectRulesFor,
   readRequirements,
 } from "../packages/engine/src/index.js";
 
@@ -449,6 +451,42 @@ describe("decomposeFeature", () => {
 
     expect(visto).toContain("Cómo se descompone en este proyecto");
     expect(visto).toContain("Un ticket no cruza dos apps");
+  });
+
+  it("la skill de descomposición llega entera aunque los estándares pasen el tope", () => {
+    // En SaiOpenCloud las reglas sumaban unos 31.000 caracteres contra un tope de
+    // 20.000, y la skill iba al final: se cortaba siempre, y el arquitecto partía
+    // con la regla genérica de «divídelo» —cincuenta tickets donde el proyecto
+    // pedía agrupar—. La skill es lo único escrito para él: entra primero.
+    const root = proyecto();
+    mkdirSync(join(root, ".valmen", "rules"), { recursive: true });
+    mkdirSync(join(root, ".valmen", "skills", "descomposicion"), { recursive: true });
+    writeFileSync(
+      join(root, ".valmen", "rules", "estandares-presentacion.md"),
+      `# Estándares de presentación\n\n${"Los colores salen de variables. ".repeat(800)}`,
+      "utf8",
+    );
+    writeFileSync(
+      join(root, ".valmen", "skills", "descomposicion", "SKILL.md"),
+      "---\nname: descomposicion\n---\n\nCada pieza funcional da un ticket de backend y otro de frontend.\n",
+      "utf8",
+    );
+
+    const reglas = projectRulesFor(root);
+
+    expect(reglas).toContain("Cómo se descompone en este proyecto");
+    expect(reglas).toContain("un ticket de backend y otro de frontend");
+    // El recorte cae sobre los estándares, y se dice.
+    expect(reglas).toContain("reglas recortadas");
+    expect(reglas.length).toBeLessThan(21_000);
+  });
+
+  it("la regla genérica no pide partir un cambio por capas", () => {
+    // «Si toca más de un módulo, divídelo» contradecía la skill del proyecto
+    // —«un ticket puede cruzar capas cuando el cambio es uno»— y, sin ella,
+    // partía una pantalla en tres tickets.
+    expect(SISTEMA_DESCOMPOSICION).not.toContain("si toca más de un módulo");
+    expect(SISTEMA_DESCOMPOSICION).toContain("el menor número de tickets");
   });
 
   it("un proyecto sin reglas no recibe un bloque vacío", async () => {
