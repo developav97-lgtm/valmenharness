@@ -54,3 +54,15 @@ debajo aunque el plan los cubra.
   (REVIEW) y aprobación del plan por la autorización APA-20261009-2cf4af. Razón: pasos, verificabilidad y rollback en
   0.99; la banda (27 criterios entre 0.55 y 0.89) viene de la redacción, y partir C36-C38 pasaría de 40 criterios (el
   precheck lo rechaza); la pastelería pasó con la misma forma.
+
+- **FEATURE-WEB-MUNDO-INVERNADERO · análisis · GR-20261009-FEATURE-WEB-MUNDO-INVERNADERO-20261008-analysis-1** · approve por claude (REVIEW). Razón: un solo punto bajo
+  (`nombra_archivos_reales` 0.81, patrón ya visto), el resto entre 0.91 y 0.95 y clasificación completa.
+  Cinco decisiones de diseño resueltas por Claude con la opción por defecto del ticket (el PO delegó seguir mis
+  recomendaciones): títulos de los tres paneles del invernadero; Caveat con pila de respaldo y sin descarga externa;
+  gotas de la regadera sin azar y con duración fija; tope de tres sobres de la cola en el semillero; el jardinero que
+  termina sale hacia el puesto principal del motor (no hacia el semillero, como en el prototipo).
+
+- **FEATURE-WEB-MUNDO-INVERNADERO · plan · GR-20261009-FEATURE-WEB-MUNDO-INVERNADERO-20261008-plan-1** · approve por
+  claude (REVIEW) y aprobación del plan por la autorización APA-20261009-2cf4af. Razón: pasos, verificabilidad y
+  rollback en 0.99; ningún criterio bajó a zona de bloqueo (24 de 40 entre 0.80 y 0.89 por redacción); partir los
+  siete compuestos choca con el tope de 40 y los otros dos mundos pasaron con la misma forma.
