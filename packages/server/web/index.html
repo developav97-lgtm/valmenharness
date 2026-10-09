@@ -2245,6 +2245,24 @@
           grid-template-columns: repeat(2, minmax(0, 1fr));
         }
       }
+      /* Telemetría del centro de control: paneles azul noche; la fuente Chakra Petch no se descarga, cae en Segoe UI. */
+      .corrida-paneles[data-mundo="control"] .corrida-panel {
+        background: #080d1a; /* valmen:allow-color fondo de los paneles del centro de control */
+        color: #9fd3ff; /* valmen:allow-color texto de los paneles del centro de control */
+        border: 1px solid #223a6e; /* valmen:allow-color borde de los paneles del centro de control */
+        border-radius: 8px;
+        padding: 12px 14px;
+        font-family: "Chakra Petch", "Segoe UI", sans-serif;
+      }
+      .corrida-paneles[data-mundo="control"] .corrida-panel h3 {
+        font-family: "Chakra Petch", "Segoe UI", sans-serif;
+        color: #8fb4ff; /* valmen:allow-color títulos de los paneles del centro de control */
+      }
+      .corrida-paneles[data-mundo="control"] .corrida-panel .id,
+      .corrida-paneles[data-mundo="control"] .corrida-panel td,
+      .corrida-paneles[data-mundo="control"] .corrida-panel .rotulo {
+        color: #dfe9ff; /* valmen:allow-color identificadores de los paneles del centro de control */
+      }
       /* Pizarra de la pastelería: paneles verdes con marco de madera; la fuente Fraunces no se descarga, cae en Georgia. */
       .corrida-paneles[data-mundo="pasteleria"] .corrida-panel {
         background: #24382d; /* valmen:allow-color pizarra de la pastelería */
