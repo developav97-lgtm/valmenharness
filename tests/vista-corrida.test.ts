@@ -214,7 +214,7 @@ describe("la vista Agentes", () => {
     expect(textoDe(filas[1])).toContain("implementando | inferida");
   });
 
-  it("la cola se agrupa por ola y dice a qué espera cada ticket (C10)", async () => {
+  it("la cola se agrupa por ola y dice a qué espera cada ticket (C10, C20: sin el módulo de escena)", async () => {
     const { contenido } = await abrir();
     const olas = buscar(contenido as Nodo, (n) => n.className === "corrida-ola").map(textoDe);
     expect(olas).toHaveLength(3);
@@ -227,7 +227,7 @@ describe("la vista Agentes", () => {
     expect(olas[2]).toContain("FEATURE-CUATRO-20261008 | espera a FEATURE-TRES-20261008");
   });
 
-  it("los entregados llevan su estado del registro (C11)", async () => {
+  it("los entregados llevan su estado del registro (C11, C21: sin el módulo de escena)", async () => {
     const { contenido } = await abrir();
     const texto = textoDe(contenido as Nodo);
     expect(texto).toContain("Entregados");
