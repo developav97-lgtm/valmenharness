@@ -126,13 +126,18 @@ export function crearMontaje({
   let escena = null;
   let canvas = null;
   let filasVigentes = [];
+  let cola = [];
+  let entregados = [];
   let cuadro = null;
   let ultimo = null;
 
   function dibujarCuadro() {
     const ctx = canvas?.getContext?.("2d");
     if (!ctx) return;
-    mundo.dibujar({ ctx, escena, miniatura: false }, escena.t);
+    mundo.dibujar(
+      { ctx, escena, miniatura: false, cola, entregados, ahoraMs: ahora(), ventanaRespuestaMs: VENTANA_RESPUESTA_MS },
+      escena.t,
+    );
   }
 
   function cuadroDeAnimacion() {
@@ -153,9 +158,11 @@ export function crearMontaje({
   }
 
   return {
-    montar(lienzo, filas, ahoraMs) {
+    montar(lienzo, filas, ahoraMs, datos = {}) {
       canvas = lienzo;
       filasVigentes = filas;
+      cola = Array.isArray(datos?.cola) ? datos.cola : [];
+      entregados = Array.isArray(datos?.entregados) ? datos.entregados : [];
       if (escena === null) escena = crearEscena(mundo);
       actualizar(escena, filas, ahoraMs);
       if (cuadro === null) {
@@ -185,6 +192,8 @@ export function crearMontaje({
     reiniciar() {
       escena = null;
       filasVigentes = [];
+      cola = [];
+      entregados = [];
     },
   };
 }

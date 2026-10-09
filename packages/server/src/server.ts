@@ -2349,6 +2349,7 @@ export const ARCHIVOS_WEB: readonly string[] = [
   "agentes/montaje.js",
   "agentes/mundos/index.js",
   "agentes/mundos/pasteleria.js",
+  "agentes/mundos/sprites.js",
   "agentes/mundos/control.js",
   "agentes/mundos/invernadero.js",
 ];

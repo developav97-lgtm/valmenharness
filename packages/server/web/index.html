@@ -2245,6 +2245,26 @@
           grid-template-columns: repeat(2, minmax(0, 1fr));
         }
       }
+      /* Pizarra de la pastelería: paneles verdes con marco de madera; la fuente Fraunces no se descarga, cae en Georgia. */
+      .corrida-paneles[data-mundo="pasteleria"] .corrida-panel {
+        background: #24382d; /* valmen:allow-color pizarra de la pastelería */
+        color: #f1ead8; /* valmen:allow-color pizarra de la pastelería */
+        border: 6px solid #8a5f3b; /* valmen:allow-color marco de madera de la pastelería */
+        border-radius: 8px;
+        padding: 12px 14px;
+      }
+      .corrida-paneles[data-mundo="pasteleria"] .corrida-panel h3 {
+        font-family: "Fraunces", Georgia, serif;
+        color: #f6e7c9; /* valmen:allow-color títulos de la pizarra de la pastelería */
+      }
+      .corrida-paneles[data-mundo="pasteleria"] .corrida-panel .id,
+      .corrida-paneles[data-mundo="pasteleria"] .corrida-panel .rotulo,
+      .corrida-paneles[data-mundo="pasteleria"] .corrida-panel .resultado,
+      .corrida-paneles[data-mundo="pasteleria"] .corrida-panel th,
+      .corrida-paneles[data-mundo="pasteleria"] .corrida-panel td,
+      .corrida-paneles[data-mundo="pasteleria"] .corrida-panel .vacio {
+        color: #f1ead8; /* valmen:allow-color texto de tiza de la pizarra de la pastelería */
+      }
       .corrida-cuenta {
         font-weight: 620;
         font-size: 15px;
@@ -6372,8 +6392,19 @@
         return escenaPromesa;
       }
 
+      const TITULOS_DE_PANEL = { agentes: "Agentes vivos", cola: "Cola", entregados: "Entregados" };
+
+      /** Marca los paneles con el mundo actual y toma sus títulos de `mundo.paneles` si los tiene. */
+      function aplicarMundoAPaneles(paneles, mundo) {
+        if (!paneles || !mundo) return;
+        paneles.dataset.mundo = mundo.id;
+        for (const titulo of paneles.querySelectorAll?.("h3[data-panel]") ?? []) {
+          titulo.textContent = mundo.paneles?.[titulo.dataset.panel] ?? TITULOS_DE_PANEL[titulo.dataset.panel];
+        }
+      }
+
       /** El lienzo, el selector de mundo y los avisos de pregunta; los paneles van aparte. */
-      function pintarLienzoDeAgentes(cont, modulo, agentes, ahora) {
+      function pintarLienzoDeAgentes(cont, modulo, agentes, ahora, datos) {
         const montaje = montajeDeAgentes;
         if (lienzoDeAgentes === null) {
           lienzoDeAgentes = document.createElement("canvas");
@@ -6422,11 +6453,12 @@
             }
             lema.textContent = mundo.lema;
             pintarAvisos();
+            aplicarMundoAPaneles(cont.querySelector?.(".corrida-paneles"), mundo);
           });
           selector.append(boton);
         }
         cont.append(avisos, lienzoDeAgentes, selector, lema);
-        montaje.montar(lienzoDeAgentes, agentes, ahora);
+        montaje.montar(lienzoDeAgentes, agentes, ahora, datos);
       }
 
       async function vistaCorrida() {
@@ -6525,7 +6557,10 @@
               montajeDeAgentes.reiniciar();
               proyectoDelMontaje = proyectoDeLaSolicitud;
             }
-            pintarLienzoDeAgentes(cont, moduloDeEscena, agentes, ahora);
+            pintarLienzoDeAgentes(cont, moduloDeEscena, agentes, ahora, {
+              cola: kpis.cola.map((fila) => fila.ticketId),
+              entregados: kpis.entregadosIds,
+            });
           }
 
           const paneles = el("div", undefined, "corrida-paneles");
@@ -6535,12 +6570,17 @@
           paneles.append(panelVivos, panelCola, panelEntregados);
           cont.append(paneles);
 
-          panelVivos.append(el("h3", "Agentes vivos"));
+          const tituloDe = (clave) => {
+            const titulo = el("h3", TITULOS_DE_PANEL[clave]);
+            titulo.dataset.panel = clave;
+            return titulo;
+          };
+          panelVivos.append(tituloDe("agentes"));
           const filasDePanel = moduloDeEscena !== null ? moduloDeEscena.filasDePanelAgentes(agentes) : vivos;
           if (filasDePanel.length === 0) panelVivos.append(el("div", "Ningún agente trabajando ahora.", "vacio"));
           else panelVivos.append(tablaDeAgentes(filasDePanel, ahora));
 
-          panelCola.append(el("h3", "Cola"));
+          panelCola.append(tituloDe("cola"));
           if (kpis.cola.length === 0) {
             panelCola.append(el("div", hayJornada ? "La cola está vacía." : "Sin jornada programada: no hay cola.", "vacio"));
           } else {
@@ -6561,7 +6601,7 @@
             panelCola.append(contenedor);
           }
 
-          panelEntregados.append(el("h3", "Entregados"));
+          panelEntregados.append(tituloDe("entregados"));
           if (kpis.entregadosIds.length === 0) panelEntregados.append(el("div", "Todavía no se entregó ningún ticket de la corrida.", "vacio"));
           else {
             const contenedor = el("div", undefined, "corrida-cola");
@@ -6572,6 +6612,7 @@
             }
             panelEntregados.append(contenedor);
           }
+          if (moduloDeEscena !== null && montajeDeAgentes !== null) aplicarMundoAPaneles(paneles, montajeDeAgentes.mundoActual());
         }
 
         // Al pie, plegado: lo que antes era la vista Jornadas.
