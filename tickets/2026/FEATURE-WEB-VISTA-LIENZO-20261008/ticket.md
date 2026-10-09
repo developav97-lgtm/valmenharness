@@ -4,8 +4,8 @@ id: FEATURE-WEB-VISTA-LIENZO-20261008
 title: Vista Agentes con lienzo montado desde el motor, selector de mundo, aviso de pregunta, paneles y estáticos declarados
 type: FEATURE
 module: WEB
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -13,7 +13,7 @@ migration_impact: false
 docker_impact: false
 risk_level: normal
 created: 2026-10-08
-updated: 2026-10-08
+updated: 2026-10-09
 related_ticket: null
 target_release: null
 released_in: null
@@ -167,7 +167,7 @@ Ninguno.
       <!-- verify: manual -->
 - [x] C25 (R-ESC-007): en el navegador una pregunta abierta muestra su aviso sobre el lienzo
       <!-- verify: manual -->
-- [ ] C26 (R-ESC-006): en el navegador los agentes no vuelven al puesto principal tras diez refrescos de 5 s
+- [x] C26 (R-ESC-006): en el navegador los agentes no vuelven al puesto principal tras diez refrescos de 5 s
       <!-- verify: manual -->
 - [x] C27: `ARCHIVOS_WEB` lista `index.html`, `agentes/motor.js`, `agentes/montaje.js` y los cuatro archivos de `agentes/mundos/`
       <!-- test: npx vitest run tests/estaticos-web.test.ts -->
@@ -177,11 +177,11 @@ Ninguno.
       <!-- test: npx vitest run tests/estaticos-web.test.ts -->
 - [x] C30: el build de TypeScript del repositorio termina sin errores con `main.ts` usando `ARCHIVOS_WEB`
       <!-- test: npx tsc --build tsconfig.build.json -->
-- [ ] R-ESC-005: La vista DEBE recordar el mundo elegido solo en el navegador (C4, C5, C6, C18, C23, C24)
+- [x] R-ESC-005: La vista DEBE recordar el mundo elegido solo en el navegador (C4, C5, C6, C18, C23, C24)
       <!-- test: npx vitest run tests/vista-lienzo.test.ts -->
-- [ ] R-ESC-006: La escena no se reinicia en cada refresco de datos (C1, C2, C3, C15, C19, C26)
+- [x] R-ESC-006: La escena no se reinicia en cada refresco de datos (C1, C2, C3, C15, C19, C26)
       <!-- test: npx vitest run tests/vista-lienzo.test.ts -->
-- [ ] R-ESC-007: El aviso de pregunta pendiente dice a quién le toca (C7, C25)
+- [x] R-ESC-007: El aviso de pregunta pendiente dice a quién le toca (C7, C25)
       <!-- test: npx vitest run tests/vista-lienzo.test.ts -->
 - [x] R-ESC-007: El aviso de pregunta pendiente dice desde cuándo (C9)
       <!-- test: npx vitest run tests/vista-lienzo.test.ts -->
@@ -191,7 +191,40 @@ Ninguno.
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación de la entrega de FEATURE-WEB-VISTA-LIENZO-20261008",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta verificar sus criterios.",
+    "expected": "Los criterios del ticket se cumplen y el PO valida la pantalla.",
+    "evidence": [
+      "EVIDENCE-002"
+    ],
+    "affected_files": [
+      "packages/cli/src/main.ts",
+      "packages/server/src/server.ts",
+      "packages/server/web/agentes/montaje.js",
+      "packages/server/web/agentes/mundos/control.js",
+      "packages/server/web/agentes/mundos/index.js",
+      "packages/server/web/agentes/mundos/invernadero.js",
+      "packages/server/web/agentes/mundos/pasteleria.js",
+      "packages/server/web/index.html",
+      "tests/estaticos-web.test.ts",
+      "tests/vista-corrida.test.ts",
+      "tests/vista-lienzo.test.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -213,11 +246,33 @@ Desviación menor del plan: `crearMontaje` recibe además `ahora` (reloj) y expo
 - Validaciones manuales (C23-C26, sin marcar: las confirma el responsable): `npm run build`, `valmen serve` sobre un proyecto con jornada, abrir `#/agentes`; ver que el selector ofrece Pastelería, Centro de control e Invernadero con su miniatura (C23); elegir uno, recargar y comprobar que sigue elegido (C24); con un agente que tenga una pregunta abierta, ver el aviso «Pregunta pendiente para una persona» sobre el lienzo (C25); dejar pasar diez refrescos de 5 s y ver que los agentes no vuelven al puesto principal (C26).
 - Comprobación hecha por el agente en el navegador (no sustituye lo anterior): servidor del worktree, filas simuladas con fetch sobre `#/agentes`: aparecieron lienzo, tres miniaturas, aviso con ticket, «hace 40 s» y la expresión del mundo; el mismo `<canvas>` sobrevivió a los refrescos; el mundo elegido quedó en `localStorage` y volvió tras recargar; sin errores de consola. Con datos reales no había agentes vivos.
 - Ambiente: Node 24; navegador con Canvas 2D.
+- Resultado del PO: «los lienzos estan bien» · «A cierralos» (2026-10-09; validó la pantalla con una corrida real).
 
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-09",
+    "build_reference": "commit:8881bbddbff8b3b845c4998cb1cfbbc7c4466dd5",
+    "environment": "macOS, Node 24, main tras integrar; Mission Control del PO en el computador y el iPad",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-09",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "«los lienzos estan bien» · «A cierralos»"
+  }
+]
 ```
 
 ## Evidencia
@@ -231,6 +286,14 @@ Desviación menor del plan: `crearMontaje` recibe además `ahora` (reloj) y expo
     "description": "vitest de 5 archivos del ticket: 69 pruebas en verde; tsc --build tsconfig.build.json sin errores; comprobación en navegador con filas simuladas (lienzo, tres miniaturas, aviso, mundo recordado tras recargar, mismo canvas entre refrescos)",
     "reference": null,
     "point_id": null
+  },
+  {
+    "id": "EVIDENCE-002",
+    "date": "2026-10-09",
+    "kind": "manual-test",
+    "description": "Suite completa en verde y validación del PO con una corrida real en Mission Control",
+    "reference": "worktree:sha256:b57b36973e1b5b3156fdd4604407baa44fa65d99783f98b49d318e961b84c6ad",
+    "point_id": "POINT-001"
   }
 ]
 ```
@@ -238,13 +301,34 @@ Desviación menor del plan: `crearMontaje` recibe además `ahora` (reloj) y expo
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-09",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "«los lienzos estan bien» · «A cierralos»"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-09",
+    "technical_summary": "Lienzo montado desde el motor (montaje.js) con selector de mundo recordado, avisos de pregunta y estáticos declarados en ARCHIVOS_WEB; la vista carga la escena con import dinámico.",
+    "functional_summary": "La vista Agentes dibuja una escena animada con selector de mundo y aviso de pregunta pendiente.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "unreleased: entra con la feature vista-agentes"
+  }
+]
 ```
 
 ## Consumo de IA
@@ -265,6 +349,36 @@ Desviación menor del plan: `crearMontaje` recibe además `ahora` (reloj) y expo
     "source": "manual:subagente de implementación (sonnet) de la corrida orquestada; la sesión no expone números",
     "confidence": "low",
     "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-09",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Subagentes por fase; sin números por ticket.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:sesiones de Claude Code de la corrida orquestada vista-agentes",
+    "confidence": "low",
+    "id": "CONSUMO-002"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-09",
+    "session_reference": "4f9b1b12-ced4-4132-9151-c3a025ede085",
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. Sesión **compartida**: trabajó 15 tickets (FEATURE-SERVER-SESION-PRINCIPAL-20261008 ×129, FEATURE-WEB-MOTOR-ESCENA-20261008 ×118, FEATURE-WEB-VISTA-LIENZO-20261008 ×118, FEATURE-WEB-MUNDO-PASTELERIA-20261008 ×110, IMPROVEMENT-WEB-VISTA-RENOMBRAR-AGENTES-20261008 ×107), así que su costo no se reparte y acá no se registran números. Costo completo de la sesión: no declarado por el proveedor, 6649907 tokens. Registralo en el ticket cuya sesión sea propia, o declaralo compartido donde corresponda. Sesión \"Feature vista-agentes\".",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "claude:4f9b1b12-ced4-4132-9151-c3a025ede085",
+    "confidence": "high",
+    "id": "CONSUMO-003"
   }
 ]
 ```
@@ -384,6 +498,141 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:06:15.664Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:06:15.951Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:06:16.240Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:06:16.528Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:06:16.822Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:06:17.267Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:06:17.786Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:06:18.109Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:06:18.411Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:06:18.719Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:06:19.017Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:06:19.303Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-025",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:06:21.104Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-026",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:06:21.273Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001. Criterios marcados desde el recibo GR-20261009-FEATURE-WEB-VISTA-LIENZO-20261008-qa-mechanical-2 de qa-mechanical: C31, C32, C33, C34."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-027",
+    "date": "2026-10-09",
+    "at": "2026-10-09T14:06:21.600Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
