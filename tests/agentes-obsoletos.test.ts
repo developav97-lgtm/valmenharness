@@ -8,7 +8,7 @@ import { mkdirSync, mkdtempSync, readdirSync, rmSync, statSync, utimesSync } fro
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { choosePaths, nombresDeWorktree } from "../packages/engine/src/index.js";
 import { finesDeSubagentes, leerAgentesDeCorrida } from "../packages/server/src/agentes.js";
@@ -115,7 +115,15 @@ describe("agente terminado según la sesión principal", () => {
   it("C10: la respuesta del endpoint no trae el summary ni la output-file", async () => {
     sesion(transcriptDelCasoReal(), principalCon(notificacion("a0", "completed")));
     const ctx: ServerContext = { root, credentialsFile: join(home, "c"), bindingsFile: join(home, "b.yaml"), env: {}, home };
-    const r = await handleApi("GET", "/api/corrida/agentes", {}, ctx);
+    // El endpoint usa el reloj real: se fija la fecha para que el transcript no salga de la ventana de 24 h.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(RELOJ);
+    let r: Awaited<ReturnType<typeof handleApi>>;
+    try {
+      r = await handleApi("GET", "/api/corrida/agentes", {}, ctx);
+    } finally {
+      vi.useRealTimers();
+    }
     const texto = JSON.stringify(r.body);
     expect(texto).not.toContain(RESUMEN);
     expect(texto).not.toContain("SALIDA-SENSIBLE");
