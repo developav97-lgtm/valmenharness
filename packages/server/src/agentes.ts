@@ -42,10 +42,21 @@ import { ticketsDeTexto } from "./hermes.js";
 
 /** Pasados estos milisegundos sin eventos, un agente que no terminó está esperando. */
 export const ESPERA_MAXIMA_MS = 60_000;
+/** Cuánto tiempo después de contestada se sigue declarando la pregunta (propia: no mueve ESPERA_MAXIMA_MS). */
+export const VENTANA_RESPUESTA_MS = 60_000;
 /** Solo se consideran sesiones con subagentes modificadas dentro de esta ventana. */
 const VENTANA_MS = 24 * 60 * 60 * 1000;
 
 export type EstadoDeAgente = "trabajando" | "esperando" | "termino";
+
+/**
+ * La pregunta al usuario (`AskUserQuestion`) de un agente: solo horas ISO.
+ * Nunca lleva el texto de la pregunta ni el de la respuesta.
+ */
+export interface PreguntaPendiente {
+  readonly desde: string;
+  readonly respondidaEn: string | null;
+}
 
 /** La fila pública de un agente: lista blanca, sin contenido del transcript. */
 export interface AgenteDeCorrida {
@@ -64,6 +75,8 @@ export interface AgenteDeCorrida {
   readonly ticketEstado: string | null;
   readonly faseConfirmada: string | null;
   readonly faseInferida: string | null;
+  /** La pregunta abierta, o contestada hace menos de VENTANA_RESPUESTA_MS; null si no hay. */
+  readonly pregunta: PreguntaPendiente | null;
 }
 
 /** Un identificador de sesión simple: sin separadores de ruta ni puntos. */
@@ -85,6 +98,10 @@ interface Lectura {
   ultimoEventoEn: number | null;
   cerro: boolean;
   pendiente: boolean;
+  /** Hora absoluta (ms) de la pregunta elegida, o null. */
+  preguntaDesde: number | null;
+  /** Hora absoluta (ms) en que se contestó, o null si sigue abierta. */
+  preguntaRespondidaEn: number | null;
 }
 
 const CACHE = new Map<string, Lectura>();
@@ -126,8 +143,13 @@ function leerTranscript(contenido: string): Lectura {
     ultimoEventoEn: null,
     cerro: false,
     pendiente: false,
+    preguntaDesde: null,
+    preguntaRespondidaEn: null,
   };
   const abiertas = new Set<string>();
+  /** Solo las `AskUserQuestion`: id del tool_use → hora del evento. Nunca su entrada. */
+  const preguntas = new Map<string, number>();
+  const respondidas = new Map<string, number>();
   let primerMensajeVisto = false;
 
   for (const linea of contenido.split("\n")) {
@@ -157,6 +179,8 @@ function leerTranscript(contenido: string): Lectura {
           const dato = objeto(bloque);
           if (dato !== null && dato["type"] === "tool_result" && typeof dato["tool_use_id"] === "string") {
             abiertas.delete(dato["tool_use_id"]);
+            // Se mira solo el id y la hora: ni `content` ni `is_error`.
+            if (tieneMarca && preguntas.has(dato["tool_use_id"])) respondidas.set(dato["tool_use_id"], marca);
           }
         }
       }
@@ -186,7 +210,10 @@ function leerTranscript(contenido: string): Lectura {
               lectura.ultimaHerramienta = nombre;
               lectura.ultimaHerramientaEn = tieneMarca ? marca : lectura.ultimaHerramientaEn;
             }
-            if (typeof dato["id"] === "string") abiertas.add(dato["id"]);
+            if (typeof dato["id"] === "string") {
+              abiertas.add(dato["id"]);
+              if (nombre === "AskUserQuestion" && tieneMarca) preguntas.set(dato["id"], marca);
+            }
           }
         }
       }
@@ -195,6 +222,25 @@ function leerTranscript(contenido: string): Lectura {
   }
 
   lectura.pendiente = abiertas.size > 0;
+
+  // Manda la abierta más reciente; sin abiertas, la última respondida.
+  let elegida: string | null = null;
+  for (const [id, desde] of preguntas) {
+    if (!abiertas.has(id)) continue;
+    if (elegida === null || desde >= (preguntas.get(elegida) ?? 0)) elegida = id;
+  }
+  if (elegida !== null) {
+    lectura.preguntaDesde = preguntas.get(elegida) ?? null;
+  } else {
+    for (const [id, desde] of preguntas) {
+      if (!respondidas.has(id)) continue;
+      if (elegida === null || desde >= (preguntas.get(elegida) ?? 0)) elegida = id;
+    }
+    if (elegida !== null) {
+      lectura.preguntaDesde = preguntas.get(elegida) ?? null;
+      lectura.preguntaRespondidaEn = respondidas.get(elegida) ?? null;
+    }
+  }
   return lectura;
 }
 
@@ -330,6 +376,15 @@ function estadoDe(lectura: Lectura, ahora: number): EstadoDeAgente {
   return "trabajando";
 }
 
+/** La pregunta a declarar: abierta, contestada dentro de la ventana, o null. */
+function preguntaDe(lectura: Lectura, ahora: number): PreguntaPendiente | null {
+  if (lectura.preguntaDesde === null) return null;
+  const desde = new Date(lectura.preguntaDesde).toISOString();
+  if (lectura.preguntaRespondidaEn === null) return { desde, respondidaEn: null };
+  if (ahora - lectura.preguntaRespondidaEn > VENTANA_RESPUESTA_MS) return null;
+  return { desde, respondidaEn: new Date(lectura.preguntaRespondidaEn).toISOString() };
+}
+
 /** Una fila por la sesión principal y otra por cada subagente; vacío si no hay subagentes. */
 export function leerAgentesDeCorrida(
   root: string,
@@ -361,6 +416,7 @@ export function leerAgentesDeCorrida(
       ticketEstado: null,
       faseConfirmada: null,
       faseInferida: null,
+      pregunta: preguntaDe(principal, ahora),
     });
   }
 
@@ -396,6 +452,7 @@ export function leerAgentesDeCorrida(
       ticketEstado,
       faseConfirmada,
       faseInferida: faseConfirmada === null ? inferirFase(lectura.ultimaHerramienta) : null,
+      pregunta: preguntaDe(lectura, ahora),
     });
   }
   return filas;
