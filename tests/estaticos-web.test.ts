@@ -13,7 +13,7 @@ import { ARCHIVOS_WEB, loadStatics } from "../packages/server/src/server.js";
 const WEB = join(import.meta.dirname, "..", "packages", "server", "web");
 
 describe("los estáticos de la interfaz", () => {
-  it("ARCHIVOS_WEB lista index.html, el motor, el montaje y los cuatro archivos de mundos (C27)", () => {
+  it("ARCHIVOS_WEB lista index.html, el motor, el montaje, los cuatro archivos de mundos y los sprites (C27)", () => {
     expect([...ARCHIVOS_WEB].sort()).toEqual(
       [
         "index.html",
@@ -21,6 +21,7 @@ describe("los estáticos de la interfaz", () => {
         "agentes/montaje.js",
         "agentes/mundos/index.js",
         "agentes/mundos/pasteleria.js",
+        "agentes/mundos/sprites.js",
         "agentes/mundos/control.js",
         "agentes/mundos/invernadero.js",
       ].sort(),
