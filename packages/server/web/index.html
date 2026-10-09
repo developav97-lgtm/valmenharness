@@ -1867,6 +1867,65 @@
       .qa-agente .qa-mensaje.mal {
         color: var(--error);
       }
+      /* autorizacion-casillas:inicio */
+      .qa-agente .qa-fila {
+        align-items: start;
+      }
+      .qa-agente .casillas {
+        border: 1px solid var(--borde);
+        border-radius: 6px;
+        padding: 8px 10px;
+        margin: 0;
+        min-width: 0;
+      }
+      .qa-agente .casillas legend {
+        font-size: 12px;
+        color: var(--tenue);
+        padding: 0 4px;
+      }
+      .qa-agente .casillas .casillas-lista {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 14px;
+        max-height: 240px;
+        overflow-x: hidden;
+        overflow-y: auto;
+      }
+      .qa-agente .casillas label {
+        display: inline-flex;
+        grid-template-columns: none;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+        color: var(--texto);
+      }
+      .qa-agente .casillas input[type="checkbox"],
+      .qa-agente .casillas input[type="radio"] {
+        padding: 0;
+        margin: 0;
+        accent-color: var(--acento);
+        background: var(--fondo);
+        border: 1px solid var(--borde);
+      }
+      .qa-agente .casillas .casillas-todos {
+        flex-basis: 100%;
+        color: var(--acento);
+        font-weight: 600;
+      }
+      .qa-agente .casillas .casillas-cuenta {
+        color: var(--tenue);
+        font-size: 11px;
+      }
+      .qa-agente .casillas .casillas-aviso {
+        font-size: 12px;
+        color: var(--alerta);
+        margin-top: 6px;
+      }
+      .qa-agente .casillas .casillas-vacio {
+        font-size: 12px;
+        color: var(--tenue);
+      }
+      /* autorizacion-casillas:fin */
       .politicas {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -2587,6 +2646,55 @@
         if (texto !== undefined) nodo.textContent = texto;
         if (clase !== undefined) nodo.className = clase;
         return nodo;
+      }
+
+      /**
+       * Un grupo de casillas (o de radios, con `unico: true`) para el formulario de autorizaciones.
+       * `opciones` son `{ valor, etiqueta, cuenta? }`. Con `conTodos: true` agrega «Seleccionar todos»,
+       * que solo marca las casillas: su palabra nunca viaja en `valores()`.
+       */
+      function grupoDeCasillas(titulo, opciones, { conTodos, marcadas = [], unico = false, aviso = "", vacio = "" } = {}) {
+        const nodo = el("fieldset", undefined, "casillas");
+        nodo.append(el("legend", titulo));
+        const lista = el("div", undefined, "casillas-lista");
+        const nombre = `grupo-${titulo}`;
+        const cajas = [];
+        let todos = null;
+        const sincronizar = () => {
+          if (todos !== null) todos.checked = cajas.length > 0 && cajas.every((c) => c.checked);
+        };
+        if (conTodos && !unico && opciones.length > 0) {
+          const rotulo = el("label", undefined, "casillas-todos");
+          todos = el("input");
+          todos.type = "checkbox";
+          todos.addEventListener("change", () => {
+            for (const c of cajas) c.checked = todos.checked;
+          });
+          rotulo.append(todos, el("span", "Seleccionar todos"));
+          lista.append(rotulo);
+        }
+        for (const o of opciones) {
+          const rotulo = el("label");
+          const caja = el("input");
+          if (unico) {
+            caja.type = "radio";
+            caja.name = nombre;
+          } else {
+            caja.type = "checkbox";
+          }
+          caja.value = o.valor;
+          caja.checked = marcadas.includes(o.valor);
+          caja.addEventListener("change", sincronizar);
+          cajas.push(caja);
+          rotulo.append(caja, el("span", o.etiqueta ?? o.valor));
+          if (o.cuenta !== undefined) rotulo.append(el("span", `(${o.cuenta})`, "casillas-cuenta"));
+          lista.append(rotulo);
+        }
+        if (opciones.length === 0 && vacio !== "") lista.append(el("span", vacio, "casillas-vacio"));
+        nodo.append(lista);
+        if (aviso !== "") nodo.append(el("div", aviso, "casillas-aviso"));
+        sincronizar();
+        return { nodo, valores: () => cajas.filter((c) => c.checked).map((c) => c.value) };
       }
 
       /**
@@ -8304,15 +8412,27 @@
             rotulo.append(entrada);
             return { rotulo, entrada };
           };
-          const tipos = campo("Tipos (BUGFIX, IMPROVEMENT, CHORE, FEATURE)", "BUGFIX");
-          const modulos = campo("Módulos (separados por coma)", "");
+          let opciones;
+          try {
+            opciones = await enviar("GET", "/api/authorizations/options");
+          } catch (falla) {
+            qaAgente.append(el("div", String(falla.message ?? falla), "qa-mensaje mal"));
+            return;
+          }
+          const avisoModulos = "Seleccionar todos marca los módulos de hoy: un módulo nuevo no queda cubierto.";
+          const tipos = grupoDeCasillas("Tipos", opciones.qa.types.map((valor) => ({ valor })), { conTodos: true, marcadas: ["BUGFIX"] });
+          const modulos = grupoDeCasillas(
+            "Módulos",
+            opciones.modules.map((m) => ({ valor: m.module, cuenta: m.tickets })),
+            { conTodos: true, aviso: avisoModulos, vacio: "El proyecto no tiene módulos en su registro." },
+          );
           const riesgo = campo("Riesgo máximo (low o normal)", "normal");
           const cupo = campo("Cupo diario", "1", "number");
           const dias = campo("Vigencia en días", "30", "number");
           const actor = campo("Responsable", "");
           const frase = campo("Frase literal de quien autoriza", "");
           const fila1 = el("div", undefined, "qa-fila");
-          fila1.append(tipos.rotulo, modulos.rotulo, riesgo.rotulo, cupo.rotulo, dias.rotulo);
+          fila1.append(tipos.nodo, modulos.nodo, riesgo.rotulo, cupo.rotulo, dias.rotulo);
           const fila2 = el("div", undefined, "qa-fila");
           fila2.append(actor.rotulo, frase.rotulo);
           const crear = el("button", "Autorizar");
@@ -8322,8 +8442,8 @@
               const r = await enviar("POST", "/api/qa/authorizations", {
                 actor: actor.entrada.value,
                 quote: frase.entrada.value,
-                types: tipos.entrada.value,
-                modules: modulos.entrada.value,
+                types: tipos.valores(),
+                modules: modulos.valores(),
                 maxRisk: riesgo.entrada.value,
                 dailyQuota: Number(cupo.entrada.value),
                 validDays: Number(dias.entrada.value),
@@ -8384,18 +8504,30 @@
             rotulo.append(entrada);
             return { rotulo, entrada };
           };
-          const tipos = campo("Tipos (BUGFIX, IMPROVEMENT, CHORE, FEATURE, SYNC, INTEGRATION, AGENT)", "BUGFIX");
-          const modulos = campo("Módulos (separados por coma)", "");
+          let opciones;
+          try {
+            opciones = await enviar("GET", "/api/authorizations/options");
+          } catch (falla) {
+            aprobacionAuto.append(el("div", String(falla.message ?? falla), "qa-mensaje mal"));
+            return;
+          }
+          const avisoModulos = "Seleccionar todos marca los módulos de hoy: un módulo nuevo no queda cubierto.";
+          const tipos = grupoDeCasillas("Tipos", opciones.approval.types.map((valor) => ({ valor })), { conTodos: true, marcadas: ["BUGFIX"] });
+          const modulos = grupoDeCasillas(
+            "Módulos",
+            opciones.modules.map((m) => ({ valor: m.module, cuenta: m.tickets })),
+            { conTodos: true, aviso: avisoModulos, vacio: "El proyecto no tiene módulos en su registro." },
+          );
           const riesgo = campo("Riesgo máximo (low o normal)", "normal");
-          const impactos = campo("Impactos admitidos (sync_impact, migration_impact, docker_impact)", "");
-          const etapas = campo("Etapas (analysis, plan)", "analysis,plan");
-          const modo = campo("Modo (on-approve o reviewer)", "on-approve");
+          const impactos = grupoDeCasillas("Impactos admitidos", opciones.approval.impacts.map((valor) => ({ valor })), { conTodos: false });
+          const etapas = grupoDeCasillas("Etapas", opciones.approval.stages.map((valor) => ({ valor })), { conTodos: true, marcadas: ["analysis", "plan"] });
+          const modo = grupoDeCasillas("Modo", opciones.approval.modes.map((valor) => ({ valor })), { unico: true, marcadas: ["on-approve"] });
           const cupo = campo("Cupo diario", "1", "number");
           const dias = campo("Vigencia en días", "30", "number");
           const actor = campo("Responsable", "");
           const frase = campo("Frase literal de quien autoriza", "");
           const fila1 = el("div", undefined, "qa-fila");
-          fila1.append(tipos.rotulo, modulos.rotulo, riesgo.rotulo, impactos.rotulo, etapas.rotulo, modo.rotulo, cupo.rotulo, dias.rotulo);
+          fila1.append(tipos.nodo, modulos.nodo, riesgo.rotulo, impactos.nodo, etapas.nodo, modo.nodo, cupo.rotulo, dias.rotulo);
           const fila2 = el("div", undefined, "qa-fila");
           fila2.append(actor.rotulo, frase.rotulo);
           const crear = el("button", "Autorizar");
@@ -8405,12 +8537,12 @@
               const r = await enviar("POST", "/api/approval/authorizations", {
                 actor: actor.entrada.value,
                 quote: frase.entrada.value,
-                types: tipos.entrada.value,
-                modules: modulos.entrada.value,
+                types: tipos.valores(),
+                modules: modulos.valores(),
                 maxRisk: riesgo.entrada.value,
-                impacts: impactos.entrada.value,
-                stages: etapas.entrada.value,
-                mode: modo.entrada.value,
+                impacts: impactos.valores(),
+                stages: etapas.valores(),
+                mode: modo.valores()[0] ?? "on-approve",
                 dailyQuota: Number(cupo.entrada.value),
                 validDays: Number(dias.entrada.value),
               });

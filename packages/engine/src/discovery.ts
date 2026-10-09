@@ -29,6 +29,7 @@ import {
   readGateThresholds,
   readPlanApprovalSources,
   readApprovalAuthorizationSources,
+  readAuthorizationModules,
   readQaAuthorizationSources,
   type ThresholdOverride,
   readPlaywrightConfig,
@@ -224,6 +225,11 @@ export function planApprovalSources(root: string): readonly string[] {
 /** Los canales desde los que se acepta crear o revocar una autorización de aprobación. */
 export function approvalAuthorizationSources(root: string): readonly string[] {
   return readApprovalAuthorizationSources(configDelProyecto(root) ?? {});
+}
+
+/** Los módulos que el proyecto declara para la pantalla de autorizaciones, o `null` si ofrece los del registro. */
+export function authorizationModules(root: string): readonly string[] | null {
+  return readAuthorizationModules(configDelProyecto(root) ?? {});
 }
 
 /** Los canales desde los que se acepta crear o revocar una autorización de QA. */

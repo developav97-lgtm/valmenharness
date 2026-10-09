@@ -39,6 +39,18 @@ const AUTORIZACION = {
 };
 const DE_QA = { ...AUTORIZACION, id: "QAA-20261008-a5fb57" };
 
+const OPCIONES = {
+  source: "registry",
+  modules: [{ module: "WEB", tickets: 2 }, { module: "ENGINE", tickets: 1 }],
+  approval: {
+    types: ["BUGFIX", "IMPROVEMENT", "CHORE", "FEATURE", "SYNC", "INTEGRATION", "AGENT"],
+    stages: ["analysis", "plan"],
+    modes: ["on-approve", "reviewer"],
+    impacts: ["sync_impact", "migration_impact", "docker_impact"],
+  },
+  qa: { types: ["BUGFIX", "IMPROVEMENT", "CHORE", "FEATURE"] },
+};
+
 async function pintar() {
   const llamadas: Llamada[] = [];
   const vista = await ejecutarInterfaz(HTML, {
@@ -55,6 +67,7 @@ async function pintar() {
       if (url.pathname === "/api/config") {
         return { config: { ...checkConfig(RAIZ, "name: Demo\n"), text: "name: Demo\n", diff: [] }, impact: null };
       }
+      if (url.pathname === "/api/authorizations/options") return OPCIONES;
       if (url.pathname === "/api/qa/authorizations" && (init?.method ?? "GET") === "GET") return { authorizations: [DE_QA] };
       if (url.pathname === "/api/approval/authorizations" && (init?.method ?? "GET") === "GET") {
         return { authorizations: [AUTORIZACION] };

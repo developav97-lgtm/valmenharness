@@ -128,6 +128,7 @@ import {
   routingFromForm,
   writeRouting,
 } from "./routing.js";
+import { listarOpcionesDeAutorizacion } from "./autorizaciones-opciones.js";
 import { crearAutorizacionDeAprobacionMc, listarAutorizacionesDeAprobacion, revocarAutorizacionDeAprobacionMc } from "./approval-autorizaciones.js";
 import { crearAutorizacionQa, listarAutorizacionesQa, revocarAutorizacionQa } from "./qa-autorizaciones.js";
 import { listFeatureRows, readFeatureDetail, summarizeFeatures } from "./features.js";
@@ -1858,6 +1859,10 @@ export async function handleApi(
 
   // GET/POST /api/approval/authorizations y /revoke  — la autorización de aprobación automática (R-APRO-001).
   // Las escrituras ya pasaron por `exigirTokenEnEscritura`; el motor rechaza una sesión desatendida.
+  // GET /api/authorizations/options  — opciones del formulario: módulos del proyecto activo, tipos, etapas, modos e impactos.
+  if (path === "/api/authorizations/options" && method === "GET") {
+    return listarOpcionesDeAutorizacion(context.root, context.paths ?? choosePaths(context.root));
+  }
   if (path === "/api/approval/authorizations" && method === "GET") {
     return listarAutorizacionesDeAprobacion(context.root);
   }

@@ -236,6 +236,17 @@ const FEATURE = {
 /** Responde cada ruta con la forma que la vista espera. */
 function respuesta(ruta) {
   if (ruta.includes("/api/health")) return { root: "/proyecto" };
+  if (ruta.includes("/api/authorizations/options")) return {
+    source: "registry",
+    modules: [{ module: "WEB", tickets: 2 }, { module: "ENGINE", tickets: 1 }],
+    approval: {
+      types: ["BUGFIX", "IMPROVEMENT", "CHORE", "FEATURE", "SYNC", "INTEGRATION", "AGENT"],
+      stages: ["analysis", "plan"],
+      modes: ["on-approve", "reviewer"],
+      impacts: ["sync_impact", "migration_impact", "docker_impact"],
+    },
+    qa: { types: ["BUGFIX", "IMPROVEMENT", "CHORE", "FEATURE"] },
+  };
   if (ruta.includes("/api/portafolio")) return {
     available: true,
     reason: null,

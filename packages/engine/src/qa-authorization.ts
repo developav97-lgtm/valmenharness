@@ -145,6 +145,9 @@ export function crearAutorizacion(request: CrearAutorizacionRequest): QaAuthoriz
   if (modules.length === 0 || modules.includes("*")) {
     fail("Una autorización declara módulos concretos: ni vacía ni con comodín.", EXIT_SCHEMA);
   }
+  if (modules.includes("todos") || modules.includes("all")) {
+    fail("Los módulos `todos` y `all` no existen: elige los módulos en la lista.", EXIT_SCHEMA);
+  }
   if (!(RIESGOS_AUTORIZABLES as readonly string[]).includes(request.maxRisk)) {
     fail(`El riesgo máximo autorizable es ${RIESGOS_AUTORIZABLES.join(" o ")}; recibí «${request.maxRisk}».`, EXIT_INVARIANT);
   }

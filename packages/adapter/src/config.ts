@@ -1160,6 +1160,24 @@ export function readApprovalAuthorizationSources(config: ConfigMap): readonly st
   return fuentes;
 }
 
+/**
+ * Lee `authorization-modules`: los módulos que la pantalla de autorizaciones ofrece en lugar de los del registro.
+ * Devuelve `null` si la clave no existe. Una lista vacía o con un nombre inválido **falla**.
+ */
+export function readAuthorizationModules(config: ConfigMap): readonly string[] | null {
+  if (config["authorization-modules"] === undefined) return null;
+  const modulos = readList(config, "authorization-modules", []);
+  if (modulos.length === 0) {
+    fail('config.yaml: "authorization-modules" no puede estar vacía; quite la clave para ofrecer los módulos del registro.');
+  }
+  for (const modulo of modulos) {
+    if (!/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(modulo)) {
+      fail(`config.yaml: "authorization-modules" contiene un módulo inválido: «${modulo}».`);
+    }
+  }
+  return modulos;
+}
+
 /** Los canales desde los que se acepta crear o revocar una autorización de QA si el proyecto no declara los suyos. */
 export const DEFAULT_QA_AUTHORIZATION_SOURCES: readonly string[] = ["cli", "mission-control"];
 
