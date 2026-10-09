@@ -4,8 +4,8 @@ id: IMPROVEMENT-GATE-CRITERIOS-MANUALES-POR-FORMA-20261009
 title: Validar por forma en código los criterios manuales y contar afirmaciones en el tope de criterios
 type: IMPROVEMENT
 module: GATE
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -159,7 +159,46 @@ Decisión del PO (2026-10-09, por AskUserQuestion, transmitida por el orquestado
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación delegada de IMPROVEMENT-GATE-CRITERIOS-MANUALES-POR-FORMA-20261009",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta verificar sus criterios.",
+    "expected": "Los criterios del ticket se cumplen y sus pruebas dan el resultado esperado.",
+    "evidence": [
+      "EVIDENCE-001"
+    ],
+    "affected_files": [
+      "packages/engine/src/gate.ts",
+      "packages/engine/src/revision-previa.ts",
+      "packages/gate/src/criteria.ts",
+      "packages/gate/src/dynamic.ts",
+      "skills/planificacion/SKILL.md",
+      "tests/gate-command.test.ts",
+      "tests/gate-criterios-por-forma.test.ts",
+      "tests/gate-lector-criterios.test.ts",
+      "tests/gate-plan-aviso.test.ts",
+      "tests/gate-playwright-plan.test.ts",
+      "tests/gate-promotion.test.ts",
+      "tests/gate-view.test.ts",
+      "tests/helpers/fixtures.ts",
+      "tests/mcp-server.test.ts",
+      "tests/revision-previa.test.ts",
+      "tests/statehash-archivos-citados.test.ts",
+      "tests/umbrales-por-evaluador.test.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -194,28 +233,81 @@ Validación manual (C29): la skill `planificacion` (`skills/planificacion/SKILL.
 
 Resultado de esta sesión: 1 y 2 a 5 verdes; 6 al día.
 
+- Resultado del PO: Cerrarlos (Recomendado). Las pruebas del ticket las ejecutó el agente y dieron el resultado esperado: Pruebas del ticket y suite completa en verde; qa-mechanical approve
+
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-09",
+    "build_reference": "commit:00b0558788fcfdaa36730e24ac6d7ae7c90e092d",
+    "environment": "macOS, Node 24, main tras integrar; suite completa 231 archivos y 3927 pruebas en verde",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-09",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "Cerrarlos (Recomendado)"
+  }
+]
 ```
 
 ## Evidencia
 
 ```json
-[]
+[
+  {
+    "id": "EVIDENCE-001",
+    "date": "2026-10-09",
+    "kind": "automated-test",
+    "description": "Pruebas del ticket y suite completa en verde; qa-mechanical approve",
+    "reference": "worktree:sha256:7b9b501221d56b6f1fbfc1527a1862dddf49a738ef5cf123befb52b223b5cdc1",
+    "point_id": "POINT-001"
+  }
+]
 ```
 
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-09",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "Cerrarlos (Recomendado)"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-09",
+    "technical_summary": "Los criterios verify: manual y «la prueba X pasa» citados por un paso del plan se deciden en código (una afirmación, cita Cn, archivo de prueba nombrado) en vez de preguntarle al modelo; el tope de criterios cuenta afirmaciones.",
+    "functional_summary": "Menos vueltas de REVIEW por la forma de los criterios, sin bajar la exigencia de que el plan los cubra.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "unreleased"
+  }
+]
 ```
 
 ## Consumo de IA
@@ -337,6 +429,123 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-09",
+    "at": "2026-10-09T16:59:23.688Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-10-09",
+    "at": "2026-10-09T16:59:23.851Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-09",
+    "at": "2026-10-09T16:59:23.996Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-09",
+    "at": "2026-10-09T16:59:24.137Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-09",
+    "at": "2026-10-09T16:59:24.272Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-09",
+    "at": "2026-10-09T16:59:24.674Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-09",
+    "at": "2026-10-09T16:59:25.187Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-09",
+    "at": "2026-10-09T16:59:25.378Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-09",
+    "at": "2026-10-09T16:59:25.573Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-09",
+    "at": "2026-10-09T16:59:25.759Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-09",
+    "at": "2026-10-09T16:59:25.954Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-09",
+    "at": "2026-10-09T16:59:26.144Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-09",
+    "at": "2026-10-09T16:59:26.298Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
