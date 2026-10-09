@@ -1101,6 +1101,176 @@ describe("las sesiones de Claude Code", () => {
       expect(String(entrada?.["notes"])).toContain("claude-haiku-4-5 (1 mensajes)");
       expect(String(entrada?.["notes"])).toContain("1 subagente(s)");
     });
+
+    describe("los subagentes con ticket propio", () => {
+      // Transcripts sintéticos en el HOME temporal `lab`: nada lee el HOME real.
+      const AGENTE_0 = `${SESION}/agent-a0`;
+      const AGENTE_1 = `${SESION}/agent-a1`;
+      const AGENTE_2 = `${SESION}/agent-a2`;
+
+      /** Un subagente: 5 de entrada, 50 de creación, 500 de caché leída y 20 de salida. */
+      function subagente(id: string, ticket: string, inicio: string, fin: string): string[] {
+        return [
+          mensajeDelUsuario(`Trabaja ${ticket}`, { cwd: lab, timestamp: inicio }),
+          ...mensajeDelAsistente(
+            {
+              id: `msg_${id}`,
+              uso: { input: 5, creacion: 50, lectura: 500, salida: 20 },
+              bloques: [
+                texto("Listo."),
+                llamada(`toolu_${id}`, "mcp__valmen__mover_ticket", { id: ticket, to: "analyzed" }),
+              ],
+            },
+            { cwd: lab, timestamp: fin },
+          ),
+        ];
+      }
+
+      /** Una madre que orquesta dos tickets (compartida), con dos subagentes del primero. */
+      function escribirCorrida(): void {
+        writeFixtureTicket(lab, { id: TICKET, type: "IMPROVEMENT", module: "POS" });
+        writeFixtureTicket(lab, { id: OTRO, type: "BUGFIX", module: "RESTAURANTE" });
+        escribirSesionDeClaude(lab, {
+          root: lab,
+          id: SESION,
+          lineas: [
+            mensajeDelUsuario("Orquesta la corrida", { cwd: lab }),
+            ...mensajeDelAsistente(
+              {
+                id: "msg_madre",
+                uso: { input: 10, creacion: 1000, lectura: 50_000, salida: 400 },
+                bloques: [
+                  llamada("tm1", "mcp__valmen__mover_ticket", { id: TICKET, to: "analyzed" }),
+                  llamada("tm2", "mcp__valmen__mover_ticket", { id: OTRO, to: "analyzed" }),
+                ],
+              },
+              { cwd: lab },
+            ),
+          ],
+          subagentes: [
+            subagente("a0", TICKET, "2026-10-05T10:00:00.000Z", "2026-10-05T10:12:00.000Z"),
+            subagente("a1", TICKET, "2026-10-05T11:00:00.000Z", "2026-10-05T11:03:00.000Z"),
+            subagente("a2", OTRO, "2026-10-05T12:00:00.000Z", "2026-10-05T12:01:00.000Z"),
+          ],
+        });
+      }
+
+      const entrada = (referencia: string): Record<string, unknown> | undefined =>
+        consumo().find((e) => e["session_reference"] === referencia);
+
+      it("el subagente deja en su ticket una entrada con sus números y su modelo", () => {
+        escribirCorrida();
+
+        guardarFotoEnTicket(paths(), TICKET, { home: lab });
+
+        const propia = entrada(AGENTE_0);
+        expect(propia?.["source"]).toBe(`claude:${AGENTE_0}`);
+        expect(propia?.["session_reference"]).toBe(AGENTE_0);
+        expect(propia?.["input_tokens"]).toBe(55);
+        expect(propia?.["output_tokens"]).toBe(20);
+        expect(propia?.["total_tokens"]).toBe(75);
+        expect(propia?.["model"]).toBe("anthropic/claude-sonnet-5-5");
+        expect(propia?.["estimated_cost_usd"]).toBeNull();
+        const notas = String(propia?.["notes"]);
+        expect(notas).toContain(`Subagente de la sesión ${SESION}`);
+        expect(notas).toContain("12 min");
+        expect(notas).toContain("Caché leída 500 tokens");
+      });
+
+      it("dos subagentes del ticket dejan dos entradas con números", () => {
+        escribirCorrida();
+
+        guardarFotoEnTicket(paths(), TICKET, { home: lab });
+
+        expect(entrada(AGENTE_0)?.["total_tokens"]).toBe(75);
+        expect(entrada(AGENTE_1)?.["total_tokens"]).toBe(75);
+        expect(entrada(AGENTE_1)?.["notes"]).toEqual(expect.stringContaining("3 min"));
+      });
+
+      it("la madre compartida sigue sin números y su total no incluye a los separados", () => {
+        escribirCorrida();
+
+        guardarFotoEnTicket(paths(), TICKET, { home: lab });
+
+        const compartida = entrada(SESION);
+        expect(compartida?.["input_tokens"]).toBeNull();
+        const notas = String(compartida?.["notes"]);
+        expect(notas).toContain("compartida");
+        // 1010 de entrada y 400 de salida de la madre; 3 x 75 de los subagentes no cuentan.
+        expect(notas).toContain("1410 tokens");
+        expect(notas).toContain("sin los subagentes con ticket propio");
+      });
+
+      it("guardar la foto dos veces deja una sola entrada por subagente", () => {
+        escribirCorrida();
+
+        guardarFotoEnTicket(paths(), TICKET, { home: lab });
+        const segunda = guardarFotoEnTicket(paths(), TICKET, { home: lab });
+
+        expect(segunda?.entradas).toEqual([]);
+        expect(consumo().filter((e) => e["session_reference"] === AGENTE_0)).toHaveLength(1);
+        expect(consumo().filter((e) => e["session_reference"] === AGENTE_1)).toHaveLength(1);
+      });
+
+      it("la foto de otro ticket no se lleva los subagentes de este", () => {
+        escribirCorrida();
+
+        guardarFotoEnTicket(paths(), OTRO, { home: lab });
+
+        const ruta = join(lab, "tickets", "2026", OTRO, "ticket.md");
+        const referencias = (
+          (parseTicket(readFileSync(ruta, "utf8")).blocks["Consumo de IA"] ?? []) as Record<
+            string,
+            unknown
+          >[]
+        ).map((e) => e["session_reference"]);
+        expect(referencias).toContain(AGENTE_2);
+        expect(referencias).toContain(SESION);
+        expect(referencias).not.toContain(AGENTE_0);
+        expect(referencias).not.toContain(AGENTE_1);
+      });
+
+      it("una madre ya registrada con números no separa a sus subagentes", () => {
+        writeFixtureTicket(lab, { id: TICKET, type: "IMPROVEMENT", module: "POS" });
+        writeFixtureTicket(lab, { id: OTRO, type: "BUGFIX", module: "RESTAURANTE" });
+        escribirSesionDeClaude(lab, {
+          root: lab,
+          id: SESION,
+          lineas: lineasDeTrabajo(lab, TICKET),
+          subagentes: [subagente("a0", TICKET, "2026-10-05T10:00:00.000Z", "2026-10-05T10:05:00.000Z")],
+        });
+        // La madre ya quedó cargada con números —y con ellos, su subagente— en otro ticket.
+        addAiUsage({
+          paths: paths(),
+          ticketId: OTRO,
+          source: `claude:${SESION}`,
+          confidence: "high",
+          sessionReference: SESION,
+          model: "anthropic/claude-sonnet-5-5",
+          inputTokens: "3085",
+          outputTokens: "1020",
+          totalTokens: "4105",
+        });
+
+        guardarFotoEnTicket(paths(), TICKET, { home: lab });
+
+        expect(entrada(AGENTE_0)).toBeUndefined();
+        expect(String(entrada(SESION)?.["notes"])).toContain(`ya cargada con números en ${OTRO}`);
+      });
+
+      it("la línea de tiempo del ticket muestra la sesión del subagente", async () => {
+        escribirCorrida();
+
+        const { leerLineaDeTiempo } = await cargar();
+        const linea = leerLineaDeTiempo(lab, { home: lab, ticketId: TICKET });
+
+        const delSubagente = linea?.sessions.find((s) => s.id === AGENTE_0);
+        expect(delSubagente?.source).toBe("claude");
+        expect(delSubagente?.sesionMadre).toBe(SESION);
+        expect(delSubagente?.duracionMs).toBe(12 * 60 * 1000);
+        expect(delSubagente?.reparto).toBeUndefined();
+      });
+    });
   });
 });
 

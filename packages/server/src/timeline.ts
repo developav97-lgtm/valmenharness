@@ -25,7 +25,13 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 
 import { parseTicket } from "@valmen/core";
-import { type RegistryPaths, addAiUsage, findTicket, sessionNumbersOwner } from "@valmen/engine";
+import {
+  type RegistryPaths,
+  addAiUsage,
+  findTicket,
+  sessionNumbersAnywhere,
+  sessionNumbersOwner,
+} from "@valmen/engine";
 
 import { leerSesionesDeClaude, type SesionDeClaude } from "./claude.js";
 import { leerSesionesDeCodex } from "./codex.js";
@@ -129,6 +135,10 @@ export interface SesionDeAgente {
    */
   readonly intervenciones: number;
   readonly fallidas: number;
+  /** Solo en un subagente de Claude Code con ticket propio: la sesión madre que lo lanzó. */
+  readonly sesionMadre?: string;
+  /** Solo en un subagente de Claude Code con ticket propio: cuánto duró, en milisegundos. */
+  readonly duracionMs?: number;
   /**
    * La base de la que salió esta sesión, cuando no es la de opencode.
    *
@@ -361,7 +371,12 @@ interface AgregadoDeSesion {
  */
 export function leerLineaDeTiempo(
   directory: string,
-  options: { readonly home?: string; readonly ticketId?: string } = {},
+  options: {
+    readonly home?: string;
+    readonly ticketId?: string;
+    /** ¿La sesión madre ya quedó registrada con números? Sus subagentes no se separan. */
+    readonly madreYaContada?: (idMadre: string) => boolean;
+  } = {},
 ): LineaDeTiempo | null {
   const dbPath = opencodeDbPath(options.home ?? homedir());
   const db = abrir(dbPath);
@@ -379,8 +394,12 @@ export function leerLineaDeTiempo(
       ...(options.home === undefined ? {} : { home: options.home }),
       ...(options.ticketId === undefined ? {} : { ticketId: options.ticketId }),
     };
+    const opcionesDeClaude = {
+      ...opciones,
+      ...(options.madreYaContada === undefined ? {} : { madreYaContada: options.madreYaContada }),
+    };
     const deCodex = leerSesionesDeCodex(directory, opciones);
-    const deClaude = leerSesionesDeClaude(directory, opciones);
+    const deClaude = leerSesionesDeClaude(directory, opcionesDeClaude);
     const deHermes = leerSesionesDeHermes(directory, opciones);
     return unirLineas([
       ...(deCodex.length === 0 ? [] : [lineaSoloDeCodex(deCodex, directory)]),
@@ -390,7 +409,7 @@ export function leerLineaDeTiempo(
   }
 
   try {
-    return consultar(db, dbPath, directory, options.ticketId, options.home);
+    return consultar(db, dbPath, directory, options.ticketId, options.home, options.madreYaContada);
   } finally {
     db.close();
   }
@@ -468,6 +487,12 @@ function sesionDeClaude(sesion: SesionDeClaude): SesionDeAgente {
     mensajesDelRegistro: sesion.mensajesDelRegistro,
     modelos: sesion.modelos,
     subagentes: sesion.subagentes,
+    ...(sesion.sesionMadre === undefined
+      ? {}
+      : {
+          sesionMadre: sesion.sesionMadre,
+          duracionMs: Math.max(0, (sesion.terminaEn ?? sesion.startedAt) - sesion.startedAt),
+        }),
     // El reparto son los tickets que la sesión **trabajó**: el lector ya dejó solo
     // esos. Una compartida queda fuera de los totales, como las de Hermes.
     ...(sesion.compartida ? { reparto: sesion.tickets } : {}),
@@ -629,6 +654,7 @@ function consultar(
   directory: string,
   ticketId: string | undefined,
   home: string | undefined,
+  madreYaContada?: (idMadre: string) => boolean,
 ): LineaDeTiempo | null {
   const patron = `${directory}%`;
 
@@ -1052,6 +1078,7 @@ function consultar(
   for (const sesion of leerSesionesDeClaude(directory, {
     ...(home === undefined ? {} : { home }),
     ...(ticketId === undefined ? {} : { ticketId }),
+    ...(madreYaContada === undefined ? {} : { madreYaContada }),
   })) {
     sesiones.set(`claude:${sesion.id}`, sesionDeClaude(sesion));
     if (!sesion.compartida) {
@@ -1257,7 +1284,13 @@ export function renderDesglose(desglose: DesgloseDeTrabajo, totalUsd: number): s
  */
 function detalleDeTokensDeClaude(sesion: SesionDeAgente): string {
   const modelos = sesion.modelos ?? [];
+  const deSubagente =
+    sesion.sesionMadre === undefined
+      ? ""
+      : `Subagente de la sesión ${sesion.sesionMadre}; su gasto no está en la madre. ` +
+        `Duró ${Math.round((sesion.duracionMs ?? 0) / 60000)} min. `;
   return (
+    deSubagente +
     "La entrada incluye la creación de caché y la salida incluye el razonamiento. " +
     `Caché leída ${sesion.cacheReadTokens} tokens. ` +
     (modelos.length > 1
@@ -1310,6 +1343,9 @@ export function guardarFotoEnTicket(
   const linea = leerLineaDeTiempo(paths.root, {
     ...(options.home === undefined ? {} : { home: options.home }),
     ticketId,
+    // Una madre ya registrada con números incluye a sus subagentes: separarlos ahora
+    // duplicaría su gasto en un bloque que no se reescribe.
+    madreYaContada: (idMadre) => sessionNumbersAnywhere(paths, idMadre) !== null,
   });
   if (linea === null || linea.sessions.length === 0) return null;
 
@@ -1404,7 +1440,9 @@ export function guardarFotoEnTicket(
                 (sesion.costUsd === null
                   ? "no declarado por el proveedor"
                   : `$${sesion.costUsd.toFixed(6)}`) +
-                `, ${sesion.inputTokens + sesion.outputTokens + sesion.reasoningTokens} tokens. ` +
+                `, ${sesion.inputTokens + sesion.outputTokens + sesion.reasoningTokens} tokens` +
+                (sesion.source === "claude" ? " (sin los subagentes con ticket propio)" : "") +
+                `. ` +
                 `Registralo en el ticket cuya sesión sea propia, o declaralo compartido donde ` +
                 `corresponda. Sesión "${sesion.title}".`,
             }),

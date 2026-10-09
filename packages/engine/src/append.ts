@@ -328,8 +328,28 @@ export function sessionNumbersOwner(
   sessionReference: string,
   ticketId: string,
 ): string | null {
+  return sessionNumbersFound(paths, sessionReference, ticketId);
+}
+
+/**
+ * ¿Algún ticket tiene ya esta sesión con números? Igual que {@link sessionNumbersOwner}
+ * pero sin excluir a ningún ticket: sirve para saber si una sesión madre ya quedó
+ * registrada con números —que incluyen a sus subagentes— antes de separarlos.
+ */
+export function sessionNumbersAnywhere(
+  paths: RegistryPaths,
+  sessionReference: string,
+): string | null {
+  return sessionNumbersFound(paths, sessionReference, null);
+}
+
+function sessionNumbersFound(
+  paths: RegistryPaths,
+  sessionReference: string,
+  excludedTicketId: string | null,
+): string | null {
   for (const registro of documentsForReport(paths)) {
-    if (registro.document === null || registro.document.fields.id === ticketId) continue;
+    if (registro.document === null || registro.document.fields.id === excludedTicketId) continue;
     const tiene = (registro.document.blocks["Consumo de IA"] ?? []).some(
       (entrada) =>
         entrada["session_reference"] === sessionReference &&
