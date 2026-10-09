@@ -4,7 +4,7 @@ id: FEATURE-WEB-VISTA-LIENZO-20261008
 title: Vista Agentes con lienzo montado desde el motor, selector de mundo, aviso de pregunta, paneles y estáticos declarados
 type: FEATURE
 module: WEB
-workflow_status: in_progress
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -375,6 +375,15 @@ Sin publicar todavía.
     "action": "evidence-added",
     "actor": "cli",
     "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-10-08",
+    "at": "2026-10-09T00:47:42.975Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
