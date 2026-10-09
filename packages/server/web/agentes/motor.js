@@ -89,6 +89,34 @@ function fijarObjetivo(escena, agente) {
   agente.objetivoY = o.y;
 }
 
+/** El carril libre más bajo entre los agentes presentes: un carril que quedó libre se reutiliza. */
+export function carrilLibre(escena) {
+  const usados = new Set();
+  for (const a of escena.agentes.values()) usados.add(a.carril);
+  let c = 0;
+  while (usados.has(c)) c += 1;
+  return c;
+}
+
+/**
+ * Reparte los tickets `[{ id, estado }]` por estación (índice de ESTACIONES) y recorta cada
+ * estación a su tope. `topes` es un número para todas o un arreglo con uno por estación.
+ * `qa_approved` cuenta en la última estación; `blocked`, `changes_requested` y los estados
+ * desconocidos no se ubican en ninguna.
+ */
+export function ticketsPorEstacion(tickets, topes) {
+  const porEstacion = ESTACIONES.map(() => []);
+  for (const t of Array.isArray(tickets) ? tickets : []) {
+    const estado = t?.estado === "qa_approved" ? "closed" : t?.estado;
+    const i = ESTACIONES.findIndex((e) => e.id === estado);
+    if (i >= 0) porEstacion[i].push(t);
+  }
+  return porEstacion.map((lista, i) => {
+    const tope = Array.isArray(topes) ? topes[i] : topes;
+    return Number.isFinite(tope) ? lista.slice(0, Math.max(0, tope)) : lista;
+  });
+}
+
 /**
  * Fusiona las filas del servidor con la escena. No la reinicia: un agente que ya
  * estaba conserva posición, carril y paso; solo cambia lo que dicen las filas.
@@ -99,9 +127,12 @@ export function actualizar(escena, filas, ahoraMs) {
     vistos.add(fila.agente);
     let a = escena.agentes.get(fila.agente);
     if (a === undefined) {
+      // Un agente que llega ya terminado no entra en escena: el servidor devuelve también los
+      // terminados de la sesión y, sin esto, reaparecerían a cada refresco.
+      if (!fila.principal && fila.estado === "termino") continue;
       a = {
         id: fila.agente, fila, x: escena.mundo.puestoPrincipal.x, y: escena.mundo.puestoPrincipal.y,
-        carril: escena.siguienteCarril, paso: 0, moviendo: false, estacion: 0, desvio: false,
+        carril: carrilLibre(escena), paso: 0, moviendo: false, estacion: 0, desvio: false,
         ultimaValida: null, rotulo: "", estado: "trabajando", principal: false, saleEn: null,
         objetivoX: 0, objetivoY: 0,
       };

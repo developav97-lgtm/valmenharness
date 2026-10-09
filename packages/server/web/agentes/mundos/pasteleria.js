@@ -5,6 +5,7 @@
 // ocho puestos, pasteleros con toque, el pastel de cada ticket según su estación y la vitrina de entregados.
 // Sin azar y sin reloj propio: el vapor y la lámpara salen de `t`. Los colores de este archivo viven en PALETA.
 
+import { ticketsPorEstacion } from "../motor.js";
 import { dibujarPersonaje, rasgosDe } from "./sprites.js";
 
 const ANCHO = 960;
@@ -12,10 +13,10 @@ const ALTO = 480;
 const SUELO_Y = 364;
 const FRAUNCES = '"Fraunces", Georgia, serif';
 const SANS = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-const ESTACIONES = ["Pedidos", "Recetario", "Báscula", "Mostrador de Anita", "Horno", "Degustación", "Control", "Vitrina"];
+const ESTACIONES = ["Pedidos", "Recetario", "Báscula", "Mostrador", "Horno", "Degustación", "Control", "Vitrina"];
 const HUMANAS = [3, 5];
 
-/** Cuánto dura la ventanilla de Anita si el estado no trae la ventana de respuesta. */
+/** Cuánto dura la ventanilla del mostrador si el estado no trae la ventana de respuesta. */
 const VENTANA_POR_DEFECTO_MS = 60_000;
 
 const PALETA = {
@@ -44,8 +45,8 @@ const PALETA = {
   lomoAzul: "#2b7bd1", // valmen:allow-color paleta del obrador de la pastelería
   lomoVioleta: "#7a5fd1", // valmen:allow-color paleta del obrador de la pastelería
   tiza: "#e7e1cf", // valmen:allow-color paleta del obrador de la pastelería
-  anitaMostrador: "#fbf3e6", // valmen:allow-color paleta del obrador de la pastelería
-  anitaPiel: "#e0ac69", // valmen:allow-color paleta del obrador de la pastelería
+  mostrador: "#fbf3e6", // valmen:allow-color paleta del obrador de la pastelería
+  pielDelPO: "#e0ac69", // valmen:allow-color paleta del obrador de la pastelería
   ojo: "#15171c", // valmen:allow-color paleta del obrador de la pastelería
   lamparaApagada: "#8a7a66", // valmen:allow-color paleta del obrador de la pastelería
   lamparaTenue: "#c98a2e", // valmen:allow-color paleta del obrador de la pastelería
@@ -104,9 +105,33 @@ export function comandasDelPase(cola) {
   return (cola ?? []).slice(0, 12).map((id, i) => ({ id, x: 18 + (i % 6) * 15, y: 336 - 14 * Math.floor(i / 6) }));
 }
 
-/** Los seis últimos entregados, los que caben en la vitrina. */
-export function vitrina(entregados) {
-  return (entregados ?? []).slice(-6);
+/** Cuántos pasteles caben sobre el mostrador de un puesto (2 filas de 3): el máximo visual por estación. */
+export const TOPE_POR_PUESTO = 6;
+
+/** Cuántos pasteles caben en la vitrina final (3 estantes de 3). */
+export const TOPE_VITRINA = 9;
+
+/** Los tickets de cada estación, recortados al tope del puesto (las siete primeras) o de la vitrina (la última). */
+export function repartoDeLaPasteleria(tickets) {
+  return ticketsPorEstacion(tickets, [...Array(7).fill(TOPE_POR_PUESTO), TOPE_VITRINA]);
+}
+
+/** Los tickets cerrados que se acumulan en la vitrina, hasta su tope. */
+export function pastelesDeLaVitrina(tickets) {
+  return repartoDeLaPasteleria(tickets)[7];
+}
+
+/**
+ * Las posiciones (base del pastel) de los `n` primeros pasteles de un puesto, hasta el tope: tres columnas
+ * por dos filas dentro del tramo de mostrador del puesto (x ± 50), la fila de delante primero.
+ */
+export function pastelesDelPuesto(indice, n) {
+  const x = 180 + indice * 101;
+  const posiciones = [];
+  for (let k = 0; k < Math.min(Math.max(0, n), TOPE_POR_PUESTO); k++) {
+    posiciones.push({ x: x + ((k % 3) - 1) * 34, y: k < 3 ? 348 : 334 });
+  }
+  return posiciones;
 }
 
 /** El horno está encendido si un agente trabaja, quieto, en la estación del horno. */
@@ -120,10 +145,10 @@ const preguntaAbierta = (a) => {
 };
 
 /**
- * Lo que Anita muestra: `lampara` encendida con una pregunta abierta en su mostrador (estación 3) y
- * `ventanilla` con ella asomada si alguien respondió hace menos de la ventana.
+ * Lo que el mostrador muestra: `lampara` encendida con una pregunta abierta en su puesto (estación 3) y
+ * `ventanilla` con el PO asomado si alguien respondió hace menos de la ventana.
  */
-export function senalDeAnita(agentes, ahoraMs, ventanaMs = VENTANA_POR_DEFECTO_MS) {
+export function senalDelMostrador(agentes, ahoraMs, ventanaMs = VENTANA_POR_DEFECTO_MS) {
   const lista = agentes ?? [];
   const lampara = lista.some((a) => a.estacion === 3 && preguntaAbierta(a));
   const ventanilla = lista.some((a) => {
@@ -212,12 +237,12 @@ function pastel(R, x, b, e) {
 function dibujar(estado, t = 0) {
   const { ctx, escena, miniatura } = estado;
   const cola = estado.cola ?? [];
-  const entregados = estado.entregados ?? [];
+  const reparto = repartoDeLaPasteleria(estado.tickets);
   const ahoraMs = estado.ahoraMs ?? 0;
   const ventanaMs = estado.ventanaRespuestaMs ?? VENTANA_POR_DEFECTO_MS;
   const agentes = [...(escena?.agentes?.values?.() ?? [])];
   const { R, C, T } = pincel(ctx);
-  const senal = senalDeAnita(agentes, ahoraMs, ventanaMs);
+  const senal = senalDelMostrador(agentes, ahoraMs, ventanaMs);
   const horno = hornoEncendido(agentes);
   const k = ctx.canvas.width / ANCHO;
   ctx.save();
@@ -266,11 +291,11 @@ function dibujar(estado, t = 0) {
         R(x - 22, 174, 40, 2, PALETA.tiza); R(x - 22, 184, 28, 2, PALETA.tiza); R(x - 22, 194, 36, 2, PALETA.tiza); R(x - 22, 204, 20, 2, PALETA.tiza);
         break;
       case 3: {
-        R(x - 38, 150, 76, 112, PALETA.madera); R(x - 32, 156, 64, 100, PALETA.anitaMostrador); R(x - 32, 156, 18, 100, PALETA.rojo); R(x + 14, 156, 18, 100, PALETA.rojo);
+        R(x - 38, 150, 76, 112, PALETA.madera); R(x - 32, 156, 64, 100, PALETA.mostrador); R(x - 32, 156, 18, 100, PALETA.rojo); R(x + 14, 156, 18, 100, PALETA.rojo);
         R(x - 24, 132, 48, 16, PALETA.maderaOscura);
-        if (!miniatura) T("ANITA", x, 144, { tam: 10, color: PALETA.crema, peso: "600" });
+        if (!miniatura) T("PO", x, 144, { tam: 10, color: PALETA.crema, peso: "600" });
         if (senal.ventanilla) {
-          R(x - 8, 196, 16, 18, PALETA.anitaPiel); R(x - 9, 192, 18, 6, PALETA.maderaOscura); R(x - 4, 202, 2, 2, PALETA.ojo); R(x + 2, 202, 2, 2, PALETA.ojo); R(x - 12, 214, 24, 30, PALETA.lomoVerde);
+          R(x - 8, 196, 16, 18, PALETA.pielDelPO); R(x - 9, 192, 18, 6, PALETA.maderaOscura); R(x - 4, 202, 2, 2, PALETA.ojo); R(x + 2, 202, 2, 2, PALETA.ojo); R(x - 12, 214, 24, 30, PALETA.lomoVerde);
         }
         const parpadeo = senal.lampara && Math.floor(t * 3) % 2 === 0;
         if (senal.lampara) C(x, 262, 12, PALETA.lamparaViva, 0.25);
@@ -300,7 +325,7 @@ function dibujar(estado, t = 0) {
       case 7:
         R(x - 40, 150, 80, 112, PALETA.vidrioVitrina, 0.25);
         for (const y of [172, 206, 240]) R(x - 40, y, 80, 6, PALETA.madera);
-        vitrina(entregados).forEach((_, n) => {
+        reparto[7].forEach((_, n) => {
           const cx = x - 22 + (n % 3) * 22;
           const cy = [172, 206, 240][Math.floor(n / 3)];
           R(cx - 8, cy - 14, 16, 14, PALETA.cajaVitrina); R(cx - 8, cy - 14, 16, 2, PALETA.glaseado); R(cx - 1, cy - 14, 2, 14, PALETA.glaseado);
@@ -335,10 +360,16 @@ function dibujar(estado, t = 0) {
       ctx.strokeStyle = PALETA.metalOscuro; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x - 6, 336, 8, 0, 7); ctx.stroke?.(); R(x + 1, 340, 14, 3, PALETA.metalOscuro);
     }
   }
-  // El pastel de cada ticket sobre el mostrador mientras su pastelero está quieto.
-  for (const a of agentes) {
-    const llevaTicket = a.principal !== true && a.fila?.ticket !== null && a.fila?.ticket !== undefined;
-    if (llevaTicket && a.moviendo !== true && a.estado !== "termino") pastel(R, a.x - 10, 348, etapaDelPastel(a));
+  // Un pastel por ticket sobre el mostrador de su estación, hasta el tope; los de atrás se pintan primero.
+  for (let i = 0; i < 7; i++) {
+    const posiciones = pastelesDelPuesto(i, reparto[i].length);
+    for (let n = posiciones.length - 1; n >= 0; n--) {
+      ctx.save();
+      ctx.translate(posiciones[n].x, posiciones[n].y);
+      ctx.scale(0.5, 0.5);
+      pastel(R, 0, 0, i);
+      ctx.restore();
+    }
   }
   ctx.restore();
 }
@@ -347,7 +378,7 @@ export const mundo = {
   id: "pasteleria",
   nombre: "Pastelería",
   lema: "Cada ticket es un pastel que recorre el obrador hasta la vitrina.",
-  pregunta: "timbre en el mostrador de Anita",
+  pregunta: "timbre en el mostrador",
   estaciones: ESTACIONES,
   puestoPrincipal: PUESTO_PRINCIPAL,
   paneles: { agentes: "Comandas", cola: "En espera", entregados: "Vitrina" },

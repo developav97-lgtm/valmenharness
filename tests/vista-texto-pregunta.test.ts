@@ -165,14 +165,14 @@ describe("la vista muestra el texto de la pregunta y la respuesta", () => {
   });
   it("C14: la franja usa el texto real", () => {
     expect(franja([operador(3, preguntaAbierta("¿Despliego a staging?"))]).texto).toBe(
-      "ESPERANDO A ANITA · LÍNEA 1 · FEATURE-WEB · ¿Despliego a staging?",
+      "ESPERANDO AL PO · LÍNEA 1 · FEATURE-WEB · ¿Despliego a staging?",
     );
   });
   it("C15: la franja reduce saltos de línea y espacios", () => {
     expect(franja([operador(3, preguntaAbierta("línea uno\n\nlínea dos"))]).texto.endsWith("línea uno línea dos")).toBe(true);
   });
   it("C16: sin texto en la estación 3 conserva el texto inferido", () => {
-    expect(franja([operador(3, preguntaAbierta())]).texto).toBe("ESPERANDO A ANITA · LÍNEA 1 · FEATURE-WEB · ¿Apruebo el plan?");
+    expect(franja([operador(3, preguntaAbierta())]).texto).toBe("ESPERANDO AL PO · LÍNEA 1 · FEATURE-WEB · ¿Apruebo el plan?");
   });
   it("C17: sin texto en la estación 5 conserva el texto inferido", () => {
     expect(franja([operador(5, preguntaAbierta())]).texto.endsWith("¿Pasaron tus pruebas?")).toBe(true);
@@ -194,7 +194,7 @@ describe("la vista muestra el texto de la pregunta y la respuesta", () => {
     const { ctx, textos } = contexto();
     const a = operador(3, preguntaAbierta("x".repeat(500)));
     control.dibujar({ ctx, escena: { agentes: new Map([["a1", a]]), t: 0 }, miniatura: false, cola: [], entregados: [], ahoraMs: AHORA }, 0);
-    const franjaEscrita = textos.find((t) => t.startsWith("ESPERANDO A ANITA"));
+    const franjaEscrita = textos.find((t) => t.startsWith("ESPERANDO AL PO"));
     expect(franjaEscrita).toBeDefined();
     expect(Array.from(franjaEscrita as string).length * 7).toBeLessThanOrEqual(896);
     expect((franjaEscrita as string).endsWith("…")).toBe(true);

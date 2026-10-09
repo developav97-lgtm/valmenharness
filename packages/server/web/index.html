@@ -2244,6 +2244,10 @@
         min-width: 0;
         overflow-x: auto;
       }
+      /* El panel ya desplaza su contenido: el encabezado sticky de la página bajaría sobre la primera fila. */
+      .corrida-panel th {
+        position: static;
+      }
       @media (min-width: 700px) {
         .corrida-paneles {
           grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2267,6 +2271,10 @@
       }
       .corrida-paneles[data-mundo="invernadero"] .corrida-panel th {
         color: #7a8a6f; /* valmen:allow-color encabezados del cuaderno del invernadero */
+        background: transparent;
+      }
+      .corrida-paneles[data-mundo="invernadero"] .corrida-panel tbody tr:hover td {
+        background: rgba(166, 124, 82, 0.12); /* valmen:allow-color fila resaltada del cuaderno del invernadero */
       }
       /* Telemetría del centro de control: paneles azul noche; la fuente Chakra Petch no se descarga, cae en Segoe UI. */
       .corrida-paneles[data-mundo="control"] .corrida-panel {
@@ -6279,6 +6287,11 @@
         return (tickets ?? []).find((t) => t.id === ticketId)?.workflowStatus ?? null;
       }
 
+      /** Cada ticket de la corrida con su estado del registro: lo que el lienzo reparte por estación. */
+      function ticketsDeLaEscena(agentes, filas, tickets) {
+        return idsDeLaCorrida(agentes, filas).map((id) => ({ id, estado: estadoDeRegistro(id, tickets) }));
+      }
+
       /** Los seis KPI de la corrida, derivados de agentes, jornada y registro. */
       function kpisDeCorrida({ agentes, tickets, filas }) {
         const vivos = agentesVivos(agentes);
@@ -6597,6 +6610,7 @@
             pintarLienzoDeAgentes(cont, moduloDeEscena, agentes, ahora, {
               cola: kpis.cola.map((fila) => fila.ticketId),
               entregados: kpis.entregadosIds,
+              tickets: ticketsDeLaEscena(agentes, filas, tickets),
             });
           }
 

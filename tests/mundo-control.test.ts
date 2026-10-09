@@ -164,9 +164,9 @@ describe("el mundo centro de control", () => {
     expect(franja(dos)).toEqual({ alerta: false, texto: "TURNO DE NOCHE · 2 MISIONES ACTIVAS" });
   });
 
-  it("C18: con una pregunta abierta en la estación 3 la franja espera a Anita y pregunta por el plan", () => {
+  it("C18: con una pregunta abierta en la estación 3 la franja espera al PO y pregunta por el plan", () => {
     const a = conPregunta(3, { desde: hace(10), respondidaEn: null });
-    expect(franja([a]).texto).toBe("ESPERANDO A ANITA · LÍNEA 1 · FEATURE-WEB · ¿Apruebo el plan?");
+    expect(franja([a]).texto).toBe("ESPERANDO AL PO · LÍNEA 1 · FEATURE-WEB · ¿Apruebo el plan?");
     expect(franja([a]).alerta).toBe(true);
   });
 
@@ -185,14 +185,14 @@ describe("el mundo centro de control", () => {
     expect(telefono([a], AHORA, 60000).encendido).toBe(true);
   });
 
-  it("C22: con una pregunta respondida hace 30 s Anita está en línea", () => {
+  it("C22: con una pregunta respondida hace 30 s el PO está en línea", () => {
     const a = conPregunta(3, { desde: hace(90), respondidaEn: hace(30) });
-    expect(telefono([a], AHORA, 60000).anitaEnLinea).toBe(true);
+    expect(telefono([a], AHORA, 60000).poEnLinea).toBe(true);
   });
 
-  it("C23: con una pregunta respondida hace 61 s Anita ya no está en línea", () => {
+  it("C23: con una pregunta respondida hace 61 s el PO ya no está en línea", () => {
     const a = conPregunta(3, { desde: hace(120), respondidaEn: hace(61) });
-    expect(telefono([a], AHORA, 60000).anitaEnLinea).toBe(false);
+    expect(telefono([a], AHORA, 60000).poEnLinea).toBe(false);
   });
 
   const escenaDePunto = () => {
@@ -284,6 +284,6 @@ describe("el mundo centro de control", () => {
     expect(() =>
       mundo.dibujar({ ctx, escena: { agentes, t: 1 }, miniatura: false, cola: ["T-3", "T-4"], entregados: ["T-5"], ahoraMs: AHORA, ventanaRespuestaMs: 60000 }, 1),
     ).not.toThrow();
-    expect(llamadas.some((l) => l.metodo === "fillText" && String(l.args[0]).startsWith("ESPERANDO A ANITA"))).toBe(true);
+    expect(llamadas.some((l) => l.metodo === "fillText" && String(l.args[0]).startsWith("ESPERANDO AL PO"))).toBe(true);
   });
 });
