@@ -223,6 +223,24 @@ export function renderFases(fases: FasesDeSesion): string[] {
   return lines;
 }
 
+/**
+ * Forma corta para quien solo necesita el estado (`resume --quiet`): tres líneas, sin plan,
+ * puntos, fases, recibo ni duraciones.
+ */
+export function renderResumeQuiet(context: ResumeContext): string {
+  const una = (texto: string): string => texto.replace(/\s+/g, " ").trim();
+  const paso = context.nextStep.pasos[0];
+  const titulo = context.nextStep.fase !== "" ? context.nextStep.fase : (paso ?? "sin paso pendiente");
+  const alto = context.nextStep.alto;
+  return (
+    [
+      `${context.id} — ${context.status.workflow} · QA: ${context.status.qa} · Release: ${context.status.release}`,
+      `Siguiente paso: ${una(titulo)}`,
+      alto === null ? "Alto: ninguno." : `Alto: ${una(alto)}`,
+    ].join("\n") + "\n"
+  );
+}
+
 /** Representación legible del contexto compacto, en orden estable. */
 export function renderResumeContext(context: ResumeContext): string {
   if (context.modo === "completo") return context.documentoCompleto ?? "";

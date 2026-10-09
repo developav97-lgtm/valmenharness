@@ -1,7 +1,7 @@
 ---
 name: corrida-orquestada
 description: Usar cuando el PO pide ejecutar la jornada de hoy o una feature repartiendo los tickets en subagentes simultáneos, cada uno en su worktree —«ejecuta la jornada», «ejecuta el feature X de corrido»—, o cuando haya que retomar esa corrida. Para tickets uno tras otro sin subagentes, ver corrida-delegada.
-version: 1.2.0
+version: 1.3.0
 origen: valmen
 ---
 
@@ -25,10 +25,10 @@ Si un comando de este recorrido falta, **no lo reemplazas con git a mano**: te d
 Un subagente por ticket, **en segundo plano** y en su **propio worktree**:
 
 1. `valmen journey worktree create --id <ID>` desde el checkout principal (rama `valmen/ticket-<slug>`), o `isolation: worktree` al lanzar el agente.
-2. `valmen journey brief --id <ID>` imprime el brief. Su texto es el **único contexto** del subagente: pásalo entero, sin resumirlo ni añadirle permisos.
+2. `valmen journey brief --id <ID>` con `--out <ruta>` escribe el brief en un archivo, sin pegarlo en la conversación. Su texto es el **único contexto** del subagente: dale solo la ruta y la orden de leerlo entero, sin resumirlo ni añadirle permisos.
 3. Pide el modelo y esfuerzo que el brief declara para la fase.
 
-El subagente trabaja solo en su worktree, recorre `valmen resume --id <ID>` y se detiene en el primer alto: plan por aprobar o ticket en `awaiting_user_tests`. Cuando termina, lee su informe y vuelve a pedir la ola.
+El subagente trabaja solo en su worktree, recorre `valmen resume --id <ID>` y se detiene en el primer alto: plan por aprobar o ticket en `awaiting_user_tests`. Cuando termina, lee su informe (8 líneas) y vuelve a pedir la ola.
 
 ## Aprobar
 
@@ -51,13 +51,17 @@ Solo el orquestador, **de a uno** y en el orden en que los subagentes entregaron
 
 Los subagentes corren solo las pruebas de su ticket. **Tras integrar la ola**, el orquestador corre `npx vitest run` **una sola vez** en el checkout principal: dos suites a la vez se cuelgan. Un rojo se atribuye al ticket cuyo cambio lo causó y se devuelve a su subagente; no se sigue con la ola siguiente sobre un rojo.
 
+## Contexto del orquestador
+
+Todo lo que entra a la conversación se relee en cada turno. De la suite muestra solo las líneas `Test Files` y `Tests` y los fallos. No pegues salidas largas de comandos: cita el comando y el resultado. Del informe del subagente no pidas más detalle que el ticket.
+
 ## Reglas duras
 
 - **Solo el orquestador toca el checkout principal.** Los subagentes escriben en su worktree y rama; un solo escritor por archivo.
 - Nunca `git push`, force, `--no-verify` ni tags. Publicar lo decide el PO.
 - Un **BLOCK**, una compuerta humana dura (SECURITY, despliegue, migraciones) y lo que quede **fuera del alcance** del ticket se detienen: se reportan al PO, no se fuerzan ni se esquivan.
 - Una REVIEW no se aprueba por el modelo: la decide una persona.
-- El estado vive en el registro, no en la conversación: ante la duda, `valmen resume --id <ID>`.
+- El estado vive en el registro, no en la conversación: ante la duda, `valmen resume --id <ID> --quiet` (tres líneas).
 
 ## QA por comandos
 
