@@ -419,6 +419,7 @@ describe("el paso local y el CI", () => {
       "El registro se valida con el propio motor",
       "La interfaz se ejecuta",
       "Pruebas",
+      "La medición de fricción compila y pasa sus pruebas",
     ]);
     for (const comando of [
       "run: npm ci",
