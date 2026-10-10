@@ -77,6 +77,18 @@ Un bugfix o un cambio chico y acotado se hace en modo directo, sin compuertas, p
 **Por qué:** A/B del 2026-10-09 sobre BUGFIX-ENGINE-JORNADA-HANDOFF-LECTOR-20261008, el mismo pedido en dos worktrees: la rama directa (sonnet, 77 s…
 **Visto en:** BUGFIX-ENGINE-JORNADA-HANDOFF-LECTOR-20261008 (2026-10-09)
 
+## Una prueba existente en rojo no se edita: se detiene y se reporta
+
+Cuando una prueba que ya existía falla durante un cambio, no se edita, no se borra ni se marca como omitida para que pase: se detiene la implementación y se reporta en el ticket la prueba, su salida y la hipótesis de por qué falla. Solo se modifica si el plan aprobado del ticket declara que el pedido cambia a propósito el comportamiento que esa prueba describe, y el cambio se cita en el ticket con la prueba y el motivo.
+
+**Por qué:** Comparación con gentle-ai del 2026-10-10 (Gentleman-Programming/gentle-ai @66bf3e1, docs/architecture/the-organic-rdd-story.md)…
+
+## Prueba primero: una en rojo por regla pedida y una de regresión por comando tocado
+
+Cuando el comportamiento pedido admite una prueba ejecutable y determinista, se escribe antes de implementar y se observa en rojo; después se implementa hasta verde y se refactoriza con las pruebas en verde. Se escribe una prueba en rojo por cada regla que pide el ticket, con los casos que esa regla nombra y sus efectos observables (salida, código de salida, datos persistidos), y una por cada comando, herramienta MCP u opción existente que el cambio toca, que demuestre que su comportamiento anterior se mantiene; no se agregan otras. Si no hay prueba ejecutable posible, el ticket dice por qué y se corren las verificaciones funcionales que apliquen.
+
+**Por qué:** Comparación con gentle-ai del 2026-10-10 (Gentleman-Programming/gentle-ai @66bf3e1, docs/usage.md, sección ODD)…
+
 ## Cómo se trabaja en este repositorio
 
 Este repositorio **es** el harness, no un proyecto que lo usa, y se gestiona con
@@ -141,6 +153,10 @@ Consultas, diagnósticos, exploración, cambios visuales o de contenido que no a
 
 Esos gates protegen datos y clientes de un proyecto en uso. En un repositorio que **es** el producto —y lo declara en sus reglas— la protección equivalente son las pruebas antes de decir que algo funciona y la confirmación antes de commitear.
 
+### Modo de trabajo por tamaño
+
+Un bugfix o un cambio chico y acotado va en modo directo, sin compuertas, pero reproduciendo antes el defecto con datos reales y con pruebas que fallen sin el arreglo. Una funcionalidad, un cambio de varios módulos o un pedido ambiguo va por el flujo completo. Quien registra el trabajo declara el modo y su motivo.
+
 ### Autorización antes de acción
 
 Investigar, explicar, revisar, auditar, comparar y proponer son operaciones **read-only** salvo que el pedido autorice explícitamente un cambio. Es el primer paso, no una recomendación.
@@ -150,6 +166,10 @@ Investigar, explicar, revisar, auditar, comparar y proponer son operaciones **re
 **La persona, no el agente.** Abrir un ticket escribe en el repositorio, y escribir exige autorización. El agente puede proponerlo —una línea, con el motivo— y esperar respuesta; no lo abre por su cuenta, aunque se cumplan de sobra las condiciones.
 
 Un pedido de trabajo no es un pedido de registro. Ante "hagámoslo", el modo por defecto es el directo: se hace y se prueba. Vale para un pedido **que no nombra un ticket**; si nombra uno existente, ese ticket manda.
+
+### Preguntar a la persona
+
+Una decisión de la persona se pide con la herramienta de preguntas del cliente (`AskUserQuestion` en Claude Code; sin ella, en texto con el mismo formato): opciones con su efecto y la recomendada primero, marcada «(Recomendado)». Su respuesta cuenta como su frase literal.
 
 ### Continuar un ticket
 
@@ -200,6 +220,10 @@ Si el cambio toca pantallas, antes de entregar se corre `revisar_presentacion`: 
 ### Cómo se verifica un criterio
 
 Cada criterio de aceptación declara cómo se verifica, en un comentario debajo: `<!-- test: <comando> -->` o `<!-- verify: manual -->`. El gate `qa-mechanical` corre los comandos declarados y se detiene ante un criterio sin anotación. Comandos permitidos y tiempo máximo salen de `test-commands` y `test-timeout` en `.valmen/config.yaml`; el detalle está en la skill `planificacion`.
+
+### Pruebas
+
+Con una prueba ejecutable posible, se escribe primero y se ve en rojo; cuántas lleva un cambio lo dice la skill `pruebas-unitarias`. **Una prueba que ya existía y se pone en rojo no se edita, no se borra ni se omite**: se detiene y se reporta en el ticket; solo cambia si el plan aprobado cambia a propósito ese comportamiento.
 
 ### Acciones que nunca se automatizan
 

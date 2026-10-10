@@ -28,6 +28,10 @@ Consultas, diagnósticos, exploración, cambios visuales o de contenido que no a
 
 Esos gates protegen datos y clientes de un proyecto en uso. En un repositorio que **es** el producto —y lo declara en sus reglas— la protección equivalente son las pruebas antes de decir que algo funciona y la confirmación antes de commitear.
 
+### Modo de trabajo por tamaño
+
+Un bugfix o un cambio chico y acotado va en modo directo, sin compuertas, pero reproduciendo antes el defecto con datos reales y con pruebas que fallen sin el arreglo. Una funcionalidad, un cambio de varios módulos o un pedido ambiguo va por el flujo completo. Quien registra el trabajo declara el modo y su motivo.
+
 ### Autorización antes de acción
 
 Investigar, explicar, revisar, auditar, comparar y proponer son operaciones **read-only** salvo que el pedido autorice explícitamente un cambio. Es el primer paso, no una recomendación.
@@ -37,6 +41,10 @@ Investigar, explicar, revisar, auditar, comparar y proponer son operaciones **re
 **La persona, no el agente.** Abrir un ticket escribe en el repositorio, y escribir exige autorización. El agente puede proponerlo —una línea, con el motivo— y esperar respuesta; no lo abre por su cuenta, aunque se cumplan de sobra las condiciones.
 
 Un pedido de trabajo no es un pedido de registro. Ante "hagámoslo", el modo por defecto es el directo: se hace y se prueba. Vale para un pedido **que no nombra un ticket**; si nombra uno existente, ese ticket manda.
+
+### Preguntar a la persona
+
+Una decisión de la persona se pide con la herramienta de preguntas del cliente (\`AskUserQuestion\` en Claude Code; sin ella, en texto con el mismo formato): opciones con su efecto y la recomendada primero, marcada «(Recomendado)». Su respuesta cuenta como su frase literal.
 
 ### Continuar un ticket
 
@@ -87,6 +95,10 @@ Si el cambio toca pantallas, antes de entregar se corre \`revisar_presentacion\`
 ### Cómo se verifica un criterio
 
 Cada criterio de aceptación declara cómo se verifica, en un comentario debajo: \`<!-- test: <comando> -->\` o \`<!-- verify: manual -->\`. El gate \`qa-mechanical\` corre los comandos declarados y se detiene ante un criterio sin anotación. Comandos permitidos y tiempo máximo salen de \`test-commands\` y \`test-timeout\` en \`.valmen/config.yaml\`; el detalle está en la skill \`planificacion\`.
+
+### Pruebas
+
+Con una prueba ejecutable posible, se escribe primero y se ve en rojo; cuántas lleva un cambio lo dice la skill \`pruebas-unitarias\`. **Una prueba que ya existía y se pone en rojo no se edita, no se borra ni se omite**: se detiene y se reporta en el ticket; solo cambia si el plan aprobado cambia a propósito ese comportamiento.
 
 ### Acciones que nunca se automatizan
 

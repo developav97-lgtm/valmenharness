@@ -39,8 +39,11 @@ const REPO = process.cwd();
  * 9 800 B con R-QAAG-009, que agrega dos reglas de QA por agente (unos 420 B), y a
  * 10 400 B con la sección «Corrida orquestada» (569 B medidos; decisión del PO).
  * Por qué: la sesión que orquesta una corrida solo puede cumplir el contrato si lo lee en AGENTS.md.
+ * Subió a 11 500 B el 2026-10-10 con EST-007 a EST-010 en versión compacta (1 001 B
+ * medidos; decisión del PO: «A 11 500 B, versión compacta»): son estándares de todo
+ * proyecto que use el harness, y un proyecto nuevo solo los recibe si están acá.
  */
-const TOPE_BYTES = 10400;
+const TOPE_BYTES = 11500;
 
 /** Texto sin saltos de línea ni espacios repetidos: se afirma la frase, no dónde corta el renglón. */
 const plano = (texto: string): string => texto.replace(/\s+/g, " ");
@@ -52,20 +55,21 @@ const skill = (id: string): string =>
   plano(readFileSync(join(REPO, "skills", id, "SKILL.md"), "utf8"));
 
 describe("el tope de las plantillas fijas", () => {
-  it("suman 10 400 B o menos, desde 15 464 B", () => {
+  it("suman 11 500 B o menos, desde 15 464 B", () => {
     const bytes = [WORKFLOW_TEMPLATE, INVARIANTS_TEMPLATE, DELIVERY_TEMPLATE]
       .map((plantilla) => Buffer.byteLength(plantilla, "utf8"))
       .reduce((suma, tamano) => suma + tamano, 0);
 
-    expect(bytes, `las plantillas pesan ${bytes} B y el tope es ${TOPE_BYTES} B`).toBeLessThanOrEqual(
-      TOPE_BYTES,
-    );
+    expect(
+      bytes,
+      `las plantillas pesan ${bytes} B y el tope es ${TOPE_BYTES} B`,
+    ).toBeLessThanOrEqual(TOPE_BYTES);
   });
 });
 
 describe("la corrida orquestada", () => {
   const inicio = workflow.indexOf("### Corrida orquestada");
-  const seccion = inicio < 0 ? "" : workflow.slice(inicio).split(" ### ")[0] ?? "";
+  const seccion = inicio < 0 ? "" : (workflow.slice(inicio).split(" ### ")[0] ?? "");
 
   const afirma = (nombre: string, patron: RegExp): void => {
     it(nombre, () => {
@@ -74,19 +78,81 @@ describe("la corrida orquestada", () => {
     });
   };
 
-  afirma("se pide en la sesión, con 3 a la vez por defecto", /ejecuta el feature X.*N a la vez.*3 por defecto/);
-  afirma("la sesión es el orquestador y lanza un subagente por ticket", /sesión es el orquestador.*un subagente por ticket/);
-  afirma("cada subagente trabaja en su worktree y su rama", /cada uno en su worktree y su rama/);
-  afirma("solo el orquestador toca el checkout principal", /Solo el orquestador toca el checkout principal/);
-  afirma("el subagente corre las pruebas de su ticket, no la suite completa", /pruebas de su ticket, no la suite completa/);
-  afirma("la aprobación sale de la política por tipo de ticket", /política por tipo de ticket.*autorización vigente.*elegible/);
-  afirma("SECURITY y despliegue son siempre de una persona", /SECURITY y despliegue son siempre de una persona/);
+  afirma(
+    "se pide en la sesión, con 3 a la vez por defecto",
+    /ejecuta el feature X.*N a la vez.*3 por defecto/,
+  );
+  afirma(
+    "la sesión es el orquestador y lanza un subagente por ticket",
+    /sesión es el orquestador.*un subagente por ticket/,
+  );
+  afirma(
+    "cada subagente trabaja en su worktree y su rama",
+    /cada uno en su worktree y su rama/,
+  );
+  afirma(
+    "solo el orquestador toca el checkout principal",
+    /Solo el orquestador toca el checkout principal/,
+  );
+  afirma(
+    "el subagente corre las pruebas de su ticket, no la suite completa",
+    /pruebas de su ticket, no la suite completa/,
+  );
+  afirma(
+    "la aprobación sale de la política por tipo de ticket",
+    /política por tipo de ticket.*autorización vigente.*elegible/,
+  );
+  afirma(
+    "SECURITY y despliegue son siempre de una persona",
+    /SECURITY y despliegue son siempre de una persona/,
+  );
 
   it("control: no nombra git push, --force ni --no-verify", () => {
     expect(seccion).not.toBe("");
     for (const prohibido of ["git push", "--force", "--no-verify"]) {
       expect(seccion).not.toContain(prohibido);
     }
+  });
+});
+
+describe("los estándares de proceso que el harness trae por defecto (EST-007 a EST-010)", () => {
+  it("EST-007: una decisión se pide con la herramienta de preguntas, la recomendada primero", () => {
+    expect(workflow).toContain("### Preguntar a la persona");
+    expect(workflow).toMatch(
+      /`AskUserQuestion` en Claude Code; sin ella, en texto con el mismo formato/,
+    );
+    expect(workflow).toMatch(/la recomendada primero, marcada «\(Recomendado\)»/);
+  });
+
+  it("EST-008: el modo de trabajo se elige por tamaño y el directo conserva sus dos reglas", () => {
+    expect(workflow).toContain("### Modo de trabajo por tamaño");
+    expect(workflow).toMatch(
+      /reproduciendo antes el defecto con datos reales y con pruebas que fallen sin el arreglo/,
+    );
+    expect(workflow).toMatch(/declara el modo y su motivo/);
+  });
+
+  it("EST-009: una prueba existente en rojo no se edita y frena la implementación", () => {
+    expect(workflow).toContain("### Pruebas");
+    expect(workflow).toMatch(
+      /\*\*Una prueba que ya existía y se pone en rojo no se edita, no se borra ni se omite\*\*: se detiene/,
+    );
+    expect(workflow).toMatch(
+      /solo cambia si el plan aprobado cambia a propósito ese comportamiento/,
+    );
+  });
+
+  it("EST-010: la plantilla apunta a la skill y la skill publicada trae la regla entera", () => {
+    expect(workflow).toMatch(
+      /cuántas lleva un cambio lo dice la skill `pruebas-unitarias`/,
+    );
+    const pruebas = skill("pruebas-unitarias");
+    expect(pruebas).toMatch(/una prueba en rojo por cada regla que pide el ticket/i);
+    expect(pruebas).toMatch(
+      /una por cada comando, herramienta u opción existente que el cambio toca/i,
+    );
+    expect(pruebas).toMatch(/no se agregan otras/i);
+    expect(pruebas).toMatch(/no se edita, no se borra ni se omite/);
   });
 });
 
@@ -106,7 +172,9 @@ describe("lo que frena una acción se queda en la plantilla", () => {
     ];
 
     for (const [nombre, patron] of acciones) {
-      expect(workflow, `«Acciones que nunca se automatizan» no nombra: ${nombre}`).toMatch(patron);
+      expect(workflow, `«Acciones que nunca se automatizan» no nombra: ${nombre}`).toMatch(
+        patron,
+      );
     }
     expect(workflow).toContain("### Acciones que nunca se automatizan");
     expect(workflow, "estas acciones se preparan, no se ejecutan sin una persona").toMatch(
@@ -115,19 +183,32 @@ describe("lo que frena una acción se queda en la plantilla", () => {
   });
 
   it("declara la autorización de aprobación como condición y como acción humana (R-APRO-001)", () => {
-    expect(workflow, "C1").toMatch(/se aprueba sin una persona solo bajo una \*\*autorización de aprobación\*\* vigente que creó una persona/);
+    expect(workflow, "C1").toMatch(
+      /se aprueba sin una persona solo bajo una \*\*autorización de aprobación\*\* vigente que creó una persona/,
+    );
     expect(workflow, "C2").toMatch(/se atribuye a ella, nunca al agente/);
-    expect(workflow, "C3").toMatch(/SECURITY, un `block` y un despliegue a producción, siempre\./);
-    const acciones = workflow.slice(workflow.indexOf("### Acciones que nunca se automatizan"));
-    expect(acciones, "C4").toMatch(/Crear o ampliar una autorización de aprobación \(sin herramienta MCP\)/);
+    expect(workflow, "C3").toMatch(
+      /SECURITY, un `block` y un despliegue a producción, siempre\./,
+    );
+    const acciones = workflow.slice(
+      workflow.indexOf("### Acciones que nunca se automatizan"),
+    );
+    expect(acciones, "C4").toMatch(
+      /Crear o ampliar una autorización de aprobación \(sin herramienta MCP\)/,
+    );
   });
 
   it("declara la QA por agente como vía de entrega y su autorización como acción humana (R-QAAG-009)", () => {
-    expect(delivery, "«Entrega y documentación» no dice que un agente puede ejecutar la QA").toMatch(/La QA puede ejecutarla un agente/);
+    expect(
+      delivery,
+      "«Entrega y documentación» no dice que un agente puede ejecutar la QA",
+    ).toMatch(/La QA puede ejecutarla un agente/);
     expect(delivery).toMatch(/autorización vigente que creó una persona/);
     expect(delivery).toMatch(/sombra/);
     expect(delivery).toMatch(/sin autorización vigente, la QA es de una persona/i);
-    const acciones = workflow.slice(workflow.indexOf("### Acciones que nunca se automatizan"));
+    const acciones = workflow.slice(
+      workflow.indexOf("### Acciones que nunca se automatizan"),
+    );
     expect(acciones).toMatch(/autorización permanente de QA por agente/);
     expect(acciones).toMatch(/promover la política a cerrar tickets/);
     expect(acciones).toMatch(/sin herramienta MCP/);
@@ -158,7 +239,9 @@ describe("lo que frena una acción se queda en la plantilla", () => {
     expect(delivery).toContain("`awaiting_user_tests`");
     expect(delivery).toContain("Los commits se crean solo tras la confirmación");
     expect(delivery).toMatch(/consumo de IA queda registrado antes de cerrar/i);
-    expect(delivery, "sin consumo el motor rechaza el cierre").toMatch(/el motor rechaza el cierre/i);
+    expect(delivery, "sin consumo el motor rechaza el cierre").toMatch(
+      /el motor rechaza el cierre/i,
+    );
     expect(delivery).toMatch(/una sesión por ticket/i);
     expect(delivery).toContain("`valmen secrets`");
     expect(delivery).toContain("`valmen:allow-secret`");
@@ -186,12 +269,17 @@ describe("lo que sale de la plantilla deja un puntero a su skill", () => {
 
   it("apunta solo a skills que el harness publica", () => {
     const ids = new Set(publicadas().map((publicada) => publicada.id));
-    const nombradas = [...workflow.matchAll(/skill `([a-z-]+)`/g), ...delivery.matchAll(/skill `([a-z-]+)`/g)]
-      .map((coincidencia) => coincidencia[1] as string);
+    const nombradas = [
+      ...workflow.matchAll(/skill `([a-z-]+)`/g),
+      ...delivery.matchAll(/skill `([a-z-]+)`/g),
+    ].map((coincidencia) => coincidencia[1] as string);
 
     expect(nombradas.length).toBeGreaterThan(0);
     for (const id of nombradas) {
-      expect(ids.has(id), `la plantilla manda a la skill «${id}» y el catálogo no la publica`).toBe(true);
+      expect(
+        ids.has(id),
+        `la plantilla manda a la skill «${id}» y el catálogo no la publica`,
+      ).toBe(true);
     }
   });
 });
@@ -219,10 +307,19 @@ describe("el detalle que sale llega a su skill publicada", () => {
 
     expect(versionPublicada("revision-final")).toBe("1.3.0");
     expect(texto).toContain("## El consumo de IA se registra antes de cerrar");
-    for (const prefijo of ["`opencode:`", "`hermes:`", "`codex:`", "`claude:`", "`manual:`", "`process:`"]) {
+    for (const prefijo of [
+      "`opencode:`",
+      "`hermes:`",
+      "`codex:`",
+      "`claude:`",
+      "`manual:`",
+      "`process:`",
+    ]) {
       expect(texto, `falta el prefijo ${prefijo}`).toContain(prefijo);
     }
-    expect(texto, "la sesión que sirvió varios tickets").toMatch(/varios\*\* tickets|varios tickets/);
+    expect(texto, "la sesión que sirvió varios tickets").toMatch(
+      /varios\*\* tickets|varios tickets/,
+    );
     expect(texto).toMatch(/una sesión por ticket/i);
   });
 
@@ -253,7 +350,9 @@ describe("la delegación de la fase en el contrato", () => {
   };
 
   it("C1: con «Delegación de la fase», la fase la hace un subagente con ese modelo", () => {
-    expect(continuar()).toContain("«Delegación de la fase», la hace un subagente con ese modelo");
+    expect(continuar()).toContain(
+      "«Delegación de la fase», la hace un subagente con ese modelo",
+    );
   });
 
   it("C2: no se cambia el modelo de la sesión", () => {

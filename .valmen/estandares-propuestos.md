@@ -102,7 +102,8 @@ pasan a `.valmen/rules/estandares-<área>.md`, que es lo que llega al
 
 - **Área:** proceso
 - **Propuesto:** 2026-10-10
-- **Estado:** propuesto
+- **Estado:** aceptado
+- **Decidido:** 2026-10-10
 
 **Regla:** Cuando una prueba que ya existía falla durante un cambio, no se edita, no se borra ni se marca como omitida para que pase: se detiene la implementación y se reporta en el ticket la prueba, su salida y la hipótesis de por qué falla. Solo se modifica si el plan aprobado del ticket declara que el pedido cambia a propósito el comportamiento que esa prueba describe, y el cambio se cita en el ticket con la prueba y el motivo.
 
@@ -112,7 +113,8 @@ pasan a `.valmen/rules/estandares-<área>.md`, que es lo que llega al
 
 - **Área:** proceso
 - **Propuesto:** 2026-10-10
-- **Estado:** propuesto
+- **Estado:** aceptado
+- **Decidido:** 2026-10-10
 
 **Regla:** Cuando el comportamiento pedido admite una prueba ejecutable y determinista, se escribe antes de implementar y se observa en rojo; después se implementa hasta verde y se refactoriza con las pruebas en verde. Se escribe una prueba en rojo por cada regla que pide el ticket, con los casos que esa regla nombra y sus efectos observables (salida, código de salida, datos persistidos), y una por cada comando, herramienta MCP u opción existente que el cambio toca, que demuestre que su comportamiento anterior se mantiene; no se agregan otras. Si no hay prueba ejecutable posible, el ticket dice por qué y se corren las verificaciones funcionales que apliquen.
 

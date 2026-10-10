@@ -1,7 +1,7 @@
 ---
 name: pruebas-unitarias
 description: Usar al cambiar comportamiento de backend o frontend, corregir una regresión o preparar las pruebas de un ticket, y al armar la entrega verificable para el responsable.
-version: 1.0.0
+version: 1.1.0
 origen: valmen
 ---
 
@@ -16,6 +16,16 @@ La guía diseña y actualiza pruebas. **No** confirma cambios, no envía, no des
 Las herramientas de prueba de este proyecto salen de `.valmen/rules/stack.md` y de lo que ya exista en el repositorio. **No introducir un ejecutor de pruebas nuevo, una fábrica de datos ni otra infraestructura sin ticket y plan**: la infraestructura de pruebas es una decisión del proyecto, no de quien escribe la prueba.
 
 Localizar antes de escribir expectativas: dónde viven las pruebas, cómo se configuran, qué utilidades ya hay y qué convenciones usa el módulo. No asumir rutas, permisos ni esquemas.
+
+## Prueba primero
+
+Cuando el comportamiento pedido admite una prueba ejecutable y determinista, se escribe **antes** de implementar y se observa en rojo; después se implementa hasta verde y se refactoriza con las pruebas en verde.
+
+- Una prueba en rojo por cada regla que pide el ticket, con los casos que esa regla nombra y sus efectos observables: salida, código de salida, datos persistidos.
+- Una por cada comando, herramienta u opción existente que el cambio toca, que demuestre que su comportamiento anterior se mantiene.
+- No se agregan otras. Si no hay prueba ejecutable posible, el ticket dice por qué y se corren las verificaciones funcionales que apliquen.
+
+Una prueba que ya existía y se pone en rojo durante el cambio **no se edita, no se borra ni se omite** para que pase: se detiene la implementación y se reporta en el ticket la prueba, su salida y la hipótesis. Solo se modifica si el plan aprobado declara que el pedido cambia a propósito ese comportamiento, y el cambio se cita en el ticket.
 
 ## Diseño de pruebas
 
