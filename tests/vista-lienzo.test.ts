@@ -21,7 +21,7 @@ function fila(agente: string, extra: Record<string, unknown> = {}) {
     agente,
     principal: false,
     ticket: `TICKET-${agente}`,
-    estado: "trabajando",
+    estado: "trabajando" as const,
     ticketEstado: "in_progress",
     faseConfirmada: "implementación",
     faseInferida: null,
