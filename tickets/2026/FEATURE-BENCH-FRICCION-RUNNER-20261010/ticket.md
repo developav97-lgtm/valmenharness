@@ -4,7 +4,7 @@ id: FEATURE-BENCH-FRICCION-RUNNER-20261010
 title: Medición de fricción aislada sobre un binario valmen con clasificador
 type: FEATURE
 module: BENCH
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -175,79 +175,79 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1 (R-FRI-001): `run --binary <ruta> --out <archivo>` escribe en `<archivo>` un JSON con un resultado por cada recorrido del corpus
+- [x] C1 (R-FRI-001): `run --binary <ruta> --out <archivo>` escribe en `<archivo>` un JSON con un resultado por cada recorrido del corpus
       <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t FR-C01 -->
-- [ ] C2 (R-FRI-001): el archivo de resultados registra el sha256 del binario medido
+- [x] C2 (R-FRI-001): el archivo de resultados registra el sha256 del binario medido
       <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t FR-C02 -->
-- [ ] C3 (R-FRI-001): dos corridas con el mismo corpus escriben el mismo `corpus.sha256`
+- [x] C3 (R-FRI-001): dos corridas con el mismo corpus escriben el mismo `corpus.sha256`
       <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t FR-C03 -->
-- [ ] C4 (R-FRI-001): `run` sin `--binary` sale con código 2 sin escribir el archivo de resultados
+- [x] C4 (R-FRI-001): `run` sin `--binary` sale con código 2 sin escribir el archivo de resultados
       <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t FR-C04 -->
-- [ ] C5 (R-FRI-001): el binario medido corre con un `HOME` dentro del directorio temporal del escenario
+- [x] C5 (R-FRI-001): el binario medido corre con un `HOME` dentro del directorio temporal del escenario
       <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t FR-C05 -->
-- [ ] C6 (R-FRI-001): el binario medido corre con su directorio de trabajo dentro del directorio temporal del escenario
+- [x] C6 (R-FRI-001): el binario medido corre con su directorio de trabajo dentro del directorio temporal del escenario
       <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t FR-C06 -->
-- [ ] C7 (R-FRI-001): el entorno del binario medido no lleva variables `*_API_KEY` aunque el proceso que mide las tenga
+- [x] C7 (R-FRI-001): el entorno del binario medido no lleva variables `*_API_KEY` aunque el proceso que mide las tenga
       <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t FR-C07 -->
-- [ ] C8 (R-FRI-001): `VALMEN_CLAUDE_BIN` del binario medido apunta a la trampa del escenario
+- [x] C8 (R-FRI-001): `VALMEN_CLAUDE_BIN` del binario medido apunta a la trampa del escenario
       <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t FR-C08 -->
-- [ ] C9 (R-FRI-001): un binario que invoca `claude` desde el `PATH` deja su recorrido en estado `fallido`
+- [x] C9 (R-FRI-001): un binario que invoca `claude` desde el `PATH` deja su recorrido en estado `fallido`
       <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t FR-C09 -->
-- [ ] C10 (R-FRI-001): tras una corrida, el `HOME` del proceso que mide sigue sin `.valmen/`
+- [x] C10 (R-FRI-001): tras una corrida, el `HOME` del proceso que mide sigue sin `.valmen/`
       <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t FR-C10 -->
-- [ ] C11 (R-FRI-001): tras una corrida, `git status --porcelain` del repositorio desde el que se mide queda vacío
+- [x] C11 (R-FRI-001): tras una corrida, `git status --porcelain` del repositorio desde el que se mide queda vacío
       <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t FR-C11 -->
-- [ ] C12 (R-FRI-001): una salida sugerida que cita una ruta absoluta fuera del escenario no se ejecuta
+- [x] C12 (R-FRI-001): una salida sugerida que cita una ruta absoluta fuera del escenario no se ejecuta
       <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t FR-C12 -->
-- [ ] C13 (R-FRI-001): un subproceso que excede `--timeout-ms` deja su recorrido en estado `fallido`
+- [x] C13 (R-FRI-001): un subproceso que excede `--timeout-ms` deja su recorrido en estado `fallido`
       <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t FR-C13 -->
-- [ ] C14 (R-FRI-001): un recorrido cuyo armado falla queda en estado `fallido` con el paso que falló
+- [x] C14 (R-FRI-001): un recorrido cuyo armado falla queda en estado `fallido` con el paso que falló
       <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t FR-C14 -->
-- [ ] C15 (R-FRI-002): `extraerSalidas` devuelve cada comando citado como `` `valmen <cmd> …` `` en el mensaje
+- [x] C15 (R-FRI-002): `extraerSalidas` devuelve cada comando citado como `` `valmen <cmd> …` `` en el mensaje
       <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t FR-C15 -->
-- [ ] C16 (R-FRI-002): `extraerSalidas` ignora un `valmen <cmd>` escrito fuera de comillas invertidas
+- [x] C16 (R-FRI-002): `extraerSalidas` ignora un `valmen <cmd>` escrito fuera de comillas invertidas
       <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t FR-C16 -->
-- [ ] C17 (R-FRI-002): un bloqueo sin salida citada se clasifica `fuera_de_banda`
+- [x] C17 (R-FRI-002): un bloqueo sin salida citada se clasifica `fuera_de_banda`
       <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t FR-C17 -->
-- [ ] C18 (R-FRI-002): un bloqueo se clasifica `en_banda` cuando, tras correr su salida con código 0, el reintento de la operación sale con 0
+- [x] C18 (R-FRI-002): un bloqueo se clasifica `en_banda` cuando, tras correr su salida con código 0, el reintento de la operación sale con 0
       <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t FR-C18 -->
-- [ ] C19 (R-FRI-002): un bloqueo cuya salida el binario rechaza como comando desconocido se clasifica `callejon_sin_salida`
+- [x] C19 (R-FRI-002): un bloqueo cuya salida el binario rechaza como comando desconocido se clasifica `callejon_sin_salida`
       <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t FR-C19 -->
-- [ ] C20 (R-FRI-002): un bloqueo se clasifica `callejon_sin_salida` cuando, tras correr su salida con código 0, el reintento sigue bloqueado
+- [x] C20 (R-FRI-002): un bloqueo se clasifica `callejon_sin_salida` cuando, tras correr su salida con código 0, el reintento sigue bloqueado
       <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t FR-C20 -->
-- [ ] C21 (R-FRI-002): un bloqueo cuya salida lleva un marcador sin variable en el recorrido se clasifica `callejon_sin_salida`
+- [x] C21 (R-FRI-002): un bloqueo cuya salida lleva un marcador sin variable en el recorrido se clasifica `callejon_sin_salida`
       <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t FR-C21 -->
-- [ ] C22 (R-FRI-002): un marcador `<ID>` de una salida se reemplaza por la variable `ID` del recorrido antes de correrla
+- [x] C22 (R-FRI-002): un marcador `<ID>` de una salida se reemplaza por la variable `ID` del recorrido antes de correrla
       <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t FR-C22 -->
-- [ ] C23 (R-FRI-002): cada salida candidata se prueba en un escenario recién armado
+- [x] C23 (R-FRI-002): cada salida candidata se prueba en un escenario recién armado
       <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t FR-C23 -->
-- [ ] C24 (R-FRI-002): el bloqueo de un recorrido con `rechazoCorrecto` lleva ese motivo en el archivo de resultados
+- [x] C24 (R-FRI-002): el bloqueo de un recorrido con `rechazoCorrecto` lleva ese motivo en el archivo de resultados
       <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t FR-C24 -->
-- [ ] C25 (R-FRI-002): un rechazo correcto no suma en los totales de fricción
+- [x] C25 (R-FRI-002): un rechazo correcto no suma en los totales de fricción
       <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t FR-C25 -->
-- [ ] C26 (R-FRI-002): una operación que sale con 0 deja su recorrido sin bloqueo
+- [x] C26 (R-FRI-002): una operación que sale con 0 deja su recorrido sin bloqueo
       <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t FR-C26 -->
-- [ ] C27 (R-FRI-002): con `packages/cli/dist/main.js`, el recorrido `salto-ilegal` se clasifica `fuera_de_banda`
+- [x] C27 (R-FRI-002): con `packages/cli/dist/main.js`, el recorrido `salto-ilegal` se clasifica `fuera_de_banda`
       <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t FR-C27 -->
-- [ ] C28 (R-FRI-001): `npx tsc --showConfig -p tsconfig.json` no lista archivos de `bench/`
+- [x] C28 (R-FRI-001): `npx tsc --showConfig -p tsconfig.json` no lista archivos de `bench/`
       <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t FR-C28 -->
-- [ ] C29 (R-FRI-001): `npx vitest list --filesOnly` de la raíz no lista archivos de `bench/`
+- [x] C29 (R-FRI-001): `npx vitest list --filesOnly` de la raíz no lista archivos de `bench/`
       <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t FR-C29 -->
-- [ ] C30 (R-FRI-001): ningún archivo de `bench/friccion/src` importa de `packages/` ni de `@valmen/`
+- [x] C30 (R-FRI-001): ningún archivo de `bench/friccion/src` importa de `packages/` ni de `@valmen/`
       <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t FR-C30 -->
-- [ ] C31 (R-FRI-001): la CI declara un paso que corre `npx vitest run --config bench/friccion/vitest.config.ts`
+- [x] C31 (R-FRI-001): la CI declara un paso que corre `npx vitest run --config bench/friccion/vitest.config.ts`
       <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t FR-C31 -->
-- [ ] C32: la medición compila con `bench/friccion/tsconfig.json`
+- [x] C32: la medición compila con `bench/friccion/tsconfig.json`
       <!-- test: npx tsc -p bench/friccion/tsconfig.json -->
-- [ ] C33: el build propio de la medición compila
+- [x] C33: el build propio de la medición compila
       <!-- test: npx tsc -p bench/friccion/tsconfig.build.json -->
-- [ ] C34: el build del producto compila
+- [x] C34: el build del producto compila
       <!-- test: npx tsc --build tsconfig.build.json -->
-- [ ] C35: las pruebas de la medición pasan
+- [x] C35: las pruebas de la medición pasan
       <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -->
-- [ ] C36: la prueba existente de `scripts/medir-salida-s1-s3.mjs` pasa sin cambios
+- [x] C36: la prueba existente de `scripts/medir-salida-s1-s3.mjs` pasa sin cambios
       <!-- test: npx vitest run tests/medicion-salida.test.ts -->
-- [ ] C37: el lint pasa sobre `bench/friccion`
+- [x] C37: el lint pasa sobre `bench/friccion`
       <!-- test: node node_modules/eslint/bin/eslint.js bench/friccion -->
 - [ ] C38 (R-FRI-001): con el binario de un commit anterior, `run` escribe su propio archivo de resultados
       <!-- verify: manual -->
@@ -262,11 +262,50 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+La medición es nueva y vive en `bench/friccion/`, fuera de `packages/`: no se tocó ningún archivo del producto. Se siguió el plan paso a paso, con cada prueba escrita antes que el código que cubre.
+
+- `bench/friccion/tsconfig.json` y `bench/friccion/tsconfig.build.json`: compilación propia, con las opciones estrictas de la raíz, sin `paths` ni `references`. `bench/friccion/vitest.config.ts`: `root` propio, `pool: "forks"` y `testTimeout: 120_000`.
+- `tsconfig.json` (raíz): `"bench"` en `exclude`. `.github/workflows/verificacion.yml`: paso «La medición de fricción compila y pasa sus pruebas», después de «Pruebas».
+- `bench/friccion/src/tipos.ts`: tipos de recorrido, bloqueo, resultados y archivo de resultados.
+- `bench/friccion/src/aislamiento.ts`: `crearEscenario`, `entornoAislado` (entorno armado desde cero), trampas `claude`, `codex`, `opencode` y `hermes` que anotan y salen con 97, `correrBinario`, `correrGit`, `llamadasAModelo` y `limpiarEscenario`.
+- `bench/friccion/src/clasificador.ts`: `extraerSalidas`, `resolverMarcadores`, `fueraDelEscenario`, `esComandoDesconocido`, `clasificar` y `totalizar`, todas puras.
+- `bench/friccion/src/medicion.ts`: `medirRecorrido` y `medir`. `bench/friccion/src/recorridos.ts`: `RECORRIDOS` con `salto-ilegal`. `bench/friccion/src/cli.ts`: `main` con el comando `run`, y la guarda `esProgramaPrincipal`.
+- Pruebas en `bench/friccion/test/`: `binario-falso.ts` (ayudante), `clasificador.test.ts`, `aislamiento.test.ts`, `binario-real.test.ts` y `fuera-del-producto.test.ts`; 44 pruebas, cada una con su `FR-Cnn`.
+
+Precisiones que el plan dejaba abiertas, todas dentro de su alcance:
+
+- `ResultadoDeRecorrido` lleva además `id` y `nombre`, porque «un resultado por cada recorrido» exige identificarlos. `extraerSalidas` devuelve `{ comando, argv }` y no solo las palabras: el comando citado queda tal cual en el intento.
+- `crearEscenario(raizExistente?)` reconstruye el escenario en la misma ruta. Así «un escenario recién armado» para cada salida no cambia las rutas absolutas que cite el mensaje, y la regla de «fuera del escenario» se evalúa contra una sola raíz.
+- El mensaje de un bloqueo es `stderr`; si está vacío, `stdout`.
+- Un subproceso que no termina con un código (una señal, o no se pudo lanzar) deja el recorrido `fallido`, igual que el tiempo agotado. Un paso `archivo` del armado cuya ruta sale del escenario también lo deja `fallido`: lo cubre una prueba FR-C14.
+- Pruebas por encima de una por criterio, todas de una regla pedida: la tokenización de comillas (FR-C15), «basta una salida que destraba» (FR-C18), el reintento declarado por el recorrido (FR-C20) y el paso `archivo` del armado (FR-C14).
+
+Evidencia de la prueba primero: antes del código, `npx vitest run --config bench/friccion/vitest.config.ts` dio 4 archivos fallidos (los módulos `src/` no existían) y, de `fuera-del-producto`, rojas FR-C28, FR-C30 y FR-C31 con FR-C29 verde (regresión del `npm test` existente). Tras escribir `src/` y antes de tocar la raíz, FR-C28 y FR-C31 seguían rojas; pasaron al agregar la exclusión de `tsconfig.json` y el paso de la CI. Se comprobó además que cinco pruebas fallan si se rompe lo que cubren: entorno heredado (FR-C07), `HOME` heredado (FR-C05), escenario no reconstruido (FR-C23), trampas sin vigilar (FR-C09) y rutas fuera del escenario sin mirar (FR-C12). Ninguna prueba que ya existía se puso en rojo ni se editó.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Directorio de ejecución de todo: la raíz del worktree (`/Users/juanandrade/Desktop/ValmenHarness/.claude/worktrees/ticket-friccion-runner`) o la raíz del repositorio donde se integre la rama. Requisitos de ambiente: Node 22 o superior, `npm ci` hecho y `npm run build` corrido antes (las pruebas de `binario-real` miden `packages/cli/dist/main.js` y fallan con «corre npm run build» si falta); `git` en el equipo; sin red ni credenciales.
+
+- `npm run build` — esperado: sin errores. Resultado: sin errores.
+- `npx tsc -p bench/friccion/tsconfig.json` — esperado: sin salida y código 0 (C32). Resultado: código 0.
+- `npx tsc -p bench/friccion/tsconfig.build.json` — esperado: sin salida y código 0, y deja `bench/friccion/dist/cli.js` (C33). Resultado: código 0.
+- `npx tsc --build tsconfig.build.json` — esperado: sin errores (C34). Resultado: código 0.
+- `npx vitest run --config bench/friccion/vitest.config.ts` — esperado: 4 archivos y 44 pruebas verdes (C1 a C31 y C35). Resultado: 44 de 44 verdes.
+- `valmen gate qa-mechanical --id FEATURE-BENCH-FRICCION-RUNNER-20261010 --evaluator command` — esperado: APPROVE con los criterios C1 a C37 en 1.00. Resultado: APPROVE, 37 de 37 criterios con comando pasan (recibo en `.valmen/receipts/FEATURE-BENCH-FRICCION-RUNNER-20261010.jsonl`).
+- `npx vitest run tests/medicion-salida.test.ts` — esperado: 6 pruebas verdes, sin cambios en el archivo (C36). Resultado: 6 de 6 verdes.
+- `node node_modules/eslint/bin/eslint.js bench/friccion` — esperado: sin salida y código 0 (C37). Resultado: código 0. `node node_modules/prettier/bin/prettier.cjs --check bench/friccion` también pasa.
+- `valmen secrets` — esperado: «Sin secretos». Resultado: «Sin secretos en 19 archivo(s) con cambios.»
+- `npx tsc --noEmit -p tsconfig.json` no se usa como criterio: da 37 errores en `tests/` (TS7016 y TS2345) que ya existían, y ninguno nombra `bench/`.
+- La suite completa (`npm test`) no se corrió en esta sesión: la corre el orquestador al integrar. Lo que garantiza que el producto no cambia es FR-C28 (`bench/` fuera del typecheck), FR-C29 (`bench/` fuera de `vitest list` de la raíz), C34 y C36.
+
+Validación manual del responsable (C38 y C39, sin marcar: nadie las probó en esta sesión). Desde la raíz del repositorio, con el binario actual y el de un commit anterior:
+
+1. `npx tsc -p bench/friccion/tsconfig.build.json`
+2. `git clone . "$TMPDIR/valmen-anterior"`, luego `git -C "$TMPDIR/valmen-anterior" checkout HEAD~5`, y dentro de ese clon `npm ci` y `npm run build` (necesita red).
+3. `node bench/friccion/dist/cli.js run --binary "$TMPDIR/valmen-anterior/packages/cli/dist/main.js" --out "$TMPDIR/friccion-anterior.json" --etiqueta HEAD~5` — esperado: código 0, el archivo existe y trae su propio `binario.sha256` y `binario.etiqueta` igual a `HEAD~5` (C38).
+4. `node bench/friccion/dist/cli.js run --binary packages/cli/dist/main.js --out "$TMPDIR/friccion-actual.json"` — esperado: código 0 y el mismo `corpus.sha256` que el archivo anterior (C39): `grep -A1 '"corpus"' "$TMPDIR/friccion-anterior.json" "$TMPDIR/friccion-actual.json"`.
+
+Comprobación hecha en esta sesión, que no sustituye a C38 ni a C39: `node bench/friccion/dist/cli.js run --binary packages/cli/dist/main.js --out <archivo> --etiqueta prueba-manual` salió con 0 y clasificó `salto-ilegal` como `fuera_de_banda` (código 3, sin salida citada); `run` sin `--binary` salió con 2 y no escribió nada.
 
 ## QA
 
@@ -295,7 +334,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-10",
+    "session_reference": null,
+    "model": "claude-sonnet-5-5",
+    "reasoning_effort": "high",
+    "notes": "Sesión de subagente de implementación (una sesión, un ticket) lanzada por el orquestador. No expone agregado de tokens ni de costo, ni el id de su sesión, por eso va sin números. Dato visible del contador de presupuesto del propio subagente: bajó de 15 000 000 a unos 14 790 000 tokens restantes entre el inicio y esta entrada, sin separar entrada de salida ni caché; es una referencia, no una medición de costo.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:subagente-implementacion-friccion-runner",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -368,6 +423,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-10",
+    "at": "2026-10-10T22:20:18.682Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-10",
+    "at": "2026-10-10T22:30:32.680Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-10",
+    "at": "2026-10-10T22:31:37.740Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
