@@ -4,7 +4,7 @@ id: CHORE-CI-EXPORTS-SIN-USO-20261010
 title: Guarda de exportaciones sin uso con knip y línea base decreciente
 type: CHORE
 module: CI
-workflow_status: approved
+workflow_status: in_progress
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -87,51 +87,51 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1. (R-MUE-001) En el monorepo de prueba, una función exportada en `packages/engine/src` sin ningún import hace fallar el chequeo con salida 1
+- [x] C1. (R-MUE-001) En el monorepo de prueba, una función exportada en `packages/engine/src` sin ningún import hace fallar el chequeo con salida 1
       <!-- test: npx vitest run tests/exports-sin-uso.test.ts -->
-- [ ] C2. (R-MUE-001) El mensaje de ese fallo nombra la función junto a su archivo
+- [x] C2. (R-MUE-001) El mensaje de ese fallo nombra la función junto a su archivo
       <!-- test: npx vitest run tests/exports-sin-uso.test.ts -->
-- [ ] C3. (R-MUE-001) Una exportación que solo importa un archivo de `tests/` cuenta como consumida
+- [x] C3. (R-MUE-001) Una exportación que solo importa un archivo de `tests/` cuenta como consumida
       <!-- test: npx vitest run tests/exports-sin-uso.test.ts -->
-- [ ] C4. (R-MUE-001) Una exportación que solo importa un guion de `scripts/` cuenta como consumida
+- [x] C4. (R-MUE-001) Una exportación que solo importa un guion de `scripts/` cuenta como consumida
       <!-- test: npx vitest run tests/exports-sin-uso.test.ts -->
-- [ ] C5. (R-MUE-001) Una exportación que solo importa el `main.ts` de una entrada `bin` cuenta como consumida
+- [x] C5. (R-MUE-001) Una exportación que solo importa el `main.ts` de una entrada `bin` cuenta como consumida
       <!-- test: npx vitest run tests/exports-sin-uso.test.ts -->
-- [ ] C6. (R-MUE-002) Una entrada de la línea base cuyo símbolo se borró hace fallar el chequeo pidiendo quitarla
+- [x] C6. (R-MUE-002) Una entrada de la línea base cuyo símbolo se borró hace fallar el chequeo pidiendo quitarla
       <!-- test: npx vitest run tests/exports-sin-uso.test.ts -->
-- [ ] C7. (R-MUE-002) Una entrada de la línea base cuyo símbolo ganó un consumidor hace fallar el chequeo pidiendo quitarla
+- [x] C7. (R-MUE-002) Una entrada de la línea base cuyo símbolo ganó un consumidor hace fallar el chequeo pidiendo quitarla
       <!-- test: npx vitest run tests/exports-sin-uso.test.ts -->
-- [ ] C8. (R-MUE-002) La opción `--crear-linea-base` se niega a sobrescribir una línea base que ya existe
+- [x] C8. (R-MUE-002) La opción `--crear-linea-base` se niega a sobrescribir una línea base que ya existe
       <!-- test: npx vitest run tests/exports-sin-uso.test.ts -->
-- [ ] C9. (R-MUE-003) El script `exports:check` del `package.json` corre `node scripts/exports-sin-uso.mjs`
+- [x] C9. (R-MUE-003) El script `exports:check` del `package.json` corre `node scripts/exports-sin-uso.mjs`
       <!-- test: npx vitest run tests/exports-sin-uso.test.ts -->
-- [ ] C10. (R-MUE-001) El flujo `.github/workflows/verificacion.yml` tiene un paso que corre `npm run exports:check`
+- [x] C10. (R-MUE-001) El flujo `.github/workflows/verificacion.yml` tiene un paso que corre `npm run exports:check`
       <!-- test: npx vitest run tests/exports-sin-uso.test.ts -->
-- [ ] C11. (R-MUE-003) Sobre el árbol limpio de la rama el chequeo sale con 0
+- [x] C11. (R-MUE-003) Sobre el árbol limpio de la rama el chequeo sale con 0
       <!-- test: node scripts/exports-sin-uso.mjs -->
-- [ ] C12. (R-MUE-003) La salida del chequeo sin hallazgos dice cuántas entradas tiene la línea base
+- [x] C12. (R-MUE-003) La salida del chequeo sin hallazgos dice cuántas entradas tiene la línea base
       <!-- test: npx vitest run tests/exports-sin-uso.test.ts -->
-- [ ] C13. (R-MUE-003) `knip` figura en las `devDependencies` de la raíz con versión exacta
+- [x] C13. (R-MUE-003) `knip` figura en las `devDependencies` de la raíz con versión exacta
       <!-- test: npx vitest run tests/exports-sin-uso.test.ts -->
-- [ ] C14. (R-MUE-003) Ningún `package.json` de `packages/*` declara `knip`
+- [x] C14. (R-MUE-003) Ningún `package.json` de `packages/*` declara `knip`
       <!-- test: npx vitest run tests/exports-sin-uso.test.ts -->
-- [ ] C15. (R-MUE-002) La línea base es una lista ordenada sin entradas repetidas
+- [x] C15. (R-MUE-002) La línea base es una lista ordenada sin entradas repetidas
       <!-- test: npx vitest run tests/exports-sin-uso.test.ts -->
-- [ ] C16. (R-MUE-001) La línea base incluye exportaciones de `packages/engine/src`, señal de que el uso opaco ya no ciega ese paquete
+- [x] C16. (R-MUE-001) La línea base incluye exportaciones de `packages/engine/src`, señal de que el uso opaco ya no ciega ese paquete
       <!-- test: npx vitest run tests/exports-sin-uso.test.ts -->
-- [ ] C17. `tests/retiro-disparador.test.ts` sigue comprobando que ningún paquete exporta el renderizado del plist
+- [x] C17. `tests/retiro-disparador.test.ts` sigue comprobando que ningún paquete exporta el renderizado del plist
       <!-- test: npx vitest run tests/retiro-disparador.test.ts -->
-- [ ] C18. El comentario de `eslint.config.js` atribuye al lint la detección de variables sin usar
+- [x] C18. El comentario de `eslint.config.js` atribuye al lint la detección de variables sin usar
       <!-- verify: manual -->
 - [ ] C19. La comprobación de tipos del repositorio no produce salida
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
-- [ ] C20. `package-lock.json` incluye el binario nativo de Linux que `knip` necesita en el CI
+- [x] C20. `package-lock.json` incluye el binario nativo de Linux que `knip` necesita en el CI
       <!-- verify: manual -->
-- [ ] C21. Los archivos nuevos cumplen el formato de `prettier --check`
+- [x] C21. Los archivos nuevos cumplen el formato de `prettier --check`
       <!-- verify: manual -->
-- [ ] C22. El lint de las dos pruebas tocadas termina sin errores
+- [x] C22. El lint de las dos pruebas tocadas termina sin errores
       <!-- verify: manual -->
-- [ ] C23. En una rama de prueba del repositorio real, una función exportada nueva sin import en `packages/engine/src` hace fallar `npm run exports:check`
+- [x] C23. En una rama de prueba del repositorio real, una función exportada nueva sin import en `packages/engine/src` hace fallar `npm run exports:check`
       <!-- verify: manual -->
 
 ## Puntos
@@ -142,11 +142,56 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+Hecho por un subagente (claude-sonnet-5-5) en el worktree `.claude/worktrees/ticket-exports-sin-uso`, rama `valmen/ticket-exports-sin-uso`, siguiendo `## Plan` en orden y con las pruebas escritas antes del código (EST-010).
+
+**Paso 1 — dependencia.** `npm install --save-dev --save-exact knip@6.38.0` en la raíz: queda `"knip": "6.38.0"` en `package.json` y ningún `packages/*/package.json` cambia. Se fijó 6.38.0 (publicada el 2026-09-23, 17 días antes) y no la 6.41.0 «vigente» que cita el diagnóstico (publicada el 2026-10-09): la instrucción de la corrida pide una versión con más de dos semanas, y las 6.39.0, 6.40.0 y 6.41.0 no las cumplen. El lockfile suma 60 paquetes y no quita ni cambia la versión de ninguno de los que ya tenía; `grep -c "binding-linux-x64-gnu" package-lock.json` da 6 (`@oxc-parser/binding-linux-x64-gnu` 0.150.0 y `@oxc-resolver/binding-linux-x64-gnu` 11.24.2, con su entrada y su dependencia opcional).
+
+**Paso 2 — configuración y comprobación de H1 a H4** (`knip.json` en la raíz: `includeEntryExports`, workspace `.` con entradas `scripts/*.mjs` y las pruebas de `vitest.config.ts:78`, `ignore` de `tests/fixtures/**`, y `packages/*` con `src/index.ts` y `src/main.ts`):
+
+- H1, se cumple. Con `--include exports,types,files` `knip` 6.38.0 reporta 171 en `packages/*/src` antes de neutralizar el uso opaco (core 46, server 38, cli 26, mcp 25, gate 21, credentials 8, gate-llm-judge 4, gate-command 2, gate-jev 1; engine 0 y adapter 0), contra los 212 de la medición (a); 0 archivos enteros, como (d). Salen `V2_ONLY_TICKET_TYPES`, `ID_PAD`, `FEATURE_BLOCKED_EXITS`, `hermesDbPath` y `hayDatosDeClaude`.
+- H2, **se cumple a medias**. Con `packages/*/dist` construido, un guion de `scripts/` que importa `../packages/core/dist/index.js` cuenta como consumidor (sonda con un guion temporal que importaba `V2_ONLY_TICKET_TYPES`: no sale con `dist` y sí sale sin `dist`). Sin `dist`, `knip` no mapea ese import y el símbolo sale como sin consumidor: la cláusula «sin construir antes» del diagnóstico **no se cumple**. Hoy no cambia ningún resultado: `writeRun`, `buildGateState`, `DEFAULT_POLICY`, `buildReceipt`, `decide` y `TICKET_TEMPLATE`, que el plan daba por «solo importan los guiones», no salen porque también los importan `src/` y pruebas, y el resultado es idéntico con y sin `dist` (212 hallazgos en total, guiones incluidos); ningún símbolo del repositorio lo consume solo un guion. En el CI el paso va después del `typecheck`, que construye, así que `dist` existe. Para el uso local el guion agrega una nota al fallo cuando falta algún `dist` («corré `npm run build`») y la cabecera del guion y el comentario del CI lo dicen. El plan decía detenerse ante un fallo de H2 y consultar D2-B: se siguió porque el hallazgo no altera ningún número ni criterio y el CI lo cumple por construcción; **queda para que el PO lo confirme** (ver `## Pruebas`, decisión).
+- H3, se cumple: engine y adapter dan 0 mientras `tests/retiro-disparador.test.ts` pasa los índices a `Object.keys`, y 205 y 59 después de neutralizarlo.
+- H4, se cumple: la salida es `{ "issues": [{ "file", "exports": [{ "name", "line", "col", "pos" }], "types": [...], "files": [{ "name" }] }] }`; un archivo entero sin consumidor aparece en `files` y sus exportaciones no se listan aparte.
+
+**Paso 3 — pruebas primero.** `tests/exports-sin-uso.test.ts` (23 pruebas: unitarias de `hallazgosDeKnip` y `compararConLineaBase`, integración sobre un monorepo mínimo en un directorio temporal con el `knip` y el `knip.json` reales, y contrato de `package.json`, del flujo, de cada `packages/*/package.json` y de la línea base, más dos de regresión). Antes de existir el comparador se corrió `npx vitest run tests/exports-sin-uso.test.ts`: 9 en rojo, 9 omitidas por el `beforeAll` roto y 4 verdes: las dos de regresión, C14 (guarda lo que ya era cierto) y C13 (ya lo cumplía el paso 1).
+
+**Paso 4 — comparador.** `scripts/exports-sin-uso.mjs` y `scripts/exports-sin-uso.d.mts`: `hallazgosDeKnip`, `compararConLineaBase`, `ejecutarKnip`, `comprobar`, `--crear-linea-base` (se niega con salida 2 si el archivo existe) y `--directory`. Salida 0 sin hallazgos, 1 con nuevas o sobrantes, 2 por mal uso o línea base ausente, 3 si `knip` no corre. Dos cosas que las pruebas de integración hicieron aparecer y que el plan no decía: `ejecutarKnip` pasa a `knip` la ruta real del directorio (en macOS el temporal `/var` es `/private/var` y con la ruta simbólica `knip` no reconoce las entradas y marca todo como archivo sin uso), y el aviso de `dist` ausente del paso 2.
+
+**Paso 5 — uso opaco.** En `tests/retiro-disparador.test.ts` los dos `import * as` se reemplazaron por `indiceDe(paquete)`, un `import()` dinámico con ruta armada con `join(REPO, …)`, y `approvalLogPath` pasó a import con nombre. Es el cambio que el plan declara a propósito: las afirmaciones sobre el plist, `readJourneyDispatcher` y `dispatchJourney` no cambian, y las 20 pruebas del archivo siguen verdes. (El archivo ya no pasaba `prettier --check` en `HEAD`; no se reformateó.)
+
+**Paso 6 — línea base.** `node scripts/exports-sin-uso.mjs --crear-linea-base` escribió `scripts/exports-sin-uso.linea-base.json` con 435 entradas (246 valores y 189 tipos, 0 archivos): engine 205, adapter 59, core 46, server 38, cli 26, mcp 25, gate 21, credentials 8, gate-llm-judge 4, gate-command 2, gate-jev 1. Contra las mediciones del diagnóstico: 212 en (a) (que dejaba engine y adapter en 0 por el uso opaco) y 825 en (b); `knip` da 435 con engine y adapter ya vigilados (la diferencia con (b) viene del método de cada medición y no se investigó). `node scripts/exports-sin-uso.mjs` sale con 0 y dice «la línea base tiene 435 entradas».
+
+**Pasos 7 y 8.** `package.json` suma `"exports:check": "node scripts/exports-sin-uso.mjs"`; `.github/workflows/verificacion.yml` suma el paso «Exportaciones sin consumidor» entre el lint y el formato, con su comentario (por qué existe, que la línea base solo se achica, que un `import * as` pasado entero a `Object.keys` vuelve a cegar un paquete y que va después del `typecheck` por el `dist`); el comentario de `eslint.config.js` atribuye las variables sin usar a `@typescript-eslint/no-unused-vars` y las exportaciones sin consumidor al paso nuevo.
+
+**Hallazgos fuera del alcance (no se tocaron).** (1) `npx tsc --noEmit -p tsconfig.json` no sale en silencio **en `HEAD`**: 37 errores en 7 pruebas que no toca este ticket (`tests/mundo-control.test.ts`, `mundo-invernadero`, `mundo-pasteleria`, `mundos-correcciones`, `vista-lienzo`, `vista-marco-responsivo`, `vista-texto-pregunta`), por módulos de `packages/server/web/agentes/` sin declaración `.d.ts` y por tipos de filas de agente; ningún archivo de este ticket aparece en esa lista. Por eso C19 no se pudo verificar y la compuerta `qa-mechanical` da BLOCK (ver `## Pruebas`). (2) `prettier --check .` falla en 287 archivos de `HEAD`, entre ellos `tests/retiro-disparador.test.ts`; los archivos nuevos de este ticket sí pasan.
+
+Archivos del ticket: `package.json`, `package-lock.json`, `knip.json`, `scripts/exports-sin-uso.mjs`, `scripts/exports-sin-uso.d.mts`, `scripts/exports-sin-uso.linea-base.json`, `tests/exports-sin-uso.test.ts`, `tests/retiro-disparador.test.ts`, `.github/workflows/verificacion.yml`, `eslint.config.js`, este ticket y su recibo de compuerta.
 
 ## Pruebas
 
-Pendiente de ejecución.
+**Directorio:** la raíz del repositorio (`/Users/juanandrade/Desktop/ValmenHarness/.claude/worktrees/ticket-exports-sin-uso` en esta rama; la raíz del checkout al integrar). Todos los comandos salen de ahí.
+
+**Ambiente:** Node `>=22.12` (se probó con v26.10.0), `npm ci` (necesita red una sola vez para instalar `knip` 6.38.0 y sus binarios nativos) y `npm run build` hecho antes (los guiones de `scripts/` importan el `dist` y `knip` solo lo reconoce construido). No hace falta red ni credenciales para el resto.
+
+| Comando | Resultado esperado | Criterios |
+|---|---|---|
+| `npm run build` | termina sin errores | requisito de los demás |
+| `npx vitest run tests/exports-sin-uso.test.ts tests/retiro-disparador.test.ts tests/medicion-salida.test.ts` | 3 archivos, 49 pruebas en verde (23 + 20 + 6) | C1 a C10, C12 a C17 |
+| `node scripts/exports-sin-uso.mjs` | salida 0 y «Sin exportaciones nuevas sin consumidor; la línea base tiene 435 entradas» | C11 |
+| `npm run exports:check` | lo mismo que el anterior (es el paso que corre el CI) | C9, C11 |
+| `npx eslint tests/exports-sin-uso.test.ts tests/retiro-disparador.test.ts` | sin salida | C22 |
+| `npx prettier --check knip.json package.json .github/workflows/verificacion.yml scripts/exports-sin-uso.mjs scripts/exports-sin-uso.d.mts scripts/exports-sin-uso.linea-base.json tests/exports-sin-uso.test.ts eslint.config.js` | «All matched files use Prettier code style!» | C21 |
+| `grep -c "binding-linux-x64-gnu" package-lock.json` | 6 (oxc-parser y oxc-resolver) | C20 |
+| `npx tsc --noEmit -p tsconfig.json` | **hoy no sale en silencio**: 37 errores en 7 pruebas ajenas a este ticket, ya presentes en `HEAD`; ninguno en un archivo de este ticket | C19 (sin verificar) |
+| `valmen gate qa-mechanical --id CHORE-CI-EXPORTS-SIN-USO-20261010 --evaluator command` | BLOCK solo por C19; los otros 21 criterios con comando pasan (recibo `GR-20261010-CHORE-CI-EXPORTS-SIN-USO-20261010-qa-mechanical-1`) | todos |
+
+**Validación manual (C23, la hace el responsable):** en una rama de prueba, con `packages/*/dist` construido, crear `packages/engine/src/zz-sonda.ts` con `export function funcionDeSondaSinConsumidor(): number { return 1; }`, agregar `export * from "./zz-sonda.js";` a `packages/engine/src/index.ts` y correr `npm run exports:check`: tiene que salir con 1 y decir «Exportación sin consumidor: `funcionDeSondaSinConsumidor` en `packages/engine/src/zz-sonda.ts:1`». Al revertir los dos cambios vuelve a salir con 0. El agente lo comprobó así en este worktree y lo revirtió.
+
+**Criterios manuales (C18, C20 a C23):** C18 se verificó leyendo `git diff eslint.config.js`; C20 con el `grep` de la tabla (y las entradas `node_modules/@oxc-parser/binding-linux-x64-gnu` y `node_modules/@oxc-resolver/binding-linux-x64-gnu` del lockfile); C21 y C22 con los comandos de la tabla; C23 con la sonda de arriba.
+
+**Cobertura y limitaciones.** Las pruebas de integración corren el `knip` y el `knip.json` reales sobre un monorepo mínimo (con un `dist` simulado, que es como llega al paso del CI); si `knip` cambia lo que reporta, fallan antes que la línea base. Cada prueba nueva se vio en rojo antes del comparador (9 rojas y 9 omitidas por el `beforeAll`, 4 verdes por ser regresión o estar ya cumplidas por el paso 1). Límites conocidos: (1) sin `dist` construido un símbolo que solo importa un guion saldría como nuevo (hoy no hay ninguno; el fallo lo avisa); (2) `tests/gate-playwright-specs-repo.test.ts:151` y `tests/timeline.test.ts:66` siguen pasando un módulo entero y ciegan ese solo módulo; (3) si la línea base llegara a ser tan corta que quepa en una línea, `prettier --check` la querría en una línea.
+
+**Decisión de una persona.** (1) Cómo tratar C19: el criterio exige un `tsc` sin salida, y `HEAD` ya no lo cumple por 7 pruebas ajenas (declaraciones `.d.ts` que faltan en `packages/server/web/agentes/`); o se arregla eso en otro ticket y se repite la compuerta, o se reescribe el criterio. (2) Confirmar el fallo parcial de H2 (ver `## Implementación`): el plan pedía consultar D2-B en ese caso y no se detuvo el trabajo porque no cambia ningún número. (3) La versión fijada es 6.38.0, no la 6.41.0 del diagnóstico, por la regla de las dos semanas.
 
 ## QA
 
@@ -175,7 +220,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-10",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Fase de implementación hecha por un subagente (claude-sonnet-5-5, esfuerzo high) lanzado desde la sesión orquestadora c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8, que sirve varios tickets: el subagente no expone un agregado propio de tokens ni de coste, así que no se declaran números en vez de repartir a ojo. El gasto completo está en la sesión del orquestador.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:subagente-de-implementacion",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -248,6 +309,24 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-10",
+    "at": "2026-10-10T22:20:14.639Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-10",
+    "at": "2026-10-10T22:29:19.260Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
   }
 ]
 ```
