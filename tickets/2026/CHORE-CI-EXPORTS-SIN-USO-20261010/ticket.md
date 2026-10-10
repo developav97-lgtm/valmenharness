@@ -123,7 +123,7 @@ Ninguno.
       <!-- test: npx vitest run tests/retiro-disparador.test.ts -->
 - [x] C18. El comentario de `eslint.config.js` atribuye al lint la detección de variables sin usar
       <!-- verify: manual -->
-- [ ] C19. La comprobación de tipos del repositorio no produce salida
+- [x] C19. La comprobación de tipos del repositorio no produce salida
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
 - [x] C20. `package-lock.json` incluye el binario nativo de Linux que `knip` necesita en el CI
       <!-- verify: manual -->
@@ -166,6 +166,8 @@ Hecho por un subagente (claude-sonnet-5-5) en el worktree `.claude/worktrees/tic
 **Hallazgos fuera del alcance (no se tocaron).** (1) `npx tsc --noEmit -p tsconfig.json` no sale en silencio **en `HEAD`**: 37 errores en 7 pruebas que no toca este ticket (`tests/mundo-control.test.ts`, `mundo-invernadero`, `mundo-pasteleria`, `mundos-correcciones`, `vista-lienzo`, `vista-marco-responsivo`, `vista-texto-pregunta`), por módulos de `packages/server/web/agentes/` sin declaración `.d.ts` y por tipos de filas de agente; ningún archivo de este ticket aparece en esa lista. Por eso C19 no se pudo verificar y la compuerta `qa-mechanical` da BLOCK (ver `## Pruebas`). (2) `prettier --check .` falla en 287 archivos de `HEAD`, entre ellos `tests/retiro-disparador.test.ts`; los archivos nuevos de este ticket sí pasan.
 
 Archivos del ticket: `package.json`, `package-lock.json`, `knip.json`, `scripts/exports-sin-uso.mjs`, `scripts/exports-sin-uso.d.mts`, `scripts/exports-sin-uso.linea-base.json`, `tests/exports-sin-uso.test.ts`, `tests/retiro-disparador.test.ts`, `.github/workflows/verificacion.yml`, `eslint.config.js`, este ticket y su recibo de compuerta.
+
+**Actualización del 2026-10-10 (orquestador).** El PO decidió arreglar el typecheck de `main` en modo directo (integrado en `113d2e5`: 37 errores a 0) y confirmó seguir con `knip` pese al fallo parcial de H2 (en el CI el paso va después del typecheck, que construye). Con `main` traído a la rama, `npx tsc --noEmit -p tsconfig.json` sale sin salida y C19 queda verificado; la compuerta `qa-mechanical` se repitió y aprobó. La línea base pasó de 435 a 453 entradas: las 18 exportaciones de `packages/cli/src/command-table.ts` e `index.ts` que FEATURE-CLI-TABLA-COMANDOS-20261010 dejó para que las consuma FEATURE-CLI-PRUEBA-MENSAJES-20261010, y la guarda exige quitarlas cuando ese ticket las use. La regresión del flujo del CI incluye ahora el paso de la medición de fricción que trajo `main`.
 
 ## Pruebas
 
