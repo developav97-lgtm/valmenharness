@@ -97,3 +97,23 @@ pasan a `.valmen/rules/estandares-<área>.md`, que es lo que llega al
 **Regla:** Un bugfix o un cambio chico y acotado se hace en modo directo, sin compuertas, pero con dos reglas obligatorias: reproducir el defecto con datos reales antes de arreglarlo, y añadir pruebas que fallen sin el arreglo y pasen con él. Una funcionalidad, un cambio que toca varios módulos o un pedido ambiguo va por el harness completo (ticket, análisis, plan, aprobación, implementación, QA). Quien registra el trabajo declara el modo elegido y su motivo.
 
 **Por qué:** A/B del 2026-10-09 sobre BUGFIX-ENGINE-JORNADA-HANDOFF-LECTOR-20261008, el mismo pedido en dos worktrees: la rama directa (sonnet, 77 s, 0,76 M de caché leída) halló 2 de 3 causas y falló 1 de 44 pruebas de la otra rama; la rama con harness (opus y sonnet, ~12 min, 3,66 M) halló las 3 causas porque reprodujo el defecto con el parte real, con 13 pruebas. El valor vino del diagnóstico con datos reales y de las pruebas exhaustivas, no de las compuertas (cascade falló en las 4, y las 2 REVIEW fueron de forma). En la feature vista-agentes el harness atrapó huecos reales del plan (C31, C20, C14) y la decisión de privacidad, a un costo de tokens alto.
+
+### [EST-009] Una prueba existente en rojo no se edita: se detiene y se reporta
+
+- **Área:** proceso
+- **Propuesto:** 2026-10-10
+- **Estado:** propuesto
+
+**Regla:** Cuando una prueba que ya existía falla durante un cambio, no se edita, no se borra ni se marca como omitida para que pase: se detiene la implementación y se reporta en el ticket la prueba, su salida y la hipótesis de por qué falla. Solo se modifica si el plan aprobado del ticket declara que el pedido cambia a propósito el comportamiento que esa prueba describe, y el cambio se cita en el ticket con la prueba y el motivo.
+
+**Por qué:** Comparación con gentle-ai del 2026-10-10 (Gentleman-Programming/gentle-ai @66bf3e1, docs/architecture/the-organic-rdd-story.md): en la segunda corrida de su rediseño de revisión, esta regla detuvo el trabajo nueve veces porque una prueba vieja se puso en rojo, y en las nueve la prueba tenía razón y el diagnóstico no. Valmen no lo tiene escrito: un agente presionado por terminar puede ajustar la prueba al código nuevo, y entonces el verde ya no prueba nada. Se registra junto con la feature guardas-verificacion-harness.
+
+### [EST-010] Prueba primero: una en rojo por regla pedida y una de regresión por comando tocado
+
+- **Área:** proceso
+- **Propuesto:** 2026-10-10
+- **Estado:** propuesto
+
+**Regla:** Cuando el comportamiento pedido admite una prueba ejecutable y determinista, se escribe antes de implementar y se observa en rojo; después se implementa hasta verde y se refactoriza con las pruebas en verde. Se escribe una prueba en rojo por cada regla que pide el ticket, con los casos que esa regla nombra y sus efectos observables (salida, código de salida, datos persistidos), y una por cada comando, herramienta MCP u opción existente que el cambio toca, que demuestre que su comportamiento anterior se mantiene; no se agregan otras. Si no hay prueba ejecutable posible, el ticket dice por qué y se corren las verificaciones funcionales que apliquen.
+
+**Por qué:** Comparación con gentle-ai del 2026-10-10 (Gentleman-Programming/gentle-ai @66bf3e1, docs/usage.md, sección ODD): su política fija cuántas pruebas lleva un cambio, así no faltan ni se rellenan. EST-008 ya exige, solo en modo directo, pruebas que fallen sin el arreglo; esta regla lo extiende al flujo completo y fija el criterio: exhaustivas respecto de lo pedido y de lo que se toca, no más allá. Se registra junto con la feature operacion-entrega-harness.

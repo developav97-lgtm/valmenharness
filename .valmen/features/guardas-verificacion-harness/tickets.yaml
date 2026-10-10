@@ -1,0 +1,172 @@
+feature: guardas-verificacion-harness
+generated_by:
+  provider: claude-code
+  model: claude-sonnet-5-5
+sprints:
+  - id: S1
+    goal: "El CLI declara sus comandos en una tabla y una prueba comprueba que todo mensaje de bloqueo nombra comandos, banderas y salidas reales."
+    tickets:
+      - id: FEATURE-CLI-TABLA-COMANDOS-20261010
+        title: Tabla declarativa de comandos y banderas que usa el despacho
+        depends_on: []
+      - id: FEATURE-CLI-PRUEBA-MENSAJES-20261010
+        title: Prueba de coherencia de los mensajes de bloqueo del CLI y el MCP
+        depends_on:
+          - FEATURE-CLI-TABLA-COMANDOS-20261010
+  - id: S2
+    goal: "El CI rechaza exportaciones nuevas sin consumidor, con línea base que solo se achica y paso local."
+    tickets:
+      - id: CHORE-CI-EXPORTS-SIN-USO-20261010
+        title: Guarda de exportaciones sin uso con knip y línea base decreciente
+        depends_on: []
+  - id: S3
+    goal: "La fricción del CLI se mide con recorridos sin modelo, se clasifica en código y se compara entre dos binarios."
+    tickets:
+      - id: FEATURE-BENCH-FRICCION-RUNNER-20261010
+        title: Medición de fricción aislada sobre un binario valmen con clasificador
+        depends_on: []
+      - id: FEATURE-BENCH-FRICCION-CORPUS-20261010
+        title: Corpus inicial de rechazos y comparación de dos corridas
+        depends_on:
+          - FEATURE-BENCH-FRICCION-RUNNER-20261010
+  - id: S4
+    goal: La revisión del diff es una compuerta con riesgo calculado en código y recibos atados al árbol entregado.
+    tickets:
+      - id: FEATURE-GATE-ARBOL-QA-RECIBO-20261010
+        title: Recibo de qa-mechanical atado al árbol probado y rechazo si cambia
+        depends_on: []
+      - id: FEATURE-ENGINE-RIESGO-REVISION-20261010
+        title: Cálculo en código del riesgo de la revisión por lo tocado
+        depends_on: []
+      - id: FEATURE-GATE-CODE-REVIEW-20261010
+        title: Compuerta code-review con profundidad por riesgo y una corrección
+        depends_on:
+          - FEATURE-GATE-ARBOL-QA-RECIBO-20261010
+          - FEATURE-ENGINE-RIESGO-REVISION-20261010
+  - id: S5
+    goal: "Los permisos de los agentes niegan lo que nunca se automatiza, desde una sola lista proyectada por valmen sync."
+    tickets:
+      - id: CHORE-CORE-LISTA-DENEGADOS-20261010
+        title: Lista única de rutas y comandos denegados en core
+        depends_on: []
+      - id: SECURITY-CLI-PROYECCION-DENEGADOS-20261010
+        title: Sync proyecta denegaciones a settings.json de Claude Code
+        depends_on:
+          - CHORE-CORE-LISTA-DENEGADOS-20261010
+      - id: SECURITY-ADAPTER-DENEGADOS-CODEX-OPENCODE-20261010
+        title: Proyección de denegaciones a Codex y OpenCode con reporte del resto
+        depends_on:
+          - SECURITY-CLI-PROYECCION-DENEGADOS-20261010
+  - id: S6
+    goal: "La cascada y las compuertas se prueban de punta a punta con un modelo guionado local, sin claves ni red."
+    tickets:
+      - id: FEATURE-CREDENTIALS-URL-BASE-PRUEBA-20261010
+        title: URL base de prueba por variable de entorno en transportes HTTP
+        depends_on: []
+      - id: FEATURE-CLI-PRUEBA-CASCADA-GUIONADA-20261010
+        title: Prueba de valmen gate con cascada completa y modelo guionado
+        depends_on:
+          - FEATURE-CREDENTIALS-URL-BASE-PRUEBA-20261010
+  - id: S7
+    goal: "Las skills tienen presupuesto con aviso en sync, referencias proyectadas y catálogo recortado bajo un tope."
+    tickets:
+      - id: FEATURE-CLI-PRESUPUESTO-SKILLS-20261010
+        title: Clave skill-budget y aviso de valmen sync por skill que lo pasa
+        depends_on: []
+      - id: FEATURE-ADAPTER-SKILL-REFERENCIAS-20261010
+        title: Proyección de la carpeta de referencias junto al SKILL.md
+        depends_on: []
+      - id: IMPROVEMENT-SKILLS-RECORTE-TOPE-20261010
+        title: Recorte de skills sin perder reglas y prueba del tope del catálogo
+        depends_on:
+          - FEATURE-CLI-PRESUPUESTO-SKILLS-20261010
+          - FEATURE-ADAPTER-SKILL-REFERENCIAS-20261010
+coverage:
+  - requirement: R-MSG-001
+    covered_by:
+      - FEATURE-CLI-TABLA-COMANDOS-20261010
+  - requirement: R-MSG-002
+    covered_by:
+      - FEATURE-CLI-PRUEBA-MENSAJES-20261010
+  - requirement: R-MSG-003
+    covered_by:
+      - FEATURE-CLI-TABLA-COMANDOS-20261010
+  - requirement: R-MSG-004
+    covered_by:
+      - FEATURE-CLI-PRUEBA-MENSAJES-20261010
+      - FEATURE-BENCH-FRICCION-CORPUS-20261010
+  - requirement: R-MUE-001
+    covered_by:
+      - CHORE-CI-EXPORTS-SIN-USO-20261010
+  - requirement: R-MUE-002
+    covered_by:
+      - CHORE-CI-EXPORTS-SIN-USO-20261010
+  - requirement: R-MUE-003
+    covered_by:
+      - CHORE-CI-EXPORTS-SIN-USO-20261010
+  - requirement: R-FRI-001
+    covered_by:
+      - FEATURE-BENCH-FRICCION-RUNNER-20261010
+  - requirement: R-FRI-002
+    covered_by:
+      - FEATURE-BENCH-FRICCION-RUNNER-20261010
+  - requirement: R-FRI-003
+    covered_by:
+      - FEATURE-BENCH-FRICCION-CORPUS-20261010
+  - requirement: R-FRI-004
+    covered_by:
+      - FEATURE-BENCH-FRICCION-CORPUS-20261010
+  - requirement: R-REV-001
+    covered_by:
+      - FEATURE-GATE-ARBOL-QA-RECIBO-20261010
+  - requirement: R-REV-002
+    covered_by:
+      - FEATURE-ENGINE-RIESGO-REVISION-20261010
+  - requirement: R-REV-003
+    covered_by:
+      - FEATURE-GATE-CODE-REVIEW-20261010
+  - requirement: R-REV-004
+    covered_by:
+      - FEATURE-GATE-CODE-REVIEW-20261010
+  - requirement: R-REV-005
+    covered_by:
+      - FEATURE-GATE-CODE-REVIEW-20261010
+  - requirement: R-PER-001
+    covered_by:
+      - CHORE-CORE-LISTA-DENEGADOS-20261010
+      - SECURITY-CLI-PROYECCION-DENEGADOS-20261010
+  - requirement: R-PER-002
+    covered_by:
+      - SECURITY-CLI-PROYECCION-DENEGADOS-20261010
+  - requirement: R-PER-003
+    covered_by:
+      - SECURITY-CLI-PROYECCION-DENEGADOS-20261010
+  - requirement: R-PER-004
+    covered_by:
+      - SECURITY-ADAPTER-DENEGADOS-CODEX-OPENCODE-20261010
+  - requirement: R-PER-005
+    covered_by:
+      - SECURITY-CLI-PROYECCION-DENEGADOS-20261010
+  - requirement: R-GUI-001
+    covered_by:
+      - FEATURE-CREDENTIALS-URL-BASE-PRUEBA-20261010
+  - requirement: R-GUI-002
+    covered_by:
+      - FEATURE-CLI-PRUEBA-CASCADA-GUIONADA-20261010
+  - requirement: R-GUI-003
+    covered_by:
+      - FEATURE-CLI-PRUEBA-CASCADA-GUIONADA-20261010
+  - requirement: R-GUI-004
+    covered_by:
+      - FEATURE-CLI-PRUEBA-CASCADA-GUIONADA-20261010
+  - requirement: R-SKL-001
+    covered_by:
+      - FEATURE-CLI-PRESUPUESTO-SKILLS-20261010
+  - requirement: R-SKL-002
+    covered_by:
+      - IMPROVEMENT-SKILLS-RECORTE-TOPE-20261010
+  - requirement: R-SKL-003
+    covered_by:
+      - FEATURE-ADAPTER-SKILL-REFERENCIAS-20261010
+      - IMPROVEMENT-SKILLS-RECORTE-TOPE-20261010
+gaps: []

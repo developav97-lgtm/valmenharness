@@ -1,0 +1,96 @@
+feature: operacion-entrega-harness
+generated_by:
+  provider: claude-code
+  model: claude-sonnet-5-5
+sprints:
+  - id: S1
+    goal: "Operar sync y la limpieza de forma reversible: vista previa, respaldo no versionado y limpieza con confirmación."
+    tickets:
+      - id: FEATURE-CLI-SYNC-RESPALDO-20261010
+        title: valmen sync con --dry-run y respaldo de lo que sobrescribe
+        depends_on: []
+      - id: FEATURE-CLI-LIMPIEZA-INTEGRADOS-20261010
+        title: Comando de limpieza de worktrees y respaldos con --confirm
+        depends_on:
+          - FEATURE-CLI-SYNC-RESPALDO-20261010
+  - id: S2
+    goal: "La entrega se mide, avisa al pasar el tope y el plan declara cómo partir un cambio grande."
+    tickets:
+      - id: FEATURE-ENGINE-ENTREGA-TOPE-20261010
+        title: Medir líneas añadidas y borradas y avisar al pasar el tope
+        depends_on: []
+      - id: FEATURE-ENGINE-PLAN-TAMANO-20261010
+        title: El plan declara tamaño previsto y estrategia de partición
+        depends_on:
+          - FEATURE-ENGINE-ENTREGA-TOPE-20261010
+  - id: S3
+    goal: "El cierre de QA declara lo no cubierto, compatible con ciclos anteriores, y la vista del ticket lo muestra."
+    tickets:
+      - id: FEATURE-ENGINE-QA-SIN-CUBRIR-20261010
+        title: El cierre del ciclo de QA registra lo que quedó sin cubrir
+        depends_on: []
+      - id: FEATURE-WEB-QA-SIN-CUBRIR-20261010
+        title: La vista del ticket muestra lo no cubierto por ciclo
+        depends_on:
+          - FEATURE-ENGINE-QA-SIN-CUBRIR-20261010
+  - id: S4
+    goal: El PO lee cuatro estados públicos con una sola función y recibe aviso cuando algo espera su decisión.
+    tickets:
+      - id: FEATURE-CORE-ESTADO-PUBLICO-20261010
+        title: Función única que deriva el estado público del ticket
+        depends_on: []
+      - id: FEATURE-WEB-ESTADO-PUBLICO-20261010
+        title: La vista web usa la función de estado público
+        depends_on:
+          - FEATURE-CORE-ESTADO-PUBLICO-20261010
+      - id: FEATURE-CLI-AVISO-DECISION-20261010
+        title: Aviso de Telegram al pasar a Necesita tu decisión
+        depends_on:
+          - FEATURE-CORE-ESTADO-PUBLICO-20261010
+coverage:
+  - requirement: R-SYN-001
+    covered_by:
+      - FEATURE-CLI-SYNC-RESPALDO-20261010
+  - requirement: R-SYN-002
+    covered_by:
+      - FEATURE-CLI-SYNC-RESPALDO-20261010
+  - requirement: R-SYN-003
+    covered_by:
+      - FEATURE-CLI-SYNC-RESPALDO-20261010
+  - requirement: R-ENT-001
+    covered_by:
+      - FEATURE-ENGINE-ENTREGA-TOPE-20261010
+  - requirement: R-ENT-002
+    covered_by:
+      - FEATURE-ENGINE-ENTREGA-TOPE-20261010
+  - requirement: R-ENT-003
+    covered_by:
+      - FEATURE-ENGINE-PLAN-TAMANO-20261010
+  - requirement: R-QAC-001
+    covered_by:
+      - FEATURE-ENGINE-QA-SIN-CUBRIR-20261010
+  - requirement: R-QAC-002
+    covered_by:
+      - FEATURE-ENGINE-QA-SIN-CUBRIR-20261010
+  - requirement: R-QAC-003
+    covered_by:
+      - FEATURE-WEB-QA-SIN-CUBRIR-20261010
+  - requirement: R-EPU-001
+    covered_by:
+      - FEATURE-CORE-ESTADO-PUBLICO-20261010
+  - requirement: R-EPU-002
+    covered_by:
+      - FEATURE-WEB-ESTADO-PUBLICO-20261010
+  - requirement: R-EPU-003
+    covered_by:
+      - FEATURE-CLI-AVISO-DECISION-20261010
+  - requirement: R-LIM-001
+    covered_by:
+      - FEATURE-CLI-LIMPIEZA-INTEGRADOS-20261010
+  - requirement: R-LIM-002
+    covered_by:
+      - FEATURE-CLI-LIMPIEZA-INTEGRADOS-20261010
+  - requirement: R-LIM-003
+    covered_by:
+      - FEATURE-CLI-LIMPIEZA-INTEGRADOS-20261010
+gaps: []
