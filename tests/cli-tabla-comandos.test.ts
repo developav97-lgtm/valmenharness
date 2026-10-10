@@ -42,14 +42,18 @@ async function correr(
 ): Promise<{ codigo: number; stdout: string; stderr: string }> {
   let stdout = "";
   let stderr = "";
-  const espiaOut = vi.spyOn(process.stdout, "write").mockImplementation((chunk: unknown) => {
-    stdout += String(chunk);
-    return true;
-  });
-  const espiaErr = vi.spyOn(process.stderr, "write").mockImplementation((chunk: unknown) => {
-    stderr += String(chunk);
-    return true;
-  });
+  const espiaOut = vi
+    .spyOn(process.stdout, "write")
+    .mockImplementation((chunk: unknown) => {
+      stdout += String(chunk);
+      return true;
+    });
+  const espiaErr = vi
+    .spyOn(process.stderr, "write")
+    .mockImplementation((chunk: unknown) => {
+      stderr += String(chunk);
+      return true;
+    });
   try {
     const codigo = await run(argv);
     return { codigo, stdout, stderr };
@@ -63,10 +67,13 @@ async function correr(
 function comandosConRama(): Set<string> {
   const texto = fuente("main.ts");
   const ramas = new Set<string>();
-  for (const m of texto.matchAll(/\bcommand === "([a-z][a-z0-9-]*)"/g)) ramas.add(m[1] as string);
-  for (const m of texto.matchAll(/^\s*case "([a-z][a-z0-9-]*)":/gm)) ramas.add(m[1] as string);
+  for (const m of texto.matchAll(/\bcommand === "([a-z][a-z0-9-]*)"/g))
+    ramas.add(m[1] as string);
+  for (const m of texto.matchAll(/^\s*case "([a-z][a-z0-9-]*)":/gm))
+    ramas.add(m[1] as string);
   const escritura = /const ESCRITURA = new Set\(\[([\s\S]*?)\]\)/.exec(texto);
-  for (const m of (escritura?.[1] ?? "").matchAll(/"([a-z][a-z0-9-]*)"/g)) ramas.add(m[1] as string);
+  for (const m of (escritura?.[1] ?? "").matchAll(/"([a-z][a-z0-9-]*)"/g))
+    ramas.add(m[1] as string);
   return ramas;
 }
 
@@ -115,7 +122,11 @@ describe("R-MSG-001: el CLI declara sus comandos en una tabla", () => {
   it("C2: cada comando de la tabla tiene una rama de despacho en main.ts", async () => {
     const t = await tabla();
     const ramas = comandosConRama();
-    expect(Object.keys(t.COMANDOS).filter((comando) => !ramas.has(comando)).sort()).toEqual([]);
+    expect(
+      Object.keys(t.COMANDOS)
+        .filter((comando) => !ramas.has(comando))
+        .sort(),
+    ).toEqual([]);
   });
 
   it("C3: cada subcomando de la tabla aparece en el despachador de su comando", async () => {
@@ -154,7 +165,9 @@ describe("R-MSG-001: el CLI declara sus comandos en una tabla", () => {
   it("C6: cada bandera que USAGE documenta en la línea de un comando está declarada para él", async () => {
     const t = await tabla();
     const citas = t.citasDeAyuda(USAGE);
-    expect(citas.reduce((cuantas, cita) => cuantas + cita.banderas.length, 0)).toBeGreaterThan(150);
+    expect(
+      citas.reduce((cuantas, cita) => cuantas + cita.banderas.length, 0),
+    ).toBeGreaterThan(150);
 
     // La unión de lo que el comando acepta en cualquiera de sus verbos: una línea
     // de continuación documenta banderas de un comando, no de un verbo concreto.
@@ -169,12 +182,15 @@ describe("R-MSG-001: el CLI declara sus comandos en una tabla", () => {
 
     const sobran: string[] = [];
     for (const cita of citas) {
-      const validas: Set<string>[] = cita.continuacion || cita.subcomandos.length === 0
-        ? [delComando(cita.comando)]
-        : cita.subcomandos.map((sub) => new Set(t.banderasValidas([cita.comando, sub])));
+      const validas: Set<string>[] =
+        cita.continuacion || cita.subcomandos.length === 0
+          ? [delComando(cita.comando)]
+          : cita.subcomandos.map((sub) => new Set(t.banderasValidas([cita.comando, sub])));
       for (const bandera of cita.banderas) {
         if (!validas.every((conjunto) => conjunto.has(bandera))) {
-          sobran.push(`${cita.comando} ${cita.subcomandos.join("|")} ${bandera}`.replace("  ", " "));
+          sobran.push(
+            `${cita.comando} ${cita.subcomandos.join("|")} ${bandera}`.replace("  ", " "),
+          );
         }
       }
     }
@@ -188,9 +204,11 @@ describe("R-MSG-001: el CLI declara sus comandos en una tabla", () => {
       ...t.BANDERAS_GLOBALES.booleanas,
     ]);
     for (const espec of Object.values(t.COMANDOS)) {
-      for (const bandera of [...espec.conValor, ...espec.booleanas]) declaradas.add(bandera);
+      for (const bandera of [...espec.conValor, ...espec.booleanas])
+        declaradas.add(bandera);
       for (const sub of Object.values(espec.subcomandos ?? {})) {
-        for (const bandera of [...(sub.conValor ?? []), ...(sub.booleanas ?? [])]) declaradas.add(bandera);
+        for (const bandera of [...(sub.conValor ?? []), ...(sub.booleanas ?? [])])
+          declaradas.add(bandera);
       }
     }
 
@@ -200,9 +218,20 @@ describe("R-MSG-001: el CLI declara sus comandos en una tabla", () => {
       /\b(?:flag|texto|bandera|value|obligatoria|lista|t)\(\s*(?:[A-Za-z.]+\s*,\s*)?"([a-z][a-z0-9-]*)"/g,
     ];
     const archivos = [
-      "main.ts", "commands.ts", "ceremony.ts", "delegation.ts", "execution.ts", "features.ts",
-      "setup.ts", "journey-handoff.ts", "worktree.ts", "run.ts", "hermes.ts", "process.ts",
-      "manuales.ts", "corpus.ts",
+      "main.ts",
+      "commands.ts",
+      "ceremony.ts",
+      "delegation.ts",
+      "execution.ts",
+      "features.ts",
+      "setup.ts",
+      "journey-handoff.ts",
+      "worktree.ts",
+      "run.ts",
+      "hermes.ts",
+      "process.ts",
+      "manuales.ts",
+      "corpus.ts",
     ];
     const leidas = new Set<string>();
     for (const archivo of archivos) {
@@ -213,7 +242,9 @@ describe("R-MSG-001: el CLI declara sus comandos en una tabla", () => {
     }
 
     expect(leidas.size).toBeGreaterThan(100);
-    expect([...leidas].filter((nombre) => !declaradas.has(`--${nombre}`)).sort()).toEqual([]);
+    expect([...leidas].filter((nombre) => !declaradas.has(`--${nombre}`)).sort()).toEqual(
+      [],
+    );
   });
 
   it("C8: VALUE_OPTIONS se deriva de la tabla y no repite entradas", async () => {
@@ -221,7 +252,14 @@ describe("R-MSG-001: el CLI declara sus comandos en una tabla", () => {
     expect(new Set(VALUE_OPTIONS).size).toBe(VALUE_OPTIONS.length);
     expect([...VALUE_OPTIONS].sort()).toEqual([...t.banderasConValor()].sort());
     // Las que el parser ya trataba con valor siguen siéndolo.
-    for (const bandera of ["--root", "--id", "--tickets-dir", "--credentials", "--version", "--limite"]) {
+    for (const bandera of [
+      "--root",
+      "--id",
+      "--tickets-dir",
+      "--credentials",
+      "--version",
+      "--limite",
+    ]) {
       expect(VALUE_OPTIONS).toContain(bandera);
     }
   });
@@ -229,7 +267,9 @@ describe("R-MSG-001: el CLI declara sus comandos en una tabla", () => {
   it("C16: un comando que no está en la tabla conserva el mensaje «Comando desconocido»", async () => {
     const { codigo, stderr } = await correr(["pepe"]);
     expect(codigo).toBe(EXIT_SCHEMA);
-    expect(stderr).toContain("Comando desconocido: pepe. Use --help para ver los disponibles.");
+    expect(stderr).toContain(
+      "Comando desconocido: pepe. Use --help para ver los disponibles.",
+    );
   });
 
   it("C17: un subcomando desconocido conserva el mensaje de su módulo", async () => {
@@ -257,12 +297,23 @@ describe("R-MSG-003: una bandera que el comando no declara se rechaza", () => {
   });
 
   it("C12: `validate --id X --inventada` sale con código 2 sin validar el ticket", async () => {
-    const control = await correr(["--root", RAIZ_FIXTURE, "validate", "--id", TICKET_DEL_FIXTURE]);
+    const control = await correr([
+      "--root",
+      RAIZ_FIXTURE,
+      "validate",
+      "--id",
+      TICKET_DEL_FIXTURE,
+    ]);
     expect(control.codigo).toBe(0);
     expect(control.stdout).toContain("Ticket válido");
 
     const { codigo, stdout, stderr } = await correr([
-      "--root", RAIZ_FIXTURE, "validate", "--id", TICKET_DEL_FIXTURE, "--inventada",
+      "--root",
+      RAIZ_FIXTURE,
+      "validate",
+      "--id",
+      TICKET_DEL_FIXTURE,
+      "--inventada",
     ]);
     expect(codigo).toBe(EXIT_SCHEMA);
     expect(stdout).toBe("");
@@ -277,17 +328,36 @@ describe("R-MSG-003: una bandera que el comando no declara se rechaza", () => {
   });
 
   it("C14: `release-publish --version 1.2.3` entrega 1.2.3 como valor de --version", () => {
-    const opciones = parseArgs(["release-publish", "--version", "1.2.3", "--tickets", "A,B"]);
+    const opciones = parseArgs([
+      "release-publish",
+      "--version",
+      "1.2.3",
+      "--tickets",
+      "A,B",
+    ]);
     expect(opciones.flags["version"]).toBe("1.2.3");
     expect(opciones.version).toBe(false);
     expect(opciones.positionals).toEqual(["release-publish"]);
   });
 
   it("C14 (compatibilidad): deliver-manifest y transition también reciben --version con valor", () => {
-    expect(parseArgs(["deliver-manifest", "--version", "2.0.0", "--tickets", "A"]).flags["version"]).toBe("2.0.0");
     expect(
-      parseArgs(["transition", "--id", "A", "--entity", "release", "--to", "published", "--version", "2.0.0"])
-        .flags["version"],
+      parseArgs(["deliver-manifest", "--version", "2.0.0", "--tickets", "A"]).flags[
+        "version"
+      ],
+    ).toBe("2.0.0");
+    expect(
+      parseArgs([
+        "transition",
+        "--id",
+        "A",
+        "--entity",
+        "release",
+        "--to",
+        "published",
+        "--version",
+        "2.0.0",
+      ]).flags["version"],
     ).toBe("2.0.0");
   });
 
@@ -296,36 +366,65 @@ describe("R-MSG-003: una bandera que el comando no declara se rechaza", () => {
     expect(opciones.positionals).toEqual(["validate"]);
     expect(opciones.flags["id"]).toBe("FEATURE-X-20261010");
 
-    const conRaiz = parseArgs(["--root", "/proyecto", "--tickets-dir", "t", "validate", "--all"]);
+    const conRaiz = parseArgs([
+      "--root",
+      "/proyecto",
+      "--tickets-dir",
+      "t",
+      "validate",
+      "--all",
+    ]);
     expect(conRaiz.positionals).toEqual(["validate"]);
     expect(conRaiz.ticketsDir).toBe("t");
     expect(conRaiz.flags["all"]).toBe(true);
   });
 
   it("la forma --bandera=valor y una desconocida con '=' también se rechazan por su nombre", () => {
-    expect(parseArgs(["resume", "--id=FEATURE-X-20261010"]).flags["id"]).toBe("FEATURE-X-20261010");
-    expect(() => parseArgs(["resume", "--idd=FEATURE-X-20261010"])).toThrow(/--idd no existe para resume/);
+    expect(parseArgs(["resume", "--id=FEATURE-X-20261010"]).flags["id"]).toBe(
+      "FEATURE-X-20261010",
+    );
+    expect(() => parseArgs(["resume", "--idd=FEATURE-X-20261010"])).toThrow(
+      /--idd no existe para resume/,
+    );
   });
 
   it("una bandera global vale en cualquier comando", () => {
-    const opciones = parseArgs(["validate", "--all", "--root", "/proyecto", "--legacy-layout", "--credentials", "c.yaml"]);
+    const opciones = parseArgs([
+      "validate",
+      "--all",
+      "--root",
+      "/proyecto",
+      "--legacy-layout",
+      "--credentials",
+      "c.yaml",
+    ]);
     expect(opciones.legacyLayout).toBe(true);
     expect(opciones.flags["credentials"]).toBe("c.yaml");
   });
 
   it("una bandera de otro comando se rechaza aunque exista en la ayuda", () => {
-    expect(() => parseArgs(["validate", "--id", "X", "--limit", "3"])).toThrow(/--limit no existe para validate/);
+    expect(() => parseArgs(["validate", "--id", "X", "--limit", "3"])).toThrow(
+      /--limit no existe para validate/,
+    );
   });
 
   it("un subcomando declarado acepta lo suyo y rechaza lo ajeno", () => {
-    expect(parseArgs(["memory", "search", "consulta", "--limite", "3"]).flags["limite"]).toBe("3");
-    expect(() => parseArgs(["memory", "list", "--limite", "3"])).toThrow(/--limite no existe para memory list/);
+    expect(
+      parseArgs(["memory", "search", "consulta", "--limite", "3"]).flags["limite"],
+    ).toBe("3");
+    expect(() => parseArgs(["memory", "list", "--limite", "3"])).toThrow(
+      /--limite no existe para memory list/,
+    );
   });
 
   it("hermes sin verbo se rige por status", () => {
     expect(parseArgs(["hermes", "--dry-run"]).flags["dry-run"]).toBe(true);
-    expect(() => parseArgs(["hermes", "--receipt", "GR-1"])).toThrow(/--receipt no existe para hermes/);
-    expect(parseArgs(["hermes", "notify", "--receipt", "GR-1"]).flags["receipt"]).toBe("GR-1");
+    expect(() => parseArgs(["hermes", "--receipt", "GR-1"])).toThrow(
+      /--receipt no existe para hermes/,
+    );
+    expect(parseArgs(["hermes", "notify", "--receipt", "GR-1"]).flags["receipt"]).toBe(
+      "GR-1",
+    );
   });
 
   it("con un comando o un subcomando desconocido el parser acepta, para que respondan los mensajes de siempre", () => {
@@ -340,12 +439,21 @@ describe("R-MSG-003: una bandera que el comando no declara se rechaza", () => {
   });
 
   it("C18 (unidad): process run sigue aceptando los parámetros que declara el proceso", () => {
-    const declarado = parseArgs(["process", "run", "publicar", "--modulo", "inventario"], ["--modulo"]);
+    const declarado = parseArgs(
+      ["process", "run", "publicar", "--modulo", "inventario"],
+      ["--modulo"],
+    );
     expect(declarado.flags["modulo"]).toBe("inventario");
 
     // Lo que el proceso no declara lo rechaza el motor, con el catálogo delante.
-    expect(() => parseArgs(["process", "run", "publicar", "--otra", "--set", "a=1"])).not.toThrow();
-    expect(parseArgs(["process", "run", "publicar", "--version", "1.2.3"], ["--version"]).flags["version"]).toBe("1.2.3");
+    expect(() =>
+      parseArgs(["process", "run", "publicar", "--otra", "--set", "a=1"]),
+    ).not.toThrow();
+    expect(
+      parseArgs(["process", "run", "publicar", "--version", "1.2.3"], ["--version"]).flags[
+        "version"
+      ],
+    ).toBe("1.2.3");
   });
 
   it("ninguna línea de USAGE es rechazada por el parser con las banderas que documenta", async () => {

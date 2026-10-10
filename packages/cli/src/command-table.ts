@@ -71,12 +71,23 @@ const DE_LA_COMPUERTA: EspecBanderas = {
 
 /** Los términos de una autorización de aprobación: se piden al crearla y al emitir su código. */
 const TERMINOS_DE_APROBACION: readonly string[] = [
-  "--types", "--modules", "--max-risk", "--impacts", "--stages", "--mode", "--daily-quota", "--valid-days",
+  "--types",
+  "--modules",
+  "--max-risk",
+  "--impacts",
+  "--stages",
+  "--mode",
+  "--daily-quota",
+  "--valid-days",
 ];
 
 /** Los términos de una autorización de QA por agente. */
 const TERMINOS_DE_QA: readonly string[] = [
-  "--types", "--modules", "--max-risk", "--daily-quota", "--valid-days",
+  "--types",
+  "--modules",
+  "--max-risk",
+  "--daily-quota",
+  "--valid-days",
 ];
 
 /** Lo que `hermes status`, `connect` y `test` reciben. */
@@ -154,7 +165,15 @@ export const COMANDOS: Readonly<Record<string, EspecComando>> = {
     booleanas: [],
     subcomandos: {
       record: {
-        conValor: ["--ticket", "--execution", "--attempt", "--event-id", "--state", "--source", "--occurred-at"],
+        conValor: [
+          "--ticket",
+          "--execution",
+          "--attempt",
+          "--event-id",
+          "--state",
+          "--source",
+          "--occurred-at",
+        ],
       },
       list: { conValor: ["--ticket", "--execution", "--attempt"], booleanas: ["--json"] },
       journeys: { booleanas: ["--json"] },
@@ -184,16 +203,25 @@ export const COMANDOS: Readonly<Record<string, EspecComando>> = {
     conValor: [],
     booleanas: [],
     subcomandos: {
-      pendientes: { conValor: ["--tickets", "--manuales-dir", "--pantallas"], booleanas: ["--escribir"] },
+      pendientes: {
+        conValor: ["--tickets", "--manuales-dir", "--pantallas"],
+        booleanas: ["--escribir"],
+      },
       auditar: { conValor: ["--manuales-dir"] },
-      plantilla: { conValor: ["--pantalla", "--destino"], booleanas: ["--escribir", "--forzar"] },
+      plantilla: {
+        conValor: ["--pantalla", "--destino"],
+        booleanas: ["--escribir", "--forzar"],
+      },
     },
   },
   corpus: {
     conValor: [],
     booleanas: [],
     subcomandos: {
-      publicar: { conValor: ["--indexador", "--corpus-dir", "--manuales-dir"], booleanas: ["--completo"] },
+      publicar: {
+        conValor: ["--indexador", "--corpus-dir", "--manuales-dir"],
+        booleanas: ["--completo"],
+      },
     },
   },
   migrate: { conValor: [], booleanas: ["--dry-run"] },
@@ -288,9 +316,19 @@ export const COMANDOS: Readonly<Record<string, EspecComando>> = {
       },
       close: {
         conValor: [
-          "--delegation", "--id", "--files", "--environment", "--tests", "--technical-summary",
-          "--functional-summary", "--release-impact", "--po-confirmation", "--source",
-          "--confidence", "--model", "--notes",
+          "--delegation",
+          "--id",
+          "--files",
+          "--environment",
+          "--tests",
+          "--technical-summary",
+          "--functional-summary",
+          "--release-impact",
+          "--po-confirmation",
+          "--source",
+          "--confidence",
+          "--model",
+          "--notes",
         ],
         booleanas: ["--tests-passed", "--visual"],
       },
@@ -304,7 +342,10 @@ export const COMANDOS: Readonly<Record<string, EspecComando>> = {
     subcomandos: {
       plan: { conValor: ["--project", "--feature", "--tickets", "--max", "--to"] },
       advance: { conValor: ["--project", "--fase", "--journey", "--to"] },
-      next: { conValor: ["--concurrency", "--journey", "--project"], booleanas: ["--wave"] },
+      next: {
+        conValor: ["--concurrency", "--journey", "--project"],
+        booleanas: ["--wave"],
+      },
       brief: { conValor: ["--id", "--cliente", "--project", "--out"] },
       handoff: { conValor: ["--id", "--project", "--to"], booleanas: ["--saved"] },
       "notify-plans": { conValor: ["--project", "--journey", "--to"] },
@@ -372,9 +413,18 @@ export const COMANDOS: Readonly<Record<string, EspecComando>> = {
   },
   close: {
     conValor: [
-      "--id", "--po-confirmation", "--environment", "--tests", "--technical-summary",
-      "--functional-summary", "--release-impact", "--files", "--source", "--confidence",
-      "--model", "--notes",
+      "--id",
+      "--po-confirmation",
+      "--environment",
+      "--tests",
+      "--technical-summary",
+      "--functional-summary",
+      "--release-impact",
+      "--files",
+      "--source",
+      "--confidence",
+      "--model",
+      "--notes",
     ],
     booleanas: [],
   },
@@ -390,7 +440,10 @@ export const COMANDOS: Readonly<Record<string, EspecComando>> = {
   },
 
   // --- Los comandos de anexado (`ESCRITURA`) ---------------------------------------
-  create: { conValor: ["--id", "--title", "--type", "--module", "--request"], booleanas: [] },
+  create: {
+    conValor: ["--id", "--title", "--type", "--module", "--request"],
+    booleanas: [],
+  },
   "release-publish": { conValor: ["--version", "--tickets"], booleanas: [] },
   "add-point": {
     conValor: ["--id", "--title", "--severity", "--actual", "--expected", "--files"],
@@ -402,18 +455,35 @@ export const COMANDOS: Readonly<Record<string, EspecComando>> = {
     conValor: ["--id", "--kind", "--description", "--reference", "--point-id"],
     booleanas: [],
   },
-  "add-retest": { conValor: ["--id", "--point-id", "--result", "--po-confirmation"], booleanas: [] },
+  "add-retest": {
+    conValor: ["--id", "--point-id", "--result", "--po-confirmation"],
+    booleanas: [],
+  },
   "close-attempt": {
     conValor: [
-      "--id", "--technical-summary", "--functional-summary", "--qa-status", "--release-impact",
-      "--qa-waiver-reason", "--po-confirmation",
+      "--id",
+      "--technical-summary",
+      "--functional-summary",
+      "--qa-status",
+      "--release-impact",
+      "--qa-waiver-reason",
+      "--po-confirmation",
     ],
     booleanas: [],
   },
   "add-ai-usage": {
     conValor: [
-      "--id", "--source", "--confidence", "--session-reference", "--model", "--reasoning-effort",
-      "--input-tokens", "--output-tokens", "--total-tokens", "--estimated-cost-usd", "--notes",
+      "--id",
+      "--source",
+      "--confidence",
+      "--session-reference",
+      "--model",
+      "--reasoning-effort",
+      "--input-tokens",
+      "--output-tokens",
+      "--total-tokens",
+      "--estimated-cost-usd",
+      "--notes",
     ],
     booleanas: [],
   },
@@ -428,7 +498,10 @@ export const COMANDOS: Readonly<Record<string, EspecComando>> = {
 };
 
 /** `true` si la propiedad es del objeto y no de su prototipo: `constructor` no es un comando. */
-function propia<T>(objeto: Readonly<Record<string, T>> | undefined, clave: string): T | undefined {
+function propia<T>(
+  objeto: Readonly<Record<string, T>> | undefined,
+  clave: string,
+): T | undefined {
   return objeto !== undefined && Object.hasOwn(objeto, clave) ? objeto[clave] : undefined;
 }
 
@@ -460,7 +533,9 @@ export function banderasConValor(): readonly string[] {
  * La spec declarada para una ruta: `[comando]` o `[comando, subcomando]`.
  * `undefined` si la tabla no la tiene.
  */
-export function especDe(ruta: readonly string[]): EspecComando | EspecSubcomando | undefined {
+export function especDe(
+  ruta: readonly string[],
+): EspecComando | EspecSubcomando | undefined {
   const [comando, sub] = ruta;
   if (comando === undefined) return undefined;
   const espec = propia(COMANDOS, comando);
@@ -502,10 +577,14 @@ interface Declaradas {
   readonly sinVerbo: boolean;
 }
 
-function declaradas(comando: string, subcomando: string | undefined): Declaradas | undefined {
+function declaradas(
+  comando: string,
+  subcomando: string | undefined,
+): Declaradas | undefined {
   const espec = propia(COMANDOS, comando);
   if (espec === undefined) return undefined;
-  const declarado = subcomando === undefined ? undefined : propia(espec.subcomandos, subcomando);
+  const declarado =
+    subcomando === undefined ? undefined : propia(espec.subcomandos, subcomando);
   const sinVerbo = subcomando === undefined && espec.subcomandoPorDefecto !== undefined;
   const porDefecto = sinVerbo
     ? propia(espec.subcomandos, espec.subcomandoPorDefecto as string)
@@ -596,10 +675,18 @@ export function banderasValidas(ruta: readonly string[]): readonly string[] {
  * El rechazo de una bandera que el comando no declara (R-MSG-003): dice cuál es,
  * para qué comando, y lista las que sí acepta.
  */
-export function mensajeBanderaDesconocida(bandera: string, ruta: readonly string[]): string {
+export function mensajeBanderaDesconocida(
+  bandera: string,
+  ruta: readonly string[],
+): string {
   const nombre = ruta.join(" ");
-  const globales = [...BANDERAS_GLOBALES.conValor, ...BANDERAS_GLOBALES.booleanas.filter((b) => b !== "-h")];
-  const propias = banderasValidas(ruta).filter((candidata) => !globales.includes(candidata) && candidata !== "-h");
+  const globales = [
+    ...BANDERAS_GLOBALES.conValor,
+    ...BANDERAS_GLOBALES.booleanas.filter((b) => b !== "-h"),
+  ];
+  const propias = banderasValidas(ruta).filter(
+    (candidata) => !globales.includes(candidata) && candidata !== "-h",
+  );
   const aceptadas = propias.length === 0 ? "ninguna propia" : propias.join(", ");
   return (
     `La bandera ${bandera} no existe para ${nombre}. Las que acepta: ${aceptadas} ` +
