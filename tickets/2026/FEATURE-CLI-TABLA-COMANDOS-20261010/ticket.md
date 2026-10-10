@@ -4,8 +4,8 @@ id: FEATURE-CLI-TABLA-COMANDOS-20261010
 title: Tabla declarativa de comandos y banderas que usa el despacho
 type: FEATURE
 module: CLI
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -143,7 +143,33 @@ Ninguno.
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación delegada de FEATURE-CLI-TABLA-COMANDOS-20261010",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta verificar sus criterios.",
+    "expected": "Los criterios del ticket se cumplen y sus pruebas dan el resultado esperado.",
+    "evidence": [
+      "EVIDENCE-001"
+    ],
+    "affected_files": [
+      "packages/cli/src/command-table.ts",
+      "packages/cli/src/main.ts",
+      "packages/cli/src/index.ts",
+      "tests/cli-tabla-comandos.test.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -193,28 +219,81 @@ Evidencia de esta sesión (ejecutadas en el worktree): las 27 pruebas del ticket
 Criterios sin verificar: ninguno; los 20 llevan comando de prueba y pasaron.
 Limitaciones: las invocaciones de `valmen` fuera de este repositorio (ganchos, tareas programadas y configuraciones de Hermes de otros proyectos, H2) no se pueden probar desde aquí; si pasan una bandera sobrante, ahora salen con 2 y el mensaje nombra las válidas, y el arreglo dirigido es declarar esa bandera en la tabla.
 
+- Resultado del PO: poder aprobar o cerrar lo que sea de probar con comandos. Las pruebas del ticket las ejecutó el agente y dieron el resultado esperado: npx vitest run tests/cli-tabla-comandos.test.ts: 27 de 27; suite completa en main tras integrar la ola: 234 archivos y 4008 pruebas en verde; npx tsc --build tsconfig.build.json y npx tsc --noEmit -p tsconfig.json sin salida; compuerta qa-mechanical con evaluador command: APPROVE (C1 a C20)
+
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-10",
+    "build_reference": "commit:2632ae361c0a13dc321f351b3b53276a7f97b175",
+    "environment": "local: checkout principal de main (a3b8fed y posteriores), Node 24, sin Docker",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-10",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "poder aprobar o cerrar lo que sea de probar con comandos"
+  }
+]
 ```
 
 ## Evidencia
 
 ```json
-[]
+[
+  {
+    "id": "EVIDENCE-001",
+    "date": "2026-10-10",
+    "kind": "automated-test",
+    "description": "npx vitest run tests/cli-tabla-comandos.test.ts: 27 de 27; suite completa en main tras integrar la ola: 234 archivos y 4008 pruebas en verde; npx tsc --build tsconfig.build.json y npx tsc --noEmit -p tsconfig.json sin salida; compuerta qa-mechanical con evaluador command: APPROVE (C1 a C20)",
+    "reference": "worktree:sha256:41d9967b9922f0e9916d7614b730fd426f43a8b795f5bdffd5bf56c44892d9f7",
+    "point_id": "POINT-001"
+  }
+]
 ```
 
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-10",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "poder aprobar o cerrar lo que sea de probar con comandos"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-10",
+    "technical_summary": "Tabla declarativa de comandos y banderas (packages/cli/src/command-table.ts) que usan el parser y el despacho de main.ts; una bandera no declarada para el comando sale con código 2 y lista las válidas; se corrigen --version y validate --inventada; prueba de coherencia entre tabla, ramas de despacho y USAGE.",
+    "functional_summary": "El CLI valmen rechaza una bandera mal escrita nombrando las que sí existen, y la ayuda, la tabla y el despacho no pueden divergir sin que una prueba falle.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "Sin migraciones, sin sincronización ni Docker. Cambio deliberado: una bandera no declarada deja de ignorarse y falla con código 2; un script que pase banderas sobrantes empieza a fallar."
+  }
+]
 ```
 
 ## Consumo de IA
@@ -235,6 +314,36 @@ Limitaciones: las invocaciones de `valmen` fuera de este repositorio (ganchos, t
     "source": "claude:agent-a2a31bea361f4d59d",
     "confidence": "medium",
     "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-10",
+    "session_reference": "c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-af96b073b617481f2",
+    "model": "anthropic/claude-opus-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 14 intervención(es) sobre el registro, 0 con fallo. 14 de 75 mensajes tocaron el registro. Subagente de la sesión c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8; su gasto no está en la madre. Duró 14 min. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 10235470 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 210219,
+    "output_tokens": 68825,
+    "total_tokens": 279044,
+    "estimated_cost_usd": null,
+    "source": "claude:c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-af96b073b617481f2",
+    "confidence": "high",
+    "id": "CONSUMO-002"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-10",
+    "session_reference": "c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-a2a31bea361f4d59d",
+    "model": "anthropic/claude-sonnet-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 16 intervención(es) sobre el registro, 0 con fallo. 16 de 90 mensajes tocaron el registro. Subagente de la sesión c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8; su gasto no está en la madre. Duró 18 min. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 22372111 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 350386,
+    "output_tokens": 124815,
+    "total_tokens": 475201,
+    "estimated_cost_usd": null,
+    "source": "claude:c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-a2a31bea361f4d59d",
+    "confidence": "high",
+    "id": "CONSUMO-003"
   }
 ]
 ```
@@ -336,6 +445,141 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-10",
+    "at": "2026-10-10T22:50:09.141Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-10-10",
+    "at": "2026-10-10T22:50:09.476Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-10",
+    "at": "2026-10-10T22:50:09.691Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-10",
+    "at": "2026-10-10T22:50:09.948Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-10",
+    "at": "2026-10-10T22:50:10.273Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-10",
+    "at": "2026-10-10T22:50:10.688Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-10",
+    "at": "2026-10-10T22:50:10.964Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-10",
+    "at": "2026-10-10T22:50:11.277Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-10",
+    "at": "2026-10-10T22:50:11.660Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-10",
+    "at": "2026-10-10T22:50:11.834Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-10",
+    "at": "2026-10-10T22:50:12.014Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-10",
+    "at": "2026-10-10T22:50:12.217Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-10",
+    "at": "2026-10-10T22:50:12.562Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-10",
+    "at": "2026-10-10T22:50:12.862Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-025",
+    "date": "2026-10-10",
+    "at": "2026-10-10T22:50:13.059Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```

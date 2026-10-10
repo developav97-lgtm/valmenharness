@@ -72,13 +72,13 @@ describe("el bucle con movimiento reducido", () => {
     const b = banco(() => true);
     for (let t = 0; t < 1020; t += 17) b.cuadro(17);
     // 60 cuadros de 17 ms = 1020 ms; el último cuadro dibujado queda a ≤ 250 ms del final.
-    const t = b.montaje.escena().t;
+    const t = b.montaje.escena()!.t;
     expect(t).toBeGreaterThan(0.75);
     expect(t).toBeLessThanOrEqual(1.02);
     // Y nunca un salto mayor que el acotado: cuatro cuadros de 250 ms suman exactamente un segundo.
     const c = banco(() => true);
     for (let i = 0; i < 4; i++) c.cuadro(250);
-    expect(c.montaje.escena().t).toBeCloseTo(1, 6);
+    expect(c.montaje.escena()!.t).toBeCloseTo(1, 6);
   });
 
   it("C3: sin la preferencia dibuja en cada cuadro pedido", () => {
