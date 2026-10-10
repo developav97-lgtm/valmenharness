@@ -11,6 +11,9 @@
  *   `claude`, `codex`, `opencode` y `hermes` que anotan la llamada y salen con 97. Quien
  *   mide mira esa anotación; una llamada a un CLI de modelo deja el recorrido fallido.
  *
+ * - `npm_config_offline=true`: `npx` no descarga nada. Es lo que impide que un recorrido
+ *   que recompile (`journey worktree integrate`) toque el registro de npm.
+ *
  * Lo que no se hace es aislar la red del sistema operativo: un binario que abra la red sin
  * credenciales no se detecta. La ayuda de `run` lo dice.
  */
@@ -110,6 +113,8 @@ export function entornoAislado(escenario: Escenario): Record<string, string> {
     GIT_COMMITTER_NAME: "friccion",
     GIT_COMMITTER_EMAIL: "friccion@example.test",
     VALMEN_CLAUDE_BIN: join(escenario.trampa, "claude"),
+    // `npx` no descarga nada: falla con ENOTCACHED en vez de tocar el registro de npm.
+    npm_config_offline: "true",
   };
 }
 

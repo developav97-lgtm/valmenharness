@@ -10,8 +10,10 @@
  * - **callejón sin salida**: cita una salida que no existe o que no saca del bloqueo.
  *
  * Una salida es un comando citado entre comillas invertidas que empieza por `valmen `,
- * la forma que fija la spec s1. Una salida escrita en prosa no cuenta: quien lee el
- * mensaje no puede copiarla sin interpretarla.
+ * la forma que fija la spec s1, o una línea sangrada con dos espacios o más que empieza
+ * por `valmen `, la forma en que el motor cita la entrega. Una salida escrita en prosa o
+ * en una línea sin sangría no cuenta: quien lee el mensaje no puede copiarla sin
+ * interpretarla.
  */
 import { resolve, sep } from "node:path";
 
@@ -50,12 +52,29 @@ function tokenizar(comando: string): string[] {
   return palabras;
 }
 
-/** Cada comando citado entre comillas invertidas que empieza por `valmen `. */
+/**
+ * Cada comando citado entre comillas invertidas que empieza por `valmen `, y cada línea
+ * sangrada que empieza por `valmen `. Se devuelven en el orden en que aparecen en el mensaje
+ * y un comando citado en las dos formas se devuelve una vez.
+ */
 export function extraerSalidas(mensaje: string): SalidaCitada[] {
-  const salidas: SalidaCitada[] = [];
+  const encontradas: { posicion: number; comando: string }[] = [];
   for (const coincidencia of mensaje.matchAll(/`([^`\n]+)`/g)) {
-    const comando = (coincidencia[1] ?? "").trim();
+    encontradas.push({
+      posicion: coincidencia.index,
+      comando: (coincidencia[1] ?? "").trim(),
+    });
+  }
+  for (const coincidencia of mensaje.matchAll(/^[ \t]{2,}(valmen\s.*)$/gm)) {
+    encontradas.push({
+      posicion: coincidencia.index,
+      comando: (coincidencia[1] ?? "").trim(),
+    });
+  }
+  const salidas: SalidaCitada[] = [];
+  for (const { comando } of encontradas.sort((a, b) => a.posicion - b.posicion)) {
     if (!comando.startsWith("valmen ")) continue;
+    if (salidas.some((salida) => salida.comando === comando)) continue;
     salidas.push({ comando, argv: tokenizar(comando).slice(1) });
   }
   return salidas;
@@ -103,6 +122,11 @@ export function esComandoDesconocido(stderr: string): boolean {
   return /Comando (?:de escritura )?desconocido/.test(stderr);
 }
 
+/** El binario rechazó una bandera que no declara para el comando: «La bandera X no existe para». */
+export function esBanderaDesconocida(stderr: string): boolean {
+  return /La bandera \S+ no existe para/.test(stderr);
+}
+
 function motivoDelIntento(intento: IntentoDeSalida): string {
   if (!intento.ejecutada) return "la salida no se ejecutó";
   if (intento.codigoSalida !== 0)
@@ -143,9 +167,11 @@ export function totalizar(resultados: ResultadoDeRecorrido[]): Totales {
     callejon_sin_salida: 0,
     rechazos_correctos: 0,
     fallidos: 0,
+    no_soportados: 0,
   };
   for (const resultado of resultados) {
     if (resultado.estado === "fallido") totales.fallidos += 1;
+    else if (resultado.estado === "no_soportado") totales.no_soportados += 1;
     else if (resultado.bloqueo === null) continue;
     else if (resultado.bloqueo.rechazoCorrecto !== null) totales.rechazos_correctos += 1;
     else totales[resultado.bloqueo.clase] += 1;

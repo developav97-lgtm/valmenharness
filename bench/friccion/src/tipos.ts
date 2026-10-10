@@ -59,8 +59,12 @@ export interface Bloqueo {
 export interface ResultadoDeRecorrido {
   id: string;
   nombre: string;
-  /** `fallido`: no se pudo medir (armado roto, tiempo agotado, llamó a un modelo). */
-  estado: "medido" | "fallido";
+  /**
+   * `fallido`: no se pudo medir (armado roto, tiempo agotado, llamó a un modelo).
+   * `no_soportado`: el binario no tiene el comando o la bandera que el recorrido necesita;
+   * no suma fricción y no falla la corrida.
+   */
+  estado: "medido" | "fallido" | "no_soportado";
   motivo: string | null;
   /** `null` si la operación salió con 0, o si el recorrido quedó fallido. */
   bloqueo: Bloqueo | null;
@@ -72,6 +76,8 @@ export interface Totales {
   callejon_sin_salida: number;
   rechazos_correctos: number;
   fallidos: number;
+  /** Un archivo de resultados anterior a este campo no lo trae: quien lo lee no lo da por hecho. */
+  no_soportados: number;
 }
 
 export interface ArchivoDeResultados {

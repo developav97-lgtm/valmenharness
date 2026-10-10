@@ -61,6 +61,41 @@ describe("extraer las salidas que cita un mensaje", () => {
   });
 });
 
+describe("extraer la salida de una línea sangrada", () => {
+  it("CO-C14 devuelve el comando de una línea sangrada que empieza por `valmen `", () => {
+    const mensaje = [
+      "La entrega requiere correr la verificación mecánica antes:",
+      "  valmen gate qa-mechanical --id X-1 --evaluator command",
+      "y reintentar.",
+    ].join("\n");
+    expect(extraerSalidas(mensaje)).toEqual([
+      {
+        comando: "valmen gate qa-mechanical --id X-1 --evaluator command",
+        argv: ["gate", "qa-mechanical", "--id", "X-1", "--evaluator", "command"],
+      },
+    ]);
+  });
+
+  it("CO-C14 mantiene el orden de aparición y no repite un comando citado en las dos formas", () => {
+    const mensaje = [
+      "Corre `valmen gate qa-mechanical --id X-1`.",
+      "  valmen gate qa-mechanical --id X-1",
+      "  valmen resume --id X-1",
+    ].join("\n");
+    expect(extraerSalidas(mensaje).map((salida) => salida.comando)).toEqual([
+      "valmen gate qa-mechanical --id X-1",
+      "valmen resume --id X-1",
+    ]);
+  });
+
+  it("CO-C15 ignora una línea sin sangría que empieza por `valmen `", () => {
+    expect(extraerSalidas("Falta algo.\nvalmen gate plan --id X-1\ny nada más.")).toEqual(
+      [],
+    );
+    expect(extraerSalidas(" valmen gate plan --id X-1")).toEqual([]);
+  });
+});
+
 describe("clasificar un bloqueo según sus intentos de salida", () => {
   it("FR-C17 un bloqueo sin salida citada es fuera_de_banda", () => {
     expect(clasificar([]).clase).toBe<Clase>("fuera_de_banda");
@@ -197,6 +232,26 @@ describe("totalizar los resultados", () => {
       callejon_sin_salida: 1,
       rechazos_correctos: 1,
       fallidos: 1,
+      no_soportados: 0,
     });
+  });
+});
+
+describe("totalizar un recorrido no soportado", () => {
+  it("CO-C24 cuenta cada recorrido no_soportado en no_soportados y no lo suma como fallido", () => {
+    const sinBloqueo = (
+      id: string,
+      estado: ResultadoDeRecorrido["estado"],
+    ): ResultadoDeRecorrido => ({ id, nombre: id, estado, motivo: null, bloqueo: null });
+
+    const totales = totalizar([
+      sinBloqueo("a", "no_soportado"),
+      sinBloqueo("b", "no_soportado"),
+      sinBloqueo("c", "fallido"),
+      sinBloqueo("d", "medido"),
+    ]);
+
+    expect(totales.no_soportados).toBe(2);
+    expect(totales.fallidos).toBe(1);
   });
 });

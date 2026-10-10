@@ -2,10 +2,12 @@
  * La medición: arma cada recorrido en un escenario aislado, corre la operación que bloquea,
  * prueba cada salida que el mensaje cita y clasifica el bloqueo.
  *
- * Cada recorrido termina en uno de dos estados. `medido`: la operación corrió y, si
+ * Cada recorrido termina en uno de tres estados. `medido`: la operación corrió y, si
  * bloqueó, el bloqueo está clasificado. `fallido`: no se pudo medir —un paso del armado
  * salió distinto de 0, un subproceso agotó su tiempo o el binario llamó a un modelo—, y el
- * motivo dice cuál. Un recorrido fallido no oculta un bloqueo: no tiene ninguno que contar.
+ * motivo dice cuál. `no_soportado`: el binario no tiene un comando o una bandera que el
+ * recorrido necesita, y el motivo cita el rechazo. Ni uno ni otro oculta un bloqueo: no
+ * tienen ninguno que contar. Solo el fallido falla la corrida.
  */
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
@@ -21,6 +23,7 @@ import {
 import type { Escenario, Salida } from "./aislamiento.js";
 import {
   clasificar,
+  esBanderaDesconocida,
   esComandoDesconocido,
   extraerSalidas,
   fueraDelEscenario,
@@ -39,6 +42,9 @@ import type {
 
 /** Un recorrido que no se pudo medir. Su mensaje es el motivo que queda en el resultado. */
 class FalloDeRecorrido extends Error {}
+
+/** Un recorrido que el binario no soporta: le falta un comando o una bandera. */
+class RecorridoNoSoportado extends Error {}
 
 function sha256(contenido: string | Buffer): string {
   return createHash("sha256").update(contenido).digest("hex");
@@ -118,10 +124,18 @@ function armar(
       salida = correr(escenario, binario, paso.binario, timeoutMs, contexto);
     }
     if (salida.status !== 0) {
+      const detalle = primeraLinea(salida.stderr || salida.stdout);
+      // Solo un paso del binario medido puede no existir en él: un `git` roto es un armado roto.
+      if (
+        "binario" in paso &&
+        (esComandoDesconocido(salida.stderr) || esBanderaDesconocida(salida.stderr))
+      ) {
+        throw new RecorridoNoSoportado(
+          `el binario no soporta el ${descripcion}: código ${String(salida.status)}: ${detalle}`,
+        );
+      }
       throw new FalloDeRecorrido(
-        `el armado falló en el ${descripcion}: código ${String(salida.status)}: ${primeraLinea(
-          salida.stderr || salida.stdout,
-        )}`,
+        `el armado falló en el ${descripcion}: código ${String(salida.status)}: ${detalle}`,
       );
     }
   });
@@ -129,7 +143,8 @@ function armar(
 
 /**
  * Mide un recorrido contra el binario. Nunca lanza: lo que impida medir queda como un
- * recorrido `fallido` con su motivo.
+ * recorrido `fallido` con su motivo, o `no_soportado` si al binario le falta un comando o
+ * una bandera del armado, o el comando de la operación.
  */
 export function medirRecorrido(
   binario: string,
@@ -215,6 +230,13 @@ export function medirRecorrido(
     if (operacion.status === 0) {
       return { ...identidad, estado: "medido", motivo: null, bloqueo: null };
     }
+    if (esComandoDesconocido(operacion.stderr)) {
+      throw new RecorridoNoSoportado(
+        `el binario no soporta la operación: código ${String(operacion.status)}: ${primeraLinea(
+          operacion.stderr,
+        )}`,
+      );
+    }
 
     const mensaje = (
       operacion.stderr.trim() !== "" ? operacion.stderr : operacion.stdout
@@ -232,7 +254,8 @@ export function medirRecorrido(
     return { ...identidad, estado: "medido", motivo: null, bloqueo };
   } catch (error) {
     const motivo = error instanceof Error ? error.message : String(error);
-    return { ...identidad, estado: "fallido", motivo, bloqueo: null };
+    const estado = error instanceof RecorridoNoSoportado ? "no_soportado" : "fallido";
+    return { ...identidad, estado, motivo, bloqueo: null };
   } finally {
     if (escenario !== undefined) limpiarEscenario(escenario);
   }
