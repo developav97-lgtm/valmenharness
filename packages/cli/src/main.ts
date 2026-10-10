@@ -83,6 +83,13 @@ import { runCorpus } from "./corpus.js";
 import { executionCommand } from "./execution.js";
 import { runAutonomousCommand } from "./run.js";
 import {
+  banderasConValor,
+  banderasDeRuta,
+  comandoDesconocido,
+  existeComando,
+  mensajeBanderaDesconocida,
+} from "./command-table.js";
+import {
   type RegistryPaths,
   CASCADE_TASK_IDS,
   EVALUATOR_IDS,
@@ -633,179 +640,15 @@ interface Options {
   readonly flags: Readonly<Record<string, string | true>>;
 }
 
-/** Opciones que consumen un valor. */
-export const VALUE_OPTIONS = [
-  "--root",
-  "--tickets-dir",
-  "--id",
-  "--limit",
-  "--evaluator",
-  // El informe de Impeccable que `ux review` anexa.
-  "--report",
-  // El tipo de ticket del informe de presupuestos.
-  "--tipo",
-  // La corrida de la cascada: la tarea y su entrada.
-  "--tarea",
-  "--solicitud",
-  "--pregunta",
-  "--port",
-  // La aprobación de un gate que exige frase: la corrida y la frase literal.
-  "--phrase",
-  // `transition` mueve el estado de una entidad, y sus banderas llevan valor.
-  "--entity",
-  "--to",
-  "--point-id",
-  "--reason",
-  "--version",
-  // Comandos de anexado.
-  "--title",
-  "--severity",
-  "--actual",
-  "--expected",
-  "--kind",
-  "--description",
-  "--reference",
-  "--source",
-  "--confidence",
-  "--session-reference",
-  "--model",
-  "--reasoning-effort",
-  "--input-tokens",
-  "--output-tokens",
-  "--total-tokens",
-  "--estimated-cost-usd",
-  "--notes",
-  "--environment",
-  "--build-reference",
-  "--result",
-  "--po-confirmation",
-  "--technical-summary",
-  "--functional-summary",
-  "--qa-status",
-  "--release-impact",
-  "--qa-waiver-reason",
-  "--receipt",
-  "--decision",
-  "--actor",
-  "--tickets",
-  // El tope de tickets de una jornada.
-  "--max",
-  // El avance de una jornada concreta, el intervalo del disparador y su carpeta.
-  "--journey",
-  "--concurrency",
-  // `journey brief --out`: el archivo donde escribir el brief.
-  "--out",
-  "--fase",
-  "--every",
-  "--via",
-  "--dir",
-  // `manuales pendientes`: dónde viven los manuales y qué archivos son pantalla.
-  // Sin esto en la lista, `--manuales-dir docs/…` se leería como bandera booleana
-  // y la ruta quedaría como argumento suelto.
-  "--manuales-dir",
-  // `corpus publicar`: destino del corpus e indexador registrado.
-  "--corpus-dir",
-  "--indexador",
-  "--pantallas",
-  // `manuales plantilla`: el nombre de pantalla del encabezado y la ruta relativa
-  // donde escribir el manual. Sin esto en la lista, los dos valores quedarían
-  // como argumentos sueltos y el comando escribiría en cualquier parte.
-  "--pantalla",
-  "--destino",
-  "--desde",
-  "--hasta",
-  "--q",
-  "--set",
-  // `memory` y los anexados que se agregaron después. Una bandera que consume
-  // valor y no está acá se lee como booleana y su valor queda como argumento
-  // suelto: el comando corre con la mitad de lo que se le pidió y sin decir nada.
-  "--limite",
-  "--cliente",
-  "--body",
-  "--files",
-  // `estandar proponer`: las tres banderas del estándar. La prueba que compara la
-  // ayuda con esta lista las cazó en cuanto se agregaron, que es para lo que está.
-  "--rule",
-  "--why",
-  "--area",
-  // `estandar aceptar`: las palabras de quien decide. Una bandera que consume
-  // valor y no está en esta lista se lee como booleana y su valor queda suelto.
-  "--instruccion",
-  // `serve --host`: dónde escucha Mission Control.
-  "--host",
-  // `memory clasificar`: qué se hace con el aprendizaje.
-  "--decision",
-  "--actor",
-  "--run",
-  "--credentials",
-  "--released-at",
-  "--provider",
-  "--type",
-  "--module",
-  "--request",
-  // `hermes`: el nombre de la entrada. Hermes es global —una config para todos
-  // los proyectos—, así que conectar un segundo proyecto es declarar una segunda
-  // entrada con otro nombre. Sin esto en la lista, `--name valor` se leía como
-  // bandera booleana más un argumento suelto, y `connect` escribía la entrada
-  // `valmen` creyendo que había hecho lo que se le pidió.
-  "--name",
-  // `hermes --profile`: el perfil de Hermes donde se declara la entrada. Sin
-  // esto en la lista, `--profile valor` se leería como booleana más un argumento
-  // suelto, y `connect` escribiría en el config global creyendo otra cosa.
-  "--profile",
-  // `gate-decide --code`: el código corto que llegó al celular. Reemplaza a
-  // `--id` y `--receipt`, que el token firmado ya trae.
-  "--code",
-  // La autorización de QA por agente: tipos, módulos, riesgo, cupo y vigencia.
-  "--base",
-  "--delivered",
-  "--types",
-  "--permissions",
-  "--impacts",
-  "--stages",
-  // `review-agent --stage`: la etapa cuyo review se revisa (analysis o plan).
-  "--stage",
-  "--mode",
-  "--modules",
-  "--max-risk",
-  "--daily-quota",
-  "--valid-days",
-  // `approval-eligibility --stage`: la etapa (analysis o plan) cuya compuerta se quiere aprobar.
-  "--stage",
-  // `hermes brief --dias N`: cuántos días hacia atrás se cuentan los cierres.
-  "--dias",
-  // `provider` y `routing`: la puesta en marcha sin pasar por la pantalla. Es lo
-  // que permite que un agente configure el proyecto —un equipo que trabaja dentro
-  // de Claude Code le pide a Claude que lo instale, y Claude no puede pulsar un
-  // botón—.
-  "--key",
-  "--preset",
-  "--effort",
-  // `feature attach`: anexar al grafo un ticket que ya existe.
-  "--ticket",
-  "--sprint",
-  "--goal",
-  "--depends-on",
-  // `delegation`: el alcance, las palabras del PO y lo que se ejecutó.
-  "--delegation",
-  "--quote",
-  "--tests",
-  "--feature",
-  // `gate --force-reason`: el motivo para repetir una compuerta sobre el mismo estado.
-  "--force-reason",
-  // `feature asset add`: el archivo local y el enlace del que salió.
-  "--file",
-  "--origin-url",
-  // `execution`: identidad y hecho de actividad del contrato portable.
-  "--project",
-  "--execution",
-  "--attempt",
-  "--event-id",
-  "--state",
-  "--occurred-at",
-  // `adopt --machine-id`: identidad que permite crear el primer binding local.
-  "--machine-id",
-] as const;
+/**
+ * Opciones que consumen un valor en algún comando, sin repetidas.
+ *
+ * Se deriva de la tabla de comandos (`command-table.ts`), que es donde se declara
+ * cada bandera con el comando al que pertenece: la lista plana que hubo aquí no
+ * decía de quién era cada una, y por eso cualquier otra palabra con `--` se aceptaba.
+ * Sigue exportada porque la leen la ayuda, las pruebas y la primera pasada del parser.
+ */
+export const VALUE_OPTIONS: readonly string[] = banderasConValor();
 
 /**
  * La primera dirección IPv4 de la máquina en la red local.
@@ -827,11 +670,49 @@ function primerIpLocal(): string {
 class UsageError extends Error {}
 
 /**
+ * Ubica el comando y su subcomando: las dos primeras palabras sueltas.
+ *
+ * Es la primera pasada de `parseArgs`: hace falta saber **qué comando es** antes de
+ * saber qué banderas consumen valor, porque eso depende del comando (`--version`
+ * lleva valor en `release-publish` y es la bandera global en el resto). Es
+ * tolerante a propósito —no rechaza nada— y usa la unión de las banderas con valor,
+ * de modo que una bandera antes del comando (`--id X validate`) no se confunde con
+ * él.
+ */
+function ubicarComando(
+  argv: readonly string[],
+  conValor: ReadonlySet<string>,
+): { readonly comando: string | undefined; readonly subcomando: string | undefined } {
+  const sueltas: string[] = [];
+  for (let index = 0; index < argv.length && sueltas.length < 2; index += 1) {
+    const arg = argv[index] as string;
+    if (arg === "-h" || arg === "--help") continue;
+    if (!arg.startsWith("-")) {
+      sueltas.push(arg);
+      continue;
+    }
+    const equals = arg.indexOf("=");
+    const name = equals === -1 ? arg : arg.slice(0, equals);
+    if (equals === -1 && conValor.has(name)) {
+      const next = argv[index + 1];
+      if (next !== undefined && !next.startsWith("--")) index += 1;
+    }
+  }
+  return { comando: sueltas[0], subcomando: sueltas[1] };
+}
+
+/**
  * Analiza los argumentos.
  *
  * Se admiten las dos formas de declarar una opción: `--clave valor` y
  * `--clave=valor`. Un valor que empieza por `--` se rechaza como valor para no
  * tragarse la opción siguiente por error.
+ *
+ * Qué banderas acepta cada comando lo dice la tabla de `command-table.ts`: una que
+ * el comando no declara se rechaza con un `UsageError` —código 2— que nombra el
+ * comando y lista las válidas (R-MSG-003). Con un comando o un subcomando que la
+ * tabla no tiene, o con banderas libres (`process run`), se acepta como siempre
+ * para que respondan los mensajes de cada módulo.
  */
 export function parseArgs(
   argv: readonly string[],
@@ -844,7 +725,12 @@ export function parseArgs(
    */
   extraValueOptions: readonly string[] = [],
 ): Options {
-  const valueOptions = new Set<string>([...VALUE_OPTIONS, ...extraValueOptions]);
+  const { comando, subcomando } = ubicarComando(
+    argv,
+    new Set<string>([...VALUE_OPTIONS, ...extraValueOptions]),
+  );
+  const reglas = banderasDeRuta(comando, subcomando);
+  const valueOptions = new Set<string>([...reglas.conValor, ...extraValueOptions]);
 
   let root = process.cwd();
   let ticketsDir: string | undefined;
@@ -895,6 +781,10 @@ export function parseArgs(
       continue;
     }
 
+    // Una bandera que el comando no declara: se dice cuál es, de quién, y cuáles sí.
+    if (reglas.estricta && !reglas.booleanas.has(name)) {
+      throw new UsageError(mensajeBanderaDesconocida(name, reglas.ruta));
+    }
     if (equals !== -1) {
       throw new UsageError(`La opción ${name} no admite un valor.`);
     }
@@ -1564,7 +1454,7 @@ export function dispatch(options: Options): CommandResult {
     default:
       return {
         stdout: "",
-        stderr: `Comando desconocido: ${command}. Use --help para ver los disponibles.`,
+        stderr: comandoDesconocido(command),
         exitCode: EXIT_SCHEMA,
       };
   }
@@ -1678,7 +1568,15 @@ export async function run(argv: readonly string[]): Promise<number> {
   try {
     const [command, ...rest] = options.positionals;
 
-    if (command === "serve") {
+    // El comando se resuelve contra la tabla antes de la cadena de `if`: uno que la
+    // tabla no tiene responde lo mismo que respondía el `default` de `dispatch`.
+    // `--version` contesta antes de despachar: `valmen serve --version` no levanta
+    // el servidor.
+    if (command !== undefined && !options.help && !options.version && !existeComando([command])) {
+      result = { stdout: "", stderr: comandoDesconocido(command), exitCode: EXIT_SCHEMA };
+    } else if (options.version) {
+      result = dispatch(options);
+    } else if (command === "serve") {
       const rawPort = options.flags["port"];
       const puerto = typeof rawPort === "string" ? Number.parseInt(rawPort, 10) : 4173;
       // La interfaz se publica junto al código compilado, en `dist/web`. Se
@@ -1760,9 +1658,7 @@ export async function run(argv: readonly string[]): Promise<number> {
       });
       servidor.close();
       return 0;
-    }
-
-    if (command === "mcp") {
+    } else if (command === "mcp") {
       // El ejecutable del servidor se deduce del que está corriendo: en una
       // instalación global y en el repositorio de desarrollo las rutas no tienen
       // nada que ver, y escribir una a mano deja la otra rota.

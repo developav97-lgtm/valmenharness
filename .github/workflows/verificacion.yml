@@ -97,3 +97,13 @@ jobs:
       # `ticket.py` se activa con `VALMEN_REFERENCE_TICKET_PY`.
       - name: Pruebas
         run: npm test
+
+      # La medición de fricción vive en `bench/friccion/`, fuera de `packages/`: su
+      # typecheck y sus pruebas no entran al del producto ni a `npm test`, así que
+      # sin este paso nada las correría. Va después del typecheck de arriba porque
+      # sus pruebas miden `packages/cli/dist/main.js`, que ese paso ya construyó.
+      - name: La medición de fricción compila y pasa sus pruebas
+        run: |
+          npx tsc -p bench/friccion/tsconfig.json
+          npx tsc -p bench/friccion/tsconfig.build.json
+          npx vitest run --config bench/friccion/vitest.config.ts
