@@ -8,8 +8,8 @@
  * y las reglas que nunca se relajan (SECURITY, BLOCK, un solo escritor del checkout
  * principal). La prueba no ejecuta ningún comando de la skill.
  *
- * Los comandos que la skill cita deben existir en la ayuda del CLI o figurar en la
- * lista de pendientes de un ticket hermano: así un cambio de nombre falla a la vista.
+ * Que los comandos que la skill cita existen lo comprueba
+ * `tests/cli-mensajes-coherencia.test.ts`, contra la tabla de comandos del CLI.
  */
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -31,39 +31,6 @@ const PENDIENTES: Readonly<Record<string, string>> = {
 
 const texto = readFileSync(CATALOGO, "utf8");
 const plano = (t: string): string => t.replace(/\s+/g, " ");
-
-/** Los `valmen <comando>` entre comillas invertidas, sin banderas ni marcadores. */
-function comandosCitados(t: string): string[] {
-  const citados = new Set<string>();
-  for (const m of t.matchAll(/`valmen ([^`]+)`/g)) {
-    const palabras: string[] = [];
-    for (const palabra of (m[1] as string).split(/\s+/)) {
-      if (/^[-<\[(]/.test(palabra)) break;
-      palabras.push(palabra);
-    }
-    if (palabras.length > 0) citados.add(palabras.join(" "));
-  }
-  return [...citados];
-}
-
-/** Una cita como «journey worktree create|remove» en la ayuda cubre cada alternativa. */
-function enLaAyuda(ayuda: string, comando: string): boolean {
-  if (ayuda.includes(comando)) return true;
-  const palabras = comando.split(" ");
-  const ultima = palabras.pop() as string;
-  const patron = new RegExp(
-    `(^|\\n)\\s*${palabras.join("\\s+")}\\s+(\\w+\\|)*${ultima}(\\|\\w+)*(\\s|$)`,
-  );
-  return patron.test(ayuda);
-}
-
-/** La ayuda del CLI: el texto de `USAGE` en `main.ts`, sin ejecutar nada. */
-function ayudaDelCli(): string {
-  const fuente = readFileSync(join(REPO, "packages/cli/src/main.ts"), "utf8");
-  const inicio = fuente.indexOf("export const USAGE = `");
-  const fin = fuente.indexOf("`;", inicio);
-  return fuente.slice(inicio, fin);
-}
 
 let lab: string;
 beforeEach(() => {
@@ -209,36 +176,5 @@ describe("la instalación (C17)", () => {
 
     const copia = join(lab, ".valmen", "skills", ID, "SKILL.md");
     expect(readFileSync(copia, "utf8")).toBe(texto);
-  });
-});
-
-describe("los comandos citados (C20)", () => {
-  const ayuda = ayudaDelCli();
-
-  it("extrae comandos de la skill", () => {
-    const citados = comandosCitados(texto);
-    expect(citados).toContain("journey next --wave".split(" --")[0]);
-    expect(citados).toContain("approval-eligibility");
-    expect(citados.length).toBeGreaterThanOrEqual(8);
-  });
-
-  it("cada uno está en la ayuda del CLI o es pendiente de un ticket hermano", () => {
-    for (const comando of comandosCitados(texto)) {
-      const conocido = enLaAyuda(ayuda, comando) || comando in PENDIENTES;
-      expect(conocido, `«valmen ${comando}» no está en la ayuda ni entre los pendientes`).toBe(true);
-    }
-  });
-
-  it("los pendientes que la skill cita siguen sin estar en la ayuda; al llegar, se pasan a existentes", () => {
-    for (const comando of Object.keys(PENDIENTES)) {
-      expect(
-        enLaAyuda(ayuda, comando),
-        `«${comando}» ya existe: quítalo de PENDIENTES y de la sección Dependencias`,
-      ).toBe(false);
-    }
-  });
-
-  it("control: un comando inventado no pasa", () => {
-    expect(enLaAyuda(ayuda, "journey inventado")).toBe(false);
   });
 });

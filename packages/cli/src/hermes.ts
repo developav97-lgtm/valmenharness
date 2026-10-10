@@ -633,7 +633,7 @@ export function decideByCode(request: DecideByCodeRequest): CommandResult {
         "El veredicto que leíste describe un texto que ya no es el que está en\n" +
         "disco, así que aprobarlo sería aprobar otra cosa. Volvé a evaluar la\n" +
         "compuerta y decidí sobre el recibo nuevo:\n" +
-        `  valmen gate --id ${claims.ticket} --gate ${claims.gate}\n\n` +
+        `  valmen gate ${claims.gate} --id ${claims.ticket}\n\n` +
         "El código queda sin usar hasta que venza.",
     );
   }

@@ -142,7 +142,7 @@ export const ROLES: readonly RoleSpec[] = [
     // al agente que trabaja un ticket de pruebas de interfaz.
     id: "ui-specs",
     description: "Escribe y mantiene los specs de interfaz del proyecto",
-    consumer: "valmen routing show --role ui-specs",
+    consumer: "valmen routing show",
   },
   // Los cuatro roles de **fase** del agente que ejecuta la jornada (R-JORN-006): análisis,
   // plan, implementación y verificación. Su proveedor es el del **ejecutor** (`codex`,

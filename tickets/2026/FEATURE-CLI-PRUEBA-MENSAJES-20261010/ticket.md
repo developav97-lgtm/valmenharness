@@ -4,7 +4,7 @@ id: FEATURE-CLI-PRUEBA-MENSAJES-20261010
 title: Prueba de coherencia de los mensajes de bloqueo del CLI y el MCP
 type: FEATURE
 module: CLI
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -127,51 +127,51 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1 — R-MSG-002: Cada cita `valmen …` de los literales de cadena de `packages/*/src/**/*.ts` es válida contra la tabla.
+- [x] C1 — R-MSG-002: Cada cita `valmen …` de los literales de cadena de `packages/*/src/**/*.ts` es válida contra la tabla.
       <!-- test: npx vitest run tests/cli-mensajes-coherencia.test.ts -->
-- [ ] C2 — R-MSG-002: Cada cita `valmen …` de `.valmen/skills/` es válida contra la tabla.
+- [x] C2 — R-MSG-002: Cada cita `valmen …` de `.valmen/skills/` es válida contra la tabla.
       <!-- test: npx vitest run tests/cli-mensajes-coherencia.test.ts -->
-- [ ] C3 — R-MSG-002: Cada cita `valmen …` de `skills/` es válida contra la tabla.
+- [x] C3 — R-MSG-002: Cada cita `valmen …` de `skills/` es válida contra la tabla.
       <!-- test: npx vitest run tests/cli-mensajes-coherencia.test.ts -->
-- [ ] C4 — R-MSG-002: Cada cita `valmen …` de `AGENTS.md`, `README.md`, `templates/**/*.md` y `.valmen/rules/` es válida contra la tabla.
+- [x] C4 — R-MSG-002: Cada cita `valmen …` de `AGENTS.md`, `README.md`, `templates/**/*.md` y `.valmen/rules/` es válida contra la tabla.
       <!-- test: npx vitest run tests/cli-mensajes-coherencia.test.ts -->
-- [ ] C5 — R-MSG-002: Cada herramienta MCP citada entre comillas invertidas en los literales de `packages/*/src` está en `TOOLS`.
+- [x] C5 — R-MSG-002: Cada herramienta MCP citada entre comillas invertidas en los literales de `packages/*/src` está en `TOOLS`.
       <!-- test: npx vitest run tests/cli-mensajes-coherencia.test.ts -->
-- [ ] C6 — R-MSG-002: Cada herramienta MCP citada entre comillas invertidas en el texto de instrucciones recorrido está en `TOOLS`.
+- [x] C6 — R-MSG-002: Cada herramienta MCP citada entre comillas invertidas en el texto de instrucciones recorrido está en `TOOLS`.
       <!-- test: npx vitest run tests/cli-mensajes-coherencia.test.ts -->
-- [ ] C7 — R-MSG-002: Un `fail()` cuyo texto dice «corre `valmen qa-agent --forzar`» produce un hallazgo con la `ruta:línea` del literal.
+- [x] C7 — R-MSG-002: Un `fail()` cuyo texto dice «corre `valmen qa-agent --forzar`» produce un hallazgo con la `ruta:línea` del literal.
       <!-- test: npx vitest run tests/cli-mensajes-coherencia.test.ts -->
-- [ ] C8 — R-MSG-002: El hallazgo de `valmen qa-agent --forzar` nombra la bandera `--forzar`.
+- [x] C8 — R-MSG-002: El hallazgo de `valmen qa-agent --forzar` nombra la bandera `--forzar`.
       <!-- test: npx vitest run tests/cli-mensajes-coherencia.test.ts -->
-- [ ] C9 — R-MSG-002: Una skill que cita `reanudar_tiket` entre comillas invertidas produce un hallazgo que nombra la skill.
+- [x] C9 — R-MSG-002: Una skill que cita `reanudar_tiket` entre comillas invertidas produce un hallazgo que nombra la skill.
       <!-- test: npx vitest run tests/cli-mensajes-coherencia.test.ts -->
-- [ ] C10 — R-MSG-002: El hallazgo de esa skill nombra la herramienta `reanudar_tiket`.
+- [x] C10 — R-MSG-002: El hallazgo de esa skill nombra la herramienta `reanudar_tiket`.
       <!-- test: npx vitest run tests/cli-mensajes-coherencia.test.ts -->
-- [ ] C11 — R-MSG-002: La cita `valmen journey inventado` produce un hallazgo que nombra el verbo `inventado`.
+- [x] C11 — R-MSG-002: La cita `valmen journey inventado` produce un hallazgo que nombra el verbo `inventado`.
       <!-- test: npx vitest run tests/cli-mensajes-coherencia.test.ts -->
-- [ ] C12 — R-MSG-002: La cita `valmen inventado` produce un hallazgo que nombra el comando `inventado`.
+- [x] C12 — R-MSG-002: La cita `valmen inventado` produce un hallazgo que nombra el comando `inventado`.
       <!-- test: npx vitest run tests/cli-mensajes-coherencia.test.ts -->
-- [ ] C13 — R-MSG-002: Una cita sin comillas invertidas dentro de un literal (`  valmen gate --id X --gate plan`) produce el hallazgo de la bandera `--gate`.
+- [x] C13 — R-MSG-002: Una cita sin comillas invertidas dentro de un literal (`  valmen gate --id X --gate plan`) produce el hallazgo de la bandera `--gate`.
       <!-- test: npx vitest run tests/cli-mensajes-coherencia.test.ts -->
-- [ ] C14 — R-MSG-002: Una cita partida en dos literales unidos con `+` produce el hallazgo de su bandera inexistente.
+- [x] C14 — R-MSG-002: Una cita partida en dos literales unidos con `+` produce el hallazgo de su bandera inexistente.
       <!-- test: npx vitest run tests/cli-mensajes-coherencia.test.ts -->
-- [ ] C15 — R-MSG-002: Una cita cuyo comando es una interpolación (`valmen ${comando}`) no produce hallazgo.
+- [x] C15 — R-MSG-002: Una cita cuyo comando es una interpolación (`valmen ${comando}`) no produce hallazgo.
       <!-- test: npx vitest run tests/cli-mensajes-coherencia.test.ts -->
-- [ ] C16 — R-MSG-002: La prueba extrae al menos 8 citas `valmen …` de `skills/corrida-orquestada/SKILL.md`.
+- [x] C16 — R-MSG-002: La prueba extrae al menos 8 citas `valmen …` de `skills/corrida-orquestada/SKILL.md`.
       <!-- test: npx vitest run tests/cli-mensajes-coherencia.test.ts -->
-- [ ] C17 — R-MSG-004: El rechazo de `decideByCode` por ticket cambiado nombra la salida `valmen gate <compuerta> --id <ticket>`.
+- [x] C17 — R-MSG-004: El rechazo de `decideByCode` por ticket cambiado nombra la salida `valmen gate <compuerta> --id <ticket>`.
       <!-- test: npx vitest run tests/cli-mensajes-coherencia.test.ts -->
-- [ ] C18 — R-MSG-004: `parseArgs` acepta sin `UsageError` la salida que nombra el rechazo de `decideByCode` por ticket cambiado.
+- [x] C18 — R-MSG-004: `parseArgs` acepta sin `UsageError` la salida que nombra el rechazo de `decideByCode` por ticket cambiado.
       <!-- test: npx vitest run tests/cli-mensajes-coherencia.test.ts -->
-- [ ] C19 — R-MSG-004: Las pruebas existentes del rechazo por ticket cambiado pasan sin editarlas.
+- [x] C19 — R-MSG-004: Las pruebas existentes del rechazo por ticket cambiado pasan sin editarlas.
       <!-- test: npx vitest run tests/hermes-notify.test.ts -->
-- [ ] C20 — R-MSG-002: Las pruebas existentes del enrutado de roles pasan sin editarlas.
+- [x] C20 — R-MSG-002: Las pruebas existentes del enrutado de roles pasan sin editarlas.
       <!-- test: npx vitest run tests/roles-ejecucion.test.ts tests/routing.test.ts -->
-- [ ] C21 — R-MSG-002: `tests/skill-corrida-orquestada.test.ts` pasa con el bloque C20 reemplazado.
+- [x] C21 — R-MSG-002: `tests/skill-corrida-orquestada.test.ts` pasa con el bloque C20 reemplazado.
       <!-- test: npx vitest run tests/skill-corrida-orquestada.test.ts -->
-- [ ] C22 — R-MSG-002: `tests/skill-corrida-orquestada.test.ts` ya no contiene el bloque «los comandos citados (C20)».
+- [x] C22 — R-MSG-002: `tests/skill-corrida-orquestada.test.ts` ya no contiene el bloque «los comandos citados (C20)».
       <!-- verify: manual -->
-- [ ] C23 — R-MSG-002: El monorepo compila con las dos correcciones de texto.
+- [x] C23 — R-MSG-002: El monorepo compila con las dos correcciones de texto.
       <!-- test: npx tsc --build tsconfig.build.json -->
 
 ## Puntos
@@ -182,11 +182,53 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+Hecho en el worktree `.claude/worktrees/ticket-prueba-mensajes` (rama `valmen/ticket-prueba-mensajes`), siguiendo el plan paso a paso y EST-010: la prueba nueva se escribió antes de tocar ningún literal y se observó en rojo.
+
+**Prueba primero (EST-010).** `npx vitest run tests/cli-mensajes-coherencia.test.ts` con los literales sin tocar: 15 verdes y 3 rojas, las tres que predijo el plan. C1 falló con exactamente dos hallazgos —`packages/adapter/src/routing.ts:145 — bandera --role en «valmen routing show --role ui-specs»` y `packages/cli/src/hermes.ts:636 — bandera --gate en «valmen gate --id <expr> --gate <expr>»`—, C17 con la línea recibida `valmen gate --id BUGFIX-POS-FILTRO-ORDENES-20260921 --gate plan` en vez de `valmen gate plan --id …`, y C18 con el `UsageError` de `parseArgs` («La bandera --gate no existe para gate»). Las otras 15 (C2 a C16) pasaron en el árbol sin corregir, que confirma H1: 0 hallazgos en las skills, `AGENTS.md`, `README.md`, `templates/` y `.valmen/rules/`, y solo los dos del código. Con las dos correcciones, las 18 pasan. Lo leído: 201 citas `valmen …` y 69 identificadores de herramienta en los literales de los 223 archivos de `packages/*/src`; 40, 40 y 52 citas en `.valmen/skills/`, `skills/` y el resto de las instrucciones; 7, 7 y 11 identificadores de herramienta en esas tres áreas (la medición del diagnóstico daba 192, 40, 40 y 52 citas). Cada prueba de recorrido afirma además que leyó archivos y citas, para que una lectura vacía no pase por buena.
+
+**Cambios**
+- `tests/cli-mensajes-coherencia.test.ts` (nuevo, con `prettier`): `literalesDe`, `citasDe`, `revisarCita`, `herramientasCitadas`, el recorrido con `EXCLUIDOS` (cada ruta excluida con su motivo) y los criterios C1 a C18. Importa de `packages/cli/src/index.ts` `existeComando`, `especDe`, `banderasValidas` y `parseArgs`, `TOOLS` de `packages/mcp/src/index.ts` y, para el caso de R-MSG-004, el mismo andamiaje de `tests/hermes-notify.test.ts` (`writeFixtureTicket`, `buildReceipt`, `appendReceipt`, `hermesNotify` con un `runner` inyectado y el ticket tocado después de notificar). No agrega código de producción ni exportaciones.
+- `packages/cli/src/hermes.ts:636`: la salida del rechazo por ticket cambiado pasa de `valmen gate --id ${claims.ticket} --gate ${claims.gate}` a `valmen gate ${claims.gate} --id ${claims.ticket}`, la forma de `USAGE`. No cambia nada más del rechazo.
+- `packages/adapter/src/routing.ts:145`: el consumidor del rol `ui-specs` pasa de `valmen routing show --role ui-specs` a `valmen routing show`.
+- `tests/skill-corrida-orquestada.test.ts` (reemplazo declarado en el plan, EST-009): se quitan `comandosCitados`, `enLaAyuda`, `ayudaDelCli`, el bloque «los comandos citados (C20)» y el comentario de cabecera ahora remite a la prueba nueva. `PENDIENTES` y su caso C14 se quedan; ningún otro caso se tocó. Lo que afirmaba el bloque lo afirman ahora C11, C12 y C16 de la prueba nueva, contra la tabla.
+- `scripts/exports-sin-uso.linea-base.json`: se quitan 10 entradas que la prueba nueva consume y la guarda exigió retirar (`npm run exports:check`): `packages/cli/src/command-table.ts#EspecComando`, `#EspecSubcomando`, `#banderasValidas`, `#especDe`; `packages/cli/src/index.ts#EspecComando`, `#banderasValidas`, `#especDe`, `#existeComando`, `#parseArgs`; y `packages/mcp/src/index.ts#TOOLS`. La línea base pasa de 453 a 443 entradas y no se agregó ninguna. Las otras entradas de la tabla (`COMANDOS`, `BANDERAS_GLOBALES`, `EspecBanderas` y `EspecSubcomando` del índice, `CitaDeAyuda`, `citasDeAyuda`, `comandosCitadosEnAyuda`) siguen sin consumidor y se quedan.
+
+**Decisiones durante la implementación (no estaban en el plan).**
+1. Las citas sin comillas se limpian de la cola de la frase que las rodea (`.`, `,`, `;`, `:`, `!`, `?`, comillas simples y comillas invertidas) antes de comprobarlas; es lo que evita leer `sync'` como un comando. Los terminadores son los del plan, sin agregar ninguno.
+2. En Markdown, la línea de un bloque de código se corta en el primer ` #` (un comentario) y se parte en `&&`; las citas con comillas invertidas se leen igual dentro y fuera de un bloque.
+3. Cuando el comando tiene verbos y la cita nombra uno que no existe, el hallazgo es solo el del verbo: no se comprueban las banderas contra una ruta que no existe.
+4. Una cita sin verbo (o con un marcador en su lugar) se compara con la unión de las banderas del comando y las de todos sus verbos, que es la forma de `packages/cli/src/commands.ts:1732`; con la unión, una bandera de otro verbo no se detecta. Es el falso negativo que el diagnóstico ya asumía.
+5. La línea de un hallazgo en un literal de varias líneas se busca con la misma aparición de `valmen` en lo escrito (no con la del texto interpretado), de modo que un `\n` escrito no cuenta como salto y un salto real de una plantilla sí.
+6. El criterio manual C22 se verificó con `grep -c "los comandos citados (C20)" tests/skill-corrida-orquestada.test.ts` (0); se marca con esa evidencia y la persona puede contradecirla.
+
+**Cobertura honesta.** Las tres pruebas que fallaron sin las correcciones (C1, C17 y C18) son las únicas que cambian de rojo a verde con ellas: el rojo del primer punto es el estado de los dos literales antes de corregirlos. Los casos sintéticos C7 a C15 comprueban, con las mismas funciones que recorren el repositorio, lo que cada uno nombra: la bandera inventada dentro de un `fail()` con un comentario que no se lee y una cita válida en la misma fuente (un solo hallazgo, con su `ruta:línea`), la herramienta `reanudar_tiket` junto a `ver_ticket` y al campo `workflow_status` (que no dan hallazgo), el verbo y el comando inexistentes, la cita sin comillas, la partida con `+` (sin la unión no hay cita que leer) y la interpolación, que se lee y no se rechaza.
+
+**Lo que no se hizo, a sabiendas.** `docs/` queda fuera (decisión aprobada del plan); las dos citas de `docs/` que describen como vigente algo inexistente (`docs/07-ADAPTADORES.md:95`, `sync --diff`; `docs/08-ADOPCION.md:331`, `adopt --revert`) se proponen como un ticket DOCS aparte, que abre una persona si lo quiere. Los argumentos posicionales y su orden no se validan. `prettier` solo se aplicó al archivo nuevo; `eslint` sobre los cuatro archivos de código y prueba tocados sale limpio.
+
+**Compatibilidad comprobada.** `tests/hermes-notify.test.ts` (45), `tests/roles-ejecucion.test.ts` y `tests/routing.test.ts` (110), `tests/skill-corrida-orquestada.test.ts` (21) y `tests/cli-tabla-comandos.test.ts` (27) pasan sin editarlas más allá del bloque declarado. Ninguna prueba que ya existía se puso en rojo.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Directorio: la raíz del worktree (`/Users/juanandrade/Desktop/ValmenHarness/.claude/worktrees/ticket-prueba-mensajes`). Requisitos: Node 24 con las dependencias del monorepo instaladas (incluido `typescript`) y `npm run build` hecho para `npm run exports:check`; sin red ni credenciales.
+
+1. Las pruebas del ticket (C1 a C18): `npx vitest run tests/cli-mensajes-coherencia.test.ts`. Esperado: 1 archivo, 18 pruebas, 0 fallos.
+2. El rechazo por ticket cambiado (C19): `npx vitest run tests/hermes-notify.test.ts`. Esperado: 45 pruebas, 0 fallos, sin editar la prueba.
+3. El enrutado de roles (C20): `npx vitest run tests/roles-ejecucion.test.ts tests/routing.test.ts`. Esperado: 2 archivos, 110 pruebas, 0 fallos.
+4. La skill con el bloque reemplazado (C21): `npx vitest run tests/skill-corrida-orquestada.test.ts`. Esperado: 21 pruebas, 0 fallos.
+5. La tabla de comandos, que la prueba nueva consume: `npx vitest run tests/cli-tabla-comandos.test.ts`. Esperado: 27 pruebas, 0 fallos.
+6. Compilación (C23): `npx tsc --build tsconfig.build.json`. Esperado: sin salida y código 0. Además `npx tsc --noEmit -p tsconfig.json` (sin errores, como en main) y `npm run exports:check` (esperado: «Sin exportaciones nuevas sin consumidor; la línea base tiene 443 entradas»).
+7. Compuerta mecánica: `valmen gate qa-mechanical --id FEATURE-CLI-PRUEBA-MENSAJES-20261010 --evaluator command`. Esperado: APPROVE con C1 a C21 y C23 por comando; el último recibo `qa-mechanical` de `.valmen/receipts/FEATURE-CLI-PRUEBA-MENSAJES-20261010.jsonl` es el vigente.
+
+Validación manual (opcional, tras `npm run build`, desde la misma raíz):
+- C22: `grep -c "los comandos citados (C20)" tests/skill-corrida-orquestada.test.ts` imprime `0`.
+- `node packages/cli/dist/main.js gate --id FEATURE-X-20261010 --gate analysis --root "$(mktemp -d)"` sale con 2 y dice «La bandera --gate no existe para gate» (la forma que el rechazo nombraba antes); `node packages/cli/dist/main.js gate analysis --id FEATURE-X-20261010 --root "$(mktemp -d)"` ya no dice eso (falla por otra razón: la carpeta no es un registro).
+- `node packages/cli/dist/main.js routing show` lista el rol `ui-specs` y `valmen routing show` ya no lleva `--role`.
+- Para ver la prueba fallar: en `packages/cli/src/hermes.ts:636` poner de vuelta `--id ${claims.ticket} --gate ${claims.gate}` y correr el punto 1: fallan C1, C17 y C18, y C1 cita `packages/cli/src/hermes.ts:636 — bandera --gate`.
+
+Evidencia de esta sesión (ejecutada en el worktree): las 18 pruebas del ticket, 3 en rojo antes de las correcciones (C1 con `routing.ts:145` y `hermes.ts:636`, C17 y C18) y las 18 en verde después; los puntos 2 a 5 en verde (45, 110, 21 y 27 pruebas); `npx tsc --build tsconfig.build.json`, `npx tsc --noEmit -p tsconfig.json` y `npm run build` sin errores; `npm run exports:check` sin hallazgos con 443 entradas; `eslint` limpio sobre los archivos tocados.
+
+Criterios sin verificar: ninguno. C22 es manual y se verificó con el `grep` de arriba; queda marcado con esa evidencia.
+Limitaciones: la prueba no comprueba los argumentos posicionales ni su orden, ni una cita armada en tiempo de ejecución (`valmen ${comando}`); `docs/` y `packages/server/web/` quedan fuera del recorrido, con su motivo en la constante `EXCLUIDOS`; que correr la salida saque del bloqueo es de FEATURE-BENCH-FRICCION-CORPUS-20261010.
 
 ## QA
 
@@ -215,7 +257,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-10",
+    "session_reference": "~/.claude/projects/-Users-juanandrade-Desktop-ValmenHarness/c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/subagents/agent-a376be4dbde21ac9d.jsonl",
+    "model": "claude-sonnet-5-5",
+    "reasoning_effort": "high",
+    "notes": "Fase de implementación en una sesión de subagente propia de este ticket. Números sumados de la transcripción del subagente hasta el registro (49 respuestas): 98 tokens de entrada sin caché, 229673 de creación de caché y 8042695 de lectura de caché (entrada = suma de los tres), 74359 de salida. No incluye lo que el subagente gaste después del registro (compuerta, secretos, commit y entrega). Sin coste estimado: el cliente no lo expone.",
+    "input_tokens": 8272466,
+    "output_tokens": 74359,
+    "total_tokens": 8346825,
+    "estimated_cost_usd": null,
+    "source": "claude:c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-a376be4dbde21ac9d",
+    "confidence": "medium",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -288,6 +346,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-10",
+    "at": "2026-10-10T23:13:13.352Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-10",
+    "at": "2026-10-10T23:22:27.997Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-10",
+    "at": "2026-10-10T23:23:49.809Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
