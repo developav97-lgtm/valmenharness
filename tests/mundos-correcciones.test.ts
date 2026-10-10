@@ -64,7 +64,7 @@ function fila(agente: string, sobre: Record<string, unknown> = {}) {
   return {
     agente,
     principal: false,
-    estado: "trabajando",
+    estado: "trabajando" as const,
     ticket: `T-${agente}`,
     ticketEstado: "in_progress",
     faseConfirmada: null,
@@ -311,7 +311,7 @@ describe("C31-C32: el cuaderno del invernadero", () => {
   const regla = (selector: string) => {
     const m = INDEX.match(new RegExp(`${selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} \\{([^}]*)\\}`));
     expect(m, selector).not.toBeNull();
-    return m![1];
+    return m![1]!;
   };
 
   it("C31: el th del invernadero declara un fondo que no es var(--fondo)", () => {

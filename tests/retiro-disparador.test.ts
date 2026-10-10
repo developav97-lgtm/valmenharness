@@ -13,7 +13,6 @@ import { fileURLToPath } from "node:url";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import * as adapter from "../packages/adapter/src/index.js";
 import {
   journeyAdvanceCommand,
   journeyClearStopCommand,
@@ -23,9 +22,9 @@ import {
 import { pendientesDeAvisar } from "../packages/cli/src/hermes.js";
 import { USAGE } from "../packages/cli/src/main.js";
 import { EXIT_SCHEMA } from "../packages/core/src/index.js";
-import * as engine from "../packages/engine/src/index.js";
 import {
   advertenciaDeArbolSucio,
+  approvalLogPath,
   armarJornada,
   autonomousConfig,
   leerPasadas,
@@ -38,6 +37,16 @@ import { crearEntornoOla, crearJornada, enJornada, ticketEn, type EntornoOla } f
 import { writeFixtureTicket } from "./helpers/fixtures.js";
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+
+/**
+ * El índice de un paquete como objeto entero, para preguntarle qué exporta.
+ *
+ * La ruta se arma al ejecutar a propósito: un `import * as` que se pasa entero a `Object.keys`
+ * marca como consumido todo lo que el paquete exporta y deja ciega la guarda de exportaciones
+ * sin consumidor (`npm run exports:check`), que no cuenta como consumidor una ruta no literal.
+ */
+const indiceDe = (paquete: string): Promise<Record<string, unknown>> =>
+  import(join(REPO, "packages", paquete, "src", "index.ts")) as Promise<Record<string, unknown>>;
 const projectId = "retiro-lab";
 const A = "FEATURE-RETIRO-UNO-20261008";
 const B = "FEATURE-RETIRO-DOS-20261008";
@@ -169,9 +178,9 @@ describe("el disparador retirado", () => {
     expect(foto(home)).toEqual(antes);
   });
 
-  it("C7: el archivo del disparador ya no existe y nadie exporta el plist", () => {
+  it("C7: el archivo del disparador ya no existe y nadie exporta el plist", async () => {
     expect(existsSync(join(REPO, "packages", "cli", "src", "journey-trigger.ts"))).toBe(false);
-    for (const exportes of [Object.keys(engine), Object.keys(adapter)]) {
+    for (const exportes of [Object.keys(await indiceDe("engine")), Object.keys(await indiceDe("adapter"))]) {
       expect(exportes.filter((nombre) => /LaunchdPlist|escribirPlist|HermesJobScript/.test(nombre))).toEqual([]);
     }
   });
@@ -188,8 +197,8 @@ describe("el disparador retirado", () => {
 });
 
 describe("la configuración del despachador", () => {
-  it("C9: @valmen/adapter ya no exporta readJourneyDispatcher", () => {
-    expect("readJourneyDispatcher" in adapter).toBe(false);
+  it("C9: @valmen/adapter ya no exporta readJourneyDispatcher", async () => {
+    expect("readJourneyDispatcher" in (await indiceDe("adapter"))).toBe(false);
   });
 
   it("C10: un config.yaml que todavía declara execution.dispatcher se carga sin error", () => {
@@ -203,8 +212,8 @@ describe("la configuración del despachador", () => {
     expect(readFileSync(join(REPO, ".valmen", "config.yaml"), "utf8")).not.toMatch(/^\s*dispatcher:/m);
   });
 
-  it("C12: el motor ya no exporta dispatchJourney y el archivo no existe", () => {
-    expect("dispatchJourney" in engine).toBe(false);
+  it("C12: el motor ya no exporta dispatchJourney y el archivo no existe", async () => {
+    expect("dispatchJourney" in (await indiceDe("engine"))).toBe(false);
     expect(existsSync(join(REPO, "packages", "engine", "src", "journey-dispatch.ts"))).toBe(false);
   });
 });
@@ -304,7 +313,7 @@ describe("los avisos del vigilante", () => {
 
   it("C20: `readApprovalLog` sigue leyendo una línea histórica journey-dirty-tree-notice", () => {
     const paths = proyecto().paths;
-    const ruta = engine.approvalLogPath(paths);
+    const ruta = approvalLogPath(paths);
     mkdirSync(dirname(ruta), { recursive: true });
     const historica = { kind: "journey-dirty-tree-notice", journeyId: ESTE_DIA_UTC, episodio: "2026-10-07T08:00:00.000Z", notifiedAt: "2026-10-07T08:30:00.000Z" };
     writeFileSync(ruta, `${JSON.stringify(historica)}\n`, "utf8");

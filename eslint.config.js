@@ -5,9 +5,13 @@ import tseslint from "typescript-eslint";
  * El lint del repositorio.
  *
  * Deliberadamente corto. TypeScript en modo estricto ya cubre la mayor parte de lo
- * que un lint aportaría —tipos, variables sin usar, código inalcanzable—, así que
- * aquí solo van las reglas que el compilador **no** puede ver y que en este
- * proyecto ya han sido un problema real:
+ * que un lint aportaría —tipos, código inalcanzable—. Las variables sin usar no las
+ * caza el compilador (`tsconfig.json` no declara `noUnusedLocals`): las caza
+ * `@typescript-eslint/no-unused-vars`, de la configuración recomendada que se hereda
+ * abajo; y las exportaciones sin consumidor, que ninguno de los dos ve, las caza el
+ * paso «Exportaciones sin consumidor» del CI (`npm run exports:check`). Aquí solo van
+ * las reglas que el compilador **no** puede ver y que en este proyecto ya han sido
+ * un problema real:
  *
  * 1. **Promesas sin esperar.** Un `runGate` olvidado no falla: devuelve una promesa
  *    que nadie mira, y el gate no corre. Es el fallo más caro posible aquí.

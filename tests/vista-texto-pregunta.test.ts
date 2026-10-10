@@ -104,23 +104,23 @@ function dibujarCon(mundo: typeof control, texto: string | undefined) {
 
 describe("la vista muestra el texto de la pregunta y la respuesta", () => {
   it("C1: el aviso pendiente lleva el texto", () => {
-    const [aviso] = avisosDePregunta(abierta({ texto: "¿Apruebo el plan de FEATURE-X?" }), AHORA, MUNDO);
+    const aviso = avisosDePregunta(abierta({ texto: "¿Apruebo el plan de FEATURE-X?" }), AHORA, MUNDO)[0]!;
     expect(aviso.texto).toBe("¿Apruebo el plan de FEATURE-X?");
   });
   it("C2: el aviso respondio lleva la respuesta", () => {
-    const [aviso] = avisosDePregunta(respondida({ respuesta: "Sí, aprobado." }), AHORA, MUNDO);
+    const aviso = avisosDePregunta(respondida({ respuesta: "Sí, aprobado." }), AHORA, MUNDO)[0]!;
     expect(aviso.respuesta).toBe("Sí, aprobado.");
   });
   it("C3: sin la clave texto el aviso es el de siempre", () => {
     expect(avisosDePregunta(abierta(), AHORA, MUNDO)).toEqual([BASE_PENDIENTE]);
   });
   it("C4: texto null no agrega la clave", () => {
-    const [aviso] = avisosDePregunta(abierta({ texto: null }), AHORA, MUNDO);
+    const aviso = avisosDePregunta(abierta({ texto: null }), AHORA, MUNDO)[0]!;
     expect(aviso).toEqual(BASE_PENDIENTE);
     expect("texto" in aviso).toBe(false);
   });
   it("C5: texto en blanco no agrega la clave", () => {
-    const [aviso] = avisosDePregunta(abierta({ texto: "   \n " }), AHORA, MUNDO);
+    const aviso = avisosDePregunta(abierta({ texto: "   \n " }), AHORA, MUNDO)[0]!;
     expect(aviso).toEqual(BASE_PENDIENTE);
     expect("texto" in aviso).toBe(false);
   });
@@ -131,26 +131,26 @@ describe("la vista muestra el texto de la pregunta y la respuesta", () => {
   });
   it("C7: la caja pone el texto hostil como textContent exacto", () => {
     const { doc } = documentoFalso();
-    const [aviso] = avisosDePregunta(abierta({ texto: HOSTIL }), AHORA, MUNDO);
+    const aviso = avisosDePregunta(abierta({ texto: HOSTIL }), AHORA, MUNDO)[0]!;
     const caja = cajaDeAviso(doc, aviso) as unknown as Nodo;
     const texto = caja.children.find((h) => h.className === "texto");
     expect(texto?.textContent).toBe(HOSTIL);
   });
   it("C8: la caja no asigna innerHTML en ningún elemento", () => {
     const { doc, creados } = documentoFalso();
-    const [aviso] = avisosDePregunta(abierta({ texto: HOSTIL }), AHORA, MUNDO);
+    const aviso = avisosDePregunta(abierta({ texto: HOSTIL }), AHORA, MUNDO)[0]!;
     expect(() => cajaDeAviso(doc, aviso)).not.toThrow();
     expect(creados.length).toBeGreaterThan(1);
   });
   it("C9: la caja del aviso respondio muestra la respuesta", () => {
     const { doc } = documentoFalso();
-    const [aviso] = avisosDePregunta(respondida({ respuesta: "Sí, aprobado." }), AHORA, MUNDO);
+    const aviso = avisosDePregunta(respondida({ respuesta: "Sí, aprobado." }), AHORA, MUNDO)[0]!;
     const caja = cajaDeAviso(doc, aviso) as unknown as Nodo;
     expect(caja.children.find((h) => h.className === "texto")?.textContent).toBe("Sí, aprobado.");
   });
   it("C10: sin texto la caja tiene rotulo, id y resultado, en ese orden", () => {
     const { doc } = documentoFalso();
-    const [aviso] = avisosDePregunta(abierta(), AHORA, MUNDO);
+    const aviso = avisosDePregunta(abierta(), AHORA, MUNDO)[0]!;
     const caja = cajaDeAviso(doc, aviso) as unknown as Nodo;
     expect(caja.children.map((h) => h.className)).toEqual(["rotulo", "id", "resultado"]);
   });
