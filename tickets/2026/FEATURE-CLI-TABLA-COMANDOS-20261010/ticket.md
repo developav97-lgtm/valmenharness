@@ -4,7 +4,7 @@ id: FEATURE-CLI-TABLA-COMANDOS-20261010
 title: Tabla declarativa de comandos y banderas que usa el despacho
 type: FEATURE
 module: CLI
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -99,45 +99,45 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1 — R-MSG-001: Cada comando de primer nivel que despacha `packages/cli/src/main.ts` figura en la tabla de `packages/cli/src/command-table.ts`.
+- [x] C1 — R-MSG-001: Cada comando de primer nivel que despacha `packages/cli/src/main.ts` figura en la tabla de `packages/cli/src/command-table.ts`.
       <!-- test: npx vitest run tests/cli-tabla-comandos.test.ts -->
-- [ ] C2 — R-MSG-001: Cada comando de la tabla tiene una rama de despacho en `packages/cli/src/main.ts`.
+- [x] C2 — R-MSG-001: Cada comando de la tabla tiene una rama de despacho en `packages/cli/src/main.ts`.
       <!-- test: npx vitest run tests/cli-tabla-comandos.test.ts -->
-- [ ] C3 — R-MSG-001: Cada subcomando de la tabla aparece en el despachador de su comando.
+- [x] C3 — R-MSG-001: Cada subcomando de la tabla aparece en el despachador de su comando.
       <!-- test: npx vitest run tests/cli-tabla-comandos.test.ts -->
-- [ ] C4 — R-MSG-001: Cada comando citado en `USAGE`, con su subcomando, figura en la tabla.
+- [x] C4 — R-MSG-001: Cada comando citado en `USAGE`, con su subcomando, figura en la tabla.
       <!-- test: npx vitest run tests/cli-tabla-comandos.test.ts -->
-- [ ] C5 — R-MSG-001: Un comando agregado a `USAGE` sin entrada en la tabla hace fallar la comprobación con un mensaje que nombra ese comando.
+- [x] C5 — R-MSG-001: Un comando agregado a `USAGE` sin entrada en la tabla hace fallar la comprobación con un mensaje que nombra ese comando.
       <!-- test: npx vitest run tests/cli-tabla-comandos.test.ts -->
-- [ ] C6 — R-MSG-001: Cada bandera que `USAGE` documenta en la línea de un comando está declarada para ese comando en la tabla.
+- [x] C6 — R-MSG-001: Cada bandera que `USAGE` documenta en la línea de un comando está declarada para ese comando en la tabla.
       <!-- test: npx vitest run tests/cli-tabla-comandos.test.ts -->
-- [ ] C7 — R-MSG-001: Cada bandera que leen los manejadores de `packages/cli/src` está declarada en la tabla.
+- [x] C7 — R-MSG-001: Cada bandera que leen los manejadores de `packages/cli/src` está declarada en la tabla.
       <!-- test: npx vitest run tests/cli-tabla-comandos.test.ts -->
-- [ ] C8 — R-MSG-001: `VALUE_OPTIONS` se deriva de la tabla sin entradas repetidas.
+- [x] C8 — R-MSG-001: `VALUE_OPTIONS` se deriva de la tabla sin entradas repetidas.
       <!-- test: npx vitest run tests/cli-tabla-comandos.test.ts -->
-- [ ] C9 — R-MSG-003: `valmen resume --idd X` sale con código 2.
+- [x] C9 — R-MSG-003: `valmen resume --idd X` sale con código 2.
       <!-- test: npx vitest run tests/cli-tabla-comandos.test.ts -->
-- [ ] C10 — R-MSG-003: El rechazo de `resume --idd X` dice que `--idd` no existe para `resume`.
+- [x] C10 — R-MSG-003: El rechazo de `resume --idd X` dice que `--idd` no existe para `resume`.
       <!-- test: npx vitest run tests/cli-tabla-comandos.test.ts -->
-- [ ] C11 — R-MSG-003: El rechazo de `resume --idd X` nombra `--id` entre las banderas válidas de `resume`.
+- [x] C11 — R-MSG-003: El rechazo de `resume --idd X` nombra `--id` entre las banderas válidas de `resume`.
       <!-- test: npx vitest run tests/cli-tabla-comandos.test.ts -->
-- [ ] C12 — R-MSG-003: `valmen validate --id X --inventada` sale con código 2 sin validar el ticket.
+- [x] C12 — R-MSG-003: `valmen validate --id X --inventada` sale con código 2 sin validar el ticket.
       <!-- test: npx vitest run tests/cli-tabla-comandos.test.ts -->
-- [ ] C13 — R-MSG-003: `valmen --version` imprime la versión con código de salida 0.
+- [x] C13 — R-MSG-003: `valmen --version` imprime la versión con código de salida 0.
       <!-- test: npx vitest run tests/cli-tabla-comandos.test.ts -->
-- [ ] C14 — R-MSG-003: `valmen release-publish --version 1.2.3` entrega `1.2.3` como valor de `--version`.
+- [x] C14 — R-MSG-003: `valmen release-publish --version 1.2.3` entrega `1.2.3` como valor de `--version`.
       <!-- test: npx vitest run tests/cli-tabla-comandos.test.ts -->
-- [ ] C15 — R-MSG-003: Una bandera con valor escrita antes del comando sigue aceptada (`--id X validate`).
+- [x] C15 — R-MSG-003: Una bandera con valor escrita antes del comando sigue aceptada (`--id X validate`).
       <!-- test: npx vitest run tests/cli-tabla-comandos.test.ts -->
-- [ ] C16 — R-MSG-001: Un comando que no está en la tabla conserva el mensaje «Comando desconocido».
+- [x] C16 — R-MSG-001: Un comando que no está en la tabla conserva el mensaje «Comando desconocido».
       <!-- test: npx vitest run tests/cli-tabla-comandos.test.ts -->
-- [ ] C17 — R-MSG-003: Un subcomando desconocido conserva el mensaje de su módulo (`journey inventado` responde «journey admite:»).
+- [x] C17 — R-MSG-003: Un subcomando desconocido conserva el mensaje de su módulo (`journey inventado` responde «journey admite:»).
       <!-- test: npx vitest run tests/cli-tabla-comandos.test.ts -->
-- [ ] C18 — R-MSG-003: `process run` sigue aceptando los parámetros que declara el proceso.
+- [x] C18 — R-MSG-003: `process run` sigue aceptando los parámetros que declara el proceso.
       <!-- test: npx vitest run tests/process-engine.test.ts tests/process-gates.test.ts -->
-- [ ] C19 — R-MSG-003: Las pruebas que importan `packages/cli/src/main.ts` pasan con la tabla.
+- [x] C19 — R-MSG-003: Las pruebas que importan `packages/cli/src/main.ts` pasan con la tabla.
       <!-- test: npx vitest run tests/aprendizajes.test.ts tests/aprobacion-de-lote.test.ts tests/cascada-tareas.test.ts tests/cli.test.ts tests/codegraph-montaje.test.ts tests/corpus-rag.test.ts tests/docs-cascada-verificada.test.ts tests/docs-perfil-hermes.test.ts tests/elegibilidad-aprobacion.test.ts tests/gate-human-decision.test.ts tests/gate-promotion.test.ts tests/jornada-handoff.test.ts tests/journey-ola-cli.test.ts tests/manuales-auditar.test.ts tests/manuales-pendientes.test.ts tests/manuales-plantilla.test.ts tests/modo-ask.test.ts tests/presupuestos.test.ts tests/process-engine.test.ts tests/process-gates.test.ts tests/report-delivery.test.ts tests/retiro-disparador.test.ts tests/value.test.ts tests/verificacion-puesta-en-marcha.test.ts tests/worktree-cli.test.ts -->
-- [ ] C20 — R-MSG-001: El monorepo compila con la tabla.
+- [x] C20 — R-MSG-001: El monorepo compila con la tabla.
       <!-- test: npx tsc --build tsconfig.build.json -->
 
 ## Puntos
@@ -148,11 +148,50 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+Hecho en el worktree `.claude/worktrees/ticket-tabla-comandos` (rama `valmen/ticket-tabla-comandos`), siguiendo el plan paso a paso y EST-010: la prueba nueva se escribió antes que el código y se observó en rojo.
+
+**Prueba primero (EST-010).** `tests/cli-tabla-comandos.test.ts` se escribió con el módulo de la tabla inexistente (importación perezosa, para que cada prueba falle por lo suyo): 19 rojas —C1 a C13 y las del parser— y 8 verdes, que son las de compatibilidad de lo que ya funcionaba (C14, C15, C16, C17, la bandera global, el comando y el subcomando desconocidos, y `process run`). Los rojos reproducen el diagnóstico: `resume --idd X` salía con 6, `validate --id X --inventada` con 0 y `--version` con 2. Tras implementar, las 27 pasan. Cobertura honesta: con la tabla ya hecha se mutó a propósito (quitar `--quiet` de `resume`, quitar `--force` de `hermes`, quitar el comando `doctor`, agregar un comando fantasma, agregar un subcomando fantasma a `journey`) y cada mutación hizo fallar la prueba que corresponde (C6/C7, C6/C7, C1/C4, C2, C3). Ninguna prueba que ya existía se puso en rojo ni se editó.
+
+**Cambios**
+- `packages/cli/src/command-table.ts` (nuevo): `EspecComando`, `EspecSubcomando`, `BANDERAS_GLOBALES`, `COMANDOS` (69 comandos de primer nivel: los 47 de la cadena de `run` y los 22 de `dispatch`, con el alias `list` y `execution`, que no figura en la ayuda) y las funciones `especDe`, `existeComando`, `banderasValidas`, `mensajeBanderaDesconocida`, `comandoDesconocido` y `comandosCitadosEnAyuda`. No importa de `main.ts` ni de `index.ts` (AP-002).
+- `packages/cli/src/main.ts`: `VALUE_OPTIONS` se deriva de la tabla (`banderasConValor()`: 118 distintas, el mismo conjunto que la lista literal anterior, comparado contra una copia de ella); `parseArgs` analiza en dos pasadas con la misma firma y el mismo `Options` (la primera ubica comando y subcomando con la unión de banderas con valor y sin rechazar nada; la segunda aplica las del comando y las globales y lanza `UsageError`, que `run` ya convierte en código 2); `run` resuelve el comando contra la tabla antes de la cadena de `if`; el `default` de `dispatch` usa `comandoDesconocido()` con el mismo texto de siempre.
+- `packages/cli/src/index.ts`: exporta `COMANDOS`, `BANDERAS_GLOBALES`, `especDe`, `existeComando` y `banderasValidas` (y los tipos), que es lo que consume FEATURE-CLI-PRUEBA-MENSAJES-20261010.
+- `tests/cli-tabla-comandos.test.ts` (nuevo): C1 a C17, más las de parser y la que corre `parseArgs` sobre las banderas de cada línea de `USAGE`.
+
+**Inventario (paso 1).** Se recorrió cada rama de `run` y de `dispatch` hasta su manejador y se anotaron las banderas que lee cada comando y subcomando, directas y por los ayudantes `flag()`, `texto()`, `value()`, `bandera()`, `obligatoria()`, `t()` y `lista()`. Casos con decisión: `approve`, `gate` y `delegation advance` declaran `--evaluator`, `--force-reason` y `--dry-run`, que reenvían a `runGateFromFlags`; `journey install-trigger` declara `--project`, `--every`, `--via` y `--dir` para seguir respondiendo su aviso de retiro; `process run` lleva `banderasLibres` y declara `--set`, `--actor`, `--reason`, `--run`, `--skip-gates` y `--dry-run` (las de `BANDERAS_PROPIAS` de `packages/cli/src/commands.ts:2144`); `hermes` sin verbo es `status`; `--version` lleva valor en `release-publish`, `deliver-manifest` y `transition`, y es la bandera global en el resto.
+
+**Decisiones durante la implementación (no estaban en el plan).**
+1. `--version` contesta antes de despachar (`valmen serve --version` no levanta el servidor): sin esto, volver booleana la bandera dejaba que un comando de la cadena de `if` corriera con ella puesta, y antes fallaba pidiendo un valor. Es una rama de dos líneas en `run`.
+2. Un comando desconocido con `--help` sigue imprimiendo la ayuda, como antes (`valmen pepe --help`): la resolución contra la tabla no corre con `--help`.
+3. Rutas laxas, que el parser acepta como hoy: sin comando, comando desconocido, subcomando que la tabla no declara (`journey inventado`), comando con verbos y sin verbo por defecto (`journey --project p`: responde «journey admite:») y banderas libres. Un comando con verbo por defecto (`hermes`, `provider`, `routing`, `perfiles`, `estandar`, `template`) rige por él; `usage` sin verbo es el consumo, con `--desde` y `--hasta`.
+4. Se declaran como subcomandos también los alias que el despachador acepta (`valor` en `usage`, `materializar`, `anexar`, `desanexar`, `avanzar`, `verificar` y `adjunto` en `feature`), para que no se rechacen sus banderas.
+5. La tabla exporta además `banderasConValor`, `banderasDeRuta` y `citasDeAyuda`, que `main.ts` y la prueba necesitan; `index.ts` expone solo las cinco del plan.
+6. `prettier` no se aplicó: `main.ts`, `commands.ts` y `delegation.ts` tampoco lo cumplen hoy, y reformatearlos metería ruido ajeno al ticket. `eslint` sobre los archivos tocados sale limpio.
+
+**Hallazgos (no bloquean; son del ticket siguiente, R-MSG-002).** Se corrió `parseArgs` sobre las 293 invocaciones `` `valmen …` `` de una línea que citan `AGENTS.md`, `README.md`, las skills (`.valmen/skills/`, `skills/`), `templates/`, `.valmen/rules/` y `docs/`: ninguna de las skills, `AGENTS.md` ni `.valmen/rules/` se rechaza. Se rechazan 10, todas en `docs/` y una plantilla: citas con una bandera que el comando no tiene (`sync --diff`, `adopt --revert`, `adopt --phase=…` y `gate simulate --last` en docs de roadmap y migración; `journey integrate`, que no existe) y citas de prosa sin valor (`gate-decide --code`, `validate --id` en `templates/programar/prompt-eslabon.md`). Las invocaciones fuera del repositorio (H2) no se pueden comprobar desde aquí.
+
+**Compatibilidad comprobada.** Las 25 pruebas que importan `main.ts`, más `tests/hermes-cli.test.ts`, `tests/hermes.test.ts`, `tests/mcp-registration.test.ts` y `tests/skill-corrida-orquestada.test.ts`, pasan sin tocarlas; `tests/cli.test.ts:202-216` (la comparación de la ayuda con `VALUE_OPTIONS`) sigue valiendo. Las invocaciones del relay de Hermes (`gate-decide --code --decision --actor --root`) y de `scripts/medir-salida-s1-s3.mjs` están declaradas.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Directorio: la raíz del worktree (`/Users/juanandrade/Desktop/ValmenHarness/.claude/worktrees/ticket-tabla-comandos`). Requisitos: Node 24 con las dependencias del monorepo instaladas (`npm install` ya hecho); sin red ni credenciales.
+
+1. Las pruebas del ticket: `npx vitest run tests/cli-tabla-comandos.test.ts`. Esperado: 1 archivo, 27 pruebas, 0 fallos (C1 a C17 y las de parser).
+2. Las que importan `packages/cli/src/main.ts` y las de procesos (C18 y C19): `npx vitest run tests/aprendizajes.test.ts tests/aprobacion-de-lote.test.ts tests/cascada-tareas.test.ts tests/cli.test.ts tests/codegraph-montaje.test.ts tests/corpus-rag.test.ts tests/docs-cascada-verificada.test.ts tests/docs-perfil-hermes.test.ts tests/elegibilidad-aprobacion.test.ts tests/gate-human-decision.test.ts tests/gate-promotion.test.ts tests/jornada-handoff.test.ts tests/journey-ola-cli.test.ts tests/manuales-auditar.test.ts tests/manuales-pendientes.test.ts tests/manuales-plantilla.test.ts tests/modo-ask.test.ts tests/presupuestos.test.ts tests/process-engine.test.ts tests/process-gates.test.ts tests/report-delivery.test.ts tests/retiro-disparador.test.ts tests/value.test.ts tests/verificacion-puesta-en-marcha.test.ts tests/worktree-cli.test.ts`. Esperado: 25 archivos, 574 pruebas, 0 fallos.
+3. Compilación (C20): `npx tsc --build tsconfig.build.json`. Esperado: sin salida y código 0 (con `npm run build` además copia la interfaz).
+4. Compuerta mecánica: `valmen gate qa-mechanical --id FEATURE-CLI-TABLA-COMANDOS-20261010 --evaluator command --force-reason "<motivo>"` si ya hay un recibo sobre el mismo estado. Esperado: APPROVE con los 20 criterios en 1.00.
+
+Validación manual (opcional, tras `npm run build`):
+- `node packages/cli/dist/main.js resume --idd X` sale con 2 y dice «La bandera --idd no existe para resume. Las que acepta: --id, --cliente, --quiet (más las globales …)».
+- `node packages/cli/dist/main.js --version` imprime `0.0.1` y sale con 0; `node packages/cli/dist/main.js serve --version` también (no levanta el servidor).
+- `node packages/cli/dist/main.js validate --id FEATURE-CLI-TABLA-COMANDOS-20261010 --inventada` sale con 2; sin `--inventada`, sale con 0.
+- `node packages/cli/dist/main.js --id FEATURE-CLI-TABLA-COMANDOS-20261010 validate` sale con 0 (la bandera antes del comando sigue valiendo).
+- `node packages/cli/dist/main.js pepe` sale con 2 y dice «Comando desconocido: pepe.».
+
+Evidencia de esta sesión (ejecutadas en el worktree): las 27 pruebas del ticket en verde tras 19 en rojo antes de implementar; los 25 archivos de la lista 2 en verde (574 pruebas); `npx tsc --build tsconfig.build.json` y `npm run build` sin errores; compuerta `qa-mechanical` con evaluador `command` en APPROVE, el último recibo `qa-mechanical` de `.valmen/receipts/FEATURE-CLI-TABLA-COMANDOS-20261010.jsonl` (una corrida por cada cambio del ticket: el vigente es el de más abajo), con los criterios C1 a C20 en 1.00 y los 20 comandos con salida 0.
+
+Criterios sin verificar: ninguno; los 20 llevan comando de prueba y pasaron.
+Limitaciones: las invocaciones de `valmen` fuera de este repositorio (ganchos, tareas programadas y configuraciones de Hermes de otros proyectos, H2) no se pueden probar desde aquí; si pasan una bandera sobrante, ahora salen con 2 y el mensaje nombra las válidas, y el arreglo dirigido es declarar esa bandera en la tabla.
 
 ## QA
 
@@ -181,7 +220,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-10",
+    "session_reference": "~/.claude/projects/-Users-juanandrade-Desktop-ValmenHarness/c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/subagents/agent-a2a31bea361f4d59d.jsonl",
+    "model": "claude-sonnet-5-5",
+    "reasoning_effort": "high",
+    "notes": "Fase de implementación en una sesión de subagente propia de este ticket. Números sumados de la transcripción del subagente hasta el registro (79 respuestas): 158 tokens de entrada sin caché, 340449 de creación de caché y 18578994 de lectura de caché (entrada = suma de los tres), 118042 de salida. No incluye lo que el subagente gaste después del registro (secretos, commit y entrega). Sin coste estimado: el cliente no lo expone.",
+    "input_tokens": 18919601,
+    "output_tokens": 118042,
+    "total_tokens": 19037643,
+    "estimated_cost_usd": null,
+    "source": "claude:agent-a2a31bea361f4d59d",
+    "confidence": "medium",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -254,6 +309,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-10",
+    "at": "2026-10-10T22:19:58.310Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-10",
+    "at": "2026-10-10T22:36:06.986Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-10",
+    "at": "2026-10-10T22:36:58.715Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```

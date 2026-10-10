@@ -18,5 +18,13 @@ export { perfilesCommand } from "./setup.js";
 export { executionCommand } from "./execution.js";
 export type { ExecutionCommandOptions } from "./execution.js";
 export { parseArgs, dispatch, resolvePaths, run } from "./main.js";
+export {
+  COMANDOS,
+  BANDERAS_GLOBALES,
+  especDe,
+  existeComando,
+  banderasValidas,
+} from "./command-table.js";
+export type { EspecBanderas, EspecComando, EspecSubcomando } from "./command-table.js";
 export type { CommandResult } from "./commands.js";
 export type { LocatedTicket, RegistryPaths, RunnerResult } from "@valmen/engine";
