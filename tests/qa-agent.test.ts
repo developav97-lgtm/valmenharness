@@ -215,6 +215,19 @@ describe("el árbol que el agente no controla", () => {
     expect(r.reasons.join(" ")).toContain("scripts/regresion.mjs");
     expect(r.recibo!.commands).toEqual([]);
   });
+  it("C11: bloquea un entregado que renombra un archivo de .valmen/", () => {
+    mkdirSync(root, { recursive: true });
+    git("init", "-q", "-b", "main");
+    escribir(".valmen/otra.yaml", "x: 1\n");
+    const { base } = repo();
+    git("mv", ".valmen/otra.yaml", "src/otra.txt");
+    git("commit", "-q", "-m", "renombra");
+    ticket();
+    autorizar();
+    const r = correr(base, git("rev-parse", "HEAD"));
+    expect(r.verdict).toBe("block");
+    expect(r.reasons.join(" ")).toContain(".valmen/otra.yaml");
+  });
 });
 
 describe("rechazos", () => {

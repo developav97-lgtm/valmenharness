@@ -4,7 +4,7 @@ id: BUGFIX-ENGINE-DIFF-RUTAS-RENOMBRE-20261010
 title: Las rutas de un diff pierden el origen de un renombre, los borrados y las rutas no ASCII
 type: BUGFIX
 module: ENGINE
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -102,45 +102,45 @@ Ninguno.
 
 ## Criterios de aceptación
 
-- [ ] C1: `rutasQueCuentan` incluye el origen de un renombre.
+- [x] C1: `rutasQueCuentan` incluye el origen de un renombre.
   <!-- test: npx vitest run tests/rutas-tocadas.test.ts -t "C1:" -->
-- [ ] C2: `rutasQueCuentan` incluye la ruta de un borrado.
+- [x] C2: `rutasQueCuentan` incluye la ruta de un borrado.
   <!-- test: npx vitest run tests/rutas-tocadas.test.ts -t "C2:" -->
-- [ ] C3: `rutasQueCuentan` excluye el origen de una copia.
+- [x] C3: `rutasQueCuentan` excluye el origen de una copia.
   <!-- test: npx vitest run tests/rutas-tocadas.test.ts -t "C3:" -->
-- [ ] C4: `cambiosDeRuta` entrega una ruta no ASCII con sus caracteres reales.
+- [x] C4: `cambiosDeRuta` entrega una ruta no ASCII con sus caracteres reales.
   <!-- test: npx vitest run tests/rutas-tocadas.test.ts -t "C4:" -->
-- [ ] C5: `cambiosDeRuta` entrega sin comillas una ruta que contiene una comilla doble.
+- [x] C5: `cambiosDeRuta` entrega sin comillas una ruta que contiene una comilla doble.
   <!-- test: npx vitest run tests/rutas-tocadas.test.ts -t "C5:" -->
-- [ ] C6: Un renombre con similitud bajo el umbral de `-M` conserva la ruta vieja entre las rutas que cuentan.
+- [x] C6: Un renombre con similitud bajo el umbral de `-M` conserva la ruta vieja entre las rutas que cuentan.
   <!-- test: npx vitest run tests/rutas-tocadas.test.ts -t "C6:" -->
-- [ ] C7: `archivosDelDiff` devuelve el origen de un renombre desde una migración.
+- [x] C7: `archivosDelDiff` devuelve el origen de un renombre desde una migración.
   <!-- test: npx vitest run tests/rutas-tocadas.test.ts -t "C7:" -->
-- [ ] C8: `rutaProhibidaParaQaAgente` clasifica como «migraciones» la ruta no ASCII que devuelve `archivosDelDiff`.
+- [x] C8: `rutaProhibidaParaQaAgente` clasifica como «migraciones» la ruta no ASCII que devuelve `archivosDelDiff`.
   <!-- test: npx vitest run tests/rutas-tocadas.test.ts -t "C8:" -->
-- [ ] C9: `motivoDeGitDeQaAgent` admite `diff --name-status -z -M -C <rango>`.
+- [x] C9: `motivoDeGitDeQaAgent` admite `diff --name-status -z -M -C <rango>`.
   <!-- test: npx vitest run tests/rutas-tocadas.test.ts -t "C9:" -->
-- [ ] C10: `motivoDeGitDeQaAgent` rechaza `diff --name-only <rango>`.
+- [x] C10: `motivoDeGitDeQaAgent` rechaza `diff --name-only <rango>`.
   <!-- test: npx vitest run tests/rutas-tocadas.test.ts -t "C10:" -->
-- [ ] C11: `correrQaAgent` bloquea un entregado que renombra un archivo de `.valmen/`.
+- [x] C11: `correrQaAgent` bloquea un entregado que renombra un archivo de `.valmen/`.
   <!-- test: npx vitest run tests/qa-agent.test.ts -t "C11:" -->
-- [ ] C12: `cerrarQaPorPolitica` rechaza el cierre de un diff que renombra una migración.
+- [x] C12: `cerrarQaPorPolitica` rechaza el cierre de un diff que renombra una migración.
   <!-- test: npx vitest run tests/qa-por-politica.test.ts -t "C12:" -->
-- [ ] C13: `motivoDeGitDeIntegracion` admite `diff --name-status -z -M -C <rango>`.
+- [x] C13: `motivoDeGitDeIntegracion` admite `diff --name-status -z -M -C <rango>`.
   <!-- test: npx vitest run tests/rutas-tocadas.test.ts -t "C13:" -->
-- [ ] C14: `integrarWorktree` rechaza una rama que renombra `.valmen/config.yaml`.
+- [x] C14: `integrarWorktree` rechaza una rama que renombra `.valmen/config.yaml`.
   <!-- test: npx vitest run tests/worktree-integrar.test.ts -t "C14:" -->
-- [ ] C15: `pendingChanges` cuenta un archivo borrado entre sus archivos.
+- [x] C15: `pendingChanges` cuenta un archivo borrado entre sus archivos.
   <!-- test: npx vitest run tests/rutas-tocadas.test.ts -t "C15:" -->
-- [ ] C16: `scanPendingChanges` detecta un secreto en un archivo de nombre no ASCII.
+- [x] C16: `scanPendingChanges` detecta un secreto en un archivo de nombre no ASCII.
   <!-- test: npx vitest run tests/rutas-tocadas.test.ts -t "C16:" -->
-- [ ] C17: El hallazgo de ese secreto lleva la ruta real del archivo.
+- [x] C17: El hallazgo de ese secreto lleva la ruta real del archivo.
   <!-- test: npx vitest run tests/rutas-tocadas.test.ts -t "C17:" -->
-- [ ] C18: `node scripts/exports-sin-uso.mjs` termina sin exportaciones sin uso.
+- [x] C18: `node scripts/exports-sin-uso.mjs` termina sin exportaciones sin uso.
   <!-- test: node scripts/exports-sin-uso.mjs -->
-- [ ] C19: `npx tsc --build tsconfig.build.json` termina sin errores.
+- [x] C19: `npx tsc --build tsconfig.build.json` termina sin errores.
   <!-- test: npx tsc --build tsconfig.build.json -->
-- [ ] C20: Las pruebas existentes de las listas cerradas pasan con la forma nueva del diff.
+- [x] C20: Las pruebas existentes de las listas cerradas pasan con la forma nueva del diff.
   <!-- test: npx vitest run tests/lista-denegados.test.ts tests/worktree-integrar.test.ts tests/qa-agent.test.ts tests/elegibilidad-qa.test.ts tests/qa-por-politica.test.ts tests/riesgo-revision.test.ts tests/presentation.test.ts tests/revision-ux.test.ts -->
 
 ## Puntos
@@ -151,11 +151,20 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+- Módulo nuevo `packages/engine/src/rutas-tocadas.ts` (exportado desde `index.ts`): `ARGUMENTOS_DE_RUTAS_TOCADAS`, `CambioDeRuta`, `EjecutorDeRutas`, `cambiosDeRuta`, `rutasQueCuentan`, `desentrecomillarRutaDeGit`; `parsearCambiosDeRuta` queda interna (sin consumidor externo, `exports:check` la rechazaba).
+- Consumidores: `qa-eligibility.ts` (`archivosDelDiff`), `qa-agent.ts` (una lectura; pruebas nuevas = estados `A`/`C`), `qa-policy-close.ts`, `worktree-integrar.ts`, y las dos listas cerradas `qa-agent-git.ts` y `worktree-integracion-git.ts` (solo `diff --name-status -z -M -C <rango>`). `diff.ts`: `pendingFiles` con `cambiosDeRuta`, `ls-files -z`, parche con `-c core.quotePath=false`, cabeceras `---`/`+++` solo dentro de la cabecera de cada archivo (`diff --git` hasta `@@`), borrado (`+++ /dev/null`) registra la ruta de `--- a/…`.
+- `scripts/exports-sin-uso.linea-base.json`: se quitó `motivoDeGitDeQaAgent`, que ahora consume una prueba (lo exigía `exports:check`); no se agregó nada.
+- Pruebas existentes editadas (EST-009, solo las que el plan declara): `tests/lista-denegados.test.ts:118-124` (siete filas: `"--name-only"` por `"--name-status", "-z", "-M", "-C"`; la forma vieja ya no se admite) y `tests/worktree-integrar.test.ts:438` (fila admitida a la forma nueva; la rechazada de 429 intacta). Ninguna otra prueba existente se puso en rojo.
+- Pruebas nuevas, en rojo antes del código: `tests/rutas-tocadas.test.ts` (tablas «rutas que cuentan», «lectura cruda», «listas cerradas», «consumidores»: C1-C10, C13, C15-C17), C11 en `tests/qa-agent.test.ts`, C12 en `tests/qa-por-politica.test.ts` (el recibo se simula aprobado por una versión anterior reescribiendo su `base`, porque la versión nueva ya no lo aprobaría), C14 en `tests/worktree-integrar.test.ts`. Sin el arreglo: C1-C10, C13, C15-C17 fallaron (módulo/forma inexistente o salida entrecomillada), C11 dio `approve`, C12 y C14 fallaron al revalidar con el código anterior.
+- Fuera del ticket, sin tocar: `git status --porcelain` sin `-z` (otro ticket).
 
 ## Pruebas
 
-Pendiente de ejecución.
+Directorio: raíz del worktree (`/Users/juanandrade/Desktop/ValmenHarness/.claude/worktrees/ticket-diff-rutas-renombre`). Ambiente: Node 24, `git` en el PATH; las pruebas crean repositorios git temporales.
+
+- `npx vitest run tests/rutas-tocadas.test.ts tests/qa-agent.test.ts tests/qa-por-politica.test.ts tests/worktree-integrar.test.ts tests/lista-denegados.test.ts tests/elegibilidad-qa.test.ts tests/riesgo-revision.test.ts tests/presentation.test.ts tests/revision-ux.test.ts tests/secrets.test.ts tests/reglas-integracion.test.ts` → esperado y obtenido: 11 archivos, 287 pruebas verdes.
+- `npx tsc --noEmit -p tsconfig.json` → 0 errores. `npm run build` → compila. `npm run exports:check` → sin exportaciones nuevas sin consumidor. `npm run lint` → 0 errores. `npm run format:check` → limpio.
+- Validación manual: ninguna. Pendiente para la persona: la suite completa (`npx vitest run`) la corre el orquestador al integrar.
 
 ## QA
 
@@ -184,7 +193,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Sesión de subagente de implementación; no expone números de tokens ni costo.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:subagente-implementacion",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -248,6 +273,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-11",
+    "at": "2026-10-11T06:43:54.340Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-11",
+    "at": "2026-10-11T06:49:29.193Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-11",
+    "at": "2026-10-11T06:50:28.731Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```

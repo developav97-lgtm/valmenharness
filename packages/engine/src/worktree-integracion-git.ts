@@ -13,6 +13,7 @@ import { spawnSync } from "node:child_process";
 import { DENIED_GIT_FLAGS, EXIT_INVARIANT, fail } from "@valmen/core";
 
 import { type EjecutorDeGit } from "./integration-rules.js";
+import { ARGUMENTOS_DE_RUTAS_TOCADAS } from "./rutas-tocadas.js";
 import { motivoDeGitDeWorktree } from "./worktree-git.js";
 
 const REFERENCIA = /^[A-Za-z0-9_][A-Za-z0-9_./^~@-]*$/;
@@ -41,12 +42,11 @@ export function motivoDeGitDeIntegracion(argumentos: readonly string[]): string 
         ? null
         : "git show solo se admite como `<revisión>:<ruta>`.";
     case "diff":
-      return resto.length === 3 &&
-        resto[0] === "--name-only" &&
-        resto[1] === "-z" &&
-        REFERENCIA.test(resto[2]!)
+      return resto.length === ARGUMENTOS_DE_RUTAS_TOCADAS.length &&
+        ARGUMENTOS_DE_RUTAS_TOCADAS.slice(1).every((a, i) => resto[i] === a) &&
+        REFERENCIA.test(resto[resto.length - 1]!)
         ? null
-        : "git diff solo se admite como `--name-only -z <rango>`.";
+        : `git diff solo se admite como \`${ARGUMENTOS_DE_RUTAS_TOCADAS.slice(1).join(" ")} <rango>\`.`;
     case "merge-base":
       if (resto.length === 2 && REFERENCIA.test(resto[0]!) && REFERENCIA.test(resto[1]!))
         return null;
