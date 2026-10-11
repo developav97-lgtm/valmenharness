@@ -46,6 +46,29 @@ const LONGITUD_SOSPECHOSA = 320;
 /** Las conjunciones que unen dos afirmaciones dentro de la misma frase. */
 const CONJUNCIONES = /(?:^|\s)(?:as[íi] como|y|e|o|u)(?=\s)/giu;
 
+/** Un literal es un nombre: el texto entre acentos graves, comillas angulares o comillas dobles. */
+const LITERALES = /`[^`]*`|«[^»]*»|"[^"]*"/gu;
+
+/** La etiqueta inicial de un criterio: `Cn` con su separador y un `R-…` opcional. */
+const ETIQUETA = /^\s*C\d+\s*[.:—]\s*(?:\(R-[^)]*\)\s*|R-\S*:\s*)?/iu;
+
+/** Las palabras que abren una condición inicial: lista cerrada. */
+const CONDICION_INICIAL =
+  /^(?:con|sin|si|cuando|tras|ante|al|dado|dada|mientras|según|antes de|después de|para cada)\s/iu;
+
+/**
+ * La cláusula principal de una parte: sin etiqueta y sin la condición inicial.
+ *
+ * La condición va desde una palabra de condición al principio hasta la primera coma. Sin
+ * coma no hay condición reconocible y se devuelve la parte entera.
+ */
+function clausulaPrincipal(parte: string): string {
+  const sinEtiqueta = parte.replace(ETIQUETA, "").trimStart();
+  if (!CONDICION_INICIAL.test(sinEtiqueta)) return parte;
+  const coma = sinEtiqueta.indexOf(",");
+  return coma === -1 ? parte : sinEtiqueta.slice(coma + 1);
+}
+
 /**
  * Cuántas afirmaciones tiene un texto.
  *
@@ -53,15 +76,24 @@ const CONJUNCIONES = /(?:^|\s)(?:as[íi] como|y|e|o|u)(?=\s)/giu;
  * explícita, y una conjunción con espacios alrededor une dos dentro de la misma
  * frase. Los espacios son lo que evita que «apoyo» o «otro» cuenten como
  * conjunción, y por eso el patrón no es una simple búsqueda de la letra.
+ *
+ * La conjunción cuenta solo en la cláusula principal y fuera de un literal: un
+ * literal entre acentos graves, comillas angulares o dobles es un nombre, y la
+ * condición inicial («Con A y B, …», hasta la primera coma) no es cláusula
+ * principal. Sin coma no hay condición reconocible y se cuenta todo.
  */
 export function afirmacionesDe(texto: string): number {
-  const limpio = texto.trim();
+  const limpio = texto.trim().replace(LITERALES, "LITERAL");
   if (limpio === "") return 0;
 
   return limpio
     .split(";")
     .filter((parte) => parte.trim() !== "")
-    .reduce((total, parte) => total + 1 + (parte.match(CONJUNCIONES)?.length ?? 0), 0);
+    .reduce(
+      (total, parte) =>
+        total + 1 + (clausulaPrincipal(parte).match(CONJUNCIONES)?.length ?? 0),
+      0,
+    );
 }
 
 /**

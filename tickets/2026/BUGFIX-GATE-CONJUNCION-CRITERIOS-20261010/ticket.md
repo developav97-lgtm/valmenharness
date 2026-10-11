@@ -4,7 +4,7 @@ id: BUGFIX-GATE-CONJUNCION-CRITERIOS-20261010
 title: Una conjunción dentro de un nombre no hace compuesto a un criterio
 type: BUGFIX
 module: GATE
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -85,43 +85,43 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1. `afirmacionesDe` cuenta 1 para el texto de C13 del recibo `plan-1` de SECURITY-ADAPTER-DENEGADOS-CODEX-OPENCODE-20261010
+- [x] C1. `afirmacionesDe` cuenta 1 para el texto de C13 del recibo `plan-1` de SECURITY-ADAPTER-DENEGADOS-CODEX-OPENCODE-20261010
       <!-- test: npx vitest run tests/gate-conjuncion-criterios.test.ts -->
-- [ ] C2. `afirmacionesDe` cuenta 1 para el texto de C14 del recibo `plan-1` de SECURITY-ADAPTER-DENEGADOS-CODEX-OPENCODE-20261010
+- [x] C2. `afirmacionesDe` cuenta 1 para el texto de C14 del recibo `plan-1` de SECURITY-ADAPTER-DENEGADOS-CODEX-OPENCODE-20261010
       <!-- test: npx vitest run tests/gate-conjuncion-criterios.test.ts -->
-- [ ] C3. Un criterio con dos verbos unidos por «y» en la cláusula principal sigue contando 2
+- [x] C3. Un criterio con dos verbos unidos por «y» en la cláusula principal sigue contando 2
       <!-- test: npx vitest run tests/gate-conjuncion-criterios.test.ts -->
-- [ ] C4. Un criterio con dos verbos unidos por «e» en la cláusula principal sigue contando 2
+- [x] C4. Un criterio con dos verbos unidos por «e» en la cláusula principal sigue contando 2
       <!-- test: npx vitest run tests/gate-conjuncion-criterios.test.ts -->
-- [ ] C5. Un criterio con dos verbos unidos por «o» en la cláusula principal sigue contando 2
+- [x] C5. Un criterio con dos verbos unidos por «o» en la cláusula principal sigue contando 2
       <!-- test: npx vitest run tests/gate-conjuncion-criterios.test.ts -->
-- [ ] C6. Una «o» dentro de la condición inicial no suma una afirmación
+- [x] C6. Una «o» dentro de la condición inicial no suma una afirmación
       <!-- test: npx vitest run tests/gate-conjuncion-criterios.test.ts -->
-- [ ] C7. Una «e» dentro de la condición inicial no suma una afirmación
+- [x] C7. Una «e» dentro de la condición inicial no suma una afirmación
       <!-- test: npx vitest run tests/gate-conjuncion-criterios.test.ts -->
-- [ ] C8. Una «u» dentro de la condición inicial no suma una afirmación
+- [x] C8. Una «u» dentro de la condición inicial no suma una afirmación
       <!-- test: npx vitest run tests/gate-conjuncion-criterios.test.ts -->
-- [ ] C9. Una conjunción dentro de un literal entre acentos graves no suma una afirmación
+- [x] C9. Una conjunción dentro de un literal entre acentos graves no suma una afirmación
       <!-- test: npx vitest run tests/gate-conjuncion-criterios.test.ts -->
-- [ ] C10. Una conjunción dentro de un literal entre comillas angulares no suma una afirmación
+- [x] C10. Una conjunción dentro de un literal entre comillas angulares no suma una afirmación
       <!-- test: npx vitest run tests/gate-conjuncion-criterios.test.ts -->
-- [ ] C11. Una conjunción de la cláusula principal que sigue a una condición inicial suma una afirmación
+- [x] C11. Una conjunción de la cláusula principal que sigue a una condición inicial suma una afirmación
       <!-- test: npx vitest run tests/gate-conjuncion-criterios.test.ts -->
-- [ ] C12. Una condición inicial sin coma de cierre se cuenta entera, igual que antes del arreglo
+- [x] C12. Una condición inicial sin coma de cierre se cuenta entera, igual que antes del arreglo
       <!-- test: npx vitest run tests/gate-conjuncion-criterios.test.ts -->
-- [ ] C13. La etiqueta inicial `C13. (R-PER-002)` no impide reconocer la condición que la sigue
+- [x] C13. La etiqueta inicial `C13. (R-PER-002)` no impide reconocer la condición que la sigue
       <!-- test: npx vitest run tests/gate-conjuncion-criterios.test.ts -->
-- [ ] C14. `decidirCriterioEnCodigo` vota 0.99 al texto real de C13 como criterio manual citado por un paso del plan
+- [x] C14. `decidirCriterioEnCodigo` vota 0.99 al texto real de C13 como criterio manual citado por un paso del plan
       <!-- test: npx vitest run tests/gate-conjuncion-criterios.test.ts -->
-- [ ] C15. La tabla de `tests/gate-conjuncion-criterios.test.ts` falla contra el `criteria.ts` anterior al arreglo
+- [x] C15. La tabla de `tests/gate-conjuncion-criterios.test.ts` falla contra el `criteria.ts` anterior al arreglo
       <!-- verify: manual -->
-- [ ] C16. Las pruebas de `tests/gate-plan-aviso.test.ts` pasan sin editarlas
+- [x] C16. Las pruebas de `tests/gate-plan-aviso.test.ts` pasan sin editarlas
       <!-- test: npx vitest run tests/gate-plan-aviso.test.ts -->
-- [ ] C17. Las pruebas de `tests/gate-criterios-por-forma.test.ts` pasan sin editarlas
+- [x] C17. Las pruebas de `tests/gate-criterios-por-forma.test.ts` pasan sin editarlas
       <!-- test: npx vitest run tests/gate-criterios-por-forma.test.ts -->
-- [ ] C18. `node scripts/exports-sin-uso.mjs` pasa sin exportaciones nuevas sin consumidor
+- [x] C18. `node scripts/exports-sin-uso.mjs` pasa sin exportaciones nuevas sin consumidor
       <!-- test: node scripts/exports-sin-uso.mjs -->
-- [ ] C19. El monorepo compila con `npx tsc -p tsconfig.json --noEmit`
+- [x] C19. El monorepo compila con `npx tsc -p tsconfig.json --noEmit`
       <!-- test: npx tsc -p tsconfig.json --noEmit -->
 
 ## Puntos
@@ -132,11 +132,20 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+- `packages/gate/src/criteria.ts`: `afirmacionesDe` reemplaza cada literal por un marcador (`LITERALES`) y cuenta `CONJUNCIONES` solo sobre `clausulaPrincipal(parte)`, que quita la etiqueta (`ETIQUETA`) y la condición inicial (`CONDICION_INICIAL`, hasta la primera coma). Sin cambios de firma ni exportaciones nuevas.
+- `tests/gate-conjuncion-criterios.test.ts`: una tabla `it.each` de 13 casos (C1 a C13) y un caso de `decidirCriterioEnCodigo` (C14).
+- Reproducción previa (REGLA 1): antes del arreglo los textos reales de C13 y C14 contaban 2; la prueba nueva falló en 9 de 14 filas (C1, C2, C6 a C10, C13, C14) y el control de «y» siguió en 2.
+- Ninguna prueba existente se puso en rojo.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Directorio: raíz del repositorio (worktree).
+
+- `npx vitest run tests/gate-conjuncion-criterios.test.ts` → 14 pruebas pasan; con `git stash push packages/gate/src/criteria.ts` fallan 9 de 14 (C15).
+- `npx vitest run tests/gate-plan-aviso.test.ts tests/gate-criterios-por-forma.test.ts` → pasan sin editarlas (46 con la nueva).
+- Consumidores de `criteria.ts` (`revision-previa`, `cierre-criterios`, `gate-jev`, `gate-decide`, `gate-impacto-nulo`, `gate-jev-propositions`, `gate-playwright-plan`, `gate-view`, `statehash-archivos-citados`) → 182 pruebas pasan.
+- `npx tsc --noEmit -p tsconfig.json` → 0 errores; `npm run exports:check` → sin entradas nuevas (línea base 439); `npm run lint` → 0 errores; `npm run format:check` → limpio.
+- Validación manual del responsable: volver a correr la compuerta de plan de SECURITY-ADAPTER-DENEGADOS-CODEX-OPENCODE-20261010 y comprobar que C13 y C14 ya no dan «agrupa 2 afirmaciones».
 
 ## QA
 
@@ -165,7 +174,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": null,
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual: sesión de implementación sin números expuestos",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -238,6 +263,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-11",
+    "at": "2026-10-11T06:44:28.833Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-11",
+    "at": "2026-10-11T06:46:03.202Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-11",
+    "at": "2026-10-11T06:46:33.468Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
