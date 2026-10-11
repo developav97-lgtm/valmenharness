@@ -8,7 +8,7 @@
  */
 import { spawnSync } from "node:child_process";
 
-import { EXIT_INVARIANT, fail } from "@valmen/core";
+import { DENIED_GIT_FLAGS, EXIT_INVARIANT, SENSITIVE_PATH_PATTERNS, fail } from "@valmen/core";
 
 /** Lo que las reglas necesitan saber del momento de commitear. */
 export interface IntegrationState {
@@ -33,10 +33,7 @@ export interface IntegrationVerdict {
 
 /** Archivos que una jornada nunca commitea: credenciales y la configuración del propio harness. */
 const PROHIBIDOS: readonly RegExp[] = [
-  /(^|\/)\.env(\.|$)/,
-  /(^|\/)\.credentials(\.|$)/,
-  /(^|\/)(id_rsa|id_ed25519)(\.pub)?$/,
-  /\.(pem|key|p12)$/,
+  ...SENSITIVE_PATH_PATTERNS,
   /^\.valmen\/config\.yaml$/,
   /^\.valmen\/routing\.yaml$/,
   /^\.valmen\/delegations\//,
@@ -97,7 +94,7 @@ const OPERACIONES_PERMITIDAS = [
 ] as const;
 
 /** Banderas que no se admiten en ninguna operación. */
-const BANDERAS_PROHIBIDAS = new Set(["--force", "-f", "--force-with-lease", "--hard", "--no-verify", "--amend"]);
+const BANDERAS_PROHIBIDAS = new Set([...DENIED_GIT_FLAGS, "--force-with-lease"]);
 
 /** Por qué una invocación de git no se admite, o `null` si se admite. */
 export function motivoDeGitProhibido(argumentos: readonly string[]): string | null {

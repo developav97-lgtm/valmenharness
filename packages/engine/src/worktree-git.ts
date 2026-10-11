@@ -13,7 +13,7 @@ import { spawnSync } from "node:child_process";
 import { realpathSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { EXIT_INVARIANT, fail } from "@valmen/core";
+import { DENIED_GIT_FLAGS, EXIT_INVARIANT, fail } from "@valmen/core";
 
 import { type EjecutorDeGit } from "./integration-rules.js";
 
@@ -21,7 +21,7 @@ const FORMATO_DE_TICKET = /^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)+-\d{8}$/;
 const RAMA_DE_TICKET = /^valmen\/ticket-[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const CARPETA_DE_TICKET = /^(?:[^\s]*\/)?\.claude\/worktrees\/ticket-[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const REFERENCIA = /^[A-Za-z0-9_][A-Za-z0-9_./:^~@-]*$/;
-const BANDERAS_DE_FUERZA = ["--force", "-f", "-D", "--hard", "--no-verify", "--amend"];
+const BANDERAS_DE_FUERZA = [...DENIED_GIT_FLAGS, "-D"];
 
 export interface NombresDeWorktree {
   /** Lo que identifica al ticket en la carpeta y la rama: sin tipo, módulo ni fecha. */
