@@ -32,15 +32,20 @@
  * decide cómo presentarlo.
  */
 export class TransportError extends Error {
-  readonly code: "TRANSPORT_UNSUPPORTED" | "TEST_URL_REJECTED";
+  readonly code: "TRANSPORT_UNSUPPORTED" | "TEST_URL_REJECTED" | "TEST_URL_INCOMPLETE";
 
   /**
    * `TRANSPORT_UNSUPPORTED` por defecto, que es lo que lanza el catálogo; `TEST_URL_REJECTED` es
-   * el de una URL de prueba que no es local (`testBaseUrlFor`), y la cascada no lo degrada.
+   * el de una URL de prueba que no es local (`testBaseUrlFor`) y `TEST_URL_INCOMPLETE` el de una
+   * cadena a la que le falta la variable de algún eslabón mientras hay una URL de prueba activa
+   * (`requireTestRoutes`). La cascada no degrada ninguno de los dos últimos.
    */
   constructor(
     message: string,
-    code: "TRANSPORT_UNSUPPORTED" | "TEST_URL_REJECTED" = "TRANSPORT_UNSUPPORTED",
+    code:
+      | "TRANSPORT_UNSUPPORTED"
+      | "TEST_URL_REJECTED"
+      | "TEST_URL_INCOMPLETE" = "TRANSPORT_UNSUPPORTED",
   ) {
     super(message);
     this.name = "TransportError";
@@ -275,6 +280,14 @@ export function transportById(id: string): Transport {
   return encontrado;
 }
 
+/** El prefijo de toda variable de URL de prueba. */
+const PREFIJO_DE_URL_BASE = "VALMEN_BASE_URL_";
+
+/** `VALMEN_BASE_URL_<ID>`, con el identificador en mayúsculas y `-` → `_`. */
+function nombreDeUrlBase(id: string): string {
+  return `${PREFIJO_DE_URL_BASE}${id.toUpperCase().replace(/-/g, "_")}`;
+}
+
 /** Los únicos hosts que admite una URL de prueba: el `hostname` ya normalizado por `URL`. */
 const HOSTS_DE_PRUEBA: ReadonlySet<string> = new Set(["127.0.0.1", "localhost"]);
 
@@ -298,7 +311,7 @@ export function testBaseUrlFor(
   id: string,
   env: NodeJS.ProcessEnv = process.env,
 ): string | null {
-  const nombre = `VALMEN_BASE_URL_${id.toUpperCase().replace(/-/g, "_")}`;
+  const nombre = nombreDeUrlBase(id);
   const valor = env[nombre]?.trim() ?? "";
   if (valor === "") return null;
 
@@ -327,6 +340,50 @@ export function testBaseUrlFor(
     return rechazar();
   }
   return `${url.origin}${url.pathname.replace(/\/+$/, "")}`;
+}
+
+/**
+ * Con una URL de prueba activa, la cadena del evaluador va completa o no corre.
+ *
+ * Una `VALMEN_BASE_URL_*` desvía **un** transporte hacia un servidor local; los demás eslabones
+ * de la cadena seguirían hablando con su proveedor de siempre, con la clave del entorno, y un
+ * fallo del servidor local los degradaría hacia ese proveedor. Quien decide el modo prueba es
+ * esta función, dueña de los nombres de variable, y no cada borde (CLI, Mission Control, MCP).
+ *
+ * Devuelve `false`, sin leer nada más, si ninguna `VALMEN_BASE_URL_*` tiene valor: no cambia
+ * nada. Con alguna, comprueba cada eslabón de `ids` —`jev` con `VALMEN_BASE_URL_JEV`, un
+ * transporte por CLI (`claude-code`) con `VALMEN_CLAUDE_BIN`, el resto con su
+ * `VALMEN_BASE_URL_<ID>`— y devuelve `true`, o lanza `TEST_URL_INCOMPLETE` nombrando las
+ * variables activas y las que faltan, nunca sus valores. Un valor que no es local lanza
+ * `TEST_URL_REJECTED` (`testBaseUrlFor`): el rechazo gana sobre la falta.
+ */
+export function requireTestRoutes(
+  ids: readonly string[],
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  const activas = Object.keys(env).filter(
+    (nombre) =>
+      nombre.startsWith(PREFIJO_DE_URL_BASE) && (env[nombre]?.trim() ?? "") !== "",
+  );
+  if (activas.length === 0) return false;
+
+  const faltan: string[] = [];
+  for (const id of new Set(ids)) {
+    if (id !== "jev" && transportById(id).cli !== undefined) {
+      if ((env["VALMEN_CLAUDE_BIN"]?.trim() ?? "") === "") faltan.push("VALMEN_CLAUDE_BIN");
+    } else if (testBaseUrlFor(id, env) === null) {
+      faltan.push(nombreDeUrlBase(id));
+    }
+  }
+  if (faltan.length > 0) {
+    throw new TransportError(
+      `Hay una URL de prueba activa (${activas.join(", ")}) y a la cadena le falta ` +
+        `${faltan.join(", ")}: con una URL de prueba, todos los eslabones hablan con el ` +
+        "servidor local o la compuerta no corre.",
+      "TEST_URL_INCOMPLETE",
+    );
+  }
+  return true;
 }
 
 /**

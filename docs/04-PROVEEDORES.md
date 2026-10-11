@@ -146,11 +146,22 @@ vacía cuenta como ausente.
 - **Proxy de entorno:** con `NODE_USE_ENV_PROXY=1`, `fetch` manda también la petición local al proxy
   salvo que `NO_PROXY` incluya `127.0.0.1` y `localhost`. No viaja ninguna credencial, pero sí el
   contenido de la petición (el estado del ticket).
-- **Límite conocido:** mientras haya una variable activa, si el servidor local está caído o responde
-  un 5xx, la cascada y jev todavía pueden degradar a su proveedor de siempre, con la clave real si la
-  sesión la trae. La clave no viaja al host de la variable. Hasta que la prueba de punta a punta de
-  la cascada defina la variable de todos los transportes de la cadena y deje de degradar, no la
-  definas a mano con claves reales en el entorno.
+- **Con una variable activa la compuerta no degrada a otro evaluador.** Un 5xx, un 307, una
+  respuesta que no es JSON o el servidor caído hacen fallar la cascada y jev, sin recibo: ni la
+  cascada pasa a jev ni jev al juez de siempre, que saldrían a su proveedor con la clave del
+  entorno.
+- **Con una variable activa la cadena va completa, o la compuerta no corre.** Cada eslabón habla
+  con el servidor local: cada transporte con su `VALMEN_BASE_URL_<TRANSPORTE>`, jev con
+  `VALMEN_BASE_URL_JEV` y `claude-code` con `VALMEN_CLAUDE_BIN`, que debe apuntar a un `claude` de
+  prueba: la compuerta solo comprueba que esté declarada, y un `claude` real hablaría con su propia
+  sesión. Si a un eslabón le falta su variable, la compuerta falla antes de la primera llamada con
+  el código `TEST_URL_INCOMPLETE`, nombrando la que falta.
+- **Vale para `valmen gate` y `valmen cascada`.** El revisor, la descomposición de features y la
+  simulación de compuertas no comprueban la cadena: con una variable activa y su transporte sin
+  variable, hablarían con su proveedor de siempre.
+
+`tests/cascada-guionada.test.ts` es el ejemplo de uso: corre `valmen gate` con la cascada completa
+contra un servidor guionado local y un `claude` falso, sin claves ni red.
 
 ## 2. Arquitectura de providers
 
