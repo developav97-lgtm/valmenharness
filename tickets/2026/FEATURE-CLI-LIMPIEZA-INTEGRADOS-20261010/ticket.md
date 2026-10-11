@@ -4,7 +4,7 @@ id: FEATURE-CLI-LIMPIEZA-INTEGRADOS-20261010
 title: Comando de limpieza de worktrees y respaldos con --confirm
 type: FEATURE
 module: CLI
-workflow_status: planned
+workflow_status: in_progress
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -71,7 +71,7 @@ El pedido nombra cuatro cosas que el código no tiene; se buscaron (`grep -rn -i
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente. Este plan exige la aprobación explícita del PO (gate de plan) antes de implementar, porque el comando borra; ningún agente lo aprueba.
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan), el 2026-10-11 con «Aprobar tal cual (Recomendado)»; el REVIEW del recibo plan-1 (C6 y C8 en 0,90) lo decidió el PO.
 - Alcance: comando nuevo `valmen cleanup [--confirm] [--json]` (D2) sobre los worktrees de `.claude/worktrees/` y los respaldos de `.valmen/backups/sync/`, con retención `backup-retention-days` (D1, 30 días por defecto), conservación de los worktrees de ticket sin cerrar (D3) y recibo de recuperación (D4). Fuera de alcance: `journey worktree` (`packages/cli/src/worktree.ts`, `quitarWorktree`), su lista cerrada (`packages/engine/src/worktree-git.ts`), los worktrees de `qa-agent`, Mission Control, la línea `backup-retention-days` en `.valmen/config.yaml` (la declara el orquestador en `main`, como `delivery-budget`; sin ella rige el defecto de 30).
 - Diseño:
   - Seguridad: dry-run por defecto; solo `--confirm` quita. Nunca `--force`, `-f`, `-D` ni `--hard`. Solo se borra dentro de `.claude/worktrees/<nombre>` (con `git worktree remove`) o de `.valmen/backups/sync/<marca>` (con `rmSync` recursivo tras comprobar con `lstatSync` que no es un enlace y con `realpathSync` que su padre es `.valmen/backups/sync`). Corre solo desde el checkout principal en `main` (`exigirCheckoutPrincipal`, `packages/engine/src/worktree-git.ts`).
@@ -226,6 +226,51 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:08:30.471Z",
+    "action": "gate-approved",
+    "actor": "cli",
+    "details": "Gate plan aprobado por PO (recibo GR-20261011-FEATURE-CLI-LIMPIEZA-INTEGRADOS-20261010-plan-1, canal cli, decidida 2026-10-11T20:08:30.461Z): Aprobar tal cual (Recomendado)"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:08:30.857Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"PO\",\"source\":\"cli\",\"quote\":\"Aprobar tal cual (Recomendado)\",\"planHash\":\"sha256:b03184c43b2180bffce96acd3cdca9ae930d485bce330e80cf3e3eac6db27fbb\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:08:31.363Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: PO (fuente cli), plan sha256:b03184c43b2180bffce96acd3cdca9ae930d485bce330e80cf3e3eac6db27fbb."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:08:31.363Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:08:31.710Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
   }
 ]
 ```
