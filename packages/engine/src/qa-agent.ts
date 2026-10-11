@@ -18,6 +18,7 @@ import { parseTicket } from "@valmen/core";
 import { commandChecksFor, extractCriteriaSpecs, partirComando } from "@valmen/gate";
 
 import { type RegistryPaths, findTicket } from "./discovery.js";
+import { esArchivoDePrueba } from "./path-categories.js";
 import { ejecutarGitDeQaAgent, type EjecutorGitQa } from "./qa-agent-git.js";
 import {
   type ComandoDeRecibo,
@@ -69,7 +70,6 @@ export interface ResultadoQaAgent {
   readonly reciboPath: string | null;
 }
 
-const ES_PRUEBA = /(^|\/)(tests?|__tests__|spec)\/|\.(test|spec)\.[a-z]+$|(^|\/)test_[^/]*\.py$/i;
 const COLA = 2000;
 
 function sha(texto: string): string {
@@ -220,7 +220,7 @@ export function correrQaAgent(request: QaAgentRequest): ResultadoQaAgent {
     }
 
     if (esBugfix) {
-      const nuevas = lineasDelDiff(["--diff-filter=A"]).filter((f) => ES_PRUEBA.test(f));
+      const nuevas = lineasDelDiff(["--diff-filter=A"]).filter((f) => esArchivoDePrueba(f));
       const referidos = checks.filter((c) => (c.args ?? []).some((a) => nuevas.includes(a)));
       if (nuevas.length === 0 || referidos.length === 0) {
         razones.push("un BUGFIX necesita una prueba nueva que un criterio ejecute: el diff no trae ninguna");

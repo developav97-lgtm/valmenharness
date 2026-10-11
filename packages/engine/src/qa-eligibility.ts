@@ -16,28 +16,18 @@ import { join } from "node:path";
 import { type RegistryPaths, findTicket } from "./discovery.js";
 import { scanDrift } from "./drift.js";
 import { type EjecutorDeGit, ejecutarGitPermitido } from "./integration-rules.js";
+import { categoriasDeRuta } from "./path-categories.js";
 import { autorizacionQueCubre, cupoRestante } from "./qa-authorization.js";
 import { scanPendingChanges } from "./secrets.js";
 
 /** Los tipos que nunca son elegibles, aunque una autorización los listara. */
 export const TIPOS_NUNCA_ELEGIBLES = ["SECURITY", "SYNC", "INTEGRATION", "AGENT"] as const;
 
-/** Las categorías de ruta que el diff de un ticket elegible no puede tocar. */
-const CATEGORIAS_DE_RUTA: readonly { readonly nombre: string; readonly patron: RegExp }[] = [
-  { nombre: "pantallas", patron: /(^|\/)(templates|FrontEnd|frontend|web|static)\/|\.(html|tsx|jsx|vue|svelte|css|scss)$/i },
-  { nombre: "migraciones", patron: /(^|\/)migrations?\/|\.sql$/i },
-  { nombre: "configuración de despliegue", patron: /(^|\/)(Dockerfile[^/]*|docker-compose[^/]*\.ya?ml|\.dockerignore|nginx[^/]*|k8s|helm|terraform|deploy)(\/|$)/i },
-  { nombre: "autenticación", patron: /(^|\/)(auth[^/]*|login[^/]*|permissions?[^/]*|passwords?[^/]*|jwt[^/]*|oauth[^/]*|credentials?[^/]*)(\/|\.|$)/i },
-  { nombre: "CI", patron: /(^|\/)(\.github\/workflows|\.gitlab-ci\.ya?ml|\.circleci|azure-pipelines[^/]*|Jenkinsfile)(\/|$)/i },
-  { nombre: "el registro y la configuración del harness (.valmen/)", patron: /^\.valmen\// },
-];
-
 /** La categoría de una ruta prohibida, o `null` si el diff puede tocarla. */
 export function rutaProhibidaParaQaAgente(ruta: string, scriptsDePrueba: readonly string[] = []): string | null {
   const normal = ruta.replace(/^\.\//, "");
   if (scriptsDePrueba.includes(normal)) return "los scripts que corren las pruebas";
-  for (const { nombre, patron } of CATEGORIAS_DE_RUTA) if (patron.test(normal)) return nombre;
-  return null;
+  return categoriasDeRuta(normal)[0]?.nombre ?? null;
 }
 
 /** Los archivos que cambió el commit entregado respecto de la base, por la lista cerrada de git. */
