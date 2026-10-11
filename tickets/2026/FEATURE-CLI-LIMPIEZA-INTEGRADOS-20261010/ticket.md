@@ -164,6 +164,15 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: intake -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-003",
+    "date": "2026-10-11",
+    "at": "2026-10-11T19:42:25.223Z",
+    "action": "gate-approved",
+    "actor": "cli",
+    "details": "Gate analysis aprobado por PO (recibo GR-20261011-FEATURE-CLI-LIMPIEZA-INTEGRADOS-20261010-analysis-1, canal cli, decidida 2026-10-11T19:42:25.219Z): Aprobar y confirmar D1–D4 (Recomendado)"
   }
 ]
 ```
