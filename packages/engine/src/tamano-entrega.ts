@@ -9,7 +9,7 @@ import { join } from "node:path";
 import { type YamlMap, type YamlValue, parseYamlSubset } from "@valmen/core";
 
 /** El tope orientativo de líneas cuando `config.yaml` no declara `delivery-budget`. */
-export const TOPE_DE_ENTREGA_POR_DEFECTO = 400;
+const TOPE_DE_ENTREGA_POR_DEFECTO = 400;
 
 /** Archivos que `valmen sync` o el gestor de paquetes generan: no son trabajo del ticket. */
 const GENERADOS = new Set(["AGENTS.md", "CLAUDE.md", "package-lock.json"]);

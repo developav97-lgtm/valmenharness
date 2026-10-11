@@ -18,7 +18,7 @@ import { join } from "node:path";
 import { atomicWrite } from "@valmen/core";
 
 /** Dónde caen los respaldos de `sync`, relativo a la raíz del proyecto. */
-export const SYNC_BACKUP_DIR = ".valmen/backups/sync";
+const SYNC_BACKUP_DIR = ".valmen/backups/sync";
 
 /** Cómo cambiaría un archivo: no existe, difiere o ya coincide. */
 export interface ResumenDeCambios {

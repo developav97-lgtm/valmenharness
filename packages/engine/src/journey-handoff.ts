@@ -45,7 +45,7 @@ export interface EntradaDePruebas {
 }
 
 /** Líneas de la entrega de un ticket, tal como las registró la integración. */
-export interface EntregaDelParte {
+interface EntregaDelParte {
   readonly añadidas: number;
   readonly borradas: number;
   readonly total: number;

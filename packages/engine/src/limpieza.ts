@@ -31,7 +31,7 @@ import { INTENTO_DE_WORKTREE, proyectoDeLaMaquina } from "./worktree.js";
 import { exigirCheckoutPrincipal, nombresDeWorktree } from "./worktree-git.js";
 
 /** Los días de retención de los respaldos de `sync` cuando la configuración no los declara. */
-export const RETENCION_DE_RESPALDOS_POR_DEFECTO = 30;
+const RETENCION_DE_RESPALDOS_POR_DEFECTO = 30;
 
 const CARPETA_DE_WORKTREES = ".claude/worktrees";
 const CARPETA_DE_RESPALDOS = ".valmen/backups/sync";
@@ -79,7 +79,7 @@ export interface LimpiezaRequest {
 }
 
 /** `backup-retention-days` de `.valmen/config.yaml`; 30 sin la clave o con un valor que no es un entero positivo. */
-export function retencionDeRespaldos(root: string): number {
+function retencionDeRespaldos(root: string): number {
   try {
     const documento: YamlValue = parseYamlSubset(
       readFileSync(join(root, ".valmen", "config.yaml"), "utf8"),

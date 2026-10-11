@@ -346,7 +346,6 @@
   "packages/engine/src/usage.ts#GateUsage",
   "packages/engine/src/usage.ts#ModelUsage",
   "packages/engine/src/value.ts#TicketValue",
-  "packages/engine/src/worktree.ts#INTENTO_DE_WORKTREE",
   "packages/gate-command/src/command.ts#CommandArtifact",
   "packages/gate-command/src/command.ts#listArtifacts",
   "packages/gate-jev/src/jev.ts#applicablePropositions",
