@@ -46,8 +46,30 @@ export interface PreReviewFinding {
  * evaluar todos en varias llamadas no es recortar, y un ticket con más de este número es
  * dos tickets. Se cuentan afirmaciones y no líneas: partir un criterio compuesto en atómicos
  * —lo que pide el aviso de forma— no cambia la suma, y así partir no puede pasar el tope.
+ *
+ * Es 20 para los tickets con `created` igual o posterior a `VIGENCIA_DEL_TOPE`; los creados
+ * antes conservan `TOPE_DE_CRITERIOS_HEREDADO`. Ver `topeDeCriterios`.
  */
-export const TOPE_DE_CRITERIOS = 40;
+export const TOPE_DE_CRITERIOS = 20;
+
+/** El tope que conservan los tickets creados antes de la vigencia. */
+export const TOPE_DE_CRITERIOS_HEREDADO = 40;
+
+/** Desde esta fecha de creación (inclusive) rige `TOPE_DE_CRITERIOS`. */
+export const VIGENCIA_DEL_TOPE = "2026-10-12";
+
+/**
+ * El tope de afirmaciones que aplica a un ticket según su fecha de creación.
+ *
+ * Un `created` ausente o que no es `AAAA-MM-DD` cuenta como ticket nuevo: es el lado que no deja
+ * pasar un plan grande por un frontmatter roto.
+ */
+export function topeDeCriterios(created: string | undefined): number {
+  if (created === undefined || !/^\d{4}-\d{2}-\d{2}$/.test(created)) {
+    return TOPE_DE_CRITERIOS;
+  }
+  return created >= VIGENCIA_DEL_TOPE ? TOPE_DE_CRITERIOS : TOPE_DE_CRITERIOS_HEREDADO;
+}
 
 /** Etiquetas que pueden quedar vacías: se llenan después o no aplican a todo ticket. */
 const ETIQUETAS_QUE_PUEDEN_QUEDAR_VACIAS = [
@@ -322,12 +344,13 @@ export function reviewBeforeGate(input: {
       });
     }
     const afirmaciones = criterios.reduce((total, c) => total + afirmacionesDe(c.text), 0);
-    if (afirmaciones > TOPE_DE_CRITERIOS) {
+    const tope = topeDeCriterios(parseTicket(input.ticketText).fields["created"]);
+    if (afirmaciones > tope) {
       findings.push({
         id: "mas_criterios_que_el_tope",
         message:
           `«Criterios»: son ${afirmaciones} afirmaciones en ${criterios.length} criterio(s), ` +
-          `más que el tope de ${TOPE_DE_CRITERIOS}; partí el ticket.`,
+          `más que el tope de ${tope}; partí el ticket.`,
       });
     }
   }

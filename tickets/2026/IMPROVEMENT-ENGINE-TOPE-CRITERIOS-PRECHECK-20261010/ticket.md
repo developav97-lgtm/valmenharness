@@ -4,7 +4,7 @@ id: IMPROVEMENT-ENGINE-TOPE-CRITERIOS-PRECHECK-20261010
 title: El precheck rechaza un plan de más de 20 criterios, no de más de 40
 type: IMPROVEMENT
 module: ENGINE
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -80,45 +80,45 @@ Ninguno.
 
 ## Criterios de aceptación
 
-- [ ] C1. `TOPE_DE_CRITERIOS` vale 20 en `packages/engine/src/revision-previa.ts`.
+- [x] C1. `TOPE_DE_CRITERIOS` vale 20 en `packages/engine/src/revision-previa.ts`.
       <!-- test: npx vitest run tests/tope-criterios-precheck.test.ts -->
-- [ ] C2. `TOPE_DE_CRITERIOS_HEREDADO` vale 40 en `packages/engine/src/revision-previa.ts`.
+- [x] C2. `TOPE_DE_CRITERIOS_HEREDADO` vale 40 en `packages/engine/src/revision-previa.ts`.
       <!-- test: npx vitest run tests/tope-criterios-precheck.test.ts -->
-- [ ] C3. `topeDeCriterios` devuelve 20 para un `created` igual a `VIGENCIA_DEL_TOPE`.
+- [x] C3. `topeDeCriterios` devuelve 20 para un `created` igual a `VIGENCIA_DEL_TOPE`.
       <!-- test: npx vitest run tests/tope-criterios-precheck.test.ts -->
-- [ ] C4. `topeDeCriterios` devuelve 20 para un `created` posterior a `VIGENCIA_DEL_TOPE`.
+- [x] C4. `topeDeCriterios` devuelve 20 para un `created` posterior a `VIGENCIA_DEL_TOPE`.
       <!-- test: npx vitest run tests/tope-criterios-precheck.test.ts -->
-- [ ] C5. `topeDeCriterios` devuelve 40 para un `created` anterior a `VIGENCIA_DEL_TOPE`.
+- [x] C5. `topeDeCriterios` devuelve 40 para un `created` anterior a `VIGENCIA_DEL_TOPE`.
       <!-- test: npx vitest run tests/tope-criterios-precheck.test.ts -->
-- [ ] C6. `topeDeCriterios` devuelve 20 cuando `created` no es una fecha `AAAA-MM-DD`.
+- [x] C6. `topeDeCriterios` devuelve 20 cuando `created` no es una fecha `AAAA-MM-DD`.
       <!-- test: npx vitest run tests/tope-criterios-precheck.test.ts -->
-- [ ] C7. Un ticket nuevo con 21 criterios atómicos da `mas_criterios_que_el_tope` en el precheck del plan.
+- [x] C7. Un ticket nuevo con 21 criterios atómicos da `mas_criterios_que_el_tope` en el precheck del plan.
       <!-- test: npx vitest run tests/tope-criterios-precheck.test.ts -->
-- [ ] C8. Un ticket nuevo con 20 criterios atómicos pasa el precheck del plan sin `mas_criterios_que_el_tope`.
+- [x] C8. Un ticket nuevo con 20 criterios atómicos pasa el precheck del plan sin `mas_criterios_que_el_tope`.
       <!-- test: npx vitest run tests/tope-criterios-precheck.test.ts -->
-- [ ] C9. Un ticket nuevo con 11 criterios compuestos de dos afirmaciones da `mas_criterios_que_el_tope`.
+- [x] C9. Un ticket nuevo con 11 criterios compuestos de dos afirmaciones da `mas_criterios_que_el_tope`.
       <!-- test: npx vitest run tests/tope-criterios-precheck.test.ts -->
-- [ ] C10. Partir un criterio compuesto en dos atómicos deja igual la suma que informa el hallazgo.
+- [x] C10. Partir un criterio compuesto en dos atómicos deja igual la suma que informa el hallazgo.
       <!-- test: npx vitest run tests/tope-criterios-precheck.test.ts -->
-- [ ] C11. Un ticket creado antes de la vigencia con 40 criterios atómicos pasa el precheck del plan sin `mas_criterios_que_el_tope`.
+- [x] C11. Un ticket creado antes de la vigencia con 40 criterios atómicos pasa el precheck del plan sin `mas_criterios_que_el_tope`.
       <!-- test: npx vitest run tests/tope-criterios-precheck.test.ts -->
-- [ ] C12. Un ticket creado antes de la vigencia con 41 criterios atómicos recibe un hallazgo que cita «el tope de 40».
+- [x] C12. Un ticket creado antes de la vigencia con 41 criterios atómicos recibe un hallazgo que cita «el tope de 40».
       <!-- test: npx vitest run tests/tope-criterios-precheck.test.ts -->
-- [ ] C13. Un ticket nuevo de tipo SECURITY con 21 criterios atómicos da `mas_criterios_que_el_tope`.
+- [x] C13. Un ticket nuevo de tipo SECURITY con 21 criterios atómicos da `mas_criterios_que_el_tope`.
       <!-- test: npx vitest run tests/tope-criterios-precheck.test.ts -->
-- [ ] C14. Un ticket nuevo con `migration_impact: true` con 21 criterios atómicos da `mas_criterios_que_el_tope`.
+- [x] C14. Un ticket nuevo con `migration_impact: true` con 21 criterios atómicos da `mas_criterios_que_el_tope`.
       <!-- test: npx vitest run tests/tope-criterios-precheck.test.ts -->
-- [ ] C15. La revisión previa de la compuerta `analysis` de un ticket nuevo con 25 criterios atómicos no da `mas_criterios_que_el_tope`.
+- [x] C15. La revisión previa de la compuerta `analysis` de un ticket nuevo con 25 criterios atómicos no da `mas_criterios_que_el_tope`.
       <!-- test: npx vitest run tests/tope-criterios-precheck.test.ts -->
-- [ ] C16. El hallazgo de un ticket nuevo con 21 criterios cita «el tope de 20».
+- [x] C16. El hallazgo de un ticket nuevo con 21 criterios cita «el tope de 20».
       <!-- test: npx vitest run tests/tope-criterios-precheck.test.ts -->
-- [ ] C17. `valmen gate plan` sobre un ticket nuevo con 21 criterios sale con código 3 sin llamar al evaluador.
+- [x] C17. `valmen gate plan` sobre un ticket nuevo con 21 criterios sale con código 3 sin llamar al evaluador.
       <!-- test: npx vitest run tests/revision-previa.test.ts -->
-- [ ] C18. `precheckCommand` sobre un ticket nuevo con 21 criterios devuelve código 3.
+- [x] C18. `precheckCommand` sobre un ticket nuevo con 21 criterios devuelve código 3.
       <!-- test: npx vitest run tests/tope-criterios-precheck.test.ts -->
-- [ ] C19. La herramienta MCP `revision_previa` informa `mas_criterios_que_el_tope` sobre un ticket nuevo con 21 criterios.
+- [x] C19. La herramienta MCP `revision_previa` informa `mas_criterios_que_el_tope` sobre un ticket nuevo con 21 criterios.
       <!-- test: npx vitest run tests/tope-criterios-precheck.test.ts -->
-- [ ] C20. `node scripts/exports-sin-uso.mjs` termina sin exportaciones nuevas sin consumidor.
+- [x] C20. `node scripts/exports-sin-uso.mjs` termina sin exportaciones nuevas sin consumidor.
       <!-- test: node scripts/exports-sin-uso.mjs -->
 
 ## Puntos
@@ -129,11 +129,27 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+- `packages/engine/src/revision-previa.ts`: `TOPE_DE_CRITERIOS` pasa a 20; nuevas `TOPE_DE_CRITERIOS_HEREDADO = 40`, `VIGENCIA_DEL_TOPE = "2026-10-12"` y `topeDeCriterios(created)` (20 si `created` falta, no es `AAAA-MM-DD` o es igual o posterior a la vigencia; 40 si es anterior). `reviewBeforeGate` calcula `tope` desde el `created` del ticket y lo interpola en el mensaje.
+- `tests/tope-criterios-precheck.test.ts` (nuevo, escrito antes del código y observado en rojo: 15 de 19 fallaban): tabla de `topeDeCriterios`, tabla de `reviewBeforeGate` (C7-C9, C11-C16), C10, C18 y C19.
+- `tests/revision-previa.test.ts`: prueba nueva del `valmen gate plan` con 21 criterios y `created: 2026-10-12` (C17, evaluador en 0 llamadas).
+- Pruebas existentes puestas en rojo a propósito, editadas como declara el plan aprobado (EST-009), cambio mínimo y ninguna otra:
+  - `tests/gate-criterios-por-forma.test.ts:453` (`TOPE_DE_CRITERIOS` a `TOPE_DE_CRITERIOS_HEREDADO`; el import `:22` se sustituye porque el símbolo viejo ya no se usa): el ticket de prueba es de 2026-09-21, conserva 40.
+  - `tests/gate-criterios-por-forma.test.ts:489`: el mismo motivo.
+  - `tests/revision-previa.test.ts:199` (`length: TOPE_DE_CRITERIOS_HEREDADO + 1`, import `:24` sustituido): con 21 criterios un ticket de 2026-09-21 ya no supera el tope.
+  - `tests/revision-previa.test.ts:214`: el mismo motivo.
+- Verificado: `valmen precheck plan` de este ticket sin hallazgos (20 criterios, no pasa de 20 aunque conserva 40 por su `created`).
 
 ## Pruebas
 
-Pendiente de ejecución.
+Directorio de ejecución: raíz del worktree (o del repositorio tras integrar). Requisitos: Node 24, `npm install` hecho; sin red ni modelo.
+
+- `npm run build` y `npx vitest run tests/tope-criterios-precheck.test.ts tests/revision-previa.test.ts tests/gate-criterios-por-forma.test.ts tests/mcp-server.test.ts`: esperado, todo en verde (corrido: 161 pruebas en 5 archivos, con mcp-anotaciones).
+- `npx vitest run tests/gate*.test.ts tests/cascada*.test.ts`: esperado verde (corrido: 374 pruebas).
+- `node scripts/exports-sin-uso.mjs`: «Sin exportaciones nuevas sin consumidor» (línea base 439).
+- `npx tsc --noEmit -p tsconfig.json` (0 errores), `npm run lint` (0 errores), `npm run format:check` (limpio).
+- `node packages/cli/dist/main.js precheck plan --id IMPROVEMENT-ENGINE-TOPE-CRITERIOS-PRECHECK-20261010`: «Sin hallazgos».
+- Validación manual: antes de integrar, el orquestador corre `valmen precheck plan --id <ID>` sobre cada ticket de `grep -l "created: 2026-10-1[2-9]" tickets/2026/*/ticket.md` en `intake` o `analyzed`; si alguno da `mas_criterios_que_el_tope`, avisa al PO.
+- No corrida: la suite completa (la corre el orquestador al integrar).
 
 ## QA
 
@@ -162,7 +178,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Sesión de implementación del ticket (Sonnet 5.5); la sesión no expone los números de consumo.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:sesión de implementación sin agregado de tokens expuesto",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -235,6 +267,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-11",
+    "at": "2026-10-11T06:44:39.870Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-11",
+    "at": "2026-10-11T06:47:04.119Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-11",
+    "at": "2026-10-11T06:47:58.240Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```

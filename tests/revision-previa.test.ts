@@ -11,7 +11,7 @@
  *    `criterios_verificables` se deciden en código y votan aunque el ticket tenga
  *    criterios: un plan sin archivos afectados no aprueba.
  */
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -21,7 +21,7 @@ import { precheckCommand } from "../packages/cli/src/commands.js";
 import { runGate } from "../packages/engine/src/gate.js";
 import { readReceipts } from "../packages/engine/src/receipts.js";
 import {
-  TOPE_DE_CRITERIOS,
+  TOPE_DE_CRITERIOS_HEREDADO,
   citedFiles,
   decideInCode,
   renderPreReview,
@@ -196,7 +196,7 @@ describe("cada hallazgo corta antes del evaluador", () => {
 
   it("un ticket con más criterios que el tope se rechaza antes del evaluador", async () => {
     const muchos = Array.from(
-      { length: TOPE_DE_CRITERIOS + 1 },
+      { length: TOPE_DE_CRITERIOS_HEREDADO + 1 },
       (_, i) =>
         `- [ ] El criterio número ${i + 1} se cumple en la pantalla.\n      <!-- verify: manual -->`,
     ).join("\n");
@@ -211,7 +211,34 @@ describe("cada hallazgo corta antes del evaluador", () => {
     const r = await pedirPlan(e);
 
     expect(r.exitCode).toBe(3);
-    expect(r.stderr).toContain(`más que el tope de ${TOPE_DE_CRITERIOS}`);
+    expect(r.stderr).toContain(`más que el tope de ${TOPE_DE_CRITERIOS_HEREDADO}`);
+    expect(e.llamadas()).toBe(0);
+  });
+
+  it("un ticket nuevo con 21 criterios se rechaza antes del evaluador con el tope de 20", async () => {
+    const muchos = Array.from(
+      { length: 21 },
+      (_, i) =>
+        `- [ ] El criterio número ${i + 1} se cumple en la pantalla.\n      <!-- verify: manual -->`,
+    ).join("\n");
+    writeFixtureTicket(lab, {
+      id: TICKET,
+      workflowStatus: "planned",
+      plan: PLAN_OK,
+      criterios: muchos,
+    });
+    const archivo = join(lab, "tickets", "2026", TICKET, "ticket.md");
+    writeFileSync(
+      archivo,
+      readFileSync(archivo, "utf8").replace("created: 2026-09-21", "created: 2026-10-12"),
+      "utf8",
+    );
+    const e = espia();
+
+    const r = await pedirPlan(e);
+
+    expect(r.exitCode).toBe(3);
+    expect(r.stderr).toContain("el tope de 20");
     expect(e.llamadas()).toBe(0);
   });
 
