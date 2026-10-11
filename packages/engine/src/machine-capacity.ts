@@ -86,7 +86,10 @@ export function claimMachineCapacity(request: {
   readonly attemptId: string;
 }): ClaimMachineCapacityResult {
   assertIdentity(request.project, request.identity);
-  const reservation = { ...reservationFor(request.project, request.identity, request.attemptId), pid: process.pid };
+  const reservation = {
+    ...reservationFor(request.project, request.identity, request.attemptId),
+    pid: process.pid,
+  };
   return MutationLock.run(capacityDirectory(request.home), () => {
     const context = contextFor(request.home, request.project);
     let stored = readStored(request.home, context.machineId);
@@ -95,7 +98,11 @@ export function claimMachineCapacity(request: {
       return Object.freeze({ ...snapshot(context, stored), granted: true, created: false });
     }
     if (stored.reservations.length >= context.capacity) {
-      return Object.freeze({ ...snapshot(context, stored), granted: false, created: false });
+      return Object.freeze({
+        ...snapshot(context, stored),
+        granted: false,
+        created: false,
+      });
     }
     stored = Object.freeze({
       schemaVersion: SCHEMA_VERSION,
@@ -119,10 +126,16 @@ export function releaseMachineCapacity(request: {
   return MutationLock.run(capacityDirectory(request.home), () => {
     const context = contextFor(request.home, request.project);
     const stored = readStored(request.home, context.machineId);
-    const reservations = stored.reservations.filter((item) => !sameReservation(item, reservation));
+    const reservations = stored.reservations.filter(
+      (item) => !sameReservation(item, reservation),
+    );
     const released = reservations.length !== stored.reservations.length;
     const next = released
-      ? Object.freeze({ schemaVersion: SCHEMA_VERSION, machineId: context.machineId, reservations: Object.freeze(reservations) })
+      ? Object.freeze({
+          schemaVersion: SCHEMA_VERSION,
+          machineId: context.machineId,
+          reservations: Object.freeze(reservations),
+        })
       : stored;
     if (released) writeStored(request.home, next);
     return Object.freeze({ ...snapshot(context, next), released });
@@ -162,24 +175,34 @@ export function reconcileMachineCapacity(request: {
     const retained = stored.reservations.filter((reservation) => {
       let project: AuthorizedProject;
       try {
-        project = resolveAuthorizedProject({ projectId: reservation.projectId, home: request.home });
+        project = resolveAuthorizedProject({
+          projectId: reservation.projectId,
+          home: request.home,
+        });
       } catch {
         return true;
       }
       if (project.machineId !== context.machineId) return true;
       const identity = createExecutionIdentity(reservation);
-      const activity = readExecutionActivity(project, identity, reservation.attemptId).at(-1);
+      const activity = readExecutionActivity(project, identity, reservation.attemptId).at(
+        -1,
+      );
       if (activity?.state === "finished" || activity?.state === "failed") {
         recovered.push(reservation);
         return false;
       }
       if (activity?.state !== "started" && activity?.state !== "active") return true;
       if (reservation.pid !== undefined && procesoVivo(reservation.pid)) return true;
-      const tope = (autonomousConfig(project.root).limits.maxMinutes + MARGEN_DE_RECUPERACION_MINUTOS) * 60_000;
+      const tope =
+        (autonomousConfig(project.root).limits.maxMinutes +
+          MARGEN_DE_RECUPERACION_MINUTOS) *
+        60_000;
       if (ahora.getTime() - new Date(activity.occurredAt).getTime() < tope) return true;
       recordExecutionActivity(project, {
         eventId: `journey-recovery-failed-${createHash("sha256")
-          .update(`${reservation.ticketId}\u0000${reservation.executionId}\u0000${reservation.attemptId}\u0000${activity.cursor}`)
+          .update(
+            `${reservation.ticketId}\u0000${reservation.executionId}\u0000${reservation.attemptId}\u0000${activity.cursor}`,
+          )
           .digest("hex")
           .slice(0, 32)}`,
         identity,
@@ -191,11 +214,19 @@ export function reconcileMachineCapacity(request: {
       recovered.push(reservation);
       return false;
     });
-    const next = recovered.length === 0
-      ? stored
-      : Object.freeze({ schemaVersion: SCHEMA_VERSION, machineId: context.machineId, reservations: Object.freeze(retained) });
+    const next =
+      recovered.length === 0
+        ? stored
+        : Object.freeze({
+            schemaVersion: SCHEMA_VERSION,
+            machineId: context.machineId,
+            reservations: Object.freeze(retained),
+          });
     if (recovered.length > 0) writeStored(request.home, next);
-    return Object.freeze({ ...snapshot(context, next), recovered: Object.freeze(recovered) });
+    return Object.freeze({
+      ...snapshot(context, next),
+      recovered: Object.freeze(recovered),
+    });
   });
 }
 
@@ -209,7 +240,9 @@ function contextFor(home: string, project?: AuthorizedProject): MachineContext {
   if (project !== undefined) {
     const binding = bindings.projects[project.projectId];
     if (project.machineId !== bindings.machineId || binding?.root !== project.root) {
-      throw new Error("El proyecto autorizado no coincide con su binding local de máquina.");
+      throw new Error(
+        "El proyecto autorizado no coincide con su binding local de máquina.",
+      );
     }
   }
   return Object.freeze({
@@ -226,7 +259,11 @@ function readStored(home: string, machineId: string): StoredCapacity {
     text = readFileSync(path, "utf8");
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      return Object.freeze({ schemaVersion: SCHEMA_VERSION, machineId, reservations: Object.freeze([]) });
+      return Object.freeze({
+        schemaVersion: SCHEMA_VERSION,
+        machineId,
+        reservations: Object.freeze([]),
+      });
     }
     throw error;
   }
@@ -240,13 +277,19 @@ function readStored(home: string, machineId: string): StoredCapacity {
     throw new Error("El estado local de capacidad no tiene el esquema esperado.");
   }
   const record = value as Record<string, unknown>;
-  if (record.schemaVersion !== SCHEMA_VERSION || record.machineId !== machineId || !Array.isArray(record.reservations)) {
+  if (
+    record.schemaVersion !== SCHEMA_VERSION ||
+    record.machineId !== machineId ||
+    !Array.isArray(record.reservations)
+  ) {
     throw new Error("El estado local de capacidad no coincide con esta máquina o esquema.");
   }
   return Object.freeze({
     schemaVersion: SCHEMA_VERSION,
     machineId,
-    reservations: Object.freeze(record.reservations.map((item) => parseReservation(item, machineId))),
+    reservations: Object.freeze(
+      record.reservations.map((item) => parseReservation(item, machineId)),
+    ),
   });
 }
 
@@ -256,7 +299,10 @@ function writeStored(home: string, stored: StoredCapacity): void {
   atomicWrite(path, `${JSON.stringify(stored, null, 2)}\n`);
 }
 
-function snapshot(context: MachineContext, stored: StoredCapacity): MachineCapacitySnapshot {
+function snapshot(
+  context: MachineContext,
+  stored: StoredCapacity,
+): MachineCapacitySnapshot {
   return Object.freeze({
     machineId: context.machineId,
     capacity: context.capacity,
@@ -306,7 +352,9 @@ function parseReservation(value: unknown, machineId: string): MachineCapacityRes
     ticketId: item.ticketId,
     executionId: item.executionId,
     attemptId: item.attemptId,
-    ...(typeof item.pid === "number" && Number.isInteger(item.pid) && item.pid > 0 ? { pid: item.pid } : {}),
+    ...(typeof item.pid === "number" && Number.isInteger(item.pid) && item.pid > 0
+      ? { pid: item.pid }
+      : {}),
   });
 }
 
@@ -316,8 +364,15 @@ function assertIdentity(project: AuthorizedProject, identity: ExecutionIdentity)
   }
 }
 
-function sameReservation(left: MachineCapacityReservation, right: MachineCapacityReservation): boolean {
-  return left.machineId === right.machineId && left.projectId === right.projectId &&
-    left.ticketId === right.ticketId && left.executionId === right.executionId &&
-    left.attemptId === right.attemptId;
+function sameReservation(
+  left: MachineCapacityReservation,
+  right: MachineCapacityReservation,
+): boolean {
+  return (
+    left.machineId === right.machineId &&
+    left.projectId === right.projectId &&
+    left.ticketId === right.ticketId &&
+    left.executionId === right.executionId &&
+    left.attemptId === right.attemptId
+  );
 }

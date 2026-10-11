@@ -15,7 +15,9 @@ let context: ServerContext;
 function writeTicket(root: string, id: string) {
   const path = join(root, "tickets", "2026", id, "ticket.md");
   mkdirSync(join(root, "tickets", "2026", id), { recursive: true });
-  writeFileSync(path, `---
+  writeFileSync(
+    path,
+    `---
 schema_version: 2
 id: ${id}
 title: ${id}
@@ -35,13 +37,19 @@ related_ticket: null
 target_release: null
 released_in: null
 ---
-\n# ${id}\n`);
+\n# ${id}\n`,
+  );
 }
 
-async function api(server: ReturnType<typeof createMissionControl>, path: string, project?: string) {
+async function api(
+  server: ReturnType<typeof createMissionControl>,
+  path: string,
+  project?: string,
+) {
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address();
-  if (address === null || typeof address === "string") throw new Error("No se obtuvo puerto.");
+  if (address === null || typeof address === "string")
+    throw new Error("No se obtuvo puerto.");
   try {
     return await fetch(`http://127.0.0.1:${address.port}${path}`, {
       headers: project === undefined ? {} : { "X-Valmen-Project": project },
@@ -57,7 +65,10 @@ beforeEach(() => {
   home = mkdtempSync(join(tmpdir(), "valmen-selector-"));
   first = join(home, "uno");
   second = join(home, "dos");
-  for (const [root, id] of [[first, "uno"], [second, "dos"]] as const) {
+  for (const [root, id] of [
+    [first, "uno"],
+    [second, "dos"],
+  ] as const) {
     mkdirSync(join(root, ".valmen"), { recursive: true });
     writeFileSync(join(root, ".valmen", "config.yaml"), `project-id: ${id}\n`);
   }
@@ -65,15 +76,23 @@ beforeEach(() => {
   writeTicket(second, "FEATURE-DOS-20261001");
   mkdirSync(join(home, ".valmen"), { recursive: true });
   const bindingsFile = machineBindingsPath(home);
-  writeFileSync(bindingsFile, `schema-version: 1
+  writeFileSync(
+    bindingsFile,
+    `schema-version: 1
 machine-id: pruebas
 projects:
   uno:
     root: ${first}
   dos:
     root: ${second}
-`);
-  context = { root: first, bindingsFile, credentialsFile: join(home, "credentials"), env: {} };
+`,
+  );
+  context = {
+    root: first,
+    bindingsFile,
+    credentialsFile: join(home, "credentials"),
+    env: {},
+  };
 });
 
 afterEach(() => rmSync(home, { recursive: true, force: true }));
@@ -84,15 +103,15 @@ describe("selector de proyectos", () => {
 
     expect(response.status).toBe(200);
     const body = (await response.json()) as { tickets: { id: string }[] };
-    expect(body.tickets.map((ticket) => ticket.id)).toEqual([
-      "FEATURE-DOS-20261001",
-    ]);
+    expect(body.tickets.map((ticket) => ticket.id)).toEqual(["FEATURE-DOS-20261001"]);
   });
 
   it("rechaza un identificador de proyecto no declarado en vez de volver a la raíz actual", async () => {
     const response = await api(createMissionControl(context), "/api/tickets", "ajeno");
 
     expect(response.status).toBe(403);
-    expect(((await response.json()) as { error: string }).error).toContain("no está declarado");
+    expect(((await response.json()) as { error: string }).error).toContain(
+      "no está declarado",
+    );
   });
 });

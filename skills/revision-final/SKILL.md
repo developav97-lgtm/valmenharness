@@ -1,7 +1,7 @@
 ---
 name: revision-final
 description: Usar cuando un cambio parece listo para entregar al responsable, cuando se pida una revisión de código o antes de abrir un ciclo de validación. Revisa calidad y trazabilidad; no autoriza publicaciones.
-version: 1.3.0
+version: 1.4.0
 origen: valmen
 ---
 
@@ -9,7 +9,7 @@ origen: valmen
 
 Revisar la calidad y la trazabilidad de un cambio antes de entregarlo. Es una revisión técnica: **no** declara un despliegue listo, no despliega, no confirma cambios, no envía ni crea etiquetas, y no sustituye la aprobación del responsable ni la validación.
 
-Revisar contra el ticket, sus criterios de aceptación y el cambio real. Informar **únicamente hallazgos sustentados** por el código, la configuración o la evidencia disponible: una sospecha sin respaldo consume tiempo y desgasta la revisión.
+Revisar contra el ticket, sus criterios de aceptación y el cambio real. Informar **únicamente hallazgos sustentados** por el código, la configuración o la evidencia: una sospecha sin respaldo desgasta la revisión.
 
 ## De dónde sale el stack
 
@@ -39,13 +39,13 @@ Antes de entregar un cambio con pantallas, si `valmen skills external` muestra `
 
 ## Los criterios se marcan
 
-Antes de entregar y antes de cerrar, **cada criterio de aceptación que se verificó queda marcado** con `- [x]` en el ticket. Una casilla sin marcar en un ticket entregado —o peor, cerrado— dice que nadie comprobó ese criterio, y el registro queda afirmando dos cosas a la vez: el ticket está aprobado y hay criterios que nadie miró.
+Antes de entregar y antes de cerrar, **cada criterio de aceptación que se verificó queda marcado** con `- [x]` en el ticket. Una casilla sin marcar en un ticket entregado —o cerrado— dice que nadie comprobó ese criterio.
 
 - Los que se corrieron por comando y pasaron, marcados. El recibo del gate mecánico dice cuáles: si un criterio con `<!-- test: … -->` no pasó, el ticket no se entrega.
 - Los `verify: manual`, marcados cuando quien prueba confirma el resultado —no antes—. Mientras no se hayan probado, quedan sin marcar y el ticket no está listo.
 - Un criterio que dejó de aplicar **no se borra ni se marca en falso**: se dice por qué en la entrega, y si el alcance cambió, eso se resuelve en el plan.
 
-Marcarlos es parte de entregar, como escribir los comandos exactos: es lo que permite leer un ticket cerrado dentro de un año y saber qué se comprobó.
+Marcarlos es parte de entregar: permite leer un ticket cerrado dentro de un año y saber qué se comprobó.
 
 ## El consumo de IA se registra antes de cerrar
 
@@ -65,12 +65,7 @@ Una sesión que sirvió **varios** tickets se declara con `manual:` y sin númer
 
 ## Informe y siguiente estado
 
-Entregar un informe breve con:
-
-- alcance revisado y evidencia disponible, incluida la referencia del cambio si existe;
-- criterios verificados y riesgos que siguen pendientes;
-- hallazgos bloqueantes y observaciones, **o una declaración explícita de que no se detectaron**;
-- comandos exactos para el responsable, directorio, resultado esperado, validaciones manuales y requisitos de entorno.
+Entregar un informe breve —su contenido está en `referencias/informe-de-revision.md`— que diga los hallazgos bloqueantes y observaciones, **o una declaración explícita de que no se detectaron**, y los comandos exactos para el responsable, con directorio, resultado esperado, validaciones manuales y requisitos de entorno.
 
 Registrar la revisión y su evidencia en el ticket con el mecanismo del harness. Tras entregar las pruebas al responsable, el flujo queda en `awaiting_user_tests`; solo su resultado permite avanzar. No aprobar la validación mientras exista un punto abierto, en análisis, en curso o pendiente de retest.
 

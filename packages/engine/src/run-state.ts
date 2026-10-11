@@ -27,7 +27,14 @@ import type { StepUsage } from "./process.js";
 import { mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
-import { EXIT_HISTORY, EXIT_INVARIANT, EXIT_SCHEMA, atomicWrite, fail, parseYamlSubset } from "@valmen/core";
+import {
+  EXIT_HISTORY,
+  EXIT_INVARIANT,
+  EXIT_SCHEMA,
+  atomicWrite,
+  fail,
+  parseYamlSubset,
+} from "@valmen/core";
 
 /** En qué punto está una corrida. */
 export const RUN_STATUSES = [
@@ -295,7 +302,10 @@ export function readRequiredPhrase(root: string, gate: string): string | null {
 }
 
 /** Sustituye `{nombre}` por el parámetro de la corrida; uno que falta es un error, no un hueco. */
-function resolverFrase(plantilla: string, params: Readonly<Record<string, string>>): string {
+function resolverFrase(
+  plantilla: string,
+  params: Readonly<Record<string, string>>,
+): string {
   return plantilla.replace(/\{(\w+)\}/g, (_, nombre: string) => {
     if (!Object.hasOwn(params, nombre)) {
       fail(
@@ -405,7 +415,9 @@ export function approveGate(
     }
     atadura = {
       runId: corrida.runId,
-      ...(corrida.params["version"] === undefined ? {} : { version: corrida.params["version"] }),
+      ...(corrida.params["version"] === undefined
+        ? {}
+        : { version: corrida.params["version"] }),
       phrase: esperada,
     };
   }

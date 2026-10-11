@@ -258,6 +258,13 @@ export interface GateDefinition {
    */
   readonly commandPropositions?: boolean;
   /**
+   * Si revisa el diff entregado de un ticket y no el texto del ticket.
+   *
+   * La corre `runCodeReview`: el riesgo del diff decide cuántos revisores responden, el código
+   * comprueba cada hallazgo contra las líneas cambiadas y el evaluador no se elige.
+   */
+  readonly diffReview?: boolean;
+  /**
    * Si despliega la proposición de declaración de Playwright cuando el plan toca
    * una pantalla y el proyecto declara la capacidad.
    */
@@ -542,9 +549,9 @@ function isIsolatedBlockContradiction(
   if (
     rule === undefined ||
     blocking.length !== 1 ||
-    !([rule.blockingId, ...(rule.alsoBlockingIds ?? [])] as readonly (string | undefined)[]).includes(
-      blocking[0]?.id,
-    )
+    !(
+      [rule.blockingId, ...(rule.alsoBlockingIds ?? [])] as readonly (string | undefined)[]
+    ).includes(blocking[0]?.id)
   ) {
     return false;
   }

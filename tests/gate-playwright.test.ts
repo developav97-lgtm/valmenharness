@@ -105,7 +105,10 @@ beforeEach(() => {
   lab = mkdtempSync(join(tmpdir(), "valmen-playwright-"));
   mkdirSync(join(lab, "tickets"), { recursive: true });
   mkdirSync(join(lab, "tests/pos"), { recursive: true });
-  writeFileSync(join(lab, "tests/pos/creacion-manual.spec.ts"), "// Spec del repositorio\n");
+  writeFileSync(
+    join(lab, "tests/pos/creacion-manual.spec.ts"),
+    "// Spec del repositorio\n",
+  );
 });
 
 afterEach(() => {
@@ -119,11 +122,17 @@ describe("el verbo se resuelve contra la sección declarada", () => {
     runnerPlaywright();
 
     const criterios = extractCriteriaSpecs(CRITERIO_VERBO);
-    const { checks, refused } = commandChecksFor(criterios, ["node"], undefined, {
-      command: "node playwright",
-      project: "chromium",
-      timeoutMs: 30_000,
-    }, { root: lab, esArchivo: (ruta) => statSync(ruta).isFile() });
+    const { checks, refused } = commandChecksFor(
+      criterios,
+      ["node"],
+      undefined,
+      {
+        command: "node playwright",
+        project: "chromium",
+        timeoutMs: 30_000,
+      },
+      { root: lab, esArchivo: (ruta) => statSync(ruta).isFile() },
+    );
 
     expect(refused).toEqual([]);
     expect(checks[0]?.command).toBe("node");

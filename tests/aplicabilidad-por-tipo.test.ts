@@ -37,15 +37,26 @@ const LIBRE: Proposition = { id: "para_todos", kind: "noul", instructions: "¿Se
 
 describe("separar por aplicabilidad", () => {
   it("una proposición solo de BUGFIX no aplica a un FEATURE y queda como no_aplica", () => {
-    const { applicable, notApplicable } = partitionByApplicability([SOLO_BUGFIX, LIBRE], "FEATURE");
+    const { applicable, notApplicable } = partitionByApplicability(
+      [SOLO_BUGFIX, LIBRE],
+      "FEATURE",
+    );
     expect(applicable.map((p) => p.id)).toEqual(["para_todos"]);
     expect(notApplicable).toEqual([
-      { id: "solo_correcciones", status: "no_aplica", appliesTo: ["BUGFIX"], ticketType: "FEATURE" },
+      {
+        id: "solo_correcciones",
+        status: "no_aplica",
+        appliesTo: ["BUGFIX"],
+        ticketType: "FEATURE",
+      },
     ]);
   });
 
   it("la misma proposición aplica a un BUGFIX", () => {
-    const { applicable, notApplicable } = partitionByApplicability([SOLO_BUGFIX, LIBRE], "BUGFIX");
+    const { applicable, notApplicable } = partitionByApplicability(
+      [SOLO_BUGFIX, LIBRE],
+      "BUGFIX",
+    );
     expect(applicable.map((p) => p.id)).toEqual(["solo_correcciones", "para_todos"]);
     expect(notApplicable).toEqual([]);
   });
@@ -68,7 +79,10 @@ describe("separar por aplicabilidad", () => {
 
 describe("en la compuerta real", () => {
   let lab: string;
-  const PATHS = (): { root: string; ticketsDir: string } => ({ root: lab, ticketsDir: "tickets" });
+  const PATHS = (): { root: string; ticketsDir: string } => ({
+    root: lab,
+    ticketsDir: "tickets",
+  });
   const originales = [...ANALYSIS_GATE.propositions];
 
   /** Un evaluador simulado que anota qué proposiciones recibió. */
@@ -103,12 +117,20 @@ describe("en la compuerta real", () => {
   });
 
   afterEach(() => {
-    (ANALYSIS_GATE.propositions as Proposition[]).splice(0, ANALYSIS_GATE.propositions.length, ...originales);
+    (ANALYSIS_GATE.propositions as Proposition[]).splice(
+      0,
+      ANALYSIS_GATE.propositions.length,
+      ...originales,
+    );
     rmSync(lab, { recursive: true, force: true });
   });
 
   it("sobre un FEATURE no se envía al evaluador y el recibo la registra como no_aplica", async () => {
-    writeFixtureTicket(lab, { id: "FEATURE-POS-FILTRO-ORDENES-20260921", type: "FEATURE", workflowStatus: "analyzed" });
+    writeFixtureTicket(lab, {
+      id: "FEATURE-POS-FILTRO-ORDENES-20260921",
+      type: "FEATURE",
+      workflowStatus: "analyzed",
+    });
     const e = espia();
 
     const resultado = await runGate(PATHS(), {
@@ -131,7 +153,11 @@ describe("en la compuerta real", () => {
   });
 
   it("sobre un BUGFIX sí se evalúa y el recibo no la registra como no_aplica", async () => {
-    writeFixtureTicket(lab, { id: "BUGFIX-POS-FILTRO-ORDENES-20260921", type: "BUGFIX", workflowStatus: "analyzed" });
+    writeFixtureTicket(lab, {
+      id: "BUGFIX-POS-FILTRO-ORDENES-20260921",
+      type: "BUGFIX",
+      workflowStatus: "analyzed",
+    });
     const e = espia();
 
     const resultado = await runGate(PATHS(), {
@@ -142,12 +168,17 @@ describe("en la compuerta real", () => {
 
     expect(resultado.exitCode, resultado.stderr).toBe(0);
     expect(e.recibidas()).toContain("solo_correcciones");
-    const noAplican = readReceipts(PATHS(), "BUGFIX-POS-FILTRO-ORDENES-20260921")[0]?.notApplicable ?? [];
+    const noAplican =
+      readReceipts(PATHS(), "BUGFIX-POS-FILTRO-ORDENES-20260921")[0]?.notApplicable ?? [];
     expect(noAplican.map((registro) => registro.id)).not.toContain("solo_correcciones");
   });
 
   it("si el filtro no deja ninguna proposición, no se aprueba por vacuidad", async () => {
-    writeFixtureTicket(lab, { id: "FEATURE-POS-FILTRO-ORDENES-20260921", type: "FEATURE", workflowStatus: "analyzed" });
+    writeFixtureTicket(lab, {
+      id: "FEATURE-POS-FILTRO-ORDENES-20260921",
+      type: "FEATURE",
+      workflowStatus: "analyzed",
+    });
     // Todas las proposiciones de la compuerta quedan solo para BUGFIX.
     (ANALYSIS_GATE.propositions as Proposition[]).splice(
       0,

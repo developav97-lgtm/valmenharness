@@ -202,6 +202,18 @@ export interface GateReceipt {
   readonly commandResults?: readonly CommandResultRecord[];
   /** La preparación del ambiente de pruebas que corrió antes de los criterios, si el proyecto la declara. */
   readonly setup?: SetupRecord;
+  /**
+   * El árbol de trabajo que se probó, si el proyecto es un repositorio git (R-REV-001).
+   *
+   * Opcional y aditivo, con el mismo criterio que `commandResults`: un recibo emitido antes de
+   * que este campo existiera sigue siendo válido y no se reescribe —el registro es
+   * append-only—, y por eso `receiptVersion` no sube. Un recibo sin este campo no dice «se probó
+   * un árbol vacío» sino «se emitió antes de que el recibo guardara el árbol», o «el proyecto no
+   * es un repositorio git»: la entrega distingue los dos casos mirando si hay repositorio.
+   */
+  readonly testedTree?: TestedTreeRecord;
+  /** Lo que la revisión del diff vio y respondió (compuerta `code-review`). Opcional y aditivo. */
+  readonly codeReview?: CodeReviewRecord;
   /** Con qué evaluador se produjo (`command`, `jev`, `llm-judge`, `cascade`). */
   readonly evaluator?: string;
   /** Los umbrales del proyecto que se aplicaron, con quién los decidió y por qué (R-CPRE-010). */
@@ -230,6 +242,84 @@ export interface GateReceipt {
    * modelo de escalado. Dato de auditoría: no entra en `stateHash` ni en `gateHash`.
    */
   readonly producerRetries?: readonly ProducerRetryRecord[];
+}
+
+/**
+ * El árbol de trabajo que se probó: lo que una entrega posterior compara con el de ese momento.
+ *
+ * El hash es lo único que se compara. Cubre el contenido de los archivos funcionales que git ve
+ * —los versionados y los nuevos no ignorados— sin los del propio registro (`tickets/` y
+ * `.valmen/`), que cambian entre la compuerta y la entrega sin ser código. Los otros tres campos
+ * son informativos.
+ */
+export interface TestedTreeRecord {
+  /** `sha256:<64 hex>` del contenido de los archivos funcionales del árbol de trabajo. */
+  readonly hash: string;
+  /** El commit de `HEAD` al correr la compuerta; `null` si el repositorio no tiene commits. */
+  readonly head: string | null;
+  /**
+   * El `tree` de ese commit si no había cambios funcionales sin commitear; `null` si los había
+   * (lo probado era el árbol de trabajo, no el commit) o si no hay commits.
+   */
+  readonly commitTree: string | null;
+  /** Cuántos archivos funcionales entraron al hash. */
+  readonly files: number;
+}
+
+/** Cuántos revisores y con qué lentes corrió la revisión del diff. */
+export type ProfundidadDeRevision =
+  "sin-revisores" | "un-revisor" | "un-revisor-cuatro-lentes" | "dos-revisores";
+
+/** Un hallazgo citado por un revisor, con lo que el código comprobó de su cita. */
+interface HallazgoRegistrado {
+  readonly ruta: string;
+  readonly linea: number;
+  readonly motivo: string;
+  /** `true` si la cita cae en una línea que el cambio agrega o modifica. */
+  readonly verificado: boolean;
+}
+
+/** Lo que guarda la compuerta `code-review`: la base, el riesgo, lo enviado y lo respondido. */
+export interface CodeReviewRecord {
+  readonly base: { readonly ref: string; readonly commit: string };
+  readonly riesgo: {
+    readonly nivel: "bajo" | "medio" | "alto";
+    readonly motivos: readonly string[];
+  };
+  readonly profundidad: ProfundidadDeRevision;
+  readonly ronda: 1 | 2;
+  readonly reciboAnterior: string | null;
+  readonly entrada: {
+    readonly sha256: string;
+    readonly bytes: number;
+    readonly soloParche: boolean;
+    /** Todos los archivos del diff, con el sha256 de su contenido (`null` si se borró). */
+    readonly archivos: readonly {
+      readonly ruta: string;
+      readonly estado: "A" | "M" | "D";
+      readonly sha256: string | null;
+    }[];
+    /** En la segunda ronda, los archivos que de verdad se enviaron. */
+    readonly acotadaA?: readonly string[];
+  };
+  readonly revisores: readonly {
+    readonly rol: string;
+    readonly provider: string;
+    readonly model: string;
+    readonly resolvedVersion: string;
+    readonly effort: string;
+    readonly respuestas: readonly {
+      readonly proposicion: string;
+      readonly cumple: boolean;
+      readonly confianza: number;
+      readonly motivo: string;
+      readonly hallazgos: readonly HallazgoRegistrado[];
+    }[];
+    readonly usage: EvaluationUsage;
+    readonly latencyMs: number;
+  }[];
+  /** Los archivos de la propia compuerta que el diff toca. */
+  readonly propiaCompuerta: readonly string[];
 }
 
 /** Un reintento de la producción: quién falló, quién produjo en su lugar y el error real. */
@@ -348,6 +438,9 @@ export interface ReceiptInput {
   readonly commandResults?: readonly CommandResultRecord[];
   /** La preparación del ambiente que corrió antes de los criterios. */
   readonly setup?: SetupRecord;
+  /** El árbol de trabajo que se probó, si el proyecto es un repositorio git. */
+  readonly testedTree?: TestedTreeRecord;
+  readonly codeReview?: CodeReviewRecord;
   readonly evaluator?: string;
   readonly thresholds?: readonly AppliedThreshold[];
   readonly notApplicable?: readonly NotApplicableRecord[];
@@ -378,7 +471,10 @@ export function buildReceipt(input: ReceiptInput): GateReceipt {
     policy: input.policy,
     mechanicalChecks: input.mechanicalChecks,
     // El motivo va explícito: `null` quiere decir que el evaluador no lo dio.
-    modelAnswers: input.answers.map((answer) => ({ ...answer, reason: answer.reason ?? null })),
+    modelAnswers: input.answers.map((answer) => ({
+      ...answer,
+      reason: answer.reason ?? null,
+    })),
     propositions: input.decision.propositions,
     model: input.model ?? null,
     usage: input.usage ?? null,
@@ -395,6 +491,8 @@ export function buildReceipt(input: ReceiptInput): GateReceipt {
       ? {}
       : { commandResults: input.commandResults }),
     ...(input.setup === undefined ? {} : { setup: input.setup }),
+    ...(input.testedTree === undefined ? {} : { testedTree: input.testedTree }),
+    ...(input.codeReview === undefined ? {} : { codeReview: input.codeReview }),
     ...(input.evaluator === undefined ? {} : { evaluator: input.evaluator }),
     ...(input.thresholds === undefined || input.thresholds.length === 0
       ? {}
@@ -407,7 +505,9 @@ export function buildReceipt(input: ReceiptInput): GateReceipt {
     ...(input.requestedEvaluator === undefined
       ? {}
       : { requestedEvaluator: input.requestedEvaluator }),
-    ...(input.evaluatorFailure === undefined ? {} : { evaluatorFailure: input.evaluatorFailure }),
+    ...(input.evaluatorFailure === undefined
+      ? {}
+      : { evaluatorFailure: input.evaluatorFailure }),
     ...(input.producerRetries === undefined || input.producerRetries.length === 0
       ? {}
       : { producerRetries: input.producerRetries }),

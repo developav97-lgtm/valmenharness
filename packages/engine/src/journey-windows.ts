@@ -13,7 +13,9 @@ export interface JourneyWindowStatus {
 /** Valida y congela una ventana que puede guardarse en una revisión de jornada. */
 export function createJourneyWindow(input: JourneyWindowInput): JourneyWindowInput {
   if (!JOURNEY_ID_RE.test(input.windowId)) {
-    throw new Error("windowId debe ser un identificador portable no vacío, sin rutas ni espacios.");
+    throw new Error(
+      "windowId debe ser un identificador portable no vacío, sin rutas ni espacios.",
+    );
   }
   assertIsoInstant(input.startsAt, "startsAt");
   assertIsoInstant(input.endsAt, "endsAt");
@@ -36,9 +38,12 @@ export function evaluateJourneyWindow(
   const window = createJourneyWindow(input);
   assertIsoInstant(at, "at");
   const instant = Date.parse(at);
-  const state: JourneyWindowState = instant < Date.parse(window.startsAt)
-    ? "upcoming"
-    : instant < Date.parse(window.endsAt) ? "open" : "closed";
+  const state: JourneyWindowState =
+    instant < Date.parse(window.startsAt)
+      ? "upcoming"
+      : instant < Date.parse(window.endsAt)
+        ? "open"
+        : "closed";
   return Object.freeze({
     state,
     allowsNewDispatch: state === "open",

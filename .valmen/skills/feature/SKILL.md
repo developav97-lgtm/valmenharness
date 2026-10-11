@@ -1,7 +1,7 @@
 ---
 name: feature
 description: Usar cuando alguien pide una funcionalidad que excede un ticket —varias pantallas, reportes, configuración, varios módulos o varios eslabones— y hay que registrarla como feature, escribir su spec, descomponerla en tickets y ponerlos a trabajar. Aplica también cuando alguien dice «necesito crear un feature para…» y explica en lenguaje natural.
-version: 1.2.0
+version: 1.3.0
 origen: valmen
 ---
 
@@ -44,9 +44,7 @@ Un diseño aprobado, una captura, un listado de requisitos o un documento del cl
 
 La spec cita el adjunto por su ruta (`assets/pantalla.html`). Cada ticket hereda una sección `### Referencias de diseño` con las rutas de los adjuntos que citan **sus requisitos** —si ninguno cita, los que cita el `spec.md` de su dominio; y si tampoco, todos— y **se construye y se valida contra el original**, no contra el texto de la spec.
 
-Un adjunto anexado **después de materializar** llega solo: `asset add` (y `anexar_adjunto_a_feature`) actualiza la sección de los tickets de la feature en `intake`, `analyzed`, `planned` o `blocked`, deja el evento `design-references-updated` e informa los que no tocó porque ya empezaron la implementación. `valmen feature asset refresh <slug> [--dry-run]` repite ese refresco a pedido.
-
-Un enlace externo sin copia local **detiene** `valmen feature materialize` sin crear ningún ticket; si el enlace es solo bibliografía, `--allow-external-links` (MCP: `permitirEnlacesExternos`) deja seguir. `--dry-run` solo informa. Un `.dc.html` (la fuente del lienzo de diseño, que depende de `support.js`, `x-dc` y `sc-for`) se rechaza al anexarlo: se exporta la versión autónoma y se anexa esa.
+El refresco de los tickets ya materializados, el enlace externo (`--allow-external-links`) y el `.dc.html` están en `referencias/adjuntos.md`.
 
 ## Lo que no se hace
 

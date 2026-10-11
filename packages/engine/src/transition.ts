@@ -47,12 +47,21 @@ import {
 
 import { hashState } from "@valmen/gate";
 
+import { motivoDeArbolNoVigente } from "./arbol-probado.js";
 import { unmarkedCriteria, unmarkedMessage } from "./criteria-marks.js";
-import { type RegistryPaths, findTicket } from "./discovery.js";
+import { type RegistryPaths, codeReviewExigida, findTicket } from "./discovery.js";
 import { motivoDeAprobacionPorAutorizacionInvalida } from "./approval-eligibility.js";
-import { FUENTE_AUTORIZACION, FUENTE_REVISOR, aprobacionDePlanVigente } from "./plan-approval.js";
+import {
+  FUENTE_AUTORIZACION,
+  FUENTE_REVISOR,
+  aprobacionDePlanVigente,
+} from "./plan-approval.js";
+import { revisionPendiente } from "./revision-exigida.js";
 import { type ReciboConRevisor, motivoDeDecisionDelRevisorInvalida } from "./reviewer.js";
-import { motivoDeCierrePorPoliticaInvalido, motivoDePruebasPorPoliticaInvalido } from "./qa-policy-verify.js";
+import {
+  motivoDeCierrePorPoliticaInvalido,
+  motivoDePruebasPorPoliticaInvalido,
+} from "./qa-policy-verify.js";
 import { finalizeMutation, readAndValidate } from "./mutate.js";
 import {
   describirDecisionHumana,
@@ -186,10 +195,16 @@ function assertNoExtraFlags(request: TransitionRequest): void {
  * que se exige acá no es una opinión: es **el recibo** de haber corrido los
  * criterios que declaran su test, sobre el estado actual del ticket.
  *
- * Las dos comprobaciones importan y por razones distintas. Que falte el recibo
+ * Las tres comprobaciones importan y por razones distintas. Que falte el recibo
  * significa que nadie corrió nada; que el recibo sea viejo —su hash de estado no
  * coincide con el ticket de ahora— significa que **lo que se probó no es lo que se
  * entrega**, y ese es el caso que un recibo sin hash dejaría pasar en silencio.
+ *
+ * Y el texto del ticket no es el código: el hash de estado no ve un archivo funcional
+ * editado, creado o borrado después de la compuerta. Por eso el recibo guarda también el
+ * árbol de trabajo que probó (`testedTree`) y acá se compara con el de ahora, sin el
+ * propio registro (R-REV-001). Fuera de un repositorio git no hay árbol y vale solo el
+ * texto; dentro de uno, un recibo sin árbol no prueba qué código se verificó y se repite.
  */
 function exigirVerificacionMecanica(document: ParsedTicket, paths: RegistryPaths): void {
   const recibos = readReceipts(paths, document.fields.id).filter(
@@ -215,6 +230,14 @@ function exigirVerificacionMecanica(document: ParsedTicket, paths: RegistryPaths
     );
   }
 
+  const motivoDeArbol = motivoDeArbolNoVigente(
+    ultimo,
+    paths,
+    document.fields.id,
+    "qa-mechanical",
+  );
+  if (motivoDeArbol !== null) fail(motivoDeArbol, EXIT_INVARIANT);
+
   if (ultimo.outcome === "block") {
     fail(
       `La verificación mecánica bloqueó: ${ultimo.reason}. Corrija lo que falla y ` +
@@ -222,6 +245,17 @@ function exigirVerificacionMecanica(document: ParsedTicket, paths: RegistryPaths
       EXIT_INVARIANT,
     );
   }
+}
+
+/**
+ * Con `code-review: exigida`, entregar pide la revisión del diff al día (R-REV-004, R-REV-005):
+ * sin recibo, con un recibo de otro árbol, con un `block` o con un `review` sin firma de una
+ * persona, se rechaza diciendo qué correr o quién decide. La tabla vive en `revisionPendiente`.
+ */
+function exigirRevisionDeCodigo(document: ParsedTicket, paths: RegistryPaths): void {
+  const id = document.fields.id;
+  const pendiente = revisionPendiente(paths, id, readReceipts(paths, id));
+  if (pendiente !== null) fail(pendiente.motivo, EXIT_INVARIANT);
 }
 
 /**
@@ -299,10 +333,23 @@ function exigirDecisionDeCompuerta(
   // `review`; se re-verifica ahora porque una línea del recibo no basta. Un `reject` del revisor no
   // la deja: sigue esperando a una persona. Un `block` nunca (SECURITY-ENGINE-APROBACION-POR-REVISOR).
   const delRevisor = (recibo as ReciboConRevisor).reviewerDecision;
-  if (decision === null && recibo.outcome === "review" && delRevisor?.decision === "approve") {
-    const motivo = motivoDeDecisionDelRevisorInvalida(paths.root, document, recibo as ReciboConRevisor, compuerta, ahora);
+  if (
+    decision === null &&
+    recibo.outcome === "review" &&
+    delRevisor?.decision === "approve"
+  ) {
+    const motivo = motivoDeDecisionDelRevisorInvalida(
+      paths.root,
+      document,
+      recibo as ReciboConRevisor,
+      compuerta,
+      ahora,
+    );
     if (motivo === null) return [];
-    fail(`No se puede pasar a \`${to}\`: la decisión del revisor sobre el recibo ${recibo.id} no vale.\n${motivo}`, EXIT_INVARIANT);
+    fail(
+      `No se puede pasar a \`${to}\`: la decisión del revisor sobre el recibo ${recibo.id} no vale.\n${motivo}`,
+      EXIT_INVARIANT,
+    );
   }
   if (decision !== null) {
     fail(
@@ -388,7 +435,12 @@ function applyTicket(
   }
   let eventosPrevios: readonly EventoPrevio[] = [];
   if (to === "planned" || to === "approved") {
-    eventosPrevios = exigirDecisionDeCompuerta(document, request.paths, to, new Date(request.now?.() ?? new Date()));
+    eventosPrevios = exigirDecisionDeCompuerta(
+      document,
+      request.paths,
+      to,
+      new Date(request.now?.() ?? new Date()),
+    );
   }
   if (to === "approved") {
     // La aprobación es un hecho registrado con autor y atado al plan, no una frase del
@@ -409,7 +461,10 @@ function applyTicket(
     const ahoraDeLaTransicion = new Date(request.now?.() ?? new Date());
     if (porRevisor) {
       // La fuente `revisor` solo vale con la decisión del revisor en el recibo de plan vigente.
-      const veredictoPlan = veredictoDeCompuerta(readReceipts(request.paths, document.fields.id), "plan");
+      const veredictoPlan = veredictoDeCompuerta(
+        readReceipts(request.paths, document.fields.id),
+        "plan",
+      );
       const motivo =
         veredictoPlan.tipo === "sin-recibo"
           ? "El ticket no tiene recibo de la compuerta plan que respalde la decisión del revisor."
@@ -421,10 +476,14 @@ function applyTicket(
               ahoraDeLaTransicion,
             );
       if (motivo !== null) {
-        fail(`approved requiere la aprobación del plan vigente.\n${motivo}`, EXIT_INVARIANT);
+        fail(
+          `approved requiere la aprobación del plan vigente.\n${motivo}`,
+          EXIT_INVARIANT,
+        );
       }
     }
-    const porAutorizacion = aprobacion.aprobacion.source === FUENTE_AUTORIZACION || porRevisor;
+    const porAutorizacion =
+      aprobacion.aprobacion.source === FUENTE_AUTORIZACION || porRevisor;
     if (porAutorizacion && !porRevisor) {
       const motivo = motivoDeAprobacionPorAutorizacionInvalida(
         request.paths.root,
@@ -433,7 +492,10 @@ function applyTicket(
         new Date(request.now?.() ?? new Date()),
       );
       if (motivo !== null) {
-        fail(`approved requiere la aprobación del plan vigente.\n${motivo}`, EXIT_INVARIANT);
+        fail(
+          `approved requiere la aprobación del plan vigente.\n${motivo}`,
+          EXIT_INVARIANT,
+        );
       }
     }
     eventosPrevios = [
@@ -444,17 +506,24 @@ function applyTicket(
           ? `Aprobación del plan vigente: ${aprobacion.aprobacion.actor} (fuente ${aprobacion.aprobacion.source}, ` +
             `hash ${aprobacion.aprobacion.authorizationHash ?? "?"}), plan ${aprobacion.aprobacion.planHash}.`
           : `Aprobación del plan vigente: ${aprobacion.aprobacion.actor} (fuente ${aprobacion.aprobacion.source}), ` +
-          `plan ${aprobacion.aprobacion.planHash}.`,
+            `plan ${aprobacion.aprobacion.planHash}.`,
       },
     ];
   }
   if (to === "awaiting_user_tests") {
     exigirVerificacionMecanica(document, request.paths);
+    if (codeReviewExigida(request.paths.root)) {
+      exigirRevisionDeCodigo(document, request.paths);
+    }
   }
 
   if (to === "in_qa") {
     // Un resultado «por política» en Pruebas se comprueba contra el registro, no solo por su forma.
-    const invalido = motivoDePruebasPorPoliticaInvalido(request.paths.root, request.ticketId, document);
+    const invalido = motivoDePruebasPorPoliticaInvalido(
+      request.paths.root,
+      request.ticketId,
+      document,
+    );
     if (invalido !== null) fail(invalido, EXIT_INVARIANT);
   }
 
@@ -480,7 +549,11 @@ function applyTicket(
 
   if (to === "qa_approved") {
     // Un cierre por política se comprueba contra el registro, no solo por su forma (R-QAAG-006).
-    const invalido = motivoDeCierrePorPoliticaInvalido(request.paths.root, request.ticketId, document);
+    const invalido = motivoDeCierrePorPoliticaInvalido(
+      request.paths.root,
+      request.ticketId,
+      document,
+    );
     if (invalido !== null) fail(invalido, EXIT_INVARIANT);
     if (hasApprovedQaCycle(document.blocks.QA ?? [])) {
       if (document.fields.qa_status !== "approved") {

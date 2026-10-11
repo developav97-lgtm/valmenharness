@@ -349,7 +349,11 @@ export interface BriefInput {
   /** Las aprobaciones del día: las automáticas (con su autorización) aparte de las humanas. */
   readonly aprobaciones?:
     | {
-        readonly automaticas: readonly { readonly ticket: string; readonly etapa: string; readonly autorizacion: string }[];
+        readonly automaticas: readonly {
+          readonly ticket: string;
+          readonly etapa: string;
+          readonly autorizacion: string;
+        }[];
         readonly humanas: number;
       }
     | undefined;
@@ -397,7 +401,9 @@ export interface BudgetNotificationInput {
 }
 
 /** El aviso de presupuesto, en el payload que el canal entrega. */
-export function renderBudgetNotification(input: BudgetNotificationInput): NotificationPayload {
+export function renderBudgetNotification(
+  input: BudgetNotificationInput,
+): NotificationPayload {
   const lineas = [
     `💵 PRESUPUESTO · ${input.tier.toUpperCase()}`,
     "",
@@ -522,7 +528,9 @@ export interface JourneyFinishedNotificationInput {
 }
 
 /** El aviso de que la jornada terminó: no queda ningún ticket pendiente. */
-export function renderJourneyFinishedNotification(input: JourneyFinishedNotificationInput): NotificationPayload {
+export function renderJourneyFinishedNotification(
+  input: JourneyFinishedNotificationInput,
+): NotificationPayload {
   return {
     key: `journey-finished:${input.journeyId}`,
     subject: `Jornada terminada · ${input.journeyId}`,
@@ -551,7 +559,9 @@ export interface TestsReadyNotificationInput {
 }
 
 /** El aviso de que un ticket espera las pruebas del responsable, con su contrato. */
-export function renderTestsReadyNotification(input: TestsReadyNotificationInput): NotificationPayload {
+export function renderTestsReadyNotification(
+  input: TestsReadyNotificationInput,
+): NotificationPayload {
   return {
     key: `tests-ready:${input.ticketId}:${input.cycle}`,
     subject: `Listo para probar · ${input.ticketId}`,
@@ -581,7 +591,9 @@ export interface PolicyCloseNotificationInput {
 }
 
 /** «QA aprobada por política»: con el recibo y la forma de reabrir (R-QAAG-006). */
-export function renderPolicyCloseNotification(input: PolicyCloseNotificationInput): NotificationPayload {
+export function renderPolicyCloseNotification(
+  input: PolicyCloseNotificationInput,
+): NotificationPayload {
   return {
     key: `policy-close:${input.ticketId}:${input.cycle}`,
     subject: `QA aprobada por política · ${input.ticketId}`,
@@ -685,16 +697,22 @@ export function renderBrief(input: BriefInput): NotificationPayload {
 
   // Las aprobaciones del día (R-APRO-007): las automáticas visibles y aparte de las humanas.
   const aprobaciones = input.aprobaciones;
-  if (aprobaciones !== undefined && (aprobaciones.automaticas.length > 0 || aprobaciones.humanas > 0)) {
+  if (
+    aprobaciones !== undefined &&
+    (aprobaciones.automaticas.length > 0 || aprobaciones.humanas > 0)
+  ) {
     if (aprobaciones.automaticas.length > 0) {
       lineas.push(
         ...vinetas(
           `🤖 ${aprobaciones.automaticas.length} aprobación(es) automática(s) hoy:`,
-          aprobaciones.automaticas.map((a) => `${a.ticket} · ${a.etapa} · ${a.autorizacion}`),
+          aprobaciones.automaticas.map(
+            (a) => `${a.ticket} · ${a.etapa} · ${a.autorizacion}`,
+          ),
         ),
       );
     }
-    if (aprobaciones.humanas > 0) lineas.push(`✍ ${aprobaciones.humanas} aprobación(es) humana(s) hoy`, "");
+    if (aprobaciones.humanas > 0)
+      lineas.push(`✍ ${aprobaciones.humanas} aprobación(es) humana(s) hoy`, "");
   }
 
   // La jornada del día: lo hecho por fase y los altos que esperan a una persona.
@@ -714,16 +732,24 @@ export function renderBrief(input: BriefInput): NotificationPayload {
           const sinModelo = f.sinReportarModelo ?? 0;
           const extra: string[] = [];
           if (usados.length > 0) extra.push(`usado: ${usados.join(", ")}`);
-          for (const par of f.distintos ?? []) extra.push(`⚠ distinto al declarado: ${par.declarado} → ${par.usado}`);
-          if (sinModelo > 0) extra.push(`modelo usado sin reportar en ${sinModelo} sesión(es)`);
+          for (const par of f.distintos ?? [])
+            extra.push(`⚠ distinto al declarado: ${par.declarado} → ${par.usado}`);
+          if (sinModelo > 0)
+            extra.push(`modelo usado sin reportar en ${sinModelo} sesión(es)`);
           return (
             `${f.fase}: ${f.sesiones} sesión(es), ${f.modelos.join(", ")}, ${minutos(f.duracionMs)}, ${costo}` +
             (extra.length === 0 ? "" : ` · ${extra.join(" · ")}`)
           );
         }),
       ),
-      ...vinetas(`🧪 ${jornada.esperanPruebas.length} esperan tus pruebas:`, jornada.esperanPruebas),
-      ...vinetas(`📝 ${jornada.esperanPlan.length} plan(es) esperan tu aprobación:`, jornada.esperanPlan),
+      ...vinetas(
+        `🧪 ${jornada.esperanPruebas.length} esperan tus pruebas:`,
+        jornada.esperanPruebas,
+      ),
+      ...vinetas(
+        `📝 ${jornada.esperanPlan.length} plan(es) esperan tu aprobación:`,
+        jornada.esperanPlan,
+      ),
       ...vinetas(`⛔ ${jornada.paradas.length} parada(s) activa(s):`, jornada.paradas),
     );
   }
@@ -757,23 +783,36 @@ export function renderJourneyHandoffNotification(
   for (const e of parte.esperanPruebas) {
     const lineas = [`• ${e.ticketId} — ${e.title}`, `    ticket: ${e.ruta}`];
     if (e.omitidoPorSecreto.length > 0) {
-      lineas.push(`    contrato omitido: se encontró ${e.omitidoPorSecreto.join(", ")}; léelo en el ticket.`);
+      lineas.push(
+        `    contrato omitido: se encontró ${e.omitidoPorSecreto.join(", ")}; léelo en el ticket.`,
+      );
     } else if (e.sinContrato) {
-      lineas.push("    sin contrato de pruebas: el ticket no trae comandos, léelo en su ruta.");
+      lineas.push(
+        "    sin contrato de pruebas: el ticket no trae comandos, léelo en su ruta.",
+      );
     } else {
       if (e.directorio !== null) lineas.push(`    directorio: ${e.directorio}`);
       lineas.push(...e.probar.map((linea) => `    probar: ${linea}`));
     }
-    lineas.push(...e.manuales.map((linea) => `    manual: ${linea.replace(/^(?:validación manual|manual)\s*:\s*/i, "")}`));
+    lineas.push(
+      ...e.manuales.map(
+        (linea) =>
+          `    manual: ${linea.replace(/^(?:validación manual|manual)\s*:\s*/i, "")}`,
+      ),
+    );
     unidades.push({ seccion: 0, lineas });
   }
   for (const c of parte.cerradosPorPolitica) {
     unidades.push({
       seccion: 1,
-      lineas: [`• ${c.ticketId} — ${c.title}`, `    autorización ${c.autorizacion} · recibo ${c.recibo}`],
+      lineas: [
+        `• ${c.ticketId} — ${c.title}`,
+        `    autorización ${c.autorizacion} · recibo ${c.recibo}`,
+      ],
     });
   }
-  for (const s of parte.sinEntregar) unidades.push({ seccion: 2, lineas: [`• ${s.ticketId} [${s.estado}]`] });
+  for (const s of parte.sinEntregar)
+    unidades.push({ seccion: 2, lineas: [`• ${s.ticketId} [${s.estado}]`] });
 
   const titulos = [
     "ESPERAN TUS PRUEBAS",
@@ -799,7 +838,10 @@ export function renderJourneyHandoffNotification(
       lineas.push(...unidad.lineas);
     }
     if (cuantos < unidades.length) {
-      lineas.push("", `… y ${unidades.length - cuantos} más. Parte completo: valmen journey handoff --id ${parte.journeyId} --saved`);
+      lineas.push(
+        "",
+        `… y ${unidades.length - cuantos} más. Parte completo: valmen journey handoff --id ${parte.journeyId} --saved`,
+      );
     }
     lineas.push("", cierre);
     return lineas.join("\n");
@@ -809,7 +851,11 @@ export function renderJourneyHandoffNotification(
   while (cuantos > 0 && componer(cuantos).length > tope) cuantos -= 1;
   let body = componer(cuantos);
   // Un solo ticket más largo que el tope: se corta el texto, pero la frase final no se pierde.
-  if (body.length > tope) body = `${body.slice(0, Math.max(0, tope - cierre.length - 1))}\n${cierre}`.slice(0, tope);
+  if (body.length > tope)
+    body = `${body.slice(0, Math.max(0, tope - cierre.length - 1))}\n${cierre}`.slice(
+      0,
+      tope,
+    );
   return {
     key: `journey-handoff:${parte.journeyId}`,
     subject: `Parte de la jornada · ${parte.journeyId}`,

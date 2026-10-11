@@ -369,9 +369,7 @@ describe.skipIf(sqlite === null)("las sesiones de Hermes", () => {
     const sesionLeida = leerSesionesDeHermes("/proyectos/tienda", { home: lab })[0];
     expect(sesionLeida?.ticket).toBe("FEATURE-PROPIO-20260928");
     expect(sesionLeida?.compartida).toBe(false);
-    const ajenos = sesionLeida?.tickets.filter(
-      (t) => t.id !== "FEATURE-PROPIO-20260928",
-    );
+    const ajenos = sesionLeida?.tickets.filter((t) => t.id !== "FEATURE-PROPIO-20260928");
     expect(ajenos?.every((t) => !t.trabajado)).toBe(true);
   });
 
@@ -482,10 +480,11 @@ describe.skipIf(sqlite === null)("las sesiones de Hermes", () => {
     });
     db.close();
 
-    expect(leerSesionesDeHermes("/proyectos/tienda", { home: lab }).map((s) => s.id).sort()).toEqual([
-      "20261001_100004_dentro",
-      "20261001_100005_por_git",
-    ]);
+    expect(
+      leerSesionesDeHermes("/proyectos/tienda", { home: lab })
+        .map((s) => s.id)
+        .sort(),
+    ).toEqual(["20261001_100004_dentro", "20261001_100005_por_git"]);
   });
 
   it("un coste desconocido no se convierte en cero", () => {

@@ -12,7 +12,13 @@ import { type AvanceDeFase, type EstadoDeAvance } from "./journey-advance.js";
 
 export type EstadoDePasada = EstadoDeAvance | "error";
 
-const ESTADOS_DE_PASADA: readonly string[] = ["sin-jornada", "despachado", "ya-despachado", "sin-candidato", "error"];
+const ESTADOS_DE_PASADA: readonly string[] = [
+  "sin-jornada",
+  "despachado",
+  "ya-despachado",
+  "sin-candidato",
+  "error",
+];
 
 export interface RegistroDePasada {
   readonly kind: "journey-pass";
@@ -43,9 +49,15 @@ export function registrarPasada(
   root: string,
   pasada: Omit<RegistroDePasada, "kind" | "version" | "at"> & { readonly at?: string },
 ): RegistroDePasada {
-  if (!ESTADOS_DE_PASADA.includes(pasada.estado)) throw new Error(`Estado de pasada desconocido: ${pasada.estado}.`);
+  if (!ESTADOS_DE_PASADA.includes(pasada.estado))
+    throw new Error(`Estado de pasada desconocido: ${pasada.estado}.`);
   const { at, ...resto } = pasada;
-  const completa: RegistroDePasada = { kind: "journey-pass", version: 1, ...resto, at: at ?? new Date().toISOString() };
+  const completa: RegistroDePasada = {
+    kind: "journey-pass",
+    version: 1,
+    ...resto,
+    at: at ?? new Date().toISOString(),
+  };
   const ruta = pasadasPath(root);
   mkdirSync(dirname(ruta), { recursive: true });
   appendFileSync(ruta, `${JSON.stringify(completa)}\n`, "utf8");
@@ -82,20 +94,31 @@ export function leerPasadas(root: string): RegistroDePasada[] {
  * La última pasada de una jornada y la estimación de la siguiente: la última más la mediana de
  * los intervalos entre sus últimas pasadas. Con menos de dos no hay cadencia que estimar.
  */
-export function resumenDePasadas(pasadas: readonly RegistroDePasada[], journeyId: string): ResumenDePasadas {
+export function resumenDePasadas(
+  pasadas: readonly RegistroDePasada[],
+  journeyId: string,
+): ResumenDePasadas {
   const horas = pasadas
     .filter((pasada) => pasada.journeyId === journeyId)
     .map((pasada) => ({ pasada, ms: Date.parse(pasada.at) }))
     .sort((a, b) => a.ms - b.ms);
   const ultima = horas.at(-1)?.pasada ?? null;
   const recientes = horas.slice(-PASADAS_PARA_CADENCIA);
-  if (ultima === null || recientes.length < 2) return { ultima, cadenciaMs: null, proxima: null };
-  const intervalos = recientes.slice(1).map((actual, i) => actual.ms - (recientes[i] as { ms: number }).ms).sort((a, b) => a - b);
+  if (ultima === null || recientes.length < 2)
+    return { ultima, cadenciaMs: null, proxima: null };
+  const intervalos = recientes
+    .slice(1)
+    .map((actual, i) => actual.ms - (recientes[i] as { ms: number }).ms)
+    .sort((a, b) => a - b);
   const medio = Math.floor(intervalos.length / 2);
   const cadenciaMs =
     intervalos.length % 2 === 1
       ? (intervalos[medio] as number)
       : ((intervalos[medio - 1] as number) + (intervalos[medio] as number)) / 2;
   if (cadenciaMs <= 0) return { ultima, cadenciaMs: null, proxima: null };
-  return { ultima, cadenciaMs, proxima: new Date(Date.parse(ultima.at) + cadenciaMs).toISOString() };
+  return {
+    ultima,
+    cadenciaMs,
+    proxima: new Date(Date.parse(ultima.at) + cadenciaMs).toISOString(),
+  };
 }

@@ -59,8 +59,7 @@ function lineaQueEnumera(texto: string): string | undefined {
     .split("\n")
     .find(
       (linea) =>
-        linea.includes("--evaluator") &&
-        EVALUADORES.every((id) => linea.includes(id)),
+        linea.includes("--evaluator") && EVALUADORES.every((id) => linea.includes(id)),
     );
 }
 
@@ -72,14 +71,12 @@ function juezFalso() {
   }) => {
     const modelo = options.model ?? "";
     return {
-      answers: options.propositions.map(
-        (proposicion): PropositionAnswer => ({
-          id: proposicion.id,
-          kind: proposicion.kind,
-          value: 0.95,
-          confidence: 0.95,
-        }),
-      ),
+      answers: options.propositions.map((proposicion): PropositionAnswer => ({
+        id: proposicion.id,
+        kind: proposicion.kind,
+        value: 0.95,
+        confidence: 0.95,
+      })),
       model: { provider: "openrouter", model: modelo, resolvedVersion: `${modelo}-v1` },
       usage: { inputTokens: 10, outputTokens: 2, costUsd: 0.0001 },
       latencyMs: 10,
@@ -94,13 +91,11 @@ function verificadorFalso() {
     readonly model?: string;
   }) => {
     return {
-      answers: options.propositions.map(
-        (proposicion): PropositionAnswer => ({
-          id: proposicion.id,
-          kind: "noul",
-          value: proposicion.id === "respaldada_b" ? 0.2 : 0.99,
-        }),
-      ),
+      answers: options.propositions.map((proposicion): PropositionAnswer => ({
+        id: proposicion.id,
+        kind: "noul",
+        value: proposicion.id === "respaldada_b" ? 0.2 : 0.99,
+      })),
       model: {
         provider: "openrouter",
         model: options.model ?? "typesafe/jev-1.13",
@@ -146,9 +141,17 @@ async function escalamientoReal(): Promise<Record<string, unknown>> {
     root: REPO,
     evaluator: "cascade",
     cascade: {
-      producer: { provider: "openrouter", model: "proveedor/modelo-barato", effort: "auto" },
+      producer: {
+        provider: "openrouter",
+        model: "proveedor/modelo-barato",
+        effort: "auto",
+      },
       verifier: { provider: "openrouter", model: "typesafe/jev-1.13", effort: "auto" },
-      escalation: { provider: "openrouter", model: "proveedor/modelo-superior", effort: "high" },
+      escalation: {
+        provider: "openrouter",
+        model: "proveedor/modelo-superior",
+        effort: "high",
+      },
       reason: null,
     },
     judge: juezFalso(),
@@ -169,7 +172,9 @@ describe("la referencia de compuertas y los evaluadores que el motor implementa"
     // exactamente como quedó `cascade`.
     expect(EVALUADORES.length).toBeGreaterThan(3);
     for (const id of EVALUADORES) {
-      expect(referencia, `la referencia no nombra el evaluador ${id}`).toContain(`\`${id}\``);
+      expect(referencia, `la referencia no nombra el evaluador ${id}`).toContain(
+        `\`${id}\``,
+      );
     }
   });
 
@@ -202,7 +207,10 @@ describe("la referencia del recibo y lo que el motor escribe en un escalamiento"
       .map((bloque) => JSON.parse(bloque[1] as string) as Record<string, unknown>)
       .filter((bloque) => Array.isArray(bloque["escalations"]));
 
-    expect(bloques.length, "la referencia no publica ningún ejemplo de escalamiento").toBeGreaterThan(0);
+    expect(
+      bloques.length,
+      "la referencia no publica ningún ejemplo de escalamiento",
+    ).toBeGreaterThan(0);
     for (const bloque of bloques) {
       const ejemplo = (bloque["escalations"] as Record<string, unknown>[])[0];
       expect(ejemplo).toBeDefined();

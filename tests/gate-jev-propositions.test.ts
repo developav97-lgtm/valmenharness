@@ -22,7 +22,10 @@ let lab: string;
 
 const paths = () => ({ root: lab, ticketsDir: "tickets" });
 
-function configured(stage: "analysis" | "plan" | "integration", verdict = "required"): string {
+function configured(
+  stage: "analysis" | "plan" | "integration",
+  verdict = "required",
+): string {
   return [
     "name: Laboratorio",
     "jev-propositions:",
@@ -40,19 +43,35 @@ function configured(stage: "analysis" | "plan" | "integration", verdict = "requi
   ].join("\n");
 }
 
-function evaluator(values: Record<string, number>): typeof import("../packages/gate-jev/src/index.js").evaluateWithJev {
-  return (async ({ propositions }: { propositions: readonly { id: string; kind: string }[] }) => {
-    const analysis = propositions.some((proposition) => proposition.id === "diagnostico_explica_el_sintoma");
+function evaluator(
+  values: Record<string, number>,
+): typeof import("../packages/gate-jev/src/index.js").evaluateWithJev {
+  return (async ({
+    propositions,
+  }: {
+    propositions: readonly { id: string; kind: string }[];
+  }) => {
+    const analysis = propositions.some(
+      (proposition) => proposition.id === "diagnostico_explica_el_sintoma",
+    );
     return {
-    answers: propositions.map((proposition) =>
-      proposition.kind === "choice"
-        ? { id: proposition.id, kind: "choice" as const, choice: analysis ? "completa" : "completo" }
-        : { id: proposition.id, kind: "noul" as const, value: values[proposition.id] ?? 0.99 },
-    ),
-    model: { provider: "laboratorio", model: "jev-fijo", resolvedVersion: "jev-fijo@1" },
-    usage: { inputTokens: 12, outputTokens: 3, costUsd: 0.02 },
-    latencyMs: 1,
-  };
+      answers: propositions.map((proposition) =>
+        proposition.kind === "choice"
+          ? {
+              id: proposition.id,
+              kind: "choice" as const,
+              choice: analysis ? "completa" : "completo",
+            }
+          : {
+              id: proposition.id,
+              kind: "noul" as const,
+              value: values[proposition.id] ?? 0.99,
+            },
+      ),
+      model: { provider: "laboratorio", model: "jev-fijo", resolvedVersion: "jev-fijo@1" },
+      usage: { inputTokens: 12, outputTokens: 3, costUsd: 0.02 },
+      latencyMs: 1,
+    };
   }) as unknown as typeof import("../packages/gate-jev/src/index.js").evaluateWithJev;
 }
 
@@ -84,7 +103,9 @@ describe("jev-propositions", () => {
 
     expect(conConfiguracion.stdout).toContain("custom-alcance-aprobado=0.81");
     const receipt = readReceipts(paths(), TICKET).at(-1);
-    expect(receipt?.propositions.find((item) => item.id === "custom-alcance-aprobado")?.policy).toEqual({
+    expect(
+      receipt?.propositions.find((item) => item.id === "custom-alcance-aprobado")?.policy,
+    ).toEqual({
       approveAt: 0.8,
       blockAt: 0.2,
     });
@@ -117,10 +138,12 @@ describe("jev-propositions", () => {
       DEFAULT_POLICY,
     );
     expect(result.outcome).toBe("block");
-    expect(result.propositions.find((item) => item.id === "custom-umbral")?.policy).toEqual({
-      approveAt: 0.8,
-      blockAt: 0.2,
-    });
+    expect(result.propositions.find((item) => item.id === "custom-umbral")?.policy).toEqual(
+      {
+        approveAt: 0.8,
+        blockAt: 0.2,
+      },
+    );
   });
 
   it("una inform queda en el recibo sin decidir", () => {
@@ -151,7 +174,9 @@ describe("jev-propositions", () => {
       ),
       expanded.policy,
     );
-    expect(result.propositions.find((item) => item.id === "custom-contexto")?.verdict).toBe(false);
+    expect(result.propositions.find((item) => item.id === "custom-contexto")?.verdict).toBe(
+      false,
+    );
     expect(result.outcome).toBe("approve");
   });
 
@@ -163,12 +188,13 @@ describe("jev-propositions", () => {
     expect(validation.state.solicitudOriginal).not.toBe("");
     expect(validation.state.planAprobado).not.toBe("");
     expect(validation.state.alcanceDeclarado).not.toBe("");
-    expect(validation.propositions.map((item) => item.id)).toEqual(["custom-alcance-aprobado"]);
+    expect(validation.propositions.map((item) => item.id)).toEqual([
+      "custom-alcance-aprobado",
+    ]);
 
-    const result = decide(
-      validation.propositions,
-      [{ id: "custom-alcance-aprobado", kind: "noul", value: 0.2 }],
-    );
+    const result = decide(validation.propositions, [
+      { id: "custom-alcance-aprobado", kind: "noul", value: 0.2 },
+    ]);
     expect(result.outcome).toBe("block");
   });
 });

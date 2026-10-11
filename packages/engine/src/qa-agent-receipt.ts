@@ -18,7 +18,8 @@ export interface ComandoDeRecibo {
   readonly outputSha256: string;
 }
 
-export type ResultadoContraBase = "no-aplica" | "fallo-como-se-esperaba" | "no-reproduce-el-defecto";
+export type ResultadoContraBase =
+  "no-aplica" | "fallo-como-se-esperaba" | "no-reproduce-el-defecto";
 
 export interface ReciboQaAgent {
   readonly kind: "qa-agent-receipt";
@@ -56,7 +57,11 @@ export function leerRecibosQaAgent(root: string, ticketId?: string): ReciboQaAge
     if (linea.trim() === "") continue;
     try {
       const r = JSON.parse(linea) as ReciboQaAgent;
-      if (r.kind === "qa-agent-receipt" && (ticketId === undefined || r.ticketId === ticketId)) recibos.push(r);
+      if (
+        r.kind === "qa-agent-receipt" &&
+        (ticketId === undefined || r.ticketId === ticketId)
+      )
+        recibos.push(r);
     } catch {
       // Un renglón truncado no borra los anteriores.
     }
@@ -66,29 +71,40 @@ export function leerRecibosQaAgent(root: string, ticketId?: string): ReciboQaAge
 
 /** Los pasos exactos para repetir la verificación sobre el mismo árbol. */
 export function reproducirReciboQaAgent(recibo: ReciboQaAgent): string[] {
-  const pasos = [`git worktree add --detach <carpeta> ${recibo.delivered}   # árbol ${recibo.treeHash}`];
-  pasos.push(`restaurar .valmen/config.yaml y los scripts de pruebas desde el commit base ${recibo.base}`);
+  const pasos = [
+    `git worktree add --detach <carpeta> ${recibo.delivered}   # árbol ${recibo.treeHash}`,
+  ];
+  pasos.push(
+    `restaurar .valmen/config.yaml y los scripts de pruebas desde el commit base ${recibo.base}`,
+  );
   for (const c of recibo.commands) {
-    const donde = c.fase === "base" ? `worktree del commit base ${recibo.base}` : "worktree entregado";
+    const donde =
+      c.fase === "base" ? `worktree del commit base ${recibo.base}` : "worktree entregado";
     pasos.push(`(${donde}) ${c.invocacion}   # salida esperada: código ${c.exitCode}`);
   }
   return pasos;
 }
 
 /** El último recibo de un ticket con la línea que ocupa en el archivo (1-based). */
-export function ultimoReciboConLinea(root: string, ticketId: string): { readonly recibo: ReciboQaAgent; readonly linea: number } | null {
+export function ultimoReciboConLinea(
+  root: string,
+  ticketId: string,
+): { readonly recibo: ReciboQaAgent; readonly linea: number } | null {
   const ruta = qaAgentReceiptsPath(root);
   if (!existsSync(ruta)) return null;
   let ultimo: { recibo: ReciboQaAgent; linea: number } | null = null;
-  readFileSync(ruta, "utf8").split("\n").forEach((texto, indice) => {
-    if (texto.trim() === "") return;
-    try {
-      const r = JSON.parse(texto) as ReciboQaAgent;
-      if (r.kind === "qa-agent-receipt" && r.ticketId === ticketId) ultimo = { recibo: r, linea: indice + 1 };
-    } catch {
-      // Un renglón truncado no cuenta.
-    }
-  });
+  readFileSync(ruta, "utf8")
+    .split("\n")
+    .forEach((texto, indice) => {
+      if (texto.trim() === "") return;
+      try {
+        const r = JSON.parse(texto) as ReciboQaAgent;
+        if (r.kind === "qa-agent-receipt" && r.ticketId === ticketId)
+          ultimo = { recibo: r, linea: indice + 1 };
+      } catch {
+        // Un renglón truncado no cuenta.
+      }
+    });
   return ultimo;
 }
 

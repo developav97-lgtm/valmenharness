@@ -40,11 +40,18 @@ import {
   hasSubstantivePlan,
   isCriticalPlanGate,
 } from "@valmen/core";
-import { type GateReceipt, criterioDeclarado, extractCriteriaSpecs, hashState } from "@valmen/gate";
+import {
+  type GateReceipt,
+  criterioDeclarado,
+  extractCriteriaSpecs,
+  hashState,
+} from "@valmen/gate";
 
-import type { RegistryPaths } from "./discovery.js";
+import { motivoDeArbolNoVigente } from "./arbol-probado.js";
+import { type RegistryPaths, codeReviewExigida } from "./discovery.js";
 import { aprobacionDePlanVigente } from "./plan-approval.js";
 import { currentReceipts, veredictoDeCompuerta } from "./receipts.js";
+import { revisionPendiente } from "./revision-exigida.js";
 import { buildGateState } from "./state.js";
 
 /** Lo que toca hacer ahora con un ticket. */
@@ -102,7 +109,7 @@ const NO_GIT_NI_ALCANCE =
 /** El registro de la aprobación del plan: un evento con actor, fuente, frase y hash (R-CTRL-001). */
 const REGISTRAR_APROBACION =
   "regístrala como evento con `valmen approve-plan --id <ID> --actor <nombre> --source cli " +
-  "--quote \"<sus palabras literales>\"` (una frase en `## Plan` ya no basta)";
+  '--quote "<sus palabras literales>"` (una frase en `## Plan` ya no basta)';
 
 /** La salvedad de las decisiones humanas: quién puede registrarlas. */
 const SALVEDAD_DE_DELEGACION =
@@ -140,8 +147,7 @@ function citar(recibo: GateReceipt): string {
 function criteriosSinVerificacion(ticket: ParsedTicket): number {
   const criterios = extractCriteriaSpecs(ticket.sections["Criterios de aceptación"] ?? "");
   if (criterios.length === 0) return -1;
-  return criterios.filter((criterio) => !criterioDeclarado(criterio))
-    .length;
+  return criterios.filter((criterio) => !criterioDeclarado(criterio)).length;
 }
 
 /**
@@ -396,8 +402,8 @@ export function computeNextStep(
         );
       }
       // Lo que el motor exige para entregar: que el recibo exista, que sea del estado
-      // actual y que no haya bloqueado. Un recibo viejo prueba lo que se probó, no lo
-      // que se entrega.
+      // actual, del árbol de trabajo actual y que no haya bloqueado. Un recibo viejo
+      // prueba lo que se probó, no lo que se entrega.
       if (mecanica.outcome === "block") {
         return paso(
           "verificación",
@@ -416,6 +422,23 @@ export function computeNextStep(
               `ticket: lo que se probó no es lo que se entrega. Vuelve a correr ${comando}.`,
           ],
           base,
+        );
+      }
+      // El texto del ticket no es el código: lo mismo que `transition` compara con el árbol.
+      const motivoDeArbol = motivoDeArbolNoVigente(mecanica, paths, id, "qa-mechanical");
+      if (motivoDeArbol !== null) {
+        return paso("verificación", [motivoDeArbol], base);
+      }
+      // Con `code-review: exigida` la revisión del diff va antes de entregar (R-REV-004): la misma
+      // lectura que impone `transition`.
+      const revision = codeReviewExigida(paths.root)
+        ? revisionPendiente(paths, id, recibos)
+        : null;
+      if (revision !== null) {
+        return paso(
+          "revisión del diff",
+          [revision.motivo, `Con la revisión al día, ${entregar}.`],
+          revision.persona ? { ...base, alto: revision.motivo } : base,
         );
       }
       return paso(

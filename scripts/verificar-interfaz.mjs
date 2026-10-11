@@ -236,27 +236,69 @@ const FEATURE = {
 /** Responde cada ruta con la forma que la vista espera. */
 function respuesta(ruta) {
   if (ruta.includes("/api/health")) return { root: "/proyecto" };
-  if (ruta.includes("/api/authorizations/options")) return {
-    source: "registry",
-    modules: [{ module: "WEB", tickets: 2 }, { module: "ENGINE", tickets: 1 }],
-    approval: {
-      types: ["BUGFIX", "IMPROVEMENT", "CHORE", "FEATURE", "SYNC", "INTEGRATION", "AGENT"],
-      stages: ["analysis", "plan"],
-      modes: ["on-approve", "reviewer"],
-      impacts: ["sync_impact", "migration_impact", "docker_impact"],
-    },
-    qa: { types: ["BUGFIX", "IMPROVEMENT", "CHORE", "FEATURE"] },
-  };
-  if (ruta.includes("/api/portafolio")) return {
-    available: true,
-    reason: null,
-    range: { desde: "2026-10-01", hasta: "2026-10-31" },
-    summary: { projects: 2, available: 1, unavailable: 1, gatesPending: 3, waiting: 2, costUsd: 0.125 },
-    projects: [
-      { projectId: "laboratorio", name: "Proyecto laboratorio", root: "/proyecto", current: true, available: true, reason: null, gatesPending: 3, correctionsPending: 1, waiting: 2, usage: { costUsd: 0.125, evaluations: 7, unreadable: 0 } },
-      { projectId: "remoto", name: "Proyecto remoto", root: "/no-disponible", current: false, available: false, reason: "La raíz no está disponible en esta máquina.", gatesPending: null, correctionsPending: null, waiting: null, usage: null },
-    ],
-  };
+  if (ruta.includes("/api/authorizations/options"))
+    return {
+      source: "registry",
+      modules: [
+        { module: "WEB", tickets: 2 },
+        { module: "ENGINE", tickets: 1 },
+      ],
+      approval: {
+        types: [
+          "BUGFIX",
+          "IMPROVEMENT",
+          "CHORE",
+          "FEATURE",
+          "SYNC",
+          "INTEGRATION",
+          "AGENT",
+        ],
+        stages: ["analysis", "plan"],
+        modes: ["on-approve", "reviewer"],
+        impacts: ["sync_impact", "migration_impact", "docker_impact"],
+      },
+      qa: { types: ["BUGFIX", "IMPROVEMENT", "CHORE", "FEATURE"] },
+    };
+  if (ruta.includes("/api/portafolio"))
+    return {
+      available: true,
+      reason: null,
+      range: { desde: "2026-10-01", hasta: "2026-10-31" },
+      summary: {
+        projects: 2,
+        available: 1,
+        unavailable: 1,
+        gatesPending: 3,
+        waiting: 2,
+        costUsd: 0.125,
+      },
+      projects: [
+        {
+          projectId: "laboratorio",
+          name: "Proyecto laboratorio",
+          root: "/proyecto",
+          current: true,
+          available: true,
+          reason: null,
+          gatesPending: 3,
+          correctionsPending: 1,
+          waiting: 2,
+          usage: { costUsd: 0.125, evaluations: 7, unreadable: 0 },
+        },
+        {
+          projectId: "remoto",
+          name: "Proyecto remoto",
+          root: "/no-disponible",
+          current: false,
+          available: false,
+          reason: "La raíz no está disponible en esta máquina.",
+          gatesPending: null,
+          correctionsPending: null,
+          waiting: null,
+          usage: null,
+        },
+      ],
+    };
   if (ruta.includes("/gates")) {
     return {
       // Un gate con proposiciones que solo un modelo puede responder: es lo que
@@ -545,7 +587,8 @@ function respuesta(ruta) {
  * terminado hasta que su promesa se resuelve.
  */
 export async function disparar(nodo, tipo, evento = {}) {
-  for (const accion of nodo._oyentes?.[tipo] ?? []) await accion({ type: tipo, target: nodo, ...evento });
+  for (const accion of nodo._oyentes?.[tipo] ?? [])
+    await accion({ type: tipo, target: nodo, ...evento });
   for (let i = 0; i < 20; i += 1) await new Promise((r) => setImmediate(r));
 }
 
@@ -730,7 +773,18 @@ export const VISTAS = [
  * explica el número también se comprueba.
  */
 const AFIRMACIONES = [
-  ["portafolio", ["Proyecto laboratorio", "3 compuertas pendientes", "2 corridas detenidas", "USD 0.125000", "7 evaluaciones", "No disponible", "Totales parciales"]],
+  [
+    "portafolio",
+    [
+      "Proyecto laboratorio",
+      "3 compuertas pendientes",
+      "2 corridas detenidas",
+      "USD 0.125000",
+      "7 evaluaciones",
+      "No disponible",
+      "Totales parciales",
+    ],
+  ],
   [
     "ticket",
     [

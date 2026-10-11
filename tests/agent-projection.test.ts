@@ -122,7 +122,7 @@ describe("proyección a opencode y Claude (Markdown)", () => {
       expect(opencode.path).toBe(`.opencode/agents/${agent.id}.md`);
       expect(opencode.content).toMatch(/^---$/m);
       expect(opencode.content).toMatch(/^mode: subagent$/m);
-      expect(opencode.content).toMatch(/^ {2}edit: (allow|deny)$/m);
+      expect(opencode.content).toMatch(/^ {2}edit:\n {4}"\*": (allow|deny)$/m);
       expect(opencode.content).toContain("GENERADO POR valmen");
 
       const claude = renderClaudeAgent(agent, []);

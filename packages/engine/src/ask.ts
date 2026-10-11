@@ -64,7 +64,9 @@ export interface AskRequest {
 function activeTickets(paths: RegistryPaths): readonly AskTicket[] {
   return listTickets(paths)
     .filter((row: TicketRow) => row.workflowStatus !== "closed")
-    .sort((a, b) => (a.created === b.created ? a.id.localeCompare(b.id) : a.created < b.created ? -1 : 1))
+    .sort((a, b) =>
+      a.created === b.created ? a.id.localeCompare(b.id) : a.created < b.created ? -1 : 1,
+    )
     .map((row) => ({
       id: row.id,
       title: row.title,

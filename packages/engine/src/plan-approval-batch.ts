@@ -23,7 +23,10 @@ import {
   verifyApproval,
   type IssuedApproval,
 } from "./approval.js";
-import { elegibilidadDeAprobacion, aprobarPorAutorizacion } from "./approval-eligibility.js";
+import {
+  elegibilidadDeAprobacion,
+  aprobarPorAutorizacion,
+} from "./approval-eligibility.js";
 import { type RegistryPaths, findTicket, planApprovalSources } from "./discovery.js";
 import { readJourneys } from "./journeys.js";
 import {
@@ -67,20 +70,30 @@ export function emitirAprobacionesDeJornada(request: {
   const { project, secret, ahora } = request;
   const jornada = readJourneys(project).find((j) => j.journeyId === request.journeyId);
   if (jornada === undefined) {
-    throw new Error(`La jornada "${request.journeyId}" no existe en el proyecto autorizado.`);
+    throw new Error(
+      `La jornada "${request.journeyId}" no existe en el proyecto autorizado.`,
+    );
   }
   const ttl = request.ttlHours ?? 24;
   const planes: PlanListo[] = [];
   const sinCodigo: { ticket: string; motivo: string }[] = [];
 
-  for (const entrada of [...jornada.tickets].sort((a, b) => a.priority - b.priority || a.order - b.order)) {
+  for (const entrada of [...jornada.tickets].sort(
+    (a, b) => a.priority - b.priority || a.order - b.order,
+  )) {
     const ubicado = findTicket(project.paths, entrada.ticketId);
     if (ubicado === undefined) continue;
     const documento = parseTicket(ubicado.text);
     if (documento.fields.workflow_status !== "planned") continue;
     if (aprobacionDePlanVigente(documento).estado === "vigente") continue;
-    if (veredictoDeCompuerta(readReceipts(project.paths, entrada.ticketId), "plan").tipo !== "aprobada") {
-      sinCodigo.push({ ticket: entrada.ticketId, motivo: "la compuerta del plan no está aprobada" });
+    if (
+      veredictoDeCompuerta(readReceipts(project.paths, entrada.ticketId), "plan").tipo !==
+      "aprobada"
+    ) {
+      sinCodigo.push({
+        ticket: entrada.ticketId,
+        motivo: "la compuerta del plan no está aprobada",
+      });
       continue;
     }
     // Un ticket de seguridad se aprueba con la máquina delante, y los techos de riesgo e impactos
@@ -105,7 +118,11 @@ export function emitirAprobacionesDeJornada(request: {
       receipt: `plan:${planHash}`,
       stateHash: planHash,
       revision: "1",
-      ceiling: { subjectType: "ticket", riskLevel: documento.fields.risk_level, impacts: declaredImpactIds(documento) },
+      ceiling: {
+        subjectType: "ticket",
+        riskLevel: documento.fields.risk_level,
+        impacts: declaredImpactIds(documento),
+      },
       now: ahora,
       ttlHours: ttl,
     });
@@ -114,7 +131,12 @@ export function emitirAprobacionesDeJornada(request: {
       continue;
     }
     appendApproval(project.paths, emision.issued);
-    planes.push({ ticket: entrada.ticketId, title: documento.fields.title, code: emision.issued.code, planHash });
+    planes.push({
+      ticket: entrada.ticketId,
+      title: documento.fields.title,
+      code: emision.issued.code,
+      planHash,
+    });
   }
 
   let lote: { code: string } | null = null;
@@ -137,7 +159,11 @@ export function emitirAprobacionesDeJornada(request: {
         kind: "approval-batch",
         code: emisionLote.issued.code,
         journeyId: request.journeyId,
-        items: planes.map((p) => ({ ticket: p.ticket, code: p.code, planHash: p.planHash })),
+        items: planes.map((p) => ({
+          ticket: p.ticket,
+          code: p.code,
+          planHash: p.planHash,
+        })),
         issuedAt: emisionLote.issued.issuedAt,
         expiresAt: emisionLote.issued.expiresAt,
       };
@@ -180,18 +206,35 @@ function aprobarPlanDeCodigo(request: {
 }): ResultadoDeAprobacion {
   const normalizado = normalizarCodigo(request.codigo);
   const emitidos = readApprovalLog(request.paths).filter(
-    (e): e is IssuedApproval => e.kind === "approval-issued" && normalizarCodigo(e.code) === normalizado,
+    (e): e is IssuedApproval =>
+      e.kind === "approval-issued" && normalizarCodigo(e.code) === normalizado,
   );
   const emitido = emitidos[emitidos.length - 1];
   if (emitido === undefined) {
-    return { ticket: "?", ok: false, detalle: "ese código no corresponde a ninguna aprobación emitida para este proyecto" };
+    return {
+      ticket: "?",
+      ok: false,
+      detalle: "ese código no corresponde a ninguna aprobación emitida para este proyecto",
+    };
   }
-  if (readApprovalLog(request.paths).some((e) => e.kind === "approval-consumed" && normalizarCodigo(e.code) === normalizado)) {
-    return { ticket: emitido.ticket, ok: false, detalle: `el código ${emitido.code} ya se usó` };
+  if (
+    readApprovalLog(request.paths).some(
+      (e) => e.kind === "approval-consumed" && normalizarCodigo(e.code) === normalizado,
+    )
+  ) {
+    return {
+      ticket: emitido.ticket,
+      ok: false,
+      detalle: `el código ${emitido.code} ya se usó`,
+    };
   }
   const verificado = verifyApproval(request.secret, emitido.token, request.ahora);
   if (!verificado.ok) {
-    return { ticket: emitido.ticket, ok: false, detalle: `el código ${emitido.code} no sirve: ${verificado.detail}` };
+    return {
+      ticket: emitido.ticket,
+      ok: false,
+      detalle: `el código ${emitido.code} no sirve: ${verificado.detail}`,
+    };
   }
   const claims = verificado.claims;
   if (claims.gate !== SUJETO_PLAN) {
@@ -202,7 +245,12 @@ function aprobarPlanDeCodigo(request: {
     };
   }
   const ubicado = findTicket(request.paths, claims.ticket);
-  if (ubicado === undefined) return { ticket: claims.ticket, ok: false, detalle: "el ticket ya no está en el registro" };
+  if (ubicado === undefined)
+    return {
+      ticket: claims.ticket,
+      ok: false,
+      detalle: "el ticket ya no está en el registro",
+    };
   const documento = parseTicket(ubicado.text);
   if (hashDelPlan(documento) !== claims.stateHash) {
     return {
@@ -224,7 +272,11 @@ function aprobarPlanDeCodigo(request: {
       ...(request.env === undefined ? {} : { env: request.env }),
     });
   } catch (error) {
-    return { ticket: claims.ticket, ok: false, detalle: error instanceof Error ? error.message : String(error) };
+    return {
+      ticket: claims.ticket,
+      ok: false,
+      detalle: error instanceof Error ? error.message : String(error),
+    };
   }
   // Se consume **después** de que la aprobación quedó registrada: al revés, un fallo dejaría el
   // código quemado y el plan sin aprobar.
@@ -235,7 +287,11 @@ function aprobarPlanDeCodigo(request: {
     actor: request.actor,
     decision: "approve",
   });
-  return { ticket: claims.ticket, ok: true, detalle: `plan aprobado con el código ${emitido.code}` };
+  return {
+    ticket: claims.ticket,
+    ok: true,
+    detalle: `plan aprobado con el código ${emitido.code}`,
+  };
 }
 
 /**
@@ -266,17 +322,38 @@ export function aprobarPorCodigo(request: {
   }
   const normalizado = normalizarCodigo(request.codigo);
   const lote = readApprovalLog(request.paths)
-    .filter((e): e is ApprovalBatch => e.kind === "approval-batch" && normalizarCodigo(e.code) === normalizado)
+    .filter(
+      (e): e is ApprovalBatch =>
+        e.kind === "approval-batch" && normalizarCodigo(e.code) === normalizado,
+    )
     .at(-1);
   if (lote === undefined) return [aprobarPlanDeCodigo(request)];
 
   if (new Date(lote.expiresAt).getTime() <= request.ahora.getTime()) {
-    return [{ ticket: `LOTE-${lote.journeyId}`, ok: false, detalle: `el código ${lote.code} venció el ${lote.expiresAt}` }];
+    return [
+      {
+        ticket: `LOTE-${lote.journeyId}`,
+        ok: false,
+        detalle: `el código ${lote.code} venció el ${lote.expiresAt}`,
+      },
+    ];
   }
-  if (readApprovalLog(request.paths).some((e) => e.kind === "approval-consumed" && normalizarCodigo(e.code) === normalizado)) {
-    return [{ ticket: `LOTE-${lote.journeyId}`, ok: false, detalle: `el código ${lote.code} ya se usó` }];
+  if (
+    readApprovalLog(request.paths).some(
+      (e) => e.kind === "approval-consumed" && normalizarCodigo(e.code) === normalizado,
+    )
+  ) {
+    return [
+      {
+        ticket: `LOTE-${lote.journeyId}`,
+        ok: false,
+        detalle: `el código ${lote.code} ya se usó`,
+      },
+    ];
   }
-  const resultados = lote.items.map((item) => aprobarPlanDeCodigo({ ...request, codigo: item.code }));
+  const resultados = lote.items.map((item) =>
+    aprobarPlanDeCodigo({ ...request, codigo: item.code }),
+  );
   if (resultados.every((r) => r.ok)) {
     appendApproval(request.paths, {
       kind: "approval-consumed",
@@ -288,7 +365,6 @@ export function aprobarPorCodigo(request: {
   }
   return resultados;
 }
-
 
 export interface PlanAprobadoPorAutorizacion {
   readonly ticket: string;
@@ -333,12 +409,16 @@ export function aprobarPlanesElegiblesDeJornada(request: {
   const { project } = request;
   const jornada = readJourneys(project).find((j) => j.journeyId === request.journeyId);
   if (jornada === undefined) {
-    throw new Error(`La jornada "${request.journeyId}" no existe en el proyecto autorizado.`);
+    throw new Error(
+      `La jornada "${request.journeyId}" no existe en el proyecto autorizado.`,
+    );
   }
   const aprobados: PlanAprobadoPorAutorizacion[] = [];
   const pendientes: PlanPendienteDeJornada[] = [];
 
-  for (const entrada of [...jornada.tickets].sort((a, b) => a.priority - b.priority || a.order - b.order)) {
+  for (const entrada of [...jornada.tickets].sort(
+    (a, b) => a.priority - b.priority || a.order - b.order,
+  )) {
     const ticket = entrada.ticketId;
     const ubicado = findTicket(project.paths, ticket);
     if (ubicado === undefined) continue;
@@ -347,7 +427,8 @@ export function aprobarPlanesElegiblesDeJornada(request: {
     const title = documento.fields.title;
     const vigente = aprobacionDePlanVigente(documento);
     // Aprobado por una persona o por otra vía: no es de esta orden.
-    if (vigente.estado === "vigente" && vigente.aprobacion.source !== FUENTE_AUTORIZACION) continue;
+    if (vigente.estado === "vigente" && vigente.aprobacion.source !== FUENTE_AUTORIZACION)
+      continue;
 
     try {
       let autorizacion: string;
@@ -355,19 +436,38 @@ export function aprobarPlanesElegiblesDeJornada(request: {
         // Quedó registrada pero no se movió: se termina el movimiento sin otro cupo ni otro evento.
         autorizacion = vigente.aprobacion.authorizationId ?? "?";
       } else {
-        const e = elegibilidadDeAprobacion({ paths: project.paths, ticketId: ticket, etapa: "plan", ahora });
+        const e = elegibilidadDeAprobacion({
+          paths: project.paths,
+          ticketId: ticket,
+          etapa: "plan",
+          ahora,
+        });
         if (!e.elegible) {
           pendientes.push({
             ticket,
             title,
-            motivos: e.reglas.filter((r) => !r.cumple).map((r) => `${r.regla}: ${r.detalle}`),
+            motivos: e.reglas
+              .filter((r) => !r.cumple)
+              .map((r) => `${r.regla}: ${r.detalle}`),
             derivableAlRevisor: e.derivableAlRevisor,
           });
           continue;
         }
-        autorizacion = aprobarPorAutorizacion({ paths: project.paths, ticketId: ticket, etapa: "plan", ahora, env }).autorizacion.id;
+        autorizacion = aprobarPorAutorizacion({
+          paths: project.paths,
+          ticketId: ticket,
+          etapa: "plan",
+          ahora,
+          env,
+        }).autorizacion.id;
       }
-      transition({ paths: project.paths, ticketId: ticket, entity: "ticket", to: "approved", now: () => ahora });
+      transition({
+        paths: project.paths,
+        ticketId: ticket,
+        entity: "ticket",
+        to: "approved",
+        now: () => ahora,
+      });
       aprobados.push({ ticket, title, autorizacion });
     } catch (error) {
       pendientes.push({
@@ -381,7 +481,9 @@ export function aprobarPlanesElegiblesDeJornada(request: {
 
   const lineas = [
     `Planes aprobados por autorización — ${request.journeyId}: ${aprobados.length}; pendientes de una persona: ${pendientes.length}`,
-    ...aprobados.map((a) => `✓ ${a.ticket} — ${a.title}: aprobado por la autorización ${a.autorizacion}`),
+    ...aprobados.map(
+      (a) => `✓ ${a.ticket} — ${a.title}: aprobado por la autorización ${a.autorizacion}`,
+    ),
   ];
   for (const p of pendientes) {
     lineas.push(

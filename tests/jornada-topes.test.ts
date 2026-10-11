@@ -8,7 +8,14 @@
  * fallo del ejecutor o de la verificación deja una parada que se avisa en formato de decisión,
  * y una parada no se reintenta sola: solo una persona la libera.
  */
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -33,14 +40,18 @@ const projectId = "topes-lab";
 const A = "FEATURE-TOPES-UNO-20261005";
 const B = "FEATURE-TOPES-DOS-20261005";
 const AHORA = new Date("2026-10-06T08:00:00.000Z");
-const CRITERIO = '- [ ] El laboratorio termina correctamente.\n      <!-- test: node -e "process.exit(0)" -->';
-const PRUEBAS = "Contrato de entrega: ejecutar `node -e \"process.exit(0)\"`; esperado: código 0.";
+const CRITERIO =
+  '- [ ] El laboratorio termina correctamente.\n      <!-- test: node -e "process.exit(0)" -->';
+const PRUEBAS =
+  'Contrato de entrega: ejecutar `node -e "process.exit(0)"`; esperado: código 0.';
 
 let home: string;
 let root: string;
 const proyecto = () => resolveAuthorizedProject({ projectId, home });
 
-function politica(limites: { perDay?: number; concurrent?: number; minutes?: string } = {}): void {
+function politica(
+  limites: { perDay?: number; concurrent?: number; minutes?: string } = {},
+): void {
   writeFileSync(
     join(root, ".valmen", "config.yaml"),
     [
@@ -79,7 +90,8 @@ function politica(limites: { perDay?: number; concurrent?: number; minutes?: str
 }
 
 function estado(id: string): string {
-  return parseTicket(readFileSync(join(root, "tickets", "2026", id, "ticket.md"), "utf8")).fields.workflow_status;
+  return parseTicket(readFileSync(join(root, "tickets", "2026", id, "ticket.md"), "utf8"))
+    .fields.workflow_status;
 }
 
 function implementador(opciones: { contrato?: boolean } = {}) {
@@ -110,7 +122,14 @@ beforeEach(() => {
   );
   politica();
   for (const id of [A, B]) {
-    writeFixtureTicket(root, { id, workflowStatus: "approved", type: "FEATURE", module: "TOPES", criterios: CRITERIO, pruebas: PRUEBAS });
+    writeFixtureTicket(root, {
+      id,
+      workflowStatus: "approved",
+      type: "FEATURE",
+      module: "TOPES",
+      criterios: CRITERIO,
+      pruebas: PRUEBAS,
+    });
   }
   armarJornada({ project: proyecto(), tickets: [A, B], ahora: () => AHORA });
 });
@@ -118,11 +137,23 @@ beforeEach(() => {
 afterEach(() => rmSync(home, { recursive: true, force: true }));
 
 const avanzar = (extra: Partial<Parameters<typeof avanzarJornada>[0]> = {}) =>
-  avanzarJornada({ project: proyecto(), home, ahora: () => AHORA, fase: "preparacion", ...extra });
+  avanzarJornada({
+    project: proyecto(),
+    home,
+    ahora: () => AHORA,
+    fase: "preparacion",
+    ...extra,
+  });
 
 /** La preparación necesita tickets en intake. */
 function enIntake(...ids: string[]): void {
-  for (const id of ids) writeFixtureTicket(root, { id, workflowStatus: "intake", type: "FEATURE", module: "TOPES" });
+  for (const id of ids)
+    writeFixtureTicket(root, {
+      id,
+      workflowStatus: "intake",
+      type: "FEATURE",
+      module: "TOPES",
+    });
 }
 
 const preparador = () => vi.fn(() => ({ status: 0, stdout: "preparado", stderr: "" }));
@@ -157,14 +188,18 @@ describe("los topes", () => {
     let interno: Awaited<ReturnType<typeof avanzar>> | null = null;
     const ejecutor = () => {
       // Mientras la primera sesión corre, otro avance (capacidad de la máquina: 3) choca con el tope de la política (1).
-      void avanzar({ ejecutarPreparacion: () => ({ status: 0, stdout: "no debe correr", stderr: "" }) }).then((r) => {
+      void avanzar({
+        ejecutarPreparacion: () => ({ status: 0, stdout: "no debe correr", stderr: "" }),
+      }).then((r) => {
         interno = r;
       });
       return { status: 0, stdout: "preparado", stderr: "" };
     };
     await avanzar({ ejecutarPreparacion: ejecutor });
     await new Promise((resolve) => setTimeout(resolve, 50));
-    expect((interno as Awaited<ReturnType<typeof avanzar>> | null)?.detalle ?? "").toContain("Tope concurrente alcanzado");
+    expect(
+      (interno as Awaited<ReturnType<typeof avanzar>> | null)?.detalle ?? "",
+    ).toContain("Tope concurrente alcanzado");
   });
 });
 
@@ -194,30 +229,51 @@ describe("el tiempo máximo y los fallos", () => {
     const avisos: string[] = [];
     await avanzar({
       ejecutarPreparacion: () => ({ status: 3, stdout: "", stderr: "se cayó" }),
-      notificar: (t) => { avisos.push(t); return { delivered: true, detail: "ok" }; },
+      notificar: (t) => {
+        avisos.push(t);
+        return { delivered: true, detail: "ok" };
+      },
     });
     const parada = readAutonomousStops({ root, ticketsDir: "tickets" })[0];
     expect(parada?.ticketId).toBe(A);
     expect(parada?.reason).toBe("executor-failed");
     const lineas = (avisos[0] ?? "").split("\n");
-    expect(lineas[0]).toMatch(/^Decisión: FEATURE-TOPES-UNO-20261005 — la jornada se detuvo por executor-failed/);
+    expect(lineas[0]).toMatch(
+      /^Decisión: FEATURE-TOPES-UNO-20261005 — la jornada se detuvo por executor-failed/,
+    );
     expect(lineas.some((l) => /^A\) .* → /.test(l))).toBe(true);
     expect(lineas.some((l) => /^B\) .* → /.test(l))).toBe(true);
     expect(lineas.some((l) => l.startsWith("Recomiendo"))).toBe(true);
     // Y deja constancia para que el vigilante no repita el aviso.
-    expect(readApprovalLog({ root, ticketsDir: "tickets" }).some((e) => e.kind === "autonomous-stop-notice")).toBe(true);
+    expect(
+      readApprovalLog({ root, ticketsDir: "tickets" }).some(
+        (e) => e.kind === "autonomous-stop-notice",
+      ),
+    ).toBe(true);
   });
 
   it("una verificación fallida (sin contrato de pruebas) deja una parada de verificación", async () => {
     await ejecutar(implementador({ contrato: false }));
-    expect(readAutonomousStops({ root, ticketsDir: "tickets" })[0]?.reason).toBe("verification-failed");
+    expect(readAutonomousStops({ root, ticketsDir: "tickets" })[0]?.reason).toBe(
+      "verification-failed",
+    );
   });
 });
 
 describe("una parada no se reintenta sola", () => {
   it("en preparación, un ticket parado no se vuelve a elegir hasta que una persona lo libera", async () => {
-    writeFixtureTicket(root, { id: A, workflowStatus: "intake", type: "FEATURE", module: "TOPES" });
-    writeFixtureTicket(root, { id: B, workflowStatus: "planned", type: "FEATURE", module: "TOPES" });
+    writeFixtureTicket(root, {
+      id: A,
+      workflowStatus: "intake",
+      type: "FEATURE",
+      module: "TOPES",
+    });
+    writeFixtureTicket(root, {
+      id: B,
+      workflowStatus: "planned",
+      type: "FEATURE",
+      module: "TOPES",
+    });
     const falla = vi.fn(() => ({ status: 2, stdout: "", stderr: "falló" }));
     const primero = await avanzar({ fase: "preparacion", ejecutarPreparacion: falla });
     expect(primero.ticketId).toBe(A);
@@ -228,7 +284,10 @@ describe("una parada no se reintenta sola", () => {
     expect(falla).toHaveBeenCalledTimes(1);
 
     // Una persona la libera: queda un renglón más y el despacho puede volver a elegirlo.
-    const liberada = journeyClearStopCommand({ project: projectId, id: A, actor: "Juan Andrade" }, { home });
+    const liberada = journeyClearStopCommand(
+      { project: projectId, id: A, actor: "Juan Andrade" },
+      { home },
+    );
     expect(liberada.exitCode).toBe(0);
     expect(paradasActivas({ root, ticketsDir: "tickets" })).toHaveLength(0);
     expect(readAutonomousStops({ root, ticketsDir: "tickets" })).toHaveLength(1);
@@ -237,8 +296,12 @@ describe("una parada no se reintenta sola", () => {
   });
 
   it("liberar sin responsable o un ticket sin parada se rechaza", () => {
-    expect(journeyClearStopCommand({ project: projectId, id: A, actor: "x" }, { home }).exitCode).not.toBe(0);
-    expect(journeyClearStopCommand({ project: projectId, id: A, actor: "" }, { home }).exitCode).not.toBe(0);
+    expect(
+      journeyClearStopCommand({ project: projectId, id: A, actor: "x" }, { home }).exitCode,
+    ).not.toBe(0);
+    expect(
+      journeyClearStopCommand({ project: projectId, id: A, actor: "" }, { home }).exitCode,
+    ).not.toBe(0);
   });
 });
 
@@ -247,8 +310,16 @@ describe("el tiempo máximo en la política", () => {
     const base = readFileSync(join(root, ".valmen", "config.yaml"), "utf8");
     expect(readAutonomousConfig(parseConfig(base)).limits.maxMinutes).toBe(60);
     politica({ minutes: "5" });
-    expect(readAutonomousConfig(parseConfig(readFileSync(join(root, ".valmen", "config.yaml"), "utf8"))).limits.maxMinutes).toBe(5);
+    expect(
+      readAutonomousConfig(
+        parseConfig(readFileSync(join(root, ".valmen", "config.yaml"), "utf8")),
+      ).limits.maxMinutes,
+    ).toBe(5);
     politica({ minutes: "0" });
-    expect(() => readAutonomousConfig(parseConfig(readFileSync(join(root, ".valmen", "config.yaml"), "utf8")))).toThrow(/max-minutes/);
+    expect(() =>
+      readAutonomousConfig(
+        parseConfig(readFileSync(join(root, ".valmen", "config.yaml"), "utf8")),
+      ),
+    ).toThrow(/max-minutes/);
   });
 });

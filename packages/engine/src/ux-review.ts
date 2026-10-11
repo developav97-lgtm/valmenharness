@@ -39,7 +39,11 @@ export interface RevisionUx {
   readonly conPantallas: boolean;
   readonly archivos: readonly string[];
   readonly colores: number;
-  readonly skills: readonly { readonly id: string; readonly estado: string; readonly motivo: string }[];
+  readonly skills: readonly {
+    readonly id: string;
+    readonly estado: string;
+    readonly motivo: string;
+  }[];
   readonly descripcion: string;
   readonly evidencia: string | null;
 }
@@ -47,8 +51,11 @@ export interface RevisionUx {
 export function revisarUx(request: RevisarUxRequest): RevisionUx {
   const { paths } = request;
   if (request.informe !== undefined) {
-    const ruta = isAbsolute(request.informe) ? request.informe : join(paths.root, request.informe);
-    if (!existsSync(ruta)) fail(`El informe de Impeccable no existe: ${request.informe}.`, EXIT_REFERENCE);
+    const ruta = isAbsolute(request.informe)
+      ? request.informe
+      : join(paths.root, request.informe);
+    if (!existsSync(ruta))
+      fail(`El informe de Impeccable no existe: ${request.informe}.`, EXIT_REFERENCE);
   }
   const staged = request.staged === true;
   const archivos = pendingChanges(paths.root, staged).files.filter(isUiFile);
@@ -68,7 +75,11 @@ export function revisarUx(request: RevisarUxRequest): RevisionUx {
   const skills = Object.values(SKILLS_DE_UX).map((id) => {
     const skill = estados.find((candidata) => candidata.id === id);
     return skill === undefined
-      ? { id, estado: "no declarada", motivo: "el proyecto no la declara en external-skills" }
+      ? {
+          id,
+          estado: "no declarada",
+          motivo: "el proyecto no la declara en external-skills",
+        }
       : { id, estado: skill.estado, motivo: skill.motivo };
   });
 

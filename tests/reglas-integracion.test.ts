@@ -28,27 +28,44 @@ describe("la rama de trabajo", () => {
     const porDefecto = config("name: Demo\n");
     expect(porDefecto.workBranch).toBe(DEFAULT_WORK_BRANCH);
     expect(porDefecto.protectedBranches).toEqual([...DEFAULT_PROTECTED_BRANCHES]);
-    expect(resolveWorkBranch(porDefecto.workBranch, new Date("2026-10-06T08:00:00Z"))).toBe("valmen/jornada-20261006");
+    expect(resolveWorkBranch(porDefecto.workBranch, new Date("2026-10-06T08:00:00Z"))).toBe(
+      "valmen/jornada-20261006",
+    );
   });
 
   it("se declara en execution.work-branch", () => {
     const declarada = config("execution:\n  work-branch: trabajo/<AAAAMMDD>\n");
-    expect(resolveWorkBranch(declarada.workBranch, new Date("2026-10-06T08:00:00Z"))).toBe("trabajo/20261006");
+    expect(resolveWorkBranch(declarada.workBranch, new Date("2026-10-06T08:00:00Z"))).toBe(
+      "trabajo/20261006",
+    );
   });
 
-  it.each(["main", "master", "production"])("una configuración que apunta a %s se rechaza con el mensaje de la clave", (rama) => {
-    expect(() => config(`execution:\n  work-branch: ${rama}\n`)).toThrow(/execution\.work-branch.*protegida/);
-  });
+  it.each(["main", "master", "production"])(
+    "una configuración que apunta a %s se rechaza con el mensaje de la clave",
+    (rama) => {
+      expect(() => config(`execution:\n  work-branch: ${rama}\n`)).toThrow(
+        /execution\.work-branch.*protegida/,
+      );
+    },
+  );
 
   it("una rama declarada como protegida por el proyecto también se rechaza", () => {
-    expect(() => config("execution:\n  work-branch: release\n  protected-branches:\n    - release\n")).toThrow(/protegida/);
+    expect(() =>
+      config("execution:\n  work-branch: release\n  protected-branches:\n    - release\n"),
+    ).toThrow(/protegida/);
     // Y una plantilla que hoy se resuelve a una protegida.
-    expect(() => config("execution:\n  work-branch: main\n  protected-branches:\n    - main\n")).toThrow(/protegida/);
+    expect(() =>
+      config("execution:\n  work-branch: main\n  protected-branches:\n    - main\n"),
+    ).toThrow(/protegida/);
   });
 
   it("una forma inválida se rechaza", () => {
-    expect(() => config("execution:\n  work-branch: con espacios\n")).toThrow(/no es un nombre de rama válido/);
-    expect(() => config("execution:\n  work-branch: a..b\n")).toThrow(/no es un nombre de rama válido/);
+    expect(() => config("execution:\n  work-branch: con espacios\n")).toThrow(
+      /no es un nombre de rama válido/,
+    );
+    expect(() => config("execution:\n  work-branch: a..b\n")).toThrow(
+      /no es un nombre de rama válido/,
+    );
   });
 });
 
@@ -100,7 +117,12 @@ describe("las reglas de commit", () => {
   });
 
   it("acumula todas las violaciones, no solo la primera", () => {
-    const r = reglasDeIntegracion({ ...BASE, ramaActual: "main", arbolLimpioAlEmpezar: false, hallazgosDeSecretos: 1 });
+    const r = reglasDeIntegracion({
+      ...BASE,
+      ramaActual: "main",
+      arbolLimpioAlEmpezar: false,
+      hallazgosDeSecretos: 1,
+    });
     expect(r.violaciones.length).toBeGreaterThanOrEqual(3);
   });
 });
@@ -137,21 +159,34 @@ describe("el git que una jornada puede ejecutar", () => {
 
   it("rechaza las banderas peligrosas aunque la operación esté permitida", () => {
     expect(motivoDeGitProhibido(["commit", "--amend"])).toContain("--amend");
-    expect(motivoDeGitProhibido(["commit", "--no-verify", "-m", "x"])).toContain("--no-verify");
+    expect(motivoDeGitProhibido(["commit", "--no-verify", "-m", "x"])).toContain(
+      "--no-verify",
+    );
     expect(motivoDeGitProhibido(["checkout", "-f", "main"])).toContain("-f");
   });
 
   it("add exige archivos explícitos: nada de -A, --all, punto ni -u", () => {
-    for (const argumentos of [["add", "-A"], ["add", "--all"], ["add", "."], ["add", "-u"], ["add", "a.ts"], ["add", "--"]]) {
+    for (const argumentos of [
+      ["add", "-A"],
+      ["add", "--all"],
+      ["add", "."],
+      ["add", "-u"],
+      ["add", "a.ts"],
+      ["add", "--"],
+    ]) {
       expect(motivoDeGitProhibido(argumentos), argumentos.join(" ")).not.toBeNull();
     }
   });
 
   it("ejecutarGitPermitido rechaza antes de lanzar nada y lanza lo permitido", () => {
     const ejecutor = vi.fn(() => ({ status: 0, stdout: "ok", stderr: "" }));
-    expect(() => ejecutarGitPermitido("/x", ["push"], ejecutor)).toThrow(/no está permitida/);
+    expect(() => ejecutarGitPermitido("/x", ["push"], ejecutor)).toThrow(
+      /no está permitida/,
+    );
     expect(ejecutor).not.toHaveBeenCalled();
-    expect(ejecutarGitPermitido("/x", ["status", "--porcelain"], ejecutor).stdout).toBe("ok");
+    expect(ejecutarGitPermitido("/x", ["status", "--porcelain"], ejecutor).stdout).toBe(
+      "ok",
+    );
     expect(ejecutor).toHaveBeenCalledWith(["status", "--porcelain"], "/x");
   });
 });
@@ -185,8 +220,11 @@ describe("el avance de la rama de trabajo hacia main", () => {
 
   it("rechaza merge-base fuera de --is-ancestor y switch -c con más argumentos", () => {
     expect(motivoDeGitProhibido(["merge-base", "main", "x"])).toContain("merge-base");
-    expect(motivoDeGitProhibido(["merge-base", "--is-ancestor", "main"])).toContain("merge-base");
-    expect(motivoDeGitProhibido(["switch", "-c", "a", "main", "extra"])).toContain("switch");
+    expect(motivoDeGitProhibido(["merge-base", "--is-ancestor", "main"])).toContain(
+      "merge-base",
+    );
+    expect(motivoDeGitProhibido(["switch", "-c", "a", "main", "extra"])).toContain(
+      "switch",
+    );
   });
 });
-

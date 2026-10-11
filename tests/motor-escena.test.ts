@@ -63,16 +63,32 @@ function llegar(escena: ReturnType<typeof crearEscena>, ahoraMs = 0): void {
 
 describe("C1: estación por estado del ticket", () => {
   it("C1: in_progress queda en el índice 4 sin desvío", () => {
-    expect(estacionDe(fila("a", { ticketEstado: "in_progress" }), null)).toEqual({ indice: 4, desvio: false });
+    expect(estacionDe(fila("a", { ticketEstado: "in_progress" }), null)).toEqual({
+      indice: 4,
+      desvio: false,
+    });
     expect(ESTACIONES.map((e) => e.id)).toHaveLength(8);
-    expect(ESTACIONES.filter((e) => e.humano).map((e) => e.id)).toEqual(["approved", "awaiting_user_tests"]);
+    expect(ESTACIONES.filter((e) => e.humano).map((e) => e.id)).toEqual([
+      "approved",
+      "awaiting_user_tests",
+    ]);
   });
 });
 
 describe("C2: rótulo", () => {
   it("C2: faseConfirmada, luego faseInferida, luego ultimaHerramienta", () => {
-    expect(rotuloDe(fila("a", { faseConfirmada: "plan", faseInferida: "análisis", ultimaHerramienta: "Read" }))).toBe("plan");
-    expect(rotuloDe(fila("a", { faseInferida: "análisis", ultimaHerramienta: "Read" }))).toBe("análisis");
+    expect(
+      rotuloDe(
+        fila("a", {
+          faseConfirmada: "plan",
+          faseInferida: "análisis",
+          ultimaHerramienta: "Read",
+        }),
+      ),
+    ).toBe("plan");
+    expect(
+      rotuloDe(fila("a", { faseInferida: "análisis", ultimaHerramienta: "Read" })),
+    ).toBe("análisis");
     expect(rotuloDe(fila("a", { ultimaHerramienta: "Read" }))).toBe("Read");
     expect(rotuloDe(fila("a"))).toBe("");
   });
@@ -96,7 +112,10 @@ describe("C4: desvío sin historial", () => {
     const a = escena.agentes.get("a")!;
     expect(a.estacion).toBe(0);
     expect(a.desvio).toBe(true);
-    expect(estacionDe(fila("b", { ticketEstado: null }), null)).toEqual({ indice: 0, desvio: false });
+    expect(estacionDe(fila("b", { ticketEstado: null }), null)).toEqual({
+      indice: 0,
+      desvio: false,
+    });
   });
 });
 
@@ -182,7 +201,12 @@ describe("C8: salida al terminar", () => {
 
 describe("C9: estados visuales", () => {
   it("C9: exactamente cuatro y la fila principal da principal", () => {
-    expect([...ESTADOS_VISUALES]).toEqual(["trabajando", "esperando", "termino", "principal"]);
+    expect([...ESTADOS_VISUALES]).toEqual([
+      "trabajando",
+      "esperando",
+      "termino",
+      "principal",
+    ]);
     expect(estadoVisualDe(fila("p", { principal: true }))).toBe("principal");
     expect(estadoVisualDe(fila("a", { estado: "termino" }))).toBe("termino");
   });
@@ -215,7 +239,15 @@ describe("C11: la escena no se reinicia al refrescar", () => {
     actualizar(escena, filas, 0);
     llegar(escena);
     const foto = () =>
-      [...escena.agentes.values()].map((a) => [a.id, a.x, a.y, a.objetivoX, a.objetivoY, a.carril, a.paso]);
+      [...escena.agentes.values()].map((a) => [
+        a.id,
+        a.x,
+        a.y,
+        a.objetivoX,
+        a.objetivoY,
+        a.carril,
+        a.paso,
+      ]);
     const antes = foto();
     const mapa = escena.agentes;
     for (let i = 0; i < 10; i++) actualizar(escena, filas, 1000 + i);
@@ -243,7 +275,15 @@ describe("C13: mundo inválido", () => {
       puestoPrincipal: { x: 1 },
     } as unknown as Mundo;
     const errores = validarMundo(malo).join("\n");
-    for (const campo of ["nombre", "lema", "pregunta", "estaciones", "posicion", "dibujar", "puestoPrincipal"]) {
+    for (const campo of [
+      "nombre",
+      "lema",
+      "pregunta",
+      "estaciones",
+      "posicion",
+      "dibujar",
+      "puestoPrincipal",
+    ]) {
       expect(errores).toContain(campo);
     }
     expect(() => crearEscena(malo)).toThrow(/Mundo inválido/);
@@ -254,7 +294,8 @@ describe("C13: mundo inválido", () => {
 describe("C14: el motor no conoce mundos", () => {
   it("C14: el código no nombra ningún mundo y uno ficticio funciona", () => {
     const codigo = leerMotor().toLowerCase();
-    for (const nombre of ["pasteler", "invernadero", "centro de control"]) expect(codigo).not.toContain(nombre);
+    for (const nombre of ["pasteler", "invernadero", "centro de control"])
+      expect(codigo).not.toContain(nombre);
     const mundo = mundoFicticio({ id: "otro", puestoPrincipal: { x: 0, y: 0 } });
     const escena = crearEscena(mundo);
     actualizar(escena, [fila("a", { ticketEstado: "closed" })], 0);
@@ -276,5 +317,8 @@ describe("C15: sin lienzo ni azar", () => {
 });
 
 function leerMotor(): string {
-  return readFileSync(fileURLToPath(new URL("../packages/server/web/agentes/motor.js", import.meta.url)), "utf8");
+  return readFileSync(
+    fileURLToPath(new URL("../packages/server/web/agentes/motor.js", import.meta.url)),
+    "utf8",
+  );
 }

@@ -4,8 +4,8 @@ id: FEATURE-BENCH-FRICCION-CORPUS-20261010
 title: Corpus inicial de rechazos y comparación de dos corridas
 type: FEATURE
 module: BENCH
-workflow_status: intake
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -48,34 +48,170 @@ Ninguno.
 
 ## Descripción funcional
 
-- Alcance:
-- Usuario o rol afectado:
-- Comportamiento actual:
-- Comportamiento esperado:
+- Alcance: la medición de fricción de `bench/friccion/`, fuera de `packages/`. Su corpus pasa de un recorrido a los ocho rechazos frecuentes del motor que nombra R-FRI-003. `run` sale con un código distinto de 0 si un recorrido no pudo medirse, y marca como no soportado el que el binario no tiene. Dos comandos nuevos: `list`, que muestra el corpus, y `compare`, que contrasta dos archivos de resultados (R-FRI-004). De R-MSG-004 este ticket cubre la parte de la medición: un mensaje que nombra una salida que no destraba queda clasificado como callejón sin salida. La prueba estática de los mensajes es de FEATURE-CLI-PRUEBA-MENSAJES-20261010. El código del producto no se toca.
+- Usuario o rol afectado: quien mantiene el CLI `valmen` —el PO y los agentes que cambian sus mensajes— y la CI, que corre las pruebas de la medición.
+- Comportamiento actual: el corpus tiene solo `salto-ilegal` (`bench/friccion/src/recorridos.ts:12-36`). `run` sale con 0 siempre que escribió el archivo, aunque un recorrido quede `fallido` (`bench/friccion/src/cli.ts:129-148`). No hay `list` ni `compare`: todo comando que no sea `run` se rechaza (`bench/friccion/src/cli.ts:110-112`). Un recorrido cuyo comando el binario no tiene queda `fallido`, igual que un armado roto (`bench/friccion/src/medicion.ts:120-126`).
+- Comportamiento esperado: `list` muestra los ocho recorridos con su nombre y la operación que bloquean. `run` mide cada uno contra el binario dado, escribe el archivo y, si alguno quedó `fallido`, sale con un código distinto de 0. Uno que el binario no soporta queda `no_soportado` y no falla la corrida. `compare` muestra, por recorrido y en total, los bloqueos en banda, fuera de banda y callejones de dos corridas.
 
 ## Diagnóstico
 
-- Causa comprobada (con `ruta:línea`):
+- Memoria consultada (`buscar_memoria`, módulo bench y síntoma corpus, clasificación y comparación): nada resuelto sobre la medición. Aplican dos aprendizajes: AP-001 (`.valmen/memory/aprendizajes.md:5`), criterios atómicos y pasos con archivo y símbolo; y AP-003 (`.valmen/memory/aprendizajes.md:21`), que la compuerta respete la porción de R-MSG-004 asignada a este ticket.
+- Causa comprobada (con `ruta:línea`): no es un defecto. Faltan el corpus y la comparación, que FEATURE-BENCH-FRICCION-RUNNER-20261010 dejó fuera de su alcance (sus «Exclusiones»). Lo que hay hoy en el código integrado:
+  1. El corpus tiene un solo recorrido (`bench/friccion/src/recorridos.ts:12-36`). Su comentario ya remite a este ticket (`bench/friccion/src/recorridos.ts:5-6`).
+  2. `run` devuelve 0 tras escribir el archivo (`bench/friccion/src/cli.ts:129-148`), y la ayuda lo declara así (`bench/friccion/src/cli.ts:39`).
+  3. `armar` convierte en `FalloDeRecorrido` cualquier paso que sale distinto de 0 (`bench/friccion/src/medicion.ts:120-126`), y `medirRecorrido` lo vuelve `fallido` (`bench/friccion/src/medicion.ts:233-235`). No distingue «el binario no tiene este comando». `ResultadoDeRecorrido.estado` solo admite `medido` o `fallido` (`bench/friccion/src/tipos.ts:63`), y `Totales` no tiene dónde contar un no soportado (`bench/friccion/src/tipos.ts:69-75`).
+  4. `extraerSalidas` reconoce una salida solo entre comillas invertidas (`bench/friccion/src/clasificador.ts:53-62`). El motor también cita salidas en una línea sangrada que empieza por `valmen `, en al menos ocho mensajes: por ejemplo, `packages/engine/src/transition.ts:203`, `packages/engine/src/transition.ts:322`, `packages/engine/src/transition.ts:402`, `packages/engine/src/approval-eligibility.ts:368` y `packages/cli/src/hermes.ts:366`. Con el extractor actual, esos bloqueos cuentan como fuera de banda aunque nombran su salida, y R-MSG-004 nunca se comprobaría sobre ellos. En la entrega sin recibo (rechazo 2, abajo) se comprobó que la salida sangrada destraba.
+- El mensaje de hoy de cada rechazo del corpus, comprobado con `packages/cli/dist/main.js` (tras `npm run build` del worktree). Cada uno se corrió en un escenario armado como `crearEscenario` (`bench/friccion/src/aislamiento.ts:173-214`), con `HOME` temporal, entorno armado desde cero y trampas de modelo; ninguna trampa anotó una llamada.
+  1. Salto ilegal: `transition --to approved` desde `intake` sale con código 3 y «Transición de ticket intake -> approved no permitida.» (`packages/core/src/transitions.ts:142`). No cita salida.
+  2. Compuerta pedida sin su recibo previo: `transition --to awaiting_user_tests` desde `in_progress`, sin recibo de `qa-mechanical`. Sale con código 3 y «La entrega requiere correr la verificación mecánica…», con la salida en una línea sangrada: `valmen gate qa-mechanical --id <ticket>` (`packages/engine/src/transition.ts:194-208`, llamada en `packages/engine/src/transition.ts:452`).
+     - Es la única transición que falla por no tener el recibo de una compuerta. Entrar a `planned` o a `approved` sin recibo no falla (`packages/engine/src/transition.ts:280`).
+     - Con un criterio `test:` autorizado en `test-commands`, la salida da APPROVE con código 0 y el reintento pasa: destraba.
+     - Con solo criterios `verify: manual`, en cambio, la compuerta da REVIEW con código 3 y el reintento igual pasa.
+  3. `sync --check` desactualizado: tras un `sync` y una regla nueva en `.valmen/rules/`, sale con código 2 y «Hay 1 archivo(s) generados desactualizados o editados a mano; ejecute `valmen sync`: AGENTS.md» (`packages/cli/src/commands.ts:917-924`). `valmen sync` sale con 0, y el reintento también: destraba.
+  4. Integración con el árbol sucio: `journey worktree integrate --id <ticket>`, con un archivo sin commitear en el checkout principal, sale con código 3 y «El checkout principal tiene cambios sin commit (…): limpia antes de integrar.» (`packages/engine/src/worktree-integrar.ts:88-91`, despachado en `packages/cli/src/worktree.ts:44-54`). La salida está en prosa.
+  5. `resume` de un ticket inexistente: sale con código 2 y «La ruta canónica solicitada no existe.» (`packages/cli/src/commands.ts:483-486`). No nombra el identificador ni una salida.
+  6. Bandera mal escrita: `resume --idd <ticket>` sale con código 2 y «La bandera --idd no existe para resume. Las que acepta: --id, --cliente, --quiet (más las globales …).». El mensaje sale de `packages/cli/src/command-table.ts:679-695`; se lanza en `packages/cli/src/main.ts:786` y se convierte en código 2 en `packages/cli/src/main.ts:1555-1559`. Es el rechazo que declara R-MSG-003: la salida es reescribir la bandera, no correr otro comando.
+  7. QA sin referencia de build: `qa-start --id <ticket> --environment local`, en `in_qa`, sale con código 3 y «qa-start requiere --environment y --build-reference trazables.» (`packages/engine/src/append.ts:501-504`). Esa comprobación va antes que la del estado (`packages/engine/src/append.ts:507-510`), así que hoy el mensaje es el mismo en cualquier estado.
+  8. Cierre sin `## Consumo de IA`: `close-attempt … --qa-status approved`, en `qa_approved` y con el bloque vacío, sale con código 3. Cita `` `valmen add-ai-usage --id <ticket> --source "<opencode|hermes|codex|manual>:<referencia>" --confidence high …` `` (`packages/engine/src/append.ts:974-983`).
+     - Corrida tal como la cita, con `<referencia>` resuelto, sale con 2: «source: tiene que empezar con uno de los orígenes conocidos…».
+     - La alternativa entre `<…|…>` no es un marcador que `resolverMarcadores` complete (`bench/friccion/src/clasificador.ts:68-81`). Es un callejón sin salida: el caso de R-MSG-004.
+- Cómo se llega sin modelo a cada estado, comprobado con el mismo binario:
+  - El ticket se escribe como archivo fijo, con el diagnóstico, el plan con la línea de aprobación, un criterio `test: node --version` y el resultado del PO ya en `## Pruebas`. Desde ahí, en orden:
+    - `transition` a `analyzed` y a `planned`;
+    - `approve-plan --source cli`;
+    - `transition` a `approved` y a `in_progress`;
+    - `gate qa-mechanical --evaluator command`, con `test-commands` declarado en la configuración del escenario;
+    - `transition` a `awaiting_user_tests` y a `in_qa`;
+    - `qa-start --build-reference worktree`, que exige un archivo versionado y modificado (`packages/engine/src/references.ts:125-138`);
+    - `qa-close --result approved` y `transition` a `qa_approved`.
+  - La integración necesita tres cosas:
+    - un `.gitignore` que excluya los worktrees, porque sin él la carpeta del worktree cuenta como cambio del checkout principal;
+    - el worktree creado con `git worktree add`, porque `journey worktree create` exige `node_modules` en el checkout principal;
+    - un commit en la rama del ticket, sin el cual integrar responde «nada que integrar» con 0 (`packages/engine/src/worktree-integrar.ts:73-75`).
+  - `sync` corre con una configuración mínima y sin `adopt`. Así se evita que `adopt` sondee `codegraph status --json` (`packages/cli/src/codegraph.ts:115`).
+- Riesgo de red comprobado. Cuando `journey worktree integrate` sí integra, recompila con `npx tsc --build tsconfig.build.json` (`packages/engine/src/worktree-integrar.ts:177-186`). En el escenario, sin `node_modules`, `npx` descargó un paquete del registro de npm. Hoy el recorrido 4 no llega ahí: su bloqueo no cita salida, así que no hay reintento. Pero un mensaje que mañana cite una salida sí llegaría, y el entorno aislado no lo impide (`bench/friccion/src/aislamiento.ts:101-114`).
 - Hipótesis pendientes:
+  - El corpus escribe el ticket con el contrato vigente (`schema_version: 2`). Con un binario anterior de otro contrato, el armado fallaría y el recorrido quedaría `fallido`, no `no_soportado`. Se asume correcto: es «no pudo armar su escenario» (R-FRI-004).
+  - «No soportado» se decidiría por el texto del binario: «Comando desconocido» (`packages/cli/src/command-table.ts:698-700`, y el de escritura que reconoce `bench/friccion/src/clasificador.ts:101-104`), o «La bandera … no existe para» en un paso del armado. Un binario que redacte distinto esos rechazos deja el recorrido `fallido`. Un subcomando ausente que responde con otro texto (por ejemplo, la lista de `packages/cli/src/worktree.ts:72-76`) se mediría como bloqueo.
+  - El tiempo: hoy las 44 pruebas de la medición tardan ~13 s. Armar el recorrido más largo (cierre) toma ~2 s de binario, y cada salida rearma su escenario; se estima ~15 s por corrida completa del corpus.
 - Consumidores afectados:
+  - Las pruebas de la medición contra el binario real: FR-C01, FR-C02, FR-C03, FR-C10 y FR-C11 corren `run` con `RECORRIDOS` completo (`bench/friccion/test/binario-real.test.ts:31-35`), y FR-C27 corre `medir` sobre todo el corpus (`bench/friccion/test/binario-real.test.ts:118-128`). Con ocho recorridos tardan más, y cualquier recorrido `fallido` las pone en rojo. FR-C01 exige además que todos queden `medido` (`bench/friccion/test/binario-real.test.ts:56-58`). Los criterios C1 a C31 del ticket anterior citan esas pruebas por nombre, así que los nombres se conservan.
+  - El paso de la CI que corre la medición (`.github/workflows/verificacion.yml:90-94`): gana tiempo de ejecución y no cambia de forma.
+  - El producto: nada. `bench/` está fuera del typecheck (`tsconfig.json:35`) y de `npm test` (`vitest.config.ts:78`), y la medición no importa `packages/` (FR-C30).
+  - Los archivos de resultados ya escritos (`version: 1`): `compare` los tiene que leer aunque no traigan el total nuevo de no soportados.
 - Archivos y flujo investigados:
+  - La spec s3 (`.valmen/features/guardas-verificacion-harness/spec/s3-friccion/spec.md:36-59`), R-MSG-003 y R-MSG-004 de s1 (`.valmen/features/guardas-verificacion-harness/spec/s1-mensajes/spec.md:46-67`) y D3 (`.valmen/features/guardas-verificacion-harness/design.md:24-30`).
+  - Toda `bench/friccion/src/` y `bench/friccion/test/`.
+  - En el CLI y el motor, los ocho rechazos citados arriba y lo necesario para armarlos: `packages/engine/src/transition.ts`, `packages/engine/src/append.ts`, `packages/engine/src/worktree-integrar.ts`, `packages/engine/src/references.ts`, `packages/cli/src/ceremony.ts`, `packages/cli/src/commands.ts` y `packages/cli/src/command-table.ts`.
+  - El flujo de una medición: `run` → por recorrido, escenario nuevo → armado → operación → salidas extraídas → por salida, escenario rearmado, operación, salida y reintento → clase → archivo.
 - Riesgos y compatibilidad:
-- Impactos de sync, migración, Docker o despliegue:
+  - Que el corpus toque la red. El recorrido de integración puede alcanzar `npx`, y hoy nada lo frena: el entorno aislado no lo cubre.
+  - Que un recorrido dependa de herramientas de la máquina. `adopt` sondea `codegraph`, y por eso no se usa. Los criterios del ticket fijo solo corren `node --version`, que está en el `PATH` aislado.
+  - Que una prueba fije el texto de un mensaje del producto. Un cambio de mensaje cambia la clase medida, que es lo que se quiere ver, pero rompe una prueba que la fije; el ticket que cambie el mensaje ajusta la prueba, como ya pasa con FR-C27.
+  - Compatibilidad con binarios anteriores: solo se usan comandos públicos y el texto de salida. Un recorrido que el binario no soporta no debe tumbar la corrida (R-FRI-004).
+- Impactos de sync, migración, Docker o despliegue: ninguno. Es una herramienta local de desarrollo fuera de `packages/`, sin datos persistidos, sin migraciones, sin contenedores y sin despliegue. La CI solo tarda más en el paso que ya existe.
 
 ## Plan
 
-- Gate de plan y aprobación:
-- Pasos ordenados:
-  <!-- Cada paso nombra archivo, símbolo o comando, y los criterios que cubre, por ejemplo
-       «(C1, C2)». Un paso que no dice dónde ni con qué se toca no se puede ejecutar ni
-       revisar, y la compuerta lo lee así. -->
-  1.
-  2.
-- Impactos declarados:
-  <!-- Una línea por cada impacto que el ticket declara, con las palabras de su proposición:
-       sincronización (datos ya sincronizados y clientes que todavía no se actualizaron),
-       migración (orden de aplicación y reversión) o contenedores (imagen y publicación). -->
-- Rollback (obligatorio):
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan). Confirma las cinco decisiones del plan: extraer también las salidas en línea sangrada, estado `no_soportado`, `run` sale con 1 si un recorrido falla, `rechazoCorrecto` para la bandera mal escrita y `npm_config_offline` en los recorridos.
+- Alcance: solo `bench/friccion/`:
+  - el corpus de ocho recorridos;
+  - el estado `no_soportado`;
+  - el código de salida de `run` ante un recorrido `fallido`;
+  - los comandos `list` y `compare`;
+  - la extracción de salidas citadas en una línea sangrada;
+  - `npm_config_offline` en el entorno aislado;
+  - y las pruebas de todo lo anterior.
+- Exclusiones:
+  - No se tocan `packages/`, la configuración de la raíz ni la CI: el paso de `.github/workflows/verificacion.yml:90-94` ya corre las pruebas de la medición.
+  - No se corrigen los mensajes del producto que la medición clasifique fuera de banda o como callejón, como el del cierre sin consumo. Quedan medidos en el archivo de resultados, y corregirlos es de otro ticket que decide el PO. La prueba estática de R-MSG-004 es de FEATURE-CLI-PRUEBA-MENSAJES-20261010.
+  - `compare` muestra; no decide si la fricción empeoró ni sale distinto de 0 por eso, porque la spec no pide un umbral.
+  - C38 y C39 de FEATURE-BENCH-FRICCION-RUNNER-20261010 (el binario de un commit anterior, con `npm ci` y red) siguen siendo de ese ticket y no se dan por hechos.
+- Decisiones del plan sobre las hipótesis del diagnóstico:
+  - «Compuerta pedida sin su recibo previo» es la entrega: `transition --to awaiting_user_tests` sin recibo de `qa-mechanical`. Es la única transición que falla por no tener un recibo (`packages/engine/src/transition.ts:194-208`).
+  - `bandera-mal-escrita` lleva `rechazoCorrecto`, con el motivo «R-MSG-003: la bandera no existe para el comando; el mensaje nombra las válidas y la salida es reescribir la operación». Los otros siete se miden como fricción, y `salto-ilegal` también, como pide el escenario de R-FRI-002.
+  - Una salida es, además, una línea del mensaje con al menos dos espacios de sangría seguidos de `valmen ` (la forma de `packages/engine/src/transition.ts:203`). Se extraen en el orden en que aparecen, y un comando citado en las dos formas se prueba una vez. Una línea sin sangría sigue sin contar (FR-C16 no cambia).
+  - Un recorrido queda `no_soportado` en tres casos, y entonces no suma fricción ni falla la corrida:
+    - un paso `binario` del armado que el binario rechaza con «Comando desconocido»;
+    - un paso `binario` del armado que rechaza con «La bandera … no existe para»;
+    - una operación que rechaza con «Comando desconocido».
+    La regla de la bandera mira solo el armado: la operación de `bandera-mal-escrita` sigue siendo un bloqueo.
+  - Códigos de salida de `run`: 0 si todos los recorridos quedaron `medido` o `no_soportado`; 1 si alguno quedó `fallido`, después de escribir el archivo; 2, como hoy, si los argumentos no sirven.
+  - El archivo sigue en `version: 1`: `no_soportado` es un estado más y `totales.no_soportados`, un campo más. `compare` recalcula los totales desde `recorridos` y no lee `totales`, así que también lee los archivos que escribió el ticket anterior.
+  - El entorno aislado lleva `npm_config_offline=true`: `npx` no descarga nada y falla con `ENOTCACHED` (comprobado en un `HOME` temporal). Cubre la recompilación de `journey worktree integrate`.
+  - Los recorridos que pasan por estados avanzados escriben el ticket con un paso `archivo`, como texto fijo del contrato vigente. No se usa `create`, porque su fecha cambiaría el texto; tampoco `adopt`, porque sondea `codegraph`.
+- Pasos ordenados (cada prueba se escribe antes que el código que cubre y se ve fallar primero):
+  1. `bench/friccion/src/tipos.ts`: `ResultadoDeRecorrido.estado` admite `"no_soportado"` y `Totales` suma `no_soportados: number`. (C20–C24)
+  2. `bench/friccion/src/aislamiento.ts`, `entornoAislado`: agrega `npm_config_offline: "true"`. La ayuda de `run` en `bench/friccion/src/cli.ts` lo nombra. Prueba CO-C16 en `bench/friccion/test/aislamiento.test.ts`. (C16)
+  3. `bench/friccion/src/clasificador.ts`: (C14, C15, C24)
+     - `extraerSalidas` suma a las salidas entre comillas invertidas las líneas que casan con `^\s{2,}valmen\s`, sin repetir un `comando`;
+     - la función nueva `esBanderaDesconocida(stderr)` reconoce «La bandera X no existe para»;
+     - `totalizar` cuenta cada recorrido `no_soportado` en `no_soportados`.
+     - Pruebas CO-C14, CO-C15 y CO-C24 en `bench/friccion/test/clasificador.test.ts`. FR-C15 y FR-C16 no cambian.
+  4. `bench/friccion/src/medicion.ts`: (C20, C21, C22)
+     - una clase nueva, `RecorridoNoSoportado`;
+     - `armar` la lanza cuando un paso `binario` falla con `esComandoDesconocido` o con `esBanderaDesconocida`;
+     - `medirRecorrido` la lanza cuando la operación falla con `esComandoDesconocido`, y la convierte en `estado: "no_soportado"` con su motivo.
+     - Pruebas CO-C20, CO-C21 y CO-C22 en `bench/friccion/test/aislamiento.test.ts`, con el binario falso de `bench/friccion/test/binario-falso.ts`.
+  5. `bench/friccion/src/recorridos.ts`: los ocho recorridos de `RECORRIDOS`, en el orden de R-FRI-003. Se agrega el texto fijo del ticket (`ticketDeLaMedicion(id)`: diagnóstico, plan con la línea de aprobación, el criterio `test: node --version` y el resultado del PO en `## Pruebas`). Cada recorrido lleva el armado que comprobó el diagnóstico: (C1, C5–C13)
+     - `salto-ilegal`: sin cambios.
+     - `entrega-sin-recibo`:
+       - armado: `.valmen/config.yaml` con `test-commands: [node --version]`, el ticket fijo, `transition` a `analyzed` y a `planned`, `approve-plan --source cli`, y `transition` a `approved` y a `in_progress`;
+       - operación: `transition --to awaiting_user_tests`.
+     - `sync-desactualizado`:
+       - armado: la configuración mínima, `sync` y una regla nueva en `.valmen/rules/`;
+       - operación: `sync --check`.
+     - `integracion-arbol-sucio`:
+       - armado: un `.gitignore` que excluye los worktrees, `create`, un commit, `git worktree add -b valmen/ticket-integra`, un commit en esa rama y un archivo sin commitear en el checkout principal;
+       - operación: `journey worktree integrate`.
+     - `resume-inexistente`:
+       - armado: `create` de un ticket;
+       - operación: `resume` con otro identificador.
+     - `bandera-mal-escrita`:
+       - armado: `create`;
+       - operación: `resume --idd`, con `rechazoCorrecto`.
+     - `qa-sin-build`:
+       - armado: el de la entrega, más `gate qa-mechanical --evaluator command` y `transition` a `awaiting_user_tests` y a `in_qa`;
+       - operación: `qa-start --environment local`.
+     - `cierre-sin-consumo`:
+       - armado: el de `qa-sin-build`, más un archivo versionado y modificado, `qa-start --build-reference worktree`, `qa-close --result approved` y `transition` a `qa_approved`;
+       - operación: `close-attempt --qa-status approved`, con `variables: { referencia: "friccion" }`.
+  6. `bench/friccion/src/comparacion.ts`, módulo nuevo de funciones puras: (C25–C32)
+     - `leerResultados(texto)` valida `version: 1` y la forma mínima del archivo;
+     - `comparar(antes, despues)` arma una fila por recorrido sobre la unión de los ids, con la clase o el estado de cada lado y `ausente` cuando falta. Recalcula desde `recorridos` los totales de cada lado y su diferencia, y avisa si los `corpus.sha256` difieren;
+     - `formatear` lo pasa a texto.
+     - Pruebas CO-C25 a CO-C32 en `bench/friccion/test/compare.test.ts` (nuevo), con archivos de resultados sintéticos.
+  7. `bench/friccion/src/cli.ts`: (C2–C4, C17–C19, C23, C25–C32)
+     - `main(argv, recorridos = RECORRIDOS)`: el segundo parámetro solo lo usan las pruebas;
+     - `list` imprime una línea por recorrido (`<id>  <nombre> — bloquea: <bloquea>`) y sale con 0;
+     - `compare <antes.json> <despues.json>` imprime lo de `comparacion.ts`. Sale con 2 si falta un argumento, si un archivo no existe o si no es un archivo de resultados;
+     - `run` devuelve 1 si `totales.fallidos > 0`, después de escribir el archivo;
+     - la ayuda lista los comandos y los tres códigos.
+     - Pruebas CO-C02 a CO-C04 en `bench/friccion/test/corpus.test.ts` (nuevo). CO-C17 a CO-C19 y CO-C23, en `bench/friccion/test/aislamiento.test.ts`.
+  8. `bench/friccion/test/corpus.test.ts`: CO-C01 compara los ids de `RECORRIDOS` con los ocho del corpus mínimo. (C1)
+  9. `bench/friccion/test/binario-real.test.ts`: un `describe` nuevo corre `medir` con `RECORRIDOS` una sola vez contra `packages/cli/dist/main.js`, en un `beforeAll` con tiempo propio de 300 s. De esa corrida leen FR-C27 y CO-C05 a CO-C13. Al ir en un `describe` aparte, `-t FR-C01` no dispara esa corrida. FR-C01, FR-C02, FR-C03, FR-C10 y FR-C11 conservan su nombre y lo que afirman. (C5–C13)
+  10. Verificación desde la raíz del worktree, con `npm run build` hecho antes: (C33–C37)
+      - `npx tsc -p bench/friccion/tsconfig.json` y `npx tsc -p bench/friccion/tsconfig.build.json`;
+      - `npx vitest run --config bench/friccion/vitest.config.ts`, que corre los archivos de prueba de `bench/friccion/test/`;
+      - `node node_modules/eslint/bin/eslint.js bench/friccion` y `node node_modules/prettier/bin/prettier.cjs --check bench/friccion`;
+      - `valmen secrets`.
+      - La suite del producto no se corre: este cambio no toca nada de lo que ella ve, como afirman FR-C28 y FR-C29.
+  11. Validación manual del PO con `bench/friccion/dist/cli.js`, desde la raíz del repositorio (C38):
+      - `npx tsc -p bench/friccion/tsconfig.build.json`;
+      - `node bench/friccion/dist/cli.js list`;
+      - dos corridas: `node bench/friccion/dist/cli.js run --binary packages/cli/dist/main.js --out "$TMPDIR/friccion-a.json"` y la misma con `--out "$TMPDIR/friccion-b.json"`;
+      - `node bench/friccion/dist/cli.js compare "$TMPDIR/friccion-a.json" "$TMPDIR/friccion-b.json"`.
+      - Esperado: ocho filas iguales y diferencia 0 en cada total.
+- Responsables: la implementación la hace el subagente de la fase (sonnet). La aprobación del plan, la validación manual y la QA son del PO.
+- Compatibilidad:
+  - `run` sale con 1 donde antes salía con 0 cuando un recorrido queda `fallido`. Hoy no lo consume nadie fuera de las pruebas: la CI corre las pruebas, no `run`.
+  - El archivo de resultados conserva `version: 1`, con un estado y un total más.
+  - El producto no cambia.
+- Impactos declarados: ninguno de sincronización, migración ni contenedores, y sin despliegue.
+- Rollback (obligatorio): revertir el commit del ticket en la rama (`git revert <hash>`).
+  - Vuelve `bench/friccion/` al corpus de un recorrido y a `run` con 0 siempre.
+  - No hay datos persistidos ni configuración de la máquina que deshacer.
+  - Los archivos de resultados viven donde los puso `--out`, fuera del repositorio.
 
 <!-- Los criterios de la sección siguiente se numeran C1…Cn, con una afirmación verificable por criterio
      —una frase con «y» son dos criterios—, y cada uno lleva debajo su anotación de
@@ -84,52 +220,293 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] R-MSG-004: Un mensaje de bloqueo que nombra una salida DEBE nombrar una que resuelva el bloqueo (solo la parte de «Corpus inicial de rechazos y comparación de dos corridas»; el resto lo cubre FEATURE-CLI-PRUEBA-MENSAJES-20261010)
-- [ ] R-FRI-003: El corpus inicial DEBE cubrir los rechazos frecuentes del motor
-- [ ] R-FRI-004: La medición DEBE comparar dos corridas y fallar si un recorrido no pudo medirse
+- [x] C1 (R-FRI-003): `RECORRIDOS` declara los ocho recorridos del corpus mínimo en el orden de R-FRI-003
+      <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t CO-C01 -->
+- [x] C2 (R-FRI-003): `list` imprime una línea por recorrido del corpus
+      <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t CO-C02 -->
+- [x] C3 (R-FRI-003): cada línea de `list` lleva el nombre de su recorrido
+      <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t CO-C03 -->
+- [x] C4 (R-FRI-003): cada línea de `list` lleva la operación que bloquea su recorrido
+      <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t CO-C04 -->
+- [x] C5 (R-FRI-003): con `packages/cli/dist/main.js`, los ocho recorridos quedan en estado `medido`
+      <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t CO-C05 -->
+- [x] C6 (R-FRI-003): con `packages/cli/dist/main.js`, el recorrido `entrega-sin-recibo` se clasifica `en_banda`
+      <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t CO-C06 -->
+- [x] C7 (R-FRI-003): con `packages/cli/dist/main.js`, el recorrido `sync-desactualizado` se clasifica `en_banda`
+      <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t CO-C07 -->
+- [x] C8 (R-FRI-003): con `packages/cli/dist/main.js`, el recorrido `integracion-arbol-sucio` se clasifica `fuera_de_banda`
+      <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t CO-C08 -->
+- [x] C9 (R-FRI-003): con `packages/cli/dist/main.js`, el recorrido `resume-inexistente` se clasifica `fuera_de_banda`
+      <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t CO-C09 -->
+- [x] C10 (R-FRI-003): con `packages/cli/dist/main.js`, el bloqueo del recorrido `bandera-mal-escrita` lleva `rechazoCorrecto`
+      <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t CO-C10 -->
+- [x] C11 (R-FRI-003): con `packages/cli/dist/main.js`, el recorrido `qa-sin-build` se clasifica `fuera_de_banda`
+      <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t CO-C11 -->
+- [x] C12 (R-MSG-004): con `packages/cli/dist/main.js`, el recorrido `cierre-sin-consumo` se clasifica `callejon_sin_salida`
+      <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t CO-C12 -->
+- [x] C13 (R-MSG-004): la salida que cita el bloqueo de `cierre-sin-consumo` queda registrada como ejecutada
+      <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t CO-C13 -->
+- [x] C14 (R-MSG-004): `extraerSalidas` devuelve el comando de una línea sangrada que empieza por `valmen `
+      <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t CO-C14 -->
+- [x] C15 (R-MSG-004): `extraerSalidas` ignora una línea sin sangría que empieza por `valmen `
+      <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t CO-C15 -->
+- [x] C16 (R-FRI-003): `entornoAislado` lleva `npm_config_offline` con el valor `true`
+      <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t CO-C16 -->
+- [x] C17 (R-FRI-004): `run` sale con 1 cuando un recorrido queda `fallido`
+      <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t CO-C17 -->
+- [x] C18 (R-FRI-004): con un recorrido `fallido`, `run` escribe el archivo de resultados
+      <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t CO-C18 -->
+- [x] C19 (R-FRI-004): el archivo de resultados marca como `fallido` el recorrido que no se pudo armar
+      <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t CO-C19 -->
+- [x] C20 (R-FRI-004): un paso del armado que el binario rechaza como comando desconocido deja el recorrido `no_soportado`
+      <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t CO-C20 -->
+- [x] C21 (R-FRI-004): un paso del armado con una bandera que el binario no declara deja el recorrido `no_soportado`
+      <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t CO-C21 -->
+- [x] C22 (R-FRI-004): una operación que el binario rechaza como comando desconocido deja el recorrido `no_soportado`
+      <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t CO-C22 -->
+- [x] C23 (R-FRI-004): `run` sale con 0 cuando el único recorrido sin medir está `no_soportado`
+      <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t CO-C23 -->
+- [x] C24 (R-FRI-004): `totalizar` cuenta cada recorrido `no_soportado` en `no_soportados`
+      <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t CO-C24 -->
+- [x] C25 (R-FRI-004): `compare` imprime una línea por recorrido con la clase de cada corrida
+      <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t CO-C25 -->
+- [x] C26 (R-FRI-004): `compare` imprime los totales de cada corrida por clase de bloqueo
+      <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t CO-C26 -->
+- [x] C27 (R-FRI-004): `compare` imprime la diferencia de cada total entre las dos corridas
+      <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t CO-C27 -->
+- [x] C28 (R-FRI-004): `compare` avisa cuando los `corpus.sha256` de los dos archivos difieren
+      <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t CO-C28 -->
+- [x] C29 (R-FRI-004): un recorrido que falta en una de las corridas aparece en `compare` como `ausente`
+      <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t CO-C29 -->
+- [x] C30 (R-FRI-004): `compare` sale con 2 cuando uno de los archivos no existe
+      <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t CO-C30 -->
+- [x] C31 (R-FRI-004): `compare` sale con 2 cuando un archivo no es de resultados con `version: 1`
+      <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t CO-C31 -->
+- [x] C32 (R-FRI-004): `compare` lee un archivo de resultados que no trae `totales.no_soportados`
+      <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -t CO-C32 -->
+- [x] C33: la medición compila con `bench/friccion/tsconfig.json`
+      <!-- test: npx tsc -p bench/friccion/tsconfig.json -->
+- [x] C34: el build propio de la medición compila
+      <!-- test: npx tsc -p bench/friccion/tsconfig.build.json -->
+- [x] C35: las pruebas de la medición pasan
+      <!-- test: npx vitest run --config bench/friccion/vitest.config.ts -->
+- [x] C36: el lint pasa sobre `bench/friccion`
+      <!-- test: node node_modules/eslint/bin/eslint.js bench/friccion -->
+- [x] C37: el formato pasa sobre `bench/friccion`
+      <!-- test: node node_modules/prettier/bin/prettier.cjs --check bench/friccion -->
+- [x] C38 (R-FRI-004): `compare` de dos corridas del binario actual hechas con `bench/friccion/dist/cli.js` no muestra diferencias
+      <!-- verify: manual -->
 
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación delegada de FEATURE-BENCH-FRICCION-CORPUS-20261010",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta verificar sus criterios.",
+    "expected": "Los criterios del ticket se cumplen y sus pruebas dan el resultado esperado.",
+    "evidence": [
+      "EVIDENCE-001"
+    ],
+    "affected_files": [
+      "bench/friccion/src/aislamiento.ts",
+      "bench/friccion/src/clasificador.ts",
+      "bench/friccion/src/cli.ts",
+      "bench/friccion/src/comparacion.ts",
+      "bench/friccion/src/medicion.ts",
+      "bench/friccion/src/recorridos.ts",
+      "bench/friccion/src/tipos.ts",
+      "bench/friccion/test/corpus.test.ts",
+      "bench/friccion/test/compare.test.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
 
-Pendiente.
+Hecha en `bench/friccion/`, sin tocar `packages/`, la configuración de la raíz ni la CI. Cada prueba nueva se escribió antes que su código y se vio fallar; las que ya pasaban (CO-C15 y la segunda de CO-C21) guardan lo que no cambia.
+
+- Pasos 1 a 4: `no_soportado` y `no_soportados` (`bench/friccion/src/tipos.ts`); `npm_config_offline` en el entorno aislado (`bench/friccion/src/aislamiento.ts`); salidas en línea sangrada, `esBanderaDesconocida` y el total nuevo (`bench/friccion/src/clasificador.ts`); `RecorridoNoSoportado` en `armar` y en `medirRecorrido` (`bench/friccion/src/medicion.ts`).
+- Paso 5: los ocho recorridos y el ticket fijo `ticketDeLaMedicion` (`bench/friccion/src/recorridos.ts`). Cada armado se comprobó contra `packages/cli/dist/main.js`. Dos detalles que el diagnóstico no traía: el ticket fijo necesita la línea `- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).` y dos pasos reales para entrar a `approved` (`packages/engine/src/transition.ts:370-395`), y la línea `- Resultado del PO: …` en `## Pruebas` para entrar a `in_qa` (`packages/core/src/validate.ts:318-338`). El recorrido de integración usa el ticket `FEATURE-FRICCION-INTEGRA-20261010`, porque el identificador da el slug del worktree y la rama (`packages/engine/src/worktree-git.ts:38-46`).
+- Pasos 6 y 7: `bench/friccion/src/comparacion.ts` (nuevo) y `bench/friccion/src/cli.ts`: `list`, `compare`, `main(argv, recorridos = RECORRIDOS)`, la ayuda y el código 1 de `run`.
+- Pasos 8 y 9: `bench/friccion/test/corpus.test.ts` y `bench/friccion/test/compare.test.ts` (nuevos) y el `describe` del corpus completo en `bench/friccion/test/binario-real.test.ts`, con una sola corrida en un `beforeAll` de 300 s.
+- Medido contra el binario de este árbol: salto-ilegal, integracion-arbol-sucio, resume-inexistente y qa-sin-build, fuera de banda; entrega-sin-recibo y sync-desactualizado, en banda; cierre-sin-consumo, callejón sin salida (su salida cita `<opencode|hermes|codex|manual>`, que ningún marcador resuelve), y bandera-mal-escrita, rechazo correcto. Los mensajes del producto no se tocan.
+
+Pruebas existentes que se ajustaron, con la autorización del PO (EST-009):
+
+- Autorización 1 (2026-10-10), transmitida por la coordinación: «Autorizar el cambio de FR-C25 (Recomendado)».
+  - `FR-C25 un rechazo correcto no suma en los totales de fricción`, `bench/friccion/test/clasificador.test.ts:216` (la línea agregada es la 235).
+  - Motivo: compara `totalizar` con `toEqual` contra los cinco campos de siempre, y el plan agrega `no_soportados`, que llega con 0. Solo se agrega `no_soportados: 0` a lo esperado; nombre y demás aserciones no cambian.
+- Autorización 2 (2026-10-10), transmitida por la coordinación: «Autorizar FR-C14 y las que sean consecuencia del plan (Recomendado)». Alcance exacto que fijó el PO: FR-C14 cambia su regla a `^romper`, sin el `$`; y cualquier otra prueba del ticket FEATURE-BENCH-FRICCION-RUNNER-20261010 que se ponga en rojo solo por las cinco decisiones del plan se ajusta de la misma forma mínima y se lista aquí; cualquier otra en rojo se reporta.
+  - `FR-C14 un armado que falla deja el recorrido fallido con el paso que falló`, `bench/friccion/test/aislamiento.test.ts:201` (la línea cambiada es la 202).
+  - Motivo: su regla `^romper$` no casaba con el paso `romper --ahora`; el binario falso respondía «Comando desconocido», que con el estado `no_soportado` del plan ya no es un fallo. Con `^romper` el paso sale de verdad con 3 y el recorrido sigue `fallido`. Nombre y aserciones no cambian.
+  - Ninguna otra prueba existente se puso en rojo por las cinco decisiones del plan: no hubo más ajustes bajo esta autorización.
+- Un cambio que el plan declara y que no estuvo en rojo: `FR-C27 el recorrido salto-ilegal se clasifica fuera_de_banda` pasó a `bench/friccion/test/binario-real.test.ts:134`, dentro del `describe` del corpus completo, y lee el archivo de la corrida compartida en vez de medir otra vez. Nombre y aserciones no cambian. FR-C01, FR-C02, FR-C03, FR-C10 y FR-C11 siguen intactos.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Contrato de entrega.
+
+- Directorio: la raíz del repositorio (el worktree o el checkout donde esté la rama).
+- Requisito previo: `npm run build`. Los recorridos corren contra `packages/cli/dist/main.js`; sin él la prueba falla con «corre npm run build».
+- Entorno: Node 24 y `git` en el `PATH`. No hace falta red, claves ni HOME propio: cada recorrido corre en una carpeta temporal con su HOME y con `npm_config_offline=true`.
+- Comandos y resultado esperado:
+  - `npx vitest run --config bench/friccion/vitest.config.ts`: 6 archivos y 83 pruebas en verde, en ~85 s.
+  - Una prueba suelta, por ejemplo `npx vitest run --config bench/friccion/vitest.config.ts -t CO-C12`: pasa. Las CO-C05 a CO-C13 y FR-C27 comparten una corrida del corpus de ~15 s; las demás no la disparan.
+  - `npx tsc -p bench/friccion/tsconfig.json` y `npx tsc -p bench/friccion/tsconfig.build.json`: sin salida.
+  - `node node_modules/eslint/bin/eslint.js bench/friccion`: sin salida.
+  - `node node_modules/prettier/bin/prettier.cjs --check bench/friccion`: «All matched files use Prettier code style!».
+  - `npx tsc --noEmit -p tsconfig.json` y `npm run exports:check`: sin errores; la guarda dice que no hay exportaciones nuevas sin consumidor.
+- Validación manual del PO (C38), desde la raíz del repositorio y después del build:
+  - `npx tsc -p bench/friccion/tsconfig.build.json`
+  - `node bench/friccion/dist/cli.js list`: ocho líneas, una por recorrido, con su nombre y lo que bloquea.
+  - `node bench/friccion/dist/cli.js run --binary packages/cli/dist/main.js --out "$TMPDIR/friccion-a.json"` y la misma con `friccion-b.json`: sale con 0 y resume «en banda: 2 · fuera de banda: 4 · callejones sin salida: 1 · rechazos correctos: 1 · no soportados: 0 · fallidos: 0».
+  - `node bench/friccion/dist/cli.js compare "$TMPDIR/friccion-a.json" "$TMPDIR/friccion-b.json"`: ocho filas iguales y diferencia 0 en cada total.
+  - Esta sesión corrió esas cuatro órdenes con el resultado de arriba; el criterio queda sin marcar porque la validación manual es del PO.
+- Limitaciones:
+  - C38 y C39 de FEATURE-BENCH-FRICCION-RUNNER-20261010 (el binario de un commit anterior, con `npm ci` y red) no se dan por hechos.
+  - El recorrido `integracion-arbol-sucio` hoy no llega a recompilar con `npx`: su bloqueo no cita salida. `npm_config_offline` lo cubre si un mensaje futuro la cita.
+  - No se corrió la suite del producto: el cambio no toca `packages/`, como afirman FR-C28 y FR-C29.
+
+- Resultado del PO: cierra los de pocas pruebas manuales primero. Las pruebas del ticket las ejecutó el agente y dieron el resultado esperado: npx vitest run --config bench/friccion/vitest.config.ts: 6 archivos y 83 pruebas en verde; suite completa de main en verde (4298); tsc de bench y de la raíz sin errores; compuerta qa-mechanical (command): APPROVE; C38 verificado por el orquestador: npx tsc -p bench/friccion/tsconfig.build.json, cli.js list (8 recorridos), dos corridas de run contra packages/cli/dist/main.js y compare: diferencia 0 en los seis totales
 
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-11",
+    "build_reference": "commit:51dab92d0856e24c8bbd6a67b9fc0c9f2a588703",
+    "environment": "local: checkout principal de main (51dab92), Node 24, sin Docker ni red",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-11",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "cierra los de pocas pruebas manuales primero"
+  }
+]
 ```
 
 ## Evidencia
 
 ```json
-[]
+[
+  {
+    "id": "EVIDENCE-001",
+    "date": "2026-10-11",
+    "kind": "automated-test",
+    "description": "npx vitest run --config bench/friccion/vitest.config.ts: 6 archivos y 83 pruebas en verde; suite completa de main en verde (4298); tsc de bench y de la raíz sin errores; compuerta qa-mechanical (command): APPROVE; C38 verificado por el orquestador: npx tsc -p bench/friccion/tsconfig.build.json, cli.js list (8 recorridos), dos corridas de run contra packages/cli/dist/main.js y compare: diferencia 0 en los seis totales",
+    "reference": "worktree:sha256:3979f5e7d3684348e78bced433f4e42321d6ee073331cdaab07f5f12301cb556",
+    "point_id": "POINT-001"
+  }
+]
 ```
 
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-11",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "cierra los de pocas pruebas manuales primero"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-11",
+    "technical_summary": "Corpus de ocho recorridos del CLI valmen que provocan un bloqueo (salto ilegal de estado, compuerta sin recibo, sync --check desactualizado, integración con árbol sucio, resume inexistente, bandera mal escrita, QA sin build, cierre sin consumo), con su clasificación en banda, fuera de banda, callejón sin salida o rechazo correcto, y el comando compare de dos corridas.",
+    "functional_summary": "Se puede medir cuánto se atasca quien opera el CLI y comparar dos versiones del binario. Primera medición del binario actual: 2 en banda, 4 fuera de banda, 1 callejón sin salida (cierre sin Consumo de IA) y 1 rechazo correcto.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "Sin migraciones, sin sincronización ni Docker. La medición vive fuera de packages/ y no entra al build del producto."
+  }
+]
 ```
 
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-10",
+    "session_reference": null,
+    "model": "claude-sonnet-5-5",
+    "reasoning_effort": null,
+    "notes": "Sesión de implementación de este único ticket, con tres cortes por pruebas existentes en rojo (FR-C25 y FR-C14, autorizadas por el PO). La sesión no expone tokens ni costo: no se estiman.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:subagente de implementación claude-sonnet-5-5, sin números de sesión expuestos",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": "c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-a98a96473e650b8fc",
+    "model": "anthropic/claude-opus-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 14 intervención(es) sobre el registro, 0 con fallo. 14 de 115 mensajes tocaron el registro. Subagente de la sesión c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8; su gasto no está en la madre. Duró 22 min. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 21881533 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 272668,
+    "output_tokens": 98049,
+    "total_tokens": 370717,
+    "estimated_cost_usd": null,
+    "source": "claude:c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-a98a96473e650b8fc",
+    "confidence": "high",
+    "id": "CONSUMO-002"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": "c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-a2cb3f14cb05053ce",
+    "model": "anthropic/claude-sonnet-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 17 intervención(es) sobre el registro, 0 con fallo. 17 de 79 mensajes tocaron el registro. Subagente de la sesión c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8; su gasto no está en la madre. Duró 18 min. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 13958119 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 212516,
+    "output_tokens": 77659,
+    "total_tokens": 290175,
+    "estimated_cost_usd": null,
+    "source": "claude:c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-a2cb3f14cb05053ce",
+    "confidence": "high",
+    "id": "CONSUMO-003"
+  }
+]
 ```
 
 ## Release
@@ -148,6 +525,222 @@ Sin publicar todavía.
     "action": "created",
     "actor": "cli",
     "details": "Ticket creado sin sobrescribir historial."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-002",
+    "date": "2026-10-10",
+    "at": "2026-10-10T22:51:58.509Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: intake -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-003",
+    "date": "2026-10-10",
+    "at": "2026-10-10T22:55:41.630Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-10",
+    "at": "2026-10-10T23:13:31.995Z",
+    "action": "gate-approved",
+    "actor": "cli",
+    "details": "Gate plan aprobado por juan andrade (recibo GR-20261010-FEATURE-BENCH-FRICCION-CORPUS-20261010-plan-1, canal cli, decidida 2026-10-10T23:13:31.992Z): Aprobar tal cual (Recomendado)"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-10",
+    "at": "2026-10-10T23:13:32.350Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"juan andrade\",\"source\":\"cli\",\"quote\":\"Aprobar tal cual (Recomendado)\",\"planHash\":\"sha256:c526957dcaa997e35e5cb959b912aecf0969130addf3cb67b9da323dfe36ad1a\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-10",
+    "at": "2026-10-10T23:13:32.661Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: juan andrade (fuente cli), plan sha256:c526957dcaa997e35e5cb959b912aecf0969130addf3cb67b9da323dfe36ad1a."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-10",
+    "at": "2026-10-10T23:13:32.661Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-10",
+    "at": "2026-10-10T23:14:23.563Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-10",
+    "at": "2026-10-10T23:27:13.981Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-10",
+    "at": "2026-10-10T23:31:03.063Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:09.754Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:10.055Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:10.207Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:10.351Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:10.495Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:10.637Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:10.779Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:11.026Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:11.379Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:11.526Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:11.673Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:11.820Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:11.960Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:12.105Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-025",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:12.254Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```

@@ -66,7 +66,17 @@ export function qaAuthorizationsPath(root: string): string {
 /** El hash de una autorización: sobre sus campos en un orden fijo, sin el propio hash. */
 export function hashDeAutorizacion(a: Omit<QaAuthorization, "hash">): string {
   const canonico = JSON.stringify([
-    a.id, a.types, a.modules, a.maxRisk, a.dailyQuota, a.validFrom, a.validUntil, a.actor, a.quote, a.source, a.createdAt,
+    a.id,
+    a.types,
+    a.modules,
+    a.maxRisk,
+    a.dailyQuota,
+    a.validFrom,
+    a.validUntil,
+    a.actor,
+    a.quote,
+    a.source,
+    a.createdAt,
   ]);
   return `sha256:${createHash("sha256").update(canonico, "utf8").digest("hex")}`;
 }
@@ -79,7 +89,8 @@ function leerRegistro(root: string): (QaAuthorization | QaAuthorizationRevoked)[
     if (linea.trim() === "") continue;
     try {
       const v = JSON.parse(linea) as QaAuthorization | QaAuthorizationRevoked;
-      if (v.kind === "qa-authorization-created" || v.kind === "qa-authorization-revoked") entradas.push(v);
+      if (v.kind === "qa-authorization-created" || v.kind === "qa-authorization-revoked")
+        entradas.push(v);
     } catch {
       // Un renglón truncado no borra los anteriores: el registro es un diario.
     }
@@ -94,10 +105,18 @@ function anexar(root: string, entrada: QaAuthorization | QaAuthorizationRevoked)
 }
 
 /** Falla si el canal no es uno aceptado o la sesión es desatendida. */
-function exigirCanalHumano(root: string, source: string, accion: string, env: Readonly<Record<string, string | undefined>>): void {
+function exigirCanalHumano(
+  root: string,
+  source: string,
+  accion: string,
+  env: Readonly<Record<string, string | undefined>>,
+): void {
   const marca = env[UNATTENDED_ENV];
   if (marca !== undefined && marca !== "") {
-    fail(`Una sesión desatendida no puede ${accion}: esa autoridad es de una persona.`, EXIT_INVARIANT);
+    fail(
+      `Una sesión desatendida no puede ${accion}: esa autoridad es de una persona.`,
+      EXIT_INVARIANT,
+    );
   }
   const fuentes = qaAuthorizationSources(root);
   if (!fuentes.includes(source)) {
@@ -125,15 +144,30 @@ export interface CrearAutorizacionRequest {
 
 /** Crea una autorización: anexa un renglón con la frase literal de quien autoriza. */
 export function crearAutorizacion(request: CrearAutorizacionRequest): QaAuthorization {
-  exigirCanalHumano(request.root, request.source, "crear una autorización de QA", request.env ?? process.env);
+  exigirCanalHumano(
+    request.root,
+    request.source,
+    "crear una autorización de QA",
+    request.env ?? process.env,
+  );
   const actor = request.actor.trim();
   const quote = request.quote.trim();
-  if (actor === "") fail("Crear una autorización necesita un responsable: falta --actor.", EXIT_SCHEMA);
-  if (quote === "") fail("Crear una autorización necesita la frase literal de quien autoriza: falta --quote.", EXIT_SCHEMA);
+  if (actor === "")
+    fail("Crear una autorización necesita un responsable: falta --actor.", EXIT_SCHEMA);
+  if (quote === "")
+    fail(
+      "Crear una autorización necesita la frase literal de quien autoriza: falta --quote.",
+      EXIT_SCHEMA,
+    );
 
-  const types = [...new Set(request.types.map((t) => t.trim().toUpperCase()).filter((t) => t !== ""))];
-  if (types.length === 0) fail("Una autorización declara al menos un tipo de ticket.", EXIT_SCHEMA);
-  const prohibidos = types.filter((t) => !(TIPOS_AUTORIZABLES as readonly string[]).includes(t));
+  const types = [
+    ...new Set(request.types.map((t) => t.trim().toUpperCase()).filter((t) => t !== "")),
+  ];
+  if (types.length === 0)
+    fail("Una autorización declara al menos un tipo de ticket.", EXIT_SCHEMA);
+  const prohibidos = types.filter(
+    (t) => !(TIPOS_AUTORIZABLES as readonly string[]).includes(t),
+  );
   if (prohibidos.length > 0) {
     fail(
       `Los tipos ${prohibidos.join(", ")} no se pueden autorizar: solo ${TIPOS_AUTORIZABLES.join(", ")} ` +
@@ -141,20 +175,35 @@ export function crearAutorizacion(request: CrearAutorizacionRequest): QaAuthoriz
       EXIT_INVARIANT,
     );
   }
-  const modules = [...new Set(request.modules.map((m) => m.trim().toLowerCase()).filter((m) => m !== ""))];
+  const modules = [
+    ...new Set(request.modules.map((m) => m.trim().toLowerCase()).filter((m) => m !== "")),
+  ];
   if (modules.length === 0 || modules.includes("*")) {
-    fail("Una autorización declara módulos concretos: ni vacía ni con comodín.", EXIT_SCHEMA);
+    fail(
+      "Una autorización declara módulos concretos: ni vacía ni con comodín.",
+      EXIT_SCHEMA,
+    );
   }
   if (modules.includes("todos") || modules.includes("all")) {
-    fail("Los módulos `todos` y `all` no existen: elige los módulos en la lista.", EXIT_SCHEMA);
+    fail(
+      "Los módulos `todos` y `all` no existen: elige los módulos en la lista.",
+      EXIT_SCHEMA,
+    );
   }
   if (!(RIESGOS_AUTORIZABLES as readonly string[]).includes(request.maxRisk)) {
-    fail(`El riesgo máximo autorizable es ${RIESGOS_AUTORIZABLES.join(" o ")}; recibí «${request.maxRisk}».`, EXIT_INVARIANT);
+    fail(
+      `El riesgo máximo autorizable es ${RIESGOS_AUTORIZABLES.join(" o ")}; recibí «${request.maxRisk}».`,
+      EXIT_INVARIANT,
+    );
   }
   if (!Number.isSafeInteger(request.dailyQuota) || request.dailyQuota < 1) {
     fail("El cupo diario debe ser un entero de al menos 1.", EXIT_SCHEMA);
   }
-  if (!Number.isFinite(request.validDays) || request.validDays < 1 || request.validDays > 365) {
+  if (
+    !Number.isFinite(request.validDays) ||
+    request.validDays < 1 ||
+    request.validDays > 365
+  ) {
     fail("La vigencia debe ser de 1 a 365 días.", EXIT_SCHEMA);
   }
 
@@ -190,11 +239,22 @@ export interface RevocarAutorizacionRequest {
 }
 
 /** Revoca una autorización: vale desde este instante. Mismo canal y misma barrera que crearla. */
-export function revocarAutorizacion(request: RevocarAutorizacionRequest): QaAuthorizationRevoked {
-  exigirCanalHumano(request.root, request.source, "revocar una autorización de QA", request.env ?? process.env);
-  if (request.actor.trim() === "") fail("Revocar necesita un responsable: falta --actor.", EXIT_SCHEMA);
-  if (request.reason.trim() === "") fail("Revocar necesita un motivo: falta --reason.", EXIT_SCHEMA);
-  const existe = leerRegistro(request.root).some((e) => e.kind === "qa-authorization-created" && e.id === request.id);
+export function revocarAutorizacion(
+  request: RevocarAutorizacionRequest,
+): QaAuthorizationRevoked {
+  exigirCanalHumano(
+    request.root,
+    request.source,
+    "revocar una autorización de QA",
+    request.env ?? process.env,
+  );
+  if (request.actor.trim() === "")
+    fail("Revocar necesita un responsable: falta --actor.", EXIT_SCHEMA);
+  if (request.reason.trim() === "")
+    fail("Revocar necesita un motivo: falta --reason.", EXIT_SCHEMA);
+  const existe = leerRegistro(request.root).some(
+    (e) => e.kind === "qa-authorization-created" && e.id === request.id,
+  );
   if (!existe) fail(`No existe la autorización ${request.id}.`, EXIT_SCHEMA);
   const revocacion: QaAuthorizationRevoked = {
     kind: "qa-authorization-revoked",
@@ -210,7 +270,10 @@ export function revocarAutorizacion(request: RevocarAutorizacionRequest): QaAuth
 }
 
 /** Todas las autorizaciones con su estado a `ahora`; una con el hash roto no se lista como vigente. */
-export function leerAutorizaciones(root: string, ahora: Date = new Date()): AutorizacionConEstado[] {
+export function leerAutorizaciones(
+  root: string,
+  ahora: Date = new Date(),
+): AutorizacionConEstado[] {
   const registro = leerRegistro(root);
   return registro
     .filter((e): e is QaAuthorization => e.kind === "qa-authorization-created")
@@ -220,7 +283,9 @@ export function leerAutorizaciones(root: string, ahora: Date = new Date()): Auto
       const revocacion =
         registro.find(
           (e): e is QaAuthorizationRevoked =>
-            e.kind === "qa-authorization-revoked" && e.id === a.id && new Date(e.revokedAt).getTime() <= ahora.getTime(),
+            e.kind === "qa-authorization-revoked" &&
+            e.id === a.id &&
+            new Date(e.revokedAt).getTime() <= ahora.getTime(),
         ) ?? null;
       const estado: EstadoDeAutorizacion =
         !integra || revocacion !== null
@@ -235,7 +300,10 @@ export function leerAutorizaciones(root: string, ahora: Date = new Date()): Auto
 }
 
 /** Las autorizaciones vigentes ahora. */
-export function autorizacionesVigentes(root: string, ahora: Date = new Date()): AutorizacionConEstado[] {
+export function autorizacionesVigentes(
+  root: string,
+  ahora: Date = new Date(),
+): AutorizacionConEstado[] {
   return leerAutorizaciones(root, ahora).filter((a) => a.estado === "vigente");
 }
 
@@ -306,8 +374,14 @@ export function registrarUsoDeCupo(request: {
 }
 
 /** Cuántos cierres por política le quedan hoy (UTC) a la autorización. */
-export function cupoRestante(root: string, autorizacion: QaAuthorization, ahora: Date = new Date()): number {
+export function cupoRestante(
+  root: string,
+  autorizacion: QaAuthorization,
+  ahora: Date = new Date(),
+): number {
   const dia = ahora.toISOString().slice(0, 10);
-  const usados = leerUsos(root).filter((u) => u.authorizationId === autorizacion.id && u.usedAt.startsWith(dia)).length;
+  const usados = leerUsos(root).filter(
+    (u) => u.authorizationId === autorizacion.id && u.usedAt.startsWith(dia),
+  ).length;
   return Math.max(0, autorizacion.dailyQuota - usados);
 }

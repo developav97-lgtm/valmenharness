@@ -17,10 +17,13 @@
  * El fallback de `jev` a `llm-judge` es explícito y no silencioso: el recibo
  * registra qué evaluador se usó, porque una decisión tomada con un juez de chat
  * es más débil que una tomada con probabilidades calibradas y quien la lea tiene
- * que poder saberlo.
+ * que poder saberlo. **Con una `VALMEN_BASE_URL_*` activa no hay fallback**: ni
+ * la cascada degrada a `jev` ni `jev` al juez, y la cadena va completa o la
+ * compuerta falla (ver `requireTestRoutes`).
  *
  * Ver docs/03-GATES.md §4.
  */
+import { DEFAULT_PROVIDER, requireTestRoutes } from "@valmen/credentials";
 import {
   MAX_CRITERIA_PROPOSITIONS,
   type GateDefinition,
@@ -228,14 +231,19 @@ export function chooseEvaluator(options: {
  *
  * Si `jev` falla por indisponibilidad —y solo por eso— se degrada a `llm-judge`
  * y se informa. Un fallo de credencial o de contrato no se degrada: significan
- * que hay algo mal configurado y hay que verlo, no taparlo.
+ * que hay algo mal configurado y hay que verlo, no taparlo. Con una
+ * `VALMEN_BASE_URL_*` activa tampoco se degrada la indisponibilidad: el servidor
+ * local caído o con un 5xx falla la compuerta, porque degradar mandaría la
+ * petición, con la clave del entorno, al proveedor de siempre.
  */
 export async function evaluateGate(options: SelectOptions): Promise<EvaluationOutcome> {
   const previas = options.precomputed ?? [];
   if (previas.length === 0) return evaluateGateBase(options);
 
   const ids = new Set(previas.map((respuesta) => respuesta.id));
-  const restantes = options.gate.propositions.filter((proposicion) => !ids.has(proposicion.id));
+  const restantes = options.gate.propositions.filter(
+    (proposicion) => !ids.has(proposicion.id),
+  );
   // Si el código respondió todo, no hay nada que preguntar: ni una llamada ni un céntimo.
   if (restantes.length === 0) {
     return {
@@ -351,16 +359,36 @@ async function evaluateGateBase(options: SelectOptions): Promise<EvaluationOutco
  * criterios sin preguntar.
  */
 function partirEnTandas(propositions: readonly Proposition[]): Proposition[][] {
-  const criterios = propositions.filter((proposition) => proposition.id.startsWith("criterio_"));
+  const criterios = propositions.filter((proposition) =>
+    proposition.id.startsWith("criterio_"),
+  );
   if (criterios.length <= MAX_CRITERIA_PROPOSITIONS) return [[...propositions]];
 
-  const otras = propositions.filter((proposition) => !proposition.id.startsWith("criterio_"));
+  const otras = propositions.filter(
+    (proposition) => !proposition.id.startsWith("criterio_"),
+  );
   const tandas: Proposition[][] = [];
   for (let desde = 0; desde < criterios.length; desde += MAX_CRITERIA_PROPOSITIONS) {
     const tanda = criterios.slice(desde, desde + MAX_CRITERIA_PROPOSITIONS);
     tandas.push(desde === 0 ? [...otras, ...tanda] : tanda);
   }
   return tandas;
+}
+
+/**
+ * Los eslabones con los que habla el evaluador semántico, por identificador de proveedor.
+ *
+ * Es la lista que `requireTestRoutes` comprueba: la cascada habla con el productor, el
+ * escalado y jev (el verificador); `jev` solo con jev; y un juez con el proveedor del rol.
+ */
+function eslabones(
+  chosen: "jev" | "llm-judge" | "cascade",
+  options: SelectOptions,
+): readonly string[] {
+  if (chosen === "jev") return ["jev"];
+  if (chosen === "llm-judge") return [options.provider ?? DEFAULT_PROVIDER];
+  exigirCadena(options.cascade);
+  return [options.cascade.producer.provider, options.cascade.escalation.provider, "jev"];
 }
 
 /**
@@ -374,19 +402,33 @@ async function runSemanticEnTandas(
   chosen: "jev" | "llm-judge" | "cascade",
   options: SelectOptions,
 ): Promise<EvaluationOutcome> {
+  // Con una `VALMEN_BASE_URL_*` activa la cadena va completa o la compuerta no corre, y
+  // **ningún** fallo se degrada a otro evaluador. Se decide antes de la primera llamada.
+  const enPrueba = requireTestRoutes(eslabones(chosen, options));
   if (chosen === "cascade") {
     try {
-      return await runSemanticEnTandasDe(chosen, options);
+      return await runSemanticEnTandasDe(chosen, options, enPrueba);
     } catch (caught) {
       const error = caught as { code?: string; message?: string };
-      // Un fallo de credencial no se tapa con otro evaluador: hay que verlo. Cualquier otro
+      // Un fallo de credencial no se tapa con otro evaluador: hay que verlo, y tampoco el rechazo de
+      // una URL de prueba que no es local (`TEST_URL_REJECTED`), que es una vía para desviar claves
+      // y no una indisponibilidad: degradar a jev llamaría al servicio real. Con una URL de prueba
+      // activa nada se degrada: un 5xx, un 307 o el servidor caído fallan la compuerta, porque jev
+      // y el juez saldrían al proveedor de siempre con la clave del entorno. Cualquier otro
       // fallo de la cascada degrada al evaluador por defecto. El fallo de salida estructurada
       // del productor es intermitente (medido el 2026-10-09: 1 de 4 compuertas y 2 de 8
       // llamadas), no determinista: `verifiedCascade` ya lo reintentó una vez con el modelo de
       // escalado, así que si el error llega hasta acá el reintento también falló y la caída a
       // jev es el último recurso, sin una tercera llamada.
-      if (error.code === "AUTH" || error.code === "CREDENTIAL_MISSING") throw caught;
-      const respaldo = await runSemanticEnTandasDe("jev", options);
+      if (
+        enPrueba ||
+        error.code === "AUTH" ||
+        error.code === "CREDENTIAL_MISSING" ||
+        error.code === "TEST_URL_REJECTED"
+      ) {
+        throw caught;
+      }
+      const respaldo = await runSemanticEnTandasDe("jev", options, enPrueba);
       return {
         ...respaldo,
         requestedEvaluator: "cascade",
@@ -397,20 +439,27 @@ async function runSemanticEnTandas(
       };
     }
   }
-  return runSemanticEnTandasDe(chosen, options);
+  return runSemanticEnTandasDe(chosen, options, enPrueba);
 }
 
 async function runSemanticEnTandasDe(
   chosen: "jev" | "llm-judge" | "cascade",
   options: SelectOptions,
+  enPrueba: boolean,
 ): Promise<EvaluationOutcome> {
   const tandas = partirEnTandas(options.gate.propositions);
-  if (tandas.length === 1) return { ...(await runSemantic(chosen, options)), tandas: 1 };
+  if (tandas.length === 1) {
+    return { ...(await runSemantic(chosen, options, enPrueba)), tandas: 1 };
+  }
 
   const partes: EvaluationOutcome[] = [];
   for (const propositions of tandas) {
     partes.push(
-      await runSemantic(chosen, { ...options, gate: { ...options.gate, propositions } }),
+      await runSemantic(
+        chosen,
+        { ...options, gate: { ...options.gate, propositions } },
+        enPrueba,
+      ),
     );
   }
 
@@ -439,10 +488,15 @@ async function runSemanticEnTandasDe(
   };
 }
 
-/** Ejecuta un evaluador semántico, con la degradación de Jev a juez. */
+/**
+ * Ejecuta un evaluador semántico, con la degradación de Jev a juez.
+ *
+ * `enPrueba` es que hay una `VALMEN_BASE_URL_*` activa: la degradación se apaga.
+ */
 async function runSemantic(
   chosen: "jev" | "llm-judge" | "cascade",
   options: SelectOptions,
+  enPrueba: boolean,
 ): Promise<EvaluationOutcome> {
   if (chosen === "cascade") {
     return runCascade(options);
@@ -486,9 +540,10 @@ async function runSemantic(
   } catch (caught) {
     const error = caught as { code?: string };
     // Solo se degrada por indisponibilidad del servicio. Un fallo de credencial
-    // o de contrato no se tapa con otro evaluador: hay que verlo.
+    // o de contrato no se tapa con otro evaluador: hay que verlo. Con una URL de prueba
+    // activa tampoco la indisponibilidad: el juez saldría al proveedor de siempre.
     const indisponible = error.code === "SERVER" || error.code === "TRANSPORT";
-    if (!indisponible) throw caught;
+    if (enPrueba || !indisponible) throw caught;
 
     const judge = options.judge ?? evaluateWithJudge;
     const evaluation = await judge({
@@ -544,7 +599,9 @@ async function runCascade(options: SelectOptions): Promise<EvaluationOutcome> {
     usage: corrida.usage,
     latencyMs: corrida.latencyMs,
     escalations: corrida.escalations,
-    ...(corrida.producerRetry === undefined ? {} : { producerRetries: [corrida.producerRetry] }),
+    ...(corrida.producerRetry === undefined
+      ? {}
+      : { producerRetries: [corrida.producerRetry] }),
   };
 }
 

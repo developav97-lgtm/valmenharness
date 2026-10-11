@@ -132,7 +132,11 @@ function escribirTicket(
   const ruta = join(lab, "tickets", id.slice(-8, -4), id, "ticket.md");
   const texto = readFileSync(ruta, "utf8");
   const bloque = `## Eventos\n\n\`\`\`json\n${JSON.stringify(eventos, null, 2)}\n\`\`\`\n`;
-  writeFileSync(ruta, texto.replace(/## Eventos\n\n```json\n[\s\S]*?\n```\n/, bloque), "utf8");
+  writeFileSync(
+    ruta,
+    texto.replace(/## Eventos\n\n```json\n[\s\S]*?\n```\n/, bloque),
+    "utf8",
+  );
 }
 
 /** Llama al endpoint para un ticket del laboratorio. */
@@ -192,7 +196,9 @@ function escribirBaseV2(
   if (modulo === null) return;
 
   mkdirSync(join(lab, ".local", "share", "opencode"), { recursive: true });
-  const db = new modulo.DatabaseSync(join(lab, ".local", "share", "opencode", "opencode.db"));
+  const db = new modulo.DatabaseSync(
+    join(lab, ".local", "share", "opencode", "opencode.db"),
+  );
 
   db.exec(`
     CREATE TABLE session_v2 (
@@ -463,7 +469,8 @@ describe.skipIf(sqlite() === null)("GET /api/ticket/fases: sesiones por fase", (
       expect(indice).toBeGreaterThanOrEqual(0);
       return indice;
     };
-    const tramoDe = (estado: string): Sesion[] => cuerpo.sesionesPorFase[indiceDe(estado)] ?? [];
+    const tramoDe = (estado: string): Sesion[] =>
+      cuerpo.sesionesPorFase[indiceDe(estado)] ?? [];
 
     expect(tramoDe("planned").map((s) => s.id)).toEqual(["ses_fases_a"]);
     expect(tramoDe("in_progress").map((s) => s.id)).toEqual(["ses_fases_b"]);

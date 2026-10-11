@@ -37,7 +37,9 @@ const VALIDA = [
 
 describe("leer test-setup", () => {
   it("sin la sección devuelve null", () => {
-    expect(readTestSetupConfig(parseConfig("test-commands:\n  - npx vitest run\n"))).toBeNull();
+    expect(
+      readTestSetupConfig(parseConfig("test-commands:\n  - npx vitest run\n")),
+    ).toBeNull();
   });
 
   it("lee una sección válida con su esquema, sus comandos y su tope", () => {
@@ -58,8 +60,16 @@ describe("leer test-setup", () => {
   it.each([
     ["sin esquema", "test-setup:\n  commands:\n    - echo x\n", "test-setup.schema"],
     ["sin comandos", "test-setup:\n  schema: t\n", "test-setup.commands"],
-    ["tope inválido", "test-setup:\n  schema: t\n  timeout: 0\n  commands:\n    - echo x\n", "test-setup.timeout"],
-    ["tope que no es número", "test-setup:\n  schema: t\n  timeout: mucho\n  commands:\n    - echo x\n", "test-setup.timeout"],
+    [
+      "tope inválido",
+      "test-setup:\n  schema: t\n  timeout: 0\n  commands:\n    - echo x\n",
+      "test-setup.timeout",
+    ],
+    [
+      "tope que no es número",
+      "test-setup:\n  schema: t\n  timeout: mucho\n  commands:\n    - echo x\n",
+      "test-setup.timeout",
+    ],
   ])("falla nombrando la clave: %s", (_caso, texto, clave) => {
     expect(() => readTestSetupConfig(parseConfig(texto))).toThrow(clave);
   });
@@ -83,7 +93,9 @@ describe("esquemas permitidos", () => {
 
   it("una lista vacía rechaza cualquier esquema: la ausencia no habilita", () => {
     expect(testSetupRefusal(setup, [])).toContain("no declara allowed-schemas");
-    expect(readAllowedSchemas(parseConfig("test-commands:\n  - npx vitest run\n"))).toEqual([]);
+    expect(readAllowedSchemas(parseConfig("test-commands:\n  - npx vitest run\n"))).toEqual(
+      [],
+    );
   });
 
   it("un elemento vacío en la lista es un error", () => {
@@ -115,7 +127,11 @@ describe("el motor lee la declaración del proyecto", () => {
   });
 
   it("una sección mal formada sube como error: no se interpreta a medias", () => {
-    writeFileSync(join(lab, ".valmen", "config.yaml"), "test-setup:\n  schema: t\n", "utf8");
+    writeFileSync(
+      join(lab, ".valmen", "config.yaml"),
+      "test-setup:\n  schema: t\n",
+      "utf8",
+    );
     expect(() => testSetupConfig(lab)).toThrow("test-setup.commands");
   });
 });

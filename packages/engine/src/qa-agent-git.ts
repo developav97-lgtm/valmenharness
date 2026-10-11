@@ -7,7 +7,7 @@
  */
 import { spawnSync } from "node:child_process";
 
-import { EXIT_INVARIANT, fail } from "@valmen/core";
+import { DENIED_GIT_FLAGS, EXIT_INVARIANT, fail } from "@valmen/core";
 
 export type EjecutorGitQa = (
   argumentos: readonly string[],
@@ -18,26 +18,40 @@ export type EjecutorGitQa = (
 export function motivoDeGitDeQaAgent(argumentos: readonly string[]): string | null {
   const [operacion, ...resto] = argumentos;
   if (operacion === undefined) return "No se indicó ninguna operación de git.";
-  const prohibida = resto.find((a) => ["--force", "-f", "--hard", "--no-verify", "--amend"].includes(a) && !(operacion === "worktree" && a === "--force"));
-  if (prohibida !== undefined) return `La bandera ${prohibida} no está permitida a qa-agent.`;
+  const prohibida = resto.find(
+    (a) => DENIED_GIT_FLAGS.includes(a) && !(operacion === "worktree" && a === "--force"),
+  );
+  if (prohibida !== undefined)
+    return `La bandera ${prohibida} no está permitida a qa-agent.`;
   switch (operacion) {
     case "worktree":
       if (resto[0] === "add" && resto[1] === "--detach" && resto.length === 4) return null;
-      if (resto[0] === "remove" && resto[1] === "--force" && resto.length === 3) return null;
+      if (resto[0] === "remove" && resto[1] === "--force" && resto.length === 3)
+        return null;
       return "git worktree solo se admite como `add --detach <carpeta> <commit>` o `remove --force <carpeta>`.";
     case "rev-parse":
-      return resto.length === 1 && !resto[0]!.startsWith("-") ? null : "git rev-parse admite una sola referencia.";
+      return resto.length === 1 && !resto[0]!.startsWith("-")
+        ? null
+        : "git rev-parse admite una sola referencia.";
     case "diff":
-      return resto[0] === "--name-only" && resto.length >= 2 && resto.length <= 3 ? null : "git diff solo se admite como `--name-only [--diff-filter=A] <rango>`.";
+      return resto[0] === "--name-only" && resto.length >= 2 && resto.length <= 3
+        ? null
+        : "git diff solo se admite como `--name-only [--diff-filter=A] <rango>`.";
     case "show":
-      return resto.length === 1 && /^[0-9a-f]{7,64}:[^\s]+$/.test(resto[0]!) ? null : "git show solo se admite como `<commit>:<ruta>`.";
+      return resto.length === 1 && /^[0-9a-f]{7,64}:[^\s]+$/.test(resto[0]!)
+        ? null
+        : "git show solo se admite como `<commit>:<ruta>`.";
     default:
       return `La operación git ${operacion} no está permitida a qa-agent (solo worktree, rev-parse, diff y show).`;
   }
 }
 
 const ejecutarGitDeVerdad: EjecutorGitQa = (argumentos, cwd) => {
-  const r = spawnSync("git", ["-c", "core.hooksPath=/dev/null", ...argumentos], { cwd, encoding: "utf8", maxBuffer: 16 * 1024 * 1024 });
+  const r = spawnSync("git", ["-c", "core.hooksPath=/dev/null", ...argumentos], {
+    cwd,
+    encoding: "utf8",
+    maxBuffer: 16 * 1024 * 1024,
+  });
   return { status: r.status ?? 1, stdout: r.stdout ?? "", stderr: r.stderr ?? "" };
 };
 

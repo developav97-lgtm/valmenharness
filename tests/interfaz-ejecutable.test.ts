@@ -16,13 +16,7 @@
  * compartirían ese estado y el segundo resultado no diría nada del código.
  */
 import { spawnSync } from "node:child_process";
-import {
-  mkdtempSync,
-  readFileSync,
-  rmdirSync,
-  unlinkSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdtempSync, readFileSync, rmdirSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -47,28 +41,45 @@ const HTML = join(RAIZ, "packages", "server", "web", "index.html");
 describe("la interfaz de Mission Control", () => {
   it("declara paletas clara y oscura, y un foco visible para el teclado", () => {
     const html = readFileSync(HTML, "utf8");
-    const temaClaro = /@media\s*\(prefers-color-scheme:\s*light\)\s*\{([\s\S]*?)\n\s*\}/.exec(html)?.[1];
+    const temaClaro =
+      /@media\s*\(prefers-color-scheme:\s*light\)\s*\{([\s\S]*?)\n\s*\}/.exec(html)?.[1];
 
     // Antes de este ticket solo existía :root con la paleta oscura: quien
     // prefiriera claro recibía la misma superficie oscura. Se exige una paleta
     // completa y semántica, no colores en los controles individuales.
     expect(temaClaro).toBeDefined();
     for (const variable of [
-      "--fondo:", "--panel:", "--panel-alto:", "--borde:",
-      "--texto:", "--tenue:", "--acento:", "--ok:", "--alerta:", "--error:",
-    ]) expect(temaClaro).toContain(variable);
+      "--fondo:",
+      "--panel:",
+      "--panel-alto:",
+      "--borde:",
+      "--texto:",
+      "--tenue:",
+      "--acento:",
+      "--ok:",
+      "--alerta:",
+      "--error:",
+    ])
+      expect(temaClaro).toContain(variable);
 
     // Enlaces, botones, resúmenes y campos se recorren por Tab. La misma señal
     // visual evita que el foco dependa de cómo lo pinte cada navegador.
-    expect(html).toMatch(/a:focus-visible,[\s\S]*button:focus-visible,[\s\S]*summary:focus-visible,[\s\S]*input:focus-visible,[\s\S]*select:focus-visible,[\s\S]*textarea:focus-visible\s*\{/);
+    expect(html).toMatch(
+      /a:focus-visible,[\s\S]*button:focus-visible,[\s\S]*summary:focus-visible,[\s\S]*input:focus-visible,[\s\S]*select:focus-visible,[\s\S]*textarea:focus-visible\s*\{/,
+    );
     expect(html).toMatch(/:focus-visible[\s\S]*outline:/);
   });
 
   it("reconcilia ejecución por cursor paginado sin abrir conversaciones", () => {
     const html = readFileSync(HTML, "utf8");
-    const reconciliacion = /async function reconciliarEventosDeEjecucion[\s\S]*?\n\s*function puedeRefrescar/.exec(html)?.[0];
+    const reconciliacion =
+      /async function reconciliarEventosDeEjecucion[\s\S]*?\n\s*function puedeRefrescar/.exec(
+        html,
+      )?.[0];
 
-    expect(reconciliacion).toContain("/api/execution-events?after=${encodeURIComponent(cursor)}&limit=100");
+    expect(reconciliacion).toContain(
+      "/api/execution-events?after=${encodeURIComponent(cursor)}&limit=100",
+    );
     expect(reconciliacion).not.toContain("/messages");
     expect(reconciliacion).toContain("guardarCursorDeEjecucion");
   });
@@ -284,10 +295,13 @@ describe("la banda de fases del ticket", () => {
             },
           ]);
         },
-        caer: () => { caida = true; },
-        avisar: (id = ID) => entorno.pruebaSSE.eventos.onmessage({
-          data: JSON.stringify({ paths: [`tickets/2026/${id}/ticket.md`] }),
-        }),
+        caer: () => {
+          caida = true;
+        },
+        avisar: (id = ID) =>
+          entorno.pruebaSSE.eventos.onmessage({
+            data: JSON.stringify({ paths: [`tickets/2026/${id}/ticket.md`] }),
+          }),
         esperar: async (ms = 300) => {
           await vi.advanceTimersByTimeAsync(ms);
           for (let i = 0; i < 10; i += 1) await new Promise<void>((r) => setImmediate(r));
@@ -303,7 +317,9 @@ describe("la banda de fases del ticket", () => {
     try {
       const vivo = await montarEnVivo();
       vivo.nuevasFases();
-      const detalleAntes = vivo.llamadas.filter((ruta) => ruta === `/api/tickets/${ID}`).length;
+      const detalleAntes = vivo.llamadas.filter(
+        (ruta) => ruta === `/api/tickets/${ID}`,
+      ).length;
       vivo.avisar();
       vivo.avisar();
       await vivo.esperar(299);
@@ -313,8 +329,12 @@ describe("la banda de fases del ticket", () => {
       expect(conClase(bandaNueva, "banda-fase")).toHaveLength(2);
       expect(texto(bandaNueva)).toContain("En curso");
       expect(bandaNueva).not.toBe(vivo.banda);
-      expect(vivo.llamadas.filter((ruta) => ruta === `/api/tickets/${ID}`)).toHaveLength(detalleAntes + 1);
-      expect(vivo.llamadas.filter((ruta) => ruta.startsWith("/api/ticket/fases?"))).toHaveLength(2);
+      expect(vivo.llamadas.filter((ruta) => ruta === `/api/tickets/${ID}`)).toHaveLength(
+        detalleAntes + 1,
+      );
+      expect(
+        vivo.llamadas.filter((ruta) => ruta.startsWith("/api/ticket/fases?")),
+      ).toHaveLength(2);
       expect(vivo.resultado.fallos).toEqual([]);
     } finally {
       vi.useRealTimers();
@@ -329,17 +349,22 @@ describe("la banda de fases del ticket", () => {
         vivo.avisar("FEATURE-OTRO-20260929");
         await vivo.esperar();
         expect(conClase(vivo.banda, "banda-fase")).toEqual(vivo.tramosIniciales);
-        expect(vivo.llamadas.filter((ruta) => ruta.startsWith("/api/ticket/fases?"))).toHaveLength(1);
+        expect(
+          vivo.llamadas.filter((ruta) => ruta.startsWith("/api/ticket/fases?")),
+        ).toHaveLength(1);
         if (ocupacion === "foco durante el margen") vivo.avisar();
         if (ocupacion === "dialogo") {
-          vivo.entorno.document.querySelector = (selector) => selector === "dialog[open]" ? {} : null;
+          vivo.entorno.document.querySelector = (selector) =>
+            selector === "dialog[open]" ? {} : null;
         } else {
           vivo.entorno.document.activeElement = { tagName: "INPUT" };
         }
         if (ocupacion !== "foco durante el margen") vivo.avisar();
         await vivo.esperar();
         expect(conClase(vivo.banda, "banda-fase")).toEqual(vivo.tramosIniciales);
-        expect(vivo.llamadas.filter((ruta) => ruta.startsWith("/api/ticket/fases?"))).toHaveLength(1);
+        expect(
+          vivo.llamadas.filter((ruta) => ruta.startsWith("/api/ticket/fases?")),
+        ).toHaveLength(1);
         expect(vivo.entorno.document.getElementById("hay-cambios").hidden).toBe(false);
         vivo.entorno.document.activeElement = null;
         vivo.entorno.document.querySelector = () => null;
@@ -360,7 +385,9 @@ describe("la banda de fases del ticket", () => {
       vivo.caer();
       vivo.avisar();
       await vivo.esperar();
-      expect(vivo.llamadas.filter((ruta) => ruta.startsWith("/api/ticket/fases?"))).toHaveLength(2);
+      expect(
+        vivo.llamadas.filter((ruta) => ruta.startsWith("/api/ticket/fases?")),
+      ).toHaveLength(2);
       const bandaNueva = conClase(vivo.resultado.contenido, "banda-fases")[0]!;
       expect(bandaNueva).not.toBe(vivo.banda);
       expect(texto(bandaNueva)).toContain("Sin línea de fases");

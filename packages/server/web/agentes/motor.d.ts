@@ -12,6 +12,13 @@ export interface Punto {
   y: number;
 }
 
+/** Los títulos de los tres paneles de la vista, propios de cada mundo. */
+export interface PanelesDelMundo {
+  agentes: string;
+  cola: string;
+  entregados: string;
+}
+
 /** Lo que un mundo debe aportar; el motor no conoce ninguno por nombre. */
 export interface Mundo {
   id: string;
@@ -20,6 +27,8 @@ export interface Mundo {
   pregunta: string;
   estaciones: readonly string[];
   puestoPrincipal: Punto;
+  /** Opcional: la vista usa sus títulos propios si el mundo los trae (`validarMundo` no los exige). */
+  paneles?: PanelesDelMundo;
   posicion(indice: number, carril: number): Punto;
   dibujar(estado: unknown, t: number): void;
 }

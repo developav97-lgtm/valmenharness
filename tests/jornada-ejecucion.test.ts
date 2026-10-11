@@ -9,7 +9,15 @@
  * declara un rol por fase y cada sesión usa el modelo de la suya (o cae al de la política
  * diciéndolo); y cada sesión deja su registro por fase.
  */
-import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -39,14 +47,19 @@ import { writeFixtureTicket } from "./helpers/fixtures.js";
 const projectId = "ejec-lab";
 const A = "FEATURE-EJEC-UNO-20261005";
 const AHORA = new Date("2026-10-06T08:00:00.000Z");
-const CRITERIO = '- [ ] El laboratorio termina correctamente.\n      <!-- test: node -e "process.exit(0)" -->';
-const PRUEBAS = "Contrato de entrega: ejecutar `node -e \"process.exit(0)\"` desde la raíz; esperado: código 0.";
+const CRITERIO =
+  '- [ ] El laboratorio termina correctamente.\n      <!-- test: node -e "process.exit(0)" -->';
+const PRUEBAS =
+  'Contrato de entrega: ejecutar `node -e "process.exit(0)"` desde la raíz; esperado: código 0.';
 
 let home: string;
 let root: string;
 const proyecto = () => resolveAuthorizedProject({ projectId, home });
 
-function politica(modelo = "gpt-6-politica", autorizados: readonly string[] = ["codex"]): void {
+function politica(
+  modelo = "gpt-6-politica",
+  autorizados: readonly string[] = ["codex"],
+): void {
   writeFileSync(
     join(root, ".valmen", "config.yaml"),
     [
@@ -102,7 +115,8 @@ function enrutamiento(roles: Record<string, [string, string, string]>): void {
 }
 
 function estado(id: string): string {
-  return parseTicket(readFileSync(join(root, "tickets", "2026", id, "ticket.md"), "utf8")).fields.workflow_status;
+  return parseTicket(readFileSync(join(root, "tickets", "2026", id, "ticket.md"), "utf8"))
+    .fields.workflow_status;
 }
 
 beforeEach(() => {
@@ -115,15 +129,29 @@ beforeEach(() => {
     `schema-version: 1\nmachine-id: ejec\nmanaged-execution-capacity: 1\nprojects:\n  ${projectId}:\n    root: ${root}\n`,
   );
   politica();
-  writeFixtureTicket(root, { id: A, workflowStatus: "approved", type: "FEATURE", module: "EJEC", criterios: CRITERIO, pruebas: PRUEBAS });
+  writeFixtureTicket(root, {
+    id: A,
+    workflowStatus: "approved",
+    type: "FEATURE",
+    module: "EJEC",
+    criterios: CRITERIO,
+    pruebas: PRUEBAS,
+  });
   armarJornada({ project: proyecto(), tickets: [A], ahora: () => AHORA });
 });
 
 afterEach(() => rmSync(home, { recursive: true, force: true }));
 
 /** Un ejecutor que implementa: deja o no deja el contrato de pruebas. */
-function implementador(opciones: { contrato: boolean; entornos?: Record<string, string>[]; comandos?: string[] }) {
-  return (comando: { command: string; args: readonly string[] }, entorno: Readonly<Record<string, string>> = {}) => {
+function implementador(opciones: {
+  contrato: boolean;
+  entornos?: Record<string, string>[];
+  comandos?: string[];
+}) {
+  return (
+    comando: { command: string; args: readonly string[] },
+    entorno: Readonly<Record<string, string>> = {},
+  ) => {
     opciones.entornos?.push({ ...entorno });
     opciones.comandos?.push([comando.command, ...comando.args].join(" "));
     writeFixtureTicket(root, {
@@ -164,7 +192,9 @@ describe("la ejecución llega a las pruebas del responsable", () => {
     const avance = await ejecutar(implementador({ contrato: false }));
     expect(avance.status).not.toBe("delivered");
     expect(estado(A)).toBe("in_progress");
-    expect(`${avance.status} ${avance.detail}`).toMatch(/contrato de pruebas|verification-failed/);
+    expect(`${avance.status} ${avance.detail}`).toMatch(
+      /contrato de pruebas|verification-failed/,
+    );
   });
 
   it("el ejecutor corre con VALMEN_UNATTENDED", async () => {
@@ -179,7 +209,8 @@ describe("el enrutamiento por fase", () => {
     for (const fase of FASES_DEL_AGENTE) {
       const rol = ROLES.find((r) => r.id === `agent-${fase}`);
       expect(rol?.consumer, fase).toBe("valmen journey brief");
-      for (const preset of PRESETS) expect(preset.roles[`agent-${fase}`], `${preset.id}/${fase}`).toBeDefined();
+      for (const preset of PRESETS)
+        expect(preset.roles[`agent-${fase}`], `${preset.id}/${fase}`).toBeDefined();
     }
   });
 
@@ -195,7 +226,12 @@ describe("el enrutamiento por fase", () => {
 
     // La preparación de otro ticket usa el modelo de la fase de análisis.
     const B = "FEATURE-EJEC-DOS-20261005";
-    writeFixtureTicket(root, { id: B, workflowStatus: "intake", type: "FEATURE", module: "EJEC" });
+    writeFixtureTicket(root, {
+      id: B,
+      workflowStatus: "intake",
+      type: "FEATURE",
+      module: "EJEC",
+    });
     const lanzados: string[] = [];
     prepararTicket({
       paths: proyecto().paths,
@@ -249,7 +285,9 @@ describe("el enrutamiento por fase", () => {
   });
 
   it("R-PERF-004 C4: un proveedor sin ejecutor conocido detiene el despacho sin caer a la política", async () => {
-    enrutamiento({ "agent-implementation": ["openrouter", "openai/gpt-5.6-luna-pro", "high"] });
+    enrutamiento({
+      "agent-implementation": ["openrouter", "openai/gpt-5.6-luna-pro", "high"],
+    });
     const comandos: string[] = [];
     const avance = await ejecutar(implementador({ contrato: true, comandos }));
     expect(comandos).toHaveLength(0);
@@ -289,14 +327,25 @@ describe("el enrutamiento por fase", () => {
       await ejecutar(implementador({ contrato: true, comandos, entornos }));
       // Y una corrida detenida, que es la que deja el recibo de parada.
       const B = "FEATURE-EJEC-TRES-20261005";
-      writeFixtureTicket(root, { id: B, workflowStatus: "approved", type: "FEATURE", module: "EJEC", criterios: CRITERIO, pruebas: PRUEBAS });
+      writeFixtureTicket(root, {
+        id: B,
+        workflowStatus: "approved",
+        type: "FEATURE",
+        module: "EJEC",
+        criterios: CRITERIO,
+        pruebas: PRUEBAS,
+      });
       enrutamiento({ "agent-implementation": ["openrouter", "x/y", "high"] });
       await runAutonomous({ paths: proyecto().paths, ticketId: B, now: () => AHORA });
       expect(comandos.join("\n")).not.toContain(ficticia);
       // El entorno del ejecutor es solo la marca de sesión desatendida; la credencial hereda del proceso, no del argumento.
       expect(Object.keys(entornos[0] ?? {})).toEqual(["VALMEN_UNATTENDED"]);
-      for (const archivo of [join(root, ".valmen", "autonomous-stops.jsonl"), join(root, ".valmen", "journeys", "fases.jsonl")]) {
-        if (existsSync(archivo)) expect(readFileSync(archivo, "utf8")).not.toContain(ficticia);
+      for (const archivo of [
+        join(root, ".valmen", "autonomous-stops.jsonl"),
+        join(root, ".valmen", "journeys", "fases.jsonl"),
+      ]) {
+        if (existsSync(archivo))
+          expect(readFileSync(archivo, "utf8")).not.toContain(ficticia);
       }
       expect(existsSync(join(root, ".valmen", "autonomous-stops.jsonl"))).toBe(true);
     } finally {
@@ -321,7 +370,12 @@ describe("el enrutamiento por fase", () => {
   it("R-PERF-004 C3: un modelo explícito del llamador no salta la autorización", async () => {
     enrutamiento({ "agent-implementation": ["claude-code", "claude-sonnet-5-5", "high"] });
     const comandos: string[] = [];
-    const modelo = { model: "gpt-6-x", effort: "high", origen: "rol" as const, motivo: "forzado" };
+    const modelo = {
+      model: "gpt-6-x",
+      effort: "high",
+      origen: "rol" as const,
+      motivo: "forzado",
+    };
     const avance = await runAutonomous({
       paths: proyecto().paths,
       ticketId: A,
@@ -334,8 +388,15 @@ describe("el enrutamiento por fase", () => {
   });
 
   it("modeloDeFase usa el rol cuando el proveedor coincide con el ejecutor", () => {
-    const rutas = resolveRouting({ preset: "balanced", roles: { "agent-plan": { provider: "codex", model: "gpt-6-x", effort: "high" } } });
-    const modelo = modeloDeFase(rutas, "plan", { id: "codex", model: "gpt-6-politica", effort: "medium" });
+    const rutas = resolveRouting({
+      preset: "balanced",
+      roles: { "agent-plan": { provider: "codex", model: "gpt-6-x", effort: "high" } },
+    });
+    const modelo = modeloDeFase(rutas, "plan", {
+      id: "codex",
+      model: "gpt-6-politica",
+      effort: "medium",
+    });
     expect(modelo).toMatchObject({ model: "gpt-6-x", effort: "high", origen: "rol" });
   });
 });
@@ -359,36 +420,71 @@ describe("el registro por fase", () => {
 
 describe("el modelo usado y el costo por fase (R-PERF-006)", () => {
   const base = {
-    ticketId: A, fase: "implementation" as const, ejecutor: "claude", modelo: "claude-sonnet-5-5", esfuerzo: "high",
-    origenDelModelo: "rol", duracionMs: 1, resultado: "delivered",
+    ticketId: A,
+    fase: "implementation" as const,
+    ejecutor: "claude",
+    modelo: "claude-sonnet-5-5",
+    esfuerzo: "high",
+    origenDelModelo: "rol",
+    duracionMs: 1,
+    resultado: "delivered",
   };
 
   it("C6: coincide es false cuando el usado difiere del declarado", () => {
-    expect(registrarFase(root, { ...base, modeloUsado: "claude-opus-5-5", costeUsd: 0.5 })).toMatchObject({ coincide: false, costeUsd: 0.5 });
+    expect(
+      registrarFase(root, { ...base, modeloUsado: "claude-opus-5-5", costeUsd: 0.5 }),
+    ).toMatchObject({ coincide: false, costeUsd: 0.5 });
   });
 
   it("C7: coincide es true con otro nombre del mismo modelo, y null si no hay usado", () => {
-    expect(registrarFase(root, { ...base, modelo: "claude-haiku-4-5", modeloUsado: "claude-haiku-4-5-20251001" }).coincide).toBe(true);
-    expect(registrarFase(root, base)).toMatchObject({ modeloUsado: null, coincide: null, costeUsd: null });
+    expect(
+      registrarFase(root, {
+        ...base,
+        modelo: "claude-haiku-4-5",
+        modeloUsado: "claude-haiku-4-5-20251001",
+      }).coincide,
+    ).toBe(true);
+    expect(registrarFase(root, base)).toMatchObject({
+      modeloUsado: null,
+      coincide: null,
+      costeUsd: null,
+    });
   });
 
   it("C8: un renglón anterior sin los campos nuevos se lee como sin reportar", () => {
     mkdirSync(join(root, ".valmen", "journeys"), { recursive: true });
     appendFileSync(
       join(root, ".valmen", "journeys", "fases.jsonl"),
-      JSON.stringify({ kind: "journey-phase", version: 1, ...base, registradoEn: "2026-10-01T00:00:00.000Z" }) + "\n",
+      JSON.stringify({
+        kind: "journey-phase",
+        version: 1,
+        ...base,
+        registradoEn: "2026-10-01T00:00:00.000Z",
+      }) + "\n",
     );
-    expect(leerFases(root)[0]).toMatchObject({ modelo: "claude-sonnet-5-5", modeloUsado: null, coincide: null, costeUsd: null });
+    expect(leerFases(root)[0]).toMatchObject({
+      modelo: "claude-sonnet-5-5",
+      modeloUsado: null,
+      coincide: null,
+      costeUsd: null,
+    });
   });
 
   it("C9: runAutonomous registra el modelo usado y el costo que reportó el ejecutor", async () => {
     politica("gpt-6-politica", ["codex", "claude"]);
     enrutamiento({ "agent-implementation": ["claude-code", "claude-sonnet-5-5", "high"] });
-    const json = JSON.stringify({ type: "result", total_cost_usd: 0.25, modelUsage: { "claude-opus-5-5": {} } });
+    const json = JSON.stringify({
+      type: "result",
+      total_cost_usd: 0.25,
+      modelUsage: { "claude-opus-5-5": {} },
+    });
     const interno = implementador({ contrato: true });
     await ejecutar((c, e) => ({ ...interno(c, e), stdout: json }));
     expect(leerFases(root).find((f) => f.ticketId === A)).toMatchObject({
-      modelo: "claude-sonnet-5-5", modeloUsado: "claude-opus-5-5", coincide: false, costeUsd: 0.25,
+      modelo: "claude-sonnet-5-5",
+      modeloUsado: "claude-opus-5-5",
+      coincide: false,
+      costeUsd: 0.25,
     });
   });
 
@@ -396,6 +492,10 @@ describe("el modelo usado y el costo por fase (R-PERF-006)", () => {
     politica("gpt-6-politica", ["codex", "claude"]);
     enrutamiento({ "agent-implementation": ["claude-code", "claude-sonnet-5-5", "high"] });
     await ejecutar(implementador({ contrato: true }));
-    expect(leerFases(root).find((f) => f.ticketId === A)).toMatchObject({ modeloUsado: null, coincide: null, costeUsd: null });
+    expect(leerFases(root).find((f) => f.ticketId === A)).toMatchObject({
+      modeloUsado: null,
+      coincide: null,
+      costeUsd: null,
+    });
   });
 });

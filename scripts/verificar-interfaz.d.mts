@@ -59,10 +59,17 @@ export function ejecutarInterfaz(
 ): Promise<ResultadoDeInterfaz>;
 
 /** Dispara un evento sobre un nodo, llamando a sus oyentes, y espera a que terminen. */
-export function disparar(nodo: NodoFalso, tipo: string, evento?: Record<string, unknown>): Promise<void>;
+export function disparar(
+  nodo: NodoFalso,
+  tipo: string,
+  evento?: Record<string, unknown>,
+): Promise<void>;
 
 /** Todos los nodos del árbol que cumplen el predicado. */
-export function buscarNodos(raiz: NodoFalso | undefined, predicado: (nodo: NodoFalso) => boolean): NodoFalso[];
+export function buscarNodos(
+  raiz: NodoFalso | undefined,
+  predicado: (nodo: NodoFalso) => boolean,
+): NodoFalso[];
 
 /** Las vistas que la interfaz sabe pintar, con el hash que las abre. */
 export const VISTAS: readonly (readonly [string, string])[];

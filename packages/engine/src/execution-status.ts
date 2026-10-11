@@ -2,7 +2,11 @@
 import { parseTicket, type ExecutionIdentity } from "@valmen/core";
 
 import { findTicket } from "./discovery.js";
-import { readExecutionActivity, type ExecutionActivity, type ExecutionActivityState } from "./execution-activity.js";
+import {
+  readExecutionActivity,
+  type ExecutionActivity,
+  type ExecutionActivityState,
+} from "./execution-activity.js";
 import { type AuthorizedProject } from "./project-resolution.js";
 
 export type ExecutionLiveness = "active" | "waiting" | "finished" | "failed" | "unknown";
@@ -17,13 +21,23 @@ export interface ExecutionStatus extends Readonly<ExecutionIdentity> {
  * La ausencia de señal final no es un fallo: conserva el último estado abierto
  * o devuelve unknown si nunca llegó actividad.
  */
-export function readExecutionStatus(project: AuthorizedProject, identity: ExecutionIdentity): ExecutionStatus {
-  if (identity.projectId !== project.projectId) throw new Error("La identidad no pertenece al proyecto autorizado.");
+export function readExecutionStatus(
+  project: AuthorizedProject,
+  identity: ExecutionIdentity,
+): ExecutionStatus {
+  if (identity.projectId !== project.projectId)
+    throw new Error("La identidad no pertenece al proyecto autorizado.");
   const located = findTicket(project.paths, identity.ticketId);
-  const validatedStatus = located === undefined ? null : String(parseTicket(located.text).fields.workflow_status);
+  const validatedStatus =
+    located === undefined ? null : String(parseTicket(located.text).fields.workflow_status);
   const activity = readExecutionActivity(project, identity);
   const currentActivity = activity.at(-1) ?? null;
-  return Object.freeze({ ...identity, validatedStatus, currentActivity, liveness: livenessOf(currentActivity?.state) });
+  return Object.freeze({
+    ...identity,
+    validatedStatus,
+    currentActivity,
+    liveness: livenessOf(currentActivity?.state),
+  });
 }
 
 function livenessOf(state: ExecutionActivityState | undefined): ExecutionLiveness {

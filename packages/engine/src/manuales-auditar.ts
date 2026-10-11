@@ -498,7 +498,9 @@ function extraerLiterales(texto: string): string[] {
 function textoDeFuentesCitadas(root: string, citas: readonly Cita[]): string {
   const partes: string[] = [];
   for (const cita of citas) {
-    const absoluta = isAbsolute(cita.ruta) ? cita.ruta : join(root, ...cita.ruta.split("/"));
+    const absoluta = isAbsolute(cita.ruta)
+      ? cita.ruta
+      : join(root, ...cita.ruta.split("/"));
     try {
       partes.push(readFileSync(absoluta, "utf8"));
     } catch {
@@ -611,7 +613,10 @@ function auditarManual(root: string, relativa: string, texto: string): Auditoria
 
 /** Resume hasta tres hallazgos para el detalle de un check. */
 function resumenHallazgos(hallazgos: readonly HallazgoAuditoria[]): string {
-  const muestra = hallazgos.slice(0, 3).map((h) => `${h.manual}:${h.linea}`).join(", ");
+  const muestra = hallazgos
+    .slice(0, 3)
+    .map((h) => `${h.manual}:${h.linea}`)
+    .join(", ");
   return hallazgos.length > 3 ? `${muestra}, …` : muestra;
 }
 
@@ -621,9 +626,18 @@ function construirChecks(manuales: readonly AuditoriaManual[]): MechanicalCheck[
     const nada: MechanicalCheck[] = (
       [
         ["citas_presentes", "Cada afirmación visible declara la cita que la respalda."],
-        ["citas_resuelven", "Cada cita resuelve a un archivo real y a una línea existente y no vacía."],
-        ["sin_rutas_tecnicas", "El texto visible no filtra rutas técnicas con extensión de fuente."],
-        ["mensajes_de_error", "Los literales de la sección de errores aparecen en las fuentes citadas."],
+        [
+          "citas_resuelven",
+          "Cada cita resuelve a un archivo real y a una línea existente y no vacía.",
+        ],
+        [
+          "sin_rutas_tecnicas",
+          "El texto visible no filtra rutas técnicas con extensión de fuente.",
+        ],
+        [
+          "mensajes_de_error",
+          "Los literales de la sección de errores aparecen en las fuentes citadas.",
+        ],
       ] as const
     ).map(([id, description]) => ({
       id,
@@ -785,7 +799,9 @@ export function renderAuditoria(resultado: AuditoriaManuales): string {
 
   lineas.push("", "Checks mecánicos:");
   for (const check of resultado.checks) {
-    lineas.push(`  ${MARCAS[check.result]} ${check.id} — ${check.detail ?? check.description}`);
+    lineas.push(
+      `  ${MARCAS[check.result]} ${check.id} — ${check.detail ?? check.description}`,
+    );
   }
 
   lineas.push("", `Veredicto de la corrida: ${resultado.veredicto}`);
@@ -824,13 +840,13 @@ export function reciboDeAuditoria(
     blocking: resultado.manuales
       .filter((m) => m.veredicto === "block")
       .map((m) => m.manual),
-    inBand: resultado.manuales
-      .filter((m) => m.veredicto === "review")
-      .map((m) => m.manual),
+    inBand: resultado.manuales.filter((m) => m.veredicto === "review").map((m) => m.manual),
   };
 
   return buildReceipt({
-    id: opciones.id ?? `GR-${resultado.fecha.slice(0, 10).replace(/-/g, "")}-${GATE_MANUALES}`,
+    id:
+      opciones.id ??
+      `GR-${resultado.fecha.slice(0, 10).replace(/-/g, "")}-${GATE_MANUALES}`,
     gate: GATE_MANUALES,
     propositions: [],
     policy: DEFAULT_POLICY,

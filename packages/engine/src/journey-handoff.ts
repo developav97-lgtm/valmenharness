@@ -10,7 +10,13 @@ import { createHash } from "node:crypto";
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
-import { EXIT_INVARIANT, MutationLock, TicketError, parseTicket, parsePolicyConfirmation } from "@valmen/core";
+import {
+  EXIT_INVARIANT,
+  MutationLock,
+  TicketError,
+  parseTicket,
+  parsePolicyConfirmation,
+} from "@valmen/core";
 
 import { contratoDePruebasEscrito } from "./autonomous-run.js";
 import { findTicket } from "./discovery.js";
@@ -61,7 +67,12 @@ export interface ParteDeJornada {
 /** El contenido del parte sin la hora, que es lo que decide si cambió. */
 export function huellaDelParte(parte: ParteDeJornada): string {
   const { journeyId, esperanPruebas, cerradosPorPolitica, sinEntregar } = parte;
-  const contenido = JSON.stringify({ journeyId, esperanPruebas, cerradosPorPolitica, sinEntregar });
+  const contenido = JSON.stringify({
+    journeyId,
+    esperanPruebas,
+    cerradosPorPolitica,
+    sinEntregar,
+  });
   return `sha256:${createHash("sha256").update(contenido).digest("hex")}`;
 }
 
@@ -85,12 +96,18 @@ function viñetas(seccion: string): ViñetaDelContrato[] {
 
 const ES_DIRECTORIO = /^directorio\s*:\s*(.*)$/i;
 /** Estados posteriores a `awaiting_user_tests`: el ticket ya se entregó y no cuenta como «sin entregar». */
-const ESTADOS_YA_ENTREGADOS: ReadonlySet<string> = new Set(["in_qa", "qa_approved", "closed"]);
+const ESTADOS_YA_ENTREGADOS: ReadonlySet<string> = new Set([
+  "in_qa",
+  "qa_approved",
+  "closed",
+]);
 const ES_MANUAL = /^(?:validaci[oó]n manual|manual)\b/i;
 // «No se corrió la suite completa (`npx vitest run`)» nombra un comando que NO hay que correr.
 const ES_NEGACION = /^no\s/i;
 
-function leerContrato(seccion: string): Pick<EntradaDePruebas, "directorio" | "probar" | "manuales"> {
+function leerContrato(
+  seccion: string,
+): Pick<EntradaDePruebas, "directorio" | "probar" | "manuales"> {
   let directorio: string | null = null;
   const probar: string[] = [];
   const manuales: string[] = [];
@@ -117,7 +134,12 @@ function leerContrato(seccion: string): Pick<EntradaDePruebas, "directorio" | "p
   return { directorio, probar, manuales };
 }
 
-function entradaDePruebas(ticketId: string, title: string, ruta: string, texto: string): EntradaDePruebas {
+function entradaDePruebas(
+  ticketId: string,
+  title: string,
+  ruta: string,
+  texto: string,
+): EntradaDePruebas {
   const seccion = parseTicket(texto).sections["Pruebas"] ?? "";
   const hallazgos = scanSecrets(seccion);
   if (hallazgos.length > 0) {
@@ -149,9 +171,14 @@ export function armarParteDeJornada(request: {
   readonly journeyId: string;
   readonly ahora?: (() => Date) | undefined;
 }): ParteDeJornada {
-  const jornada = readJourneys(request.project).find((j) => j.journeyId === request.journeyId);
+  const jornada = readJourneys(request.project).find(
+    (j) => j.journeyId === request.journeyId,
+  );
   if (jornada === undefined) {
-    throw new TicketError(`La jornada ${request.journeyId} no existe en el registro de jornadas.`, EXIT_INVARIANT);
+    throw new TicketError(
+      `La jornada ${request.journeyId} no existe en el registro de jornadas.`,
+      EXIT_INVARIANT,
+    );
   }
   const esperanPruebas: EntradaDePruebas[] = [];
   const cerradosPorPolitica: CierreDeJornadaPorPolitica[] = [];
@@ -172,13 +199,18 @@ export function armarParteDeJornada(request: {
     const estado = String(leido.fields.workflow_status ?? "?");
     const title = String(leido.fields.title ?? ticketId);
     if (estado === "awaiting_user_tests") {
-      esperanPruebas.push(entradaDePruebas(ticketId, title, ubicado.relativePath, ubicado.text));
+      esperanPruebas.push(
+        entradaDePruebas(ticketId, title, ubicado.relativePath, ubicado.text),
+      );
       continue;
     }
     if (estado === "qa_approved" || estado === "closed") {
       const qa = leido.blocks.QA ?? [];
       const ultimo = qa[qa.length - 1];
-      const politica = ultimo === undefined ? null : parsePolicyConfirmation(ultimo["po_confirmation"] as string | null);
+      const politica =
+        ultimo === undefined
+          ? null
+          : parsePolicyConfirmation(ultimo["po_confirmation"] as string | null);
       if (politica !== null) {
         cerradosPorPolitica.push({
           ticketId,

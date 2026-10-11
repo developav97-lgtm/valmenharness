@@ -81,6 +81,10 @@ sprints:
         depends_on:
           - FEATURE-CLI-PRESUPUESTO-SKILLS-20261010
           - FEATURE-ADAPTER-SKILL-REFERENCIAS-20261010
+      - id: FEATURE-GATE-CODE-REVIEW-EXIGENCIA-20261010
+        title: Exigir la revisión del diff al entregar un ticket y adaptar a quienes entregan
+        depends_on:
+          - FEATURE-GATE-CODE-REVIEW-20261010
 coverage:
   - requirement: R-MSG-001
     covered_by:

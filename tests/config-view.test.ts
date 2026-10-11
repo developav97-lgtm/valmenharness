@@ -39,7 +39,10 @@ const ARCHIVOS_GENERADOS = [
   ".claude/output-styles/valmen.md",
   ".claude/settings.json",
   "CLAUDE.md",
+  ".worktreeinclude",
   ".codex/config.toml",
+  ".codex/rules/valmen.rules",
+  ".opencode/opencode.json",
 ];
 
 const CONFIG = `# Configuración del harness en este proyecto.
@@ -218,16 +221,20 @@ describe("guardar la configuración", () => {
       lab,
       CONFIG.replace("name: SaiOpenCloud", "name: Otro"),
     );
-    // Además de AGENTS.md, Claude Code recibe su estilo de salida, la activación en
-    // settings.json y el bloque de CLAUDE.md: tres archivos más (R-RESP-002 y 003) y la verbosidad de Codex (R-RESP-007).
+    // Además de AGENTS.md, Claude Code recibe su estilo de salida, la activación y las denegaciones en
+    // settings.json, el bloque de CLAUDE.md y el .worktreeinclude que lleva settings.json a sus worktrees
+    // (R-RESP-002 y 003, R-PER-001): cuatro archivos más y la verbosidad de Codex (R-RESP-007).
     expect(impacto?.files).toEqual([
       { path: "AGENTS.md", stale: true },
       { path: ".claude/output-styles/valmen.md", stale: true },
       { path: ".claude/settings.json", stale: true },
       { path: "CLAUDE.md", stale: true },
+      { path: ".worktreeinclude", stale: true },
       { path: ".codex/config.toml", stale: true },
+      { path: ".codex/rules/valmen.rules", stale: true },
+      { path: ".opencode/opencode.json", stale: true },
     ]);
-    expect(impacto?.stale).toBe(5);
+    expect(impacto?.stale).toBe(8);
     expect(impacto?.changesAgentsMd).toBe(true);
   });
 });
@@ -236,7 +243,7 @@ describe("guardar la configuración", () => {
 
 describe("regenerar los archivos proyectados", () => {
   it("escribe AGENTS.md y deja de haber nada pendiente", () => {
-    expect(projectionImpact(lab, CONFIG)?.stale).toBe(5);
+    expect(projectionImpact(lab, CONFIG)?.stale).toBe(8);
 
     const resultado = syncProjections(lab);
     expect(resultado.ok).toBe(true);

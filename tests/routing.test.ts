@@ -17,7 +17,14 @@
  * 4. **El orden "el código primero" no se rompe por configuración.** Un gate que
  *    se resuelve con comandos se sigue resolviendo con comandos.
  */
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -63,7 +70,11 @@ import {
   writeRouting,
 } from "../packages/server/src/routing.js";
 import { resetCatalogCache } from "../packages/server/src/routing.js";
-import { registrarFase, resolverDespachoDeFase, resolverModeloDeFase } from "../packages/engine/src/journey-phases.js";
+import {
+  registrarFase,
+  resolverDespachoDeFase,
+  resolverModeloDeFase,
+} from "../packages/engine/src/journey-phases.js";
 import { handleApi } from "../packages/server/src/server.js";
 import { writeFixtureTicket } from "./helpers/fixtures.js";
 
@@ -143,8 +154,11 @@ describe("el catálogo de roles", () => {
       "agent-verification",
     ]);
     expect(ROLES.every((rol) => rol.description !== "")).toBe(true);
-    // C1: el rol revisor declara su consumidor, `valmen review-agent`.
-    expect(ROLES.find((rol) => rol.id === "reviewer")?.consumer).toBe("valmen review-agent");
+    // C1: el rol revisor declara sus consumidores, `valmen review-agent` y, desde
+    // FEATURE-GATE-CODE-REVIEW-20261010, `valmen gate code-review`.
+    expect(ROLES.find((rol) => rol.id === "reviewer")?.consumer).toBe(
+      "valmen review-agent, valmen gate code-review",
+    );
   });
 
   it("los presets solo asignan modelos a los roles que se ejecutan", () => {
@@ -204,7 +218,9 @@ describe("el catálogo de roles", () => {
       // modelo es el de `balanced`. Se compara contra ese preset para que la excepción no
       // se desvíe sola.
       if (rol === "reviewer") {
-        expect(ruta.model).toBe(PRESETS.find((p) => p.id === "balanced")?.roles["reviewer"]?.model);
+        expect(ruta.model).toBe(
+          PRESETS.find((p) => p.id === "balanced")?.roles["reviewer"]?.model,
+        );
         continue;
       }
       expect(caros, rol).not.toContain(ruta.model);
@@ -752,11 +768,32 @@ describe("el proveedor viaja con el modelo", () => {
 
 /** Los catálogos medidos el 2026-10-07; la red es el límite externo que se simula. */
 const CATALOGOS = {
-  codex: ["gpt-5.5", "gpt-5.6-luna", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-6-astra", "gpt-6-luna", "gpt-6-sol", "gpt-6.1-sol"],
-  "opencode-go": ["deepseek-v4-flash", "deepseek-v4-pro", "glm-5.3", "glm-5.3-flash", "kimi-k3", "kimi-k2.7-code", "gpt-6-luna"],
+  codex: [
+    "gpt-5.5",
+    "gpt-5.6-luna",
+    "gpt-5.6-sol",
+    "gpt-5.6-terra",
+    "gpt-6-astra",
+    "gpt-6-luna",
+    "gpt-6-sol",
+    "gpt-6.1-sol",
+  ],
+  "opencode-go": [
+    "deepseek-v4-flash",
+    "deepseek-v4-pro",
+    "glm-5.3",
+    "glm-5.3-flash",
+    "kimi-k3",
+    "kimi-k2.7-code",
+    "gpt-6-luna",
+  ],
   // `openai/gpt-5.6-luna-pro` es el modelo del rol `reviewer` en `balanced`, que los perfiles
   // incorporados heredan.
-  openrouter: ["deepseek/deepseek-v4-flash", "moonshotai/kimi-k3", "openai/gpt-5.6-luna-pro"],
+  openrouter: [
+    "deepseek/deepseek-v4-flash",
+    "moonshotai/kimi-k3",
+    "openai/gpt-5.6-luna-pro",
+  ],
 };
 
 function fetchCatalogos(caidos: readonly string[] = []): typeof fetch {
@@ -768,12 +805,21 @@ function fetchCatalogos(caidos: readonly string[] = []): typeof fetch {
         ? "opencode-go"
         : "openrouter";
     if (caidos.includes(clave)) return new Response("caído", { status: 503 });
-    return new Response(JSON.stringify({ data: CATALOGOS[clave as keyof typeof CATALOGOS].map((id) => ({ id })) }), { status: 200 });
+    return new Response(
+      JSON.stringify({
+        data: CATALOGOS[clave as keyof typeof CATALOGOS].map((id) => ({ id })),
+      }),
+      { status: 200 },
+    );
   }) as unknown as typeof fetch;
 }
 
 function opcionesDePerfil(caidos: readonly string[] = []) {
-  return { env: {}, filePath: join(lab, ".valmen", ".credentials.yaml"), fetchImpl: fetchCatalogos(caidos) };
+  return {
+    env: {},
+    filePath: join(lab, ".valmen", ".credentials.yaml"),
+    fetchImpl: fetchCatalogos(caidos),
+  };
 }
 
 function perfilIncorporado(id: string) {
@@ -783,14 +829,23 @@ function perfilIncorporado(id: string) {
 }
 
 function perfilMixto() {
-  return derivarPerfil(perfilIncorporado("claude-code-completo"), "mixto", "Claude planea, Codex implementa", {
-    "agent-implementation": { provider: "codex", model: "gpt-6-sol", effort: "high" },
-  });
+  return derivarPerfil(
+    perfilIncorporado("claude-code-completo"),
+    "mixto",
+    "Claude planea, Codex implementa",
+    {
+      "agent-implementation": { provider: "codex", model: "gpt-6-sol", effort: "high" },
+    },
+  );
 }
 
 describe("los perfiles de modelos", () => {
   it("R-PERF-001 perfiles incorporados", () => {
-    expect(PERFILES_INCORPORADOS.map((p) => p.id)).toEqual(["claude-code-completo", "codex-completo", "opencode-go"]);
+    expect(PERFILES_INCORPORADOS.map((p) => p.id)).toEqual([
+      "claude-code-completo",
+      "codex-completo",
+      "opencode-go",
+    ]);
     expect(PERFILES_INCORPORADOS.every((p) => p.origen === "incorporado")).toBe(true);
   });
 
@@ -810,7 +865,12 @@ describe("los perfiles de modelos", () => {
   it("R-PERF-001 perfil incompleto", () => {
     const resto = { ...perfilIncorporado("codex-completo").roles };
     delete (resto as Record<string, unknown>)["agent-plan"];
-    const errores = comprobarCompleto({ ...perfilIncorporado("codex-completo"), id: "roto", origen: "proyecto", roles: resto });
+    const errores = comprobarCompleto({
+      ...perfilIncorporado("codex-completo"),
+      id: "roto",
+      origen: "proyecto",
+      roles: resto,
+    });
     expect(errores).toHaveLength(1);
     expect(errores[0]).toContain("agent-plan");
   });
@@ -827,12 +887,18 @@ describe("los perfiles de modelos", () => {
     });
     const resultado = await guardarPerfil(lab, perfil, opcionesDePerfil());
     expect(resultado.ok).toBe(false);
-    expect(resultado.errores.join("\n")).toContain("rol agent-plan: el modelo gpt-9-inventado no existe en el catálogo de codex");
+    expect(resultado.errores.join("\n")).toContain(
+      "rol agent-plan: el modelo gpt-9-inventado no existe en el catálogo de codex",
+    );
     expect(existsSync(perfilesPath(lab))).toBe(false);
   });
 
   it("R-PERF-003 catálogo no disponible", async () => {
-    const resultado = await guardarPerfil(lab, derivarPerfil(perfilIncorporado("codex-completo"), "sin-red", "", {}), opcionesDePerfil(["codex"]));
+    const resultado = await guardarPerfil(
+      lab,
+      derivarPerfil(perfilIncorporado("codex-completo"), "sin-red", "", {}),
+      opcionesDePerfil(["codex"]),
+    );
     expect(resultado.ok).toBe(false);
     expect(resultado.errores.join("\n")).toContain("no se pudo comprobar");
     expect(existsSync(perfilesPath(lab))).toBe(false);
@@ -865,7 +931,11 @@ describe("los perfiles de modelos", () => {
   });
 
   it("rechaza guardar con el id de un perfil incorporado", async () => {
-    const resultado = await guardarPerfil(lab, { ...perfilMixto(), id: "codex-completo" }, opcionesDePerfil());
+    const resultado = await guardarPerfil(
+      lab,
+      { ...perfilMixto(), id: "codex-completo" },
+      opcionesDePerfil(),
+    );
     expect(resultado.ok).toBe(false);
     expect(existsSync(perfilesPath(lab))).toBe(false);
   });
@@ -873,10 +943,16 @@ describe("los perfiles de modelos", () => {
 
 // ── La resolución del perfil elegido ────────────────────────────────────────
 
-function elegir(seleccion: { proyecto: string | null; ejecutores?: Record<string, string> }) {
+function elegir(seleccion: {
+  proyecto: string | null;
+  ejecutores?: Record<string, string>;
+}) {
   writeFileSync(
     perfilesPath(lab),
-    renderPerfiles(readProjectPerfiles(lab), { proyecto: seleccion.proyecto, ejecutores: seleccion.ejecutores ?? {} }),
+    renderPerfiles(readProjectPerfiles(lab), {
+      proyecto: seleccion.proyecto,
+      ejecutores: seleccion.ejecutores ?? {},
+    }),
   );
 }
 
@@ -897,7 +973,12 @@ describe("la resolución del perfil elegido", () => {
       expect(rutasDelProyecto(lab)).toEqual(resolveRouting({ preset, roles: {} }));
     }
     const rutas = rutasDelProyecto(lab);
-    expect(rutas.every((r) => r.source !== "perfil" && r.perfil === undefined && r.anulaPerfil === undefined)).toBe(true);
+    expect(
+      rutas.every(
+        (r) =>
+          r.source !== "perfil" && r.perfil === undefined && r.anulaPerfil === undefined,
+      ),
+    ).toBe(true);
   });
 
   it("R-PERF-002 perfil del proyecto gana al preset", () => {
@@ -916,7 +997,10 @@ describe("la resolución del perfil elegido", () => {
       fijarRouting(`preset: ${preset}\nroles: {}\n`);
       const rutas = rutasDelProyecto(lab);
       for (const [id, ruta] of Object.entries(perfil.roles)) {
-        expect(rol(rutas, id), `${preset}/${id}`).toMatchObject({ ...ruta, source: "perfil" });
+        expect(rol(rutas, id), `${preset}/${id}`).toMatchObject({
+          ...ruta,
+          source: "perfil",
+        });
       }
     }
   });
@@ -936,15 +1020,23 @@ describe("la resolución del perfil elegido", () => {
 
   it("R-PERF-005 el override gana al perfil", () => {
     elegir({ proyecto: "claude-code-completo" });
-    fijarRouting("preset: quality\nroles:\n  agent-plan:\n    provider: codex\n    model: gpt-6-sol\n    effort: high\n");
+    fijarRouting(
+      "preset: quality\nroles:\n  agent-plan:\n    provider: codex\n    model: gpt-6-sol\n    effort: high\n",
+    );
     const plan = rol(rutasDelProyecto(lab), "agent-plan");
-    expect(plan).toMatchObject({ source: "proyecto", provider: "codex", model: "gpt-6-sol" });
+    expect(plan).toMatchObject({
+      source: "proyecto",
+      provider: "codex",
+      model: "gpt-6-sol",
+    });
     expect(plan.perfil).toBeUndefined();
   });
 
   it("R-PERF-005 el rol dice que anula el perfil", () => {
     elegir({ proyecto: "claude-code-completo" });
-    fijarRouting("preset: quality\nroles:\n  agent-plan:\n    provider: codex\n    model: gpt-6-sol\n    effort: high\n");
+    fijarRouting(
+      "preset: quality\nroles:\n  agent-plan:\n    provider: codex\n    model: gpt-6-sol\n    effort: high\n",
+    );
     const rutas = rutasDelProyecto(lab);
     expect(rol(rutas, "agent-plan").anulaPerfil).toBe("claude-code-completo");
     expect(rol(rutas, "agent-analysis").anulaPerfil).toBeUndefined();
@@ -953,7 +1045,9 @@ describe("la resolución del perfil elegido", () => {
   it("R-PERF-002 perfil elegido inexistente", () => {
     elegir({ proyecto: "fantasma" });
     expect(() => rutasDelProyecto(lab)).toThrow(/"fantasma" no existe/);
-    expect(() => perfilElegido([], { proyecto: "x", ejecutores: {} })).toThrow(/"x" no existe/);
+    expect(() => perfilElegido([], { proyecto: "x", ejecutores: {} })).toThrow(
+      /"x" no existe/,
+    );
   });
 
   it("R-PERF-002 elegir perfil inexistente", () => {
@@ -973,8 +1067,12 @@ describe("la resolución del perfil elegido", () => {
 
   it("R-PERF-002 elegir escribe y quitar borra la elección", () => {
     expect(elegirPerfil(lab, { perfil: "claude-code-completo" }).written).toBe(true);
-    expect(elegirPerfil(lab, { perfil: "codex-completo", ejecutor: "hermes" }).written).toBe(true);
-    expect(rol(rutasDelProyecto(lab, { ejecutor: "hermes" }), "agent-plan").perfil?.id).toBe("codex-completo");
+    expect(
+      elegirPerfil(lab, { perfil: "codex-completo", ejecutor: "hermes" }).written,
+    ).toBe(true);
+    expect(
+      rol(rutasDelProyecto(lab, { ejecutor: "hermes" }), "agent-plan").perfil?.id,
+    ).toBe("codex-completo");
     elegirPerfil(lab, { perfil: null, ejecutor: "hermes" });
     elegirPerfil(lab, { perfil: null });
     expect(rutasDelProyecto(lab).every((r) => r.source !== "perfil")).toBe(true);
@@ -995,29 +1093,54 @@ describe("la resolución del perfil elegido", () => {
     const real = readFileSync(join(process.cwd(), ".valmen", "config.yaml"), "utf8");
     writeFileSync(
       join(lab, ".valmen", "config.yaml"),
-      real.replace("    id: claude\n    model: claude-sonnet-5-5", "    id: codex\n    model: gpt-5.5"),
+      real.replace(
+        "    id: claude\n    model: claude-sonnet-5-5",
+        "    id: codex\n    model: gpt-5.5",
+      ),
     );
     elegir({ proyecto: "claude-code-completo", ejecutores: { codex: "codex-completo" } });
     const fase = resolverModeloDeFase(lab, "plan");
     expect(fase?.origen).toBe("rol");
-    expect(fase?.model).toBe(perfilIncorporado("codex-completo").roles["agent-plan"]?.model);
+    expect(fase?.model).toBe(
+      perfilIncorporado("codex-completo").roles["agent-plan"]?.model,
+    );
     expect(fase?.motivo).toContain("perfil codex-completo");
   });
 
   it("R-PERF-005 la API muestra el origen perfil", () => {
     elegir({ proyecto: "claude-code-completo" });
-    fijarRouting("preset: quality\nroles:\n  agent-plan:\n    provider: codex\n    model: gpt-6-sol\n    effort: high\n");
+    fijarRouting(
+      "preset: quality\nroles:\n  agent-plan:\n    provider: codex\n    model: gpt-6-sol\n    effort: high\n",
+    );
     const estado = checkRouting(lab, readFileSync(routingPath(lab), "utf8"));
     expect(estado.ok).toBe(true);
-    expect(rol(estado.roles, "agent-analysis")).toMatchObject({ source: "perfil", perfil: { id: "claude-code-completo", alcance: "proyecto" } });
-    expect(rol(estado.roles, "agent-plan")).toMatchObject({ source: "proyecto", anulaPerfil: "claude-code-completo" });
+    expect(rol(estado.roles, "agent-analysis")).toMatchObject({
+      source: "perfil",
+      perfil: { id: "claude-code-completo", alcance: "proyecto" },
+    });
+    expect(rol(estado.roles, "agent-plan")).toMatchObject({
+      source: "proyecto",
+      anulaPerfil: "claude-code-completo",
+    });
   });
 
   it("R-PERF-002 la degradación no sobrescribe el perfil", () => {
-    const propio = derivarPerfil(perfilIncorporado("claude-code-completo"), "juez-propio", "", {
-      "gate-evaluator": { provider: "openrouter", model: "moonshotai/kimi-k3", effort: "high" },
-    });
-    writeFileSync(perfilesPath(lab), renderPerfiles([propio], { proyecto: "juez-propio", ejecutores: {} }));
+    const propio = derivarPerfil(
+      perfilIncorporado("claude-code-completo"),
+      "juez-propio",
+      "",
+      {
+        "gate-evaluator": {
+          provider: "openrouter",
+          model: "moonshotai/kimi-k3",
+          effort: "high",
+        },
+      },
+    );
+    writeFileSync(
+      perfilesPath(lab),
+      renderPerfiles([propio], { proyecto: "juez-propio", ejecutores: {} }),
+    );
     fijarRouting("preset: balanced\nroles: {}\n");
     for (const preset of [undefined, "economy"]) {
       const gate = gateRoutingFor(lab, preset === undefined ? {} : { preset });
@@ -1035,8 +1158,14 @@ describe("la API de perfiles", () => {
   it("R-PERF-002 API lista sin archivo", async () => {
     const r = await handleApi("GET", "/api/perfiles", {}, contextoConCatalogo());
     expect(r.status).toBe(200);
-    const cuerpo = cuerpoDe<{ perfiles: { id: string; origen: string }[]; seleccion: unknown; ejecutores: string[] }>(r);
-    expect(cuerpo.perfiles.map((p) => p.id)).toEqual(PERFILES_INCORPORADOS.map((p) => p.id));
+    const cuerpo = cuerpoDe<{
+      perfiles: { id: string; origen: string }[];
+      seleccion: unknown;
+      ejecutores: string[];
+    }>(r);
+    expect(cuerpo.perfiles.map((p) => p.id)).toEqual(
+      PERFILES_INCORPORADOS.map((p) => p.id),
+    );
     expect(cuerpo.perfiles.every((p) => p.origen === "incorporado")).toBe(true);
     expect(cuerpo.seleccion).toEqual({ proyecto: null, ejecutores: {} });
     expect(cuerpo.ejecutores).toEqual(["claude", "codex", "opencode", "hermes"]);
@@ -1046,7 +1175,10 @@ describe("la API de perfiles", () => {
     await guardarPerfil(lab, perfilMixto(), opcionesDePerfil());
     elegirPerfil(lab, { perfil: "mixto" });
     const r = await handleApi("GET", "/api/perfiles", {}, contextoConCatalogo());
-    const cuerpo = cuerpoDe<{ perfiles: { id: string; origen: string }[]; seleccion: { proyecto: string } }>(r);
+    const cuerpo = cuerpoDe<{
+      perfiles: { id: string; origen: string }[];
+      seleccion: { proyecto: string };
+    }>(r);
     expect(cuerpo.perfiles.find((p) => p.id === "mixto")?.origen).toBe("proyecto");
     expect(cuerpo.seleccion.proyecto).toBe("mixto");
   });
@@ -1068,7 +1200,9 @@ describe("la API de perfiles", () => {
         id: "mi-perfil",
         description: "Claude con Codex",
         base: "claude-code-completo",
-        roles: { "agent-implementation": { provider: "codex", model: "gpt-6-sol", effort: "high" } },
+        roles: {
+          "agent-implementation": { provider: "codex", model: "gpt-6-sol", effort: "high" },
+        },
       },
       contextoConCatalogo(),
     );
@@ -1101,13 +1235,17 @@ describe("la API de perfiles", () => {
         id: "con-error",
         description: "",
         base: "codex-completo",
-        roles: { "agent-plan": { provider: "codex", model: "gpt-9-inventado", effort: "high" } },
+        roles: {
+          "agent-plan": { provider: "codex", model: "gpt-9-inventado", effort: "high" },
+        },
       },
       contextoConCatalogo(),
     );
     const cuerpo = cuerpoDe<Resultado>(r);
     expect(cuerpo.ok).toBe(false);
-    expect(cuerpo.errores.join("\n")).toContain("rol agent-plan: el modelo gpt-9-inventado");
+    expect(cuerpo.errores.join("\n")).toContain(
+      "rol agent-plan: el modelo gpt-9-inventado",
+    );
     expect(existsSync(perfilesPath(lab))).toBe(false);
   });
 
@@ -1120,28 +1258,56 @@ describe("la API de perfiles", () => {
       {
         id: "mixto",
         description: "Editado",
-        roles: { ...completo.roles, "agent-implementation": { provider: "codex", model: "gpt-6-luna", effort: "low" } },
+        roles: {
+          ...completo.roles,
+          "agent-implementation": { provider: "codex", model: "gpt-6-luna", effort: "low" },
+        },
       },
       contextoConCatalogo(),
     );
     expect(cuerpoDe<Resultado>(r).written).toBe(true);
     const editado = readProjectPerfiles(lab).filter((p) => p.id === "mixto");
     expect(editado).toHaveLength(1);
-    expect(editado[0]?.roles["agent-implementation"]).toEqual({ provider: "codex", model: "gpt-6-luna", effort: "low" });
+    expect(editado[0]?.roles["agent-implementation"]).toEqual({
+      provider: "codex",
+      model: "gpt-6-luna",
+      effort: "low",
+    });
     expect(editado[0]?.description).toBe("Editado");
   });
 
   it("R-PERF-002 API elige para el proyecto", async () => {
-    const r = await handleApi("PUT", "/api/perfiles/seleccion", { perfil: "codex-completo" }, context());
+    const r = await handleApi(
+      "PUT",
+      "/api/perfiles/seleccion",
+      { perfil: "codex-completo" },
+      context(),
+    );
     expect(cuerpoDe<Resultado>(r).written).toBe(true);
-    expect(readSeleccionDePerfil(lab)).toEqual({ proyecto: "codex-completo", ejecutores: {} });
+    expect(readSeleccionDePerfil(lab)).toEqual({
+      proyecto: "codex-completo",
+      ejecutores: {},
+    });
   });
 
   it("R-PERF-002 API elige por ejecutor", async () => {
-    await handleApi("PUT", "/api/perfiles/seleccion", { perfil: "codex-completo" }, context());
-    const r = await handleApi("PUT", "/api/perfiles/seleccion", { perfil: "opencode-go", ejecutor: "hermes" }, context());
+    await handleApi(
+      "PUT",
+      "/api/perfiles/seleccion",
+      { perfil: "codex-completo" },
+      context(),
+    );
+    const r = await handleApi(
+      "PUT",
+      "/api/perfiles/seleccion",
+      { perfil: "opencode-go", ejecutor: "hermes" },
+      context(),
+    );
     expect(cuerpoDe<Resultado>(r).written).toBe(true);
-    expect(readSeleccionDePerfil(lab)).toEqual({ proyecto: "codex-completo", ejecutores: { hermes: "opencode-go" } });
+    expect(readSeleccionDePerfil(lab)).toEqual({
+      proyecto: "codex-completo",
+      ejecutores: { hermes: "opencode-go" },
+    });
   });
 
   it("R-PERF-002 API cuerpo mal formado", async () => {
@@ -1168,7 +1334,12 @@ describe("R-PERF-007 modelos por fase para la sesión", () => {
     expect(sesion.fases.map((f) => f.fase)).toEqual([...FASES_DEL_AGENTE]);
     for (const f of sesion.fases) {
       const ruta = rol(rutas, `agent-${f.fase}`);
-      expect(f).toMatchObject({ rol: ruta.role, provider: ruta.provider, model: ruta.model, effort: ruta.effort });
+      expect(f).toMatchObject({
+        rol: ruta.role,
+        provider: ruta.provider,
+        model: ruta.model,
+        effort: ruta.effort,
+      });
       expect(f.origen).toEqual({ source: ruta.source, perfil: ruta.perfil });
     }
   });
@@ -1184,7 +1355,9 @@ describe("R-PERF-007 modelos por fase para la sesión", () => {
 
   it("R-PERF-007 nota del alias", () => {
     elegir({ proyecto: "claude-code-completo" });
-    expect(fasesDeSesion(lab, { cliente: "claude" }).nota).toContain("versión vigente de la familia");
+    expect(fasesDeSesion(lab, { cliente: "claude" }).nota).toContain(
+      "versión vigente de la familia",
+    );
   });
 
   it("R-PERF-007 cliente sin subagentes", () => {
@@ -1192,7 +1365,10 @@ describe("R-PERF-007 modelos por fase para la sesión", () => {
     for (const cliente of ["codex", "opencode", "hermes"] as const) {
       const sesion = fasesDeSesion(lab, { cliente });
       expect(sesion.admiteSubagentes, cliente).toBe(false);
-      expect(sesion.fases.every((f) => f.subagente === null), cliente).toBe(true);
+      expect(
+        sesion.fases.every((f) => f.subagente === null),
+        cliente,
+      ).toBe(true);
     }
   });
 
@@ -1204,25 +1380,42 @@ describe("R-PERF-007 modelos por fase para la sesión", () => {
   });
 
   it("R-PERF-007 fase de otro proveedor sin subagente", () => {
-    writeFileSync(perfilesPath(lab), renderPerfiles([perfilMixto()], { proyecto: "mixto", ejecutores: {} }));
+    writeFileSync(
+      perfilesPath(lab),
+      renderPerfiles([perfilMixto()], { proyecto: "mixto", ejecutores: {} }),
+    );
     const sesion = fasesDeSesion(lab, { cliente: "claude" });
     expect(sesion.fases.find((f) => f.fase === "implementation")?.subagente).toBeNull();
     expect(sesion.fases.find((f) => f.fase === "plan")?.subagente).toBe("opus");
   });
 
   it("R-PERF-007 aviso fase de otro proveedor", () => {
-    writeFileSync(perfilesPath(lab), renderPerfiles([perfilMixto()], { proyecto: "mixto", ejecutores: {} }));
-    const aviso = fasesDeSesion(lab, { cliente: "claude" }).fases.find((f) => f.fase === "implementation")?.aviso;
+    writeFileSync(
+      perfilesPath(lab),
+      renderPerfiles([perfilMixto()], { proyecto: "mixto", ejecutores: {} }),
+    );
+    const aviso = fasesDeSesion(lab, { cliente: "claude" }).fases.find(
+      (f) => f.fase === "implementation",
+    )?.aviso;
     expect(aviso).toContain("codex");
     expect(aviso).toContain("R-PERF-004");
   });
 
   it("R-PERF-007 modelo sin alias", () => {
     const raro = derivarPerfil(perfilIncorporado("claude-code-completo"), "raro", "", {
-      "agent-plan": { provider: "claude-code", model: "modelo-desconocido-1", effort: "high" },
+      "agent-plan": {
+        provider: "claude-code",
+        model: "modelo-desconocido-1",
+        effort: "high",
+      },
     });
-    writeFileSync(perfilesPath(lab), renderPerfiles([raro], { proyecto: "raro", ejecutores: {} }));
-    const plan = fasesDeSesion(lab, { cliente: "claude" }).fases.find((f) => f.fase === "plan");
+    writeFileSync(
+      perfilesPath(lab),
+      renderPerfiles([raro], { proyecto: "raro", ejecutores: {} }),
+    );
+    const plan = fasesDeSesion(lab, { cliente: "claude" }).fases.find(
+      (f) => f.fase === "plan",
+    );
     expect(plan?.subagente).toBeNull();
     expect(plan?.aviso).toContain("modelo-desconocido-1");
   });
@@ -1247,36 +1440,63 @@ describe("R-PERF-007 modelos por fase para la sesión", () => {
   it("R-PERF-007 fase del estado", () => {
     expect(faseDelEstado("intake")).toBe("analysis");
     expect(faseDelEstado("analyzed")).toBe("plan");
-    for (const e of ["approved", "in_progress", "changes_requested"]) expect(faseDelEstado(e), e).toBe("implementation");
-    for (const e of ["awaiting_user_tests", "in_qa"]) expect(faseDelEstado(e), e).toBe("verification");
-    for (const e of ["planned", "qa_approved", "closed", "blocked", "otro"]) expect(faseDelEstado(e), e).toBeNull();
+    for (const e of ["approved", "in_progress", "changes_requested"])
+      expect(faseDelEstado(e), e).toBe("implementation");
+    for (const e of ["awaiting_user_tests", "in_qa"])
+      expect(faseDelEstado(e), e).toBe("verification");
+    for (const e of ["planned", "qa_approved", "closed", "blocked", "otro"])
+      expect(faseDelEstado(e), e).toBeNull();
   });
 });
 
 describe("R-PERF-004 despacho de fase por proveedor", () => {
   const politica = { id: "claude", model: "claude-sonnet-5-5", effort: "high" };
   const rutas = (provider: string, model: string) =>
-    resolveRouting({ preset: "balanced", roles: { "agent-plan": { provider, model, effort: "medium" } } });
+    resolveRouting({
+      preset: "balanced",
+      roles: { "agent-plan": { provider, model, effort: "medium" } },
+    });
 
   it("R-PERF-004 C5: un proveedor sin ejecutor declarado se rechaza con un motivo que nombra el proveedor", () => {
-    const d = despachoDeFase(rutas("openrouter", "x/y"), "plan", politica, ["claude", "codex", "opencode"]);
+    const d = despachoDeFase(rutas("openrouter", "x/y"), "plan", politica, [
+      "claude",
+      "codex",
+      "opencode",
+    ]);
     expect(d.ok).toBe(false);
     if (!d.ok) expect(d.motivo).toContain("openrouter");
   });
 
   it("R-PERF-004 C6: el ejecutor sale del proveedor del perfil, no del nombre del modelo", () => {
     // Un modelo que se llama como Claude pero lo sirve codex: manda el proveedor.
-    const d = despachoDeFase(rutas("codex", "claude-sonnet-5-5"), "plan", politica, ["claude", "codex"]);
-    expect(d).toMatchObject({ ok: true, ejecutor: "codex", model: "claude-sonnet-5-5", effort: "medium", origen: "rol" });
+    const d = despachoDeFase(rutas("codex", "claude-sonnet-5-5"), "plan", politica, [
+      "claude",
+      "codex",
+    ]);
+    expect(d).toMatchObject({
+      ok: true,
+      ejecutor: "codex",
+      model: "claude-sonnet-5-5",
+      effort: "medium",
+      origen: "rol",
+    });
     // Y un modelo con nombre de otro proveedor no autoriza nada: sin codex autorizado se rechaza.
-    const sin = despachoDeFase(rutas("codex", "claude-sonnet-5-5"), "plan", politica, ["claude"]);
+    const sin = despachoDeFase(rutas("codex", "claude-sonnet-5-5"), "plan", politica, [
+      "claude",
+    ]);
     expect(sin.ok).toBe(false);
     if (!sin.ok) expect(sin.motivo).toContain("codex");
   });
 
   it("R-PERF-004 C5: un rol sin modelo conserva ejecutor y modelo de la política, pero el ejecutor debe estar autorizado", () => {
-    const vacias = resolveRouting({ preset: "balanced", roles: {} }).filter((r) => r.role !== "agent-plan");
-    expect(despachoDeFase(vacias, "plan", politica, ["claude"])).toMatchObject({ ok: true, ejecutor: "claude", origen: "politica" });
+    const vacias = resolveRouting({ preset: "balanced", roles: {} }).filter(
+      (r) => r.role !== "agent-plan",
+    );
+    expect(despachoDeFase(vacias, "plan", politica, ["claude"])).toMatchObject({
+      ok: true,
+      ejecutor: "claude",
+      origen: "politica",
+    });
     expect(despachoDeFase(vacias, "plan", politica, ["codex"]).ok).toBe(false);
   });
 
@@ -1294,28 +1514,46 @@ describe("el reporte del ejecutor (R-PERF-006)", () => {
   });
 
   it("C2: toma de modelUsage el modelo que coincide con el declarado", () => {
-    expect(reporteDelEjecutor("claude", "claude-sonnet-5-5", salida).modeloUsado).toBe("claude-sonnet-5-5");
-    expect(reporteDelEjecutor("claude", "claude-haiku-4-5", salida).modeloUsado).toBe("claude-haiku-4-5-20251001");
-    expect(reporteDelEjecutor("claude", "otro", salida).modeloUsado).toBe("claude-haiku-4-5-20251001");
+    expect(reporteDelEjecutor("claude", "claude-sonnet-5-5", salida).modeloUsado).toBe(
+      "claude-sonnet-5-5",
+    );
+    expect(reporteDelEjecutor("claude", "claude-haiku-4-5", salida).modeloUsado).toBe(
+      "claude-haiku-4-5-20251001",
+    );
+    expect(reporteDelEjecutor("claude", "otro", salida).modeloUsado).toBe(
+      "claude-haiku-4-5-20251001",
+    );
   });
 
   it("C3: toma el costo de total_cost_usd, también de una lista cuyo último result vale", () => {
     expect(reporteDelEjecutor("claude", "claude-sonnet-5-5", salida).costeUsd).toBe(0.0421);
     const lista = JSON.stringify([{ type: "system" }, JSON.parse(salida)]);
-    expect(reporteDelEjecutor("claude", "claude-sonnet-5-5", lista)).toEqual({ modeloUsado: "claude-sonnet-5-5", costeUsd: 0.0421 });
+    expect(reporteDelEjecutor("claude", "claude-sonnet-5-5", lista)).toEqual({
+      modeloUsado: "claude-sonnet-5-5",
+      costeUsd: 0.0421,
+    });
     const negativo = JSON.stringify({ total_cost_usd: -1, modelUsage: {} });
-    expect(reporteDelEjecutor("claude", "x", negativo)).toEqual({ modeloUsado: null, costeUsd: null });
+    expect(reporteDelEjecutor("claude", "x", negativo)).toEqual({
+      modeloUsado: null,
+      costeUsd: null,
+    });
   });
 
   it("C4: una salida truncada o ilegible deja ambos en null", () => {
     for (const mala of ["", "hecho", salida.slice(0, 20), "null"]) {
-      expect(reporteDelEjecutor("claude", "claude-sonnet-5-5", mala)).toEqual({ modeloUsado: null, costeUsd: null });
+      expect(reporteDelEjecutor("claude", "claude-sonnet-5-5", mala)).toEqual({
+        modeloUsado: null,
+        costeUsd: null,
+      });
     }
   });
 
   it("C5: codex y opencode quedan en null aunque la salida parezca de Claude", () => {
     for (const ejecutor of ["codex", "opencode"]) {
-      expect(reporteDelEjecutor(ejecutor, "gpt-6-sol", salida)).toEqual({ modeloUsado: null, costeUsd: null });
+      expect(reporteDelEjecutor(ejecutor, "gpt-6-sol", salida)).toEqual({
+        modeloUsado: null,
+        costeUsd: null,
+      });
     }
   });
 
@@ -1344,10 +1582,22 @@ describe("la API de modelos por fase", () => {
     origen: { source: string; perfil?: { id: string; alcance: string } };
     usado: Usado;
   };
-  type Cuerpo = { ejecutor: string | null; ejecutores: string[]; fases: Fase[]; aviso: string | null; error?: string };
+  type Cuerpo = {
+    ejecutor: string | null;
+    ejecutores: string[];
+    fases: Fase[];
+    aviso: string | null;
+    error?: string;
+  };
   const pedir = async (ruta = "/api/modelos/fases") => {
     const [path, consulta] = ruta.split("?");
-    const r = await handleApi("GET", path as string, {}, context(), new URLSearchParams(consulta ?? ""));
+    const r = await handleApi(
+      "GET",
+      path as string,
+      {},
+      context(),
+      new URLSearchParams(consulta ?? ""),
+    );
     return { status: r.status, cuerpo: r.body as Cuerpo };
   };
   const registro = (fase: string, ejecutor: string, extra: Record<string, unknown>) =>
@@ -1379,12 +1629,17 @@ describe("la API de modelos por fase", () => {
   it("C2: cada fase trae su origen; el perfil del proyecto nombra su id y alcance", async () => {
     const sinPerfil = await pedir();
     for (const f of sinPerfil.cuerpo.fases) {
-      expect(["proyecto", "perfil", "preset", "sistema", "sin-asignar"]).toContain(f.origen.source);
+      expect(["proyecto", "perfil", "preset", "sistema", "sin-asignar"]).toContain(
+        f.origen.source,
+      );
     }
     elegirPerfil(lab, { perfil: "claude-code-completo" });
     const { cuerpo } = await pedir();
     expect(cuerpo.fases.every((f) => f.origen.source === "perfil")).toBe(true);
-    expect(cuerpo.fases[0]?.origen.perfil).toEqual({ id: "claude-code-completo", alcance: "proyecto" });
+    expect(cuerpo.fases[0]?.origen.perfil).toEqual({
+      id: "claude-code-completo",
+      alcance: "proyecto",
+    });
   });
 
   it("C3: con ejecutor y perfil elegido para él, el origen nombra ese perfil con alcance ejecutor", async () => {
@@ -1392,7 +1647,10 @@ describe("la API de modelos por fase", () => {
     elegirPerfil(lab, { perfil: "codex-completo", ejecutor: "codex" });
     const { cuerpo } = await pedir("/api/modelos/fases?ejecutor=codex");
     expect(cuerpo.ejecutor).toBe("codex");
-    expect(cuerpo.fases[0]?.origen.perfil).toEqual({ id: "codex-completo", alcance: "ejecutor" });
+    expect(cuerpo.fases[0]?.origen.perfil).toEqual({
+      id: "codex-completo",
+      alcance: "ejecutor",
+    });
   });
 
   it("C4: un ejecutor desconocido responde 400 con los vigentes", async () => {
@@ -1410,8 +1668,16 @@ describe("la API de modelos por fase", () => {
   });
 
   it("C6: usado es el registro más reciente de la fase, con sus campos", async () => {
-    registro("implementation", "claude", { registradoEn: "2026-10-01T10:00:00.000Z", modeloUsado: "claude-opus-5-5", costeUsd: 1 });
-    registro("implementation", "claude", { registradoEn: "2026-10-02T10:00:00.000Z", modeloUsado: "claude-sonnet-5-5", costeUsd: 0.25 });
+    registro("implementation", "claude", {
+      registradoEn: "2026-10-01T10:00:00.000Z",
+      modeloUsado: "claude-opus-5-5",
+      costeUsd: 1,
+    });
+    registro("implementation", "claude", {
+      registradoEn: "2026-10-02T10:00:00.000Z",
+      modeloUsado: "claude-sonnet-5-5",
+      costeUsd: 0.25,
+    });
     const { cuerpo } = await pedir();
     const usado = cuerpo.fases.find((f) => f.fase === "implementation")?.usado;
     expect(usado).toMatchObject({
@@ -1425,20 +1691,42 @@ describe("la API de modelos por fase", () => {
 
   it("C6: modeloUsado nulo y coincide falso viajan tal cual", async () => {
     registro("plan", "claude", { registradoEn: "2026-10-02T10:00:00.000Z" });
-    registro("verification", "claude", { registradoEn: "2026-10-02T10:00:00.000Z", modeloUsado: "claude-haiku-4-5", costeUsd: null });
+    registro("verification", "claude", {
+      registradoEn: "2026-10-02T10:00:00.000Z",
+      modeloUsado: "claude-haiku-4-5",
+      costeUsd: null,
+    });
     const { cuerpo } = await pedir();
-    expect(cuerpo.fases.find((f) => f.fase === "plan")?.usado).toMatchObject({ modeloUsado: null, coincide: null, costeUsd: null });
-    expect(cuerpo.fases.find((f) => f.fase === "verification")?.usado).toMatchObject({ coincide: false });
+    expect(cuerpo.fases.find((f) => f.fase === "plan")?.usado).toMatchObject({
+      modeloUsado: null,
+      coincide: null,
+      costeUsd: null,
+    });
+    expect(cuerpo.fases.find((f) => f.fase === "verification")?.usado).toMatchObject({
+      coincide: false,
+    });
   });
 
   it("C7: con ejecutor, usado solo considera los registros de ese ejecutor", async () => {
-    registro("implementation", "claude", { registradoEn: "2026-10-01T10:00:00.000Z", modeloUsado: "claude-sonnet-5-5" });
-    registro("implementation", "codex", { registradoEn: "2026-10-03T10:00:00.000Z", modeloUsado: "gpt-6-sol" });
-    const todos = (await pedir()).cuerpo.fases.find((f) => f.fase === "implementation")?.usado;
+    registro("implementation", "claude", {
+      registradoEn: "2026-10-01T10:00:00.000Z",
+      modeloUsado: "claude-sonnet-5-5",
+    });
+    registro("implementation", "codex", {
+      registradoEn: "2026-10-03T10:00:00.000Z",
+      modeloUsado: "gpt-6-sol",
+    });
+    const todos = (await pedir()).cuerpo.fases.find(
+      (f) => f.fase === "implementation",
+    )?.usado;
     expect(todos?.modeloUsado).toBe("gpt-6-sol");
-    const claude = (await pedir("/api/modelos/fases?ejecutor=claude")).cuerpo.fases.find((f) => f.fase === "implementation")?.usado;
+    const claude = (await pedir("/api/modelos/fases?ejecutor=claude")).cuerpo.fases.find(
+      (f) => f.fase === "implementation",
+    )?.usado;
     expect(claude?.modeloUsado).toBe("claude-sonnet-5-5");
-    const opencode = (await pedir("/api/modelos/fases?ejecutor=opencode")).cuerpo.fases.find((f) => f.fase === "implementation")?.usado;
+    const opencode = (
+      await pedir("/api/modelos/fases?ejecutor=opencode")
+    ).cuerpo.fases.find((f) => f.fase === "implementation")?.usado;
     expect(opencode).toBeNull();
   });
 

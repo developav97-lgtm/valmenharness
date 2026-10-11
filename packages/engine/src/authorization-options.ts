@@ -33,7 +33,10 @@ export interface OpcionesDeAutorizacion {
 }
 
 /** Las opciones de autorización del proyecto de `root`. No escribe nada. */
-export function opcionesDeAutorizacion(root: string, paths: RegistryPaths): OpcionesDeAutorizacion {
+export function opcionesDeAutorizacion(
+  root: string,
+  paths: RegistryPaths,
+): OpcionesDeAutorizacion {
   const cuenta = new Map<string, number>();
   for (const fila of listTickets(paths)) {
     const modulo = fila.module.trim().toUpperCase();

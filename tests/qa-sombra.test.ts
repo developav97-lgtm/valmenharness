@@ -41,22 +41,64 @@ afterEach(() => rmSync(root, { recursive: true, force: true }));
 const id = (n: number): string => `BUGFIX-POS-SOMBRA${String(n).padStart(2, "0")}-20261005`;
 
 /** Un ticket con un recibo de qa-agent y, si se pide, un ciclo de QA cerrado por una persona (o por política). */
-function ticketEnSombra(n: number, agente: "approve" | "block", responsable: "approved" | "changes_requested" | "ninguno", porPolitica = false): void {
+function ticketEnSombra(
+  n: number,
+  agente: "approve" | "block",
+  responsable: "approved" | "changes_requested" | "ninguno",
+  porPolitica = false,
+): void {
   const ticketId = id(n);
-  writeFixtureTicket(root, { id: ticketId, workflowStatus: "awaiting_user_tests", type: "BUGFIX", module: "POS" });
+  writeFixtureTicket(root, {
+    id: ticketId,
+    workflowStatus: "awaiting_user_tests",
+    type: "BUGFIX",
+    module: "POS",
+  });
   if (responsable !== "ninguno") {
     const ruta = join(root, "tickets", "2026", ticketId, "ticket.md");
-    const confirmacion = porPolitica ? `policy:QAA-20261007-abc123:${HASH}|recibo:.valmen/qa/agent-receipts.jsonl:1` : "Resultado del PO: lo probé";
+    const confirmacion = porPolitica
+      ? `policy:QAA-20261007-abc123:${HASH}|recibo:.valmen/qa/agent-receipts.jsonl:1`
+      : "Resultado del PO: lo probé";
     const ciclo = [
-      { id: "QA-001", date: "2026-10-07", build_reference: `commit:${"b".repeat(40)}`, environment: "local", result: "pending", findings: [], correction: null, po_confirmation: null },
-      { id: "QA-002", date: "2026-10-07", build_reference: null, environment: null, result: responsable, findings: [], correction: null, po_confirmation: confirmacion },
+      {
+        id: "QA-001",
+        date: "2026-10-07",
+        build_reference: `commit:${"b".repeat(40)}`,
+        environment: "local",
+        result: "pending",
+        findings: [],
+        correction: null,
+        po_confirmation: null,
+      },
+      {
+        id: "QA-002",
+        date: "2026-10-07",
+        build_reference: null,
+        environment: null,
+        result: responsable,
+        findings: [],
+        correction: null,
+        po_confirmation: confirmacion,
+      },
     ];
-    const texto = readFileSync(ruta, "utf8").replace("## QA\n\n```json\n[]\n```", `## QA\n\n\`\`\`json\n${JSON.stringify(ciclo, null, 2)}\n\`\`\``);
+    const texto = readFileSync(ruta, "utf8").replace(
+      "## QA\n\n```json\n[]\n```",
+      `## QA\n\n\`\`\`json\n${JSON.stringify(ciclo, null, 2)}\n\`\`\``,
+    );
     writeFileSync(ruta, texto, "utf8");
   }
   const recibo: ReciboQaAgent = {
-    kind: "qa-agent-receipt", ticketId, base: "c".repeat(40), delivered: "d".repeat(40), treeHash: "e".repeat(40), verdict: agente,
-    reasons: [], commands: [], resultadoContraBase: "no-aplica", authorization: null, at: AHORA.toISOString(),
+    kind: "qa-agent-receipt",
+    ticketId,
+    base: "c".repeat(40),
+    delivered: "d".repeat(40),
+    treeHash: "e".repeat(40),
+    verdict: agente,
+    reasons: [],
+    commands: [],
+    resultadoContraBase: "no-aplica",
+    authorization: null,
+    at: AHORA.toISOString(),
   };
   registrarReciboQaAgent(root, recibo);
 }
@@ -71,7 +113,14 @@ const concordantes = (cuantos: number, desde = 1): void => {
 };
 
 const promover = (extra: Record<string, unknown> = {}) =>
-  promoverQaAgent({ paths: paths(), actor: "Juan Andrade", quote: "Promuevo la QA por agente: coincidió 20 veces", ahora: AHORA, env: {}, ...extra });
+  promoverQaAgent({
+    paths: paths(),
+    actor: "Juan Andrade",
+    quote: "Promuevo la QA por agente: coincidió 20 veces",
+    ahora: AHORA,
+    env: {},
+    ...extra,
+  });
 
 describe("la promoción", () => {
   it("con 20 tickets concordantes se registra con la lista de tickets como evidencia", () => {
@@ -81,25 +130,34 @@ describe("la promoción", () => {
     expect(p.evidence.tickets).toHaveLength(20);
     expect(p.evidence.tickets).toContain(id(7));
     expect(leerPromociones(root)).toHaveLength(1);
-    expect(leerPromociones(root)[0]).toMatchObject({ actor: "Juan Andrade", quote: "Promuevo la QA por agente: coincidió 20 veces" });
+    expect(leerPromociones(root)[0]).toMatchObject({
+      actor: "Juan Andrade",
+      quote: "Promuevo la QA por agente: coincidió 20 veces",
+    });
   });
 
   it("con 19 concordantes y uno donde el responsable pidió cambios y el agente aprobó, se rechaza y lo muestra", () => {
     concordantes(19);
     ticketEnSombra(20, "approve", "changes_requested");
-    expect(() => promover()).toThrow(new RegExp(`${id(20)}.*agente approve, responsable changes_requested`));
+    expect(() => promover()).toThrow(
+      new RegExp(`${id(20)}.*agente approve, responsable changes_requested`),
+    );
     expect(leerPromociones(root)).toHaveLength(0);
   });
 
   it("al revés también es discrepancia: el agente bloqueó y el responsable aprobó", () => {
     concordantes(19);
     ticketEnSombra(20, "block", "approved");
-    expect(concordanciaEnSombra(paths()).discordantes.map((d) => d.ticketId)).toEqual([id(20)]);
+    expect(concordanciaEnSombra(paths()).discordantes.map((d) => d.ticketId)).toEqual([
+      id(20),
+    ]);
   });
 
   it("con menos de 20 se rechaza diciendo cuántos faltan", () => {
     concordantes(5);
-    expect(() => promover()).toThrow(/hay 5 ticket\(s\) comparados y hacen falta 20 \(faltan 15\)/);
+    expect(() => promover()).toThrow(
+      /hay 5 ticket\(s\) comparados y hacen falta 20 \(faltan 15\)/,
+    );
   });
 
   it("un ticket sin decisión del responsable, o cerrado por política, no cuenta", () => {
@@ -122,12 +180,24 @@ describe("la promoción", () => {
 
 describe("el modo efectivo", () => {
   const config = (modo: string | null): void =>
-    writeFileSync(join(root, ".valmen", "config.yaml"), ["name: Demo", ...(modo === null ? [] : ["qa-agent:", `  mode: ${modo}`]), ""].join("\n"), "utf8");
+    writeFileSync(
+      join(root, ".valmen", "config.yaml"),
+      ["name: Demo", ...(modo === null ? [] : ["qa-agent:", `  mode: ${modo}`]), ""].join(
+        "\n",
+      ),
+      "utf8",
+    );
 
   it("sin la clave está en sombra, y con `close` pero sin promoción también, diciendo qué falta", () => {
-    expect(modoEfectivoDeQaAgent(paths())).toEqual({ modo: "shadow", motivo: "qa-agent.mode no es close y no hay una promoción registrada" });
+    expect(modoEfectivoDeQaAgent(paths())).toEqual({
+      modo: "shadow",
+      motivo: "qa-agent.mode no es close y no hay una promoción registrada",
+    });
     config("close");
-    expect(modoEfectivoDeQaAgent(paths())).toEqual({ modo: "shadow", motivo: "no hay una promoción registrada" });
+    expect(modoEfectivoDeQaAgent(paths())).toEqual({
+      modo: "shadow",
+      motivo: "no hay una promoción registrada",
+    });
   });
 
   it("con `close` y una promoción puede cerrar; volver a `shadow` en la configuración lo detiene sin tocar el registro", () => {
@@ -148,7 +218,9 @@ describe("el modo efectivo", () => {
 
   it("en sombra el cierre por política se rechaza antes de escribir nada", () => {
     ticketEnSombra(1, "approve", "ninguno");
-    expect(() => cerrarQaPorPolitica({ paths: paths(), ticketId: id(1), ahora: AHORA })).toThrow(/está en sombra/);
+    expect(() =>
+      cerrarQaPorPolitica({ paths: paths(), ticketId: id(1), ahora: AHORA }),
+    ).toThrow(/está en sombra/);
   });
 });
 
@@ -168,7 +240,10 @@ describe("los comandos", () => {
     expect(sin.exitCode).not.toBe(0);
     expect(sin.stderr).toContain("faltan 20");
     concordantes(20);
-    const con = qaPromoteCommand(paths(), { actor: "Juan Andrade", quote: "Promuevo con 20 coincidencias" });
+    const con = qaPromoteCommand(paths(), {
+      actor: "Juan Andrade",
+      quote: "Promuevo con 20 coincidencias",
+    });
     expect(con.exitCode).toBe(0);
     expect(con.stdout).toContain("qa-agent.mode: close");
   });

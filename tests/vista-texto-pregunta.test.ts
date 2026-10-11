@@ -9,7 +9,11 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { avisosDePregunta, cajaDeAviso } from "../packages/server/web/agentes/montaje.js";
-import { mundo as control, ajustarAlAncho, franja } from "../packages/server/web/agentes/mundos/control.js";
+import {
+  mundo as control,
+  ajustarAlAncho,
+  franja,
+} from "../packages/server/web/agentes/mundos/control.js";
 import { mundo as invernadero } from "../packages/server/web/agentes/mundos/invernadero.js";
 import { mundo as pasteleria } from "../packages/server/web/agentes/mundos/pasteleria.js";
 
@@ -20,10 +24,18 @@ const HOSTIL = `<script>alert("x")</script><b>'negrita'</b> & "comillas"`;
 const MUNDO = { pregunta: "línea 1 abierta" };
 
 const abierta = (extra: Record<string, unknown> = {}) => [
-  { agente: "a1", ticket: "FEATURE-WEB", pregunta: { desde: hace(40), respondidaEn: null, ...extra } },
+  {
+    agente: "a1",
+    ticket: "FEATURE-WEB",
+    pregunta: { desde: hace(40), respondidaEn: null, ...extra },
+  },
 ];
 const respondida = (extra: Record<string, unknown> = {}) => [
-  { agente: "a1", ticket: "FEATURE-WEB", pregunta: { desde: hace(60), respondidaEn: hace(10), ...extra } },
+  {
+    agente: "a1",
+    ticket: "FEATURE-WEB",
+    pregunta: { desde: hace(60), respondidaEn: hace(10), ...extra },
+  },
 ];
 const BASE_PENDIENTE = {
   tipo: "pendiente",
@@ -45,7 +57,12 @@ function documentoFalso() {
   const creados: Nodo[] = [];
   const doc = {
     createElement(tag: string): Nodo {
-      const n: Record<string, unknown> = { tag, className: "", textContent: "", children: [] as Nodo[] };
+      const n: Record<string, unknown> = {
+        tag,
+        className: "",
+        textContent: "",
+        children: [] as Nodo[],
+      };
       n.append = (...hijos: Nodo[]) => (n.children as Nodo[]).push(...hijos);
       Object.defineProperty(n, "innerHTML", {
         set() {
@@ -67,7 +84,8 @@ function contexto() {
     { canvas: { width: 960, height: 480 }, fillStyle: "" } as Record<string, unknown>,
     {
       get(d, p: string) {
-        if (p === "measureText") return (s: string) => (medidos.push(s), { width: Array.from(s).length * 7 });
+        if (p === "measureText")
+          return (s: string) => (medidos.push(s), { width: Array.from(s).length * 7 });
         if (p === "fillText") return (s: string) => void textos.push(s);
         if (p in d) return d[p];
         return () => undefined;
@@ -81,7 +99,11 @@ function contexto() {
   return { ctx, textos, medidos };
 }
 
-const operador = (estacion: number, pregunta: Record<string, unknown> | null, ticket = "FEATURE-WEB-X") => ({
+const operador = (
+  estacion: number,
+  pregunta: Record<string, unknown> | null,
+  ticket = "FEATURE-WEB-X",
+) => ({
   id: "a1",
   estado: pregunta ? "esperando" : "trabajando",
   estacion,
@@ -93,64 +115,97 @@ const operador = (estacion: number, pregunta: Record<string, unknown> | null, ti
   y: 420,
   fila: { agente: "a1", ticket, pregunta, ultimaHerramienta: "Read" },
 });
-const preguntaAbierta = (texto?: string) => ({ desde: hace(40), respondidaEn: null, ...(texto === undefined ? {} : { texto }) });
+const preguntaAbierta = (texto?: string) => ({
+  desde: hace(40),
+  respondidaEn: null,
+  ...(texto === undefined ? {} : { texto }),
+});
 
 function dibujarCon(mundo: typeof control, texto: string | undefined) {
   const { ctx, textos } = contexto();
   const a = operador(3, preguntaAbierta(texto));
-  mundo.dibujar({ ctx, escena: { agentes: new Map([["a1", a]]), t: 0 }, miniatura: false, cola: [], entregados: [], ahoraMs: AHORA }, 0);
+  mundo.dibujar(
+    {
+      ctx,
+      escena: { agentes: new Map([["a1", a]]), t: 0 },
+      miniatura: false,
+      cola: [],
+      entregados: [],
+      ahoraMs: AHORA,
+    },
+    0,
+  );
   return textos;
 }
 
 describe("la vista muestra el texto de la pregunta y la respuesta", () => {
   it("C1: el aviso pendiente lleva el texto", () => {
-    const [aviso] = avisosDePregunta(abierta({ texto: "¿Apruebo el plan de FEATURE-X?" }), AHORA, MUNDO);
+    const aviso = avisosDePregunta(
+      abierta({ texto: "¿Apruebo el plan de FEATURE-X?" }),
+      AHORA,
+      MUNDO,
+    )[0]!;
     expect(aviso.texto).toBe("¿Apruebo el plan de FEATURE-X?");
   });
   it("C2: el aviso respondio lleva la respuesta", () => {
-    const [aviso] = avisosDePregunta(respondida({ respuesta: "Sí, aprobado." }), AHORA, MUNDO);
+    const aviso = avisosDePregunta(
+      respondida({ respuesta: "Sí, aprobado." }),
+      AHORA,
+      MUNDO,
+    )[0]!;
     expect(aviso.respuesta).toBe("Sí, aprobado.");
   });
   it("C3: sin la clave texto el aviso es el de siempre", () => {
     expect(avisosDePregunta(abierta(), AHORA, MUNDO)).toEqual([BASE_PENDIENTE]);
   });
   it("C4: texto null no agrega la clave", () => {
-    const [aviso] = avisosDePregunta(abierta({ texto: null }), AHORA, MUNDO);
+    const aviso = avisosDePregunta(abierta({ texto: null }), AHORA, MUNDO)[0]!;
     expect(aviso).toEqual(BASE_PENDIENTE);
     expect("texto" in aviso).toBe(false);
   });
   it("C5: texto en blanco no agrega la clave", () => {
-    const [aviso] = avisosDePregunta(abierta({ texto: "   \n " }), AHORA, MUNDO);
+    const aviso = avisosDePregunta(abierta({ texto: "   \n " }), AHORA, MUNDO)[0]!;
     expect(aviso).toEqual(BASE_PENDIENTE);
     expect("texto" in aviso).toBe(false);
   });
   it("C6: sin la clave respuesta el aviso respondio es el de siempre", () => {
     expect(avisosDePregunta(respondida(), AHORA, MUNDO)).toEqual([
-      { tipo: "respondio", encabezado: "una persona respondió", ticket: "FEATURE-WEB", hace: "hace 10 s" },
+      {
+        tipo: "respondio",
+        encabezado: "una persona respondió",
+        ticket: "FEATURE-WEB",
+        hace: "hace 10 s",
+      },
     ]);
   });
   it("C7: la caja pone el texto hostil como textContent exacto", () => {
     const { doc } = documentoFalso();
-    const [aviso] = avisosDePregunta(abierta({ texto: HOSTIL }), AHORA, MUNDO);
+    const aviso = avisosDePregunta(abierta({ texto: HOSTIL }), AHORA, MUNDO)[0]!;
     const caja = cajaDeAviso(doc, aviso) as unknown as Nodo;
     const texto = caja.children.find((h) => h.className === "texto");
     expect(texto?.textContent).toBe(HOSTIL);
   });
   it("C8: la caja no asigna innerHTML en ningún elemento", () => {
     const { doc, creados } = documentoFalso();
-    const [aviso] = avisosDePregunta(abierta({ texto: HOSTIL }), AHORA, MUNDO);
+    const aviso = avisosDePregunta(abierta({ texto: HOSTIL }), AHORA, MUNDO)[0]!;
     expect(() => cajaDeAviso(doc, aviso)).not.toThrow();
     expect(creados.length).toBeGreaterThan(1);
   });
   it("C9: la caja del aviso respondio muestra la respuesta", () => {
     const { doc } = documentoFalso();
-    const [aviso] = avisosDePregunta(respondida({ respuesta: "Sí, aprobado." }), AHORA, MUNDO);
+    const aviso = avisosDePregunta(
+      respondida({ respuesta: "Sí, aprobado." }),
+      AHORA,
+      MUNDO,
+    )[0]!;
     const caja = cajaDeAviso(doc, aviso) as unknown as Nodo;
-    expect(caja.children.find((h) => h.className === "texto")?.textContent).toBe("Sí, aprobado.");
+    expect(caja.children.find((h) => h.className === "texto")?.textContent).toBe(
+      "Sí, aprobado.",
+    );
   });
   it("C10: sin texto la caja tiene rotulo, id y resultado, en ese orden", () => {
     const { doc } = documentoFalso();
-    const [aviso] = avisosDePregunta(abierta(), AHORA, MUNDO);
+    const aviso = avisosDePregunta(abierta(), AHORA, MUNDO)[0]!;
     const caja = cajaDeAviso(doc, aviso) as unknown as Nodo;
     expect(caja.children.map((h) => h.className)).toEqual(["rotulo", "id", "resultado"]);
   });
@@ -158,10 +213,14 @@ describe("la vista muestra el texto de la pregunta y la respuesta", () => {
     expect(readFileSync(join(WEB, "index.html"), "utf8")).not.toMatch(/innerHTML\s*=/);
   });
   it("C12: pintarAvisos arma la caja con modulo.cajaDeAviso(document, aviso)", () => {
-    expect(readFileSync(join(WEB, "index.html"), "utf8")).toContain("modulo.cajaDeAviso(document, aviso)");
+    expect(readFileSync(join(WEB, "index.html"), "utf8")).toContain(
+      "modulo.cajaDeAviso(document, aviso)",
+    );
   });
   it("C13: el CSS declara .corrida-aviso .texto con pre-wrap", () => {
-    expect(readFileSync(join(WEB, "index.html"), "utf8")).toMatch(/\.corrida-aviso \.texto\s*\{[^}]*white-space:\s*pre-wrap/);
+    expect(readFileSync(join(WEB, "index.html"), "utf8")).toMatch(
+      /\.corrida-aviso \.texto\s*\{[^}]*white-space:\s*pre-wrap/,
+    );
   });
   it("C14: la franja usa el texto real", () => {
     expect(franja([operador(3, preguntaAbierta("¿Despliego a staging?"))]).texto).toBe(
@@ -169,13 +228,21 @@ describe("la vista muestra el texto de la pregunta y la respuesta", () => {
     );
   });
   it("C15: la franja reduce saltos de línea y espacios", () => {
-    expect(franja([operador(3, preguntaAbierta("línea uno\n\nlínea dos"))]).texto.endsWith("línea uno línea dos")).toBe(true);
+    expect(
+      franja([operador(3, preguntaAbierta("línea uno\n\nlínea dos"))]).texto.endsWith(
+        "línea uno línea dos",
+      ),
+    ).toBe(true);
   });
   it("C16: sin texto en la estación 3 conserva el texto inferido", () => {
-    expect(franja([operador(3, preguntaAbierta())]).texto).toBe("ESPERANDO AL PO · LÍNEA 1 · FEATURE-WEB · ¿Apruebo el plan?");
+    expect(franja([operador(3, preguntaAbierta())]).texto).toBe(
+      "ESPERANDO AL PO · LÍNEA 1 · FEATURE-WEB · ¿Apruebo el plan?",
+    );
   });
   it("C17: sin texto en la estación 5 conserva el texto inferido", () => {
-    expect(franja([operador(5, preguntaAbierta())]).texto.endsWith("¿Pasaron tus pruebas?")).toBe(true);
+    expect(
+      franja([operador(5, preguntaAbierta())]).texto.endsWith("¿Pasaron tus pruebas?"),
+    ).toBe(true);
   });
   it("C18: ajustarAlAncho recorta 500 caracteres a 128 como máximo con «…»", () => {
     const { ctx } = contexto();
@@ -188,24 +255,42 @@ describe("la vista muestra el texto de la pregunta y la respuesta", () => {
     expect(ajustarAlAncho(ctx, "a".repeat(20), 896)).toBe("a".repeat(20));
   });
   it("C20: el centro de control escribe el texto hostil literal en la franja", () => {
-    expect(dibujarCon(control, HOSTIL).some((t) => t.includes(`<script>alert("x")</script>`))).toBe(true);
+    expect(
+      dibujarCon(control, HOSTIL).some((t) => t.includes(`<script>alert("x")</script>`)),
+    ).toBe(true);
   });
   it("C21: la franja con 500 caracteres cabe en 896 px", () => {
     const { ctx, textos } = contexto();
     const a = operador(3, preguntaAbierta("x".repeat(500)));
-    control.dibujar({ ctx, escena: { agentes: new Map([["a1", a]]), t: 0 }, miniatura: false, cola: [], entregados: [], ahoraMs: AHORA }, 0);
+    control.dibujar(
+      {
+        ctx,
+        escena: { agentes: new Map([["a1", a]]), t: 0 },
+        miniatura: false,
+        cola: [],
+        entregados: [],
+        ahoraMs: AHORA,
+      },
+      0,
+    );
     const franjaEscrita = textos.find((t) => t.startsWith("ESPERANDO AL PO"));
     expect(franjaEscrita).toBeDefined();
     expect(Array.from(franjaEscrita as string).length * 7).toBeLessThanOrEqual(896);
     expect((franjaEscrita as string).endsWith("…")).toBe(true);
   });
   it("C22: la pastelería no pasa el texto a fillText", () => {
-    expect(dibujarCon(pasteleria as typeof control, HOSTIL).some((t) => t.includes("script"))).toBe(false);
+    expect(
+      dibujarCon(pasteleria as typeof control, HOSTIL).some((t) => t.includes("script")),
+    ).toBe(false);
   });
   it("C23: el invernadero no pasa el texto a fillText", () => {
-    expect(dibujarCon(invernadero as typeof control, HOSTIL).some((t) => t.includes("script"))).toBe(false);
+    expect(
+      dibujarCon(invernadero as typeof control, HOSTIL).some((t) => t.includes("script")),
+    ).toBe(false);
   });
   it("C24: montaje.js no referencia document fuera de un parámetro", () => {
-    expect(readFileSync(join(WEB, "agentes", "montaje.js"), "utf8")).not.toContain("document.");
+    expect(readFileSync(join(WEB, "agentes", "montaje.js"), "utf8")).not.toContain(
+      "document.",
+    );
   });
 });

@@ -68,7 +68,12 @@ beforeEach(() => {
       po_confirmation: null,
     },
   ];
-  writeFixtureTicket(lab, { id: TICKET, module: "QA", workflowStatus: "in_qa", qaStatus: "in_qa" });
+  writeFixtureTicket(lab, {
+    id: TICKET,
+    module: "QA",
+    workflowStatus: "in_qa",
+    qaStatus: "in_qa",
+  });
   const ruta = join(lab, "tickets", "2026", TICKET, "ticket.md");
   writeFileSync(
     ruta,
@@ -102,7 +107,10 @@ afterEach(() => {
 });
 
 const commits = (): { verificado: string; distinto: string } => {
-  const log = execFileSync("git", ["log", "--format=%H %s"], { cwd: lab, encoding: "utf8" });
+  const log = execFileSync("git", ["log", "--format=%H %s"], {
+    cwd: lab,
+    encoding: "utf8",
+  });
   const lineas = log.trim().split("\n");
   return {
     distinto: lineas[0]?.split(" ")[0] ?? "",
@@ -131,8 +139,10 @@ const prepararTicket = (hash: string) => {
 };
 
 const paths = () => ({ root: lab, ticketsDir: "tickets" });
-const ticket = () => readFileSync(join(lab, "tickets", "2026", TICKET, "ticket.md"), "utf8");
-const git = (...args: string[]) => execFileSync("git", args, { cwd: lab, encoding: "utf8" });
+const ticket = () =>
+  readFileSync(join(lab, "tickets", "2026", TICKET, "ticket.md"), "utf8");
+const git = (...args: string[]) =>
+  execFileSync("git", args, { cwd: lab, encoding: "utf8" });
 
 describe("qa-start con --build-reference commit:<sha>", () => {
   /**

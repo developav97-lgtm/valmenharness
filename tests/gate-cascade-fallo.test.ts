@@ -57,12 +57,19 @@ const cadena = (): CascadeOptions => ({
 
 type Opciones = Parameters<typeof runGate>[1];
 
-function responder(propositions: readonly Proposition[], valor: number): PropositionAnswer[] {
-  return propositions.map(
-    (p): PropositionAnswer =>
-      p.kind === "choice"
-        ? { id: p.id, kind: "choice", choice: Object.keys(p.criteria)[0] as string, confidence: valor }
-        : { id: p.id, kind: p.kind, value: valor, confidence: valor },
+function responder(
+  propositions: readonly Proposition[],
+  valor: number,
+): PropositionAnswer[] {
+  return propositions.map((p): PropositionAnswer =>
+    p.kind === "choice"
+      ? {
+          id: p.id,
+          kind: "choice",
+          choice: Object.keys(p.criteria)[0] as string,
+          confidence: valor,
+        }
+      : { id: p.id, kind: p.kind, value: valor, confidence: valor },
   );
 }
 
@@ -82,11 +89,15 @@ function dobles(productor: "falla" | "responde", codigo = "MALFORMED_RESPONSE") 
   const jev = (async (o: { propositions: readonly Proposition[]; model?: string }) => {
     cuenta.jev += 1;
     return {
-      answers: o.propositions.map(
-        (p): PropositionAnswer =>
-          p.kind === "choice"
-            ? { id: p.id, kind: "choice", choice: Object.keys(p.criteria)[0] as string, confidence: 0.95 }
-            : { id: p.id, kind: p.kind, value: 0.95, confidence: 0.95 },
+      answers: o.propositions.map((p): PropositionAnswer =>
+        p.kind === "choice"
+          ? {
+              id: p.id,
+              kind: "choice",
+              choice: Object.keys(p.criteria)[0] as string,
+              confidence: 0.95,
+            }
+          : { id: p.id, kind: p.kind, value: 0.95, confidence: 0.95 },
       ),
       model: { provider: "openrouter", model: "jev", resolvedVersion: "jev-1" },
       usage: { inputTokens: 1, outputTokens: 1, costUsd: 0 },
@@ -139,7 +150,9 @@ describe("la cascada falla: se degrada y el recibo lo cuenta", () => {
 
   it("C22. evaluatorFailure.message contiene el error real", async () => {
     const { recibo, resultado } = await pedirCascada(nuevoLab(), dobles("falla"));
-    expect(recibo?.evaluatorFailure?.message).toContain("error_max_structured_output_retries");
+    expect(recibo?.evaluatorFailure?.message).toContain(
+      "error_max_structured_output_retries",
+    );
     expect(recibo?.evaluatorFailure?.code).toBe("MALFORMED_RESPONSE");
     expect(resultado.stdout).toContain("Evaluador pedido cascade · efectivo jev");
   });

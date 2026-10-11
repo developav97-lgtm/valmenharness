@@ -18,6 +18,7 @@ import { parseTicket } from "@valmen/core";
 import { commandChecksFor, extractCriteriaSpecs, partirComando } from "@valmen/gate";
 
 import { type RegistryPaths, findTicket } from "./discovery.js";
+import { esArchivoDePrueba } from "./path-categories.js";
 import { ejecutarGitDeQaAgent, type EjecutorGitQa } from "./qa-agent-git.js";
 import {
   type ComandoDeRecibo,
@@ -47,9 +48,18 @@ const ejecutarComandoDeVerdad: EjecutorDeComando = (programa, args, { cwd, timeo
     timeout: timeoutMs,
     maxBuffer: 16 * 1024 * 1024,
     // Entorno mínimo: ningún secreto del proceso del agente llega a las pruebas.
-    env: { PATH: process.env["PATH"] ?? "", HOME: process.env["HOME"] ?? "", LANG: "C.UTF-8", CI: "1" },
+    env: {
+      PATH: process.env["PATH"] ?? "",
+      HOME: process.env["HOME"] ?? "",
+      LANG: "C.UTF-8",
+      CI: "1",
+    },
   });
-  return { status: r.status ?? (r.error === undefined ? 1 : 124), stdout: r.stdout ?? "", stderr: r.stderr ?? "" };
+  return {
+    status: r.status ?? (r.error === undefined ? 1 : 124),
+    stdout: r.stdout ?? "",
+    stderr: r.stderr ?? "",
+  };
 };
 
 export interface QaAgentRequest {
@@ -69,7 +79,6 @@ export interface ResultadoQaAgent {
   readonly reciboPath: string | null;
 }
 
-const ES_PRUEBA = /(^|\/)(tests?|__tests__|spec)\/|\.(test|spec)\.[a-z]+$|(^|\/)test_[^/]*\.py$/i;
 const COLA = 2000;
 
 function sha(texto: string): string {
@@ -80,7 +89,8 @@ function sha(texto: string): string {
 export function correrQaAgent(request: QaAgentRequest): ResultadoQaAgent {
   const { paths, ticketId } = request;
   const ahora = request.ahora ?? new Date();
-  const git = (args: readonly string[]) => ejecutarGitDeQaAgent(args, paths.root, request.ejecutarGit);
+  const git = (args: readonly string[]) =>
+    ejecutarGitDeQaAgent(args, paths.root, request.ejecutarGit);
   const ejecutar = request.ejecutar ?? ejecutarComandoDeVerdad;
   const razones: string[] = [];
 
@@ -100,7 +110,10 @@ export function correrQaAgent(request: QaAgentRequest): ResultadoQaAgent {
   const lineasDelDiff = (filtro: string[]): string[] => {
     const r = git(["diff", "--name-only", ...filtro, `${base}..${delivered}`]);
     if (r.status !== 0) throw new Error(`git diff falló: ${r.stderr.trim()}`);
-    return r.stdout.split("\n").map((l) => l.trim()).filter((l) => l !== "");
+    return r.stdout
+      .split("\n")
+      .map((l) => l.trim())
+      .filter((l) => l !== "");
   };
   const archivosDelDiff = lineasDelDiff([]);
 
@@ -123,13 +136,19 @@ export function correrQaAgent(request: QaAgentRequest): ResultadoQaAgent {
       authorization: autorizacion,
       at: ahora.toISOString(),
     };
-    return { verdict, reasons: razones, recibo, reciboPath: registrarReciboQaAgent(paths.root, recibo) };
+    return {
+      verdict,
+      reasons: razones,
+      recibo,
+      reciboPath: registrarReciboQaAgent(paths.root, recibo),
+    };
   };
 
   // La elegibilidad va primero: un ticket que no lo es no corre nada.
   const elegibilidad = elegibilidadQa({ paths, ticketId, ahora, archivosDelDiff });
   if (!elegibilidad.elegible) {
-    for (const r of elegibilidad.reglas.filter((x) => !x.cumple)) razones.push(`no elegible (${r.regla}): ${r.detalle}`);
+    for (const r of elegibilidad.reglas.filter((x) => !x.cumple))
+      razones.push(`no elegible (${r.regla}): ${r.detalle}`);
     return cerrar("block", [], "no-aplica", elegibilidad.autorizacion);
   }
 
@@ -140,7 +159,9 @@ export function correrQaAgent(request: QaAgentRequest): ResultadoQaAgent {
   };
   const textoConfig = mostrar(base, ".valmen/config.yaml");
   if (textoConfig === null) {
-    razones.push("el commit base no tiene .valmen/config.yaml: no hay comandos autorizados");
+    razones.push(
+      "el commit base no tiene .valmen/config.yaml: no hay comandos autorizados",
+    );
     return cerrar("block", [], "no-aplica", elegibilidad.autorizacion);
   }
   const config = parseConfig(textoConfig);
@@ -154,19 +175,36 @@ export function correrQaAgent(request: QaAgentRequest): ResultadoQaAgent {
   for (const r of refused) razones.push(`comando no autorizado por el proyecto: ${r}`);
   for (const comando of regresion) {
     const partes = partirComando(comando);
-    const autorizado = partes.length > 0 && permitidos.some((p) => {
-      const esperado = partirComando(p);
-      return esperado.length > 0 && esperado.length <= partes.length && esperado.every((x, i) => x === partes[i]);
-    });
-    if (!autorizado) razones.push(`la regresión «${comando}» no está autorizada en test-commands`);
+    const autorizado =
+      partes.length > 0 &&
+      permitidos.some((p) => {
+        const esperado = partirComando(p);
+        return (
+          esperado.length > 0 &&
+          esperado.length <= partes.length &&
+          esperado.every((x, i) => x === partes[i])
+        );
+      });
+    if (!autorizado)
+      razones.push(`la regresión «${comando}» no está autorizada en test-commands`);
   }
-  if (checks.length === 0) razones.push("ningún criterio declara un comando de prueba autorizado");
+  if (checks.length === 0)
+    razones.push("ningún criterio declara un comando de prueba autorizado");
   const esBugfix = ticket.fields.type === "BUGFIX";
-  if (esBugfix && regresion.length === 0) razones.push("un BUGFIX exige la suite de regresión declarada en qa-agent.regression-commands");
-  if (razones.length > 0) return cerrar("block", [], "no-aplica", elegibilidad.autorizacion);
+  if (esBugfix && regresion.length === 0)
+    razones.push(
+      "un BUGFIX exige la suite de regresión declarada en qa-agent.regression-commands",
+    );
+  if (razones.length > 0)
+    return cerrar("block", [], "no-aplica", elegibilidad.autorizacion);
 
   const comandos: ComandoDeRecibo[] = [];
-  const correr = (fase: ComandoDeRecibo["fase"], cwd: string, programa: string, args: readonly string[]): number => {
+  const correr = (
+    fase: ComandoDeRecibo["fase"],
+    cwd: string,
+    programa: string,
+    args: readonly string[],
+  ): number => {
     const inicio = Date.now();
     const r = ejecutar(programa, args, { cwd, timeoutMs });
     const salida = `${r.stdout}${r.stderr}`;
@@ -188,7 +226,8 @@ export function correrQaAgent(request: QaAgentRequest): ResultadoQaAgent {
     const crearWorktree = (nombre: string, commit: string): string => {
       const carpeta = join(tmp, nombre);
       const r = git(["worktree", "add", "--detach", carpeta, commit]);
-      if (r.status !== 0) throw new Error(`No se pudo crear el worktree ${nombre}: ${r.stderr.trim()}`);
+      if (r.status !== 0)
+        throw new Error(`No se pudo crear el worktree ${nombre}: ${r.stderr.trim()}`);
       creados.push(carpeta);
       return carpeta;
     };
@@ -211,7 +250,10 @@ export function correrQaAgent(request: QaAgentRequest): ResultadoQaAgent {
     imponerBase(entregado);
     for (const check of checks) {
       const codigo = correr("entregado", entregado, check.command, check.args ?? []);
-      if (codigo !== (check.expectExitCode ?? 0)) razones.push(`${check.description}: el comando salió con ${codigo} contra el entregado`);
+      if (codigo !== (check.expectExitCode ?? 0))
+        razones.push(
+          `${check.description}: el comando salió con ${codigo} contra el entregado`,
+        );
     }
     for (const comando of regresion) {
       const [programa, ...args] = partirComando(comando) as [string, ...string[]];
@@ -220,10 +262,14 @@ export function correrQaAgent(request: QaAgentRequest): ResultadoQaAgent {
     }
 
     if (esBugfix) {
-      const nuevas = lineasDelDiff(["--diff-filter=A"]).filter((f) => ES_PRUEBA.test(f));
-      const referidos = checks.filter((c) => (c.args ?? []).some((a) => nuevas.includes(a)));
+      const nuevas = lineasDelDiff(["--diff-filter=A"]).filter((f) => esArchivoDePrueba(f));
+      const referidos = checks.filter((c) =>
+        (c.args ?? []).some((a) => nuevas.includes(a)),
+      );
       if (nuevas.length === 0 || referidos.length === 0) {
-        razones.push("un BUGFIX necesita una prueba nueva que un criterio ejecute: el diff no trae ninguna");
+        razones.push(
+          "un BUGFIX necesita una prueba nueva que un criterio ejecute: el diff no trae ninguna",
+        );
         contraBase = "no-reproduce-el-defecto";
       } else {
         const enBase = crearWorktree("base", base);
@@ -233,20 +279,31 @@ export function correrQaAgent(request: QaAgentRequest): ResultadoQaAgent {
           mkdirSync(dirname(destino), { recursive: true });
           copyFileSync(join(entregado, f), destino);
         }
-        const codigos = referidos.map((c) => correr("base", enBase, c.command, c.args ?? []));
+        const codigos = referidos.map((c) =>
+          correr("base", enBase, c.command, c.args ?? []),
+        );
         if (codigos.some((c) => c !== 0)) {
           contraBase = "fallo-como-se-esperaba";
         } else {
           contraBase = "no-reproduce-el-defecto";
-          razones.push("la prueba nueva pasa también contra el código base: no reproduce el defecto");
+          razones.push(
+            "la prueba nueva pasa también contra el código base: no reproduce el defecto",
+          );
         }
       }
     }
   } catch (caught) {
-    razones.push(`la compuerta no pudo completarse: ${caught instanceof Error ? caught.message : String(caught)}`);
+    razones.push(
+      `la compuerta no pudo completarse: ${caught instanceof Error ? caught.message : String(caught)}`,
+    );
   } finally {
     for (const carpeta of creados) git(["worktree", "remove", "--force", carpeta]);
     rmSync(tmp, { recursive: true, force: true });
   }
-  return cerrar(razones.length === 0 ? "approve" : "block", comandos, contraBase, elegibilidad.autorizacion);
+  return cerrar(
+    razones.length === 0 ? "approve" : "block",
+    comandos,
+    contraBase,
+    elegibilidad.autorizacion,
+  );
 }

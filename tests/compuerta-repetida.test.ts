@@ -25,7 +25,10 @@ import { writeFixtureTicket } from "./helpers/fixtures.js";
 const TICKET = "BUGFIX-POS-FILTRO-ORDENES-20260921";
 
 let lab: string;
-const PATHS = (): { root: string; ticketsDir: string } => ({ root: lab, ticketsDir: "tickets" });
+const PATHS = (): { root: string; ticketsDir: string } => ({
+  root: lab,
+  ticketsDir: "tickets",
+});
 
 beforeEach(() => {
   lab = mkdtempSync(join(tmpdir(), "valmen-repetida-"));
@@ -63,11 +66,19 @@ function evaluador(): {
 describe("la repetición idéntica", () => {
   it("se rechaza sin llamar al modelo, cita el recibo y no escribe recibo", async () => {
     const e = evaluador();
-    const primera = await runGate(PATHS(), { gateId: "plan", ticketId: TICKET, jev: e.jev });
+    const primera = await runGate(PATHS(), {
+      gateId: "plan",
+      ticketId: TICKET,
+      jev: e.jev,
+    });
     expect(primera.exitCode).toBe(0);
     const [recibo] = readReceipts(PATHS(), TICKET);
 
-    const segunda = await runGate(PATHS(), { gateId: "plan", ticketId: TICKET, jev: e.jev });
+    const segunda = await runGate(PATHS(), {
+      gateId: "plan",
+      ticketId: TICKET,
+      jev: e.jev,
+    });
 
     expect(segunda.exitCode).toBe(3);
     expect(segunda.stderr).toContain(recibo?.id as string);
@@ -81,7 +92,11 @@ describe("la repetición idéntica", () => {
     await runGate(PATHS(), { gateId: "plan", ticketId: TICKET, jev: e.jev });
 
     const ruta = join(lab, "tickets", "2026", TICKET, "ticket.md");
-    writeFileSync(ruta, readFileSync(ruta, "utf8").replace("Rollback:", "Rollback (revisado):"), "utf8");
+    writeFileSync(
+      ruta,
+      readFileSync(ruta, "utf8").replace("Rollback:", "Rollback (revisado):"),
+      "utf8",
+    );
 
     const otra = await runGate(PATHS(), { gateId: "plan", ticketId: TICKET, jev: e.jev });
     expect(otra.exitCode).toBe(0);
@@ -134,7 +149,12 @@ describe("forzar la repetición", () => {
     const e = evaluador();
     await runGate(PATHS(), { gateId: "plan", ticketId: TICKET, jev: e.jev });
 
-    const vacio = await runGate(PATHS(), { gateId: "plan", ticketId: TICKET, jev: e.jev, forceReason: "   " });
+    const vacio = await runGate(PATHS(), {
+      gateId: "plan",
+      ticketId: TICKET,
+      jev: e.jev,
+      forceReason: "   ",
+    });
 
     expect(vacio.exitCode).toBe(3);
     expect(e.llamadas()).toBe(1);
@@ -144,11 +164,16 @@ describe("forzar la repetición", () => {
 describe("lo que no se bloquea", () => {
   it("la compuerta mecánica, que decide el código, puede correrse otra vez sobre el mismo estado", async () => {
     mkdirSync(join(lab, ".valmen"), { recursive: true });
-    writeFileSync(join(lab, ".valmen", "config.yaml"), "name: Lab\ntest-commands:\n  - node\n", "utf8");
+    writeFileSync(
+      join(lab, ".valmen", "config.yaml"),
+      "name: Lab\ntest-commands:\n  - node\n",
+      "utf8",
+    );
     writeFixtureTicket(lab, {
       id: TICKET,
       workflowStatus: "in_progress",
-      criterios: '- [ ] El comando de verificación del criterio sale con código cero.\n      <!-- test: node -e "process.exit(0)" -->',
+      criterios:
+        '- [ ] El comando de verificación del criterio sale con código cero.\n      <!-- test: node -e "process.exit(0)" -->',
     });
 
     const a = await runGate(PATHS(), { gateId: "qa-mechanical", ticketId: TICKET });

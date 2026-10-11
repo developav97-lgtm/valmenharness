@@ -7,17 +7,34 @@
  * solo borra lo ya integrado: no integra, no fuerza y no publica. Todo el git y los procesos salen
  * de las listas cerradas de `worktree-git.ts`.
  */
-import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
+import {
+  existsSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  rmdirSync,
+} from "node:fs";
 import { homedir } from "node:os";
-import { join, sep } from "node:path";
+import { basename, dirname, join, sep } from "node:path";
 
-import { EXIT_INVARIANT, createExecutionIdentity, fail } from "@valmen/core";
-import { parseConfig, readSharedProjectPolicy } from "@valmen/adapter";
+import { EXIT_INVARIANT, atomicWrite, createExecutionIdentity, fail } from "@valmen/core";
+import {
+  CLAUDE_SETTINGS_PATH,
+  missingClaudeDenyRules,
+  parseConfig,
+  projectFiles,
+  readSharedProjectPolicy,
+} from "@valmen/adapter";
 
 import { findTicket, type RegistryPaths } from "./discovery.js";
 import { estadoDelArbolDeTrabajo } from "./integration-commit.js";
 import { type EjecutorDeGit } from "./integration-rules.js";
-import { claimMachineCapacity, readMachineCapacity, releaseMachineCapacity } from "./machine-capacity.js";
+import {
+  claimMachineCapacity,
+  readMachineCapacity,
+  releaseMachineCapacity,
+} from "./machine-capacity.js";
 import { resolveAuthorizedProject, type AuthorizedProject } from "./project-resolution.js";
 import {
   type EjecutorDeProceso,
@@ -92,12 +109,66 @@ function enlacesFueraDelWorktree(carpetaAbsoluta: string): string[] {
   const fuera: string[] = [];
   for (const nombre of readdirSync(alcance)) {
     try {
-      if (!(realpathSync(join(alcance, nombre)) + sep).startsWith(dentro)) fuera.push(nombre);
+      if (!(realpathSync(join(alcance, nombre)) + sep).startsWith(dentro))
+        fuera.push(nombre);
     } catch {
       fuera.push(nombre);
     }
   }
   return fuera;
+}
+
+/**
+ * Lleva las denegaciones del harness al worktree que acaba de nacer.
+ *
+ * `.claude/` no se versiona en muchos proyectos —en este mismo repositorio está ignorado—, así
+ * que un worktree nace sin `.claude/settings.json` y un agente que trabaje ahí correría sin
+ * ninguna denegación: Claude Code no hereda las reglas del checkout padre. Si el proyecto proyecta
+ * a `claude` y el worktree no trae el archivo de git, se escribe el que proyecta `valmen sync` para
+ * la raíz (las reglas de la persona más las del harness) y se comprueba que git lo ignora: un
+ * archivo sin rastrear se borra y se avisa, para no colarlo en el commit del ticket. Si el worktree
+ * lo trae versionado no se toca: solo se avisa de las denegaciones que le falten.
+ *
+ * Devuelve los avisos. Un fallo (config inválida, `settings.json` que no parsea) lo lanza quien
+ * llama para deshacer el worktree: crear uno sin denegaciones y con un aviso las deja sin ellas.
+ */
+function dejarDenegacionesEnElWorktree(
+  root: string,
+  absoluta: string,
+  git?: EjecutorDeGit,
+): string[] {
+  const proyectado = projectFiles(root, basename(root)).files.find(
+    (f) => f.path === CLAUDE_SETTINGS_PATH,
+  );
+  if (proyectado === undefined) return [];
+
+  const destino = join(absoluta, CLAUDE_SETTINGS_PATH);
+  if (existsSync(destino)) {
+    const faltan = missingClaudeDenyRules(readFileSync(destino, "utf8"));
+    return faltan.length === 0
+      ? []
+      : [
+          `${CLAUDE_SETTINGS_PATH} del worktree viene de git y le faltan ${faltan.length} denegación(es) del harness: ` +
+            "no se tocó; corre `valmen sync` en el checkout principal y versiona el resultado.",
+        ];
+  }
+
+  const carpetaPropia = !existsSync(dirname(destino));
+  atomicWrite(destino, proyectado.content);
+  const estado = ejecutarGitDeWorktree(absoluta, ["status", "--porcelain", "-uall"], git);
+  if (estado.status !== 0)
+    fail(`git status falló en el worktree: ${estado.stderr.trim()}`, EXIT_INVARIANT);
+  const sinRastrear = estado.stdout
+    .split("\n")
+    .some((linea) => linea.startsWith("??") && linea.endsWith(CLAUDE_SETTINGS_PATH));
+  if (!sinRastrear) return [];
+
+  rmSync(destino);
+  if (carpetaPropia) rmdirSync(dirname(destino));
+  return [
+    `No se dejó ${CLAUDE_SETTINGS_PATH} en el worktree: git no lo ignora y entraría al commit del ticket. ` +
+      "Los agentes de ese worktree correrán sin las denegaciones del harness: ignora `.claude/` en el `.gitignore` o versiona el archivo.",
+  ];
 }
 
 export function crearWorktree(request: WorktreeRequest): WorktreeCreado {
@@ -110,29 +181,60 @@ export function crearWorktree(request: WorktreeRequest): WorktreeCreado {
   exigirCheckoutPrincipal(root, git);
 
   const ticket = findTicket(paths, request.ticketId);
-  if (ticket === undefined) fail(`El ticket ${request.ticketId} no está registrado.`, EXIT_INVARIANT);
-  const enMain = ejecutarGitDeWorktree(root, ["cat-file", "-e", `main:${ticket.relativePath}`], git);
+  if (ticket === undefined)
+    fail(`El ticket ${request.ticketId} no está registrado.`, EXIT_INVARIANT);
+  const enMain = ejecutarGitDeWorktree(
+    root,
+    ["cat-file", "-e", `main:${ticket.relativePath}`],
+    git,
+  );
   if (enMain.status !== 0) {
-    fail(`El ticket ${request.ticketId} no está registrado en main (${ticket.relativePath}): commitéalo antes de crear su worktree.`, EXIT_INVARIANT);
+    fail(
+      `El ticket ${request.ticketId} no está registrado en main (${ticket.relativePath}): commitéalo antes de crear su worktree.`,
+      EXIT_INVARIANT,
+    );
   }
 
-  if (existsSync(absoluta) || worktreesRegistrados(root, git).some((w) => w === absoluta || w === quitarLaBarraFinal(realpathOrSame(absoluta)))) {
+  if (
+    existsSync(absoluta) ||
+    worktreesRegistrados(root, git).some(
+      (w) => w === absoluta || w === quitarLaBarraFinal(realpathOrSame(absoluta)),
+    )
+  ) {
     fail(`El worktree ${carpeta} ya existe: no se toca.`, EXIT_INVARIANT);
   }
-  if (ramaExiste(root, rama, git)) fail(`La rama ${rama} ya existe: no se toca.`, EXIT_INVARIANT);
+  if (ramaExiste(root, rama, git))
+    fail(`La rama ${rama} ya existe: no se toca.`, EXIT_INVARIANT);
 
   const avisos: string[] = [];
   const project = proyectoDeLaMaquina(paths, home);
-  const identity = project === null ? null : createExecutionIdentity({ projectId: project.projectId, ticketId: request.ticketId, executionId: `worktree-${slug}` });
+  const identity =
+    project === null
+      ? null
+      : createExecutionIdentity({
+          projectId: project.projectId,
+          ticketId: request.ticketId,
+          executionId: `worktree-${slug}`,
+        });
   let reservada = false;
   if (project !== null && identity !== null) {
-    const reserva = claimMachineCapacity({ home, project, identity, attemptId: INTENTO_DE_WORKTREE });
+    const reserva = claimMachineCapacity({
+      home,
+      project,
+      identity,
+      attemptId: INTENTO_DE_WORKTREE,
+    });
     if (!reserva.granted) {
-      fail(`La capacidad de la máquina no tiene cupo (${reserva.capacity} en uso): no se crea el worktree de ${request.ticketId}.`, EXIT_INVARIANT);
+      fail(
+        `La capacidad de la máquina no tiene cupo (${reserva.capacity} en uso): no se crea el worktree de ${request.ticketId}.`,
+        EXIT_INVARIANT,
+      );
     }
     reservada = true;
   } else {
-    avisos.push("El proyecto no está declarado en la máquina: no se reservó cupo de capacidad.");
+    avisos.push(
+      "El proyecto no está declarado en la máquina: no se reservó cupo de capacidad.",
+    );
   }
 
   let worktreeCreado = false;
@@ -141,7 +243,8 @@ export function crearWorktree(request: WorktreeRequest): WorktreeCreado {
     const problemas: string[] = [];
     if (worktreeCreado) {
       const r = ejecutarGitDeWorktree(root, ["worktree", "remove", carpeta], git);
-      if (r.status !== 0) problemas.push(`no se pudo quitar el worktree: ${r.stderr.trim()}`);
+      if (r.status !== 0)
+        problemas.push(`no se pudo quitar el worktree: ${r.stderr.trim()}`);
       else worktreeCreado = false;
     }
     if (ramaCreada && !worktreeCreado) {
@@ -160,13 +263,19 @@ export function crearWorktree(request: WorktreeRequest): WorktreeCreado {
   const abortar = (motivo: string): never => {
     const problemas = deshacer();
     return fail(
-      problemas.length === 0 ? motivo : `${motivo} Además quedó a medias: ${problemas.join("; ")}. Revisa con \`git worktree list\`.`,
+      problemas.length === 0
+        ? motivo
+        : `${motivo} Además quedó a medias: ${problemas.join("; ")}. Revisa con \`git worktree list\`.`,
       EXIT_INVARIANT,
     );
   };
 
   try {
-    const alta = ejecutarGitDeWorktree(root, ["worktree", "add", "-b", rama, carpeta, "main"], git);
+    const alta = ejecutarGitDeWorktree(
+      root,
+      ["worktree", "add", "-b", rama, carpeta, "main"],
+      git,
+    );
     if (alta.status !== 0) {
       // Puede haber creado la rama antes de fallar: se limpia solo lo que existe.
       ramaCreada = ramaExiste(root, rama, git);
@@ -177,18 +286,37 @@ export function crearWorktree(request: WorktreeRequest): WorktreeCreado {
     ramaCreada = true;
 
     const origen = join(root, "node_modules");
-    if (!existsSync(origen)) abortar(`No hay ${origen} que clonar: instala las dependencias en el checkout principal.`);
+    if (!existsSync(origen))
+      abortar(
+        `No hay ${origen} que clonar: instala las dependencias en el checkout principal.`,
+      );
     const destino = join(absoluta, "node_modules");
-    let copia = ejecutarProcesoDeWorktree("cp", ["-Rc", origen, destino], root, request.proceso);
+    let copia = ejecutarProcesoDeWorktree(
+      "cp",
+      ["-Rc", origen, destino],
+      root,
+      request.proceso,
+    );
     if (copia.status !== 0) {
       // Fuera de APFS no hay clon: cae a la copia normal, solo si el intento no dejó nada a medias.
-      if (existsSync(destino)) abortar(`El clon de node_modules falló y dejó una copia parcial: ${copia.stderr.trim()}`);
-      copia = ejecutarProcesoDeWorktree("cp", ["-R", origen, destino], root, request.proceso);
-      if (copia.status !== 0) abortar(`No se pudo clonar node_modules: ${copia.stderr.trim()}`);
+      if (existsSync(destino))
+        abortar(
+          `El clon de node_modules falló y dejó una copia parcial: ${copia.stderr.trim()}`,
+        );
+      copia = ejecutarProcesoDeWorktree(
+        "cp",
+        ["-R", origen, destino],
+        root,
+        request.proceso,
+      );
+      if (copia.status !== 0)
+        abortar(`No se pudo clonar node_modules: ${copia.stderr.trim()}`);
     }
     const fuera = enlacesFueraDelWorktree(absoluta);
     if (fuera.length > 0) {
-      abortar(`El clon de node_modules no quedó contenido en el worktree: @valmen/${fuera.join(", @valmen/")} resuelve fuera de ${carpeta}.`);
+      abortar(
+        `El clon de node_modules no quedó contenido en el worktree: @valmen/${fuera.join(", @valmen/")} resuelve fuera de ${carpeta}.`,
+      );
     }
 
     for (const [comando, argumentos] of [
@@ -197,8 +325,18 @@ export function crearWorktree(request: WorktreeRequest): WorktreeCreado {
     ] as const) {
       const r = ejecutarProcesoDeWorktree(comando, argumentos, absoluta, request.proceso);
       if (r.status !== 0) {
-        abortar(`La compilación falló (${comando} ${argumentos.join(" ")}): ${(r.stderr || r.stdout).trim().slice(0, 500)}`);
+        abortar(
+          `La compilación falló (${comando} ${argumentos.join(" ")}): ${(r.stderr || r.stdout).trim().slice(0, 500)}`,
+        );
       }
+    }
+
+    try {
+      avisos.push(...dejarDenegacionesEnElWorktree(root, absoluta, git));
+    } catch (caught) {
+      abortar(
+        `No se pudieron llevar las denegaciones del harness al worktree: ${caught instanceof Error ? caught.message : String(caught)}`,
+      );
     }
 
     const commit = ejecutarGitDeWorktree(root, ["rev-parse", rama], git).stdout.trim();
@@ -214,7 +352,10 @@ export function crearWorktree(request: WorktreeRequest): WorktreeCreado {
     if (worktreeCreado || ramaCreada || reservada) {
       const problemas = deshacer();
       if (problemas.length > 0) {
-        fail(`${caught instanceof Error ? caught.message : String(caught)} Además quedó a medias: ${problemas.join("; ")}.`, EXIT_INVARIANT);
+        fail(
+          `${caught instanceof Error ? caught.message : String(caught)} Además quedó a medias: ${problemas.join("; ")}.`,
+          EXIT_INVARIANT,
+        );
       }
     }
     throw caught;
@@ -238,47 +379,80 @@ export function quitarWorktree(request: WorktreeRequest): WorktreeQuitado {
 
   exigirCheckoutPrincipal(root, git);
 
-  const actual = ejecutarGitDeWorktree(root, ["rev-parse", "--abbrev-ref", "HEAD"], git).stdout.trim();
+  const actual = ejecutarGitDeWorktree(
+    root,
+    ["rev-parse", "--abbrev-ref", "HEAD"],
+    git,
+  ).stdout.trim();
   if (actual !== "main") {
-    fail(`El checkout principal está en "${actual}", no en main: quitar el worktree borra la rama y debe comprobarse contra main.`, EXIT_INVARIANT);
+    fail(
+      `El checkout principal está en "${actual}", no en main: quitar el worktree borra la rama y debe comprobarse contra main.`,
+      EXIT_INVARIANT,
+    );
   }
-  if (!ramaExiste(root, rama, git)) fail(`La rama ${rama} no existe: no hay nada que quitar.`, EXIT_INVARIANT);
-  const ancestro = ejecutarGitDeWorktree(root, ["merge-base", "--is-ancestor", rama, "main"], git);
+  if (!ramaExiste(root, rama, git))
+    fail(`La rama ${rama} no existe: no hay nada que quitar.`, EXIT_INVARIANT);
+  const ancestro = ejecutarGitDeWorktree(
+    root,
+    ["merge-base", "--is-ancestor", rama, "main"],
+    git,
+  );
   if (ancestro.status !== 0) {
-    fail(`La rama ${rama} no está integrada en main: se conservan el worktree y la rama. Integra primero.`, EXIT_INVARIANT);
+    fail(
+      `La rama ${rama} no está integrada en main: se conservan el worktree y la rama. Integra primero.`,
+      EXIT_INVARIANT,
+    );
   }
 
   const hayCarpeta = existsSync(absoluta);
   if (hayCarpeta) {
     const real = quitarLaBarraFinal(realpathOrSame(absoluta));
     if (!worktreesRegistrados(root, git).includes(real)) {
-      fail(`${carpeta} existe pero no es un worktree registrado: no se toca.`, EXIT_INVARIANT);
+      fail(
+        `${carpeta} existe pero no es un worktree registrado: no se toca.`,
+        EXIT_INVARIANT,
+      );
     }
-    const sucios = estadoDelArbolDeTrabajo(absoluta, (argumentos, cwd) => ejecutarGitDeWorktree(cwd, argumentos, git));
+    const sucios = estadoDelArbolDeTrabajo(absoluta, (argumentos, cwd) =>
+      ejecutarGitDeWorktree(cwd, argumentos, git),
+    );
     if (sucios.length > 0) {
-      fail(`El worktree ${carpeta} tiene cambios sin commit (${sucios.slice(0, 5).join(", ")}): se conservan el worktree y la rama.`, EXIT_INVARIANT);
+      fail(
+        `El worktree ${carpeta} tiene cambios sin commit (${sucios.slice(0, 5).join(", ")}): se conservan el worktree y la rama.`,
+        EXIT_INVARIANT,
+      );
     }
     const quitado = ejecutarGitDeWorktree(root, ["worktree", "remove", carpeta], git);
-    if (quitado.status !== 0) fail(`git worktree remove falló: ${quitado.stderr.trim()}`, EXIT_INVARIANT);
+    if (quitado.status !== 0)
+      fail(`git worktree remove falló: ${quitado.stderr.trim()}`, EXIT_INVARIANT);
   }
   const borrada = ejecutarGitDeWorktree(root, ["branch", "-d", rama], git);
-  if (borrada.status !== 0) fail(`git branch -d falló: ${borrada.stderr.trim()}`, EXIT_INVARIANT);
+  if (borrada.status !== 0)
+    fail(`git branch -d falló: ${borrada.stderr.trim()}`, EXIT_INVARIANT);
 
   const avisos: string[] = [];
-  if (!hayCarpeta) avisos.push(`La carpeta ${carpeta} ya no existía: solo se borró la rama.`);
+  if (!hayCarpeta)
+    avisos.push(`La carpeta ${carpeta} ya no existía: solo se borró la rama.`);
   const project = proyectoDeLaMaquina(paths, home);
   let reserva: WorktreeQuitado["reserva"] = "no-declarada";
   if (project === null) {
     avisos.push("El proyecto no está declarado en la máquina: no había cupo que liberar.");
   } else {
     const encontrada = readMachineCapacity({ home, project }).reservations.find(
-      (r) => r.projectId === project.projectId && r.ticketId === request.ticketId && r.attemptId === INTENTO_DE_WORKTREE,
+      (r) =>
+        r.projectId === project.projectId &&
+        r.ticketId === request.ticketId &&
+        r.attemptId === INTENTO_DE_WORKTREE,
     );
     if (encontrada === undefined) {
       reserva = "sin-reserva";
       avisos.push("El ticket no tenía un cupo reservado por el worktree.");
     } else {
-      const identity = createExecutionIdentity({ projectId: project.projectId, ticketId: request.ticketId, executionId: encontrada.executionId });
+      const identity = createExecutionIdentity({
+        projectId: project.projectId,
+        ticketId: request.ticketId,
+        executionId: encontrada.executionId,
+      });
       releaseMachineCapacity({ home, project, identity, attemptId: INTENTO_DE_WORKTREE });
       reserva = "liberada";
     }

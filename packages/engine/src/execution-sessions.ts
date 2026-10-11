@@ -43,18 +43,24 @@ export function linkExecutionSession(
   input: ExecutionSessionLinkInput,
   options: { readonly receivedAt?: string | undefined } = {},
 ): AppendExecutionEventResult {
-  return appendExecutionEvent(project, {
-    eventId: input.eventId,
-    identity: input.identity,
-    attemptId: input.attemptId,
-    kind: "session.linked",
-    source: input.source,
-    occurredAt: input.occurredAt,
-    session: {
-      executor: createSessionReference(input.executor),
-      ...(input.origin === undefined ? {} : { origin: createSessionReference(input.origin) }),
+  return appendExecutionEvent(
+    project,
+    {
+      eventId: input.eventId,
+      identity: input.identity,
+      attemptId: input.attemptId,
+      kind: "session.linked",
+      source: input.source,
+      occurredAt: input.occurredAt,
+      session: {
+        executor: createSessionReference(input.executor),
+        ...(input.origin === undefined
+          ? {}
+          : { origin: createSessionReference(input.origin) }),
+      },
     },
-  }, options);
+    options,
+  );
 }
 
 /** Lee enlaces del ámbito autorizado, en orden de recepción y sin inferencias. */
@@ -71,23 +77,27 @@ export function readExecutionSessionLinks(
     .filter((event) => attemptId === undefined || event.attemptId === attemptId)
     .flatMap((event) => {
       if (event.kind !== "session.linked" || event.session === undefined) return [];
-      return [Object.freeze({
-        eventId: event.eventId,
-        identity: event.identity,
-        attemptId: event.attemptId,
-        executor: event.session.executor,
-        ...(event.session.origin === undefined ? {} : { origin: event.session.origin }),
-        source: event.source,
-        occurredAt: event.occurredAt,
-        receivedAt: event.receivedAt,
-        cursor: event.cursor,
-      })];
+      return [
+        Object.freeze({
+          eventId: event.eventId,
+          identity: event.identity,
+          attemptId: event.attemptId,
+          executor: event.session.executor,
+          ...(event.session.origin === undefined ? {} : { origin: event.session.origin }),
+          source: event.source,
+          occurredAt: event.occurredAt,
+          receivedAt: event.receivedAt,
+          cursor: event.cursor,
+        }),
+      ];
     });
 }
 
 function sameIdentity(left: ExecutionIdentity, right: ExecutionIdentity): boolean {
   const validated = createExecutionIdentity(right);
-  return left.projectId === validated.projectId
-    && left.ticketId === validated.ticketId
-    && left.executionId === validated.executionId;
+  return (
+    left.projectId === validated.projectId &&
+    left.ticketId === validated.ticketId &&
+    left.executionId === validated.executionId
+  );
 }

@@ -5,7 +5,15 @@
  * repositorio, y la última comprueba con sha256 que siguen igual.
  */
 import { createHash } from "node:crypto";
-import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -30,8 +38,14 @@ const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const AHORA = new Date("2026-10-07T08:00:00.000Z");
 const FRASE = "Autorizo aprobar solos los planes de bajo riesgo de web";
 
-const sha = (ruta: string): string => (existsSync(ruta) ? createHash("sha256").update(readFileSync(ruta)).digest("hex") : "ausente");
-const RUTAS_DEL_REPO = [join(REPO, ".valmen", "approval", "authorizations.jsonl"), join(REPO, ".valmen", "qa", "authorizations.jsonl")];
+const sha = (ruta: string): string =>
+  existsSync(ruta)
+    ? createHash("sha256").update(readFileSync(ruta)).digest("hex")
+    : "ausente";
+const RUTAS_DEL_REPO = [
+  join(REPO, ".valmen", "approval", "authorizations.jsonl"),
+  join(REPO, ".valmen", "qa", "authorizations.jsonl"),
+];
 let huellasIniciales: string[] = [];
 
 let roots: string[] = [];
@@ -47,7 +61,12 @@ const rutas = (r: string): RegistryPaths => ({ root: r, ticketsDir: "tickets" })
 let n = 0;
 function ticket(r: string, modulo: string, tipo = "FEATURE"): void {
   n += 1;
-  writeFixtureTicket(r, { id: `${tipo}-${modulo}-PA${n}-20261007`, workflowStatus: "analyzed", type: tipo, module: modulo });
+  writeFixtureTicket(r, {
+    id: `${tipo}-${modulo}-PA${n}-20261007`,
+    workflowStatus: "analyzed",
+    type: tipo,
+    module: modulo,
+  });
 }
 
 beforeAll(() => {
@@ -81,7 +100,9 @@ describe("opcionesDeAutorizacion", () => {
     const b = raiz();
     ticket(a, "SOLOENA");
     ticket(b, "ENB");
-    expect(opcionesDeAutorizacion(b, rutas(b)).modules.map((m) => m.module)).toEqual(["ENB"]);
+    expect(opcionesDeAutorizacion(b, rutas(b)).modules.map((m) => m.module)).toEqual([
+      "ENB",
+    ]);
   });
 
   it("C4 con la clave, la fuente es la configuración", () => {
@@ -98,17 +119,31 @@ describe("opcionesDeAutorizacion", () => {
   });
 
   it("C6 una lista vacía falla", () => {
-    expect(() => readAuthorizationModules({ "authorization-modules": [] })).toThrow(/no puede estar vacía/);
+    expect(() => readAuthorizationModules({ "authorization-modules": [] })).toThrow(
+      /no puede estar vacía/,
+    );
     expect(readAuthorizationModules({})).toBeNull();
   });
 
   it("C8 a C12 las constantes del motor", () => {
     const o = opcionesDeAutorizacion(raiz(), rutas(raiz()));
-    expect(o.approval.types).toEqual(["BUGFIX", "IMPROVEMENT", "CHORE", "FEATURE", "SYNC", "INTEGRATION", "AGENT"]);
+    expect(o.approval.types).toEqual([
+      "BUGFIX",
+      "IMPROVEMENT",
+      "CHORE",
+      "FEATURE",
+      "SYNC",
+      "INTEGRATION",
+      "AGENT",
+    ]);
     expect(o.qa.types).toEqual(["BUGFIX", "IMPROVEMENT", "CHORE", "FEATURE"]);
     expect(o.approval.stages).toEqual(["analysis", "plan"]);
     expect(o.approval.modes).toEqual(["on-approve", "reviewer"]);
-    expect(o.approval.impacts).toEqual(["sync_impact", "migration_impact", "docker_impact"]);
+    expect(o.approval.impacts).toEqual([
+      "sync_impact",
+      "migration_impact",
+      "docker_impact",
+    ]);
   });
 });
 
@@ -131,7 +166,9 @@ describe("GET /api/authorizations/options", () => {
     const base = await levantar(r);
     const res = await fetch(`${base}/api/authorizations/options`);
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual(JSON.parse(JSON.stringify(opcionesDeAutorizacion(r, rutas(r)))));
+    expect(await res.json()).toEqual(
+      JSON.parse(JSON.stringify(opcionesDeAutorizacion(r, rutas(r)))),
+    );
     expect(existsSync(join(r, ".valmen", "approval"))).toBe(false);
     expect(existsSync(join(r, ".valmen", "qa"))).toBe(false);
   });
@@ -142,14 +179,34 @@ describe("GET /api/authorizations/options", () => {
     const res = await fetch(`${base}/api/approval/authorizations`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ actor: "Juan Andrade", quote: FRASE, types: ["FEATURE"], modules: ["WEB", "ENGINE"], maxRisk: "normal", dailyQuota: 1, validDays: 30 }),
+      body: JSON.stringify({
+        actor: "Juan Andrade",
+        quote: FRASE,
+        types: ["FEATURE"],
+        modules: ["WEB", "ENGINE"],
+        maxRisk: "normal",
+        dailyQuota: 1,
+        validDays: 30,
+      }),
     });
     expect(res.status).toBe(200);
   });
 });
 
 const crearAprobacion = (r: string, modules: string[]) =>
-  crearAutorizacionDeAprobacion({ root: r, actor: "Juan Andrade", quote: FRASE, types: ["FEATURE"], modules, maxRisk: "normal", dailyQuota: 2, validDays: 30, source: "cli", ahora: AHORA, env: {} });
+  crearAutorizacionDeAprobacion({
+    root: r,
+    actor: "Juan Andrade",
+    quote: FRASE,
+    types: ["FEATURE"],
+    modules,
+    maxRisk: "normal",
+    dailyQuota: 2,
+    validDays: 30,
+    source: "cli",
+    ahora: AHORA,
+    env: {},
+  });
 
 describe("el motor rechaza todos y all", () => {
   it("C14 y C15 aprobación con todos o ALL", () => {
@@ -161,7 +218,19 @@ describe("el motor rechaza todos y all", () => {
     expect(() => crearAprobacion(raiz(), ["*"])).toThrow(/ni vacía ni con comodín/);
   });
   const qa = (r: string, modules: string[]) =>
-    crearAutorizacion({ root: r, actor: "Juan Andrade", quote: FRASE, types: ["BUGFIX"], modules, maxRisk: "normal", dailyQuota: 1, validDays: 30, source: "cli", ahora: AHORA, env: {} });
+    crearAutorizacion({
+      root: r,
+      actor: "Juan Andrade",
+      quote: FRASE,
+      types: ["BUGFIX"],
+      modules,
+      maxRisk: "normal",
+      dailyQuota: 1,
+      validDays: 30,
+      source: "cli",
+      ahora: AHORA,
+      env: {},
+    });
   it("C17 QA con Todos", () => {
     expect(() => qa(raiz(), ["Todos"])).toThrow(/elige los módulos en la lista/);
   });
@@ -172,11 +241,21 @@ describe("el motor rechaza todos y all", () => {
 
 describe("la elegibilidad con módulos concretos", () => {
   const regla = (r: string, id: string): string =>
-    elegibilidadDeAprobacion({ paths: rutas(r), ticketId: id, etapa: "plan", ahora: AHORA }).reglas.find((x) => x.regla === "autorizacion")?.detalle ?? "";
+    elegibilidadDeAprobacion({
+      paths: rutas(r),
+      ticketId: id,
+      etapa: "plan",
+      ahora: AHORA,
+    }).reglas.find((x) => x.regla === "autorizacion")?.detalle ?? "";
   const crearTicket = (r: string, modulo: string): string => {
     n += 1;
     const id = `FEATURE-${modulo}-EL${n}-20261007`;
-    writeFixtureTicket(r, { id, workflowStatus: "analyzed", type: "FEATURE", module: modulo });
+    writeFixtureTicket(r, {
+      id,
+      workflowStatus: "analyzed",
+      type: "FEATURE",
+      module: modulo,
+    });
     return id;
   };
 
@@ -196,13 +275,29 @@ describe("la elegibilidad con módulos concretos", () => {
   it("C23 una autorización antigua con todos no cubre nada", () => {
     const r = raiz();
     const base = {
-      kind: "approval-authorization-created" as const, version: 1 as const, id: "APA-20261007-bbbbbb", types: ["FEATURE"], modules: ["todos"],
-      maxRisk: "normal", impacts: [], stages: ["analysis", "plan"], mode: "on-approve", dailyQuota: 5,
-      validFrom: AHORA.toISOString(), validUntil: new Date(AHORA.getTime() + 30 * 86_400_000).toISOString(),
-      actor: "Alguien", quote: "frase", source: "cli", createdAt: AHORA.toISOString(),
+      kind: "approval-authorization-created" as const,
+      version: 1 as const,
+      id: "APA-20261007-bbbbbb",
+      types: ["FEATURE"],
+      modules: ["todos"],
+      maxRisk: "normal",
+      impacts: [],
+      stages: ["analysis", "plan"],
+      mode: "on-approve",
+      dailyQuota: 5,
+      validFrom: AHORA.toISOString(),
+      validUntil: new Date(AHORA.getTime() + 30 * 86_400_000).toISOString(),
+      actor: "Alguien",
+      quote: "frase",
+      source: "cli",
+      createdAt: AHORA.toISOString(),
     };
     mkdirSync(join(r, ".valmen", "approval"), { recursive: true });
-    appendFileSync(approvalAuthorizationsPath(r), `${JSON.stringify({ ...base, hash: hashDeAutorizacionDeAprobacion(base) })}\n`, "utf8");
+    appendFileSync(
+      approvalAuthorizationsPath(r),
+      `${JSON.stringify({ ...base, hash: hashDeAutorizacionDeAprobacion(base) })}\n`,
+      "utf8",
+    );
     expect(regla(r, crearTicket(r, "WEB"))).toContain("no lista el módulo WEB");
   });
 });
@@ -225,7 +320,10 @@ describe("index.html", () => {
     expect(html).toContain("un módulo nuevo no queda cubierto");
   });
   it("C30 el CSS de las casillas no trae colores a mano", () => {
-    const bloque = html.split("/* autorizacion-casillas:inicio */")[1]?.split("/* autorizacion-casillas:fin */")[0] ?? "";
+    const bloque =
+      html
+        .split("/* autorizacion-casillas:inicio */")[1]
+        ?.split("/* autorizacion-casillas:fin */")[0] ?? "";
     expect(bloque.length).toBeGreaterThan(200);
     expect(bloque).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
     expect(bloque).not.toMatch(/rgba?\(/);

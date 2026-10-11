@@ -8,3 +8,4 @@
 
 export * from "./judge.js";
 export * from "./reviewer.js";
+export * from "./revisor-diff.js";

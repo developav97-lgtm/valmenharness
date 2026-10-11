@@ -21,13 +21,19 @@ export interface SessionReference {
 /** Valida y congela una referencia que puede persistirse en el historial. */
 export function createSessionReference(input: SessionReference): SessionReference {
   if (!SESSION_ADAPTER_RE.test(input.adapter)) {
-    throw new Error("adapter debe ser una etiqueta de adaptador en minúsculas, sin espacios.");
+    throw new Error(
+      "adapter debe ser una etiqueta de adaptador en minúsculas, sin espacios.",
+    );
   }
   if (!EXECUTION_ID_RE.test(input.scope)) {
-    throw new Error("scope debe ser un identificador portable no vacío, sin rutas ni espacios.");
+    throw new Error(
+      "scope debe ser un identificador portable no vacío, sin rutas ni espacios.",
+    );
   }
   if (!EXECUTION_ID_RE.test(input.sessionId)) {
-    throw new Error("sessionId debe ser un identificador portable no vacío, sin rutas ni espacios.");
+    throw new Error(
+      "sessionId debe ser un identificador portable no vacío, sin rutas ni espacios.",
+    );
   }
   return Object.freeze({
     adapter: input.adapter,

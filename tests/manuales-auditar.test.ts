@@ -75,9 +75,14 @@ function manualAprobable(): string {
 }
 
 /** El manual con una afirmación sin cita. */
-const MANUAL_SIN_CITA = ["# Sin cita", "", "## Sección", "", "El botón guarda la orden.", ""].join(
-  "\n",
-);
+const MANUAL_SIN_CITA = [
+  "# Sin cita",
+  "",
+  "## Sección",
+  "",
+  "El botón guarda la orden.",
+  "",
+].join("\n");
 
 describe("manuales auditar: los tres veredictos", () => {
   it("aprueba cuando cada afirmación declara cita y cada cita resuelve", () => {
@@ -135,9 +140,15 @@ describe("manuales auditar: las causas de bloqueo", () => {
   it("bloquea una cita que apunta a una ruta que no existe", () => {
     escribir(
       MANUAL,
-      ["# M", "", "## Sección", "", "La pantalla lista.", "<!-- cita: src/no-existe.ts:1 -->", ""].join(
-        "\n",
-      ),
+      [
+        "# M",
+        "",
+        "## Sección",
+        "",
+        "La pantalla lista.",
+        "<!-- cita: src/no-existe.ts:1 -->",
+        "",
+      ].join("\n"),
     );
 
     const resultado = auditarManuales(choosePaths(lab), {});
@@ -175,9 +186,15 @@ describe("manuales auditar: las causas de bloqueo", () => {
     escribirFuente(["const listar = true;", "", "const guardar = true;"]);
     escribir(
       MANUAL,
-      ["# M", "", "## Sección", "", "La pantalla lista.", `<!-- cita: ${FUENTE}:2 -->`, ""].join(
-        "\n",
-      ),
+      [
+        "# M",
+        "",
+        "## Sección",
+        "",
+        "La pantalla lista.",
+        `<!-- cita: ${FUENTE}:2 -->`,
+        "",
+      ].join("\n"),
     );
 
     const resultado = auditarManuales(choosePaths(lab), {});
@@ -192,9 +209,15 @@ describe("manuales auditar: las causas de bloqueo", () => {
     escribirFuente(["const listar = true;"]);
     escribir(
       MANUAL,
-      ["# M", "", "## Sección", "", "La pantalla lista.", `<!-- cita: ${FUENTE}:abc -->`, ""].join(
-        "\n",
-      ),
+      [
+        "# M",
+        "",
+        "## Sección",
+        "",
+        "La pantalla lista.",
+        `<!-- cita: ${FUENTE}:abc -->`,
+        "",
+      ].join("\n"),
     );
 
     const resultado = auditarManuales(choosePaths(lab), {});
@@ -223,9 +246,9 @@ describe("manuales auditar: las causas de bloqueo", () => {
     const resultado = auditarManuales(choosePaths(lab), {});
 
     expect(resultado.manuales[0]?.veredicto).toBe("block");
-    expect(
-      resultado.manuales[0]?.hallazgos.some((h) => h.tipo === "ruta-tecnica"),
-    ).toBe(true);
+    expect(resultado.manuales[0]?.hallazgos.some((h) => h.tipo === "ruta-tecnica")).toBe(
+      true,
+    );
   });
 });
 
@@ -383,14 +406,17 @@ describe("manuales auditar: lo que no es una afirmación", () => {
   });
 
   it("una línea en negrita fuera del bloque de metadata sí exige cita", () => {
-    escribir(SIN_CITA, [
-      "# M",
-      "",
-      "## ¿Cómo se usa?",
-      "",
-      "**Importante:** el botón guarda la orden.",
-      "",
-    ].join("\n"));
+    escribir(
+      SIN_CITA,
+      [
+        "# M",
+        "",
+        "## ¿Cómo se usa?",
+        "",
+        "**Importante:** el botón guarda la orden.",
+        "",
+      ].join("\n"),
+    );
 
     const resultado = auditarManuales(choosePaths(lab), {});
 
@@ -449,10 +475,18 @@ describe("manuales auditar: el recibo", () => {
       "sin_rutas_tecnicas",
       "mensajes_de_error",
     ]);
-    expect(recibo.mechanicalChecks.find((c) => c.id === "citas_presentes")?.result).toBe("fail");
-    expect(recibo.mechanicalChecks.find((c) => c.id === "citas_resuelven")?.result).toBe("pass");
-    expect(recibo.mechanicalChecks.find((c) => c.id === "sin_rutas_tecnicas")?.result).toBe("pass");
-    expect(recibo.mechanicalChecks.find((c) => c.id === "mensajes_de_error")?.result).toBe("skip");
+    expect(recibo.mechanicalChecks.find((c) => c.id === "citas_presentes")?.result).toBe(
+      "fail",
+    );
+    expect(recibo.mechanicalChecks.find((c) => c.id === "citas_resuelven")?.result).toBe(
+      "pass",
+    );
+    expect(recibo.mechanicalChecks.find((c) => c.id === "sin_rutas_tecnicas")?.result).toBe(
+      "pass",
+    );
+    expect(recibo.mechanicalChecks.find((c) => c.id === "mensajes_de_error")?.result).toBe(
+      "skip",
+    );
   });
 });
 

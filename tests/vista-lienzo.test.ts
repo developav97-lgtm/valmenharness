@@ -21,7 +21,7 @@ function fila(agente: string, extra: Record<string, unknown> = {}) {
     agente,
     principal: false,
     ticket: `TICKET-${agente}`,
-    estado: "trabajando",
+    estado: "trabajando" as const,
     ticketEstado: "in_progress",
     faseConfirmada: "implementación",
     faseInferida: null,
@@ -39,7 +39,9 @@ function almacenEnMemoria(inicial: Record<string, string> = {}) {
   };
 }
 
-function banco(opciones: { visible?: () => boolean; almacen?: ReturnType<typeof almacenEnMemoria> } = {}) {
+function banco(
+  opciones: { visible?: () => boolean; almacen?: ReturnType<typeof almacenEnMemoria> } = {},
+) {
   let reloj = AHORA;
   let siguiente = 1;
   const pendientes = new Map<number, () => void>();
@@ -59,7 +61,19 @@ function banco(opciones: { visible?: () => boolean; almacen?: ReturnType<typeof 
       llamadas.cancelados += 1;
     },
   });
-  const lienzo = { getContext: () => ({ canvas: { width: 960 }, save() {}, restore() {}, scale() {}, fillRect() {}, fillText() {}, beginPath() {}, arc() {}, fill() {} }) };
+  const lienzo = {
+    getContext: () => ({
+      canvas: { width: 960 },
+      save() {},
+      restore() {},
+      scale() {},
+      fillRect() {},
+      fillText() {},
+      beginPath() {},
+      arc() {},
+      fill() {},
+    }),
+  };
   return {
     montaje,
     lienzo,
@@ -182,7 +196,11 @@ describe("los avisos de pregunta", () => {
   const mundo = MUNDOS[0];
 
   it("una pregunta abierta avisa a una persona, con ticket, antigüedad y la expresión del mundo (C7-C10)", () => {
-    const avisos = avisosDePregunta([fila("a1", { pregunta: { desde: hace(40), respondidaEn: null } })], AHORA, mundo);
+    const avisos = avisosDePregunta(
+      [fila("a1", { pregunta: { desde: hace(40), respondidaEn: null } })],
+      AHORA,
+      mundo,
+    );
     expect(avisos).toHaveLength(1);
     expect(avisos[0]).toMatchObject({
       tipo: "pendiente",
@@ -195,13 +213,26 @@ describe("los avisos de pregunta", () => {
   });
 
   it("una pregunta respondida hace 10 s produce «una persona respondió» (C11)", () => {
-    const avisos = avisosDePregunta([fila("a1", { pregunta: { desde: hace(90), respondidaEn: hace(10) } })], AHORA, mundo);
+    const avisos = avisosDePregunta(
+      [fila("a1", { pregunta: { desde: hace(90), respondidaEn: hace(10) } })],
+      AHORA,
+      mundo,
+    );
     expect(avisos).toHaveLength(1);
-    expect(avisos[0]).toMatchObject({ tipo: "respondio", encabezado: "una persona respondió" });
+    expect(avisos[0]).toMatchObject({
+      tipo: "respondio",
+      encabezado: "una persona respondió",
+    });
   });
 
   it("una pregunta respondida hace más de 60 s no produce aviso (C12)", () => {
-    expect(avisosDePregunta([fila("a1", { pregunta: { desde: hace(300), respondidaEn: hace(61) } })], AHORA, mundo)).toEqual([]);
+    expect(
+      avisosDePregunta(
+        [fila("a1", { pregunta: { desde: hace(300), respondidaEn: hace(61) } })],
+        AHORA,
+        mundo,
+      ),
+    ).toEqual([]);
   });
 
   it("una fila sin pregunta no produce aviso", () => {
@@ -213,13 +244,22 @@ describe("el panel de agentes", () => {
   const filas = [
     fila("a1", { estado: "trabajando", faseConfirmada: null, faseInferida: "análisis" }),
     fila("a2", { estado: "termino" }),
-    fila("p", { principal: true, ticket: null, estado: "trabajando", ultimaHerramienta: "Agent" }),
+    fila("p", {
+      principal: true,
+      ticket: null,
+      estado: "trabajando",
+      ultimaHerramienta: "Agent",
+    }),
     fila("a3", { estado: "esperando" }),
   ];
 
   it("pone la sesión principal en primer lugar (C13)", () => {
     const panel = filasDePanelAgentes(filas);
-    expect(panel[0]).toMatchObject({ agente: "p", principal: true, nombre: "Sesión principal" });
+    expect(panel[0]).toMatchObject({
+      agente: "p",
+      principal: true,
+      nombre: "Sesión principal",
+    });
     expect(panel.map((f: { agente: string }) => f.agente)).toEqual(["p", "a1", "a3"]);
   });
 
@@ -237,7 +277,11 @@ describe("el panel de agentes", () => {
 
 describe("los mundos registrados", () => {
   it("MUNDOS registra exactamente pasteleria, control e invernadero (C16)", () => {
-    expect(MUNDOS.map((m: { id: string }) => m.id)).toEqual(["pasteleria", "control", "invernadero"]);
+    expect(MUNDOS.map((m: { id: string }) => m.id)).toEqual([
+      "pasteleria",
+      "control",
+      "invernadero",
+    ]);
   });
 
   it("cada mundo cumple la interfaz del motor (C17)", () => {

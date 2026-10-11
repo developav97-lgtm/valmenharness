@@ -20,6 +20,7 @@ import { join } from "node:path";
 
 import {
   EXIT_INVARIANT,
+  EXIT_SCHEMA,
   TicketError,
   declaredImpactIds,
   parseTicket,
@@ -47,6 +48,7 @@ import {
   hashState,
   partitionByApplicability,
   type NotApplicableRecord,
+  type TestedTreeRecord,
   summarizeReceipt,
   weightedMean,
 } from "@valmen/gate";
@@ -65,6 +67,12 @@ import {
   testTimeout,
   verifyDevConfig,
 } from "./discovery.js";
+import {
+  type ArbolProbado,
+  calcularArbolProbado,
+  rutasQueCambiaron,
+} from "./arbol-probado.js";
+import { runCodeReview } from "./code-review.js";
 import { buildGateState, runMechanicalChecks } from "./state.js";
 import { appendReceipt, currentReceipts, readReceipts } from "./receipts.js";
 import { interfazDelTicket } from "./interfaz.js";
@@ -78,7 +86,11 @@ import {
   renderPreReview,
   reviewBeforeGate,
 } from "./revision-previa.js";
-import { type ThresholdOutcome, applyThresholds, validateThresholdTargets } from "./thresholds.js";
+import {
+  type ThresholdOutcome,
+  applyThresholds,
+  validateThresholdTargets,
+} from "./thresholds.js";
 
 /** Convierte preguntas ya validadas en proposiciones que el motor puro decide. */
 function configuredPropositions(
@@ -113,7 +125,10 @@ export interface IntegrationValidation {
   readonly propositions: readonly import("@valmen/gate").NoulProposition[];
 }
 
-export function buildIntegrationValidation(paths: RegistryPaths, ticketId: string): IntegrationValidation {
+export function buildIntegrationValidation(
+  paths: RegistryPaths,
+  ticketId: string,
+): IntegrationValidation {
   const ticket = findTicket(paths, ticketId);
   if (ticket === undefined) throw new TicketError("La ruta canónica solicitada no existe.");
   const parsed = parseTicket(ticket.text);
@@ -131,7 +146,10 @@ export function buildIntegrationValidation(paths: RegistryPaths, ticketId: strin
 /** Las citas comprobadas, una por línea con su resultado, para el estado del evaluador. */
 function renderCitas(citas: readonly CitaComprobada[]): string {
   return citas
-    .map((cita) => `${cita.cita}: ${cita.resultado}${cita.detalle === undefined ? "" : ` (${cita.detalle})`}`)
+    .map(
+      (cita) =>
+        `${cita.cita}: ${cita.resultado}${cita.detalle === undefined ? "" : ` (${cita.detalle})`}`,
+    )
     .join("\n");
 }
 
@@ -146,7 +164,9 @@ function chequeoDeArchivosCitados(citas: readonly CitaComprobada[]): MechanicalC
       detail: "el diagnóstico no cita rutas comprobables en este repositorio",
     };
   }
-  const mal = citas.filter((c) => c.resultado === "no_existe" || c.resultado === "linea_fuera");
+  const mal = citas.filter(
+    (c) => c.resultado === "no_existe" || c.resultado === "linea_fuera",
+  );
   return {
     id: "archivos_existen",
     description,
@@ -229,6 +249,15 @@ export interface GateRunOptions {
    * Un motivo vacío no fuerza nada; el no vacío queda escrito en el recibo nuevo.
    */
   readonly forceReason?: string;
+  /**
+   * El revisor de diff inyectable de la compuerta `code-review`, para pruebas.
+   *
+   * El nombre coincide con el de `runCodeReview` por la misma razón que `jev` y `judge`: un
+   * parámetro con otro nombre que el orquestador ignora convertiría una prueba en una ilusión.
+   */
+  readonly reviewDiff?: typeof import("@valmen/gate-llm-judge").reviewDiffWithModel;
+  /** La base del diff de `code-review`. Sin ella, `main` si existe y si no `HEAD`. */
+  readonly base?: string;
 }
 
 /** Ejecuta un gate y devuelve el recibo con el informe. */
@@ -269,9 +298,7 @@ function revisarCriteriosVerificables(
   root: string,
   verifyDev: ReturnType<typeof verifyDevConfig>,
 ): string | null {
-  const sinDeclarar = criteria.filter(
-    (criterio) => !criterioDeclarado(criterio),
-  );
+  const sinDeclarar = criteria.filter((criterio) => !criterioDeclarado(criterio));
   if (sinDeclarar.length > 0) {
     return (
       `${sinDeclarar.length} criterio(s) no declaran cómo se verifican:\n` +
@@ -392,7 +419,7 @@ function avisoDeForma(
  * viejo lo pisaría en el colapso, que es justo el defecto que se arregla. El
  * `receiptId` explícito sigue siendo el camino para forzar un identificador.
  */
-function defaultReceiptId(
+export function defaultReceiptId(
   paths: RegistryPaths,
   ticketId: string,
   gateId: string,
@@ -407,6 +434,46 @@ function defaultReceiptId(
     if (coincidencia !== null) mayor = Math.max(mayor, Number(coincidencia[1]));
   }
   return `${prefijo}-${mayor + 1}`;
+}
+
+/** Cuántas rutas se nombran en la nota de un árbol que cambió mientras corrían los comandos. */
+const RUTAS_EN_LA_NOTA = 10;
+
+/** El árbol de trabajo de ahora, o por qué no se pudo calcular. `arbol: null` sin `error`: no es un repositorio git. */
+function tomarArbol(paths: RegistryPaths): {
+  readonly arbol: ArbolProbado | null;
+  readonly error: string | null;
+} {
+  try {
+    return { arbol: calcularArbolProbado(paths), error: null };
+  } catch (caught) {
+    return { arbol: null, error: toFailure(caught).message };
+  }
+}
+
+/** El árbol probado en una línea del informe: prefijo del hash, archivos y de dónde sale. */
+function describirArbol(arbol: TestedTreeRecord | undefined): string {
+  if (arbol === undefined)
+    return "— (sin repositorio git, o no se pudo calcular: ver las notas)";
+  const origen =
+    arbol.commitTree !== null
+      ? `commit ${arbol.head?.slice(0, 12) ?? "?"}`
+      : arbol.head === null
+        ? "repositorio sin commits"
+        : "cambios sin commitear";
+  return `${arbol.hash.slice(0, 23)}…  ${arbol.files} archivo(s), ${origen}`;
+}
+
+/** La nota del recibo cuando los comandos de la compuerta dejaron el árbol distinto del que se probó. */
+function notaDeArbolCambiado(rutas: readonly string[]): string {
+  const nombradas = rutas.slice(0, RUTAS_EN_LA_NOTA).join(", ");
+  const resto =
+    rutas.length > RUTAS_EN_LA_NOTA ? ` y ${rutas.length - RUTAS_EN_LA_NOTA} más` : "";
+  return (
+    `Los comandos de la compuerta cambiaron el árbol de trabajo (${rutas.length} ruta(s): ${nombradas}${resto}): ` +
+    "el recibo guarda el árbol de antes de correr, así que la entrega con este recibo se va a rechazar. " +
+    "Repetir la compuerta desde este árbol, o evitar que el comando escriba en archivos del proyecto."
+  );
 }
 
 export async function runGate(
@@ -463,6 +530,21 @@ export async function runGate(
     };
   }
 
+  // La revisión del diff no evalúa el texto del ticket: lee lo que se entrega. El evaluador no se
+  // elige —la profundidad la decide el riesgo— y se rechaza antes de llamar a nadie.
+  if (definition.diffReview === true) {
+    if (options.evaluator !== undefined) {
+      return {
+        stdout: "",
+        stderr:
+          `La compuerta ${definition.id} no admite --evaluator: su profundidad la decide el riesgo del ` +
+          "diff y no se elige. No se llamó a ningún revisor.\n",
+        exitCode: EXIT_SCHEMA,
+      };
+    }
+    return runCodeReview(paths, options, { definition, ticket });
+  }
+
   let state: Record<string, string>;
   // Lo que ve el evaluador: el estado del ticket más lo que el motor comprobó en disco. No es lo
   // que se hashea: el `stateHash` responde «¿cambió el texto del ticket?» y lo recalculan los
@@ -479,7 +561,10 @@ export async function runGate(
     // resultado como dato en vez de adivinar si los archivos existen. Solo en las
     // compuertas que pasan por la revisión previa, y solo si hay algo citado: sin citas el
     // estado queda como antes.
-    if ((definition.id === "analysis" || definition.id === "plan") && definition.commandPropositions !== true) {
+    if (
+      (definition.id === "analysis" || definition.id === "plan") &&
+      definition.commandPropositions !== true
+    ) {
       const citas = citedFiles(paths.root, ticket.text);
       if (citas.length > 0) {
         estadoDelEvaluador = { ...state, archivos_citados: renderCitas(citas) };
@@ -503,7 +588,8 @@ export async function runGate(
     effort: options.effort ?? null,
     judgeModel: options.judgeModel ?? null,
     semantic: options.semantic ?? null,
-    cascade: options.cascade === undefined ? null : JSON.parse(JSON.stringify(options.cascade)),
+    cascade:
+      options.cascade === undefined ? null : JSON.parse(JSON.stringify(options.cascade)),
   });
   const hashDelEstado = hashState(state);
   const previo = currentReceipts(readReceipts(paths, options.ticketId)).find(
@@ -600,11 +686,17 @@ export async function runGate(
     for (const proposicion of partido.applicable) {
       if (proposicion.decidedInCode !== true) continue;
       const criterioNN = /^criterio_(\d+)$/.exec(proposicion.id);
-      const criterio = criterioNN === null ? undefined : criteria[Number(criterioNN[1]) - 1];
+      const criterio =
+        criterioNN === null ? undefined : criteria[Number(criterioNN[1]) - 1];
       if (criterioNN !== null && criterio !== undefined) {
-        const { valor, motivo } = decidirCriterioEnCodigo(Number(criterioNN[1]), criterio, ticket.text);
+        const { valor, motivo } = decidirCriterioEnCodigo(
+          Number(criterioNN[1]),
+          criterio,
+          ticket.text,
+        );
         respuestasDeCodigo.push({ id: proposicion.id, kind: "noul", value: valor });
-        if (valor === 0) notasDeCodigo.push(`${proposicion.id} decidido en código: ${motivo}`);
+        if (valor === 0)
+          notasDeCodigo.push(`${proposicion.id} decidido en código: ${motivo}`);
         continue;
       }
       const valor = decideInCode(proposicion.id, ticket.text);
@@ -703,12 +795,19 @@ export async function runGate(
   // `review`, que es la verdad: lo verifican las personas, en el estado siguiente.
   const soloManual = definition.commandPropositions === true && comandos.length === 0;
 
+  // El árbol de trabajo se toma **antes** de la preparación y de los comandos: es lo que se va a
+  // probar, y es lo que la entrega compara después (R-REV-001). También cuando todos los
+  // criterios son manuales: el recibo dice qué código había aunque no corra nada.
+  const arbolAntes = definition.commandPropositions === true ? tomarArbol(paths) : null;
+
   // La preparación del ambiente de pruebas que el proyecto declara corre **antes** de
   // los criterios, una sola vez, y queda en el recibo. Si falla —o si su esquema no
   // está permitido— los criterios no corren: no probarían nada, y la compuerta termina
   // como falla del entorno (R-CDEF-007).
   const preparacion =
-    definition.commandPropositions === true && !soloManual ? runTestSetup(paths.root) : null;
+    definition.commandPropositions === true && !soloManual
+      ? runTestSetup(paths.root)
+      : null;
 
   let decision: GateDecision;
   let evaluation;
@@ -798,7 +897,12 @@ export async function runGate(
       // respondió, y solo los que una persona firmó (R-CPRE-010).
       const declarados = gateThresholds(paths.root);
       validateThresholdTargets(declarados);
-      umbrales = applyThresholds(gate.propositions, declarados, definition.id, evaluation.evaluator);
+      umbrales = applyThresholds(
+        gate.propositions,
+        declarados,
+        definition.id,
+        evaluation.evaluator,
+      );
       decision = decide(
         umbrales.propositions,
         evaluation.answers,
@@ -848,8 +952,35 @@ export async function runGate(
   // La causa probable de una banda de revisión, cuando la banda la causan los
   // criterios y no el plan. Se calcula acá y no dentro de `decide`: decidir es del
   // gate, y esto no decide — explica por qué el número salió así.
+  const notasDeArbol: string[] = [];
+  if (arbolAntes !== null) {
+    if (arbolAntes.arbol === null) {
+      notasDeArbol.push(
+        arbolAntes.error === null
+          ? "sin árbol: el proyecto no es un repositorio git; la entrega compara solo el texto del ticket."
+          : `sin árbol: no se pudo calcular (${arbolAntes.error}); dentro de un repositorio git la entrega ` +
+              "con este recibo se va a rechazar.",
+      );
+    } else {
+      // Al terminar se vuelve a mirar: si los comandos escribieron en el árbol, el recibo guarda el de
+      // antes y la nota dice qué cambió, para que se vea por qué la entrega se va a rechazar.
+      const despues = tomarArbol(paths);
+      if (despues.arbol === null) {
+        notasDeArbol.push(
+          `no se pudo volver a calcular el árbol al terminar los comandos (${despues.error ?? "sin repositorio"}).`,
+        );
+      } else if (despues.arbol.registro.hash !== arbolAntes.arbol.registro.hash) {
+        notasDeArbol.push(
+          notaDeArbolCambiado(
+            rutasQueCambiaron(arbolAntes.arbol.archivos, despues.arbol.archivos),
+          ),
+        );
+      }
+    }
+  }
   const notas = [
     ...(options.notes ?? []),
+    ...notasDeArbol,
     ...(effectiveMode.evidence === null
       ? []
       : [
@@ -899,6 +1030,7 @@ export async function runGate(
       ? {}
       : { commandResults: evaluation.commandResults }),
     ...(preparacion === null ? {} : { setup: preparacion }),
+    ...(arbolAntes?.arbol == null ? {} : { testedTree: arbolAntes.arbol.registro }),
     evaluator: evaluation.evaluator,
     notApplicable: noAplican,
     thresholds: umbrales.applied,
@@ -945,7 +1077,10 @@ export async function runGate(
       "cascada verificada: produce el modelo barato y el verificador escala lo no respaldado",
   }[evaluation.evaluator];
   lines.push("", `  Evaluación (${etiquetaEvaluador})`);
-  if (evaluation.requestedEvaluator !== undefined && evaluation.evaluatorFailure !== undefined) {
+  if (
+    evaluation.requestedEvaluator !== undefined &&
+    evaluation.evaluatorFailure !== undefined
+  ) {
     lines.push(
       `    Evaluador pedido ${evaluation.requestedEvaluator} · efectivo ${evaluation.evaluator}: ` +
         `el pedido falló (${evaluation.evaluatorFailure.code}) y no se reintentó.`,
@@ -1098,6 +1233,9 @@ export async function runGate(
     "  Recibo",
     `    evaluador          ${evaluation.evaluator}`,
     `    estado congelado   ${receipt.stateHash.slice(0, 23)}…`,
+    ...(arbolAntes === null
+      ? []
+      : [`    árbol probado      ${describirArbol(receipt.testedTree)}`]),
     `    gate               ${receipt.gateHash.slice(0, 23)}…`,
     `    modelo             ${evaluation.model?.resolvedVersion ?? "— (decisión en código)"}`,
     `    coste              $${(evaluation.usage?.costUsd ?? 0).toFixed(6)}`,

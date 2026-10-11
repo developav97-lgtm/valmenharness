@@ -227,7 +227,10 @@ describe("la asimetría de la decisión", () => {
 describe("la contradicción aislada del gate de análisis", () => {
   // Lo que el evaluador recibe en un ticket BUGFIX: las proposiciones que no aplican a su
   // tipo no se envían (R-CPRE-001), y `decide` exige respuesta para todas las que sí.
-  const PROPOSICIONES_BUGFIX = partitionByApplicability(ANALYSIS_GATE.propositions, "BUGFIX").applicable;
+  const PROPOSICIONES_BUGFIX = partitionByApplicability(
+    ANALYSIS_GATE.propositions,
+    "BUGFIX",
+  ).applicable;
 
   const respuestasAp004: PropositionAnswer[] = [
     { id: "diagnostico_explica_el_sintoma", kind: "noul", value: 0.04 },

@@ -29,9 +29,15 @@ describe("identidad de ejecución", () => {
   it.each([
     [{ projectId: "", ticketId, executionId: "exec-1" }, "projectId"],
     [{ projectId: "../otro", ticketId, executionId: "exec-1" }, "projectId"],
-    [{ projectId: "valmen-harness", ticketId: "TICKET-SUELTO", executionId: "exec-1" }, "ticketId"],
+    [
+      { projectId: "valmen-harness", ticketId: "TICKET-SUELTO", executionId: "exec-1" },
+      "ticketId",
+    ],
     [{ projectId: "valmen-harness", ticketId, executionId: "" }, "executionId"],
-    [{ projectId: "valmen-harness", ticketId, executionId: "/tmp/ejecucion" }, "executionId"],
+    [
+      { projectId: "valmen-harness", ticketId, executionId: "/tmp/ejecucion" },
+      "executionId",
+    ],
   ])("rechaza %s cuando no es una identidad portable válida", (input, field) => {
     expect(() => createExecutionIdentity(input)).toThrow(field);
   });

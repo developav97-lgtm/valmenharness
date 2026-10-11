@@ -42,7 +42,10 @@ interface Llamada {
 
 function contextoFalso(ancho = 960) {
   const llamadas: Llamada[] = [];
-  const estado: Record<string, unknown> = { canvas: { width: ancho, height: ancho / 2 }, fillStyle: "" };
+  const estado: Record<string, unknown> = {
+    canvas: { width: ancho, height: ancho / 2 },
+    fillStyle: "",
+  };
   const ctx = new Proxy(estado, {
     get(destino, propiedad: string) {
       if (propiedad in destino) return destino[propiedad];
@@ -58,13 +61,14 @@ function contextoFalso(ancho = 960) {
   return { ctx, llamadas };
 }
 
-const tickets = (n: number, estado: string) => Array.from({ length: n }, (_, i) => ({ id: `T-${estado}-${i}`, estado }));
+const tickets = (n: number, estado: string) =>
+  Array.from({ length: n }, (_, i) => ({ id: `T-${estado}-${i}`, estado }));
 
 function fila(agente: string, sobre: Record<string, unknown> = {}) {
   return {
     agente,
     principal: false,
-    estado: "trabajando",
+    estado: "trabajando" as const,
     ticket: `T-${agente}`,
     ticketEstado: "in_progress",
     faseConfirmada: null,
@@ -77,7 +81,15 @@ function fila(agente: string, sobre: Record<string, unknown> = {}) {
 
 function agenteDeEscena(extra: Record<string, unknown> = {}) {
   return {
-    id: "a1", estado: "trabajando", estacion: 4, moviendo: false, carril: 0, paso: 0, principal: false, x: 550, y: 296,
+    id: "a1",
+    estado: "trabajando",
+    estacion: 4,
+    moviendo: false,
+    carril: 0,
+    paso: 0,
+    principal: false,
+    x: 550,
+    y: 296,
     fila: { agente: "a1", ticket: "T-1", pregunta: null },
     ...extra,
   };
@@ -85,16 +97,23 @@ function agenteDeEscena(extra: Record<string, unknown> = {}) {
 
 /** Las llamadas a `translate` que ubican una planta o un pastel a media escala. */
 const ubicaciones = (llamadas: Llamada[]) =>
-  llamadas.filter((l) => l.metodo === "translate").map((l) => ({ x: l.args[0] as number, y: l.args[1] as number }));
+  llamadas
+    .filter((l) => l.metodo === "translate")
+    .map((l) => ({ x: l.args[0] as number, y: l.args[1] as number }));
 
 describe("C1-C6: el reparto de tickets por estación", () => {
   it("C1: 12 tickets en awaiting_user_tests dan 9 en la estación 5 del invernadero", () => {
-    const reparto = ticketsPorEstacion(tickets(12, "awaiting_user_tests"), TOPE_POR_CANTERO);
+    const reparto = ticketsPorEstacion(
+      tickets(12, "awaiting_user_tests"),
+      TOPE_POR_CANTERO,
+    );
     expect(reparto[5]).toHaveLength(9);
   });
 
   it("C2: 8 tickets en awaiting_user_tests dan 8 en la estación 5 del invernadero", () => {
-    expect(ticketsPorEstacion(tickets(8, "awaiting_user_tests"), TOPE_POR_CANTERO)[5]).toHaveLength(8);
+    expect(
+      ticketsPorEstacion(tickets(8, "awaiting_user_tests"), TOPE_POR_CANTERO)[5],
+    ).toHaveLength(8);
   });
 
   it("C3: 10 tickets en in_progress dan 6 en la estación 4 de la pastelería", () => {
@@ -110,7 +129,14 @@ describe("C1-C6: el reparto de tickets por estación", () => {
   });
 
   it("C6: un ticket en blocked no cuenta en ninguna estación", () => {
-    const reparto = ticketsPorEstacion([...tickets(1, "blocked"), ...tickets(1, "changes_requested"), { id: "x", estado: null }], 9);
+    const reparto = ticketsPorEstacion(
+      [
+        ...tickets(1, "blocked"),
+        ...tickets(1, "changes_requested"),
+        { id: "x", estado: null },
+      ],
+      9,
+    );
     expect(reparto.flat()).toHaveLength(0);
   });
 });
@@ -133,7 +159,8 @@ describe("C7-C8: las posiciones caben en su tierra y su mostrador", () => {
     for (let i = 0; i < 7; i++) {
       const posiciones = pastelesDelPuesto(i, 9);
       expect(posiciones).toHaveLength(TOPE_POR_PUESTO);
-      for (const p of posiciones) expect(Math.abs(p.x - (180 + i * 101))).toBeLessThanOrEqual(50);
+      for (const p of posiciones)
+        expect(Math.abs(p.x - (180 + i * 101))).toBeLessThanOrEqual(50);
       expect(new Set(posiciones.map((p) => `${p.x},${p.y}`)).size).toBe(6);
     }
   });
@@ -142,22 +169,38 @@ describe("C7-C8: las posiciones caben en su tierra y su mostrador", () => {
 describe("C9-C11: el dibujo pinta un objeto por ticket y no por agente", () => {
   it("C9: tres tickets en in_progress y ningún agente pintan 3 plantas en el cantero 4", () => {
     const { ctx, llamadas } = contextoFalso();
-    invernadero.dibujar({ ctx, escena: { agentes: new Map(), t: 0 }, miniatura: false, tickets: tickets(3, "in_progress") }, 0);
-    const enElCantero = ubicaciones(llamadas).filter((u) => Math.abs(u.x - xDeCantero(4)) <= 40);
+    invernadero.dibujar(
+      {
+        ctx,
+        escena: { agentes: new Map(), t: 0 },
+        miniatura: false,
+        tickets: tickets(3, "in_progress"),
+      },
+      0,
+    );
+    const enElCantero = ubicaciones(llamadas).filter(
+      (u) => Math.abs(u.x - xDeCantero(4)) <= 40,
+    );
     expect(enElCantero).toHaveLength(3);
   });
 
   it("C10: un jardinero arrodillado y ningún ticket no pintan plantas en los canteros", () => {
     const { ctx, llamadas } = contextoFalso();
     const agentes = new Map([["a1", agenteDeEscena({ x: xDeCantero(4) })]]);
-    invernadero.dibujar({ ctx, escena: { agentes, t: 0 }, miniatura: false, tickets: [] }, 0);
+    invernadero.dibujar(
+      { ctx, escena: { agentes, t: 0 }, miniatura: false, tickets: [] },
+      0,
+    );
     expect(ubicaciones(llamadas)).toHaveLength(0);
   });
 
   it("C11: un pastelero quieto y ningún ticket no pintan pasteles sobre el mostrador", () => {
     const { ctx, llamadas } = contextoFalso();
     const agentes = new Map([["a1", agenteDeEscena({ x: 584, y: 364 })]]);
-    pasteleria.dibujar({ ctx, escena: { agentes, t: 0 }, miniatura: false, tickets: [] }, 0);
+    pasteleria.dibujar(
+      { ctx, escena: { agentes, t: 0 }, miniatura: false, tickets: [] },
+      0,
+    );
     expect(ubicaciones(llamadas)).toHaveLength(0);
   });
 });
@@ -165,7 +208,10 @@ describe("C9-C11: el dibujo pinta un objeto por ticket y no por agente", () => {
 describe("C12-C13: los tickets llegan hasta el mundo", () => {
   it("C12: montar entrega al dibujar del mundo los tickets de datos.tickets", () => {
     const recibidos: unknown[] = [];
-    const mundoEspia = { ...invernadero, dibujar: (estado: { tickets: unknown }) => recibidos.push(estado.tickets) };
+    const mundoEspia = {
+      ...invernadero,
+      dibujar: (estado: { tickets: unknown }) => recibidos.push(estado.tickets),
+    };
     let cuadro: (() => void) | null = null;
     const montaje = crearMontaje({
       mundos: [mundoEspia],
@@ -187,7 +233,9 @@ describe("C12-C13: los tickets llegan hasta el mundo", () => {
 
   it("C13: la vista Corrida pasa cada ticket de idsDeLaCorrida con su workflowStatus", () => {
     const fuente = (nombre: string) => {
-      const m = INDEX.match(new RegExp(`function ${nombre}\\([^)]*\\) \\{[\\s\\S]*?\\n      \\}`));
+      const m = INDEX.match(
+        new RegExp(`function ${nombre}\\([^)]*\\) \\{[\\s\\S]*?\\n      \\}`),
+      );
       expect(m, nombre).not.toBeNull();
       return m![0];
     };
@@ -197,7 +245,10 @@ describe("C12-C13: los tickets llegan hasta el mundo", () => {
     const resultado = ticketsDeLaEscena(
       [{ ticket: "T-2" }, { ticket: "T-1" }],
       [{ ticketId: "T-1" }, { ticketId: "T-3" }],
-      [{ id: "T-1", workflowStatus: "in_qa" }, { id: "T-2", workflowStatus: "planned" }],
+      [
+        { id: "T-1", workflowStatus: "in_qa" },
+        { id: "T-2", workflowStatus: "planned" },
+      ],
     );
     expect(resultado).toEqual([
       { id: "T-1", estado: "in_qa" },
@@ -309,19 +360,25 @@ describe("C24-C28: los agentes terminados no reaparecen", () => {
 
 describe("C31-C32: el cuaderno del invernadero", () => {
   const regla = (selector: string) => {
-    const m = INDEX.match(new RegExp(`${selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} \\{([^}]*)\\}`));
+    const m = INDEX.match(
+      new RegExp(`${selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} \\{([^}]*)\\}`),
+    );
     expect(m, selector).not.toBeNull();
-    return m![1];
+    return m![1]!;
   };
 
   it("C31: el th del invernadero declara un fondo que no es var(--fondo)", () => {
-    const fondo = regla('.corrida-paneles[data-mundo="invernadero"] .corrida-panel th').match(/background:\s*([^;]+);/);
+    const fondo = regla(
+      '.corrida-paneles[data-mundo="invernadero"] .corrida-panel th',
+    ).match(/background:\s*([^;]+);/);
     expect(fondo).not.toBeNull();
     expect(fondo![1]).not.toContain("var(--fondo)");
   });
 
   it("C32: la fila con ratón encima del invernadero declara un fondo que no es var(--panel)", () => {
-    const fondo = regla('.corrida-paneles[data-mundo="invernadero"] .corrida-panel tbody tr:hover td').match(/background:\s*([^;]+);/);
+    const fondo = regla(
+      '.corrida-paneles[data-mundo="invernadero"] .corrida-panel tbody tr:hover td',
+    ).match(/background:\s*([^;]+);/);
     expect(fondo).not.toBeNull();
     expect(fondo![1]).not.toContain("var(--panel)");
   });

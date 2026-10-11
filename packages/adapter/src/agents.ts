@@ -24,6 +24,7 @@ import {
   generatedHeaderToml,
 } from "./templates.js";
 import { ADAPTER_VERSION } from "./project.js";
+import { opencodeAgentPermission } from "./denied-clients.js";
 
 /** Permisos de un agente, en términos neutrales al runtime. */
 export interface AgentPermissions {
@@ -197,6 +198,17 @@ export function renderCodexAgent(
   return { path: `.codex/agents/${agent.id}.toml`, content: lines.join("\n") };
 }
 
+/** El bloque `permission` del frontmatter: una clave entre comillas por patrón, la base primero. */
+function opencodePermissionLines(write: boolean, execute: boolean): string[] {
+  const permiso = opencodeAgentPermission(write, execute);
+  return (["read", "edit", "bash"] as const).flatMap((tool) => [
+    `  ${tool}:`,
+    ...Object.entries(permiso[tool]).map(
+      ([patron, valor]) => `    ${JSON.stringify(patron)}: ${valor}`,
+    ),
+  ]);
+}
+
 /**
  * Proyecta un agente al formato de opencode (`Markdown` con frontmatter YAML).
  */
@@ -210,8 +222,7 @@ export function renderOpencodeAgent(
     `description: ${agent.description}`,
     "mode: subagent",
     "permission:",
-    `  edit: ${agent.permissions.write ? "allow" : "deny"}`,
-    `  bash: ${agent.permissions.execute ? "allow" : "ask"}`,
+    ...opencodePermissionLines(agent.permissions.write, agent.permissions.execute),
     "---",
     "",
     withReportLimit(agent.instructions),

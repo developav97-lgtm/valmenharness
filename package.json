@@ -19,12 +19,14 @@
     "verify:hermes": "node scripts/verificar-hermes.mjs",
     "typecheck": "npm run build && tsc --noEmit -p tsconfig.json",
     "lint": "eslint .",
+    "exports:check": "node scripts/exports-sin-uso.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
     "eslint": "^10.11.0",
+    "knip": "6.38.0",
     "prettier": "^3.9.8",
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.70.1",

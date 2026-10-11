@@ -63,7 +63,10 @@ function sesionQueTrabajaElTicket(
         uso: { input: 2, creacion: 100, lectura: 1000, salida: 30 },
         bloques: [
           texto("Voy a moverlo."),
-          llamada(`toolu_${id}_1`, "mcp__valmen__mover_ticket", { id: ticket, to: "analyzed" }),
+          llamada(`toolu_${id}_1`, "mcp__valmen__mover_ticket", {
+            id: ticket,
+            to: "analyzed",
+          }),
         ],
       },
       { cwd: ROOT },
@@ -193,15 +196,30 @@ describe("sumar el uso de una sesión", () => {
       lineas: [
         mensajeDelUsuario(`Trabaja ${TICKET}`, { cwd: ROOT }),
         ...mensajeDelAsistente(
-          { id: "m1", modelo: "claude-haiku-4-5", uso: { salida: 100 }, bloques: [texto("a")] },
+          {
+            id: "m1",
+            modelo: "claude-haiku-4-5",
+            uso: { salida: 100 },
+            bloques: [texto("a")],
+          },
           { cwd: ROOT },
         ),
         ...mensajeDelAsistente(
-          { id: "m2", modelo: "claude-sonnet-5-5", uso: { salida: 300 }, bloques: [texto("b")] },
+          {
+            id: "m2",
+            modelo: "claude-sonnet-5-5",
+            uso: { salida: 300 },
+            bloques: [texto("b")],
+          },
           { cwd: ROOT },
         ),
         ...mensajeDelAsistente(
-          { id: "m3", modelo: "claude-sonnet-5-5", uso: { salida: 50 }, bloques: [texto("c")] },
+          {
+            id: "m3",
+            modelo: "claude-sonnet-5-5",
+            uso: { salida: 50 },
+            bloques: [texto("c")],
+          },
           { cwd: ROOT },
         ),
       ],
@@ -299,7 +317,9 @@ describe("a qué proyecto pertenece una sesión", () => {
   it("entra una sesión de un worktree del proyecto, que vive en otra carpeta", () => {
     const worktree = `${ROOT}/.claude/worktrees/fix-uno`;
     // Es la carpeta real: `<proyecto>--claude-worktrees-<nombre>`.
-    expect(carpetaDeClaude(worktree)).toBe(`${carpetaDeClaude(ROOT)}--claude-worktrees-fix-uno`);
+    expect(carpetaDeClaude(worktree)).toBe(
+      `${carpetaDeClaude(ROOT)}--claude-worktrees-fix-uno`,
+    );
     escribirSesionDeClaude(home, {
       root: worktree,
       id: "wt-1",
@@ -308,7 +328,9 @@ describe("a qué proyecto pertenece una sesión", () => {
         ...mensajeDelAsistente(
           {
             id: "m1",
-            bloques: [llamada("t1", "mcp__valmen__mover_ticket", { id: TICKET, to: "analyzed" })],
+            bloques: [
+              llamada("t1", "mcp__valmen__mover_ticket", { id: TICKET, to: "analyzed" }),
+            ],
           },
           { cwd: worktree },
         ),
@@ -347,7 +369,9 @@ describe("a qué proyecto pertenece una sesión", () => {
     escribirSesionDeClaude(home, {
       root: colision,
       id: "colision",
-      lineas: sesionQueTrabajaElTicket("c", TICKET).map((l) => l.replaceAll(ROOT, colision)),
+      lineas: sesionQueTrabajaElTicket("c", TICKET).map((l) =>
+        l.replaceAll(ROOT, colision),
+      ),
     });
 
     expect(leerSesionesDeClaude(mia, { home })).toEqual([]);
@@ -364,7 +388,10 @@ describe("a qué proyecto pertenece una sesión", () => {
         lineaDeCola(`Trabaja ${TICKET}`),
         ...sesionQueTrabajaElTicket("a", TICKET),
         mensajeDelUsuario("otra cosa", { cwd: "/private/tmp" }),
-        ...mensajeDelAsistente({ id: "m9", bloques: [texto("ok")] }, { cwd: "/private/tmp" }),
+        ...mensajeDelAsistente(
+          { id: "m9", bloques: [texto("ok")] },
+          { cwd: "/private/tmp" },
+        ),
       ],
     });
 
@@ -385,10 +412,11 @@ describe("a qué proyecto pertenece una sesión", () => {
     });
 
     expect(leerSesionesDeClaude(ROOT, { home }).map((s) => s.id)).toEqual(["reciente"]);
-    expect(leerSesionesDeClaude(ROOT, { home, dias: 120 }).map((s) => s.id).sort()).toEqual([
-      "reciente",
-      "vieja",
-    ]);
+    expect(
+      leerSesionesDeClaude(ROOT, { home, dias: 120 })
+        .map((s) => s.id)
+        .sort(),
+    ).toEqual(["reciente", "vieja"]);
   });
 
   it("sin carpeta de Claude Code devuelve vacío, no un error", () => {
@@ -440,7 +468,10 @@ describe("a qué ticket pertenece una sesión", () => {
       root: ROOT,
       id: SESION,
       lineas: [
-        mensajeDelUsuario(`Instrucciones de la skill: ${TICKET}`, { cwd: ROOT, meta: true }),
+        mensajeDelUsuario(`Instrucciones de la skill: ${TICKET}`, {
+          cwd: ROOT,
+          meta: true,
+        }),
         ...mensajeDelAsistente({ id: "m1", bloques: [texto("hecho")] }, { cwd: ROOT }),
       ],
     });
@@ -479,7 +510,9 @@ describe("a qué ticket pertenece una sesión", () => {
       ...mensajeDelAsistente(
         {
           id: "m2",
-          bloques: [llamada("t2", "mcp__valmen__mover_ticket", { id: OTRO, to: "analyzed" })],
+          bloques: [
+            llamada("t2", "mcp__valmen__mover_ticket", { id: OTRO, to: "analyzed" }),
+          ],
         },
         { cwd: ROOT },
       ),
@@ -533,7 +566,9 @@ describe("a qué ticket pertenece una sesión", () => {
           id: "m1",
           bloques: [
             llamada("t1", "Bash", { command: `valmen resume --id ${TICKET} | head -70` }),
-            llamada("t2", "Bash", { command: `valmen show ${OTRO} && valmen validate --id ${OTRO}` }),
+            llamada("t2", "Bash", {
+              command: `valmen show ${OTRO} && valmen validate --id ${OTRO}`,
+            }),
             llamada("t3", "mcp__valmen__ver_ticket", { id: TICKET }),
             llamada("t4", "mcp__valmen__validar_ticket", { id: OTRO }),
           ],
@@ -605,7 +640,10 @@ describe("a qué ticket pertenece una sesión", () => {
         ],
       });
       const [sesion] = leerSesionesDeClaude(ROOT, { home, ticketId: TICKET });
-      expect(sesion?.tickets.map((t) => t.id), comando).toEqual([TICKET]);
+      expect(
+        sesion?.tickets.map((t) => t.id),
+        comando,
+      ).toEqual([TICKET]);
     }
   });
 
@@ -642,7 +680,9 @@ describe("los subagentes", () => {
           uso: { input: 5, creacion: 50, lectura: 500, salida: 20 },
           bloques: [
             texto("Busco."),
-            llamada("toolu_sub_1", "mcp__valmen__buscar_memoria", { consulta: "mensaje orden" }),
+            llamada("toolu_sub_1", "mcp__valmen__buscar_memoria", {
+              consulta: "mensaje orden",
+            }),
           ],
         },
         { cwd: `${ROOT}/FrontEnd` },
@@ -663,7 +703,10 @@ describe("los subagentes", () => {
     expect(sesion?.outputTokens).toBe(30 + 20);
     // La mover_ticket del padre y la buscar_memoria del subagente.
     expect(sesion?.intervenciones).toBe(2);
-    expect(sesion?.modelos.map((m) => m.model)).toEqual(["claude-sonnet-5-5", "claude-haiku-4-5"]);
+    expect(sesion?.modelos.map((m) => m.model)).toEqual([
+      "claude-sonnet-5-5",
+      "claude-haiku-4-5",
+    ]);
     // El modelo que se registra es el que más produjo.
     expect(sesion?.model).toBe("claude-sonnet-5-5");
   });
@@ -677,7 +720,12 @@ describe("los subagentes", () => {
         ...mensajeDelAsistente({ id: "m1", bloques: [texto("voy")] }, { cwd: ROOT }),
         `${TICKET} aparece en el crudo del padre, pero no como prompt`,
       ],
-      subagentes: [[mensajeDelUsuario(`Mira ${TICKET}`), ...mensajeDelAsistente({ id: "s1", bloques: [texto("x")] })]],
+      subagentes: [
+        [
+          mensajeDelUsuario(`Mira ${TICKET}`),
+          ...mensajeDelAsistente({ id: "s1", bloques: [texto("x")] }),
+        ],
+      ],
     });
 
     expect(leerSesionesDeClaude(ROOT, { home, ticketId: TICKET })).toEqual([]);
@@ -703,7 +751,10 @@ describe("una transcripción que se está escribiendo", () => {
     escribirSesionDeClaude(home, {
       root: ROOT,
       id: SESION,
-      lineas: [...sesionQueTrabajaElTicket("a", TICKET), '{"type":"assistant","message":{"id":"m'],
+      lineas: [
+        ...sesionQueTrabajaElTicket("a", TICKET),
+        '{"type":"assistant","message":{"id":"m',
+      ],
     });
 
     const [sesion] = leerSesionesDeClaude(ROOT, { home, ticketId: TICKET });
@@ -790,9 +841,9 @@ describe("los subagentes con ticket propio", () => {
     expect(delMadre?.tickets.map((t) => t.id)).toEqual([OTRO]);
     expect(delMadre?.compartida).toBe(false);
     // Y con el ticket del subagente solo sale el subagente.
-    expect(leerSesionesDeClaude(ROOT, { home, ticketId: TICKET }).map((s) => s.id)).toEqual([
-      AGENTE_A,
-    ]);
+    expect(leerSesionesDeClaude(ROOT, { home, ticketId: TICKET }).map((s) => s.id)).toEqual(
+      [AGENTE_A],
+    );
   });
 
   it("un subagente que escribió en dos tickets sigue sumado en la madre", () => {
@@ -815,10 +866,13 @@ describe("los subagentes con ticket propio", () => {
   });
 
   it("el primer mensaje que nombra otro ticket no atribuye el subagente a ese ticket", () => {
-    escribir([subagente("a", [TICKET], { prompt: `Trabaja ${TICKET}; contexto: ${OTRO}` })], [
-      mensajeDelUsuario("Orquesta", { cwd: ROOT }),
-      ...mensajeDelAsistente({ id: "m1", bloques: [texto("voy")] }, { cwd: ROOT }),
-    ]);
+    escribir(
+      [subagente("a", [TICKET], { prompt: `Trabaja ${TICKET}; contexto: ${OTRO}` })],
+      [
+        mensajeDelUsuario("Orquesta", { cwd: ROOT }),
+        ...mensajeDelAsistente({ id: "m1", bloques: [texto("voy")] }, { cwd: ROOT }),
+      ],
+    );
 
     const [propia] = leerSesionesDeClaude(ROOT, { home, ticketId: TICKET });
     expect(propia?.tickets.map((t) => t.id)).toEqual([TICKET]);
@@ -869,7 +923,15 @@ describe("los subagentes con ticket propio", () => {
     escribir([["esto no es json", "{cortado"], subagente("b", [TICKET])]);
     // Un «archivo» de subagente que ni se puede leer: una carpeta con su nombre.
     mkdirSync(
-      join(home, ".claude", "projects", carpetaDeClaude(ROOT), SESION, "subagents", "agent-zz.jsonl"),
+      join(
+        home,
+        ".claude",
+        "projects",
+        carpetaDeClaude(ROOT),
+        SESION,
+        "subagents",
+        "agent-zz.jsonl",
+      ),
     );
 
     const todas = leerSesionesDeClaude(ROOT, { home });

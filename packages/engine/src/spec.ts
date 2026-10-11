@@ -127,7 +127,10 @@ export function parseRequirements(
     const desde = (inicios[i] as number) + 1;
     let hasta = lineas.length;
     for (let j = desde; j < lineas.length; j++) {
-      if (/^#{1,3}\s+(?:Requirement:|\S)/.test(lineas[j] as string) && !/^####/.test(lineas[j] as string)) {
+      if (
+        /^#{1,3}\s+(?:Requirement:|\S)/.test(lineas[j] as string) &&
+        !/^####/.test(lineas[j] as string)
+      ) {
         hasta = j;
         break;
       }

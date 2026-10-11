@@ -6,7 +6,11 @@
  * son las del motor y no se repiten aquí. El token de escritura lo exige el despacho del servidor
  * antes de llegar a este módulo; esta capa agrega la frase literal, que nunca puede ir vacía.
  */
-import { crearAutorizacionDeAprobacion, leerAutorizacionesDeAprobacion, revocarAutorizacionDeAprobacion } from "@valmen/engine";
+import {
+  crearAutorizacionDeAprobacion,
+  leerAutorizacionesDeAprobacion,
+  revocarAutorizacionDeAprobacion,
+} from "@valmen/engine";
 import { toFailure } from "@valmen/core";
 
 export interface RespuestaAprobacion {
@@ -16,18 +20,39 @@ export interface RespuestaAprobacion {
 
 const texto = (v: unknown): string => (typeof v === "string" ? v.trim() : "");
 const lista = (v: unknown): string[] =>
-  Array.isArray(v) ? v.map((x) => texto(x)).filter((x) => x !== "") : texto(v).split(",").map((x) => x.trim()).filter((x) => x !== "");
+  Array.isArray(v)
+    ? v.map((x) => texto(x)).filter((x) => x !== "")
+    : texto(v)
+        .split(",")
+        .map((x) => x.trim())
+        .filter((x) => x !== "");
 
 /** Las autorizaciones con su estado. Solo lee. */
-export function listarAutorizacionesDeAprobacion(root: string, ahora: Date = new Date()): RespuestaAprobacion {
-  return { status: 200, body: { authorizations: leerAutorizacionesDeAprobacion(root, ahora) } };
+export function listarAutorizacionesDeAprobacion(
+  root: string,
+  ahora: Date = new Date(),
+): RespuestaAprobacion {
+  return {
+    status: 200,
+    body: { authorizations: leerAutorizacionesDeAprobacion(root, ahora) },
+  };
 }
 
 /** Crea una autorización desde Mission Control. */
-export function crearAutorizacionDeAprobacionMc(root: string, cuerpo: unknown, env: Readonly<Record<string, string | undefined>>, ahora?: Date): RespuestaAprobacion {
+export function crearAutorizacionDeAprobacionMc(
+  root: string,
+  cuerpo: unknown,
+  env: Readonly<Record<string, string | undefined>>,
+  ahora?: Date,
+): RespuestaAprobacion {
   const d = (cuerpo ?? {}) as Record<string, unknown>;
-  if (texto(d["actor"]) === "") return { status: 400, body: { error: "Falta el responsable (`actor`)." } };
-  if (texto(d["quote"]) === "") return { status: 400, body: { error: "Falta la frase literal de quien autoriza (`quote`)." } };
+  if (texto(d["actor"]) === "")
+    return { status: 400, body: { error: "Falta el responsable (`actor`)." } };
+  if (texto(d["quote"]) === "")
+    return {
+      status: 400,
+      body: { error: "Falta la frase literal de quien autoriza (`quote`)." },
+    };
   try {
     const a = crearAutorizacionDeAprobacion({
       root,
@@ -52,11 +77,22 @@ export function crearAutorizacionDeAprobacionMc(root: string, cuerpo: unknown, e
 }
 
 /** Revoca una autorización desde Mission Control; la frase literal es el motivo. */
-export function revocarAutorizacionDeAprobacionMc(root: string, cuerpo: unknown, env: Readonly<Record<string, string | undefined>>, ahora?: Date): RespuestaAprobacion {
+export function revocarAutorizacionDeAprobacionMc(
+  root: string,
+  cuerpo: unknown,
+  env: Readonly<Record<string, string | undefined>>,
+  ahora?: Date,
+): RespuestaAprobacion {
   const d = (cuerpo ?? {}) as Record<string, unknown>;
-  if (texto(d["id"]) === "") return { status: 400, body: { error: "Falta la autorización (`id`)." } };
-  if (texto(d["actor"]) === "") return { status: 400, body: { error: "Falta el responsable (`actor`)." } };
-  if (texto(d["quote"]) === "") return { status: 400, body: { error: "Falta la frase literal de quien revoca (`quote`)." } };
+  if (texto(d["id"]) === "")
+    return { status: 400, body: { error: "Falta la autorización (`id`)." } };
+  if (texto(d["actor"]) === "")
+    return { status: 400, body: { error: "Falta el responsable (`actor`)." } };
+  if (texto(d["quote"]) === "")
+    return {
+      status: 400,
+      body: { error: "Falta la frase literal de quien revoca (`quote`)." },
+    };
   try {
     const r = revocarAutorizacionDeAprobacion({
       root,

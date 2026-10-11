@@ -145,7 +145,10 @@ export function dshSnippet(entry: McpEntry): string {
 
 /** La entrada del servidor para este proyecto. */
 export function entryFor(request: McpRequest): McpEntry {
-  return mcpEntry(mcpExecutableFrom(request.cliEntry), request.ask === true ? ["--ask"] : []);
+  return mcpEntry(
+    mcpExecutableFrom(request.cliEntry),
+    request.ask === true ? ["--ask"] : [],
+  );
 }
 
 /** El fragmento de opencode, tal como queda en el archivo. */
@@ -184,7 +187,8 @@ export function mcpCommand(request: McpRequest): CommandResult {
     "",
   ];
 
-  const grafo = request.codegraph !== undefined && request.codegraph.estado !== "no-instalado";
+  const grafo =
+    request.codegraph !== undefined && request.codegraph.estado !== "no-instalado";
   const entradaGrafo = codegraphEntry();
 
   if (request.json) {
@@ -222,7 +226,10 @@ export function mcpCommand(request: McpRequest): CommandResult {
                       CODEGRAPH_SERVER_ID,
                     ).content,
                   },
-                  codex: { path: rutaCodex, snippet: codexToml(entradaGrafo, CODEGRAPH_SERVER_ID) },
+                  codex: {
+                    path: rutaCodex,
+                    snippet: codexToml(entradaGrafo, CODEGRAPH_SERVER_ID),
+                  },
                 },
               }
             : {}),
@@ -257,7 +264,13 @@ export function mcpCommand(request: McpRequest): CommandResult {
       );
     }
   } else {
-    escribirFusion(rutaOpencode, mergeOpencodeConfig, entry, grafo ? entradaGrafo : null, lineas);
+    escribirFusion(
+      rutaOpencode,
+      mergeOpencodeConfig,
+      entry,
+      grafo ? entradaGrafo : null,
+      lineas,
+    );
   }
 
   lineas.push("");
@@ -293,7 +306,13 @@ export function mcpCommand(request: McpRequest): CommandResult {
       );
     }
   } else {
-    escribirFusion(rutaClaude, mergeClaudeConfig, entry, grafo ? entradaGrafo : null, lineas);
+    escribirFusion(
+      rutaClaude,
+      mergeClaudeConfig,
+      entry,
+      grafo ? entradaGrafo : null,
+      lineas,
+    );
   }
 
   lineas.push("");
@@ -383,7 +402,8 @@ function escribirFusion(
 ): void {
   const inicial = readIfExists(ruta);
   const primera = fusionar(inicial, entry);
-  const segunda = grafo === null ? null : fusionar(primera.content, grafo, CODEGRAPH_SERVER_ID);
+  const segunda =
+    grafo === null ? null : fusionar(primera.content, grafo, CODEGRAPH_SERVER_ID);
   const final = segunda?.content ?? primera.content;
   if (final !== inicial && (primera.changed || segunda?.changed === true)) {
     writeFileSync(ruta, final, "utf8");

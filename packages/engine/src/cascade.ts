@@ -37,11 +37,8 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { EXIT_SCHEMA, RISK_LEVELS, TICKET_TYPES, fail } from "@valmen/core";
-import type {
-  EscalationRecord,
-  Proposition,
-  PropositionAnswer,
-} from "@valmen/gate";
+import { requireTestRoutes } from "@valmen/credentials";
+import type { EscalationRecord, Proposition, PropositionAnswer } from "@valmen/gate";
 import { evaluateWithJev } from "@valmen/gate-jev";
 import { evaluateWithJudge } from "@valmen/gate-llm-judge";
 
@@ -270,6 +267,11 @@ function preguntaDeVerificacion(
 export async function verifiedCascade(options: CascadeRunOptions): Promise<CascadeRun> {
   exigirCadena(options.chain);
   const cadena = options.chain;
+  // Con una `VALMEN_BASE_URL_*` activa la cadena va completa —el productor, el escalado y jev,
+  // cada uno con su variable— o no corre: sin esto, el eslabón sin variable hablaría con su
+  // proveedor real con la clave del entorno. Antes de la primera llamada, y también para las
+  // tareas de la cascada, que pasan por aquí.
+  requireTestRoutes([cadena.producer.provider, cadena.escalation.provider, "jev"]);
   const judge = options.judge ?? evaluateWithJudge;
   const verificar = options.jev ?? evaluateWithJev;
   const umbral = options.threshold;
@@ -286,7 +288,9 @@ export async function verifiedCascade(options: CascadeRunOptions): Promise<Casca
       model: paso.model,
       provider: paso.provider,
       ...(credencial === undefined ? {} : { apiKey: credencial }), // valmen:allow-secret — valor ya resuelto, nunca literal
-      ...(paso.effort === undefined || paso.effort === "auto" ? {} : { effort: paso.effort }),
+      ...(paso.effort === undefined || paso.effort === "auto"
+        ? {}
+        : { effort: paso.effort }),
     });
 
   let produccion: Awaited<ReturnType<typeof judge>>;
@@ -304,7 +308,9 @@ export async function verifiedCascade(options: CascadeRunOptions): Promise<Casca
     };
   }
 
-  const producidas = new Map(produccion.answers.map((respuesta) => [respuesta.id, respuesta]));
+  const producidas = new Map(
+    produccion.answers.map((respuesta) => [respuesta.id, respuesta]),
+  );
 
   // Paso 2: verificar. Primero el código, y sólo lo que el código no puede
   // decidir se le pregunta al verificador.
@@ -363,7 +369,9 @@ export async function verifiedCascade(options: CascadeRunOptions): Promise<Casca
           state: options.state,
           model: cadena.escalation.model,
           provider: cadena.escalation.provider,
-          ...(credencialEscalamiento === undefined ? {} : { apiKey: credencialEscalamiento }), // valmen:allow-secret — valor ya resuelto, nunca literal
+          ...(credencialEscalamiento === undefined
+            ? {}
+            : { apiKey: credencialEscalamiento }), // valmen:allow-secret — valor ya resuelto, nunca literal
           ...(cadena.escalation.effort === undefined || cadena.escalation.effort === "auto"
             ? {}
             : { effort: cadena.escalation.effort }),
@@ -602,10 +610,10 @@ const TAREA_CLASIFICACION: CascadeTask = {
       id: "riesgo",
       kind: "choice",
       description: "El riesgo del cambio que la solicitud pide",
-      instructions: "El riesgo es uno de los niveles declarados, según lo que el cambio toca.",
-      criteria: opciones(
-        RISK_LEVELS,
-        (nivel) => `El cambio es de riesgo ${nivel}: ${RIESGO_DESCRIPCION[nivel] ?? ""}`.trim(),
+      instructions:
+        "El riesgo es uno de los niveles declarados, según lo que el cambio toca.",
+      criteria: opciones(RISK_LEVELS, (nivel) =>
+        `El cambio es de riesgo ${nivel}: ${RIESGO_DESCRIPCION[nivel] ?? ""}`.trim(),
       ),
     };
 
@@ -730,7 +738,10 @@ function verificarModulo(
 }
 
 /** Las tareas declaradas, en el orden en que se listan. */
-export const CASCADE_TASKS: readonly CascadeTask[] = [TAREA_CLASIFICACION, TAREA_EXPLORACION];
+export const CASCADE_TASKS: readonly CascadeTask[] = [
+  TAREA_CLASIFICACION,
+  TAREA_EXPLORACION,
+];
 
 /**
  * Los identificadores de las tareas.
@@ -745,7 +756,9 @@ export type CascadeTaskId = (typeof CASCADE_TASK_IDS)[number];
 
 /** `true` si el valor es una tarea declarada. */
 export function isCascadeTaskId(value: unknown): value is CascadeTaskId {
-  return typeof value === "string" && (CASCADE_TASK_IDS as readonly string[]).includes(value);
+  return (
+    typeof value === "string" && (CASCADE_TASK_IDS as readonly string[]).includes(value)
+  );
 }
 
 /** La tarea pedida, o un fallo que nombra las declaradas. */
@@ -911,9 +924,7 @@ export function renderCascadeTask(outcome: CascadeTaskOutcome): string {
       verificacion.por === "codigo"
         ? `por el código: ${verificacion.motivo}`
         : `por el verificador: ${verificacion.respaldada.toFixed(2)}`;
-    lineas.push(
-      `    ${verificacion.respaldada >= 0.9 ? "✓" : "⚠"}  ${id}  ${como}`,
-    );
+    lineas.push(`    ${verificacion.respaldada >= 0.9 ? "✓" : "⚠"}  ${id}  ${como}`);
   }
 
   if (outcome.escalations.length === 0) {

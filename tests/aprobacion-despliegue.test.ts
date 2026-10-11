@@ -59,15 +59,19 @@ afterEach(() => {
   rmSync(lab, { recursive: true, force: true });
 });
 
-const simulador = (comandos: string[] = []) => (comando: string) => {
-  comandos.push(comando);
-  return { status: 0, stdout: "ok", stderr: "" };
-};
+const simulador =
+  (comandos: string[] = []) =>
+  (comando: string) => {
+    comandos.push(comando);
+    return { status: 0, stdout: "ok", stderr: "" };
+  };
 
 /** Corre el proceso hasta que se detiene en el gate y devuelve la corrida en espera. */
 function detenerEn(version: string) {
   runProcess({ root: lab, id: "deploy", params: { version }, runCommand: simulador() });
-  const esperando = waitingRuns(lab).find((corrida) => corrida.params["version"] === version);
+  const esperando = waitingRuns(lab).find(
+    (corrida) => corrida.params["version"] === version,
+  );
   if (esperando === undefined) throw new Error(`no hay corrida esperando para ${version}`);
   return esperando;
 }
@@ -135,7 +139,9 @@ describe("la atadura a la corrida y a la versión", () => {
 
     expect(corrida.waiting).toBe(true);
     expect(comandos).toEqual([]);
-    expect(gateApproved(lab, "deploy", { runId: nueva.runId, params: nueva.params })).toBeNull();
+    expect(
+      gateApproved(lab, "deploy", { runId: nueva.runId, params: nueva.params }),
+    ).toBeNull();
   });
 });
 
@@ -152,7 +158,12 @@ describe("el consumo", () => {
     expect(readApprovals(lab)[0]?.consumedAt).toBeDefined();
 
     // Otra corrida de la misma versión: la aprobación anterior ya no sirve.
-    runProcess({ root: lab, id: "deploy", params: { version: "1.5.0" }, runCommand: simulador() });
+    runProcess({
+      root: lab,
+      id: "deploy",
+      params: { version: "1.5.0" },
+      runCommand: simulador(),
+    });
     const segunda = waitingRuns(lab).find((c) => c.runId !== primera.runId);
     expect(segunda).toBeDefined();
     expect(retomar(segunda as NonNullable<typeof segunda>).waiting).toBe(true);
@@ -168,7 +179,9 @@ describe("compatibilidad", () => {
       ]),
     );
     const corrida = detenerEn("1.5.0");
-    expect(gateApproved(lab, "deploy", { runId: corrida.runId, params: corrida.params })).toBeNull();
+    expect(
+      gateApproved(lab, "deploy", { runId: corrida.runId, params: corrida.params }),
+    ).toBeNull();
     expect(retomar(corrida).waiting).toBe(true);
   });
 
@@ -176,6 +189,8 @@ describe("compatibilidad", () => {
     approveGate(lab, "manuales", "Primera", "");
     approveGate(lab, "manuales", "Segunda", "");
     expect(gateApproved(lab, "manuales")?.actor).toBe("Segunda");
-    expect(readFileSync(join(lab, ".valmen", "gates", "approvals.json"), "utf8")).not.toContain("consumedAt");
+    expect(
+      readFileSync(join(lab, ".valmen", "gates", "approvals.json"), "utf8"),
+    ).not.toContain("consumedAt");
   });
 });

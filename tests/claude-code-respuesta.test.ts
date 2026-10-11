@@ -18,8 +18,9 @@ import {
   CLAUDE_MD_BEGIN,
   CLAUDE_MD_END,
   RESPONSE_CONTRACT_RULES,
+  claudeDenyRules,
   mergeClaudeMdBlock,
-  mergeOutputStyleSetting,
+  mergeClaudeSettings,
   renderClaudeMdBlock,
   renderOutputStyle,
 } from "../packages/adapter/src/index.js";
@@ -66,23 +67,34 @@ describe("R-RESP-002: el estilo de salida", () => {
 
     const despues = JSON.parse(leer(".claude/settings.json")) as Record<string, unknown>;
     expect(despues["outputStyle"]).toBe("valmen");
-    expect(despues["permissions"]).toEqual(propio.permissions);
+    expect(despues["permissions"]).toEqual({
+      ...propio.permissions,
+      deny: claudeDenyRules(),
+    });
     expect(despues["model"]).toBe("opus");
   });
 
-  it("sin settings.json lo crea con solo outputStyle", () => {
+  it("sin settings.json lo crea con outputStyle y las denegaciones del harness", () => {
     syncProject(lab, "Demo", false);
-    expect(JSON.parse(leer(".claude/settings.json"))).toEqual({ outputStyle: "valmen" });
+    expect(JSON.parse(leer(".claude/settings.json"))).toEqual({
+      outputStyle: "valmen",
+      permissions: { deny: claudeDenyRules() },
+    });
   });
 
   it("si ya vale valmen devuelve el texto tal cual, sin reformatear", () => {
-    const texto = '{"outputStyle":"valmen",   "permissions": {}}';
-    expect(mergeOutputStyleSetting(texto)).toBe(texto);
+    const texto = `{"outputStyle":"valmen",   "permissions": {"deny": ${JSON.stringify(claudeDenyRules())}}}`;
+    expect(claudeDenyRules()).toHaveLength(108);
+    expect(mergeClaudeSettings(texto)).toBe(texto);
   });
 
   it("un outputStyle ajeno se cambia a valmen", () => {
-    const fusion = mergeOutputStyleSetting('{"outputStyle":"Explanatory","x":1}');
-    expect(JSON.parse(fusion)).toEqual({ outputStyle: "valmen", x: 1 });
+    const fusion = mergeClaudeSettings('{"outputStyle":"Explanatory","x":1}');
+    expect(JSON.parse(fusion)).toEqual({
+      outputStyle: "valmen",
+      x: 1,
+      permissions: { deny: claudeDenyRules() },
+    });
   });
 
   it("un settings.json inválido no se sobrescribe y el error lo nombra", () => {
@@ -106,7 +118,10 @@ describe("R-RESP-002: el estilo de salida", () => {
   it("--check no se queja de otras claves que la persona cambie después", () => {
     syncProject(lab, "Demo", false);
     const datos = JSON.parse(leer(".claude/settings.json")) as Record<string, unknown>;
-    escribir(".claude/settings.json", JSON.stringify({ ...datos, model: "sonnet" }, null, 2));
+    escribir(
+      ".claude/settings.json",
+      JSON.stringify({ ...datos, model: "sonnet" }, null, 2),
+    );
     expect(syncProject(lab, "Demo", true).exitCode).toBe(0);
   });
 });
@@ -157,7 +172,12 @@ describe("el runtime claude fuera de alcance", () => {
   it("no proyecta estilo, settings ni CLAUDE.md", () => {
     scaffold("name: Demo\nruntimes:\n  - codex\n");
     syncProject(lab, "Demo", false);
-    for (const ruta of [".claude/output-styles/valmen.md", ".claude/settings.json", "CLAUDE.md"]) {
+    for (const ruta of [
+      ".claude/output-styles/valmen.md",
+      ".claude/settings.json",
+      "CLAUDE.md",
+      ".worktreeinclude",
+    ]) {
       expect(() => leer(ruta)).toThrow();
     }
   });

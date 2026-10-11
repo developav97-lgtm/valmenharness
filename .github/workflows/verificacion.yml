@@ -48,6 +48,21 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # Una exportación que nada consume pasa el typecheck, el lint y la suite: el
+      # compilador no mira exportaciones y el lint solo cuenta un `export` como uso. Este
+      # paso corre `knip` y falla ante una exportación nueva sin consumidor de
+      # `packages/*/src`, nombrando el símbolo y su archivo. Lo que ya existía está en
+      # `scripts/exports-sin-uso.linea-base.json`, que **solo se achica**: quien borra el
+      # código muerto quita su entrada, y el paso falla si una entrada ya no aplica.
+      #
+      # Va después del typecheck porque los guiones de `scripts/` importan el `dist`, y
+      # `knip` solo lo reconoce construido. Ojo con las pruebas: un `import * as` de un
+      # índice que se pasa entero a `Object.keys` marca como consumido todo el paquete y lo
+      # vuelve a cegar (por eso `tests/retiro-disparador.test.ts` importa el índice con una
+      # ruta que se arma al ejecutar).
+      - name: Exportaciones sin consumidor
+        run: npm run exports:check
+
       # El formato, para que nadie tenga que discutirlo en una revisión.
       - name: Formato
         run: npm run format:check
@@ -82,3 +97,13 @@ jobs:
       # `ticket.py` se activa con `VALMEN_REFERENCE_TICKET_PY`.
       - name: Pruebas
         run: npm test
+
+      # La medición de fricción vive en `bench/friccion/`, fuera de `packages/`: su
+      # typecheck y sus pruebas no entran al del producto ni a `npm test`, así que
+      # sin este paso nada las correría. Va después del typecheck de arriba porque
+      # sus pruebas miden `packages/cli/dist/main.js`, que ese paso ya construyó.
+      - name: La medición de fricción compila y pasa sus pruebas
+        run: |
+          npx tsc -p bench/friccion/tsconfig.json
+          npx tsc -p bench/friccion/tsconfig.build.json
+          npx vitest run --config bench/friccion/vitest.config.ts

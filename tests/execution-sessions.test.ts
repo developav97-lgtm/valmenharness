@@ -20,14 +20,22 @@ beforeEach(() => {
   root = join(home, "harness");
   mkdirSync(join(home, ".valmen"), { recursive: true });
   mkdirSync(join(root, ".valmen"), { recursive: true });
-  writeFileSync(join(root, ".valmen", "config.yaml"), "project-id: valmen-harness\n", "utf8");
-  writeFileSync(join(home, ".valmen", "bindings.local.yaml"), [
-    "schema-version: 1",
-    "machine-id: qa-mac",
-    "projects:",
-    "  valmen-harness:",
-    `    root: ${root}`,
-  ].join("\n"), "utf8");
+  writeFileSync(
+    join(root, ".valmen", "config.yaml"),
+    "project-id: valmen-harness\n",
+    "utf8",
+  );
+  writeFileSync(
+    join(home, ".valmen", "bindings.local.yaml"),
+    [
+      "schema-version: 1",
+      "machine-id: qa-mac",
+      "projects:",
+      "  valmen-harness:",
+      `    root: ${root}`,
+    ].join("\n"),
+    "utf8",
+  );
 });
 
 afterEach(() => rmSync(home, { recursive: true, force: true }));
@@ -77,24 +85,29 @@ describe("enlaces de sesión ejecutora", () => {
     linkExecutionSession(project(), link("link-02", "attempt-01", "worker-02"));
     linkExecutionSession(project(), link("link-03", "attempt-02", "worker-03"));
 
-    expect(readExecutionSessionLinks(project(), identity()).map((entry) => [
-      entry.attemptId,
-      entry.executor.sessionId,
-      entry.cursor,
-    ])).toEqual([
+    expect(
+      readExecutionSessionLinks(project(), identity()).map((entry) => [
+        entry.attemptId,
+        entry.executor.sessionId,
+        entry.cursor,
+      ]),
+    ).toEqual([
       ["attempt-01", "worker-01", 1],
       ["attempt-01", "worker-02", 2],
       ["attempt-02", "worker-03", 3],
     ]);
     expect(
-      readExecutionSessionLinks(project(), identity(), "attempt-01")
-        .map((entry) => entry.executor.sessionId),
+      readExecutionSessionLinks(project(), identity(), "attempt-01").map(
+        (entry) => entry.executor.sessionId,
+      ),
     ).toEqual(["worker-01", "worker-02"]);
   });
 
   it("rechaza referencias de sesión que no son portables", () => {
-    expect(() => linkExecutionSession(project(), {
-      ...link("link-01", "attempt-01", "/tmp/worker"),
-    })).toThrow("sessionId");
+    expect(() =>
+      linkExecutionSession(project(), {
+        ...link("link-01", "attempt-01", "/tmp/worker"),
+      }),
+    ).toThrow("sessionId");
   });
 });

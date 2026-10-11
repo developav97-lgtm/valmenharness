@@ -15,12 +15,7 @@
  */
 import { execFileSync } from "node:child_process";
 
-import {
-  EXIT_INVARIANT,
-  EXIT_SCHEMA,
-  parseTicket,
-  toFailure,
-} from "@valmen/core";
+import { EXIT_INVARIANT, EXIT_SCHEMA, parseTicket, toFailure } from "@valmen/core";
 import { extractCriteriaSpecs } from "@valmen/gate";
 import {
   type Delegation,
@@ -28,12 +23,15 @@ import {
   FUENTE_DELEGACION,
   appendDelegationEvent,
   assertInScope,
+  codeReviewExigida,
   delegationEvents,
   delegationProgress,
   grantDelegation,
   hardGateStop,
   markManualCriteria,
+  readReceipts,
   resolveDelegation,
+  revisionPendiente,
   transition,
 } from "@valmen/engine";
 import { recordHumanDecision } from "@valmen/server";
@@ -128,7 +126,11 @@ function resolverPorDelegacion(
       descripcion: `por delegación ${delegation.id} del PO ${delegation.actor}`,
       frase: delegation.quote,
       anotar: (detail) =>
-        appendDelegationEvent(paths.root, delegation.id, { kind: "decision", ticketId, detail }),
+        appendDelegationEvent(paths.root, delegation.id, {
+          kind: "decision",
+          ticketId,
+          detail,
+        }),
     },
     siempre,
   );
@@ -171,13 +173,27 @@ export async function advanceDelegated(
       if (fallo !== null) return fallo;
     }
     if (estado() === "analyzed") {
-      const stop = await resolverPorDelegacion(paths, delegation, ticketId, "analysis", options.reason, deps);
+      const stop = await resolverPorDelegacion(
+        paths,
+        delegation,
+        ticketId,
+        "analysis",
+        options.reason,
+        deps,
+      );
       if (stop !== null) return parada(paths, delegation, ticketId, stop);
       const fallo = mover("planned");
       if (fallo !== null) return fallo;
     }
     if (estado() === "planned") {
-      const stop = await resolverPorDelegacion(paths, delegation, ticketId, "plan", options.reason, deps);
+      const stop = await resolverPorDelegacion(
+        paths,
+        delegation,
+        ticketId,
+        "plan",
+        options.reason,
+        deps,
+      );
       if (stop !== null) return parada(paths, delegation, ticketId, stop);
       // La aprobación del plan se atribuye a la política humana —la delegación— y
       // cita sus palabras: nunca al modelo. El motor exige la aprobación registrada para
@@ -277,7 +293,10 @@ export async function closeDelegated(
     ["--release-impact", o.releaseImpact],
   ].filter(([, v]) => v === undefined);
   if (faltan.length > 0) {
-    return error(`delegation close requiere ${faltan.map(([n]) => n).join(", ")}.`, EXIT_SCHEMA);
+    return error(
+      `delegation close requiere ${faltan.map(([n]) => n).join(", ")}.`,
+      EXIT_SCHEMA,
+    );
   }
   const environment = o.environment as string;
   const tests = (o.tests as string).replace(/`/g, "");
@@ -293,7 +312,10 @@ export async function closeDelegated(
         );
       }
       if (o.files.length === 0) {
-        return error("delegation close requiere --files con los archivos de la implementación.", EXIT_SCHEMA);
+        return error(
+          "delegation close requiere --files con los archivos de la implementación.",
+          EXIT_SCHEMA,
+        );
       }
       const sucios = deps.dirty(paths.root, o.files);
       if (sucios.length > 0) {
@@ -321,6 +343,27 @@ export async function closeDelegated(
         true,
       );
       if (stop !== null) return parada(paths, delegation, ticketId, stop);
+      // Con `code-review: exigida` el diff se revisa antes de entregar (R-REV-004). Un recibo
+      // aprobado del árbol de ahora se respeta (también la firma de una persona); un `review`
+      // lo decide una persona, no la delegación (R-REV-005), y no se vuelve a correr.
+      if (codeReviewExigida(paths.root)) {
+        const revision = revisionPendiente(paths, ticketId, readReceipts(paths, ticketId));
+        if (revision?.persona === true)
+          return parada(paths, delegation, ticketId, revision.motivo);
+        if (revision !== null) {
+          const stopRevision = await resolverPorDelegacion(
+            paths,
+            delegation,
+            ticketId,
+            "code-review",
+            undefined,
+            deps,
+            true,
+          );
+          if (stopRevision !== null)
+            return parada(paths, delegation, ticketId, stopRevision);
+        }
+      }
       transition({ paths, ticketId, entity: "ticket", to: "awaiting_user_tests" });
 
       const delPo = criteriosDelPo(leer(paths, ticketId));
@@ -332,7 +375,9 @@ export async function closeDelegated(
         });
         return ok(
           `${ticketId} queda en awaiting_user_tests: ${o.visual ? "es una revisión visual" : "tiene criterios que solo verifica el PO"}.` +
-            (delPo.length > 0 ? `\nSuyos:\n${delPo.map((c) => `  · ${c}`).join("\n")}` : "") +
+            (delPo.length > 0
+              ? `\nSuyos:\n${delPo.map((c) => `  · ${c}`).join("\n")}`
+              : "") +
             "\nSigue con el siguiente ticket de la delegación.\n",
         );
       }
@@ -360,7 +405,8 @@ export async function closeDelegated(
       functionalSummary: o.functionalSummary as string,
       releaseImpact: o.releaseImpact as string,
       head: deps.head,
-      usageSource: o.usageSource ?? `manual:sesión de Claude Code por delegación ${delegation.id}`,
+      usageSource:
+        o.usageSource ?? `manual:sesión de Claude Code por delegación ${delegation.id}`,
       confidence: o.confidence ?? "medium",
       model: o.model,
       notes:
@@ -450,7 +496,13 @@ export async function runDelegation(
       return error(`delegation ${sub} requiere --id <TICKET-ID>.`, EXIT_SCHEMA);
     }
     if (sub === "advance") {
-      return await advanceDelegated(paths, delegation, id as string, { reason: texto(flags, "reason") }, deps);
+      return await advanceDelegated(
+        paths,
+        delegation,
+        id as string,
+        { reason: texto(flags, "reason") },
+        deps,
+      );
     }
     if (sub === "close") {
       return await closeDelegated(
@@ -458,7 +510,10 @@ export async function runDelegation(
         delegation,
         id as string,
         {
-          files: (texto(flags, "files") ?? "").split(",").map((f) => f.trim()).filter((f) => f !== ""),
+          files: (texto(flags, "files") ?? "")
+            .split(",")
+            .map((f) => f.trim())
+            .filter((f) => f !== ""),
           environment: texto(flags, "environment"),
           tests: texto(flags, "tests"),
           testsPassed: flags["tests-passed"] === true,
@@ -475,7 +530,10 @@ export async function runDelegation(
         deps,
       );
     }
-    return error("delegation requiere un subcomando: grant, status, next, advance o close.", EXIT_SCHEMA);
+    return error(
+      "delegation requiere un subcomando: grant, status, next, advance o close.",
+      EXIT_SCHEMA,
+    );
   } catch (caught) {
     const f = toFailure(caught);
     return error(f.message, f.exitCode);

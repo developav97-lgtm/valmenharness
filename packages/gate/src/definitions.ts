@@ -257,7 +257,16 @@ export const ANALYSIS_GATE: GateDefinition = {
       // El par de la anterior para todo lo que no es una corrección: una funcionalidad
       // nueva o una mejora se juzga por si la investigación dice **dónde** falta el
       // comportamiento esperado, no por un síntoma que no tiene.
-      appliesTo: ["FEATURE", "IMPROVEMENT", "SYNC", "INTEGRATION", "AGENT", "CLAUDIO", "CHORE", "DOCS"],
+      appliesTo: [
+        "FEATURE",
+        "IMPROVEMENT",
+        "SYNC",
+        "INTEGRATION",
+        "AGENT",
+        "CLAUDIO",
+        "CHORE",
+        "DOCS",
+      ],
       description: "La investigación nombra dónde falta el comportamiento esperado",
       weight: 3,
       instructions:
@@ -298,7 +307,8 @@ export const ANALYSIS_GATE: GateDefinition = {
     {
       id: "riesgos_cubren_impactos",
       kind: "noul",
-      description: "El diagnóstico declara el efecto del cambio sobre otros consumidores del componente",
+      description:
+        "El diagnóstico declara el efecto del cambio sobre otros consumidores del componente",
       instructions:
         "`investigacion` declara el efecto del cambio sobre otros consumidores del mismo " +
         "componente o endpoint, o declara que no hay ninguno.",
@@ -374,10 +384,99 @@ export const QA_MECHANICAL_GATE: GateDefinition = {
   propositions: [],
 };
 
+/** Una proposición de la revisión del diff: un defecto severo que el cambio introduce, visto desde una lente. */
+function sinHallazgo(
+  id: string,
+  descripcion: string,
+  instrucciones: string,
+): GateDefinition["propositions"][number] {
+  return {
+    id,
+    kind: "noul",
+    description: descripcion,
+    instructions:
+      `${instrucciones} Lo que ya estaba antes del cambio no cuenta. Cada defecto se cita con la ` +
+      "`ruta` y la `linea` de una línea que el cambio agrega o modifica.",
+    criteria: {
+      yes: "El cambio no introduce ese defecto, hasta donde la entrada permite comprobarlo.",
+      no: "El cambio introduce ese defecto y se puede citar la línea que lo causa.",
+    },
+  };
+}
+
+/**
+ * La revisión del diff: `in_progress → awaiting_user_tests`.
+ *
+ * Revisa lo que se entrega, con profundidad según el riesgo que calcula el código. El modelo
+ * responde proposiciones de hecho —nunca «¿apruebas?»— y el código decide. La entrega la exige si
+ * `.valmen/config.yaml` declara `code-review: exigida`.
+ */
+const CODE_REVIEW_GATE: GateDefinition = {
+  id: "code-review",
+  title: "Revisión del diff antes de entregar",
+  transition: "in_progress → awaiting_user_tests",
+  mode: "hybrid",
+  criteriaPropositions: false,
+  diffReview: true,
+  appliesTo: ["in_progress"],
+  policy: DEFAULT_POLICY,
+  mechanicalChecks: [
+    {
+      id: "sin_secretos",
+      description: "Lo agregado no expone credenciales.",
+      result: "skip",
+    },
+    {
+      id: "sin_archivos_prohibidos",
+      description: "El diff no toca archivos que una jornada no commitea.",
+      result: "skip",
+    },
+    {
+      id: "colores_fijos",
+      description: "Lo agregado en interfaz no trae colores fijos.",
+      result: "skip",
+    },
+  ],
+  propositions: [
+    sinHallazgo(
+      "sin_hallazgo_severo",
+      "El cambio no introduce un defecto severo",
+      "El cambio no introduce un defecto severo causado por él mismo: rompe un comportamiento " +
+        "existente, pierde o corrompe datos, abre un acceso indebido o deja un error sin manejar.",
+    ),
+    sinHallazgo(
+      "sin_hallazgo_severo_riesgo",
+      "Lente de riesgo: sin defecto severo de seguridad o de datos",
+      "El cambio no introduce un defecto severo de riesgo: abre un acceso indebido, expone o pierde " +
+        "datos, o rompe un permiso o el aislamiento entre clientes.",
+    ),
+    sinHallazgo(
+      "sin_hallazgo_severo_resiliencia",
+      "Lente de resiliencia: sin defecto severo ante fallos",
+      "El cambio no introduce un defecto severo de resiliencia: deja un error sin manejar, un " +
+        "reintento sin tope, una condición de carrera o un fallo que corrompe estado.",
+    ),
+    sinHallazgo(
+      "sin_hallazgo_severo_legibilidad",
+      "Lente de legibilidad: sin código que engaña",
+      "El cambio no introduce un defecto severo de legibilidad: código cuyo comportamiento real " +
+        "contradice su nombre, su comentario o su documentación, de modo que quien lo lea o lo " +
+        "modifique decidirá mal.",
+    ),
+    sinHallazgo(
+      "sin_hallazgo_severo_fiabilidad",
+      "Lente de fiabilidad: sin regresión ni contrato roto",
+      "El cambio no introduce un defecto severo de fiabilidad: rompe un comportamiento existente, " +
+        "cambia un contrato publicado sin transición o trae una prueba que no puede fallar.",
+    ),
+  ],
+};
+
 export const GATES: Readonly<Record<string, GateDefinition>> = {
   analysis: ANALYSIS_GATE,
   plan: PLAN_GATE,
   "qa-mechanical": QA_MECHANICAL_GATE,
+  "code-review": CODE_REVIEW_GATE,
 };
 
 /** Obtiene un gate por identificador. */

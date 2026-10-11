@@ -11,7 +11,10 @@ export interface RespuestaOpciones {
 }
 
 /** Las opciones de autorización de la raíz dada. */
-export function listarOpcionesDeAutorizacion(root: string, paths: RegistryPaths): RespuestaOpciones {
+export function listarOpcionesDeAutorizacion(
+  root: string,
+  paths: RegistryPaths,
+): RespuestaOpciones {
   try {
     return { status: 200, body: opcionesDeAutorizacion(root, paths) };
   } catch (error) {

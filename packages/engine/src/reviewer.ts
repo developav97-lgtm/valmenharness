@@ -143,7 +143,12 @@ function rechazo(
 }
 
 function revisorDe(ruta: ResolvedRoute): RevisorElegido {
-  return { provider: ruta.provider, model: ruta.model, effort: ruta.effort, source: ruta.source };
+  return {
+    provider: ruta.provider,
+    model: ruta.model,
+    effort: ruta.effort,
+    source: ruta.source,
+  };
 }
 
 /**
@@ -153,13 +158,19 @@ function revisorDe(ruta: ResolvedRoute): RevisorElegido {
  * una sola sesión que deja el ticket de `intake` en `planned` y la registra como `analysis`:
  * el plan de un ticket preparado así figura con esa fase, y su modelo es el que lo produjo.
  */
-export function productoresDelTicket(root: string, ticketId: string): ProductorRegistrado[] {
+export function productoresDelTicket(
+  root: string,
+  ticketId: string,
+): ProductorRegistrado[] {
   const productores: ProductorRegistrado[] = [];
   for (const registro of leerFases(root)) {
     if (registro.ticketId !== ticketId) continue;
     if (registro.fase !== "analysis" && registro.fase !== "plan") continue;
     // El que el cliente reportó haber usado manda sobre el pedido: es quien produjo el artefacto.
-    const modelo = typeof registro.modeloUsado === "string" && registro.modeloUsado.trim() !== "" ? registro.modeloUsado : registro.modelo;
+    const modelo =
+      typeof registro.modeloUsado === "string" && registro.modeloUsado.trim() !== ""
+        ? registro.modeloUsado
+        : registro.modelo;
     if (typeof modelo !== "string" || modelo.trim() === "") continue;
     productores.push({ fase: registro.fase, ejecutor: registro.ejecutor, modelo });
   }
@@ -221,7 +232,10 @@ export function prepararRevision(input: {
   // Un recibo que evaluó otro texto del ticket no se revisa: no se paga un modelo sobre algo
   // que ya no es lo que hay (AP-007, C11).
   const ubicado = findTicket(paths, ticketId);
-  if (ubicado !== undefined && recibo.stateHash !== hashState(buildGateState(ubicado.text))) {
+  if (
+    ubicado !== undefined &&
+    recibo.stateHash !== hashState(buildGateState(ubicado.text))
+  ) {
     return rechazo(
       conRecibo,
       `el recibo ${recibo.id} evaluó otro texto del ticket (cambió después de la compuerta): ` +
@@ -234,7 +248,9 @@ export function prepararRevision(input: {
     .filter((proposicion) => proposicion.inBand)
     .map((proposicion) => ({
       id: proposicion.id,
-      ...(proposicion.description === undefined ? {} : { descripcion: proposicion.description }),
+      ...(proposicion.description === undefined
+        ? {}
+        : { descripcion: proposicion.description }),
       valor: proposicion.value,
       motivo: proposicion.reason === "" ? null : proposicion.reason,
     }));
@@ -256,7 +272,9 @@ export function prepararRevision(input: {
   const secciones = SECCIONES_DEL_ARTEFACTO[etapa];
   const artefacto = [
     `TICKET: ${ticketId} — ${ticket.title}`,
-    ...secciones.map((nombre) => `\n## ${nombre}\n${(ticket.sections[nombre] ?? "").trim()}`),
+    ...secciones.map(
+      (nombre) => `\n## ${nombre}\n${(ticket.sections[nombre] ?? "").trim()}`,
+    ),
   ].join("\n");
   const hallazgos = scanSecrets(artefacto);
   if (hallazgos.length > 0) {
@@ -274,7 +292,13 @@ export function prepararRevision(input: {
   );
   if (!eleccion.ok) return rechazo(conDatos, eleccion.motivo);
 
-  return { ok: true, ...conDatos, reciboId: recibo.id, artefacto, revisor: revisorDe(eleccion.route) };
+  return {
+    ok: true,
+    ...conDatos,
+    reciboId: recibo.id,
+    artefacto,
+    revisor: revisorDe(eleccion.route),
+  };
 }
 
 /** Lo que `ejecutarRevisor` necesita de afuera: sobre todo, simular la red en las pruebas. */
@@ -295,7 +319,9 @@ export interface ResultadoDeRevision {
   readonly reason: string;
   readonly porProposicion: ReviewEvaluation["porProposicion"];
   /** El modelo que decidió, con la versión que el proveedor dice haber servido. */
-  readonly revisor: ReviewEvaluation["model"] & { readonly effort: RevisorElegido["effort"] };
+  readonly revisor: ReviewEvaluation["model"] & {
+    readonly effort: RevisorElegido["effort"];
+  };
   /** Los modelos que produjeron el artefacto, contra los que se comprobó la separación. */
   readonly productores: readonly ProductorRegistrado[];
   readonly proposiciones: readonly ProposicionEnDuda[];
@@ -364,7 +390,9 @@ export interface DecisionDelRevisorRegistrada {
  * de compuertas no cambia, y uno sin este campo se lee igual que antes. `humanDecision` sigue en
  * `null`: la decisión del revisor no es la de una persona.
  */
-export type ReciboConRevisor = GateReceipt & { readonly reviewerDecision?: DecisionDelRevisorRegistrada };
+export type ReciboConRevisor = GateReceipt & {
+  readonly reviewerDecision?: DecisionDelRevisorRegistrada;
+};
 
 const MODO_REVISOR = "reviewer";
 
@@ -406,12 +434,16 @@ export function barrerasDelRegistro(input: BarrerasDelRegistroInput): string[] {
 
   // 1. Un SECURITY no se aprueba por revisor (C15).
   if (documento.fields.type.toUpperCase() === "SECURITY") {
-    motivos.push("tipo: un ticket SECURITY no se aprueba por revisor; lo decide una persona");
+    motivos.push(
+      "tipo: un ticket SECURITY no se aprueba por revisor; lo decide una persona",
+    );
   }
 
   // 2. El recibo: el último vigente de la etapa, en review, sin decisión humana ni del revisor (C12, C21).
   if (!(ETAPAS_REVISABLES as readonly string[]).includes(etapa)) {
-    motivos.push(`etapa: «${etapa}» no se revisa con un modelo (${ETAPAS_REVISABLES.join(" o ")})`);
+    motivos.push(
+      `etapa: «${etapa}» no se revisa con un modelo (${ETAPAS_REVISABLES.join(" o ")})`,
+    );
     return motivos;
   }
   const veredicto = veredictoDeCompuerta(readReceipts(paths, ticketId), etapa);
@@ -421,34 +453,52 @@ export function barrerasDelRegistro(input: BarrerasDelRegistroInput): string[] {
   }
   const recibo = veredicto.recibo as ReciboConRevisor;
   if (recibo.id !== reciboId) {
-    motivos.push(`recibo: ${reciboId} ya no es el último de la compuerta ${etapa} (ahora es ${recibo.id})`);
+    motivos.push(
+      `recibo: ${reciboId} ya no es el último de la compuerta ${etapa} (ahora es ${recibo.id})`,
+    );
   }
   if (veredicto.tipo === "bloqueada" || recibo.outcome === "block") {
-    motivos.push(`recibo: ${recibo.id} está en block (o una persona lo rechazó): un block es de una persona`);
+    motivos.push(
+      `recibo: ${recibo.id} está en block (o una persona lo rechazó): un block es de una persona`,
+    );
   } else if (recibo.humanDecision !== null) {
-    motivos.push(`recibo: ${recibo.id} ya tiene una decisión humana (${recibo.humanDecision.decision})`);
+    motivos.push(
+      `recibo: ${recibo.id} ya tiene una decisión humana (${recibo.humanDecision.decision})`,
+    );
   } else if (recibo.outcome !== "review") {
     motivos.push(`recibo: ${recibo.id} está en ${recibo.outcome} y no en review`);
   }
   if (recibo.reviewerDecision !== undefined) {
-    motivos.push(`recibo: ${recibo.id} ya tiene la decisión del revisor (${recibo.reviewerDecision.decision}); no se registra otra`);
+    motivos.push(
+      `recibo: ${recibo.id} ya tiene la decisión del revisor (${recibo.reviewerDecision.decision}); no se registra otra`,
+    );
   }
 
   // 3. El recibo evaluó el texto que hay ahora (C10, AP-007).
   if (recibo.stateHash !== hashState(buildGateState(documento.text))) {
-    motivos.push(`estado: el recibo ${recibo.id} evaluó otro texto del ticket (cambió después de la compuerta)`);
+    motivos.push(
+      `estado: el recibo ${recibo.id} evaluó otro texto del ticket (cambió después de la compuerta)`,
+    );
   }
 
   // 4. Las proposiciones: solo las de la banda media, todas respaldadas, y nada fuera de banda sin aprobar (C13, C14).
   const enBanda = recibo.propositions.filter((p) => p.inBand).map((p) => p.id);
   if (enBanda.length === 0) {
-    motivos.push("proposiciones: ninguna quedó en banda media; no hay nada que el revisor pueda resolver");
+    motivos.push(
+      "proposiciones: ninguna quedó en banda media; no hay nada que el revisor pueda resolver",
+    );
   }
   const fueraSinAprobar = recibo.propositions
-    .filter((p) => !p.inBand && (p.effect === null || p.effect === undefined || p.effect.outcome !== "approve"))
+    .filter(
+      (p) =>
+        !p.inBand &&
+        (p.effect === null || p.effect === undefined || p.effect.outcome !== "approve"),
+    )
     .map((p) => p.id);
   if (fueraSinAprobar.length > 0) {
-    motivos.push(`proposiciones: ${fueraSinAprobar.join(", ")} no aprobó y no es de la banda media: el revisor no lo cubre`);
+    motivos.push(
+      `proposiciones: ${fueraSinAprobar.join(", ")} no aprobó y no es de la banda media: el revisor no lo cubre`,
+    );
   }
   const decididas = input.porProposicion.map((p) => p.id);
   const mismas =
@@ -467,11 +517,15 @@ export function barrerasDelRegistro(input: BarrerasDelRegistroInput): string[] {
   // 5. Otro modelo que todo productor registrado (C8, C9).
   const productores = productoresDelTicket(paths.root, ticketId);
   if (productores.length === 0) {
-    motivos.push("modelo: el ticket no tiene productor registrado; sin saberlo no se garantiza que el revisor sea otro");
+    motivos.push(
+      "modelo: el ticket no tiene productor registrado; sin saberlo no se garantiza que el revisor sea otro",
+    );
   } else {
     for (const modelo of [input.revisor.model, input.revisor.resolvedVersion]) {
       if (modelo.trim() !== "" && esProductor(modelo, productores)) {
-        motivos.push(`modelo: el revisor (${modelo}) es el mismo modelo que produjo el artefacto`);
+        motivos.push(
+          `modelo: el revisor (${modelo}) es el mismo modelo que produjo el artefacto`,
+        );
         break;
       }
     }
@@ -480,7 +534,9 @@ export function barrerasDelRegistro(input: BarrerasDelRegistroInput): string[] {
   // 6. Elegibilidad con los tipos, impactos, cupo y modo de la autorización (C15–C17).
   const elegibilidad = elegibilidadDeAprobacion({ paths, ticketId, etapa, ahora });
   if (!elegibilidad.derivableAlRevisor) {
-    const fallas = elegibilidad.reglas.filter((r) => !r.cumple && r.regla !== "compuerta").map((r) => `${r.regla}: ${r.detalle}`);
+    const fallas = elegibilidad.reglas
+      .filter((r) => !r.cumple && r.regla !== "compuerta")
+      .map((r) => `${r.regla}: ${r.detalle}`);
     motivos.push(
       `autorización: ${fallas.length > 0 ? fallas.join("; ") : "la autorización que cubre al ticket no es de modo reviewer"}`,
     );
@@ -518,7 +574,9 @@ export interface DecisionDelRevisorGuardada {
  * aprueba nada—; con `reject`, solo el recibo y un evento `reviewer-rejected`, sin cupo: el recibo
  * sigue esperando a una persona.
  */
-export function registrarDecisionDelRevisor(request: RegistrarDecisionDelRevisorRequest): DecisionDelRevisorGuardada {
+export function registrarDecisionDelRevisor(
+  request: RegistrarDecisionDelRevisorRequest,
+): DecisionDelRevisorGuardada {
   const { paths, ticketId, resultado } = request;
   const ahora = request.ahora ?? new Date();
   assertSesionAtendida("registrar la decisión del revisor", request.env ?? process.env);
@@ -555,10 +613,13 @@ export function registrarDecisionDelRevisor(request: RegistrarDecisionDelRevisor
     ahora,
   );
   if (cubre === null || cubre.mode !== MODO_REVISOR) {
-    throw new Error("Las barreras dejaron pasar un ticket sin una autorización de modo reviewer que lo cubra.");
+    throw new Error(
+      "Las barreras dejaron pasar un ticket sin una autorización de modo reviewer que lo cubra.",
+    );
   }
   const veredicto = veredictoDeCompuerta(readReceipts(paths, ticketId), etapa);
-  if (veredicto.tipo === "sin-recibo") throw new Error("Las barreras dejaron pasar un ticket sin recibo.");
+  if (veredicto.tipo === "sin-recibo")
+    throw new Error("Las barreras dejaron pasar un ticket sin recibo.");
   const recibo = veredicto.recibo;
   const productores = productoresDelTicket(paths.root, ticketId);
   const decidida: DecisionDelRevisorRegistrada = {
@@ -577,7 +638,10 @@ export function registrarDecisionDelRevisor(request: RegistrarDecisionDelRevisor
   const cupoDe = (): number => cupoRestanteDeAprobacion(paths.root, cubre, ahora);
 
   if (resultado.decision === "reject") {
-    appendReceipt(paths, ticketId, { ...recibo, reviewerDecision: decidida } as ReciboConRevisor);
+    appendReceipt(paths, ticketId, {
+      ...recibo,
+      reviewerDecision: decidida,
+    } as ReciboConRevisor);
     appendEvent(
       paths,
       ticketId,
@@ -593,11 +657,28 @@ export function registrarDecisionDelRevisor(request: RegistrarDecisionDelRevisor
       }),
       () => ahora,
     );
-    return { ticketId, etapa, decision: "reject", receiptId: recibo.id, authorizationId: cubre.id, cupoRestante: cupoDe(), accion: "reviewer-rejected" };
+    return {
+      ticketId,
+      etapa,
+      decision: "reject",
+      receiptId: recibo.id,
+      authorizationId: cubre.id,
+      cupoRestante: cupoDe(),
+      accion: "reviewer-rejected",
+    };
   }
 
-  registrarUsoDeCupoDeAprobacion({ root: paths.root, authorizationId: cubre.id, ticketId, stage: etapa, ahora });
-  appendReceipt(paths, ticketId, { ...recibo, reviewerDecision: decidida } as ReciboConRevisor);
+  registrarUsoDeCupoDeAprobacion({
+    root: paths.root,
+    authorizationId: cubre.id,
+    ticketId,
+    stage: etapa,
+    ahora,
+  });
+  appendReceipt(paths, ticketId, {
+    ...recibo,
+    reviewerDecision: decidida,
+  } as ReciboConRevisor);
   const accion = etapa === "plan" ? PLAN_APPROVED_ACTION : "analysis-approved";
   appendEvent(
     paths,
@@ -617,7 +698,15 @@ export function registrarDecisionDelRevisor(request: RegistrarDecisionDelRevisor
     }),
     () => ahora,
   );
-  return { ticketId, etapa, decision: "approve", receiptId: recibo.id, authorizationId: cubre.id, cupoRestante: cupoDe(), accion };
+  return {
+    ticketId,
+    etapa,
+    decision: "approve",
+    receiptId: recibo.id,
+    authorizationId: cubre.id,
+    cupoRestante: cupoDe(),
+    accion,
+  };
 }
 
 /**
@@ -643,7 +732,8 @@ export function motivoDeDecisionDelRevisorInvalida(
   if (documento.fields.type.toUpperCase() === "SECURITY") {
     return `Un ticket SECURITY no se aprueba por revisor. ${regla}`;
   }
-  if (recibo.outcome === "block") return `El recibo ${recibo.id} está en block: lo decide una persona. ${regla}`;
+  if (recibo.outcome === "block")
+    return `El recibo ${recibo.id} está en block: lo decide una persona. ${regla}`;
   if (dr.receiptStateHash !== recibo.stateHash) {
     return `La decisión del revisor no es sobre el estado del recibo ${recibo.id}. ${regla}`;
   }
@@ -662,18 +752,20 @@ export function motivoDeDecisionDelRevisorInvalida(
   if (autorizacion !== undefined && autorizacion.mode !== MODO_REVISOR) {
     return `La autorización ${dr.authorizationId} no es de modo reviewer. ${regla}`;
   }
-  return motivoDeAprobacionPorAutorizacionInvalida(
-    root,
-    documento,
-    {
-      actor: "revisor",
-      source: FUENTE_REVISOR,
-      quote: "",
-      planHash: "",
-      authorizationId: dr.authorizationId,
-      authorizationHash: dr.authorizationHash,
-    },
-    ahora,
-    etapa,
-  )?.replace("Una persona la registra con `valmen approve-plan`.", regla) ?? null;
+  return (
+    motivoDeAprobacionPorAutorizacionInvalida(
+      root,
+      documento,
+      {
+        actor: "revisor",
+        source: FUENTE_REVISOR,
+        quote: "",
+        planHash: "",
+        authorizationId: dr.authorizationId,
+        authorizationHash: dr.authorizationHash,
+      },
+      ahora,
+      etapa,
+    )?.replace("Una persona la registra con `valmen approve-plan`.", regla) ?? null
+  );
 }

@@ -84,25 +84,28 @@ function registro(): void {
  * dentro de la misma corrida, y anota a quién se llamó: la prueba de que **no** se
  * escaló es que el modelo del escalado no aparece en el registro.
  */
-function juezFalso(
-  opciones: { readonly choices?: Record<string, string>; readonly llamadas: string[] },
-) {
-  return (async (o: { readonly propositions: readonly Proposition[]; readonly model?: string }) => {
+function juezFalso(opciones: {
+  readonly choices?: Record<string, string>;
+  readonly llamadas: string[];
+}) {
+  return (async (o: {
+    readonly propositions: readonly Proposition[];
+    readonly model?: string;
+  }) => {
     const modelo = o.model ?? "";
     opciones.llamadas.push(modelo);
     return {
-      answers: o.propositions.map(
-        (proposicion): PropositionAnswer =>
-          proposicion.kind === "choice"
-            ? {
-                id: proposicion.id,
-                kind: "choice",
-                choice:
-                  opciones.choices?.[proposicion.id] ??
-                  (Object.keys(proposicion.criteria)[0] as string),
-                confidence: 0.9,
-              }
-            : { id: proposicion.id, kind: proposicion.kind, value: 0.95, confidence: 0.9 },
+      answers: o.propositions.map((proposicion): PropositionAnswer =>
+        proposicion.kind === "choice"
+          ? {
+              id: proposicion.id,
+              kind: "choice",
+              choice:
+                opciones.choices?.[proposicion.id] ??
+                (Object.keys(proposicion.criteria)[0] as string),
+              confidence: 0.9,
+            }
+          : { id: proposicion.id, kind: proposicion.kind, value: 0.95, confidence: 0.9 },
       ),
       model: { provider: "openrouter", model: modelo, resolvedVersion: `${modelo}-v1` },
       usage: { inputTokens: 100, outputTokens: 20, costUsd: 0.0001 },
@@ -119,14 +122,16 @@ function verificadorFalso(opciones: {
   return (async (o: { readonly propositions: readonly Proposition[] }) => {
     opciones.vistas.push(o.propositions.map((proposicion) => proposicion.id));
     return {
-      answers: o.propositions.map(
-        (proposicion): PropositionAnswer => ({
-          id: proposicion.id,
-          kind: "noul",
-          value: opciones.porProposicion?.[proposicion.id] ?? 0.97,
-        }),
-      ),
-      model: { provider: "openrouter", model: VERIFICADOR, resolvedVersion: "jev-1.13-20260917" },
+      answers: o.propositions.map((proposicion): PropositionAnswer => ({
+        id: proposicion.id,
+        kind: "noul",
+        value: opciones.porProposicion?.[proposicion.id] ?? 0.97,
+      })),
+      model: {
+        provider: "openrouter",
+        model: VERIFICADOR,
+        resolvedVersion: "jev-1.13-20260917",
+      },
       usage: { inputTokens: 300, outputTokens: 0, costUsd: 0.00001 },
       latencyMs: 700,
     };
@@ -192,9 +197,7 @@ describe("la corrida de una tarea", () => {
       porProposicion: { respaldada_tipo: 0.99, respaldada_riesgo: 0.99 },
     });
 
-    const escalamiento = resultado.escalations.find(
-      (uno) => uno.proposition === "modulo",
-    );
+    const escalamiento = resultado.escalations.find((uno) => uno.proposition === "modulo");
     expect(escalamiento, "el módulo inventado tiene que escalarse").toBeDefined();
     expect(escalamiento?.verified).toBe(0);
     expect(escalamiento?.reason).toContain("MODULO-QUE-NO-EXISTE");
@@ -227,7 +230,10 @@ describe("la corrida de una tarea", () => {
         paths: { root: lab, ticketsDir: "tickets" },
         task: "clasificacion",
         entrada: { solicitud: "algo" },
-        chain: { ...cadena(), reason: "el rol producer y el rol escalation son el mismo modelo" },
+        chain: {
+          ...cadena(),
+          reason: "el rol producer y el rol escalation son el mismo modelo",
+        },
         judge: juezFalso({ llamadas }),
         jev: verificadorFalso({ vistas: [] }),
       }),
@@ -287,7 +293,9 @@ describe("la tarea de exploración", () => {
     const resultado = await runCascadeTask({
       paths: { root: lab, ticketsDir: "tickets" },
       task: "exploracion",
-      entrada: { pregunta: "¿por qué el filtro de órdenes no encuentra por número parcial?" },
+      entrada: {
+        pregunta: "¿por qué el filtro de órdenes no encuentra por número parcial?",
+      },
       chain: cadena(),
       judge: juezFalso({
         choices: {
@@ -301,7 +309,9 @@ describe("la tarea de exploración", () => {
     });
 
     expect(resultado.answers).toHaveLength(3);
-    expect(resultado.escalations.map((uno) => uno.proposition)).toEqual(["ticket_relacionado"]);
+    expect(resultado.escalations.map((uno) => uno.proposition)).toEqual([
+      "ticket_relacionado",
+    ]);
     expect(resultado.verificaciones.get("ticket_relacionado")?.respaldada).toBe(0);
     expect(resultado.verificaciones.get("modulo_afectado")?.respaldada).toBe(1);
   });
@@ -382,7 +392,10 @@ describe("los bordes de la corrida", () => {
         now: () => new Date("2026-09-27T20:10:00.000Z"),
       },
       "cascada_verificada",
-      { tarea: "clasificacion", solicitud: "El reporte de consumos no suma las notas de crédito." },
+      {
+        tarea: "clasificacion",
+        solicitud: "El reporte de consumos no suma las notas de crédito.",
+      },
     );
 
     expect(resultado.isError).toBe(false);

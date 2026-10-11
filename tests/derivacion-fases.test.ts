@@ -55,9 +55,7 @@ function reapertura(
   at: string | null,
 ): Record<string, unknown> {
   const details =
-    motivo === null
-      ? `Workflow: ${de} -> ${a}.`
-      : `Workflow: ${de} -> ${a}. ${motivo}`;
+    motivo === null ? `Workflow: ${de} -> ${a}.` : `Workflow: ${de} -> ${a}. ${motivo}`;
   return evento(`EVENT-${de}`, ACCION_TRANSICION, details, at);
 }
 
@@ -181,12 +179,32 @@ describe("la derivación de fases", () => {
   it("(e) los eventos ajenos no son fase ni cortan la serie", () => {
     const fases = fasesPorTicket([
       creado("2026-09-01T07:00:00.000Z"),
-      evento("EVENT-usage", "ai-usage-added", "Se agregó CONSUMO-001.", "2026-09-01T07:30:00.000Z"),
+      evento(
+        "EVENT-usage",
+        "ai-usage-added",
+        "Se agregó CONSUMO-001.",
+        "2026-09-01T07:30:00.000Z",
+      ),
       transicion("intake", "analyzed", "2026-09-01T08:00:00.000Z"),
-      evento("EVENT-point", "point-added", "Se agregó POINT-001.", "2026-09-01T08:10:00.000Z"),
-      evento("EVENT-gate", "gate-approved", "Gate analysis aprobado.", "2026-09-01T08:20:00.000Z"),
+      evento(
+        "EVENT-point",
+        "point-added",
+        "Se agregó POINT-001.",
+        "2026-09-01T08:10:00.000Z",
+      ),
+      evento(
+        "EVENT-gate",
+        "gate-approved",
+        "Gate analysis aprobado.",
+        "2026-09-01T08:20:00.000Z",
+      ),
       transicion("analyzed", "planned", "2026-09-01T09:00:00.000Z"),
-      evento("EVENT-evi", "evidence-added", "Se agregó EVIDENCE-001.", "2026-09-01T09:10:00.000Z"),
+      evento(
+        "EVENT-evi",
+        "evidence-added",
+        "Se agregó EVIDENCE-001.",
+        "2026-09-01T09:10:00.000Z",
+      ),
     ]);
 
     expect(estados(fases)).toEqual(["intake", "analyzed", "planned"]);

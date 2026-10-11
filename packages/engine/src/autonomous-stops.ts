@@ -92,7 +92,8 @@ export function recordAutonomousStop(
 ): AutonomousStopReceipt {
   const now = input.now ?? new Date();
   const sameInstant = readAutonomousStops(paths).filter(
-    (receipt) => receipt.ticketId === input.ticketId && receipt.stoppedAt === now.toISOString(),
+    (receipt) =>
+      receipt.ticketId === input.ticketId && receipt.stoppedAt === now.toISOString(),
   ).length;
   const id = `AS-${input.ticketId}-${now.toISOString().replace(/[-:.TZ]/g, "")}-${sameInstant + 1}`;
   const receipt: AutonomousStopReceipt = {
@@ -120,7 +121,11 @@ function readCleared(paths: RegistryPaths): AutonomousStopCleared[] {
     if (line.trim() === "") continue;
     try {
       const value = JSON.parse(line) as Partial<AutonomousStopCleared>;
-      if (value.kind === "autonomous-stop-cleared" && typeof value.ticketId === "string" && typeof value.clearedAt === "string") {
+      if (
+        value.kind === "autonomous-stop-cleared" &&
+        typeof value.ticketId === "string" &&
+        typeof value.clearedAt === "string"
+      ) {
         liberadas.push(value as AutonomousStopCleared);
       }
     } catch {
@@ -136,7 +141,8 @@ export function paradasActivas(paths: RegistryPaths): AutonomousStopReceipt[] {
   return readAutonomousStops(paths).filter(
     (parada) =>
       !liberadas.some(
-        (liberada) => liberada.ticketId === parada.ticketId && liberada.clearedAt >= parada.stoppedAt,
+        (liberada) =>
+          liberada.ticketId === parada.ticketId && liberada.clearedAt >= parada.stoppedAt,
       ),
   );
 }

@@ -73,7 +73,7 @@ function grafo(portions: boolean): string {
           "        text: La pantalla muestra cada movimiento registrado.",
         ]
       : []),
-  "  - requirement: R-INV-002",
+    "  - requirement: R-INV-002",
     "    covered_by:",
     `      - ${PANTALLA}`,
     "gaps: []",
@@ -131,7 +131,10 @@ describe("la plantilla del ticket", () => {
     const criterios = seccion("## Criterios de aceptación", "## Puntos");
     expect(criterios).not.toContain("<!--");
     expect(criterios).toContain("- [ ]");
-    const antes = TICKET_TEMPLATE.slice(0, TICKET_TEMPLATE.indexOf("## Criterios de aceptación"));
+    const antes = TICKET_TEMPLATE.slice(
+      0,
+      TICKET_TEMPLATE.indexOf("## Criterios de aceptación"),
+    );
     expect(antes).toContain("C1…Cn");
     expect(antes).toContain("«test:» y el comando");
     // La casilla sigue vacía: un texto en ella contaría como criterio real.
@@ -152,7 +155,10 @@ describe("la plantilla del ticket", () => {
 
   it("un ticket escrito con la plantilla anterior sigue validando", () => {
     // El fixture usa las etiquetas anteriores del diagnóstico («Causa raíz o hipótesis»).
-    writeFixtureTicket(lab, { id: "BUGFIX-POS-FILTRO-ORDENES-20260921", workflowStatus: "planned" });
+    writeFixtureTicket(lab, {
+      id: "BUGFIX-POS-FILTRO-ORDENES-20260921",
+      workflowStatus: "planned",
+    });
     expect(validateOne(PATHS(), "BUGFIX-POS-FILTRO-ORDENES-20260921").exitCode).toBe(0);
   });
 });
@@ -174,7 +180,10 @@ describe("las porciones del grafo", () => {
     const reescrito = renderTicketsYaml(documento);
     const otra = parseTicketsYaml(reescrito, requisitos);
     expect(otra.decomposition.coverage[0]?.portions).toEqual(entrada?.portions);
-    expect(previewTicketsYaml(reescrito, requisitos)?.document.decomposition.coverage[0]?.portions).toHaveLength(2);
+    expect(
+      previewTicketsYaml(reescrito, requisitos)?.document.decomposition.coverage[0]
+        ?.portions,
+    ).toHaveLength(2);
   });
 
   it("un grafo sin porciones sigue leyéndose igual", () => {
@@ -184,7 +193,10 @@ describe("las porciones del grafo", () => {
   });
 
   it("una porción de un ticket que no cubre el requisito se rechaza", () => {
-    const malo = grafo(true).replace(`ticket: ${PANTALLA}\n        text: La pantalla`, "ticket: FEATURE-OTRO-COSA-20260924\n        text: La pantalla");
+    const malo = grafo(true).replace(
+      `ticket: ${PANTALLA}\n        text: La pantalla`,
+      "ticket: FEATURE-OTRO-COSA-20260924\n        text: La pantalla",
+    );
     expect(() => parseTicketsYaml(malo, requisitos)).toThrow("no está en covered_by");
   });
 });
@@ -195,14 +207,20 @@ describe("materializar un requisito repartido", () => {
     materializeFeature(PATHS(), "kardex");
 
     const motor = leer(MOTOR);
-    expect(motor).toContain("- [ ] R-INV-001: El motor registra cada movimiento con su saldo.");
+    expect(motor).toContain(
+      "- [ ] R-INV-001: El motor registra cada movimiento con su saldo.",
+    );
     // El criterio del motor no exige lo que la pantalla cubre.
     expect(motor).not.toContain("La pantalla muestra cada movimiento registrado.\n      ");
     expect(motor).toContain("### Fuera de alcance");
-    expect(motor).toContain(`- R-INV-001: lo cubre ${PANTALLA} (Pantalla del kardex) — La pantalla muestra cada movimiento registrado.`);
+    expect(motor).toContain(
+      `- R-INV-001: lo cubre ${PANTALLA} (Pantalla del kardex) — La pantalla muestra cada movimiento registrado.`,
+    );
 
     const pantalla = leer(PANTALLA);
-    expect(pantalla).toContain("- [ ] R-INV-001: La pantalla muestra cada movimiento registrado.");
+    expect(pantalla).toContain(
+      "- [ ] R-INV-001: La pantalla muestra cada movimiento registrado.",
+    );
     expect(pantalla).toContain(`- R-INV-001: lo cubre ${MOTOR} (Motor del kardex)`);
   });
 
@@ -221,10 +239,14 @@ describe("materializar un requisito repartido", () => {
     materializeFeature(PATHS(), "kardex");
 
     const motor = leer(MOTOR);
-    expect(motor).toContain("Comportamiento esperado: El motor registra cada movimiento con su saldo.");
+    expect(motor).toContain(
+      "Comportamiento esperado: El motor registra cada movimiento con su saldo.",
+    );
     expect(motor).toContain("Comportamiento actual: los movimientos no se registran.");
     // Si la spec no lo declara, no se inventa: se dice que lo establece el análisis.
-    expect(leer(PANTALLA)).toContain("Comportamiento actual: los movimientos no se registran.");
+    expect(leer(PANTALLA)).toContain(
+      "Comportamiento actual: los movimientos no se registran.",
+    );
   });
 
   it("un requisito que cubre un solo ticket se escribe como siempre", () => {
@@ -232,7 +254,9 @@ describe("materializar un requisito repartido", () => {
     materializeFeature(PATHS(), "kardex");
 
     const pantalla = leer(PANTALLA);
-    expect(pantalla).toContain("- [ ] R-INV-002: El sistema DEBE permitir exportar a PDF\n");
+    expect(pantalla).toContain(
+      "- [ ] R-INV-002: El sistema DEBE permitir exportar a PDF\n",
+    );
     // El único «Fuera de alcance» de la pantalla es el del requisito repartido.
     expect(pantalla.match(/- R-INV-002: lo cubre/g)).toBeNull();
   });

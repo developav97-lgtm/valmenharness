@@ -27,7 +27,12 @@ import { type AuthorizedProject } from "./project-resolution.js";
 export const OLA_CONCURRENCIA_POR_DEFECTO = 3;
 
 /** Estados que cuentan como entregados: el trabajo ya salió del implementador. */
-export const ESTADOS_ENTREGADOS = ["awaiting_user_tests", "in_qa", "qa_approved", "closed"] as const;
+export const ESTADOS_ENTREGADOS = [
+  "awaiting_user_tests",
+  "in_qa",
+  "qa_approved",
+  "closed",
+] as const;
 
 /** Un worktree de git, tal como lo lista `git worktree list --porcelain`. */
 export interface WorktreeDeGit {
@@ -67,12 +72,7 @@ export interface OlaEnCurso {
 }
 
 export type MotivoDeEspera =
-  | "ausente"
-  | "dependencia"
-  | "aprobacion-del-plan"
-  | "parada"
-  | "ventana"
-  | "cupo";
+  "ausente" | "dependencia" | "aprobacion-del-plan" | "parada" | "ventana" | "cupo";
 
 export interface OlaDependencia {
   readonly ticketId: string;
@@ -137,13 +137,22 @@ export function worktreeDelTicket(raiz: string, ticketId: string): WorktreeSuger
  * completo, y nunca el checkout principal. Un nombre parecido (`ticket-jornada` frente a
  * `ticket-jornada-ola`) no coincide: la comparación es exacta.
  */
-export function esWorktreeDelTicket(worktree: WorktreeDeGit, raiz: string, ticketId: string): boolean {
+export function esWorktreeDelTicket(
+  worktree: WorktreeDeGit,
+  raiz: string,
+  ticketId: string,
+): boolean {
   if (mismaRuta(worktree.path, raiz)) return false;
   const nombres = new Set([
     `ticket-${slugDeTicket(ticketId)}`,
     `ticket-${ticketId}`.toLowerCase(),
   ]);
-  const carpeta = (worktree.path.split(/[\\/]/).filter((parte) => parte !== "").at(-1) ?? "").toLowerCase();
+  const carpeta = (
+    worktree.path
+      .split(/[\\/]/)
+      .filter((parte) => parte !== "")
+      .at(-1) ?? ""
+  ).toLowerCase();
   const rama = (worktree.branch ?? "").toLowerCase();
   return [...nombres].some((nombre) => rama === `valmen/${nombre}` || carpeta === nombre);
 }
@@ -156,7 +165,8 @@ export function parsearWorktrees(texto: string): WorktreeDeGit[] {
     let branch: string | null = null;
     for (const linea of bloque.split(/\r?\n/)) {
       if (linea.startsWith("worktree ")) path = linea.slice("worktree ".length);
-      else if (linea.startsWith("branch ")) branch = linea.slice("branch ".length).replace(/^refs\/heads\//, "");
+      else if (linea.startsWith("branch "))
+        branch = linea.slice("branch ".length).replace(/^refs\/heads\//, "");
     }
     if (path !== null) worktrees.push(Object.freeze({ path, branch }));
   }
@@ -164,7 +174,10 @@ export function parsearWorktrees(texto: string): WorktreeDeGit[] {
 }
 
 /** Los worktrees del repositorio de la raíz; si git falla, lista vacía y el motivo en `aviso`. */
-export function listarWorktreesDeGit(raiz: string): { readonly worktrees: WorktreeDeGit[]; readonly aviso: string | null } {
+export function listarWorktreesDeGit(raiz: string): {
+  readonly worktrees: WorktreeDeGit[];
+  readonly aviso: string | null;
+} {
   try {
     const salida = execFileSync("git", ["-C", raiz, "worktree", "list", "--porcelain"], {
       encoding: "utf8",
@@ -191,7 +204,8 @@ export function calcularOlaDeJornada(request: CalcularOlaRequest): OlaDeJornada 
 
   const jornadas = readJourneys(project);
   const journeyId = request.journeyId ?? jornadaVigente(project, ahora);
-  const journey = journeyId === null ? undefined : jornadas.find((item) => item.journeyId === journeyId);
+  const journey =
+    journeyId === null ? undefined : jornadas.find((item) => item.journeyId === journeyId);
   if (journey === undefined) {
     throw new Error(
       journeyId === null
@@ -211,7 +225,10 @@ export function calcularOlaDeJornada(request: CalcularOlaRequest): OlaDeJornada 
   }
 
   const estados = new Map(
-    allDocuments(project.paths).map(({ ticket, document }) => [ticket.id, document.fields.workflow_status as string]),
+    allDocuments(project.paths).map(({ ticket, document }) => [
+      ticket.id,
+      document.fields.workflow_status as string,
+    ]),
   );
   const paradas = paradasActivas(project.paths);
   const actividades = ultimaActividadPorTicket(project);
@@ -228,10 +245,20 @@ export function calcularOlaDeJornada(request: CalcularOlaRequest): OlaDeJornada 
     detalle: string,
     dependencias: readonly OlaDependencia[] = [],
   ): void => {
-    enEspera.push(Object.freeze({ ticketId, estado, motivo, detalle, dependencias: Object.freeze(dependencias) }));
+    enEspera.push(
+      Object.freeze({
+        ticketId,
+        estado,
+        motivo,
+        detalle,
+        dependencias: Object.freeze(dependencias),
+      }),
+    );
   };
 
-  for (const ticket of [...journey.tickets].sort((left, right) => left.order - right.order)) {
+  for (const ticket of [...journey.tickets].sort(
+    (left, right) => left.order - right.order,
+  )) {
     const estado = estados.get(ticket.ticketId);
     if (estado === undefined) {
       espera(ticket.ticketId, null, "ausente", "El ticket no existe en el registro.");
@@ -242,38 +269,76 @@ export function calcularOlaDeJornada(request: CalcularOlaRequest): OlaDeJornada 
       continue;
     }
 
-    const parada = paradas.filter((entry) => entry.ticketId === ticket.ticketId).at(-1) ?? null;
+    const parada =
+      paradas.filter((entry) => entry.ticketId === ticket.ticketId).at(-1) ?? null;
     const fase = faseDelTicket(estado, null, parada);
     if (fase.phase === "stopped") {
-      espera(ticket.ticketId, estado, "parada", fase.stopReason ?? "El ticket está detenido.");
+      espera(
+        ticket.ticketId,
+        estado,
+        "parada",
+        fase.stopReason ?? "El ticket está detenido.",
+      );
       continue;
     }
 
     // Con worktree por ticket, el plan que espera a una persona vive en el registro del worktree
     // mientras el checkout principal sigue en `intake`: se lee ahí, para que un plan parado no
     // ocupe un cupo de la ola.
-    const worktreeDelTicket = worktrees.find((item) => esWorktreeDelTicket(item, project.root, ticket.ticketId));
+    const worktreeDelTicket = worktrees.find((item) =>
+      esWorktreeDelTicket(item, project.root, ticket.ticketId),
+    );
     const estadoEnWorktree =
       worktreeDelTicket === undefined
         ? null
-        : estadoDelTicketEnWorktree(worktreeDelTicket.path, project.paths.ticketsDir, ticket.ticketId);
+        : estadoDelTicketEnWorktree(
+            worktreeDelTicket.path,
+            project.paths.ticketsDir,
+            ticket.ticketId,
+          );
 
     // Un plan sin aprobar no se ofrece ni cuenta como en curso, tenga o no worktree o actividad.
     if (estado === "planned" || estadoEnWorktree === "planned") {
-      espera(ticket.ticketId, estado, "aprobacion-del-plan", "El plan espera la aprobación de una persona.");
+      espera(
+        ticket.ticketId,
+        estado,
+        "aprobacion-del-plan",
+        "El plan espera la aprobación de una persona.",
+      );
       continue;
     }
 
-    const senales = senalesDeCurso(project.root, ticket.ticketId, estado, worktrees, actividades.get(ticket.ticketId));
+    const senales = senalesDeCurso(
+      project.root,
+      ticket.ticketId,
+      estado,
+      worktrees,
+      actividades.get(ticket.ticketId),
+    );
     if (senales.length > 0) {
-      enCurso.push(Object.freeze({ ticketId: ticket.ticketId, estado, senales: Object.freeze(senales) }));
+      enCurso.push(
+        Object.freeze({
+          ticketId: ticket.ticketId,
+          estado,
+          senales: Object.freeze(senales),
+        }),
+      );
       continue;
     }
 
-    const dependencias = new Set([...ticket.dependsOn, ...dependenciasEnGrafos(project.paths, ticket.ticketId)]);
+    const dependencias = new Set([
+      ...ticket.dependsOn,
+      ...dependenciasEnGrafos(project.paths, ticket.ticketId),
+    ]);
     const sinEntregar = [...dependencias]
-      .map((dependencia): OlaDependencia => ({ ticketId: dependencia, estado: estados.get(dependencia) ?? "ausente" }))
-      .filter((dependencia) => !(ESTADOS_ENTREGADOS as readonly string[]).includes(dependencia.estado));
+      .map((dependencia): OlaDependencia => ({
+        ticketId: dependencia,
+        estado: estados.get(dependencia) ?? "ausente",
+      }))
+      .filter(
+        (dependencia) =>
+          !(ESTADOS_ENTREGADOS as readonly string[]).includes(dependencia.estado),
+      );
     if (sinEntregar.length > 0) {
       espera(
         ticket.ticketId,
@@ -286,7 +351,12 @@ export function calcularOlaDeJornada(request: CalcularOlaRequest): OlaDeJornada 
     }
 
     if (razonesDeVentana(ticket, journey.windows ?? [], at).length > 0) {
-      espera(ticket.ticketId, estado, "ventana", "La ventana de la jornada no permite despachar ahora.");
+      espera(
+        ticket.ticketId,
+        estado,
+        "ventana",
+        "La ventana de la jornada no permite despachar ahora.",
+      );
       continue;
     }
 
@@ -347,7 +417,10 @@ export function renderOlaDeJornada(ola: OlaDeJornada): string {
   if (ola.enCurso.length === 0) lineas.push("- Ninguno.");
   for (const curso of ola.enCurso) {
     const senales = curso.senales
-      .map((senal) => `${senal.senal}: ${senal.fuente}${senal.hora === null ? "" : ` (${senal.hora})`}`)
+      .map(
+        (senal) =>
+          `${senal.senal}: ${senal.fuente}${senal.hora === null ? "" : ` (${senal.hora})`}`,
+      )
       .join("; ");
     lineas.push(`- ${curso.ticketId} [${curso.estado}] — ${senales}`);
   }
@@ -355,12 +428,15 @@ export function renderOlaDeJornada(ola: OlaDeJornada): string {
   lineas.push("En espera:");
   if (ola.enEspera.length === 0) lineas.push("- Ninguno.");
   for (const espera of ola.enEspera) {
-    lineas.push(`- ${espera.ticketId} [${espera.estado ?? "ausente"}] ${espera.motivo} — ${espera.detalle}`);
+    lineas.push(
+      `- ${espera.ticketId} [${espera.estado ?? "ausente"}] ${espera.motivo} — ${espera.detalle}`,
+    );
   }
 
   lineas.push("Entregados:");
   if (ola.entregados.length === 0) lineas.push("- Ninguno.");
-  for (const entregado of ola.entregados) lineas.push(`- ${entregado.ticketId} [${entregado.estado}]`);
+  for (const entregado of ola.entregados)
+    lineas.push(`- ${entregado.ticketId} [${entregado.estado}]`);
 
   return `${lineas.join("\n")}\n`;
 }
@@ -371,13 +447,18 @@ interface ActividadAbierta {
 }
 
 /** La última actividad de cada ticket, solo si sigue abierta (`started`, `active` o `waiting`). */
-function ultimaActividadPorTicket(project: AuthorizedProject): Map<string, ActividadAbierta | null> {
+function ultimaActividadPorTicket(
+  project: AuthorizedProject,
+): Map<string, ActividadAbierta | null> {
   const ultimas = new Map<string, ActividadAbierta | null>();
   for (const evento of readExecutionEvents(project)) {
     if (!evento.kind.startsWith("activity.")) continue;
     const estado = evento.kind.slice("activity.".length);
     const abierta = estado === "started" || estado === "active" || estado === "waiting";
-    ultimas.set(evento.identity.ticketId, abierta ? { fuente: evento.source, hora: evento.occurredAt } : null);
+    ultimas.set(
+      evento.identity.ticketId,
+      abierta ? { fuente: evento.source, hora: evento.occurredAt } : null,
+    );
   }
   return ultimas;
 }
@@ -390,9 +471,11 @@ function senalesDeCurso(
   actividad: ActividadAbierta | null | undefined,
 ): OlaSenal[] {
   const senales: OlaSenal[] = [];
-  if (estado === "in_progress") senales.push({ senal: "estado", fuente: "in_progress", hora: null });
+  if (estado === "in_progress")
+    senales.push({ senal: "estado", fuente: "in_progress", hora: null });
   const worktree = worktrees.find((item) => esWorktreeDelTicket(item, raiz, ticketId));
-  if (worktree !== undefined) senales.push({ senal: "worktree", fuente: worktree.path, hora: null });
+  if (worktree !== undefined)
+    senales.push({ senal: "worktree", fuente: worktree.path, hora: null });
   if (actividad !== null && actividad !== undefined) {
     senales.push({ senal: "actividad", fuente: actividad.fuente, hora: actividad.hora });
   }
@@ -403,7 +486,11 @@ function senalesDeCurso(
  * El `workflow_status` del ticket en el registro de su worktree, o `null` si no se puede leer.
  * Solo lectura: busca `<tickets>/<año>/<id>/ticket.md` y lee la línea del encabezado.
  */
-export function estadoDelTicketEnWorktree(rutaDelWorktree: string, ticketsDir: string, ticketId: string): string | null {
+export function estadoDelTicketEnWorktree(
+  rutaDelWorktree: string,
+  ticketsDir: string,
+  ticketId: string,
+): string | null {
   const base = join(rutaDelWorktree, ticketsDir);
   try {
     for (const anio of readdirSync(base)) {

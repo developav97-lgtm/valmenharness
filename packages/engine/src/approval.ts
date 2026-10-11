@@ -115,7 +115,11 @@ export interface ApprovalBatch {
   readonly kind: "approval-batch";
   readonly code: string;
   readonly journeyId: string;
-  readonly items: readonly { readonly ticket: string; readonly code: string; readonly planHash: string }[];
+  readonly items: readonly {
+    readonly ticket: string;
+    readonly code: string;
+    readonly planHash: string;
+  }[];
   readonly issuedAt: string;
   readonly expiresAt: string;
 }
@@ -516,7 +520,9 @@ export function appendApproval(paths: RegistryPaths, entry: ApprovalLogEntry): s
 export function autonomousStopsAvisados(paths: RegistryPaths): Set<string> {
   return new Set(
     readApprovalLog(paths)
-      .filter((entry): entry is AutonomousStopNotice => entry.kind === "autonomous-stop-notice")
+      .filter(
+        (entry): entry is AutonomousStopNotice => entry.kind === "autonomous-stop-notice",
+      )
       .map((entry) => entry.receiptId),
   );
 }
@@ -525,7 +531,9 @@ export function autonomousStopsAvisados(paths: RegistryPaths): Set<string> {
 export function jornadasTerminadasAvisadas(paths: RegistryPaths): Set<string> {
   return new Set(
     readApprovalLog(paths)
-      .filter((entry): entry is JourneyFinishedNotice => entry.kind === "journey-finished-notice")
+      .filter(
+        (entry): entry is JourneyFinishedNotice => entry.kind === "journey-finished-notice",
+      )
       .map((entry) => entry.journeyId),
   );
 }
@@ -534,7 +542,9 @@ export function jornadasTerminadasAvisadas(paths: RegistryPaths): Set<string> {
 export function partesDeJornadaAvisados(paths: RegistryPaths): Set<string> {
   return new Set(
     readApprovalLog(paths)
-      .filter((entry): entry is JourneyHandoffNotice => entry.kind === "journey-handoff-notice")
+      .filter(
+        (entry): entry is JourneyHandoffNotice => entry.kind === "journey-handoff-notice",
+      )
       .map((entry) => `${entry.journeyId}:${entry.huella}`),
   );
 }
@@ -642,7 +652,17 @@ export function ultimoIntento(
     // Un aviso de proceso no tiene código y no entra en esta cuenta: su vida es
     // otra —se avisa una vez y la corrida sigue detenida— y mezclarlo movería
     // la ventana de reintento de un gate sin motivo.
-    if (e.kind === "process-notice" || e.kind === "autonomous-stop-notice" || e.kind === "journey-dirty-tree-notice" || e.kind === "journey-finished-notice" || e.kind === "journey-handoff-notice" || e.kind === "tests-ready-notice" || e.kind === "policy-close-notice" || e.kind === "approval-batch") return [];
+    if (
+      e.kind === "process-notice" ||
+      e.kind === "autonomous-stop-notice" ||
+      e.kind === "journey-dirty-tree-notice" ||
+      e.kind === "journey-finished-notice" ||
+      e.kind === "journey-handoff-notice" ||
+      e.kind === "tests-ready-notice" ||
+      e.kind === "policy-close-notice" ||
+      e.kind === "approval-batch"
+    )
+      return [];
     if (!codigos.has(e.code)) return [];
     if (e.kind === "approval-issued") return [e.issuedAt];
     if (e.kind === "approval-undelivered") return [e.attemptedAt];

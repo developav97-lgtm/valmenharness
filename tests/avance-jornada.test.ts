@@ -28,12 +28,21 @@ const projectId = "avance-lab";
 const A = "FEATURE-AVANCE-UNO-20261005";
 const B = "FEATURE-AVANCE-DOS-20261005";
 const AHORA = new Date("2026-10-06T08:00:00.000Z");
-const PRUEBAS = "Contrato de entrega: ejecutar `node -e \"process.exit(0)\"` desde la raíz; esperado: código de salida 0.";
-const CRITERIO = '- [ ] El laboratorio termina correctamente.\n      <!-- test: node -e "process.exit(0)" -->';
+const PRUEBAS =
+  'Contrato de entrega: ejecutar `node -e "process.exit(0)"` desde la raíz; esperado: código de salida 0.';
+const CRITERIO =
+  '- [ ] El laboratorio termina correctamente.\n      <!-- test: node -e "process.exit(0)" -->';
 
 function fijarEstado(id: string, estadoNuevo: string): void {
   const ruta = join(root, "tickets", "2026", id, "ticket.md");
-  writeFileSync(ruta, readFileSync(ruta, "utf8").replace(/^workflow_status: .*$/m, `workflow_status: ${estadoNuevo}`), "utf8");
+  writeFileSync(
+    ruta,
+    readFileSync(ruta, "utf8").replace(
+      /^workflow_status: .*$/m,
+      `workflow_status: ${estadoNuevo}`,
+    ),
+    "utf8",
+  );
 }
 
 let home: string;
@@ -47,7 +56,9 @@ function politica(autorizada = true): void {
       "test-commands:",
       "  - node",
       "execution:",
-      ...(autorizada ? ["  dispatch-executors:", "    - codex"] : ["  dispatch-executors: []"]),
+      ...(autorizada
+        ? ["  dispatch-executors:", "    - codex"]
+        : ["  dispatch-executors: []"]),
       "autonomous:",
       `  enabled: ${autorizada}`,
       "  executor:",
@@ -78,7 +89,8 @@ function politica(autorizada = true): void {
 }
 
 function estado(id: string): string {
-  return parseTicket(readFileSync(join(root, "tickets", "2026", id, "ticket.md"), "utf8")).fields.workflow_status;
+  return parseTicket(readFileSync(join(root, "tickets", "2026", id, "ticket.md"), "utf8"))
+    .fields.workflow_status;
 }
 
 beforeEach(() => {
@@ -92,14 +104,22 @@ beforeEach(() => {
   );
   politica(true);
   for (const id of [A, B]) {
-    writeFixtureTicket(root, { id, workflowStatus: "intake", type: "FEATURE", module: "AVANCE", criterios: CRITERIO , pruebas: PRUEBAS});
+    writeFixtureTicket(root, {
+      id,
+      workflowStatus: "intake",
+      type: "FEATURE",
+      module: "AVANCE",
+      criterios: CRITERIO,
+      pruebas: PRUEBAS,
+    });
   }
 });
 
 afterEach(() => rmSync(home, { recursive: true, force: true }));
 
 const proyecto = () => resolveAuthorizedProject({ projectId, home });
-const armar = () => armarJornada({ project: proyecto(), tickets: [A, B], ahora: () => AHORA });
+const armar = () =>
+  armarJornada({ project: proyecto(), tickets: [A, B], ahora: () => AHORA });
 
 const preparador = () => vi.fn(() => ({ status: 0, stdout: "preparado", stderr: "" }));
 
@@ -107,7 +127,12 @@ describe("el avance (preparación)", () => {
   it("prepara el ticket en intake de la jornada e informa qué hizo", async () => {
     armar();
     const ejecutarPreparacion = preparador();
-    const avance = await avanzarJornada({ project: proyecto(), home, ahora: () => AHORA, ejecutarPreparacion });
+    const avance = await avanzarJornada({
+      project: proyecto(),
+      home,
+      ahora: () => AHORA,
+      ejecutarPreparacion,
+    });
 
     expect(avance.estado).toBe("despachado");
     expect(avance.journeyId).toBe(jornadaDelDia(AHORA));
@@ -118,7 +143,12 @@ describe("el avance (preparación)", () => {
 
   it("sin jornada del día lo dice, explica cómo armarla y no hace nada", async () => {
     const ejecutarPreparacion = vi.fn();
-    const avance = await avanzarJornada({ project: proyecto(), home, ahora: () => AHORA, ejecutarPreparacion });
+    const avance = await avanzarJornada({
+      project: proyecto(),
+      home,
+      ahora: () => AHORA,
+      ejecutarPreparacion,
+    });
     expect(avance.estado).toBe("sin-jornada");
     expect(avance.detalle).toContain("valmen journey plan");
     expect(ejecutarPreparacion).not.toHaveBeenCalled();
@@ -128,14 +158,22 @@ describe("el avance (preparación)", () => {
     armar();
     politica(false);
     const ejecutarPreparacion = vi.fn();
-    const avance = await avanzarJornada({ project: proyecto(), home, ahora: () => AHORA, ejecutarPreparacion });
+    const avance = await avanzarJornada({
+      project: proyecto(),
+      home,
+      ahora: () => AHORA,
+      ejecutarPreparacion,
+    });
     expect(avance.estado).toBe("sin-candidato");
     expect(ejecutarPreparacion).not.toHaveBeenCalled();
     expect(estado(A)).toBe("intake");
   });
 
   it("el comando con --fase preparacion sale bien sin jornada y reporta el estado", async () => {
-    const resultado = await journeyAdvanceCommand({ project: projectId, fase: "preparacion" }, { home, ahora: () => AHORA });
+    const resultado = await journeyAdvanceCommand(
+      { project: projectId, fase: "preparacion" },
+      { home, ahora: () => AHORA },
+    );
     expect(resultado.exitCode).toBe(0);
     expect(resultado.stdout).toContain("sin-jornada");
   });
@@ -156,11 +194,18 @@ describe("el registro de pasadas", () => {
   it("cada avance deja una pasada con su hora, estado, ticket y detalle", async () => {
     armar();
     const opciones = { home, ahora: () => AHORA, ejecutarPreparacion: preparador() };
-    const resultado = await journeyAdvanceCommand({ project: projectId, fase: "preparacion" }, opciones);
+    const resultado = await journeyAdvanceCommand(
+      { project: projectId, fase: "preparacion" },
+      opciones,
+    );
     expect(resultado.exitCode).toBe(0);
     const pasadas = leerPasadas(root);
     expect(pasadas).toHaveLength(1);
-    expect(pasadas[0]).toMatchObject({ journeyId: jornadaDelDia(AHORA), estado: "despachado", ticketId: A });
+    expect(pasadas[0]).toMatchObject({
+      journeyId: jornadaDelDia(AHORA),
+      estado: "despachado",
+      ticketId: A,
+    });
     expect(pasadas[0]?.detalle).not.toBe("");
     expect(Number.isFinite(Date.parse(pasadas[0]?.at ?? ""))).toBe(true);
     await journeyAdvanceCommand({ project: projectId, fase: "preparacion" }, opciones);
@@ -168,7 +213,10 @@ describe("el registro de pasadas", () => {
   });
 
   it("sin jornada también deja su pasada, con el estado sin-jornada", async () => {
-    await journeyAdvanceCommand({ project: projectId, fase: "preparacion" }, { home, ahora: () => AHORA });
+    await journeyAdvanceCommand(
+      { project: projectId, fase: "preparacion" },
+      { home, ahora: () => AHORA },
+    );
     expect(leerPasadas(root)[0]).toMatchObject({ estado: "sin-jornada", ticketId: null });
   });
 
@@ -192,7 +240,10 @@ describe("el registro de pasadas", () => {
 
   it("un fallo al anexar la pasada se informa en stderr sin cambiar el código de salida", async () => {
     mkdirSync(pasadasPath(root), { recursive: true });
-    const resultado = await journeyAdvanceCommand({ project: projectId, fase: "preparacion" }, { home, ahora: () => AHORA });
+    const resultado = await journeyAdvanceCommand(
+      { project: projectId, fase: "preparacion" },
+      { home, ahora: () => AHORA },
+    );
     expect(resultado.exitCode).toBe(0);
     expect(resultado.stdout).toContain("sin-jornada");
     expect(resultado.stderr).toContain("No se pudo registrar la pasada");
@@ -202,12 +253,18 @@ describe("el registro de pasadas", () => {
 describe("la jornada vigente cuando cambia el día UTC", () => {
   const AYER = new Date("2026-10-06T22:00:00.000Z");
   const HOY = new Date("2026-10-07T01:00:00.000Z");
-  const armarAyer = () => armarJornada({ project: proyecto(), tickets: [A, B], ahora: () => AYER });
+  const armarAyer = () =>
+    armarJornada({ project: proyecto(), tickets: [A, B], ahora: () => AYER });
 
   it("sin jornada del día, prepara el ticket de la jornada más reciente con pendientes", async () => {
     armarAyer();
     const ejecutarPreparacion = preparador();
-    const avance = await avanzarJornada({ project: proyecto(), home, ahora: () => HOY, ejecutarPreparacion });
+    const avance = await avanzarJornada({
+      project: proyecto(),
+      home,
+      ahora: () => HOY,
+      ejecutarPreparacion,
+    });
 
     expect(avance.journeyId).toBe(jornadaDelDia(AYER));
     expect(avance.estado).toBe("despachado");
@@ -227,7 +284,12 @@ describe("la jornada vigente cuando cambia el día UTC", () => {
     fijarEstado(A, "closed");
     fijarEstado(B, "closed");
     const ejecutarPreparacion = vi.fn();
-    const avance = await avanzarJornada({ project: proyecto(), home, ahora: () => HOY, ejecutarPreparacion });
+    const avance = await avanzarJornada({
+      project: proyecto(),
+      home,
+      ahora: () => HOY,
+      ejecutarPreparacion,
+    });
 
     expect(avance.estado).toBe("sin-jornada");
     expect(avance.detalle).toContain(`${jornadaDelDia(AYER)}, no tiene tickets pendientes`);
@@ -242,7 +304,12 @@ describe("la jornada vigente cuando cambia el día UTC", () => {
     expect(nueva.heredados?.tickets).toEqual([A]);
 
     const ejecutarPreparacion = preparador();
-    const avance = await avanzarJornada({ project: proyecto(), home, ahora: () => HOY, ejecutarPreparacion });
+    const avance = await avanzarJornada({
+      project: proyecto(),
+      home,
+      ahora: () => HOY,
+      ejecutarPreparacion,
+    });
 
     expect(avance.journeyId).toBe(jornadaDelDia(HOY));
     expect(avance.ticketId).toBe(B);

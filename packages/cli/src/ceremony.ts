@@ -134,6 +134,13 @@ export async function resolverCompuerta(
   }
 
   const recibo = veredicto.recibo;
+  // La revisión del diff en REVIEW la decide una persona, con o sin motivo (R-REV-005).
+  if (gateId === "code-review") {
+    return (
+      `la revisión del diff en REVIEW la decide una persona (recibo ${recibo.id}: ${recibo.reason}): ` +
+      `valmen gate-decide --id ${ticketId} --receipt ${recibo.id} --decision approve|reject ...`
+    );
+  }
   if (recibo.outcome === "review" && motivo === undefined) {
     return (
       `la compuerta ${gateId} cayó en REVIEW (${recibo.reason}). Si el criterio dice que no debe ` +
@@ -142,7 +149,8 @@ export async function resolverCompuerta(
   }
   const razon =
     `${origen.descripcion}: ` +
-    (motivo ?? `el evaluador aprobó (${recibo.reason}) y la política lo escala a una persona`) +
+    (motivo ??
+      `el evaluador aprobó (${recibo.reason}) y la política lo escala a una persona`) +
     ` — palabras del PO: «${origen.frase}»`;
   const resultado = deps.decide(paths, ticketId, recibo.id, {
     decision: "approve",
@@ -150,8 +158,11 @@ export async function resolverCompuerta(
     reason: razon,
     channel: origen.canal,
   });
-  if (!resultado.ok) return `no se pudo registrar la decisión de ${gateId}: ${resultado.error}`;
-  origen.anotar(`${gateId} ${recibo.outcome} → approve (${recibo.id}): ${motivo ?? "escalado por política"}`);
+  if (!resultado.ok)
+    return `no se pudo registrar la decisión de ${gateId}: ${resultado.error}`;
+  origen.anotar(
+    `${gateId} ${recibo.outcome} → approve (${recibo.id}): ${motivo ?? "escalado por política"}`,
+  );
   return null;
 }
 
@@ -237,7 +248,10 @@ export function cerrarConQaDelPo(
 ): ResultadoDeCierre {
   let paso = "resultado del PO en ## Pruebas";
   const actual = (): ReturnType<typeof parseTicket> => parseTicket(leer(paths, ticketId));
-  const parar = (mensaje: string, resultado: CommandResult | null = null): ResultadoDeCierre => ({
+  const parar = (
+    mensaje: string,
+    resultado: CommandResult | null = null,
+  ): ResultadoDeCierre => ({
     cerrado: false,
     paso,
     mensaje,
@@ -272,7 +286,8 @@ export function cerrarConQaDelPo(
         title: `Verificación delegada de ${ticketId}`,
         severity: "normal",
         actual: "La implementación está entregada y falta verificar sus criterios.",
-        expected: "Los criterios del ticket se cumplen y sus pruebas dan el resultado esperado.",
+        expected:
+          "Los criterios del ticket se cumplen y sus pruebas dan el resultado esperado.",
         affectedFiles: o.files,
       });
       for (const to of ["analyzed", "in_progress", "awaiting_retest"]) {
@@ -316,8 +331,17 @@ export function cerrarConQaDelPo(
         });
       }
       paso = "cierre del punto";
-      if (String(actual().blocks.Puntos.find((p) => p.id === "POINT-001")?.status) !== "closed") {
-        transition({ paths, ticketId, entity: "point", pointId: "POINT-001", to: "closed" });
+      if (
+        String(actual().blocks.Puntos.find((p) => p.id === "POINT-001")?.status) !==
+        "closed"
+      ) {
+        transition({
+          paths,
+          ticketId,
+          entity: "point",
+          pointId: "POINT-001",
+          to: "closed",
+        });
       }
       paso = "cierre del ciclo de QA";
       const qa = actual().blocks.QA;
@@ -372,7 +396,13 @@ function estadoDe(paths: RegistryPaths, ticketId: string): string {
 }
 
 /** Una parada del atajo: el paso, el motivo y el estado en que quedó el ticket. */
-function detenido(paths: RegistryPaths, comando: string, ticketId: string, paso: string, motivo: string): CommandResult {
+function detenido(
+  paths: RegistryPaths,
+  comando: string,
+  ticketId: string,
+  paso: string,
+  motivo: string,
+): CommandResult {
   return error(
     `DETENIDO en ${ticketId}, paso «${paso}»: ${motivo.trim()}\n` +
       `El ticket quedó en ${estadoDe(paths, ticketId)}. Corregí eso y repetí \`valmen ${comando}\`: retoma desde ahí.`,
@@ -396,10 +426,14 @@ export async function approveCommand(
   const id = texto(flags, "id");
   if (id === undefined) return error("approve requiere --id <TICKET-ID>.", EXIT_SCHEMA);
   const actor = texto(flags, "actor");
-  if (actor === undefined) return error("approve requiere --actor <PO>: quien aprueba.", EXIT_SCHEMA);
+  if (actor === undefined)
+    return error("approve requiere --actor <PO>: quien aprueba.", EXIT_SCHEMA);
   const frase = texto(flags, "quote");
   if (frase === undefined) {
-    return error("approve requiere --quote con las palabras literales del PO: el agente no las inventa.", EXIT_SCHEMA);
+    return error(
+      "approve requiere --quote con las palabras literales del PO: el agente no las inventa.",
+      EXIT_SCHEMA,
+    );
   }
   try {
     const documento = parseTicket(leer(paths, id));
@@ -445,7 +479,9 @@ export async function approveCommand(
     } catch (caught) {
       return detenido(paths, "approve", id, paso, toFailure(caught).message);
     }
-    return ok(`${id}: approved. Plan aprobado por ${actor} con sus palabras en el evento y en ## Plan.\n`);
+    return ok(
+      `${id}: approved. Plan aprobado por ${actor} con sus palabras en el evento y en ## Plan.\n`,
+    );
   } catch (caught) {
     const f = toFailure(caught);
     return error(f.message, f.exitCode);
@@ -482,7 +518,11 @@ export function closeCommand(
       );
     }
     const estado = documento.fields.workflow_status;
-    if (estado !== "awaiting_user_tests" && estado !== "in_qa" && estado !== "qa_approved") {
+    if (
+      estado !== "awaiting_user_tests" &&
+      estado !== "in_qa" &&
+      estado !== "qa_approved"
+    ) {
       return error(
         `${id} está en ${estado}: close parte de awaiting_user_tests, in_qa o qa_approved.`,
         EXIT_INVARIANT,
@@ -498,15 +538,24 @@ export function closeCommand(
     if (faltan.length > 0) {
       return error(`close requiere ${faltan.map(([n]) => n).join(", ")}.`, EXIT_SCHEMA);
     }
-    const files = (texto(flags, "files") ?? "").split(",").map((f) => f.trim()).filter((f) => f !== "");
+    const files = (texto(flags, "files") ?? "")
+      .split(",")
+      .map((f) => f.trim())
+      .filter((f) => f !== "");
     if (documento.blocks.Puntos.length === 0 && files.length === 0) {
-      return error("close requiere --files con los archivos del punto de QA: no se infieren.", EXIT_SCHEMA);
+      return error(
+        "close requiere --files con los archivos del punto de QA: no se infieren.",
+        EXIT_SCHEMA,
+      );
     }
     // El consumo real de las sesiones se guarda antes de cerrar, igual que en `close-attempt` y en
     // la transición a closed (idempotente): sin esto el ticket quedaba solo con el `manual:`.
     guardarConsumoDeSesiones(paths, id, deps.home === undefined ? {} : { home: deps.home });
     const source = texto(flags, "source");
-    if (parseTicket(leer(paths, id)).blocks["Consumo de IA"].length === 0 && source === undefined) {
+    if (
+      parseTicket(leer(paths, id)).blocks["Consumo de IA"].length === 0 &&
+      source === undefined
+    ) {
       return error(
         "close requiere --source con la fuente del consumo de IA (`manual:` sin números o la fuente con " +
           "números): el ticket no tiene entrada y no se inventa una.",
@@ -522,7 +571,8 @@ export function closeCommand(
       return detenido(paths, "close", id, "criterios manuales", toFailure(caught).message);
     }
     const sin = unmarkedCriteria(leer(paths, id));
-    if (sin.length > 0) return detenido(paths, "close", id, "criterios sin marcar", unmarkedMessage(sin));
+    if (sin.length > 0)
+      return detenido(paths, "close", id, "criterios sin marcar", unmarkedMessage(sin));
 
     const r = cerrarConQaDelPo(paths, id, {
       palabrasDelPo: frase,

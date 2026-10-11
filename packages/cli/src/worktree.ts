@@ -20,9 +20,23 @@ export interface OpcionesDeWorktree {
   readonly home?: string;
   readonly git?: EjecutorDeGit;
   readonly proceso?: EjecutorDeProceso;
+  /** `integrate --retirar`: tras integrar, hace lo mismo que `remove`. */
+  readonly retirar?: boolean;
 }
 
-type Subcomando = (paths: RegistryPaths, ticketId: string, opciones: OpcionesDeWorktree) => string;
+type Subcomando = (
+  paths: RegistryPaths,
+  ticketId: string,
+  opciones: OpcionesDeWorktree,
+) => string | CommandResult;
+
+function textoDeRetiro(r: ReturnType<typeof quitarWorktree>): string {
+  return [
+    `Worktree quitado: ${r.carpeta} y rama ${r.rama} borrada (ya estaba integrada en main).`,
+    `Cupo de la máquina: ${r.reserva === "liberada" ? "liberado" : "nada que liberar"}.`,
+    ...r.avisos.map((a) => `Aviso: ${a}`),
+  ].join("\n");
+}
 
 const motor = (paths: RegistryPaths, ticketId: string, opciones: OpcionesDeWorktree) => ({
   paths,
@@ -43,23 +57,30 @@ export const SUBCOMANDOS_DE_WORKTREE: Readonly<Record<string, Subcomando>> = Obj
   },
   integrate: (paths, ticketId, opciones) => {
     const r = integrarWorktree(motor(paths, ticketId, opciones));
-    if (r.modo === "nada-que-integrar") return `Nada que integrar: ${r.rama} ya está en main.`;
-    return [
-      r.modo === "avance-directo"
-        ? `Rama ${r.rama} integrada en main por avance directo (${r.commit.slice(0, 12)}).`
-        : `Rama ${r.rama} integrada en main con merge --no-ff (${r.commit.slice(0, 12)}).`,
-      `Registros unidos: ${r.registrosUnidos.length === 0 ? "ninguno" : r.registrosUnidos.join(", ")}.`,
-      `Índice de tickets: ${r.indiceRegenerado ? "regenerado" : "sin cambios"}. Recompilado.`,
-    ].join("\n");
+    const integracion =
+      r.modo === "nada-que-integrar"
+        ? `Nada que integrar: ${r.rama} ya está en main.`
+        : [
+            r.modo === "avance-directo"
+              ? `Rama ${r.rama} integrada en main por avance directo (${r.commit.slice(0, 12)}).`
+              : `Rama ${r.rama} integrada en main con merge --no-ff (${r.commit.slice(0, 12)}).`,
+            `Registros unidos: ${r.registrosUnidos.length === 0 ? "ninguno" : r.registrosUnidos.join(", ")}.`,
+            `Índice de tickets: ${r.indiceRegenerado ? "regenerado" : "sin cambios"}. Recompilado.`,
+          ].join("\n");
+    if (opciones.retirar !== true) return integracion;
+    try {
+      return `${integracion}\n${textoDeRetiro(quitarWorktree(motor(paths, ticketId, opciones)))}`;
+    } catch (caught) {
+      const failure = toFailure(caught);
+      return {
+        stdout: `${integracion}\n`,
+        stderr: `Retiro fallido (la integración ya está hecha): ${failure.message}\nResuélvelo con: valmen journey worktree remove --id ${ticketId}\n`,
+        exitCode: failure.exitCode,
+      };
+    }
   },
-  remove: (paths, ticketId, opciones) => {
-    const r = quitarWorktree(motor(paths, ticketId, opciones));
-    return [
-      `Worktree quitado: ${r.carpeta} y rama ${r.rama} borrada (ya estaba integrada en main).`,
-      `Cupo de la máquina: ${r.reserva === "liberada" ? "liberado" : "nada que liberar"}.`,
-      ...r.avisos.map((a) => `Aviso: ${a}`),
-    ].join("\n");
-  },
+  remove: (paths, ticketId, opciones) =>
+    textoDeRetiro(quitarWorktree(motor(paths, ticketId, opciones))),
 });
 
 /** `rest` es lo que sigue a `worktree`: el subcomando. */
@@ -73,14 +94,28 @@ export function journeyWorktreeCommand(
   const nombre = rest[0];
   const subcomando = nombre === undefined ? undefined : SUBCOMANDOS_DE_WORKTREE[nombre];
   if (subcomando === undefined) {
-    return { stdout: "", stderr: `journey worktree admite: ${admitidos}.\n`, exitCode: EXIT_SCHEMA };
+    return {
+      stdout: "",
+      stderr: `journey worktree admite: ${admitidos}.\n`,
+      exitCode: EXIT_SCHEMA,
+    };
   }
   const id = flags["id"];
   if (typeof id !== "string" || id.trim() === "") {
-    return { stdout: "", stderr: `journey worktree ${nombre} requiere --id <ticket>.\n`, exitCode: EXIT_SCHEMA };
+    return {
+      stdout: "",
+      stderr: `journey worktree ${nombre} requiere --id <ticket>.\n`,
+      exitCode: EXIT_SCHEMA,
+    };
   }
   try {
-    return { stdout: `${subcomando(paths, id, opciones)}\n`, stderr: "", exitCode: EXIT_OK };
+    const resultado = subcomando(paths, id, {
+      ...opciones,
+      retirar: flags["retirar"] === true,
+    });
+    return typeof resultado === "string"
+      ? { stdout: `${resultado}\n`, stderr: "", exitCode: EXIT_OK }
+      : resultado;
   } catch (caught) {
     const failure = toFailure(caught);
     return { stdout: "", stderr: `${failure.message}\n`, exitCode: failure.exitCode };

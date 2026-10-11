@@ -175,7 +175,12 @@ describe("la variante por fecha", () => {
 
   it("las tres variantes de identificador siguen indexando", () => {
     const entradas = parseMemory(DOCUMENTO, "docs/errors.md");
-    expect(entradas.map((entrada) => entrada.id)).toEqual(["E001", "E002", "E-010", "E031"]);
+    expect(entradas.map((entrada) => entrada.id)).toEqual([
+      "E001",
+      "E002",
+      "E-010",
+      "E031",
+    ]);
   });
 
   it("la línea base de un documento real no cambia", () => {

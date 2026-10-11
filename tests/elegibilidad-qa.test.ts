@@ -23,14 +23,27 @@ import { writeFixtureTicket } from "./helpers/fixtures.js";
 
 const AHORA = new Date("2026-10-06T08:00:00.000Z");
 const ID = "BUGFIX-POS-FILTRO-ELEG-20261005";
-const BUENOS = '- [ ] El filtro devuelve la orden 1042 al buscar 104.\n      <!-- test: npx vitest run tests/uno.test.ts -->';
+const BUENOS =
+  "- [ ] El filtro devuelve la orden 1042 al buscar 104.\n      <!-- test: npx vitest run tests/uno.test.ts -->";
 
 let root: string;
 const paths = () => ({ root, ticketsDir: "tickets" });
 
-function ticket(opciones: { tipo?: string; riesgo?: string; impactos?: string[]; criterios?: string; modulo?: string; estado?: string } = {}): void {
+function ticket(
+  opciones: {
+    tipo?: string;
+    riesgo?: string;
+    impactos?: string[];
+    criterios?: string;
+    modulo?: string;
+    estado?: string;
+  } = {},
+): void {
   writeFixtureTicket(root, {
-    id: opciones.tipo === undefined || opciones.tipo === "BUGFIX" ? ID : `${opciones.tipo}-POS-FILTRO-ELEG-20261005`,
+    id:
+      opciones.tipo === undefined || opciones.tipo === "BUGFIX"
+        ? ID
+        : `${opciones.tipo}-POS-FILTRO-ELEG-20261005`,
     workflowStatus: opciones.estado ?? "awaiting_user_tests",
     type: opciones.tipo ?? "BUGFIX",
     module: opciones.modulo ?? "POS",
@@ -40,29 +53,52 @@ function ticket(opciones: { tipo?: string; riesgo?: string; impactos?: string[];
   });
 }
 
-function autorizar(tipos = ["BUGFIX", "IMPROVEMENT", "CHORE", "FEATURE"], extra: Partial<Parameters<typeof crearAutorizacion>[0]> = {}) {
+function autorizar(
+  tipos = ["BUGFIX", "IMPROVEMENT", "CHORE", "FEATURE"],
+  extra: Partial<Parameters<typeof crearAutorizacion>[0]> = {},
+) {
   return crearAutorizacion({
-    root, actor: "Juan Andrade", quote: "Autorizo el cierre por agente", types: tipos, modules: ["pos"], maxRisk: "normal",
-    dailyQuota: 2, validDays: 30, source: "cli", ahora: AHORA, env: {}, ...extra,
+    root,
+    actor: "Juan Andrade",
+    quote: "Autorizo el cierre por agente",
+    types: tipos,
+    modules: ["pos"],
+    maxRisk: "normal",
+    dailyQuota: 2,
+    validDays: 30,
+    source: "cli",
+    ahora: AHORA,
+    env: {},
+    ...extra,
   });
 }
 
-const evaluar = (opciones: { id?: string; diff?: string[]; secretos?: number; drift?: number } = {}): ResultadoDeElegibilidad =>
+const evaluar = (
+  opciones: { id?: string; diff?: string[]; secretos?: number; drift?: number } = {},
+): ResultadoDeElegibilidad =>
   elegibilidadQa({
     paths: paths(),
     ticketId: opciones.id ?? ID,
     ahora: AHORA,
-    archivosDelDiff: opciones.diff ?? ["BackEnd/pos/filters.py", "BackEnd/pos/tests/test_filters.py"],
+    archivosDelDiff: opciones.diff ?? [
+      "BackEnd/pos/filters.py",
+      "BackEnd/pos/tests/test_filters.py",
+    ],
     secretos: () => opciones.secretos ?? 0,
     drift: () => opciones.drift ?? 0,
   });
 
-const incumplidas = (r: ResultadoDeElegibilidad): string[] => r.reglas.filter((x) => !x.cumple).map((x) => x.regla);
+const incumplidas = (r: ResultadoDeElegibilidad): string[] =>
+  r.reglas.filter((x) => !x.cumple).map((x) => x.regla);
 
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), "valmen-eleg-"));
   mkdirSync(join(root, ".valmen"), { recursive: true });
-  writeFileSync(join(root, ".valmen", "config.yaml"), "name: Demo\ntest-commands:\n  - npx vitest run\n  - bash .valmen/scripts/ng-test.sh\n", "utf8");
+  writeFileSync(
+    join(root, ".valmen", "config.yaml"),
+    "name: Demo\ntest-commands:\n  - npx vitest run\n  - bash .valmen/scripts/ng-test.sh\n",
+    "utf8",
+  );
 });
 
 afterEach(() => rmSync(root, { recursive: true, force: true }));
@@ -85,7 +121,9 @@ describe("regla 1: autorización y cupo", () => {
     ticket();
     const r = evaluar();
     expect(r.elegible).toBe(false);
-    expect(r.reglas.find((x) => x.regla === "autorizacion")?.detalle).toContain("ninguna autorización vigente");
+    expect(r.reglas.find((x) => x.regla === "autorizacion")?.detalle).toContain(
+      "ninguna autorización vigente",
+    );
     expect(r.autorizacion).toBeNull();
   });
 
@@ -98,27 +136,48 @@ describe("regla 1: autorización y cupo", () => {
   it("sin cupo diario no es elegible, y al día siguiente vuelve a haber", () => {
     ticket();
     const a = autorizar(undefined, { dailyQuota: 1 });
-    registrarUsoDeCupo({ root, authorizationId: a.id, ticketId: "BUGFIX-POS-OTRO-20261005", ahora: AHORA });
+    registrarUsoDeCupo({
+      root,
+      authorizationId: a.id,
+      ticketId: "BUGFIX-POS-OTRO-20261005",
+      ahora: AHORA,
+    });
     const sin = evaluar();
     expect(incumplidas(sin)).toContain("autorizacion");
-    expect(sin.reglas.find((x) => x.regla === "autorizacion")?.detalle).toContain("agotó su cupo");
-    const manana = elegibilidadQa({ paths: paths(), ticketId: ID, ahora: new Date("2026-10-07T08:00:00.000Z"), archivosDelDiff: [], secretos: () => 0, drift: () => 0 });
+    expect(sin.reglas.find((x) => x.regla === "autorizacion")?.detalle).toContain(
+      "agotó su cupo",
+    );
+    const manana = elegibilidadQa({
+      paths: paths(),
+      ticketId: ID,
+      ahora: new Date("2026-10-07T08:00:00.000Z"),
+      archivosDelDiff: [],
+      secretos: () => 0,
+      drift: () => 0,
+    });
     expect(manana.reglas.find((x) => x.regla === "autorizacion")?.cumple).toBe(true);
   });
 });
 
 describe("regla 2: el tipo", () => {
-  it.each(["SECURITY", "SYNC", "INTEGRATION", "AGENT"])("%s no es elegible aunque la autorización lo cubriera", (tipo) => {
-    ticket({ tipo });
-    // El registro no deja crear una autorización con estos tipos: se escribe a mano, como lo haría un atacante.
-    const a = autorizar(["BUGFIX"]);
-    const ruta = join(root, ".valmen", "qa", "authorizations.jsonl");
-    writeFileSync(ruta, readFileSync(ruta, "utf8").replace('"BUGFIX"', `"BUGFIX","${tipo}"`), "utf8");
-    const r = evaluar({ id: `${tipo}-POS-FILTRO-ELEG-20261005` });
-    expect(r.elegible).toBe(false);
-    expect(incumplidas(r)).toContain("tipo");
-    expect(a.id).toBeTruthy();
-  });
+  it.each(["SECURITY", "SYNC", "INTEGRATION", "AGENT"])(
+    "%s no es elegible aunque la autorización lo cubriera",
+    (tipo) => {
+      ticket({ tipo });
+      // El registro no deja crear una autorización con estos tipos: se escribe a mano, como lo haría un atacante.
+      const a = autorizar(["BUGFIX"]);
+      const ruta = join(root, ".valmen", "qa", "authorizations.jsonl");
+      writeFileSync(
+        ruta,
+        readFileSync(ruta, "utf8").replace('"BUGFIX"', `"BUGFIX","${tipo}"`),
+        "utf8",
+      );
+      const r = evaluar({ id: `${tipo}-POS-FILTRO-ELEG-20261005` });
+      expect(r.elegible).toBe(false);
+      expect(incumplidas(r)).toContain("tipo");
+      expect(a.id).toBeTruthy();
+    },
+  );
 });
 
 describe("regla 3: riesgo e impactos", () => {
@@ -127,30 +186,45 @@ describe("regla 3: riesgo e impactos", () => {
     autorizar();
     const r = evaluar();
     expect(incumplidas(r)).toContain("riesgo-e-impactos");
-    expect(r.reglas.find((x) => x.regla === "riesgo-e-impactos")?.detalle).toContain("high");
+    expect(r.reglas.find((x) => x.regla === "riesgo-e-impactos")?.detalle).toContain(
+      "high",
+    );
   });
 
-  it.each(["sync_impact", "migration_impact", "docker_impact"])("el impacto %s no es elegible", (impacto) => {
-    ticket({ impactos: [impacto] });
-    autorizar();
-    expect(incumplidas(evaluar())).toContain("riesgo-e-impactos");
-  });
+  it.each(["sync_impact", "migration_impact", "docker_impact"])(
+    "el impacto %s no es elegible",
+    (impacto) => {
+      ticket({ impactos: [impacto] });
+      autorizar();
+      expect(incumplidas(evaluar())).toContain("riesgo-e-impactos");
+    },
+  );
 });
 
 describe("regla 4: los criterios", () => {
   it("un criterio manual lo vuelve no elegible y el motivo lo nombra", () => {
-    ticket({ criterios: `${BUENOS}\n- [ ] La pantalla muestra el saldo actualizado correctamente.\n      <!-- verify: manual -->` });
+    ticket({
+      criterios: `${BUENOS}\n- [ ] La pantalla muestra el saldo actualizado correctamente.\n      <!-- verify: manual -->`,
+    });
     autorizar();
     const r = evaluar();
     expect(incumplidas(r)).toContain("criterios");
-    expect(r.reglas.find((x) => x.regla === "criterios")?.detalle).toContain("La pantalla muestra el saldo actualizado correctamente.");
+    expect(r.reglas.find((x) => x.regla === "criterios")?.detalle).toContain(
+      "La pantalla muestra el saldo actualizado correctamente.",
+    );
   });
 
   it("un criterio dev también, y uno por petición http sí cuenta como automático", () => {
-    ticket({ criterios: '- [ ] El ambiente dev responde con la versión nueva.\n      <!-- verify: dev -->' });
+    ticket({
+      criterios:
+        "- [ ] El ambiente dev responde con la versión nueva.\n      <!-- verify: dev -->",
+    });
     autorizar();
     expect(incumplidas(evaluar())).toContain("criterios");
-    ticket({ criterios: "- [ ] El listado de huecos sale vacío para la sucursal 1.\n      <!-- http: GET /api/v1/huecos/?sucursal=1 expect: status=200 -->" });
+    ticket({
+      criterios:
+        "- [ ] El listado de huecos sale vacío para la sucursal 1.\n      <!-- http: GET /api/v1/huecos/?sucursal=1 expect: status=200 -->",
+    });
     expect(incumplidas(evaluar())).not.toContain("criterios");
   });
 });
@@ -170,27 +244,41 @@ describe("regla 5: el diff", () => {
     [".valmen/config.yaml", "el registro y la configuración del harness"],
     [".valmen/scripts/ng-test.sh", "los scripts que corren las pruebas"],
   ];
-  it.each(prohibidas)("tocar %s lo vuelve no elegible (%s) y el motivo nombra el archivo", (archivo, categoria) => {
-    ticket();
-    autorizar();
-    const r = evaluar({ diff: ["BackEnd/pos/filters.py", archivo] });
-    expect(incumplidas(r)).toContain("diff");
-    const detalle = r.reglas.find((x) => x.regla === "diff")?.detalle ?? "";
-    expect(detalle).toContain(archivo);
-    expect(detalle).toContain(categoria);
-  });
+  it.each(prohibidas)(
+    "tocar %s lo vuelve no elegible (%s) y el motivo nombra el archivo",
+    (archivo, categoria) => {
+      ticket();
+      autorizar();
+      const r = evaluar({ diff: ["BackEnd/pos/filters.py", archivo] });
+      expect(incumplidas(r)).toContain("diff");
+      const detalle = r.reglas.find((x) => x.regla === "diff")?.detalle ?? "";
+      expect(detalle).toContain(archivo);
+      expect(detalle).toContain(categoria);
+    },
+  );
 
   it("el script que corren las pruebas, tomado de test-commands, no se puede tocar", () => {
-    writeFileSync(join(root, ".valmen", "config.yaml"), "name: Demo\ntest-commands:\n  - bash scripts/correr-pruebas.sh\n", "utf8");
+    writeFileSync(
+      join(root, ".valmen", "config.yaml"),
+      "name: Demo\ntest-commands:\n  - bash scripts/correr-pruebas.sh\n",
+      "utf8",
+    );
     ticket();
     autorizar();
     const r = evaluar({ diff: ["scripts/correr-pruebas.sh"] });
     expect(incumplidas(r)).toContain("diff");
-    expect(r.reglas.find((x) => x.regla === "diff")?.detalle).toContain("los scripts que corren las pruebas");
+    expect(r.reglas.find((x) => x.regla === "diff")?.detalle).toContain(
+      "los scripts que corren las pruebas",
+    );
   });
 
   it("rutas normales de backend y sus pruebas no se prohíben", () => {
-    for (const ruta of ["BackEnd/pos/filters.py", "BackEnd/pos/tests/test_filters.py", "docs/nota.md", "packages/engine/src/a.ts"]) {
+    for (const ruta of [
+      "BackEnd/pos/filters.py",
+      "BackEnd/pos/tests/test_filters.py",
+      "docs/nota.md",
+      "packages/engine/src/a.ts",
+    ]) {
       expect(rutaProhibidaParaQaAgente(ruta), ruta).toBeNull();
     }
   });
@@ -202,10 +290,22 @@ describe("regla 6: puntos, reapertura, secretos y drift", () => {
     autorizar();
     const ruta = join(root, "tickets", "2026", ID, "ticket.md");
     const punto = {
-      kind: "ticket-point", id: "POINT-001", date: "2026-09-21", title: "Falta algo", severity: "normal", status: "open",
-      actual: "x", expected: "y", affected_files: [], created: "2026-09-21", updated: "2026-09-21",
+      kind: "ticket-point",
+      id: "POINT-001",
+      date: "2026-09-21",
+      title: "Falta algo",
+      severity: "normal",
+      status: "open",
+      actual: "x",
+      expected: "y",
+      affected_files: [],
+      created: "2026-09-21",
+      updated: "2026-09-21",
     };
-    const texto = readFileSync(ruta, "utf8").replace("## Puntos\n\n```json\n[]\n```", `## Puntos\n\n\`\`\`json\n${JSON.stringify([punto], null, 2)}\n\`\`\``);
+    const texto = readFileSync(ruta, "utf8").replace(
+      "## Puntos\n\n```json\n[]\n```",
+      `## Puntos\n\n\`\`\`json\n${JSON.stringify([punto], null, 2)}\n\`\`\``,
+    );
     writeFileSync(ruta, texto, "utf8");
     const r = evaluar();
     expect(incumplidas(r)).toContain("puntos");
@@ -223,8 +323,14 @@ describe("regla 6: puntos, reapertura, secretos y drift", () => {
     ticket();
     autorizar();
     const r = elegibilidadQa({
-      paths: paths(), ticketId: ID, ahora: AHORA, archivosDelDiff: [],
-      secretos: () => { throw new Error("sin git"); }, drift: () => 0,
+      paths: paths(),
+      ticketId: ID,
+      ahora: AHORA,
+      archivosDelDiff: [],
+      secretos: () => {
+        throw new Error("sin git");
+      },
+      drift: () => 0,
     });
     expect(incumplidas(r)).toContain("secretos");
   });

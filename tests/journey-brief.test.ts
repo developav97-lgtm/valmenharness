@@ -23,7 +23,10 @@ beforeEach(() => {
 });
 afterEach(() => entorno.limpiar());
 
-function brief(estado: string, extra: { type?: string; cliente?: "claude" | "codex" } = {}) {
+function brief(
+  estado: string,
+  extra: { type?: string; cliente?: "claude" | "codex" } = {},
+) {
   ticketEn(entorno.root, ID, estado, extra.type === undefined ? {} : { type: extra.type });
   const armado = armarBriefDeSubagente({
     project: entorno.project(),
@@ -68,12 +71,22 @@ describe("brief de subagente", () => {
   it("C21: da el modelo, el esfuerzo y el alias de subagente de la fase del lanzamiento", () => {
     escribirRouting();
     const { armado, texto } = brief("approved", { cliente: "claude" });
-    const fase = fasesDeSesion(entorno.root, { cliente: "claude", estado: "approved" }).fases.find((f) => f.fase === "implementation");
+    const fase = fasesDeSesion(entorno.root, {
+      cliente: "claude",
+      estado: "approved",
+    }).fases.find((f) => f.fase === "implementation");
     expect(fase).toBeDefined();
-    expect(armado.fase).toMatchObject({ fase: "implementation", model: fase?.model, effort: fase?.effort, subagente: fase?.subagente });
+    expect(armado.fase).toMatchObject({
+      fase: "implementation",
+      model: fase?.model,
+      effort: fase?.effort,
+      subagente: fase?.subagente,
+    });
     expect(fase).toMatchObject({ model: "claude-sonnet-5-5", effort: "high" });
     expect(fase?.subagente).toBeTruthy();
-    expect(texto).toContain(`Modelo de tu fase (implementation): ${fase?.model}, esfuerzo ${fase?.effort}.`);
+    expect(texto).toContain(
+      `Modelo de tu fase (implementation): ${fase?.model}, esfuerzo ${fase?.effort}.`,
+    );
     expect(texto).toContain(`Alias de subagente: ${fase?.subagente}.`);
     // La fase de un ticket en intake es otra: el brief sigue al estado.
     expect(brief("intake").armado.fase?.fase).toBe("analysis");
@@ -93,7 +106,10 @@ describe("brief de subagente", () => {
     expect(brief("approved").texto).toContain("Skills a cargar: ninguna de proceso");
     for (const skill of ["pruebas-unitarias", "revision-final"]) {
       mkdirSync(join(entorno.root, ".valmen", "skills", skill), { recursive: true });
-      writeFileSync(join(entorno.root, ".valmen", "skills", skill, "SKILL.md"), "---\nname: x\n---\n");
+      writeFileSync(
+        join(entorno.root, ".valmen", "skills", skill, "SKILL.md"),
+        "---\nname: x\n---\n",
+      );
     }
     const { armado, texto } = brief("approved");
     expect(armado.skills).toEqual(["pruebas-unitarias"]);
@@ -106,14 +122,27 @@ describe("brief de subagente", () => {
     expect(comandos).toEqual(
       expect.arrayContaining([
         { comando: `valmen precheck analysis --id ${ID}`, evaluador: null },
-        { comando: `valmen gate analysis --id ${ID} --evaluator cascade`, evaluador: "cascade" },
+        {
+          comando: `valmen gate analysis --id ${ID} --evaluator cascade`,
+          evaluador: "cascade",
+        },
         { comando: `valmen precheck plan --id ${ID}`, evaluador: null },
-        { comando: `valmen gate plan --id ${ID} --evaluator cascade`, evaluador: "cascade" },
-        { comando: `valmen gate qa-mechanical --id ${ID} --evaluator command`, evaluador: "command" },
+        {
+          comando: `valmen gate plan --id ${ID} --evaluator cascade`,
+          evaluador: "cascade",
+        },
+        {
+          comando: `valmen gate qa-mechanical --id ${ID} --evaluator command`,
+          evaluador: "command",
+        },
       ]),
     );
-    expect(texto).toContain(`valmen gate qa-mechanical --id ${ID} --evaluator command (evaluador command)`);
-    expect(texto).toContain(`valmen gate analysis --id ${ID} --evaluator cascade (evaluador cascade)`);
+    expect(texto).toContain(
+      `valmen gate qa-mechanical --id ${ID} --evaluator command (evaluador command)`,
+    );
+    expect(texto).toContain(
+      `valmen gate analysis --id ${ID} --evaluator cascade (evaluador cascade)`,
+    );
     // Verificación: sin compuertas para el subagente.
     expect(armado.compuertas.find((c) => c.fase === "verificación")?.comandos).toEqual([]);
     expect(texto).toContain("sin compuertas para el subagente");
@@ -121,7 +150,10 @@ describe("brief de subagente", () => {
 
   it("C25: declara el contrato de entrega", () => {
     const { texto } = brief("approved");
-    const contrato = texto.slice(texto.indexOf("Contrato de entrega:"), texto.indexOf("Lo que NO haces:"));
+    const contrato = texto.slice(
+      texto.indexOf("Contrato de entrega:"),
+      texto.indexOf("Lo que NO haces:"),
+    );
     expect(contrato).toContain("comandos exactos");
     expect(contrato).toContain("directorio de ejecución");
     expect(contrato).toContain("resultado esperado");
@@ -163,7 +195,14 @@ describe("brief de subagente", () => {
   });
 
   it("C30: un ticket que no es lanzable produce un brief marcado con su motivo", () => {
-    for (const estado of ["planned", "awaiting_user_tests", "in_qa", "qa_approved", "closed", "blocked"]) {
+    for (const estado of [
+      "planned",
+      "awaiting_user_tests",
+      "in_qa",
+      "qa_approved",
+      "closed",
+      "blocked",
+    ]) {
       const { armado, texto } = brief(estado);
       expect(armado.lanzable, estado).toBe(false);
       expect(armado.motivoNoLanzable, estado).toBeTruthy();
@@ -172,7 +211,13 @@ describe("brief de subagente", () => {
   });
 
   it("control de C30: los estados de arranque son lanzables y no traen motivo", () => {
-    for (const estado of ["intake", "analyzed", "approved", "in_progress", "changes_requested"]) {
+    for (const estado of [
+      "intake",
+      "analyzed",
+      "approved",
+      "in_progress",
+      "changes_requested",
+    ]) {
       const { armado, texto } = brief(estado);
       expect(armado.lanzable, estado).toBe(true);
       expect(armado.motivoNoLanzable, estado).toBeNull();
@@ -184,7 +229,10 @@ describe("brief de subagente", () => {
   it("un ticket inexistente lanza un error que nombra el id", () => {
     ticketEn(entorno.root, ID, "approved");
     expect(() =>
-      armarBriefDeSubagente({ project: entorno.project(), ticketId: "FEATURE-JOURNEY-FANTASMA-20261008" }),
+      armarBriefDeSubagente({
+        project: entorno.project(),
+        ticketId: "FEATURE-JOURNEY-FANTASMA-20261008",
+      }),
     ).toThrow(/FEATURE-JOURNEY-FANTASMA-20261008/);
   });
 

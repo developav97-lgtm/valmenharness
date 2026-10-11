@@ -146,7 +146,12 @@ export function refreshDesignReferences(
       skipped.push({ id: ticket.id, state: estado });
       continue;
     }
-    const { texto, rutas } = referenciasDe(paths.root, slug, requirements, coverage.get(ticket.id) ?? []);
+    const { texto, rutas } = referenciasDe(
+      paths.root,
+      slug,
+      requirements,
+      coverage.get(ticket.id) ?? [],
+    );
     const nuevo = conReferencias(document.text, texto);
     if (nuevo === document.text) {
       unchanged.push(ticket.id);
@@ -303,7 +308,8 @@ export function dependenciasEnGrafos(paths: RegistryPaths, ticketId: string): st
       const vista = previewTicketsYaml(texto, []);
       if (vista === null) continue;
       for (const ticket of decompositionTickets(vista.document.decomposition)) {
-        if (ticket.id === ticketId) ticket.dependsOn.forEach((dependencia) => dependencias.add(dependencia));
+        if (ticket.id === ticketId)
+          ticket.dependsOn.forEach((dependencia) => dependencias.add(dependencia));
       }
     } catch {
       continue;
@@ -473,7 +479,8 @@ function referenciasDe(
       "",
       intro,
       ...assets.map(
-        (a) => `- \`${base}/${a.path}\` — ${a.description} (sha256 ${a.sha256.slice(0, 12)}…)`,
+        (a) =>
+          `- \`${base}/${a.path}\` — ${a.description} (sha256 ${a.sha256.slice(0, 12)}…)`,
       ),
     ].join("\n"),
     rutas: assets.map((a) => `${base}/${a.path}`),
@@ -655,7 +662,8 @@ export function materializeFeature(
           requirements,
           coverage.get(ticket.id) ?? [],
           objetivos.get(ticket.sprint) ?? "",
-          referenciasDe(paths.root, slug, requirements, coverage.get(ticket.id) ?? []).texto,
+          referenciasDe(paths.root, slug, requirements, coverage.get(ticket.id) ?? [])
+            .texto,
           alcance,
         ),
         ...(opciones.now === undefined ? {} : { now: opciones.now }),
@@ -737,7 +745,11 @@ export function renderMaterialization(
     );
   }
   if ((resultado.warnings ?? []).length > 0) {
-    lineas.push("", "Avisos:", ...(resultado.warnings ?? []).map((aviso) => `  ! ${aviso}`));
+    lineas.push(
+      "",
+      "Avisos:",
+      ...(resultado.warnings ?? []).map((aviso) => `  ! ${aviso}`),
+    );
   }
   if (!dryRun && resultado.created.length > 0) {
     lineas.push(

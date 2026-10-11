@@ -27,7 +27,14 @@ import { join } from "node:path";
 
 import { fail } from "@valmen/core";
 
-import { type ConfigMap, type PlaywrightConfig, parseConfig, readMap, readPlaywrightConfig, readString } from "./config.js";
+import {
+  type ConfigMap,
+  type PlaywrightConfig,
+  parseConfig,
+  readMap,
+  readPlaywrightConfig,
+  readString,
+} from "./config.js";
 
 /** Esfuerzo de razonamiento de un rol. */
 export type Effort = "auto" | "low" | "medium" | "high";
@@ -108,12 +115,14 @@ export const ROLES: readonly RoleSpec[] = [
   // activa y no lo es.
   {
     id: "producer",
-    description: "Responde primero, con el modelo barato, lo que el verificador va a comprobar",
+    description:
+      "Responde primero, con el modelo barato, lo que el verificador va a comprobar",
     consumer: "valmen gate --evaluator cascade",
   },
   {
     id: "verifier",
-    description: "Comprueba contra el contexto la respuesta del productor, con probabilidades",
+    description:
+      "Comprueba contra el contexto la respuesta del productor, con probabilidades",
     consumer: "valmen gate --evaluator cascade",
   },
   {
@@ -132,7 +141,7 @@ export const ROLES: readonly RoleSpec[] = [
     id: "reviewer",
     description:
       "Decide un `review` de análisis o plan con un modelo distinto al que lo produjo",
-    consumer: "valmen review-agent",
+    consumer: "valmen review-agent, valmen gate code-review",
   },
   {
     // El rol que **escribe y mantiene los specs de interfaz**. Su modelo no sale
@@ -142,7 +151,7 @@ export const ROLES: readonly RoleSpec[] = [
     // al agente que trabaja un ticket de pruebas de interfaz.
     id: "ui-specs",
     description: "Escribe y mantiene los specs de interfaz del proyecto",
-    consumer: "valmen routing show --role ui-specs",
+    consumer: "valmen routing show",
   },
   // Los cuatro roles de **fase** del agente que ejecuta la jornada (R-JORN-006): análisis,
   // plan, implementación y verificación. Su proveedor es el del **ejecutor** (`codex`,
@@ -161,7 +170,8 @@ export const ROLES: readonly RoleSpec[] = [
   },
   {
     id: "agent-implementation",
-    description: "Modelo del agente que implementa un ticket aprobado en la fase de ejecución",
+    description:
+      "Modelo del agente que implementa un ticket aprobado en la fase de ejecución",
     consumer: "valmen journey brief",
   },
   {
@@ -411,10 +421,22 @@ export const PRESETS: readonly Preset[] = [
       reviewer: { provider: "codex", model: "gpt-6-sol", effort: "medium" },
       "ui-specs": { provider: "claude-code", model: "claude-sonnet-5", effort: "auto" },
       // Los roles de fase del agente de la jornada: barato donde repite, fuerte donde decide.
-      "agent-analysis": { provider: "claude-code", model: "claude-haiku-4-5-20251001", effort: "auto" },
+      "agent-analysis": {
+        provider: "claude-code",
+        model: "claude-haiku-4-5-20251001",
+        effort: "auto",
+      },
       "agent-plan": { provider: "claude-code", model: "claude-sonnet-5", effort: "auto" },
-      "agent-implementation": { provider: "claude-code", model: "claude-sonnet-5", effort: "high" },
-      "agent-verification": { provider: "claude-code", model: "claude-haiku-4-5-20251001", effort: "auto" },
+      "agent-implementation": {
+        provider: "claude-code",
+        model: "claude-sonnet-5",
+        effort: "high",
+      },
+      "agent-verification": {
+        provider: "claude-code",
+        model: "claude-haiku-4-5-20251001",
+        effort: "auto",
+      },
     },
   },
 ];
@@ -490,7 +512,8 @@ function rutasDeEjecucion(
 export const PERFILES_INCORPORADOS: readonly PerfilDeModelos[] = [
   {
     id: "claude-code-completo",
-    description: "Todo el trabajo del agente con Claude Code; los evaluadores siguen en Jev.",
+    description:
+      "Todo el trabajo del agente con Claude Code; los evaluadores siguen en Jev.",
     origen: "incorporado",
     roles: {
       ...evaluadoresDeBalanced(),
@@ -524,7 +547,8 @@ export const PERFILES_INCORPORADOS: readonly PerfilDeModelos[] = [
   },
   {
     id: "opencode-go",
-    description: "Todo el trabajo del agente con OpenCode Go; los evaluadores siguen en Jev.",
+    description:
+      "Todo el trabajo del agente con OpenCode Go; los evaluadores siguen en Jev.",
     origen: "incorporado",
     roles: {
       ...evaluadoresDeBalanced(),
@@ -563,7 +587,8 @@ export function comprobarPerfilCompleto(perfil: PerfilDeModelos): string[] {
       errores.push(`rol ${spec.id}: falta en el perfil ${perfil.id}.`);
       continue;
     }
-    if (ruta.provider.trim() === "") errores.push(`rol ${spec.id}: el proveedor está vacío.`);
+    if (ruta.provider.trim() === "")
+      errores.push(`rol ${spec.id}: el proveedor está vacío.`);
     if (ruta.model.trim() === "") errores.push(`rol ${spec.id}: el modelo está vacío.`);
     if (!EFFORTS.includes(ruta.effort)) {
       errores.push(
@@ -597,7 +622,8 @@ export function comprobarPerfilContraCatalogo(
     if (ruta === undefined) continue;
     // Jev no está en el catálogo de chat (decisión 4 de la cabecera): vive en el
     // endpoint de Decisions y se añade aparte, así que no se busca en la lista.
-    if (ruta.provider === DEFAULT_PROVIDER && ruta.model === DEFAULT_GATE_EVALUATOR) continue;
+    if (ruta.provider === DEFAULT_PROVIDER && ruta.model === DEFAULT_GATE_EVALUATOR)
+      continue;
     const entrada = catalogo[ruta.provider] ?? null;
     if (entrada === null) {
       errores.push(
@@ -629,7 +655,9 @@ export function parsePerfiles(text: string): PerfilDeModelos[] {
   const resultado: PerfilDeModelos[] = [];
   for (const [id, valor] of Object.entries(perfiles)) {
     if (!ID_DE_PERFIL.test(id)) {
-      fail(`profiles.yaml: el id de perfil "${id}" debe ser kebab-case (minúsculas, dígitos y guiones).`);
+      fail(
+        `profiles.yaml: el id de perfil "${id}" debe ser kebab-case (minúsculas, dígitos y guiones).`,
+      );
     }
     if (PERFILES_INCORPORADOS.some((perfil) => perfil.id === id)) {
       fail(`profiles.yaml: "${id}" es un perfil incorporado y no se puede redefinir.`);
@@ -686,7 +714,9 @@ export function parseSeleccionDePerfil(text: string): SeleccionDePerfil {
       );
     }
     if (typeof valor !== "string") {
-      fail(`profiles.yaml: el perfil elegido para el ejecutor "${ejecutor}" debe ser un texto.`);
+      fail(
+        `profiles.yaml: el perfil elegido para el ejecutor "${ejecutor}" debe ser un texto.`,
+      );
     }
     ejecutores[ejecutor] = idValido(valor, `para el ejecutor ${ejecutor}`);
   }
@@ -989,7 +1019,11 @@ export function resolveRouting(
     // El esfuerzo no se declara en la sección y queda `auto`.
     const dePlaywright =
       spec.id === "ui-specs" && playwright !== null && playwright.model !== ""
-        ? { provider: playwright.provider, model: playwright.model, effort: "auto" as Effort }
+        ? {
+            provider: playwright.provider,
+            model: playwright.model,
+            effort: "auto" as Effort,
+          }
         : undefined;
 
     const elegido = override ?? dePlaywright ?? delPerfil ?? delPreset ?? delSistema;
@@ -1017,7 +1051,7 @@ export function resolveRouting(
       ...(source === "perfil" && perfil !== null
         ? { perfil: { id: perfil.perfil.id, alcance: perfil.alcance } }
         : {}),
-      ...((source === "proyecto") && delPerfil !== undefined && perfil !== null
+      ...(source === "proyecto" && delPerfil !== undefined && perfil !== null
         ? { anulaPerfil: perfil.perfil.id }
         : {}),
       // Los dos roles que **verifican** —el evaluador de un gate y el verificador
@@ -1033,7 +1067,12 @@ export function resolveRouting(
 }
 
 /** Las fases del agente de la jornada y el rol de enrutamiento de cada una. */
-export const FASES_DEL_AGENTE = ["analysis", "plan", "implementation", "verification"] as const;
+export const FASES_DEL_AGENTE = [
+  "analysis",
+  "plan",
+  "implementation",
+  "verification",
+] as const;
 export type FaseDelAgente = (typeof FASES_DEL_AGENTE)[number];
 
 /** El modelo con el que se lanza el ejecutor de una fase y de dónde salió. */
@@ -1068,7 +1107,12 @@ export function modeloDeFase(
   const ruta = routeFor(rutas, `agent-${fase}`);
   const proveedor = PROVEEDOR_DEL_EJECUTOR[ejecutor.id] ?? ejecutor.id;
   if (ruta === null || ruta.model === "") {
-    return { model: ejecutor.model, effort: ejecutor.effort, origen: "politica", motivo: `el rol agent-${fase} no tiene modelo` };
+    return {
+      model: ejecutor.model,
+      effort: ejecutor.effort,
+      origen: "politica",
+      motivo: `el rol agent-${fase} no tiene modelo`,
+    };
   }
   if (ruta.provider !== proveedor) {
     return {
@@ -1078,7 +1122,15 @@ export function modeloDeFase(
       motivo: `el rol agent-${fase} es del proveedor ${ruta.provider} y el ejecutor es ${ejecutor.id}`,
     };
   }
-  return { model: ruta.model, effort: ruta.effort === "auto" ? ejecutor.effort : ruta.effort, origen: "rol", motivo: ruta.perfil === undefined ? `rol agent-${fase} (${ruta.source})` : `rol agent-${fase} (perfil ${ruta.perfil.id}, ejecutor ${ejecutor.id})` };
+  return {
+    model: ruta.model,
+    effort: ruta.effort === "auto" ? ejecutor.effort : ruta.effort,
+    origen: "rol",
+    motivo:
+      ruta.perfil === undefined
+        ? `rol agent-${fase} (${ruta.source})`
+        : `rol agent-${fase} (perfil ${ruta.perfil.id}, ejecutor ${ejecutor.id})`,
+  };
 }
 
 /** El despacho de una fase: el ejecutor, el modelo y el esfuerzo con que se lanza, o por qué no se lanza. */
@@ -1125,9 +1177,14 @@ export function despachoDeFase(
       motivo: `el rol agent-${fase} no tiene modelo; se usa el ejecutor ${politica.id} y el modelo de la política`,
     };
   }
-  const ejecutor = Object.entries(PROVEEDOR_DEL_EJECUTOR).find(([, proveedor]) => proveedor === ruta.provider)?.[0];
+  const ejecutor = Object.entries(PROVEEDOR_DEL_EJECUTOR).find(
+    ([, proveedor]) => proveedor === ruta.provider,
+  )?.[0];
   if (ejecutor === undefined) {
-    return { ok: false, motivo: `el proveedor ${ruta.provider} de agent-${fase} no está declarado como ejecutor` };
+    return {
+      ok: false,
+      motivo: `el proveedor ${ruta.provider} de agent-${fase} no está declarado como ejecutor`,
+    };
   }
   if (!autorizados.includes(ejecutor)) return noAutorizado(ejecutor);
   return {
@@ -1166,7 +1223,10 @@ const SUBAGENTES_DEL_CLIENTE: Readonly<
   },
   codex: { limitacion: "Codex no declara subagentes con modelo propio" },
   opencode: { limitacion: "OpenCode no declara subagentes con modelo propio" },
-  hermes: { limitacion: "Hermes despacha por su propia política, no por subagentes con modelo propio" },
+  hermes: {
+    limitacion:
+      "Hermes despacha por su propia política, no por subagentes con modelo propio",
+  },
 };
 
 /** Una fase vista desde la sesión: lo que resuelve el perfil y con qué se lanzaría el subagente. */
@@ -1237,7 +1297,12 @@ export function fasesDeSesion(
   try {
     rutas = rutasDelProyecto(root, cliente === null ? {} : { ejecutor: cliente });
   } catch (cause) {
-    return { ...base, fases: [], nota: null, aviso: cause instanceof Error ? cause.message : String(cause) };
+    return {
+      ...base,
+      fases: [],
+      nota: null,
+      aviso: cause instanceof Error ? cause.message : String(cause),
+    };
   }
 
   const fases = FASES_DEL_AGENTE.map((fase): FaseDeSesion => {
@@ -1257,7 +1322,8 @@ export function fasesDeSesion(
         `${cliente}: no se delega como subagente, se despacha por proveedor (R-PERF-004)`;
     } else {
       subagente = declaracion.alias(model);
-      if (subagente === null) aviso = `el modelo ${model === "" ? "(sin modelo)" : model} no tiene alias en el cliente ${cliente}`;
+      if (subagente === null)
+        aviso = `el modelo ${model === "" ? "(sin modelo)" : model} no tiene alias en el cliente ${cliente}`;
     }
     return {
       fase,
@@ -1334,7 +1400,11 @@ export interface ReporteDelEjecutor {
  * reportó. Solo Claude (`--output-format json`) expone ambos; Codex y OpenCode, o una salida
  * ilegible o truncada, devuelven `null` en los dos: no se deduce de la configuración.
  */
-export function reporteDelEjecutor(ejecutor: string, modeloDeclarado: string, stdout: string): ReporteDelEjecutor {
+export function reporteDelEjecutor(
+  ejecutor: string,
+  modeloDeclarado: string,
+  stdout: string,
+): ReporteDelEjecutor {
   const vacio: ReporteDelEjecutor = { modeloUsado: null, costeUsd: null };
   if (ejecutor !== "claude") return vacio;
   let datos: unknown;
@@ -1344,15 +1414,21 @@ export function reporteDelEjecutor(ejecutor: string, modeloDeclarado: string, st
     return vacio;
   }
   const resultado: unknown = Array.isArray(datos)
-    ? [...datos].reverse().find((item) => (item as { type?: string } | null)?.type === "result")
+    ? [...datos]
+        .reverse()
+        .find((item) => (item as { type?: string } | null)?.type === "result")
     : datos;
   if (typeof resultado !== "object" || resultado === null) return vacio;
   const campos = resultado as { modelUsage?: unknown; total_cost_usd?: unknown };
   const usados =
-    typeof campos.modelUsage === "object" && campos.modelUsage !== null ? Object.keys(campos.modelUsage) : [];
-  const modeloUsado = usados.find((id) => mismoModelo(id, modeloDeclarado)) ?? usados[0] ?? null;
+    typeof campos.modelUsage === "object" && campos.modelUsage !== null
+      ? Object.keys(campos.modelUsage)
+      : [];
+  const modeloUsado =
+    usados.find((id) => mismoModelo(id, modeloDeclarado)) ?? usados[0] ?? null;
   const costo = campos.total_cost_usd;
-  const costeUsd = typeof costo === "number" && Number.isFinite(costo) && costo >= 0 ? costo : null;
+  const costeUsd =
+    typeof costo === "number" && Number.isFinite(costo) && costo >= 0 ? costo : null;
   return { modeloUsado, costeUsd };
 }
 
@@ -1376,7 +1452,10 @@ export function modeloDelRevisor(
 ): EleccionDelRevisor {
   const ruta = routeFor(rutas, "reviewer");
   if (ruta === null || ruta.model.trim() === "") {
-    return { ok: false, motivo: "el rol reviewer no tiene modelo: asigná uno en el enrutado" };
+    return {
+      ok: false,
+      motivo: "el rol reviewer no tiene modelo: asigná uno en el enrutado",
+    };
   }
   const conocidos = productores.map(normalizarModelo).filter((modelo) => modelo !== "");
   if (conocidos.length === 0) {

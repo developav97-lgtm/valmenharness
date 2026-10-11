@@ -7,13 +7,23 @@
  * ni sobre algo distinto de lo declarado.
  */
 import { createHash } from "node:crypto";
-import { appendFileSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { skillsExternalCommand, skillsReviewCommand } from "../packages/cli/src/commands.js";
+import {
+  skillsExternalCommand,
+  skillsReviewCommand,
+} from "../packages/cli/src/commands.js";
 import {
   estadoDeSkillsExternas,
   externalSkillReviewsPath,
@@ -27,7 +37,10 @@ let root: string;
 let dir: string;
 
 /** El hash que declara el proyecto para el contenido que se coloca en el disco. */
-function declarar(contenido: Record<string, string>, extra: { version?: string } = {}): string {
+function declarar(
+  contenido: Record<string, string>,
+  extra: { version?: string } = {},
+): string {
   mkdirSync(dir, { recursive: true });
   for (const [ruta, texto] of Object.entries(contenido)) {
     mkdirSync(join(dir, ...ruta.split("/").slice(0, -1)), { recursive: true });
@@ -36,14 +49,31 @@ function declarar(contenido: Record<string, string>, extra: { version?: string }
   const hash = hashDeContenidoDeSkill(dir)!;
   writeFileSync(
     join(root, ".valmen", "config.yaml"),
-    ["name: Demo", "external-skills:", "  - id: ponytail", "    source: https://github.com/mikrammullah/PonyTail", `    version: ${extra.version ?? "v1.2.0"}`, `    sha256: ${hash}`, ""].join("\n"),
+    [
+      "name: Demo",
+      "external-skills:",
+      "  - id: ponytail",
+      "    source: https://github.com/mikrammullah/PonyTail",
+      `    version: ${extra.version ?? "v1.2.0"}`,
+      `    sha256: ${hash}`,
+      "",
+    ].join("\n"),
     "utf8",
   );
   return hash;
 }
 
 const revisar = (extra: Partial<Parameters<typeof registrarRevisionDeSkill>[0]> = {}) =>
-  registrarRevisionDeSkill({ root, id: "ponytail", actor: "Juan Andrade", quote: "Revisé el contenido y no usa red", permissions: "ninguno", ahora: AHORA, env: {}, ...extra });
+  registrarRevisionDeSkill({
+    root,
+    id: "ponytail",
+    actor: "Juan Andrade",
+    quote: "Revisé el contenido y no usa red",
+    permissions: "ninguno",
+    ahora: AHORA,
+    env: {},
+    ...extra,
+  });
 const estado = () => estadoDeSkillsExternas(root)[0]!;
 
 beforeEach(() => {
@@ -56,7 +86,19 @@ afterEach(() => rmSync(root, { recursive: true, force: true }));
 
 describe("el estado de una skill", () => {
   it("sin contenido está solo declarada y no se puede revisar", () => {
-    writeFileSync(join(root, ".valmen", "config.yaml"), ["name: Demo", "external-skills:", "  - id: ponytail", "    source: x", "    version: v1", `    sha256: ${"a".repeat(64)}`, ""].join("\n"), "utf8");
+    writeFileSync(
+      join(root, ".valmen", "config.yaml"),
+      [
+        "name: Demo",
+        "external-skills:",
+        "  - id: ponytail",
+        "    source: x",
+        "    version: v1",
+        `    sha256: ${"a".repeat(64)}`,
+        "",
+      ].join("\n"),
+      "utf8",
+    );
     expect(estado()).toMatchObject({ estado: "declarada" });
     expect(estado().motivo).toContain("no hay contenido");
     expect(() => revisar()).toThrow(/no hay nada que revisar/);
@@ -68,9 +110,19 @@ describe("el estado de una skill", () => {
   });
 
   it("una revisión de una persona sobre el hash declarado la habilita", () => {
-    const hash = declarar({ "SKILL.md": "# ponytail\n", "reglas/min.md": "menos código\n" });
+    const hash = declarar({
+      "SKILL.md": "# ponytail\n",
+      "reglas/min.md": "menos código\n",
+    });
     const r = revisar();
-    expect(r).toMatchObject({ id: "ponytail", skillVersion: "v1.2.0", sha256: hash, actor: "Juan Andrade", quote: "Revisé el contenido y no usa red", permissions: "ninguno" });
+    expect(r).toMatchObject({
+      id: "ponytail",
+      skillVersion: "v1.2.0",
+      sha256: hash,
+      actor: "Juan Andrade",
+      quote: "Revisé el contenido y no usa red",
+      permissions: "ninguno",
+    });
     expect(estado()).toMatchObject({ estado: "habilitada" });
     expect(estado().motivo).toContain("Juan Andrade");
     expect(leerRevisionesDeSkills(root)).toHaveLength(1);
@@ -124,7 +176,16 @@ describe("quién puede revisar", () => {
   });
 
   it("el CLI lo hace y un renglón truncado del registro no borra las revisiones", () => {
-    const r = skillsReviewCommand(root, "ponytail", { actor: "Juan Andrade", quote: "Revisado", permissions: "lee archivos del proyecto" }, { ahora: AHORA, env: {} });
+    const r = skillsReviewCommand(
+      root,
+      "ponytail",
+      {
+        actor: "Juan Andrade",
+        quote: "Revisado",
+        permissions: "lee archivos del proyecto",
+      },
+      { ahora: AHORA, env: {} },
+    );
     expect(r.exitCode).toBe(0);
     expect(r.stdout).toContain("Permisos: lee archivos del proyecto");
     appendFileSync(externalSkillReviewsPath(root), '{"kind":"external-skill-rev', "utf8");
@@ -132,7 +193,14 @@ describe("quién puede revisar", () => {
     const lista = skillsExternalCommand(root);
     expect(lista.stdout).toContain("ponytail · habilitada");
     expect(skillsReviewCommand(root, undefined, {}).exitCode).not.toBe(0);
-    expect(skillsReviewCommand(root, "ponytail", { actor: "x", quote: "y", permissions: "z" }, { env: { VALMEN_UNATTENDED: "1" } }).exitCode).not.toBe(0);
+    expect(
+      skillsReviewCommand(
+        root,
+        "ponytail",
+        { actor: "x", quote: "y", permissions: "z" },
+        { env: { VALMEN_UNATTENDED: "1" } },
+      ).exitCode,
+    ).not.toBe(0);
   });
 });
 

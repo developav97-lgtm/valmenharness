@@ -32,7 +32,10 @@ import {
 } from "../packages/engine/src/umbrales-propuestos.js";
 import type { GateReceipt } from "../packages/gate/src/index.js";
 
-const REALES = readFileSync(new URL("./fixtures/recibos-reales.jsonl", import.meta.url), "utf8")
+const REALES = readFileSync(
+  new URL("./fixtures/recibos-reales.jsonl", import.meta.url),
+  "utf8",
+)
   .trim()
   .split("\n")
   .map((linea) => JSON.parse(linea) as GateReceipt);
@@ -54,7 +57,11 @@ function recibo(opciones: {
     schemaVersion: "2",
     id: opciones.id,
     gate: opciones.gate ?? "plan",
-    subject: { type: "ticket", id: opciones.ticket ?? "BUGFIX-X-Y-20261001", revision: "1" },
+    subject: {
+      type: "ticket",
+      id: opciones.ticket ?? "BUGFIX-X-Y-20261001",
+      revision: "1",
+    },
     outcome: opciones.outcome ?? "review",
     reason: "x",
     actor: "model",
@@ -89,7 +96,8 @@ function recibo(opciones: {
 
 describe("la suite de regresión con vectores de recibos reales", () => {
   const filas = precisionReport(REALES);
-  const fila = (gate: string, evaluator: string) => filas.find((f) => f.gate === gate && f.evaluator === evaluator);
+  const fila = (gate: string, evaluator: string) =>
+    filas.find((f) => f.gate === gate && f.evaluator === evaluator);
 
   it("agrupa por compuerta y evaluador, y las cuentas de los 39 vectores no cambian", () => {
     expect(REALES).toHaveLength(39);
@@ -101,10 +109,32 @@ describe("la suite de regresión con vectores de recibos reales", () => {
       "qa-mechanical·command",
     ]);
     expect(filas.reduce((n, f) => n + f.runs, 0)).toBe(39);
-    expect(fila("analysis", "cascade")).toMatchObject({ runs: 15, approve: 3, review: 9, block: 3, bandRate: 0.6 });
-    expect(fila("plan", "cascade")).toMatchObject({ runs: 10, approve: 3, review: 3, block: 4, bandRate: 0.3 });
-    expect(fila("plan", "jev")).toMatchObject({ runs: 6, approve: 3, review: 3, block: 0, bandRate: 0.5 });
-    expect(fila("qa-mechanical", "command")).toMatchObject({ runs: 3, bandRate: 0, approvedUnchangedRate: null });
+    expect(fila("analysis", "cascade")).toMatchObject({
+      runs: 15,
+      approve: 3,
+      review: 9,
+      block: 3,
+      bandRate: 0.6,
+    });
+    expect(fila("plan", "cascade")).toMatchObject({
+      runs: 10,
+      approve: 3,
+      review: 3,
+      block: 4,
+      bandRate: 0.3,
+    });
+    expect(fila("plan", "jev")).toMatchObject({
+      runs: 6,
+      approve: 3,
+      review: 3,
+      block: 0,
+      bandRate: 0.5,
+    });
+    expect(fila("qa-mechanical", "command")).toMatchObject({
+      runs: 3,
+      bandRate: 0,
+      approvedUnchangedRate: null,
+    });
   });
 
   it("la tasa de revisiones aprobadas sin cambios cuenta solo las decididas por una persona", () => {
@@ -116,7 +146,10 @@ describe("la suite de regresión con vectores de recibos reales", () => {
       reviewsApproved: 3,
       approvedUnchangedRate: 1,
     });
-    expect(fila("plan", "cascade")).toMatchObject({ reviewsDecided: 2, reviewsDelegated: 1 });
+    expect(fila("plan", "cascade")).toMatchObject({
+      reviewsDecided: 2,
+      reviewsDelegated: 1,
+    });
   });
 
   it("los bloqueos se cuentan por tipo de ticket", () => {
@@ -126,15 +159,21 @@ describe("la suite de regresión con vectores de recibos reales", () => {
 
   it("el informe muestra las tres cuentas", () => {
     const texto = renderPrecision(filas);
-    expect(texto).toContain("analysis · cascade: 15 corrida(s) — aprueba 3, revisa 9, bloquea 3");
+    expect(texto).toContain(
+      "analysis · cascade: 15 corrida(s) — aprueba 3, revisa 9, bloquea 3",
+    );
     expect(texto).toContain("tasa de banda: 60 %");
-    expect(texto).toContain("revisiones aprobadas sin cambios: 100 % (3 de 3 decididas por una persona; 3 decidida(s) por el agente por delegación, que no cuentan)");
+    expect(texto).toContain(
+      "revisiones aprobadas sin cambios: 100 % (3 de 3 decididas por una persona; 3 decidida(s) por el agente por delegación, que no cuentan)",
+    );
     expect(texto).toContain("bloqueos por tipo de ticket: BUGFIX 1, FEATURE 3");
   });
 
   it("acota por fechas", () => {
     expect(precisionReport(REALES, { desde: "2099-01-01" })).toEqual([]);
-    expect(renderPrecision([], { desde: "2099-01-01" })).toContain("No hay recibos en ese período");
+    expect(renderPrecision([], { desde: "2099-01-01" })).toContain(
+      "No hay recibos en ese período",
+    );
   });
 });
 
@@ -142,12 +181,19 @@ describe("el evaluador de un recibo", () => {
   it("lo toma del campo, y en un recibo anterior lo infiere de su forma", () => {
     const base = recibo({ id: "a", valores: [0.9], humano: null });
     expect(inferEvaluator(base)).toBe("jev");
-    const viejo = (extra: Record<string, unknown>) => ({ ...base, evaluator: undefined, ...extra }) as unknown as GateReceipt;
+    const viejo = (extra: Record<string, unknown>) =>
+      ({ ...base, evaluator: undefined, ...extra }) as unknown as GateReceipt;
     expect(inferEvaluator(viejo({ escalations: [{}] }))).toBe("cascade");
     expect(inferEvaluator(viejo({ model: null }))).toBe("command");
     expect(inferEvaluator(viejo({ commandResults: [{}] }))).toBe("command");
-    expect(inferEvaluator(viejo({ model: { provider: "openrouter", model: "typesafe/jev-1.13" } }))).toBe("jev");
-    expect(inferEvaluator(viejo({ model: { provider: "codex", model: "gpt-6" } }))).toBe("llm-judge");
+    expect(
+      inferEvaluator(
+        viejo({ model: { provider: "openrouter", model: "typesafe/jev-1.13" } }),
+      ),
+    ).toBe("jev");
+    expect(inferEvaluator(viejo({ model: { provider: "codex", model: "gpt-6" } }))).toBe(
+      "llm-judge",
+    );
   });
 });
 
@@ -189,7 +235,9 @@ describe("proponer umbrales desde las decisiones humanas", () => {
     expect(pocas.status).toBe("insuficiente");
     expect(pocas.reason).toContain("evidencia insuficiente");
 
-    const sinRechazos = Array.from({ length: 30 }, (_, i) => recibo({ id: `ok${i}`, valores: [0.85], humano: "approve" }));
+    const sinRechazos = Array.from({ length: 30 }, (_, i) =>
+      recibo({ id: `ok${i}`, valores: [0.85], humano: "approve" }),
+    );
     const p = proposeThresholds(sinRechazos, "plan");
     expect(p.status).toBe("insuficiente");
     expect(p.rejections).toBe(0);
@@ -217,7 +265,10 @@ describe("proponer umbrales desde las decisiones humanas", () => {
 
 describe("los comandos", () => {
   let lab: string;
-  const PATHS = (): { root: string; ticketsDir: string } => ({ root: lab, ticketsDir: "tickets" });
+  const PATHS = (): { root: string; ticketsDir: string } => ({
+    root: lab,
+    ticketsDir: "tickets",
+  });
 
   beforeEach(() => {
     lab = mkdtempSync(join(tmpdir(), "valmen-precision-"));
@@ -229,7 +280,11 @@ describe("los comandos", () => {
       porTicket.set(id, [...(porTicket.get(id) ?? []), JSON.stringify(r)]);
     }
     for (const [id, lineas] of porTicket) {
-      writeFileSync(join(lab, ".valmen", "receipts", `${id}.jsonl`), `${lineas.join("\n")}\n`, "utf8");
+      writeFileSync(
+        join(lab, ".valmen", "receipts", `${id}.jsonl`),
+        `${lineas.join("\n")}\n`,
+        "utf8",
+      );
     }
   });
   afterEach(() => {
@@ -260,6 +315,8 @@ describe("los comandos", () => {
   it("sin recibos los informes salen vacíos y no fallan", () => {
     rmSync(join(lab, ".valmen", "receipts"), { recursive: true, force: true });
     expect(precisionCommand(PATHS(), {}).stdout).toContain("No hay recibos");
-    expect(thresholdsCommand(PATHS(), "plan", {}).stdout).toContain("evidencia insuficiente");
+    expect(thresholdsCommand(PATHS(), "plan", {}).stdout).toContain(
+      "evidencia insuficiente",
+    );
   });
 });

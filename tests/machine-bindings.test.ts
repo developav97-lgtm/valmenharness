@@ -32,16 +32,22 @@ describe("bindings por máquina", () => {
       dispatchExecutors: [],
     });
 
-    expect(readExecutionCapabilities(parseConfig([
-      "project-id: valmen-harness",
-      "execution:",
-      "  observation-sources:",
-      "    - hermes",
-      "    - opencode",
-      "  dispatch-executors:",
-      "    - hermes",
-      "",
-    ].join("\n")))).toEqual({
+    expect(
+      readExecutionCapabilities(
+        parseConfig(
+          [
+            "project-id: valmen-harness",
+            "execution:",
+            "  observation-sources:",
+            "    - hermes",
+            "    - opencode",
+            "  dispatch-executors:",
+            "    - hermes",
+            "",
+          ].join("\n"),
+        ),
+      ),
+    ).toEqual({
       observationSources: ["hermes", "opencode"],
       dispatchExecutors: ["hermes"],
     });
@@ -51,22 +57,23 @@ describe("bindings por máquina", () => {
     ["observation-sources", "Hermes", "etiquetas"],
     ["dispatch-executors", "../hermes", "etiquetas"],
   ])("rechaza una capacidad no portable (%s: %s)", (key, value, message) => {
-    expect(() => readExecutionCapabilities(parseConfig([
-      "execution:",
-      `  ${key}:`,
-      `    - ${value}`,
-      "",
-    ].join("\n")))).toThrow(message);
+    expect(() =>
+      readExecutionCapabilities(
+        parseConfig(["execution:", `  ${key}:`, `    - ${value}`, ""].join("\n")),
+      ),
+    ).toThrow(message);
   });
 
   it("rechaza una capacidad repetida", () => {
-    expect(() => readExecutionCapabilities(parseConfig([
-      "execution:",
-      "  observation-sources:",
-      "    - hermes",
-      "    - hermes",
-      "",
-    ].join("\n")))).toThrow("no puede repetir");
+    expect(() =>
+      readExecutionCapabilities(
+        parseConfig(
+          ["execution:", "  observation-sources:", "    - hermes", "    - hermes", ""].join(
+            "\n",
+          ),
+        ),
+      ),
+    ).toThrow("no puede repetir");
   });
 
   it("permite que dos máquinas declaren raíces y perfiles distintos para el mismo proyecto", () => {
@@ -107,7 +114,10 @@ describe("bindings por máquina", () => {
 
   it.each([
     ["root: proyecto", "root"],
-    ["api-key: no-debe-ir-aqui # valmen:allow-secret ejemplo de campo prohibido", "api-key"],
+    [
+      "api-key: no-debe-ir-aqui # valmen:allow-secret ejemplo de campo prohibido",
+      "api-key",
+    ],
     ["token: no-debe-ir-aqui # valmen:allow-secret ejemplo de campo prohibido", "token"],
   ])("rechaza %s en un binding local", (field, expected) => {
     expect(() =>
@@ -134,18 +144,30 @@ describe("bindings por máquina", () => {
       "",
     ];
     expect(parseMachineBindings(base.join("\n")).managedExecutionCapacity).toBe(1);
-    expect(parseMachineBindings([
-      "schema-version: 1",
-      "machine-id: qa-machine",
-      "managed-execution-capacity: 3",
-      "projects:",
-      "  valmen-harness:",
-      "    root: /tmp/harness",
-      "",
-    ].join("\n")).managedExecutionCapacity).toBe(3);
-    expect(() => parseMachineBindings(base.map((line) =>
-      line === "projects:" ? "managed-execution-capacity: 0\nprojects:" : line,
-    ).join("\n"))).toThrow("entero positivo");
-    expect(() => parseConfig("managed-execution-capacity: 2\n")).toThrow("bindings.local.yaml");
+    expect(
+      parseMachineBindings(
+        [
+          "schema-version: 1",
+          "machine-id: qa-machine",
+          "managed-execution-capacity: 3",
+          "projects:",
+          "  valmen-harness:",
+          "    root: /tmp/harness",
+          "",
+        ].join("\n"),
+      ).managedExecutionCapacity,
+    ).toBe(3);
+    expect(() =>
+      parseMachineBindings(
+        base
+          .map((line) =>
+            line === "projects:" ? "managed-execution-capacity: 0\nprojects:" : line,
+          )
+          .join("\n"),
+      ),
+    ).toThrow("entero positivo");
+    expect(() => parseConfig("managed-execution-capacity: 2\n")).toThrow(
+      "bindings.local.yaml",
+    );
   });
 });

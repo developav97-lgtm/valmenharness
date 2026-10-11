@@ -86,7 +86,8 @@ export const CRITERIOS_QUE_EVALUA_EL_MODELO = [
  */
 export function renderFixtureTicket(options: FixtureTicketOptions): string {
   const estado = options.workflowStatus ?? "planned";
-  const registrada = options.aprobacionRegistrada ?? (estado === "approved" || estado === "in_progress");
+  const registrada =
+    options.aprobacionRegistrada ?? (estado === "approved" || estado === "in_progress");
   if (!registrada) return renderBase(options, "");
   // El hash del plan no depende de los eventos: se calcula sobre la versión sin el evento.
   const hash = hashDelPlan(parseTicket(renderBase(options, "")));

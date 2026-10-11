@@ -37,7 +37,10 @@ export type BloqueDePrueba =
       readonly input: Record<string, unknown>;
     };
 
-export const texto = (contenido: string): BloqueDePrueba => ({ tipo: "texto", texto: contenido });
+export const texto = (contenido: string): BloqueDePrueba => ({
+  tipo: "texto",
+  texto: contenido,
+});
 
 export const llamada = (
   id: string,
@@ -200,7 +203,11 @@ export function escribirSesionDeClaude(
     const directorio = join(carpeta, opciones.id, "subagents");
     mkdirSync(directorio, { recursive: true });
     subagentes.forEach((lineas, indice) => {
-      writeFileSync(join(directorio, `agent-a${indice}.jsonl`), `${lineas.join("\n")}\n`, "utf8");
+      writeFileSync(
+        join(directorio, `agent-a${indice}.jsonl`),
+        `${lineas.join("\n")}\n`,
+        "utf8",
+      );
       writeFileSync(
         join(directorio, `agent-a${indice}.meta.json`),
         JSON.stringify({ agentType: "Explore", spawnDepth: 1 }),

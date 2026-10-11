@@ -8,7 +8,14 @@
  * append-only y solo lo escribe una sesión atendida.
  */
 import { createHash } from "node:crypto";
-import { appendFileSync, existsSync, lstatSync, mkdirSync, readFileSync, readdirSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 
 import { type ExternalSkill, parseConfig, readExternalSkills } from "@valmen/adapter";
@@ -16,7 +23,8 @@ import { EXIT_INVARIANT, EXIT_SCHEMA, fail } from "@valmen/core";
 
 import { assertSesionAtendida } from "./plan-approval.js";
 
-export type EstadoDeSkillExterna = "declarada" | "sin-revisión" | "habilitada" | "deshabilitada";
+export type EstadoDeSkillExterna =
+  "declarada" | "sin-revisión" | "habilitada" | "deshabilitada";
 
 export interface SkillExternaConEstado extends ExternalSkill {
   readonly estado: EstadoDeSkillExterna;
@@ -71,7 +79,9 @@ export function hashDeContenidoDeSkill(dir: string): string | null {
   if (archivos.length === 0) return null;
   const global = createHash("sha256");
   for (const rel of archivos.sort()) {
-    const contenido = createHash("sha256").update(readFileSync(join(dir, ...rel.split("/")))).digest("hex");
+    const contenido = createHash("sha256")
+      .update(readFileSync(join(dir, ...rel.split("/"))))
+      .digest("hex");
     global.update(`${rel}\0${contenido}\n`, "utf8");
   }
   return global.digest("hex");
@@ -115,7 +125,11 @@ export function estadoDeSkillsExternas(root: string): SkillExternaConEstado[] {
   return declaradas(root).map((skill): SkillExternaConEstado => {
     const hash = hashDeContenidoDeSkill(join(externalSkillsDir(root), skill.id));
     if (hash === null) {
-      return { ...skill, estado: "declarada", motivo: `no hay contenido en .valmen/external-skills/${skill.id}/` };
+      return {
+        ...skill,
+        estado: "declarada",
+        motivo: `no hay contenido en .valmen/external-skills/${skill.id}/`,
+      };
     }
     const ultima = [...revisiones].reverse().find((r) => r.id === skill.id);
     if (ultima !== undefined && ultima.sha256 !== hash) {
@@ -133,12 +147,24 @@ export function estadoDeSkillsExternas(root: string): SkillExternaConEstado[] {
       };
     }
     if (ultima === undefined) {
-      return { ...skill, estado: "sin-revisión", motivo: "el contenido coincide con lo declarado y aún no lo revisó una persona" };
+      return {
+        ...skill,
+        estado: "sin-revisión",
+        motivo: "el contenido coincide con lo declarado y aún no lo revisó una persona",
+      };
     }
     if (ultima.skillVersion !== skill.version) {
-      return { ...skill, estado: "sin-revisión", motivo: `la revisión es de la versión ${ultima.skillVersion} y la declarada es ${skill.version}` };
+      return {
+        ...skill,
+        estado: "sin-revisión",
+        motivo: `la revisión es de la versión ${ultima.skillVersion} y la declarada es ${skill.version}`,
+      };
     }
-    return { ...skill, estado: "habilitada", motivo: `revisada por ${ultima.actor} el ${ultima.reviewedAt.slice(0, 10)}` };
+    return {
+      ...skill,
+      estado: "habilitada",
+      motivo: `revisada por ${ultima.actor} el ${ultima.reviewedAt.slice(0, 10)}`,
+    };
   });
 }
 
@@ -156,21 +182,38 @@ export interface RegistrarRevisionRequest {
  * Registra la revisión de una persona sobre el contenido actual de una skill. Solo se puede
  * revisar contenido que ya está en el disco y coincide con el hash declarado.
  */
-export function registrarRevisionDeSkill(request: RegistrarRevisionRequest): RevisionDeSkill {
-  assertSesionAtendida("registrar la revisión de una skill de terceros", request.env ?? process.env);
+export function registrarRevisionDeSkill(
+  request: RegistrarRevisionRequest,
+): RevisionDeSkill {
+  assertSesionAtendida(
+    "registrar la revisión de una skill de terceros",
+    request.env ?? process.env,
+  );
   const actor = request.actor.trim();
   const quote = request.quote.trim();
   const permissions = request.permissions.trim();
-  if (actor === "") fail("Revisar una skill necesita un responsable: falta --actor.", EXIT_SCHEMA);
-  if (quote === "") fail("Revisar una skill necesita la frase literal de quien revisa: falta --quote.", EXIT_SCHEMA);
+  if (actor === "")
+    fail("Revisar una skill necesita un responsable: falta --actor.", EXIT_SCHEMA);
+  if (quote === "")
+    fail(
+      "Revisar una skill necesita la frase literal de quien revisa: falta --quote.",
+      EXIT_SCHEMA,
+    );
   if (permissions === "") {
-    fail("Revisar una skill necesita los permisos que usa: falta --permissions (escribe «ninguno» si no usa ninguno).", EXIT_SCHEMA);
+    fail(
+      "Revisar una skill necesita los permisos que usa: falta --permissions (escribe «ninguno» si no usa ninguno).",
+      EXIT_SCHEMA,
+    );
   }
   const skill = declaradas(request.root).find((s) => s.id === request.id);
-  if (skill === undefined) fail(`La skill ${request.id} no está declarada en external-skills.`, EXIT_SCHEMA);
+  if (skill === undefined)
+    fail(`La skill ${request.id} no está declarada en external-skills.`, EXIT_SCHEMA);
   const hash = hashDeContenidoDeSkill(join(externalSkillsDir(request.root), request.id));
   if (hash === null) {
-    fail(`La skill ${request.id} no tiene contenido en .valmen/external-skills/${request.id}/: no hay nada que revisar.`, EXIT_INVARIANT);
+    fail(
+      `La skill ${request.id} no tiene contenido en .valmen/external-skills/${request.id}/: no hay nada que revisar.`,
+      EXIT_INVARIANT,
+    );
   }
   if (hash !== skill.sha256) {
     fail(

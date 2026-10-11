@@ -6,3 +6,5 @@
 {"kind":"approval-quota-use","authorizationId":"APA-20261009-2cf4af","ticketId":"IMPROVEMENT-WEB-MUNDOS-CORRECCIONES-20261009","stage":"plan","usedAt":"2026-10-09T04:06:06.569Z"}
 {"kind":"approval-quota-use","authorizationId":"APA-20261009-326fff","ticketId":"IMPROVEMENT-ENGINE-CONTEXTO-ORQUESTADOR-20261009","stage":"plan","usedAt":"2026-10-09T15:51:45.983Z"}
 {"kind":"approval-quota-use","authorizationId":"APA-20261009-326fff","ticketId":"IMPROVEMENT-CLI-APROBAR-Y-CERRAR-EN-UN-PASO-20261009","stage":"plan","usedAt":"2026-10-09T15:47:22.867Z"}
+{"kind":"approval-quota-use","authorizationId":"APA-20261009-326fff","ticketId":"CHORE-CORE-LISTA-DENEGADOS-20261010","stage":"plan","usedAt":"2026-10-11T00:13:46.291Z"}
+{"kind":"approval-quota-use","authorizationId":"APA-20261009-326fff","ticketId":"FEATURE-GATE-ARBOL-QA-RECIBO-20261010","stage":"plan","usedAt":"2026-10-10T23:12:33.263Z"}

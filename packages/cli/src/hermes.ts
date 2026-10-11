@@ -59,7 +59,12 @@ import {
   type HermesEntry,
 } from "@valmen/adapter";
 
-import { EXIT_SCHEMA, declaredImpactIds, parsePolicyConfirmation, parseTicket } from "@valmen/core";
+import {
+  EXIT_SCHEMA,
+  declaredImpactIds,
+  parsePolicyConfirmation,
+  parseTicket,
+} from "@valmen/core";
 import { blockOf, credentialsPath, fieldOf } from "@valmen/credentials";
 import {
   appendApproval,
@@ -633,7 +638,7 @@ export function decideByCode(request: DecideByCodeRequest): CommandResult {
         "El veredicto que leíste describe un texto que ya no es el que está en\n" +
         "disco, así que aprobarlo sería aprobar otra cosa. Volvé a evaluar la\n" +
         "compuerta y decidí sobre el recibo nuevo:\n" +
-        `  valmen gate --id ${claims.ticket} --gate ${claims.gate}\n\n` +
+        `  valmen gate ${claims.gate} --id ${claims.ticket}\n\n` +
         "El código queda sin usar hasta que venza.",
     );
   }
@@ -817,10 +822,15 @@ export function pendientesDeAvisar(paths: RegistryPaths, now: Date): PendienteDe
   // Una jornada terminada se avisa una vez, y solo la más reciente: avisar todo el historial de
   // jornadas cerradas inundaría el canal la primera vez.
   const ultimaJornada = ultimaJornadaDelRegistro(paths.root);
-  if (ultimaJornada !== null && !jornadasTerminadasAvisadas(paths).has(ultimaJornada.journeyId)) {
+  if (
+    ultimaJornada !== null &&
+    !jornadasTerminadasAvisadas(paths).has(ultimaJornada.journeyId)
+  ) {
     const estados = ultimaJornada.tickets.flatMap((ticketId) => {
       const ubicado = findTicket(paths, ticketId);
-      return ubicado === undefined ? [] : [parseTicket(ubicado.text).fields.workflow_status];
+      return ubicado === undefined
+        ? []
+        : [parseTicket(ubicado.text).fields.workflow_status];
     });
     if (estados.length > 0 && estados.every((estado) => estado === "closed")) {
       salida.push({
@@ -859,7 +869,10 @@ export function pendientesDeAvisar(paths: RegistryPaths, now: Date): PendienteDe
     if (ubicado === undefined) continue;
     const qa = parseTicket(ubicado.text).blocks.QA ?? [];
     const fin = qa[qa.length - 1];
-    const politica = fin === undefined ? null : parsePolicyConfirmation(fin["po_confirmation"] as string | null);
+    const politica =
+      fin === undefined
+        ? null
+        : parsePolicyConfirmation(fin["po_confirmation"] as string | null);
     if (politica === null || politicaAvisados.has(`${fila.id}:${qa.length}`)) continue;
     salida.push({
       kind: "cierre-por-politica",
@@ -897,12 +910,17 @@ export function avisarParteDeJornada(request: {
 }): EnvioDelParte {
   const huella = huellaDelParte(request.parte);
   if (partesDeJornadaAvisados(request.paths).has(`${request.parte.journeyId}:${huella}`)) {
-    return { estado: "ya-enviado", detalle: `el parte de ${request.parte.journeyId} con este contenido ya salió` };
+    return {
+      estado: "ya-enviado",
+      detalle: `el parte de ${request.parte.journeyId} con este contenido ya salió`,
+    };
   }
   const entrega = hermesSendChannel({
     target: request.to,
     ...(request.runner === undefined ? {} : { runner: request.runner }),
-  }).notify(renderJourneyHandoffNotification(request.parte, { maxCaracteres: TOPE_DEL_PARTE }));
+  }).notify(
+    renderJourneyHandoffNotification(request.parte, { maxCaracteres: TOPE_DEL_PARTE }),
+  );
   if (!entrega.delivered) return { estado: "fallido", detalle: entrega.detail };
   appendApproval(request.paths, {
     kind: "journey-handoff-notice",
@@ -1001,7 +1019,10 @@ export function hermesNotifyPendientes(request: NotifyPendingRequest): CommandRe
       );
 
       if (!entrega.delivered) {
-        fallidos.push({ que: `${pendiente.ticket} · ${pendiente.receipt}`, motivo: entrega.detail });
+        fallidos.push({
+          que: `${pendiente.ticket} · ${pendiente.receipt}`,
+          motivo: entrega.detail,
+        });
         continue;
       }
 
@@ -1029,7 +1050,10 @@ export function hermesNotifyPendientes(request: NotifyPendingRequest): CommandRe
         }),
       );
       if (!entrega.delivered) {
-        fallidos.push({ que: `${pendiente.ticket} · cerrado por política`, motivo: entrega.detail });
+        fallidos.push({
+          que: `${pendiente.ticket} · cerrado por política`,
+          motivo: entrega.detail,
+        });
         continue;
       }
       appendApproval(request.paths, {
@@ -1046,10 +1070,18 @@ export function hermesNotifyPendientes(request: NotifyPendingRequest): CommandRe
       const entrega = hermesSendChannel({
         target: to,
         ...(request.runner === undefined ? {} : { runner: request.runner }),
-      }).notify(renderJourneyFinishedNotification({ journeyId: pendiente.journeyId, tickets: pendiente.tickets }));
+      }).notify(
+        renderJourneyFinishedNotification({
+          journeyId: pendiente.journeyId,
+          tickets: pendiente.tickets,
+        }),
+      );
       if (!entrega.delivered) {
         // No se anota: un aviso que no salió no cuenta como avisado y se reintenta.
-        fallidos.push({ que: `${pendiente.journeyId} · jornada terminada`, motivo: entrega.detail });
+        fallidos.push({
+          que: `${pendiente.journeyId} · jornada terminada`,
+          motivo: entrega.detail,
+        });
         continue;
       }
       appendApproval(request.paths, {
@@ -1076,7 +1108,10 @@ export function hermesNotifyPendientes(request: NotifyPendingRequest): CommandRe
       );
       if (!entrega.delivered) {
         // No se anota: un aviso que no salió no cuenta como avisado y se reintenta.
-        fallidos.push({ que: `${pendiente.ticket} · pruebas listas`, motivo: entrega.detail });
+        fallidos.push({
+          que: `${pendiente.ticket} · pruebas listas`,
+          motivo: entrega.detail,
+        });
         continue;
       }
       appendApproval(request.paths, {
@@ -1361,13 +1396,18 @@ export function armarParte(request: BriefRequest): BriefInput {
 
   // La jornada del día (R-JORN-008): solo si el proyecto la usa; sin ella el parte es el de siempre.
   const hoy = request.now.toISOString().slice(0, 10);
-  const sesiones = leerFases(request.paths.root).filter((f) => f.registradoEn.startsWith(hoy));
+  const sesiones = leerFases(request.paths.root).filter((f) =>
+    f.registradoEn.startsWith(hoy),
+  );
   const paradas = paradasActivas(request.paths);
-  const usaJornadas = existsSync(join(request.paths.root, ".valmen", "journeys", "events.jsonl")) || sesiones.length > 0;
+  const usaJornadas =
+    existsSync(join(request.paths.root, ".valmen", "journeys", "events.jsonl")) ||
+    sesiones.length > 0;
   let jornada: BriefJornada | undefined;
   if (usaJornadas) {
     const porFase = new Map<string, typeof sesiones>();
-    for (const sesion of sesiones) porFase.set(sesion.fase, [...(porFase.get(sesion.fase) ?? []), sesion]);
+    for (const sesion of sesiones)
+      porFase.set(sesion.fase, [...(porFase.get(sesion.fase) ?? []), sesion]);
     const filas = listTickets(request.paths);
     jornada = {
       fases: [...porFase.entries()].map(([fase, lista]) => ({
@@ -1380,14 +1420,20 @@ export function armarParte(request: BriefRequest): BriefInput {
         costeUsd: lista.some((s2) => s2.costeUsd !== null)
           ? lista.reduce((total, s2) => total + (s2.costeUsd ?? 0), 0)
           : null,
-        modelosUsados: [...new Set(lista.flatMap((s2) => (s2.modeloUsado === null ? [] : [s2.modeloUsado])))],
+        modelosUsados: [
+          ...new Set(
+            lista.flatMap((s2) => (s2.modeloUsado === null ? [] : [s2.modeloUsado])),
+          ),
+        ],
         distintos: lista
           .filter((s2) => s2.coincide === false && s2.modeloUsado !== null)
           .map((s2) => ({ declarado: s2.modelo, usado: s2.modeloUsado as string })),
         sinReportarModelo: lista.filter((s2) => s2.modeloUsado === null).length,
         sinReportarCoste: lista.filter((s2) => s2.costeUsd === null).length,
       })),
-      esperanPruebas: filas.filter((f) => f.workflowStatus === "awaiting_user_tests").map((f) => f.id),
+      esperanPruebas: filas
+        .filter((f) => f.workflowStatus === "awaiting_user_tests")
+        .map((f) => f.id),
       esperanPlan: filas.filter((f) => f.workflowStatus === "planned").map((f) => f.id),
       paradas: paradas.map((p) => `${p.ticketId} · ${p.reason}`),
     };
@@ -1400,11 +1446,13 @@ export function armarParte(request: BriefRequest): BriefInput {
     const cuenta = contarAprobacionesDelDia(request.paths, dia);
     if (cuenta.automaticas > 0 || cuenta.humanas > 0) {
       aprobaciones = {
-        automaticas: listarAprobacionesAutomaticas(request.paths, { dia }).aprobaciones.map((a) => ({
-          ticket: a.ticket,
-          etapa: a.etapa,
-          autorizacion: a.autorizacion,
-        })),
+        automaticas: listarAprobacionesAutomaticas(request.paths, { dia }).aprobaciones.map(
+          (a) => ({
+            ticket: a.ticket,
+            etapa: a.etapa,
+            autorizacion: a.autorizacion,
+          }),
+        ),
         humanas: cuenta.humanas,
       };
     }

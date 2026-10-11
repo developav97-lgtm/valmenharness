@@ -35,7 +35,10 @@ const FEATURE = "FEATURE-POS-FILTRO-ORDENES-20260921";
 const BUGFIX = "BUGFIX-POS-FILTRO-ORDENES-20260921";
 
 let lab: string;
-const PATHS = (): { root: string; ticketsDir: string } => ({ root: lab, ticketsDir: "tickets" });
+const PATHS = (): { root: string; ticketsDir: string } => ({
+  root: lab,
+  ticketsDir: "tickets",
+});
 
 beforeEach(() => {
   lab = mkdtempSync(join(tmpdir(), "valmen-diag-"));
@@ -94,7 +97,11 @@ describe("la pregunta del diagnóstico por tipo", () => {
   it("un FEATURE con diagnóstico completo no bloquea por falta de síntoma", async () => {
     writeFixtureTicket(lab, { id: FEATURE, type: "FEATURE", workflowStatus: "analyzed" });
 
-    const r = await runGate(PATHS(), { gateId: "analysis", ticketId: FEATURE, jev: espia(0.95).jev });
+    const r = await runGate(PATHS(), {
+      gateId: "analysis",
+      ticketId: FEATURE,
+      jev: espia(0.95).jev,
+    });
 
     expect(r.stdout).toContain("APPROVE");
     expect(r.stdout).not.toContain("BLOCK");
@@ -103,26 +110,39 @@ describe("la pregunta del diagnóstico por tipo", () => {
 
 describe("el estado que ve el evaluador", () => {
   const texto = (funcional: string): string =>
-    renderFixtureTicket({ id: FEATURE, type: "FEATURE", workflowStatus: "analyzed" }).replace(
+    renderFixtureTicket({
+      id: FEATURE,
+      type: "FEATURE",
+      workflowStatus: "analyzed",
+    }).replace(
       "- Comportamiento esperado: encuentra por número parcial.",
       `- Comportamiento esperado: ${funcional}`,
     );
 
   it("incluye la descripción funcional del ticket", () => {
     const estado = buildGateState(texto("encuentra por número parcial"));
-    expect(estado["descripcion_funcional"]).toContain("Comportamiento actual: solo encuentra con el número exacto.");
-    expect(estado["descripcion_funcional"]).toContain("Comportamiento esperado: encuentra por número parcial");
+    expect(estado["descripcion_funcional"]).toContain(
+      "Comportamiento actual: solo encuentra con el número exacto.",
+    );
+    expect(estado["descripcion_funcional"]).toContain(
+      "Comportamiento esperado: encuentra por número parcial",
+    );
   });
 
   it("su hash cambia si cambia la sección", () => {
     const a = hashState(buildGateState(texto("encuentra por número parcial")));
-    const b = hashState(buildGateState(texto("encuentra por número parcial y por cliente")));
+    const b = hashState(
+      buildGateState(texto("encuentra por número parcial y por cliente")),
+    );
     expect(a).not.toBe(b);
   });
 });
 
 describe("el bloqueo aislado de la pregunta nueva", () => {
-  const proposiciones = partitionByApplicability(ANALYSIS_GATE.propositions, "FEATURE").applicable;
+  const proposiciones = partitionByApplicability(
+    ANALYSIS_GATE.propositions,
+    "FEATURE",
+  ).applicable;
   const respuestas = (ajustes: Record<string, number> = {}): PropositionAnswer[] =>
     proposiciones.map((p) =>
       p.id === "clasificacion"

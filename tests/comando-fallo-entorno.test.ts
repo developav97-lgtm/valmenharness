@@ -38,7 +38,11 @@ afterEach(() => {
   rmSync(lab, { recursive: true, force: true });
 });
 
-const CRITERIO: Proposition = { id: "criterio_01", kind: "noul", instructions: "se cumple" };
+const CRITERIO: Proposition = {
+  id: "criterio_01",
+  kind: "noul",
+  instructions: "se cumple",
+};
 const FIJA: Proposition = { id: "fija_01", kind: "noul", instructions: "se cumple" };
 
 /** Un «comando de pruebas» que imprime lo dado y sale con el código dado. */
@@ -70,20 +74,30 @@ describe("clasificar una falla del entorno", () => {
         ...base,
         line: "python manage.py test inventario",
         exitCode: 1,
-        output: "Got an error creating the test database: database \"test_x\" already exists",
+        output: 'Got an error creating the test database: database "test_x" already exists',
       }),
     ).toContain("base de datos de pruebas ya existía");
   });
 
   it("reconoce una conexión rechazada", () => {
     expect(
-      classifyEnvironmentFailure({ ...base, line: "node x.js", exitCode: 1, output: "connect ECONNREFUSED 127.0.0.1:5432" }),
+      classifyEnvironmentFailure({
+        ...base,
+        line: "node x.js",
+        exitCode: 1,
+        output: "connect ECONNREFUSED 127.0.0.1:5432",
+      }),
     ).toContain("conexión rechazada");
   });
 
   it("un runner conocido sin su resumen no llegó a ejecutar la suite", () => {
     expect(
-      classifyEnvironmentFailure({ ...base, line: "npx vitest run", exitCode: 0, output: "hola" }),
+      classifyEnvironmentFailure({
+        ...base,
+        line: "npx vitest run",
+        exitCode: 0,
+        output: "hola",
+      }),
     ).toContain("no trae el resumen de pruebas de vitest");
   });
 
@@ -94,13 +108,21 @@ describe("clasificar una falla del entorno", () => {
         line: "python manage.py test inventario",
         exitCode: 1,
         // Menciona la base de datos, pero hay resumen: las pruebas corrieron.
-        output: "FAIL: test_db (database already exists in fixture)\nRan 3 tests in 0.2s\nFAILED (failures=1)",
+        output:
+          "FAIL: test_db (database already exists in fixture)\nRan 3 tests in 0.2s\nFAILED (failures=1)",
       }),
     ).toBeNull();
   });
 
   it("un programa que no es un runner conocido y sale bien no se clasifica", () => {
-    expect(classifyEnvironmentFailure({ ...base, line: "node script.js", exitCode: 0, output: "" })).toBeNull();
+    expect(
+      classifyEnvironmentFailure({
+        ...base,
+        line: "node script.js",
+        exitCode: 0,
+        output: "",
+      }),
+    ).toBeNull();
   });
 });
 
@@ -119,7 +141,14 @@ describe("la compuerta de criterios ante una falla del entorno", () => {
   it("un comando inexistente en un criterio se revisa sin detener la compuerta", () => {
     const { answers, results, failures } = evaluateWithCommands(
       [CRITERIO],
-      [{ propositionId: "criterio_01", command: "no-existe-xyz", args: [], description: "x" }],
+      [
+        {
+          propositionId: "criterio_01",
+          command: "no-existe-xyz",
+          args: [],
+          description: "x",
+        },
+      ],
       { root: lab },
     );
     expect(failures).toEqual([]);
@@ -130,7 +159,15 @@ describe("la compuerta de criterios ante una falla del entorno", () => {
   it("un tiempo agotado en un criterio también se revisa", () => {
     const { answers, results } = evaluateWithCommands(
       [CRITERIO],
-      [{ propositionId: "criterio_01", command: "sleep", args: ["5"], description: "x", timeoutMs: 200 }],
+      [
+        {
+          propositionId: "criterio_01",
+          command: "sleep",
+          args: ["5"],
+          description: "x",
+          timeoutMs: 200,
+        },
+      ],
       { root: lab },
     );
     expect(answers[0]?.value).toBe(0.5);
@@ -141,7 +178,12 @@ describe("la compuerta de criterios ante una falla del entorno", () => {
     const { answers, results } = evaluateWithCommands(
       [CRITERIO],
       // La línea contiene `manage.py test` (runner Django) y la salida su resumen.
-      [comando("criterio_01", "Ran 3 tests in 0.2s\nFAILED (failures=1)", 1, ["manage.py", "test"])],
+      [
+        comando("criterio_01", "Ran 3 tests in 0.2s\nFAILED (failures=1)", 1, [
+          "manage.py",
+          "test",
+        ]),
+      ],
       { root: lab },
     );
     expect(answers).toEqual([{ id: "criterio_01", kind: "noul", value: 0 }]);
@@ -151,7 +193,11 @@ describe("la compuerta de criterios ante una falla del entorno", () => {
   it("una prueba que pasa con su resumen sigue aprobando", () => {
     const { answers } = evaluateWithCommands(
       [CRITERIO],
-      [comando("criterio_01", "Test Files  1 passed (1)\n      Tests  3 passed (3)", 0, ["vitest"])],
+      [
+        comando("criterio_01", "Test Files  1 passed (1)\n      Tests  3 passed (3)", 0, [
+          "vitest",
+        ]),
+      ],
       { root: lab },
     );
     expect(answers[0]?.value).toBe(1);
@@ -196,11 +242,15 @@ describe("la salida que guarda el recibo", () => {
     const resumen = "\nTest Files  1 passed (1)\n      Tests  7 passed (7)\n";
     const completa = ruido + resumen;
 
-    const resultado = runCommandCheck(comando("criterio_01", completa, 0, ["vitest"]), { root: lab });
+    const resultado = runCommandCheck(comando("criterio_01", completa, 0, ["vitest"]), {
+      root: lab,
+    });
 
     expect(resultado.stdout.length).toBeLessThanOrEqual(MAX_CAPTURED_OUTPUT);
     expect(resultado.stdout.endsWith(resumen)).toBe(true);
-    expect(resultado.stdoutSha256).toBe(createHash("sha256").update(completa, "utf8").digest("hex"));
+    expect(resultado.stdoutSha256).toBe(
+      createHash("sha256").update(completa, "utf8").digest("hex"),
+    );
     expect(resultado.stdoutBytes).toBe(40_000 + resumen.length);
     // El resumen estaba al final: con el comienzo del texto no se habría visto.
     expect(completa.slice(0, MAX_CAPTURED_OUTPUT)).not.toContain("Tests  7 passed");

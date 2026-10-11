@@ -192,7 +192,9 @@ describe("el catálogo de herramientas", () => {
     // servidor no puede perder, y por eso se afirma sobre los nombres.
     const nombres = TOOLS.map((tool) => tool.name);
     // La única con «aprob» es la de solo lectura de las autorizaciones de aprobación automática.
-    expect(nombres.filter((nombre) => /aprob|approve/.test(nombre))).toEqual(["ver_autorizaciones_aprobacion"]);
+    expect(nombres.filter((nombre) => /aprob|approve/.test(nombre))).toEqual([
+      "ver_autorizaciones_aprobacion",
+    ]);
   });
 
   it("toda herramienta que emite un veredicto de persona exige sus palabras", () => {
@@ -232,8 +234,7 @@ describe("el catálogo de herramientas", () => {
     // pidió vería «desconocido» en el camino que no lo lista—.
     const tool = TOOLS.find((candidata) => candidata.name === "evaluar_compuerta");
     const propiedades = tool?.inputSchema["properties"] as
-      | Record<string, { enum?: readonly string[] }>
-      | undefined;
+      Record<string, { enum?: readonly string[] }> | undefined;
     expect(propiedades?.["evaluator"]?.enum).toEqual([...EVALUATOR_IDS]);
   });
 
@@ -320,7 +321,13 @@ describe("el catálogo de herramientas", () => {
     // (`resolveAuthorizedProject`), no por una ruta arbitraria: la ejecución
     // directa se limita a proyectos autorizados, y un `root` que ignoraría la
     // implementación sería configuración muerta que el esquema promete.
-    const SIN_ROOT = new Set(["registrar_actividad_ejecucion", "ver_actividad_ejecucion", "ver_jornadas", "armar_jornada", "ver_autorizaciones_qa"]);
+    const SIN_ROOT = new Set([
+      "registrar_actividad_ejecucion",
+      "ver_actividad_ejecucion",
+      "ver_jornadas",
+      "armar_jornada",
+      "ver_autorizaciones_qa",
+    ]);
     for (const tool of TOOLS) {
       if (SIN_ROOT.has(tool.name)) continue;
       const propiedades = tool.inputSchema["properties"] as
@@ -967,7 +974,9 @@ describe("registrar el consumo de una sesión de Claude Code", () => {
 
   it("la descripción de la herramienta lista `claude:` junto a los demás orígenes", () => {
     const herramienta = TOOLS.find((t) => t.name === "registrar_consumo_ia");
-    expect(herramienta?.description).toContain("`claude:<identificador de la sesión de Claude Code>`");
+    expect(herramienta?.description).toContain(
+      "`claude:<identificador de la sesión de Claude Code>`",
+    );
     // Y siguen estando los que ya estaban: agregar uno no quita otro.
     for (const origen of ["`opencode:", "`hermes:", "`codex:", "`manual:"]) {
       expect(herramienta?.description).toContain(origen);
@@ -989,8 +998,9 @@ describe("registrar el consumo de una sesión de Claude Code", () => {
     });
 
     expect(resultado.isError, resultado.text).toBe(false);
-    const consumo = parseTicket(readFileSync(ruta, "utf8")).blocks["Consumo de IA"] as
-      readonly Record<string, unknown>[];
+    const consumo = parseTicket(readFileSync(ruta, "utf8")).blocks[
+      "Consumo de IA"
+    ] as readonly Record<string, unknown>[];
     expect(consumo[0]?.["source"]).toBe(`claude:${SESION}`);
     expect(consumo[0]?.["estimated_cost_usd"]).toBeNull();
   });
@@ -1419,8 +1429,12 @@ describe("el ciclo entero del ticket", () => {
     expect(ticket.fields.workflow_status).toBe("closed");
     expect(ticket.fields.qa_status).toBe("approved");
     // El criterio con `test:` quedó marcado por el motor desde el recibo, y el evento lo cita.
-    expect(readFileSync(ruta, "utf8")).toContain('- [x] Buscar "104" devuelve la orden "1042".');
-    expect(JSON.stringify(ticket.blocks.Eventos)).toContain("Criterios marcados desde el recibo");
+    expect(readFileSync(ruta, "utf8")).toContain(
+      '- [x] Buscar "104" devuelve la orden "1042".',
+    );
+    expect(JSON.stringify(ticket.blocks.Eventos)).toContain(
+      "Criterios marcados desde el recibo",
+    );
     expect(ticket.blocks.QA).toHaveLength(2);
     expect(ticket.blocks.Retests).toHaveLength(1);
     expect(ticket.blocks.Cierre).toHaveLength(1);
@@ -1773,33 +1787,58 @@ describe("R-PERF-007 reanudar_ticket con el cliente de la sesión", () => {
 
   it("R-PERF-007 reanudar con cliente", async () => {
     await crear();
-    const resultado = await callTool(contexto, "reanudar_ticket", { id: ID, cliente: "claude" });
+    const resultado = await callTool(contexto, "reanudar_ticket", {
+      id: ID,
+      cliente: "claude",
+    });
     expect(resultado.isError).toBe(false);
-    expect(resultado.data?.["fases"]).toMatchObject({ cliente: "claude", admiteSubagentes: true });
+    expect(resultado.data?.["fases"]).toMatchObject({
+      cliente: "claude",
+      admiteSubagentes: true,
+    });
     expect(resultado.text).toContain("Modelos por fase (cliente: claude)");
   });
 
   it("R-PERF-007 C12: reanudar con cliente devuelve la delegación a subagente", async () => {
     mkdirSync(join(lab, ".valmen"), { recursive: true });
-    writeFileSync(join(lab, ".valmen", "profiles.yaml"), "seleccion:\n  proyecto: claude-code-completo\n\nperfiles: {}\n");
+    writeFileSync(
+      join(lab, ".valmen", "profiles.yaml"),
+      "seleccion:\n  proyecto: claude-code-completo\n\nperfiles: {}\n",
+    );
     writeFixtureTicket(lab, { id: ID, workflowStatus: "analyzed" });
-    const resultado = await callTool(contexto, "reanudar_ticket", { id: ID, cliente: "claude" });
+    const resultado = await callTool(contexto, "reanudar_ticket", {
+      id: ID,
+      cliente: "claude",
+    });
     expect(resultado.isError).toBe(false);
-    expect(resultado.data?.["delegacion"]).toMatchObject({ modo: "subagente", fase: "plan", alias: "opus" });
+    expect(resultado.data?.["delegacion"]).toMatchObject({
+      modo: "subagente",
+      fase: "plan",
+      alias: "opus",
+    });
   });
 
   it("R-PERF-007 C13: el esquema de salida declara delegacion", () => {
-    const propiedades = herramienta()?.outputSchema?.["properties"] as Record<string, unknown>;
+    const propiedades = herramienta()?.outputSchema?.["properties"] as Record<
+      string,
+      unknown
+    >;
     expect(propiedades).toHaveProperty("delegacion");
   });
 
   it("R-PERF-007 esquema de salida", () => {
-    const propiedades = herramienta()?.outputSchema?.["properties"] as Record<string, unknown>;
+    const propiedades = herramienta()?.outputSchema?.["properties"] as Record<
+      string,
+      unknown
+    >;
     expect(propiedades).toHaveProperty("fases");
   });
 
   it("R-PERF-007 esquema de entrada", () => {
-    const propiedades = herramienta()?.inputSchema["properties"] as Record<string, { enum?: string[] }>;
+    const propiedades = herramienta()?.inputSchema["properties"] as Record<
+      string,
+      { enum?: string[] }
+    >;
     expect(propiedades["cliente"]?.enum).toEqual([...EJECUTORES_CON_PERFIL]);
   });
 });
@@ -1830,7 +1869,9 @@ describe("ver_perfiles: Hermes lee los perfiles, no los cambia", () => {
 
   it("C21 con id muestra los roles con proveedor, modelo y esfuerzo", async () => {
     sembrar();
-    const resultado = await callTool(contexto, "ver_perfiles", { id: "claude-code-completo" });
+    const resultado = await callTool(contexto, "ver_perfiles", {
+      id: "claude-code-completo",
+    });
     expect(resultado.isError).toBe(false);
     expect(resultado.text).toContain("architect");
     expect(resultado.text).toContain("claude-opus-5-5");
@@ -1851,7 +1892,10 @@ describe("ver_perfiles: Hermes lee los perfiles, no los cambia", () => {
     expect(existsSync(perfiles())).toBe(antes);
     sembrar();
     const bytes = readFileSync(perfiles(), "utf8");
-    await callTool(contexto, "ver_perfiles", { id: "claude-code-completo", cliente: "claude" });
+    await callTool(contexto, "ver_perfiles", {
+      id: "claude-code-completo",
+      cliente: "claude",
+    });
     await callTool(contexto, "ver_perfiles", {});
     expect(readFileSync(perfiles(), "utf8")).toBe(bytes);
   });

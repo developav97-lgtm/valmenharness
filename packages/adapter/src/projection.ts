@@ -11,7 +11,7 @@
  * lo genere, que es exactamente lo que una proyección determinista existe para
  * impedir.
  */
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { fail } from "@valmen/core";
@@ -23,15 +23,32 @@ import {
   agentsMdWarning,
   measureAgentsMd,
   readAgentsMdBudget,
+  readSkillBudget,
+  measureSkill,
+  skillWarning,
 } from "./agents-size.js";
 import {
   CLAUDE_MD_PATH,
   CLAUDE_SETTINGS_PATH,
   OUTPUT_STYLE_PATH,
+  WORKTREE_INCLUDE_PATH,
+  claudeAllowConflicts,
   mergeClaudeMdBlock,
-  mergeOutputStyleSetting,
+  mergeClaudeSettings,
+  mergeWorktreeInclude,
+  missingClaudeDenyRules,
   renderOutputStyle,
 } from "./claude-code.js";
+import {
+  CODEX_RULES_PATH,
+  OPENCODE_CONFIG_PATH,
+  OPENCODE_JSONC_PATH,
+  type DenyNotApplied,
+  codexRulesText,
+  denyNotApplied,
+  mergeOpencodeDenyConfig,
+  missingOpencodeDenyRules,
+} from "./denied-clients.js";
 import { CODEX_CONFIG_PATH, mergeCodexVerbosity, readCodexVerbosity } from "./verbosity.js";
 import { loadProjectModel, projectAgentsMd } from "./project.js";
 import {
@@ -40,6 +57,7 @@ import {
   SKILL_RUNTIME_IDS,
   readSkills,
   renderAllSkills,
+  renderSkill,
   withRoutedRules,
 } from "./skills.js";
 
@@ -112,7 +130,16 @@ export interface Projection {
    * no en quien lo imprime: lo ven igual la CLI y Mission Control.
    */
   readonly agentsMd: AgentsMdSize;
-  /** Avisos de la proyección que no la impiden, como pasarse del presupuesto. */
+  /**
+   * Las denegaciones del harness que `.claude/settings.json` no trae hoy en disco, para que
+   * `sync --check` diga cuál falta (R-PER-003) y `sync` cuántas agregó. Vacío sin el runtime `claude`.
+   */
+  readonly claudeDenyMissing: readonly string[];
+  /** Los patrones de OpenCode que `.opencode/opencode.json` no trae hoy. Vacío sin el runtime `opencode`. */
+  readonly opencodeDenyMissing: readonly string[];
+  /** Las reglas del harness que Codex u OpenCode no aplican, con su motivo. */
+  readonly denyNotApplied: readonly DenyNotApplied[];
+  /** Avisos de la proyección que no la impiden, como pasarse del presupuesto: el de `AGENTS.md` y, uno por skill, el de `skill-budget`. */
   readonly warnings: readonly string[];
 }
 
@@ -153,25 +180,49 @@ export function projectFiles(
     ".valmen/config.yaml",
     ...model.rules.map((rule) => rule.source),
     ...agents.map((agent) => `.valmen/agents/${agent.id}.md`),
-    ...skills.map((skill) => `.valmen/skills/${skill.id}/SKILL.md`),
+    ...skills.flatMap((skill) => [
+      `.valmen/skills/${skill.id}/SKILL.md`,
+      ...(skill.referencias ?? []).map(
+        (referencia) => `.valmen/skills/${skill.id}/referencias/${referencia.nombre}`,
+      ),
+    ]),
   ];
 
   const agentsMd = projectAgentsMd(model);
   const size = measureAgentsMd(agentsMd, readAgentsMdBudget(model.config));
   const warning = agentsMdWarning(size);
 
-  // Para Claude Code, el estilo de salida es un archivo propio; `settings.json` y
-  // `CLAUDE.md` se fusionan con lo que ya hay, porque también los escribe la persona.
+  // Cada skill se mide como se escribe (reglas encaminadas, marca y `local.md`): el contenido
+  // es el mismo en todo runtime, así que se mide una vez. Sin la clave no se mide nada.
+  const topeSkill = readSkillBudget(model.config);
+  const avisosDeSkills: string[] = [];
+  if (topeSkill !== null) {
+    for (const skill of skills) {
+      const contenido = renderSkill(skill, runtimes[0] ?? "claude").content;
+      const publicada = skill.origen === "valmen";
+      const medida = measureSkill(skill.id, contenido, publicada, topeSkill);
+      const aviso = skillWarning(medida);
+      if (aviso !== null) avisosDeSkills.push(aviso);
+    }
+  }
+
+  // Para Claude Code, el estilo de salida es un archivo propio; `settings.json`, `CLAUDE.md` y
+  // `.worktreeinclude` se fusionan con lo que ya hay, porque también los escribe la persona.
+  // `.claude/settings.local.json` no se lee ni se escribe: es de la persona y de su máquina.
+  const settingsActual = runtimes.includes("claude")
+    ? leerSiExiste(join(root, CLAUDE_SETTINGS_PATH))
+    : null;
   const claudeCode: ProjectedFile[] = runtimes.includes("claude")
     ? [
         { path: OUTPUT_STYLE_PATH, content: renderOutputStyle() },
-        {
-          path: CLAUDE_SETTINGS_PATH,
-          content: mergeOutputStyleSetting(leerSiExiste(join(root, CLAUDE_SETTINGS_PATH))),
-        },
+        { path: CLAUDE_SETTINGS_PATH, content: mergeClaudeSettings(settingsActual) },
         {
           path: CLAUDE_MD_PATH,
           content: mergeClaudeMdBlock(leerSiExiste(join(root, CLAUDE_MD_PATH))),
+        },
+        {
+          path: WORKTREE_INCLUDE_PATH,
+          content: mergeWorktreeInclude(leerSiExiste(join(root, WORKTREE_INCLUDE_PATH))),
         },
       ]
     : [];
@@ -191,10 +242,28 @@ export function projectFiles(
         ]
       : [];
 
+  // Las denegaciones: Codex las lee de `.codex/rules/valmen.rules` (archivo del harness) y OpenCode
+  // de `.opencode/opencode.json`, que se fusiona porque también lo escribe la persona. Con el JSONC
+  // de la persona al lado no se escribe el `.json`: reescribirlo perdería los comentarios.
+  const hayJsonc =
+    runtimes.includes("opencode") && existsSync(join(root, OPENCODE_JSONC_PATH));
+  const opencodeActual = runtimes.includes("opencode")
+    ? leerSiExiste(join(root, OPENCODE_CONFIG_PATH))
+    : null;
+  const denegaciones: ProjectedFile[] = [
+    ...(runtimes.includes("codex")
+      ? [{ path: CODEX_RULES_PATH, content: codexRulesText() }]
+      : []),
+    ...(runtimes.includes("opencode") && !hayJsonc
+      ? [{ path: OPENCODE_CONFIG_PATH, content: mergeOpencodeDenyConfig(opencodeActual) }]
+      : []),
+  ];
+
   const files: ProjectedFile[] = [
     { path: "AGENTS.md", content: agentsMd },
     ...claudeCode,
     ...codex,
+    ...denegaciones,
     ...renderAllAgents(agents, sources).filter((file) => enAlcance(file.path)),
     ...renderAllSkills(skills).filter((file) => enAlcance(file.path)),
   ];
@@ -216,6 +285,18 @@ export function projectFiles(
     agentCount: agents.length,
     skillCount: skills.length,
     agentsMd: size,
-    warnings: warning === null ? [] : [warning],
+    claudeDenyMissing: runtimes.includes("claude")
+      ? missingClaudeDenyRules(settingsActual)
+      : [],
+    opencodeDenyMissing:
+      runtimes.includes("opencode") && !hayJsonc
+        ? missingOpencodeDenyRules(opencodeActual)
+        : [],
+    denyNotApplied: denyNotApplied(runtimes, opencodeActual, hayJsonc),
+    warnings: [
+      ...(warning === null ? [] : [warning]),
+      ...avisosDeSkills,
+      ...(runtimes.includes("claude") ? claudeAllowConflicts(settingsActual) : []),
+    ],
   };
 }

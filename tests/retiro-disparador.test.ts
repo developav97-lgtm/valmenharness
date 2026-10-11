@@ -6,14 +6,22 @@
  * sigue saliendo y la aprobación que sigue siendo de una persona.
  */
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import * as adapter from "../packages/adapter/src/index.js";
 import {
   journeyAdvanceCommand,
   journeyClearStopCommand,
@@ -23,9 +31,9 @@ import {
 import { pendientesDeAvisar } from "../packages/cli/src/hermes.js";
 import { USAGE } from "../packages/cli/src/main.js";
 import { EXIT_SCHEMA } from "../packages/core/src/index.js";
-import * as engine from "../packages/engine/src/index.js";
 import {
   advertenciaDeArbolSucio,
+  approvalLogPath,
   armarJornada,
   autonomousConfig,
   leerPasadas,
@@ -34,10 +42,28 @@ import {
   recordAutonomousStop,
   resolveAuthorizedProject,
 } from "../packages/engine/src/index.js";
-import { crearEntornoOla, crearJornada, enJornada, ticketEn, type EntornoOla } from "./helpers/ola.js";
+import {
+  crearEntornoOla,
+  crearJornada,
+  enJornada,
+  ticketEn,
+  type EntornoOla,
+} from "./helpers/ola.js";
 import { writeFixtureTicket } from "./helpers/fixtures.js";
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+
+/**
+ * El índice de un paquete como objeto entero, para preguntarle qué exporta.
+ *
+ * La ruta se arma al ejecutar a propósito: un `import * as` que se pasa entero a `Object.keys`
+ * marca como consumido todo lo que el paquete exporta y deja ciega la guarda de exportaciones
+ * sin consumidor (`npm run exports:check`), que no cuenta como consumidor una ruta no literal.
+ */
+const indiceDe = (paquete: string): Promise<Record<string, unknown>> =>
+  import(join(REPO, "packages", paquete, "src", "index.ts")) as Promise<
+    Record<string, unknown>
+  >;
 const projectId = "retiro-lab";
 const A = "FEATURE-RETIRO-UNO-20261008";
 const B = "FEATURE-RETIRO-DOS-20261008";
@@ -115,7 +141,13 @@ beforeEach(() => {
     `schema-version: 1\nmachine-id: retiro\nmanaged-execution-capacity: 1\nprojects:\n  ${projectId}:\n    root: ${root}\n`,
   );
   politica();
-  for (const id of [A, B]) writeFixtureTicket(root, { id, workflowStatus: "intake", type: "FEATURE", module: "RETIRO" });
+  for (const id of [A, B])
+    writeFixtureTicket(root, {
+      id,
+      workflowStatus: "intake",
+      type: "FEATURE",
+      module: "RETIRO",
+    });
   armarJornada({ project: proyecto(), tickets: [A, B], ahora: () => AHORA });
 });
 
@@ -124,7 +156,9 @@ afterEach(() => rmSync(home, { recursive: true, force: true }));
 describe("el disparador retirado", () => {
   it("C1: el CLI ofrece `journey next --wave`, al que apunta el aviso de retiro", () => {
     expect(USAGE).toContain("journey next --wave");
-    expect(journeyInstallTriggerCommand({ project: projectId }).stderr).toContain("journey next --wave");
+    expect(journeyInstallTriggerCommand({ project: projectId }).stderr).toContain(
+      "journey next --wave",
+    );
   });
 
   it("C3: `journey install-trigger` dice en español que está retirado, nombra la ola y sale con 2", () => {
@@ -141,7 +175,12 @@ describe("el disparador retirado", () => {
     const dir = join(home, "LaunchAgents");
     const antes = foto(home);
     for (const via of [undefined, "hermes"]) {
-      const resultado = journeyInstallTriggerCommand({ project: projectId, dir, write: true, ...(via === undefined ? {} : { via }) });
+      const resultado = journeyInstallTriggerCommand({
+        project: projectId,
+        dir,
+        write: true,
+        ...(via === undefined ? {} : { via }),
+      });
       expect(resultado.exitCode).toBe(EXIT_SCHEMA);
     }
     expect(existsSync(dir)).toBe(false);
@@ -150,7 +189,10 @@ describe("el disparador retirado", () => {
 
   it("C5: `journey advance` sin fase responde con el aviso de retiro, sale con 2 y no despacha ni anexa pasada", async () => {
     const antes = foto(home);
-    const resultado = await journeyAdvanceCommand({ project: projectId }, { home, ahora: () => AHORA });
+    const resultado = await journeyAdvanceCommand(
+      { project: projectId },
+      { home, ahora: () => AHORA },
+    );
     expect(resultado.exitCode).toBe(EXIT_SCHEMA);
     expect(resultado.stderr).toContain("se retiró");
     expect(resultado.stderr).toContain("journey next --wave");
@@ -161,7 +203,10 @@ describe("el disparador retirado", () => {
   it("C6: `journey advance --fase ejecucion` responde con el mismo aviso y no despacha ni anexa pasada", async () => {
     const antes = foto(home);
     const ejecutarPreparacion = vi.fn();
-    const resultado = await journeyAdvanceCommand({ project: projectId, fase: "ejecucion" }, { home, ahora: () => AHORA, ejecutarPreparacion });
+    const resultado = await journeyAdvanceCommand(
+      { project: projectId, fase: "ejecucion" },
+      { home, ahora: () => AHORA, ejecutarPreparacion },
+    );
     expect(resultado.exitCode).toBe(EXIT_SCHEMA);
     expect(resultado.stderr).toContain("se retiró");
     expect(ejecutarPreparacion).not.toHaveBeenCalled();
@@ -169,18 +214,35 @@ describe("el disparador retirado", () => {
     expect(foto(home)).toEqual(antes);
   });
 
-  it("C7: el archivo del disparador ya no existe y nadie exporta el plist", () => {
-    expect(existsSync(join(REPO, "packages", "cli", "src", "journey-trigger.ts"))).toBe(false);
-    for (const exportes of [Object.keys(engine), Object.keys(adapter)]) {
-      expect(exportes.filter((nombre) => /LaunchdPlist|escribirPlist|HermesJobScript/.test(nombre))).toEqual([]);
+  it("C7: el archivo del disparador ya no existe y nadie exporta el plist", async () => {
+    expect(existsSync(join(REPO, "packages", "cli", "src", "journey-trigger.ts"))).toBe(
+      false,
+    );
+    for (const exportes of [
+      Object.keys(await indiceDe("engine")),
+      Object.keys(await indiceDe("adapter")),
+    ]) {
+      expect(
+        exportes.filter((nombre) =>
+          /LaunchdPlist|escribirPlist|HermesJobScript/.test(nombre),
+        ),
+      ).toEqual([]);
     }
   });
 
   it("C8: la ayuda marca `install-trigger` y el avance de ejecución como retirados y apunta a la ola", () => {
-    const instalar = USAGE.split("\n").findIndex((l) => l.includes("journey install-trigger"));
-    expect(USAGE.split("\n").slice(instalar, instalar + 3).join(" ")).toContain("RETIRADO");
+    const instalar = USAGE.split("\n").findIndex((l) =>
+      l.includes("journey install-trigger"),
+    );
+    expect(
+      USAGE.split("\n")
+        .slice(instalar, instalar + 3)
+        .join(" "),
+    ).toContain("RETIRADO");
     const avanzar = USAGE.split("\n").findIndex((l) => l.includes("journey advance"));
-    const textoAvanzar = USAGE.split("\n").slice(avanzar, avanzar + 4).join(" ");
+    const textoAvanzar = USAGE.split("\n")
+      .slice(avanzar, avanzar + 4)
+      .join(" ");
     expect(textoAvanzar).toContain("RETIRADO");
     expect(textoAvanzar).toContain("journey next --wave");
     expect(USAGE).not.toContain("launchd");
@@ -188,8 +250,8 @@ describe("el disparador retirado", () => {
 });
 
 describe("la configuración del despachador", () => {
-  it("C9: @valmen/adapter ya no exporta readJourneyDispatcher", () => {
-    expect("readJourneyDispatcher" in adapter).toBe(false);
+  it("C9: @valmen/adapter ya no exporta readJourneyDispatcher", async () => {
+    expect("readJourneyDispatcher" in (await indiceDe("adapter"))).toBe(false);
   });
 
   it("C10: un config.yaml que todavía declara execution.dispatcher se carga sin error", () => {
@@ -200,26 +262,41 @@ describe("la configuración del despachador", () => {
   });
 
   it("C11: el config.yaml del repositorio ya no declara dispatcher", () => {
-    expect(readFileSync(join(REPO, ".valmen", "config.yaml"), "utf8")).not.toMatch(/^\s*dispatcher:/m);
+    expect(readFileSync(join(REPO, ".valmen", "config.yaml"), "utf8")).not.toMatch(
+      /^\s*dispatcher:/m,
+    );
   });
 
-  it("C12: el motor ya no exporta dispatchJourney y el archivo no existe", () => {
-    expect("dispatchJourney" in engine).toBe(false);
-    expect(existsSync(join(REPO, "packages", "engine", "src", "journey-dispatch.ts"))).toBe(false);
+  it("C12: el motor ya no exporta dispatchJourney y el archivo no existe", async () => {
+    expect("dispatchJourney" in (await indiceDe("engine"))).toBe(false);
+    expect(existsSync(join(REPO, "packages", "engine", "src", "journey-dispatch.ts"))).toBe(
+      false,
+    );
   });
 });
 
 describe("lo que se conserva", () => {
   it("C13: `journey advance --fase preparacion` prepara a mano y no registra ninguna aprobación", async () => {
-    const ejecutarPreparacion = vi.fn(() => ({ status: 0, stdout: "preparado", stderr: "" }));
-    const resultado = await journeyAdvanceCommand({ project: projectId, fase: "preparacion" }, { home, ahora: () => AHORA, ejecutarPreparacion });
+    const ejecutarPreparacion = vi.fn(() => ({
+      status: 0,
+      stdout: "preparado",
+      stderr: "",
+    }));
+    const resultado = await journeyAdvanceCommand(
+      { project: projectId, fase: "preparacion" },
+      { home, ahora: () => AHORA, ejecutarPreparacion },
+    );
     expect(resultado.exitCode).toBe(0);
     expect(resultado.stdout).toContain(ESTE_DIA_UTC);
     expect(ejecutarPreparacion).toHaveBeenCalledTimes(1);
     expect(leerPasadas(root)).toHaveLength(1);
     // Control de la barrera: preparar no aprueba un plan.
-    expect(readApprovalLog(proyecto().paths).filter((e) => e.kind !== "autonomous-stop-notice")).toEqual([]);
-    expect(readFileSync(join(root, "tickets", "2026", A, "ticket.md"), "utf8")).not.toMatch(/workflow_status: approved/);
+    expect(
+      readApprovalLog(proyecto().paths).filter((e) => e.kind !== "autonomous-stop-notice"),
+    ).toEqual([]);
+    expect(readFileSync(join(root, "tickets", "2026", A, "ticket.md"), "utf8")).not.toMatch(
+      /workflow_status: approved/,
+    );
   });
 
   it("control: una parada de la preparación se libera con `journey clear-stop` y la preparación vuelve a elegir el ticket", async () => {
@@ -227,7 +304,12 @@ describe("lo que se conserva", () => {
     const opciones = { home, ahora: () => AHORA, ejecutarPreparacion: falla };
     await journeyAdvanceCommand({ project: projectId, fase: "preparacion" }, opciones);
     expect(paradasActivas(proyecto().paths)).toHaveLength(1);
-    expect(journeyClearStopCommand({ project: projectId, id: A, actor: "Juan Andrade" }, { home }).exitCode).toBe(0);
+    expect(
+      journeyClearStopCommand(
+        { project: projectId, id: A, actor: "Juan Andrade" },
+        { home },
+      ).exitCode,
+    ).toBe(0);
     expect(paradasActivas(proyecto().paths)).toHaveLength(0);
     await journeyAdvanceCommand({ project: projectId, fase: "preparacion" }, opciones);
     expect(falla).toHaveBeenCalledTimes(2);
@@ -236,7 +318,8 @@ describe("lo que se conserva", () => {
 
 describe("el aviso de árbol sucio", () => {
   let entorno: EntornoOla;
-  const git = (...args: string[]) => execFileSync("git", args, { cwd: entorno.root, encoding: "utf8" }).trim();
+  const git = (...args: string[]) =>
+    execFileSync("git", args, { cwd: entorno.root, encoding: "utf8" }).trim();
 
   beforeEach(() => {
     entorno = crearEntornoOla();
@@ -268,18 +351,26 @@ describe("el aviso de árbol sucio", () => {
     const antes = foto(entorno.root);
     advertenciaDeArbolSucio(entorno.root);
     expect(foto(entorno.root)).toEqual(antes);
-    expect(existsSync(join(entorno.root, ".valmen", "journeys", "arbol-sucio.jsonl"))).toBe(false);
+    expect(existsSync(join(entorno.root, ".valmen", "journeys", "arbol-sucio.jsonl"))).toBe(
+      false,
+    );
   });
 
   it("C17: `journey next --wave` con el árbol sucio imprime el aviso y sigue listando la ola; limpio no lo imprime", () => {
-    const limpio = journeyNextCommand({ project: "ola-lab", wave: true }, { home: entorno.home, ahora: () => AHORA });
+    const limpio = journeyNextCommand(
+      { project: "ola-lab", wave: true },
+      { home: entorno.home, ahora: () => AHORA },
+    );
     expect(limpio.stderr).toBe("");
     expect(limpio.exitCode).toBe(0);
     expect(limpio.stdout).not.toContain("sin commitear");
 
     writeFileSync(join(entorno.root, "suelto.ts"), "export const x = 1;\n", "utf8");
     const antes = foto(entorno.root);
-    const sucio = journeyNextCommand({ project: "ola-lab", wave: true }, { home: entorno.home, ahora: () => AHORA });
+    const sucio = journeyNextCommand(
+      { project: "ola-lab", wave: true },
+      { home: entorno.home, ahora: () => AHORA },
+    );
     expect(sucio.exitCode).toBe(0);
     expect(sucio.stdout).toContain("suelto.ts");
     expect(sucio.stdout).toContain(`${OA} [intake]`);
@@ -292,9 +383,20 @@ describe("el aviso de árbol sucio", () => {
 describe("los avisos del vigilante", () => {
   it("C19: una parada autónoma y una jornada terminada siguen avisándose", () => {
     const paths = proyecto().paths;
-    recordAutonomousStop(paths, { ticketId: A, reason: "executor-failed", detail: "se cayó", workflowStatus: "in_progress", now: AHORA });
+    recordAutonomousStop(paths, {
+      ticketId: A,
+      reason: "executor-failed",
+      detail: "se cayó",
+      workflowStatus: "in_progress",
+      now: AHORA,
+    });
     for (const id of [A, B]) {
-      writeFixtureTicket(root, { id, workflowStatus: "closed", type: "FEATURE", module: "RETIRO" });
+      writeFixtureTicket(root, {
+        id,
+        workflowStatus: "closed",
+        type: "FEATURE",
+        module: "RETIRO",
+      });
     }
     const tipos = pendientesDeAvisar(paths, AHORA).map((p) => p.kind);
     expect(tipos).toContain("autonomous-stop");
@@ -304,9 +406,14 @@ describe("los avisos del vigilante", () => {
 
   it("C20: `readApprovalLog` sigue leyendo una línea histórica journey-dirty-tree-notice", () => {
     const paths = proyecto().paths;
-    const ruta = engine.approvalLogPath(paths);
+    const ruta = approvalLogPath(paths);
     mkdirSync(dirname(ruta), { recursive: true });
-    const historica = { kind: "journey-dirty-tree-notice", journeyId: ESTE_DIA_UTC, episodio: "2026-10-07T08:00:00.000Z", notifiedAt: "2026-10-07T08:30:00.000Z" };
+    const historica = {
+      kind: "journey-dirty-tree-notice",
+      journeyId: ESTE_DIA_UTC,
+      episodio: "2026-10-07T08:00:00.000Z",
+      notifiedAt: "2026-10-07T08:30:00.000Z",
+    };
     writeFileSync(ruta, `${JSON.stringify(historica)}\n`, "utf8");
     expect(readApprovalLog(paths)).toEqual([historica]);
   });

@@ -45,9 +45,13 @@ const LIMITATION_RE = /^[^\r\n]*\S[^\r\n]*$/;
  * Exigir las cuatro entradas evita que la ausencia de una operación se confunda
  * con un dato todavía no declarado. No consulta configuración, bindings ni red.
  */
-export function createAdapterCapabilities(input: AdapterCapabilitiesInput): AdapterCapabilities {
+export function createAdapterCapabilities(
+  input: AdapterCapabilitiesInput,
+): AdapterCapabilities {
   if (!ADAPTER_ID_RE.test(input.adapter)) {
-    throw new Error("adapter debe ser un identificador portable en minúsculas, sin rutas ni espacios.");
+    throw new Error(
+      "adapter debe ser un identificador portable en minúsculas, sin rutas ni espacios.",
+    );
   }
 
   const seen = new Set<AdapterCapability>();

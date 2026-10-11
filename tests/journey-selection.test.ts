@@ -50,7 +50,8 @@ function writeClosedTicket(id: string): void {
     {
       id: "QA-001",
       date: "2026-10-05",
-      build_reference: "worktree:sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      build_reference:
+        "worktree:sha256:0000000000000000000000000000000000000000000000000000000000000000",
       environment: "test",
       result: "pending",
       findings: [],
@@ -89,24 +90,37 @@ function writeClosedTicket(id: string): void {
     module: "JOURNEY",
   })
     .replace("Pendiente de ejecución.", "Resultado del PO: aprobado.")
-    .replace("## QA\n\n```json\n[]\n```", `## QA\n\n\`\`\`json\n${JSON.stringify(qa, null, 2)}\n\`\`\``)
-    .replace("## Cierre\n\n```json\n[]\n```", `## Cierre\n\n\`\`\`json\n${JSON.stringify(cierre, null, 2)}\n\`\`\``);
+    .replace(
+      "## QA\n\n```json\n[]\n```",
+      `## QA\n\n\`\`\`json\n${JSON.stringify(qa, null, 2)}\n\`\`\``,
+    )
+    .replace(
+      "## Cierre\n\n```json\n[]\n```",
+      `## Cierre\n\n\`\`\`json\n${JSON.stringify(cierre, null, 2)}\n\`\`\``,
+    );
   const path = join(root, "tickets", "2026", id, "ticket.md");
   mkdirSync(join(root, "tickets", "2026", id), { recursive: true });
   writeFileSync(path, content, "utf8");
 }
 
-function createSelectionJourney(options: {
-  readonly window?: boolean;
-  readonly authorization?: string;
-  readonly missingIndependentWindow?: boolean;
-} = {}) {
-  const window = options.window === false ? [] : [{
-    windowId: "morning",
-    startsAt: "2026-10-05T12:00:00.000Z",
-    endsAt: "2026-10-05T16:00:00.000Z",
-    timeZone: "America/Bogota",
-  }];
+function createSelectionJourney(
+  options: {
+    readonly window?: boolean;
+    readonly authorization?: string;
+    readonly missingIndependentWindow?: boolean;
+  } = {},
+) {
+  const window =
+    options.window === false
+      ? []
+      : [
+          {
+            windowId: "morning",
+            startsAt: "2026-10-05T12:00:00.000Z",
+            endsAt: "2026-10-05T16:00:00.000Z",
+            timeZone: "America/Bogota",
+          },
+        ];
   createJourney(project(), {
     revisionId: "selection-rev-01",
     journeyId: "morning",
@@ -169,10 +183,12 @@ describe("selección elegible de jornadas", () => {
       manualCandidate: { ticketId: independent },
       dispatchCandidate: { ticketId: independent },
     });
-    expect(result.blocked).toEqual(expect.arrayContaining([
-      expect.objectContaining({ ticketId: waiting, reasons: ["qa"] }),
-      expect.objectContaining({ ticketId: dependent, reasons: ["dependency"] }),
-    ]));
+    expect(result.blocked).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ ticketId: waiting, reasons: ["qa"] }),
+        expect.objectContaining({ ticketId: dependent, reasons: ["dependency"] }),
+      ]),
+    );
   });
 
   it("solo libera una dependencia cuando su ticket está cerrado", () => {
@@ -185,9 +201,11 @@ describe("selección elegible de jornadas", () => {
       manualCandidate: { ticketId: dependent },
       dispatchCandidate: { ticketId: dependent },
     });
-    expect(select().blocked).toEqual(expect.arrayContaining([
-      expect.objectContaining({ ticketId: independent, reasons: ["plan"] }),
-    ]));
+    expect(select().blocked).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ ticketId: independent, reasons: ["plan"] }),
+      ]),
+    );
   });
 
   it("una dependencia del grafo de la feature fuera de la jornada bloquea hasta que esté cerrada", () => {
@@ -195,7 +213,12 @@ describe("selección elegible de jornadas", () => {
     writeClosedTicket(waiting);
     writeTicket(dependent, "approved");
     writeTicket(independent, "planned");
-    writeFixtureTicket(root, { id: externo, workflowStatus: "intake", type: "FEATURE", module: "JOURNEY" });
+    writeFixtureTicket(root, {
+      id: externo,
+      workflowStatus: "intake",
+      type: "FEATURE",
+      module: "JOURNEY",
+    });
     mkdirSync(join(root, ".valmen", "features", "jornada"), { recursive: true });
     writeFileSync(
       join(root, ".valmen", "features", "jornada", "tickets.yaml"),
@@ -205,12 +228,19 @@ describe("selección elegible de jornadas", () => {
     createSelectionJourney();
 
     expect(select().dispatchCandidate).toBeNull();
-    expect(select().blocked).toEqual(expect.arrayContaining([
-      expect.objectContaining({ ticketId: dependent, reasons: ["dependency"] }),
-    ]));
+    expect(select().blocked).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ ticketId: dependent, reasons: ["dependency"] }),
+      ]),
+    );
     // También bloquea en los estados que no son cierre.
     for (const estado of ["blocked", "in_progress", "approved"]) {
-      writeFixtureTicket(root, { id: externo, workflowStatus: estado, type: "FEATURE", module: "JOURNEY" });
+      writeFixtureTicket(root, {
+        id: externo,
+        workflowStatus: estado,
+        type: "FEATURE",
+        module: "JOURNEY",
+      });
       expect(select().dispatchCandidate).toBeNull();
     }
     writeClosedTicket(externo);
@@ -222,7 +252,11 @@ describe("selección elegible de jornadas", () => {
     writeTicket(dependent, "approved");
     writeTicket(independent, "planned");
     mkdirSync(join(root, ".valmen", "features", "rota"), { recursive: true });
-    writeFileSync(join(root, ".valmen", "features", "rota", "tickets.yaml"), ": : no es yaml {", "utf8");
+    writeFileSync(
+      join(root, ".valmen", "features", "rota", "tickets.yaml"),
+      ": : no es yaml {",
+      "utf8",
+    );
     createSelectionJourney();
     expect(select().dispatchCandidate).toMatchObject({ ticketId: dependent });
   });
@@ -263,7 +297,13 @@ describe("selección elegible de jornadas", () => {
       "utf8",
     );
     // El ticket no elegible supera el riesgo máximo de la política (los ids fijan tipo y módulo).
-    writeFixtureTicket(root, { id: waiting, workflowStatus: "approved", type: "FEATURE", module: "JOURNEY", riskLevel: "high" });
+    writeFixtureTicket(root, {
+      id: waiting,
+      workflowStatus: "approved",
+      type: "FEATURE",
+      module: "JOURNEY",
+      riskLevel: "high",
+    });
     writeTicket(dependent, "planned");
     writeTicket(independent, "approved");
     createSelectionJourney();
@@ -271,9 +311,11 @@ describe("selección elegible de jornadas", () => {
     const result = select();
     expect(result.manualCandidate).toMatchObject({ ticketId: waiting });
     expect(result.dispatchCandidate).toMatchObject({ ticketId: independent });
-    expect(result.blocked).toEqual(expect.arrayContaining([
-      expect.objectContaining({ ticketId: waiting, reasons: ["eligibility"] }),
-    ]));
+    expect(result.blocked).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ ticketId: waiting, reasons: ["eligibility"] }),
+      ]),
+    );
   });
 
   it("con capacidad agotada conserva la oferta manual y no altera jornada ni tickets", () => {
@@ -281,18 +323,25 @@ describe("selección elegible de jornadas", () => {
     writeTicket(dependent, "approved");
     writeTicket(independent, "approved");
     createSelectionJourney();
-    const before = readFileSync(join(root, "tickets", "2026", independent, "ticket.md"), "utf8");
+    const before = readFileSync(
+      join(root, "tickets", "2026", independent, "ticket.md"),
+      "utf8",
+    );
 
     const result = select({ availableSlots: 0 });
     expect(result).toMatchObject({
       manualCandidate: { ticketId: independent },
       dispatchCandidate: null,
     });
-    expect(result.blocked).toEqual(expect.arrayContaining([
-      expect.objectContaining({ ticketId: independent, reasons: ["resource"] }),
-    ]));
+    expect(result.blocked).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ ticketId: independent, reasons: ["resource"] }),
+      ]),
+    );
     expect(readJourneyRevisions(project())).toHaveLength(1);
-    expect(readFileSync(join(root, "tickets", "2026", independent, "ticket.md"), "utf8")).toBe(before);
+    expect(
+      readFileSync(join(root, "tickets", "2026", independent, "ticket.md"), "utf8"),
+    ).toBe(before);
   });
 
   it("no habilita despacho a un ejecutor no autorizado y no espera una hora posterior", () => {
@@ -306,9 +355,11 @@ describe("selección elegible de jornadas", () => {
       manualCandidate: { ticketId: independent },
       dispatchCandidate: null,
     });
-    expect(result.blocked).toEqual(expect.arrayContaining([
-      expect.objectContaining({ ticketId: independent, reasons: ["authorization"] }),
-    ]));
+    expect(result.blocked).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ ticketId: independent, reasons: ["authorization"] }),
+      ]),
+    );
   });
 
   it("declara gate y ventana como bloqueos verificables", () => {
@@ -321,11 +372,13 @@ describe("selección elegible de jornadas", () => {
 
     expect(result.manualCandidate).toBeNull();
     expect(result.dispatchCandidate).toBeNull();
-    expect(result.blocked).toEqual(expect.arrayContaining([
-      expect.objectContaining({ ticketId: waiting, reasons: ["gate"] }),
-      expect.objectContaining({ ticketId: dependent, reasons: ["dependency", "window"] }),
-      expect.objectContaining({ ticketId: independent, reasons: ["window"] }),
-    ]));
+    expect(result.blocked).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ ticketId: waiting, reasons: ["gate"] }),
+        expect.objectContaining({ ticketId: dependent, reasons: ["dependency", "window"] }),
+        expect.objectContaining({ ticketId: independent, reasons: ["window"] }),
+      ]),
+    );
   });
 
   it("no salta una condición de ventana incompleta", () => {
@@ -338,9 +391,11 @@ describe("selección elegible de jornadas", () => {
 
     expect(result.manualCandidate).toBeNull();
     expect(result.dispatchCandidate).toBeNull();
-    expect(result.blocked).toEqual(expect.arrayContaining([
-      expect.objectContaining({ ticketId: independent, reasons: ["window"] }),
-    ]));
+    expect(result.blocked).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ ticketId: independent, reasons: ["window"] }),
+      ]),
+    );
   });
 
   it("prioriza por prioridad y orden sin esperar un scheduledAt futuro", () => {

@@ -34,7 +34,14 @@
  * nunca se programan dos tickets en el mismo job.
  */
 import { execFileSync } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  writeFileSync,
+} from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -168,9 +175,11 @@ function menosMinutos(iso, minutos) {
 /** Escribe el script del aviso de arranque en `scripts/` del perfil, y lo deja ejecutable. */
 function escribirAviso(plantilla, valores, perfil) {
   let texto = plantilla;
-  for (const [clave, valor] of Object.entries(valores)) texto = texto.replaceAll(`{{${clave}}}`, String(valor));
+  for (const [clave, valor] of Object.entries(valores))
+    texto = texto.replaceAll(`{{${clave}}}`, String(valor));
   const sobrantes = texto.match(/\{\{[A-Z_]+\}\}/g);
-  if (sobrantes) throw new Error(`Marcadores sin rellenar en el aviso: ${sobrantes.join(", ")}`);
+  if (sobrantes)
+    throw new Error(`Marcadores sin rellenar en el aviso: ${sobrantes.join(", ")}`);
   const dir = join(homedir(), ".hermes", "profiles", perfil, "scripts");
   if (!existe(dir)) mkdirSync(dir, { recursive: true });
   const ruta = join(dir, valores.SCRIPT_AVISO);
@@ -188,7 +197,10 @@ function main() {
   const horas = Number(String(f.cada ?? "2h").replace(/h$/i, "")) || 2;
   const inicio = String(f.inicio ?? "");
   const deliver = String(f.deliver ?? "local");
-  const skills = String(f.skills ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  const skills = String(f.skills ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
   const seco = f["dry-run"] === true;
   const conAviso = f["sin-aviso"] !== true;
   const minutosAviso = 3;
@@ -200,7 +212,9 @@ function main() {
   }
 
   // ── El proyecto ──────────────────────────────────────────────────────────────
-  const configYaml = existe(join(raiz, ".valmen", "config.yaml")) ? leer(join(raiz, ".valmen", "config.yaml")) : "";
+  const configYaml = existe(join(raiz, ".valmen", "config.yaml"))
+    ? leer(join(raiz, ".valmen", "config.yaml"))
+    : "";
   const proyecto = nombreDe(configYaml, raiz.split("/").pop());
   const ticketsDir = (/^tickets-dir:\s*(.+)$/m.exec(configYaml) ?? [, "tickets"])[1].trim();
 
@@ -222,7 +236,9 @@ function main() {
   }
 
   // ── La elegibilidad, en orden, con la proyección de la propia tanda ──────────
-  const cerrados = new Set([...estado].filter(([, c]) => c.workflow_status === "closed").map(([id]) => id));
+  const cerrados = new Set(
+    [...estado].filter(([, c]) => c.workflow_status === "closed").map(([id]) => id),
+  );
   const elegidos = [];
   const saltados = [];
   if (f.tickets) {
@@ -231,7 +247,10 @@ function main() {
     // estaba agendado, sin dejar la elección al grafo por segunda vez. Un ticket cerrado se
     // saltea y se dice: reprogramar trabajo entregado es un error, no una decisión.
     const porId = new Map(grafo.map((t) => [t.id, t]));
-    for (const id of String(f.tickets).split(",").map((s) => s.trim()).filter(Boolean)) {
+    for (const id of String(f.tickets)
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)) {
       const campos = estado.get(id);
       if (!campos) {
         saltados.push({ id, motivo: "no está en el registro de este proyecto" });
@@ -242,7 +261,11 @@ function main() {
         continue;
       }
       const enGrafo = porId.get(id);
-      elegidos.push(enGrafo ? { ...enGrafo } : { id, sprint: null, title: campos.title ?? id, deps: [] });
+      elegidos.push(
+        enGrafo
+          ? { ...enGrafo }
+          : { id, sprint: null, title: campos.title ?? id, deps: [] },
+      );
     }
     if (saltados.length > 0) {
       // No se programa media lista: los eslabones se numeran sobre la tanda entera y una
@@ -256,7 +279,10 @@ function main() {
       const campos = estado.get(t.id);
       if (!campos || campos.workflow_status === "closed") continue;
       if (!t.deps.every((d) => cerrados.has(d))) continue;
-      if (TIPOS_QUE_PIDEN_AUTORIZACION_APARTE.has(campos.type) && f["permitir-criticos"] !== true) {
+      if (
+        TIPOS_QUE_PIDEN_AUTORIZACION_APARTE.has(campos.type) &&
+        f["permitir-criticos"] !== true
+      ) {
         saltados.push({ id: t.id, motivo: `${campos.type} pide autorización aparte` });
         continue;
       }
@@ -275,9 +301,13 @@ function main() {
   // ── El prompt de cada eslabón ────────────────────────────────────────────────
   // La plantilla vive con el script (el repositorio del harness), no con el proyecto:
   // el proyecto aporta su registro y su configuración, no la forma del instructivo.
-  const plantilla = leer(join(homeDelScript, "..", "templates", "programar", "prompt-eslabon.md"));
+  const plantilla = leer(
+    join(homeDelScript, "..", "templates", "programar", "prompt-eslabon.md"),
+  );
   const cuerpo = /````text\n([\s\S]*?)\n````/.exec(plantilla)[1];
-  const plantillaAviso = leer(join(homeDelScript, "..", "templates", "programar", "aviso-eslabon.sh"));
+  const plantillaAviso = leer(
+    join(homeDelScript, "..", "templates", "programar", "aviso-eslabon.sh"),
+  );
   const programa = fechas(inicio, horas, elegidos.length);
 
   /** Enumera: «el eslabón 5», «los eslabones 2, 3, 4 y 5». */
@@ -285,7 +315,12 @@ function main() {
     if (numeros.length === 1) return `${singular} ${numeros[0]}`;
     return `${plural} ${numeros.slice(0, -1).join(", ")} y ${numeros[numeros.length - 1]}`;
   };
-  const otros = (n) => enumerar(elegidos.map((_, i) => i + 1).filter((k) => k !== n), "el eslabón", "los eslabones");
+  const otros = (n) =>
+    enumerar(
+      elegidos.map((_, i) => i + 1).filter((k) => k !== n),
+      "el eslabón",
+      "los eslabones",
+    );
   const horasOtros = (n) => {
     const hs = programa.map((p, i) => (i + 1 === n ? null : hora(p))).filter(Boolean);
     if (hs.length === 0) return "las mismas horas";
@@ -294,7 +329,10 @@ function main() {
 
   const rama = (() => {
     try {
-      return execFileSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], { cwd: raiz, encoding: "utf8" }).trim();
+      return execFileSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
+        cwd: raiz,
+        encoding: "utf8",
+      }).trim();
     } catch {
       return "main";
     }
@@ -341,14 +379,24 @@ function main() {
       HORAS_OTROS: horasOtros(n) || "las mismas horas",
     };
     let texto = cuerpo;
-    for (const [clave, valor] of Object.entries(valores)) texto = texto.replaceAll(`{{${clave}}}`, String(valor));
+    for (const [clave, valor] of Object.entries(valores))
+      texto = texto.replaceAll(`{{${clave}}}`, String(valor));
     const sobrantes = texto.match(/\{\{[A-Z_]+\}\}/g);
-    if (sobrantes) throw new Error(`Marcadores sin rellenar en ${t.id}: ${sobrantes.join(", ")}`);
+    if (sobrantes)
+      throw new Error(`Marcadores sin rellenar en ${t.id}: ${sobrantes.join(", ")}`);
 
     const archivo = join(salida, `eslabon-${n}-${t.id}.txt`);
     writeFileSync(archivo, texto, "utf8");
 
-    planes.push({ n, id: t.id, cuando, archivo, nombre, titulo: campos.title ?? t.title, scriptAviso });
+    planes.push({
+      n,
+      id: t.id,
+      cuando,
+      archivo,
+      nombre,
+      titulo: campos.title ?? t.title,
+      scriptAviso,
+    });
 
     if (seco) {
       // En seco también se escribe el aviso, al lado de los prompts, para poder leerlo
@@ -368,17 +416,39 @@ function main() {
     if (conAviso) {
       const rutaAviso = escribirAviso(
         plantillaAviso,
-        { PROYECTO: proyecto, PERFIL: perfil, TICKET_ID: t.id, ESLABON: String(n), HORA: hora(cuando), RUTA_REPO: raiz, NOMBRE_JOB: nombre, SCRIPT_AVISO: scriptAviso },
+        {
+          PROYECTO: proyecto,
+          PERFIL: perfil,
+          TICKET_ID: t.id,
+          ESLABON: String(n),
+          HORA: hora(cuando),
+          RUTA_REPO: raiz,
+          NOMBRE_JOB: nombre,
+          SCRIPT_AVISO: scriptAviso,
+        },
         perfil,
       );
       const cuandoAviso = menosMinutos(cuando, minutosAviso);
       const salidaAviso = execFileSync(
         "hermes",
         [
-          "-p", perfil, "cron", "create", cuandoAviso,
+          "-p",
+          perfil,
+          "cron",
+          "create",
+          cuandoAviso,
           `Aviso de arranque del eslabón ${n} de la tanda de ${proyecto}: ${t.id}. Lo entrega el script, sin modelo.`,
-          "--name", `aviso-${nombre}`, "--no-agent", "--script", scriptAviso,
-          "--deliver", deliver, "--workdir", raiz, "--repeat", "1",
+          "--name",
+          `aviso-${nombre}`,
+          "--no-agent",
+          "--script",
+          scriptAviso,
+          "--deliver",
+          deliver,
+          "--workdir",
+          raiz,
+          "--repeat",
+          "1",
         ],
         { encoding: "utf8" },
       );
@@ -387,8 +457,20 @@ function main() {
     }
 
     const args = [
-      "-p", perfil, "cron", "create", cuando, texto,
-      "--name", nombre, "--deliver", deliver, "--workdir", raiz, "--repeat", "1",
+      "-p",
+      perfil,
+      "cron",
+      "create",
+      cuando,
+      texto,
+      "--name",
+      nombre,
+      "--deliver",
+      deliver,
+      "--workdir",
+      raiz,
+      "--repeat",
+      "1",
     ];
     for (const s of skills) args.push("--skill", s);
     const salidaCron = execFileSync("hermes", args, { encoding: "utf8" });
@@ -396,15 +478,19 @@ function main() {
   });
 
   console.log("");
-  for (const p of planes) console.log(`${hora(p.cuando)}  eslabón ${p.n}  ${p.id}  →  ${p.nombre}`);
+  for (const p of planes)
+    console.log(`${hora(p.cuando)}  eslabón ${p.n}  ${p.id}  →  ${p.nombre}`);
   if (avisos.length > 0) {
     console.log("");
-    for (const a of avisos) console.log(`${hora(a.cuando)}  aviso del eslabón ${a.n}  →  ${a.ruta}`);
+    for (const a of avisos)
+      console.log(`${hora(a.cuando)}  aviso del eslabón ${a.n}  →  ${a.ruta}`);
   }
-  console.log(`\n${planes.length} ticket(s) de ${proyecto} · perfil ${perfil} · entrega ${deliver}` +
-    (seco
-      ? ` · SECO (los prompts y los avisos quedaron en ${salida})`
-      : ` · ${planes.length} job(s) de trabajo${avisos.length > 0 ? ` y ${avisos.length} aviso(s) de arranque` : ""} creados · prompts en ${salida}`));
+  console.log(
+    `\n${planes.length} ticket(s) de ${proyecto} · perfil ${perfil} · entrega ${deliver}` +
+      (seco
+        ? ` · SECO (los prompts y los avisos quedaron en ${salida})`
+        : ` · ${planes.length} job(s) de trabajo${avisos.length > 0 ? ` y ${avisos.length} aviso(s) de arranque` : ""} creados · prompts en ${salida}`),
+  );
 }
 
 main();

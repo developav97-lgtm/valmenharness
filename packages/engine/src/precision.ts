@@ -144,7 +144,8 @@ export function precisionReport(
         reviewsDecided: decididas.length,
         reviewsDelegated: conDecision.length - decididas.length,
         reviewsApproved: aprobadas.length,
-        approvedUnchangedRate: decididas.length === 0 ? null : aprobadas.length / decididas.length,
+        approvedUnchangedRate:
+          decididas.length === 0 ? null : aprobadas.length / decididas.length,
         blocksByType: bloqueos,
       };
     })
@@ -155,7 +156,10 @@ const pct = (valor: number | null): string =>
   valor === null ? "—" : `${(valor * 100).toFixed(0)} %`;
 
 /** El informe, para quien lo lee. */
-export function renderPrecision(rows: readonly PrecisionRow[], options: PrecisionOptions = {}): string {
+export function renderPrecision(
+  rows: readonly PrecisionRow[],
+  options: PrecisionOptions = {},
+): string {
   const periodo =
     options.desde === undefined && options.hasta === undefined
       ? "todo el registro"

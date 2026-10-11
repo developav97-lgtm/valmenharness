@@ -23,13 +23,7 @@
  * El archivo de una delegación solo recibe líneas: `grant` abre y los eventos
  * siguientes cuentan lo que pasó, igual que los recibos de compuertas.
  */
-import {
-  appendFileSync,
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  readdirSync,
-} from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 import {
@@ -108,7 +102,10 @@ export function grantDelegation(request: GrantDelegationRequest): Delegation {
   const feature = request.feature?.trim() ?? "";
   const tickets = (request.tickets ?? []).map((id) => id.trim()).filter((id) => id !== "");
   if ((feature === "") === (tickets.length === 0)) {
-    fail("Una delegación lleva --feature <slug> o --tickets A,B, una de las dos.", EXIT_SCHEMA);
+    fail(
+      "Una delegación lleva --feature <slug> o --tickets A,B, una de las dos.",
+      EXIT_SCHEMA,
+    );
   }
 
   if (feature !== "") {
@@ -174,7 +171,8 @@ export function readDelegation(root: string, id: string): Delegation | null {
 export function resolveDelegation(root: string, id: string | undefined): Delegation {
   if (id !== undefined) {
     const encontrada = readDelegation(root, id);
-    if (encontrada === null) fail(`No existe la delegación ${id} en .valmen/delegations/.`, EXIT_SCHEMA);
+    if (encontrada === null)
+      fail(`No existe la delegación ${id} en .valmen/delegations/.`, EXIT_SCHEMA);
     return encontrada;
   }
   const dir = delegationsDir(root);
@@ -192,15 +190,14 @@ export function resolveDelegation(root: string, id: string | undefined): Delegat
     );
   }
   const encontrada = readDelegation(root, ultimo.replace(/\.jsonl$/, ""));
-  if (encontrada === null) fail(`La delegación ${ultimo} no se puede leer.`, EXIT_INVARIANT);
+  if (encontrada === null)
+    fail(`La delegación ${ultimo} no se puede leer.`, EXIT_INVARIANT);
   return encontrada;
 }
 
 /** Los eventos de una delegación, sin el `grant`. */
 export function delegationEvents(root: string, id: string): DelegationEvent[] {
-  return (lines(root, id) ?? [])
-    .slice(1)
-    .map((l) => l as unknown as DelegationEvent);
+  return (lines(root, id) ?? []).slice(1).map((l) => l as unknown as DelegationEvent);
 }
 
 /** Anexa un hecho a la delegación. */
@@ -349,7 +346,10 @@ export function delegationProgress(
       continue;
     }
     if (e === "missing") {
-      stopped.push({ id, reason: "no existe en el registro (¿falta materializar la feature?)" });
+      stopped.push({
+        id,
+        reason: "no existe en el registro (¿falta materializar la feature?)",
+      });
       continue;
     }
     if (e === "blocked") {
@@ -361,7 +361,10 @@ export function delegationProgress(
       return de !== undefined && de !== "closed" && de !== "awaiting_user_tests";
     });
     if (sinCerrar.length > 0) {
-      stopped.push({ id, reason: `depende de ${sinCerrar.join(", ")}, que no está cerrado` });
+      stopped.push({
+        id,
+        reason: `depende de ${sinCerrar.join(", ")}, que no está cerrado`,
+      });
       continue;
     }
     const dura = hardGateStop(textos.get(id) ?? "");

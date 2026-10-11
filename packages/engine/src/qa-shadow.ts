@@ -10,7 +10,13 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 import { parseConfig, readQaAgentConfig } from "@valmen/adapter";
-import { EXIT_INVARIANT, EXIT_SCHEMA, fail, parsePolicyConfirmation, parseTicket } from "@valmen/core";
+import {
+  EXIT_INVARIANT,
+  EXIT_SCHEMA,
+  fail,
+  parsePolicyConfirmation,
+  parseTicket,
+} from "@valmen/core";
 
 import { type RegistryPaths, findTicket } from "./discovery.js";
 import { assertSesionAtendida } from "./plan-approval.js";
@@ -46,9 +52,11 @@ export function concordanciaEnSombra(paths: RegistryPaths): ConcordanciaEnSombra
     for (let i = 1; i < qa.length; i += 2) {
       const fin = qa[i];
       if (fin === undefined) continue;
-      if (parsePolicyConfirmation(fin["po_confirmation"] as string | null) !== null) continue;
+      if (parsePolicyConfirmation(fin["po_confirmation"] as string | null) !== null)
+        continue;
       if (fin["result"] === "approved") decision = "approved";
-      else if (fin["result"] === "changes_requested" || fin["result"] === "failed") decision = "changes_requested";
+      else if (fin["result"] === "changes_requested" || fin["result"] === "failed")
+        decision = "changes_requested";
     }
     if (decision === null) continue;
     const agente = recibo.verdict;
@@ -103,14 +111,22 @@ export function promoverQaAgent(request: {
   readonly ahora?: Date;
   readonly env?: Readonly<Record<string, string | undefined>>;
 }): PromocionDeQaAgent {
-  assertSesionAtendida("promover la QA por agente a cerrar tickets", request.env ?? process.env);
-  if (request.actor.trim() === "") fail("Promover necesita un responsable: falta --actor.", EXIT_SCHEMA);
-  if (request.quote.trim() === "") fail("Promover necesita la frase literal de quien decide: falta --quote.", EXIT_SCHEMA);
+  assertSesionAtendida(
+    "promover la QA por agente a cerrar tickets",
+    request.env ?? process.env,
+  );
+  if (request.actor.trim() === "")
+    fail("Promover necesita un responsable: falta --actor.", EXIT_SCHEMA);
+  if (request.quote.trim() === "")
+    fail("Promover necesita la frase literal de quien decide: falta --quote.", EXIT_SCHEMA);
   const { comparaciones, discordantes } = concordanciaEnSombra(request.paths);
   if (discordantes.length > 0) {
     fail(
       `No se puede promover: ${discordantes.length} ticket(s) discordante(s): ` +
-        discordantes.map((d) => `${d.ticketId} (agente ${d.agente}, responsable ${d.responsable})`).join("; ") + ".",
+        discordantes
+          .map((d) => `${d.ticketId} (agente ${d.agente}, responsable ${d.responsable})`)
+          .join("; ") +
+        ".",
       EXIT_INVARIANT,
     );
   }
@@ -126,7 +142,10 @@ export function promoverQaAgent(request: {
     actor: request.actor.trim(),
     quote: request.quote.trim(),
     at: (request.ahora ?? new Date()).toISOString(),
-    evidence: { total: comparaciones.length, tickets: comparaciones.map((c) => c.ticketId) },
+    evidence: {
+      total: comparaciones.length,
+      tickets: comparaciones.map((c) => c.ticketId),
+    },
   };
   const ruta = qaPromotionsPath(request.paths.root);
   mkdirSync(dirname(ruta), { recursive: true });
@@ -144,12 +163,17 @@ export interface ModoEfectivo {
 export function modoEfectivoDeQaAgent(paths: RegistryPaths): ModoEfectivo {
   let declarado: "shadow" | "close" = "shadow";
   try {
-    declarado = readQaAgentConfig(parseConfig(readFileSync(join(paths.root, ".valmen", "config.yaml"), "utf8"))).mode;
+    declarado = readQaAgentConfig(
+      parseConfig(readFileSync(join(paths.root, ".valmen", "config.yaml"), "utf8")),
+    ).mode;
   } catch {
     declarado = "shadow";
   }
   const promovida = leerPromociones(paths.root).length > 0;
   if (declarado === "close" && promovida) return { modo: "close", motivo: null };
-  const faltas = [declarado !== "close" ? "qa-agent.mode no es close" : null, !promovida ? "no hay una promoción registrada" : null].filter((x) => x !== null);
+  const faltas = [
+    declarado !== "close" ? "qa-agent.mode no es close" : null,
+    !promovida ? "no hay una promoción registrada" : null,
+  ].filter((x) => x !== null);
   return { modo: "shadow", motivo: faltas.join(" y ") };
 }

@@ -51,6 +51,7 @@ import {
   resolveDelegation,
   type RegistryPaths,
 } from "../packages/engine/src/index.js";
+import { calcularArbolProbado } from "../packages/engine/src/arbol-probado.js";
 import { materializeFeature } from "../packages/engine/src/materialize.js";
 import { buildGateState } from "../packages/engine/src/state.js";
 import { recordHumanDecision } from "../packages/server/src/gates.js";
@@ -90,7 +91,10 @@ function ponerEstado(id: string, estado: string): void {
   const ruta = join(lab, "tickets", "2026", id, "ticket.md");
   writeFileSync(
     ruta,
-    readFileSync(ruta, "utf8").replace(/^workflow_status: .*$/m, `workflow_status: ${estado}`),
+    readFileSync(ruta, "utf8").replace(
+      /^workflow_status: .*$/m,
+      `workflow_status: ${estado}`,
+    ),
     "utf8",
   );
 }
@@ -102,6 +106,9 @@ function recibo(ticket: string, gate: string, valor: number): GateReceipt {
   const respuestas: PropositionAnswer[] = [
     { id: "cubre_todos_los_criterios", kind: "noul", value: valor },
   ];
+  // El recibo de `qa-mechanical` guarda el árbol probado, como lo deja la compuerta de verdad
+  // (R-REV-001): sin él, la entrega dentro de un repositorio git no sabe qué código se verificó.
+  const arbol = gate === "qa-mechanical" ? calcularArbolProbado(PATHS()) : null;
   return buildReceipt({
     id: `GR-20261006-${ticket}-${gate}-${readReceipts(PATHS(), ticket).length + 1}`,
     gate,
@@ -110,13 +117,16 @@ function recibo(ticket: string, gate: string, valor: number): GateReceipt {
     subject: { type: "ticket", id: ticket, revision: "1" },
     decision: decide(proposiciones, respuestas, DEFAULT_POLICY),
     // El recibo congela el estado real del ticket: el motor compara ese hash al entregar.
-    state: buildGateState(readFileSync(join(lab, "tickets", "2026", ticket, "ticket.md"), "utf8")),
+    state: buildGateState(
+      readFileSync(join(lab, "tickets", "2026", ticket, "ticket.md"), "utf8"),
+    ),
     answers: respuestas,
     mechanicalChecks: [],
     model: null,
     usage: null,
     latencyMs: 1,
     decidedAt: new Date().toISOString(),
+    ...(arbol === null ? {} : { testedTree: arbol.registro }),
   });
 }
 
@@ -174,23 +184,44 @@ afterEach(() => {
 
 describe("registrar la delegación", () => {
   it("guarda el alcance y las palabras literales del PO en un archivo que solo recibe líneas", () => {
-    const d = grantDelegation({ paths: PATHS(), feature: "kardex", quote: PALABRAS, actor: "Juan" });
+    const d = grantDelegation({
+      paths: PATHS(),
+      feature: "kardex",
+      quote: PALABRAS,
+      actor: "Juan",
+    });
     expect(d.id).toMatch(/^DEL-\d{8}-001$/);
     const leida = readDelegation(lab, d.id);
     expect(leida?.quote).toBe(PALABRAS);
     expect(leida?.scope).toEqual({ feature: "kardex", tickets: [] });
-    expect(readFileSync(join(lab, ".valmen", "delegations", `${d.id}.jsonl`), "utf8").split("\n").filter(Boolean)).toHaveLength(1);
+    expect(
+      readFileSync(join(lab, ".valmen", "delegations", `${d.id}.jsonl`), "utf8")
+        .split("\n")
+        .filter(Boolean),
+    ).toHaveLength(1);
     // Una segunda delegación del mismo día no pisa la primera.
-    expect(grantDelegation({ paths: PATHS(), feature: "kardex", quote: PALABRAS }).id).toMatch(/-002$/);
+    expect(
+      grantDelegation({ paths: PATHS(), feature: "kardex", quote: PALABRAS }).id,
+    ).toMatch(/-002$/);
   });
 
   it("rechaza una delegación sin palabras del PO o con un alcance ambiguo", () => {
-    expect(() => grantDelegation({ paths: PATHS(), feature: "kardex", quote: "  " })).toThrow(/palabras del PO/);
-    expect(() => grantDelegation({ paths: PATHS(), quote: PALABRAS })).toThrow(/una de las dos/);
+    expect(() =>
+      grantDelegation({ paths: PATHS(), feature: "kardex", quote: "  " }),
+    ).toThrow(/palabras del PO/);
+    expect(() => grantDelegation({ paths: PATHS(), quote: PALABRAS })).toThrow(
+      /una de las dos/,
+    );
     expect(() =>
       grantDelegation({ paths: PATHS(), feature: "kardex", tickets: [A], quote: PALABRAS }),
     ).toThrow(/una de las dos/);
-    expect(() => grantDelegation({ paths: PATHS(), tickets: ["FEATURE-NADA-X-20260924"], quote: PALABRAS })).toThrow(/no existe/);
+    expect(() =>
+      grantDelegation({
+        paths: PATHS(),
+        tickets: ["FEATURE-NADA-X-20260924"],
+        quote: PALABRAS,
+      }),
+    ).toThrow(/no existe/);
   });
 });
 
@@ -227,7 +258,10 @@ describe("qué ticket sigue", () => {
 });
 
 /** El ticket A tal como lo deja el agente al terminar de escribir análisis y plan. */
-function escribirA(estado: string, opciones: { impacts?: string[]; criterios?: string } = {}): void {
+function escribirA(
+  estado: string,
+  opciones: { impacts?: string[]; criterios?: string } = {},
+): void {
   const base = renderFixtureTicket({
     id: A,
     workflowStatus: estado,
@@ -274,7 +308,9 @@ describe("compuertas por delegación", () => {
     expect(ticket).toContain(PALABRAS);
     // Y la aprobación queda **registrada** (R-CTRL-001): evento con la fuente `delegacion` y
     // las palabras del PO, que es lo que el motor exige para entrar a `approved`.
-    const aprobacion = /"action": "plan-approved"[\s\S]*?"details": "((?:[^"\\]|\\.)*)"/.exec(ticket)?.[1] ?? "";
+    const aprobacion =
+      /"action": "plan-approved"[\s\S]*?"details": "((?:[^"\\]|\\.)*)"/.exec(ticket)?.[1] ??
+      "";
     expect(aprobacion).toContain("delegacion");
     expect(aprobacion).toContain("Corre la feature completa");
   });
@@ -289,11 +325,16 @@ describe("compuertas por delegación", () => {
   });
 
   it("una REVIEW con motivo se aprueba y el recibo guarda el motivo y las palabras del PO", async () => {
-    const { r } = await avanzar({ analysis: 0.72 }, "el criterio faltante es de otro ticket");
+    const { r } = await avanzar(
+      { analysis: 0.72 },
+      "el criterio faltante es de otro ticket",
+    );
     expect(r.exitCode).toBe(0);
     const decidido = readReceipts(PATHS(), A).find((x) => x.humanDecision !== null);
     expect(decidido?.humanDecision?.actor).toBe("Claude Code por delegación del PO");
-    expect(decidido?.humanDecision?.reason).toContain("el criterio faltante es de otro ticket");
+    expect(decidido?.humanDecision?.reason).toContain(
+      "el criterio faltante es de otro ticket",
+    );
     expect(decidido?.humanDecision?.reason).toContain(PALABRAS);
     expect(decidido?.humanDecision?.decision).toBe("approve");
   });
@@ -308,7 +349,9 @@ describe("compuertas por delegación", () => {
 
   it("un impacto de gate humano duro detiene la corrida antes de correr compuerta alguna", async () => {
     escribirA("intake", { impacts: ["migration_impact"] });
-    expect(hardGateStop(readFileSync(join(lab, "tickets", "2026", A, "ticket.md"), "utf8"))).toContain("migration_impact");
+    expect(
+      hardGateStop(readFileSync(join(lab, "tickets", "2026", A, "ticket.md"), "utf8")),
+    ).toContain("migration_impact");
     const { r, dep } = await avanzar({ analysis: 0.72 }, "motivo cualquiera");
     expect(r.exitCode).toBe(3);
     expect(r.stderr).toContain("gate humano duro");
@@ -317,10 +360,20 @@ describe("compuertas por delegación", () => {
   });
 
   it("rechaza un ticket fuera del alcance en todos los comandos", async () => {
-    writeFixtureTicket(lab, { id: "FEATURE-OTRO-COSA-20260924", workflowStatus: "intake", type: "FEATURE", module: "OTRO" });
+    writeFixtureTicket(lab, {
+      id: "FEATURE-OTRO-COSA-20260924",
+      workflowStatus: "intake",
+      type: "FEATURE",
+      module: "OTRO",
+    });
     const dep = deps({});
     for (const sub of ["advance", "close"]) {
-      const r = await runDelegation(PATHS(), [sub], { id: "FEATURE-OTRO-COSA-20260924" }, dep);
+      const r = await runDelegation(
+        PATHS(),
+        [sub],
+        { id: "FEATURE-OTRO-COSA-20260924" },
+        dep,
+      );
       expect(r.exitCode).toBe(3);
       expect(r.stderr).toContain("fuera del alcance");
     }
@@ -352,7 +405,10 @@ describe("cierre delegado", () => {
       module: "INVENTARIO",
       criterios,
     })
-      .replace("## Implementación\n\nPendiente.", "## Implementación\n\nSe agregó `src/a.ts` con el modelo del kardex.")
+      .replace(
+        "## Implementación\n\nPendiente.",
+        "## Implementación\n\nSe agregó `src/a.ts` con el modelo del kardex.",
+      )
       .replace(
         "## Pruebas\n\nPendiente de ejecución.",
         "## Pruebas\n\nComando: `npx vitest run` en la raíz; resultado esperado: todo en verde.",
@@ -369,7 +425,9 @@ describe("cierre delegado", () => {
     writeFileSync(join(lab, "src", "a.ts"), "export const a = 1;\n");
     git("add", "src/a.ts");
     git("commit", "-q", "-m", "implementación");
-    ticketEnProgreso("- [ ] El modelo registra movimientos\n      <!-- test: npx vitest run -->");
+    ticketEnProgreso(
+      "- [ ] El modelo registra movimientos\n      <!-- test: npx vitest run -->",
+    );
   });
 
   it("anota el punto con --files, arranca el QA con el HEAD vigente y cierra el ticket", async () => {
@@ -380,7 +438,13 @@ describe("cierre delegado", () => {
     git("commit", "-q", "-m", "corrección posterior");
     const head = git("rev-parse", "HEAD");
 
-    const r = await closeDelegated(PATHS(), resolveDelegation(lab, undefined), A, { ...CIERRE, files: ["src/a.ts"] }, deps({}));
+    const r = await closeDelegated(
+      PATHS(),
+      resolveDelegation(lab, undefined),
+      A,
+      { ...CIERRE, files: ["src/a.ts"] },
+      deps({}),
+    );
     expect(r.exitCode, r.stderr).toBe(0);
     expect(estadoDe(A)).toBe("closed");
 
@@ -394,20 +458,38 @@ describe("cierre delegado", () => {
 
   it("detiene el cierre si hay cambios sin commitear en los archivos del punto", async () => {
     writeFileSync(join(lab, "src", "a.ts"), "export const a = 3;\n");
-    const r = await closeDelegated(PATHS(), resolveDelegation(lab, undefined), A, { ...CIERRE, files: ["src/a.ts"] }, deps({}));
+    const r = await closeDelegated(
+      PATHS(),
+      resolveDelegation(lab, undefined),
+      A,
+      { ...CIERRE, files: ["src/a.ts"] },
+      deps({}),
+    );
     expect(r.exitCode).toBe(3);
     expect(r.stderr).toContain("sin commitear");
     expect(estadoDe(A)).toBe("in_progress");
   });
 
   it("sin --tests-passed no cierra nada", async () => {
-    const r = await closeDelegated(PATHS(), resolveDelegation(lab, undefined), A, { ...CIERRE, testsPassed: false, files: ["src/a.ts"] }, deps({}));
+    const r = await closeDelegated(
+      PATHS(),
+      resolveDelegation(lab, undefined),
+      A,
+      { ...CIERRE, testsPassed: false, files: ["src/a.ts"] },
+      deps({}),
+    );
     expect(r.exitCode).toBe(2);
     expect(estadoDe(A)).toBe("in_progress");
   });
 
   it("un ticket visual queda en awaiting_user_tests y no se cierra", async () => {
-    const r = await closeDelegated(PATHS(), resolveDelegation(lab, undefined), A, { ...CIERRE, visual: true, files: ["src/a.ts"] }, deps({}));
+    const r = await closeDelegated(
+      PATHS(),
+      resolveDelegation(lab, undefined),
+      A,
+      { ...CIERRE, visual: true, files: ["src/a.ts"] },
+      deps({}),
+    );
     expect(r.exitCode, r.stderr).toBe(0);
     expect(estadoDe(A)).toBe("awaiting_user_tests");
     expect(r.stdout).toContain("awaiting_user_tests");
@@ -417,7 +499,13 @@ describe("cierre delegado", () => {
     ticketEnProgreso(
       "- [ ] El modelo registra movimientos\n      <!-- test: npx vitest run -->\n- [ ] La pantalla se ve como el prototipo\n      <!-- verify: manual -->",
     );
-    const r = await closeDelegated(PATHS(), resolveDelegation(lab, undefined), A, { ...CIERRE, files: ["src/a.ts"] }, deps({}));
+    const r = await closeDelegated(
+      PATHS(),
+      resolveDelegation(lab, undefined),
+      A,
+      { ...CIERRE, files: ["src/a.ts"] },
+      deps({}),
+    );
     expect(r.exitCode, r.stderr).toBe(0);
     expect(estadoDe(A)).toBe("awaiting_user_tests");
     expect(r.stdout).toContain("La pantalla se ve como el prototipo");
@@ -443,8 +531,20 @@ describe("cierre delegado", () => {
   });
 
   it("desde awaiting_user_tests exige las palabras literales del PO y cierra con el HEAD", async () => {
-    await closeDelegated(PATHS(), resolveDelegation(lab, undefined), A, { ...CIERRE, visual: true, files: ["src/a.ts"] }, deps({}));
-    const sin = await closeDelegated(PATHS(), resolveDelegation(lab, undefined), A, { ...CIERRE, files: ["src/a.ts"] }, deps({}));
+    await closeDelegated(
+      PATHS(),
+      resolveDelegation(lab, undefined),
+      A,
+      { ...CIERRE, visual: true, files: ["src/a.ts"] },
+      deps({}),
+    );
+    const sin = await closeDelegated(
+      PATHS(),
+      resolveDelegation(lab, undefined),
+      A,
+      { ...CIERRE, files: ["src/a.ts"] },
+      deps({}),
+    );
     expect(sin.exitCode).toBe(2);
     expect(sin.stderr).toContain("--po-confirmation");
 
@@ -455,7 +555,13 @@ describe("cierre delegado", () => {
     const head = git("rev-parse", "HEAD");
 
     const palabrasPo = "«si confirmo» — Juan, 2026-10-06";
-    const r = await closeDelegated(PATHS(), resolveDelegation(lab, undefined), A, { ...CIERRE, files: ["src/a.ts"], poConfirmation: palabrasPo }, deps({}));
+    const r = await closeDelegated(
+      PATHS(),
+      resolveDelegation(lab, undefined),
+      A,
+      { ...CIERRE, files: ["src/a.ts"], poConfirmation: palabrasPo },
+      deps({}),
+    );
     expect(r.exitCode, r.stderr).toBe(0);
     expect(estadoDe(A)).toBe("closed");
     const ticket = readFileSync(join(lab, "tickets", "2026", A, "ticket.md"), "utf8");
