@@ -23,6 +23,7 @@ import { findTicket } from "./discovery.js";
 import { readJourneys } from "./journeys.js";
 import { type AuthorizedProject } from "./project-resolution.js";
 import { scanSecrets } from "./secrets.js";
+import { entregaDeLosEventos } from "./tamano-entrega.js";
 
 /** Un ticket que espera las pruebas de una persona, con su contrato leído de `## Pruebas`. */
 export interface EntradaDePruebas {
@@ -39,6 +40,17 @@ export interface EntradaDePruebas {
   readonly sinContrato: boolean;
   /** Tipos de hallazgo de secretos que obligaron a omitir el contrato; nunca el valor. */
   readonly omitidoPorSecreto: readonly string[];
+  /** El tamaño medido al integrar; falta en los partes guardados antes de medirlo. */
+  readonly entrega?: EntregaDelParte | undefined;
+}
+
+/** Líneas de la entrega de un ticket, tal como las registró la integración. */
+export interface EntregaDelParte {
+  readonly añadidas: number;
+  readonly borradas: number;
+  readonly total: number;
+  readonly tope: number;
+  readonly pasaElTope: boolean;
 }
 
 /** Un ticket de la jornada cuyo último ciclo de QA cerró por política. */
@@ -155,6 +167,12 @@ function entradaDePruebas(
     };
   }
   const contrato = leerContrato(seccion);
+  const registrada = entregaDeLosEventos(
+    (parseTicket(texto).blocks.Eventos ?? []) as readonly {
+      action?: unknown;
+      details?: unknown;
+    }[],
+  );
   return {
     ticketId,
     title,
@@ -162,6 +180,17 @@ function entradaDePruebas(
     ...contrato,
     sinContrato: !contratoDePruebasEscrito(texto) || contrato.probar.length === 0,
     omitidoPorSecreto: [],
+    ...(registrada === null
+      ? {}
+      : {
+          entrega: {
+            añadidas: registrada.añadidas,
+            borradas: registrada.borradas,
+            total: registrada.total,
+            tope: registrada.tope,
+            pasaElTope: registrada.pasaElTope,
+          },
+        }),
   };
 }
 

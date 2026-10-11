@@ -80,45 +80,45 @@ El pedido nombra dos cosas que el código no tiene. Se buscaron (`grep` de `budg
 
 ## Criterios de aceptación
 
-- [ ] C1. `medirEntrega` da 150 líneas de total para 120 añadidas más 30 borradas
+- [x] C1. `medirEntrega` da 150 líneas de total para 120 añadidas más 30 borradas
       <!-- test: npx vitest run tests/entrega-tope.test.ts -t "C1 " -->
-- [ ] C2. `medirEntrega` no cuenta ninguna ruta del registro del harness (`.valmen/`, `tickets/`)
+- [x] C2. `medirEntrega` no cuenta ninguna ruta del registro del harness (`.valmen/`, `tickets/`)
       <!-- test: npx vitest run tests/entrega-tope.test.ts -t "C2 " -->
-- [ ] C3. `medirEntrega` no cuenta los archivos generados de la lista acordada
+- [x] C3. `medirEntrega` no cuenta los archivos generados de la lista acordada
       <!-- test: npx vitest run tests/entrega-tope.test.ts -t "C3 " -->
-- [ ] C4. `topeDeEntrega` devuelve 400 cuando `config.yaml` no declara `delivery-budget`
+- [x] C4. `topeDeEntrega` devuelve 400 cuando `config.yaml` no declara `delivery-budget`
       <!-- test: npx vitest run tests/entrega-tope.test.ts -t "C4 " -->
-- [ ] C5. `topeDeEntrega` devuelve el valor que declara `delivery-budget`
+- [x] C5. `topeDeEntrega` devuelve el valor que declara `delivery-budget`
       <!-- test: npx vitest run tests/entrega-tope.test.ts -t "C5 " -->
-- [ ] C6. La lista cerrada de git de la integración admite `diff --numstat -z <rango>`
+- [x] C6. La lista cerrada de git de la integración admite `diff --numstat -z <rango>`
       <!-- test: npx vitest run tests/entrega-tope.test.ts -t "C6 " -->
-- [ ] C7. Tras `valmen journey worktree integrate`, el ticket tiene un evento `delivery-size` con 120 añadidas, 30 borradas, 150 de total
+- [x] C7. Tras `valmen journey worktree integrate`, el ticket tiene un evento `delivery-size` con 120 añadidas, 30 borradas, 150 de total
       <!-- test: npx vitest run tests/entrega-tope.test.ts -t "C7 " -->
-- [ ] C8. Tras integrar por avance directo, el checkout principal queda sin cambios sin commitear
+- [x] C8. Tras integrar por avance directo, el checkout principal queda sin cambios sin commitear
       <!-- test: npx vitest run tests/entrega-tope.test.ts -t "C8 " -->
-- [ ] C9. Una integración con merge `--no-ff` también registra el evento `delivery-size`
+- [x] C9. Una integración con merge `--no-ff` también registra el evento `delivery-size`
       <!-- test: npx vitest run tests/entrega-tope.test.ts -t "C9 " -->
-- [ ] C10. Con 900 líneas contra un tope de 400, `journey worktree integrate` termina con código de salida 0
+- [x] C10. Con 900 líneas contra un tope de 400, `journey worktree integrate` termina con código de salida 0
       <!-- test: npx vitest run tests/entrega-tope.test.ts -t "C10 " -->
-- [ ] C11. Con 900 líneas contra un tope de 400, la salida de `journey worktree integrate` avisa las 900 líneas contra el tope de 400
+- [x] C11. Con 900 líneas contra un tope de 400, la salida de `journey worktree integrate` avisa las 900 líneas contra el tope de 400
       <!-- test: npx vitest run tests/entrega-tope.test.ts -t "C11 " -->
-- [ ] C12. Si la medición falla, `journey worktree integrate` integra la rama con un aviso de que no se pudo medir
+- [x] C12. Si la medición falla, `journey worktree integrate` integra la rama con un aviso de que no se pudo medir
       <!-- test: npx vitest run tests/entrega-tope.test.ts -t "C12 " -->
-- [ ] C13. El commit que crea `integrarTicket` contiene el evento `delivery-size` del ticket
+- [x] C13. El commit que crea `integrarTicket` contiene el evento `delivery-size` del ticket
       <!-- test: npx vitest run tests/entrega-tope.test.ts -t "C13 " -->
-- [ ] C14. Tras `integrarTicket`, el árbol de trabajo queda sin cambios sin commitear
+- [x] C14. Tras `integrarTicket`, el árbol de trabajo queda sin cambios sin commitear
       <!-- test: npx vitest run tests/entrega-tope.test.ts -t "C14 " -->
-- [ ] C15. `integrarTicket` commitea un ticket de 900 líneas con un tope de 400
+- [x] C15. `integrarTicket` commitea un ticket de 900 líneas con un tope de 400
       <!-- test: npx vitest run tests/entrega-tope.test.ts -t "C15 " -->
-- [ ] C16. El parte de la jornada muestra el tamaño de cada ticket que espera pruebas
+- [x] C16. El parte de la jornada muestra el tamaño de cada ticket que espera pruebas
       <!-- test: npx vitest run tests/entrega-tope.test.ts -t "C16 " -->
-- [ ] C17. El parte de la jornada marca el ticket que pasó el tope
+- [x] C17. El parte de la jornada marca el ticket que pasó el tope
       <!-- test: npx vitest run tests/entrega-tope.test.ts -t "C17 " -->
 - [ ] C18. Las pruebas existentes de `journey worktree integrate` siguen en verde sin editarse
       <!-- test: npx vitest run tests/worktree-integrar.test.ts tests/worktree-integracion.test.ts tests/worktree-cli.test.ts -->
-- [ ] C19. Las pruebas existentes de `integrarTicket` siguen en verde sin editarse
+- [x] C19. Las pruebas existentes de `integrarTicket` siguen en verde sin editarse
       <!-- test: npx vitest run tests/integracion-autonoma.test.ts -->
-- [ ] C20. Las pruebas existentes del parte de la jornada siguen en verde sin editarse
+- [x] C20. Las pruebas existentes del parte de la jornada siguen en verde sin editarse
       <!-- test: npx vitest run tests/jornada-handoff.test.ts tests/notify.test.ts -->
 
 ## Puntos
@@ -129,11 +129,26 @@ El pedido nombra dos cosas que el código no tiene. Se buscaron (`grep` de `budg
 
 ## Implementación
 
-Pendiente.
+**Detenido por EST-009 (prueba existente en rojo): decide una persona.** Los pasos 1–8 del plan están hechos y las 17 pruebas nuevas (`tests/entrega-tope.test.ts`) pasan; se vieron en rojo antes de tocar producción (16 de 18 fallaban; C8 y C14 eran de regresión y ya pasaban). La regresión del paso 9 deja dos pruebas existentes en rojo, que no se editaron:
+
+- `tests/worktree-integrar.test.ts` «avanza main con merge --ff-only cuando no se movió, sin commit de merge (C17)»: `expected '388496c…' to be 'fa9055d…'` (HEAD de main ya no es la punta de la rama).
+- `tests/worktree-integrar.test.ts` «si la recompilación falla conserva la integración y lo dice (C24)»: `expected '36484a3…' to be 'c63d770…'`, mismo motivo.
+
+Hipótesis: ambas afirman que tras un avance directo `HEAD` de main **es** la punta de la rama. El plan (paso 4) pide registrar `delivery-size` tras el `merge --ff-only` y commitearlo (exigencia de C8: checkout sin cambios), lo que añade un commit encima de la punta. Es una colisión entre C8/paso 4 y C18 que el plan aprobado no declara como cambio intencional del comportamiento de esas dos pruebas. (La prueba C22 existente, que espera el índice en un commit propio sobre la punta, sigue en verde.)
+
+Opciones para el PO: A) declarar en el plan que «tras avance directo HEAD es un commit de registro sobre la punta» y ajustar C17/C24 a `HEAD~1 == punta` → mantiene C8 y el paso 4 (recomendado); B) no commitear el evento en avance directo → deja el ticket sucio y rompe C8; C) forzar merge `--no-ff` cuando haya evento → cambia igualmente C17.
+
+Archivos de producción tocados: `packages/engine/src/tamano-entrega.ts` (nuevo), `worktree-integracion-git.ts`, `worktree-integrar.ts`, `integration-commit.ts`, `journey-handoff.ts`, `notify.ts`, `index.ts`, `packages/cli/src/worktree.ts`, `.valmen/config.yaml` (`delivery-budget: 400`). Pendiente: resolver lo anterior, correr `qa-mechanical` (hoy fallaría en C18), registrar el consumo de IA y pasar a `awaiting_user_tests`. C18 queda sin marcar.
 
 ## Pruebas
 
-Pendiente de ejecución.
+- Directorio: raíz del repositorio (`/Users/juanandrade/Desktop/ValmenHarness`, rama `valmen/ticket-entrega-tope`), con `node_modules` y `npm run build` hecho.
+- `npx vitest run tests/entrega-tope.test.ts`: 18 pruebas pasan (C1–C17).
+- `npx vitest run tests/integracion-autonoma.test.ts tests/jornada-handoff.test.ts tests/notify.test.ts tests/worktree-cli.test.ts tests/worktree-integracion.test.ts`: pasan sin editarse (C19, C20).
+- `npx vitest run tests/worktree-integrar.test.ts`: **2 en rojo** (C17 y C24 existentes; ver Implementación). Resultado esperado tras la decisión del PO: todo en verde.
+- `npx tsc --noEmit -p .`, `npx eslint packages/engine/src packages/cli/src/worktree.ts tests/entrega-tope.test.ts` y `npx prettier --check` de lo tocado: sin hallazgos.
+- Validación manual: ninguna.
+- No se corrió la suite completa (`npx vitest run`): la corre el orquestador.
 
 ## QA
 

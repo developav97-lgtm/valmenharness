@@ -66,6 +66,12 @@ export const SUBCOMANDOS_DE_WORKTREE: Readonly<Record<string, Subcomando>> = Obj
               : `Rama ${r.rama} integrada en main con merge --no-ff (${r.commit.slice(0, 12)}).`,
             `Registros unidos: ${r.registrosUnidos.length === 0 ? "ninguno" : r.registrosUnidos.join(", ")}.`,
             `Índice de tickets: ${r.indiceRegenerado ? "regenerado" : "sin cambios"}. Recompilado.`,
+            ...(r.entrega === null
+              ? []
+              : [
+                  `Tamaño de la entrega: ${r.entrega.total} líneas (+${r.entrega.añadidas} −${r.entrega.borradas}), tope ${r.entrega.tope}.`,
+                ]),
+            ...r.avisos.map((a) => `Aviso: ${a}`),
           ].join("\n");
     if (opciones.retirar !== true) return integracion;
     try {

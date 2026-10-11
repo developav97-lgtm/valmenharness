@@ -2,7 +2,7 @@
  * El git de la integración de la rama de un worktree: una lista cerrada que se suma a la de los
  * worktrees (`motivoDeGitDeWorktree`).
  *
- * Integrar necesita leer (`show`, `diff --name-only -z`, `merge-base`, `merge-tree`) y escribir en
+ * Integrar necesita leer (`show`, `diff --name-only -z`, `diff --numstat -z`, `merge-base`, `merge-tree`) y escribir en
  * `main` con unas pocas formas de `merge`, `add` y `commit`. No se amplía la lista de las jornadas
  * (`integration-rules.ts`): la autoridad git de la jornada autónoma no crece, y el precedente es
  * `qa-agent-git.ts`. Nunca push, fetch, pull, reset, rebase, clean, tag ni remote, ni banderas de
@@ -42,6 +42,13 @@ export function motivoDeGitDeIntegracion(argumentos: readonly string[]): string 
         ? null
         : "git show solo se admite como `<revisión>:<ruta>`.";
     case "diff":
+      if (
+        resto.length === 3 &&
+        resto[0] === "--numstat" &&
+        resto[1] === "-z" &&
+        REFERENCIA.test(resto[2]!)
+      )
+        return null;
       return resto.length === ARGUMENTOS_DE_RUTAS_TOCADAS.length &&
         ARGUMENTOS_DE_RUTAS_TOCADAS.slice(1).every((a, i) => resto[i] === a) &&
         REFERENCIA.test(resto[resto.length - 1]!)
