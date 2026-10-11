@@ -4,8 +4,8 @@ id: FEATURE-CREDENTIALS-URL-BASE-PRUEBA-20261010
 title: URL base de prueba por variable de entorno en transportes HTTP
 type: FEATURE
 module: CREDENTIALS
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -13,7 +13,7 @@ migration_impact: false
 docker_impact: false
 risk_level: normal
 created: 2026-10-10
-updated: 2026-10-10
+updated: 2026-10-11
 related_ticket: null
 target_release: null
 released_in: null
@@ -186,13 +186,40 @@ Ninguno.
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
 - [x] C32 — R-GUI-001: La guarda de exportaciones sin uso no encuentra exportaciones nuevas ni entradas sobrantes.
       <!-- test: node scripts/exports-sin-uso.mjs -->
-- [ ] C33 — R-GUI-001: La revisión de seguridad del diff no encuentra un camino por el que una credencial viaje con la URL de prueba activa.
+- [x] C33 — R-GUI-001: La revisión de seguridad del diff no encuentra un camino por el que una credencial viaje con la URL de prueba activa.
       <!-- verify: manual -->
 
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación delegada de FEATURE-CREDENTIALS-URL-BASE-PRUEBA-20261010",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta verificar sus criterios.",
+    "expected": "Los criterios del ticket se cumplen y sus pruebas dan el resultado esperado.",
+    "evidence": [
+      "EVIDENCE-001"
+    ],
+    "affected_files": [
+      "packages/credentials/src/endpoints.ts",
+      "packages/credentials/src/chat.ts",
+      "packages/gate-jev/src/jev.ts",
+      "tests/url-base-prueba.test.ts",
+      "docs/04-PROVEEDORES.md"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -259,28 +286,81 @@ Cobertura y limitaciones: las pruebas del dialecto de Responses usan un servidor
 caso de `localhost` resuelto por el sistema operativo por `::1` (H1) no se prueba, queda como
 riesgo residual declarado en el diagnóstico.
 
+- Resultado del PO: Sí, cerrar los tres (Recomendado). Las pruebas del ticket las ejecutó el agente y dieron el resultado esperado: Pruebas del ticket en verde; C33 por revisión del diff 2eb3e34 el 2026-10-11 sin hallazgos
+
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-11",
+    "build_reference": "commit:edaea74020c4748638daed26baf87f714bcd4c96",
+    "environment": "local",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-11",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "Sí, cerrar los tres (Recomendado)"
+  }
+]
 ```
 
 ## Evidencia
 
 ```json
-[]
+[
+  {
+    "id": "EVIDENCE-001",
+    "date": "2026-10-11",
+    "kind": "automated-test",
+    "description": "Pruebas del ticket en verde; C33 por revisión del diff 2eb3e34 el 2026-10-11 sin hallazgos",
+    "reference": "worktree:sha256:87d231c986fca71fe221c1c4ef70cc87922469a04176abc4a25e270738407574",
+    "point_id": "POINT-001"
+  }
+]
 ```
 
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-11",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "Sí, cerrar los tres (Recomendado)"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-11",
+    "technical_summary": "Entregado y verificado; ver ## Implementación del ticket",
+    "functional_summary": "Cumple sus criterios de aceptación, todos marcados",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "Sin impacto en producción; herramientas del repositorio"
+  }
+]
 ```
 
 ## Consumo de IA
@@ -301,6 +381,66 @@ riesgo residual declarado en el diagnóstico.
     "source": "manual:subagente claude-sonnet-5-5 sin agregado de tokens expuesto a la sesión",
     "confidence": "low",
     "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": "c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-ac28353dc010401f0",
+    "model": "anthropic/claude-opus-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 15 intervención(es) sobre el registro, 0 con fallo. 14 de 60 mensajes tocaron el registro. Subagente de la sesión c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8; su gasto no está en la madre. Duró 13 min. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 8215445 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 175763,
+    "output_tokens": 55197,
+    "total_tokens": 230960,
+    "estimated_cost_usd": null,
+    "source": "claude:c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-ac28353dc010401f0",
+    "confidence": "high",
+    "id": "CONSUMO-002"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": "fc8a0427-7309-4f1b-b302-cbed18478b68/agent-ac28353dc010401f0",
+    "model": "anthropic/claude-opus-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 15 intervención(es) sobre el registro, 0 con fallo. 14 de 60 mensajes tocaron el registro. Subagente de la sesión fc8a0427-7309-4f1b-b302-cbed18478b68; su gasto no está en la madre. Duró 13 min. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 8215445 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 175763,
+    "output_tokens": 55197,
+    "total_tokens": 230960,
+    "estimated_cost_usd": null,
+    "source": "claude:fc8a0427-7309-4f1b-b302-cbed18478b68/agent-ac28353dc010401f0",
+    "confidence": "high",
+    "id": "CONSUMO-003"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": "c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-acc1996aa43abcc1e",
+    "model": "anthropic/claude-sonnet-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 11 intervención(es) sobre el registro, 0 con fallo. 11 de 64 mensajes tocaron el registro. Subagente de la sesión c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8; su gasto no está en la madre. Duró 20 min. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 11122744 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 436290,
+    "output_tokens": 77517,
+    "total_tokens": 513807,
+    "estimated_cost_usd": null,
+    "source": "claude:c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-acc1996aa43abcc1e",
+    "confidence": "high",
+    "id": "CONSUMO-004"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": "fc8a0427-7309-4f1b-b302-cbed18478b68/agent-acc1996aa43abcc1e",
+    "model": "anthropic/claude-sonnet-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 11 intervención(es) sobre el registro, 0 con fallo. 11 de 64 mensajes tocaron el registro. Subagente de la sesión fc8a0427-7309-4f1b-b302-cbed18478b68; su gasto no está en la madre. Duró 20 min. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 11122744 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 436290,
+    "output_tokens": 77517,
+    "total_tokens": 513807,
+    "estimated_cost_usd": null,
+    "source": "claude:fc8a0427-7309-4f1b-b302-cbed18478b68/agent-acc1996aa43abcc1e",
+    "confidence": "high",
+    "id": "CONSUMO-005"
   }
 ]
 ```
@@ -402,6 +542,159 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:37:41.677Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:37:42.003Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:37:42.337Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-004."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:37:42.672Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-005."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:37:42.839Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:37:42.997Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:37:43.152Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:37:43.313Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:37:43.469Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:37:43.689Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:37:43.938Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:37:44.092Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:37:44.253Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:37:44.412Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-025",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:37:44.570Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-026",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:37:44.725Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-027",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:37:44.877Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
