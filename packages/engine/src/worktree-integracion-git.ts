@@ -10,7 +10,7 @@
  */
 import { spawnSync } from "node:child_process";
 
-import { EXIT_INVARIANT, fail } from "@valmen/core";
+import { DENIED_GIT_FLAGS, EXIT_INVARIANT, fail } from "@valmen/core";
 
 import { type EjecutorDeGit } from "./integration-rules.js";
 import { motivoDeGitDeWorktree } from "./worktree-git.js";
@@ -18,7 +18,7 @@ import { motivoDeGitDeWorktree } from "./worktree-git.js";
 const REFERENCIA = /^[A-Za-z0-9_][A-Za-z0-9_./^~@-]*$/;
 const RAMA_DE_TICKET = /^valmen\/ticket-[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const REVISION_Y_RUTA = /^[A-Za-z0-9_][A-Za-z0-9_./^~@-]*:[^\s:-][^\s:]*$/;
-const BANDERAS_DE_FUERZA = ["--force", "-f", "-D", "--hard", "--no-verify", "--amend"];
+const BANDERAS_DE_FUERZA = [...DENIED_GIT_FLAGS, "-D"];
 
 const rutaSegura = (ruta: string): boolean => ruta !== "" && !ruta.startsWith("-") && !ruta.startsWith("/") && !ruta.split("/").includes("..");
 

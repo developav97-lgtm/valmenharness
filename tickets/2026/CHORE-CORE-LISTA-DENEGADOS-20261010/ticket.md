@@ -4,7 +4,7 @@ id: CHORE-CORE-LISTA-DENEGADOS-20261010
 title: Lista única de rutas y comandos denegados en core
 type: CHORE
 module: CORE
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -90,43 +90,43 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1. (R-PER-001) `SENSITIVE_PATH_PATTERNS` de `@valmen/core` contiene los cuatro patrones de credenciales de `integration-rules.ts:36-39` con el mismo texto
+- [x] C1. (R-PER-001) `SENSITIVE_PATH_PATTERNS` de `@valmen/core` contiene los cuatro patrones de credenciales de `integration-rules.ts:36-39` con el mismo texto
       <!-- test: npx vitest run tests/lista-denegados.test.ts -->
-- [ ] C2. (R-PER-001) `DENIED_GIT_FLAGS` de `@valmen/core` es la intersección de las cuatro listas de banderas del motor, cinco banderas
+- [x] C2. (R-PER-001) `DENIED_GIT_FLAGS` de `@valmen/core` es la intersección de las cuatro listas de banderas del motor, cinco banderas
       <!-- test: npx vitest run tests/lista-denegados.test.ts -->
-- [ ] C3. `SENSITIVE_PATH_PATTERNS` está congelada
+- [x] C3. `SENSITIVE_PATH_PATTERNS` está congelada
       <!-- test: npx vitest run tests/lista-denegados.test.ts -->
-- [ ] C4. `DENIED_GIT_FLAGS` está congelada
+- [x] C4. `DENIED_GIT_FLAGS` está congelada
       <!-- test: npx vitest run tests/lista-denegados.test.ts -->
-- [ ] C5. Ningún patrón de `SENSITIVE_PATH_PATTERNS` lleva banderas de expresión regular
+- [x] C5. Ningún patrón de `SENSITIVE_PATH_PATTERNS` lleva banderas de expresión regular
       <!-- test: npx vitest run tests/lista-denegados.test.ts -->
-- [ ] C6. El módulo de core con las listas no importa ningún otro módulo
+- [x] C6. El módulo de core con las listas no importa ningún otro módulo
       <!-- test: npx vitest run tests/lista-denegados.test.ts -->
-- [ ] C7. (R-PER-001) `motivoDeArchivoProhibido` devuelve para cada ruta de la tabla de caracterización el valor que devolvía antes del cambio
+- [x] C7. (R-PER-001) `motivoDeArchivoProhibido` devuelve para cada ruta de la tabla de caracterización el valor que devolvía antes del cambio
       <!-- test: npx vitest run tests/lista-denegados.test.ts -->
-- [ ] C8. `motivoDeGitProhibido` devuelve para cada invocación de la tabla de caracterización el valor que devolvía antes del cambio
+- [x] C8. `motivoDeGitProhibido` devuelve para cada invocación de la tabla de caracterización el valor que devolvía antes del cambio
       <!-- test: npx vitest run tests/lista-denegados.test.ts -->
-- [ ] C9. `motivoDeGitDeQaAgent` devuelve para cada invocación de la tabla de caracterización el valor que devolvía antes del cambio
+- [x] C9. `motivoDeGitDeQaAgent` devuelve para cada invocación de la tabla de caracterización el valor que devolvía antes del cambio
       <!-- test: npx vitest run tests/lista-denegados.test.ts -->
-- [ ] C10. `motivoDeGitDeWorktree` devuelve para cada invocación de la tabla de caracterización el valor que devolvía antes del cambio
+- [x] C10. `motivoDeGitDeWorktree` devuelve para cada invocación de la tabla de caracterización el valor que devolvía antes del cambio
       <!-- test: npx vitest run tests/lista-denegados.test.ts -->
-- [ ] C11. `motivoDeGitDeIntegracion` devuelve para cada invocación de la tabla de caracterización el valor que devolvía antes del cambio
+- [x] C11. `motivoDeGitDeIntegracion` devuelve para cada invocación de la tabla de caracterización el valor que devolvía antes del cambio
       <!-- test: npx vitest run tests/lista-denegados.test.ts -->
-- [ ] C12. (R-PER-001) Ningún archivo de `packages/engine/src` repite el texto de un patrón de `SENSITIVE_PATH_PATTERNS`
+- [x] C12. (R-PER-001) Ningún archivo de `packages/engine/src` repite el texto de un patrón de `SENSITIVE_PATH_PATTERNS`
       <!-- test: npx vitest run tests/lista-denegados.test.ts -->
-- [ ] C13. Ningún archivo de `packages/engine/src` declara por su cuenta las banderas de git que solo usan las listas de denegación
+- [x] C13. Ningún archivo de `packages/engine/src` declara por su cuenta las banderas de git que solo usan las listas de denegación
       <!-- test: npx vitest run tests/lista-denegados.test.ts -->
-- [ ] C14. Las seis pruebas existentes de las listas cerradas del motor siguen en verde
+- [x] C14. Las seis pruebas existentes de las listas cerradas del motor siguen en verde
       <!-- test: npx vitest run tests/reglas-integracion.test.ts tests/qa-agent.test.ts tests/worktree-git.test.ts tests/worktree-integracion.test.ts tests/worktree-integrar.test.ts tests/elegibilidad-qa.test.ts -->
-- [ ] C15. La guarda de exportaciones sin consumidor sale con 0
+- [x] C15. La guarda de exportaciones sin consumidor sale con 0
       <!-- test: node scripts/exports-sin-uso.mjs -->
-- [ ] C16. La línea base `scripts/exports-sin-uso.linea-base.json` queda sin cambios
+- [x] C16. La línea base `scripts/exports-sin-uso.linea-base.json` queda sin cambios
       <!-- verify: manual -->
-- [ ] C17. La comprobación de tipos del repositorio no produce salida
+- [x] C17. La comprobación de tipos del repositorio no produce salida
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
-- [ ] C18. El lint de los archivos tocados termina sin errores
+- [x] C18. El lint de los archivos tocados termina sin errores
       <!-- verify: manual -->
-- [ ] C19. La prueba de caracterización pasa sobre el árbol sin cambios, antes de tocar `packages/`
+- [x] C19. La prueba de caracterización pasa sobre el árbol sin cambios, antes de tocar `packages/`
       <!-- verify: manual -->
 
 ## Puntos
@@ -137,11 +137,31 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+Hecho en el worktree `.claude/worktrees/ticket-lista-denegados` (rama `valmen/ticket-lista-denegados`), siguiendo `## Plan`.
+
+- Paso 1, caracterización antes del cambio: `tests/lista-denegados.test.ts` con el bloque «el motor no cambia» (62 filas: 20 rutas y 42 invocaciones de git, cada una con el valor exacto que devuelve hoy). Corrida sobre el árbol sin cambios en `packages/`: `npx vitest run tests/lista-denegados.test.ts`, 62 de 62 en verde (C19). Tras el cambio se volvió a correr sobre el motor anterior (los cuatro archivos revertidos un momento) y siguió en verde, 62 de 62.
+- Pruebas nuevas antes del código: el bloque «la lista de core» (8 pruebas) se agregó antes de crear el módulo y se observó en rojo, 8 de 8 fallaban (`SENSITIVE_PATH_PATTERNS` y `DENIED_GIT_FLAGS` indefinidas, `denied.ts` inexistente). Orden distinto al del plan (que lo ponía en el paso 6, tras el código) para cumplir EST-010: toda prueba nueva se observa en rojo antes del código que cubre. C3 y C4 salieron verdes en esa primera corrida porque `Object.isFrozen(undefined)` es verdadero; se endurecieron con `Array.isArray` y entonces fallaron como debían.
+- Pasos 2 a 5: `packages/core/src/denied.ts` (nuevo, sin ningún import) con `SENSITIVE_PATH_PATTERNS` y `DENIED_GIT_FLAGS` congeladas, reexportado desde `packages/core/src/index.ts`; el motor las lee en `integration-rules.ts` (`PROHIBIDOS` y `BANDERAS_PROHIBIDAS`), `qa-agent-git.ts`, `worktree-git.ts` y `worktree-integracion-git.ts`. Cada módulo conserva su extra (`--force-with-lease` en jornadas, `-D` en worktrees). Ningún mensaje ni firma cambia.
+- Desviación de la prueba de qa-agent: el plan evalúa esa lista con `motivoDeGitDeQaAgent`, pero ese símbolo está en `scripts/exports-sin-uso.linea-base.json` y al importarlo desde la prueba la guarda `npm run exports:check` falló pidiendo quitar su entrada (la guarda cuenta una prueba como consumidor y una entrada de la línea base que gana consumidor es un fallo). C16 exige la línea base sin cambios, así que la prueba observa la lista por `ejecutarGitDeQaAgent` con un ejecutor falso: rechaza con el mismo motivo y lo consume el motor. Las 11 filas de qa-agent pasan igual sobre el motor anterior. Quitar la entrada `motivoDeGitDeQaAgent` de la línea base es una decisión aparte, de otro ticket.
+- Paso 7, verificación: las 7 pruebas (70 del ticket más 174 existentes) en verde, 244 de 244; `npm run build`, `npx tsc --noEmit -p tsconfig.json` y `npx eslint` sobre los siete archivos tocados sin salida; `node scripts/exports-sin-uso.mjs` con salida 0 (línea base de 443 entradas) y `git diff --exit-code scripts/exports-sin-uso.linea-base.json` sin diferencias. H1 del diagnóstico se confirmó: la guarda trata igual las dos exportaciones nuevas.
+- Archivos: `packages/core/src/denied.ts` (nuevo), `packages/core/src/index.ts`, `packages/engine/src/integration-rules.ts`, `packages/engine/src/qa-agent-git.ts`, `packages/engine/src/worktree-git.ts`, `packages/engine/src/worktree-integracion-git.ts`, `tests/lista-denegados.test.ts` (nuevo) y este ticket.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Contrato de entrega para el responsable.
+
+- Directorio: `/Users/juanandrade/Desktop/ValmenHarness/.claude/worktrees/ticket-lista-denegados` (rama `valmen/ticket-lista-denegados`), o la raíz del repositorio con la rama integrada.
+- Ambiente: Node 24 y `npm install` hecho; sin red, sin servicios ni datos. No hay validación manual ni de interfaz: es un movimiento de código entre paquetes.
+- Comandos y resultado esperado:
+  1. `npx vitest run tests/lista-denegados.test.ts` → 1 archivo y 70 pruebas en verde: 62 de «el motor no cambia» (C7 a C11) y 8 de «la lista de core» (C1 a C6, C12, C13).
+  2. `npx vitest run tests/reglas-integracion.test.ts tests/qa-agent.test.ts tests/worktree-git.test.ts tests/worktree-integracion.test.ts tests/worktree-integrar.test.ts tests/elegibilidad-qa.test.ts` → 6 archivos y 174 pruebas en verde (C14).
+  3. `npm run build` y `npx tsc --noEmit -p tsconfig.json` → sin errores ni salida (C17).
+  4. `node scripts/exports-sin-uso.mjs` → «Sin exportaciones nuevas sin consumidor; la línea base tiene 443 entradas», salida 0 (C15). Requiere el paso 3 hecho.
+  5. `git diff --exit-code scripts/exports-sin-uso.linea-base.json` → salida 0, sin diferencias (C16).
+  6. `npx eslint packages/core/src/denied.ts packages/core/src/index.ts packages/engine/src/integration-rules.ts packages/engine/src/qa-agent-git.ts packages/engine/src/worktree-git.ts packages/engine/src/worktree-integracion-git.ts tests/lista-denegados.test.ts` → sin salida (C18).
+- C19 (la caracterización pasa sobre el árbol sin cambios): comprobada antes de tocar `packages/` y otra vez sobre el motor anterior; se repite en una copia desechable del árbol con `git checkout 2711073 -- packages/engine/src` (el motor anterior al cambio) y `npx vitest run tests/lista-denegados.test.ts -t "el motor no cambia"` → 62 en verde, 8 omitidas.
+- Qué probar con ojo humano: que ninguna fila de la caracterización se editó para pasar (su valor es el que devolvía el motor antes del cambio) y que `SENSITIVE_PATH_PATTERNS` y `DENIED_GIT_FLAGS` son lo que se quiere negar a los agentes antes de que SECURITY-CLI-PROYECCION-DENEGADOS-20261010 las proyecte.
+- Limitación: la prueba de qa-agent observa la lista por `ejecutarGitDeQaAgent` y no por `motivoDeGitDeQaAgent` (ver `## Implementación`).
 
 ## QA
 
@@ -170,7 +190,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": null,
+    "model": "claude-sonnet-5-5",
+    "reasoning_effort": "high",
+    "notes": "Sesion de implementacion del subagente en el worktree del ticket; el cliente no expone tokens ni costo, por eso no se declaran numeros.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:la sesion no expone los numeros",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -234,6 +270,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-10",
+    "at": "2026-10-11T00:14:24.166Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-10",
+    "at": "2026-10-11T00:18:27.933Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-10",
+    "at": "2026-10-11T00:19:16.486Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
