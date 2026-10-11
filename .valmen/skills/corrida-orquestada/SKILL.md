@@ -26,9 +26,9 @@ Un subagente por ticket, **en segundo plano** y en su **propio worktree**:
 1. `valmen journey worktree create --id <ID>` desde el checkout principal (rama `valmen/ticket-<slug>`) o `isolation: worktree`.
 2. Antes de lanzar a un subagente de implementación, trae `main` a su rama y **comprueba que no hay conflicto**; no lo lances en paralelo al merge.
 3. `valmen journey brief --id <ID>` con `--out <ruta>` escribe el brief en un archivo, sin pegarlo en la conversación. Su texto es el **único contexto** del subagente: dale solo la ruta y la orden de leerlo entero, sin resumirlo ni añadirle permisos. El brief toma el estado del registro del worktree.
-4. Pide el modelo y esfuerzo que el brief declara para la fase. Análisis y plan pueden ir a un subagente `sonnet` en vez de `opus` si el ticket es BUGFIX, CHORE o IMPROVEMENT de riesgo bajo, sin impactos y sin tocar motor, compuertas ni permisos; SECURITY y FEATURE que toca motor o compuerta conservan el modelo del brief.
+4. Pide el modelo y esfuerzo que el brief declara para la fase. Análisis y plan pueden ir a `sonnet` solo en BUGFIX, CHORE o IMPROVEMENT de riesgo bajo, sin impactos ni tocar motor, compuertas o permisos; el resto conserva el modelo del brief.
 
-El subagente trabaja solo en su worktree y arranca por `valmen resume --id <ID>` en él; se detiene en el primer alto: plan por aprobar o ticket en `awaiting_user_tests`. Si el ticket cambia el propio harness, corre compuertas y entrega con `node packages/cli/dist/main.js` de su worktree, no con el `valmen` del PATH (apunta al `dist` del principal). Al terminar, lee su informe (8 líneas) y vuelve a pedir la ola.
+El subagente trabaja solo en su worktree y arranca por `valmen resume --id <ID>` en él; se detiene en el primer alto: plan por aprobar o ticket en `awaiting_user_tests`. Si el ticket cambia el propio harness, corre compuertas y entrega con `node packages/cli/dist/main.js` de su worktree, no con el `valmen` del PATH. Al terminar, lee su informe (8 líneas) y vuelve a pedir la ola.
 
 ## Aprobar
 
@@ -64,7 +64,7 @@ De la suite muestra solo las líneas `Test Files` y `Tests` y los fallos. No peg
 
 ## QA por comandos
 
-Un ticket entregado cuyos criterios se verifican todos por comando se cierra aquí mismo con su ciclo de QA, citando la frase del PO que lo autoriza; con QA por agente vigente y promovida, la hace el agente. Lo de pantalla, de un entorno que no tienes (Docker, Hermes, un cliente real) o `verify: manual` queda en `awaiting_user_tests` y va al parte con dónde y cómo probarlo. Un SECURITY solo se cierra con la frase del PO. No marques `[x]` un criterio manual que no verificaste.
+Un ticket entregado cuyos criterios se verifican todos por comando se cierra aquí mismo con su ciclo de QA, citando la frase del PO que lo autoriza; con QA por agente vigente y promovida, la hace el agente. Lo de pantalla, de un entorno que no tienes o `verify: manual` queda en `awaiting_user_tests` y va al parte con cómo probarlo. Un SECURITY solo se cierra con la frase del PO. No marques `[x]` un criterio manual que no verificaste.
 
 ## Cerrar
 
