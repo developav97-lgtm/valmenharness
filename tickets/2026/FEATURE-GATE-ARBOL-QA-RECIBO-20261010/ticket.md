@@ -4,7 +4,7 @@ id: FEATURE-GATE-ARBOL-QA-RECIBO-20261010
 title: Recibo de qa-mechanical atado al árbol probado y rechazo si cambia
 type: FEATURE
 module: GATE
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -115,51 +115,51 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1 — R-REV-001: En un repositorio git, el recibo de `qa-mechanical` guarda `testedTree.hash` con la forma `sha256:<64 hex>`.
+- [x] C1 — R-REV-001: En un repositorio git, el recibo de `qa-mechanical` guarda `testedTree.hash` con la forma `sha256:<64 hex>`.
       <!-- test: npx vitest run tests/arbol-probado.test.ts -->
-- [ ] C2 — R-REV-001: `testedTree.head` es el commit de `HEAD` en el momento de correr la compuerta.
+- [x] C2 — R-REV-001: `testedTree.head` es el commit de `HEAD` en el momento de correr la compuerta.
       <!-- test: npx vitest run tests/arbol-probado.test.ts -->
-- [ ] C3 — R-REV-001: Sin cambios funcionales sin commitear, `testedTree.commitTree` es el `tree` de ese commit.
+- [x] C3 — R-REV-001: Sin cambios funcionales sin commitear, `testedTree.commitTree` es el `tree` de ese commit.
       <!-- test: npx vitest run tests/arbol-probado.test.ts -->
-- [ ] C4 — R-REV-001: Con un cambio funcional sin commitear, `testedTree.commitTree` es `null`.
+- [x] C4 — R-REV-001: Con un cambio funcional sin commitear, `testedTree.commitTree` es `null`.
       <!-- test: npx vitest run tests/arbol-probado.test.ts -->
-- [ ] C5 — R-REV-001: Con un recibo `approve` de `qa-mechanical` y un archivo funcional editado después, la transición a `awaiting_user_tests` se rechaza.
+- [x] C5 — R-REV-001: Con un recibo `approve` de `qa-mechanical` y un archivo funcional editado después, la transición a `awaiting_user_tests` se rechaza.
       <!-- test: npx vitest run tests/arbol-probado.test.ts -->
-- [ ] C6 — R-REV-001: El rechazo por árbol cambiado dice que el árbol cambió desde el recibo.
+- [x] C6 — R-REV-001: El rechazo por árbol cambiado dice que el árbol cambió desde el recibo.
       <!-- test: npx vitest run tests/arbol-probado.test.ts -->
-- [ ] C7 — R-REV-001: El rechazo por árbol cambiado nombra la compuerta a repetir con `valmen gate qa-mechanical --id <ID>`.
+- [x] C7 — R-REV-001: El rechazo por árbol cambiado nombra la compuerta a repetir con `valmen gate qa-mechanical --id <ID>`.
       <!-- test: npx vitest run tests/arbol-probado.test.ts -->
-- [ ] C8 — R-REV-001: Un archivo funcional nuevo sin versionar, creado después del recibo, rechaza la entrega.
+- [x] C8 — R-REV-001: Un archivo funcional nuevo sin versionar, creado después del recibo, rechaza la entrega.
       <!-- test: npx vitest run tests/arbol-probado.test.ts -->
-- [ ] C9 — R-REV-001: Un archivo funcional borrado después del recibo rechaza la entrega.
+- [x] C9 — R-REV-001: Un archivo funcional borrado después del recibo rechaza la entrega.
       <!-- test: npx vitest run tests/arbol-probado.test.ts -->
-- [ ] C10 — R-REV-001: Un cambio en `tickets/` después del recibo no rechaza la entrega.
+- [x] C10 — R-REV-001: Un cambio en `tickets/` después del recibo no rechaza la entrega.
       <!-- test: npx vitest run tests/arbol-probado.test.ts -->
-- [ ] C11 — R-REV-001: Un cambio en `.valmen/` después del recibo no rechaza la entrega.
+- [x] C11 — R-REV-001: Un cambio en `.valmen/` después del recibo no rechaza la entrega.
       <!-- test: npx vitest run tests/arbol-probado.test.ts -->
-- [ ] C12 — R-REV-001: Commitear después del recibo el mismo contenido probado no rechaza la entrega.
+- [x] C12 — R-REV-001: Commitear después del recibo el mismo contenido probado no rechaza la entrega.
       <!-- test: npx vitest run tests/arbol-probado.test.ts -->
-- [ ] C13 — R-REV-001: Un recibo real de `qa-mechanical` sin `testedTree` se lee con `readReceipts`.
+- [x] C13 — R-REV-001: Un recibo real de `qa-mechanical` sin `testedTree` se lee con `readReceipts`.
       <!-- test: npx vitest run tests/arbol-probado.test.ts -->
-- [ ] C14 — R-REV-001: En un repositorio git, la entrega con un recibo de `qa-mechanical` sin `testedTree` se rechaza pidiendo repetir la compuerta.
+- [x] C14 — R-REV-001: En un repositorio git, la entrega con un recibo de `qa-mechanical` sin `testedTree` se rechaza pidiendo repetir la compuerta.
       <!-- test: npx vitest run tests/arbol-probado.test.ts -->
-- [ ] C15 — R-REV-001: En un proyecto sin git, la entrega con un recibo vigente por el texto del ticket se acepta.
+- [x] C15 — R-REV-001: En un proyecto sin git, la entrega con un recibo vigente por el texto del ticket se acepta.
       <!-- test: npx vitest run tests/arbol-probado.test.ts tests/gate-mecanico.test.ts -->
-- [ ] C16 — R-REV-001: Con el árbol cambiado, `computeNextStep` en `in_progress` indica volver a correr `qa-mechanical`.
+- [x] C16 — R-REV-001: Con el árbol cambiado, `computeNextStep` en `in_progress` indica volver a correr `qa-mechanical`.
       <!-- test: npx vitest run tests/arbol-probado.test.ts -->
-- [ ] C17 — R-REV-001: Si los comandos de la compuerta cambian un archivo funcional, el recibo anota la ruta que cambió.
+- [x] C17 — R-REV-001: Si los comandos de la compuerta cambian un archivo funcional, el recibo anota la ruta que cambió.
       <!-- test: npx vitest run tests/arbol-probado.test.ts -->
-- [ ] C18 — R-REV-001: La salida de `valmen gate qa-mechanical` muestra el árbol probado.
+- [x] C18 — R-REV-001: La salida de `valmen gate qa-mechanical` muestra el árbol probado.
       <!-- test: npx vitest run tests/arbol-probado.test.ts -->
-- [ ] C19 — R-REV-001: Las pruebas existentes de la compuerta mecánica, la entrega y los recibos pasan con el árbol.
+- [x] C19 — R-REV-001: Las pruebas existentes de la compuerta mecánica, la entrega y los recibos pasan con el árbol.
       <!-- test: npx vitest run tests/gate-mecanico.test.ts tests/next-step.test.ts tests/autonomous-run.test.ts tests/integracion-autonoma.test.ts tests/jornada-ejecucion.test.ts tests/receipts-compat.test.ts tests/gate-command.test.ts tests/preparacion-ambiente.test.ts tests/compuerta-repetida.test.ts tests/cierre-criterios.test.ts -->
-- [ ] C20 — R-REV-001: Las pruebas del servidor MCP que corren `qa-mechanical` y entregan pasan.
+- [x] C20 — R-REV-001: Las pruebas del servidor MCP que corren `qa-mechanical` y entregan pasan.
       <!-- test: npx vitest run tests/mcp-server.test.ts -->
-- [ ] C21 — R-REV-001: El monorepo compila con el campo nuevo.
+- [x] C21 — R-REV-001: El monorepo compila con el campo nuevo.
       <!-- test: npx tsc --build tsconfig.build.json -->
-- [ ] C22 — R-REV-001: Las pruebas tipan contra el código nuevo.
+- [x] C22 — R-REV-001: Las pruebas tipan contra el código nuevo.
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
-- [ ] C23 — R-REV-001: El cambio no deja exportaciones nuevas sin consumidor.
+- [x] C23 — R-REV-001: El cambio no deja exportaciones nuevas sin consumidor.
       <!-- test: node scripts/exports-sin-uso.mjs -->
 
 ## Puntos
@@ -170,11 +170,71 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+**Estado: implementada, pasos 1 a 9.** En el paso 9 una prueba que ya existía se puso en rojo por lo que declara C14 y no se editó (EST-009): se detuvo la implementación, el PO decidió y se continuó con la excepción que se cita abajo.
+
+### Hecho
+
+- Paso 1: `TestedTreeRecord` y el campo opcional `testedTree` en `GateReceipt`, `ReceiptInput` y `buildReceipt` (`packages/gate/src/receipt.ts`); `RECEIPT_VERSION` sigue en 1.
+- Paso 2: `tests/fixtures/recibo-qa-mechanical-sin-arbol.jsonl`, copiado con `grep -m1` del recibo real `GR-20261010-FEATURE-CLI-TABLA-COMANDOS-20261010-qa-mechanical-1`: una línea, 29 781 bytes, `gate` `qa-mechanical` y sin `testedTree`.
+- Paso 3: `encuadrar` exportada (`packages/engine/src/integration-commit.ts`), sin cambiar su comportamiento.
+- Paso 4: `packages/engine/src/arbol-probado.ts` con `calcularArbolProbado`, `rutasQueCambiaron` y `motivoDeArbolNoVigente`; git solo en lectura y sin shell (`rev-parse`, `ls-files`, `status --porcelain -z`, con `--no-optional-locks`).
+- Pasos 5 a 7: `runGate` (árbol antes de la preparación y de los comandos, y otra vez al terminar; nota con las rutas si cambió; línea `árbol probado` en el informe), `exigirVerificacionMecanica` (`transition.ts`) y el caso `in_progress` de `computeNextStep` (`next-step.ts`).
+- Paso 8: `tests/arbol-probado.test.ts`, 21 pruebas escritas antes del código: 16 en rojo y 5 en verde antes del cambio (C13, C10, C11 y las dos de regresión, que protegen lo que ya funcionaba); con el código, 21 en verde. Se comprobó con tres mutaciones que pueden fallar (meter `tickets/` al árbol rompe C10; meter `.valmen/` rompe C11, C12 y la regresión; hashear sin el contenido rompe C5 a C7 y C16).
+
+### Hallazgo durante la implementación (dentro del alcance)
+
+El motor crea `.valmen.lock` en la raíz mientras `transition` muta el registro (`MutationLock.run(paths.root, …)`, `packages/core/src/fs.ts`), y ese archivo existe justo cuando la entrega compara el árbol: sin excluirlo, la entrega veía un archivo nuevo que ella misma acababa de crear y rechazaba toda entrega, incluso con el árbol intacto. Lo cazó la prueba de regresión «sigue aprobando y entregando cuando el árbol no cambió». `calcularArbolProbado` lo excluye junto con `tickets/` y `.valmen/` (constante `ARCHIVO_DE_LOCK`): es la misma decisión del plan —el registro no es código—, aplicada a un archivo del registro que el plan no nombraba.
+
+### Medición de H1
+
+`calcularArbolProbado` sobre este repositorio (691 archivos funcionales, `dist/` ignorado): entre 157 y 247 ms por corrida, 5 corridas. La compuerta lo calcula dos veces, `resume` y la entrega una vez cada uno.
+
+### Pruebas existentes en rojo (`tests/delegation.test.ts`) y la excepción del PO a EST-009
+
+Con el código del plan, `npx vitest run tests/delegation.test.ts` daba 4 fallos de 18 y el resto de la suite pasaba (una corrida completa, 4 025 pruebas: solo esas 4 fallaban). Las 4, todas de `describe("cierre delegado")`:
+
+- «anota el punto con --files, arranca el QA con el HEAD vigente y cierra el ticket»
+- «un ticket visual queda en awaiting_user_tests y no se cierra»
+- «un criterio manual del PO sin marcar deja el ticket esperándolo»
+- «desde awaiting_user_tests exige las palabras literales del PO y cierra con el HEAD»
+
+Salida (la misma en las cuatro): `DETENIDO en FEATURE-INVENTARIO-MODELO-20260924: La verificación mecánica (recibo GR-20261006-FEATURE-INVENTARIO-MODELO-20260924-qa-mechanical-1) no guarda el árbol de trabajo que probó: sin él no se puede comprobar que lo que se probó es lo que se entrega.`
+
+Hipótesis, comprobada leyendo la prueba: esas pruebas no corren `runGate`; usan un evaluador falso (`deps()`, `tests/delegation.test.ts:125-137`, y `recibo()`, `:99-122` antes de la edición) que anexa con `appendReceipt` un recibo de `qa-mechanical` armado a mano con `buildReceipt` —sin `testedTree`— en un laboratorio git real (`REAL_GIT`, `git init` y commit en `beforeEach`), y `closeDelegated` entrega con `transition`. Es exactamente el caso que C14 manda rechazar: un recibo de `qa-mechanical` sin árbol dentro de un repositorio git. El plan lista las pruebas que entregan y usan git (`autonomous-run`, `integracion-autonoma`) pero no esta; no es un defecto del código nuevo sino una consecuencia directa de C14.
+
+Se ofrecieron dos opciones al PO: A) que `recibo()` lleve el árbol (recomendada), y B) aceptar en la entrega el recibo sin árbol dentro de git, que contradice C14 y deja pasar el caso que esta compuerta cierra.
+
+**Decisión del PO, 2026-10-10:** «Que `recibo()` lleve árbol (Recomendado)». Es una excepción del PO a EST-009, con este alcance exacto: se edita solo el ayudante `recibo()`; los nombres y las aserciones de las 4 pruebas no cambian y ninguna se omite ni se borra.
+
+Lo que se editó, en `tests/delegation.test.ts`: la importación de `calcularArbolProbado` (línea 55) y, dentro de `recibo()` (líneas 100-127), el cálculo del árbol para el gate `qa-mechanical` (línea 109) y `testedTree` en el recibo (línea 125; los demás gates no lo llevan, como en la compuerta real). Motivo: el evaluador falso de esas pruebas emitía un recibo de `qa-mechanical` como el de antes de R-REV-001, que C14 manda rechazar dentro de git; ahora emite el recibo como lo deja el código nuevo. Resultado: `npx vitest run tests/delegation.test.ts` pasa en 18 de 18 y no se tocó ninguna otra prueba existente.
+
+### Incidente: la compuerta y la entrega de este ticket corrieron con el `valmen` instalado, que es el código de antes
+
+El `valmen` del `PATH` es un enlace (`/Users/juanandrade/.local/bin/valmen`) al `dist` del checkout principal (`packages/cli/dist/main.js`), que no tiene este cambio. La compuerta `qa-mechanical` y la transición a `awaiting_user_tests` de este ticket se corrieron con ese binario y no con el compilado del worktree, así que:
+
+- El recibo `GR-20261011-FEATURE-GATE-ARBOL-QA-RECIBO-20261010-qa-mechanical-1` no trae `testedTree` y la entrega no comparó el árbol: **la regla nueva no se aplicó a este mismo ticket**, que era el último paso del plan. No tiene arreglo dentro del motor: la compuerta solo aplica a `in_progress`, el ticket ya está en `awaiting_user_tests` (que solo sale hacia `in_qa`) y recibos y eventos son append-only.
+- Los comandos de los 23 criterios sí probaron el código del worktree (`vitest` resuelve `src`, y `tsc` y `knip` leen los fuentes), así que la evidencia de C1 a C23 vale; lo que falta es el recibo con árbol.
+- Sustituto, ya ejecutado: la validación manual de extremo a extremo con el CLI compilado del worktree (`node packages/cli/dist/main.js`) en un laboratorio git de `$TMPDIR` con un ticket en `in_progress`. `gate qa-mechanical` salió con APPROVE y la línea `árbol probado  sha256:9c5d8390d98b0a1e…  1 archivo(s), commit dc4519f8c8b8`; tras editar `src/suma.mjs`, `transition … --to awaiting_user_tests` salió con 3 y el mensaje «El árbol de trabajo cambió desde la verificación mecánica (recibo …)» con `valmen gate qa-mechanical --id <ID> --evaluator command`; `resume` dijo lo mismo (fase «verificación»); y tras revertir el archivo y tocar `tickets/index.md`, la entrega se aceptó.
+- Para quien integre: tras integrar y reconstruir el `dist` del checkout principal, el `valmen` del `PATH` ya aplica la regla; y como este ticket tiene un recibo de `qa-mechanical` sin árbol, un ticket que vuelva a `in_progress` tendrá que repetir la compuerta para entregar, que es lo que C14 decide.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Directorio: la raíz del worktree (`/Users/juanandrade/Desktop/ValmenHarness/.claude/worktrees/ticket-arbol-qa-recibo`). Requisitos: Node 24 con las dependencias del monorepo instaladas (`npm install` ya hecho) y `git` en el `PATH`; sin red ni credenciales.
+
+1. Las pruebas del ticket (C1 a C18): `npx vitest run tests/arbol-probado.test.ts`. Esperado: 1 archivo, 21 pruebas, 0 fallos.
+2. Las que entregan o leen recibos de `qa-mechanical` (C19): `npx vitest run tests/gate-mecanico.test.ts tests/next-step.test.ts tests/autonomous-run.test.ts tests/integracion-autonoma.test.ts tests/jornada-ejecucion.test.ts tests/receipts-compat.test.ts tests/gate-command.test.ts tests/preparacion-ambiente.test.ts tests/compuerta-repetida.test.ts tests/cierre-criterios.test.ts`. Esperado: 10 archivos, 195 pruebas, 0 fallos.
+3. El servidor MCP (C20): `npx vitest run tests/mcp-server.test.ts`. Esperado: 1 archivo, 81 pruebas, 0 fallos.
+4. La delegación, que no es un criterio pero es donde la regla nueva cambió una prueba existente (ver `## Implementación`): `npx vitest run tests/delegation.test.ts`. Esperado: 1 archivo, 18 pruebas, 0 fallos.
+5. Compilación y tipos (C21 y C22): `npx tsc --build tsconfig.build.json` y `npx tsc --noEmit -p tsconfig.json`. Esperado: sin salida y código 0 en las dos.
+6. Exportaciones sin consumidor (C23): `node scripts/exports-sin-uso.mjs`. Esperado: «Sin exportaciones nuevas sin consumidor; la línea base tiene 453 entradas» y código 0.
+7. Compuerta mecánica: `node packages/cli/dist/main.js gate qa-mechanical --id FEATURE-GATE-ARBOL-QA-RECIBO-20261010 --evaluator command` (con el CLI compilado del worktree: el `valmen` del `PATH` es el del checkout principal) (con `--force-reason "<motivo>"` si ya hay un recibo sobre el mismo estado; con el evaluador `command` no hace falta). Esperado: APPROVE con los 23 criterios en 1.00 y una línea `árbol probado` en el informe. La regla nueva se aplica a este mismo ticket: no se toca ningún archivo funcional entre la compuerta y la entrega.
+
+Validación manual (opcional, tras `npm run build`; ejecutada en esta sesión, ver el incidente en `## Implementación`): en un repositorio git de prueba con un ticket en `in_progress` y un criterio `<!-- test: node prueba.mjs -->`, correr `node packages/cli/dist/main.js gate qa-mechanical --id <ID> --evaluator command`, editar un archivo funcional y correr `node packages/cli/dist/main.js transition --id <ID> --entity ticket --to awaiting_user_tests`. Esperado: sale con 3 y dice «El árbol de trabajo cambió desde la verificación mecánica (recibo …)» y `valmen gate qa-mechanical --id <ID> --evaluator command`. Si en vez de editar se cambia un archivo de `tickets/` o de `.valmen/`, la entrega se acepta.
+
+Evidencia de esta sesión (ejecutada en el worktree): las 21 pruebas del ticket, 16 en rojo antes de escribir el código y 21 en verde después; tres mutaciones del código (meter `tickets/` al árbol, meter `.valmen/`, hashear sin el contenido) pusieron en rojo las pruebas que debían; la medición de H1 (157 a 247 ms por cálculo, 691 archivos) y la excepción del PO sobre `recibo()` están en `## Implementación`.
+
+Criterios sin verificar: ninguno; los 23 llevan comando de prueba y pasaron en la compuerta. Una salvedad que no es de un criterio: la compuerta y la entrega de este ticket corrieron con el `valmen` instalado, anterior a este cambio, así que su recibo no trae `testedTree` y la entrega no aplicó la regla nueva (ver el incidente en `## Implementación`).
+Limitaciones: los proyectos con la raíz dentro de un repositorio más grande (git ve el árbol del repositorio, no el de la raíz del proyecto) solo afectan al campo informativo `commitTree`, no al hash que se compara; un archivo de submódulo o un enlace roto se trata como borrado. Un cambio en `.valmen/config.yaml` después de la compuerta no la invalida (costo aceptado en el plan). Una corrida completa de la suite (`npx vitest run`) la hace el orquestador al integrar; en esta sesión se corrió una vez por un fallo de glob y pasó salvo las 4 pruebas de `tests/delegation.test.ts` ya tratadas.
 
 ## QA
 
@@ -203,7 +263,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": "~/.claude/projects/-Users-juanandrade-Desktop-ValmenHarness/c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/subagents/agent-ae7fd190eea4f2cf2.jsonl",
+    "model": "claude-sonnet-5-5",
+    "reasoning_effort": "high",
+    "notes": "Fase de implementación en una sesión de subagente propia de este ticket. Números sumados de la transcripción del subagente hasta el registro (67 respuestas): 134 tokens de entrada sin caché, 501586 de creación de caché y 13198012 de lectura de caché (entrada = suma de los tres), 85262 de salida. No incluye lo que el subagente gaste después del registro (compuerta, secretos, commit y entrega). Sin coste estimado: el cliente no lo expone.",
+    "input_tokens": 13699732,
+    "output_tokens": 85262,
+    "total_tokens": 13784994,
+    "estimated_cost_usd": null,
+    "source": "claude:agent-ae7fd190eea4f2cf2",
+    "confidence": "medium",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -267,6 +343,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-10",
+    "at": "2026-10-10T23:13:24.640Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-10",
+    "at": "2026-10-11T00:02:55.908Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-10",
+    "at": "2026-10-11T00:05:32.863Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
