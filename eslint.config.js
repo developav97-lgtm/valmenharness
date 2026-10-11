@@ -41,6 +41,9 @@ export default tseslint.config(
       // no está en ningún `tsconfig` y lo que el compilador sabe de él lo dicen
       // los `.d.ts` de al lado, que sí se revisan.
       "packages/server/web/**/*.js",
+      // Los worktrees de las jornadas (`.claude/worktrees/`) son copias del repositorio
+      // dentro del propio repositorio: revisarlas repite sus errores y agota la memoria.
+      ".claude/**",
     ],
   },
   ...tseslint.configs.recommended,
