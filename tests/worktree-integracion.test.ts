@@ -248,7 +248,7 @@ describe("las denegaciones llegan al worktree", () => {
       outputStyle: string;
       permissions: { deny: string[] };
     };
-    expect(claudeDenyRules()).toHaveLength(64);
+    expect(claudeDenyRules()).toHaveLength(108);
     expect(datos.permissions.deny).toEqual(claudeDenyRules());
     expect(datos.outputStyle).toBe("valmen");
     expect(r.avisos).toEqual([]);
@@ -282,7 +282,7 @@ describe("las denegaciones llegan al worktree", () => {
     lab.git("commit", "-q", "-m", "versiona los permisos");
     const r = crear();
     expect(readFileSync(join(enElWorktree(), SETTINGS), "utf8")).toBe(propio);
-    expect(r.avisos.join(" ")).toMatch(/viene de git y le faltan 64 denegaci/);
+    expect(r.avisos.join(" ")).toMatch(/viene de git y le faltan 108 denegaci/);
   });
 
   it("no avisa de denegaciones si el archivo que viene de git ya las trae", () => {

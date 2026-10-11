@@ -59,6 +59,29 @@ const GLOBS = [
   "~/.ssh/**",
 ];
 
+/** Los grupos de banderas de `git clean` que no empiezan por `-f` y borran (EST-009, 2026-10-10). */
+const GRUPOS_CLEAN = [
+  "-df",
+  "-xf",
+  "-Xf",
+  "-dxf",
+  "-dfx",
+  "-xdf",
+  "-xfd",
+  "-dXf",
+  "-dfX",
+  "-Xdf",
+  "-Xfd",
+];
+
+/** Las cuatro formas de un patrón de `git clean`. */
+const patronesClean = (bandera: string): string[] => [
+  `Bash(git clean ${bandera}*)`,
+  `Bash(git clean * ${bandera}*)`,
+  `Bash(git * clean ${bandera}*)`,
+  `Bash(git * clean * ${bandera}*)`,
+];
+
 const FORMAS = [
   "git push --force",
   "git push -f",
@@ -70,6 +93,7 @@ const FORMAS = [
   "git clean --force",
   "git tag -d",
   "git tag --delete",
+  ...GRUPOS_CLEAN.map((grupo) => `git clean ${grupo}`),
 ];
 
 /** Las 64 reglas, escritas a mano y en el orden del plan: 12 Read, 12 Edit y 4 Bash por cada forma. */
@@ -116,6 +140,8 @@ const REGLAS_ESPERADAS = [
   "Bash(git tag * --delete*)",
   "Bash(git * tag --delete*)",
   "Bash(git * tag * --delete*)",
+  // `git clean`: los grupos de banderas que no empiezan por -f.
+  ...GRUPOS_CLEAN.flatMap((grupo) => patronesClean(grupo)),
 ];
 
 const SETTINGS = ".claude/settings.json";
@@ -195,7 +221,7 @@ describe("la lista de core, sin la sintaxis de ningún cliente", () => {
 
 describe("las reglas de Claude Code", () => {
   it("claudeDenyRules() devuelve las 64 reglas del plan en su orden (C6)", () => {
-    expect(REGLAS_ESPERADAS).toHaveLength(64);
+    expect(REGLAS_ESPERADAS).toHaveLength(108);
     expect(claudeDenyRules()).toEqual(REGLAS_ESPERADAS);
   });
 });
@@ -439,7 +465,7 @@ describe("R-PER-003: sync --check nombra la denegación que falta", () => {
     ).toEqual([]);
     expect(
       missingClaudeDenyRules(JSON.stringify({ permissions: { deny: ["Read(**/.env)"] } })),
-    ).toHaveLength(63);
+    ).toHaveLength(107);
   });
 });
 
@@ -539,8 +565,8 @@ describe("regresión: lo que sync ya hacía sigue igual", () => {
 describe("la línea de permisos de sync", () => {
   it("dice cuántas denegaciones hay, cuántas agregó y que un worktree a mano no las trae", () => {
     const primera = sync().stdout;
-    expect(primera).toContain("denegaciones de Claude Code  64 (64 agregadas)");
+    expect(primera).toContain("denegaciones de Claude Code  108 (108 agregadas)");
     expect(primera).toContain("un worktree creado con git worktree add a mano no las trae");
-    expect(sync().stdout).toContain("denegaciones de Claude Code  64 (0 agregadas)");
+    expect(sync().stdout).toContain("denegaciones de Claude Code  108 (0 agregadas)");
   });
 });

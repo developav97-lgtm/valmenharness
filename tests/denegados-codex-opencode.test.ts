@@ -110,7 +110,7 @@ describe("Codex: .codex/rules/valmen.rules", () => {
     const texto = codexRulesText();
     expect(texto).not.toContain('"+"');
     expect(texto.split("\n")[1]).toMatch(/forma canónica.*de confianza/);
-    expect(texto.match(/prefix_rule\(/g)).toHaveLength(9);
+    expect(texto.match(/prefix_rule\(/g)).toHaveLength(27);
   });
 
   it("sync con codex escribe el archivo, y sin codex no", () => {
@@ -170,7 +170,7 @@ describe("OpenCode: traducción de la lista", () => {
       expect(permiso.read["*"]).toBe("allow");
       expect(permiso.edit["*"]).toBe(write ? "allow" : "deny");
       expect(permiso.bash["*"]).toBe(execute ? "allow" : "ask");
-      expect(Object.keys(permiso.bash).at(-1)).toBe("git * tag * --delete*");
+      expect(Object.keys(permiso.bash).at(-1)).toBe("git * clean * -Xfd*");
     }
   });
 });
@@ -216,7 +216,7 @@ describe("OpenCode: fusión de .opencode/opencode.json (R-PER-002)", () => {
     const todo = JSON.stringify({ permission: "allow" });
     expect(mergeOpencodeDenyConfig(todo)).toBe(todo);
     expect(denyNotApplied(["opencode"], todo, false)).toHaveLength(
-      SENSITIVE_PATH_GLOBS.length * 2 + DENIED_GIT_COMMANDS.length,
+      SENSITIVE_PATH_GLOBS.length * 2 + DENIED_GIT_COMMANDS.length + 1,
     );
 
     const bash = JSON.stringify({ permission: { bash: "allow" } });
@@ -225,6 +225,7 @@ describe("OpenCode: fusión de .opencode/opencode.json (R-PER-002)", () => {
     expect(datos["permission"]["read"][".env"]).toBe("deny");
     expect(denyNotApplied(["opencode"], bash, false).map((r) => r.regla)).toEqual([
       ...DENIED_GIT_COMMANDS,
+      "git clean tras env o command",
     ]);
   });
 
@@ -248,7 +249,7 @@ describe("OpenCode: fusión de .opencode/opencode.json (R-PER-002)", () => {
     const r = sync();
     expect(existsSync(join(lab, OPENCODE_CONFIG_PATH))).toBe(false);
     expect(leer(".opencode/opencode.jsonc")).toBe("// de la persona\n{}\n");
-    expect(r.stdout).toContain("no aplicadas en opencode (34)");
+    expect(r.stdout).toContain("no aplicadas en opencode (46)");
   });
 
   it("sync escribe, no toca opencode.json de la raíz y --check queda al día", () => {
@@ -351,10 +352,10 @@ describe("salida de sync, sync --check y doctor", () => {
     escribir(OPENCODE_CONFIG_PATH, JSON.stringify({ permission: { bash: "allow" } }));
     const r = sync();
     expect(r.stdout).toMatch(
-      /no aplicadas en codex \(25\): .*read \*\*\/\.env.*git push \+.*— /,
+      /no aplicadas en codex \(26\): .*read \*\*\/\.env.*git push \+.*— /,
     );
     expect(r.stdout).toContain("forma canónica");
-    expect(r.stdout).toMatch(/no aplicadas en opencode \(10\): git push --force/);
+    expect(r.stdout).toMatch(/no aplicadas en opencode \(22\): git push --force/);
     expect(r.stdout).toContain("no heredan read ni edit");
   });
 
@@ -363,7 +364,7 @@ describe("salida de sync, sync --check y doctor", () => {
     sync();
     const r = sync(true);
     expect(r.exitCode).toBe(0);
-    expect(r.stdout).toContain("no aplicadas en codex (25)");
+    expect(r.stdout).toContain("no aplicadas en codex (26)");
   });
 
   it("doctor avisa por cliente y no cambia el código de salida", async () => {
