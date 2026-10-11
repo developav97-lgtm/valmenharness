@@ -4,7 +4,7 @@ id: FEATURE-GATE-POLITICA-BANDA-REVIEW-20261010
 title: Un REVIEW exige una proposición bajo 0,80 o varias en la banda
 type: FEATURE
 module: GATE
-workflow_status: in_progress
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -113,45 +113,45 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1. `readGateThresholds` acepta `review-floor` con `review-band-max` en una entrada de compuerta.
+- [x] C1. `readGateThresholds` acepta `review-floor` con `review-band-max` en una entrada de compuerta.
       <!-- test: npx vitest run tests/gate-banda-revision.test.ts -->
-- [ ] C2. `readGateThresholds` rechaza `review-floor` en una entrada que nombra una proposición.
+- [x] C2. `readGateThresholds` rechaza `review-floor` en una entrada que nombra una proposición.
       <!-- test: npx vitest run tests/gate-banda-revision.test.ts -->
-- [ ] C3. `readGateThresholds` rechaza un `review-floor` fuera del intervalo abierto entre `block-at` con `approve-at`.
+- [x] C3. `readGateThresholds` rechaza un `review-floor` fuera del intervalo abierto entre `block-at` con `approve-at`.
       <!-- test: npx vitest run tests/gate-banda-revision.test.ts -->
-- [ ] C4. Una entrada de banda sin firma completa deja la decisión igual a la de hoy.
+- [x] C4. Una entrada de banda sin firma completa deja la decisión igual a la de hoy.
       <!-- test: npx vitest run tests/gate-banda-revision.test.ts -->
-- [ ] C5. Con la banda firmada, una sola proposición en 0,85 aprueba la compuerta.
+- [x] C5. Con la banda firmada, una sola proposición en 0,85 aprueba la compuerta.
       <!-- test: npx vitest run tests/gate-banda-revision.test.ts -->
-- [ ] C6. Con la banda firmada, una proposición bajo el piso manda la compuerta a `review`.
+- [x] C6. Con la banda firmada, una proposición bajo el piso manda la compuerta a `review`.
       <!-- test: npx vitest run tests/gate-banda-revision.test.ts -->
-- [ ] C7. Con la banda firmada, tres proposiciones sobre el piso pero bajo `approveAt` mandan la compuerta a `review`.
+- [x] C7. Con la banda firmada, tres proposiciones sobre el piso pero bajo `approveAt` mandan la compuerta a `review`.
       <!-- test: npx vitest run tests/gate-banda-revision.test.ts -->
-- [ ] C8. Con la banda firmada, una proposición crítica bajo `approveAt` manda la compuerta a `review`.
+- [x] C8. Con la banda firmada, una proposición crítica bajo `approveAt` manda la compuerta a `review`.
       <!-- test: npx vitest run tests/gate-banda-revision.test.ts -->
-- [ ] C9. Con la banda firmada, una proposición en `blockAt` sigue dando `block`.
+- [x] C9. Con la banda firmada, una proposición en `blockAt` sigue dando `block`.
       <!-- test: npx vitest run tests/gate-banda-revision.test.ts -->
-- [ ] C10. La banda no se aplica a un ticket SECURITY.
+- [x] C10. La banda no se aplica a un ticket SECURITY.
       <!-- test: npx vitest run tests/gate-banda-revision.test.ts -->
-- [ ] C11. La banda no se aplica a un ticket con algún impacto declarado en su frontmatter.
+- [x] C11. La banda no se aplica a un ticket con algún impacto declarado en su frontmatter.
       <!-- test: npx vitest run tests/gate-banda-revision.test.ts -->
-- [ ] C12. El recibo de una aprobación por banda guarda la banda aplicada con su firma.
+- [x] C12. El recibo de una aprobación por banda guarda la banda aplicada con su firma.
       <!-- test: npx vitest run tests/gate-banda-revision.test.ts -->
-- [ ] C13. La salida de `valmen gate` nombra a quien firmó la banda cuando la compuerta aprueba por ella.
+- [x] C13. La salida de `valmen gate` nombra a quien firmó la banda cuando la compuerta aprueba por ella.
       <!-- test: npx vitest run tests/gate-banda-revision.test.ts -->
-- [ ] C14. La pantalla de políticas muestra el piso firmado de una entrada con banda.
+- [x] C14. La pantalla de políticas muestra el piso firmado de una entrada con banda.
       <!-- test: npx vitest run tests/politicas-autonomas.test.ts -->
-- [ ] C15. `valmen thresholds plan --band` muestra el conteo de veredictos antes del cambio junto al conteo después.
+- [x] C15. `valmen thresholds plan --band` muestra el conteo de veredictos antes del cambio junto al conteo después.
       <!-- test: npx vitest run tests/gate-banda-repeticion.test.ts -->
-- [ ] C16. La repetición de la muestra fija no cambia ningún recibo desde `block` ni hacia `block`.
+- [x] C16. La repetición de la muestra fija no cambia ningún recibo desde `block` ni hacia `block`.
       <!-- test: npx vitest run tests/gate-banda-repeticion.test.ts -->
-- [ ] C17. La repetición de la muestra fija lista los recibos que pasan de `review` a `approve`.
+- [x] C17. La repetición de la muestra fija lista los recibos que pasan de `review` a `approve`.
       <!-- test: npx vitest run tests/gate-banda-repeticion.test.ts -->
-- [ ] C18. En la repetición, el recibo de control con una proposición en 0,12 sigue en `review`.
+- [x] C18. En la repetición, el recibo de control con una proposición en 0,12 sigue en `review`.
       <!-- test: npx vitest run tests/gate-banda-repeticion.test.ts -->
-- [ ] C19. El informe de revisión posterior cuenta los tickets aprobados por banda que volvieron a `changes_requested`.
+- [x] C19. El informe de revisión posterior cuenta los tickets aprobados por banda que volvieron a `changes_requested`.
       <!-- test: npx vitest run tests/gate-banda-repeticion.test.ts -->
-- [ ] C20. El script de exportaciones sin uso termina sin hallazgos nuevos.
+- [x] C20. El script de exportaciones sin uso termina sin hallazgos nuevos.
       <!-- test: node scripts/exports-sin-uso.mjs -->
 
 ## Puntos
@@ -162,11 +162,33 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+Hecha en modo flujo completo, con pruebas primero (observadas en rojo antes de implementar: `tests/gate-banda-revision.test.ts`, `tests/gate-banda-repeticion.test.ts` y la ampliación de `tests/politicas-autonomas.test.ts`). Ninguna prueba existente cayó; no se editó ninguna.
+
+- `packages/adapter/src/config.ts`: `ThresholdOverride` gana `reviewFloor` y `reviewBandMax`; `review-floor` (estrictamente entre `block-at` y `approve-at`, no con `proposition`) y `review-band-max` (entero >= 2, por defecto 3, requiere piso).
+- `packages/gate/src/decide.ts`: `ReviewBand`, `aplicarBanda` (pura) y quinto parámetro opcional de `decide`; `GateDecision.toleratedInBand`. Sin banda el resultado es el de siempre; el veto de `block` no se toca.
+- `packages/gate/src/receipt.ts`: campo aditivo `reviewBand` en el recibo (`receiptVersion` no sube).
+- `packages/engine/src/thresholds.ts`: `bandaFirmada` (solo con `approved-by` y `reason`; no a SECURITY ni a `sync_impact`, `migration_impact`, `docker_impact`, con nota en el recibo) y `criticas`.
+- `packages/engine/src/gate.ts`: pasa la banda a `decide`, la guarda en el recibo y la nombra en la salida («Banda de revisión: ... firmada por P»).
+- `packages/server/src/politicas.ts`: el resumen muestra «revisión solo bajo X o con N en banda».
+- `packages/engine/src/banda-revision.ts` (nuevo): `repetirConBanda` e informe de revisión posterior; `valmen thresholds <gate> --band [--floor] [--max]` (`packages/cli/src/commands.ts`, `command-table.ts`, `main.ts`).
+- `tests/fixtures/recibos-banda.jsonl`: muestra fija de 52 líneas copiada con `grep -F` desde `.valmen/receipts/*.jsonl` (ids elegidos por una repetición independiente de solo lectura).
+
+Evidencia alternativa a `calibrar_compuerta`: la repetición de recibos dice qué decisiones cambiarían (con la muestra actual, `valmen thresholds plan --band`: 16 recibos pasan de review a approve, ninguno desde ni hacia block, 1 de SECURITY queda fuera) y los controles con una proposición en 0,12 siguen en review. No demuestra que la política no apruebe un plan malo: hay 25 decisiones humanas y 0 rechazos frente a las 20 y 5 que pide `calibrar_compuerta`.
+
+No se firmó ninguna banda: la política sigue apagada hasta que una persona firme una entrada en `.valmen/config.yaml`.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Directorio: raíz del repositorio (o del worktree).
+
+- `npx vitest run tests/gate-banda-revision.test.ts tests/gate-banda-repeticion.test.ts tests/politicas-autonomas.test.ts` — esperado: 43 pruebas en verde (configuración C1-C3, decisión C4-C9, motor C10-C13, pantalla C14, repetición C15-C19).
+- `node scripts/exports-sin-uso.mjs` — esperado: «Sin exportaciones nuevas sin consumidor» (C20).
+- `npx tsc --noEmit -p .`, `npx eslint` y `npx prettier --check` de lo tocado — sin hallazgos.
+- Regresión (no se editaron): `npx vitest run tests/umbrales-por-evaluador.test.ts tests/precision-y-umbrales.test.ts tests/cli-tabla-comandos.test.ts tests/gate-decide.test.ts` — 588 pruebas en 33 archivos de gate/umbrales/code-review en verde.
+- Validación manual (opcional): `valmen thresholds plan --band` muestra Antes/Después y la lista de cambios; añadir a `.valmen/config.yaml` una entrada con `review-floor: 0.8`, `approved-by` y `reason` y correr una compuerta de plan.
+- Ambiente: Node 24, `npm run build` previo para el CLI. Sin servicios.
+
+Resultado de la ejecución local: ver arriba; la validación del responsable queda pendiente.
 
 ## QA
 
@@ -195,7 +217,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Sesión de subagente sonnet que no expone números; sin estimación.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:subagente de implementación sin agregado de sesión",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -277,6 +315,24 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-11",
+    "at": "2026-10-11T19:12:40.786Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-11",
+    "at": "2026-10-11T19:12:41.313Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
