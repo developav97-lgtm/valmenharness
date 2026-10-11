@@ -32,8 +32,6 @@ test-timeout: 420
 
 # Tope por skill del catálogo (D7): `sync` avisa sin bloquear y tests/skills-catalogo-tope.test.ts lo exige.
 skill-budget: 6500
-# Tope orientativo de líneas (añadidas + borradas) por entrega: al pasarlo la integración avisa, no bloquea (R-ENT-002).
-delivery-budget: 400
 # Modelos que este proyecto quiere tener a mano en el selector, por proveedor.
 #
 # Van **primero** en el desplegable. Sirven para dos cosas: subir arriba los que
