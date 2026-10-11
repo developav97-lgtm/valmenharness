@@ -4,7 +4,7 @@ id: FEATURE-CLI-PRUEBA-CASCADA-GUIONADA-20261010
 title: Prueba de valmen gate con cascada completa y modelo guionado
 type: FEATURE
 module: CLI
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -136,73 +136,73 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1 — R-GUI-003: El monorepo compila con el cambio, lo que deja el binario que corre la prueba.
+- [x] C1 — R-GUI-003: El monorepo compila con el cambio, lo que deja el binario que corre la prueba.
       <!-- test: npx tsc --build tsconfig.build.json -->
-- [ ] C2 — R-GUI-002: Con el guion de tres pasos del paso 5, el servidor guionado recibe exactamente tres peticiones, en el orden productor, verificador (`/decisions`) y escalado.
+- [x] C2 — R-GUI-002: Con el guion de tres pasos del paso 5, el servidor guionado recibe exactamente tres peticiones, en el orden productor, verificador (`/decisions`) y escalado.
       <!-- test: npx vitest run tests/cascada-guionada.test.ts -->
-- [ ] C3 — R-GUI-002: El recibo de esa corrida declara el evaluador `cascade`.
+- [x] C3 — R-GUI-002: El recibo de esa corrida declara el evaluador `cascade`.
       <!-- test: npx vitest run tests/cascada-guionada.test.ts -->
-- [ ] C4 — R-GUI-002: El recibo de esa corrida no declara `requestedEvaluator`.
+- [x] C4 — R-GUI-002: El recibo de esa corrida no declara `requestedEvaluator`.
       <!-- test: npx vitest run tests/cascada-guionada.test.ts -->
-- [ ] C5 — R-GUI-002: El recibo de esa corrida lista las proposiciones de la compuerta `analysis` que aplican a un ticket BUGFIX.
+- [x] C5 — R-GUI-002: El recibo de esa corrida lista las proposiciones de la compuerta `analysis` que aplican a un ticket BUGFIX.
       <!-- test: npx vitest run tests/cascada-guionada.test.ts -->
-- [ ] C6 — R-GUI-002: El recibo guarda en `modelAnswers`, para cada proposición que el verificador respaldó, el valor que dio el productor.
+- [x] C6 — R-GUI-002: El recibo guarda en `modelAnswers`, para cada proposición que el verificador respaldó, el valor que dio el productor.
       <!-- test: npx vitest run tests/cascada-guionada.test.ts -->
-- [ ] C7 — R-GUI-002: El recibo guarda en `escalations` la proposición `causa_especifica` con la probabilidad 0.10 que dio el verificador.
+- [x] C7 — R-GUI-002: El recibo guarda en `escalations` la proposición `causa_especifica` con la probabilidad 0.10 que dio el verificador.
       <!-- test: npx vitest run tests/cascada-guionada.test.ts -->
-- [ ] C8 — R-GUI-002: El recibo guarda en `modelAnswers`, para `causa_especifica`, el valor que dio el escalado.
+- [x] C8 — R-GUI-002: El recibo guarda en `modelAnswers`, para `causa_especifica`, el valor que dio el escalado.
       <!-- test: npx vitest run tests/cascada-guionada.test.ts -->
-- [ ] C9 — R-GUI-002: El resultado del recibo es `approve`, el que corresponde al guion.
+- [x] C9 — R-GUI-002: El resultado del recibo es `approve`, el que corresponde al guion.
       <!-- test: npx vitest run tests/cascada-guionada.test.ts -->
-- [ ] C10 — R-GUI-002: Con el productor en `claude-code`, el `claude` falso de `VALMEN_CLAUDE_BIN` recibe el pedido del productor.
+- [x] C10 — R-GUI-002: Con el productor en `claude-code`, el `claude` falso de `VALMEN_CLAUDE_BIN` recibe el pedido del productor.
       <!-- test: npx vitest run tests/cascada-guionada.test.ts -->
-- [ ] C11 — R-GUI-003: En las corridas de C2 y C10, la guarda de red no registra ningún intento fuera de loopback.
+- [x] C11 — R-GUI-003: En las corridas de C2 y C10, la guarda de red no registra ningún intento fuera de loopback.
       <!-- test: npx vitest run tests/cascada-guionada.test.ts -->
-- [ ] C12 — R-GUI-003: Sin el binario compilado, la prueba falla con un mensaje que pide `npm run build`.
+- [x] C12 — R-GUI-003: Sin el binario compilado, la prueba falla con un mensaje que pide `npm run build`.
       <!-- test: npx vitest run tests/cascada-guionada.test.ts -->
-- [ ] C13 — R-GUI-003: `.github/workflows/verificacion.yml` corre `npm run typecheck`, que compila el binario, antes de `npm test`.
+- [x] C13 — R-GUI-003: `.github/workflows/verificacion.yml` corre `npm run typecheck`, que compila el binario, antes de `npm test`.
       <!-- test: npx vitest run tests/cascada-guionada.test.ts -->
-- [ ] C14 — R-GUI-003: `.github/workflows/verificacion.yml` no usa ningún secreto.
+- [x] C14 — R-GUI-003: `.github/workflows/verificacion.yml` no usa ningún secreto.
       <!-- test: npx vitest run tests/cascada-guionada.test.ts -->
-- [ ] C15 — R-GUI-003: Con claves falsas en el entorno del subproceso, ninguna corrida de la tabla de fallos registra un intento fuera de loopback.
+- [x] C15 — R-GUI-003: Con claves falsas en el entorno del subproceso, ninguna corrida de la tabla de fallos registra un intento fuera de loopback.
       <!-- test: npx vitest run tests/cascada-guionada.test.ts -->
-- [ ] C16 — R-GUI-004: Con un guion de dos pasos y una cascada que hace tres llamadas, no queda ningún recibo `approve` del ticket.
+- [x] C16 — R-GUI-004: Con un guion de dos pasos y una cascada que hace tres llamadas, no queda ningún recibo `approve` del ticket.
       <!-- test: npx vitest run tests/cascada-guionada.test.ts -->
-- [ ] C17 — R-GUI-004: Con ese guion, la salida de error nombra la llamada sin guion.
+- [x] C17 — R-GUI-004: Con ese guion, la salida de error nombra la llamada sin guion.
       <!-- test: npx vitest run tests/cascada-guionada.test.ts -->
-- [ ] C18 — R-GUI-004: Con ese guion, el servidor guionado recibe exactamente tres peticiones.
+- [x] C18 — R-GUI-004: Con ese guion, el servidor guionado recibe exactamente tres peticiones.
       <!-- test: npx vitest run tests/cascada-guionada.test.ts -->
-- [ ] C19 — R-GUI-003: Con las variables de la cadena activas, cada fallo de la tabla de fallos del servidor local hace salir a la compuerta con un código distinto de 0.
+- [x] C19 — R-GUI-003: Con las variables de la cadena activas, cada fallo de la tabla de fallos del servidor local hace salir a la compuerta con un código distinto de 0.
       <!-- test: npx vitest run tests/cascada-guionada.test.ts -->
-- [ ] C20 — R-GUI-003: En cada fallo de esa tabla, la guarda de red registra un solo intento: la cascada no degrada a otro evaluador.
+- [x] C20 — R-GUI-003: En cada fallo de esa tabla, la guarda de red registra un solo intento: la cascada no degrada a otro evaluador.
       <!-- test: npx vitest run tests/cascada-guionada.test.ts -->
-- [ ] C21 — R-GUI-004: En cada fallo de esa tabla, no queda recibo del ticket.
+- [x] C21 — R-GUI-004: En cada fallo de esa tabla, no queda recibo del ticket.
       <!-- test: npx vitest run tests/cascada-guionada.test.ts -->
-- [ ] C22 — R-GUI-003: El destino del 307 de esa tabla no recibe ninguna petición.
+- [x] C22 — R-GUI-003: El destino del 307 de esa tabla no recibe ninguna petición.
       <!-- test: npx vitest run tests/cascada-guionada.test.ts -->
-- [ ] C23 — R-GUI-003: Con el evaluador `jev`, `VALMEN_BASE_URL_JEV` activa y jev respondiendo 500, la guarda de red registra un solo intento.
+- [x] C23 — R-GUI-003: Con el evaluador `jev`, `VALMEN_BASE_URL_JEV` activa y jev respondiendo 500, la guarda de red registra un solo intento.
       <!-- test: npx vitest run tests/cascada-guionada.test.ts -->
-- [ ] C24 — R-GUI-003: Cada cadena de la tabla de cadenas incompletas hace fallar la compuerta sin ningún intento de petición.
+- [x] C24 — R-GUI-003: Cada cadena de la tabla de cadenas incompletas hace fallar la compuerta sin ningún intento de petición.
       <!-- test: npx vitest run tests/cascada-guionada.test.ts -->
-- [ ] C25 — R-GUI-003: Cada fallo de esa tabla nombra en la salida de error la variable que falta.
+- [x] C25 — R-GUI-003: Cada fallo de esa tabla nombra en la salida de error la variable que falta.
       <!-- test: npx vitest run tests/cascada-guionada.test.ts -->
-- [ ] C26 — R-GUI-004: En `runGate` con una URL de prueba activa, ningún código de la tabla de códigos del motor lanzado por el productor hace que la cascada llame al doble de jev.
+- [x] C26 — R-GUI-004: En `runGate` con una URL de prueba activa, ningún código de la tabla de códigos del motor lanzado por el productor hace que la cascada llame al doble de jev.
       <!-- test: npx vitest run tests/cascada-guionada.test.ts -->
-- [ ] C27 — R-GUI-004: En `runGate` con una URL de prueba activa, ningún código de esa tabla lanzado por jev hace que el evaluador `jev` llame al doble del juez.
+- [x] C27 — R-GUI-004: En `runGate` con una URL de prueba activa, ningún código de esa tabla lanzado por jev hace que el evaluador `jev` llame al doble del juez.
       <!-- test: npx vitest run tests/cascada-guionada.test.ts -->
-- [ ] C28 — R-GUI-003: Sin ninguna `VALMEN_BASE_URL_*`, la cascada sigue degradando al evaluador por defecto ante un fallo del productor.
+- [x] C28 — R-GUI-003: Sin ninguna `VALMEN_BASE_URL_*`, la cascada sigue degradando al evaluador por defecto ante un fallo del productor.
       <!-- test: npx vitest run tests/gate-cascade-fallo.test.ts -->
-- [ ] C29 — R-GUI-003: La sección 1.4 de `docs/04-PROVEEDORES.md` dice que con una variable activa la compuerta no degrada a otro evaluador.
+- [x] C29 — R-GUI-003: La sección 1.4 de `docs/04-PROVEEDORES.md` dice que con una variable activa la compuerta no degrada a otro evaluador.
       <!-- test: npx vitest run tests/cascada-guionada.test.ts -->
-- [ ] C30 — R-GUI-003: La sección 1.4 dice que con una variable activa la compuerta falla si un eslabón de la cadena no tiene su variable.
+- [x] C30 — R-GUI-003: La sección 1.4 dice que con una variable activa la compuerta falla si un eslabón de la cadena no tiene su variable.
       <!-- test: npx vitest run tests/cascada-guionada.test.ts -->
-- [ ] C31 — R-GUI-003: La sección 1.4 ya no contiene el «Límite conocido».
+- [x] C31 — R-GUI-003: La sección 1.4 ya no contiene el «Límite conocido».
       <!-- test: npx vitest run tests/cascada-guionada.test.ts -->
-- [ ] C32 — R-GUI-003: Las pruebas existentes de URL base, cascada, evaluadores, jev y CLI de Claude pasan con el cambio.
+- [x] C32 — R-GUI-003: Las pruebas existentes de URL base, cascada, evaluadores, jev y CLI de Claude pasan con el cambio.
       <!-- test: npx vitest run tests/url-base-prueba.test.ts tests/gate-cascade-fallo.test.ts tests/cascada-verificada.test.ts tests/cascada-productor-reintento.test.ts tests/cascada-tareas.test.ts tests/evaluators.test.ts tests/gate-jev.test.ts tests/claude-cli.test.ts -->
-- [ ] C33 — R-GUI-003: Las pruebas tipan contra el código nuevo.
+- [x] C33 — R-GUI-003: Las pruebas tipan contra el código nuevo.
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
-- [ ] C34 — R-GUI-003: La guarda de exportaciones sin uso no encuentra exportaciones nuevas ni entradas sobrantes.
+- [x] C34 — R-GUI-003: La guarda de exportaciones sin uso no encuentra exportaciones nuevas ni entradas sobrantes.
       <!-- test: node scripts/exports-sin-uso.mjs -->
 - [ ] C35 — R-GUI-003: La revisión de seguridad del diff no encuentra un camino por el que, con una URL de prueba activa, una petición salga de loopback.
       <!-- verify: manual -->
@@ -215,11 +215,90 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
 
 ## Implementación
 
-Pendiente.
+Sigue `## Plan` pasos 1 a 7 sin desviar el diseño; el paso 8 es la revisión de seguridad de abajo. Cambios:
+
+- `packages/credentials/src/endpoints.ts`: `TransportError` suma el código `TEST_URL_INCOMPLETE`; `requireTestRoutes(ids, env = process.env)` va después de `testBaseUrlFor` y sigue el pseudocódigo del plan (jev con `VALMEN_BASE_URL_JEV`, un transporte por CLI con `VALMEN_CLAUDE_BIN`, el resto con su `VALMEN_BASE_URL_<ID>`; un valor no local lanza `TEST_URL_REJECTED` antes que la falta; el mensaje nombra variables, nunca valores). Un ayudante interno sin exportar, `nombreDeUrlBase`, arma el nombre de la variable para `testBaseUrlFor` y para `requireTestRoutes`, de modo que la convención vive en un solo lugar. La única exportación nueva es `requireTestRoutes`, consumida por el motor y por la prueba: `exports:check` sigue en 443 entradas.
+- `packages/engine/package.json`, `tsconfig.json` y `package-lock.json`: el motor declara `@valmen/credentials` (`"0.0.1"` y la referencia `../credentials`); `git diff package-lock.json` muestra una sola línea agregada.
+- `packages/engine/src/cascade.ts`: `verifiedCascade` llama `requireTestRoutes([productor, escalado, "jev"])` justo después de `exigirCadena`; cubre la compuerta y las tareas de la cascada.
+- `packages/engine/src/evaluators.ts`: `eslabones(chosen, options)` y `enPrueba` en `runSemanticEnTandas`, que lo pasa a `runSemanticEnTandasDe` y a `runSemantic`; con `enPrueba` la cascada relanza cualquier fallo y jev no cae al juez. Sin ninguna `VALMEN_BASE_URL_*` el orden y las condiciones no cambian. Los tres comentarios del plan se actualizaron.
+- `docs/04-PROVEEDORES.md` §1.4: el «Límite conocido» se reemplaza por dos viñetas (no degrada; cadena completa o `TEST_URL_INCOMPLETE`), una línea que remite a `tests/cascada-guionada.test.ts`, y dos aclaraciones que salieron de la revisión de seguridad (abajo): `VALMEN_CLAUDE_BIN` debe apuntar a un `claude` de prueba, y lo anterior vale para `valmen gate` y `valmen cascada`.
+- `tests/cascada-guionada.test.ts` (nuevo, 63 pruebas): el `beforeAll` del binario y la prueba de su mensaje; el servidor guionado único para `/v1/chat/completions`, `/decisions` y `/claude`; la guarda de red y el `claude` falso, escritos en el laboratorio; la tabla de fallos (500, 307, no JSON, puerto cerrado), la de cadenas incompletas, `--evaluator jev`, `runGate` con dobles para los siete códigos del motor, las lecturas de `verificacion.yml` y de la sección 1.4.
+
+Desviaciones, todas menores: (1) el `PATH` del subproceso lleva un directorio del laboratorio con solo un enlace a `node`, en vez de «el directorio de Node, `/usr/bin` y `/bin`»: en esta máquina el `claude` real vive en el directorio de Node (`which claude` lo encuentra ahí), y el plan quiere un `PATH` sin él. (2) Tres pruebas que el plan no listaba, una por cada cosa existente que el cambio toca y una por regla: `requireTestRoutes` devuelve `false` sin variables o con valores en blanco; el binario sin ninguna `VALMEN_BASE_URL_*` y con la cadena de (iii) sigue pidiendo la credencial como siempre (no pide variables de prueba); y `verifiedCascade` con la cadena incompleta falla antes de llamar al juez o a jev (paso 3, las tareas de la cascada). (3) Las aclaraciones de la documentación ya dichas.
+
+Pruebas primero (EST-010): `tests/cascada-guionada.test.ts` se escribió antes que el código de producto y se corrió en rojo: 25 de 62 fallaban (C17 y C18 del guion agotado, C20 en los cuatro fallos, C23, C24 de (i) y (ii), C25 de las tres cadenas, C26 en los siete códigos, C27 en `SERVER` y `TRANSPORT`, C29 a C31 y la de `requireTestRoutes`, esta última por no existir la función). Antes del arreglo, la cadena sin `VALMEN_BASE_URL_JEV` y la del escalado en `anthropic` sin su variable **terminaban con salida 0**, es decir, la compuerta corría degradando a otro evaluador: es H1 medido por la prueba, con la guarda cortando lo que salía de loopback. Las 37 restantes pasaban desde el principio porque describen lo que el camino ya hacía sin código nuevo de producto, como dice el diagnóstico: el recorrido de C2 a C11, C12 a C14, C16, C19, C21, C15 y C22 de la tabla de fallos, C24 de (iii) (el `claude` falta del `PATH`, así que no hay petición), C27 con los cinco códigos que jev nunca degradó, C28 y la regresión del binario. La prueba de `verifiedCascade` se agregó después y se comprobó quitando a mano la línea del paso 3 de `cascade.ts`: falla («resolved … instead of rejecting»); con la línea restaurada pasa. Ninguna prueba existente se tocó ni se puso en rojo. Ninguna prueba hace una llamada de red fuera de localhost ni usa una clave real.
+
+### Revisión de seguridad del diff (paso 8, criterio C35)
+
+La hizo un subagente revisor independiente, sin mi conclusión, solo con lectura del código. Sin hallazgo en: todas las llamadas a un modelo de `valmen gate` con cualquier `--evaluator` y de `valmen cascada` pasan por `runSemanticEnTandas` o por `verifiedCascade` (las rutas `precomputed` y de comandos mixtos o puros solo llegan a un modelo por ahí); la lista de eslabones incluye el reintento del productor (usa el escalado) y a jev (el verificador ignora el proveedor); la comprobación va antes de la primera llamada y sirve para todas las tandas; con la variable activa `callChat` y jev anulan la clave y no siguen redirecciones; `requireTestRoutes` nombra variables, nunca valores; y sin ninguna `VALMEN_BASE_URL_*` con valor devuelve `false` antes de leer nada más.
+
+Hallazgos, **todos fuera del plan aprobado y sin tocar el código, para decisión de la persona responsable**:
+
+- H-A (media, ya conocida como H3 del diagnóstico): `requireTestRoutes` exige `VALMEN_CLAUDE_BIN` para `claude-code`, pero no comprueba a qué apunta; `VALMEN_CLAUDE_BIN` también es una configuración legítima de uso real (`claude-cli.ts:108`), y los presets incorporados ponen `claude-code` en productor y escalado. Con una variable activa y esa apuntando al `claude` real, la petición saldría a Anthropic con la sesión del CLI. El plan lo aceptó (D6); la documentación ahora dice que debe apuntar a un `claude` de prueba. Alternativa del revisor: una variable propia de prueba (`VALMEN_CLAUDE_BIN_TEST`), que cambiaría `claudeBinary`.
+- H-B (baja): la lista de eslabones se mantiene a mano en `eslabones()` y en `cascade.ts`; un proveedor nuevo en la cadena quedaría sin guarda en silencio. Alternativa del revisor: llamar a `requireTestRoutes` dentro de `callChat` y de `evaluateWithJev`; es la opción (b) que el plan descartó.
+- H-C (media/baja, **ya existía**): los consumidores que no son compuertas no comprueban la cadena —`reviewWithModel` (`packages/gate-llm-judge/src/reviewer.ts:311`, desde `packages/engine/src/reviewer.ts:316`), `decomposeFeature` (`packages/cli/src/features.ts:353`, `packages/server/src/server.ts:829`) y la simulación de compuertas (`packages/engine/src/simulate.ts:153`)—: con una `VALMEN_BASE_URL_*` activa y su transporte sin variable, hablan con el proveedor de siempre con la clave del entorno. Solo es alcanzable con una variable exportada de más. El plan deja fuera la simulación y los demás consumidores de `callChat`; la documentación ahora lo dice.
+- Informativa (ya existía): los checks de `gate-command` heredan todo el entorno, pero son comandos que declara el proyecto.
+
+Por esto C35 queda sin marcar: la revisión no encuentra un camino abierto en las compuertas, pero la confirma la persona responsable en `awaiting_user_tests`, como declara el plan.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Contrato de entrega para la persona responsable. Todo corre desde la raíz del worktree
+(`/Users/juanandrade/Desktop/ValmenHarness/.claude/worktrees/ticket-prueba-cascada-guionada`, rama
+`valmen/ticket-prueba-cascada-guionada`).
+
+Requisitos de ambiente: Node 22 o posterior con las dependencias del monorepo instaladas (`npm install`
+ya hecho) y el binario compilado (`npm run build`, o el primer comando de la tabla): la prueba nueva
+corre `packages/cli/dist/main.js` y, sin él, falla pidiendo `npm run build`. Sin red y sin claves: los
+servidores escuchan en `127.0.0.1` con puerto 0, los laboratorios viven en el directorio temporal del
+sistema, las claves son literales falsos, el subproceso recibe un entorno armado desde cero (`HOME`
+temporal y un `PATH` sin ningún `claude` real) y una guarda precargada con `NODE_OPTIONS=--import`
+corta todo `fetch` a un host que no sea `127.0.0.1` o `localhost`. Las pruebas con dobles fijan y
+limpian las variables `VALMEN_BASE_URL_*` por su cuenta, así que una fijada en el shell no las afecta.
+
+| Qué | Comando | Resultado esperado |
+| --- | --- | --- |
+| Compilación (C1) | `npx tsc --build tsconfig.build.json` | sin salida, código 0 |
+| Pruebas del ticket (C2 a C27 y C29 a C31) | `npx vitest run tests/cascada-guionada.test.ts` | 1 archivo, 63 pruebas, todas en verde, unos 3 s |
+| Regresión de URL base, cascada, evaluadores, jev y CLI de Claude (C28, C32) | `npx vitest run tests/url-base-prueba.test.ts tests/gate-cascade-fallo.test.ts tests/cascada-verificada.test.ts tests/cascada-productor-reintento.test.ts tests/cascada-tareas.test.ts tests/evaluators.test.ts tests/gate-jev.test.ts tests/claude-cli.test.ts` | 8 archivos, 198 pruebas, todas en verde |
+| Tipos de las pruebas (C33) | `npx tsc --noEmit -p tsconfig.json` | sin salida, 0 errores |
+| Exportaciones sin uso (C34) | `node scripts/exports-sin-uso.mjs` (o `npm run exports:check`) | «Sin exportaciones nuevas sin consumidor; la línea base tiene 443 entradas» |
+| Lint | `npx eslint packages/credentials/src/endpoints.ts packages/engine/src/cascade.ts packages/engine/src/evaluators.ts tests/cascada-guionada.test.ts` | sin salida |
+| Formato de lo nuevo y de lo ya formateado | `npx prettier --check tests/cascada-guionada.test.ts packages/credentials/src/endpoints.ts docs/04-PROVEEDORES.md` | «All matched files use Prettier code style!» |
+
+Además, el agente corrió sin fallos 35 archivos más que usan `runGate`, `evaluateGate`, la cascada o
+`@valmen/credentials` (los de `tests/` que los importan, entre ellos `tests/cli.test.ts` y
+`tests/mcp-server.test.ts`). La suite completa la corre el orquestador al integrar.
+
+Validaciones manuales:
+
+1. (C35) Leer la «Revisión de seguridad del diff» de `## Implementación` y confirmar, con
+   `git diff HEAD -- packages docs`, que no queda un camino por el que, con una `VALMEN_BASE_URL_*`
+   activa, una petición salga de loopback o una credencial viaje. Es el único criterio sin comando: lo
+   decide la persona responsable.
+2. Opcional, tras `npm run build` y con un ticket en `analyzed`:
+   `VALMEN_BASE_URL_OPENROUTER=http://127.0.0.1:9 node packages/cli/dist/main.js gate analysis --id <ID> --evaluator cascade`
+   debe fallar diciendo que a la cadena le falta `VALMEN_BASE_URL_JEV`, sin ninguna petición y sin
+   recibo nuevo en `.valmen/receipts/`. No la ejecutó el agente: la cubre el caso (i) de la tabla de
+   cadenas incompletas (C24 y C25).
+
+Cobertura y limitaciones:
+
+- La prueba corre el binario compilado, no `src`: con un `dist` viejo mediría código anterior sin
+  decirlo (H1 del diagnóstico). En local lo evita el `beforeAll`, que exige el binario, y el CI compila
+  antes de `npm test` con `npm run typecheck`; si se edita código sin recompilar, hay que correr
+  `npm run build`.
+- La guarda de red corta y anota `fetch` en el subproceso y en el `claude` falso, que hereda
+  `NODE_OPTIONS`; no vería un cliente HTTP que no use `fetch`, y hoy el código no tiene otro.
+- Se ejecutó con Node 26; el CI usa Node 22 y `--import` en `NODE_OPTIONS` existe desde Node 20.6 (H2
+  del diagnóstico). No hay un Node 22 en esta máquina para comprobarlo: lo comprobará el primer CI.
+- `VALMEN_CLAUDE_BIN` no prueba que el ejecutable sea falso: es también una configuración legítima de
+  producción (H3 del diagnóstico). El `claude` de la prueba es un script del laboratorio.
+- El `PATH` del subproceso no es literalmente «el directorio de Node, `/usr/bin` y `/bin`» del plan: en
+  esta máquina el `claude` real vive en el directorio de Node, así que el laboratorio arma un
+  directorio con solo un enlace a `node`.
+- Las pruebas de cadenas incompletas y de fallos fijan que la salida diga qué falta y que no haya
+  petición; no fijan el resto del texto del mensaje.
 
 ## QA
 
@@ -248,7 +327,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": null,
+    "model": "claude-sonnet-5-5",
+    "reasoning_effort": null,
+    "notes": "Una sesión de subagente de implementación (fase implementation) para este solo ticket; la sesión no expone sus números de tokens ni de coste, así que no se declaran. Incluye un subagente revisor de seguridad (informó 184769 tokens y 247 s) cuyo gasto no se suma a una cifra de la sesión.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:subagente claude-sonnet-5-5 sin agregado de tokens expuesto a la sesión",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -321,6 +416,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-10",
+    "at": "2026-10-11T01:25:08.900Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-10",
+    "at": "2026-10-11T01:41:29.021Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-10",
+    "at": "2026-10-11T01:43:33.299Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
