@@ -4,7 +4,7 @@ id: FEATURE-ENGINE-RIESGO-REVISION-20261010
 title: Cálculo en código del riesgo de la revisión por lo tocado
 type: FEATURE
 module: ENGINE
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -117,71 +117,71 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1 — R-REV-002: Un commit que cambia dos líneas de «packages/core/src/permissions.ts» da riesgo alto.
+- [x] C1 — R-REV-002: Un commit que cambia dos líneas de «packages/core/src/permissions.ts» da riesgo alto.
       <!-- test: npx vitest run tests/riesgo-revision.test.ts -->
-- [ ] C2 — R-REV-002: Un motivo del riesgo de C1 es «packages/core/src/permissions.ts (autenticación)».
+- [x] C2 — R-REV-002: Un motivo del riesgo de C1 es «packages/core/src/permissions.ts (autenticación)».
       <!-- test: npx vitest run tests/riesgo-revision.test.ts -->
-- [ ] C3 — R-REV-002: Un commit que agrega mil líneas en archivos `.md` de «docs/» da riesgo bajo.
+- [x] C3 — R-REV-002: Un commit que agrega mil líneas en archivos `.md` de «docs/» da riesgo bajo.
       <!-- test: npx vitest run tests/riesgo-revision.test.ts -->
-- [ ] C4 — R-REV-002: Un diff que solo modifica archivos de prueba («tests/a.test.ts», «packages/engine/test/b.test.ts») da riesgo bajo.
+- [x] C4 — R-REV-002: Un diff que solo modifica archivos de prueba («tests/a.test.ts», «packages/engine/test/b.test.ts») da riesgo bajo.
       <!-- test: npx vitest run tests/riesgo-revision.test.ts -->
-- [ ] C5 — R-REV-002: Un diff que modifica `packages/engine/src/drift.ts` da riesgo medio.
+- [x] C5 — R-REV-002: Un diff que modifica `packages/engine/src/drift.ts` da riesgo medio.
       <!-- test: npx vitest run tests/riesgo-revision.test.ts -->
-- [ ] C6 — R-REV-002: Un diff que solo modifica `packages/server/web/index.html`, de la categoría no crítica «pantallas», da riesgo medio.
+- [x] C6 — R-REV-002: Un diff que solo modifica `packages/server/web/index.html`, de la categoría no crítica «pantallas», da riesgo medio.
       <!-- test: npx vitest run tests/riesgo-revision.test.ts -->
-- [ ] C7 — R-REV-002: Un diff que modifica «BackEnd/pos/migrations/0042_orden.py» da riesgo alto.
+- [x] C7 — R-REV-002: Un diff que modifica «BackEnd/pos/migrations/0042_orden.py» da riesgo alto.
       <!-- test: npx vitest run tests/riesgo-revision.test.ts -->
-- [ ] C8 — R-REV-002: Un diff que modifica «Dockerfile» da riesgo alto.
+- [x] C8 — R-REV-002: Un diff que modifica «Dockerfile» da riesgo alto.
       <!-- test: npx vitest run tests/riesgo-revision.test.ts -->
-- [ ] C9 — R-REV-002: Un diff que modifica «.github/workflows/ci.yml» da riesgo alto.
+- [x] C9 — R-REV-002: Un diff que modifica «.github/workflows/ci.yml» da riesgo alto.
       <!-- test: npx vitest run tests/riesgo-revision.test.ts -->
-- [ ] C10 — R-REV-002: Un diff que modifica `.valmen/config.yaml` da riesgo alto.
+- [x] C10 — R-REV-002: Un diff que modifica `.valmen/config.yaml` da riesgo alto.
       <!-- test: npx vitest run tests/riesgo-revision.test.ts -->
-- [ ] C11 — R-REV-002: Un diff que solo modifica `.valmen/rules/estandares-proceso.md` da riesgo alto.
+- [x] C11 — R-REV-002: Un diff que solo modifica `.valmen/rules/estandares-proceso.md` da riesgo alto.
       <!-- test: npx vitest run tests/riesgo-revision.test.ts -->
-- [ ] C12 — R-REV-002: Un diff que modifica «frontend/src/auth/login.tsx», que casa con «pantallas» antes que con «autenticación», da riesgo alto.
+- [x] C12 — R-REV-002: Un diff que modifica «frontend/src/auth/login.tsx», que casa con «pantallas» antes que con «autenticación», da riesgo alto.
       <!-- test: npx vitest run tests/riesgo-revision.test.ts -->
-- [ ] C13 — R-REV-002: Un diff que solo modifica el `ticket.md` del propio ticket junto con su `.valmen/receipts/<ID>.jsonl` da riesgo bajo.
+- [x] C13 — R-REV-002: Un diff que solo modifica el `ticket.md` del propio ticket junto con su `.valmen/receipts/<ID>.jsonl` da riesgo bajo.
       <!-- test: npx vitest run tests/riesgo-revision.test.ts -->
-- [ ] C14 — R-REV-002: Un diff que modifica el archivo de recibos de otro ticket en `.valmen/receipts/` da riesgo alto.
+- [x] C14 — R-REV-002: Un diff que modifica el archivo de recibos de otro ticket en `.valmen/receipts/` da riesgo alto.
       <!-- test: npx vitest run tests/riesgo-revision.test.ts -->
-- [ ] C15 — R-REV-002: Sobre un repositorio git real, `cambiosDelDiff` informa un archivo agregado con estado `A`.
+- [x] C15 — R-REV-002: Sobre un repositorio git real, `cambiosDelDiff` informa un archivo agregado con estado `A`.
       <!-- test: npx vitest run tests/riesgo-revision.test.ts -->
-- [ ] C16 — R-REV-002: Sobre un repositorio git real, `cambiosDelDiff` informa un archivo borrado con estado `D` con su ruta anterior.
+- [x] C16 — R-REV-002: Sobre un repositorio git real, `cambiosDelDiff` informa un archivo borrado con estado `D` con su ruta anterior.
       <!-- test: npx vitest run tests/riesgo-revision.test.ts -->
-- [ ] C17 — R-REV-002: Sobre un repositorio git real, `cambiosDelDiff` informa el renombre de «packages/core/src/permissions.ts» a «packages/core/src/p.ts» como `D` de la ruta vieja más `A` de la nueva.
+- [x] C17 — R-REV-002: Sobre un repositorio git real, `cambiosDelDiff` informa el renombre de «packages/core/src/permissions.ts» a «packages/core/src/p.ts» como `D` de la ruta vieja más `A` de la nueva.
       <!-- test: npx vitest run tests/riesgo-revision.test.ts -->
-- [ ] C18 — R-REV-002: El renombre de C17 da riesgo alto.
+- [x] C18 — R-REV-002: El renombre de C17 da riesgo alto.
       <!-- test: npx vitest run tests/riesgo-revision.test.ts -->
-- [ ] C19 — R-REV-002: Un diff que borra «packages/core/src/permissions.ts» da riesgo alto.
+- [x] C19 — R-REV-002: Un diff que borra «packages/core/src/permissions.ts» da riesgo alto.
       <!-- test: npx vitest run tests/riesgo-revision.test.ts -->
-- [ ] C20 — R-REV-002: Un diff que solo borra un archivo de prueba da riesgo medio.
+- [x] C20 — R-REV-002: Un diff que solo borra un archivo de prueba da riesgo medio.
       <!-- test: npx vitest run tests/riesgo-revision.test.ts -->
-- [ ] C21 — R-REV-002: Sobre un repositorio git real, `cambiosDelDiff` informa «docs/diseño.md» sin comillas ni escapes.
+- [x] C21 — R-REV-002: Sobre un repositorio git real, `cambiosDelDiff` informa «docs/diseño.md» sin comillas ni escapes.
       <!-- test: npx vitest run tests/riesgo-revision.test.ts -->
-- [ ] C22 — R-REV-002: Con la base igual al destino, `cambiosDelDiff` devuelve una lista vacía.
+- [x] C22 — R-REV-002: Con la base igual al destino, `cambiosDelDiff` devuelve una lista vacía.
       <!-- test: npx vitest run tests/riesgo-revision.test.ts -->
-- [ ] C23 — R-REV-002: Un diff vacío en un ticket sin factores de riesgo da riesgo bajo.
+- [x] C23 — R-REV-002: Un diff vacío en un ticket sin factores de riesgo da riesgo bajo.
       <!-- test: npx vitest run tests/riesgo-revision.test.ts -->
-- [ ] C24 — R-REV-002: Un ticket SECURITY con un diff de solo documentación da riesgo alto.
+- [x] C24 — R-REV-002: Un ticket SECURITY con un diff de solo documentación da riesgo alto.
       <!-- test: npx vitest run tests/riesgo-revision.test.ts -->
-- [ ] C25 — R-REV-002: Un ticket que declara cualquiera de los impactos del frontmatter (`sync_impact`, `migration_impact`, `docker_impact`) da riesgo alto con un diff de solo documentación.
+- [x] C25 — R-REV-002: Un ticket que declara cualquiera de los impactos del frontmatter (`sync_impact`, `migration_impact`, `docker_impact`) da riesgo alto con un diff de solo documentación.
       <!-- test: npx vitest run tests/riesgo-revision.test.ts -->
-- [ ] C26 — R-REV-002: Un ticket con `risk_level: high` da riesgo alto con un diff de solo documentación.
+- [x] C26 — R-REV-002: Un ticket con `risk_level: high` da riesgo alto con un diff de solo documentación.
       <!-- test: npx vitest run tests/riesgo-revision.test.ts -->
-- [ ] C27 — R-REV-002: Pedir `subirA: "alto"` sobre un diff de solo documentación da riesgo alto.
+- [x] C27 — R-REV-002: Pedir `subirA: "alto"` sobre un diff de solo documentación da riesgo alto.
       <!-- test: npx vitest run tests/riesgo-revision.test.ts -->
-- [ ] C28 — R-REV-002: Pedir `subirA: "bajo"` sobre un diff que toca autenticación deja el riesgo en alto.
+- [x] C28 — R-REV-002: Pedir `subirA: "bajo"` sobre un diff que toca autenticación deja el riesgo en alto.
       <!-- test: npx vitest run tests/riesgo-revision.test.ts -->
-- [ ] C29 — R-REV-002: Un script de «tests/» que figura en `scriptsDePrueba` da riesgo medio.
+- [x] C29 — R-REV-002: Un script de «tests/» que figura en `scriptsDePrueba` da riesgo medio.
       <!-- test: npx vitest run tests/riesgo-revision.test.ts -->
-- [ ] C30 — R-REV-002: Las pruebas existentes de la elegibilidad de QA por agente, del qa-agent y del cierre por política pasan sin editarlas.
+- [x] C30 — R-REV-002: Las pruebas existentes de la elegibilidad de QA por agente, del qa-agent y del cierre por política pasan sin editarlas.
       <!-- test: npx vitest run tests/elegibilidad-qa.test.ts tests/qa-agent.test.ts tests/qa-por-politica.test.ts -->
-- [ ] C31 — R-REV-002: El monorepo compila con los dos módulos nuevos.
+- [x] C31 — R-REV-002: El monorepo compila con los dos módulos nuevos.
       <!-- test: npx tsc --build tsconfig.build.json -->
-- [ ] C32 — R-REV-002: La guarda de exportaciones sin uso pasa sin cambiar su línea base.
+- [x] C32 — R-REV-002: La guarda de exportaciones sin uso pasa sin cambiar su línea base.
       <!-- test: node scripts/exports-sin-uso.mjs -->
-- [ ] C33 — R-REV-002: `CATEGORIAS_DE_RUTA` tiene una sola definición en `packages/*/src`, en el módulo común del motor.
+- [x] C33 — R-REV-002: `CATEGORIAS_DE_RUTA` tiene una sola definición en `packages/*/src`, en el módulo común del motor.
       <!-- verify: manual -->
 
 ## Puntos
@@ -192,11 +192,28 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+Hecho el plan aprobado, paso por paso, sin salirse de su alcance.
+
+- Archivos: `tests/riesgo-revision.test.ts` (nuevo), `packages/engine/src/path-categories.ts` (nuevo), `packages/engine/src/review-risk.ts` (nuevo); cambian `packages/engine/src/qa-eligibility.ts` (quita `CATEGORIAS_DE_RUTA`, importa `categoriasDeRuta`; `:39` queda `return categoriasDeRuta(normal)[0]?.nombre ?? null;`), `packages/engine/src/qa-agent.ts` (quita `ES_PRUEBA`, usa `esArchivoDePrueba`) y `packages/engine/src/index.ts` (una línea: `export * from "./review-risk.js";`).
+- Prueba primero (EST-010): antes de tocar el motor, la línea base de las 56 pruebas existentes de `tests/elegibilidad-qa.test.ts`, `tests/qa-agent.test.ts` y `tests/qa-por-politica.test.ts` estaba en verde, y `npx tsc --noEmit -p tsconfig.json` y `npm run exports:check` pasaban (443 entradas de línea base). Con `tests/riesgo-revision.test.ts` escrita y el módulo sin crear, `npx vitest run tests/riesgo-revision.test.ts` dio **32 en rojo y 10 en verde** de 42: los 32 fallaban con «cambiosDelDiff is not a function» o «riesgoDeRevision is not a function» (C1–C29), y los 10 verdes son la regresión de `rutaProhibidaParaQaAgente` (nombres, orden y «primera categoría gana»), que caracteriza la elegibilidad de QA **antes** de moverla. Con el motor hecho, los 42 pasan.
+- Que las pruebas pueden fallar: con cinco mutaciones temporales de `review-risk.ts`, restauradas después, cada una puso en rojo exactamente su prueba: sin la excepción del registro propio (C13), solo la primera categoría (C12), sin `--no-renames` (C17), `subirA` que baja (C28) y los scripts de `test-commands` ignorados (C29).
+- Lo movido es idéntico: se comparó con un script cada una de las seis expresiones de `CATEGORIAS_DE_RUTA` y `ES_PRUEBA` contra `HEAD`, y el texto es el mismo. `categoriasDeRuta(ruta)` devuelve todas las categorías que casan en el orden original y no normaliza el `./` inicial: lo sigue haciendo `rutaProhibidaParaQaAgente`.
+- Ninguna prueba que ya existía se puso en rojo ni se editó. Los tipos `CambioDelDiff`, `NivelDeRiesgo` y `RiesgoDeRevision` se quedaron sin `export` (el `.d.ts` emitido los trae locales) y la guarda de exportaciones pasa sin tocar su línea base.
+- Dentro del plan, cuatro precisiones de detalle: (1) `cambiosDelDiff` termina el `git diff` con `--` para que una referencia nunca se confunda con una ruta; (2) `motivos` lleva lo que causa el nivel final, no todo lo que toca el diff (el detalle por archivo está en `archivos`); (3) con el diff vacío `motivos` empieza por «el diff no toca archivos» aunque el ticket aporte factores; (4) C18 se prueba sobre el renombre real de git de C17 y no con cambios en línea, y C25 y C26 se parametrizan (los tres impactos; `high` y `critical`). Los 10 casos de regresión de `rutaProhibidaParaQaAgente` son los que EST-010 pide por tocar la elegibilidad de QA; no son criterios del ticket.
+- Fuera de este ticket, sin tocar: el hueco de `git diff --name-only` con renombres, rutas no ASCII y borrados en `archivosDelDiff`, `qa-agent` y `qa-policy-close`, y el de `pendingChanges` en `valmen secrets` (diagnóstico, causa 3).
 
 ## Pruebas
 
-Pendiente de ejecución.
+Contrato de entrega. Directorio de ejecución de todos los comandos: la raíz del worktree (`/Users/juanandrade/Desktop/ValmenHarness/.claude/worktrees/ticket-riesgo-revision`) o, tras integrarlo, la raíz del repositorio. Requisitos de entorno: Node 24 con las dependencias del monorepo instaladas (`npm install`), `git` en el PATH, sin red ni credenciales ni servicios.
+
+1. `npx vitest run tests/riesgo-revision.test.ts` — C1 a C29. Esperado: `Test Files  1 passed`, `Tests  42 passed (42)` (los 32 casos de los criterios y los 10 de regresión de `rutaProhibidaParaQaAgente`). Crea repositorios git temporales en el directorio temporal del sistema y los borra.
+2. `npx vitest run tests/elegibilidad-qa.test.ts tests/qa-agent.test.ts tests/qa-por-politica.test.ts` — C30, la elegibilidad de QA por agente, el qa-agent y el cierre por política sin editar sus pruebas. Esperado: `Test Files  3 passed`, `Tests  56 passed (56)`.
+3. `npx tsc --build tsconfig.build.json` — C31. Esperado: sale con código 0 y sin salida. Complemento: `npx tsc --noEmit -p tsconfig.json` también con 0 errores.
+4. `node scripts/exports-sin-uso.mjs` — C32. Esperado: «Sin exportaciones nuevas sin consumidor; la línea base tiene 443 entradas» (`npm run exports:check` es lo mismo).
+5. Validación manual, C33: `grep -rn "CATEGORIAS_DE_RUTA\|ES_PRUEBA" packages/*/src`. Esperado: todas las líneas son de `packages/engine/src/path-categories.ts` (la definición y los dos usos de la misma constante); ni `qa-eligibility.ts` ni `qa-agent.ts` la definen.
+6. Validación manual opcional del lector con un repositorio propio: tras crear un commit que renombre `packages/core/src/permissions.ts` a `p.ts`, `cambiosDelDiff(raíz, base, destino)` debe listar el `D` de la ruta vieja y el `A` de la nueva, y `riesgoDeRevision` darlo como `alto`. Lo cubre la prueba 1 (C17 y C18); no hace falta repetirlo a mano.
+
+Sin interfaz, sin migraciones y sin datos que preparar: la función no tiene llamador de producción hasta FEATURE-GATE-CODE-REVIEW-20261010.
 
 ## QA
 
@@ -225,7 +242,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": "~/.claude/projects/-Users-juanandrade-Desktop-ValmenHarness/c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/subagents/agent-a24696c54743c0657.jsonl",
+    "model": "claude-sonnet-5-5",
+    "reasoning_effort": "high",
+    "notes": "Fase de implementación en una sesión de subagente propia de este ticket. Números sumados de la transcripción del subagente hasta el registro (35 respuestas): 70 tokens de entrada sin caché, 150638 de creación de caché y 4642747 de lectura de caché (entrada = suma de los tres), 47243 de salida. No incluye lo que el subagente gaste después del registro (compuerta, secretos, commit y entrega). Sin coste estimado: el cliente no lo expone.",
+    "input_tokens": 4793455,
+    "output_tokens": 47243,
+    "total_tokens": 4840698,
+    "estimated_cost_usd": null,
+    "source": "claude:agent-a24696c54743c0657",
+    "confidence": "medium",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -298,6 +331,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-10",
+    "at": "2026-10-11T00:17:30.661Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-10",
+    "at": "2026-10-11T00:23:29.785Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-10",
+    "at": "2026-10-11T00:25:19.362Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
