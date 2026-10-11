@@ -4,7 +4,7 @@ id: IMPROVEMENT-SKILLS-RECORTE-TOPE-20261010
 title: Recorte de skills sin perder reglas y prueba del tope del catálogo
 type: IMPROVEMENT
 module: SKILLS
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -86,37 +86,37 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1 — R-SKL-002: El `.valmen/config.yaml` de este repositorio declara `skill-budget: 6500`.
+- [x] C1 — R-SKL-002: El `.valmen/config.yaml` de este repositorio declara `skill-budget: 6500`.
       <!-- test: npx vitest run tests/skills-catalogo-tope.test.ts -t "declara skill-budget" -->
-- [ ] C2 — R-SKL-002: `readSkillBudget` devuelve 6500 al leer la configuración de este repositorio.
+- [x] C2 — R-SKL-002: `readSkillBudget` devuelve 6500 al leer la configuración de este repositorio.
       <!-- test: npx vitest run tests/skills-catalogo-tope.test.ts -t "lee skill-budget" -->
-- [ ] C3 — R-SKL-002: Cada `skills/<id>/SKILL.md` del catálogo pesa el presupuesto declarado o menos.
+- [x] C3 — R-SKL-002: Cada `skills/<id>/SKILL.md` del catálogo pesa el presupuesto declarado o menos.
       <!-- test: npx vitest run tests/skills-catalogo-tope.test.ts -t "bajo el presupuesto" -->
-- [ ] C4 — R-SKL-002: La prueba del tope falla nombrando la skill que se pasa con su tamaño.
+- [x] C4 — R-SKL-002: La prueba del tope falla nombrando la skill que se pasa con su tamaño.
       <!-- test: npx vitest run tests/skills-catalogo-tope.test.ts -t "nombra la skill" -->
-- [ ] C5 — R-SKL-002: `tests/skill-corrida-orquestada.test.ts` ya no declara un tope particular de bytes.
+- [x] C5 — R-SKL-002: `tests/skill-corrida-orquestada.test.ts` ya no declara un tope particular de bytes.
       <!-- test: node -e "process.exit(require('fs').readFileSync('tests/skill-corrida-orquestada.test.ts','utf8').includes('TOPE_BYTES')?1:0)" -->
-- [ ] C6 — R-SKL-003: Cada archivo de `referencias/` que un cuerpo cita existe en el catálogo.
+- [x] C6 — R-SKL-003: Cada archivo de `referencias/` que un cuerpo cita existe en el catálogo.
       <!-- test: npx vitest run tests/skills-catalogo-tope.test.ts -t "referencia citada existe" -->
-- [ ] C7 — R-SKL-003: Cada archivo de `referencias/` del catálogo está citado desde el cuerpo de su skill.
+- [x] C7 — R-SKL-003: Cada archivo de `referencias/` del catálogo está citado desde el cuerpo de su skill.
       <!-- test: npx vitest run tests/skills-catalogo-tope.test.ts -t "referencia huérfana" -->
-- [ ] C8 — R-SKL-003: Cada regla obligatoria inventariada de `planificacion` sigue en el cuerpo.
+- [x] C8 — R-SKL-003: Cada regla obligatoria inventariada de `planificacion` sigue en el cuerpo.
       <!-- test: npx vitest run tests/skills-catalogo-tope.test.ts -t "regla de planificacion" -->
-- [ ] C9 — R-SKL-003: Cada regla obligatoria inventariada de `programar-trabajo-de-tickets` sigue en el cuerpo.
+- [x] C9 — R-SKL-003: Cada regla obligatoria inventariada de `programar-trabajo-de-tickets` sigue en el cuerpo.
       <!-- test: npx vitest run tests/skills-catalogo-tope.test.ts -t "regla de programar-trabajo-de-tickets" -->
-- [ ] C10 — R-SKL-003: Cada regla obligatoria inventariada de `feature` sigue en el cuerpo.
+- [x] C10 — R-SKL-003: Cada regla obligatoria inventariada de `feature` sigue en el cuerpo.
       <!-- test: npx vitest run tests/skills-catalogo-tope.test.ts -t "regla de feature" -->
-- [ ] C11 — R-SKL-003: Cada regla obligatoria inventariada de `revision-final` sigue en el cuerpo.
+- [x] C11 — R-SKL-003: Cada regla obligatoria inventariada de `revision-final` sigue en el cuerpo.
       <!-- test: npx vitest run tests/skills-catalogo-tope.test.ts -t "regla de revision-final" -->
-- [ ] C12 — R-SKL-003: Cada skill recortada declara su versión menor anterior más uno.
+- [x] C12 — R-SKL-003: Cada skill recortada declara su versión menor anterior más uno.
       <!-- test: npx vitest run tests/skills-catalogo-tope.test.ts -t "versión recortada" -->
-- [ ] C13 — R-SKL-003: La copia de cada skill recortada en `.valmen/skills/` es igual al catálogo, referencias incluidas.
+- [x] C13 — R-SKL-003: La copia de cada skill recortada en `.valmen/skills/` es igual al catálogo, referencias incluidas.
       <!-- test: npx vitest run tests/skills-catalogo-tope.test.ts -t "copia igual" -->
-- [ ] C14 — R-SKL-003: `valmen sync --check` no informa diferencias tras el recorte.
+- [x] C14 — R-SKL-003: `valmen sync --check` no informa diferencias tras el recorte.
       <!-- verify: manual -->
-- [ ] C15 — R-SKL-003: Cada cita `valmen …` de las referencias existe en la tabla de comandos del CLI.
+- [x] C15 — R-SKL-003: Cada cita `valmen …` de las referencias existe en la tabla de comandos del CLI.
       <!-- test: npx vitest run tests/cli-mensajes-coherencia.test.ts -t "cada cita" -->
-- [ ] C16 — R-SKL-003: Las frases que fijan las pruebas existentes siguen en el cuerpo de las skills recortadas.
+- [x] C16 — R-SKL-003: Las frases que fijan las pruebas existentes siguen en el cuerpo de las skills recortadas.
       <!-- test: npx vitest run tests/plantillas-compactas.test.ts tests/skills-publicadas.test.ts tests/contexto-orquestador.test.ts tests/skill-corrida-orquestada.test.ts -->
 - [ ] C17 — R-SKL-003: El aviso de presupuesto de `sync` no marca ninguna skill del catálogo.
       <!-- test: npx vitest run tests/skills-catalogo-tope.test.ts -t "sin aviso de presupuesto" -->
@@ -129,11 +129,29 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+Hecho según el plan, con la prueba escrita antes y vista en rojo (15 en rojo sobre 144, todas las esperadas: C1, C2, C3 por skill, C12 y C17, más una regla de inventario mal escrita que se corrigió).
+
+- `tests/skills-catalogo-tope.test.ts` (nueva): presupuesto, referencias citadas y huérfanas, inventario de reglas (una prueba parametrizada por regla, 4 skills), versiones, copias iguales y ausencia de aviso de `sync`.
+- `.valmen/config.yaml`: `skill-budget: 6500`.
+- Skills recortadas, con `referencias/` y versión menor +1: `programar-trabajo-de-tickets` 11 772 a 6 256 B (1.2.0; `aviso-de-arranque`, `como-se-corre`, `autorizacion-registrada`), `planificacion` 11 017 a 6 325 B (1.4.0; `contenido-del-plan`, `controles-por-impacto`, `verificacion-de-criterios`), `feature` 6 668 a 6 016 B (1.3.0; `adjuntos`), `revision-final` 6 554 a 6 299 B (1.4.0; `informe-de-revision`). Las copias de `.valmen/skills/` se hicieron a mano y se verificaron con `cmp`; no se corrió `valmen sync` en este worktree (se probó en un laboratorio temporal: `sync` y `sync --check` salen en 0 con «Archivos generados al día.» y las copias salen idénticas).
+- Ediciones de pruebas existentes (excepción a EST-009, autorizadas por el PO con su frase del 2026-10-10: «Aprobar y autorizar las 3 ediciones (Recomendado)»): (1) `tests/plantillas-compactas.test.ts:291` y (2) `:308`, solo el número esperado, `1.3.0` a `1.4.0`, porque las skills `planificacion` y `revision-final` subieron de versión; (3) `tests/skill-corrida-orquestada.test.ts`: retiro de `TOPE_BYTES` (línea 26) y del caso C3 (líneas 57-59), que reemplaza la prueba nueva del presupuesto.
+
+### Supuestos y decisiones pendientes
+
+- Desvío del plan en C17: `sync` mide la skill proyectada (con su marca), unos 165 B más que el archivo del catálogo; por eso las cuatro recortadas bajaron a 6 335 B o menos en archivo (el plan apuntaba a 6 500). Además, `corrida-orquestada` (fuera de alcance) pesa 6 452 B en archivo pero 6 620 B proyectada, y `sync` la avisa con 120 B de más. La prueba C17 se limita a las cuatro recortadas. Pregunta al PO: ¿recortar `corrida-orquestada` ~130 B en un ticket aparte, o subir `skill-budget`?
+- C14 (`verify: manual`): en este worktree `sync --check` informa archivos de runtime ausentes (`.claude/`, `.agents/`, etc., ignorados por git) por no haberse corrido `sync` aquí; no informa deriva de `.valmen/skills/`.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Directorio: la raíz del repositorio (o del worktree). Ambiente: Node 24, `npm install` hecho, `npm run build`.
+
+- `npx vitest run tests/skills-catalogo-tope.test.ts` — esperado: 147 pruebas en verde.
+- `npx vitest run tests/plantillas-compactas.test.ts tests/skills-publicadas.test.ts tests/contexto-orquestador.test.ts tests/skill-corrida-orquestada.test.ts` — esperado: en verde.
+- `npx vitest run tests/cli-mensajes-coherencia.test.ts -t "cada cita"` — esperado: en verde.
+- `node -e "process.exit(require('fs').readFileSync('tests/skill-corrida-orquestada.test.ts','utf8').includes('TOPE_BYTES')?1:0)"` — esperado: código 0.
+- `npx tsc --noEmit -p tsconfig.json` y `npm run exports:check` — esperado: sin errores.
+- Manual (C14): en un directorio nuevo con `.valmen/config.yaml` (`name: Demo`), correr `valmen sync` y `valmen sync --check`: código 0 y `Archivos generados al día.`. Resultado obtenido: cumple.
+- Corrido por el implementador: 16 archivos de prueba, 524 pruebas en verde.
 
 ## QA
 
@@ -162,7 +180,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "La sesión de Claude Code no expone sus números; sin estimación.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual: sesión de implementación sin agregado expuesto",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -235,6 +269,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-10",
+    "at": "2026-10-11T04:05:42.402Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-10",
+    "at": "2026-10-11T04:06:00.737Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-10",
+    "at": "2026-10-11T04:06:42.343Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
