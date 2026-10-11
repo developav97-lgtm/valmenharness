@@ -4,7 +4,7 @@ id: FEATURE-ENGINE-PLAN-TAMANO-20261010
 title: El plan declara tamaño previsto y estrategia de partición
 type: FEATURE
 module: ENGINE
-workflow_status: planned
+workflow_status: in_progress
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -59,7 +59,7 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente de la aprobación del PO (compuerta plan con evaluador `cascade`).
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan), el 2026-10-11 con «Aprobar tal cual (Recomendado)»; el REVIEW del recibo plan-1 (criterio_18 en 0,895) lo decidió el PO.
 - Alcance: dos líneas nuevas en el `## Plan` de la plantilla, una regla nueva en la revisión previa de la compuerta de plan, el párrafo «Tamaño del plan» de la skill `planificacion`, una prueba nueva. Exclusiones: la medición de la entrega (`packages/engine/src/tamano-entrega.ts` se usa, no se cambia), el tope de criterios, el evaluador de la compuerta, la vista web.
 - Tamaño previsto: unas 360 líneas (unas 90 de producción, unas 270 de pruebas), 19 criterios.
 - Si excede el tope: no excede el tope de 400 (`delivery-budget`); no se parte.
@@ -201,6 +201,51 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:43:04.816Z",
+    "action": "gate-approved",
+    "actor": "cli",
+    "details": "Gate plan aprobado por PO (recibo GR-20261011-FEATURE-ENGINE-PLAN-TAMANO-20261010-plan-1, canal cli, decidida 2026-10-11T20:43:04.813Z): Aprobar tal cual (Recomendado)"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:43:05.214Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"PO\",\"source\":\"cli\",\"quote\":\"Aprobar tal cual (Recomendado)\",\"planHash\":\"sha256:aea2e87fff9fea77279f0f939b3d85be7a2e9006e62ece62fa29096100a8a3a9\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:43:05.730Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: PO (fuente cli), plan sha256:aea2e87fff9fea77279f0f939b3d85be7a2e9006e62ece62fa29096100a8a3a9."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:43:05.730Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:43:06.077Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
   }
 ]
 ```
