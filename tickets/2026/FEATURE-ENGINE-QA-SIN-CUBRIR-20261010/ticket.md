@@ -4,7 +4,7 @@ id: FEATURE-ENGINE-QA-SIN-CUBRIR-20261010
 title: El cierre del ciclo de QA registra lo que quedó sin cubrir
 type: FEATURE
 module: ENGINE
-workflow_status: planned
+workflow_status: in_progress
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -108,7 +108,7 @@ su motivo (`packages/engine/src/transition.ts:624-627`)— y se escribe vacío e
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente. Compuerta `plan` con evaluador `cascade`; la aprobación es del PO (FEATURE, sin autorización de aprobación invocada en esta sesión).
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan), el 2026-10-11 con «Aprobar tal cual (Recomendado)»; el REVIEW del recibo plan-1 lo decidió el PO, incluido el cambio a propósito de tres pruebas existentes de tests/mcp-server.test.ts (EST-009).
 - Modo: harness completo (FEATURE de una feature descompuesta; toca core, engine, cli y mcp).
 - Alcance: campo opcional `not_covered` en la entrada de cierre del bloque `QA`; exigencia de declararlo en `valmen qa-close` y `cerrar_qa`; lectura compatible de ciclos viejos.
 - Exclusiones: la vista web (FEATURE-WEB-QA-SIN-CUBRIR-20261010); la ceremonia `valmen close`/`delegation close`, el cierre por política (`qaApproveByPolicy`) y la reapertura, que siguen escribiendo el ciclo sin `not_covered` («sin declarar») salvo que el PO decida otra cosa (ver «Supuestos y decisiones pendientes», pregunta 2); `findings` no cambia.
@@ -242,6 +242,51 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-11",
+    "at": "2026-10-11T19:23:38.977Z",
+    "action": "gate-approved",
+    "actor": "cli",
+    "details": "Gate plan aprobado por PO (recibo GR-20261011-FEATURE-ENGINE-QA-SIN-CUBRIR-20261010-plan-1, canal cli, decidida 2026-10-11T19:23:38.958Z): Aprobar tal cual (Recomendado)"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-11",
+    "at": "2026-10-11T19:23:42.569Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"PO\",\"source\":\"cli\",\"quote\":\"Aprobar tal cual (Recomendado)\",\"planHash\":\"sha256:a5863d7e471a59e4308e844720e5ecb6424eb2ee0a4749706d1c91385807557f\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-11",
+    "at": "2026-10-11T19:23:46.871Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: PO (fuente cli), plan sha256:a5863d7e471a59e4308e844720e5ecb6424eb2ee0a4749706d1c91385807557f."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-11",
+    "at": "2026-10-11T19:23:46.871Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-11",
+    "at": "2026-10-11T19:23:49.387Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
   }
 ]
 ```
