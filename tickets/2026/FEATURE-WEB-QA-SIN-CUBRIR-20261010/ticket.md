@@ -4,7 +4,7 @@ id: FEATURE-WEB-QA-SIN-CUBRIR-20261010
 title: La vista del ticket muestra lo no cubierto por ciclo
 type: FEATURE
 module: WEB
-workflow_status: planned
+workflow_status: in_progress
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -57,7 +57,7 @@ Ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente de la decisión del PO (gate de plan); el agente no lo aprueba.
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan), el 2026-10-11 con «Aprobar tal cual (Recomendado)».
 - Modo: harness completo (FEATURE de una feature descompuesta, sprint S3; es pantalla).
 - Alcance: la vista del ticket (`packages/server/web/index.html`) pinta `not_covered` bajo la tarjeta de cada entrada que cierra un ciclo de QA: la lista de elementos, «Todo cubierto» para `[]`, «Sin cubrir: sin declarar» para un cierre sin el campo.
 - Exclusiones: motor, validador, API, CLI y MCP no cambian; la tarjeta genérica `tarjetaDato` sigue igual para Puntos, Evidencia, Retests y Cierre; `findings` no cambia.
@@ -179,6 +179,42 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:47:15.361Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"PO\",\"source\":\"cli\",\"quote\":\"Aprobar tal cual (Recomendado)\",\"planHash\":\"sha256:6de21b81e050192262592ace88c7af58a851187c4a25bd8502b35a18a1cf0e78\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:47:15.917Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: PO (fuente cli), plan sha256:6de21b81e050192262592ace88c7af58a851187c4a25bd8502b35a18a1cf0e78."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:47:15.917Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:47:16.261Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
   }
 ]
 ```
