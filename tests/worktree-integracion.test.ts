@@ -2,11 +2,12 @@
  * Crear y quitar el worktree de un ticket, contra un repositorio git de laboratorio de verdad.
  * La compilación se simula con un ejecutor que registra las llamadas; `cp` es el real.
  */
-import { existsSync, mkdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { claudeDenyRules } from "../packages/adapter/src/index.js";
 import {
   crearWorktree,
   defaultPaths,
@@ -165,8 +166,106 @@ describe("crear el worktree", () => {
     const paths = defaultPaths(enlazado);
     expect(() => crearWorktree({ paths, ticketId: TICKET_B, home: lab.home, proceso: procesoSimulado().ejecutor })).toThrow(/worktree enlazado.*checkout principal/);
     expect(() => quitarWorktree({ paths, ticketId: TICKET_A, home: lab.home })).toThrow(/worktree enlazado.*checkout principal/);
-    expect(existsSync(join(enlazado, ".claude"))).toBe(false);
+    // El worktree trae solo `.claude/settings.json`, con las reglas del harness: la negativa no dejó nada más.
+    expect(readdirSync(join(enlazado, ".claude"))).toEqual(["settings.json"]);
+    const reglas = (JSON.parse(readFileSync(join(enlazado, ".claude", "settings.json"), "utf8")) as { permissions: { deny: string[] } }).permissions.deny;
+    expect(reglas).toEqual(claudeDenyRules());
     expect(existsSync(join(lab.root, nombres(TICKET_B).carpeta))).toBe(false);
+  });
+});
+
+describe("las denegaciones llegan al worktree", () => {
+  const SETTINGS = ".claude/settings.json";
+  const enElWorktree = (id = TICKET_A): string => join(lab.root, nombres(id).carpeta);
+
+  it("deja en un worktree con .claude/ ignorado un .claude/settings.json con las 64 reglas (C25)", () => {
+    lab = crearLaboratorio();
+    expect(lab.git("check-ignore", SETTINGS)).toBe(SETTINGS);
+    const r = crear();
+    const archivo = join(enElWorktree(), SETTINGS);
+    expect(existsSync(archivo)).toBe(true);
+    const datos = JSON.parse(readFileSync(archivo, "utf8")) as { outputStyle: string; permissions: { deny: string[] } };
+    expect(claudeDenyRules()).toHaveLength(64);
+    expect(datos.permissions.deny).toEqual(claudeDenyRules());
+    expect(datos.outputStyle).toBe("valmen");
+    expect(r.avisos).toEqual([]);
+    // Ignorado: no entra al commit del ticket.
+    expect(lab.gitEn(enElWorktree(), "status", "--porcelain", "-uall")).toBe("");
+  });
+
+  it("suma a las reglas de la persona en el checkout principal las del harness", () => {
+    lab = crearLaboratorio();
+    mkdirSync(join(lab.root, ".claude"), { recursive: true });
+    writeFileSync(join(lab.root, SETTINGS), JSON.stringify({ permissions: { allow: ["Bash(npm test)"], deny: ["Bash(rm -rf*)"] } }));
+    crear();
+    const datos = JSON.parse(readFileSync(join(enElWorktree(), SETTINGS), "utf8")) as { permissions: { allow: string[]; deny: string[] } };
+    expect(datos.permissions.allow).toEqual(["Bash(npm test)"]);
+    expect(datos.permissions.deny).toEqual(["Bash(rm -rf*)", ...claudeDenyRules()]);
+  });
+
+  it("no cambia un .claude/settings.json que el worktree trae de git (C26)", () => {
+    lab = crearLaboratorio();
+    const propio = '{"outputStyle":"valmen",  "model":"opus"}\n';
+    mkdirSync(join(lab.root, ".claude"), { recursive: true });
+    writeFileSync(join(lab.root, SETTINGS), propio);
+    lab.git("add", "-f", SETTINGS);
+    lab.git("commit", "-q", "-m", "versiona los permisos");
+    const r = crear();
+    expect(readFileSync(join(enElWorktree(), SETTINGS), "utf8")).toBe(propio);
+    expect(r.avisos.join(" ")).toMatch(/viene de git y le faltan 64 denegaci/);
+  });
+
+  it("no avisa de denegaciones si el archivo que viene de git ya las trae", () => {
+    lab = crearLaboratorio();
+    mkdirSync(join(lab.root, ".claude"), { recursive: true });
+    writeFileSync(join(lab.root, SETTINGS), JSON.stringify({ permissions: { deny: claudeDenyRules() } }));
+    lab.git("add", "-f", SETTINGS);
+    lab.git("commit", "-q", "-m", "versiona los permisos");
+    expect(crear().avisos.join(" ")).not.toMatch(/denegaci/);
+  });
+
+  it("no deja un .claude/settings.json que git no ignora (C27)", () => {
+    lab = crearLaboratorio();
+    writeFileSync(join(lab.root, ".gitignore"), "node_modules/\ndist/\n");
+    lab.git("add", ".gitignore");
+    lab.git("commit", "-q", "-m", "ya no ignora .claude/");
+    crear();
+    expect(existsSync(join(enElWorktree(), SETTINGS))).toBe(false);
+    expect(lab.gitEn(enElWorktree(), "status", "--porcelain", "-uall")).toBe("");
+  });
+
+  it("avisa cuando no deja .claude/settings.json porque git no lo ignora (C28)", () => {
+    lab = crearLaboratorio();
+    writeFileSync(join(lab.root, ".gitignore"), "node_modules/\ndist/\n");
+    lab.git("add", ".gitignore");
+    lab.git("commit", "-q", "-m", "ya no ignora .claude/");
+    const r = crear();
+    expect(r.avisos.join(" ")).toMatch(/No se dejó \.claude\/settings\.json.*git no lo ignora/);
+    expect(r.carpeta).toBe(nombres(TICKET_A).carpeta);
+  });
+
+  it("no escribe nada si el proyecto no proyecta al runtime claude", () => {
+    lab = crearLaboratorio();
+    writeFileSync(join(lab.root, ".valmen", "config.yaml"), `project-id: ${PROYECTO}\nruntimes:\n  - codex\n`);
+    lab.git("add", "-A");
+    lab.git("commit", "-q", "-m", "solo codex");
+    const r = crear();
+    expect(existsSync(join(enElWorktree(), SETTINGS))).toBe(false);
+    expect(r.avisos).toEqual([]);
+  });
+
+  it("se niega, sin dejar worktree, rama ni cupo, si la proyección falla (D-6)", () => {
+    lab = crearLaboratorio();
+    mkdirSync(join(lab.root, ".claude"), { recursive: true });
+    writeFileSync(join(lab.root, SETTINGS), "{ esto no es json");
+    expect(() => crear()).toThrow(/\.claude\/settings\.json no es JSON válido/);
+    expect(existsSync(join(lab.root, nombres(TICKET_A).carpeta))).toBe(false);
+    expect(ramas()).toBe("");
+    expect(reservas()).toEqual([]);
+    expect(lab.git("worktree", "list", "--porcelain").split("\n").filter((l) => l.startsWith("worktree "))).toHaveLength(1);
+    // Corregido el archivo, el ticket puede intentarse otra vez.
+    writeFileSync(join(lab.root, SETTINGS), "{}");
+    expect(() => crear()).not.toThrow();
   });
 });
 

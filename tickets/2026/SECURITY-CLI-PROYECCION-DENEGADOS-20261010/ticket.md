@@ -4,7 +4,7 @@ id: SECURITY-CLI-PROYECCION-DENEGADOS-20261010
 title: Sync proyecta denegaciones a settings.json de Claude Code
 type: SECURITY
 module: CLI
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -115,79 +115,79 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1. (R-PER-001) `SENSITIVE_PATH_GLOBS` de `@valmen/core` lleva los 12 globs de rutas sensibles, `~/.ssh/**` incluido
+- [x] C1. (R-PER-001) `SENSITIVE_PATH_GLOBS` de `@valmen/core` lleva los 12 globs de rutas sensibles, `~/.ssh/**` incluido
       <!-- test: npx vitest run tests/proyeccion-denegados.test.ts -->
-- [ ] C2. (R-PER-001) `DENIED_GIT_COMMANDS` de `@valmen/core` lleva las diez formas de git que nunca se automatizan
+- [x] C2. (R-PER-001) `DENIED_GIT_COMMANDS` de `@valmen/core` lleva las diez formas de git que nunca se automatizan
       <!-- test: npx vitest run tests/proyeccion-denegados.test.ts -->
-- [ ] C3. `SENSITIVE_PATH_GLOBS` está congelada
+- [x] C3. `SENSITIVE_PATH_GLOBS` está congelada
       <!-- test: npx vitest run tests/proyeccion-denegados.test.ts -->
-- [ ] C4. `DENIED_GIT_COMMANDS` está congelada
+- [x] C4. `DENIED_GIT_COMMANDS` está congelada
       <!-- test: npx vitest run tests/proyeccion-denegados.test.ts -->
-- [ ] C5. Para cada ruta de la tabla, `SENSITIVE_PATH_GLOBS` da el mismo veredicto que `SENSITIVE_PATH_PATTERNS`
+- [x] C5. Para cada ruta de la tabla, `SENSITIVE_PATH_GLOBS` da el mismo veredicto que `SENSITIVE_PATH_PATTERNS`
       <!-- test: npx vitest run tests/proyeccion-denegados.test.ts -->
-- [ ] C6. `claudeDenyRules()` devuelve las 64 reglas del plan en su orden
+- [x] C6. `claudeDenyRules()` devuelve las 64 reglas del plan en su orden
       <!-- test: npx vitest run tests/proyeccion-denegados.test.ts -->
-- [ ] C7. (R-PER-001) `valmen sync` sobre `{"outputStyle":"valmen"}` conserva `outputStyle`
+- [x] C7. (R-PER-001) `valmen sync` sobre `{"outputStyle":"valmen"}` conserva `outputStyle`
       <!-- test: npx vitest run tests/proyeccion-denegados.test.ts -->
-- [ ] C8. (R-PER-001) `valmen sync` sobre `{"outputStyle":"valmen"}` escribe en `permissions.deny` las 64 reglas del harness
+- [x] C8. (R-PER-001) `valmen sync` sobre `{"outputStyle":"valmen"}` escribe en `permissions.deny` las 64 reglas del harness
       <!-- test: npx vitest run tests/proyeccion-denegados.test.ts -->
-- [ ] C9. (R-PER-002) Tras dos `sync`, la lista `permissions.allow` propia queda idéntica a la original
+- [x] C9. (R-PER-002) Tras dos `sync`, la lista `permissions.allow` propia queda idéntica a la original
       <!-- test: npx vitest run tests/proyeccion-denegados.test.ts -->
-- [ ] C10. (R-PER-002) Tras dos `sync`, las reglas `deny` propias quedan con su texto original, en su orden original, delante de las del harness
+- [x] C10. (R-PER-002) Tras dos `sync`, las reglas `deny` propias quedan con su texto original, en su orden original, delante de las del harness
       <!-- test: npx vitest run tests/proyeccion-denegados.test.ts -->
-- [ ] C11. (R-PER-002) Tras dos `sync`, cada regla del harness aparece una sola vez
+- [x] C11. (R-PER-002) Tras dos `sync`, cada regla del harness aparece una sola vez
       <!-- test: npx vitest run tests/proyeccion-denegados.test.ts -->
-- [ ] C12. (R-PER-002) `sync` deja `.claude/settings.local.json` igual byte a byte
+- [x] C12. (R-PER-002) `sync` deja `.claude/settings.local.json` igual byte a byte
       <!-- test: npx vitest run tests/proyeccion-denegados.test.ts -->
-- [ ] C13. (R-PER-002) Una `allow` propia que contradice una denegación sale como aviso en la salida de `sync`
+- [x] C13. (R-PER-002) Una `allow` propia que contradice una denegación sale como aviso en la salida de `sync`
       <!-- test: npx vitest run tests/proyeccion-denegados.test.ts -->
-- [ ] C14. (R-PER-002) La `allow` que contradice una denegación sigue en el archivo después de `sync`
+- [x] C14. (R-PER-002) La `allow` que contradice una denegación sigue en el archivo después de `sync`
       <!-- test: npx vitest run tests/proyeccion-denegados.test.ts -->
-- [ ] C15. Una `allow` que no contradice ninguna denegación no produce aviso
+- [x] C15. Una `allow` que no contradice ninguna denegación no produce aviso
       <!-- test: npx vitest run tests/proyeccion-denegados.test.ts -->
-- [ ] C16. Un `permissions` que no es objeto hace fallar `sync` sin escribir el archivo
+- [x] C16. Un `permissions` que no es objeto hace fallar `sync` sin escribir el archivo
       <!-- test: npx vitest run tests/proyeccion-denegados.test.ts -->
-- [ ] C17. Un `permissions.deny` que no es un arreglo de textos hace fallar `sync` sin escribir el archivo
+- [x] C17. Un `permissions.deny` que no es un arreglo de textos hace fallar `sync` sin escribir el archivo
       <!-- test: npx vitest run tests/proyeccion-denegados.test.ts -->
-- [ ] C18. Si el archivo ya tiene `outputStyle` en `valmen` con las 64 reglas, `mergeClaudeSettings` devuelve el texto tal cual
+- [x] C18. Si el archivo ya tiene `outputStyle` en `valmen` con las 64 reglas, `mergeClaudeSettings` devuelve el texto tal cual
       <!-- test: npx vitest run tests/claude-code-respuesta.test.ts -->
-- [ ] C19. (R-PER-003) Con la denegación `Bash(git reset --hard*)` borrada, `sync --check` sale con código distinto de 0
+- [x] C19. (R-PER-003) Con la denegación `Bash(git reset --hard*)` borrada, `sync --check` sale con código distinto de 0
       <!-- test: npx vitest run tests/proyeccion-denegados.test.ts -->
-- [ ] C20. (R-PER-003) La salida de `sync --check` nombra la denegación que falta
+- [x] C20. (R-PER-003) La salida de `sync --check` nombra la denegación que falta
       <!-- test: npx vitest run tests/proyeccion-denegados.test.ts -->
-- [ ] C21. Tras `sync`, `sync --check` vuelve a salir con 0
+- [x] C21. Tras `sync`, `sync --check` vuelve a salir con 0
       <!-- test: npx vitest run tests/proyeccion-denegados.test.ts -->
-- [ ] C22. `sync` escribe en `.worktreeinclude` la línea `.claude/settings.json`
+- [x] C22. `sync` escribe en `.worktreeinclude` la línea `.claude/settings.json`
       <!-- test: npx vitest run tests/proyeccion-denegados.test.ts -->
-- [ ] C23. `sync` conserva las líneas propias de `.worktreeinclude`
+- [x] C23. `sync` conserva las líneas propias de `.worktreeinclude`
       <!-- test: npx vitest run tests/proyeccion-denegados.test.ts -->
-- [ ] C24. Sin el runtime `claude`, `sync` no escribe `.worktreeinclude`
+- [x] C24. Sin el runtime `claude`, `sync` no escribe `.worktreeinclude`
       <!-- test: npx vitest run tests/claude-code-respuesta.test.ts -->
-- [ ] C25. `crearWorktree` deja en un worktree con `.claude/` ignorado un `.claude/settings.json` con las 64 reglas
+- [x] C25. `crearWorktree` deja en un worktree con `.claude/` ignorado un `.claude/settings.json` con las 64 reglas
       <!-- test: npx vitest run tests/worktree-integracion.test.ts -->
-- [ ] C26. `crearWorktree` no cambia un `.claude/settings.json` que el worktree trae de git
+- [x] C26. `crearWorktree` no cambia un `.claude/settings.json` que el worktree trae de git
       <!-- test: npx vitest run tests/worktree-integracion.test.ts -->
-- [ ] C27. `crearWorktree` no deja un `.claude/settings.json` que git no ignora
+- [x] C27. `crearWorktree` no deja un `.claude/settings.json` que git no ignora
       <!-- test: npx vitest run tests/worktree-integracion.test.ts -->
-- [ ] C28. `crearWorktree` avisa cuando no deja `.claude/settings.json` porque git no lo ignora
+- [x] C28. `crearWorktree` avisa cuando no deja `.claude/settings.json` porque git no lo ignora
       <!-- test: npx vitest run tests/worktree-integracion.test.ts -->
-- [ ] C29. (R-PER-005) En modo `bypassPermissions`, con el `settings.json` proyectado, Claude Code deniega `git reset --hard`
+- [x] C29. (R-PER-005) En modo `bypassPermissions`, con el `settings.json` proyectado, Claude Code deniega `git reset --hard`
       <!-- verify: manual -->
-- [ ] C30. (R-PER-005) En modo `bypassPermissions`, con el `settings.json` proyectado, Claude Code deniega `git -C . reset --hard`
+- [x] C30. (R-PER-005) En modo `bypassPermissions`, con el `settings.json` proyectado, Claude Code deniega `git -C . reset --hard`
       <!-- verify: manual -->
-- [ ] C31. (R-PER-005) En modo `bypassPermissions`, con el `settings.json` proyectado, Claude Code deniega `cat .env`
+- [x] C31. (R-PER-005) En modo `bypassPermissions`, con el `settings.json` proyectado, Claude Code deniega `cat .env`
       <!-- verify: manual -->
-- [ ] C32. Sin `VALMEN_CLAUDE_BYPASS_E2E`, la prueba con Claude Code real se salta sin fallar
+- [x] C32. Sin `VALMEN_CLAUDE_BYPASS_E2E`, la prueba con Claude Code real se salta sin fallar
       <!-- test: npx vitest run tests/denegaciones-claude-bypass.test.ts -->
-- [ ] C33. Las pruebas existentes que el cambio puede romper siguen en verde
+- [x] C33. Las pruebas existentes que el cambio puede romper siguen en verde
       <!-- test: npx vitest run tests/claude-code-respuesta.test.ts tests/config-view.test.ts tests/adapters.test.ts tests/agentes-y-verbosidad.test.ts tests/respuesta-agents-md.test.ts tests/skills-publicadas.test.ts tests/agents-md-tamano.test.ts tests/lista-denegados.test.ts tests/adopt.test.ts tests/skill-corrida-orquestada.test.ts tests/dogfooding-registro.test.ts tests/worktree-integrar.test.ts -->
-- [ ] C34. La guarda de exportaciones sin consumidor sale con 0
+- [x] C34. La guarda de exportaciones sin consumidor sale con 0
       <!-- test: node scripts/exports-sin-uso.mjs -->
-- [ ] C35. La línea base `scripts/exports-sin-uso.linea-base.json` queda sin cambios
+- [x] C35. La línea base `scripts/exports-sin-uso.linea-base.json` queda sin cambios
       <!-- verify: manual -->
-- [ ] C36. La comprobación de tipos del repositorio no produce salida
+- [x] C36. La comprobación de tipos del repositorio no produce salida
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
-- [ ] C37. El lint de los archivos tocados termina sin errores
+- [x] C37. El lint de los archivos tocados termina sin errores
       <!-- verify: manual -->
 
 ## Puntos
@@ -198,11 +198,60 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+Hecho en el worktree `ticket-proyeccion-denegados`, siguiendo `## Plan` paso por paso. Las pruebas nuevas se escribieron antes que el código y se observaron en rojo (29 de 62 fallaron antes de implementar); las que pasaban antes son invariantes de «no se toca nada» (C7, C9, C12, C14, C15, C27, el caso sin runtime `claude`) y las de regresión de `sync` y `journey worktree create`, que deben pasar antes y después. Para probar que las de R-PER-002 pueden fallar, una mutación temporal que dejaba a `permissions` sin `allow` ni `deny` propios las puso en rojo (C9, C10, C11, C14 y la de `mergeClaudeSettings`) y se revirtió.
+
+1. `packages/core/src/denied.ts`: `SENSITIVE_PATH_GLOBS` (12 globs) y `DENIED_GIT_COMMANDS` (diez formas), congeladas y sin `import`; la cabecera nombra su consumidor.
+2. `packages/adapter/src/claude-code.ts`: `claudeDenyRules()` devuelve las 64 reglas (12 `Read`, 12 `Edit` y cuatro `Bash` por cada forma) en el orden del plan.
+3. Mismo archivo: `mergeOutputStyleSetting` pasa a `mergeClaudeSettings`: conserva sus fallos, falla sin escribir si `permissions` no es objeto o `permissions.deny` no es un arreglo de textos, suma al final de `permissions.deny` lo que falte por igualdad exacta, no toca ninguna otra clave y devuelve el texto tal cual si no falta nada.
+4. Mismo archivo: `missingClaudeDenyRules` (tolerante: un archivo ausente o ilegible cuenta como sin reglas) y `claudeAllowConflicts` (un aviso por `allow` que contradice una denegación; el patrón de `Bash` se lee con `:*` final como `*`, y el de `Read`/`Edit` contra la ruta de ejemplo de cada glob).
+5. Mismo archivo: `WORKTREE_INCLUDE_PATH` y `mergeWorktreeInclude`.
+6. `packages/adapter/src/projection.ts`: `settings.json` se lee una vez; se suma `.worktreeinclude` tras `CLAUDE.md` solo con el runtime `claude`; `Projection.claudeDenyMissing`; los avisos de `claudeAllowConflicts` entran a `warnings`. `.claude/settings.local.json` no se lee.
+7. `packages/cli/src/commands.ts`: `sync --check` suma «Faltan N denegación(es) del harness en .claude/settings.json: <reglas>»; `sync` suma la línea «denegaciones de Claude Code  <total> (<m> agregadas); un worktree creado con git worktree add a mano no las trae».
+8. `packages/engine/src/worktree.ts`: `crearWorktree` lleva `.claude/settings.json` al worktree tras compilar, solo si el proyecto proyecta a `claude` y el worktree no lo trae de git; comprueba con `git status --porcelain -uall` que quedó ignorado y, si no, lo borra (y su carpeta, si la creó él) y avisa; si lo trae versionado, no lo toca y avisa de las denegaciones que le falten; si la proyección falla, no crea el worktree y deshace (D-6).
+9. Pruebas nuevas: `tests/proyeccion-denegados.test.ts` (33); ocho en `tests/worktree-integracion.test.ts`, bajo «las denegaciones llegan al worktree» (C25-C28 y cuatro más: reglas de la persona sumadas, versionado sin faltantes, proyecto sin `claude` y D-6); y `tests/denegaciones-claude-bypass.test.ts` (dos deterministas sobre la lectura de la salida y una con Claude Code real, saltada sin `VALMEN_CLAUDE_BYPASS_E2E`).
+
+Pruebas existentes que se editaron (todas citadas aquí; ninguna se omitió ni se borró; el resto de sus aserciones y sus nombres, salvo donde se dice, no cambiaron):
+
+Declaradas por el paso 9 del plan:
+- `tests/claude-code-respuesta.test.ts:23`, `:85` y `:89` (en `main`, `:22`, `:80` y `:84`): `mergeOutputStyleSetting` pasa a `mergeClaudeSettings`, que es el nuevo nombre de la función.
+- `tests/claude-code-respuesta.test.ts:74` (en `main`, `:73-76`), «sin settings.json lo crea con outputStyle y las denegaciones del harness»: el nombre y el valor esperado cambian de `{outputStyle}` a `{outputStyle, permissions: {deny: claudeDenyRules()}}`, que es lo que ahora proyecta el adaptador.
+- `tests/claude-code-respuesta.test.ts:82` (en `main`, `:78-81`), «si ya vale valmen devuelve el texto tal cual, sin reformatear»: el texto de partida lleva las 64 reglas, porque sin ellas la fusión ya no lo devuelve tal cual.
+- `tests/claude-code-respuesta.test.ts:162` (en `main`, `:156-163`), «no proyecta estilo, settings ni CLAUDE.md»: suma `.worktreeinclude` a lo que no se proyecta sin el runtime `claude`.
+- `tests/config-view.test.ts:37-44`, `:225-233` y `:242` (en `main`, `:37-43`, `:223-230` y `:239`): `.worktreeinclude` entra tras `CLAUDE.md` y los archivos desactualizados pasan de 5 a 6.
+
+Autorizadas por el PO fuera del plan, el 2026-10-10: «Autorizar las 3 aserciones (Recomendado)». Alcance exacto: solo esas tres aserciones, cada una a lo que el plan aprobado produce, sin tocar su nombre ni otra aserción:
+- `tests/claude-code-respuesta.test.ts:63` (en `main`, `:62`), «activa outputStyle y conserva los permisos y demás claves», aserción de `permissions` (`:71`): esperaba `permissions` igual a la original; ahora espera la original más `deny: claudeDenyRules()`. Motivo: la proyección suma `permissions.deny` y el plan no lo listó.
+- `tests/claude-code-respuesta.test.ts:88` (en `main`, `:83`), «un outputStyle ajeno se cambia a valmen», aserción del objeto fusionado (`:90`): esperaba `{outputStyle, x}`; ahora espera además `permissions: {deny: claudeDenyRules()}`. Motivo: el mismo.
+- `tests/worktree-integracion.test.ts:162`, C13 «se niega a correr desde un worktree enlazado y señala el checkout principal», aserción sobre `.claude` del worktree (`:170-172`): exigía que `<worktree>/.claude` no existiera; ahora espera que contenga solo `settings.json` y que sus reglas `deny` sean las de `claudeDenyRules()`. Motivo: `crearWorktree` deja ahí el archivo a propósito (D-6, límite 2 (i)).
+
+Límites sin cambio frente al plan: Codex y OpenCode, `settings.local.json`, el `.claude/settings.json` y el `.worktreeinclude` reales de este repositorio y `autonomous-run.ts` no se tocaron; `scripts/exports-sin-uso.linea-base.json` sin diferencias.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Se ejecutan desde la raíz del repositorio con el código de este ticket (tras integrarlo, el checkout principal; antes, el worktree `.claude/worktrees/ticket-proyeccion-denegados`). Ambiente: Node 22 o superior y `npm install` hecho. Para C29-C31, Claude Code 2.1.289 o superior con sesión iniciada y red. Todo corre en directorios temporales: ninguna prueba lee ni escribe el `.claude/settings.json` ni el `.claude/settings.local.json` de este repositorio.
+
+Comandos y resultado esperado:
+1. `npm run build`: sin errores.
+2. `npx vitest run tests/proyeccion-denegados.test.ts`: 33 pruebas en verde (C1-C17, C19-C23).
+3. `npx vitest run tests/claude-code-respuesta.test.ts`: 14 en verde (C18, C24).
+4. `npx vitest run tests/worktree-integracion.test.ts`: 26 en verde (C25-C28; incluye C13 con su aserción nueva).
+5. `npx vitest run tests/denegaciones-claude-bypass.test.ts`: 2 en verde y 1 saltada, con su motivo en el nombre (C32).
+6. Las existentes que el cambio puede romper (C33): `npx vitest run tests/claude-code-respuesta.test.ts tests/config-view.test.ts tests/adapters.test.ts tests/agentes-y-verbosidad.test.ts tests/respuesta-agents-md.test.ts tests/skills-publicadas.test.ts tests/agents-md-tamano.test.ts tests/lista-denegados.test.ts tests/adopt.test.ts tests/skill-corrida-orquestada.test.ts tests/dogfooding-registro.test.ts tests/worktree-integrar.test.ts`: todo en verde.
+7. `node scripts/exports-sin-uso.mjs`: sale con 0 («línea base de 443 entradas»); `git diff --exit-code scripts/exports-sin-uso.linea-base.json`: sin diferencias (C34, C35).
+8. `npx tsc --noEmit -p tsconfig.json`: sin salida (C36).
+9. `npx eslint packages/core/src/denied.ts packages/adapter/src/claude-code.ts packages/adapter/src/projection.ts packages/cli/src/commands.ts packages/engine/src/worktree.ts tests/proyeccion-denegados.test.ts tests/denegaciones-claude-bypass.test.ts tests/worktree-integracion.test.ts tests/claude-code-respuesta.test.ts tests/config-view.test.ts`: sin errores (C37).
+10. Con Claude Code real, opcional y de una persona (C29-C31): `VALMEN_CLAUDE_BYPASS_E2E=1 npx vitest run tests/denegaciones-claude-bypass.test.ts`: 3 en verde en unos 12 s. Gasta unos 0,03 USD con haiku. Si el modelo no intenta uno de los tres comandos, falla como no concluyente en vez de pasar. Corre sobre un repositorio git temporal con su propio `settings.json` proyectado por `syncProject`, en `bypassPermissions`, y exige los tres en `permission_denials`: `git reset --hard`, `git -C . reset --hard` y `cat .env`.
+
+Validación manual (en un proyecto de prueba con el runtime `claude`, nunca en uno real): `valmen sync` y ver en `.claude/settings.json` las 64 reglas en `permissions.deny` y la línea de «denegaciones de Claude Code»; borrar `Bash(git reset --hard*)` y comprobar que `valmen sync --check` sale distinto de 0 y la nombra; con una `allow` `Bash(git push *)` propia, ver el aviso y que la regla sigue en el archivo; `valmen journey worktree create --id <ticket>` y ver el `.claude/settings.json` en el worktree.
+
+Resultados de la corrida de la sesión de implementación (2026-10-10): los 19 archivos de los puntos 2 a 6 más `worktree-cli`, `worktree-git`, `worktree-registros` y `drift`, 464 pruebas en verde y 1 saltada; `npm run build`, `exports:check`, `tsc` y `eslint` sin salida de error; `valmen secrets`: sin secretos. La corrida con Claude Code real se hizo una vez y pasó (3 en verde, 11,6 s la real; el costo no lo expone el cliente). Es evidencia del agente: la repite la persona responsable.
+
+Qué se le dice al PO:
+- Un worktree creado a mano con `git worktree add`, como los de las jornadas anteriores a este ticket, no recibe las reglas: `sync` lo dice en su línea de permisos. La salida es crearlo con `valmen journey worktree create` o `claude -w`, o versionar `.claude/settings.json` en el proyecto. Los subagentes de la herramienta Agent siguen sin comprobar (H3).
+- Contra un `git push --force` o un borrado remoto (`git push origin :rama`) que las reglas no ven (comillas, ruta absoluta del binario, `sh -c`, alias, bandera combinada como `-df`), queda solo la protección de ramas del servidor git, fuera del harness. Falso positivo aceptado: un mensaje de commit o un argumento de `git grep` con «<operación> <bandera>» queda denegado.
+- `.claude/settings.json` y `.worktreeinclude` reales de este repositorio cambian cuando una persona corra `valmen sync` en el checkout principal; este ticket no lo hizo. Hasta entonces `sync --check` del checkout los marcará desactualizados (la CI corre `sync` antes).
+- Una regla que el harness retire de su lista se queda en los proyectos hasta que una persona la borre (R-PER-002).
+- Rollback: `git revert <sha>` del commit del ticket y `npm run build`; lo ya escrito en los proyectos (las 64 reglas y la línea de `.worktreeinclude`) lo borra a mano una persona.
 
 ## QA
 
@@ -231,7 +280,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": null,
+    "model": "claude-sonnet-5-5",
+    "reasoning_effort": "high",
+    "notes": "Sesion de implementacion del subagente en el worktree del ticket; el cliente no expone tokens ni costo, por eso no se declaran numeros. La corrida con Claude Code real (haiku) fue una sola y su costo no se midio.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:la sesion no expone los numeros",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -313,6 +378,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-10",
+    "at": "2026-10-11T00:52:15.063Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-10",
+    "at": "2026-10-11T01:27:29.255Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-10",
+    "at": "2026-10-11T01:31:35.662Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```

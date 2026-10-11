@@ -7,12 +7,18 @@
  * solo borra lo ya integrado: no integra, no fuerza y no publica. Todo el git y los procesos salen
  * de las listas cerradas de `worktree-git.ts`.
  */
-import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, realpathSync, rmSync, rmdirSync } from "node:fs";
 import { homedir } from "node:os";
-import { join, sep } from "node:path";
+import { basename, dirname, join, sep } from "node:path";
 
-import { EXIT_INVARIANT, createExecutionIdentity, fail } from "@valmen/core";
-import { parseConfig, readSharedProjectPolicy } from "@valmen/adapter";
+import { EXIT_INVARIANT, atomicWrite, createExecutionIdentity, fail } from "@valmen/core";
+import {
+  CLAUDE_SETTINGS_PATH,
+  missingClaudeDenyRules,
+  parseConfig,
+  projectFiles,
+  readSharedProjectPolicy,
+} from "@valmen/adapter";
 
 import { findTicket, type RegistryPaths } from "./discovery.js";
 import { estadoDelArbolDeTrabajo } from "./integration-commit.js";
@@ -98,6 +104,50 @@ function enlacesFueraDelWorktree(carpetaAbsoluta: string): string[] {
     }
   }
   return fuera;
+}
+
+/**
+ * Lleva las denegaciones del harness al worktree que acaba de nacer.
+ *
+ * `.claude/` no se versiona en muchos proyectos —en este mismo repositorio está ignorado—, así
+ * que un worktree nace sin `.claude/settings.json` y un agente que trabaje ahí correría sin
+ * ninguna denegación: Claude Code no hereda las reglas del checkout padre. Si el proyecto proyecta
+ * a `claude` y el worktree no trae el archivo de git, se escribe el que proyecta `valmen sync` para
+ * la raíz (las reglas de la persona más las del harness) y se comprueba que git lo ignora: un
+ * archivo sin rastrear se borra y se avisa, para no colarlo en el commit del ticket. Si el worktree
+ * lo trae versionado no se toca: solo se avisa de las denegaciones que le falten.
+ *
+ * Devuelve los avisos. Un fallo (config inválida, `settings.json` que no parsea) lo lanza quien
+ * llama para deshacer el worktree: crear uno sin denegaciones y con un aviso las deja sin ellas.
+ */
+function dejarDenegacionesEnElWorktree(root: string, absoluta: string, git?: EjecutorDeGit): string[] {
+  const proyectado = projectFiles(root, basename(root)).files.find((f) => f.path === CLAUDE_SETTINGS_PATH);
+  if (proyectado === undefined) return [];
+
+  const destino = join(absoluta, CLAUDE_SETTINGS_PATH);
+  if (existsSync(destino)) {
+    const faltan = missingClaudeDenyRules(readFileSync(destino, "utf8"));
+    return faltan.length === 0
+      ? []
+      : [
+          `${CLAUDE_SETTINGS_PATH} del worktree viene de git y le faltan ${faltan.length} denegación(es) del harness: ` +
+            "no se tocó; corre `valmen sync` en el checkout principal y versiona el resultado.",
+        ];
+  }
+
+  const carpetaPropia = !existsSync(dirname(destino));
+  atomicWrite(destino, proyectado.content);
+  const estado = ejecutarGitDeWorktree(absoluta, ["status", "--porcelain", "-uall"], git);
+  if (estado.status !== 0) fail(`git status falló en el worktree: ${estado.stderr.trim()}`, EXIT_INVARIANT);
+  const sinRastrear = estado.stdout.split("\n").some((linea) => linea.startsWith("??") && linea.endsWith(CLAUDE_SETTINGS_PATH));
+  if (!sinRastrear) return [];
+
+  rmSync(destino);
+  if (carpetaPropia) rmdirSync(dirname(destino));
+  return [
+    `No se dejó ${CLAUDE_SETTINGS_PATH} en el worktree: git no lo ignora y entraría al commit del ticket. ` +
+      "Los agentes de ese worktree correrán sin las denegaciones del harness: ignora `.claude/` en el `.gitignore` o versiona el archivo.",
+  ];
 }
 
 export function crearWorktree(request: WorktreeRequest): WorktreeCreado {
@@ -199,6 +249,12 @@ export function crearWorktree(request: WorktreeRequest): WorktreeCreado {
       if (r.status !== 0) {
         abortar(`La compilación falló (${comando} ${argumentos.join(" ")}): ${(r.stderr || r.stdout).trim().slice(0, 500)}`);
       }
+    }
+
+    try {
+      avisos.push(...dejarDenegacionesEnElWorktree(root, absoluta, git));
+    } catch (caught) {
+      abortar(`No se pudieron llevar las denegaciones del harness al worktree: ${caught instanceof Error ? caught.message : String(caught)}`);
     }
 
     const commit = ejecutarGitDeWorktree(root, ["rev-parse", rama], git).stdout.trim();
