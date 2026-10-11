@@ -853,7 +853,7 @@ function lineaDeComparadas(root: string): string {
 
 /**
  * Cuánto pesa el `AGENTS.md` proyectado y, si pasa del presupuesto del proyecto, el
- * aviso. Es lo que dice `sync` para que el tamaño sea una decisión y no algo que
+ * aviso; los avisos incluyen los de cada skill que pasa de `skill-budget`. Es lo que dice `sync` para que el tamaño sea una decisión y no algo que
  * crece sin que nadie lo vea.
  *
  * El aviso **no** cambia el código de salida: un documento pasado de tamaño sigue
