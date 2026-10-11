@@ -52,6 +52,7 @@ import {
   resolveDelegation,
   type RegistryPaths,
 } from "../packages/engine/src/index.js";
+import { calcularArbolProbado } from "../packages/engine/src/arbol-probado.js";
 import { materializeFeature } from "../packages/engine/src/materialize.js";
 import { buildGateState } from "../packages/engine/src/state.js";
 import { recordHumanDecision } from "../packages/server/src/gates.js";
@@ -103,6 +104,9 @@ function recibo(ticket: string, gate: string, valor: number): GateReceipt {
   const respuestas: PropositionAnswer[] = [
     { id: "cubre_todos_los_criterios", kind: "noul", value: valor },
   ];
+  // El recibo de `qa-mechanical` guarda el árbol probado, como lo deja la compuerta de verdad
+  // (R-REV-001): sin él, la entrega dentro de un repositorio git no sabe qué código se verificó.
+  const arbol = gate === "qa-mechanical" ? calcularArbolProbado(PATHS()) : null;
   return buildReceipt({
     id: `GR-20261006-${ticket}-${gate}-${readReceipts(PATHS(), ticket).length + 1}`,
     gate,
@@ -118,6 +122,7 @@ function recibo(ticket: string, gate: string, valor: number): GateReceipt {
     usage: null,
     latencyMs: 1,
     decidedAt: new Date().toISOString(),
+    ...(arbol === null ? {} : { testedTree: arbol.registro }),
   });
 }
 

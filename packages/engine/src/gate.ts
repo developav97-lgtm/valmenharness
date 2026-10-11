@@ -47,6 +47,7 @@ import {
   hashState,
   partitionByApplicability,
   type NotApplicableRecord,
+  type TestedTreeRecord,
   summarizeReceipt,
   weightedMean,
 } from "@valmen/gate";
@@ -65,6 +66,7 @@ import {
   testTimeout,
   verifyDevConfig,
 } from "./discovery.js";
+import { type ArbolProbado, calcularArbolProbado, rutasQueCambiaron } from "./arbol-probado.js";
 import { buildGateState, runMechanicalChecks } from "./state.js";
 import { appendReceipt, currentReceipts, readReceipts } from "./receipts.js";
 import { interfazDelTicket } from "./interfaz.js";
@@ -409,6 +411,44 @@ function defaultReceiptId(
   return `${prefijo}-${mayor + 1}`;
 }
 
+/** Cuántas rutas se nombran en la nota de un árbol que cambió mientras corrían los comandos. */
+const RUTAS_EN_LA_NOTA = 10;
+
+/** El árbol de trabajo de ahora, o por qué no se pudo calcular. `arbol: null` sin `error`: no es un repositorio git. */
+function tomarArbol(paths: RegistryPaths): {
+  readonly arbol: ArbolProbado | null;
+  readonly error: string | null;
+} {
+  try {
+    return { arbol: calcularArbolProbado(paths), error: null };
+  } catch (caught) {
+    return { arbol: null, error: toFailure(caught).message };
+  }
+}
+
+/** El árbol probado en una línea del informe: prefijo del hash, archivos y de dónde sale. */
+function describirArbol(arbol: TestedTreeRecord | undefined): string {
+  if (arbol === undefined) return "— (sin repositorio git, o no se pudo calcular: ver las notas)";
+  const origen =
+    arbol.commitTree !== null
+      ? `commit ${arbol.head?.slice(0, 12) ?? "?"}`
+      : arbol.head === null
+        ? "repositorio sin commits"
+        : "cambios sin commitear";
+  return `${arbol.hash.slice(0, 23)}…  ${arbol.files} archivo(s), ${origen}`;
+}
+
+/** La nota del recibo cuando los comandos de la compuerta dejaron el árbol distinto del que se probó. */
+function notaDeArbolCambiado(rutas: readonly string[]): string {
+  const nombradas = rutas.slice(0, RUTAS_EN_LA_NOTA).join(", ");
+  const resto = rutas.length > RUTAS_EN_LA_NOTA ? ` y ${rutas.length - RUTAS_EN_LA_NOTA} más` : "";
+  return (
+    `Los comandos de la compuerta cambiaron el árbol de trabajo (${rutas.length} ruta(s): ${nombradas}${resto}): ` +
+    "el recibo guarda el árbol de antes de correr, así que la entrega con este recibo se va a rechazar. " +
+    "Repetir la compuerta desde este árbol, o evitar que el comando escriba en archivos del proyecto."
+  );
+}
+
 export async function runGate(
   paths: RegistryPaths,
   options: GateRunOptions,
@@ -703,6 +743,11 @@ export async function runGate(
   // `review`, que es la verdad: lo verifican las personas, en el estado siguiente.
   const soloManual = definition.commandPropositions === true && comandos.length === 0;
 
+  // El árbol de trabajo se toma **antes** de la preparación y de los comandos: es lo que se va a
+  // probar, y es lo que la entrega compara después (R-REV-001). También cuando todos los
+  // criterios son manuales: el recibo dice qué código había aunque no corra nada.
+  const arbolAntes = definition.commandPropositions === true ? tomarArbol(paths) : null;
+
   // La preparación del ambiente de pruebas que el proyecto declara corre **antes** de
   // los criterios, una sola vez, y queda en el recibo. Si falla —o si su esquema no
   // está permitido— los criterios no corren: no probarían nada, y la compuerta termina
@@ -848,8 +893,33 @@ export async function runGate(
   // La causa probable de una banda de revisión, cuando la banda la causan los
   // criterios y no el plan. Se calcula acá y no dentro de `decide`: decidir es del
   // gate, y esto no decide — explica por qué el número salió así.
+  const notasDeArbol: string[] = [];
+  if (arbolAntes !== null) {
+    if (arbolAntes.arbol === null) {
+      notasDeArbol.push(
+        arbolAntes.error === null
+          ? "sin árbol: el proyecto no es un repositorio git; la entrega compara solo el texto del ticket."
+          : `sin árbol: no se pudo calcular (${arbolAntes.error}); dentro de un repositorio git la entrega ` +
+              "con este recibo se va a rechazar.",
+      );
+    } else {
+      // Al terminar se vuelve a mirar: si los comandos escribieron en el árbol, el recibo guarda el de
+      // antes y la nota dice qué cambió, para que se vea por qué la entrega se va a rechazar.
+      const despues = tomarArbol(paths);
+      if (despues.arbol === null) {
+        notasDeArbol.push(
+          `no se pudo volver a calcular el árbol al terminar los comandos (${despues.error ?? "sin repositorio"}).`,
+        );
+      } else if (despues.arbol.registro.hash !== arbolAntes.arbol.registro.hash) {
+        notasDeArbol.push(
+          notaDeArbolCambiado(rutasQueCambiaron(arbolAntes.arbol.archivos, despues.arbol.archivos)),
+        );
+      }
+    }
+  }
   const notas = [
     ...(options.notes ?? []),
+    ...notasDeArbol,
     ...(effectiveMode.evidence === null
       ? []
       : [
@@ -899,6 +969,7 @@ export async function runGate(
       ? {}
       : { commandResults: evaluation.commandResults }),
     ...(preparacion === null ? {} : { setup: preparacion }),
+    ...(arbolAntes?.arbol == null ? {} : { testedTree: arbolAntes.arbol.registro }),
     evaluator: evaluation.evaluator,
     notApplicable: noAplican,
     thresholds: umbrales.applied,
@@ -1098,6 +1169,7 @@ export async function runGate(
     "  Recibo",
     `    evaluador          ${evaluation.evaluator}`,
     `    estado congelado   ${receipt.stateHash.slice(0, 23)}…`,
+    ...(arbolAntes === null ? [] : [`    árbol probado      ${describirArbol(receipt.testedTree)}`]),
     `    gate               ${receipt.gateHash.slice(0, 23)}…`,
     `    modelo             ${evaluation.model?.resolvedVersion ?? "— (decisión en código)"}`,
     `    coste              $${(evaluation.usage?.costUsd ?? 0).toFixed(6)}`,
