@@ -4,7 +4,7 @@ id: FEATURE-CLI-AVISO-DECISION-20261010
 title: Aviso de Telegram al pasar a Necesita tu decisión
 type: FEATURE
 module: CLI
-workflow_status: planned
+workflow_status: in_progress
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -40,6 +40,8 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
 - **Enlace a la pantalla del ticket (S-1).** La spec pide «el enlace a su pantalla», pero el vigilante en TypeScript no conoce la dirección de Mission Control: `HermesConfig` (`packages/adapter/src/config.ts:481-499`) no tiene ninguna base de URL, y el único sitio que arma el enlace es el script `templates/programar/aviso-eslabon.sh:136-138` (`http://<IP LAN>:<puerto>/#/ticket/<ID>`), que levanta o releva el servidor. La ruta de la pantalla sí existe: `#/ticket/<ID>` (`packages/server/web/index.html:3314`). Pregunta al PO: ¿de dónde sale la base del enlace? A) una clave nueva `hermes.notify.screen-url` en `.valmen/config.yaml`; sin ella el aviso dice «sin enlace» y da la ruta del ticket, como hoy `pruebas-listas` → no inventa una URL (Recomendado). B) calcular IP de la red local y un puerto fijo como el script → enlace que puede no abrir si el servidor no escucha ahí. El plan se escribe con A y queda sujeto a esta respuesta en la aprobación del plan.
 - **Compuerta escalada no avisable a distancia (S-2).** Un ticket de riesgo `critical` o con impacto crítico no recibe el aviso `gate` (el techo de riesgo lo niega, `packages/cli/src/hermes.ts:1166-1190`). Pregunta al PO: ¿el aviso nuevo debe cubrir ese caso con un aviso informativo, sin código? A) no: el motivo «compuerta escalada» queda siempre a cargo del aviso `gate`, que ya lo lista como «no avisable» → cero duplicados (Recomendado). B) sí: aviso informativo solo cuando `gate` se negó → un camino más que probar.
 
+- Decisión del PO (2026-10-11): S-1 «Clave nueva en la configuración (Recomendado)»: la dirección del enlace sale de `hermes.notify.screen-url`; si falta, el aviso dice «sin enlace» y da la ruta del ticket. S-2 «Sigue a cargo del aviso de compuertas (Recomendado)»: una compuerta escalada que no se puede avisar por Telegram queda en el aviso de compuertas, sin aviso extra.
+
 ## Descripción funcional
 
 - Alcance: el vigilante de avisos (`valmen hermes notify` sin `--id`, `packages/cli/src/main.ts:1783-1795` → `hermesNotifyPendientes`, `packages/cli/src/hermes.ts:969`) suma un tipo de aviso nuevo, «necesita tu decisión», que sale una vez por cada entrada de un ticket a ese estado público, con el ticket, el motivo y el enlace a su pantalla. No cambia la función `estadoPublico` ni los seis avisos existentes.
@@ -62,7 +64,7 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
 
 ## Plan
 
-- Gate de plan y aprobación: compuerta `plan` con el evaluador `cascade`; sin autorización de aprobación vigente, el plan lo aprueba el PO, que en la misma decisión responde S-1 (base del enlace) y S-2 (compuerta escalada no avisable). El plan está escrito con la opción recomendada de las dos.
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan), el 2026-10-11 con «Aprobar tal cual (Recomendado)».
 - Alcance: un tipo de aviso nuevo en el vigilante (`necesita-decision`) para los motivos «bloqueado», «cambios pedidos» y «plan por aprobar», con su marca en el diario de aprobaciones, su texto y la clave opcional `hermes.notify.screen-url`. Exclusiones: no cambia `estadoPublico`, ni los seis avisos existentes, ni la web, ni el bot o la gateway de Telegram; los motivos «pruebas listas» y «compuerta escalada» siguen a cargo de `pruebas-listas` y `gate`.
 - Tamaño previsto: unas 390 líneas (unas 140 de producción, unas 250 de pruebas), 19 criterios.
 - Si excede el tope: si al implementar pasa de 400 líneas (`delivery-budget`), se parte en dos tickets dependientes: (a) motor —entrada al estado, marca y texto del aviso: pasos 3, 4 y 5, criterios C2, C3, C9, C10, C11, C12, C13, C17— y (b) vigilante —clave de configuración y tipo nuevo en `pendientesDeAvisar` y `hermesNotifyPendientes`: pasos 2 y 6, criterios C1, C4, C5, C6, C7, C8, C14, C15, C16, C18—, con (b) dependiendo de (a).
@@ -202,6 +204,42 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-11",
+    "at": "2026-10-11T21:25:02.601Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"PO\",\"source\":\"cli\",\"quote\":\"Aprobar tal cual (Recomendado)\",\"planHash\":\"sha256:4e9b2deea709d976b8383317f9a0783c02eaad8f8ef83377ed0e84e9b703a0f7\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-11",
+    "at": "2026-10-11T21:25:03.167Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: PO (fuente cli), plan sha256:4e9b2deea709d976b8383317f9a0783c02eaad8f8ef83377ed0e84e9b703a0f7."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-11",
+    "at": "2026-10-11T21:25:03.167Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-11",
+    "at": "2026-10-11T21:25:03.508Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
   }
 ]
 ```
