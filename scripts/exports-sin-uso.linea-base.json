@@ -298,7 +298,6 @@
   "packages/engine/src/process.ts#processesDir",
   "packages/engine/src/process.ts#renderProcessRun",
   "packages/engine/src/project-resolution.ts#AuthorizedProjectEntry",
-  "packages/engine/src/qa-agent-git.ts#motivoDeGitDeQaAgent",
   "packages/engine/src/qa-agent-receipt.ts#qaAgentReceiptsPath",
   "packages/engine/src/qa-agent.ts#EjecucionDeComando",
   "packages/engine/src/qa-agent.ts#EjecutorDeComando",

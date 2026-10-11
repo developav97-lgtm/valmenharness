@@ -164,6 +164,14 @@ describe("las barreras previas", () => {
     rechazo(e, /cambia archivos que no se integran: .*\.valmen\/routing\.yaml/);
   });
 
+  it("C14: se niega si la rama renombra .valmen/config.yaml", () => {
+    const e = preparar();
+    mkdirSync(join(e.wt, "src"), { recursive: true });
+    e.lab.gitEn(e.wt, "mv", ".valmen/config.yaml", "src/config.txt");
+    e.lab.gitEn(e.wt, "commit", "-q", "-m", "rama: renombra la configuración");
+    rechazo(e, /cambia archivos que no se integran: .*\.valmen\/config\.yaml/);
+  });
+
   it("se niega si el worktree tiene cambios sin commit (C12)", () => {
     const e = preparar();
     e.commitEnRama("codigo/a.txt", "a\n");
@@ -435,7 +443,7 @@ describe("las listas cerradas", () => {
     }
     for (const a of [
       ["show", "main:.valmen/executions/events.jsonl"],
-      ["diff", "--name-only", "-z", "main...valmen/ticket-uno"],
+      ["diff", "--name-status", "-z", "-M", "-C", "main...valmen/ticket-uno"],
       ["merge-base", "main", "valmen/ticket-uno"],
       [
         "merge-tree",

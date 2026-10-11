@@ -258,6 +258,25 @@ describe("lo que impide cerrar, sin dejar un ciclo a medias", () => {
     sinCiclo();
   });
 
+  it("C12: rechaza el cierre de un diff que renombra una migración", () => {
+    mkdirSync(root, { recursive: true });
+    git("init", "-q", "-b", "main");
+    escribir("migrations/0001_init.sql", "create table x (id int);\n");
+    const origen =
+      (git("add", "-A"), git("commit", "-q", "-m", "origen"), git("rev-parse", "HEAD"));
+    mkdirSync(join(root, "src"), { recursive: true });
+    git("mv", "migrations/0001_init.sql", "src/inofensivo.ts");
+    const { base } = preparar();
+    // Un recibo aprobado por una versión anterior, que no veía el origen del renombre: su base
+    // queda antes del renombre, y el cierre revalida la elegibilidad con ese diff.
+    const ruta = join(root, ".valmen", "qa", "agent-receipts.jsonl");
+    const texto = readFileSync(ruta, "utf8");
+    expect(texto).toContain(base);
+    writeFileSync(ruta, texto.replace(base, origen), "utf8");
+    expect(() => cerrar()).toThrow(/ya no es elegible.*migraciones/);
+    sinCiclo();
+  });
+
   it("si el último recibo no aprobó", () => {
     const { base, delivered } = preparar();
     // Un segundo recibo, posterior y bloqueado: el que manda es el último.
