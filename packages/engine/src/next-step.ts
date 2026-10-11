@@ -42,6 +42,7 @@ import {
 } from "@valmen/core";
 import { type GateReceipt, criterioDeclarado, extractCriteriaSpecs, hashState } from "@valmen/gate";
 
+import { motivoDeArbolNoVigente } from "./arbol-probado.js";
 import type { RegistryPaths } from "./discovery.js";
 import { aprobacionDePlanVigente } from "./plan-approval.js";
 import { currentReceipts, veredictoDeCompuerta } from "./receipts.js";
@@ -396,8 +397,8 @@ export function computeNextStep(
         );
       }
       // Lo que el motor exige para entregar: que el recibo exista, que sea del estado
-      // actual y que no haya bloqueado. Un recibo viejo prueba lo que se probó, no lo
-      // que se entrega.
+      // actual, del árbol de trabajo actual y que no haya bloqueado. Un recibo viejo
+      // prueba lo que se probó, no lo que se entrega.
       if (mecanica.outcome === "block") {
         return paso(
           "verificación",
@@ -417,6 +418,11 @@ export function computeNextStep(
           ],
           base,
         );
+      }
+      // El texto del ticket no es el código: lo mismo que `transition` compara con el árbol.
+      const motivoDeArbol = motivoDeArbolNoVigente(mecanica, paths, id);
+      if (motivoDeArbol !== null) {
+        return paso("verificación", [motivoDeArbol], base);
       }
       return paso(
         "entrega",

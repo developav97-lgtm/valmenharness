@@ -47,6 +47,7 @@ import {
 
 import { hashState } from "@valmen/gate";
 
+import { motivoDeArbolNoVigente } from "./arbol-probado.js";
 import { unmarkedCriteria, unmarkedMessage } from "./criteria-marks.js";
 import { type RegistryPaths, findTicket } from "./discovery.js";
 import { motivoDeAprobacionPorAutorizacionInvalida } from "./approval-eligibility.js";
@@ -186,10 +187,16 @@ function assertNoExtraFlags(request: TransitionRequest): void {
  * que se exige acá no es una opinión: es **el recibo** de haber corrido los
  * criterios que declaran su test, sobre el estado actual del ticket.
  *
- * Las dos comprobaciones importan y por razones distintas. Que falte el recibo
+ * Las tres comprobaciones importan y por razones distintas. Que falte el recibo
  * significa que nadie corrió nada; que el recibo sea viejo —su hash de estado no
  * coincide con el ticket de ahora— significa que **lo que se probó no es lo que se
  * entrega**, y ese es el caso que un recibo sin hash dejaría pasar en silencio.
+ *
+ * Y el texto del ticket no es el código: el hash de estado no ve un archivo funcional
+ * editado, creado o borrado después de la compuerta. Por eso el recibo guarda también el
+ * árbol de trabajo que probó (`testedTree`) y acá se compara con el de ahora, sin el
+ * propio registro (R-REV-001). Fuera de un repositorio git no hay árbol y vale solo el
+ * texto; dentro de uno, un recibo sin árbol no prueba qué código se verificó y se repite.
  */
 function exigirVerificacionMecanica(document: ParsedTicket, paths: RegistryPaths): void {
   const recibos = readReceipts(paths, document.fields.id).filter(
@@ -214,6 +221,9 @@ function exigirVerificacionMecanica(document: ParsedTicket, paths: RegistryPaths
       EXIT_INVARIANT,
     );
   }
+
+  const motivoDeArbol = motivoDeArbolNoVigente(ultimo, paths, document.fields.id);
+  if (motivoDeArbol !== null) fail(motivoDeArbol, EXIT_INVARIANT);
 
   if (ultimo.outcome === "block") {
     fail(

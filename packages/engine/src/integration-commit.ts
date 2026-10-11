@@ -78,8 +78,13 @@ export function ramaActual(root: string, ejecutor?: EjecutorDeGit): string {
   return salida.stdout.trim();
 }
 
-/** El hash del contenido de los archivos, con el mismo encuadre que la evidencia de QA. */
-function encuadrar(archivos: readonly string[], leer: (ruta: string) => Buffer | null): string | null {
+/**
+ * El hash del contenido de los archivos, con el mismo encuadre que la evidencia de QA.
+ *
+ * Se exporta para que el árbol probado del recibo (`arbol-probado.ts`) use este encuadre y no sea
+ * una copia más: un cambio de formato aquí tiene que cambiar los dos hashes a la vez.
+ */
+export function encuadrar(archivos: readonly string[], leer: (ruta: string) => Buffer | null): string | null {
   const hash = createHash("sha256");
   for (const relativa of [...archivos].sort()) {
     const contenido = leer(relativa);
