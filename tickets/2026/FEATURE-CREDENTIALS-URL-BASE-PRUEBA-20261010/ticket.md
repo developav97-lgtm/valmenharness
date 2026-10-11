@@ -4,7 +4,7 @@ id: FEATURE-CREDENTIALS-URL-BASE-PRUEBA-20261010
 title: URL base de prueba por variable de entorno en transportes HTTP
 type: FEATURE
 module: CREDENTIALS
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -122,69 +122,69 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1 — R-GUI-001: Con `VALMEN_BASE_URL_OPENROUTER=http://127.0.0.1:<puerto>`, `resolveChatEndpoint` devuelve `http://127.0.0.1:<puerto>/chat/completions` para OpenRouter.
+- [x] C1 — R-GUI-001: Con `VALMEN_BASE_URL_OPENROUTER=http://127.0.0.1:<puerto>`, `resolveChatEndpoint` devuelve `http://127.0.0.1:<puerto>/chat/completions` para OpenRouter.
       <!-- test: npx vitest run tests/url-base-prueba.test.ts -->
-- [ ] C2 — R-GUI-001: Con la base `http://localhost:<puerto>/v1/`, la URL resultante es `http://localhost:<puerto>/v1/chat/completions`, sin doble barra.
+- [x] C2 — R-GUI-001: Con la base `http://localhost:<puerto>/v1/`, la URL resultante es `http://localhost:<puerto>/v1/chat/completions`, sin doble barra.
       <!-- test: npx vitest run tests/url-base-prueba.test.ts -->
-- [ ] C3 — R-GUI-001: Con la variable, un modelo del dialecto `anthropic-messages` conserva la ruta `/messages`.
+- [x] C3 — R-GUI-001: Con la variable, un modelo del dialecto `anthropic-messages` conserva la ruta `/messages`.
       <!-- test: npx vitest run tests/url-base-prueba.test.ts -->
-- [ ] C4 — R-GUI-001: Con la variable, un modelo del dialecto `openai-responses` conserva la ruta `/responses`.
+- [x] C4 — R-GUI-001: Con la variable, un modelo del dialecto `openai-responses` conserva la ruta `/responses`.
       <!-- test: npx vitest run tests/url-base-prueba.test.ts -->
-- [ ] C5 — R-GUI-001: La variable de un proveedor con guion se llama con guion bajo (`VALMEN_BASE_URL_OPENCODE_GO`).
+- [x] C5 — R-GUI-001: La variable de un proveedor con guion se llama con guion bajo (`VALMEN_BASE_URL_OPENCODE_GO`).
       <!-- test: npx vitest run tests/url-base-prueba.test.ts -->
-- [ ] C6 — R-GUI-001: Cada valor de la tabla de rechazos del paso 7 se rechaza con el código `TEST_URL_REJECTED`.
+- [x] C6 — R-GUI-001: Cada valor de la tabla de rechazos del paso 7 se rechaza con el código `TEST_URL_REJECTED`.
       <!-- test: npx vitest run tests/url-base-prueba.test.ts -->
-- [ ] C7 — R-GUI-001: El mensaje del rechazo dice que la URL de prueba solo admite localhost.
+- [x] C7 — R-GUI-001: El mensaje del rechazo dice que la URL de prueba solo admite localhost.
       <!-- test: npx vitest run tests/url-base-prueba.test.ts -->
-- [ ] C8 — R-GUI-001: El mensaje del rechazo no contiene el valor de la variable.
+- [x] C8 — R-GUI-001: El mensaje del rechazo no contiene el valor de la variable.
       <!-- test: npx vitest run tests/url-base-prueba.test.ts -->
-- [ ] C9 — R-GUI-001: Con la variable vacía, `resolveChatEndpoint` devuelve la URL del catálogo.
+- [x] C9 — R-GUI-001: Con la variable vacía, `resolveChatEndpoint` devuelve la URL del catálogo.
       <!-- test: npx vitest run tests/url-base-prueba.test.ts -->
-- [ ] C10 — R-GUI-001: Sin la variable, `resolveChatEndpoint` devuelve las URL de catálogo de hoy.
+- [x] C10 — R-GUI-001: Sin la variable, `resolveChatEndpoint` devuelve las URL de catálogo de hoy.
       <!-- test: npx vitest run tests/anthropic-dialect.test.ts tests/responses-dialect.test.ts tests/url-base-prueba.test.ts -->
-- [ ] C11 — R-GUI-001: Con la variable, `callChat` entrega la petición al servidor local y devuelve su contenido.
+- [x] C11 — R-GUI-001: Con la variable, `callChat` entrega la petición al servidor local y devuelve su contenido.
       <!-- test: npx vitest run tests/url-base-prueba.test.ts -->
-- [ ] C12 — R-GUI-001: Con la variable, el servidor local no recibe la cabecera `authorization` aunque `callChat` reciba `apiKey`.
+- [x] C12 — R-GUI-001: Con la variable, el servidor local no recibe la cabecera `authorization` aunque `callChat` reciba `apiKey`.
       <!-- test: npx vitest run tests/url-base-prueba.test.ts -->
-- [ ] C13 — R-GUI-001: Con la variable, una petición del dialecto de Anthropic no lleva la cabecera `x-api-key`.
+- [x] C13 — R-GUI-001: Con la variable, una petición del dialecto de Anthropic no lleva la cabecera `x-api-key`.
       <!-- test: npx vitest run tests/url-base-prueba.test.ts -->
-- [ ] C14 — R-GUI-001: Con la variable, un 307 del servidor local hace fallar `callChat` con el código `TRANSPORT`.
+- [x] C14 — R-GUI-001: Con la variable, un 307 del servidor local hace fallar `callChat` con el código `TRANSPORT`.
       <!-- test: npx vitest run tests/url-base-prueba.test.ts -->
-- [ ] C15 — R-GUI-001: El destino de ese 307 no recibe ninguna petición.
+- [x] C15 — R-GUI-001: El destino de ese 307 no recibe ninguna petición.
       <!-- test: npx vitest run tests/url-base-prueba.test.ts -->
-- [ ] C16 — R-GUI-001: Sin la variable, la petición de `callChat` a OpenRouter lleva `Authorization: Bearer` con la clave.
+- [x] C16 — R-GUI-001: Sin la variable, la petición de `callChat` a OpenRouter lleva `Authorization: Bearer` con la clave.
       <!-- test: npx vitest run tests/url-base-prueba.test.ts -->
-- [ ] C17 — R-GUI-001: Sin la variable, las opciones que recibe `fetch` no incluyen `redirect`.
+- [x] C17 — R-GUI-001: Sin la variable, las opciones que recibe `fetch` no incluyen `redirect`.
       <!-- test: npx vitest run tests/url-base-prueba.test.ts -->
-- [ ] C18 — R-GUI-001: Con `VALMEN_BASE_URL_JEV`, `evaluateWithJev` llama a `<base>/decisions` en el servidor local.
+- [x] C18 — R-GUI-001: Con `VALMEN_BASE_URL_JEV`, `evaluateWithJev` llama a `<base>/decisions` en el servidor local.
       <!-- test: npx vitest run tests/url-base-prueba.test.ts -->
-- [ ] C19 — R-GUI-001: Con `VALMEN_BASE_URL_JEV`, la petición de jev no lleva la cabecera `authorization`.
+- [x] C19 — R-GUI-001: Con `VALMEN_BASE_URL_JEV`, la petición de jev no lleva la cabecera `authorization`.
       <!-- test: npx vitest run tests/url-base-prueba.test.ts -->
-- [ ] C20 — R-GUI-001: Con `VALMEN_BASE_URL_JEV` externa, `evaluateWithJev` falla con el código `TEST_URL_REJECTED`.
+- [x] C20 — R-GUI-001: Con `VALMEN_BASE_URL_JEV` externa, `evaluateWithJev` falla con el código `TEST_URL_REJECTED`.
       <!-- test: npx vitest run tests/url-base-prueba.test.ts -->
-- [ ] C21 — R-GUI-001: Con `VALMEN_BASE_URL_JEV` externa, `evaluateWithJev` no llama a `fetch`.
+- [x] C21 — R-GUI-001: Con `VALMEN_BASE_URL_JEV` externa, `evaluateWithJev` no llama a `fetch`.
       <!-- test: npx vitest run tests/url-base-prueba.test.ts -->
-- [ ] C22 — R-GUI-001: Sin la variable, jev sigue llamando a `DECISIONS_ENDPOINT`.
+- [x] C22 — R-GUI-001: Sin la variable, jev sigue llamando a `DECISIONS_ENDPOINT`.
       <!-- test: npx vitest run tests/gate-jev.test.ts -->
-- [ ] C23 — R-GUI-001: La compuerta `analysis` con el evaluador `cascade` y `VALMEN_BASE_URL_OPENROUTER` externa falla diciendo que la URL de prueba solo admite localhost.
+- [x] C23 — R-GUI-001: La compuerta `analysis` con el evaluador `cascade` y `VALMEN_BASE_URL_OPENROUTER` externa falla diciendo que la URL de prueba solo admite localhost.
       <!-- test: npx vitest run tests/url-base-prueba.test.ts -->
-- [ ] C24 — R-GUI-001: Ante ese rechazo la cascada no degrada: el doble de jev se llama cero veces.
+- [x] C24 — R-GUI-001: Ante ese rechazo la cascada no degrada: el doble de jev se llama cero veces.
       <!-- test: npx vitest run tests/url-base-prueba.test.ts -->
-- [ ] C25 — R-GUI-001: Ante ese rechazo la compuerta no escribe recibo.
+- [x] C25 — R-GUI-001: Ante ese rechazo la compuerta no escribe recibo.
       <!-- test: npx vitest run tests/url-base-prueba.test.ts -->
-- [ ] C26 — R-GUI-001: Con el evaluador `jev` y `VALMEN_BASE_URL_JEV` externa, la compuerta no degrada al juez: el doble del juez se llama cero veces.
+- [x] C26 — R-GUI-001: Con el evaluador `jev` y `VALMEN_BASE_URL_JEV` externa, la compuerta no degrada al juez: el doble del juez se llama cero veces.
       <!-- test: npx vitest run tests/url-base-prueba.test.ts -->
-- [ ] C27 — R-GUI-001: `docs/04-PROVEEDORES.md` documenta `VALMEN_BASE_URL_<TRANSPORTE>` con la regla de localhost.
+- [x] C27 — R-GUI-001: `docs/04-PROVEEDORES.md` documenta `VALMEN_BASE_URL_<TRANSPORTE>` con la regla de localhost.
       <!-- test: npx vitest run tests/url-base-prueba.test.ts -->
-- [ ] C28 — R-GUI-001: `docs/04-PROVEEDORES.md` documenta `VALMEN_BASE_URL_JEV`.
+- [x] C28 — R-GUI-001: `docs/04-PROVEEDORES.md` documenta `VALMEN_BASE_URL_JEV`.
       <!-- test: npx vitest run tests/url-base-prueba.test.ts -->
-- [ ] C29 — R-GUI-001: Las pruebas existentes de transportes, jev y cascada pasan con el cambio.
+- [x] C29 — R-GUI-001: Las pruebas existentes de transportes, jev y cascada pasan con el cambio.
       <!-- test: npx vitest run tests/anthropic-dialect.test.ts tests/responses-dialect.test.ts tests/gate-jev.test.ts tests/gate-cascade-fallo.test.ts tests/cascada-verificada.test.ts tests/cascada-productor-reintento.test.ts tests/evaluators.test.ts tests/routing.test.ts tests/recibo-motivos.test.ts tests/claude-cli.test.ts -->
-- [ ] C30 — R-GUI-001: El monorepo compila con el cambio.
+- [x] C30 — R-GUI-001: El monorepo compila con el cambio.
       <!-- test: npx tsc --build tsconfig.build.json -->
-- [ ] C31 — R-GUI-001: Las pruebas tipan contra el código nuevo.
+- [x] C31 — R-GUI-001: Las pruebas tipan contra el código nuevo.
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
-- [ ] C32 — R-GUI-001: La guarda de exportaciones sin uso no encuentra exportaciones nuevas ni entradas sobrantes.
+- [x] C32 — R-GUI-001: La guarda de exportaciones sin uso no encuentra exportaciones nuevas ni entradas sobrantes.
       <!-- test: node scripts/exports-sin-uso.mjs -->
 - [ ] C33 — R-GUI-001: La revisión de seguridad del diff no encuentra un camino por el que una credencial viaje con la URL de prueba activa.
       <!-- verify: manual -->
@@ -197,11 +197,62 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+Sigue `## Plan` sin desviaciones (pasos 1 a 8 hechos; el 9 es la revisión de seguridad de abajo).
+
+- `packages/credentials/src/endpoints.ts`: `TransportError` acepta `code` (`TRANSPORT_UNSUPPORTED` por defecto, `TEST_URL_REJECTED`); `testBaseUrlFor` (`:297`) valida con `new URL` y compara el `hostname` contra `HOSTS_DE_PRUEBA` (`:279`); `resolveChatEndpoint` (`:343`) gana el parámetro `env` y marca `testUrl: true` en las tres rutas.
+- `packages/credentials/src/chat.ts:196-203`: con `testUrl` la credencial es `""` sin resolver ninguna, `Authorization` se omite (`:267`) y los tres caminos pasan `redirect: "error"` (`:224`, `:247`, `:312`). `anthropic.ts:62,164` y `responses.ts:141,206` reenvían `redirect` solo si viene.
+- `packages/gate-jev/src/jev.ts:188-222`: `VALMEN_BASE_URL_JEV` (`<base>/decisions`), sin credencial ni `Authorization` y con `redirect: "error"`; sin la variable, `DECISIONS_ENDPOINT` como siempre.
+- `packages/engine/src/evaluators.ts:390-395`: `TEST_URL_REJECTED` entra en los códigos que la cascada no degrada; el comentario lo explica.
+- `docs/04-PROVEEDORES.md`: sección «1.4 URL base de prueba».
+- La única exportación nueva es `testBaseUrlFor`, consumida por `@valmen/gate-jev` y por la prueba; la línea base de exportaciones no cambió.
+
+Pruebas primero (EST-010): `tests/url-base-prueba.test.ts` se escribió antes que el código y se corrió en rojo sin implementación: C8 se reforzó para exigir también el código del rechazo, porque en la primera corrida pasaba en vacío (el error era un `TypeError` que no contenía el valor); con eso quedaron 29 en rojo de 35 (reglas de C1 a C9, C11 a C15, C18 a C21, C23 a C28 y los casos de un transporte que no se usa y de hosts equivalentes) y 6 en verde, que son las de regresión de lo que el cambio toca (C10 con proveedor desconocido y con `claude-code`, C16, C17, C16 de Anthropic y codex, C22). Todas las pruebas ya existentes siguieron en verde: ninguna se tocó. Dos pruebas se agregaron después del código (la redirección en los dialectos de Anthropic y Responses, y en jev, que los criterios no pedían): se comprobaron quitando a mano el `redirect` de `anthropic.ts`, `responses.ts` y `jev.ts`, y fallan; con el código restaurado pasan. También se comprobó por mutación que fallan C12, C14, C15 y la tabla de rechazos si se vuelve a enviar `Authorization`, se quita `redirect` en `callChat` o se valida el host por prefijo. Ninguna prueba hace una llamada de red ni usa una clave real.
+
+### Revisión de seguridad del diff (paso 9, criterio C33)
+
+La hizo un subagente revisor independiente (sin mi conclusión), con reproducciones sin red. Sin hallazgo en: credencial en los tres caminos de `callChat` y en jev con la URL de prueba activa; confusiones de parseo de URL (unos 75 valores, entre ellos `\`, `@`, `#`, `?`, IDN, IP decimal, hexadecimal y octal, `//`, tabulaciones; los aceptados se reconstruyen como `origin + pathname` y `Request` los resuelve a `127.0.0.1` o `localhost`); fuga del valor en mensajes y recibos; cambios de comportamiento sin la variable.
+
+Hallazgos, todos fuera del plan aprobado, **sin tocar y para decisión de la persona responsable**:
+
+- H1 (media): con la URL de prueba activa, la cascada y jev siguen degradando por `TRANSPORT`, `SERVER` o una respuesta mal formada (servidor local caído, un 307, un 5xx) hacia el servicio real, **con la clave real** si `options.apiKey` la trae: `evaluators.ts:390-405` (la cascada cae a jev) y `evaluators.ts:498-516` (jev cae al juez). Además el verificador de la cascada (`cascade.ts:336-342`, y el reintento con el proveedor de escalado en `cascade.ts:299`) llama a `evaluateWithJev` y solo queda local si `VALMEN_BASE_URL_JEV` también está definida. La clave no viaja al host de la variable, sino al proveedor de siempre: es el riesgo H3 del diagnóstico, que el plan dejó para FEATURE-CLI-PRUEBA-CASCADA-GUIONADA-20261010 (definir la variable de cada transporte de la cadena y la de jev). El arreglo mínimo que propone el revisor —no degradar mientras haya una `VALMEN_BASE_URL_*` activa y exigir todo o nada en la cadena— amplía el alcance aprobado y por eso no se hizo. Por esto C33 queda sin marcar: hoy «ninguna credencial viaja con la URL de prueba activa» vale para el transporte que tiene la variable, no para toda la cadena. §1.4 de la documentación dice «no viaja ninguna credencial» sin esa precisión; conviene ajustarla cuando se decida.
+- H2 (baja): `localhost` lo resuelve el sistema operativo y no está garantizado que sea loopback (H1 del diagnóstico, aceptado). Alternativa del revisor: devolver `http://127.0.0.1…` cuando el host sea `localhost`.
+- H3 (informativa): con `NODE_USE_ENV_PROXY=1`, `fetch` manda también la petición loopback al proxy salvo que `NO_PROXY` incluya `127.0.0.1` y `localhost`. No viaja credencial, pero sí el estado del ticket. Basta documentarlo.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Contrato de entrega para la persona responsable. Todo corre desde la raíz del worktree
+(`/Users/juanandrade/Desktop/ValmenHarness/.claude/worktrees/ticket-url-base-prueba`, rama
+`valmen/ticket-url-base-prueba`).
+
+Requisitos de ambiente: Node 24 con las dependencias del monorepo instaladas (`npm install` ya
+hecho). Sin red y sin claves: los servidores de prueba escuchan en `127.0.0.1` con puerto 0, las
+claves son literales falsos, `HOME` apunta a un directorio temporal y `fetch` global se sustituye
+por uno que rechaza cualquier host que no sea local. Las pruebas nuevas fijan y limpian las
+variables `VALMEN_BASE_URL_*` por su cuenta, así que una fijada en el shell no las afecta.
+
+| Qué | Comando | Resultado esperado |
+| --- | --- | --- |
+| Pruebas del ticket (C1 a C28) | `npx vitest run tests/url-base-prueba.test.ts` | 1 archivo, 37 pruebas, todas en verde |
+| Regresión de transportes, jev y cascada (C10, C22, C29) | `npx vitest run tests/anthropic-dialect.test.ts tests/responses-dialect.test.ts tests/gate-jev.test.ts tests/gate-cascade-fallo.test.ts tests/cascada-verificada.test.ts tests/cascada-productor-reintento.test.ts tests/evaluators.test.ts tests/routing.test.ts tests/recibo-motivos.test.ts tests/claude-cli.test.ts` | 10 archivos, todas en verde (310 pruebas) |
+| Compilación (C30) | `npx tsc --build tsconfig.build.json` | sin salida, código 0 |
+| Tipos de las pruebas (C31) | `npx tsc --noEmit -p tsconfig.json` | sin salida, 0 errores |
+| Exportaciones sin uso (C32) | `node scripts/exports-sin-uso.mjs` (o `npm run exports:check`) | «Sin exportaciones nuevas sin consumidor; la línea base tiene 443 entradas» |
+| Lint | `npx eslint packages/credentials packages/gate-jev packages/engine/src/evaluators.ts tests/url-base-prueba.test.ts` | sin salida |
+
+Validaciones manuales:
+
+1. (C33) Revisar la sección «Revisión de seguridad» de `## Implementación` y confirmar, leyendo
+   `git diff -- packages` de la rama, que no queda un camino por el que una credencial viaje con la
+   URL de prueba activa ni un host no local que pase la validación. Es el único criterio sin
+   anotación de comando: lo decide la persona responsable.
+2. Opcional, tras `npm run build`, con un ticket en `analyzed`:
+   `VALMEN_BASE_URL_OPENROUTER=https://example.com node packages/cli/dist/main.js gate analysis --id <ID> --evaluator cascade`
+   debe fallar con «la URL de prueba solo admite localhost» y sin recibo nuevo en
+   `.valmen/receipts/`. No la ejecutó el agente: la cubren C23 a C25 sobre `runGate`.
+
+Cobertura y limitaciones: las pruebas del dialecto de Responses usan un servidor SSE mínimo; el
+caso de `localhost` resuelto por el sistema operativo por `::1` (H1) no se prueba, queda como
+riesgo residual declarado en el diagnóstico.
 
 ## QA
 
@@ -230,7 +281,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": null,
+    "model": "claude-sonnet-5-5",
+    "reasoning_effort": null,
+    "notes": "Una sesión de subagente de implementación (fase implementation) para este solo ticket; la sesión no expone sus números de tokens ni de coste, así que no se declaran. Incluye un subagente revisor de seguridad (informó 210600 tokens y 289 s) cuyo gasto no se suma a una cifra de la sesión.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:subagente claude-sonnet-5-5 sin agregado de tokens expuesto a la sesión",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -303,6 +370,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-10",
+    "at": "2026-10-11T00:23:48.835Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-10",
+    "at": "2026-10-11T00:42:09.335Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-10",
+    "at": "2026-10-11T00:42:56.808Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
