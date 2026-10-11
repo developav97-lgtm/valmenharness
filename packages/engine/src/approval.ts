@@ -99,6 +99,7 @@ export type ApprovalLogEntry =
   | JourneyFinishedNotice
   | JourneyHandoffNotice
   | TestsReadyNotice
+  | DecisionNeededNotice
   | ApprovalBatch;
 
 /** Los gates (en el sentido de sujeto) cuyo código aprueba un plan y no una compuerta (R-JORN-004). */
@@ -134,6 +135,20 @@ export interface TestsReadyNotice {
   readonly kind: "tests-ready-notice";
   readonly ticketId: string;
   readonly cycle: number;
+  readonly notifiedAt: string;
+}
+
+/**
+ * El aviso de que un ticket entró a «Necesita tu decisión» (R-EPU-003).
+ *
+ * `entryEvent` es el id del evento de transición con que entró: una nueva entrada, con otro
+ * evento, es otro aviso, y la misma no se repite.
+ */
+interface DecisionNeededNotice {
+  readonly kind: "decision-needed-notice";
+  readonly ticketId: string;
+  readonly entryEvent: string;
+  readonly reason: string;
   readonly notifiedAt: string;
 }
 
@@ -494,6 +509,7 @@ export function readApprovalLog(paths: RegistryPaths): ApprovalLogEntry[] {
         valor.kind === "journey-finished-notice" ||
         valor.kind === "journey-handoff-notice" ||
         valor.kind === "tests-ready-notice" ||
+        valor.kind === "decision-needed-notice" ||
         valor.kind === "policy-close-notice" ||
         valor.kind === "approval-batch"
       ) {
@@ -555,6 +571,17 @@ export function pruebasListasAvisadas(paths: RegistryPaths): Set<string> {
     readApprovalLog(paths)
       .filter((entry): entry is TestsReadyNotice => entry.kind === "tests-ready-notice")
       .map((entry) => `${entry.ticketId}:${entry.cycle}`),
+  );
+}
+
+/** Los avisos de «Necesita tu decisión» ya entregados, como `ticket:evento`. */
+export function decisionesAvisadas(paths: RegistryPaths): Set<string> {
+  return new Set(
+    readApprovalLog(paths)
+      .filter(
+        (entry): entry is DecisionNeededNotice => entry.kind === "decision-needed-notice",
+      )
+      .map((entry) => `${entry.ticketId}:${entry.entryEvent}`),
   );
 }
 
@@ -659,6 +686,7 @@ export function ultimoIntento(
       e.kind === "journey-finished-notice" ||
       e.kind === "journey-handoff-notice" ||
       e.kind === "tests-ready-notice" ||
+      e.kind === "decision-needed-notice" ||
       e.kind === "policy-close-notice" ||
       e.kind === "approval-batch"
     )

@@ -4,7 +4,12 @@
  * Solo reúne del registro los dos hechos que `estadoPublico` recibe; la decisión es de la
  * función de `@valmen/core`.
  */
-import { type PublicStateResult, estadoPublico, parseTicket } from "@valmen/core";
+import {
+  type JsonObject,
+  type PublicStateResult,
+  estadoPublico,
+  parseTicket,
+} from "@valmen/core";
 import type { GateReceipt } from "@valmen/gate";
 
 import { elegibilidadDeAprobacion } from "./approval-eligibility.js";
@@ -42,4 +47,27 @@ export function estadoPublicoDelTicket(
       ...(ahora === undefined ? {} : { ahora }),
     }).elegible;
   return estadoPublico({ state, planWaitsForPerson, escalatedGatePending });
+}
+
+/** `Workflow: in_progress -> blocked.` → `blocked`. */
+const TRANSICION_RE = /^Workflow: [a-z_]+ -> ([a-z_]+)\.$/;
+
+/**
+ * El id del último evento de transición cuyo destino es `estado`, o `null` si no hay ninguno.
+ *
+ * Es la identidad de una entrada al estado (R-EPU-003): un ticket que sale y vuelve a entrar
+ * deja otro evento, y por eso es otro aviso.
+ */
+export function entradaAlEstado(
+  eventos: readonly JsonObject[],
+  estado: string,
+): string | null {
+  let entrada: string | null = null;
+  for (const evento of eventos) {
+    if (evento["action"] !== "ticket-transition") continue;
+    const details = typeof evento["details"] === "string" ? evento["details"] : "";
+    const match = TRANSICION_RE.exec(details);
+    if (match?.[1] === estado && typeof evento["id"] === "string") entrada = evento["id"];
+  }
+  return entrada;
 }
