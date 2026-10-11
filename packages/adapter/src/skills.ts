@@ -21,7 +21,7 @@
  */
 import { createHash } from "node:crypto";
 import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { fail } from "@valmen/core";
@@ -697,28 +697,34 @@ export function descripcionDeDeriva(deriva: readonly DerivaPublicada[]): string 
   ].join("\n");
 }
 
-/**
- * Instala en el proyecto las skills publicadas, y devuelve los ids que escribió.
- *
- * Idempotente: lo que ya coincide no se reescribe, para no cambiar la fecha de un
- * archivo que nadie modificó. Nunca toca una skill del proyecto —solo recorre los
- * ids publicados— ni `local.md`.
- *
- * **Pisa una copia editada a mano.** Es deliberado y es el otro lado del check: la
- * compuerta nombra la edición, y quien ejecuta `sync` acepta el reemplazo. Por eso
- * `sync --check` la nombra antes, en vez de dejar que la actualización la borre sin
- * aviso.
- */
-export function instalarPublicadas(root: string, dir: string = CATALOGO_DIR): string[] {
-  const escritas: string[] = [];
+/** Una escritura que `instalarPublicadas` haría: la ruta relativa, lo nuevo y lo que hay. */
+export interface EscrituraDePublicada {
+  readonly ruta: string;
+  readonly contenido: string;
+  /** Lo que hay hoy en disco, o `null` si el archivo no existe. */
+  readonly anterior: string | null;
+}
 
+/**
+ * Lo que `instalarPublicadas` escribiría, sin escribir: solo lectura.
+ *
+ * Es la misma comparación que la instalación, así que la vista previa de `sync`
+ * nombra exactamente lo que `sync` pisaría.
+ */
+export function escriturasDePublicadas(
+  root: string,
+  dir: string = CATALOGO_DIR,
+): EscrituraDePublicada[] {
+  const escrituras: EscrituraDePublicada[] = [];
   for (const skill of publicadas(dir)) {
     const ruta = copiaDelProyecto(root, skill.id);
-    let escrita = false;
-    if (!exists(ruta) || readFileSync(ruta, "utf8") !== skill.texto) {
-      mkdirSync(join(root, ".valmen", "skills", skill.id), { recursive: true });
-      writeFileSync(ruta, skill.texto, "utf8");
-      escrita = true;
+    const anterior = exists(ruta) ? readFileSync(ruta, "utf8") : null;
+    if (anterior !== skill.texto) {
+      escrituras.push({
+        ruta: relative(root, ruta),
+        contenido: skill.texto,
+        anterior,
+      });
     }
     for (const referencia of skill.referencias) {
       const destino = join(
@@ -729,14 +735,49 @@ export function instalarPublicadas(root: string, dir: string = CATALOGO_DIR): st
         "referencias",
         referencia.nombre,
       );
-      if (exists(destino) && readFileSync(destino, "utf8") === referencia.contenido)
-        continue;
-      mkdirSync(join(destino, ".."), { recursive: true });
-      writeFileSync(destino, referencia.contenido, "utf8");
-      escrita = true;
+      const previa = exists(destino) ? readFileSync(destino, "utf8") : null;
+      if (previa === referencia.contenido) continue;
+      escrituras.push({
+        ruta: relative(root, destino),
+        contenido: referencia.contenido,
+        anterior: previa,
+      });
     }
-    if (escrita) escritas.push(skill.id);
+  }
+  return escrituras;
+}
+
+/**
+ * Instala en el proyecto las skills publicadas, y devuelve los ids que escribió.
+ *
+ * Idempotente: lo que ya coincide no se reescribe, para no cambiar la fecha de un
+ * archivo que nadie modificó. Nunca toca una skill del proyecto —solo recorre los
+ * ids publicados— ni `local.md`.
+ *
+ * **Pisa una copia editada a mano.** Es deliberado y es el otro lado del check: la
+ * compuerta nombra la edición, y quien ejecuta `sync` acepta el reemplazo. Por eso
+ * `sync --check` la nombra antes, y `antesDeSobrescribir` deja a quien llama
+ * respaldar la versión que está por perderse.
+ */
+export function instalarPublicadas(
+  root: string,
+  dir: string = CATALOGO_DIR,
+  opciones: {
+    readonly antesDeSobrescribir?: (rutaRelativa: string, anterior: string) => void;
+  } = {},
+): string[] {
+  const escritas = new Set<string>();
+
+  for (const escritura of escriturasDePublicadas(root, dir)) {
+    if (escritura.anterior !== null) {
+      opciones.antesDeSobrescribir?.(escritura.ruta, escritura.anterior);
+    }
+    const destino = join(root, escritura.ruta);
+    mkdirSync(join(destino, ".."), { recursive: true });
+    writeFileSync(destino, escritura.contenido, "utf8");
+    // `.valmen/skills/<id>/...`: el id es el tercer segmento.
+    escritas.add(escritura.ruta.split("/")[2] as string);
   }
 
-  return escritas;
+  return [...escritas];
 }

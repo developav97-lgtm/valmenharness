@@ -237,7 +237,7 @@ Comandos:
                             invariante cuando el corte es la pausa.
   migrate [--dry-run]       Lleva el registro al esquema vigente y limpia del
                             routing los roles que el harness ya no ejecuta.
-  sync [--check]            Proyecta .valmen/ a AGENTS.md.
+  sync [--check|--dry-run]  Proyecta .valmen/ a AGENTS.md.
   adopt [--dry-run] [--machine-id <id>] [--codegraph]
                             Incorpora el harness a un proyecto existente. Ofrece
                             CodeGraph; con --codegraph lo indexa (init o sync), solo
@@ -1450,12 +1450,18 @@ export function dispatch(options: Options): CommandResult {
         codegraph: options.flags["codegraph"] === true,
       });
 
-    case "sync":
-      return syncProject(
-        options.root,
-        basename(options.root),
-        options.flags["check"] === true,
-      );
+    case "sync": {
+      const dryRun = options.flags["dry-run"] === true;
+      const check = options.flags["check"] === true;
+      if (dryRun && check) {
+        return {
+          stdout: "",
+          stderr: "`sync --check` y `sync --dry-run` son excluyentes: elija uno.",
+          exitCode: EXIT_SCHEMA,
+        };
+      }
+      return syncProject(options.root, basename(options.root), check, { dryRun });
+    }
 
     case "feature":
       // `feature <sub> [args]` es asíncrono —`decompose` habla con un

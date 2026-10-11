@@ -6,6 +6,9 @@ coverage/
 # Estado derivado del harness: siempre reconstruible con `valmen index`.
 .valmen/state/
 
+# Respaldos de `valmen sync`: pueden contener lo que una persona editó a mano y no quiso commitear.
+.valmen/backups/
+
 # Lo que escribe `scripts/programar-tickets.mjs`: los prompts y los avisos de una tanda
 # agendada, que se regeneran al programar la siguiente. Los jobs ya quedaron creados.
 .valmen/programar/

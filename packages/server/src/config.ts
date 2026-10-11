@@ -29,6 +29,7 @@ import {
   projectFiles,
   readList,
   readString,
+  crearRespaldo,
 } from "@valmen/adapter";
 import { atomicWrite, fail, toFailure } from "@valmen/core";
 
@@ -279,6 +280,8 @@ export interface SyncOutcome {
   readonly written: readonly string[];
   /** Los que ya estaban al día: reescribirlos no cambiaría nada. */
   readonly unchanged: readonly string[];
+  /** Carpeta (relativa) con la versión anterior de lo que se pisó, o `null` si no hubo. */
+  readonly backup: string | null;
 }
 
 /**
@@ -299,20 +302,33 @@ export function syncProjections(root: string): SyncOutcome {
       error: toFailure(caught).message,
       written: [],
       unchanged: [],
+      backup: null,
     };
   }
+
+  // Primero se respalda lo que cambia y se cierra el manifiesto; recién entonces
+  // se escribe: si el respaldo falla, no se pisó nada (R-SYN-002).
+  const respaldo = crearRespaldo(root, { origen: "mission-control" });
+  const enDiscoDe = new Map<string, string | null>();
+  for (const archivo of proyectados) {
+    let enDisco: string | null = null;
+    try {
+      enDisco = readFileSync(join(root, archivo.path), "utf8");
+    } catch {
+      enDisco = null;
+    }
+    enDiscoDe.set(archivo.path, enDisco);
+    if (enDisco !== null && enDisco !== archivo.content) {
+      respaldo.guardar(archivo.path, enDisco);
+    }
+  }
+  const backup = respaldo.cerrar();
 
   const written: string[] = [];
   const unchanged: string[] = [];
   for (const archivo of proyectados) {
     const ruta = join(root, archivo.path);
-    let enDisco: string | null = null;
-    try {
-      enDisco = readFileSync(ruta, "utf8");
-    } catch {
-      enDisco = null;
-    }
-    if (enDisco === archivo.content) {
+    if (enDiscoDe.get(archivo.path) === archivo.content) {
       unchanged.push(archivo.path);
       continue;
     }
@@ -323,7 +339,7 @@ export function syncProjections(root: string): SyncOutcome {
     written.push(archivo.path);
   }
 
-  return { ok: true, error: "", written, unchanged };
+  return { ok: true, error: "", written, unchanged, backup };
 }
 
 /** Un valor de la configuración como mapa, o `null` si no lo es. */
