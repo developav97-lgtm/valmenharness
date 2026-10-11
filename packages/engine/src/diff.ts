@@ -21,6 +21,11 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { esRegistroDelTicket } from "./review-risk.js";
+import {
+  cambiosDeRuta,
+  desentrecomillarRutaDeGit,
+  rutasQueCuentan,
+} from "./rutas-tocadas.js";
 
 /** Un tramo contiguo de líneas agregadas dentro de un archivo. */
 export interface AddedBlock {
@@ -48,6 +53,26 @@ export function git(root: string, args: readonly string[]): string | null {
   return resultado.status === 0 ? (resultado.stdout ?? "") : null;
 }
 
+/** El ejecutor de git de este módulo, con la forma que piden las rutas tocadas. */
+function ejecutorDeGit(root: string) {
+  return (args: readonly string[]) => {
+    const r = spawnSync("git", [...args], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      maxBuffer: 32 * 1024 * 1024,
+    });
+    return { status: r.status ?? 1, stdout: r.stdout ?? "", stderr: r.stderr ?? "" };
+  };
+}
+
+/** Los archivos nuevos sin seguimiento, con la ruta cruda (`-z`: sin comillas ni escapes). */
+function archivosNuevos(root: string): string[] {
+  return (git(root, ["ls-files", "--others", "--exclude-standard", "-z"]) ?? "")
+    .split("\0")
+    .filter((ruta) => ruta !== "");
+}
+
 /**
  * Los archivos que git reporta como cambiados o nuevos.
  *
@@ -56,16 +81,17 @@ export function git(root: string, args: readonly string[]): string | null {
  * trabajo se detendría por algo que no es de quien está trabajando.
  */
 export function pendingFiles(root: string, staged = false): string[] {
-  const rango = staged ? ["--cached"] : [];
-  const modificados = git(root, ["diff", "--name-only", ...rango, "HEAD"]) ?? "";
-  const nuevos = staged
-    ? []
-    : (git(root, ["ls-files", "--others", "--exclude-standard"]) ?? "").split("\n");
+  let modificados: string[] = [];
+  try {
+    modificados = rutasQueCuentan(
+      cambiosDeRuta(ejecutorDeGit(root), "HEAD", staged ? ["--cached"] : []),
+    );
+  } catch {
+    // Sin HEAD o fuera de un repositorio no hay nada que comparar.
+  }
+  const nuevos = staged ? [] : archivosNuevos(root);
 
-  return [...new Set([...modificados.split("\n"), ...nuevos])]
-    .map((linea) => linea.trim())
-    .filter((linea) => linea !== "")
-    .sort();
+  return [...new Set([...modificados, ...nuevos])].filter((ruta) => ruta !== "").sort();
 }
 
 /**
@@ -77,12 +103,22 @@ export function pendingFiles(root: string, staged = false): string[] {
  */
 export function pendingChanges(root: string, staged = false): PendingChanges {
   const rango = staged ? ["--cached"] : [];
-  const diff = git(root, ["diff", "--unified=0", "--no-color", ...rango, "HEAD"]);
+  const diff = git(root, [
+    "-c",
+    "core.quotePath=false",
+    "diff",
+    "--unified=0",
+    "--no-color",
+    ...rango,
+    "HEAD",
+  ]);
   const bloques: AddedBlock[] = [];
   const archivos = new Set<string>();
 
   if (diff !== null) {
     let path = "";
+    let rutaVieja = "";
+    let enCabecera = false;
     let enBloque = false;
     let inicio = 0;
     let lineas: string[] = [];
@@ -96,15 +132,37 @@ export function pendingChanges(root: string, staged = false): PendingChanges {
     };
 
     for (const renglon of diff.split("\n")) {
-      if (renglon.startsWith("+++ b/")) {
+      if (renglon.startsWith("diff --git ")) {
         cerrar();
-        path = renglon.slice(6);
-        archivos.add(path);
+        path = "";
+        rutaVieja = "";
+        enCabecera = true;
+        continue;
+      }
+      if (enCabecera && renglon.startsWith("--- ")) {
+        // La ruta vieja: un borrado (`+++ /dev/null`) no trae otra y es lo que se registra.
+        rutaVieja = desentrecomillarRutaDeGit(renglon.slice(4).replace(/\t$/, "")).replace(
+          /^a\//,
+          "",
+        );
+        continue;
+      }
+      if (enCabecera && renglon.startsWith("+++ ")) {
+        cerrar();
+        const destino = desentrecomillarRutaDeGit(renglon.slice(4).replace(/\t$/, ""));
+        if (destino === "/dev/null") {
+          path = "";
+          if (rutaVieja !== "") archivos.add(rutaVieja);
+        } else {
+          path = destino.replace(/^b\//, "");
+          archivos.add(path);
+        }
         continue;
       }
       const encabezado = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(renglon);
       if (encabezado !== null) {
         cerrar();
+        enCabecera = false;
         inicio = Number.parseInt(encabezado[1] as string, 10);
         enBloque = true;
         continue;
@@ -128,10 +186,7 @@ export function pendingChanges(root: string, staged = false): PendingChanges {
   // qué diferenciarse—, así que se lee entero. Es donde más probable es que haya
   // algo: nadie revisa lo que acaba de escribir.
   if (!staged) {
-    for (const path of (git(root, ["ls-files", "--others", "--exclude-standard"]) ?? "")
-      .split("\n")
-      .map((linea) => linea.trim())
-      .filter((linea) => linea !== "")) {
+    for (const path of archivosNuevos(root)) {
       archivos.add(path);
       let contenido: string;
       try {

@@ -20,6 +20,7 @@ import {
 } from "./qa-authorization.js";
 import { elegibilidadQa } from "./qa-eligibility.js";
 import { modoEfectivoDeQaAgent } from "./qa-shadow.js";
+import { cambiosDeRuta, rutasQueCuentan } from "./rutas-tocadas.js";
 import { transition } from "./transition.js";
 
 export interface CierrePorPolitica {
@@ -88,9 +89,12 @@ export function cerrarQaPorPolitica(request: {
   }
 
   // 2. Sigue siendo elegible, con el diff desde el base del recibo.
-  const diff = git(["diff", "--name-only", `${recibo.base}..${head}`])
-    .split("\n")
-    .filter((l) => l !== "");
+  const diff = rutasQueCuentan(
+    cambiosDeRuta(
+      (argumentos) => ejecutarGitDeQaAgent(argumentos, paths.root, request.ejecutarGit),
+      `${recibo.base}..${head}`,
+    ),
+  );
   const elegibilidad = elegibilidadQa({ paths, ticketId, ahora, archivosDelDiff: diff });
   if (!elegibilidad.elegible) {
     fail(

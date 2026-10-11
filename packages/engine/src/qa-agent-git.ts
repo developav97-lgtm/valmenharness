@@ -9,6 +9,8 @@ import { spawnSync } from "node:child_process";
 
 import { DENIED_GIT_FLAGS, EXIT_INVARIANT, fail } from "@valmen/core";
 
+import { ARGUMENTOS_DE_RUTAS_TOCADAS } from "./rutas-tocadas.js";
+
 export type EjecutorGitQa = (
   argumentos: readonly string[],
   cwd: string,
@@ -34,9 +36,10 @@ export function motivoDeGitDeQaAgent(argumentos: readonly string[]): string | nu
         ? null
         : "git rev-parse admite una sola referencia.";
     case "diff":
-      return resto[0] === "--name-only" && resto.length >= 2 && resto.length <= 3
+      return resto.length === ARGUMENTOS_DE_RUTAS_TOCADAS.length &&
+        ARGUMENTOS_DE_RUTAS_TOCADAS.slice(1).every((a, i) => resto[i] === a)
         ? null
-        : "git diff solo se admite como `--name-only [--diff-filter=A] <rango>`.";
+        : `git diff solo se admite como \`${ARGUMENTOS_DE_RUTAS_TOCADAS.slice(1).join(" ")} <rango>\`.`;
     case "show":
       return resto.length === 1 && /^[0-9a-f]{7,64}:[^\s]+$/.test(resto[0]!)
         ? null

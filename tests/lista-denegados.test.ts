@@ -115,13 +115,16 @@ describe("el motor no cambia", () => {
       const bandera = (b: string): string =>
         `La bandera ${b} no está permitida a qa-agent.`;
       const filas: readonly Fila[] = [
-        [["diff", "--name-only", "--force"], bandera("--force")],
-        [["diff", "--name-only", "-f"], bandera("-f")],
-        [["diff", "--name-only", "--force-with-lease"], null],
-        [["diff", "--name-only", "--hard"], bandera("--hard")],
-        [["diff", "--name-only", "--no-verify"], bandera("--no-verify")],
-        [["diff", "--name-only", "--amend"], bandera("--amend")],
-        [["diff", "--name-only", "-D"], null],
+        [["diff", "--name-status", "-z", "-M", "-C", "--force"], bandera("--force")],
+        [["diff", "--name-status", "-z", "-M", "-C", "-f"], bandera("-f")],
+        [["diff", "--name-status", "-z", "-M", "-C", "--force-with-lease"], null],
+        [["diff", "--name-status", "-z", "-M", "-C", "--hard"], bandera("--hard")],
+        [
+          ["diff", "--name-status", "-z", "-M", "-C", "--no-verify"],
+          bandera("--no-verify"),
+        ],
+        [["diff", "--name-status", "-z", "-M", "-C", "--amend"], bandera("--amend")],
+        [["diff", "--name-status", "-z", "-M", "-C", "-D"], null],
         [["worktree", "remove", "--force", CARPETA], null],
         [["worktree", "remove", "-f", CARPETA], bandera("-f")],
         [["worktree", "add", "--detach", "-D", "abc1234"], null],

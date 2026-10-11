@@ -16,6 +16,7 @@ import { findAllTickets, indexPath, toRelative, type RegistryPaths } from "./dis
 import { renderIndex } from "./index-file.js";
 import { RAMA_BASE, estadoDelArbolDeTrabajo, ramaActual } from "./integration-commit.js";
 import { type EjecutorDeGit, motivoDeArchivoProhibido } from "./integration-rules.js";
+import { cambiosDeRuta, rutasQueCuentan } from "./rutas-tocadas.js";
 import { ejecutarGitDeIntegracion } from "./worktree-integracion-git.js";
 import {
   type EjecutorDeProceso,
@@ -104,10 +105,14 @@ export function integrarWorktree(request: IntegrarRequest): WorktreeIntegrado {
     );
   }
 
-  const diferencia = g(root, "diff", "--name-only", "-z", `${RAMA_BASE}...${rama}`);
-  if (diferencia.status !== 0)
-    fail(`git diff falló: ${diferencia.stderr.trim()}`, EXIT_INVARIANT);
-  const archivosDeLaRama = diferencia.stdout.split("\0").filter((a) => a !== "");
+  let archivosDeLaRama: string[];
+  try {
+    archivosDeLaRama = rutasQueCuentan(
+      cambiosDeRuta((argumentos) => g(root, ...argumentos), `${RAMA_BASE}...${rama}`),
+    );
+  } catch (error) {
+    fail((error as Error).message, EXIT_INVARIANT);
+  }
   const prohibidos = archivosDeLaRama
     .map(motivoDeArchivoProhibido)
     .filter((m): m is string => m !== null);

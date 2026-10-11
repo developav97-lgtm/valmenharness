@@ -18,6 +18,7 @@ import { scanDrift } from "./drift.js";
 import { type EjecutorDeGit, ejecutarGitPermitido } from "./integration-rules.js";
 import { categoriasDeRuta } from "./path-categories.js";
 import { autorizacionQueCubre, cupoRestante } from "./qa-authorization.js";
+import { cambiosDeRuta, rutasQueCuentan } from "./rutas-tocadas.js";
 import { scanPendingChanges } from "./secrets.js";
 
 /** Los tipos que nunca son elegibles, aunque una autorización los listara. */
@@ -33,22 +34,18 @@ export function rutaProhibidaParaQaAgente(
   return categoriasDeRuta(normal)[0]?.nombre ?? null;
 }
 
-/** Los archivos que cambió el commit entregado respecto de la base, por la lista cerrada de git. */
+/** Los archivos que toca el commit entregado respecto de la base (con el origen de un renombre), por la lista cerrada de git. */
 export function archivosDelDiff(
   root: string,
   base: string,
   ejecutor?: EjecutorDeGit,
 ): string[] {
-  const salida = ejecutarGitPermitido(
-    root,
-    ["diff", "--name-only", `${base}..HEAD`],
-    ejecutor,
+  return rutasQueCuentan(
+    cambiosDeRuta(
+      (argumentos) => ejecutarGitPermitido(root, argumentos, ejecutor),
+      `${base}..HEAD`,
+    ),
   );
-  if (salida.status !== 0) throw new Error(`git diff falló: ${salida.stderr.trim()}`);
-  return salida.stdout
-    .split("\n")
-    .map((l) => l.trim())
-    .filter((l) => l !== "");
 }
 
 /** Los scripts que nombran los comandos de `test-commands`. */

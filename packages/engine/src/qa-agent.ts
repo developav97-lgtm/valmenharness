@@ -27,6 +27,7 @@ import {
   registrarReciboQaAgent,
 } from "./qa-agent-receipt.js";
 import { elegibilidadQa, scriptsDeComandos } from "./qa-eligibility.js";
+import { cambiosDeRuta, rutasQueCuentan } from "./rutas-tocadas.js";
 
 export interface EjecucionDeComando {
   readonly status: number;
@@ -107,15 +108,8 @@ export function correrQaAgent(request: QaAgentRequest): ResultadoQaAgent {
   if (ubicado === undefined) throw new Error(`No existe el ticket ${ticketId}.`);
   const ticket = parseTicket(ubicado.text);
 
-  const lineasDelDiff = (filtro: string[]): string[] => {
-    const r = git(["diff", "--name-only", ...filtro, `${base}..${delivered}`]);
-    if (r.status !== 0) throw new Error(`git diff falló: ${r.stderr.trim()}`);
-    return r.stdout
-      .split("\n")
-      .map((l) => l.trim())
-      .filter((l) => l !== "");
-  };
-  const archivosDelDiff = lineasDelDiff([]);
+  const cambiosDelDiff = cambiosDeRuta(git, `${base}..${delivered}`);
+  const archivosDelDiff = rutasQueCuentan(cambiosDelDiff);
 
   const cerrar = (
     verdict: "approve" | "block",
@@ -262,7 +256,10 @@ export function correrQaAgent(request: QaAgentRequest): ResultadoQaAgent {
     }
 
     if (esBugfix) {
-      const nuevas = lineasDelDiff(["--diff-filter=A"]).filter((f) => esArchivoDePrueba(f));
+      const nuevas = cambiosDelDiff
+        .filter((c) => c.estado === "A" || c.estado === "C")
+        .map((c) => c.ruta)
+        .filter((f) => esArchivoDePrueba(f));
       const referidos = checks.filter((c) =>
         (c.args ?? []).some((a) => nuevas.includes(a)),
       );

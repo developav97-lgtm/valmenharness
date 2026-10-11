@@ -19,7 +19,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { runGate } from "../packages/engine/src/gate.js";
 import { readReceipts } from "../packages/engine/src/receipts.js";
 import {
-  TOPE_DE_CRITERIOS,
+  TOPE_DE_CRITERIOS_HEREDADO,
   criteriosCitados,
   decidirCriterioEnCodigo,
   reviewBeforeGate,
@@ -450,7 +450,7 @@ describe("el tope cuenta afirmaciones", () => {
   }
 
   it("C21 el precheck compara contra el tope de 40 la suma de afirmaciones de los criterios", () => {
-    expect(TOPE_DE_CRITERIOS).toBe(40);
+    expect(TOPE_DE_CRITERIOS_HEREDADO).toBe(40);
     // 21 criterios son menos que 40 líneas, pero 42 afirmaciones.
     expect(revisar(Array.from({ length: 21 }, (_, i) => compuesto(i + 1)))).toHaveLength(1);
     // 20 de dos afirmaciones son exactamente 40: no pasan el tope.
@@ -486,6 +486,6 @@ describe("el tope cuenta afirmaciones", () => {
   it("C25 el mensaje de `mas_criterios_que_el_tope` dice cuántas afirmaciones contó", () => {
     const [hallazgo] = revisar(Array.from({ length: 45 }, (_, i) => atomico(i + 1)));
     expect(hallazgo?.message).toContain("45 afirmaciones en 45 criterio(s)");
-    expect(hallazgo?.message).toContain(`el tope de ${TOPE_DE_CRITERIOS}`);
+    expect(hallazgo?.message).toContain(`el tope de ${TOPE_DE_CRITERIOS_HEREDADO}`);
   });
 });
