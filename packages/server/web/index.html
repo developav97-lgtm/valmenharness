@@ -1569,6 +1569,15 @@
         color: var(--tenue);
         line-height: 1.5;
       }
+      .tarjeta-dato-cobertura {
+        margin-top: 6px;
+        padding-top: 6px;
+        border-top: 1px solid var(--borde);
+      }
+      .tarjeta-dato-cobertura ul {
+        margin: 4px 0 0;
+        padding-left: 18px;
+      }
       .lista-criterios {
         margin: 0;
         padding-left: 20px;
@@ -5180,8 +5189,12 @@
         ];
         for (const [titulo, items] of bloques) {
           const caja = acordeon(titulo, `${items.length}`);
+          const construir =
+            titulo === "QA"
+              ? (registro) => tarjetaCicloQa(registro, items.indexOf(registro))
+              : tarjetaDato;
           caja.cuerpo.append(
-            tarjetasDe(items, tarjetaDato, `Sin registros en ${titulo.toLowerCase()}.`),
+            tarjetasDe(items, construir, `Sin registros en ${titulo.toLowerCase()}.`),
           );
           cont.append(caja.caja);
         }
@@ -6101,6 +6114,30 @@
           }
           caja.append(el("div", `${clave}: ${String(valor)}`, "tarjeta-dato-nota"));
         }
+        return caja;
+      }
+
+      /**
+       * La tarjeta de una entrada de QA. La entrada impar cierra el ciclo y es la única
+       * que puede declarar `not_covered`: se lista cada elemento, «Todo cubierto» si la
+       * lista es vacía y «Sin cubrir: sin declarar» si el cierre no trae el campo.
+       */
+      function tarjetaCicloQa(registro, indice) {
+        const { not_covered: noCubierto, ...resto } = registro;
+        const caja = tarjetaDato(resto);
+        if (indice % 2 === 0) return caja;
+        const cobertura = el("div", undefined, "tarjeta-dato-nota tarjeta-dato-cobertura");
+        if (!Array.isArray(noCubierto)) {
+          cobertura.append(el("strong", "Sin cubrir: sin declarar"));
+        } else if (noCubierto.length === 0) {
+          cobertura.append(el("strong", "Todo cubierto"));
+        } else {
+          cobertura.append(el("strong", "Sin cubrir"));
+          const lista = el("ul");
+          for (const elemento of noCubierto) lista.append(el("li", String(elemento)));
+          cobertura.append(lista);
+        }
+        caja.append(cobertura);
         return caja;
       }
 

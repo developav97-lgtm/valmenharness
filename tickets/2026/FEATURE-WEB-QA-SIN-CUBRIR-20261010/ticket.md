@@ -4,7 +4,7 @@ id: FEATURE-WEB-QA-SIN-CUBRIR-20261010
 title: La vista del ticket muestra lo no cubierto por ciclo
 type: FEATURE
 module: WEB
-workflow_status: in_progress
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -76,19 +76,19 @@ Ninguno.
 
 ## Criterios de aceptación
 
-- [ ] C1 (R-QAC-003): Un cierre con dos elementos sin cubrir pinta cada elemento como un ítem de lista en la tarjeta de ese cierre.
+- [x] C1 (R-QAC-003): Un cierre con dos elementos sin cubrir pinta cada elemento como un ítem de lista en la tarjeta de ese cierre.
       <!-- test: npx vitest run tests/qa-sin-cubrir-vista.test.ts -->
-- [ ] C2 (R-QAC-003): La tarjeta de un cierre con elementos sin cubrir ya no pinta el resumen «not_covered: 2 elemento(s)».
+- [x] C2 (R-QAC-003): La tarjeta de un cierre con elementos sin cubrir ya no pinta el resumen «not_covered: 2 elemento(s)».
       <!-- test: npx vitest run tests/qa-sin-cubrir-vista.test.ts -->
-- [ ] C3 (R-QAC-003): Un cierre con `not_covered` vacío pinta «Todo cubierto» en su tarjeta.
+- [x] C3 (R-QAC-003): Un cierre con `not_covered` vacío pinta «Todo cubierto» en su tarjeta.
       <!-- test: npx vitest run tests/qa-sin-cubrir-vista.test.ts -->
-- [ ] C4 (R-QAC-003): Un cierre sin la clave `not_covered` pinta «Sin cubrir: sin declarar» en su tarjeta.
+- [x] C4 (R-QAC-003): Un cierre sin la clave `not_covered` pinta «Sin cubrir: sin declarar» en su tarjeta.
       <!-- test: npx vitest run tests/qa-sin-cubrir-vista.test.ts -->
-- [ ] C5 (R-QAC-003): La tarjeta de una entrada que abre un ciclo no pinta ninguna línea de cobertura.
+- [x] C5 (R-QAC-003): La tarjeta de una entrada que abre un ciclo no pinta ninguna línea de cobertura.
       <!-- test: npx vitest run tests/qa-sin-cubrir-vista.test.ts -->
-- [ ] C6 (R-QAC-003): Con dos ciclos cerrados, cada lista aparece en la tarjeta de su propio cierre.
+- [x] C6 (R-QAC-003): Con dos ciclos cerrados, cada lista aparece en la tarjeta de su propio cierre.
       <!-- test: npx vitest run tests/qa-sin-cubrir-vista.test.ts -->
-- [ ] C7 (R-QAC-003): Un elemento con marcado HTML se pinta como texto literal, sin crear nodos.
+- [x] C7 (R-QAC-003): Un elemento con marcado HTML se pinta como texto literal, sin crear nodos.
       <!-- test: npx vitest run tests/qa-sin-cubrir-vista.test.ts -->
 - [ ] C8: Un arreglo no vacío de un registro de Evidencia sigue pintándose como «N elemento(s)».
       <!-- test: npx vitest run tests/qa-sin-cubrir-vista.test.ts -->
@@ -109,11 +109,17 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+- `packages/server/web/index.html`: nueva `tarjetaCicloQa(registro, indice)` junto a `tarjetasDe`; llama a `tarjetaDato` con el registro sin `not_covered` y, en la entrada impar (la que cierra), agrega dentro de la tarjeta la caja `tarjeta-dato-cobertura`: «Sin cubrir» con un `li` por elemento (texto con `el`, sin `innerHTML`), «Todo cubierto» si la lista es vacía, «Sin cubrir: sin declarar» si falta la clave. `vistaTicket` usa esa tarjeta solo para el bloque QA; los demás bloques siguen con `tarjetaDato`.
+- Estilos `.tarjeta-dato-cobertura` con `var(--borde)`; sin colores escritos a mano.
+- `tests/qa-sin-cubrir-vista.test.ts` (nuevo): una prueba parametrizada por R-QAC-003 (seis casos) y una de regresión de `tarjetaDato` (Evidencia).
+- Ninguna prueba existente se editó.
 
 ## Pruebas
 
-Pendiente de ejecución.
+- Rojo previo (antes de implementar): `npx vitest run tests/qa-sin-cubrir-vista.test.ts` dio 5 fallidas y 2 pasadas (las dos que afirman ausencia: la entrada que abre y la regresión de Evidencia).
+- Directorio: raíz del worktree/repositorio. Comando: `npx vitest run tests/qa-sin-cubrir-vista.test.ts tests/interfaz-ejecutable.test.ts tests/firma-de-bloqueo-pantalla.test.ts tests/estaticos-web.test.ts` (requiere `npm run build` antes: el verificador compara `dist/web` con la fuente). Resultado esperado: 4 archivos, 36 pruebas en verde. Además `node scripts/verificar-interfaz.mjs packages/server/web/index.html` («Interfaz verificada.»), `npx tsc --noEmit -p .`, `node scripts/exports-sin-uso.mjs`.
+- Validación manual (C10, C11, C12), a cargo del responsable: desde un registro con un ciclo cerrado con `valmen qa-close --not-covered "a" --not-covered "b"` y otro `--all-covered`, `valmen serve --port 4310`, abrir `#/ticket/<ID>` y el acordeón «QA»: se ven los dos elementos bajo el cierre y «Todo cubierto» bajo el segundo; en un ticket con ciclo anterior (p. ej. FEATURE-ENGINE-QA-SIN-CUBRIR-20261010) «Sin cubrir: sin declarar»; repetir en modo oscuro.
+- Limitación: el agente no pudo levantar el servidor de desarrollo con `preview_start` (la herramienta lee `.claude/launch.json` del checkout principal, que no se toca) y no se usó Bash para servidores; C10–C12 y las capturas quedan sin verificar. Hay un registro de prueba armado con comandos reales en el scratchpad de la sesión (`reg-prueba`, ticket FEATURE-WEB-PRUEBAQA-20261011).
 
 ## QA
 
@@ -142,7 +148,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Sesión de subagente sonnet sin acceso a sus números de consumo.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:subagente-implementacion",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -215,6 +237,24 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:51:21.496Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:51:22.051Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
