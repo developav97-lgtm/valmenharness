@@ -379,13 +379,21 @@ async function runSemanticEnTandas(
       return await runSemanticEnTandasDe(chosen, options);
     } catch (caught) {
       const error = caught as { code?: string; message?: string };
-      // Un fallo de credencial no se tapa con otro evaluador: hay que verlo. Cualquier otro
+      // Un fallo de credencial no se tapa con otro evaluador: hay que verlo, y tampoco el rechazo de
+      // una URL de prueba que no es local (`TEST_URL_REJECTED`), que es una vía para desviar claves
+      // y no una indisponibilidad: degradar a jev llamaría al servicio real. Cualquier otro
       // fallo de la cascada degrada al evaluador por defecto. El fallo de salida estructurada
       // del productor es intermitente (medido el 2026-10-09: 1 de 4 compuertas y 2 de 8
       // llamadas), no determinista: `verifiedCascade` ya lo reintentó una vez con el modelo de
       // escalado, así que si el error llega hasta acá el reintento también falló y la caída a
       // jev es el último recurso, sin una tercera llamada.
-      if (error.code === "AUTH" || error.code === "CREDENTIAL_MISSING") throw caught;
+      if (
+        error.code === "AUTH" ||
+        error.code === "CREDENTIAL_MISSING" ||
+        error.code === "TEST_URL_REJECTED"
+      ) {
+        throw caught;
+      }
       const respaldo = await runSemanticEnTandasDe("jev", options);
       return {
         ...respaldo,

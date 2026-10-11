@@ -188,11 +188,19 @@ export async function callChat(options: ChatOptions): Promise<ChatResult> {
   const endpoint = resolveChatEndpoint(proveedor, options.model);
   const extra = extraHeaders(proveedor);
 
+  // Con la URL de prueba activa (`VALMEN_BASE_URL_<ID>`) no viaja ninguna credencial, ni la que
+  // llega por `options.apiKey` ni la del archivo o la de codex: un servidor de prueba no la
+  // necesita, y una URL reemplazable por entorno no puede ser el camino de una clave. Tampoco se
+  // siguen redirecciones, que llevarían la petición a otro destino. Sin la variable, las
+  // cabeceras y las opciones de `fetch` quedan exactamente como estaban.
+  const urlDePrueba = endpoint.testUrl === true;
+  const sinRedireccion = urlDePrueba ? ({ redirect: "error" } as const) : {};
+
   // La credencial se resuelve **antes** que el dialecto, y no dentro de cada
   // camino: un proveedor de suscripción no tiene clave en el archivo del harness,
   // así que resolverla después hacía que codex fallara buscando una que nunca iba
   // a estar.
-  const apiKey = options.apiKey ?? resolveCredentialFor(proveedor);
+  const apiKey = urlDePrueba ? "" : (options.apiKey ?? resolveCredentialFor(proveedor));
 
   // El dialecto no lo elige quien llama: lo dice el endpoint, que lo saca del
   // catálogo de transporte. Un `gpt-*` de codex va por `/responses` con streaming
@@ -213,6 +221,7 @@ export async function callChat(options: ChatOptions): Promise<ChatResult> {
         effort: options.effort,
         ...(options.structured === undefined ? {} : { structured: options.structured }),
         signal: options.signal ?? AbortSignal.timeout(options.timeoutMs ?? TIMEOUT_LLAMADA_MS),
+        ...sinRedireccion,
       },
       fetchImpl,
     );
@@ -235,6 +244,7 @@ export async function callChat(options: ChatOptions): Promise<ChatResult> {
         temperature: options.temperature,
         structured: options.structured,
         signal: options.signal ?? AbortSignal.timeout(options.timeoutMs ?? TIMEOUT_LLAMADA_MS),
+        ...sinRedireccion,
       },
       fetchImpl,
     );
@@ -254,7 +264,7 @@ export async function callChat(options: ChatOptions): Promise<ChatResult> {
     response = await fetchImpl(endpoint.url, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        ...(urlDePrueba ? {} : { Authorization: `Bearer ${apiKey}` }),
         "Content-Type": "application/json",
         ...extra,
       },
@@ -299,6 +309,7 @@ export async function callChat(options: ChatOptions): Promise<ChatResult> {
               }),
       }),
       signal: options.signal ?? AbortSignal.timeout(options.timeoutMs ?? TIMEOUT_LLAMADA_MS),
+      ...sinRedireccion,
     });
   } catch (caught) {
     const detail = caught instanceof Error ? caught.message : String(caught);

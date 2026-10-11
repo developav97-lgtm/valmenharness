@@ -109,6 +109,49 @@ compartido en git nunca contiene un secreto.
 Para clasificación barata y gates mecánicos sin costo. Sin credenciales; se detecta en
 `localhost` y se declara como provider.
 
+### 1.4 URL base de prueba
+
+Para probar `valmen gate` sin claves ni red, la URL base de un transporte HTTP se reemplaza con
+una variable de entorno que apunta a un servidor local:
+
+| Variable                       | Reemplaza                                          |
+| ------------------------------ | -------------------------------------------------- |
+| `VALMEN_BASE_URL_<TRANSPORTE>` | La base del transporte; el dialecto agrega su ruta |
+| `VALMEN_BASE_URL_JEV`          | El host de jev; se le agrega `/decisions`          |
+
+`<TRANSPORTE>` es el identificador del proveedor en mayúsculas y con `-` convertido en `_`, igual
+que `<PROVEEDOR>_API_KEY`: `VALMEN_BASE_URL_OPENROUTER`, `VALMEN_BASE_URL_ANTHROPIC`,
+`VALMEN_BASE_URL_CODEX`, `VALMEN_BASE_URL_OPENCODE_GO`. Con
+`VALMEN_BASE_URL_OPENROUTER=http://127.0.0.1:4010/v1`, una llamada a OpenRouter va a
+`http://127.0.0.1:4010/v1/chat/completions`; el dialecto de Anthropic agrega `/messages`, el de
+Responses agrega `/responses` y jev agrega `/decisions`.
+
+**Solo se admite localhost.** Una variable que reemplaza la URL es una vía para desviar claves de
+API, así que el valor debe ser `http://127.0.0.1` o `http://localhost`, con puerto y ruta
+opcionales, y sin usuario, consulta ni fragmento. `https:`, `[::1]`, cualquier otro host
+—también `127.0.0.1.nip.io` o `http://127.0.0.1@otro-host`— y un valor que no sea una URL se
+rechazan con el código `TEST_URL_REJECTED` y un mensaje que nombra la variable y la regla, pero no
+repite el valor. La compuerta falla: no degrada a otro evaluador ni escribe recibo. Una variable
+vacía cuenta como ausente.
+
+- **Sin la variable no cambia nada**: la URL, las cabeceras y las opciones de `fetch` son las de
+  siempre.
+- **Con la variable no viaja ninguna credencial**: ni `Authorization` ni `x-api-key`, aunque el
+  CLI o el servidor pasen una clave, y no se lee la de codex. Tampoco se siguen redirecciones: un
+  307 del servidor local falla como un error de transporte.
+- **`claude-code` no la usa**: se habla por `claude -p`, no por HTTP; para sustituirlo se usa
+  `VALMEN_CLAUDE_BIN`.
+- **No es un proxy hacia un proveedor real**: sin credencial, el proveedor real contestaría 401.
+- `localhost` lo resuelve el sistema operativo; `127.0.0.1` es la forma recomendada.
+- **Proxy de entorno:** con `NODE_USE_ENV_PROXY=1`, `fetch` manda también la petición local al proxy
+  salvo que `NO_PROXY` incluya `127.0.0.1` y `localhost`. No viaja ninguna credencial, pero sí el
+  contenido de la petición (el estado del ticket).
+- **Límite conocido:** mientras haya una variable activa, si el servidor local está caído o responde
+  un 5xx, la cascada y jev todavía pueden degradar a su proveedor de siempre, con la clave real si la
+  sesión la trae. La clave no viaja al host de la variable. Hasta que la prueba de punta a punta de
+  la cascada defina la variable de todos los transportes de la cadena y deje de degradar, no la
+  definas a mano con claves reales en el entorno.
+
 ## 2. Arquitectura de providers
 
 Modelo **seam / provider / consumer**, igual que en el resto del sistema.

@@ -133,6 +133,12 @@ export interface ResponsesRequest {
   /** Forma estructurada nativa del endpoint Responses. */
   readonly structured?: StructuredRequest | undefined;
   readonly signal?: AbortSignal | undefined;
+  /**
+   * `"error"` para no seguir redirecciones: lo pide `callChat` con la URL de prueba activa, para
+   * que un 307 del servidor local no lleve la petición a otro destino. Ausente, `fetch` no
+   * recibe la opción y se comporta como siempre.
+   */
+  readonly redirect?: "error" | undefined;
 }
 
 /**
@@ -197,6 +203,7 @@ export async function callResponses(
       headers: { "Content-Type": "application/json", ...request.headers },
       body: JSON.stringify(cuerpo),
       ...(request.signal === undefined ? {} : { signal: request.signal }),
+      ...(request.redirect === undefined ? {} : { redirect: request.redirect }),
     });
   } catch (caught) {
     const detalle = caught instanceof Error ? caught.message : String(caught);

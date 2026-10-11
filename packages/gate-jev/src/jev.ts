@@ -19,7 +19,7 @@
  */
 import type { Proposition, PropositionAnswer } from "@valmen/gate";
 import { GateDefinitionError } from "@valmen/gate";
-import { CredentialError, resolveApiKey } from "@valmen/credentials";
+import { CredentialError, resolveApiKey, testBaseUrlFor } from "@valmen/credentials";
 
 /** Endpoint de la API de Decisions. No es la API de chat. */
 export const DECISIONS_ENDPOINT = "https://openrouter.ai/api/alpha/decisions";
@@ -181,7 +181,14 @@ export interface EvaluateOptions {
  * exactamente el fallo que el sistema existe para evitar.
  */
 export async function evaluateWithJev(options: EvaluateOptions): Promise<JevEvaluation> {
-  const apiKey = options.apiKey ?? resolveApiKeyFromCredentials();
+  // `VALMEN_BASE_URL_JEV` reemplaza el host, solo hacia localhost (R-GUI-001). Se valida antes
+  // que la credencial y que `fetch`: un valor inválido lanza `TEST_URL_REJECTED` sin salir. Con
+  // la URL de prueba activa no se resuelve ni se manda ninguna credencial, aunque llegue por
+  // `options.apiKey`, y no se siguen redirecciones; sin la variable, todo sigue como estaba.
+  const urlDePrueba = testBaseUrlFor("jev");
+  const endpoint =
+    urlDePrueba === null ? DECISIONS_ENDPOINT : `${urlDePrueba}/decisions`;
+  const apiKey = urlDePrueba !== null ? "" : (options.apiKey ?? resolveApiKeyFromCredentials());
   const fetchImpl = options.fetchImpl ?? fetch;
   const model = options.model ?? DEFAULT_JEV_MODEL;
 
@@ -204,14 +211,15 @@ export async function evaluateWithJev(options: EvaluateOptions): Promise<JevEval
   const started = Date.now();
   let response: Response;
   try {
-    response = await fetchImpl(DECISIONS_ENDPOINT, {
+    response = await fetchImpl(endpoint, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        ...(urlDePrueba === null ? { Authorization: `Bearer ${apiKey}` } : {}),
         "Content-Type": "application/json",
       },
       body: JSON.stringify(body),
       ...(options.signal === undefined ? {} : { signal: options.signal }),
+      ...(urlDePrueba === null ? {} : { redirect: "error" as const }),
     });
   } catch (caught) {
     // El mensaje de error nunca incluye las cabeceras: llevan la credencial.
