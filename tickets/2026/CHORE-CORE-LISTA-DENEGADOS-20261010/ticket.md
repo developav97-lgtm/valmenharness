@@ -4,8 +4,8 @@ id: CHORE-CORE-LISTA-DENEGADOS-20261010
 title: Lista única de rutas y comandos denegados en core
 type: CHORE
 module: CORE
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -132,7 +132,36 @@ Ninguno.
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación delegada de CHORE-CORE-LISTA-DENEGADOS-20261010",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta verificar sus criterios.",
+    "expected": "Los criterios del ticket se cumplen y sus pruebas dan el resultado esperado.",
+    "evidence": [
+      "EVIDENCE-001"
+    ],
+    "affected_files": [
+      "packages/core/src/denied.ts",
+      "packages/core/src/index.ts",
+      "packages/engine/src/integration-rules.ts",
+      "packages/engine/src/qa-agent-git.ts",
+      "packages/engine/src/worktree-git.ts",
+      "packages/engine/src/worktree-integracion-git.ts",
+      "tests/lista-denegados.test.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -163,28 +192,81 @@ Contrato de entrega para el responsable.
 - Qué probar con ojo humano: que ninguna fila de la caracterización se editó para pasar (su valor es el que devolvía el motor antes del cambio) y que `SENSITIVE_PATH_PATTERNS` y `DENIED_GIT_FLAGS` son lo que se quiere negar a los agentes antes de que SECURITY-CLI-PROYECCION-DENEGADOS-20261010 las proyecte.
 - Limitación: la prueba de qa-agent observa la lista por `ejecutarGitDeQaAgent` y no por `motivoDeGitDeQaAgent` (ver `## Implementación`).
 
+- Resultado del PO: cierra los de pocas pruebas manuales primero. Las pruebas del ticket las ejecutó el agente y dieron el resultado esperado: npx vitest run tests/lista-denegados.test.ts y las 6 pruebas existentes de las listas: 244 de 244; suite completa de main en verde (4298); tsc sin errores; compuerta qa-mechanical (command): APPROVE; verificados por el orquestador: C16 (la línea base sin diferencias), C18 (eslint de los archivos tocados sale con 0) y C19 (el bloque 'el motor no cambia' pasa 62 de 62 sobre el árbol anterior al cambio, que no tiene packages/core/src/denied.ts)
+
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-11",
+    "build_reference": "commit:51dab92d0856e24c8bbd6a67b9fc0c9f2a588703",
+    "environment": "local: checkout principal de main (51dab92), Node 24, sin Docker ni red",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-11",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "cierra los de pocas pruebas manuales primero"
+  }
+]
 ```
 
 ## Evidencia
 
 ```json
-[]
+[
+  {
+    "id": "EVIDENCE-001",
+    "date": "2026-10-11",
+    "kind": "automated-test",
+    "description": "npx vitest run tests/lista-denegados.test.ts y las 6 pruebas existentes de las listas: 244 de 244; suite completa de main en verde (4298); tsc sin errores; compuerta qa-mechanical (command): APPROVE; verificados por el orquestador: C16 (la línea base sin diferencias), C18 (eslint de los archivos tocados sale con 0) y C19 (el bloque 'el motor no cambia' pasa 62 de 62 sobre el árbol anterior al cambio, que no tiene packages/core/src/denied.ts)",
+    "reference": "worktree:sha256:1c278fcb0a16861b5dbabfc11941b737957281ed5d01bf1061b8533276220b75",
+    "point_id": "POINT-001"
+  }
+]
 ```
 
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-11",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "cierra los de pocas pruebas manuales primero"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-11",
+    "technical_summary": "Las listas de rutas sensibles y de banderas de git denegadas pasan a packages/core/src/denied.ts (la intersección de las cuatro listas del motor); el motor las lee desde core y cada módulo conserva su extra; una prueba de caracterización demuestra que el comportamiento del motor no cambia.",
+    "functional_summary": "Hay una sola lista de lo que un agente no puede tocar ni ejecutar, y el motor y la proyección a los agentes la comparten.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "Sin migraciones, sin sincronización ni Docker. Sin cambio de comportamiento del motor."
+  }
+]
 ```
 
 ## Consumo de IA
@@ -205,6 +287,36 @@ Contrato de entrega para el responsable.
     "source": "manual:la sesion no expone los numeros",
     "confidence": "low",
     "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": "c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-aa945966f838c7b34",
+    "model": "anthropic/claude-opus-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 15 intervención(es) sobre el registro, 0 con fallo. 15 de 55 mensajes tocaron el registro. Subagente de la sesión c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8; su gasto no está en la madre. Duró 12 min. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 6722471 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 149794,
+    "output_tokens": 43946,
+    "total_tokens": 193740,
+    "estimated_cost_usd": null,
+    "source": "claude:c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-aa945966f838c7b34",
+    "confidence": "high",
+    "id": "CONSUMO-002"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": "c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-a4d9cdaf94be4ea90",
+    "model": "anthropic/claude-sonnet-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 7 intervención(es) sobre el registro, 0 con fallo. 7 de 36 mensajes tocaron el registro. Subagente de la sesión c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8; su gasto no está en la madre. Duró 6 min. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 4164554 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 152651,
+    "output_tokens": 33709,
+    "total_tokens": 186360,
+    "estimated_cost_usd": null,
+    "source": "claude:c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-a4d9cdaf94be4ea90",
+    "confidence": "high",
+    "id": "CONSUMO-003"
   }
 ]
 ```
@@ -297,6 +409,141 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:02.359Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:02.655Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:02.821Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:02.971Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:03.110Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:03.268Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:03.409Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:03.640Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:03.898Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:04.034Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:04.178Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:04.316Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:04.460Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:04.621Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:04.762Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```

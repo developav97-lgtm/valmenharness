@@ -4,8 +4,8 @@ id: FEATURE-ENGINE-RIESGO-REVISION-20261010
 title: Cálculo en código del riesgo de la revisión por lo tocado
 type: FEATURE
 module: ENGINE
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -187,7 +187,35 @@ Ninguno.
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación delegada de FEATURE-ENGINE-RIESGO-REVISION-20261010",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta verificar sus criterios.",
+    "expected": "Los criterios del ticket se cumplen y sus pruebas dan el resultado esperado.",
+    "evidence": [
+      "EVIDENCE-001"
+    ],
+    "affected_files": [
+      "packages/engine/src/path-categories.ts",
+      "packages/engine/src/review-risk.ts",
+      "packages/engine/src/qa-eligibility.ts",
+      "packages/engine/src/qa-agent.ts",
+      "packages/engine/src/index.ts",
+      "tests/riesgo-revision.test.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -215,28 +243,81 @@ Contrato de entrega. Directorio de ejecución de todos los comandos: la raíz de
 
 Sin interfaz, sin migraciones y sin datos que preparar: la función no tiene llamador de producción hasta FEATURE-GATE-CODE-REVIEW-20261010.
 
+- Resultado del PO: cierra los de pocas pruebas manuales primero. Las pruebas del ticket las ejecutó el agente y dieron el resultado esperado: npx vitest run tests/riesgo-revision.test.ts: 42 de 42 (32 nacieron en rojo); 98 de 98 en las 3 pruebas existentes de elegibilidad y qa-agent sin editarlas; suite completa de main en verde (4298); tsc sin errores; compuerta qa-mechanical (command): APPROVE; C33 verificado por el orquestador: una sola definición de CATEGORIAS_DE_RUTA en packages/engine/src/path-categories.ts
+
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-11",
+    "build_reference": "commit:51dab92d0856e24c8bbd6a67b9fc0c9f2a588703",
+    "environment": "local: checkout principal de main (51dab92), Node 24, sin Docker ni red",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-11",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "cierra los de pocas pruebas manuales primero"
+  }
+]
 ```
 
 ## Evidencia
 
 ```json
-[]
+[
+  {
+    "id": "EVIDENCE-001",
+    "date": "2026-10-11",
+    "kind": "automated-test",
+    "description": "npx vitest run tests/riesgo-revision.test.ts: 42 de 42 (32 nacieron en rojo); 98 de 98 en las 3 pruebas existentes de elegibilidad y qa-agent sin editarlas; suite completa de main en verde (4298); tsc sin errores; compuerta qa-mechanical (command): APPROVE; C33 verificado por el orquestador: una sola definición de CATEGORIAS_DE_RUTA en packages/engine/src/path-categories.ts",
+    "reference": "worktree:sha256:37949f16cd122a20b8a3eb77076d22c6b15544247242f7782cbeb5b4dcc09d3b",
+    "point_id": "POINT-001"
+  }
+]
 ```
 
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-11",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "cierra los de pocas pruebas manuales primero"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-11",
+    "technical_summary": "El riesgo bajo, medio o alto de un diff se calcula en código (packages/engine/src/review-risk.ts) a partir de las categorías de ruta críticas, los impactos declarados y el tipo SECURITY; CATEGORIAS_DE_RUTA se extrae a un módulo común (path-categories.ts) que también usa la elegibilidad de la QA por agente.",
+    "functional_summary": "El motor sabe cuán riesgoso es lo que un ticket cambió según lo que tocó y no según cuánto cambió.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "Sin migraciones, sin sincronización ni Docker. Sin cambio de comportamiento en la elegibilidad de la QA."
+  }
+]
 ```
 
 ## Consumo de IA
@@ -257,6 +338,36 @@ Sin interfaz, sin migraciones y sin datos que preparar: la función no tiene lla
     "source": "claude:agent-a24696c54743c0657",
     "confidence": "medium",
     "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": "c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-ae0f4acb38205e3c2",
+    "model": "anthropic/claude-opus-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 13 intervención(es) sobre el registro, 0 con fallo. 13 de 57 mensajes tocaron el registro. Subagente de la sesión c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8; su gasto no está en la madre. Duró 15 min. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 8700262 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 225916,
+    "output_tokens": 66480,
+    "total_tokens": 292396,
+    "estimated_cost_usd": null,
+    "source": "claude:c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-ae0f4acb38205e3c2",
+    "confidence": "high",
+    "id": "CONSUMO-002"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": "c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-a24696c54743c0657",
+    "model": "anthropic/claude-sonnet-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 10 intervención(es) sobre el registro, 0 con fallo. 10 de 43 mensajes tocaron el registro. Subagente de la sesión c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8; su gasto no está en la madre. Duró 8 min. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 6166051 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 160729,
+    "output_tokens": 51415,
+    "total_tokens": 212144,
+    "estimated_cost_usd": null,
+    "source": "claude:c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-a24696c54743c0657",
+    "confidence": "high",
+    "id": "CONSUMO-003"
   }
 ]
 ```
@@ -358,6 +469,141 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:06.107Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:06.390Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:06.539Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:06.696Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:06.844Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:06.985Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:07.125Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:07.339Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:07.585Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:07.725Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:07.878Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:08.017Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:08.157Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:08.297Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-025",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:08.433Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```

@@ -4,8 +4,8 @@ id: FEATURE-BENCH-FRICCION-CORPUS-20261010
 title: Corpus inicial de rechazos y comparación de dos corridas
 type: FEATURE
 module: BENCH
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -294,13 +294,44 @@ Ninguno.
       <!-- test: node node_modules/eslint/bin/eslint.js bench/friccion -->
 - [x] C37: el formato pasa sobre `bench/friccion`
       <!-- test: node node_modules/prettier/bin/prettier.cjs --check bench/friccion -->
-- [ ] C38 (R-FRI-004): `compare` de dos corridas del binario actual hechas con `bench/friccion/dist/cli.js` no muestra diferencias
+- [x] C38 (R-FRI-004): `compare` de dos corridas del binario actual hechas con `bench/friccion/dist/cli.js` no muestra diferencias
       <!-- verify: manual -->
 
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación delegada de FEATURE-BENCH-FRICCION-CORPUS-20261010",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta verificar sus criterios.",
+    "expected": "Los criterios del ticket se cumplen y sus pruebas dan el resultado esperado.",
+    "evidence": [
+      "EVIDENCE-001"
+    ],
+    "affected_files": [
+      "bench/friccion/src/aislamiento.ts",
+      "bench/friccion/src/clasificador.ts",
+      "bench/friccion/src/cli.ts",
+      "bench/friccion/src/comparacion.ts",
+      "bench/friccion/src/medicion.ts",
+      "bench/friccion/src/recorridos.ts",
+      "bench/friccion/src/tipos.ts",
+      "bench/friccion/test/corpus.test.ts",
+      "bench/friccion/test/compare.test.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -349,28 +380,81 @@ Contrato de entrega.
   - El recorrido `integracion-arbol-sucio` hoy no llega a recompilar con `npx`: su bloqueo no cita salida. `npm_config_offline` lo cubre si un mensaje futuro la cita.
   - No se corrió la suite del producto: el cambio no toca `packages/`, como afirman FR-C28 y FR-C29.
 
+- Resultado del PO: cierra los de pocas pruebas manuales primero. Las pruebas del ticket las ejecutó el agente y dieron el resultado esperado: npx vitest run --config bench/friccion/vitest.config.ts: 6 archivos y 83 pruebas en verde; suite completa de main en verde (4298); tsc de bench y de la raíz sin errores; compuerta qa-mechanical (command): APPROVE; C38 verificado por el orquestador: npx tsc -p bench/friccion/tsconfig.build.json, cli.js list (8 recorridos), dos corridas de run contra packages/cli/dist/main.js y compare: diferencia 0 en los seis totales
+
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-11",
+    "build_reference": "commit:51dab92d0856e24c8bbd6a67b9fc0c9f2a588703",
+    "environment": "local: checkout principal de main (51dab92), Node 24, sin Docker ni red",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-11",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "cierra los de pocas pruebas manuales primero"
+  }
+]
 ```
 
 ## Evidencia
 
 ```json
-[]
+[
+  {
+    "id": "EVIDENCE-001",
+    "date": "2026-10-11",
+    "kind": "automated-test",
+    "description": "npx vitest run --config bench/friccion/vitest.config.ts: 6 archivos y 83 pruebas en verde; suite completa de main en verde (4298); tsc de bench y de la raíz sin errores; compuerta qa-mechanical (command): APPROVE; C38 verificado por el orquestador: npx tsc -p bench/friccion/tsconfig.build.json, cli.js list (8 recorridos), dos corridas de run contra packages/cli/dist/main.js y compare: diferencia 0 en los seis totales",
+    "reference": "worktree:sha256:3979f5e7d3684348e78bced433f4e42321d6ee073331cdaab07f5f12301cb556",
+    "point_id": "POINT-001"
+  }
+]
 ```
 
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-11",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "cierra los de pocas pruebas manuales primero"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-11",
+    "technical_summary": "Corpus de ocho recorridos del CLI valmen que provocan un bloqueo (salto ilegal de estado, compuerta sin recibo, sync --check desactualizado, integración con árbol sucio, resume inexistente, bandera mal escrita, QA sin build, cierre sin consumo), con su clasificación en banda, fuera de banda, callejón sin salida o rechazo correcto, y el comando compare de dos corridas.",
+    "functional_summary": "Se puede medir cuánto se atasca quien opera el CLI y comparar dos versiones del binario. Primera medición del binario actual: 2 en banda, 4 fuera de banda, 1 callejón sin salida (cierre sin Consumo de IA) y 1 rechazo correcto.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "Sin migraciones, sin sincronización ni Docker. La medición vive fuera de packages/ y no entra al build del producto."
+  }
+]
 ```
 
 ## Consumo de IA
@@ -391,6 +475,36 @@ Contrato de entrega.
     "source": "manual:subagente de implementación claude-sonnet-5-5, sin números de sesión expuestos",
     "confidence": "low",
     "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": "c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-a98a96473e650b8fc",
+    "model": "anthropic/claude-opus-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 14 intervención(es) sobre el registro, 0 con fallo. 14 de 115 mensajes tocaron el registro. Subagente de la sesión c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8; su gasto no está en la madre. Duró 22 min. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 21881533 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 272668,
+    "output_tokens": 98049,
+    "total_tokens": 370717,
+    "estimated_cost_usd": null,
+    "source": "claude:c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-a98a96473e650b8fc",
+    "confidence": "high",
+    "id": "CONSUMO-002"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": "c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-a2cb3f14cb05053ce",
+    "model": "anthropic/claude-sonnet-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 17 intervención(es) sobre el registro, 0 con fallo. 17 de 79 mensajes tocaron el registro. Subagente de la sesión c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8; su gasto no está en la madre. Duró 18 min. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 13958119 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 212516,
+    "output_tokens": 77659,
+    "total_tokens": 290175,
+    "estimated_cost_usd": null,
+    "source": "claude:c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-a2cb3f14cb05053ce",
+    "confidence": "high",
+    "id": "CONSUMO-003"
   }
 ]
 ```
@@ -492,6 +606,141 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:09.754Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:10.055Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:10.207Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:10.351Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:10.495Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:10.637Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:10.779Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:11.026Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:11.379Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:11.526Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:11.673Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:11.820Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:11.960Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:12.105Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-025",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:12.254Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
