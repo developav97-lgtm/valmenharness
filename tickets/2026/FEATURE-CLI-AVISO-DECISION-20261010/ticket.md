@@ -4,7 +4,7 @@ id: FEATURE-CLI-AVISO-DECISION-20261010
 title: Aviso de Telegram al pasar a Necesita tu decisión
 type: FEATURE
 module: CLI
-workflow_status: in_progress
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -87,43 +87,43 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1 (R-EPU-003): un ticket que pasó de `in_progress` a `blocked` produce un pendiente `necesita-decision` con motivo «bloqueado»
+- [x] C1 (R-EPU-003): un ticket que pasó de `in_progress` a `blocked` produce un pendiente `necesita-decision` con motivo «bloqueado»
       <!-- test: npx vitest run tests/aviso-decision.test.ts -->
-- [ ] C2 (R-EPU-003): una entrada ya avisada no vuelve a salir en la corrida siguiente
+- [x] C2 (R-EPU-003): una entrada ya avisada no vuelve a salir en la corrida siguiente
       <!-- test: npx vitest run tests/aviso-decision.test.ts -->
-- [ ] C3 (R-EPU-003): una nueva entrada a `blocked`, con otro evento de transición, produce un aviso nuevo
+- [x] C3 (R-EPU-003): una nueva entrada a `blocked`, con otro evento de transición, produce un aviso nuevo
       <!-- test: npx vitest run tests/aviso-decision.test.ts -->
-- [ ] C4 (R-EPU-003): un ticket que pasó a `changes_requested` produce el aviso con motivo «cambios pedidos»
+- [x] C4 (R-EPU-003): un ticket que pasó a `changes_requested` produce el aviso con motivo «cambios pedidos»
       <!-- test: npx vitest run tests/aviso-decision.test.ts -->
-- [ ] C5 (R-EPU-003): un ticket que pasó a `planned` sin autorización vigente produce el aviso con motivo «plan por aprobar»
+- [x] C5 (R-EPU-003): un ticket que pasó a `planned` sin autorización vigente produce el aviso con motivo «plan por aprobar»
       <!-- test: npx vitest run tests/aviso-decision.test.ts -->
-- [ ] C6 (R-EPU-003): un ticket en `planned` cubierto por una autorización de aprobación vigente no produce el aviso
+- [x] C6 (R-EPU-003): un ticket en `planned` cubierto por una autorización de aprobación vigente no produce el aviso
       <!-- test: npx vitest run tests/aviso-decision.test.ts -->
-- [ ] C7 (R-EPU-003): un ticket en `awaiting_user_tests` no produce el aviso `necesita-decision`
+- [x] C7 (R-EPU-003): un ticket en `awaiting_user_tests` no produce el aviso `necesita-decision`
       <!-- test: npx vitest run tests/aviso-decision.test.ts -->
-- [ ] C8 (R-EPU-003): un ticket en `in_progress` con una compuerta escalada sin decisión no produce el aviso `necesita-decision`
+- [x] C8 (R-EPU-003): un ticket en `in_progress` con una compuerta escalada sin decisión no produce el aviso `necesita-decision`
       <!-- test: npx vitest run tests/aviso-decision.test.ts -->
-- [ ] C9 (R-EPU-003): un ticket en `blocked` sin evento de transición hacia `blocked` no produce el aviso
+- [x] C9 (R-EPU-003): un ticket en `blocked` sin evento de transición hacia `blocked` no produce el aviso
       <!-- test: npx vitest run tests/aviso-decision.test.ts -->
-- [ ] C10 (R-EPU-003): el cuerpo del aviso nombra el id del ticket
+- [x] C10 (R-EPU-003): el cuerpo del aviso nombra el id del ticket
       <!-- test: npx vitest run tests/aviso-decision.test.ts -->
-- [ ] C11 (R-EPU-003): el cuerpo del aviso nombra el motivo en palabras del PO
+- [x] C11 (R-EPU-003): el cuerpo del aviso nombra el motivo en palabras del PO
       <!-- test: npx vitest run tests/aviso-decision.test.ts -->
-- [ ] C12 (R-EPU-003): con `screenUrl` declarado, el cuerpo lleva el enlace `<screenUrl>/#/ticket/<ID>`
+- [x] C12 (R-EPU-003): con `screenUrl` declarado, el cuerpo lleva el enlace `<screenUrl>/#/ticket/<ID>`
       <!-- test: npx vitest run tests/aviso-decision.test.ts -->
-- [ ] C13 (R-EPU-003): sin `screenUrl`, el cuerpo dice «sin enlace» con la ruta del ticket
+- [x] C13 (R-EPU-003): sin `screenUrl`, el cuerpo dice «sin enlace» con la ruta del ticket
       <!-- test: npx vitest run tests/aviso-decision.test.ts -->
-- [ ] C14 (R-EPU-003): `readHermesConfig` devuelve en `screenUrl` el valor de `hermes.notify.screen-url`
+- [x] C14 (R-EPU-003): `readHermesConfig` devuelve en `screenUrl` el valor de `hermes.notify.screen-url`
       <!-- test: npx vitest run tests/aviso-decision.test.ts -->
-- [ ] C15 (R-EPU-003): `readHermesConfig` sin la clave `hermes.notify.screen-url` devuelve `screenUrl` vacío
+- [x] C15 (R-EPU-003): `readHermesConfig` sin la clave `hermes.notify.screen-url` devuelve `screenUrl` vacío
       <!-- test: npx vitest run tests/aviso-decision.test.ts -->
-- [ ] C16 (R-EPU-003): un envío que el transporte falso no entrega deja el aviso pendiente para la corrida siguiente
+- [x] C16 (R-EPU-003): un envío que el transporte falso no entrega deja el aviso pendiente para la corrida siguiente
       <!-- test: npx vitest run tests/aviso-decision.test.ts -->
-- [ ] C17 (R-EPU-003): una entrega anota en el diario de aprobaciones una línea `decision-needed-notice` con la entrada `ticket:evento`
+- [x] C17 (R-EPU-003): una entrega anota en el diario de aprobaciones una línea `decision-needed-notice` con la entrada `ticket:evento`
       <!-- test: npx vitest run tests/aviso-decision.test.ts -->
-- [ ] C18 (R-EPU-003): `hermesNotifyPendientes` con `json` cuenta el aviso entregado en `notificados`
+- [x] C18 (R-EPU-003): `hermesNotifyPendientes` con `json` cuenta el aviso entregado en `notificados`
       <!-- test: npx vitest run tests/aviso-decision.test.ts -->
-- [ ] C19 (regresión de `valmen hermes notify`): las pruebas existentes del vigilante pasan sin cambios
+- [x] C19 (regresión de `valmen hermes notify`): las pruebas existentes del vigilante pasan sin cambios
       <!-- test: npx vitest run tests/hermes-notify.test.ts tests/vigilante-jornada.test.ts tests/qa-por-politica.test.ts tests/retiro-disparador.test.ts -->
 
 ## Puntos
@@ -134,11 +134,27 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
 
 ## Implementación
 
-Pendiente.
+Hecho tal como el plan, en la rama valmen/ticket-aviso-decision:
+
+- packages/adapter/src/config.ts: `HermesConfig.screenUrl?` y su lectura de `hermes.notify.screen-url` (vacía por defecto).
+- packages/engine/src/approval.ts: aviso `decision-needed-notice` en el diario (tipo, lectura y exclusión del conteo de intentos) y `decisionesAvisadas`.
+- packages/engine/src/public-state.ts: `entradaAlEstado(eventos, estado)`.
+- packages/engine/src/notify.ts: `renderDecisionNeededNotification` (clave `decision-needed:<ticket>:<evento>`, enlace o «sin enlace»).
+- packages/cli/src/hermes.ts: pendiente `necesita-decision` en `pendientesDeAvisar` y su rama de entrega en `hermesNotifyPendientes`.
+- tests/aviso-decision.test.ts: 18 pruebas (C1–C18), vistas en rojo antes de implementar (12 en rojo, las 6 negativas pasaban por vacío); todas con transporte falso, ningún mensaje real.
+
+Tamaño del diff: unas 194 líneas de producción y 292 de pruebas (unas 486 en total, sobre las 400 de `delivery-budget`). Si la revisión previa lo exige, se parte como dice el plan: (a) motor —approval.ts, public-state.ts, notify.ts y sus pruebas C2, C3, C9, C10–C13, C17— y (b) vigilante —config.ts, hermes.ts y sus pruebas C1, C4–C8, C14–C16, C18—, con (b) dependiendo de (a). No se partió: las dos mitades se prueban juntas y el PO aprobó el plan con el tamaño previsto.
+Pruebas existentes: ninguna se editó.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Directorio de ejecución: la raíz del repositorio (o del worktree). Sin requisitos de ambiente: todo el envío usa un transporte falso.
+
+- `npx vitest run tests/aviso-decision.test.ts` → 18 pruebas en verde (C1–C18).
+- `npx vitest run tests/hermes-notify.test.ts tests/vigilante-jornada.test.ts tests/qa-por-politica.test.ts tests/retiro-disparador.test.ts` → en verde, sin cambios (C19).
+- `npx tsc --noEmit -p .`, `npx eslint packages tests/aviso-decision.test.ts`, `npx prettier --check packages tests/aviso-decision.test.ts`, `node scripts/exports-sin-uso.mjs` → sin hallazgos.
+
+Validaciones manuales: ninguna. El aviso real a Telegram no se probó (por regla); con `hermes.notify.screen-url` ausente el aviso dice «sin enlace» hasta que el orquestador la declare en main.
 
 ## QA
 
@@ -167,7 +183,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Implementación en subagente sonnet; la sesión no expone los números.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:sesión de implementación sin agregado expuesto",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -240,6 +272,24 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-11",
+    "at": "2026-10-11T21:28:48.104Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-11",
+    "at": "2026-10-11T21:28:48.586Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```

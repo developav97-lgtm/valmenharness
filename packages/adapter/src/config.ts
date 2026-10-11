@@ -492,6 +492,12 @@ export interface HermesConfig {
    * ve en el archivo en vez de quedar decidido por el harness.
    */
   readonly budgetTarget: string;
+  /**
+   * La dirección de la pantalla del harness, para el enlace del aviso «Necesita tu decisión».
+   *
+   * Opcional y vacía por defecto: sin ella el aviso dice «sin enlace» y da la ruta del ticket.
+   */
+  readonly screenUrl?: string;
   /** Cuántas horas vale un token de aprobación. */
   readonly tokenHours: number;
   /** El techo de riesgo que se puede aprobar a distancia. */
@@ -520,6 +526,7 @@ export function readHermesConfig(config: ConfigMap): HermesConfig {
     enabled: readString(hermes, "enabled", "false") === "true",
     gateTarget: readString(notify, "gate", ""),
     budgetTarget: readString(notify, "budget", ""),
+    screenUrl: readString(notify, "screen-url", ""),
     tokenHours: horas,
     allowedRisk: readList(approval, "allowed-risk", ["low", "normal"]),
   };

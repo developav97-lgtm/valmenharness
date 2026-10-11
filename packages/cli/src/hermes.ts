@@ -77,6 +77,10 @@ import {
   paradasActivas,
   cierresPorPoliticaAvisados,
   pruebasListasAvisadas,
+  decisionesAvisadas,
+  entradaAlEstado,
+  estadoPublicoDelTicket,
+  renderDecisionNeededNotification,
   partesDeJornadaAvisados,
   huellaDelParte,
   renderJourneyHandoffNotification,
@@ -759,7 +763,22 @@ export type PendienteDeAvisar =
       readonly cycle: number;
       readonly commands: readonly string[];
       readonly contractPath: string;
+    }
+  | {
+      /** Un ticket que entró a «Necesita tu decisión» por bloqueo, cambios o plan (R-EPU-003). */
+      readonly kind: "necesita-decision";
+      readonly ticket: string;
+      readonly title: string;
+      readonly reason: "blocked" | "changes-requested" | "plan-approval";
+      readonly entryEvent: string;
+      readonly ticketPath: string;
     };
+
+const MOTIVO_EN_PALABRAS = {
+  blocked: "bloqueado",
+  "changes-requested": "cambios pedidos",
+  "plan-approval": "plan por aprobar",
+} as const;
 
 export function pendientesDeAvisar(paths: RegistryPaths, now: Date): PendienteDeAvisar[] {
   const porRecibo = new Map<string, PendingApproval[]>();
@@ -858,6 +877,38 @@ export function pendientesDeAvisar(paths: RegistryPaths, now: Date): PendienteDe
       cycle: ciclo,
       commands: comandosDelContrato(ubicado.text),
       contractPath: ubicado.relativePath,
+    });
+  }
+
+  // Un ticket bloqueado, con cambios pedidos o con el plan por aprobar espera a una persona. La
+  // identidad del aviso es el evento con que entró al estado: otra entrada es otro aviso.
+  const decisionesYaAvisadas = decisionesAvisadas(paths);
+  for (const fila of listTickets(paths)) {
+    if (!["blocked", "changes_requested", "planned"].includes(fila.workflowStatus))
+      continue;
+    const publico = estadoPublicoDelTicket(paths, fila.id, now);
+    const motivo = publico.reason;
+    if (
+      motivo !== "blocked" &&
+      motivo !== "changes-requested" &&
+      motivo !== "plan-approval"
+    ) {
+      continue;
+    }
+    const ubicado = findTicket(paths, fila.id);
+    if (ubicado === undefined) continue;
+    const entrada = entradaAlEstado(
+      parseTicket(ubicado.text).blocks.Eventos ?? [],
+      fila.workflowStatus,
+    );
+    if (entrada === null || decisionesYaAvisadas.has(`${fila.id}:${entrada}`)) continue;
+    salida.push({
+      kind: "necesita-decision",
+      ticket: fila.id,
+      title: fila.title,
+      reason: motivo,
+      entryEvent: entrada,
+      ticketPath: ubicado.relativePath,
     });
   }
 
@@ -1121,6 +1172,40 @@ export function hermesNotifyPendientes(request: NotifyPendingRequest): CommandRe
         notifiedAt: request.now.toISOString(),
       });
       notificados.push(`${pendiente.ticket} · listo para probar`);
+      continue;
+    }
+
+    if (pendiente.kind === "necesita-decision") {
+      const entrega = hermesSendChannel({
+        target: to,
+        ...(request.runner === undefined ? {} : { runner: request.runner }),
+      }).notify(
+        renderDecisionNeededNotification({
+          ticketId: pendiente.ticket,
+          title: pendiente.title,
+          reason: pendiente.reason,
+          entryEvent: pendiente.entryEvent,
+          screenUrl: request.config.screenUrl,
+          ticketPath: pendiente.ticketPath,
+        }),
+      );
+      const motivo = MOTIVO_EN_PALABRAS[pendiente.reason];
+      if (!entrega.delivered) {
+        // No se anota: un aviso que no salió no cuenta como avisado y se reintenta.
+        fallidos.push({
+          que: `${pendiente.ticket} · necesita tu decisión (${motivo})`,
+          motivo: entrega.detail,
+        });
+        continue;
+      }
+      appendApproval(request.paths, {
+        kind: "decision-needed-notice",
+        ticketId: pendiente.ticket,
+        entryEvent: pendiente.entryEvent,
+        reason: pendiente.reason,
+        notifiedAt: request.now.toISOString(),
+      });
+      notificados.push(`${pendiente.ticket} · necesita tu decisión (${motivo})`);
       continue;
     }
 

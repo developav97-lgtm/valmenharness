@@ -582,6 +582,51 @@ export function renderTestsReadyNotification(
   };
 }
 
+/** Un ticket que entró a «Necesita tu decisión», listo para avisar (R-EPU-003). */
+export interface DecisionNeededNotificationInput {
+  readonly ticketId: string;
+  readonly title: string;
+  readonly reason: "blocked" | "changes-requested" | "plan-approval";
+  /** El id del evento de transición con que entró al estado. */
+  readonly entryEvent: string;
+  /** La dirección de la pantalla; vacía o ausente, el aviso dice «sin enlace». */
+  readonly screenUrl?: string | undefined;
+  /** La ruta del ticket, para cuando no hay enlace. */
+  readonly ticketPath: string;
+}
+
+const MOTIVO_DE_DECISION = {
+  blocked: "bloqueado",
+  "changes-requested": "cambios pedidos",
+  "plan-approval": "plan por aprobar",
+} as const;
+
+/** El aviso de que un ticket espera la decisión del PO, con el enlace a su pantalla. */
+export function renderDecisionNeededNotification(
+  input: DecisionNeededNotificationInput,
+): NotificationPayload {
+  const base = (input.screenUrl ?? "").trim().replace(/\/+$/, "");
+  const enlace =
+    base === ""
+      ? `Enlace: sin enlace (falta hermes.notify.screen-url); el ticket está en ${input.ticketPath}.`
+      : `Enlace: ${base}/#/ticket/${input.ticketId}`;
+  const motivo = MOTIVO_DE_DECISION[input.reason];
+  return {
+    key: `decision-needed:${input.ticketId}:${input.entryEvent}`,
+    subject: `Necesita tu decisión · ${input.ticketId}`,
+    body: [
+      "🟠 NECESITA TU DECISIÓN",
+      "",
+      `  ticket   ${input.ticketId}`,
+      `  título   ${input.title}`,
+      `  motivo   ${motivo}`,
+      "",
+      enlace,
+      "Avisar no decide nada: la decisión es tuya.",
+    ].join("\n"),
+  };
+}
+
 export interface PolicyCloseNotificationInput {
   readonly ticketId: string;
   readonly title: string;
