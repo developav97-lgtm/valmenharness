@@ -15,7 +15,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { main } from "../src/cli.js";
 import { medir } from "../src/medicion.js";
 import { RECORRIDOS } from "../src/recorridos.js";
-import type { ArchivoDeResultados } from "../src/tipos.js";
+import type { ArchivoDeResultados, ResultadoDeRecorrido } from "../src/tipos.js";
 
 const RAIZ = join(import.meta.dirname, "..", "..", "..");
 const BINARIO = join(RAIZ, "packages", "cli", "dist", "main.js");
@@ -114,16 +114,77 @@ describe("run contra el binario real", () => {
 
     expect(git("status", "--porcelain")).toBe("");
   });
+});
+
+describe("el corpus completo contra el binario real", () => {
+  // Una sola corrida del corpus alimenta todas las pruebas de este bloque. Al ir en un
+  // describe aparte, `-t FR-C01` y las demás de arriba no la disparan.
+  let archivo: ArchivoDeResultados;
+
+  beforeAll(() => {
+    archivo = medir({ binario: BINARIO, recorridos: RECORRIDOS, timeoutMs: 60_000 });
+  }, 300_000);
+
+  function resultadoDe(id: string): ResultadoDeRecorrido {
+    const resultado = archivo.recorridos.find((r) => r.id === id);
+    expect(resultado, `el recorrido ${id} no está en el archivo`).toBeDefined();
+    return resultado as ResultadoDeRecorrido;
+  }
 
   it("FR-C27 el recorrido salto-ilegal se clasifica fuera_de_banda", () => {
-    vi.spyOn(process.stdout, "write").mockReturnValue(true);
-    const archivo = medir({ binario: BINARIO, recorridos: RECORRIDOS, timeoutMs: 60_000 });
+    const resultado = resultadoDe("salto-ilegal");
+    expect(resultado.estado).toBe("medido");
+    expect(resultado.bloqueo?.clase).toBe("fuera_de_banda");
+    expect(resultado.bloqueo?.codigo).toBe(3);
+    expect(resultado.bloqueo?.mensaje).toContain("intake -> approved");
+  });
 
-    const resultado = archivo.recorridos.find((r) => r.id === "salto-ilegal");
-    expect(resultado).toBeDefined();
-    expect(resultado!.estado).toBe("medido");
-    expect(resultado!.bloqueo?.clase).toBe("fuera_de_banda");
-    expect(resultado!.bloqueo?.codigo).toBe(3);
-    expect(resultado!.bloqueo?.mensaje).toContain("intake -> approved");
+  it("CO-C05 los ocho recorridos quedan en estado medido", () => {
+    expect(archivo.recorridos).toHaveLength(8);
+    expect(
+      archivo.recorridos.map((r) => ({ id: r.id, estado: r.estado, motivo: r.motivo })),
+    ).toEqual(RECORRIDOS.map((r) => ({ id: r.id, estado: "medido", motivo: null })));
+  });
+
+  it("CO-C06 el recorrido entrega-sin-recibo se clasifica en_banda", () => {
+    expect(resultadoDe("entrega-sin-recibo").bloqueo?.clase).toBe("en_banda");
+  });
+
+  it("CO-C07 el recorrido sync-desactualizado se clasifica en_banda", () => {
+    expect(resultadoDe("sync-desactualizado").bloqueo?.clase).toBe("en_banda");
+  });
+
+  it("CO-C08 el recorrido integracion-arbol-sucio se clasifica fuera_de_banda", () => {
+    expect(resultadoDe("integracion-arbol-sucio").bloqueo?.clase).toBe("fuera_de_banda");
+  });
+
+  it("CO-C09 el recorrido resume-inexistente se clasifica fuera_de_banda", () => {
+    expect(resultadoDe("resume-inexistente").bloqueo?.clase).toBe("fuera_de_banda");
+  });
+
+  it("CO-C10 el bloqueo del recorrido bandera-mal-escrita lleva rechazoCorrecto", () => {
+    const bloqueo = resultadoDe("bandera-mal-escrita").bloqueo;
+    expect(bloqueo?.mensaje).toContain("--idd");
+    expect(bloqueo?.rechazoCorrecto).not.toBeNull();
+    expect(bloqueo?.rechazoCorrecto?.motivo).toContain("R-MSG-003");
+  });
+
+  it("CO-C11 el recorrido qa-sin-build se clasifica fuera_de_banda", () => {
+    expect(resultadoDe("qa-sin-build").bloqueo?.clase).toBe("fuera_de_banda");
+  });
+
+  it("CO-C12 el recorrido cierre-sin-consumo se clasifica callejon_sin_salida", () => {
+    expect(resultadoDe("cierre-sin-consumo").bloqueo?.clase).toBe("callejon_sin_salida");
+  });
+
+  it("CO-C13 la salida que cita el bloqueo de cierre-sin-consumo queda registrada como ejecutada", () => {
+    const salidas = resultadoDe("cierre-sin-consumo").bloqueo?.salidas ?? [];
+    const citada = salidas.find((salida) =>
+      salida.comando.startsWith("valmen add-ai-usage"),
+    );
+
+    expect(citada).toBeDefined();
+    expect(citada?.ejecutada).toBe(true);
+    expect(citada?.codigoSalida).not.toBeNull();
   });
 });

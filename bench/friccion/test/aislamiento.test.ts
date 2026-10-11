@@ -5,15 +5,16 @@
  * afirmar desde fuera que la medición no hereda nada del proceso que mide. Cada prueba lleva
  * el identificador de su criterio (`FR-Cnn`) para poder correrla con `-t`.
  */
-import { existsSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, sep } from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { crearEscenario, entornoAislado, limpiarEscenario } from "../src/aislamiento.js";
 import { main } from "../src/cli.js";
 import { medirRecorrido } from "../src/medicion.js";
-import type { Recorrido } from "../src/tipos.js";
+import type { ArchivoDeResultados, Recorrido } from "../src/tipos.js";
 import { crearBinarioFalso } from "./binario-falso.js";
 import type { BinarioFalso, Regla } from "./binario-falso.js";
 
@@ -55,6 +56,77 @@ describe("el comando run", () => {
 
     expect(main(["run", "--out", salida])).toBe(2);
     expect(existsSync(salida)).toBe(false);
+  });
+});
+
+/** Corre `run` con un corpus propio contra el binario falso y lee el archivo que escribió. */
+function correrRun(
+  binario: BinarioFalso,
+  recorridos: Recorrido[],
+): { codigo: number; salida: string; archivo: ArchivoDeResultados | null } {
+  vi.spyOn(process.stdout, "write").mockReturnValue(true);
+  const carpeta = mkdtempSync(join(tmpdir(), "friccion-prueba-"));
+  carpetas.push(carpeta);
+  const salida = join(carpeta, "resultados.json");
+  const codigo = main(
+    ["run", "--binary", binario.ruta, "--out", salida, "--timeout-ms", String(TIMEOUT_MS)],
+    recorridos,
+  );
+  return {
+    codigo,
+    salida,
+    archivo: existsSync(salida)
+      ? (JSON.parse(readFileSync(salida, "utf8")) as ArchivoDeResultados)
+      : null,
+  };
+}
+
+describe("el código de salida de run", () => {
+  const roto = (id: string): Recorrido =>
+    recorrido({ id, armado: [{ binario: ["romper"] }], operacion: ["op"] });
+  const reglas: Regla[] = [{ cuando: "^op$" }, { cuando: "^romper", salida: 3 }];
+
+  it("CO-C17 sale con 1 cuando un recorrido queda fallido", () => {
+    const { codigo } = correrRun(falso(reglas), [
+      recorrido({ id: "ok", operacion: ["op"] }),
+      roto("roto"),
+    ]);
+
+    expect(codigo).toBe(1);
+  });
+
+  it("CO-C18 con un recorrido fallido, run escribe el archivo de resultados", () => {
+    const { archivo } = correrRun(falso(reglas), [roto("roto")]);
+
+    expect(archivo).not.toBeNull();
+    expect(archivo?.totales.fallidos).toBe(1);
+  });
+
+  it("CO-C19 el archivo de resultados marca como fallido el recorrido que no se pudo armar", () => {
+    const { archivo } = correrRun(falso(reglas), [
+      recorrido({ id: "ok", operacion: ["op"] }),
+      roto("roto"),
+    ]);
+
+    expect(archivo?.recorridos.map((r) => [r.id, r.estado])).toEqual([
+      ["ok", "medido"],
+      ["roto", "fallido"],
+    ]);
+    expect(archivo?.recorridos[1]?.motivo).toContain("paso 1");
+  });
+
+  it("CO-C23 sale con 0 cuando el único recorrido sin medir está no_soportado", () => {
+    const { codigo, archivo } = correrRun(falso(reglas), [
+      recorrido({ id: "ok", operacion: ["op"] }),
+      recorrido({ id: "nuevo", armado: [{ binario: ["inexistente"] }], operacion: ["op"] }),
+    ]);
+
+    expect(archivo?.recorridos.map((r) => [r.id, r.estado])).toEqual([
+      ["ok", "medido"],
+      ["nuevo", "no_soportado"],
+    ]);
+    expect(archivo?.totales.no_soportados).toBe(1);
+    expect(codigo).toBe(0);
   });
 });
 
@@ -127,7 +199,7 @@ describe("el escenario aislado", () => {
   });
 
   it("FR-C14 un armado que falla deja el recorrido fallido con el paso que falló", () => {
-    const binario = falso([{ cuando: "^preparar$" }, { cuando: "^romper$", salida: 3 }]);
+    const binario = falso([{ cuando: "^preparar$" }, { cuando: "^romper", salida: 3 }]);
     const resultado = medirRecorrido(
       binario.ruta,
       recorrido({
@@ -144,6 +216,17 @@ describe("el escenario aislado", () => {
       "preparar",
       "romper",
     ]);
+  });
+});
+
+describe("el entorno del escenario", () => {
+  it("CO-C16 entornoAislado lleva npm_config_offline con el valor true", () => {
+    const escenario = crearEscenario();
+    try {
+      expect(entornoAislado(escenario)["npm_config_offline"]).toBe("true");
+    } finally {
+      limpiarEscenario(escenario);
+    }
   });
 });
 
@@ -388,5 +471,82 @@ describe("la medición de un bloqueo", () => {
     expect(resultado.bloqueo?.rechazoCorrecto).toEqual({
       motivo: "el diseño lo rechaza a propósito",
     });
+  });
+});
+
+describe("un recorrido que el binario no soporta", () => {
+  it("CO-C20 un paso del armado rechazado como comando desconocido deja el recorrido no_soportado", () => {
+    const binario = falso([{ cuando: "^preparar$" }]);
+    const resultado = medirRecorrido(
+      binario.ruta,
+      recorrido({
+        armado: [{ binario: ["preparar"] }, { binario: ["nuevo", "--ya"] }],
+        operacion: ["op"],
+      }),
+      TIMEOUT_MS,
+    );
+
+    expect(resultado.estado).toBe("no_soportado");
+    expect(resultado.motivo).toContain("paso 2");
+    expect(resultado.motivo).toContain("nuevo --ya");
+    expect(resultado.motivo).toContain("Comando desconocido");
+    expect(resultado.bloqueo).toBeNull();
+    expect(binario.llamadas().map((llamada) => llamada.argv[0])).toEqual([
+      "preparar",
+      "nuevo",
+    ]);
+  });
+
+  it("CO-C21 un paso del armado con una bandera que el binario no declara deja el recorrido no_soportado", () => {
+    const binario = falso([
+      {
+        cuando: "^armar --nueva$",
+        salida: 2,
+        stderr: "Error: La bandera --nueva no existe para armar. Las que acepta: --id.\n",
+      },
+    ]);
+    const resultado = medirRecorrido(
+      binario.ruta,
+      recorrido({ armado: [{ binario: ["armar", "--nueva"] }], operacion: ["op"] }),
+      TIMEOUT_MS,
+    );
+
+    expect(resultado.estado).toBe("no_soportado");
+    expect(resultado.motivo).toContain("paso 1");
+    expect(resultado.motivo).toContain("La bandera --nueva no existe para armar");
+    expect(resultado.bloqueo).toBeNull();
+  });
+
+  it("CO-C21 una operación con una bandera que el binario no declara sigue siendo un bloqueo", () => {
+    const binario = falso([
+      {
+        cuando: "^op --idd$",
+        salida: 2,
+        stderr: "Error: La bandera --idd no existe para op. Las que acepta: --id.\n",
+      },
+    ]);
+    const resultado = medirRecorrido(
+      binario.ruta,
+      recorrido({ operacion: ["op", "--idd"] }),
+      TIMEOUT_MS,
+    );
+
+    expect(resultado.estado).toBe("medido");
+    expect(resultado.bloqueo?.codigo).toBe(2);
+    expect(resultado.bloqueo?.clase).toBe("fuera_de_banda");
+  });
+
+  it("CO-C22 una operación que el binario rechaza como comando desconocido deja el recorrido no_soportado", () => {
+    const binario = falso([{ cuando: "^preparar$" }]);
+    const resultado = medirRecorrido(
+      binario.ruta,
+      recorrido({ armado: [{ binario: ["preparar"] }], operacion: ["inexistente"] }),
+      TIMEOUT_MS,
+    );
+
+    expect(resultado.estado).toBe("no_soportado");
+    expect(resultado.motivo).toContain("la operación");
+    expect(resultado.motivo).toContain("Comando desconocido");
+    expect(resultado.bloqueo).toBeNull();
   });
 });
