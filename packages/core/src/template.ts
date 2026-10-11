@@ -114,6 +114,13 @@ Ninguno.
   <!-- Una línea por cada impacto que el ticket declara, con las palabras de su proposición:
        sincronización (datos ya sincronizados y clientes que todavía no se actualizaron),
        migración (orden de aplicación y reversión) o contenedores (imagen y publicación). -->
+- Tamaño previsto:
+  <!-- «N líneas» de producción y pruebas, más el número de criterios, por ejemplo
+       «unas 360 líneas (90 de producción, 270 de pruebas), 19 criterios». Se estima contra
+       \`delivery-budget\` de \`.valmen/config.yaml\`. -->
+- Si excede el tope:
+  <!-- Con más líneas que \`delivery-budget\`: «se parte en <tickets dependientes>» o
+       «sigue: <motivo>». Sin exceder, «no excede el tope». La persona lo aprueba con el plan. -->
 - Rollback (obligatorio):
 
 <!-- Los criterios de la sección siguiente se numeran C1…Cn, con una afirmación verificable por criterio

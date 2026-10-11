@@ -87,7 +87,7 @@ Un `verify: manual` se cita como «Cn» en el paso del plan que lo verifica y un
 
 **Un criterio, un comportamiento observable**: ni compuestos («y») ni uno por cada aserción.
 
-**Tamaño del plan**: se declara el previsto (criterios y líneas de cambio, producción y pruebas). Un plan de más de unos 20 criterios o de más de unas 400 líneas se parte antes de aprobarse.
+**Tamaño del plan**: `- Tamaño previsto:` («N líneas») contra `delivery-budget`; si pasa unos 20 criterios o el tope, `- Si excede el tope:` dice «se parte en tickets dependientes» o «sigue: motivo».
 
 ## Handoff
 
