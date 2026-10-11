@@ -4,8 +4,8 @@ id: BUGFIX-GATE-CONJUNCION-CRITERIOS-20261010
 title: Una conjunción dentro de un nombre no hace compuesto a un criterio
 type: BUGFIX
 module: GATE
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -127,7 +127,31 @@ Ninguno.
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación delegada de BUGFIX-GATE-CONJUNCION-CRITERIOS-20261010",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta verificar sus criterios.",
+    "expected": "Los criterios del ticket se cumplen y sus pruebas dan el resultado esperado.",
+    "evidence": [
+      "EVIDENCE-001"
+    ],
+    "affected_files": [
+      "packages/gate/src/criteria.ts",
+      "tests/gate-conjuncion-criterios.test.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -147,28 +171,81 @@ Directorio: raíz del repositorio (worktree).
 - `npx tsc --noEmit -p tsconfig.json` → 0 errores; `npm run exports:check` → sin entradas nuevas (línea base 439); `npm run lint` → 0 errores; `npm run format:check` → limpio.
 - Validación manual del responsable: volver a correr la compuerta de plan de SECURITY-ADAPTER-DENEGADOS-CODEX-OPENCODE-20261010 y comprobar que C13 y C14 ya no dan «agrupa 2 afirmaciones».
 
+- Resultado del PO: Si dale. Las pruebas del ticket las ejecutó el agente y dieron el resultado esperado: tests/gate-conjuncion-criterios.test.ts: 14 de 14; verificado por el orquestador C15: contra criteria.ts anterior al arreglo (commit 68cf431 padre) la tabla falla y con el arreglo pasa; 9 archivos que consumen criteria.ts: 182 pruebas; suite completa de main con los tres integrados: 257 archivos y 4966 pruebas en verde; tsc 0 errores; lint 0; format:check y exports:check limpios; compuerta qa-mechanical (command): APPROVE
+
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-11",
+    "build_reference": "commit:050308dad40207766b94e2ae8caaa7baa40b68d9",
+    "environment": "local: checkout principal de main, Node 24, sin Docker ni red ni modelo real",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-11",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "Si dale"
+  }
+]
 ```
 
 ## Evidencia
 
 ```json
-[]
+[
+  {
+    "id": "EVIDENCE-001",
+    "date": "2026-10-11",
+    "kind": "automated-test",
+    "description": "tests/gate-conjuncion-criterios.test.ts: 14 de 14; verificado por el orquestador C15: contra criteria.ts anterior al arreglo (commit 68cf431 padre) la tabla falla y con el arreglo pasa; 9 archivos que consumen criteria.ts: 182 pruebas; suite completa de main con los tres integrados: 257 archivos y 4966 pruebas en verde; tsc 0 errores; lint 0; format:check y exports:check limpios; compuerta qa-mechanical (command): APPROVE",
+    "reference": "worktree:sha256:2df6e62ebe42b77fb918e3ba87120b99fd1cda75bdf7459e60c749e07dde1fc5",
+    "point_id": "POINT-001"
+  }
+]
 ```
 
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-11",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "Si dale"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-11",
+    "technical_summary": "packages/gate/src/criteria.ts distingue una conjunción entre dos afirmaciones de una dentro de un sintagma nominal o de una condición, sin modelo: C13 y C14 reales de Codex cuentan 1 y no 2, y «valida el monto y envía el aviso» sigue contando 2; de 2222 criterios de los tickets cerrados, 38 pasan de compuestos a atómicos y los 38 eran falsos positivos.",
+    "functional_summary": "Un criterio con una «y» dentro de un nombre ya no se penaliza como compuesto, así que la compuerta no bloquea planes buenos por eso.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "Sin migraciones, sin sincronización ni Docker. Cambia cómo se cuentan las afirmaciones de un criterio; no reabre ninguna compuerta ya decidida."
+  }
+]
 ```
 
 ## Consumo de IA
@@ -189,6 +266,36 @@ Directorio: raíz del repositorio (worktree).
     "source": "manual: sesión de implementación sin números expuestos",
     "confidence": "low",
     "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": "c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-a51e8bbf689073fdc",
+    "model": "anthropic/claude-opus-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 11 intervención(es) sobre el registro, 0 con fallo. 11 de 44 mensajes tocaron el registro. Subagente de la sesión c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8; su gasto no está en la madre. Duró 9 min. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 4251302 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 127161,
+    "output_tokens": 28854,
+    "total_tokens": 156015,
+    "estimated_cost_usd": null,
+    "source": "claude:c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-a51e8bbf689073fdc",
+    "confidence": "high",
+    "id": "CONSUMO-002"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": "c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-a11c2063ac79380d2",
+    "model": "anthropic/claude-sonnet-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 4 intervención(es) sobre el registro, 0 con fallo. 4 de 18 mensajes tocaron el registro. Subagente de la sesión c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8; su gasto no está en la madre. Duró 2 min. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 1518818 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 63570,
+    "output_tokens": 10218,
+    "total_tokens": 73788,
+    "estimated_cost_usd": null,
+    "source": "claude:c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-a11c2063ac79380d2",
+    "confidence": "high",
+    "id": "CONSUMO-003"
   }
 ]
 ```
@@ -290,6 +397,141 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:24.658Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:24.995Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:25.163Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:25.342Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:25.517Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:25.675Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:25.840Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:26.022Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:26.225Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:26.376Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:26.525Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:26.678Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:26.825Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:26.974Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-025",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:27.121Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```

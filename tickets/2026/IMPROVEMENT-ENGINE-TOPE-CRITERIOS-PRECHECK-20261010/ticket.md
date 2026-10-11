@@ -4,8 +4,8 @@ id: IMPROVEMENT-ENGINE-TOPE-CRITERIOS-PRECHECK-20261010
 title: El precheck rechaza un plan de más de 20 criterios, no de más de 40
 type: IMPROVEMENT
 module: ENGINE
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -124,7 +124,33 @@ Ninguno.
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación delegada de IMPROVEMENT-ENGINE-TOPE-CRITERIOS-PRECHECK-20261010",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta verificar sus criterios.",
+    "expected": "Los criterios del ticket se cumplen y sus pruebas dan el resultado esperado.",
+    "evidence": [
+      "EVIDENCE-001"
+    ],
+    "affected_files": [
+      "packages/engine/src/revision-previa.ts",
+      "tests/gate-criterios-por-forma.test.ts",
+      "tests/revision-previa.test.ts",
+      "tests/tope-criterios-precheck.test.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -151,28 +177,81 @@ Directorio de ejecución: raíz del worktree (o del repositorio tras integrar). 
 - Validación manual: antes de integrar, el orquestador corre `valmen precheck plan --id <ID>` sobre cada ticket de `grep -l "created: 2026-10-1[2-9]" tickets/2026/*/ticket.md` en `intake` o `analyzed`; si alguno da `mas_criterios_que_el_tope`, avisa al PO.
 - No corrida: la suite completa (la corre el orquestador al integrar).
 
+- Resultado del PO: Si dale. Las pruebas del ticket las ejecutó el agente y dieron el resultado esperado: tests/tope-criterios-precheck.test.ts: 19 de 19 (15 nacieron en rojo); revision-previa, gate-criterios-por-forma, gates y cascada: 161 y 374 pruebas en verde; suite completa de main con los tres integrados: 257 archivos y 4966 pruebas en verde; tsc 0 errores; lint 0; format:check y exports:check limpios; compuerta qa-mechanical (command): APPROVE
+
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-11",
+    "build_reference": "commit:050308dad40207766b94e2ae8caaa7baa40b68d9",
+    "environment": "local: checkout principal de main, Node 24, sin Docker ni red ni modelo real",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-11",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "Si dale"
+  }
+]
 ```
 
 ## Evidencia
 
 ```json
-[]
+[
+  {
+    "id": "EVIDENCE-001",
+    "date": "2026-10-11",
+    "kind": "automated-test",
+    "description": "tests/tope-criterios-precheck.test.ts: 19 de 19 (15 nacieron en rojo); revision-previa, gate-criterios-por-forma, gates y cascada: 161 y 374 pruebas en verde; suite completa de main con los tres integrados: 257 archivos y 4966 pruebas en verde; tsc 0 errores; lint 0; format:check y exports:check limpios; compuerta qa-mechanical (command): APPROVE",
+    "reference": "worktree:sha256:d0cdbe11138451ffe8f5226c7218a9211e5794cfe7441662d22a76cb497bb8f4",
+    "point_id": "POINT-001"
+  }
+]
 ```
 
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-11",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "Si dale"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-11",
+    "technical_summary": "El precheck (packages/engine/src/revision-previa.ts) rechaza un plan de más de 20 criterios para tickets con created desde el 2026-10-12; los anteriores conservan 40 y no se reabren; sin aviso previo y sin excepción por tipo; cuatro líneas de pruebas existentes ajustadas, declaradas en el plan.",
+    "functional_summary": "Un plan de más de 20 criterios se rechaza antes de gastar la compuerta, que es lo que más REVIEW causa (0 % hasta 12 proposiciones, 51 % de 20 a 30 y 69 % de 30 a 60).",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "Sin migraciones, sin sincronización ni Docker. Desde el 2026-10-12 un ticket nuevo con más de 20 criterios no pasa el precheck: hay que partirlo."
+  }
+]
 ```
 
 ## Consumo de IA
@@ -193,6 +272,36 @@ Directorio de ejecución: raíz del worktree (o del repositorio tras integrar). 
     "source": "manual:sesión de implementación sin agregado de tokens expuesto",
     "confidence": "low",
     "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": "c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-a2141b1fcaf804d56",
+    "model": "anthropic/claude-opus-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 14 intervención(es) sobre el registro, 1 con fallo. 14 de 42 mensajes tocaron el registro. Subagente de la sesión c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8; su gasto no está en la madre. Duró 9 min. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 3967203 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 87627,
+    "output_tokens": 25519,
+    "total_tokens": 113146,
+    "estimated_cost_usd": null,
+    "source": "claude:c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-a2141b1fcaf804d56",
+    "confidence": "high",
+    "id": "CONSUMO-002"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": "c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-a45b3ef564c0e6f0e",
+    "model": "anthropic/claude-sonnet-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 5 intervención(es) sobre el registro, 0 con fallo. 5 de 24 mensajes tocaron el registro. Subagente de la sesión c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8; su gasto no está en la madre. Duró 4 min. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 2330361 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 79164,
+    "output_tokens": 13052,
+    "total_tokens": 92216,
+    "estimated_cost_usd": null,
+    "source": "claude:c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-a45b3ef564c0e6f0e",
+    "confidence": "high",
+    "id": "CONSUMO-003"
   }
 ]
 ```
@@ -294,6 +403,141 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:28.738Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:29.067Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:29.225Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:29.386Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:29.538Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:29.714Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:29.865Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:30.111Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:30.347Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:30.492Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:30.646Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:30.792Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:30.942Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:31.091Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-025",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:31.256Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```

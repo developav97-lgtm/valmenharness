@@ -4,8 +4,8 @@ id: BUGFIX-ENGINE-DIFF-RUTAS-RENOMBRE-20261010
 title: Las rutas de un diff pierden el origen de un renombre, los borrados y las rutas no ASCII
 type: BUGFIX
 module: ENGINE
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -146,7 +146,44 @@ Ninguno.
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación delegada de BUGFIX-ENGINE-DIFF-RUTAS-RENOMBRE-20261010",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta verificar sus criterios.",
+    "expected": "Los criterios del ticket se cumplen y sus pruebas dan el resultado esperado.",
+    "evidence": [
+      "EVIDENCE-001"
+    ],
+    "affected_files": [
+      "packages/engine/src/diff.ts",
+      "packages/engine/src/index.ts",
+      "packages/engine/src/qa-agent-git.ts",
+      "packages/engine/src/qa-agent.ts",
+      "packages/engine/src/qa-eligibility.ts",
+      "packages/engine/src/qa-policy-close.ts",
+      "packages/engine/src/rutas-tocadas.ts",
+      "packages/engine/src/worktree-integracion-git.ts",
+      "packages/engine/src/worktree-integrar.ts",
+      "scripts/exports-sin-uso.linea-base.json",
+      "tests/lista-denegados.test.ts",
+      "tests/qa-agent.test.ts",
+      "tests/qa-por-politica.test.ts",
+      "tests/rutas-tocadas.test.ts",
+      "tests/worktree-integrar.test.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -166,28 +203,81 @@ Directorio: raíz del worktree (`/Users/juanandrade/Desktop/ValmenHarness/.claud
 - `npx tsc --noEmit -p tsconfig.json` → 0 errores. `npm run build` → compila. `npm run exports:check` → sin exportaciones nuevas sin consumidor. `npm run lint` → 0 errores. `npm run format:check` → limpio.
 - Validación manual: ninguna. Pendiente para la persona: la suite completa (`npx vitest run`) la corre el orquestador al integrar.
 
+- Resultado del PO: Si dale. Las pruebas del ticket las ejecutó el agente y dieron el resultado esperado: tests/rutas-tocadas.test.ts nueva y las 11 suites de los seis consumidores: 287 pruebas en verde; reproducido en un repositorio git real el renombre desde una migración, la ruta no ASCII, el borrado y el secreto en un archivo de nombre no ASCII; suite completa de main con los tres integrados: 257 archivos y 4966 pruebas en verde; tsc 0 errores; lint 0; format:check y exports:check limpios; compuerta qa-mechanical (command): APPROVE
+
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-11",
+    "build_reference": "commit:050308dad40207766b94e2ae8caaa7baa40b68d9",
+    "environment": "local: checkout principal de main, Node 24, sin Docker ni red ni modelo real",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-11",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "Si dale"
+  }
+]
 ```
 
 ## Evidencia
 
 ```json
-[]
+[
+  {
+    "id": "EVIDENCE-001",
+    "date": "2026-10-11",
+    "kind": "automated-test",
+    "description": "tests/rutas-tocadas.test.ts nueva y las 11 suites de los seis consumidores: 287 pruebas en verde; reproducido en un repositorio git real el renombre desde una migración, la ruta no ASCII, el borrado y el secreto en un archivo de nombre no ASCII; suite completa de main con los tres integrados: 257 archivos y 4966 pruebas en verde; tsc 0 errores; lint 0; format:check y exports:check limpios; compuerta qa-mechanical (command): APPROVE",
+    "reference": "worktree:sha256:36ee5f5abf30a3ced5b6e63e4d4c9c04dfe2b3ded7562572f576b83915c18825",
+    "point_id": "POINT-001"
+  }
+]
 ```
 
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-11",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "Si dale"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-11",
+    "technical_summary": "Función única de rutas tocadas (packages/engine/src/rutas-tocadas.ts) con -z y --name-status que reporta origen y destino de renombres y copias; la usan la elegibilidad de la QA por agente, qa-agent, qa-policy-close, la integración, diff.ts y el detector de secretos.",
+    "functional_summary": "Un renombre desde una ruta prohibida ya frena la elegibilidad de la QA por agente, las rutas no ASCII se clasifican, los borrados aparecen y valmen secrets ve un secreto en un archivo de nombre no ASCII.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "Sin migraciones, sin sincronización ni Docker. git status con porcelain sin -z queda fuera, para otro ticket."
+  }
+]
 ```
 
 ## Consumo de IA
@@ -208,6 +298,51 @@ Directorio: raíz del worktree (`/Users/juanandrade/Desktop/ValmenHarness/.claud
     "source": "manual:subagente-implementacion",
     "confidence": "low",
     "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": "c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8",
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. Sesión **compartida**: trabajó 7 tickets (FEATURE-CLI-PRUEBA-MENSAJES-20261010 ×87, FEATURE-BENCH-FRICCION-RUNNER-20261010 ×58, CHORE-CI-EXPORTS-SIN-USO-20261010 ×56, FEATURE-GATE-CODE-REVIEW-EXIGENCIA-20261010 ×29, FEATURE-X-20261010 ×25), así que su costo no se reparte y acá no se registran números. Costo completo de la sesión: no declarado por el proveedor, 5162518 tokens (sin los subagentes con ticket propio). Registralo en el ticket cuya sesión sea propia, o declaralo compartido donde corresponda. Sesión \"Comparación de harness de desarrollo\".",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "claude:c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8",
+    "confidence": "high",
+    "id": "CONSUMO-002"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": "c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-a778ae8259c5f7cdc",
+    "model": "anthropic/claude-opus-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 15 intervención(es) sobre el registro, 0 con fallo. 15 de 52 mensajes tocaron el registro. Subagente de la sesión c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8; su gasto no está en la madre. Duró 10 min. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 5408839 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 108768,
+    "output_tokens": 39798,
+    "total_tokens": 148566,
+    "estimated_cost_usd": null,
+    "source": "claude:c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-a778ae8259c5f7cdc",
+    "confidence": "high",
+    "id": "CONSUMO-003"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": "c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-ac876415901a82b10",
+    "model": "anthropic/claude-sonnet-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 7 intervención(es) sobre el registro, 0 con fallo. 7 de 40 mensajes tocaron el registro. Subagente de la sesión c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8; su gasto no está en la madre. Duró 7 min. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 4682724 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 147924,
+    "output_tokens": 32046,
+    "total_tokens": 179970,
+    "estimated_cost_usd": null,
+    "source": "claude:c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-ac876415901a82b10",
+    "confidence": "high",
+    "id": "CONSUMO-004"
   }
 ]
 ```
@@ -300,6 +435,150 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:32.673Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:32.981Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:33.284Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-004."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:33.450Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:33.607Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:33.766Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:33.920Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:34.072Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:34.403Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:34.761Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:34.909Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:35.058Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:35.215Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:35.363Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:35.515Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-025",
+    "date": "2026-10-11",
+    "at": "2026-10-11T07:12:35.661Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
