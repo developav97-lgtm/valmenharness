@@ -227,6 +227,7 @@ export const COMANDOS: Readonly<Record<string, EspecComando>> = {
   migrate: { conValor: [], booleanas: ["--dry-run"] },
   adopt: { conValor: ["--machine-id"], booleanas: ["--dry-run", "--codegraph"] },
   sync: { conValor: [], booleanas: ["--check", "--dry-run"] },
+  cleanup: { conValor: [], booleanas: ["--confirm", "--json"] },
 
   // --- Los que `run` despacha antes que `dispatch` ---------------------------------
   serve: { conValor: ["--port", "--host"], booleanas: [] },

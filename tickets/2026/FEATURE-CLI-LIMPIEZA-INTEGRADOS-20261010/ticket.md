@@ -4,7 +4,7 @@ id: FEATURE-CLI-LIMPIEZA-INTEGRADOS-20261010
 title: Comando de limpieza de worktrees y respaldos con --confirm
 type: FEATURE
 module: CLI
-workflow_status: in_progress
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -98,45 +98,45 @@ El pedido nombra cuatro cosas que el código no tiene; se buscaron (`grep -rn -i
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1. (R-LIM-001) `valmen cleanup` sin banderas lista un worktree integrado limpio como «se quitaría» con su tamaño en bytes.
+- [x] C1. (R-LIM-001) `valmen cleanup` sin banderas lista un worktree integrado limpio como «se quitaría» con su tamaño en bytes.
       <!-- test: npx vitest run tests/limpieza.test.ts -->
-- [ ] C2. (R-LIM-001) `valmen cleanup` sin banderas lista un worktree con un archivo sin commitear como «se conserva: árbol sucio».
+- [x] C2. (R-LIM-001) `valmen cleanup` sin banderas lista un worktree con un archivo sin commitear como «se conserva: árbol sucio».
       <!-- test: npx vitest run tests/limpieza.test.ts -->
-- [ ] C3. (R-LIM-001) `valmen cleanup` sin banderas lista como «se conserva: árbol sucio» un worktree cuyo único cambio está en `.valmen/journeys/`.
+- [x] C3. (R-LIM-001) `valmen cleanup` sin banderas lista como «se conserva: árbol sucio» un worktree cuyo único cambio está en `.valmen/journeys/`.
       <!-- test: npx vitest run tests/limpieza.test.ts -->
-- [ ] C4. (R-LIM-001) Sin `backup-retention-days` en la configuración, un respaldo de `sync` de 31 días se lista como «se quitaría».
+- [x] C4. (R-LIM-001) Sin `backup-retention-days` en la configuración, un respaldo de `sync` de 31 días se lista como «se quitaría».
       <!-- test: npx vitest run tests/limpieza.test.ts -->
-- [ ] C5. (R-LIM-001) Con `backup-retention-days: 7`, un respaldo de `sync` de 3 días se lista como «se conserva: dentro de la retención».
+- [x] C5. (R-LIM-001) Con `backup-retention-days: 7`, un respaldo de `sync` de 3 días se lista como «se conserva: dentro de la retención».
       <!-- test: npx vitest run tests/limpieza.test.ts -->
-- [ ] C6. (R-LIM-001) `valmen cleanup` sin banderas deja la salida de `git worktree list --porcelain` igual a la de antes.
+- [x] C6. (R-LIM-001) `valmen cleanup` sin banderas deja la salida de `git worktree list --porcelain` igual a la de antes.
       <!-- test: npx vitest run tests/limpieza.test.ts -->
-- [ ] C7. (R-LIM-001) `valmen cleanup` sin banderas sale con código 0.
+- [x] C7. (R-LIM-001) `valmen cleanup` sin banderas sale con código 0.
       <!-- test: npx vitest run tests/limpieza.test.ts -->
-- [ ] C8. (R-LIM-001) `valmen cleanup` sin banderas deja igual la lista de carpetas de `.valmen/backups/sync/`.
+- [x] C8. (R-LIM-001) `valmen cleanup` sin banderas deja igual la lista de carpetas de `.valmen/backups/sync/`.
       <!-- test: npx vitest run tests/limpieza.test.ts -->
-- [ ] C9. (R-LIM-001) `valmen cleanup --json` devuelve un JSON cuyos elementos de `worktrees` traen los campos `ruta`, `accion`, `motivo`, `bytes`.
+- [x] C9. (R-LIM-001) `valmen cleanup --json` devuelve un JSON cuyos elementos de `worktrees` traen los campos `ruta`, `accion`, `motivo`, `bytes`.
       <!-- test: npx vitest run tests/limpieza.test.ts -->
-- [ ] C10. (R-LIM-002) `valmen cleanup --confirm` quita un worktree desacoplado cuyo commit es alcanzable desde `main`.
+- [x] C10. (R-LIM-002) `valmen cleanup --confirm` quita un worktree desacoplado cuyo commit es alcanzable desde `main`.
       <!-- test: npx vitest run tests/limpieza.test.ts -->
-- [ ] C11. (R-LIM-002) `valmen cleanup --confirm` borra la rama del worktree integrado que quitó.
+- [x] C11. (R-LIM-002) `valmen cleanup --confirm` borra la rama del worktree integrado que quitó.
       <!-- test: npx vitest run tests/limpieza.test.ts -->
-- [ ] C12. (R-LIM-002) `valmen cleanup --confirm` libera el cupo de la máquina que reservaba el worktree quitado.
+- [x] C12. (R-LIM-002) `valmen cleanup --confirm` libera el cupo de la máquina que reservaba el worktree quitado.
       <!-- test: npx vitest run tests/limpieza.test.ts -->
-- [ ] C13. (R-LIM-002) `valmen cleanup --confirm` borra la carpeta del respaldo de `sync` vencido.
+- [x] C13. (R-LIM-002) `valmen cleanup --confirm` borra la carpeta del respaldo de `sync` vencido.
       <!-- test: npx vitest run tests/limpieza.test.ts -->
-- [ ] C14. (R-LIM-002) El recibo `.valmen/backups/cleanup/<marca>.json` ya existe cuando git recibe el primer `worktree remove`.
+- [x] C14. (R-LIM-002) El recibo `.valmen/backups/cleanup/<marca>.json` ya existe cuando git recibe el primer `worktree remove`.
       <!-- test: npx vitest run tests/limpieza.test.ts -->
-- [ ] C15. (R-LIM-002) El recibo registra el commit de cada worktree quitado.
+- [x] C15. (R-LIM-002) El recibo registra el commit de cada worktree quitado.
       <!-- test: npx vitest run tests/limpieza.test.ts -->
-- [ ] C16. (R-LIM-002) Un worktree que git se niega a quitar se informa con el error de git, con salida 3.
+- [x] C16. (R-LIM-002) Un worktree que git se niega a quitar se informa con el error de git, con salida 3.
       <!-- test: npx vitest run tests/limpieza.test.ts -->
-- [ ] C17. (R-LIM-003) `valmen cleanup --confirm` conserva un worktree limpio con un commit fuera de `main`, con el motivo «commits sin integrar».
+- [x] C17. (R-LIM-003) `valmen cleanup --confirm` conserva un worktree limpio con un commit fuera de `main`, con el motivo «commits sin integrar».
       <!-- test: npx vitest run tests/limpieza.test.ts -->
-- [ ] C18. (R-LIM-003) `valmen cleanup --confirm` conserva un worktree `ticket-<slug>` cuyo ticket no está `closed`, con el motivo «ticket sin cerrar».
+- [x] C18. (R-LIM-003) `valmen cleanup --confirm` conserva un worktree `ticket-<slug>` cuyo ticket no está `closed`, con el motivo «ticket sin cerrar».
       <!-- test: npx vitest run tests/limpieza.test.ts -->
-- [ ] C19. (R-LIM-003) `motivoDeGitDeLimpieza` rechaza `--force`, `-f`, `-D`, una carpeta fuera de `.claude/worktrees/`, sin llamar al ejecutor de git.
+- [x] C19. (R-LIM-003) `motivoDeGitDeLimpieza` rechaza `--force`, `-f`, `-D`, una carpeta fuera de `.claude/worktrees/`, sin llamar al ejecutor de git.
       <!-- test: npx vitest run tests/limpieza.test.ts -->
-- [ ] C20. Las pruebas existentes de la tabla de comandos, de `journey worktree`, pasan sin editarlas con `cleanup` agregado.
+- [x] C20. Las pruebas existentes de la tabla de comandos, de `journey worktree`, pasan sin editarlas con `cleanup` agregado.
       <!-- test: npx vitest run tests/cli-tabla-comandos.test.ts tests/worktree-cli.test.ts tests/worktree-git.test.ts tests/worktree-integracion.test.ts -->
 
 ## Puntos
@@ -147,11 +147,22 @@ El pedido nombra cuatro cosas que el código no tiene; se buscaron (`grep -rn -i
 
 ## Implementación
 
-Pendiente.
+Hecho el 2026-10-11 en la rama `valmen/ticket-limpieza-integrados`, siguiendo el plan aprobado y D1–D4 sin cambios.
+
+- `packages/engine/src/limpieza-git.ts` (nuevo): `motivoDeGitDeLimpieza` y `ejecutarGitDeLimpieza`, la lista cerrada propia (lectura, `worktree remove` de una carpeta directa de `.claude/worktrees/`, `branch -d` de una rama distinta de `main`); rechaza `--force`, `-f`, `-D`, `--hard` antes de lanzar nada. No se amplió la de `journey worktree`.
+- `packages/engine/src/limpieza.ts` (nuevo): `retencionDeRespaldos` (`backup-retention-days`, 30 por defecto), `vistaDeLimpieza` (árbol sucio sin el filtro del harness, commits sin integrar, ticket sin cerrar, tamaño aparente) y `aplicarLimpieza` (recibo `.valmen/backups/cleanup/<marca>.json` antes del primer borrado, `git worktree remove` + `branch -d`, liberación del cupo `worktree-<slug>`, borrado acotado de respaldos con `lstat`/`realpath`). Exportados en `packages/engine/src/index.ts`; `proyectoDeLaMaquina` de `worktree.ts` pasa a exportarse (sin otro cambio).
+- `packages/cli/src/limpieza.ts` (nuevo): `cleanupCommand`; `packages/cli/src/command-table.ts` (entrada `cleanup`) y `packages/cli/src/main.ts` (despacho y línea de `USAGE`).
+- Tamaño: unas 950 líneas añadidas (producción ≈ 620 con comentarios, pruebas ≈ 330), por encima de las 700 previstas; no se partió porque la mitad B (`--confirm`) comparte el motor con la A. Se reporta al orquestador.
+- Sin tocar: `journey worktree`, `quitarWorktree`, `.valmen/config.yaml` (la clave `backup-retention-days` la declara el orquestador en `main`; mientras falte rigen 30 días).
 
 ## Pruebas
 
-Pendiente de ejecución.
+Directorio de ejecución: la raíz del repositorio (o del worktree). Requisitos: `node_modules` y `npx tsc --build tsconfig.build.json` hechos. Todas corren sobre repositorios git temporales creados por la prueba (`tests/helpers/worktree-lab.ts`); ninguna toca el repositorio real ni ejecuta `cleanup --confirm` sobre él.
+
+- `npx vitest run tests/limpieza.test.ts` — esperado: 19 pruebas en verde (C1–C19). Vistas en rojo antes de implementar (el módulo no existía).
+- `npx vitest run tests/cli-tabla-comandos.test.ts tests/worktree-cli.test.ts tests/worktree-git.test.ts tests/worktree-integracion.test.ts` — esperado: en verde sin editarlas (C20); los cinco archivos juntos: 137 pruebas.
+- `npx tsc --noEmit -p .`, `npx eslint` y `npx prettier --check` de lo tocado: sin hallazgos.
+- Validación manual: ninguna; todos los criterios llevan prueba ejecutable.
 
 ## QA
 
@@ -180,7 +191,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": null,
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:sesion-implementacion-sonnet-5-5",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -271,6 +298,24 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:16:55.938Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:16:56.440Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```

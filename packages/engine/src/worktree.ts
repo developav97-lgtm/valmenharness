@@ -71,7 +71,10 @@ export interface WorktreeQuitado {
 }
 
 /** El proyecto autorizado de esta raíz, o `null` si la máquina no lo declara. */
-function proyectoDeLaMaquina(paths: RegistryPaths, home: string): AuthorizedProject | null {
+export function proyectoDeLaMaquina(
+  paths: RegistryPaths,
+  home: string,
+): AuthorizedProject | null {
   try {
     const config = readFileSync(join(paths.root, ".valmen", "config.yaml"), "utf8");
     const projectId = readSharedProjectPolicy(parseConfig(config)).projectId;
