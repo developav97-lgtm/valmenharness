@@ -15,7 +15,6 @@ import {
   SIN_INTERFAZ,
   type NoulProposition,
 } from "../packages/gate/src/index.js";
-import type { JevEvaluation } from "../packages/gate-jev/src/index.js";
 import { writeFixtureTicket } from "./helpers/fixtures.js";
 
 const TICKET = "FEATURE-JEV-PROPOSICIONES-LAB-20261006";

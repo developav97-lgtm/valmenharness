@@ -462,7 +462,8 @@ export function elegirPerfil(
   if (ejecutor === undefined) {
     nueva = { proyecto: perfil, ejecutores: vigente.ejecutores };
   } else {
-    const { [ejecutor]: _quitado, ...resto } = vigente.ejecutores;
+    const resto = { ...vigente.ejecutores };
+    delete resto[ejecutor];
     nueva = {
       proyecto: vigente.proyecto,
       ejecutores: perfil === null ? resto : { ...resto, [ejecutor]: perfil },

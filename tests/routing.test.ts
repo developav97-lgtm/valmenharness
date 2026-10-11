@@ -808,7 +808,8 @@ describe("los perfiles de modelos", () => {
   });
 
   it("R-PERF-001 perfil incompleto", () => {
-    const { "agent-plan": _quitado, ...resto } = perfilIncorporado("codex-completo").roles;
+    const resto = { ...perfilIncorporado("codex-completo").roles };
+    delete (resto as Record<string, unknown>)["agent-plan"];
     const errores = comprobarCompleto({ ...perfilIncorporado("codex-completo"), id: "roto", origen: "proyecto", roles: resto });
     expect(errores).toHaveLength(1);
     expect(errores[0]).toContain("agent-plan");

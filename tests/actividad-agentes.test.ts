@@ -475,16 +475,16 @@ describe("pregunta pendiente", () => {
   const inicio = linea({ t: 1, tipo: "user", texto: `Implementa ${TICKET}` });
   const pregunta = (id = "q1", t = 2): string =>
     linea({ t, tipo: "assistant", herramienta: { id, name: "AskUserQuestion" } });
-  const una = (_: readonly string[]) => leer()[0];
+  const una = () => leer()[0];
 
   it("PP-C1: una AskUserQuestion sin resultado declara desde y respondidaEn null", () => {
     sesion([[inicio, pregunta()]]);
-    expect(una([])?.pregunta).toEqual({ desde: iso(2), respondidaEn: null });
+    expect(una()?.pregunta).toEqual({ desde: iso(2), respondidaEn: null });
   });
 
   it("PP-C2: una AskUserQuestion sin resultado deja la fila esperando", () => {
     sesion([[inicio, pregunta()]]);
-    expect(una([])?.estado).toBe("esperando");
+    expect(una()?.estado).toBe("esperando");
   });
 
   it("PP-C3: respondida hace 20 s declara respondidaEn con la hora del resultado", () => {

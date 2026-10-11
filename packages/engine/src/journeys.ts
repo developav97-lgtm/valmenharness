@@ -78,7 +78,7 @@ export interface JourneyRevision extends Readonly<JourneyRevisionInput> {
 }
 
 /** Última foto de una jornada, conservando el cursor de la revisión que la produjo. */
-export interface Journey extends Readonly<Omit<JourneyRevision, "kind">> {}
+export type Journey = Readonly<Omit<JourneyRevision, "kind">>;
 
 export interface AppendJourneyRevisionResult {
   readonly revision: JourneyRevision;

@@ -98,12 +98,6 @@ export interface AutonomousRunResult {
   readonly commit?: string | undefined;
 }
 
-interface Candidate {
-  readonly id: string;
-  readonly text: string;
-  readonly reasons: readonly string[];
-}
-
 const RISK_ORDER = ["low", "normal", "high", "critical"] as const;
 
 function riskAtMost(actual: string, maximum: string): boolean {

@@ -83,7 +83,8 @@ describe("la hora de los eventos del ticket", () => {
     expect(dos["id"]).toBe("EVENT-002");
     expect(() => validateEvents([uno, dos])).not.toThrow();
     // Un evento sin hora sigue exigiendo todo lo demás.
-    const { details: _detalles, ...sinDetalles } = sinHora();
+    const sinDetalles = { ...sinHora() } as Partial<ReturnType<typeof sinHora>>;
+    delete sinDetalles.details;
     expect(() => validateEvents([sinDetalles])).toThrow();
   });
 });
