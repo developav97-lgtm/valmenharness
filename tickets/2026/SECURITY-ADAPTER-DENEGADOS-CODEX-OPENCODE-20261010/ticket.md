@@ -4,8 +4,8 @@ id: SECURITY-ADAPTER-DENEGADOS-CODEX-OPENCODE-20261010
 title: Proyección de denegaciones a Codex y OpenCode con reporte del resto
 type: SECURITY
 module: ADAPTER
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -13,7 +13,7 @@ migration_impact: false
 docker_impact: false
 risk_level: normal
 created: 2026-10-10
-updated: 2026-10-10
+updated: 2026-10-11
 related_ticket: null
 target_release: null
 released_in: null
@@ -112,7 +112,7 @@ Ninguno.
       <!-- test: npx vitest run tests/denegados-codex-opencode.test.ts -->
 - [x] C2. (R-PER-004) `codexRulesText()` no lleva regla para `git push +`
       <!-- test: npx vitest run tests/denegados-codex-opencode.test.ts -->
-- [ ] C3. Con Codex 0.160.1, `codex execpolicy check` sobre el archivo proyectado devuelve `forbidden` para `git reset --hard`
+- [x] C3. Con Codex 0.160.1, `codex execpolicy check` sobre el archivo proyectado devuelve `forbidden` para `git reset --hard`
       <!-- verify: manual -->
 - [x] C4. Sin el runtime `codex`, `sync` no escribe el archivo de reglas de Codex
       <!-- test: npx vitest run tests/denegados-codex-opencode.test.ts -->
@@ -156,7 +156,30 @@ Ninguno.
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación de SECURITY-ADAPTER-DENEGADOS-CODEX-OPENCODE-20261010",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta verificar sus criterios.",
+    "expected": "Los criterios del ticket se cumplen y sus pruebas dan el resultado esperado.",
+    "evidence": [
+      "EVIDENCE-001"
+    ],
+    "affected_files": [
+      "packages/adapter/src/denied-clients.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-007"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -188,28 +211,141 @@ Manual, solo en un repositorio temporal (nunca uno real): con `valmen sync` y `r
 
 Ejecutado por el implementador: 1 (133 de 133), 2 (262 de 262), 3 (sin hallazgos nuevos) y `npx eslint` de los archivos tocados limpio. Limitación: la prueba parametrizada comprueba que cada regla está en el archivo del cliente o reportada, no que Codex u OpenCode las respeten (eso lo cubren C3, C13 y C14).
 
+- Resultado del PO: Cerrar los dos y abrir ticket del hueco cat .env (Recomendado). Las pruebas las ejecutó el agente el 2026-10-11: C3 con Codex 0.160.1, execpolicy check da forbidden para git reset --hard; C13 con OpenCode 2.0.16 en modo --auto, read de .env da Permission denied; C14 respaldado por la regla proyectada «git * reset --hard*» sin prueba en vivo, porque el modelo se negó solo a ejecutarlo. Límite anotado: cat .env por el shell de OpenCode no se deniega.
+
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-11",
+    "build_reference": "worktree:sha256:3d48d9349e722f7c115d6e34c06ab4d48c12dae4068c5c6dd1b766c9bd0d0bc2",
+    "environment": "local",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-11",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "Cerrar los dos y abrir ticket del hueco cat .env (Recomendado)"
+  },
+  {
+    "id": "QA-003",
+    "date": "2026-10-11",
+    "build_reference": "worktree:sha256:3d48d9349e722f7c115d6e34c06ab4d48c12dae4068c5c6dd1b766c9bd0d0bc2",
+    "environment": "local",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-004",
+    "date": "2026-10-11",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "Cerrar los dos y abrir ticket del hueco cat .env (Recomendado)"
+  },
+  {
+    "id": "QA-005",
+    "date": "2026-10-11",
+    "build_reference": "worktree:sha256:3d48d9349e722f7c115d6e34c06ab4d48c12dae4068c5c6dd1b766c9bd0d0bc2",
+    "environment": "local",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-006",
+    "date": "2026-10-11",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "Cerrar los dos y abrir ticket del hueco cat .env (Recomendado)"
+  },
+  {
+    "id": "QA-007",
+    "date": "2026-10-11",
+    "build_reference": "worktree:sha256:3d48d9349e722f7c115d6e34c06ab4d48c12dae4068c5c6dd1b766c9bd0d0bc2",
+    "environment": "local",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-008",
+    "date": "2026-10-11",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "Cerrar los dos y abrir ticket del hueco cat .env (Recomendado)"
+  }
+]
 ```
 
 ## Evidencia
 
 ```json
-[]
+[
+  {
+    "id": "EVIDENCE-001",
+    "date": "2026-10-11",
+    "kind": "test",
+    "description": "Codex execpolicy forbidden; OpenCode read de .env denegado; pruebas del ticket en verde, 2026-10-11",
+    "reference": "worktree:sha256:3d48d9349e722f7c115d6e34c06ab4d48c12dae4068c5c6dd1b766c9bd0d0bc2",
+    "point_id": "POINT-001"
+  }
+]
 ```
 
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-11",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "Cerrar los dos y abrir ticket del hueco cat .env (Recomendado)"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-11",
+    "technical_summary": "Entregado y verificado; ver ## Implementación del ticket",
+    "functional_summary": "Cumple sus criterios de aceptación, todos marcados",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "Sin impacto en producción; proyección de permisos del harness"
+  }
+]
 ```
 
 ## Consumo de IA
@@ -230,6 +366,66 @@ Ejecutado por el implementador: 1 (133 de 133), 2 (262 de 262), 3 (sin hallazgos
     "source": "manual:sesion-implementacion-sonnet-5-5",
     "confidence": "low",
     "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": "c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-a03df00ba131cdb15",
+    "model": "anthropic/claude-opus-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 14 intervención(es) sobre el registro, 0 con fallo. 14 de 129 mensajes tocaron el registro. Subagente de la sesión c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8; su gasto no está en la madre. Duró 133 min. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 24262040 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 695669,
+    "output_tokens": 85124,
+    "total_tokens": 780793,
+    "estimated_cost_usd": null,
+    "source": "claude:c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-a03df00ba131cdb15",
+    "confidence": "high",
+    "id": "CONSUMO-002"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": "fc8a0427-7309-4f1b-b302-cbed18478b68/agent-a03df00ba131cdb15",
+    "model": "anthropic/claude-opus-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 14 intervención(es) sobre el registro, 0 con fallo. 14 de 129 mensajes tocaron el registro. Subagente de la sesión fc8a0427-7309-4f1b-b302-cbed18478b68; su gasto no está en la madre. Duró 133 min. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 24262040 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 695669,
+    "output_tokens": 85124,
+    "total_tokens": 780793,
+    "estimated_cost_usd": null,
+    "source": "claude:fc8a0427-7309-4f1b-b302-cbed18478b68/agent-a03df00ba131cdb15",
+    "confidence": "high",
+    "id": "CONSUMO-003"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": "c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-a7ea464393989e01c",
+    "model": "anthropic/claude-sonnet-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 11 intervención(es) sobre el registro, 0 con fallo. 11 de 48 mensajes tocaron el registro. Subagente de la sesión c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8; su gasto no está en la madre. Duró 14 min. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 6279685 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 126775,
+    "output_tokens": 36868,
+    "total_tokens": 163643,
+    "estimated_cost_usd": null,
+    "source": "claude:c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-a7ea464393989e01c",
+    "confidence": "high",
+    "id": "CONSUMO-004"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": "fc8a0427-7309-4f1b-b302-cbed18478b68/agent-a7ea464393989e01c",
+    "model": "anthropic/claude-sonnet-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 11 intervención(es) sobre el registro, 0 con fallo. 11 de 48 mensajes tocaron el registro. Subagente de la sesión fc8a0427-7309-4f1b-b302-cbed18478b68; su gasto no está en la madre. Duró 14 min. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 6279685 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 126775,
+    "output_tokens": 36868,
+    "total_tokens": 163643,
+    "estimated_cost_usd": null,
+    "source": "claude:fc8a0427-7309-4f1b-b302-cbed18478b68/agent-a7ea464393989e01c",
+    "confidence": "high",
+    "id": "CONSUMO-005"
   }
 ]
 ```
@@ -340,6 +536,213 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:49:19.565Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:49:49.606Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:49:50.029Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:49:50.456Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:49:50.839Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:50:08.870Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:50:09.355Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-004 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:50:15.638Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-005."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:50:16.110Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-006 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:50:28.554Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:50:28.913Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:50:29.285Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:50:29.658Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-007."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-025",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:50:30.013Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-026",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:50:30.369Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-008 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-027",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:50:30.741Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-028",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:50:31.120Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-029",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:50:44.336Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-030",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:50:44.696Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-031",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:50:45.057Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-004."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-032",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:50:45.375Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-005."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-033",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:50:45.540Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-034",
+    "date": "2026-10-11",
+    "at": "2026-10-11T17:50:45.942Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
