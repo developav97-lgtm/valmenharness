@@ -28,8 +28,12 @@ import {
   CLAUDE_MD_PATH,
   CLAUDE_SETTINGS_PATH,
   OUTPUT_STYLE_PATH,
+  WORKTREE_INCLUDE_PATH,
+  claudeAllowConflicts,
   mergeClaudeMdBlock,
-  mergeOutputStyleSetting,
+  mergeClaudeSettings,
+  mergeWorktreeInclude,
+  missingClaudeDenyRules,
   renderOutputStyle,
 } from "./claude-code.js";
 import { CODEX_CONFIG_PATH, mergeCodexVerbosity, readCodexVerbosity } from "./verbosity.js";
@@ -112,6 +116,11 @@ export interface Projection {
    * no en quien lo imprime: lo ven igual la CLI y Mission Control.
    */
   readonly agentsMd: AgentsMdSize;
+  /**
+   * Las denegaciones del harness que `.claude/settings.json` no trae hoy en disco, para que
+   * `sync --check` diga cuál falta (R-PER-003) y `sync` cuántas agregó. Vacío sin el runtime `claude`.
+   */
+  readonly claudeDenyMissing: readonly string[];
   /** Avisos de la proyección que no la impiden, como pasarse del presupuesto. */
   readonly warnings: readonly string[];
 }
@@ -160,18 +169,23 @@ export function projectFiles(
   const size = measureAgentsMd(agentsMd, readAgentsMdBudget(model.config));
   const warning = agentsMdWarning(size);
 
-  // Para Claude Code, el estilo de salida es un archivo propio; `settings.json` y
-  // `CLAUDE.md` se fusionan con lo que ya hay, porque también los escribe la persona.
+  // Para Claude Code, el estilo de salida es un archivo propio; `settings.json`, `CLAUDE.md` y
+  // `.worktreeinclude` se fusionan con lo que ya hay, porque también los escribe la persona.
+  // `.claude/settings.local.json` no se lee ni se escribe: es de la persona y de su máquina.
+  const settingsActual = runtimes.includes("claude")
+    ? leerSiExiste(join(root, CLAUDE_SETTINGS_PATH))
+    : null;
   const claudeCode: ProjectedFile[] = runtimes.includes("claude")
     ? [
         { path: OUTPUT_STYLE_PATH, content: renderOutputStyle() },
-        {
-          path: CLAUDE_SETTINGS_PATH,
-          content: mergeOutputStyleSetting(leerSiExiste(join(root, CLAUDE_SETTINGS_PATH))),
-        },
+        { path: CLAUDE_SETTINGS_PATH, content: mergeClaudeSettings(settingsActual) },
         {
           path: CLAUDE_MD_PATH,
           content: mergeClaudeMdBlock(leerSiExiste(join(root, CLAUDE_MD_PATH))),
+        },
+        {
+          path: WORKTREE_INCLUDE_PATH,
+          content: mergeWorktreeInclude(leerSiExiste(join(root, WORKTREE_INCLUDE_PATH))),
         },
       ]
     : [];
@@ -216,6 +230,10 @@ export function projectFiles(
     agentCount: agents.length,
     skillCount: skills.length,
     agentsMd: size,
-    warnings: warning === null ? [] : [warning],
+    claudeDenyMissing: runtimes.includes("claude") ? missingClaudeDenyRules(settingsActual) : [],
+    warnings: [
+      ...(warning === null ? [] : [warning]),
+      ...(runtimes.includes("claude") ? claudeAllowConflicts(settingsActual) : []),
+    ],
   };
 }

@@ -30,9 +30,11 @@ import {
 } from "@valmen/core";
 import {
   type Projection,
+  CLAUDE_SETTINGS_PATH,
   adoptPlan,
   applyBlueprint,
   blueprintsDir,
+  claudeDenyRules,
   extractRules,
   listBlueprints,
   renderRuleExtraction,
@@ -914,12 +916,20 @@ export function syncProject(
     // versión anterior del catálogo. Antes de esto, esa segunda nada la veía.
     const deriva = derivaPublicada(root);
 
-    if (stale.length > 0 || deriva.length > 0) {
+    if (stale.length > 0 || deriva.length > 0 || proyeccion.claudeDenyMissing.length > 0) {
       const partes: string[] = [];
       if (stale.length > 0) {
         partes.push(
           `Hay ${stale.length} archivo(s) generados desactualizados o editados a mano; ` +
             `ejecute \`valmen sync\`: ${stale.join(", ")}`,
+        );
+      }
+      // Qué denegación falta, por nombre: «.claude/settings.json desactualizado» no dice si es el
+      // estilo de salida o una regla que alguien borró (R-PER-003).
+      if (proyeccion.claudeDenyMissing.length > 0) {
+        partes.push(
+          `Faltan ${proyeccion.claudeDenyMissing.length} denegación(es) del harness en ${CLAUDE_SETTINGS_PATH}: ` +
+            proyeccion.claudeDenyMissing.join(", "),
         );
       }
       if (deriva.length > 0) partes.push(descripcionDeDeriva(deriva));
@@ -938,6 +948,7 @@ export function syncProject(
   for (const file of projected) {
     atomicWrite(join(root, file.path), file.content);
   }
+  const conPermisos = projected.some((file) => file.path === CLAUDE_SETTINGS_PATH);
 
   const lines = [
     "Sincronización",
@@ -975,6 +986,14 @@ export function syncProject(
       ? `al día (${publicadasDelProyecto(root).length})`
       : `${instaladas.length} actualizada(s): ${instaladas.join(", ")}`;
   lines.push(`  skills publicadas        ${instaladasTexto}`);
+
+  if (conPermisos) {
+    const total = claudeDenyRules().length;
+    lines.push(
+      `  denegaciones de Claude Code  ${total} (${proyeccion.claudeDenyMissing.length} agregadas); ` +
+        "un worktree creado con git worktree add a mano no las trae",
+    );
+  }
 
   if (proyeccion.ruleCount === 0) {
     lines.push("  Añada reglas en .valmen/rules/ para que se incluyan en AGENTS.md.");

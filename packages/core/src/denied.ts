@@ -8,8 +8,11 @@
  * jornadas, `-D` en los worktrees. Sumar el extra a todos cambiaría lo que cada lista cerrada
  * admite, y eso es autoridad del agente: esta lista no la amplía ni la reduce.
  *
- * La proyección de estas listas a los agentes la suma SECURITY-CLI-PROYECCION-DENEGADOS-20261010,
- * con su consumidor. Core no toca la red ni el disco, así que el módulo no depende de ningún otro.
+ * Además lleva las dos listas que `valmen sync` proyecta a los agentes: `SENSITIVE_PATH_GLOBS` y
+ * `DENIED_GIT_COMMANDS`. Van **sin la sintaxis de ningún cliente**: globs y formas de comando en
+ * texto plano, para que cada adaptador las traduzca a la suya (hoy el de Claude Code las lee en
+ * `claude-code.ts`; Codex y OpenCode las leerán igual). Core no toca la red ni el disco, así que
+ * el módulo no depende de ningún otro.
  */
 
 /**
@@ -31,4 +34,45 @@ export const DENIED_GIT_FLAGS: readonly string[] = Object.freeze([
   "--hard",
   "--no-verify",
   "--amend",
+]);
+
+/**
+ * Las mismas rutas de credenciales como globs, para los clientes que filtran por patrón de ruta
+ * en vez de por expresión regular. Dan el mismo veredicto que `SENSITIVE_PATH_PATTERNS` sobre
+ * una ruta relativa (una prueba lo comprueba), y suman `~/.ssh/**`, que el motor no consume
+ * porque no commitea fuera del proyecto pero los agentes sí pueden leer.
+ */
+export const SENSITIVE_PATH_GLOBS: readonly string[] = Object.freeze([
+  "**/.env",
+  "**/.env.*",
+  "**/.credentials",
+  "**/.credentials.*",
+  "**/id_rsa",
+  "**/id_rsa.pub",
+  "**/id_ed25519",
+  "**/id_ed25519.pub",
+  "**/*.pem",
+  "**/*.key",
+  "**/*.p12",
+  "~/.ssh/**",
+]);
+
+/**
+ * Las formas de git que nunca se automatizan, como `git <operación> <bandera>`. Distinta de
+ * `DENIED_GIT_FLAGS`, que niega la bandera en cualquier operación de las listas cerradas del
+ * motor: aquí la bandera solo se niega con su operación (`-d` borra una etiqueta o una rama
+ * remota, pero en `git branch -d` lo admiten los worktrees). `git push +` es el push forzado por
+ * refspec (`git push origin +main`).
+ */
+export const DENIED_GIT_COMMANDS: readonly string[] = Object.freeze([
+  "git push --force",
+  "git push -f",
+  "git push +",
+  "git push --delete",
+  "git push -d",
+  "git reset --hard",
+  "git clean -f",
+  "git clean --force",
+  "git tag -d",
+  "git tag --delete",
 ]);
