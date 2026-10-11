@@ -84,7 +84,7 @@ describe("R-RESP-002: el estilo de salida", () => {
 
   it("si ya vale valmen devuelve el texto tal cual, sin reformatear", () => {
     const texto = `{"outputStyle":"valmen",   "permissions": {"deny": ${JSON.stringify(claudeDenyRules())}}}`;
-    expect(claudeDenyRules()).toHaveLength(64);
+    expect(claudeDenyRules()).toHaveLength(108);
     expect(mergeClaudeSettings(texto)).toBe(texto);
   });
 

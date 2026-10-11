@@ -58,6 +58,35 @@ export const SENSITIVE_PATH_GLOBS: readonly string[] = Object.freeze([
 ]);
 
 /**
+ * Los grupos de banderas cortas de `git clean` que borran: `f` con `d`, `x` o `X` en cualquier
+ * orden (`x` y `X` no van juntas). Los que empiezan por `-f` los cubre el prefijo `-f*`; los otros
+ * (`-df`, `-xdf`) no empiezan por `-f` y eran el hueco. Se enumeran en vez de usar un comodín
+ * como `-*f*`, que negaría `git clean -n src/foo` por la «f» de la ruta.
+ */
+const CLEAN_BUNDLES_LEADING_FORCE: readonly string[] = [
+  "-fd",
+  "-fx",
+  "-fX",
+  "-fdx",
+  "-fxd",
+  "-fdX",
+  "-fXd",
+];
+const CLEAN_BUNDLES_AFTER_FORCE: readonly string[] = [
+  "-df",
+  "-xf",
+  "-Xf",
+  "-dxf",
+  "-dfx",
+  "-xdf",
+  "-xfd",
+  "-dXf",
+  "-dfX",
+  "-Xdf",
+  "-Xfd",
+];
+
+/**
  * Las formas de git que nunca se automatizan, como `git <operación> <bandera>`. Distinta de
  * `DENIED_GIT_FLAGS`, que niega la bandera en cualquier operación de las listas cerradas del
  * motor: aquí la bandera solo se niega con su operación (`-d` borra una etiqueta o una rama
@@ -75,4 +104,15 @@ export const DENIED_GIT_COMMANDS: readonly string[] = Object.freeze([
   "git clean --force",
   "git tag -d",
   "git tag --delete",
+  ...CLEAN_BUNDLES_AFTER_FORCE.map((banderas) => `git clean ${banderas}`),
 ]);
+
+/**
+ * Las formas de `git clean` que Codex niega además de las de arriba. Claude Code y OpenCode las
+ * cubren ya con `git clean -f*` (la bandera empieza por `-f`), pero un prefijo de argumentos de
+ * Codex solo casa el argumento completo: `-fd` no es `-f`. Con `-n` git no borra nada aunque lleve
+ * `-f`, así que el simulacro (`-nf`, `-nfd`) no está en ninguna de las dos listas.
+ */
+export const DENIED_GIT_CLEAN_EXACT_FORMS: readonly string[] = Object.freeze(
+  CLEAN_BUNDLES_LEADING_FORCE.map((banderas) => `git clean ${banderas}`),
+);

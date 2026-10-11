@@ -38,6 +38,8 @@ import {
   rutasDelProyecto,
   type AdapterCapabilities,
   CODEGRAPH_SERVER_ID,
+  CLAUDE_CLEAN_LIMIT,
+  CLAUDE_SETTINGS_PATH,
   DENY_CLIENT_NOTICE,
   projectFiles,
 } from "@valmen/adapter";
@@ -861,6 +863,13 @@ export async function doctorCommand(
   if (adoptado) {
     try {
       const proyeccion = projectFiles(paths.root, basename(paths.root));
+      if (proyeccion.files.some((archivo) => archivo.path === CLAUDE_SETTINGS_PATH)) {
+        opcionales.push({
+          que: "Límite de las denegaciones de Claude Code",
+          estado: "aviso",
+          detalle: CLAUDE_CLEAN_LIMIT,
+        });
+      }
       for (const cliente of ["codex", "opencode"] as const) {
         const reglas = proyeccion.denyNotApplied.filter(
           (regla) => regla.cliente === cliente,

@@ -16,7 +16,12 @@
  * `.opencode/opencode.json` también lo escribe la persona, así que se fusiona (R-PER-002): solo se
  * suman claves ausentes, una clave existente con otro valor no se toca y se reporta.
  */
-import { DENIED_GIT_COMMANDS, SENSITIVE_PATH_GLOBS, fail } from "@valmen/core";
+import {
+  DENIED_GIT_CLEAN_EXACT_FORMS,
+  DENIED_GIT_COMMANDS,
+  SENSITIVE_PATH_GLOBS,
+  fail,
+} from "@valmen/core";
 
 export const CODEX_RULES_PATH = ".codex/rules/valmen.rules";
 export const OPENCODE_CONFIG_PATH = ".opencode/opencode.json";
@@ -47,11 +52,29 @@ const MOTIVO_PUSH_REFSPEC =
   "un prefijo de argumentos de Codex no casa parte de un argumento (git push origin +main)";
 const MOTIVO_RUTAS_CODEX =
   "negar leer o editar una ruta exige un perfil de permisos que cambia el sandbox de toda sesión de Codex";
+/**
+ * El límite conocido de Claude Code, que `sync` y `doctor` dicen aparte de lo no aplicado de Codex
+ * y OpenCode (un proyecto solo con Claude Code no tiene nada «no aplicado» que listar): un patrón
+ * de Bash que empieza por git no ve `env git clean -f` ni `command git clean -f`.
+ */
+export const CLAUDE_CLEAN_LIMIT =
+  "git clean tras env o command sigue permitido en Claude Code: un patrón de Bash que empieza por git no lo ve (límite conocido, decisión del PO del 2026-10-10)";
+
+const CLEAN_ENVOLTORIO = "git clean tras env o command";
+const MOTIVO_CLEAN_ENVOLTORIO =
+  "límite conocido (decisión del PO, 2026-10-10): un patrón que empieza por git no casa env git clean -f ni command git clean -f";
+const CLEAN_CODEX =
+  "git clean con otras combinaciones de banderas, opciones globales o envoltorio";
+const MOTIVO_CLEAN_CODEX =
+  "un prefijo de argumentos de Codex casa argumentos completos: solo niega git clean con las banderas -f, --force y las combinaciones de f con d, x y X escritas tal cual, sin opciones globales de git (-C, -c) ni envoltorio (env, command) ni otras banderas en el mismo grupo";
 const MOTIVO_JSONC = `existe ${OPENCODE_JSONC_PATH}: reescribirlo perdería sus comentarios`;
 
 /** Las formas de git que Codex puede negar como prefijo de comando. */
 function gitFormsForCodex(): string[] {
-  return DENIED_GIT_COMMANDS.filter((forma) => forma !== PUSH_REFSPEC);
+  return [
+    ...DENIED_GIT_COMMANDS.filter((forma) => forma !== PUSH_REFSPEC),
+    ...DENIED_GIT_CLEAN_EXACT_FORMS,
+  ];
 }
 
 /** El contenido de `.codex/rules/valmen.rules`: una `prefix_rule` prohibida por forma expresable. */
@@ -275,6 +298,7 @@ export function denyNotApplied(
     if (DENIED_GIT_COMMANDS.includes(PUSH_REFSPEC)) {
       salida.push({ cliente: "codex", regla: PUSH_REFSPEC, motivo: MOTIVO_PUSH_REFSPEC });
     }
+    salida.push({ cliente: "codex", regla: CLEAN_CODEX, motivo: MOTIVO_CLEAN_CODEX });
   }
   if (runtimes.includes("opencode")) {
     if (hayJsonc) {
@@ -294,6 +318,11 @@ export function denyNotApplied(
         });
       }
     }
+    salida.push({
+      cliente: "opencode",
+      regla: CLEAN_ENVOLTORIO,
+      motivo: MOTIVO_CLEAN_ENVOLTORIO,
+    });
   }
   return salida;
 }

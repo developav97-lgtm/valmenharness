@@ -30,6 +30,7 @@ import {
 } from "@valmen/core";
 import {
   type Projection,
+  CLAUDE_CLEAN_LIMIT,
   CLAUDE_SETTINGS_PATH,
   DENY_CLIENT_NOTICE,
   OPENCODE_CONFIG_PATH,
@@ -1048,6 +1049,7 @@ export function syncProject(
     lines.push(
       `  denegaciones de Claude Code  ${total} (${proyeccion.claudeDenyMissing.length} agregadas); ` +
         "un worktree creado con git worktree add a mano no las trae",
+      `  límite conocido de Claude Code: ${CLAUDE_CLEAN_LIMIT}`,
     );
   }
 
