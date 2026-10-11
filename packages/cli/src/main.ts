@@ -58,6 +58,7 @@ import {
   validateOne,
 } from "./commands.js";
 import { journeyHandoffCommand } from "./journey-handoff.js";
+import { cleanupCommand } from "./limpieza.js";
 import { journeyWorktreeCommand } from "./worktree.js";
 import { approveCommand, closeCommand } from "./ceremony.js";
 import { REAL_GIT, runDelegation } from "./delegation.js";
@@ -239,6 +240,10 @@ Comandos:
   migrate [--dry-run]       Lleva el registro al esquema vigente y limpia del
                             routing los roles que el harness ya no ejecuta.
   sync [--check|--dry-run]  Proyecta .valmen/ a AGENTS.md.
+  cleanup [--confirm] [--json]
+                            Lista los worktrees de .claude/worktrees/ ya integrados en main
+                            y los respaldos de sync vencidos (backup-retention-days, 30 por
+                            defecto); sin --confirm no quita nada.
   adopt [--dry-run] [--machine-id <id>] [--codegraph]
                             Incorpora el harness a un proyecto existente. Ofrece
                             CodeGraph; con --codegraph lo indexa (init o sync), solo
@@ -1470,6 +1475,9 @@ export function dispatch(options: Options): CommandResult {
       }
       return syncProject(options.root, basename(options.root), check, { dryRun });
     }
+
+    case "cleanup":
+      return cleanupCommand(paths, options.flags);
 
     case "feature":
       // `feature <sub> [args]` es asíncrono —`decompose` habla con un
