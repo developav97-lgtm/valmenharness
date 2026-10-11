@@ -4,7 +4,7 @@ id: FEATURE-CLI-SYNC-RESPALDO-20261010
 title: valmen sync con --dry-run y respaldo de lo que sobrescribe
 type: FEATURE
 module: CLI
-workflow_status: in_progress
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -106,43 +106,43 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1. (R-SYN-001) `valmen sync --dry-run` nombra `AGENTS.md` desactualizado con su resumen `+N −M`.
+- [x] C1. (R-SYN-001) `valmen sync --dry-run` nombra `AGENTS.md` desactualizado con su resumen `+N −M`.
       <!-- test: npx vitest run tests/sync-respaldo.test.ts -->
-- [ ] C2. (R-SYN-001) `valmen sync --dry-run` deja `AGENTS.md` en disco byte a byte igual.
+- [x] C2. (R-SYN-001) `valmen sync --dry-run` deja `AGENTS.md` en disco byte a byte igual.
       <!-- test: npx vitest run tests/sync-respaldo.test.ts -->
-- [ ] C3. (R-SYN-001) `valmen sync --dry-run` sale con código 0 cuando hay proyecciones desactualizadas.
+- [x] C3. (R-SYN-001) `valmen sync --dry-run` sale con código 0 cuando hay proyecciones desactualizadas.
       <!-- test: npx vitest run tests/sync-respaldo.test.ts -->
-- [ ] C4. (R-SYN-001) `valmen sync --dry-run` nombra la copia de una skill publicada que reinstalaría.
+- [x] C4. (R-SYN-001) `valmen sync --dry-run` nombra la copia de una skill publicada que reinstalaría.
       <!-- test: npx vitest run tests/sync-respaldo.test.ts -->
-- [ ] C5. (R-SYN-001) `valmen sync --dry-run` deja igual la copia editada de una skill publicada en `.valmen/skills/`.
+- [x] C5. (R-SYN-001) `valmen sync --dry-run` deja igual la copia editada de una skill publicada en `.valmen/skills/`.
       <!-- test: npx vitest run tests/sync-respaldo.test.ts -->
-- [ ] C6. (R-SYN-001) `valmen sync --dry-run` no crea `.valmen/backups/`.
+- [x] C6. (R-SYN-001) `valmen sync --dry-run` no crea `.valmen/backups/`.
       <!-- test: npx vitest run tests/sync-respaldo.test.ts -->
-- [ ] C7. (R-SYN-001) `valmen sync --check --dry-run` sale con error de uso.
+- [x] C7. (R-SYN-001) `valmen sync --check --dry-run` sale con error de uso.
       <!-- test: npx vitest run tests/sync-respaldo.test.ts -->
-- [ ] C8. (R-SYN-002) `valmen sync` copia la versión editada a mano de `.claude/skills/feature/SKILL.md` a `.valmen/backups/sync/<marca>/.claude/skills/feature/SKILL.md`.
+- [x] C8. (R-SYN-002) `valmen sync` copia la versión editada a mano de `.claude/skills/feature/SKILL.md` a `.valmen/backups/sync/<marca>/.claude/skills/feature/SKILL.md`.
       <!-- test: npx vitest run tests/sync-respaldo.test.ts -->
-- [ ] C9. (R-SYN-002) El `manifiesto.json` del respaldo registra el sha256 de la versión editada.
+- [x] C9. (R-SYN-002) El `manifiesto.json` del respaldo registra el sha256 de la versión editada.
       <!-- test: npx vitest run tests/sync-respaldo.test.ts -->
-- [ ] C10. (R-SYN-002) La salida de `valmen sync` nombra la carpeta del respaldo.
+- [x] C10. (R-SYN-002) La salida de `valmen sync` nombra la carpeta del respaldo.
       <!-- test: npx vitest run tests/sync-respaldo.test.ts -->
-- [ ] C11. (R-SYN-002) Tras el respaldo, `.claude/skills/feature/SKILL.md` queda con el contenido proyectado.
+- [x] C11. (R-SYN-002) Tras el respaldo, `.claude/skills/feature/SKILL.md` queda con el contenido proyectado.
       <!-- test: npx vitest run tests/sync-respaldo.test.ts -->
-- [ ] C12. (R-SYN-002) `valmen sync` sobre un proyecto al día no crea carpeta de respaldo.
+- [x] C12. (R-SYN-002) `valmen sync` sobre un proyecto al día no crea carpeta de respaldo.
       <!-- test: npx vitest run tests/sync-respaldo.test.ts -->
-- [ ] C13. (R-SYN-002) `valmen sync` no respalda un archivo proyectado que no existía en disco.
+- [x] C13. (R-SYN-002) `valmen sync` no respalda un archivo proyectado que no existía en disco.
       <!-- test: npx vitest run tests/sync-respaldo.test.ts -->
-- [ ] C14. (R-SYN-002) `valmen sync` respalda la copia editada de una skill publicada antes de reinstalarla.
+- [x] C14. (R-SYN-002) `valmen sync` respalda la copia editada de una skill publicada antes de reinstalarla.
       <!-- test: npx vitest run tests/sync-respaldo.test.ts -->
-- [ ] C15. (R-SYN-002) `syncProjections` de Mission Control respalda un archivo proyectado editado a mano.
+- [x] C15. (R-SYN-002) `syncProjections` de Mission Control respalda un archivo proyectado editado a mano.
       <!-- test: npx vitest run tests/sync-respaldo.test.ts -->
-- [ ] C16. El monorepo compila con los cambios.
+- [x] C16. El monorepo compila con los cambios.
       <!-- test: npx tsc --build tsconfig.build.json -->
-- [ ] C17. (R-SYN-003) `git check-ignore` reconoce `.valmen/backups/sync/` en el repositorio del harness.
+- [x] C17. (R-SYN-003) `git check-ignore` reconoce `.valmen/backups/sync/` en el repositorio del harness.
       <!-- test: npx vitest run tests/sync-respaldo.test.ts -->
-- [ ] C18. (R-SYN-003) Tras un `valmen sync` con respaldo en un repositorio git temporal sin reglas propias, `git status --porcelain` no lista `.valmen/backups/`.
+- [x] C18. (R-SYN-003) Tras un `valmen sync` con respaldo en un repositorio git temporal sin reglas propias, `git status --porcelain` no lista `.valmen/backups/`.
       <!-- test: npx vitest run tests/sync-respaldo.test.ts -->
-- [ ] C19. `valmen sync --check` sigue saliendo con error ante un archivo generado editado a mano.
+- [x] C19. `valmen sync --check` sigue saliendo con error ante un archivo generado editado a mano.
       <!-- test: npx vitest run tests/sync-respaldo.test.ts -->
 
 ## Puntos
@@ -153,11 +153,22 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
 
 ## Implementación
 
-Pendiente.
+- `packages/adapter/src/sync-backup.ts` (nuevo): `resumenDeCambios` (`+N −M` por multiconjunto de líneas), `crearRespaldo` (carpeta `.valmen/backups/sync/<AAAAMMDDTHHMMSSZ>[-n]`, creada al primer `guardar`, `.valmen/backups/.gitignore` con `*`, `manifiesto.json` con sha256 al `cerrar`); exportado en `packages/adapter/src/index.ts`.
+- `packages/adapter/src/skills.ts`: `escriturasDePublicadas` (lectura pura) e `instalarPublicadas(root, dir, { antesDeSobrescribir })`; la firma anterior sigue válida.
+- `packages/cli/src/commands.ts`: `syncProject(root, nombre, check, { dryRun, ahora })`; `vistaPreviaDeSync` (sin escribir, sale con 0) y respaldo antes del primer `atomicWrite`; si el respaldo falla, no se escribe la proyección. `--check` no cambia.
+- `packages/cli/src/command-table.ts` y `packages/cli/src/main.ts`: `--dry-run`, excluyente con `--check` (código 2), y línea de `USAGE`.
+- `packages/server/src/config.ts`: `syncProjections` respalda antes de escribir y `SyncOutcome.backup`; `server.ts` sin cambios.
+- `.gitignore`: `.valmen/backups/`.
+- Límite aceptado (Supuestos): `--dry-run` proyecta sobre la copia actual de `.valmen/skills/`; si una copia es inválida, la vista previa informa el error de proyección en lugar de simular.
+- Pruebas existentes en rojo: ninguna (33 archivos relacionados en verde).
 
 ## Pruebas
 
-Pendiente de ejecución.
+- Directorio: raíz del repositorio (worktree). Ambiente: Node 24, `git` en el PATH.
+- `npx vitest run tests/sync-respaldo.test.ts` — esperado: 12 pruebas en verde (C1–C15, C17–C19); observadas en rojo antes de implementar (9 de 12).
+- `npx tsc --build tsconfig.build.json` — esperado: sin errores (C16); `npx tsc --noEmit -p .` sin errores.
+- Regresión: 33 archivos de prueba que tocan `sync`, `instalarPublicadas`, la tabla de comandos o `USAGE` — 1045 pruebas en verde.
+- Validaciones manuales: ninguna. Prueba a mano opcional: en un proyecto con `AGENTS.md` editado, `valmen sync --dry-run` y luego `valmen sync`.
 
 ## QA
 
@@ -186,7 +197,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Subagente sonnet de implementación; la sesión no expone agregados de tokens, sin números.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:subagente-impl-sync-respaldo",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -268,6 +295,24 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-11",
+    "at": "2026-10-11T19:26:08.020Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-11",
+    "at": "2026-10-11T19:26:09.628Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
