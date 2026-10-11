@@ -248,7 +248,11 @@ export function resumirPoliticas(config: ConfigMap): readonly PoliticaResumida[]
             u.approvedBy === null
               ? "sin firma: no se aplica"
               : `firmado por ${u.approvedBy}${u.reason === null ? "" : ` — ${u.reason}`}`;
-          return `${donde}: aprueba desde ${u.approveAt}, bloquea hasta ${u.blockAt}; ${firma}.`;
+          const banda =
+            u.reviewFloor === null
+              ? ""
+              : `; revisión solo bajo ${u.reviewFloor} o con ${u.reviewBandMax ?? 3} en banda`;
+          return `${donde}: aprueba desde ${u.approveAt}, bloquea hasta ${u.blockAt}${banda}; ${firma}.`;
         }),
         error: null,
       });

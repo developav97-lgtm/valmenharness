@@ -343,6 +343,13 @@ export interface ThresholdOverride {
   readonly blockAt: number;
   readonly approvedBy: string | null;
   readonly reason: string | null;
+  /**
+   * Piso de la banda de revisión: bajo él una proposición en banda exige revisión; sobre él,
+   * y con las demás condiciones, la compuerta aprueba. `null` = sin política de banda.
+   */
+  readonly reviewFloor: number | null;
+  /** Cuántas proposiciones en banda bastan para exigir revisión. `null` sin banda. */
+  readonly reviewBandMax: number | null;
 }
 
 /**
@@ -369,6 +376,8 @@ export function readGateThresholds(
     "block-at",
     "approved-by",
     "reason",
+    "review-floor",
+    "review-band-max",
   ]);
   return crudo.map((entrada, indice): ThresholdOverride => {
     const donde = `gate-thresholds[${indice}]`;
@@ -411,6 +420,37 @@ export function readGateThresholds(
     const proposition = readString(entrada, "proposition", "");
     const approvedBy = readString(entrada, "approved-by", "");
     const reason = readString(entrada, "reason", "");
+    const pisoCrudo = readString(entrada, "review-floor", "");
+    const maxCrudo = readString(entrada, "review-band-max", "");
+    let reviewFloor: number | null = null;
+    let reviewBandMax: number | null = null;
+    if (pisoCrudo !== "") {
+      if (proposition !== "") {
+        fail(
+          `config.yaml: "${donde}.review-floor" no aplica a una entrada que nombra una ` +
+            "proposición: la banda es de la compuerta.",
+        );
+      }
+      const piso = Number(pisoCrudo);
+      if (!Number.isFinite(piso) || piso <= blockAt || piso >= approveAt) {
+        fail(
+          `config.yaml: "${donde}.review-floor" (${pisoCrudo}) debe quedar estrictamente ` +
+            `entre "block-at" (${blockAt}) y "approve-at" (${approveAt}).`,
+        );
+      }
+      reviewFloor = piso;
+      reviewBandMax = 3;
+    }
+    if (maxCrudo !== "") {
+      const maximo = Number(maxCrudo);
+      if (pisoCrudo === "") {
+        fail(`config.yaml: "${donde}.review-band-max" requiere "review-floor".`);
+      }
+      if (!Number.isInteger(maximo) || maximo < 2) {
+        fail(`config.yaml: "${donde}.review-band-max" debe ser un entero de 2 o más.`);
+      }
+      reviewBandMax = maximo;
+    }
     return {
       gate,
       evaluator: evaluator === "" ? null : evaluator,
@@ -419,6 +459,8 @@ export function readGateThresholds(
       blockAt,
       approvedBy: approvedBy === "" ? null : approvedBy,
       reason: reason === "" ? null : reason,
+      reviewFloor,
+      reviewBandMax,
     };
   });
 }

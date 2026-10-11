@@ -110,6 +110,22 @@ gate-thresholds:
     expect(lineas).toContain("sin firma");
     expect(lineas).toContain("firmado por Juan Andrade");
   });
+
+  it("una entrada con banda muestra el piso firmado y cuántas en banda exigen revisión", () => {
+    const texto = `name: Demo
+gate-thresholds:
+  - gate: plan
+    approve-at: 0.9
+    block-at: 0.1
+    review-floor: 0.8
+    review-band-max: 3
+    approved-by: Juan Andrade
+    reason: medido en 263 recibos
+`;
+    const lineas = politicas(texto)["gate-thresholds"]?.resumen.join("\n") ?? "";
+    expect(lineas).toContain("revisión solo bajo 0.8 o con 3 en banda");
+    expect(lineas).toContain("firmado por Juan Andrade");
+  });
 });
 
 describe("una sección con error no esconde las demás", () => {

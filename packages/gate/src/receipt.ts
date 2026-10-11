@@ -144,6 +144,16 @@ export interface AppliedThreshold {
   readonly reason: string;
 }
 
+/** La banda de revisión que dejó pasar una aprobación, con quién la firmó (aditivo). */
+interface AppliedReviewBand {
+  readonly floor: number;
+  readonly maxInBand: number;
+  readonly approvedBy: string;
+  readonly reason: string;
+  /** Las proposiciones en banda que la política toleró para aprobar. */
+  readonly tolerated: readonly string[];
+}
+
 /** Un recibo de gate, append-only y completo. */
 export interface GateReceipt {
   readonly kind: "gate-receipt";
@@ -218,6 +228,8 @@ export interface GateReceipt {
   readonly evaluator?: string;
   /** Los umbrales del proyecto que se aplicaron, con quién los decidió y por qué (R-CPRE-010). */
   readonly thresholds?: readonly AppliedThreshold[];
+  /** La banda de revisión firmada con la que se aprobó, si la aprobación la usó. Opcional y aditivo. */
+  readonly reviewBand?: AppliedReviewBand;
   /** Las proposiciones que no aplican al tipo del ticket: no se enviaron al evaluador (`no_aplica`). */
   readonly notApplicable?: readonly NotApplicableRecord[];
   /**
@@ -443,6 +455,7 @@ export interface ReceiptInput {
   readonly codeReview?: CodeReviewRecord;
   readonly evaluator?: string;
   readonly thresholds?: readonly AppliedThreshold[];
+  readonly reviewBand?: AppliedReviewBand;
   readonly notApplicable?: readonly NotApplicableRecord[];
   readonly evaluatorKey?: string;
   readonly forced?: { readonly reason: string; readonly receiptId: string };
@@ -497,6 +510,7 @@ export function buildReceipt(input: ReceiptInput): GateReceipt {
     ...(input.thresholds === undefined || input.thresholds.length === 0
       ? {}
       : { thresholds: input.thresholds }),
+    ...(input.reviewBand === undefined ? {} : { reviewBand: input.reviewBand }),
     ...(input.notApplicable === undefined || input.notApplicable.length === 0
       ? {}
       : { notApplicable: input.notApplicable }),

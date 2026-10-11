@@ -335,7 +335,7 @@ export const COMANDOS: Readonly<Record<string, EspecComando>> = {
     },
   },
   precision: { conValor: ["--desde", "--hasta"], booleanas: [] },
-  thresholds: { conValor: ["--evaluator"], booleanas: [] },
+  thresholds: { conValor: ["--evaluator", "--floor", "--max"], booleanas: ["--band"] },
   journey: {
     conValor: [],
     booleanas: [],

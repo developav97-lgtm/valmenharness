@@ -129,8 +129,11 @@ import {
   renderPreReview,
   reviewBeforeGate,
   precisionReport,
+  informeRevisionPosterior,
   proposeThresholds,
   readCurrentReceipts,
+  renderRepeticion,
+  repetirConBanda,
   renderPrecision,
   renderProposal,
   appendPromotionEvidence,
@@ -417,6 +420,35 @@ export function thresholdsCommand(
   const evaluator =
     typeof flags["evaluator"] === "string" ? (flags["evaluator"] as string) : undefined;
   try {
+    if (flags["band"] === true) {
+      const numero = (clave: string, defecto: number): number => {
+        const crudo = flags[clave];
+        if (crudo === undefined) return defecto;
+        const valor = Number(crudo);
+        return typeof crudo === "string" ? valor : Number.NaN;
+      };
+      const banda = { floor: numero("floor", 0.8), maxInBand: numero("max", 3) };
+      if (
+        banda.floor <= 0.1 ||
+        banda.floor >= 0.9 ||
+        !Number.isInteger(banda.maxInBand) ||
+        banda.maxInBand < 2
+      ) {
+        return error(
+          "--floor debe quedar entre 0.1 y 0.9 y --max debe ser un entero de 2 o más.",
+          EXIT_SCHEMA,
+        );
+      }
+      const recibos = readCurrentReceipts(paths);
+      return ok(
+        renderRepeticion(
+          gateId,
+          banda,
+          repetirConBanda(recibos, banda, gateId),
+          informeRevisionPosterior(paths, recibos),
+        ),
+      );
+    }
     return ok(
       renderProposal(proposeThresholds(readCurrentReceipts(paths), gateId, evaluator)),
     );

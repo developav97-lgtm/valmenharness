@@ -108,3 +108,92 @@ export function applyThresholds(
   });
   return { propositions: resultado, applied, ignored };
 }
+
+/** La banda de revisión firmada que rige una evaluación, o por qué no rige. */
+export interface BandaFirmada {
+  readonly floor: number;
+  readonly maxInBand: number;
+  readonly approvedBy: string;
+  readonly reason: string;
+}
+
+/** Lo que la banda necesita saber del ticket: su tipo y los impactos que declara. */
+export interface CamposDeBanda {
+  readonly type?: string | undefined;
+  readonly sync_impact?: string | undefined;
+  readonly migration_impact?: string | undefined;
+  readonly docker_impact?: string | undefined;
+}
+
+/**
+ * Elige la banda de revisión que una persona firmó para esta compuerta y este evaluador.
+ *
+ * La misma regla que los umbrales: sin `approved-by` y `reason` no rige. Además no se
+ * aplica a un ticket SECURITY ni a uno que declara impacto de sincronización, migración o
+ * contenedores: ahí la revisión humana es la que añade alcance. Devuelve la nota de por qué
+ * no se aplicó cuando había una entrada que apuntaba a esta evaluación.
+ */
+export function bandaFirmada(
+  overrides: readonly ThresholdOverride[],
+  gateId: string,
+  evaluatorId: string,
+  campos: CamposDeBanda,
+): { readonly band: BandaFirmada | null; readonly nota: string | null } {
+  const candidatas = overrides.filter(
+    (e) =>
+      e.gate === gateId &&
+      e.proposition === null &&
+      e.reviewFloor !== null &&
+      (e.evaluator === null || e.evaluator === evaluatorId),
+  );
+  const entrada = candidatas
+    .filter((e) => e.approvedBy !== null && e.reason !== null)
+    .sort((a, b) => especificidad(b) - especificidad(a))[0];
+  if (entrada === undefined) {
+    return {
+      band: null,
+      nota:
+        candidatas.length === 0
+          ? null
+          : `la banda de revisión de ${gateId} no se aplicó: falta \`approved-by\` y \`reason\` de la persona que la decidió.`,
+    };
+  }
+  const motivos: string[] = [];
+  if (campos.type === "SECURITY") motivos.push("el ticket es SECURITY");
+  for (const impacto of ["sync_impact", "migration_impact", "docker_impact"] as const) {
+    if (campos[impacto] === "true") motivos.push(`declara ${impacto}`);
+  }
+  if (motivos.length > 0) {
+    return {
+      band: null,
+      nota: `la banda de revisión no se aplicó: ${motivos.join(" y ")}; decide la revisión de siempre.`,
+    };
+  }
+  return {
+    band: {
+      floor: entrada.reviewFloor as number,
+      maxInBand: entrada.reviewBandMax ?? 3,
+      approvedBy: entrada.approvedBy as string,
+      reason: entrada.reason as string,
+    },
+    nota: null,
+  };
+}
+
+/**
+ * Las proposiciones críticas de una compuerta: las que decide el código, las estructurales
+ * que su regla de contradicción exige aprobadas, y las de impacto. Las calcula el motor, no
+ * el modelo; en banda, una crítica exige revisión.
+ */
+export function criticas(
+  propositions: readonly { readonly id: string; readonly decidedInCode?: boolean }[],
+  isolatedBlockReview: { readonly requiredApprovedIds: readonly string[] } | undefined,
+): string[] {
+  const ids = new Set<string>(isolatedBlockReview?.requiredApprovedIds ?? []);
+  for (const p of propositions) {
+    if (p.decidedInCode === true || /^(?:sync|migration|docker)_impact_/.test(p.id)) {
+      ids.add(p.id);
+    }
+  }
+  return [...ids];
+}

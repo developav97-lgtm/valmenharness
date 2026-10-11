@@ -386,6 +386,54 @@ export interface GateDecision {
   readonly blocking: readonly string[];
   /** Las que quedaron en la banda media, si las hay. */
   readonly inBand: readonly string[];
+  /**
+   * Las proposiciones en banda que una banda firmada dejó pasar para aprobar.
+   * Ausente si no se aplicó ninguna banda o no hubo nada que tolerar.
+   */
+  readonly toleratedInBand?: readonly string[];
+}
+
+/**
+ * La política de banda de revisión que una persona firmó para una compuerta.
+ *
+ * Solo la construye el motor, desde una entrada firmada de `gate-thresholds`: un gate no
+ * amplía su propia autoridad.
+ */
+export interface ReviewBand {
+  /** Bajo este valor una proposición en banda exige revisión. */
+  readonly floor: number;
+  /** Con esta cantidad (o más) de proposiciones en banda, se exige revisión. */
+  readonly maxInBand: number;
+  /** Proposiciones críticas: en banda exigen revisión sin importar su valor. */
+  readonly critical: readonly string[];
+}
+
+/**
+ * Aplica la banda a las proposiciones en banda de una decisión.
+ *
+ * Devuelve las que se toleran para aprobar, o `null` si alguna razón exige revisión:
+ * una bajo el piso, una crítica, una que no es booleana, o `maxInBand` o más en banda.
+ * Es pura, y la usa tanto `decide` como la repetición de recibos.
+ */
+export function aplicarBanda(
+  evaluated: readonly EvaluatedProposition[],
+  band: ReviewBand,
+): { readonly tolerated: readonly string[]; readonly motivo: string } | null {
+  const inBand = evaluated.filter((item) => item.verdict && item.inBand);
+  if (inBand.length === 0) return { tolerated: [], motivo: "" };
+  if (inBand.length >= band.maxInBand) return null;
+  for (const item of inBand) {
+    if (item.kind !== "noul") return null;
+    if (item.value < band.floor) return null;
+    if (band.critical.includes(item.id)) return null;
+  }
+  const ids = inBand.map((item) => item.id);
+  return {
+    tolerated: ids,
+    motivo:
+      `aprobado por la banda firmada (piso ${band.floor}, máximo ${band.maxInBand} en banda): ` +
+      `toleradas ${inBand.map((item) => item.label).join(", ")}`,
+  };
 }
 
 /** Error de contrato: una proposición mal definida es un gate roto. */
@@ -444,6 +492,7 @@ export function decide(
   answers: readonly PropositionAnswer[],
   policy: GatePolicy = DEFAULT_POLICY,
   isolatedBlockReview?: IsolatedBlockReviewRule,
+  reviewBand?: ReviewBand,
 ): GateDecision {
   validatePolicy(policy);
 
@@ -498,19 +547,30 @@ export function decide(
   }
 
   const inBand = evaluated.filter((item) => decides(item) && item.inBand);
+  let tolerated: readonly string[] = [];
+  let motivoBanda = "";
   if (inBand.length > 0) {
-    return {
-      outcome: "review",
-      reason: inBand.map((item) => item.reason).join("; "),
-      actor: "model",
-      propositions: evaluated,
-      blocking: [],
-      inBand: inBand.map((item) => item.id),
-    };
+    const tolerada = reviewBand === undefined ? null : aplicarBanda(evaluated, reviewBand);
+    if (tolerada === null) {
+      return {
+        outcome: "review",
+        reason: inBand.map((item) => item.reason).join("; "),
+        actor: "model",
+        propositions: evaluated,
+        blocking: [],
+        inBand: inBand.map((item) => item.id),
+      };
+    }
+    tolerated = tolerada.tolerated;
+    motivoBanda = tolerada.motivo;
   }
 
   const notApproving = evaluated.filter(
-    (item) => decides(item) && item.effect !== null && !isApprove(item.effect),
+    (item) =>
+      decides(item) &&
+      item.effect !== null &&
+      !isApprove(item.effect) &&
+      !tolerated.includes(item.id),
   );
   if (notApproving.length > 0) {
     return {
@@ -525,11 +585,14 @@ export function decide(
 
   return {
     outcome: "approve",
-    reason: "todas las proposiciones claras" + procedencia(evaluated),
+    reason:
+      (tolerated.length > 0 ? motivoBanda : "todas las proposiciones claras") +
+      procedencia(evaluated),
     actor: "model",
     propositions: evaluated,
     blocking: [],
     inBand: [],
+    ...(tolerated.length > 0 ? { toleratedInBand: tolerated } : {}),
   };
 }
 

@@ -87,8 +87,11 @@ import {
   reviewBeforeGate,
 } from "./revision-previa.js";
 import {
+  type BandaFirmada,
   type ThresholdOutcome,
   applyThresholds,
+  bandaFirmada,
+  criticas,
   validateThresholdTargets,
 } from "./thresholds.js";
 
@@ -813,6 +816,9 @@ export async function runGate(
   let evaluation;
   // Los umbrales que el proyecto declaró y una persona firmó, aplicados a esta evaluación.
   let umbrales: ThresholdOutcome = { propositions: [], applied: [], ignored: [] };
+  // La banda de revisión firmada que rigió esta corrida y las notas de por qué no rigió.
+  let bandaDeEstaCorrida: BandaFirmada | null = null;
+  const notasDeBanda: string[] = [];
 
   if (preparacion !== null && preparacion.failure !== null) {
     evaluation = {
@@ -903,11 +909,27 @@ export async function runGate(
         definition.id,
         evaluation.evaluator,
       );
+      const camposDelTicket = parseTicket(ticket.text).fields;
+      const firmada = bandaFirmada(
+        declarados,
+        definition.id,
+        evaluation.evaluator,
+        camposDelTicket,
+      );
+      if (firmada.nota !== null) notasDeBanda.push(firmada.nota);
+      bandaDeEstaCorrida = firmada.band;
       decision = decide(
         umbrales.propositions,
         evaluation.answers,
         gate.policy as GatePolicy,
         gate.isolatedBlockReview,
+        firmada.band === null
+          ? undefined
+          : {
+              floor: firmada.band.floor,
+              maxInBand: firmada.band.maxInBand,
+              critical: criticas(umbrales.propositions, gate.isolatedBlockReview),
+            },
       );
     } catch (caught) {
       const failure = toFailure(caught);
@@ -989,6 +1011,7 @@ export async function runGate(
         ]),
     ...avisoDeForma(decision, criteria, gate.policy as GatePolicy),
     ...notasDeCodigo,
+    ...notasDeBanda,
     ...fallasDeEntorno.map(
       (resultado) =>
         `${resultado.propositionId}: falla del entorno — ${resultado.environmentFailure}. ` +
@@ -1034,6 +1057,17 @@ export async function runGate(
     evaluator: evaluation.evaluator,
     notApplicable: noAplican,
     thresholds: umbrales.applied,
+    ...(bandaDeEstaCorrida === null || (decision.toleratedInBand ?? []).length === 0
+      ? {}
+      : {
+          reviewBand: {
+            floor: bandaDeEstaCorrida.floor,
+            maxInBand: bandaDeEstaCorrida.maxInBand,
+            approvedBy: bandaDeEstaCorrida.approvedBy,
+            reason: bandaDeEstaCorrida.reason,
+            tolerated: decision.toleratedInBand ?? [],
+          },
+        }),
     evaluatorKey: huellaDelEvaluador,
     ...(evaluation.requestedEvaluator === undefined
       ? {}
@@ -1129,6 +1163,16 @@ export async function runGate(
       );
     }
     for (const nota of umbrales.ignored) lines.push(`    ✗  ${nota}`);
+  }
+
+  // La banda de revisión: solo se nombra cuando la aprobación pasó por ella.
+  if (bandaDeEstaCorrida !== null && (decision.toleratedInBand ?? []).length > 0) {
+    lines.push(
+      "",
+      `  Banda de revisión: piso ${bandaDeEstaCorrida.floor}, máximo ${bandaDeEstaCorrida.maxInBand} en banda — ` +
+        `firmada por ${bandaDeEstaCorrida.approvedBy}: ${bandaDeEstaCorrida.reason}`,
+      `    Toleradas: ${(decision.toleratedInBand ?? []).join(", ")}`,
+    );
   }
 
   // Las proposiciones que no aplican a este tipo de ticket: el código las separó y el

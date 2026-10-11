@@ -251,9 +251,11 @@ Comandos:
                             Precisión de las compuertas por evaluador: tasa de banda,
                             revisiones aprobadas sin cambios y bloqueos por tipo. Lee los
                             recibos; no llama a ningún modelo.
-  thresholds <gate> [--evaluator <id>]
+  thresholds <gate> [--evaluator <id>] [--band [--floor 0.80] [--max 3]]
                             Propone umbrales desde las decisiones humanas ya registradas,
                             con su acierto simulado. No aplica nada: lo firma una persona.
+                            Con --band repite los recibos con la banda de revisión y
+                            lista qué decisiones cambiarían, sin llamar a ningún modelo.
   journey plan --project <id> (--feature <slug> | --tickets <a,b,c>) [--max <n>] [--to <destino>]
                             Arma la jornada del día en el registro de jornadas y envía el
                             plan por Telegram. No despacha ni reserva capacidad.
