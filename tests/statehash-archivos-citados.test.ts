@@ -18,7 +18,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { hashState } from "../packages/gate/src/index.js";
-import { buildGateState, findTicket, readReceipts } from "../packages/engine/src/index.js";
+import { buildGateState, readReceipts } from "../packages/engine/src/index.js";
 import { aprobarPorAutorizacion } from "../packages/engine/src/approval-eligibility.js";
 import { crearAutorizacionDeAprobacion } from "../packages/engine/src/index.js";
 import { runGate } from "../packages/engine/src/gate.js";

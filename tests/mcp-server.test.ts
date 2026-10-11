@@ -1154,8 +1154,6 @@ describe("la lista avisa de lo que está a medias", () => {
 
 // ── El ciclo entero, sin terminal ───────────────────────────────────────────
 
-const SHA = "a".repeat(40);
-
 /**
  * Un evaluador falso que aprueba, con el vocabulario de cada compuerta.
  *

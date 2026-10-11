@@ -37,6 +37,10 @@ export default tseslint.config(
       // rechaza. Se revisan a ojo, que para dos archivos es suficiente.
       "eslint.config.js",
       "scripts/**",
+      // Lo mismo para el JavaScript que se sirve al navegador (la vista Agentes):
+      // no está en ningún `tsconfig` y lo que el compilador sabe de él lo dicen
+      // los `.d.ts` de al lado, que sí se revisan.
+      "packages/server/web/**/*.js",
     ],
   },
   ...tseslint.configs.recommended,

@@ -43,7 +43,7 @@ function declarar(
   skills: readonly { id: string; habilitar: boolean; contenido?: boolean }[],
 ): void {
   const items: string[] = [];
-  for (const { id, habilitar, contenido = true } of skills) {
+  for (const { id, contenido = true } of skills) {
     const dir = join(root, ".valmen", "external-skills", id);
     let hash = "a".repeat(64);
     if (contenido) {

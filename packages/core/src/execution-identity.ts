@@ -27,7 +27,7 @@ export interface ExecutionIdentityInput {
 }
 
 /** Identidad validada e inmutable de una ejecución. */
-export interface ExecutionIdentity extends Readonly<ExecutionIdentityInput> {}
+export type ExecutionIdentity = Readonly<ExecutionIdentityInput>;
 
 /**
  * Construye una identidad que puede cruzar CLI, MCP, UI y adaptadores.
