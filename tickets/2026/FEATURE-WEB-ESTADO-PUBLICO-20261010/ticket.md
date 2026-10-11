@@ -4,7 +4,7 @@ id: FEATURE-WEB-ESTADO-PUBLICO-20261010
 title: La vista web usa la función de estado público
 type: FEATURE
 module: WEB
-workflow_status: planned
+workflow_status: in_progress
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -40,6 +40,8 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
 - El pedido no nombra nada que el código no tenga: «la misma función» es `estadoPublico` (`packages/core/src/public-state.ts:52`), con su lector `estadoPublicoDelTicket` (`packages/engine/src/public-state.ts:24`), ya cerrados en FEATURE-CORE-ESTADO-PUBLICO-20261010.
 - Contador de la barra lateral (`packages/server/web/index.html:9086-9088`): cuenta solo `awaiting_user_tests` y su comentario (`index.html:9060-9063`) lo declara como «tickets que esperan una prueba de la persona», no como la lista `ESTADOS_QUE_ESPERAN_AL_PO`. Este ticket lo deja como está. Pregunta al PO: ¿el contador de «Tickets» debe pasar a contar los tickets en «Necesita tu decisión» (incluye bloqueados, cambios pedidos, plan por aprobar y compuerta escalada) o sigue contando solo las pruebas pendientes?
 
+- Decisión del PO (2026-10-11, «Se queda como está (Recomendado)»): el contador de «Tickets» de la barra lateral (`index.html:9086`) sigue contando solo pruebas pendientes.
+
 ## Descripción funcional
 
 - Alcance: la lista de tickets, la vista del ticket y la vista Agentes de Mission Control muestran el estado público (R-EPU-002, `.valmen/features/operacion-entrega-harness/spec/s4-estados/spec.md`) junto al estado del motor, calculado por la misma función `estadoPublico` de `@valmen/core` a través del lector `estadoPublicoDelTicket` de `@valmen/engine`; el servidor lo agrega a las respuestas de `GET /api/tickets` y `GET /api/tickets/:id`, y la constante `ESTADOS_QUE_ESPERAN_AL_PO` de la vista Agentes se reemplaza por ese dato. Fuera: el tablero de la feature conserva sus columnas (lo pide la spec), la escena animada de la vista Agentes sigue repartiendo por estado del motor (sus estaciones son posiciones, como columnas), el contador de la barra lateral (ver «Supuestos») y el aviso de Telegram (FEATURE-CLI-AVISO-DECISION-20261010).
@@ -66,7 +68,7 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente; la aprobación del plan es de una persona (el PO) o de una autorización de aprobación vigente.
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan), el 2026-10-11 con «Aprobar y autorizar las 3 pruebas (Recomendado)»; el REVIEW del recibo plan-1 (criterio_14 en 0,90 y criterio_15 en 0,86) lo decidió el PO, que autoriza además el cambio a propósito de las tres pruebas de tests/vista-corrida.test.ts nombradas en este plan (EST-009).
 - Alcance: el servidor agrega `publicState` (el resultado de `estadoPublicoDelTicket`, que llama a `estadoPublico` de `@valmen/core`) a cada fila de `GET /api/tickets` y al detalle de `GET /api/tickets/:id`; la web lo pinta junto al estado del motor en la lista de tickets, en la vista del ticket y en la vista Agentes, y el KPI «esperan al PO» lo cuenta en lugar de `ESTADOS_QUE_ESPERAN_AL_PO`, que desaparece. El navegador no reagrupa estados: solo lee `publicState`. Exclusiones: el tablero de la feature (`packages/server/web/index.html:4070-4082`) conserva sus columnas; la escena animada (`packages/server/web/agentes/motor.js:8-40`) sigue repartiendo por estado del motor; el contador de la barra lateral (`index.html:9086-9088`) queda como está (pregunta abierta en «Supuestos»); `@valmen/core` y `@valmen/engine` no cambian; el aviso de Telegram es de FEATURE-CLI-AVISO-DECISION-20261010.
 - Tamaño previsto: 19 criterios; unas 75 líneas de producción (`server.ts` ~25, `index.html` ~50) y unas 280 de pruebas (archivo nuevo ~265, cambios declarados en `tests/vista-corrida.test.ts` ~15), unas 355 en total.
 - Pruebas existentes que el plan cambia a propósito: `tests/vista-corrida.test.ts:100-108` (el ayudante `registro` recibe un tercer argumento `publicState`), `tests/vista-corrida.test.ts:136-145` (el registro simulado `TICKETS` declara el estado público de cada ticket: `FEATURE-FIN-20261008` «Necesita tu decisión»/`user-tests`, `FEATURE-CUATRO-20261008` en `planned` «Necesita tu decisión»/`plan-approval`, `FEATURE-LISTO-20261008` «Listo», los demás «Trabajando») y `tests/vista-corrida.test.ts:253` (el KPI «esperan al PO» pasa de `"2"` a `"3"`). Motivo: R-EPU-001 cuenta el plan que espera aprobación como «Necesita tu decisión», y R-EPU-002 pide que el KPI salga de la función; el ticket en `planned` sin autorización del registro simulado ahora suma. Ninguna otra prueba existente cambia.
@@ -206,6 +208,51 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:50:48.744Z",
+    "action": "gate-approved",
+    "actor": "cli",
+    "details": "Gate plan aprobado por PO (recibo GR-20261011-FEATURE-WEB-ESTADO-PUBLICO-20261010-plan-1, canal cli, decidida 2026-10-11T20:50:48.739Z): Aprobar y autorizar las 3 pruebas (Recomendado)"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:50:49.174Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"PO\",\"source\":\"cli\",\"quote\":\"Aprobar y autorizar las 3 pruebas (Recomendado)\",\"planHash\":\"sha256:474f294f0538cec7f85bd96454505a5e962032d60dcbbfa0c97ea0fee30c0479\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:50:49.748Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: PO (fuente cli), plan sha256:474f294f0538cec7f85bd96454505a5e962032d60dcbbfa0c97ea0fee30c0479."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:50:49.748Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:50:50.138Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
   }
 ]
 ```
