@@ -31,6 +31,8 @@ import {
 import {
   type Projection,
   CLAUDE_SETTINGS_PATH,
+  DENY_CLIENT_NOTICE,
+  OPENCODE_CONFIG_PATH,
   adoptPlan,
   applyBlueprint,
   blueprintsDir,
@@ -879,6 +881,24 @@ function lineasDeTamano(proyeccion: Projection): string[] {
  * y falla si difieren. Es el modo para integración continua, porque detecta una
  * edición a mano del archivo generado sin modificar el repositorio.
  */
+/**
+ * Una línea por cliente con lo que el harness no pudo aplicar (R-PER-001), y su aviso fijo: callar
+ * lo que un cliente no niega dejaría creer que la lectura de credenciales está protegida.
+ */
+function lineasDeDenegaciones(proyeccion: Projection): string[] {
+  const lineas: string[] = [];
+  for (const cliente of ["codex", "opencode"] as const) {
+    const reglas = proyeccion.denyNotApplied.filter((regla) => regla.cliente === cliente);
+    if (reglas.length === 0) continue;
+    const motivos = [...new Set(reglas.map((regla) => regla.motivo))];
+    lineas.push(
+      `no aplicadas en ${cliente} (${reglas.length}): ${reglas.map((regla) => regla.regla).join(", ")} — ${motivos.join("; ")}`,
+      `Nota (${cliente}): ${DENY_CLIENT_NOTICE[cliente]}`,
+    );
+  }
+  return lineas;
+}
+
 export function syncProject(
   root: string,
   projectName: string,
@@ -916,7 +936,11 @@ export function syncProject(
     // versión anterior del catálogo. Antes de esto, esa segunda nada la veía.
     const deriva = derivaPublicada(root);
 
-    if (stale.length > 0 || deriva.length > 0 || proyeccion.claudeDenyMissing.length > 0) {
+    if (
+      stale.length > 0 || deriva.length > 0 ||
+      proyeccion.claudeDenyMissing.length > 0 ||
+      proyeccion.opencodeDenyMissing.length > 0
+    ) {
       const partes: string[] = [];
       if (stale.length > 0) {
         partes.push(
@@ -932,6 +956,13 @@ export function syncProject(
             proyeccion.claudeDenyMissing.join(", "),
         );
       }
+      if (proyeccion.opencodeDenyMissing.length > 0) {
+        partes.push(
+          `Faltan ${proyeccion.opencodeDenyMissing.length} denegación(es) del harness en ${OPENCODE_CONFIG_PATH}: ` +
+            proyeccion.opencodeDenyMissing.join(", "),
+        );
+      }
+      partes.push(...lineasDeDenegaciones(proyeccion));
       if (deriva.length > 0) partes.push(descripcionDeDeriva(deriva));
       // El aviso de tamaño también cuenta cuando hay otra cosa que arreglar: es lo
       // que se vería de todos modos tras el próximo `sync`.
@@ -941,7 +972,8 @@ export function syncProject(
 
     return ok(
       `Archivos generados al día.\n${lineaDeComparadas(root)}\n` +
-        `${lineasDeTamano(proyeccion).join("\n")}\n`,
+        `${lineasDeTamano(proyeccion).join("\n")}\n` +
+        lineasDeDenegaciones(proyeccion).map((linea) => `${linea}\n`).join(""),
     );
   }
 
@@ -999,6 +1031,7 @@ export function syncProject(
     lines.push("  Añada reglas en .valmen/rules/ para que se incluyan en AGENTS.md.");
   }
 
+  for (const linea of lineasDeDenegaciones(proyeccion)) lines.push(`  ${linea}`);
   for (const aviso of proyeccion.warnings) lines.push(`  Aviso: ${aviso}`);
 
   return ok(lines.join("\n") + "\n");

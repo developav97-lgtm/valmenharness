@@ -4,7 +4,7 @@ id: SECURITY-ADAPTER-DENEGADOS-CODEX-OPENCODE-20261010
 title: Proyección de denegaciones a Codex y OpenCode con reporte del resto
 type: SECURITY
 module: ADAPTER
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -108,49 +108,49 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1. (R-PER-004) `codexRulesText()` lleva una regla `forbidden` por cada una de las 9 formas expresables de `DENIED_GIT_COMMANDS`
+- [x] C1. (R-PER-004) `codexRulesText()` lleva una regla `forbidden` por cada una de las 9 formas expresables de `DENIED_GIT_COMMANDS`
       <!-- test: npx vitest run tests/denegados-codex-opencode.test.ts -->
-- [ ] C2. (R-PER-004) `codexRulesText()` no lleva regla para `git push +`
+- [x] C2. (R-PER-004) `codexRulesText()` no lleva regla para `git push +`
       <!-- test: npx vitest run tests/denegados-codex-opencode.test.ts -->
 - [ ] C3. Con Codex 0.160.1, `codex execpolicy check` sobre el archivo proyectado devuelve `forbidden` para `git reset --hard`
       <!-- verify: manual -->
-- [ ] C4. Sin el runtime `codex`, `sync` no escribe el archivo de reglas de Codex
+- [x] C4. Sin el runtime `codex`, `sync` no escribe el archivo de reglas de Codex
       <!-- test: npx vitest run tests/denegados-codex-opencode.test.ts -->
-- [ ] C5. (R-PER-004) Con el runtime `opencode`, `sync` deja en el archivo de proyecto de OpenCode todas las reglas de `opencodeDenyPermission()`
+- [x] C5. (R-PER-004) Con el runtime `opencode`, `sync` deja en el archivo de proyecto de OpenCode todas las reglas de `opencodeDenyPermission()`
       <!-- test: npx vitest run tests/denegados-codex-opencode.test.ts -->
-- [ ] C6. (R-PER-002) Tras dos `sync`, las reglas propias de OpenCode quedan idénticas, en su orden original, delante de las del harness
+- [x] C6. (R-PER-002) Tras dos `sync`, las reglas propias de OpenCode quedan idénticas, en su orden original, delante de las del harness
       <!-- test: npx vitest run tests/denegados-codex-opencode.test.ts -->
-- [ ] C7. (R-PER-002) Tras dos `sync`, cada regla del harness aparece una sola vez en el archivo de OpenCode
+- [x] C7. (R-PER-002) Tras dos `sync`, cada regla del harness aparece una sola vez en el archivo de OpenCode
       <!-- test: npx vitest run tests/denegados-codex-opencode.test.ts -->
-- [ ] C8. (R-PER-002) Una clave propia igual a una regla del harness con otro valor conserva su valor
+- [x] C8. (R-PER-002) Una clave propia igual a una regla del harness con otro valor conserva su valor
       <!-- test: npx vitest run tests/denegados-codex-opencode.test.ts -->
-- [ ] C9. (R-PER-004) La regla de esa clave sale en la salida de `sync` como no aplicada en OpenCode
+- [x] C9. (R-PER-004) La regla de esa clave sale en la salida de `sync` como no aplicada en OpenCode
       <!-- test: npx vitest run tests/denegados-codex-opencode.test.ts -->
-- [ ] C10. (R-PER-002) Un `permission.bash` escrito como texto queda igual tras `sync`
+- [x] C10. (R-PER-002) Un `permission.bash` escrito como texto queda igual tras `sync`
       <!-- test: npx vitest run tests/denegados-codex-opencode.test.ts -->
-- [ ] C11. Un archivo de OpenCode con JSON inválido hace fallar `sync` sin escribirlo
+- [x] C11. Un archivo de OpenCode con JSON inválido hace fallar `sync` sin escribirlo
       <!-- test: npx vitest run tests/denegados-codex-opencode.test.ts -->
-- [ ] C12. Cada agente proyectado de OpenCode lleva en su frontmatter las reglas de `opencodeAgentPermission`
+- [x] C12. Cada agente proyectado de OpenCode lleva en su frontmatter las reglas de `opencodeAgentPermission`
       <!-- test: npx vitest run tests/denegados-codex-opencode.test.ts -->
-- [ ] C13. Con OpenCode 2.0.16 en modo `--auto`, un agente proyectado no puede leer `.env`
+- [x] C13. Con OpenCode 2.0.16 en modo `--auto`, un agente proyectado no puede leer `.env`
       <!-- verify: manual -->
-- [ ] C14. Con OpenCode 2.0.16 en modo `--auto`, un agente proyectado no puede ejecutar `git -C . reset --hard`
+- [x] C14. Con OpenCode 2.0.16 en modo `--auto`, un agente proyectado no puede ejecutar `git -C . reset --hard`
       <!-- verify: manual -->
-- [ ] C15. (R-PER-004) Para cada par de regla de la lista con cliente, la regla figura en el archivo del cliente, de lo contrario en su reporte de no aplicadas
+- [x] C15. (R-PER-004) Para cada par de regla de la lista con cliente, la regla figura en el archivo del cliente, de lo contrario en su reporte de no aplicadas
       <!-- test: npx vitest run tests/denegados-codex-opencode.test.ts -->
-- [ ] C16. (R-PER-004) Ninguna regla aplicada en el archivo de un cliente figura además en el reporte de no aplicadas de ese cliente
+- [x] C16. (R-PER-004) Ninguna regla aplicada en el archivo de un cliente figura además en el reporte de no aplicadas de ese cliente
       <!-- test: npx vitest run tests/denegados-codex-opencode.test.ts -->
-- [ ] C17. (R-PER-004) La salida de `valmen sync` con el runtime `codex` nombra cada regla no aplicada en Codex
+- [x] C17. (R-PER-004) La salida de `valmen sync` con el runtime `codex` nombra cada regla no aplicada en Codex
       <!-- test: npx vitest run tests/denegados-codex-opencode.test.ts -->
-- [ ] C18. (R-PER-004) La salida de `valmen doctor` con el runtime `codex` nombra cada regla no aplicada en Codex
+- [x] C18. (R-PER-004) La salida de `valmen doctor` con el runtime `codex` nombra cada regla no aplicada en Codex
       <!-- test: npx vitest run tests/denegados-codex-opencode.test.ts -->
-- [ ] C19. Con una regla del harness borrada del archivo de OpenCode, `sync --check` sale con código distinto de 0
+- [x] C19. Con una regla del harness borrada del archivo de OpenCode, `sync --check` sale con código distinto de 0
       <!-- test: npx vitest run tests/denegados-codex-opencode.test.ts -->
-- [ ] C20. Las pruebas existentes que el cambio puede romper siguen en verde
+- [x] C20. Las pruebas existentes que el cambio puede romper siguen en verde
       <!-- test: npx vitest run tests/agent-projection.test.ts tests/config-view.test.ts tests/claude-code-respuesta.test.ts tests/proyeccion-denegados.test.ts tests/adapters.test.ts tests/agentes-y-verbosidad.test.ts tests/puesta-en-marcha.test.ts tests/codegraph-estado.test.ts tests/adopt.test.ts tests/dogfooding-registro.test.ts -->
-- [ ] C21. La guarda de exportaciones sin consumidor sale con 0
+- [x] C21. La guarda de exportaciones sin consumidor sale con 0
       <!-- test: node scripts/exports-sin-uso.mjs -->
-- [ ] C22. La comprobación de tipos del repositorio no produce salida
+- [x] C22. La comprobación de tipos del repositorio no produce salida
       <!-- test: npx tsc --noEmit -p tsconfig.json -->
 
 ## Puntos
@@ -161,11 +161,32 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+Hecho según el plan, con las pruebas escritas antes y observadas en rojo (132 de 133 fallaban sin el módulo y el cableado).
+
+- `packages/adapter/src/denied-clients.ts` (nuevo): `codexRulesText`, `opencodeDenyPermission`, `opencodeAgentPermission`, `mergeOpencodeDenyConfig`, `missingOpencodeDenyRules`, `denyNotApplied`, `DENY_CLIENT_NOTICE`. La fusión se llama `mergeOpencodeDenyConfig` porque `mergeOpencodeConfig` ya existe en `mcp.ts` (el servidor MCP en `opencode.json` de la raíz).
+- `agents.ts`: el frontmatter de OpenCode lleva `permission` con `read`, `edit` y `bash`, la base de hoy como clave `"*"` y las denegaciones después (D-3). `renderCodexAgent` no cambia (D-1).
+- `projection.ts`: suma `.codex/rules/valmen.rules` y `.opencode/opencode.json` (no este último si existe `.opencode/opencode.jsonc`); `Projection` gana `opencodeDenyMissing` y `denyNotApplied`.
+- `commands.ts`: `sync` y `sync --check` imprimen «no aplicadas en <cliente> (N): … — <motivo>» y una línea «Nota (<cliente>): …» (no empieza por «Aviso» porque `tests/agents-md-tamano.test.ts` exige que no haya «Aviso» sin presupuesto excedido); `--check` falla con «Faltan N denegación(es) del harness en .opencode/opencode.json».
+- `setup.ts`: `doctor` suma un hallazgo `aviso` «Denegaciones en <cliente>» sin escribir ni cambiar el código de salida.
+
+Aserciones de pruebas existentes cambiadas a propósito (paso 7 del plan), todas por los dos archivos nuevos o el frontmatter nuevo:
+- `tests/agent-projection.test.ts`: `^ {2}edit: (allow|deny)$` pasa a `^ {2}edit:\n {4}"\*": (allow|deny)$`.
+- `tests/adapters.test.ts`: `.opencode/` 2 a 3 archivos; `.codex/` 3 a 4; la lista de «proyecta solo a los declarados» suma `.opencode/opencode.json`.
+- `tests/config-view.test.ts`: `ARCHIVOS_GENERADOS` suma `.codex/rules/valmen.rules` y `.opencode/opencode.json`; pendientes 6 a 8.
+
+Verificación manual con OpenCode 2.0.16 en un repositorio temporal (fuera del repo, `sync` con el dist del worktree): `read` de `.env` sale `Permission denied: read` (C13) y `git -C . reset --hard` por bash sale `Permission denied: shell` con el árbol intacto (C14). Codex no está instalado en esta máquina: C3 queda sin verificar.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Directorio: raíz del worktree/checkout, Node 22 o superior, `npm install` hecho y `npm run build` corrido.
+
+1. `npx vitest run tests/denegados-codex-opencode.test.ts` — esperado: 133 pruebas en verde (C1, C2, C4 a C12, C15 a C19).
+2. `npx vitest run tests/agent-projection.test.ts tests/config-view.test.ts tests/claude-code-respuesta.test.ts tests/proyeccion-denegados.test.ts tests/adapters.test.ts tests/agentes-y-verbosidad.test.ts tests/puesta-en-marcha.test.ts tests/codegraph-estado.test.ts tests/adopt.test.ts tests/dogfooding-registro.test.ts tests/agents-md-tamano.test.ts` — esperado: 262 en verde (C20).
+3. `node scripts/exports-sin-uso.mjs` — esperado: «Sin exportaciones nuevas sin consumidor» (C21). `npx tsc --noEmit -p tsconfig.json` — sin salida (C22).
+
+Manual, solo en un repositorio temporal (nunca uno real): con `valmen sync` y `runtimes: [codex]`, `codex execpolicy check -r <repo>/.codex/rules/valmen.rules git reset --hard` con Codex 0.160.1 debe devolver `forbidden` (C3, SIN VERIFICAR: Codex no está instalado donde se implementó). Con `runtimes: [opencode]` y OpenCode 2.0.16, `opencode run --standalone --auto --agent <agente> --format json` pidiendo `read` de `.env` da `Permission denied: read` y pidiendo `git -C . reset --hard` por bash da `Permission denied: shell` (C13 y C14, verificados por el implementador).
+
+Ejecutado por el implementador: 1 (133 de 133), 2 (262 de 262), 3 (sin hallazgos nuevos) y `npx eslint` de los archivos tocados limpio. Limitación: la prueba parametrizada comprueba que cada regla está en el archivo del cliente o reportada, no que Codex u OpenCode las respeten (eso lo cubren C3, C13 y C14).
 
 ## QA
 
@@ -194,7 +215,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Sesión de implementación; la sesión no expone totales de tokens, sin números.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:sesion-implementacion-sonnet-5-5",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -276,6 +313,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:46:20.740Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:57:06.247Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-10",
+    "at": "2026-10-11T04:00:30.959Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
