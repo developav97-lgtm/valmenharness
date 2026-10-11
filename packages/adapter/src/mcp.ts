@@ -23,7 +23,7 @@ import { existsSync, lstatSync, mkdirSync, readFileSync, writeFileSync } from "n
 import { homedir } from "node:os";
 import { basename, dirname, join, resolve, sep } from "node:path";
 
-import { publicadas } from "./skills.js";
+import { CATALOGO_DIR, publicadas } from "./skills.js";
 
 /** La entrada del servidor, ya resuelta para un runtime. */
 export interface McpEntry {
@@ -884,27 +884,38 @@ export interface ResultadoGlobal {
  */
 export function instalarPublicadasEnHermes(
   home: string = homedir(),
-  options: { readonly forzar?: boolean } = {},
+  options: { readonly forzar?: boolean; readonly dir?: string } = {},
 ): ResultadoGlobal {
   const escritas: string[] = [];
   const pendientes: string[] = [];
 
-  for (const skill of publicadas()) {
-    const ruta = join(hermesSkillsDir(home), skill.id, "SKILL.md");
-    const existente = existsSync(ruta) ? readFileSync(ruta, "utf8") : null;
-    if (existente === skill.texto) continue;
-
-    // Misma política que la skill del harness: no se pisa una edición sin que
-    // alguien lo pida. Una copia global distinta suele ser una edición propia, y
+  for (const skill of publicadas(options.dir ?? CATALOGO_DIR)) {
+    const base = join(hermesSkillsDir(home), skill.id);
+    // El `SKILL.md` y sus referencias siguen la misma política: no se pisa una edición
+    // sin que alguien lo pida. Una copia global distinta suele ser una edición propia, y
     // reemplazarla en silencio borraría trabajo; se informa y `--force` la aplica.
-    if (existente !== null && options.forzar !== true) {
-      pendientes.push(skill.id);
-      continue;
+    const archivos = [
+      { ruta: join(base, "SKILL.md"), contenido: skill.texto },
+      ...skill.referencias.map((r) => ({
+        ruta: join(base, "referencias", r.nombre),
+        contenido: r.contenido,
+      })),
+    ];
+    let escrita = false;
+    let pendiente = false;
+    for (const { ruta, contenido } of archivos) {
+      const existente = existsSync(ruta) ? readFileSync(ruta, "utf8") : null;
+      if (existente === contenido) continue;
+      if (existente !== null && options.forzar !== true) {
+        pendiente = true;
+        continue;
+      }
+      mkdirSync(dirname(ruta), { recursive: true });
+      writeFileSync(ruta, contenido, "utf8");
+      escrita = true;
     }
-
-    mkdirSync(dirname(ruta), { recursive: true });
-    writeFileSync(ruta, skill.texto, "utf8");
-    escritas.push(skill.id);
+    if (escrita) escritas.push(skill.id);
+    if (pendiente) pendientes.push(skill.id);
   }
 
   return { escritas, pendientes };

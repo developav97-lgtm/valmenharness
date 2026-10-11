@@ -166,7 +166,12 @@ export function projectFiles(
     ".valmen/config.yaml",
     ...model.rules.map((rule) => rule.source),
     ...agents.map((agent) => `.valmen/agents/${agent.id}.md`),
-    ...skills.map((skill) => `.valmen/skills/${skill.id}/SKILL.md`),
+    ...skills.flatMap((skill) => [
+      `.valmen/skills/${skill.id}/SKILL.md`,
+      ...(skill.referencias ?? []).map(
+        (referencia) => `.valmen/skills/${skill.id}/referencias/${referencia.nombre}`,
+      ),
+    ]),
   ];
 
   const agentsMd = projectAgentsMd(model);

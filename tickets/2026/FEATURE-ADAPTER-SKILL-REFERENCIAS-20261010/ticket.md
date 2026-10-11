@@ -4,7 +4,7 @@ id: FEATURE-ADAPTER-SKILL-REFERENCIAS-20261010
 title: Proyección de la carpeta de referencias junto al SKILL.md
 type: FEATURE
 module: ADAPTER
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -103,41 +103,41 @@ Es un requisito nuevo, sin síntoma previo (AP-005, `.valmen/memory/aprendizajes
 
 ## Criterios de aceptación
 
-- [ ] C1. `valmen sync` escribe cada `referencias/<nombre>.md` de una skill, con el mismo contenido, en `<runtime>/skills/<id>/referencias/` de cada runtime en alcance.
+- [x] C1. `valmen sync` escribe cada `referencias/<nombre>.md` de una skill, con el mismo contenido, en `<runtime>/skills/<id>/referencias/` de cada runtime en alcance.
       <!-- test: npx vitest run tests/skill-referencias.test.ts -->
-- [ ] C2. Un runtime fuera de `runtimes` en la configuración no recibe la referencia.
+- [x] C2. Un runtime fuera de `runtimes` en la configuración no recibe la referencia.
       <!-- test: npx vitest run tests/skill-referencias.test.ts -->
-- [ ] C3. Una skill sin carpeta `referencias/` produce la misma lista de archivos proyectados que antes del cambio.
+- [x] C3. Una skill sin carpeta `referencias/` produce la misma lista de archivos proyectados que antes del cambio.
       <!-- test: npx vitest run tests/skill-referencias.test.ts -->
-- [ ] C4. Un archivo de `referencias/` que no termina en `.md` no se proyecta.
+- [x] C4. Un archivo de `referencias/` que no termina en `.md` no se proyecta.
       <!-- test: npx vitest run tests/skill-referencias.test.ts -->
-- [ ] C5. Una subcarpeta dentro de `referencias/` no se proyecta.
+- [x] C5. Una subcarpeta dentro de `referencias/` no se proyecta.
       <!-- test: npx vitest run tests/skill-referencias.test.ts -->
-- [ ] C6. Las referencias de una skill se proyectan en orden por nombre.
+- [x] C6. Las referencias de una skill se proyectan en orden por nombre.
       <!-- test: npx vitest run tests/skill-referencias.test.ts -->
-- [ ] C7. `valmen sync --check` nombra la referencia proyectada que falta en un runtime.
+- [x] C7. `valmen sync --check` nombra la referencia proyectada que falta en un runtime.
       <!-- test: npx vitest run tests/skill-referencias.test.ts -->
-- [ ] C8. `valmen sync --check` nombra la referencia proyectada que se editó a mano.
+- [x] C8. `valmen sync --check` nombra la referencia proyectada que se editó a mano.
       <!-- test: npx vitest run tests/skill-referencias.test.ts -->
-- [ ] C9. `valmen sync --check` responde «Archivos generados al día.» cuando las referencias proyectadas coinciden con la fuente.
+- [x] C9. `valmen sync --check` responde «Archivos generados al día.» cuando las referencias proyectadas coinciden con la fuente.
       <!-- test: npx vitest run tests/skill-referencias.test.ts -->
-- [ ] C10. El aviso de `skill-budget` no suma el tamaño de las referencias de la skill.
+- [x] C10. El aviso de `skill-budget` no suma el tamaño de las referencias de la skill.
       <!-- test: npx vitest run tests/skill-referencias.test.ts -->
-- [ ] C11. `valmen sync` copia la referencia de una skill publicada del catálogo a `.valmen/skills/<id>/referencias/`.
+- [x] C11. `valmen sync` copia la referencia de una skill publicada del catálogo a `.valmen/skills/<id>/referencias/`.
       <!-- test: npx vitest run tests/skill-referencias.test.ts -->
-- [ ] C12. `valmen sync --check` nombra la referencia publicada que falta en `.valmen/skills/<id>/referencias/`.
+- [x] C12. `valmen sync --check` nombra la referencia publicada que falta en `.valmen/skills/<id>/referencias/`.
       <!-- test: npx vitest run tests/skill-referencias.test.ts -->
-- [ ] C13. `valmen sync --check` nombra la referencia publicada que se editó a mano en el proyecto.
+- [x] C13. `valmen sync --check` nombra la referencia publicada que se editó a mano en el proyecto.
       <!-- test: npx vitest run tests/skill-referencias.test.ts -->
-- [ ] C14. La instalación global de Hermes escribe la referencia publicada junto al `SKILL.md`.
+- [x] C14. La instalación global de Hermes escribe la referencia publicada junto al `SKILL.md`.
       <!-- test: npx vitest run tests/skill-referencias.test.ts -->
-- [ ] C15. La instalación global de Hermes deja como pendiente una referencia global editada cuando no se pasa `forzar`.
+- [x] C15. La instalación global de Hermes deja como pendiente una referencia global editada cuando no se pasa `forzar`.
       <!-- test: npx vitest run tests/skill-referencias.test.ts -->
-- [ ] C16. Las pruebas existentes de skills, publicadas, presupuesto y proyección de agentes siguen pasando.
+- [x] C16. Las pruebas existentes de skills, publicadas, presupuesto y proyección de agentes siguen pasando.
       <!-- test: npx vitest run tests/skills.test.ts tests/skills-publicadas.test.ts tests/skill-presupuesto.test.ts tests/agent-projection.test.ts -->
-- [ ] C17. El monorepo compila sin errores de tipos.
+- [x] C17. El monorepo compila sin errores de tipos.
       <!-- test: npx tsc -b -->
-- [ ] C18. La guarda de exportaciones sin uso no encuentra hallazgos.
+- [x] C18. La guarda de exportaciones sin uso no encuentra hallazgos.
       <!-- test: node scripts/exports-sin-uso.mjs -->
 - [ ] C19. En Claude Code, una skill proyectada que cita `referencias/ejemplo.md` lee ese archivo desde su directorio base.
       <!-- verify: manual -->
@@ -150,11 +150,20 @@ Es un requisito nuevo, sin síntoma previo (AP-005, `.valmen/memory/aprendizajes
 
 ## Implementación
 
-Pendiente.
+- `packages/adapter/src/skills.ts`: `SkillDefinition.referencias` opcional; `leerReferencias` (solo `*.md` de primer nivel, por nombre); `renderAllSkills` emite cada referencia tras el `SKILL.md`; `Publicada.referencias`; `instalarPublicadas` las copia; deriva con motivo `referencia` (`falta` o `editada`) y su descripción.
+- `packages/adapter/src/projection.ts`: las referencias entran en `sources`; el filtro de runtimes existente las deja fuera donde no aplica.
+- `packages/adapter/src/mcp.ts`: `instalarPublicadasEnHermes` copia las referencias con la política del `SKILL.md` (distinta sin `forzar` va a `pendientes`); el catálogo se pasa por `options.dir` (por defecto `CATALOGO_DIR`).
+- `scripts/exports-sin-uso.linea-base.json`: se quita `CATALOGO_DIR`, que ahora consume `mcp.ts` (no se agrega ninguna entrada).
+- Pruebas: `tests/skill-referencias.test.ts`, una prueba parametrizada por regla, escrita antes y observada en rojo (13 de 17 fallaban).
 
 ## Pruebas
 
-Pendiente de ejecución.
+Directorio: raíz del worktree/repositorio. Requisitos: Node 24, `npm install` hecho; sin servicios.
+
+- `npx vitest run tests/skill-referencias.test.ts tests/skills.test.ts tests/skills-publicadas.test.ts tests/skill-presupuesto.test.ts tests/agent-projection.test.ts tests/adapters.test.ts` → 6 archivos, 112 pruebas en verde (C1-C16).
+- `npx tsc -b` → sin errores (C17).
+- `node scripts/exports-sin-uso.mjs` → «Sin exportaciones nuevas sin consumidor» (C18).
+- Validación manual (C19, sin verificar): en un proyecto de prueba crear `.valmen/skills/<id>/referencias/ejemplo.md` citada desde su `SKILL.md`, correr `valmen sync`, cargar la skill en Claude Code y comprobar que lee `.claude/skills/<id>/referencias/ejemplo.md`; luego borrar la skill de prueba. No correr `valmen sync` sobre un proyecto real sin saber que escribe reglas `deny` en `.claude/settings.json`.
 
 ## QA
 
@@ -183,7 +192,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "La sesión no expone números de consumo; implementación con claude-sonnet-5-5.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:sesion-sin-agregado",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -256,6 +281,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:44:13.192Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:46:17.308Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:47:17.146Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```

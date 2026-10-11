@@ -53,7 +53,6 @@
   "packages/adapter/src/routing.ts#parseSeleccionDePerfil",
   "packages/adapter/src/routing.ts#playwrightConfigOf",
   "packages/adapter/src/routing.ts#routeFor",
-  "packages/adapter/src/skills.ts#CATALOGO_DIR",
   "packages/adapter/src/skills.ts#MotivoDeDeriva",
   "packages/adapter/src/skills.ts#SkillRule",
   "packages/adapter/src/skills.ts#publicada",
