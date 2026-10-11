@@ -1289,6 +1289,7 @@ async function hastaCerrado(): Promise<string> {
     id: ID,
     resultado: "approved",
     confirmacion_po: "Conforme",
+    todo_cubierto: true,
   });
   await paso(contexto, "mover_ticket", { id: ID, to: "qa_approved" });
   // El consumo es lo último que falta antes de cerrar, y el motor no prepara el
@@ -1396,6 +1397,7 @@ describe("el ciclo entero del ticket", () => {
       id: ID,
       resultado: "approved",
       confirmacion_po: "Aprobado, quedó bien",
+      todo_cubierto: true,
     });
     await paso(contexto, "mover_ticket", { id: ID, to: "qa_approved" });
     // El criterio manual lo marca quien lo probó, con su confirmación; el que declara un
@@ -1488,6 +1490,7 @@ describe("el ciclo entero del ticket", () => {
     const resultado = await callTool(contexto, "cerrar_qa", {
       id: ID,
       resultado: "approved",
+      todo_cubierto: true,
     });
     expect(resultado.isError).toBe(true);
     expect(resultado.text).toContain("confirmación explícita del PO");

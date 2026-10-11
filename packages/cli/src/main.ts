@@ -167,6 +167,7 @@ import {
   createTicket,
   releasePublish,
   qaClose,
+  declaracionDeCobertura,
   qaStart,
   transition,
 } from "@valmen/engine";
@@ -386,8 +387,10 @@ Comandos:
                             el de la evidencia worktree:sha256 del ticket; igualdad
                             probada evita re-correr la suite sobre el commit— o
                             worktree / worktree:sha256:hash.
-  qa-close --id <ID> --result <r>
+  qa-close --id <ID> --result <r> (--not-covered <texto> | --all-covered)
                             Cierra el ciclo abierto. --po-confirmation si aprueba.
+                            --not-covered: lo que quedó sin cubrir, uno por línea;
+                            --all-covered: no quedó nada sin cubrir.
   add-evidence --id <ID> --kind <k> --description <d>
                             Anexa evidencia. --reference y --point-id opcionales.
   add-retest --id <ID> --point-id <P> --result <r>
@@ -1083,6 +1086,11 @@ export function runAppend(
           ticketId: identificador(),
           result: obligatoria("result"),
           poConfirmation: flag(flags, "po-confirmation"),
+          notCovered: declaracionDeCobertura(
+            flag(flags, "not-covered"),
+            flags["all-covered"] === true,
+            { lista: "--not-covered", todo: "--all-covered" },
+          ),
         });
         break;
 

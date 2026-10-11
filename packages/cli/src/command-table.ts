@@ -450,7 +450,10 @@ export const COMANDOS: Readonly<Record<string, EspecComando>> = {
     booleanas: [],
   },
   "qa-start": { conValor: ["--id", "--environment", "--build-reference"], booleanas: [] },
-  "qa-close": { conValor: ["--id", "--result", "--po-confirmation"], booleanas: [] },
+  "qa-close": {
+    conValor: ["--id", "--result", "--po-confirmation", "--not-covered"],
+    booleanas: ["--all-covered"],
+  },
   "add-evidence": {
     conValor: ["--id", "--kind", "--description", "--reference", "--point-id"],
     booleanas: [],

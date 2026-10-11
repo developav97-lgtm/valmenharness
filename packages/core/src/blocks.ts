@@ -213,6 +213,8 @@ export function validateQa(entries: readonly JsonObject[]): void {
         "po_confirmation",
       ],
       id,
+      // Lo que quedó sin cubrir lo declara solo el cierre; los ciclos cerrados antes no lo traen.
+      ["not_covered"],
     );
 
     validateIsoDate(entry["date"], `${id}.date`);
@@ -249,6 +251,13 @@ export function validateQa(entries: readonly JsonObject[]): void {
     }
 
     requireStringList(entry["findings"], `${id}.findings`);
+    if ("not_covered" in entry) {
+      // Lista vacía = cobertura completa declarada; ausente = «sin declarar».
+      requireStringList(entry["not_covered"], `${id}.not_covered`);
+      if ((entry["not_covered"] as string[]).some((item) => item.trim() === "")) {
+        fail(`${id}.not_covered solo admite textos no vacíos.`);
+      }
+    }
 
     // QA es un historial por parejas: una entrada par abre el ciclo y la impar
     // lo cierra. El índice es 0-based, así que "par" es el inicio.
@@ -259,6 +268,9 @@ export function validateQa(entries: readonly JsonObject[]): void {
       }
       if (entry["build_reference"] === null || entry["environment"] === null) {
         fail(`${id} requiere build_reference y environment trazables.`);
+      }
+      if ("not_covered" in entry) {
+        fail(`${id}.not_covered solo lo declara la entrada que cierra el ciclo.`);
       }
     } else if (result === "pending") {
       fail(`${id} debe cerrar el ciclo QA anterior con un resultado.`);

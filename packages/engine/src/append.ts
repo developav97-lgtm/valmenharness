@@ -639,7 +639,41 @@ export interface QaCloseRequest {
   readonly ticketId: string;
   readonly result: string;
   readonly poConfirmation?: string | undefined;
+  /** Lo que quedó sin cubrir; `[]` = cobertura completa. Sin él, la entrada no lleva `not_covered`. */
+  readonly notCovered?: readonly string[] | undefined;
   readonly now?: (() => Date) | undefined;
+}
+
+/**
+ * La declaración de cobertura de un cierre de QA (R-QAC-001): lo que quedó sin cubrir, o que no
+ * quedó nada. Parte el texto por líneas, recorta y descarta las vacías. Falla nombrando el
+ * parámetro si no llega ninguna de las dos formas, si llegan ambas o si la lista queda vacía.
+ */
+export function declaracionDeCobertura(
+  lista: string | undefined,
+  todoCubierto: boolean,
+  nombres: { readonly lista: string; readonly todo: string },
+): readonly string[] {
+  if (lista !== undefined && todoCubierto) {
+    fail(`Declara ${nombres.lista} o ${nombres.todo}, no las dos: se contradicen.`);
+  }
+  if (todoCubierto) return [];
+  if (lista === undefined) {
+    fail(
+      `Cerrar el ciclo exige declarar lo que quedó sin cubrir: pasa ${nombres.lista} ` +
+        `(un elemento por línea) o ${nombres.todo} si no quedó nada.`,
+    );
+  }
+  const elementos = lista
+    .split("\n")
+    .map((linea) => linea.trim())
+    .filter((linea) => linea !== "");
+  if (elementos.length === 0) {
+    fail(
+      `${nombres.lista} no tiene ningún elemento: si no quedó nada sin cubrir, usa ${nombres.todo}.`,
+    );
+  }
+  return elementos;
 }
 
 export function qaClose(request: QaCloseRequest): string {
@@ -699,6 +733,7 @@ export function qaClose(request: QaCloseRequest): string {
       findings: [],
       correction: null,
       po_confirmation: poConfirmation,
+      ...(request.notCovered === undefined ? {} : { not_covered: [...request.notCovered] }),
     });
 
     let texto = replaceBlock(contexto.document.text, "QA", qa);
