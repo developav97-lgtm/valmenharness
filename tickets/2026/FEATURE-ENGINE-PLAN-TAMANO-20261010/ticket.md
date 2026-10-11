@@ -4,7 +4,7 @@ id: FEATURE-ENGINE-PLAN-TAMANO-20261010
 title: El plan declara tamaño previsto y estrategia de partición
 type: FEATURE
 module: ENGINE
-workflow_status: intake
+workflow_status: analyzed
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -13,7 +13,7 @@ migration_impact: false
 docker_impact: false
 risk_level: normal
 created: 2026-10-10
-updated: 2026-10-10
+updated: 2026-10-11
 related_ticket: null
 target_release: null
 released_in: null
@@ -37,23 +37,25 @@ Comportamiento actual: la spec no lo declara; se establece en el análisis, leye
 campo, bandera, columna, migración— y no lo especifica, listá cada elemento
 con su pregunta antes de avanzar a análisis; el análisis no planifica sobre
 la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
-Ninguno.
+- «El tope» se traduce a campo real: `delivery-budget` de `.valmen/config.yaml` (línea 33, hoy 400), que lee `topeDeEntrega` en `packages/engine/src/tamano-entrega.ts:56` con 400 por defecto. Resuelto por búsqueda; no queda pregunta.
+- «Tamaño previsto» y «cómo se parte» no existen como campo: el código no tiene ninguna línea del plan que los lleve. Es lo que este ticket crea (dos líneas nuevas de `## Plan` en la plantilla). Resuelto por diseño en el plan.
+- Decisión pendiente del PO, al aprobar el plan: ¿la revisión previa de la compuerta de plan **detiene** la compuerta (hallazgo, sin llamar al evaluador) cuando el plan declara más líneas que el tope sin decir si se parte o sigue, o solo **informa**? El requisito es DEBERÍA; el escenario pide la decisión «antes de pedir la compuerta». El plan propone detenerla solo en ese caso (un plan sin la línea, de tickets anteriores, sigue pasando); si el PO prefiere solo informar, el paso 3 cambia de hallazgo a línea «Omitido».
 
 ## Descripción funcional
 
-- Alcance:
-- Usuario o rol afectado:
-- Comportamiento actual:
-- Comportamiento esperado:
+- Alcance: el plan de un ticket declara el tamaño previsto en líneas (producción y pruebas) y, si pasa el tope de entrega, si se parte en tickets dependientes o sigue con un motivo escrito. Lo piden la plantilla del ticket, la skill `planificacion` y la revisión previa de la compuerta de plan. No toca la medición de la entrega (cerrada en FEATURE-ENGINE-ENTREGA-TOPE-20261010) ni el tope de criterios.
+- Usuario o rol afectado: el agente que escribe el plan, la compuerta de plan (revisión previa en código) y el PO que aprueba el plan con la decisión de partición dentro.
+- Comportamiento actual: la skill dice en una frase que se declara el tamaño previsto y que un plan de más de unas 400 líneas se parte, con el número fijo y sin la opción de seguir con motivo; la plantilla no tiene dónde escribirlo y la revisión previa no lo mira. Un plan de 1 200 líneas llega a la compuerta sin declarar nada.
+- Comportamiento esperado: la plantilla trae `- Tamaño previsto:` y `- Si excede el tope:`; la skill pide estimar contra `delivery-budget` y elegir partir o seguir con motivo; la revisión previa detiene la compuerta de plan cuando las líneas declaradas pasan el tope y la decisión falta.
 
 ## Diagnóstico
 
-- Causa comprobada (con `ruta:línea`):
-- Hipótesis pendientes:
-- Consumidores afectados:
-- Archivos y flujo investigados:
-- Riesgos y compatibilidad:
-- Impactos de sync, migración, Docker o despliegue:
+- Causa comprobada (con `ruta:línea`): no es un defecto, es un requisito nuevo (R-ENT-003) sin síntoma previo. Lo que falta, comprobado en el código: (1) la sección `## Plan` de la plantilla, `packages/core/src/template.ts:104-117`, solo trae «Gate de plan y aprobación», «Pasos ordenados», «Impactos declarados» y «Rollback (obligatorio)»: no hay línea de tamaño. (2) La skill, `.valmen/skills/planificacion/SKILL.md:90` (copia igual en `skills/planificacion/SKILL.md:90`), fija «unas 400 líneas» a mano, no nombra `delivery-budget` ni la opción de seguir con motivo. (3) `reviewBeforeGate` en `packages/engine/src/revision-previa.ts:270-359` revisa marcadores vacíos, Rollback, archivos citados, anotaciones, tope de criterios y pasos sin ruta, pero nada del tamaño; sus hallazgos posibles están en `packages/engine/src/revision-previa.ts:32-38`. (4) El tope ya existe y se lee en un solo lugar: `topeDeEntrega` en `packages/engine/src/tamano-entrega.ts:56`, con `TOPE_DE_ENTREGA_POR_DEFECTO` = 400 en `packages/engine/src/tamano-entrega.ts:12`; hoy solo lo usan la integración (`packages/engine/src/integration-commit.ts:346`, `packages/engine/src/worktree-integrar.ts:141`).
+- Hipótesis pendientes: ninguna sobre el código. Sobre el diseño, la decisión de detener o informar queda en «Supuestos y decisiones pendientes».
+- Consumidores afectados: las tres puertas que llaman a `reviewBeforeGate` —la compuerta (`packages/engine/src/gate.ts:775`, que no llama al evaluador si hay hallazgos), `valmen precheck` (`packages/cli/src/commands.ts:365`) y la herramienta MCP `revision_previa` (`packages/mcp/src/tools.ts:3410`)—; todo ticket creado con `TICKET_TEMPLATE` (`valmen create`, `crear_ticket`, la materialización de features en `packages/engine/src/materialize.ts:554`); la proyección de skills (`valmen sync`).
+- Archivos y flujo investigados: `packages/core/src/template.ts`, `packages/engine/src/revision-previa.ts`, `packages/engine/src/tamano-entrega.ts`, `packages/engine/src/gate.ts`, `packages/cli/src/commands.ts`, `.valmen/skills/planificacion/SKILL.md`, `.valmen/skills/planificacion/referencias/contenido-del-plan.md`, `.valmen/config.yaml`, `packages/adapter/src/agents-size.ts` (presupuesto de skill de 6500 B), y las pruebas que fijan texto: `tests/plantilla-y-materializacion.test.ts:122-128`, `tests/skills-catalogo-tope.test.ts:230` (exige «unos 20 criterios»), `tests/skills-catalogo-tope.test.ts:406` (copias iguales en `skills/` y `.valmen/skills/`), `tests/plantillas-compactas.test.ts:291` (fija la versión 1.4.0 de `planificacion`), `tests/revision-previa.test.ts`. Memoria consultada (`valmen memory search`): AP-013 (cada « y » de un criterio cuenta como afirmación) y AP-012 (criterios atómicos); nada resuelto antes sobre el tamaño del plan.
+- Riesgos y compatibilidad: (a) un ticket existente no tiene las líneas nuevas: la regla nueva solo mira un plan que declara el tamaño, así que los tickets previos y los fixtures (`bench/friccion/src/recorridos.ts`, `tests/helpers/fixtures.ts`) no ganan hallazgos. (b) Un ticket nuevo con la línea vacía da `marcador_vacio` en la compuerta de plan (mismo trato que cualquier línea de la plantilla); es intencional, pero las pruebas que crean un ticket con la plantilla y reemplazan líneas sueltas del plan podrían ponerse en rojo: se corren las que tocan plantilla y revisión previa antes de entregar. (c) La skill está a 6325 B contra el presupuesto de 6500 B: el cambio del párrafo debe quedar casi del mismo largo y el detalle va a la referencia `contenido-del-plan.md`. (d) La versión de la skill no se sube, porque `tests/plantillas-compactas.test.ts:291` la fija en 1.4.0. (e) Contar líneas desde texto libre es frágil: el formato se fija en la plantilla («N líneas») y una línea de tamaño sin número da su propio hallazgo en vez de pasar en silencio.
+- Impactos de sync, migración, Docker o despliegue: ninguno (no toca sincronización de datos, migraciones, contenedores ni despliegue; `valmen sync` solo reproyecta la skill).
 
 ## Plan
 
@@ -139,6 +141,15 @@ Sin publicar todavía.
     "action": "created",
     "actor": "cli",
     "details": "Ticket creado sin sobrescribir historial."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-002",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:13:04.871Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: intake -> analyzed."
   }
 ]
 ```
