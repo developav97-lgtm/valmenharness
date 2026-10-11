@@ -4,7 +4,7 @@ id: FEATURE-ENGINE-ENTREGA-TOPE-20261010
 title: Medir líneas añadidas y borradas y avisar al pasar el tope
 type: FEATURE
 module: ENGINE
-workflow_status: in_progress
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -74,6 +74,7 @@ El pedido nombra dos cosas que el código no tiene. Se buscaron (`grep` de `budg
   7. `packages/engine/src/journey-handoff.ts`: `EntradaDePruebas` gana `entrega` opcional (los partes ya guardados en `handoffs.jsonl` no lo traen), leída del último evento `delivery-size` del ticket en `entradaDePruebas` (`:137`); `packages/engine/src/notify.ts`, `renderJourneyHandoffNotification` (`:777`): una línea `    tamaño: N líneas (+A −B)` por entrada, con « · pasa el tope de T» cuando corresponde. Cubre C16, C17.
   8. `.valmen/config.yaml`: declarar `delivery-budget: 400` con un comentario de una línea (aviso sin bloqueo, R-ENT-002).
   9. Regresión: correr `tests/worktree-integrar.test.ts`, `tests/worktree-integracion.test.ts`, `tests/worktree-cli.test.ts`, `tests/integracion-autonoma.test.ts`, `tests/jornada-handoff.test.ts` y `tests/notify.test.ts` sin editarlos. Cubre C18, C19, C20.
+- Cambio intencional de pruebas existentes (autorizado por el PO el 2026-10-11, «A) Ajustar C17 y C24 (Recomendado)»): tras el avance directo, `HEAD` de main es un commit de registro (`delivery-size`) sobre la punta de la rama. Solo cambian dos pruebas de `tests/worktree-integrar.test.ts`: «avanza main con merge --ff-only… (C17)» y «si la recompilación falla conserva la integración… (C24)», que pasan de `HEAD == punta` a `HEAD~1 == punta`. Ninguna otra prueba existente se toca.
 - Impactos declarados:
   - Sincronización: ninguna. Migración: ninguna. Contenedores: ninguno. Cambia solo el motor local; el evento nuevo es append-only y los tickets anteriores no cambian.
 - Rollback (obligatorio): revertir el commit del ticket quita la medición, el aviso y la línea del parte; los eventos `delivery-size` ya escritos en tickets quedan como historial (append-only) y el motor los ignora; la clave `delivery-budget` de `config.yaml` queda sin lector y se puede borrar.
@@ -114,7 +115,7 @@ El pedido nombra dos cosas que el código no tiene. Se buscaron (`grep` de `budg
       <!-- test: npx vitest run tests/entrega-tope.test.ts -t "C16 " -->
 - [x] C17. El parte de la jornada marca el ticket que pasó el tope
       <!-- test: npx vitest run tests/entrega-tope.test.ts -t "C17 " -->
-- [ ] C18. Las pruebas existentes de `journey worktree integrate` siguen en verde sin editarse
+- [x] C18. Las pruebas existentes de `journey worktree integrate` siguen en verde sin editarse
       <!-- test: npx vitest run tests/worktree-integrar.test.ts tests/worktree-integracion.test.ts tests/worktree-cli.test.ts -->
 - [x] C19. Las pruebas existentes de `integrarTicket` siguen en verde sin editarse
       <!-- test: npx vitest run tests/integracion-autonoma.test.ts -->
@@ -129,23 +130,18 @@ El pedido nombra dos cosas que el código no tiene. Se buscaron (`grep` de `budg
 
 ## Implementación
 
-**Detenido por EST-009 (prueba existente en rojo): decide una persona.** Los pasos 1–8 del plan están hechos y las 17 pruebas nuevas (`tests/entrega-tope.test.ts`) pasan; se vieron en rojo antes de tocar producción (16 de 18 fallaban; C8 y C14 eran de regresión y ya pasaban). La regresión del paso 9 deja dos pruebas existentes en rojo, que no se editaron:
+Pasos 1–9 del plan hechos. Las 17 pruebas nuevas (`tests/entrega-tope.test.ts`) se vieron en rojo antes de tocar producción (16 de 18; C8 y C14 eran de regresión).
 
-- `tests/worktree-integrar.test.ts` «avanza main con merge --ff-only cuando no se movió, sin commit de merge (C17)»: `expected '388496c…' to be 'fa9055d…'` (HEAD de main ya no es la punta de la rama).
-- `tests/worktree-integrar.test.ts` «si la recompilación falla conserva la integración y lo dice (C24)»: `expected '36484a3…' to be 'c63d770…'`, mismo motivo.
+Cambio de pruebas existentes, autorizado por el PO el 2026-10-11 («A) Ajustar C17 y C24 (Recomendado)») y declarado en el plan: en `tests/worktree-integrar.test.ts`, «avanza main con merge --ff-only cuando no se movió, sin commit de merge (C17)» y «si la recompilación falla conserva la integración y lo dice (C24)» pasan de `HEAD == punta de la rama` a `HEAD~1 == punta`, porque el avance directo ahora añade el commit de registro `delivery-size` (exigido por C8). El resto de sus aserciones no cambió (C17 sigue esperando `indiceRegenerado: false` y un solo padre). Salida previa al ajuste: `expected '388496c…' to be 'fa9055d…'` y `expected '36484a3…' to be 'c63d770…'`.
 
-Hipótesis: ambas afirman que tras un avance directo `HEAD` de main **es** la punta de la rama. El plan (paso 4) pide registrar `delivery-size` tras el `merge --ff-only` y commitearlo (exigencia de C8: checkout sin cambios), lo que añade un commit encima de la punta. Es una colisión entre C8/paso 4 y C18 que el plan aprobado no declara como cambio intencional del comportamiento de esas dos pruebas. (La prueba C22 existente, que espera el índice en un commit propio sobre la punta, sigue en verde.)
-
-Opciones para el PO: A) declarar en el plan que «tras avance directo HEAD es un commit de registro sobre la punta» y ajustar C17/C24 a `HEAD~1 == punta` → mantiene C8 y el paso 4 (recomendado); B) no commitear el evento en avance directo → deja el ticket sucio y rompe C8; C) forzar merge `--no-ff` cuando haya evento → cambia igualmente C17.
-
-Archivos de producción tocados: `packages/engine/src/tamano-entrega.ts` (nuevo), `worktree-integracion-git.ts`, `worktree-integrar.ts`, `integration-commit.ts`, `journey-handoff.ts`, `notify.ts`, `index.ts`, `packages/cli/src/worktree.ts`, `.valmen/config.yaml` (`delivery-budget: 400`). Pendiente: resolver lo anterior, correr `qa-mechanical` (hoy fallaría en C18), registrar el consumo de IA y pasar a `awaiting_user_tests`. C18 queda sin marcar.
+Archivos de producción: `packages/engine/src/tamano-entrega.ts` (nuevo), `worktree-integracion-git.ts`, `worktree-integrar.ts`, `integration-commit.ts`, `journey-handoff.ts`, `notify.ts`, `index.ts`, `packages/cli/src/worktree.ts`, `.valmen/config.yaml` (`delivery-budget: 400`).
 
 ## Pruebas
 
 - Directorio: raíz del repositorio (`/Users/juanandrade/Desktop/ValmenHarness`, rama `valmen/ticket-entrega-tope`), con `node_modules` y `npm run build` hecho.
 - `npx vitest run tests/entrega-tope.test.ts`: 18 pruebas pasan (C1–C17).
 - `npx vitest run tests/integracion-autonoma.test.ts tests/jornada-handoff.test.ts tests/notify.test.ts tests/worktree-cli.test.ts tests/worktree-integracion.test.ts`: pasan sin editarse (C19, C20).
-- `npx vitest run tests/worktree-integrar.test.ts`: **2 en rojo** (C17 y C24 existentes; ver Implementación). Resultado esperado tras la decisión del PO: todo en verde.
+- `npx vitest run tests/worktree-integrar.test.ts tests/worktree-integracion.test.ts tests/worktree-cli.test.ts`: pasan (C18; C17 y C24 ajustadas con autorización del PO).
 - `npx tsc --noEmit -p .`, `npx eslint packages/engine/src packages/cli/src/worktree.ts tests/entrega-tope.test.ts` y `npx prettier --check` de lo tocado: sin hallazgos.
 - Validación manual: ninguna.
 - No se corrió la suite completa (`npx vitest run`): la corre el orquestador.
@@ -177,7 +173,23 @@ Archivos de producción tocados: `packages/engine/src/tamano-entrega.ts` (nuevo)
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": null,
+    "model": "claude-sonnet-5-5",
+    "reasoning_effort": null,
+    "notes": "manual: sin números; implementación y ajuste de C17/C24 en una sesión",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:sesion-implementacion",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -259,6 +271,24 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-11",
+    "at": "2026-10-11T19:33:08.107Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-11",
+    "at": "2026-10-11T19:33:13.881Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
   }
 ]
 ```

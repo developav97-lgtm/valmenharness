@@ -207,9 +207,10 @@ export function integrarWorktree(request: IntegrarRequest): WorktreeIntegrado {
     modo = "avance-directo";
     const ff = g(root, "merge", "--ff-only", rama);
     if (ff.status !== 0) fail(`merge --ff-only falló: ${ff.stderr.trim()}`, EXIT_INVARIANT);
+    const regenerado = regenerarIndice();
     const rutaDelTicket = anotarEntrega();
-    if (regenerarIndice() || rutaDelTicket !== null) {
-      indiceRegenerado = true;
+    if (regenerado || rutaDelTicket !== null) {
+      indiceRegenerado = regenerado;
       const a = g(
         root,
         "add",
