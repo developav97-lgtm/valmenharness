@@ -5,10 +5,12 @@
  * hacer ahora (lo mismo que `valmen resume`), con qué modelo, qué compuertas corre, qué entrega y
  * qué no puede hacer. Es una consulta de solo lectura: no crea el worktree ni lanza al subagente.
  */
+import { existsSync } from "node:fs";
+
 import { type ClienteDeSesion, type FaseDeSesion } from "@valmen/adapter";
 import { parseTicket } from "@valmen/core";
 
-import { findTicket } from "./discovery.js";
+import { findTicket, type RegistryPaths } from "./discovery.js";
 import { renderNextStep } from "./next-step.js";
 import { type AuthorizedProject } from "./project-resolution.js";
 import { buildResumeContext, renderFases, type ResumeContext } from "./resume.js";
@@ -38,6 +40,8 @@ export interface BriefDeSubagente {
   /** El comando que el orquestador corre para crear el worktree; el subagente no lo corre. */
   readonly comandoWorktree: string;
   readonly raiz: string;
+  /** De qué registro salen el estado y el siguiente paso: el del worktree del ticket o el principal. */
+  readonly registro: { readonly origen: "worktree" | "principal"; readonly ruta: string };
   readonly resume: ResumeContext;
   /** La fase del estado, con su modelo, esfuerzo y alias de subagente. */
   readonly fase: FaseDeSesion | null;
@@ -58,14 +62,18 @@ export interface ArmarBriefRequest {
 /** Arma el brief; un ticket que no existe lanza un error que nombra el id. */
 export function armarBriefDeSubagente(request: ArmarBriefRequest): BriefDeSubagente {
   const { project, ticketId } = request;
-  const ubicado = findTicket(project.paths, ticketId);
+  const worktree = worktreeDelTicket(project.root, ticketId);
+  // Un ticket que avanzó dentro de su worktree vive allí hasta integrarse: el estado y el paso salen de ese registro.
+  const pathsDelWorktree: RegistryPaths = { root: worktree.ruta, ticketsDir: project.paths.ticketsDir };
+  const enWorktree = existsSync(worktree.ruta) ? findTicket(pathsDelWorktree, ticketId) : undefined;
+  const ubicado = enWorktree ?? findTicket(project.paths, ticketId);
   if (ubicado === undefined) {
     throw new Error(`El ticket ${ticketId} no existe en el proyecto ${project.projectId}.`);
   }
+  const pathsDelRegistro = enWorktree === undefined ? project.paths : pathsDelWorktree;
   const ticket = parseTicket(ubicado.text);
   const estado = ticket.fields.workflow_status as string;
-  const resume = buildResumeContext(project.paths, ticket, "compacto", request.cliente ?? "claude");
-  const worktree = worktreeDelTicket(project.root, ticketId);
+  const resume = buildResumeContext(pathsDelRegistro, ticket, "compacto", request.cliente ?? "claude");
   const motivoNoLanzable = motivoDeNoLanzable(estado);
   const esSecurity = ticket.fields.type === "SECURITY";
 
@@ -80,6 +88,11 @@ export function armarBriefDeSubagente(request: ArmarBriefRequest): BriefDeSubage
     worktree,
     comandoWorktree: `git -C ${project.root} worktree add -b ${worktree.rama} ${worktree.ruta}`,
     raiz: project.root,
+    registro: Object.freeze(
+      enWorktree === undefined
+        ? { origen: "principal" as const, ruta: project.root }
+        : { origen: "worktree" as const, ruta: worktree.ruta },
+    ),
     resume,
     fase: resume.fases.fases.find((fase) => fase.fase === resume.fases.faseActual) ?? null,
     skills: resume.nextStep.skills,
@@ -95,6 +108,9 @@ export function renderBriefDeSubagente(brief: BriefDeSubagente): string {
   const lineas = [
     `Brief de subagente — ${brief.ticketId}: ${brief.titulo}`,
     `Tipo/Módulo: ${brief.tipo} / ${brief.modulo} · Estado: ${brief.estado}`,
+    brief.registro.origen === "worktree"
+      ? `Registro: worktree (${brief.registro.ruta}): el estado y el siguiente paso salen de ahí.`
+      : "Registro: principal: el ticket no tiene worktree con su ticket.",
   ];
   if (brief.lanzable) {
     lineas.push("Lanzable: sí.");
