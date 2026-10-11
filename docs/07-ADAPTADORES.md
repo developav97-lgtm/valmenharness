@@ -290,6 +290,20 @@ estimados y presupuesto si lo hay) y el aviso; con `--check`, el resultado al d�
 que el proyecto declaró. Un valor que no sea un entero ≥ 1000 hace fallar la proyección en vez de
 ignorarse.
 
+`skill-budget` aplica el mismo presupuesto a cada skill proyectada, que se carga entera cuando el
+agente la invoca:
+
+```yaml
+skill-budget: 6500          # bytes por skill; entero ≥ 1000. Sin la clave no se mide ni se avisa.
+```
+
+Se mide el archivo que escribe `sync` (frontmatter, cuerpo, reglas encaminadas, marca de generado y
+`local.md`), una vez por skill, publicada o propia. `sync` y `sync --check` avisan de cada skill que
+se pasa, con bytes, tokens estimados y cuánto sobra; el aviso **no bloquea** y no cambia el código de
+salida. La indicación depende del origen: una publicada (`origen: valmen`) se recorta en el catálogo
+del harness y lo propio va en `local.md`; una propia, en su `SKILL.md` o su `local.md`. Un valor que
+no sea un entero ≥ 1000 hace fallar la proyección.
+
 ### 6.4 Reglas que viven en las skills
 
 **Implementado, opt-in.** Una regla que solo aplica a un tipo de trabajo —las de pantalla, por

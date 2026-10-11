@@ -23,6 +23,9 @@ import {
   agentsMdWarning,
   measureAgentsMd,
   readAgentsMdBudget,
+  readSkillBudget,
+  measureSkill,
+  skillWarning,
 } from "./agents-size.js";
 import {
   CLAUDE_MD_PATH,
@@ -44,6 +47,7 @@ import {
   SKILL_RUNTIME_IDS,
   readSkills,
   renderAllSkills,
+  renderSkill,
   withRoutedRules,
 } from "./skills.js";
 
@@ -121,7 +125,7 @@ export interface Projection {
    * `sync --check` diga cuál falta (R-PER-003) y `sync` cuántas agregó. Vacío sin el runtime `claude`.
    */
   readonly claudeDenyMissing: readonly string[];
-  /** Avisos de la proyección que no la impiden, como pasarse del presupuesto. */
+  /** Avisos de la proyección que no la impiden, como pasarse del presupuesto: el de `AGENTS.md` y, uno por skill, el de `skill-budget`. */
   readonly warnings: readonly string[];
 }
 
@@ -168,6 +172,20 @@ export function projectFiles(
   const agentsMd = projectAgentsMd(model);
   const size = measureAgentsMd(agentsMd, readAgentsMdBudget(model.config));
   const warning = agentsMdWarning(size);
+
+  // Cada skill se mide como se escribe (reglas encaminadas, marca y `local.md`): el contenido
+  // es el mismo en todo runtime, así que se mide una vez. Sin la clave no se mide nada.
+  const topeSkill = readSkillBudget(model.config);
+  const avisosDeSkills: string[] = [];
+  if (topeSkill !== null) {
+    for (const skill of skills) {
+      const contenido = renderSkill(skill, runtimes[0] ?? "claude").content;
+      const publicada = skill.origen === "valmen";
+      const medida = measureSkill(skill.id, contenido, publicada, topeSkill);
+      const aviso = skillWarning(medida);
+      if (aviso !== null) avisosDeSkills.push(aviso);
+    }
+  }
 
   // Para Claude Code, el estilo de salida es un archivo propio; `settings.json`, `CLAUDE.md` y
   // `.worktreeinclude` se fusionan con lo que ya hay, porque también los escribe la persona.
@@ -233,6 +251,7 @@ export function projectFiles(
     claudeDenyMissing: runtimes.includes("claude") ? missingClaudeDenyRules(settingsActual) : [],
     warnings: [
       ...(warning === null ? [] : [warning]),
+      ...avisosDeSkills,
       ...(runtimes.includes("claude") ? claudeAllowConflicts(settingsActual) : []),
     ],
   };

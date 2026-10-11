@@ -4,7 +4,7 @@ id: FEATURE-CLI-PRESUPUESTO-SKILLS-20261010
 title: Clave skill-budget y aviso de valmen sync por skill que lo pasa
 type: FEATURE
 module: CLI
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -119,45 +119,45 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1 — R-SKL-001: Sin la clave `skill-budget`, `projectFiles` no devuelve ningún aviso de skill.
+- [x] C1 — R-SKL-001: Sin la clave `skill-budget`, `projectFiles` no devuelve ningún aviso de skill.
       <!-- test: npx vitest run tests/skill-presupuesto.test.ts -->
-- [ ] C2 — R-SKL-001: Una skill `planificacion` de 10 584 B de fuente, con `skill-budget: 6500`, produce un aviso de `projectFiles` que la nombra.
+- [x] C2 — R-SKL-001: Una skill `planificacion` de 10 584 B de fuente, con `skill-budget: 6500`, produce un aviso de `projectFiles` que la nombra.
       <!-- test: npx vitest run tests/skill-presupuesto.test.ts -->
-- [ ] C3 — R-SKL-001: El aviso de una skill da los bytes de su archivo proyectado.
+- [x] C3 — R-SKL-001: El aviso de una skill da los bytes de su archivo proyectado.
       <!-- test: npx vitest run tests/skill-presupuesto.test.ts -->
-- [ ] C4 — R-SKL-001: El aviso de una skill da `ceil(bytes / 4)` como tokens estimados.
+- [x] C4 — R-SKL-001: El aviso de una skill da `ceil(bytes / 4)` como tokens estimados.
       <!-- test: npx vitest run tests/skill-presupuesto.test.ts -->
-- [ ] C5 — R-SKL-001: Una skill que cabe en el presupuesto no aparece en los avisos.
+- [x] C5 — R-SKL-001: Una skill que cabe en el presupuesto no aparece en los avisos.
       <!-- test: npx vitest run tests/skill-presupuesto.test.ts -->
-- [ ] C6 — R-SKL-001: Los bytes medidos de una skill incluyen su `local.md`.
+- [x] C6 — R-SKL-001: Los bytes medidos de una skill incluyen su `local.md`.
       <!-- test: npx vitest run tests/skill-presupuesto.test.ts -->
-- [ ] C7 — R-SKL-001: El aviso de una skill con `origen: valmen` remite al catálogo del harness.
+- [x] C7 — R-SKL-001: El aviso de una skill con `origen: valmen` remite al catálogo del harness.
       <!-- test: npx vitest run tests/skill-presupuesto.test.ts -->
-- [ ] C8 — R-SKL-001: El aviso de una skill propia remite a `.valmen/skills/<id>/SKILL.md`.
+- [x] C8 — R-SKL-001: El aviso de una skill propia remite a `.valmen/skills/<id>/SKILL.md`.
       <!-- test: npx vitest run tests/skill-presupuesto.test.ts -->
-- [ ] C9 — R-SKL-001: `syncProject` sin `--check` imprime el aviso de la skill pasada.
+- [x] C9 — R-SKL-001: `syncProject` sin `--check` imprime el aviso de la skill pasada.
       <!-- test: npx vitest run tests/skill-presupuesto.test.ts -->
-- [ ] C10 — R-SKL-001: `syncProject` sin `--check` sale con 0 cuando hay avisos de skill.
+- [x] C10 — R-SKL-001: `syncProject` sin `--check` sale con 0 cuando hay avisos de skill.
       <!-- test: npx vitest run tests/skill-presupuesto.test.ts -->
-- [ ] C11 — R-SKL-001: `syncProject` sin `--check` deja escrito el archivo proyectado de la skill pasada.
+- [x] C11 — R-SKL-001: `syncProject` sin `--check` deja escrito el archivo proyectado de la skill pasada.
       <!-- test: npx vitest run tests/skill-presupuesto.test.ts -->
-- [ ] C12 — R-SKL-001: `syncProject` con `--check` al día imprime el aviso de la skill pasada.
+- [x] C12 — R-SKL-001: `syncProject` con `--check` al día imprime el aviso de la skill pasada.
       <!-- test: npx vitest run tests/skill-presupuesto.test.ts -->
-- [ ] C13 — R-SKL-001: `syncProject` con `--check` al día sale con 0 cuando hay avisos de skill.
+- [x] C13 — R-SKL-001: `syncProject` con `--check` al día sale con 0 cuando hay avisos de skill.
       <!-- test: npx vitest run tests/skill-presupuesto.test.ts -->
-- [ ] C14 — R-SKL-001: La salida de error de `syncProject` con `--check` desactualizado incluye el aviso de la skill.
+- [x] C14 — R-SKL-001: La salida de error de `syncProject` con `--check` desactualizado incluye el aviso de la skill.
       <!-- test: npx vitest run tests/skill-presupuesto.test.ts -->
-- [ ] C15 — R-SKL-001: Un `skill-budget` que no es un entero de al menos 1 000 hace salir a `syncProject` con un código distinto de 0.
+- [x] C15 — R-SKL-001: Un `skill-budget` que no es un entero de al menos 1 000 hace salir a `syncProject` con un código distinto de 0.
       <!-- test: npx vitest run tests/skill-presupuesto.test.ts -->
-- [ ] C16 — R-SKL-001: El mensaje de error de un `skill-budget` inválido nombra la clave `skill-budget`.
+- [x] C16 — R-SKL-001: El mensaje de error de un `skill-budget` inválido nombra la clave `skill-budget`.
       <!-- test: npx vitest run tests/skill-presupuesto.test.ts -->
 - [ ] C17 — R-SKL-001: El `.valmen/config.yaml` de este repositorio declara `skill-budget: 6500`.
       <!-- test: npx vitest run tests/skill-presupuesto.test.ts -->
-- [ ] C18 — R-SKL-001: Las pruebas existentes del presupuesto de `AGENTS.md`, de la proyección de denegaciones, de las skills y del dogfooding siguen pasando.
+- [x] C18 — R-SKL-001: Las pruebas existentes del presupuesto de `AGENTS.md`, de la proyección de denegaciones, de las skills y del dogfooding siguen pasando.
       <!-- test: npx vitest run tests/agents-md-tamano.test.ts tests/proyeccion-denegados.test.ts tests/skills.test.ts tests/dogfooding-registro.test.ts -->
-- [ ] C19 — R-SKL-001: La guarda de exportaciones no encuentra exportaciones nuevas sin consumidor.
+- [x] C19 — R-SKL-001: La guarda de exportaciones no encuentra exportaciones nuevas sin consumidor.
       <!-- test: node scripts/exports-sin-uso.mjs -->
-- [ ] C20 — R-SKL-001: `docs/07-ADAPTADORES.md` §6.3 documenta la clave `skill-budget`.
+- [x] C20 — R-SKL-001: `docs/07-ADAPTADORES.md` §6.3 documenta la clave `skill-budget`.
       <!-- verify: manual -->
 
 ## Puntos
@@ -168,11 +168,21 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+- `packages/adapter/src/agents-size.ts`: ayudante privado `leerPresupuesto` (lo usa también `agents-md-budget`, mensaje idéntico), `SKILL_BUDGET_MIN`, `readSkillBudget`, `SkillSize`, `measureSkill` y `skillWarning`.
+- `packages/adapter/src/projection.ts`: mide cada skill con `renderSkill` y suma un aviso por skill a `warnings`, después del de `AGENTS.md`.
+- `packages/cli/src/commands.ts`: solo el comentario de `lineasDeTamano`. `docs/07-ADAPTADORES.md` §6.3: párrafo y ejemplo de `skill-budget`.
+- `tests/skill-presupuesto.test.ts`: una prueba parametrizada por regla (clave, medida y aviso, proyección, comandos) y la regresión sin la clave; vista en rojo antes del código (18 de 22 fallaban).
+- Desviación por instrucción del PO en la sesión: NO se declara `skill-budget` en `.valmen/config.yaml` de este repositorio; C17 queda sin verificar y sin prueba (se declarará con R-SKL-003).
 
 ## Pruebas
 
-Pendiente de ejecución.
+Directorio: raíz del worktree. Requisitos: Node 22 o posterior, dependencias instaladas y `npm run build` hecho; sin red.
+
+- `npx vitest run tests/skill-presupuesto.test.ts` — esperado: 22 pruebas verdes.
+- `npx vitest run tests/agents-md-tamano.test.ts tests/proyeccion-denegados.test.ts tests/skills.test.ts tests/dogfooding-registro.test.ts` — esperado: sin fallos (99 pruebas).
+- `node scripts/exports-sin-uso.mjs` — esperado: «Sin exportaciones nuevas sin consumidor».
+- `npx tsc --noEmit -p tsconfig.json` — esperado: 0 errores.
+- Manual (C20): leer `docs/07-ADAPTADORES.md` §6.3. No se corre `valmen sync` sobre este repositorio.
 
 ## QA
 
@@ -201,7 +211,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": null,
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:sesion-implementacion-sonnet-5-5",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -274,6 +300,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:32:44.587Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:35:10.232Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:36:06.779Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```

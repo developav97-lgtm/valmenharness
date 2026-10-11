@@ -1,7 +1,8 @@
 /**
- * El tamaño del `AGENTS.md` proyectado, y el presupuesto que el proyecto le pone.
+ * El tamaño de lo que se carga entero —el `AGENTS.md` proyectado y cada skill
+ * proyectada—, y el presupuesto que el proyecto le pone.
  *
- * `AGENTS.md` se carga entero en cada sesión. Un documento que crece sin tope se
+ * `AGENTS.md` se carga entero en cada sesión y una skill entera cuando se invoca. Un documento que crece sin tope se
  * paga en cada conversación, y crece por acumulación —una regla más, un «Por qué»
  * más largo— sin que nadie decida que pese 54 KB. El presupuesto vuelve ese número
  * una decisión: el proyecto declara cuánto está dispuesto a cargar y `sync` avisa
@@ -16,6 +17,9 @@ import { type ConfigMap, readString } from "./config.js";
 
 /** El menor presupuesto que se acepta, en bytes. */
 export const AGENTS_MD_BUDGET_MIN = 1000;
+
+/** El menor presupuesto de skill que se acepta, en bytes. */
+export const SKILL_BUDGET_MIN = 1000;
 
 /** El tamaño de un `AGENTS.md` proyectado. */
 export interface AgentsMdSize {
@@ -43,14 +47,24 @@ export interface AgentsMdSize {
  * deja al proyecto creyendo que lo vigila.
  */
 export function readAgentsMdBudget(config: ConfigMap): number | null {
-  const crudo = readString(config, "agents-md-budget", "");
+  return leerPresupuesto(config, "agents-md-budget", AGENTS_MD_BUDGET_MIN, 24000);
+}
+
+/** El presupuesto de una clave, en bytes: `null` sin la clave, y falla si no es válido. */
+function leerPresupuesto(
+  config: ConfigMap,
+  clave: string,
+  minimo: number,
+  ejemplo: number,
+): number | null {
+  const crudo = readString(config, clave, "");
   if (crudo === "") return null;
 
   const valor = /^\d+$/.test(crudo) ? Number(crudo) : Number.NaN;
-  if (!Number.isSafeInteger(valor) || valor < AGENTS_MD_BUDGET_MIN) {
+  if (!Number.isSafeInteger(valor) || valor < minimo) {
     fail(
-      `config.yaml: "agents-md-budget" debe ser un entero de bytes de al menos ` +
-        `${AGENTS_MD_BUDGET_MIN} (por ejemplo 24000); recibí «${crudo}».`,
+      `config.yaml: "${clave}" debe ser un entero de bytes de al menos ` +
+        `${minimo} (por ejemplo ${ejemplo}); recibí «${crudo}».`,
     );
   }
   return valor;
@@ -92,5 +106,41 @@ export function agentsMdWarning(size: AgentsMdSize): string | null {
     `tokens) contra ${conMiles(size.budget)} B, ${conMiles(sobra)} B de más. ` +
     "Para bajarlo: encamina las reglas que solo aplican a un tipo de trabajo a sus skills " +
     "con `rules-to-skills` en .valmen/config.yaml, o acorta el texto de .valmen/rules/."
+  );
+}
+
+/** Lee `skill-budget` de la configuración, en bytes: `null` sin la clave. */
+export function readSkillBudget(config: ConfigMap): number | null {
+  return leerPresupuesto(config, "skill-budget", SKILL_BUDGET_MIN, 6500);
+}
+
+/** El tamaño de una skill proyectada, con lo que hace falta para decir dónde recortar. */
+export interface SkillSize extends AgentsMdSize {
+  readonly id: string;
+  /** `true` si la publica el harness (`origen: valmen`): `sync` reescribe su copia. */
+  readonly publicada: boolean;
+}
+
+/** Mide una skill ya proyectada —con reglas encaminadas, marca y `local.md`— contra el presupuesto. */
+export function measureSkill(
+  id: string,
+  content: string,
+  publicada: boolean,
+  budget: number | null,
+): SkillSize {
+  return { ...measureAgentsMd(content, budget), id, publicada };
+}
+
+/** El aviso de una skill que pasa del presupuesto, o `null`; dice cuánto y dónde recortar. */
+export function skillWarning(size: SkillSize): string | null {
+  if (!size.exceeded || size.budget === null) return null;
+  const sobra = size.bytes - size.budget;
+  const dondeRecortar = size.publicada
+    ? `Es una skill publicada por el harness y \`sync\` reescribe su copia: recórtala en el catálogo del harness (skills/${size.id}/SKILL.md) y deja lo propio en .valmen/skills/${size.id}/local.md.`
+    : `Para bajarla: acorta .valmen/skills/${size.id}/SKILL.md o lo propio en .valmen/skills/${size.id}/local.md.`;
+  return (
+    `La skill \`${size.id}\` pasa del presupuesto: ${conMiles(size.bytes)} B ` +
+    `(~${conMiles(size.estimatedTokens)} tokens) contra ${conMiles(size.budget)} B, ` +
+    `${conMiles(sobra)} B de más. ${dondeRecortar}`
   );
 }
