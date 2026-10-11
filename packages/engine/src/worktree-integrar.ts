@@ -12,11 +12,24 @@ import { join } from "node:path";
 
 import { EXIT_INVARIANT, atomicWrite, fail } from "@valmen/core";
 
-import { findAllTickets, indexPath, toRelative, type RegistryPaths } from "./discovery.js";
+import {
+  findAllTickets,
+  findTicket,
+  indexPath,
+  toRelative,
+  type RegistryPaths,
+} from "./discovery.js";
 import { renderIndex } from "./index-file.js";
 import { RAMA_BASE, estadoDelArbolDeTrabajo, ramaActual } from "./integration-commit.js";
 import { type EjecutorDeGit, motivoDeArchivoProhibido } from "./integration-rules.js";
+import { appendEvent } from "./mutate.js";
 import { cambiosDeRuta, rutasQueCuentan } from "./rutas-tocadas.js";
+import {
+  type EntregaRegistrada,
+  registrarEntrega,
+  textoDelAviso,
+  textoDelEvento,
+} from "./tamano-entrega.js";
 import { ejecutarGitDeIntegracion } from "./worktree-integracion-git.js";
 import {
   type EjecutorDeProceso,
@@ -41,6 +54,10 @@ export interface WorktreeIntegrado {
   readonly commit: string;
   readonly registrosUnidos: readonly string[];
   readonly indiceRegenerado: boolean;
+  /** El tamaño de la entrega, o `null` si no se pudo medir (o no había nada que integrar). */
+  readonly entrega: EntregaRegistrada | null;
+  /** Lo que la integración dejó pasar sin detenerse: el tope superado, una medición fallida. */
+  readonly avisos: readonly string[];
 }
 
 /** Las rutas del `status --porcelain` crudo: sin quitar el estado del harness. */
@@ -94,6 +111,8 @@ export function integrarWorktree(request: IntegrarRequest): WorktreeIntegrado {
       commit: cabeza(),
       registrosUnidos: Object.freeze([]),
       indiceRegenerado: false,
+      entrega: null,
+      avisos: Object.freeze([]),
     });
   }
 
@@ -112,6 +131,18 @@ export function integrarWorktree(request: IntegrarRequest): WorktreeIntegrado {
     );
   } catch (error) {
     fail((error as Error).message, EXIT_INVARIANT);
+  }
+  // Medir no bloquea: un fallo deja `entrega: null` y un aviso.
+  const avisos: string[] = [];
+  let entrega: EntregaRegistrada | null = null;
+  try {
+    const medida = g(root, "diff", "--numstat", "-z", `${RAMA_BASE}...${rama}`);
+    if (medida.status !== 0) throw new Error(medida.stderr.trim() || "git diff falló");
+    entrega = registrarEntrega(medida.stdout, root);
+  } catch (error) {
+    avisos.push(
+      `no se pudo medir el tamaño de la entrega de ${request.ticketId} (${(error as Error).message}): la integración sigue.`,
+    );
   }
   const prohibidos = archivosDeLaRama
     .map(motivoDeArchivoProhibido)
@@ -148,6 +179,26 @@ export function integrarWorktree(request: IntegrarRequest): WorktreeIntegrado {
     return true;
   };
 
+  /** Anota `delivery-size` en el ticket ya integrado; devuelve la ruta a commitear o `null`. */
+  const anotarEntrega = (): string | null => {
+    if (entrega === null) return null;
+    if (entrega.pasaElTope) avisos.push(textoDelAviso(request.ticketId, entrega));
+    try {
+      appendEvent(
+        paths,
+        request.ticketId,
+        "delivery-size",
+        textoDelEvento(entrega, "worktree"),
+      );
+    } catch (error) {
+      avisos.push(
+        `no se pudo registrar el tamaño de la entrega (${(error as Error).message}): la integración sigue.`,
+      );
+      return null;
+    }
+    return findTicket(paths, request.ticketId)?.relativePath ?? null;
+  };
+
   let modo: "avance-directo" | "merge";
   const registrosUnidos: string[] = [];
   let indiceRegenerado = false;
@@ -156,15 +207,23 @@ export function integrarWorktree(request: IntegrarRequest): WorktreeIntegrado {
     modo = "avance-directo";
     const ff = g(root, "merge", "--ff-only", rama);
     if (ff.status !== 0) fail(`merge --ff-only falló: ${ff.stderr.trim()}`, EXIT_INVARIANT);
-    if (regenerarIndice()) {
-      indiceRegenerado = true;
-      const a = g(root, "add", "--", indiceRelativo);
+    const regenerado = regenerarIndice();
+    const rutaDelTicket = anotarEntrega();
+    if (regenerado || rutaDelTicket !== null) {
+      indiceRegenerado = regenerado;
+      const a = g(
+        root,
+        "add",
+        "--",
+        ...(rutaDelTicket === null ? [] : [rutaDelTicket]),
+        indiceRelativo,
+      );
       if (a.status !== 0) fail(`git add falló: ${a.stderr.trim()}`, EXIT_INVARIANT);
       const c = g(
         root,
         "commit",
         "-m",
-        `Regenera tickets/index.md tras integrar ${request.ticketId}`,
+        `Regenera tickets/index.md tras integrar ${request.ticketId}${rutaDelTicket === null ? "" : " y registra el tamaño de la entrega"}`,
       );
       if (c.status !== 0) fail(`git commit falló: ${c.stderr.trim()}`, EXIT_INVARIANT);
     }
@@ -238,7 +297,16 @@ export function integrarWorktree(request: IntegrarRequest): WorktreeIntegrado {
           registrosUnidos.push(ruta);
         }
       }
-      if (regenerarIndice() || conflictos.includes(indiceRelativo)) {
+      const rutaDelTicket = anotarEntrega();
+      if (rutaDelTicket !== null) {
+        const a = g(root, "add", "--", rutaDelTicket);
+        if (a.status !== 0) abortar(`git add ${rutaDelTicket} falló: ${a.stderr.trim()}`);
+      }
+      if (
+        regenerarIndice() ||
+        rutaDelTicket !== null ||
+        conflictos.includes(indiceRelativo)
+      ) {
         indiceRegenerado = true;
         const a = g(root, "add", "--", indiceRelativo);
         if (a.status !== 0) abortar(`git add ${indiceRelativo} falló: ${a.stderr.trim()}`);
@@ -272,5 +340,7 @@ export function integrarWorktree(request: IntegrarRequest): WorktreeIntegrado {
     commit,
     registrosUnidos: Object.freeze(registrosUnidos),
     indiceRegenerado,
+    entrega,
+    avisos: Object.freeze(avisos),
   });
 }

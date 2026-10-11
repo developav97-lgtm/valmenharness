@@ -782,6 +782,11 @@ export function renderJourneyHandoffNotification(
   const unidades: { readonly seccion: number; readonly lineas: string[] }[] = [];
   for (const e of parte.esperanPruebas) {
     const lineas = [`• ${e.ticketId} — ${e.title}`, `    ticket: ${e.ruta}`];
+    if (e.entrega !== undefined)
+      lineas.push(
+        `    tamaño: ${e.entrega.total} líneas (+${e.entrega.añadidas} −${e.entrega.borradas})` +
+          (e.entrega.pasaElTope ? ` · pasa el tope de ${e.entrega.tope}` : ""),
+      );
     if (e.omitidoPorSecreto.length > 0) {
       lineas.push(
         `    contrato omitido: se encontró ${e.omitidoPorSecreto.join(", ")}; léelo en el ticket.`,

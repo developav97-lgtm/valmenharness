@@ -223,7 +223,8 @@ describe("avance directo y merge", () => {
     const puntaDeLaRama = e.lab.gitEn(e.wt, "rev-parse", "HEAD");
     const r = e.integrar();
     expect(r.modo).toBe("avance-directo");
-    expect(e.lab.git("rev-parse", "HEAD")).toBe(puntaDeLaRama);
+    // Tras el avance directo, HEAD es un commit de registro (`delivery-size`) sobre la punta.
+    expect(e.lab.git("rev-parse", "HEAD~1")).toBe(puntaDeLaRama);
     expect(padres(e.lab)).toHaveLength(1);
     expect(r.indiceRegenerado).toBe(false);
     expect(readFileSync(join(e.lab.root, "codigo/a.txt"), "utf8")).toBe("a\n");
@@ -379,7 +380,8 @@ describe("el índice y la recompilación", () => {
     expect(() =>
       e.integrar({ proceso: procesoSimulado({ fallaEn: "tsc" }).ejecutor }),
     ).toThrow(/quedó integrada en main.*la recompilación falló.*se conserva/s);
-    expect(e.lab.git("rev-parse", "HEAD")).toBe(punta);
+    // HEAD es el commit de registro (`delivery-size`) sobre la punta de la rama.
+    expect(e.lab.git("rev-parse", "HEAD~1")).toBe(punta);
   });
 });
 

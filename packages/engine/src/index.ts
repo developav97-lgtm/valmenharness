@@ -29,6 +29,7 @@ export * from "./journey-selection.js";
 export * from "./journey-dirty-tree.js";
 export * from "./http-criterion.js";
 export * from "./integration-commit.js";
+export * from "./tamano-entrega.js";
 export * from "./integration-rules.js";
 export * from "./worktree-git.js";
 export * from "./worktree.js";

@@ -19,8 +19,14 @@ import {
   ejecutarGitPermitido,
   reglasDeIntegracion,
 } from "./integration-rules.js";
-import { type RegistryPaths } from "./discovery.js";
+import { type RegistryPaths, findTicket } from "./discovery.js";
+import { appendEvent } from "./mutate.js";
 import { scanPendingChanges } from "./secrets.js";
+import {
+  type EntregaRegistrada,
+  registrarEntrega,
+  textoDelEvento,
+} from "./tamano-entrega.js";
 
 /** El estado del propio harness que cambia al despachar: no es del ticket y no se commitea. */
 const ESTADO_DEL_HARNESS = [
@@ -259,6 +265,8 @@ export type ResultadoDeIntegracion =
       readonly estado: "commiteado";
       readonly commit: string;
       readonly archivos: readonly string[];
+      /** El tamaño medido, o `null` si no se pudo medir: medir nunca rechaza el commit. */
+      readonly entrega: EntregaRegistrada | null;
     }
   | { readonly estado: "rechazado"; readonly motivos: readonly string[] };
 
@@ -326,6 +334,38 @@ export function integrarTicket(request: IntegrarTicketRequest): ResultadoDeInteg
   );
   if (agregar.status !== 0)
     return { estado: "rechazado", motivos: [`git add falló: ${agregar.stderr.trim()}`] };
+  // El tamaño entra en el mismo commit: tras `git add` y antes de `git commit`. Medir no rechaza.
+  let entrega: EntregaRegistrada | null = null;
+  try {
+    const medida = ejecutarGitPermitido(
+      paths.root,
+      ["diff", "--cached", "--numstat", "-z"],
+      request.ejecutor,
+    );
+    if (medida.status === 0) {
+      entrega = registrarEntrega(medida.stdout, paths.root);
+      appendEvent(
+        paths,
+        request.ticketId,
+        "delivery-size",
+        textoDelEvento(entrega, "jornada"),
+      );
+      const delTicket = findTicket(paths, request.ticketId)?.relativePath;
+      const reagregar = ejecutarGitPermitido(
+        paths.root,
+        [
+          "add",
+          "--",
+          ...(delTicket === undefined ? [] : [delTicket]),
+          `${paths.ticketsDir}/index.md`,
+        ],
+        request.ejecutor,
+      );
+      if (reagregar.status !== 0) entrega = null;
+    }
+  } catch {
+    entrega = null;
+  }
   const mensaje =
     `${request.ticketId}: ${request.titulo}\n\n` +
     `Commit de la jornada tras qa-mechanical en verde (recibo ${request.recibo}). ` +
@@ -356,5 +396,5 @@ export function integrarTicket(request: IntegrarTicketRequest): ResultadoDeInteg
       ],
     };
   }
-  return { estado: "commiteado", commit: sha, archivos: atribuibles };
+  return { estado: "commiteado", commit: sha, archivos: atribuibles, entrega };
 }
