@@ -37,6 +37,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { EXIT_SCHEMA, RISK_LEVELS, TICKET_TYPES, fail } from "@valmen/core";
+import { requireTestRoutes } from "@valmen/credentials";
 import type {
   EscalationRecord,
   Proposition,
@@ -270,6 +271,11 @@ function preguntaDeVerificacion(
 export async function verifiedCascade(options: CascadeRunOptions): Promise<CascadeRun> {
   exigirCadena(options.chain);
   const cadena = options.chain;
+  // Con una `VALMEN_BASE_URL_*` activa la cadena va completa —el productor, el escalado y jev,
+  // cada uno con su variable— o no corre: sin esto, el eslabón sin variable hablaría con su
+  // proveedor real con la clave del entorno. Antes de la primera llamada, y también para las
+  // tareas de la cascada, que pasan por aquí.
+  requireTestRoutes([cadena.producer.provider, cadena.escalation.provider, "jev"]);
   const judge = options.judge ?? evaluateWithJudge;
   const verificar = options.jev ?? evaluateWithJev;
   const umbral = options.threshold;

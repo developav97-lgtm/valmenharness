@@ -4,8 +4,8 @@ id: FEATURE-CLI-PRUEBA-MENSAJES-20261010
 title: Prueba de coherencia de los mensajes de bloqueo del CLI y el MCP
 type: FEATURE
 module: CLI
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -177,7 +177,34 @@ Ninguno.
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación delegada de FEATURE-CLI-PRUEBA-MENSAJES-20261010",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta verificar sus criterios.",
+    "expected": "Los criterios del ticket se cumplen y sus pruebas dan el resultado esperado.",
+    "evidence": [
+      "EVIDENCE-001"
+    ],
+    "affected_files": [
+      "tests/cli-mensajes-coherencia.test.ts",
+      "packages/cli/src/hermes.ts",
+      "packages/adapter/src/routing.ts",
+      "tests/skill-corrida-orquestada.test.ts",
+      "scripts/exports-sin-uso.linea-base.json"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -230,28 +257,81 @@ Evidencia de esta sesión (ejecutada en el worktree): las 18 pruebas del ticket,
 Criterios sin verificar: ninguno. C22 es manual y se verificó con el `grep` de arriba; queda marcado con esa evidencia.
 Limitaciones: la prueba no comprueba los argumentos posicionales ni su orden, ni una cita armada en tiempo de ejecución (`valmen ${comando}`); `docs/` y `packages/server/web/` quedan fuera del recorrido, con su motivo en la constante `EXCLUIDOS`; que correr la salida saque del bloqueo es de FEATURE-BENCH-FRICCION-CORPUS-20261010.
 
+- Resultado del PO: cierra los de pocas pruebas manuales primero. Las pruebas del ticket las ejecutó el agente y dieron el resultado esperado: npx vitest run tests/cli-mensajes-coherencia.test.ts: 18 de 18; hermes-notify, roles-ejecucion, routing, skill-corrida-orquestada y cli-tabla-comandos en verde; suite completa de main: 242 archivos y 4298 pruebas en verde; tsc sin errores; compuerta qa-mechanical (command): APPROVE; C22 verificado por el orquestador: grep -c 'los comandos citados (C20)' tests/skill-corrida-orquestada.test.ts da 0
+
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-11",
+    "build_reference": "commit:51dab92d0856e24c8bbd6a67b9fc0c9f2a588703",
+    "environment": "local: checkout principal de main (51dab92), Node 24, sin Docker ni red",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-11",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "cierra los de pocas pruebas manuales primero"
+  }
+]
 ```
 
 ## Evidencia
 
 ```json
-[]
+[
+  {
+    "id": "EVIDENCE-001",
+    "date": "2026-10-11",
+    "kind": "automated-test",
+    "description": "npx vitest run tests/cli-mensajes-coherencia.test.ts: 18 de 18; hermes-notify, roles-ejecucion, routing, skill-corrida-orquestada y cli-tabla-comandos en verde; suite completa de main: 242 archivos y 4298 pruebas en verde; tsc sin errores; compuerta qa-mechanical (command): APPROVE; C22 verificado por el orquestador: grep -c 'los comandos citados (C20)' tests/skill-corrida-orquestada.test.ts da 0",
+    "reference": "worktree:sha256:529a9850fedc23e871914da12a777988a05ea5051e47724c823bf012ea575786",
+    "point_id": "POINT-001"
+  }
+]
 ```
 
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-11",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "cierra los de pocas pruebas manuales primero"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-11",
+    "technical_summary": "Prueba de coherencia que recorre todo mensaje del CLI y del MCP que cita un comando o bandera con comillas invertidas y comprueba que existen en la tabla de comandos y en DEFINICIONES; corrige las dos citas reales con bandera inexistente (hermes.ts:636 y routing.ts:145); reemplaza el bloque C20 de tests/skill-corrida-orquestada.test.ts; saca 10 entradas de la línea base de exportaciones.",
+    "functional_summary": "Un mensaje de bloqueo ya no puede nombrar un comando o una bandera que no existe sin que una prueba falle.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "Sin migraciones, sin sincronización ni Docker. Las 2 citas de docs/ con banderas inexistentes quedan fuera y pasan a un ticket DOCS aparte si se pide."
+  }
+]
 ```
 
 ## Consumo de IA
@@ -272,6 +352,21 @@ Limitaciones: la prueba no comprueba los argumentos posicionales ni su orden, ni
     "source": "claude:c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-a376be4dbde21ac9d",
     "confidence": "medium",
     "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": "c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8",
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. Sesión **compartida**: trabajó 7 tickets (FEATURE-CLI-PRUEBA-MENSAJES-20261010 ×86, FEATURE-BENCH-FRICCION-RUNNER-20261010 ×58, CHORE-CI-EXPORTS-SIN-USO-20261010 ×56, FEATURE-X-20261010 ×25, FEATURE-FRICCION-SALTO-20261010 ×15), así que su costo no se reparte y acá no se registran números. Costo completo de la sesión: no declarado por el proveedor, 4340525 tokens (sin los subagentes con ticket propio). Registralo en el ticket cuya sesión sea propia, o declaralo compartido donde corresponda. Sesión \"Comparación de harness de desarrollo\".",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "claude:c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8",
+    "confidence": "high",
+    "id": "CONSUMO-002"
   }
 ]
 ```
@@ -373,6 +468,132 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:07:59.023Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:07:59.185Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:07:59.336Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:07:59.484Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:07:59.624Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:07:59.767Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:07:59.971Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:00.203Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:00.352Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:00.491Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:00.629Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:00.766Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:00.910Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:08:01.048Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```

@@ -351,7 +351,7 @@ export const COMANDOS: Readonly<Record<string, EspecComando>> = {
       "notify-plans": { conValor: ["--project", "--journey", "--to"] },
       "approve-eligible": { conValor: ["--journey", "--project"] },
       "clear-stop": { conValor: ["--project", "--id", "--actor"] },
-      worktree: { conValor: ["--id"] },
+      worktree: { conValor: ["--id"], booleanas: ["--retirar"] },
       // Retirado: sigue declarando las banderas del disparador para responder su aviso
       // de retiro (que no escribe nada) en vez de «la bandera no existe».
       "install-trigger": { conValor: ["--project", "--every", "--via", "--dir"] },

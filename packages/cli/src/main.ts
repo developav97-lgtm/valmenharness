@@ -331,9 +331,10 @@ Comandos:
                             proyecto la declara en plan-approval-sources. De un solo uso.
   journey clear-stop --project <id> --id <ticket> --actor <nombre>
                             Libera la parada de un ticket: una parada no se reintenta sola.
-  journey worktree create|integrate|remove --id <ID>
+  journey worktree create|integrate|remove --id <ID> [--retirar]
                             Crea, integra a main o quita el worktree .claude/worktrees/ticket-<slug>
                             (rama valmen/ticket-<slug>) del ticket, solo desde el checkout principal.
+                            integrate --retirar: tras integrar (o si no había nada), lo quita como remove.
   journey install-trigger --project <id>
                             RETIRADO: ya no hay disparador periódico. Responde con el aviso, sale
                             con 2 y no escribe nada. Usa journey next --wave y journey brief --id.

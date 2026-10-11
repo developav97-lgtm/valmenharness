@@ -1,7 +1,7 @@
 ---
 name: pruebas-unitarias
 description: Usar al cambiar comportamiento de backend o frontend, corregir una regresión o preparar las pruebas de un ticket, y al armar la entrega verificable para el responsable.
-version: 1.1.0
+version: 1.2.0
 origen: valmen
 ---
 
@@ -23,7 +23,8 @@ Cuando el comportamiento pedido admite una prueba ejecutable y determinista, se 
 
 - Una prueba en rojo por cada regla que pide el ticket, con los casos que esa regla nombra y sus efectos observables: salida, código de salida, datos persistidos.
 - Una por cada comando, herramienta u opción existente que el cambio toca, que demuestre que su comportamiento anterior se mantiene.
-- No se agregan otras. Si no hay prueba ejecutable posible, el ticket dice por qué y se corren las verificaciones funcionales que apliquen.
+- Los casos que nombra una regla viven en **una** prueba parametrizada (tabla de casos), no en un archivo o un bloque por criterio numerado.
+- No se agregan otras: una prueba por regla pedida más una de regresión por comando tocado, y nada más. La caracterización previa solo cuando se mueve código sin cambiar comportamiento. Si no hay prueba ejecutable posible, el ticket dice por qué y se corren las verificaciones funcionales que apliquen.
 
 Una prueba que ya existía y se pone en rojo durante el cambio **no se edita, no se borra ni se omite** para que pase: se detiene la implementación y se reporta en el ticket la prueba, su salida y la hipótesis. Solo se modifica si el plan aprobado declara que el pedido cambia a propósito ese comportamiento, y el cambio se cita en el ticket.
 
