@@ -4,8 +4,8 @@ id: FEATURE-GATE-CODE-REVIEW-EXIGENCIA-20261010
 title: Exigir la revisión del diff al entregar un ticket y adaptar a quienes entregan
 type: FEATURE
 module: GATE
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -156,7 +156,42 @@ Ninguno.
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación delegada de FEATURE-GATE-CODE-REVIEW-EXIGENCIA-20261010",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta verificar sus criterios.",
+    "expected": "Los criterios del ticket se cumplen y sus pruebas dan el resultado esperado.",
+    "evidence": [
+      "EVIDENCE-001"
+    ],
+    "affected_files": [
+      "packages/cli/src/ceremony.ts",
+      "packages/cli/src/delegation.ts",
+      "packages/engine/src/autonomous-run.ts",
+      "packages/engine/src/code-review.ts",
+      "packages/engine/src/discovery.ts",
+      "packages/engine/src/index.ts",
+      "packages/engine/src/journey-brief.ts",
+      "packages/engine/src/next-step.ts",
+      "packages/engine/src/revision-exigida.ts",
+      "packages/engine/src/transition.ts",
+      "packages/gate/src/definitions.ts",
+      "tests/code-review-exigida-entregas.test.ts",
+      "tests/code-review-exigida.test.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -182,28 +217,81 @@ Directorio: la raíz del worktree (`/Users/juanandrade/Desktop/ValmenHarness/.cl
 - Las pruebas nuevas se escribieron antes del código y se observaron en rojo (17 de 23 y 5 de 8; pasaban solo los casos de control sin la clave y C2/C5, que ya valían).
 - Validación manual: ninguna.
 
+- Resultado del PO: Sí, cerrarlo por comandos (Recomendado). Las pruebas del ticket las ejecutó el agente y dieron el resultado esperado: npx vitest run tests/code-review-exigida.test.ts tests/code-review-exigida-entregas.test.ts: 31 de 31 (nacieron en rojo); las 12 suites que el cambio puede romper: 249 de 249 sin editar ninguna prueba existente; suite completa de main tras integrar: 254 archivos y 4912 pruebas en verde; npx tsc --noEmit -p tsconfig.json: 0 errores; npm run format:check y npm run exports:check limpios; compuerta qa-mechanical (command): APPROVE; los 20 criterios se verifican por comando y están marcados
+
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-11",
+    "build_reference": "commit:2a703e19abf4117f8450e60b5e6f0b6b48653a27",
+    "environment": "local: checkout principal de main, Node 24, sin Docker ni red ni modelo real",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-11",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "Sí, cerrarlo por comandos (Recomendado)"
+  }
+]
 ```
 
 ## Evidencia
 
 ```json
-[]
+[
+  {
+    "id": "EVIDENCE-001",
+    "date": "2026-10-11",
+    "kind": "automated-test",
+    "description": "npx vitest run tests/code-review-exigida.test.ts tests/code-review-exigida-entregas.test.ts: 31 de 31 (nacieron en rojo); las 12 suites que el cambio puede romper: 249 de 249 sin editar ninguna prueba existente; suite completa de main tras integrar: 254 archivos y 4912 pruebas en verde; npx tsc --noEmit -p tsconfig.json: 0 errores; npm run format:check y npm run exports:check limpios; compuerta qa-mechanical (command): APPROVE; los 20 criterios se verifican por comando y están marcados",
+    "reference": "worktree:sha256:e2655849339f187e35cdc74ba077679ee71d20274da21298fa051a6a1c5b8ff3",
+    "point_id": "POINT-001"
+  }
+]
 ```
 
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-11",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "Sí, cerrarlo por comandos (Recomendado)"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-11",
+    "technical_summary": "Con la clave code-review: exigida en .valmen/config.yaml (leída del árbol de trabajo y de HEAD, de modo que quitarla sin commitear no la quita), la entrega a awaiting_user_tests pide además el recibo de code-review del árbol actual: packages/engine/src/revision-exigida.ts concentra la decisión (revisionPendiente) y la usan transition, next-step, journey-brief, la jornada autónoma y la corrida delegada; un review de code-review lo decide una persona, nunca la delegación. La clave NO se activa en este repositorio.",
+    "functional_summary": "Un proyecto puede exigir que todo ticket pase la revisión del diff antes de entregarse; sin la clave la entrega de ningún proyecto cambia.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "Sin migraciones, sin sincronización ni Docker. Sin la clave code-review: exigida nada cambia; con ella, cada entrega cuesta de 0 a 4 llamadas a un modelo según el riesgo."
+  }
+]
 ```
 
 ## Consumo de IA
@@ -224,6 +312,51 @@ Directorio: la raíz del worktree (`/Users/juanandrade/Desktop/ValmenHarness/.cl
     "source": "manual:sesión de Claude Code sin agregado expuesto",
     "confidence": "low",
     "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": "c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8",
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. Sesión **compartida**: trabajó 7 tickets (FEATURE-CLI-PRUEBA-MENSAJES-20261010 ×87, FEATURE-BENCH-FRICCION-RUNNER-20261010 ×58, CHORE-CI-EXPORTS-SIN-USO-20261010 ×56, FEATURE-GATE-CODE-REVIEW-EXIGENCIA-20261010 ×27, FEATURE-X-20261010 ×25), así que su costo no se reparte y acá no se registran números. Costo completo de la sesión: no declarado por el proveedor, 5009666 tokens (sin los subagentes con ticket propio). Registralo en el ticket cuya sesión sea propia, o declaralo compartido donde corresponda. Sesión \"Comparación de harness de desarrollo\".",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "claude:c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8",
+    "confidence": "high",
+    "id": "CONSUMO-002"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": "c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-a23afd368367352c5",
+    "model": "anthropic/claude-opus-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 9 intervención(es) sobre el registro, 0 con fallo. 9 de 39 mensajes tocaron el registro. Subagente de la sesión c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8; su gasto no está en la madre. Duró 8 min. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 4002528 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 141845,
+    "output_tokens": 29005,
+    "total_tokens": 170850,
+    "estimated_cost_usd": null,
+    "source": "claude:c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-a23afd368367352c5",
+    "confidence": "high",
+    "id": "CONSUMO-003"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": "c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-a3dd09cf51885214c",
+    "model": "anthropic/claude-sonnet-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 7 intervención(es) sobre el registro, 0 con fallo. 7 de 55 mensajes tocaron el registro. Subagente de la sesión c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8; su gasto no está en la madre. Duró 10 min. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 7932268 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 188208,
+    "output_tokens": 46602,
+    "total_tokens": 234810,
+    "estimated_cost_usd": null,
+    "source": "claude:c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-a3dd09cf51885214c",
+    "confidence": "high",
+    "id": "CONSUMO-004"
   }
 ]
 ```
@@ -325,6 +458,150 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-11",
+    "at": "2026-10-11T05:36:50.377Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-10-11",
+    "at": "2026-10-11T05:36:50.914Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-11",
+    "at": "2026-10-11T05:36:51.876Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-004."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-11",
+    "at": "2026-10-11T05:36:52.437Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-11",
+    "at": "2026-10-11T05:36:52.912Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-11",
+    "at": "2026-10-11T05:36:53.728Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-11",
+    "at": "2026-10-11T05:36:54.114Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-11",
+    "at": "2026-10-11T05:36:54.522Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-11",
+    "at": "2026-10-11T05:36:55.185Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-11",
+    "at": "2026-10-11T05:36:56.008Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-11",
+    "at": "2026-10-11T05:36:56.309Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-11",
+    "at": "2026-10-11T05:36:56.596Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-11",
+    "at": "2026-10-11T05:36:56.854Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-11",
+    "at": "2026-10-11T05:36:57.116Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-025",
+    "date": "2026-10-11",
+    "at": "2026-10-11T05:36:57.440Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-026",
+    "date": "2026-10-11",
+    "at": "2026-10-11T05:36:57.698Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
