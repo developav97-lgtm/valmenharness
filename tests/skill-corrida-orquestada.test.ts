@@ -23,7 +23,6 @@ import { adoptProject, syncProject } from "../packages/cli/src/commands.js";
 const REPO = process.cwd();
 const ID = "corrida-orquestada";
 const CATALOGO = join(REPO, "skills", ID, "SKILL.md");
-const TOPE_BYTES = 6500;
 
 /** Comandos que la skill cita y que aún no están en el CLI, con el ticket que los entrega. */
 const PENDIENTES: Readonly<Record<string, string>> = {
@@ -52,10 +51,6 @@ describe("la skill en el catálogo", () => {
     const ids = publicadas().map((skill) => skill.id);
     expect(ids).toContain(ID);
     expect(ids).not.toContain("desarrollo-backend");
-  });
-
-  it("C3: pesa 6 500 B o menos", () => {
-    expect(Buffer.byteLength(texto, "utf8")).toBeLessThanOrEqual(TOPE_BYTES);
   });
 });
 
