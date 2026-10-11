@@ -4,7 +4,7 @@ id: FEATURE-CORE-ESTADO-PUBLICO-20261010
 title: Función única que deriva el estado público del ticket
 type: FEATURE
 module: CORE
-workflow_status: intake
+workflow_status: analyzed
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -13,7 +13,7 @@ migration_impact: false
 docker_impact: false
 risk_level: normal
 created: 2026-10-10
-updated: 2026-10-10
+updated: 2026-10-11
 related_ticket: null
 target_release: null
 released_in: null
@@ -36,23 +36,32 @@ Comportamiento actual: la spec no lo declara; se establece en el análisis, leye
 campo, bandera, columna, migración— y no lo especifica, listá cada elemento
 con su pregunta antes de avanzar a análisis; el análisis no planifica sobre
 la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
-Ninguno.
+Ninguno sin decidir. Lo nuevo del pedido se tradujo a campos reales:
+- «compuerta escalada a una persona sin resolver» → recibo con `escalatedTo: "human"` y `humanDecision: null` (`packages/gate/src/receipt.ts:182`).
+- «autorización vigente que aprueba el plan sin una persona» → `elegibilidadDeAprobacion({ etapa: "plan" }).elegible` (`packages/engine/src/approval-eligibility.ts:93`).
 
 ## Descripción funcional
 
-- Alcance:
-- Usuario o rol afectado:
-- Comportamiento actual:
-- Comportamiento esperado:
+- Alcance: una función pura en `@valmen/core` que recibe el estado del motor y dos hechos del registro (si la aprobación del plan espera a una persona y si hay una compuerta escalada a una persona sin decisión) y devuelve uno de cuatro estados públicos —Necesita tu decisión, Verificando, Listo, Trabajando—; más un lector en `@valmen/engine` que obtiene esos dos hechos del registro de un ticket y llama a la función. Fuera: la vista web (FEATURE-WEB-ESTADO-PUBLICO-20261010) y el aviso de Telegram (FEATURE-CLI-AVISO-DECISION-20261010), que la consumen después.
+- Usuario o rol afectado: el PO, que hoy lee estados del motor agrupados de tres formas distintas; y los dos tickets del sprint S4 que dependen de este.
+- Comportamiento actual: no existe estado público; cada vista agrupa `WORKFLOW_STATES` a su manera y ninguna considera el plan que espera aprobación ni la compuerta escalada.
+- Comportamiento esperado: una sola función deriva el estado público con las reglas de R-EPU-001 (`.valmen/features/operacion-entrega-harness/spec/s4-estados/spec.md`), y el motivo cuando es «Necesita tu decisión».
 
 ## Diagnóstico
 
-- Causa comprobada (con `ruta:línea`):
-- Hipótesis pendientes:
-- Consumidores afectados:
+- Causa comprobada (con `ruta:línea`): la agrupación de estados está repetida y no coincide entre sí: tablero de la feature `packages/server/web/index.html:4071-4082` (siete columnas, `planned` dentro de «Planeado»), vista Agentes `packages/server/web/index.html:6339` (`ESTADOS_QUE_ESPERAN_AL_PO` = `awaiting_user_tests`, `blocked`, `changes_requested`, usada en `index.html:6411`) y tira de estado `packages/server/web/index.html:5662-5673`. Ninguna mira el plan que espera aprobación ni los recibos escalados. Los estados del motor son `WORKFLOW_STATES` (`packages/core/src/contract.ts:126-138`) y no cambian: el estado público es una proyección.
+- Hipótesis pendientes: ninguna sobre la causa. Un recibo escalado de una corrida vieja de una compuerta ya superada por otra corrida podría seguir contando como «espera persona» si se miran todas las corridas (así lo hace `packages/cli/src/hermes.ts:774`); el lector mirará solo el último recibo de cada compuerta, como `veredictoDeCompuerta` (`packages/engine/src/receipts.ts:125-143`).
+- Consumidores afectados: ninguno cambia en este ticket (la función es nueva). Consumidores futuros: la web (`index.html:6339`, `:6411`, `:5662`) en FEATURE-WEB-ESTADO-PUBLICO-20261010 y el vigilante `pendientesDeAvisar` (`packages/cli/src/hermes.ts:759`) en FEATURE-CLI-AVISO-DECISION-20261010.
 - Archivos y flujo investigados:
-- Riesgos y compatibilidad:
-- Impactos de sync, migración, Docker o despliegue:
+  - `packages/core/src/contract.ts:126-138` — `WORKFLOW_STATES`, entrada de la función.
+  - `packages/core/src/index.ts:9-29` — reexporta los módulos de core; ahí se suma el nuevo.
+  - `packages/gate/src/receipt.ts:182` — `escalatedTo: "human" | null`; con `humanDecision === null` es «compuerta escalada sin resolver», la misma lectura de `packages/server/src/portafolio.ts:104` y `packages/cli/src/hermes.ts:774`.
+  - `packages/engine/src/receipts.ts:72-76` — `currentReceipts` colapsa por corrida, no por compuerta; `receipts.ts:125-143` — `veredictoDeCompuerta` toma el último recibo de una compuerta.
+  - `packages/engine/src/approval-eligibility.ts:93-293` — `elegibilidadDeAprobacion` con etapa `plan` decide en código si una autorización vigente aprueba el plan sin una persona (tipo no SECURITY, sin despliegue, compuerta en approve, autorización que cubre tipo/módulo/riesgo/impactos/etapa, cupo); su `elegible` es exactamente «planned con autorización vigente».
+  - `packages/engine/src/approval-authorization.ts:402-425` — `autorizacionDeAprobacionQueCubre`, usada por la anterior.
+  - `packages/engine/src/discovery.ts:424` — `findTicket`, para leer el estado del ticket.
+- Riesgos y compatibilidad: `@valmen/core` no toca el disco (AGENTS.md, Stack): por eso la función recibe los hechos ya calculados y el lector vive en `engine`. Aditivo: no cambia ninguna firma ni la máquina de estados. Riesgo de divergencia con `hermes.ts:774` (todas las corridas) frente al último recibo por compuerta: se documenta para el ticket del aviso.
+- Impactos de sync, migración, Docker o despliegue: ninguno.
 
 ## Plan
 
@@ -138,6 +147,15 @@ Sin publicar todavía.
     "action": "created",
     "actor": "cli",
     "details": "Ticket creado sin sobrescribir historial."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-002",
+    "date": "2026-10-11",
+    "at": "2026-10-11T19:34:58.019Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: intake -> analyzed."
   }
 ]
 ```
