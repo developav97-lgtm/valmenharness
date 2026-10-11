@@ -1,7 +1,7 @@
 ---
 name: planificacion
 description: Usar antes de implementar un ticket, o cuando se pida diseñar, revisar o ajustar su plan. Aplica a funcionalidades, errores, mejoras, sincronización, integraciones, seguridad y cambios de despliegue o runtime.
-version: 1.2.0
+version: 1.3.0
 origen: valmen
 ---
 

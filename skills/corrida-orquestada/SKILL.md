@@ -1,7 +1,7 @@
 ---
 name: corrida-orquestada
 description: Usar cuando el PO pide ejecutar la jornada de hoy o una feature repartiendo los tickets en subagentes simultáneos, cada uno en su worktree —«ejecuta la jornada», «ejecuta el feature X de corrido»—, o cuando haya que retomar esa corrida. Para tickets uno tras otro sin subagentes, ver corrida-delegada.
-version: 1.3.0
+version: 1.4.0
 origen: valmen
 ---
 
@@ -52,7 +52,7 @@ Los subagentes corren solo las de su ticket. **Tras integrar la ola**, el orques
 
 ## Contexto del orquestador
 
-Lo que entra a la conversación se relee cada turno. De la suite muestra solo `Test Files`, `Tests` y los fallos; de los comandos, cita el comando y el resultado. Del subagente no pidas más detalle que el ticket.
+De la suite muestra solo las líneas `Test Files` y `Tests` y los fallos. No pegues salidas largas de comandos: cita el comando y el resultado. Del subagente no pidas más detalle que el ticket.
 
 ## Reglas duras
 

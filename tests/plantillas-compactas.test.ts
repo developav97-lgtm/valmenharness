@@ -285,10 +285,10 @@ describe("lo que sale de la plantilla deja un puntero a su skill", () => {
 });
 
 describe("el detalle que sale llega a su skill publicada", () => {
-  it("`planificacion` 1.2.0 trae los estados y la verificación de criterios", () => {
+  it("`planificacion` 1.3.0 trae los estados y la verificación de criterios", () => {
     const texto = skill("planificacion");
 
-    expect(versionPublicada("planificacion")).toBe("1.2.0");
+    expect(versionPublicada("planificacion")).toBe("1.3.0");
     expect(texto).toContain("## Estados del ticket");
     expect(texto).toContain("intake → analyzed → planned → approved → in_progress");
     expect(texto, "máquina del punto").toContain("point:");
