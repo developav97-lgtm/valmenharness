@@ -73,7 +73,13 @@ Ninguno sin decidir. Lo nuevo del pedido se tradujo a campos reales:
   1. Prueba primero: crear `tests/estado-publico.test.ts` con un `it` por criterio, nombrado con su prefijo (`C01 …` a `C17 …`), y verla en rojo con `npx vitest run tests/estado-publico.test.ts`. C01–C12 llaman a la función pura; C13–C17 arman un registro temporal con los ayudantes de `tests/elegibilidad-aprobacion.test.ts:71-136` (`ticket`, `recibo`, `autorizar`, con `appendReceipt` y `crearAutorizacionDeAprobacion`). (C01–C17)
   2. Crear `packages/core/src/public-state.ts`: `PUBLIC_STATES = ["needs-decision", "verifying", "done", "working"]`, `PUBLIC_STATE_LABELS` («Necesita tu decisión», «Verificando», «Listo», «Trabajando»), `DecisionReason` (`user-tests`, `blocked`, `changes-requested`, `plan-approval`, `escalated-gate`) y `estadoPublico({ state, planWaitsForPerson, escalatedGatePending })` que devuelve `{ state, label, reason }`. Orden: `blocked`/`changes_requested`/`awaiting_user_tests` → motivo propio; `planned` con `planWaitsForPerson` → `plan-approval`; cualquier estado con `escalatedGatePending` (salvo `qa_approved` y `closed`) → `escalated-gate`; `in_qa` → verifying; `qa_approved`/`closed` → done; el resto → working. Sin imports de disco. (C01–C11)
   3. Reexportar en `packages/core/src/index.ts:9-29` con `export * from "./public-state.js";`. (C12)
-  4. Crear `packages/engine/src/public-state.ts` con `estadoPublicoDelTicket(paths, ticketId, ahora?)`: lee el estado con `findTicket` (`packages/engine/src/discovery.ts:424`) y `parseTicket`; `escalatedGatePending` = algún gate cuyo último recibo (`currentReceipts`, `packages/engine/src/receipts.ts:72`, primero por `gate`) tiene `escalatedTo === "human"` y `humanDecision === null`; `planWaitsForPerson` = estado `planned` y `!elegibilidadDeAprobacion({ paths, ticketId, etapa: "plan", ahora }).elegible` (`packages/engine/src/approval-eligibility.ts:93`). Llama a `estadoPublico` y devuelve su resultado. (C13–C17)
+  4. Crear `packages/engine/src/public-state.ts` con `estadoPublicoDelTicket(paths, ticketId, ahora?)`, en este orden:
+     a. Lee el estado del ticket con `findTicket` (`packages/engine/src/discovery.ts:424`) y `parseTicket`.
+     b. Lee los recibos con `readReceipts(paths, ticketId)` y los colapsa con `currentReceipts` (`packages/engine/src/receipts.ts:72`), que los devuelve del más nuevo al más viejo.
+     c. Arma un mapa compuerta → recibo recorriendo esa lista y guardando solo el primero que aparece de cada `gate`: es el último recibo de esa compuerta. Los recibos más viejos de la misma compuerta se descartan, así que un escalado sin decisión que una corrida posterior de la misma compuerta superó no cuenta. (C17)
+     d. `escalatedGatePending` es verdadero si alguno de los recibos del mapa tiene `escalatedTo === "human"` con `humanDecision === null`; uno con decisión humana registrada no cuenta. (C15, C16)
+     e. `planWaitsForPerson` es verdadero cuando el estado es `planned` con `elegibilidadDeAprobacion({ paths, ticketId, etapa: "plan", ahora }).elegible === false` (`packages/engine/src/approval-eligibility.ts:93`). (C13, C14)
+     f. Llama a `estadoPublico({ state, planWaitsForPerson, escalatedGatePending })` y devuelve su resultado sin modificarlo. (C13–C17)
   5. Reexportar en `packages/engine/src/index.ts` junto a `receipts.js` (línea 74). (C13)
   6. Ver en verde `npx vitest run tests/estado-publico.test.ts tests/elegibilidad-aprobacion.test.ts` y compilar con `npx tsc --build tsconfig.build.json`. (C18)
 - Impactos declarados: ninguno; no hay sincronización, migración ni contenedores.
@@ -113,7 +119,7 @@ Ninguno sin decidir. Lo nuevo del pedido se tradujo a campos reales:
       <!-- test: npx vitest run tests/estado-publico.test.ts -t C15 -->
 - [ ] C16: Un recibo escalado con decisión humana registrada no cuenta como compuerta escalada para `estadoPublicoDelTicket`.
       <!-- test: npx vitest run tests/estado-publico.test.ts -t C16 -->
-- [ ] C17: Un recibo escalado sin decisión que una corrida posterior de la misma compuerta superó no cuenta para `estadoPublicoDelTicket`.
+- [ ] C17: Con un recibo escalado sin decisión seguido de un recibo posterior en approve de la misma compuerta, `estadoPublicoDelTicket` no devuelve el motivo `escalated-gate`.
       <!-- test: npx vitest run tests/estado-publico.test.ts -t C17 -->
 - [ ] C18: El monorepo compila sin errores de tipos con los dos módulos nuevos.
       <!-- test: npx tsc --build tsconfig.build.json -->
