@@ -62,6 +62,10 @@ import {
   describeAgentsMdSize,
   descripcionDeDeriva,
   instalarPublicadas,
+  escriturasDePublicadas,
+  crearRespaldo,
+  resumenDeCambios,
+  type ResumenDeCambios,
   publicadas,
   publicadasDelProyecto,
 } from "@valmen/adapter";
@@ -921,16 +925,66 @@ function lineasDeDenegaciones(proyeccion: Projection): string[] {
   return lineas;
 }
 
+/**
+ * `sync --dry-run`: lo que `sync` escribiría, sin escribir nada (R-SYN-001).
+ *
+ * No instala las publicadas: nombra las copias que reinstalaría y proyecta sobre
+ * la copia actual de `.valmen/skills/`, así que los archivos que dependen de una
+ * publicada pendiente aparecen recién en la vista previa siguiente a instalarla.
+ */
+function vistaPreviaDeSync(root: string, projectName: string): CommandResult {
+  let proyeccion: Projection;
+  try {
+    proyeccion = projectFiles(root, projectName);
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+
+  const lineas = ["Simulación de sync"];
+  let cambian = 0;
+  const linea = (ruta: string, resumen: ResumenDeCambios): void => {
+    cambian += 1;
+    const detalle =
+      resumen.estado === "nuevo"
+        ? `nuevo, +${resumen.anadidas} −0`
+        : `cambia, +${resumen.anadidas} −${resumen.quitadas}`;
+    lineas.push(`  ${ruta}  (${detalle})`);
+  };
+
+  for (const escritura of escriturasDePublicadas(root)) {
+    const resumen = resumenDeCambios(escritura.anterior, escritura.contenido);
+    if (resumen.estado !== "igual") linea(escritura.ruta, resumen);
+  }
+  for (const file of proyeccion.files) {
+    const resumen = resumenDeCambios(readIfExists(join(root, file.path)), file.content);
+    if (resumen.estado !== "igual") linea(file.path, resumen);
+  }
+
+  if (cambian === 0) lineas.push("  Todo está al día.");
+  lineas.push("Simulación: no se escribió nada.");
+  return ok(lineas.join("\n") + "\n");
+}
+
 export function syncProject(
   root: string,
   projectName: string,
   check: boolean,
+  opciones: { readonly dryRun?: boolean; readonly ahora?: Date } = {},
 ): CommandResult {
+  if (opciones.dryRun === true) return vistaPreviaDeSync(root, projectName);
+
   // Las publicadas se instalan **antes** de proyectar, y el orden importa: la
   // proyección se calcula desde la copia del proyecto, así que proyectar primero
   // escribiría la versión que se acaba de actualizar. Con `--check` no se toca
   // nada: la diferencia se informa y la resuelve quien ejecute `sync` sin `--check`.
-  const instaladas = check ? [] : instalarPublicadas(root);
+  // Antes de pisar una copia editada a mano se guarda lo que había (R-SYN-002).
+  const respaldo = crearRespaldo(root, { origen: "cli", ahora: opciones.ahora });
+  const instaladas = check
+    ? []
+    : instalarPublicadas(root, undefined, {
+        antesDeSobrescribir: (ruta, anterior) => respaldo.guardar(ruta, anterior),
+      });
 
   // La proyección se calcula con la misma función que usa Mission Control: si el
   // botón y el comando generaran archivos distintos, la comparación de frescura
@@ -1002,6 +1056,24 @@ export function syncProject(
     );
   }
 
+  // El respaldo se cierra **antes** del primer `atomicWrite` de la proyección: si
+  // falla, `sync` sale con error sin haber pisado nada.
+  let carpetaDeRespaldo: string | null;
+  try {
+    for (const file of projected) {
+      const enDisco = readIfExists(join(root, file.path));
+      if (enDisco !== null && enDisco !== file.content)
+        respaldo.guardar(file.path, enDisco);
+    }
+    carpetaDeRespaldo = respaldo.cerrar();
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(
+      `No se pudo respaldar antes de sincronizar: ${failure.message}`,
+      failure.exitCode,
+    );
+  }
+
   for (const file of projected) {
     atomicWrite(join(root, file.path), file.content);
   }
@@ -1043,6 +1115,9 @@ export function syncProject(
       ? `al día (${publicadasDelProyecto(root).length})`
       : `${instaladas.length} actualizada(s): ${instaladas.join(", ")}`;
   lines.push(`  skills publicadas        ${instaladasTexto}`);
+  if (carpetaDeRespaldo !== null) {
+    lines.push(`  respaldo                 ${carpetaDeRespaldo}`);
+  }
 
   if (conPermisos) {
     const total = claudeDenyRules().length;
