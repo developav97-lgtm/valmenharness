@@ -4,7 +4,7 @@ id: FEATURE-ENGINE-QA-SIN-CUBRIR-20261010
 title: El cierre del ciclo de QA registra lo que quedó sin cubrir
 type: FEATURE
 module: ENGINE
-workflow_status: in_progress
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -127,41 +127,41 @@ su motivo (`packages/engine/src/transition.ts:624-627`)— y se escribe vacío e
 
 ## Criterios de aceptación
 
-- [ ] C1 (R-QAC-001): `valmen qa-close --not-covered` guarda cada línea no vacía como elemento de `not_covered` en la entrada de cierre.
+- [x] C1 (R-QAC-001): `valmen qa-close --not-covered` guarda cada línea no vacía como elemento de `not_covered` en la entrada de cierre.
       <!-- test: npx vitest run tests/qa-sin-cubrir.test.ts -->
-- [ ] C2 (R-QAC-001): `cerrar_qa` con `sin_cubrir` guarda cada línea no vacía como elemento de `not_covered` en la entrada de cierre.
+- [x] C2 (R-QAC-001): `cerrar_qa` con `sin_cubrir` guarda cada línea no vacía como elemento de `not_covered` en la entrada de cierre.
       <!-- test: npx vitest run tests/qa-sin-cubrir.test.ts -->
-- [ ] C3 (R-QAC-001): `valmen qa-close --all-covered` guarda `not_covered` como lista vacía.
+- [x] C3 (R-QAC-001): `valmen qa-close --all-covered` guarda `not_covered` como lista vacía.
       <!-- test: npx vitest run tests/qa-sin-cubrir.test.ts -->
-- [ ] C4 (R-QAC-001): `cerrar_qa` con `todo_cubierto: true` guarda `not_covered` como lista vacía.
+- [x] C4 (R-QAC-001): `cerrar_qa` con `todo_cubierto: true` guarda `not_covered` como lista vacía.
       <!-- test: npx vitest run tests/qa-sin-cubrir.test.ts -->
-- [ ] C5 (R-QAC-001): `valmen qa-close` sin declaración falla con un mensaje que nombra `--not-covered`.
+- [x] C5 (R-QAC-001): `valmen qa-close` sin declaración falla con un mensaje que nombra `--not-covered`.
       <!-- test: npx vitest run tests/qa-sin-cubrir.test.ts -->
-- [ ] C6 (R-QAC-001): `cerrar_qa` sin declaración devuelve un error que nombra `sin_cubrir`.
+- [x] C6 (R-QAC-001): `cerrar_qa` sin declaración devuelve un error que nombra `sin_cubrir`.
       <!-- test: npx vitest run tests/qa-sin-cubrir.test.ts -->
-- [ ] C7 (R-QAC-001): Un cierre rechazado por falta de declaración deja el `ticket.md` byte a byte igual.
+- [x] C7 (R-QAC-001): Un cierre rechazado por falta de declaración deja el `ticket.md` byte a byte igual.
       <!-- test: npx vitest run tests/qa-sin-cubrir.test.ts -->
-- [ ] C8 (R-QAC-001): Un cierre que declara lista junto con cobertura completa se rechaza.
+- [x] C8 (R-QAC-001): Un cierre que declara lista junto con cobertura completa se rechaza.
       <!-- test: npx vitest run tests/qa-sin-cubrir.test.ts -->
-- [ ] C9 (R-QAC-001): Un cierre cuya lista no tiene ningún elemento no vacío se rechaza.
+- [x] C9 (R-QAC-001): Un cierre cuya lista no tiene ningún elemento no vacío se rechaza.
       <!-- test: npx vitest run tests/qa-sin-cubrir.test.ts -->
-- [ ] C10 (R-QAC-002): `validateQa` acepta una entrada de cierre sin `not_covered`.
+- [x] C10 (R-QAC-002): `validateQa` acepta una entrada de cierre sin `not_covered`.
       <!-- test: npx vitest run tests/qa-sin-cubrir.test.ts -->
-- [ ] C11 (R-QAC-002): `validateQa` rechaza un `not_covered` que no es una lista de textos no vacíos.
+- [x] C11 (R-QAC-002): `validateQa` rechaza un `not_covered` que no es una lista de textos no vacíos.
       <!-- test: npx vitest run tests/qa-sin-cubrir.test.ts -->
-- [ ] C12 (R-QAC-002): `validateQa` rechaza `not_covered` en la entrada que abre el ciclo.
+- [x] C12 (R-QAC-002): `validateQa` rechaza `not_covered` en la entrada que abre el ciclo.
       <!-- test: npx vitest run tests/qa-sin-cubrir.test.ts -->
-- [ ] C13 (R-QAC-002): `valmen validate --all` sobre el registro del repositorio termina con salida 0.
+- [x] C13 (R-QAC-002): `valmen validate --all` sobre el registro del repositorio termina con salida 0.
       <!-- test: node packages/cli/dist/main.js validate --all -->
-- [ ] C14: `valmen qa-close --result approved` sin `--po-confirmation` sigue fallando.
+- [x] C14: `valmen qa-close --result approved` sin `--po-confirmation` sigue fallando.
       <!-- test: npx vitest run tests/qa-sin-cubrir.test.ts -->
-- [ ] C15: `cerrar_qa` con `approved` sin `confirmacion_po` sigue fallando.
+- [x] C15: `cerrar_qa` con `approved` sin `confirmacion_po` sigue fallando.
       <!-- test: npx vitest run tests/qa-sin-cubrir.test.ts -->
-- [ ] C16: La ceremonia `valmen close` sigue cerrando el ciclo de QA sin pedir declaración.
+- [x] C16: La ceremonia `valmen close` sigue cerrando el ciclo de QA sin pedir declaración.
       <!-- test: npx vitest run tests/approve-close-shortcut.test.ts -->
-- [ ] C17: Las pruebas del servidor MCP pasan con la declaración agregada a sus cierres.
+- [x] C17: Las pruebas del servidor MCP pasan con la declaración agregada a sus cierres.
       <!-- test: npx vitest run tests/mcp-server.test.ts -->
-- [ ] C18: El monorepo compila.
+- [x] C18: El monorepo compila.
       <!-- test: npx tsc --build tsconfig.build.json -->
 
 ## Puntos
@@ -172,11 +172,27 @@ su motivo (`packages/engine/src/transition.ts:624-627`)— y se escribe vacío e
 
 ## Implementación
 
-Pendiente.
+Hecho según el plan aprobado, en el orden declarado:
+
+1. Prueba primero: `tests/qa-sin-cubrir.test.ts` (20 casos: R-QAC-001 por CLI y por MCP, R-QAC-002 sobre `validateQa`, regresión C14 y C15). En rojo antes de implementar: 10 de 20 fallaban (`--not-covered`/`--all-covered` inexistentes en `qa-close`, `cerrar_qa` sin `not_covered`, `validateQa` rechazando la clave); los otros 10 pasaban de rebote porque el comportamiento antiguo ya rechazaba o ya aceptaba lo mismo.
+2. `packages/core/src/blocks.ts` `validateQa`: `not_covered` como clave opcional; si está, lista de textos no vacíos (también sin espacios solos); rechazada en la entrada que abre el ciclo.
+3. `packages/engine/src/append.ts`: `QaCloseRequest.notCovered` opcional; si llega se escribe como `not_covered` en la entrada de cierre, si no, la clave no existe. El motor no lo exige: la ceremonia (`ceremony.ts:349`), el cierre por política y la reapertura siguen escribiendo el ciclo «sin declarar».
+4. `declaracionDeCobertura(lista, todoCubierto, nombres)` en `append.ts`: error con el nombre del parámetro si no hay declaración, si hay ambas o si la lista queda vacía; se evalúa antes de `qaClose`, así el ticket no se escribe.
+5. CLI: `--not-covered` y `--all-covered` en `command-table.ts`, despacho en `main.ts` y ayuda.
+6. MCP: `sin_cubrir` y `todo_cubierto` en el esquema de `cerrar_qa` y su despacho en `tools.ts`.
+7. Cambio a propósito de pruebas existentes (EST-009, autorizado en el plan): `tests/mcp-server.test.ts`, las tres llamadas a `cerrar_qa` (cierre en `hastaCerrado`, cierre del flujo con retest y la prueba «la aprobación de QA exige las palabras de quien aprobó») ganan `todo_cubierto: true` y nada más. Ninguna otra prueba existente falló.
+
+Divergencia anotada: `tests/equivalence-ticketpy.test.ts:838, 1208, 1371` no se edita (desactivada por defecto); `ticket.py` no conoce `not_covered` ni la bandera.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Directorio de ejecución: raíz del repositorio. Sin requisitos de ambiente (raíces temporales, sin red).
+
+- `npx vitest run tests/qa-sin-cubrir.test.ts` — esperado: 20 pruebas pasan (C1-C12, C14, C15). Antes de implementar: 10 en rojo.
+- `npx vitest run tests/mcp-server.test.ts tests/approve-close-shortcut.test.ts tests/delegation.test.ts tests/qa-por-politica.test.ts tests/jornada-sin-autoaprobacion.test.ts tests/qa-commit-referencia.test.ts tests/cli-tabla-comandos.test.ts` — esperado: verde (C16, C17).
+- `npx tsc --build tsconfig.build.json` y `npx tsc --noEmit -p .` — esperado: sin salida (C18).
+- `node packages/cli/dist/main.js validate --all` — esperado: «Tickets válidos: 228», salida 0 (C13).
+- Validación manual (opcional): en un proyecto temporal con un ticket `in_qa`, `valmen qa-close --id <ID> --result changes_requested` debe fallar nombrando `--not-covered`; con `--all-covered` debe guardar `"not_covered": []`.
 
 ## QA
 
@@ -205,7 +221,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Sesión de subagente; el cliente no expone los números de tokens.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:subagente sonnet de implementación, sin agregado que leer",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -287,6 +319,24 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-11",
+    "at": "2026-10-11T19:33:21.086Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-11",
+    "at": "2026-10-11T19:33:21.534Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```

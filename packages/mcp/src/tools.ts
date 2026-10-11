@@ -82,6 +82,7 @@ import {
   renderProposals,
   standardsFiles,
   qaClose,
+  declaracionDeCobertura,
   qaStart,
   scanSecrets,
   readReceipts,
@@ -1945,6 +1946,16 @@ const DEFINICIONES: readonly ToolDefinition[] = [
           description:
             "Las palabras literales de quien aprobó. **Obligatoria** con `approved`.",
         },
+        sin_cubrir: {
+          type: "string",
+          description:
+            "Lo que quedó sin cubrir en este ciclo, un elemento por línea. Exige esto " +
+            "**o** `todo_cubierto`, no las dos.",
+        },
+        todo_cubierto: {
+          type: "boolean",
+          description: "`true` si no quedó nada sin cubrir. Alternativa a `sin_cubrir`.",
+        },
       },
       required: ["id", "resultado"],
     }),
@@ -3559,6 +3570,11 @@ async function ejecutarHerramienta(
           ticketId: texto(args, "id") as string,
           result: texto(args, "resultado") as string,
           poConfirmation: texto(args, "confirmacion_po", false),
+          notCovered: declaracionDeCobertura(
+            typeof args["sin_cubrir"] === "string" ? args["sin_cubrir"] : undefined,
+            args["todo_cubierto"] === true,
+            { lista: "sin_cubrir", todo: "todo_cubierto" },
+          ),
           now: contexto.now,
         });
         return bien(salida);
