@@ -4,7 +4,7 @@ id: FEATURE-ENGINE-PLAN-TAMANO-20261010
 title: El plan declara tamaño previsto y estrategia de partición
 type: FEATURE
 module: ENGINE
-workflow_status: in_progress
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -75,43 +75,43 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
 
 ## Criterios de aceptación
 
-- [ ] C1 (R-ENT-003): `TICKET_TEMPLATE` trae la línea `- Tamaño previsto:` en `## Plan`
+- [x] C1 (R-ENT-003): `TICKET_TEMPLATE` trae la línea `- Tamaño previsto:` en `## Plan`
       <!-- test: npx vitest run tests/plan-tamano.test.ts -->
-- [ ] C2 (R-ENT-003): `TICKET_TEMPLATE` trae la línea `- Si excede el tope:` en `## Plan`
+- [x] C2 (R-ENT-003): `TICKET_TEMPLATE` trae la línea `- Si excede el tope:` en `## Plan`
       <!-- test: npx vitest run tests/plan-tamano.test.ts -->
-- [ ] C3: Un ticket recién creado con `createTicket` da `marcador_vacio` por `- Tamaño previsto:` en la revisión previa de la compuerta plan
+- [x] C3: Un ticket recién creado con `createTicket` da `marcador_vacio` por `- Tamaño previsto:` en la revisión previa de la compuerta plan
       <!-- test: npx vitest run tests/plan-tamano.test.ts -->
-- [ ] C4 (R-ENT-003): Con 1 200 líneas previstas contra un tope de 400 sin decisión, `reviewBeforeGate` devuelve `excede_el_tope_sin_decision`
+- [x] C4 (R-ENT-003): Con 1 200 líneas previstas contra un tope de 400 sin decisión, `reviewBeforeGate` devuelve `excede_el_tope_sin_decision`
       <!-- test: npx vitest run tests/plan-tamano.test.ts -->
-- [ ] C5: El mensaje de `excede_el_tope_sin_decision` nombra las 1200 líneas junto al tope de 400
+- [x] C5: El mensaje de `excede_el_tope_sin_decision` nombra las 1200 líneas junto al tope de 400
       <!-- test: npx vitest run tests/plan-tamano.test.ts -->
-- [ ] C6 (R-ENT-003): Con 1 200 líneas previstas, la decisión «se parte en dos tickets dependientes» deja la revisión sin hallazgos
+- [x] C6 (R-ENT-003): Con 1 200 líneas previstas, la decisión «se parte en dos tickets dependientes» deja la revisión sin hallazgos
       <!-- test: npx vitest run tests/plan-tamano.test.ts -->
-- [ ] C7 (R-ENT-003): Con 1 200 líneas previstas, la decisión «sigue: la migración no admite partirse» deja la revisión sin hallazgos
+- [x] C7 (R-ENT-003): Con 1 200 líneas previstas, la decisión «sigue: la migración no admite partirse» deja la revisión sin hallazgos
       <!-- test: npx vitest run tests/plan-tamano.test.ts -->
-- [ ] C8: Con 300 líneas previstas contra un tope de 400, la revisión no pide decisión de partición
+- [x] C8: Con 300 líneas previstas contra un tope de 400, la revisión no pide decisión de partición
       <!-- test: npx vitest run tests/plan-tamano.test.ts -->
-- [ ] C9: Con `delivery-budget: 1000` en la configuración, un plan de 900 líneas sin decisión pasa la revisión
+- [x] C9: Con `delivery-budget: 1000` en la configuración, un plan de 900 líneas sin decisión pasa la revisión
       <!-- test: npx vitest run tests/plan-tamano.test.ts -->
-- [ ] C10: Sin `delivery-budget` en la configuración, un plan de 500 líneas sin decisión da `excede_el_tope_sin_decision`
+- [x] C10: Sin `delivery-budget` en la configuración, un plan de 500 líneas sin decisión da `excede_el_tope_sin_decision`
       <!-- test: npx vitest run tests/plan-tamano.test.ts -->
-- [ ] C11: Una línea `- Tamaño previsto:` sin la forma «N líneas» da `tamano_sin_lineas`
+- [x] C11: Una línea `- Tamaño previsto:` sin la forma «N líneas» da `tamano_sin_lineas`
       <!-- test: npx vitest run tests/plan-tamano.test.ts -->
-- [ ] C12: Un plan sin la línea `- Tamaño previsto:` no gana ningún hallazgo nuevo
+- [x] C12: Un plan sin la línea `- Tamaño previsto:` no gana ningún hallazgo nuevo
       <!-- test: npx vitest run tests/plan-tamano.test.ts -->
-- [ ] C13: `precheckCommand` de la compuerta plan sale con código 3 ante `excede_el_tope_sin_decision`
+- [x] C13: `precheckCommand` de la compuerta plan sale con código 3 ante `excede_el_tope_sin_decision`
       <!-- test: npx vitest run tests/plan-tamano.test.ts -->
-- [ ] C14: `runGate` de la compuerta plan no llama al evaluador ante `excede_el_tope_sin_decision`
+- [x] C14: `runGate` de la compuerta plan no llama al evaluador ante `excede_el_tope_sin_decision`
       <!-- test: npx vitest run tests/plan-tamano.test.ts -->
-- [ ] C15: La skill `planificacion` nombra `delivery-budget`
+- [x] C15: La skill `planificacion` nombra `delivery-budget`
       <!-- test: npx vitest run tests/plan-tamano.test.ts -->
-- [ ] C16: La skill `planificacion` nombra la opción de partir en tickets dependientes
+- [x] C16: La skill `planificacion` nombra la opción de partir en tickets dependientes
       <!-- test: npx vitest run tests/plan-tamano.test.ts -->
-- [ ] C17: La skill `planificacion` nombra la opción de seguir con motivo escrito
+- [x] C17: La skill `planificacion` nombra la opción de seguir con motivo escrito
       <!-- test: npx vitest run tests/plan-tamano.test.ts -->
-- [ ] C18: `valmen sync --check` queda sin diferencias tras el cambio de la skill
+- [x] C18: `valmen sync --check` queda sin diferencias tras el cambio de la skill
       <!-- test: node packages/cli/dist/main.js sync --check -->
-- [ ] C19: Las pruebas existentes de plantilla, revisión previa, catálogo de skills pasan sin editarse
+- [x] C19: Las pruebas existentes de plantilla, revisión previa, catálogo de skills pasan sin editarse
       <!-- test: npx vitest run tests/plantilla-y-materializacion.test.ts tests/revision-previa.test.ts tests/skills-catalogo-tope.test.ts tests/plantillas-compactas.test.ts tests/gate-criterios-por-forma.test.ts tests/tope-criterios-precheck.test.ts -->
 
 ## Puntos
@@ -122,11 +122,24 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
 
 ## Implementación
 
-Pendiente.
+Hecho según el plan aprobado, sin tocar pruebas existentes (EST-009) y con la prueba nueva vista en rojo antes (EST-010: 12 de 17 en rojo).
+
+- `packages/core/src/template.ts`: `## Plan` de `TICKET_TEMPLATE` trae `- Tamaño previsto:` y `- Si excede el tope:` con su comentario, entre «Impactos declarados» y «Rollback (obligatorio)». Vacías dan `marcador_vacio` por la regla existente.
+- `packages/engine/src/revision-previa.ts`: hallazgos `tamano_sin_lineas` y `excede_el_tope_sin_decision`; funciones privadas `textoDeLaLinea`, `lineasPrevistas` y `hayDecisionDeParticion`; el tope sale de `topeDeEntrega` (`delivery-budget`). Solo en la compuerta de plan y solo si el plan declara la línea de tamaño.
+- `.valmen/skills/planificacion/SKILL.md` y `skills/planificacion/SKILL.md` (copia igual): párrafo «Tamaño del plan» reescrito; versión 1.4.0 intacta; proyección regenerada con `valmen sync` (6 500 B de presupuesto cumplido).
+- `tests/plan-tamano.test.ts`: una prueba por criterio C1–C17; C18 y C19 se verifican con comandos.
+- Nota: `node scripts/exports-sin-uso.mjs` marca tres exportaciones (`SYNC_BACKUP_DIR`, `EntregaDelParte`, `TOPE_DE_ENTREGA_POR_DEFECTO`) que ya estaban marcadas antes del cambio; este ticket no añade ninguna.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Directorio: la raíz del repositorio (worktree del ticket). Requisitos: Node 24, `npm install` y `npm run build` hechos.
+
+1. `npx vitest run tests/plan-tamano.test.ts` — esperado: 17 pruebas en verde (C1–C17).
+2. `node packages/cli/dist/main.js sync --check` — esperado: «Archivos generados al día», código 0 (C18).
+3. `npx vitest run tests/plantilla-y-materializacion.test.ts tests/revision-previa.test.ts tests/skills-catalogo-tope.test.ts tests/plantillas-compactas.test.ts tests/gate-criterios-por-forma.test.ts tests/tope-criterios-precheck.test.ts` — esperado: todo en verde, sin editar esas pruebas (C19).
+4. `npx tsc --noEmit -p .`, `npx eslint` y `npx prettier --check` sobre los archivos tocados — esperado: sin salida de error.
+
+Validaciones manuales: ninguna. Resultado observado: 280 pruebas en verde entre las tres primeras ejecuciones; `valmen secrets` sin hallazgos.
 
 ## QA
 
@@ -155,7 +168,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": null,
+    "model": "claude-sonnet-5-5",
+    "reasoning_effort": null,
+    "notes": "Sesion de subagente de implementacion sin acceso a los agregados de tokens; sin numeros.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:subagente-implementacion",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -246,6 +275,24 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:46:24.841Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:46:27.512Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```

@@ -27,6 +27,8 @@ import {
   extractCriteriaSpecs,
 } from "@valmen/gate";
 
+import { topeDeEntrega } from "./tamano-entrega.js";
+
 /** Un hallazgo de la revisión: qué es y qué falta. */
 export interface PreReviewFinding {
   readonly id:
@@ -35,7 +37,9 @@ export interface PreReviewFinding {
     | "archivo_inexistente"
     | "criterio_sin_anotacion"
     | "mas_criterios_que_el_tope"
-    | "paso_sin_ruta_ni_comando";
+    | "paso_sin_ruta_ni_comando"
+    | "tamano_sin_lineas"
+    | "excede_el_tope_sin_decision";
   readonly message: string;
 }
 
@@ -131,6 +135,41 @@ function textoDelRollback(plan: string): string | null {
     siguientes.push(linea.trim());
   }
   return [enLinea, ...siguientes].join(" ").trim();
+}
+
+/** El texto de una línea `- <etiqueta>:` del plan y su continuación; `null` si no está. */
+function textoDeLaLinea(plan: string, etiqueta: RegExp): string | null {
+  const lineas = lineasDe(plan);
+  const i = lineas.findIndex((linea) => etiqueta.test(linea));
+  if (i === -1) return null;
+  const enLinea = (lineas[i] as string).replace(/^-\s+[^:]*:/, "").trim();
+  const siguientes: string[] = [];
+  for (let j = i + 1; j < lineas.length; j++) {
+    const linea = lineas[j] as string;
+    if (linea.trim() === "") continue;
+    if (!/^\s{2,}\S/.test(linea)) break;
+    siguientes.push(linea.trim());
+  }
+  return [enLinea, ...siguientes].join(" ").trim();
+}
+
+/**
+ * Las líneas que el plan declara en `- Tamaño previsto:` (la mayor de las «N líneas»).
+ * `null` sin la línea; `NaN` con la línea pero sin un número de líneas.
+ */
+function lineasPrevistas(plan: string): number | null {
+  const texto = textoDeLaLinea(plan, /^-\s+tama[ñn]o previsto\b/i);
+  if (texto === null) return null;
+  const cantidades = [
+    ...texto.matchAll(/(\d{1,3}(?:[ .\u00a0]\d{3})+|\d+)\s+l[ií]neas/gi),
+  ].map((m) => Number.parseInt((m[1] as string).replace(/[ .\u00a0]/g, ""), 10));
+  return cantidades.length === 0 ? Number.NaN : Math.max(...cantidades);
+}
+
+/** `true` si «Si excede el tope:» dice que se parte o que sigue, con algo más que la palabra. */
+function hayDecisionDeParticion(plan: string): boolean {
+  const texto = textoDeLaLinea(plan, /^-\s+si excede el tope\b/i) ?? "";
+  return texto.length >= 15 && /\b(se parte|partir|partirse|sigue|seguir)\b/i.test(texto);
 }
 
 /** Los pasos numerados del plan, con su texto (los vacíos incluidos, como cadena vacía). */
@@ -320,6 +359,27 @@ export function reviewBeforeGate(input: {
         message:
           "«Plan»: la línea «Rollback:» está vacía; dice cómo se revierte el cambio.",
       });
+    }
+
+    const previstas = lineasPrevistas(plan);
+    if (previstas !== null) {
+      if (Number.isNaN(previstas)) {
+        findings.push({
+          id: "tamano_sin_lineas",
+          message:
+            "«Plan»: «- Tamaño previsto:» no dice «N líneas»; escribí cuántas líneas de producción y pruebas prevé.",
+        });
+      } else {
+        const tope = topeDeEntrega(input.root);
+        if (previstas > tope && !hayDecisionDeParticion(plan)) {
+          findings.push({
+            id: "excede_el_tope_sin_decision",
+            message:
+              `«Plan»: declara ${previstas} líneas, más que el tope de ${tope} (\`delivery-budget\`), ` +
+              "y «- Si excede el tope:» no dice si se parte en tickets dependientes («se parte en …») o sigue con motivo («sigue: …»).",
+          });
+        }
+      }
     }
 
     pasosDelPlan(plan).forEach((paso, i) => {
