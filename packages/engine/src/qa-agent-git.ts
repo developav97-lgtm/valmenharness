@@ -7,7 +7,7 @@
  */
 import { spawnSync } from "node:child_process";
 
-import { EXIT_INVARIANT, fail } from "@valmen/core";
+import { DENIED_GIT_FLAGS, EXIT_INVARIANT, fail } from "@valmen/core";
 
 export type EjecutorGitQa = (
   argumentos: readonly string[],
@@ -18,7 +18,7 @@ export type EjecutorGitQa = (
 export function motivoDeGitDeQaAgent(argumentos: readonly string[]): string | null {
   const [operacion, ...resto] = argumentos;
   if (operacion === undefined) return "No se indicó ninguna operación de git.";
-  const prohibida = resto.find((a) => ["--force", "-f", "--hard", "--no-verify", "--amend"].includes(a) && !(operacion === "worktree" && a === "--force"));
+  const prohibida = resto.find((a) => DENIED_GIT_FLAGS.includes(a) && !(operacion === "worktree" && a === "--force"));
   if (prohibida !== undefined) return `La bandera ${prohibida} no está permitida a qa-agent.`;
   switch (operacion) {
     case "worktree":
