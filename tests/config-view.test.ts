@@ -41,6 +41,8 @@ const ARCHIVOS_GENERADOS = [
   "CLAUDE.md",
   ".worktreeinclude",
   ".codex/config.toml",
+  ".codex/rules/valmen.rules",
+  ".opencode/opencode.json",
 ];
 
 const CONFIG = `# Configuración del harness en este proyecto.
@@ -229,8 +231,10 @@ describe("guardar la configuración", () => {
       { path: "CLAUDE.md", stale: true },
       { path: ".worktreeinclude", stale: true },
       { path: ".codex/config.toml", stale: true },
+      { path: ".codex/rules/valmen.rules", stale: true },
+      { path: ".opencode/opencode.json", stale: true },
     ]);
-    expect(impacto?.stale).toBe(6);
+    expect(impacto?.stale).toBe(8);
     expect(impacto?.changesAgentsMd).toBe(true);
   });
 });
@@ -239,7 +243,7 @@ describe("guardar la configuración", () => {
 
 describe("regenerar los archivos proyectados", () => {
   it("escribe AGENTS.md y deja de haber nada pendiente", () => {
-    expect(projectionImpact(lab, CONFIG)?.stale).toBe(6);
+    expect(projectionImpact(lab, CONFIG)?.stale).toBe(8);
 
     const resultado = syncProjections(lab);
     expect(resultado.ok).toBe(true);

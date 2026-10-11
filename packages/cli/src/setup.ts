@@ -16,7 +16,7 @@
  */
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 
 import { EXIT_SCHEMA, toFailure } from "@valmen/core";
 import {
@@ -38,6 +38,8 @@ import {
   rutasDelProyecto,
   type AdapterCapabilities,
   CODEGRAPH_SERVER_ID,
+  DENY_CLIENT_NOTICE,
+  projectFiles,
 } from "@valmen/adapter";
 import { renderFases, type RegistryPaths } from "@valmen/engine";
 import {
@@ -840,6 +842,31 @@ export async function doctorCommand(
         estado: declarado ? "ok" : "aviso",
         detalle: declarado ? relativa : `${relativa} no declara el servidor codegraph`,
         ...(declarado ? {} : { arreglo: "valmen mcp --install" }),
+      });
+    }
+  }
+
+  // 11. Las denegaciones que Codex u OpenCode no aplican: solo informa, sin escribir (la proyección
+  //     se calcula en memoria) y sin cambiar el código de salida. Sin `.valmen/config.yaml` no hay
+  //     proyección que calcular, y eso ya lo dice «Proyecto adoptado».
+  if (adoptado) {
+    try {
+      const proyeccion = projectFiles(paths.root, basename(paths.root));
+      for (const cliente of ["codex", "opencode"] as const) {
+        const reglas = proyeccion.denyNotApplied.filter((regla) => regla.cliente === cliente);
+        if (reglas.length === 0) continue;
+        opcionales.push({
+          que: `Denegaciones en ${cliente}`,
+          estado: "aviso",
+          detalle: `${reglas.length} regla(s) del harness sin aplicar: ${reglas.map((regla) => regla.regla).join(", ")}. ${DENY_CLIENT_NOTICE[cliente]}`,
+        });
+      }
+    } catch (caught) {
+      opcionales.push({
+        que: "Denegaciones en Codex y OpenCode",
+        estado: "aviso",
+        detalle: `no se pudo calcular la proyección: ${toFailure(caught).message}`,
+        arreglo: "valmen sync --check",
       });
     }
   }

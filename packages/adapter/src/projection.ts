@@ -11,7 +11,7 @@
  * lo genere, que es exactamente lo que una proyección determinista existe para
  * impedir.
  */
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { fail } from "@valmen/core";
@@ -39,6 +39,16 @@ import {
   missingClaudeDenyRules,
   renderOutputStyle,
 } from "./claude-code.js";
+import {
+  CODEX_RULES_PATH,
+  OPENCODE_CONFIG_PATH,
+  OPENCODE_JSONC_PATH,
+  type DenyNotApplied,
+  codexRulesText,
+  denyNotApplied,
+  mergeOpencodeDenyConfig,
+  missingOpencodeDenyRules,
+} from "./denied-clients.js";
 import { CODEX_CONFIG_PATH, mergeCodexVerbosity, readCodexVerbosity } from "./verbosity.js";
 import { loadProjectModel, projectAgentsMd } from "./project.js";
 import {
@@ -125,6 +135,10 @@ export interface Projection {
    * `sync --check` diga cuál falta (R-PER-003) y `sync` cuántas agregó. Vacío sin el runtime `claude`.
    */
   readonly claudeDenyMissing: readonly string[];
+  /** Los patrones de OpenCode que `.opencode/opencode.json` no trae hoy. Vacío sin el runtime `opencode`. */
+  readonly opencodeDenyMissing: readonly string[];
+  /** Las reglas del harness que Codex u OpenCode no aplican, con su motivo. */
+  readonly denyNotApplied: readonly DenyNotApplied[];
   /** Avisos de la proyección que no la impiden, como pasarse del presupuesto: el de `AGENTS.md` y, uno por skill, el de `skill-budget`. */
   readonly warnings: readonly string[];
 }
@@ -228,10 +242,25 @@ export function projectFiles(
         ]
       : [];
 
+  // Las denegaciones: Codex las lee de `.codex/rules/valmen.rules` (archivo del harness) y OpenCode
+  // de `.opencode/opencode.json`, que se fusiona porque también lo escribe la persona. Con el JSONC
+  // de la persona al lado no se escribe el `.json`: reescribirlo perdería los comentarios.
+  const hayJsonc = runtimes.includes("opencode") && existsSync(join(root, OPENCODE_JSONC_PATH));
+  const opencodeActual = runtimes.includes("opencode")
+    ? leerSiExiste(join(root, OPENCODE_CONFIG_PATH))
+    : null;
+  const denegaciones: ProjectedFile[] = [
+    ...(runtimes.includes("codex") ? [{ path: CODEX_RULES_PATH, content: codexRulesText() }] : []),
+    ...(runtimes.includes("opencode") && !hayJsonc
+      ? [{ path: OPENCODE_CONFIG_PATH, content: mergeOpencodeDenyConfig(opencodeActual) }]
+      : []),
+  ];
+
   const files: ProjectedFile[] = [
     { path: "AGENTS.md", content: agentsMd },
     ...claudeCode,
     ...codex,
+    ...denegaciones,
     ...renderAllAgents(agents, sources).filter((file) => enAlcance(file.path)),
     ...renderAllSkills(skills).filter((file) => enAlcance(file.path)),
   ];
@@ -254,6 +283,9 @@ export function projectFiles(
     skillCount: skills.length,
     agentsMd: size,
     claudeDenyMissing: runtimes.includes("claude") ? missingClaudeDenyRules(settingsActual) : [],
+    opencodeDenyMissing:
+      runtimes.includes("opencode") && !hayJsonc ? missingOpencodeDenyRules(opencodeActual) : [],
+    denyNotApplied: denyNotApplied(runtimes, opencodeActual, hayJsonc),
     warnings: [
       ...(warning === null ? [] : [warning]),
       ...avisosDeSkills,

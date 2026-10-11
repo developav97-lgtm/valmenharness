@@ -371,11 +371,11 @@ describe("proyección por runtime", () => {
   it("proyecta a los tres runtimes cuando el proyecto no declara ninguno", () => {
     scaffoldCompleto("name: Demo\n");
     const generadas = rutas(lab);
-    expect(generadas.filter((path) => path.startsWith(".opencode/"))).toHaveLength(2);
+    expect(generadas.filter((path) => path.startsWith(".opencode/"))).toHaveLength(3);
     // Un agente, una skill y, desde R-RESP-002, el estilo de salida y settings.json.
     expect(generadas.filter((path) => path.startsWith(".claude/"))).toHaveLength(4);
-    // Un agente, una skill y, desde R-RESP-007, el config.toml con la verbosidad.
-    expect(generadas.filter((path) => path.startsWith(".codex/"))).toHaveLength(3);
+    // Un agente, una skill, el config.toml con la verbosidad (R-RESP-007) y las reglas de denegación.
+    expect(generadas.filter((path) => path.startsWith(".codex/"))).toHaveLength(4);
   });
 
   it("proyecta solo a los declarados", () => {
@@ -383,6 +383,7 @@ describe("proyección por runtime", () => {
     const generadas = rutas(lab);
     expect(generadas).toEqual([
       ".opencode/agents/planner.md",
+      ".opencode/opencode.json",
       ".opencode/skills/revision/SKILL.md",
     ]);
   });
