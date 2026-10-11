@@ -4,7 +4,7 @@ id: FEATURE-GATE-POLITICA-BANDA-REVIEW-20261010
 title: Un REVIEW exige una proposición bajo 0,80 o varias en la banda
 type: FEATURE
 module: GATE
-workflow_status: planned
+workflow_status: in_progress
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -80,7 +80,7 @@ Ninguno.
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente. **Este plan lo aprueba siempre una persona**, aunque la compuerta `plan` dé `approve` y aunque haya una autorización de aprobación vigente: cambia cuándo una compuerta pide a una persona, y un gate no amplía su propia autoridad. Tampoco se firma ninguna banda en `.valmen/config.yaml` como parte de este ticket: activarla, con el piso y el máximo que elija, es una decisión aparte de una persona (`approved-by` con `reason`).
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan), el 2026-10-11 con «si apruebo tal cual»; el REVIEW del recibo plan-1 (criterio_04 en 0,90) lo decidió el PO. Este plan lo aprueba siempre una persona: cambia cuándo una compuerta pide a una persona.
 - Alcance: política de banda opcional para `analysis` con `plan`, desactivada por defecto, con su repetición de recibos y su informe de revisión posterior. Fuera de alcance: `qa-mechanical`, `code-review`, cambiar `DEFAULT_POLICY`, tocar `GateDefinition` (no cambia `hashGate`), firmar una banda, `simulate.ts` (sigue sin banda: simula la política por defecto).
 - Diseño:
   - Configuración: dos claves nuevas en una entrada de `gate-thresholds` **sin** `proposition`: `review-floor` (número; `block-at` < piso < `approve-at`) con `review-band-max` (entero ≥ 2; por defecto 3). Una entrada sin `approved-by` o sin `reason` no aplica ni sus umbrales ni su banda, igual que hoy (`packages/engine/src/thresholds.ts:81`).
@@ -232,6 +232,51 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-11",
+    "at": "2026-10-11T19:04:28.045Z",
+    "action": "gate-approved",
+    "actor": "cli",
+    "details": "Gate plan aprobado por PO (recibo GR-20261011-FEATURE-GATE-POLITICA-BANDA-REVIEW-20261010-plan-1, canal cli, decidida 2026-10-11T19:04:28.041Z): si apruebo tal cual"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-11",
+    "at": "2026-10-11T19:04:28.438Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"PO\",\"source\":\"cli\",\"quote\":\"si apruebo tal cual\",\"planHash\":\"sha256:1fdbce322d0ecfc02e8f5025be5ad6ca9abd5c70edc3bcb52778374c980e7fac\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-11",
+    "at": "2026-10-11T19:04:32.657Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: PO (fuente cli), plan sha256:1fdbce322d0ecfc02e8f5025be5ad6ca9abd5c70edc3bcb52778374c980e7fac."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-11",
+    "at": "2026-10-11T19:04:32.657Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-11",
+    "at": "2026-10-11T19:04:33.075Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
   }
 ]
 ```
