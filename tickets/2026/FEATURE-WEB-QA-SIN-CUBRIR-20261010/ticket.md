@@ -4,8 +4,8 @@ id: FEATURE-WEB-QA-SIN-CUBRIR-20261010
 title: La vista del ticket muestra lo no cubierto por ciclo
 type: FEATURE
 module: WEB
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -90,21 +90,45 @@ Ninguno.
       <!-- test: npx vitest run tests/qa-sin-cubrir-vista.test.ts -->
 - [x] C7 (R-QAC-003): Un elemento con marcado HTML se pinta como texto literal, sin crear nodos.
       <!-- test: npx vitest run tests/qa-sin-cubrir-vista.test.ts -->
-- [ ] C8: Un arreglo no vacío de un registro de Evidencia sigue pintándose como «N elemento(s)».
+- [x] C8: Un arreglo no vacío de un registro de Evidencia sigue pintándose como «N elemento(s)».
       <!-- test: npx vitest run tests/qa-sin-cubrir-vista.test.ts -->
-- [ ] C9: El verificador de interfaz recorre todas las vistas sin fallos.
+- [x] C9: El verificador de interfaz recorre todas las vistas sin fallos.
       <!-- test: npx vitest run tests/interfaz-ejecutable.test.ts -->
-- [ ] C10: En el navegador, la sección QA del ticket de prueba lista los dos elementos bajo su ciclo.
+- [x] C10: En el navegador, la sección QA del ticket de prueba lista los dos elementos bajo su ciclo.
       <!-- verify: manual -->
-- [ ] C11: En modo oscuro, la lista sin cubrir se lee con el mismo contraste que las demás notas de la tarjeta.
+- [x] C11: En modo oscuro, la lista sin cubrir se lee con el mismo contraste que las demás notas de la tarjeta.
       <!-- verify: manual -->
-- [ ] C12: En el navegador, el ticket con un ciclo anterior al cambio muestra «sin declarar» bajo su cierre.
+- [x] C12: En el navegador, el ticket con un ciclo anterior al cambio muestra «sin declarar» bajo su cierre.
       <!-- verify: manual -->
 
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación delegada de FEATURE-WEB-QA-SIN-CUBRIR-20261010",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta verificar sus criterios.",
+    "expected": "Los criterios del ticket se cumplen y sus pruebas dan el resultado esperado.",
+    "evidence": [
+      "EVIDENCE-001"
+    ],
+    "affected_files": [
+      "packages/server/web/index.html",
+      "tests/qa-sin-cubrir-vista.test.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -121,28 +145,81 @@ Ninguno.
 - Validación manual (C10, C11, C12), a cargo del responsable: desde un registro con un ciclo cerrado con `valmen qa-close --not-covered "a" --not-covered "b"` y otro `--all-covered`, `valmen serve --port 4310`, abrir `#/ticket/<ID>` y el acordeón «QA»: se ven los dos elementos bajo el cierre y «Todo cubierto» bajo el segundo; en un ticket con ciclo anterior (p. ej. FEATURE-ENGINE-QA-SIN-CUBRIR-20261010) «Sin cubrir: sin declarar»; repetir en modo oscuro.
 - Limitación: el agente no pudo levantar el servidor de desarrollo con `preview_start` (la herramienta lee `.claude/launch.json` del checkout principal, que no se toca) y no se usó Bash para servidores; C10–C12 y las capturas quedan sin verificar. Hay un registro de prueba armado con comandos reales en el scratchpad de la sesión (`reg-prueba`, ticket FEATURE-WEB-PRUEBAQA-20261011).
 
+- Resultado del PO: Visto bueno, cerrar (Recomendado). Las pruebas del ticket las ejecutó el agente y dieron el resultado esperado: Suite completa en main tras integrar: 266 archivos y 5119 pruebas en verde; C10-C12 verificados en el navegador con un registro de prueba, en claro y oscuro, con capturas vistas por el PO
+
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-11",
+    "build_reference": "commit:af2c77c82d38c0266e77935ace551b3a280380d3",
+    "environment": "local",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-11",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "Visto bueno, cerrar (Recomendado)"
+  }
+]
 ```
 
 ## Evidencia
 
 ```json
-[]
+[
+  {
+    "id": "EVIDENCE-001",
+    "date": "2026-10-11",
+    "kind": "automated-test",
+    "description": "Suite completa en main tras integrar: 266 archivos y 5119 pruebas en verde; C10-C12 verificados en el navegador con un registro de prueba, en claro y oscuro, con capturas vistas por el PO",
+    "reference": "worktree:sha256:bc9ce60eca5a98fcfdab2d8d06f52ed92019fee360cdb494ca1859f11927691f",
+    "point_id": "POINT-001"
+  }
+]
 ```
 
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-11",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "Visto bueno, cerrar (Recomendado)"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-11",
+    "technical_summary": "La sección QA de la vista del ticket muestra lo sin cubrir de cada ciclo; ver ## Implementación",
+    "functional_summary": "La vista distingue lo sin cubrir, Todo cubierto y sin declarar",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "Sin impacto en producción; vista web interna"
+  }
+]
 ```
 
 ## Consumo de IA
@@ -163,6 +240,36 @@ Ninguno.
     "source": "manual:subagente-implementacion",
     "confidence": "low",
     "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": "c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-aae90f88d6db5eef5",
+    "model": "anthropic/claude-opus-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 12 intervención(es) sobre el registro, 0 con fallo. 12 de 41 mensajes tocaron el registro. Subagente de la sesión c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8; su gasto no está en la madre. Duró 5 min. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 3897213 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 92730,
+    "output_tokens": 19860,
+    "total_tokens": 112590,
+    "estimated_cost_usd": null,
+    "source": "claude:c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-aae90f88d6db5eef5",
+    "confidence": "high",
+    "id": "CONSUMO-002"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": "c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-a46ff9d5528f2b20f",
+    "model": "anthropic/claude-sonnet-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 7 intervención(es) sobre el registro, 0 con fallo. 7 de 36 mensajes tocaron el registro. Subagente de la sesión c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8; su gasto no está en la madre. Duró 4 min. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 3443943 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 78284,
+    "output_tokens": 15634,
+    "total_tokens": 93918,
+    "estimated_cost_usd": null,
+    "source": "claude:c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-a46ff9d5528f2b20f",
+    "confidence": "high",
+    "id": "CONSUMO-003"
   }
 ]
 ```
@@ -264,6 +371,141 @@ Sin publicar todavía.
     "action": "delivery-size",
     "actor": "cli",
     "details": "{\"añadidas\":231,\"borradas\":1,\"total\":232,\"tope\":400,\"pasaElTope\":false,\"via\":\"worktree\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:56:28.312Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:56:28.800Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:56:29.078Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:56:29.322Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:56:29.539Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:56:29.752Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:56:29.943Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:56:30.199Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:56:30.507Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:56:30.733Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:56:30.954Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:56:31.157Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:56:31.354Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:56:31.556Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-025",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:56:31.756Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
