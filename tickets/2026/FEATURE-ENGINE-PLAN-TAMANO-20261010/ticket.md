@@ -150,6 +150,15 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: intake -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-003",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:37:07.385Z",
+    "action": "gate-approved",
+    "actor": "cli",
+    "details": "Gate analysis aprobado por PO (recibo GR-20261011-FEATURE-ENGINE-PLAN-TAMANO-20261010-analysis-1, canal cli, decidida 2026-10-11T20:37:07.376Z): Aprobar el análisis (Recomendado)"
   }
 ]
 ```
