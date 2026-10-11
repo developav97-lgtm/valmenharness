@@ -2,9 +2,9 @@
 schema_version: 2
 id: operacion-entrega-harness
 title: Operación y entrega del harness
-state: decomposed
+state: complete
 created: 2026-10-10
-updated: 2026-10-10
+updated: 2026-10-11
 ---
 
 # Operación y entrega del harness

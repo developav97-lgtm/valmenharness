@@ -2,9 +2,9 @@
 schema_version: 2
 id: guardas-verificacion-harness
 title: Guardas y verificación del propio harness
-state: decomposed
+state: complete
 created: 2026-10-10
-updated: 2026-10-10
+updated: 2026-10-11
 ---
 
 # Guardas y verificación del propio harness
