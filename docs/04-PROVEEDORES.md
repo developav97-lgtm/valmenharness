@@ -143,6 +143,14 @@ vacía cuenta como ausente.
   `VALMEN_CLAUDE_BIN`.
 - **No es un proxy hacia un proveedor real**: sin credencial, el proveedor real contestaría 401.
 - `localhost` lo resuelve el sistema operativo; `127.0.0.1` es la forma recomendada.
+- **Proxy de entorno:** con `NODE_USE_ENV_PROXY=1`, `fetch` manda también la petición local al proxy
+  salvo que `NO_PROXY` incluya `127.0.0.1` y `localhost`. No viaja ninguna credencial, pero sí el
+  contenido de la petición (el estado del ticket).
+- **Límite conocido:** mientras haya una variable activa, si el servidor local está caído o responde
+  un 5xx, la cascada y jev todavía pueden degradar a su proveedor de siempre, con la clave real si la
+  sesión la trae. La clave no viaja al host de la variable. Hasta que la prueba de punta a punta de
+  la cascada defina la variable de todos los transportes de la cadena y deje de degradar, no la
+  definas a mano con claves reales en el entorno.
 
 ## 2. Arquitectura de providers
 

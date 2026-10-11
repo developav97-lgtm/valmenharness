@@ -218,6 +218,11 @@ Hallazgos, todos fuera del plan aprobado, **sin tocar y para decisión de la per
 - H2 (baja): `localhost` lo resuelve el sistema operativo y no está garantizado que sea loopback (H1 del diagnóstico, aceptado). Alternativa del revisor: devolver `http://127.0.0.1…` cuando el host sea `localhost`.
 - H3 (informativa): con `NODE_USE_ENV_PROXY=1`, `fetch` manda también la petición loopback al proxy salvo que `NO_PROXY` incluya `127.0.0.1` y `localhost`. No viaja credencial, pero sí el estado del ticket. Basta documentarlo.
 
+### Decisiones del PO sobre los hallazgos (2026-10-10)
+
+- **H1:** «Integrar y cerrarlo en el ticket de la cascada (Recomendado)». Este ticket se integra tal como está y C33 queda sin marcar, para el PO. El arreglo (no degradar mientras haya una `VALMEN_BASE_URL_*` activa y exigir todo o nada en la cadena) pasa como requisito explícito a FEATURE-CLI-PRUEBA-CASCADA-GUIONADA-20261010, con su prueba. El límite queda escrito en `docs/04-PROVEEDORES.md` (§1.4).
+- **H2 y H3:** «Aceptar H2 y documentar H3 (Recomendado)». H2 se acepta sin cambios de código; H3 (proxy de entorno y `NO_PROXY`) se documentó en `docs/04-PROVEEDORES.md` (§1.4).
+
 ## Pruebas
 
 Contrato de entrega para la persona responsable. Todo corre desde la raíz del worktree
