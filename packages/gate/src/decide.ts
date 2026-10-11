@@ -549,9 +549,9 @@ function isIsolatedBlockContradiction(
   if (
     rule === undefined ||
     blocking.length !== 1 ||
-    !([rule.blockingId, ...(rule.alsoBlockingIds ?? [])] as readonly (string | undefined)[]).includes(
-      blocking[0]?.id,
-    )
+    !(
+      [rule.blockingId, ...(rule.alsoBlockingIds ?? [])] as readonly (string | undefined)[]
+    ).includes(blocking[0]?.id)
   ) {
     return false;
   }

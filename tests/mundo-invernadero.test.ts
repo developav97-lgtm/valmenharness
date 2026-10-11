@@ -35,7 +35,10 @@ interface Llamada {
 /** Un contexto de lienzo que acepta cualquier llamada y la registra. */
 function contextoFalso(ancho = 960) {
   const llamadas: Llamada[] = [];
-  const estado: Record<string, unknown> = { canvas: { width: ancho, height: ancho / 2 }, fillStyle: "" };
+  const estado: Record<string, unknown> = {
+    canvas: { width: ancho, height: ancho / 2 },
+    fillStyle: "",
+  };
   const ctx = new Proxy(estado, {
     get(destino, propiedad: string) {
       if (propiedad in destino) return destino[propiedad];
@@ -68,7 +71,11 @@ function agente(extra: Record<string, unknown> = {}) {
 }
 
 const conRespuesta = (hizoHace: number, extra: Record<string, unknown> = {}) =>
-  agente({ estacion: 3, fila: { agente: "a1", ticket: "T-1", pregunta: { respondidaEn: hace(hizoHace) } }, ...extra });
+  agente({
+    estacion: 3,
+    fila: { agente: "a1", ticket: "T-1", pregunta: { respondidaEn: hace(hizoHace) } },
+    ...extra,
+  });
 
 describe("el mundo invernadero", () => {
   it("C1: validarMundo no reporta errores", () => {
@@ -77,7 +84,9 @@ describe("el mundo invernadero", () => {
 
   it("C2: la miniatura con una escena vacía, sin cola y sin ahoraMs no lanza", () => {
     const { ctx } = contextoFalso(160);
-    expect(() => mundo.dibujar({ ctx, escena: { agentes: new Map(), t: 0 }, miniatura: true }, 0)).not.toThrow();
+    expect(() =>
+      mundo.dibujar({ ctx, escena: { agentes: new Map(), t: 0 }, miniatura: true }, 0),
+    ).not.toThrow();
   });
 
   it("C3: el puesto principal es el semillero, en { x: 75, y: 296 }", () => {
@@ -85,21 +94,42 @@ describe("el mundo invernadero", () => {
   });
 
   it("C4: la sesión principal lleva la banda verde", () => {
-    expect(aparienciaDe(agente({ principal: true, estado: "principal", fila: { ticket: null } })).bandaColor).toBe("#3f8f4a");
+    expect(
+      aparienciaDe(agente({ principal: true, estado: "principal", fila: { ticket: null } }))
+        .bandaColor,
+    ).toBe("#3f8f4a");
   });
 
   it("C5: un subagente quieto con ticket está arrodillado, de paja, banda dorada y peto azul", () => {
-    expect(aparienciaDe(agente())).toEqual({ sombrero: "paja", bandaColor: "#e8b84a", delantal: "#4a5e8a", pantalon: "#4a5e8a", sentado: true });
+    expect(aparienciaDe(agente())).toEqual({
+      sombrero: "paja",
+      bandaColor: "#e8b84a",
+      delantal: "#4a5e8a",
+      pantalon: "#4a5e8a",
+      sentado: true,
+    });
   });
 
   it("C6: las estaciones son las del cultivo", () => {
-    expect(mundo.estaciones).toEqual(["Semilla", "Brote", "Hojas", "Riego", "Crecimiento", "Floración", "Fruto", "Cosecha"]);
+    expect(mundo.estaciones).toEqual([
+      "Semilla",
+      "Brote",
+      "Hojas",
+      "Riego",
+      "Crecimiento",
+      "Floración",
+      "Fruto",
+      "Cosecha",
+    ]);
   });
 
   it("C7: la posición depende de la estación y del carril", () => {
     for (let i = 0; i < 8; i++) {
       for (let carril = 0; carril <= 5; carril++) {
-        expect(mundo.posicion(i, carril)).toEqual({ x: 180 + 100 * i + ((carril % 3) - 1) * 11, y: 296 });
+        expect(mundo.posicion(i, carril)).toEqual({
+          x: 180 + 100 * i + ((carril % 3) - 1) * 11,
+          y: 296,
+        });
       }
     }
   });
@@ -135,8 +165,20 @@ describe("el mundo invernadero", () => {
 
   it("C15: la escena completa escribe SEMILLERO una sola vez", () => {
     const { ctx, llamadas } = contextoFalso();
-    mundo.dibujar({ ctx, escena: { agentes: new Map([["a1", agente()]]), t: 0 }, miniatura: false, cola: ["T-2"], entregados: [], ahoraMs: AHORA }, 0);
-    expect(llamadas.filter((l) => l.metodo === "fillText" && l.args[0] === "SEMILLERO")).toHaveLength(1);
+    mundo.dibujar(
+      {
+        ctx,
+        escena: { agentes: new Map([["a1", agente()]]), t: 0 },
+        miniatura: false,
+        cola: ["T-2"],
+        entregados: [],
+        ahoraMs: AHORA,
+      },
+      0,
+    );
+    expect(
+      llamadas.filter((l) => l.metodo === "fillText" && l.args[0] === "SEMILLERO"),
+    ).toHaveLength(1);
   });
 
   it("C16: con un esperando en la estación 3 la regadera flota", () => {
@@ -148,7 +190,9 @@ describe("el mundo invernadero", () => {
   });
 
   it("C18: la regadera flotando oscila alrededor de 226", () => {
-    expect(regadera([agente({ estado: "esperando", estacion: 3 })], 3, Math.PI / 6).y).toBeCloseTo(230, 10);
+    expect(
+      regadera([agente({ estado: "esperando", estacion: 3 })], 3, Math.PI / 6).y,
+    ).toBeCloseTo(230, 10);
   });
 
   it("C19: esperando y quieto lleva la pregunta", () => {
@@ -193,7 +237,11 @@ describe("el mundo invernadero", () => {
   });
 
   it("C28: los paneles se llaman Bitácora de cultivo, Semillero y Cosecha", () => {
-    expect(mundo.paneles).toEqual({ agentes: "Bitácora de cultivo", cola: "Semillero", entregados: "Cosecha" });
+    expect(mundo.paneles).toEqual({
+      agentes: "Bitácora de cultivo",
+      cola: "Semillero",
+      entregados: "Cosecha",
+    });
   });
 
   const lineasConColor = (archivo: string) =>
@@ -204,11 +252,15 @@ describe("el mundo invernadero", () => {
       .filter(({ texto }) => /#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(/.test(texto));
 
   it("C29: invernadero.js no usa Math.random", () => {
-    expect(readFileSync(join(WEB, "agentes", "mundos", "invernadero.js"), "utf8")).not.toContain("Math.random");
+    expect(
+      readFileSync(join(WEB, "agentes", "mundos", "invernadero.js"), "utf8"),
+    ).not.toContain("Math.random");
   });
 
   it("C30: toda línea de invernadero.js con un color lleva valmen:allow-color", () => {
-    const sinMarca = lineasConColor(join(WEB, "agentes", "mundos", "invernadero.js")).filter(({ texto }) => !texto.includes("valmen:allow-color"));
+    const sinMarca = lineasConColor(
+      join(WEB, "agentes", "mundos", "invernadero.js"),
+    ).filter(({ texto }) => !texto.includes("valmen:allow-color"));
     expect(sinMarca).toEqual([]);
   });
 
@@ -218,7 +270,10 @@ describe("el mundo invernadero", () => {
     const hasta = html.indexOf("/* Telemetría del centro de control", desde);
     expect(desde).toBeGreaterThan(0);
     expect(hasta).toBeGreaterThan(desde);
-    const colores = html.slice(desde, hasta).split("\n").filter((l) => /#[0-9a-fA-F]{3,8}\b|\brgba?\(/.test(l));
+    const colores = html
+      .slice(desde, hasta)
+      .split("\n")
+      .filter((l) => /#[0-9a-fA-F]{3,8}\b|\brgba?\(/.test(l));
     expect(colores.length).toBeGreaterThan(0);
     for (const linea of colores) {
       expect(linea).toContain("valmen:allow-color");

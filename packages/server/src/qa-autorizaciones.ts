@@ -16,18 +16,36 @@ export interface RespuestaQa {
 
 const texto = (v: unknown): string => (typeof v === "string" ? v.trim() : "");
 const lista = (v: unknown): string[] =>
-  Array.isArray(v) ? v.map((x) => texto(x)).filter((x) => x !== "") : texto(v).split(",").map((x) => x.trim()).filter((x) => x !== "");
+  Array.isArray(v)
+    ? v.map((x) => texto(x)).filter((x) => x !== "")
+    : texto(v)
+        .split(",")
+        .map((x) => x.trim())
+        .filter((x) => x !== "");
 
 /** Las autorizaciones con su estado. Solo lee. */
-export function listarAutorizacionesQa(root: string, ahora: Date = new Date()): RespuestaQa {
+export function listarAutorizacionesQa(
+  root: string,
+  ahora: Date = new Date(),
+): RespuestaQa {
   return { status: 200, body: { authorizations: leerAutorizaciones(root, ahora) } };
 }
 
 /** Crea una autorización desde Mission Control. */
-export function crearAutorizacionQa(root: string, cuerpo: unknown, env: Readonly<Record<string, string | undefined>>, ahora?: Date): RespuestaQa {
+export function crearAutorizacionQa(
+  root: string,
+  cuerpo: unknown,
+  env: Readonly<Record<string, string | undefined>>,
+  ahora?: Date,
+): RespuestaQa {
   const d = (cuerpo ?? {}) as Record<string, unknown>;
-  if (texto(d["actor"]) === "") return { status: 400, body: { error: "Falta el responsable (`actor`)." } };
-  if (texto(d["quote"]) === "") return { status: 400, body: { error: "Falta la frase literal de quien autoriza (`quote`)." } };
+  if (texto(d["actor"]) === "")
+    return { status: 400, body: { error: "Falta el responsable (`actor`)." } };
+  if (texto(d["quote"]) === "")
+    return {
+      status: 400,
+      body: { error: "Falta la frase literal de quien autoriza (`quote`)." },
+    };
   try {
     const a = crearAutorizacion({
       root,
@@ -49,11 +67,22 @@ export function crearAutorizacionQa(root: string, cuerpo: unknown, env: Readonly
 }
 
 /** Revoca una autorización desde Mission Control; la frase literal es el motivo. */
-export function revocarAutorizacionQa(root: string, cuerpo: unknown, env: Readonly<Record<string, string | undefined>>, ahora?: Date): RespuestaQa {
+export function revocarAutorizacionQa(
+  root: string,
+  cuerpo: unknown,
+  env: Readonly<Record<string, string | undefined>>,
+  ahora?: Date,
+): RespuestaQa {
   const d = (cuerpo ?? {}) as Record<string, unknown>;
-  if (texto(d["id"]) === "") return { status: 400, body: { error: "Falta la autorización (`id`)." } };
-  if (texto(d["actor"]) === "") return { status: 400, body: { error: "Falta el responsable (`actor`)." } };
-  if (texto(d["quote"]) === "") return { status: 400, body: { error: "Falta la frase literal de quien revoca (`quote`)." } };
+  if (texto(d["id"]) === "")
+    return { status: 400, body: { error: "Falta la autorización (`id`)." } };
+  if (texto(d["actor"]) === "")
+    return { status: 400, body: { error: "Falta el responsable (`actor`)." } };
+  if (texto(d["quote"]) === "")
+    return {
+      status: 400,
+      body: { error: "Falta la frase literal de quien revoca (`quote`)." },
+    };
   try {
     const r = revocarAutorizacion({
       root,

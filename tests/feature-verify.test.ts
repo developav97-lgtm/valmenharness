@@ -122,10 +122,17 @@ describe("verify.md", () => {
   });
 
   it("incluye como anexos los salida-*.md de la carpeta de la feature y sin ellos no cambia", () => {
-    const sin = readFileSync(writeFeatureVerify({ paths: PATHS(), slug: "kardex" }), "utf8");
+    const sin = readFileSync(
+      writeFeatureVerify({ paths: PATHS(), slug: "kardex" }),
+      "utf8",
+    );
     expect(sin).not.toContain("## Anexos");
 
-    writeFileSync(join(lab, FEATURE, "salida-s1.md"), "# Salida de S1\n\nMedido y conforme.\n", "utf8");
+    writeFileSync(
+      join(lab, FEATURE, "salida-s1.md"),
+      "# Salida de S1\n\nMedido y conforme.\n",
+      "utf8",
+    );
     const con = readFileSync(
       writeFeatureVerify({ paths: PATHS(), slug: "kardex", rewrite: true }),
       "utf8",
@@ -154,7 +161,9 @@ describe("completar una feature", () => {
   it("se rechaza si algún ticket no está cerrado, y nombra cuál", () => {
     ponerEstado(A, "closed");
     writeFeatureVerify({ paths: PATHS(), slug: "kardex" });
-    expect(() => completeFeature({ paths: PATHS(), slug: "kardex" })).toThrow(new RegExp(B));
+    expect(() => completeFeature({ paths: PATHS(), slug: "kardex" })).toThrow(
+      new RegExp(B),
+    );
     expect(readFeature(lab, "kardex")?.row.state).toBe("decomposed");
   });
 

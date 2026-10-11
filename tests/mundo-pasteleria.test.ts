@@ -9,7 +9,10 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { validarMundo } from "../packages/server/web/agentes/motor.js";
-import { crearMontaje, VENTANA_RESPUESTA_MS } from "../packages/server/web/agentes/montaje.js";
+import {
+  crearMontaje,
+  VENTANA_RESPUESTA_MS,
+} from "../packages/server/web/agentes/montaje.js";
 import {
   aparienciaDe,
   comandasDelPase,
@@ -20,7 +23,11 @@ import {
   senalDelMostrador,
   pastelesDeLaVitrina,
 } from "../packages/server/web/agentes/mundos/pasteleria.js";
-import { cuadroDeMarcha, dibujarPersonaje, rasgosDe } from "../packages/server/web/agentes/mundos/sprites.js";
+import {
+  cuadroDeMarcha,
+  dibujarPersonaje,
+  rasgosDe,
+} from "../packages/server/web/agentes/mundos/sprites.js";
 
 const WEB = join(import.meta.dirname, "..", "packages", "server", "web");
 const AHORA = Date.parse("2026-10-09T12:00:00.000Z");
@@ -35,7 +42,10 @@ interface Llamada {
 /** Un contexto de lienzo que acepta cualquier llamada y la registra. */
 function contextoFalso(ancho = 960) {
   const llamadas: Llamada[] = [];
-  const estado: Record<string, unknown> = { canvas: { width: ancho, height: ancho / 2 }, fillStyle: "" };
+  const estado: Record<string, unknown> = {
+    canvas: { width: ancho, height: ancho / 2 },
+    fillStyle: "",
+  };
   const ctx = new Proxy(estado, {
     get(destino, propiedad: string) {
       if (propiedad in destino) return destino[propiedad];
@@ -52,7 +62,16 @@ function contextoFalso(ancho = 960) {
 }
 
 function agente(extra: Record<string, unknown> = {}) {
-  return { estado: "trabajando", estacion: 4, moviendo: false, carril: 0, paso: 0, principal: false, fila: { ticket: "T-1", pregunta: null }, ...extra };
+  return {
+    estado: "trabajando",
+    estacion: 4,
+    moviendo: false,
+    carril: 0,
+    paso: 0,
+    principal: false,
+    fila: { ticket: "T-1", pregunta: null },
+    ...extra,
+  };
 }
 
 describe("el mundo pastelería", () => {
@@ -62,7 +81,10 @@ describe("el mundo pastelería", () => {
 
   it("C2: el montaje entrega a dibujar la cola, los entregados y la hora de montar", () => {
     const recibidos: Record<string, unknown>[] = [];
-    const espia = { ...mundo, dibujar: (estado: Record<string, unknown>) => void recibidos.push(estado) };
+    const espia = {
+      ...mundo,
+      dibujar: (estado: Record<string, unknown>) => void recibidos.push(estado),
+    };
     let pendiente: (() => void) | null = null;
     const montaje = crearMontaje({
       mundos: [espia],
@@ -77,12 +99,21 @@ describe("el mundo pastelería", () => {
     montaje.montar(lienzo, [], AHORA, { cola: ["T-A", "T-B"], entregados: ["T-C"] });
     pendiente!();
     expect(recibidos).toHaveLength(1);
-    expect(recibidos[0]).toMatchObject({ cola: ["T-A", "T-B"], entregados: ["T-C"], ahoraMs: AHORA, ventanaRespuestaMs: VENTANA_RESPUESTA_MS, miniatura: false });
+    expect(recibidos[0]).toMatchObject({
+      cola: ["T-A", "T-B"],
+      entregados: ["T-C"],
+      ahoraMs: AHORA,
+      ventanaRespuestaMs: VENTANA_RESPUESTA_MS,
+      miniatura: false,
+    });
   });
 
   it("C3: montar con tres argumentos entrega una cola vacía", () => {
     const recibidos: Record<string, unknown>[] = [];
-    const espia = { ...mundo, dibujar: (estado: Record<string, unknown>) => void recibidos.push(estado) };
+    const espia = {
+      ...mundo,
+      dibujar: (estado: Record<string, unknown>) => void recibidos.push(estado),
+    };
     let pendiente: (() => void) | null = null;
     const montaje = crearMontaje({
       mundos: [espia],
@@ -116,26 +147,40 @@ describe("el mundo pastelería", () => {
   });
 
   it("C7: cada estado visual tiene una apariencia distinta", () => {
-    const apariencias = ["trabajando", "esperando", "termino", "principal"].map((estado) => JSON.stringify(aparienciaDe({ estado, carril: 1 })));
+    const apariencias = ["trabajando", "esperando", "termino", "principal"].map((estado) =>
+      JSON.stringify(aparienciaDe({ estado, carril: 1 })),
+    );
     expect(new Set(apariencias).size).toBe(4);
   });
 
   it("C8: esperando con pregunta abierta en approved enciende la lámpara", () => {
-    const a = agente({ estado: "esperando", estacion: 3, fila: { ticket: "T-1", pregunta: { desde: hace(10), respondidaEn: null } } });
+    const a = agente({
+      estado: "esperando",
+      estacion: 3,
+      fila: { ticket: "T-1", pregunta: { desde: hace(10), respondidaEn: null } },
+    });
     expect(senalDelMostrador([a], AHORA, VENTANA_RESPUESTA_MS).lampara).toBe(true);
   });
 
   it("C9: sin pregunta abierta la lámpara está apagada", () => {
-    expect(senalDelMostrador([agente({ estacion: 3 })], AHORA, VENTANA_RESPUESTA_MS).lampara).toBe(false);
+    expect(
+      senalDelMostrador([agente({ estacion: 3 })], AHORA, VENTANA_RESPUESTA_MS).lampara,
+    ).toBe(false);
   });
 
   it("C10: una pregunta respondida hace 30 s deja al PO en la ventanilla", () => {
-    const a = agente({ estacion: 3, fila: { ticket: "T-1", pregunta: { desde: hace(90), respondidaEn: hace(30) } } });
+    const a = agente({
+      estacion: 3,
+      fila: { ticket: "T-1", pregunta: { desde: hace(90), respondidaEn: hace(30) } },
+    });
     expect(senalDelMostrador([a], AHORA, VENTANA_RESPUESTA_MS).ventanilla).toBe(true);
   });
 
   it("C11: una pregunta respondida hace 61 s no deja al PO en la ventanilla", () => {
-    const a = agente({ estacion: 3, fila: { ticket: "T-1", pregunta: { desde: hace(120), respondidaEn: hace(61) } } });
+    const a = agente({
+      estacion: 3,
+      fila: { ticket: "T-1", pregunta: { desde: hace(120), respondidaEn: hace(61) } },
+    });
     expect(senalDelMostrador([a], AHORA, VENTANA_RESPUESTA_MS).ventanilla).toBe(false);
   });
 
@@ -148,7 +193,16 @@ describe("el mundo pastelería", () => {
   });
 
   it("C14: las estaciones son las ocho del obrador", () => {
-    expect(mundo.estaciones).toEqual(["Pedidos", "Recetario", "Báscula", "Mostrador", "Horno", "Degustación", "Control", "Vitrina"]);
+    expect(mundo.estaciones).toEqual([
+      "Pedidos",
+      "Recetario",
+      "Báscula",
+      "Mostrador",
+      "Horno",
+      "Degustación",
+      "Control",
+      "Vitrina",
+    ]);
   });
 
   it("C15: cada puesto queda en y = 364 y a no más de 22 px de su estación", () => {
@@ -166,7 +220,9 @@ describe("el mundo pastelería", () => {
   });
 
   it("C17: el horno se enciende con un agente trabajando, quieto, en la estación 4", () => {
-    expect(hornoEncendido([agente({ estado: "trabajando", moviendo: false, estacion: 4 })])).toBe(true);
+    expect(
+      hornoEncendido([agente({ estado: "trabajando", moviendo: false, estacion: 4 })]),
+    ).toBe(true);
   });
 
   it("C18: el horno no se enciende si el único agente de la estación 4 espera", () => {
@@ -174,12 +230,28 @@ describe("el mundo pastelería", () => {
   });
 
   it("C19: con ocho tickets cerrados la vitrina muestra los ocho", () => {
-    const ocho = ["a", "b", "c", "d", "e", "f", "g", "h"].map((id) => ({ id, estado: "closed" }));
-    expect(pastelesDeLaVitrina(ocho).map((t) => t.id)).toEqual(["a", "b", "c", "d", "e", "f", "g", "h"]);
+    const ocho = ["a", "b", "c", "d", "e", "f", "g", "h"].map((id) => ({
+      id,
+      estado: "closed",
+    }));
+    expect(pastelesDeLaVitrina(ocho).map((t) => t.id)).toEqual([
+      "a",
+      "b",
+      "c",
+      "d",
+      "e",
+      "f",
+      "g",
+      "h",
+    ]);
   });
 
   it("C20: los paneles se llaman Comandas, En espera y Vitrina", () => {
-    expect(mundo.paneles).toEqual({ agentes: "Comandas", cola: "En espera", entregados: "Vitrina" });
+    expect(mundo.paneles).toEqual({
+      agentes: "Comandas",
+      cola: "En espera",
+      entregados: "Vitrina",
+    });
   });
 
   const lineasConColor = (archivo: string) =>
@@ -190,12 +262,16 @@ describe("el mundo pastelería", () => {
       .filter(({ texto }) => /#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(/.test(texto));
 
   it("C21: toda línea de pasteleria.js con un color lleva valmen:allow-color", () => {
-    const sinMarca = lineasConColor(join(WEB, "agentes", "mundos", "pasteleria.js")).filter(({ texto }) => !texto.includes("valmen:allow-color"));
+    const sinMarca = lineasConColor(join(WEB, "agentes", "mundos", "pasteleria.js")).filter(
+      ({ texto }) => !texto.includes("valmen:allow-color"),
+    );
     expect(sinMarca).toEqual([]);
   });
 
   it("C22: toda línea de sprites.js con un color lleva valmen:allow-color", () => {
-    const sinMarca = lineasConColor(join(WEB, "agentes", "mundos", "sprites.js")).filter(({ texto }) => !texto.includes("valmen:allow-color"));
+    const sinMarca = lineasConColor(join(WEB, "agentes", "mundos", "sprites.js")).filter(
+      ({ texto }) => !texto.includes("valmen:allow-color"),
+    );
     expect(sinMarca).toEqual([]);
   });
 
@@ -205,7 +281,8 @@ describe("el mundo pastelería", () => {
   });
 
   it("C24: un agente quieto usa el cuadro 0", () => {
-    for (const paso of [0, 1, 2, 3, 7]) expect(cuadroDeMarcha({ moviendo: false, paso })).toBe(0);
+    for (const paso of [0, 1, 2, 3, 7])
+      expect(cuadroDeMarcha({ moviendo: false, paso })).toBe(0);
   });
 
   it("C25: rasgosDe devuelve lo mismo para el mismo carril", () => {
@@ -216,7 +293,9 @@ describe("el mundo pastelería", () => {
   it("C26: el sprite de un pastelero quieto mide 48 px de alto y cabe en 36 px sobre sus pies", () => {
     const { ctx, llamadas } = contextoFalso();
     dibujarPersonaje(ctx, { moviendo: false, paso: 0, carril: 0 }, 300, 364);
-    const cajas = llamadas.filter((l) => l.metodo === "fillRect").map((l) => l.args as number[]);
+    const cajas = llamadas
+      .filter((l) => l.metodo === "fillRect")
+      .map((l) => l.args as number[]);
     expect(cajas.length).toBeGreaterThan(0);
     const izquierda = Math.min(...cajas.map(([x]) => x!));
     const derecha = Math.max(...cajas.map(([x, , w]) => x! + w!));
@@ -232,7 +311,11 @@ describe("el mundo pastelería", () => {
     const insignia = (principal: boolean) => {
       const { ctx, llamadas } = contextoFalso();
       dibujarPersonaje(ctx, { moviendo: false, paso: 0, carril: 0, principal }, 300, 364);
-      return llamadas.filter((l) => l.metodo === "fillRect" && (l.args as number[]).join() === [297, 364 - 48 + 22, 6, 6].join());
+      return llamadas.filter(
+        (l) =>
+          l.metodo === "fillRect" &&
+          (l.args as number[]).join() === [297, 364 - 48 + 22, 6, 6].join(),
+      );
     };
     expect(insignia(true)).toHaveLength(1);
     expect(insignia(false)).toHaveLength(0);
@@ -240,19 +323,50 @@ describe("el mundo pastelería", () => {
 
   it("C29: dibujar la miniatura con una escena vacía y sin cola no lanza", () => {
     const { ctx } = contextoFalso(160);
-    expect(() => mundo.dibujar({ ctx, escena: { agentes: new Map(), t: 0 }, miniatura: true }, 0)).not.toThrow();
+    expect(() =>
+      mundo.dibujar({ ctx, escena: { agentes: new Map(), t: 0 }, miniatura: true }, 0),
+    ).not.toThrow();
   });
 
   it("dibuja una escena con pasteleros, pregunta, comandas y vitrina sin lanzar", () => {
     const { ctx, llamadas } = contextoFalso();
     const agentes = new Map([
       ["a", agente({ x: 584, y: 364, estacion: 4 })],
-      ["b", agente({ x: 483, y: 364, estacion: 3, estado: "esperando", fila: { ticket: "T-2", pregunta: { desde: hace(5), respondidaEn: null } } })],
+      [
+        "b",
+        agente({
+          x: 483,
+          y: 364,
+          estacion: 3,
+          estado: "esperando",
+          fila: { ticket: "T-2", pregunta: { desde: hace(5), respondidaEn: null } },
+        }),
+      ],
       ["c", agente({ x: 400, y: 364, moviendo: true, paso: 1, estacion: 2 })],
-      ["p", agente({ x: 64, y: 364, principal: true, estado: "principal", fila: { ticket: null, pregunta: null } })],
+      [
+        "p",
+        agente({
+          x: 64,
+          y: 364,
+          principal: true,
+          estado: "principal",
+          fila: { ticket: null, pregunta: null },
+        }),
+      ],
     ]);
     expect(() =>
-      mundo.dibujar({ ctx, escena: { agentes, t: 1 }, miniatura: false, cola: ["T-3", "T-4"], entregados: ["T-5"], ahoraMs: AHORA, ventanaRespuestaMs: VENTANA_RESPUESTA_MS }, 1),
+      mundo.dibujar(
+        {
+          ctx,
+          escena: { agentes, t: 1 },
+          miniatura: false,
+          cola: ["T-3", "T-4"],
+          entregados: ["T-5"],
+          ahoraMs: AHORA,
+          ventanaRespuestaMs: VENTANA_RESPUESTA_MS,
+        },
+        1,
+      ),
     ).not.toThrow();
     expect(llamadas.some((l) => l.metodo === "fillText" && l.args[0] === "?")).toBe(true);
   });

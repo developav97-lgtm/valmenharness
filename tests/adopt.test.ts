@@ -405,7 +405,9 @@ describe("comandos de prueba detectados del stack", () => {
     write("BackEnd/manage.py", "#!/usr/bin/env python\n");
 
     const config = parseConfig(proposeConfig(profileProject(lab, "Demo"), "tickets"));
-    expect(readList(config, "test-commands", [])).toEqual(["python BackEnd/manage.py test"]);
+    expect(readList(config, "test-commands", [])).toEqual([
+      "python BackEnd/manage.py test",
+    ]);
   });
 
   it("sin comandos detectados la lista queda vacía, no como el texto «[]»", () => {
@@ -555,7 +557,9 @@ describe("extracción de las reglas del AGENTS.md previo", () => {
 
     const extraccion = extractRules(lab);
     expect(extraccion.skipped.map((uno) => uno.path)).toEqual([".valmen/rules/stack.md"]);
-    expect(extraccion.files.some((uno) => uno.path === ".valmen/rules/stack.md")).toBe(false);
+    expect(extraccion.files.some((uno) => uno.path === ".valmen/rules/stack.md")).toBe(
+      false,
+    );
   });
 
   it("un AGENTS.md ya generado por el harness no aporta reglas", () => {

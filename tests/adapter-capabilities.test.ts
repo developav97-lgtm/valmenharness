@@ -9,10 +9,22 @@ function profile(overrides: Partial<Parameters<typeof createAdapterCapabilities>
   return {
     adapter: "hermes",
     capabilities: [
-      { capability: "observe-states" as const, available: true, limitation: "solo lectura" },
+      {
+        capability: "observe-states" as const,
+        available: true,
+        limitation: "solo lectura",
+      },
       { capability: "read-activity" as const, available: true, limitation: null },
-      { capability: "read-messages" as const, available: false, limitation: "mensajes no expuestos" },
-      { capability: "dispatch" as const, available: false, limitation: "despacho no habilitado" },
+      {
+        capability: "read-messages" as const,
+        available: false,
+        limitation: "mensajes no expuestos",
+      },
+      {
+        capability: "dispatch" as const,
+        available: false,
+        limitation: "despacho no habilitado",
+      },
     ],
     ...overrides,
   };
@@ -50,33 +62,51 @@ describe("perfil de capacidades de adaptador", () => {
   });
 
   it("rechaza perfiles incompletos o con capacidades repetidas", () => {
-    expect(() => createAdapterCapabilities(profile({
-      capabilities: profile().capabilities.slice(0, 3),
-    }))).toThrow("cuatro capacidades");
+    expect(() =>
+      createAdapterCapabilities(
+        profile({
+          capabilities: profile().capabilities.slice(0, 3),
+        }),
+      ),
+    ).toThrow("cuatro capacidades");
 
-    expect(() => createAdapterCapabilities(profile({
-      capabilities: [
-        ...profile().capabilities.slice(0, 3),
-        { capability: "read-messages", available: false, limitation: "mensajes no expuestos" },
-      ],
-    }))).toThrow("repetir");
+    expect(() =>
+      createAdapterCapabilities(
+        profile({
+          capabilities: [
+            ...profile().capabilities.slice(0, 3),
+            {
+              capability: "read-messages",
+              available: false,
+              limitation: "mensajes no expuestos",
+            },
+          ],
+        }),
+      ),
+    ).toThrow("repetir");
   });
 
   it("rechaza identificadores y límites ambiguos sin consultar configuración o servicios", () => {
-    expect(() => createAdapterCapabilities(profile({ adapter: "Hermes" }))).toThrow("adapter");
-    expect(() => createAdapterCapabilities(profile({
-      capabilities: profile().capabilities.map((entry) =>
-        entry.capability === "dispatch"
-          ? { ...entry, limitation: null }
-          : entry,
+    expect(() => createAdapterCapabilities(profile({ adapter: "Hermes" }))).toThrow(
+      "adapter",
+    );
+    expect(() =>
+      createAdapterCapabilities(
+        profile({
+          capabilities: profile().capabilities.map((entry) =>
+            entry.capability === "dispatch" ? { ...entry, limitation: null } : entry,
+          ),
+        }),
       ),
-    }))).toThrow("limitación");
-    expect(() => createAdapterCapabilities(profile({
-      capabilities: profile().capabilities.map((entry) =>
-        entry.capability === "read-messages"
-          ? { ...entry, limitation: "   " }
-          : entry,
+    ).toThrow("limitación");
+    expect(() =>
+      createAdapterCapabilities(
+        profile({
+          capabilities: profile().capabilities.map((entry) =>
+            entry.capability === "read-messages" ? { ...entry, limitation: "   " } : entry,
+          ),
+        }),
       ),
-    }))).toThrow("limitación");
+    ).toThrow("limitación");
   });
 });

@@ -22,7 +22,12 @@
  *    modelo la tomó y compararlo con el que produjo el artefacto; elegir ese modelo no
  *    es cosa de este módulo —lo hace `modeloDelRevisor`, en el enrutado—.
  */
-import { callChat, ChatError, type ClaudeCliRunner, DEFAULT_PROVIDER } from "@valmen/credentials";
+import {
+  callChat,
+  ChatError,
+  type ClaudeCliRunner,
+  DEFAULT_PROVIDER,
+} from "@valmen/credentials";
 
 import { JudgeError, MOTIVO_MAX, TIMEOUT_JUEZ_MS } from "./judge.js";
 
@@ -275,7 +280,9 @@ function leerDecision(
       "MISSING_ANSWER",
     );
   }
-  const porProposicion = proposiciones.map((p) => porId.get(p.id) as RevisionPorProposicion);
+  const porProposicion = proposiciones.map(
+    (p) => porId.get(p.id) as RevisionPorProposicion,
+  );
 
   // `approve` y una proposición no respaldada se contradicen: ninguna de las dos lecturas
   // es la del modelo, y la salida segura no es elegir una por él sino no decidir.

@@ -55,12 +55,21 @@ function ola(extra: Partial<Parameters<typeof calcularOlaDeJornada>[0]> = {}) {
   });
 }
 
-const ids = (lista: readonly { readonly ticketId: string }[]): string[] => lista.map((item) => item.ticketId);
+const ids = (lista: readonly { readonly ticketId: string }[]): string[] =>
+  lista.map((item) => item.ticketId);
 
-function actividad(ticketId: string, state: "started" | "active" | "waiting" | "finished" | "failed", n: number): void {
+function actividad(
+  ticketId: string,
+  state: "started" | "active" | "waiting" | "finished" | "failed",
+  n: number,
+): void {
   recordExecutionActivity(entorno.project(), {
     eventId: `ev-${ticketId}-${n}`,
-    identity: createExecutionIdentity({ projectId: PROYECTO_OLA, ticketId, executionId: `run-${ticketId}` }),
+    identity: createExecutionIdentity({
+      projectId: PROYECTO_OLA,
+      ticketId,
+      executionId: `run-${ticketId}`,
+    }),
     attemptId: "intento-1",
     state,
     source: "subagente",
@@ -81,9 +90,19 @@ describe("nombres y worktrees", () => {
   it("C19: la ola reconoce la rama sugerida y también el id completo, y no un nombre parecido", () => {
     const id = "FEATURE-ENGINE-JORNADA-OLA-20261008";
     const sugerido = worktreeDelTicket("/r", id);
-    expect(esWorktreeDelTicket({ path: sugerido.ruta, branch: sugerido.rama }, "/r", id)).toBe(true);
-    expect(esWorktreeDelTicket({ path: "/otro/x", branch: `valmen/ticket-${id}` }, "/r", id)).toBe(true);
-    expect(esWorktreeDelTicket({ path: "/r/.claude/worktrees/ticket-jornada", branch: "valmen/ticket-jornada" }, "/r", id)).toBe(false);
+    expect(
+      esWorktreeDelTicket({ path: sugerido.ruta, branch: sugerido.rama }, "/r", id),
+    ).toBe(true);
+    expect(
+      esWorktreeDelTicket({ path: "/otro/x", branch: `valmen/ticket-${id}` }, "/r", id),
+    ).toBe(true);
+    expect(
+      esWorktreeDelTicket(
+        { path: "/r/.claude/worktrees/ticket-jornada", branch: "valmen/ticket-jornada" },
+        "/r",
+        id,
+      ),
+    ).toBe(false);
   });
 
   it("lee la salida porcelain de git", () => {
@@ -112,7 +131,11 @@ describe("nombres y worktrees", () => {
 describe("listos y orden", () => {
   it("C1: ordena por prioridad y desempata por la posición de la jornada", () => {
     for (const id of [A, B, C]) ticketEn(entorno.root, id, "intake");
-    crearJornada(entorno, [enJornada(A, 1, { priority: 2 }), enJornada(B, 2, { priority: 1 }), enJornada(C, 3, { priority: 1 })]);
+    crearJornada(entorno, [
+      enJornada(A, 1, { priority: 2 }),
+      enJornada(B, 2, { priority: 1 }),
+      enJornada(C, 3, { priority: 1 }),
+    ]);
     expect(ids(ola().listos)).toEqual([B, C, A]);
   });
 
@@ -121,7 +144,12 @@ describe("listos y orden", () => {
     ticketEn(entorno.root, B, "analyzed");
     ticketEn(entorno.root, C, "approved");
     ticketEn(entorno.root, D, "changes_requested");
-    crearJornada(entorno, [enJornada(A, 1), enJornada(B, 2), enJornada(C, 3), enJornada(D, 4)]);
+    crearJornada(entorno, [
+      enJornada(A, 1),
+      enJornada(B, 2),
+      enJornada(C, 3),
+      enJornada(D, 4),
+    ]);
     expect(ids(ola({ concurrency: 4 }).listos)).toEqual([A, B, C, D]);
   });
 
@@ -130,7 +158,12 @@ describe("listos y orden", () => {
     ticketEn(entorno.root, B, "approved");
     crearJornada(entorno, [enJornada(A, 1)]);
     const resultado = ola();
-    const todos = [...ids(resultado.listos), ...ids(resultado.enCurso), ...ids(resultado.enEspera), ...ids(resultado.entregados)];
+    const todos = [
+      ...ids(resultado.listos),
+      ...ids(resultado.enCurso),
+      ...ids(resultado.enEspera),
+      ...ids(resultado.entregados),
+    ];
     expect(todos).toEqual([A]);
   });
 });
@@ -140,7 +173,9 @@ describe("dependencias", () => {
     for (const estado of ["awaiting_user_tests", "in_qa", "qa_approved", "closed"]) {
       ticketEn(entorno.root, A, estado);
       ticketEn(entorno.root, B, "intake");
-      crearJornada(entorno, [enJornada(A, 1), enJornada(B, 2, { dependsOn: [A] })], { journeyId: `dia-${estado}` });
+      crearJornada(entorno, [enJornada(A, 1), enJornada(B, 2, { dependsOn: [A] })], {
+        journeyId: `dia-${estado}`,
+      });
       const resultado = ola({ journeyId: `dia-${estado}` });
       expect(ids(resultado.listos), estado).toEqual([B]);
       expect(ids(resultado.entregados), estado).toEqual([A]);
@@ -158,7 +193,10 @@ describe("dependencias", () => {
     ]);
     const resultado = ola({ concurrency: 1 });
     const espera = (id: string) => resultado.enEspera.find((item) => item.ticketId === id);
-    expect(espera(B)).toMatchObject({ motivo: "dependencia", dependencias: [{ ticketId: A, estado: "approved" }] });
+    expect(espera(B)).toMatchObject({
+      motivo: "dependencia",
+      dependencias: [{ ticketId: A, estado: "approved" }],
+    });
     expect(espera(B)?.detalle).toContain(`${A} (approved)`);
     expect(espera(C)).toMatchObject({
       motivo: "dependencia",
@@ -176,7 +214,13 @@ describe("dependencias", () => {
     );
     // B existe pero no va en la jornada: A depende de un ticket que la jornada no contiene.
     crearJornada(entorno, [enJornada(A, 1)]);
-    expect(ola().enEspera).toMatchObject([{ ticketId: A, motivo: "dependencia", dependencias: [{ ticketId: B, estado: "intake" }] }]);
+    expect(ola().enEspera).toMatchObject([
+      {
+        ticketId: A,
+        motivo: "dependencia",
+        dependencias: [{ ticketId: B, estado: "intake" }],
+      },
+    ]);
 
     // Control: con B entregado, A pasa.
     ticketEn(entorno.root, B, "awaiting_user_tests");
@@ -189,7 +233,10 @@ describe("entregados y en curso", () => {
     const estados = ["awaiting_user_tests", "in_qa", "qa_approved", "closed"];
     const tickets = [A, B, C, D];
     tickets.forEach((id, i) => ticketEn(entorno.root, id, estados[i] as string));
-    crearJornada(entorno, tickets.map((id, i) => enJornada(id, i + 1)));
+    crearJornada(
+      entorno,
+      tickets.map((id, i) => enJornada(id, i + 1)),
+    );
     const resultado = ola();
     expect(ids(resultado.entregados)).toEqual(tickets);
     expect(resultado.listos).toEqual([]);
@@ -200,7 +247,9 @@ describe("entregados y en curso", () => {
     crearJornada(entorno, [enJornada(A, 1)]);
     const resultado = ola();
     expect(resultado.listos).toEqual([]);
-    expect(resultado.enCurso).toMatchObject([{ ticketId: A, senales: [{ senal: "estado" }] }]);
+    expect(resultado.enCurso).toMatchObject([
+      { ticketId: A, senales: [{ senal: "estado" }] },
+    ]);
   });
 
   it("C7: un worktree de la rama del ticket lo cuenta en curso aunque el registro diga intake", () => {
@@ -209,7 +258,13 @@ describe("entregados y en curso", () => {
     crearJornada(entorno, [enJornada(A, 1), enJornada(B, 2)]);
     const propio = worktreeDelTicket(entorno.root, A);
     const resultado = ola({ worktrees: [{ path: propio.ruta, branch: propio.rama }] });
-    expect(resultado.enCurso).toMatchObject([{ ticketId: A, estado: "intake", senales: [{ senal: "worktree", fuente: propio.ruta }] }]);
+    expect(resultado.enCurso).toMatchObject([
+      {
+        ticketId: A,
+        estado: "intake",
+        senales: [{ senal: "worktree", fuente: propio.ruta }],
+      },
+    ]);
     expect(ids(resultado.listos)).toEqual([B]);
   });
 
@@ -223,7 +278,11 @@ describe("entregados y en curso", () => {
     actividad(C, "waiting", 3);
     const resultado = ola({ concurrency: 5 });
     expect(ids(resultado.enCurso)).toEqual([A, B, C]);
-    expect(resultado.enCurso[0]?.senales[0]).toEqual({ senal: "actividad", fuente: "subagente", hora: "2026-10-08T12:01:00.000Z" });
+    expect(resultado.enCurso[0]?.senales[0]).toEqual({
+      senal: "actividad",
+      fuente: "subagente",
+      hora: "2026-10-08T12:01:00.000Z",
+    });
     const texto = renderOlaDeJornada(resultado);
     expect(texto).toContain("actividad: subagente (2026-10-08T12:01:00.000Z)");
   });
@@ -255,9 +314,20 @@ describe("entregados y en curso", () => {
   });
 
   it("detecta un worktree real de git por su rama", () => {
-    const git = (...args: string[]) => execFileSync("git", ["-C", entorno.root, ...args], { stdio: "pipe" });
+    const git = (...args: string[]) =>
+      execFileSync("git", ["-C", entorno.root, ...args], { stdio: "pipe" });
     git("init", "-q", "-b", "main");
-    git("-c", "user.email=a@b.c", "-c", "user.name=t", "commit", "-q", "--allow-empty", "-m", "base");
+    git(
+      "-c",
+      "user.email=a@b.c",
+      "-c",
+      "user.name=t",
+      "commit",
+      "-q",
+      "--allow-empty",
+      "-m",
+      "base",
+    );
     ticketEn(entorno.root, A, "intake");
     ticketEn(entorno.root, B, "intake");
     crearJornada(entorno, [enJornada(A, 1), enJornada(B, 2)]);
@@ -266,11 +336,18 @@ describe("entregados y en curso", () => {
 
     const leidos = listarWorktreesDeGit(entorno.root);
     expect(leidos.aviso).toBeNull();
-    expect(leidos.worktrees.map((w) => w.branch)).toEqual(expect.arrayContaining(["main", propio.rama]));
+    expect(leidos.worktrees.map((w) => w.branch)).toEqual(
+      expect.arrayContaining(["main", propio.rama]),
+    );
 
-    const resultado = calcularOlaDeJornada({ project: entorno.project(), journeyId: "dia" });
+    const resultado = calcularOlaDeJornada({
+      project: entorno.project(),
+      journeyId: "dia",
+    });
     expect(ids(resultado.enCurso)).toEqual([A]);
-    expect(realpathSync((resultado.enCurso[0]?.senales[0]?.fuente) as string)).toBe(realpathSync(propio.ruta));
+    expect(realpathSync(resultado.enCurso[0]?.senales[0]?.fuente as string)).toBe(
+      realpathSync(propio.ruta),
+    );
     expect(ids(resultado.listos)).toEqual([B]);
   });
 
@@ -278,7 +355,10 @@ describe("entregados y en curso", () => {
     // La raíz no es un repositorio git.
     ticketEn(entorno.root, A, "intake");
     crearJornada(entorno, [enJornada(A, 1)]);
-    const resultado = calcularOlaDeJornada({ project: entorno.project(), journeyId: "dia" });
+    const resultado = calcularOlaDeJornada({
+      project: entorno.project(),
+      journeyId: "dia",
+    });
     expect(ids(resultado.listos)).toEqual([A]);
     expect(resultado.avisos.join(" ")).toContain("worktrees de git");
     expect(renderOlaDeJornada(resultado)).toContain("Aviso:");
@@ -290,11 +370,17 @@ describe("tope de simultáneos", () => {
     expect(OLA_CONCURRENCIA_POR_DEFECTO).toBe(3);
     const todos = [A, B, C, D, E];
     for (const id of todos) ticketEn(entorno.root, id, "intake");
-    crearJornada(entorno, todos.map((id, i) => enJornada(id, i + 1)));
+    crearJornada(
+      entorno,
+      todos.map((id, i) => enJornada(id, i + 1)),
+    );
     const sin = ola();
     expect(sin.concurrency).toBe(3);
     expect(ids(sin.listos)).toEqual([A, B, C]);
-    expect(sin.enEspera.map((e) => [e.ticketId, e.motivo])).toEqual([[D, "cupo"], [E, "cupo"]]);
+    expect(sin.enEspera.map((e) => [e.ticketId, e.motivo])).toEqual([
+      [D, "cupo"],
+      [E, "cupo"],
+    ]);
 
     ticketEn(entorno.root, A, "in_progress");
     const con = ola();
@@ -306,7 +392,10 @@ describe("tope de simultáneos", () => {
   it("C11: --concurrency cambia el tope", () => {
     const todos = [A, B, C, D, E];
     for (const id of todos) ticketEn(entorno.root, id, "intake");
-    crearJornada(entorno, todos.map((id, i) => enJornada(id, i + 1)));
+    crearJornada(
+      entorno,
+      todos.map((id, i) => enJornada(id, i + 1)),
+    );
     expect(ids(ola({ concurrency: 1 }).listos)).toEqual([A]);
     expect(ids(ola({ concurrency: 5 }).listos)).toEqual(todos);
     expect(() => ola({ concurrency: 0 })).toThrow(/entero de al menos 1/);
@@ -316,7 +405,10 @@ describe("tope de simultáneos", () => {
   it("con más en curso que el tope no ofrece ninguno", () => {
     for (const id of [A, B, C]) ticketEn(entorno.root, id, "in_progress");
     ticketEn(entorno.root, D, "intake");
-    crearJornada(entorno, [A, B, C, D].map((id, i) => enJornada(id, i + 1)));
+    crearJornada(
+      entorno,
+      [A, B, C, D].map((id, i) => enJornada(id, i + 1)),
+    );
     const resultado = ola({ concurrency: 2 });
     expect(resultado.listos).toEqual([]);
     expect(resultado.enEspera).toMatchObject([{ ticketId: D, motivo: "cupo" }]);
@@ -333,7 +425,9 @@ describe("esperas", () => {
     const resultado = ola({ worktrees: [{ path: propio.ruta, branch: propio.rama }] });
     expect(resultado.listos).toEqual([]);
     expect(resultado.enCurso).toEqual([]);
-    expect(resultado.enEspera).toMatchObject([{ ticketId: A, motivo: "aprobacion-del-plan" }]);
+    expect(resultado.enEspera).toMatchObject([
+      { ticketId: A, motivo: "aprobacion-del-plan" },
+    ]);
   });
 
   it("un plan parado en su worktree espera la aprobación aunque el checkout principal diga intake", () => {
@@ -345,7 +439,9 @@ describe("esperas", () => {
     actividad(A, "started", 1);
     const resultado = ola({ worktrees: [{ path: propio.ruta, branch: propio.rama }] });
     expect(resultado.enCurso).toEqual([]);
-    expect(resultado.enEspera).toMatchObject([{ ticketId: A, motivo: "aprobacion-del-plan" }]);
+    expect(resultado.enEspera).toMatchObject([
+      { ticketId: A, motivo: "aprobacion-del-plan" },
+    ]);
     expect(ids(resultado.listos)).toEqual([B]);
   });
 
@@ -374,7 +470,9 @@ describe("esperas", () => {
     ticketEn(entorno.root, B, "intake");
     crearJornada(entorno, [enJornada(A, 1), enJornada(B, 2)]);
     let resultado = ola();
-    expect(resultado.enEspera).toMatchObject([{ ticketId: A, motivo: "parada", detalle: "El ticket está bloqueado." }]);
+    expect(resultado.enEspera).toMatchObject([
+      { ticketId: A, motivo: "parada", detalle: "El ticket está bloqueado." },
+    ]);
     expect(ids(resultado.listos)).toEqual([B]);
 
     recordAutonomousStop(entorno.project().paths, {
@@ -398,9 +496,18 @@ describe("esperas", () => {
   it("C15: un ticket cuya ventana no permite despachar no se ofrece; con la ventana abierta sí", () => {
     ticketEn(entorno.root, A, "intake");
     crearJornada(entorno, [enJornada(A, 1, { windowId: "manana" })], {
-      windows: [{ windowId: "manana", startsAt: "2026-10-08T12:00:00.000Z", endsAt: "2026-10-08T16:00:00.000Z", timeZone: "America/Bogota" }],
+      windows: [
+        {
+          windowId: "manana",
+          startsAt: "2026-10-08T12:00:00.000Z",
+          endsAt: "2026-10-08T16:00:00.000Z",
+          timeZone: "America/Bogota",
+        },
+      ],
     });
-    expect(ids(ola({ ahora: () => new Date("2026-10-08T13:00:00.000Z") }).listos)).toEqual([A]);
+    expect(ids(ola({ ahora: () => new Date("2026-10-08T13:00:00.000Z") }).listos)).toEqual([
+      A,
+    ]);
     const cerrada = ola({ ahora: () => new Date("2026-10-08T18:00:00.000Z") });
     expect(cerrada.listos).toEqual([]);
     expect(cerrada.enEspera).toMatchObject([{ ticketId: A, motivo: "ventana" }]);
@@ -409,13 +516,17 @@ describe("esperas", () => {
   it("un ticket de la jornada ausente del registro espera con el motivo ausente", () => {
     ticketEn(entorno.root, B, "intake");
     crearJornada(entorno, [enJornada(A, 1), enJornada(B, 2)]);
-    expect(ola().enEspera).toMatchObject([{ ticketId: A, estado: null, motivo: "ausente" }]);
+    expect(ola().enEspera).toMatchObject([
+      { ticketId: A, estado: null, motivo: "ausente" },
+    ]);
   });
 });
 
 describe("jornada", () => {
   it("sin jornada vigente, o con una inexistente, falla y manda a valmen journey plan", () => {
-    expect(() => calcularOlaDeJornada({ project: entorno.project(), worktrees: [] })).toThrow(/valmen journey plan/);
+    expect(() =>
+      calcularOlaDeJornada({ project: entorno.project(), worktrees: [] }),
+    ).toThrow(/valmen journey plan/);
     ticketEn(entorno.root, A, "intake");
     crearJornada(entorno, [enJornada(A, 1)]);
     expect(() => ola({ journeyId: "no-existe" })).toThrow(/no-existe.*valmen journey plan/);

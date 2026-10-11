@@ -18,7 +18,10 @@ import { recordHumanDecision } from "../packages/server/src/gates.js";
 import { writeFixtureTicket } from "./helpers/fixtures.js";
 
 const RAIZ = join(import.meta.dirname, "..");
-const PLANTILLA = readFileSync(join(RAIZ, "templates", "programar", "prompt-eslabon.md"), "utf8");
+const PLANTILLA = readFileSync(
+  join(RAIZ, "templates", "programar", "prompt-eslabon.md"),
+  "utf8",
+);
 const ID = "BUGFIX-POS-AUTOAPROB-20261005";
 
 /** Lo que una plantilla de jornada no puede pedir, ni afirmativa ni disfrazada de delegación. */
@@ -54,7 +57,14 @@ describe("las plantillas de prompt de la jornada", () => {
   });
 
   it("la plantilla sigue teniendo los marcadores que el script rellena", () => {
-    for (const marcador of ["PROYECTO", "TICKET_ID", "RUTA_TICKET", "COMANDOS_PRUEBA", "IMPLEMENTADOR", "OTROS_ESLABONES"]) {
+    for (const marcador of [
+      "PROYECTO",
+      "TICKET_ID",
+      "RUTA_TICKET",
+      "COMANDOS_PRUEBA",
+      "IMPLEMENTADOR",
+      "OTROS_ESLABONES",
+    ]) {
       expect(PLANTILLA).toContain(`{{${marcador}}}`);
     }
   });
@@ -78,24 +88,48 @@ describe("una sesión desatendida no decide", () => {
 
   it("no puede registrar la decisión de una compuerta", () => {
     process.env["VALMEN_UNATTENDED"] = "1";
-    expect(() => recordHumanDecision(paths(), ID, "GR-x", { decision: "approve", actor: "agente", reason: "x" })).toThrow(/desatendida.*decidir una compuerta/);
+    expect(() =>
+      recordHumanDecision(paths(), ID, "GR-x", {
+        decision: "approve",
+        actor: "agente",
+        reason: "x",
+      }),
+    ).toThrow(/desatendida.*decidir una compuerta/);
     delete process.env["VALMEN_UNATTENDED"];
     // Una persona sí llega a la validación del recibo (que no existe): no la frena la barrera.
-    const r = recordHumanDecision(paths(), ID, "GR-x", { decision: "approve", actor: "Juan", reason: "x" });
+    const r = recordHumanDecision(paths(), ID, "GR-x", {
+      decision: "approve",
+      actor: "Juan",
+      reason: "x",
+    });
     expect(r.ok).toBe(false);
     expect(r.error).toContain("No existe el recibo");
   });
 
   it("no puede aprobar un ciclo de QA ni un retest, y sí puede registrar un resultado no aprobado", () => {
     process.env["VALMEN_UNATTENDED"] = "1";
-    expect(() => qaClose({ paths: paths(), ticketId: ID, result: "approved", poConfirmation: "ok" })).toThrow(/desatendida.*ciclo de QA/);
-    expect(() => addRetest({ paths: paths(), ticketId: ID, pointId: "POINT-001", result: "approved", poConfirmation: "ok" })).toThrow(/desatendida.*retest/);
+    expect(() =>
+      qaClose({ paths: paths(), ticketId: ID, result: "approved", poConfirmation: "ok" }),
+    ).toThrow(/desatendida.*ciclo de QA/);
+    expect(() =>
+      addRetest({
+        paths: paths(),
+        ticketId: ID,
+        pointId: "POINT-001",
+        result: "approved",
+        poConfirmation: "ok",
+      }),
+    ).toThrow(/desatendida.*retest/);
     // Un hallazgo no es una aprobación: llega al motor y falla por sus propias reglas, no por la barrera.
-    expect(() => qaClose({ paths: paths(), ticketId: ID, result: "changes_requested" })).not.toThrow(/desatendida/);
+    expect(() =>
+      qaClose({ paths: paths(), ticketId: ID, result: "changes_requested" }),
+    ).not.toThrow(/desatendida/);
   });
 
   it("sin la marca, la aprobación de QA llega a las reglas del motor", () => {
-    expect(() => qaClose({ paths: paths(), ticketId: ID, result: "approved", poConfirmation: "ok" })).not.toThrow(/desatendida/);
+    expect(() =>
+      qaClose({ paths: paths(), ticketId: ID, result: "approved", poConfirmation: "ok" }),
+    ).not.toThrow(/desatendida/);
   });
 });
 
@@ -139,15 +173,27 @@ describe("el run autónomo exige la aprobación registrada", () => {
   afterEach(() => rmSync(lab, { recursive: true, force: true }));
 
   it("un plan con la línea escrita pero sin la aprobación registrada no es elegible", async () => {
-    writeFixtureTicket(lab, { id: ID, workflowStatus: "approved", aprobacionRegistrada: false });
+    writeFixtureTicket(lab, {
+      id: ID,
+      workflowStatus: "approved",
+      aprobacionRegistrada: false,
+    });
     await expect(
-      runAutonomous({ paths: { root: lab, ticketsDir: "tickets" }, ticketId: ID, execute: () => ({ status: 0, stdout: "", stderr: "" }) }),
+      runAutonomous({
+        paths: { root: lab, ticketsDir: "tickets" },
+        ticketId: ID,
+        execute: () => ({ status: 0, stdout: "", stderr: "" }),
+      }),
     ).rejects.toThrow(/no tiene la aprobación del plan registrada/);
   });
 
   it("con la aprobación registrada vigente sí es elegible", async () => {
     writeFixtureTicket(lab, { id: ID, workflowStatus: "approved" });
-    const r = await runAutonomous({ paths: { root: lab, ticketsDir: "tickets" }, ticketId: ID, execute: () => ({ status: 0, stdout: "", stderr: "" }) });
+    const r = await runAutonomous({
+      paths: { root: lab, ticketsDir: "tickets" },
+      ticketId: ID,
+      execute: () => ({ status: 0, stdout: "", stderr: "" }),
+    });
     expect(r.ticketId).toBe(ID);
   });
 });

@@ -31,7 +31,9 @@ const AUTONOMIA = `autonomous:
       - test-failure
 `;
 
-function politicas(texto: string): Record<string, ReturnType<typeof resumirPoliticas>[number]> {
+function politicas(
+  texto: string,
+): Record<string, ReturnType<typeof resumirPoliticas>[number]> {
   return Object.fromEntries(
     resumirPoliticas(parseConfig(texto)).map((politica) => [politica.id, politica]),
   );
@@ -75,12 +77,15 @@ jev-propositions:
 `;
     const proposiciones = politicas(texto)["jev-propositions"];
     expect(proposiciones?.estado).toBe("activa");
-    expect(proposiciones?.resumen.join("\n")).toContain("plan: 1 — custom-rollback-probado (inform)");
+    expect(proposiciones?.resumen.join("\n")).toContain(
+      "plan: 1 — custom-rollback-probado (inform)",
+    );
     expect(proposiciones?.resumen.join("\n")).toContain("analysis: ninguna");
   });
 
   it("una preparación fuera de allowed-schemas se avisa como rechazada", () => {
-    const texto = "name: Demo\ntest-setup:\n  schema: prod\n  commands:\n    - echo hola\nallowed-schemas:\n  - test\n";
+    const texto =
+      "name: Demo\ntest-setup:\n  schema: prod\n  commands:\n    - echo hola\nallowed-schemas:\n  - test\n";
     const preparacion = politicas(texto)["test-setup"];
     expect(preparacion?.estado).toBe("activa");
     expect(preparacion?.resumen.join(" ")).toContain("se rechaza");

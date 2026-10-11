@@ -44,14 +44,22 @@ async function pintar(texto: string) {
         return { config: checkConfig(RAIZ, cuerpo.text), impact: null };
       }
       if (url.pathname === "/api/config") {
-        return { config: { ...checkConfig(RAIZ, texto), text: texto, diff: [] }, impact: null };
+        return {
+          config: { ...checkConfig(RAIZ, texto), text: texto, diff: [] },
+          impact: null,
+        };
       }
       if (url.pathname === "/api/health") return { root: RAIZ };
       if (url.pathname === "/api/authorizations/options") {
         return {
           source: "registry",
           modules: [{ module: "WEB", tickets: 2 }],
-          approval: { types: ["BUGFIX", "FEATURE"], stages: ["analysis", "plan"], modes: ["on-approve", "reviewer"], impacts: ["sync_impact"] },
+          approval: {
+            types: ["BUGFIX", "FEATURE"],
+            stages: ["analysis", "plan"],
+            modes: ["on-approve", "reviewer"],
+            impacts: ["sync_impact"],
+          },
           qa: { types: ["BUGFIX", "FEATURE"] },
         };
       }
@@ -68,7 +76,11 @@ const textoDe = (n: NodoFalso): string => String(n._texto);
 const editorDe = (v: Vista): NodoFalso =>
   buscarNodos(v.contenido, (n) => n.tagName === "TEXTAREA")[0] as NodoFalso;
 const tarjetas = (v: Vista): NodoFalso[] =>
-  buscarNodos(v.contenido, (n) => String(n.className ?? "").split(" ").includes("politica"));
+  buscarNodos(v.contenido, (n) =>
+    String(n.className ?? "")
+      .split(" ")
+      .includes("politica"),
+  );
 
 describe("las tarjetas de políticas", () => {
   it("hay una por política, con su estado y su resumen", async () => {
@@ -89,7 +101,9 @@ describe("las tarjetas de políticas", () => {
   });
 
   it("una sección que no se entiende muestra el error exacto en su tarjeta", async () => {
-    const { vista } = await pintar("name: Demo\ntest-setup:\n  commands:\n    - echo hola\n");
+    const { vista } = await pintar(
+      "name: Demo\ntest-setup:\n  commands:\n    - echo hola\n",
+    );
 
     expect(vista.texto).toContain("test-setup.schema");
     expect(tarjetas(vista).some((t) => String(t.className).includes("error"))).toBe(true);
@@ -102,13 +116,18 @@ describe("«Editar»", () => {
     const editor = editorDe(vista);
     const antes = String(editor.value);
 
-    const agregar = botones(vista).filter((b) => textoDe(b) === "Agregar un ejemplo")[0] as NodoFalso;
+    const agregar = botones(vista).filter(
+      (b) => textoDe(b) === "Agregar un ejemplo",
+    )[0] as NodoFalso;
     await disparar(agregar, "click");
 
     const despues = String(editor.value);
     expect(despues.startsWith(antes)).toBe(true);
     expect(despues.length).toBeGreaterThan(antes.length);
-    const agregado = despues.slice(antes.length).split("\n").filter((l) => l.trim() !== "");
+    const agregado = despues
+      .slice(antes.length)
+      .split("\n")
+      .filter((l) => l.trim() !== "");
     expect(agregado.length).toBeGreaterThan(0);
     for (const linea of agregado) expect(linea.startsWith("#"), linea).toBe(true);
     // Analizar sí; guardar nunca.
@@ -137,6 +156,10 @@ describe("los umbrales firmados", () => {
     const tarjeta = tarjetas(vista)[3] as NodoFalso;
     expect(String(tarjeta.className)).toContain("activa");
     expect(buscarNodos(tarjeta, (n) => n.tagName === "BUTTON")).toHaveLength(0);
-    expect(tarjetas(vista).slice(0, 3).every((t) => buscarNodos(t, (n) => n.tagName === "BUTTON").length === 1)).toBe(true);
+    expect(
+      tarjetas(vista)
+        .slice(0, 3)
+        .every((t) => buscarNodos(t, (n) => n.tagName === "BUTTON").length === 1),
+    ).toBe(true);
   });
 });

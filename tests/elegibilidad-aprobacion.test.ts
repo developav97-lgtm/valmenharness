@@ -6,13 +6,26 @@
  * dice algo si el mismo ticket, sin la barrera, pasa. Cada barrera se prueba con una autorización
  * vigente que cubre al ticket, porque lo que importa es que la autorización no la levante.
  */
-import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { approvalAuthorizationApprovalsCommand, approvalEligibilityCommand, approveByAuthorizationCommand } from "../packages/cli/src/commands.js";
+import {
+  approvalAuthorizationApprovalsCommand,
+  approvalEligibilityCommand,
+  approveByAuthorizationCommand,
+} from "../packages/cli/src/commands.js";
 import { USAGE, parseArgs } from "../packages/cli/src/main.js";
 import {
   DEFAULT_POLICY,
@@ -56,7 +69,13 @@ let root: string;
 const paths = (): RegistryPaths => ({ root, ticketsDir: "tickets" });
 
 function ticket(
-  opciones: { tipo?: string; riesgo?: string; impactos?: string[]; modulo?: string; diagnostico?: string } = {},
+  opciones: {
+    tipo?: string;
+    riesgo?: string;
+    impactos?: string[];
+    modulo?: string;
+    diagnostico?: string;
+  } = {},
 ): string {
   const tipo = opciones.tipo ?? "BUGFIX";
   return writeFixtureTicket(root, {
@@ -79,14 +98,18 @@ const diagnosticoCon = (impactos: string): string =>
     `- Impactos de sync, migración, Docker o despliegue: ${impactos}`,
   ].join("\n");
 
-const PROPOSICIONES: Proposition[] = [{ id: "cubre_todos_los_criterios", kind: "noul", instructions: "cubre", weight: 3 }];
+const PROPOSICIONES: Proposition[] = [
+  { id: "cubre_todos_los_criterios", kind: "noul", instructions: "cubre", weight: 3 },
+];
 const APPROVE = 0.99;
 const REVIEW = 0.5;
 const BLOCK = 0.01;
 
 /** Un recibo de la compuerta con el veredicto que da el valor: approve, review o block. */
 function recibo(gate: string, valor: number, ticketId = ID, intento = 1): GateReceipt {
-  const respuestas: PropositionAnswer[] = [{ id: "cubre_todos_los_criterios", kind: "noul", value: valor }];
+  const respuestas: PropositionAnswer[] = [
+    { id: "cubre_todos_los_criterios", kind: "noul", value: valor },
+  ];
   return buildReceipt({
     id: `GR-20261007-${ticketId}-${gate}-${intento}`,
     gate,
@@ -110,7 +133,9 @@ const guardar = (gate: string, valor: number, ticketId = ID, intento = 1): GateR
   return r;
 };
 
-function autorizar(extra: Partial<Parameters<typeof crearAutorizacionDeAprobacion>[0]> = {}) {
+function autorizar(
+  extra: Partial<Parameters<typeof crearAutorizacionDeAprobacion>[0]> = {},
+) {
   return crearAutorizacionDeAprobacion({
     root,
     actor: "Juan Andrade",
@@ -127,11 +152,20 @@ function autorizar(extra: Partial<Parameters<typeof crearAutorizacionDeAprobacio
   });
 }
 
-const evaluar = (opciones: { id?: string; etapa?: string; ahora?: Date } = {}): ResultadoDeElegibilidadDeAprobacion =>
-  elegibilidadDeAprobacion({ paths: paths(), ticketId: opciones.id ?? ID, etapa: opciones.etapa ?? "plan", ahora: opciones.ahora ?? AHORA });
+const evaluar = (
+  opciones: { id?: string; etapa?: string; ahora?: Date } = {},
+): ResultadoDeElegibilidadDeAprobacion =>
+  elegibilidadDeAprobacion({
+    paths: paths(),
+    ticketId: opciones.id ?? ID,
+    etapa: opciones.etapa ?? "plan",
+    ahora: opciones.ahora ?? AHORA,
+  });
 
-const incumplidas = (r: ResultadoDeElegibilidadDeAprobacion): string[] => r.reglas.filter((x) => !x.cumple).map((x) => x.regla);
-const detalle = (r: ResultadoDeElegibilidadDeAprobacion, regla: string): string => r.reglas.find((x) => x.regla === regla)?.detalle ?? "";
+const incumplidas = (r: ResultadoDeElegibilidadDeAprobacion): string[] =>
+  r.reglas.filter((x) => !x.cumple).map((x) => x.regla);
+const detalle = (r: ResultadoDeElegibilidadDeAprobacion, regla: string): string =>
+  r.reglas.find((x) => x.regla === regla)?.detalle ?? "";
 
 /** El contenido de todos los archivos del registro, para comprobar que una lectura no escribe. */
 function fotografia(dir: string = root, base: string = root): Record<string, string> {
@@ -160,7 +194,15 @@ describe("un ticket que cumple todo (control)", () => {
     const r = evaluar();
     expect(r.elegible).toBe(true);
     expect(incumplidas(r)).toEqual([]);
-    expect(r.reglas.map((x) => x.regla)).toEqual(["etapa", "tipo", "despliegue", "qa-mechanical", "compuerta", "autorizacion", "cupo"]);
+    expect(r.reglas.map((x) => x.regla)).toEqual([
+      "etapa",
+      "tipo",
+      "despliegue",
+      "qa-mechanical",
+      "compuerta",
+      "autorizacion",
+      "cupo",
+    ]);
     expect(r.autorizacion).toEqual({ id: a.id, hash: a.hash });
     expect(r.derivableAlRevisor).toBe(false);
   });
@@ -217,9 +259,19 @@ describe("C1. SECURITY no es elegible nunca", () => {
       createdAt: AHORA.toISOString(),
     };
     mkdirSync(join(root, ".valmen", "approval"), { recursive: true });
-    appendFileSync(approvalAuthorizationsPath(root), `${JSON.stringify({ ...base, hash: hashDeAutorizacionDeAprobacion(base) })}\n`, "utf8");
+    appendFileSync(
+      approvalAuthorizationsPath(root),
+      `${JSON.stringify({ ...base, hash: hashDeAutorizacionDeAprobacion(base) })}\n`,
+      "utf8",
+    );
     // La consulta de siempre sí lo cubriría: lo que lo frena es la regla `tipo`.
-    expect(autorizacionDeAprobacionQueCubre(root, { type: "SECURITY", module: "POS", riskLevel: "normal", stage: "plan" }, AHORA)).not.toBeNull();
+    expect(
+      autorizacionDeAprobacionQueCubre(
+        root,
+        { type: "SECURITY", module: "POS", riskLevel: "normal", stage: "plan" },
+        AHORA,
+      ),
+    ).not.toBeNull();
 
     const r = evaluar({ id });
     expect(r.elegible).toBe(false);
@@ -259,7 +311,17 @@ describe("C2. un block de la compuerta de la etapa no se aprueba sin una persona
     autorizar();
     const bloqueo = recibo("plan", BLOCK);
     appendReceipt(paths(), ID, bloqueo);
-    appendReceipt(paths(), ID, withHumanDecision(bloqueo, { actor: "Juan Andrade", decision: "approve", reason: "sigo pese al bloqueo", channel: "cli", decidedAt: AHORA.toISOString() }));
+    appendReceipt(
+      paths(),
+      ID,
+      withHumanDecision(bloqueo, {
+        actor: "Juan Andrade",
+        decision: "approve",
+        reason: "sigo pese al bloqueo",
+        channel: "cli",
+        decidedAt: AHORA.toISOString(),
+      }),
+    );
     const r = evaluar();
     expect(r.elegible).toBe(true);
     expect(detalle(r, "compuerta")).toMatch(/Juan Andrade.*no necesita la autorización/);
@@ -270,7 +332,17 @@ describe("C2. un block de la compuerta de la etapa no se aprueba sin una persona
     autorizar();
     const revision = recibo("plan", REVIEW);
     appendReceipt(paths(), ID, revision);
-    appendReceipt(paths(), ID, withHumanDecision(revision, { actor: "Juan Andrade", decision: "reject", reason: "falta un criterio", channel: "cli", decidedAt: AHORA.toISOString() }));
+    appendReceipt(
+      paths(),
+      ID,
+      withHumanDecision(revision, {
+        actor: "Juan Andrade",
+        decision: "reject",
+        reason: "falta un criterio",
+        channel: "cli",
+        decidedAt: AHORA.toISOString(),
+      }),
+    );
     const r = evaluar();
     expect(r.elegible).toBe(false);
     expect(detalle(r, "compuerta")).toMatch(/rechazó/);
@@ -326,7 +398,10 @@ describe("C4. un diagnóstico que declara despliegue es de una persona", () => {
   ])("no es elegible bajo ninguna autorización: %s", (impactos) => {
     ticket({ diagnostico: diagnosticoCon(impactos) });
     guardar("plan", APPROVE);
-    autorizar({ types: ["BUGFIX", "FEATURE", "SYNC"], impacts: ["sync_impact", "migration_impact", "docker_impact"] });
+    autorizar({
+      types: ["BUGFIX", "FEATURE", "SYNC"],
+      impacts: ["sync_impact", "migration_impact", "docker_impact"],
+    });
     const r = evaluar();
     expect(r.elegible).toBe(false);
     expect(incumplidas(r)).toEqual(["despliegue"]);
@@ -359,12 +434,24 @@ describe("C5. un tipo que la autorización no lista es de una persona", () => {
   it("sin ninguna autorización vigente lo dice, y una revocada o vencida no cuenta", () => {
     ticket();
     guardar("plan", APPROVE);
-    expect(detalle(evaluar(), "autorizacion")).toMatch(/no hay ninguna autorización de aprobación vigente/);
+    expect(detalle(evaluar(), "autorizacion")).toMatch(
+      /no hay ninguna autorización de aprobación vigente/,
+    );
     const a = autorizar();
-    revocarAutorizacionDeAprobacion({ root, id: a.id, actor: "Juan Andrade", reason: "prueba", source: "cli", ahora: AHORA, env: {} });
+    revocarAutorizacionDeAprobacion({
+      root,
+      id: a.id,
+      actor: "Juan Andrade",
+      reason: "prueba",
+      source: "cli",
+      ahora: AHORA,
+      env: {},
+    });
     expect(evaluar().elegible).toBe(false);
     autorizar({ validDays: 1 });
-    expect(evaluar({ ahora: new Date(AHORA.getTime() + 3 * 86_400_000) }).elegible).toBe(false);
+    expect(evaluar({ ahora: new Date(AHORA.getTime() + 3 * 86_400_000) }).elegible).toBe(
+      false,
+    );
   });
 });
 
@@ -374,7 +461,15 @@ describe("C6. SYNC, INTEGRATION y AGENT son elegibles si la autorización los li
     guardar("plan", APPROVE, id);
     const sinTipo = autorizar({ types: ["BUGFIX", "FEATURE"] });
     expect(evaluar({ id }).elegible).toBe(false);
-    revocarAutorizacionDeAprobacion({ root, id: sinTipo.id, actor: "Juan Andrade", reason: "prueba", source: "cli", ahora: AHORA, env: {} });
+    revocarAutorizacionDeAprobacion({
+      root,
+      id: sinTipo.id,
+      actor: "Juan Andrade",
+      reason: "prueba",
+      source: "cli",
+      ahora: AHORA,
+      env: {},
+    });
     const conTipo = autorizar({ types: [tipo] });
     const r = evaluar({ id });
     expect(r.elegible).toBe(true);
@@ -400,11 +495,27 @@ describe("C7. un impacto solo se admite si la autorización lo lista", () => {
 
     // Una autorización que lista otro impacto tampoco lo cubre.
     const otro = impacto === "docker_impact" ? "migration_impact" : "docker_impact";
-    revocarAutorizacionDeAprobacion({ root, id: sinImpacto.id, actor: "Juan Andrade", reason: "prueba", source: "cli", ahora: AHORA, env: {} });
+    revocarAutorizacionDeAprobacion({
+      root,
+      id: sinImpacto.id,
+      actor: "Juan Andrade",
+      reason: "prueba",
+      source: "cli",
+      ahora: AHORA,
+      env: {},
+    });
     const conOtro = autorizar({ impacts: [otro] });
     expect(evaluar().elegible).toBe(false);
 
-    revocarAutorizacionDeAprobacion({ root, id: conOtro.id, actor: "Juan Andrade", reason: "prueba", source: "cli", ahora: AHORA, env: {} });
+    revocarAutorizacionDeAprobacion({
+      root,
+      id: conOtro.id,
+      actor: "Juan Andrade",
+      reason: "prueba",
+      source: "cli",
+      ahora: AHORA,
+      env: {},
+    });
     const conImpacto = autorizar({ impacts: [impacto] });
     const aprobado = evaluar();
     expect(aprobado.elegible).toBe(true);
@@ -435,7 +546,9 @@ describe("el resto de lo que la autorización declara: módulo, riesgo y etapa",
     ticket({ riesgo: "high" });
     guardar("plan", APPROVE);
     autorizar();
-    expect(detalle(evaluar(), "autorizacion")).toMatch(/riesgo máximo es normal y el ticket es high/);
+    expect(detalle(evaluar(), "autorizacion")).toMatch(
+      /riesgo máximo es normal y el ticket es high/,
+    );
   });
 
   it("una etapa que la autorización no cubre también, y la que sí cubre es elegible", () => {
@@ -443,7 +556,9 @@ describe("el resto de lo que la autorización declara: módulo, riesgo y etapa",
     guardar("plan", APPROVE);
     guardar("analysis", APPROVE);
     autorizar({ stages: ["analysis"] });
-    expect(detalle(evaluar({ etapa: "plan" }), "autorizacion")).toMatch(/no cubre la etapa plan/);
+    expect(detalle(evaluar({ etapa: "plan" }), "autorizacion")).toMatch(
+      /no cubre la etapa plan/,
+    );
     expect(evaluar({ etapa: "analysis" }).elegible).toBe(true);
   });
 
@@ -468,7 +583,9 @@ describe("el resto de lo que la autorización declara: módulo, riesgo y etapa",
   });
 
   it("un ticket que no existe falla en voz alta", () => {
-    expect(() => evaluar({ id: "BUGFIX-POS-NO-EXISTE-20261007" })).toThrow(/No existe el ticket/);
+    expect(() => evaluar({ id: "BUGFIX-POS-NO-EXISTE-20261007" })).toThrow(
+      /No existe el ticket/,
+    );
   });
 });
 
@@ -514,7 +631,13 @@ describe("C8. un recibo en review no es elegible; solo se deriva al revisor si l
     guardar("plan", REVIEW, seguridad);
     expect(evaluar({ id: seguridad }).derivableAlRevisor).toBe(false);
 
-    registrarUsoDeCupoDeAprobacion({ root, authorizationId: leerIdDeLaUnica(), ticketId: "OTRO-POS-X-20261007", stage: "plan", ahora: AHORA });
+    registrarUsoDeCupoDeAprobacion({
+      root,
+      authorizationId: leerIdDeLaUnica(),
+      ticketId: "OTRO-POS-X-20261007",
+      stage: "plan",
+      ahora: AHORA,
+    });
     expect(evaluar().derivableAlRevisor).toBe(false);
   });
 
@@ -523,7 +646,17 @@ describe("C8. un recibo en review no es elegible; solo se deriva al revisor si l
     autorizar();
     const revision = recibo("plan", REVIEW);
     appendReceipt(paths(), ID, revision);
-    appendReceipt(paths(), ID, withHumanDecision(revision, { actor: "Juan Andrade", decision: "approve", reason: "de acuerdo", channel: "cli", decidedAt: AHORA.toISOString() }));
+    appendReceipt(
+      paths(),
+      ID,
+      withHumanDecision(revision, {
+        actor: "Juan Andrade",
+        decision: "approve",
+        reason: "de acuerdo",
+        channel: "cli",
+        decidedAt: AHORA.toISOString(),
+      }),
+    );
     const r = evaluar();
     expect(r.elegible).toBe(true);
     expect(detalle(r, "compuerta")).toMatch(/Juan Andrade.*no necesita la autorización/);
@@ -543,7 +676,13 @@ describe("C9. una autorización con el cupo del día agotado deja el ticket no e
     const a = autorizar({ dailyQuota: 1 });
     expect(evaluar().elegible).toBe(true);
 
-    registrarUsoDeCupoDeAprobacion({ root, authorizationId: a.id, ticketId: "OTRO-POS-X-20261007", stage: "plan", ahora: AHORA });
+    registrarUsoDeCupoDeAprobacion({
+      root,
+      authorizationId: a.id,
+      ticketId: "OTRO-POS-X-20261007",
+      stage: "plan",
+      ahora: AHORA,
+    });
     const r = evaluar();
     expect(r.elegible).toBe(false);
     expect(incumplidas(r)).toEqual(["cupo"]);
@@ -558,20 +697,36 @@ describe("C9. una autorización con el cupo del día agotado deja el ticket no e
     ticket();
     guardar("plan", APPROVE);
     const a = autorizar({ dailyQuota: 1 });
-    registrarUsoDeCupoDeAprobacion({ root, authorizationId: "APA-20261007-ffffff", ticketId: "OTRO-POS-X-20261007", stage: "plan", ahora: AHORA });
+    registrarUsoDeCupoDeAprobacion({
+      root,
+      authorizationId: "APA-20261007-ffffff",
+      ticketId: "OTRO-POS-X-20261007",
+      stage: "plan",
+      ahora: AHORA,
+    });
     expect(evaluar().autorizacion?.id).toBe(a.id);
   });
 });
 
 describe("C10. el resultado devuelve todas las reglas que fallan con su motivo", () => {
   it("un ticket que incumple varias barreras las lista todas, no solo la primera", () => {
-    const id = ticket({ tipo: "SECURITY", diagnostico: diagnosticoCon("Despliegue a producción.") });
+    const id = ticket({
+      tipo: "SECURITY",
+      diagnostico: diagnosticoCon("Despliegue a producción."),
+    });
     guardar("plan", BLOCK, id);
     guardar("qa-mechanical", BLOCK, id);
     autorizar();
     const r = evaluar({ id });
     expect(r.elegible).toBe(false);
-    expect(incumplidas(r)).toEqual(["tipo", "despliegue", "qa-mechanical", "compuerta", "autorizacion", "cupo"]);
+    expect(incumplidas(r)).toEqual([
+      "tipo",
+      "despliegue",
+      "qa-mechanical",
+      "compuerta",
+      "autorizacion",
+      "cupo",
+    ]);
     for (const x of r.reglas) expect(x.detalle.length).toBeGreaterThan(10);
     expect(r.autorizacion).toBeNull();
   });
@@ -595,7 +750,11 @@ describe("C11. valmen approval-eligibility muestra la decisión y sus reglas sin
     guardar("plan", APPROVE);
     const a = autorizar();
     const antes = fotografia();
-    const r = approvalEligibilityCommand(paths(), { id: ID, stage: "plan" }, { ahora: AHORA });
+    const r = approvalEligibilityCommand(
+      paths(),
+      { id: ID, stage: "plan" },
+      { ahora: AHORA },
+    );
     expect(r.exitCode).toBe(0);
     expect(r.stdout).toContain(`${ID} (plan): ELEGIBLE`);
     expect(r.stdout.split("\n").filter((l) => /^ {2}[✓✗] /.test(l))).toHaveLength(7);
@@ -608,7 +767,11 @@ describe("C11. valmen approval-eligibility muestra la decisión y sus reglas sin
     guardar("plan", BLOCK);
     autorizar();
     const antes = fotografia();
-    const r = approvalEligibilityCommand(paths(), { id: ID, stage: "plan" }, { ahora: AHORA });
+    const r = approvalEligibilityCommand(
+      paths(),
+      { id: ID, stage: "plan" },
+      { ahora: AHORA },
+    );
     expect(r.exitCode).toBe(3);
     expect(r.stdout).toContain("NO ELEGIBLE");
     expect(r.stdout).toMatch(/✗ compuerta: .*block/);
@@ -620,7 +783,11 @@ describe("C11. valmen approval-eligibility muestra la decisión y sus reglas sin
     ticket();
     guardar("plan", REVIEW);
     autorizar({ mode: "reviewer" });
-    const r = approvalEligibilityCommand(paths(), { id: ID, stage: "plan" }, { ahora: AHORA });
+    const r = approvalEligibilityCommand(
+      paths(),
+      { id: ID, stage: "plan" },
+      { ahora: AHORA },
+    );
     expect(r.exitCode).toBe(3);
     expect(r.stdout).toContain("Derivable al revisor");
   });
@@ -629,28 +796,52 @@ describe("C11. valmen approval-eligibility muestra la decisión y sus reglas sin
     ticket();
     guardar("plan", APPROVE);
     const a = autorizar();
-    const r = approvalEligibilityCommand(paths(), { id: ID, stage: "plan", json: true }, { ahora: AHORA });
+    const r = approvalEligibilityCommand(
+      paths(),
+      { id: ID, stage: "plan", json: true },
+      { ahora: AHORA },
+    );
     const json = JSON.parse(r.stdout) as ResultadoDeElegibilidadDeAprobacion;
-    expect(json).toMatchObject({ ticketId: ID, etapa: "plan", elegible: true, derivableAlRevisor: false, autorizacion: { id: a.id, hash: a.hash } });
+    expect(json).toMatchObject({
+      ticketId: ID,
+      etapa: "plan",
+      elegible: true,
+      derivableAlRevisor: false,
+      autorizacion: { id: a.id, hash: a.hash },
+    });
     expect(json.reglas).toHaveLength(7);
     expect(r.exitCode).toBe(0);
   });
 
   it("pide --id y --stage, y un ticket inexistente falla sin escribir", () => {
     expect(approvalEligibilityCommand(paths(), { stage: "plan" }).exitCode).toBe(2);
-    expect(approvalEligibilityCommand(paths(), { id: ID }).stderr).toMatch(/--stage analysis\|plan/);
+    expect(approvalEligibilityCommand(paths(), { id: ID }).stderr).toMatch(
+      /--stage analysis\|plan/,
+    );
     const antes = fotografia();
-    const r = approvalEligibilityCommand(paths(), { id: "BUGFIX-POS-NO-EXISTE-20261007", stage: "plan" });
+    const r = approvalEligibilityCommand(paths(), {
+      id: "BUGFIX-POS-NO-EXISTE-20261007",
+      stage: "plan",
+    });
     expect(r.exitCode).not.toBe(0);
     expect(r.stderr).toMatch(/No existe el ticket/);
     expect(fotografia()).toEqual(antes);
   });
 
   it("el CLI lee --stage como valor y la ayuda lo documenta", () => {
-    const opciones = parseArgs(["approval-eligibility", "--id", ID, "--stage", "analysis", "--json"]);
+    const opciones = parseArgs([
+      "approval-eligibility",
+      "--id",
+      ID,
+      "--stage",
+      "analysis",
+      "--json",
+    ]);
     expect(opciones.positionals).toEqual(["approval-eligibility"]);
     expect(opciones.flags).toEqual({ id: ID, stage: "analysis", json: true });
-    expect(USAGE).toContain("approval-eligibility --id <ID> --stage analysis|plan [--json]");
+    expect(USAGE).toContain(
+      "approval-eligibility --id <ID> --stage analysis|plan [--json]",
+    );
   });
 });
 
@@ -665,7 +856,9 @@ describe("aprobar por autorización", () => {
   ].join("\n");
 
   /** Un ticket en `planned`, sin frase de aprobación en el plan y sin aprobación registrada. */
-  function planificado(opciones: { tipo?: string; impactos?: string[]; diagnostico?: string } = {}): string {
+  function planificado(
+    opciones: { tipo?: string; impactos?: string[]; diagnostico?: string } = {},
+  ): string {
     const tipo = opciones.tipo ?? "BUGFIX";
     return writeFixtureTicket(root, {
       id: `${tipo}-${SUFIJO}`,
@@ -687,9 +880,16 @@ describe("aprobar por autorización", () => {
   };
 
   /** Un recibo cuyo hash de estado es el del ticket **de ahora**, como el que deja la compuerta real. */
-  function guardarVigente(gate: string, valor: number, id: string = ID, intento = 1): GateReceipt {
+  function guardarVigente(
+    gate: string,
+    valor: number,
+    id: string = ID,
+    intento = 1,
+  ): GateReceipt {
     const estado = buildGateState(readFileSync(rutaDe(id), "utf8"));
-    const respuestas: PropositionAnswer[] = [{ id: "cubre_todos_los_criterios", kind: "noul", value: valor }];
+    const respuestas: PropositionAnswer[] = [
+      { id: "cubre_todos_los_criterios", kind: "noul", value: valor },
+    ];
     const r = buildReceipt({
       id: `GR-20261007-${id}-${gate}-${intento}`,
       gate,
@@ -709,13 +909,26 @@ describe("aprobar por autorización", () => {
     return r;
   }
 
-  const aprobar = (etapa = "plan", id: string = ID, env: Record<string, string | undefined> = {}) =>
-    aprobarPorAutorizacion({ paths: paths(), ticketId: id, etapa, ahora: AHORA, env });
-  const aprobadoPlan = (id: string = ID) => transition({ paths: paths(), ticketId: id, entity: "ticket", to: "approved", now: () => AHORA });
-  const eventos = (id: string = ID, accion = "plan-approved") => (doc(id).blocks.Eventos ?? []).filter((e) => e["action"] === accion);
+  const aprobar = (
+    etapa = "plan",
+    id: string = ID,
+    env: Record<string, string | undefined> = {},
+  ) => aprobarPorAutorizacion({ paths: paths(), ticketId: id, etapa, ahora: AHORA, env });
+  const aprobadoPlan = (id: string = ID) =>
+    transition({
+      paths: paths(),
+      ticketId: id,
+      entity: "ticket",
+      to: "approved",
+      now: () => AHORA,
+    });
+  const eventos = (id: string = ID, accion = "plan-approved") =>
+    (doc(id).blocks.Eventos ?? []).filter((e) => e["action"] === accion);
   const usos = (): number => {
     try {
-      return readFileSync(approvalQuotaUsesPath(root), "utf8").split("\n").filter((l) => l.trim() !== "").length;
+      return readFileSync(approvalQuotaUsesPath(root), "utf8")
+        .split("\n")
+        .filter((l) => l.trim() !== "").length;
     } catch {
       return 0;
     }
@@ -749,11 +962,15 @@ describe("aprobar por autorización", () => {
     planificado();
     guardarVigente("plan", APPROVE);
     autorizar();
-    expect(() => aprobadoPlan()).toThrow(/aprobación del plan registrada|aprobación explícita/);
+    expect(() => aprobadoPlan()).toThrow(
+      /aprobación del plan registrada|aprobación explícita/,
+    );
     aprobar();
     aprobadoPlan();
     expect(doc().fields.workflow_status).toBe("approved");
-    const verificado = (doc().blocks.Eventos ?? []).find((e) => e["action"] === "plan-approval-verified");
+    const verificado = (doc().blocks.Eventos ?? []).find(
+      (e) => e["action"] === "plan-approval-verified",
+    );
     expect(String(verificado?.["details"])).toContain("autorizacion");
   });
 
@@ -774,7 +991,11 @@ describe("aprobar por autorización", () => {
     guardarVigente("plan", APPROVE);
     autorizar();
     aprobar();
-    editar(ID, "- Rollback: revertir el cambio de una línea.", "- Rollback: revertir el cambio de una línea y reabrir.");
+    editar(
+      ID,
+      "- Rollback: revertir el cambio de una línea.",
+      "- Rollback: revertir el cambio de una línea y reabrir.",
+    );
     expect(aprobacionDePlanVigente(doc()).estado).toBe("plan-cambiado");
     expect(() => aprobadoPlan()).toThrow(/cambió/);
     expect(doc().fields.workflow_status).toBe("planned");
@@ -784,7 +1005,11 @@ describe("aprobar por autorización", () => {
     planificado();
     guardarVigente("plan", APPROVE);
     autorizar();
-    editar(ID, "- Rollback: revertir el cambio de una línea.", "- Rollback: otro texto que el recibo no evaluó.");
+    editar(
+      ID,
+      "- Rollback: revertir el cambio de una línea.",
+      "- Rollback: otro texto que el recibo no evaluó.",
+    );
     expect(() => aprobar()).toThrow(/evaluó otro texto/);
     expect(eventos()).toHaveLength(0);
     expect(usos()).toBe(0);
@@ -807,15 +1032,34 @@ describe("aprobar por autorización", () => {
     guardarVigente("plan", APPROVE, id);
     const a = autorizar();
     // Con la frase humana en el plan, lo que frena el evento forjado es la re-verificación de transition.
-    editar(id, "- Pasos ordenados:", "- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).\n- Pasos ordenados:");
-    registrarUsoDeCupoDeAprobacion({ root, authorizationId: a.id, ticketId: id, stage: "plan", ahora: AHORA });
-    forjarEvento(id, { actor: `autorización ${a.id}`, source: "autorizacion", quote: a.quote, planHash: hashDelPlan(doc(id)), authorizationId: a.id, authorizationHash: a.hash });
+    editar(
+      id,
+      "- Pasos ordenados:",
+      "- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).\n- Pasos ordenados:",
+    );
+    registrarUsoDeCupoDeAprobacion({
+      root,
+      authorizationId: a.id,
+      ticketId: id,
+      stage: "plan",
+      ahora: AHORA,
+    });
+    forjarEvento(id, {
+      actor: `autorización ${a.id}`,
+      source: "autorizacion",
+      quote: a.quote,
+      planHash: hashDelPlan(doc(id)),
+      authorizationId: a.id,
+      authorizationHash: a.hash,
+    });
     expect(() => aprobadoPlan(id)).toThrow(/SECURITY/);
     expect(doc(id).fields.workflow_status).toBe("planned");
   });
 
   it("C7. un ticket cuyo diagnóstico declara despliegue no se aprueba por autorización", () => {
-    planificado({ diagnostico: diagnosticoCon("Despliegue a producción del servicio de órdenes.") });
+    planificado({
+      diagnostico: diagnosticoCon("Despliegue a producción del servicio de órdenes."),
+    });
     guardarVigente("plan", APPROVE);
     autorizar();
     expect(() => aprobar()).toThrow(/despliegue/);
@@ -824,7 +1068,10 @@ describe("aprobar por autorización", () => {
   });
 
   it("C8. un impacto de migración que la autorización no lista no se aprueba; con él listado, sí", () => {
-    planificado({ impactos: ["migration_impact"], diagnostico: diagnosticoCon("Migración de la columna number.") });
+    planificado({
+      impactos: ["migration_impact"],
+      diagnostico: diagnosticoCon("Migración de la columna number."),
+    });
     guardarVigente("plan", APPROVE);
     autorizar();
     expect(() => aprobar()).toThrow(/migration_impact/);
@@ -855,7 +1102,13 @@ describe("aprobar por autorización", () => {
     planificado();
     guardarVigente("plan", APPROVE);
     const a = autorizar({ dailyQuota: 1 });
-    registrarUsoDeCupoDeAprobacion({ root, authorizationId: a.id, ticketId: "OTRO-POS-X-20261007", stage: "plan", ahora: AHORA });
+    registrarUsoDeCupoDeAprobacion({
+      root,
+      authorizationId: a.id,
+      ticketId: "OTRO-POS-X-20261007",
+      stage: "plan",
+      ahora: AHORA,
+    });
     expect(() => aprobar()).toThrow(/cupo/);
     expect(eventos()).toHaveLength(0);
     expect(usos()).toBe(1);
@@ -868,7 +1121,9 @@ describe("aprobar por autorización", () => {
     const res = aprobar();
     expect(usos()).toBe(1);
     expect(res.cupoRestante).toBe(2);
-    const uso = JSON.parse(readFileSync(approvalQuotaUsesPath(root), "utf8").trim()) as Record<string, string>;
+    const uso = JSON.parse(
+      readFileSync(approvalQuotaUsesPath(root), "utf8").trim(),
+    ) as Record<string, string>;
     expect(uso).toMatchObject({ authorizationId: a.id, ticketId: ID, stage: "plan" });
   });
 
@@ -900,9 +1155,23 @@ describe("aprobar por autorización", () => {
     guardarVigente("plan", APPROVE);
     const a = autorizar();
     aprobar();
-    revocarAutorizacionDeAprobacion({ root, id: a.id, actor: "Juan Andrade", reason: "ya no", source: "cli", ahora: new Date(AHORA.getTime() + 1000), env: {} });
+    revocarAutorizacionDeAprobacion({
+      root,
+      id: a.id,
+      actor: "Juan Andrade",
+      reason: "ya no",
+      source: "cli",
+      ahora: new Date(AHORA.getTime() + 1000),
+      env: {},
+    });
     expect(() =>
-      transition({ paths: paths(), ticketId: ID, entity: "ticket", to: "approved", now: () => new Date(AHORA.getTime() + 2000) }),
+      transition({
+        paths: paths(),
+        ticketId: ID,
+        entity: "ticket",
+        to: "approved",
+        now: () => new Date(AHORA.getTime() + 2000),
+      }),
     ).toThrow(/ya no está vigente/);
     expect(doc().fields.workflow_status).toBe("planned");
   });
@@ -911,11 +1180,24 @@ describe("aprobar por autorización", () => {
     planificado();
     guardarVigente("plan", APPROVE);
     const a = autorizar();
-    forjarEvento(ID, { actor: `autorización ${a.id}`, source: "autorizacion", quote: a.quote, planHash: hashDelPlan(doc()), authorizationId: a.id, authorizationHash: a.hash });
+    forjarEvento(ID, {
+      actor: `autorización ${a.id}`,
+      source: "autorizacion",
+      quote: a.quote,
+      planHash: hashDelPlan(doc()),
+      authorizationId: a.id,
+      authorizationHash: a.hash,
+    });
     expect(() => aprobadoPlan()).toThrow(/no tiene un cupo registrado/);
     expect(doc().fields.workflow_status).toBe("planned");
     // Control: con el uso registrado por el camino real, el mismo evento sí vale.
-    registrarUsoDeCupoDeAprobacion({ root, authorizationId: a.id, ticketId: ID, stage: "plan", ahora: AHORA });
+    registrarUsoDeCupoDeAprobacion({
+      root,
+      authorizationId: a.id,
+      ticketId: ID,
+      stage: "plan",
+      ahora: AHORA,
+    });
     aprobadoPlan();
     expect(doc().fields.workflow_status).toBe("approved");
   });
@@ -924,8 +1206,21 @@ describe("aprobar por autorización", () => {
     planificado();
     guardarVigente("plan", APPROVE);
     const a = autorizar();
-    registrarUsoDeCupoDeAprobacion({ root, authorizationId: a.id, ticketId: ID, stage: "plan", ahora: AHORA });
-    forjarEvento(ID, { actor: `autorización ${a.id}`, source: "autorizacion", quote: "x", planHash: hashDelPlan(doc()), authorizationId: a.id, authorizationHash: "sha256:" + "0".repeat(64) });
+    registrarUsoDeCupoDeAprobacion({
+      root,
+      authorizationId: a.id,
+      ticketId: ID,
+      stage: "plan",
+      ahora: AHORA,
+    });
+    forjarEvento(ID, {
+      actor: `autorización ${a.id}`,
+      source: "autorizacion",
+      quote: "x",
+      planHash: hashDelPlan(doc()),
+      authorizationId: a.id,
+      authorizationHash: "sha256:" + "0".repeat(64),
+    });
     expect(() => aprobadoPlan()).toThrow(/no existe en el registro/);
   });
 
@@ -937,7 +1232,12 @@ describe("aprobar por autorización", () => {
     expect(res.accion).toBe("analysis-approved");
     const [evento] = eventos(ID, "analysis-approved");
     const d = JSON.parse(String(evento?.["details"])) as Record<string, string>;
-    expect(d).toMatchObject({ source: "autorizacion", authorizationId: a.id, authorizationHash: a.hash, stage: "analysis" });
+    expect(d).toMatchObject({
+      source: "autorizacion",
+      authorizationId: a.id,
+      authorizationHash: a.hash,
+      stage: "analysis",
+    });
     expect(usos()).toBe(1);
     // No es una aprobación del plan: no destraba approved.
     expect(eventos()).toHaveLength(0);
@@ -948,17 +1248,27 @@ describe("aprobar por autorización", () => {
   it("C20. approve-by-authorization imprime la autorización usada, o las reglas que fallan", () => {
     planificado();
     guardarVigente("plan", APPROVE);
-    const fallida = approveByAuthorizationCommand(paths(), { id: ID, stage: "plan" }, { ahora: AHORA, env: {} });
+    const fallida = approveByAuthorizationCommand(
+      paths(),
+      { id: ID, stage: "plan" },
+      { ahora: AHORA, env: {} },
+    );
     expect(fallida.exitCode).toBe(3);
     expect(fallida.stderr).toMatch(/autorizacion/);
     const a = autorizar();
-    const ok = approveByAuthorizationCommand(paths(), { id: ID, stage: "plan" }, { ahora: AHORA, env: {} });
+    const ok = approveByAuthorizationCommand(
+      paths(),
+      { id: ID, stage: "plan" },
+      { ahora: AHORA, env: {} },
+    );
     expect(ok.exitCode).toBe(0);
     expect(ok.stdout).toContain(a.id);
     expect(ok.stdout).toMatch(/Cupo que queda hoy/);
     expect(approveByAuthorizationCommand(paths(), { stage: "plan" }).exitCode).toBe(2);
     expect(USAGE).toContain("approve-by-authorization --id <ID> --stage analysis|plan");
-    expect(parseArgs(["approve-by-authorization", "--id", ID, "--stage", "plan"]).flags).toEqual({ id: ID, stage: "plan" });
+    expect(
+      parseArgs(["approve-by-authorization", "--id", ID, "--stage", "plan"]).flags,
+    ).toEqual({ id: ID, stage: "plan" });
   });
 
   describe("R-APRO-007. las aprobaciones automáticas son visibles y reversibles", () => {
@@ -967,7 +1277,12 @@ describe("aprobar por autorización", () => {
         paths(),
         id,
         "plan-approved",
-        JSON.stringify({ actor: "Juan Andrade", source: "cli", quote: "apruebo", planHash: hashDelPlan(doc(id)) }),
+        JSON.stringify({
+          actor: "Juan Andrade",
+          source: "cli",
+          quote: "apruebo",
+          planHash: hashDelPlan(doc(id)),
+        }),
         () => AHORA,
       );
 
@@ -982,7 +1297,9 @@ describe("aprobar por autorización", () => {
 
     it("C1. lista la aprobación con ticket, etapa, autorización, recibo y modo", () => {
       const { a, recibo } = conUnaAutomatica();
-      const { aprobaciones, omitidos } = listarAprobacionesAutomaticas(paths(), { ahora: AHORA });
+      const { aprobaciones, omitidos } = listarAprobacionesAutomaticas(paths(), {
+        ahora: AHORA,
+      });
       expect(omitidos).toEqual([]);
       expect(aprobaciones).toHaveLength(1);
       expect(aprobaciones[0]).toMatchObject({
@@ -1002,26 +1319,62 @@ describe("aprobar por autorización", () => {
       humana(`FEATURE-${SUFIJO}`);
       const { aprobaciones } = listarAprobacionesAutomaticas(paths(), { ahora: AHORA });
       expect(aprobaciones.map((x) => x.ticket)).toEqual([ID]);
-      expect(contarAprobacionesDelDia(paths(), "2026-10-07")).toEqual({ automaticas: 1, humanas: 1 });
-      expect(contarAprobacionesDelDia(paths(), "2026-10-06")).toEqual({ automaticas: 0, humanas: 0 });
+      expect(contarAprobacionesDelDia(paths(), "2026-10-07")).toEqual({
+        automaticas: 1,
+        humanas: 1,
+      });
+      expect(contarAprobacionesDelDia(paths(), "2026-10-06")).toEqual({
+        automaticas: 0,
+        humanas: 0,
+      });
     });
 
     it("C3. tras revocar, la aprobación sigue listada con su atribución y el estado revocada", () => {
       const { a } = conUnaAutomatica();
-      revocarAutorizacionDeAprobacion({ root, id: a.id, actor: "Juan Andrade", reason: "ya no", source: "cli", ahora: new Date(AHORA.getTime() + 1000), env: {} });
-      const { aprobaciones } = listarAprobacionesAutomaticas(paths(), { ahora: new Date(AHORA.getTime() + 2000) });
+      revocarAutorizacionDeAprobacion({
+        root,
+        id: a.id,
+        actor: "Juan Andrade",
+        reason: "ya no",
+        source: "cli",
+        ahora: new Date(AHORA.getTime() + 1000),
+        env: {},
+      });
+      const { aprobaciones } = listarAprobacionesAutomaticas(paths(), {
+        ahora: new Date(AHORA.getTime() + 2000),
+      });
       expect(aprobaciones).toHaveLength(1);
-      expect(aprobaciones[0]).toMatchObject({ autorizacion: a.id, hash: a.hash, estado: "revocada" });
+      expect(aprobaciones[0]).toMatchObject({
+        autorizacion: a.id,
+        hash: a.hash,
+        estado: "revocada",
+      });
     });
 
     it("C4. tras revocar, aprobarPorAutorizacion rechaza una aprobación posterior con ella", () => {
       const { a } = conUnaAutomatica();
       // Control: con la autorización vigente, la elegibilidad de la etapa analysis la cita.
       expect(evaluar({ etapa: "analysis" }).autorizacion?.id).toBe(a.id);
-      revocarAutorizacionDeAprobacion({ root, id: a.id, actor: "Juan Andrade", reason: "ya no", source: "cli", ahora: new Date(AHORA.getTime() + 1000), env: {} });
+      revocarAutorizacionDeAprobacion({
+        root,
+        id: a.id,
+        actor: "Juan Andrade",
+        reason: "ya no",
+        source: "cli",
+        ahora: new Date(AHORA.getTime() + 1000),
+        env: {},
+      });
       const despues = new Date(AHORA.getTime() + 2000);
       const usosAntes = usos();
-      expect(() => aprobarPorAutorizacion({ paths: paths(), ticketId: ID, etapa: "analysis", ahora: despues, env: {} })).toThrow(/autorizaci/i);
+      expect(() =>
+        aprobarPorAutorizacion({
+          paths: paths(),
+          ticketId: ID,
+          etapa: "analysis",
+          ahora: despues,
+          env: {},
+        }),
+      ).toThrow(/autorizaci/i);
       expect(usos()).toBe(usosAntes);
       expect(eventos(ID, "analysis-approved")).toHaveLength(0);
     });
@@ -1043,16 +1396,30 @@ describe("aprobar por autorización", () => {
       conUnaAutomatica();
       const roto = join(root, "tickets", "2026", "BUGFIX-ROTO-20261007");
       mkdirSync(roto, { recursive: true });
-      writeFileSync(join(roto, "ticket.md"), "---\nschema_version: 2\n---\n## Eventos\n\n```json\n{no es json\n```\n", "utf8");
-      const { aprobaciones, omitidos } = listarAprobacionesAutomaticas(paths(), { ahora: AHORA });
+      writeFileSync(
+        join(roto, "ticket.md"),
+        "---\nschema_version: 2\n---\n## Eventos\n\n```json\n{no es json\n```\n",
+        "utf8",
+      );
+      const { aprobaciones, omitidos } = listarAprobacionesAutomaticas(paths(), {
+        ahora: AHORA,
+      });
       expect(aprobaciones).toHaveLength(1);
       expect(omitidos).toEqual(["BUGFIX-ROTO-20261007"]);
-      expect(approvalAuthorizationApprovalsCommand(paths()).stdout).toContain("Se omitieron 1 ticket(s)");
+      expect(approvalAuthorizationApprovalsCommand(paths()).stdout).toContain(
+        "Se omitieron 1 ticket(s)",
+      );
     });
   });
 });
 
 /** Escribe a mano un evento plan-approved, como lo haría quien intenta forjar la aprobación. */
 function forjarEvento(id: string, datos: Record<string, string>): void {
-  appendEvent({ root, ticketsDir: "tickets" }, id, "plan-approved", JSON.stringify(datos), () => AHORA);
+  appendEvent(
+    { root, ticketsDir: "tickets" },
+    id,
+    "plan-approved",
+    JSON.stringify(datos),
+    () => AHORA,
+  );
 }

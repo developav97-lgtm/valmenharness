@@ -121,7 +121,12 @@ import {
   type ExecutionActivityState,
 } from "@valmen/engine";
 import { GATES, gateFor, gateById, SIN_INTERFAZ } from "@valmen/gate";
-import { EJECUTORES_CON_PERFIL, architectRoutingFor, cascadeRoutingFor, gateRoutingFor } from "@valmen/adapter";
+import {
+  EJECUTORES_CON_PERFIL,
+  architectRoutingFor,
+  cascadeRoutingFor,
+  gateRoutingFor,
+} from "@valmen/adapter";
 import { apiKeyWithPrecedence, transportById } from "@valmen/credentials";
 import {
   advanceDelegated,
@@ -307,20 +312,36 @@ const DEFINICIONES: readonly ToolDefinition[] = [
     name: "registrar_actividad_ejecucion",
     annotations: ANEXA,
     title: "Registrar actividad de una ejecución",
-    description: "Anexa un hecho de actividad de una ejecución directa al proyecto autorizado. No modifica el workflow, gates ni QA del ticket.",
+    description:
+      "Anexa un hecho de actividad de una ejecución directa al proyecto autorizado. No modifica el workflow, gates ni QA del ticket.",
     inputSchema: {
       type: "object",
       properties: {
-        proyecto: { type: "string", description: "project-id declarado en el binding local." },
+        proyecto: {
+          type: "string",
+          description: "project-id declarado en el binding local.",
+        },
         ticket: { type: "string", description: "Identificador del ticket ejecutado." },
-        ejecucion: { type: "string", description: "Identificador portable de la ejecución." },
+        ejecucion: {
+          type: "string",
+          description: "Identificador portable de la ejecución.",
+        },
         intento: { type: "string", description: "Identificador del intento." },
         evento: { type: "string", description: "Identificador idempotente del evento." },
         estado: { type: "string", enum: [...EXECUTION_ACTIVITY_STATES] },
         fuente: { type: "string", description: "Origen que observó la actividad." },
         ocurrido_en: { type: "string", description: "Fecha ISO 8601 del hecho." },
       },
-      required: ["proyecto", "ticket", "ejecucion", "intento", "evento", "estado", "fuente", "ocurrido_en"],
+      required: [
+        "proyecto",
+        "ticket",
+        "ejecucion",
+        "intento",
+        "evento",
+        "estado",
+        "fuente",
+        "ocurrido_en",
+      ],
       additionalProperties: false,
     },
   },
@@ -328,25 +349,36 @@ const DEFINICIONES: readonly ToolDefinition[] = [
     name: "ver_actividad_ejecucion",
     annotations: SOLO_LEE,
     title: "Ver actividad de una ejecución",
-    description: "Lee la actividad persistida de una ejecución directa en el proyecto autorizado.",
+    description:
+      "Lee la actividad persistida de una ejecución directa en el proyecto autorizado.",
     inputSchema: {
       type: "object",
       properties: {
-        proyecto: { type: "string" }, ticket: { type: "string" }, ejecucion: { type: "string" },
+        proyecto: { type: "string" },
+        ticket: { type: "string" },
+        ejecucion: { type: "string" },
         intento: { type: "string", description: "Limita la lectura a un intento." },
       },
-      required: ["proyecto", "ticket", "ejecucion"], additionalProperties: false,
+      required: ["proyecto", "ticket", "ejecucion"],
+      additionalProperties: false,
     },
   },
   {
     name: "ver_jornadas",
     annotations: SOLO_LEE,
     title: "Ver hoja de ruta de jornadas",
-    description: "Lee las jornadas persistidas del proyecto autorizado sin iniciar ni autorizar despacho.",
+    description:
+      "Lee las jornadas persistidas del proyecto autorizado sin iniciar ni autorizar despacho.",
     inputSchema: {
       type: "object",
-      properties: { proyecto: { type: "string", description: "project-id declarado en el binding local." } },
-      required: ["proyecto"], additionalProperties: false,
+      properties: {
+        proyecto: {
+          type: "string",
+          description: "project-id declarado en el binding local.",
+        },
+      },
+      required: ["proyecto"],
+      additionalProperties: false,
     },
   },
   {
@@ -384,22 +416,48 @@ const DEFINICIONES: readonly ToolDefinition[] = [
     inputSchema: {
       type: "object",
       properties: {
-        proyecto: { type: "string", description: "project-id declarado en el binding local." },
-        feature: { type: "string", description: "Slug de la feature cuyos tickets entran, en orden de dependencias." },
-        tickets: { type: "array", items: { type: "string" }, description: "Alternativa a `feature`: ids de tickets en el orden dado." },
+        proyecto: {
+          type: "string",
+          description: "project-id declarado en el binding local.",
+        },
+        feature: {
+          type: "string",
+          description: "Slug de la feature cuyos tickets entran, en orden de dependencias.",
+        },
+        tickets: {
+          type: "array",
+          items: { type: "string" },
+          description: "Alternativa a `feature`: ids de tickets en el orden dado.",
+        },
         maximo: { type: "number", description: "Cuántos tickets entran al día." },
-        destino: { type: "string", description: "Canal del aviso del plan, por ejemplo `telegram`." },
+        destino: {
+          type: "string",
+          description: "Canal del aviso del plan, por ejemplo `telegram`.",
+        },
       },
-      required: ["proyecto"], additionalProperties: false,
+      required: ["proyecto"],
+      additionalProperties: false,
     },
     outputSchema: {
       type: "object",
       properties: {
         jornada: { type: "string", description: "Id de la jornada armada." },
-        revisada: { type: "boolean", description: "`true` si ya existía la del día y se revisó." },
-        tickets: { type: "array", description: "Los tickets del día, en orden, con sus dependencias." },
-        aviso: { type: ["object", "null"], description: "El resultado del envío, o `null` si no se pidió." },
-        heredados: { type: ["object", "null"], description: "Los tickets pendientes heredados de la jornada anterior, o `null`." },
+        revisada: {
+          type: "boolean",
+          description: "`true` si ya existía la del día y se revisó.",
+        },
+        tickets: {
+          type: "array",
+          description: "Los tickets del día, en orden, con sus dependencias.",
+        },
+        aviso: {
+          type: ["object", "null"],
+          description: "El resultado del envío, o `null` si no se pidió.",
+        },
+        heredados: {
+          type: ["object", "null"],
+          description: "Los tickets pendientes heredados de la jornada anterior, o `null`.",
+        },
       },
       required: ["jornada", "revisada", "tickets", "aviso"],
       additionalProperties: false,
@@ -968,11 +1026,13 @@ const DEFINICIONES: readonly ToolDefinition[] = [
         motivo: { type: "string", description: "Por qué, en una línea." },
         en_banda: {
           type: "array",
-          description: "Las proposiciones en banda de revisión, con su valor (hasta cinco).",
+          description:
+            "Las proposiciones en banda de revisión, con su valor (hasta cinco).",
         },
         recibo_id: {
           type: ["string", "null"],
-          description: "El id del recibo, para pedirlo con `ver_recibo`. `null` si no se pudo leer.",
+          description:
+            "El id del recibo, para pedirlo con `ver_recibo`. `null` si no se pudo leer.",
         },
       },
       required: ["resultado", "motivo", "en_banda", "recibo_id"],
@@ -993,7 +1053,8 @@ const DEFINICIONES: readonly ToolDefinition[] = [
         id: { type: "string", description: "Identificador del ticket." },
         recibo: {
           type: "string",
-          description: "Id del recibo (`recibo_id` del resumen). Sin él, el último del ticket.",
+          description:
+            "Id del recibo (`recibo_id` del resumen). Sin él, el último del ticket.",
         },
       },
       required: ["id"],
@@ -1001,7 +1062,10 @@ const DEFINICIONES: readonly ToolDefinition[] = [
     outputSchema: {
       type: "object",
       properties: {
-        recibo: { type: ["object", "null"], description: "El recibo completo, o `null` si no existe." },
+        recibo: {
+          type: ["object", "null"],
+          description: "El recibo completo, o `null` si no existe.",
+        },
       },
       required: ["recibo"],
       additionalProperties: false,
@@ -1240,7 +1304,8 @@ const DEFINICIONES: readonly ToolDefinition[] = [
         },
         evaluator: {
           type: "string",
-          description: "Con `umbrales`, el evaluador a calibrar: command, jev, llm-judge o cascade.",
+          description:
+            "Con `umbrales`, el evaluador a calibrar: command, jev, llm-judge o cascade.",
         },
       },
       required: ["gate"],
@@ -1666,7 +1731,8 @@ const DEFINICIONES: readonly ToolDefinition[] = [
         },
         staged: {
           type: "boolean",
-          description: "Mirar solo lo que está en el índice (`git add`), no todo el cambio.",
+          description:
+            "Mirar solo lo que está en el índice (`git add`), no todo el cambio.",
         },
       },
       required: ["id"],
@@ -1961,7 +2027,10 @@ const DEFINICIONES: readonly ToolDefinition[] = [
           type: "string",
           description: "Qué es y para qué lo usa quien implementa o valida.",
         },
-        nombre: { type: "string", description: "Nombre dentro de assets/; por defecto el del archivo." },
+        nombre: {
+          type: "string",
+          description: "Nombre dentro de assets/; por defecto el del archivo.",
+        },
         origen: { type: "string", description: "El enlace del que salió, si lo hubo." },
       },
       required: ["slug", "archivo", "descripcion"],
@@ -1981,7 +2050,10 @@ const DEFINICIONES: readonly ToolDefinition[] = [
     inputSchema: conRoot({
       properties: {
         slug: { type: "string", description: "El identificador de la feature." },
-        a: { type: "string", description: "El estado destino, como `in_progress` o `complete`." },
+        a: {
+          type: "string",
+          description: "El estado destino, como `in_progress` o `complete`.",
+        },
         verify: { type: "boolean", description: "Escribir verify.md en vez de avanzar." },
         rewrite: { type: "boolean", description: "Regenerar un verify.md existente." },
         pendientes_del_po: {
@@ -2007,8 +2079,15 @@ const DEFINICIONES: readonly ToolDefinition[] = [
     inputSchema: conRoot({
       properties: {
         feature: { type: "string", description: "La feature delegada." },
-        tickets: { type: "array", items: { type: "string" }, description: "Los tickets delegados, en orden." },
-        palabras: { type: "string", description: "Las palabras del PO, tal como las dijo." },
+        tickets: {
+          type: "array",
+          items: { type: "string" },
+          description: "Los tickets delegados, en orden.",
+        },
+        palabras: {
+          type: "string",
+          description: "Las palabras del PO, tal como las dijo.",
+        },
         actor: { type: "string", description: "Quién es el PO que delega." },
       },
       required: ["palabras"],
@@ -2025,8 +2104,14 @@ const DEFINICIONES: readonly ToolDefinition[] = [
       "más reciente.",
     inputSchema: conRoot({
       properties: {
-        delegacion: { type: "string", description: "El identificador DEL-…; por defecto, la última." },
-        solo_siguiente: { type: "boolean", description: "Devolver únicamente el ticket que sigue." },
+        delegacion: {
+          type: "string",
+          description: "El identificador DEL-…; por defecto, la última.",
+        },
+        solo_siguiente: {
+          type: "boolean",
+          description: "Devolver únicamente el ticket que sigue.",
+        },
       },
     }),
   },
@@ -2067,17 +2152,37 @@ const DEFINICIONES: readonly ToolDefinition[] = [
       properties: {
         id: { type: "string", description: "El identificador del ticket." },
         delegacion: { type: "string", description: "El DEL-…; por defecto, la última." },
-        archivos: { type: "array", items: { type: "string" }, description: "Archivos de la implementación." },
+        archivos: {
+          type: "array",
+          items: { type: "string" },
+          description: "Archivos de la implementación.",
+        },
         ambiente: { type: "string", description: "Dónde se probó." },
         pruebas: { type: "string", description: "Qué se ejecutó y qué dio, en una línea." },
-        pruebas_ok: { type: "boolean", description: "Las pruebas dieron el resultado esperado." },
+        pruebas_ok: {
+          type: "boolean",
+          description: "Las pruebas dieron el resultado esperado.",
+        },
         resumen_tecnico: { type: "string" },
         resumen_funcional: { type: "string" },
         impacto_release: { type: "string" },
-        visual: { type: "boolean", description: "Es una revisión visual: queda esperando al PO." },
-        confirmacion_po: { type: "string", description: "Las palabras literales del PO al confirmar." },
+        visual: {
+          type: "boolean",
+          description: "Es una revisión visual: queda esperando al PO.",
+        },
+        confirmacion_po: {
+          type: "string",
+          description: "Las palabras literales del PO al confirmar.",
+        },
       },
-      required: ["id", "ambiente", "pruebas", "resumen_tecnico", "resumen_funcional", "impacto_release"],
+      required: [
+        "id",
+        "ambiente",
+        "pruebas",
+        "resumen_tecnico",
+        "resumen_funcional",
+        "impacto_release",
+      ],
     }),
   },
   {
@@ -2093,7 +2198,11 @@ const DEFINICIONES: readonly ToolDefinition[] = [
       "comando. Si algo falta, la compuerta no llamaría al evaluador. No escribe nada.",
     inputSchema: conRoot({
       properties: {
-        gate: { type: "string", enum: ["analysis", "plan"], description: "La compuerta que se va a pedir." },
+        gate: {
+          type: "string",
+          enum: ["analysis", "plan"],
+          description: "La compuerta que se va a pedir.",
+        },
         id: { type: "string", description: "Identificador del ticket." },
       },
       required: ["gate", "id"],
@@ -2158,7 +2267,8 @@ export const TOOLS: readonly ToolDefinition[] = DEFINICIONES.map((definicion) =>
         ...propiedades,
         siguiente_paso: {
           type: "string",
-          description: "Qué hacer a continuación; un cliente que solo lee este dato lo tiene aquí.",
+          description:
+            "Qué hacer a continuación; un cliente que solo lee este dato lo tiene aquí.",
         },
       },
     },
@@ -2403,13 +2513,9 @@ function correrCompuerta(
     ...(contexto.judge === undefined ? {} : { judge: contexto.judge }),
     ...(contexto.now === undefined ? {} : { now: contexto.now }),
     ...(routing.evaluatorModel === "" ? {} : { model: routing.evaluatorModel }),
-    ...(routing.evaluatorProvider === ""
-      ? {}
-      : { provider: routing.evaluatorProvider }),
+    ...(routing.evaluatorProvider === "" ? {} : { provider: routing.evaluatorProvider }),
     ...(routing.probabilistic ? {} : { semantic: "llm-judge" as const }),
-    ...(routing.evaluatorEffort === "auto"
-      ? {}
-      : { effort: routing.evaluatorEffort }),
+    ...(routing.evaluatorEffort === "auto" ? {} : { effort: routing.evaluatorEffort }),
     ...(routing.judgeModel === "" ? {} : { judgeModel: routing.judgeModel }),
     ...(cascade === undefined ? {} : { cascade }),
     ...(presupuesto.note === null ? {} : { notes: [presupuesto.note] }),
@@ -2446,7 +2552,11 @@ function resumenDeRecibo(recibo: {
   readonly id: string;
   readonly outcome: string;
   readonly reason: string;
-  readonly propositions: readonly { readonly id: string; readonly value: number; readonly inBand: boolean }[];
+  readonly propositions: readonly {
+    readonly id: string;
+    readonly value: number;
+    readonly inBand: boolean;
+  }[];
 }): Record<string, unknown> {
   const motivo = recibo.reason.replace(/\s+/g, " ").trim();
   return {
@@ -2455,7 +2565,10 @@ function resumenDeRecibo(recibo: {
     en_banda: recibo.propositions
       .filter((proposicion) => proposicion.inBand)
       .slice(0, MAX_EN_BANDA)
-      .map((proposicion) => ({ id: proposicion.id, valor: Number(proposicion.value.toFixed(2)) })),
+      .map((proposicion) => ({
+        id: proposicion.id,
+        valor: Number(proposicion.value.toFixed(2)),
+      })),
     siguiente_paso: siguientePasoDeCompuerta(recibo.outcome),
     recibo_id: recibo.id,
   };
@@ -2463,19 +2576,25 @@ function resumenDeRecibo(recibo: {
 
 /** El siguiente paso de las herramientas cuyo dato no lo decide el resultado. */
 const SIGUIENTE_PASO: Readonly<Record<string, string>> = {
-  crear_ticket: "Abre la ruta del ticket y escribe `## Descripción funcional` y `## Diagnóstico`.",
+  crear_ticket:
+    "Abre la ruta del ticket y escribe `## Descripción funcional` y `## Diagnóstico`.",
   ver_ticket: "Lee las secciones que faltan y continúa con `reanudar_ticket`.",
   listar_tickets: "Elige un ticket y llama a `reanudar_ticket` con su id.",
   reanudar_ticket: "Haz el paso que devuelve y vuelve a llamar a `reanudar_ticket`.",
   mover_ticket: "Llama a `reanudar_ticket` para el paso del estado nuevo.",
-  cascada_verificada: "Usa el resultado de la cascada y, si cierra una transición, evalúa la compuerta.",
-  simular_compuerta: "Si la simulación sale bien, evalúa la compuerta con `evaluar_compuerta`.",
-  revision_previa: "Corrige los hallazgos y evalúa la compuerta; sin hallazgos, evalúala tal cual.",
-  precision_compuertas: "Si hace falta ajustar un umbral, propónlo con `valmen thresholds`; lo decide una persona.",
+  cascada_verificada:
+    "Usa el resultado de la cascada y, si cierra una transición, evalúa la compuerta.",
+  simular_compuerta:
+    "Si la simulación sale bien, evalúa la compuerta con `evaluar_compuerta`.",
+  revision_previa:
+    "Corrige los hallazgos y evalúa la compuerta; sin hallazgos, evalúala tal cual.",
+  precision_compuertas:
+    "Si hace falta ajustar un umbral, propónlo con `valmen thresholds`; lo decide una persona.",
   iniciar_qa: "Registra el retest con `anotar_retest` y cierra con `cerrar_qa`.",
   anotar_retest: "Cierra el ciclo con `cerrar_qa`.",
   cerrar_qa: "Prepara el cierre con `preparar_cierre`.",
-  preparar_cierre: "Registra el consumo con `registrar_consumo_ia` y pasa el ticket a cerrado.",
+  preparar_cierre:
+    "Registra el consumo con `registrar_consumo_ia` y pasa el ticket a cerrado.",
   registrar_consumo_ia: "Mueve el ticket a `closed` con `mover_ticket`.",
   materializar_feature: "Recorre los tickets de la feature con `reanudar_ticket`.",
   avanzar_feature: "Llama a `ver_features` para el siguiente tramo.",
@@ -2499,12 +2618,18 @@ export async function callTool(
   args: Record<string, unknown>,
 ): Promise<ToolResult> {
   const resultado = await ejecutarHerramienta(contexto, nombre, args);
-  if (resultado.data === undefined || typeof resultado.data["siguiente_paso"] === "string") {
+  if (
+    resultado.data === undefined ||
+    typeof resultado.data["siguiente_paso"] === "string"
+  ) {
     return resultado;
   }
   return {
     ...resultado,
-    data: { ...resultado.data, siguiente_paso: SIGUIENTE_PASO[nombre] ?? SIGUIENTE_PASO_GENERICO },
+    data: {
+      ...resultado.data,
+      siguiente_paso: SIGUIENTE_PASO[nombre] ?? SIGUIENTE_PASO_GENERICO,
+    },
   };
 }
 
@@ -2519,32 +2644,68 @@ async function ejecutarHerramienta(
     switch (nombre) {
       case "registrar_actividad_ejecucion": {
         const projectId = texto(args, "proyecto") as string;
-        const project = resolveAuthorizedProject({ projectId, ...(contexto.home === undefined ? {} : { home: contexto.home }) });
+        const project = resolveAuthorizedProject({
+          projectId,
+          ...(contexto.home === undefined ? {} : { home: contexto.home }),
+        });
         const state = texto(args, "estado") as string;
-        if (!EXECUTION_ACTIVITY_STATES.includes(state as ExecutionActivityState)) throw new Error(`estado debe ser uno de: ${EXECUTION_ACTIVITY_STATES.join(", ")}.`);
+        if (!EXECUTION_ACTIVITY_STATES.includes(state as ExecutionActivityState))
+          throw new Error(
+            `estado debe ser uno de: ${EXECUTION_ACTIVITY_STATES.join(", ")}.`,
+          );
         const event = createExecutionContract(project).recordActivity({
           eventId: texto(args, "evento") as string,
-          identity: createExecutionIdentity({ projectId, ticketId: texto(args, "ticket") as string, executionId: texto(args, "ejecucion") as string }),
-          attemptId: texto(args, "intento") as string, state: state as ExecutionActivityState,
-          source: texto(args, "fuente") as string, occurredAt: texto(args, "ocurrido_en") as string,
+          identity: createExecutionIdentity({
+            projectId,
+            ticketId: texto(args, "ticket") as string,
+            executionId: texto(args, "ejecucion") as string,
+          }),
+          attemptId: texto(args, "intento") as string,
+          state: state as ExecutionActivityState,
+          source: texto(args, "fuente") as string,
+          occurredAt: texto(args, "ocurrido_en") as string,
         });
-        return bien(event.appended ? `Actividad registrada: ${state}.` : `Actividad ya registrada: ${state}.`, { cursor: event.event.cursor });
+        return bien(
+          event.appended
+            ? `Actividad registrada: ${state}.`
+            : `Actividad ya registrada: ${state}.`,
+          { cursor: event.event.cursor },
+        );
       }
       case "ver_actividad_ejecucion": {
         const projectId = texto(args, "proyecto") as string;
-        const project = resolveAuthorizedProject({ projectId, ...(contexto.home === undefined ? {} : { home: contexto.home }) });
+        const project = resolveAuthorizedProject({
+          projectId,
+          ...(contexto.home === undefined ? {} : { home: contexto.home }),
+        });
         const activity = createExecutionContract(project).readActivity(
-          createExecutionIdentity({ projectId, ticketId: texto(args, "ticket") as string, executionId: texto(args, "ejecucion") as string }),
+          createExecutionIdentity({
+            projectId,
+            ticketId: texto(args, "ticket") as string,
+            executionId: texto(args, "ejecucion") as string,
+          }),
           texto(args, "intento", false),
         );
-        return bien(activity.length === 0 ? "No hay actividad registrada." : activity.map((item) => `${item.cursor}\t${item.state}\t${item.attemptId}`).join("\n"), { actividad: [...activity] });
+        return bien(
+          activity.length === 0
+            ? "No hay actividad registrada."
+            : activity
+                .map((item) => `${item.cursor}\t${item.state}\t${item.attemptId}`)
+                .join("\n"),
+          { actividad: [...activity] },
+        );
       }
       case "ver_jornadas": {
         const projectId = texto(args, "proyecto") as string;
-        const project = resolveAuthorizedProject({ projectId, ...(contexto.home === undefined ? {} : { home: contexto.home }) });
+        const project = resolveAuthorizedProject({
+          projectId,
+          ...(contexto.home === undefined ? {} : { home: contexto.home }),
+        });
         const roadmap = readJourneyRoadmap(project);
         return bien(
-          roadmap.journeys.length === 0 ? "No hay jornadas registradas." : `Jornadas: ${roadmap.journeys.length}.`,
+          roadmap.journeys.length === 0
+            ? "No hay jornadas registradas."
+            : `Jornadas: ${roadmap.journeys.length}.`,
           { jornadas: roadmap },
         );
       }
@@ -2553,11 +2714,19 @@ async function ejecutarHerramienta(
         return bien(
           todas.length === 0
             ? "No hay autorizaciones de QA por agente."
-            : todas.map((a) => `${a.id} · ${a.estado} · ${a.types.join(",")} · ${a.modules.join(",")} · ${a.actor}: «${a.quote}»`).join("\n"),
+            : todas
+                .map(
+                  (a) =>
+                    `${a.id} · ${a.estado} · ${a.types.join(",")} · ${a.modules.join(",")} · ${a.actor}: «${a.quote}»`,
+                )
+                .join("\n"),
         );
       }
       case "ver_autorizaciones_aprobacion": {
-        const todas = leerAutorizacionesDeAprobacion(paths.root, contexto.now?.() ?? new Date());
+        const todas = leerAutorizacionesDeAprobacion(
+          paths.root,
+          contexto.now?.() ?? new Date(),
+        );
         return bien(
           todas.length === 0
             ? "No hay autorizaciones de aprobación automática."
@@ -2565,19 +2734,28 @@ async function ejecutarHerramienta(
                 .map(
                   (a) =>
                     `${a.id} · ${a.estado} · ${a.types.join(",")} · ${a.modules.join(",")} · modo ${a.mode} · ${a.actor}: «${a.quote}»` +
-                    (a.estado === "vigente" ? `\n    revertir: ${comandoDeRevocacionDeAprobacion(a.id)}` : ""),
+                    (a.estado === "vigente"
+                      ? `\n    revertir: ${comandoDeRevocacionDeAprobacion(a.id)}`
+                      : ""),
                 )
                 .join("\n"),
         );
       }
       case "armar_jornada": {
         const projectId = texto(args, "proyecto") as string;
-        const project = resolveAuthorizedProject({ projectId, ...(contexto.home === undefined ? {} : { home: contexto.home }) });
+        const project = resolveAuthorizedProject({
+          projectId,
+          ...(contexto.home === undefined ? {} : { home: contexto.home }),
+        });
         const destino = texto(args, "destino", false);
-        const lista = Array.isArray(args["tickets"]) ? (args["tickets"] as unknown[]).map(String) : undefined;
+        const lista = Array.isArray(args["tickets"])
+          ? (args["tickets"] as unknown[]).map(String)
+          : undefined;
         const jornada = armarJornada({
           project,
-          ...(texto(args, "feature", false) === undefined ? {} : { feature: texto(args, "feature", false) as string }),
+          ...(texto(args, "feature", false) === undefined
+            ? {}
+            : { feature: texto(args, "feature", false) as string }),
           ...(lista === undefined ? {} : { tickets: lista }),
           ...(typeof args["maximo"] === "number" ? { maximo: args["maximo"] } : {}),
           ...(contexto.now === undefined ? {} : { ahora: contexto.now }),
@@ -2596,7 +2774,9 @@ async function ejecutarHerramienta(
         });
         return bien(
           `${jornada.plan}\n` +
-            (jornada.omitidos.length === 0 ? "" : `Omitidos: ${jornada.omitidos.join("; ")}.\n`) +
+            (jornada.omitidos.length === 0
+              ? ""
+              : `Omitidos: ${jornada.omitidos.join("; ")}.\n`) +
             (jornada.aviso === null
               ? "Sin destino: no se envió ningún aviso."
               : jornada.aviso.delivered
@@ -2607,7 +2787,13 @@ async function ejecutarHerramienta(
             revisada: jornada.revisada,
             tickets: jornada.tickets.map((t) => ({ ...t })),
             aviso: jornada.aviso === null ? null : { ...jornada.aviso },
-            heredados: jornada.heredados === null ? null : { desde: jornada.heredados.desde, tickets: [...jornada.heredados.tickets] },
+            heredados:
+              jornada.heredados === null
+                ? null
+                : {
+                    desde: jornada.heredados.desde,
+                    tickets: [...jornada.heredados.tickets],
+                  },
             siguiente_paso:
               "La jornada está escrita: lista la ola con `valmen journey next --wave` (la sesión orquestadora la reparte) o revisa la hoja de ruta con `ver_jornadas`.",
           },
@@ -2839,7 +3025,11 @@ async function ejecutarHerramienta(
         if (args["umbrales"] === true) {
           return bien(
             renderProposal(
-              proposeThresholds(readCurrentReceipts(paths), gateId, texto(args, "evaluator", false)),
+              proposeThresholds(
+                readCurrentReceipts(paths),
+                gateId,
+                texto(args, "evaluator", false),
+              ),
             ),
           );
         }
@@ -3135,7 +3325,9 @@ async function ejecutarHerramienta(
           staged: args["staged"] === true,
           now: contexto.now,
         });
-        return bien(`${revision.descripcion}\n${revision.evidencia ?? "No se anexó evidencia."}`);
+        return bien(
+          `${revision.descripcion}\n${revision.evidencia ?? "No se anexó evidencia."}`,
+        );
       }
 
       case "revisar_presentacion": {
@@ -3191,15 +3383,24 @@ async function ejecutarHerramienta(
       }
 
       case "precision_compuertas": {
-        const opciones = { desde: texto(args, "desde", false), hasta: texto(args, "hasta", false) };
-        return bien(renderPrecision(precisionReport(readCurrentReceipts(paths), opciones), opciones));
+        const opciones = {
+          desde: texto(args, "desde", false),
+          hasta: texto(args, "hasta", false),
+        };
+        return bien(
+          renderPrecision(precisionReport(readCurrentReceipts(paths), opciones), opciones),
+        );
       }
 
       case "revision_previa": {
         const ticket = findTicket(paths, texto(args, "id") as string);
         if (ticket === undefined) return mal("La ruta canónica solicitada no existe.");
         const gateId = texto(args, "gate") as string;
-        const revision = reviewBeforeGate({ root: paths.root, ticketText: ticket.text, gateId });
+        const revision = reviewBeforeGate({
+          root: paths.root,
+          ticketText: ticket.text,
+          gateId,
+        });
         return bien(renderPreReview(gateId, texto(args, "id") as string, revision), {
           hallazgos: revision.findings.length,
         });
@@ -3215,13 +3416,17 @@ async function ejecutarHerramienta(
           originUrl: texto(args, "origen", false),
         });
         if (alreadyPresent) {
-          return bien(`${asset.path} ya estaba con el mismo contenido: no se escribió nada.`);
+          return bien(
+            `${asset.path} ya estaba con el mismo contenido: no se escribió nada.`,
+          );
         }
         const slugAnexo = texto(args, "slug") as string;
         const refresco = refreshAfterAttach(paths, slugAnexo);
         return bien(
           `Adjunto anexado: ${asset.path} (${asset.kind}, ${asset.bytes} bytes, sha256 ${asset.sha256}).` +
-            (refresco === null ? "" : `\n${renderDesignReferencesRefresh(slugAnexo, refresco)}`),
+            (refresco === null
+              ? ""
+              : `\n${renderDesignReferencesRefresh(slugAnexo, refresco)}`),
         );
       }
 
@@ -3235,7 +3440,11 @@ async function ejecutarHerramienta(
         const destino = texto(args, "a") as string;
         const fila =
           destino === "complete"
-            ? completeFeature({ paths, slug, allowPendingPo: args["pendientes_del_po"] === true })
+            ? completeFeature({
+                paths,
+                slug,
+                allowPendingPo: args["pendientes_del_po"] === true,
+              })
             : advanceFeature({ root: paths.root, slug, to: destino });
         return bien(
           `Feature ${slug}: ${fila.state}${fila.via === undefined || fila.via.length === 0 ? "" : ` (pasó por ${fila.via.join(", ")})`}.`,
@@ -3246,7 +3455,9 @@ async function ejecutarHerramienta(
         const d = grantDelegation({
           paths,
           feature: texto(args, "feature", false),
-          tickets: Array.isArray(args["tickets"]) ? (args["tickets"] as unknown[]).map(String) : undefined,
+          tickets: Array.isArray(args["tickets"])
+            ? (args["tickets"] as unknown[]).map(String)
+            : undefined,
           quote: texto(args, "palabras") as string,
           actor: texto(args, "actor", false),
         });
@@ -3262,7 +3473,9 @@ async function ejecutarHerramienta(
         const d = resolveDelegation(paths.root, texto(args, "delegacion", false));
         const bruto = texto(args, "evaluator", false);
         if (bruto !== "" && bruto !== undefined && !isEvaluatorId(bruto)) {
-          return mal(`Evaluador desconocido: ${String(bruto)}. Use ${EVALUATOR_IDS.join(", ")}.`);
+          return mal(
+            `Evaluador desconocido: ${String(bruto)}. Use ${EVALUATOR_IDS.join(", ")}.`,
+          );
         }
         const evaluator = isEvaluatorId(bruto) ? bruto : undefined;
         const resultado = await advanceDelegated(
@@ -3307,7 +3520,9 @@ async function ejecutarHerramienta(
             model: undefined,
             notes: undefined,
           },
-          delegationDeps(async (gateId, ticketId) => correrCompuerta(contexto, gateId, ticketId, undefined)),
+          delegationDeps(async (gateId, ticketId) =>
+            correrCompuerta(contexto, gateId, ticketId, undefined),
+          ),
         );
         return delCli(resultado);
       }
@@ -3472,7 +3687,9 @@ async function ejecutarHerramienta(
         const id = texto(args, "id") as string;
         const bruto = texto(args, "evaluator", false);
         if (bruto !== "" && bruto !== undefined && !isEvaluatorId(bruto)) {
-          return mal(`Evaluador desconocido: ${String(bruto)}. Use ${EVALUATOR_IDS.join(", ")}.`);
+          return mal(
+            `Evaluador desconocido: ${String(bruto)}. Use ${EVALUATOR_IDS.join(", ")}.`,
+          );
         }
         const evaluator = isEvaluatorId(bruto) ? bruto : undefined;
 
@@ -3510,7 +3727,12 @@ async function ejecutarHerramienta(
             "  · `BLOCK` → hay algo que corregir. El motivo dice qué proposición y con " +
             "qué valor; corrige el artefacto y vuelve a evaluar.",
           ultimo === undefined
-            ? { resultado: "desconocido", motivo: "No se pudo leer el recibo que acaba de escribir el motor.", en_banda: [], recibo_id: null }
+            ? {
+                resultado: "desconocido",
+                motivo: "No se pudo leer el recibo que acaba de escribir el motor.",
+                en_banda: [],
+                recibo_id: null,
+              }
             : resumenDeRecibo(ultimo),
         );
       }
@@ -3546,10 +3768,14 @@ async function ejecutarHerramienta(
         // La entrada de cada tarea es obligatoria, y decirlo acá evita una corrida
         // que gaste tres llamadas para clasificar la nada.
         if (brutaTarea === "clasificacion" && solicitud === undefined) {
-          return mal("La tarea `clasificacion` necesita `solicitud`: lo que hay que clasificar.");
+          return mal(
+            "La tarea `clasificacion` necesita `solicitud`: lo que hay que clasificar.",
+          );
         }
         if (brutaTarea === "exploracion" && pregunta === undefined) {
-          return mal("La tarea `exploracion` necesita `pregunta`: lo que hay que responder.");
+          return mal(
+            "La tarea `exploracion` necesita `pregunta`: lo que hay que responder.",
+          );
         }
 
         // La cadena sale del routing del proyecto, igual que en la compuerta y en el
@@ -3638,7 +3864,9 @@ function apiKeyDe(contexto: ToolContext, provider: string): string | null {
 }
 
 /** Las suscripciones llevan su token en el transporte, no en el YAML del proyecto. */
-function credentialForCascade(contexto: ToolContext): (provider: string) => string | undefined {
+function credentialForCascade(
+  contexto: ToolContext,
+): (provider: string) => string | undefined {
   return (provider) => {
     if (transportById(provider).credential !== undefined) return undefined;
     return apiKeyDe(contexto, provider) ?? undefined;

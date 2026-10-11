@@ -15,7 +15,12 @@
  */
 import { TICKET_TYPES } from "@valmen/core";
 
-import type { CommandCheckSpec, GateDefinition, NoulProposition, Proposition } from "./decide.js";
+import type {
+  CommandCheckSpec,
+  GateDefinition,
+  NoulProposition,
+  Proposition,
+} from "./decide.js";
 import { DEFAULT_POLICY, GateDefinitionError } from "./decide.js";
 import { seDecideEnCodigo } from "./criteria.js";
 import { ANALYSIS_GATE, PLAN_GATE } from "./definitions.js";
@@ -81,8 +86,14 @@ export interface CriterionSpec {
 }
 
 /** ¿Declara el criterio cómo se verifica: un comando, a mano o una petición HTTP? */
-export function criterioDeclarado(criterio: Pick<CriterionSpec, "command" | "manual" | "http">): boolean {
-  return criterio.command !== null || criterio.manual || (criterio.http !== undefined && criterio.http !== "");
+export function criterioDeclarado(
+  criterio: Pick<CriterionSpec, "command" | "manual" | "http">,
+): boolean {
+  return (
+    criterio.command !== null ||
+    criterio.manual ||
+    (criterio.http !== undefined && criterio.http !== "")
+  );
 }
 
 /** La viñeta que abre un criterio: casilla, guion o número. */
@@ -321,7 +332,9 @@ export function commandChecksFor(
 
     const declarado = playwright == null ? [] : partirComando(playwright.command);
     const comandoCompleto =
-      playwright != null && declarado.length > 0 && autorizado(partes, [playwright.command]);
+      playwright != null &&
+      declarado.length > 0 &&
+      autorizado(partes, [playwright.command]);
 
     // (a) El prefijo completo conserva su invocación. Solo los argumentos con
     // forma de spec se comprueban; los filtros por título siguen siendo válidos.
@@ -331,12 +344,15 @@ export function commandChecksFor(
       (partes[0] !== VERBO_PLAYWRIGHT || (comandoCompleto && declarado.length > 1))
     ) {
       if (comandoCompleto) {
-        const motivos = partes.slice(declarado.length)
+        const motivos = partes
+          .slice(declarado.length)
           .filter((parte) => /\.spec\.(?:ts|js|tsx|mjs)$/.test(parte))
           .map((ruta) => specDelRepositorio(ruta, repositorio))
-          .flatMap((spec) => "motivo" in spec ? [spec.motivo] : []);
+          .flatMap((spec) => ("motivo" in spec ? [spec.motivo] : []));
         if (motivos.length > 0) {
-          refused.push(`criterio ${index + 1}: ${criterion.command} — ${motivos.join("; ")}`);
+          refused.push(
+            `criterio ${index + 1}: ${criterion.command} — ${motivos.join("; ")}`,
+          );
           return;
         }
       }
@@ -556,7 +572,10 @@ export interface InterfazDelSujeto {
  * constante con su motivo escrita en el llamado dice la decisión; omitir el
  * campo diría una omisión.
  */
-export const SIN_INTERFAZ: InterfazDelSujeto = { requiereDeclaracion: false, pantallas: [] };
+export const SIN_INTERFAZ: InterfazDelSujeto = {
+  requiereDeclaracion: false,
+  pantallas: [],
+};
 
 /**
  * El identificador de la proposición que pide la declaración sobre Playwright.
@@ -599,16 +618,14 @@ export function impactPropositions(impacto: string): Proposition[] {
   const preguntas = PREGUNTAS_DE_IMPACTO[impacto];
   if (preguntas === undefined) return [];
 
-  return preguntas.map(
-    (pregunta): Proposition => ({
-      id: pregunta.id,
-      kind: "noul",
-      weight: 1,
-      description: pregunta.description,
-      instructions: pregunta.instructions,
-      criteria: { yes: pregunta.yes, no: pregunta.no },
-    }),
-  );
+  return preguntas.map((pregunta): Proposition => ({
+    id: pregunta.id,
+    kind: "noul",
+    weight: 1,
+    description: pregunta.description,
+    instructions: pregunta.instructions,
+    criteria: { yes: pregunta.yes, no: pregunta.no },
+  }));
 }
 
 /**
@@ -630,7 +647,9 @@ export function expandGate(gate: GateDefinition, context: GateContext): GateDefi
       ? context.criteria.map((criterion, index) => {
           const proposicion = criterionProposition(index, criterion);
           // Un manual y un «la prueba pasa» se leen en el texto del plan: los decide el código.
-          return seDecideEnCodigo(criterion) ? { ...proposicion, decidedInCode: true } : proposicion;
+          return seDecideEnCodigo(criterion)
+            ? { ...proposicion, decidedInCode: true }
+            : proposicion;
         })
       : [];
 
@@ -664,7 +683,13 @@ export function expandGate(gate: GateDefinition, context: GateContext): GateDefi
   const adicionales = context.additional ?? [];
 
   const ids = new Set(gate.propositions.map((proposition) => proposition.id));
-  for (const proposition of [...atomicas, ...porImpacto, ...porComando, ...porInterfaz, ...adicionales]) {
+  for (const proposition of [
+    ...atomicas,
+    ...porImpacto,
+    ...porComando,
+    ...porInterfaz,
+    ...adicionales,
+  ]) {
     if (ids.has(proposition.id)) {
       throw new GateDefinitionError(
         `La proposición adicional "${proposition.id}" colisiona con una proposición del gate.`,
@@ -673,7 +698,14 @@ export function expandGate(gate: GateDefinition, context: GateContext): GateDefi
     ids.add(proposition.id);
   }
 
-  if (atomicas.length === 0 && porImpacto.length === 0 && porComando.length === 0 && porInterfaz.length === 0 && adicionales.length === 0 && context.impacts.length > 0)
+  if (
+    atomicas.length === 0 &&
+    porImpacto.length === 0 &&
+    porComando.length === 0 &&
+    porInterfaz.length === 0 &&
+    adicionales.length === 0 &&
+    context.impacts.length > 0
+  )
     return gate;
   if (
     atomicas.length === 0 &&
@@ -682,7 +714,11 @@ export function expandGate(gate: GateDefinition, context: GateContext): GateDefi
     porInterfaz.length === 0 &&
     adicionales.length === 0 &&
     context.impacts.length === 0 &&
-    !PROPOSICIONES_QUE_PIDEN_IMPACTOS.some((id) => gate.propositions.some((proposition) => proposition.id === id && proposition.verdict !== false))
+    !PROPOSICIONES_QUE_PIDEN_IMPACTOS.some((id) =>
+      gate.propositions.some(
+        (proposition) => proposition.id === id && proposition.verdict !== false,
+      ),
+    )
   )
     return gate;
 
@@ -703,7 +739,9 @@ export function expandGate(gate: GateDefinition, context: GateContext): GateDefi
   // ausencia de una respuesta que nunca se pidió. Se conservan como
   // descriptivas porque su valor es informativo y queda en el recibo.
   const propositions = gate.propositions.map((proposition) =>
-    atomicas.length > 0 && proposition.verdict !== false && proposition.decidedInCode !== true
+    atomicas.length > 0 &&
+    proposition.verdict !== false &&
+    proposition.decidedInCode !== true
       ? { ...proposition, verdict: false }
       : proposition,
   );
@@ -744,7 +782,14 @@ export function expandGate(gate: GateDefinition, context: GateContext): GateDefi
   return {
     ...gate,
     id: `${gate.id}+${sufijo}`,
-    propositions: [...atomicas, ...porImpacto, ...porComando, ...porInterfaz, ...adicionales, ...propositionsFinales],
+    propositions: [
+      ...atomicas,
+      ...porImpacto,
+      ...porComando,
+      ...porInterfaz,
+      ...adicionales,
+      ...propositionsFinales,
+    ],
   };
 }
 
@@ -827,7 +872,13 @@ export function partitionByApplicability(
       );
     }
     if (tipos.includes(ticketType)) applicable.push(proposition);
-    else notApplicable.push({ id: proposition.id, status: "no_aplica", appliesTo: [...tipos], ticketType });
+    else
+      notApplicable.push({
+        id: proposition.id,
+        status: "no_aplica",
+        appliesTo: [...tipos],
+        ticketType,
+      });
   }
   return { applicable, notApplicable };
 }
@@ -858,7 +909,10 @@ export const AVISO_DE_APROBACIONES =
 
 function conAvisoDeAprobaciones(proposition: Proposition): Proposition {
   if (proposition.instructions.includes(AVISO_DE_APROBACIONES)) return proposition;
-  return { ...proposition, instructions: `${proposition.instructions} ${AVISO_DE_APROBACIONES}` };
+  return {
+    ...proposition,
+    instructions: `${proposition.instructions} ${AVISO_DE_APROBACIONES}`,
+  };
 }
 
 /** Resumen legible de qué proposiciones aporta la expansión. */

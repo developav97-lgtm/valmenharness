@@ -355,7 +355,9 @@ describe("más criterios que el tope (R-CDEF-002)", () => {
     const recibo = readReceipts(PATHS(), TICKET)[0] as unknown as {
       propositions: { id: string; value: number }[];
     };
-    const comandosCorridos = recibo.propositions.filter((p) => p.id.startsWith("criterio_"));
+    const comandosCorridos = recibo.propositions.filter((p) =>
+      p.id.startsWith("criterio_"),
+    );
     expect(comandosCorridos).toHaveLength(31);
     expect(comandosCorridos.every((p) => p.value === 1)).toBe(true);
   });

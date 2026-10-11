@@ -25,11 +25,23 @@ import {
   renderNextStep,
 } from "../packages/engine/src/next-step.js";
 import { appendReceipt } from "../packages/engine/src/receipts.js";
-import { buildResumeContext, delegacionDeFase, renderResumeContext } from "../packages/engine/src/resume.js";
+import {
+  buildResumeContext,
+  delegacionDeFase,
+  renderResumeContext,
+} from "../packages/engine/src/resume.js";
 import { buildGateState } from "../packages/engine/src/state.js";
-import { PERFILES_INCORPORADOS, derivarPerfil, renderPerfiles } from "../packages/adapter/src/index.js";
+import {
+  PERFILES_INCORPORADOS,
+  derivarPerfil,
+  renderPerfiles,
+} from "../packages/adapter/src/index.js";
 import { type GateReceipt, hashState } from "../packages/gate/src/receipt.js";
-import { type FixtureTicketOptions, renderFixtureTicket, writeFixtureTicket } from "./helpers/fixtures.js";
+import {
+  type FixtureTicketOptions,
+  renderFixtureTicket,
+  writeFixtureTicket,
+} from "./helpers/fixtures.js";
 
 const ID = "BUGFIX-POS-SIGUIENTE-20261005";
 
@@ -598,7 +610,8 @@ describe("las skills: las del harness que el proyecto tiene, y las de dominio", 
     // Caso de control: con una skill propia, sigue tratándose como de dominio.
     skill("desarrollo-de-algo");
     expect(
-      siguiente({ workflowStatus: "intake", diagnostico: DIAGNOSTICO_VACIO }).skillsDeDominio,
+      siguiente({ workflowStatus: "intake", diagnostico: DIAGNOSTICO_VACIO })
+        .skillsDeDominio,
     ).toBe(true);
   });
 
@@ -706,7 +719,10 @@ describe("R-PERF-007 modelos por fase en el contexto de reanudación", () => {
 
   function preparar(): void {
     mkdirSync(join(root, ".valmen"), { recursive: true });
-    writeFileSync(perfiles(), "seleccion:\n  proyecto: claude-code-completo\n\nperfiles: {}\n");
+    writeFileSync(
+      perfiles(),
+      "seleccion:\n  proyecto: claude-code-completo\n\nperfiles: {}\n",
+    );
     writeFixtureTicket(root, { id: ID, workflowStatus: "intake" });
   }
 
@@ -717,7 +733,9 @@ describe("R-PERF-007 modelos por fase en el contexto de reanudación", () => {
     expect(resultado.stdout).toContain("Modelos por fase (cliente: claude):");
     expect(resultado.stdout).toMatch(/^→ analysis: .*subagente opus/m);
     expect(resultado.stdout).toMatch(/^- plan: .*subagente opus/m);
-    expect(resultado.stdout.indexOf("Plan vigente")).toBeLessThan(resultado.stdout.indexOf("Modelos por fase"));
+    expect(resultado.stdout.indexOf("Plan vigente")).toBeLessThan(
+      resultado.stdout.indexOf("Modelos por fase"),
+    );
   });
 
   it("R-PERF-007 cliente desconocido", () => {
@@ -730,7 +748,11 @@ describe("R-PERF-007 modelos por fase en el contexto de reanudación", () => {
   it("R-PERF-007 solo lectura", () => {
     preparar();
     writeFileSync(join(root, ".valmen", "routing.yaml"), "preset: balanced\nroles: {}\n");
-    const archivos = [perfiles(), join(root, ".valmen", "routing.yaml"), join(root, "tickets", "2026", ID, "ticket.md")];
+    const archivos = [
+      perfiles(),
+      join(root, ".valmen", "routing.yaml"),
+      join(root, "tickets", "2026", ID, "ticket.md"),
+    ];
     const antes = archivos.map((a) => readFileSync(a));
     resumeTicket(paths(), ID, "compacto", "claude");
     resumeTicket(paths(), ID, "compacto", "codex");
@@ -740,7 +762,10 @@ describe("R-PERF-007 modelos por fase en el contexto de reanudación", () => {
   describe("delegación de la fase", () => {
     const sesionDe = (estado: string, cliente?: "claude" | "codex") => {
       mkdirSync(join(root, ".valmen"), { recursive: true });
-      writeFileSync(perfiles(), "seleccion:\n  proyecto: claude-code-completo\n\nperfiles: {}\n");
+      writeFileSync(
+        perfiles(),
+        "seleccion:\n  proyecto: claude-code-completo\n\nperfiles: {}\n",
+      );
       writeFixtureTicket(root, { id: ID, workflowStatus: estado });
       return resumeTicket(paths(), ID, "compacto", cliente);
     };
@@ -751,20 +776,36 @@ describe("R-PERF-007 modelos por fase en el contexto de reanudación", () => {
       return d.modo === "subagente" ? d.instrucciones.join("\n") : "";
     };
     const mixto = (): void => {
-      const perfil = derivarPerfil((PERFILES_INCORPORADOS.find((p) => p.id === "claude-code-completo") as (typeof PERFILES_INCORPORADOS)[number]), "mixto", "Claude planea, Codex implementa", {
-        "agent-implementation": { provider: "codex", model: "gpt-6-sol", effort: "high" },
-      });
+      const perfil = derivarPerfil(
+        PERFILES_INCORPORADOS.find(
+          (p) => p.id === "claude-code-completo",
+        ) as (typeof PERFILES_INCORPORADOS)[number],
+        "mixto",
+        "Claude planea, Codex implementa",
+        {
+          "agent-implementation": { provider: "codex", model: "gpt-6-sol", effort: "high" },
+        },
+      );
       mkdirSync(join(root, ".valmen"), { recursive: true });
-      writeFileSync(perfiles(), renderPerfiles([perfil], { proyecto: "mixto", ejecutores: {} }));
+      writeFileSync(
+        perfiles(),
+        renderPerfiles([perfil], { proyecto: "mixto", ejecutores: {} }),
+      );
       writeFixtureTicket(root, { id: ID, workflowStatus: "approved" });
     };
     const ticketAprobado = () => {
       mixto();
-      return resumeTicket(paths(), ID, "compacto", "claude").data?.["delegacion"] as ReturnType<typeof delegacionDeFase>;
+      return resumeTicket(paths(), ID, "compacto", "claude").data?.[
+        "delegacion"
+      ] as ReturnType<typeof delegacionDeFase>;
     };
 
     it("R-PERF-007 C1: claude en analyzed delega el plan a opus", () => {
-      expect(delegacion("analyzed", "claude")).toMatchObject({ modo: "subagente", fase: "plan", alias: "opus" });
+      expect(delegacion("analyzed", "claude")).toMatchObject({
+        modo: "subagente",
+        fase: "plan",
+        alias: "opus",
+      });
     });
     it("R-PERF-007 C2: cita el brief con el cliente", () => {
       expect(instrucciones()).toContain(`valmen journey brief --id ${ID} --cliente claude`);
@@ -796,11 +837,17 @@ describe("R-PERF-007 modelos por fase en el contexto de reanudación", () => {
     it("R-PERF-007 C9: el bloque va entre el siguiente paso y el plan vigente", () => {
       const out = sesionDe("analyzed", "claude").stdout;
       expect(out).toContain("Delegación de la fase plan:");
-      expect(out.indexOf("Delegación de la fase plan:")).toBeGreaterThan(out.indexOf("Siguiente paso"));
-      expect(out.indexOf("Delegación de la fase plan:")).toBeLessThan(out.indexOf("Plan vigente"));
+      expect(out.indexOf("Delegación de la fase plan:")).toBeGreaterThan(
+        out.indexOf("Siguiente paso"),
+      );
+      expect(out.indexOf("Delegación de la fase plan:")).toBeLessThan(
+        out.indexOf("Plan vigente"),
+      );
     });
     it("R-PERF-007 C10: sin cliente dice que no está declarado", () => {
-      expect(sesionDe("analyzed").stdout).toMatch(/Delegación de la fase plan: sin cliente declarado/);
+      expect(sesionDe("analyzed").stdout).toMatch(
+        /Delegación de la fase plan: sin cliente declarado/,
+      );
     });
     it("R-PERF-007 C11: data.delegacion coincide con lo impreso", () => {
       const r = sesionDe("analyzed", "claude");
@@ -818,7 +865,9 @@ describe("R-PERF-007 modelos por fase en el contexto de reanudación", () => {
       expect(archivos.map((a) => readFileSync(a))).toEqual(antes);
     });
     it("R-PERF-007 C18: el motivo de otro proveedor dice despacha por proveedor", () => {
-      expect((ticketAprobado() as { motivo: string }).motivo).toContain("despacha por proveedor");
+      expect((ticketAprobado() as { motivo: string }).motivo).toContain(
+        "despacha por proveedor",
+      );
     });
   });
 });

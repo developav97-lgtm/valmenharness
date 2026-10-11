@@ -30,13 +30,17 @@ import { writeFixtureTicket } from "./helpers/fixtures.js";
 
 const AHORA = new Date("2026-10-06T08:00:00.000Z");
 const ID = "BUGFIX-POS-QAAGENT-20261005";
-const CRITERIO = '- [ ] El valor corregido es el esperado.\n      <!-- test: node tests/bug.test.mjs -->';
+const CRITERIO =
+  "- [ ] El valor corregido es el esperado.\n      <!-- test: node tests/bug.test.mjs -->";
 
 let root: string;
 const paths = () => ({ root, ticketsDir: "tickets" });
 
 const git = (...args: string[]): string =>
-  execFileSync("git", ["-c", "user.email=t@t", "-c", "user.name=t", ...args], { cwd: root, encoding: "utf8" }).trim();
+  execFileSync("git", ["-c", "user.email=t@t", "-c", "user.name=t", ...args], {
+    cwd: root,
+    encoding: "utf8",
+  }).trim();
 
 function escribir(ruta: string, contenido: string): void {
   mkdirSync(dirname(join(root, ruta)), { recursive: true });
@@ -93,22 +97,26 @@ function ticket(criterios = CRITERIO, tipo = "BUGFIX"): string {
   });
 }
 
-
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), "valmen-qaagent-"));
 });
 
 afterEach(() => rmSync(root, { recursive: true, force: true }));
 
-
 const ticketMd = () => join(root, "tickets", "2026", ID, "ticket.md");
-const estado = (): string => parseTicket(readFileSync(ticketMd(), "utf8")).fields.workflow_status;
-const cerrar = (extra: Record<string, unknown> = {}) => cerrarQaPorPolitica({ paths: paths(), ticketId: ID, ahora: AHORA, ...extra });
+const estado = (): string =>
+  parseTicket(readFileSync(ticketMd(), "utf8")).fields.workflow_status;
+const cerrar = (extra: Record<string, unknown> = {}) =>
+  cerrarQaPorPolitica({ paths: paths(), ticketId: ID, ahora: AHORA, ...extra });
 
 /** La política ya fue promovida (R-QAAG-008): sin eso se queda en sombra. */
 function promover(): void {
   mkdirSync(join(root, ".valmen", "qa"), { recursive: true });
-  writeFileSync(join(root, ".valmen", "qa", "promotions.jsonl"), `${JSON.stringify({ kind: "qa-agent-promotion", actor: "Juan Andrade", quote: "Promuevo", at: AHORA.toISOString(), evidence: { total: 20, tickets: [] } })}\n`, "utf8");
+  writeFileSync(
+    join(root, ".valmen", "qa", "promotions.jsonl"),
+    `${JSON.stringify({ kind: "qa-agent-promotion", actor: "Juan Andrade", quote: "Promuevo", at: AHORA.toISOString(), evidence: { total: 20, tickets: [] } })}\n`,
+    "utf8",
+  );
 }
 
 /** Un ticket elegible con `qa-agent` aprobado: lo que el cierre por política exige. */
@@ -117,8 +125,17 @@ function preparar(dailyQuota = 5) {
   promover();
   ticket();
   const a = crearAutorizacion({
-    root, actor: "Juan Andrade", quote: "Autorizo el cierre por agente", types: ["BUGFIX"], modules: ["pos"], maxRisk: "normal",
-    dailyQuota, validDays: 30, source: "cli", ahora: AHORA, env: {},
+    root,
+    actor: "Juan Andrade",
+    quote: "Autorizo el cierre por agente",
+    types: ["BUGFIX"],
+    modules: ["pos"],
+    maxRisk: "normal",
+    dailyQuota,
+    validDays: 30,
+    source: "cli",
+    ahora: AHORA,
+    env: {},
   });
   const r = correrQaAgent({ paths: paths(), ticketId: ID, base, delivered, ahora: AHORA });
   expect(r.verdict, r.reasons.join("; ")).toBe("approve");
@@ -134,24 +151,51 @@ describe("el cierre por política", () => {
     expect(r.authorization).toEqual({ id: a.id, hash: a.hash });
     const qa = parseTicket(readFileSync(ticketMd(), "utf8")).blocks.QA!;
     expect(qa).toHaveLength(2);
-    expect(qa[0]).toMatchObject({ result: "pending", build_reference: `commit:${delivered}` });
+    expect(qa[0]).toMatchObject({
+      result: "pending",
+      build_reference: `commit:${delivered}`,
+    });
     expect(qa[1]!["result"]).toBe("approved");
     const politica = parsePolicyConfirmation(qa[1]!["po_confirmation"] as string);
-    expect(politica).toEqual({ authorizationId: a.id, authorizationHash: a.hash, receipt: ".valmen/qa/agent-receipts.jsonl:1" });
+    expect(politica).toEqual({
+      authorizationId: a.id,
+      authorizationHash: a.hash,
+      receipt: ".valmen/qa/agent-receipts.jsonl:1",
+    });
     expect(JSON.stringify(qa)).not.toMatch(/agente escribi/i);
     // Consume un cupo y la validación del ticket lo acepta (transition ya validó el documento).
     expect(cupoRestante(root, a, AHORA)).toBe(antes - 1);
-    expect(motivoDeCierrePorPoliticaInvalido(root, ID, parseTicket(readFileSync(ticketMd(), "utf8")))).toBeNull();
+    expect(
+      motivoDeCierrePorPoliticaInvalido(
+        root,
+        ID,
+        parseTicket(readFileSync(ticketMd(), "utf8")),
+      ),
+    ).toBeNull();
   });
 
   it("deja un aviso «QA aprobada por política» con el recibo y la forma de reabrir, una sola vez", () => {
     const { a } = preparar();
     cerrar();
-    const pendientes = pendientesDeAvisar(paths(), AHORA).filter((p) => p.kind === "cierre-por-politica");
+    const pendientes = pendientesDeAvisar(paths(), AHORA).filter(
+      (p) => p.kind === "cierre-por-politica",
+    );
     expect(pendientes).toHaveLength(1);
-    const p = pendientes[0]! as { ticket: string; title: string; cycle: number; authorizationId: string; receipt: string };
+    const p = pendientes[0]! as {
+      ticket: string;
+      title: string;
+      cycle: number;
+      authorizationId: string;
+      receipt: string;
+    };
     expect(p.authorizationId).toBe(a.id);
-    const aviso = renderPolicyCloseNotification({ ticketId: p.ticket, title: p.title, authorizationId: p.authorizationId, receipt: p.receipt, cycle: p.cycle });
+    const aviso = renderPolicyCloseNotification({
+      ticketId: p.ticket,
+      title: p.title,
+      authorizationId: p.authorizationId,
+      receipt: p.receipt,
+      cycle: p.cycle,
+    });
     expect(aviso.body).toContain("QA APROBADA POR POLÍTICA");
     expect(aviso.body).toContain(p.receipt);
     expect(aviso.body).toContain("--to changes_requested");
@@ -183,10 +227,23 @@ describe("lo que impide cerrar, sin dejar un ciclo a medias", () => {
 
   it("con la autorización revocada o sin cupo", () => {
     const { a } = preparar(1);
-    registrarUsoDeCupo({ root, authorizationId: a.id, ticketId: "BUGFIX-POS-OTRO-20261005", ahora: AHORA });
+    registrarUsoDeCupo({
+      root,
+      authorizationId: a.id,
+      ticketId: "BUGFIX-POS-OTRO-20261005",
+      ahora: AHORA,
+    });
     expect(() => cerrar()).toThrow(/cupo/);
     sinCiclo();
-    revocarAutorizacion({ root, id: a.id, actor: "Juan Andrade", reason: "ya no", source: "cli", ahora: AHORA, env: {} });
+    revocarAutorizacion({
+      root,
+      id: a.id,
+      actor: "Juan Andrade",
+      reason: "ya no",
+      source: "cli",
+      ahora: AHORA,
+      env: {},
+    });
     expect(leerAutorizaciones(root, AHORA)[0]!.estado).toBe("revocada");
     expect(() => cerrar()).toThrow(/ya no es elegible|ya no está vigente/);
     sinCiclo();
@@ -194,7 +251,9 @@ describe("lo que impide cerrar, sin dejar un ciclo a medias", () => {
 
   it("si el ticket dejó de ser elegible (un criterio manual)", () => {
     preparar();
-    ticket(`${CRITERIO}\n- [ ] La pantalla muestra el valor corregido al operador.\n      <!-- verify: manual -->`);
+    ticket(
+      `${CRITERIO}\n- [ ] La pantalla muestra el valor corregido al operador.\n      <!-- verify: manual -->`,
+    );
     expect(() => cerrar()).toThrow(/ya no es elegible/);
     sinCiclo();
   });
@@ -205,7 +264,13 @@ describe("lo que impide cerrar, sin dejar un ciclo a medias", () => {
     escribir(".valmen/config.yaml", "name: Demo\nqa-agent:\n  mode: close\n");
     git("add", "-A");
     git("commit", "-q", "-m", "config sin comandos");
-    const r = correrQaAgent({ paths: paths(), ticketId: ID, base, delivered: git("rev-parse", "HEAD"), ahora: AHORA });
+    const r = correrQaAgent({
+      paths: paths(),
+      ticketId: ID,
+      base,
+      delivered: git("rev-parse", "HEAD"),
+      ahora: AHORA,
+    });
     expect(r.verdict).toBe("block");
     expect(() => cerrar()).toThrow(/no aprobó/);
     sinCiclo();
@@ -215,7 +280,14 @@ describe("lo que impide cerrar, sin dejar un ciclo a medias", () => {
 
 describe("la atribución no se puede falsificar", () => {
   it("qaClose no acepta una confirmación «policy:», ni siquiera de una persona", () => {
-    expect(() => qaClose({ paths: paths(), ticketId: ID, result: "approved", poConfirmation: `policy:QAA-1:sha256:${"a".repeat(64)}|recibo:x:1` })).toThrow(/policy/);
+    expect(() =>
+      qaClose({
+        paths: paths(),
+        ticketId: ID,
+        result: "approved",
+        poConfirmation: `policy:QAA-1:sha256:${"a".repeat(64)}|recibo:x:1`,
+      }),
+    ).toThrow(/policy/);
   });
 
   it("un cierre que cita una autorización o un recibo inexistentes no es creíble", () => {
@@ -224,16 +296,27 @@ describe("la atribución no se puede falsificar", () => {
     const texto = readFileSync(ticketMd(), "utf8");
     expect(motivoDeCierrePorPoliticaInvalido(root, ID, parseTicket(texto))).toBeNull();
     const rota = texto.replaceAll("agent-receipts.jsonl:1", "agent-receipts.jsonl:9");
-    expect(motivoDeCierrePorPoliticaInvalido(root, ID, parseTicket(rota))).toMatch(/recibo/);
+    expect(motivoDeCierrePorPoliticaInvalido(root, ID, parseTicket(rota))).toMatch(
+      /recibo/,
+    );
     const falsa = texto.replace(/policy:QAA-[A-Za-z0-9-]+:/g, "policy:QAA-inventada:");
-    expect(motivoDeCierrePorPoliticaInvalido(root, ID, parseTicket(falsa))).toMatch(/no existe/);
+    expect(motivoDeCierrePorPoliticaInvalido(root, ID, parseTicket(falsa))).toMatch(
+      /no existe/,
+    );
   });
 
   it("una sesión desatendida puede cerrar por política, pero qa-close sigue rechazándola", () => {
     preparar();
     process.env["VALMEN_UNATTENDED"] = "1";
     try {
-      expect(() => qaClose({ paths: paths(), ticketId: ID, result: "approved", poConfirmation: "Apruebo" })).toThrow(/desatendida/);
+      expect(() =>
+        qaClose({
+          paths: paths(),
+          ticketId: ID,
+          result: "approved",
+          poConfirmation: "Apruebo",
+        }),
+      ).toThrow(/desatendida/);
       expect(qaPolicyCloseCommand(paths(), { id: ID }).exitCode).toBe(0);
     } finally {
       delete process.env["VALMEN_UNATTENDED"];

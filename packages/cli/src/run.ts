@@ -11,13 +11,25 @@ export async function runAutonomousCommand(
   const ticket = typeof flags.ticket === "string" ? flags.ticket : undefined;
   const queue = flags.queue === true;
   if (ticket === undefined && !queue) {
-    return { stdout: "", stderr: "run requiere --ticket <ID> o --queue.\n", exitCode: EXIT_SCHEMA };
+    return {
+      stdout: "",
+      stderr: "run requiere --ticket <ID> o --queue.\n",
+      exitCode: EXIT_SCHEMA,
+    };
   }
   if (ticket !== undefined && queue) {
-    return { stdout: "", stderr: "run admite --ticket o --queue, no ambos.\n", exitCode: EXIT_SCHEMA };
+    return {
+      stdout: "",
+      stderr: "run admite --ticket o --queue, no ambos.\n",
+      exitCode: EXIT_SCHEMA,
+    };
   }
   try {
-    const result = await runAutonomous({ paths, ...(ticket === undefined ? {} : { ticketId: ticket }), ...(queue ? { queue: true } : {}) });
+    const result = await runAutonomous({
+      paths,
+      ...(ticket === undefined ? {} : { ticketId: ticket }),
+      ...(queue ? { queue: true } : {}),
+    });
     const prefix = result.status === "delivered" ? "Entregado" : "Detenido";
     return {
       stdout: `${prefix}: ${result.ticketId} (${result.status}).\n${result.detail}\n`,

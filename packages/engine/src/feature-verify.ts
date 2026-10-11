@@ -166,8 +166,10 @@ export function renderFeatureVerify(
     partes.push("Nada: todos los tickets están cerrados.", "");
   } else {
     for (const e of delPo) {
-      if (!estaCerrado(e)) partes.push(`- ${e.id}: en ${e.state ?? "?"}; espera su validación.`);
-      for (const criterio of e.pendingPo) partes.push(`  - criterio manual: ${linea(criterio)}`);
+      if (!estaCerrado(e))
+        partes.push(`- ${e.id}: en ${e.state ?? "?"}; espera su validación.`);
+      for (const criterio of e.pendingPo)
+        partes.push(`  - criterio manual: ${linea(criterio)}`);
     }
     partes.push("");
   }
@@ -213,7 +215,8 @@ export function writeFeatureVerify(request: WriteFeatureVerifyRequest): string {
   const { paths, slug } = request;
   const leida = readFeature(paths.root, slug);
   if (leida === null) fail(`No existe la feature "${slug}" en .valmen/features/.`);
-  if (leida.row.invalid !== null) fail(`La feature "${slug}" no es válida: ${leida.row.invalid}`);
+  if (leida.row.invalid !== null)
+    fail(`La feature "${slug}" no es válida: ${leida.row.invalid}`);
 
   const ruta = verifyPath(paths.root, slug);
   if (existsSync(ruta) && request.rewrite !== true) {
@@ -247,7 +250,9 @@ export interface CompleteFeatureRequest {
  * acepta los que esperan al PO en `awaiting_user_tests`: es una declaración
  * expresa, y `verify.md` los lista como pendientes suyos.
  */
-export function completeFeature(request: CompleteFeatureRequest): ReturnType<typeof advanceFeature> {
+export function completeFeature(
+  request: CompleteFeatureRequest,
+): ReturnType<typeof advanceFeature> {
   const { paths, slug } = request;
   if (!existsSync(verifyPath(paths.root, slug))) {
     fail(

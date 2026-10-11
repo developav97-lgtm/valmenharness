@@ -438,13 +438,19 @@ export async function callClaudeCli(request: ClaudeCliRequest): Promise<ChatResu
     // stderr: se conserva en el mensaje, y «sin detalle» queda para cuando de verdad no hay nada.
     const primerError =
       Array.isArray(resultado.errors) && resultado.errors.length > 0
-        ? limpiar(typeof resultado.errors[0] === "string" ? resultado.errors[0] : JSON.stringify(resultado.errors[0]))
+        ? limpiar(
+            typeof resultado.errors[0] === "string"
+              ? resultado.errors[0]
+              : JSON.stringify(resultado.errors[0]),
+          )
         : "";
     const cola = limpiar(salida.stderr);
     const partes = [
       texto,
       resultado.subtype === undefined ? "" : `subtype ${resultado.subtype}`,
-      resultado.terminal_reason === undefined ? "" : `terminal_reason ${resultado.terminal_reason}`,
+      resultado.terminal_reason === undefined
+        ? ""
+        : `terminal_reason ${resultado.terminal_reason}`,
       primerError === "" ? "" : `errors[0] ${primerError}`,
       cola === "" ? "" : `stderr ${cola}`,
     ].filter((parte) => parte !== "");

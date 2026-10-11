@@ -153,25 +153,35 @@ const RUNNERS: readonly {
   readonly detecta: RegExp;
   readonly resumen: RegExp;
 }[] = [
-  { id: "vitest", detecta: /\bvitest\b/, resumen: /\bTest Files\s+\d+|\bTests\s+\d+\s+(?:passed|failed)/ },
+  {
+    id: "vitest",
+    detecta: /\bvitest\b/,
+    resumen: /\bTest Files\s+\d+|\bTests\s+\d+\s+(?:passed|failed)/,
+  },
   { id: "jest", detecta: /\bjest\b/, resumen: /\bTests:\s+\d+/ },
   { id: "Django", detecta: /manage\.py\s+test/, resumen: /\bRan\s+\d+\s+tests?\b/ },
-  { id: "pytest", detecta: /\bpytest\b/, resumen: /\b\d+\s+(?:passed|failed|errors?)\b|no tests ran/ },
+  {
+    id: "pytest",
+    detecta: /\bpytest\b/,
+    resumen: /\b\d+\s+(?:passed|failed|errors?)\b|no tests ran/,
+  },
   { id: "Karma", detecta: /\bkarma\b|\bng\s+test\b/, resumen: /Executed\s+\d+\s+of\s+\d+/ },
 ];
 
 /** Mensajes de una falla del entorno, cuando el comando salió con error. */
-const MENSAJES_DE_ENTORNO: readonly { readonly patron: RegExp; readonly motivo: string }[] = [
-  {
-    patron: /(?:database|base de datos)[^\n]*(?:already exists|ya existe)/i,
-    motivo: "la base de datos de pruebas ya existía",
-  },
-  {
-    patron: /ECONNREFUSED|connection refused|could not connect to server|conexi[oó]n rechazada/i,
-    motivo: "conexión rechazada",
-  },
-  { patron: /command not found|ENOENT/i, motivo: "comando no encontrado" },
-];
+const MENSAJES_DE_ENTORNO: readonly { readonly patron: RegExp; readonly motivo: string }[] =
+  [
+    {
+      patron: /(?:database|base de datos)[^\n]*(?:already exists|ya existe)/i,
+      motivo: "la base de datos de pruebas ya existía",
+    },
+    {
+      patron:
+        /ECONNREFUSED|connection refused|could not connect to server|conexi[oó]n rechazada/i,
+      motivo: "conexión rechazada",
+    },
+    { patron: /command not found|ENOENT/i, motivo: "comando no encontrado" },
+  ];
 
 /**
  * ¿Terminó el comando sin haber probado nada?
@@ -192,7 +202,8 @@ export function classifyEnvironmentFailure(input: {
 
   if (input.exitCode !== input.expectedExitCode) {
     for (const { patron, motivo } of MENSAJES_DE_ENTORNO) {
-      if (patron.test(input.output)) return `${motivo}; el comando no llegó a ejecutar pruebas`;
+      if (patron.test(input.output))
+        return `${motivo}; el comando no llegó a ejecutar pruebas`;
     }
   }
   if (runner !== undefined) {

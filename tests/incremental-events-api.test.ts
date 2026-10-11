@@ -29,19 +29,25 @@ beforeEach(() => {
   root = join(home, "harness");
   otherRoot = join(home, "saiopen");
   mkdirSync(join(home, ".valmen"), { recursive: true });
-  for (const [directory, id] of [[root, projectId], [otherRoot, otherProjectId]] as const) {
+  for (const [directory, id] of [
+    [root, projectId],
+    [otherRoot, otherProjectId],
+  ] as const) {
     mkdirSync(join(directory, ".valmen"), { recursive: true });
     writeFileSync(join(directory, ".valmen", "config.yaml"), `project-id: ${id}\n`);
   }
-  writeFileSync(join(home, ".valmen", "bindings.local.yaml"), [
-    "schema-version: 1",
-    "machine-id: qa",
-    "projects:",
-    `  ${projectId}:`,
-    `    root: ${root}`,
-    `  ${otherProjectId}:`,
-    `    root: ${otherRoot}`,
-  ].join("\n"));
+  writeFileSync(
+    join(home, ".valmen", "bindings.local.yaml"),
+    [
+      "schema-version: 1",
+      "machine-id: qa",
+      "projects:",
+      `  ${projectId}:`,
+      `    root: ${root}`,
+      `  ${otherProjectId}:`,
+      `    root: ${otherRoot}`,
+    ].join("\n"),
+  );
 });
 
 afterEach(() => rmSync(home, { recursive: true, force: true }));
@@ -61,7 +67,10 @@ function context(authorizedProject = project()): ServerContext {
   };
 }
 
-function event(eventId: string, overrides: Partial<Parameters<typeof appendExecutionEvent>[1]> = {}) {
+function event(
+  eventId: string,
+  overrides: Partial<Parameters<typeof appendExecutionEvent>[1]> = {},
+) {
   return {
     eventId,
     identity: createExecutionIdentity({ projectId, ticketId, executionId: "exec-01" }),
@@ -83,7 +92,12 @@ async function readUntil(
     const remaining = Math.max(1, deadline - Date.now());
     const result = await Promise.race([
       reader.read(),
-      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("SSE no entregó el evento esperado.")), remaining)),
+      new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error("SSE no entregó el evento esperado.")),
+          remaining,
+        ),
+      ),
     ]);
     if (result.done) throw new Error("SSE cerró antes de entregar el evento esperado.");
     text += new TextDecoder().decode(result.value);
@@ -96,9 +110,16 @@ describe("API incremental de eventos de ejecución", () => {
   it("pagina solamente el proyecto autorizado y declara una frontera inválida", async () => {
     appendExecutionEvent(project(), event("evt-01"));
     appendExecutionEvent(project(), event("evt-02"));
-    appendExecutionEvent(project(otherProjectId), event("evt-ajeno", {
-      identity: createExecutionIdentity({ projectId: otherProjectId, ticketId, executionId: "exec-02" }),
-    }));
+    appendExecutionEvent(
+      project(otherProjectId),
+      event("evt-ajeno", {
+        identity: createExecutionIdentity({
+          projectId: otherProjectId,
+          ticketId,
+          executionId: "exec-02",
+        }),
+      }),
+    );
 
     const page = await handleApi(
       "GET",
@@ -121,21 +142,46 @@ describe("API incremental de eventos de ejecución", () => {
     expect(JSON.stringify(page.body)).not.toContain("messages");
 
     const stale = await handleApi(
-      "GET", "/api/execution-events", {}, context(), new URLSearchParams({ after: "3" }),
+      "GET",
+      "/api/execution-events",
+      {},
+      context(),
+      new URLSearchParams({ after: "3" }),
     );
-    expect(stale).toMatchObject({ status: 200, body: { cursorValid: false, latestCursor: 2, events: [] } });
+    expect(stale).toMatchObject({
+      status: 200,
+      body: { cursorValid: false, latestCursor: 2, events: [] },
+    });
 
     const invalidLimit = await handleApi(
-      "GET", "/api/execution-events", {}, context(), new URLSearchParams({ limit: "101" }),
+      "GET",
+      "/api/execution-events",
+      {},
+      context(),
+      new URLSearchParams({ limit: "101" }),
     );
-    expect(invalidLimit).toMatchObject({ status: 400, body: { error: expect.stringContaining("entre 1 y 100") } });
+    expect(invalidLimit).toMatchObject({
+      status: 400,
+      body: { error: expect.stringContaining("entre 1 y 100") },
+    });
   });
 
   it("reanuda SSE por cursor sin repetir y la jornada ya proyecta la actividad en menos de cinco segundos", async () => {
     const authorized = project();
     createJourney(authorized, {
-      revisionId: "rev-sse", journeyId: "jornada-sse", occurredAt: "2026-10-03T09:00:00.000Z",
-      tickets: [{ ticketId, order: 1, priority: 1, dependsOn: [], start: { condition: "manual" }, authorizationIds: [] }],
+      revisionId: "rev-sse",
+      journeyId: "jornada-sse",
+      occurredAt: "2026-10-03T09:00:00.000Z",
+      tickets: [
+        {
+          ticketId,
+          order: 1,
+          priority: 1,
+          dependsOn: [],
+          start: { condition: "manual" },
+          authorizationIds: [],
+        },
+      ],
     });
     const startedAt = Date.now();
     recordExecutionActivity(authorized, {
@@ -149,10 +195,13 @@ describe("API incremental de eventos de ejecución", () => {
     const server = createMissionControl(context(authorized));
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
     const address = server.address();
-    if (address === null || typeof address === "string") throw new Error("No se pudo abrir el servidor de prueba.");
+    if (address === null || typeof address === "string")
+      throw new Error("No se pudo abrir el servidor de prueba.");
 
     try {
-      const first = await fetch(`http://127.0.0.1:${address.port}/api/events?project=${projectId}`);
+      const first = await fetch(
+        `http://127.0.0.1:${address.port}/api/events?project=${projectId}`,
+      );
       expect(first.status).toBe(200);
       const firstReader = first.body?.getReader();
       if (firstReader === undefined) throw new Error("SSE no devolvió un cuerpo legible.");
@@ -160,22 +209,31 @@ describe("API incremental de eventos de ejecución", () => {
       expect(delivered).toContain("evt-active");
       expect(Date.now() - startedAt).toBeLessThan(5_000);
       const roadmap = await handleApi("GET", "/api/journeys", {}, context(authorized));
-      expect(roadmap).toMatchObject({ status: 200, body: { journeys: [{ tickets: [{ activity: "active" }] }] } });
+      expect(roadmap).toMatchObject({
+        status: 200,
+        body: { journeys: [{ tickets: [{ activity: "active" }] }] },
+      });
       await firstReader.cancel();
 
       appendExecutionEvent(authorized, event("evt-second"));
-      const resumed = await fetch(`http://127.0.0.1:${address.port}/api/events?project=${projectId}`, {
-        headers: { "Last-Event-ID": "1" },
-      });
+      const resumed = await fetch(
+        `http://127.0.0.1:${address.port}/api/events?project=${projectId}`,
+        {
+          headers: { "Last-Event-ID": "1" },
+        },
+      );
       const resumedReader = resumed.body?.getReader();
-      if (resumedReader === undefined) throw new Error("SSE no devolvió un cuerpo legible.");
+      if (resumedReader === undefined)
+        throw new Error("SSE no devolvió un cuerpo legible.");
       const replayed = await readUntil(resumedReader, /id: 2\nevent: execution/);
       expect(replayed).toContain("evt-second");
       expect(replayed).not.toContain("evt-active");
       await resumedReader.cancel();
     } finally {
       server.closeAllConnections();
-      await new Promise<void>((resolve, reject) => server.close((error) => error === undefined ? resolve() : reject(error)));
+      await new Promise<void>((resolve, reject) =>
+        server.close((error) => (error === undefined ? resolve() : reject(error))),
+      );
     }
   });
 });

@@ -22,10 +22,7 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import {
-  type CodegraphState,
-  readCodegraphStatus,
-} from "../packages/adapter/src/index.js";
+import { type CodegraphState, readCodegraphStatus } from "../packages/adapter/src/index.js";
 import { mcpCommand } from "../packages/cli/src/mcp.js";
 import { doctorCommand } from "../packages/cli/src/setup.js";
 import type { RegistryPaths } from "../packages/engine/src/discovery.js";

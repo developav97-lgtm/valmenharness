@@ -220,7 +220,8 @@ export async function callChat(options: ChatOptions): Promise<ChatResult> {
         maxTokens: options.maxTokens,
         effort: options.effort,
         ...(options.structured === undefined ? {} : { structured: options.structured }),
-        signal: options.signal ?? AbortSignal.timeout(options.timeoutMs ?? TIMEOUT_LLAMADA_MS),
+        signal:
+          options.signal ?? AbortSignal.timeout(options.timeoutMs ?? TIMEOUT_LLAMADA_MS),
         ...sinRedireccion,
       },
       fetchImpl,
@@ -243,7 +244,8 @@ export async function callChat(options: ChatOptions): Promise<ChatResult> {
         maxTokens: options.maxTokens,
         temperature: options.temperature,
         structured: options.structured,
-        signal: options.signal ?? AbortSignal.timeout(options.timeoutMs ?? TIMEOUT_LLAMADA_MS),
+        signal:
+          options.signal ?? AbortSignal.timeout(options.timeoutMs ?? TIMEOUT_LLAMADA_MS),
         ...sinRedireccion,
       },
       fetchImpl,
@@ -308,7 +310,8 @@ export async function callChat(options: ChatOptions): Promise<ChatResult> {
                 },
               }),
       }),
-      signal: options.signal ?? AbortSignal.timeout(options.timeoutMs ?? TIMEOUT_LLAMADA_MS),
+      signal:
+        options.signal ?? AbortSignal.timeout(options.timeoutMs ?? TIMEOUT_LLAMADA_MS),
       ...sinRedireccion,
     });
   } catch (caught) {

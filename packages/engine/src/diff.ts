@@ -173,7 +173,10 @@ interface CambiosContraBase {
 }
 
 /** Lee un parche de git con `--unified=5`: los tramos cambiados y los bloques agregados de un archivo. */
-function leerParche(ruta: string, seccion: string): { tramos: TramoCambiado[]; bloques: AddedBlock[] } {
+function leerParche(
+  ruta: string,
+  seccion: string,
+): { tramos: TramoCambiado[]; bloques: AddedBlock[] } {
   const tramos: TramoCambiado[] = [];
   const bloques: AddedBlock[] = [];
   let nuevo = 0;
@@ -184,12 +187,16 @@ function leerParche(ruta: string, seccion: string): { tramos: TramoCambiado[]; b
   let bloque: { startLine: number; lines: string[] } | null = null;
 
   const cerrarBloque = (): void => {
-    if (bloque !== null) bloques.push({ path: ruta, startLine: bloque.startLine, lines: bloque.lines });
+    if (bloque !== null)
+      bloques.push({ path: ruta, startLine: bloque.startLine, lines: bloque.lines });
     bloque = null;
   };
   const cerrarGrupo = (): void => {
     if (agregadas.length > 0) {
-      tramos.push({ desde: agregadas[0] as number, hasta: agregadas[agregadas.length - 1] as number });
+      tramos.push({
+        desde: agregadas[0] as number,
+        hasta: agregadas[agregadas.length - 1] as number,
+      });
     } else if (eliminadas > 0) {
       tramos.push({ desde: Math.max(1, corte - 1), hasta: Math.max(1, corte) });
     }
@@ -231,10 +238,16 @@ function leerParche(ruta: string, seccion: string): { tramos: TramoCambiado[]; b
 }
 
 /** El archivo nuevo sin versionar como un alta completa, con la forma de un parche de git. */
-function altaCompleta(ruta: string, contenido: Buffer): { archivo: ArchivoDelDiff; bloque: AddedBlock | null } {
+function altaCompleta(
+  ruta: string,
+  contenido: Buffer,
+): { archivo: ArchivoDelDiff; bloque: AddedBlock | null } {
   if (contenido.subarray(0, 8000).some((byte) => byte === 0)) {
     const parche = `diff --git a/${ruta} b/${ruta}\nnew file mode 100644\nBinary files /dev/null and b/${ruta} differ\n`;
-    return { archivo: { ruta, estado: "A", parche, tramos: [], binario: true }, bloque: null };
+    return {
+      archivo: { ruta, estado: "A", parche, tramos: [], binario: true },
+      bloque: null,
+    };
   }
   const texto = contenido.toString("utf8");
   const lineas = texto.split("\n");
@@ -277,17 +290,29 @@ export function cambiosContraBase(
   }
   const commit = (git(root, ["merge-base", base, "HEAD"]) ?? "").trim();
   if (commit === "") {
-    throw new Error(`No se pudo resolver la base "${base}": git merge-base ${base} HEAD no devolvió un commit.`);
+    throw new Error(
+      `No se pudo resolver la base "${base}": git merge-base ${base} HEAD no devolvió un commit.`,
+    );
   }
 
   const estados = git(root, ["diff", "--name-status", "--no-renames", "-z", commit, "--"]);
   const parche = git(root, [
-    "-c", "core.quotePath=false",
-    "diff", "--no-color", "--no-ext-diff", "--no-textconv", "--no-renames", "--unified=5", commit, "--",
+    "-c",
+    "core.quotePath=false",
+    "diff",
+    "--no-color",
+    "--no-ext-diff",
+    "--no-textconv",
+    "--no-renames",
+    "--unified=5",
+    commit,
+    "--",
   ]);
   const sinVersionar = git(root, ["ls-files", "--others", "--exclude-standard", "-z"]);
   if (estados === null || parche === null || sinVersionar === null) {
-    throw new Error("git no pudo leer el diff contra la base (¿el proyecto es un repositorio git?).");
+    throw new Error(
+      "git no pudo leer el diff contra la base (¿el proyecto es un repositorio git?).",
+    );
   }
 
   const partes = estados.split("\0");
@@ -298,7 +323,9 @@ export function cambiosContraBase(
     if (letra === undefined || ruta === undefined || ruta === "") continue;
     rutas.push({ estado: letra === "A" || letra === "D" ? letra : "M", ruta });
   }
-  const secciones = parche.split(/^(?=diff --git )/m).filter((seccion) => seccion.trim() !== "");
+  const secciones = parche
+    .split(/^(?=diff --git )/m)
+    .filter((seccion) => seccion.trim() !== "");
   if (secciones.length !== rutas.length) {
     throw new Error(
       `git informó ${rutas.length} archivo(s) cambiado(s) y ${secciones.length} parche(s): no se puede emparejar el diff.`,

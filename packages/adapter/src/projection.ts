@@ -245,12 +245,15 @@ export function projectFiles(
   // Las denegaciones: Codex las lee de `.codex/rules/valmen.rules` (archivo del harness) y OpenCode
   // de `.opencode/opencode.json`, que se fusiona porque también lo escribe la persona. Con el JSONC
   // de la persona al lado no se escribe el `.json`: reescribirlo perdería los comentarios.
-  const hayJsonc = runtimes.includes("opencode") && existsSync(join(root, OPENCODE_JSONC_PATH));
+  const hayJsonc =
+    runtimes.includes("opencode") && existsSync(join(root, OPENCODE_JSONC_PATH));
   const opencodeActual = runtimes.includes("opencode")
     ? leerSiExiste(join(root, OPENCODE_CONFIG_PATH))
     : null;
   const denegaciones: ProjectedFile[] = [
-    ...(runtimes.includes("codex") ? [{ path: CODEX_RULES_PATH, content: codexRulesText() }] : []),
+    ...(runtimes.includes("codex")
+      ? [{ path: CODEX_RULES_PATH, content: codexRulesText() }]
+      : []),
     ...(runtimes.includes("opencode") && !hayJsonc
       ? [{ path: OPENCODE_CONFIG_PATH, content: mergeOpencodeDenyConfig(opencodeActual) }]
       : []),
@@ -282,9 +285,13 @@ export function projectFiles(
     agentCount: agents.length,
     skillCount: skills.length,
     agentsMd: size,
-    claudeDenyMissing: runtimes.includes("claude") ? missingClaudeDenyRules(settingsActual) : [],
+    claudeDenyMissing: runtimes.includes("claude")
+      ? missingClaudeDenyRules(settingsActual)
+      : [],
     opencodeDenyMissing:
-      runtimes.includes("opencode") && !hayJsonc ? missingOpencodeDenyRules(opencodeActual) : [],
+      runtimes.includes("opencode") && !hayJsonc
+        ? missingOpencodeDenyRules(opencodeActual)
+        : [],
     denyNotApplied: denyNotApplied(runtimes, opencodeActual, hayJsonc),
     warnings: [
       ...(warning === null ? [] : [warning]),

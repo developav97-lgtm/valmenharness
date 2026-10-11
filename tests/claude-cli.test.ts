@@ -779,19 +779,26 @@ describe("un error del CLI sin result deja el error real en el mensaje", () => {
 
   it("C14. el mensaje contiene los primeros 300 caracteres de stderr", async () => {
     const stderr = `${"e".repeat(300)}FIN`;
-    const error = await fallo({ ...salida({ is_error: true, subtype: "error_during_execution" }, 1), stderr });
+    const error = await fallo({
+      ...salida({ is_error: true, subtype: "error_during_execution" }, 1),
+      stderr,
+    });
     expect(error.message).toContain("e".repeat(300));
     expect(error.message).not.toContain("FIN");
   });
 
   it("C15. el mensaje contiene el primer elemento de errors", async () => {
-    const error = await fallo(salida({ is_error: true, errors: ["primero raro", "segundo"] }, 1));
+    const error = await fallo(
+      salida({ is_error: true, errors: ["primero raro", "segundo"] }, 1),
+    );
     expect(error.message).toContain("primero raro");
     expect(error.message).not.toContain("segundo");
   });
 
   it("C16. control: un 429 con texto conserva RATE_LIMIT", async () => {
-    const error = await fallo(salida({ is_error: true, api_error_status: 429, result: "limit" }, 1));
+    const error = await fallo(
+      salida({ is_error: true, api_error_status: 429, result: "limit" }, 1),
+    );
     expect(error.code).toBe("RATE_LIMIT");
     expect(error.message).toContain("limit");
   });
@@ -799,7 +806,9 @@ describe("un error del CLI sin result deja el error real en el mensaje", () => {
   it("C17. «sin detalle» solo aparece cuando no hay result, subtype, errors ni stderr", async () => {
     const vacio = await fallo(salida({ is_error: true }, 1));
     expect(vacio.message).toContain("sin detalle");
-    const conSubtipo = await fallo(salida({ is_error: true, subtype: "error_during_execution" }, 1));
+    const conSubtipo = await fallo(
+      salida({ is_error: true, subtype: "error_during_execution" }, 1),
+    );
     expect(conSubtipo.message).not.toContain("sin detalle");
     const conErrors = await fallo(salida({ is_error: true, errors: ["x"] }, 1));
     expect(conErrors.message).not.toContain("sin detalle");

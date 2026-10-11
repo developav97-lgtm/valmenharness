@@ -17,7 +17,14 @@
  *    es un programa que decide por su cuenta; lo que hace falta es que un agente
  *    lea qué falta y lo ejecute.
  */
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -155,7 +162,9 @@ describe("perfiles", () => {
     perfilesCommand(PATHS(), {}, "elegir", "claude-code-completo");
     perfilesCommand(PATHS(), { cliente: "codex" }, "elegir", "mio");
     const r = perfilesCommand(PATHS(), { cliente: "claude" }, "list", undefined);
-    expect(r.stdout).toMatch(/claude-code-completo\s+incorporado\s+elegido para el proyecto/);
+    expect(r.stdout).toMatch(
+      /claude-code-completo\s+incorporado\s+elegido para el proyecto/,
+    );
     expect(r.stdout).toContain("elegido para codex");
     expect(r.stdout).toContain("Modelos por fase (cliente: claude)");
     expect(r.stdout).toContain("perfil claude-code-completo");
@@ -189,7 +198,12 @@ describe("perfiles", () => {
   it("C9 elegir para un ejecutor no cambia el del proyecto", () => {
     conPerfilPropio();
     perfilesCommand(PATHS(), {}, "elegir", "mio");
-    const r = perfilesCommand(PATHS(), { cliente: "codex" }, "elegir", "claude-code-completo");
+    const r = perfilesCommand(
+      PATHS(),
+      { cliente: "codex" },
+      "elegir",
+      "claude-code-completo",
+    );
     expect(r.exitCode).toBe(0);
     const texto = readFileSync(perfilesYaml(), "utf8");
     expect(texto).toContain("proyecto: mio");
@@ -238,13 +252,18 @@ describe("perfiles", () => {
 
   it("C14 elegir y quitar dejan routing.yaml y config.yaml con los mismos bytes", () => {
     conPerfilPropio();
-    const rutas = [join(lab, ".valmen", "routing.yaml"), join(lab, ".valmen", "config.yaml")];
+    const rutas = [
+      join(lab, ".valmen", "routing.yaml"),
+      join(lab, ".valmen", "config.yaml"),
+    ];
     const antes = rutas.map((ruta) => readFileSync(ruta));
     perfilesCommand(PATHS(), {}, "elegir", "mio");
     perfilesCommand(PATHS(), { cliente: "claude" }, "elegir", "claude-code-completo");
     perfilesCommand(PATHS(), {}, "quitar", undefined);
     perfilesCommand(PATHS(), { cliente: "claude" }, "quitar", undefined);
-    rutas.forEach((ruta, i) => expect(readFileSync(ruta).equals(antes[i] as Buffer)).toBe(true));
+    rutas.forEach((ruta, i) =>
+      expect(readFileSync(ruta).equals(antes[i] as Buffer)).toBe(true),
+    );
   });
 
   it("C15 un profiles.yaml ilegible sale con el mensaje y sin excepción", () => {

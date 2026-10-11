@@ -213,7 +213,9 @@ export function allowedSchemas(root: string): string[] {
 /** Los umbrales que el proyecto declara por compuerta, evaluador y proposición; vacía si no declara. */
 export function gateThresholds(root: string): readonly ThresholdOverride[] {
   const config = configDelProyecto(root);
-  return config === null ? [] : readGateThresholds(config, ["analysis", "plan", "qa-mechanical"]);
+  return config === null
+    ? []
+    : readGateThresholds(config, ["analysis", "plan", "qa-mechanical"]);
 }
 
 /** Las fuentes desde las que el proyecto acepta aprobar un plan. */
@@ -260,7 +262,8 @@ export function autonomousConfig(root: string): AutonomousConfig {
     return readAutonomousConfig({});
   }
   const documento = parseYamlSubset(texto, { fileName: ".valmen/config.yaml" });
-  if (typeof documento !== "object" || Array.isArray(documento)) return readAutonomousConfig({});
+  if (typeof documento !== "object" || Array.isArray(documento))
+    return readAutonomousConfig({});
   return readAutonomousConfig(documento as ConfigMap);
 }
 

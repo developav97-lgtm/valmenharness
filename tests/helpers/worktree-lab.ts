@@ -22,7 +22,9 @@ export interface Laboratorio {
   limpiar(): void;
 }
 
-export function crearLaboratorio(opciones: { capacidad?: number; declarado?: boolean } = {}): Laboratorio {
+export function crearLaboratorio(
+  opciones: { capacidad?: number; declarado?: boolean } = {},
+): Laboratorio {
   const home = mkdtempSync(join(tmpdir(), "valmen-wt-"));
   const root = join(home, "proyecto");
   mkdirSync(join(home, ".valmen"), { recursive: true });
@@ -42,16 +44,28 @@ export function crearLaboratorio(opciones: { capacidad?: number; declarado?: boo
     );
   }
   for (const id of [TICKET_A, TICKET_B]) {
-    writeFixtureTicket(root, { id, workflowStatus: "approved", type: "FEATURE", module: "WT" });
+    writeFixtureTicket(root, {
+      id,
+      workflowStatus: "approved",
+      type: "FEATURE",
+      module: "WT",
+    });
   }
-  const gitEn = (cwd: string, ...args: string[]): string => execFileSync("git", args, { cwd, encoding: "utf8" }).trim();
+  const gitEn = (cwd: string, ...args: string[]): string =>
+    execFileSync("git", args, { cwd, encoding: "utf8" }).trim();
   const git = (...args: string[]): string => gitEn(root, ...args);
   git("init", "-q", "-b", "main");
   git("config", "user.email", "t@example.com");
   git("config", "user.name", "T");
   git("add", "-A");
   git("commit", "-q", "-m", "base");
-  return { home, root, git, gitEn, limpiar: () => rmSync(home, { recursive: true, force: true }) };
+  return {
+    home,
+    root,
+    git,
+    gitEn,
+    limpiar: () => rmSync(home, { recursive: true, force: true }),
+  };
 }
 
 export interface Llamada {
@@ -61,7 +75,10 @@ export interface Llamada {
 }
 
 /** `cp` de verdad; la compilación se simula y se registra. */
-export function procesoSimulado(opciones: { fallaEn?: string } = {}): { ejecutor: EjecutorDeProceso; llamadas: Llamada[] } {
+export function procesoSimulado(opciones: { fallaEn?: string } = {}): {
+  ejecutor: EjecutorDeProceso;
+  llamadas: Llamada[];
+} {
   const llamadas: Llamada[] = [];
   const ejecutor: EjecutorDeProceso = (comando, argumentos, cwd) => {
     llamadas.push({ comando, argumentos: [...argumentos], cwd });
@@ -69,7 +86,10 @@ export function procesoSimulado(opciones: { fallaEn?: string } = {}): { ejecutor
       const r = spawnSync(comando, [...argumentos], { cwd, encoding: "utf8" });
       return { status: r.status ?? 1, stdout: r.stdout ?? "", stderr: r.stderr ?? "" };
     }
-    if (opciones.fallaEn !== undefined && `${comando} ${argumentos.join(" ")}`.includes(opciones.fallaEn)) {
+    if (
+      opciones.fallaEn !== undefined &&
+      `${comando} ${argumentos.join(" ")}`.includes(opciones.fallaEn)
+    ) {
       return { status: 2, stdout: "", stderr: "error TS0000: simulado" };
     }
     return { status: 0, stdout: "", stderr: "" };

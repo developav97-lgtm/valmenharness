@@ -25,8 +25,7 @@ const ID = "corrida-orquestada";
 const CATALOGO = join(REPO, "skills", ID, "SKILL.md");
 
 /** Comandos que la skill cita y que aún no están en el CLI, con el ticket que los entrega. */
-const PENDIENTES: Readonly<Record<string, string>> = {
-};
+const PENDIENTES: Readonly<Record<string, string>> = {};
 
 const texto = readFileSync(CATALOGO, "utf8");
 const plano = (t: string): string => t.replace(/\s+/g, " ");
@@ -68,7 +67,9 @@ describe("lo que manda", () => {
   });
 
   it("C6: un subagente por ticket, en segundo plano y en su propio worktree", () => {
-    expect(t).toMatch(/Un subagente por ticket, \*\*en segundo plano\*\* y en su \*\*propio worktree\*\*/);
+    expect(t).toMatch(
+      /Un subagente por ticket, \*\*en segundo plano\*\* y en su \*\*propio worktree\*\*/,
+    );
     expect(t).toContain("`valmen journey worktree create --id <ID>`");
     expect(t).toContain("isolation: worktree");
   });

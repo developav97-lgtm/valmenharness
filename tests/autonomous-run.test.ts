@@ -19,7 +19,8 @@ import { writeFixtureTicket } from "./helpers/fixtures.js";
 const ID = "BUGFIX-POS-AUTONOMO-20261004";
 let root: string;
 const paths = () => ({ root, ticketsDir: "tickets" });
-const PRUEBAS = "Contrato de entrega: ejecutar `node -e \"process.exit(0)\"` desde la raíz; esperado: código de salida 0.";
+const PRUEBAS =
+  'Contrato de entrega: ejecutar `node -e "process.exit(0)"` desde la raíz; esperado: código de salida 0.';
 const criteria =
   '- [ ] El filtro devuelve una coincidencia.\n      <!-- test: node -e "process.exit(0)" -->';
 
@@ -69,7 +70,13 @@ function ticket(): ReturnType<typeof parseTicket> {
 }
 
 function initializeGit(): void {
-  for (const args of [["init", "-q"], ["config", "user.email", "test@valmen.local"], ["config", "user.name", "Valmen test"], ["add", "."], ["commit", "-qm", "inicial"]]) {
+  for (const args of [
+    ["init", "-q"],
+    ["config", "user.email", "test@valmen.local"],
+    ["config", "user.name", "Valmen test"],
+    ["add", "."],
+    ["commit", "-qm", "inicial"],
+  ]) {
     const result = spawnSync("git", args, { cwd: root, encoding: "utf8" });
     if (result.status !== 0) throw new Error(result.stderr);
   }
@@ -109,37 +116,42 @@ function closeForBudget(id: string, costUsd: number): void {
     criterios: criteria,
   });
   const path = join(root, "tickets", "2026", id, "ticket.md");
-  const usage = [{
-    kind: "ai-usage",
-    id: "CONSUMO-001",
-    date: "2026-10-05",
-    session_reference: "manual:lab",
-    model: "laboratorio",
-    reasoning_effort: null,
-    input_tokens: 0,
-    output_tokens: 0,
-    total_tokens: 0,
-    estimated_cost_usd: costUsd,
-    source: "manual:prueba",
-    confidence: "high",
-    notes: null,
-  }];
-  const closure = [{
-    kind: "ticket-close",
-    id: "CLOSE-001",
-    date: "2026-10-05",
-    technical_summary: "Cierre de laboratorio.",
-    functional_summary: "Cierre de laboratorio.",
-    qa_status: "approved",
-    qa_waiver_reason: null,
-    po_confirmation: "probado y conforme",
-    release_impact: "unreleased",
-  }];
+  const usage = [
+    {
+      kind: "ai-usage",
+      id: "CONSUMO-001",
+      date: "2026-10-05",
+      session_reference: "manual:lab",
+      model: "laboratorio",
+      reasoning_effort: null,
+      input_tokens: 0,
+      output_tokens: 0,
+      total_tokens: 0,
+      estimated_cost_usd: costUsd,
+      source: "manual:prueba",
+      confidence: "high",
+      notes: null,
+    },
+  ];
+  const closure = [
+    {
+      kind: "ticket-close",
+      id: "CLOSE-001",
+      date: "2026-10-05",
+      technical_summary: "Cierre de laboratorio.",
+      functional_summary: "Cierre de laboratorio.",
+      qa_status: "approved",
+      qa_waiver_reason: null,
+      po_confirmation: "probado y conforme",
+      release_impact: "unreleased",
+    },
+  ];
   const qa = [
     {
       id: "QA-001",
       date: "2026-10-05",
-      build_reference: "worktree:sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      build_reference:
+        "worktree:sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       environment: "laboratorio",
       result: "pending",
       findings: [],
@@ -163,7 +175,10 @@ function closeForBudget(id: string, costUsd: number): void {
       .replace(/(## Consumo de IA\n\n```json\n)\[\]/, `$1${JSON.stringify(usage)}`)
       .replace(/(## Cierre\n\n```json\n)\[\]/, `$1${JSON.stringify(closure)}`)
       .replace(/(## QA\n\n```json\n)\[\]/, `$1${JSON.stringify(qa)}`)
-      .replace("## Pruebas\n\nPendiente de ejecución.", "## Pruebas\n\n- Resultado del PO: probado y conforme."),
+      .replace(
+        "## Pruebas\n\nPendiente de ejecución.",
+        "## Pruebas\n\n- Resultado del PO: probado y conforme.",
+      ),
     "utf8",
   );
 }
@@ -177,7 +192,12 @@ afterEach(() => rmSync(root, { recursive: true, force: true }));
 
 describe("run autónomo", () => {
   it("lleva un ticket aprobado a awaiting_user_tests después del gate mecánico", async () => {
-    writeFixtureTicket(root, { id: ID, workflowStatus: "approved", criterios: criteria , pruebas: PRUEBAS});
+    writeFixtureTicket(root, {
+      id: ID,
+      workflowStatus: "approved",
+      criterios: criteria,
+      pruebas: PRUEBAS,
+    });
     const commands: string[] = [];
 
     const result = await runAutonomous({
@@ -195,7 +215,12 @@ describe("run autónomo", () => {
   });
 
   it("rechaza un ticket que no tiene plan aprobado sin tocarlo", async () => {
-    writeFixtureTicket(root, { id: ID, workflowStatus: "analyzed", criterios: criteria , pruebas: PRUEBAS});
+    writeFixtureTicket(root, {
+      id: ID,
+      workflowStatus: "analyzed",
+      criterios: criteria,
+      pruebas: PRUEBAS,
+    });
     await expect(runAutonomous({ paths: paths(), ticketId: ID })).rejects.toThrow(
       "no está en approved",
     );
@@ -206,12 +231,14 @@ describe("run autónomo", () => {
     writeFixtureTicket(root, {
       id: "BUGFIX-POS-ZETA-20261004",
       workflowStatus: "approved",
-      criterios: criteria, pruebas: PRUEBAS,
+      criterios: criteria,
+      pruebas: PRUEBAS,
     });
     writeFixtureTicket(root, {
       id: "BUGFIX-POS-ALFA-20261004",
       workflowStatus: "approved",
-      criterios: criteria, pruebas: PRUEBAS,
+      criterios: criteria,
+      pruebas: PRUEBAS,
     });
     const result = await runAutonomous({
       paths: paths(),
@@ -250,8 +277,14 @@ describe("run autónomo", () => {
   });
 
   it("detiene ante un fallo de pruebas declarado, deja recibo y no entrega", async () => {
-    const failing = '- [ ] El filtro falla.\n      <!-- test: node -e "process.exit(1)" -->';
-    writeFixtureTicket(root, { id: ID, workflowStatus: "approved", criterios: failing , pruebas: PRUEBAS});
+    const failing =
+      '- [ ] El filtro falla.\n      <!-- test: node -e "process.exit(1)" -->';
+    writeFixtureTicket(root, {
+      id: ID,
+      workflowStatus: "approved",
+      criterios: failing,
+      pruebas: PRUEBAS,
+    });
 
     const result = await runAutonomous({
       paths: paths(),
@@ -268,8 +301,14 @@ describe("run autónomo", () => {
 
   it("un fallo de pruebas con `test-failure` sin declarar igual deja una parada de verificación (R-JORN-007)", async () => {
     policy(["secret-detected"]);
-    const failing = '- [ ] El filtro falla.\n      <!-- test: node -e "process.exit(1)" -->';
-    writeFixtureTicket(root, { id: ID, workflowStatus: "approved", criterios: failing , pruebas: PRUEBAS});
+    const failing =
+      '- [ ] El filtro falla.\n      <!-- test: node -e "process.exit(1)" -->';
+    writeFixtureTicket(root, {
+      id: ID,
+      workflowStatus: "approved",
+      criterios: failing,
+      pruebas: PRUEBAS,
+    });
 
     const result = await runAutonomous({
       paths: paths(),
@@ -284,7 +323,12 @@ describe("run autónomo", () => {
 
   it("detiene antes de invocar si conserva dos bloqueos vigentes de compuerta", async () => {
     policy(["gate-blocked-twice"]);
-    writeFixtureTicket(root, { id: ID, workflowStatus: "approved", criterios: criteria , pruebas: PRUEBAS});
+    writeFixtureTicket(root, {
+      id: ID,
+      workflowStatus: "approved",
+      criterios: criteria,
+      pruebas: PRUEBAS,
+    });
     appendReceipt(paths(), ID, blockedReceipt("GR-001"));
     appendReceipt(paths(), ID, blockedReceipt("GR-002"));
     const execute = vi.fn(() => ({ status: 0, stdout: "", stderr: "" }));
@@ -298,7 +342,12 @@ describe("run autónomo", () => {
 
   it("detiene antes de invocar cuando el costo acumulado alcanza el tope por ticket", async () => {
     policy(["budget-exceeded"]);
-    writeFixtureTicket(root, { id: ID, workflowStatus: "approved", criterios: criteria , pruebas: PRUEBAS});
+    writeFixtureTicket(root, {
+      id: ID,
+      workflowStatus: "approved",
+      criterios: criteria,
+      pruebas: PRUEBAS,
+    });
     appendReceipt(paths(), ID, {
       ...blockedReceipt("GR-PRESUPUESTO"),
       outcome: "approve",
@@ -318,7 +367,11 @@ describe("run autónomo", () => {
     const config = join(root, ".valmen", "config.yaml");
     writeFileSync(
       config,
-      readFileSync(config, "utf8").replace("    budget-per-ticket: 1", "    budget-per-ticket: 99") + `
+      readFileSync(config, "utf8").replace(
+        "    budget-per-ticket: 1",
+        "    budget-per-ticket: 99",
+      ) +
+        `
 budgets:
   adaptive:
     enabled: true
@@ -334,7 +387,12 @@ budgets:
     closeForBudget("BUGFIX-POS-HISTORIAL-A-20261001", 1);
     closeForBudget("BUGFIX-POS-HISTORIAL-B-20261002", 1);
     closeForBudget("BUGFIX-POS-HISTORIAL-C-20261003", 1);
-    writeFixtureTicket(root, { id: ID, workflowStatus: "approved", criterios: criteria , pruebas: PRUEBAS});
+    writeFixtureTicket(root, {
+      id: ID,
+      workflowStatus: "approved",
+      criterios: criteria,
+      pruebas: PRUEBAS,
+    });
     appendReceipt(paths(), ID, {
       ...blockedReceipt("GR-PAUSA"),
       outcome: "approve",
@@ -351,7 +409,12 @@ budgets:
 
   it("detiene por secreto sin guardar su valor", async () => {
     policy(["secret-detected"]);
-    writeFixtureTicket(root, { id: ID, workflowStatus: "approved", criterios: criteria , pruebas: PRUEBAS});
+    writeFixtureTicket(root, {
+      id: ID,
+      workflowStatus: "approved",
+      criterios: criteria,
+      pruebas: PRUEBAS,
+    });
     initializeGit();
     const secret = `sk-${"x".repeat(24)}`;
 

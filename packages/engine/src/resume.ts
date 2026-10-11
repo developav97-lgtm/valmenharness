@@ -169,7 +169,8 @@ export function delegacionDeFase(fases: FasesDeSesion, id: string): DelegacionDe
     return {
       modo: "sesion",
       fase: null,
-      motivo: "el estado no es de una fase del agente: no se delega lo que decide una persona",
+      motivo:
+        "el estado no es de una fase del agente: no se delega lo que decide una persona",
     };
   }
   const fase = fases.fases.find((f) => f.fase === actual);
@@ -205,7 +206,9 @@ export function delegacionDeFase(fases: FasesDeSesion, id: string): DelegacionDe
 
 export function renderDelegacion(delegacion: DelegacionDeFase): string[] {
   if (delegacion.modo === "sesion") {
-    return [`Delegación de la fase${delegacion.fase === null ? "" : ` ${delegacion.fase}`}: ${delegacion.motivo}.`];
+    return [
+      `Delegación de la fase${delegacion.fase === null ? "" : ` ${delegacion.fase}`}: ${delegacion.motivo}.`,
+    ];
   }
   return [`Delegación de la fase ${delegacion.fase}:`, ...delegacion.instrucciones];
 }
@@ -214,9 +217,13 @@ export function renderFases(fases: FasesDeSesion): string[] {
   const lines = [`Modelos por fase (cliente: ${fases.cliente ?? "no declarado"}):`];
   for (const f of fases.fases) {
     const marca = f.fase === fases.faseActual ? "→" : "-";
-    const origen = f.origen.perfil === undefined ? f.origen.source : `perfil ${f.origen.perfil.id}`;
-    const destino = f.subagente === null ? (f.aviso ?? "sin subagente") : `subagente ${f.subagente}`;
-    lines.push(`${marca} ${f.fase}: ${f.provider}/${f.model} (${f.effort}, ${origen}) — ${destino}`);
+    const origen =
+      f.origen.perfil === undefined ? f.origen.source : `perfil ${f.origen.perfil.id}`;
+    const destino =
+      f.subagente === null ? (f.aviso ?? "sin subagente") : `subagente ${f.subagente}`;
+    lines.push(
+      `${marca} ${f.fase}: ${f.provider}/${f.model} (${f.effort}, ${origen}) — ${destino}`,
+    );
   }
   if (fases.nota !== null) lines.push(`Nota: ${fases.nota}`);
   if (fases.aviso !== null) lines.push(`Aviso: ${fases.aviso}`);
@@ -230,7 +237,8 @@ export function renderFases(fases: FasesDeSesion): string[] {
 export function renderResumeQuiet(context: ResumeContext): string {
   const una = (texto: string): string => texto.replace(/\s+/g, " ").trim();
   const paso = context.nextStep.pasos[0];
-  const titulo = context.nextStep.fase !== "" ? context.nextStep.fase : (paso ?? "sin paso pendiente");
+  const titulo =
+    context.nextStep.fase !== "" ? context.nextStep.fase : (paso ?? "sin paso pendiente");
   const alto = context.nextStep.alto;
   return (
     [

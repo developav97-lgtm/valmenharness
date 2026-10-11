@@ -40,7 +40,12 @@ import {
   hasSubstantivePlan,
   isCriticalPlanGate,
 } from "@valmen/core";
-import { type GateReceipt, criterioDeclarado, extractCriteriaSpecs, hashState } from "@valmen/gate";
+import {
+  type GateReceipt,
+  criterioDeclarado,
+  extractCriteriaSpecs,
+  hashState,
+} from "@valmen/gate";
 
 import { motivoDeArbolNoVigente } from "./arbol-probado.js";
 import type { RegistryPaths } from "./discovery.js";
@@ -103,7 +108,7 @@ const NO_GIT_NI_ALCANCE =
 /** El registro de la aprobación del plan: un evento con actor, fuente, frase y hash (R-CTRL-001). */
 const REGISTRAR_APROBACION =
   "regístrala como evento con `valmen approve-plan --id <ID> --actor <nombre> --source cli " +
-  "--quote \"<sus palabras literales>\"` (una frase en `## Plan` ya no basta)";
+  '--quote "<sus palabras literales>"` (una frase en `## Plan` ya no basta)';
 
 /** La salvedad de las decisiones humanas: quién puede registrarlas. */
 const SALVEDAD_DE_DELEGACION =
@@ -141,8 +146,7 @@ function citar(recibo: GateReceipt): string {
 function criteriosSinVerificacion(ticket: ParsedTicket): number {
   const criterios = extractCriteriaSpecs(ticket.sections["Criterios de aceptación"] ?? "");
   if (criterios.length === 0) return -1;
-  return criterios.filter((criterio) => !criterioDeclarado(criterio))
-    .length;
+  return criterios.filter((criterio) => !criterioDeclarado(criterio)).length;
 }
 
 /**

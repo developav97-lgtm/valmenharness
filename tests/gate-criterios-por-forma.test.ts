@@ -42,7 +42,10 @@ import { renderFixtureTicket, writeFixtureTicket } from "./helpers/fixtures.js";
 const TICKET = "IMPROVEMENT-GATE-CRITERIOS-FORMA-20261009";
 
 let lab: string;
-const PATHS = (): { root: string; ticketsDir: string } => ({ root: lab, ticketsDir: "tickets" });
+const PATHS = (): { root: string; ticketsDir: string } => ({
+  root: lab,
+  ticketsDir: "tickets",
+});
 
 beforeEach(() => {
   lab = mkdtempSync(join(tmpdir(), "valmen-criterios-forma-"));
@@ -64,7 +67,8 @@ function plan(pasos: readonly string[]): string {
 }
 
 const manual = (texto: string): string => `- [ ] ${texto}\n      <!-- verify: manual -->`;
-const conTest = (texto: string, comando: string): string => `- [ ] ${texto}\n      <!-- test: ${comando} -->`;
+const conTest = (texto: string, comando: string): string =>
+  `- [ ] ${texto}\n      <!-- test: ${comando} -->`;
 
 /** Escribe el ticket del laboratorio. */
 function ticket(pasos: readonly string[], criterios: readonly string[]): void {
@@ -84,7 +88,11 @@ function espia(): {
 } {
   const ids: string[] = [];
   let n = 0;
-  const jev = (async ({ propositions }: { propositions: readonly { id: string; kind: string }[] }) => {
+  const jev = (async ({
+    propositions,
+  }: {
+    propositions: readonly { id: string; kind: string }[];
+  }) => {
     n += 1;
     ids.push(...propositions.map((p) => p.id));
     return {
@@ -103,27 +111,42 @@ function espia(): {
   return { jev, recibidas: () => [...ids], llamadas: () => n };
 }
 
-async function correrPlan(e = espia()): Promise<{ e: ReturnType<typeof espia>; stdout: string }> {
-  const r = await runGate(PATHS(), { gateId: "plan", ticketId: TICKET, evaluator: "jev", jev: e.jev });
+async function correrPlan(
+  e = espia(),
+): Promise<{ e: ReturnType<typeof espia>; stdout: string }> {
+  const r = await runGate(PATHS(), {
+    gateId: "plan",
+    ticketId: TICKET,
+    evaluator: "jev",
+    jev: e.jev,
+  });
   return { e, stdout: r.stdout };
 }
 
 /** El último recibo del ticket. */
-function recibo(): { modelAnswers: { id: string; value?: number }[]; notes?: string[]; policy: unknown } {
+function recibo(): {
+  modelAnswers: { id: string; value?: number }[];
+  notes?: string[];
+  policy: unknown;
+} {
   const todos = readReceipts(PATHS(), TICKET) as unknown as ReturnType<typeof recibo>[];
   const ultimo = todos[todos.length - 1];
   if (ultimo === undefined) throw new Error("No se escribió ningún recibo.");
   return ultimo;
 }
 
-const voto = (id: string): number | undefined => recibo().modelAnswers.find((a) => a.id === id)?.value;
+const voto = (id: string): number | undefined =>
+  recibo().modelAnswers.find((a) => a.id === id)?.value;
 const notas = (): string => (recibo().notes ?? []).join(" | ");
 
 const ARCHIVO = "Tocar `packages/gate/src/criteria.ts`";
 
 describe("criterios manuales", () => {
   it("C01 un manual de una afirmación citado como «Cn» vota 0.99 decidido en código", async () => {
-    ticket([`${ARCHIVO} (C1).`], [manual("La skill dice que el criterio se cita en el paso")]);
+    ticket(
+      [`${ARCHIVO} (C1).`],
+      [manual("La skill dice que el criterio se cita en el paso")],
+    );
     const { e } = await correrPlan();
     expect(voto("criterio_01")).toBe(0.99);
     expect(e.recibidas()).not.toContain("criterio_01");
@@ -137,7 +160,10 @@ describe("criterios manuales", () => {
   });
 
   it("C03 un manual compuesto vota 0 decidido en código aunque un paso lo cite", async () => {
-    ticket([`${ARCHIVO} (C1).`], [manual("La skill nombra el paso y el motivo del cambio")]);
+    ticket(
+      [`${ARCHIVO} (C1).`],
+      [manual("La skill nombra el paso y el motivo del cambio")],
+    );
     const { e } = await correrPlan();
     expect(voto("criterio_01")).toBe(0);
     expect(e.recibidas()).not.toContain("criterio_01");
@@ -147,31 +173,43 @@ describe("criterios manuales", () => {
   it("C04 el recibo nombra el motivo del 0 de cada criterio decidido en código", async () => {
     ticket(
       [`${ARCHIVO} (C2).`],
-      [manual("El primer criterio queda sin cita en el plan"), manual("El segundo criterio queda citado en el plan"), manual("El tercero agrupa una cosa y otra cosa")],
+      [
+        manual("El primer criterio queda sin cita en el plan"),
+        manual("El segundo criterio queda citado en el plan"),
+        manual("El tercero agrupa una cosa y otra cosa"),
+      ],
     );
     await correrPlan();
     expect(notas()).toContain("criterio_01 decidido en código: ningún paso cita C1");
-    expect(notas()).toContain("criterio_03 decidido en código: agrupa 2 afirmaciones; partilo");
+    expect(notas()).toContain(
+      "criterio_03 decidido en código: agrupa 2 afirmaciones; partilo",
+    );
     expect(notas()).not.toContain("criterio_02 decidido en código");
   });
 
   it("C05 un paso que cita el rango «C1–C24» cita a cada criterio del rango", () => {
     for (const rango of ["C1–C24", "C1-C24", "C1 a C24"]) {
       const citados = criteriosCitados(plan([`${ARCHIVO} (${rango}).`]));
-      expect([...citados].sort((a, b) => a - b)).toEqual(Array.from({ length: 24 }, (_, i) => i + 1));
+      expect([...citados].sort((a, b) => a - b)).toEqual(
+        Array.from({ length: 24 }, (_, i) => i + 1),
+      );
       expect(citados.has(25)).toBe(false);
     }
   });
 
   it("C06 un paso que cita «C10» no cuenta como cita de C1", () => {
-    const citados = criteriosCitados(plan([`${ARCHIVO} (C10).`, "Revisar `x.ts` con el plan de C100 y de AC1."]));
+    const citados = criteriosCitados(
+      plan([`${ARCHIVO} (C10).`, "Revisar `x.ts` con el plan de C100 y de AC1."]),
+    );
     expect(citados.has(10)).toBe(true);
     expect(citados.has(1)).toBe(false);
     expect(citados.has(100)).toBe(true);
   });
 
   it("C07 un criterio `verify: dev` sigue la regla de los criterios manuales", () => {
-    const [dev] = extractCriteriaSpecs("- [ ] La pantalla conserva el flujo de pago en desarrollo\n      <!-- verify: dev -->");
+    const [dev] = extractCriteriaSpecs(
+      "- [ ] La pantalla conserva el flujo de pago en desarrollo\n      <!-- verify: dev -->",
+    );
     expect(dev?.dev).toBe(true);
     expect(seDecideEnCodigo(dev as CriterionSpec)).toBe(true);
     const sinCita = renderFixtureTicket({ id: TICKET, plan: plan([`${ARCHIVO}.`]) });
@@ -186,14 +224,20 @@ describe("criterios «la prueba pasa»", () => {
   const COMANDO = "npx vitest run tests/a.test.ts";
 
   it("C08 un `test:` que afirma que pasa vota 0.99 cuando un paso lo cita con su archivo", async () => {
-    ticket([`${ARCHIVO} (C1).`, "Añadir `tests/a.test.ts` con el caso."], [conTest(PRUEBA, COMANDO)]);
+    ticket(
+      [`${ARCHIVO} (C1).`, "Añadir `tests/a.test.ts` con el caso."],
+      [conTest(PRUEBA, COMANDO)],
+    );
     const { e } = await correrPlan();
     expect(voto("criterio_01")).toBe(0.99);
     expect(e.recibidas()).not.toContain("criterio_01");
   });
 
   it("C09 un `test:` que afirma que pasa vota 0 cuando ningún paso lo cita", async () => {
-    ticket([`${ARCHIVO}.`, "Añadir `tests/a.test.ts` con el caso."], [conTest(PRUEBA, COMANDO)]);
+    ticket(
+      [`${ARCHIVO}.`, "Añadir `tests/a.test.ts` con el caso."],
+      [conTest(PRUEBA, COMANDO)],
+    );
     const { e } = await correrPlan();
     expect(voto("criterio_01")).toBe(0);
     expect(e.recibidas()).not.toContain("criterio_01");
@@ -209,14 +253,20 @@ describe("criterios «la prueba pasa»", () => {
   });
 
   it("C11 un `test:` que afirma que el monorepo compila vota 0.99 cuando un paso lo cita", async () => {
-    ticket([`${ARCHIVO} (C1).`], [conTest("El monorepo compila sin errores.", "npx tsc --build tsconfig.build.json")]);
+    ticket(
+      [`${ARCHIVO} (C1).`],
+      [conTest("El monorepo compila sin errores.", "npx tsc --build tsconfig.build.json")],
+    );
     const { e } = await correrPlan();
     expect(voto("criterio_01")).toBe(0.99);
     expect(e.recibidas()).not.toContain("criterio_01");
   });
 
   it("C12 un `test:` que describe un comportamiento sigue preguntándose al evaluador", async () => {
-    const comportamiento = conTest("El filtro encuentra la orden por número parcial.", COMANDO);
+    const comportamiento = conTest(
+      "El filtro encuentra la orden por número parcial.",
+      COMANDO,
+    );
     ticket([`${ARCHIVO} (C1).`], [comportamiento]);
     const [spec] = extractCriteriaSpecs(comportamiento);
     expect(seDecideEnCodigo(spec as CriterionSpec)).toBe(false);
@@ -233,7 +283,11 @@ describe("criterios «la prueba pasa»", () => {
       http: "GET /api/ordenes/1 expect: 200",
     };
     expect(seDecideEnCodigo(http)).toBe(false);
-    const gate = expandGate(PLAN_GATE, { criteria: [http], impacts: [], interfaz: SIN_INTERFAZ });
+    const gate = expandGate(PLAN_GATE, {
+      criteria: [http],
+      impacts: [],
+      interfaz: SIN_INTERFAZ,
+    });
     const proposicion = gate.propositions.find((p) => p.id === "criterio_01");
     expect(proposicion).toBeDefined();
     expect(proposicion?.decidedInCode).not.toBe(true);
@@ -246,7 +300,10 @@ describe("el reparto entre el código y el evaluador", () => {
       [`${ARCHIVO} (C1–C3).`],
       [
         manual("El primer criterio manual queda citado por el plan"),
-        conTest("El segundo criterio describe un comportamiento observable.", "npx vitest run tests/a.test.ts"),
+        conTest(
+          "El segundo criterio describe un comportamiento observable.",
+          "npx vitest run tests/a.test.ts",
+        ),
         conTest("`tests/a.test.ts` pasa.", "npx vitest run tests/a.test.ts"),
       ],
     );
@@ -259,7 +316,10 @@ describe("el reparto entre el código y el evaluador", () => {
   it("C15 un plan cuyos criterios se deciden todos en código no hace ninguna llamada por criterios", async () => {
     ticket(
       [`${ARCHIVO} (C1–C2).`, "Añadir `tests/a.test.ts` con el caso."],
-      [manual("El primer criterio manual queda citado por el plan"), conTest("`tests/a.test.ts` pasa.", "npx vitest run tests/a.test.ts")],
+      [
+        manual("El primer criterio manual queda citado por el plan"),
+        conTest("`tests/a.test.ts` pasa.", "npx vitest run tests/a.test.ts"),
+      ],
     );
     const { e } = await correrPlan();
     expect(e.recibidas().filter((id) => id.startsWith("criterio_"))).toEqual([]);
@@ -280,7 +340,8 @@ describe("el caso medido de la pantalla de autorizaciones", () => {
   );
   // Los primeros 30 criterios del ticket no se reproducen: la prueba numera a los cuatro como C1–C4
   // y el paso 8 cita los suyos con el mismo texto.
-  const PASO_8 = "Comprobación: `npx tsc --build tsconfig.build.json` y `npx vitest run` con los archivos de C24 y C31–C34. (C1, C2, C3, C4)";
+  const PASO_8 =
+    "Comprobación: `npx tsc --build tsconfig.build.json` y `npx vitest run` con los archivos de C24 y C31–C34. (C1, C2, C3, C4)";
   const PASO_ARCHIVOS =
     "Tocar `tests/autorizacion-qa-canales.test.ts`, `tests/autorizacion-aprobacion.test.ts`, `tests/elegibilidad-aprobacion.test.ts` y `tests/autorizacion-qa.test.ts`.";
 
@@ -315,23 +376,52 @@ describe("lo que no cambia", () => {
   it("C19 el gate de análisis sigue sin desplegar criterios", () => {
     const criteria: CriterionSpec[] = [
       { text: "Un criterio manual cualquiera del ticket", command: null, manual: true },
-      { text: "`tests/a.test.ts` pasa.", command: "npx vitest run tests/a.test.ts", manual: false },
+      {
+        text: "`tests/a.test.ts` pasa.",
+        command: "npx vitest run tests/a.test.ts",
+        manual: false,
+      },
     ];
     expect(ANALYSIS_GATE.criteriaPropositions).not.toBe(true);
-    const gate = expandGate(ANALYSIS_GATE, { criteria, impacts: [], interfaz: SIN_INTERFAZ });
-    expect(gate.propositions.map((p) => p.id).filter((id) => id.startsWith("criterio_"))).toEqual([]);
-    expect(gate.propositions.some((p) => p.decidedInCode === true && p.id.startsWith("criterio_"))).toBe(false);
+    const gate = expandGate(ANALYSIS_GATE, {
+      criteria,
+      impacts: [],
+      interfaz: SIN_INTERFAZ,
+    });
+    expect(
+      gate.propositions.map((p) => p.id).filter((id) => id.startsWith("criterio_")),
+    ).toEqual([]);
+    expect(
+      gate.propositions.some(
+        (p) => p.decidedInCode === true && p.id.startsWith("criterio_"),
+      ),
+    ).toBe(false);
   });
 
   it("C20 las proposiciones del gate `qa-mechanical` quedan iguales", () => {
     const criteria: CriterionSpec[] = [
       { text: "Un criterio manual cualquiera del ticket", command: null, manual: true },
-      { text: "`tests/a.test.ts` pasa.", command: "npx vitest run tests/a.test.ts", manual: false },
-      { text: "El filtro encuentra la orden parcial.", command: "npx vitest run tests/b.test.ts", manual: false },
+      {
+        text: "`tests/a.test.ts` pasa.",
+        command: "npx vitest run tests/a.test.ts",
+        manual: false,
+      },
+      {
+        text: "El filtro encuentra la orden parcial.",
+        command: "npx vitest run tests/b.test.ts",
+        manual: false,
+      },
     ];
     expect(GATES["qa-mechanical"]).toBe(QA_MECHANICAL_GATE);
-    const gate = expandGate(QA_MECHANICAL_GATE, { criteria, impacts: [], interfaz: SIN_INTERFAZ });
-    const esperadas = [criterionProposition(1, criteria[1] as CriterionSpec), criterionProposition(2, criteria[2] as CriterionSpec)];
+    const gate = expandGate(QA_MECHANICAL_GATE, {
+      criteria,
+      impacts: [],
+      interfaz: SIN_INTERFAZ,
+    });
+    const esperadas = [
+      criterionProposition(1, criteria[1] as CriterionSpec),
+      criterionProposition(2, criteria[2] as CriterionSpec),
+    ];
     const propias = gate.propositions.filter((p) => p.id.startsWith("criterio_"));
     // Las mismas, en el mismo orden y sin la marca de decididas en código: las contesta el comando.
     expect(propias).toEqual(esperadas);
@@ -340,14 +430,23 @@ describe("lo que no cambia", () => {
 });
 
 describe("el tope cuenta afirmaciones", () => {
-  const atomico = (n: number): string => manual(`El criterio número ${n} se cumple en la pantalla.`);
-  const compuesto = (n: number): string => manual(`El criterio número ${n} se cumple en la pantalla y en el informe.`);
+  const atomico = (n: number): string =>
+    manual(`El criterio número ${n} se cumple en la pantalla.`);
+  const compuesto = (n: number): string =>
+    manual(`El criterio número ${n} se cumple en la pantalla y en el informe.`);
 
   function revisar(criterios: readonly string[]): { id: string; message: string }[] {
-    const texto = renderFixtureTicket({ id: TICKET, workflowStatus: "planned", plan: plan([`${ARCHIVO}.`]), criterios: criterios.join("\n") });
-    return reviewBeforeGate({ root: lab, ticketText: texto, gateId: "plan" }).findings.filter(
-      (h) => h.id === "mas_criterios_que_el_tope",
-    );
+    const texto = renderFixtureTicket({
+      id: TICKET,
+      workflowStatus: "planned",
+      plan: plan([`${ARCHIVO}.`]),
+      criterios: criterios.join("\n"),
+    });
+    return reviewBeforeGate({
+      root: lab,
+      ticketText: texto,
+      gateId: "plan",
+    }).findings.filter((h) => h.id === "mas_criterios_que_el_tope");
   }
 
   it("C21 el precheck compara contra el tope de 40 la suma de afirmaciones de los criterios", () => {
@@ -359,7 +458,9 @@ describe("el tope cuenta afirmaciones", () => {
   });
 
   it("C22 un ticket de 38 criterios con tres compuestos de dos afirmaciones da `mas_criterios_que_el_tope`", () => {
-    const criterios = Array.from({ length: 38 }, (_, i) => (i < 3 ? compuesto(i + 1) : atomico(i + 1)));
+    const criterios = Array.from({ length: 38 }, (_, i) =>
+      i < 3 ? compuesto(i + 1) : atomico(i + 1),
+    );
     const hallazgos = revisar(criterios);
     expect(hallazgos).toHaveLength(1);
     expect(hallazgos[0]?.message).toContain("41 afirmaciones en 38 criterio(s)");

@@ -113,7 +113,10 @@ export function listFeatureAssets(root: string, slug: string): FeatureAsset[] {
   try {
     crudo = JSON.parse(readFileSync(ruta, "utf8"));
   } catch {
-    fail(`El manifiesto de adjuntos de ${slug} no es un JSON legible: ${ruta}.`, EXIT_SCHEMA);
+    fail(
+      `El manifiesto de adjuntos de ${slug} no es un JSON legible: ${ruta}.`,
+      EXIT_SCHEMA,
+    );
   }
   const lista = (crudo as { assets?: unknown } | null)?.assets;
   if (!Array.isArray(lista)) {
@@ -188,7 +191,10 @@ export function attachFeatureAsset(request: AttachFeatureAssetRequest): Attached
 
   const descripcion = request.description.trim();
   if (descripcion === "") {
-    fail("Un adjunto necesita una descripción: qué es y para qué lo usa el agente.", EXIT_SCHEMA);
+    fail(
+      "Un adjunto necesita una descripción: qué es y para qué lo usa el agente.",
+      EXIT_SCHEMA,
+    );
   }
 
   let datos;
@@ -253,7 +259,10 @@ export function attachFeatureAsset(request: AttachFeatureAssetRequest): Attached
     // La copia se verifica: un destino con otra huella es una copia corrupta y se
     // dice, en vez de anotarla en el manifiesto como buena.
     if (sha256De(readFileSync(destino)) !== huella) {
-      fail(`La copia de ${nombre} no coincide con el original: se interrumpe.`, EXIT_INVARIANT);
+      fail(
+        `La copia de ${nombre} no coincide con el original: se interrumpe.`,
+        EXIT_INVARIANT,
+      );
     }
 
     const asset: FeatureAsset = {
@@ -335,13 +344,18 @@ export type NivelDeCita = "requisito" | "archivo" | "todos";
 export function assetsForRequirements(
   root: string,
   assets: readonly FeatureAsset[],
-  requisitos: readonly { readonly statement: string; readonly body?: string; readonly source: string }[],
+  requisitos: readonly {
+    readonly statement: string;
+    readonly body?: string;
+    readonly source: string;
+  }[],
 ): { assets: FeatureAsset[]; cited: boolean; level: NivelDeCita } {
   if (assets.length === 0) return { assets: [], cited: false, level: "todos" };
 
   const delRequisito = requisitos.map((r) => `${r.statement}\n${r.body ?? ""}`);
   const porRequisito = assets.filter((a) => delRequisito.some((t) => t.includes(a.path)));
-  if (porRequisito.length > 0) return { assets: porRequisito, cited: true, level: "requisito" };
+  if (porRequisito.length > 0)
+    return { assets: porRequisito, cited: true, level: "requisito" };
 
   const textos = [...new Set(requisitos.map((r) => r.source))].map((fuente) => {
     try {

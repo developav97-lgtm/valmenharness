@@ -337,7 +337,8 @@ export function detectTestCommands(root: string): DetectedTestCommand[] {
   };
 
   for (const { relative, absolute } of manifestDirs(root)) {
-    const inside = (name: string): string => (relative === "" ? name : `${relative}/${name}`);
+    const inside = (name: string): string =>
+      relative === "" ? name : `${relative}/${name}`;
 
     if (existsSync(join(absolute, "manage.py"))) {
       declare(`python ${inside("manage.py")} test`, inside("manage.py"));

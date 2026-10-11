@@ -19,14 +19,22 @@ beforeEach(() => {
   root = join(home, "harness");
   mkdirSync(join(home, ".valmen"), { recursive: true });
   mkdirSync(join(root, ".valmen"), { recursive: true });
-  writeFileSync(join(root, ".valmen", "config.yaml"), "project-id: valmen-harness\n", "utf8");
-  writeFileSync(join(home, ".valmen", "bindings.local.yaml"), [
-    "schema-version: 1",
-    "machine-id: qa-mac",
-    "projects:",
-    "  valmen-harness:",
-    `    root: ${root}`,
-  ].join("\n"), "utf8");
+  writeFileSync(
+    join(root, ".valmen", "config.yaml"),
+    "project-id: valmen-harness\n",
+    "utf8",
+  );
+  writeFileSync(
+    join(home, ".valmen", "bindings.local.yaml"),
+    [
+      "schema-version: 1",
+      "machine-id: qa-mac",
+      "projects:",
+      "  valmen-harness:",
+      `    root: ${root}`,
+    ].join("\n"),
+    "utf8",
+  );
 });
 afterEach(() => rmSync(home, { recursive: true, force: true }));
 
@@ -36,7 +44,11 @@ function project() {
 function identity(executionId = "exec-01") {
   return createExecutionIdentity({ projectId: "valmen-harness", ticketId, executionId });
 }
-function activity(eventId: string, state: "started" | "active" | "waiting" | "finished" | "failed", attemptId = "attempt-01") {
+function activity(
+  eventId: string,
+  state: "started" | "active" | "waiting" | "finished" | "failed",
+  attemptId = "attempt-01",
+) {
   return {
     eventId,
     identity: identity(),
@@ -53,8 +65,15 @@ describe("actividad de ejecución sin gates", () => {
     recordExecutionActivity(project(), activity("act-02", "waiting"));
     recordExecutionActivity(project(), activity("act-03", "finished"));
 
-    expect(readExecutionActivity(project(), identity()).map(({ state, cursor }) => [state, cursor])).toEqual([
-      ["started", 1], ["waiting", 2], ["finished", 3],
+    expect(
+      readExecutionActivity(project(), identity()).map(({ state, cursor }) => [
+        state,
+        cursor,
+      ]),
+    ).toEqual([
+      ["started", 1],
+      ["waiting", 2],
+      ["finished", 3],
     ]);
   });
 
@@ -62,8 +81,16 @@ describe("actividad de ejecución sin gates", () => {
     recordExecutionActivity(project(), activity("act-01", "started", "attempt-01"));
     recordExecutionActivity(project(), activity("act-02", "failed", "attempt-02"));
 
-    expect(readExecutionActivity(project(), identity(), "attempt-01").map((event) => event.state)).toEqual(["started"]);
-    expect(readExecutionActivity(project(), identity(), "attempt-02").map((event) => event.state)).toEqual(["failed"]);
+    expect(
+      readExecutionActivity(project(), identity(), "attempt-01").map(
+        (event) => event.state,
+      ),
+    ).toEqual(["started"]);
+    expect(
+      readExecutionActivity(project(), identity(), "attempt-02").map(
+        (event) => event.state,
+      ),
+    ).toEqual(["failed"]);
   });
 
   it("reconcilia un reenvío sin crear otra actividad", () => {
@@ -83,9 +110,11 @@ describe("actividad de ejecución sin gates", () => {
   });
 
   it("rechaza estados fuera del vocabulario de actividad", () => {
-    expect(() => recordExecutionActivity(project(), {
-      ...activity("act-01", "started"),
-      state: "qa_approved" as "started",
-    })).toThrow("state debe ser uno de");
+    expect(() =>
+      recordExecutionActivity(project(), {
+        ...activity("act-01", "started"),
+        state: "qa_approved" as "started",
+      }),
+    ).toThrow("state debe ser uno de");
   });
 });

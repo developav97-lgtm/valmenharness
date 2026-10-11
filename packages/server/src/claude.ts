@@ -259,7 +259,12 @@ function fundir(destino: Acumulado, origen: Acumulado): void {
   for (const clave of origen.mensajesDelRegistro) destino.mensajesDelRegistro.add(clave);
   for (const clave of origen.resultadosConError) destino.resultadosConError.add(clave);
   for (const [ticket, dato] of origen.tickets) {
-    sumar(destino, ticket, dato.peso, dato.trabajado ? "trabajado" : dato.pedido ? "pedido" : null);
+    sumar(
+      destino,
+      ticket,
+      dato.peso,
+      dato.trabajado ? "trabajado" : dato.pedido ? "pedido" : null,
+    );
     if (dato.trabajado && dato.pedido) sumar(destino, ticket, 0, "pedido");
   }
   if (origen.inicio !== 0 && (destino.inicio === 0 || origen.inicio < destino.inicio)) {
@@ -352,7 +357,8 @@ const OBJETIVO_DEL_CLI_RE = /--(?:id|ticket)(?:=|\s+)["']?([^\s"';|&]+)/g;
 function objetivosDelCli(segmento: string, ticketId: string | undefined): Set<string> {
   const objetivos = new Set<string>();
   for (const coincidencia of segmento.matchAll(OBJETIVO_DEL_CLI_RE)) {
-    for (const ticket of idsEn(coincidencia[1] as string, ticketId).keys()) objetivos.add(ticket);
+    for (const ticket of idsEn(coincidencia[1] as string, ticketId).keys())
+      objetivos.add(ticket);
   }
   return objetivos;
 }
@@ -389,7 +395,12 @@ function leerLlamada(
     }
     for (const [ticket, veces] of idsEn(JSON.stringify(entrada), ticketId)) {
       const esObjetivo = objetivos.has(ticket);
-      sumar(acumulado, ticket, veces * (esObjetivo ? 3 : 1), esObjetivo ? "trabajado" : null);
+      sumar(
+        acumulado,
+        ticket,
+        veces * (esObjetivo ? 3 : 1),
+        esObjetivo ? "trabajado" : null,
+      );
     }
     return;
   }
@@ -411,7 +422,12 @@ function leerLlamada(
           : new Set<string>();
       for (const [ticket, veces] of idsEn(segmento, ticketId)) {
         const esObjetivo = objetivos.has(ticket);
-        sumar(acumulado, ticket, veces * (esObjetivo ? 3 : 1), esObjetivo ? "trabajado" : null);
+        sumar(
+          acumulado,
+          ticket,
+          veces * (esObjetivo ? 3 : 1),
+          esObjetivo ? "trabajado" : null,
+        );
       }
     }
     return;
@@ -465,7 +481,8 @@ function leerTranscripcion(
       continue;
     }
 
-    const marca = typeof evento["timestamp"] === "string" ? Date.parse(evento["timestamp"]) : NaN;
+    const marca =
+      typeof evento["timestamp"] === "string" ? Date.parse(evento["timestamp"]) : NaN;
     if (Number.isFinite(marca) && (acumulado.inicio === 0 || marca < acumulado.inicio)) {
       acumulado.inicio = marca;
     }
@@ -498,7 +515,10 @@ function leerTranscripcion(
         acumulado.mensajes.set(clave, {
           model: modelo !== "" ? modelo : (previo?.model ?? ""),
           input: Math.max(previo?.input ?? 0, numero(uso["input_tokens"])),
-          creacion: Math.max(previo?.creacion ?? 0, numero(uso["cache_creation_input_tokens"])),
+          creacion: Math.max(
+            previo?.creacion ?? 0,
+            numero(uso["cache_creation_input_tokens"]),
+          ),
           lectura: Math.max(previo?.lectura ?? 0, numero(uso["cache_read_input_tokens"])),
           salida: Math.max(previo?.salida ?? 0, numero(uso["output_tokens"])),
         });
@@ -547,7 +567,11 @@ function leerTranscripcion(
 
 /** Los archivos de subagentes de una sesión: `<carpeta>/<id>/subagents/agent-*.jsonl`. */
 export function archivosDeSubagentes(rutaDeSesion: string): string[] {
-  const carpeta = join(dirname(rutaDeSesion), basename(rutaDeSesion, ".jsonl"), "subagents");
+  const carpeta = join(
+    dirname(rutaDeSesion),
+    basename(rutaDeSesion, ".jsonl"),
+    "subagents",
+  );
   let nombres: string[];
   try {
     nombres = readdirSync(carpeta);
@@ -620,7 +644,9 @@ function sesionDesdeAcumulado(
     .map(([model, dato]) => ({ model, ...dato }))
     .sort(
       (a, b) =>
-        b.outputTokens - a.outputTokens || b.mensajes - a.mensajes || a.model.localeCompare(b.model),
+        b.outputTokens - a.outputTokens ||
+        b.mensajes - a.mensajes ||
+        a.model.localeCompare(b.model),
     );
 
   let fallidas = 0;
@@ -760,7 +786,10 @@ export function leerSesionesDeClaude(
       }
 
       for (const propia of propias) {
-        if (options.ticketId !== undefined && !propia.tickets.some((t) => t.id === options.ticketId)) {
+        if (
+          options.ticketId !== undefined &&
+          !propia.tickets.some((t) => t.id === options.ticketId)
+        ) {
           continue;
         }
         sesiones.set(propia.id, propia);
@@ -769,8 +798,16 @@ export function leerSesionesDeClaude(
       // Sin un solo mensaje del asistente no hay nada que medir.
       if (acumulado.mensajes.size === 0) continue;
 
-      const madre = sesionDesdeAcumulado(id, ruta, acumulado, archivos.length - propias.length);
-      if (options.ticketId !== undefined && !madre.tickets.some((t) => t.id === options.ticketId)) {
+      const madre = sesionDesdeAcumulado(
+        id,
+        ruta,
+        acumulado,
+        archivos.length - propias.length,
+      );
+      if (
+        options.ticketId !== undefined &&
+        !madre.tickets.some((t) => t.id === options.ticketId)
+      ) {
         continue;
       }
       sesiones.set(id, madre);

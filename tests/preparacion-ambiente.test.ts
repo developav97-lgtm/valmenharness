@@ -11,7 +11,14 @@
  *    (revisión), no una prueba fallida.
  * 5. Sin `test-setup`, nada cambia.
  */
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -25,7 +32,10 @@ import { writeFixtureTicket } from "./helpers/fixtures.js";
 const TICKET = "BUGFIX-POS-FILTRO-ORDENES-20260921";
 
 let lab: string;
-const PATHS = (): { root: string; ticketsDir: string } => ({ root: lab, ticketsDir: "tickets" });
+const PATHS = (): { root: string; ticketsDir: string } => ({
+  root: lab,
+  ticketsDir: "tickets",
+});
 
 /** Un comando de verdad que anota en `orden.log` quién corrió. */
 const anota = (quien: string): string =>
@@ -41,7 +51,9 @@ function configuracion(setup: string, permitidos: string[] = ["test_x"]): void {
       "test-commands:",
       "  - node",
       setup,
-      ...(permitidos.length === 0 ? [] : ["allowed-schemas:", ...permitidos.map((p) => `  - ${p}`)]),
+      ...(permitidos.length === 0
+        ? []
+        : ["allowed-schemas:", ...permitidos.map((p) => `  - ${p}`)]),
       "",
     ].join("\n"),
     "utf8",
@@ -49,7 +61,12 @@ function configuracion(setup: string, permitidos: string[] = ["test_x"]): void {
 }
 
 function setupCon(...comandos: string[]): string {
-  return ["test-setup:", "  schema: test_x", "  commands:", ...comandos.map((c) => `    - ${c}`)].join("\n");
+  return [
+    "test-setup:",
+    "  schema: test_x",
+    "  commands:",
+    ...comandos.map((c) => `    - ${c}`),
+  ].join("\n");
 }
 
 function ticket(): void {
@@ -143,7 +160,9 @@ describe("el esquema de la preparación", () => {
     await correr();
 
     expect(log()).toEqual([]);
-    expect(readReceipts(PATHS(), TICKET)[0]?.setup?.failure).toContain("no declara allowed-schemas");
+    expect(readReceipts(PATHS(), TICKET)[0]?.setup?.failure).toContain(
+      "no declara allowed-schemas",
+    );
   });
 });
 

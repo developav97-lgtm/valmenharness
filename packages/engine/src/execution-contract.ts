@@ -92,10 +92,8 @@ export function createExecutionContract(project: AuthorizedProject): ExecutionCo
       readConfiguredExecutionModels(project, identity, attemptId),
     readEffectiveModels: (identity: ExecutionIdentity, attemptId?: string) =>
       readEffectiveExecutionModels(project, identity, attemptId),
-    readEvents: (
-      after = 0,
-      options: { readonly limit?: number | undefined } = {},
-    ) => readExecutionEventPage(project, after, options),
+    readEvents: (after = 0, options: { readonly limit?: number | undefined } = {}) =>
+      readExecutionEventPage(project, after, options),
     replay: () => replayExecutionEvents(project),
   });
 }

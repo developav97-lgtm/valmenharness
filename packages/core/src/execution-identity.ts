@@ -55,7 +55,7 @@ export function executionScopeKey(identity: ExecutionIdentity): string {
 function assertProjectId(projectId: string): void {
   if (!PROJECT_ID_RE.test(projectId)) {
     throw new Error(
-      'projectId debe ser un identificador lógico en minúsculas (letras, números y guiones), sin rutas.',
+      "projectId debe ser un identificador lógico en minúsculas (letras, números y guiones), sin rutas.",
     );
   }
 }

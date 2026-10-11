@@ -7,7 +7,15 @@
  * y que todo el camino sea de solo lectura. La red y el CLI de Claude son los únicos límites
  * externos que se simulan: el registro, los recibos y el enrutado son los reales.
  */
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -58,14 +66,22 @@ const ID = "FEATURE-ENGINE-PRUEBA-REVISOR-20261007";
 const REVISOR_POR_DEFECTO = "openai/gpt-5.6-luna-pro";
 
 let lab: string;
-const PATHS = (): { root: string; ticketsDir: string } => ({ root: lab, ticketsDir: "tickets" });
+const PATHS = (): { root: string; ticketsDir: string } => ({
+  root: lab,
+  ticketsDir: "tickets",
+});
 
 // ── El registro de prueba ────────────────────────────────────────────────────
 
 /** Una proposición evaluada, tal como el recibo la guarda. */
 function proposicion(
   id: string,
-  opciones: { readonly valor: number; readonly enBanda: boolean; readonly descripcion?: string; readonly motivo?: string },
+  opciones: {
+    readonly valor: number;
+    readonly enBanda: boolean;
+    readonly descripcion?: string;
+    readonly motivo?: string;
+  },
 ): GateReceipt["propositions"][number] {
   return {
     id,
@@ -83,7 +99,12 @@ function proposicion(
 
 /** Dos proposiciones en banda media y una que aprobó: lo que deja un `review` típico. */
 const PROPOSICIONES_DE_UN_REVIEW = [
-  proposicion("causa_especifica", { valor: 0.97, enBanda: false, descripcion: "La causa es específica", motivo: "nombra la causa" }),
+  proposicion("causa_especifica", {
+    valor: 0.97,
+    enBanda: false,
+    descripcion: "La causa es específica",
+    motivo: "nombra la causa",
+  }),
   proposicion("riesgos_cubren_impactos", {
     valor: 0.55,
     enBanda: true,
@@ -116,7 +137,12 @@ interface OpcionesDeRecibo {
 }
 
 function recibo(opciones: OpcionesDeRecibo = {}): GateReceipt {
-  const { ticketId = ID, gate = "plan", id = `GR-2026-10-07-${ticketId}-${gate}-1`, outcome = "review" } = opciones;
+  const {
+    ticketId = ID,
+    gate = "plan",
+    id = `GR-2026-10-07-${ticketId}-${gate}-1`,
+    outcome = "review",
+  } = opciones;
   return {
     kind: "gate-receipt",
     receiptVersion: 1,
@@ -186,7 +212,12 @@ beforeEach(() => {
   lab = mkdtempSync(join(tmpdir(), "valmen-revisor-"));
   mkdirSync(join(lab, ".valmen"), { recursive: true });
   writeFileSync(join(lab, ".valmen", "config.yaml"), "name: Demo\n", "utf8");
-  writeFixtureTicket(lab, { id: ID, workflowStatus: "planned", type: "FEATURE", module: "ENGINE" });
+  writeFixtureTicket(lab, {
+    id: ID,
+    workflowStatus: "planned",
+    type: "FEATURE",
+    module: "ENGINE",
+  });
 });
 
 afterEach(() => {
@@ -201,11 +232,20 @@ interface Llamada {
 }
 
 /** Una respuesta de chat con el contenido que se diga. */
-function respuestaDeChat(contenido: unknown, modelo = "openai/gpt-5.6-luna-pro-20261001"): Response {
+function respuestaDeChat(
+  contenido: unknown,
+  modelo = "openai/gpt-5.6-luna-pro-20261001",
+): Response {
   return new Response(
     JSON.stringify({
       model: modelo,
-      choices: [{ message: { content: typeof contenido === "string" ? contenido : JSON.stringify(contenido) } }],
+      choices: [
+        {
+          message: {
+            content: typeof contenido === "string" ? contenido : JSON.stringify(contenido),
+          },
+        },
+      ],
       usage: { prompt_tokens: 900, completion_tokens: 80, cost: 0.0012 },
     }),
     { status: 200, headers: { "Content-Type": "application/json" } },
@@ -213,10 +253,16 @@ function respuestaDeChat(contenido: unknown, modelo = "openai/gpt-5.6-luna-pro-2
 }
 
 /** El `fetch` simulado: guarda lo que se le pidió y responde lo que se le diga. */
-function red(responder: () => Response): { readonly llamadas: Llamada[]; readonly fetchImpl: typeof fetch } {
+function red(responder: () => Response): {
+  readonly llamadas: Llamada[];
+  readonly fetchImpl: typeof fetch;
+} {
   const llamadas: Llamada[] = [];
   const fetchImpl = (async (url: string | URL | Request, init?: RequestInit) => {
-    llamadas.push({ url: String(url), body: JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown> });
+    llamadas.push({
+      url: String(url),
+      body: JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>,
+    });
     return responder();
   }) as unknown as typeof fetch;
   return { llamadas, fetchImpl };
@@ -230,7 +276,8 @@ function decision(
 ): Record<string, unknown> {
   return {
     decision: valor,
-    reason: valor === "approve" ? "El plan respalda cada proposición." : "Falta el rollback.",
+    reason:
+      valor === "approve" ? "El plan respalda cada proposición." : "Falta el rollback.",
     porProposicion: ids.map((id, i) => ({
       id,
       respaldada: Array.isArray(respaldadas) ? respaldadas[i] : respaldadas,
@@ -260,7 +307,9 @@ function instantanea(dir: string = lab, base: string = ""): Record<string, strin
 }
 
 /** Ejecuta el CLI de punta a punta y devuelve el código y lo que escribió. */
-async function correrCli(argv: readonly string[]): Promise<{ readonly codigo: number; readonly salida: string }> {
+async function correrCli(
+  argv: readonly string[],
+): Promise<{ readonly codigo: number; readonly salida: string }> {
   const escrituras: string[] = [];
   const escribir = (chunk: unknown): boolean => {
     escrituras.push(String(chunk));
@@ -289,14 +338,19 @@ describe("el rol reviewer en el enrutado", () => {
       const normalizado = normalizarModelo(revisor?.model ?? "");
       for (const fase of ["agent-analysis", "agent-plan"]) {
         const ruta = rutas.find((r) => r.role === fase);
-        expect(normalizado, `${preset.id}: reviewer contra ${fase}`).not.toBe(normalizarModelo(ruta?.model ?? ""));
+        expect(normalizado, `${preset.id}: reviewer contra ${fase}`).not.toBe(
+          normalizarModelo(ruta?.model ?? ""),
+        );
       }
     }
   });
 
   it("C2: cada perfil incorporado resuelve reviewer a un modelo distinto, normalizado, de sus agent-analysis y agent-plan", () => {
     for (const perfil of PERFILES_INCORPORADOS) {
-      const rutas = resolveRouting({ preset: "balanced", roles: {} }, null, { perfil, alcance: "proyecto" });
+      const rutas = resolveRouting({ preset: "balanced", roles: {} }, null, {
+        perfil,
+        alcance: "proyecto",
+      });
       const revisor = rutas.find((r) => r.role === "reviewer");
       // Lo hereda de `balanced` por `ROLES_DE_EVALUACION`: sale del perfil, no del preset.
       expect(revisor?.source, perfil.id).toBe("perfil");
@@ -304,19 +358,31 @@ describe("el rol reviewer en el enrutado", () => {
       const normalizado = normalizarModelo(revisor?.model ?? "");
       for (const fase of ["agent-analysis", "agent-plan"]) {
         const ruta = rutas.find((r) => r.role === fase);
-        expect(normalizado, `${perfil.id}: reviewer contra ${fase}`).not.toBe(normalizarModelo(ruta?.model ?? ""));
+        expect(normalizado, `${perfil.id}: reviewer contra ${fase}`).not.toBe(
+          normalizarModelo(ruta?.model ?? ""),
+        );
       }
     }
   });
 
   it("C3: normalizarModelo trata como el mismo modelo anthropic/claude-sonnet-5 y claude-sonnet-5", () => {
-    expect(normalizarModelo("anthropic/claude-sonnet-5")).toBe(normalizarModelo("claude-sonnet-5"));
+    expect(normalizarModelo("anthropic/claude-sonnet-5")).toBe(
+      normalizarModelo("claude-sonnet-5"),
+    );
     // Mayúsculas y los separadores que cada catálogo escribe a su manera.
-    expect(normalizarModelo("Claude-Opus-4.6")).toBe(normalizarModelo("anthropic/claude-opus-4-6"));
-    expect(normalizarModelo("openai/gpt_5.6-luna-pro")).toBe(normalizarModelo("gpt-5-6-luna-pro"));
+    expect(normalizarModelo("Claude-Opus-4.6")).toBe(
+      normalizarModelo("anthropic/claude-opus-4-6"),
+    );
+    expect(normalizarModelo("openai/gpt_5.6-luna-pro")).toBe(
+      normalizarModelo("gpt-5-6-luna-pro"),
+    );
     // Y no confunde modelos distintos.
-    expect(normalizarModelo("claude-sonnet-5")).not.toBe(normalizarModelo("claude-sonnet-5-5"));
-    expect(normalizarModelo("claude-opus-5-5")).not.toBe(normalizarModelo("claude-sonnet-5-5"));
+    expect(normalizarModelo("claude-sonnet-5")).not.toBe(
+      normalizarModelo("claude-sonnet-5-5"),
+    );
+    expect(normalizarModelo("claude-opus-5-5")).not.toBe(
+      normalizarModelo("claude-sonnet-5-5"),
+    );
   });
 
   it("C4/C5: modeloDelRevisor elige solo si hay productor conocido y es otro modelo", () => {
@@ -324,7 +390,10 @@ describe("el rol reviewer en el enrutado", () => {
 
     const mismo = modeloDelRevisor(rutas, ["claude-opus-5-5", "gpt-5.6-luna-pro"]);
     expect(mismo.ok).toBe(false);
-    if (!mismo.ok) expect(mismo.motivo).toMatch(/mismo modelo que produjo el artefacto.*elegí otro en el rol reviewer/);
+    if (!mismo.ok)
+      expect(mismo.motivo).toMatch(
+        /mismo modelo que produjo el artefacto.*elegí otro en el rol reviewer/,
+      );
 
     const desconocido = modeloDelRevisor(rutas, []);
     expect(desconocido.ok).toBe(false);
@@ -336,7 +405,10 @@ describe("el rol reviewer en el enrutado", () => {
     expect(otro.ok).toBe(true);
     if (otro.ok) expect(otro.route.model).toBe(REVISOR_POR_DEFECTO);
 
-    const sinRol = modeloDelRevisor(rutas.filter((r) => r.role !== "reviewer"), ["claude-opus-5-5"]);
+    const sinRol = modeloDelRevisor(
+      rutas.filter((r) => r.role !== "reviewer"),
+      ["claude-opus-5-5"],
+    );
     expect(sinRol.ok).toBe(false);
     if (!sinRol.ok) expect(sinRol.motivo).toMatch(/reviewer no tiene modelo/);
   });
@@ -353,9 +425,16 @@ describe("el revisor es otro modelo", () => {
 
     const preparacion = prepararRevision({ paths: PATHS(), ticketId: ID, etapa: "plan" });
     expect(preparacion.ok).toBe(false);
-    if (!preparacion.ok) expect(preparacion.motivo).toMatch(/mismo modelo que produjo.*elegí otro en el rol reviewer/);
+    if (!preparacion.ok)
+      expect(preparacion.motivo).toMatch(
+        /mismo modelo que produjo.*elegí otro en el rol reviewer/,
+      );
 
-    const r = await reviewAgentCommand(PATHS(), { id: ID, stage: "plan" }, { cliRunner: cli });
+    const r = await reviewAgentCommand(
+      PATHS(),
+      { id: ID, stage: "plan" },
+      { cliRunner: cli },
+    );
     expect(cli).not.toHaveBeenCalled();
     expect(r.exitCode).toBe(3);
     expect(r.stdout).toContain("elegí otro en el rol reviewer");
@@ -373,7 +452,9 @@ describe("el revisor es otro modelo", () => {
     conRecibos(recibo());
     // Las fases de otro ticket no son las de este.
     productor("analysis", "claude-opus-5-5", "FEATURE-ENGINE-OTRO-TICKET-20261007");
-    const { llamadas, fetchImpl } = red(() => respuestaDeChat(decision("approve", IDS_EN_DUDA)));
+    const { llamadas, fetchImpl } = red(() =>
+      respuestaDeChat(decision("approve", IDS_EN_DUDA)),
+    );
 
     const preparacion = prepararRevision({ paths: PATHS(), ticketId: ID, etapa: "plan" });
     expect(preparacion.ok).toBe(false);
@@ -382,7 +463,11 @@ describe("el revisor es otro modelo", () => {
       expect(preparacion.productores).toEqual([]);
     }
 
-    const r = await reviewAgentCommand(PATHS(), { id: ID, stage: "plan" }, { apiKey: "k", fetchImpl });
+    const r = await reviewAgentCommand(
+      PATHS(),
+      { id: ID, stage: "plan" },
+      { apiKey: "k", fetchImpl },
+    );
     expect(llamadas).toHaveLength(0);
     expect(r.exitCode).toBe(3);
     expect(r.stdout).toContain("productor desconocido");
@@ -406,7 +491,9 @@ describe("el revisor es otro modelo", () => {
     expect(preparacion.ok).toBe(false);
     if (!preparacion.ok) {
       expect(preparacion.motivo).toMatch(/mismo modelo que produjo/);
-      expect(preparacion.productores).toEqual([{ fase: "analysis", ejecutor: "claude", modelo: "claude-opus-5-5" }]);
+      expect(preparacion.productores).toEqual([
+        { fase: "analysis", ejecutor: "claude", modelo: "claude-opus-5-5" },
+      ]);
     }
   });
 
@@ -416,8 +503,15 @@ describe("el revisor es otro modelo", () => {
     productor("plan", "claude-sonnet-5-5");
 
     const preparacion = preparada("plan");
-    expect(preparacion.revisor).toMatchObject({ provider: "openrouter", model: REVISOR_POR_DEFECTO, source: "preset" });
-    expect(preparacion.productores.map((p) => p.modelo)).toEqual(["claude-opus-5-5", "claude-sonnet-5-5"]);
+    expect(preparacion.revisor).toMatchObject({
+      provider: "openrouter",
+      model: REVISOR_POR_DEFECTO,
+      source: "preset",
+    });
+    expect(preparacion.productores.map((p) => p.modelo)).toEqual([
+      "claude-opus-5-5",
+      "claude-sonnet-5-5",
+    ]);
   });
 });
 
@@ -429,10 +523,26 @@ describe("solo llega al revisor un último recibo vigente en review sin decisió
     readonly recibos: () => GateReceipt[];
     readonly motivo: RegExp;
   }[] = [
-    { nombre: "sin recibo", recibos: () => [], motivo: /ningún recibo de la compuerta plan/ },
-    { nombre: "un recibo de otra compuerta", recibos: () => [recibo({ gate: "analysis" })], motivo: /ningún recibo de la compuerta plan/ },
-    { nombre: "en block", recibos: () => [recibo({ outcome: "block" })], motivo: /está en block.*lo decide una persona/ },
-    { nombre: "en approve", recibos: () => [recibo({ outcome: "approve", escalado: false })], motivo: /está en approve y no en review/ },
+    {
+      nombre: "sin recibo",
+      recibos: () => [],
+      motivo: /ningún recibo de la compuerta plan/,
+    },
+    {
+      nombre: "un recibo de otra compuerta",
+      recibos: () => [recibo({ gate: "analysis" })],
+      motivo: /ningún recibo de la compuerta plan/,
+    },
+    {
+      nombre: "en block",
+      recibos: () => [recibo({ outcome: "block" })],
+      motivo: /está en block.*lo decide una persona/,
+    },
+    {
+      nombre: "en approve",
+      recibos: () => [recibo({ outcome: "approve", escalado: false })],
+      motivo: /está en approve y no en review/,
+    },
     {
       nombre: "en approve escalado a una persona",
       recibos: () => [recibo({ outcome: "approve", escalado: true })],
@@ -450,12 +560,21 @@ describe("solo llega al revisor un último recibo vigente en review sin decisió
     },
     {
       nombre: "en review sin ninguna proposición en banda media",
-      recibos: () => [recibo({ propositions: [PROPOSICIONES_DE_UN_REVIEW[0] as GateReceipt["propositions"][number]] })],
+      recibos: () => [
+        recibo({
+          propositions: [
+            PROPOSICIONES_DE_UN_REVIEW[0] as GateReceipt["propositions"][number],
+          ],
+        }),
+      ],
       motivo: /ninguna proposición quedó en banda media/,
     },
     {
       nombre: "un review viejo y un approve después",
-      recibos: () => [recibo({ id: "GR-1" }), recibo({ id: "GR-2", outcome: "approve", escalado: false })],
+      recibos: () => [
+        recibo({ id: "GR-1" }),
+        recibo({ id: "GR-2", outcome: "approve", escalado: false }),
+      ],
       motivo: /está en approve y no en review/,
     },
     {
@@ -469,13 +588,19 @@ describe("solo llega al revisor un último recibo vigente en review sin decisió
     it(`C9: ${caso.nombre}: no llega al revisor y devuelve su motivo`, async () => {
       conRecibos(...caso.recibos());
       productor("analysis", "claude-opus-5-5");
-      const { llamadas, fetchImpl } = red(() => respuestaDeChat(decision("approve", IDS_EN_DUDA)));
+      const { llamadas, fetchImpl } = red(() =>
+        respuestaDeChat(decision("approve", IDS_EN_DUDA)),
+      );
 
       const preparacion = prepararRevision({ paths: PATHS(), ticketId: ID, etapa: "plan" });
       expect(preparacion.ok).toBe(false);
       if (!preparacion.ok) expect(preparacion.motivo).toMatch(caso.motivo);
 
-      const r = await reviewAgentCommand(PATHS(), { id: ID, stage: "plan" }, { apiKey: "k", fetchImpl });
+      const r = await reviewAgentCommand(
+        PATHS(),
+        { id: ID, stage: "plan" },
+        { apiKey: "k", fetchImpl },
+      );
       expect(llamadas).toHaveLength(0);
       expect(r.exitCode).toBe(3);
       expect(r.stdout).toMatch(caso.motivo);
@@ -491,7 +616,11 @@ describe("solo llega al revisor un último recibo vigente en review sin decisió
 
   it("solo se revisan las etapas analysis y plan", () => {
     expect(() =>
-      prepararRevision({ paths: PATHS(), ticketId: ID, etapa: "qa-mechanical" as unknown as "plan" }),
+      prepararRevision({
+        paths: PATHS(),
+        ticketId: ID,
+        etapa: "qa-mechanical" as unknown as "plan",
+      }),
     ).toThrow(/analysis y plan/);
   });
 });
@@ -499,14 +628,27 @@ describe("solo llega al revisor un último recibo vigente en review sin decisió
 // ── Lo que se le envía al revisor ────────────────────────────────────────────
 
 describe("reviewWithModel envía solo lo que corresponde", () => {
-  const ARTEFACTO = "## Plan\n- Cambiar `src/filtro.ts` y probarlo.\n\n## Criterios de aceptación\n- [ ] C1. Busca por número parcial.";
+  const ARTEFACTO =
+    "## Plan\n- Cambiar `src/filtro.ts` y probarlo.\n\n## Criterios de aceptación\n- [ ] C1. Busca por número parcial.";
   const EN_DUDA = [
-    { id: "riesgos_cubren_impactos", descripcion: "Los riesgos cubren los impactos", valor: 0.55, motivo: "no menciona el rollback" },
+    {
+      id: "riesgos_cubren_impactos",
+      descripcion: "Los riesgos cubren los impactos",
+      valor: 0.55,
+      motivo: "no menciona el rollback",
+    },
     { id: "plan_nombra_archivos", valor: 0.62, motivo: null },
   ];
 
   it("C6: envía el prompt del rol revisor, el artefacto y las proposiciones en banda media", async () => {
-    const { llamadas, fetchImpl } = red(() => respuestaDeChat(decision("approve", EN_DUDA.map((p) => p.id))));
+    const { llamadas, fetchImpl } = red(() =>
+      respuestaDeChat(
+        decision(
+          "approve",
+          EN_DUDA.map((p) => p.id),
+        ),
+      ),
+    );
 
     await reviewWithModel({
       provider: "openrouter",
@@ -529,7 +671,9 @@ describe("reviewWithModel envía solo lo que corresponde", () => {
     // El rol: revisa, no reescribe, no evalúa otras y aprueba solo si todo está respaldado.
     expect(cuerpo.messages[0]).toEqual({ role: "system", content: promptDelRevisor() });
     expect(promptDelRevisor()).toMatch(/no reescribas/i);
-    expect(promptDelRevisor()).toMatch(/únicamente si el artefacto respalda \*\*cada\*\* proposición/);
+    expect(promptDelRevisor()).toMatch(
+      /únicamente si el artefacto respalda \*\*cada\*\* proposición/,
+    );
     // El artefacto y la etapa, y las proposiciones con su valor y su motivo.
     const usuario = cuerpo.messages[1]?.content ?? "";
     expect(usuario).toContain("ETAPA: plan");
@@ -540,13 +684,19 @@ describe("reviewWithModel envía solo lo que corresponde", () => {
     expect(usuario).toContain("plan_nombra_archivos");
     // La salida es estructurada, con el esquema de la decisión.
     expect(cuerpo.response_format.json_schema.name).toBe("review_decision");
-    expect(cuerpo.response_format.json_schema.schema.required).toEqual(["decision", "reason", "porProposicion"]);
+    expect(cuerpo.response_format.json_schema.schema.required).toEqual([
+      "decision",
+      "reason",
+      "porProposicion",
+    ]);
   });
 
   it("C6: desde un recibo real, el revisor no ve las proposiciones que aprobaron", async () => {
     conRecibos(recibo());
     productor("analysis", "claude-opus-5-5");
-    const { llamadas, fetchImpl } = red(() => respuestaDeChat(decision("approve", IDS_EN_DUDA)));
+    const { llamadas, fetchImpl } = red(() =>
+      respuestaDeChat(decision("approve", IDS_EN_DUDA)),
+    );
 
     await ejecutarRevisor(preparada("plan"), { apiKey: "k", fetchImpl });
 
@@ -562,7 +712,9 @@ describe("reviewWithModel envía solo lo que corresponde", () => {
   it("C6: el artefacto de un análisis es la Descripción funcional y el Diagnóstico", async () => {
     conRecibos(recibo({ gate: "analysis" }));
     productor("analysis", "claude-opus-5-5");
-    const { llamadas, fetchImpl } = red(() => respuestaDeChat(decision("approve", IDS_EN_DUDA)));
+    const { llamadas, fetchImpl } = red(() =>
+      respuestaDeChat(decision("approve", IDS_EN_DUDA)),
+    );
 
     await ejecutarRevisor(preparada("analysis"), { apiKey: "k", fetchImpl });
 
@@ -648,7 +800,9 @@ describe("la decisión del revisor", () => {
   });
 
   it("C7: devuelve reject cuando alguna proposición no está respaldada", async () => {
-    const { fetchImpl } = red(() => respuestaDeChat(decision("reject", IDS, [true, false])));
+    const { fetchImpl } = red(() =>
+      respuestaDeChat(decision("reject", IDS, [true, false])),
+    );
 
     const r = await reviewWithModel({ ...BASE, fetchImpl });
 
@@ -658,7 +812,10 @@ describe("la decisión del revisor", () => {
   });
 
   it("C7: la razón se recorta a MOTIVO_MAX", async () => {
-    const larga = { ...decision("reject", IDS, false), reason: "x".repeat(MOTIVO_MAX + 300) };
+    const larga = {
+      ...decision("reject", IDS, false),
+      reason: "x".repeat(MOTIVO_MAX + 300),
+    };
     const { fetchImpl } = red(() => respuestaDeChat(larga));
 
     const r = await reviewWithModel({ ...BASE, fetchImpl });
@@ -684,7 +841,12 @@ describe("la decisión del revisor", () => {
       };
     };
 
-    const r = await reviewWithModel({ ...BASE, provider: "claude-code", model: "claude-opus-5-5", cliRunner });
+    const r = await reviewWithModel({
+      ...BASE,
+      provider: "claude-code",
+      model: "claude-opus-5-5",
+      cliRunner,
+    });
 
     expect(r.decision).toBe("approve");
     expect(r.model.model).toBe("claude-opus-5-5");
@@ -693,20 +855,60 @@ describe("la decisión del revisor", () => {
     expect(ejecuciones[0]?.stdin).toContain("## Plan");
   });
 
-  const FUERA_DEL_ESQUEMA: readonly { readonly nombre: string; readonly contenido: unknown; readonly code: string }[] = [
-    { nombre: "texto que no es JSON", contenido: "Apruebo, el plan está bien.", code: "MALFORMED_RESPONSE" },
-    { nombre: "un JSON que no es un objeto", contenido: "[1, 2]", code: "MALFORMED_RESPONSE" },
-    { nombre: "una decisión inventada", contenido: { ...decision("approve", IDS), decision: "maybe" }, code: "INVALID_DECISION" },
-    { nombre: "una decisión en otro idioma", contenido: { ...decision("approve", IDS), decision: "aprobado" }, code: "INVALID_DECISION" },
-    { nombre: "sin decisión", contenido: { reason: "ok", porProposicion: [] }, code: "INVALID_DECISION" },
-    { nombre: "sin razón", contenido: { ...decision("approve", IDS), reason: "  " }, code: "MISSING_REASON" },
-    { nombre: "sin porProposicion", contenido: { decision: "approve", reason: "ok" }, code: "MALFORMED_RESPONSE" },
+  const FUERA_DEL_ESQUEMA: readonly {
+    readonly nombre: string;
+    readonly contenido: unknown;
+    readonly code: string;
+  }[] = [
     {
-      nombre: "una entrada de porProposicion sin respaldada",
-      contenido: { decision: "approve", reason: "ok", porProposicion: [{ id: "p1", motivo: "x" }] },
+      nombre: "texto que no es JSON",
+      contenido: "Apruebo, el plan está bien.",
       code: "MALFORMED_RESPONSE",
     },
-    { nombre: "sin responder una proposición", contenido: decision("approve", ["p1"]), code: "MISSING_ANSWER" },
+    {
+      nombre: "un JSON que no es un objeto",
+      contenido: "[1, 2]",
+      code: "MALFORMED_RESPONSE",
+    },
+    {
+      nombre: "una decisión inventada",
+      contenido: { ...decision("approve", IDS), decision: "maybe" },
+      code: "INVALID_DECISION",
+    },
+    {
+      nombre: "una decisión en otro idioma",
+      contenido: { ...decision("approve", IDS), decision: "aprobado" },
+      code: "INVALID_DECISION",
+    },
+    {
+      nombre: "sin decisión",
+      contenido: { reason: "ok", porProposicion: [] },
+      code: "INVALID_DECISION",
+    },
+    {
+      nombre: "sin razón",
+      contenido: { ...decision("approve", IDS), reason: "  " },
+      code: "MISSING_REASON",
+    },
+    {
+      nombre: "sin porProposicion",
+      contenido: { decision: "approve", reason: "ok" },
+      code: "MALFORMED_RESPONSE",
+    },
+    {
+      nombre: "una entrada de porProposicion sin respaldada",
+      contenido: {
+        decision: "approve",
+        reason: "ok",
+        porProposicion: [{ id: "p1", motivo: "x" }],
+      },
+      code: "MALFORMED_RESPONSE",
+    },
+    {
+      nombre: "sin responder una proposición",
+      contenido: decision("approve", ["p1"]),
+      code: "MISSING_ANSWER",
+    },
     {
       nombre: "approve con una proposición sin respaldo",
       contenido: decision("approve", IDS, [true, false]),
@@ -743,7 +945,11 @@ describe("el revisor no escribe en el registro", () => {
     productor("analysis", "claude-opus-5-5");
     // Con una autorización de aprobación y su cupo en el registro: no se toca.
     mkdirSync(join(lab, ".valmen", "authorizations"), { recursive: true });
-    writeFileSync(join(lab, ".valmen", "authorizations", "approval.jsonl"), '{"id":"APA-001","dailyQuota":3}\n', "utf8");
+    writeFileSync(
+      join(lab, ".valmen", "authorizations", "approval.jsonl"),
+      '{"id":"APA-001","dailyQuota":3}\n',
+      "utf8",
+    );
     const { fetchImpl } = red(() => respuestaDeChat(decision("approve", IDS_EN_DUDA)));
 
     const antes = instantanea();
@@ -765,11 +971,21 @@ describe("el revisor no escribe en el registro", () => {
   it("C11: el comando tampoco escribe, con o sin --dry-run", async () => {
     conRecibos(recibo());
     productor("analysis", "claude-opus-5-5");
-    const { fetchImpl } = red(() => respuestaDeChat(decision("reject", IDS_EN_DUDA, false)));
+    const { fetchImpl } = red(() =>
+      respuestaDeChat(decision("reject", IDS_EN_DUDA, false)),
+    );
 
     const antes = instantanea();
-    await reviewAgentCommand(PATHS(), { id: ID, stage: "plan", "dry-run": true }, { apiKey: "k", fetchImpl });
-    const real = await reviewAgentCommand(PATHS(), { id: ID, stage: "plan" }, { apiKey: "k", fetchImpl });
+    await reviewAgentCommand(
+      PATHS(),
+      { id: ID, stage: "plan", "dry-run": true },
+      { apiKey: "k", fetchImpl },
+    );
+    const real = await reviewAgentCommand(
+      PATHS(),
+      { id: ID, stage: "plan" },
+      { apiKey: "k", fetchImpl },
+    );
 
     expect(real.exitCode).toBe(0);
     expect(instantanea()).toEqual(antes);
@@ -782,9 +998,15 @@ describe("valmen review-agent", () => {
   it("C12: --dry-run muestra productor, revisor y proposiciones sin llamar al modelo", async () => {
     conRecibos(recibo());
     productor("analysis", "claude-opus-5-5");
-    const { llamadas, fetchImpl } = red(() => respuestaDeChat(decision("approve", IDS_EN_DUDA)));
+    const { llamadas, fetchImpl } = red(() =>
+      respuestaDeChat(decision("approve", IDS_EN_DUDA)),
+    );
 
-    const r = await reviewAgentCommand(PATHS(), { id: ID, stage: "plan", "dry-run": true }, { apiKey: "k", fetchImpl });
+    const r = await reviewAgentCommand(
+      PATHS(),
+      { id: ID, stage: "plan", "dry-run": true },
+      { apiKey: "k", fetchImpl },
+    );
 
     expect(llamadas).toHaveLength(0);
     expect(r.exitCode).toBe(0);
@@ -802,7 +1024,12 @@ describe("valmen review-agent", () => {
     conRecibos(recibo());
     productor("analysis", "claude-opus-5-5");
 
-    const r = await reviewAgentCommand(PATHS(), { id: ID, stage: "plan", "dry-run": true, json: true });
+    const r = await reviewAgentCommand(PATHS(), {
+      id: ID,
+      stage: "plan",
+      "dry-run": true,
+      json: true,
+    });
 
     const datos = JSON.parse(r.stdout) as {
       modo: string;
@@ -843,7 +1070,10 @@ describe("valmen review-agent", () => {
     const etapa = await reviewAgentCommand(PATHS(), { id: ID, stage: "release" });
     expect(etapa.exitCode).toBe(2);
     expect(etapa.stderr).toContain("analysis|plan");
-    const ticket = await reviewAgentCommand(PATHS(), { id: "FEATURE-ENGINE-NO-EXISTE-20261007", stage: "plan" });
+    const ticket = await reviewAgentCommand(PATHS(), {
+      id: "FEATURE-ENGINE-NO-EXISTE-20261007",
+      stage: "plan",
+    });
     expect(ticket.exitCode).toBe(2);
     expect(ticket.stderr).toContain("No existe el ticket");
   });
@@ -851,9 +1081,15 @@ describe("valmen review-agent", () => {
   it("control: con un revisor distinto del productor imprime su decisión y aclara que no la registró", async () => {
     conRecibos(recibo());
     productor("analysis", "claude-opus-5-5");
-    const { llamadas, fetchImpl } = red(() => respuestaDeChat(decision("approve", IDS_EN_DUDA)));
+    const { llamadas, fetchImpl } = red(() =>
+      respuestaDeChat(decision("approve", IDS_EN_DUDA)),
+    );
 
-    const r = await reviewAgentCommand(PATHS(), { id: ID, stage: "plan" }, { apiKey: "k", fetchImpl });
+    const r = await reviewAgentCommand(
+      PATHS(),
+      { id: ID, stage: "plan" },
+      { apiKey: "k", fetchImpl },
+    );
 
     expect(llamadas).toHaveLength(1);
     expect(r.exitCode).toBe(0);
@@ -869,7 +1105,11 @@ describe("valmen review-agent", () => {
     productor("analysis", "claude-opus-5-5");
     const { fetchImpl } = red(() => respuestaDeChat("Todo bien, apruebo."));
 
-    const r = await reviewAgentCommand(PATHS(), { id: ID, stage: "plan" }, { apiKey: "k", fetchImpl });
+    const r = await reviewAgentCommand(
+      PATHS(),
+      { id: ID, stage: "plan" },
+      { apiKey: "k", fetchImpl },
+    );
 
     expect(r.exitCode).toBe(3);
     expect(r.stdout).toBe("");
@@ -886,11 +1126,21 @@ describe("el enrutado que usa la preparación", () => {
     productor("analysis", "claude-opus-5-5");
     revisorDelProyecto("claude-code", "claude-sonnet-5-5");
 
-    const preparacion: PreparacionDeRevision = prepararRevision({ paths: PATHS(), ticketId: ID, etapa: "plan" });
+    const preparacion: PreparacionDeRevision = prepararRevision({
+      paths: PATHS(),
+      ticketId: ID,
+      etapa: "plan",
+    });
 
     expect(preparacion.ok).toBe(true);
-    expect(preparacion.revisor).toMatchObject({ provider: "claude-code", model: "claude-sonnet-5-5", source: "proyecto" });
-    expect(rutasDelProyecto(lab).find((r) => r.role === "reviewer")?.source).toBe("proyecto");
+    expect(preparacion.revisor).toMatchObject({
+      provider: "claude-code",
+      model: "claude-sonnet-5-5",
+      source: "proyecto",
+    });
+    expect(rutasDelProyecto(lab).find((r) => r.role === "reviewer")?.source).toBe(
+      "proyecto",
+    );
   });
 });
 
@@ -898,17 +1148,32 @@ describe("los productores registrados (R-PERF-006)", () => {
   it("C15: productoresDelTicket usa el modelo usado cuando el registro lo trae, y el declarado si no", async () => {
     const { productoresDelTicket } = await import("../packages/engine/src/reviewer.js");
     registrarFase(lab, {
-      ticketId: ID, fase: "plan", ejecutor: "claude", modelo: "claude-opus-5-5", modeloUsado: "claude-sonnet-5-5",
-      esfuerzo: "high", origenDelModelo: "rol", duracionMs: 1, resultado: "ok",
+      ticketId: ID,
+      fase: "plan",
+      ejecutor: "claude",
+      modelo: "claude-opus-5-5",
+      modeloUsado: "claude-sonnet-5-5",
+      esfuerzo: "high",
+      origenDelModelo: "rol",
+      duracionMs: 1,
+      resultado: "ok",
     });
     registrarFase(lab, {
-      ticketId: ID, fase: "analysis", ejecutor: "claude", modelo: "claude-opus-5-5",
-      esfuerzo: "high", origenDelModelo: "rol", duracionMs: 1, resultado: "ok",
+      ticketId: ID,
+      fase: "analysis",
+      ejecutor: "claude",
+      modelo: "claude-opus-5-5",
+      esfuerzo: "high",
+      origenDelModelo: "rol",
+      duracionMs: 1,
+      resultado: "ok",
     });
-    expect(productoresDelTicket(lab, ID).map((p) => p.modelo)).toEqual(["claude-sonnet-5-5", "claude-opus-5-5"]);
+    expect(productoresDelTicket(lab, ID).map((p) => p.modelo)).toEqual([
+      "claude-sonnet-5-5",
+      "claude-opus-5-5",
+    ]);
   });
 });
-
 
 // ── Registrar la decisión del revisor como suya (SECURITY-ENGINE-APROBACION-POR-REVISOR-20261007) ──
 
@@ -918,7 +1183,9 @@ describe("la decisión del revisor se registra", () => {
   const ID_BUG = "BUGFIX-ENGINE-PRUEBA-REVISOR-20261007";
   const ID_SECURITY = "SECURITY-ENGINE-PRUEBA-REVISOR-20261007";
 
-  const autorizar = (extra: Partial<Parameters<typeof crearAutorizacionDeAprobacion>[0]> = {}) =>
+  const autorizar = (
+    extra: Partial<Parameters<typeof crearAutorizacionDeAprobacion>[0]> = {},
+  ) =>
     crearAutorizacionDeAprobacion({
       root: lab,
       actor: "Juan Andrade",
@@ -948,7 +1215,12 @@ describe("la decisión del revisor se registra", () => {
       decision: "approve",
       reason: "El plan respalda cada proposición.",
       porProposicion: IDS_EN_DUDA.map((id) => ({ id, respaldada: true, motivo: "ok" })),
-      revisor: { provider: "openrouter", model: REVISOR_POR_DEFECTO, resolvedVersion: "openai/gpt-5.6-luna-pro-20261001", effort: "high" },
+      revisor: {
+        provider: "openrouter",
+        model: REVISOR_POR_DEFECTO,
+        resolvedVersion: "openai/gpt-5.6-luna-pro-20261001",
+        effort: "high",
+      },
       productores: [],
       proposiciones: [],
       usage: { inputTokens: 900, outputTokens: 80, costUsd: 0.0012 },
@@ -965,15 +1237,23 @@ describe("la decisión del revisor se registra", () => {
   ): Promise<ResultadoDeRevision> {
     const preparacion = prepararRevision({ paths: PATHS(), ticketId, etapa });
     if (!preparacion.ok) throw new Error(`no se preparó: ${preparacion.motivo}`);
-    const { fetchImpl } = red(() => respuestaDeChat(decision(valor, IDS_EN_DUDA, valor === "approve")));
+    const { fetchImpl } = red(() =>
+      respuestaDeChat(decision(valor, IDS_EN_DUDA, valor === "approve")),
+    );
     return ejecutarRevisor(preparacion, { apiKey: "k", fetchImpl });
   }
 
-  const registrar = (resultado: ResultadoDeRevision, env: Record<string, string | undefined> = {}, ticketId: string = ID) =>
+  const registrar = (
+    resultado: ResultadoDeRevision,
+    env: Record<string, string | undefined> = {},
+    ticketId: string = ID,
+  ) =>
     registrarDecisionDelRevisor({ paths: PATHS(), ticketId, resultado, ahora: AHORA, env });
   const usos = (): number => {
     try {
-      return readFileSync(approvalQuotaUsesPath(lab), "utf8").split("\n").filter((l) => l.trim() !== "").length;
+      return readFileSync(approvalQuotaUsesPath(lab), "utf8")
+        .split("\n")
+        .filter((l) => l.trim() !== "").length;
     } catch {
       return 0;
     }
@@ -982,13 +1262,26 @@ describe("la decisión del revisor se registra", () => {
     const u = findTicket(PATHS(), id);
     return parseTicket(u?.text ?? "");
   };
-  const eventos = (accion: string, id: string = ID) => (documento(id).blocks.Eventos ?? []).filter((e) => e["action"] === accion);
+  const eventos = (accion: string, id: string = ID) =>
+    (documento(id).blocks.Eventos ?? []).filter((e) => e["action"] === accion);
   const versiones = (id: string = ID): number => readReceipts(PATHS(), id).length;
-  const ultimoRecibo = (id: string = ID) => readReceipts(PATHS(), id).at(-1) as GateReceipt & {
-    reviewerDecision?: { decision: string; revisor: { model: string }; authorizationId: string; receiptStateHash: string };
-  };
+  const ultimoRecibo = (id: string = ID) =>
+    readReceipts(PATHS(), id).at(-1) as GateReceipt & {
+      reviewerDecision?: {
+        decision: string;
+        revisor: { model: string };
+        authorizationId: string;
+        receiptStateHash: string;
+      };
+    };
   const mover = (to: string, id: string = ID, ms = 1000) =>
-    transition({ paths: PATHS(), ticketId: id, entity: "ticket", to, now: () => new Date(AHORA.getTime() + ms) });
+    transition({
+      paths: PATHS(),
+      ticketId: id,
+      entity: "ticket",
+      to,
+      now: () => new Date(AHORA.getTime() + ms),
+    });
 
   /** El caso de control: recibo de plan en review con dos proposiciones en banda, autorización con cupo, otro modelo. */
   function preparar(id: string = ID): void {
@@ -997,7 +1290,12 @@ describe("la decisión del revisor se registra", () => {
     autorizar();
   }
   const bugfix = (): void => {
-    writeFixtureTicket(lab, { id: ID_BUG, workflowStatus: "planned", type: "BUGFIX", module: "ENGINE" });
+    writeFixtureTicket(lab, {
+      id: ID_BUG,
+      workflowStatus: "planned",
+      type: "BUGFIX",
+      module: "ENGINE",
+    });
   };
 
   it("control, C1, C2, C3: el approve queda como del revisor, con su evento y un cupo consumido", async () => {
@@ -1041,8 +1339,17 @@ describe("la decisión del revisor se registra", () => {
   });
 
   it("C5: el approve del revisor sobre el análisis deja pasar a planned", async () => {
-    writeFixtureTicket(lab, { id: ID_ANALISIS, workflowStatus: "analyzed", type: "BUGFIX", module: "ENGINE" });
-    appendReceipt(PATHS(), ID_ANALISIS, recibo({ ticketId: ID_ANALISIS, gate: "analysis" }));
+    writeFixtureTicket(lab, {
+      id: ID_ANALISIS,
+      workflowStatus: "analyzed",
+      type: "BUGFIX",
+      module: "ENGINE",
+    });
+    appendReceipt(
+      PATHS(),
+      ID_ANALISIS,
+      recibo({ ticketId: ID_ANALISIS, gate: "analysis" }),
+    );
     productor("analysis", "claude-opus-5-5", ID_ANALISIS);
     autorizar();
     expect(() => mover("planned", ID_ANALISIS)).toThrow(/gate-decide/);
@@ -1078,7 +1385,17 @@ describe("la decisión del revisor se registra", () => {
     it("C8: el mismo modelo que produjo el plan, aun con otro prefijo de proveedor", () => {
       preparar();
       noEscribe(
-        () => registrar(manual({ revisor: { provider: "openrouter", model: "anthropic/claude-opus-5-5", resolvedVersion: "claude-opus-5-5", effort: "high" } })),
+        () =>
+          registrar(
+            manual({
+              revisor: {
+                provider: "openrouter",
+                model: "anthropic/claude-opus-5-5",
+                resolvedVersion: "claude-opus-5-5",
+                effort: "high",
+              },
+            }),
+          ),
         /mismo modelo que produjo/,
       );
     });
@@ -1086,7 +1403,17 @@ describe("la decisión del revisor se registra", () => {
     it("C8: la versión que sirvió el proveedor también cuenta contra los productores", () => {
       preparar();
       noEscribe(
-        () => registrar(manual({ revisor: { provider: "openrouter", model: REVISOR_POR_DEFECTO, resolvedVersion: "claude-opus-5-5", effort: "high" } })),
+        () =>
+          registrar(
+            manual({
+              revisor: {
+                provider: "openrouter",
+                model: REVISOR_POR_DEFECTO,
+                resolvedVersion: "claude-opus-5-5",
+                effort: "high",
+              },
+            }),
+          ),
         /mismo modelo que produjo/,
       );
     });
@@ -1100,7 +1427,14 @@ describe("la decisión del revisor se registra", () => {
     it("C10: el ticket cambió después del recibo", () => {
       preparar();
       const ruta = join(lab, "tickets", "2026", ID, "ticket.md");
-      writeFileSync(ruta, readFileSync(ruta, "utf8").replace("- Rollback: revertir", "- Rollback: no revertir"), "utf8");
+      writeFileSync(
+        ruta,
+        readFileSync(ruta, "utf8").replace(
+          "- Rollback: revertir",
+          "- Rollback: no revertir",
+        ),
+        "utf8",
+      );
       noEscribe(() => registrar(manual()), /otro texto del ticket/);
     });
 
@@ -1108,7 +1442,14 @@ describe("la decisión del revisor se registra", () => {
       conRecibos(recibo());
       productor("plan", "claude-opus-5-5");
       const ruta = join(lab, "tickets", "2026", ID, "ticket.md");
-      writeFileSync(ruta, readFileSync(ruta, "utf8").replace("- Rollback: revertir", "- Rollback: no revertir"), "utf8");
+      writeFileSync(
+        ruta,
+        readFileSync(ruta, "utf8").replace(
+          "- Rollback: revertir",
+          "- Rollback: no revertir",
+        ),
+        "utf8",
+      );
       const preparacion = prepararRevision({ paths: PATHS(), ticketId: ID, etapa: "plan" });
       expect(preparacion.ok).toBe(false);
       if (!preparacion.ok) {
@@ -1125,14 +1466,26 @@ describe("la decisión del revisor se registra", () => {
     });
 
     it("C13: un review sin proposiciones en banda media no admite el registro", () => {
-      conRecibos(recibo({ propositions: [PROPOSICIONES_DE_UN_REVIEW[0] as GateReceipt["propositions"][number]] }));
+      conRecibos(
+        recibo({
+          propositions: [
+            PROPOSICIONES_DE_UN_REVIEW[0] as GateReceipt["propositions"][number],
+          ],
+        }),
+      );
       productor("plan", "claude-opus-5-5");
       autorizar();
-      noEscribe(() => registrar(manual({ porProposicion: [] })), /ninguna quedó en banda media/);
+      noEscribe(
+        () => registrar(manual({ porProposicion: [] })),
+        /ninguna quedó en banda media/,
+      );
     });
 
     it("C13: otra proposición fuera de banda que no aprobó no admite el registro", () => {
-      const noAprobada = { ...(proposicion("otra", { valor: 0.2, enBanda: false }) as object), effect: { outcome: "block" } } as GateReceipt["propositions"][number];
+      const noAprobada = {
+        ...(proposicion("otra", { valor: 0.2, enBanda: false }) as object),
+        effect: { outcome: "block" },
+      } as GateReceipt["propositions"][number];
       conRecibos(recibo({ propositions: [...PROPOSICIONES_DE_UN_REVIEW, noAprobada] }));
       productor("plan", "claude-opus-5-5");
       autorizar();
@@ -1141,9 +1494,28 @@ describe("la decisión del revisor se registra", () => {
 
     it("C14: una decisión que no cubre exactamente la banda media", () => {
       preparar();
-      noEscribe(() => registrar(manual({ porProposicion: [{ id: "riesgos_cubren_impactos", respaldada: true, motivo: "ok" }] })), /la decisión cubre/);
       noEscribe(
-        () => registrar(manual({ porProposicion: [...IDS_EN_DUDA, "inventada"].map((id) => ({ id, respaldada: true, motivo: "ok" })) })),
+        () =>
+          registrar(
+            manual({
+              porProposicion: [
+                { id: "riesgos_cubren_impactos", respaldada: true, motivo: "ok" },
+              ],
+            }),
+          ),
+        /la decisión cubre/,
+      );
+      noEscribe(
+        () =>
+          registrar(
+            manual({
+              porProposicion: [...IDS_EN_DUDA, "inventada"].map((id) => ({
+                id,
+                respaldada: true,
+                motivo: "ok",
+              })),
+            }),
+          ),
         /la decisión cubre/,
       );
     });
@@ -1151,13 +1523,26 @@ describe("la decisión del revisor se registra", () => {
     it("C14: un approve con una proposición sin respaldo se rechaza", () => {
       preparar();
       noEscribe(
-        () => registrar(manual({ porProposicion: [{ id: IDS_EN_DUDA[0] as string, respaldada: false, motivo: "no" }, { id: IDS_EN_DUDA[1] as string, respaldada: true, motivo: "ok" }] })),
+        () =>
+          registrar(
+            manual({
+              porProposicion: [
+                { id: IDS_EN_DUDA[0] as string, respaldada: false, motivo: "no" },
+                { id: IDS_EN_DUDA[1] as string, respaldada: true, motivo: "ok" },
+              ],
+            }),
+          ),
         /exige que cada proposición esté respaldada/,
       );
     });
 
     it("C15: un SECURITY no admite el registro del revisor", () => {
-      writeFixtureTicket(lab, { id: ID_SECURITY, workflowStatus: "planned", type: "SECURITY", module: "ENGINE" });
+      writeFixtureTicket(lab, {
+        id: ID_SECURITY,
+        workflowStatus: "planned",
+        type: "SECURITY",
+        module: "ENGINE",
+      });
       appendReceipt(PATHS(), ID_SECURITY, recibo({ ticketId: ID_SECURITY }));
       productor("plan", "claude-opus-5-5", ID_SECURITY);
       autorizar();
@@ -1174,11 +1559,25 @@ describe("la decisión del revisor se registra", () => {
     it("C17: con el cupo del día agotado no se registra", () => {
       preparar();
       const otra = autorizar({ dailyQuota: 1 });
-      registrarUsoDeCupoDeAprobacion({ root: lab, authorizationId: otra.id, ticketId: "BUGFIX-ENGINE-OTRO-20261007", stage: "plan", ahora: AHORA });
+      registrarUsoDeCupoDeAprobacion({
+        root: lab,
+        authorizationId: otra.id,
+        ticketId: "BUGFIX-ENGINE-OTRO-20261007",
+        stage: "plan",
+        ahora: AHORA,
+      });
       // Las dos autorizaciones cubren al ticket: la primera con cupo decide, así que se revoca para aislar la barrera.
       const todas = readFileSync(approvalAuthorizationsPath(lab), "utf8");
       const primera = (JSON.parse(todas.split("\n")[0] as string) as { id: string }).id;
-      revocarAutorizacionDeAprobacion({ root: lab, id: primera, actor: "Juan Andrade", reason: "aislar", source: "cli", ahora: AHORA, env: {} });
+      revocarAutorizacionDeAprobacion({
+        root: lab,
+        id: primera,
+        actor: "Juan Andrade",
+        reason: "aislar",
+        source: "cli",
+        ahora: AHORA,
+        env: {},
+      });
       const antes = usos();
       const fotos = instantanea();
       expect(() => registrar(manual())).toThrow(/cupo/);
@@ -1199,7 +1598,15 @@ describe("la decisión del revisor se registra", () => {
     const a = autorizar();
     registrar(await decidir("approve", ID_BUG), {}, ID_BUG);
     // Control: antes de revocar, el mismo avance sí procede (se prueba en C4); aquí se revoca primero.
-    revocarAutorizacionDeAprobacion({ root: lab, id: a.id, actor: "Juan Andrade", reason: "ya no", source: "cli", ahora: new Date(AHORA.getTime() + 500), env: {} });
+    revocarAutorizacionDeAprobacion({
+      root: lab,
+      id: a.id,
+      actor: "Juan Andrade",
+      reason: "ya no",
+      source: "cli",
+      ahora: new Date(AHORA.getTime() + 500),
+      env: {},
+    });
 
     expect(() => mover("approved", ID_BUG, 2000)).toThrow(/ya no está vigente/);
     expect(documento(ID_BUG).fields.workflow_status).toBe("planned");
@@ -1221,7 +1628,18 @@ describe("la decisión del revisor se registra", () => {
     const a = autorizar();
     appendReceipt(PATHS(), ID_BUG, {
       ...bloqueado,
-      reviewerDecision: { decision: "approve", reason: "forjada", porProposicion: [], revisor: manual().revisor, productores: [], authorizationId: a.id, authorizationHash: a.hash, receiptStateHash: bloqueado.stateHash, usage: manual().usage, decidedAt: AHORA.toISOString() },
+      reviewerDecision: {
+        decision: "approve",
+        reason: "forjada",
+        porProposicion: [],
+        revisor: manual().revisor,
+        productores: [],
+        authorizationId: a.id,
+        authorizationHash: a.hash,
+        receiptStateHash: bloqueado.stateHash,
+        usage: manual().usage,
+        decidedAt: AHORA.toISOString(),
+      },
     } as GateReceipt);
     expect(() => mover("approved", ID_BUG)).toThrow(/block|Ni el modelo/);
   });
@@ -1243,7 +1661,11 @@ describe("la decisión del revisor se registra", () => {
     preparar();
     const { fetchImpl } = red(() => respuestaDeChat(decision("approve", IDS_EN_DUDA)));
 
-    const r = await reviewAgentCommand(PATHS(), { id: ID, stage: "plan", record: true }, { apiKey: "k", fetchImpl });
+    const r = await reviewAgentCommand(
+      PATHS(),
+      { id: ID, stage: "plan", record: true },
+      { apiKey: "k", fetchImpl },
+    );
 
     expect(r.exitCode).toBe(0);
     expect(r.stdout).toContain("Decisión del revisor: approve");
@@ -1259,7 +1681,11 @@ describe("la decisión del revisor se registra", () => {
     preparar();
     const { fetchImpl } = red(() => respuestaDeChat(decision("approve", IDS_EN_DUDA)));
     const antes = instantanea();
-    const r = await reviewAgentCommand(PATHS(), { id: ID, stage: "plan" }, { apiKey: "k", fetchImpl });
+    const r = await reviewAgentCommand(
+      PATHS(),
+      { id: ID, stage: "plan" },
+      { apiKey: "k", fetchImpl },
+    );
     expect(r.stdout).toContain("No se registró");
     expect(instantanea()).toEqual(antes);
   });
@@ -1269,7 +1695,14 @@ describe("la decisión del revisor se registra", () => {
     productor("plan", "claude-opus-5-5");
     autorizar();
     const antes = instantanea();
-    const r = await reviewAgentCommand(PATHS(), { id: ID, stage: "plan", record: true }, { apiKey: "k", fetchImpl: red(() => respuestaDeChat(decision("approve", IDS_EN_DUDA))).fetchImpl });
+    const r = await reviewAgentCommand(
+      PATHS(),
+      { id: ID, stage: "plan", record: true },
+      {
+        apiKey: "k",
+        fetchImpl: red(() => respuestaDeChat(decision("approve", IDS_EN_DUDA))).fetchImpl,
+      },
+    );
     expect(r.exitCode).toBe(3);
     expect(instantanea()).toEqual(antes);
   });

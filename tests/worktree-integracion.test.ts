@@ -2,7 +2,16 @@
  * Crear y quitar el worktree de un ticket, contra un repositorio git de laboratorio de verdad.
  * La compilación se simula con un ejecutor que registra las llamadas; `cp` es el real.
  */
-import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
@@ -33,11 +42,22 @@ let lab: Laboratorio;
 afterEach(() => lab?.limpiar());
 
 const nombres = (id: string) => nombresDeWorktree(id);
-const reservas = () => readMachineCapacity({ home: lab.home, project: resolveAuthorizedProject({ projectId: PROYECTO, home: lab.home }) }).reservations;
+const reservas = () =>
+  readMachineCapacity({
+    home: lab.home,
+    project: resolveAuthorizedProject({ projectId: PROYECTO, home: lab.home }),
+  }).reservations;
 const ramas = () => lab.git("branch", "--list", "valmen/*");
 const crear = (id = TICKET_A, extra: Partial<Parameters<typeof crearWorktree>[0]> = {}) =>
-  crearWorktree({ paths: defaultPaths(lab.root), ticketId: id, home: lab.home, proceso: procesoSimulado().ejecutor, ...extra });
-const quitar = (id = TICKET_A) => quitarWorktree({ paths: defaultPaths(lab.root), ticketId: id, home: lab.home });
+  crearWorktree({
+    paths: defaultPaths(lab.root),
+    ticketId: id,
+    home: lab.home,
+    proceso: procesoSimulado().ejecutor,
+    ...extra,
+  });
+const quitar = (id = TICKET_A) =>
+  quitarWorktree({ paths: defaultPaths(lab.root), ticketId: id, home: lab.home });
 
 /** Integra a mano la rama del ticket en main, como hará el ticket de integración. */
 function integrar(id: string, archivo = "hecho.txt"): void {
@@ -57,7 +77,9 @@ describe("crear el worktree", () => {
     expect(r.carpeta).toBe(carpeta);
     expect(existsSync(join(lab.root, carpeta, ".git"))).toBe(true);
     expect(lab.git("rev-parse", rama)).toBe(lab.git("rev-parse", "main"));
-    expect(lab.gitEn(join(lab.root, carpeta), "rev-parse", "--abbrev-ref", "HEAD")).toBe(rama);
+    expect(lab.gitEn(join(lab.root, carpeta), "rev-parse", "--abbrev-ref", "HEAD")).toBe(
+      rama,
+    );
     expect(r.commit).toBe(lab.git("rev-parse", "main"));
   });
 
@@ -74,12 +96,20 @@ describe("crear el worktree", () => {
   it("se niega, sin dejar worktree ni rama ni cupo, si el clon no queda contenido en el worktree (C6)", () => {
     lab = crearLaboratorio();
     rmSync(join(lab.root, "node_modules", "@valmen", "core"));
-    symlinkSync(join(lab.root, "packages", "core"), join(lab.root, "node_modules", "@valmen", "core"));
+    symlinkSync(
+      join(lab.root, "packages", "core"),
+      join(lab.root, "node_modules", "@valmen", "core"),
+    );
     expect(() => crear()).toThrow(/no quedó contenido en el worktree/);
     expect(existsSync(join(lab.root, nombres(TICKET_A).carpeta))).toBe(false);
     expect(ramas()).toBe("");
     expect(reservas()).toEqual([]);
-    expect(lab.git("worktree", "list", "--porcelain").split("\n").filter((l) => l.startsWith("worktree "))).toHaveLength(1);
+    expect(
+      lab
+        .git("worktree", "list", "--porcelain")
+        .split("\n")
+        .filter((l) => l.startsWith("worktree ")),
+    ).toHaveLength(1);
   });
 
   it("compila en el worktree con la receta de build (C7)", () => {
@@ -90,14 +120,24 @@ describe("crear el worktree", () => {
     const [, tsc, web] = proceso.llamadas;
     expect(proceso.llamadas.map((l) => l.comando)).toEqual(["cp", "npx", "node"]);
     expect(proceso.llamadas[0]!.argumentos[0]).toBe("-Rc");
-    expect(tsc).toEqual({ comando: "npx", argumentos: ["tsc", "--build", "tsconfig.build.json"], cwd: absoluta });
-    expect(web).toEqual({ comando: "node", argumentos: ["scripts/copy-web.mjs"], cwd: absoluta });
+    expect(tsc).toEqual({
+      comando: "npx",
+      argumentos: ["tsc", "--build", "tsconfig.build.json"],
+      cwd: absoluta,
+    });
+    expect(web).toEqual({
+      comando: "node",
+      argumentos: ["scripts/copy-web.mjs"],
+      cwd: absoluta,
+    });
   });
 
   it("si la compilación falla no deja worktree, rama ni cupo (C8)", () => {
     lab = crearLaboratorio();
     for (const falla of ["tsc --build", "copy-web"]) {
-      expect(() => crear(TICKET_A, { proceso: procesoSimulado({ fallaEn: falla }).ejecutor })).toThrow(/La compilación falló/);
+      expect(() =>
+        crear(TICKET_A, { proceso: procesoSimulado({ fallaEn: falla }).ejecutor }),
+      ).toThrow(/La compilación falló/);
       expect(existsSync(join(lab.root, nombres(TICKET_A).carpeta))).toBe(false);
       expect(ramas()).toBe("");
       expect(reservas()).toEqual([]);
@@ -127,7 +167,12 @@ describe("crear el worktree", () => {
   it("se niega si el ticket no está registrado en main (C10)", () => {
     lab = crearLaboratorio();
     const sinCommit = "FEATURE-WT-TRES-20261008";
-    writeFixtureTicket(lab.root, { id: sinCommit, workflowStatus: "approved", type: "FEATURE", module: "WT" });
+    writeFixtureTicket(lab.root, {
+      id: sinCommit,
+      workflowStatus: "approved",
+      type: "FEATURE",
+      module: "WT",
+    });
     expect(() => crear(sinCommit)).toThrow(/no está registrado en main/);
     expect(() => crear("FEATURE-WT-NUNCA-20261008")).toThrow(/no está registrado/);
     expect(ramas()).toBe("");
@@ -138,7 +183,9 @@ describe("crear el worktree", () => {
     lab = crearLaboratorio();
     const r = crear();
     expect(r.reserva).toBe("reservada");
-    expect(reservas()).toMatchObject([{ projectId: PROYECTO, ticketId: TICKET_A, attemptId: "worktree" }]);
+    expect(reservas()).toMatchObject([
+      { projectId: PROYECTO, ticketId: TICKET_A, attemptId: "worktree" },
+    ]);
   });
 
   it("si el proyecto no está declarado en la máquina sigue sin reservar y lo dice (C11)", () => {
@@ -164,11 +211,24 @@ describe("crear el worktree", () => {
     crear(TICKET_A);
     const enlazado = join(lab.root, nombres(TICKET_A).carpeta);
     const paths = defaultPaths(enlazado);
-    expect(() => crearWorktree({ paths, ticketId: TICKET_B, home: lab.home, proceso: procesoSimulado().ejecutor })).toThrow(/worktree enlazado.*checkout principal/);
-    expect(() => quitarWorktree({ paths, ticketId: TICKET_A, home: lab.home })).toThrow(/worktree enlazado.*checkout principal/);
+    expect(() =>
+      crearWorktree({
+        paths,
+        ticketId: TICKET_B,
+        home: lab.home,
+        proceso: procesoSimulado().ejecutor,
+      }),
+    ).toThrow(/worktree enlazado.*checkout principal/);
+    expect(() => quitarWorktree({ paths, ticketId: TICKET_A, home: lab.home })).toThrow(
+      /worktree enlazado.*checkout principal/,
+    );
     // El worktree trae solo `.claude/settings.json`, con las reglas del harness: la negativa no dejó nada más.
     expect(readdirSync(join(enlazado, ".claude"))).toEqual(["settings.json"]);
-    const reglas = (JSON.parse(readFileSync(join(enlazado, ".claude", "settings.json"), "utf8")) as { permissions: { deny: string[] } }).permissions.deny;
+    const reglas = (
+      JSON.parse(readFileSync(join(enlazado, ".claude", "settings.json"), "utf8")) as {
+        permissions: { deny: string[] };
+      }
+    ).permissions.deny;
     expect(reglas).toEqual(claudeDenyRules());
     expect(existsSync(join(lab.root, nombres(TICKET_B).carpeta))).toBe(false);
   });
@@ -184,7 +244,10 @@ describe("las denegaciones llegan al worktree", () => {
     const r = crear();
     const archivo = join(enElWorktree(), SETTINGS);
     expect(existsSync(archivo)).toBe(true);
-    const datos = JSON.parse(readFileSync(archivo, "utf8")) as { outputStyle: string; permissions: { deny: string[] } };
+    const datos = JSON.parse(readFileSync(archivo, "utf8")) as {
+      outputStyle: string;
+      permissions: { deny: string[] };
+    };
     expect(claudeDenyRules()).toHaveLength(64);
     expect(datos.permissions.deny).toEqual(claudeDenyRules());
     expect(datos.outputStyle).toBe("valmen");
@@ -196,9 +259,16 @@ describe("las denegaciones llegan al worktree", () => {
   it("suma a las reglas de la persona en el checkout principal las del harness", () => {
     lab = crearLaboratorio();
     mkdirSync(join(lab.root, ".claude"), { recursive: true });
-    writeFileSync(join(lab.root, SETTINGS), JSON.stringify({ permissions: { allow: ["Bash(npm test)"], deny: ["Bash(rm -rf*)"] } }));
+    writeFileSync(
+      join(lab.root, SETTINGS),
+      JSON.stringify({
+        permissions: { allow: ["Bash(npm test)"], deny: ["Bash(rm -rf*)"] },
+      }),
+    );
     crear();
-    const datos = JSON.parse(readFileSync(join(enElWorktree(), SETTINGS), "utf8")) as { permissions: { allow: string[]; deny: string[] } };
+    const datos = JSON.parse(readFileSync(join(enElWorktree(), SETTINGS), "utf8")) as {
+      permissions: { allow: string[]; deny: string[] };
+    };
     expect(datos.permissions.allow).toEqual(["Bash(npm test)"]);
     expect(datos.permissions.deny).toEqual(["Bash(rm -rf*)", ...claudeDenyRules()]);
   });
@@ -218,7 +288,10 @@ describe("las denegaciones llegan al worktree", () => {
   it("no avisa de denegaciones si el archivo que viene de git ya las trae", () => {
     lab = crearLaboratorio();
     mkdirSync(join(lab.root, ".claude"), { recursive: true });
-    writeFileSync(join(lab.root, SETTINGS), JSON.stringify({ permissions: { deny: claudeDenyRules() } }));
+    writeFileSync(
+      join(lab.root, SETTINGS),
+      JSON.stringify({ permissions: { deny: claudeDenyRules() } }),
+    );
     lab.git("add", "-f", SETTINGS);
     lab.git("commit", "-q", "-m", "versiona los permisos");
     expect(crear().avisos.join(" ")).not.toMatch(/denegaci/);
@@ -240,13 +313,18 @@ describe("las denegaciones llegan al worktree", () => {
     lab.git("add", ".gitignore");
     lab.git("commit", "-q", "-m", "ya no ignora .claude/");
     const r = crear();
-    expect(r.avisos.join(" ")).toMatch(/No se dejó \.claude\/settings\.json.*git no lo ignora/);
+    expect(r.avisos.join(" ")).toMatch(
+      /No se dejó \.claude\/settings\.json.*git no lo ignora/,
+    );
     expect(r.carpeta).toBe(nombres(TICKET_A).carpeta);
   });
 
   it("no escribe nada si el proyecto no proyecta al runtime claude", () => {
     lab = crearLaboratorio();
-    writeFileSync(join(lab.root, ".valmen", "config.yaml"), `project-id: ${PROYECTO}\nruntimes:\n  - codex\n`);
+    writeFileSync(
+      join(lab.root, ".valmen", "config.yaml"),
+      `project-id: ${PROYECTO}\nruntimes:\n  - codex\n`,
+    );
     lab.git("add", "-A");
     lab.git("commit", "-q", "-m", "solo codex");
     const r = crear();
@@ -262,7 +340,12 @@ describe("las denegaciones llegan al worktree", () => {
     expect(existsSync(join(lab.root, nombres(TICKET_A).carpeta))).toBe(false);
     expect(ramas()).toBe("");
     expect(reservas()).toEqual([]);
-    expect(lab.git("worktree", "list", "--porcelain").split("\n").filter((l) => l.startsWith("worktree "))).toHaveLength(1);
+    expect(
+      lab
+        .git("worktree", "list", "--porcelain")
+        .split("\n")
+        .filter((l) => l.startsWith("worktree ")),
+    ).toHaveLength(1);
     // Corregido el archivo, el ticket puede intentarse otra vez.
     writeFileSync(join(lab.root, SETTINGS), "{}");
     expect(() => crear()).not.toThrow();
@@ -278,7 +361,12 @@ describe("quitar el worktree", () => {
     expect(r.rama).toBe("valmen/ticket-uno");
     expect(existsSync(join(lab.root, nombres(TICKET_A).carpeta))).toBe(false);
     expect(ramas()).toBe("");
-    expect(lab.git("worktree", "list", "--porcelain").split("\n").filter((l) => l.startsWith("worktree "))).toHaveLength(1);
+    expect(
+      lab
+        .git("worktree", "list", "--porcelain")
+        .split("\n")
+        .filter((l) => l.startsWith("worktree ")),
+    ).toHaveLength(1);
     expect(existsSync(join(lab.root, "hecho.txt"))).toBe(true);
   });
 
@@ -346,14 +434,36 @@ describe("las listas cerradas", () => {
     lab = crearLaboratorio();
     const git = gitRegistrado();
     const proceso = procesoSimulado();
-    crearWorktree({ paths: defaultPaths(lab.root), ticketId: TICKET_A, home: lab.home, git: git.ejecutor, proceso: proceso.ejecutor });
+    crearWorktree({
+      paths: defaultPaths(lab.root),
+      ticketId: TICKET_A,
+      home: lab.home,
+      git: git.ejecutor,
+      proceso: proceso.ejecutor,
+    });
     integrar(TICKET_A);
-    quitarWorktree({ paths: defaultPaths(lab.root), ticketId: TICKET_A, home: lab.home, git: git.ejecutor });
+    quitarWorktree({
+      paths: defaultPaths(lab.root),
+      ticketId: TICKET_A,
+      home: lab.home,
+      git: git.ejecutor,
+    });
     expect(git.llamadas.length).toBeGreaterThan(8);
-    for (const argumentos of git.llamadas) expect(motivoDeGitDeWorktree(argumentos)).toBeNull();
-    for (const l of proceso.llamadas) expect(motivoDeProcesoDeWorktree(l.comando, l.argumentos)).toBeNull();
+    for (const argumentos of git.llamadas)
+      expect(motivoDeGitDeWorktree(argumentos)).toBeNull();
+    for (const l of proceso.llamadas)
+      expect(motivoDeProcesoDeWorktree(l.comando, l.argumentos)).toBeNull();
     const operaciones = new Set(git.llamadas.map((a) => a[0]));
-    for (const prohibida of ["push", "fetch", "pull", "reset", "rebase", "clean", "tag", "remote"]) {
+    for (const prohibida of [
+      "push",
+      "fetch",
+      "pull",
+      "reset",
+      "rebase",
+      "clean",
+      "tag",
+      "remote",
+    ]) {
       expect(operaciones.has(prohibida)).toBe(false);
     }
     const banderas = git.llamadas.flat();

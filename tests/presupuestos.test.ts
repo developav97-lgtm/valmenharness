@@ -239,7 +239,11 @@ function ultimoRecibo(ticketId: string): Record<string, unknown> | null {
  */
 function evaluador(): typeof import("../packages/gate-jev/src/index.js").evaluateWithJev {
   return (async (options: {
-    propositions?: readonly { id: string; kind: string; criteria?: Record<string, string> }[];
+    propositions?: readonly {
+      id: string;
+      kind: string;
+      criteria?: Record<string, string>;
+    }[];
   }) => ({
     answers: (options?.propositions ?? []).map((proposition) =>
       proposition.kind === "choice"
@@ -404,7 +408,11 @@ describe("los tres cortes", () => {
 
 describe("los multiplicadores del proyecto", () => {
   it("reemplazan los valores por defecto", () => {
-    expect(DEFAULT_BUDGET_POLICY.multipliers).toEqual({ notify: 1.5, degrade: 2, pause: 3 });
+    expect(DEFAULT_BUDGET_POLICY.multipliers).toEqual({
+      notify: 1.5,
+      degrade: 2,
+      pause: 3,
+    });
 
     const politica = politicaAdaptativa(`    multipliers:
       notify: 1.2
@@ -425,9 +433,9 @@ describe("los multiplicadores del proyecto", () => {
 `);
     const otra = readBudgetPolicy(lab);
     expect(otra.multipliers).toEqual({ notify: 1.2, degrade: 1.4, pause: 1.6 });
-    expect(
-      classifyRunCost({ costUsd: 1.2, typicalUsd: 1, policy: otra }).tier,
-    ).toBe("notify");
+    expect(classifyRunCost({ costUsd: 1.2, typicalUsd: 1, policy: otra }).tier).toBe(
+      "notify",
+    );
   });
 
   it("un multiplicador que no es un número se rechaza nombrando su clave", () => {
@@ -495,7 +503,9 @@ describe("la degradación del enrutado", () => {
     const degradado = gateRoutingFor(lab, { preset: decision.preset ?? "" });
     expect(degradado.source).toBe("preset");
     expect(degradado.judgeModel).not.toBe(sinDegradar.judgeModel);
-    expect(degradado.judgeModel).toBe(gateRoutingFor(lab, { preset: "economy" }).judgeModel);
+    expect(degradado.judgeModel).toBe(
+      gateRoutingFor(lab, { preset: "economy" }).judgeModel,
+    );
   });
 
   it("deja la nota que lo explica escrita en el recibo de la compuerta", async () => {
@@ -569,7 +579,16 @@ describe("el comando", () => {
 
     // Y el mismo comando por el CLI, que es como lo corre una persona.
     const porCli = dispatch(
-      parseArgs(["budget", "--id", id, "--check", "--root", lab, "--tickets-dir", "tickets"]),
+      parseArgs([
+        "budget",
+        "--id",
+        id,
+        "--check",
+        "--root",
+        lab,
+        "--tickets-dir",
+        "tickets",
+      ]),
     );
     expect(porCli.exitCode).toBe(0);
     expect(resolvePaths(parseArgs(["budget", "--id", id, "--root", lab])).root).toBe(lab);

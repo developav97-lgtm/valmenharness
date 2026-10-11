@@ -35,7 +35,11 @@ import {
 
 import { leerSesionesDeClaude, type SesionDeClaude } from "./claude.js";
 import { leerSesionesDeCodex } from "./codex.js";
-import { leerSesionesDeHermes, HERRAMIENTAS_DE_LECTURA, HERRAMIENTAS_QUE_ESCRIBEN } from "./hermes.js";
+import {
+  leerSesionesDeHermes,
+  HERRAMIENTAS_DE_LECTURA,
+  HERRAMIENTAS_QUE_ESCRIBEN,
+} from "./hermes.js";
 
 /**
  * La base de datos de opencode, cargada **de forma perezosa**.
@@ -396,7 +400,9 @@ export function leerLineaDeTiempo(
     };
     const opcionesDeClaude = {
       ...opciones,
-      ...(options.madreYaContada === undefined ? {} : { madreYaContada: options.madreYaContada }),
+      ...(options.madreYaContada === undefined
+        ? {}
+        : { madreYaContada: options.madreYaContada }),
     };
     const deCodex = leerSesionesDeCodex(directory, opciones);
     const deClaude = leerSesionesDeClaude(directory, opcionesDeClaude);
@@ -409,7 +415,14 @@ export function leerLineaDeTiempo(
   }
 
   try {
-    return consultar(db, dbPath, directory, options.ticketId, options.home, options.madreYaContada);
+    return consultar(
+      db,
+      dbPath,
+      directory,
+      options.ticketId,
+      options.home,
+      options.madreYaContada,
+    );
   } finally {
     db.close();
   }
@@ -491,7 +504,10 @@ function sesionDeClaude(sesion: SesionDeClaude): SesionDeAgente {
       ? {}
       : {
           sesionMadre: sesion.sesionMadre,
-          duracionMs: Math.max(0, (sesion.terminaEn ?? sesion.startedAt) - sesion.startedAt),
+          duracionMs: Math.max(
+            0,
+            (sesion.terminaEn ?? sesion.startedAt) - sesion.startedAt,
+          ),
         }),
     // El reparto son los tickets que la sesión **trabajó**: el lector ya dejó solo
     // esos. Una compartida queda fuera de los totales, como las de Hermes.
@@ -731,11 +747,13 @@ function consultar(
   // pantalla distingue «no hay datos» de un cero que se lee como «no costó».
   if (falloLaVieja && !hayV2) return null;
   // La consulta de mensajes v2 falla si la tabla no existe, y no es un fallo.
-  let leerMensajesV2: ((sessionId: string) => {
-    id: string;
-    type: string | null;
-    data: string | null;
-  }[]) | null = null;
+  let leerMensajesV2:
+    | ((sessionId: string) => {
+        id: string;
+        type: string | null;
+        data: string | null;
+      }[])
+    | null = null;
   try {
     const consulta = db.prepare(
       `SELECT id, type, data
@@ -926,123 +944,127 @@ function consultar(
   for (const fila of filasV2) {
     // Una sesión presente en las dos tablas es la misma dos veces: gana la
     // entrada que ya se leyó y la de `session_v2` no se agrega.
-      if (sesiones.has(fila.id)) continue;
+    if (sesiones.has(fila.id)) continue;
 
-      let intervencionesV2 = 0;
-      let fallidasV2 = 0;
-      const agregadoV2 = agregadoDe(fila.id);
-      let agente = "";
-      let modelo = "";
-      let primerTextoDeUsuario: string | null = null;
+    let intervencionesV2 = 0;
+    let fallidasV2 = 0;
+    const agregadoV2 = agregadoDe(fila.id);
+    let agente = "";
+    let modelo = "";
+    let primerTextoDeUsuario: string | null = null;
 
-      const mensajes = leerMensajesV2
-        ? leerMensajesV2(fila.id)
+    const mensajes = leerMensajesV2 ? leerMensajesV2(fila.id) : [];
+
+    for (const mensaje of mensajes) {
+      let datos: Record<string, unknown>;
+      try {
+        datos = JSON.parse(mensaje.data ?? "{}") as Record<string, unknown>;
+      } catch {
+        continue;
+      }
+      if (mensaje.type !== "assistant") {
+        if (
+          mensaje.type === "user" &&
+          primerTextoDeUsuario === null &&
+          typeof datos["text"] === "string"
+        ) {
+          primerTextoDeUsuario = datos["text"] as string;
+        }
+        continue;
+      }
+
+      agregadoV2.mensajes += 1;
+      const coste = typeof datos["cost"] === "number" ? (datos["cost"] as number) : 0;
+      const delModelo = datos["model"] as Record<string, unknown> | undefined;
+      if (modelo === "" && delModelo && typeof delModelo["id"] === "string") {
+        modelo = modeloDeSesion(JSON.stringify(delModelo));
+      }
+      if (agente === "" && typeof datos["agent"] === "string") {
+        agente = datos["agent"] as string;
+      }
+
+      let elMensajeTocoElHarness = false;
+      const contenido = Array.isArray(datos["content"])
+        ? (datos["content"] as unknown[])
         : [];
+      for (const entrada of contenido) {
+        if (entrada === null || typeof entrada !== "object") continue;
+        const parte = entrada as Record<string, unknown>;
+        if (parte["type"] !== "tool") continue;
+        const nombre = typeof parte["name"] === "string" ? parte["name"] : "";
+        const estado = (parte["state"] ?? {}) as Record<string, unknown>;
+        const bruto = JSON.stringify(parte);
+        const esMcpDelHarness = herramientaDelHarnessDeOpencode(nombre) !== null;
+        // La vía CLI: una herramienta de shell cuyo comando invoca `valmen`.
+        const esCli =
+          !esMcpDelHarness &&
+          (nombre === "shell" || nombre === "bash" || nombre === "execute") &&
+          /(?:^|[\s;&|()"'])(?:valmen|[^\s;&|()"']*main\.js)[\s;&|()"']+/.test(bruto);
+        if (!esMcpDelHarness && !esCli) continue;
 
-      for (const mensaje of mensajes) {
-        let datos: Record<string, unknown>;
-        try {
-          datos = JSON.parse(mensaje.data ?? "{}") as Record<string, unknown>;
-        } catch {
-          continue;
-        }
-        if (mensaje.type !== "assistant") {
-          if (
-            mensaje.type === "user" &&
-            primerTextoDeUsuario === null &&
-            typeof datos["text"] === "string"
-          ) {
-            primerTextoDeUsuario = datos["text"] as string;
-          }
-          continue;
-        }
+        elMensajeTocoElHarness = true;
+        intervencionesV2 += 1;
+        const status = typeof estado["status"] === "string" ? estado["status"] : "";
+        if (status === "error" || status === "failed") fallidasV2 += 1;
 
-        agregadoV2.mensajes += 1;
-        const coste = typeof datos["cost"] === "number" ? (datos["cost"] as number) : 0;
-        const delModelo = datos["model"] as Record<string, unknown> | undefined;
-        if (modelo === "" && delModelo && typeof delModelo["id"] === "string") {
-          modelo = modeloDeSesion(JSON.stringify(delModelo));
-        }
-        if (agente === "" && typeof datos["agent"] === "string") {
-          agente = datos["agent"] as string;
-        }
-
-        let elMensajeTocoElHarness = false;
-        const contenido = Array.isArray(datos["content"]) ? (datos["content"] as unknown[]) : [];
-        for (const entrada of contenido) {
-          if (entrada === null || typeof entrada !== "object") continue;
-          const parte = entrada as Record<string, unknown>;
-          if (parte["type"] !== "tool") continue;
-          const nombre = typeof parte["name"] === "string" ? parte["name"] : "";
-          const estado = (parte["state"] ?? {}) as Record<string, unknown>;
-          const bruto = JSON.stringify(parte);
-          const esMcpDelHarness = herramientaDelHarnessDeOpencode(nombre) !== null;
-          // La vía CLI: una herramienta de shell cuyo comando invoca `valmen`.
-          const esCli =
-            !esMcpDelHarness &&
-            (nombre === "shell" || nombre === "bash" || nombre === "execute") &&
-            /(?:^|[\s;&|()"'])(?:valmen|[^\s;&|()"']*main\.js)[\s;&|()"']+/.test(bruto);
-          if (!esMcpDelHarness && !esCli) continue;
-
-          elMensajeTocoElHarness = true;
-          intervencionesV2 += 1;
-          const status = typeof estado["status"] === "string" ? estado["status"] : "";
-          if (status === "error" || status === "failed") fallidasV2 += 1;
-
-          if (ticketId !== undefined && bruto.includes(ticketId)) {
-            sesionesDelTicket.add(fila.id);
-            intervenciones.push({
-              at:
-                typeof estado["time"] === "object" && estado["time"] !== null
-                  ? ((estado["time"] as Record<string, unknown>)["start"] as number) ||
-                    Number(mensaje.id) ||
-                    0
-                  : 0,
-              tool: nombre,
-              status: status || "completed",
-              agent: agente,
-              provider: typeof delModelo?.["providerID"] === "string" ? String(delModelo["providerID"]) : "",
-              model: modelo,
-              costUsd: coste,
-              failed: status === "error" || status === "failed",
-            });
-          }
-        }
-        if (elMensajeTocoElHarness) {
-          agregadoV2.mensajesDelHarness += 1;
-          agregadoV2.costeHarness += coste;
+        if (ticketId !== undefined && bruto.includes(ticketId)) {
+          sesionesDelTicket.add(fila.id);
+          intervenciones.push({
+            at:
+              typeof estado["time"] === "object" && estado["time"] !== null
+                ? ((estado["time"] as Record<string, unknown>)["start"] as number) ||
+                  Number(mensaje.id) ||
+                  0
+                : 0,
+            tool: nombre,
+            status: status || "completed",
+            agent: agente,
+            provider:
+              typeof delModelo?.["providerID"] === "string"
+                ? String(delModelo["providerID"])
+                : "",
+            model: modelo,
+            costUsd: coste,
+            failed: status === "error" || status === "failed",
+          });
         }
       }
-
-      // La mención como última vía: el título o el primer mensaje del usuario
-      // nombran el ticket. Un ejecutor que implementó y nunca consultó el registro
-      // solo se puede atribuir así — y es lo que el lector de codex ya hace.
-      if (
-        ticketId !== undefined &&
-        !sesionesDelTicket.has(fila.id) &&
-        ((fila.title ?? "").includes(ticketId) ||
-          (primerTextoDeUsuario ?? "").includes(ticketId))
-      ) {
-        sesionesDelTicket.add(fila.id);
+      if (elMensajeTocoElHarness) {
+        agregadoV2.mensajesDelHarness += 1;
+        agregadoV2.costeHarness += coste;
       }
-
-      sesiones.set(fila.id, {
-        id: fila.id,
-        title: fila.title ?? "",
-        agent: agente || (fila.agent ?? ""),
-        provider: "",
-        model: modelo || modeloDeSesion(fila.model),
-        costUsd: typeof fila.cost === "number" && Number.isFinite(fila.cost) ? fila.cost : null,
-        source: "opencode",
-        inputTokens: aNumero(fila.tokensInput),
-        outputTokens: aNumero(fila.tokensOutput),
-        reasoningTokens: aNumero(fila.tokensReasoning),
-        cacheReadTokens: aNumero(fila.tokensCacheRead),
-        startedAt: aNumero(fila.timeCreated),
-        intervenciones: intervencionesV2,
-        fallidas: fallidasV2,
-      });
     }
+
+    // La mención como última vía: el título o el primer mensaje del usuario
+    // nombran el ticket. Un ejecutor que implementó y nunca consultó el registro
+    // solo se puede atribuir así — y es lo que el lector de codex ya hace.
+    if (
+      ticketId !== undefined &&
+      !sesionesDelTicket.has(fila.id) &&
+      ((fila.title ?? "").includes(ticketId) ||
+        (primerTextoDeUsuario ?? "").includes(ticketId))
+    ) {
+      sesionesDelTicket.add(fila.id);
+    }
+
+    sesiones.set(fila.id, {
+      id: fila.id,
+      title: fila.title ?? "",
+      agent: agente || (fila.agent ?? ""),
+      provider: "",
+      model: modelo || modeloDeSesion(fila.model),
+      costUsd:
+        typeof fila.cost === "number" && Number.isFinite(fila.cost) ? fila.cost : null,
+      source: "opencode",
+      inputTokens: aNumero(fila.tokensInput),
+      outputTokens: aNumero(fila.tokensOutput),
+      reasoningTokens: aNumero(fila.tokensReasoning),
+      cacheReadTokens: aNumero(fila.tokensCacheRead),
+      startedAt: aNumero(fila.timeCreated),
+      intervenciones: intervencionesV2,
+      fallidas: fallidasV2,
+    });
+  }
 
   // Las sesiones de codex, si las hay. Se leen después de las de opencode porque
   // son otro almacén, y se suman a la misma lista: quien mira quiere el consumo de
@@ -1207,9 +1229,7 @@ function consultar(
       // con sus intervenciones contadas.
       exploracionUsd: totalCostUsd - costeHarness - costeDeHermes,
       harnessMensajes:
-        mensajesDeOpencodeDelHarness +
-        intervencionesDeHermes +
-        mensajesDelRegistroDeClaude,
+        mensajesDeOpencodeDelHarness + intervencionesDeHermes + mensajesDelRegistroDeClaude,
       exploracionMensajes:
         mensajesDeOpencode -
         mensajesDeOpencodeDelHarness +
@@ -1331,8 +1351,12 @@ export interface FotoGuardada {
  * solo se puede decir que se desconoce. No se calcula con una tabla de precios que nadie
  * verificó: se declara la causa.
  */
-export function marcaDeCosto(sesion: { readonly source: string }): "suscripción" | "desconocido" {
-  return sesion.source === "codex" || sesion.source === "claude" ? "suscripción" : "desconocido";
+export function marcaDeCosto(sesion: {
+  readonly source: string;
+}): "suscripción" | "desconocido" {
+  return sesion.source === "codex" || sesion.source === "claude"
+    ? "suscripción"
+    : "desconocido";
 }
 
 export function guardarFotoEnTicket(
@@ -1375,7 +1399,8 @@ export function guardarFotoEnTicket(
     // Una sesión que ya tiene números en otro ticket se declara aquí sin números: cargarla
     // completa a dos tickets cuenta su costo dos veces (R-CTRL-005), y fallar el cierre por
     // la duplicación de otro ticket sería castigar a este.
-    const dueno = reparto === undefined ? sessionNumbersOwner(paths, sesion.id, ticketId) : null;
+    const dueno =
+      reparto === undefined ? sessionNumbersOwner(paths, sesion.id, ticketId) : null;
     entradas.push(
       addAiUsage({
         paths,
@@ -1428,24 +1453,26 @@ export function guardarFotoEnTicket(
                   `declara sin números. Sesión "${sesion.title}".`,
               }
             : {
-              notes:
-                `Agente ${sesion.agent || "(sin declarar)"}. Sesión **compartida**: ` +
-                `trabajó ${reparto.length} tickets ` +
-                `(${reparto
-                  .slice(0, 5)
-                  .map((t) => `${t.id} ×${t.peso}`)
-                  .join(", ")}), así que su costo no se reparte y acá no se ` +
-                `registran números. ` +
-                `Costo completo de la sesión: ` +
-                (sesion.costUsd === null
-                  ? "no declarado por el proveedor"
-                  : `$${sesion.costUsd.toFixed(6)}`) +
-                `, ${sesion.inputTokens + sesion.outputTokens + sesion.reasoningTokens} tokens` +
-                (sesion.source === "claude" ? " (sin los subagentes con ticket propio)" : "") +
-                `. ` +
-                `Registralo en el ticket cuya sesión sea propia, o declaralo compartido donde ` +
-                `corresponda. Sesión "${sesion.title}".`,
-            }),
+                notes:
+                  `Agente ${sesion.agent || "(sin declarar)"}. Sesión **compartida**: ` +
+                  `trabajó ${reparto.length} tickets ` +
+                  `(${reparto
+                    .slice(0, 5)
+                    .map((t) => `${t.id} ×${t.peso}`)
+                    .join(", ")}), así que su costo no se reparte y acá no se ` +
+                  `registran números. ` +
+                  `Costo completo de la sesión: ` +
+                  (sesion.costUsd === null
+                    ? "no declarado por el proveedor"
+                    : `$${sesion.costUsd.toFixed(6)}`) +
+                  `, ${sesion.inputTokens + sesion.outputTokens + sesion.reasoningTokens} tokens` +
+                  (sesion.source === "claude"
+                    ? " (sin los subagentes con ticket propio)"
+                    : "") +
+                  `. ` +
+                  `Registralo en el ticket cuya sesión sea propia, o declaralo compartido donde ` +
+                  `corresponda. Sesión "${sesion.title}".`,
+              }),
         ...(options.now === undefined ? {} : { now: options.now }),
       }),
     );

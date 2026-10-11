@@ -19,7 +19,8 @@ import type { Ejecutor } from "../scripts/medir-salida-s1-s3.mjs";
 
 const RAIZ = join(import.meta.dirname, "..");
 
-const PRECISION = "Precisión de las compuertas — todo el registro\n\nplan · jev: 5 corrida(s) — aprueba 4, revisa 1, bloquea 0\n  tasa de banda: 20 %";
+const PRECISION =
+  "Precisión de las compuertas — todo el registro\n\nplan · jev: 5 corrida(s) — aprueba 4, revisa 1, bloquea 0\n  tasa de banda: 20 %";
 
 function ejecutor(validacion: { status: number; stdout: string }): Ejecutor {
   return (_root, argumentos) =>
@@ -30,11 +31,18 @@ function ejecutor(validacion: { status: number; stdout: string }): Ejecutor {
 
 describe("medir un registro", () => {
   it("cuenta los tickets válidos y trae la precisión por compuerta y evaluador", () => {
-    const m = medirRegistro("/x/proyecto", ejecutor({ status: 0, stdout: "Tickets válidos: 12\n" }));
+    const m = medirRegistro(
+      "/x/proyecto",
+      ejecutor({ status: 0, stdout: "Tickets válidos: 12\n" }),
+    );
     expect(m.valida).toBe(true);
     expect(m.ticketsValidos).toBe(12);
     expect(m.precision).toContain("plan · jev");
-    const { informe } = medirSalida(["/x/proyecto"], ejecutor({ status: 0, stdout: "Tickets válidos: 12\n" }), "2026-10-06");
+    const { informe } = medirSalida(
+      ["/x/proyecto"],
+      ejecutor({ status: 0, stdout: "Tickets válidos: 12\n" }),
+      "2026-10-06",
+    );
     expect(informe).toContain("# Salida de S1 a S3 — medición del 2026-10-06");
     expect(informe).toContain("12 tickets válidos");
     expect(informe).toContain("tasa de banda: 20 %");
@@ -43,7 +51,9 @@ describe("medir un registro", () => {
   it("si un registro no valida, sale con código 3 y el informe lo dice con la raíz y la salida", () => {
     const falla = ejecutor({ status: 3, stdout: "SECURITY-X-20260101: type no coincide" });
     const { informe, exitCode } = medirSalida(["/x/roto", "/x/sano"], (root, a) =>
-      root === "/x/roto" ? falla(root, a) : ejecutor({ status: 0, stdout: "Tickets válidos: 3\n" })(root, a),
+      root === "/x/roto"
+        ? falla(root, a)
+        : ejecutor({ status: 0, stdout: "Tickets válidos: 3\n" })(root, a),
     );
     expect(exitCode).toBe(3);
     expect(informe).toContain("**FALLÓ** en el registro `/x/roto`");

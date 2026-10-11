@@ -179,7 +179,12 @@ describe("el parte", () => {
 
   it("C8. las aprobaciones automáticas del día van en una línea aparte de las humanas", () => {
     const cuerpo = parte({
-      aprobaciones: { automaticas: [{ ticket: "FEATURE-X-20261007", etapa: "plan", autorizacion: "APA-1" }], humanas: 2 },
+      aprobaciones: {
+        automaticas: [
+          { ticket: "FEATURE-X-20261007", etapa: "plan", autorizacion: "APA-1" },
+        ],
+        humanas: 2,
+      },
     }).body;
     const lineas = cuerpo.split("\n");
     const auto = lineas.findIndex((l) => l.includes("1 aprobación(es) automática(s) hoy"));
@@ -192,7 +197,9 @@ describe("el parte", () => {
 
   it("C9. sin aprobaciones no imprime la línea", () => {
     expect(parte().body).not.toContain("aprobación(es)");
-    expect(parte({ aprobaciones: { automaticas: [], humanas: 0 } }).body).not.toContain("aprobación(es)");
+    expect(parte({ aprobaciones: { automaticas: [], humanas: 0 } }).body).not.toContain(
+      "aprobación(es)",
+    );
   });
 
   it("los bloques vacíos no se imprimen", () => {

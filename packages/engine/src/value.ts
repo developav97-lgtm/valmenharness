@@ -80,7 +80,10 @@ export interface ValueReport {
    * cierre— y las lista aquí, porque sumar el costo completo de la misma sesión en dos
    * tickets lo cuenta dos veces. El histórico las tiene: se señalan, no se reescriben.
    */
-  readonly duplicatedSessions: readonly { readonly session: string; readonly tickets: readonly string[] }[];
+  readonly duplicatedSessions: readonly {
+    readonly session: string;
+    readonly tickets: readonly string[];
+  }[];
 }
 
 /** Los recibos de un ticket, ya colapsados a su versión vigente. */
@@ -190,13 +193,21 @@ export function ticketValueReport(
 
     // Una sesión con números se cuenta en un solo ticket: la primera vez que aparece.
     const propias = (detalle?.usage ?? []).filter((uso) => {
-      const referencia = typeof uso["session_reference"] === "string" ? uso["session_reference"] : null;
-      const conNumeros = ["input_tokens", "output_tokens", "total_tokens", "estimated_cost_usd"].some(
-        (clave) => uso[clave] !== null && uso[clave] !== undefined,
-      );
+      const referencia =
+        typeof uso["session_reference"] === "string" ? uso["session_reference"] : null;
+      const conNumeros = [
+        "input_tokens",
+        "output_tokens",
+        "total_tokens",
+        "estimated_cost_usd",
+      ].some((clave) => uso[clave] !== null && uso[clave] !== undefined);
       // Un `process:` reparte el gasto de una corrida entre sus tickets a propósito: cada
       // ticket tiene su parte, no la sesión completa.
-      if (referencia === null || !conNumeros || String(uso["source"] ?? "").startsWith("process:")) {
+      if (
+        referencia === null ||
+        !conNumeros ||
+        String(uso["source"] ?? "").startsWith("process:")
+      ) {
         return true;
       }
       const dueno = duenos.get(referencia);
@@ -204,7 +215,10 @@ export function ticketValueReport(
         duenos.set(referencia, entrada.ticketId);
         return true;
       }
-      duplicadas.set(referencia, [...(duplicadas.get(referencia) ?? [dueno]), entrada.ticketId]);
+      duplicadas.set(referencia, [
+        ...(duplicadas.get(referencia) ?? [dueno]),
+        entrada.ticketId,
+      ]);
       return false;
     });
     const sesionesUsd = propias.reduce(

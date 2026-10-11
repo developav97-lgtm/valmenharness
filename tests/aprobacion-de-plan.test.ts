@@ -24,7 +24,10 @@ const ID = "SECURITY-ENGINE-APROBACION-PLAN-20261005";
 const FRASE = "Apruebo este plan: «Escojo la A aprobar los 3 planes»";
 
 let lab: string;
-const PATHS = (): { root: string; ticketsDir: string } => ({ root: lab, ticketsDir: "tickets" });
+const PATHS = (): { root: string; ticketsDir: string } => ({
+  root: lab,
+  ticketsDir: "tickets",
+});
 
 function ticket(): ReturnType<typeof parseTicket> {
   const ubicado = findTicket(PATHS(), ID);
@@ -37,10 +40,16 @@ function editarPlan(reemplazo: (plan: string) => string): void {
   const texto = readFileSync(ruta, "utf8");
   const a = texto.indexOf("## Plan");
   const b = texto.indexOf("## Criterios de aceptación");
-  writeFileSync(ruta, texto.slice(0, a) + reemplazo(texto.slice(a, b)) + texto.slice(b), "utf8");
+  writeFileSync(
+    ruta,
+    texto.slice(0, a) + reemplazo(texto.slice(a, b)) + texto.slice(b),
+    "utf8",
+  );
 }
 
-function aprobar(extra: Partial<Parameters<typeof registrarAprobacionDePlan>[0]> = {}): void {
+function aprobar(
+  extra: Partial<Parameters<typeof registrarAprobacionDePlan>[0]> = {},
+): void {
   registrarAprobacionDePlan({
     paths: PATHS(),
     ticketId: ID,
@@ -56,7 +65,12 @@ beforeEach(() => {
   lab = mkdtempSync(join(tmpdir(), "valmen-aprobplan-"));
   mkdirSync(join(lab, ".valmen"), { recursive: true });
   writeFileSync(join(lab, ".valmen", "config.yaml"), "name: Demo\n", "utf8");
-  writeFixtureTicket(lab, { id: ID, workflowStatus: "planned", type: "SECURITY", module: "ENGINE" });
+  writeFixtureTicket(lab, {
+    id: ID,
+    workflowStatus: "planned",
+    type: "SECURITY",
+    module: "ENGINE",
+  });
 });
 
 afterEach(() => {
@@ -92,15 +106,26 @@ describe("la fuente autorizacion (R-APRO-002)", () => {
       "utf8",
     );
     expect(() => aprobar({ source: "autorizacion" })).toThrow(/no se declara/);
-    expect(() => aprobar({ source: "autorizacion", viaDelegacion: true })).toThrow(/no se declara/);
-    expect((ticket().blocks.Eventos ?? []).some((e) => e["action"] === "plan-approved")).toBe(false);
+    expect(() => aprobar({ source: "autorizacion", viaDelegacion: true })).toThrow(
+      /no se declara/,
+    );
+    expect(
+      (ticket().blocks.Eventos ?? []).some((e) => e["action"] === "plan-approved"),
+    ).toBe(false);
     // Control: la misma llamada con una fuente aceptada sí registra.
     expect(() => aprobar({ source: "cli" })).not.toThrow();
   });
 
   it("hasPlanGate acepta el evento de fuente autorizacion en un FEATURE, pero nunca en un SECURITY", () => {
     const evento = (id: string, fuente: string): string =>
-      JSON.stringify({ actor: "autorización APA-1", source: fuente, quote: "q", planHash: "sha256:x", authorizationId: "APA-1", authorizationHash: "sha256:y" });
+      JSON.stringify({
+        actor: "autorización APA-1",
+        source: fuente,
+        quote: "q",
+        planHash: "sha256:x",
+        authorizationId: "APA-1",
+        authorizationHash: "sha256:y",
+      });
     const conEvento = (tipo: string, fuente: string): ReturnType<typeof parseTicket> => {
       const id = `${tipo}-ENGINE-GATE-AUTORIZACION-20261007`;
       writeFixtureTicket(lab, {
@@ -134,8 +159,12 @@ describe("la fuente autorizacion (R-APRO-002)", () => {
       "utf8",
     );
     expect(() => aprobar({ source: "revisor" })).toThrow(/no se declara/);
-    expect(() => aprobar({ source: "revisor", viaDelegacion: true })).toThrow(/no se declara/);
-    expect((ticket().blocks.Eventos ?? []).some((e) => e["action"] === "plan-approved")).toBe(false);
+    expect(() => aprobar({ source: "revisor", viaDelegacion: true })).toThrow(
+      /no se declara/,
+    );
+    expect(
+      (ticket().blocks.Eventos ?? []).some((e) => e["action"] === "plan-approved"),
+    ).toBe(false);
     // Control: la misma llamada con una fuente aceptada sí registra.
     expect(() => aprobar({ source: "cli" })).not.toThrow();
   });
@@ -144,7 +173,9 @@ describe("la fuente autorizacion (R-APRO-002)", () => {
 describe("las fuentes aceptadas", () => {
   it("sin declaración rigen mission-control y cli; otra se rechaza", () => {
     expect(() => aprobar({ source: "mission-control" })).not.toThrow();
-    expect(() => aprobar({ source: "hermes" })).toThrow(/no está entre las que el proyecto acepta/);
+    expect(() => aprobar({ source: "hermes" })).toThrow(
+      /no está entre las que el proyecto acepta/,
+    );
   });
 
   it("el proyecto las declara y la lista manda", () => {
@@ -158,7 +189,11 @@ describe("las fuentes aceptadas", () => {
   });
 
   it("una lista vacía o con un nombre inválido falla en vez de aceptar cualquiera", () => {
-    writeFileSync(join(lab, ".valmen", "config.yaml"), "name: Demo\nplan-approval-sources: []\n", "utf8");
+    writeFileSync(
+      join(lab, ".valmen", "config.yaml"),
+      "name: Demo\nplan-approval-sources: []\n",
+      "utf8",
+    );
     expect(() => aprobar()).toThrow(/plan-approval-sources/);
     writeFileSync(
       join(lab, ".valmen", "config.yaml"),
@@ -172,7 +207,9 @@ describe("las fuentes aceptadas", () => {
 describe("una sesión desatendida", () => {
   it("no puede registrar la aprobación y no deja nada escrito", () => {
     expect(() => aprobar({ env: { VALMEN_UNATTENDED: "1" } })).toThrow(/desatendida/);
-    expect((ticket().blocks.Eventos ?? []).some((e) => e["action"] === "plan-approved")).toBe(false);
+    expect(
+      (ticket().blocks.Eventos ?? []).some((e) => e["action"] === "plan-approved"),
+    ).toBe(false);
   });
 });
 
@@ -222,16 +259,28 @@ describe("la vigencia", () => {
 describe("compatibilidad", () => {
   it("C19. sin autorización, approve-plan sigue registrando la aprobación de una persona con la forma de siempre", () => {
     aprobar();
-    const evento = (ticket().blocks.Eventos ?? []).find((e) => e["action"] === "plan-approved");
+    const evento = (ticket().blocks.Eventos ?? []).find(
+      (e) => e["action"] === "plan-approved",
+    );
     const datos = JSON.parse(String(evento?.["details"])) as Record<string, string>;
     expect(Object.keys(datos).sort()).toEqual(["actor", "planHash", "quote", "source"]);
     const estado = aprobacionDePlanVigente(ticket());
     expect(estado.estado).toBe("vigente");
-    if (estado.estado === "vigente") expect(estado.aprobacion).toEqual({ actor: "Juan Andrade", source: "cli", quote: FRASE, planHash: hashDelPlan(ticket()) });
+    if (estado.estado === "vigente")
+      expect(estado.aprobacion).toEqual({
+        actor: "Juan Andrade",
+        source: "cli",
+        quote: FRASE,
+        planHash: hashDelPlan(ticket()),
+      });
   });
 
   it("un ticket que ya pasó por approved sigue validando y sigue sin aprobación registrada", () => {
-    writeFixtureTicket(lab, { id: "BUGFIX-POS-VIEJO-20260921", workflowStatus: "approved", aprobacionRegistrada: false });
+    writeFixtureTicket(lab, {
+      id: "BUGFIX-POS-VIEJO-20260921",
+      workflowStatus: "approved",
+      aprobacionRegistrada: false,
+    });
     const viejo = findTicket(PATHS(), "BUGFIX-POS-VIEJO-20260921");
     expect(viejo).toBeDefined();
     const documento = parseTicket(viejo?.text ?? "");

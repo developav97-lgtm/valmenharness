@@ -25,12 +25,18 @@ describe("nombresDeWorktree", () => {
     expect(nombresDeWorktree("CHORE-CLI-20261001").rama).toBe("valmen/ticket-cli");
   });
 
-  it.each(["../FEATURE-X-Y-20261008", "FEATURE-X/Y-20261008", "FEATURE-X-..-20261008", "feature-x-y-20261008", "FEATURE-X-Y", "FEATURE-20261008", "", "FEATURE-X-Y-20261008/../a"])(
-    "rechaza %j (C2)",
-    (id) => {
-      expect(() => nombresDeWorktree(id)).toThrow(/formato de ticket/);
-    },
-  );
+  it.each([
+    "../FEATURE-X-Y-20261008",
+    "FEATURE-X/Y-20261008",
+    "FEATURE-X-..-20261008",
+    "feature-x-y-20261008",
+    "FEATURE-X-Y",
+    "FEATURE-20261008",
+    "",
+    "FEATURE-X-Y-20261008/../a",
+  ])("rechaza %j (C2)", (id) => {
+    expect(() => nombresDeWorktree(id)).toThrow(/formato de ticket/);
+  });
 });
 
 describe("la lista cerrada de git de los worktrees", () => {
@@ -83,7 +89,12 @@ describe("la lista cerrada de git de los worktrees", () => {
 
   it("rechaza antes de lanzar: el ejecutor no se llama", () => {
     const ejecutor = vi.fn(() => ({ status: 0, stdout: "", stderr: "" }));
-    for (const argumentos of [["push"], ["reset", "--hard"], ["branch", "-D", RAMA], ["worktree", "remove", "--force", CARPETA]]) {
+    for (const argumentos of [
+      ["push"],
+      ["reset", "--hard"],
+      ["branch", "-D", RAMA],
+      ["worktree", "remove", "--force", CARPETA],
+    ]) {
       expect(() => ejecutarGitDeWorktree("/x", argumentos, ejecutor)).toThrow();
     }
     expect(ejecutor).not.toHaveBeenCalled();
@@ -101,11 +112,19 @@ describe("exigirCheckoutPrincipal", () => {
 
   it("acepta el checkout principal y rechaza un worktree enlazado señalando el principal", () => {
     expect(() => exigirCheckoutPrincipal("/lab", con(".git", ".git"))).not.toThrow();
-    expect(() => exigirCheckoutPrincipal("/lab/wt", con("/lab/.git/worktrees/wt", "/lab/.git"))).toThrow(/checkout principal \(\/lab\)/);
+    expect(() =>
+      exigirCheckoutPrincipal("/lab/wt", con("/lab/.git/worktrees/wt", "/lab/.git")),
+    ).toThrow(/checkout principal \(\/lab\)/);
   });
 
   it("rechaza lo que no es un repositorio", () => {
-    expect(() => exigirCheckoutPrincipal("/lab", () => ({ status: 128, stdout: "", stderr: "not a git repository" }))).toThrow(/no es un repositorio git/);
+    expect(() =>
+      exigirCheckoutPrincipal("/lab", () => ({
+        status: 128,
+        stdout: "",
+        stderr: "not a git repository",
+      })),
+    ).toThrow(/no es un repositorio git/);
   });
 });
 
@@ -128,7 +147,9 @@ describe("la lista cerrada de procesos", () => {
     ["sh", ["-c", "git push"]],
   ] as const)("rechaza %s %j antes de lanzar", (comando, argumentos) => {
     const ejecutor = vi.fn(() => ({ status: 0, stdout: "", stderr: "" }));
-    expect(() => ejecutarProcesoDeWorktree(comando, argumentos, "/x", ejecutor)).toThrow(/no está permitido/);
+    expect(() => ejecutarProcesoDeWorktree(comando, argumentos, "/x", ejecutor)).toThrow(
+      /no está permitido/,
+    );
     expect(ejecutor).not.toHaveBeenCalled();
   });
 });

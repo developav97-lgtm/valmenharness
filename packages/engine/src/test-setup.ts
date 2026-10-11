@@ -42,16 +42,14 @@ export function runTestSetup(
   if (rechazo !== null) {
     return {
       schema: setup.schema,
-      steps: setup.commands.map(
-        (command): SetupStepRecord => ({
-          command,
-          outcome: "refused",
-          exitCode: null,
-          durationMs: 0,
-          tail: "",
-          detail: rechazo,
-        }),
-      ),
+      steps: setup.commands.map((command): SetupStepRecord => ({
+        command,
+        outcome: "refused",
+        exitCode: null,
+        durationMs: 0,
+        tail: "",
+        detail: rechazo,
+      })),
       failure: `la preparación del ambiente no se ejecutó: ${rechazo}`,
     };
   }
@@ -81,7 +79,9 @@ export function runTestSetup(
         exitCode: resultado.exitCode,
         durationMs: resultado.durationMs,
         tail: tailOf(`${resultado.stdout}\n${resultado.stderr}`.trim()),
-        ...(resultado.stdoutSha256 === undefined ? {} : { outputSha256: resultado.stdoutSha256 }),
+        ...(resultado.stdoutSha256 === undefined
+          ? {}
+          : { outputSha256: resultado.stdoutSha256 }),
       });
       if (!bien) {
         return {

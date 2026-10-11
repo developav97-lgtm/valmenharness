@@ -203,7 +203,9 @@ function opencodePermissionLines(write: boolean, execute: boolean): string[] {
   const permiso = opencodeAgentPermission(write, execute);
   return (["read", "edit", "bash"] as const).flatMap((tool) => [
     `  ${tool}:`,
-    ...Object.entries(permiso[tool]).map(([patron, valor]) => `    ${JSON.stringify(patron)}: ${valor}`),
+    ...Object.entries(permiso[tool]).map(
+      ([patron, valor]) => `    ${JSON.stringify(patron)}: ${valor}`,
+    ),
   ]);
 }
 

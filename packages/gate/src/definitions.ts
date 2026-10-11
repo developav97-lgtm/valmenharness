@@ -257,7 +257,16 @@ export const ANALYSIS_GATE: GateDefinition = {
       // El par de la anterior para todo lo que no es una corrección: una funcionalidad
       // nueva o una mejora se juzga por si la investigación dice **dónde** falta el
       // comportamiento esperado, no por un síntoma que no tiene.
-      appliesTo: ["FEATURE", "IMPROVEMENT", "SYNC", "INTEGRATION", "AGENT", "CLAUDIO", "CHORE", "DOCS"],
+      appliesTo: [
+        "FEATURE",
+        "IMPROVEMENT",
+        "SYNC",
+        "INTEGRATION",
+        "AGENT",
+        "CLAUDIO",
+        "CHORE",
+        "DOCS",
+      ],
       description: "La investigación nombra dónde falta el comportamiento esperado",
       weight: 3,
       instructions:
@@ -298,7 +307,8 @@ export const ANALYSIS_GATE: GateDefinition = {
     {
       id: "riesgos_cubren_impactos",
       kind: "noul",
-      description: "El diagnóstico declara el efecto del cambio sobre otros consumidores del componente",
+      description:
+        "El diagnóstico declara el efecto del cambio sobre otros consumidores del componente",
       instructions:
         "`investigacion` declara el efecto del cambio sobre otros consumidores del mismo " +
         "componente o endpoint, o declara que no hay ninguno.",
@@ -375,7 +385,11 @@ export const QA_MECHANICAL_GATE: GateDefinition = {
 };
 
 /** Una proposición de la revisión del diff: un defecto severo que el cambio introduce, visto desde una lente. */
-function sinHallazgo(id: string, descripcion: string, instrucciones: string): GateDefinition["propositions"][number] {
+function sinHallazgo(
+  id: string,
+  descripcion: string,
+  instrucciones: string,
+): GateDefinition["propositions"][number] {
   return {
     id,
     kind: "noul",
@@ -407,13 +421,21 @@ const CODE_REVIEW_GATE: GateDefinition = {
   appliesTo: ["in_progress"],
   policy: DEFAULT_POLICY,
   mechanicalChecks: [
-    { id: "sin_secretos", description: "Lo agregado no expone credenciales.", result: "skip" },
+    {
+      id: "sin_secretos",
+      description: "Lo agregado no expone credenciales.",
+      result: "skip",
+    },
     {
       id: "sin_archivos_prohibidos",
       description: "El diff no toca archivos que una jornada no commitea.",
       result: "skip",
     },
-    { id: "colores_fijos", description: "Lo agregado en interfaz no trae colores fijos.", result: "skip" },
+    {
+      id: "colores_fijos",
+      description: "Lo agregado en interfaz no trae colores fijos.",
+      result: "skip",
+    },
   ],
   propositions: [
     sinHallazgo(

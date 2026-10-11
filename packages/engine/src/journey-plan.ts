@@ -46,13 +46,20 @@ export interface JornadaArmada {
   readonly journeyId: string;
   /** `true` si la jornada del día ya existía y se revisó en vez de crearse. */
   readonly revisada: boolean;
-  readonly tickets: readonly { readonly ticketId: string; readonly title: string; readonly dependsOn: readonly string[] }[];
+  readonly tickets: readonly {
+    readonly ticketId: string;
+    readonly title: string;
+    readonly dependsOn: readonly string[];
+  }[];
   readonly omitidos: readonly string[];
   readonly executor: string;
   readonly plan: string;
   readonly aviso: EntregaDeAviso | null;
   /** Los tickets pendientes que la jornada nueva heredó de la anterior; `null` si no heredó. */
-  readonly heredados: { readonly desde: string; readonly tickets: readonly string[] } | null;
+  readonly heredados: {
+    readonly desde: string;
+    readonly tickets: readonly string[];
+  } | null;
 }
 
 /** El mensaje cuando la política no autoriza a ningún ejecutor: dice qué declarar. */
@@ -74,13 +81,16 @@ export function renderPlanDelDia(
   heredados: JornadaArmada["heredados"] = null,
 ): string {
   const lineas = tickets.map((ticket, indice) => {
-    const deps = ticket.dependsOn.length === 0 ? "" : ` (tras ${ticket.dependsOn.join(", ")})`;
+    const deps =
+      ticket.dependsOn.length === 0 ? "" : ` (tras ${ticket.dependsOn.join(", ")})`;
     return `${indice + 1}. ${ticket.ticketId} — ${ticket.title}${deps}`;
   });
   return (
     `Plan del día ${journeyId}${revisada ? " (revisado)" : ""}: ${tickets.length} ticket(s), ` +
     `ejecutor ${executor}.\n${lineas.join("\n")}` +
-    (heredados === null ? "" : `\nHeredados de ${heredados.desde}: ${heredados.tickets.join(", ")}`)
+    (heredados === null
+      ? ""
+      : `\nHeredados de ${heredados.desde}: ${heredados.tickets.join(", ")}`)
   );
 }
 
@@ -88,15 +98,25 @@ export function renderPlanDelDia(
 export function armarJornada(request: ArmarJornadaRequest): JornadaArmada {
   const { project } = request;
   if ((request.feature === undefined) === (request.tickets === undefined)) {
-    fail("Armar una jornada necesita una feature o una lista de tickets, no las dos ni ninguna.", EXIT_SCHEMA);
+    fail(
+      "Armar una jornada necesita una feature o una lista de tickets, no las dos ni ninguna.",
+      EXIT_SCHEMA,
+    );
   }
-  if (request.maximo !== undefined && (!Number.isSafeInteger(request.maximo) || request.maximo < 1)) {
-    fail("El máximo de tickets de la jornada debe ser un entero de al menos 1.", EXIT_SCHEMA);
+  if (
+    request.maximo !== undefined &&
+    (!Number.isSafeInteger(request.maximo) || request.maximo < 1)
+  ) {
+    fail(
+      "El máximo de tickets de la jornada debe ser un entero de al menos 1.",
+      EXIT_SCHEMA,
+    );
   }
 
   // La política manda: sin ejecutor autorizado no se arma nada.
   const politica = autonomousConfig(project.root);
-  const executor = politica.enabled && politica.executor !== null ? politica.executor.id : null;
+  const executor =
+    politica.enabled && politica.executor !== null ? politica.executor.id : null;
   if (executor === null || !readJourneyAuthorization(project).canDispatch(executor)) {
     fail(SIN_AUTORIZACION, EXIT_INVARIANT);
   }
@@ -119,7 +139,11 @@ export function armarJornada(request: ArmarJornadaRequest): JornadaArmada {
       omitidos.push(`${pedido.id} (ya cerrado)`);
       continue;
     }
-    elegidos.push({ id: pedido.id, title: documento.fields.title, dependsOn: pedido.dependsOn });
+    elegidos.push({
+      id: pedido.id,
+      title: documento.fields.title,
+      dependsOn: pedido.dependsOn,
+    });
   }
 
   // La jornada de un día nuevo hereda los pendientes de la vigente anterior, antes que los pedidos;
@@ -130,7 +154,9 @@ export function armarJornada(request: ArmarJornadaRequest): JornadaArmada {
   let heredados: JornadaArmada["heredados"] = null;
   if (!revisada) {
     const anteriorId = jornadaVigente(project, ahora);
-    const anterior = readJourneys(project).find((jornada) => jornada.journeyId === anteriorId);
+    const anterior = readJourneys(project).find(
+      (jornada) => jornada.journeyId === anteriorId,
+    );
     if (anterior !== undefined) {
       const pendientes = new Set(ticketsPendientesDeJornada(project, anterior));
       const pedidosIds = new Set(elegidos.map((ticket) => ticket.id));
@@ -147,11 +173,15 @@ export function armarJornada(request: ArmarJornadaRequest): JornadaArmada {
       }
       if (previos.length > 0) {
         elegidos.unshift(...previos);
-        heredados = { desde: anterior.journeyId, tickets: previos.map((ticket) => ticket.id) };
+        heredados = {
+          desde: anterior.journeyId,
+          tickets: previos.map((ticket) => ticket.id),
+        };
       }
     }
   }
-  const delDia = request.maximo === undefined ? elegidos : elegidos.slice(0, request.maximo);
+  const delDia =
+    request.maximo === undefined ? elegidos : elegidos.slice(0, request.maximo);
   if (delDia.length === 0) {
     fail("No hay tickets pendientes para armar la jornada.", EXIT_INVARIANT);
   }

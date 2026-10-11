@@ -15,7 +15,10 @@ import { dirname, join } from "node:path";
 import { EXIT_INVARIANT, EXIT_SCHEMA, fail } from "@valmen/core";
 
 import { mintApproval, normalizarCodigo, verifyApproval } from "./approval.js";
-import { type ApprovalAuthorization, crearAutorizacionDeAprobacion } from "./approval-authorization.js";
+import {
+  type ApprovalAuthorization,
+  crearAutorizacionDeAprobacion,
+} from "./approval-authorization.js";
 
 export const SUJETO_AUTORIZACION_APROBACION = "approval-authorization";
 export const FUENTE_ENLACE_FIRMADO_APROBACION = "enlace-firmado";
@@ -33,8 +36,20 @@ export interface TerminosDeAutorizacionDeAprobacion {
 }
 
 type EntradaDeCodigo =
-  | { readonly kind: "approval-link-issued"; readonly code: string; readonly token: string; readonly expiresAt: string; readonly issuedAt: string }
-  | { readonly kind: "approval-link-consumed"; readonly code: string; readonly at: string; readonly actor: string; readonly decision: "redeemed" | "revoked" };
+  | {
+      readonly kind: "approval-link-issued";
+      readonly code: string;
+      readonly token: string;
+      readonly expiresAt: string;
+      readonly issuedAt: string;
+    }
+  | {
+      readonly kind: "approval-link-consumed";
+      readonly code: string;
+      readonly at: string;
+      readonly actor: string;
+      readonly decision: "redeemed" | "revoked";
+    };
 
 export function approvalLinksPath(root: string): string {
   return join(root, ".valmen", "approval", "links.jsonl");
@@ -48,7 +63,8 @@ function leer(root: string): EntradaDeCodigo[] {
     if (linea.trim() === "") continue;
     try {
       const v = JSON.parse(linea) as EntradaDeCodigo;
-      if (v.kind === "approval-link-issued" || v.kind === "approval-link-consumed") entradas.push(v);
+      if (v.kind === "approval-link-issued" || v.kind === "approval-link-consumed")
+        entradas.push(v);
     } catch {
       // Un renglón truncado no borra los anteriores.
     }
@@ -62,7 +78,9 @@ function anexar(root: string, entrada: EntradaDeCodigo): void {
   appendFileSync(ruta, `${JSON.stringify(entrada)}\n`, "utf8");
 }
 
-function canonicos(t: TerminosDeAutorizacionDeAprobacion): TerminosDeAutorizacionDeAprobacion {
+function canonicos(
+  t: TerminosDeAutorizacionDeAprobacion,
+): TerminosDeAutorizacionDeAprobacion {
   const limpiar = (xs: readonly string[], f: (s: string) => string): string[] =>
     [...new Set(xs.map((x) => f(x.trim())).filter((x) => x !== ""))].sort();
   return {
@@ -78,8 +96,12 @@ function canonicos(t: TerminosDeAutorizacionDeAprobacion): TerminosDeAutorizacio
 }
 
 /** El hash de los términos en su forma canónica: cambiar uno cambia el hash. */
-export function hashDeTerminosDeAprobacion(terminos: TerminosDeAutorizacionDeAprobacion): string {
-  return createHash("sha256").update(JSON.stringify(canonicos(terminos)), "utf8").digest("hex");
+export function hashDeTerminosDeAprobacion(
+  terminos: TerminosDeAutorizacionDeAprobacion,
+): string {
+  return createHash("sha256")
+    .update(JSON.stringify(canonicos(terminos)), "utf8")
+    .digest("hex");
 }
 
 export interface CodigoDeAprobacionEmitido {
@@ -122,12 +144,31 @@ export function emitirCodigoDeAutorizacionDeAprobacion(request: {
   return { code: emision.issued.code, terminos, expiresAt: emision.issued.expiresAt };
 }
 
-function buscar(root: string, codigo: string): { emitido: Extract<EntradaDeCodigo, { kind: "approval-link-issued" }>; usado: Extract<EntradaDeCodigo, { kind: "approval-link-consumed" }> | null } {
+function buscar(
+  root: string,
+  codigo: string,
+): {
+  emitido: Extract<EntradaDeCodigo, { kind: "approval-link-issued" }>;
+  usado: Extract<EntradaDeCodigo, { kind: "approval-link-consumed" }> | null;
+} {
   const normal = normalizarCodigo(codigo);
   const entradas = leer(root);
-  const emitido = [...entradas].reverse().find((e): e is Extract<EntradaDeCodigo, { kind: "approval-link-issued" }> => e.kind === "approval-link-issued" && normalizarCodigo(e.code) === normal);
-  if (emitido === undefined) fail("Ese código no corresponde a ninguna autorización emitida para este proyecto.", EXIT_INVARIANT);
-  const usado = entradas.find((e): e is Extract<EntradaDeCodigo, { kind: "approval-link-consumed" }> => e.kind === "approval-link-consumed" && normalizarCodigo(e.code) === normal) ?? null;
+  const emitido = [...entradas]
+    .reverse()
+    .find(
+      (e): e is Extract<EntradaDeCodigo, { kind: "approval-link-issued" }> =>
+        e.kind === "approval-link-issued" && normalizarCodigo(e.code) === normal,
+    );
+  if (emitido === undefined)
+    fail(
+      "Ese código no corresponde a ninguna autorización emitida para este proyecto.",
+      EXIT_INVARIANT,
+    );
+  const usado =
+    entradas.find(
+      (e): e is Extract<EntradaDeCodigo, { kind: "approval-link-consumed" }> =>
+        e.kind === "approval-link-consumed" && normalizarCodigo(e.code) === normal,
+    ) ?? null;
   return { emitido, usado };
 }
 
@@ -147,22 +188,36 @@ export function canjearCodigoDeAutorizacionDeAprobacion(request: {
   const ahora = request.ahora ?? new Date();
   const { emitido, usado } = buscar(request.root, request.codigo);
   if (usado !== null) {
-    fail(usado.decision === "revoked" ? `El código ${emitido.code} fue revocado.` : `El código ${emitido.code} ya se usó.`, EXIT_INVARIANT);
+    fail(
+      usado.decision === "revoked"
+        ? `El código ${emitido.code} fue revocado.`
+        : `El código ${emitido.code} ya se usó.`,
+      EXIT_INVARIANT,
+    );
   }
   const verificado = verifyApproval(request.secret, emitido.token, ahora);
-  if (!verificado.ok) fail(`El código ${emitido.code} no sirve: ${verificado.detail}.`, EXIT_INVARIANT);
+  if (!verificado.ok)
+    fail(`El código ${emitido.code} no sirve: ${verificado.detail}.`, EXIT_INVARIANT);
   const claims = verificado.claims;
   if (claims.gate !== SUJETO_AUTORIZACION_APROBACION) {
-    fail(`El código ${emitido.code} no es de una autorización de aprobación (es de ${claims.gate}).`, EXIT_INVARIANT);
+    fail(
+      `El código ${emitido.code} no es de una autorización de aprobación (es de ${claims.gate}).`,
+      EXIT_INVARIANT,
+    );
   }
   let terminos: TerminosDeAutorizacionDeAprobacion;
   try {
-    terminos = JSON.parse(claims.receipt.replace(/^approval-auth:/, "")) as TerminosDeAutorizacionDeAprobacion;
+    terminos = JSON.parse(
+      claims.receipt.replace(/^approval-auth:/, ""),
+    ) as TerminosDeAutorizacionDeAprobacion;
   } catch {
     fail(`El código ${emitido.code} no trae términos legibles.`, EXIT_INVARIANT);
   }
   if (hashDeTerminosDeAprobacion(terminos) !== claims.stateHash) {
-    fail(`Los términos del código ${emitido.code} no corresponden a su firma.`, EXIT_INVARIANT);
+    fail(
+      `Los términos del código ${emitido.code} no corresponden a su firma.`,
+      EXIT_INVARIANT,
+    );
   }
   const autorizacion = crearAutorizacionDeAprobacion({
     root: request.root,
@@ -180,7 +235,13 @@ export function canjearCodigoDeAutorizacionDeAprobacion(request: {
     ahora,
     ...(request.env === undefined ? {} : { env: request.env }),
   });
-  anexar(request.root, { kind: "approval-link-consumed", code: emitido.code, at: ahora.toISOString(), actor: request.actor.trim(), decision: "redeemed" });
+  anexar(request.root, {
+    kind: "approval-link-consumed",
+    code: emitido.code,
+    at: ahora.toISOString(),
+    actor: request.actor.trim(),
+    decision: "redeemed",
+  });
   return autorizacion;
 }
 
@@ -193,10 +254,21 @@ export function revocarCodigoDeAutorizacionDeAprobacion(request: {
   readonly env?: Readonly<Record<string, string | undefined>>;
 }): void {
   if ((request.env ?? process.env)["VALMEN_UNATTENDED"] === "1") {
-    fail("Una sesión desatendida no puede revocar un código de autorización de aprobación: esa autoridad es de una persona.", EXIT_INVARIANT);
+    fail(
+      "Una sesión desatendida no puede revocar un código de autorización de aprobación: esa autoridad es de una persona.",
+      EXIT_INVARIANT,
+    );
   }
-  if (request.actor.trim() === "") fail("Revocar un código necesita un responsable: falta --actor.", EXIT_SCHEMA);
+  if (request.actor.trim() === "")
+    fail("Revocar un código necesita un responsable: falta --actor.", EXIT_SCHEMA);
   const { emitido, usado } = buscar(request.root, request.codigo);
-  if (usado !== null) fail(`El código ${emitido.code} ya no está pendiente.`, EXIT_INVARIANT);
-  anexar(request.root, { kind: "approval-link-consumed", code: emitido.code, at: (request.ahora ?? new Date()).toISOString(), actor: request.actor.trim(), decision: "revoked" });
+  if (usado !== null)
+    fail(`El código ${emitido.code} ya no está pendiente.`, EXIT_INVARIANT);
+  anexar(request.root, {
+    kind: "approval-link-consumed",
+    code: emitido.code,
+    at: (request.ahora ?? new Date()).toISOString(),
+    actor: request.actor.trim(),
+    decision: "revoked",
+  });
 }

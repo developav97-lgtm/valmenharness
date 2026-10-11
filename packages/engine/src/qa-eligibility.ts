@@ -24,17 +24,31 @@ import { scanPendingChanges } from "./secrets.js";
 export const TIPOS_NUNCA_ELEGIBLES = ["SECURITY", "SYNC", "INTEGRATION", "AGENT"] as const;
 
 /** La categoría de una ruta prohibida, o `null` si el diff puede tocarla. */
-export function rutaProhibidaParaQaAgente(ruta: string, scriptsDePrueba: readonly string[] = []): string | null {
+export function rutaProhibidaParaQaAgente(
+  ruta: string,
+  scriptsDePrueba: readonly string[] = [],
+): string | null {
   const normal = ruta.replace(/^\.\//, "");
   if (scriptsDePrueba.includes(normal)) return "los scripts que corren las pruebas";
   return categoriasDeRuta(normal)[0]?.nombre ?? null;
 }
 
 /** Los archivos que cambió el commit entregado respecto de la base, por la lista cerrada de git. */
-export function archivosDelDiff(root: string, base: string, ejecutor?: EjecutorDeGit): string[] {
-  const salida = ejecutarGitPermitido(root, ["diff", "--name-only", `${base}..HEAD`], ejecutor);
+export function archivosDelDiff(
+  root: string,
+  base: string,
+  ejecutor?: EjecutorDeGit,
+): string[] {
+  const salida = ejecutarGitPermitido(
+    root,
+    ["diff", "--name-only", `${base}..HEAD`],
+    ejecutor,
+  );
   if (salida.status !== 0) throw new Error(`git diff falló: ${salida.stderr.trim()}`);
-  return salida.stdout.split("\n").map((l) => l.trim()).filter((l) => l !== "");
+  return salida.stdout
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l !== "");
 }
 
 /** Los scripts que nombran los comandos de `test-commands`. */
@@ -42,7 +56,8 @@ export function scriptsDeComandos(comandos: readonly string[]): string[] {
   const scripts = new Set<string>();
   for (const comando of comandos) {
     for (const palabra of comando.split(/\s+/)) {
-      if (/^(\.\/)?[\w./-]+\.(sh|mjs|cjs|js|py|ts)$/.test(palabra)) scripts.add(palabra.replace(/^\.\//, ""));
+      if (/^(\.\/)?[\w./-]+\.(sh|mjs|cjs|js|py|ts)$/.test(palabra))
+        scripts.add(palabra.replace(/^\.\//, ""));
     }
   }
   return [...scripts];
@@ -98,9 +113,17 @@ export function elegibilidadQa(request: ElegibilidadRequest): ResultadoDeElegibi
   };
 
   // 1. Una autorización vigente cubre su tipo y su módulo, y queda cupo.
-  const autorizacion = autorizacionQueCubre(paths.root, { type, module, riskLevel: "low" }, ahora);
+  const autorizacion = autorizacionQueCubre(
+    paths.root,
+    { type, module, riskLevel: "low" },
+    ahora,
+  );
   if (autorizacion === null) {
-    regla("autorizacion", false, `ninguna autorización vigente cubre el tipo ${type} y el módulo ${module}`);
+    regla(
+      "autorizacion",
+      false,
+      `ninguna autorización vigente cubre el tipo ${type} y el módulo ${module}`,
+    );
   } else {
     const cupo = cupoRestante(paths.root, autorizacion, ahora);
     regla(
@@ -114,7 +137,13 @@ export function elegibilidadQa(request: ElegibilidadRequest): ResultadoDeElegibi
 
   // 2. El tipo nunca es SECURITY, SYNC, INTEGRATION ni AGENT.
   const prohibido = (TIPOS_NUNCA_ELEGIBLES as readonly string[]).includes(type);
-  regla("tipo", !prohibido, prohibido ? `el tipo ${type} nunca es elegible, aunque una autorización lo listara` : `el tipo ${type} es elegible`);
+  regla(
+    "tipo",
+    !prohibido,
+    prohibido
+      ? `el tipo ${type} nunca es elegible, aunque una autorización lo listara`
+      : `el tipo ${type} es elegible`,
+  );
 
   // 3. Riesgo normal o menor, sin impactos de sincronización, migración ni contenedores.
   const impactos = declaredImpactIds(ticket);
@@ -132,7 +161,11 @@ export function elegibilidadQa(request: ElegibilidadRequest): ResultadoDeElegibi
   // 4. Todos los criterios se verifican por comando o por petición.
   const criterios = extractCriteriaSpecs(ticket.sections["Criterios de aceptación"] ?? "");
   const noAutomaticos = criterios.filter(
-    (c) => !criterioDeclarado(c) || c.manual || c.dev === true || (c.command === null && (c.http === undefined || c.http === "")),
+    (c) =>
+      !criterioDeclarado(c) ||
+      c.manual ||
+      c.dev === true ||
+      (c.command === null && (c.http === undefined || c.http === "")),
   );
   regla(
     "criterios",
@@ -161,22 +194,44 @@ export function elegibilidadQa(request: ElegibilidadRequest): ResultadoDeElegibi
   const abiertos = (ticket.blocks.Puntos ?? []).filter((p) =>
     (BLOCKING_POINT_STATES as readonly string[]).includes(String(p["status"])),
   );
-  regla("puntos", abiertos.length === 0, abiertos.length > 0 ? `tiene puntos abiertos: ${abiertos.map((p) => String(p["id"])).join(", ")}` : "sin puntos abiertos");
+  regla(
+    "puntos",
+    abiertos.length === 0,
+    abiertos.length > 0
+      ? `tiene puntos abiertos: ${abiertos.map((p) => String(p["id"])).join(", ")}`
+      : "sin puntos abiertos",
+  );
   const reabierto =
-    (ticket.blocks.QA ?? []).some((q) => q["result"] === "changes_requested" || q["result"] === "failed") ||
-    (ticket.blocks.Eventos ?? []).some((e) => /reapertura|changes_requested/i.test(String(e["details"])));
-  regla("reapertura", !reabierto, reabierto ? "el ticket ya se reabrió o tuvo cambios solicitados" : "sin reapertura previa");
+    (ticket.blocks.QA ?? []).some(
+      (q) => q["result"] === "changes_requested" || q["result"] === "failed",
+    ) ||
+    (ticket.blocks.Eventos ?? []).some((e) =>
+      /reapertura|changes_requested/i.test(String(e["details"])),
+    );
+  regla(
+    "reapertura",
+    !reabierto,
+    reabierto
+      ? "el ticket ya se reabrió o tuvo cambios solicitados"
+      : "sin reapertura previa",
+  );
 
   let secretos: number | null;
   try {
-    secretos = (request.secretos ?? (() => scanPendingChanges(paths.root).findings.length))();
+    secretos = (
+      request.secretos ?? (() => scanPendingChanges(paths.root).findings.length)
+    )();
   } catch {
     secretos = null;
   }
   regla(
     "secretos",
     secretos === 0,
-    secretos === null ? "no se pudo comprobar `valmen secrets`: se trata como no limpio" : secretos > 0 ? `valmen secrets halla ${secretos} posible(s) secreto(s)` : "valmen secrets limpio",
+    secretos === null
+      ? "no se pudo comprobar `valmen secrets`: se trata como no limpio"
+      : secretos > 0
+        ? `valmen secrets halla ${secretos} posible(s) secreto(s)`
+        : "valmen secrets limpio",
   );
   let drift: number | null;
   try {
@@ -187,7 +242,11 @@ export function elegibilidadQa(request: ElegibilidadRequest): ResultadoDeElegibi
   regla(
     "drift",
     drift === 0,
-    drift === null ? "no se pudo comprobar `valmen drift`: se trata como no limpio" : drift > 0 ? `valmen drift halla ${drift} cita(s) que no existen` : "valmen drift limpio",
+    drift === null
+      ? "no se pudo comprobar `valmen drift`: se trata como no limpio"
+      : drift > 0
+        ? `valmen drift halla ${drift} cita(s) que no existen`
+        : "valmen drift limpio",
   );
 
   const elegible = reglas.every((r) => r.cumple);
@@ -195,6 +254,9 @@ export function elegibilidadQa(request: ElegibilidadRequest): ResultadoDeElegibi
     ticketId,
     elegible,
     reglas,
-    autorizacion: elegible && autorizacion !== null ? { id: autorizacion.id, hash: autorizacion.hash } : null,
+    autorizacion:
+      elegible && autorizacion !== null
+        ? { id: autorizacion.id, hash: autorizacion.hash }
+        : null,
   };
 }

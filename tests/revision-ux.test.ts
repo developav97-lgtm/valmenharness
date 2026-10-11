@@ -34,11 +34,14 @@ const escribir = (ruta: string, texto: string): void => {
   mkdirSync(join(root, ...ruta.split("/").slice(0, -1)), { recursive: true });
   writeFileSync(join(root, ...ruta.split("/")), texto, "utf8");
 };
-const ticketTexto = (): string => readFileSync(join(root, "tickets", "2026", TICKET, "ticket.md"), "utf8");
+const ticketTexto = (): string =>
+  readFileSync(join(root, "tickets", "2026", TICKET, "ticket.md"), "utf8");
 const evidencias = (): number => (ticketTexto().match(/"kind": "ux-review"/g) ?? []).length;
 
 /** Declara las skills de UX que se pidan y deja habilitadas las que se indiquen. */
-function declarar(skills: readonly { id: string; habilitar: boolean; contenido?: boolean }[]): void {
+function declarar(
+  skills: readonly { id: string; habilitar: boolean; contenido?: boolean }[],
+): void {
   const items: string[] = [];
   for (const { id, habilitar, contenido = true } of skills) {
     const dir = join(root, ".valmen", "external-skills", id);
@@ -48,12 +51,28 @@ function declarar(skills: readonly { id: string; habilitar: boolean; contenido?:
       writeFileSync(join(dir, "SKILL.md"), `# ${id}\n`, "utf8");
       hash = hashDeContenidoDeSkill(dir) as string;
     }
-    items.push(`  - id: ${id}`, `    source: https://example.com/${id}`, "    version: v1.0.0", `    sha256: ${hash}`);
+    items.push(
+      `  - id: ${id}`,
+      `    source: https://example.com/${id}`,
+      "    version: v1.0.0",
+      `    sha256: ${hash}`,
+    );
   }
-  writeFileSync(join(root, ".valmen", "config.yaml"), ["name: Demo", "external-skills:", ...items, ""].join("\n"), "utf8");
+  writeFileSync(
+    join(root, ".valmen", "config.yaml"),
+    ["name: Demo", "external-skills:", ...items, ""].join("\n"),
+    "utf8",
+  );
   for (const { id, habilitar } of skills) {
     if (habilitar) {
-      registrarRevisionDeSkill({ root, id, actor: "Juan Andrade", quote: "Revisé el contenido", permissions: "ninguno", env: {} });
+      registrarRevisionDeSkill({
+        root,
+        id,
+        actor: "Juan Andrade",
+        quote: "Revisé el contenido",
+        permissions: "ninguno",
+        env: {},
+      });
     }
   }
 }
@@ -68,14 +87,24 @@ beforeEach(() => {
   escribir("web/pantalla.html", "<p>hola</p>\n");
   git("add", "-A");
   git("commit", "-q", "-m", "base");
-  createTicket({ paths, id: TICKET, title: "Pantalla de prueba", type: "FEATURE", module: "POS", request: "Una pantalla." });
+  createTicket({
+    paths,
+    id: TICKET,
+    title: "Pantalla de prueba",
+    type: "FEATURE",
+    module: "POS",
+    request: "Una pantalla.",
+  });
 });
 
 afterEach(() => rmSync(root, { recursive: true, force: true }));
 
 describe("la revisión de UX", () => {
   it("C1: con las dos skills habilitadas anexa una evidencia ux-review que las nombra", () => {
-    declarar([{ id: SKILLS_DE_UX.diseno, habilitar: true }, { id: SKILLS_DE_UX.revision, habilitar: true }]);
+    declarar([
+      { id: SKILLS_DE_UX.diseno, habilitar: true },
+      { id: SKILLS_DE_UX.revision, habilitar: true },
+    ]);
     escribir("web/pantalla.html", "<p>hola</p>\n<p>nuevo</p>\n");
     const revision = revisarUx({ paths, ticketId: TICKET });
     expect(revision.conPantallas).toBe(true);
@@ -91,14 +120,22 @@ describe("la revisión de UX", () => {
       { id: SKILLS_DE_UX.revision, habilitar: true },
     ]);
     // Cambiar el contenido después de la revisión la deshabilita.
-    writeFileSync(join(root, ".valmen", "external-skills", SKILLS_DE_UX.revision, "SKILL.md"), "# cambiado\n", "utf8");
+    writeFileSync(
+      join(root, ".valmen", "external-skills", SKILLS_DE_UX.revision, "SKILL.md"),
+      "# cambiado\n",
+      "utf8",
+    );
     escribir("web/pantalla.html", "<p>otro</p>\n");
     const { descripcion } = revisarUx({ paths, ticketId: TICKET });
-    expect(descripcion).toContain("ui-ux-pro-max sin-revisión (el contenido coincide con lo declarado");
+    expect(descripcion).toContain(
+      "ui-ux-pro-max sin-revisión (el contenido coincide con lo declarado",
+    );
     expect(descripcion).toContain("impeccable deshabilitada (el contenido cambió");
 
     declarar([{ id: SKILLS_DE_UX.revision, habilitar: false }]);
-    expect(revisarUx({ paths, ticketId: TICKET }).descripcion).toContain("ui-ux-pro-max no declarada (el proyecto no la declara");
+    expect(revisarUx({ paths, ticketId: TICKET }).descripcion).toContain(
+      "ui-ux-pro-max no declarada (el proyecto no la declara",
+    );
   });
 
   it("C3: cuenta los colores fijos y termina sin error", () => {
@@ -121,10 +158,18 @@ describe("la revisión de UX", () => {
   it("C5: el informe de Impeccable que se pasa queda anotado en la evidencia", () => {
     escribir("web/pantalla.html", "<p>otro</p>\n");
     escribir("tickets/2026/FEATURE-POS-PANTALLA-20261007/impeccable.md", "# informe\n");
-    revisarUx({ paths, ticketId: TICKET, informe: "tickets/2026/FEATURE-POS-PANTALLA-20261007/impeccable.md" });
-    expect(ticketTexto()).toContain("Informe de Impeccable: tickets/2026/FEATURE-POS-PANTALLA-20261007/impeccable.md");
+    revisarUx({
+      paths,
+      ticketId: TICKET,
+      informe: "tickets/2026/FEATURE-POS-PANTALLA-20261007/impeccable.md",
+    });
+    expect(ticketTexto()).toContain(
+      "Informe de Impeccable: tickets/2026/FEATURE-POS-PANTALLA-20261007/impeccable.md",
+    );
     // Un informe que no existe no se anota como si estuviera.
-    expect(() => revisarUx({ paths, ticketId: TICKET, informe: "no-existe.md" })).toThrow(/no existe/);
+    expect(() => revisarUx({ paths, ticketId: TICKET, informe: "no-existe.md" })).toThrow(
+      /no existe/,
+    );
   });
 
   it("C6: `ux review` sale con 0 aunque haya hallazgos", () => {
@@ -142,6 +187,8 @@ describe("la revisión de UX", () => {
     expect(resultado.isError).not.toBe(true);
     expect(evidencias()).toBe(1);
     const comando = uxReviewCommand(paths, { id: TICKET });
-    expect(resultado.text ?? JSON.stringify(resultado)).toContain(comando.stdout.split("\n")[0] as string);
+    expect(resultado.text ?? JSON.stringify(resultado)).toContain(
+      comando.stdout.split("\n")[0] as string,
+    );
   });
 });

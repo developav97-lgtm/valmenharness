@@ -23,14 +23,20 @@ import { renderValue, ticketValueReport } from "../packages/engine/src/value.js"
 import { marcaDeCosto } from "../packages/server/src/timeline.js";
 import { writeFixtureTicket } from "./helpers/fixtures.js";
 
-const BASE = readFileSync(new URL("./fixtures/ticket-cerrado-con-criterios.md", import.meta.url), "utf8");
+const BASE = readFileSync(
+  new URL("./fixtures/ticket-cerrado-con-criterios.md", import.meta.url),
+  "utf8",
+);
 const ID_BASE = "BUGFIX-GATE-CONTRADICCION-DESCRIPTIVA-20261005";
 const UNO = "BUGFIX-POS-UNO-20260921";
 const DOS = "BUGFIX-POS-DOS-20260921";
 const SESION = "9d55ce3b-5c13-4e93-af45-77a4977bd5c6";
 
 let lab: string;
-const PATHS = (): { root: string; ticketsDir: string } => ({ root: lab, ticketsDir: "tickets" });
+const PATHS = (): { root: string; ticketsDir: string } => ({
+  root: lab,
+  ticketsDir: "tickets",
+});
 
 beforeEach(() => {
   lab = mkdtempSync(join(tmpdir(), "valmen-consumo-"));
@@ -66,7 +72,9 @@ describe("registrar consumo con una sesión que ya tiene números", () => {
     expect(() => conNumeros(DOS)).toThrow(UNO);
     expect(() => conNumeros(DOS)).toThrow("`manual:` y sin números");
     // El segundo ticket no recibió nada.
-    expect(readFileSync(join(lab, "tickets", "2026", DOS, "ticket.md"), "utf8")).not.toContain(SESION);
+    expect(
+      readFileSync(join(lab, "tickets", "2026", DOS, "ticket.md"), "utf8"),
+    ).not.toContain(SESION);
   });
 
   it("la misma sesión declarada sin números se acepta en el segundo ticket", () => {
@@ -190,7 +198,11 @@ describe("el costo que el origen no declara", () => {
   it("una entrada sin costo queda con el campo en null y no suma cero en el informe", () => {
     const id = "BUGFIX-GATE-CCC-20261005";
     mkdirSync(join(lab, "tickets", "2026", id), { recursive: true });
-    writeFileSync(join(lab, "tickets", "2026", id, "ticket.md"), BASE.replaceAll(ID_BASE, id), "utf8");
+    writeFileSync(
+      join(lab, "tickets", "2026", id, "ticket.md"),
+      BASE.replaceAll(ID_BASE, id),
+      "utf8",
+    );
     addAiUsage({
       paths: PATHS(),
       ticketId: id,

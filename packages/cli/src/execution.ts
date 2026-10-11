@@ -54,9 +54,10 @@ export function executionCommand(
     if (action === "journeys") {
       const roadmap = readJourneyRoadmap(project);
       return {
-        stdout: flags.json === true
-          ? `${JSON.stringify(roadmap, null, 2)}\n`
-          : renderJourneys(roadmap),
+        stdout:
+          flags.json === true
+            ? `${JSON.stringify(roadmap, null, 2)}\n`
+            : renderJourneys(roadmap),
         stderr: "",
         exitCode: 0,
       };
@@ -64,7 +65,11 @@ export function executionCommand(
     const ticketId = value(flags, "ticket");
     const executionId = value(flags, "execution");
     if (ticketId === undefined || executionId === undefined) {
-      return { stdout: "", stderr: "execution record y list requieren --ticket y --execution.", exitCode: EXIT_SCHEMA };
+      return {
+        stdout: "",
+        stderr: "execution record y list requieren --ticket y --execution.",
+        exitCode: EXIT_SCHEMA,
+      };
     }
     const contract = createExecutionContract(project);
     const identity = createExecutionIdentity({ projectId, ticketId, executionId });
@@ -73,9 +78,10 @@ export function executionCommand(
     if (action === "list") {
       const activity = contract.readActivity(identity, attemptId);
       return {
-        stdout: flags.json === true
-          ? `${JSON.stringify(activity, null, 2)}\n`
-          : renderActivity(activity),
+        stdout:
+          flags.json === true
+            ? `${JSON.stringify(activity, null, 2)}\n`
+            : renderActivity(activity),
         stderr: "",
         exitCode: 0,
       };
@@ -86,12 +92,16 @@ export function executionCommand(
     const source = value(flags, "source");
     const occurredAt = value(flags, "occurred-at");
     if (
-      attemptId === undefined || eventId === undefined || state === undefined ||
-      source === undefined || occurredAt === undefined
+      attemptId === undefined ||
+      eventId === undefined ||
+      state === undefined ||
+      source === undefined ||
+      occurredAt === undefined
     ) {
       return {
         stdout: "",
-        stderr: "execution record requiere --attempt, --event-id, --state, --source y --occurred-at.",
+        stderr:
+          "execution record requiere --attempt, --event-id, --state, --source y --occurred-at.",
         exitCode: EXIT_SCHEMA,
       };
     }
@@ -126,9 +136,16 @@ export function executionCommand(
 
 function renderJourneys(roadmap: ReturnType<typeof readJourneyRoadmap>): string {
   if (roadmap.journeys.length === 0) return "No hay jornadas registradas.\n";
-  return roadmap.journeys.flatMap((journey) => journey.tickets.map((ticket) =>
-    `${journey.journeyId}\t${ticket.order}\t${ticket.ticketId}\t${ticket.activity}\t${ticket.condition}`,
-  )).join("\n") + "\n";
+  return (
+    roadmap.journeys
+      .flatMap((journey) =>
+        journey.tickets.map(
+          (ticket) =>
+            `${journey.journeyId}\t${ticket.order}\t${ticket.ticketId}\t${ticket.activity}\t${ticket.condition}`,
+        ),
+      )
+      .join("\n") + "\n"
+  );
 }
 
 function value(flags: Flags, name: string): string | undefined {
@@ -136,15 +153,22 @@ function value(flags: Flags, name: string): string | undefined {
   return typeof candidate === "string" ? candidate : undefined;
 }
 
-function renderActivity(activity: readonly {
-  readonly cursor: number;
-  readonly state: string;
-  readonly attemptId: string;
-  readonly source: string;
-  readonly occurredAt: string;
-}[]): string {
+function renderActivity(
+  activity: readonly {
+    readonly cursor: number;
+    readonly state: string;
+    readonly attemptId: string;
+    readonly source: string;
+    readonly occurredAt: string;
+  }[],
+): string {
   if (activity.length === 0) return "No hay actividad registrada para esta ejecución.\n";
-  return activity
-    .map((event) => `${event.cursor}\t${event.occurredAt}\t${event.state}\t${event.attemptId}\t${event.source}`)
-    .join("\n") + "\n";
+  return (
+    activity
+      .map(
+        (event) =>
+          `${event.cursor}\t${event.occurredAt}\t${event.state}\t${event.attemptId}\t${event.source}`,
+      )
+      .join("\n") + "\n"
+  );
 }

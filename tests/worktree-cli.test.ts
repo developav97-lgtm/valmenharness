@@ -7,9 +7,17 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { USAGE, VALUE_OPTIONS, run } from "../packages/cli/src/main.js";
-import { journeyWorktreeCommand, SUBCOMANDOS_DE_WORKTREE } from "../packages/cli/src/worktree.js";
+import {
+  journeyWorktreeCommand,
+  SUBCOMANDOS_DE_WORKTREE,
+} from "../packages/cli/src/worktree.js";
 import { defaultPaths } from "../packages/engine/src/index.js";
-import { type Laboratorio, TICKET_A, crearLaboratorio, procesoSimulado } from "./helpers/worktree-lab.js";
+import {
+  type Laboratorio,
+  TICKET_A,
+  crearLaboratorio,
+  procesoSimulado,
+} from "./helpers/worktree-lab.js";
 
 let lab: Laboratorio | undefined;
 afterEach(() => lab?.limpiar());
@@ -19,7 +27,9 @@ const sinRepo = defaultPaths("/no/existe");
 describe("la ayuda", () => {
   it("lista journey worktree create|integrate|remove y --id está entre las banderas con valor (C25)", () => {
     expect(USAGE).toContain("journey worktree create|integrate|remove --id <ID>");
-    const documentadas = [...USAGE.matchAll(/--([a-z][a-z-]*)\s+</g)].map((m) => `--${m[1] as string}`);
+    const documentadas = [...USAGE.matchAll(/--([a-z][a-z-]*)\s+</g)].map(
+      (m) => `--${m[1] as string}`,
+    );
     expect(documentadas.filter((b) => !VALUE_OPTIONS.includes(b as never))).toEqual([]);
     expect(VALUE_OPTIONS).toContain("--id");
   });
@@ -52,7 +62,9 @@ describe("la entrada", () => {
     expect(journeyWorktreeCommand(sinRepo, ["create"], { id: "../x" }).exitCode).toBe(3);
     expect(journeyWorktreeCommand(sinRepo, ["remove"], { id: TICKET_A }).exitCode).toBe(3);
     expect(journeyWorktreeCommand(sinRepo, ["integrate"], { id: "../x" }).exitCode).toBe(3);
-    expect(journeyWorktreeCommand(sinRepo, ["integrate"], { id: TICKET_A }).exitCode).toBe(3);
+    expect(journeyWorktreeCommand(sinRepo, ["integrate"], { id: TICKET_A }).exitCode).toBe(
+      3,
+    );
   });
 });
 
@@ -60,16 +72,33 @@ describe("el formato de la salida", () => {
   it("create y remove informan carpeta, rama y cupo", () => {
     lab = crearLaboratorio();
     const paths = defaultPaths(lab.root);
-    const creado = journeyWorktreeCommand(paths, ["create"], { id: TICKET_A }, { home: lab.home, proceso: procesoSimulado().ejecutor });
+    const creado = journeyWorktreeCommand(
+      paths,
+      ["create"],
+      { id: TICKET_A },
+      { home: lab.home, proceso: procesoSimulado().ejecutor },
+    );
     expect(creado.exitCode).toBe(0);
-    expect(creado.stdout).toContain("Worktree creado: .claude/worktrees/ticket-uno (rama valmen/ticket-uno");
+    expect(creado.stdout).toContain(
+      "Worktree creado: .claude/worktrees/ticket-uno (rama valmen/ticket-uno",
+    );
     expect(creado.stdout).toContain("Cupo de la máquina: reservado");
     expect(existsSync(join(lab.root, ".claude/worktrees/ticket-uno"))).toBe(true);
 
-    const rechazado = journeyWorktreeCommand(paths, ["create"], { id: TICKET_A }, { home: lab.home, proceso: procesoSimulado().ejecutor });
+    const rechazado = journeyWorktreeCommand(
+      paths,
+      ["create"],
+      { id: TICKET_A },
+      { home: lab.home, proceso: procesoSimulado().ejecutor },
+    );
     expect(rechazado.exitCode).toBe(3);
 
-    const quitado = journeyWorktreeCommand(paths, ["remove"], { id: TICKET_A }, { home: lab.home });
+    const quitado = journeyWorktreeCommand(
+      paths,
+      ["remove"],
+      { id: TICKET_A },
+      { home: lab.home },
+    );
     expect(quitado.exitCode).toBe(0);
     expect(quitado.stdout).toContain("Worktree quitado: .claude/worktrees/ticket-uno");
     expect(quitado.stdout).toContain("Cupo de la máquina: liberado");

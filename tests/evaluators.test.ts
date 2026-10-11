@@ -324,7 +324,9 @@ describe("evaluador con juez de chat", () => {
 
   it("evalúa un juicio mediante el flujo responses de Codex", async () => {
     const fetchImpl = (async () =>
-      responsesStream({ p1: { holds: true, confidence: 1, reason: "evidencia" } })) as unknown as typeof fetch;
+      responsesStream({
+        p1: { holds: true, confidence: 1, reason: "evidencia" },
+      })) as unknown as typeof fetch;
 
     const resultado = await evaluateWithJudge({
       propositions: [NOUL],
@@ -351,10 +353,17 @@ describe("evaluador con juez de chat", () => {
 
   it("conserva el proveedor declarado en el recibo del juez", async () => {
     const fetchImpl = (async () =>
-      chatResponse({ p1: { holds: true, confidence: 1, reason: "evidencia" } })) as unknown as typeof fetch;
+      chatResponse({
+        p1: { holds: true, confidence: 1, reason: "evidencia" },
+      })) as unknown as typeof fetch;
 
     const resultado = await evaluateWithJudge({
-      propositions: [NOUL], state: {}, apiKey: "k", provider: "opencode-go", model: "deepseek-v4.1-flash", fetchImpl,
+      propositions: [NOUL],
+      state: {},
+      apiKey: "k",
+      provider: "opencode-go",
+      model: "deepseek-v4.1-flash",
+      fetchImpl,
     });
 
     expect(resultado.model.provider).toBe("opencode-go");
@@ -367,7 +376,14 @@ describe("evaluador con juez de chat", () => {
       return chatResponse({ p1: { holds: true, confidence: 1, reason: "evidencia" } });
     }) as unknown as typeof fetch;
 
-    await evaluateWithJudge({ propositions: [NOUL], state: {}, apiKey: "k", provider: "opencode-go", model: "deepseek-v4.1-flash", fetchImpl });
+    await evaluateWithJudge({
+      propositions: [NOUL],
+      state: {},
+      apiKey: "k",
+      provider: "opencode-go",
+      model: "deepseek-v4.1-flash",
+      fetchImpl,
+    });
 
     expect(requestBody?.tools).toBeDefined();
     expect(requestBody?.response_format).toBeUndefined();
@@ -702,7 +718,9 @@ describe("evaluación en tandas", () => {
     expect(recibidas[1]).not.toContain("p1");
     expect(recibidas[2]).not.toContain("p2");
     for (const tanda of recibidas) {
-      expect(tanda.filter((id) => id.startsWith("criterio_")).length).toBeLessThanOrEqual(12);
+      expect(tanda.filter((id) => id.startsWith("criterio_")).length).toBeLessThanOrEqual(
+        12,
+      );
     }
 
     const ids = resultado.answers.map((respuesta) => respuesta.id);

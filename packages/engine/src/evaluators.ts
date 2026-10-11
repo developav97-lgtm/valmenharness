@@ -241,7 +241,9 @@ export async function evaluateGate(options: SelectOptions): Promise<EvaluationOu
   if (previas.length === 0) return evaluateGateBase(options);
 
   const ids = new Set(previas.map((respuesta) => respuesta.id));
-  const restantes = options.gate.propositions.filter((proposicion) => !ids.has(proposicion.id));
+  const restantes = options.gate.propositions.filter(
+    (proposicion) => !ids.has(proposicion.id),
+  );
   // Si el código respondió todo, no hay nada que preguntar: ni una llamada ni un céntimo.
   if (restantes.length === 0) {
     return {
@@ -357,10 +359,14 @@ async function evaluateGateBase(options: SelectOptions): Promise<EvaluationOutco
  * criterios sin preguntar.
  */
 function partirEnTandas(propositions: readonly Proposition[]): Proposition[][] {
-  const criterios = propositions.filter((proposition) => proposition.id.startsWith("criterio_"));
+  const criterios = propositions.filter((proposition) =>
+    proposition.id.startsWith("criterio_"),
+  );
   if (criterios.length <= MAX_CRITERIA_PROPOSITIONS) return [[...propositions]];
 
-  const otras = propositions.filter((proposition) => !proposition.id.startsWith("criterio_"));
+  const otras = propositions.filter(
+    (proposition) => !proposition.id.startsWith("criterio_"),
+  );
   const tandas: Proposition[][] = [];
   for (let desde = 0; desde < criterios.length; desde += MAX_CRITERIA_PROPOSITIONS) {
     const tanda = criterios.slice(desde, desde + MAX_CRITERIA_PROPOSITIONS);
@@ -593,7 +599,9 @@ async function runCascade(options: SelectOptions): Promise<EvaluationOutcome> {
     usage: corrida.usage,
     latencyMs: corrida.latencyMs,
     escalations: corrida.escalations,
-    ...(corrida.producerRetry === undefined ? {} : { producerRetries: [corrida.producerRetry] }),
+    ...(corrida.producerRetry === undefined
+      ? {}
+      : { producerRetries: [corrida.producerRetry] }),
   };
 }
 

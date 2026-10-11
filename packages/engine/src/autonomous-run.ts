@@ -8,16 +8,19 @@
  */
 import { spawnSync } from "node:child_process";
 
-import { type DespachoDeFase, type FaseDelAgente, type ModeloDeFase, reporteDelEjecutor } from "@valmen/adapter";
-
 import {
-  EXIT_INVARIANT,
-  EXIT_SCHEMA,
-  impactIdsInFields,
-  parseTicket,
-} from "@valmen/core";
+  type DespachoDeFase,
+  type FaseDelAgente,
+  type ModeloDeFase,
+  reporteDelEjecutor,
+} from "@valmen/adapter";
+
+import { EXIT_INVARIANT, EXIT_SCHEMA, impactIdsInFields, parseTicket } from "@valmen/core";
 import { criterioDeclarado, extractCriteriaSpecs } from "@valmen/gate";
-import { AUTONOMOUS_DEFAULT_MAX_MINUTES, type AutonomousExecutorConfig } from "@valmen/adapter";
+import {
+  AUTONOMOUS_DEFAULT_MAX_MINUTES,
+  type AutonomousExecutorConfig,
+} from "@valmen/adapter";
 
 import { autonomousConfig, type RegistryPaths } from "./discovery.js";
 import { budgetForTicket, readBudgetPolicy } from "./budget.js";
@@ -78,12 +81,14 @@ export interface AutonomousRunRequest {
    * Con el contexto de integración, cada ticket que termina queda en su propio commit sobre la
    * rama de trabajo (R-JORN-009). Sin él se entrega como siempre, sin commitear.
    */
-  readonly integracion?: {
-    readonly ramaDeTrabajo: string;
-    readonly ramasProtegidas: readonly string[];
-    /** Rutas que la propia jornada deja sin commitear: no detienen ni se commitean. */
-    readonly propias?: RutasPropias | undefined;
-  } | undefined;
+  readonly integracion?:
+    | {
+        readonly ramaDeTrabajo: string;
+        readonly ramasProtegidas: readonly string[];
+        /** Rutas que la propia jornada deja sin commitear: no detienen ni se commitean. */
+        readonly propias?: RutasPropias | undefined;
+      }
+    | undefined;
   /** Reloj inyectable para que el recibo de parada sea reproducible en pruebas. */
   readonly now?: (() => Date) | undefined;
 }
@@ -107,8 +112,10 @@ interface Candidate {
 const RISK_ORDER = ["low", "normal", "high", "critical"] as const;
 
 function riskAtMost(actual: string, maximum: string): boolean {
-  return RISK_ORDER.indexOf(actual as (typeof RISK_ORDER)[number]) <=
-    RISK_ORDER.indexOf(maximum as (typeof RISK_ORDER)[number]);
+  return (
+    RISK_ORDER.indexOf(actual as (typeof RISK_ORDER)[number]) <=
+    RISK_ORDER.indexOf(maximum as (typeof RISK_ORDER)[number])
+  );
 }
 
 /**
@@ -120,7 +127,8 @@ export function razonesDePolitica(
   policy: ReturnType<typeof autonomousConfig>,
 ): string[] {
   const reasons: string[] = [];
-  if (!policy.eligible.types.includes(fields.type)) reasons.push("su tipo no está habilitado");
+  if (!policy.eligible.types.includes(fields.type))
+    reasons.push("su tipo no está habilitado");
   if (!riskAtMost(fields.risk_level, policy.eligible.maxRisk)) {
     reasons.push("supera el riesgo máximo");
   }
@@ -131,7 +139,10 @@ export function razonesDePolitica(
 }
 
 /** Razones mecánicas por las que un ticket no pertenece a la cola. */
-function ineligibility(text: string, policy: ReturnType<typeof autonomousConfig>): string[] {
+function ineligibility(
+  text: string,
+  policy: ReturnType<typeof autonomousConfig>,
+): string[] {
   const ticket = parseTicket(text);
   const reasons: string[] = [];
   if (ticket.fields.workflow_status !== "approved") reasons.push("no está en approved");
@@ -139,16 +150,25 @@ function ineligibility(text: string, policy: ReturnType<typeof autonomousConfig>
   for (const requirement of policy.eligible.require) {
     // La aprobación es un evento registrado con actor, fuente y hash (R-CTRL-001): la línea
     // escrita en el plan no la reemplaza.
-    if (requirement === "plan-approved" && aprobacionDePlanVigente(ticket).estado !== "vigente") {
+    if (
+      requirement === "plan-approved" &&
+      aprobacionDePlanVigente(ticket).estado !== "vigente"
+    ) {
       reasons.push("no tiene la aprobación del plan registrada");
     }
     if (requirement === "tests-declared") {
       const criteria = extractCriteriaSpecs(ticket.sections["Criterios de aceptación"]);
-      if (criteria.length === 0 || criteria.some((criterion) => !criterioDeclarado(criterion))) {
+      if (
+        criteria.length === 0 ||
+        criteria.some((criterion) => !criterioDeclarado(criterion))
+      ) {
         reasons.push("no declara cómo verificar todos los criterios");
       }
     }
-    if (requirement === "no-critical-impacts" && impactIdsInFields(ticket.fields).length > 0) {
+    if (
+      requirement === "no-critical-impacts" &&
+      impactIdsInFields(ticket.fields).length > 0
+    ) {
       reasons.push("declara un impacto crítico");
     }
   }
@@ -164,18 +184,49 @@ export function autonomousExecutorCommand(
   if (executor.id === "codex") {
     return {
       command: "codex",
-      args: ["-c", `model_reasoning_effort=\"${executor.effort}\"`, "exec", "--cd", root, "--model", executor.model, "--sandbox", "workspace-write", "--ask-for-approval", "never", prompt],
+      args: [
+        "-c",
+        `model_reasoning_effort=\"${executor.effort}\"`,
+        "exec",
+        "--cd",
+        root,
+        "--model",
+        executor.model,
+        "--sandbox",
+        "workspace-write",
+        "--ask-for-approval",
+        "never",
+        prompt,
+      ],
     };
   }
   if (executor.id === "opencode") {
     return {
       command: "opencode",
-      args: ["run", "--standalone", "--auto", "--model", executor.model, "--prompt", prompt, root],
+      args: [
+        "run",
+        "--standalone",
+        "--auto",
+        "--model",
+        executor.model,
+        "--prompt",
+        prompt,
+        root,
+      ],
     };
   }
   return {
     command: "claude",
-    args: ["--model", executor.model, "--permission-mode", "bypassPermissions", "--output-format", "json", "--print", prompt],
+    args: [
+      "--model",
+      executor.model,
+      "--permission-mode",
+      "bypassPermissions",
+      "--output-format",
+      "json",
+      "--print",
+      prompt,
+    ],
   };
 }
 
@@ -209,7 +260,9 @@ function execute(
   return {
     status: agotado ? 124 : (result.status ?? 1),
     stdout: result.stdout ?? "",
-    stderr: agotado ? `El ejecutor superó el tiempo máximo de ${maxMinutes} minutos y se cortó.` : (result.stderr ?? ""),
+    stderr: agotado
+      ? `El ejecutor superó el tiempo máximo de ${maxMinutes} minutos y se cortó.`
+      : (result.stderr ?? ""),
     ...(agotado ? { timedOut: true } : {}),
   };
 }
@@ -290,15 +343,22 @@ export function contratoDePruebasEscrito(ticketText: string): boolean {
 
 /** Los comandos del contrato de pruebas: lo que va entre comillas invertidas en `## Pruebas`. */
 export function comandosDelContrato(ticketText: string): string[] {
-  const seccion = (parseTicket(ticketText).sections["Pruebas"] ?? "").replace(/<!--[\s\S]*?-->/g, "");
-  return [...seccion.matchAll(/`([^`\n]+)`/g)].map((m) => (m[1] as string).trim()).filter((c) => c !== "");
+  const seccion = (parseTicket(ticketText).sections["Pruebas"] ?? "").replace(
+    /<!--[\s\S]*?-->/g,
+    "",
+  );
+  return [...seccion.matchAll(/`([^`\n]+)`/g)]
+    .map((m) => (m[1] as string).trim())
+    .filter((c) => c !== "");
 }
 
 /**
  * Selecciona y ejecuta una única entrada, sin paralelismo ni reintentos, y deja el registro
  * de la sesión por fase (R-JORN-006).
  */
-export async function runAutonomous(request: AutonomousRunRequest): Promise<AutonomousRunResult> {
+export async function runAutonomous(
+  request: AutonomousRunRequest,
+): Promise<AutonomousRunResult> {
   const inicio = Date.now();
   const contexto: { despacho?: DespachoDeFase; stdout?: string } = {};
   const resultado = await runAutonomousInner(request, contexto);
@@ -309,7 +369,10 @@ export async function runAutonomous(request: AutonomousRunRequest): Promise<Auto
       ticketId: resultado.ticketId,
       fase: request.fase ?? "implementation",
       // El ejecutor que realmente se lanzó; si el despacho se detuvo, ninguno.
-      ejecutor: despacho?.ok === true && resultado.stop?.reason !== "executor-unauthorized" ? despacho.ejecutor : "ninguno",
+      ejecutor:
+        despacho?.ok === true && resultado.stop?.reason !== "executor-unauthorized"
+          ? despacho.ejecutor
+          : "ninguno",
       modelo: despacho?.ok === true ? despacho.model : politica.executor.model,
       esfuerzo: despacho?.ok === true ? despacho.effort : politica.executor.effort,
       origenDelModelo:
@@ -334,31 +397,54 @@ async function runAutonomousInner(
   contexto: { despacho?: DespachoDeFase; stdout?: string },
 ): Promise<AutonomousRunResult> {
   if (request.ticketId === undefined && request.queue !== true) {
-    throw Object.assign(new Error("run requiere --ticket o --queue."), { exitCode: EXIT_SCHEMA });
+    throw Object.assign(new Error("run requiere --ticket o --queue."), {
+      exitCode: EXIT_SCHEMA,
+    });
   }
   if (request.ticketId !== undefined && request.queue === true) {
-    throw Object.assign(new Error("run acepta --ticket o --queue, no ambos."), { exitCode: EXIT_SCHEMA });
+    throw Object.assign(new Error("run acepta --ticket o --queue, no ambos."), {
+      exitCode: EXIT_SCHEMA,
+    });
   }
 
   const policy = autonomousConfig(request.paths.root);
   if (!policy.enabled) {
-    throw Object.assign(new Error("La autonomía está apagada en .valmen/config.yaml."), { exitCode: EXIT_INVARIANT });
+    throw Object.assign(new Error("La autonomía está apagada en .valmen/config.yaml."), {
+      exitCode: EXIT_INVARIANT,
+    });
   }
   if (policy.executor === null) {
-    throw Object.assign(new Error("La autonomía no declara un ejecutor seguro."), { exitCode: EXIT_INVARIANT });
+    throw Object.assign(new Error("La autonomía no declara un ejecutor seguro."), {
+      exitCode: EXIT_INVARIANT,
+    });
   }
 
   const candidates = allDocuments(request.paths)
-    .map(({ ticket }) => ({ id: ticket.id, text: ticket.text, reasons: ineligibility(ticket.text, policy) }))
+    .map(({ ticket }) => ({
+      id: ticket.id,
+      text: ticket.text,
+      reasons: ineligibility(ticket.text, policy),
+    }))
     .sort((left, right) => left.id.localeCompare(right.id));
-  const selected = request.ticketId === undefined
-    ? candidates.find((candidate) => candidate.reasons.length === 0)
-    : candidates.find((candidate) => candidate.id === request.ticketId);
+  const selected =
+    request.ticketId === undefined
+      ? candidates.find((candidate) => candidate.reasons.length === 0)
+      : candidates.find((candidate) => candidate.id === request.ticketId);
   if (selected === undefined) {
-    throw Object.assign(new Error(request.ticketId === undefined ? "No hay tickets elegibles en la cola." : "La ruta canónica solicitada no existe."), { exitCode: EXIT_SCHEMA });
+    throw Object.assign(
+      new Error(
+        request.ticketId === undefined
+          ? "No hay tickets elegibles en la cola."
+          : "La ruta canónica solicitada no existe.",
+      ),
+      { exitCode: EXIT_SCHEMA },
+    );
   }
   if (selected.reasons.length > 0) {
-    throw Object.assign(new Error(`El ticket ${selected.id} no es elegible: ${selected.reasons.join(", ")}.`), { exitCode: EXIT_INVARIANT });
+    throw Object.assign(
+      new Error(`El ticket ${selected.id} no es elegible: ${selected.reasons.join(", ")}.`),
+      { exitCode: EXIT_INVARIANT },
+    );
   }
 
   // R-PERF-004: el ejecutor y el modelo salen del proveedor del perfil, y el ejecutor tiene que
@@ -367,7 +453,10 @@ async function runAutonomousInner(
   const despacho = resolverDespachoDeFase(request.paths.root, fase);
   if (despacho !== null) contexto.despacho = despacho;
   if (despacho === null || !despacho.ok) {
-    const detalle = despacho === null ? "La autonomía no declara un ejecutor seguro." : `El despacho de la fase ${fase} se detuvo: ${despacho.motivo}.`;
+    const detalle =
+      despacho === null
+        ? "La autonomía no declara un ejecutor seguro."
+        : `El despacho de la fase ${fase} se detuvo: ${despacho.motivo}.`;
     const stop = recordAutonomousStop(request.paths, {
       ticketId: selected.id,
       reason: "executor-unauthorized",
@@ -375,14 +464,24 @@ async function runAutonomousInner(
       workflowStatus: "approved",
       now: request.now?.() ?? new Date(),
     });
-    return { ticketId: selected.id, status: "stopped", detail: detalle, executor: { command: "", args: [] }, stop };
+    return {
+      ticketId: selected.id,
+      status: "stopped",
+      detail: detalle,
+      executor: { command: "", args: [] },
+      stop,
+    };
   }
   const executorDeFase: AutonomousExecutorConfig = {
     id: despacho.ejecutor as AutonomousExecutorConfig["id"],
     model: despacho.model,
     effort: despacho.effort as AutonomousExecutorConfig["effort"],
   };
-  const command = autonomousExecutorCommand(executorDeFase, request.paths.root, promptFor(selected.id));
+  const command = autonomousExecutorCommand(
+    executorDeFase,
+    request.paths.root,
+    promptFor(selected.id),
+  );
   // La integración parte de un árbol limpio en la rama de trabajo: lo comprueba antes de mover el
   // ticket, porque la propia transición edita el ticket y lo ensuciaría.
   let arbolLimpioAlEmpezar = true;
@@ -391,18 +490,29 @@ async function runAutonomousInner(
       root: request.paths.root,
       ramaDeTrabajo: request.integracion.ramaDeTrabajo,
       ramasProtegidas: request.integracion.ramasProtegidas,
-      ...(request.integracion.propias === undefined ? {} : { propias: request.integracion.propias }),
+      ...(request.integracion.propias === undefined
+        ? {}
+        : { propias: request.integracion.propias }),
     });
-    arbolLimpioAlEmpezar = estadoDelArbolDeTrabajo(request.paths.root, undefined, request.integracion.propias).length === 0;
+    arbolLimpioAlEmpezar =
+      estadoDelArbolDeTrabajo(request.paths.root, undefined, request.integracion.propias)
+        .length === 0;
     if (!arbolLimpioAlEmpezar) {
       throw Object.assign(
-        new Error("El árbol de trabajo no está limpio: la jornada no despacha un ticket sobre cambios de otro."),
+        new Error(
+          "El árbol de trabajo no está limpio: la jornada no despacha un ticket sobre cambios de otro.",
+        ),
         { exitCode: EXIT_INVARIANT },
       );
     }
   }
 
-  transition({ paths: request.paths, ticketId: selected.id, entity: "ticket", to: "in_progress" });
+  transition({
+    paths: request.paths,
+    ticketId: selected.id,
+    entity: "ticket",
+    to: "in_progress",
+  });
 
   const before = preflightStop(request.paths, selected.id, policy);
   if (before !== null) {
@@ -418,7 +528,10 @@ async function runAutonomousInner(
 
   // El ejecutor hereda la marca de sesión desatendida: no puede registrar aprobaciones.
   const entorno = { [UNATTENDED_ENV]: "1" };
-  const result = (request.execute ?? ((item, env) => execute(item, request.paths.root, env, policy.limits.maxMinutes)))(command, entorno);
+  const result = (
+    request.execute ??
+    ((item, env) => execute(item, request.paths.root, env, policy.limits.maxMinutes))
+  )(command, entorno);
   contexto.stdout = result.stdout;
   if (result.timedOut === true) {
     return stopResult(
@@ -473,14 +586,23 @@ async function runAutonomousInner(
   const propiasAlCommitear: RutasPropias | undefined =
     request.integracion?.propias === undefined
       ? undefined
-      : (ruta) => ruta !== `${request.paths.ticketsDir}/index.md` && (request.integracion?.propias?.(ruta) ?? false);
+      : (ruta) =>
+          ruta !== `${request.paths.ticketsDir}/index.md` &&
+          (request.integracion?.propias?.(ruta) ?? false);
   const archivosFuncionales =
     request.integracion === undefined
       ? []
-      : repartirCambios(estadoDelArbolDeTrabajo(request.paths.root, undefined, propiasAlCommitear), request.paths, selected.id).funcionales;
+      : repartirCambios(
+          estadoDelArbolDeTrabajo(request.paths.root, undefined, propiasAlCommitear),
+          request.paths,
+          selected.id,
+        ).funcionales;
   const hashProbado = hashDeArchivos(request.paths.root, archivosFuncionales);
 
-  const gate = await runGate(request.paths, { gateId: "qa-mechanical", ticketId: selected.id });
+  const gate = await runGate(request.paths, {
+    gateId: "qa-mechanical",
+    ticketId: selected.id,
+  });
   if (gate.exitCode !== 0) {
     if (permitsStop(policy, "test-failure")) {
       return stopResult(
@@ -502,7 +624,9 @@ async function runAutonomousInner(
     );
   }
   // El contrato de pruebas se comprueba en código: sin él, el responsable no sabe qué correr.
-  const despues = allDocuments(request.paths).find(({ ticket }) => ticket.id === selected.id);
+  const despues = allDocuments(request.paths).find(
+    ({ ticket }) => ticket.id === selected.id,
+  );
   if (despues !== undefined && !contratoDePruebasEscrito(despues.ticket.text)) {
     return stopResult(
       request.paths,
@@ -513,11 +637,18 @@ async function runAutonomousInner(
       request.now?.() ?? new Date(),
     );
   }
-  transition({ paths: request.paths, ticketId: selected.id, entity: "ticket", to: "awaiting_user_tests" });
+  transition({
+    paths: request.paths,
+    ticketId: selected.id,
+    entity: "ticket",
+    to: "awaiting_user_tests",
+  });
 
   // El commit por ticket (R-JORN-009): solo con el contexto de integración y tras las pruebas.
   if (request.integracion !== undefined) {
-    const recibos = currentReceipts(readReceipts(request.paths, selected.id)).filter((r) => r.gate === "qa-mechanical");
+    const recibos = currentReceipts(readReceipts(request.paths, selected.id)).filter(
+      (r) => r.gate === "qa-mechanical",
+    );
     const integrado = integrarTicket({
       paths: request.paths,
       ticketId: selected.id,
@@ -539,7 +670,18 @@ async function runAutonomousInner(
         request.now?.() ?? new Date(),
       );
     }
-    return { ticketId: selected.id, status: "delivered", detail: gate.stdout, executor: command, commit: integrado.commit };
+    return {
+      ticketId: selected.id,
+      status: "delivered",
+      detail: gate.stdout,
+      executor: command,
+      commit: integrado.commit,
+    };
   }
-  return { ticketId: selected.id, status: "delivered", detail: gate.stdout, executor: command };
+  return {
+    ticketId: selected.id,
+    status: "delivered",
+    detail: gate.stdout,
+    executor: command,
+  };
 }

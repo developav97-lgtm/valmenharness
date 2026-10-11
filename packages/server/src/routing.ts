@@ -55,7 +55,12 @@ import {
 } from "@valmen/adapter";
 import { atomicWrite, toFailure } from "@valmen/core";
 
-import { type ConfigDiffLine, diffLines, readConfig, readProviderCandidates } from "./config.js";
+import {
+  type ConfigDiffLine,
+  diffLines,
+  readConfig,
+  readProviderCandidates,
+} from "./config.js";
 import { listProviderModels } from "./providers.js";
 
 /**
@@ -372,7 +377,9 @@ export async function catalogoParaPerfil(
   } catch {
     config = null;
   }
-  const proveedores = [...new Set(Object.values(perfil.roles).map((ruta) => ruta.provider))];
+  const proveedores = [
+    ...new Set(Object.values(perfil.roles).map((ruta) => ruta.provider)),
+  ];
   const catalogo: Record<string, CatalogoDeProveedor> = {};
   for (const proveedor of proveedores) {
     try {
@@ -403,7 +410,11 @@ export async function guardarPerfil(
   root: string,
   perfil: PerfilDeModelos,
   opciones: OpcionesDePerfil = {},
-): Promise<{ readonly ok: boolean; readonly errores: string[]; readonly written: boolean }> {
+): Promise<{
+  readonly ok: boolean;
+  readonly errores: string[];
+  readonly written: boolean;
+}> {
   if (PERFILES_INCORPORADOS.some((incorporado) => incorporado.id === perfil.id)) {
     return {
       ok: false,
@@ -428,10 +439,15 @@ export async function guardarPerfil(
   );
   if (errores.length > 0) return { ok: false, errores, written: false };
 
-  const guardados = readProjectPerfiles(root).filter((existente) => existente.id !== perfil.id);
+  const guardados = readProjectPerfiles(root).filter(
+    (existente) => existente.id !== perfil.id,
+  );
   atomicWrite(
     perfilesPath(root),
-    renderPerfiles([...guardados, { ...perfil, origen: "proyecto" }], readSeleccionDePerfil(root)),
+    renderPerfiles(
+      [...guardados, { ...perfil, origen: "proyecto" }],
+      readSeleccionDePerfil(root),
+    ),
   );
   return { ok: true, errores: [], written: true };
 }
@@ -445,7 +461,10 @@ export function elegirPerfil(
   eleccion: { readonly perfil: string | null; readonly ejecutor?: string },
 ): { readonly ok: boolean; readonly errores: string[]; readonly written: boolean } {
   const { perfil, ejecutor } = eleccion;
-  if (ejecutor !== undefined && !(EJECUTORES_CON_PERFIL as readonly string[]).includes(ejecutor)) {
+  if (
+    ejecutor !== undefined &&
+    !(EJECUTORES_CON_PERFIL as readonly string[]).includes(ejecutor)
+  ) {
     return {
       ok: false,
       errores: [
@@ -454,7 +473,10 @@ export function elegirPerfil(
       written: false,
     };
   }
-  if (perfil !== null && !listarPerfiles(root).some((candidato) => candidato.id === perfil)) {
+  if (
+    perfil !== null &&
+    !listarPerfiles(root).some((candidato) => candidato.id === perfil)
+  ) {
     return { ok: false, errores: [`el perfil "${perfil}" no existe.`], written: false };
   }
   const vigente = readSeleccionDePerfil(root);

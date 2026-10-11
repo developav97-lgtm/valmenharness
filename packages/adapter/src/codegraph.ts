@@ -86,7 +86,10 @@ export function readCodegraphStatus(resultado: CodegraphProbeResult): CodegraphS
   const datos = analizado as Record<string, unknown>;
   if (datos["initialized"] === false) return { estado: "sin-indice" };
   if (datos["initialized"] !== true) {
-    return { estado: "ilegible", motivo: "la salida no dice si el índice está inicializado" };
+    return {
+      estado: "ilegible",
+      motivo: "la salida no dice si el índice está inicializado",
+    };
   }
 
   const pendientes = datos["pendingChanges"];

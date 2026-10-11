@@ -31,7 +31,8 @@ const REFERENCIA = "docs/03-GATES.md";
 import { interfazDelTicket } from "../packages/engine/src/interfaz.js";
 import { esPantalla } from "../packages/engine/src/manuales.js";
 import { runGate } from "../packages/engine/src/gate.js";
-import { readReceipts } from "../packages/engine/src/receipts.js";import {
+import { readReceipts } from "../packages/engine/src/receipts.js";
+import {
   ANALYSIS_GATE,
   PLAN_GATE,
   PROPOSICION_PLAYWRIGHT,
@@ -91,7 +92,10 @@ function criterion(text: string): CriterionSpec {
 }
 
 /** El texto completo de un ticket de laboratorio, con el diagnóstico y el plan pedidos. */
-function textoTicket(options: { readonly diagnostico?: string; readonly plan?: string }): string {
+function textoTicket(options: {
+  readonly diagnostico?: string;
+  readonly plan?: string;
+}): string {
   return renderFixtureTicket({
     id: TICKET,
     workflowStatus: "planned",
@@ -215,7 +219,8 @@ describe("el disparador se decide en código", () => {
       texto: renderFixtureTicket({
         id: TICKET,
         workflowStatus: "planned",
-        criterios: "- [ ] `FrontEnd/src/pos/Zeta.component.html` queda legible.\n      <!-- verify: manual -->",
+        criterios:
+          "- [ ] `FrontEnd/src/pos/Zeta.component.html` queda legible.\n      <!-- verify: manual -->",
         plan: "1. Tocar `FrontEnd/src/pos/Alfa.component.html`.",
       }),
       comandos: CON_PLAYWRIGHT,
@@ -266,7 +271,9 @@ describe("el despliegue de la proposición en el gate de plan", () => {
       interfaz,
     });
 
-    const deInterfaz = expandido.propositions.filter((p) => p.id === PROPOSICION_PLAYWRIGHT);
+    const deInterfaz = expandido.propositions.filter(
+      (p) => p.id === PROPOSICION_PLAYWRIGHT,
+    );
     // Una sola, aunque el ticket cite dos pantallas.
     expect(deInterfaz).toHaveLength(1);
     expect(expandido.id).toBe("plan+criterios+impactos+interfaz");
@@ -275,7 +282,9 @@ describe("el despliegue de la proposición en el gate de plan", () => {
     // quedan detrás.
     const ids = expandido.propositions.map((p) => p.id);
     expect(ids.indexOf("criterio_01")).toBeLessThan(ids.indexOf("migration_impact_orden"));
-    expect(ids.indexOf("migration_impact_reversion")).toBeLessThan(ids.indexOf(PROPOSICION_PLAYWRIGHT));
+    expect(ids.indexOf("migration_impact_reversion")).toBeLessThan(
+      ids.indexOf(PROPOSICION_PLAYWRIGHT),
+    );
     expect(ids).toContain("clasificacion");
   });
 
@@ -350,7 +359,10 @@ describe("el enunciado de la proposición", () => {
     });
 
     const ids = expandido.propositions.map((p) => p.id);
-    expect(ids).toEqual([PROPOSICION_PLAYWRIGHT, ...PLAN_GATE.propositions.map((p) => p.id)]);
+    expect(ids).toEqual([
+      PROPOSICION_PLAYWRIGHT,
+      ...PLAN_GATE.propositions.map((p) => p.id),
+    ]);
     // Ninguna otra proposición menciona el verbo: el gate no convierte la
     // recomendación en un criterio exigido por la puerta de atrás.
     for (const proposicion of expandido.propositions) {

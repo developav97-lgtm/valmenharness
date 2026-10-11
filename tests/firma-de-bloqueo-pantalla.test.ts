@@ -38,7 +38,12 @@ function compuerta(id: string): Record<string, unknown> {
     hasCommandChecks: false,
     needsModel: true,
     policy: { approveAt: 0.9, blockAt: 0.1 },
-    routing: { model: "typesafe/jev-1.13", effort: "high", source: "preset", probabilistic: true },
+    routing: {
+      model: "typesafe/jev-1.13",
+      effort: "high",
+      source: "preset",
+      probabilistic: true,
+    },
   };
 }
 
@@ -58,9 +63,16 @@ function recibo(opciones: {
     decidedAt: "2026-10-06T10:00:00Z",
     stale: opciones.stale ?? false,
     humanDecision: opciones.humana
-      ? { actor: "Juan Andrade", decision: "approve", reason: "Sigo.", channel: "mission-control", decidedAt: "2026-10-06T11:00:00Z" }
+      ? {
+          actor: "Juan Andrade",
+          decision: "approve",
+          reason: "Sigo.",
+          channel: "mission-control",
+          decidedAt: "2026-10-06T11:00:00Z",
+        }
       : null,
-    reason: opciones.outcome === "block" ? "falló criterio_02=0.02" : "queda en banda media.",
+    reason:
+      opciones.outcome === "block" ? "falló criterio_02=0.02" : "queda en banda media.",
     escalatedTo: opciones.outcome === "review" ? "human" : null,
     weightedMean: 0.4,
     model: { resolvedVersion: "typesafe/jev-1.13-20260917" },
@@ -68,7 +80,14 @@ function recibo(opciones: {
     latencyMs: 420,
     stateHash: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
     propositions: [
-      { id: "criterio_02", label: "criterio_02", description: "El rollback se declara.", value: 0.02, mark: opciones.outcome === "block" ? "block" : "review", reason: "" },
+      {
+        id: "criterio_02",
+        label: "criterio_02",
+        description: "El rollback se declara.",
+        value: 0.02,
+        mark: opciones.outcome === "block" ? "block" : "review",
+        reason: "",
+      },
     ],
     mechanicalChecks: [],
     report: `RESULTADO: ${opciones.outcome.toUpperCase()}`,
@@ -82,7 +101,10 @@ interface Llamada {
 }
 
 /** Pinta el ticket con las compuertas y los recibos dados, y registra lo que la pantalla envía. */
-async function pintar(compuertas: readonly string[], recibos: readonly Record<string, unknown>[]) {
+async function pintar(
+  compuertas: readonly string[],
+  recibos: readonly Record<string, unknown>[],
+) {
   const llamadas: Llamada[] = [];
   const vista = await ejecutarInterfaz(HTML, {
     hash: `#/ticket/${ID}`,
@@ -106,7 +128,13 @@ async function pintar(compuertas: readonly string[], recibos: readonly Record<st
         };
       }
       if (url.pathname === "/api/ticket/fases") {
-        return { ticket: ID, fases: [], timeline: { disponible: false }, sesionesPorFase: [], kanban: null };
+        return {
+          ticket: ID,
+          fases: [],
+          timeline: { disponible: false },
+          sesionesPorFase: [],
+          kanban: null,
+        };
       }
       if (url.pathname === "/api/timeline") return { available: false, compuertas: [] };
       if (url.pathname === `/api/tickets/${ID}`) return ticket;
@@ -120,9 +148,16 @@ async function pintar(compuertas: readonly string[], recibos: readonly Record<st
 const botones = (v: { contenido: NodoFalso | undefined }): string[] =>
   buscarNodos(v.contenido, (n) => n.tagName === "BUTTON").map((n) => String(n._texto));
 const campoDeFrase = (v: { contenido: NodoFalso | undefined }): NodoFalso | undefined =>
-  buscarNodos(v.contenido, (n) => n.tagName === "INPUT" && String(n.placeholder ?? "").includes("Frase literal"))[0];
+  buscarNodos(
+    v.contenido,
+    (n) => n.tagName === "INPUT" && String(n.placeholder ?? "").includes("Frase literal"),
+  )[0];
 const botonDeAutorizar = (v: { contenido: NodoFalso | undefined }): NodoFalso | undefined =>
-  buscarNodos(v.contenido, (n) => n.tagName === "BUTTON" && String(n._texto) === "Autorizar seguir pese al bloqueo")[0];
+  buscarNodos(
+    v.contenido,
+    (n) =>
+      n.tagName === "BUTTON" && String(n._texto) === "Autorizar seguir pese al bloqueo",
+  )[0];
 
 describe("un recibo que bloqueó", () => {
   it("ofrece el campo de la frase literal y el botón de autorizar seguir", async () => {
@@ -157,7 +192,10 @@ describe("un recibo que bloqueó", () => {
   });
 
   it("al pulsar envía la decisión approve con el responsable y la frase literal", async () => {
-    const { vista, llamadas } = await pintar(["plan"], [recibo({ gate: "plan", outcome: "block", receiptId: "GR-plan-7" })]);
+    const { vista, llamadas } = await pintar(
+      ["plan"],
+      [recibo({ gate: "plan", outcome: "block", receiptId: "GR-plan-7" })],
+    );
     const frase = campoDeFrase(vista) as NodoFalso;
     frase.value = "Autorizo seguir: el plan ya corrige lo que faltaba";
     await disparar(frase, "input");
@@ -174,21 +212,30 @@ describe("un recibo que bloqueó", () => {
   });
 
   it("un bloqueo obsoleto también se puede autorizar", async () => {
-    const { vista } = await pintar(["plan"], [recibo({ gate: "plan", outcome: "block", stale: true })]);
+    const { vista } = await pintar(
+      ["plan"],
+      [recibo({ gate: "plan", outcome: "block", stale: true })],
+    );
 
     expect(vista.texto).toContain("El ticket cambió desde que se emitió este recibo");
     expect(botones(vista)).toContain("Autorizar seguir pese al bloqueo");
   });
 
   it("uno de análisis se ofrece igual que uno de plan", async () => {
-    const { vista } = await pintar(["analysis"], [recibo({ gate: "analysis", outcome: "block" })]);
+    const { vista } = await pintar(
+      ["analysis"],
+      [recibo({ gate: "analysis", outcome: "block" })],
+    );
     expect(botones(vista)).toContain("Autorizar seguir pese al bloqueo");
   });
 });
 
 describe("lo que no se ofrece", () => {
   it("sobre el bloqueo de qa-mechanical no hay ninguna acción y la pantalla dice por qué", async () => {
-    const { vista } = await pintar(["qa-mechanical"], [recibo({ gate: "qa-mechanical", outcome: "block" })]);
+    const { vista } = await pintar(
+      ["qa-mechanical"],
+      [recibo({ gate: "qa-mechanical", outcome: "block" })],
+    );
 
     expect(vista.texto).toContain("un comando falló, y eso es un hecho y no una opinión");
     expect(campoDeFrase(vista)).toBeUndefined();
@@ -196,7 +243,10 @@ describe("lo que no se ofrece", () => {
   });
 
   it("un bloqueo que una persona ya autorizó no ofrece firmar otra vez", async () => {
-    const { vista } = await pintar(["plan"], [recibo({ gate: "plan", outcome: "block", humana: true })]);
+    const { vista } = await pintar(
+      ["plan"],
+      [recibo({ gate: "plan", outcome: "block", humana: true })],
+    );
 
     expect(vista.texto).toContain("Juan Andrade");
     expect(campoDeFrase(vista)).toBeUndefined();
@@ -204,7 +254,10 @@ describe("lo que no se ofrece", () => {
   });
 
   it("un recibo aprobado no ofrece decidir", async () => {
-    const { vista } = await pintar(["plan"], [recibo({ gate: "plan", outcome: "approve" })]);
+    const { vista } = await pintar(
+      ["plan"],
+      [recibo({ gate: "plan", outcome: "approve" })],
+    );
     expect(campoDeFrase(vista)).toBeUndefined();
     expect(botones(vista)).not.toContain("Autorizar seguir pese al bloqueo");
   });

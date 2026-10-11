@@ -40,7 +40,17 @@ function calibration(overrides: Partial<Calibration> = {}): Calibration {
     falseApproves: 0,
     criticalFalseApproves: 0,
     falseBlocks: 1,
-    rows: [{ ticketId: "FEATURE-UNO-20261005", human: "approved", automatic: "approve", critical: false, agrees: true, falseApprove: false, falseBlock: false }],
+    rows: [
+      {
+        ticketId: "FEATURE-UNO-20261005",
+        human: "approved",
+        automatic: "approve",
+        critical: false,
+        agrees: true,
+        falseApprove: false,
+        falseBlock: false,
+      },
+    ],
     ...overrides,
   };
 }
@@ -60,16 +70,22 @@ describe("gate-promotions", () => {
 
   it("solo acepta solicitudes auto con umbrales e identificadores de gate conocidos", () => {
     const valid = readGatePromotions(
-      parseConfig([
-        "gate-promotions:",
-        "  analysis:",
-        "    mode: auto",
-        "    minimum-sample: 30",
-        "    minimum-agreement: 0.9",
-      ].join("\n")),
+      parseConfig(
+        [
+          "gate-promotions:",
+          "  analysis:",
+          "    mode: auto",
+          "    minimum-sample: 30",
+          "    minimum-agreement: 0.9",
+        ].join("\n"),
+      ),
       gates,
     );
-    expect(valid.analysis).toEqual({ mode: "auto", minimumSample: 30, minimumAgreement: 0.9 });
+    expect(valid.analysis).toEqual({
+      mode: "auto",
+      minimumSample: 30,
+      minimumAgreement: 0.9,
+    });
 
     for (const yaml of [
       "gate-promotions:\n  unknown:\n    mode: auto\n    minimum-sample: 1\n    minimum-agreement: 0.9",
@@ -85,15 +101,20 @@ describe("gate-promotions", () => {
 
 describe("evidencia de promoción", () => {
   it("anexa una calibración válida y solo entonces resuelve auto", () => {
-    config([
-      "gate-promotions:",
-      "  analysis:",
-      "    mode: auto",
-      "    minimum-sample: 30",
-      "    minimum-agreement: 0.9",
-    ].join("\n"));
+    config(
+      [
+        "gate-promotions:",
+        "  analysis:",
+        "    mode: auto",
+        "    minimum-sample: 30",
+        "    minimum-agreement: 0.9",
+      ].join("\n"),
+    );
 
-    expect(resolveGateMode(paths(), "analysis")).toMatchObject({ mode: "hybrid", reason: expect.stringMatching(/evidencia/i) });
+    expect(resolveGateMode(paths(), "analysis")).toMatchObject({
+      mode: "hybrid",
+      reason: expect.stringMatching(/evidencia/i),
+    });
 
     const evidence = evidenceFromCalibration(calibration(), "qa-cycles");
     appendPromotionEvidence(paths(), evidence);
@@ -103,14 +124,20 @@ describe("evidencia de promoción", () => {
   });
 
   it("convierte una revisión en bloqueo automático y cita la evidencia en el recibo", async () => {
-    config([
-      "gate-promotions:",
-      "  plan:",
-      "    mode: auto",
-      "    minimum-sample: 1",
-      "    minimum-agreement: 0.9",
-    ].join("\n"));
-    writeFixtureTicket(lab, { id: "FEATURE-PROMOTION-20261005", workflowStatus: "planned", criterios: CRITERIOS_QUE_EVALUA_EL_MODELO });
+    config(
+      [
+        "gate-promotions:",
+        "  plan:",
+        "    mode: auto",
+        "    minimum-sample: 1",
+        "    minimum-agreement: 0.9",
+      ].join("\n"),
+    );
+    writeFixtureTicket(lab, {
+      id: "FEATURE-PROMOTION-20261005",
+      workflowStatus: "planned",
+      criterios: CRITERIOS_QUE_EVALUA_EL_MODELO,
+    });
     const evidence = evidenceFromCalibration(
       calibration({ gate: "plan", compared: 1, decided: 1, agree: 1, rate: 1 }),
       "qa-cycles",
@@ -121,10 +148,21 @@ describe("evidencia de promoción", () => {
       gateId: "plan",
       ticketId: "FEATURE-PROMOTION-20261005",
       evaluator: "jev",
-      jev: (async (options: { propositions?: readonly { id: string; kind?: string; criteria?: Readonly<Record<string, string>> }[] }) => ({
+      jev: (async (options: {
+        propositions?: readonly {
+          id: string;
+          kind?: string;
+          criteria?: Readonly<Record<string, string>>;
+        }[];
+      }) => ({
         answers: (options.propositions ?? []).map((proposition) =>
           proposition.kind === "choice"
-            ? { id: proposition.id, kind: "choice" as const, choice: "completo", confidence: 0.9 }
+            ? {
+                id: proposition.id,
+                kind: "choice" as const,
+                choice: "completo",
+                confidence: 0.9,
+              }
             : { id: proposition.id, kind: "noul" as const, value: 0.5 },
         ),
         model: null,
@@ -135,43 +173,57 @@ describe("evidencia de promoción", () => {
 
     expect(result.stdout).toContain("Modo efectivo: auto");
     expect(result.stdout).toContain("RESULTADO: BLOCK");
-    expect(readReceipts(paths(), "FEATURE-PROMOTION-20261005")[0]?.notes?.join(" ")).toContain(
-      `evidencia ${evidence.id}`,
-    );
-    expect(readReceipts(paths(), "FEATURE-PROMOTION-20261005")[0]?.notes?.join(" ")).toContain(
-      "referencia humana qa-cycles",
-    );
+    expect(
+      readReceipts(paths(), "FEATURE-PROMOTION-20261005")[0]?.notes?.join(" "),
+    ).toContain(`evidencia ${evidence.id}`);
+    expect(
+      readReceipts(paths(), "FEATURE-PROMOTION-20261005")[0]?.notes?.join(" "),
+    ).toContain("referencia humana qa-cycles");
   });
 
   it("expone el motivo y la evidencia del modo efectivo en la tarjeta de Mission Control", () => {
-    config([
-      "gate-promotions:",
-      "  analysis:",
-      "    mode: auto",
-      "    minimum-sample: 30",
-      "    minimum-agreement: 0.9",
-    ].join("\n"));
+    config(
+      [
+        "gate-promotions:",
+        "  analysis:",
+        "    mode: auto",
+        "    minimum-sample: 30",
+        "    minimum-agreement: 0.9",
+      ].join("\n"),
+    );
     writeFixtureTicket(lab, { id: "FEATURE-CARD-20261005", workflowStatus: "analyzed" });
     const evidence = evidenceFromCalibration(calibration(), "qa-cycles");
     appendPromotionEvidence(paths(), evidence);
 
-    expect(listGateCards(paths(), "FEATURE-CARD-20261005")?.find((card) => card.id === "analysis"))
-      .toMatchObject({ mode: "auto", modeReason: expect.stringMatching(/cumple/), promotionEvidenceId: evidence.id });
+    expect(
+      listGateCards(paths(), "FEATURE-CARD-20261005")?.find(
+        (card) => card.id === "analysis",
+      ),
+    ).toMatchObject({
+      mode: "auto",
+      modeReason: expect.stringMatching(/cumple/),
+      promotionEvidenceId: evidence.id,
+    });
   });
 
   it.each([
-    ["muestra insuficiente", calibration({ compared: 29, decided: 29, agree: 29, rate: 1 })],
+    [
+      "muestra insuficiente",
+      calibration({ compared: 29, decided: 29, agree: 29, rate: 1 }),
+    ],
     ["coincidencia baja", calibration({ agree: 26, rate: 26 / 30 })],
     ["falso aprobado crítico", calibration({ criticalFalseApproves: 1 })],
     ["gate distinto", calibration({ gate: "plan" })],
   ])("conserva hybrid ante %s", (_name, report) => {
-    config([
-      "gate-promotions:",
-      "  analysis:",
-      "    mode: auto",
-      "    minimum-sample: 30",
-      "    minimum-agreement: 0.9",
-    ].join("\n"));
+    config(
+      [
+        "gate-promotions:",
+        "  analysis:",
+        "    mode: auto",
+        "    minimum-sample: 30",
+        "    minimum-agreement: 0.9",
+      ].join("\n"),
+    );
 
     appendPromotionEvidence(paths(), evidenceFromCalibration(report, "qa-cycles"));
 

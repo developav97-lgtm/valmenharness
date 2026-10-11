@@ -22,7 +22,11 @@ import {
   type Proposition,
   type PropositionAnswer,
 } from "../packages/gate/src/index.js";
-import { appendReceipt, readReceipts, type RegistryPaths } from "../packages/engine/src/index.js";
+import {
+  appendReceipt,
+  readReceipts,
+  type RegistryPaths,
+} from "../packages/engine/src/index.js";
 import { buildGateState } from "../packages/engine/src/state.js";
 import { recordHumanDecision } from "../packages/server/src/gates.js";
 import {
@@ -49,7 +53,9 @@ function recibo(gate: string, valor: number): GateReceipt {
   const proposiciones: Proposition[] = [
     { id: "cubre_todos_los_criterios", kind: "noul", instructions: "cubre", weight: 3 },
   ];
-  const respuestas: PropositionAnswer[] = [{ id: "cubre_todos_los_criterios", kind: "noul", value: valor }];
+  const respuestas: PropositionAnswer[] = [
+    { id: "cubre_todos_los_criterios", kind: "noul", value: valor },
+  ];
   return buildReceipt({
     id: `GR-20261009-${ID}-${gate}-${readReceipts(PATHS(), ID).length + 1}`,
     gate,
@@ -69,7 +75,10 @@ function recibo(gate: string, valor: number): GateReceipt {
 
 /** Un evaluador falso: cada corrida deja el recibo del valor dado. */
 function deps(valor = 0.99): {
-  runGate: (g: string, t: string) => Promise<{ stdout: string; stderr: string; exitCode: number }>;
+  runGate: (
+    g: string,
+    t: string,
+  ) => Promise<{ stdout: string; stderr: string; exitCode: number }>;
   decide: typeof recordHumanDecision;
   corridas: string[];
 } {
@@ -98,17 +107,29 @@ function escribir(estado: string, extra: { type?: string; criterios?: string } =
     workflowStatus: estado,
     type: extra.type ?? "IMPROVEMENT",
     module: "CLI",
-    plan: estado === "planned" ? PLAN : PLAN.replace("pendiente", "**aprobado explícitamente por el PO** (gate de plan)"),
+    plan:
+      estado === "planned"
+        ? PLAN
+        : PLAN.replace("pendiente", "**aprobado explícitamente por el PO** (gate de plan)"),
     aprobacionRegistrada: estado !== "planned",
-    ...(estado === "awaiting_user_tests" || estado === "in_qa" ? { qaStatus: "pending" } : {}),
+    ...(estado === "awaiting_user_tests" || estado === "in_qa"
+      ? { qaStatus: "pending" }
+      : {}),
     ...(extra.criterios === undefined ? {} : { criterios: extra.criterios }),
   })
-    .replace("## Implementación\n\nPendiente.", "## Implementación\n\nSe agregó `src/a.ts` con el atajo.")
-    .replace("## Pruebas\n\nPendiente de ejecución.", "## Pruebas\n\nComando: `npx vitest run` en la raíz; resultado esperado: todo en verde.");
+    .replace(
+      "## Implementación\n\nPendiente.",
+      "## Implementación\n\nSe agregó `src/a.ts` con el atajo.",
+    )
+    .replace(
+      "## Pruebas\n\nPendiente de ejecución.",
+      "## Pruebas\n\nComando: `npx vitest run` en la raíz; resultado esperado: todo en verde.",
+    );
   writeFileSync(RUTA(), base, "utf8");
 }
 
-const A_MANO = "- [x] El atajo escribe la línea del plan\n      <!-- test: npx vitest run -->";
+const A_MANO =
+  "- [x] El atajo escribe la línea del plan\n      <!-- test: npx vitest run -->";
 
 const CIERRE = {
   id: ID,
@@ -129,7 +150,13 @@ beforeEach(() => {
   mkdirSync(join(lab, "src"), { recursive: true });
   writeFileSync(join(lab, "src", "a.ts"), "export const a = 1;\n", "utf8");
   // …y estar versionados: el motor lo comprueba con git. El repositorio es el de la raíz temporal.
-  for (const args of [["init", "-q"], ["config", "user.email", "t@example.com"], ["config", "user.name", "T"], ["add", "src/a.ts"], ["commit", "-q", "-m", "a"]]) {
+  for (const args of [
+    ["init", "-q"],
+    ["config", "user.email", "t@example.com"],
+    ["config", "user.name", "T"],
+    ["add", "src/a.ts"],
+    ["commit", "-q", "-m", "a"],
+  ]) {
     execFileSync("git", args, { cwd: lab });
   }
 });
@@ -158,10 +185,14 @@ describe("valmen approve", () => {
     expect(r.exitCode, r.stderr).toBe(0);
     expect(estadoDe()).toBe("approved");
     const ticket = leerTicket();
-    const evento = /"action": "plan-approved"[\s\S]*?"details": "((?:[^"\\]|\\.)*)"/.exec(ticket)?.[1] ?? "";
+    const evento =
+      /"action": "plan-approved"[\s\S]*?"details": "((?:[^"\\]|\\.)*)"/.exec(ticket)?.[1] ??
+      "";
     expect(evento).toContain(FRASE);
     expect(evento).toContain("cli");
-    expect(ticket).toMatch(/- Gate de plan y aprobación: \*\*aprobado explícitamente por el PO\*\*.*Apruebo el plan tal como está/);
+    expect(ticket).toMatch(
+      /- Gate de plan y aprobación: \*\*aprobado explícitamente por el PO\*\*.*Apruebo el plan tal como está/,
+    );
   });
 
   it("C5: una REVIEW sin --reason se detiene en planned y no decide nada", async () => {
@@ -173,18 +204,28 @@ describe("valmen approve", () => {
   });
 
   it("C6: una REVIEW con --reason registra la decisión humana en el recibo, con el motivo y la frase", async () => {
-    const r = await approveCommand(PATHS(), { ...FLAGS, reason: "el criterio faltante es de otro ticket" }, deps(0.72));
+    const r = await approveCommand(
+      PATHS(),
+      { ...FLAGS, reason: "el criterio faltante es de otro ticket" },
+      deps(0.72),
+    );
     expect(r.exitCode, r.stderr).toBe(0);
     expect(estadoDe()).toBe("approved");
     const decidido = readReceipts(PATHS(), ID).find((x) => x.humanDecision !== null);
     expect(decidido?.humanDecision?.decision).toBe("approve");
     expect(decidido?.humanDecision?.actor).toBe("Juan");
-    expect(decidido?.humanDecision?.reason).toContain("el criterio faltante es de otro ticket");
+    expect(decidido?.humanDecision?.reason).toContain(
+      "el criterio faltante es de otro ticket",
+    );
     expect(decidido?.humanDecision?.reason).toContain(FRASE);
   });
 
   it("C7: un BLOCK se detiene en planned y nombra el recibo, ni con --reason", async () => {
-    const r = await approveCommand(PATHS(), { ...FLAGS, reason: "ya está bien" }, deps(0.02));
+    const r = await approveCommand(
+      PATHS(),
+      { ...FLAGS, reason: "ya está bien" },
+      deps(0.02),
+    );
     expect(r.exitCode).toBe(3);
     expect(r.stderr).toContain("BLOCK");
     expect(r.stderr).toContain("plan");
@@ -221,7 +262,8 @@ describe("valmen approve", () => {
 
 describe("valmen close", () => {
   // El commit lo resuelve el motor contra el repositorio de la raíz temporal: es su HEAD real.
-  const HEAD = (): string => execFileSync("git", ["rev-parse", "HEAD"], { cwd: lab, encoding: "utf8" }).trim();
+  const HEAD = (): string =>
+    execFileSync("git", ["rev-parse", "HEAD"], { cwd: lab, encoding: "utf8" }).trim();
   const head = { head: () => HEAD() };
 
   beforeEach(() => escribir("awaiting_user_tests", { criterios: A_MANO }));
@@ -320,7 +362,10 @@ describe("valmen close", () => {
             {
               id: "msg_1",
               uso: { input: 10, creacion: 1000, lectura: 50_000, salida: 400 },
-              bloques: [textoDeClaude("Lo muevo."), llamada("t1", "mcp__valmen__mover_ticket", { id: ID, to: "analyzed" })],
+              bloques: [
+                textoDeClaude("Lo muevo."),
+                llamada("t1", "mcp__valmen__mover_ticket", { id: ID, to: "analyzed" }),
+              ],
             },
             { cwd: lab },
           ),
@@ -346,7 +391,14 @@ describe("valmen close", () => {
     });
     expect(primera.exitCode).toBe(3);
     // La evidencia del intento fallido tiene árbol: se reemplaza por una sin referencia.
-    writeFileSync(RUTA(), leerTicket().replace(/"reference": "worktree:sha256:[0-9a-f]{64}"/, '"reference": null'), "utf8");
+    writeFileSync(
+      RUTA(),
+      leerTicket().replace(
+        /"reference": "worktree:sha256:[0-9a-f]{64}"/,
+        '"reference": null',
+      ),
+      "utf8",
+    );
     expect(leerTicket()).not.toContain("worktree:sha256:");
     const r = closeCommand(PATHS(), CIERRE, head);
     expect(r.exitCode, r.stderr).toBe(0);

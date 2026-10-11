@@ -25,38 +25,86 @@ afterEach(() => {
 });
 
 function esperarTurnos(turnos = 10) {
-  return Promise.all(Array.from({ length: turnos }, () => new Promise<void>((resolve) => setImmediate(resolve))));
+  return Promise.all(
+    Array.from(
+      { length: turnos },
+      () => new Promise<void>((resolve) => setImmediate(resolve)),
+    ),
+  );
 }
 
 function textoDe(nodo: Nodo | undefined): string {
   if (nodo === undefined) return "";
-  return [nodo._texto ?? "", ...nodo.children.map(textoDe)].filter((p) => p !== "").join(" | ");
+  return [nodo._texto ?? "", ...nodo.children.map(textoDe)]
+    .filter((p) => p !== "")
+    .join(" | ");
 }
 
 function buscar(nodo: Nodo | undefined, prueba: (n: Nodo) => boolean): Nodo[] {
   if (nodo === undefined) return [];
-  return [...(prueba(nodo) ? [nodo] : []), ...nodo.children.flatMap((hijo) => buscar(hijo, prueba))];
+  return [
+    ...(prueba(nodo) ? [nodo] : []),
+    ...nodo.children.flatMap((hijo) => buscar(hijo, prueba)),
+  ];
 }
 
 const AHORA = new Date().toISOString();
 
-function agente(id: string, ticket: string | null, estado: string, extra: Record<string, unknown> = {}) {
+function agente(
+  id: string,
+  ticket: string | null,
+  estado: string,
+  extra: Record<string, unknown> = {},
+) {
   return {
-    agente: id, ticket, descripcion: `Trabajo de ${ticket}`, modelo: "claude-sonnet-5-5", esfuerzo: "high",
-    rama: null, carpeta: null, ultimaHerramienta: "Edit", ultimaHerramientaEn: AHORA, estado,
-    ticketEstado: null, faseConfirmada: null, faseInferida: "implementando", ...extra,
+    agente: id,
+    ticket,
+    descripcion: `Trabajo de ${ticket}`,
+    modelo: "claude-sonnet-5-5",
+    esfuerzo: "high",
+    rama: null,
+    carpeta: null,
+    ultimaHerramienta: "Edit",
+    ultimaHerramientaEn: AHORA,
+    estado,
+    ticketEstado: null,
+    faseConfirmada: null,
+    faseInferida: "implementando",
+    ...extra,
   };
 }
 
-function fila(ticketId: string, order: number, dependsOn: string[] = [], phase = "waiting") {
+function fila(
+  ticketId: string,
+  order: number,
+  dependsOn: string[] = [],
+  phase = "waiting",
+) {
   return {
-    order, ticketId, actualAt: null, scheduledAt: null, condition: "manual", activity: "unknown",
-    phase, stopReason: null, durationMs: null, waitingFor: [], dependsOn, window: null, lastReceivedAt: null,
+    order,
+    ticketId,
+    actualAt: null,
+    scheduledAt: null,
+    condition: "manual",
+    activity: "unknown",
+    phase,
+    stopReason: null,
+    durationMs: null,
+    waitingFor: [],
+    dependsOn,
+    window: null,
+    lastReceivedAt: null,
   };
 }
 
 function registro(id: string, workflowStatus: string) {
-  return { id, title: id, workflowStatus, qaStatus: "pending", releaseStatus: "unreleased" };
+  return {
+    id,
+    title: id,
+    workflowStatus,
+    qaStatus: "pending",
+    releaseStatus: "unreleased",
+  };
 }
 
 const AGENTES = {
@@ -68,23 +116,31 @@ const AGENTES = {
 };
 const JORNADAS = {
   authorization: { observationSources: [], dispatchExecutors: [] },
-  journeys: [{
-    journeyId: "JOR-1", revisionId: "rev-01", receivedAt: "2026-10-08T08:00:00.000Z",
-    passes: { last: null, cadenceMs: null, next: null },
-    tickets: [
-      fila("FEATURE-UNO-20261008", 1), fila("FEATURE-DOS-20261008", 2),
-      fila("FEATURE-TRES-20261008", 3, ["FEATURE-UNO-20261008"]),
-      fila("FEATURE-CUATRO-20261008", 4, ["FEATURE-TRES-20261008"]),
-      fila("FEATURE-CINCO-20261008", 5),
-      fila("FEATURE-FIN-20261008", 6, [], "delivered"),
-    ],
-  }],
+  journeys: [
+    {
+      journeyId: "JOR-1",
+      revisionId: "rev-01",
+      receivedAt: "2026-10-08T08:00:00.000Z",
+      passes: { last: null, cadenceMs: null, next: null },
+      tickets: [
+        fila("FEATURE-UNO-20261008", 1),
+        fila("FEATURE-DOS-20261008", 2),
+        fila("FEATURE-TRES-20261008", 3, ["FEATURE-UNO-20261008"]),
+        fila("FEATURE-CUATRO-20261008", 4, ["FEATURE-TRES-20261008"]),
+        fila("FEATURE-CINCO-20261008", 5),
+        fila("FEATURE-FIN-20261008", 6, [], "delivered"),
+      ],
+    },
+  ],
 };
 const TICKETS = {
   tickets: [
-    registro("FEATURE-UNO-20261008", "in_progress"), registro("FEATURE-DOS-20261008", "in_progress"),
-    registro("FEATURE-TRES-20261008", "approved"), registro("FEATURE-CUATRO-20261008", "planned"),
-    registro("FEATURE-CINCO-20261008", "approved"), registro("FEATURE-FIN-20261008", "awaiting_user_tests"),
+    registro("FEATURE-UNO-20261008", "in_progress"),
+    registro("FEATURE-DOS-20261008", "in_progress"),
+    registro("FEATURE-TRES-20261008", "approved"),
+    registro("FEATURE-CUATRO-20261008", "planned"),
+    registro("FEATURE-CINCO-20261008", "approved"),
+    registro("FEATURE-FIN-20261008", "awaiting_user_tests"),
     registro("FEATURE-LISTO-20261008", "closed"),
   ],
 };
@@ -105,7 +161,8 @@ async function abrir(o: Opciones = {}, llamadas: { metodo: string; ruta: string 
       llamadas.push({ metodo: init?.method ?? "GET", ruta });
       const url = new URL(ruta, "http://localhost");
       if (url.pathname === "/api/health") return { root: RAIZ };
-      if (url.pathname === "/api/portafolio") return { projects: [{ projectId: PROYECTO, name: "Harness", available: true }] };
+      if (url.pathname === "/api/portafolio")
+        return { projects: [{ projectId: PROYECTO, name: "Harness", available: true }] };
       if (url.pathname === "/api/corrida/agentes") {
         const valor = o.agentes ?? AGENTES;
         if (valor instanceof Error) throw valor;
@@ -149,7 +206,10 @@ describe("la vista Agentes", () => {
         respuesta: (ruta: string) => {
           const url = new URL(ruta, "http://localhost");
           if (url.pathname === "/api/health") return { root: RAIZ };
-          if (url.pathname === "/api/portafolio") return { projects: [{ projectId: PROYECTO, name: "Harness", available: true }] };
+          if (url.pathname === "/api/portafolio")
+            return {
+              projects: [{ projectId: PROYECTO, name: "Harness", available: true }],
+            };
           if (url.pathname === "/api/corrida/agentes") return AGENTES;
           if (url.pathname === "/api/journeys") return JORNADAS;
           if (url.pathname === "/api/tickets") return TICKETS;
@@ -157,7 +217,10 @@ describe("la vista Agentes", () => {
         },
       });
       const g = globalThis as typeof globalThis & {
-        __enlaces: { dataset: { vista: string }; getAttribute: (k: string) => string | null }[];
+        __enlaces: {
+          dataset: { vista: string };
+          getAttribute: (k: string) => string | null;
+        }[];
         document: { getElementById: (id: string) => Nodo };
       };
       const h2 = buscar(contenido as Nodo, (n) => n.tagName === "H2").map(textoDe);
@@ -181,7 +244,9 @@ describe("la vista Agentes", () => {
   it("muestra los seis KPI con su rótulo y su valor (C5, C6)", async () => {
     const { contenido } = await abrir();
     const tarjetas = buscar(contenido as Nodo, (n) => n.className === "tarjeta");
-    const kpi = Object.fromEntries(tarjetas.map((t) => [t.children[1]!._texto, t.children[0]!._texto]));
+    const kpi = Object.fromEntries(
+      tarjetas.map((t) => [t.children[1]!._texto, t.children[0]!._texto]),
+    );
     expect(kpi).toEqual({
       entregados: "1",
       cerrados: "0",
@@ -194,8 +259,10 @@ describe("la vista Agentes", () => {
 
   it("una fila por agente vivo, sin el que terminó (C7, C8)", async () => {
     const { contenido } = await abrir();
-    const filas = buscar(contenido as Nodo, (n) => n.tagName === "TR" && n.children.some((c) => c.tagName === "TD"))
-      .filter((tr) => textoDe(tr).includes("claude-sonnet-5-5"));
+    const filas = buscar(
+      contenido as Nodo,
+      (n) => n.tagName === "TR" && n.children.some((c) => c.tagName === "TD"),
+    ).filter((tr) => textoDe(tr).includes("claude-sonnet-5-5"));
     expect(filas).toHaveLength(2);
     const primera = textoDe(filas[0]);
     expect(primera).toContain("FEATURE-UNO-20261008");
@@ -208,7 +275,10 @@ describe("la vista Agentes", () => {
 
   it("la fase inferida se rotula y la confirmada no (C9)", async () => {
     const { contenido } = await abrir();
-    const filas = buscar(contenido as Nodo, (n) => n.tagName === "TR" && textoDe(n).includes("claude-sonnet-5-5"));
+    const filas = buscar(
+      contenido as Nodo,
+      (n) => n.tagName === "TR" && textoDe(n).includes("claude-sonnet-5-5"),
+    );
     expect(textoDe(filas[0])).toContain("implementing");
     expect(textoDe(filas[0])).not.toContain("inferida");
     expect(textoDe(filas[1])).toContain("implementando | inferida");
@@ -216,7 +286,9 @@ describe("la vista Agentes", () => {
 
   it("la cola se agrupa por ola y dice a qué espera cada ticket (C10, C20: sin el módulo de escena)", async () => {
     const { contenido } = await abrir();
-    const olas = buscar(contenido as Nodo, (n) => n.className === "corrida-ola").map(textoDe);
+    const olas = buscar(contenido as Nodo, (n) => n.className === "corrida-ola").map(
+      textoDe,
+    );
     expect(olas).toHaveLength(3);
     expect(olas[0]).toContain("Ola 1");
     expect(olas[0]).toContain("FEATURE-CINCO-20261008");
@@ -235,8 +307,13 @@ describe("la vista Agentes", () => {
   });
 
   it("SP-C9: la fila de la sesión principal no cuenta entre los agentes vivos", async () => {
-    const principal = agente("sesion-principal", null, "trabajando", { principal: true, descripcion: null });
-    const { contenido } = await abrir({ agentes: { agentes: [principal, ...AGENTES.agentes] } });
+    const principal = agente("sesion-principal", null, "trabajando", {
+      principal: true,
+      descripcion: null,
+    });
+    const { contenido } = await abrir({
+      agentes: { agentes: [principal, ...AGENTES.agentes] },
+    });
     const texto = textoDe(contenido as Nodo);
     expect(texto).toContain("2 de 3 agentes");
     expect(texto).not.toContain("3 de 3 agentes");
@@ -258,17 +335,25 @@ describe("la vista Agentes", () => {
   });
 
   it("respeta la preferencia guardada (C12)", async () => {
-    const { contenido } = await abrir({ localStorage: { "valmen.corrida.simultaneos": "6" } });
+    const { contenido } = await abrir({
+      localStorage: { "valmen.corrida.simultaneos": "6" },
+    });
     expect(textoDe(contenido as Nodo)).toContain("2 de 6 agentes");
   });
 
   it("una descripción con marcado HTML se pinta como texto (C15)", async () => {
     const marcado = '<img src=x onerror="alert(1)"><b>negrita</b>';
     const { contenido } = await abrir({
-      agentes: { agentes: [agente("a1", "FEATURE-UNO-20261008", "trabajando", { descripcion: marcado })] },
+      agentes: {
+        agentes: [
+          agente("a1", "FEATURE-UNO-20261008", "trabajando", { descripcion: marcado }),
+        ],
+      },
     });
     expect(textoDe(contenido as Nodo)).toContain(marcado);
-    expect(buscar(contenido as Nodo, (n) => n.tagName === "IMG" || n.tagName === "B")).toEqual([]);
+    expect(
+      buscar(contenido as Nodo, (n) => n.tagName === "IMG" || n.tagName === "B"),
+    ).toEqual([]);
   });
 
   it("si falla /api/corrida/agentes, pinta cola y entregados con un aviso (C16)", async () => {
@@ -291,7 +376,8 @@ describe("la vista Agentes", () => {
       respuesta: (ruta: string) => {
         const url = new URL(ruta, "http://localhost");
         if (url.pathname === "/api/health") return { root: RAIZ };
-        if (url.pathname === "/api/portafolio") return { projects: [{ projectId: PROYECTO, name: "Harness", available: true }] };
+        if (url.pathname === "/api/portafolio")
+          return { projects: [{ projectId: PROYECTO, name: "Harness", available: true }] };
         if (url.pathname === "/api/corrida/agentes") return pendiente;
         if (url.pathname === "/api/journeys") return JORNADAS;
         if (url.pathname === "/api/tickets") return { tickets: [], summary: {} };
@@ -313,7 +399,10 @@ describe("la vista Agentes", () => {
   it("sin jornada ni agentes dice que no hay corrida (C18)", async () => {
     const { contenido } = await abrir({
       agentes: { agentes: [] },
-      jornadas: { authorization: { observationSources: [], dispatchExecutors: [] }, journeys: [] },
+      jornadas: {
+        authorization: { observationSources: [], dispatchExecutors: [] },
+        journeys: [],
+      },
       tickets: { tickets: [] },
     });
     const texto = textoDe(contenido as Nodo);
@@ -327,7 +416,10 @@ describe("la vista Agentes", () => {
     const html = join(dir, "index.html");
     writeFileSync(
       html,
-      readFileSync(HTML, "utf8").replace('<script type="module">', '<script type="module">\n          document.visibilityState = "visible"; document.activeElement = null;\n'),
+      readFileSync(HTML, "utf8").replace(
+        '<script type="module">',
+        '<script type="module">\n          document.visibilityState = "visible"; document.activeElement = null;\n',
+      ),
     );
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const llamadas: string[] = [];
@@ -338,7 +430,8 @@ describe("la vista Agentes", () => {
         llamadas.push(ruta);
         const url = new URL(ruta, "http://localhost");
         if (url.pathname === "/api/health") return { root: RAIZ };
-        if (url.pathname === "/api/portafolio") return { projects: [{ projectId: PROYECTO, name: "Harness", available: true }] };
+        if (url.pathname === "/api/portafolio")
+          return { projects: [{ projectId: PROYECTO, name: "Harness", available: true }] };
         if (url.pathname === "/api/corrida/agentes") return AGENTES;
         if (url.pathname === "/api/journeys") return JORNADAS;
         if (url.pathname === "/api/tickets") return TICKETS;

@@ -73,7 +73,13 @@ function pintar(timeline: unknown) {
       const url = new URL(ruta, "http://localhost");
       if (url.pathname === "/api/timeline") return timeline;
       if (url.pathname === "/api/ticket/fases") {
-        return { ticket: ID, fases: [], timeline: { disponible: false }, sesionesPorFase: [], kanban: null };
+        return {
+          ticket: ID,
+          fases: [],
+          timeline: { disponible: false },
+          sesionesPorFase: [],
+          kanban: null,
+        };
       }
       if (url.pathname === `/api/tickets/${ID}/gates`) {
         return { gates: [], decisions: [], corrections: [], transitions: null };
@@ -178,7 +184,9 @@ describe("la línea de tiempo del ticket con sesiones de Claude Code", () => {
 
     expect(vista.fallos).toEqual([]);
     expect(vista.texto).toContain("36 intervención(es) sobre el registro");
-    expect(vista.texto).toContain("Las sesiones de Claude Code hicieron 36 llamada(s) al registro");
+    expect(vista.texto).toContain(
+      "Las sesiones de Claude Code hicieron 36 llamada(s) al registro",
+    );
     expect(vista.texto).not.toContain("Ninguna de esas sesiones llamó");
     expect(vista.texto).toContain("suscripción");
   });

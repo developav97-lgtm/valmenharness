@@ -11,3 +11,14 @@ docs/
 packages/server/web/
 package-lock.json
 *.md
+
+# Registros append-only y contenido que las pruebas miden o fijan al byte: reformatearlos
+# rompería la auditoría (receipts, qa, memory), el tope de 6 500 B de las skills o las frases
+# que fijan las pruebas, y los activos de una feature son su fuente de verdad. `tickets/`,
+# `tests/fixtures/` y `docs/` ya estaban arriba por el mismo motivo.
+.valmen/receipts/
+.valmen/qa/
+.valmen/features/
+.valmen/memory/
+.valmen/skills/
+skills/

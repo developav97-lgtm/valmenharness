@@ -134,7 +134,8 @@ export function hasSubstantivePlan(planSection: string): boolean {
  * análisis») y el encabezado «aprobación del PO». Se reconocen por el inicio de
  * la línea: un paso que cita `packages/gate/...` no es una cabecera.
  */
-const ENCABEZADO_DE_COMPUERTA_RE = /^(?:gate de (?:plan|an[aá]lisis)\b|gate no exigible\b|aprobaci[oó]n del po\b)/;
+const ENCABEZADO_DE_COMPUERTA_RE =
+  /^(?:gate de (?:plan|an[aá]lisis)\b|gate no exigible\b|aprobaci[oó]n del po\b)/;
 
 /**
  * `true` si el plan es proporcional y estructurado: al menos dos pasos reales
@@ -254,7 +255,9 @@ export function isCriticalPlanGate(ticket: ParsedTicket): boolean {
 
 /** `true` si la última aprobación de plan del bloque `Eventos` es de fuente `autorizacion` o `revisor` y cita su id. */
 function hasAuthorizationPlanApproval(ticket: ParsedTicket): boolean {
-  const approvals = (ticket.blocks.Eventos ?? []).filter((event) => event["action"] === "plan-approved");
+  const approvals = (ticket.blocks.Eventos ?? []).filter(
+    (event) => event["action"] === "plan-approved",
+  );
   const last = approvals[approvals.length - 1];
   if (last === undefined) return false;
   try {
@@ -295,7 +298,11 @@ export function hasPlanGate(ticket: ParsedTicket): boolean {
   // La aprobación atribuida a una autorización (R-APRO-002) también cumple el gate, incluso en un
   // tipo crítico, pero nunca en SECURITY. Aquí solo se mira su forma; `transition` la re-verifica
   // contra el registro de autorizaciones y de cupos antes de entrar a `approved`.
-  if (ticket.fields.type.toUpperCase() !== "SECURITY" && hasAuthorizationPlanApproval(ticket)) return true;
+  if (
+    ticket.fields.type.toUpperCase() !== "SECURITY" &&
+    hasAuthorizationPlanApproval(ticket)
+  )
+    return true;
 
   if (isCriticalPlanGate(ticket)) return false;
 

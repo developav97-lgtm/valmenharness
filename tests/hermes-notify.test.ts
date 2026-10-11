@@ -598,14 +598,37 @@ describe("el parte", () => {
     writeFixtureTicket(raiz, { id: TICKET, workflowStatus: "planned" });
     const OTRO = "BUGFIX-POS-FILTRO-OTRO-20260921";
     writeFixtureTicket(raiz, { id: OTRO, workflowStatus: "planned" });
-    appendEvent(paths, TICKET, "plan-approved", JSON.stringify({ actor: "autorización APA-1", source: "autorizacion", authorizationId: "APA-1", authorizationHash: "sha256:x", stage: "plan", receiptId: "GR-1" }), () => AHORA);
-    appendEvent(paths, OTRO, "plan-approved", JSON.stringify({ actor: "Juan", source: "cli", quote: "apruebo" }), () => AHORA);
+    appendEvent(
+      paths,
+      TICKET,
+      "plan-approved",
+      JSON.stringify({
+        actor: "autorización APA-1",
+        source: "autorizacion",
+        authorizationId: "APA-1",
+        authorizationHash: "sha256:x",
+        stage: "plan",
+        receiptId: "GR-1",
+      }),
+      () => AHORA,
+    );
+    appendEvent(
+      paths,
+      OTRO,
+      "plan-approved",
+      JSON.stringify({ actor: "Juan", source: "cli", quote: "apruebo" }),
+      () => AHORA,
+    );
     const parte = armar();
     expect(parte.aprobaciones?.humanas).toBe(1);
-    expect(parte.aprobaciones?.automaticas).toEqual([{ ticket: TICKET, etapa: "plan", autorizacion: "APA-1" }]);
+    expect(parte.aprobaciones?.automaticas).toEqual([
+      { ticket: TICKET, etapa: "plan", autorizacion: "APA-1" },
+    ]);
     expect(renderBrief(parte).body).toContain("1 aprobación(es) automática(s) hoy");
     // Sin aprobaciones en el día no hay campo.
-    expect(armar({ now: new Date("2026-09-24T12:00:00.000Z") }).aprobaciones).toBeUndefined();
+    expect(
+      armar({ now: new Date("2026-09-24T12:00:00.000Z") }).aprobaciones,
+    ).toBeUndefined();
   });
 
   it("lleva el código cuando ya se avisó", () => {

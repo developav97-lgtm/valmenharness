@@ -39,7 +39,10 @@ interface Llamada {
 /** Un contexto de lienzo que acepta cualquier llamada y la registra. */
 function contextoFalso(ancho = 960) {
   const llamadas: Llamada[] = [];
-  const estado: Record<string, unknown> = { canvas: { width: ancho, height: ancho / 2 }, fillStyle: "" };
+  const estado: Record<string, unknown> = {
+    canvas: { width: ancho, height: ancho / 2 },
+    fillStyle: "",
+  };
   const ctx = new Proxy(estado, {
     get(destino, propiedad: string) {
       if (propiedad in destino) return destino[propiedad];
@@ -71,8 +74,17 @@ function agente(extra: Record<string, unknown> = {}) {
   };
 }
 
-const conPregunta = (estacion: number, pregunta: unknown, extra: Record<string, unknown> = {}) =>
-  agente({ estado: "esperando", estacion, fila: { agente: "a1", ticket: "FEATURE-WEB-MUNDO-CONTROL-20261008", pregunta }, ...extra });
+const conPregunta = (
+  estacion: number,
+  pregunta: unknown,
+  extra: Record<string, unknown> = {},
+) =>
+  agente({
+    estado: "esperando",
+    estacion,
+    fila: { agente: "a1", ticket: "FEATURE-WEB-MUNDO-CONTROL-20261008", pregunta },
+    ...extra,
+  });
 
 describe("el mundo centro de control", () => {
   it("C1: validarMundo no reporta errores", () => {
@@ -81,20 +93,32 @@ describe("el mundo centro de control", () => {
 
   it("C2: la miniatura con una escena vacía y sin cola no lanza", () => {
     const { ctx } = contextoFalso(160);
-    expect(() => mundo.dibujar({ ctx, escena: { agentes: new Map(), t: 0 }, miniatura: true }, 0)).not.toThrow();
+    expect(() =>
+      mundo.dibujar({ ctx, escena: { agentes: new Map(), t: 0 }, miniatura: true }, 0),
+    ).not.toThrow();
   });
 
   it("C3: la miniatura entre dos cuadros no cambia la x guardada del punto de un operador", () => {
-    const op = agente({ id: "m1", estacion: 2, fila: { agente: "m1", ticket: "T-9", pregunta: null } });
+    const op = agente({
+      id: "m1",
+      estacion: 2,
+      fila: { agente: "m1", ticket: "T-9", pregunta: null },
+    });
     const agentes = new Map([["m1", op]]);
     const completo = contextoFalso();
     mundo.dibujar({ ctx: completo.ctx, escena: { agentes, t: 0 }, miniatura: false }, 0);
     op.estacion = 3;
-    mundo.dibujar({ ctx: completo.ctx, escena: { agentes, t: 0.25 }, miniatura: false }, 0.25);
+    mundo.dibujar(
+      { ctx: completo.ctx, escena: { agentes, t: 0.25 }, miniatura: false },
+      0.25,
+    );
     const antes = memoriaDePuntos.puntos.get("m1")!.x;
     expect(antes).toBe(340);
     const pequena = contextoFalso(160);
-    mundo.dibujar({ ctx: pequena.ctx, escena: { agentes, t: 0.25 }, miniatura: true }, 0.25);
+    mundo.dibujar(
+      { ctx: pequena.ctx, escena: { agentes, t: 0.25 }, miniatura: true },
+      0.25,
+    );
     mundo.dibujar({ ctx: pequena.ctx, escena: { agentes, t: 5 }, miniatura: true }, 5);
     expect(memoriaDePuntos.puntos.get("m1")!.x).toBe(antes);
   });
@@ -104,7 +128,11 @@ describe("el mundo centro de control", () => {
   });
 
   it("C5: el director está sentado, de camisa azul y con gafas", () => {
-    expect(aparienciaDelDirector()).toEqual({ sentado: true, camisa: "#1e2c55", sombrero: "gafas" });
+    expect(aparienciaDelDirector()).toEqual({
+      sentado: true,
+      camisa: "#1e2c55",
+      sombrero: "gafas",
+    });
   });
 
   it("C6: la consola depende solo del carril: x = 130 + 175 * (carril % 5), y = 420", () => {
@@ -116,7 +144,16 @@ describe("el mundo centro de control", () => {
   });
 
   it("C7: las estaciones son las ocho de la sala", () => {
-    expect(mundo.estaciones).toEqual(["Ingreso", "Análisis", "Plan", "Autorización", "Ejecución", "Pruebas", "QA", "Cierre"]);
+    expect(mundo.estaciones).toEqual([
+      "Ingreso",
+      "Análisis",
+      "Plan",
+      "Autorización",
+      "Ejecución",
+      "Pruebas",
+      "QA",
+      "Cierre",
+    ]);
   });
 
   it("C8: la x de cada pantalla es 78 + 116 * i", () => {
@@ -132,7 +169,14 @@ describe("el mundo centro de control", () => {
   });
 
   it("C11: cinco operadores en la estación 2 son tres tickets en su pantalla", () => {
-    const cinco = [0, 1, 2, 3, 4].map((n) => agente({ id: `o${n}`, carril: n, estacion: 2, fila: { agente: `o${n}`, ticket: `T-${n}`, pregunta: null } }));
+    const cinco = [0, 1, 2, 3, 4].map((n) =>
+      agente({
+        id: `o${n}`,
+        carril: n,
+        estacion: 2,
+        fila: { agente: `o${n}`, ticket: `T-${n}`, pregunta: null },
+      }),
+    );
     expect(ticketsEnPantalla(cinco, [], 2)).toHaveLength(3);
   });
 
@@ -142,31 +186,63 @@ describe("el mundo centro de control", () => {
 
   it("C13: dibujar sin miniatura escribe «REQUIERE PERSONA» exactamente dos veces", () => {
     const { ctx, llamadas } = contextoFalso();
-    mundo.dibujar({ ctx, escena: { agentes: new Map([["a1", agente()]]), t: 0 }, miniatura: false, cola: [], entregados: [] }, 0);
-    expect(llamadas.filter((l) => l.metodo === "fillText" && l.args[0] === "REQUIERE PERSONA")).toHaveLength(2);
+    mundo.dibujar(
+      {
+        ctx,
+        escena: { agentes: new Map([["a1", agente()]]), t: 0 },
+        miniatura: false,
+        cola: [],
+        entregados: [],
+      },
+      0,
+    );
+    expect(
+      llamadas.filter((l) => l.metodo === "fillText" && l.args[0] === "REQUIERE PERSONA"),
+    ).toHaveLength(2);
   });
 
   it("C14: el monitor de un operador esperando en t = 0 es ámbar con «ESPERA»", () => {
-    expect(monitorDe(agente({ estado: "esperando" }), 0)).toEqual({ color: "#f2a52a", rotulo: "ESPERA" });
+    expect(monitorDe(agente({ estado: "esperando" }), 0)).toEqual({
+      color: "#f2a52a",
+      rotulo: "ESPERA",
+    });
   });
 
   it("C15: el monitor de un operador que terminó es azul con «CERRADA»", () => {
-    expect(monitorDe(agente({ estado: "termino" }), 0)).toEqual({ color: "#5b8dff", rotulo: "CERRADA" });
+    expect(monitorDe(agente({ estado: "termino" }), 0)).toEqual({
+      color: "#5b8dff",
+      rotulo: "CERRADA",
+    });
   });
 
   it("C16: el monitor de un operador trabajando lleva el color de su carril y el primer segmento del ticket", () => {
-    const a = agente({ carril: 0, fila: { agente: "a1", ticket: "FEATURE-WEB-X-1", pregunta: null } });
+    const a = agente({
+      carril: 0,
+      fila: { agente: "a1", ticket: "FEATURE-WEB-X-1", pregunta: null },
+    });
     expect(monitorDe(a, 0)).toEqual({ color: "#2f9e6b77", rotulo: "FEATURE" });
   });
 
   it("C17: con dos operadores trabajando y sin pregunta la franja cuenta dos misiones activas", () => {
-    const dos = [agente(), agente({ id: "a2", carril: 1, fila: { agente: "a2", ticket: "T-2", pregunta: null } })];
-    expect(franja(dos)).toEqual({ alerta: false, texto: "TURNO DE NOCHE · 2 MISIONES ACTIVAS" });
+    const dos = [
+      agente(),
+      agente({
+        id: "a2",
+        carril: 1,
+        fila: { agente: "a2", ticket: "T-2", pregunta: null },
+      }),
+    ];
+    expect(franja(dos)).toEqual({
+      alerta: false,
+      texto: "TURNO DE NOCHE · 2 MISIONES ACTIVAS",
+    });
   });
 
   it("C18: con una pregunta abierta en la estación 3 la franja espera al PO y pregunta por el plan", () => {
     const a = conPregunta(3, { desde: hace(10), respondidaEn: null });
-    expect(franja([a]).texto).toBe("ESPERANDO AL PO · LÍNEA 1 · FEATURE-WEB · ¿Apruebo el plan?");
+    expect(franja([a]).texto).toBe(
+      "ESPERANDO AL PO · LÍNEA 1 · FEATURE-WEB · ¿Apruebo el plan?",
+    );
     expect(franja([a]).alerta).toBe(true);
   });
 
@@ -197,7 +273,11 @@ describe("el mundo centro de control", () => {
 
   const escenaDePunto = () => {
     const memoria = crearMemoria();
-    const op = agente({ id: "p1", estacion: 2, fila: { agente: "p1", ticket: "T-1", pregunta: null } });
+    const op = agente({
+      id: "p1",
+      estacion: 2,
+      fila: { agente: "p1", ticket: "T-1", pregunta: null },
+    });
     avanzarPuntos(memoria, [op], 0);
     return { memoria, op };
   };
@@ -228,7 +308,9 @@ describe("el mundo centro de control", () => {
     const { ctx, llamadas } = contextoFalso();
     const a = { moviendo: false, paso: 0, carril: 0 };
     dibujarPersonaje(ctx, a, 130, 420, aparienciaDelOperador(a));
-    const cajas = llamadas.filter((l) => l.metodo === "fillRect").map((l) => l.args as number[]);
+    const cajas = llamadas
+      .filter((l) => l.metodo === "fillRect")
+      .map((l) => l.args as number[]);
     const izquierda = Math.min(...cajas.map(([x]) => x!));
     const derecha = Math.max(...cajas.map(([x, , w]) => x! + w!));
     const arriba = Math.min(...cajas.map(([, y]) => y!));
@@ -240,12 +322,19 @@ describe("el mundo centro de control", () => {
   });
 
   it("C28: el operador que camina va de pie y con auricular", () => {
-    expect(aparienciaDelOperador({ moviendo: true })).toEqual({ sentado: false, sombrero: "auricular" });
+    expect(aparienciaDelOperador({ moviendo: true })).toEqual({
+      sentado: false,
+      sombrero: "auricular",
+    });
     expect(aparienciaDelOperador({ moviendo: false }).sentado).toBe(true);
   });
 
   it("C29: los paneles se llaman Telemetría, Misiones en espera y Misiones cerradas", () => {
-    expect(mundo.paneles).toEqual({ agentes: "Telemetría", cola: "Misiones en espera", entregados: "Misiones cerradas" });
+    expect(mundo.paneles).toEqual({
+      agentes: "Telemetría",
+      cola: "Misiones en espera",
+      entregados: "Misiones cerradas",
+    });
   });
 
   it("C30: toda línea de control.js con un color lleva valmen:allow-color", () => {
@@ -264,26 +353,63 @@ describe("el mundo centro de control", () => {
     const hasta = html.indexOf("/* Pizarra de la pastelería", desde);
     expect(desde).toBeGreaterThan(0);
     expect(hasta).toBeGreaterThan(desde);
-    const colores = html.slice(desde, hasta).split("\n").filter((l) => /#[0-9a-fA-F]{3,8}\b/.test(l));
+    const colores = html
+      .slice(desde, hasta)
+      .split("\n")
+      .filter((l) => /#[0-9a-fA-F]{3,8}\b/.test(l));
     expect(colores.length).toBeGreaterThan(0);
     for (const linea of colores) {
       expect(linea).toContain("valmen:allow-color");
-      expect(linea.split("valmen:allow-color")[1]!.toLowerCase()).toContain("centro de control");
+      expect(linea.split("valmen:allow-color")[1]!.toLowerCase()).toContain(
+        "centro de control",
+      );
     }
   });
 
   it("dibuja una escena con director, operadores, pregunta, cola y entregados sin lanzar", () => {
     const { ctx, llamadas } = contextoFalso();
     const agentes = new Map([
-      ["p", agente({ id: "p", x: 480, y: 282, principal: true, estado: "principal", fila: { agente: "p", ticket: null, pregunta: null } })],
+      [
+        "p",
+        agente({
+          id: "p",
+          x: 480,
+          y: 282,
+          principal: true,
+          estado: "principal",
+          fila: { agente: "p", ticket: null, pregunta: null },
+        }),
+      ],
       ["a", agente({ id: "a", estacion: 4 })],
-      ["b", conPregunta(3, { desde: hace(5), respondidaEn: null }, { id: "b", carril: 1, x: 305 })],
+      [
+        "b",
+        conPregunta(
+          3,
+          { desde: hace(5), respondidaEn: null },
+          { id: "b", carril: 1, x: 305 },
+        ),
+      ],
       ["c", agente({ id: "c", carril: 2, moviendo: true, paso: 1, estacion: 6, x: 400 })],
       ["d", agente({ id: "d", carril: 3, estado: "termino", estacion: 7 })],
     ]);
     expect(() =>
-      mundo.dibujar({ ctx, escena: { agentes, t: 1 }, miniatura: false, cola: ["T-3", "T-4"], entregados: ["T-5"], ahoraMs: AHORA, ventanaRespuestaMs: 60000 }, 1),
+      mundo.dibujar(
+        {
+          ctx,
+          escena: { agentes, t: 1 },
+          miniatura: false,
+          cola: ["T-3", "T-4"],
+          entregados: ["T-5"],
+          ahoraMs: AHORA,
+          ventanaRespuestaMs: 60000,
+        },
+        1,
+      ),
     ).not.toThrow();
-    expect(llamadas.some((l) => l.metodo === "fillText" && String(l.args[0]).startsWith("ESPERANDO AL PO"))).toBe(true);
+    expect(
+      llamadas.some(
+        (l) => l.metodo === "fillText" && String(l.args[0]).startsWith("ESPERANDO AL PO"),
+      ),
+    ).toBe(true);
   });
 });

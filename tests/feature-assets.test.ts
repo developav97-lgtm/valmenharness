@@ -12,7 +12,14 @@
  *    igual que siempre.
  */
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -24,7 +31,10 @@ import {
   externalLinkWarnings,
   listFeatureAssets,
 } from "../packages/engine/src/feature-assets.js";
-import { materializeFeature, refreshDesignReferences } from "../packages/engine/src/materialize.js";
+import {
+  materializeFeature,
+  refreshDesignReferences,
+} from "../packages/engine/src/materialize.js";
 
 let lab: string;
 const PATHS = (): RegistryPaths => ({ root: lab, ticketsDir: "tickets" });
@@ -142,7 +152,12 @@ describe("anexar un adjunto", () => {
   it("solo agrega: repetir el mismo contenido no escribe nada y otro contenido falla", () => {
     const fuente = origen("pantalla.png", PNG);
     attachFeatureAsset({ root: lab, slug: "kardex", source: fuente, description: "d" });
-    const otra = attachFeatureAsset({ root: lab, slug: "kardex", source: fuente, description: "d" });
+    const otra = attachFeatureAsset({
+      root: lab,
+      slug: "kardex",
+      source: fuente,
+      description: "d",
+    });
     expect(otra.alreadyPresent).toBe(true);
     expect(listFeatureAssets(lab, "kardex")).toHaveLength(1);
 
@@ -156,7 +171,9 @@ describe("anexar un adjunto", () => {
         description: "d",
       }),
     ).toThrow(/otro contenido/);
-    expect(readFileSync(join(lab, FEATURE, "assets", "pantalla.png")).equals(PNG)).toBe(true);
+    expect(readFileSync(join(lab, FEATURE, "assets", "pantalla.png")).equals(PNG)).toBe(
+      true,
+    );
   });
 
   it("rechaza un enlace en lugar de un archivo y pide la copia local", () => {
@@ -195,9 +212,9 @@ describe("enlaces externos sin copia local", () => {
   it("materialize se detiene ante un enlace externo sin copia", () => {
     escribirSpec(spec("Prototipo: https://claude.ai/artifact/abc\n"));
     expect(() => materializeFeature(PATHS(), "kardex")).toThrow(/enlace\(s\) externo\(s\)/);
-    expect(existsSync(join(lab, "tickets", "2026", "FEATURE-INVENTARIO-PANTALLA-20260924"))).toBe(
-      false,
-    );
+    expect(
+      existsSync(join(lab, "tickets", "2026", "FEATURE-INVENTARIO-PANTALLA-20260924")),
+    ).toBe(false);
   });
 
   it("con permiso explícito materialize crea y avisa", () => {
@@ -317,9 +334,9 @@ describe("adjuntos anexados después de materializar", () => {
     const seccion = (t: string): string =>
       t.slice(t.indexOf("## Solicitud original"), t.indexOf("## Descripción funcional"));
     expect(seccion(despues)).toContain("### Supuestos y decisiones pendientes");
-    expect(seccion(despues).replace(/### Referencias de diseño[\s\S]*?(?=### Supuestos)/, "")).toBe(
-      seccion(antes),
-    );
+    expect(
+      seccion(despues).replace(/### Referencias de diseño[\s\S]*?(?=### Supuestos)/, ""),
+    ).toBe(seccion(antes));
     // Un segundo adjunto reemplaza el bloque, no lo duplica.
     anexarPantalla("otra.png", Buffer.from([7, 7]));
     refreshDesignReferences(PATHS(), "kardex");
@@ -372,7 +389,7 @@ describe("fuente del lienzo de diseño", () => {
   it("rechaza un html que depende del lienzo", () => {
     for (const html of [
       '<script src="./support.js"></script>',
-      "<x-dc><div sc-for=\"i in items\"></div></x-dc>",
+      '<x-dc><div sc-for="i in items"></div></x-dc>',
     ]) {
       expect(() =>
         attachFeatureAsset({

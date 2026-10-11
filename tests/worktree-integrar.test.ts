@@ -20,7 +20,14 @@ import {
   indexPath,
   renderIndex,
 } from "../packages/engine/src/index.js";
-import { type Laboratorio, TICKET_A, TICKET_B, crearLaboratorio, gitRegistrado, procesoSimulado } from "./helpers/worktree-lab.js";
+import {
+  type Laboratorio,
+  TICKET_A,
+  TICKET_B,
+  crearLaboratorio,
+  gitRegistrado,
+  procesoSimulado,
+} from "./helpers/worktree-lab.js";
 
 let lab: Laboratorio | undefined;
 afterEach(() => lab?.limpiar());
@@ -28,14 +35,29 @@ afterEach(() => lab?.limpiar());
 const EVENTOS = ".valmen/executions/events.jsonl";
 const { rama: RAMA, carpeta: CARPETA } = nombresDeWorktree(TICKET_A);
 
-const evento = (eventId: string, cursor: number, extra: Record<string, unknown> = {}): string =>
-  JSON.stringify({ eventId, kind: "ejecucion.avance", occurredAt: "2026-10-08T10:00:00.000Z", cursor, receivedAt: "2026-10-08T10:00:00.000Z", ...extra });
+const evento = (
+  eventId: string,
+  cursor: number,
+  extra: Record<string, unknown> = {},
+): string =>
+  JSON.stringify({
+    eventId,
+    kind: "ejecucion.avance",
+    occurredAt: "2026-10-08T10:00:00.000Z",
+    cursor,
+    receivedAt: "2026-10-08T10:00:00.000Z",
+    ...extra,
+  });
 
 interface Entorno {
   readonly lab: Laboratorio;
   readonly wt: string;
   readonly paths: ReturnType<typeof defaultPaths>;
-  integrar(opciones?: { proceso?: EjecutorDeProceso; git?: ReturnType<typeof gitRegistrado>["ejecutor"]; paths?: ReturnType<typeof defaultPaths> }): ReturnType<typeof integrarWorktree>;
+  integrar(opciones?: {
+    proceso?: EjecutorDeProceso;
+    git?: ReturnType<typeof gitRegistrado>["ejecutor"];
+    paths?: ReturnType<typeof defaultPaths>;
+  }): ReturnType<typeof integrarWorktree>;
   escribirEn(base: string, ruta: string, contenido: string): void;
   commitEnMain(ruta: string, contenido: string): void;
   commitEnRama(ruta: string, contenido: string): void;
@@ -53,7 +75,12 @@ function preparar(opciones: { sinWorktree?: boolean } = {}): Entorno {
   l.git("commit", "-q", "-m", "registro e índice");
   const wt = join(l.root, CARPETA);
   if (opciones.sinWorktree !== true) {
-    crearWorktree({ paths, ticketId: TICKET_A, home: l.home, proceso: procesoSimulado().ejecutor });
+    crearWorktree({
+      paths,
+      ticketId: TICKET_A,
+      home: l.home,
+      proceso: procesoSimulado().ejecutor,
+    });
   }
   const escribirEn = (base: string, ruta: string, contenido: string): void => {
     mkdirSync(join(base, ruta, ".."), { recursive: true });
@@ -64,7 +91,13 @@ function preparar(opciones: { sinWorktree?: boolean } = {}): Entorno {
     wt,
     paths,
     integrar: (o = {}) =>
-      integrarWorktree({ paths: o.paths ?? paths, ticketId: TICKET_A, home: l.home, proceso: o.proceso ?? procesoSimulado().ejecutor, ...(o.git === undefined ? {} : { git: o.git }) }),
+      integrarWorktree({
+        paths: o.paths ?? paths,
+        ticketId: TICKET_A,
+        home: l.home,
+        proceso: o.proceso ?? procesoSimulado().ejecutor,
+        ...(o.git === undefined ? {} : { git: o.git }),
+      }),
     escribirEn,
     commitEnMain: (ruta, contenido) => {
       escribirEn(l.root, ruta, contenido);
@@ -79,9 +112,14 @@ function preparar(opciones: { sinWorktree?: boolean } = {}): Entorno {
   };
 }
 
-const padres = (l: Laboratorio, rev = "HEAD"): string[] => l.git("rev-list", "--parents", "-n", "1", rev).split(" ").slice(1);
+const padres = (l: Laboratorio, rev = "HEAD"): string[] =>
+  l.git("rev-list", "--parents", "-n", "1", rev).split(" ").slice(1);
 const estado = (l: Laboratorio): string => l.git("status", "--porcelain");
-const rechazo = (e: Entorno, patron: RegExp, opciones?: Parameters<Entorno["integrar"]>[0]): void => {
+const rechazo = (
+  e: Entorno,
+  patron: RegExp,
+  opciones?: Parameters<Entorno["integrar"]>[0],
+): void => {
   const antes = e.lab.git("rev-parse", "HEAD");
   expect(() => e.integrar(opciones)).toThrow(patron);
   expect(e.lab.git("rev-parse", "HEAD")).toBe(antes);
@@ -101,7 +139,10 @@ describe("las barreras previas", () => {
     const e = preparar();
     e.commitEnRama(EVENTOS, `${evento("e1", 1)}\n${evento("e2", 2)}\n${evento("t3", 3)}\n`);
     // El estado del harness no cuenta como sucio, pero sí como solape.
-    writeFileSync(join(e.lab.root, EVENTOS), `${evento("e1", 1)}\n${evento("e2", 2)}\n${evento("o3", 3)}\n`);
+    writeFileSync(
+      join(e.lab.root, EVENTOS),
+      `${evento("e1", 1)}\n${evento("e2", 2)}\n${evento("o3", 3)}\n`,
+    );
     rechazo(e, /también cambia la rama \(\.valmen\/executions\/events\.jsonl\)/);
     expect(readFileSync(join(e.lab.root, EVENTOS), "utf8")).toContain("o3");
   });
@@ -109,7 +150,10 @@ describe("las barreras previas", () => {
   it("un cambio sin commit del principal que la rama no toca no estorba (C10)", () => {
     const e = preparar();
     e.commitEnRama("codigo/a.txt", "a\n");
-    writeFileSync(join(e.lab.root, EVENTOS), `${evento("e1", 1)}\n${evento("e2", 2)}\n${evento("o3", 3)}\n`);
+    writeFileSync(
+      join(e.lab.root, EVENTOS),
+      `${evento("e1", 1)}\n${evento("e2", 2)}\n${evento("o3", 3)}\n`,
+    );
     expect(e.integrar().modo).toBe("avance-directo");
     expect(readFileSync(join(e.lab.root, EVENTOS), "utf8")).toContain("o3");
   });
@@ -150,7 +194,9 @@ describe("las barreras previas", () => {
   it("se niega a correr desde un worktree enlazado y señala el checkout principal (C15)", () => {
     const e = preparar();
     e.commitEnRama("codigo/a.txt", "a\n");
-    expect(() => e.integrar({ paths: defaultPaths(e.wt) })).toThrow(/worktree enlazado.*checkout principal/);
+    expect(() => e.integrar({ paths: defaultPaths(e.wt) })).toThrow(
+      /worktree enlazado.*checkout principal/,
+    );
     expect(e.lab.git("branch", "--list", RAMA)).toContain(RAMA);
   });
 
@@ -182,18 +228,28 @@ describe("avance directo y merge", () => {
     const r = e.integrar();
     expect(r.modo).toBe("merge");
     expect(padres(e.lab)).toHaveLength(2);
-    expect(e.lab.git("log", "-1", "--format=%s")).toBe(`Integra ${TICKET_A} desde su worktree`);
-    expect(existsSync(join(e.lab.root, "codigo/a.txt")) && existsSync(join(e.lab.root, "codigo/b.txt"))).toBe(true);
+    expect(e.lab.git("log", "-1", "--format=%s")).toBe(
+      `Integra ${TICKET_A} desde su worktree`,
+    );
+    expect(
+      existsSync(join(e.lab.root, "codigo/a.txt")) &&
+        existsSync(join(e.lab.root, "codigo/b.txt")),
+    ).toBe(true);
     expect(estado(e.lab)).toBe("");
   });
 
   it("une las dos versiones de events.jsonl por eventId con cursores consecutivos (C20)", () => {
     const e = preparar();
-    e.commitEnRama(EVENTOS, `${evento("e1", 1)}\n${evento("e2", 2)}\n${evento("t3", 3)}\n${evento("t4", 4)}\n`);
+    e.commitEnRama(
+      EVENTOS,
+      `${evento("e1", 1)}\n${evento("e2", 2)}\n${evento("t3", 3)}\n${evento("t4", 4)}\n`,
+    );
     e.commitEnMain(EVENTOS, `${evento("e1", 1)}\n${evento("e2", 2)}\n${evento("o3", 3)}\n`);
     const r = e.integrar();
     expect(r.registrosUnidos).toEqual([EVENTOS]);
-    const lineas = readFileSync(join(e.lab.root, EVENTOS), "utf8").split("\n").filter((l) => l !== "");
+    const lineas = readFileSync(join(e.lab.root, EVENTOS), "utf8")
+      .split("\n")
+      .filter((l) => l !== "");
     const eventos = lineas.map((l) => JSON.parse(l) as { eventId: string; cursor: number });
     expect(eventos.map((x) => x.eventId)).toEqual(["e1", "e2", "o3", "t3", "t4"]);
     expect(eventos.map((x) => x.cursor)).toEqual([1, 2, 3, 4, 5]);
@@ -222,7 +278,10 @@ describe("avance directo y merge", () => {
 
   it("si la unión de un registro es imposible hace merge --abort y deja main como estaba (C21)", () => {
     const e = preparar();
-    e.commitEnRama(EVENTOS, `${evento("e1", 1)}\n${evento("e2", 2, { kind: "editada" })}\n`);
+    e.commitEnRama(
+      EVENTOS,
+      `${evento("e1", 1)}\n${evento("e2", 2, { kind: "editada" })}\n`,
+    );
     e.commitEnMain(EVENTOS, `${evento("e1", 1)}\n${evento("e2", 2)}\n${evento("o3", 3)}\n`);
     e.commitEnRama("codigo/a.txt", "a\n");
     rechazo(e, /No se puede unir el registro: .*events\.jsonl.*merge --abort/);
@@ -233,8 +292,14 @@ describe("avance directo y merge", () => {
 
   it("un eventId con contenido distinto en las dos versiones también aborta (C21)", () => {
     const e = preparar();
-    e.commitEnRama(EVENTOS, `${evento("e1", 1)}\n${evento("e2", 2)}\n${evento("dup", 3, { kind: "a" })}\n`);
-    e.commitEnMain(EVENTOS, `${evento("e1", 1)}\n${evento("e2", 2)}\n${evento("dup", 3, { kind: "b" })}\n`);
+    e.commitEnRama(
+      EVENTOS,
+      `${evento("e1", 1)}\n${evento("e2", 2)}\n${evento("dup", 3, { kind: "a" })}\n`,
+    );
+    e.commitEnMain(
+      EVENTOS,
+      `${evento("e1", 1)}\n${evento("e2", 2)}\n${evento("dup", 3, { kind: "b" })}\n`,
+    );
     rechazo(e, /eventId dup tiene contenido distinto/);
     expect(estado(e.lab)).toBe("");
   });
@@ -244,7 +309,13 @@ describe("el índice y la recompilación", () => {
   it("regenera tickets/index.md y coincide con el de `valmen index` (C22)", () => {
     const e = preparar();
     const ruta = join(e.wt, "tickets", TICKET_B.slice(-8, -4), TICKET_B, "ticket.md");
-    writeFileSync(ruta, readFileSync(ruta, "utf8").replace("workflow_status: approved", "workflow_status: in_progress"));
+    writeFileSync(
+      ruta,
+      readFileSync(ruta, "utf8").replace(
+        "workflow_status: approved",
+        "workflow_status: in_progress",
+      ),
+    );
     e.lab.gitEn(e.wt, "add", "-A");
     e.lab.gitEn(e.wt, "commit", "-q", "-m", "rama: avanza otro ticket");
     e.commitEnMain("codigo/b.txt", "b\n");
@@ -259,7 +330,13 @@ describe("el índice y la recompilación", () => {
   it("tras un avance directo el índice regenerado va en un commit propio (C22)", () => {
     const e = preparar();
     const ruta = join(e.wt, "tickets", TICKET_B.slice(-8, -4), TICKET_B, "ticket.md");
-    writeFileSync(ruta, readFileSync(ruta, "utf8").replace("workflow_status: approved", "workflow_status: in_progress"));
+    writeFileSync(
+      ruta,
+      readFileSync(ruta, "utf8").replace(
+        "workflow_status: approved",
+        "workflow_status: in_progress",
+      ),
+    );
     e.lab.gitEn(e.wt, "add", "-A");
     e.lab.gitEn(e.wt, "commit", "-q", "-m", "rama: avanza otro ticket");
     const punta = e.lab.gitEn(e.wt, "rev-parse", "HEAD");
@@ -276,7 +353,10 @@ describe("el índice y la recompilación", () => {
     e.commitEnRama("codigo/a.txt", "a\n");
     const proceso = procesoSimulado();
     e.integrar({ proceso: proceso.ejecutor });
-    expect(proceso.llamadas.map((l) => `${l.comando} ${l.argumentos.join(" ")}`)).toEqual(["npx tsc --build tsconfig.build.json", "node scripts/copy-web.mjs"]);
+    expect(proceso.llamadas.map((l) => `${l.comando} ${l.argumentos.join(" ")}`)).toEqual([
+      "npx tsc --build tsconfig.build.json",
+      "node scripts/copy-web.mjs",
+    ]);
     expect(proceso.llamadas.every((l) => l.cwd === e.lab.root)).toBe(true);
     // Sobre una rama ya integrada no hay nada que recompilar.
     const otra = procesoSimulado();
@@ -288,7 +368,9 @@ describe("el índice y la recompilación", () => {
     const e = preparar();
     e.commitEnRama("codigo/a.txt", "a\n");
     const punta = e.lab.gitEn(e.wt, "rev-parse", "HEAD");
-    expect(() => e.integrar({ proceso: procesoSimulado({ fallaEn: "tsc" }).ejecutor })).toThrow(/quedó integrada en main.*la recompilación falló.*se conserva/s);
+    expect(() =>
+      e.integrar({ proceso: procesoSimulado({ fallaEn: "tsc" }).ejecutor }),
+    ).toThrow(/quedó integrada en main.*la recompilación falló.*se conserva/s);
     expect(e.lab.git("rev-parse", "HEAD")).toBe(punta);
   });
 });
@@ -302,29 +384,74 @@ describe("las listas cerradas", () => {
     const proceso = procesoSimulado();
     e.integrar({ git: git.ejecutor, proceso: proceso.ejecutor });
     expect(git.llamadas.length).toBeGreaterThan(12);
-    for (const argumentos of git.llamadas) expect(motivoDeGitDeIntegracion(argumentos)).toBeNull();
-    for (const l of proceso.llamadas) expect(motivoDeProcesoDeWorktree(l.comando, l.argumentos)).toBeNull();
+    for (const argumentos of git.llamadas)
+      expect(motivoDeGitDeIntegracion(argumentos)).toBeNull();
+    for (const l of proceso.llamadas)
+      expect(motivoDeProcesoDeWorktree(l.comando, l.argumentos)).toBeNull();
     const operaciones = new Set(git.llamadas.map((a) => a[0]));
-    for (const prohibida of ["push", "fetch", "pull", "reset", "rebase", "clean", "tag", "remote"]) expect(operaciones.has(prohibida)).toBe(false);
-    for (const b of ["--force", "-f", "-D", "--hard"]) expect(git.llamadas.flat()).not.toContain(b);
-    for (const esperada of ["show", "merge-tree", "merge", "add", "commit", "diff"]) expect(operaciones).toContain(esperada);
+    for (const prohibida of [
+      "push",
+      "fetch",
+      "pull",
+      "reset",
+      "rebase",
+      "clean",
+      "tag",
+      "remote",
+    ])
+      expect(operaciones.has(prohibida)).toBe(false);
+    for (const b of ["--force", "-f", "-D", "--hard"])
+      expect(git.llamadas.flat()).not.toContain(b);
+    for (const esperada of ["show", "merge-tree", "merge", "add", "commit", "diff"])
+      expect(operaciones).toContain(esperada);
   });
 
   it("rechaza lo que no está en la lista antes de lanzarlo (C27)", () => {
     for (const a of [
-      ["push"], ["fetch"], ["pull"], ["reset", "--hard"], ["rebase", "main"], ["clean", "-fd"], ["tag", "x"], ["remote", "add", "o", "u"],
-      ["merge", "valmen/ticket-uno"], ["merge", "--ff-only", "main"], ["merge", "--no-ff", "valmen/ticket-uno"],
-      ["commit", "--amend", "-m", "x"], ["commit", "-m"], ["add", "-A"], ["add", "--", "../fuera"], ["add", "--"],
-      ["show", "HEAD"], ["show", "main:../x"], ["diff", "--name-only", "main"], ["merge-tree", "a", "b"],
-      ["branch", "-D", "valmen/ticket-uno"], ["merge", "--no-ff", "--no-commit", "valmen/ticket-uno", "--force"],
+      ["push"],
+      ["fetch"],
+      ["pull"],
+      ["reset", "--hard"],
+      ["rebase", "main"],
+      ["clean", "-fd"],
+      ["tag", "x"],
+      ["remote", "add", "o", "u"],
+      ["merge", "valmen/ticket-uno"],
+      ["merge", "--ff-only", "main"],
+      ["merge", "--no-ff", "valmen/ticket-uno"],
+      ["commit", "--amend", "-m", "x"],
+      ["commit", "-m"],
+      ["add", "-A"],
+      ["add", "--", "../fuera"],
+      ["add", "--"],
+      ["show", "HEAD"],
+      ["show", "main:../x"],
+      ["diff", "--name-only", "main"],
+      ["merge-tree", "a", "b"],
+      ["branch", "-D", "valmen/ticket-uno"],
+      ["merge", "--no-ff", "--no-commit", "valmen/ticket-uno", "--force"],
     ]) {
       expect(motivoDeGitDeIntegracion(a), a.join(" ")).not.toBeNull();
     }
     for (const a of [
-      ["show", "main:.valmen/executions/events.jsonl"], ["diff", "--name-only", "-z", "main...valmen/ticket-uno"], ["merge-base", "main", "valmen/ticket-uno"],
-      ["merge-tree", "--write-tree", "--name-only", "--no-messages", "main", "valmen/ticket-uno"], ["merge", "--ff-only", "valmen/ticket-uno"],
-      ["merge", "--no-ff", "--no-commit", "valmen/ticket-uno"], ["merge", "--abort"], ["add", "--", "a.txt", "b/c.txt"], ["commit", "-m", "Integra"],
-      ["status", "--porcelain", "-uall"], ["merge-base", "--is-ancestor", "a", "b"],
+      ["show", "main:.valmen/executions/events.jsonl"],
+      ["diff", "--name-only", "-z", "main...valmen/ticket-uno"],
+      ["merge-base", "main", "valmen/ticket-uno"],
+      [
+        "merge-tree",
+        "--write-tree",
+        "--name-only",
+        "--no-messages",
+        "main",
+        "valmen/ticket-uno",
+      ],
+      ["merge", "--ff-only", "valmen/ticket-uno"],
+      ["merge", "--no-ff", "--no-commit", "valmen/ticket-uno"],
+      ["merge", "--abort"],
+      ["add", "--", "a.txt", "b/c.txt"],
+      ["commit", "-m", "Integra"],
+      ["status", "--porcelain", "-uall"],
+      ["merge-base", "--is-ancestor", "a", "b"],
     ]) {
       expect(motivoDeGitDeIntegracion(a), a.join(" ")).toBeNull();
     }

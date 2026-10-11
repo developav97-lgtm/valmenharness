@@ -113,21 +113,20 @@ function juezFalso(porModelo: Record<string, number>, llamadas: string[]) {
       // La respuesta se arma por tipo de proposición: el motor rechaza —con
       // razón— una respuesta cuyo tipo no coincide con el declarado, así que un
       // doble que conteste siempre un booleano no prueba nada de una elección.
-      answers: options.propositions.map(
-        (proposicion): PropositionAnswer =>
-          proposicion.kind === "choice"
-            ? {
-                id: proposicion.id,
-                kind: "choice",
-                choice: Object.keys(proposicion.criteria)[0] as string,
-                confidence: valor,
-              }
-            : {
-                id: proposicion.id,
-                kind: proposicion.kind,
-                value: valor,
-                confidence: valor,
-              },
+      answers: options.propositions.map((proposicion): PropositionAnswer =>
+        proposicion.kind === "choice"
+          ? {
+              id: proposicion.id,
+              kind: "choice",
+              choice: Object.keys(proposicion.criteria)[0] as string,
+              confidence: valor,
+            }
+          : {
+              id: proposicion.id,
+              kind: proposicion.kind,
+              value: valor,
+              confidence: valor,
+            },
       ),
       model: { provider: "openrouter", model: modelo, resolvedVersion: `${modelo}-v1` },
       usage: { inputTokens: 100, outputTokens: 20, costUsd: 0.0001 },
@@ -144,13 +143,11 @@ function verificadorFalso(porProposicion: Record<string, number>, vistas: string
   }) => {
     vistas.push(options.propositions.map((proposicion) => proposicion.id));
     return {
-      answers: options.propositions.map(
-        (proposicion): PropositionAnswer => ({
-          id: proposicion.id,
-          kind: "noul",
-          value: porProposicion[proposicion.id] ?? 0.97,
-        }),
-      ),
+      answers: options.propositions.map((proposicion): PropositionAnswer => ({
+        id: proposicion.id,
+        kind: "noul",
+        value: porProposicion[proposicion.id] ?? 0.97,
+      })),
       model: {
         provider: "openrouter",
         model: options.model ?? VERIFICADOR,
@@ -232,14 +229,12 @@ describe("la cascada verificada", () => {
         ...(options.apiKey === undefined ? {} : { apiKey: options.apiKey }),
       });
       return {
-        answers: options.propositions.map(
-          (proposicion): PropositionAnswer => ({
-            id: proposicion.id,
-            kind: proposicion.kind,
-            value: 0.95,
-            confidence: 0.95,
-          }),
-        ),
+        answers: options.propositions.map((proposicion): PropositionAnswer => ({
+          id: proposicion.id,
+          kind: proposicion.kind,
+          value: 0.95,
+          confidence: 0.95,
+        })),
         model: {
           provider: options.provider ?? "",
           model: options.model ?? "",
@@ -258,13 +253,11 @@ describe("la cascada verificada", () => {
         ...(options.apiKey === undefined ? {} : { apiKey: options.apiKey }),
       });
       return {
-        answers: options.propositions.map(
-          (proposicion): PropositionAnswer => ({
-            id: proposicion.id,
-            kind: "noul",
-            value: 0.2,
-          }),
-        ),
+        answers: options.propositions.map((proposicion): PropositionAnswer => ({
+          id: proposicion.id,
+          kind: "noul",
+          value: 0.2,
+        })),
         model: { provider: "verificador", model: VERIFICADOR, resolvedVersion: "prueba" },
         usage: { inputTokens: 1, outputTokens: 1, costUsd: 0 },
         latencyMs: 1,
@@ -365,7 +358,9 @@ describe("el recibo del gate en cascada", () => {
       .map((linea) => JSON.parse(linea) as GateReceipt);
     const recibo = recibos[recibos.length - 1];
     const escalamiento = recibo?.escalations?.[0];
-    expect(recibo?.escalations?.map((uno) => uno.proposition)).toEqual(["causa_especifica"]);
+    expect(recibo?.escalations?.map((uno) => uno.proposition)).toEqual([
+      "causa_especifica",
+    ]);
     expect(escalamiento?.verified).toBeCloseTo(0.3);
     expect(escalamiento?.threshold).toBe(0.9);
     expect(escalamiento?.reason).toContain("causa_especifica");

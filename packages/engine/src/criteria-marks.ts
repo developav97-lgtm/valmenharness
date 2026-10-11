@@ -108,7 +108,10 @@ const normalizar = (s: string): string => s.replace(/\s+/g, " ").trim();
  * descripción coincide con el texto del criterio: uno cambiado después del recibo no se
  * marca, porque lo que el recibo comprobó ya no es lo que dice el ticket.
  */
-export function markFromReceipt(ticketText: string, receipt: GateReceipt | undefined): MarkResult {
+export function markFromReceipt(
+  ticketText: string,
+  receipt: GateReceipt | undefined,
+): MarkResult {
   if (receipt === undefined) return { text: ticketText, marked: [] };
   const seccion = parseTicket(ticketText).sections["Criterios de aceptación"];
   const specs = extractCriteriaSpecs(seccion);
@@ -124,7 +127,8 @@ export function markFromReceipt(ticketText: string, receipt: GateReceipt | undef
     if (proposicion === undefined || proposicion.effect?.outcome !== "approve") return;
     if (normalizar(proposicion.description ?? "") !== normalizar(spec.text)) return;
     const caja = cajas.find(
-      (c) => !c.checked && normalizar(c.text).startsWith(normalizar(spec.text).slice(0, 40)),
+      (c) =>
+        !c.checked && normalizar(c.text).startsWith(normalizar(spec.text).slice(0, 40)),
     );
     if (caja === undefined) return;
     lineas[caja.line] = (lineas[caja.line] as string).replace(/\[ \]/, "[x]");
@@ -160,7 +164,8 @@ export function markManualCriteria(
     const marcados: string[] = [];
     for (const spec of specs.filter((s) => s.manual)) {
       const caja = cajas.find(
-        (c) => !c.checked && normalizar(c.text).startsWith(normalizar(spec.text).slice(0, 40)),
+        (c) =>
+          !c.checked && normalizar(c.text).startsWith(normalizar(spec.text).slice(0, 40)),
       );
       if (caja === undefined) continue;
       lineas[caja.line] = (lineas[caja.line] as string).replace(/\[ \]/, "[x]");

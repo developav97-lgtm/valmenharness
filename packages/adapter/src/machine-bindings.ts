@@ -75,7 +75,9 @@ export function prepareMachineProjectBinding(
       projects: {
         [request.projectId]: {
           root: request.root,
-          ...(request.hermesProfile === undefined ? {} : { hermesProfile: request.hermesProfile }),
+          ...(request.hermesProfile === undefined
+            ? {}
+            : { hermesProfile: request.hermesProfile }),
         },
       },
     });
@@ -87,7 +89,9 @@ export function prepareMachineProjectBinding(
   const previous = bindings.projects[request.projectId];
   const requested: MachineProjectBinding = {
     root: request.root,
-    ...(request.hermesProfile === undefined ? {} : { hermesProfile: request.hermesProfile }),
+    ...(request.hermesProfile === undefined
+      ? {}
+      : { hermesProfile: request.hermesProfile }),
   };
 
   if (previous !== undefined) {
@@ -180,10 +184,16 @@ export function parseMachineBindings(text: string): MachineBindings {
 
     const bindingRoot = requiredString(binding, "root", `projects.${projectId}`);
     if (!isAbsolute(bindingRoot)) {
-      fail(`${MACHINE_BINDINGS_FILE}: "projects.${projectId}.root" debe ser una ruta absoluta.`);
+      fail(
+        `${MACHINE_BINDINGS_FILE}: "projects.${projectId}.root" debe ser una ruta absoluta.`,
+      );
     }
 
-    const hermesProfile = optionalString(binding, "hermes-profile", `projects.${projectId}`);
+    const hermesProfile = optionalString(
+      binding,
+      "hermes-profile",
+      `projects.${projectId}`,
+    );
     if (hermesProfile !== undefined && !PROFILE_RE.test(hermesProfile)) {
       fail(
         `${MACHINE_BINDINGS_FILE}: "projects.${projectId}.hermes-profile" debe ser una referencia local válida, sin rutas ni espacios.`,
@@ -203,7 +213,11 @@ export function parseMachineBindings(text: string): MachineBindings {
   });
 }
 
-function positiveInteger(value: YamlValue | undefined, key: string, fallback: number): number {
+function positiveInteger(
+  value: YamlValue | undefined,
+  key: string,
+  fallback: number,
+): number {
   if (value === undefined || value === "") return fallback;
   const parsed = typeof value === "string" ? Number(value) : Number.NaN;
   if (!Number.isSafeInteger(parsed) || parsed < 1) {
@@ -213,11 +227,16 @@ function positiveInteger(value: YamlValue | undefined, key: string, fallback: nu
 }
 
 function asMap(value: YamlValue | undefined, message: string): Record<string, YamlValue> {
-  if (value === undefined || typeof value === "string" || Array.isArray(value)) fail(message);
+  if (value === undefined || typeof value === "string" || Array.isArray(value))
+    fail(message);
   return value;
 }
 
-function requiredString(map: Record<string, YamlValue>, key: string, context: string): string {
+function requiredString(
+  map: Record<string, YamlValue>,
+  key: string,
+  context: string,
+): string {
   const value = map[key];
   if (typeof value !== "string" || value === "") {
     fail(`${MACHINE_BINDINGS_FILE}: "${context}.${key}" debe ser un texto no vacío.`);
