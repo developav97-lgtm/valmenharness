@@ -62,6 +62,20 @@ export interface SkillDefinition {
    * `withRoutedRules`, no con `readSkills`, porque necesitan el modelo del proyecto.
    */
   readonly rules?: readonly SkillRule[];
+  /**
+   * Los `*.md` del primer nivel de `.valmen/skills/<id>/referencias/`, por nombre.
+   *
+   * Opcional por lo mismo que `rules`: una skill sin carpeta se proyecta como antes. Se
+   * copian byte a byte junto al `SKILL.md`, para que la cita relativa del cuerpo
+   * (`referencias/<nombre>.md`) resuelva desde el directorio base de la skill.
+   */
+  readonly referencias?: readonly Referencia[];
+}
+
+/** Un archivo de la carpeta `referencias/` de una skill. */
+interface Referencia {
+  readonly nombre: string;
+  readonly contenido: string;
 }
 
 /** Una regla del proyecto proyectada dentro de una skill. */
@@ -133,6 +147,24 @@ export const SKILL_RUNTIME_IDS: readonly SkillRuntime[] = [
   "codex",
   "agents",
 ];
+
+/**
+ * Las referencias de la carpeta de una skill: solo `*.md` del primer nivel que sean
+ * archivos, en orden por nombre. Subcarpetas y otros formatos no se proyectan.
+ */
+function leerReferencias(carpeta: string): Referencia[] {
+  const dir = join(carpeta, "referencias");
+  let nombres: string[];
+  try {
+    nombres = readdirSync(dir);
+  } catch {
+    return [];
+  }
+  return nombres
+    .filter((nombre) => nombre.endsWith(".md") && exists(join(dir, nombre)))
+    .sort()
+    .map((nombre) => ({ nombre, contenido: readFileSync(join(dir, nombre), "utf8") }));
+}
 
 /** Separa el frontmatter del cuerpo. */
 function splitSkillFrontmatter(text: string): {
@@ -245,7 +277,12 @@ export function readSkills(root: string): SkillDefinition[] {
         local = null;
       }
 
-      return { ...parseSkill(name, text), local };
+      const referencias = leerReferencias(join(directory, name));
+      return {
+        ...parseSkill(name, text),
+        local,
+        ...(referencias.length > 0 ? { referencias } : {}),
+      };
     });
 }
 
@@ -379,6 +416,12 @@ export function renderAllSkills(skills: readonly SkillDefinition[]): RenderedSki
   for (const runtime of SKILL_RUNTIME_IDS) {
     for (const skill of skills) {
       files.push(renderSkill(skill, runtime));
+      for (const referencia of skill.referencias ?? []) {
+        files.push({
+          path: `${SKILL_RUNTIMES[runtime]}/${skill.id}/referencias/${referencia.nombre}`,
+          content: referencia.contenido,
+        });
+      }
     }
   }
   return files;
@@ -416,10 +459,12 @@ export interface Publicada {
   readonly hash: string;
   /** El archivo tal cual, que es lo que se instala en el proyecto. */
   readonly texto: string;
+  /** Las referencias de la carpeta publicada, que se instalan junto al `SKILL.md`. */
+  readonly referencias: readonly Referencia[];
 }
 
 /** Por qué una copia del proyecto no coincide con la publicada. */
-export type MotivoDeDeriva = "falta" | "version" | "editada";
+export type MotivoDeDeriva = "falta" | "version" | "editada" | "referencia";
 
 /** Una diferencia entre la copia del proyecto y el catálogo. */
 export interface DerivaPublicada {
@@ -428,6 +473,10 @@ export interface DerivaPublicada {
   /** La versión que declara la copia del proyecto, o `null` si no declara. */
   readonly versionProyecto: string | null;
   readonly versionPublicada: string;
+  /** Con motivo `referencia`: el nombre del archivo de `referencias/` que difiere. */
+  readonly referencia?: string;
+  /** Con motivo `referencia`: si el archivo falta o se editó a mano. */
+  readonly detalle?: "falta" | "editada";
 }
 
 /** El sha256 de un texto. */
@@ -493,6 +542,7 @@ export function publicadas(dir: string = CATALOGO_DIR): Publicada[] {
         origen: "valmen",
         hash: hashDeTexto(texto),
         texto,
+        referencias: leerReferencias(join(dir, id)),
       };
     });
 }
@@ -566,6 +616,23 @@ export function derivaPublicada(
 
     const texto = readFileSync(ruta, "utf8");
     const versionProyecto = versionDeTexto(texto);
+    for (const referencia of skill.referencias) {
+      const destino = join(root, ".valmen", "skills", skill.id, "referencias", referencia.nombre);
+      const detalle = !exists(destino)
+        ? "falta"
+        : readFileSync(destino, "utf8") !== referencia.contenido
+          ? "editada"
+          : null;
+      if (detalle === null) continue;
+      deriva.push({
+        id: skill.id,
+        motivo: "referencia",
+        versionProyecto,
+        versionPublicada: skill.version,
+        referencia: referencia.nombre,
+        detalle,
+      });
+    }
     if (versionProyecto !== skill.version) {
       deriva.push({
         id: skill.id,
@@ -606,6 +673,12 @@ export function descripcionDeDeriva(deriva: readonly DerivaPublicada[]): string 
         `proyecto, ${diferencia.versionPublicada} en el harness`
       );
     }
+    if (diferencia.motivo === "referencia") {
+      const ruta = `${diferencia.id}/referencias/${diferencia.referencia ?? ""}`;
+      return diferencia.detalle === "falta"
+        ? `  · ${ruta} — referencia no instalada`
+        : `  · ${ruta} — referencia editada a mano`;
+    }
     return `  · ${diferencia.id} — copia editada a mano sobre la versión ${diferencia.versionPublicada}`;
   });
 
@@ -634,11 +707,20 @@ export function instalarPublicadas(root: string, dir: string = CATALOGO_DIR): st
 
   for (const skill of publicadas(dir)) {
     const ruta = copiaDelProyecto(root, skill.id);
-    if (exists(ruta) && readFileSync(ruta, "utf8") === skill.texto) continue;
-
-    mkdirSync(join(root, ".valmen", "skills", skill.id), { recursive: true });
-    writeFileSync(ruta, skill.texto, "utf8");
-    escritas.push(skill.id);
+    let escrita = false;
+    if (!exists(ruta) || readFileSync(ruta, "utf8") !== skill.texto) {
+      mkdirSync(join(root, ".valmen", "skills", skill.id), { recursive: true });
+      writeFileSync(ruta, skill.texto, "utf8");
+      escrita = true;
+    }
+    for (const referencia of skill.referencias) {
+      const destino = join(root, ".valmen", "skills", skill.id, "referencias", referencia.nombre);
+      if (exists(destino) && readFileSync(destino, "utf8") === referencia.contenido) continue;
+      mkdirSync(join(destino, ".."), { recursive: true });
+      writeFileSync(destino, referencia.contenido, "utf8");
+      escrita = true;
+    }
+    if (escrita) escritas.push(skill.id);
   }
 
   return escritas;
