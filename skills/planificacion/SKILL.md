@@ -114,6 +114,10 @@ Un criterio sin anotación detiene el gate: la ambigüedad se resuelve sola a fa
 
 El gate de plan decide en código, sin preguntarle al modelo, los criterios que se leen en el texto. Un criterio `verify: manual` se cita como «Cn» (o dentro de un rango «Cn–Cm») en el paso del plan que lo verifica: sin esa cita vota 0, y también vota 0 un manual compuesto —una frase con «y» u «o» son dos criterios—, que hay que partir. Un `test:` que solo afirma que la prueba pasa o que el monorepo compila se decide igual: lo cita un paso y el plan nombra el archivo de prueba del comando. El tope de 40 del precheck cuenta afirmaciones y no líneas, así que partir un criterio compuesto no lo supera.
 
+**Un criterio, un comportamiento observable**: ni compuestos («y») ni uno por cada aserción. Las dudas del evaluador entre 0,80 y 0,90 suelen venir de criterios compuestos: escríbelos atómicos desde el principio.
+
+**Tamaño del plan**: el plan declara su tamaño previsto (criterios y líneas de cambio, producción más pruebas). Un plan de más de unos 20 criterios o de más de unas 400 líneas se parte antes de aprobarse.
+
 ## Handoff
 
 Entregar el identificador y la ruta del ticket, el plan vigente, el estado de la compuerta, quién es responsable de qué, el orden de trabajo, las pruebas y las decisiones pendientes. **Delegar no amplía los archivos ni las acciones aprobadas.**
