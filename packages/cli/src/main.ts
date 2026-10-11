@@ -21,7 +21,7 @@ import { fileURLToPath } from "node:url";
 
 import { EXIT_INVARIANT, EXIT_SCHEMA, toFailure } from "@valmen/core";
 import { apiKeyWithPrecedence, transportById } from "@valmen/credentials";
-import { gateById } from "@valmen/gate";
+import { GATES, gateById } from "@valmen/gate";
 import { gateRoutingFor, cascadeRoutingFor } from "@valmen/adapter";
 
 /**
@@ -357,6 +357,8 @@ Comandos:
       --force-reason <m>    Repite una compuerta ya evaluada sobre el mismo estado y con el
                             mismo evaluador: sin motivo se rechaza; con él queda en el recibo.
       --evaluator <id>      auto (por defecto) · command · jev · llm-judge · cascade
+      --base <ref>          code-review: la base del diff (por defecto main, o HEAD si no existe).
+                            code-review revisa el diff entregado según su riesgo y no admite --evaluator.
   promote-gate <gate>       Calibra el gate contra decisiones humanas y anexa la
       --limit <n>           evidencia que una solicitud gate-promotions necesita.
   cascada --tarea <id>      Corre una tarea de la cascada verificada y deja el recibo
@@ -1508,8 +1510,10 @@ export async function runGateFromFlags(
     typeof flags["credentials"] === "string"
       ? flags["credentials"]
       : undefined;
+  // La revisión del diff habla con el proveedor del rol `reviewer`, no con el del evaluador.
+  const revisaDiff = GATES[gateId]?.diffReview === true;
   const credentialResolver =
-    cascade === undefined ? undefined : credentialForCascade(archivoCredenciales);
+    cascade === undefined && !revisaDiff ? undefined : credentialForCascade(archivoCredenciales);
   const apiKey =
     cascade === undefined
       ? (apiKeyWithPrecedence(
@@ -1539,6 +1543,7 @@ export async function runGateFromFlags(
     ...(cascade === undefined ? {} : { cascade }),
     ...(presupuesto.note === null ? {} : { notes: [presupuesto.note] }),
     ...(typeof flags["force-reason"] === "string" ? { forceReason: flags["force-reason"] } : {}),
+    ...(typeof flags["base"] === "string" ? { base: flags["base"] } : {}),
   });
 }
 
@@ -1816,6 +1821,14 @@ export async function run(argv: readonly string[]): Promise<number> {
           };
           definition = null;
         }
+        if (definition?.diffReview === true) {
+          result = {
+            stdout: "",
+            stderr: `La compuerta ${gateId} revisa el diff de una entrega y no se puede simular: un ticket histórico no conserva el diff que se entregó.`,
+            exitCode: EXIT_SCHEMA,
+          };
+          definition = null;
+        }
         if (definition !== null && definition !== undefined) {
           const rawLimit = options.flags["limit"];
           const limit =
@@ -1862,6 +1875,14 @@ export async function run(argv: readonly string[]): Promise<number> {
         } catch (caught) {
           const failure = toFailure(caught);
           result = { stdout: "", stderr: failure.message, exitCode: EXIT_SCHEMA };
+          definition = null;
+        }
+        if (definition?.diffReview === true) {
+          result = {
+            stdout: "",
+            stderr: `La compuerta ${gateId} revisa el diff de una entrega y no se puede calibrar con el histórico.`,
+            exitCode: EXIT_SCHEMA,
+          };
           definition = null;
         }
         if (

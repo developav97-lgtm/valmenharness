@@ -420,7 +420,7 @@ export function computeNextStep(
         );
       }
       // El texto del ticket no es el código: lo mismo que `transition` compara con el árbol.
-      const motivoDeArbol = motivoDeArbolNoVigente(mecanica, paths, id);
+      const motivoDeArbol = motivoDeArbolNoVigente(mecanica, paths, id, "qa-mechanical");
       if (motivoDeArbol !== null) {
         return paso("verificación", [motivoDeArbol], base);
       }

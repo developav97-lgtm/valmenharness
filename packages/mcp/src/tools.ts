@@ -120,7 +120,7 @@ import {
   EXECUTION_ACTIVITY_STATES,
   type ExecutionActivityState,
 } from "@valmen/engine";
-import { gateFor, gateById, SIN_INTERFAZ } from "@valmen/gate";
+import { GATES, gateFor, gateById, SIN_INTERFAZ } from "@valmen/gate";
 import { EJECUTORES_CON_PERFIL, architectRoutingFor, cascadeRoutingFor, gateRoutingFor } from "@valmen/adapter";
 import { apiKeyWithPrecedence, transportById } from "@valmen/credentials";
 import {
@@ -933,7 +933,7 @@ const DEFINICIONES: readonly ToolDefinition[] = [
           description:
             "Compuerta a evaluar. `analysis` valida el diagnóstico y protege " +
             "`analyzed → planned`; `plan` valida el plan y protege `planned → approved`.",
-          enum: ["analysis", "plan", "qa-mechanical"],
+          enum: ["analysis", "plan", "qa-mechanical", "code-review"],
         },
         id: { type: "string", description: "Identificador del ticket." },
         evaluator: {
@@ -2387,7 +2387,9 @@ function correrCompuerta(
   const cascade =
     evaluator === "cascade" ? cascadeRoutingFor(paths.root, preset) : undefined;
   const credentialResolver =
-    cascade === undefined ? undefined : credentialForCascade(contexto);
+    cascade === undefined && GATES[gateId]?.diffReview !== true
+      ? undefined
+      : credentialForCascade(contexto);
 
   return runGate(paths, {
     gateId,

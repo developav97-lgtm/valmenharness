@@ -41,7 +41,7 @@ import {
 } from "@valmen/gate";
 import { declaredImpactIds, parseTicket } from "@valmen/core";
 import { apiKeyWithPrecedence, transportById } from "@valmen/credentials";
-import { assertSesionAtendida, interfazDelTicket } from "@valmen/engine";
+import { assertSesionAtendida, interfazDelTicket, motivoDeArbolNoVigente } from "@valmen/engine";
 import { cascadeRouting, gateRouting } from "./routing.js";
 import {
   type EvaluatorId,
@@ -260,6 +260,22 @@ async function currentStateHash(
 }
 
 /**
+ * El hash que se compara con el del recibo para saber si sigue vigente.
+ *
+ * El recibo de la revisión del diff no guarda el hash del texto del ticket sino el de su entrada
+ * congelada, y caduca con el árbol de trabajo: se da por vigente si el árbol sigue siendo el revisado.
+ */
+function hashVigenteDe(
+  paths: RegistryPaths,
+  ticketId: string,
+  recibo: GateReceipt,
+  actual: string | null,
+): string | null {
+  if (recibo.codeReview === undefined) return actual;
+  return motivoDeArbolNoVigente(recibo, paths, ticketId, "code-review") === null ? recibo.stateHash : null;
+}
+
+/**
  * Los gates que existen y si aplican al ticket.
  *
  * Devuelve `null` si el ticket no existe. Un ticket que no parsea no impide
@@ -446,7 +462,9 @@ export async function runTicketGate(
     gateId,
     ticketId,
     ...(apiKey === null ? {} : { apiKey }),
-    ...(cascade === undefined ? {} : { credentialForProvider: credentialResolver }),
+    ...(cascade === undefined && GATES[gateId]?.diffReview !== true
+      ? {}
+      : { credentialForProvider: credentialResolver }),
     ...(request.evaluator === undefined ? {} : { evaluator: request.evaluator }),
     ...(request.jev === undefined ? {} : { jev: request.jev }),
     ...(request.judge === undefined ? {} : { judge: request.judge }),
@@ -488,7 +506,7 @@ export async function runTicketGate(
     report: result.stdout,
     error: result.stderr,
     exitCode: result.exitCode,
-    receipt: { ...projectReceipt(ultimo, actual), report: result.stdout },
+    receipt: { ...projectReceipt(ultimo, hashVigenteDe(paths, ticketId, ultimo, actual)), report: result.stdout },
     tickets: listGateCards(paths, ticketId),
   };
 }
@@ -563,7 +581,7 @@ export function listGateDecisions(
         })();
 
   return currentReceipts(readReceipts(paths, ticketId)).map((recibo) =>
-    projectReceipt(recibo, actual),
+    projectReceipt(recibo, hashVigenteDe(paths, ticketId, recibo, actual)),
   );
 }
 
@@ -690,5 +708,5 @@ export function recordHumanDecision(
     }
   }
 
-  return { ok: true, error: "", receipt: projectReceipt(conDecision, actual) };
+  return { ok: true, error: "", receipt: projectReceipt(conDecision, hashVigenteDe(paths, ticketId, conDecision, actual)) };
 }

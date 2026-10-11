@@ -4,7 +4,7 @@ id: FEATURE-GATE-CODE-REVIEW-20261010
 title: Compuerta code-review con profundidad por riesgo y una corrección
 type: FEATURE
 module: GATE
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -125,71 +125,71 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1 — R-REV-003: Con un diff que solo toca pruebas, el recibo de `code-review` aprueba sin llamar a ningún revisor.
+- [x] C1 — R-REV-003: Con un diff que solo toca pruebas, el recibo de `code-review` aprueba sin llamar a ningún revisor.
       <!-- test: npx vitest run tests/code-review.test.ts -->
-- [ ] C2 — R-REV-003: Un secreto en una línea agregada bloquea la compuerta sin llamar a ningún revisor.
+- [x] C2 — R-REV-003: Un secreto en una línea agregada bloquea la compuerta sin llamar a ningún revisor.
       <!-- test: npx vitest run tests/code-review.test.ts -->
-- [ ] C3 — R-REV-003: Un archivo que rechaza `motivoDeArchivoProhibido` deja la compuerta en `review` sin llamar a ningún revisor.
+- [x] C3 — R-REV-003: Un archivo que rechaza `motivoDeArchivoProhibido` deja la compuerta en `review` sin llamar a ningún revisor.
       <!-- test: npx vitest run tests/code-review.test.ts -->
-- [ ] C4 — R-REV-003: Un color fijo agregado en un archivo de interfaz queda como nota del recibo sin cambiar el veredicto.
+- [x] C4 — R-REV-003: Un color fijo agregado en un archivo de interfaz queda como nota del recibo sin cambiar el veredicto.
       <!-- test: npx vitest run tests/code-review.test.ts -->
-- [ ] C5 — R-REV-003: Con riesgo medio, la compuerta llama una sola vez al revisor con la proposición `sin_hallazgo_severo`.
+- [x] C5 — R-REV-003: Con riesgo medio, la compuerta llama una sola vez al revisor con la proposición `sin_hallazgo_severo`.
       <!-- test: npx vitest run tests/code-review.test.ts -->
-- [ ] C6 — R-REV-003: Con riesgo alto, la compuerta llama una sola vez al revisor con las cuatro proposiciones de lente.
+- [x] C6 — R-REV-003: Con riesgo alto, la compuerta llama una sola vez al revisor con las cuatro proposiciones de lente.
       <!-- test: npx vitest run tests/code-review.test.ts -->
-- [ ] C7 — R-REV-003: En un ticket SECURITY, la compuerta llama a dos revisores con la misma entrada congelada.
+- [x] C7 — R-REV-003: En un ticket SECURITY, la compuerta llama a dos revisores con la misma entrada congelada.
       <!-- test: npx vitest run tests/code-review.test.ts -->
-- [ ] C8 — R-REV-003: En un ticket SECURITY, ninguno de los dos revisores recibe la respuesta del otro.
+- [x] C8 — R-REV-003: En un ticket SECURITY, ninguno de los dos revisores recibe la respuesta del otro.
       <!-- test: npx vitest run tests/code-review.test.ts -->
-- [ ] C9 — R-REV-003: Un hallazgo severo citado con `ruta:línea` dentro de las líneas cambiadas bloquea la compuerta.
+- [x] C9 — R-REV-003: Un hallazgo severo citado con `ruta:línea` dentro de las líneas cambiadas bloquea la compuerta.
       <!-- test: npx vitest run tests/code-review.test.ts -->
-- [ ] C10 — R-REV-003: Un hallazgo citado fuera de las líneas cambiadas deja su proposición en banda de revisión.
+- [x] C10 — R-REV-003: Un hallazgo citado fuera de las líneas cambiadas deja su proposición en banda de revisión.
       <!-- test: npx vitest run tests/code-review.test.ts -->
-- [ ] C11 — R-REV-003: En un ticket SECURITY, un hallazgo que confirman los dos revisores bloquea la compuerta.
+- [x] C11 — R-REV-003: En un ticket SECURITY, un hallazgo que confirman los dos revisores bloquea la compuerta.
       <!-- test: npx vitest run tests/code-review.test.ts -->
-- [ ] C12 — R-REV-003: En un ticket SECURITY, un hallazgo que informa un solo revisor deja la compuerta en `review`.
+- [x] C12 — R-REV-003: En un ticket SECURITY, un hallazgo que informa un solo revisor deja la compuerta en `review`.
       <!-- test: npx vitest run tests/code-review.test.ts -->
-- [ ] C13 — R-REV-003: Una respuesta del revisor fuera del esquema no deja ningún recibo `approve`.
+- [x] C13 — R-REV-003: Una respuesta del revisor fuera del esquema no deja ningún recibo `approve`.
       <!-- test: npx vitest run tests/revisor-diff.test.ts tests/code-review.test.ts -->
-- [ ] C14 — R-REV-003: `valmen gate code-review` con `--evaluator` se rechaza sin llamar a ningún revisor.
+- [x] C14 — R-REV-003: `valmen gate code-review` con `--evaluator` se rechaza sin llamar a ningún revisor.
       <!-- test: npx vitest run tests/code-review.test.ts -->
-- [ ] C15 — R-REV-003: Un diff que toca un archivo de la propia compuerta deja como máximo un recibo `review`.
+- [x] C15 — R-REV-003: Un diff que toca un archivo de la propia compuerta deja como máximo un recibo `review`.
       <!-- test: npx vitest run tests/code-review.test.ts -->
-- [ ] C16 — R-REV-003: Un diff mayor que el tope de entrada deja la compuerta en `review` sin llamar a ningún revisor.
+- [x] C16 — R-REV-003: Un diff mayor que el tope de entrada deja la compuerta en `review` sin llamar a ningún revisor.
       <!-- test: npx vitest run tests/code-review.test.ts -->
-- [ ] C17 — R-REV-004: El recibo de `code-review` guarda la base resuelta como commit.
+- [x] C17 — R-REV-004: El recibo de `code-review` guarda la base resuelta como commit.
       <!-- test: npx vitest run tests/code-review.test.ts -->
-- [ ] C18 — R-REV-004: El recibo de `code-review` guarda en `testedTree` el árbol revisado.
+- [x] C18 — R-REV-004: El recibo de `code-review` guarda en `testedTree` el árbol revisado.
       <!-- test: npx vitest run tests/code-review.test.ts -->
-- [ ] C19 — R-REV-004: El recibo de `code-review` guarda el nivel de riesgo calculado con sus motivos.
+- [x] C19 — R-REV-004: El recibo de `code-review` guarda el nivel de riesgo calculado con sus motivos.
       <!-- test: npx vitest run tests/code-review.test.ts -->
-- [ ] C20 — R-REV-004: El recibo de `code-review` guarda el modelo de cada revisor con sus respuestas.
+- [x] C20 — R-REV-004: El recibo de `code-review` guarda el modelo de cada revisor con sus respuestas.
       <!-- test: npx vitest run tests/code-review.test.ts -->
-- [ ] C21 — R-REV-004: El recibo de `code-review` suma en `usage.costUsd` el costo de todos los revisores.
+- [x] C21 — R-REV-004: El recibo de `code-review` suma en `usage.costUsd` el costo de todos los revisores.
       <!-- test: npx vitest run tests/code-review.test.ts -->
-- [ ] C22 — R-REV-004: Si el árbol cambia mientras corren los revisores, el recibo anota las rutas que cambiaron.
+- [x] C22 — R-REV-004: Si el árbol cambia mientras corren los revisores, el recibo anota las rutas que cambiaron.
       <!-- test: npx vitest run tests/code-review.test.ts -->
-- [ ] C23 — R-REV-004: Con un archivo funcional cambiado después del recibo de `code-review`, `motivoDeArbolNoVigente` lo da por vencido nombrando `valmen gate code-review --id <ID>`.
+- [x] C23 — R-REV-004: Con un archivo funcional cambiado después del recibo de `code-review`, `motivoDeArbolNoVigente` lo da por vencido nombrando `valmen gate code-review --id <ID>`.
       <!-- test: npx vitest run tests/code-review.test.ts -->
-- [ ] C24 — R-REV-005: Tras un bloqueo, la segunda corrida envía al revisor solo los archivos que cambiaron desde el árbol revisado.
+- [x] C24 — R-REV-005: Tras un bloqueo, la segunda corrida envía al revisor solo los archivos que cambiaron desde el árbol revisado.
       <!-- test: npx vitest run tests/code-review.test.ts -->
-- [ ] C25 — R-REV-005: Un hallazgo de la primera ronda en un archivo que la corrección no tocó bloquea la segunda ronda sin llamar al revisor.
+- [x] C25 — R-REV-005: Un hallazgo de la primera ronda en un archivo que la corrección no tocó bloquea la segunda ronda sin llamar al revisor.
       <!-- test: npx vitest run tests/code-review.test.ts -->
-- [ ] C26 — R-REV-005: Una segunda ronda que vuelve a bloquear deja un recibo escalado a una persona que cita los dos recibos.
+- [x] C26 — R-REV-005: Una segunda ronda que vuelve a bloquear deja un recibo escalado a una persona que cita los dos recibos.
       <!-- test: npx vitest run tests/code-review.test.ts -->
-- [ ] C27 — R-REV-005: Tras la segunda ronda sin decisión humana, una tercera corrida se rechaza sin llamar a ningún revisor.
+- [x] C27 — R-REV-005: Tras la segunda ronda sin decisión humana, una tercera corrida se rechaza sin llamar a ningún revisor.
       <!-- test: npx vitest run tests/code-review.test.ts -->
-- [ ] C28 — R-REV-005: Tras el rechazo humano de la segunda ronda, la siguiente corrida vuelve a ser la primera ronda.
+- [x] C28 — R-REV-005: Tras el rechazo humano de la segunda ronda, la siguiente corrida vuelve a ser la primera ronda.
       <!-- test: npx vitest run tests/code-review.test.ts -->
-- [ ] C29 — R-REV-003: Sin la clave `code-review: exigida`, `valmen gate code-review --id <ID>` corre a mano hasta dejar su recibo.
+- [x] C29 — R-REV-003: Sin la clave `code-review: exigida`, `valmen gate code-review --id <ID>` corre a mano hasta dejar su recibo.
       <!-- test: npx vitest run tests/code-review.test.ts -->
-- [ ] C30 — R-REV-004: Un recibo `block` de `code-review` no impide entregar a `awaiting_user_tests` con el recibo vigente de `qa-mechanical`.
+- [x] C30 — R-REV-004: Un recibo `block` de `code-review` no impide entregar a `awaiting_user_tests` con el recibo vigente de `qa-mechanical`.
       <!-- test: npx vitest run tests/code-review.test.ts -->
-- [ ] C31 — Las pruebas existentes de compuertas, entrega, recibos, calibración, riesgo, revisor, enrutado, panel, servidor MCP pasan con la compuerta nueva.
+- [x] C31 — Las pruebas existentes de compuertas, entrega, recibos, calibración, riesgo, revisor, enrutado, panel, servidor MCP pasan con la compuerta nueva.
       <!-- test: npx vitest run tests/gate-mecanico.test.ts tests/arbol-probado.test.ts tests/next-step.test.ts tests/gate-command.test.ts tests/compuerta-repetida.test.ts tests/receipts-compat.test.ts tests/calibration.test.ts tests/riesgo-revision.test.ts tests/agente-revisor.test.ts tests/routing.test.ts tests/gate-view.test.ts tests/mcp-server.test.ts -->
-- [ ] C32 — El monorepo compila con la compuerta nueva.
+- [x] C32 — El monorepo compila con la compuerta nueva.
       <!-- test: npx tsc --build tsconfig.build.json -->
-- [ ] C33 — El cambio no deja exportaciones nuevas sin consumidor.
+- [x] C33 — El cambio no deja exportaciones nuevas sin consumidor.
       <!-- test: node scripts/exports-sin-uso.mjs -->
 
 ## Puntos
@@ -200,11 +200,32 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+Parte A completa según `## Plan`, pasos 1 a 11. Compuerta `code-review` en `packages/gate/src/definitions.ts` (flag `diffReview` en `decide.ts`), campo `codeReview` del recibo en `receipt.ts`, `cambiosContraBase` en `packages/engine/src/diff.ts`, revisor `packages/gate-llm-judge/src/revisor-diff.ts`, la corrida en `packages/engine/src/code-review.ts` y su despacho en `gate.ts`; bordes en CLI (`--base`), MCP, servidor y rol `reviewer`. No se activó ninguna clave en `.valmen/config.yaml` y la entrega no cambia.
+
+Cambios autorizados por el PO fuera de lo escrito en el plan (respuesta literal del PO, 2026-10-10: «Autorizar la aserción y los 3 cambios (Recomendado)»):
+
+- `tests/gate-view.test.ts:477`: la lista esperada de ids pasa a las cuatro compuertas, porque la tarjeta de `code-review` es el efecto previsto de registrarla. Solo esa lista; «Autorizar la aserción y los 3 cambios (Recomendado)».
+- `packages/server/src/gates.ts:268` (`hashVigenteDe`, usado en `runTicketGate`, `listGateDecisions` y `recordHumanDecision`) y `packages/engine/src/index.ts:55` (exporta `motivoDeArbolNoVigente`): el recibo de `code-review` guarda el hash de su entrada congelada y caduca con el árbol, así que sin esto Mission Control lo marcaba siempre obsoleto. «Autorizar la aserción y los 3 cambios (Recomendado)». Cubierta por la prueba «Mission Control muestra una tarjeta más…» de `tests/code-review.test.ts`.
+- `packages/engine/src/diff.ts:269` (`cambiosContraBase`): el parche se pide contra el commit de `git merge-base <base> HEAD` en vez de `--merge-base <base>`; mismo resultado, no exige git 2.30 (cierra H5) y la referencia externa no viaja como opción de git. «Autorizar la aserción y los 3 cambios (Recomendado)». Cubierta por las pruebas de base y de commiteado más sin commitear de `tests/code-review.test.ts`.
+- `packages/cli/src/main.ts:1824` y `:1880`: `valmen simulate code-review` y `valmen promote-gate code-review` devuelven un error limpio de código 2. «Autorizar la aserción y los 3 cambios (Recomendado)». Cubierta por «valmen simulate code-review lo dice con el código de esquema…» y «simulateGate rechaza…».
+
+Otros cambios declarados por el plan: `tests/routing.test.ts:147` (texto del `consumer` del rol `reviewer`) y la línea base de `scripts/exports-sin-uso.linea-base.json`, de la que se quitaron 3 entradas que ya tienen consumidor (`routeFor`, `COMANDOS`, `git`); no se agregó ninguna.
+
+Decisiones de implementación: un diff vacío queda en `review` (no se aprueba por vacuidad); `profundidad` guarda la que pide el riesgo aunque un veto del código evite llamar a los revisores; `entrada.acotadaA` (campo extra) dice qué archivos se enviaron en la segunda ronda; `NotApplicableRecord` gana el campo opcional `reason`.
+
+H1 medida sobre el diff de este ticket: parche de archivos versionados 45 073 bytes, más unos 110 000 de archivos nuevos como altas completas (unos 155 000, bajo el tope de 240 000); con los archivos completos de los tocados no cabría, y la compuerta enviaría solo el parche. H2 (que `maxTokens` no corte la salida por `CLAUDE_CODE_MAX_OUTPUT_TOKENS`) y H4 siguen sin medirse: no se usó un modelo real. Limitación: el revisor real solo se probó con `fetchImpl` y `cliRunner` falsos.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Directorio: la raíz del worktree (o del repositorio tras integrar). Requisitos: Node 24 con las dependencias del monorepo y `git` en el PATH; sin red ni credenciales (los revisores son falsos).
+
+1. `npm run build` — sale sin errores.
+2. `npx vitest run tests/revisor-diff.test.ts tests/code-review.test.ts` — 78 pruebas en verde (C1 a C30 y los casos de borde).
+3. `npx vitest run tests/gate-mecanico.test.ts tests/arbol-probado.test.ts tests/next-step.test.ts tests/gate-command.test.ts tests/compuerta-repetida.test.ts tests/receipts-compat.test.ts tests/calibration.test.ts tests/riesgo-revision.test.ts tests/agente-revisor.test.ts tests/routing.test.ts tests/gate-view.test.ts tests/mcp-server.test.ts` — todo en verde (C31).
+4. `npx tsc --build tsconfig.build.json` y `npx tsc --noEmit -p tsconfig.json` — 0 errores (C32).
+5. `node scripts/exports-sin-uso.mjs` — «Sin exportaciones nuevas sin consumidor» (C33).
+
+Validación manual opcional, que gasta una llamada a un modelo real: `valmen gate code-review --id <ID>` sobre un ticket en `in_progress` con un diff pequeño, y leer el recibo con `valmen show`. No se hizo: queda sin verificar el revisor real contra un proveedor (H2, H4).
 
 ## QA
 
@@ -233,7 +254,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": null,
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual: sesión de implementación con Claude Sonnet 5.5, dos tramos cortados por el límite de uso; la sesión no expone los números",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -306,6 +343,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-10",
+    "at": "2026-10-11T01:43:21.790Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:37:27.655Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-10",
+    "at": "2026-10-11T03:51:08.505Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```
