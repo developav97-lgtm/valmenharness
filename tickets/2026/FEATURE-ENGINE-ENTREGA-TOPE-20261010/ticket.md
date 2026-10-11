@@ -4,7 +4,7 @@ id: FEATURE-ENGINE-ENTREGA-TOPE-20261010
 title: Medir líneas añadidas y borradas y avisar al pasar el tope
 type: FEATURE
 module: ENGINE
-workflow_status: planned
+workflow_status: in_progress
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -60,7 +60,7 @@ El pedido nombra dos cosas que el código no tiene. Se buscaron (`grep` de `budg
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente de la aprobación del PO (gate de plan). La aprobación confirma también los dos supuestos de «Supuestos y decisiones pendientes»: el nombre de la clave (`delivery-budget`) y la lista de archivos generados que no cuentan.
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan), el 2026-10-11 con «Aprobar tal cual (Recomendado)»; el REVIEW del recibo plan-1 lo decidió el PO.
 - Alcance: medir, registrar y avisar en las dos integraciones (`integrarWorktree`, `integrarTicket`) y mostrar el tamaño en el parte de la jornada. Exclusiones: no se bloquea ninguna integración por tamaño; no se toca el plan ni la skill `planificacion` (R-ENT-003, ticket FEATURE-ENGINE-PLAN-TAMANO-20261010); no se cambia la vista web.
 - Modo de trabajo: harness completo, porque toca varios módulos del motor (integración, git cerrado, parte) y el CLI.
 - Tamaño previsto: 20 criterios; unas 180 líneas de producción y unas 350 de pruebas (unas 530 en total). Pasa el tope orientativo de 400 de la propia spec; se sigue en un ticket porque medir sin registrar ni avisar no es entregable por separado, y partir el parte (paso 7) en otro ticket es la alternativa si el PO lo prefiere.
@@ -199,6 +199,51 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-004",
+    "date": "2026-10-11",
+    "at": "2026-10-11T19:16:50.819Z",
+    "action": "gate-approved",
+    "actor": "cli",
+    "details": "Gate plan aprobado por PO (recibo GR-20261011-FEATURE-ENGINE-ENTREGA-TOPE-20261010-plan-1, canal cli, decidida 2026-10-11T19:16:50.816Z): Aprobar tal cual (Recomendado)"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-11",
+    "at": "2026-10-11T19:16:51.173Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"PO\",\"source\":\"cli\",\"quote\":\"Aprobar tal cual (Recomendado)\",\"planHash\":\"sha256:984f9fa5db2ebdda3b476cd9d78be37512939685f742654d61c0b4dc3deb6208\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-11",
+    "at": "2026-10-11T19:16:51.657Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: PO (fuente cli), plan sha256:984f9fa5db2ebdda3b476cd9d78be37512939685f742654d61c0b4dc3deb6208."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-11",
+    "at": "2026-10-11T19:16:51.657Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-11",
+    "at": "2026-10-11T19:16:51.993Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
   }
 ]
 ```
