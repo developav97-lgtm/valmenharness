@@ -97,15 +97,30 @@ function fila(
   };
 }
 
-function registro(id: string, workflowStatus: string) {
+function registro(
+  id: string,
+  workflowStatus: string,
+  publicState: { state: string; label: string; reason: string | null } = {
+    state: "working",
+    label: "Trabajando",
+    reason: null,
+  },
+) {
   return {
     id,
     title: id,
     workflowStatus,
     qaStatus: "pending",
     releaseStatus: "unreleased",
+    publicState,
   };
 }
+
+const DECIDE = (reason: string) => ({
+  state: "needs-decision",
+  label: "Necesita tu decisión",
+  reason,
+});
 
 const AGENTES = {
   agentes: [
@@ -138,10 +153,14 @@ const TICKETS = {
     registro("FEATURE-UNO-20261008", "in_progress"),
     registro("FEATURE-DOS-20261008", "in_progress"),
     registro("FEATURE-TRES-20261008", "approved"),
-    registro("FEATURE-CUATRO-20261008", "planned"),
+    registro("FEATURE-CUATRO-20261008", "planned", DECIDE("plan-approval")),
     registro("FEATURE-CINCO-20261008", "approved"),
-    registro("FEATURE-FIN-20261008", "awaiting_user_tests"),
-    registro("FEATURE-LISTO-20261008", "closed"),
+    registro("FEATURE-FIN-20261008", "awaiting_user_tests", DECIDE("user-tests")),
+    registro("FEATURE-LISTO-20261008", "closed", {
+      state: "done",
+      label: "Listo",
+      reason: null,
+    }),
   ],
 };
 
@@ -250,7 +269,7 @@ describe("la vista Agentes", () => {
     expect(kpi).toEqual({
       entregados: "1",
       cerrados: "0",
-      "esperan al PO": "2",
+      "esperan al PO": "3",
       trabajando: "1",
       "en cola": "3",
       "aprobaciones pendientes": "1",

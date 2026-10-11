@@ -4,7 +4,7 @@ id: FEATURE-WEB-ESTADO-PUBLICO-20261010
 title: La vista web usa la función de estado público
 type: FEATURE
 module: WEB
-workflow_status: in_progress
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -91,43 +91,43 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
 
 ## Criterios de aceptación
 
-- [ ] C01: Cada fila de `GET /api/tickets` trae `publicState` igual al que devuelve `estadoPublicoDelTicket` para ese ticket.
+- [x] C01: Cada fila de `GET /api/tickets` trae `publicState` igual al que devuelve `estadoPublicoDelTicket` para ese ticket.
       <!-- test: npx vitest run tests/estado-publico-web.test.ts -t C01 -->
-- [ ] C02: En `GET /api/tickets`, un ticket en `planned` sin autorización vigente trae `publicState.reason` igual a `plan-approval`.
+- [x] C02: En `GET /api/tickets`, un ticket en `planned` sin autorización vigente trae `publicState.reason` igual a `plan-approval`.
       <!-- test: npx vitest run tests/estado-publico-web.test.ts -t C02 -->
-- [ ] C03: `GET /api/tickets/:id` trae `publicState` igual al que devuelve `estadoPublicoDelTicket` para ese ticket.
+- [x] C03: `GET /api/tickets/:id` trae `publicState` igual al que devuelve `estadoPublicoDelTicket` para ese ticket.
       <!-- test: npx vitest run tests/estado-publico-web.test.ts -t C03 -->
-- [ ] C04: Un ticket con frontmatter ilegible aparece en `GET /api/tickets` con `publicState` en `null` sin que la respuesta deje de ser 200.
+- [x] C04: Un ticket con frontmatter ilegible aparece en `GET /api/tickets` con `publicState` en `null` sin que la respuesta deje de ser 200.
       <!-- test: npx vitest run tests/estado-publico-web.test.ts -t C04 -->
-- [ ] C05: Las pruebas existentes de los endpoints de tickets siguen en verde.
+- [x] C05: Las pruebas existentes de los endpoints de tickets siguen en verde.
       <!-- test: npx vitest run tests/tickets-view.test.ts -->
-- [ ] C06: La lista de tickets muestra la etiqueta del estado público en la celda de estado de cada fila.
+- [x] C06: La lista de tickets muestra la etiqueta del estado público en la celda de estado de cada fila.
       <!-- test: npx vitest run tests/estado-publico-web.test.ts -t C06 -->
-- [ ] C07: Una fila de la lista con `publicState` en `null` muestra «—» como estado público.
+- [x] C07: Una fila de la lista con `publicState` en `null` muestra «—» como estado público.
       <!-- test: npx vitest run tests/estado-publico-web.test.ts -t C07 -->
-- [ ] C08: La tira de la vista del ticket muestra un chip «estado público» con la etiqueta que trae `GET /api/tickets/:id`.
+- [x] C08: La tira de la vista del ticket muestra un chip «estado público» con la etiqueta que trae `GET /api/tickets/:id`.
       <!-- test: npx vitest run tests/estado-publico-web.test.ts -t C08 -->
-- [ ] C09: El KPI «esperan al PO» cuenta un ticket de la corrida en `planned` cuyo `publicState` es «Necesita tu decisión».
+- [x] C09: El KPI «esperan al PO» cuenta un ticket de la corrida en `planned` cuyo `publicState` es «Necesita tu decisión».
       <!-- test: npx vitest run tests/estado-publico-web.test.ts -t C09 -->
-- [ ] C10: `packages/server/web/index.html` ya no contiene `ESTADOS_QUE_ESPERAN_AL_PO`.
+- [x] C10: `packages/server/web/index.html` ya no contiene `ESTADOS_QUE_ESPERAN_AL_PO`.
       <!-- test: npx vitest run tests/estado-publico-web.test.ts -t C10 -->
-- [ ] C11: El panel de entregados de la vista Agentes muestra la etiqueta del estado público después del estado del motor.
+- [x] C11: El panel de entregados de la vista Agentes muestra la etiqueta del estado público después del estado del motor.
       <!-- test: npx vitest run tests/estado-publico-web.test.ts -t C11 -->
-- [ ] C12: Cada ticket de la cola de la vista Agentes muestra la etiqueta de su estado público.
+- [x] C12: Cada ticket de la cola de la vista Agentes muestra la etiqueta de su estado público.
       <!-- test: npx vitest run tests/estado-publico-web.test.ts -t C12 -->
-- [ ] C13: La fila de un agente vivo en la vista Agentes muestra la etiqueta del estado público de su ticket.
+- [x] C13: La fila de un agente vivo en la vista Agentes muestra la etiqueta del estado público de su ticket.
       <!-- test: npx vitest run tests/estado-publico-web.test.ts -t C13 -->
-- [ ] C14: Un ticket en `blocked` muestra «Necesita tu decisión» tanto en la lista como en la vista Agentes.
+- [x] C14: Un ticket en `blocked` muestra «Necesita tu decisión» tanto en la lista como en la vista Agentes.
       <!-- test: npx vitest run tests/estado-publico-web.test.ts -t C14 -->
-- [ ] C15: El tablero de la feature conserva sus columnas.
+- [x] C15: El tablero de la feature conserva sus columnas.
       <!-- test: npx vitest run tests/tablero-feature.test.ts -->
-- [ ] C16: Las pruebas de la vista Agentes pasan con el cambio declarado del KPI «esperan al PO».
+- [x] C16: Las pruebas de la vista Agentes pasan con el cambio declarado del KPI «esperan al PO».
       <!-- test: npx vitest run tests/vista-corrida.test.ts -->
-- [ ] C17: El monorepo compila sin errores de tipos.
+- [x] C17: El monorepo compila sin errores de tipos.
       <!-- test: npx tsc --build tsconfig.build.json -->
-- [ ] C18: `revisar_presentacion` no informa colores escritos a mano en las líneas agregadas.
+- [x] C18: `revisar_presentacion` no informa colores escritos a mano en las líneas agregadas.
       <!-- verify: manual -->
-- [ ] C19: En el servidor de desarrollo, la pantalla `#/agentes` muestra la etiqueta del estado público en los entregados.
+- [x] C19: En el servidor de desarrollo, la pantalla `#/agentes` muestra la etiqueta del estado público en los entregados.
       <!-- verify: manual -->
 
 ## Puntos
@@ -138,11 +138,23 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
 
 ## Implementación
 
-Pendiente.
+- `packages/server/src/server.ts`: importa `estadoPublicoDelTicket` de `@valmen/engine` y crea `estadoPublicoOVacio(paths, id)` (devuelve `null` si el ticket no se puede leer); `GET /api/tickets` agrega `publicState` a cada fila y `GET /api/tickets/:id` al detalle. `summary` no cambia.
+- `packages/server/web/index.html`: `etiquetaDeEstadoPublico(publicState)` (clases `corrida-estado`, `error`/`ok`, sin colores nuevos) y `estadoPublicoDeRegistro`; se pinta en la celda de estado de la lista, como chip «estado público» en la tira del ticket, y en la vista Agentes (entregados, cola y tabla de agentes). `ESTADOS_QUE_ESPERAN_AL_PO` desaparece: el KPI «esperan al PO» cuenta `publicState.state === "needs-decision"`. Tablero, escena animada y contador de la barra lateral no cambian (decisión del PO).
+- En la cola la etiqueta va después de «espera a …» para no romper la prueba existente de `tests/vista-corrida.test.ts` («la cola se agrupa por ola…»), que compara ese texto contiguo y no está entre las tres que el plan cambia.
+- Pruebas: `tests/estado-publico-web.test.ts` (nuevo, 13 casos, vistos en rojo antes de implementar) y, por EST-009 autorizado en el plan, los tres cambios declarados en `tests/vista-corrida.test.ts` (ayudante `registro` con `publicState`, registro simulado `TICKETS`, KPI «esperan al PO» de `"2"` a `"3"`). Ninguna otra prueba existente cambió.
+- Rollback: revertir el commit de implementación.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Directorio: la raíz del repositorio (o del worktree `ticket-estado-publico`).
+
+- `npx vitest run tests/estado-publico-web.test.ts tests/tickets-view.test.ts tests/tablero-feature.test.ts tests/vista-corrida.test.ts tests/api-rutas.test.ts` — esperado: 5 archivos, 75 pruebas en verde (resultado de la sesión: 75 passed).
+- `npx tsc --build tsconfig.build.json` y `npx tsc --noEmit -p .` — esperado: sin salida (sin errores de tipos); eslint y prettier sobre los archivos tocados sin hallazgos; `node scripts/exports-sin-uso.mjs` sin exportaciones nuevas sin consumidor.
+- C18: `node packages/cli/dist/main.js estandar revisar` (equivale a `revisar_presentacion`) → «Colores fijos — nada que avisar (1 archivo(s) de interfaz revisado(s))».
+- C19 y validación manual (verificadas en el navegador integrado contra `node packages/cli/dist/main.js serve --port 4173` desde el worktree, registro real de 228 tickets): `#/tickets` muestra «Listo» / «Trabajando» / «Necesita tu decisión» junto al estado del motor; `#/ticket/FEATURE-WEB-ESTADO-PUBLICO-20261010` muestra el chip «estado público Trabajando»; `#/agentes` muestra «Listo» en los entregados y «Trabajando» en la tabla de agentes; la lista en modo oscuro conserva el contraste.
+- Capturas (fuera del repositorio): `/private/tmp/claude-501/-Users-juanandrade-Desktop-ValmenHarness/c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/scratchpad/capturas-web-estado/` — 1-lista-tickets-claro, 2-ticket-chip-claro, 3-agentes-entregados-claro, 4-agentes-tabla-claro, 5-lista-tickets-oscuro (PNG).
+- Limitación: el registro real no tiene un ticket en `blocked` ni `planned`; esos casos (C02, C09, C14) se prueban con registros temporales y DOM simulado, no en el navegador. No se capturó la vista del ticket ni Agentes en modo oscuro.
+- Ambiente: Node 24, `npm run build` previo para el servidor de desarrollo.
 
 ## QA
 
@@ -171,7 +183,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": null,
+    "model": null,
+    "reasoning_effort": null,
+    "notes": null,
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:sesion-implementacion-sonnet-5-5 sin numeros expuestos",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -253,6 +281,24 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:57:24.238Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:57:24.729Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```

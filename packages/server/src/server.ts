@@ -61,6 +61,7 @@ import {
   createExecutionContract,
   executionEventsPath,
   readReceipts,
+  estadoPublicoDelTicket,
   readJourneyRoadmap,
   leerFases,
 } from "@valmen/engine";
@@ -433,6 +434,18 @@ function sesionesPorTramo<S extends { readonly startedAt: number }>(
 }
 
 /**
+ * El estado público de un ticket (R-EPU-002), o `null` si no se puede leer: un ticket ilegible o
+ * inexistente no debe tumbar la respuesta que lo lista.
+ */
+function estadoPublicoOVacio(paths: RegistryPaths, id: string) {
+  try {
+    return estadoPublicoDelTicket(paths, id);
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Enrutado de la API.
  *
  * Se separa del servidor HTTP para poder probar cada endpoint llamándolo
@@ -501,7 +514,13 @@ export async function handleApi(
     };
     return {
       status: 200,
-      body: { summary: summarize(filas), tickets: filterTickets(filas, filtros) },
+      body: {
+        summary: summarize(filas),
+        tickets: filterTickets(filas, filtros).map((fila) => ({
+          ...fila,
+          publicState: estadoPublicoOVacio(paths, fila.id),
+        })),
+      },
     };
   }
 
@@ -1300,7 +1319,10 @@ export async function handleApi(
     if (detalle === null) {
       return { status: 404, body: { error: `No existe el ticket "${partes[2]}".` } };
     }
-    return { status: 200, body: detalle };
+    return {
+      status: 200,
+      body: { ...detalle, publicState: estadoPublicoOVacio(paths, detalle.id) },
+    };
   }
 
   // GET /api/tickets/:id/gates

@@ -3285,7 +3285,7 @@
           tr.append(celdaImpactos);
 
           const celdaEstado = el("td");
-          celdaEstado.append(el("span", t.workflowStatus));
+          celdaEstado.append(el("span", t.workflowStatus), etiquetaDeEstadoPublico(t.publicState));
           if (t.invalid !== null) {
             const roto = el("div");
             roto.append(el("span", "inválido", "etiqueta roto"));
@@ -5699,6 +5699,11 @@
         const chips = el("div", undefined, "estado-chips");
         chips.append(
           chip("workflow", bloqueado ? "bloqueado" : t.workflowStatus, bloqueado ? "malo" : "activo"),
+          chip(
+            "estado público",
+            t.publicState?.label ?? "—",
+            t.publicState?.state === "needs-decision" ? "malo" : t.publicState?.state === "done" ? "bueno" : "",
+          ),
           chip("QA", t.qaStatus, t.qaStatus === "approved" ? "bueno" : ""),
           chip("release", t.releaseStatus, t.releaseStatus === "released" ? "bueno" : ""),
           chip("riesgo", t.riskLevel, t.riskLevel === "normal" ? "" : "malo"),
@@ -6336,7 +6341,6 @@
       const REFRESCO_DE_CORRIDA_MS = 5000;
       const ESTADOS_ENTREGADOS = ["awaiting_user_tests", "in_qa", "qa_approved", "closed"];
       const ESTADOS_CERRADOS = ["qa_approved", "closed"];
-      const ESTADOS_QUE_ESPERAN_AL_PO = ["awaiting_user_tests", "blocked", "changes_requested"];
       let refrescoDeCorrida = null;
 
       /** Los agentes con trabajo en curso: trabajando, o esperando un permiso. La sesión principal no cuenta. */
@@ -6395,6 +6399,11 @@
         return (tickets ?? []).find((t) => t.id === ticketId)?.workflowStatus ?? null;
       }
 
+      /** El estado público (R-EPU-002) que el servidor calculó para el ticket, o `null`. */
+      function estadoPublicoDeRegistro(ticketId, tickets) {
+        return (tickets ?? []).find((t) => t.id === ticketId)?.publicState ?? null;
+      }
+
       /** Cada ticket de la corrida con su estado del registro: lo que el lienzo reparte por estación. */
       function ticketsDeLaEscena(agentes, filas, tickets) {
         return idsDeLaCorrida(agentes, filas).map((id) => ({ id, estado: estadoDeRegistro(id, tickets) }));
@@ -6408,7 +6417,7 @@
         const conAgente = new Set(vivos.map((a) => a.ticket).filter(Boolean));
         const entregados = ids.filter((id) => ESTADOS_ENTREGADOS.includes(estados.get(id)));
         const cerrados = ids.filter((id) => ESTADOS_CERRADOS.includes(estados.get(id)));
-        const esperan = new Set(ids.filter((id) => ESTADOS_QUE_ESPERAN_AL_PO.includes(estados.get(id))));
+        const esperan = new Set(ids.filter((id) => estadoPublicoDeRegistro(id, tickets)?.state === "needs-decision"));
         for (const agente of vivos) {
           if (agente.estado === "esperando") esperan.add(agente.ticket ?? agente.agente);
         }
@@ -6471,6 +6480,19 @@
         return el("span", estado ?? "sin registro", clase);
       }
 
+      /** La etiqueta del estado público: la del servidor, sin reagrupar estados en el navegador. */
+      function etiquetaDeEstadoPublico(publicState) {
+        const clase =
+          publicState?.state === "needs-decision"
+            ? "corrida-estado error"
+            : publicState?.state === "done"
+              ? "corrida-estado ok"
+              : "corrida-estado";
+        const nodo = el("span", publicState?.label ?? "—", clase);
+        if (publicState?.reason) nodo.title = publicState.reason;
+        return nodo;
+      }
+
       function celdaConRotulo(rotulo, contenido) {
         const celda = el("td");
         celda.setAttribute("data-rotulo", rotulo);
@@ -6479,7 +6501,7 @@
         return celda;
       }
 
-      function tablaDeAgentes(vivos, ahora) {
+      function tablaDeAgentes(vivos, ahora, tickets) {
         const tabla = el("table", undefined, "corrida-agente");
         const encabezado = el("thead");
         const fila = el("tr");
@@ -6492,6 +6514,9 @@
           const punto = el("span", undefined, `corrida-punto ${agente.estado}`);
           punto.setAttribute("title", agente.estado);
           ticket.append(punto, el("span", agente.principal === true ? (agente.nombre ?? agente.agente) : (agente.ticket ?? agente.agente), "id"));
+          if (agente.ticket && (tickets ?? []).some((t) => t.id === agente.ticket)) {
+            ticket.append(etiquetaDeEstadoPublico(estadoPublicoDeRegistro(agente.ticket, tickets)));
+          }
           if (agente.descripcion) ticket.append(el("div", agente.descripcion, "nota-agente"));
           const fase = fraseDeFase(agente);
           const celdaFase = el("div");
@@ -6737,7 +6762,7 @@
           panelVivos.append(tituloDe("agentes"));
           const filasDePanel = moduloDeEscena !== null ? moduloDeEscena.filasDePanelAgentes(agentes) : vivos;
           if (filasDePanel.length === 0) panelVivos.append(el("div", "Ningún agente trabajando ahora.", "vacio"));
-          else panelVivos.append(tablaDeAgentes(filasDePanel, ahora));
+          else panelVivos.append(tablaDeAgentes(filasDePanel, ahora, tickets));
 
           panelCola.append(tituloDe("cola"));
           if (kpis.cola.length === 0) {
@@ -6753,6 +6778,7 @@
                 const linea = el("div", undefined, "corrida-item");
                 linea.append(el("span", item.ticketId, "id"));
                 linea.append(el("span", item.esperaA.length === 0 ? "sin espera" : `espera a ${item.esperaA.join(", ")}`, "resultado"));
+                linea.append(etiquetaDeEstadoPublico(estadoPublicoDeRegistro(item.ticketId, tickets)));
                 grupo.append(linea);
               }
               contenedor.append(grupo);
@@ -6766,7 +6792,11 @@
             const contenedor = el("div", undefined, "corrida-cola");
             for (const id of kpis.entregadosIds) {
               const linea = el("div", undefined, "corrida-item");
-              linea.append(el("span", id, "id"), etiquetaDeEstadoRegistro(estadoDeRegistro(id, tickets)));
+              linea.append(
+                el("span", id, "id"),
+                etiquetaDeEstadoRegistro(estadoDeRegistro(id, tickets)),
+                etiquetaDeEstadoPublico(estadoPublicoDeRegistro(id, tickets)),
+              );
               contenedor.append(linea);
             }
             panelEntregados.append(contenedor);
