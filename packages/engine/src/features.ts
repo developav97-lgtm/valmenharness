@@ -460,7 +460,9 @@ export function attachTicketToFeature(request: AttachTicketRequest): AttachedTic
     ...sprint,
     tickets: [...sprint.tickets] as (typeof sprint.tickets)[number][],
   }));
-  const declarados = new Set(decompositionTickets(documento.decomposition).map((t) => t.id));
+  const declarados = new Set(
+    decompositionTickets(documento.decomposition).map((t) => t.id),
+  );
 
   // Los tickets de los que depende tienen que estar en el grafo: una dependencia
   // que no existe no se puede leer en el tablero, y el grafo se comprueba entero
@@ -481,7 +483,8 @@ export function attachTicketToFeature(request: AttachTicketRequest): AttachedTic
 
   let sprintCreated = false;
   const pedido = request.sprint?.trim();
-  let indice = pedido === undefined ? sprints.length - 1 : sprints.findIndex((s) => s.id === pedido);
+  let indice =
+    pedido === undefined ? sprints.length - 1 : sprints.findIndex((s) => s.id === pedido);
 
   if (pedido !== undefined && indice === -1) {
     const objetivo = (request.goal ?? "").trim();

@@ -123,9 +123,7 @@ export interface JevPropositionConfig {
 }
 
 /** Las preguntas adicionales, agrupadas por etapa y siempre completas. */
-export type JevPropositions = Readonly<
-  Record<JevStage, readonly JevPropositionConfig[]>
->;
+export type JevPropositions = Readonly<Record<JevStage, readonly JevPropositionConfig[]>>;
 
 const JEV_PROPOSITION_ID_RE = /^custom-[a-z][a-z0-9-]{0,62}$/;
 
@@ -173,9 +171,7 @@ function jevProposition(value: ConfigValue, path: string): JevPropositionConfig 
 
   const id = jevText(item, "id", path);
   if (!JEV_PROPOSITION_ID_RE.test(id)) {
-    fail(
-      `config.yaml: "${path}.id" debe usar el prefijo reservado custom- y minúsculas.`,
-    );
+    fail(`config.yaml: "${path}.id" debe usar el prefijo reservado custom- y minúsculas.`);
   }
 
   const criteria = jevMap(item["criteria"], `${path}.criteria`);
@@ -231,7 +227,11 @@ function jevProposition(value: ConfigValue, path: string): JevPropositionConfig 
  */
 export function readJevPropositions(config: ConfigMap): JevPropositions {
   if (config["jev-propositions"] === undefined) {
-    return Object.freeze({ analysis: Object.freeze([]), plan: Object.freeze([]), integration: Object.freeze([]) });
+    return Object.freeze({
+      analysis: Object.freeze([]),
+      plan: Object.freeze([]),
+      integration: Object.freeze([]),
+    });
   }
   const declared = readMap(config, "jev-propositions");
   for (const stage of Object.keys(declared)) {
@@ -376,14 +376,18 @@ export function readGateThresholds(
       fail(`config.yaml: "${donde}" debe ser un mapa.`);
     }
     for (const clave of Object.keys(entrada)) {
-      if (!permitidas.has(clave)) fail(`config.yaml: "${donde}.${clave}" no es una clave válida.`);
+      if (!permitidas.has(clave))
+        fail(`config.yaml: "${donde}.${clave}" no es una clave válida.`);
     }
     const gate = readString(entrada, "gate", "");
     if (!knownGateIds.includes(gate)) {
       fail(`config.yaml: "${donde}.gate" nombra una compuerta desconocida: "${gate}".`);
     }
     const evaluator = readString(entrada, "evaluator", "");
-    if (evaluator !== "" && !(THRESHOLD_EVALUATORS as readonly string[]).includes(evaluator)) {
+    if (
+      evaluator !== "" &&
+      !(THRESHOLD_EVALUATORS as readonly string[]).includes(evaluator)
+    ) {
       fail(
         `config.yaml: "${donde}.evaluator" nombra un evaluador desconocido: "${evaluator}". ` +
           `Los válidos son ${THRESHOLD_EVALUATORS.join(", ")}.`,
@@ -641,7 +645,9 @@ export function readTestSetupConfig(config: ConfigMap): TestSetupConfig | null {
   if (setup["timeout"] !== undefined) {
     const segundos = Number(readString(setup, "timeout", ""));
     if (!Number.isFinite(segundos) || segundos <= 0) {
-      fail('config.yaml: "test-setup.timeout" debe ser un número de segundos mayor que cero.');
+      fail(
+        'config.yaml: "test-setup.timeout" debe ser un número de segundos mayor que cero.',
+      );
     }
     timeoutMs = Math.round(segundos * 1000);
   }
@@ -1004,18 +1010,26 @@ export function readPlanApprovalSources(config: ConfigMap): readonly string[] {
   if (config["plan-approval-sources"] === undefined) return DEFAULT_PLAN_APPROVAL_SOURCES;
   const fuentes = readList(config, "plan-approval-sources", []);
   if (fuentes.length === 0) {
-    fail('config.yaml: "plan-approval-sources" no puede estar vacía; quite la clave para usar las de siempre.');
+    fail(
+      'config.yaml: "plan-approval-sources" no puede estar vacía; quite la clave para usar las de siempre.',
+    );
   }
   for (const fuente of fuentes) {
     if (!/^[a-z][a-z0-9-]{0,63}$/.test(fuente)) {
-      fail(`config.yaml: "plan-approval-sources" contiene una fuente inválida: «${fuente}».`);
+      fail(
+        `config.yaml: "plan-approval-sources" contiene una fuente inválida: «${fuente}».`,
+      );
     }
   }
   return fuentes;
 }
 
 /** Las ramas que nunca se aceptan como rama de trabajo si el proyecto no declara las suyas. */
-export const DEFAULT_PROTECTED_BRANCHES: readonly string[] = ["main", "master", "production"];
+export const DEFAULT_PROTECTED_BRANCHES: readonly string[] = [
+  "main",
+  "master",
+  "production",
+];
 
 /** La rama de trabajo si el proyecto no declara `execution.work-branch`. */
 export const DEFAULT_WORK_BRANCH = "valmen/jornada-<AAAAMMDD>";
@@ -1030,7 +1044,10 @@ const WORK_BRANCH_RE = /^[A-Za-z0-9][A-Za-z0-9._/<>-]*$/;
 
 /** Reemplaza `<AAAAMMDD>` de una plantilla de rama por la fecha. */
 export function resolveWorkBranch(workBranch: string, fecha: Date): string {
-  return workBranch.replaceAll("<AAAAMMDD>", fecha.toISOString().slice(0, 10).replaceAll("-", ""));
+  return workBranch.replaceAll(
+    "<AAAAMMDD>",
+    fecha.toISOString().slice(0, 10).replaceAll("-", ""),
+  );
 }
 
 /**
@@ -1049,7 +1066,12 @@ export function readIntegrationConfig(config: ConfigMap): IntegrationConfig {
     fail('config.yaml: "execution.protected-branches" no admite elementos vacíos.');
   }
   const workBranch = readString(execution, "work-branch", DEFAULT_WORK_BRANCH);
-  if (!WORK_BRANCH_RE.test(workBranch) || workBranch.includes("..") || workBranch.endsWith("/") || workBranch.endsWith(".lock")) {
+  if (
+    !WORK_BRANCH_RE.test(workBranch) ||
+    workBranch.includes("..") ||
+    workBranch.endsWith("/") ||
+    workBranch.endsWith(".lock")
+  ) {
     fail(
       `config.yaml: "execution.work-branch" no es un nombre de rama válido: «${workBranch}». ` +
         "Use letras, números, `.`, `_`, `-` y `/`, con `<AAAAMMDD>` opcional.",
@@ -1097,7 +1119,17 @@ export interface ExternalSkill {
   readonly sha256: string;
 }
 
-const VERSIONES_MOVILES = new Set(["latest", "main", "master", "head", "develop", "dev", "trunk", "stable", "nightly"]);
+const VERSIONES_MOVILES = new Set([
+  "latest",
+  "main",
+  "master",
+  "head",
+  "develop",
+  "dev",
+  "trunk",
+  "stable",
+  "nightly",
+]);
 
 /**
  * Lee `external-skills`: las skills de terceros que el proyecto declara.
@@ -1109,35 +1141,60 @@ const VERSIONES_MOVILES = new Set(["latest", "main", "master", "head", "develop"
 export function readExternalSkills(config: ConfigMap): readonly ExternalSkill[] {
   const crudo = config["external-skills"];
   if (crudo === undefined) return [];
-  if (!Array.isArray(crudo)) fail('config.yaml: "external-skills" debe ser una lista de skills.');
+  if (!Array.isArray(crudo))
+    fail('config.yaml: "external-skills" debe ser una lista de skills.');
   const ids = new Set<string>();
   return crudo.map((item, indice) => {
     if (typeof item === "string" || Array.isArray(item)) {
-      fail(`config.yaml: "external-skills[${indice}]" debe ser un mapa con id, source, version y sha256.`);
+      fail(
+        `config.yaml: "external-skills[${indice}]" debe ser un mapa con id, source, version y sha256.`,
+      );
     }
     const id = typeof item["id"] === "string" ? item["id"].trim() : "";
     if (!/^[a-z][a-z0-9-]{0,63}$/.test(id)) {
-      fail(`config.yaml: "external-skills[${indice}].id" debe ser un identificador en minúsculas (letras, números y guiones).`);
+      fail(
+        `config.yaml: "external-skills[${indice}].id" debe ser un identificador en minúsculas (letras, números y guiones).`,
+      );
     }
-    if (ids.has(id)) fail(`config.yaml: skill ${id}: el id está duplicado en "external-skills".`);
+    if (ids.has(id))
+      fail(`config.yaml: skill ${id}: el id está duplicado en "external-skills".`);
     ids.add(id);
     const source = typeof item["source"] === "string" ? item["source"].trim() : "";
     if (source === "") fail(`config.yaml: skill ${id}: falta la fuente («source»).`);
     const version = typeof item["version"] === "string" ? item["version"].trim() : "";
-    if (version === "") fail(`config.yaml: skill ${id}: falta la versión fijada («version»).`);
-    if (VERSIONES_MOVILES.has(version.toLowerCase()) || /^[\^~*><=]/.test(version) || version.includes("*") || /\s/.test(version)) {
-      fail(`config.yaml: skill ${id}: la versión «${version}» no está fijada; usa un tag o un commit, nunca una rama, latest ni un rango.`);
+    if (version === "")
+      fail(`config.yaml: skill ${id}: falta la versión fijada («version»).`);
+    if (
+      VERSIONES_MOVILES.has(version.toLowerCase()) ||
+      /^[\^~*><=]/.test(version) ||
+      version.includes("*") ||
+      /\s/.test(version)
+    ) {
+      fail(
+        `config.yaml: skill ${id}: la versión «${version}» no está fijada; usa un tag o un commit, nunca una rama, latest ni un rango.`,
+      );
     }
-    const hashCrudo = typeof item["sha256"] === "string" ? item["sha256"].trim().toLowerCase().replace(/^sha256:/, "") : "";
+    const hashCrudo =
+      typeof item["sha256"] === "string"
+        ? item["sha256"]
+            .trim()
+            .toLowerCase()
+            .replace(/^sha256:/, "")
+        : "";
     if (!/^[0-9a-f]{64}$/.test(hashCrudo)) {
-      fail(`config.yaml: skill ${id}: falta el hash del contenido («sha256» de 64 caracteres hexadecimales).`);
+      fail(
+        `config.yaml: skill ${id}: falta el hash del contenido («sha256» de 64 caracteres hexadecimales).`,
+      );
     }
     return Object.freeze({ id, source, version, sha256: hashCrudo });
   });
 }
 
 /** Los canales desde los que se acepta crear o revocar una autorización de aprobación si el proyecto no declara los suyos. */
-export const DEFAULT_APPROVAL_AUTHORIZATION_SOURCES: readonly string[] = ["cli", "mission-control"];
+export const DEFAULT_APPROVAL_AUTHORIZATION_SOURCES: readonly string[] = [
+  "cli",
+  "mission-control",
+];
 
 /**
  * Lee `approval-authorization-sources`: los canales que el agente no controla para crear o revocar
@@ -1147,14 +1204,19 @@ export const DEFAULT_APPROVAL_AUTHORIZATION_SOURCES: readonly string[] = ["cli",
  * significar «cualquiera».
  */
 export function readApprovalAuthorizationSources(config: ConfigMap): readonly string[] {
-  if (config["approval-authorization-sources"] === undefined) return DEFAULT_APPROVAL_AUTHORIZATION_SOURCES;
+  if (config["approval-authorization-sources"] === undefined)
+    return DEFAULT_APPROVAL_AUTHORIZATION_SOURCES;
   const fuentes = readList(config, "approval-authorization-sources", []);
   if (fuentes.length === 0) {
-    fail('config.yaml: "approval-authorization-sources" no puede estar vacía; quite la clave para usar las de siempre.');
+    fail(
+      'config.yaml: "approval-authorization-sources" no puede estar vacía; quite la clave para usar las de siempre.',
+    );
   }
   for (const fuente of fuentes) {
     if (!/^[a-z][a-z0-9-]{0,63}$/.test(fuente)) {
-      fail(`config.yaml: "approval-authorization-sources" contiene una fuente inválida: «${fuente}».`);
+      fail(
+        `config.yaml: "approval-authorization-sources" contiene una fuente inválida: «${fuente}».`,
+      );
     }
   }
   return fuentes;
@@ -1168,18 +1230,25 @@ export function readAuthorizationModules(config: ConfigMap): readonly string[] |
   if (config["authorization-modules"] === undefined) return null;
   const modulos = readList(config, "authorization-modules", []);
   if (modulos.length === 0) {
-    fail('config.yaml: "authorization-modules" no puede estar vacía; quite la clave para ofrecer los módulos del registro.');
+    fail(
+      'config.yaml: "authorization-modules" no puede estar vacía; quite la clave para ofrecer los módulos del registro.',
+    );
   }
   for (const modulo of modulos) {
     if (!/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(modulo)) {
-      fail(`config.yaml: "authorization-modules" contiene un módulo inválido: «${modulo}».`);
+      fail(
+        `config.yaml: "authorization-modules" contiene un módulo inválido: «${modulo}».`,
+      );
     }
   }
   return modulos;
 }
 
 /** Los canales desde los que se acepta crear o revocar una autorización de QA si el proyecto no declara los suyos. */
-export const DEFAULT_QA_AUTHORIZATION_SOURCES: readonly string[] = ["cli", "mission-control"];
+export const DEFAULT_QA_AUTHORIZATION_SOURCES: readonly string[] = [
+  "cli",
+  "mission-control",
+];
 
 /**
  * Lee `qa-authorization-sources` (R-QAAG-001): los canales que el agente no controla.
@@ -1188,14 +1257,19 @@ export const DEFAULT_QA_AUTHORIZATION_SOURCES: readonly string[] = ["cli", "miss
  * significar «cualquiera».
  */
 export function readQaAuthorizationSources(config: ConfigMap): readonly string[] {
-  if (config["qa-authorization-sources"] === undefined) return DEFAULT_QA_AUTHORIZATION_SOURCES;
+  if (config["qa-authorization-sources"] === undefined)
+    return DEFAULT_QA_AUTHORIZATION_SOURCES;
   const fuentes = readList(config, "qa-authorization-sources", []);
   if (fuentes.length === 0) {
-    fail('config.yaml: "qa-authorization-sources" no puede estar vacía; quite la clave para usar las de siempre.');
+    fail(
+      'config.yaml: "qa-authorization-sources" no puede estar vacía; quite la clave para usar las de siempre.',
+    );
   }
   for (const fuente of fuentes) {
     if (!/^[a-z][a-z0-9-]{0,63}$/.test(fuente)) {
-      fail(`config.yaml: "qa-authorization-sources" contiene una fuente inválida: «${fuente}».`);
+      fail(
+        `config.yaml: "qa-authorization-sources" contiene una fuente inválida: «${fuente}».`,
+      );
     }
   }
   return fuentes;
@@ -1225,7 +1299,8 @@ export function readQaHttpConfig(config: ConfigMap): QaHttpConfig | null {
   if (config["qa-http"] === undefined) return null;
   const mapa = readMap(config, "qa-http");
   const hosts = readList(mapa, "hosts", []);
-  if (hosts.length === 0) fail('config.yaml: "qa-http.hosts" debe listar al menos una URL base.');
+  if (hosts.length === 0)
+    fail('config.yaml: "qa-http.hosts" debe listar al menos una URL base.');
   for (const host of hosts) {
     let url: URL;
     try {
@@ -1237,20 +1312,39 @@ export function readQaHttpConfig(config: ConfigMap): QaHttpConfig | null {
       fail(`config.yaml: "qa-http.hosts" solo admite http o https: «${host}».`);
     }
     if (url.username !== "" || url.password !== "") {
-      fail(`config.yaml: "qa-http.hosts" no admite credenciales dentro de la URL: «${host}».`);
+      fail(
+        `config.yaml: "qa-http.hosts" no admite credenciales dentro de la URL: «${host}».`,
+      );
     }
   }
-  const methods = mapa["methods"] === undefined ? ["GET"] : readList(mapa, "methods", []).map((m) => m.toUpperCase());
+  const methods =
+    mapa["methods"] === undefined
+      ? ["GET"]
+      : readList(mapa, "methods", []).map((m) => m.toUpperCase());
   if (methods.length === 0 || methods.some((m) => !METODOS_HTTP.includes(m))) {
-    fail(`config.yaml: "qa-http.methods" debe usar métodos entre ${METODOS_HTTP.join(", ")}.`);
+    fail(
+      `config.yaml: "qa-http.methods" debe usar métodos entre ${METODOS_HTTP.join(", ")}.`,
+    );
   }
-  const timeoutSeconds = mapa["timeout-seconds"] === undefined ? 10 : Number(readString(mapa, "timeout-seconds", ""));
+  const timeoutSeconds =
+    mapa["timeout-seconds"] === undefined
+      ? 10
+      : Number(readString(mapa, "timeout-seconds", ""));
   if (!Number.isFinite(timeoutSeconds) || timeoutSeconds <= 0 || timeoutSeconds > 120) {
-    fail('config.yaml: "qa-http.timeout-seconds" debe ser un número de segundos entre 0 y 120.');
+    fail(
+      'config.yaml: "qa-http.timeout-seconds" debe ser un número de segundos entre 0 y 120.',
+    );
   }
   const credencial = readString(mapa, "credential-env", "");
   if (credencial !== "" && !/^[A-Z_][A-Z0-9_]*$/.test(credencial)) {
-    fail('config.yaml: "qa-http.credential-env" debe ser el nombre de una variable de entorno en mayúsculas.');
+    fail(
+      'config.yaml: "qa-http.credential-env" debe ser el nombre de una variable de entorno en mayúsculas.',
+    );
   }
-  return { hosts, methods, timeoutSeconds, credentialEnv: credencial === "" ? null : credencial };
+  return {
+    hosts,
+    methods,
+    timeoutSeconds,
+    credentialEnv: credencial === "" ? null : credencial,
+  };
 }

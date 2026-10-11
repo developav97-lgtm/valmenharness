@@ -12,7 +12,10 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createExecutionIdentity } from "../packages/core/src/execution-identity.js";
-import { recordExecutionActivity, resolveAuthorizedProject } from "../packages/engine/src/index.js";
+import {
+  recordExecutionActivity,
+  resolveAuthorizedProject,
+} from "../packages/engine/src/index.js";
 import { leerAgentesDeCorrida, recortar } from "../packages/server/src/agentes.js";
 import { type ServerContext, handleApi } from "../packages/server/src/server.js";
 import { carpetaDeClaude, escribirSesionDeClaude } from "./helpers/claude.js";
@@ -70,7 +73,14 @@ function linea(e: Ev): string {
   if (e.tipo === "user") {
     const content =
       e.resultadoDe !== undefined
-        ? [{ type: "tool_result", tool_use_id: e.resultadoDe, content: e.contenido ?? SECRETO, ...(e.error === true ? { is_error: true } : {}) }]
+        ? [
+            {
+              type: "tool_result",
+              tool_use_id: e.resultadoDe,
+              content: e.contenido ?? SECRETO,
+              ...(e.error === true ? { is_error: true } : {}),
+            },
+          ]
         : (e.texto ?? "");
     return JSON.stringify({
       ...base,
@@ -135,7 +145,11 @@ function sesion(
   descripciones.forEach((descripcion, i) => {
     writeFileSync(
       join(directorio, `agent-a${i}.meta.json`),
-      JSON.stringify({ agentType: "general-purpose", description: descripcion, toolUseId: `tu-${i}` }),
+      JSON.stringify({
+        agentType: "general-purpose",
+        description: descripcion,
+        toolUseId: `tu-${i}`,
+      }),
       "utf8",
     );
   });
@@ -151,7 +165,13 @@ const leer = (extra: { ahora?: number; sesion?: string; conTexto?: boolean } = {
 /** Un agente típico que lleva trabajo reciente y una herramienta ya resuelta. */
 const activo = [
   linea({ t: 1, tipo: "user", texto: `Implementa ${TICKET} siguiendo el plan` }),
-  linea({ t: 2, tipo: "assistant", modelo: "claude-opus-5-5", esfuerzo: "high", herramienta: { id: "h1", name: "Edit" } }),
+  linea({
+    t: 2,
+    tipo: "assistant",
+    modelo: "claude-opus-5-5",
+    esfuerzo: "high",
+    herramienta: { id: "h1", name: "Edit" },
+  }),
   linea({ t: 3, tipo: "user", resultadoDe: "h1" }),
 ];
 
@@ -167,7 +187,10 @@ describe("lector de actividad de subagentes", () => {
   });
 
   it("C3: trae el ticket del primer mensaje, o null si no lo nombra", () => {
-    sesion([activo, [linea({ t: 1, tipo: "user", texto: "haz algo sin ticket" }), ...activo.slice(1)]]);
+    sesion([
+      activo,
+      [linea({ t: 1, tipo: "user", texto: "haz algo sin ticket" }), ...activo.slice(1)],
+    ]);
     expect(leer().map((a) => a.ticket)).toEqual([TICKET, null]);
   });
 
@@ -182,19 +205,31 @@ describe("lector de actividad de subagentes", () => {
   });
 
   it("C4: el esfuerzo es null si el transcript no lo trae", () => {
-    sesion([[activo[0] as string, linea({ t: 2, tipo: "assistant", stop: "end_turn", texto: "ok" })]]);
+    sesion([
+      [
+        activo[0] as string,
+        linea({ t: 2, tipo: "assistant", stop: "end_turn", texto: "ok" }),
+      ],
+    ]);
     expect(leer()[0]?.esfuerzo).toBeNull();
   });
 
   it("C5: trae el nombre de la última herramienta con su hora", () => {
     sesion([activo]);
-    expect(leer()[0]).toMatchObject({ ultimaHerramienta: "Edit", ultimaHerramientaEn: iso(2) });
+    expect(leer()[0]).toMatchObject({
+      ultimaHerramienta: "Edit",
+      ultimaHerramientaEn: iso(2),
+    });
   });
 
   it("C6: una línea cortada al final no impide leer el resto", () => {
     sesion([[...activo, '{"type":"assistant","timestamp":"2026-10-08T12:00:0']]);
     const [fila] = leer();
-    expect(fila).toMatchObject({ ticket: TICKET, ultimaHerramienta: "Edit", estado: "trabajando" });
+    expect(fila).toMatchObject({
+      ticket: TICKET,
+      ultimaHerramienta: "Edit",
+      estado: "trabajando",
+    });
   });
 
   it("C7: último evento reciente y sin permiso pendiente está trabajando", () => {
@@ -208,12 +243,19 @@ describe("lector de actividad de subagentes", () => {
   });
 
   it("C8: una herramienta sin resultado está esperando aunque sea reciente", () => {
-    sesion([[activo[0] as string, linea({ t: 2, tipo: "assistant", herramienta: { id: "h9", name: "Bash" } })]]);
+    sesion([
+      [
+        activo[0] as string,
+        linea({ t: 2, tipo: "assistant", herramienta: { id: "h9", name: "Bash" } }),
+      ],
+    ]);
     expect(leer({ ahora: T0 + 5_000 })[0]?.estado).toBe("esperando");
   });
 
   it("C9: un último mensaje con end_turn está termino, incluso pasado el minuto", () => {
-    sesion([[...activo, linea({ t: 4, tipo: "assistant", texto: "listo", stop: "end_turn" })]]);
+    sesion([
+      [...activo, linea({ t: 4, tipo: "assistant", texto: "listo", stop: "end_turn" })],
+    ]);
     expect(leer({ ahora: T0 + 600_000 })[0]?.estado).toBe("termino");
   });
 
@@ -242,7 +284,13 @@ describe("sesión principal", () => {
   });
   const PRINCIPAL = [
     linea({ t: 0, tipo: "user", texto: `orquesta ${TICKET}` }),
-    linea({ t: 1, tipo: "assistant", modelo: "claude-opus-5-5", esfuerzo: "high", herramienta: { id: "p1", name: "Agent" } }),
+    linea({
+      t: 1,
+      tipo: "assistant",
+      modelo: "claude-opus-5-5",
+      esfuerzo: "high",
+      herramienta: { id: "p1", name: "Agent" },
+    }),
     linea({ t: 2, tipo: "user", resultadoDe: "p1" }),
   ];
   const ctx = (): ServerContext => ({
@@ -256,7 +304,12 @@ describe("sesión principal", () => {
   it("SP-C1: la primera fila es la sesión principal, con principal true y ticket null", () => {
     sesion([activo, activo], [], "orquestadora-1", new Date(T0), PRINCIPAL);
     const [primera] = leerTodo();
-    expect(primera).toMatchObject({ agente: "orquestadora-1", principal: true, ticket: null, descripcion: null });
+    expect(primera).toMatchObject({
+      agente: "orquestadora-1",
+      principal: true,
+      ticket: null,
+      descripcion: null,
+    });
   });
 
   it("SP-C2: las filas que siguen a la principal son los subagentes con principal false", () => {
@@ -298,7 +351,12 @@ describe("sesión principal", () => {
   });
 
   it("SP-C6: una sesión reciente sin carpeta subagents produce la lista vacía", () => {
-    escribirSesionDeClaude(home, { root, id: "sola", lineas: PRINCIPAL, modificado: new Date(T0) });
+    escribirSesionDeClaude(home, {
+      root,
+      id: "sola",
+      lineas: PRINCIPAL,
+      modificado: new Date(T0),
+    });
     expect(leerTodo()).toEqual([]);
   });
 
@@ -306,7 +364,9 @@ describe("sesión principal", () => {
     sesion([activo], [], "orquestadora-1", new Date(T0), PRINCIPAL);
     const respuesta = await handleApi("GET", "/api/corrida/agentes", {}, ctx());
     expect(respuesta.status).toBe(200);
-    const agentes = (respuesta.body as { agentes: { agente: string; principal: boolean }[] }).agentes;
+    const agentes = (
+      respuesta.body as { agentes: { agente: string; principal: boolean }[] }
+    ).agentes;
     expect(agentes[0]).toMatchObject({ agente: "orquestadora-1", principal: true });
     expect(agentes[1]).toMatchObject({ agente: "a0", principal: false });
   });
@@ -314,25 +374,52 @@ describe("sesión principal", () => {
   it("SP-C8: la respuesta con la principal no contiene texto de prompts, entradas ni resultados", async () => {
     sesion([activo], [], "orquestadora-1", new Date(T0), [
       linea({ t: 0, tipo: "user", texto: `Prompt privado ${SECRETO}` }),
-      linea({ t: 1, tipo: "assistant", texto: SECRETO, herramienta: { id: "p1", name: "Bash" } }),
+      linea({
+        t: 1,
+        tipo: "assistant",
+        texto: SECRETO,
+        herramienta: { id: "p1", name: "Bash" },
+      }),
       linea({ t: 2, tipo: "user", resultadoDe: "p1" }),
     ]);
     const respuesta = await handleApi("GET", "/api/corrida/agentes", {}, ctx());
     const texto = JSON.stringify(respuesta.body);
     expect(texto).not.toContain(SECRETO);
     expect(texto).not.toContain("Prompt privado");
-    expect(Object.keys((respuesta.body as { agentes: object[] }).agentes[0] ?? {}).sort()).toEqual(
+    expect(
+      Object.keys((respuesta.body as { agentes: object[] }).agentes[0] ?? {}).sort(),
+    ).toEqual(
       [
-        "agente", "carpeta", "descripcion", "esfuerzo", "estado", "faseConfirmada", "faseInferida",
-        "modelo", "pregunta", "principal", "rama", "ticket", "ticketEstado", "ultimaHerramienta", "ultimaHerramientaEn",
+        "agente",
+        "carpeta",
+        "descripcion",
+        "esfuerzo",
+        "estado",
+        "faseConfirmada",
+        "faseInferida",
+        "modelo",
+        "pregunta",
+        "principal",
+        "rama",
+        "ticket",
+        "ticketEstado",
+        "ultimaHerramienta",
+        "ultimaHerramientaEn",
       ].sort(),
     );
   });
 });
 
 describe("unión con el registro", () => {
-  function contexto(): { context: ServerContext; project: ReturnType<typeof resolveAuthorizedProject> } {
-    writeFileSync(join(root, ".valmen", "config.yaml"), "project-id: prueba-agentes\n", "utf8");
+  function contexto(): {
+    context: ServerContext;
+    project: ReturnType<typeof resolveAuthorizedProject>;
+  } {
+    writeFileSync(
+      join(root, ".valmen", "config.yaml"),
+      "project-id: prueba-agentes\n",
+      "utf8",
+    );
     mkdirSync(join(home, ".valmen"), { recursive: true });
     writeFileSync(
       join(home, ".valmen", "bindings.local.yaml"),
@@ -357,10 +444,18 @@ describe("unión con el registro", () => {
   it("C11: la fila lleva el estado real del ticket y null si no existe en el registro", () => {
     const { context } = contexto();
     writeFixtureTicket(root, { id: TICKET, workflowStatus: "in_progress" });
-    sesion([activo, [linea({ t: 1, tipo: "user", texto: "Trabaja FEATURE-SERVER-FANTASMA-20261008" }), ...activo.slice(1)]]);
-    const filas = leerAgentesDeCorrida(root, { home, ahora: T0 + 10_000, paths: context.paths! }).filter(
-      (a) => !a.principal,
-    );
+    sesion([
+      activo,
+      [
+        linea({ t: 1, tipo: "user", texto: "Trabaja FEATURE-SERVER-FANTASMA-20261008" }),
+        ...activo.slice(1),
+      ],
+    ]);
+    const filas = leerAgentesDeCorrida(root, {
+      home,
+      ahora: T0 + 10_000,
+      paths: context.paths!,
+    }).filter((a) => !a.principal);
     expect(filas.map((a) => [a.ticket, a.ticketEstado])).toEqual([
       [TICKET, "in_progress"],
       ["FEATURE-SERVER-FANTASMA-20261008", null],
@@ -378,13 +473,19 @@ describe("unión con el registro", () => {
 
     recordExecutionActivity(project, {
       eventId: "act-1",
-      identity: createExecutionIdentity({ projectId: "prueba-agentes", ticketId: TICKET, executionId: "exec-1" }),
+      identity: createExecutionIdentity({
+        projectId: "prueba-agentes",
+        ticketId: TICKET,
+        executionId: "exec-1",
+      }),
       attemptId: "attempt-1",
       state: "waiting",
       source: "cli",
       occurredAt: iso(5),
     });
-    expect(leerAgentesDeCorrida(root, opciones).filter((a) => !a.principal)[0]).toMatchObject({
+    expect(
+      leerAgentesDeCorrida(root, opciones).filter((a) => !a.principal)[0],
+    ).toMatchObject({
       faseConfirmada: "waiting",
       faseInferida: null,
     });
@@ -419,7 +520,9 @@ describe("GET /api/corrida/agentes", () => {
     sesion([activo], ["Implementar A"]);
     const respuesta = await handleApi("GET", "/api/corrida/agentes", {}, ctx());
     expect(respuesta.status).toBe(200);
-    const cuerpo = respuesta.body as { agentes: { agente: string; estado: string; principal: boolean }[] };
+    const cuerpo = respuesta.body as {
+      agentes: { agente: string; estado: string; principal: boolean }[];
+    };
     const subagentes = cuerpo.agentes.filter((a) => !a.principal);
     expect(subagentes).toHaveLength(1);
     expect(subagentes[0]).toMatchObject({ agente: "a0", ticket: TICKET });
@@ -431,15 +534,40 @@ describe("GET /api/corrida/agentes", () => {
   });
 
   it("C14: la respuesta no contiene texto de prompts, entradas ni resultados", async () => {
-    sesion([[...activo, linea({ t: 4, tipo: "assistant", texto: SECRETO, herramienta: { id: "h2", name: "Bash" } })]]);
+    sesion([
+      [
+        ...activo,
+        linea({
+          t: 4,
+          tipo: "assistant",
+          texto: SECRETO,
+          herramienta: { id: "h2", name: "Bash" },
+        }),
+      ],
+    ]);
     const respuesta = await handleApi("GET", "/api/corrida/agentes", {}, ctx());
     const texto = JSON.stringify(respuesta.body);
     expect(texto).not.toContain(SECRETO);
     expect(texto).not.toContain("Implementa");
-    expect(Object.keys((respuesta.body as { agentes: object[] }).agentes[0] ?? {}).sort()).toEqual(
+    expect(
+      Object.keys((respuesta.body as { agentes: object[] }).agentes[0] ?? {}).sort(),
+    ).toEqual(
       [
-        "agente", "carpeta", "descripcion", "esfuerzo", "estado", "faseConfirmada", "faseInferida",
-        "modelo", "pregunta", "principal", "rama", "ticket", "ticketEstado", "ultimaHerramienta", "ultimaHerramientaEn",
+        "agente",
+        "carpeta",
+        "descripcion",
+        "esfuerzo",
+        "estado",
+        "faseConfirmada",
+        "faseInferida",
+        "modelo",
+        "pregunta",
+        "principal",
+        "rama",
+        "ticket",
+        "ticketEstado",
+        "ultimaHerramienta",
+        "ultimaHerramientaEn",
       ].sort(),
     );
   });
@@ -447,10 +575,22 @@ describe("GET /api/corrida/agentes", () => {
   it("C15: un parámetro sesion con separadores de ruta se rechaza con 400", async () => {
     sesion([activo]);
     for (const malo of ["../x", "a/b", "..", "a\\b", "a%2Fb"]) {
-      const r = await handleApi("GET", "/api/corrida/agentes", {}, ctx(), new URLSearchParams({ sesion: malo }));
+      const r = await handleApi(
+        "GET",
+        "/api/corrida/agentes",
+        {},
+        ctx(),
+        new URLSearchParams({ sesion: malo }),
+      );
       expect(r.status, malo).toBe(400);
     }
-    const bueno = await handleApi("GET", "/api/corrida/agentes", {}, ctx(), new URLSearchParams({ sesion: "orquestadora-1" }));
+    const bueno = await handleApi(
+      "GET",
+      "/api/corrida/agentes",
+      {},
+      ctx(),
+      new URLSearchParams({ sesion: "orquestadora-1" }),
+    );
     expect(bueno.status).toBe(200);
   });
 });
@@ -504,12 +644,16 @@ describe("pregunta pendiente", () => {
   });
 
   it("PP-C6: un Bash abierto sin pregunta deja pregunta null", () => {
-    sesion([[inicio, linea({ t: 2, tipo: "assistant", herramienta: { id: "b1", name: "Bash" } })]]);
+    sesion([
+      [inicio, linea({ t: 2, tipo: "assistant", herramienta: { id: "b1", name: "Bash" } })],
+    ]);
     expect(leer()[0]?.pregunta).toBeNull();
   });
 
   it("PP-C7: un Bash abierto sin resultado sigue esperando", () => {
-    sesion([[inicio, linea({ t: 2, tipo: "assistant", herramienta: { id: "b1", name: "Bash" } })]]);
+    sesion([
+      [inicio, linea({ t: 2, tipo: "assistant", herramienta: { id: "b1", name: "Bash" } })],
+    ]);
     expect(leer()[0]?.estado).toBe("esperando");
   });
 
@@ -518,56 +662,112 @@ describe("pregunta pendiente", () => {
       linea({ t: 0, tipo: "user", texto: "orquesta" }),
       pregunta("p1", 1),
     ]);
-    expect(leerTodo()[0]).toMatchObject({ principal: true, pregunta: { desde: iso(1), respondidaEn: null } });
+    expect(leerTodo()[0]).toMatchObject({
+      principal: true,
+      pregunta: { desde: iso(1), respondidaEn: null },
+    });
   });
 
   it("PP-C9: un tool_result con is_error true cuenta como respondida", () => {
-    sesion([[inicio, pregunta(), linea({ t: 3, tipo: "user", resultadoDe: "q1", error: true })]]);
-    expect(leer({ ahora: T0 + 10_000 })[0]?.pregunta).toEqual({ desde: iso(2), respondidaEn: iso(3) });
+    sesion([
+      [inicio, pregunta(), linea({ t: 3, tipo: "user", resultadoDe: "q1", error: true })],
+    ]);
+    expect(leer({ ahora: T0 + 10_000 })[0]?.pregunta).toEqual({
+      desde: iso(2),
+      respondidaEn: iso(3),
+    });
   });
 
   it("PP-C10: la respuesta del endpoint no contiene el header, el label ni la description de la entrada de la pregunta", async () => {
-    sesion([[inicio, linea({ t: 2, tipo: "assistant", herramienta: { id: "q1", name: "AskUserQuestion" }, preguntas: ["¿Seguimos?"] })]]);
+    sesion([
+      [
+        inicio,
+        linea({
+          t: 2,
+          tipo: "assistant",
+          herramienta: { id: "q1", name: "AskUserQuestion" },
+          preguntas: ["¿Seguimos?"],
+        }),
+      ],
+    ]);
     const r = await handleApi("GET", "/api/corrida/agentes", {}, ctx());
     const cuerpo = JSON.stringify(r.body);
     expect(cuerpo).toContain("¿Seguimos?");
-    for (const fuera of [FUERA_HEADER, FUERA_LABEL, FUERA_DESCRIPCION, SECRETO]) expect(cuerpo).not.toContain(fuera);
+    for (const fuera of [FUERA_HEADER, FUERA_LABEL, FUERA_DESCRIPCION, SECRETO])
+      expect(cuerpo).not.toContain(fuera);
   });
 
   it("PP-C11: la respuesta del endpoint no contiene el content del resultado de la pregunta", async () => {
-    sesion([[
-      inicio,
-      linea({ t: 2, tipo: "assistant", herramienta: { id: "q1", name: "AskUserQuestion" }, preguntas: ["¿Seguimos?"] }),
-      linea({ t: 3, tipo: "user", resultadoDe: "q1", contenido: FUERA_CONTENT, respuestas: { "¿Seguimos?": "Sí" } }),
-    ]]);
+    sesion([
+      [
+        inicio,
+        linea({
+          t: 2,
+          tipo: "assistant",
+          herramienta: { id: "q1", name: "AskUserQuestion" },
+          preguntas: ["¿Seguimos?"],
+        }),
+        linea({
+          t: 3,
+          tipo: "user",
+          resultadoDe: "q1",
+          contenido: FUERA_CONTENT,
+          respuestas: { "¿Seguimos?": "Sí" },
+        }),
+      ],
+    ]);
     const r = await handleApi("GET", "/api/corrida/agentes", {}, ctx(), undefined);
     const cuerpo = JSON.stringify(r.body);
     expect(cuerpo).not.toContain(FUERA_CONTENT);
   });
 
   it("PP-C12: en loopback las claves de pregunta son exactamente desde, respondidaEn, texto y respuesta", async () => {
-    sesion([[inicio, linea({ t: 2, tipo: "assistant", herramienta: { id: "q1", name: "AskUserQuestion" }, preguntas: ["¿Seguimos?"] })]]);
+    sesion([
+      [
+        inicio,
+        linea({
+          t: 2,
+          tipo: "assistant",
+          herramienta: { id: "q1", name: "AskUserQuestion" },
+          preguntas: ["¿Seguimos?"],
+        }),
+      ],
+    ]);
     const r = await handleApi("GET", "/api/corrida/agentes", {}, ctx());
-    const fila = (r.body as { agentes: { principal: boolean; pregunta: object | null }[] }).agentes.find((f) => !f.principal);
-    expect(Object.keys(fila?.pregunta ?? {}).sort()).toEqual(["desde", "respondidaEn", "respuesta", "texto"]);
+    const fila = (
+      r.body as { agentes: { principal: boolean; pregunta: object | null }[] }
+    ).agentes.find((f) => !f.principal);
+    expect(Object.keys(fila?.pregunta ?? {}).sort()).toEqual([
+      "desde",
+      "respondidaEn",
+      "respuesta",
+      "texto",
+    ]);
   });
 
   it("PP-extra: con varias preguntas manda la abierta más reciente; sin abiertas, la última respondida", () => {
-    sesion([[
-      inicio,
-      pregunta("q1", 2),
-      linea({ t: 3, tipo: "user", resultadoDe: "q1" }),
-      pregunta("q2", 4),
-    ]]);
+    sesion([
+      [
+        inicio,
+        pregunta("q1", 2),
+        linea({ t: 3, tipo: "user", resultadoDe: "q1" }),
+        pregunta("q2", 4),
+      ],
+    ]);
     expect(leer()[0]?.pregunta).toEqual({ desde: iso(4), respondidaEn: null });
-    sesion([[
-      inicio,
-      pregunta("q1", 2),
-      linea({ t: 3, tipo: "user", resultadoDe: "q1" }),
-      pregunta("q2", 4),
-      linea({ t: 5, tipo: "user", resultadoDe: "q2" }),
-    ]]);
-    expect(leer({ ahora: T0 + 10_000 })[0]?.pregunta).toEqual({ desde: iso(4), respondidaEn: iso(5) });
+    sesion([
+      [
+        inicio,
+        pregunta("q1", 2),
+        linea({ t: 3, tipo: "user", resultadoDe: "q1" }),
+        pregunta("q2", 4),
+        linea({ t: 5, tipo: "user", resultadoDe: "q2" }),
+      ],
+    ]);
+    expect(leer({ ahora: T0 + 10_000 })[0]?.pregunta).toEqual({
+      desde: iso(4),
+      respondidaEn: iso(5),
+    });
   });
 });
 
@@ -590,15 +790,25 @@ describe("texto de pregunta y respuesta (R-DAT-004)", () => {
   });
   const inicio = linea({ t: 1, tipo: "user", texto: `Implementa ${TICKET}` });
   const ask = (preguntas: readonly string[], id = "q1", t = 2): string =>
-    linea({ t, tipo: "assistant", herramienta: { id, name: "AskUserQuestion" }, preguntas });
+    linea({
+      t,
+      tipo: "assistant",
+      herramienta: { id, name: "AskUserQuestion" },
+      preguntas,
+    });
   const resp = (respuestas: Record<string, string>, extra: Partial<Ev> = {}): string =>
     linea({ t: 3, tipo: "user", resultadoDe: "q1", respuestas, ...extra });
   const pregunta = async (c: ServerContext = ctx()) => {
     const r = await handleApi("GET", "/api/corrida/agentes", {}, c);
-    const filas = (r.body as { agentes: { principal: boolean; pregunta: Record<string, unknown> | null }[] }).agentes;
+    const filas = (
+      r.body as {
+        agentes: { principal: boolean; pregunta: Record<string, unknown> | null }[];
+      }
+    ).agentes;
     return filas.find((fila) => !fila.principal)?.pregunta ?? null;
   };
-  const conTexto = (extra: { ahora?: number } = {}) => leer({ conTexto: true, ...extra })[0]?.pregunta;
+  const conTexto = (extra: { ahora?: number } = {}) =>
+    leer({ conTexto: true, ...extra })[0]?.pregunta;
 
   it("TP-C01: la pregunta abierta lleva texto igual a la question", async () => {
     sesion([[inicio, ask(["¿Usamos la opción B?"])]]);
@@ -621,13 +831,22 @@ describe("texto de pregunta y respuesta (R-DAT-004)", () => {
   });
 
   it("TP-C05: con dos respuestas, se unen con salto de línea en el orden de las questions", () => {
-    sesion([[inicio, ask(["Primera", "Segunda"]), resp({ Segunda: "dos", Primera: "uno" })]]);
+    sesion([
+      [inicio, ask(["Primera", "Segunda"]), resp({ Segunda: "dos", Primera: "uno" })],
+    ]);
     expect(conTexto({ ahora: T0 + 23_000 })?.respuesta).toBe("uno\ndos");
   });
 
   it("TP-C06: la sesión principal con una AskUserQuestion abierta lleva texto", () => {
-    sesion([activo], [], "orquestadora-1", new Date(T0), [linea({ t: 0, tipo: "user", texto: "orquesta" }), ask(["¿Principal?"], "p1", 1)]);
-    const fila = leerAgentesDeCorrida(root, { home, ahora: T0 + 10_000, conTexto: true })[0];
+    sesion([activo], [], "orquestadora-1", new Date(T0), [
+      linea({ t: 0, tipo: "user", texto: "orquesta" }),
+      ask(["¿Principal?"], "p1", 1),
+    ]);
+    const fila = leerAgentesDeCorrida(root, {
+      home,
+      ahora: T0 + 10_000,
+      conTexto: true,
+    })[0];
     expect(fila).toMatchObject({ principal: true, pregunta: { texto: "¿Principal?" } });
   });
 
@@ -660,7 +879,10 @@ describe("texto de pregunta y respuesta (R-DAT-004)", () => {
 
   it("TP-C12: con writeToken las claves de pregunta son exactamente desde y respondidaEn", async () => {
     sesion([[inicio, ask(["¿X?"])]]);
-    expect(Object.keys((await pregunta(ctxAbierto())) ?? {}).sort()).toEqual(["desde", "respondidaEn"]);
+    expect(Object.keys((await pregunta(ctxAbierto())) ?? {}).sort()).toEqual([
+      "desde",
+      "respondidaEn",
+    ]);
   });
 
   it("TP-C13: con writeToken la respuesta serializada no contiene la question ni la respuesta", async () => {
@@ -679,13 +901,18 @@ describe("texto de pregunta y respuesta (R-DAT-004)", () => {
   });
 
   /** Una sesión con la lista blanca ampliada activa: pregunta respondida más los centinelas. */
-  const conCentinelas = (extra: readonly string[], inicioTexto = `Implementa ${TICKET}`): void => {
-    sesion([[
-      linea({ t: 1, tipo: "user", texto: inicioTexto }),
-      ask(["¿Seguimos?"]),
-      resp({ "¿Seguimos?": "Sí" }),
-      ...extra,
-    ]]);
+  const conCentinelas = (
+    extra: readonly string[],
+    inicioTexto = `Implementa ${TICKET}`,
+  ): void => {
+    sesion([
+      [
+        linea({ t: 1, tipo: "user", texto: inicioTexto }),
+        ask(["¿Seguimos?"]),
+        resp({ "¿Seguimos?": "Sí" }),
+        ...extra,
+      ],
+    ]);
   };
 
   it("TP-C15: el primer mensaje del usuario no aparece en la respuesta", async () => {
@@ -697,7 +924,14 @@ describe("texto de pregunta y respuesta (R-DAT-004)", () => {
   });
 
   it("TP-C16: la entrada de otra herramienta no aparece en la respuesta", async () => {
-    conCentinelas([linea({ t: 4, tipo: "assistant", herramienta: { id: "b1", name: "Bash" }, comando: "TP-BASH-IN" })]);
+    conCentinelas([
+      linea({
+        t: 4,
+        tipo: "assistant",
+        herramienta: { id: "b1", name: "Bash" },
+        comando: "TP-BASH-IN",
+      }),
+    ]);
     const r = await handleApi("GET", "/api/corrida/agentes", {}, ctx());
     const cuerpo = JSON.stringify(r.body);
     expect(cuerpo).toContain("¿Seguimos?");
@@ -717,7 +951,11 @@ describe("texto de pregunta y respuesta (R-DAT-004)", () => {
 
   it("TP-C18: respondida en T0 + 3 s con el reloj en T0 + 64 s la pregunta es null", async () => {
     sesion([[inicio, ask(["¿X?"]), resp({ "¿X?": "B" })]]);
-    const lectura = leerAgentesDeCorrida(root, { home, ahora: T0 + 64_000, conTexto: true });
+    const lectura = leerAgentesDeCorrida(root, {
+      home,
+      ahora: T0 + 64_000,
+      conTexto: true,
+    });
     expect(lectura[0]?.pregunta).toBeNull();
   });
 });

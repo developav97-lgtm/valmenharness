@@ -17,13 +17,22 @@ import { buildResumeContext, renderFases, type ResumeContext } from "./resume.js
 import { worktreeDelTicket, type WorktreeSugerido } from "./journey-wave.js";
 
 /** Estados desde los que un subagente puede arrancar. */
-export const ESTADOS_LANZABLES = ["intake", "analyzed", "approved", "in_progress", "changes_requested"] as const;
+export const ESTADOS_LANZABLES = [
+  "intake",
+  "analyzed",
+  "approved",
+  "in_progress",
+  "changes_requested",
+] as const;
 
 export interface CompuertaDelBrief {
   readonly fase: string;
   /** Los estados del ticket a los que aplica. */
   readonly estados: readonly string[];
-  readonly comandos: readonly { readonly comando: string; readonly evaluador: string | null }[];
+  readonly comandos: readonly {
+    readonly comando: string;
+    readonly evaluador: string | null;
+  }[];
   /** Por qué esta fase no lleva compuertas para el subagente, si no las lleva. */
   readonly nota: string | null;
 }
@@ -64,8 +73,13 @@ export function armarBriefDeSubagente(request: ArmarBriefRequest): BriefDeSubage
   const { project, ticketId } = request;
   const worktree = worktreeDelTicket(project.root, ticketId);
   // Un ticket que avanzó dentro de su worktree vive allí hasta integrarse: el estado y el paso salen de ese registro.
-  const pathsDelWorktree: RegistryPaths = { root: worktree.ruta, ticketsDir: project.paths.ticketsDir };
-  const enWorktree = existsSync(worktree.ruta) ? findTicket(pathsDelWorktree, ticketId) : undefined;
+  const pathsDelWorktree: RegistryPaths = {
+    root: worktree.ruta,
+    ticketsDir: project.paths.ticketsDir,
+  };
+  const enWorktree = existsSync(worktree.ruta)
+    ? findTicket(pathsDelWorktree, ticketId)
+    : undefined;
   const ubicado = enWorktree ?? findTicket(project.paths, ticketId);
   if (ubicado === undefined) {
     throw new Error(`El ticket ${ticketId} no existe en el proyecto ${project.projectId}.`);
@@ -73,7 +87,12 @@ export function armarBriefDeSubagente(request: ArmarBriefRequest): BriefDeSubage
   const pathsDelRegistro = enWorktree === undefined ? project.paths : pathsDelWorktree;
   const ticket = parseTicket(ubicado.text);
   const estado = ticket.fields.workflow_status as string;
-  const resume = buildResumeContext(pathsDelRegistro, ticket, "compacto", request.cliente ?? "claude");
+  const resume = buildResumeContext(
+    pathsDelRegistro,
+    ticket,
+    "compacto",
+    request.cliente ?? "claude",
+  );
   const motivoNoLanzable = motivoDeNoLanzable(estado);
   const esSecurity = ticket.fields.type === "SECURITY";
 
@@ -115,7 +134,9 @@ export function renderBriefDeSubagente(brief: BriefDeSubagente): string {
   if (brief.lanzable) {
     lineas.push("Lanzable: sí.");
   } else {
-    lineas.push(`NO LANZABLE: ${brief.motivoNoLanzable ?? "el estado no admite un subagente"}`);
+    lineas.push(
+      `NO LANZABLE: ${brief.motivoNoLanzable ?? "el estado no admite un subagente"}`,
+    );
   }
 
   lineas.push(
@@ -131,9 +152,13 @@ export function renderBriefDeSubagente(brief: BriefDeSubagente): string {
     ...renderFases(brief.resume.fases),
   );
   if (brief.fase !== null) {
-    lineas.push(`Modelo de tu fase (${brief.fase.fase}): ${brief.fase.model}, esfuerzo ${brief.fase.effort}.`);
-    if (brief.fase.subagente !== null) lineas.push(`Alias de subagente: ${brief.fase.subagente}.`);
-    else if (brief.fase.aviso !== null) lineas.push(`Aviso de la fase: ${brief.fase.aviso}.`);
+    lineas.push(
+      `Modelo de tu fase (${brief.fase.fase}): ${brief.fase.model}, esfuerzo ${brief.fase.effort}.`,
+    );
+    if (brief.fase.subagente !== null)
+      lineas.push(`Alias de subagente: ${brief.fase.subagente}.`);
+    else if (brief.fase.aviso !== null)
+      lineas.push(`Aviso de la fase: ${brief.fase.aviso}.`);
   } else {
     lineas.push("El estado del ticket no corresponde a una fase con modelo propio.");
   }
@@ -149,9 +174,12 @@ export function renderBriefDeSubagente(brief: BriefDeSubagente): string {
   for (const compuerta of brief.compuertas) {
     const marca = compuerta.estados.includes(brief.estado) ? "→" : "-";
     lineas.push(`${marca} ${compuerta.fase} (${compuerta.estados.join(", ")}):`);
-    if (compuerta.comandos.length === 0) lineas.push(`    ${compuerta.nota ?? "sin compuertas para el subagente"}`);
+    if (compuerta.comandos.length === 0)
+      lineas.push(`    ${compuerta.nota ?? "sin compuertas para el subagente"}`);
     for (const comando of compuerta.comandos) {
-      lineas.push(`    ${comando.comando}${comando.evaluador === null ? "" : ` (evaluador ${comando.evaluador})`}`);
+      lineas.push(
+        `    ${comando.comando}${comando.evaluador === null ? "" : ` (evaluador ${comando.evaluador})`}`,
+      );
     }
   }
 
@@ -194,7 +222,10 @@ function compuertasPorFase(ticketId: string): CompuertaDelBrief[] {
       estados: ["intake"],
       comandos: [
         { comando: `valmen precheck analysis --id ${ticketId}`, evaluador: null },
-        { comando: `valmen gate analysis --id ${ticketId} --evaluator cascade`, evaluador: "cascade" },
+        {
+          comando: `valmen gate analysis --id ${ticketId} --evaluator cascade`,
+          evaluador: "cascade",
+        },
       ],
       nota: null,
     },
@@ -203,7 +234,10 @@ function compuertasPorFase(ticketId: string): CompuertaDelBrief[] {
       estados: ["analyzed"],
       comandos: [
         { comando: `valmen precheck plan --id ${ticketId}`, evaluador: null },
-        { comando: `valmen gate plan --id ${ticketId} --evaluator cascade`, evaluador: "cascade" },
+        {
+          comando: `valmen gate plan --id ${ticketId} --evaluator cascade`,
+          evaluador: "cascade",
+        },
       ],
       nota: null,
     },
@@ -211,7 +245,10 @@ function compuertasPorFase(ticketId: string): CompuertaDelBrief[] {
       fase: "implementación",
       estados: ["approved", "in_progress", "changes_requested"],
       comandos: [
-        { comando: `valmen gate qa-mechanical --id ${ticketId} --evaluator command`, evaluador: "command" },
+        {
+          comando: `valmen gate qa-mechanical --id ${ticketId} --evaluator command`,
+          evaluador: "command",
+        },
       ],
       nota: null,
     },

@@ -9,13 +9,22 @@
  * previa editada no se une: se informa y la integración se aborta.
  */
 
-const REGISTROS_FIJOS: readonly string[] = [".valmen/executions/events.jsonl", ".valmen/autonomous-stops.jsonl"];
-const REGISTROS_POR_CARPETA: readonly RegExp[] = [/^\.valmen\/receipts\/[^/]+\.jsonl$/, /^\.valmen\/journeys\/[^/]+\.jsonl$/];
+const REGISTROS_FIJOS: readonly string[] = [
+  ".valmen/executions/events.jsonl",
+  ".valmen/autonomous-stops.jsonl",
+];
+const REGISTROS_POR_CARPETA: readonly RegExp[] = [
+  /^\.valmen\/receipts\/[^/]+\.jsonl$/,
+  /^\.valmen\/journeys\/[^/]+\.jsonl$/,
+];
 
 /** ¿Es esta ruta uno de los registros append-only que se pueden unir? Lista cerrada. */
 export function esRegistroUnible(ruta: string): boolean {
   if (ruta.split("/").includes("..")) return false;
-  return REGISTROS_FIJOS.includes(ruta) || REGISTROS_POR_CARPETA.some((patron) => patron.test(ruta));
+  return (
+    REGISTROS_FIJOS.includes(ruta) ||
+    REGISTROS_POR_CARPETA.some((patron) => patron.test(ruta))
+  );
 }
 
 export type UnionDeRegistro =
@@ -24,12 +33,15 @@ export type UnionDeRegistro =
 
 const CAMPOS_QUE_NO_SON_EL_HECHO = ["cursor", "receivedAt"];
 
-const lineasDe = (texto: string): string[] => texto.split("\n").filter((linea) => linea.trim() !== "");
+const lineasDe = (texto: string): string[] =>
+  texto.split("\n").filter((linea) => linea.trim() !== "");
 
 function objetoDe(linea: string): Record<string, unknown> | null {
   try {
     const valor: unknown = JSON.parse(linea);
-    return valor !== null && typeof valor === "object" && !Array.isArray(valor) ? (valor as Record<string, unknown>) : null;
+    return valor !== null && typeof valor === "object" && !Array.isArray(valor)
+      ? (valor as Record<string, unknown>)
+      : null;
   } catch {
     return null;
   }
@@ -50,7 +62,15 @@ function hechoDe(objeto: Record<string, unknown>): string {
               .map(([clave, v]) => [clave, ordenar(v)]),
           )
         : valor;
-  return JSON.stringify(ordenar(Object.fromEntries(Object.entries(objeto).filter(([clave]) => !CAMPOS_QUE_NO_SON_EL_HECHO.includes(clave)))));
+  return JSON.stringify(
+    ordenar(
+      Object.fromEntries(
+        Object.entries(objeto).filter(
+          ([clave]) => !CAMPOS_QUE_NO_SON_EL_HECHO.includes(clave),
+        ),
+      ),
+    ),
+  );
 }
 
 function esPrefijo(base: readonly string[], version: readonly string[]): boolean {
@@ -71,10 +91,16 @@ export function unirRegistro(entrada: {
   const ours = lineasDe(entrada.ours);
   const theirs = lineasDe(entrada.theirs);
   if (!esPrefijo(base, ours)) {
-    return { ok: false, motivo: `${entrada.ruta}: main editó o borró una línea previa del registro (la base no es prefijo de su versión).` };
+    return {
+      ok: false,
+      motivo: `${entrada.ruta}: main editó o borró una línea previa del registro (la base no es prefijo de su versión).`,
+    };
   }
   if (!esPrefijo(base, theirs)) {
-    return { ok: false, motivo: `${entrada.ruta}: la rama editó o borró una línea previa del registro (la base no es prefijo de su versión).` };
+    return {
+      ok: false,
+      motivo: `${entrada.ruta}: la rama editó o borró una línea previa del registro (la base no es prefijo de su versión).`,
+    };
   }
 
   const resultado = [...ours];
@@ -100,15 +126,25 @@ export function unirRegistro(entrada: {
     const previo = porEventId.get(id);
     if (previo !== undefined) {
       if (hechoDe(previo) === hechoDe(objeto)) continue;
-      return { ok: false, motivo: `${entrada.ruta}: el eventId ${id} tiene contenido distinto en las dos versiones.` };
+      return {
+        ok: false,
+        motivo: `${entrada.ruta}: el eventId ${id} tiene contenido distinto en las dos versiones.`,
+      };
     }
     const cursor = resultado.length + 1;
-    const final = "cursor" in objeto && objeto["cursor"] !== cursor ? JSON.stringify({ ...objeto, cursor }) : linea;
+    const final =
+      "cursor" in objeto && objeto["cursor"] !== cursor
+        ? JSON.stringify({ ...objeto, cursor })
+        : linea;
     const objetoFinal = objetoDe(final) as Record<string, unknown>;
     resultado.push(final);
     lineasPropias.add(final);
     porEventId.set(id, objetoFinal);
     incorporadas += 1;
   }
-  return { ok: true, contenido: resultado.length === 0 ? "" : `${resultado.join("\n")}\n`, incorporadas };
+  return {
+    ok: true,
+    contenido: resultado.length === 0 ? "" : `${resultado.join("\n")}\n`,
+    incorporadas,
+  };
 }

@@ -36,7 +36,8 @@ export const CLAUDE_MD_PATH = "CLAUDE.md";
  */
 export const WORKTREE_INCLUDE_PATH = ".worktreeinclude";
 
-export const CLAUDE_MD_BEGIN = "<!-- valmen:inicio (gestionado por `valmen sync`; no editar) -->";
+export const CLAUDE_MD_BEGIN =
+  "<!-- valmen:inicio (gestionado por `valmen sync`; no editar) -->";
 export const CLAUDE_MD_END = "<!-- valmen:fin -->";
 
 /** El estilo de salida: el contrato de respuesta, con la misma fuente que `AGENTS.md`. */
@@ -86,8 +87,15 @@ export function claudeDenyRules(): readonly string[] {
 /** `git push --force` → operación `push`, bandera `--force`. Una forma mal escrita no se adivina. */
 function partesDeForma(forma: string): { operacion: string; bandera: string } {
   const [git, operacion, bandera, ...resto] = forma.split(" ");
-  if (git !== "git" || operacion === undefined || bandera === undefined || resto.length > 0) {
-    fail(`La forma de git denegada «${forma}» no tiene el formato «git <operación> <bandera>».`);
+  if (
+    git !== "git" ||
+    operacion === undefined ||
+    bandera === undefined ||
+    resto.length > 0
+  ) {
+    fail(
+      `La forma de git denegada «${forma}» no tiene el formato «git <operación> <bandera>».`,
+    );
   }
   return { operacion, bandera };
 }
@@ -107,9 +115,12 @@ function permisosDe(actual: string | null): { allow: string[]; deny: string[] } 
   }
   if (typeof datos !== "object" || datos === null || Array.isArray(datos)) return vacio;
   const permisos = (datos as Record<string, unknown>)["permissions"];
-  if (typeof permisos !== "object" || permisos === null || Array.isArray(permisos)) return vacio;
+  if (typeof permisos !== "object" || permisos === null || Array.isArray(permisos))
+    return vacio;
   const textos = (valor: unknown): string[] =>
-    Array.isArray(valor) ? valor.filter((regla): regla is string => typeof regla === "string") : [];
+    Array.isArray(valor)
+      ? valor.filter((regla): regla is string => typeof regla === "string")
+      : [];
   return {
     allow: textos((permisos as Record<string, unknown>)["allow"]),
     deny: textos((permisos as Record<string, unknown>)["deny"]),
@@ -157,7 +168,9 @@ function globDeRuta(glob: string): RegExp {
 
 /** Una ruta que el glob del harness cubre, para ver si una `allow` también la cubre. */
 function rutaDeEjemplo(glob: string): string {
-  return glob.startsWith("~/") ? glob.replace("**", "id_rsa") : glob.replace(/^\*\*\//, "").replace(/\*/g, "x");
+  return glob.startsWith("~/")
+    ? glob.replace("**", "id_rsa")
+    : glob.replace(/^\*\*\//, "").replace(/\*/g, "x");
 }
 
 /**
@@ -237,12 +250,16 @@ export function mergeClaudeSettings(actual: string | null): string {
   let deny: string[] = [];
   if (permisos !== undefined) {
     if (typeof permisos !== "object" || permisos === null || Array.isArray(permisos)) {
-      fail(`${CLAUDE_SETTINGS_PATH}: «permissions» debe ser un objeto; no se sobrescribió.`);
+      fail(
+        `${CLAUDE_SETTINGS_PATH}: «permissions» debe ser un objeto; no se sobrescribió.`,
+      );
     }
     const actuales = (permisos as Record<string, unknown>)["deny"];
     if (actuales !== undefined) {
       if (!Array.isArray(actuales) || actuales.some((regla) => typeof regla !== "string")) {
-        fail(`${CLAUDE_SETTINGS_PATH}: «permissions.deny» debe ser un arreglo de textos; no se sobrescribió.`);
+        fail(
+          `${CLAUDE_SETTINGS_PATH}: «permissions.deny» debe ser un arreglo de textos; no se sobrescribió.`,
+        );
       }
       deny = actuales as string[];
     }
@@ -250,7 +267,10 @@ export function mergeClaudeSettings(actual: string | null): string {
 
   const faltan = reglas.filter((regla) => !deny.includes(regla));
   if (objeto["outputStyle"] === OUTPUT_STYLE_NAME && faltan.length === 0) return actual;
-  const permisosNuevos = { ...(permisos as Record<string, unknown> | undefined), deny: [...deny, ...faltan] };
+  const permisosNuevos = {
+    ...(permisos as Record<string, unknown> | undefined),
+    deny: [...deny, ...faltan],
+  };
   return `${JSON.stringify({ ...objeto, outputStyle: OUTPUT_STYLE_NAME, permissions: permisosNuevos }, null, 2)}\n`;
 }
 
@@ -261,7 +281,8 @@ export function mergeClaudeSettings(actual: string | null): string {
  */
 export function mergeWorktreeInclude(actual: string | null): string {
   if (actual === null || actual.trim() === "") return `${CLAUDE_SETTINGS_PATH}\n`;
-  if (actual.split(/\r?\n/).some((linea) => linea.trim() === CLAUDE_SETTINGS_PATH)) return actual;
+  if (actual.split(/\r?\n/).some((linea) => linea.trim() === CLAUDE_SETTINGS_PATH))
+    return actual;
   return `${actual.replace(/\s*$/, "")}\n${CLAUDE_SETTINGS_PATH}\n`;
 }
 

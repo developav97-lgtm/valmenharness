@@ -46,7 +46,8 @@ describe("recibos de parada autónoma", () => {
     const parada = recordAutonomousStop(paths(), {
       ticketId: "SECURITY-ENGINE-DESPACHO-20261008",
       reason: "executor-unauthorized",
-      detail: "el ejecutor codex de agent-implementation no está autorizado en execution.dispatch-executors",
+      detail:
+        "el ejecutor codex de agent-implementation no está autorizado en execution.dispatch-executors",
       workflowStatus: "approved",
       now: NOW,
     });

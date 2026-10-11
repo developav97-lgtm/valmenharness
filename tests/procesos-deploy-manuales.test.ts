@@ -75,7 +75,9 @@ describe("el proceso actualizar-manuales declara la auditoría con citas", () =>
   it("carga con el paso auditar-manuales, de tipo command, que corre valmen manuales auditar", () => {
     const manuales = requireProcess(REPO, "actualizar-manuales");
 
-    const auditoria = manuales.definition.steps.find((step) => step.id === "auditar-manuales");
+    const auditoria = manuales.definition.steps.find(
+      (step) => step.id === "auditar-manuales",
+    );
     expect(auditoria).toBeDefined();
     expect(auditoria?.kind).toBe("command");
     expect(auditoria?.run).toContain("valmen manuales auditar");

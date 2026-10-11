@@ -82,7 +82,11 @@ export function cambiosDelDiff(
 }
 
 /** Si la ruta es parte del registro del propio ticket: su directorio o su archivo de recibos. */
-export function esRegistroDelTicket(ruta: string, ticketId: string, ticketsDir: string): boolean {
+export function esRegistroDelTicket(
+  ruta: string,
+  ticketId: string,
+  ticketsDir: string,
+): boolean {
   if (ruta === `.valmen/receipts/${ticketId}.jsonl`) return true;
   const prefijo = ticketsDir.replace(/^\.\//, "").replace(/\/+$/, "");
   if (!ruta.startsWith(`${prefijo}/`)) return false;

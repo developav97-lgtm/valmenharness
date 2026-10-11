@@ -40,22 +40,43 @@ function evaluador(valor: number): NonNullable<ToolContext["jev"]> {
   return async (options: { propositions?: readonly { id: string }[] }) => ({
     answers: (options.propositions ?? []).map((proposition) =>
       proposition.id === "clasificacion"
-        ? { id: proposition.id, kind: "choice" as const, choice: "completa", rationale: "falso" }
-        : { id: proposition.id, kind: "noul" as const, value: valor, rationale: "x".repeat(400) },
+        ? {
+            id: proposition.id,
+            kind: "choice" as const,
+            choice: "completa",
+            rationale: "falso",
+          }
+        : {
+            id: proposition.id,
+            kind: "noul" as const,
+            value: valor,
+            rationale: "x".repeat(400),
+          },
     ),
-    model: { provider: "falso", model: "para-pruebas", resolvedVersion: "falso/para-pruebas@0" },
+    model: {
+      provider: "falso",
+      model: "para-pruebas",
+      resolvedVersion: "falso/para-pruebas@0",
+    },
     usage: { inputTokens: 0, outputTokens: 0, costUsd: 0 },
     latencyMs: 1,
   });
 }
 
 function con(valor: number): ToolContext {
-  return { ...contexto, jev: evaluador(valor), now: () => new Date("2026-09-22T12:00:00Z") };
+  return {
+    ...contexto,
+    jev: evaluador(valor),
+    now: () => new Date("2026-09-22T12:00:00Z"),
+  };
 }
 
 describe("R-RESP-006: el resumen de evaluar_compuerta", () => {
   it("en revisión, el dato ocupa menos de un kilobyte y trae lo necesario", async () => {
-    const resultado = await callTool(con(0.5), "evaluar_compuerta", { gate: "analysis", id: ID });
+    const resultado = await callTool(con(0.5), "evaluar_compuerta", {
+      gate: "analysis",
+      id: ID,
+    });
     expect(resultado.isError).toBe(false);
 
     const dato = resultado.data as Record<string, unknown>;
@@ -71,15 +92,18 @@ describe("R-RESP-006: el resumen de evaluar_compuerta", () => {
   });
 
   it("el siguiente paso depende del veredicto", async () => {
-    const aprobada = await callTool(con(0.99), "evaluar_compuerta", { gate: "analysis", id: ID });
+    const aprobada = await callTool(con(0.99), "evaluar_compuerta", {
+      gate: "analysis",
+      id: ID,
+    });
     expect(aprobada.data?.["resultado"]).toBe("approve");
     expect(String(aprobada.data?.["siguiente_paso"])).toContain("mover_ticket");
 
-    const bloqueada = await callTool(
-      con(0.01),
-      "evaluar_compuerta",
-      { gate: "analysis", id: ID, forzar: "otra corrida para comprobar el bloqueo" },
-    );
+    const bloqueada = await callTool(con(0.01), "evaluar_compuerta", {
+      gate: "analysis",
+      id: ID,
+      forzar: "otra corrida para comprobar el bloqueo",
+    });
     expect(bloqueada.data?.["resultado"]).toBe("block");
     expect(String(bloqueada.data?.["siguiente_paso"])).toContain("Corrige");
   });
@@ -91,7 +115,10 @@ describe("R-RESP-006: ver_recibo", () => {
       await callTool(con(0.5), "evaluar_compuerta", { gate: "analysis", id: ID })
     ).data as Record<string, unknown>;
 
-    const porId = await callTool(contexto, "ver_recibo", { id: ID, recibo: resumen["recibo_id"] });
+    const porId = await callTool(contexto, "ver_recibo", {
+      id: ID,
+      recibo: resumen["recibo_id"],
+    });
     const ultimo = await callTool(contexto, "ver_recibo", { id: ID });
     const recibo = porId.data?.["recibo"] as Record<string, unknown>;
     expect(recibo["id"]).toBe(resumen["recibo_id"]);
@@ -101,7 +128,10 @@ describe("R-RESP-006: ver_recibo", () => {
   });
 
   it("un id que no existe devuelve recibo nulo y lo dice", async () => {
-    const resultado = await callTool(contexto, "ver_recibo", { id: ID, recibo: "GR-inexistente" });
+    const resultado = await callTool(contexto, "ver_recibo", {
+      id: ID,
+      recibo: "GR-inexistente",
+    });
     expect(resultado.data?.["recibo"]).toBeNull();
     expect(resultado.text).toContain("GR-inexistente");
   });

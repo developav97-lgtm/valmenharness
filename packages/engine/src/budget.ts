@@ -102,13 +102,15 @@ function adaptiveDe(root: string): Record<string, unknown> {
     // «ilegible», y fallar acá dejaría sin evaluar una compuerta por una tilde.
     return {};
   }
-  if (typeof documento !== "object" || documento === null || Array.isArray(documento)) return {};
+  if (typeof documento !== "object" || documento === null || Array.isArray(documento))
+    return {};
 
   const budgets = valor(documento as Record<string, unknown>, "budgets");
   if (typeof budgets !== "object" || budgets === null || Array.isArray(budgets)) return {};
 
   const adaptive = valor(budgets as Record<string, unknown>, "adaptive");
-  if (typeof adaptive !== "object" || adaptive === null || Array.isArray(adaptive)) return {};
+  if (typeof adaptive !== "object" || adaptive === null || Array.isArray(adaptive))
+    return {};
 
   return adaptive as Record<string, unknown>;
 }
@@ -144,9 +146,16 @@ function numero(
 export function readBudgetPolicy(root: string): BudgetPolicy {
   const adaptive = adaptiveDe(root);
 
-  const minSamples = numero(adaptive, "min-samples", DEFAULT_BUDGET_POLICY.minSamples, "budgets.adaptive.min-samples");
+  const minSamples = numero(
+    adaptive,
+    "min-samples",
+    DEFAULT_BUDGET_POLICY.minSamples,
+    "budgets.adaptive.min-samples",
+  );
   if (!Number.isInteger(minSamples)) {
-    fail('config.yaml: "budgets.adaptive.min-samples" debe ser un número entero de cierres.');
+    fail(
+      'config.yaml: "budgets.adaptive.min-samples" debe ser un número entero de cierres.',
+    );
   }
 
   const multiplicadores = valor(adaptive, "multipliers");
@@ -188,7 +197,8 @@ export function readBudgetPolicy(root: string): BudgetPolicy {
       DEFAULT_BUDGET_POLICY.learnFromDays,
       "budgets.adaptive.learn-from-days",
     ),
-    degradePreset: preset === undefined ? DEFAULT_BUDGET_POLICY.degradePreset : String(preset),
+    degradePreset:
+      preset === undefined ? DEFAULT_BUDGET_POLICY.degradePreset : String(preset),
   };
 }
 
@@ -409,7 +419,10 @@ export function classifyRunCost(input: {
  * distinta, y un ticket en pausa que sigue evaluándose con el modelo caro sería la
  * peor combinación de las dos.
  */
-export function presetForDegradation(tier: BudgetTier, policy: BudgetPolicy): string | null {
+export function presetForDegradation(
+  tier: BudgetTier,
+  policy: BudgetPolicy,
+): string | null {
   if (!policy.enabled) return null;
   if (tier !== "degrade" && tier !== "pause") return null;
   return policy.degradePreset === "" ? null : policy.degradePreset;
@@ -622,7 +635,9 @@ export function renderBudgetReport(input: {
   ];
 
   if (report.types.length === 0) {
-    lineas.push("  Ningún tipo declara un típico todavía: no hay cierres con costo registrado.");
+    lineas.push(
+      "  Ningún tipo declara un típico todavía: no hay cierres con costo registrado.",
+    );
   } else {
     for (const entrada of report.types) lineas.push(filaDeTipo(entrada, policy));
   }

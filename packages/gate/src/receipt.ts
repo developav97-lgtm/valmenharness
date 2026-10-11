@@ -268,10 +268,7 @@ export interface TestedTreeRecord {
 
 /** Cuántos revisores y con qué lentes corrió la revisión del diff. */
 export type ProfundidadDeRevision =
-  | "sin-revisores"
-  | "un-revisor"
-  | "un-revisor-cuatro-lentes"
-  | "dos-revisores";
+  "sin-revisores" | "un-revisor" | "un-revisor-cuatro-lentes" | "dos-revisores";
 
 /** Un hallazgo citado por un revisor, con lo que el código comprobó de su cita. */
 interface HallazgoRegistrado {
@@ -474,7 +471,10 @@ export function buildReceipt(input: ReceiptInput): GateReceipt {
     policy: input.policy,
     mechanicalChecks: input.mechanicalChecks,
     // El motivo va explícito: `null` quiere decir que el evaluador no lo dio.
-    modelAnswers: input.answers.map((answer) => ({ ...answer, reason: answer.reason ?? null })),
+    modelAnswers: input.answers.map((answer) => ({
+      ...answer,
+      reason: answer.reason ?? null,
+    })),
     propositions: input.decision.propositions,
     model: input.model ?? null,
     usage: input.usage ?? null,
@@ -505,7 +505,9 @@ export function buildReceipt(input: ReceiptInput): GateReceipt {
     ...(input.requestedEvaluator === undefined
       ? {}
       : { requestedEvaluator: input.requestedEvaluator }),
-    ...(input.evaluatorFailure === undefined ? {} : { evaluatorFailure: input.evaluatorFailure }),
+    ...(input.evaluatorFailure === undefined
+      ? {}
+      : { evaluatorFailure: input.evaluatorFailure }),
     ...(input.producerRetries === undefined || input.producerRetries.length === 0
       ? {}
       : { producerRetries: input.producerRetries }),

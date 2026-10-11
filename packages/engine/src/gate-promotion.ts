@@ -45,7 +45,18 @@ export function evidenceFromCalibration(
 ): PromotionEvidence {
   const humanTickets = report.rows.map((row) => row.ticketId);
   const digest = createHash("sha256")
-    .update(JSON.stringify({ gate: report.gate, humanReference, humanTickets, compared: report.compared, decided: report.decided, agree: report.agree, rate: report.rate, criticalFalseApproves: report.criticalFalseApproves }))
+    .update(
+      JSON.stringify({
+        gate: report.gate,
+        humanReference,
+        humanTickets,
+        compared: report.compared,
+        decided: report.decided,
+        agree: report.agree,
+        rate: report.rate,
+        criticalFalseApproves: report.criticalFalseApproves,
+      }),
+    )
     .digest("hex")
     .slice(0, 16);
   return {
@@ -78,14 +89,19 @@ export function readPromotionEvidence(paths: RegistryPaths): PromotionEvidence[]
 }
 
 /** Anexa una evidencia sin sustituir ni reordenar las anteriores. */
-export function appendPromotionEvidence(paths: RegistryPaths, evidence: PromotionEvidence): string {
+export function appendPromotionEvidence(
+  paths: RegistryPaths,
+  evidence: PromotionEvidence,
+): string {
   const path = promotionEvidencePath(paths);
   mkdirSync(dirname(path), { recursive: true });
   appendFileSync(path, `${JSON.stringify(evidence)}\n`, "utf8");
   return path;
 }
 
-function configuredPromotions(paths: RegistryPaths): Readonly<Record<string, import("@valmen/adapter").GatePromotionRequest>> {
+function configuredPromotions(
+  paths: RegistryPaths,
+): Readonly<Record<string, import("@valmen/adapter").GatePromotionRequest>> {
   let text: string;
   try {
     text = readFileSync(join(paths.root, ".valmen", "config.yaml"), "utf8");
@@ -105,28 +121,57 @@ function configuredPromotions(paths: RegistryPaths): Readonly<Record<string, imp
 export function resolveGateMode(paths: RegistryPaths, gateId: string): EffectiveGateMode {
   const definition = gateById(gateId);
   if (definition.mode !== "hybrid") {
-    return { mode: definition.mode, reason: "el gate está definido como automático", evidence: null };
+    return {
+      mode: definition.mode,
+      reason: "el gate está definido como automático",
+      evidence: null,
+    };
   }
 
   const request = configuredPromotions(paths)[gateId];
   if (request === undefined) {
-    return { mode: "hybrid", reason: "no hay una solicitud de promoción configurada", evidence: null };
+    return {
+      mode: "hybrid",
+      reason: "no hay una solicitud de promoción configurada",
+      evidence: null,
+    };
   }
 
-  const evidence = readPromotionEvidence(paths)
-    .filter((item) => item.gate === gateId)
-    .at(-1) ?? null;
+  const evidence =
+    readPromotionEvidence(paths)
+      .filter((item) => item.gate === gateId)
+      .at(-1) ?? null;
   if (evidence === null) {
-    return { mode: "hybrid", reason: "falta evidencia calibrada para la promoción", evidence: null };
+    return {
+      mode: "hybrid",
+      reason: "falta evidencia calibrada para la promoción",
+      evidence: null,
+    };
   }
   if (evidence.decided < request.minimumSample) {
-    return { mode: "hybrid", reason: "la muestra decidida no alcanza el mínimo configurado", evidence };
+    return {
+      mode: "hybrid",
+      reason: "la muestra decidida no alcanza el mínimo configurado",
+      evidence,
+    };
   }
   if (evidence.agreement === null || evidence.agreement < request.minimumAgreement) {
-    return { mode: "hybrid", reason: "la coincidencia no alcanza el mínimo configurado", evidence };
+    return {
+      mode: "hybrid",
+      reason: "la coincidencia no alcanza el mínimo configurado",
+      evidence,
+    };
   }
   if (evidence.criticalFalseApproves !== 0) {
-    return { mode: "hybrid", reason: "la calibración contiene falsos aprobados críticos", evidence };
+    return {
+      mode: "hybrid",
+      reason: "la calibración contiene falsos aprobados críticos",
+      evidence,
+    };
   }
-  return { mode: "auto", reason: "la evidencia calibrada cumple la política configurada", evidence };
+  return {
+    mode: "auto",
+    reason: "la evidencia calibrada cumple la política configurada",
+    evidence,
+  };
 }

@@ -33,7 +33,10 @@ import { renderFixtureTicket, writeFixtureTicket } from "./helpers/fixtures.js";
 const TICKET = "BUGFIX-POS-FILTRO-ORDENES-20260921";
 
 let lab: string;
-const PATHS = (): { root: string; ticketsDir: string } => ({ root: lab, ticketsDir: "tickets" });
+const PATHS = (): { root: string; ticketsDir: string } => ({
+  root: lab,
+  ticketsDir: "tickets",
+});
 
 beforeEach(() => {
   lab = mkdtempSync(join(tmpdir(), "valmen-previa-"));
@@ -56,7 +59,12 @@ function espia(): {
     ids = (options?.propositions ?? []).map((p) => p.id);
     const answers = (options?.propositions ?? []).map((p) =>
       p.id === "clasificacion"
-        ? { id: p.id, kind: "choice" as const, choice: p.id === "clasificacion" ? "completo" : "completa", confidence: 0.95 }
+        ? {
+            id: p.id,
+            kind: "choice" as const,
+            choice: p.id === "clasificacion" ? "completo" : "completa",
+            confidence: 0.95,
+          }
         : { id: p.id, kind: "noul" as const, value: 0.95 },
     );
     return {
@@ -82,7 +90,11 @@ const pedirPlan = (e: ReturnType<typeof espia>) =>
 
 describe("cada hallazgo corta antes del evaluador", () => {
   it("un plan con la línea Rollback vacía no llama al evaluador y nombra la línea", async () => {
-    writeFixtureTicket(lab, { id: TICKET, workflowStatus: "planned", plan: PLAN_OK.replace(/- Rollback:.*/, "- Rollback:") });
+    writeFixtureTicket(lab, {
+      id: TICKET,
+      workflowStatus: "planned",
+      plan: PLAN_OK.replace(/- Rollback:.*/, "- Rollback:"),
+    });
     const e = espia();
 
     const r = await pedirPlan(e);
@@ -120,7 +132,8 @@ describe("cada hallazgo corta antes del evaluador", () => {
     const texto = renderFixtureTicket({
       id: TICKET,
       workflowStatus: "planned",
-      diagnostico: "- Archivos y flujo investigados: `packages/x/no-existe.ts`.\n- Causa raíz o hipótesis: x.\n- Riesgos y compatibilidad: x.\n- Impactos de sync, migración, Docker o despliegue: ninguno.",
+      diagnostico:
+        "- Archivos y flujo investigados: `packages/x/no-existe.ts`.\n- Causa raíz o hipótesis: x.\n- Riesgos y compatibilidad: x.\n- Impactos de sync, migración, Docker o despliegue: ninguno.",
     });
     const r = reviewBeforeGate({ root: lab, ticketText: texto, gateId: "plan" });
     expect(r.findings.map((h) => h.id)).not.toContain("archivo_inexistente");
@@ -148,7 +161,12 @@ describe("cada hallazgo corta antes del evaluador", () => {
   });
 
   it("un criterio sin anotación de verificación corta antes del evaluador", async () => {
-    writeFixtureTicket(lab, { id: TICKET, workflowStatus: "planned", plan: PLAN_OK, criterios: "- [ ] El filtro encuentra la orden por número parcial." });
+    writeFixtureTicket(lab, {
+      id: TICKET,
+      workflowStatus: "planned",
+      plan: PLAN_OK,
+      criterios: "- [ ] El filtro encuentra la orden por número parcial.",
+    });
     const e = espia();
 
     const r = await pedirPlan(e);
@@ -162,7 +180,10 @@ describe("cada hallazgo corta antes del evaluador", () => {
     writeFixtureTicket(lab, {
       id: TICKET,
       workflowStatus: "planned",
-      plan: PLAN_OK.replace("  2. Añadir en `BackEnd/pos/tests/test_filters.py` una prueba de búsqueda parcial (C1–C4).", "  2. Mejorar el filtro."),
+      plan: PLAN_OK.replace(
+        "  2. Añadir en `BackEnd/pos/tests/test_filters.py` una prueba de búsqueda parcial (C1–C4).",
+        "  2. Mejorar el filtro.",
+      ),
     });
     const e = espia();
 
@@ -176,9 +197,15 @@ describe("cada hallazgo corta antes del evaluador", () => {
   it("un ticket con más criterios que el tope se rechaza antes del evaluador", async () => {
     const muchos = Array.from(
       { length: TOPE_DE_CRITERIOS + 1 },
-      (_, i) => `- [ ] El criterio número ${i + 1} se cumple en la pantalla.\n      <!-- verify: manual -->`,
+      (_, i) =>
+        `- [ ] El criterio número ${i + 1} se cumple en la pantalla.\n      <!-- verify: manual -->`,
     ).join("\n");
-    writeFixtureTicket(lab, { id: TICKET, workflowStatus: "planned", plan: PLAN_OK, criterios: muchos });
+    writeFixtureTicket(lab, {
+      id: TICKET,
+      workflowStatus: "planned",
+      plan: PLAN_OK,
+      criterios: muchos,
+    });
     const e = espia();
 
     const r = await pedirPlan(e);
@@ -201,7 +228,11 @@ describe("cada hallazgo corta antes del evaluador", () => {
 
 describe("la revisión a mano", () => {
   it("dice lo mismo que la compuerta y sale con 3 si falta algo", async () => {
-    writeFixtureTicket(lab, { id: TICKET, workflowStatus: "planned", plan: PLAN_OK.replace(/- Rollback:.*/, "- Rollback:") });
+    writeFixtureTicket(lab, {
+      id: TICKET,
+      workflowStatus: "planned",
+      plan: PLAN_OK.replace(/- Rollback:.*/, "- Rollback:"),
+    });
 
     const mano = precheckCommand(PATHS(), "plan", TICKET);
     const compuerta = await pedirPlan(espia());
@@ -222,7 +253,9 @@ describe("la revisión a mano", () => {
   it("pide la compuerta y el ticket", () => {
     expect(precheckCommand(PATHS(), "qa-mechanical", TICKET).exitCode).toBe(2);
     expect(precheckCommand(PATHS(), "plan", undefined).exitCode).toBe(2);
-    expect(renderPreReview("plan", TICKET, { findings: [], skipped: [] })).toContain("Sin hallazgos");
+    expect(renderPreReview("plan", TICKET, { findings: [], skipped: [] })).toContain(
+      "Sin hallazgos",
+    );
   });
 });
 
@@ -234,12 +267,19 @@ describe("las cuatro comprobaciones que decide el código", () => {
     const r = await pedirPlan(e);
 
     expect(r.exitCode, r.stderr).toBe(0);
-    const codigo = ["rollback_suficiente", "hay_archivos_afectados", "pasos_ejecutables", "criterios_verificables"];
+    const codigo = [
+      "rollback_suficiente",
+      "hay_archivos_afectados",
+      "pasos_ejecutables",
+      "criterios_verificables",
+    ];
     for (const id of codigo) expect(e.recibidas()).not.toContain(id);
     const recibo = readReceipts(PATHS(), TICKET)[0];
     for (const id of codigo) {
       expect(recibo?.modelAnswers.map((a) => a.id)).toContain(id);
-      expect(recibo?.propositions.find((p) => p.id === id)?.verdict, `${id} no vota`).toBe(true);
+      expect(recibo?.propositions.find((p) => p.id === id)?.verdict, `${id} no vota`).toBe(
+        true,
+      );
     }
   });
 
@@ -261,16 +301,31 @@ describe("las cuatro comprobaciones que decide el código", () => {
     expect(r.stdout).toContain("BLOCK");
     const recibo = readReceipts(PATHS(), TICKET)[0];
     expect(recibo?.outcome).toBe("block");
-    expect(recibo?.modelAnswers.find((a) => a.id === "hay_archivos_afectados")?.value).toBe(0);
+    expect(recibo?.modelAnswers.find((a) => a.id === "hay_archivos_afectados")?.value).toBe(
+      0,
+    );
   });
 
   it("decideInCode decide cada una por separado y no inventa respuestas para otras", () => {
-    const texto = renderFixtureTicket({ id: TICKET, workflowStatus: "planned", plan: PLAN_OK });
-    for (const id of ["rollback_suficiente", "hay_archivos_afectados", "pasos_ejecutables", "criterios_verificables"]) {
+    const texto = renderFixtureTicket({
+      id: TICKET,
+      workflowStatus: "planned",
+      plan: PLAN_OK,
+    });
+    for (const id of [
+      "rollback_suficiente",
+      "hay_archivos_afectados",
+      "pasos_ejecutables",
+      "criterios_verificables",
+    ]) {
       expect(decideInCode(id, texto)).toBe(0.99);
     }
     expect(decideInCode("cubre_todos_los_criterios", texto)).toBeNull();
-    const sinRollback = renderFixtureTicket({ id: TICKET, workflowStatus: "planned", plan: PLAN_OK.replace(/- Rollback:.*/, "- Rollback:") });
+    const sinRollback = renderFixtureTicket({
+      id: TICKET,
+      workflowStatus: "planned",
+      plan: PLAN_OK.replace(/- Rollback:.*/, "- Rollback:"),
+    });
     expect(decideInCode("rollback_suficiente", sinRollback)).toBe(0);
   });
 });
@@ -284,38 +339,57 @@ describe("citas ruta:línea y worktrees", () => {
       "- Impactos de sync, migración, Docker o despliegue: ninguno.",
     ].join("\n");
   const texto = (cita: string): string =>
-    renderFixtureTicket({ id: TICKET, workflowStatus: "planned", plan: PLAN_OK, diagnostico: diag(cita) });
+    renderFixtureTicket({
+      id: TICKET,
+      workflowStatus: "planned",
+      plan: PLAN_OK,
+      diagnostico: diag(cita),
+    });
   const revisar = (cita: string) =>
     reviewBeforeGate({ root: lab, ticketText: texto(cita), gateId: "plan" });
-  const comoWorktree = (): void => writeFileSync(join(lab, ".git"), "gitdir: /otro/lugar/.git/worktrees/x\n");
+  const comoWorktree = (): void =>
+    writeFileSync(join(lab, ".git"), "gitdir: /otro/lugar/.git/worktrees/x\n");
   const crear = (ruta: string, lineas: number): void => {
     mkdirSync(join(lab, ruta.split("/").slice(0, -1).join("/")), { recursive: true });
-    writeFileSync(join(lab, ruta), Array.from({ length: lineas }, (_, i) => `l${i + 1}`).join("\n") + "\n");
+    writeFileSync(
+      join(lab, ruta),
+      Array.from({ length: lineas }, (_, i) => `l${i + 1}`).join("\n") + "\n",
+    );
   };
 
   it("C1. con .git como archivo gitdir no devuelve el omitido de repositorio", () => {
     comoWorktree();
-    expect(revisar("`packages/x/y.ts`").skipped.join(" ")).not.toContain("no es un repositorio git");
+    expect(revisar("`packages/x/y.ts`").skipped.join(" ")).not.toContain(
+      "no es un repositorio git",
+    );
   });
 
   it("C2. con .git como archivo y una ruta inexistente devuelve archivo_inexistente", () => {
     comoWorktree();
-    expect(revisar("`packages/x/no-existe.ts`").findings.map((h) => h.id)).toContain("archivo_inexistente");
+    expect(revisar("`packages/x/no-existe.ts`").findings.map((h) => h.id)).toContain(
+      "archivo_inexistente",
+    );
   });
 
   it("C3. control: sin .git sigue el omitido", () => {
-    expect(revisar("`packages/x/y.ts`").skipped.join(" ")).toContain("no es un repositorio git");
+    expect(revisar("`packages/x/y.ts`").skipped.join(" ")).toContain(
+      "no es un repositorio git",
+    );
   });
 
   it("C3b. control: un .git que es archivo sin gitdir no es un repositorio", () => {
     writeFileSync(join(lab, ".git"), "otra cosa\n");
-    expect(revisar("`packages/x/y.ts`").skipped.join(" ")).toContain("no es un repositorio git");
+    expect(revisar("`packages/x/y.ts`").skipped.join(" ")).toContain(
+      "no es un repositorio git",
+    );
   });
 
   it("C4. control: .git como directorio y una ruta que existe no da hallazgos de archivos", () => {
     mkdirSync(join(lab, ".git"));
     crear("packages/x/y.ts", 3);
-    expect(revisar("`packages/x/y.ts`").findings.map((h) => h.id)).not.toContain("archivo_inexistente");
+    expect(revisar("`packages/x/y.ts`").findings.map((h) => h.id)).not.toContain(
+      "archivo_inexistente",
+    );
   });
 
   it("C5. una línea mayor que el largo del archivo da un hallazgo con el número de líneas", () => {
@@ -329,8 +403,12 @@ describe("citas ruta:línea y worktrees", () => {
   it("C6. control: una línea dentro del archivo no da hallazgo", () => {
     mkdirSync(join(lab, ".git"));
     crear("packages/x/y.ts", 3);
-    expect(revisar("`packages/x/y.ts:3`").findings.map((h) => h.id)).not.toContain("archivo_inexistente");
-    expect(revisar("`packages/x/y.ts:2-3`").findings.map((h) => h.id)).not.toContain("archivo_inexistente");
+    expect(revisar("`packages/x/y.ts:3`").findings.map((h) => h.id)).not.toContain(
+      "archivo_inexistente",
+    );
+    expect(revisar("`packages/x/y.ts:2-3`").findings.map((h) => h.id)).not.toContain(
+      "archivo_inexistente",
+    );
   });
 
   it("C7. una cita que empieza por «/» queda omitida con su motivo y no es hallazgo", () => {
@@ -351,8 +429,16 @@ describe("citas ruta:línea y worktrees", () => {
     expect(citedFiles(lab, texto("`packages/x/y.ts`"))).toEqual([]);
     mkdirSync(join(lab, ".git"));
     crear("packages/x/y.ts", 2);
-    const r = citedFiles(lab, texto("`packages/x/y.ts:1`, `packages/x/z.ts`, `packages/x/y.ts:9`, `/a/b.ts`"));
-    expect(r.map((c) => c.resultado)).toEqual(["existe", "no_existe", "linea_fuera", "omitida"]);
+    const r = citedFiles(
+      lab,
+      texto("`packages/x/y.ts:1`, `packages/x/z.ts`, `packages/x/y.ts:9`, `/a/b.ts`"),
+    );
+    expect(r.map((c) => c.resultado)).toEqual([
+      "existe",
+      "no_existe",
+      "linea_fuera",
+      "omitida",
+    ]);
   });
 
   async function correrAnalisis(diagnostico: string) {
@@ -360,13 +446,22 @@ describe("citas ruta:línea y worktrees", () => {
     let estado: Record<string, string> = {};
     const jev = (async (o: {
       state: Record<string, string>;
-      propositions: readonly { id: string; kind: string; criteria?: Record<string, unknown> }[];
+      propositions: readonly {
+        id: string;
+        kind: string;
+        criteria?: Record<string, unknown>;
+      }[];
     }) => {
       estado = o.state;
       return {
         answers: o.propositions.map((p) =>
           p.kind === "choice"
-            ? { id: p.id, kind: "choice" as const, choice: Object.keys(p.criteria ?? {})[0] as string, confidence: 0.95 }
+            ? {
+                id: p.id,
+                kind: "choice" as const,
+                choice: Object.keys(p.criteria ?? {})[0] as string,
+                confidence: 0.95,
+              }
             : { id: p.id, kind: "noul" as const, value: 0.95 },
         ),
         model: { provider: "openrouter", model: "jev", resolvedVersion: "jev-1" },
@@ -383,7 +478,9 @@ describe("citas ruta:línea y worktrees", () => {
     crear("packages/x/y.ts", 3);
     const { r, recibos } = await correrAnalisis(diag("`packages/x/y.ts:2`"));
     expect(r.exitCode, r.stderr).toBe(0);
-    const check = recibos[recibos.length - 1]?.mechanicalChecks.find((c) => c.id === "archivos_existen");
+    const check = recibos[recibos.length - 1]?.mechanicalChecks.find(
+      (c) => c.id === "archivos_existen",
+    );
     expect(check?.result).toBe("pass");
   });
 
@@ -391,7 +488,9 @@ describe("citas ruta:línea y worktrees", () => {
     mkdirSync(join(lab, ".git"));
     const { r, recibos } = await correrAnalisis(diag("el módulo de filtros"));
     expect(r.exitCode, r.stderr).toBe(0);
-    const check = recibos[recibos.length - 1]?.mechanicalChecks.find((c) => c.id === "archivos_existen");
+    const check = recibos[recibos.length - 1]?.mechanicalChecks.find(
+      (c) => c.id === "archivos_existen",
+    );
     expect(check?.result).toBe("skip");
     expect(check?.detail).toContain("no cita rutas");
   });
@@ -399,7 +498,9 @@ describe("citas ruta:línea y worktrees", () => {
   it("C11. el estado del evaluador incluye las rutas citadas comprobadas", async () => {
     mkdirSync(join(lab, ".git"));
     crear("packages/x/y.ts", 3);
-    const { r, estado } = await correrAnalisis(diag("`packages/x/y.ts:2` y `/api/a/b.json`"));
+    const { r, estado } = await correrAnalisis(
+      diag("`packages/x/y.ts:2` y `/api/a/b.json`"),
+    );
     expect(r.exitCode, r.stderr).toBe(0);
     expect(estado()["archivos_citados"]).toContain("packages/x/y.ts:2: existe");
     expect(estado()["archivos_citados"]).toContain("/api/a/b.json: omitida");

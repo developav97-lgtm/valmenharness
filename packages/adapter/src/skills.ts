@@ -617,7 +617,14 @@ export function derivaPublicada(
     const texto = readFileSync(ruta, "utf8");
     const versionProyecto = versionDeTexto(texto);
     for (const referencia of skill.referencias) {
-      const destino = join(root, ".valmen", "skills", skill.id, "referencias", referencia.nombre);
+      const destino = join(
+        root,
+        ".valmen",
+        "skills",
+        skill.id,
+        "referencias",
+        referencia.nombre,
+      );
       const detalle = !exists(destino)
         ? "falta"
         : readFileSync(destino, "utf8") !== referencia.contenido
@@ -714,8 +721,16 @@ export function instalarPublicadas(root: string, dir: string = CATALOGO_DIR): st
       escrita = true;
     }
     for (const referencia of skill.referencias) {
-      const destino = join(root, ".valmen", "skills", skill.id, "referencias", referencia.nombre);
-      if (exists(destino) && readFileSync(destino, "utf8") === referencia.contenido) continue;
+      const destino = join(
+        root,
+        ".valmen",
+        "skills",
+        skill.id,
+        "referencias",
+        referencia.nombre,
+      );
+      if (exists(destino) && readFileSync(destino, "utf8") === referencia.contenido)
+        continue;
       mkdirSync(join(destino, ".."), { recursive: true });
       writeFileSync(destino, referencia.contenido, "utf8");
       escrita = true;

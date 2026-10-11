@@ -90,7 +90,9 @@ const RIESGOS_CONOCIDOS = ["low", "normal", "high", "critical"];
 const DESPLIEGUE_RE = /\bdespliegue|\bdesplegar|\bdesplegad|\bdeploy/i;
 
 /** Decide si el análisis o el plan de un ticket puede aprobarse por una autorización. No consulta a ningún modelo. */
-export function elegibilidadDeAprobacion(request: ElegibilidadDeAprobacionRequest): ResultadoDeElegibilidadDeAprobacion {
+export function elegibilidadDeAprobacion(
+  request: ElegibilidadDeAprobacionRequest,
+): ResultadoDeElegibilidadDeAprobacion {
   const { paths, ticketId, etapa } = request;
   const ahora = request.ahora ?? new Date();
   const ubicado = findTicket(paths, ticketId);
@@ -124,7 +126,8 @@ export function elegibilidadDeAprobacion(request: ElegibilidadDeAprobacionReques
 
   // 3. Un diagnóstico que declara despliegue es de una persona (C4).
   const impactos = diagnosedImpacts(ticket.sections["Diagnóstico"] ?? "");
-  const declaraDespliegue = impactos.found && !impactos.saysNone && DESPLIEGUE_RE.test(impactos.value);
+  const declaraDespliegue =
+    impactos.found && !impactos.saysNone && DESPLIEGUE_RE.test(impactos.value);
   regla(
     "despliegue",
     !declaraDespliegue,
@@ -149,12 +152,20 @@ export function elegibilidadDeAprobacion(request: ElegibilidadDeAprobacionReques
   // 5. La compuerta de la etapa está en `approve` (C2, C8).
   let compuertaEnReview = false;
   if (!etapaValida) {
-    regla("compuerta", false, `sin una etapa válida no hay compuerta que mirar (${ETAPAS_APROBABLES.join(" o ")})`);
+    regla(
+      "compuerta",
+      false,
+      `sin una etapa válida no hay compuerta que mirar (${ETAPAS_APROBABLES.join(" o ")})`,
+    );
   } else {
     const veredicto = veredictoDeCompuerta(recibos, etapa);
     switch (veredicto.tipo) {
       case "sin-recibo":
-        regla("compuerta", false, `la compuerta ${etapa} no tiene recibo: hay que correrla antes de aprobar`);
+        regla(
+          "compuerta",
+          false,
+          `la compuerta ${etapa} no tiene recibo: hay que correrla antes de aprobar`,
+        );
         break;
       case "bloqueada": {
         const rechazo = veredicto.recibo.humanDecision !== null;
@@ -218,7 +229,11 @@ export function elegibilidadDeAprobacion(request: ElegibilidadDeAprobacionReques
     if (esSecurity) {
       regla("autorizacion", false, "un ticket SECURITY no admite autorización");
     } else if (!riesgoConocido) {
-      regla("autorizacion", false, `el riesgo «${riesgo}» no es uno que una autorización pueda cubrir (${RIESGOS_APROBABLES.join(" o ")})`);
+      regla(
+        "autorizacion",
+        false,
+        `el riesgo «${riesgo}» no es uno que una autorización pueda cubrir (${RIESGOS_APROBABLES.join(" o ")})`,
+      );
     } else if (vigentes.length === 0) {
       regla("autorizacion", false, "no hay ninguna autorización de aprobación vigente");
     } else {
@@ -226,7 +241,11 @@ export function elegibilidadDeAprobacion(request: ElegibilidadDeAprobacionReques
         (a) =>
           `${a.id}: ${primeraDimensionQueFalla(a, { tipo, modulo, riesgo, impactos: impactosDelTicket, etapa: etapaValida ? etapa : null })}`,
       );
-      regla("autorizacion", false, `ninguna autorización vigente cubre al ticket; ${motivos.join("; ")}`);
+      regla(
+        "autorizacion",
+        false,
+        `ninguna autorización vigente cubre al ticket; ${motivos.join("; ")}`,
+      );
     }
   }
 
@@ -245,21 +264,33 @@ export function elegibilidadDeAprobacion(request: ElegibilidadDeAprobacionReques
   }
 
   const elegible = reglas.every((r) => r.cumple);
-  const soloFallaLaCompuerta = reglas.filter((r) => !r.cumple).every((r) => r.regla === "compuerta");
+  const soloFallaLaCompuerta = reglas
+    .filter((r) => !r.cumple)
+    .every((r) => r.regla === "compuerta");
   return {
     ticketId,
     etapa,
     elegible,
     reglas,
     autorizacion: elegible && cubre !== null ? { id: cubre.id, hash: cubre.hash } : null,
-    derivableAlRevisor: compuertaEnReview && soloFallaLaCompuerta && cubre !== null && cubre.mode === "reviewer",
+    derivableAlRevisor:
+      compuertaEnReview &&
+      soloFallaLaCompuerta &&
+      cubre !== null &&
+      cubre.mode === "reviewer",
   };
 }
 
 /** La primera dimensión en la que una autorización no cubre al ticket, con el motivo. */
 function primeraDimensionQueFalla(
   a: AutorizacionDeAprobacionConEstado,
-  t: { tipo: string; modulo: string; riesgo: string; impactos: readonly string[]; etapa: string | null },
+  t: {
+    tipo: string;
+    modulo: string;
+    riesgo: string;
+    impactos: readonly string[];
+    etapa: string | null;
+  },
 ): string {
   if (!a.types.includes(t.tipo.toUpperCase())) {
     return `no lista el tipo ${t.tipo} (lista ${a.types.join(", ")}; los tipos que una autorización puede cubrir son ${TIPOS_APROBABLES.join(", ")})`;
@@ -283,7 +314,10 @@ function primeraDimensionQueFalla(
 // ── Registrar la aprobación atribuida a la autorización (R-APRO-002) ─────────
 
 /** La acción del evento de una etapa; `plan` es la que `transition --to approved` lee. */
-const ACCION_DE_ETAPA: Readonly<Record<string, string>> = { plan: PLAN_APPROVED_ACTION, analysis: "analysis-approved" };
+const ACCION_DE_ETAPA: Readonly<Record<string, string>> = {
+  plan: PLAN_APPROVED_ACTION,
+  analysis: "analysis-approved",
+};
 
 export interface AprobarPorAutorizacionRequest {
   readonly paths: RegistryPaths;
@@ -337,14 +371,18 @@ function eventosDe(doc: ParsedTicket, accion: string): DatosDeEvento[] {
  * evento. El cupo va antes que el evento a propósito: si la escritura del evento falla se pierde un
  * cupo, pero no se aprueba nada.
  */
-export function aprobarPorAutorizacion(request: AprobarPorAutorizacionRequest): ResultadoDeAprobarPorAutorizacion {
+export function aprobarPorAutorizacion(
+  request: AprobarPorAutorizacionRequest,
+): ResultadoDeAprobarPorAutorizacion {
   const { paths, ticketId, etapa } = request;
   const ahora = request.ahora ?? new Date();
   assertSesionAtendida("aprobar por autorización", request.env ?? process.env);
 
   const elegibilidad = elegibilidadDeAprobacion({ paths, ticketId, etapa, ahora });
   if (!elegibilidad.elegible || elegibilidad.autorizacion === null) {
-    const fallas = elegibilidad.reglas.filter((r) => !r.cumple).map((r) => `  ✗ ${r.regla}: ${r.detalle}`);
+    const fallas = elegibilidad.reglas
+      .filter((r) => !r.cumple)
+      .map((r) => `  ✗ ${r.regla}: ${r.detalle}`);
     fail(
       `${ticketId} no se aprueba por autorización en ${etapa}; no se registró nada ni se consumió cupo:\n${fallas.join("\n")}`,
       EXIT_INVARIANT,
@@ -359,7 +397,8 @@ export function aprobarPorAutorizacion(request: AprobarPorAutorizacionRequest): 
 
   // El recibo `approve` tiene que haber evaluado el texto que hay ahora (AP-007).
   const veredicto = veredictoDeCompuerta(readReceipts(paths, ticketId), etapa);
-  if (veredicto.tipo !== "aprobada") throw new Error("La elegibilidad dejó pasar una compuerta que no está aprobada.");
+  if (veredicto.tipo !== "aprobada")
+    throw new Error("La elegibilidad dejó pasar una compuerta que no está aprobada.");
   const recibo = veredicto.recibo;
   const estadoActual = hashState(buildGateState(documento.text));
   if (recibo.stateHash !== estadoActual) {
@@ -375,7 +414,9 @@ export function aprobarPorAutorizacion(request: AprobarPorAutorizacionRequest): 
     (a) => a.id === authorizationId && a.hash === authorizationHash,
   );
   const cupoDe = (): number =>
-    autorizacionVigente === undefined ? 0 : cupoRestanteDeAprobacion(paths.root, autorizacionVigente, ahora);
+    autorizacionVigente === undefined
+      ? 0
+      : cupoRestanteDeAprobacion(paths.root, autorizacionVigente, ahora);
 
   // Repetir con la aprobación todavía vigente no escribe otro evento ni consume otro cupo (C13).
   const ultimo = eventosDe(documento, accion).at(-1);
@@ -386,12 +427,27 @@ export function aprobarPorAutorizacion(request: AprobarPorAutorizacionRequest): 
     ultimo.receiptStateHash === estadoActual &&
     ultimo.stage === etapa;
   if (sigueVigente) {
-    return { ticketId, etapa, registrada: false, autorizacion: elegibilidad.autorizacion, cupoRestante: cupoDe(), accion, receiptId: recibo.id };
+    return {
+      ticketId,
+      etapa,
+      registrada: false,
+      autorizacion: elegibilidad.autorizacion,
+      cupoRestante: cupoDe(),
+      accion,
+      receiptId: recibo.id,
+    };
   }
 
   const cubre = autorizacionVigente;
-  if (cubre === undefined) throw new Error("La autorización que cubre al ticket dejó de existir.");
-  registrarUsoDeCupoDeAprobacion({ root: paths.root, authorizationId, ticketId, stage: etapa, ahora });
+  if (cubre === undefined)
+    throw new Error("La autorización que cubre al ticket dejó de existir.");
+  registrarUsoDeCupoDeAprobacion({
+    root: paths.root,
+    authorizationId,
+    ticketId,
+    stage: etapa,
+    ahora,
+  });
   const detalles = {
     actor: `autorización ${authorizationId}`,
     source: FUENTE_AUTORIZACION,
@@ -404,7 +460,15 @@ export function aprobarPorAutorizacion(request: AprobarPorAutorizacionRequest): 
     receiptStateHash: estadoActual,
   };
   appendEvent(paths, ticketId, accion, JSON.stringify(detalles), () => ahora);
-  return { ticketId, etapa, registrada: true, autorizacion: elegibilidad.autorizacion, cupoRestante: cupoDe(), accion, receiptId: recibo.id };
+  return {
+    ticketId,
+    etapa,
+    registrada: true,
+    autorizacion: elegibilidad.autorizacion,
+    cupoRestante: cupoDe(),
+    accion,
+    receiptId: recibo.id,
+  };
 }
 
 /**
@@ -479,7 +543,10 @@ export function listarAprobacionesAutomaticas(
   paths: RegistryPaths,
   opciones: { readonly dia?: string; readonly ahora?: Date } = {},
 ): ListaDeAprobacionesAutomaticas {
-  const autorizaciones = leerAutorizacionesDeAprobacion(paths.root, opciones.ahora ?? new Date());
+  const autorizaciones = leerAutorizacionesDeAprobacion(
+    paths.root,
+    opciones.ahora ?? new Date(),
+  );
   const aprobaciones: AprobacionAutomaticaListada[] = [];
   const omitidos: string[] = [];
   for (const t of findAllTickets(paths)) {
@@ -505,15 +572,23 @@ export function listarAprobacionesAutomaticas(
         if (opciones.dia !== undefined && dia !== opciones.dia) continue;
         const id = texto(d["authorizationId"]);
         const hash = texto(d["authorizationHash"]);
-        const a = autorizaciones.find((x) => x.id === id && x.hash === hash) ?? autorizaciones.find((x) => x.id === id);
+        const a =
+          autorizaciones.find((x) => x.id === id && x.hash === hash) ??
+          autorizaciones.find((x) => x.id === id);
         aprobaciones.push({
           ticket: t.id,
-          etapa: texto(d["stage"]) || (accion === PLAN_APPROVED_ACTION ? "plan" : "analysis"),
+          etapa:
+            texto(d["stage"]) || (accion === PLAN_APPROVED_ACTION ? "plan" : "analysis"),
           autorizacion: id,
           hash,
           recibo: texto(d["receiptId"]),
           modo: a?.mode ?? "desconocido",
-          estado: a === undefined ? "desconocida" : a.hash === hash ? a.estado : "hash-no-coincide",
+          estado:
+            a === undefined
+              ? "desconocida"
+              : a.hash === hash
+                ? a.estado
+                : "hash-no-coincide",
           en,
           dia,
         });
@@ -528,7 +603,10 @@ export function listarAprobacionesAutomaticas(
  * Cuenta las aprobaciones de plan de un día: las de fuente `autorizacion` son automáticas; todas
  * las demás (cli, delegacion, ...) son de una persona. Un ticket ilegible se omite.
  */
-export function contarAprobacionesDelDia(paths: RegistryPaths, dia: string): { automaticas: number; humanas: number } {
+export function contarAprobacionesDelDia(
+  paths: RegistryPaths,
+  dia: string,
+): { automaticas: number; humanas: number } {
   const { aprobaciones } = listarAprobacionesAutomaticas(paths, { dia });
   let humanas = 0;
   for (const t of findAllTickets(paths)) {

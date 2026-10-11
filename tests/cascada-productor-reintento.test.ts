@@ -62,11 +62,15 @@ type Opciones = Parameters<typeof runGate>[1];
 type Falla = { readonly codigo: string; readonly mensaje: string } | null;
 
 function responder(propositions: readonly Proposition[]): PropositionAnswer[] {
-  return propositions.map(
-    (p): PropositionAnswer =>
-      p.kind === "choice"
-        ? { id: p.id, kind: "choice", choice: Object.keys(p.criteria)[0] as string, confidence: 0.95 }
-        : { id: p.id, kind: p.kind, value: 0.95, confidence: 0.95 },
+  return propositions.map((p): PropositionAnswer =>
+    p.kind === "choice"
+      ? {
+          id: p.id,
+          kind: "choice",
+          choice: Object.keys(p.criteria)[0] as string,
+          confidence: 0.95,
+        }
+      : { id: p.id, kind: p.kind, value: 0.95, confidence: 0.95 },
   );
 }
 
@@ -152,8 +156,14 @@ describe("el productor agota la salida estructurada: reintento único con el esc
       dobles({ productor: INTERMITENTE }),
     );
     expect(recibo?.producerRetries).toHaveLength(1);
-    expect(recibo?.producerRetries?.[0]?.from).toEqual({ provider: "openrouter", model: PRODUCTOR });
-    expect(recibo?.producerRetries?.[0]?.to).toEqual({ provider: "openrouter", model: ESCALADO });
+    expect(recibo?.producerRetries?.[0]?.from).toEqual({
+      provider: "openrouter",
+      model: PRODUCTOR,
+    });
+    expect(recibo?.producerRetries?.[0]?.to).toEqual({
+      provider: "openrouter",
+      model: ESCALADO,
+    });
     expect(resultado.stdout).toContain(`Productor ${PRODUCTOR} falló (INVALID_REQUEST)`);
     expect(resultado.stdout).toContain(`la tanda se repitió con ${ESCALADO}`);
   });
@@ -174,7 +184,9 @@ describe("el productor agota la salida estructurada: reintento único con el esc
     expect(d.cuenta.escalado).toBe(1);
     expect(recibo?.evaluator).toBe("jev");
     expect(recibo?.requestedEvaluator).toBe("cascade");
-    expect(recibo?.evaluatorFailure?.message).toContain("error_max_structured_output_retries");
+    expect(recibo?.evaluatorFailure?.message).toContain(
+      "error_max_structured_output_retries",
+    );
     expect(recibo?.producerRetries).toBeUndefined();
   });
 
@@ -188,7 +200,9 @@ describe("el productor agota la salida estructurada: reintento único con el esc
   });
 
   it("C7b. control: un INVALID_REQUEST que no es de salida estructurada no se reintenta", async () => {
-    const d = dobles({ productor: { codigo: "INVALID_REQUEST", mensaje: "modelo inexistente" } });
+    const d = dobles({
+      productor: { codigo: "INVALID_REQUEST", mensaje: "modelo inexistente" },
+    });
     const { recibo } = await pedirCascada(nuevoLab(), d);
     expect(d.cuenta.escalado).toBe(0);
     expect(recibo?.evaluator).toBe("jev");
@@ -206,7 +220,13 @@ describe("el productor agota la salida estructurada: reintento único con el esc
 
   it("C11. un recibo anterior al cambio, literal de .valmen/receipts, se lee sin error", () => {
     const aqui = dirname(fileURLToPath(import.meta.url));
-    const origen = join(aqui, "..", ".valmen", "receipts", "AGENT-DOCS-GENERAR-MANUAL-MARKDOWN-20260926.jsonl");
+    const origen = join(
+      aqui,
+      "..",
+      ".valmen",
+      "receipts",
+      "AGENT-DOCS-GENERAR-MANUAL-MARKDOWN-20260926.jsonl",
+    );
     const lab = nuevoLab();
     const id = "AGENT-DOCS-GENERAR-MANUAL-MARKDOWN-20260926";
     mkdirSync(join(lab, ".valmen", "receipts"), { recursive: true });

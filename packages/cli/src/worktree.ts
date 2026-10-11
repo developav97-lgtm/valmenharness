@@ -24,7 +24,11 @@ export interface OpcionesDeWorktree {
   readonly retirar?: boolean;
 }
 
-type Subcomando = (paths: RegistryPaths, ticketId: string, opciones: OpcionesDeWorktree) => string | CommandResult;
+type Subcomando = (
+  paths: RegistryPaths,
+  ticketId: string,
+  opciones: OpcionesDeWorktree,
+) => string | CommandResult;
 
 function textoDeRetiro(r: ReturnType<typeof quitarWorktree>): string {
   return [
@@ -75,7 +79,8 @@ export const SUBCOMANDOS_DE_WORKTREE: Readonly<Record<string, Subcomando>> = Obj
       };
     }
   },
-  remove: (paths, ticketId, opciones) => textoDeRetiro(quitarWorktree(motor(paths, ticketId, opciones))),
+  remove: (paths, ticketId, opciones) =>
+    textoDeRetiro(quitarWorktree(motor(paths, ticketId, opciones))),
 });
 
 /** `rest` es lo que sigue a `worktree`: el subcomando. */
@@ -89,15 +94,28 @@ export function journeyWorktreeCommand(
   const nombre = rest[0];
   const subcomando = nombre === undefined ? undefined : SUBCOMANDOS_DE_WORKTREE[nombre];
   if (subcomando === undefined) {
-    return { stdout: "", stderr: `journey worktree admite: ${admitidos}.\n`, exitCode: EXIT_SCHEMA };
+    return {
+      stdout: "",
+      stderr: `journey worktree admite: ${admitidos}.\n`,
+      exitCode: EXIT_SCHEMA,
+    };
   }
   const id = flags["id"];
   if (typeof id !== "string" || id.trim() === "") {
-    return { stdout: "", stderr: `journey worktree ${nombre} requiere --id <ticket>.\n`, exitCode: EXIT_SCHEMA };
+    return {
+      stdout: "",
+      stderr: `journey worktree ${nombre} requiere --id <ticket>.\n`,
+      exitCode: EXIT_SCHEMA,
+    };
   }
   try {
-    const resultado = subcomando(paths, id, { ...opciones, retirar: flags["retirar"] === true });
-    return typeof resultado === "string" ? { stdout: `${resultado}\n`, stderr: "", exitCode: EXIT_OK } : resultado;
+    const resultado = subcomando(paths, id, {
+      ...opciones,
+      retirar: flags["retirar"] === true,
+    });
+    return typeof resultado === "string"
+      ? { stdout: `${resultado}\n`, stderr: "", exitCode: EXIT_OK }
+      : resultado;
   } catch (caught) {
     const failure = toFailure(caught);
     return { stdout: "", stderr: `${failure.message}\n`, exitCode: failure.exitCode };

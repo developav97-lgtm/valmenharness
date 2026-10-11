@@ -11,7 +11,10 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { journeyApproveEligibleCommand, planApproveCommand } from "../packages/cli/src/commands.js";
+import {
+  journeyApproveEligibleCommand,
+  planApproveCommand,
+} from "../packages/cli/src/commands.js";
 import { USAGE } from "../packages/cli/src/main.js";
 import { decideByCode } from "../packages/cli/src/hermes.js";
 import { parseTicket } from "../packages/core/src/index.js";
@@ -42,7 +45,11 @@ import { writeFixtureTicket } from "./helpers/fixtures.js";
 const projectId = "lote-lab";
 const SECRETO = "secreto-de-prueba-del-lote-largo";
 const AHORA = new Date("2026-10-06T08:00:00.000Z");
-const IDS = ["FEATURE-LOTE-UNO-20261005", "FEATURE-LOTE-DOS-20261005", "FEATURE-LOTE-TRES-20261005"];
+const IDS = [
+  "FEATURE-LOTE-UNO-20261005",
+  "FEATURE-LOTE-DOS-20261005",
+  "FEATURE-LOTE-TRES-20261005",
+];
 const JORNADA = "JOR-20261006";
 
 let home: string;
@@ -55,7 +62,9 @@ function configuracion(fuentes: string[] | null): void {
     join(root, ".valmen", "config.yaml"),
     [
       `project-id: ${projectId}`,
-      ...(fuentes === null ? [] : ["plan-approval-sources:", ...fuentes.map((f) => `  - ${f}`)]),
+      ...(fuentes === null
+        ? []
+        : ["plan-approval-sources:", ...fuentes.map((f) => `  - ${f}`)]),
       "",
     ].join("\n"),
     "utf8",
@@ -63,8 +72,12 @@ function configuracion(fuentes: string[] | null): void {
 }
 
 function reciboPlan(id: string) {
-  const proposiciones: Proposition[] = [{ id: "cubre_todos_los_criterios", kind: "noul", instructions: "cubre", weight: 3 }];
-  const respuestas: PropositionAnswer[] = [{ id: "cubre_todos_los_criterios", kind: "noul", value: 0.99 }];
+  const proposiciones: Proposition[] = [
+    { id: "cubre_todos_los_criterios", kind: "noul", instructions: "cubre", weight: 3 },
+  ];
+  const respuestas: PropositionAnswer[] = [
+    { id: "cubre_todos_los_criterios", kind: "noul", value: 0.99 },
+  ];
   return buildReceipt({
     id: `GR-20261006-${id}-plan-1`,
     gate: "plan",
@@ -72,7 +85,9 @@ function reciboPlan(id: string) {
     policy: DEFAULT_POLICY,
     subject: { type: "ticket", id, revision: "1" },
     decision: decide(proposiciones, respuestas, DEFAULT_POLICY),
-    state: buildGateState(readFileSync(join(root, "tickets", "2026", id, "ticket.md"), "utf8")),
+    state: buildGateState(
+      readFileSync(join(root, "tickets", "2026", id, "ticket.md"), "utf8"),
+    ),
     answers: respuestas,
     mechanicalChecks: [],
     model: null,
@@ -98,7 +113,10 @@ beforeEach(() => {
   root = join(home, "proyecto");
   mkdirSync(join(home, ".valmen"), { recursive: true });
   mkdirSync(join(root, ".valmen"), { recursive: true });
-  writeFileSync(join(home, ".valmen", "bindings.local.yaml"), `schema-version: 1\nmachine-id: lote\nprojects:\n  ${projectId}:\n    root: ${root}\n`);
+  writeFileSync(
+    join(home, ".valmen", "bindings.local.yaml"),
+    `schema-version: 1\nmachine-id: lote\nprojects:\n  ${projectId}:\n    root: ${root}\n`,
+  );
   paths = { root, ticketsDir: "tickets" };
   configuracion(["cli", "token"]);
   for (const id of IDS) planeado(id);
@@ -107,17 +125,41 @@ beforeEach(() => {
     journeyId: JORNADA,
     occurredAt: AHORA.toISOString(),
     tickets: IDS.map((id, i) => ({
-      ticketId: id, order: i + 1, priority: i + 1, dependsOn: [], start: { condition: "dependencies" as const }, authorizationIds: ["codex"],
+      ticketId: id,
+      order: i + 1,
+      priority: i + 1,
+      dependsOn: [],
+      start: { condition: "dependencies" as const },
+      authorizationIds: ["codex"],
     })),
   });
 });
 
 afterEach(() => rmSync(home, { recursive: true, force: true }));
 
-const emitir = () => emitirAprobacionesDeJornada({ project: proyecto(), journeyId: JORNADA, secret: SECRETO, ahora: AHORA });
-const aprobar = (codigo: string, extra: Partial<Parameters<typeof aprobarPorCodigo>[0]> = {}) =>
-  aprobarPorCodigo({ paths, secret: SECRETO, codigo, actor: "Juan Andrade", quote: "Apruebo estos planes", ahora: AHORA, env: {}, ...extra });
-const documento = (id: string) => parseTicket(readFileSync(join(root, "tickets", "2026", id, "ticket.md"), "utf8"));
+const emitir = () =>
+  emitirAprobacionesDeJornada({
+    project: proyecto(),
+    journeyId: JORNADA,
+    secret: SECRETO,
+    ahora: AHORA,
+  });
+const aprobar = (
+  codigo: string,
+  extra: Partial<Parameters<typeof aprobarPorCodigo>[0]> = {},
+) =>
+  aprobarPorCodigo({
+    paths,
+    secret: SECRETO,
+    codigo,
+    actor: "Juan Andrade",
+    quote: "Apruebo estos planes",
+    ahora: AHORA,
+    env: {},
+    ...extra,
+  });
+const documento = (id: string) =>
+  parseTicket(readFileSync(join(root, "tickets", "2026", id, "ticket.md"), "utf8"));
 
 describe("emitir", () => {
   it("tres planes listos emiten un código por plan y uno de lote en un solo mensaje", () => {
@@ -127,22 +169,43 @@ describe("emitir", () => {
     for (const id of IDS) expect(emision.mensaje).toContain(id);
     expect(emision.mensaje).toContain(`código ${emision.lote?.code}`);
     expect(emision.mensaje).toContain("plan-approve");
-    expect(new Set([...emision.planes.map((p) => p.code), emision.lote?.code]).size).toBe(4);
+    expect(new Set([...emision.planes.map((p) => p.code), emision.lote?.code]).size).toBe(
+      4,
+    );
   });
 
   it("un ticket de riesgo alto, de tipo SECURITY o con la compuerta sin aprobar no recibe código y se dice por qué", () => {
     planeado("FEATURE-LOTE-ALTO-20261005", { riesgo: "high" });
     planeado("SECURITY-LOTE-SEG-20261005", { tipo: "SECURITY" });
-    writeFixtureTicket(root, { id: "FEATURE-LOTE-SINREC-20261005", workflowStatus: "planned", type: "FEATURE", module: "LOTE" });
+    writeFixtureTicket(root, {
+      id: "FEATURE-LOTE-SINREC-20261005",
+      workflowStatus: "planned",
+      type: "FEATURE",
+      module: "LOTE",
+    });
     createJourney(proyecto(), {
       revisionId: "lote-02",
       journeyId: "JOR-20261007",
       occurredAt: AHORA.toISOString(),
-      tickets: ["FEATURE-LOTE-ALTO-20261005", "SECURITY-LOTE-SEG-20261005", "FEATURE-LOTE-SINREC-20261005"].map((id, i) => ({
-        ticketId: id, order: i + 1, priority: i + 1, dependsOn: [], start: { condition: "dependencies" as const }, authorizationIds: ["codex"],
+      tickets: [
+        "FEATURE-LOTE-ALTO-20261005",
+        "SECURITY-LOTE-SEG-20261005",
+        "FEATURE-LOTE-SINREC-20261005",
+      ].map((id, i) => ({
+        ticketId: id,
+        order: i + 1,
+        priority: i + 1,
+        dependsOn: [],
+        start: { condition: "dependencies" as const },
+        authorizationIds: ["codex"],
       })),
     });
-    const emision = emitirAprobacionesDeJornada({ project: proyecto(), journeyId: "JOR-20261007", secret: SECRETO, ahora: AHORA });
+    const emision = emitirAprobacionesDeJornada({
+      project: proyecto(),
+      journeyId: "JOR-20261007",
+      secret: SECRETO,
+      ahora: AHORA,
+    });
     expect(emision.planes).toEqual([]);
     expect(emision.lote).toBeNull();
     expect(emision.sinCodigo.map((s) => s.ticket)).toEqual([
@@ -174,13 +237,22 @@ describe("aprobar", () => {
     const { planes } = emitir();
     expect(aprobar(planes[0]?.code ?? "").every((r) => r.ok)).toBe(true);
     expect(aprobacionDePlanVigente(documento(IDS[0] as string)).estado).toBe("vigente");
-    expect(aprobacionDePlanVigente(documento(IDS[1] as string)).estado).toBe("sin-aprobacion");
+    expect(aprobacionDePlanVigente(documento(IDS[1] as string)).estado).toBe(
+      "sin-aprobacion",
+    );
   });
 
   it("un plan editado después de emitir el código no se aprueba con él, y el código queda sin usar", () => {
     const { planes } = emitir();
     const ruta = join(root, "tickets", "2026", IDS[0] as string, "ticket.md");
-    writeFileSync(ruta, readFileSync(ruta, "utf8").replace("- Rollback:", "- Paso nuevo que nadie aprobó.\n- Rollback:"), "utf8");
+    writeFileSync(
+      ruta,
+      readFileSync(ruta, "utf8").replace(
+        "- Rollback:",
+        "- Paso nuevo que nadie aprobó.\n- Rollback:",
+      ),
+      "utf8",
+    );
     const r = aprobar(planes[0]?.code ?? "");
     expect(r[0]?.ok).toBe(false);
     expect(r[0]?.detalle).toContain("el plan cambió");
@@ -197,15 +269,19 @@ describe("aprobar", () => {
 
   it("un código vencido no sirve", () => {
     const { planes } = emitir();
-    const r = aprobar(planes[0]?.code ?? "", { ahora: new Date("2026-10-08T08:00:00.000Z") });
+    const r = aprobar(planes[0]?.code ?? "", {
+      ahora: new Date("2026-10-08T08:00:00.000Z"),
+    });
     expect(r[0]?.ok).toBe(false);
     expect(r[0]?.detalle).toContain("venció");
   });
 
   it("un código con otro secreto o inexistente se rechaza", () => {
     const { planes } = emitir();
-    // valmen:allow-secret — valor de prueba inventado.
-    expect(aprobar(planes[0]?.code ?? "", { secret: "otro-secreto-largo-de-prueba-x" })[0]?.ok).toBe(false);
+    expect(
+      // valmen:allow-secret — valor de prueba inventado.
+      aprobar(planes[0]?.code ?? "", { secret: "otro-secreto-largo-de-prueba-x" })[0]?.ok,
+    ).toBe(false);
     expect(aprobar("ZZZZ-ZZZZ")[0]?.detalle).toContain("ninguna aprobación emitida");
   });
 
@@ -230,7 +306,13 @@ describe("un código de compuerta y uno de plan no se confunden", () => {
   it("el código de un plan no decide una compuerta con gate-decide --code", () => {
     const { planes } = emitir();
     const r = decideByCode({
-      paths, code: planes[0]?.code ?? "", decision: "approve", actor: "Juan", reason: "x", secret: SECRETO, now: AHORA,
+      paths,
+      code: planes[0]?.code ?? "",
+      decision: "approve",
+      actor: "Juan",
+      reason: "x",
+      secret: SECRETO,
+      now: AHORA,
     });
     expect(r.exitCode).not.toBe(0);
     expect(r.stderr).toContain("aprueba un plan");
@@ -238,9 +320,17 @@ describe("un código de compuerta y uno de plan no se confunden", () => {
 
   it("el comando plan-approve aprueba y sale con error si algo falla", () => {
     const { planes } = emitir();
-    const bien = planApproveCommand(paths, { code: planes[0]?.code ?? "", actor: "Juan Andrade", quote: "ok" }, { secret: SECRETO, ahora: () => AHORA, env: {} });
+    const bien = planApproveCommand(
+      paths,
+      { code: planes[0]?.code ?? "", actor: "Juan Andrade", quote: "ok" },
+      { secret: SECRETO, ahora: () => AHORA, env: {} },
+    );
     expect(bien.exitCode).toBe(0);
-    const mal = planApproveCommand(paths, { code: planes[0]?.code ?? "", actor: "Juan Andrade", quote: "ok" }, { secret: SECRETO, ahora: () => AHORA, env: {} });
+    const mal = planApproveCommand(
+      paths,
+      { code: planes[0]?.code ?? "", actor: "Juan Andrade", quote: "ok" },
+      { secret: SECRETO, ahora: () => AHORA, env: {} },
+    );
     expect(mal.exitCode).not.toBe(0);
     expect(readReceipts(paths, IDS[0] as string).length).toBeGreaterThan(0);
   });
@@ -248,11 +338,15 @@ describe("un código de compuerta y uno de plan no se confunden", () => {
 
 describe("aprobar los elegibles de la jornada (R-APRO-006)", () => {
   const JOR = "JOR-20261008";
-  const idDe = (n: string) => `FEATURE-${n === "CINCO" ? "OTRO" : "LOTE"}-ELEG${n}-20261008`;
+  const idDe = (n: string) =>
+    `FEATURE-${n === "CINCO" ? "OTRO" : "LOTE"}-ELEG${n}-20261008`;
   const sufijos = ["UNO", "DOS", "TRES", "CUATRO", "CINCO"];
 
   /** Un plan en `planned` con su recibo de plan en el valor que se pide (approve 0.99, review 0.5, block 0.01). */
-  function plan(id: string, o: { tipo?: string; diagnostico?: string; valor?: number } = {}): void {
+  function plan(
+    id: string,
+    o: { tipo?: string; diagnostico?: string; valor?: number } = {},
+  ): void {
     writeFixtureTicket(root, {
       id,
       workflowStatus: "planned",
@@ -260,8 +354,12 @@ describe("aprobar los elegibles de la jornada (R-APRO-006)", () => {
       module: id.split("-")[1] as string,
       ...(o.diagnostico === undefined ? {} : { diagnostico: o.diagnostico }),
     });
-    const proposiciones: Proposition[] = [{ id: "cubre_todos_los_criterios", kind: "noul", instructions: "cubre", weight: 3 }];
-    const respuestas: PropositionAnswer[] = [{ id: "cubre_todos_los_criterios", kind: "noul", value: o.valor ?? 0.99 }];
+    const proposiciones: Proposition[] = [
+      { id: "cubre_todos_los_criterios", kind: "noul", instructions: "cubre", weight: 3 },
+    ];
+    const respuestas: PropositionAnswer[] = [
+      { id: "cubre_todos_los_criterios", kind: "noul", value: o.valor ?? 0.99 },
+    ];
     appendReceipt(
       paths,
       id,
@@ -272,7 +370,9 @@ describe("aprobar los elegibles de la jornada (R-APRO-006)", () => {
         policy: DEFAULT_POLICY,
         subject: { type: "ticket", id, revision: "1" },
         decision: decide(proposiciones, respuestas, DEFAULT_POLICY),
-        state: buildGateState(readFileSync(join(root, "tickets", "2026", id, "ticket.md"), "utf8")),
+        state: buildGateState(
+          readFileSync(join(root, "tickets", "2026", id, "ticket.md"), "utf8"),
+        ),
         answers: respuestas,
         mechanicalChecks: [],
         model: null,
@@ -289,7 +389,12 @@ describe("aprobar los elegibles de la jornada (R-APRO-006)", () => {
       journeyId: JOR,
       occurredAt: AHORA.toISOString(),
       tickets: ids.map((id, i) => ({
-        ticketId: id, order: i + 1, priority: i + 1, dependsOn: [], start: { condition: "dependencies" as const }, authorizationIds: ["codex"],
+        ticketId: id,
+        order: i + 1,
+        priority: i + 1,
+        dependsOn: [],
+        start: { condition: "dependencies" as const },
+        authorizationIds: ["codex"],
       })),
     });
   }
@@ -309,11 +414,18 @@ describe("aprobar los elegibles de la jornada (R-APRO-006)", () => {
       env: {},
     });
   const correr = (env: Record<string, string | undefined> = {}) =>
-    aprobarPlanesElegiblesDeJornada({ project: proyecto(), journeyId: JOR, ahora: AHORA, env });
+    aprobarPlanesElegiblesDeJornada({
+      project: proyecto(),
+      journeyId: JOR,
+      ahora: AHORA,
+      env,
+    });
   const estado = (id: string): string => documento(id).fields.workflow_status;
   const usos = (): number => {
     try {
-      return readFileSync(approvalQuotaUsesPath(root), "utf8").split("\n").filter((l) => l.trim() !== "").length;
+      return readFileSync(approvalQuotaUsesPath(root), "utf8")
+        .split("\n")
+        .filter((l) => l.trim() !== "").length;
     } catch {
       return 0;
     }
@@ -366,7 +478,12 @@ describe("aprobar los elegibles de la jornada (R-APRO-006)", () => {
     const ids = cinco();
     autorizar();
     correr();
-    const emision = emitirAprobacionesDeJornada({ project: proyecto(), journeyId: JOR, secret: SECRETO, ahora: AHORA });
+    const emision = emitirAprobacionesDeJornada({
+      project: proyecto(),
+      journeyId: JOR,
+      secret: SECRETO,
+      ahora: AHORA,
+    });
     expect(emision.planes.map((p) => p.ticket)).toEqual([ids[4]]);
   });
 
@@ -424,7 +541,14 @@ describe("aprobar los elegibles de la jornada (R-APRO-006)", () => {
     const ids = [idDe("UNO"), idDe("DOS"), idDe("TRES")];
     ids.forEach((id) => plan(id));
     const ruta = join(root, "tickets", "2026", ids[0] as string, "ticket.md");
-    writeFileSync(ruta, readFileSync(ruta, "utf8").replace("- Rollback:", "- Paso nuevo después de la compuerta.\n- Rollback:"), "utf8");
+    writeFileSync(
+      ruta,
+      readFileSync(ruta, "utf8").replace(
+        "- Rollback:",
+        "- Paso nuevo después de la compuerta.\n- Rollback:",
+      ),
+      "utf8",
+    );
     jornada(ids);
     autorizar();
     const r = correr();
@@ -460,7 +584,10 @@ describe("aprobar los elegibles de la jornada (R-APRO-006)", () => {
   it("C14: la orden con --journey imprime aprobados y pendientes y sale con 0", () => {
     const ids = cinco();
     autorizar();
-    const r = journeyApproveEligibleCommand({ project: projectId, journey: JOR }, { home, ahora: () => AHORA, env: {} });
+    const r = journeyApproveEligibleCommand(
+      { project: projectId, journey: JOR },
+      { home, ahora: () => AHORA, env: {} },
+    );
     expect(r.exitCode).toBe(0);
     expect(r.stdout).toContain("aprobados por autorización");
     expect(r.stdout).toContain(`✓ ${ids[0]}`);

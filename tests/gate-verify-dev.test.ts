@@ -63,9 +63,9 @@ describe("la configuración del ambiente", () => {
     expect(() => readVerifyDevConfig(parseConfig("verify-dev:\n  branch: dev\n"))).toThrow(
       /verify-dev.url/,
     );
-    expect(() => readVerifyDevConfig(parseConfig("verify-dev:\n  url: ftp://dev.test\n"))).toThrow(
-      /verify-dev.url/,
-    );
+    expect(() =>
+      readVerifyDevConfig(parseConfig("verify-dev:\n  url: ftp://dev.test\n")),
+    ).toThrow(/verify-dev.url/);
     expect(() =>
       readVerifyDevConfig(
         parseConfig("verify-dev:\n  url: https://dev.test\n  branch:\n    - dev\n"),
@@ -84,7 +84,10 @@ describe("qa-mechanical", () => {
       criterios: criterioDev,
     });
 
-    const sinAmbiente = await runGate(paths(), { gateId: "qa-mechanical", ticketId: TICKET });
+    const sinAmbiente = await runGate(paths(), {
+      gateId: "qa-mechanical",
+      ticketId: TICKET,
+    });
     expect(sinAmbiente.exitCode).toBe(3);
     expect(sinAmbiente.stderr).toContain("verify-dev");
 
@@ -135,9 +138,9 @@ describe("el pase a QA", () => {
       "utf8",
     );
 
-    expect(() => transition({ paths: paths(), ticketId: TICKET, entity: "ticket", to: "in_qa" })).toThrow(
-      /resultado del PO u omisión explícita/i,
-    );
+    expect(() =>
+      transition({ paths: paths(), ticketId: TICKET, entity: "ticket", to: "in_qa" }),
+    ).toThrow(/resultado del PO u omisión explícita/i);
 
     writeFileSync(
       ticketPath,
@@ -148,7 +151,8 @@ describe("el pase a QA", () => {
       "utf8",
     );
     expect(
-      transition({ paths: paths(), ticketId: TICKET, entity: "ticket", to: "in_qa" }).details,
+      transition({ paths: paths(), ticketId: TICKET, entity: "ticket", to: "in_qa" })
+        .details,
     ).toContain("awaiting_user_tests -> in_qa");
   });
 });

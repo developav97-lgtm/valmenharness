@@ -40,11 +40,7 @@ import {
   type RegistryPaths,
 } from "@valmen/engine";
 
-import {
-  archivosDeSubagentes,
-  carpetasDelProyecto,
-  claudeProjectsPath,
-} from "./claude.js";
+import { archivosDeSubagentes, carpetasDelProyecto, claudeProjectsPath } from "./claude.js";
 import { ticketsDeTexto } from "./hermes.js";
 
 /** Pasados estos milisegundos sin eventos, un agente que no terminó está esperando. */
@@ -196,7 +192,8 @@ function leerTranscript(contenido: string): Lectura {
       continue; // línea cortada: la sesión se está escribiendo
     }
 
-    const marca = typeof evento["timestamp"] === "string" ? Date.parse(evento["timestamp"]) : NaN;
+    const marca =
+      typeof evento["timestamp"] === "string" ? Date.parse(evento["timestamp"]) : NaN;
     const tieneMarca = Number.isFinite(marca);
     if (tieneMarca && (lectura.ultimoEventoEn === null || marca > lectura.ultimoEventoEn)) {
       lectura.ultimoEventoEn = marca;
@@ -212,7 +209,11 @@ function leerTranscript(contenido: string): Lectura {
       if (Array.isArray(cuerpo)) {
         for (const bloque of cuerpo) {
           const dato = objeto(bloque);
-          if (dato !== null && dato["type"] === "tool_result" && typeof dato["tool_use_id"] === "string") {
+          if (
+            dato !== null &&
+            dato["type"] === "tool_result" &&
+            typeof dato["tool_use_id"] === "string"
+          ) {
             abiertas.delete(dato["tool_use_id"]);
             // De una pregunta se toma la hora y, sin error, `toolUseResult.answers`; nunca `content`.
             const idPregunta = dato["tool_use_id"];
@@ -249,7 +250,8 @@ function leerTranscript(contenido: string): Lectura {
     if (tipo === "assistant" && mensaje !== null) {
       const modelo = texto(mensaje["model"]);
       if (modelo !== null && modelo !== "<synthetic>") lectura.modelo = modelo;
-      lectura.esfuerzo = texto(evento["effort"]) ?? texto(evento["perTurnEffort"]) ?? lectura.esfuerzo;
+      lectura.esfuerzo =
+        texto(evento["effort"]) ?? texto(evento["perTurnEffort"]) ?? lectura.esfuerzo;
       if (Array.isArray(mensaje["content"])) {
         for (const bloque of mensaje["content"]) {
           const dato = objeto(bloque);
@@ -257,7 +259,9 @@ function leerTranscript(contenido: string): Lectura {
             const nombre = texto(dato["name"]);
             if (nombre !== null) {
               lectura.ultimaHerramienta = nombre;
-              lectura.ultimaHerramientaEn = tieneMarca ? marca : lectura.ultimaHerramientaEn;
+              lectura.ultimaHerramientaEn = tieneMarca
+                ? marca
+                : lectura.ultimaHerramientaEn;
             }
             if (typeof dato["id"] === "string") {
               abiertas.add(dato["id"]);
@@ -268,7 +272,8 @@ function leerTranscript(contenido: string): Lectura {
                 if (Array.isArray(questions)) {
                   for (const q of questions) {
                     const pregunta = objeto(q)?.["question"];
-                    if (typeof pregunta === "string" && pregunta !== "") lista.push(pregunta);
+                    if (typeof pregunta === "string" && pregunta !== "")
+                      lista.push(pregunta);
                   }
                 }
                 textos.set(dato["id"], lista);
@@ -363,8 +368,15 @@ export function finesDeSubagentes(contenido: string): Map<string, number> {
     if (!cuerpo.includes("<task-notification>")) continue;
     const id = /<task-id>([A-Za-z0-9_-]{1,128})<\/task-id>/.exec(cuerpo)?.[1];
     const estado = /<status>([a-z_]+)<\/status>/.exec(cuerpo)?.[1];
-    const marca = typeof evento["timestamp"] === "string" ? Date.parse(evento["timestamp"]) : NaN;
-    if (id === undefined || estado === undefined || !ESTADOS_DE_FIN.has(estado) || !Number.isFinite(marca)) continue;
+    const marca =
+      typeof evento["timestamp"] === "string" ? Date.parse(evento["timestamp"]) : NaN;
+    if (
+      id === undefined ||
+      estado === undefined ||
+      !ESTADOS_DE_FIN.has(estado) ||
+      !Number.isFinite(marca)
+    )
+      continue;
     if (marca > (fines.get(id) ?? -Infinity)) fines.set(id, marca);
   }
   return fines;
@@ -419,7 +431,9 @@ export function estadoDelTicket(paths: RegistryPaths, ticket: string): string | 
 /** La descripción del `meta.json` del subagente, o null. */
 function descripcionDe(rutaJsonl: string): string | null {
   try {
-    const meta = objeto(JSON.parse(readFileSync(rutaJsonl.replace(/\.jsonl$/, ".meta.json"), "utf8")));
+    const meta = objeto(
+      JSON.parse(readFileSync(rutaJsonl.replace(/\.jsonl$/, ".meta.json"), "utf8")),
+    );
     return meta === null ? null : texto(meta["description"]);
   } catch {
     return null;
@@ -471,7 +485,11 @@ export function inferirFase(herramienta: string | null): string | null {
   if (herramienta === null) return null;
   if (/^(Edit|Write|NotebookEdit)$/.test(herramienta)) return "implementando";
   if (/^(Read|Grep|Glob|WebFetch|WebSearch)$/.test(herramienta)) return "analizando";
-  if (/^mcp__valmen[A-Za-z0-9_-]*__(evaluar_compuerta|simular_compuerta|cascada_verificada)$/.test(herramienta)) {
+  if (
+    /^mcp__valmen[A-Za-z0-9_-]*__(evaluar_compuerta|simular_compuerta|cascada_verificada)$/.test(
+      herramienta,
+    )
+  ) {
     return "compuerta";
   }
   if (herramienta === "Bash") return "ejecutando";
@@ -504,7 +522,10 @@ function actividadPorTicket(project: AuthorizedProject | undefined): Map<string,
       for (const actividad of readExecutionActivity(project, replay.identity)) {
         const previa = resultado.get(replay.identity.ticketId);
         if (previa === undefined || actividad.cursor > previa.cursor) {
-          resultado.set(replay.identity.ticketId, { cursor: actividad.cursor, estado: actividad.state });
+          resultado.set(replay.identity.ticketId, {
+            cursor: actividad.cursor,
+            estado: actividad.state,
+          });
         }
       }
     }
@@ -528,7 +549,11 @@ function estadoDe(lectura: Lectura, ahora: number): EstadoDeAgente {
 }
 
 /** La pregunta a declarar: abierta, contestada dentro de la ventana, o null. */
-function preguntaDe(lectura: Lectura, ahora: number, conTexto: boolean): PreguntaPendiente | null {
+function preguntaDe(
+  lectura: Lectura,
+  ahora: number,
+  conTexto: boolean,
+): PreguntaPendiente | null {
   if (lectura.preguntaDesde === null) return null;
   const desde = new Date(lectura.preguntaDesde).toISOString();
   let respondidaEn: string | null = null;
@@ -537,7 +562,12 @@ function preguntaDe(lectura: Lectura, ahora: number, conTexto: boolean): Pregunt
     respondidaEn = new Date(lectura.preguntaRespondidaEn).toISOString();
   }
   if (!conTexto) return { desde, respondidaEn };
-  return { desde, respondidaEn, texto: lectura.preguntaTexto, respuesta: lectura.preguntaRespuesta };
+  return {
+    desde,
+    respondidaEn,
+    texto: lectura.preguntaTexto,
+    respuesta: lectura.preguntaRespuesta,
+  };
 }
 
 /** Una fila por la sesión principal y otra por cada subagente; vacío si no hay subagentes. */
@@ -567,7 +597,9 @@ export function leerAgentesDeCorrida(
       carpeta: principal.carpeta,
       ultimaHerramienta: principal.ultimaHerramienta,
       ultimaHerramientaEn:
-        principal.ultimaHerramientaEn === null ? null : new Date(principal.ultimaHerramientaEn).toISOString(),
+        principal.ultimaHerramientaEn === null
+          ? null
+          : new Date(principal.ultimaHerramientaEn).toISOString(),
       estado: estadoDe(principal, ahora),
       ticketEstado: null,
       faseConfirmada: null,
@@ -583,7 +615,8 @@ export function leerAgentesDeCorrida(
 
     const fin = fines.get(basename(archivo, ".jsonl").replace(/^agent-/, ""));
     const estado: EstadoDeAgente =
-      fin !== undefined && (lectura.ultimoEventoEn === null || fin >= lectura.ultimoEventoEn)
+      fin !== undefined &&
+      (lectura.ultimoEventoEn === null || fin >= lectura.ultimoEventoEn)
         ? "termino"
         : estadoDe(lectura, ahora);
 
@@ -591,7 +624,8 @@ export function leerAgentesDeCorrida(
       lectura.ticket !== null && opciones.paths !== undefined
         ? estadoDelTicket(opciones.paths, lectura.ticket)
         : null;
-    const faseConfirmada = lectura.ticket === null ? null : (actividad.get(lectura.ticket) ?? null);
+    const faseConfirmada =
+      lectura.ticket === null ? null : (actividad.get(lectura.ticket) ?? null);
 
     filas.push({
       agente: basename(archivo, ".jsonl").replace(/^agent-/, ""),
@@ -604,7 +638,9 @@ export function leerAgentesDeCorrida(
       carpeta: lectura.carpeta,
       ultimaHerramienta: lectura.ultimaHerramienta,
       ultimaHerramientaEn:
-        lectura.ultimaHerramientaEn === null ? null : new Date(lectura.ultimaHerramientaEn).toISOString(),
+        lectura.ultimaHerramientaEn === null
+          ? null
+          : new Date(lectura.ultimaHerramientaEn).toISOString(),
       estado,
       ticketEstado,
       faseConfirmada,

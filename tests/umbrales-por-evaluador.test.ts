@@ -35,13 +35,21 @@ const PLAN = [
 ].join("\n");
 
 let lab: string;
-const PATHS = (): { root: string; ticketsDir: string } => ({ root: lab, ticketsDir: "tickets" });
+const PATHS = (): { root: string; ticketsDir: string } => ({
+  root: lab,
+  ticketsDir: "tickets",
+});
 
 beforeEach(() => {
   lab = mkdtempSync(join(tmpdir(), "valmen-umbrales-"));
   mkdirSync(join(lab, "tickets"), { recursive: true });
   mkdirSync(join(lab, ".valmen"), { recursive: true });
-  writeFixtureTicket(lab, { id: TICKET, workflowStatus: "planned", plan: PLAN, criterios: CRITERIOS_QUE_EVALUA_EL_MODELO });
+  writeFixtureTicket(lab, {
+    id: TICKET,
+    workflowStatus: "planned",
+    plan: PLAN,
+    criterios: CRITERIOS_QUE_EVALUA_EL_MODELO,
+  });
 });
 afterEach(() => {
   rmSync(lab, { recursive: true, force: true });
@@ -52,7 +60,9 @@ function configurar(texto: string): void {
 }
 
 /** Un evaluador simulado que responde 0.85 a toda proposición booleana: en banda con 0.9. */
-function evaluador(valor = 0.85): typeof import("../packages/gate-jev/src/index.js").evaluateWithJev {
+function evaluador(
+  valor = 0.85,
+): typeof import("../packages/gate-jev/src/index.js").evaluateWithJev {
   return (async (options: { propositions?: readonly { id: string }[] }) => {
     const answers = (options?.propositions ?? []).map((p) =>
       p.id === "clasificacion"
@@ -68,9 +78,11 @@ function evaluador(valor = 0.85): typeof import("../packages/gate-jev/src/index.
   }) as unknown as typeof import("../packages/gate-jev/src/index.js").evaluateWithJev;
 }
 
-const correr = () => runGate(PATHS(), { gateId: "plan", ticketId: TICKET, jev: evaluador() });
+const correr = () =>
+  runGate(PATHS(), { gateId: "plan", ticketId: TICKET, jev: evaluador() });
 
-const FIRMA = '    approved-by: Juan Andrade\n    reason: "calibración del 2026-10-06 sobre 108 decisiones humanas"\n';
+const FIRMA =
+  '    approved-by: Juan Andrade\n    reason: "calibración del 2026-10-06 sobre 108 decisiones humanas"\n';
 
 describe("aplicar umbrales", () => {
   it("sin gate-thresholds la decisión no cambia: 0.85 queda en banda con los umbrales por defecto", async () => {
@@ -128,14 +140,22 @@ describe("aplicar umbrales", () => {
     expect(por("cubre_todos_los_criterios")?.inBand).toBe(true);
     // Las demás se deciden con la del evaluador (0.8), no con la de la compuerta (0.95).
     expect(por("corresponde_a_la_investigacion")?.inBand).toBe(false);
-    expect(recibo?.thresholds?.find((t) => t.proposition === "cubre_todos_los_criterios")?.approveAt).toBe(0.99);
-    expect(recibo?.thresholds?.find((t) => t.proposition === "corresponde_a_la_investigacion")?.approveAt).toBe(0.8);
+    expect(
+      recibo?.thresholds?.find((t) => t.proposition === "cubre_todos_los_criterios")
+        ?.approveAt,
+    ).toBe(0.99);
+    expect(
+      recibo?.thresholds?.find((t) => t.proposition === "corresponde_a_la_investigacion")
+        ?.approveAt,
+    ).toBe(0.8);
   });
 });
 
 describe("la firma de una persona", () => {
   it("una entrada sin approved-by o sin reason no se aplica y el informe lo dice", async () => {
-    configurar("gate-thresholds:\n  - gate: plan\n    evaluator: jev\n    approve-at: 0.8\n    block-at: 0.1\n");
+    configurar(
+      "gate-thresholds:\n  - gate: plan\n    evaluator: jev\n    approve-at: 0.8\n    block-at: 0.1\n",
+    );
 
     const r = await correr();
 
@@ -145,7 +165,9 @@ describe("la firma de una persona", () => {
   });
 
   it("con approved-by pero sin reason tampoco se aplica", async () => {
-    configurar("gate-thresholds:\n  - gate: plan\n    evaluator: jev\n    approve-at: 0.8\n    block-at: 0.1\n    approved-by: Juan Andrade\n");
+    configurar(
+      "gate-thresholds:\n  - gate: plan\n    evaluator: jev\n    approve-at: 0.8\n    block-at: 0.1\n    approved-by: Juan Andrade\n",
+    );
     const r = await correr();
     expect(r.stdout).toContain("REVIEW");
     expect(r.stdout).toContain("no se aplica");
@@ -153,39 +175,50 @@ describe("la firma de una persona", () => {
 });
 
 describe("la configuración inválida", () => {
-  const leer = (texto: string) => readGateThresholds(parseConfig(texto), ["analysis", "plan", "qa-mechanical"]);
+  const leer = (texto: string) =>
+    readGateThresholds(parseConfig(texto), ["analysis", "plan", "qa-mechanical"]);
 
   it("un block-at que no es menor que approve-at falla nombrando la clave", () => {
-    expect(() => leer("gate-thresholds:\n  - gate: plan\n    approve-at: 0.5\n    block-at: 0.5\n")).toThrow(
-      "gate-thresholds[0].block-at",
-    );
+    expect(() =>
+      leer("gate-thresholds:\n  - gate: plan\n    approve-at: 0.5\n    block-at: 0.5\n"),
+    ).toThrow("gate-thresholds[0].block-at");
   });
 
   it("un valor fuera de 0 a 1 o que no es número falla nombrando la clave", () => {
-    expect(() => leer("gate-thresholds:\n  - gate: plan\n    approve-at: 1.5\n    block-at: 0.1\n")).toThrow(
-      "gate-thresholds[0].approve-at",
-    );
-    expect(() => leer("gate-thresholds:\n  - gate: plan\n    approve-at: alto\n    block-at: 0.1\n")).toThrow(
-      "approve-at",
-    );
+    expect(() =>
+      leer("gate-thresholds:\n  - gate: plan\n    approve-at: 1.5\n    block-at: 0.1\n"),
+    ).toThrow("gate-thresholds[0].approve-at");
+    expect(() =>
+      leer("gate-thresholds:\n  - gate: plan\n    approve-at: alto\n    block-at: 0.1\n"),
+    ).toThrow("approve-at");
   });
 
   it("una compuerta, un evaluador o una clave desconocidos fallan nombrando la clave", () => {
-    expect(() => leer("gate-thresholds:\n  - gate: otra\n    approve-at: 0.9\n    block-at: 0.1\n")).toThrow(
-      "gate-thresholds[0].gate",
-    );
     expect(() =>
-      leer("gate-thresholds:\n  - gate: plan\n    evaluator: gpt\n    approve-at: 0.9\n    block-at: 0.1\n"),
+      leer("gate-thresholds:\n  - gate: otra\n    approve-at: 0.9\n    block-at: 0.1\n"),
+    ).toThrow("gate-thresholds[0].gate");
+    expect(() =>
+      leer(
+        "gate-thresholds:\n  - gate: plan\n    evaluator: gpt\n    approve-at: 0.9\n    block-at: 0.1\n",
+      ),
     ).toThrow("gate-thresholds[0].evaluator");
     expect(() =>
-      leer("gate-thresholds:\n  - gate: plan\n    approve-at: 0.9\n    block-at: 0.1\n    extra: x\n"),
+      leer(
+        "gate-thresholds:\n  - gate: plan\n    approve-at: 0.9\n    block-at: 0.1\n    extra: x\n",
+      ),
     ).toThrow("gate-thresholds[0].extra");
   });
 
   it("una proposición desconocida falla nombrando la clave y una conocida pasa", () => {
-    configurar("gate-thresholds:\n  - gate: plan\n    proposition: no_existe\n    approve-at: 0.9\n    block-at: 0.1\n");
-    expect(() => validateThresholdTargets(gateThresholds(lab))).toThrow("gate-thresholds[0].proposition");
-    configurar("gate-thresholds:\n  - gate: plan\n    proposition: criterio_03\n    approve-at: 0.9\n    block-at: 0.1\n");
+    configurar(
+      "gate-thresholds:\n  - gate: plan\n    proposition: no_existe\n    approve-at: 0.9\n    block-at: 0.1\n",
+    );
+    expect(() => validateThresholdTargets(gateThresholds(lab))).toThrow(
+      "gate-thresholds[0].proposition",
+    );
+    configurar(
+      "gate-thresholds:\n  - gate: plan\n    proposition: criterio_03\n    approve-at: 0.9\n    block-at: 0.1\n",
+    );
     expect(() => validateThresholdTargets(gateThresholds(lab))).not.toThrow();
   });
 

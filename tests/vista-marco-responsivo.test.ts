@@ -8,7 +8,10 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { ejecutarInterfaz } from "../scripts/verificar-interfaz.mjs";
-import { INTERVALO_REDUCIDO_MS, crearMontaje } from "../packages/server/web/agentes/montaje.js";
+import {
+  INTERVALO_REDUCIDO_MS,
+  crearMontaje,
+} from "../packages/server/web/agentes/montaje.js";
 import { MUNDOS } from "../packages/server/web/agentes/mundos/index.js";
 
 const RAIZ = join(import.meta.dirname, "..");
@@ -158,32 +161,74 @@ describe("el contenedor de paneles (vista ejecutada)", () => {
       respuesta: (ruta: string) => {
         const url = new URL(ruta, "http://localhost");
         if (url.pathname === "/api/health") return { root: RAIZ };
-        if (url.pathname === "/api/portafolio") return { projects: [{ projectId: PROYECTO, name: "Harness", available: true }] };
-        if (url.pathname === "/api/corrida/agentes") return { agentes: [{
-          agente: "a1", ticket: "FEATURE-UNO-20261008", descripcion: "Trabajo", modelo: "m", esfuerzo: "high",
-          rama: null, carpeta: null, ultimaHerramienta: "Edit", ultimaHerramientaEn: new Date().toISOString(),
-          estado: "trabajando", ticketEstado: null, faseConfirmada: null, faseInferida: "implementando",
-        }] };
-        if (url.pathname === "/api/journeys") return { authorization: { observationSources: [], dispatchExecutors: [] }, journeys: [{
-          journeyId: "JOR-1", revisionId: "rev-01", receivedAt: "2026-10-08T08:00:00.000Z",
-          passes: { last: null, cadenceMs: null, next: null },
-          tickets: [{
-            order: 1, ticketId: "FEATURE-UNO-20261008", actualAt: null, scheduledAt: null, condition: "manual",
-            activity: "unknown", phase: "waiting", stopReason: null, durationMs: null, waitingFor: [],
-            dependsOn: [], window: null, lastReceivedAt: null,
-          }],
-        }] };
+        if (url.pathname === "/api/portafolio")
+          return { projects: [{ projectId: PROYECTO, name: "Harness", available: true }] };
+        if (url.pathname === "/api/corrida/agentes")
+          return {
+            agentes: [
+              {
+                agente: "a1",
+                ticket: "FEATURE-UNO-20261008",
+                descripcion: "Trabajo",
+                modelo: "m",
+                esfuerzo: "high",
+                rama: null,
+                carpeta: null,
+                ultimaHerramienta: "Edit",
+                ultimaHerramientaEn: new Date().toISOString(),
+                estado: "trabajando",
+                ticketEstado: null,
+                faseConfirmada: null,
+                faseInferida: "implementando",
+              },
+            ],
+          };
+        if (url.pathname === "/api/journeys")
+          return {
+            authorization: { observationSources: [], dispatchExecutors: [] },
+            journeys: [
+              {
+                journeyId: "JOR-1",
+                revisionId: "rev-01",
+                receivedAt: "2026-10-08T08:00:00.000Z",
+                passes: { last: null, cadenceMs: null, next: null },
+                tickets: [
+                  {
+                    order: 1,
+                    ticketId: "FEATURE-UNO-20261008",
+                    actualAt: null,
+                    scheduledAt: null,
+                    condition: "manual",
+                    activity: "unknown",
+                    phase: "waiting",
+                    stopReason: null,
+                    durationMs: null,
+                    waitingFor: [],
+                    dependsOn: [],
+                    window: null,
+                    lastReceivedAt: null,
+                  },
+                ],
+              },
+            ],
+          };
         if (url.pathname === "/api/tickets") return { tickets: [] };
         return {};
       },
     });
     expect(fallos).toEqual([]);
     const raiz = contenido as Nodo;
-    const contenedores = buscar(raiz, (n) => (n.className ?? "").split(" ").includes("corrida-paneles"));
+    const contenedores = buscar(raiz, (n) =>
+      (n.className ?? "").split(" ").includes("corrida-paneles"),
+    );
     expect(contenedores).toHaveLength(1);
-    const paneles = contenedores[0]!.children.filter((n) => (n.className ?? "").split(" ").includes("corrida-panel"));
+    const paneles = contenedores[0]!.children.filter((n) =>
+      (n.className ?? "").split(" ").includes("corrida-panel"),
+    );
     expect(paneles).toHaveLength(3);
-    const encabezados = paneles.map((p) => buscar(p, (n) => n.tagName === "H3").map(texto)[0]);
+    const encabezados = paneles.map(
+      (p) => buscar(p, (n) => n.tagName === "H3").map(texto)[0],
+    );
     expect(encabezados).toEqual(["Agentes vivos", "Cola", "Entregados"]);
   });
 });

@@ -47,7 +47,11 @@ import { assertSesionAtendida } from "./plan-approval.js";
 import { currentReceipts, readReceipts } from "./receipts.js";
 import { type RegistryPaths, findTicket } from "./discovery.js";
 import { documentsForReport, finalizeMutation, readAndValidate } from "./mutate.js";
-import { declaredFunctionalFiles, resolveReference, validateFunctionalFile } from "./references.js";
+import {
+  declaredFunctionalFiles,
+  resolveReference,
+  validateFunctionalFile,
+} from "./references.js";
 
 /** El estado de un ticket, tal como lo ve un comando de anexado. */
 interface Contexto {
@@ -163,7 +167,10 @@ export function addPoint(request: AddPointRequest): string {
     }));
     const pointId = nextPointId(contexto.document);
 
-    if (puntos.length >= MAX_POINTS || pointId === `POINT-${String(MAX_POINTS + 1).padStart(3, "0")}`) {
+    if (
+      puntos.length >= MAX_POINTS ||
+      pointId === `POINT-${String(MAX_POINTS + 1).padStart(3, "0")}`
+    ) {
       fail(`El ticket ya alcanzó el máximo de ${MAX_POINTS} puntos.`, EXIT_INVARIANT);
     }
 
@@ -349,7 +356,8 @@ function sessionNumbersFound(
   excludedTicketId: string | null,
 ): string | null {
   for (const registro of documentsForReport(paths)) {
-    if (registro.document === null || registro.document.fields.id === excludedTicketId) continue;
+    if (registro.document === null || registro.document.fields.id === excludedTicketId)
+      continue;
     const tiene = (registro.document.blocks["Consumo de IA"] ?? []).some(
       (entrada) =>
         entrada["session_reference"] === sessionReference &&
@@ -400,7 +408,10 @@ export function addAiUsage(request: AddAiUsageRequest): string {
   // Una sesión con números es de un solo ticket: cargarla completa a dos cuenta su costo
   // dos veces (R-CTRL-005). Una sesión compartida se declara sin números.
   const conNumeros =
-    inputTokens !== null || outputTokens !== null || totalTokens !== null || estimatedCostUsd !== null;
+    inputTokens !== null ||
+    outputTokens !== null ||
+    totalTokens !== null ||
+    estimatedCostUsd !== null;
   if (sessionReference !== null && conNumeros && !source.startsWith("process:")) {
     const dueno = sessionNumbersOwner(request.paths, sessionReference, request.ticketId);
     if (dueno !== null) {
@@ -476,11 +487,11 @@ function hashArbolDeCommit(
   for (const relativa of archivos) {
     let contenido: Buffer;
     try {
-      const salida = execFileSync(
-        "git",
-        ["show", `${commit}:${relativa}`],
-        { cwd: root, encoding: "buffer", maxBuffer: 64 * 1024 * 1024 },
-      );
+      const salida = execFileSync("git", ["show", `${commit}:${relativa}`], {
+        cwd: root,
+        encoding: "buffer",
+        maxBuffer: 64 * 1024 * 1024,
+      });
       contenido = Buffer.from(salida);
     } catch {
       return null;
@@ -575,7 +586,10 @@ export function qaStart(request: QaStartRequest): string {
           EXIT_REFERENCE,
         );
       }
-      if (hashDeLaEvidencia === null || hashDeLaEvidencia !== evidencia.slice("worktree:sha256:".length)) {
+      if (
+        hashDeLaEvidencia === null ||
+        hashDeLaEvidencia !== evidencia.slice("worktree:sha256:".length)
+      ) {
         fail(
           "El árbol del commit no coincide con la evidencia worktree:sha256 del " +
             "ticket: el contenido cambió después de verificarse, o un archivo de la " +
@@ -644,7 +658,10 @@ export function qaClose(request: QaCloseRequest): string {
   if (result === "approved") assertSesionAtendida("aprobar un ciclo de QA");
   // La atribución «por política» solo la escribe `qaApproveByPolicy`: nadie la declara con una frase.
   if (poConfirmation !== null && /^policy:/i.test(poConfirmation.trim())) {
-    fail("Una confirmación «policy:» solo la escribe el cierre por política, no una persona ni el agente.", EXIT_INVARIANT);
+    fail(
+      "Una confirmación «policy:» solo la escribe el cierre por política, no una persona ni el agente.",
+      EXIT_INVARIANT,
+    );
   }
 
   return conTicket(request.paths, request.ticketId, request.now, (contexto) => {
@@ -711,14 +728,20 @@ export function anotarResultadoPorPolitica(request: {
   readonly now?: (() => Date) | undefined;
 }): string {
   if (parsePolicyConfirmation(request.confirmation) === null) {
-    fail("La confirmación por política debe ser policy:<autorización>:<hash>|recibo:<ruta:línea>.", EXIT_INVARIANT);
+    fail(
+      "La confirmación por política debe ser policy:<autorización>:<hash>|recibo:<ruta:línea>.",
+      EXIT_INVARIANT,
+    );
   }
   return conTicket(request.paths, request.ticketId, request.now, (contexto) => {
     const m = /^## Pruebas\n([\s\S]*?)(?=^## )/m.exec(contexto.document.text);
     if (m === null) fail("El ticket no tiene la sección Pruebas.", EXIT_INVARIANT);
     const cuerpo = (m[1] as string).replace(/\s+$/, "");
     const nuevo = `## Pruebas\n${cuerpo}\n\n- Resultado por política: ${request.confirmation}\n\n`;
-    const texto = contexto.document.text.slice(0, m.index) + nuevo + contexto.document.text.slice(m.index + m[0].length);
+    const texto =
+      contexto.document.text.slice(0, m.index) +
+      nuevo +
+      contexto.document.text.slice(m.index + m[0].length);
     return {
       texto,
       accion: "tests-result-by-policy",
@@ -750,20 +773,45 @@ export interface QaApproveByPolicyRequest {
  */
 export function qaApproveByPolicy(request: QaApproveByPolicyRequest): string {
   if (parsePolicyConfirmation(request.confirmation) === null) {
-    fail("La confirmación por política debe ser policy:<autorización>:<hash>|recibo:<ruta:línea>.", EXIT_INVARIANT);
+    fail(
+      "La confirmación por política debe ser policy:<autorización>:<hash>|recibo:<ruta:línea>.",
+      EXIT_INVARIANT,
+    );
   }
   const environment = validateText(request.environment, "environment");
   return conTicket(request.paths, request.ticketId, request.now, (contexto) => {
     if (contexto.document.fields.workflow_status !== "in_qa") {
-      fail("El cierre por política solo se permite cuando el ticket está in_qa.", EXIT_INVARIANT);
+      fail(
+        "El cierre por política solo se permite cuando el ticket está in_qa.",
+        EXIT_INVARIANT,
+      );
     }
     const qa = (contexto.document.blocks.QA ?? []).map((entrada) => ({ ...entrada }));
-    if (qa.length % 2 !== 0) fail("Ya existe un ciclo QA pendiente de cierre.", EXIT_INVARIANT);
+    if (qa.length % 2 !== 0)
+      fail("Ya existe un ciclo QA pendiente de cierre.", EXIT_INVARIANT);
     validateReference(request.buildReference, "build_reference");
     const abre = nextId(qa, "QA");
-    qa.push({ id: abre, date: contexto.date, build_reference: request.buildReference, environment, result: "pending", findings: [], correction: null, po_confirmation: null });
+    qa.push({
+      id: abre,
+      date: contexto.date,
+      build_reference: request.buildReference,
+      environment,
+      result: "pending",
+      findings: [],
+      correction: null,
+      po_confirmation: null,
+    });
     const cierra = nextId(qa, "QA");
-    qa.push({ id: cierra, date: contexto.date, build_reference: null, environment: null, result: "approved", findings: [], correction: null, po_confirmation: request.confirmation });
+    qa.push({
+      id: cierra,
+      date: contexto.date,
+      build_reference: null,
+      environment: null,
+      result: "approved",
+      findings: [],
+      correction: null,
+      po_confirmation: request.confirmation,
+    });
     let texto = replaceBlock(contexto.document.text, "QA", qa);
     texto = replaceFrontmatterField(texto, "qa_status", "approved");
     return {

@@ -140,7 +140,11 @@ describe("qué gates aplican a un ticket", () => {
   });
 
   it("avisa cuando el código ya sabe que el gate va a bloquear", () => {
-    writeFixtureTicket(lab, { id: TICKET, riskLevel: "critical", criterios: CRITERIOS_QUE_EVALUA_EL_MODELO });
+    writeFixtureTicket(lab, {
+      id: TICKET,
+      riskLevel: "critical",
+      criterios: CRITERIOS_QUE_EVALUA_EL_MODELO,
+    });
     const ticketPath = join(lab, "tickets", "2026", TICKET, "ticket.md");
     // Se quitan las dos palabras que el check reconoce como rollback declarado.
     writeFileSync(
@@ -265,7 +269,11 @@ describe("ejecutar un gate desde la interfaz", () => {
   });
 
   it("un bloqueo por checks mecánicos no emite recibo y explica el motivo", async () => {
-    writeFixtureTicket(lab, { id: TICKET, riskLevel: "critical", criterios: CRITERIOS_QUE_EVALUA_EL_MODELO });
+    writeFixtureTicket(lab, {
+      id: TICKET,
+      riskLevel: "critical",
+      criterios: CRITERIOS_QUE_EVALUA_EL_MODELO,
+    });
     const ticketPath = join(lab, "tickets", "2026", TICKET, "ticket.md");
     writeFileSync(
       ticketPath,

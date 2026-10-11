@@ -18,7 +18,14 @@
  *
  * Nada sale a la red: el evaluador del gate de plan entra inyectado.
  */
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -65,13 +72,15 @@ function configYaml(texto: string): void {
 }
 
 /** La sección declarada, tal como la escribiría una persona. */
-function seccionDeclarada(options: {
-  readonly command?: string;
-  readonly project?: string;
-  readonly timeout?: number | string;
-  readonly provider?: string;
-  readonly model?: string;
-} = {}): void {
+function seccionDeclarada(
+  options: {
+    readonly command?: string;
+    readonly project?: string;
+    readonly timeout?: number | string;
+    readonly provider?: string;
+    readonly model?: string;
+  } = {},
+): void {
   const lineas = [
     "name: Laboratorio",
     "test-commands:",
@@ -127,7 +136,10 @@ beforeEach(() => {
   lab = mkdtempSync(join(tmpdir(), "valmen-config-playwright-"));
   mkdirSync(join(lab, "tickets"), { recursive: true });
   mkdirSync(join(lab, "tests/pos"), { recursive: true });
-  writeFileSync(join(lab, "tests/pos/creacion-manual.spec.ts"), "// Spec del repositorio\n");
+  writeFileSync(
+    join(lab, "tests/pos/creacion-manual.spec.ts"),
+    "// Spec del repositorio\n",
+  );
 });
 
 afterEach(() => {
@@ -215,18 +227,16 @@ describe("la sección declara los cuatro datos", () => {
 describe("una sección mal formada falla al leerla", () => {
   it("rechaza un timeout que no es un número positivo", () => {
     const config = parseConfig(
-      [
-        "playwright:",
-        "  command: npx playwright test",
-        "  timeout: cero",
-      ].join("\n"),
+      ["playwright:", "  command: npx playwright test", "  timeout: cero"].join("\n"),
     );
     expect(() => readPlaywrightConfig(config)).toThrow(/playwright.timeout/);
 
     const negativo = parseConfig(
       ["playwright:", "  command: npx playwright test", "  timeout: -5"].join("\n"),
     );
-    expect(() => readPlaywrightConfig(negativo)).toThrow(/número de segundos mayor que cero/);
+    expect(() => readPlaywrightConfig(negativo)).toThrow(
+      /número de segundos mayor que cero/,
+    );
   });
 
   it("rechaza una sección declarada sin comando", () => {
@@ -236,9 +246,12 @@ describe("una sección mal formada falla al leerla", () => {
 
   it("rechaza un valor que no es texto", () => {
     const config = parseConfig(
-      ["playwright:", "  command: npx playwright test", "  project:", "    - chromium"].join(
-        "\n",
-      ),
+      [
+        "playwright:",
+        "  command: npx playwright test",
+        "  project:",
+        "    - chromium",
+      ].join("\n"),
     );
     // El error nombra la clave y que debe ser un texto.
     expect(() => readPlaywrightConfig(config)).toThrow(/"project"/);
@@ -247,7 +260,9 @@ describe("una sección mal formada falla al leerla", () => {
 
   it("el motor falla en voz alta al leer una sección inválida", () => {
     configYaml(
-      ["playwright:", "  command: npx playwright test", "  timeout: no-es-numero"].join("\n"),
+      ["playwright:", "  command: npx playwright test", "  timeout: no-es-numero"].join(
+        "\n",
+      ),
     );
     expect(() => playwrightConfig(lab)).toThrow(/playwright.timeout/);
   });
@@ -292,7 +307,13 @@ describe("sin la sección el verbo está apagado", () => {
     const conSeccion = interfazDelTicket({
       texto,
       comandos: ["npx vitest run"],
-      playwright: { command: "npx playwright test", project: "chromium", timeoutMs: 30_000, provider: "openrouter", model: "" },
+      playwright: {
+        command: "npx playwright test",
+        project: "chromium",
+        timeoutMs: 30_000,
+        provider: "openrouter",
+        model: "",
+      },
     });
     expect(conSeccion.capacidadDisponible).toBe(true);
     expect(conSeccion.requiereDeclaracion).toBe(true);
@@ -304,11 +325,17 @@ describe("sin la sección el verbo está apagado", () => {
 describe("el check del verbo sale de la sección", () => {
   it("el comando sale de la sección y del criterio solo viaja la ruta del spec", () => {
     const criterios = extractCriteriaSpecs(CRITERIO_VERBO);
-    const { checks, refused } = commandChecksFor(criterios, ["npx vitest run"], undefined, {
-      command: "npx playwright test",
-      project: "chromium",
-      timeoutMs: 120_000,
-    }, { root: lab, esArchivo: (ruta) => statSync(ruta).isFile() });
+    const { checks, refused } = commandChecksFor(
+      criterios,
+      ["npx vitest run"],
+      undefined,
+      {
+        command: "npx playwright test",
+        project: "chromium",
+        timeoutMs: 120_000,
+      },
+      { root: lab, esArchivo: (ruta) => statSync(ruta).isFile() },
+    );
 
     expect(refused).toEqual([]);
     expect(checks[0]?.command).toBe("npx");
@@ -323,21 +350,33 @@ describe("el check del verbo sale de la sección", () => {
 
   it("el check usa el timeout propio de la sección y no el de backend", () => {
     const criterios = extractCriteriaSpecs(CRITERIO_VERBO);
-    const { checks } = commandChecksFor(criterios, ["npx vitest run"], 30_000, {
-      command: "npx playwright test",
-      project: "chromium",
-      timeoutMs: 300_000,
-    }, { root: lab, esArchivo: (ruta) => statSync(ruta).isFile() });
+    const { checks } = commandChecksFor(
+      criterios,
+      ["npx vitest run"],
+      30_000,
+      {
+        command: "npx playwright test",
+        project: "chromium",
+        timeoutMs: 300_000,
+      },
+      { root: lab, esArchivo: (ruta) => statSync(ruta).isFile() },
+    );
     expect(checks[0]?.timeoutMs).toBe(300_000);
   });
 
   it("agrega el proyecto por defecto de la sección como --project", () => {
     const criterios = extractCriteriaSpecs(CRITERIO_VERBO);
-    const { checks } = commandChecksFor(criterios, [], undefined, {
-      command: "node playwright",
-      project: "firefox",
-      timeoutMs: 30_000,
-    }, { root: lab, esArchivo: (ruta) => statSync(ruta).isFile() });
+    const { checks } = commandChecksFor(
+      criterios,
+      [],
+      undefined,
+      {
+        command: "node playwright",
+        project: "firefox",
+        timeoutMs: 30_000,
+      },
+      { root: lab, esArchivo: (ruta) => statSync(ruta).isFile() },
+    );
     const args = checks[0]?.args ?? [];
     expect(args).toContain("--project");
     expect(args[args.indexOf("--project") + 1]).toBe("firefox");
@@ -420,7 +459,13 @@ describe("el rol ui-specs", () => {
   it("la resolución general expone el rol con su origen", () => {
     const rutas = resolveRouting(
       { preset: "balanced", roles: {} },
-      { command: "npx playwright test", project: "chromium", timeoutMs: 30_000, provider: "openrouter", model: "moonshotai/kimi-k3" },
+      {
+        command: "npx playwright test",
+        project: "chromium",
+        timeoutMs: 30_000,
+        provider: "openrouter",
+        model: "moonshotai/kimi-k3",
+      },
     );
     const specs = rutas.find((ruta) => ruta.role === "ui-specs");
     expect(specs?.model).toBe("moonshotai/kimi-k3");
@@ -451,10 +496,7 @@ describe("la compuerta de plan con la sección declarada", () => {
     });
 
     const interfaz = interfazDelTicket({
-      texto: readFileSync(
-        join(lab, "tickets", "2026", TICKET_PLAN, "ticket.md"),
-        "utf8",
-      ),
+      texto: readFileSync(join(lab, "tickets", "2026", TICKET_PLAN, "ticket.md"), "utf8"),
       comandos: testCommands(lab),
       playwright: playwrightConfig(lab),
     });

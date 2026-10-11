@@ -41,7 +41,11 @@ import {
 } from "@valmen/gate";
 import { declaredImpactIds, parseTicket } from "@valmen/core";
 import { apiKeyWithPrecedence, transportById } from "@valmen/credentials";
-import { assertSesionAtendida, interfazDelTicket, motivoDeArbolNoVigente } from "@valmen/engine";
+import {
+  assertSesionAtendida,
+  interfazDelTicket,
+  motivoDeArbolNoVigente,
+} from "@valmen/engine";
 import { cascadeRouting, gateRouting } from "./routing.js";
 import {
   type EvaluatorId,
@@ -272,7 +276,9 @@ function hashVigenteDe(
   actual: string | null,
 ): string | null {
   if (recibo.codeReview === undefined) return actual;
-  return motivoDeArbolNoVigente(recibo, paths, ticketId, "code-review") === null ? recibo.stateHash : null;
+  return motivoDeArbolNoVigente(recibo, paths, ticketId, "code-review") === null
+    ? recibo.stateHash
+    : null;
 }
 
 /**
@@ -347,31 +353,31 @@ export function listGateCards(paths: RegistryPaths, ticketId: string): GateCard[
   return Object.values(GATES).map((definicion) => {
     const effective = resolveGateMode(paths, definicion.id);
     return {
-    id: definicion.id,
-    title: definicion.title,
-    transition: definicion.transition,
-    mode: effective.mode,
-    modeReason: effective.reason,
-    promotionEvidenceId: effective.evidence?.id ?? null,
-    appliesTo: definicion.appliesTo,
-    applies: workflow !== "" && definicion.appliesTo.includes(workflow),
-    workflowStatus: workflow,
-    mechanicalChecks: checks,
-    blockedByCode: checks.some((check) => check.result === "fail"),
-    propositionCount: proposiciones.get(definicion.id)?.length ?? 0,
-    hasCommandChecks: (comandos.get(definicion.id)?.length ?? 0) > 0,
-    needsModel:
-      pendientesDeModelo(
-        proposiciones.get(definicion.id) ?? [],
-        comandos.get(definicion.id) ?? [],
-      ).length > 0,
-    policy: definicion.policy,
-    routing: {
-      model: routing.evaluatorModel,
-      effort: routing.evaluatorEffort,
-      source: routing.source,
-      probabilistic: routing.probabilistic,
-    },
+      id: definicion.id,
+      title: definicion.title,
+      transition: definicion.transition,
+      mode: effective.mode,
+      modeReason: effective.reason,
+      promotionEvidenceId: effective.evidence?.id ?? null,
+      appliesTo: definicion.appliesTo,
+      applies: workflow !== "" && definicion.appliesTo.includes(workflow),
+      workflowStatus: workflow,
+      mechanicalChecks: checks,
+      blockedByCode: checks.some((check) => check.result === "fail"),
+      propositionCount: proposiciones.get(definicion.id)?.length ?? 0,
+      hasCommandChecks: (comandos.get(definicion.id)?.length ?? 0) > 0,
+      needsModel:
+        pendientesDeModelo(
+          proposiciones.get(definicion.id) ?? [],
+          comandos.get(definicion.id) ?? [],
+        ).length > 0,
+      policy: definicion.policy,
+      routing: {
+        model: routing.evaluatorModel,
+        effort: routing.evaluatorEffort,
+        source: routing.source,
+        probabilistic: routing.probabilistic,
+      },
     };
   });
 }
@@ -506,7 +512,10 @@ export async function runTicketGate(
     report: result.stdout,
     error: result.stderr,
     exitCode: result.exitCode,
-    receipt: { ...projectReceipt(ultimo, hashVigenteDe(paths, ticketId, ultimo, actual)), report: result.stdout },
+    receipt: {
+      ...projectReceipt(ultimo, hashVigenteDe(paths, ticketId, ultimo, actual)),
+      report: result.stdout,
+    },
     tickets: listGateCards(paths, ticketId),
   };
 }
@@ -708,5 +717,12 @@ export function recordHumanDecision(
     }
   }
 
-  return { ok: true, error: "", receipt: projectReceipt(conDecision, hashVigenteDe(paths, ticketId, conDecision, actual)) };
+  return {
+    ok: true,
+    error: "",
+    receipt: projectReceipt(
+      conDecision,
+      hashVigenteDe(paths, ticketId, conDecision, actual),
+    ),
+  };
 }

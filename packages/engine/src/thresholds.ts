@@ -43,7 +43,10 @@ function proposicionConocida(gateId: string, id: string): boolean {
 /** Falla nombrando la clave si una entrada apunta a una proposición que no existe. */
 export function validateThresholdTargets(overrides: readonly ThresholdOverride[]): void {
   overrides.forEach((entrada, indice) => {
-    if (entrada.proposition !== null && !proposicionConocida(entrada.gate, entrada.proposition)) {
+    if (
+      entrada.proposition !== null &&
+      !proposicionConocida(entrada.gate, entrada.proposition)
+    ) {
       fail(
         `config.yaml: "gate-thresholds[${indice}].proposition" nombra una proposición ` +
           `desconocida de la compuerta ${entrada.gate}: "${entrada.proposition}".`,

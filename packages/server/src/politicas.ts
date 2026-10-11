@@ -241,7 +241,9 @@ export function resumirPoliticas(config: ConfigMap): readonly PoliticaResumida[]
         ...base,
         estado: "activa",
         resumen: leida.valor.map((u) => {
-          const donde = [u.gate, u.evaluator, u.proposition].filter((x) => x !== null).join(" / ");
+          const donde = [u.gate, u.evaluator, u.proposition]
+            .filter((x) => x !== null)
+            .join(" / ");
           const firma =
             u.approvedBy === null
               ? "sin firma: no se aplica"

@@ -30,7 +30,10 @@ beforeEach(() => {
   lab = mkdtempSync(join(tmpdir(), "valmen-token-"));
   mkdirSync(join(lab, ".valmen", "gates"), { recursive: true });
   writeFileSync(join(lab, ".valmen", "config.yaml"), "name: Demo\n", "utf8");
-  writeFileSync(join(lab, ".valmen", "gates", "manuales.yaml"), "id: manuales\ntitle: x\nmode: human\n");
+  writeFileSync(
+    join(lab, ".valmen", "gates", "manuales.yaml"),
+    "id: manuales\ntitle: x\nmode: human\n",
+  );
 });
 
 afterEach(async () => {
@@ -77,7 +80,10 @@ describe("la escritura sin token", () => {
 
   it("cubre también PUT y DELETE: no solo el POST", () => {
     for (const metodo of ["POST", "PUT", "PATCH", "DELETE"]) {
-      expect(exigirTokenEnEscritura({ writeToken: TOKEN }, metodo, undefined)?.status, metodo).toBe(401);
+      expect(
+        exigirTokenEnEscritura({ writeToken: TOKEN }, metodo, undefined)?.status,
+        metodo,
+      ).toBe(401);
     }
   });
 });

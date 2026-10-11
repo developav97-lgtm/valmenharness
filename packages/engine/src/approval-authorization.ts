@@ -22,13 +22,25 @@ import { approvalAuthorizationSources } from "./discovery.js";
 import { UNATTENDED_ENV } from "./plan-approval.js";
 
 /** Los tipos que una autorización de aprobación puede cubrir: nunca SECURITY. */
-export const TIPOS_APROBABLES = ["BUGFIX", "IMPROVEMENT", "CHORE", "FEATURE", "SYNC", "INTEGRATION", "AGENT"] as const;
+export const TIPOS_APROBABLES = [
+  "BUGFIX",
+  "IMPROVEMENT",
+  "CHORE",
+  "FEATURE",
+  "SYNC",
+  "INTEGRATION",
+  "AGENT",
+] as const;
 
 /** El riesgo máximo que una autorización puede cubrir. */
 export const RIESGOS_APROBABLES = ["low", "normal"] as const;
 
 /** Los impactos que un ticket puede declarar y que solo se admiten si la autorización los lista. */
-export const IMPACTOS_ADMISIBLES = ["sync_impact", "migration_impact", "docker_impact"] as const;
+export const IMPACTOS_ADMISIBLES = [
+  "sync_impact",
+  "migration_impact",
+  "docker_impact",
+] as const;
 
 /** Las etapas cuya compuerta una autorización puede cubrir. */
 export const ETAPAS_APROBABLES = ["analysis", "plan"] as const;
@@ -69,7 +81,8 @@ export interface ApprovalAuthorizationRevoked {
   readonly revokedAt: string;
 }
 
-export type EstadoDeAutorizacionDeAprobacion = "vigente" | "revocada" | "vencida" | "futura";
+export type EstadoDeAutorizacionDeAprobacion =
+  "vigente" | "revocada" | "vencida" | "futura";
 
 export interface AutorizacionDeAprobacionConEstado extends ApprovalAuthorization {
   readonly estado: EstadoDeAutorizacionDeAprobacion;
@@ -87,9 +100,24 @@ export function approvalQuotaUsesPath(root: string): string {
 }
 
 /** El hash de una autorización: sobre sus campos en un orden fijo, sin el propio hash. */
-export function hashDeAutorizacionDeAprobacion(a: Omit<ApprovalAuthorization, "hash">): string {
+export function hashDeAutorizacionDeAprobacion(
+  a: Omit<ApprovalAuthorization, "hash">,
+): string {
   const canonico = JSON.stringify([
-    a.id, a.types, a.modules, a.maxRisk, a.impacts, a.stages, a.mode, a.dailyQuota, a.validFrom, a.validUntil, a.actor, a.quote, a.source, a.createdAt,
+    a.id,
+    a.types,
+    a.modules,
+    a.maxRisk,
+    a.impacts,
+    a.stages,
+    a.mode,
+    a.dailyQuota,
+    a.validFrom,
+    a.validUntil,
+    a.actor,
+    a.quote,
+    a.source,
+    a.createdAt,
   ]);
   return `sha256:${createHash("sha256").update(canonico, "utf8").digest("hex")}`;
 }
@@ -102,7 +130,11 @@ function leerRegistro(root: string): Entrada[] {
     if (linea.trim() === "") continue;
     try {
       const v = JSON.parse(linea) as Entrada;
-      if (v.kind === "approval-authorization-created" || v.kind === "approval-authorization-revoked") entradas.push(v);
+      if (
+        v.kind === "approval-authorization-created" ||
+        v.kind === "approval-authorization-revoked"
+      )
+        entradas.push(v);
     } catch {
       // Un renglón truncado no borra los anteriores: el registro es un diario.
     }
@@ -117,10 +149,18 @@ function anexar(root: string, entrada: Entrada): void {
 }
 
 /** Falla si el canal no es uno aceptado o la sesión es desatendida. */
-function exigirCanalHumano(root: string, source: string, accion: string, env: Readonly<Record<string, string | undefined>>): void {
+function exigirCanalHumano(
+  root: string,
+  source: string,
+  accion: string,
+  env: Readonly<Record<string, string | undefined>>,
+): void {
   const marca = env[UNATTENDED_ENV];
   if (marca !== undefined && marca !== "") {
-    fail(`Una sesión desatendida no puede ${accion}: esa autoridad es de una persona.`, EXIT_INVARIANT);
+    fail(
+      `Una sesión desatendida no puede ${accion}: esa autoridad es de una persona.`,
+      EXIT_INVARIANT,
+    );
   }
   const fuentes = approvalAuthorizationSources(root);
   if (!fuentes.includes(source)) {
@@ -150,39 +190,81 @@ export interface CrearAutorizacionDeAprobacionRequest {
 }
 
 /** Crea una autorización: anexa un renglón con la frase literal de quien autoriza. */
-export function crearAutorizacionDeAprobacion(request: CrearAutorizacionDeAprobacionRequest): ApprovalAuthorization {
-  exigirCanalHumano(request.root, request.source, "crear una autorización de aprobación", request.env ?? process.env);
+export function crearAutorizacionDeAprobacion(
+  request: CrearAutorizacionDeAprobacionRequest,
+): ApprovalAuthorization {
+  exigirCanalHumano(
+    request.root,
+    request.source,
+    "crear una autorización de aprobación",
+    request.env ?? process.env,
+  );
   const actor = request.actor.trim();
   const quote = request.quote.trim();
-  if (actor === "") fail("Crear una autorización necesita un responsable: falta --actor.", EXIT_SCHEMA);
-  if (quote === "") fail("Crear una autorización necesita la frase literal de quien autoriza: falta --quote.", EXIT_SCHEMA);
+  if (actor === "")
+    fail("Crear una autorización necesita un responsable: falta --actor.", EXIT_SCHEMA);
+  if (quote === "")
+    fail(
+      "Crear una autorización necesita la frase literal de quien autoriza: falta --quote.",
+      EXIT_SCHEMA,
+    );
 
-  const types = [...new Set(request.types.map((t) => t.trim().toUpperCase()).filter((t) => t !== ""))];
-  if (types.length === 0) fail("Una autorización declara al menos un tipo de ticket.", EXIT_SCHEMA);
-  const prohibidos = types.filter((t) => !(TIPOS_APROBABLES as readonly string[]).includes(t));
+  const types = [
+    ...new Set(request.types.map((t) => t.trim().toUpperCase()).filter((t) => t !== "")),
+  ];
+  if (types.length === 0)
+    fail("Una autorización declara al menos un tipo de ticket.", EXIT_SCHEMA);
+  const prohibidos = types.filter(
+    (t) => !(TIPOS_APROBABLES as readonly string[]).includes(t),
+  );
   if (prohibidos.length > 0) {
     fail(
       `Los tipos ${prohibidos.join(", ")} no se pueden autorizar: solo ${TIPOS_APROBABLES.join(", ")} (nunca SECURITY).`,
       EXIT_INVARIANT,
     );
   }
-  const modules = [...new Set(request.modules.map((m) => m.trim().toLowerCase()).filter((m) => m !== ""))];
+  const modules = [
+    ...new Set(request.modules.map((m) => m.trim().toLowerCase()).filter((m) => m !== "")),
+  ];
   if (modules.length === 0 || modules.includes("*")) {
-    fail("Una autorización declara módulos concretos: ni vacía ni con comodín.", EXIT_SCHEMA);
+    fail(
+      "Una autorización declara módulos concretos: ni vacía ni con comodín.",
+      EXIT_SCHEMA,
+    );
   }
   if (modules.includes("todos") || modules.includes("all")) {
-    fail("Los módulos `todos` y `all` no existen: elige los módulos en la lista.", EXIT_SCHEMA);
+    fail(
+      "Los módulos `todos` y `all` no existen: elige los módulos en la lista.",
+      EXIT_SCHEMA,
+    );
   }
   if (!(RIESGOS_APROBABLES as readonly string[]).includes(request.maxRisk)) {
-    fail(`El riesgo máximo autorizable es ${RIESGOS_APROBABLES.join(" o ")}; recibí «${request.maxRisk}».`, EXIT_INVARIANT);
+    fail(
+      `El riesgo máximo autorizable es ${RIESGOS_APROBABLES.join(" o ")}; recibí «${request.maxRisk}».`,
+      EXIT_INVARIANT,
+    );
   }
-  const impacts = [...new Set((request.impacts ?? []).map((i) => i.trim()).filter((i) => i !== ""))];
-  const impactosInvalidos = impacts.filter((i) => !(IMPACTOS_ADMISIBLES as readonly string[]).includes(i));
+  const impacts = [
+    ...new Set((request.impacts ?? []).map((i) => i.trim()).filter((i) => i !== "")),
+  ];
+  const impactosInvalidos = impacts.filter(
+    (i) => !(IMPACTOS_ADMISIBLES as readonly string[]).includes(i),
+  );
   if (impactosInvalidos.length > 0) {
-    fail(`Los impactos ${impactosInvalidos.join(", ")} no existen: solo ${IMPACTOS_ADMISIBLES.join(", ")}.`, EXIT_SCHEMA);
+    fail(
+      `Los impactos ${impactosInvalidos.join(", ")} no existen: solo ${IMPACTOS_ADMISIBLES.join(", ")}.`,
+      EXIT_SCHEMA,
+    );
   }
-  const stages = [...new Set((request.stages ?? ["analysis", "plan"]).map((e) => e.trim()).filter((e) => e !== ""))];
-  if (stages.length === 0 || !stages.every((e) => (ETAPAS_APROBABLES as readonly string[]).includes(e))) {
+  const stages = [
+    ...new Set(
+      (request.stages ?? ["analysis", "plan"]).map((e) => e.trim()).filter((e) => e !== ""),
+    ),
+  ];
+  if (
+    stages.length === 0 ||
+    !stages.every((e) => (ETAPAS_APROBABLES as readonly string[]).includes(e))
+  ) {
     fail(`Las etapas son ${ETAPAS_APROBABLES.join(" y/o ")}.`, EXIT_SCHEMA);
   }
   const mode = request.mode ?? "on-approve";
@@ -192,7 +274,11 @@ export function crearAutorizacionDeAprobacion(request: CrearAutorizacionDeAproba
   if (!Number.isSafeInteger(request.dailyQuota) || request.dailyQuota < 1) {
     fail("El cupo diario debe ser un entero de al menos 1.", EXIT_SCHEMA);
   }
-  if (!Number.isFinite(request.validDays) || request.validDays < 1 || request.validDays > 365) {
+  if (
+    !Number.isFinite(request.validDays) ||
+    request.validDays < 1 ||
+    request.validDays > 365
+  ) {
     fail("La vigencia debe ser de 1 a 365 días.", EXIT_SCHEMA);
   }
 
@@ -215,7 +301,10 @@ export function crearAutorizacionDeAprobacion(request: CrearAutorizacionDeAproba
     source: request.source,
     createdAt: ahora.toISOString(),
   };
-  const autorizacion: ApprovalAuthorization = { ...base, hash: hashDeAutorizacionDeAprobacion(base) };
+  const autorizacion: ApprovalAuthorization = {
+    ...base,
+    hash: hashDeAutorizacionDeAprobacion(base),
+  };
   anexar(request.root, autorizacion);
   return autorizacion;
 }
@@ -231,11 +320,22 @@ export interface RevocarAutorizacionDeAprobacionRequest {
 }
 
 /** Revoca una autorización: vale desde este instante. Mismo canal y misma barrera que crearla. */
-export function revocarAutorizacionDeAprobacion(request: RevocarAutorizacionDeAprobacionRequest): ApprovalAuthorizationRevoked {
-  exigirCanalHumano(request.root, request.source, "revocar una autorización de aprobación", request.env ?? process.env);
-  if (request.actor.trim() === "") fail("Revocar necesita un responsable: falta --actor.", EXIT_SCHEMA);
-  if (request.reason.trim() === "") fail("Revocar necesita un motivo: falta --reason.", EXIT_SCHEMA);
-  const existe = leerRegistro(request.root).some((e) => e.kind === "approval-authorization-created" && e.id === request.id);
+export function revocarAutorizacionDeAprobacion(
+  request: RevocarAutorizacionDeAprobacionRequest,
+): ApprovalAuthorizationRevoked {
+  exigirCanalHumano(
+    request.root,
+    request.source,
+    "revocar una autorización de aprobación",
+    request.env ?? process.env,
+  );
+  if (request.actor.trim() === "")
+    fail("Revocar necesita un responsable: falta --actor.", EXIT_SCHEMA);
+  if (request.reason.trim() === "")
+    fail("Revocar necesita un motivo: falta --reason.", EXIT_SCHEMA);
+  const existe = leerRegistro(request.root).some(
+    (e) => e.kind === "approval-authorization-created" && e.id === request.id,
+  );
   if (!existe) fail(`No existe la autorización ${request.id}.`, EXIT_SCHEMA);
   const revocacion: ApprovalAuthorizationRevoked = {
     kind: "approval-authorization-revoked",
@@ -256,7 +356,10 @@ export function comandoDeRevocacionDeAprobacion(id: string): string {
 }
 
 /** Todas las autorizaciones con su estado a `ahora`; una con el hash roto no se lista como vigente. */
-export function leerAutorizacionesDeAprobacion(root: string, ahora: Date = new Date()): AutorizacionDeAprobacionConEstado[] {
+export function leerAutorizacionesDeAprobacion(
+  root: string,
+  ahora: Date = new Date(),
+): AutorizacionDeAprobacionConEstado[] {
   const registro = leerRegistro(root);
   return registro
     .filter((e): e is ApprovalAuthorization => e.kind === "approval-authorization-created")
@@ -266,7 +369,9 @@ export function leerAutorizacionesDeAprobacion(root: string, ahora: Date = new D
       const revocacion =
         registro.find(
           (e): e is ApprovalAuthorizationRevoked =>
-            e.kind === "approval-authorization-revoked" && e.id === a.id && new Date(e.revokedAt).getTime() <= ahora.getTime(),
+            e.kind === "approval-authorization-revoked" &&
+            e.id === a.id &&
+            new Date(e.revokedAt).getTime() <= ahora.getTime(),
         ) ?? null;
       const estado: EstadoDeAutorizacionDeAprobacion =
         !integra || revocacion !== null
@@ -281,7 +386,10 @@ export function leerAutorizacionesDeAprobacion(root: string, ahora: Date = new D
 }
 
 /** Las autorizaciones vigentes ahora. */
-export function autorizacionesDeAprobacionVigentes(root: string, ahora: Date = new Date()): AutorizacionDeAprobacionConEstado[] {
+export function autorizacionesDeAprobacionVigentes(
+  root: string,
+  ahora: Date = new Date(),
+): AutorizacionDeAprobacionConEstado[] {
   return leerAutorizacionesDeAprobacion(root, ahora).filter((a) => a.estado === "vigente");
 }
 
@@ -362,13 +470,27 @@ export function registrarUsoDeCupoDeAprobacion(request: {
 }
 
 /** ¿Hay un uso de cupo de esa autorización para ese ticket y esa etapa? Solo lee el registro de usos. */
-export function hayUsoDeCupoDeAprobacion(root: string, authorizationId: string, ticketId: string, stage: string): boolean {
-  return leerUsos(root).some((u) => u.authorizationId === authorizationId && u.ticketId === ticketId && u.stage === stage);
+export function hayUsoDeCupoDeAprobacion(
+  root: string,
+  authorizationId: string,
+  ticketId: string,
+  stage: string,
+): boolean {
+  return leerUsos(root).some(
+    (u) =>
+      u.authorizationId === authorizationId && u.ticketId === ticketId && u.stage === stage,
+  );
 }
 
 /** Cuántas aprobaciones le quedan hoy (UTC) a la autorización. */
-export function cupoRestanteDeAprobacion(root: string, autorizacion: ApprovalAuthorization, ahora: Date = new Date()): number {
+export function cupoRestanteDeAprobacion(
+  root: string,
+  autorizacion: ApprovalAuthorization,
+  ahora: Date = new Date(),
+): number {
   const dia = ahora.toISOString().slice(0, 10);
-  const usados = leerUsos(root).filter((u) => u.authorizationId === autorizacion.id && u.usedAt.startsWith(dia)).length;
+  const usados = leerUsos(root).filter(
+    (u) => u.authorizationId === autorizacion.id && u.usedAt.startsWith(dia),
+  ).length;
   return Math.max(0, autorizacion.dailyQuota - usados);
 }

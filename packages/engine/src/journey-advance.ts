@@ -16,7 +16,8 @@ import { type EntregaDeAviso } from "./journey-plan.js";
 import { type Journey, readJourneys } from "./journeys.js";
 import { type AuthorizedProject } from "./project-resolution.js";
 
-export type EstadoDeAvance = "sin-jornada" | "despachado" | "ya-despachado" | "sin-candidato";
+export type EstadoDeAvance =
+  "sin-jornada" | "despachado" | "ya-despachado" | "sin-candidato";
 
 /** Lo que hizo una fase del avance. */
 export interface AvanceDeFase {
@@ -89,12 +90,16 @@ export function jornadaDelDia(fecha: Date): string {
  *
  * Un ticket que ya no existe no cuenta como pendiente: no hay nada que avanzar en él.
  */
-export function ticketsPendientesDeJornada(project: AuthorizedProject, jornada: Journey): string[] {
+export function ticketsPendientesDeJornada(
+  project: AuthorizedProject,
+  jornada: Journey,
+): string[] {
   const pendientes: string[] = [];
   for (const entrada of jornada.tickets) {
     const ubicado = findTicket(project.paths, entrada.ticketId);
     if (ubicado === undefined) continue;
-    if (parseTicket(ubicado.text).fields.workflow_status !== "closed") pendientes.push(entrada.ticketId);
+    if (parseTicket(ubicado.text).fields.workflow_status !== "closed")
+      pendientes.push(entrada.ticketId);
   }
   return pendientes;
 }
@@ -107,7 +112,9 @@ export function jornadaVigente(project: AuthorizedProject, ahora: Date): string 
   const jornadas = readJourneys(project);
   const delDia = jornadaDelDia(ahora);
   if (jornadas.some((jornada) => jornada.journeyId === delDia)) return delDia;
-  const vigente = [...jornadas].reverse().find((jornada) => ticketsPendientesDeJornada(project, jornada).length > 0);
+  const vigente = [...jornadas]
+    .reverse()
+    .find((jornada) => ticketsPendientesDeJornada(project, jornada).length > 0);
   return vigente?.journeyId ?? null;
 }
 
@@ -115,10 +122,13 @@ export function jornadaVigente(project: AuthorizedProject, ahora: Date): string 
 const INTENTO_DE_AVANCE = "avance-1";
 
 /** Avanza la jornada una vez: prepara los planes (de `intake` a `planned`, sin aprobar nada). */
-export async function avanzarJornada(request: AvanzarJornadaRequest): Promise<AvanceDeJornada> {
+export async function avanzarJornada(
+  request: AvanzarJornadaRequest,
+): Promise<AvanceDeJornada> {
   const ahora = request.ahora?.() ?? new Date();
   // Un `journeyId` explícito se respeta tal cual, sin búsqueda.
-  const journeyId = request.journeyId ?? jornadaVigente(request.project, ahora) ?? jornadaDelDia(ahora);
+  const journeyId =
+    request.journeyId ?? jornadaVigente(request.project, ahora) ?? jornadaDelDia(ahora);
 
   if (!readJourneys(request.project).some((jornada) => jornada.journeyId === journeyId)) {
     const ultima = readJourneys(request.project).at(-1);
@@ -133,21 +143,38 @@ export async function avanzarJornada(request: AvanzarJornadaRequest): Promise<Av
   }
 
   const fase = avanzarPreparacion(request, journeyId, ahora);
-  return { estado: fase.estado, journeyId, ticketId: fase.ticketId, detalle: fase.detalle, fases: [fase] };
+  return {
+    estado: fase.estado,
+    journeyId,
+    ticketId: fase.ticketId,
+    detalle: fase.detalle,
+    fases: [fase],
+  };
 }
 
-function avanzarPreparacion(request: AvanzarJornadaRequest, journeyId: string, ahora: Date): AvanceDeFase {
+function avanzarPreparacion(
+  request: AvanzarJornadaRequest,
+  journeyId: string,
+  ahora: Date,
+): AvanceDeFase {
   const despacho = despacharPreparacion({
     project: request.project,
     home: request.home,
     journeyId,
     attemptId: `${INTENTO_DE_AVANCE}-preparacion`,
     ahora,
-    ...(request.ejecutarPreparacion === undefined ? {} : { execute: request.ejecutarPreparacion }),
+    ...(request.ejecutarPreparacion === undefined
+      ? {}
+      : { execute: request.ejecutarPreparacion }),
     ...(request.notificar === undefined ? {} : { notificar: request.notificar }),
   });
   if (despacho.resultado?.parada !== undefined && request.notificar !== undefined) {
-    avisarParada(request.project.paths, despacho.resultado.parada, request.notificar, ahora);
+    avisarParada(
+      request.project.paths,
+      despacho.resultado.parada,
+      request.notificar,
+      ahora,
+    );
   }
   return {
     fase: "preparacion",
@@ -159,7 +186,9 @@ function avanzarPreparacion(request: AvanzarJornadaRequest, journeyId: string, a
           : "sin-candidato",
     ticketId: despacho.ticketId,
     detalle:
-      (despacho.resultado === null ? despacho.detalle : `${despacho.resultado.estado}: ${despacho.detalle}`) +
+      (despacho.resultado === null
+        ? despacho.detalle
+        : `${despacho.resultado.estado}: ${despacho.detalle}`) +
       (despacho.omitidos.length === 0
         ? ""
         : ` Omitidos: ${despacho.omitidos.map((o) => `${o.ticketId} (${o.motivo})`).join("; ")}.`),

@@ -69,13 +69,20 @@ export function selectJourneyTickets(request: JourneySelectionRequest): JourneyS
     throw new Error("executor no puede ser vacío.");
   }
 
-  const journey = readJourneys(request.project).find((item) => item.journeyId === request.journeyId);
+  const journey = readJourneys(request.project).find(
+    (item) => item.journeyId === request.journeyId,
+  );
   if (journey === undefined) {
-    throw new Error(`La jornada "${request.journeyId}" no existe en el proyecto autorizado.`);
+    throw new Error(
+      `La jornada "${request.journeyId}" no existe en el proyecto autorizado.`,
+    );
   }
 
   const tickets = new Map(
-    allDocuments(request.project.paths).map(({ ticket, document }) => [ticket.id, document]),
+    allDocuments(request.project.paths).map(({ ticket, document }) => [
+      ticket.id,
+      document,
+    ]),
   );
   const authorization = readJourneyAuthorization(request.project);
   const policy = autonomousConfig(request.project.root);
@@ -84,7 +91,14 @@ export function selectJourneyTickets(request: JourneySelectionRequest): JourneyS
 
   for (const ticket of [...journey.tickets].sort(compareTicket)) {
     const document = tickets.get(ticket.ticketId);
-    const reasons = baseReasons(ticket, document, tickets, journey.windows ?? [], request.at, request.project.paths);
+    const reasons = baseReasons(
+      ticket,
+      document,
+      tickets,
+      journey.windows ?? [],
+      request.at,
+      request.project.paths,
+    );
     const candidate = candidateOf(ticket);
     if (reasons.length > 0) {
       blocked.push(Object.freeze({ ...candidate, reasons: Object.freeze(reasons) }));
@@ -99,10 +113,19 @@ export function selectJourneyTickets(request: JourneySelectionRequest): JourneyS
     const ticket = journey.tickets.find((item) => item.ticketId === candidate.ticketId);
     if (ticket === undefined) continue;
     const document = tickets.get(candidate.ticketId);
-    const reasons = dispatchReasons(ticket, authorization, request.executor, request.availableSlots);
+    const reasons = dispatchReasons(
+      ticket,
+      authorization,
+      request.executor,
+      request.availableSlots,
+    );
     // La política de autonomía solo limita al despachador (y solo si está encendida): una persona
     // puede ejecutar el ticket aunque su tipo, riesgo o módulo no estén habilitados.
-    if (policy.enabled && document !== undefined && razonesDePolitica(document.fields, policy).length > 0) {
+    if (
+      policy.enabled &&
+      document !== undefined &&
+      razonesDePolitica(document.fields, policy).length > 0
+    ) {
       reasons.unshift("eligibility");
     }
     if (reasons.length === 0) {
@@ -127,14 +150,23 @@ export function compareTicket(left: JourneyTicketInput, right: JourneyTicketInpu
 }
 
 function candidateOf(ticket: JourneyTicketInput): JourneySelectionCandidate {
-  return Object.freeze({ ticketId: ticket.ticketId, priority: ticket.priority, order: ticket.order });
+  return Object.freeze({
+    ticketId: ticket.ticketId,
+    priority: ticket.priority,
+    order: ticket.order,
+  });
 }
 
 function baseReasons(
   ticket: JourneyTicketInput,
   document: ParsedTicket | undefined,
   tickets: ReadonlyMap<string, ParsedTicket>,
-  windows: readonly { readonly windowId: string; readonly startsAt: string; readonly endsAt: string; readonly timeZone: string }[],
+  windows: readonly {
+    readonly windowId: string;
+    readonly startsAt: string;
+    readonly endsAt: string;
+    readonly timeZone: string;
+  }[],
   at: string,
   paths: AuthorizedProject["paths"],
 ): JourneySelectionReason[] {
@@ -145,8 +177,15 @@ function baseReasons(
   if (workflow !== null) reasons.push(workflow);
   // Una dependencia bloquea esté o no en la jornada: se suman las del grafo de la feature, que
   // armar la jornada descarta cuando no van en ella. Un ticket ausente del registro no está cerrado.
-  const dependencies = new Set([...ticket.dependsOn, ...dependenciasEnGrafos(paths, ticket.ticketId)]);
-  if ([...dependencies].some((dependency) => tickets.get(dependency)?.fields.workflow_status !== "closed")) {
+  const dependencies = new Set([
+    ...ticket.dependsOn,
+    ...dependenciasEnGrafos(paths, ticket.ticketId),
+  ]);
+  if (
+    [...dependencies].some(
+      (dependency) => tickets.get(dependency)?.fields.workflow_status !== "closed",
+    )
+  ) {
     reasons.push("dependency");
   }
 
@@ -160,23 +199,37 @@ function baseReasons(
  */
 export function razonesDeVentana(
   ticket: JourneyTicketInput,
-  windows: readonly { readonly windowId: string; readonly startsAt: string; readonly endsAt: string; readonly timeZone: string }[],
+  windows: readonly {
+    readonly windowId: string;
+    readonly startsAt: string;
+    readonly endsAt: string;
+    readonly timeZone: string;
+  }[],
   at: string,
 ): JourneySelectionReason[] {
   const requiresWindow =
-    ticket.start.condition === "window" || ticket.start.condition === "dependencies-and-window";
+    ticket.start.condition === "window" ||
+    ticket.start.condition === "dependencies-and-window";
   if (requiresWindow && ticket.windowId === undefined) return ["window"];
   if (ticket.windowId !== undefined) {
     const window = windows.find((item) => item.windowId === ticket.windowId);
-    if (window === undefined || !evaluateJourneyWindow(window, at).allowsNewDispatch) return ["window"];
+    if (window === undefined || !evaluateJourneyWindow(window, at).allowsNewDispatch)
+      return ["window"];
   }
   return [];
 }
 
 function workflowReason(workflow: string): JourneySelectionReason | null {
   if (workflow === "approved") return null;
-  if (workflow === "intake" || workflow === "analyzed" || workflow === "planned") return "plan";
-  if (workflow === "awaiting_user_tests" || workflow === "in_qa" || workflow === "qa_approved" || workflow === "changes_requested") return "qa";
+  if (workflow === "intake" || workflow === "analyzed" || workflow === "planned")
+    return "plan";
+  if (
+    workflow === "awaiting_user_tests" ||
+    workflow === "in_qa" ||
+    workflow === "qa_approved" ||
+    workflow === "changes_requested"
+  )
+    return "qa";
   if (workflow === "closed") return "completed";
   return "gate";
 }

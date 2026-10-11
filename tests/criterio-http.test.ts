@@ -27,7 +27,11 @@ let recibidas: { metodo: string; url: string; autorizacion: string | undefined }
 beforeEach(async () => {
   recibidas = [];
   servidor = createServer((req: IncomingMessage, res) => {
-    recibidas.push({ metodo: req.method ?? "", url: req.url ?? "", autorizacion: req.headers["authorization"] });
+    recibidas.push({
+      metodo: req.method ?? "",
+      url: req.url ?? "",
+      autorizacion: req.headers["authorization"],
+    });
     res.setHeader("Set-Cookie", "sesion=abc; HttpOnly");
     if (req.url?.startsWith("/redirige")) {
       res.statusCode = 302;
@@ -37,7 +41,15 @@ beforeEach(async () => {
     }
     res.setHeader("Content-Type", "application/json");
     if (req.url?.startsWith("/api/v1/huecos")) {
-      res.end(JSON.stringify({ results: [], count: 0, ok: true, nombre: "x", anidado: { a: { b: 7 } } }));
+      res.end(
+        JSON.stringify({
+          results: [],
+          count: 0,
+          ok: true,
+          nombre: "x",
+          anidado: { a: { b: 7 } },
+        }),
+      );
       return;
     }
     res.statusCode = 404;
@@ -50,13 +62,20 @@ beforeEach(async () => {
 afterEach(() => new Promise<void>((resolve) => servidor.close(() => resolve())));
 
 const config = (extra = "") =>
-  readQaHttpConfig(parseConfig(`qa-http:\n  hosts:\n    - ${base}\n  methods:\n    - GET\n${extra}`));
-const verificar = (criterio: string, cfg = config(), entorno: Record<string, string> = {}) =>
-  verificarCriterioHttp({ criterio, config: cfg, entorno });
+  readQaHttpConfig(
+    parseConfig(`qa-http:\n  hosts:\n    - ${base}\n  methods:\n    - GET\n${extra}`),
+  );
+const verificar = (
+  criterio: string,
+  cfg = config(),
+  entorno: Record<string, string> = {},
+) => verificarCriterioHttp({ criterio, config: cfg, entorno });
 
 describe("un criterio válido", () => {
   it("se verifica contra el host de la configuración y guarda status, latencia y hash del cuerpo", async () => {
-    const r = await verificar("GET /api/v1/huecos/?sucursal=1 expect: status=200; json.results.length==0");
+    const r = await verificar(
+      "GET /api/v1/huecos/?sucursal=1 expect: status=200; json.results.length==0",
+    );
     expect(r.estado).toBe("cumplido");
     expect(r.respuesta?.status).toBe(200);
     expect(typeof r.respuesta?.latenciaMs).toBe("number");
@@ -106,7 +125,13 @@ describe("lo que se rechaza sin hacer la petición", () => {
   });
 
   it("una aserción fuera de la gramática cerrada se rechaza", async () => {
-    for (const mala of ["status>=200", "json.results.map(x=>x)==1", "body.contains=hola", "json..a==1", "header.x==1"]) {
+    for (const mala of [
+      "status>=200",
+      "json.results.map(x=>x)==1",
+      "body.contains=hola",
+      "json..a==1",
+      "header.x==1",
+    ]) {
       const r = await verificar(`GET /api/v1/huecos/ expect: ${mala}`);
       expect(r.estado, mala).toBe("rechazado");
       expect(r.motivo, mala).toContain("gramática cerrada");
@@ -132,7 +157,9 @@ describe("la red", () => {
   });
 
   it("un servidor que no responde da rechazado con el motivo, no una excepción", async () => {
-    const cfg = readQaHttpConfig(parseConfig("qa-http:\n  hosts:\n    - http://127.0.0.1:1\n"));
+    const cfg = readQaHttpConfig(
+      parseConfig("qa-http:\n  hosts:\n    - http://127.0.0.1:1\n"),
+    );
     const r = await verificar("GET /x expect: status=200", cfg);
     expect(r.estado).toBe("rechazado");
     expect(r.motivo).toContain("La petición falló");
@@ -142,7 +169,9 @@ describe("la red", () => {
 describe("la credencial y las cabeceras", () => {
   it("la credencial sale de la variable que declara la configuración y no aparece en el resultado", async () => {
     const cfg = config("  credential-env: QA_HTTP_TOKEN\n");
-    const r = await verificar("GET /api/v1/huecos/ expect: status=200", cfg, { QA_HTTP_TOKEN: CREDENCIAL });
+    const r = await verificar("GET /api/v1/huecos/ expect: status=200", cfg, {
+      QA_HTTP_TOKEN: CREDENCIAL,
+    });
     expect(r.estado).toBe("cumplido");
     expect(recibidas[0]?.autorizacion).toBe(`Bearer ${CREDENCIAL}`);
     const serializado = JSON.stringify(r);
@@ -154,17 +183,33 @@ describe("la credencial y las cabeceras", () => {
   });
 
   it("si la variable de la credencial falta, se rechaza sin hacer la petición", async () => {
-    const r = await verificar("GET /api/v1/huecos/ expect: status=200", config("  credential-env: QA_HTTP_TOKEN\n"), {});
+    const r = await verificar(
+      "GET /api/v1/huecos/ expect: status=200",
+      config("  credential-env: QA_HTTP_TOKEN\n"),
+      {},
+    );
     expect(r.estado).toBe("rechazado");
     expect(r.motivo).toContain("QA_HTTP_TOKEN");
     expect(recibidas).toEqual([]);
   });
 
   it("el ticket no puede elegir el host ni la credencial: la configuración con credenciales en la URL se rechaza", () => {
-    expect(() => readQaHttpConfig(parseConfig("qa-http:\n  hosts:\n    - http://usuario:clave@localhost:8000\n"))).toThrow(/credenciales/);
-    expect(() => readQaHttpConfig(parseConfig("qa-http:\n  hosts:\n    - ftp://localhost\n"))).toThrow(/http o https/);
-    expect(() => readQaHttpConfig(parseConfig("qa-http:\n  hosts: []\n"))).toThrow(/al menos una URL/);
-    expect(() => readQaHttpConfig(parseConfig("qa-http:\n  hosts:\n    - http://x\n  credential-env: minuscula\n"))).toThrow(/credential-env/);
+    expect(() =>
+      readQaHttpConfig(
+        parseConfig("qa-http:\n  hosts:\n    - http://usuario:clave@localhost:8000\n"),
+      ),
+    ).toThrow(/credenciales/);
+    expect(() =>
+      readQaHttpConfig(parseConfig("qa-http:\n  hosts:\n    - ftp://localhost\n")),
+    ).toThrow(/http o https/);
+    expect(() => readQaHttpConfig(parseConfig("qa-http:\n  hosts: []\n"))).toThrow(
+      /al menos una URL/,
+    );
+    expect(() =>
+      readQaHttpConfig(
+        parseConfig("qa-http:\n  hosts:\n    - http://x\n  credential-env: minuscula\n"),
+      ),
+    ).toThrow(/credential-env/);
     expect(readQaHttpConfig(parseConfig("name: Demo\n"))).toBeNull();
   });
 });
@@ -189,8 +234,18 @@ describe("el criterio dentro de un ticket", () => {
       http: "GET /api/v1/huecos/?sucursal=1 expect: status=200; json.results.length==0",
     });
     // Los criterios sin `http:` conservan exactamente su forma de siempre.
-    expect(specs[1]).toEqual({ text: "El filtro devuelve la orden 1042 al buscar 104", command: "npx vitest run tests/uno.test.ts", manual: false, dev: false });
-    expect(specs[2]).toEqual({ text: "La pantalla muestra el saldo actualizado", command: null, manual: true, dev: false });
+    expect(specs[1]).toEqual({
+      text: "El filtro devuelve la orden 1042 al buscar 104",
+      command: "npx vitest run tests/uno.test.ts",
+      manual: false,
+      dev: false,
+    });
+    expect(specs[2]).toEqual({
+      text: "La pantalla muestra el saldo actualizado",
+      command: null,
+      manual: true,
+      dev: false,
+    });
     expect(parsearCriterioHttp(specs[0]?.http ?? "").aserciones).toHaveLength(2);
   });
 });

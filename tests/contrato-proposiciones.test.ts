@@ -26,11 +26,19 @@ import {
 } from "../packages/gate/src/index.js";
 import { QA_MECHANICAL_GATE } from "../packages/gate/src/definitions.js";
 
-const CRITERIO = { text: "El filtro encuentra la orden por número parcial.", command: null, manual: true } as const;
+const CRITERIO = {
+  text: "El filtro encuentra la orden por número parcial.",
+  command: null,
+  manual: true,
+} as const;
 const TODOS_LOS_IMPACTOS = ["sync_impact", "migration_impact", "docker_impact"];
 
 const planConTodo = () =>
-  gateFor(PLAN_GATE, { criteria: [CRITERIO], impacts: TODOS_LOS_IMPACTOS, interfaz: SIN_INTERFAZ });
+  gateFor(PLAN_GATE, {
+    criteria: [CRITERIO],
+    impacts: TODOS_LOS_IMPACTOS,
+    interfaz: SIN_INTERFAZ,
+  });
 
 function votan(propositions: readonly Proposition[]): Proposition[] {
   return propositions.filter((p) => p.verdict !== false);
@@ -58,7 +66,9 @@ describe("lo que cada proposición que vota declara", () => {
   });
 
   it("riesgos_cubren_impactos pregunta lo que dice su descripción: el efecto sobre otros consumidores", () => {
-    const p = ANALYSIS_GATE.propositions.find((x) => x.id === "riesgos_cubren_impactos") as Proposition & {
+    const p = ANALYSIS_GATE.propositions.find(
+      (x) => x.id === "riesgos_cubren_impactos",
+    ) as Proposition & {
       criteria: { yes: string; no: string };
     };
     expect(p.description).toContain("otros consumidores");
@@ -68,7 +78,9 @@ describe("lo que cada proposición que vota declara", () => {
   });
 
   it("nombra_archivos_reales describe y pregunta lo mismo: que contienen el comportamiento descrito", () => {
-    const p = ANALYSIS_GATE.propositions.find((x) => x.id === "nombra_archivos_reales") as Proposition & {
+    const p = ANALYSIS_GATE.propositions.find(
+      (x) => x.id === "nombra_archivos_reales",
+    ) as Proposition & {
       criteria: { yes: string; no: string };
     };
     expect(p.description).toContain("contienen el comportamiento");
@@ -85,23 +97,40 @@ describe("cada impacto es dos proposiciones atómicas", () => {
       .filter((id) => id.startsWith(impacto));
 
   it("sincronización: datos ya sincronizados y clientes desactualizados", () => {
-    expect(ids("sync_impact")).toEqual(["sync_impact_datos_sincronizados", "sync_impact_clientes_desactualizados"]);
+    expect(ids("sync_impact")).toEqual([
+      "sync_impact_datos_sincronizados",
+      "sync_impact_clientes_desactualizados",
+    ]);
   });
 
   it("migración: orden de aplicación y reversión", () => {
-    expect(ids("migration_impact")).toEqual(["migration_impact_orden", "migration_impact_reversion"]);
+    expect(ids("migration_impact")).toEqual([
+      "migration_impact_orden",
+      "migration_impact_reversion",
+    ]);
   });
 
   it("contenedores: imagen y publicación", () => {
-    expect(ids("docker_impact")).toEqual(["docker_impact_imagen", "docker_impact_publicacion"]);
+    expect(ids("docker_impact")).toEqual([
+      "docker_impact_imagen",
+      "docker_impact_publicacion",
+    ]);
   });
 
   it("si falta una mitad, la otra se responde por separado y el recibo nombra la que falta", () => {
-    const gate = gateFor(PLAN_GATE, { criteria: [], impacts: ["migration_impact"], interfaz: SIN_INTERFAZ });
+    const gate = gateFor(PLAN_GATE, {
+      criteria: [],
+      impacts: ["migration_impact"],
+      interfaz: SIN_INTERFAZ,
+    });
     const respuestas: PropositionAnswer[] = gate.propositions.map((p) =>
       p.id === "clasificacion"
         ? { id: p.id, kind: "choice", choice: "completo", confidence: 0.99 }
-        : { id: p.id, kind: "noul", value: p.id === "migration_impact_reversion" ? 0.04 : 0.97 },
+        : {
+            id: p.id,
+            kind: "noul",
+            value: p.id === "migration_impact_reversion" ? 0.04 : 0.97,
+          },
     );
 
     const decision = decide(gate.propositions, respuestas, gate.policy);
@@ -117,7 +146,8 @@ describe("cada impacto es dos proposiciones atómicas", () => {
 describe("el aviso sobre aprobaciones", () => {
   it("lo lleva toda proposición evaluada por modelo, en análisis, plan e impactos", () => {
     const evaluadas = [
-      ...gateFor(ANALYSIS_GATE, { criteria: [], impacts: [], interfaz: SIN_INTERFAZ }).propositions,
+      ...gateFor(ANALYSIS_GATE, { criteria: [], impacts: [], interfaz: SIN_INTERFAZ })
+        .propositions,
       ...planConTodo().propositions,
     ];
     expect(evaluadas.length).toBeGreaterThan(15);

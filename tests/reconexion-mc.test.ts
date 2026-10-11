@@ -18,36 +18,51 @@ afterEach(() => {
 });
 
 function esperarTurnos(turnos = 10) {
-  return Promise.all(Array.from({ length: turnos }, () => new Promise<void>((resolve) => setImmediate(resolve))));
+  return Promise.all(
+    Array.from(
+      { length: turnos },
+      () => new Promise<void>((resolve) => setImmediate(resolve)),
+    ),
+  );
 }
 
 function jornada(actividad: string) {
   return {
     authorization: { observationSources: [], dispatchExecutors: [] },
-    journeys: [{
-      journeyId: "jornada-01",
-      revisionId: "rev-01",
-      receivedAt: "2026-10-03T10:00:00.000Z",
-      tickets: [{
-        order: 1,
-        ticketId: "FEATURE-MC-RECONEXION-RECONCILIACION-20261001",
-        actualAt: null,
-        scheduledAt: null,
-        condition: "manual",
-        activity: actividad,
-        durationMs: null,
-        waitingFor: [],
-        dependsOn: [],
-        window: null,
-        lastReceivedAt: null,
-      }],
-    }],
+    journeys: [
+      {
+        journeyId: "jornada-01",
+        revisionId: "rev-01",
+        receivedAt: "2026-10-03T10:00:00.000Z",
+        tickets: [
+          {
+            order: 1,
+            ticketId: "FEATURE-MC-RECONEXION-RECONCILIACION-20261001",
+            actualAt: null,
+            scheduledAt: null,
+            condition: "manual",
+            activity: actividad,
+            durationMs: null,
+            waitingFor: [],
+            dependsOn: [],
+            window: null,
+            lastReceivedAt: null,
+          },
+        ],
+      },
+    ],
   };
 }
 
-function textoActual(nodo: { _texto?: string; className?: string; children: readonly unknown[] } | undefined): string {
+function textoActual(
+  nodo: { _texto?: string; className?: string; children: readonly unknown[] } | undefined,
+): string {
   if (nodo === undefined) return "";
-  return [nodo._texto ?? "", nodo.className ?? "", ...nodo.children.map((hijo) => textoActual(hijo as typeof nodo))]
+  return [
+    nodo._texto ?? "",
+    nodo.className ?? "",
+    ...nodo.children.map((hijo) => textoActual(hijo as typeof nodo)),
+  ]
     .filter((parte) => parte !== "")
     .join(" | ");
 }
@@ -124,7 +139,11 @@ describe("reconexión de Mission Control", () => {
       },
     });
     const entorno = globalThis as typeof globalThis & {
-      pruebaReconexion: { eventos: { oyentes: Map<string, (mensaje: { data: string; lastEventId?: string }) => void> } };
+      pruebaReconexion: {
+        eventos: {
+          oyentes: Map<string, (mensaje: { data: string; lastEventId?: string }) => void>;
+        };
+      };
     };
     expect(resultado.texto).toContain("pendiente");
 
@@ -134,8 +153,12 @@ describe("reconexión de Mission Control", () => {
     await vi.runAllTimersAsync();
     await esperarTurnos();
 
-    expect(llamadas.filter((ruta) => ruta.includes("/api/execution-events?after=0&limit=100"))).toHaveLength(1);
-    expect(llamadas.filter((ruta) => ruta.includes("/api/execution-events?after=1&limit=100"))).toHaveLength(1);
+    expect(
+      llamadas.filter((ruta) => ruta.includes("/api/execution-events?after=0&limit=100")),
+    ).toHaveLength(1);
+    expect(
+      llamadas.filter((ruta) => ruta.includes("/api/execution-events?after=1&limit=100")),
+    ).toHaveLength(1);
     expect(llamadas.filter((ruta) => ruta === "/api/journeys")).toHaveLength(2);
     expect(textoActual(resultado.contenido)).toContain("active");
     expect(Date.now() - inicio).toBeLessThan(5_000);
@@ -144,7 +167,8 @@ describe("reconexión de Mission Control", () => {
     // reconciliación; después del cursor 2 no vuelve a repintar la jornada.
     const jornadasAntes = llamadas.filter((ruta) => ruta === "/api/journeys").length;
     entorno.pruebaReconexion.eventos.oyentes.get("execution")!({
-      data: JSON.stringify({ cursor: 2 }), lastEventId: "2",
+      data: JSON.stringify({ cursor: 2 }),
+      lastEventId: "2",
     });
     await vi.advanceTimersByTimeAsync(300);
     await esperarTurnos();
@@ -158,8 +182,12 @@ describe("reconexión de Mission Control", () => {
     await esperarTurnos(20);
     await vi.runAllTimersAsync();
     await esperarTurnos();
-    expect(llamadas.filter((ruta) => ruta.includes("/api/execution-events?after=2&limit=100"))).toHaveLength(1);
-    expect(llamadas.filter((ruta) => ruta === "/api/journeys")).toHaveLength(jornadasAntes + 1);
+    expect(
+      llamadas.filter((ruta) => ruta.includes("/api/execution-events?after=2&limit=100")),
+    ).toHaveLength(1);
+    expect(llamadas.filter((ruta) => ruta === "/api/journeys")).toHaveLength(
+      jornadasAntes + 1,
+    );
     expect(resultado.fallos).toEqual([]);
   });
 

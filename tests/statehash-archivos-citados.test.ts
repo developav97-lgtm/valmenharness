@@ -4,7 +4,14 @@
  *
  * Laboratorio temporal con carpeta `.git` y `packages/x/y.ts` de 3 líneas; reloj fijo.
  */
-import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -57,14 +64,25 @@ function ticket(cita: string): string {
 }
 
 /** Un evaluador que contesta lo mismo a todo: 0.95 aprueba, 0.5 deja la compuerta en revisión. */
-function jevDe(valor: number): typeof import("../packages/gate-jev/src/index.js").evaluateWithJev {
+function jevDe(
+  valor: number,
+): typeof import("../packages/gate-jev/src/index.js").evaluateWithJev {
   return (async (o: {
-    propositions: readonly { id: string; kind: string; criteria?: Record<string, unknown> }[];
+    propositions: readonly {
+      id: string;
+      kind: string;
+      criteria?: Record<string, unknown>;
+    }[];
   }) =>
     ({
       answers: o.propositions.map((p) =>
         p.kind === "choice"
-          ? { id: p.id, kind: "choice" as const, choice: Object.keys(p.criteria ?? {})[0] as string, confidence: valor }
+          ? {
+              id: p.id,
+              kind: "choice" as const,
+              choice: Object.keys(p.criteria ?? {})[0] as string,
+              confidence: valor,
+            }
           : { id: p.id, kind: "noul" as const, value: valor },
       ),
       model: { provider: "openrouter", model: "jev", resolvedVersion: "jev-1" },
@@ -92,12 +110,26 @@ function autorizar(): void {
   });
 }
 
-const aprobar = () => aprobarPorAutorizacion({ paths: paths(), ticketId: ID, etapa: "plan", ahora: AHORA, env: {} });
+const aprobar = () =>
+  aprobarPorAutorizacion({
+    paths: paths(),
+    ticketId: ID,
+    etapa: "plan",
+    ahora: AHORA,
+    env: {},
+  });
 const rutaDelTicket = (): string => join(root, "tickets", "2026", ID, "ticket.md");
 const editarDiagnostico = (): void => {
   const ruta = rutaDelTicket();
   const texto = readFileSync(ruta, "utf8");
-  writeFileSync(ruta, texto.replace("- Riesgos y compatibilidad: ninguno.", "- Riesgos y compatibilidad: ninguno.\n- Riesgo añadido después de la compuerta."), "utf8");
+  writeFileSync(
+    ruta,
+    texto.replace(
+      "- Riesgos y compatibilidad: ninguno.",
+      "- Riesgos y compatibilidad: ninguno.\n- Riesgo añadido después de la compuerta.",
+    ),
+    "utf8",
+  );
 };
 const recibosPlan = () => readReceipts(paths(), ID).filter((r) => r.gate === "plan");
 
@@ -193,7 +225,9 @@ describe("el estado que hashea el recibo y el que recalculan sus comparadores", 
   it("C12. el recibo conserva el check archivos_existen en pass con su detalle", async () => {
     ticket("`packages/x/y.ts:2`");
     await correrPlan();
-    const check = recibosPlan()[0]?.mechanicalChecks.find((c) => c.id === "archivos_existen");
+    const check = recibosPlan()[0]?.mechanicalChecks.find(
+      (c) => c.id === "archivos_existen",
+    );
     expect(check?.result).toBe("pass");
     expect(check?.detail).toContain("1 ruta(s) citada(s) existen");
   });

@@ -144,7 +144,8 @@ export function featureShow(root: string, slug: string | undefined): CommandResu
   let avisos = "";
   try {
     const lista = externalLinkWarnings(root, slug);
-    if (lista.length > 0) avisos = `\nAvisos:\n${lista.map((a) => `  ! ${a}`).join("\n")}\n`;
+    if (lista.length > 0)
+      avisos = `\nAvisos:\n${lista.map((a) => `  ! ${a}`).join("\n")}\n`;
   } catch (caught) {
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);
@@ -166,7 +167,10 @@ function featureAdvance(
   flags: Readonly<Record<string, string | true>>,
 ): CommandResult {
   if (slug === undefined || slug === "") {
-    return error("feature advance requiere la feature: valmen feature advance <slug> --to <estado>.", EXIT_SCHEMA);
+    return error(
+      "feature advance requiere la feature: valmen feature advance <slug> --to <estado>.",
+      EXIT_SCHEMA,
+    );
   }
   const destino = flags["to"];
   if (typeof destino !== "string" || destino.trim() === "") {
@@ -176,9 +180,16 @@ function featureAdvance(
     const paths = choosePaths(root);
     const fila =
       destino.trim() === "complete"
-        ? completeFeature({ paths, slug, allowPendingPo: flags["pendientes-del-po"] === true })
+        ? completeFeature({
+            paths,
+            slug,
+            allowPendingPo: flags["pendientes-del-po"] === true,
+          })
         : advanceFeature({ root, slug, to: destino.trim() });
-    const via = fila.via === undefined || fila.via.length === 0 ? "" : ` (pasó por ${fila.via.join(", ")})`;
+    const via =
+      fila.via === undefined || fila.via.length === 0
+        ? ""
+        : ` (pasó por ${fila.via.join(", ")})`;
     return ok(`Feature ${slug}: ${fila.state}${via}.\n`);
   } catch (caught) {
     const failure = toFailure(caught);
@@ -193,7 +204,10 @@ function featureVerify(
   flags: Readonly<Record<string, string | true>>,
 ): CommandResult {
   if (slug === undefined || slug === "") {
-    return error("feature verify requiere la feature: valmen feature verify <slug>.", EXIT_SCHEMA);
+    return error(
+      "feature verify requiere la feature: valmen feature verify <slug>.",
+      EXIT_SCHEMA,
+    );
   }
   try {
     const ruta = writeFeatureVerify({
@@ -249,7 +263,8 @@ function featureAsset(
     }
     if (accion === "add") {
       const archivo = texto("file");
-      if (archivo === undefined) return error("feature asset add requiere --file <ruta>.", EXIT_SCHEMA);
+      if (archivo === undefined)
+        return error("feature asset add requiere --file <ruta>.", EXIT_SCHEMA);
       const resultado = attachFeatureAsset({
         root,
         slug,
@@ -260,7 +275,9 @@ function featureAsset(
       });
       const { asset } = resultado;
       if (resultado.alreadyPresent) {
-        return ok(`${asset.path} ya estaba en ${slug} con el mismo contenido: no se escribió nada.\n`);
+        return ok(
+          `${asset.path} ya estaba en ${slug} con el mismo contenido: no se escribió nada.\n`,
+        );
       }
       const refresco = refreshAfterAttach(choosePaths(root), slug);
       return ok(

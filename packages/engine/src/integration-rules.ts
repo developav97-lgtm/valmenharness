@@ -8,7 +8,12 @@
  */
 import { spawnSync } from "node:child_process";
 
-import { DENIED_GIT_FLAGS, EXIT_INVARIANT, SENSITIVE_PATH_PATTERNS, fail } from "@valmen/core";
+import {
+  DENIED_GIT_FLAGS,
+  EXIT_INVARIANT,
+  SENSITIVE_PATH_PATTERNS,
+  fail,
+} from "@valmen/core";
 
 /** Lo que las reglas necesitan saber del momento de commitear. */
 export interface IntegrationState {
@@ -54,7 +59,9 @@ export function motivoDeArchivoProhibido(archivo: string): string | null {
 export function reglasDeIntegracion(estado: IntegrationState): IntegrationVerdict {
   const violaciones: string[] = [];
   if (estado.ramasProtegidas.includes(estado.ramaActual)) {
-    violaciones.push(`La rama actual (${estado.ramaActual}) es una rama protegida: la jornada no commitea ahí.`);
+    violaciones.push(
+      `La rama actual (${estado.ramaActual}) es una rama protegida: la jornada no commitea ahí.`,
+    );
   } else if (estado.ramaActual !== estado.ramaDeTrabajo) {
     violaciones.push(
       `La rama actual (${estado.ramaActual}) no es la rama de trabajo (${estado.ramaDeTrabajo}).`,
@@ -104,20 +111,34 @@ export function motivoDeGitProhibido(argumentos: readonly string[]): string | nu
     return `La operación git ${operacion} no está permitida a una jornada (solo ${OPERACIONES_PERMITIDAS.join(", ")}).`;
   }
   const prohibida = resto.find((argumento) => BANDERAS_PROHIBIDAS.has(argumento));
-  if (prohibida !== undefined) return `La bandera ${prohibida} no está permitida a una jornada.`;
+  if (prohibida !== undefined)
+    return `La bandera ${prohibida} no está permitida a una jornada.`;
   if (operacion === "add") {
-    if (resto.includes("-A") || resto.includes("--all") || resto.includes(".") || resto.includes("-u")) {
+    if (
+      resto.includes("-A") ||
+      resto.includes("--all") ||
+      resto.includes(".") ||
+      resto.includes("-u")
+    ) {
       return "git add exige archivos explícitos tras `--`: nada de -A, --all, `.` ni -u.";
     }
-    if (resto[0] !== "--" || resto.length < 2) return "git add exige archivos explícitos tras `--`.";
+    if (resto[0] !== "--" || resto.length < 2)
+      return "git add exige archivos explícitos tras `--`.";
   }
   if (operacion === "checkout" && !(resto[0] === "-b" && resto.length === 2)) {
     return "git checkout solo se admite como `checkout -b <rama>`.";
   }
-  if (operacion === "switch" && resto.length !== 1 && !(resto[0] === "-c" && (resto.length === 2 || resto.length === 3))) {
+  if (
+    operacion === "switch" &&
+    resto.length !== 1 &&
+    !(resto[0] === "-c" && (resto.length === 2 || resto.length === 3))
+  ) {
     return "git switch solo se admite como `switch <rama>` o `switch -c <rama> [<base>]`.";
   }
-  if (operacion === "merge" && !(resto[0] === "--ff-only" && resto.length === 2 && !resto[1]?.startsWith("-"))) {
+  if (
+    operacion === "merge" &&
+    !(resto[0] === "--ff-only" && resto.length === 2 && !resto[1]?.startsWith("-"))
+  ) {
     return "git merge solo se admite como `merge --ff-only <rama>`.";
   }
   if (operacion === "merge-base" && !(resto[0] === "--is-ancestor" && resto.length === 3)) {

@@ -432,11 +432,9 @@ describe("guardar la foto de consumo", () => {
     );
     db.close();
 
-    const foto = guardarFotoEnTicket(
-      { root: lab, ticketsDir: "tickets" },
-      ticketId,
-      { home: lab },
-    );
+    const foto = guardarFotoEnTicket({ root: lab, ticketsDir: "tickets" }, ticketId, {
+      home: lab,
+    });
 
     expect(foto?.entradas).toEqual([]);
     expect(foto?.detalle).toContain("0 sesión(es) nuevas de 1");
@@ -584,7 +582,11 @@ describe("las sesiones de Claude Code", () => {
    * Una sesión que pide el ticket, lo mueve dos veces y lo cierra, con números que
    * se suman a mano: dos mensajes únicos, el primero repetido en tres líneas.
    */
-  function lineasDeTrabajo(root: string, ticket: string, opciones: { modelo?: string | null } = {}) {
+  function lineasDeTrabajo(
+    root: string,
+    ticket: string,
+    opciones: { modelo?: string | null } = {},
+  ) {
     return [
       mensajeDelUsuario(`Trabaja el ticket ${ticket}`, { cwd: root }),
       ...mensajeDelAsistente(
@@ -595,7 +597,10 @@ describe("las sesiones de Claude Code", () => {
           bloques: [
             texto("Lo muevo."),
             llamada("t1", "mcp__valmen__mover_ticket", { id: ticket, to: "analyzed" }),
-            llamada("t2", "mcp__valmen__evaluar_compuerta", { id: ticket, gate: "analysis" }),
+            llamada("t2", "mcp__valmen__evaluar_compuerta", {
+              id: ticket,
+              gate: "analysis",
+            }),
           ],
         },
         { cwd: root },
@@ -664,7 +669,11 @@ describe("las sesiones de Claude Code", () => {
           title: "Implementación",
           cost: 0.05,
           mensajes: [
-            { id: "m1", data: mensaje(0.05), partes: [{ tool: "valmen_mover_ticket", status: "completed" }] },
+            {
+              id: "m1",
+              data: mensaje(0.05),
+              partes: [{ tool: "valmen_mover_ticket", status: "completed" }],
+            },
           ],
         },
         {
@@ -672,7 +681,11 @@ describe("las sesiones de Claude Code", () => {
           title: "Otra cosa",
           cost: 0.5,
           mensajes: [
-            { id: "m2", data: mensaje(0.5), partes: [{ tool: "valmen_mover_ticket", status: "completed" }] },
+            {
+              id: "m2",
+              data: mensaje(0.5),
+              partes: [{ tool: "valmen_mover_ticket", status: "completed" }],
+            },
           ],
         },
       ],
@@ -686,8 +699,14 @@ describe("las sesiones de Claude Code", () => {
         tool: "valmen_mover_ticket",
         state: { status: "completed", time: { start: 1 }, input: { id } },
       });
-    db.prepare("UPDATE part SET data = ? WHERE message_id = ?").run(conArgumentos(TICKET), "m1");
-    db.prepare("UPDATE part SET data = ? WHERE message_id = ?").run(conArgumentos(OTRO), "m2");
+    db.prepare("UPDATE part SET data = ? WHERE message_id = ?").run(
+      conArgumentos(TICKET),
+      "m1",
+    );
+    db.prepare("UPDATE part SET data = ? WHERE message_id = ?").run(
+      conArgumentos(OTRO),
+      "m2",
+    );
     db.close();
 
     // Lo que se comprueba es **lo que Claude Code agrega** al desglose, midiendo
@@ -720,7 +739,9 @@ describe("las sesiones de Claude Code", () => {
     // Y los mensajes de Claude Code entran al desglose sin inventarle coste: de sus
     // dos mensajes, uno tocó el registro y uno no.
     expect(linea!.desglose.harnessMensajes - antes!.desglose.harnessMensajes).toBe(1);
-    expect(linea!.desglose.exploracionMensajes - antes!.desglose.exploracionMensajes).toBe(1);
+    expect(linea!.desglose.exploracionMensajes - antes!.desglose.exploracionMensajes).toBe(
+      1,
+    );
     expect(linea!.desglose.harnessUsd).toBeCloseTo(antes!.desglose.harnessUsd, 9);
   });
 
@@ -731,7 +752,9 @@ describe("las sesiones de Claude Code", () => {
   function nombrarTicketEnLlamadas(ticketPorMensaje: Record<string, string>): void {
     const modulo = sqlite();
     if (modulo === null) return;
-    const db = new modulo.DatabaseSync(join(lab, ".local", "share", "opencode", "opencode.db"));
+    const db = new modulo.DatabaseSync(
+      join(lab, ".local", "share", "opencode", "opencode.db"),
+    );
     for (const [messageId, ticket] of Object.entries(ticketPorMensaje)) {
       db.prepare("UPDATE part SET data = ? WHERE message_id = ?").run(
         JSON.stringify({
@@ -757,8 +780,16 @@ describe("las sesiones de Claude Code", () => {
           title: "Otra cosa",
           cost: 0.75,
           mensajes: [
-            { id: "ma1", data: mensaje(0.5), partes: [{ tool: "valmen_mover_ticket", status: "completed" }] },
-            { id: "ma2", data: mensaje(0.25), partes: [{ tool: "read", status: "completed" }] },
+            {
+              id: "ma1",
+              data: mensaje(0.5),
+              partes: [{ tool: "valmen_mover_ticket", status: "completed" }],
+            },
+            {
+              id: "ma2",
+              data: mensaje(0.25),
+              partes: [{ tool: "read", status: "completed" }],
+            },
           ],
         },
       ],
@@ -801,8 +832,16 @@ describe("las sesiones de Claude Code", () => {
           title: "Implementación",
           cost: 0.08,
           mensajes: [
-            { id: "m1", data: mensaje(0.05), partes: [{ tool: "valmen_mover_ticket", status: "completed" }] },
-            { id: "m3", data: mensaje(0.03), partes: [{ tool: "read", status: "completed" }] },
+            {
+              id: "m1",
+              data: mensaje(0.05),
+              partes: [{ tool: "valmen_mover_ticket", status: "completed" }],
+            },
+            {
+              id: "m3",
+              data: mensaje(0.03),
+              partes: [{ tool: "read", status: "completed" }],
+            },
           ],
         },
         {
@@ -810,8 +849,16 @@ describe("las sesiones de Claude Code", () => {
           title: "Otra cosa",
           cost: 0.75,
           mensajes: [
-            { id: "ma1", data: mensaje(0.5), partes: [{ tool: "valmen_mover_ticket", status: "completed" }] },
-            { id: "ma2", data: mensaje(0.25), partes: [{ tool: "read", status: "completed" }] },
+            {
+              id: "ma1",
+              data: mensaje(0.5),
+              partes: [{ tool: "valmen_mover_ticket", status: "completed" }],
+            },
+            {
+              id: "ma2",
+              data: mensaje(0.25),
+              partes: [{ tool: "read", status: "completed" }],
+            },
           ],
         },
       ],
@@ -852,7 +899,11 @@ describe("las sesiones de Claude Code", () => {
       [
         JSON.stringify({
           type: "session_meta",
-          payload: { id: "codex-uno", timestamp: `${fecha}T10:00:00.000Z`, cwd: "/proyecto" },
+          payload: {
+            id: "codex-uno",
+            timestamp: `${fecha}T10:00:00.000Z`,
+            cwd: "/proyecto",
+          },
         }),
         JSON.stringify({ payload: { text: `cerré ${TICKET}` } }),
         JSON.stringify({
@@ -896,7 +947,9 @@ describe("las sesiones de Claude Code", () => {
         ...mensajeDelAsistente(
           {
             id: "msg_3",
-            bloques: [llamada("t9", "mcp__valmen__mover_ticket", { id: OTRO, to: "analyzed" })],
+            bloques: [
+              llamada("t9", "mcp__valmen__mover_ticket", { id: OTRO, to: "analyzed" }),
+            ],
           },
           { cwd: "/proyecto" },
         ),
@@ -907,7 +960,9 @@ describe("las sesiones de Claude Code", () => {
     const linea = leerLineaDeTiempo("/proyecto", { home: lab, ticketId: TICKET });
 
     expect(linea?.sessions).toHaveLength(1);
-    expect(linea?.sessions[0]?.reparto?.map((t) => t.id).sort()).toEqual([OTRO, TICKET].sort());
+    expect(linea?.sessions[0]?.reparto?.map((t) => t.id).sort()).toEqual(
+      [OTRO, TICKET].sort(),
+    );
     expect(linea?.sesionesCompartidas).toBe(1);
     expect(linea?.totalTokens).toEqual({ input: 0, output: 0, reasoning: 0, cacheRead: 0 });
     expect(linea?.desglose.harnessMensajes).toBe(0);
@@ -918,10 +973,8 @@ describe("las sesiones de Claude Code", () => {
 
     function consumo(): Record<string, unknown>[] {
       const ruta = join(lab, "tickets", "2026", TICKET, "ticket.md");
-      return (parseTicket(readFileSync(ruta, "utf8")).blocks["Consumo de IA"] ?? []) as Record<
-        string,
-        unknown
-      >[];
+      return (parseTicket(readFileSync(ruta, "utf8")).blocks["Consumo de IA"] ??
+        []) as Record<string, unknown>[];
     }
 
     it("escribe la sesión con `claude:<id>`, el modelo con su proveedor y los tokens medidos", () => {
@@ -1056,7 +1109,9 @@ describe("las sesiones de Claude Code", () => {
           ...mensajeDelAsistente(
             {
               id: "msg_3",
-              bloques: [llamada("t9", "mcp__valmen__mover_ticket", { id: OTRO, to: "analyzed" })],
+              bloques: [
+                llamada("t9", "mcp__valmen__mover_ticket", { id: OTRO, to: "analyzed" }),
+              ],
             },
             { cwd: lab },
           ),
@@ -1109,7 +1164,12 @@ describe("las sesiones de Claude Code", () => {
       const AGENTE_2 = `${SESION}/agent-a2`;
 
       /** Un subagente: 5 de entrada, 50 de creación, 500 de caché leída y 20 de salida. */
-      function subagente(id: string, ticket: string, inicio: string, fin: string): string[] {
+      function subagente(
+        id: string,
+        ticket: string,
+        inicio: string,
+        fin: string,
+      ): string[] {
         return [
           mensajeDelUsuario(`Trabaja ${ticket}`, { cwd: lab, timestamp: inicio }),
           ...mensajeDelAsistente(
@@ -1118,7 +1178,10 @@ describe("las sesiones de Claude Code", () => {
               uso: { input: 5, creacion: 50, lectura: 500, salida: 20 },
               bloques: [
                 texto("Listo."),
-                llamada(`toolu_${id}`, "mcp__valmen__mover_ticket", { id: ticket, to: "analyzed" }),
+                llamada(`toolu_${id}`, "mcp__valmen__mover_ticket", {
+                  id: ticket,
+                  to: "analyzed",
+                }),
               ],
             },
             { cwd: lab, timestamp: fin },
@@ -1140,7 +1203,10 @@ describe("las sesiones de Claude Code", () => {
                 id: "msg_madre",
                 uso: { input: 10, creacion: 1000, lectura: 50_000, salida: 400 },
                 bloques: [
-                  llamada("tm1", "mcp__valmen__mover_ticket", { id: TICKET, to: "analyzed" }),
+                  llamada("tm1", "mcp__valmen__mover_ticket", {
+                    id: TICKET,
+                    to: "analyzed",
+                  }),
                   llamada("tm2", "mcp__valmen__mover_ticket", { id: OTRO, to: "analyzed" }),
                 ],
               },
@@ -1208,8 +1274,12 @@ describe("las sesiones de Claude Code", () => {
         const segunda = guardarFotoEnTicket(paths(), TICKET, { home: lab });
 
         expect(segunda?.entradas).toEqual([]);
-        expect(consumo().filter((e) => e["session_reference"] === AGENTE_0)).toHaveLength(1);
-        expect(consumo().filter((e) => e["session_reference"] === AGENTE_1)).toHaveLength(1);
+        expect(consumo().filter((e) => e["session_reference"] === AGENTE_0)).toHaveLength(
+          1,
+        );
+        expect(consumo().filter((e) => e["session_reference"] === AGENTE_1)).toHaveLength(
+          1,
+        );
       });
 
       it("la foto de otro ticket no se lleva los subagentes de este", () => {
@@ -1237,7 +1307,9 @@ describe("las sesiones de Claude Code", () => {
           root: lab,
           id: SESION,
           lineas: lineasDeTrabajo(lab, TICKET),
-          subagentes: [subagente("a0", TICKET, "2026-10-05T10:00:00.000Z", "2026-10-05T10:05:00.000Z")],
+          subagentes: [
+            subagente("a0", TICKET, "2026-10-05T10:00:00.000Z", "2026-10-05T10:05:00.000Z"),
+          ],
         });
         // La madre ya quedó cargada con números —y con ellos, su subagente— en otro ticket.
         addAiUsage({
@@ -1255,7 +1327,9 @@ describe("las sesiones de Claude Code", () => {
         guardarFotoEnTicket(paths(), TICKET, { home: lab });
 
         expect(entrada(AGENTE_0)).toBeUndefined();
-        expect(String(entrada(SESION)?.["notes"])).toContain(`ya cargada con números en ${OTRO}`);
+        expect(String(entrada(SESION)?.["notes"])).toContain(
+          `ya cargada con números en ${OTRO}`,
+        );
       });
 
       it("la línea de tiempo del ticket muestra la sesión del subagente", async () => {
@@ -1302,7 +1376,9 @@ describe("las sesiones de opencode 2.0.16 (session_v2)", () => {
     const modulo = sqlite();
     if (modulo === null) return;
     mkdirSync(join(lab, ".local", "share", "opencode"), { recursive: true });
-    const db = new modulo.DatabaseSync(join(lab, ".local", "share", "opencode", "opencode.db"));
+    const db = new modulo.DatabaseSync(
+      join(lab, ".local", "share", "opencode", "opencode.db"),
+    );
 
     db.exec(`
       CREATE TABLE session_v2 (
@@ -1317,9 +1393,7 @@ describe("las sesiones de opencode 2.0.16 (session_v2)", () => {
 
     let t = 1_700_000_000_000;
     for (const s of datos.sesiones) {
-      db.prepare(
-        "INSERT INTO session_v2 VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-      ).run(
+      db.prepare("INSERT INTO session_v2 VALUES (?,?,?,?,?,?,?,?,?,?,?)").run(
         s.id,
         s.title,
         s.cost,
@@ -1383,16 +1457,28 @@ describe("las sesiones de opencode 2.0.16 (session_v2)", () => {
           tokensReasoning: 34365,
           tokensCacheRead: 4855680,
           mensajes: [
-            { tipo: "user", data: { text: "Ticket: BUGFIX-POS-UNO-20260101. Implementá el plan." } },
-            { tipo: "assistant", data: mensajeV2(0.03, [{ type: "reasoning", text: "leo" }]) },
-            { tipo: "assistant", data: mensajeV2(0.04315299, [{ type: "text", text: "listo" }]) },
+            {
+              tipo: "user",
+              data: { text: "Ticket: BUGFIX-POS-UNO-20260101. Implementá el plan." },
+            },
+            {
+              tipo: "assistant",
+              data: mensajeV2(0.03, [{ type: "reasoning", text: "leo" }]),
+            },
+            {
+              tipo: "assistant",
+              data: mensajeV2(0.04315299, [{ type: "text", text: "listo" }]),
+            },
           ],
         },
       ],
     });
 
     const { leerLineaDeTiempo } = await cargar();
-    const linea = leerLineaDeTiempo("/proyecto", { home: lab, ticketId: "BUGFIX-POS-UNO-20260101" });
+    const linea = leerLineaDeTiempo("/proyecto", {
+      home: lab,
+      ticketId: "BUGFIX-POS-UNO-20260101",
+    });
 
     expect(linea?.sessions).toHaveLength(1);
     const sesion = linea?.sessions[0];
@@ -1429,7 +1515,10 @@ describe("las sesiones de opencode 2.0.16 (session_v2)", () => {
     });
 
     const { leerLineaDeTiempo } = await cargar();
-    const linea = leerLineaDeTiempo("/proyecto", { home: lab, ticketId: "BUGFIX-POS-UNO-20260101" });
+    const linea = leerLineaDeTiempo("/proyecto", {
+      home: lab,
+      ticketId: "BUGFIX-POS-UNO-20260101",
+    });
     expect(linea?.sessions).toHaveLength(1);
     expect(linea?.desglose.harnessUsd).toBeCloseTo(0.02, 6);
     expect(linea?.sessions[0]?.intervenciones).toBe(1);
@@ -1478,7 +1567,9 @@ describe("las sesiones de opencode 2.0.16 (session_v2)", () => {
         ...mensajeDelAsistente(
           {
             id: "msg_1",
-            bloques: [llamada("t1", "mcp__valmen__mover_ticket", { id: ticket, to: "analyzed" })],
+            bloques: [
+              llamada("t1", "mcp__valmen__mover_ticket", { id: ticket, to: "analyzed" }),
+            ],
           },
           { cwd: "/proyecto" },
         ),
@@ -1517,7 +1608,11 @@ describe("las sesiones de opencode 2.0.16 (session_v2)", () => {
           title: "Sesión en las dos tablas",
           cost: 0.05,
           mensajes: [
-            { id: "m1", data: mensaje(0.05), partes: [{ tool: "read", status: "completed" }] },
+            {
+              id: "m1",
+              data: mensaje(0.05),
+              partes: [{ tool: "read", status: "completed" }],
+            },
           ],
         },
       ],
@@ -1551,7 +1646,11 @@ describe("las sesiones de opencode 2.0.16 (session_v2)", () => {
           title: "Sesión vieja",
           cost: 0.01,
           mensajes: [
-            { id: "m1", data: mensaje(0.01), partes: [{ tool: "read", status: "completed" }] },
+            {
+              id: "m1",
+              data: mensaje(0.01),
+              partes: [{ tool: "read", status: "completed" }],
+            },
           ],
         },
       ],
@@ -1806,7 +1905,9 @@ describe("el desglose de compuertas del endpoint /api/timeline", () => {
         new URLSearchParams({ ticket: id }),
       );
       expect(respuesta.status).toBe(200);
-      const cuerpo = respuesta.body as { compuertas: { gate: string; costUsd: number; model: string | null }[] };
+      const cuerpo = respuesta.body as {
+        compuertas: { gate: string; costUsd: number; model: string | null }[];
+      };
       expect(cuerpo.compuertas.map((c) => c.gate)).toEqual(["analysis", "qa-mechanical"]);
       const [jev, mecanico] = cuerpo.compuertas;
       expect(jev?.model).toBe("TypeSafe/typesafe/jev-1.13");

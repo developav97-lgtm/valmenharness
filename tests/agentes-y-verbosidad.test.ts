@@ -82,7 +82,9 @@ describe("R-RESP-007: la verbosidad de Codex", () => {
     const fusion = mergeCodexVerbosity(propio, "low");
     expect(fusion).toContain('model = "gpt-5"');
     expect(fusion).toContain('[mcp_servers.x]\ncommand = "x"');
-    expect(fusion.indexOf("model_verbosity")).toBeLessThan(fusion.indexOf("[mcp_servers.x]"));
+    expect(fusion.indexOf("model_verbosity")).toBeLessThan(
+      fusion.indexOf("[mcp_servers.x]"),
+    );
     expect(mergeCodexVerbosity(fusion, "low")).toBe(fusion);
   });
 
@@ -94,7 +96,9 @@ describe("R-RESP-007: la verbosidad de Codex", () => {
   it("una clave del mismo nombre dentro de una sección no cuenta como la de nivel superior", () => {
     const fusion = mergeCodexVerbosity('[perfil]\nmodel_verbosity = "high"\n', "low");
     expect(fusion.split("model_verbosity")).toHaveLength(3);
-    expect(fusion.indexOf('model_verbosity = "low"')).toBeLessThan(fusion.indexOf("[perfil]"));
+    expect(fusion.indexOf('model_verbosity = "low"')).toBeLessThan(
+      fusion.indexOf("[perfil]"),
+    );
   });
 
   it("sync es idempotente y --check queda al día", () => {

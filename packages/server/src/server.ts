@@ -129,8 +129,16 @@ import {
   writeRouting,
 } from "./routing.js";
 import { listarOpcionesDeAutorizacion } from "./autorizaciones-opciones.js";
-import { crearAutorizacionDeAprobacionMc, listarAutorizacionesDeAprobacion, revocarAutorizacionDeAprobacionMc } from "./approval-autorizaciones.js";
-import { crearAutorizacionQa, listarAutorizacionesQa, revocarAutorizacionQa } from "./qa-autorizaciones.js";
+import {
+  crearAutorizacionDeAprobacionMc,
+  listarAutorizacionesDeAprobacion,
+  revocarAutorizacionDeAprobacionMc,
+} from "./approval-autorizaciones.js";
+import {
+  crearAutorizacionQa,
+  listarAutorizacionesQa,
+  revocarAutorizacionQa,
+} from "./qa-autorizaciones.js";
 import { listFeatureRows, readFeatureDetail, summarizeFeatures } from "./features.js";
 import { guardarFotoEnTicket, leerLineaDeTiempo } from "./timeline.js";
 import { readExecutionPanel, readExecutionVisibleMessages } from "./execution-panel.js";
@@ -230,9 +238,11 @@ export function exigirTokenEnEscritura(
   method: string,
   authorization: string | undefined,
 ): { readonly status: 401; readonly body: { readonly error: string } } | null {
-  if (context.writeToken === undefined || METODOS_DE_LECTURA.has(method.toUpperCase())) return null;
+  if (context.writeToken === undefined || METODOS_DE_LECTURA.has(method.toUpperCase()))
+    return null;
   const recibido = /^Bearer (.+)$/.exec(authorization ?? "")?.[1] ?? "";
-  const hash = (texto: string): Buffer => createHash("sha256").update(texto, "utf8").digest();
+  const hash = (texto: string): Buffer =>
+    createHash("sha256").update(texto, "utf8").digest();
   if (timingSafeEqual(hash(recibido), hash(context.writeToken))) return null;
   return {
     status: 401,
@@ -306,7 +316,12 @@ function contextoDeProyecto(
     projectId,
     ...(context.bindingsFile === undefined ? {} : { bindingsFile: context.bindingsFile }),
   });
-  return { ...context, root: project.root, paths: project.paths, authorizedProject: project };
+  return {
+    ...context,
+    root: project.root,
+    paths: project.paths,
+    authorizedProject: project,
+  };
 }
 
 function proyectoAutorizadoParaEjecucion(context: ServerContext): AuthorizedProject {
@@ -314,9 +329,13 @@ function proyectoAutorizadoParaEjecucion(context: ServerContext): AuthorizedProj
   const catalogo = listAuthorizedProjects(
     context.bindingsFile === undefined ? {} : { bindingsFile: context.bindingsFile },
   );
-  const project = catalogo.projects.find((entry) => entry.available && entry.root === context.root);
+  const project = catalogo.projects.find(
+    (entry) => entry.available && entry.root === context.root,
+  );
   if (project === undefined || !project.available) {
-    throw new Error("El proyecto actual debe estar declarado y disponible en los bindings locales para consultar ejecuciones.");
+    throw new Error(
+      "El proyecto actual debe estar declarado y disponible en los bindings locales para consultar ejecuciones.",
+    );
   }
   return project;
 }
@@ -325,7 +344,8 @@ function enteroDeQuery(query: URLSearchParams, name: string): number | undefined
   const value = valorDeQuery(query, name);
   if (value === undefined) return undefined;
   const parsed = Number(value);
-  if (!Number.isSafeInteger(parsed) || parsed < 0) throw new Error(`El parámetro \`${name}\` debe ser un entero no negativo.`);
+  if (!Number.isSafeInteger(parsed) || parsed < 0)
+    throw new Error(`El parámetro \`${name}\` debe ser un entero no negativo.`);
   return parsed;
 }
 
@@ -580,7 +600,13 @@ export async function handleApi(
   if (method === "GET" && path === "/api/portafolio") {
     for (const key of query.keys()) {
       if (key !== "desde" && key !== "hasta") {
-        return { status: 400, body: { error: "El portafolio solo admite `desde` y `hasta`; no acepta rutas ni selección de proyecto." } };
+        return {
+          status: 400,
+          body: {
+            error:
+              "El portafolio solo admite `desde` y `hasta`; no acepta rutas ni selección de proyecto.",
+          },
+        };
       }
     }
     const desde = valorDeQuery(query, "desde");
@@ -591,9 +617,16 @@ export async function handleApi(
     });
     const validDate = (date: string): boolean =>
       /^\d{4}-\d{2}-\d{2}$/.test(date) &&
-      !Number.isNaN(Date.parse(date)) && new Date(date).toISOString().slice(0, 10) === date;
+      !Number.isNaN(Date.parse(date)) &&
+      new Date(date).toISOString().slice(0, 10) === date;
     if (!validDate(range.desde) || !validDate(range.hasta) || range.desde > range.hasta) {
-      return { status: 400, body: { error: "El rango debe contener fechas válidas YYYY-MM-DD, con `desde` anterior o igual a `hasta`." } };
+      return {
+        status: 400,
+        body: {
+          error:
+            "El rango debe contener fechas válidas YYYY-MM-DD, con `desde` anterior o igual a `hasta`.",
+        },
+      };
     }
     const catalog = listAuthorizedProjects({
       bindingsFile: context.bindingsFile ?? machineBindingsPath(homedir()),
@@ -646,7 +679,12 @@ export async function handleApi(
     partes[4] === "approve"
   ) {
     const gate = partes[3] as string;
-    const datos = body as { actor?: unknown; reason?: unknown; run?: unknown; phrase?: unknown };
+    const datos = body as {
+      actor?: unknown;
+      reason?: unknown;
+      run?: unknown;
+      phrase?: unknown;
+    };
     const actor = typeof datos.actor === "string" ? datos.actor.trim() : "";
     if (actor === "") {
       return {
@@ -753,7 +791,8 @@ export async function handleApi(
     try {
       const resultado = materializeFeature(paths, slug, {
         write: !dryRun,
-        allowExternalLinks: (body as { allowExternalLinks?: unknown }).allowExternalLinks === true,
+        allowExternalLinks:
+          (body as { allowExternalLinks?: unknown }).allowExternalLinks === true,
       });
       return {
         status: 200,
@@ -932,8 +971,7 @@ export async function handleApi(
         ticket,
         fases,
         kanban: fasesDeBoard(board, ticket),
-        timeline:
-          linea === null ? { disponible: false } : { disponible: true, ...linea },
+        timeline: linea === null ? { disponible: false } : { disponible: true, ...linea },
         // La vista por fase de la misma lista de sesiones: la lista plana sigue
         // completa y esto solo dice en qué tramo cayó cada una. Sin base de
         // contabilidad queda una estructura vacía por fase, no una lista
@@ -1025,7 +1063,10 @@ export async function handleApi(
   if (method === "GET" && path === "/api/corrida/agentes") {
     const sesion = valorDeQuery(query, "sesion");
     if (sesion !== undefined && !esSesionValida(sesion)) {
-      return { status: 400, body: { error: "El parámetro `sesion` debe ser un identificador simple." } };
+      return {
+        status: 400,
+        body: { error: "El parámetro `sesion` debe ser un identificador simple." },
+      };
     }
     let project: AuthorizedProject | undefined;
     try {
@@ -1053,7 +1094,10 @@ export async function handleApi(
   if (method === "GET" && path === "/api/execution-freshness") {
     try {
       const project = proyectoAutorizadoParaEjecucion(context);
-      return { status: 200, body: { projectId: project.projectId, sources: readSourceFreshness(project) } };
+      return {
+        status: 200,
+        body: { projectId: project.projectId, sources: readSourceFreshness(project) },
+      };
     } catch (caught) {
       return { status: 400, body: { error: toFailure(caught).message } };
     }
@@ -1185,13 +1229,23 @@ export async function handleApi(
 
   // GET /api/tickets/:id/executions
   if (
-    method === "GET" && partes.length === 4 && partes[0] === "api" &&
-    partes[1] === "tickets" && partes[3] === "executions"
+    method === "GET" &&
+    partes.length === 4 &&
+    partes[0] === "api" &&
+    partes[1] === "tickets" &&
+    partes[3] === "executions"
   ) {
     const ticket = partes[2] as string;
-    if (readTicket(paths, ticket) === null) return { status: 404, body: { error: `No existe el ticket "${ticket}".` } };
+    if (readTicket(paths, ticket) === null)
+      return { status: 404, body: { error: `No existe el ticket "${ticket}".` } };
     try {
-      return { status: 200, body: { ticket, executions: readExecutionPanel(proyectoAutorizadoParaEjecucion(context), ticket) } };
+      return {
+        status: 200,
+        body: {
+          ticket,
+          executions: readExecutionPanel(proyectoAutorizadoParaEjecucion(context), ticket),
+        },
+      };
     } catch (caught) {
       return { status: 400, body: { error: toFailure(caught).message } };
     }
@@ -1199,14 +1253,21 @@ export async function handleApi(
 
   // GET /api/tickets/:ticket/executions/:execution/messages?attempt=&session=&after=&limit=
   if (
-    method === "GET" && partes.length === 6 && partes[0] === "api" &&
-    partes[1] === "tickets" && partes[3] === "executions" && partes[5] === "messages"
+    method === "GET" &&
+    partes.length === 6 &&
+    partes[0] === "api" &&
+    partes[1] === "tickets" &&
+    partes[3] === "executions" &&
+    partes[5] === "messages"
   ) {
     const ticket = partes[2] as string;
     const attemptId = valorDeQuery(query, "attempt");
     const sessionId = valorDeQuery(query, "session");
     if (attemptId === undefined || sessionId === undefined) {
-      return { status: 400, body: { error: "Faltan los parámetros `attempt` o `session`." } };
+      return {
+        status: 400,
+        body: { error: "Faltan los parámetros `attempt` o `session`." },
+      };
     }
     try {
       const afterId = enteroDeQuery(query, "after");
@@ -1214,9 +1275,13 @@ export async function handleApi(
       return {
         status: 200,
         body: readExecutionVisibleMessages({
-          project: proyectoAutorizadoParaEjecucion(context), ticketId: ticket,
-          executionId: partes[4] as string, attemptId, sessionId,
-          ...(afterId === undefined ? {} : { afterId }), ...(limit === undefined ? {} : { limit }),
+          project: proyectoAutorizadoParaEjecucion(context),
+          ticketId: ticket,
+          executionId: partes[4] as string,
+          attemptId,
+          sessionId,
+          ...(afterId === undefined ? {} : { afterId }),
+          ...(limit === undefined ? {} : { limit }),
         }),
       };
     } catch (caught) {
@@ -1618,18 +1683,32 @@ export async function handleApi(
   // si se pidió—. Un `profiles.yaml` ilegible llega como `aviso`, no como 500.
   if (method === "GET" && path === "/api/modelos/fases") {
     const ejecutor = valorDeQuery(query, "ejecutor");
-    if (ejecutor !== undefined && !(EJECUTORES_CON_PERFIL as readonly string[]).includes(ejecutor)) {
+    if (
+      ejecutor !== undefined &&
+      !(EJECUTORES_CON_PERFIL as readonly string[]).includes(ejecutor)
+    ) {
       return {
         status: 400,
-        body: { error: `"${ejecutor}" no es un ejecutor con perfil. Los vigentes son: ${EJECUTORES_CON_PERFIL.join(", ")}.` },
+        body: {
+          error: `"${ejecutor}" no es un ejecutor con perfil. Los vigentes son: ${EJECUTORES_CON_PERFIL.join(", ")}.`,
+        },
       };
     }
-    const sesion = fasesDeSesion(context.root, ejecutor === undefined ? {} : { cliente: ejecutor as ClienteDeSesion });
-    const registros = leerFases(context.root).filter((r) => ejecutor === undefined || r.ejecutor === ejecutor);
+    const sesion = fasesDeSesion(
+      context.root,
+      ejecutor === undefined ? {} : { cliente: ejecutor as ClienteDeSesion },
+    );
+    const registros = leerFases(context.root).filter(
+      (r) => ejecutor === undefined || r.ejecutor === ejecutor,
+    );
     const fases = sesion.fases.map((fase) => {
       let ultimo: (typeof registros)[number] | null = null;
       for (const registro of registros) {
-        if (registro.fase === fase.fase && (ultimo === null || registro.registradoEn >= ultimo.registradoEn)) ultimo = registro;
+        if (
+          registro.fase === fase.fase &&
+          (ultimo === null || registro.registradoEn >= ultimo.registradoEn)
+        )
+          ultimo = registro;
       }
       return {
         fase: fase.fase,
@@ -1672,7 +1751,9 @@ export async function handleApi(
     ) {
       return {
         status: 400,
-        body: { error: "Se espera `perfil` (texto o null) y, opcional, `ejecutor` (texto)." },
+        body: {
+          error: "Se espera `perfil` (texto o null) y, opcional, `ejecutor` (texto).",
+        },
       };
     }
     try {
@@ -1714,10 +1795,17 @@ export async function handleApi(
     try {
       let perfil: PerfilDeModelos;
       if (datos.base === undefined) {
-        perfil = { id: datos.id, description: datos.description, origen: "proyecto", roles };
+        perfil = {
+          id: datos.id,
+          description: datos.description,
+          origen: "proyecto",
+          roles,
+        };
       } else {
         const baseId = datos.base;
-        const base = listarPerfiles(context.root).find((candidato) => candidato.id === baseId);
+        const base = listarPerfiles(context.root).find(
+          (candidato) => candidato.id === baseId,
+        );
         if (base === undefined) {
           return { status: 400, body: { error: `el perfil base "${baseId}" no existe.` } };
         }
@@ -1861,7 +1949,10 @@ export async function handleApi(
   // Las escrituras ya pasaron por `exigirTokenEnEscritura`; el motor rechaza una sesión desatendida.
   // GET /api/authorizations/options  — opciones del formulario: módulos del proyecto activo, tipos, etapas, modos e impactos.
   if (path === "/api/authorizations/options" && method === "GET") {
-    return listarOpcionesDeAutorizacion(context.root, context.paths ?? choosePaths(context.root));
+    return listarOpcionesDeAutorizacion(
+      context.root,
+      context.paths ?? choosePaths(context.root),
+    );
   }
   if (path === "/api/approval/authorizations" && method === "GET") {
     return listarAutorizacionesDeAprobacion(context.root);
@@ -2097,7 +2188,8 @@ function cambioTocaEventosDeEjecucion(
 ): boolean {
   const events = executionEventsPath(project);
   return rutas.some(
-    (ruta) => ruta === events || events.startsWith(`${ruta}/`) || ruta.startsWith(`${events}/`),
+    (ruta) =>
+      ruta === events || events.startsWith(`${ruta}/`) || ruta.startsWith(`${events}/`),
   );
 }
 
@@ -2175,13 +2267,17 @@ function vigilar(context: ServerContext, paths: RegistryPaths): () => void {
   for (const objetivo of objetivos) {
     try {
       vigías.push(
-        watch(objetivo, { recursive: true }, (_evento, archivo) => registrarCambio(objetivo, archivo)),
+        watch(objetivo, { recursive: true }, (_evento, archivo) =>
+          registrarCambio(objetivo, archivo),
+        ),
       );
       // La vigía recursiva informa cambios dentro de directorios existentes;
       // esta segunda vigía del raíz cubre la creación inicial de `executions/`
       // en sistemas que no registran todavía sus hijos nuevos en la recursiva.
       if (objetivo.endsWith("/.valmen")) {
-        vigías.push(watch(objetivo, (_evento, archivo) => registrarCambio(objetivo, archivo)));
+        vigías.push(
+          watch(objetivo, (_evento, archivo) => registrarCambio(objetivo, archivo)),
+        );
       }
     } catch {
       // Un directorio que todavía no existe no es un error: el registro se crea
@@ -2220,7 +2316,11 @@ async function handleRequest(
   const url = new URL(request.url ?? "/", "http://127.0.0.1");
   const method = request.method ?? "GET";
 
-  const sinToken = exigirTokenEnEscritura(context, method, request.headers["authorization"]);
+  const sinToken = exigirTokenEnEscritura(
+    context,
+    method,
+    request.headers["authorization"],
+  );
   if (sinToken !== null) {
     send(response, sinToken.status, sinToken.body, "application/json; charset=utf-8");
     return;
@@ -2235,13 +2335,16 @@ async function handleRequest(
       const projectId = valorDeQuery(url.searchParams, "project");
       if (projectId !== undefined) {
         project = proyectoAutorizadoParaEjecucion(contextoDeProyecto(context, projectId));
-        const requested = request.headers["last-event-id"] ?? valorDeQuery(url.searchParams, "after");
-        if (Array.isArray(requested)) throw new Error("Last-Event-ID debe contener un único cursor.");
+        const requested =
+          request.headers["last-event-id"] ?? valorDeQuery(url.searchParams, "after");
+        if (Array.isArray(requested))
+          throw new Error("Last-Event-ID debe contener un único cursor.");
         if (requested !== undefined && !/^\d+$/.test(requested)) {
           throw new Error("El cursor SSE debe ser un entero no negativo.");
         }
         cursor = requested === undefined ? 0 : Number(requested);
-        if (!Number.isSafeInteger(cursor)) throw new Error("El cursor SSE es demasiado grande.");
+        if (!Number.isSafeInteger(cursor))
+          throw new Error("El cursor SSE es demasiado grande.");
       }
     } catch (caught) {
       const error = caught instanceof Error ? caught.message : String(caught);
@@ -2256,7 +2359,11 @@ async function handleRequest(
     // Sin latido, un proxy o el propio navegador pueden cerrar la conexión por
     // inactividad, y la pantalla dejaría de actualizarse en silencio.
     response.write("retry: 3000\n\n");
-    const subscriber: SuscriptorDeEventos = { response, ...(project === undefined ? {} : { project }), cursor };
+    const subscriber: SuscriptorDeEventos = {
+      response,
+      ...(project === undefined ? {} : { project }),
+      cursor,
+    };
     suscriptores.add(subscriber);
     if (project !== undefined) publicarEventosPendientes(subscriber, "connected");
 
@@ -2279,11 +2386,23 @@ async function handleRequest(
     if (url.pathname.startsWith("/api/")) {
       const selected = request.headers["x-valmen-project"];
       if (Array.isArray(selected) || selected === "") {
-        send(response, 400, { error: "X-Valmen-Project debe contener un único project-id." }, "application/json; charset=utf-8");
+        send(
+          response,
+          400,
+          { error: "X-Valmen-Project debe contener un único project-id." },
+          "application/json; charset=utf-8",
+        );
         return;
       }
       if (url.pathname === "/api/portafolio" && selected !== undefined) {
-        send(response, 400, { error: "El portafolio es una vista conjunta y no admite selección de proyecto." }, "application/json; charset=utf-8");
+        send(
+          response,
+          400,
+          {
+            error: "El portafolio es una vista conjunta y no admite selección de proyecto.",
+          },
+          "application/json; charset=utf-8",
+        );
         return;
       }
       let requestContext: ServerContext;

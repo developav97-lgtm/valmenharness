@@ -186,9 +186,9 @@ export async function evaluateWithJev(options: EvaluateOptions): Promise<JevEval
   // la URL de prueba activa no se resuelve ni se manda ninguna credencial, aunque llegue por
   // `options.apiKey`, y no se siguen redirecciones; sin la variable, todo sigue como estaba.
   const urlDePrueba = testBaseUrlFor("jev");
-  const endpoint =
-    urlDePrueba === null ? DECISIONS_ENDPOINT : `${urlDePrueba}/decisions`;
-  const apiKey = urlDePrueba !== null ? "" : (options.apiKey ?? resolveApiKeyFromCredentials());
+  const endpoint = urlDePrueba === null ? DECISIONS_ENDPOINT : `${urlDePrueba}/decisions`;
+  const apiKey =
+    urlDePrueba !== null ? "" : (options.apiKey ?? resolveApiKeyFromCredentials());
   const fetchImpl = options.fetchImpl ?? fetch;
   const model = options.model ?? DEFAULT_JEV_MODEL;
 

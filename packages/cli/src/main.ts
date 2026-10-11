@@ -63,7 +63,12 @@ import { approveCommand, closeCommand } from "./ceremony.js";
 import { REAL_GIT, runDelegation } from "./delegation.js";
 import { runFeature } from "./features.js";
 import { probeCodegraph } from "./codegraph.js";
-import { doctorCommand, perfilesCommand, providerCommand, routingCommand } from "./setup.js";
+import {
+  doctorCommand,
+  perfilesCommand,
+  providerCommand,
+  routingCommand,
+} from "./setup.js";
 import { verifyOnboarding } from "./onboarding-verify.js";
 import {
   runHermes,
@@ -1318,7 +1323,13 @@ export function dispatch(options: Options): CommandResult {
       const rawId = options.flags["id"];
       const id = typeof rawId === "string" ? rawId : undefined;
       const rawCliente = options.flags["cliente"];
-      return resumeTicket(paths, id, undefined, typeof rawCliente === "string" ? rawCliente : undefined, options.flags["quiet"] === true);
+      return resumeTicket(
+        paths,
+        id,
+        undefined,
+        typeof rawCliente === "string" ? rawCliente : undefined,
+        options.flags["quiet"] === true,
+      );
     }
 
     case "ask": {
@@ -1507,13 +1518,13 @@ export async function runGateFromFlags(
   // para un CLI; con él, un proyecto puede tener el suyo y el comando y la
   // app dejan de poder discrepar.
   const archivoCredenciales =
-    typeof flags["credentials"] === "string"
-      ? flags["credentials"]
-      : undefined;
+    typeof flags["credentials"] === "string" ? flags["credentials"] : undefined;
   // La revisión del diff habla con el proveedor del rol `reviewer`, no con el del evaluador.
   const revisaDiff = GATES[gateId]?.diffReview === true;
   const credentialResolver =
-    cascade === undefined && !revisaDiff ? undefined : credentialForCascade(archivoCredenciales);
+    cascade === undefined && !revisaDiff
+      ? undefined
+      : credentialForCascade(archivoCredenciales);
   const apiKey =
     cascade === undefined
       ? (apiKeyWithPrecedence(
@@ -1532,17 +1543,15 @@ export async function runGateFromFlags(
       : { credentialForProvider: credentialResolver }),
     ...(evaluator === undefined ? {} : { evaluator }),
     ...(routing.evaluatorModel === "" ? {} : { model: routing.evaluatorModel }),
-    ...(routing.evaluatorProvider === ""
-      ? {}
-      : { provider: routing.evaluatorProvider }),
+    ...(routing.evaluatorProvider === "" ? {} : { provider: routing.evaluatorProvider }),
     ...(routing.probabilistic ? {} : { semantic: "llm-judge" as const }),
-    ...(routing.evaluatorEffort === "auto"
-      ? {}
-      : { effort: routing.evaluatorEffort }),
+    ...(routing.evaluatorEffort === "auto" ? {} : { effort: routing.evaluatorEffort }),
     ...(routing.judgeModel === "" ? {} : { judgeModel: routing.judgeModel }),
     ...(cascade === undefined ? {} : { cascade }),
     ...(presupuesto.note === null ? {} : { notes: [presupuesto.note] }),
-    ...(typeof flags["force-reason"] === "string" ? { forceReason: flags["force-reason"] } : {}),
+    ...(typeof flags["force-reason"] === "string"
+      ? { forceReason: flags["force-reason"] }
+      : {}),
     ...(typeof flags["base"] === "string" ? { base: flags["base"] } : {}),
   });
 }
@@ -1578,7 +1587,12 @@ export async function run(argv: readonly string[]): Promise<number> {
     // tabla no tiene responde lo mismo que respondía el `default` de `dispatch`.
     // `--version` contesta antes de despachar: `valmen serve --version` no levanta
     // el servidor.
-    if (command !== undefined && !options.help && !options.version && !existeComando([command])) {
+    if (
+      command !== undefined &&
+      !options.help &&
+      !options.version &&
+      !existeComando([command])
+    ) {
       result = { stdout: "", stderr: comandoDesconocido(command), exitCode: EXIT_SCHEMA };
     } else if (options.version) {
       result = dispatch(options);
@@ -1987,19 +2001,32 @@ export async function run(argv: readonly string[]): Promise<number> {
               ? journeyNextCommand(options.flags, { root: resolvePaths(options).root })
               : rest[0] === "brief"
                 ? journeyBriefCommand(options.flags, { root: resolvePaths(options).root })
-            : rest[0] === "handoff"
-                ? journeyHandoffCommand(options.flags, { root: resolvePaths(options).root })
-            : rest[0] === "install-trigger"
-              ? journeyInstallTriggerCommand(options.flags)
-              : rest[0] === "notify-plans"
-                ? journeyNotifyPlansCommand(options.flags)
-                : rest[0] === "approve-eligible"
-                ? journeyApproveEligibleCommand(options.flags, { root: resolvePaths(options).root })
-                : rest[0] === "clear-stop"
-                ? journeyClearStopCommand(options.flags)
-                : rest[0] === "worktree"
-                ? journeyWorktreeCommand(resolvePaths(options), rest.slice(1), options.flags)
-                : { stdout: "", stderr: "journey admite: plan, advance (solo --fase preparacion), next, brief, handoff, notify-plans, approve-eligible, clear-stop, worktree e install-trigger (retirado).\n", exitCode: EXIT_SCHEMA };
+                : rest[0] === "handoff"
+                  ? journeyHandoffCommand(options.flags, {
+                      root: resolvePaths(options).root,
+                    })
+                  : rest[0] === "install-trigger"
+                    ? journeyInstallTriggerCommand(options.flags)
+                    : rest[0] === "notify-plans"
+                      ? journeyNotifyPlansCommand(options.flags)
+                      : rest[0] === "approve-eligible"
+                        ? journeyApproveEligibleCommand(options.flags, {
+                            root: resolvePaths(options).root,
+                          })
+                        : rest[0] === "clear-stop"
+                          ? journeyClearStopCommand(options.flags)
+                          : rest[0] === "worktree"
+                            ? journeyWorktreeCommand(
+                                resolvePaths(options),
+                                rest.slice(1),
+                                options.flags,
+                              )
+                            : {
+                                stdout: "",
+                                stderr:
+                                  "journey admite: plan, advance (solo --fase preparacion), next, brief, handoff, notify-plans, approve-eligible, clear-stop, worktree e install-trigger (retirado).\n",
+                                exitCode: EXIT_SCHEMA,
+                              };
     } else if (command === "review-agent") {
       result = await reviewAgentCommand(resolvePaths(options), options.flags);
     } else if (command === "qa-shadow") {
@@ -2027,7 +2054,11 @@ export async function run(argv: readonly string[]): Promise<number> {
           ? skillsExternalCommand(resolvePaths(options).root)
           : rest[0] === "review"
             ? skillsReviewCommand(resolvePaths(options).root, rest[1], options.flags)
-            : { stdout: "", stderr: "skills admite: external o review.\n", exitCode: EXIT_SCHEMA };
+            : {
+                stdout: "",
+                stderr: "skills admite: external o review.\n",
+                exitCode: EXIT_SCHEMA,
+              };
     } else if (command === "approval-authorize") {
       result =
         rest[0] === "approvals"
@@ -2040,7 +2071,8 @@ export async function run(argv: readonly string[]): Promise<number> {
     } else if (command === "approve") {
       const rutas = resolvePaths(options);
       result = await approveCommand(rutas, options.flags, {
-        runGate: (gateId, ticketId) => runGateFromFlags(rutas, gateId, ticketId, options.flags),
+        runGate: (gateId, ticketId) =>
+          runGateFromFlags(rutas, gateId, ticketId, options.flags),
         decide: recordHumanDecision,
       });
     } else if (command === "close") {
@@ -2080,7 +2112,12 @@ export async function run(argv: readonly string[]): Promise<number> {
           exitCode: EXIT_SCHEMA,
         };
       } else {
-        result = await runGateFromFlags(resolvePaths(options), gateId, ticketId, options.flags);
+        result = await runGateFromFlags(
+          resolvePaths(options),
+          gateId,
+          ticketId,
+          options.flags,
+        );
       }
     } else if (command === "cascada") {
       // La tarea se valida **antes** de resolver rutas, cadena y credenciales: un

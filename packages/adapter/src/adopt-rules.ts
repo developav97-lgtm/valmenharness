@@ -126,7 +126,11 @@ function cortarEnSecciones(texto: string): { sections: Seccion[]; title: string 
       // El título del documento es el primer encabezado de nivel 1, y sólo si no
       // hay nada antes que no sean líneas vacías: un `#` en medio del texto es
       // parte del texto.
-      if (title === null && abierta === null && preambulo.every((una) => una.trim() === "")) {
+      if (
+        title === null &&
+        abierta === null &&
+        preambulo.every((una) => una.trim() === "")
+      ) {
         const nivel1 = /^#\s+(.+?)\s*$/.exec(line);
         if (nivel1 !== null) {
           title = nivel1[1] as string;

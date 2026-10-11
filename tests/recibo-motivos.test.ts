@@ -80,7 +80,10 @@ describe("el motivo de cada respuesta", () => {
     });
     const recibo = reciboCon(evaluacion.answers);
 
-    expect(recibo.modelAnswers.map((a) => a.reason)).toEqual(["el plan lo nombra", "cubre todo"]);
+    expect(recibo.modelAnswers.map((a) => a.reason)).toEqual([
+      "el plan lo nombra",
+      "cubre todo",
+    ]);
   });
 
   it("queda en null cuando el evaluador no lo da, y no falta el campo", () => {

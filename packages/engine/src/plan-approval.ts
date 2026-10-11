@@ -180,9 +180,13 @@ export function registrarAprobacionDePlan(request: PlanApprovalRequest): void {
   }
   const actor = request.actor.trim();
   const quote = request.quote.trim();
-  if (actor === "") fail("Aprobar un plan necesita un responsable: falta --actor.", EXIT_SCHEMA);
+  if (actor === "")
+    fail("Aprobar un plan necesita un responsable: falta --actor.", EXIT_SCHEMA);
   if (quote === "") {
-    fail("Aprobar un plan necesita la frase literal de quien aprueba: falta --quote.", EXIT_SCHEMA);
+    fail(
+      "Aprobar un plan necesita la frase literal de quien aprueba: falta --quote.",
+      EXIT_SCHEMA,
+    );
   }
   // La fuente `autorizacion` es de `aprobarPorAutorizacion`: por aquí no se puede forjar (C16).
   if (request.source === FUENTE_AUTORIZACION) {
@@ -201,7 +205,8 @@ export function registrarAprobacionDePlan(request: PlanApprovalRequest): void {
     );
   }
   const fuentes = planApprovalSources(request.paths.root);
-  const porDelegacion = request.viaDelegacion === true && request.source === FUENTE_DELEGACION;
+  const porDelegacion =
+    request.viaDelegacion === true && request.source === FUENTE_DELEGACION;
   if (!porDelegacion && !fuentes.includes(request.source)) {
     fail(
       `La fuente «${request.source}» no está entre las que el proyecto acepta para aprobar un plan: ` +

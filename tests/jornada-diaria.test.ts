@@ -6,7 +6,14 @@
  * la política manda (sin ejecutor autorizado no se arma nada), repetir el día no duplica, un
  * aviso perdido no deshace lo escrito y programar no crea tareas por ticket.
  */
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -38,7 +45,9 @@ function politica(autorizada: boolean): void {
     [
       `project-id: ${projectId}`,
       "execution:",
-      ...(autorizada ? ["  dispatch-executors:", "    - codex"] : ["  dispatch-executors: []"]),
+      ...(autorizada
+        ? ["  dispatch-executors:", "    - codex"]
+        : ["  dispatch-executors: []"]),
       "autonomous:",
       `  enabled: ${autorizada}`,
       "  executor:",
@@ -70,7 +79,9 @@ beforeEach(() => {
   home = join(tmpdir(), `valmen-jornada-${Date.now()}-${Math.random()}`);
   root = join(home, "proyecto");
   mkdirSync(join(home, ".valmen"), { recursive: true });
-  mkdirSync(join(root, ".valmen", "features", "kardex", "spec", "inventario"), { recursive: true });
+  mkdirSync(join(root, ".valmen", "features", "kardex", "spec", "inventario"), {
+    recursive: true,
+  });
   writeFileSync(
     join(home, ".valmen", "bindings.local.yaml"),
     `schema-version: 1\nmachine-id: qa\nprojects:\n  ${projectId}:\n    root: ${root}\n`,
@@ -119,12 +130,26 @@ beforeEach(() => {
     "utf8",
   );
   for (const id of [A, B, C]) {
-    writeFixtureTicket(root, { id, workflowStatus: "approved", type: "FEATURE", module: "INVENTARIO" });
+    writeFixtureTicket(root, {
+      id,
+      workflowStatus: "approved",
+      type: "FEATURE",
+      module: "INVENTARIO",
+    });
   }
-  writeFixtureTicket(root, { id: CERRADO, workflowStatus: "intake", type: "FEATURE", module: "INVENTARIO" });
+  writeFixtureTicket(root, {
+    id: CERRADO,
+    workflowStatus: "intake",
+    type: "FEATURE",
+    module: "INVENTARIO",
+  });
   // Cerrado de verdad: se reescribe el estado, que es lo único que mira el armado.
   const ruta = join(root, "tickets", "2026", CERRADO, "ticket.md");
-  writeFileSync(ruta, readFileSync(ruta, "utf8").replace(/^workflow_status: .*$/m, "workflow_status: closed"), "utf8");
+  writeFileSync(
+    ruta,
+    readFileSync(ruta, "utf8").replace(/^workflow_status: .*$/m, "workflow_status: closed"),
+    "utf8",
+  );
 });
 
 afterEach(() => rmSync(home, { recursive: true, force: true }));
@@ -159,7 +184,9 @@ describe("armar la jornada del día", () => {
   it("el orden respeta las dependencias y cada ticket declara las suyas dentro de la jornada", () => {
     armarJornada({ project: proyecto(), feature: "kardex", ahora: () => AHORA });
     const tickets = readJourneys(proyecto())[0]?.tickets ?? [];
-    const dependencias = Object.fromEntries(tickets.map((t) => [t.ticketId, [...t.dependsOn]]));
+    const dependencias = Object.fromEntries(
+      tickets.map((t) => [t.ticketId, [...t.dependsOn]]),
+    );
     expect(dependencias).toEqual({ [A]: [], [B]: [A], [C]: [B] });
     expect(tickets.map((t) => t.order)).toEqual([1, 2, 3]);
   });
@@ -180,7 +207,11 @@ describe("armar la jornada del día", () => {
   });
 
   it("una lista de tickets conserva el orden dado y omite lo que no existe", () => {
-    const jornada = armarJornada({ project: proyecto(), tickets: [C, "FEATURE-NADA-X-20261005", A], ahora: () => AHORA });
+    const jornada = armarJornada({
+      project: proyecto(),
+      tickets: [C, "FEATURE-NADA-X-20261005", A],
+      ahora: () => AHORA,
+    });
     expect(jornada.tickets.map((t) => t.ticketId)).toEqual([C, A]);
     expect(jornada.omitidos[0]).toContain("no existe");
   });
@@ -189,16 +220,23 @@ describe("armar la jornada del día", () => {
 describe("la política manda", () => {
   it("sin ejecutor autorizado no arma nada y el mensaje dice qué declarar", () => {
     politica(false);
-    expect(() => armarJornada({ project: proyecto(), feature: "kardex", ahora: () => AHORA })).toThrow(
-      /execution\.dispatch-executors.*autonomous\.executor/s,
-    );
+    expect(() =>
+      armarJornada({ project: proyecto(), feature: "kardex", ahora: () => AHORA }),
+    ).toThrow(/execution\.dispatch-executors.*autonomous\.executor/s);
     expect(readJourneys(proyecto())).toEqual([]);
   });
 
   it("pedir feature y tickets a la vez, o ninguno, se rechaza", () => {
-    expect(() => armarJornada({ project: proyecto(), ahora: () => AHORA })).toThrow(/feature o una lista/);
+    expect(() => armarJornada({ project: proyecto(), ahora: () => AHORA })).toThrow(
+      /feature o una lista/,
+    );
     expect(() =>
-      armarJornada({ project: proyecto(), feature: "kardex", tickets: [A], ahora: () => AHORA }),
+      armarJornada({
+        project: proyecto(),
+        feature: "kardex",
+        tickets: [A],
+        ahora: () => AHORA,
+      }),
     ).toThrow(/feature o una lista/);
   });
 });
@@ -234,7 +272,12 @@ describe("el aviso", () => {
 describe("la herramienta MCP y la ausencia de cron por ticket", () => {
   it("armar_jornada arma la misma jornada y devuelve su dato", async () => {
     const resultado = await callTool(
-      { paths: { root, ticketsDir: "tickets" }, credentialsFile: undefined, home, now: () => AHORA },
+      {
+        paths: { root, ticketsDir: "tickets" },
+        credentialsFile: undefined,
+        home,
+        now: () => AHORA,
+      },
       "armar_jornada",
       { proyecto: projectId, feature: "kardex" },
     );
@@ -248,7 +291,9 @@ describe("la herramienta MCP y la ausencia de cron por ticket", () => {
   it("programar el día no crea jobs de cron ni tareas por ticket", () => {
     armarJornada({ project: proyecto(), feature: "kardex", ahora: () => AHORA });
     const rastros = existsSync(join(root, ".valmen"))
-      ? readdirSync(join(root, ".valmen")).filter((nombre) => /cron|schedule|launchd|jobs/i.test(nombre))
+      ? readdirSync(join(root, ".valmen")).filter((nombre) =>
+          /cron|schedule|launchd|jobs/i.test(nombre),
+        )
       : [];
     expect(rastros).toEqual([]);
   });
@@ -259,7 +304,14 @@ describe("armar la jornada de un día nuevo", () => {
   const HOY = new Date("2026-10-07T01:00:00.000Z");
   const fijarEstado = (id: string, estadoNuevo: string): void => {
     const ruta = join(root, "tickets", "2026", id, "ticket.md");
-    writeFileSync(ruta, readFileSync(ruta, "utf8").replace(/^workflow_status: .*$/m, `workflow_status: ${estadoNuevo}`), "utf8");
+    writeFileSync(
+      ruta,
+      readFileSync(ruta, "utf8").replace(
+        /^workflow_status: .*$/m,
+        `workflow_status: ${estadoNuevo}`,
+      ),
+      "utf8",
+    );
   };
 
   it("incluye primero los pendientes de la jornada anterior sin duplicarlos", () => {
@@ -271,7 +323,11 @@ describe("armar la jornada de un día nuevo", () => {
     expect(nueva.tickets.map((t) => t.ticketId)).toEqual([B, C]);
     expect(nueva.heredados).toBeNull();
 
-    const otra = armarJornada({ project: proyecto(), tickets: [C], ahora: () => new Date("2026-10-08T01:00:00.000Z") });
+    const otra = armarJornada({
+      project: proyecto(),
+      tickets: [C],
+      ahora: () => new Date("2026-10-08T01:00:00.000Z"),
+    });
     // B y C siguen pendientes: C se pidió y no se duplica; B se hereda primero.
     expect(otra.tickets.map((t) => t.ticketId)).toEqual([B, C]);
     expect(otra.heredados).toEqual({ desde: nueva.journeyId, tickets: [B] });

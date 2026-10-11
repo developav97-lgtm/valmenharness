@@ -21,7 +21,14 @@ import {
   renderJourneyHandoffNotification,
 } from "../packages/engine/src/index.js";
 import { USAGE, VALUE_OPTIONS } from "../packages/cli/src/main.js";
-import { crearEntornoOla, crearJornada, enJornada, fotoDelArbol, ticketEn, type EntornoOla } from "./helpers/ola.js";
+import {
+  crearEntornoOla,
+  crearJornada,
+  enJornada,
+  fotoDelArbol,
+  ticketEn,
+  type EntornoOla,
+} from "./helpers/ola.js";
 import { writeFixtureTicket } from "./helpers/fixtures.js";
 
 const JORNADA = "JOR-20261008";
@@ -59,7 +66,11 @@ afterEach(() => entorno.limpiar());
 function conContrato(id: string, contrato: string, estado = "awaiting_user_tests"): void {
   ticketEn(entorno.root, id, estado);
   const ruta = join(entorno.root, "tickets", id.slice(-8, -4), id, "ticket.md");
-  writeFileSync(ruta, readFileSync(ruta, "utf8").replace("Resultado del PO: aprobado.", contrato), "utf8");
+  writeFileSync(
+    ruta,
+    readFileSync(ruta, "utf8").replace("Resultado del PO: aprobado.", contrato),
+    "utf8",
+  );
 }
 
 function cerrarPorPolitica(id: string, estado: "qa_approved" | "closed"): void {
@@ -67,7 +78,10 @@ function cerrarPorPolitica(id: string, estado: "qa_approved" | "closed"): void {
   const ruta = join(entorno.root, "tickets", id.slice(-8, -4), id, "ticket.md");
   writeFileSync(
     ruta,
-    readFileSync(ruta, "utf8").replace("aprobado por pruebas", `policy:QAA-20261008-abc123:${HASH}|recibo:.valmen/qa/agent-receipts.jsonl:1`),
+    readFileSync(ruta, "utf8").replace(
+      "aprobado por pruebas",
+      `policy:QAA-20261008-abc123:${HASH}|recibo:.valmen/qa/agent-receipts.jsonl:1`,
+    ),
     "utf8",
   );
 }
@@ -82,17 +96,31 @@ function armarCorrida(): void {
   conContrato(AJENO, "- Ejecutar `npm run ajeno`; esperado: pasa.");
   crearJornada(
     entorno,
-    [enJornada(A, 1), enJornada(B, 2), enJornada(POLITICA, 3), enJornada(PERSONA, 4), enJornada(C, 5)],
+    [
+      enJornada(A, 1),
+      enJornada(B, 2),
+      enJornada(POLITICA, 3),
+      enJornada(PERSONA, 4),
+      enJornada(C, 5),
+    ],
     { journeyId: JORNADA },
   );
 }
 
-const parte = () => armarParteDeJornada({ project: entorno.project(), journeyId: JORNADA, ahora: AHORA });
+const parte = () =>
+  armarParteDeJornada({ project: entorno.project(), journeyId: JORNADA, ahora: AHORA });
 const handoffsPath = () => join(entorno.root, ".valmen", "journeys", "handoffs.jsonl");
 const lineasGuardadas = (): string[] =>
-  existsSync(handoffsPath()) ? readFileSync(handoffsPath(), "utf8").split("\n").filter((l) => l.trim() !== "") : [];
+  existsSync(handoffsPath())
+    ? readFileSync(handoffsPath(), "utf8")
+        .split("\n")
+        .filter((l) => l.trim() !== "")
+    : [];
 
-function canal(falla = false): { runner: CommandRunner; llamadas: { args: readonly string[]; cuerpo: string }[] } {
+function canal(falla = false): {
+  runner: CommandRunner;
+  llamadas: { args: readonly string[]; cuerpo: string }[];
+} {
   const llamadas: { args: readonly string[]; cuerpo: string }[] = [];
   const runner: CommandRunner = (_c, args, input) => {
     llamadas.push({ args, cuerpo: input });
@@ -103,8 +131,16 @@ function canal(falla = false): { runner: CommandRunner; llamadas: { args: readon
   return { runner, llamadas };
 }
 
-const correr = (flags: Record<string, string | true>, extra: { runner?: CommandRunner } = {}) =>
-  journeyHandoffCommand(flags, { home: entorno.home, root: entorno.root, ahora: AHORA, ...extra });
+const correr = (
+  flags: Record<string, string | true>,
+  extra: { runner?: CommandRunner } = {},
+) =>
+  journeyHandoffCommand(flags, {
+    home: entorno.home,
+    root: entorno.root,
+    ahora: AHORA,
+    ...extra,
+  });
 
 describe("armar el parte", () => {
   it("C1: incluye id, título y ruta de cada ticket que espera pruebas, en el orden de la jornada", () => {
@@ -143,7 +179,14 @@ describe("armar el parte", () => {
   it("C5: un contrato pendiente sale marcado sin contrato y sin comandos inventados", () => {
     ticketEn(entorno.root, SIN_CONTRATO, "awaiting_user_tests");
     const ruta = join(entorno.root, "tickets", "2026", SIN_CONTRATO, "ticket.md");
-    writeFileSync(ruta, readFileSync(ruta, "utf8").replace("Resultado del PO: aprobado.", "Pendiente de ejecución."), "utf8");
+    writeFileSync(
+      ruta,
+      readFileSync(ruta, "utf8").replace(
+        "Resultado del PO: aprobado.",
+        "Pendiente de ejecución.",
+      ),
+      "utf8",
+    );
     crearJornada(entorno, [enJornada(SIN_CONTRATO, 1)], { journeyId: JORNADA });
     const entrada = parte().esperanPruebas[0];
     expect(entrada?.sinContrato).toBe(true);
@@ -154,7 +197,9 @@ describe("armar el parte", () => {
   it("C6: un ticket cerrado por política sale marcado con la autorización y el recibo (qa_approved y closed)", () => {
     cerrarPorPolitica(POLITICA, "closed");
     cerrarPorPolitica(D, "qa_approved");
-    crearJornada(entorno, [enJornada(POLITICA, 1), enJornada(D, 2)], { journeyId: JORNADA });
+    crearJornada(entorno, [enJornada(POLITICA, 1), enJornada(D, 2)], {
+      journeyId: JORNADA,
+    });
     const p = parte();
     expect(p.cerradosPorPolitica.map((c) => c.ticketId)).toEqual([POLITICA, D]);
     expect(p.cerradosPorPolitica[0]).toMatchObject({
@@ -173,7 +218,11 @@ describe("armar el parte", () => {
   it("C8: un ticket en pruebas que no es de la jornada no aparece en ningún bloque", () => {
     armarCorrida();
     const p = parte();
-    const todos = [...p.esperanPruebas.map((e) => e.ticketId), ...p.cerradosPorPolitica.map((c) => c.ticketId), ...p.sinEntregar.map((s) => s.ticketId)];
+    const todos = [
+      ...p.esperanPruebas.map((e) => e.ticketId),
+      ...p.cerradosPorPolitica.map((c) => c.ticketId),
+      ...p.sinEntregar.map((s) => s.ticketId),
+    ];
     expect(todos).not.toContain(AJENO);
   });
 
@@ -184,7 +233,11 @@ describe("armar el parte", () => {
       [enJornada(A, 1), enJornada(C, 2), enJornada("FEATURE-HANDOFF-FANTASMA-20261008", 3)],
       { journeyId: "JOR-20261009" },
     );
-    const p = armarParteDeJornada({ project: entorno.project(), journeyId: "JOR-20261009", ahora: AHORA });
+    const p = armarParteDeJornada({
+      project: entorno.project(),
+      journeyId: "JOR-20261009",
+      ahora: AHORA,
+    });
     expect(p.sinEntregar).toEqual([
       { ticketId: C, estado: "in_progress" },
       { ticketId: "FEATURE-HANDOFF-FANTASMA-20261008", estado: "?" },
@@ -194,14 +247,21 @@ describe("armar el parte", () => {
 
   it("C10: un contrato con una credencial se omite, con el tipo de hallazgo y sin copiar el valor", () => {
     const valor = "AKIAIOSFODNN7EXAMPLE"; // valmen:allow-secret clave de ejemplo de la documentación de AWS
-    conContrato(CON_SECRETO, `- Ejecutar \`npm test\` con la clave ${valor}; esperado: pasa.`);
+    conContrato(
+      CON_SECRETO,
+      `- Ejecutar \`npm test\` con la clave ${valor}; esperado: pasa.`,
+    );
     conContrato(A, CONTRATO_A);
-    crearJornada(entorno, [enJornada(A, 1), enJornada(CON_SECRETO, 2)], { journeyId: JORNADA });
+    crearJornada(entorno, [enJornada(A, 1), enJornada(CON_SECRETO, 2)], {
+      journeyId: JORNADA,
+    });
     const p = parte();
     const secreta = p.esperanPruebas.find((e) => e.ticketId === CON_SECRETO);
     expect(secreta?.probar).toEqual([]);
     expect(secreta?.omitidoPorSecreto.length).toBeGreaterThan(0);
-    const texto = renderJourneyHandoffNotification(p, { maxCaracteres: Number.POSITIVE_INFINITY }).body;
+    const texto = renderJourneyHandoffNotification(p, {
+      maxCaracteres: Number.POSITIVE_INFINITY,
+    }).body;
     expect(texto).toContain("contrato omitido");
     expect(texto).not.toContain(valor);
     expect(JSON.stringify(p)).not.toContain(valor);
@@ -212,7 +272,9 @@ describe("armar el parte", () => {
   it("C11: una jornada que no existe falla nombrándola y no escribe nada", () => {
     armarCorrida();
     const antes = fotoDelArbol(entorno.root);
-    expect(() => armarParteDeJornada({ project: entorno.project(), journeyId: "JOR-20990101" })).toThrow(/JOR-20990101/);
+    expect(() =>
+      armarParteDeJornada({ project: entorno.project(), journeyId: "JOR-20990101" }),
+    ).toThrow(/JOR-20990101/);
     const r = correr({ id: "JOR-20990101" });
     expect(r.exitCode).toBe(EXIT_INVARIANT);
     expect(r.stderr).toContain("JOR-20990101");
@@ -239,9 +301,9 @@ describe("lista numerada y estados entregados", () => {
   };
 
   it("C1: el ítem numerado da el comando sin el número", () => {
-    expect(entrada("1. `npx vitest run tests/x.test.ts` — esperado: todo en verde")?.probar).toEqual([
-      "`npx vitest run tests/x.test.ts` — esperado: todo en verde",
-    ]);
+    expect(
+      entrada("1. `npx vitest run tests/x.test.ts` — esperado: todo en verde")?.probar,
+    ).toEqual(["`npx vitest run tests/x.test.ts` — esperado: todo en verde"]);
   });
 
   it("C2: un contrato solo en lista numerada no sale sin contrato", () => {
@@ -303,16 +365,24 @@ describe("lista numerada y estados entregados", () => {
   });
 
   it("C11: un ticket in_progress sigue en sinEntregar", () => {
-    expect(sinEntregarDe(C, "in_progress")).toEqual([{ ticketId: C, estado: "in_progress" }]);
+    expect(sinEntregarDe(C, "in_progress")).toEqual([
+      { ticketId: C, estado: "in_progress" },
+    ]);
   });
 
   it("C12: un ticket changes_requested sigue en sinEntregar", () => {
-    expect(sinEntregarDe(C, "changes_requested")).toEqual([{ ticketId: C, estado: "changes_requested" }]);
+    expect(sinEntregarDe(C, "changes_requested")).toEqual([
+      { ticketId: C, estado: "changes_requested" },
+    ]);
   });
 
   it("C13: un ticket ilegible sigue en sinEntregar con estado ?", () => {
-    crearJornada(entorno, [enJornada("FEATURE-HANDOFF-FANTASMA-20261008", 1)], { journeyId: JORNADA });
-    expect(parte().sinEntregar).toEqual([{ ticketId: "FEATURE-HANDOFF-FANTASMA-20261008", estado: "?" }]);
+    crearJornada(entorno, [enJornada("FEATURE-HANDOFF-FANTASMA-20261008", 1)], {
+      journeyId: JORNADA,
+    });
+    expect(parte().sinEntregar).toEqual([
+      { ticketId: "FEATURE-HANDOFF-FANTASMA-20261008", estado: "?" },
+    ]);
   });
 });
 
@@ -324,7 +394,11 @@ describe("guardar el parte", () => {
     const lineas = lineasGuardadas();
     expect(lineas).toHaveLength(1);
     const registro = JSON.parse(lineas[0] as string);
-    expect(registro).toMatchObject({ kind: "journey-handoff", version: 1, journeyId: JORNADA });
+    expect(registro).toMatchObject({
+      kind: "journey-handoff",
+      version: 1,
+      journeyId: JORNADA,
+    });
     expect(registro.huella).toMatch(/^sha256:[0-9a-f]{64}$/);
     expect(registro.parte.esperanPruebas).toHaveLength(2);
     expect(r.stdout).toContain(A);
@@ -334,7 +408,14 @@ describe("guardar el parte", () => {
   it("C13: repetir sin cambios no añade otra línea, aunque cambie la hora", () => {
     armarCorrida();
     correr({ id: JORNADA });
-    journeyHandoffCommand({ id: JORNADA }, { home: entorno.home, root: entorno.root, ahora: () => new Date("2026-10-08T23:00:00.000Z") });
+    journeyHandoffCommand(
+      { id: JORNADA },
+      {
+        home: entorno.home,
+        root: entorno.root,
+        ahora: () => new Date("2026-10-08T23:00:00.000Z"),
+      },
+    );
     expect(lineasGuardadas()).toHaveLength(1);
   });
 
@@ -343,7 +424,14 @@ describe("guardar el parte", () => {
     correr({ id: JORNADA });
     const primera = lineasGuardadas()[0];
     const ruta = join(entorno.root, "tickets", "2026", C, "ticket.md");
-    writeFileSync(ruta, readFileSync(ruta, "utf8").replace("workflow_status: in_progress", "workflow_status: blocked"), "utf8");
+    writeFileSync(
+      ruta,
+      readFileSync(ruta, "utf8").replace(
+        "workflow_status: in_progress",
+        "workflow_status: blocked",
+      ),
+      "utf8",
+    );
     correr({ id: JORNADA });
     const lineas = lineasGuardadas();
     expect(lineas).toHaveLength(2);
@@ -379,12 +467,19 @@ describe("guardar el parte", () => {
   it("C16: los ticket.md y events.jsonl quedan byte a byte iguales", () => {
     armarCorrida();
     const leer = () => ({
-      eventos: readFileSync(join(entorno.root, ".valmen", "journeys", "events.jsonl"), "utf8"),
-      tickets: Object.fromEntries(Object.entries(fotoDelArbol(join(entorno.root, "tickets"))).filter(([k]) => k.endsWith("ticket.md"))),
+      eventos: readFileSync(
+        join(entorno.root, ".valmen", "journeys", "events.jsonl"),
+        "utf8",
+      ),
+      tickets: Object.fromEntries(
+        Object.entries(fotoDelArbol(join(entorno.root, "tickets"))).filter(([k]) =>
+          k.endsWith("ticket.md"),
+        ),
+      ),
     });
     const antes = leer();
     correr({ id: JORNADA });
-    correr({ id: JORNADA, to: "telegram:1", }, { runner: canal().runner });
+    correr({ id: JORNADA, to: "telegram:1" }, { runner: canal().runner });
     expect(leer()).toEqual(antes);
   });
 });
@@ -405,7 +500,9 @@ describe("enviar el parte", () => {
     expect(llamadas).toHaveLength(1);
     expect(llamadas[0]?.args.slice(0, 3)).toEqual(["send", "--to", "telegram:42"]);
     expect(llamadas[0]?.cuerpo).toContain(A);
-    const avisos = readApprovalLog({ root: entorno.root, ticketsDir: "tickets" }).filter((e) => e.kind === "journey-handoff-notice");
+    const avisos = readApprovalLog({ root: entorno.root, ticketsDir: "tickets" }).filter(
+      (e) => e.kind === "journey-handoff-notice",
+    );
     expect(avisos).toHaveLength(1);
     expect(avisos[0]).toMatchObject({ journeyId: JORNADA });
     expect(r.stdout).toContain("enviado");
@@ -418,7 +515,9 @@ describe("enviar el parte", () => {
     const r = correr({ id: JORNADA, to: "telegram:42" }, { runner });
     expect(llamadas).toHaveLength(1);
     expect(r.stdout).toContain("ya estaba enviado");
-    expect(partesDeJornadaAvisados({ root: entorno.root, ticketsDir: "tickets" }).size).toBe(1);
+    expect(
+      partesDeJornadaAvisados({ root: entorno.root, ticketsDir: "tickets" }).size,
+    ).toBe(1);
   });
 
   it("C20: si el canal falla el parte queda guardado, no se anota, se dice que no se envió y el reintento sano lo envía", () => {
@@ -429,7 +528,11 @@ describe("enviar el parte", () => {
     expect(r.stdout).toContain("NO se envió");
     expect(r.stdout).toContain("canal caído");
     expect(lineasGuardadas()).toHaveLength(1);
-    expect(readApprovalLog({ root: entorno.root, ticketsDir: "tickets" }).filter((e) => e.kind === "journey-handoff-notice")).toHaveLength(0);
+    expect(
+      readApprovalLog({ root: entorno.root, ticketsDir: "tickets" }).filter(
+        (e) => e.kind === "journey-handoff-notice",
+      ),
+    ).toHaveLength(0);
 
     const sano = canal();
     correr({ id: JORNADA, to: "telegram:42" }, { runner: sano.runner });
@@ -438,11 +541,24 @@ describe("enviar el parte", () => {
   });
 
   it("C21: el cuerpo no pasa de 3500 caracteres y, al recortar, dice cuántos tickets quedaron fuera", () => {
-    const ids = Array.from({ length: 12 }, (_, i) => `FEATURE-HANDOFF-MASIVO${String(i).padStart(2, "0")}-20261008`);
+    const ids = Array.from(
+      { length: 12 },
+      (_, i) => `FEATURE-HANDOFF-MASIVO${String(i).padStart(2, "0")}-20261008`,
+    );
     for (const id of ids) {
-      conContrato(id, [`- Directorio: raíz.`, `- \`npx vitest run tests/${id}.test.ts\`: ${"pasa con un resultado esperado largo ".repeat(4)}`].join("\n"));
+      conContrato(
+        id,
+        [
+          `- Directorio: raíz.`,
+          `- \`npx vitest run tests/${id}.test.ts\`: ${"pasa con un resultado esperado largo ".repeat(4)}`,
+        ].join("\n"),
+      );
     }
-    crearJornada(entorno, ids.map((id, i) => enJornada(id, i + 1)), { journeyId: JORNADA });
+    crearJornada(
+      entorno,
+      ids.map((id, i) => enJornada(id, i + 1)),
+      { journeyId: JORNADA },
+    );
     const { runner, llamadas } = canal();
     correr({ id: JORNADA, to: "telegram:42" }, { runner });
     const cuerpo = llamadas[0]?.cuerpo ?? "";
@@ -458,7 +574,9 @@ describe("enviar el parte", () => {
     const impreso = correr({ id: JORNADA, saved: true }).stdout;
     for (const id of ids) expect(impreso).toContain(id);
     // Control: sin recorte no hay «y N más».
-    const corto = renderJourneyHandoffNotification(parte(), { maxCaracteres: Number.POSITIVE_INFINITY }).body;
+    const corto = renderJourneyHandoffNotification(parte(), {
+      maxCaracteres: Number.POSITIVE_INFINITY,
+    }).body;
     expect(corto).not.toContain("más");
   });
 
@@ -484,8 +602,20 @@ describe("enviar el parte", () => {
     const p = parte();
     const paths = { root: entorno.root, ticketsDir: "tickets" };
     const { runner } = canal();
-    const uno = avisarParteDeJornada({ paths, parte: p, to: "telegram:42", now: AHORA(), runner });
-    const dos = avisarParteDeJornada({ paths, parte: p, to: "telegram:42", now: AHORA(), runner });
+    const uno = avisarParteDeJornada({
+      paths,
+      parte: p,
+      to: "telegram:42",
+      now: AHORA(),
+      runner,
+    });
+    const dos = avisarParteDeJornada({
+      paths,
+      parte: p,
+      to: "telegram:42",
+      now: AHORA(),
+      runner,
+    });
     expect([uno.estado, dos.estado]).toEqual(["enviado", "ya-enviado"]);
   });
 });
@@ -495,7 +625,9 @@ describe("el comando", () => {
     for (const flags of [{}, { id: true }, { id: A }, { id: "DEL-20261008-1" }]) {
       const r = correr(flags as Record<string, string | true>);
       expect(r.exitCode).toBe(EXIT_SCHEMA);
-      expect(r.stderr).toContain("journey handoff --id <jornada> [--project <id>] [--to <destino>] [--saved]");
+      expect(r.stderr).toContain(
+        "journey handoff --id <jornada> [--project <id>] [--to <destino>] [--saved]",
+      );
     }
   });
 
@@ -513,7 +645,8 @@ describe("el comando", () => {
 
   it("C26: la ayuda documenta journey handoff y sus banderas con valor están declaradas", () => {
     expect(USAGE).toContain("journey handoff --id");
-    for (const bandera of ["--id", "--to", "--project"]) expect(VALUE_OPTIONS).toContain(bandera);
+    for (const bandera of ["--id", "--to", "--project"])
+      expect(VALUE_OPTIONS).toContain(bandera);
     expect(VALUE_OPTIONS).not.toContain("--saved");
   });
 });
@@ -522,8 +655,12 @@ describe("barreras", () => {
   it("guardar dos veces el mismo parte desde el motor tampoco duplica", () => {
     armarCorrida();
     const p = parte();
-    expect(guardarParteDeJornada({ project: entorno.project(), parte: p }).guardado).toBe(true);
-    expect(guardarParteDeJornada({ project: entorno.project(), parte: p }).guardado).toBe(false);
+    expect(guardarParteDeJornada({ project: entorno.project(), parte: p }).guardado).toBe(
+      true,
+    );
+    expect(guardarParteDeJornada({ project: entorno.project(), parte: p }).guardado).toBe(
+      false,
+    );
     expect(lineasGuardadas()).toHaveLength(1);
   });
 

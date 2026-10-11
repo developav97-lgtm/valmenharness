@@ -9,7 +9,11 @@
  * El registro histórico `.valmen/journeys/arbol-sucio.jsonl` ya no lo escribe nadie ni lo lee
  * nadie; sus líneas quedan como historia (son append-only).
  */
-import { esRepositorioGit, estadoDelArbolDeTrabajo, type RutasPropias } from "./integration-commit.js";
+import {
+  esRepositorioGit,
+  estadoDelArbolDeTrabajo,
+  type RutasPropias,
+} from "./integration-commit.js";
 
 const MAX_ARCHIVOS_DEL_AVISO = 10;
 
@@ -17,7 +21,10 @@ const MAX_ARCHIVOS_DEL_AVISO = 10;
  * El texto del aviso si el árbol de trabajo tiene archivos ajenos a la jornada, o `null` si está
  * limpio o la raíz no es un repositorio git. Solo lee: nunca escribe en el registro.
  */
-export function advertenciaDeArbolSucio(root: string, propias?: RutasPropias): string | null {
+export function advertenciaDeArbolSucio(
+  root: string,
+  propias?: RutasPropias,
+): string | null {
   if (!esRepositorioGit(root)) return null;
   const archivos = estadoDelArbolDeTrabajo(root, undefined, propias);
   if (archivos.length === 0) return null;

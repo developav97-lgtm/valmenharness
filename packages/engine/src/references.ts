@@ -134,7 +134,9 @@ function modifiedFunctionalFiles(root: string, ticketPath: string): string[] {
   return result.stdout
     .split("\n")
     .map((path) => path.trim())
-    .filter((path) => path !== "" && !path.startsWith("tickets/") && !path.startsWith(".valmen/"))
+    .filter(
+      (path) => path !== "" && !path.startsWith("tickets/") && !path.startsWith(".valmen/"),
+    )
     .map((path) => validateFunctionalFile(path, ticketPath, root))
     .sort();
 }
@@ -153,7 +155,8 @@ export function calculateWorktreeReference(
   root: string,
 ): string {
   const declarados = declaredFunctionalFiles(document, ticketPath, root);
-  const archivos = declarados.length > 0 ? declarados : modifiedFunctionalFiles(root, ticketPath);
+  const archivos =
+    declarados.length > 0 ? declarados : modifiedFunctionalFiles(root, ticketPath);
   if (archivos.length === 0) {
     fail("No hay archivos funcionales modificados para calcular el hash.", EXIT_REFERENCE);
   }

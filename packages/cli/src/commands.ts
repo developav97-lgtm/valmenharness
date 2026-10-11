@@ -316,7 +316,8 @@ export function approvePlanCommand(
   paths: RegistryPaths,
   flags: Readonly<Record<string, string | true>>,
 ): CommandResult {
-  const texto = (nombre: string): string => (typeof flags[nombre] === "string" ? (flags[nombre] as string) : "");
+  const texto = (nombre: string): string =>
+    typeof flags[nombre] === "string" ? (flags[nombre] as string) : "";
   const id = texto("id");
   if (id === "") return error("approve-plan requiere --id <TICKET-ID>.", EXIT_SCHEMA);
   try {
@@ -353,7 +354,11 @@ export function precheckCommand(
   const ticket = findTicket(paths, id);
   if (ticket === undefined) return error("La ruta canónica solicitada no existe.");
   try {
-    const revision = reviewBeforeGate({ root: paths.root, ticketText: ticket.text, gateId });
+    const revision = reviewBeforeGate({
+      root: paths.root,
+      ticketText: ticket.text,
+      gateId,
+    });
     const informe = renderPreReview(gateId, id, revision);
     return revision.findings.length === 0
       ? ok(informe)
@@ -384,7 +389,9 @@ export function precisionCommand(
     }
   }
   try {
-    return ok(renderPrecision(precisionReport(readCurrentReceipts(paths), opciones), opciones));
+    return ok(
+      renderPrecision(precisionReport(readCurrentReceipts(paths), opciones), opciones),
+    );
   } catch (caught) {
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);
@@ -406,9 +413,12 @@ export function thresholdsCommand(
   if (gateId !== "analysis" && gateId !== "plan") {
     return error("thresholds requiere la compuerta: analysis o plan.", EXIT_SCHEMA);
   }
-  const evaluator = typeof flags["evaluator"] === "string" ? (flags["evaluator"] as string) : undefined;
+  const evaluator =
+    typeof flags["evaluator"] === "string" ? (flags["evaluator"] as string) : undefined;
   try {
-    return ok(renderProposal(proposeThresholds(readCurrentReceipts(paths), gateId, evaluator)));
+    return ok(
+      renderProposal(proposeThresholds(readCurrentReceipts(paths), gateId, evaluator)),
+    );
   } catch (caught) {
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);
@@ -479,8 +489,13 @@ export function resumeTicket(
   cliente?: string,
   quiet = false,
 ): CommandResult & { readonly data?: Record<string, unknown> } {
-  if (cliente !== undefined && !(EJECUTORES_CON_PERFIL as readonly string[]).includes(cliente)) {
-    return error(`El cliente "${cliente}" no es válido. Valores admitidos: ${EJECUTORES_CON_PERFIL.join(", ")}.`);
+  if (
+    cliente !== undefined &&
+    !(EJECUTORES_CON_PERFIL as readonly string[]).includes(cliente)
+  ) {
+    return error(
+      `El cliente "${cliente}" no es válido. Valores admitidos: ${EJECUTORES_CON_PERFIL.join(", ")}.`,
+    );
   }
   const cliente_ = cliente as ClienteDeSesion | undefined;
   if (id !== undefined) {
@@ -508,7 +523,13 @@ export function resumeTicket(
       exitCode: EXIT_AMBIGUOUS,
     };
   }
-  return resultadoReanudacion(paths, activos.rows[0]?.document as ParsedTicket, modo, cliente_, quiet);
+  return resultadoReanudacion(
+    paths,
+    activos.rows[0]?.document as ParsedTicket,
+    modo,
+    cliente_,
+    quiet,
+  );
 }
 
 function resultadoReanudacion(
@@ -937,7 +958,8 @@ export function syncProject(
     const deriva = derivaPublicada(root);
 
     if (
-      stale.length > 0 || deriva.length > 0 ||
+      stale.length > 0 ||
+      deriva.length > 0 ||
       proyeccion.claudeDenyMissing.length > 0 ||
       proyeccion.opencodeDenyMissing.length > 0
     ) {
@@ -973,7 +995,9 @@ export function syncProject(
     return ok(
       `Archivos generados al día.\n${lineaDeComparadas(root)}\n` +
         `${lineasDeTamano(proyeccion).join("\n")}\n` +
-        lineasDeDenegaciones(proyeccion).map((linea) => `${linea}\n`).join(""),
+        lineasDeDenegaciones(proyeccion)
+          .map((linea) => `${linea}\n`)
+          .join(""),
     );
   }
 
@@ -1178,7 +1202,10 @@ function codegraphOfferLines(
         "    valmen adopt --codegraph",
       );
       if (confirmado) {
-        lines.push("", "  Se pidió --codegraph, pero CodeGraph no está instalado: no se indexó nada.");
+        lines.push(
+          "",
+          "  Se pidió --codegraph, pero CodeGraph no está instalado: no se indexó nada.",
+        );
       }
       return lines;
 
@@ -1195,7 +1222,11 @@ function codegraphOfferLines(
         `  estado            no se pudo leer (${estado.motivo})`,
         "  Revise el estado a mano con `codegraph status`; mientras no se lea, no se indexa nada.",
       );
-      if (confirmado) lines.push("", "  Se pidió --codegraph, pero sin saber el estado no se indexó nada.");
+      if (confirmado)
+        lines.push(
+          "",
+          "  Se pidió --codegraph, pero sin saber el estado no se indexó nada.",
+        );
       return lines;
 
     case "sin-indice":
@@ -1267,9 +1298,7 @@ export function adoptProject(
   const alreadyAdopted = existsSync(plan.configPath);
   const extraccion = extractRules(root);
 
-  let binding:
-    | ReturnType<typeof prepareMachineProjectBinding>
-    | undefined;
+  let binding: ReturnType<typeof prepareMachineProjectBinding> | undefined;
   let bindingPath: string | undefined;
   if (alreadyAdopted) {
     try {
@@ -1494,9 +1523,7 @@ export function adoptProject(
         : "  no había reglas propias que preservar de él, así que el documento nuevo lo",
     );
     lines.push(
-      extraccion.files.length > 0
-        ? "  a incluir."
-        : "  reemplaza sin perder nada.",
+      extraccion.files.length > 0 ? "  a incluir." : "  reemplaza sin perder nada.",
     );
   }
 
@@ -2728,10 +2755,9 @@ export function manualesAuditarCommand(
     const recibo = reciboDeAuditoria(resultado, {});
     const ruta = appendReceipt(paths, SUJETO_MANUALES, recibo);
 
-    const texto = [
-      renderAuditoria(resultado),
-      `Recibo: ${relative(root, ruta)}\n`,
-    ].join("");
+    const texto = [renderAuditoria(resultado), `Recibo: ${relative(root, ruta)}\n`].join(
+      "",
+    );
 
     const exitCode =
       resultado.veredicto === "approve"
@@ -2761,8 +2787,12 @@ export function corpusPublicarCommand(
   }
   try {
     const resultado = publicarCorpus(choosePaths(root), {
-      ...(typeof flags["corpus-dir"] === "string" ? { corpusDir: flags["corpus-dir"] } : {}),
-      ...(typeof flags["manuales-dir"] === "string" ? { manualesDir: flags["manuales-dir"] } : {}),
+      ...(typeof flags["corpus-dir"] === "string"
+        ? { corpusDir: flags["corpus-dir"] }
+        : {}),
+      ...(typeof flags["manuales-dir"] === "string"
+        ? { manualesDir: flags["manuales-dir"] }
+        : {}),
       ...(nombre === undefined ? {} : { indexador: INDEXADORES_CORPUS[nombre]! }),
       completo: flags["completo"] === true,
     });
@@ -2985,21 +3015,33 @@ export async function journeyAdvanceCommand(
   flags: Readonly<Record<string, string | true>>,
   opciones: {
     readonly home?: string;
-    readonly ejecutarPreparacion?: Parameters<typeof avanzarJornada>[0]["ejecutarPreparacion"];
+    readonly ejecutarPreparacion?: Parameters<
+      typeof avanzarJornada
+    >[0]["ejecutarPreparacion"];
     readonly ahora?: () => Date;
   } = {},
 ): Promise<CommandResult> {
   const proyecto = typeof flags["project"] === "string" ? flags["project"] : undefined;
-  if (proyecto === undefined) return error("journey advance requiere --project <id>.", EXIT_SCHEMA);
-  if (typeof flags["fase"] === "string" && flags["fase"] !== "preparacion" && flags["fase"] !== "ejecucion") {
+  if (proyecto === undefined)
+    return error("journey advance requiere --project <id>.", EXIT_SCHEMA);
+  if (
+    typeof flags["fase"] === "string" &&
+    flags["fase"] !== "preparacion" &&
+    flags["fase"] !== "ejecucion"
+  ) {
     return error("--fase admite: preparacion (la ejecución se retiró).", EXIT_SCHEMA);
   }
-  if (flags["fase"] !== "preparacion") return retiroDelDisparador("`journey advance` sin fase y con `--fase ejecucion`");
+  if (flags["fase"] !== "preparacion")
+    return retiroDelDisparador("`journey advance` sin fase y con `--fase ejecucion`");
   try {
     const home = opciones.home ?? homedir();
     const project = resolveAuthorizedProject({ projectId: proyecto, home });
     const destino = typeof flags["to"] === "string" ? flags["to"] : "";
-    const journeyId = typeof flags["journey"] === "string" ? flags["journey"] : (jornadaVigente(project, (opciones.ahora ?? (() => new Date()))()) ?? jornadaDelDia((opciones.ahora ?? (() => new Date()))()));
+    const journeyId =
+      typeof flags["journey"] === "string"
+        ? flags["journey"]
+        : (jornadaVigente(project, (opciones.ahora ?? (() => new Date()))()) ??
+          jornadaDelDia((opciones.ahora ?? (() => new Date()))()));
     let avance: Awaited<ReturnType<typeof avanzarJornada>>;
     try {
       avance = await avanzarJornada({
@@ -3018,7 +3060,9 @@ export async function journeyAdvanceCommand(
               },
             }),
         ...(typeof flags["journey"] === "string" ? { journeyId: flags["journey"] } : {}),
-        ...(opciones.ejecutarPreparacion === undefined ? {} : { ejecutarPreparacion: opciones.ejecutarPreparacion }),
+        ...(opciones.ejecutarPreparacion === undefined
+          ? {}
+          : { ejecutarPreparacion: opciones.ejecutarPreparacion }),
         ...(opciones.ahora === undefined ? {} : { ahora: opciones.ahora }),
         fase: "preparacion",
       });
@@ -3026,8 +3070,16 @@ export async function journeyAdvanceCommand(
       // Un avance que falla también deja su pasada, para que la pantalla no lo confunda con silencio.
       const mensaje = caught instanceof Error ? caught.message : String(caught);
       const falla = toFailure(caught);
-      const aviso = anexarPasada(project.root, { journeyId, estado: "error", ticketId: null, detalle: mensaje });
-      return error(aviso === "" ? falla.message : `${falla.message}\n${aviso}`, falla.exitCode);
+      const aviso = anexarPasada(project.root, {
+        journeyId,
+        estado: "error",
+        ticketId: null,
+        detalle: mensaje,
+      });
+      return error(
+        aviso === "" ? falla.message : `${falla.message}\n${aviso}`,
+        falla.exitCode,
+      );
     }
     const aviso = anexarPasada(project.root, {
       journeyId: avance.journeyId,
@@ -3054,8 +3106,12 @@ function anexarPasada(root: string, pasada: Parameters<typeof registrarPasada>[1
   }
 }
 
-function avanceComoResultado(avance: Awaited<ReturnType<typeof avanzarJornada>>): CommandResult {
-  return ok(`${avance.journeyId}: ${avance.estado}${avance.ticketId === null ? "" : ` (${avance.ticketId})`}. ${avance.detalle}\n`);
+function avanceComoResultado(
+  avance: Awaited<ReturnType<typeof avanzarJornada>>,
+): CommandResult {
+  return ok(
+    `${avance.journeyId}: ${avance.estado}${avance.ticketId === null ? "" : ` (${avance.ticketId})`}. ${avance.detalle}\n`,
+  );
 }
 
 /**
@@ -3066,12 +3122,20 @@ function avanceComoResultado(avance: Awaited<ReturnType<typeof avanzarJornada>>)
  */
 export function journeyNotifyPlansCommand(
   flags: Readonly<Record<string, string | true>>,
-  opciones: { readonly home?: string; readonly secret?: string | null; readonly ahora?: () => Date; readonly runner?: CommandRunner } = {},
+  opciones: {
+    readonly home?: string;
+    readonly secret?: string | null;
+    readonly ahora?: () => Date;
+    readonly runner?: CommandRunner;
+  } = {},
 ): CommandResult {
   const proyecto = typeof flags["project"] === "string" ? flags["project"] : undefined;
   const jornada = typeof flags["journey"] === "string" ? flags["journey"] : undefined;
   if (proyecto === undefined || jornada === undefined) {
-    return error("journey notify-plans requiere --project <id> y --journey <id>.", EXIT_SCHEMA);
+    return error(
+      "journey notify-plans requiere --project <id> y --journey <id>.",
+      EXIT_SCHEMA,
+    );
   }
   const secret = opciones.secret === undefined ? approvalSecret() : opciones.secret;
   if (secret === null) {
@@ -3082,17 +3146,31 @@ export function journeyNotifyPlansCommand(
     );
   }
   try {
-    const project = resolveAuthorizedProject({ projectId: proyecto, home: opciones.home ?? homedir() });
+    const project = resolveAuthorizedProject({
+      projectId: proyecto,
+      home: opciones.home ?? homedir(),
+    });
     const ahora = opciones.ahora?.() ?? new Date();
-    const emision = emitirAprobacionesDeJornada({ project, journeyId: jornada, secret, ahora });
+    const emision = emitirAprobacionesDeJornada({
+      project,
+      journeyId: jornada,
+      secret,
+      ahora,
+    });
     const destino = typeof flags["to"] === "string" ? flags["to"] : "";
     if (destino === "" || emision.planes.length === 0) {
-      return ok(`${emision.mensaje}\n${destino === "" ? "Sin destino: no se envió nada (--to telegram).\n" : ""}`);
+      return ok(
+        `${emision.mensaje}\n${destino === "" ? "Sin destino: no se envió nada (--to telegram).\n" : ""}`,
+      );
     }
     const entrega = hermesSendChannel({
       target: destino,
       ...(opciones.runner === undefined ? {} : { runner: opciones.runner }),
-    }).notify({ subject: "Planes para aprobar", body: emision.mensaje, key: `plan-codes:${jornada}:${ahora.toISOString()}` });
+    }).notify({
+      subject: "Planes para aprobar",
+      body: emision.mensaje,
+      key: `plan-codes:${jornada}:${ahora.toISOString()}`,
+    });
     return ok(
       `${emision.mensaje}\n${entrega.delivered ? `Enviado a ${destino}.` : `Los códigos valen, pero el envío a ${destino} falló: ${entrega.detail}`}\n`,
     );
@@ -3116,7 +3194,8 @@ export function journeyApproveEligibleCommand(
   } = {},
 ): CommandResult {
   const jornada = typeof flags["journey"] === "string" ? flags["journey"] : undefined;
-  if (jornada === undefined) return error("journey approve-eligible requiere --journey <id>.", EXIT_SCHEMA);
+  if (jornada === undefined)
+    return error("journey approve-eligible requiere --journey <id>.", EXIT_SCHEMA);
   try {
     const project = proyectoDeLaOla(flags, {
       ...(opciones.home === undefined ? {} : { home: opciones.home }),
@@ -3144,12 +3223,22 @@ export function journeyApproveEligibleCommand(
 export function planApproveCommand(
   paths: RegistryPaths,
   flags: Readonly<Record<string, string | true>>,
-  opciones: { readonly secret?: string | null; readonly ahora?: () => Date; readonly env?: Readonly<Record<string, string | undefined>> } = {},
+  opciones: {
+    readonly secret?: string | null;
+    readonly ahora?: () => Date;
+    readonly env?: Readonly<Record<string, string | undefined>>;
+  } = {},
 ): CommandResult {
-  const texto = (n: string): string => (typeof flags[n] === "string" ? (flags[n] as string) : "");
-  if (texto("code") === "") return error("plan-approve requiere --code <código>.", EXIT_SCHEMA);
+  const texto = (n: string): string =>
+    typeof flags[n] === "string" ? (flags[n] as string) : "";
+  if (texto("code") === "")
+    return error("plan-approve requiere --code <código>.", EXIT_SCHEMA);
   const secret = opciones.secret === undefined ? approvalSecret() : opciones.secret;
-  if (secret === null) return error("No hay secreto para verificar los códigos (aprobacion.secret o VALMEN_APPROVAL_SECRET).", EXIT_SCHEMA);
+  if (secret === null)
+    return error(
+      "No hay secreto para verificar los códigos (aprobacion.secret o VALMEN_APPROVAL_SECRET).",
+      EXIT_SCHEMA,
+    );
   const resultados = aprobarPorCodigo({
     paths,
     secret,
@@ -3176,10 +3265,19 @@ export function qaAuthorizeCommand(
   root: string,
   accion: string | undefined,
   flags: Readonly<Record<string, string | true>>,
-  opciones: { readonly ahora?: Date; readonly env?: Readonly<Record<string, string | undefined>>; readonly secret?: string | null } = {},
+  opciones: {
+    readonly ahora?: Date;
+    readonly env?: Readonly<Record<string, string | undefined>>;
+    readonly secret?: string | null;
+  } = {},
 ): CommandResult {
-  const t = (n: string): string => (typeof flags[n] === "string" ? (flags[n] as string) : "");
-  const lista = (n: string): string[] => t(n).split(",").map((x) => x.trim()).filter((x) => x !== "");
+  const t = (n: string): string =>
+    typeof flags[n] === "string" ? (flags[n] as string) : "";
+  const lista = (n: string): string[] =>
+    t(n)
+      .split(",")
+      .map((x) => x.trim())
+      .filter((x) => x !== "");
   try {
     if (accion === "create") {
       const a = crearAutorizacion({
@@ -3211,22 +3309,34 @@ export function qaAuthorizeCommand(
         ...(opciones.ahora === undefined ? {} : { ahora: opciones.ahora }),
         ...(opciones.env === undefined ? {} : { env: opciones.env }),
       });
-      return ok(`Autorización ${r.id} revocada por ${r.actor}: ninguna política posterior cierra tickets con ella.\n`);
+      return ok(
+        `Autorización ${r.id} revocada por ${r.actor}: ninguna política posterior cierra tickets con ella.\n`,
+      );
     }
     if (accion === "list") {
       const todas = leerAutorizaciones(root, opciones.ahora ?? new Date());
       if (todas.length === 0) return ok("No hay autorizaciones de QA por agente.\n");
       return ok(
         todas
-          .map((a) => `${a.id} · ${a.estado} · ${a.types.join(",")} · ${a.modules.join(",")} · ${a.actor}: «${a.quote}»`)
+          .map(
+            (a) =>
+              `${a.id} · ${a.estado} · ${a.types.join(",")} · ${a.modules.join(",")} · ${a.actor}: «${a.quote}»`,
+          )
           .join("\n") + "\n",
       );
     }
     if (accion === "link") {
       const secret = opciones.secret === undefined ? approvalSecret() : opciones.secret;
-      if (secret === null) return error("No hay secreto para firmar el código (aprobacion.secret o VALMEN_APPROVAL_SECRET).", EXIT_SCHEMA);
+      if (secret === null)
+        return error(
+          "No hay secreto para firmar el código (aprobacion.secret o VALMEN_APPROVAL_SECRET).",
+          EXIT_SCHEMA,
+        );
       if ((opciones.env ?? process.env)["VALMEN_UNATTENDED"] === "1") {
-        return error("Una sesión desatendida no puede emitir un código de autorización de QA: esa autoridad es de una persona.", EXIT_INVARIANT);
+        return error(
+          "Una sesión desatendida no puede emitir un código de autorización de QA: esa autoridad es de una persona.",
+          EXIT_INVARIANT,
+        );
       }
       const e = emitirCodigoDeAutorizacion({
         root,
@@ -3248,7 +3358,11 @@ export function qaAuthorizeCommand(
     }
     if (accion === "redeem") {
       const secret = opciones.secret === undefined ? approvalSecret() : opciones.secret;
-      if (secret === null) return error("No hay secreto para verificar el código (aprobacion.secret o VALMEN_APPROVAL_SECRET).", EXIT_SCHEMA);
+      if (secret === null)
+        return error(
+          "No hay secreto para verificar el código (aprobacion.secret o VALMEN_APPROVAL_SECRET).",
+          EXIT_SCHEMA,
+        );
       const a = canjearCodigoDeAutorizacion({
         root,
         secret,
@@ -3258,7 +3372,9 @@ export function qaAuthorizeCommand(
         ...(opciones.ahora === undefined ? {} : { ahora: opciones.ahora }),
         ...(opciones.env === undefined ? {} : { env: opciones.env }),
       });
-      return ok(`Autorización ${a.id} creada por ${a.actor} con el código firmado; vigente hasta ${a.validUntil.slice(0, 10)}.\n`);
+      return ok(
+        `Autorización ${a.id} creada por ${a.actor} con el código firmado; vigente hasta ${a.validUntil.slice(0, 10)}.\n`,
+      );
     }
     if (accion === "revoke-code") {
       revocarCodigoDeAutorizacion({
@@ -3270,7 +3386,10 @@ export function qaAuthorizeCommand(
       });
       return ok(`Código ${t("code")} revocado: ya no se puede canjear.\n`);
     }
-    return error("qa-authorize admite: create, revoke, list, link, redeem o revoke-code.", EXIT_SCHEMA);
+    return error(
+      "qa-authorize admite: create, revoke, list, link, redeem o revoke-code.",
+      EXIT_SCHEMA,
+    );
   } catch (caught) {
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);
@@ -3288,7 +3407,8 @@ export function uxReviewCommand(
 ): CommandResult {
   try {
     const id = flags["id"];
-    if (typeof id !== "string" || id === "") return error("ux review requiere --id <TICKET-ID>.", EXIT_SCHEMA);
+    if (typeof id !== "string" || id === "")
+      return error("ux review requiere --id <TICKET-ID>.", EXIT_SCHEMA);
     const informe = flags["report"];
     const revision = revisarUx({
       paths,
@@ -3296,7 +3416,9 @@ export function uxReviewCommand(
       informe: typeof informe === "string" && informe !== "" ? informe : undefined,
       staged: flags["staged"] === true,
     });
-    return ok(`${revision.descripcion}\n${revision.evidencia ?? "No se anexó evidencia."}\n`);
+    return ok(
+      `${revision.descripcion}\n${revision.evidencia ?? "No se anexó evidencia."}\n`,
+    );
   } catch (caught) {
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);
@@ -3311,9 +3433,15 @@ export function uxReviewCommand(
 export function skillsExternalCommand(root: string): CommandResult {
   try {
     const skills = estadoDeSkillsExternas(root);
-    if (skills.length === 0) return ok("No hay skills de terceros declaradas (clave external-skills).\n");
+    if (skills.length === 0)
+      return ok("No hay skills de terceros declaradas (clave external-skills).\n");
     return ok(
-      skills.map((k) => `${k.id} · ${k.estado} · versión ${k.version} · ${k.source} · sha256:${k.sha256.slice(0, 12)}…\n    ${k.motivo}`).join("\n") +
+      skills
+        .map(
+          (k) =>
+            `${k.id} · ${k.estado} · versión ${k.version} · ${k.source} · sha256:${k.sha256.slice(0, 12)}…\n    ${k.motivo}`,
+        )
+        .join("\n") +
         "\nDeclarar no instala ni habilita nada: la habilitación exige una revisión registrada sobre el hash del contenido.\n",
     );
   } catch (caught) {
@@ -3332,10 +3460,15 @@ export function skillsReviewCommand(
   root: string,
   id: string | undefined,
   flags: Readonly<Record<string, string | true>>,
-  opciones: { readonly ahora?: Date; readonly env?: Readonly<Record<string, string | undefined>> } = {},
+  opciones: {
+    readonly ahora?: Date;
+    readonly env?: Readonly<Record<string, string | undefined>>;
+  } = {},
 ): CommandResult {
-  const t = (n: string): string => (typeof flags[n] === "string" ? (flags[n] as string) : "");
-  if (id === undefined || id === "") return error("skills review requiere el identificador de la skill.", EXIT_SCHEMA);
+  const t = (n: string): string =>
+    typeof flags[n] === "string" ? (flags[n] as string) : "";
+  if (id === undefined || id === "")
+    return error("skills review requiere el identificador de la skill.", EXIT_SCHEMA);
   try {
     const r = registrarRevisionDeSkill({
       root,
@@ -3346,7 +3479,9 @@ export function skillsReviewCommand(
       ...(opciones.ahora === undefined ? {} : { ahora: opciones.ahora }),
       ...(opciones.env === undefined ? {} : { env: opciones.env }),
     });
-    return ok(`Revisión de ${r.id} registrada por ${r.actor} sobre sha256:${r.sha256.slice(0, 12)}… (versión ${r.skillVersion}). Permisos: ${r.permissions}.\n`);
+    return ok(
+      `Revisión de ${r.id} registrada por ${r.actor} sobre sha256:${r.sha256.slice(0, 12)}… (versión ${r.skillVersion}). Permisos: ${r.permissions}.\n`,
+    );
   } catch (caught) {
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);
@@ -3363,16 +3498,32 @@ export function approvalAuthorizeCommand(
   root: string,
   accion: string | undefined,
   flags: Readonly<Record<string, string | true>>,
-  opciones: { readonly ahora?: Date; readonly env?: Readonly<Record<string, string | undefined>>; readonly secret?: string | null } = {},
+  opciones: {
+    readonly ahora?: Date;
+    readonly env?: Readonly<Record<string, string | undefined>>;
+    readonly secret?: string | null;
+  } = {},
 ): CommandResult {
-  const t = (n: string): string => (typeof flags[n] === "string" ? (flags[n] as string) : "");
-  const lista = (n: string): string[] => t(n).split(",").map((x) => x.trim()).filter((x) => x !== "");
+  const t = (n: string): string =>
+    typeof flags[n] === "string" ? (flags[n] as string) : "";
+  const lista = (n: string): string[] =>
+    t(n)
+      .split(",")
+      .map((x) => x.trim())
+      .filter((x) => x !== "");
   try {
     if (accion === "link") {
       const secret = opciones.secret === undefined ? approvalSecret() : opciones.secret;
-      if (secret === null) return error("No hay secreto para firmar el código (aprobacion.secret o VALMEN_APPROVAL_SECRET).", EXIT_SCHEMA);
+      if (secret === null)
+        return error(
+          "No hay secreto para firmar el código (aprobacion.secret o VALMEN_APPROVAL_SECRET).",
+          EXIT_SCHEMA,
+        );
       if ((opciones.env ?? process.env)["VALMEN_UNATTENDED"] === "1") {
-        return error("Una sesión desatendida no puede emitir un código de autorización de aprobación: esa autoridad es de una persona.", EXIT_INVARIANT);
+        return error(
+          "Una sesión desatendida no puede emitir un código de autorización de aprobación: esa autoridad es de una persona.",
+          EXIT_INVARIANT,
+        );
       }
       const e = emitirCodigoDeAutorizacionDeAprobacion({
         root,
@@ -3398,7 +3549,11 @@ export function approvalAuthorizeCommand(
     }
     if (accion === "redeem") {
       const secret = opciones.secret === undefined ? approvalSecret() : opciones.secret;
-      if (secret === null) return error("No hay secreto para verificar el código (aprobacion.secret o VALMEN_APPROVAL_SECRET).", EXIT_SCHEMA);
+      if (secret === null)
+        return error(
+          "No hay secreto para verificar el código (aprobacion.secret o VALMEN_APPROVAL_SECRET).",
+          EXIT_SCHEMA,
+        );
       const a = canjearCodigoDeAutorizacionDeAprobacion({
         root,
         secret,
@@ -3408,7 +3563,9 @@ export function approvalAuthorizeCommand(
         ...(opciones.ahora === undefined ? {} : { ahora: opciones.ahora }),
         ...(opciones.env === undefined ? {} : { env: opciones.env }),
       });
-      return ok(`Autorización ${a.id} creada por ${a.actor} con el código firmado; vigente hasta ${a.validUntil.slice(0, 10)}.\n`);
+      return ok(
+        `Autorización ${a.id} creada por ${a.actor} con el código firmado; vigente hasta ${a.validUntil.slice(0, 10)}.\n`,
+      );
     }
     if (accion === "revoke-code") {
       revocarCodigoDeAutorizacionDeAprobacion({
@@ -3454,22 +3611,30 @@ export function approvalAuthorizeCommand(
         ...(opciones.ahora === undefined ? {} : { ahora: opciones.ahora }),
         ...(opciones.env === undefined ? {} : { env: opciones.env }),
       });
-      return ok(`Autorización ${r.id} revocada por ${r.actor}: ninguna aprobación posterior se hace con ella.\n`);
+      return ok(
+        `Autorización ${r.id} revocada por ${r.actor}: ninguna aprobación posterior se hace con ella.\n`,
+      );
     }
     if (accion === "list") {
       const todas = leerAutorizacionesDeAprobacion(root, opciones.ahora ?? new Date());
-      if (todas.length === 0) return ok("No hay autorizaciones de aprobación automática.\n");
+      if (todas.length === 0)
+        return ok("No hay autorizaciones de aprobación automática.\n");
       return ok(
         todas
           .map(
             (a) =>
               `${a.id} · ${a.estado} · ${a.types.join(",")} · ${a.modules.join(",")} · modo ${a.mode} · ${a.actor}: «${a.quote}»` +
-              (a.estado === "vigente" ? `\n    revertir: ${comandoDeRevocacionDeAprobacion(a.id)}` : ""),
+              (a.estado === "vigente"
+                ? `\n    revertir: ${comandoDeRevocacionDeAprobacion(a.id)}`
+                : ""),
           )
           .join("\n") + "\n",
       );
     }
-    return error("approval-authorize admite: create, revoke, list, link, redeem o revoke-code.", EXIT_SCHEMA);
+    return error(
+      "approval-authorize admite: create, revoke, list, link, redeem o revoke-code.",
+      EXIT_SCHEMA,
+    );
   } catch (caught) {
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);
@@ -3485,7 +3650,10 @@ export function approvalAuthorizationApprovalsCommand(paths: RegistryPaths): Com
         `${a.ticket} · ${a.etapa} · ${a.autorizacion} (${a.hash.slice(0, 19)}…) · recibo ${a.recibo === "" ? "(sin recibo)" : a.recibo} · modo ${a.modo} · ${a.en} · autorización ${a.estado}`,
     );
     if (lineas.length === 0) lineas.push("No hay aprobaciones automáticas registradas.");
-    if (omitidos.length > 0) lineas.push(`Se omitieron ${omitidos.length} ticket(s) ilegibles: ${omitidos.join(", ")}.`);
+    if (omitidos.length > 0)
+      lineas.push(
+        `Se omitieron ${omitidos.length} ticket(s) ilegibles: ${omitidos.join(", ")}.`,
+      );
     return ok(lineas.join("\n") + "\n");
   } catch (caught) {
     const failure = toFailure(caught);
@@ -3515,7 +3683,9 @@ export function qaEligibilityCommand(
     const lineas = [
       `Elegibilidad para QA por agente — ${id}: ${resultado.elegible ? "ELEGIBLE" : "NO ELEGIBLE"}`,
       ...resultado.reglas.map((r) => `  ${r.cumple ? "✓" : "✗"} ${r.regla}: ${r.detalle}`),
-      ...(resultado.autorizacion === null ? [] : [`Respaldada por la autorización ${resultado.autorizacion.id}.`]),
+      ...(resultado.autorizacion === null
+        ? []
+        : [`Respaldada por la autorización ${resultado.autorizacion.id}.`]),
     ];
     return resultado.elegible
       ? ok(`${lineas.join("\n")}\n`)
@@ -3533,7 +3703,9 @@ function lineasDeRevision(
   const productores =
     preparacion.productores.length === 0
       ? "ninguno registrado"
-      : preparacion.productores.map((p) => `${p.modelo} (${p.ejecutor}, fase ${p.fase})`).join(", ");
+      : preparacion.productores
+          .map((p) => `${p.modelo} (${p.ejecutor}, fase ${p.fase})`)
+          .join(", ");
   const revisor =
     preparacion.revisor === null
       ? "sin resolver"
@@ -3582,7 +3754,11 @@ export async function reviewAgentCommand(
   const dryRun = flags["dry-run"] === true;
 
   try {
-    const preparacion = prepararRevision({ paths, ticketId: id, etapa: etapa as EtapaRevisable });
+    const preparacion = prepararRevision({
+      paths,
+      ticketId: id,
+      etapa: etapa as EtapaRevisable,
+    });
 
     if (!preparacion.ok) {
       const cuerpo = json
@@ -3624,7 +3800,9 @@ export async function reviewAgentCommand(
         `Consumo: ${resultado.usage.inputTokens} tokens de entrada, ${resultado.usage.outputTokens} de salida, ` +
           `${resultado.usage.costUsd} USD, ${resultado.latencyMs} ms.`,
         ...(guardada === null
-          ? ["No se registró: la decisión no se guardó en el recibo ni en el ticket, no movió el estado y no consumió cupo."]
+          ? [
+              "No se registró: la decisión no se guardó en el recibo ni en el ticket, no movió el estado y no consumió cupo.",
+            ]
           : [
               `Registrada como decisión del revisor en el recibo ${guardada.receiptId} (autorización ${guardada.authorizationId}).`,
               guardada.decision === "approve"
@@ -3659,9 +3837,11 @@ export function approvalEligibilityCommand(
   opciones: { readonly ahora?: Date } = {},
 ): CommandResult {
   const id = typeof flags["id"] === "string" ? flags["id"] : "";
-  if (id === "") return error("approval-eligibility requiere --id <TICKET-ID>.", EXIT_SCHEMA);
+  if (id === "")
+    return error("approval-eligibility requiere --id <TICKET-ID>.", EXIT_SCHEMA);
   const etapa = typeof flags["stage"] === "string" ? flags["stage"] : "";
-  if (etapa === "") return error("approval-eligibility requiere --stage analysis|plan.", EXIT_SCHEMA);
+  if (etapa === "")
+    return error("approval-eligibility requiere --stage analysis|plan.", EXIT_SCHEMA);
   try {
     const resultado = elegibilidadDeAprobacion({
       paths,
@@ -3671,13 +3851,25 @@ export function approvalEligibilityCommand(
     });
     const salida = resultado.elegible ? EXIT_OK : EXIT_INVARIANT;
     if (flags["json"] === true) {
-      return { stdout: `${JSON.stringify(resultado, null, 2)}\n`, stderr: "", exitCode: salida };
+      return {
+        stdout: `${JSON.stringify(resultado, null, 2)}\n`,
+        stderr: "",
+        exitCode: salida,
+      };
     }
     const lineas = [
       `Elegibilidad para aprobar por autorización — ${id} (${etapa}): ${resultado.elegible ? "ELEGIBLE" : "NO ELEGIBLE"}`,
       ...resultado.reglas.map((r) => `  ${r.cumple ? "✓" : "✗"} ${r.regla}: ${r.detalle}`),
-      ...(resultado.autorizacion === null ? [] : [`Respaldada por la autorización ${resultado.autorizacion.id} (${resultado.autorizacion.hash}).`]),
-      ...(resultado.derivableAlRevisor ? ["Derivable al revisor: solo la compuerta en review impide la aprobación y la autorización es de modo reviewer."] : []),
+      ...(resultado.autorizacion === null
+        ? []
+        : [
+            `Respaldada por la autorización ${resultado.autorizacion.id} (${resultado.autorizacion.hash}).`,
+          ]),
+      ...(resultado.derivableAlRevisor
+        ? [
+            "Derivable al revisor: solo la compuerta en review impide la aprobación y la autorización es de modo reviewer.",
+          ]
+        : []),
     ];
     return { stdout: `${lineas.join("\n")}\n`, stderr: "", exitCode: salida };
   } catch (caught) {
@@ -3694,12 +3886,17 @@ export function approvalEligibilityCommand(
 export function approveByAuthorizationCommand(
   paths: RegistryPaths,
   flags: Readonly<Record<string, string | true>>,
-  opciones: { readonly ahora?: Date; readonly env?: Readonly<Record<string, string | undefined>> } = {},
+  opciones: {
+    readonly ahora?: Date;
+    readonly env?: Readonly<Record<string, string | undefined>>;
+  } = {},
 ): CommandResult {
   const id = typeof flags["id"] === "string" ? flags["id"] : "";
-  if (id === "") return error("approve-by-authorization requiere --id <TICKET-ID>.", EXIT_SCHEMA);
+  if (id === "")
+    return error("approve-by-authorization requiere --id <TICKET-ID>.", EXIT_SCHEMA);
   const etapa = typeof flags["stage"] === "string" ? flags["stage"] : "";
-  if (etapa === "") return error("approve-by-authorization requiere --stage analysis|plan.", EXIT_SCHEMA);
+  if (etapa === "")
+    return error("approve-by-authorization requiere --stage analysis|plan.", EXIT_SCHEMA);
   try {
     const r = aprobarPorAutorizacion({
       paths,
@@ -3731,7 +3928,10 @@ export function qaShadowCommand(paths: RegistryPaths): CommandResult {
     const lineas = [
       `QA por agente — modo efectivo: ${modo.modo}${modo.motivo === null ? "" : ` (${modo.motivo})`}`,
       `Comparados: ${comparaciones.length} de ${TICKETS_PARA_PROMOVER} · discrepancias: ${discordantes.length}`,
-      ...comparaciones.map((c) => `  ${c.concordante ? "✓" : "✗"} ${c.ticketId}: agente ${c.agente}, responsable ${c.responsable}`),
+      ...comparaciones.map(
+        (c) =>
+          `  ${c.concordante ? "✓" : "✗"} ${c.ticketId}: agente ${c.agente}, responsable ${c.responsable}`,
+      ),
     ];
     return ok(`${lineas.join("\n")}\n`);
   } catch (caught) {
@@ -3745,7 +3945,8 @@ export function qaPromoteCommand(
   paths: RegistryPaths,
   flags: Readonly<Record<string, string | true>>,
 ): CommandResult {
-  const texto = (n: string): string => (typeof flags[n] === "string" ? (flags[n] as string) : "");
+  const texto = (n: string): string =>
+    typeof flags[n] === "string" ? (flags[n] as string) : "";
   try {
     const p = promoverQaAgent({ paths, actor: texto("actor"), quote: texto("quote") });
     return ok(
@@ -3793,17 +3994,30 @@ export function qaAgentCommand(
   paths: RegistryPaths,
   flags: Readonly<Record<string, string | true>>,
 ): CommandResult {
-  const texto = (n: string): string => (typeof flags[n] === "string" ? (flags[n] as string) : "");
+  const texto = (n: string): string =>
+    typeof flags[n] === "string" ? (flags[n] as string) : "";
   const id = texto("id");
   if (id === "" || texto("base") === "" || texto("delivered") === "") {
-    return error("qa-agent requiere --id <TICKET-ID>, --base <commit> y --delivered <commit>.", EXIT_SCHEMA);
+    return error(
+      "qa-agent requiere --id <TICKET-ID>, --base <commit> y --delivered <commit>.",
+      EXIT_SCHEMA,
+    );
   }
   try {
-    const r = correrQaAgent({ paths, ticketId: id, base: texto("base"), delivered: texto("delivered") });
+    const r = correrQaAgent({
+      paths,
+      ticketId: id,
+      base: texto("base"),
+      delivered: texto("delivered"),
+    });
     const lineas = [
       `qa-agent — ${id}: ${r.verdict === "approve" ? "APRUEBA" : "NO APRUEBA"}`,
       ...r.reasons.map((m) => `  ✗ ${m}`),
-      ...(r.recibo === null ? [] : [`Contra el código base: ${r.recibo.resultadoContraBase}. Comandos: ${r.recibo.commands.length}.`]),
+      ...(r.recibo === null
+        ? []
+        : [
+            `Contra el código base: ${r.recibo.resultadoContraBase}. Comandos: ${r.recibo.commands.length}.`,
+          ]),
       ...(r.reciboPath === null ? [] : [`Recibo anexado en ${r.reciboPath}`]),
     ];
     return r.verdict === "approve"
@@ -3829,12 +4043,20 @@ export function journeyClearStopCommand(
   const ticket = typeof flags["id"] === "string" ? flags["id"] : undefined;
   const actor = typeof flags["actor"] === "string" ? flags["actor"] : "";
   if (proyecto === undefined || ticket === undefined) {
-    return error("journey clear-stop requiere --project <id> y --id <ticket>.", EXIT_SCHEMA);
+    return error(
+      "journey clear-stop requiere --project <id> y --id <ticket>.",
+      EXIT_SCHEMA,
+    );
   }
   try {
-    const project = resolveAuthorizedProject({ projectId: proyecto, home: opciones.home ?? homedir() });
+    const project = resolveAuthorizedProject({
+      projectId: proyecto,
+      home: opciones.home ?? homedir(),
+    });
     liberarParada(project.paths, ticket, actor);
-    return ok(`Parada de ${ticket} liberada por ${actor.trim()}: el despacho puede volver a elegirlo.\n`);
+    return ok(
+      `Parada de ${ticket} liberada por ${actor.trim()}: el despacho puede volver a elegirlo.\n`,
+    );
   } catch (caught) {
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);
@@ -3851,19 +4073,26 @@ export function proyectoDeLaOla(
 ): ReturnType<typeof resolveAuthorizedProject> {
   const home = opciones.home ?? homedir();
   const explicito = typeof flags["project"] === "string" ? flags["project"] : undefined;
-  if (explicito !== undefined) return resolveAuthorizedProject({ projectId: explicito, home });
+  if (explicito !== undefined)
+    return resolveAuthorizedProject({ projectId: explicito, home });
   const configPath = join(opciones.root ?? process.cwd(), ".valmen", "config.yaml");
   const derivado = existsSync(configPath)
     ? readSharedProjectPolicy(parseConfig(readFileSync(configPath, "utf8"))).projectId
     : null;
   if (derivado === null) {
-    throw new TicketError("Falta --project <id>: la raíz no declara un project-id en .valmen/config.yaml.", EXIT_SCHEMA);
+    throw new TicketError(
+      "Falta --project <id>: la raíz no declara un project-id en .valmen/config.yaml.",
+      EXIT_SCHEMA,
+    );
   }
   return resolveAuthorizedProject({ projectId: derivado, home });
 }
 
 /** El aviso de árbol sucio para la salida de la ola y del brief: se calcula al consultar y no escribe nada. */
-function avisoDeArbolSucio(root: string, propias?: Parameters<typeof advertenciaDeArbolSucio>[1]): string {
+function avisoDeArbolSucio(
+  root: string,
+  propias?: Parameters<typeof advertenciaDeArbolSucio>[1],
+): string {
   try {
     const aviso = advertenciaDeArbolSucio(root, propias);
     return aviso === null ? "" : `\n${aviso}\n`;
@@ -3878,13 +4107,18 @@ function avisoDeArbolSucio(root: string, propias?: Parameters<typeof advertencia
  */
 export function journeyNextCommand(
   flags: Readonly<Record<string, string | true>>,
-  opciones: { readonly home?: string; readonly root?: string; readonly ahora?: () => Date } = {},
+  opciones: {
+    readonly home?: string;
+    readonly root?: string;
+    readonly ahora?: () => Date;
+  } = {},
 ): CommandResult {
   if (flags["wave"] !== true) return error("journey next requiere --wave.", EXIT_SCHEMA);
   let concurrency: number | undefined;
   if (flags["concurrency"] !== undefined) {
     const crudo = flags["concurrency"];
-    concurrency = typeof crudo === "string" && /^\d+$/.test(crudo) ? Number(crudo) : Number.NaN;
+    concurrency =
+      typeof crudo === "string" && /^\d+$/.test(crudo) ? Number(crudo) : Number.NaN;
     if (!Number.isSafeInteger(concurrency) || concurrency < 1) {
       return error("--concurrency debe ser un entero de al menos 1.", EXIT_SCHEMA);
     }
@@ -3899,7 +4133,11 @@ export function journeyNextCommand(
         ...(opciones.ahora === undefined ? {} : { ahora: opciones.ahora }),
       });
       const jornada = readJourneys(project).find((j) => j.journeyId === ola.journeyId);
-      const propias = rutasPropiasDeLaJornada(project.paths, jornada?.tickets.map((t) => t.ticketId) ?? [], null);
+      const propias = rutasPropiasDeLaJornada(
+        project.paths,
+        jornada?.tickets.map((t) => t.ticketId) ?? [],
+        null,
+      );
       return ok(renderOlaDeJornada(ola) + avisoDeArbolSucio(project.root, propias));
     });
   } catch (caught) {
@@ -3917,10 +4155,18 @@ export function journeyBriefCommand(
   opciones: { readonly home?: string; readonly root?: string } = {},
 ): CommandResult {
   const ticketId = typeof flags["id"] === "string" ? flags["id"] : undefined;
-  if (ticketId === undefined) return error("journey brief requiere --id <ID>.", EXIT_SCHEMA);
+  if (ticketId === undefined)
+    return error("journey brief requiere --id <ID>.", EXIT_SCHEMA);
   const cliente = flags["cliente"];
-  if (cliente !== undefined && (typeof cliente !== "string" || !(EJECUTORES_CON_PERFIL as readonly string[]).includes(cliente))) {
-    return error(`El cliente "${String(cliente)}" no es válido. Valores admitidos: ${EJECUTORES_CON_PERFIL.join(", ")}.`, EXIT_SCHEMA);
+  if (
+    cliente !== undefined &&
+    (typeof cliente !== "string" ||
+      !(EJECUTORES_CON_PERFIL as readonly string[]).includes(cliente))
+  ) {
+    return error(
+      `El cliente "${String(cliente)}" no es válido. Valores admitidos: ${EJECUTORES_CON_PERFIL.join(", ")}.`,
+      EXIT_SCHEMA,
+    );
   }
   const out = flags["out"];
   if (out !== undefined && (typeof out !== "string" || out === "")) {
@@ -3953,7 +4199,9 @@ export function journeyBriefCommand(
  * `journey install-trigger`: retirado. Responde con el aviso de retiro y no escribe nada, ni el
  * plist de launchd ni el script del job de Hermes.
  */
-export function journeyInstallTriggerCommand(flags: Readonly<Record<string, string | true>> = {}): CommandResult {
+export function journeyInstallTriggerCommand(
+  flags: Readonly<Record<string, string | true>> = {},
+): CommandResult {
   void flags; // ninguna bandera cambia la respuesta: no se escribe nada
   return retiroDelDisparador("`journey install-trigger`");
 }
@@ -3972,7 +4220,8 @@ export function journeyPlanCommand(
   const texto = (nombre: string): string | undefined =>
     typeof flags[nombre] === "string" ? (flags[nombre] as string) : undefined;
   const proyecto = texto("project");
-  if (proyecto === undefined) return error("journey plan requiere --project <id>.", EXIT_SCHEMA);
+  if (proyecto === undefined)
+    return error("journey plan requiere --project <id>.", EXIT_SCHEMA);
   try {
     const project = resolveAuthorizedProject({ projectId: proyecto });
     const destino = texto("to") ?? "";
@@ -3983,7 +4232,12 @@ export function journeyPlanCommand(
       ...(texto("feature") === undefined ? {} : { feature: texto("feature") as string }),
       ...(tickets === undefined
         ? {}
-        : { tickets: tickets.split(",").map((id) => id.trim()).filter((id) => id !== "") }),
+        : {
+            tickets: tickets
+              .split(",")
+              .map((id) => id.trim())
+              .filter((id) => id !== ""),
+          }),
       ...(maximo === undefined ? {} : { maximo: Number(maximo) }),
       ...(destino === ""
         ? {}
@@ -3992,15 +4246,22 @@ export function journeyPlanCommand(
               const entrega = hermesSendChannel({
                 target: destino,
                 ...(runner === undefined ? {} : { runner }),
-              }).notify({ subject: "Plan del día", body: cuerpo, key: `journey-plan:${cuerpo.split(":")[0] ?? ""}` });
+              }).notify({
+                subject: "Plan del día",
+                body: cuerpo,
+                key: `journey-plan:${cuerpo.split(":")[0] ?? ""}`,
+              });
               return { delivered: entrega.delivered, detail: entrega.detail };
             },
           }),
     });
     const lineas = [jornada.plan];
-    if (jornada.omitidos.length > 0) lineas.push(`Omitidos: ${jornada.omitidos.join("; ")}.`);
+    if (jornada.omitidos.length > 0)
+      lineas.push(`Omitidos: ${jornada.omitidos.join("; ")}.`);
     if (jornada.aviso === null) {
-      lineas.push("Sin destino de aviso: la jornada quedó escrita y no se envió nada (--to telegram).");
+      lineas.push(
+        "Sin destino de aviso: la jornada quedó escrita y no se envió nada (--to telegram).",
+      );
     } else if (jornada.aviso.delivered) {
       lineas.push(`Aviso enviado a ${destino}. ${jornada.aviso.detail}`);
     } else {

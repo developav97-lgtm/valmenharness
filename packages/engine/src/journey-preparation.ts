@@ -15,8 +15,16 @@ import { join } from "node:path";
 import { reporteDelEjecutor } from "@valmen/adapter";
 import { createExecutionIdentity, parseTicket } from "@valmen/core";
 
-import { autonomousExecutorCommand, razonesDePolitica, type AutonomousExecutorCommand } from "./autonomous-run.js";
-import { type AutonomousStopReceipt, paradasActivas, recordAutonomousStop } from "./autonomous-stops.js";
+import {
+  autonomousExecutorCommand,
+  razonesDePolitica,
+  type AutonomousExecutorCommand,
+} from "./autonomous-run.js";
+import {
+  type AutonomousStopReceipt,
+  paradasActivas,
+  recordAutonomousStop,
+} from "./autonomous-stops.js";
 import { autonomousConfig, findTicket, type RegistryPaths } from "./discovery.js";
 import { recordExecutionActivity } from "./execution-activity.js";
 import { motivoDeTope } from "./journey-limits.js";
@@ -55,7 +63,12 @@ export interface ResultadoDePreparacion {
 export type EjecutorDePreparacion = (
   comando: AutonomousExecutorCommand,
   entorno: Readonly<Record<string, string>>,
-) => { readonly status: number; readonly stdout: string; readonly stderr: string; readonly timedOut?: boolean };
+) => {
+  readonly status: number;
+  readonly stdout: string;
+  readonly stderr: string;
+  readonly timedOut?: boolean;
+};
 
 export interface PrepararTicketRequest {
   readonly paths: RegistryPaths;
@@ -97,11 +110,14 @@ function ejecutarDeVerdad(
     timeout: Math.round(maxMinutes * 60_000),
     killSignal: "SIGKILL",
   });
-  const agotado = (resultado.error as NodeJS.ErrnoException | undefined)?.code === "ETIMEDOUT";
+  const agotado =
+    (resultado.error as NodeJS.ErrnoException | undefined)?.code === "ETIMEDOUT";
   return {
     status: agotado ? 124 : (resultado.status ?? 1),
     stdout: resultado.stdout ?? "",
-    stderr: agotado ? `El ejecutor superó el tiempo máximo de ${maxMinutes} minutos y se cortó.` : (resultado.stderr ?? ""),
+    stderr: agotado
+      ? `El ejecutor superó el tiempo máximo de ${maxMinutes} minutos y se cortó.`
+      : (resultado.stderr ?? ""),
     ...(agotado ? { timedOut: true } : {}),
   };
 }
@@ -109,14 +125,21 @@ function ejecutarDeVerdad(
 /** Las líneas de `git status` del árbol, o `null` si no es un repositorio. */
 function estadoDelArbol(root: string): Set<string> | null {
   if (!existsSync(join(root, ".git"))) return null;
-  const resultado = spawnSync("git", ["-C", root, "status", "--porcelain", "-uall"], { encoding: "utf8" });
+  const resultado = spawnSync("git", ["-C", root, "status", "--porcelain", "-uall"], {
+    encoding: "utf8",
+  });
   if (resultado.status !== 0) return null;
   return new Set(resultado.stdout.split("\n").filter((linea) => linea.trim() !== ""));
 }
 
-function fueraDelRegistro(antes: Set<string> | null, despues: Set<string> | null, ticketsDir: string): string[] {
+function fueraDelRegistro(
+  antes: Set<string> | null,
+  despues: Set<string> | null,
+  ticketsDir: string,
+): string[] {
   if (antes === null || despues === null) return [];
-  const permitido = (ruta: string): boolean => ruta.startsWith(`${ticketsDir}/`) || ruta.startsWith(".valmen/");
+  const permitido = (ruta: string): boolean =>
+    ruta.startsWith(`${ticketsDir}/`) || ruta.startsWith(".valmen/");
   return [...despues]
     .filter((linea) => !antes.has(linea))
     .map((linea) => linea.slice(3).trim().replace(/^"|"$/g, ""))
@@ -124,7 +147,12 @@ function fueraDelRegistro(antes: Set<string> | null, despues: Set<string> | null
 }
 
 /** El aviso de una decisión pendiente, en formato de opciones y efecto (R-JORN-003). */
-export function avisoDeDecision(ticketId: string, compuerta: string, resultado: string, motivo: string): string {
+export function avisoDeDecision(
+  ticketId: string,
+  compuerta: string,
+  resultado: string,
+  motivo: string,
+): string {
   const resumen = motivo.replace(/\s+/g, " ").trim();
   const bloqueo = resultado === "block";
   return [
@@ -167,14 +195,19 @@ export function prepararTicket(request: PrepararTicketRequest): ResultadoDePrepa
             ? "executor-failed"
             : "verification-failed",
       detail: resultado.detalle.replace(/\s+/g, " ").slice(0, 300),
-      workflowStatus: actual === undefined ? "intake" : parseTicket(actual.text).fields.workflow_status,
+      workflowStatus:
+        actual === undefined ? "intake" : parseTicket(actual.text).fields.workflow_status,
       now: request.ahora?.() ?? new Date(),
     });
     resultado = { ...resultado, parada };
   }
   // El registro por fase de una sesión que sí se lanzó (R-JORN-006); las no elegibles y las
   // detenidas por el despacho no lanzan nada.
-  if (resultado.estado !== "no-elegible" && resultado.estado !== "no-autorizado" && resultado.estado !== "ejecutor-fallo") {
+  if (
+    resultado.estado !== "no-elegible" &&
+    resultado.estado !== "no-autorizado" &&
+    resultado.estado !== "ejecutor-fallo"
+  ) {
     const despacho = resolverDespachoDeFase(request.paths.root, "analysis");
     if (despacho?.ok === true) {
       registrarFase(request.paths.root, {
@@ -196,11 +229,18 @@ export function prepararTicket(request: PrepararTicketRequest): ResultadoDePrepa
   return resultado;
 }
 
-function prepararTicketInner(request: PrepararTicketRequest, contexto: { stdout?: string }): ResultadoDePreparacion {
+function prepararTicketInner(
+  request: PrepararTicketRequest,
+  contexto: { stdout?: string },
+): ResultadoDePreparacion {
   const { paths, ticketId } = request;
   const politica = autonomousConfig(paths.root);
   const ubicado = findTicket(paths, ticketId);
-  const no = (detalle: string): ResultadoDePreparacion => ({ ticketId, estado: "no-elegible", detalle });
+  const no = (detalle: string): ResultadoDePreparacion => ({
+    ticketId,
+    estado: "no-elegible",
+    detalle,
+  });
   if (!politica.enabled || politica.executor === null) {
     return no("La autonomía está apagada o no declara un ejecutor seguro.");
   }
@@ -209,7 +249,8 @@ function prepararTicketInner(request: PrepararTicketRequest, contexto: { stdout?
   const razones: string[] = [];
   if (ticket.fields.workflow_status !== "intake") razones.push("no está en intake");
   razones.push(...razonesDePolitica(ticket.fields, politica));
-  if (razones.length > 0) return no(`El ticket ${ticketId} no es elegible para preparar: ${razones.join(", ")}.`);
+  if (razones.length > 0)
+    return no(`El ticket ${ticketId} no es elegible para preparar: ${razones.join(", ")}.`);
 
   // R-PERF-004: la preparación se lanza con el ejecutor del proveedor del rol agent-analysis y
   // su modelo; si ese ejecutor no está autorizado o el proveedor no es conocido, no se lanza nada.
@@ -226,7 +267,11 @@ function prepararTicketInner(request: PrepararTicketRequest, contexto: { stdout?
     model: despacho.model,
     effort: despacho.effort as typeof politica.executor.effort,
   };
-  const comando = autonomousExecutorCommand(executorDeFase, paths.root, promptDePreparacion(ticketId));
+  const comando = autonomousExecutorCommand(
+    executorDeFase,
+    paths.root,
+    promptDePreparacion(ticketId),
+  );
   const inicio = Date.now();
   const registrar = (resultado: string, stdout?: string): void => {
     registrarFase(paths.root, {
@@ -246,7 +291,10 @@ function prepararTicketInner(request: PrepararTicketRequest, contexto: { stdout?
   // El ejecutor hereda la marca de sesión desatendida: no puede registrar la aprobación del plan.
   const entorno = { [UNATTENDED_ENV]: "1" };
   const antes = estadoDelArbol(paths.root);
-  const corrida = (request.execute ?? ((c, e) => ejecutarDeVerdad(c, paths.root, e, politica.limits.maxMinutes)))(comando, entorno);
+  const corrida = (
+    request.execute ??
+    ((c, e) => ejecutarDeVerdad(c, paths.root, e, politica.limits.maxMinutes))
+  )(comando, entorno);
   contexto.stdout = corrida.stdout;
   if (corrida.status !== 0 || corrida.timedOut === true) {
     registrar("ejecutor-fallo", corrida.stdout);
@@ -262,18 +310,32 @@ function prepararTicketInner(request: PrepararTicketRequest, contexto: { stdout?
   const despues = findTicket(paths, ticketId);
   const actual = despues === undefined ? ticket : parseTicket(despues.text);
   if (aprobacionDePlanVigente(actual).estado === "vigente") {
-    return { ticketId, estado: "verificacion-fallo", detalle: "El ejecutor dejó una aprobación del plan registrada: la aprobación es de una persona." };
+    return {
+      ticketId,
+      estado: "verificacion-fallo",
+      detalle:
+        "El ejecutor dejó una aprobación del plan registrada: la aprobación es de una persona.",
+    };
   }
   const tocados = fueraDelRegistro(antes, estadoDelArbol(paths.root), paths.ticketsDir);
   if (tocados.length > 0) {
-    return { ticketId, estado: "verificacion-fallo", detalle: `El ejecutor modificó archivos fuera del registro: ${tocados.join(", ")}.` };
+    return {
+      ticketId,
+      estado: "verificacion-fallo",
+      detalle: `El ejecutor modificó archivos fuera del registro: ${tocados.join(", ")}.`,
+    };
   }
 
   const recibos = readReceipts(paths, ticketId);
   for (const compuerta of ["analysis", "plan"]) {
     const veredicto = veredictoDeCompuerta(recibos, compuerta);
     if (veredicto.tipo === "bloqueada" || veredicto.tipo === "espera-persona") {
-      const aviso = avisoDeDecision(ticketId, compuerta, veredicto.recibo.outcome, veredicto.recibo.reason);
+      const aviso = avisoDeDecision(
+        ticketId,
+        compuerta,
+        veredicto.recibo.outcome,
+        veredicto.recibo.reason,
+      );
       const entrega = request.notificar?.(aviso);
       return {
         ticketId,
@@ -282,13 +344,25 @@ function prepararTicketInner(request: PrepararTicketRequest, contexto: { stdout?
       };
     }
     if (veredicto.tipo === "sin-recibo") {
-      return { ticketId, estado: "verificacion-fallo", detalle: `Falta el recibo de la compuerta ${compuerta}.` };
+      return {
+        ticketId,
+        estado: "verificacion-fallo",
+        detalle: `Falta el recibo de la compuerta ${compuerta}.`,
+      };
     }
   }
   if (actual.fields.workflow_status !== "planned") {
-    return { ticketId, estado: "verificacion-fallo", detalle: `El ticket quedó en ${actual.fields.workflow_status} y no en planned.` };
+    return {
+      ticketId,
+      estado: "verificacion-fallo",
+      detalle: `El ticket quedó en ${actual.fields.workflow_status} y no en planned.`,
+    };
   }
-  return { ticketId, estado: "plan-listo", detalle: "El plan está listo para aprobar; nadie lo aprobó." };
+  return {
+    ticketId,
+    estado: "plan-listo",
+    detalle: "El plan está listo para aprobar; nadie lo aprobó.",
+  };
 }
 
 export interface OmitidoDePreparacion {
@@ -307,16 +381,23 @@ export interface EleccionDePreparacion {
  * se saltó cada uno de los anteriores: una parada, una política que no lo admite o una
  * dependencia —de la jornada o del grafo de su feature— que todavía no está preparada.
  */
-export function elegirAPreparar(project: AuthorizedProject, journeyId: string): EleccionDePreparacion {
+export function elegirAPreparar(
+  project: AuthorizedProject,
+  journeyId: string,
+): EleccionDePreparacion {
   const jornada = readJourneys(project).find((j) => j.journeyId === journeyId);
   if (jornada === undefined) return { ticketId: null, omitidos: [] };
-  const documentos = new Map(allDocuments(project.paths).map(({ ticket, document }) => [ticket.id, document]));
+  const documentos = new Map(
+    allDocuments(project.paths).map(({ ticket, document }) => [ticket.id, document]),
+  );
   const preparado = (id: string): boolean => {
     const estado = documentos.get(id)?.fields.workflow_status;
     return estado !== undefined && estado !== "intake" && estado !== "analyzed";
   };
   const politica = autonomousConfig(project.root);
-  const ordenados = [...jornada.tickets].sort((a, b) => a.priority - b.priority || a.order - b.order);
+  const ordenados = [...jornada.tickets].sort(
+    (a, b) => a.priority - b.priority || a.order - b.order,
+  );
   // Una parada no se reintenta sola: el ticket espera a que una persona la libere.
   const parados = new Set(paradasActivas(project.paths).map((parada) => parada.ticketId));
   const omitidos: OmitidoDePreparacion[] = [];
@@ -329,13 +410,22 @@ export function elegirAPreparar(project: AuthorizedProject, journeyId: string): 
     }
     const politicas = razonesDePolitica(documento.fields, politica);
     if (politicas.length > 0) {
-      omitidos.push({ ticketId: ticket.ticketId, motivo: `no es elegible: ${politicas.join(", ")}` });
+      omitidos.push({
+        ticketId: ticket.ticketId,
+        motivo: `no es elegible: ${politicas.join(", ")}`,
+      });
       continue;
     }
-    const dependencias = new Set([...ticket.dependsOn, ...dependenciasEnGrafos(project.paths, ticket.ticketId)]);
+    const dependencias = new Set([
+      ...ticket.dependsOn,
+      ...dependenciasEnGrafos(project.paths, ticket.ticketId),
+    ]);
     const pendientes = [...dependencias].filter((dependencia) => !preparado(dependencia));
     if (pendientes.length > 0) {
-      omitidos.push({ ticketId: ticket.ticketId, motivo: `dependencias sin preparar: ${pendientes.join(", ")}` });
+      omitidos.push({
+        ticketId: ticket.ticketId,
+        motivo: `dependencias sin preparar: ${pendientes.join(", ")}`,
+      });
       continue;
     }
     return { ticketId: ticket.ticketId, omitidos };
@@ -344,7 +434,10 @@ export function elegirAPreparar(project: AuthorizedProject, journeyId: string): 
 }
 
 /** El primer ticket de la jornada que se puede preparar ahora, o `null`. */
-export function siguienteAPreparar(project: AuthorizedProject, journeyId: string): string | null {
+export function siguienteAPreparar(
+  project: AuthorizedProject,
+  journeyId: string,
+): string | null {
   return elegirAPreparar(project, journeyId).ticketId;
 }
 
@@ -370,25 +463,73 @@ export function despacharPreparacion(request: {
   const { project } = request;
   const politica = autonomousConfig(project.root);
   if (!politica.enabled || politica.executor === null) {
-    return { estado: "sin-candidato", ticketId: null, resultado: null, detalle: "La autonomía está apagada o no declara un ejecutor seguro.", omitidos: [] };
+    return {
+      estado: "sin-candidato",
+      ticketId: null,
+      resultado: null,
+      detalle: "La autonomía está apagada o no declara un ejecutor seguro.",
+      omitidos: [],
+    };
   }
-  const capacidad = reconcileMachineCapacity({ home: request.home, ahora: () => request.ahora });
+  const capacidad = reconcileMachineCapacity({
+    home: request.home,
+    ahora: () => request.ahora,
+  });
   const { ticketId, omitidos } = elegirAPreparar(project, request.journeyId);
   if (ticketId === null) {
-    return { estado: "sin-candidato", ticketId: null, resultado: null, detalle: "No hay un ticket en intake elegible y con sus dependencias ya preparadas.", omitidos };
+    return {
+      estado: "sin-candidato",
+      ticketId: null,
+      resultado: null,
+      detalle: "No hay un ticket en intake elegible y con sus dependencias ya preparadas.",
+      omitidos,
+    };
   }
   if (capacidad.availableSlots < 1) {
-    return { estado: "sin-candidato", ticketId, resultado: null, detalle: "No hay capacidad disponible en la máquina.", omitidos };
+    return {
+      estado: "sin-candidato",
+      ticketId,
+      resultado: null,
+      detalle: "No hay capacidad disponible en la máquina.",
+      omitidos,
+    };
   }
-  const tope = motivoDeTope({ project, home: request.home, politica, en: request.ahora.toISOString() });
-  if (tope !== null) return { estado: "sin-candidato", ticketId, resultado: null, detalle: tope, omitidos };
-  const identidad = createExecutionIdentity({ projectId: project.projectId, ticketId, executionId: request.journeyId });
-  const reserva = claimMachineCapacity({ home: request.home, project, identity: identidad, attemptId: request.attemptId });
+  const tope = motivoDeTope({
+    project,
+    home: request.home,
+    politica,
+    en: request.ahora.toISOString(),
+  });
+  if (tope !== null)
+    return { estado: "sin-candidato", ticketId, resultado: null, detalle: tope, omitidos };
+  const identidad = createExecutionIdentity({
+    projectId: project.projectId,
+    ticketId,
+    executionId: request.journeyId,
+  });
+  const reserva = claimMachineCapacity({
+    home: request.home,
+    project,
+    identity: identidad,
+    attemptId: request.attemptId,
+  });
   if (!reserva.granted) {
-    return { estado: "sin-candidato", ticketId, resultado: null, detalle: "La capacidad se agotó antes de iniciar.", omitidos };
+    return {
+      estado: "sin-candidato",
+      ticketId,
+      resultado: null,
+      detalle: "La capacidad se agotó antes de iniciar.",
+      omitidos,
+    };
   }
   if (!reserva.created) {
-    return { estado: "ya-despachado", ticketId, resultado: null, detalle: "La misma identidad ya conserva una reserva.", omitidos };
+    return {
+      estado: "ya-despachado",
+      ticketId,
+      resultado: null,
+      detalle: "La misma identidad ya conserva una reserva.",
+      omitidos,
+    };
   }
   const registrar = (estado: "started" | "finished" | "failed"): void => {
     recordExecutionActivity(project, {
@@ -415,11 +556,26 @@ export function despacharPreparacion(request: {
       ...(request.notificar === undefined ? {} : { notificar: request.notificar }),
       ahora: () => request.ahora,
     });
-    registrar(resultado.estado === "plan-listo" || resultado.estado === "decision-pendiente" ? "finished" : "failed");
-    return { estado: "preparado", ticketId, resultado, detalle: resultado.detalle, omitidos };
+    registrar(
+      resultado.estado === "plan-listo" || resultado.estado === "decision-pendiente"
+        ? "finished"
+        : "failed",
+    );
+    return {
+      estado: "preparado",
+      ticketId,
+      resultado,
+      detalle: resultado.detalle,
+      omitidos,
+    };
   } catch (error) {
     registrar("failed");
-    releaseMachineCapacity({ home: request.home, project, identity: identidad, attemptId: request.attemptId });
+    releaseMachineCapacity({
+      home: request.home,
+      project,
+      identity: identidad,
+      attemptId: request.attemptId,
+    });
     throw error;
   }
 }
@@ -444,7 +600,9 @@ export function dispatchEventId(
   // El ticket entra al digest: una jornada despacha varios tickets con la misma ejecución e
   // intento, y sin él el segundo ticket chocaba con el evento del primero.
   const digest = createHash("sha256")
-    .update(`${ticketId}\u0000${executionId}\u0000${attemptId}\u0000${state}${momento === undefined ? "" : `\u0000${momento}`}`)
+    .update(
+      `${ticketId}\u0000${executionId}\u0000${attemptId}\u0000${state}${momento === undefined ? "" : `\u0000${momento}`}`,
+    )
     .digest("hex")
     .slice(0, 32);
   return `journey-dispatch-${state}-${digest}`;

@@ -67,7 +67,11 @@ import {
   testTimeout,
   verifyDevConfig,
 } from "./discovery.js";
-import { type ArbolProbado, calcularArbolProbado, rutasQueCambiaron } from "./arbol-probado.js";
+import {
+  type ArbolProbado,
+  calcularArbolProbado,
+  rutasQueCambiaron,
+} from "./arbol-probado.js";
 import { runCodeReview } from "./code-review.js";
 import { buildGateState, runMechanicalChecks } from "./state.js";
 import { appendReceipt, currentReceipts, readReceipts } from "./receipts.js";
@@ -82,7 +86,11 @@ import {
   renderPreReview,
   reviewBeforeGate,
 } from "./revision-previa.js";
-import { type ThresholdOutcome, applyThresholds, validateThresholdTargets } from "./thresholds.js";
+import {
+  type ThresholdOutcome,
+  applyThresholds,
+  validateThresholdTargets,
+} from "./thresholds.js";
 
 /** Convierte preguntas ya validadas en proposiciones que el motor puro decide. */
 function configuredPropositions(
@@ -117,7 +125,10 @@ export interface IntegrationValidation {
   readonly propositions: readonly import("@valmen/gate").NoulProposition[];
 }
 
-export function buildIntegrationValidation(paths: RegistryPaths, ticketId: string): IntegrationValidation {
+export function buildIntegrationValidation(
+  paths: RegistryPaths,
+  ticketId: string,
+): IntegrationValidation {
   const ticket = findTicket(paths, ticketId);
   if (ticket === undefined) throw new TicketError("La ruta canónica solicitada no existe.");
   const parsed = parseTicket(ticket.text);
@@ -135,7 +146,10 @@ export function buildIntegrationValidation(paths: RegistryPaths, ticketId: strin
 /** Las citas comprobadas, una por línea con su resultado, para el estado del evaluador. */
 function renderCitas(citas: readonly CitaComprobada[]): string {
   return citas
-    .map((cita) => `${cita.cita}: ${cita.resultado}${cita.detalle === undefined ? "" : ` (${cita.detalle})`}`)
+    .map(
+      (cita) =>
+        `${cita.cita}: ${cita.resultado}${cita.detalle === undefined ? "" : ` (${cita.detalle})`}`,
+    )
     .join("\n");
 }
 
@@ -150,7 +164,9 @@ function chequeoDeArchivosCitados(citas: readonly CitaComprobada[]): MechanicalC
       detail: "el diagnóstico no cita rutas comprobables en este repositorio",
     };
   }
-  const mal = citas.filter((c) => c.resultado === "no_existe" || c.resultado === "linea_fuera");
+  const mal = citas.filter(
+    (c) => c.resultado === "no_existe" || c.resultado === "linea_fuera",
+  );
   return {
     id: "archivos_existen",
     description,
@@ -282,9 +298,7 @@ function revisarCriteriosVerificables(
   root: string,
   verifyDev: ReturnType<typeof verifyDevConfig>,
 ): string | null {
-  const sinDeclarar = criteria.filter(
-    (criterio) => !criterioDeclarado(criterio),
-  );
+  const sinDeclarar = criteria.filter((criterio) => !criterioDeclarado(criterio));
   if (sinDeclarar.length > 0) {
     return (
       `${sinDeclarar.length} criterio(s) no declaran cómo se verifican:\n` +
@@ -439,7 +453,8 @@ function tomarArbol(paths: RegistryPaths): {
 
 /** El árbol probado en una línea del informe: prefijo del hash, archivos y de dónde sale. */
 function describirArbol(arbol: TestedTreeRecord | undefined): string {
-  if (arbol === undefined) return "— (sin repositorio git, o no se pudo calcular: ver las notas)";
+  if (arbol === undefined)
+    return "— (sin repositorio git, o no se pudo calcular: ver las notas)";
   const origen =
     arbol.commitTree !== null
       ? `commit ${arbol.head?.slice(0, 12) ?? "?"}`
@@ -452,7 +467,8 @@ function describirArbol(arbol: TestedTreeRecord | undefined): string {
 /** La nota del recibo cuando los comandos de la compuerta dejaron el árbol distinto del que se probó. */
 function notaDeArbolCambiado(rutas: readonly string[]): string {
   const nombradas = rutas.slice(0, RUTAS_EN_LA_NOTA).join(", ");
-  const resto = rutas.length > RUTAS_EN_LA_NOTA ? ` y ${rutas.length - RUTAS_EN_LA_NOTA} más` : "";
+  const resto =
+    rutas.length > RUTAS_EN_LA_NOTA ? ` y ${rutas.length - RUTAS_EN_LA_NOTA} más` : "";
   return (
     `Los comandos de la compuerta cambiaron el árbol de trabajo (${rutas.length} ruta(s): ${nombradas}${resto}): ` +
     "el recibo guarda el árbol de antes de correr, así que la entrega con este recibo se va a rechazar. " +
@@ -545,7 +561,10 @@ export async function runGate(
     // resultado como dato en vez de adivinar si los archivos existen. Solo en las
     // compuertas que pasan por la revisión previa, y solo si hay algo citado: sin citas el
     // estado queda como antes.
-    if ((definition.id === "analysis" || definition.id === "plan") && definition.commandPropositions !== true) {
+    if (
+      (definition.id === "analysis" || definition.id === "plan") &&
+      definition.commandPropositions !== true
+    ) {
       const citas = citedFiles(paths.root, ticket.text);
       if (citas.length > 0) {
         estadoDelEvaluador = { ...state, archivos_citados: renderCitas(citas) };
@@ -569,7 +588,8 @@ export async function runGate(
     effort: options.effort ?? null,
     judgeModel: options.judgeModel ?? null,
     semantic: options.semantic ?? null,
-    cascade: options.cascade === undefined ? null : JSON.parse(JSON.stringify(options.cascade)),
+    cascade:
+      options.cascade === undefined ? null : JSON.parse(JSON.stringify(options.cascade)),
   });
   const hashDelEstado = hashState(state);
   const previo = currentReceipts(readReceipts(paths, options.ticketId)).find(
@@ -666,11 +686,17 @@ export async function runGate(
     for (const proposicion of partido.applicable) {
       if (proposicion.decidedInCode !== true) continue;
       const criterioNN = /^criterio_(\d+)$/.exec(proposicion.id);
-      const criterio = criterioNN === null ? undefined : criteria[Number(criterioNN[1]) - 1];
+      const criterio =
+        criterioNN === null ? undefined : criteria[Number(criterioNN[1]) - 1];
       if (criterioNN !== null && criterio !== undefined) {
-        const { valor, motivo } = decidirCriterioEnCodigo(Number(criterioNN[1]), criterio, ticket.text);
+        const { valor, motivo } = decidirCriterioEnCodigo(
+          Number(criterioNN[1]),
+          criterio,
+          ticket.text,
+        );
         respuestasDeCodigo.push({ id: proposicion.id, kind: "noul", value: valor });
-        if (valor === 0) notasDeCodigo.push(`${proposicion.id} decidido en código: ${motivo}`);
+        if (valor === 0)
+          notasDeCodigo.push(`${proposicion.id} decidido en código: ${motivo}`);
         continue;
       }
       const valor = decideInCode(proposicion.id, ticket.text);
@@ -779,7 +805,9 @@ export async function runGate(
   // está permitido— los criterios no corren: no probarían nada, y la compuerta termina
   // como falla del entorno (R-CDEF-007).
   const preparacion =
-    definition.commandPropositions === true && !soloManual ? runTestSetup(paths.root) : null;
+    definition.commandPropositions === true && !soloManual
+      ? runTestSetup(paths.root)
+      : null;
 
   let decision: GateDecision;
   let evaluation;
@@ -869,7 +897,12 @@ export async function runGate(
       // respondió, y solo los que una persona firmó (R-CPRE-010).
       const declarados = gateThresholds(paths.root);
       validateThresholdTargets(declarados);
-      umbrales = applyThresholds(gate.propositions, declarados, definition.id, evaluation.evaluator);
+      umbrales = applyThresholds(
+        gate.propositions,
+        declarados,
+        definition.id,
+        evaluation.evaluator,
+      );
       decision = decide(
         umbrales.propositions,
         evaluation.answers,
@@ -938,7 +971,9 @@ export async function runGate(
         );
       } else if (despues.arbol.registro.hash !== arbolAntes.arbol.registro.hash) {
         notasDeArbol.push(
-          notaDeArbolCambiado(rutasQueCambiaron(arbolAntes.arbol.archivos, despues.arbol.archivos)),
+          notaDeArbolCambiado(
+            rutasQueCambiaron(arbolAntes.arbol.archivos, despues.arbol.archivos),
+          ),
         );
       }
     }
@@ -1042,7 +1077,10 @@ export async function runGate(
       "cascada verificada: produce el modelo barato y el verificador escala lo no respaldado",
   }[evaluation.evaluator];
   lines.push("", `  Evaluación (${etiquetaEvaluador})`);
-  if (evaluation.requestedEvaluator !== undefined && evaluation.evaluatorFailure !== undefined) {
+  if (
+    evaluation.requestedEvaluator !== undefined &&
+    evaluation.evaluatorFailure !== undefined
+  ) {
     lines.push(
       `    Evaluador pedido ${evaluation.requestedEvaluator} · efectivo ${evaluation.evaluator}: ` +
         `el pedido falló (${evaluation.evaluatorFailure.code}) y no se reintentó.`,
@@ -1195,7 +1233,9 @@ export async function runGate(
     "  Recibo",
     `    evaluador          ${evaluation.evaluator}`,
     `    estado congelado   ${receipt.stateHash.slice(0, 23)}…`,
-    ...(arbolAntes === null ? [] : [`    árbol probado      ${describirArbol(receipt.testedTree)}`]),
+    ...(arbolAntes === null
+      ? []
+      : [`    árbol probado      ${describirArbol(receipt.testedTree)}`]),
     `    gate               ${receipt.gateHash.slice(0, 23)}…`,
     `    modelo             ${evaluation.model?.resolvedVersion ?? "— (decisión en código)"}`,
     `    coste              $${(evaluation.usage?.costUsd ?? 0).toFixed(6)}`,

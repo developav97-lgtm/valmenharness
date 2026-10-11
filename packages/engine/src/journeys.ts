@@ -130,7 +130,9 @@ export function readJourneyRevisions(
     .map((line, index) => parseStoredRevision(project, line, index + 1));
   for (const [index, revision] of revisions.entries()) {
     if (revision.cursor !== index + 1) {
-      throw new Error("El historial de jornadas tiene cursores no consecutivos o fuera de orden.");
+      throw new Error(
+        "El historial de jornadas tiene cursores no consecutivos o fuera de orden.",
+      );
     }
   }
   assertRevisionSequence(revisions);
@@ -143,16 +145,19 @@ export function readJourneyRevisions(
 export function readJourneys(project: AuthorizedProject): readonly Journey[] {
   const current = new Map<string, Journey>();
   for (const revision of readJourneyRevisions(project)) {
-    current.set(revision.journeyId, Object.freeze({
-      revisionId: revision.revisionId,
-      journeyId: revision.journeyId,
-      occurredAt: revision.occurredAt,
-      tickets: revision.tickets,
-      windows: revision.windows,
-      projectId: revision.projectId,
-      receivedAt: revision.receivedAt,
-      cursor: revision.cursor,
-    }));
+    current.set(
+      revision.journeyId,
+      Object.freeze({
+        revisionId: revision.revisionId,
+        journeyId: revision.journeyId,
+        occurredAt: revision.occurredAt,
+        tickets: revision.tickets,
+        windows: revision.windows,
+        projectId: revision.projectId,
+        receivedAt: revision.receivedAt,
+        cursor: revision.cursor,
+      }),
+    );
   }
   return [...current.values()];
 }
@@ -203,10 +208,14 @@ function appendJourneyRevision(
 
   return MutationLock.run(project.root, () => {
     const history = readJourneyRevisions(project);
-    const knownRevision = history.find((revision) => revision.revisionId === input.revisionId);
+    const knownRevision = history.find(
+      (revision) => revision.revisionId === input.revisionId,
+    );
     if (knownRevision !== undefined) {
       if (!sameRevision(knownRevision, input, kind)) {
-        throw new Error(`El revisionId "${input.revisionId}" ya existe con contenido distinto.`);
+        throw new Error(
+          `El revisionId "${input.revisionId}" ya existe con contenido distinto.`,
+        );
       }
       return { revision: knownRevision, appended: false };
     }
@@ -260,10 +269,14 @@ function parseStoredRevision(
   try {
     value = JSON.parse(line);
   } catch {
-    throw new Error(`El historial de jornadas tiene JSON inválido en la línea ${lineNumber}.`);
+    throw new Error(
+      `El historial de jornadas tiene JSON inválido en la línea ${lineNumber}.`,
+    );
   }
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error(`El historial de jornadas tiene una revisión inválida en la línea ${lineNumber}.`);
+    throw new Error(
+      `El historial de jornadas tiene una revisión inválida en la línea ${lineNumber}.`,
+    );
   }
   const record = value as Record<string, unknown>;
   const kind = stringField(record, "kind", lineNumber);
@@ -279,7 +292,8 @@ function parseStoredRevision(
     journeyId: stringField(record, "journeyId", lineNumber),
     occurredAt: stringField(record, "occurredAt", lineNumber),
     tickets: ticketsField(record["tickets"], lineNumber),
-    windows: record["windows"] === undefined ? [] : windowsField(record["windows"], lineNumber),
+    windows:
+      record["windows"] === undefined ? [] : windowsField(record["windows"], lineNumber),
   };
   assertInput(input);
   const receivedAt = stringField(record, "receivedAt", lineNumber);
@@ -303,13 +317,16 @@ function assertInput(input: JourneyRevisionInput): void {
   assertPortableId(input.revisionId, "revisionId");
   assertPortableId(input.journeyId, "journeyId");
   assertIsoInstant(input.occurredAt, "occurredAt");
-  if (input.tickets.length === 0) throw new Error("Una jornada debe declarar al menos un ticket.");
+  if (input.tickets.length === 0)
+    throw new Error("Una jornada debe declarar al menos un ticket.");
   const ids = new Set<string>();
   const orders = new Set<number>();
   for (const ticket of input.tickets) {
     assertTicket(ticket);
-    if (ids.has(ticket.ticketId)) throw new Error("Una jornada no puede repetir el mismo ticket.");
-    if (orders.has(ticket.order)) throw new Error("Una jornada no puede repetir el orden de un ticket.");
+    if (ids.has(ticket.ticketId))
+      throw new Error("Una jornada no puede repetir el mismo ticket.");
+    if (orders.has(ticket.order))
+      throw new Error("Una jornada no puede repetir el orden de un ticket.");
     ids.add(ticket.ticketId);
     orders.add(ticket.order);
   }
@@ -320,7 +337,8 @@ function assertWindows(windows: readonly JourneyWindowInput[]): void {
   const ids = new Set<string>();
   for (const window of windows) {
     assertPortableId(window.windowId, "windowId");
-    if (ids.has(window.windowId)) throw new Error("Una jornada no puede repetir una ventana.");
+    if (ids.has(window.windowId))
+      throw new Error("Una jornada no puede repetir una ventana.");
     ids.add(window.windowId);
     assertIsoInstant(window.startsAt, "window.startsAt");
     assertIsoInstant(window.endsAt, "window.endsAt");
@@ -356,7 +374,8 @@ function assertRevisionSequence(revisions: readonly JourneyRevision[]): void {
 }
 
 function assertTicket(ticket: JourneyTicketInput): void {
-  if (!ID_RE.test(ticket.ticketId)) throw new Error("ticketId debe ser un identificador de ticket válido.");
+  if (!ID_RE.test(ticket.ticketId))
+    throw new Error("ticketId debe ser un identificador de ticket válido.");
   if (!Number.isSafeInteger(ticket.order) || ticket.order < 1) {
     throw new Error("order debe ser un entero positivo.");
   }
@@ -364,10 +383,14 @@ function assertTicket(ticket: JourneyTicketInput): void {
     throw new Error("priority debe ser un entero no negativo.");
   }
   if (!JOURNEY_START_CONDITIONS.includes(ticket.start.condition)) {
-    throw new Error(`start.condition debe ser uno de: ${JOURNEY_START_CONDITIONS.join(", ")}.`);
+    throw new Error(
+      `start.condition debe ser uno de: ${JOURNEY_START_CONDITIONS.join(", ")}.`,
+    );
   }
-  if (ticket.start.scheduledAt !== undefined) assertIsoInstant(ticket.start.scheduledAt, "start.scheduledAt");
-  if (ticket.start.actualAt !== undefined) assertIsoInstant(ticket.start.actualAt, "start.actualAt");
+  if (ticket.start.scheduledAt !== undefined)
+    assertIsoInstant(ticket.start.scheduledAt, "start.scheduledAt");
+  if (ticket.start.actualAt !== undefined)
+    assertIsoInstant(ticket.start.actualAt, "start.actualAt");
   if (ticket.windowId !== undefined) assertPortableId(ticket.windowId, "windowId");
   assertUniqueIds(ticket.dependsOn, "dependsOn");
   if (ticket.dependsOn.includes(ticket.ticketId)) {
@@ -380,7 +403,8 @@ function assertUniqueIds(ids: readonly string[], field: string): void {
   const known = new Set<string>();
   for (const id of ids) {
     if (field === "dependsOn") {
-      if (!ID_RE.test(id)) throw new Error("dependsOn debe contener identificadores de ticket válidos.");
+      if (!ID_RE.test(id))
+        throw new Error("dependsOn debe contener identificadores de ticket válidos.");
     } else {
       assertPortableId(id, field);
     }
@@ -389,31 +413,47 @@ function assertUniqueIds(ids: readonly string[], field: string): void {
   }
 }
 
-function freezeTickets(tickets: readonly JourneyTicketInput[]): readonly JourneyTicketInput[] {
-  return Object.freeze(tickets
-    .map((ticket) => Object.freeze({
-      ticketId: ticket.ticketId,
-      order: ticket.order,
-      priority: ticket.priority,
-      dependsOn: Object.freeze([...ticket.dependsOn]),
-      start: Object.freeze({
-        condition: ticket.start.condition,
-        ...(ticket.start.scheduledAt === undefined ? {} : { scheduledAt: ticket.start.scheduledAt }),
-        ...(ticket.start.actualAt === undefined ? {} : { actualAt: ticket.start.actualAt }),
-      }),
-      ...(ticket.windowId === undefined ? {} : { windowId: ticket.windowId }),
-      authorizationIds: Object.freeze([...ticket.authorizationIds]),
-    }))
-    .sort((left, right) => left.order - right.order));
+function freezeTickets(
+  tickets: readonly JourneyTicketInput[],
+): readonly JourneyTicketInput[] {
+  return Object.freeze(
+    tickets
+      .map((ticket) =>
+        Object.freeze({
+          ticketId: ticket.ticketId,
+          order: ticket.order,
+          priority: ticket.priority,
+          dependsOn: Object.freeze([...ticket.dependsOn]),
+          start: Object.freeze({
+            condition: ticket.start.condition,
+            ...(ticket.start.scheduledAt === undefined
+              ? {}
+              : { scheduledAt: ticket.start.scheduledAt }),
+            ...(ticket.start.actualAt === undefined
+              ? {}
+              : { actualAt: ticket.start.actualAt }),
+          }),
+          ...(ticket.windowId === undefined ? {} : { windowId: ticket.windowId }),
+          authorizationIds: Object.freeze([...ticket.authorizationIds]),
+        }),
+      )
+      .sort((left, right) => left.order - right.order),
+  );
 }
 
-function freezeWindows(windows: readonly JourneyWindowInput[]): readonly JourneyWindowInput[] {
-  return Object.freeze(windows.map((window) => Object.freeze({
-    windowId: window.windowId,
-    startsAt: window.startsAt,
-    endsAt: window.endsAt,
-    timeZone: window.timeZone,
-  })));
+function freezeWindows(
+  windows: readonly JourneyWindowInput[],
+): readonly JourneyWindowInput[] {
+  return Object.freeze(
+    windows.map((window) =>
+      Object.freeze({
+        windowId: window.windowId,
+        startsAt: window.startsAt,
+        endsAt: window.endsAt,
+        timeZone: window.timeZone,
+      }),
+    ),
+  );
 }
 
 function sameRevision(
@@ -421,12 +461,20 @@ function sameRevision(
   input: JourneyRevisionInput,
   kind: JourneyRevisionKind,
 ): boolean {
-  return revision.kind === kind && revision.journeyId === input.journeyId &&
-    revision.occurredAt === input.occurredAt && sameTickets(revision.tickets, input.tickets) &&
-    JSON.stringify(freezeWindows(revision.windows ?? [])) === JSON.stringify(freezeWindows(input.windows ?? []));
+  return (
+    revision.kind === kind &&
+    revision.journeyId === input.journeyId &&
+    revision.occurredAt === input.occurredAt &&
+    sameTickets(revision.tickets, input.tickets) &&
+    JSON.stringify(freezeWindows(revision.windows ?? [])) ===
+      JSON.stringify(freezeWindows(input.windows ?? []))
+  );
 }
 
-function sameTickets(left: readonly JourneyTicketInput[], right: readonly JourneyTicketInput[]): boolean {
+function sameTickets(
+  left: readonly JourneyTicketInput[],
+  right: readonly JourneyTicketInput[],
+): boolean {
   return JSON.stringify(freezeTickets(left)) === JSON.stringify(freezeTickets(right));
 }
 
@@ -464,34 +512,62 @@ function ticketField(value: unknown, lineNumber: number): JourneyTicketInput {
     dependsOn: stringListField(record["dependsOn"], "dependsOn", lineNumber),
     start: {
       condition: stringField(start, "condition", lineNumber) as JourneyStartCondition,
-      ...(start["scheduledAt"] === undefined ? {} : { scheduledAt: stringField(start, "scheduledAt", lineNumber) }),
-      ...(start["actualAt"] === undefined ? {} : { actualAt: stringField(start, "actualAt", lineNumber) }),
+      ...(start["scheduledAt"] === undefined
+        ? {}
+        : { scheduledAt: stringField(start, "scheduledAt", lineNumber) }),
+      ...(start["actualAt"] === undefined
+        ? {}
+        : { actualAt: stringField(start, "actualAt", lineNumber) }),
     },
-    ...(record["windowId"] === undefined ? {} : { windowId: stringField(record, "windowId", lineNumber) }),
-    authorizationIds: stringListField(record["authorizationIds"], "authorizationIds", lineNumber),
+    ...(record["windowId"] === undefined
+      ? {}
+      : { windowId: stringField(record, "windowId", lineNumber) }),
+    authorizationIds: stringListField(
+      record["authorizationIds"],
+      "authorizationIds",
+      lineNumber,
+    ),
   };
 }
 
-function stringListField(value: unknown, field: string, lineNumber: number): readonly string[] {
+function stringListField(
+  value: unknown,
+  field: string,
+  lineNumber: number,
+): readonly string[] {
   if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) {
     throw new Error(`La línea ${lineNumber} no declara ${field}.`);
   }
   return value as string[];
 }
 
-function stringField(record: Record<string, unknown>, field: string, lineNumber: number): string {
+function stringField(
+  record: Record<string, unknown>,
+  field: string,
+  lineNumber: number,
+): string {
   const value = record[field];
-  if (typeof value !== "string") throw new Error(`La línea ${lineNumber} no declara ${field}.`);
+  if (typeof value !== "string")
+    throw new Error(`La línea ${lineNumber} no declara ${field}.`);
   return value;
 }
 
-function numberField(record: Record<string, unknown>, field: string, lineNumber: number): number {
+function numberField(
+  record: Record<string, unknown>,
+  field: string,
+  lineNumber: number,
+): number {
   const value = record[field];
-  if (typeof value !== "number") throw new Error(`La línea ${lineNumber} no declara ${field}.`);
+  if (typeof value !== "number")
+    throw new Error(`La línea ${lineNumber} no declara ${field}.`);
   return value;
 }
 
-function objectField(record: Record<string, unknown>, field: string, lineNumber: number): Record<string, unknown> {
+function objectField(
+  record: Record<string, unknown>,
+  field: string,
+  lineNumber: number,
+): Record<string, unknown> {
   const value = record[field];
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
     throw new Error(`La línea ${lineNumber} no declara ${field}.`);
@@ -501,7 +577,9 @@ function objectField(record: Record<string, unknown>, field: string, lineNumber:
 
 function assertPortableId(value: string, field: string): void {
   if (!JOURNEY_ID_RE.test(value)) {
-    throw new Error(`${field} debe ser un identificador portable no vacío, sin rutas ni espacios.`);
+    throw new Error(
+      `${field} debe ser un identificador portable no vacío, sin rutas ni espacios.`,
+    );
   }
 }
 

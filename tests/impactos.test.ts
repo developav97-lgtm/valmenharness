@@ -16,7 +16,12 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { buildGateState, runMechanicalChecks } from "../packages/engine/src/state.js";
-import { ANALYSIS_GATE, PLAN_GATE, gateFor, SIN_INTERFAZ } from "../packages/gate/src/index.js";
+import {
+  ANALYSIS_GATE,
+  PLAN_GATE,
+  gateFor,
+  SIN_INTERFAZ,
+} from "../packages/gate/src/index.js";
 import { renderFixtureTicket, writeFixtureTicket } from "./helpers/fixtures.js";
 
 let lab: string;
@@ -231,7 +236,9 @@ describe("los impactos llegan al evaluador", () => {
     expect(ids).toContain("migration_impact_reversion");
     // Y la proposición dice qué falta, no «el impacto está bien considerado»:
     // eso no se puede computar.
-    const proposicion = expandido.propositions.find((p) => p.id === "migration_impact_reversion");
+    const proposicion = expandido.propositions.find(
+      (p) => p.id === "migration_impact_reversion",
+    );
     expect(proposicion?.instructions).toContain("cómo se revierte");
     // La compuerta deja constancia de que se expandió por impacto.
     expect(expandido.id).toBe("plan+impactos");
@@ -260,7 +267,9 @@ describe("los impactos llegan al evaluador", () => {
     });
 
     expect(
-      expandido.propositions.map((proposition) => proposition.id).filter((id) => id.startsWith("migration_impact")),
+      expandido.propositions
+        .map((proposition) => proposition.id)
+        .filter((id) => id.startsWith("migration_impact")),
     ).toEqual([]);
     expect(expandido.id).toBe("analysis");
   });
@@ -279,7 +288,9 @@ describe("los impactos llegan al evaluador", () => {
     expect(expandido.id).toBe("plan+criterios");
     expect(expandido.propositions.map((p) => p.id)).toContain("criterio_01");
     expect(
-      expandido.propositions.map((p) => p.id).filter((id) => id.startsWith("migration_impact")),
+      expandido.propositions
+        .map((p) => p.id)
+        .filter((id) => id.startsWith("migration_impact")),
     ).toEqual([]);
   });
 

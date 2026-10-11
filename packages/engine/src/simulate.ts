@@ -31,7 +31,12 @@ import {
 } from "@valmen/gate";
 import { evaluateWithJev } from "@valmen/gate-jev";
 
-import { type LocatedTicket, type RegistryPaths, findAllTickets, playwrightConfig } from "./discovery.js";
+import {
+  type LocatedTicket,
+  type RegistryPaths,
+  findAllTickets,
+  playwrightConfig,
+} from "./discovery.js";
 import { buildGateState } from "./state.js";
 import { interfazDelTicket } from "./interfaz.js";
 import { testCommands } from "./gate.js";

@@ -400,7 +400,10 @@ export function perfilesCommand(
 ): CommandResult {
   const accion = subcomando ?? "list";
   const cliente = bandera(flags, "cliente");
-  if (cliente !== undefined && !(EJECUTORES_CON_PERFIL as readonly string[]).includes(cliente)) {
+  if (
+    cliente !== undefined &&
+    !(EJECUTORES_CON_PERFIL as readonly string[]).includes(cliente)
+  ) {
     return fallo(
       `"${cliente}" no es un ejecutor con perfil. Los vigentes son: ${EJECUTORES_CON_PERFIL.join(", ")}.`,
     );
@@ -430,7 +433,10 @@ export function perfilesCommand(
       lineas.push(
         "",
         ...renderFases(
-          fasesDeSesion(paths.root, cliente === undefined ? {} : { cliente: cliente as ClienteDeSesion }),
+          fasesDeSesion(
+            paths.root,
+            cliente === undefined ? {} : { cliente: cliente as ClienteDeSesion },
+          ),
         ),
         "",
         "  Ver uno:      valmen perfiles show <id>",
@@ -441,7 +447,8 @@ export function perfilesCommand(
     }
 
     if (accion === "show") {
-      if (id === undefined) return fallo("perfiles show requiere el id: valmen perfiles show <id>.");
+      if (id === undefined)
+        return fallo("perfiles show requiere el id: valmen perfiles show <id>.");
       const perfil = listarPerfiles(paths.root).find((candidato) => candidato.id === id);
       if (perfil === undefined) return fallo(`El perfil "${id}" no existe.`);
       const lineas = [
@@ -825,7 +832,9 @@ export async function doctorCommand(
     ] as const) {
       let declarado = false;
       try {
-        const documento: unknown = JSON.parse(readFileSync(join(paths.root, relativa), "utf8"));
+        const documento: unknown = JSON.parse(
+          readFileSync(join(paths.root, relativa), "utf8"),
+        );
         const seccion =
           typeof documento === "object" && documento !== null
             ? (documento as Record<string, unknown>)[clave]
@@ -853,7 +862,9 @@ export async function doctorCommand(
     try {
       const proyeccion = projectFiles(paths.root, basename(paths.root));
       for (const cliente of ["codex", "opencode"] as const) {
-        const reglas = proyeccion.denyNotApplied.filter((regla) => regla.cliente === cliente);
+        const reglas = proyeccion.denyNotApplied.filter(
+          (regla) => regla.cliente === cliente,
+        );
         if (reglas.length === 0) continue;
         opcionales.push({
           que: `Denegaciones en ${cliente}`,

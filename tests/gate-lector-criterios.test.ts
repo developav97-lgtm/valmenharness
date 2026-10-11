@@ -15,7 +15,10 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { runGate } from "../packages/engine/src/gate.js";
 import { readReceipts } from "../packages/engine/src/receipts.js";
-import { MAX_CRITERIA_PROPOSITIONS, extractCriteriaSpecs } from "../packages/gate/src/index.js";
+import {
+  MAX_CRITERIA_PROPOSITIONS,
+  extractCriteriaSpecs,
+} from "../packages/gate/src/index.js";
 import { writeFixtureTicket } from "./helpers/fixtures.js";
 
 interface VectorDeRecibo {
@@ -26,7 +29,10 @@ interface VectorDeRecibo {
 }
 
 const VECTORES = JSON.parse(
-  readFileSync(new URL("./fixtures/lector-criterios-recibos.json", import.meta.url), "utf8"),
+  readFileSync(
+    new URL("./fixtures/lector-criterios-recibos.json", import.meta.url),
+    "utf8",
+  ),
 ) as {
   readonly recibos: readonly VectorDeRecibo[];
   readonly skills: { readonly ticket: string; readonly seccion: string };
@@ -79,8 +85,14 @@ function viñetas(n: number): string {
  * Los números vienen de afuera: lo que se mide es qué proposiciones llegan y en
  * cuántas llamadas, no la calidad del plan.
  */
-function jevContador(llamadas: string[][]): NonNullable<Parameters<typeof runGate>[1]["jev"]> {
-  return (async ({ propositions }: { propositions: readonly { id: string; kind: string }[] }) => {
+function jevContador(
+  llamadas: string[][],
+): NonNullable<Parameters<typeof runGate>[1]["jev"]> {
+  return (async ({
+    propositions,
+  }: {
+    propositions: readonly { id: string; kind: string }[];
+  }) => {
     llamadas.push(propositions.map((proposicion) => proposicion.id));
     return {
       answers: propositions.map((proposicion) =>
@@ -159,7 +171,7 @@ describe("lector de criterios (R-CDEF-001)", () => {
         "- [ ] Un criterio con su anotación en la línea de abajo",
         "      <!-- verify: manual -->",
         "- [ ] Un criterio con su comando repartido en dos líneas",
-        '      <!-- test: node -e',
+        "      <!-- test: node -e",
         '            "process.exit(0)" -->',
         "- [ ] Un criterio sin ninguna anotación declarada",
       ].join("\n"),

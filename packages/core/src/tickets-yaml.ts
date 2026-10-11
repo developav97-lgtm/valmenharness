@@ -336,7 +336,11 @@ export function parseTicketsYaml(
       }
     }
     const portions = leerPorciones(mapa["portions"], `${donde}.portions`, coveredBy);
-    coverage.push({ requirement, coveredBy, ...(portions === undefined ? {} : { portions }) });
+    coverage.push({
+      requirement,
+      coveredBy,
+      ...(portions === undefined ? {} : { portions }),
+    });
   });
 
   const gaps = comoTextos(raiz["gaps"] ?? [], "gaps");

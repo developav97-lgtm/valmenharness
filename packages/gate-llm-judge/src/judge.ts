@@ -27,11 +27,7 @@
  */
 import type { Proposition, PropositionAnswer } from "@valmen/gate";
 import { GateDefinitionError } from "@valmen/gate";
-import {
-  callChat,
-  ChatError,
-  DEFAULT_PROVIDER,
-} from "@valmen/credentials";
+import { callChat, ChatError, DEFAULT_PROVIDER } from "@valmen/credentials";
 
 /**
  * Endpoint de chat por defecto.

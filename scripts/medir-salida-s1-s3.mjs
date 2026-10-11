@@ -15,7 +15,9 @@ import { pathToFileURL } from "node:url";
 
 /** El ejecutor de verdad: llama al CLI `valmen` con la raíz dada. */
 export function ejecutarValmen(root, argumentos) {
-  const resultado = spawnSync("valmen", ["--root", root, ...argumentos], { encoding: "utf8" });
+  const resultado = spawnSync("valmen", ["--root", root, ...argumentos], {
+    encoding: "utf8",
+  });
   return {
     status: resultado.status ?? 1,
     stdout: resultado.stdout ?? "",
@@ -38,7 +40,8 @@ export function medirRegistro(root, ejecutar = ejecutarValmen) {
     ticketsValidos: validos === null ? null : Number(validos),
     salidaDeValidacion: `${validacion.stdout}${validacion.stderr}`.trim(),
     precision: precision.status === 0 ? precision.stdout.trim() : "",
-    errorDePrecision: precision.status === 0 ? "" : `${precision.stdout}${precision.stderr}`.trim(),
+    errorDePrecision:
+      precision.status === 0 ? "" : `${precision.stdout}${precision.stderr}`.trim(),
   };
 }
 
@@ -48,7 +51,9 @@ export function renderInforme(mediciones, fecha) {
   for (const m of mediciones) {
     partes.push(`## Registro \`${basename(m.root)}\``, "", `Raíz: \`${m.root}\``, "");
     if (m.valida) {
-      partes.push(`- Validación: **correcta** — ${m.ticketsValidos ?? "?"} tickets válidos.`);
+      partes.push(
+        `- Validación: **correcta** — ${m.ticketsValidos ?? "?"} tickets válidos.`,
+      );
     } else {
       partes.push(
         `- Validación: **FALLÓ** en el registro \`${m.root}\`. Salida:`,
@@ -69,7 +74,11 @@ export function renderInforme(mediciones, fecha) {
 }
 
 /** Mide todas las raíces y devuelve el informe y el código de salida. */
-export function medirSalida(raices, ejecutar = ejecutarValmen, fecha = new Date().toISOString().slice(0, 10)) {
+export function medirSalida(
+  raices,
+  ejecutar = ejecutarValmen,
+  fecha = new Date().toISOString().slice(0, 10),
+) {
   const mediciones = raices.map((raiz) => medirRegistro(raiz, ejecutar));
   const fallidas = mediciones.filter((m) => !m.valida);
   return {
@@ -93,6 +102,7 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   }
   const { informe, exitCode } = medirSalida(raices);
   process.stdout.write(informe);
-  if (exitCode !== 0) process.stderr.write("Hay registros que no validan: ver el informe.\n");
+  if (exitCode !== 0)
+    process.stderr.write("Hay registros que no validan: ver el informe.\n");
   process.exit(exitCode);
 }

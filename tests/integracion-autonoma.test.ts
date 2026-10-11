@@ -15,7 +15,11 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { parseConfig, readIntegrationConfig, resolveWorkBranch } from "../packages/adapter/src/index.js";
+import {
+  parseConfig,
+  readIntegrationConfig,
+  resolveWorkBranch,
+} from "../packages/adapter/src/index.js";
 import { parseTicket } from "../packages/core/src/index.js";
 import {
   armarJornada,
@@ -34,8 +38,10 @@ const A = "FEATURE-GIT-UNO-20261005";
 const B = "FEATURE-GIT-DOS-20261005";
 const AHORA = new Date("2026-10-06T08:00:00.000Z");
 const RAMA = "valmen/jornada-20261006";
-const CRITERIO = '- [ ] El laboratorio termina correctamente.\n      <!-- test: node -e "process.exit(0)" -->';
-const PRUEBAS = "Contrato de entrega: ejecutar `node -e \"process.exit(0)\"`; esperado: código 0.";
+const CRITERIO =
+  '- [ ] El laboratorio termina correctamente.\n      <!-- test: node -e "process.exit(0)" -->';
+const PRUEBAS =
+  'Contrato de entrega: ejecutar `node -e "process.exit(0)"`; esperado: código 0.';
 
 let home: string;
 let root: string;
@@ -84,18 +90,32 @@ function politica(extra: string[] = []): void {
 }
 
 function estado(id: string): string {
-  return parseTicket(readFileSync(join(root, "tickets", "2026", id, "ticket.md"), "utf8")).fields.workflow_status;
+  return parseTicket(readFileSync(join(root, "tickets", "2026", id, "ticket.md"), "utf8"))
+    .fields.workflow_status;
 }
 
 /** Un ejecutor que implementa: escribe un archivo funcional por ticket y deja el contrato. */
-function implementador(opciones: { archivo?: (id: string) => string; despues?: () => void } = {}) {
+function implementador(
+  opciones: { archivo?: (id: string) => string; despues?: () => void } = {},
+) {
   const archivos: Record<string, string> = { [A]: "src/uno.ts", [B]: "src/dos.ts" };
   return () => {
     for (const id of [A, B]) {
       if (estado(id) !== "in_progress") continue;
       mkdirSync(join(root, "src"), { recursive: true });
-      writeFileSync(join(root, opciones.archivo?.(id) ?? (archivos[id] as string)), `export const ${id.length} = 1;\n`, "utf8");
-      writeFixtureTicket(root, { id, workflowStatus: "in_progress", type: "FEATURE", module: "GIT", criterios: CRITERIO, pruebas: PRUEBAS });
+      writeFileSync(
+        join(root, opciones.archivo?.(id) ?? (archivos[id] as string)),
+        `export const ${id.length} = 1;\n`,
+        "utf8",
+      );
+      writeFixtureTicket(root, {
+        id,
+        workflowStatus: "in_progress",
+        type: "FEATURE",
+        module: "GIT",
+        criterios: CRITERIO,
+        pruebas: PRUEBAS,
+      });
     }
     opciones.despues?.();
     return { status: 0, stdout: "hecho", stderr: "" };
@@ -113,7 +133,14 @@ beforeEach(() => {
   );
   politica();
   for (const id of [A, B]) {
-    writeFixtureTicket(root, { id, workflowStatus: "approved", type: "FEATURE", module: "GIT", criterios: CRITERIO, pruebas: PRUEBAS });
+    writeFixtureTicket(root, {
+      id,
+      workflowStatus: "approved",
+      type: "FEATURE",
+      module: "GIT",
+      criterios: CRITERIO,
+      pruebas: PRUEBAS,
+    });
   }
   git("init", "-q", "-b", "main");
   git("config", "user.email", "t@example.com");
@@ -129,7 +156,9 @@ afterEach(() => rmSync(home, { recursive: true, force: true }));
 async function ejecutar(execute: ReturnType<typeof implementador>, ticketId: string = A) {
   let integracion: Parameters<typeof runAutonomous>[0]["integracion"];
   if (esRepositorioGit(root)) {
-    const config = readIntegrationConfig(parseConfig(readFileSync(join(root, ".valmen", "config.yaml"), "utf8")));
+    const config = readIntegrationConfig(
+      parseConfig(readFileSync(join(root, ".valmen", "config.yaml"), "utf8")),
+    );
     integracion = {
       ramaDeTrabajo: resolveWorkBranch(config.workBranch, AHORA),
       ramasProtegidas: config.protectedBranches,
@@ -182,7 +211,9 @@ describe("un commit por ticket", () => {
 
   it("el commit contiene exactamente el árbol que se probó", async () => {
     await ejecutar(implementador(), A);
-    expect(readFileSync(join(root, "src", "uno.ts"), "utf8")).toBe(git("show", "HEAD:src/uno.ts") + "\n");
+    expect(readFileSync(join(root, "src", "uno.ts"), "utf8")).toBe(
+      git("show", "HEAD:src/uno.ts") + "\n",
+    );
   });
 });
 
@@ -217,7 +248,8 @@ describe("lo que impide el commit", () => {
       secretos: () => 0,
     });
     expect(resultado.estado).toBe("rechazado");
-    if (resultado.estado === "rechazado") expect(resultado.motivos.join(" ")).toContain("cambió después de la prueba");
+    if (resultado.estado === "rechazado")
+      expect(resultado.motivos.join(" ")).toContain("cambió después de la prueba");
     expect(git("rev-parse", "HEAD")).toBe(base);
   });
 
@@ -246,7 +278,11 @@ describe("el registro que deja la preparación convive con la ejecución", () =>
   it("cambios sin commitear en el directorio de otro ticket de la jornada y en el índice no detienen la ejecución", async () => {
     git("switch", "-q", "-c", RAMA);
     const registroDeB = join(root, "tickets", "2026", B, "ticket.md");
-    writeFileSync(registroDeB, `${readFileSync(registroDeB, "utf8")}\nNota de la preparación.\n`, "utf8");
+    writeFileSync(
+      registroDeB,
+      `${readFileSync(registroDeB, "utf8")}\nNota de la preparación.\n`,
+      "utf8",
+    );
     writeFileSync(join(root, "tickets", "index.md"), "# índice regenerado\n", "utf8");
 
     const r = await ejecutar(implementador(), A);
@@ -267,7 +303,9 @@ describe("la rama de trabajo se deja al día con main antes de ejecutar", () => 
     expect(r.status).toBe("delivered");
     expect(git("rev-parse", "--abbrev-ref", "HEAD")).toBe(RAMA);
     expect(git("log", "--format=%s", "main..HEAD").split("\n")).toHaveLength(1);
-    expect(git("ls-tree", "-r", "--name-only", "HEAD").split("\n")).not.toContain("otra.ts");
+    expect(git("ls-tree", "-r", "--name-only", "HEAD").split("\n")).not.toContain(
+      "otra.ts",
+    );
   });
 
   it("si existe atrás de main, queda en el mismo commit que main antes de ejecutar", async () => {
@@ -299,7 +337,9 @@ describe("la rama de trabajo se deja al día con main antes de ejecutar", () => 
     const antes = git("rev-parse", RAMA);
     git("switch", "-q", "main");
     commitear("de-main.ts", "avance de main");
-    await expect(ejecutar(implementador(), A)).rejects.toThrow(new RegExp(`${RAMA}[\\s\\S]*divergió|divergió[\\s\\S]*${RAMA}`));
+    await expect(ejecutar(implementador(), A)).rejects.toThrow(
+      new RegExp(`${RAMA}[\\s\\S]*divergió|divergió[\\s\\S]*${RAMA}`),
+    );
     expect(git("rev-parse", RAMA)).toBe(antes);
     expect(git("rev-parse", "--abbrev-ref", "HEAD")).toBe("main");
     expect(estado(A)).toBe("approved");

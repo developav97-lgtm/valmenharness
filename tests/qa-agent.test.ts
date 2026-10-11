@@ -5,7 +5,14 @@
  * el árbol donde se prueba no es el del agente, así que un simulacro no probaría nada.
  */
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -23,13 +30,17 @@ import { writeFixtureTicket } from "./helpers/fixtures.js";
 
 const AHORA = new Date("2026-10-06T08:00:00.000Z");
 const ID = "BUGFIX-POS-QAAGENT-20261005";
-const CRITERIO = '- [ ] El valor corregido es el esperado.\n      <!-- test: node tests/bug.test.mjs -->';
+const CRITERIO =
+  "- [ ] El valor corregido es el esperado.\n      <!-- test: node tests/bug.test.mjs -->";
 
 let root: string;
 const paths = () => ({ root, ticketsDir: "tickets" });
 
 const git = (...args: string[]): string =>
-  execFileSync("git", ["-c", "user.email=t@t", "-c", "user.name=t", ...args], { cwd: root, encoding: "utf8" }).trim();
+  execFileSync("git", ["-c", "user.email=t@t", "-c", "user.name=t", ...args], {
+    cwd: root,
+    encoding: "utf8",
+  }).trim();
 
 function escribir(ruta: string, contenido: string): void {
   mkdirSync(dirname(join(root, ruta)), { recursive: true });
@@ -87,12 +98,25 @@ function ticket(criterios = CRITERIO, tipo = "BUGFIX"): string {
 
 const autorizar = () =>
   crearAutorizacion({
-    root, actor: "Juan Andrade", quote: "Autorizo el cierre por agente", types: ["BUGFIX", "IMPROVEMENT", "CHORE", "FEATURE"],
-    modules: ["pos"], maxRisk: "normal", dailyQuota: 5, validDays: 30, source: "cli", ahora: AHORA, env: {},
+    root,
+    actor: "Juan Andrade",
+    quote: "Autorizo el cierre por agente",
+    types: ["BUGFIX", "IMPROVEMENT", "CHORE", "FEATURE"],
+    modules: ["pos"],
+    maxRisk: "normal",
+    dailyQuota: 5,
+    validDays: 30,
+    source: "cli",
+    ahora: AHORA,
+    env: {},
   });
 
-const correr = (base: string, delivered: string) => correrQaAgent({ paths: paths(), ticketId: ID, base, delivered, ahora: AHORA });
-const worktrees = (): string[] => git("worktree", "list").split("\n").filter((l) => l !== "");
+const correr = (base: string, delivered: string) =>
+  correrQaAgent({ paths: paths(), ticketId: ID, base, delivered, ahora: AHORA });
+const worktrees = (): string[] =>
+  git("worktree", "list")
+    .split("\n")
+    .filter((l) => l !== "");
 
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), "valmen-qaagent-"));
@@ -150,13 +174,17 @@ describe("una verificación que aprueba", () => {
     correr(base, delivered);
     expect(worktrees()).toHaveLength(1);
     expect(git("status", "--porcelain")).toBe(antes);
-    expect(readFileSync(join(root, "notas-del-agente.txt"), "utf8")).toBe("sin commitear\n");
+    expect(readFileSync(join(root, "notas-del-agente.txt"), "utf8")).toBe(
+      "sin commitear\n",
+    );
   });
 });
 
 describe("el árbol que el agente no controla", () => {
   it("un script de pruebas editado sin commitear no cuenta: se usa el del commit", () => {
-    const { base, delivered } = repo(CONFIG.replace("  - node\n", "  - node\n  - node scripts/ayuda.mjs\n"));
+    const { base, delivered } = repo(
+      CONFIG.replace("  - node\n", "  - node\n  - node scripts/ayuda.mjs\n"),
+    );
     // El script de ayuda del commit sale bien; el del árbol de trabajo, editado, saldría mal.
     escribir("scripts/regresion.mjs", "process.exit(7);\n");
     ticket();
@@ -168,7 +196,10 @@ describe("el árbol que el agente no controla", () => {
   it("un diff que modifica el script que corre las pruebas no es elegible y nombra el archivo", () => {
     mkdirSync(root, { recursive: true });
     git("init", "-q", "-b", "main");
-    escribir(".valmen/config.yaml", CONFIG.replace("  - node\n", "  - node scripts/regresion.mjs\n"));
+    escribir(
+      ".valmen/config.yaml",
+      CONFIG.replace("  - node\n", "  - node scripts/regresion.mjs\n"),
+    );
     escribir("scripts/regresion.mjs", "process.exit(0);\n");
     citados();
     git("add", "-A");
@@ -210,7 +241,9 @@ describe("rechazos", () => {
 
   it("un comando que el proyecto no autoriza se rechaza sin correr nada", () => {
     const { base, delivered } = repo();
-    ticket('- [ ] El valor corregido es el esperado en Python.\n      <!-- test: python3 tests/bug.test.py -->');
+    ticket(
+      "- [ ] El valor corregido es el esperado en Python.\n      <!-- test: python3 tests/bug.test.py -->",
+    );
     autorizar();
     const r = correr(base, delivered);
     expect(r.verdict).toBe("block");
@@ -242,7 +275,11 @@ describe("rechazos", () => {
     ticket();
     autorizar();
     const r = correrQaAgent({
-      paths: paths(), ticketId: ID, base, delivered, ahora: AHORA,
+      paths: paths(),
+      ticketId: ID,
+      base,
+      delivered,
+      ahora: AHORA,
       ejecutar: () => {
         throw new Error("se cayó el runner");
       },
@@ -260,11 +297,24 @@ describe("el git de la compuerta", () => {
       lanzado.push([...a]);
       return { status: 0, stdout: "", stderr: "" };
     };
-    for (const malo of [["push"], ["fetch"], ["reset", "--hard"], ["tag", "x"], ["worktree", "add", "/x"], ["worktree", "prune"], ["show", "HEAD"], ["checkout", "-b", "x"]]) {
+    for (const malo of [
+      ["push"],
+      ["fetch"],
+      ["reset", "--hard"],
+      ["tag", "x"],
+      ["worktree", "add", "/x"],
+      ["worktree", "prune"],
+      ["show", "HEAD"],
+      ["checkout", "-b", "x"],
+    ]) {
       expect(() => ejecutarGitDeQaAgent(malo, root, ejecutor), malo.join(" ")).toThrow();
     }
     expect(lanzado).toEqual([]);
-    ejecutarGitDeQaAgent(["worktree", "add", "--detach", "/tmp/x", "abc1234"], root, ejecutor);
+    ejecutarGitDeQaAgent(
+      ["worktree", "add", "--detach", "/tmp/x", "abc1234"],
+      root,
+      ejecutor,
+    );
     expect(lanzado).toHaveLength(1);
   });
 });

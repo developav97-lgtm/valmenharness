@@ -105,17 +105,29 @@ describe("herramientas MCP de la delegación y del cierre de feature", () => {
   });
 
   it("sin las palabras del PO no registra nada", async () => {
-    const r = await callTool(contexto(), "delegar_corrida", { feature: "kardex", palabras: " " });
+    const r = await callTool(contexto(), "delegar_corrida", {
+      feature: "kardex",
+      palabras: " ",
+    });
     expect(r.isError).toBe(true);
   });
 
   it("avanza la feature y escribe su verify.md", async () => {
-    const v = await callTool(contexto(), "avanzar_feature", { slug: "kardex", verify: true });
+    const v = await callTool(contexto(), "avanzar_feature", {
+      slug: "kardex",
+      verify: true,
+    });
     expect(v.isError).toBe(false);
-    const sinCerrar = await callTool(contexto(), "avanzar_feature", { slug: "kardex", a: "complete" });
+    const sinCerrar = await callTool(contexto(), "avanzar_feature", {
+      slug: "kardex",
+      a: "complete",
+    });
     expect(sinCerrar.isError).toBe(true);
     expect(sinCerrar.text).toContain(A);
-    const r = await callTool(contexto(), "avanzar_feature", { slug: "kardex", a: "in_progress" });
+    const r = await callTool(contexto(), "avanzar_feature", {
+      slug: "kardex",
+      a: "in_progress",
+    });
     expect(r.text).toContain("in_progress");
   });
 });

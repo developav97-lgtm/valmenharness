@@ -17,24 +17,45 @@ function textoActual(nodo: Nodo | undefined): string {
     .join(" | ");
 }
 
-function ticket(ticketId: string, order: number, phase: string, stopReason: string | null = null) {
+function ticket(
+  ticketId: string,
+  order: number,
+  phase: string,
+  stopReason: string | null = null,
+) {
   return {
-    order, ticketId, actualAt: null, scheduledAt: null, condition: "manual", activity: "unknown",
-    phase, stopReason, durationMs: null, waitingFor: [], dependsOn: [], window: null, lastReceivedAt: null,
+    order,
+    ticketId,
+    actualAt: null,
+    scheduledAt: null,
+    condition: "manual",
+    activity: "unknown",
+    phase,
+    stopReason,
+    durationMs: null,
+    waitingFor: [],
+    dependsOn: [],
+    window: null,
+    lastReceivedAt: null,
   };
 }
 
 function jornada(passes: unknown, observationSources: string[] = []) {
   return {
     authorization: { observationSources, dispatchExecutors: [] },
-    journeys: [{
-      journeyId: "JOR-20261007", revisionId: "rev-01", receivedAt: "2026-10-07T08:00:00.000Z", passes,
-      tickets: [
-        ticket("FEATURE-UNO-20261007", 1, "implementing"),
-        ticket("FEATURE-DOS-20261007", 2, "stopped", "El ejecutor salió con código 2."),
-        ticket("FEATURE-TRES-20261007", 3, "plan-ready"),
-      ],
-    }],
+    journeys: [
+      {
+        journeyId: "JOR-20261007",
+        revisionId: "rev-01",
+        receivedAt: "2026-10-07T08:00:00.000Z",
+        passes,
+        tickets: [
+          ticket("FEATURE-UNO-20261007", 1, "implementing"),
+          ticket("FEATURE-DOS-20261007", 2, "stopped", "El ejecutor salió con código 2."),
+          ticket("FEATURE-TRES-20261007", 3, "plan-ready"),
+        ],
+      },
+    ],
   };
 }
 
@@ -45,7 +66,8 @@ async function abrir(datos: unknown) {
     respuesta: (ruta) => {
       const url = new URL(ruta, "http://localhost");
       if (url.pathname === "/api/health") return { root: RAIZ };
-      if (url.pathname === "/api/portafolio") return { projects: [{ projectId: PROYECTO, name: "Harness", available: true }] };
+      if (url.pathname === "/api/portafolio")
+        return { projects: [{ projectId: PROYECTO, name: "Harness", available: true }] };
       if (url.pathname === "/api/journeys") return datos;
       return {};
     },
@@ -56,21 +78,29 @@ async function abrir(datos: unknown) {
 
 describe("la vista Jornadas muestra el avance", () => {
   const conPasadas = {
-    last: { at: "2026-10-07T08:15:00.000Z", estado: "despachado", detalle: "Se despachó FEATURE-UNO-20261007." },
+    last: {
+      at: "2026-10-07T08:15:00.000Z",
+      estado: "despachado",
+      detalle: "Se despachó FEATURE-UNO-20261007.",
+    },
     cadenceMs: 900_000,
     next: "2026-10-07T08:30:00.000Z",
   };
 
   it("la hora y el resultado de la última pasada", async () => {
     const texto = await abrir(jornada(conPasadas));
-    expect(texto).toContain("Última pasada: 2026-10-07T08:15:00.000Z · despachado — Se despachó FEATURE-UNO-20261007.");
+    expect(texto).toContain(
+      "Última pasada: 2026-10-07T08:15:00.000Z · despachado — Se despachó FEATURE-UNO-20261007.",
+    );
   });
 
   it("no muestra la próxima pasada estimada (ya no hay disparador) y sí la última, o que no hay pasadas", async () => {
     const conProxima = await abrir(jornada(conPasadas));
     expect(conProxima).not.toContain("Próxima pasada");
     expect(conProxima).toContain("Última pasada:");
-    expect(await abrir(jornada({ last: null, cadenceMs: null, next: null }))).toContain("Sin pasadas registradas");
+    expect(await abrir(jornada({ last: null, cadenceMs: null, next: null }))).toContain(
+      "Sin pasadas registradas",
+    );
   });
 
   it("la columna Fase en español y el motivo de un ticket detenido", async () => {
@@ -84,7 +114,9 @@ describe("la vista Jornadas muestra el avance", () => {
 
   it("sin fuentes de observación, la nota dice que la actividad la registra el despacho", async () => {
     const texto = await abrir(jornada(conPasadas));
-    expect(texto).toContain("Observación externa: ninguna fuente declarada; la actividad mostrada la registra el propio despacho de la jornada");
+    expect(texto).toContain(
+      "Observación externa: ninguna fuente declarada; la actividad mostrada la registra el propio despacho de la jornada",
+    );
     expect(texto).not.toContain("sin fuentes");
     expect(await abrir(jornada(conPasadas, ["hermes"]))).toContain("Observación: hermes");
   });

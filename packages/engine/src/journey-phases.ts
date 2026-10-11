@@ -56,7 +56,10 @@ export function fasesPath(root: string): string {
 /** Anexa el registro de una sesión. */
 export function registrarFase(
   root: string,
-  registro: Omit<RegistroDeFase, "kind" | "version" | "registradoEn" | "modeloUsado" | "coincide" | "costeUsd"> & {
+  registro: Omit<
+    RegistroDeFase,
+    "kind" | "version" | "registradoEn" | "modeloUsado" | "coincide" | "costeUsd"
+  > & {
     readonly registradoEn?: string;
     readonly modeloUsado?: string | null;
     readonly costeUsd?: number | null;
@@ -90,7 +93,11 @@ export function leerFases(root: string): RegistroDeFase[] {
     if (linea.trim() === "") continue;
     try {
       const valor = JSON.parse(linea) as Partial<RegistroDeFase>;
-      if (valor.kind === "journey-phase" && valor.version === 1 && typeof valor.ticketId === "string") {
+      if (
+        valor.kind === "journey-phase" &&
+        valor.version === 1 &&
+        typeof valor.ticketId === "string"
+      ) {
         // Un renglón anterior no trae los campos nuevos: se lee como «sin reportar».
         registros.push({
           ...(valor as RegistroDeFase),
@@ -110,10 +117,17 @@ export function leerFases(root: string): RegistroDeFase[] {
  * El modelo con el que se lanza el ejecutor de una fase, resuelto por el enrutamiento del
  * proyecto y el ejecutor de su política; `null` si la autonomía no declara ejecutor.
  */
-export function resolverModeloDeFase(root: string, fase: FaseDelAgente): ModeloDeFase | null {
+export function resolverModeloDeFase(
+  root: string,
+  fase: FaseDelAgente,
+): ModeloDeFase | null {
   const politica = autonomousConfig(root);
   if (politica.executor === null) return null;
-  return modeloDeFase(rutasDelProyecto(root, { ejecutor: politica.executor.id }), fase, politica.executor);
+  return modeloDeFase(
+    rutasDelProyecto(root, { ejecutor: politica.executor.id }),
+    fase,
+    politica.executor,
+  );
 }
 
 /**
@@ -121,10 +135,20 @@ export function resolverModeloDeFase(root: string, fase: FaseDelAgente): ModeloD
  * comprobación contra `execution.dispatch-executors` en el momento de lanzar. `null` si la
  * autonomía no declara ejecutor.
  */
-export function resolverDespachoDeFase(root: string, fase: FaseDelAgente): DespachoDeFase | null {
+export function resolverDespachoDeFase(
+  root: string,
+  fase: FaseDelAgente,
+): DespachoDeFase | null {
   const politica = autonomousConfig(root);
   if (politica.executor === null) return null;
   const ruta = join(root, ".valmen", "config.yaml");
-  const autorizados = existsSync(ruta) ? readExecutionCapabilities(parseConfig(readFileSync(ruta, "utf8"))).dispatchExecutors : [];
-  return despachoDeFase(rutasDelProyecto(root, { ejecutor: politica.executor.id }), fase, politica.executor, autorizados);
+  const autorizados = existsSync(ruta)
+    ? readExecutionCapabilities(parseConfig(readFileSync(ruta, "utf8"))).dispatchExecutors
+    : [];
+  return despachoDeFase(
+    rutasDelProyecto(root, { ejecutor: politica.executor.id }),
+    fase,
+    politica.executor,
+    autorizados,
+  );
 }

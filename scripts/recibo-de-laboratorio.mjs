@@ -20,7 +20,8 @@ import { dirname, join } from "node:path";
 import { DEFAULT_POLICY, buildReceipt, decide } from "../packages/gate/dist/index.js";
 import { buildGateState } from "../packages/engine/dist/index.js";
 
-const [root, ticket, recibo, resultado = "review", compuerta = "plan"] = process.argv.slice(2);
+const [root, ticket, recibo, resultado = "review", compuerta = "plan"] =
+  process.argv.slice(2);
 if (root === undefined || ticket === undefined || recibo === undefined) {
   throw new Error("faltan argumentos: <raíz> <ticket> <id-del-recibo>");
 }
@@ -32,7 +33,11 @@ const proposiciones = [
 // 0.72 cae entre `blockAt` y `approveAt`, así que el veredicto es `review` y el
 // recibo queda escalado a una persona. Es el único caso que tiene sentido avisar.
 const respuestas = [
-  { id: "cubre_todos_los_criterios", kind: "noul", value: resultado === "block" ? 0.02 : 0.72 },
+  {
+    id: "cubre_todos_los_criterios",
+    kind: "noul",
+    value: resultado === "block" ? 0.02 : 0.72,
+  },
 ];
 
 const construido = buildReceipt({

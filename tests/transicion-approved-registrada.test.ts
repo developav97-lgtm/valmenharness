@@ -21,7 +21,10 @@ import { writeFixtureTicket } from "./helpers/fixtures.js";
 const ID = "SECURITY-CORE-TRANSICION-APPROVED-20261005";
 
 let lab: string;
-const PATHS = (): { root: string; ticketsDir: string } => ({ root: lab, ticketsDir: "tickets" });
+const PATHS = (): { root: string; ticketsDir: string } => ({
+  root: lab,
+  ticketsDir: "tickets",
+});
 const RUTA = (id = ID): string => join(lab, "tickets", "2026", id, "ticket.md");
 
 beforeEach(() => {
@@ -30,7 +33,12 @@ beforeEach(() => {
   writeFileSync(join(lab, ".valmen", "config.yaml"), "name: Demo\n", "utf8");
   // El fixture ya trae la línea «aprobado explícitamente por el PO»: lo que se prueba es
   // que esa frase, sola, no alcanza.
-  writeFixtureTicket(lab, { id: ID, workflowStatus: "planned", type: "SECURITY", module: "CORE" });
+  writeFixtureTicket(lab, {
+    id: ID,
+    workflowStatus: "planned",
+    type: "SECURITY",
+    module: "CORE",
+  });
 });
 
 afterEach(() => {
@@ -55,14 +63,20 @@ function aApproved(): void {
 function editarPlan(extra: string): void {
   const texto = readFileSync(RUTA(), "utf8");
   const i = texto.indexOf("## Criterios de aceptación");
-  writeFileSync(RUTA(), `${texto.slice(0, i).trimEnd()}\n${extra}\n\n${texto.slice(i)}`, "utf8");
+  writeFileSync(
+    RUTA(),
+    `${texto.slice(0, i).trimEnd()}\n${extra}\n\n${texto.slice(i)}`,
+    "utf8",
+  );
 }
 
 describe("sin aprobación registrada", () => {
   it("la frase en `## Plan` no basta y el mensaje dice cómo registrarla", () => {
     expect(readFileSync(RUTA(), "utf8")).toContain("aprobado explícitamente por el PO");
     expect(aApproved).toThrow(/approved requiere la aprobación del plan registrada/);
-    expect(aApproved).toThrow(/valmen approve-plan --id SECURITY-CORE-TRANSICION-APPROVED-20261005/);
+    expect(aApproved).toThrow(
+      /valmen approve-plan --id SECURITY-CORE-TRANSICION-APPROVED-20261005/,
+    );
     expect(readFileSync(RUTA(), "utf8")).toContain("workflow_status: planned");
   });
 
@@ -78,7 +92,9 @@ describe("con la aprobación registrada", () => {
     aApproved();
     const ticket = parseTicket(readFileSync(RUTA(), "utf8"));
     expect(ticket.fields.workflow_status).toBe("approved");
-    const verificado = (ticket.blocks.Eventos ?? []).find((e) => e["action"] === "plan-approval-verified");
+    const verificado = (ticket.blocks.Eventos ?? []).find(
+      (e) => e["action"] === "plan-approval-verified",
+    );
     expect(String(verificado?.["details"])).toContain("Juan Andrade");
     expect(String(verificado?.["details"])).toMatch(/sha256:[0-9a-f]{64}/);
   });
@@ -102,7 +118,12 @@ describe("con la aprobación registrada", () => {
 describe("compatibilidad", () => {
   it("un ticket que ya pasó por approved sigue validando y avanza sin otra aprobación", () => {
     const viejo = "SECURITY-CORE-VIEJO-20260921";
-    writeFixtureTicket(lab, { id: viejo, workflowStatus: "approved", type: "SECURITY", module: "CORE" });
+    writeFixtureTicket(lab, {
+      id: viejo,
+      workflowStatus: "approved",
+      type: "SECURITY",
+      module: "CORE",
+    });
     expect(findTicket(PATHS(), viejo)).toBeDefined();
     transition({ paths: PATHS(), ticketId: viejo, entity: "ticket", to: "in_progress" });
     expect(readFileSync(RUTA(viejo), "utf8")).toContain("workflow_status: in_progress");

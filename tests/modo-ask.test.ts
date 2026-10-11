@@ -20,7 +20,14 @@
  * 4. **El agente tampoco recibe el catálogo de escritura.** El servidor MCP en
  *    modo pregunta publica sólo las herramientas de sólo lectura.
  */
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -180,7 +187,9 @@ describe("en modo pregunta", () => {
 
   it("`atomicWrite` falla con el código de invariante", () => {
     const destino = join(lab, "cualquiera.md");
-    const fallo = capturar(() => withAccessMode("ask", () => atomicWrite(destino, "hola\n")));
+    const fallo = capturar(() =>
+      withAccessMode("ask", () => atomicWrite(destino, "hola\n")),
+    );
 
     expect(fallo).not.toBeNull();
     expect(fallo?.exitCode).toBe(EXIT_INVARIANT);
@@ -258,7 +267,9 @@ describe("el catálogo del servidor MCP", () => {
   });
 
   it("en modo pregunta deja fuera las herramientas que escriben", () => {
-    const escritura = TOOLS.filter((tool) => !tool.annotations.readOnlyHint).map((tool) => tool.name);
+    const escritura = TOOLS.filter((tool) => !tool.annotations.readOnlyHint).map(
+      (tool) => tool.name,
+    );
     const catalogo = toolsInMode(true).map((tool) => tool.name);
 
     expect(escritura.length).toBeGreaterThan(0);
@@ -270,19 +281,25 @@ describe("el catálogo del servidor MCP", () => {
 
 describe("el contexto de consulta", () => {
   it("nombra la pregunta recibida en su salida", () => {
-    const salida = renderAskContext(buildAskContext({ paths: PATHS(), question: PREGUNTA }));
+    const salida = renderAskContext(
+      buildAskContext({ paths: PATHS(), question: PREGUNTA }),
+    );
 
     expect(salida).toContain(PREGUNTA);
   });
 
   it("lista los tickets activos del registro", () => {
-    const salida = renderAskContext(buildAskContext({ paths: PATHS(), question: PREGUNTA }));
+    const salida = renderAskContext(
+      buildAskContext({ paths: PATHS(), question: PREGUNTA }),
+    );
 
     expect(salida).toContain(EXISTENTE);
   });
 
   it("declara el permiso de escritura como no concedido", () => {
-    const salida = renderAskContext(buildAskContext({ paths: PATHS(), question: PREGUNTA }));
+    const salida = renderAskContext(
+      buildAskContext({ paths: PATHS(), question: PREGUNTA }),
+    );
 
     expect(salida).toContain("escritura");
     expect(salida).toContain("no concedida");

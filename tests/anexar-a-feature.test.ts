@@ -237,9 +237,9 @@ describe("sacar un ticket del grafo", () => {
     // sprint se va con su último ticket.
     expect(escrito).not.toContain("S2");
     // Y el ticket sigue en el registro: esto no lo toca.
-    expect(readFileSync(join(lab, "tickets", "2026", NUEVO, "ticket.md"), "utf8")).toContain(
-      NUEVO,
-    );
+    expect(
+      readFileSync(join(lab, "tickets", "2026", NUEVO, "ticket.md"), "utf8"),
+    ).toContain(NUEVO);
   });
 
   it("no se puede sacar uno del que otro depende", () => {

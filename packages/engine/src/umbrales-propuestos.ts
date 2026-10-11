@@ -54,10 +54,13 @@ function simular(recibo: GateReceipt, approveAt: number): "approve" | "review" |
   const blockAt = recibo.policy.blockAt;
   const votan = recibo.propositions.filter((p) => p.verdict);
   const bloqueaPorValor = votan.some((p) => votaConValor(p) && p.value <= blockAt);
-  const bloqueaPorEleccion = votan.some((p) => p.kind !== "noul" && p.effect?.outcome === "block");
+  const bloqueaPorEleccion = votan.some(
+    (p) => p.kind !== "noul" && p.effect?.outcome === "block",
+  );
   if (bloqueaPorValor || bloqueaPorEleccion) return "block";
-  const todoClaro =
-    votan.every((p) => (votaConValor(p) ? p.value >= approveAt : p.effect?.outcome === "approve"));
+  const todoClaro = votan.every((p) =>
+    votaConValor(p) ? p.value >= approveAt : p.effect?.outcome === "approve",
+  );
   return todoClaro ? "approve" : "review";
 }
 
@@ -93,7 +96,9 @@ export function proposeThresholds(
       r.propositions.some(votaConValor) &&
       (evaluator === undefined || inferEvaluator(r) === evaluator),
   );
-  const aprobaciones = decididos.filter((r) => r.humanDecision?.decision === "approve").length;
+  const aprobaciones = decididos.filter(
+    (r) => r.humanDecision?.decision === "approve",
+  ).length;
   const rechazos = decididos.length - aprobaciones;
   const base = {
     gate,

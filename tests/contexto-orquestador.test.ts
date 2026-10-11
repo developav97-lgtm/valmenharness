@@ -5,7 +5,14 @@
  * `journey brief --out`, `resume --quiet` y la guía de la skill `corrida-orquestada`. Todo corre
  * sobre una raíz temporal.
  */
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -21,7 +28,10 @@ import {
 import { crearEntornoOla, ticketEn, type EntornoOla } from "./helpers/ola.js";
 
 const ID = "FEATURE-JOURNEY-ALFA-20261008";
-const SKILL = readFileSync(join(process.cwd(), ".valmen", "skills", "corrida-orquestada", "SKILL.md"), "utf8");
+const SKILL = readFileSync(
+  join(process.cwd(), ".valmen", "skills", "corrida-orquestada", "SKILL.md"),
+  "utf8",
+);
 const plano = (t: string): string => t.replace(/\s+/g, " ");
 
 let entorno: EntornoOla;
@@ -37,7 +47,9 @@ afterEach(() => {
 });
 
 function textoDelBrief(): string {
-  return renderBriefDeSubagente(armarBriefDeSubagente({ project: entorno.project(), ticketId: ID }));
+  return renderBriefDeSubagente(
+    armarBriefDeSubagente({ project: entorno.project(), ticketId: ID }),
+  );
 }
 
 describe("contrato de entrega del brief", () => {
@@ -51,11 +63,16 @@ describe("contrato de entrega del brief", () => {
   });
   it("C3: nombra los cinco campos del informe", () => {
     const t = contrato();
-    for (const campo of ["estado", "commit", "archivos", "pruebas", "decisión"]) expect(t).toContain(campo);
-    expect(t).toMatch(/estado, commit \(hash\), archivos tocados, pruebas \(comando y resultado\) y decisión/);
+    for (const campo of ["estado", "commit", "archivos", "pruebas", "decisión"])
+      expect(t).toContain(campo);
+    expect(t).toMatch(
+      /estado, commit \(hash\), archivos tocados, pruebas \(comando y resultado\) y decisión/,
+    );
   });
   it("C4: prohíbe pegar salidas de comandos o recibos completos", () => {
-    expect(contrato()).toMatch(/No pegues en el informe salidas de comandos ni recibos completos/);
+    expect(contrato()).toMatch(
+      /No pegues en el informe salidas de comandos ni recibos completos/,
+    );
   });
   it("la línea vieja sin forma ni tope ya no está", () => {
     expect(contrato()).not.toContain("Responde en pocas líneas");
@@ -94,7 +111,10 @@ describe("journey brief --out", () => {
   });
 
   it("rechaza --out sin ruta", () => {
-    const con = journeyBriefCommand({ project: "ola-lab", id: ID, out: true }, { home: entorno.home });
+    const con = journeyBriefCommand(
+      { project: "ola-lab", id: ID, out: true },
+      { home: entorno.home },
+    );
     expect(con.exitCode).not.toBe(0);
   });
 });
@@ -134,7 +154,9 @@ describe("resume --quiet", () => {
     const r = resumeTicket(paths, ticketActivo);
     expect(r.stdout).toBe(renderResumeContext(r.data as unknown as ResumeContext));
     expect(r.stdout).toContain("Plan vigente:");
-    expect(resumeTicket(paths, ticketActivo, "compacto", undefined, false).stdout).toBe(r.stdout);
+    expect(resumeTicket(paths, ticketActivo, "compacto", undefined, false).stdout).toBe(
+      r.stdout,
+    );
   });
 });
 
@@ -148,12 +170,16 @@ describe("la skill corrida-orquestada", () => {
     expect(t).toContain("`valmen resume --id <ID> --quiet`");
   });
   it("C15: de la suite muestra solo el resumen de archivos y pruebas", () => {
-    expect(t).toMatch(/De la suite muestra solo las líneas `Test Files` y `Tests` y los fallos/);
+    expect(t).toMatch(
+      /De la suite muestra solo las líneas `Test Files` y `Tests` y los fallos/,
+    );
   });
   it("C16: no pega salidas largas de comandos en la conversación", () => {
     expect(t).toMatch(/No pegues salidas largas de comandos/);
   });
   it("la proyección del catálogo es la misma que la fuente", () => {
-    expect(readFileSync(join(process.cwd(), "skills", "corrida-orquestada", "SKILL.md"), "utf8")).toBe(SKILL);
+    expect(
+      readFileSync(join(process.cwd(), "skills", "corrida-orquestada", "SKILL.md"), "utf8"),
+    ).toBe(SKILL);
   });
 });

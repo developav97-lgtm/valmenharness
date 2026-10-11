@@ -126,9 +126,7 @@ function marcaDe(evento: JsonObject): Marca | null {
  * Al terminar, la última fase queda sin `fin` ni `ms`: es la que corre ahora,
  * salvo que su estado sea `closed`, que es el ticket cerrado y no una fase viva.
  */
-export function fasesPorTicket(
-  eventos: readonly JsonObject[],
-): readonly FaseDeTicket[] {
+export function fasesPorTicket(eventos: readonly JsonObject[]): readonly FaseDeTicket[] {
   const fases: FaseDeTicket[] = [];
 
   for (const evento of eventos) {
@@ -146,10 +144,7 @@ export function fasesPorTicket(
       fases[fases.length - 1] = {
         ...anterior,
         fin: at,
-        ms:
-          instante === null || inicioInstante === null
-            ? null
-            : instante - inicioInstante,
+        ms: instante === null || inicioInstante === null ? null : instante - inicioInstante,
       };
     }
 

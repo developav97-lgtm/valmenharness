@@ -50,14 +50,18 @@ export function recordExecutionActivity(
   options: { readonly receivedAt?: string | undefined } = {},
 ): AppendExecutionEventResult {
   assertActivityState(input.state);
-  return appendExecutionEvent(project, {
-    eventId: input.eventId,
-    identity: input.identity,
-    attemptId: input.attemptId,
-    kind: `activity.${input.state}`,
-    source: input.source,
-    occurredAt: input.occurredAt,
-  }, options);
+  return appendExecutionEvent(
+    project,
+    {
+      eventId: input.eventId,
+      identity: input.identity,
+      attemptId: input.attemptId,
+      kind: `activity.${input.state}`,
+      source: input.source,
+      occurredAt: input.occurredAt,
+    },
+    options,
+  );
 }
 
 /** Lee la actividad de una ejecución y, opcionalmente, de un único intento. */
@@ -79,16 +83,18 @@ function toActivity(event: ExecutionEvent): ExecutionActivity[] {
   if (!event.kind.startsWith("activity.")) return [];
   const state = event.kind.slice("activity.".length);
   if (!EXECUTION_ACTIVITY_STATES.includes(state as ExecutionActivityState)) return [];
-  return [Object.freeze({
-    eventId: event.eventId,
-    identity: event.identity,
-    attemptId: event.attemptId,
-    state: state as ExecutionActivityState,
-    source: event.source,
-    occurredAt: event.occurredAt,
-    receivedAt: event.receivedAt,
-    cursor: event.cursor,
-  })];
+  return [
+    Object.freeze({
+      eventId: event.eventId,
+      identity: event.identity,
+      attemptId: event.attemptId,
+      state: state as ExecutionActivityState,
+      source: event.source,
+      occurredAt: event.occurredAt,
+      receivedAt: event.receivedAt,
+      cursor: event.cursor,
+    }),
+  ];
 }
 
 function assertActivityState(state: string): asserts state is ExecutionActivityState {
@@ -98,7 +104,9 @@ function assertActivityState(state: string): asserts state is ExecutionActivityS
 }
 
 function sameIdentity(left: ExecutionIdentity, right: ExecutionIdentity): boolean {
-  return left.projectId === right.projectId
-    && left.ticketId === right.ticketId
-    && left.executionId === right.executionId;
+  return (
+    left.projectId === right.projectId &&
+    left.ticketId === right.ticketId &&
+    left.executionId === right.executionId
+  );
 }

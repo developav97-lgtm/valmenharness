@@ -137,7 +137,11 @@ describe("portafolio de proyectos", () => {
         available: false,
         sources: {
           machine: { available: false, label: "laboratorio" },
-          registry: { available: false, reason: "No disponible porque la máquina no pudo validar el binding.", label: "Registro local" },
+          registry: {
+            available: false,
+            reason: "No disponible porque la máquina no pudo validar el binding.",
+            label: "Registro local",
+          },
         },
         gatesPending: null,
         waiting: null,

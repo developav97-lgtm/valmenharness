@@ -41,7 +41,10 @@ const DE_QA = { ...AUTORIZACION, id: "QAA-20261008-a5fb57" };
 
 const OPCIONES = {
   source: "registry",
-  modules: [{ module: "WEB", tickets: 2 }, { module: "ENGINE", tickets: 1 }],
+  modules: [
+    { module: "WEB", tickets: 2 },
+    { module: "ENGINE", tickets: 1 },
+  ],
   approval: {
     types: ["BUGFIX", "IMPROVEMENT", "CHORE", "FEATURE", "SYNC", "INTEGRATION", "AGENT"],
     stages: ["analysis", "plan"],
@@ -57,7 +60,10 @@ async function pintar() {
     hash: "#/configuracion",
     respuesta: (ruta, init) => {
       const url = new URL(ruta, "http://localhost");
-      const cuerpo = init?.body === undefined ? null : (JSON.parse(String(init.body)) as Record<string, unknown>);
+      const cuerpo =
+        init?.body === undefined
+          ? null
+          : (JSON.parse(String(init.body)) as Record<string, unknown>);
       llamadas.push({ ruta: url.pathname, metodo: init?.method ?? "GET", cuerpo });
       if (url.pathname === "/api/health") return { root: RAIZ };
       if (url.pathname === "/api/config/check") {
@@ -65,11 +71,18 @@ async function pintar() {
         return { config: checkConfig(RAIZ, texto.text), impact: null };
       }
       if (url.pathname === "/api/config") {
-        return { config: { ...checkConfig(RAIZ, "name: Demo\n"), text: "name: Demo\n", diff: [] }, impact: null };
+        return {
+          config: { ...checkConfig(RAIZ, "name: Demo\n"), text: "name: Demo\n", diff: [] },
+          impact: null,
+        };
       }
       if (url.pathname === "/api/authorizations/options") return OPCIONES;
-      if (url.pathname === "/api/qa/authorizations" && (init?.method ?? "GET") === "GET") return { authorizations: [DE_QA] };
-      if (url.pathname === "/api/approval/authorizations" && (init?.method ?? "GET") === "GET") {
+      if (url.pathname === "/api/qa/authorizations" && (init?.method ?? "GET") === "GET")
+        return { authorizations: [DE_QA] };
+      if (
+        url.pathname === "/api/approval/authorizations" &&
+        (init?.method ?? "GET") === "GET"
+      ) {
         return { authorizations: [AUTORIZACION] };
       }
       if (url.pathname.endsWith("/revoke")) return { ok: true };
@@ -80,10 +93,13 @@ async function pintar() {
 }
 
 type Vista = { contenido: NodoFalso | undefined };
-const nodos = (v: Vista, predicado: (n: NodoFalso) => boolean): NodoFalso[] => buscarNodos(v.contenido, predicado);
+const nodos = (v: Vista, predicado: (n: NodoFalso) => boolean): NodoFalso[] =>
+  buscarNodos(v.contenido, predicado);
 const textoDe = (n: NodoFalso): string => String(n._texto);
-const botones = (v: Vista, texto: string): NodoFalso[] => nodos(v, (n) => n.tagName === "BUTTON" && textoDe(n) === texto);
-const campos = (v: Vista): NodoFalso[] => nodos(v, (n) => n.tagName === "INPUT" && String(n.placeholder ?? "").startsWith("Tu "));
+const botones = (v: Vista, texto: string): NodoFalso[] =>
+  nodos(v, (n) => n.tagName === "BUTTON" && textoDe(n) === texto);
+const campos = (v: Vista): NodoFalso[] =>
+  nodos(v, (n) => n.tagName === "INPUT" && String(n.placeholder ?? "").startsWith("Tu "));
 
 describe("el botón Revocar de las autorizaciones", () => {
   it("no usa prompt() para pedir el nombre ni la frase", () => {
@@ -114,7 +130,11 @@ describe("el botón Revocar de las autorizaciones", () => {
       {
         ruta: "/api/approval/authorizations/revoke",
         metodo: "POST",
-        cuerpo: { id: AUTORIZACION.id, actor: "Juan Andrade", quote: "reemplazada por la de cupo 50" },
+        cuerpo: {
+          id: AUTORIZACION.id,
+          actor: "Juan Andrade",
+          quote: "reemplazada por la de cupo 50",
+        },
       },
     ]);
   });
@@ -128,7 +148,10 @@ describe("el botón Revocar de las autorizaciones", () => {
     await disparar(botones(vista, "Confirmar revocación")[0] as NodoFalso, "click");
     const posts = llamadas.filter((l) => l.metodo === "POST");
     expect(posts).toHaveLength(1);
-    expect(posts[0]).toMatchObject({ ruta: "/api/qa/authorizations/revoke", cuerpo: { id: DE_QA.id } });
+    expect(posts[0]).toMatchObject({
+      ruta: "/api/qa/authorizations/revoke",
+      cuerpo: { id: DE_QA.id },
+    });
   });
 
   it("control: sin nombre o sin frase no manda nada y lo dice", async () => {
@@ -138,7 +161,9 @@ describe("el botón Revocar de las autorizaciones", () => {
     actor.value = "Juan Andrade";
     await disparar(botones(vista, "Confirmar revocación")[0] as NodoFalso, "click");
     expect(llamadas.filter((l) => l.metodo === "POST")).toEqual([]);
-    const avisos = nodos(vista, (n) => String(n.className ?? "").includes("qa-mensaje mal")).map(textoDe);
+    const avisos = nodos(vista, (n) =>
+      String(n.className ?? "").includes("qa-mensaje mal"),
+    ).map(textoDe);
     expect(avisos).toContain("Escribe tu nombre y tu frase literal para revocar.");
   });
 

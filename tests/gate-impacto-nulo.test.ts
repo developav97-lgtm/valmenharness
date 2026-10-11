@@ -22,7 +22,11 @@ import {
   partitionByApplicability,
   SIN_INTERFAZ,
 } from "../packages/gate/src/dynamic.js";
-import { decide, DEFAULT_POLICY, type PropositionAnswer } from "../packages/gate/src/decide.js";
+import {
+  decide,
+  DEFAULT_POLICY,
+  type PropositionAnswer,
+} from "../packages/gate/src/decide.js";
 
 const RESPUESTAS = (
   valores: Record<string, number>,
@@ -61,19 +65,24 @@ describe("expandGate con el conjunto de impactos vacío", () => {
     const veredicto = decide(
       // Lo que se evalúa en un ticket BUGFIX: las proposiciones de otros tipos no se envían.
       partitionByApplicability(expandido.propositions, "BUGFIX").applicable,
-      RESPUESTAS({
-        diagnostico_explica_el_sintoma: 0.95,
-        causa_especifica: 0.94,
-        nombra_archivos_reales: 0.95,
-        // La respuesta de siempre que empujaba a banda: la ausencia leída como
-        // cobertura débil.
-        riesgos_cubren_impactos: 0.46,
-      }, { clasificacion: "completa" }),
+      RESPUESTAS(
+        {
+          diagnostico_explica_el_sintoma: 0.95,
+          causa_especifica: 0.94,
+          nombra_archivos_reales: 0.95,
+          // La respuesta de siempre que empujaba a banda: la ausencia leída como
+          // cobertura débil.
+          riesgos_cubren_impactos: 0.46,
+        },
+        { clasificacion: "completa" },
+      ),
       DEFAULT_POLICY,
     );
     expect(veredicto.outcome).toBe("approve");
     expect(veredicto.inBand).toEqual([]);
-    expect(veredicto.propositions.find((p) => p.id === "riesgos_cubren_impactos")?.verdict).toBe(false);
+    expect(
+      veredicto.propositions.find((p) => p.id === "riesgos_cubren_impactos")?.verdict,
+    ).toBe(false);
   });
 
   it("con al menos un impacto declarado la proposición sigue ponderada y su banda intacta", () => {
@@ -87,12 +96,15 @@ describe("expandGate con el conjunto de impactos vacío", () => {
     const veredicto = decide(
       // Lo que se evalúa en un ticket BUGFIX: las proposiciones de otros tipos no se envían.
       partitionByApplicability(expandido.propositions, "BUGFIX").applicable,
-      RESPUESTAS({
-        diagnostico_explica_el_sintoma: 0.95,
-        causa_especifica: 0.94,
-        nombra_archivos_reales: 0.95,
-        riesgos_cubren_impactos: 0.46,
-      }, { clasificacion: "completa" }),
+      RESPUESTAS(
+        {
+          diagnostico_explica_el_sintoma: 0.95,
+          causa_especifica: 0.94,
+          nombra_archivos_reales: 0.95,
+          riesgos_cubren_impactos: 0.46,
+        },
+        { clasificacion: "completa" },
+      ),
       DEFAULT_POLICY,
     );
     // El comportamiento de hoy se conserva: la banda por la señal débil es lo

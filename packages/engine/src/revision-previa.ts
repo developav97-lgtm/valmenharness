@@ -126,12 +126,17 @@ function citados(texto: string): string[] {
 
 /** `true` si lo citado parece una ruta de archivo (con directorio y extensión). */
 function pareceRuta(token: string): boolean {
-  return /^[\w@.\-/]+\/[\w@.\-]+\.[A-Za-z0-9]{1,6}(?::\d+(?:-\d+)?)?$/.test(token) && !token.includes("://");
+  return (
+    /^[\w@.\-/]+\/[\w@.\-]+\.[A-Za-z0-9]{1,6}(?::\d+(?:-\d+)?)?$/.test(token) &&
+    !token.includes("://")
+  );
 }
 
 /** `true` si lo citado parece un archivo, con o sin directorio. */
 function pareceArchivo(token: string): boolean {
-  return /^[\w@.\-/]+\.[A-Za-z0-9]{1,6}(?::\d+(?:-\d+)?)?$/.test(token) && !token.includes("://");
+  return (
+    /^[\w@.\-/]+\.[A-Za-z0-9]{1,6}(?::\d+(?:-\d+)?)?$/.test(token) && !token.includes("://")
+  );
 }
 
 /**
@@ -198,7 +203,11 @@ export function citedFiles(root: string, ticketText: string): CitaComprobada[] {
     const linea = sufijo === null ? undefined : Number(sufijo[2] ?? sufijo[1]);
     const base = { cita: token, ruta, ...(linea === undefined ? {} : { linea }) };
     if (ruta.startsWith("/") || ruta.startsWith("../")) {
-      resultado.push({ ...base, resultado: "omitida", detalle: "no es relativa a la raíz" });
+      resultado.push({
+        ...base,
+        resultado: "omitida",
+        detalle: "no es relativa a la raíz",
+      });
       continue;
     }
     const absoluta = join(root, ruta);
@@ -246,14 +255,18 @@ export function reviewBeforeGate(input: {
   const skipped: string[] = [];
   const esPlan = input.gateId === "plan";
 
-  findings.push(...marcadoresVacios("Descripción funcional", s["Descripción funcional"] ?? ""));
+  findings.push(
+    ...marcadoresVacios("Descripción funcional", s["Descripción funcional"] ?? ""),
+  );
   findings.push(...marcadoresVacios("Diagnóstico", s["Diagnóstico"] ?? ""));
 
   if (esRepositorio(input.root)) {
     const sinExistir = new Set<string>();
     for (const cita of citedFiles(input.root, input.ticketText)) {
       if (cita.resultado === "omitida") {
-        skipped.push(`archivos citados: \`${cita.ruta}\` ${cita.detalle ?? "no se comprueba"}, no se comprueba`);
+        skipped.push(
+          `archivos citados: \`${cita.ruta}\` ${cita.detalle ?? "no se comprueba"}, no se comprueba`,
+        );
       } else if (cita.resultado === "no_existe") {
         if (sinExistir.has(cita.ruta)) continue;
         sinExistir.add(cita.ruta);
@@ -269,7 +282,9 @@ export function reviewBeforeGate(input: {
       }
     }
   } else {
-    skipped.push("archivos citados: la raíz del proyecto no es un repositorio git, no hay dónde comprobarlos");
+    skipped.push(
+      "archivos citados: la raíz del proyecto no es un repositorio git, no hay dónde comprobarlos",
+    );
   }
 
   if (esPlan) {
@@ -280,7 +295,8 @@ export function reviewBeforeGate(input: {
     if (rollback === null || rollback === "") {
       findings.push({
         id: "rollback_vacio",
-        message: "«Plan»: la línea «Rollback:» está vacía; dice cómo se revierte el cambio.",
+        message:
+          "«Plan»: la línea «Rollback:» está vacía; dice cómo se revierte el cambio.",
       });
     }
 
@@ -323,7 +339,10 @@ export function reviewBeforeGate(input: {
 export function renderPreReview(
   gateId: string,
   ticketId: string,
-  result: { readonly findings: readonly PreReviewFinding[]; readonly skipped: readonly string[] },
+  result: {
+    readonly findings: readonly PreReviewFinding[];
+    readonly skipped: readonly string[];
+  },
 ): string {
   const lineas = [`Revisión previa — compuerta ${gateId} — ${ticketId}`];
   if (result.findings.length === 0) {
@@ -361,7 +380,8 @@ export function decideInCode(propositionId: string, ticketText: string): number 
       return citados(lineasDe(plan).join("\n")).some(pareceArchivo) ? CUMPLE : 0;
     case "pasos_ejecutables": {
       const pasos = pasosDelPlan(plan);
-      return pasos.length > 0 && pasos.every((paso) => paso !== "" && citados(paso).length > 0)
+      return pasos.length > 0 &&
+        pasos.every((paso) => paso !== "" && citados(paso).length > 0)
         ? CUMPLE
         : 0;
     }

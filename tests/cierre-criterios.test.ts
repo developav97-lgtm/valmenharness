@@ -30,16 +30,25 @@ import { transition } from "../packages/engine/src/transition.js";
 import type { GateReceipt } from "../packages/gate/src/index.js";
 import { renderFixtureTicket } from "./helpers/fixtures.js";
 
-const BASE = readFileSync(new URL("./fixtures/ticket-cerrado-con-criterios.md", import.meta.url), "utf8");
+const BASE = readFileSync(
+  new URL("./fixtures/ticket-cerrado-con-criterios.md", import.meta.url),
+  "utf8",
+);
 const ID = "BUGFIX-GATE-CONTRADICCION-DESCRIPTIVA-20261005";
 
 let lab: string;
-const PATHS = (): { root: string; ticketsDir: string } => ({ root: lab, ticketsDir: "tickets" });
+const PATHS = (): { root: string; ticketsDir: string } => ({
+  root: lab,
+  ticketsDir: "tickets",
+});
 const RUTA = (id = ID): string => join(lab, "tickets", "2026", id, "ticket.md");
 
 /** El ticket base en `qa_approved`, con el texto de sus criterios transformado. */
 function preparar(transformar: (criterios: string) => string): void {
-  const texto = BASE.replace(/^workflow_status: closed/m, "workflow_status: qa_approved").replace(
+  const texto = BASE.replace(
+    /^workflow_status: closed/m,
+    "workflow_status: qa_approved",
+  ).replace(
     /(## Criterios de aceptación\n\n)([\s\S]*?)(?=\n## )/,
     (_todo, cabecera: string, cuerpo: string) => `${cabecera}${transformar(cuerpo)}`,
   );
@@ -47,7 +56,8 @@ function preparar(transformar: (criterios: string) => string): void {
   writeFileSync(RUTA(), texto, "utf8");
 }
 
-const cerrar = () => transition({ paths: PATHS(), ticketId: ID, entity: "ticket", to: "closed" });
+const cerrar = () =>
+  transition({ paths: PATHS(), ticketId: ID, entity: "ticket", to: "closed" });
 
 beforeEach(() => {
   lab = mkdtempSync(join(tmpdir(), "valmen-cierre-"));
@@ -74,18 +84,29 @@ describe("cerrar con criterios", () => {
 
   it("un criterio sin marcar que declara «no aplica» con su motivo no impide cerrar", () => {
     preparar((c) =>
-      c.replace("- [x] Una proposición requerida", "- [ ] (no aplica: el alcance pasó a otro ticket) Una proposición requerida"),
+      c.replace(
+        "- [x] Una proposición requerida",
+        "- [ ] (no aplica: el alcance pasó a otro ticket) Una proposición requerida",
+      ),
     );
     expect(() => cerrar()).not.toThrow();
   });
 
   it("un «no aplica» sin motivo suficiente no basta", () => {
-    preparar((c) => c.replace("- [x] Una proposición requerida", "- [ ] (no aplica: x) Una proposición requerida"));
+    preparar((c) =>
+      c.replace(
+        "- [x] Una proposición requerida",
+        "- [ ] (no aplica: x) Una proposición requerida",
+      ),
+    );
     expect(cerrar).toThrow(/Falta marcar «\(no aplica: x\)/);
   });
 
   it("un ticket de la plantilla anterior, sin casillas, se cierra como antes", () => {
-    preparar(() => "- Un criterio escrito como viñeta, sin casilla.\n- Otro más, también sin casilla.\n");
+    preparar(
+      () =>
+        "- Un criterio escrito como viñeta, sin casilla.\n- Otro más, también sin casilla.\n",
+    );
     expect(unmarkedCriteria(readFileSync(RUTA(), "utf8"))).toEqual([]);
     expect(() => cerrar()).not.toThrow();
   });
@@ -104,8 +125,11 @@ describe("las casillas", () => {
   });
 
   it("«no aplica» pide un motivo de al menos ocho caracteres", () => {
-    const caja = (texto: string) => criterionBoxes(`## Criterios de aceptación\n\n- [ ] ${texto}\n`)[0]!;
-    expect(declaresNotApplicable(caja("Algo. No aplica: cambió el alcance del ticket"))).toBe(true);
+    const caja = (texto: string) =>
+      criterionBoxes(`## Criterios de aceptación\n\n- [ ] ${texto}\n`)[0]!;
+    expect(
+      declaresNotApplicable(caja("Algo. No aplica: cambió el alcance del ticket")),
+    ).toBe(true);
     expect(declaresNotApplicable(caja("Algo. No aplica: x"))).toBe(false);
     expect(declaresNotApplicable(caja("Algo sin la declaración"))).toBe(false);
   });
@@ -156,7 +180,10 @@ describe("marcar desde el recibo de qa-mechanical", () => {
     const r = markFromReceipt(
       TEXTO,
       recibo(
-        { criterio_01: "El filtro encuentra la orden por número parcial.", criterio_03: "El filtro ignora las mayúsculas del número." },
+        {
+          criterio_01: "El filtro encuentra la orden por número parcial.",
+          criterio_03: "El filtro ignora las mayúsculas del número.",
+        },
         ["criterio_03"],
       ),
     );
@@ -164,7 +191,12 @@ describe("marcar desde el recibo de qa-mechanical", () => {
   });
 
   it("no marca un criterio cuyo texto cambió después del recibo", () => {
-    const r = markFromReceipt(TEXTO, recibo({ criterio_01: "El filtro encuentra la orden por cualquier parte del número." }));
+    const r = markFromReceipt(
+      TEXTO,
+      recibo({
+        criterio_01: "El filtro encuentra la orden por cualquier parte del número.",
+      }),
+    );
     expect(r.marked).toEqual([]);
     expect(r.text).toBe(TEXTO);
   });
@@ -183,7 +215,8 @@ describe("marcar un criterio manual", () => {
         id: ID,
         module: "GATE",
         workflowStatus: "in_progress",
-        criterios: "- [ ] La pantalla se ve igual que el prototipo aprobado.\n      <!-- verify: manual -->",
+        criterios:
+          "- [ ] La pantalla se ve igual que el prototipo aprobado.\n      <!-- verify: manual -->",
       }),
       "utf8",
     );
