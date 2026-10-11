@@ -4,7 +4,7 @@ id: FEATURE-CORE-ESTADO-PUBLICO-20261010
 title: Función única que deriva el estado público del ticket
 type: FEATURE
 module: CORE
-workflow_status: in_progress
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -87,41 +87,41 @@ Ninguno sin decidir. Lo nuevo del pedido se tradujo a campos reales:
 
 ## Criterios de aceptación
 
-- [ ] C01: Un ticket en `awaiting_user_tests` deriva «Necesita tu decisión» con motivo `user-tests`.
+- [x] C01: Un ticket en `awaiting_user_tests` deriva «Necesita tu decisión» con motivo `user-tests`.
       <!-- test: npx vitest run tests/estado-publico.test.ts -t C01 -->
-- [ ] C02: Un ticket en `blocked` deriva «Necesita tu decisión» con motivo `blocked`.
+- [x] C02: Un ticket en `blocked` deriva «Necesita tu decisión» con motivo `blocked`.
       <!-- test: npx vitest run tests/estado-publico.test.ts -t C02 -->
-- [ ] C03: Un ticket en `changes_requested` deriva «Necesita tu decisión» con motivo `changes-requested`.
+- [x] C03: Un ticket en `changes_requested` deriva «Necesita tu decisión» con motivo `changes-requested`.
       <!-- test: npx vitest run tests/estado-publico.test.ts -t C03 -->
-- [ ] C04: Un ticket en `planned` cuya aprobación espera a una persona deriva «Necesita tu decisión» con motivo `plan-approval`.
+- [x] C04: Un ticket en `planned` cuya aprobación espera a una persona deriva «Necesita tu decisión» con motivo `plan-approval`.
       <!-- test: npx vitest run tests/estado-publico.test.ts -t C04 -->
-- [ ] C05: Un ticket en `in_progress` con una compuerta escalada sin decisión deriva «Necesita tu decisión» con motivo `escalated-gate`.
+- [x] C05: Un ticket en `in_progress` con una compuerta escalada sin decisión deriva «Necesita tu decisión» con motivo `escalated-gate`.
       <!-- test: npx vitest run tests/estado-publico.test.ts -t C05 -->
-- [ ] C06: Un ticket en `in_qa` sin compuerta escalada deriva «Verificando».
+- [x] C06: Un ticket en `in_qa` sin compuerta escalada deriva «Verificando».
       <!-- test: npx vitest run tests/estado-publico.test.ts -t C06 -->
-- [ ] C07: Un ticket en `qa_approved` deriva «Listo».
+- [x] C07: Un ticket en `qa_approved` deriva «Listo».
       <!-- test: npx vitest run tests/estado-publico.test.ts -t C07 -->
-- [ ] C08: Un ticket en `closed` deriva «Listo».
+- [x] C08: Un ticket en `closed` deriva «Listo».
       <!-- test: npx vitest run tests/estado-publico.test.ts -t C08 -->
-- [ ] C09: Cada ticket en `intake`, `analyzed`, `approved` o `in_progress` sin compuerta escalada deriva «Trabajando».
+- [x] C09: Cada ticket en `intake`, `analyzed`, `approved` o `in_progress` sin compuerta escalada deriva «Trabajando».
       <!-- test: npx vitest run tests/estado-publico.test.ts -t C09 -->
-- [ ] C10: Un ticket en `planned` cuyo plan aprueba una autorización vigente deriva «Trabajando».
+- [x] C10: Un ticket en `planned` cuyo plan aprueba una autorización vigente deriva «Trabajando».
       <!-- test: npx vitest run tests/estado-publico.test.ts -t C10 -->
-- [ ] C11: El módulo `packages/core/src/public-state.ts` no importa `node:fs` ni otro módulo de disco.
+- [x] C11: El módulo `packages/core/src/public-state.ts` no importa `node:fs` ni otro módulo de disco.
       <!-- test: npx vitest run tests/estado-publico.test.ts -t C11 -->
-- [ ] C12: `estadoPublico` se importa desde el índice de `@valmen/core`.
+- [x] C12: `estadoPublico` se importa desde el índice de `@valmen/core`.
       <!-- test: npx vitest run tests/estado-publico.test.ts -t C12 -->
-- [ ] C13: En un registro con un ticket en `planned` sin autorización vigente, `estadoPublicoDelTicket` devuelve «Necesita tu decisión» con motivo `plan-approval`.
+- [x] C13: En un registro con un ticket en `planned` sin autorización vigente, `estadoPublicoDelTicket` devuelve «Necesita tu decisión» con motivo `plan-approval`.
       <!-- test: npx vitest run tests/estado-publico.test.ts -t C13 -->
-- [ ] C14: En un registro con un ticket en `planned` cubierto por una autorización vigente con la compuerta plan en approve, `estadoPublicoDelTicket` devuelve «Trabajando».
+- [x] C14: En un registro con un ticket en `planned` cubierto por una autorización vigente con la compuerta plan en approve, `estadoPublicoDelTicket` devuelve «Trabajando».
       <!-- test: npx vitest run tests/estado-publico.test.ts -t C14 -->
-- [ ] C15: En un registro con un ticket en `in_progress` con un recibo escalado sin decisión, `estadoPublicoDelTicket` devuelve «Necesita tu decisión» con motivo `escalated-gate`.
+- [x] C15: En un registro con un ticket en `in_progress` con un recibo escalado sin decisión, `estadoPublicoDelTicket` devuelve «Necesita tu decisión» con motivo `escalated-gate`.
       <!-- test: npx vitest run tests/estado-publico.test.ts -t C15 -->
-- [ ] C16: Un recibo escalado con decisión humana registrada no cuenta como compuerta escalada para `estadoPublicoDelTicket`.
+- [x] C16: Un recibo escalado con decisión humana registrada no cuenta como compuerta escalada para `estadoPublicoDelTicket`.
       <!-- test: npx vitest run tests/estado-publico.test.ts -t C16 -->
-- [ ] C17: Con un recibo escalado sin decisión seguido de un recibo posterior en approve de la misma compuerta, `estadoPublicoDelTicket` no devuelve el motivo `escalated-gate`.
+- [x] C17: Con un recibo escalado sin decisión seguido de un recibo posterior en approve de la misma compuerta, `estadoPublicoDelTicket` no devuelve el motivo `escalated-gate`.
       <!-- test: npx vitest run tests/estado-publico.test.ts -t C17 -->
-- [ ] C18: El monorepo compila sin errores de tipos con los dos módulos nuevos.
+- [x] C18: El monorepo compila sin errores de tipos con los dos módulos nuevos.
       <!-- test: npx tsc --build tsconfig.build.json -->
 
 ## Puntos
@@ -132,11 +132,20 @@ Ninguno sin decidir. Lo nuevo del pedido se tradujo a campos reales:
 
 ## Implementación
 
-Pendiente.
+- `packages/core/src/public-state.ts` (nuevo): `estadoPublico({ state, planWaitsForPerson, escalatedGatePending })` devuelve `{ state, label, reason }`; función pura sin imports de disco. Orden: `blocked`/`changes_requested`/`awaiting_user_tests` con motivo propio; `planned` con el plan esperando a una persona; cualquier estado salvo `qa_approved` y `closed` con una compuerta escalada; `in_qa` verificando; `qa_approved` y `closed` listos; el resto trabajando. Las constantes y tipos quedan sin `export` porque el guion de exportaciones sin uso no les halló consumidor fuera del módulo; el resultado ya los lleva en su forma.
+- `packages/engine/src/public-state.ts` (nuevo): `estadoPublicoDelTicket(paths, ticketId, ahora?)` lee el estado con `findTicket`, toma el último recibo de cada compuerta (`currentReceipts` los entrega del más nuevo al más viejo) y calcula `escalatedGatePending` (`escalatedTo === "human"` y `humanDecision === null`) y `planWaitsForPerson` (`planned` y `elegibilidadDeAprobacion(...).elegible === false`).
+- Reexportados desde `packages/core/src/index.ts` y `packages/engine/src/index.ts`. Ninguna prueba existente se editó.
+- Prueba primero: `tests/estado-publico.test.ts` se vio en rojo (no cargaba el módulo) antes de implementar.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Directorio de ejecución: raíz del repositorio. Requisitos: `node_modules` instalado; no hace falta ningún servicio.
+
+- `npx vitest run tests/estado-publico.test.ts tests/elegibilidad-aprobacion.test.ts` — esperado: 90 pruebas en verde (17 nuevas C01–C17 y las 73 de elegibilidad, que comparten ayudantes).
+- `npx tsc --build tsconfig.build.json` (C18) y `npx tsc --noEmit -p .` — esperado: sin errores.
+- `npx eslint` y `npx prettier --check` sobre los archivos tocados — esperado: sin hallazgos.
+- `node scripts/exports-sin-uso.mjs` — esperado: solo `SYNC_BACKUP_DIR` (`packages/adapter/src/sync-backup.ts:21`), ajeno a este ticket.
+- Validaciones manuales: ninguna.
 
 ## QA
 
@@ -165,7 +174,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": null,
+    "model": "claude-sonnet-5-5",
+    "reasoning_effort": null,
+    "notes": "Sesión de subagente sin agregado de tokens expuesto; sin números.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:subagente-sonnet-5-5-implementacion",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -256,6 +281,24 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:11:57.396Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:11:58.338Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```

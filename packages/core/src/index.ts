@@ -7,6 +7,7 @@
  */
 
 export * from "./contract.js";
+export * from "./public-state.js";
 export * from "./execution-identity.js";
 export * from "./session-reference.js";
 export * from "./model-reference.js";

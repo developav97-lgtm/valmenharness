@@ -72,6 +72,7 @@ export * from "./value.js";
 export * from "./tickets.js";
 export * from "./state.js";
 export * from "./receipts.js";
+export * from "./public-state.js";
 export * from "./index-file.js";
 export * from "./mutate.js";
 export * from "./transition.js";
