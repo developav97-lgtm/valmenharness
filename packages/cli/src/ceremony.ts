@@ -134,6 +134,13 @@ export async function resolverCompuerta(
   }
 
   const recibo = veredicto.recibo;
+  // La revisión del diff en REVIEW la decide una persona, con o sin motivo (R-REV-005).
+  if (gateId === "code-review") {
+    return (
+      `la revisión del diff en REVIEW la decide una persona (recibo ${recibo.id}: ${recibo.reason}): ` +
+      `valmen gate-decide --id ${ticketId} --receipt ${recibo.id} --decision approve|reject ...`
+    );
+  }
   if (recibo.outcome === "review" && motivo === undefined) {
     return (
       `la compuerta ${gateId} cayó en REVIEW (${recibo.reason}). Si el criterio dice que no debe ` +

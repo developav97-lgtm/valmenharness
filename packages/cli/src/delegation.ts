@@ -23,12 +23,15 @@ import {
   FUENTE_DELEGACION,
   appendDelegationEvent,
   assertInScope,
+  codeReviewExigida,
   delegationEvents,
   delegationProgress,
   grantDelegation,
   hardGateStop,
   markManualCriteria,
+  readReceipts,
   resolveDelegation,
+  revisionPendiente,
   transition,
 } from "@valmen/engine";
 import { recordHumanDecision } from "@valmen/server";
@@ -340,6 +343,27 @@ export async function closeDelegated(
         true,
       );
       if (stop !== null) return parada(paths, delegation, ticketId, stop);
+      // Con `code-review: exigida` el diff se revisa antes de entregar (R-REV-004). Un recibo
+      // aprobado del árbol de ahora se respeta (también la firma de una persona); un `review`
+      // lo decide una persona, no la delegación (R-REV-005), y no se vuelve a correr.
+      if (codeReviewExigida(paths.root)) {
+        const revision = revisionPendiente(paths, ticketId, readReceipts(paths, ticketId));
+        if (revision?.persona === true)
+          return parada(paths, delegation, ticketId, revision.motivo);
+        if (revision !== null) {
+          const stopRevision = await resolverPorDelegacion(
+            paths,
+            delegation,
+            ticketId,
+            "code-review",
+            undefined,
+            deps,
+            true,
+          );
+          if (stopRevision !== null)
+            return parada(paths, delegation, ticketId, stopRevision);
+        }
+      }
       transition({ paths, ticketId, entity: "ticket", to: "awaiting_user_tests" });
 
       const delPo = criteriosDelPo(leer(paths, ticketId));

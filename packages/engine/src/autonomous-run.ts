@@ -42,7 +42,9 @@ import {
 } from "./integration-commit.js";
 import { registrarFase, resolverDespachoDeFase } from "./journey-phases.js";
 import { UNATTENDED_ENV, aprobacionDePlanVigente } from "./plan-approval.js";
-import { runGate } from "./gate.js";
+import { codeReviewExigida } from "./discovery.js";
+import { type GateRunOptions, runGate } from "./gate.js";
+import { revisionPendiente } from "./revision-exigida.js";
 import { transition } from "./transition.js";
 
 /** Resultado portable de invocar un ejecutor, inyectable en las pruebas. */
@@ -91,6 +93,8 @@ export interface AutonomousRunRequest {
     | undefined;
   /** Reloj inyectable para que el recibo de parada sea reproducible en pruebas. */
   readonly now?: (() => Date) | undefined;
+  /** El revisor de diff de la compuerta `code-review`, con el mismo nombre que `GateRunOptions`. */
+  readonly reviewDiff?: GateRunOptions["reviewDiff"] | undefined;
 }
 
 export interface AutonomousRunResult {
@@ -636,6 +640,30 @@ async function runAutonomousInner(
       "El ticket no trae el contrato de pruebas en `## Pruebas` (comandos exactos entre comillas invertidas); no pasa a awaiting_user_tests.",
       request.now?.() ?? new Date(),
     );
+  }
+  // Con `code-review: exigida` el diff se revisa antes de entregar (R-REV-004). La jornada solo
+  // lee el veredicto: un `review` lo decide una persona y nunca lo firma ella (R-REV-005).
+  if (codeReviewExigida(request.paths.root)) {
+    await runGate(request.paths, {
+      gateId: "code-review",
+      ticketId: selected.id,
+      ...(request.reviewDiff === undefined ? {} : { reviewDiff: request.reviewDiff }),
+    });
+    const pendiente = revisionPendiente(
+      request.paths,
+      selected.id,
+      readReceipts(request.paths, selected.id),
+    );
+    if (pendiente !== null) {
+      return stopResult(
+        request.paths,
+        selected.id,
+        command,
+        "verification-failed",
+        pendiente.motivo.replace(/\s+/g, " ").slice(0, 400),
+        request.now?.() ?? new Date(),
+      );
+    }
   }
   transition({
     paths: request.paths,

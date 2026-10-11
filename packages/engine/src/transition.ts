@@ -49,13 +49,14 @@ import { hashState } from "@valmen/gate";
 
 import { motivoDeArbolNoVigente } from "./arbol-probado.js";
 import { unmarkedCriteria, unmarkedMessage } from "./criteria-marks.js";
-import { type RegistryPaths, findTicket } from "./discovery.js";
+import { type RegistryPaths, codeReviewExigida, findTicket } from "./discovery.js";
 import { motivoDeAprobacionPorAutorizacionInvalida } from "./approval-eligibility.js";
 import {
   FUENTE_AUTORIZACION,
   FUENTE_REVISOR,
   aprobacionDePlanVigente,
 } from "./plan-approval.js";
+import { revisionPendiente } from "./revision-exigida.js";
 import { type ReciboConRevisor, motivoDeDecisionDelRevisorInvalida } from "./reviewer.js";
 import {
   motivoDeCierrePorPoliticaInvalido,
@@ -244,6 +245,17 @@ function exigirVerificacionMecanica(document: ParsedTicket, paths: RegistryPaths
       EXIT_INVARIANT,
     );
   }
+}
+
+/**
+ * Con `code-review: exigida`, entregar pide la revisión del diff al día (R-REV-004, R-REV-005):
+ * sin recibo, con un recibo de otro árbol, con un `block` o con un `review` sin firma de una
+ * persona, se rechaza diciendo qué correr o quién decide. La tabla vive en `revisionPendiente`.
+ */
+function exigirRevisionDeCodigo(document: ParsedTicket, paths: RegistryPaths): void {
+  const id = document.fields.id;
+  const pendiente = revisionPendiente(paths, id, readReceipts(paths, id));
+  if (pendiente !== null) fail(pendiente.motivo, EXIT_INVARIANT);
 }
 
 /**
@@ -500,6 +512,9 @@ function applyTicket(
   }
   if (to === "awaiting_user_tests") {
     exigirVerificacionMecanica(document, request.paths);
+    if (codeReviewExigida(request.paths.root)) {
+      exigirRevisionDeCodigo(document, request.paths);
+    }
   }
 
   if (to === "in_qa") {

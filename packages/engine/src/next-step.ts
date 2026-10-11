@@ -48,9 +48,10 @@ import {
 } from "@valmen/gate";
 
 import { motivoDeArbolNoVigente } from "./arbol-probado.js";
-import type { RegistryPaths } from "./discovery.js";
+import { type RegistryPaths, codeReviewExigida } from "./discovery.js";
 import { aprobacionDePlanVigente } from "./plan-approval.js";
 import { currentReceipts, veredictoDeCompuerta } from "./receipts.js";
+import { revisionPendiente } from "./revision-exigida.js";
 import { buildGateState } from "./state.js";
 
 /** Lo que toca hacer ahora con un ticket. */
@@ -427,6 +428,18 @@ export function computeNextStep(
       const motivoDeArbol = motivoDeArbolNoVigente(mecanica, paths, id, "qa-mechanical");
       if (motivoDeArbol !== null) {
         return paso("verificación", [motivoDeArbol], base);
+      }
+      // Con `code-review: exigida` la revisión del diff va antes de entregar (R-REV-004): la misma
+      // lectura que impone `transition`.
+      const revision = codeReviewExigida(paths.root)
+        ? revisionPendiente(paths, id, recibos)
+        : null;
+      if (revision !== null) {
+        return paso(
+          "revisión del diff",
+          [revision.motivo, `Con la revisión al día, ${entregar}.`],
+          revision.persona ? { ...base, alto: revision.motivo } : base,
+        );
       }
       return paso(
         "entrega",

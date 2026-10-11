@@ -408,8 +408,8 @@ function sinHallazgo(
  * La revisión del diff: `in_progress → awaiting_user_tests`.
  *
  * Revisa lo que se entrega, con profundidad según el riesgo que calcula el código. El modelo
- * responde proposiciones de hecho —nunca «¿apruebas?»— y el código decide. Se corre a mano: que la
- * entrega la exija es de otro ticket.
+ * responde proposiciones de hecho —nunca «¿apruebas?»— y el código decide. La entrega la exige si
+ * `.valmen/config.yaml` declara `code-review: exigida`.
  */
 const CODE_REVIEW_GATE: GateDefinition = {
   id: "code-review",

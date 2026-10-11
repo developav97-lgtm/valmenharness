@@ -14,7 +14,7 @@
  * 4. **Una sola corrección.** Tras un bloqueo hay una segunda ronda, acotada a lo que cambió; si no
  *    aprueba, decide una persona y una tercera corrida se rechaza.
  *
- * La compuerta se corre a mano: que la entrega la exija es de otro ticket.
+ * La entrega la exige si `.valmen/config.yaml` declara `code-review: exigida`.
  */
 import { createHash } from "node:crypto";
 import { readFileSync, statSync } from "node:fs";

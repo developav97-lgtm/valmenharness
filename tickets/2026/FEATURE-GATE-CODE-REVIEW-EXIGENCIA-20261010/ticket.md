@@ -4,7 +4,7 @@ id: FEATURE-GATE-CODE-REVIEW-EXIGENCIA-20261010
 title: Exigir la revisión del diff al entregar un ticket y adaptar a quienes entregan
 type: FEATURE
 module: GATE
-workflow_status: approved
+workflow_status: awaiting_user_tests
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -112,45 +112,45 @@ Ninguno.
      criterio. Ejemplo en la skill planificacion. -->
 ## Criterios de aceptación
 
-- [ ] C1 — Con la revisión exigida, la entrega a `awaiting_user_tests` sin recibo de `code-review` se rechaza.
+- [x] C1 — Con la revisión exigida, la entrega a `awaiting_user_tests` sin recibo de `code-review` se rechaza.
       <!-- test: npx vitest run tests/code-review-exigida.test.ts -->
-- [ ] C2 — Con la revisión exigida, un recibo `approve` de `code-review` sobre el árbol actual deja entregar el ticket.
+- [x] C2 — Con la revisión exigida, un recibo `approve` de `code-review` sobre el árbol actual deja entregar el ticket.
       <!-- test: npx vitest run tests/code-review-exigida.test.ts -->
-- [ ] C3 — Con la revisión exigida, un commit posterior al recibo `approve` de `code-review` hace rechazar la entrega pidiendo revisar el árbol nuevo.
+- [x] C3 — Con la revisión exigida, un commit posterior al recibo `approve` de `code-review` hace rechazar la entrega pidiendo revisar el árbol nuevo.
       <!-- test: npx vitest run tests/code-review-exigida.test.ts -->
-- [ ] C4 — Con la revisión exigida, un recibo `review` de `code-review` sin decisión humana hace rechazar la entrega.
+- [x] C4 — Con la revisión exigida, un recibo `review` de `code-review` sin decisión humana hace rechazar la entrega.
       <!-- test: npx vitest run tests/code-review-exigida.test.ts -->
-- [ ] C5 — Con la revisión exigida, un recibo `review` de `code-review` aprobado por una persona con `gate-decide` deja entregar ese mismo árbol.
+- [x] C5 — Con la revisión exigida, un recibo `review` de `code-review` aprobado por una persona con `gate-decide` deja entregar ese mismo árbol.
       <!-- test: npx vitest run tests/code-review-exigida.test.ts -->
-- [ ] C6 — Con la revisión exigida, un recibo `review` aprobado por una persona deja de valer cuando cambia un archivo funcional.
+- [x] C6 — Con la revisión exigida, un recibo `review` aprobado por una persona deja de valer cuando cambia un archivo funcional.
       <!-- test: npx vitest run tests/code-review-exigida.test.ts -->
-- [ ] C7 — Con la revisión exigida, un recibo `block` de `code-review` hace rechazar la entrega.
+- [x] C7 — Con la revisión exigida, un recibo `block` de `code-review` hace rechazar la entrega.
       <!-- test: npx vitest run tests/code-review-exigida.test.ts -->
-- [ ] C8 — Sin la clave `code-review: exigida`, la entrega sin recibo de `code-review` se acepta.
+- [x] C8 — Sin la clave `code-review: exigida`, la entrega sin recibo de `code-review` se acepta.
       <!-- test: npx vitest run tests/code-review-exigida.test.ts -->
-- [ ] C9 — Quitar `code-review: exigida` del árbol de trabajo sin commitearlo mantiene la exigencia.
+- [x] C9 — Quitar `code-review: exigida` del árbol de trabajo sin commitearlo mantiene la exigencia.
       <!-- test: npx vitest run tests/code-review-exigida.test.ts -->
-- [ ] C10 — Agregar `code-review: exigida` al árbol de trabajo sin commitearlo ya exige la revisión.
+- [x] C10 — Agregar `code-review: exigida` al árbol de trabajo sin commitearlo ya exige la revisión.
       <!-- test: npx vitest run tests/code-review-exigida.test.ts -->
-- [ ] C11 — Un proyecto en un subdirectorio de un repositorio git lee la clave del `.valmen/config.yaml` de su propia raíz en el `HEAD`.
+- [x] C11 — Un proyecto en un subdirectorio de un repositorio git lee la clave del `.valmen/config.yaml` de su propia raíz en el `HEAD`.
       <!-- test: npx vitest run tests/code-review-exigida.test.ts -->
-- [ ] C12 — Con la revisión exigida, `computeNextStep` en `in_progress` con la verificación mecánica vigente sin recibo de `code-review` indica correr `valmen gate code-review`.
+- [x] C12 — Con la revisión exigida, `computeNextStep` en `in_progress` con la verificación mecánica vigente sin recibo de `code-review` indica correr `valmen gate code-review`.
       <!-- test: npx vitest run tests/code-review-exigida.test.ts -->
-- [ ] C13 — Con el árbol actual distinto del revisado, `computeNextStep` en `in_progress` indica volver a correr `valmen gate code-review`.
+- [x] C13 — Con el árbol actual distinto del revisado, `computeNextStep` en `in_progress` indica volver a correr `valmen gate code-review`.
       <!-- test: npx vitest run tests/code-review-exigida.test.ts -->
-- [ ] C14 — Tras un `block` de la ronda 1, `computeNextStep` indica una sola corrección acotada a los hallazgos.
+- [x] C14 — Tras un `block` de la ronda 1, `computeNextStep` indica una sola corrección acotada a los hallazgos.
       <!-- test: npx vitest run tests/code-review-exigida.test.ts -->
-- [ ] C15 — Con un `review` de la ronda 2 sin decisión humana, `computeNextStep` devuelve el alto de una persona.
+- [x] C15 — Con un `review` de la ronda 2 sin decisión humana, `computeNextStep` devuelve el alto de una persona.
       <!-- test: npx vitest run tests/code-review-exigida.test.ts -->
-- [ ] C16 — Con la revisión exigida, el brief de un subagente lista `valmen gate code-review` entre las compuertas de implementación.
+- [x] C16 — Con la revisión exigida, el brief de un subagente lista `valmen gate code-review` entre las compuertas de implementación.
       <!-- test: npx vitest run tests/code-review-exigida.test.ts -->
-- [ ] C17 — La jornada autónoma con la revisión exigida corre `code-review` antes de entregar.
+- [x] C17 — La jornada autónoma con la revisión exigida corre `code-review` antes de entregar.
       <!-- test: npx vitest run tests/code-review-exigida-entregas.test.ts -->
-- [ ] C18 — La jornada autónoma con un `code-review` que no aprueba se detiene con `verification-failed` sin entregar el ticket.
+- [x] C18 — La jornada autónoma con un `code-review` que no aprueba se detiene con `verification-failed` sin entregar el ticket.
       <!-- test: npx vitest run tests/code-review-exigida-entregas.test.ts -->
-- [ ] C19 — La corrida delegada con la revisión exigida corre `code-review` antes de entregar.
+- [x] C19 — La corrida delegada con la revisión exigida corre `code-review` antes de entregar.
       <!-- test: npx vitest run tests/code-review-exigida-entregas.test.ts -->
-- [ ] C20 — `resolverCompuerta` con un motivo no aprueba un `review` de `code-review`.
+- [x] C20 — `resolverCompuerta` con un motivo no aprueba un `review` de `code-review`.
       <!-- test: npx vitest run tests/code-review-exigida-entregas.test.ts -->
 
 ## Puntos
@@ -161,11 +161,26 @@ Ninguno.
 
 ## Implementación
 
-Pendiente.
+Se siguió el plan con una desviación menor: la tabla de decisión (sin recibo, árbol no vigente, `block` de la ronda 1, rechazo humano, `review` sin firma) vive en una sola función `revisionPendiente` (`packages/engine/src/revision-exigida.ts`) que consumen `transition`, `computeNextStep`, la jornada y la delegación, en lugar de duplicarse en `transition.ts` y `next-step.ts`; así lo que se indica al agente y lo que el motor exige no divergen.
+
+- `packages/engine/src/discovery.ts`: `codeReviewExigida(root)` lee la clave del árbol de trabajo y de `HEAD:./.valmen/config.yaml`; nunca lanza.
+- `packages/engine/src/transition.ts`: `exigirRevisionDeCodigo` tras `exigirVerificacionMecanica`, solo con la clave.
+- `packages/engine/src/next-step.ts`, `journey-brief.ts`: el paso «revisión del diff» (con alto si la decide una persona) y el comando en el brief.
+- `packages/engine/src/autonomous-run.ts`: campo `reviewDiff`; corre `code-review` antes de entregar y se detiene con `verification-failed` si no aprueba; nunca firma.
+- `packages/cli/src/delegation.ts`, `ceremony.ts`: la delegación corre `code-review` antes de entregar y `resolverCompuerta` no aprueba un `review` de `code-review` aunque traiga motivo.
+- Comentarios en `packages/engine/src/code-review.ts` y `packages/gate/src/definitions.ts`.
+- La clave NO se activa en este repositorio: ningún paso escribe `.valmen/config.yaml`.
 
 ## Pruebas
 
-Pendiente de ejecución.
+Directorio: la raíz del worktree (`/Users/juanandrade/Desktop/ValmenHarness/.claude/worktrees/ticket-code-review-exigencia`). Requisito: `npm run build` hecho, Node 24 y git; los laboratorios son repositorios temporales y la clave solo vive en ellos.
+
+- `npx vitest run tests/code-review-exigida.test.ts tests/code-review-exigida-entregas.test.ts`: esperado 31 pruebas en verde (tablas de entrega, clave, siguiente paso, brief, jornada, delegación y `resolverCompuerta`, con sus regresiones sin la clave).
+- `npx vitest run tests/transitions.test.ts tests/next-step.test.ts tests/journey-brief.test.ts tests/journey-brief-worktree.test.ts tests/autonomous-run.test.ts tests/autonomous-stops.test.ts tests/integracion-autonoma.test.ts tests/delegation.test.ts tests/delegation-mcp.test.ts tests/code-review.test.ts tests/arbol-probado.test.ts tests/approve-close-shortcut.test.ts`: esperado 249 en verde, sin editar ninguna prueba existente.
+- `npx tsc --noEmit -p tsconfig.json` (0 errores), `npm run exports:check`, `npm run format:check`.
+- `npm run lint` ya traía 19 errores previos ajenos al ticket (p. ej. `Candidate` sin uso en `autonomous-run.ts:110`); los archivos del ticket no agregan ninguno.
+- Las pruebas nuevas se escribieron antes del código y se observaron en rojo (17 de 23 y 5 de 8; pasaban solo los casos de control sin la clave y C2/C5, que ya valían).
+- Validación manual: ninguna.
 
 ## QA
 
@@ -194,7 +209,23 @@ Pendiente de ejecución.
 ## Consumo de IA
 
 ```json
-[]
+[
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": null,
+    "model": "claude-sonnet-5-5",
+    "reasoning_effort": null,
+    "notes": "La sesión no expone números de tokens ni costo; solo trabajó este ticket.",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "manual:sesión de Claude Code sin agregado expuesto",
+    "confidence": "low",
+    "id": "CONSUMO-001"
+  }
+]
 ```
 
 ## Release
@@ -267,6 +298,33 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-11",
+    "at": "2026-10-11T05:22:58.740Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-11",
+    "at": "2026-10-11T05:29:11.815Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-11",
+    "at": "2026-10-11T05:32:28.364Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_progress -> awaiting_user_tests."
   }
 ]
 ```

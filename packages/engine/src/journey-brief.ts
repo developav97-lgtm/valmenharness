@@ -10,7 +10,7 @@ import { existsSync } from "node:fs";
 import { type ClienteDeSesion, type FaseDeSesion } from "@valmen/adapter";
 import { parseTicket } from "@valmen/core";
 
-import { findTicket, type RegistryPaths } from "./discovery.js";
+import { codeReviewExigida, findTicket, type RegistryPaths } from "./discovery.js";
 import { renderNextStep } from "./next-step.js";
 import { type AuthorizedProject } from "./project-resolution.js";
 import { buildResumeContext, renderFases, type ResumeContext } from "./resume.js";
@@ -115,7 +115,7 @@ export function armarBriefDeSubagente(request: ArmarBriefRequest): BriefDeSubage
     resume,
     fase: resume.fases.fases.find((fase) => fase.fase === resume.fases.faseActual) ?? null,
     skills: resume.nextStep.skills,
-    compuertas: compuertasPorFase(ticketId),
+    compuertas: compuertasPorFase(ticketId, codeReviewExigida(project.root)),
     contratoDeEntrega: contratoDeEntrega(ticketId),
     prohibiciones: prohibiciones(project.root, worktree),
     bloqueSecurity: esSecurity ? bloqueSecurity() : [],
@@ -215,7 +215,10 @@ function motivoDeNoLanzable(estado: string): string | null {
   }
 }
 
-function compuertasPorFase(ticketId: string): CompuertaDelBrief[] {
+function compuertasPorFase(
+  ticketId: string,
+  revisionExigida: boolean,
+): CompuertaDelBrief[] {
   return [
     {
       fase: "análisis",
@@ -249,6 +252,10 @@ function compuertasPorFase(ticketId: string): CompuertaDelBrief[] {
           comando: `valmen gate qa-mechanical --id ${ticketId} --evaluator command`,
           evaluador: "command",
         },
+        // Su profundidad la decide el riesgo, no un `--evaluator` (R-REV-003).
+        ...(revisionExigida
+          ? [{ comando: `valmen gate code-review --id ${ticketId}`, evaluador: null }]
+          : []),
       ],
       nota: null,
     },

@@ -37,6 +37,8 @@ import {
   readVerifyDevConfig,
 } from "@valmen/adapter";
 
+import { git } from "./diff.js";
+
 /** Un ticket leído de disco, con su ruta relativa a la raíz del proyecto. */
 export interface LocatedTicket {
   /** Identificador del ticket, tomado del nombre del directorio. */
@@ -183,6 +185,38 @@ export function playwrightConfig(root: string): PlaywrightConfig | null {
   const documento = parseYamlSubset(texto, { fileName: ".valmen/config.yaml" });
   if (typeof documento !== "object" || Array.isArray(documento)) return null;
   return readPlaywrightConfig(documento as ConfigMap);
+}
+
+/**
+ * ¿El proyecto exige la revisión del diff para entregar? (`code-review: exigida`, R-REV-004)
+ *
+ * La clave se lee del árbol de trabajo **y** del `HEAD`, y basta que una diga `exigida`: quitarla
+ * sin commitear, o romper el YAML, no apaga la exigencia; apagarla es un commit. Del `HEAD` se lee
+ * `./.valmen/config.yaml` —la forma relativa resuelve desde la raíz del proyecto y no desde el
+ * tope del repositorio, que en un subdirectorio sería otro archivo—. Un archivo ausente, un YAML
+ * que no parsea o un `git` que falla cuentan como «no lo dice»: no lanza.
+ */
+export function codeReviewExigida(root: string): boolean {
+  const exige = (texto: string | null): boolean => {
+    if (texto === null) return false;
+    try {
+      const documento = parseYamlSubset(texto, { fileName: ".valmen/config.yaml" });
+      return (
+        typeof documento === "object" &&
+        !Array.isArray(documento) &&
+        (documento as YamlMap)["code-review"] === "exigida"
+      );
+    } catch {
+      return false;
+    }
+  };
+  let arbol: string | null = null;
+  try {
+    arbol = readFileSync(join(root, ".valmen", "config.yaml"), "utf8");
+  } catch {
+    arbol = null;
+  }
+  return exige(arbol) || exige(git(root, ["show", "HEAD:./.valmen/config.yaml"]));
 }
 
 /** Lee `config.yaml` del proyecto como mapa, o `null` si no existe o la raíz no es un mapa. */
