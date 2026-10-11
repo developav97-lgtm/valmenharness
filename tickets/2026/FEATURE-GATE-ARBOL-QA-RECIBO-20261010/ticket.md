@@ -4,8 +4,8 @@ id: FEATURE-GATE-ARBOL-QA-RECIBO-20261010
 title: Recibo de qa-mechanical atado al árbol probado y rechazo si cambia
 type: FEATURE
 module: GATE
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -165,7 +165,37 @@ Ninguno.
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación delegada de FEATURE-GATE-ARBOL-QA-RECIBO-20261010",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta verificar sus criterios.",
+    "expected": "Los criterios del ticket se cumplen y sus pruebas dan el resultado esperado.",
+    "evidence": [
+      "EVIDENCE-001"
+    ],
+    "affected_files": [
+      "packages/gate/src/receipt.ts",
+      "packages/engine/src/arbol-probado.ts",
+      "packages/engine/src/gate.ts",
+      "packages/engine/src/transition.ts",
+      "packages/engine/src/next-step.ts",
+      "packages/engine/src/integration-commit.ts",
+      "tests/arbol-probado.test.ts",
+      "tests/delegation.test.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -236,28 +266,81 @@ Evidencia de esta sesión (ejecutada en el worktree): las 21 pruebas del ticket,
 Criterios sin verificar: ninguno; los 23 llevan comando de prueba y pasaron en la compuerta. Una salvedad que no es de un criterio: la compuerta y la entrega de este ticket corrieron con el `valmen` instalado, anterior a este cambio, así que su recibo no trae `testedTree` y la entrega no aplicó la regla nueva (ver el incidente en `## Implementación`).
 Limitaciones: los proyectos con la raíz dentro de un repositorio más grande (git ve el árbol del repositorio, no el de la raíz del proyecto) solo afectan al campo informativo `commitTree`, no al hash que se compara; un archivo de submódulo o un enlace roto se trata como borrado. Un cambio en `.valmen/config.yaml` después de la compuerta no la invalida (costo aceptado en el plan). Una corrida completa de la suite (`npx vitest run`) la hace el orquestador al integrar; en esta sesión se corrió una vez por un fallo de glob y pasó salvo las 4 pruebas de `tests/delegation.test.ts` ya tratadas.
 
+- Resultado del PO: poder aprobar o cerrar lo que sea de probar con comandos. Las pruebas del ticket las ejecutó el agente y dieron el resultado esperado: npx vitest run tests/arbol-probado.test.ts: 21 de 21; tests/delegation.test.ts: 18 de 18; las 10 suites que importan el estado de la compuerta: 195 de 195; suite completa en main tras integrar la ola: 236 archivos y 4043 pruebas en verde; npx tsc --noEmit -p tsconfig.json: 0 errores; npm run exports:check sin hallazgos; compuerta qa-mechanical con evaluador command: APPROVE (23 de 23 criterios)
+
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-11",
+    "build_reference": "commit:7af49691a69371a6ee577b4e28be2a7743315564",
+    "environment": "local: checkout principal de main (7af4969 y posteriores), Node 24, sin Docker",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-11",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "poder aprobar o cerrar lo que sea de probar con comandos"
+  }
+]
 ```
 
 ## Evidencia
 
 ```json
-[]
+[
+  {
+    "id": "EVIDENCE-001",
+    "date": "2026-10-11",
+    "kind": "automated-test",
+    "description": "npx vitest run tests/arbol-probado.test.ts: 21 de 21; tests/delegation.test.ts: 18 de 18; las 10 suites que importan el estado de la compuerta: 195 de 195; suite completa en main tras integrar la ola: 236 archivos y 4043 pruebas en verde; npx tsc --noEmit -p tsconfig.json: 0 errores; npm run exports:check sin hallazgos; compuerta qa-mechanical con evaluador command: APPROVE (23 de 23 criterios)",
+    "reference": "worktree:sha256:a4f4af46b61995451689ed8c0d3dc97b47e6a2a76597d3532003b61de3d2f2da",
+    "point_id": "POINT-001"
+  }
+]
 ```
 
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-11",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "poder aprobar o cerrar lo que sea de probar con comandos"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-11",
+    "technical_summary": "El recibo de qa-mechanical guarda el árbol probado (testedTree, calculado en packages/engine/src/arbol-probado.ts sin tickets/, .valmen/ ni .valmen.lock) y la entrega a awaiting_user_tests lo compara con el árbol actual dentro de un repositorio git; un recibo sin árbol se rechaza y pide repetir qa-mechanical; los recibos ya escritos siguen leyéndose.",
+    "functional_summary": "Si el código cambia después de pasar la verificación mecánica, el motor ya no entrega el ticket y dice qué compuerta repetir; lo que se entrega es lo que se probó.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "Sin migraciones, sin sincronización ni Docker. Cambio deliberado: dentro de git, un recibo de qa-mechanical anterior a esta versión (sin testedTree) se rechaza al entregar y hay que repetir la compuerta, sin costo."
+  }
+]
 ```
 
 ## Consumo de IA
@@ -278,6 +361,36 @@ Limitaciones: los proyectos con la raíz dentro de un repositorio más grande (g
     "source": "claude:agent-ae7fd190eea4f2cf2",
     "confidence": "medium",
     "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": "c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-ac415ea3fff5dda44",
+    "model": "anthropic/claude-opus-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 13 intervención(es) sobre el registro, 0 con fallo. 13 de 67 mensajes tocaron el registro. Subagente de la sesión c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8; su gasto no está en la madre. Duró 16 min. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 11023664 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 223492,
+    "output_tokens": 68932,
+    "total_tokens": 292424,
+    "estimated_cost_usd": null,
+    "source": "claude:c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-ac415ea3fff5dda44",
+    "confidence": "high",
+    "id": "CONSUMO-002"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-11",
+    "session_reference": "c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-ae7fd190eea4f2cf2",
+    "model": "anthropic/claude-sonnet-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 13 intervención(es) sobre el registro, 0 con fallo. 13 de 77 mensajes tocaron el registro. Subagente de la sesión c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8; su gasto no está en la madre. Duró 54 min. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 16083588 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 520430,
+    "output_tokens": 94810,
+    "total_tokens": 615240,
+    "estimated_cost_usd": null,
+    "source": "claude:c2769fcf-63f8-4baf-a5d3-a4b9b7a976b8/agent-ae7fd190eea4f2cf2",
+    "confidence": "high",
+    "id": "CONSUMO-003"
   }
 ]
 ```
@@ -370,6 +483,141 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-010",
+    "date": "2026-10-10",
+    "at": "2026-10-11T00:08:46.990Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-011",
+    "date": "2026-10-10",
+    "at": "2026-10-11T00:08:47.291Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-012",
+    "date": "2026-10-10",
+    "at": "2026-10-11T00:08:47.471Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-10",
+    "at": "2026-10-11T00:08:47.620Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-10",
+    "at": "2026-10-11T00:08:47.767Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-10",
+    "at": "2026-10-11T00:08:47.931Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-10",
+    "at": "2026-10-11T00:08:48.079Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-10",
+    "at": "2026-10-11T00:08:48.321Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-10",
+    "at": "2026-10-11T00:08:48.952Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-10",
+    "at": "2026-10-11T00:08:49.228Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-10",
+    "at": "2026-10-11T00:08:49.439Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-10",
+    "at": "2026-10-11T00:08:49.683Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-10",
+    "at": "2026-10-11T00:08:49.901Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-10",
+    "at": "2026-10-11T00:08:50.128Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-10",
+    "at": "2026-10-11T00:08:50.324Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
