@@ -787,6 +787,8 @@ export interface NotApplicableRecord {
   readonly appliesTo: readonly string[];
   /** El tipo del ticket evaluado. */
   readonly ticketType: string;
+  /** Por qué no aplica, cuando no es por el tipo del ticket (la revisión del diff, por su profundidad). */
+  readonly reason?: string;
 }
 
 /**

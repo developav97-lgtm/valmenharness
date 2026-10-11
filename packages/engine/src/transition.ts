@@ -222,7 +222,7 @@ function exigirVerificacionMecanica(document: ParsedTicket, paths: RegistryPaths
     );
   }
 
-  const motivoDeArbol = motivoDeArbolNoVigente(ultimo, paths, document.fields.id);
+  const motivoDeArbol = motivoDeArbolNoVigente(ultimo, paths, document.fields.id, "qa-mechanical");
   if (motivoDeArbol !== null) fail(motivoDeArbol, EXIT_INVARIANT);
 
   if (ultimo.outcome === "block") {

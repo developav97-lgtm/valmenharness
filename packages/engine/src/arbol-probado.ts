@@ -227,8 +227,16 @@ export function motivoDeArbolNoVigente(
   recibo: GateReceipt,
   paths: RegistryPaths,
   ticketId: string,
+  compuerta: "qa-mechanical" | "code-review",
 ): string | null {
-  const repetir = `Para entregar hay que repetir la compuerta: valmen gate qa-mechanical --id ${ticketId} --evaluator command`;
+  const mecanica = compuerta === "qa-mechanical";
+  // La verificación mecánica se repite gratis con el evaluador `command`; la revisión del diff no
+  // admite `--evaluator`: su profundidad la decide el riesgo.
+  const repetir = mecanica
+    ? `Para entregar hay que repetir la compuerta: valmen gate qa-mechanical --id ${ticketId} --evaluator command`
+    : `Para entregar hay que repetir la compuerta: valmen gate code-review --id ${ticketId}`;
+  const verificacion = mecanica ? "la verificación mecánica" : "la revisión del código";
+  const queHizo = mecanica ? "probó" : "revisó";
   const sinComprobar =
     "sin él no se puede comprobar que lo que se probó es lo que se entrega";
 
@@ -243,19 +251,19 @@ export function motivoDeArbolNoVigente(
   if (actual === null) {
     if (recibo.testedTree === undefined) return null;
     return (
-      `El recibo ${recibo.id} guarda el árbol que probó, pero el proyecto ya no es un repositorio ` +
+      `El recibo ${recibo.id} guarda el árbol que ${queHizo}, pero el proyecto ya no es un repositorio ` +
       `git y el de ahora no se puede calcular: ${sinComprobar}. ${repetir}`
     );
   }
   if (recibo.testedTree === undefined) {
     return (
-      `La verificación mecánica (recibo ${recibo.id}) no guarda el árbol de trabajo que probó: ` +
+      `${mecanica ? "La verificación mecánica" : "La revisión del código"} (recibo ${recibo.id}) no guarda el árbol de trabajo que ${queHizo}: ` +
       `${sinComprobar}. ${repetir}`
     );
   }
   if (actual.registro.hash === recibo.testedTree.hash) return null;
   return (
-    `El árbol de trabajo cambió desde la verificación mecánica (recibo ${recibo.id}): lo que se ` +
-    `probó no es lo que se entrega. ${repetir}`
+    `El árbol de trabajo cambió desde ${verificacion} (recibo ${recibo.id}): lo que se ` +
+    `${queHizo} no es lo que se entrega. ${repetir}`
   );
 }

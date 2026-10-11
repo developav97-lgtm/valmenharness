@@ -476,6 +476,7 @@ describe("la API de gates", () => {
     // proposiciones las contesta un comando en vez de un modelo.
     expect(cuerpo.gates.map((gate) => gate.id).sort()).toEqual([
       "analysis",
+      "code-review",
       "plan",
       "qa-mechanical",
     ]);

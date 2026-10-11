@@ -212,6 +212,8 @@ export interface GateReceipt {
    * es un repositorio git»: la entrega distingue los dos casos mirando si hay repositorio.
    */
   readonly testedTree?: TestedTreeRecord;
+  /** Lo que la revisión del diff vio y respondió (compuerta `code-review`). Opcional y aditivo. */
+  readonly codeReview?: CodeReviewRecord;
   /** Con qué evaluador se produjo (`command`, `jev`, `llm-judge`, `cascade`). */
   readonly evaluator?: string;
   /** Los umbrales del proyecto que se aplicaron, con quién los decidió y por qué (R-CPRE-010). */
@@ -262,6 +264,65 @@ export interface TestedTreeRecord {
   readonly commitTree: string | null;
   /** Cuántos archivos funcionales entraron al hash. */
   readonly files: number;
+}
+
+/** Cuántos revisores y con qué lentes corrió la revisión del diff. */
+export type ProfundidadDeRevision =
+  | "sin-revisores"
+  | "un-revisor"
+  | "un-revisor-cuatro-lentes"
+  | "dos-revisores";
+
+/** Un hallazgo citado por un revisor, con lo que el código comprobó de su cita. */
+interface HallazgoRegistrado {
+  readonly ruta: string;
+  readonly linea: number;
+  readonly motivo: string;
+  /** `true` si la cita cae en una línea que el cambio agrega o modifica. */
+  readonly verificado: boolean;
+}
+
+/** Lo que guarda la compuerta `code-review`: la base, el riesgo, lo enviado y lo respondido. */
+export interface CodeReviewRecord {
+  readonly base: { readonly ref: string; readonly commit: string };
+  readonly riesgo: {
+    readonly nivel: "bajo" | "medio" | "alto";
+    readonly motivos: readonly string[];
+  };
+  readonly profundidad: ProfundidadDeRevision;
+  readonly ronda: 1 | 2;
+  readonly reciboAnterior: string | null;
+  readonly entrada: {
+    readonly sha256: string;
+    readonly bytes: number;
+    readonly soloParche: boolean;
+    /** Todos los archivos del diff, con el sha256 de su contenido (`null` si se borró). */
+    readonly archivos: readonly {
+      readonly ruta: string;
+      readonly estado: "A" | "M" | "D";
+      readonly sha256: string | null;
+    }[];
+    /** En la segunda ronda, los archivos que de verdad se enviaron. */
+    readonly acotadaA?: readonly string[];
+  };
+  readonly revisores: readonly {
+    readonly rol: string;
+    readonly provider: string;
+    readonly model: string;
+    readonly resolvedVersion: string;
+    readonly effort: string;
+    readonly respuestas: readonly {
+      readonly proposicion: string;
+      readonly cumple: boolean;
+      readonly confianza: number;
+      readonly motivo: string;
+      readonly hallazgos: readonly HallazgoRegistrado[];
+    }[];
+    readonly usage: EvaluationUsage;
+    readonly latencyMs: number;
+  }[];
+  /** Los archivos de la propia compuerta que el diff toca. */
+  readonly propiaCompuerta: readonly string[];
 }
 
 /** Un reintento de la producción: quién falló, quién produjo en su lugar y el error real. */
@@ -382,6 +443,7 @@ export interface ReceiptInput {
   readonly setup?: SetupRecord;
   /** El árbol de trabajo que se probó, si el proyecto es un repositorio git. */
   readonly testedTree?: TestedTreeRecord;
+  readonly codeReview?: CodeReviewRecord;
   readonly evaluator?: string;
   readonly thresholds?: readonly AppliedThreshold[];
   readonly notApplicable?: readonly NotApplicableRecord[];
@@ -430,6 +492,7 @@ export function buildReceipt(input: ReceiptInput): GateReceipt {
       : { commandResults: input.commandResults }),
     ...(input.setup === undefined ? {} : { setup: input.setup }),
     ...(input.testedTree === undefined ? {} : { testedTree: input.testedTree }),
+    ...(input.codeReview === undefined ? {} : { codeReview: input.codeReview }),
     ...(input.evaluator === undefined ? {} : { evaluator: input.evaluator }),
     ...(input.thresholds === undefined || input.thresholds.length === 0
       ? {}

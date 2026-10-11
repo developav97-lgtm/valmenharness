@@ -20,6 +20,7 @@ import { join } from "node:path";
 
 import {
   EXIT_INVARIANT,
+  EXIT_SCHEMA,
   TicketError,
   declaredImpactIds,
   parseTicket,
@@ -67,6 +68,7 @@ import {
   verifyDevConfig,
 } from "./discovery.js";
 import { type ArbolProbado, calcularArbolProbado, rutasQueCambiaron } from "./arbol-probado.js";
+import { runCodeReview } from "./code-review.js";
 import { buildGateState, runMechanicalChecks } from "./state.js";
 import { appendReceipt, currentReceipts, readReceipts } from "./receipts.js";
 import { interfazDelTicket } from "./interfaz.js";
@@ -231,6 +233,15 @@ export interface GateRunOptions {
    * Un motivo vacío no fuerza nada; el no vacío queda escrito en el recibo nuevo.
    */
   readonly forceReason?: string;
+  /**
+   * El revisor de diff inyectable de la compuerta `code-review`, para pruebas.
+   *
+   * El nombre coincide con el de `runCodeReview` por la misma razón que `jev` y `judge`: un
+   * parámetro con otro nombre que el orquestador ignora convertiría una prueba en una ilusión.
+   */
+  readonly reviewDiff?: typeof import("@valmen/gate-llm-judge").reviewDiffWithModel;
+  /** La base del diff de `code-review`. Sin ella, `main` si existe y si no `HEAD`. */
+  readonly base?: string;
 }
 
 /** Ejecuta un gate y devuelve el recibo con el informe. */
@@ -394,7 +405,7 @@ function avisoDeForma(
  * viejo lo pisaría en el colapso, que es justo el defecto que se arregla. El
  * `receiptId` explícito sigue siendo el camino para forzar un identificador.
  */
-function defaultReceiptId(
+export function defaultReceiptId(
   paths: RegistryPaths,
   ticketId: string,
   gateId: string,
@@ -501,6 +512,21 @@ export async function runGate(
         "Evaluarlo aquí produciría un veredicto sin significado.",
       exitCode: EXIT_INVARIANT,
     };
+  }
+
+  // La revisión del diff no evalúa el texto del ticket: lee lo que se entrega. El evaluador no se
+  // elige —la profundidad la decide el riesgo— y se rechaza antes de llamar a nadie.
+  if (definition.diffReview === true) {
+    if (options.evaluator !== undefined) {
+      return {
+        stdout: "",
+        stderr:
+          `La compuerta ${definition.id} no admite --evaluator: su profundidad la decide el riesgo del ` +
+          "diff y no se elige. No se llamó a ningún revisor.\n",
+        exitCode: EXIT_SCHEMA,
+      };
+    }
+    return runCodeReview(paths, options, { definition, ticket });
   }
 
   let state: Record<string, string>;

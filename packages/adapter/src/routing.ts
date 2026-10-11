@@ -132,7 +132,7 @@ export const ROLES: readonly RoleSpec[] = [
     id: "reviewer",
     description:
       "Decide un `review` de análisis o plan con un modelo distinto al que lo produjo",
-    consumer: "valmen review-agent",
+    consumer: "valmen review-agent, valmen gate code-review",
   },
   {
     // El rol que **escribe y mantiene los specs de interfaz**. Su modelo no sale

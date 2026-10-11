@@ -152,6 +152,12 @@ export async function simulateGate(
 ): Promise<SimulationReport> {
   const evaluate = options.evaluate ?? evaluateWithJev;
   const { gate } = options;
+  if (gate.diffReview === true) {
+    throw new Error(
+      `La compuerta ${gate.id} revisa el diff de una entrega y no se puede simular: un ticket ` +
+        "histórico no conserva el diff que se entregó.",
+    );
+  }
 
   let todos: LocatedTicket[];
   try {

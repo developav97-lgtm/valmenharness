@@ -491,7 +491,7 @@ export const COMANDOS: Readonly<Record<string, EspecComando>> = {
   // --- Los que corren una compuerta o un modelo ------------------------------------
   run: { conValor: ["--ticket"], booleanas: ["--queue"] },
   gate: {
-    conValor: ["--id", ...DE_LA_COMPUERTA.conValor],
+    conValor: ["--id", "--base", ...DE_LA_COMPUERTA.conValor],
     booleanas: DE_LA_COMPUERTA.booleanas,
   },
   cascada: { conValor: ["--tarea", "--solicitud", "--pregunta"], booleanas: [] },

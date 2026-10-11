@@ -143,8 +143,11 @@ describe("el catálogo de roles", () => {
       "agent-verification",
     ]);
     expect(ROLES.every((rol) => rol.description !== "")).toBe(true);
-    // C1: el rol revisor declara su consumidor, `valmen review-agent`.
-    expect(ROLES.find((rol) => rol.id === "reviewer")?.consumer).toBe("valmen review-agent");
+    // C1: el rol revisor declara sus consumidores, `valmen review-agent` y, desde
+    // FEATURE-GATE-CODE-REVIEW-20261010, `valmen gate code-review`.
+    expect(ROLES.find((rol) => rol.id === "reviewer")?.consumer).toBe(
+      "valmen review-agent, valmen gate code-review",
+    );
   });
 
   it("los presets solo asignan modelos a los roles que se ejecutan", () => {

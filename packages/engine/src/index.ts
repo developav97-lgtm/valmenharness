@@ -52,6 +52,7 @@ export * from "./execution-models.js";
 export * from "./execution-contract.js";
 export * from "./execution-status.js";
 export * from "./diff.js";
+export { motivoDeArbolNoVigente } from "./arbol-probado.js";
 export * from "./drift.js";
 export * from "./secrets.js";
 export * from "./presentation.js";
