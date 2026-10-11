@@ -4,7 +4,7 @@ id: FEATURE-CORE-ESTADO-PUBLICO-20261010
 title: Función única que deriva el estado público del ticket
 type: FEATURE
 module: CORE
-workflow_status: planned
+workflow_status: in_progress
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -65,7 +65,7 @@ Ninguno sin decidir. Lo nuevo del pedido se tradujo a campos reales:
 
 ## Plan
 
-- Gate de plan y aprobación: pendiente de la compuerta plan (evaluador cascade) y de la aprobación explícita del PO; no hay autorización de aprobación declarada para este ticket.
+- Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan), el 2026-10-11 con «Aprobar tal cual (Recomendado)»; el REVIEW del recibo plan-2 (criterio_09 y criterio_11 en 0,895) lo decidió el PO.
 - Alcance: una función pura `estadoPublico` en `@valmen/core` (la única que decide el estado público) y un lector `estadoPublicoDelTicket` en `@valmen/engine` que solo reúne del registro los dos hechos que la función recibe. Exclusiones: la web (`packages/server/web/index.html:4071-4082`, `:5662-5673`, `:6339`, `:6411`) queda para FEATURE-WEB-ESTADO-PUBLICO-20261010 y el vigilante (`packages/cli/src/hermes.ts:759`) para FEATURE-CLI-AVISO-DECISION-20261010; la máquina de estados (`packages/core/src/contract.ts:126-138`) no cambia.
 - Tamaño previsto: 18 criterios; unas 80 líneas de producción (core ~55, engine ~25) y unas 280 de pruebas, unas 360 en total.
 - Pruebas existentes que el plan cambia a propósito: ninguna. Ningún comando, herramienta MCP ni opción existente se toca, así que no lleva prueba de regresión de comando; C18 cubre que nada existente deja de compilar.
@@ -211,6 +211,51 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: analyzed -> planned."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-005",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:09:04.879Z",
+    "action": "gate-approved",
+    "actor": "cli",
+    "details": "Gate plan aprobado por PO (recibo GR-20261011-FEATURE-CORE-ESTADO-PUBLICO-20261010-plan-2, canal cli, decidida 2026-10-11T20:09:04.876Z): Aprobar tal cual (Recomendado)"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-006",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:09:05.298Z",
+    "action": "plan-approved",
+    "actor": "cli",
+    "details": "{\"actor\":\"PO\",\"source\":\"cli\",\"quote\":\"Aprobar tal cual (Recomendado)\",\"planHash\":\"sha256:de1724e2edb7bbf83a8d0e78ad0d01707a203412b3200af60114a0b2b97e0004\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-007",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:09:05.796Z",
+    "action": "plan-approval-verified",
+    "actor": "cli",
+    "details": "Aprobación del plan vigente: PO (fuente cli), plan sha256:de1724e2edb7bbf83a8d0e78ad0d01707a203412b3200af60114a0b2b97e0004."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-008",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:09:05.796Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: planned -> approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-009",
+    "date": "2026-10-11",
+    "at": "2026-10-11T20:09:06.255Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: approved -> in_progress."
   }
 ]
 ```
