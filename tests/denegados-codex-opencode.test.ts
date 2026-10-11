@@ -23,6 +23,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { DENIED_GIT_COMMANDS, SENSITIVE_PATH_GLOBS } from "../packages/core/src/index.js";
 import {
   CODEX_RULES_PATH,
+  DENY_CLIENT_NOTICE,
   OPENCODE_CONFIG_PATH,
   codexRulesText,
   denyNotApplied,
@@ -216,7 +217,7 @@ describe("OpenCode: fusión de .opencode/opencode.json (R-PER-002)", () => {
     const todo = JSON.stringify({ permission: "allow" });
     expect(mergeOpencodeDenyConfig(todo)).toBe(todo);
     expect(denyNotApplied(["opencode"], todo, false)).toHaveLength(
-      SENSITIVE_PATH_GLOBS.length * 2 + DENIED_GIT_COMMANDS.length + 1,
+      SENSITIVE_PATH_GLOBS.length * 3 + DENIED_GIT_COMMANDS.length + 1,
     );
 
     const bash = JSON.stringify({ permission: { bash: "allow" } });
@@ -224,6 +225,7 @@ describe("OpenCode: fusión de .opencode/opencode.json (R-PER-002)", () => {
     expect(datos["permission"]["bash"]).toBe("allow");
     expect(datos["permission"]["read"][".env"]).toBe("deny");
     expect(denyNotApplied(["opencode"], bash, false).map((r) => r.regla)).toEqual([
+      ...SENSITIVE_PATH_GLOBS.map((glob) => `bash ${glob}`),
       ...DENIED_GIT_COMMANDS,
       "git clean tras env o command",
     ]);
@@ -249,7 +251,7 @@ describe("OpenCode: fusión de .opencode/opencode.json (R-PER-002)", () => {
     const r = sync();
     expect(existsSync(join(lab, OPENCODE_CONFIG_PATH))).toBe(false);
     expect(leer(".opencode/opencode.jsonc")).toBe("// de la persona\n{}\n");
-    expect(r.stdout).toContain("no aplicadas en opencode (46)");
+    expect(r.stdout).toContain("no aplicadas en opencode (58)");
   });
 
   it("sync escribe, no toca opencode.json de la raíz y --check queda al día", () => {
@@ -355,7 +357,7 @@ describe("salida de sync, sync --check y doctor", () => {
       /no aplicadas en codex \(26\): .*read \*\*\/\.env.*git push \+.*— /,
     );
     expect(r.stdout).toContain("forma canónica");
-    expect(r.stdout).toMatch(/no aplicadas en opencode \(22\): git push --force/);
+    expect(r.stdout).toMatch(/no aplicadas en opencode \(34\): bash \*\*\/\.env/);
     expect(r.stdout).toContain("no heredan read ni edit");
   });
 
@@ -409,5 +411,82 @@ describe("regresión: proyectos sin Codex ni OpenCode siguen igual", () => {
       { env: {}, codegraph: () => ({ estado: "no-instalado" }) },
     );
     expect(d.stdout).not.toContain("Denegaciones en");
+  });
+});
+
+/**
+ * SECURITY-ADAPTER-OPENCODE-SHELL-ENV-20261011: el shell de OpenCode no leía `.env` por `read`, pero
+ * `cat .env` sí lo mostraba. Con el patrón por mención, todo comando `bash` que nombra una ruta
+ * sensible queda denegado.
+ */
+describe("OpenCode: el shell niega por mención las rutas sensibles", () => {
+  // Una por cada glob de SENSITIVE_PATH_GLOBS, en su orden.
+  const MENCIONES = [
+    "*.env*",
+    "*.env.*",
+    "*.credentials*",
+    "*.credentials.*",
+    "*id_rsa*",
+    "*id_rsa.pub*",
+    "*id_ed25519*",
+    "*id_ed25519.pub*",
+    "*.pem*",
+    "*.key*",
+    "*.p12*",
+    "*.ssh/*",
+  ];
+
+  it("hay un patrón por mención deny en bash por cada ruta sensible", () => {
+    expect(MENCIONES).toHaveLength(SENSITIVE_PATH_GLOBS.length);
+    const bash = opencodeDenyPermission().bash;
+    for (const patron of MENCIONES) expect(bash[patron], patron).toBe("deny");
+  });
+
+  it("la última clave de bash sigue siendo la de git clean", () => {
+    expect(Object.keys(opencodeDenyPermission().bash).at(-1)).toBe("git * clean * -Xfd*");
+  });
+
+  it("cada agente proyectado lleva los patrones de mención en su bash", () => {
+    for (const [write, execute] of [
+      [false, false],
+      [true, true],
+    ] as const) {
+      const bash = opencodeAgentPermission(write, execute).bash;
+      for (const patron of MENCIONES) expect(bash[patron], patron).toBe("deny");
+    }
+  });
+
+  it("fusiona los patrones en un bash propio sin perder las claves de la persona", () => {
+    const actual = JSON.stringify({ permission: { bash: { "npm test": "allow" } } });
+    const datos = JSON.parse(mergeOpencodeDenyConfig(actual)) as Json;
+    expect(Object.keys(datos["permission"]["bash"])[0]).toBe("npm test");
+    expect(datos["permission"]["bash"]["npm test"]).toBe("allow");
+    for (const patron of MENCIONES)
+      expect(datos["permission"]["bash"][patron]).toBe("deny");
+  });
+
+  it("missingOpencodeDenyRules nombra un patrón de mención que falta", () => {
+    const datos = JSON.parse(mergeOpencodeDenyConfig(null)) as Json;
+    delete datos["permission"]["bash"]["*.env*"];
+    expect(missingOpencodeDenyRules(JSON.stringify(datos))).toContain("bash:*.env*");
+  });
+
+  it("las reglas de mención salen como no aplicadas con opencode.jsonc", () => {
+    const reglas = denyNotApplied(["opencode"], null, true).map((r) => r.regla);
+    for (const glob of SENSITIVE_PATH_GLOBS) expect(reglas).toContain(`bash ${glob}`);
+  });
+
+  it("la documentación de la mención está en docs/07-ADAPTADORES.md", () => {
+    const doc = readFileSync(join(process.cwd(), "docs/07-ADAPTADORES.md"), "utf8");
+    expect(doc).toMatch(/shell de OpenCode se niega por mención/);
+  });
+
+  it("la documentación del límite dice que python -c elude la denegación", () => {
+    const doc = readFileSync(join(process.cwd(), "docs/07-ADAPTADORES.md"), "utf8");
+    expect(doc).toContain("python -c");
+  });
+
+  it("el aviso del shell de OpenCode dice que se niega por mención", () => {
+    expect(DENY_CLIENT_NOTICE.opencode).toMatch(/shell[^.]*por mención/);
   });
 });

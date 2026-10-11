@@ -194,6 +194,14 @@ Nótese que **el modelo viene del routing**, no del archivo del agente. El mismo
 `gpt-5.6-sol` en Codex, `claude-opus-4.6` en opencode, y el que corresponda en Claude, todo
 desde un solo `routing.yaml`. Cambiar el preset cambia las tres proyecciones.
 
+**Denegaciones del shell de OpenCode.** `valmen sync` escribe en `.opencode/opencode.json` y en cada agente
+proyectado las rutas sensibles (`.env`, claves, `.pem`) como `read` y `edit` denegados. El shell de OpenCode no
+aplica esas reglas: `cat .env` lo mostraba. Por eso el shell de OpenCode se niega por mención: todo comando
+`bash` que nombra una ruta sensible (`*.env*`, `*.pem*`, `*.ssh/*`…) queda denegado, sea cual sea el lector.
+Es una red gruesa, con dos límites declarados: frena también comandos legítimos que nombran la ruta
+(`git check-ignore .env`) y no ve lo que la oculta, como `python -c "print(open('.en'+'v').read())"` o
+`$(<.env)`. Para Claude Code no hace falta: aplica sus reglas `Read` a los lectores de shell.
+
 ## 6. Generación de `AGENTS.md`
 
 Es el archivo más importante, porque lo leen los agentes con y sin adaptador específico. Se

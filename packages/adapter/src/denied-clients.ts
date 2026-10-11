@@ -41,7 +41,7 @@ export const DENY_CLIENT_NOTICE: Readonly<Record<DenyClient, string>> = Object.f
   codex:
     "Codex solo lee estas reglas con la forma canónica del comando y en un proyecto de confianza.",
   opencode:
-    "los agentes propios de la persona no heredan read ni edit: la protección de lectura y edición vale en los agentes que proyecta el harness.",
+    "los agentes propios de la persona no heredan read ni edit: la protección de lectura y edición vale en los agentes que proyecta el harness. El shell niega por mención: todo comando que nombra una ruta sensible, también los legítimos.",
 });
 
 type Tool = "read" | "edit" | "bash";
@@ -110,6 +110,17 @@ function opencodePathPatterns(glob: string): string[] {
   return [glob.replace(/\*\*$/, "*")];
 }
 
+/**
+ * El patrón de mención de un glob del harness para `bash`: todo comando que nombre la ruta queda
+ * denegado, sea cual sea el lector (`cat .env`, `cd . && cat ./.env`). OpenCode no aplica a su
+ * shell las reglas de `read`, y Claude Code sí lo hace por su cuenta. Frena también un comando
+ * legítimo que nombra la ruta (`git check-ignore .env`) y no ve lo que la oculta (`python -c`).
+ */
+function opencodeMentionPattern(glob: string): string {
+  const base = glob.replace(/^(\*\*\/|~\/)/, "").replace(/\/\*\*$/, "/");
+  return `*${base.replace(/^\*/, "").replace(/\*+$/, "")}*`;
+}
+
 /** Los cuatro patrones `bash` de una forma de git, como en Claude Code. */
 function opencodeGitPatterns(forma: string): string[] {
   const [git, operacion, bandera] = forma.split(" ") as [string, string, string];
@@ -133,6 +144,14 @@ function opencodeRules(): OpencodeRule[] {
     for (const glob of SENSITIVE_PATH_GLOBS) {
       reglas.push({ regla: `${tool} ${glob}`, tool, patrones: opencodePathPatterns(glob) });
     }
+  }
+  // Las rutas van antes que las formas de git: la última clave de `bash` sigue siendo la de git clean.
+  for (const glob of SENSITIVE_PATH_GLOBS) {
+    reglas.push({
+      regla: `bash ${glob}`,
+      tool: "bash",
+      patrones: [opencodeMentionPattern(glob)],
+    });
   }
   for (const forma of DENIED_GIT_COMMANDS) {
     reglas.push({ regla: forma, tool: "bash", patrones: opencodeGitPatterns(forma) });
