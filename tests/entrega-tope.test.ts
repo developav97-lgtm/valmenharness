@@ -88,13 +88,14 @@ describe("medir y leer el tope", () => {
     expect(r.total).toBe(10);
   });
 
-  it("C4 el tope es 400 si config.yaml no declara delivery-budget", () => {
+  // El tope por defecto subió de 400 a 600 líneas el 2026-10-13 (decisión del PO por AskUserQuestion).
+  it("C4 el tope es 600 si config.yaml no declara delivery-budget", () => {
     const root = mkdtempSync(join(tmpdir(), "valmen-tope-"));
     limpiezas.push(() => rmSync(root, { recursive: true, force: true }));
     mkdirSync(join(root, ".valmen"));
-    expect(topeDeEntrega(root)).toBe(400);
+    expect(topeDeEntrega(root)).toBe(600);
     writeFileSync(join(root, ".valmen", "config.yaml"), "delivery-budget: 0\n");
-    expect(topeDeEntrega(root)).toBe(400);
+    expect(topeDeEntrega(root)).toBe(600);
   });
 
   it("C5 el tope es el que declara delivery-budget", () => {
@@ -186,7 +187,7 @@ describe("integrar un worktree", () => {
       añadidas: 120,
       borradas: 30,
       total: 150,
-      tope: 400,
+      tope: 600,
       pasaElTope: false,
       via: "worktree",
     });
@@ -214,20 +215,21 @@ describe("integrar un worktree", () => {
     );
   });
 
-  it("C10 con 900 líneas contra el tope de 400 termina con código de salida 0", () => {
+  it("C10 con 900 líneas contra el tope de 600 termina con código de salida 0", () => {
     const e = worktree();
     cambiarRama(e, 900, false);
     expect(integrar(e).exitCode).toBe(0);
     expect(eventosDe(e.lab.root, TICKET_A)).toHaveLength(1);
   });
 
-  it("C11 con 900 líneas contra el tope de 400 la salida avisa 900 contra 400", () => {
+  // El tope por defecto subió de 400 a 600 líneas el 2026-10-13 (decisión del PO por AskUserQuestion).
+  it("C11 con 900 líneas contra el tope de 600 la salida avisa 900 contra 600", () => {
     const e = worktree();
     cambiarRama(e, 900, false);
     const r = integrar(e);
-    expect(r.stdout).toContain("Tamaño de la entrega: 900 líneas (+900 −0), tope 400.");
+    expect(r.stdout).toContain("Tamaño de la entrega: 900 líneas (+900 −0), tope 600.");
     expect(r.stdout).toContain("Aviso: La entrega de");
-    expect(r.stdout).toContain("suma 900 líneas (+900 −0), más que el tope de 400");
+    expect(r.stdout).toContain("suma 900 líneas (+900 −0), más que el tope de 600");
   });
 
   it("C12 si la medición falla integra la rama con un aviso de que no se pudo medir", () => {

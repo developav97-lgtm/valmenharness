@@ -9,7 +9,7 @@ import { join } from "node:path";
 import { type YamlMap, type YamlValue, parseYamlSubset } from "@valmen/core";
 
 /** El tope orientativo de líneas cuando `config.yaml` no declara `delivery-budget`. */
-const TOPE_DE_ENTREGA_POR_DEFECTO = 400;
+const TOPE_DE_ENTREGA_POR_DEFECTO = 600;
 
 /** Archivos que `valmen sync` o el gestor de paquetes generan: no son trabajo del ticket. */
 const GENERADOS = new Set(["AGENTS.md", "CLAUDE.md", "package-lock.json"]);
@@ -52,7 +52,7 @@ export function medirEntrega(salidaNumstatZ: string): EntregaMedida {
   return { añadidas, borradas, total: añadidas + borradas };
 }
 
-/** `delivery-budget` de `.valmen/config.yaml` (líneas); 400 sin la clave o con un valor no positivo. */
+/** `delivery-budget` de `.valmen/config.yaml` (líneas); 600 sin la clave o con un valor no positivo. */
 export function topeDeEntrega(root: string): number {
   try {
     const documento: YamlValue = parseYamlSubset(

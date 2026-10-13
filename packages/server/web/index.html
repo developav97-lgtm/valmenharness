@@ -8233,6 +8233,13 @@
           politicas.textContent = "";
           politicas.hidden = resumen === null;
           if (resumen === null) return;
+          politicas.append(
+            el(
+              "div",
+              "Solo actúan las que dicen «activa»; una apagada no hace nada hasta que escribas su clave en el archivo.",
+              "nota-politica",
+            ),
+          );
           for (const politica of resumen.policies ?? []) {
             const tarjeta = el("div", undefined, `politica ${politica.estado}`);
             const titulo = el("div", undefined, "titulo-politica");
@@ -8624,9 +8631,38 @@
         };
         pintarAprobacionAuto();
 
+        // Desde el 2026-10-13 el agente aprueba por defecto y la persona ratifica al cerrar: las
+        // autorizaciones explícitas ya no hacen falta y quedan plegadas en «Avanzado».
+        const porDefecto = el("div", undefined, "qa-agente");
+        porDefecto.append(el("div", "El agente aprueba y tú ratificas al cerrar", "titulo-politica"));
+        const reglasPorDefecto = el("ul");
+        for (const linea of [
+          "El análisis y el plan los aprueba el agente cuando la compuerta da APPROVE; un REVIEW lo decide el revisor, que es otro modelo.",
+          "Lo que el agente decide sin preguntarte queda en el ticket con su criterio, su fuente y cómo se revierte.",
+          "Antes de cerrar el ticket, tú lo ratificas todo de una vez (valmen ratify).",
+          "Siguen siendo tuyos: SECURITY, riesgo alto, migraciones, despliegue, un block que persiste y lo irreversible.",
+        ]) {
+          reglasPorDefecto.append(el("li", linea));
+        }
+        porDefecto.append(
+          reglasPorDefecto,
+          el(
+            "div",
+            "Para volver a aprobar tú: valmen approval-authorize revoke --id POLITICA-POR-DEFECTO --actor <tú> --reason \"<motivo>\".",
+            "nota-politica",
+          ),
+        );
+        const avanzado = el("details", undefined, "avanzado");
+        avanzado.append(
+          el("summary", "Avanzado: autorizaciones explícitas (no hacen falta con la aprobación por defecto)"),
+          el("h2", "Autorización de QA por agente"),
+          qaAgente,
+          el("h2", "Aprobación automática de planes"),
+          aprobacionAuto,
+        );
+        cont.append(el("h2", "Aprobación por defecto"), porDefecto);
         cont.append(el("h2", "Políticas autónomas"), politicas);
-        cont.append(el("h2", "Autorización de QA por agente"), qaAgente);
-        cont.append(el("h2", "Aprobación automática de planes"), aprobacionAuto);
+        cont.append(avanzado);
         cont.append(el("h2", "Diferencias antes de guardar"), diff, acciones);
         pintar(datos);
       }

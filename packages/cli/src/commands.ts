@@ -82,6 +82,11 @@ import {
   aprobarPorCodigo,
   archivosDelDiff,
   aprobarPorAutorizacion,
+  decisionesPorRatificar,
+  productoresDelTicket,
+  ratificarDecisiones,
+  registrarFase,
+  registrarDecisionDelAgente,
   elegibilidadDeAprobacion,
   elegibilidadQa,
   correrQaAgent,
@@ -3861,8 +3866,26 @@ export async function reviewAgentCommand(
   }
   const json = flags["json"] === true;
   const dryRun = flags["dry-run"] === true;
+  const productor = typeof flags["producer"] === "string" ? flags["producer"].trim() : "";
 
   try {
+    // Una sesión interactiva no deja registro de fase: declara con `--producer` el modelo con el
+    // que escribió el artefacto, para que el revisor pueda comprobar que es otro.
+    if (
+      productor !== "" &&
+      !productoresDelTicket(paths.root, id).some((p) => p.fase === etapa)
+    ) {
+      registrarFase(paths.root, {
+        ticketId: id,
+        fase: etapa as EtapaRevisable,
+        ejecutor: "sesion-interactiva",
+        modelo: productor,
+        esfuerzo: "",
+        origenDelModelo: "declarado por la sesión que produjo el artefacto (review-agent --producer)",
+        duracionMs: 0,
+        resultado: "declarado",
+      });
+    }
     const preparacion = prepararRevision({
       paths,
       ticketId: id,
@@ -3981,6 +4004,86 @@ export function approvalEligibilityCommand(
         : []),
     ];
     return { stdout: `${lineas.join("\n")}\n`, stderr: "", exitCode: salida };
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/**
+ * `valmen agent-decision`: el agente deja escrita una decisión que tomó sin detener el ticket, con
+ * su criterio, su fuente y cómo se revierte, para que la persona la ratifique antes de cerrar.
+ */
+export function agentDecisionCommand(
+  paths: RegistryPaths,
+  flags: Readonly<Record<string, string | true>>,
+): CommandResult {
+  const texto = (clave: string): string =>
+    typeof flags[clave] === "string" ? (flags[clave] as string) : "";
+  const id = texto("id");
+  if (id === "") return error("agent-decision requiere --id <TICKET-ID>.", EXIT_SCHEMA);
+  try {
+    const r = registrarDecisionDelAgente({
+      paths,
+      ticketId: id,
+      pregunta: texto("question"),
+      eleccion: texto("choice"),
+      alternativas: texto("alternatives").split("|"),
+      criterio: texto("criterion"),
+      fuente: texto("source"),
+      reversion: texto("rollback"),
+    });
+    return {
+      stdout: `Decisión ${r.id} registrada en ${id}; la persona la ratifica antes de cerrar.\n`,
+      stderr: "",
+      exitCode: EXIT_OK,
+    };
+  } catch (caught) {
+    const failure = toFailure(caught);
+    return error(failure.message, failure.exitCode);
+  }
+}
+
+/**
+ * `valmen ratify`: sin `--actor` lista lo que el agente decidió o aprobó y falta ratificar; con
+ * `--actor` y `--quote` lo ratifica con las palabras de la persona.
+ */
+export function ratifyCommand(
+  paths: RegistryPaths,
+  flags: Readonly<Record<string, string | true>>,
+  opciones: { readonly env?: Readonly<Record<string, string | undefined>> } = {},
+): CommandResult {
+  const texto = (clave: string): string =>
+    typeof flags[clave] === "string" ? (flags[clave] as string) : "";
+  const id = texto("id");
+  if (id === "") return error("ratify requiere --id <TICKET-ID>.", EXIT_SCHEMA);
+  try {
+    if (texto("actor") === "" && texto("quote") === "") {
+      const ubicado = findTicket(paths, id);
+      if (ubicado === undefined) return error(`No existe el ticket ${id}.`, EXIT_SCHEMA);
+      const pendientes = decisionesPorRatificar(parseTicket(ubicado.text));
+      const lineas =
+        pendientes.length === 0
+          ? [`${id} no tiene decisiones del agente por ratificar.`]
+          : [
+              `${id}: ${pendientes.length} por ratificar antes de cerrar.`,
+              ...pendientes.map((p) => `  - ${p.resumen}`),
+            ];
+      return { stdout: `${lineas.join("\n")}\n`, stderr: "", exitCode: EXIT_OK };
+    }
+    const r = ratificarDecisiones({
+      paths,
+      ticketId: id,
+      actor: texto("actor"),
+      quote: texto("quote"),
+      source: "cli",
+      ...(opciones.env === undefined ? {} : { env: opciones.env }),
+    });
+    return {
+      stdout: `Ratificado en ${id}: ${r.ratificadas.join(", ")}.\n`,
+      stderr: "",
+      exitCode: EXIT_OK,
+    };
   } catch (caught) {
     const failure = toFailure(caught);
     return error(failure.message, failure.exitCode);

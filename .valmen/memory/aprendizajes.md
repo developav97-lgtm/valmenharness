@@ -111,3 +111,22 @@ Jornada JOR-20261010 (2026-10-10, feature guardas-verificacion-harness): 11 de 1
 - **Tickets:** SECURITY-ADAPTER-DENEGADOS-CODEX-OPENCODE-20261010, FEATURE-CLI-PRESUPUESTO-SKILLS-20261010, IMPROVEMENT-SKILLS-RECORTE-TOPE-20261010
 
 Jornada JOR-20261010 (2026-10-10). (1) `packages/gate/src/criteria.ts:47` y `:57-65` cuentan cada « y » como una afirmación más: un criterio manual como «Con OpenCode 2.0.16 y `--auto`» se lee como compuesto y vota 0, y la compuerta de plan de SECURITY-ADAPTER-DENEGADOS-CODEX-OPENCODE-20261010 dio BLOCK dos veces (plan-1 y plan-2) hasta reescribirlo «en modo `--auto`». No es un hueco del plan: es una heurística del motor que penaliza nombres y condiciones con «y». Corrige AP-012: partir criterios compuestos no bajó el REVIEW de FEATURE-CLI-PRESUPUESTO-SKILLS-20261010 (seguía 0,85 a 0,90 sin ningún criterio marcado compuesto); el ruido del REVIEW es del evaluador. Qué hacer: escribir criterios sin « y » y, si se quiere atacar la raíz, un BUGFIX que haga la detección sensible al contexto (la registra una persona). (2) Prueba de la regla «analizar con sonnet los tickets chicos»: IMPROVEMENT-SKILLS-RECORTE-TOPE-20261010 con sonnet salió con media 0,782 (C17 0,12: ningún paso lo cubría; C7 0,75) frente al 0,85 a 0,95 de los planes con opus; tras corregir dos huecos subió a 0,903. Costo parecido (134 k a 144 k tokens de análisis contra 185 k a 465 k con opus), pero con una corrida más. Usar sonnet para análisis solo con BUGFIX, CHORE e IMPROVEMENT de riesgo bajo y sin pruebas existentes que fijen frases. (3) Costo medido por ticket: unos 300 mil tokens fijos más lo que crece con el tamaño; los tickets con paradas por EST-009 y reanudaciones costaron el doble (FEATURE-GATE-ARBOL-QA-RECIBO 818 k, SECURITY-CLI-PROYECCION-DENEGADOS 1,02 M). Declarar en el plan las pruebas existentes que el cambio pone en rojo a propósito evita la parada.
+
+### [AP-014] La autonomía de aprobación existía pero el siguiente paso no la consultaba
+
+- **Fecha:** 2026-10-13
+- **Estado:** pendiente
+- **Tickets:** BUGFIX-RESTAURANTE-PAGO-BONIFICADO-RETROACTIVO-20261013
+
+En BUGFIX-RESTAURANTE-PAGO-BONIFICADO-RETROACTIVO-20261013 (SaiOpenCloud), el plan-3 ya era elegible para aprobarse con la autorización APA-20261009-6d6435. Aun así el agente le preguntó al PO, por tres causas.
+1. `computeNextStep` (`packages/engine/src/next-step.ts`) en `planned` siempre decía «pide la aprobación a una persona» y nunca llamaba a `elegibilidadDeAprobacion`.
+2. Una autorización en modo `on-approve` devuelve todo REVIEW a la persona.
+3. El revisor (`review-agent`) rechaza con «productor desconocido» cuando la sesión es interactiva, porque solo las jornadas escriben `.valmen/journeys/fases.jsonl`.
+
+Arreglo del 2026-10-13:
+- `POLITICA-POR-DEFECTO` en modo reviewer: cubre lo que no es SECURITY, de riesgo hasta normal y sin migración. Se revoca como cualquier autorización.
+- El siguiente paso consulta la elegibilidad.
+- `review-agent --producer <modelo>`.
+- `agent-decision` y `ratify`; `closed` exige la ratificación.
+
+Además, la compuerta `qa-mechanical` arrancaba un contenedor por criterio: 364 s contra 19 s de las mismas 19 pruebas Django juntas. Ahora agrupa los checks que solo difieren en la etiqueta.

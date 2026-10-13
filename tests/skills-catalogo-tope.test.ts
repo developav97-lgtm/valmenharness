@@ -205,9 +205,11 @@ const INVENTARIO: Readonly<Record<string, readonly Regla[]>> = {
     ["no introducir secretos", "No introducir secretos"],
     ["no modificar listas de hosts permitidos", "No modificar listas de hosts permitidos"],
     ["encabezado: aprobación", "## Aprobación y transición"],
+    // Desde el 2026-10-13 la política por defecto aprueba sincronización y contenedores; lo que
+    // sigue siendo de una persona es esto (pedido del PO, EST-011).
     [
-      "aprobación humana obligatoria ante aislamiento, sincronización y despliegue",
-      "aislamiento de datos, sincronización, agentes locales, contenedores, migraciones, seguridad o despliegue",
+      "aprobación humana obligatoria ante seguridad, migraciones y despliegue",
+      "SECURITY, riesgo alto, migraciones, despliegue",
     ],
     ["detenerse en planned y pedirla", "detenerse en `planned` y pedirla"],
     [

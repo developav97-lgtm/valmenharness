@@ -11,7 +11,7 @@ Esto no describe el formato del grafo —sprints, identificadores y cobertura ya
 
 Cada ticket paga un costo fijo de unos **300 mil tokens de IA** —análisis, plan, compuertas, integración— sea chico o grande. Por eso partir de más sube el consumo total, y juntar de más vuelve caro el retrabajo. Medido en la jornada del 2026-10-10: un ticket de ~300 líneas costó 340 mil tokens y uno de ~1 300 líneas, 560 a 700 mil.
 
-- **Tamaño objetivo: de 300 a 700 líneas de cambio por ticket**, contando producción y pruebas. Pasar de unas 900 es señal de que el ticket mezcla dos comportamientos: se parte por **comportamiento observable**, nunca por archivo.
+- **Tamaño objetivo: de 300 a 700 líneas de cambio por ticket**, contando producción y pruebas. Pasar de unas 900 es señal de que el ticket mezcla dos comportamientos: se parte por **comportamiento observable**, nunca por archivo, y cada parte lleva su código y sus pruebas: un ticket con código sin pruebas o con pruebas sin código no es un corte.
 - **Debajo de unas 150 líneas, se agrupa** con el ticket vecino del mismo dominio, salvo que sea de los que van solos (abajo).
 - **Como máximo 20 criterios de aceptación por ticket**, uno por comportamiento observable y ninguno compuesto. Un ticket que necesita más es dos tickets.
 - **Un ticket es una unidad revisable y verificable**: alguien lo aprueba, alguien lo prueba, y sus criterios declaran cómo se comprueban. Si no se puede escribir un criterio verificable, es parte de otro ticket o falta spec.

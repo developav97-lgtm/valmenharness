@@ -50,6 +50,7 @@ import { hashState } from "@valmen/gate";
 import { motivoDeArbolNoVigente } from "./arbol-probado.js";
 import { unmarkedCriteria, unmarkedMessage } from "./criteria-marks.js";
 import { type RegistryPaths, codeReviewExigida, findTicket } from "./discovery.js";
+import { decisionesPorRatificar, mensajeDeRatificacionPendiente } from "./agent-decisions.js";
 import { motivoDeAprobacionPorAutorizacionInvalida } from "./approval-eligibility.js";
 import {
   FUENTE_AUTORIZACION,
@@ -596,6 +597,10 @@ function applyTicket(
     );
     if (!cierreCoherente) {
       fail("closed requiere un intento de cierre coherente con QA.", EXIT_INVARIANT);
+    }
+    const porRatificar = decisionesPorRatificar(document);
+    if (porRatificar.length > 0) {
+      fail(mensajeDeRatificacionPendiente(document.fields.id, porRatificar), EXIT_INVARIANT);
     }
   }
 

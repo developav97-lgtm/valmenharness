@@ -365,6 +365,66 @@ export function runCommandCheck(
   };
 }
 
+/** Los runners que aceptan varias etiquetas de prueba en una sola invocación. */
+const RUNNERS_AGRUPABLES = /manage\.py\s+test\b|\bpytest\b/;
+
+/**
+ * La clave con la que se agrupan los checks de criterios que solo difieren en la
+ * última etiqueta, o `null` si el check no se agrupa.
+ *
+ * Solo se agrupan los de un runner que acepta varias etiquetas, que esperan salir
+ * con 0, que no son elecciones y que no recolectan evidencia propia.
+ */
+function claveDeGrupo(check: CommandCheck): string | null {
+  const args = check.args ?? [];
+  if (!esCriterio(check.propositionId) || args.length === 0) return null;
+  if ((check.expectExitCode ?? 0) !== 0 || check.as === "choice") return null;
+  if (check.artifactDirs !== undefined) return null;
+  const prefijo = [check.command, ...args.slice(0, -1)].join(" ");
+  if (!RUNNERS_AGRUPABLES.test(prefijo)) return null;
+  const ultima = args[args.length - 1] ?? "";
+  if (ultima.startsWith("-")) return null;
+  return JSON.stringify([check.cwd ?? "", prefijo]);
+}
+
+/**
+ * Corre de una vez los checks agrupados.
+ *
+ * Devuelve un resultado por check si la corrida conjunta pasó con el resumen de su
+ * runner, o `null` si falló o no probó: entonces cada check se corre solo, para que
+ * el recibo diga cuál falló. La duración se atribuye al primero para no contarla
+ * varias veces.
+ */
+function correrGrupo(
+  grupo: readonly CommandCheck[],
+  options: { readonly root: string },
+): CommandCheckResult[] | null {
+  const base = grupo[0];
+  if (base === undefined) return null;
+  const etiquetas = grupo.map((check) => {
+    const args = check.args ?? [];
+    return args[args.length - 1] ?? "";
+  });
+  const conjunto: CommandCheck = {
+    ...base,
+    args: [...(base.args ?? []).slice(0, -1), ...etiquetas],
+    timeoutMs: grupo.reduce((total, check) => total + (check.timeoutMs ?? 30_000), 0),
+  };
+  let resultado: CommandCheckResult;
+  try {
+    resultado = runCommandCheck(conjunto, options);
+  } catch {
+    return null;
+  }
+  if (!resultado.passed || resultado.environmentFailure !== undefined) return null;
+  return grupo.map((check, i) => ({
+    ...resultado,
+    propositionId: check.propositionId,
+    description: check.description,
+    durationMs: i === 0 ? resultado.durationMs : 0,
+  }));
+}
+
 /**
  * Evalúa las proposiciones resolubles por comando.
  *
@@ -375,6 +435,10 @@ export function runCommandCheck(
  * Los checks que no se pudieron ejecutar **no** producen respuesta: se informan
  * aparte para que el motor falle en vez de tratar un comando roto como una
  * proposición falsa.
+ *
+ * Los checks de criterios que solo difieren en la etiqueta de la prueba corren en
+ * una sola invocación: un contenedor por criterio multiplicaba el arranque. Si la
+ * corrida conjunta no pasa, cada uno se corre solo.
  */
 export function evaluateWithCommands(
   propositions: readonly Proposition[],
@@ -399,10 +463,29 @@ export function evaluateWithCommands(
           `que el gate no declara.`,
       );
     }
+  }
 
+  const grupos = new Map<string, CommandCheck[]>();
+  for (const check of checks) {
+    const grupoDelCheck = claveDeGrupo(check);
+    if (grupoDelCheck === null) continue;
+    grupos.set(grupoDelCheck, [...(grupos.get(grupoDelCheck) ?? []), check]);
+  }
+  const agrupados = new Map<CommandCheck, CommandCheckResult>();
+  for (const grupo of grupos.values()) {
+    if (grupo.length < 2) continue;
+    const resultados = correrGrupo(grupo, options);
+    if (resultados === null) continue;
+    grupo.forEach((check, i) => {
+      const resultado = resultados[i];
+      if (resultado !== undefined) agrupados.set(check, resultado);
+    });
+  }
+
+  for (const check of checks) {
     let result: CommandCheckResult;
     try {
-      result = runCommandCheck(check, options);
+      result = agrupados.get(check) ?? runCommandCheck(check, options);
     } catch (caught) {
       const error = caught as Error;
       // Un comando de criterio que no existe o se agotó no probó nada: es una falla

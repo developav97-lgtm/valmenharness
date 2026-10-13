@@ -40,13 +40,13 @@ En un gate con proposiciones que solo un modelo puede responder se corre el eval
 
 ## Gateway y avisos por Telegram
 
-La entrega y los avisos de la jornada (arranque, awaiting_user_tests, compuertas en REVIEW) salen por el bot de Telegram del perfil del proyecto —TELEGRAM_ALLOWED_USERS del .env—; Slack queda como canal secundario apagado. Un nuevo aviso se agrega al vigilante de avisos, no a un mensaje suelto.
+La entrega y los avisos de la jornada (arranque, awaiting_user_tests, compuertas en REVIEW) salen por el bot de Telegram del perfil del proyecto —TELEGRAM_ALLOWED_USERS del .env—; Slack queda como canal secundario apagado. Un nuevo aviso se agrega al vigilante de avisos, no a un mensaje suelto. Las preguntas al PO en una sesión con Claude no salen por Telegram: se hacen con AskUserQuestion en la sesión (2026-10-13).
 
 **Por qué:** Migración decidida por el PO el 2026-09-30: los DM de Slack a veces no llegaban al celular y la gateway ya sirve Telegram en ambos perfiles…
 
 ## Registro de tickets: traducir lo nuevo del pedido antes de crear
 
-Si el pedido nombra algo que el código no tiene —parámetro, permiso, campo, bandera, columna, migración—, se traduce a campo real con búsqueda antes de crear el ticket; si no aparece, se pregunta una vez al PO y el ticket no se registra con el hueco. Lo que quede sin decidir se escribe en la sección «Supuestos y decisiones pendientes» del ticket, cada elemento con su pregunta, y el análisis no planifica sobre la adivinanza.
+Si el pedido nombra algo que el código no tiene —parámetro, permiso, campo, bandera, columna, migración—, se traduce a campo real con búsqueda antes de crear el ticket; si no aparece, el agente elige con la documentación o la opción conservadora y lo registra con `valmen agent-decision`, y solo pregunta una vez al PO si la decisión es irreversible o no hay cómo validarla (desde el 2026-10-13). Lo que quede sin decidir se escribe en la sección «Supuestos y decisiones pendientes» del ticket, cada elemento con su pregunta, y el análisis no planifica sobre la adivinanza.
 
 **Por qué:** BUGFIX-RESTAURANTE-MESERO-BORRAR-BONIFICAR-20260929 pidió «el nuevo parámetro bonificado» sin especificarlo…
 
@@ -65,7 +65,7 @@ En FEATURE-ADAPTER-CAPACIDADES-20261001, el gate analysis bloqueó cuatro veces 
 
 ## Preguntar al PO con AskUserQuestion por defecto
 
-Cuando el agente necesite una respuesta o una decisión del PO, la hace con la herramienta AskUserQuestion —opciones con su efecto, la recomendada primero y marcada «(Recomendado)»— y no la plantea en texto; solo pide en texto lo que no es una decisión (un dato, un archivo). La respuesta del PO por la herramienta cuenta como su frase literal para registrar la decisión.
+Cuando el agente necesite una respuesta o una decisión del PO —solo lo irreversible o lo que no puede validar, desde el 2026-10-13—, la hace con la herramienta AskUserQuestion —opciones con su efecto, la recomendada primero y marcada «(Recomendado)»— y no la plantea en texto; solo pide en texto lo que no es una decisión (un dato, un archivo). La respuesta del PO por la herramienta cuenta como su frase literal para registrar la decisión.
 
 **Por qué:** El 2026-10-09 el PO probó el aviso de pregunta de la vista Agentes y tuvo que pedirle al agente «hazme la pregunta con AskUserQuestion»…
 **Visto en:** FEATURE-WEB-VISTA-TEXTO-PREGUNTA-20261008, FEATURE-SERVER-TEXTO-PREGUNTA-RESPUESTA-20261008 (2026-10-09)
@@ -89,6 +89,13 @@ Cuando el comportamiento pedido admite una prueba ejecutable y determinista, se 
 
 **Por qué:** Comparación con gentle-ai del 2026-10-10 (Gentleman-Programming/gentle-ai @66bf3e1, docs/usage.md, sección ODD)…
 
+## El agente decide lo que puede validar y la persona lo ratifica antes de cerrar
+
+Lo que el agente puede validar con la documentación del proyecto, el código o su recomendación lo decide sin detener el ticket y lo registra con `valmen agent-decision`: pregunta, elección, alternativas, criterio, fuente con `ruta:línea` y cómo se revierte. El análisis y el plan los aprueba la política por defecto: si la compuerta da APPROVE, con `valmen approve-by-authorization`; si da REVIEW, decide el revisor con `valmen review-agent --record`. Ante la duda se elige la opción conservadora y reversible. Se detiene y pregunta con AskUserQuestion solo cuando la decisión es irreversible, cuando no hay forma de validar la información antes, o ante lo que sigue siendo de una persona: SECURITY, despliegue, correr sobre datos de producción y un BLOCK que persiste. Antes de `closed`, la persona ratifica en lote con `valmen ratify` todo lo que decidió o aprobó el agente; lo que no ratifique vuelve como `changes_requested`.
+
+**Por qué:** En BUGFIX-RESTAURANTE-PAGO-BONIFICADO-RETROACTIVO-20261013 (SaiOpenCloud), de los 90 min hasta awaiting_user_tests, 41 min 40 s (46 %) fueron esperas al PO…
+**Visto en:** BUGFIX-RESTAURANTE-PAGO-BONIFICADO-RETROACTIVO-20261013 (2026-10-13)
+
 ## Cómo se trabaja en este repositorio
 
 Este repositorio **es** el harness, no un proyecto que lo usa, y se gestiona con
@@ -101,7 +108,8 @@ diagnósticos, exploración, cambios visuales o de contenido que no alteran
 funcionalidad, prototipos desechables y la configuración del propio harness.
 
 La **funcionalidad nueva** pasa por el **flujo** completo: feature cuando excede
-un ticket, y luego ticket, análisis, plan, aprobación de una persona,
+un ticket, y luego ticket, análisis, plan, aprobación (la política por defecto
+o una persona; la persona ratifica lo del agente antes de cerrar),
 implementación, entrega y QA.
 
 Eso no relaja nada de lo demás: las pruebas se corren antes de decir que algo
@@ -169,7 +177,7 @@ Un pedido de trabajo no es un pedido de registro. Ante "hagámoslo", el modo por
 
 ### Preguntar a la persona
 
-Una decisión de la persona se pide con la herramienta de preguntas del cliente (`AskUserQuestion` en Claude Code; sin ella, en texto con el mismo formato): opciones con su efecto y la recomendada primero, marcada «(Recomendado)». Su respuesta cuenta como su frase literal.
+Lo validable lo decide el agente (`valmen agent-decision`); lo demás se pide con la herramienta de preguntas del cliente (`AskUserQuestion` en Claude Code; sin ella, en texto con el mismo formato): opciones con su efecto y la recomendada primero, marcada «(Recomendado)». Su respuesta cuenta como su frase literal.
 
 ### Continuar un ticket
 
@@ -193,7 +201,7 @@ Se pide en la sesión: «ejecuta el feature X» o «los tickets de hoy, con N a 
 
 ### Antes de registrar: traducir lo nuevo del pedido
 
-Un pedido que nombra algo que el código no tiene —un «parámetro nuevo», un permiso, una bandera, una columna, una migración— no se registra con ese hueco: antes de crear el ticket se traduce a campo real con búsqueda en el código; si no aparece, se pregunta **una vez**. Lo que quede sin decidir va a `### Supuestos y decisiones pendientes` del ticket, cada elemento con su pregunta exacta, y el análisis no planifica sobre la adivinanza.
+Un pedido que nombra algo que el código no tiene —un «parámetro nuevo», un permiso, una bandera, una columna, una migración— no se registra con ese hueco: antes de crear el ticket se traduce a campo real con búsqueda en el código; si no aparece, se decide lo conservador y se registra. Lo que quede sin decidir va a `### Supuestos y decisiones pendientes` del ticket, cada elemento con su pregunta exacta, y el análisis no planifica sobre la adivinanza.
 
 ### Estados del ticket
 
@@ -203,7 +211,7 @@ Un pedido que nombra algo que el código no tiene —un «parámetro nuevo», un
 
 Un gate es una condición previa a avanzar: mecánico (lo decide el código), automático (un modelo responde proposiciones y el código aplica umbrales) o humano (despliegue, release, seguridad y migraciones: aprobación explícita, sin excepción). **Un gate nunca le pregunta a un modelo si aprueba**: le pregunta hechos verificables, y cada decisión deja un recibo con la evidencia, las respuestas y el coste.
 
-Un análisis o un plan se aprueba sin una persona solo bajo una **autorización de aprobación** vigente que creó una persona (`valmen approval-authorize`); la aprobación se atribuye a ella, nunca al agente. Sin ella aprueba una persona; SECURITY, un `block` y un despliegue a producción, siempre.
+Un análisis o un plan se aprueba sin una persona solo bajo una **autorización de aprobación** vigente que creó una persona; por defecto, la del PO (un REVIEW lo decide el revisor). La aprobación se atribuye a ella, nunca al agente, y se ratifica con `valmen ratify` antes de cerrar. SECURITY, un `block` y un despliegue a producción, siempre.
 
 ### Antes de diagnosticar, buscar en la memoria
 

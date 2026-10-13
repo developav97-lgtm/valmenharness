@@ -47,7 +47,7 @@ import {
 
 import {
   autorizacionDeAprobacionQueCubre,
-  leerAutorizacionesDeAprobacion,
+  autorizacionQueRespalda,
   cupoRestanteDeAprobacion,
   registrarUsoDeCupoDeAprobacion,
 } from "./approval-authorization.js";
@@ -746,8 +746,11 @@ export function motivoDeDecisionDelRevisorInvalida(
       return `El revisor (${modelo}) es el mismo modelo que produjo el artefacto. ${regla}`;
     }
   }
-  const autorizacion = leerAutorizacionesDeAprobacion(root, ahora).find(
-    (a) => a.id === dr.authorizationId && a.hash === dr.authorizationHash,
+  const autorizacion = autorizacionQueRespalda(
+    root,
+    dr.authorizationId,
+    dr.authorizationHash,
+    ahora,
   );
   if (autorizacion !== undefined && autorizacion.mode !== MODO_REVISOR) {
     return `La autorización ${dr.authorizationId} no es de modo reviewer. ${regla}`;

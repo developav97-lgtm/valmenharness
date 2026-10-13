@@ -145,7 +145,9 @@ import {
   reviewAgentCommand,
   qaEligibilityCommand,
   approvalEligibilityCommand,
+  agentDecisionCommand,
   approveByAuthorizationCommand,
+  ratifyCommand,
   precheckCommand,
   precisionCommand,
   thresholdsCommand,
@@ -291,7 +293,13 @@ Comandos:
   approve-by-authorization --id <ID> --stage analysis|plan
                             Registra la aprobación del análisis o del plan atribuida a la autorización
                             vigente que cubre al ticket y consume un cupo. Sale con 3 si una regla falla.
-  review-agent --id <ID> --stage analysis|plan [--dry-run] [--record] [--json]
+  agent-decision --id <ID> --question "<pregunta>" --choice "<elección>" --alternatives "a|b" --criterion "<por qué>" --source "<ruta:línea o recomendación>" --rollback "<cómo se revierte>"
+                            Deja escrita una decisión que el agente tomó sin detener el ticket; la
+                            persona la ratifica antes de cerrar.
+  ratify --id <ID> [--actor <nombre> --quote "<frase>"]
+                            Sin --actor lista lo que el agente decidió o aprobó y falta ratificar; con
+                            --actor y --quote lo ratifica. closed lo exige. Sesión atendida.
+  review-agent --id <ID> --stage analysis|plan [--producer <modelo>] [--dry-run] [--record] [--json]
                             El revisor de un review (R-APRO-003), de solo lectura: toma el
                             último recibo en review, elige el modelo del rol reviewer solo si
                             es distinto del que produjo el análisis y el plan, y le pasa el
@@ -301,7 +309,9 @@ Comandos:
                             guarda la decisión como del revisor (recibo y evento), tras las
                             barreras del motor: otro modelo, recibo vigente, nunca un block y
                             autorización de modo reviewer. Un approve consume un cupo; un reject
-                            no. Sale con 3 si la revisión o el registro no proceden.
+                            no. Sale con 3 si la revisión o el registro no proceden. --producer
+                            declara el modelo que escribió el artefacto cuando la sesión no dejó
+                            registro de fase.
   qa-eligibility --id <ID> [--base <commit>]
   qa-agent --id <ID> --base <commit> --delivered <commit>
   qa-policy-close --id <ID>
@@ -2063,6 +2073,10 @@ export async function run(argv: readonly string[]): Promise<number> {
       result = qaAgentCommand(resolvePaths(options), options.flags);
     } else if (command === "approval-eligibility") {
       result = approvalEligibilityCommand(resolvePaths(options), options.flags);
+    } else if (command === "agent-decision") {
+      result = agentDecisionCommand(resolvePaths(options), options.flags);
+    } else if (command === "ratify") {
+      result = ratifyCommand(resolvePaths(options), options.flags);
     } else if (command === "approve-by-authorization") {
       result = approveByAuthorizationCommand(resolvePaths(options), options.flags);
     } else if (command === "qa-eligibility") {

@@ -27,6 +27,8 @@ El PO pide una vez —«corre la feature», «haz estos cinco tickets»— y el 
 
 En el MCP: `avanzar_ticket_delegado` y `cerrar_ticket_delegado`.
 
+Lo que decidas sin preguntar va con `valmen agent-decision` (criterio, fuente y cómo se revierte); el cierre exige que el PO lo ratifique con `valmen ratify`, así que entrégaselo en lote.
+
 ## Dónde te detienes y consultas
 
 - **BLOCK** de una compuerta: se corrige el artefacto y se vuelve a correr, o se consulta. Nunca se aprueba.

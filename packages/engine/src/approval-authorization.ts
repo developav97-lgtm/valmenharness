@@ -333,9 +333,13 @@ export function revocarAutorizacionDeAprobacion(
     fail("Revocar necesita un responsable: falta --actor.", EXIT_SCHEMA);
   if (request.reason.trim() === "")
     fail("Revocar necesita un motivo: falta --reason.", EXIT_SCHEMA);
-  const existe = leerRegistro(request.root).some(
-    (e) => e.kind === "approval-authorization-created" && e.id === request.id,
-  );
+  // La política por defecto no está en el registro, pero se revoca igual: es el interruptor
+  // para que vuelva a aprobar una persona.
+  const existe =
+    request.id === POLITICA_POR_DEFECTO_ID ||
+    leerRegistro(request.root).some(
+      (e) => e.kind === "approval-authorization-created" && e.id === request.id,
+    );
   if (!existe) fail(`No existe la autorización ${request.id}.`, EXIT_SCHEMA);
   const revocacion: ApprovalAuthorizationRevoked = {
     kind: "approval-authorization-revoked",
@@ -355,12 +359,83 @@ export function comandoDeRevocacionDeAprobacion(id: string): string {
   return `valmen approval-authorize revoke --id ${id} --actor <tú> --reason "<motivo>"`;
 }
 
+/** El id de la política por defecto: la que deja al agente aprobar sin una autorización creada. */
+export const POLITICA_POR_DEFECTO_ID = "POLITICA-POR-DEFECTO";
+
+/**
+ * La política por defecto (decisión del PO del 2026-10-13): el agente aprueba el análisis y el plan
+ * de cualquier ticket que no sea SECURITY, de riesgo hasta `normal`, con impacto de sincronización o
+ * de contenedores pero no de migración, en cualquier módulo; un `review` lo decide el revisor. El despliegue, un `block` y un `block` de
+ * `qa-mechanical` siguen siendo de una persona, como en toda autorización. La persona ratifica en
+ * lote lo que el agente aprobó y decidió antes de cerrar el ticket.
+ *
+ * No vive en el registro: no hay nada que crear. Se revoca como cualquier autorización
+ * (`valmen approval-authorize revoke --id POLITICA-POR-DEFECTO`), y desde ese instante vuelve a
+ * aprobar una persona.
+ */
+export const POLITICA_POR_DEFECTO: ApprovalAuthorization = (() => {
+  const base: Omit<ApprovalAuthorization, "hash"> = {
+    kind: "approval-authorization-created",
+    version: 1,
+    id: POLITICA_POR_DEFECTO_ID,
+    types: [...TIPOS_APROBABLES],
+    modules: ["*"],
+    maxRisk: "normal",
+    // Sin `migration_impact`: una migración sigue siendo de una persona (AGENTS.md, «Gates»).
+    impacts: ["sync_impact", "docker_impact"],
+    stages: [...ETAPAS_APROBABLES],
+    mode: "reviewer",
+    dailyQuota: 1000,
+    validFrom: "2026-10-13T00:00:00.000Z",
+    validUntil: "9999-12-31T00:00:00.000Z",
+    actor: "Juan Andrade",
+    quote:
+      "si es necesario que un agente verifique y tome la decision de los analisis, review o planes " +
+      "para que yo no los tenga que tomar en cada punto esta bien y ya al final si hay decisiones " +
+      "tomadas por el agente antes de poder cerrar el ticket yo los apruebo",
+    source: "politica-por-defecto",
+    createdAt: "2026-10-13T00:00:00.000Z",
+  };
+  return { ...base, hash: hashDeAutorizacionDeAprobacion(base) };
+})();
+
 /** Todas las autorizaciones con su estado a `ahora`; una con el hash roto no se lista como vigente. */
 export function leerAutorizacionesDeAprobacion(
   root: string,
   ahora: Date = new Date(),
 ): AutorizacionDeAprobacionConEstado[] {
+  return conEstado(leerRegistro(root), ahora);
+}
+
+/**
+ * Las autorizaciones que pueden respaldar una aprobación: las del registro y, al final, la política
+ * por defecto. Una creada por una persona manda sobre la política porque se busca primero.
+ */
+function autorizacionesQueRespaldan(
+  root: string,
+  ahora: Date,
+): AutorizacionDeAprobacionConEstado[] {
   const registro = leerRegistro(root);
+  const yaEsta = registro.some(
+    (e) => e.kind === "approval-authorization-created" && e.id === POLITICA_POR_DEFECTO_ID,
+  );
+  return conEstado(yaEsta ? registro : [...registro, POLITICA_POR_DEFECTO], ahora);
+}
+
+/** Una autorización del registro o la política por defecto, por id y hash. */
+export function autorizacionQueRespalda(
+  root: string,
+  id: string,
+  hash: string,
+  ahora: Date = new Date(),
+): AutorizacionDeAprobacionConEstado | undefined {
+  return autorizacionesQueRespaldan(root, ahora).find((a) => a.id === id && a.hash === hash);
+}
+
+function conEstado(
+  registro: readonly Entrada[],
+  ahora: Date,
+): AutorizacionDeAprobacionConEstado[] {
   return registro
     .filter((e): e is ApprovalAuthorization => e.kind === "approval-authorization-created")
     .map((a) => {
@@ -410,16 +485,16 @@ export function autorizacionDeAprobacionQueCubre(
   },
   ahora: Date = new Date(),
 ): AutorizacionDeAprobacionConEstado | null {
-  return (
-    autorizacionesDeAprobacionVigentes(root, ahora).find(
-      (a) =>
-        a.types.includes(ticket.type.toUpperCase()) &&
-        a.modules.includes(ticket.module.toLowerCase()) &&
-        ORDEN_DE_RIESGO.indexOf(ticket.riskLevel) <= ORDEN_DE_RIESGO.indexOf(a.maxRisk) &&
-        (ticket.impacts ?? []).every((i) => a.impacts.includes(i)) &&
-        (ticket.stage === undefined || a.stages.includes(ticket.stage)),
-    ) ?? null
+  const cubren = autorizacionesQueRespaldan(root, ahora).filter(
+    (a) =>
+      a.estado === "vigente" &&
+      a.types.includes(ticket.type.toUpperCase()) &&
+      (a.modules.includes("*") || a.modules.includes(ticket.module.toLowerCase())) &&
+      ORDEN_DE_RIESGO.indexOf(ticket.riskLevel) <= ORDEN_DE_RIESGO.indexOf(a.maxRisk) &&
+      (ticket.impacts ?? []).every((i) => a.impacts.includes(i)) &&
+      (ticket.stage === undefined || a.stages.includes(ticket.stage)),
   );
+  return cubren[0] ?? null;
 }
 
 // ── El cupo diario ───────────────────────────────────────────────────────────

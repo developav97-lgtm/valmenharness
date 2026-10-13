@@ -134,13 +134,14 @@ describe("la revisión pide decisión cuando el plan pasa el tope (C4–C12)", (
     );
   });
 
-  it("C5: el mensaje nombra las 1200 líneas junto al tope de 400", () => {
+  // El tope por defecto subió de 400 a 600 líneas el 2026-10-13 (decisión del PO por AskUserQuestion).
+  it("C5: el mensaje nombra las 1200 líneas junto al tope de 600", () => {
     const h = revisar([
       ...EXCEDE,
       "- Si excede el tope: pendiente de decidir",
     ]).findings.find((x) => x.id === "excede_el_tope_sin_decision");
     expect(h?.message).toContain("1200");
-    expect(h?.message).toContain("400");
+    expect(h?.message).toContain("600");
     expect(h?.message).toContain("delivery-budget");
   });
 
@@ -177,10 +178,11 @@ describe("la revisión pide decisión cuando el plan pasa el tope (C4–C12)", (
     ).not.toContain("excede_el_tope_sin_decision");
   });
 
-  it("C10: sin delivery-budget, 500 líneas sin decisión dan excede_el_tope_sin_decision", () => {
+  // El tope por defecto subió de 400 a 600 líneas el 2026-10-13 (decisión del PO por AskUserQuestion).
+  it("C10: sin delivery-budget, 700 líneas sin decisión dan excede_el_tope_sin_decision", () => {
     expect(
       ids([
-        "- Tamaño previsto: 500 líneas, 8 criterios.",
+        "- Tamaño previsto: 700 líneas, 8 criterios.",
         "- Si excede el tope: pendiente",
       ]),
     ).toContain("excede_el_tope_sin_decision");

@@ -1707,3 +1707,40 @@ describe("la decisión del revisor se registra", () => {
     expect(instantanea()).toEqual(antes);
   });
 });
+
+// ── El productor declarado por la sesión ─────────────────────────────────────
+
+describe("review-agent --producer", () => {
+  it("sin registro de fase, la sesión declara el productor y la revisión procede", async () => {
+    conRecibos(recibo());
+    const { fetchImpl } = red(() => respuestaDeChat(decision("approve", IDS_EN_DUDA)));
+
+    const sin = await reviewAgentCommand(
+      PATHS(),
+      { id: ID, stage: "plan", "dry-run": true },
+      { apiKey: "k", fetchImpl },
+    );
+    expect(sin.exitCode).toBe(3);
+    expect(sin.stdout).toContain("productor desconocido");
+
+    const con = await reviewAgentCommand(
+      PATHS(),
+      { id: ID, stage: "plan", "dry-run": true, producer: "claude-opus-5-5" },
+      { apiKey: "k", fetchImpl },
+    );
+    expect(con.exitCode).toBe(0);
+    expect(con.stdout).toContain("claude-opus-5-5");
+  });
+
+  it("un productor declarado igual al revisor no procede", async () => {
+    conRecibos(recibo());
+    const { fetchImpl } = red(() => respuestaDeChat(decision("approve", IDS_EN_DUDA)));
+    const r = await reviewAgentCommand(
+      PATHS(),
+      { id: ID, stage: "plan", "dry-run": true, producer: REVISOR_POR_DEFECTO },
+      { apiKey: "k", fetchImpl },
+    );
+    expect(r.exitCode).toBe(3);
+    expect(r.stdout).toContain("mismo modelo");
+  });
+});

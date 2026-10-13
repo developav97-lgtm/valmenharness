@@ -41,11 +41,9 @@ No introducir secretos ni valores de respaldo en planes, ejemplos o evidencia. N
 
 ## Aprobación y transición
 
-Todo ticket necesita plan. La aprobación explícita del responsable es obligatoria cuando el tipo o el impacto la exigen, y **siempre** ante aislamiento de datos, sincronización, agentes locales, contenedores, migraciones, seguridad o despliegue, cualquiera que sea el tipo declarado.
+Todo ticket necesita plan. El análisis y el plan los aprueba la **política por defecto** del PO: en APPROVE, `valmen approve-by-authorization`; en REVIEW, `valmen review-agent --record`. Lo decidido en el camino va con `valmen agent-decision` y la persona lo ratifica con `valmen ratify` antes de cerrar.
 
-Presentar alcance, pasos, criterios, pruebas y riesgos; si hace falta aprobación, **detenerse en `planned` y pedirla**. No interpretar el silencio, la urgencia, una herramienta exitosa ni una aprobación anterior de otro alcance como autorización del plan.
-
-Solo tras recibirla, registrar en `## Plan` la línea de aprobación con fecha, alcance y referencia a la confirmación real. La forma que reconoce el motor, la única válida en un ticket crítico:
+Es de una persona ante SECURITY, riesgo alto, migraciones, despliegue, un `block` que persiste o lo irreversible: **detenerse en `planned` y pedirla**. No interpretar el silencio, la urgencia, una herramienta exitosa ni una aprobación anterior de otro alcance como autorización del plan. Si la da, la línea que reconoce el motor:
 
 ```markdown
 - Gate de plan y aprobación: **aprobado explícitamente por el PO** (gate de plan).
@@ -68,7 +66,7 @@ point:   open → analyzed → in_progress → awaiting_retest → verified → 
 release: not_applicable | unreleased → planned → released
 ```
 
-Las tres máquinas son **independientes**: un ticket cerrado puede seguir sin publicar. No existe el estado `completed`. Entrar a `approved` exige la aprobación registrada de una persona.
+Las tres máquinas son **independientes**: un ticket cerrado puede seguir sin publicar. No existe el estado `completed`. Entrar a `approved` exige la aprobación registrada, de una persona o de la política.
 
 ## Cómo se verifica un criterio
 
@@ -87,7 +85,7 @@ Un `verify: manual` se cita como «Cn» en el paso del plan que lo verifica y un
 
 **Un criterio, un comportamiento observable**: ni compuestos («y») ni uno por cada aserción.
 
-**Tamaño del plan**: `- Tamaño previsto:` («N líneas») contra `delivery-budget`; si pasa unos 20 criterios o el tope, `- Si excede el tope:` dice «se parte en tickets dependientes» o «sigue: motivo».
+**Tamaño del plan**: `- Tamaño previsto:` («N líneas») contra `delivery-budget`; si pasa unos 20 criterios o el tope, `- Si excede el tope:` lo decide quien planifica: «se parte en tickets dependientes», cada uno con su código y sus pruebas, o «sigue: motivo».
 
 ## Handoff
 

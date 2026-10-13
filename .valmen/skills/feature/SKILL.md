@@ -52,8 +52,8 @@ El refresco de los tickets ya materializados, el enlace externo (`--allow-extern
 - **No se descompone sin spec.** El grafo se comprueba contra los requisitos: sin requisitos no hay nada que repartir.
 - **No se inventan requisitos.** La spec la revisa quien pidió la funcionalidad.
 - **No se empieza un ticket que espera a otro.** Una dependencia sin cerrar no es una sugerencia de orden: trabajar antes produce retrabajo.
-- **No se mezclan los impactos críticos.** Migración, despliegue y sincronización exigen gate humano: van en su propio ticket, no como un detalle dentro de otro.
-- **No se escribe la aprobación de nadie.** La compuerta de plan y la QA las decide una persona, con sus palabras.
+- **No se mezclan los impactos críticos.** Migración y despliegue exigen gate humano y la sincronización va aparte: cada uno en su propio ticket, no como un detalle dentro de otro.
+- **No se escribe la aprobación de nadie.** El plan lo aprueba la política por defecto o una persona; la QA y la ratificación, una persona con sus palabras.
 
 ## Cómo saber que salió bien
 

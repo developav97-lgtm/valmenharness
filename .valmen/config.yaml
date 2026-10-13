@@ -30,7 +30,7 @@ test-commands:
 # ticket en equipos con memoria limitada; 30 s puede cortar una corrida sana.
 test-timeout: 420
 # Tope orientativo de líneas (añadidas + borradas) por entrega: al pasarlo la integración avisa, no bloquea (R-ENT-002).
-delivery-budget: 400
+delivery-budget: 600
 # Días que se conservan los respaldos de .valmen/backups/sync antes de que valmen cleanup los proponga para quitar (30 si falta).
 backup-retention-days: 30
 

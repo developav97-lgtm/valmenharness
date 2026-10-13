@@ -120,7 +120,9 @@ Ninguno.
        \`delivery-budget\` de \`.valmen/config.yaml\`. -->
 - Si excede el tope:
   <!-- Con más líneas que \`delivery-budget\`: «se parte en <tickets dependientes>» o
-       «sigue: <motivo>». Sin exceder, «no excede el tope». La persona lo aprueba con el plan. -->
+       «sigue: <motivo>». Sin exceder, «no excede el tope». Lo decide quien planifica, sin
+       esperar a una persona. Se parte solo en tickets que lleven cada uno su código y sus
+       pruebas; si no hay un corte así, sigue. -->
 - Rollback (obligatorio):
 
 <!-- Los criterios de la sección siguiente se numeran C1…Cn, con una afirmación verificable por criterio

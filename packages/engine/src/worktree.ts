@@ -193,7 +193,9 @@ export function crearWorktree(request: WorktreeRequest): WorktreeCreado {
   );
   if (enMain.status !== 0) {
     fail(
-      `El ticket ${request.ticketId} no está registrado en main (${ticket.relativePath}): commitéalo antes de crear su worktree.`,
+      `El ticket ${request.ticketId} no está registrado en main (${ticket.relativePath}): commitéalo antes de crear su worktree ` +
+        `(\`git add ${dirname(ticket.relativePath)} && git commit -m "docs(ticket): registra ${request.ticketId}"\`), ` +
+        "porque el worktree sale de main y la rama del ticket chocaría con el archivo sin commitear al integrarla.",
       EXIT_INVARIANT,
     );
   }

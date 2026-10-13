@@ -12,13 +12,13 @@ En un gate con proposiciones que solo un modelo puede responder se corre el eval
 
 ## Gateway y avisos por Telegram
 
-La entrega y los avisos de la jornada (arranque, awaiting_user_tests, compuertas en REVIEW) salen por el bot de Telegram del perfil del proyecto —TELEGRAM_ALLOWED_USERS del .env—; Slack queda como canal secundario apagado. Un nuevo aviso se agrega al vigilante de avisos, no a un mensaje suelto.
+La entrega y los avisos de la jornada (arranque, awaiting_user_tests, compuertas en REVIEW) salen por el bot de Telegram del perfil del proyecto —TELEGRAM_ALLOWED_USERS del .env—; Slack queda como canal secundario apagado. Un nuevo aviso se agrega al vigilante de avisos, no a un mensaje suelto. Las preguntas al PO en una sesión con Claude no salen por Telegram: se hacen con AskUserQuestion en la sesión (2026-10-13).
 
 **Por qué:** Migración decidida por el PO el 2026-09-30: los DM de Slack a veces no llegaban al celular y la gateway ya sirve Telegram en ambos perfiles; un solo canal de avisos evita revisar dos aplicaciones para lo mismo.
 
 ## Registro de tickets: traducir lo nuevo del pedido antes de crear
 
-Si el pedido nombra algo que el código no tiene —parámetro, permiso, campo, bandera, columna, migración—, se traduce a campo real con búsqueda antes de crear el ticket; si no aparece, se pregunta una vez al PO y el ticket no se registra con el hueco. Lo que quede sin decidir se escribe en la sección «Supuestos y decisiones pendientes» del ticket, cada elemento con su pregunta, y el análisis no planifica sobre la adivinanza.
+Si el pedido nombra algo que el código no tiene —parámetro, permiso, campo, bandera, columna, migración—, se traduce a campo real con búsqueda antes de crear el ticket; si no aparece, el agente elige con la documentación o la opción conservadora y lo registra con `valmen agent-decision`, y solo pregunta una vez al PO si la decisión es irreversible o no hay cómo validarla (desde el 2026-10-13). Lo que quede sin decidir se escribe en la sección «Supuestos y decisiones pendientes» del ticket, cada elemento con su pregunta, y el análisis no planifica sobre la adivinanza.
 
 **Por qué:** BUGFIX-RESTAURANTE-MESERO-BORRAR-BONIFICAR-20260929 pidió «el nuevo parámetro bonificado» sin especificarlo: tres corridas de compuerta de plan y dos escaladas hasta que el PO resolvió usar el parámetro bonus que ya vive en AdmInvoiceParam.
 
@@ -37,7 +37,7 @@ En FEATURE-ADAPTER-CAPACIDADES-20261001, el gate analysis bloqueó cuatro veces 
 
 ## Preguntar al PO con AskUserQuestion por defecto
 
-Cuando el agente necesite una respuesta o una decisión del PO, la hace con la herramienta AskUserQuestion —opciones con su efecto, la recomendada primero y marcada «(Recomendado)»— y no la plantea en texto; solo pide en texto lo que no es una decisión (un dato, un archivo). La respuesta del PO por la herramienta cuenta como su frase literal para registrar la decisión.
+Cuando el agente necesite una respuesta o una decisión del PO —solo lo irreversible o lo que no puede validar, desde el 2026-10-13—, la hace con la herramienta AskUserQuestion —opciones con su efecto, la recomendada primero y marcada «(Recomendado)»— y no la plantea en texto; solo pide en texto lo que no es una decisión (un dato, un archivo). La respuesta del PO por la herramienta cuenta como su frase literal para registrar la decisión.
 
 **Por qué:** El 2026-10-09 el PO probó el aviso de pregunta de la vista Agentes y tuvo que pedirle al agente «hazme la pregunta con AskUserQuestion»; la vista existe para mostrar esas preguntas, y dijo que quiere que el agente pregunte así siempre por defecto, en ambos proyectos, sin que él tenga que decírselo.
 **Visto en:** FEATURE-WEB-VISTA-TEXTO-PREGUNTA-20261008, FEATURE-SERVER-TEXTO-PREGUNTA-RESPUESTA-20261008 (2026-10-09)
@@ -60,3 +60,10 @@ Cuando una prueba que ya existía falla durante un cambio, no se edita, no se bo
 Cuando el comportamiento pedido admite una prueba ejecutable y determinista, se escribe antes de implementar y se observa en rojo; después se implementa hasta verde y se refactoriza con las pruebas en verde. Se escribe una prueba en rojo por cada regla que pide el ticket, con los casos que esa regla nombra y sus efectos observables (salida, código de salida, datos persistidos), y una por cada comando, herramienta MCP u opción existente que el cambio toca, que demuestre que su comportamiento anterior se mantiene; no se agregan otras. Si no hay prueba ejecutable posible, el ticket dice por qué y se corren las verificaciones funcionales que apliquen.
 
 **Por qué:** Comparación con gentle-ai del 2026-10-10 (Gentleman-Programming/gentle-ai @66bf3e1, docs/usage.md, sección ODD): su política fija cuántas pruebas lleva un cambio, así no faltan ni se rellenan. EST-008 ya exige, solo en modo directo, pruebas que fallen sin el arreglo; esta regla lo extiende al flujo completo y fija el criterio: exhaustivas respecto de lo pedido y de lo que se toca, no más allá. Se registra junto con la feature operacion-entrega-harness.
+
+## El agente decide lo que puede validar y la persona lo ratifica antes de cerrar
+
+Lo que el agente puede validar con la documentación del proyecto, el código o su recomendación lo decide sin detener el ticket y lo registra con `valmen agent-decision`: pregunta, elección, alternativas, criterio, fuente con `ruta:línea` y cómo se revierte. El análisis y el plan los aprueba la política por defecto: si la compuerta da APPROVE, con `valmen approve-by-authorization`; si da REVIEW, decide el revisor con `valmen review-agent --record`. Ante la duda se elige la opción conservadora y reversible. Se detiene y pregunta con AskUserQuestion solo cuando la decisión es irreversible, cuando no hay forma de validar la información antes, o ante lo que sigue siendo de una persona: SECURITY, despliegue, correr sobre datos de producción y un BLOCK que persiste. Antes de `closed`, la persona ratifica en lote con `valmen ratify` todo lo que decidió o aprobó el agente; lo que no ratifique vuelve como `changes_requested`.
+
+**Por qué:** En BUGFIX-RESTAURANTE-PAGO-BONIFICADO-RETROACTIVO-20261013 (SaiOpenCloud), de los 90 min hasta awaiting_user_tests, 41 min 40 s (46 %) fueron esperas al PO, que respondió casi todo con la opción recomendada. Las compuertas y su rework sumaron otro 22,6 % sin encontrar un defecto real. El PO pidió el 2026-10-13 que el ticket no dependa de él en cada punto y poder revisar al día siguiente qué decidió el agente y por qué.
+**Visto en:** BUGFIX-RESTAURANTE-PAGO-BONIFICADO-RETROACTIVO-20261013 (2026-10-13)

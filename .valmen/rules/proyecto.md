@@ -10,7 +10,8 @@ diagnósticos, exploración, cambios visuales o de contenido que no alteran
 funcionalidad, prototipos desechables y la configuración del propio harness.
 
 La **funcionalidad nueva** pasa por el **flujo** completo: feature cuando excede
-un ticket, y luego ticket, análisis, plan, aprobación de una persona,
+un ticket, y luego ticket, análisis, plan, aprobación (la política por defecto
+o una persona; la persona ratifica lo del agente antes de cerrar),
 implementación, entrega y QA.
 
 Eso no relaja nada de lo demás: las pruebas se corren antes de decir que algo

@@ -35,9 +35,9 @@ El subagente trabaja solo en su worktree y arranca por `valmen resume --id <ID>`
 Con los planes de la ola listos, antes de pedirle nada al PO y en sesión atendida (una desatendida la niega):
 
 1. `valmen journey approve-eligible --journey <id>` aprueba por autorización los planes elegibles —atribuidos a la autorización, nunca al modelo— y los deja en `approved`. Imprime los pendientes con su decisión. `valmen approval-authorize list` muestra las autorizaciones vigentes; `valmen approval-eligibility --id <ID> --stage plan` explica un ticket suelto.
-2. `valmen journey notify-plans --project <id> --journey <id> --to telegram` avisa al PO de los pendientes: emite código solo para los que siguen en `planned`.
-3. **Todo lo demás, en lote al PO** —también los planes en REVIEW por una duda del evaluador sin contradicción—: resume cada pendiente en dos líneas y espera su frase. El PO aprueba con `valmen plan-approve --code <código> --actor <nombre> --quote "<su frase>"` o, por ticket, con `valmen approve-plan --id <ID> --actor <nombre> --quote "<su frase>"`. Sin frase literal no hay aprobación.
-4. **SECURITY, despliegue y un `block` nunca se aprueban solos**: la orden los deja pendientes para una persona, con o sin autorización. Un pendiente «derivable al revisor» sigue siendo del PO.
+2. Un plan en REVIEW lo decide el revisor: `valmen review-agent --id <ID> --stage plan --producer <modelo> --record`. Lo decidido por el agente lo ratifica el PO al cerrar (`valmen ratify`).
+3. **Lo demás, en lote al PO** con AskUserQuestion: resume cada pendiente en dos líneas y espera su frase. El PO aprueba con `valmen plan-approve --code <código> --actor <nombre> --quote "<su frase>"` o, por ticket, con `valmen approve-plan --id <ID> --actor <nombre> --quote "<su frase>"`. Sin frase literal no hay aprobación.
+4. **SECURITY, despliegue y un `block` nunca se aprueban solos**: la orden los deja pendientes para una persona, con o sin autorización; tampoco migraciones ni riesgo alto.
 
 ## Integrar
 
@@ -59,7 +59,7 @@ De la suite muestra solo las líneas `Test Files` y `Tests` y los fallos. No peg
 - **Solo el orquestador toca el checkout principal.** Los subagentes escriben en su worktree y rama; un solo escritor por archivo.
 - Nunca `git push`, force, `--no-verify` ni tags. Publicar lo decide el PO.
 - Un **BLOCK**, una compuerta humana dura (SECURITY, despliegue, migraciones) y lo **fuera del alcance** del ticket se detienen: se reportan al PO, no se fuerzan ni se esquivan.
-- Una REVIEW la decide una persona, no el modelo.
+- Una REVIEW la decide el revisor (otro modelo) o una persona, nunca quien produjo el artefacto.
 - El estado vive en el registro: ante la duda, `valmen resume --id <ID> --quiet`.
 
 ## QA por comandos

@@ -34,7 +34,9 @@ import {
   ETAPAS_APROBABLES,
   RIESGOS_APROBABLES,
   TIPOS_APROBABLES,
+  POLITICA_POR_DEFECTO,
   autorizacionDeAprobacionQueCubre,
+  autorizacionQueRespalda,
   autorizacionesDeAprobacionVigentes,
   cupoRestanteDeAprobacion,
   hayUsoDeCupoDeAprobacion,
@@ -225,7 +227,16 @@ export function elegibilidadDeAprobacion(
         `impactos ${impactosDelTicket.length === 0 ? "ninguno" : impactosDelTicket.join(", ")} y etapa ${etapa}`,
     );
   } else {
-    const vigentes = autorizacionesDeAprobacionVigentes(paths.root, ahora);
+    const politica = autorizacionQueRespalda(
+      paths.root,
+      POLITICA_POR_DEFECTO.id,
+      POLITICA_POR_DEFECTO.hash,
+      ahora,
+    );
+    const vigentes = [
+      ...autorizacionesDeAprobacionVigentes(paths.root, ahora),
+      ...(politica?.estado === "vigente" ? [politica] : []),
+    ];
     if (esSecurity) {
       regla("autorizacion", false, "un ticket SECURITY no admite autorización");
     } else if (!riesgoConocido) {
@@ -295,7 +306,7 @@ function primeraDimensionQueFalla(
   if (!a.types.includes(t.tipo.toUpperCase())) {
     return `no lista el tipo ${t.tipo} (lista ${a.types.join(", ")}; los tipos que una autorización puede cubrir son ${TIPOS_APROBABLES.join(", ")})`;
   }
-  if (!a.modules.includes(t.modulo.toLowerCase())) {
+  if (!a.modules.includes("*") && !a.modules.includes(t.modulo.toLowerCase())) {
     return `no lista el módulo ${t.modulo} (lista ${a.modules.join(", ")})`;
   }
   if (RIESGOS_CONOCIDOS.indexOf(t.riesgo) > RIESGOS_CONOCIDOS.indexOf(a.maxRisk)) {
@@ -410,8 +421,11 @@ export function aprobarPorAutorizacion(
   }
 
   const planHash = hashDelPlan(documento);
-  const autorizacionVigente = leerAutorizacionesDeAprobacion(paths.root, ahora).find(
-    (a) => a.id === authorizationId && a.hash === authorizationHash,
+  const autorizacionVigente = autorizacionQueRespalda(
+    paths.root,
+    authorizationId,
+    authorizationHash,
+    ahora,
   );
   const cupoDe = (): number =>
     autorizacionVigente === undefined
@@ -493,9 +507,7 @@ export function motivoDeAprobacionPorAutorizacionInvalida(
   if (authorizationId === undefined || authorizationHash === undefined) {
     return `La aprobación dice que es de una autorización pero no cita su id y su hash. ${regla}`;
   }
-  const autorizacion = leerAutorizacionesDeAprobacion(root, ahora).find(
-    (a) => a.id === authorizationId && a.hash === authorizationHash,
-  );
+  const autorizacion = autorizacionQueRespalda(root, authorizationId, authorizationHash, ahora);
   if (autorizacion === undefined) {
     return `La autorización ${authorizationId} (${authorizationHash.slice(0, 19)}…) no existe en el registro con ese hash. ${regla}`;
   }
@@ -543,10 +555,10 @@ export function listarAprobacionesAutomaticas(
   paths: RegistryPaths,
   opciones: { readonly dia?: string; readonly ahora?: Date } = {},
 ): ListaDeAprobacionesAutomaticas {
-  const autorizaciones = leerAutorizacionesDeAprobacion(
-    paths.root,
-    opciones.ahora ?? new Date(),
-  );
+  const autorizaciones = [
+    ...leerAutorizacionesDeAprobacion(paths.root, opciones.ahora ?? new Date()),
+    { ...POLITICA_POR_DEFECTO, estado: "vigente" as const, revocacion: null },
+  ];
   const aprobaciones: AprobacionAutomaticaListada[] = [];
   const omitidos: string[] = [];
   for (const t of findAllTickets(paths)) {

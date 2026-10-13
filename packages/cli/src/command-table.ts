@@ -359,7 +359,7 @@ export const COMANDOS: Readonly<Record<string, EspecComando>> = {
     },
   },
   "review-agent": {
-    conValor: ["--id", "--stage"],
+    conValor: ["--id", "--stage", "--producer"],
     booleanas: ["--json", "--dry-run", "--record"],
   },
   "qa-shadow": { conValor: [], booleanas: [] },
@@ -368,6 +368,19 @@ export const COMANDOS: Readonly<Record<string, EspecComando>> = {
   "qa-agent": { conValor: ["--id", "--base", "--delivered"], booleanas: [] },
   "approval-eligibility": { conValor: ["--id", "--stage"], booleanas: ["--json"] },
   "approve-by-authorization": { conValor: ["--id", "--stage"], booleanas: [] },
+  "agent-decision": {
+    conValor: [
+      "--id",
+      "--question",
+      "--choice",
+      "--alternatives",
+      "--criterion",
+      "--source",
+      "--rollback",
+    ],
+    booleanas: [],
+  },
+  ratify: { conValor: ["--id", "--actor", "--quote"], booleanas: [] },
   "qa-eligibility": { conValor: ["--id", "--base"], booleanas: [] },
   ux: {
     conValor: [],

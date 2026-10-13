@@ -15,7 +15,7 @@
  * La misma función corre a mano (`valmen precheck`): lo que dice a mano es lo que la
  * compuerta dirá, porque es la misma.
  */
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 import { parseTicket, stripHtmlComments } from "@valmen/core";
@@ -243,6 +243,29 @@ function largoEnLineas(ruta: string): number {
   return texto.endsWith("\n") ? partes.length - 1 : partes.length;
 }
 
+/** Una frase que dice que el archivo es nuevo o que el ticket lo crea. */
+const DECLARA_NUEVO_RE = /\bnuev[oa]s?\b|\bse crea(?:n|rá|rán)?\b|\bcrear\b/i;
+
+/**
+ * La ruta absoluta de lo citado: en la raíz o, si no está, bajo **una sola** carpeta de
+ * primer nivel (`BackEnd/…` en un monorepo que cita rutas relativas a su paquete). `null`
+ * si no existe en ninguna o si es ambigua.
+ */
+function rutaEnElProyecto(root: string, ruta: string): string | null {
+  const directa = join(root, ruta);
+  if (existsSync(directa)) return directa;
+  let carpetas: string[];
+  try {
+    carpetas = readdirSync(root, { withFileTypes: true })
+      .filter((e) => e.isDirectory() && !e.name.startsWith(".") && e.name !== "node_modules")
+      .map((e) => e.name);
+  } catch {
+    return null;
+  }
+  const halladas = carpetas.map((c) => join(root, c, ruta)).filter((p) => existsSync(p));
+  return halladas.length === 1 ? (halladas[0] as string) : null;
+}
+
 /**
  * Las rutas que cita el diagnóstico, comprobadas en código contra la raíz.
  *
@@ -253,7 +276,11 @@ function largoEnLineas(ruta: string): number {
  */
 export function citedFiles(root: string, ticketText: string): CitaComprobada[] {
   if (!esRepositorio(root)) return [];
-  const diagnostico = lineasDe(secciones(ticketText)["Diagnóstico"] ?? "").join("\n");
+  const lineas = lineasDe(secciones(ticketText)["Diagnóstico"] ?? "");
+  const diagnostico = lineas.join("\n");
+  const declaradas = new Set(
+    lineas.filter((l) => DECLARA_NUEVO_RE.test(l)).flatMap((l) => citados(l)),
+  );
   const vistas = new Set<string>();
   const resultado: CitaComprobada[] = [];
   for (const token of citados(diagnostico).filter(pareceRuta)) {
@@ -271,8 +298,16 @@ export function citedFiles(root: string, ticketText: string): CitaComprobada[] {
       });
       continue;
     }
-    const absoluta = join(root, ruta);
-    if (!existsSync(absoluta)) {
+    const absoluta = rutaEnElProyecto(root, ruta);
+    if (absoluta === null) {
+      if (linea === undefined && declaradas.has(token)) {
+        resultado.push({
+          ...base,
+          resultado: "omitida",
+          detalle: "es un archivo nuevo que el ticket crea",
+        });
+        continue;
+      }
       resultado.push({ ...base, resultado: "no_existe" });
       continue;
     }

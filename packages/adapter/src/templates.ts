@@ -44,7 +44,7 @@ Un pedido de trabajo no es un pedido de registro. Ante "hagámoslo", el modo por
 
 ### Preguntar a la persona
 
-Una decisión de la persona se pide con la herramienta de preguntas del cliente (\`AskUserQuestion\` en Claude Code; sin ella, en texto con el mismo formato): opciones con su efecto y la recomendada primero, marcada «(Recomendado)». Su respuesta cuenta como su frase literal.
+Lo validable lo decide el agente (\`valmen agent-decision\`); lo demás se pide con la herramienta de preguntas del cliente (\`AskUserQuestion\` en Claude Code; sin ella, en texto con el mismo formato): opciones con su efecto y la recomendada primero, marcada «(Recomendado)». Su respuesta cuenta como su frase literal.
 
 ### Continuar un ticket
 
@@ -68,7 +68,7 @@ Se pide en la sesión: «ejecuta el feature X» o «los tickets de hoy, con N a 
 
 ### Antes de registrar: traducir lo nuevo del pedido
 
-Un pedido que nombra algo que el código no tiene —un «parámetro nuevo», un permiso, una bandera, una columna, una migración— no se registra con ese hueco: antes de crear el ticket se traduce a campo real con búsqueda en el código; si no aparece, se pregunta **una vez**. Lo que quede sin decidir va a \`### Supuestos y decisiones pendientes\` del ticket, cada elemento con su pregunta exacta, y el análisis no planifica sobre la adivinanza.
+Un pedido que nombra algo que el código no tiene —un «parámetro nuevo», un permiso, una bandera, una columna, una migración— no se registra con ese hueco: antes de crear el ticket se traduce a campo real con búsqueda en el código; si no aparece, se decide lo conservador y se registra. Lo que quede sin decidir va a \`### Supuestos y decisiones pendientes\` del ticket, cada elemento con su pregunta exacta, y el análisis no planifica sobre la adivinanza.
 
 ### Estados del ticket
 
@@ -78,7 +78,7 @@ Un pedido que nombra algo que el código no tiene —un «parámetro nuevo», un
 
 Un gate es una condición previa a avanzar: mecánico (lo decide el código), automático (un modelo responde proposiciones y el código aplica umbrales) o humano (despliegue, release, seguridad y migraciones: aprobación explícita, sin excepción). **Un gate nunca le pregunta a un modelo si aprueba**: le pregunta hechos verificables, y cada decisión deja un recibo con la evidencia, las respuestas y el coste.
 
-Un análisis o un plan se aprueba sin una persona solo bajo una **autorización de aprobación** vigente que creó una persona (\`valmen approval-authorize\`); la aprobación se atribuye a ella, nunca al agente. Sin ella aprueba una persona; SECURITY, un \`block\` y un despliegue a producción, siempre.
+Un análisis o un plan se aprueba sin una persona solo bajo una **autorización de aprobación** vigente que creó una persona; por defecto, la del PO (un REVIEW lo decide el revisor). La aprobación se atribuye a ella, nunca al agente, y se ratifica con \`valmen ratify\` antes de cerrar. SECURITY, un \`block\` y un despliegue a producción, siempre.
 
 ### Antes de diagnosticar, buscar en la memoria
 

@@ -48,10 +48,13 @@ import {
 } from "@valmen/gate";
 
 import { motivoDeArbolNoVigente } from "./arbol-probado.js";
+import { POLITICA_POR_DEFECTO_ID } from "./approval-authorization.js";
+import { elegibilidadDeAprobacion } from "./approval-eligibility.js";
 import { type RegistryPaths, codeReviewExigida } from "./discovery.js";
 import { aprobacionDePlanVigente } from "./plan-approval.js";
 import { currentReceipts, veredictoDeCompuerta } from "./receipts.js";
 import { revisionPendiente } from "./revision-exigida.js";
+import type { ReciboConRevisor } from "./reviewer.js";
 import { buildGateState } from "./state.js";
 
 /** Lo que toca hacer ahora con un ticket. */
@@ -190,6 +193,58 @@ export function computeNextStep(
   const decidir = (recibo: GateReceipt): string =>
     `\`valmen gate-decide --id ${id} --receipt ${recibo.id} --decision approve|reject ` +
     `--actor <nombre> --reason <texto>\``;
+  // La aprobación sin una persona (política por defecto del 2026-10-13): si el código dice que el
+  // análisis o el plan es elegible, el agente la registra y sigue; si la compuerta quedó en review
+  // y la autorización lo permite, decide el revisor. Lo demás sigue siendo de una persona.
+  const porAutorizacion = (etapa: "analysis" | "plan", destino: string): NextStep | null => {
+    let e;
+    try {
+      e = elegibilidadDeAprobacion({ paths, ticketId: id, etapa });
+    } catch {
+      return null;
+    }
+    const fase = etapa === "plan" ? "aprobación del plan" : "compuerta de análisis";
+    const ratifica =
+      "No se le pregunta a nadie: la persona lo ratifica en lote antes de cerrar " +
+      `(\`valmen ratify --id ${id}\`).`;
+    if (e.elegible && e.autorizacion !== null) {
+      const quien =
+        e.autorizacion.id === POLITICA_POR_DEFECTO_ID
+          ? "la política por defecto"
+          : `la autorización ${e.autorizacion.id}`;
+      return paso(
+        fase,
+        [
+          `Lo aprueba ${quien}: \`valmen approve-by-authorization --id ${id} --stage ${etapa}\`, ` +
+            `y después ${mover(destino)}. ${ratifica}`,
+        ],
+        { noHacer: [NO_CODIGO_SIN_APROBAR] },
+      );
+    }
+    if (e.derivableAlRevisor) {
+      return paso(
+        fase,
+        [
+          `La compuerta \`${etapa}\` quedó en review: la decide el revisor con ` +
+            `\`valmen review-agent --id ${id} --stage ${etapa} --producer <tu modelo> --record\` ` +
+            "(`--producer` solo si no hay registro de fase con el modelo que escribió el artefacto). Si aprueba, " +
+            `${mover(destino)}; si rechaza, corrige lo que señala en una sola pasada y vuelve a evaluar. ${ratifica}`,
+        ],
+        { noHacer: [NO_CODIGO_SIN_APROBAR] },
+      );
+    }
+    return null;
+  };
+
+  /** El revisor ya aprobó el review de este recibo: lo que sigue es mover el ticket. */
+  const aprobadoPorRevisor = (recibo: GateReceipt, destino: string): NextStep | null =>
+    (recibo as ReciboConRevisor).reviewerDecision?.decision === "approve"
+      ? paso(destino === "approved" ? "aprobación del plan" : "compuerta de análisis", [
+          `El revisor aprobó el review (${citar(recibo)}): ${mover(destino)}. La persona lo ` +
+            `ratifica en lote antes de cerrar (\`valmen ratify --id ${id}\`).`,
+        ])
+      : null;
+
   // El avance a `planned` y a `approved` con la compuerta en `block` sin decisión humana lo
   // rechaza `transition` (R-CDEF-004): este paso dice cómo se autoriza, para que quien se
   // topa con el rechazo no tenga que adivinarlo. Con una decisión ya registrada no hay
@@ -260,6 +315,10 @@ export function computeNextStep(
         );
       }
       if (veredicto.tipo === "espera-persona") {
+        const automatico =
+          aprobadoPorRevisor(veredicto.recibo, "planned") ??
+          porAutorizacion("analysis", "planned");
+        if (automatico !== null) return automatico;
         return paso("compuerta de análisis", [], {
           alto:
             `la decisión sobre el análisis es de una persona (${citar(veredicto.recibo)}). ` +
@@ -325,6 +384,12 @@ export function computeNextStep(
         );
       }
       if (veredicto.tipo === "espera-persona") {
+        const automatico =
+          aprobadoPorRevisor(veredicto.recibo, "approved") ??
+          (aprobadoEnPlan ? null : porAutorizacion("plan", "approved"));
+        if (automatico !== null) return automatico;
+      }
+      if (veredicto.tipo === "espera-persona") {
         if (aprobadoEnPlan) {
           return paso("aprobación del plan", [], {
             alto:
@@ -342,6 +407,10 @@ export function computeNextStep(
             `${mover("approved")}.${critico} ${SALVEDAD_DE_DELEGACION}`,
           noHacer: [NO_CODIGO_SIN_APROBAR],
         });
+      }
+      if (!aprobadoEnPlan) {
+        const automatico = porAutorizacion("plan", "approved");
+        if (automatico !== null) return automatico;
       }
       return paso(
         "aprobación del plan",

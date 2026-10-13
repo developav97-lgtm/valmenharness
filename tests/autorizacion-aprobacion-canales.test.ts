@@ -22,6 +22,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { approvalAuthorizeCommand } from "../packages/cli/src/commands.js";
 import {
+  POLITICA_POR_DEFECTO_ID,
   autorizacionDeAprobacionQueCubre,
   canjearCodigoDeAutorizacionDeAprobacion,
   emitirCodigoDeAutorizacionDeAprobacion,
@@ -214,14 +215,15 @@ describe("la escritura HTTP", () => {
       await post(base, "/api/approval/authorizations", cuerpoDeCrear())
     ).json()) as { authorization: { id: string } };
     const ticket = { type: "BUGFIX", module: "POS", riskLevel: "normal" };
-    expect(autorizacionDeAprobacionQueCubre(root, ticket)).not.toBeNull();
+    expect(autorizacionDeAprobacionQueCubre(root, ticket)?.id).toBe(creada.authorization.id);
     const r = await post(base, "/api/approval/authorizations/revoke", {
       id: creada.authorization.id,
       actor: "Juan Andrade",
       quote: "Revoco: ya no quiero cierres por agente",
     });
     expect(r.status).toBe(200);
-    expect(autorizacionDeAprobacionQueCubre(root, ticket)).toBeNull();
+    // Revocada, ya no la cubre: desde el 2026-10-13 la cubre la política por defecto (pedido del PO).
+    expect(autorizacionDeAprobacionQueCubre(root, ticket)?.id).toBe(POLITICA_POR_DEFECTO_ID);
     expect(leerAutorizacionesDeAprobacion(root)[0]!.estado).toBe("revocada");
   });
 });
