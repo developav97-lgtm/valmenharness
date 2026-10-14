@@ -3,31 +3,17 @@
 # Generado desde Mission Control. Los comentarios escritos a mano en este
 # archivo se pierden al guardarlo desde la aplicación: para conservarlos,
 # edítalo con un editor de texto y no desde la interfaz.
+#
+# Solo quedan fijados los cuatro roles que el perfil claude-code-completo manda a
+# OpenRouter con modelos que no son Jev (kimi, deepseek, gpt-5.6-luna): aquí van
+# con la suscripción de Claude. Las fases del agente, el arquitecto, el
+# orquestador y las especificaciones de UI siguen al perfil; el evaluador de
+# compuertas y el verificador siguen en Jev.
 
 preset: quality
 # Máxima calidad. Para trabajo crítico o cuando el coste no importa.
 
 roles:
-  agent-analysis:
-    provider: claude-code
-    model: claude-opus-5-5
-    effort: high
-  agent-implementation:
-    provider: claude-code
-    model: claude-sonnet-5-5
-    effort: high
-  agent-plan:
-    provider: claude-code
-    model: claude-opus-5-5
-    effort: high
-  agent-verification:
-    provider: claude-code
-    model: claude-haiku-4-5-20251001
-    effort: auto
-  architect:
-    provider: claude-code
-    model: claude-sonnet-5-5
-    effort: high
   escalation:
     provider: claude-code
     model: claude-sonnet-5-5
@@ -36,19 +22,11 @@ roles:
     provider: claude-code
     model: claude-haiku-4-5-20251001
     effort: medium
-  orchestrator:
-    provider: claude-code
-    model: claude-sonnet-5-5
-    effort: high
   producer:
     provider: claude-code
     model: claude-haiku-4-5-20251001
     effort: medium
   reviewer:
-    provider: claude-code
-    model: claude-sonnet-5-5
-    effort: medium
-  ui-specs:
     provider: claude-code
     model: claude-sonnet-5-5
     effort: medium
