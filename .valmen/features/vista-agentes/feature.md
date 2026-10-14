@@ -2,9 +2,9 @@
 schema_version: 2
 id: vista-agentes
 title: Vista Agentes: escenas animadas de la ejecución, sesión principal y preguntas pendientes
-state: decomposed
+state: complete
 created: 2026-10-08
-updated: 2026-10-08
+updated: 2026-10-14
 ---
 
 # Vista Agentes: escenas animadas de la ejecución, sesión principal y preguntas pendientes

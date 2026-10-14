@@ -2,9 +2,9 @@
 schema_version: 2
 id: perfiles-de-modelos
 title: Perfiles de modelos por fase y por ejecutor
-state: decomposed
+state: complete
 created: 2026-10-07
-updated: 2026-10-07
+updated: 2026-10-14
 ---
 
 # Perfiles de modelos por fase y por ejecutor
