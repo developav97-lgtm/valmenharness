@@ -4,8 +4,8 @@ id: BUGFIX-ENGINE-AVISOS-WORKTREE-ENGANOSOS-20261014
 title: Avisos engañosos de worktree, Recompilado fijo y quedó a medias falso en un create abortado
 type: BUGFIX
 module: ENGINE
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -125,7 +125,33 @@ Ninguno.
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación delegada de BUGFIX-ENGINE-AVISOS-WORKTREE-ENGANOSOS-20261014",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta verificar sus criterios.",
+    "expected": "Los criterios del ticket se cumplen y sus pruebas dan el resultado esperado.",
+    "evidence": [
+      "EVIDENCE-001"
+    ],
+    "affected_files": [
+      "packages/cli/src/worktree.ts",
+      "packages/engine/src/worktree-integrar.ts",
+      "packages/engine/src/worktree.ts",
+      "tests/worktree-avisos.test.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -149,28 +175,81 @@ Ninguno.
 - Validación manual (C18), ya hecha por el agente con el CLI del worktree (`node packages/cli/dist/main.js`, tras `npm run build`) sobre dos repositorios git temporales fuera del repo, con HOME temporal. (1) Proyecto sin `tsconfig.build.json` ni `node_modules/@valmen`: `journey worktree create` → 0; `journey worktree integrate` → 0 con «Índice de tickets: sin cambios. Sin recompilar: el proyecto no tiene la receta de compilación del harness (tsconfig.build.json o node_modules/@valmen en la raíz).». (2) Proyecto con `tsconfig.build.json` y sin `node_modules`: `journey worktree create` → 3 con «No hay …/node_modules que clonar: instala las dependencias en el checkout principal.», sin «quedó a medias», sin ramas `valmen/*`, con un solo worktree (el principal) y `.claude/worktrees` vacía. Para repetirla: armar esos dos repositorios con un ticket commiteado en `main` y correr los mismos comandos; resultado esperado: los mismos textos y códigos de salida.
 - No hay validación en SaiOpenCloud: el ticket no la autoriza.
 
+- Resultado del PO: sí, córrelos, ciérralo y sube todo. Las pruebas del ticket las ejecutó el agente y dieron el resultado esperado: vitest worktree-avisos: 1 archivo 6 pasadas; bateria de worktree e integracion: 9 archivos 145 pasadas; npx --no-install tsc --build: exit 0; suite completa: 5520 pruebas en verde; las dos reproducciones las repitio el agente con el arreglo
+
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-14",
+    "build_reference": "commit:8189d810e13e8d90cb9255c559ffce1c7d1b9bfa",
+    "environment": "local: macOS, Node 24, git; repositorios temporales; sin red, sin claves y sin modelos",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-14",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "sí, córrelos, ciérralo y sube todo"
+  }
+]
 ```
 
 ## Evidencia
 
 ```json
-[]
+[
+  {
+    "id": "EVIDENCE-001",
+    "date": "2026-10-14",
+    "kind": "automated-test",
+    "description": "vitest worktree-avisos: 1 archivo 6 pasadas; bateria de worktree e integracion: 9 archivos 145 pasadas; npx --no-install tsc --build: exit 0; suite completa: 5520 pruebas en verde; las dos reproducciones las repitio el agente con el arreglo",
+    "reference": "worktree:sha256:2661042865b3a00181cf882f3c4f54eae294b45119a3e7829191bd9be3eb37cc",
+    "point_id": "POINT-001"
+  }
+]
 ```
 
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-14",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "sí, córrelos, ciérralo y sube todo"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-14",
+    "technical_summary": "integrate dice Recompilado solo si corrio la receta y si no, Sin recompilar; deshacer de un create abortado marca rama y reserva como deshechas y el catch no la repite, asi que no inventa un residuo y uno real se informa una vez.",
+    "functional_summary": "Los mensajes de journey worktree integrate y de un create abortado dicen lo que de verdad paso; los codigos de salida no cambian.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "Solo mensajes del CLI y del motor: sin migracion, sincronizacion ni despliegue. Se revierte con el commit del ticket."
+  }
+]
 ```
 
 ## Consumo de IA
@@ -191,6 +270,36 @@ Ninguno.
     "source": "manual:subagente opus de la corrida orquestada 4bafa011; la sesión no expone los tokens del subagente",
     "confidence": "low",
     "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-14",
+    "session_reference": "4bafa011-0b4c-4a99-9312-df4519e031cc",
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. Sesión **compartida**: trabajó 9 tickets (BUGFIX-ENGINE-RAMA-BASE-RESTOS-20261014 ×32, FEATURE-WEB-TEMA-TOKENS-20261014 ×32, BUGFIX-ENGINE-WORKTREE-RAMA-BASE-20261014 ×31, BUGFIX-ENGINE-AVISOS-WORKTREE-ENGANOSOS-20261014 ×27, FEATURE-WEB-VIVO-PROCESOS-20261014 ×23), así que su costo no se reparte y acá no se registran números. Costo completo de la sesión: no declarado por el proveedor, 2987344 tokens (sin los subagentes con ticket propio). Registralo en el ticket cuya sesión sea propia, o declaralo compartido donde corresponda. Sesión \"Rediseño visual del harness\".",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "claude:4bafa011-0b4c-4a99-9312-df4519e031cc",
+    "confidence": "high",
+    "id": "CONSUMO-002"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-14",
+    "session_reference": "4bafa011-0b4c-4a99-9312-df4519e031cc/agent-a6eab09a569f90d49",
+    "model": "anthropic/claude-opus-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 19 intervención(es) sobre el registro, 0 con fallo. 19 de 61 mensajes tocaron el registro. Subagente de la sesión 4bafa011-0b4c-4a99-9312-df4519e031cc; su gasto no está en la madre. Duró 13 min. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 7854762 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 180152,
+    "output_tokens": 40089,
+    "total_tokens": 220241,
+    "estimated_cost_usd": null,
+    "source": "claude:4bafa011-0b4c-4a99-9312-df4519e031cc/agent-a6eab09a569f90d49",
+    "confidence": "high",
+    "id": "CONSUMO-003"
   }
 ]
 ```
@@ -310,6 +419,150 @@ Sin publicar todavía.
     "action": "delivery-size",
     "actor": "cli",
     "details": "{\"añadidas\":205,\"borradas\":2,\"total\":207,\"tope\":600,\"pasaElTope\":false,\"via\":\"worktree\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-14",
+    "at": "2026-10-14T20:50:27.116Z",
+    "action": "agent-decisions-ratified",
+    "actor": "cli",
+    "details": "{\"actor\":\"juan andrade\",\"quote\":\"sí, córrelos, ciérralo y sube todo\",\"source\":\"cli\",\"ratifica\":[\"D-001\",\"D-002\",\"EVENT-006\"]}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-14",
+    "at": "2026-10-14T20:50:29.290Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-14",
+    "at": "2026-10-14T20:50:29.648Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-14",
+    "at": "2026-10-14T20:50:29.835Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-14",
+    "at": "2026-10-14T20:50:30.015Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-14",
+    "at": "2026-10-14T20:50:30.192Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-14",
+    "at": "2026-10-14T20:50:30.364Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-14",
+    "at": "2026-10-14T20:50:30.541Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-14",
+    "at": "2026-10-14T20:50:30.764Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-14",
+    "at": "2026-10-14T20:50:31.006Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-14",
+    "at": "2026-10-14T20:50:31.179Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-14",
+    "at": "2026-10-14T20:50:31.352Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-025",
+    "date": "2026-10-14",
+    "at": "2026-10-14T20:50:31.523Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-026",
+    "date": "2026-10-14",
+    "at": "2026-10-14T20:50:31.694Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-027",
+    "date": "2026-10-14",
+    "at": "2026-10-14T20:50:31.866Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-028",
+    "date": "2026-10-14",
+    "at": "2026-10-14T20:50:32.037Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
