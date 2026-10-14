@@ -4,7 +4,7 @@ id: FEATURE-WEB-VIVO-AGENTES-20261014
 title: Agentes con titular, pregunta pendiente y selector de mundo
 type: FEATURE
 module: WEB
-workflow_status: awaiting_user_tests
+workflow_status: in_qa
 qa_status: pending
 release_status: unreleased
 user_visible: false
@@ -196,6 +196,8 @@ Ninguno.
 - Tras traer main (commit de fusión 13b890d): `npm run build`, las 18 pruebas de interfaz (con `tests/portafolio-vista.test.ts`, `tests/trabajo-features.test.ts` y `tests/vista-tickets-turno.test.ts`: 372 en verde), `node scripts/verificar-interfaz.mjs` («Interfaz verificada.») y las capturas de `evidencia/` rehechas sobre el resultado fusionado; con datos reales, Agentes, Tickets, Features, Portafolio e Inicio pintan.
 - Validaciones manuales para el responsable: abrir `#/agentes` con una corrida orquestada en marcha; con un subagente que pregunte (AskUserQuestion) ver el aviso ámbar y el titular «…, 1 te pregunta algo»; pulsar «Responder en la sesión» y comprobar que la indicación sigue abierta tras el refresco de 5 s; cambiar de mundo; mirar la vista a 390 px.
 - Hallazgo ajeno al ticket (no se corrigió): con mucha actividad en el registro, cada evento del flujo dispara `marcarPendientes` (`/api/standards`, `/api/tickets`, `/api/inicio`) y el servidor tarda en responder, así que cualquier vista puede tardar varios segundos en pintar; se vio también con el servidor de otra rama.
+
+- Resultado del PO: pasaron — «se ejecutaron los comandos de prueba y pasan correctamente» (juan andrade, Mission Control, 2026-10-14)
 
 ## QA
 
@@ -412,6 +414,33 @@ Sin publicar todavía.
     "action": "delivery-size",
     "actor": "cli",
     "details": "{\"añadidas\":995,\"borradas\":112,\"total\":1107,\"tope\":600,\"pasaElTope\":true,\"via\":\"worktree\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-14",
+    "at": "2026-10-14T14:47:35.341Z",
+    "action": "gate-approved",
+    "actor": "cli",
+    "details": "Gate plan aprobado por juan andrade (recibo GR-20261014-FEATURE-WEB-VIVO-AGENTES-20261014-plan-1, canal mission-control, decidida 2026-10-14T14:47:35.325Z): se revisa y pasa lo pedido"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-14",
+    "at": "2026-10-14T14:48:43.774Z",
+    "action": "user-tests-result",
+    "actor": "cli",
+    "details": "juan andrade anotó el resultado de sus pruebas: pasaron."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-14",
+    "at": "2026-10-14T14:48:44.244Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
   }
 ]
 ```
