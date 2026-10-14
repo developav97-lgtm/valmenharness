@@ -42,6 +42,7 @@ const RUTAS = [
   "PUT /api/perfiles/seleccion",
   "GET /api/events",
   "GET /api/tickets",
+  "GET /api/inicio",
   "GET /api/tickets/:id",
   "GET /api/tickets/:id/executions",
   "GET /api/tickets/:id/executions/:executionId/messages",
