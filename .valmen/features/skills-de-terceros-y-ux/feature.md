@@ -2,9 +2,9 @@
 schema_version: 2
 id: skills-de-terceros-y-ux
 title: Skills de terceros, revisión de UX y CodeGraph
-state: decomposed
+state: complete
 created: 2026-10-07
-updated: 2026-10-07
+updated: 2026-10-14
 ---
 
 # Skills de terceros, revisión de UX y CodeGraph

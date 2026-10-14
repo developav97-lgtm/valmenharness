@@ -2,9 +2,9 @@
 schema_version: 2
 id: aprobacion-autonoma-de-planes
 title: Aprobación autónoma de planes y análisis
-state: decomposed
+state: complete
 created: 2026-10-07
-updated: 2026-10-07
+updated: 2026-10-14
 ---
 
 # Aprobación autónoma de planes y análisis

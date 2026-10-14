@@ -1708,16 +1708,246 @@
         border-color: var(--alerta);
         color: var(--alerta);
       }
-      .tarjeta-estandar {
-        border: 1px solid var(--borde);
-        border-radius: 6px;
-        margin-bottom: 12px;
-        padding: 12px;
+      /* Estándares por estado (R-VIVO-004), como el boceto `assets/estandares.html`:
+         pestañas con cuenta y una fila plegable por estándar. Solo tokens: el ámbar es
+         «lo decidió una persona», el cian el id, el verde «en vigor». Prefijo `est-`. */
+      .est {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        max-width: 1240px;
       }
-      .tarjeta-estandar .nombre {
-        font-size: 15px;
+      .est-titulos {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .est-migas {
+        font-family: var(--mono);
+        font-size: 13px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--codigo);
+      }
+      .est-migas span {
+        color: var(--tenue);
+      }
+      .est-titulo {
+        margin: 0;
+        font-family: var(--fuente-titulo);
         font-weight: 600;
-        margin: 6px 0;
+        font-size: 38px;
+        line-height: 1.08;
+        text-transform: none;
+        letter-spacing: normal;
+        color: var(--texto);
+      }
+      .est-bajada {
+        margin: 0;
+        color: var(--tenue);
+        font-size: 16px;
+        max-width: 70ch;
+      }
+      .est-barra {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .est-pestanas {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        padding: 4px;
+        border-radius: 12px;
+        background: var(--fondo-2);
+        border: 1px solid var(--borde);
+      }
+      .est-pestana {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        height: 36px;
+        padding: 0 14px;
+        border: 0;
+        border-radius: 9px;
+        background: transparent;
+        color: var(--tenue);
+        font-size: 14px;
+        cursor: pointer;
+      }
+      .est-pestana.elegida {
+        background: var(--panel-alto);
+        color: var(--texto);
+        box-shadow: inset 0 0 0 1px var(--borde);
+      }
+      .est-cuenta {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--tenue);
+      }
+      .est-pestana.elegida .est-cuenta-ok {
+        color: var(--ok);
+      }
+      .est-cuenta-persona {
+        color: var(--persona);
+      }
+      .est-origen {
+        font-size: 13.5px;
+        color: var(--tenue);
+        overflow-wrap: anywhere;
+      }
+      .est-origen b {
+        color: var(--texto);
+      }
+      .est-ruta {
+        font-family: var(--mono);
+      }
+      .est-bloque .est-ruta {
+        font-size: 13px;
+        color: var(--tenue);
+      }
+      .est-lista {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        border-radius: 14px;
+        border: 1px solid var(--borde);
+        background: var(--panel);
+        overflow: hidden;
+      }
+      .est-item {
+        border-bottom: 1px solid var(--borde);
+      }
+      .est-item:last-child {
+        border-bottom: 0;
+      }
+      .est-fila {
+        box-sizing: border-box;
+        width: 100%;
+        display: grid;
+        grid-template-columns: 76px minmax(0, 1fr) 110px 22px;
+        gap: 14px;
+        align-items: center;
+        padding: 14px 18px;
+        border: 0;
+        background: transparent;
+        color: var(--texto);
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+      .est-fila:hover {
+        background: var(--panel-alto);
+      }
+      .est-id {
+        font-family: var(--mono);
+        font-size: 13px;
+        color: var(--codigo);
+      }
+      .est-nombre {
+        font-weight: 600;
+        min-width: 0;
+      }
+      .est-fecha {
+        font-family: var(--mono);
+        font-size: 12.5px;
+        color: var(--tenue);
+      }
+      .est-chevron {
+        justify-self: center;
+        width: 8px;
+        height: 8px;
+        border-right: 2px solid var(--tenue);
+        border-bottom: 2px solid var(--tenue);
+        transform: translateY(-2px) rotate(45deg);
+        transition: transform 0.15s ease;
+      }
+      .est-fila[aria-expanded="true"] .est-chevron {
+        transform: translateY(2px) rotate(225deg);
+      }
+      .est-cuerpo {
+        padding: 0 18px 18px 108px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        font-size: 14.5px;
+      }
+      .est-etiqueta {
+        font-family: var(--mono);
+        font-size: 11.5px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--tenue);
+      }
+      .est-texto {
+        color: var(--texto);
+        overflow-wrap: anywhere;
+      }
+      .est-texto p {
+        margin: 0;
+      }
+      .est-texto p + p {
+        margin-top: 6px;
+      }
+      .est-aviso {
+        font-size: 13.5px;
+        color: var(--tenue);
+      }
+      .est-cita {
+        padding: 10px 14px;
+        border-radius: 10px;
+        background: var(--alerta-suave);
+        border: 1px solid var(--persona);
+      }
+      .est-cita .est-etiqueta {
+        color: var(--persona);
+      }
+      .est-frase {
+        font-style: italic;
+        color: var(--texto);
+      }
+      .est-sin-frase {
+        color: var(--tenue);
+      }
+      .est-acciones {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+      }
+      .est-acciones .ruta,
+      .est-acciones .resultado {
+        flex-basis: 100%;
+      }
+      .est-mas > summary {
+        cursor: pointer;
+        color: var(--tenue);
+      }
+      .est-mas h3 {
+        margin: 14px 0 8px;
+        font-size: 14px;
+      }
+      .est-historial {
+        font-size: 13.5px;
+        color: var(--tenue);
+        padding: 4px 0;
+        overflow-wrap: anywhere;
+      }
+      @media (max-width: 640px) {
+        .est-fila {
+          grid-template-columns: auto minmax(0, 1fr) 22px;
+          grid-template-areas: "id fecha chevron" "nombre nombre nombre";
+          gap: 6px 12px;
+          padding: 12px 14px;
+        }
+        .est-id { grid-area: id; }
+        .est-fecha { grid-area: fecha; justify-self: end; }
+        .est-chevron { grid-area: chevron; }
+        .est-nombre { grid-area: nombre; }
+        .est-cuerpo { padding: 0 14px 14px; }
+        .est-titulo { font-size: 30px; }
       }
 
       /* El tablero de una feature: columnas por dónde está cada ticket.
@@ -1920,20 +2150,6 @@
       .feat-pie { font-size: 13.5px; color: var(--tenue); }
       .feat-detalle { margin-top: 16px; }
       .feat-detalle > summary { cursor: pointer; color: var(--tenue); margin-bottom: 12px; }
-
-      /* Lo ya decidido: se lee, pero no compite con lo que pide una acción. */
-      .tarjeta-estandar.historial {
-        border-left: 3px solid var(--borde);
-        margin: 8px 0 8px 12px;
-        opacity: 0.85;
-      }
-      /* El margen es del historial, no de todo desplegable: puesto como
-         `details > summary` global engordaba los acordeones de un ticket —los
-         dejaba en setenta píxeles de alto— y el usuario lo notó antes que yo. */
-      .historial-estandares > summary {
-        cursor: pointer;
-        margin: 14px 0 8px;
-      }
 
       /* La sección que toca mirar en el estado actual. */
       .acordeon.de-turno {
@@ -4270,6 +4486,404 @@
           letter-spacing: 0.06em;
         }
       }
+      /* ── Agentes: marco (FEATURE-WEB-VIVO-AGENTES-20261014) ──────────────
+         Ceja y titular, aviso ámbar de pregunta, «A la vez», escena enmarcada con
+         pestañas de mundo y la tabla de quién trabaja. Solo tokens del tema: ámbar
+         pregunta una persona, cian la sesión principal, lila trabaja un modelo. */
+      .agm-cabecera {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        gap: 16px;
+        margin-bottom: 20px;
+      }
+      .agm-titulos {
+        flex: 1 1 300px;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .agm-ceja {
+        font-family: var(--mono);
+        font-size: 13px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--acento);
+      }
+      .agm-ceja-sep,
+      .agm-ceja .agm-ceja-vista {
+        color: var(--tenue);
+      }
+      .agm-ceja .agm-ceja-vista {
+        display: inline;
+        margin: 0;
+        font: inherit;
+        letter-spacing: inherit;
+      }
+      .agm-titular {
+        margin: 0;
+        font-family: var(--fuente-titulo);
+        font-weight: 600;
+        font-size: 38px;
+        line-height: 1.08;
+        overflow-wrap: anywhere;
+      }
+      .agm-alavez {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        color: var(--tenue);
+      }
+      .agm-alavez-boton {
+        width: 36px;
+        height: 36px;
+        display: grid;
+        place-items: center;
+        border-radius: 9px;
+        border: 1px solid var(--borde);
+        background: transparent;
+        color: var(--texto);
+        font-size: 18px;
+        line-height: 1;
+        cursor: pointer;
+      }
+      .agm-alavez .agm-alavez-boton:hover:not(:disabled) {
+        border-color: var(--acento);
+        background: var(--panel-hover);
+      }
+      .agm-alavez-cifra {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 44px;
+        justify-content: center;
+        font-family: var(--mono);
+        font-size: 16px;
+        color: var(--texto);
+      }
+      .agm-alavez-deseada {
+        appearance: none;
+        -webkit-appearance: none;
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        padding: 0 4px;
+        font: inherit;
+        color: inherit;
+        cursor: pointer;
+      }
+      .agm-alavez-deseada:hover {
+        border-color: var(--borde);
+      }
+      .agm-solo-lector {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+      .agm-avisos {
+        display: grid;
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+      .agm-aviso {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 14px;
+        padding: 14px 18px;
+        border-radius: 12px;
+        border: 1px solid var(--alerta);
+        background: var(--alerta-suave);
+      }
+      .agm-aviso-cuerpo {
+        flex: 999 1 320px;
+        min-width: 0;
+      }
+      .agm-aviso-id {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--tenue);
+        overflow-wrap: anywhere;
+      }
+      .agm-aviso-texto {
+        font-weight: 600;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+      .agm-aviso-indicacion {
+        margin-top: 6px;
+        font-size: 13.5px;
+        color: var(--texto);
+      }
+      .agm-boton-alerta {
+        min-height: 40px;
+        padding: 0 16px;
+        border: 0;
+        border-radius: 10px;
+        background: var(--alerta);
+        color: var(--sobre-acento);
+        font: 600 14px var(--fuente-texto);
+        white-space: nowrap;
+        cursor: pointer;
+      }
+      .agm-aviso .agm-boton-alerta:hover:not(:disabled) {
+        background: var(--alerta);
+        filter: brightness(1.08);
+      }
+      .agm-avatar {
+        width: 30px;
+        height: 30px;
+        flex: none;
+        border-radius: 50%;
+        display: inline-grid;
+        place-items: center;
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--sobre-acento);
+        background: var(--modelo);
+      }
+      .agm-avatar-principal {
+        background: var(--acento);
+      }
+      .agm-avatar-signo {
+        background: var(--alerta);
+      }
+      .agm-avatar-con-pregunta {
+        box-shadow: 0 0 0 2px var(--panel), 0 0 0 5px var(--alerta);
+      }
+      .agm-escena {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        padding: 18px;
+        margin-bottom: 20px;
+        border-radius: 16px;
+        border: 1px solid var(--borde);
+        background: var(--panel);
+        min-width: 0;
+      }
+      .agm-escena-cabeza {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px;
+      }
+      .agm-escena-titulo {
+        flex: 1;
+        margin: 0;
+        font-size: 18px;
+        font-weight: 600;
+      }
+      .agm-mundos {
+        display: flex;
+        gap: 4px;
+        padding: 4px;
+        max-width: 100%;
+        overflow-x: auto;
+        border-radius: 12px;
+        border: 1px solid var(--borde);
+        background: var(--fondo-2);
+      }
+      .agm-mundo {
+        flex: none;
+        height: 36px;
+        padding: 0 14px;
+        border: 0;
+        border-radius: 9px;
+        background: transparent;
+        color: var(--tenue);
+        font: 14px var(--fuente-texto);
+        cursor: pointer;
+      }
+      .agm-mundos .agm-mundo:hover:not(:disabled) {
+        border-color: transparent;
+        background: var(--panel-hover);
+        color: var(--texto);
+      }
+      .agm-mundos .agm-mundo[aria-selected="true"] {
+        background: var(--panel-alto);
+        color: var(--texto);
+        box-shadow: inset 0 0 0 1px var(--borde);
+      }
+      .agm-escena-marco {
+        padding: 22px 16px;
+        border-radius: 12px;
+        border: 1px solid var(--borde);
+        background: var(--fondo);
+        min-width: 0;
+      }
+      .agm-escena-nota {
+        margin-bottom: 12px;
+        font-family: var(--mono);
+        font-size: 11.5px;
+        color: var(--tenue);
+      }
+      .agm-escena-marco .agm-lienzo {
+        margin: 0 auto;
+      }
+      .agm-escena-principal {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 14px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px dashed var(--acento);
+        font-size: 13.5px;
+      }
+      .corrida-paneles .agm-quien {
+        grid-column: 1 / -1;
+        margin-bottom: 20px;
+        border-radius: 14px;
+        border: 1px solid var(--borde);
+        background: var(--panel);
+      }
+      .agm-quien > h3 {
+        margin: 0;
+        padding: 14px 18px 0;
+        font-size: 15px;
+      }
+      /* La tabla de quién trabaja es la del boceto en cualquier mundo: no toma el
+         papel, la pizarra ni la telemetría que cada mundo pone a cola y entregados,
+         cuyos colores fijos no contrastan con los tokens del tema claro. */
+      .corrida-paneles[data-mundo] .corrida-panel.agm-quien {
+        padding: 0;
+        border: 1px solid var(--borde);
+        border-radius: 14px;
+        background: var(--panel);
+        background-image: none;
+        color: var(--texto);
+        font-family: var(--fuente-texto);
+      }
+      .corrida-paneles[data-mundo] .corrida-panel.agm-quien h3 {
+        font-family: var(--fuente-titulo);
+        font-size: 15px;
+        text-transform: none;
+        letter-spacing: 0;
+        color: var(--texto);
+      }
+      .corrida-paneles[data-mundo] .corrida-panel.agm-quien td,
+      .corrida-paneles[data-mundo] .corrida-panel.agm-quien .id {
+        color: inherit;
+      }
+      .agm-quien .corrida-agente th,
+      .corrida-paneles[data-mundo] .corrida-panel.agm-quien th {
+        background: transparent;
+        color: var(--tenue);
+      }
+      .corrida-paneles[data-mundo] .corrida-panel.agm-quien tbody tr:hover td {
+        background: var(--panel-hover);
+      }
+      .agm-quien .corrida-agente {
+        margin-bottom: 0;
+      }
+      .agm-avisos .corrida-aviso {
+        margin-bottom: 0;
+      }
+      .agm-quien .corrida-agente th {
+        font-family: var(--mono);
+        font-size: 11.5px;
+        font-weight: 500;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--tenue);
+      }
+      .agm-quien .corrida-agente th,
+      .agm-quien .corrida-agente td {
+        padding: 14px 12px;
+        vertical-align: middle;
+      }
+      .agm-quien .corrida-agente tbody tr:last-child td {
+        border-bottom: 0;
+      }
+      .agm-quien .corrida-agente td:first-child {
+        width: 48px;
+        padding-left: 18px;
+      }
+      .agm-quien .corrida-agente .corrida-fase {
+        padding: 0;
+        background: none;
+        color: var(--texto);
+        font-size: 14px;
+      }
+      .agm-fila-titulo {
+        display: block;
+        font-weight: 600;
+        overflow-wrap: anywhere;
+      }
+      .agm-fila-id {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px 10px;
+        margin-top: 2px;
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--tenue);
+        overflow-wrap: anywhere;
+      }
+      .agm-quien .agm-con-pregunta .corrida-fase {
+        color: var(--alerta);
+      }
+      .agm-fase-pregunta {
+        color: var(--alerta);
+        font-weight: 600;
+      }
+      .agm-fase-pregunta::before {
+        content: " · ";
+        color: var(--tenue);
+      }
+      .agm-fila-herramienta {
+        margin-top: 4px;
+        font-family: var(--mono);
+        font-size: 11.5px;
+        color: var(--tenue);
+      }
+      .agm-modelo {
+        font-family: var(--mono);
+        color: var(--modelo);
+      }
+      .agm-quien .corrida-agente td:last-child {
+        font-family: var(--mono);
+        color: var(--tenue);
+      }
+      .agm-cifras {
+        margin-top: 4px;
+      }
+      @media (max-width: 640px) {
+        .agm-titular {
+          font-size: 28px;
+        }
+        .agm-escena {
+          padding: 12px;
+        }
+        .agm-escena-marco {
+          padding: 14px 10px;
+        }
+        .agm-quien .corrida-agente td:first-child {
+          width: auto;
+          padding-left: 0;
+        }
+        .agm-quien .corrida-agente td[data-rotulo="Agente"]::before {
+          display: none;
+        }
+        .corrida-paneles .agm-quien,
+        .corrida-paneles[data-mundo] .corrida-panel.agm-quien {
+          padding: 0 12px 4px;
+        }
+        .agm-quien > h3 {
+          padding: 14px 0 8px;
+        }
+      }
       details {
         margin-top: 12px;
       }
@@ -5401,90 +6015,268 @@
 
       // ── Vista: estándares ─────────────────────────────────────────────────
       //
-      // Las reglas que el proyecto ya decidió y las que están por decidir. Las dos
-      // cosas juntas a propósito: quien aprueba una propuesta necesita ver lo que
-      // ya está en vigor, o aprueba algo que ya existía con otras palabras.
+      // Reglas › Estándares por estado (FEATURE-WEB-REGLAS-ESTANDARES-20261014,
+      // boceto assets/estandares.html). Tres pestañas —en vigor, propuestos,
+      // descartados— y una fila plegable por estándar con su regla, su porqué y la
+      // frase literal de quien lo decidió. La vista no decide nada por nadie: la
+      // única escritura es la de los botones de un propuesto, que pulsa una persona,
+      // y una frase que el registro no tiene no se compone acá (D-003).
+
+      /** La pestaña que se ve; se fija al entrar a la vista (D-006). */
+      let estandaresPestana = "vigor";
+      /** La clave de la fila abierta: una a la vez, la primera al entrar (D-007). */
+      let estandaresAbierto = "";
+
+      const ESTANDARES_PESTANAS = [
+        ["vigor", "En vigor"],
+        ["propuestos", "Propuestos"],
+        ["descartados", "Descartados"],
+      ];
+      const ESTANDARES_MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+      const ESTANDARES_PROPUESTAS = ".valmen/estandares-propuestos.md";
+
+      /** «13 oct» con la primera fecha `AAAA-MM-DD` que haya, o «—» (D-008). */
+      function estandaresFecha(...fechas) {
+        const iso = fechas.find((f) => typeof f === "string" && /^\d{4}-\d{2}-\d{2}/.test(f));
+        if (iso === undefined) return "—";
+        const mes = ESTANDARES_MESES[Number(iso.slice(5, 7)) - 1] ?? "";
+        return `${iso.slice(8, 10)} ${mes}`.trim();
+      }
+
+      /**
+       * Las secciones `## <título>` de un archivo de reglas, con la forma que escribe
+       * `decideProposal`: la regla, `**Por qué:**` y `**Visto en:**`. Una sección con
+       * otra forma se toma entera como regla.
+       */
+      function estandaresSecciones(contenido) {
+        const secciones = [];
+        let actual = null;
+        for (const linea of String(contenido ?? "").split("\n")) {
+          const titulo = /^##\s+(.+)$/.exec(linea);
+          if (titulo !== null) {
+            actual = { titulo: titulo[1].trim(), lineas: [] };
+            secciones.push(actual);
+          } else if (/^#\s/.test(linea)) {
+            actual = null;
+          } else if (actual !== null) {
+            actual.lineas.push(linea);
+          }
+        }
+        return secciones.map(({ titulo, lineas }) => {
+          const partes = { regla: [], porque: [], vistoEn: [] };
+          let destino = partes.regla;
+          for (const linea of lineas) {
+            const porque = /^\*\*Por qué:\*\*\s*(.*)$/.exec(linea);
+            const visto = /^\*\*Visto en:\*\*\s*(.*)$/.exec(linea);
+            if (porque !== null) {
+              destino = partes.porque;
+              destino.push(porque[1]);
+            } else if (visto !== null) {
+              destino = partes.vistoEn;
+              destino.push(visto[1]);
+            } else {
+              destino.push(linea);
+            }
+          }
+          const unir = (lista) => lista.join("\n").trim();
+          return { titulo, regla: unir(partes.regla), porque: unir(partes.porque), vistoEn: unir(partes.vistoEn) };
+        });
+      }
+
+      /**
+       * Las filas de cada pestaña. «En vigor» cruza cada sección de los archivos de
+       * reglas —lo que lee el agente— con la propuesta aceptada del mismo título, de
+       * donde salen el id, la fecha y la frase (D-004).
+       */
+      function estandaresFilas(datos) {
+        const propuestas = Array.isArray(datos?.proposals) ? datos.proposals : [];
+        const archivos = Array.isArray(datos?.standards) ? datos.standards : [];
+        const porId = (a, b) => String(b.id).localeCompare(String(a.id));
+        const desdePropuesta = (p) => ({
+          clave: String(p.id),
+          id: String(p.id),
+          titulo: String(p.title ?? ""),
+          fecha: estandaresFecha(p.date, p.decidedOn),
+          regla: String(p.rule ?? ""),
+          porque: String(p.why ?? ""),
+          vistoEn: Array.isArray(p.tickets) ? p.tickets.join(", ") : "",
+          estado: p.state,
+          decididoEl: String(p.decidedOn ?? ""),
+          frase: String(p.instruction ?? "").trim(),
+          aviso: "",
+          propuesta: p,
+        });
+        const aceptadas = propuestas.filter((p) => p.state === "aceptado");
+        const usadas = new Set();
+        const vigor = [];
+        const sinPropuesta = [];
+        for (const archivo of archivos) {
+          for (const seccion of estandaresSecciones(archivo.content)) {
+            const p = aceptadas.find(
+              (c) => !usadas.has(c.id) && String(c.title ?? "").trim() === seccion.titulo,
+            );
+            if (p === undefined) {
+              sinPropuesta.push({
+                clave: `${archivo.path}#${seccion.titulo}`,
+                id: "—",
+                titulo: seccion.titulo,
+                fecha: "—",
+                regla: seccion.regla,
+                porque: seccion.porque,
+                vistoEn: seccion.vistoEn,
+                estado: "aceptado",
+                decididoEl: "",
+                frase: "",
+                aviso: `Sin decisión registrada en ${ESTANDARES_PROPUESTAS}.`,
+                propuesta: null,
+              });
+              continue;
+            }
+            usadas.add(p.id);
+            const fila = desdePropuesta(p);
+            vigor.push({
+              ...fila,
+              regla: seccion.regla || fila.regla,
+              porque: seccion.porque || fila.porque,
+              vistoEn: seccion.vistoEn || fila.vistoEn,
+            });
+          }
+        }
+        const rutas = archivos.map((a) => a.path).join(", ") || ".valmen/rules/";
+        for (const p of aceptadas) {
+          if (!usadas.has(p.id)) vigor.push({ ...desdePropuesta(p), aviso: `No aparece en ${rutas}.` });
+        }
+        return {
+          vigor: [...vigor.sort(porId), ...sinPropuesta],
+          propuestos: propuestas.filter((p) => p.state === "propuesto").map(desdePropuesta).sort(porId),
+          descartados: propuestas.filter((p) => p.state === "descartado").map(desdePropuesta).sort(porId),
+        };
+      }
+
+      /** Un bloque «Regla» / «Por qué» del cuerpo de una fila. */
+      function estandaresBloque(etiqueta, texto) {
+        const bloque = el("div", undefined, "est-bloque");
+        const cuerpo = el("div", undefined, "est-texto");
+        cuerpo.append(renderMarkdown(texto));
+        bloque.append(el("span", etiqueta, "est-etiqueta"), cuerpo);
+        return bloque;
+      }
+
+      /** La caja ámbar con la frase literal de quien decidió, o el aviso de que no la hay. */
+      function estandaresCita(fila) {
+        const cita = el("div", undefined, "est-cita");
+        if (fila.frase !== "") {
+          cita.append(
+            el(
+              "span",
+              fila.estado === "descartado" ? "Lo descartaste con estas palabras" : "Lo aceptaste con estas palabras",
+              "est-etiqueta",
+            ),
+            el("div", `«${fila.frase}»`, "est-frase"),
+          );
+        } else {
+          cita.append(
+            el("span", "Decisión", "est-etiqueta"),
+            el(
+              "div",
+              fila.decididoEl !== ""
+                ? `Decidido el ${estandaresFecha(fila.decididoEl)}, sin frase registrada.`
+                : "Sin fecha ni frase registradas.",
+              "est-sin-frase",
+            ),
+          );
+        }
+        return cita;
+      }
+
       async function vistaEstandares() {
         const cont = $("contenido");
-        cont.textContent = "";
         const datos = await api("GET", "/api/standards");
+        cont.textContent = "";
+        const filas = estandaresFilas(datos);
+        const archivos = Array.isArray(datos?.standards) ? datos.standards : [];
+        const propuestas = Array.isArray(datos?.proposals) ? datos.proposals : [];
+        estandaresPestana = filas.propuestos.length > 0 ? "propuestos" : "vigor";
+        estandaresAbierto = filas[estandaresPestana][0]?.clave ?? "";
 
-        cont.append(el("h2", "Estándares del proyecto"));
-        cont.append(
+        const pagina = el("div", undefined, "est");
+        const titulos = el("div", undefined, "est-titulos");
+        const migas = el("div", "Reglas ", "est-migas");
+        migas.append(el("span", "· Estándares"));
+        titulos.append(
+          migas,
+          el("h1", "Lo que este proyecto ya decidió", "est-titulo"),
           el(
-            "div",
-            "Cómo se ve y cómo se escribe lo que se construye acá. Están en el AGENTS.md " +
-              "que lee el agente, así que los tiene antes de escribir la primera línea.",
-            "resultado",
+            "p",
+            "Cada regla salió de una corrección. Ábrela para ver por qué existe y con qué palabras la aceptaste.",
+            "est-bajada",
           ),
         );
+        const barra = el("div", undefined, "est-barra");
+        const pestanas = el("div", undefined, "est-pestanas");
+        pestanas.setAttribute("role", "tablist");
+        pestanas.setAttribute("aria-label", "Estándares por estado");
+        const origen = el("div", undefined, "est-origen");
+        barra.append(pestanas, origen);
+        const zona = el("div", undefined, "est-zona");
+        pagina.append(titulos, barra, zona);
 
-        const pendientes = datos.proposals.filter((p) => p.state === "propuesto");
-        if (pendientes.length > 0) {
-          const caja = el("div", undefined, "nota alerta");
-          caja.append(
-            el("strong", `${pendientes.length} propuesta(s) esperando tu decisión. `),
-            el("span", "Una regla sin aprobar no está en vigor y el agente no la aplica."),
+        // Aceptar o descartar lo decide quien pulsa: la misma llamada de siempre,
+        // sin frase, porque la pantalla no tiene palabras que citar (D-001).
+        const decidir = async (propuesta, decision, boton, salida) => {
+          boton.disabled = true;
+          salida.className = "resultado";
+          salida.textContent = "Registrando…";
+          try {
+            const r = await api("POST", `/api/standards/${propuesta.id}/decision`, { decision });
+            salida.className = "resultado ok";
+            salida.textContent = r.details;
+            await vistaEstandares();
+          } catch (fallo) {
+            salida.className = "resultado error";
+            salida.textContent = fallo.message;
+            boton.disabled = false;
+          }
+        };
+
+        const filaDe = (fila) => {
+          const abierta = fila.clave === estandaresAbierto;
+          const item = el("li", undefined, "est-item");
+          const boton = el("button", undefined, "est-fila");
+          boton.type = "button";
+          boton.setAttribute("aria-expanded", String(abierta));
+          boton.append(
+            el("span", fila.id, "est-id"),
+            el("span", fila.titulo, "est-nombre"),
+            el("span", fila.fecha, "est-fecha"),
+            el("span", undefined, "est-chevron"),
           );
-          cont.append(caja);
-        }
+          boton.addEventListener("click", () => {
+            estandaresAbierto = abierta ? "" : fila.clave;
+            pintar();
+          });
+          item.append(boton);
+          if (!abierta) return item;
 
-        // Lo decidido no se mezcla con lo que espera decisión. Una propuesta
-        // aceptada que sigue en la lista de propuestas hace dudar de si se aplicó,
-        // y la que se descartó parece pendiente para siempre: las dos se leen en
-        // el historial, que es donde se busca «¿esto por qué no está?».
-        const porDecidir = datos.proposals.filter((p) => p.state === "propuesto");
-        const decididas = datos.proposals.filter((p) => p.state !== "propuesto");
-
-        // ── Las propuestas: solo las que esperan ──
-        if (porDecidir.length > 0) {
-          cont.append(el("h3", `Propuestas (${porDecidir.length})`));
-          for (const propuesta of porDecidir) {
-            const tarjeta = el("div", undefined, "tarjeta-estandar");
-            const cabecera = el("div", undefined, "meta");
-            cabecera.append(
-              el("span", propuesta.id, "id"),
-              el("span", propuesta.area, "etiqueta"),
-              el("span", propuesta.state, "etiqueta"),
-              el("span", propuesta.date, "id"),
-            );
-            tarjeta.append(cabecera);
-            tarjeta.append(el("div", propuesta.title, "nombre"));
-            tarjeta.append(el("div", `Regla: ${propuesta.rule}`, "resultado"));
-            if (propuesta.why !== "")
-              tarjeta.append(el("div", `Por qué: ${propuesta.why}`, "resultado"));
-            if (propuesta.tickets.length > 0) {
-              tarjeta.append(el("div", `Visto en: ${propuesta.tickets.join(", ")}`, "ruta"));
-            }
-
-            const acciones = el("div", undefined, "responsable");
+          const cuerpo = el("div", undefined, "est-cuerpo");
+          cuerpo.append(estandaresBloque("Regla", fila.regla));
+          if (fila.porque !== "") cuerpo.append(estandaresBloque("Por qué", fila.porque));
+          if (fila.vistoEn !== "") {
+            const visto = el("div", undefined, "est-bloque");
+            visto.append(el("span", "Visto en", "est-etiqueta"), el("div", fila.vistoEn, "est-texto est-ruta"));
+            cuerpo.append(visto);
+          }
+          if (fila.aviso !== "") cuerpo.append(el("div", fila.aviso, "est-aviso"));
+          if (fila.propuesta !== null && fila.estado !== "propuesto") cuerpo.append(estandaresCita(fila));
+          if (fila.estado === "propuesto") {
+            const acciones = el("div", undefined, "est-acciones");
             const aceptar = el("button", "Aceptar y poner en vigor");
+            aceptar.type = "button";
             const descartar = el("button", "Descartar", "enlace");
+            descartar.type = "button";
             const salida = el("div", undefined, "resultado");
-            const decidir = async (decision, boton) => {
-              boton.disabled = true;
-              salida.className = "resultado";
-              salida.textContent = "Registrando…";
-              try {
-                const r = await api(
-                  "POST",
-                  `/api/standards/${propuesta.id}/decision`,
-                  { decision },
-                );
-                salida.className = "resultado ok";
-                salida.textContent = r.details;
-                await vistaEstandares();
-              } catch (fallo) {
-                salida.className = "resultado error";
-                salida.textContent = fallo.message;
-                boton.disabled = false;
-              }
-            };
-            aceptar.addEventListener("click", () => void decidir("aceptado", aceptar));
-            descartar.addEventListener("click", () => void decidir("descartado", descartar));
-            // Las dos puertas, dichas donde se decide: los botones son una, y
-            // pedírselo al agente es la otra. Quien no usa la pantalla tiene que
-            // poder enterarse acá de que también se puede por la conversación.
+            aceptar.addEventListener("click", () => void decidir(fila.propuesta, "aceptado", aceptar, salida));
+            descartar.addEventListener("click", () => void decidir(fila.propuesta, "descartado", descartar, salida));
             acciones.append(
               aceptar,
               descartar,
@@ -5496,83 +6288,101 @@
               ),
               salida,
             );
-            tarjeta.append(acciones);
-            cont.append(tarjeta);
+            cuerpo.append(acciones);
           }
-        }
+          item.append(cuerpo);
+          return item;
+        };
 
-        // ── Los que están en vigor ──
-        cont.append(el("h3", "En vigor"));
-        if (datos.standards.length === 0) {
-          cont.append(
-            el(
-              "div",
-              "Todavía no hay estándares escritos. El agente los propone cuando el trabajo " +
+        const pintar = () => {
+          pestanas.textContent = "";
+          for (const [clave, nombre] of ESTANDARES_PESTANAS) {
+            const elegida = clave === estandaresPestana;
+            const cuenta = filas[clave].length;
+            const pestana = el("button", undefined, `est-pestana${elegida ? " elegida" : ""}`);
+            pestana.type = "button";
+            pestana.setAttribute("role", "tab");
+            pestana.setAttribute("aria-selected", String(elegida));
+            const claseCuenta =
+              clave === "vigor" ? " est-cuenta-ok" : clave === "propuestos" && cuenta > 0 ? " est-cuenta-persona" : "";
+            pestana.append(el("span", nombre), el("span", String(cuenta), `est-cuenta${claseCuenta}`));
+            pestana.addEventListener("click", () => {
+              estandaresPestana = clave;
+              estandaresAbierto = filas[clave][0]?.clave ?? "";
+              pintar();
+            });
+            pestanas.append(pestana);
+          }
+
+          // De dónde sale lo que se ve (D-005).
+          origen.textContent = "";
+          if (estandaresPestana === "vigor" && archivos.length > 0) {
+            for (const archivo of archivos) {
+              const linea = el("div");
+              linea.append(
+                document.createTextNode("Área: "),
+                el("b", String(archivo.area ?? "")),
+                document.createTextNode(" · "),
+                el("span", String(archivo.path ?? ""), "est-ruta"),
+              );
+              origen.append(linea);
+            }
+          } else if (estandaresPestana !== "vigor") {
+            origen.append(document.createTextNode("Archivo: "), el("span", ESTANDARES_PROPUESTAS, "est-ruta"));
+          }
+
+          zona.textContent = "";
+          const actuales = filas[estandaresPestana];
+          if (actuales.length === 0) {
+            const vacios = {
+              vigor:
+                "Todavía no hay estándares escritos. El agente los propone cuando el trabajo " +
                 "le enseña una convención que no está en ninguna parte.",
-              "vacio",
-            ),
-          );
-          return;
-        }
-
-        for (const archivo of datos.standards) {
-          const acordeonEstandar = acordeon(
-            archivo.path.split("/").pop() ?? archivo.area,
-            archivo.area,
-            true,
-          );
-          acordeonEstandar.cuerpo.append(seccionDeTicket(archivo.content));
-          cont.append(acordeonEstandar.caja);
-        }
-
-        // ── El historial: lo que ya se decidió ──
-        //
-        // Cerrado por defecto: no es lo que se viene a hacer acá, y abierto
-        // empujaría hacia abajo lo único que pide una acción. Pero está, con su
-        // fecha y sus palabras, porque «¿por qué no tenemos esta regla?» y «¿esto
-        // quién lo aprobó?» son preguntas que se hacen meses después.
-        if (decididas.length > 0) {
-          const aceptadas = decididas.filter((p) => p.state === "aceptado").length;
-          const historial = document.createElement("details");
-          historial.className = "historial-estandares";
-          historial.append(
-            el(
-              "summary",
-              `Historial — ${decididas.length} decidido(s): ${aceptadas} en vigor, ` +
-                `${decididas.length - aceptadas} descartado(s)`,
-            ),
-          );
-          for (const propuesta of decididas) {
-            const tarjeta = el("div", undefined, "tarjeta-estandar historial");
-            const cabecera = el("div", undefined, "meta");
-            cabecera.append(
-              el("span", propuesta.id, "id"),
-              el("span", propuesta.area, "etiqueta"),
-              el(
-                "span",
-                propuesta.state,
-                propuesta.state === "aceptado" ? "etiqueta aprueba" : "etiqueta",
-              ),
-              el("span", propuesta.date, "id"),
-            );
-            tarjeta.append(cabecera);
-            tarjeta.append(el("div", propuesta.title, "nombre"));
-            tarjeta.append(el("div", `Regla: ${propuesta.rule}`, "resultado"));
-            tarjeta.append(
-              el(
-                "div",
-                propuesta.decidedOn
-                  ? `Decidido el ${propuesta.decidedOn}` +
-                      (propuesta.instruction ? ` — «${propuesta.instruction}»` : "")
-                  : "Decidido",
-                "ruta",
-              ),
-            );
-            tarjeta.append(el("div", `→ ${propuesta.source.path}`, "ruta"));
-            historial.append(tarjeta);
+              propuestos: "No hay estándares propuestos esperando tu decisión.",
+              descartados: "No hay estándares descartados.",
+            };
+            zona.append(el("div", vacios[estandaresPestana], "vacio"));
+            return;
           }
-          cont.append(historial);
+          const lista = el("ul", undefined, "est-lista");
+          for (const fila of actuales) lista.append(filaDe(fila));
+          zona.append(lista);
+        };
+        pintar();
+
+        // Lo que la vista anterior mostraba y las pestañas no repiten: el archivo
+        // de reglas entero, tal como lo lee el agente, y el historial de decisiones
+        // con su fecha. Plegado: se consulta, no es lo que se viene a hacer acá.
+        const decididas = propuestas.filter((p) => p.state !== "propuesto");
+        if (archivos.length > 0 || decididas.length > 0) {
+          const mas = el("details", undefined, "est-mas");
+          mas.append(el("summary", "Más detalle"));
+          if (archivos.length > 0) {
+            mas.append(el("h3", "Archivos de reglas completos"));
+            for (const archivo of archivos) {
+              const caja = acordeon(String(archivo.path ?? "").split("/").pop() || archivo.area, archivo.area);
+              caja.cuerpo.append(seccionDeTicket(String(archivo.content ?? "")));
+              mas.append(caja.caja);
+            }
+          }
+          if (decididas.length > 0) {
+            mas.append(el("h3", "Historial de decisiones"));
+            for (const p of [...decididas].sort((a, b) => String(b.id).localeCompare(String(a.id)))) {
+              const frase = String(p.instruction ?? "").trim();
+              mas.append(
+                el(
+                  "div",
+                  `${p.id} · ${p.state} · ${p.decidedOn || "sin fecha"}` +
+                    (frase !== "" ? ` · «${frase}»` : " · sin frase") +
+                    ` — ${p.title}`,
+                  "est-historial",
+                ),
+              );
+            }
+          }
+          pagina.append(mas);
         }
+        cont.append(pagina);
       }
 
       // ── Vista: features ───────────────────────────────────────────────────
@@ -9750,37 +10560,222 @@
         return celda;
       }
 
-      function tablaDeAgentes(vivos, ahora, tickets) {
+      // ── Agentes: marco (FEATURE-WEB-VIVO-AGENTES-20261014) ──────────────
+      // Titular con las cuentas, aviso de pregunta, «A la vez», escena enmarcada
+      // y tabla de quién trabaja. El motor de escena y los mundos no se tocan.
+
+      /** Las pestañas de mundo en el orden y con los nombres de la spec (D-005). */
+      const agentesMarcoMundos = [
+        ["control", "Sala de control"],
+        ["pasteleria", "Pastelería"],
+        ["invernadero", "Invernadero"],
+      ];
+      const agentesMarcoIndicacion =
+        "La pregunta espera en la sesión de Claude Code que orquesta la corrida: contéstala ahí. Esta pantalla solo la muestra.";
+      const agentesMarcoEstados = { trabajando: "Trabajando", esperando: "Esperando", termino: "Terminó" };
+      /** Las indicaciones desplegadas: el refresco cada 5 s repinta la vista y no debe plegarlas. */
+      const agentesMarcoIndicacionesAbiertas = new Set();
+
+      /** La sesión principal primero y luego los agentes vivos, sin depender del módulo de escena. */
+      function agentesMarcoFilas(agentes) {
+        const lista = agentes ?? [];
+        return [...lista.filter((a) => a.principal === true), ...agentesVivos(lista)];
+      }
+
+      /** Una pregunta abierta: la hay y nadie la respondió todavía. */
+      function agentesMarcoPreguntaAbierta(agente) {
+        const p = agente?.pregunta;
+        return p !== null && p !== undefined && (p.respondidaEn === null || p.respondidaEn === undefined);
+      }
+
+      /** El valor si es un texto con algún carácter no blanco; `null` en otro caso. */
+      function agentesMarcoTextoVisible(valor) {
+        return typeof valor === "string" && valor.trim() !== "" ? valor : null;
+      }
+
+      /** «S» para la sesión principal y «A1…An» para los subagentes, en el orden de la tabla. */
+      function agentesMarcoSiglas(filas) {
+        const siglas = new Map();
+        let n = 0;
+        for (const fila of filas) siglas.set(fila.agente, fila.principal === true ? "S" : `A${(n += 1)}`);
+        return siglas;
+      }
+
+      function agentesMarcoTitular(vivos, preguntas, fallo) {
+        if (fallo) return "Agentes";
+        if (vivos === 0) return "Ningún agente trabajando";
+        const base = `${vivos} ${vivos === 1 ? "agente trabajando" : "agentes trabajando"}`;
+        if (preguntas === 0) return base;
+        return `${base}, ${preguntas} ${preguntas === 1 ? "te pregunta algo" : "te preguntan algo"}`;
+      }
+
+      function agentesMarcoAvatar(sigla, agente) {
+        const clases = ["agm-avatar", agente.principal === true ? "agm-avatar-principal" : "agm-avatar-agente"];
+        if (agentesMarcoPreguntaAbierta(agente)) clases.push("agm-avatar-con-pregunta");
+        const avatar = el("span", sigla, clases.join(" "));
+        avatar.title = agentesMarcoEstados[agente.estado] ?? agente.estado ?? "";
+        return avatar;
+      }
+
+      /** Quién pregunta y en qué fase, para la línea mono del aviso. */
+      function agentesMarcoQuien(agente) {
+        if (agente.principal === true) return "Sesión principal";
+        const fase = fraseDeFase(agente).texto;
+        const quien = agente.ticket ?? agente.agente;
+        return fase === "—" ? quien : `${quien} · ${fase}`;
+      }
+
+      /** El aviso ámbar de una pregunta abierta. El texto es dato ajeno: solo `textContent`. */
+      function agentesMarcoAviso(agente) {
+        const caja = el("div", undefined, "agm-aviso");
+        caja.setAttribute("role", "alert");
+        const signo = el("span", "?", "agm-avatar agm-avatar-signo");
+        signo.setAttribute("aria-hidden", "true");
+        const cuerpo = el("div", undefined, "agm-aviso-cuerpo");
+        cuerpo.append(el("div", agentesMarcoQuien(agente), "agm-aviso-id"));
+        const texto = agentesMarcoTextoVisible(agente.pregunta?.texto);
+        cuerpo.append(el("div", texto ?? "Te hizo una pregunta y espera tu respuesta.", "agm-aviso-texto"));
+        const indicacion = el("div", agentesMarcoIndicacion, "agm-aviso-indicacion");
+        indicacion.id = `agm-indicacion-${String(agente.agente).replace(/[^A-Za-z0-9_-]/g, "")}`;
+        const clave = `${agente.agente}|${agente.pregunta?.desde ?? ""}`;
+        indicacion.hidden = !agentesMarcoIndicacionesAbiertas.has(clave);
+        cuerpo.append(indicacion);
+        const boton = el("button", "Responder en la sesión", "agm-boton-alerta");
+        boton.type = "button";
+        boton.setAttribute("aria-expanded", String(!indicacion.hidden));
+        boton.setAttribute("aria-controls", indicacion.id);
+        boton.addEventListener("click", () => {
+          const abrir = indicacion.hidden === true;
+          indicacion.hidden = !abrir;
+          boton.setAttribute("aria-expanded", String(abrir));
+          if (abrir) agentesMarcoIndicacionesAbiertas.add(clave);
+          else agentesMarcoIndicacionesAbiertas.delete(clave);
+        });
+        caja.append(signo, cuerpo, boton);
+        return caja;
+      }
+
+      /** «A la vez»: −, la cuenta viva sobre la deseada y +. Solo en este navegador. */
+      function agentesMarcoALaVez(vivos) {
+        const control = el("div", undefined, "agm-alavez");
+        const rotulo = el("label", "A la vez", "agm-alavez-rotulo");
+        rotulo.htmlFor = "corrida-simultaneos";
+        const selector = document.createElement("select");
+        selector.id = "corrida-simultaneos";
+        selector.className = "agm-alavez-deseada";
+        selector.setAttribute("aria-label", "Agentes simultáneos deseados");
+        selector.title = "Se recuerda solo en este navegador.";
+        for (let n = 1; n <= 8; n += 1) {
+          const opcion = el("option", String(n));
+          opcion.value = String(n);
+          selector.append(opcion);
+        }
+        selector.value = String(leerSimultaneos());
+        // Para lector de pantalla: «2 / 3» solo se entiende mirándolo.
+        const estado = el("span", undefined, "corrida-cuenta agm-solo-lector");
+        estado.setAttribute("role", "status");
+        const pintar = () => {
+          estado.textContent = `${vivos} de ${selector.value} agentes`;
+        };
+        const fijar = (valor) => {
+          if (!Number.isInteger(valor) || valor < 1 || valor > 8) return;
+          selector.value = String(valor);
+          guardarSimultaneos(valor);
+          pintar();
+        };
+        const boton = (signo, nombre, paso) => {
+          const b = el("button", signo, "agm-alavez-boton");
+          b.type = "button";
+          b.setAttribute("aria-label", nombre);
+          b.addEventListener("click", () => fijar(Number.parseInt(selector.value, 10) + paso));
+          return b;
+        };
+        selector.addEventListener("change", () => fijar(Number.parseInt(selector.value, 10)));
+        const cifra = el("span", undefined, "agm-alavez-cifra");
+        const sep = el("span", "/", "agm-alavez-sep");
+        sep.setAttribute("aria-hidden", "true");
+        const vivosNodo = el("span", String(vivos), "agm-alavez-vivos");
+        vivosNodo.setAttribute("aria-hidden", "true");
+        cifra.append(vivosNodo, sep, selector);
+        pintar();
+        control.append(rotulo, boton("−", "Uno menos", -1), cifra, boton("+", "Uno más", 1), estado);
+        return control;
+      }
+
+      /** Ceja «En vivo · Agentes» (el `h2` que la vista siempre tuvo, D-007), titular y «A la vez». */
+      function agentesMarcoCabecera(titular, vivos) {
+        const cabecera = el("div", undefined, "agm-cabecera");
+        const titulos = el("div", undefined, "agm-titulos");
+        const ceja = el("div", undefined, "agm-ceja");
+        ceja.append(el("span", "En vivo", "agm-ceja-grupo"), el("span", " · ", "agm-ceja-sep"), el("h2", "Agentes", "agm-ceja-vista"));
+        titulos.append(ceja, el("h1", titular, "agm-titular"));
+        cabecera.append(titulos, agentesMarcoALaVez(vivos));
+        return cabecera;
+      }
+
+      /** La celda Ticket: título del registro (o la descripción) en negrita y el id en mono. */
+      function agentesMarcoCeldaTicket(agente, tickets, orquesta) {
+        const celda = el("div", undefined, "agm-fila-ticket");
+        if (agente.principal === true) {
+          celda.append(el("span", "Sesión principal", "agm-fila-titulo"));
+          const detalle = [`orquesta ${orquesta} ${orquesta === 1 ? "ticket" : "tickets"}`, agente.rama].filter(Boolean).join(" · ");
+          celda.append(el("div", detalle, "agm-fila-id"));
+          return celda;
+        }
+        const registro = agente.ticket ? (tickets ?? []).find((t) => t.id === agente.ticket) : undefined;
+        const titulo =
+          agentesMarcoTextoVisible(registro?.title) !== null && registro.title !== agente.ticket
+            ? registro.title
+            : (agentesMarcoTextoVisible(agente.descripcion) ?? agente.ticket ?? agente.agente);
+        celda.append(el("span", titulo, "agm-fila-titulo"));
+        const linea = el("div", undefined, "agm-fila-id");
+        linea.append(el("span", agente.ticket ?? agente.agente, "id"));
+        if (registro !== undefined) linea.append(etiquetaDeEstadoPublico(estadoPublicoDeRegistro(agente.ticket, tickets)));
+        celda.append(linea);
+        if (agentesMarcoTextoVisible(agente.descripcion) !== null && agente.descripcion !== titulo) {
+          celda.append(el("div", agente.descripcion, "nota-agente"));
+        }
+        return celda;
+      }
+
+      function tablaDeAgentes(filas, ahora, tickets) {
         const tabla = el("table", undefined, "corrida-agente");
+        const siglas = agentesMarcoSiglas(filas);
+        const orquesta = new Set(filas.filter((a) => a.principal !== true && a.ticket).map((a) => a.ticket)).size;
         const encabezado = el("thead");
         const fila = el("tr");
-        for (const titulo of ["Ticket", "Fase", "Herramienta", "Modelo", "Tiempo"]) fila.append(el("th", titulo));
+        const primera = el("th");
+        primera.append(el("span", "Agente", "agm-solo-lector"));
+        fila.append(primera);
+        for (const titulo of ["Ticket", "Fase", "Modelo", "Tiempo"]) fila.append(el("th", titulo));
         encabezado.append(fila);
         const cuerpo = el("tbody");
-        for (const agente of vivos) {
+        for (const agente of filas) {
           const tr = el("tr");
-          const ticket = el("div");
-          const punto = el("span", undefined, `corrida-punto ${agente.estado}`);
-          punto.setAttribute("title", agente.estado);
-          ticket.append(punto, el("span", agente.principal === true ? (agente.nombre ?? agente.agente) : (agente.ticket ?? agente.agente), "id"));
-          if (agente.ticket && (tickets ?? []).some((t) => t.id === agente.ticket)) {
-            ticket.append(etiquetaDeEstadoPublico(estadoPublicoDeRegistro(agente.ticket, tickets)));
-          }
-          if (agente.descripcion) ticket.append(el("div", agente.descripcion, "nota-agente"));
-          const fase = fraseDeFase(agente);
+          const clasesDeFila = [];
+          if (agente.principal === true) clasesDeFila.push("agm-fila-principal");
+          if (agentesMarcoPreguntaAbierta(agente)) clasesDeFila.push("agm-con-pregunta");
+          if (clasesDeFila.length > 0) tr.className = clasesDeFila.join(" ");
           const celdaFase = el("div");
-          celdaFase.append(el("span", fase.texto, "corrida-fase"));
-          if (fase.inferida) celdaFase.append(el("span", "inferida", "corrida-inferida"));
-          const hora = horaDe(agente.ultimaHerramientaEn);
-          const herramienta = agente.ultimaHerramienta
-            ? `${agente.ultimaHerramienta}${hora === "" ? "" : ` · ${hora}`}`
-            : "—";
+          if (agente.principal === true) {
+            // La fila principal trae las fases en null: se muestra su estado (D-002).
+            celdaFase.append(el("span", agentesMarcoEstados[agente.estado] ?? agente.estado ?? "—", "corrida-fase"));
+          } else {
+            const fase = fraseDeFase(agente);
+            celdaFase.append(el("span", fase.texto, "corrida-fase"));
+            if (fase.inferida) celdaFase.append(el("span", "inferida", "corrida-inferida"));
+          }
+          if (agentesMarcoPreguntaAbierta(agente)) celdaFase.append(el("span", "pregunta", "agm-fase-pregunta"));
+          if (agente.ultimaHerramienta) {
+            const hora = horaDe(agente.ultimaHerramientaEn);
+            celdaFase.append(el("div", `${agente.ultimaHerramienta}${hora === "" ? "" : ` · ${hora}`}`, "agm-fila-herramienta"));
+          }
           const modelo = [agente.modelo, agente.esfuerzo].filter(Boolean).join(" · ") || "—";
           tr.append(
-            celdaConRotulo("Ticket", ticket),
+            celdaConRotulo("Agente", agentesMarcoAvatar(siglas.get(agente.agente) ?? "A", agente)),
+            celdaConRotulo("Ticket", agentesMarcoCeldaTicket(agente, tickets, orquesta)),
             celdaConRotulo("Fase", celdaFase),
-            celdaConRotulo("Herramienta", herramienta),
-            celdaConRotulo("Modelo", modelo),
+            celdaConRotulo("Modelo", el("span", modelo, "agm-modelo")),
             celdaConRotulo("Tiempo", agente.ultimaHerramientaEn ? haceCuanto(agente.ultimaHerramientaEn, ahora) : "—"),
           );
           cuerpo.append(tr);
@@ -9839,58 +10834,88 @@
         }
       }
 
-      /** El lienzo, el selector de mundo y los avisos de pregunta; los paneles van aparte. */
-      function pintarLienzoDeAgentes(cont, modulo, agentes, ahora, datos) {
+      /**
+       * La escena enmarcada (R-VIVO-002): título, pestañas de mundo, la nota del mundo,
+       * el lienzo único de siempre y la línea de la sesión principal. Elegir una pestaña
+       * cambia el mundo del montaje sin repintar la vista ni pedir nada.
+       */
+      function agentesMarcoEscena(cont, agentes, ahora, datos, conPrincipal) {
         const montaje = montajeDeAgentes;
         if (lienzoDeAgentes === null) {
           lienzoDeAgentes = document.createElement("canvas");
           lienzoDeAgentes.width = 960;
           lienzoDeAgentes.height = 480;
-          lienzoDeAgentes.className = "corrida-lienzo";
+          lienzoDeAgentes.className = "corrida-lienzo agm-lienzo";
           lienzoDeAgentes.setAttribute("aria-label", "Escena animada de los agentes");
         }
-        const avisos = el("div", undefined, "corrida-avisos");
-        const pintarAvisos = () => {
-          avisos.textContent = "";
-          for (const aviso of modulo.avisosDePregunta(agentes, ahora, montaje.mundoActual())) {
-            avisos.append(modulo.cajaDeAviso(document, aviso));
+        const seccion = el("section", undefined, "agm-escena");
+        seccion.setAttribute("aria-label", "Escena de la ejecución");
+        const cabeza = el("div", undefined, "agm-escena-cabeza");
+        const pestanas = el("div", undefined, "agm-mundos");
+        pestanas.setAttribute("role", "tablist");
+        pestanas.setAttribute("aria-label", "Mundo de la escena");
+        const marco = el("div", undefined, "agm-escena-marco");
+        marco.id = "agm-escena-marco";
+        marco.setAttribute("role", "tabpanel");
+        const nota = el("div", montaje.mundoActual().lema, "agm-escena-nota");
+
+        const disponibles = montaje.mundos();
+        const conocidos = agentesMarcoMundos.map(([id]) => id);
+        const orden = [
+          ...conocidos.filter((id) => disponibles.some((m) => m.id === id)),
+          ...disponibles.map((m) => m.id).filter((id) => !conocidos.includes(id)),
+        ];
+        const botones = [];
+        const marcar = () => {
+          const actual = montaje.mundoActual().id;
+          for (const boton of botones) {
+            const elegido = boton.dataset.mundo === actual;
+            boton.setAttribute("aria-selected", String(elegido));
+            boton.tabIndex = elegido ? 0 : -1;
+            if (elegido) marco.setAttribute("aria-labelledby", boton.id);
           }
         };
-        pintarAvisos();
-        const lema = el("div", montaje.mundoActual().lema, "resultado");
-        const selector = el("div", undefined, "corrida-mundos");
-        selector.setAttribute("role", "group");
-        selector.setAttribute("aria-label", "Mundo de la escena");
-        for (const mundo of montaje.mundos()) {
-          const boton = document.createElement("button");
+        const elegir = (id) => {
+          if (!montaje.elegirMundo(id)) return;
+          marcar();
+          nota.textContent = montaje.mundoActual().lema;
+          aplicarMundoAPaneles(cont.querySelector?.(".corrida-paneles"), montaje.mundoActual());
+        };
+        for (const id of orden) {
+          const mundo = disponibles.find((m) => m.id === id);
+          const etiqueta = agentesMarcoMundos.find(([clave]) => clave === id)?.[1] ?? mundo.nombre;
+          const boton = el("button", etiqueta, "agm-mundo");
           boton.type = "button";
-          boton.className = "corrida-mundo";
-          boton.dataset.mundo = mundo.id;
-          boton.setAttribute("aria-pressed", String(mundo.id === montaje.mundoActual().id));
-          const mini = document.createElement("canvas");
-          mini.width = 160;
-          mini.height = 80;
-          mini.setAttribute("aria-hidden", "true");
-          try {
-            const ctx = mini.getContext("2d");
-            if (ctx) mundo.dibujar({ ctx, escena: { agentes: new Map(), t: 0 }, miniatura: true }, 0);
-          } catch {
-            // Una miniatura que no se dibuja no impide elegir el mundo.
-          }
-          boton.append(mini, el("span", mundo.nombre));
-          boton.addEventListener("click", () => {
-            if (!montaje.elegirMundo(mundo.id)) return;
-            for (const otro of selector.querySelectorAll("button")) {
-              otro.setAttribute("aria-pressed", String(otro.dataset.mundo === mundo.id));
-            }
-            lema.textContent = mundo.lema;
-            pintarAvisos();
-            aplicarMundoAPaneles(cont.querySelector?.(".corrida-paneles"), mundo);
+          boton.id = `agm-mundo-${id}`;
+          boton.dataset.mundo = id;
+          boton.setAttribute("role", "tab");
+          boton.setAttribute("aria-controls", marco.id);
+          boton.addEventListener("click", () => elegir(id));
+          // Flechas entre pestañas, como pide el patrón de pestañas.
+          boton.addEventListener("keydown", (evento) => {
+            const paso = evento.key === "ArrowRight" ? 1 : evento.key === "ArrowLeft" ? -1 : 0;
+            if (paso === 0) return;
+            evento.preventDefault?.();
+            const siguiente = (orden.indexOf(id) + paso + orden.length) % orden.length;
+            elegir(orden[siguiente]);
+            botones[siguiente].focus();
           });
-          selector.append(boton);
+          botones.push(boton);
+          pestanas.append(boton);
         }
-        cont.append(avisos, lienzoDeAgentes, selector, lema);
+        marcar();
+        cabeza.append(el("h3", "Escena", "agm-escena-titulo"), pestanas);
+        marco.append(nota, lienzoDeAgentes);
+        if (conPrincipal) {
+          const linea = el("div", undefined, "agm-escena-principal");
+          const sigla = el("span", "S", "agm-avatar agm-avatar-principal");
+          sigla.setAttribute("aria-hidden", "true");
+          linea.append(sigla, el("span", "Sesión principal: reparte e integra · solo ella toca main"));
+          marco.append(linea);
+        }
+        seccion.append(cabeza, marco);
         montaje.montar(lienzoDeAgentes, agentes, ahora, datos);
+        return seccion;
       }
 
       async function vistaCorrida() {
@@ -9932,75 +10957,54 @@
         const kpis = kpisDeCorrida({ agentes, tickets, filas });
         const ahora = Date.now();
 
-        cont.textContent = "";
-        cont.append(el("h2", "Agentes"));
+        const filasDelMarco = agentesMarcoFilas(agentes);
+        const preguntas = filasDelMarco.filter(agentesMarcoPreguntaAbierta);
 
-        // Barra: agentes vivos frente a los simultáneos que quiere el PO. El valor
-        // vive solo en este navegador: no hay ninguna llamada de escritura.
-        const barra = el("div", undefined, "corrida-barra");
-        const cuenta = el("span", undefined, "corrida-cuenta");
-        const selector = document.createElement("select");
-        selector.id = "corrida-simultaneos";
-        selector.setAttribute("aria-label", "Agentes simultáneos");
-        const actual = leerSimultaneos();
-        for (let n = 1; n <= 8; n += 1) {
-          const opcion = el("option", String(n));
-          opcion.value = String(n);
-          selector.append(opcion);
-        }
-        selector.value = String(actual);
-        const pintarCuenta = (simultaneos) => {
-          cuenta.textContent = `${vivos.length} de ${simultaneos} agentes`;
-        };
-        pintarCuenta(actual);
-        selector.addEventListener("change", () => {
-          const valor = Number.parseInt(selector.value, 10);
-          if (!Number.isInteger(valor)) return;
-          guardarSimultaneos(valor);
-          pintarCuenta(valor);
-        });
-        const etiqueta = el("label", "Simultáneos");
-        etiqueta.htmlFor = "corrida-simultaneos";
-        barra.append(cuenta, etiqueta, selector, el("span", "Se recuerda solo en este navegador.", "resultado"));
-        cont.append(barra);
+        cont.textContent = "";
+        // Ceja, titular con las cuentas y «A la vez» (R-VIVO-001). La deseada vive
+        // solo en este navegador: no hay ninguna llamada de escritura.
+        cont.append(
+          agentesMarcoCabecera(agentesMarcoTitular(vivos.length, preguntas.length, avisoDeAgentes !== null), vivos.length),
+        );
 
         if (avisoDeAgentes !== null) cont.append(el("div", avisoDeAgentes, "nota alerta"));
+
+        // Las preguntas, arriba de la escena: las abiertas en el aviso ámbar del marco y,
+        // con el módulo de escena, las recién respondidas en la caja verde de siempre.
+        const avisos = el("div", undefined, "agm-avisos");
+        for (const fila of filasDelMarco) if (agentesMarcoPreguntaAbierta(fila)) avisos.append(agentesMarcoAviso(fila));
+        if (moduloDeEscena !== null && montajeDeAgentes !== null) {
+          const modulo = moduloDeEscena;
+          const respondidas = filasDelMarco.filter((fila) => fila.pregunta?.respondidaEn);
+          for (const aviso of modulo.avisosDePregunta(respondidas, ahora, montajeDeAgentes.mundoActual())) {
+            avisos.append(modulo.cajaDeAviso(document, aviso));
+          }
+        }
+        if (avisos.children.length > 0) cont.append(avisos);
 
         const hayJornada = filas.length > 0;
         if (!hayJornada && agentes.length === 0) {
           montajeDeAgentes?.desmontar();
           cont.append(el("div", "No hay corrida en marcha: ninguna jornada programada y ningún agente activo. Cuando la sesión reparta tickets en subagentes aparecerán aquí.", "vacio"));
         } else {
-          const tarjetas = el("div", undefined, "tarjetas");
-          for (const [rotulo, valor] of [
-            ["entregados", kpis.entregados],
-            ["cerrados", kpis.cerrados],
-            ["esperan al PO", kpis.esperanAlPO],
-            ["trabajando", kpis.trabajando],
-            ["en cola", kpis.enCola],
-            ["aprobaciones pendientes", kpis.aprobacionesPendientes],
-          ]) {
-            const tarjeta = el("div", undefined, "tarjeta");
-            tarjeta.append(el("div", String(valor), "valor"), el("div", rotulo, "rotulo"));
-            tarjetas.append(tarjeta);
-          }
-          cont.append(tarjetas);
-
           if (moduloDeEscena !== null && montajeDeAgentes !== null) {
             if (proyectoDelMontaje !== proyectoDeLaSolicitud) {
               montajeDeAgentes.desmontar();
               montajeDeAgentes.reiniciar();
               proyectoDelMontaje = proyectoDeLaSolicitud;
             }
-            pintarLienzoDeAgentes(cont, moduloDeEscena, agentes, ahora, {
+            const datosDeEscena = {
               cola: kpis.cola.map((fila) => fila.ticketId),
               entregados: kpis.entregadosIds,
               tickets: ticketsDeLaEscena(agentes, filas, tickets),
-            });
+            };
+            const conPrincipal = agentes.some((a) => a.principal === true);
+            cont.append(agentesMarcoEscena(cont, agentes, ahora, datosDeEscena, conPrincipal));
           }
 
           const paneles = el("div", undefined, "corrida-paneles");
-          const panelVivos = el("div", undefined, "corrida-panel");
+          // El panel de quién trabaja ocupa el ancho completo, debajo de la escena (R-VIVO-002).
+          const panelVivos = el("div", undefined, "corrida-panel agm-quien");
           const panelCola = el("div", undefined, "corrida-panel");
           const panelEntregados = el("div", undefined, "corrida-panel");
           paneles.append(panelVivos, panelCola, panelEntregados);
@@ -10012,9 +11016,8 @@
             return titulo;
           };
           panelVivos.append(tituloDe("agentes"));
-          const filasDePanel = moduloDeEscena !== null ? moduloDeEscena.filasDePanelAgentes(agentes) : vivos;
-          if (filasDePanel.length === 0) panelVivos.append(el("div", "Ningún agente trabajando ahora.", "vacio"));
-          else panelVivos.append(tablaDeAgentes(filasDePanel, ahora, tickets));
+          if (filasDelMarco.length === 0) panelVivos.append(el("div", "Ningún agente trabajando ahora.", "vacio"));
+          else panelVivos.append(tablaDeAgentes(filasDelMarco, ahora, tickets));
 
           panelCola.append(tituloDe("cola"));
           if (kpis.cola.length === 0) {
@@ -10053,6 +11056,21 @@
             }
             panelEntregados.append(contenedor);
           }
+          // Las seis cifras de la corrida, debajo de la tabla (D-004).
+          const tarjetas = el("div", undefined, "tarjetas agm-cifras");
+          for (const [rotulo, valor] of [
+            ["entregados", kpis.entregados],
+            ["cerrados", kpis.cerrados],
+            ["esperan al PO", kpis.esperanAlPO],
+            ["trabajando", kpis.trabajando],
+            ["en cola", kpis.enCola],
+            ["aprobaciones pendientes", kpis.aprobacionesPendientes],
+          ]) {
+            const tarjeta = el("div", undefined, "tarjeta");
+            tarjeta.append(el("div", String(valor), "valor"), el("div", rotulo, "rotulo"));
+            tarjetas.append(tarjeta);
+          }
+          cont.append(tarjetas);
           if (moduloDeEscena !== null && montajeDeAgentes !== null) aplicarMundoAPaneles(paneles, montajeDeAgentes.mundoActual());
         }
 
