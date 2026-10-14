@@ -4,8 +4,8 @@ id: FEATURE-WEB-INICIO-DECISIONES-20261014
 title: Inicio con lo que espera una decisión de la persona
 type: FEATURE
 module: WEB
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -151,7 +151,34 @@ Ninguno.
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación delegada de FEATURE-WEB-INICIO-DECISIONES-20261014",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta verificar sus criterios.",
+    "expected": "Los criterios del ticket se cumplen y sus pruebas dan el resultado esperado.",
+    "evidence": [
+      "EVIDENCE-001"
+    ],
+    "affected_files": [
+      "packages/server/web/index.html",
+      "packages/server/src/inicio.ts",
+      "packages/server/src/server.ts",
+      "tests/inicio-decisiones.test.ts",
+      "tests/api-rutas.test.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -184,28 +211,81 @@ Contrato de pruebas para el responsable.
   5. Con un proyecto elegido en el selector, «Ahora mismo» lista los agentes vivos con su barra de 8 pasos, fase y modelo.
 - Revisión de presentación: `revisar_presentacion` → «Colores fijos — nada que avisar».
 
+- Resultado del PO: ya he estado verificando y yo veo casi todo bien; podrias correr las ratificaciones y cerrar. Las pruebas del ticket las ejecutó el agente y dieron el resultado esperado: npx vitest run: 5481 pruebas en verde; node scripts/verificar-interfaz.mjs: Interfaz verificada; tests/inicio-decisiones.test.ts; tests/ancho-vistas.test.ts: la vista llena el ancho a 2000 px
+
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-14",
+    "build_reference": "commit:bf9cb463ca84842f5d8c287a7216f6e67b4db693",
+    "environment": "local: Mission Control con valmen serve, Chrome, modo oscuro y claro",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-14",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "ya he estado verificando y yo veo casi todo bien; podrias correr las ratificaciones y cerrar"
+  }
+]
 ```
 
 ## Evidencia
 
 ```json
-[]
+[
+  {
+    "id": "EVIDENCE-001",
+    "date": "2026-10-14",
+    "kind": "automated-test",
+    "description": "npx vitest run: 5481 pruebas en verde; node scripts/verificar-interfaz.mjs: Interfaz verificada; tests/inicio-decisiones.test.ts; tests/ancho-vistas.test.ts: la vista llena el ancho a 2000 px",
+    "reference": "worktree:sha256:cee2010d2c9fe8e4ad7cfd7544ff15df278b6eda9f4598c6acf1232bb272a5aa",
+    "point_id": "POINT-001"
+  }
+]
 ```
 
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-14",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "ya he estado verificando y yo veo casi todo bien; podrias correr las ratificaciones y cerrar"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-14",
+    "technical_summary": "Ruta de solo lectura GET /api/inicio (packages/server/src/inicio.ts) y vista Inicio que abre por defecto con lo que espera una decision, lo que corre ahora y lo hecho hoy.",
+    "functional_summary": "Al abrir Mission Control se ve primero lo que espera la decision de la persona, con tarjetas que abren el ticket correspondiente.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "Solo visual en la interfaz local de Mission Control; sin migracion, sincronizacion ni despliegue. Se revierte con el commit del ticket."
+  }
+]
 ```
 
 ## Consumo de IA
@@ -226,6 +306,21 @@ Contrato de pruebas para el responsable.
     "source": "manual:la sesión del subagente de Claude Code no expone su agregado de tokens",
     "confidence": "medium",
     "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-14",
+    "session_reference": "4bafa011-0b4c-4a99-9312-df4519e031cc/agent-a72db9144efd1a344",
+    "model": "anthropic/claude-opus-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 25 intervención(es) sobre el registro, 2 con fallo. 25 de 152 mensajes tocaron el registro. Subagente de la sesión 4bafa011-0b4c-4a99-9312-df4519e031cc; su gasto no está en la madre. Duró 432 min. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 32223287 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 575107,
+    "output_tokens": 84445,
+    "total_tokens": 659552,
+    "estimated_cost_usd": null,
+    "source": "claude:4bafa011-0b4c-4a99-9312-df4519e031cc/agent-a72db9144efd1a344",
+    "confidence": "high",
+    "id": "CONSUMO-002"
   }
 ]
 ```
@@ -381,6 +476,141 @@ Sin publicar todavía.
     "action": "delivery-size",
     "actor": "cli",
     "details": "{\"añadidas\":1020,\"borradas\":4,\"total\":1024,\"tope\":600,\"pasaElTope\":true,\"via\":\"worktree\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:09:51.310Z",
+    "action": "agent-decisions-ratified",
+    "actor": "cli",
+    "details": "{\"actor\":\"juan andrade\",\"quote\":\"podrias correr las ratificaciones y cerrar\",\"source\":\"cli\",\"ratifica\":[\"D-001\",\"D-002\",\"D-003\",\"D-004\",\"D-005\",\"EVENT-010\"]}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:09:54.224Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:09:54.486Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:09:54.762Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:09:54.994Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:09:55.251Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:09:55.486Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:09:55.861Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-025",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:09:56.203Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-026",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:09:56.422Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-027",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:09:56.633Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-028",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:09:56.853Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-029",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:09:57.084Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-030",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:09:57.300Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-031",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:09:57.524Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```

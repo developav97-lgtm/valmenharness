@@ -2,7 +2,7 @@
 schema_version: 2
 id: rediseno-mission-control
 title: Rediseño de Mission Control: estilo sala de control, menú por grupos y pantallas más fáciles de usar
-state: decomposed
+state: complete
 created: 2026-10-14
 updated: 2026-10-14
 ---

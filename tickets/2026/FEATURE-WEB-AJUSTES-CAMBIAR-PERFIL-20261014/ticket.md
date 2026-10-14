@@ -4,8 +4,8 @@ id: FEATURE-WEB-AJUSTES-CAMBIAR-PERFIL-20261014
 title: Cambiar de perfil con vista previa de lo que cambia
 type: FEATURE
 module: WEB
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -198,7 +198,33 @@ Ninguno.
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación delegada de FEATURE-WEB-AJUSTES-CAMBIAR-PERFIL-20261014",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta verificar sus criterios.",
+    "expected": "Los criterios del ticket se cumplen y sus pruebas dan el resultado esperado.",
+    "evidence": [
+      "EVIDENCE-006"
+    ],
+    "affected_files": [
+      "packages/server/web/index.html",
+      "scripts/verificar-interfaz.mjs",
+      "tests/vista-cambiar-perfil.test.ts",
+      "tests/vista-modelos-ajustes.test.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -244,10 +270,33 @@ Contrato de pruebas para el responsable.
   5. A 1440 px, en oscuro y en claro, comparar con `.valmen/features/rediseno-mission-control/assets/modelos-cambiar-perfil.png` con las diferencias listadas en «Implementación»; a 390 px no debe haber desplazamiento horizontal.
 - Resultado local: hecho con Chrome sin pantalla por CDP sobre los datos reales del worktree (evidencia en `evidencia/`); `shasum` de `.valmen/routing.yaml` y `.valmen/profiles.yaml` igual antes y después.
 
+- Resultado del PO: ya he estado verificando y yo veo casi todo bien; podrias correr las ratificaciones y cerrar. Las pruebas del ticket las ejecutó el agente y dieron el resultado esperado: npx vitest run: 5481 pruebas en verde; node scripts/verificar-interfaz.mjs: Interfaz verificada; tests/vista-cambiar-perfil.test.ts; tests/ancho-vistas.test.ts: la vista llena el ancho a 2000 px
+
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-14",
+    "build_reference": "commit:bf9cb463ca84842f5d8c287a7216f6e67b4db693",
+    "environment": "local: Mission Control con valmen serve, Chrome, modo oscuro y claro",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-14",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "ya he estado verificando y yo veo casi todo bien; podrias correr las ratificaciones y cerrar"
+  }
+]
 ```
 
 ## Evidencia
@@ -293,6 +342,14 @@ Contrato de pruebas para el responsable.
     "description": "Chrome sin pantalla por CDP a 390 px en oscuro y claro (evidencia/cambiar-perfil-390-oscuro-codex.png, evidencia/cambiar-perfil-390-claro-codex.png): scrollWidth 390 = innerWidth, sin desplazamiento horizontal; tarjetas en una columna y filas de la tabla apiladas. En el navegador, «Que también siga al perfil» mostró las diferencias de .valmen/routing.yaml (- agent-implementation…) sin pulsar Confirmar, y «Solo cuando trabajo con un cliente» mostró el selector «Cliente»; sha256 de .valmen/routing.yaml y .valmen/profiles.yaml igual antes y después.",
     "reference": null,
     "point_id": null
+  },
+  {
+    "id": "EVIDENCE-006",
+    "date": "2026-10-14",
+    "kind": "automated-test",
+    "description": "npx vitest run: 5481 pruebas en verde; node scripts/verificar-interfaz.mjs: Interfaz verificada; tests/vista-cambiar-perfil.test.ts; tests/ancho-vistas.test.ts: la vista llena el ancho a 2000 px",
+    "reference": "worktree:sha256:23ac079b195cdeb191d637d80690776bb397b6a2c8448dcba748c16470a3d701",
+    "point_id": "POINT-001"
   }
 ]
 ```
@@ -300,13 +357,34 @@ Contrato de pruebas para el responsable.
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-14",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "ya he estado verificando y yo veo casi todo bien; podrias correr las ratificaciones y cerrar"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-14",
+    "technical_summary": "Pantalla #/modelos/perfil con tarjetas por perfil, tabla Ahora a Despues solo con lo que cambia, aviso de fases cambiadas en el proyecto y aplicacion con PUT /api/perfiles/seleccion.",
+    "functional_summary": "Se puede elegir otro perfil y ver que modelo cambia de cual antes de aplicarlo.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "Solo visual en la interfaz local de Mission Control; sin migracion, sincronizacion ni despliegue. Se revierte con el commit del ticket."
+  }
+]
 ```
 
 ## Consumo de IA
@@ -327,6 +405,21 @@ Contrato de pruebas para el responsable.
     "source": "manual:sesión de subagente Claude Code (claude-opus-5-5) sin números expuestos; análisis, plan e implementación en la misma sesión de este ticket",
     "confidence": "low",
     "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-14",
+    "session_reference": "4bafa011-0b4c-4a99-9312-df4519e031cc/agent-a74643bce9fe6a606",
+    "model": "anthropic/claude-opus-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 31 intervención(es) sobre el registro, 0 con fallo. 31 de 127 mensajes tocaron el registro. Subagente de la sesión 4bafa011-0b4c-4a99-9312-df4519e031cc; su gasto no está en la madre. Duró 27 min. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 27828263 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 339471,
+    "output_tokens": 117622,
+    "total_tokens": 457093,
+    "estimated_cost_usd": null,
+    "source": "claude:4bafa011-0b4c-4a99-9312-df4519e031cc/agent-a74643bce9fe6a606",
+    "confidence": "high",
+    "id": "CONSUMO-002"
   }
 ]
 ```
@@ -563,6 +656,141 @@ Sin publicar todavía.
     "action": "delivery-size",
     "actor": "cli",
     "details": "{\"añadidas\":777,\"borradas\":13,\"total\":790,\"tope\":600,\"pasaElTope\":true,\"via\":\"worktree\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-026",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:10:04.533Z",
+    "action": "agent-decisions-ratified",
+    "actor": "cli",
+    "details": "{\"actor\":\"juan andrade\",\"quote\":\"podrias correr las ratificaciones y cerrar\",\"source\":\"cli\",\"ratifica\":[\"D-001\",\"D-002\",\"D-003\",\"D-004\",\"D-005\",\"D-006\",\"D-007\",\"D-008\",\"D-009\",\"EVENT-014\"]}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-027",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:10:07.424Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-028",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:10:07.701Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-029",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:10:07.941Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-030",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:10:08.206Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-031",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:10:08.445Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-032",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:10:08.671Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-033",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:10:09.084Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-006."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-034",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:10:09.461Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-035",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:10:09.749Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-036",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:10:10.026Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-037",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:10:10.333Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-038",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:10:10.632Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-039",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:10:10.860Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-040",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:10:11.085Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```

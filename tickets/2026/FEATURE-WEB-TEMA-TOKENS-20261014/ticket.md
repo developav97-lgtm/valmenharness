@@ -4,8 +4,8 @@ id: FEATURE-WEB-TEMA-TOKENS-20261014
 title: Tema sala de control con tokens, fuentes locales y modo claro
 type: FEATURE
 module: WEB
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -149,19 +149,45 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
       <!-- test: node scripts/verificar-interfaz.mjs -->
 - [x] C16 (R-MARCO-001): el paquete del servidor compila con el nuevo tipo de `statics`
       <!-- test: npx tsc -p packages/server/tsconfig.json --noEmit -->
-- [ ] C17 (R-MARCO-001): en modo oscuro a 1440 px la pantalla Tickets toma la paleta de `inicio.png`
+- [x] C17 (R-MARCO-001): en modo oscuro a 1440 px la pantalla Tickets toma la paleta de `inicio.png`
       <!-- verify: manual -->
-- [ ] C18 (R-MARCO-001): en modo claro a 1440 px la pantalla Tickets toma los valores claros de los tokens
+- [x] C18 (R-MARCO-001): en modo claro a 1440 px la pantalla Tickets toma los valores claros de los tokens
       <!-- verify: manual -->
-- [ ] C19 (R-MARCO-001): al abrir Mission Control el navegador no pide nada a `fonts.googleapis.com`
+- [x] C19 (R-MARCO-001): al abrir Mission Control el navegador no pide nada a `fonts.googleapis.com`
       <!-- verify: manual -->
-- [ ] C20 (R-MARCO-001): `revisar_presentacion` no avisa de colores a mano en el cambio
+- [x] C20 (R-MARCO-001): `revisar_presentacion` no avisa de colores a mano en el cambio
       <!-- verify: manual -->
 
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación delegada de FEATURE-WEB-TEMA-TOKENS-20261014",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta verificar sus criterios.",
+    "expected": "Los criterios del ticket se cumplen y sus pruebas dan el resultado esperado.",
+    "evidence": [
+      "EVIDENCE-006"
+    ],
+    "affected_files": [
+      "packages/server/web/index.html",
+      "packages/server/src/server.ts",
+      "packages/cli/src/main.ts",
+      "tests/tema-tokens.test.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -201,10 +227,33 @@ Validaciones manuales (C17-C20 sin marcar hasta que el responsable las confirme;
 4. `revisar_presentacion` (herramienta MCP `valmen`) sobre el cambio: «nada que avisar» (C20).
 Lo que no se cambia en este ticket: la estructura del menú y de cada vista sigue siendo la actual; solo cambian la paleta, el fondo y las tipografías.
 
+- Resultado del PO: ya he estado verificando y yo veo casi todo bien; podrias correr las ratificaciones y cerrar. Las pruebas del ticket las ejecutó el agente y dieron el resultado esperado: npx vitest run: 5481 pruebas en verde, incluida tests/tema-tokens.test.ts; node scripts/verificar-interfaz.mjs: Interfaz verificada; el PO reviso las pantallas en el navegador
+
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-14",
+    "build_reference": "commit:bf9cb463ca84842f5d8c287a7216f6e67b4db693",
+    "environment": "local: Mission Control con valmen serve, Chrome, modo oscuro y claro",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-14",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "ya he estado verificando y yo veo casi todo bien; podrias correr las ratificaciones y cerrar"
+  }
+]
 ```
 
 ## Evidencia
@@ -250,6 +299,14 @@ Lo que no se cambia en este ticket: la estructura del menú y de cada vista sigu
     "description": "Revisión de UX de 1 archivo(s) de interfaz (packages/server/web/index.html); 0 color(es) fijo(s). Skills: ui-ux-pro-max no declarada (el proyecto no la declara en external-skills); impeccable no declarada (el proyecto no la declara en external-skills). Sin informe de Impeccable.",
     "reference": null,
     "point_id": null
+  },
+  {
+    "id": "EVIDENCE-006",
+    "date": "2026-10-14",
+    "kind": "automated-test",
+    "description": "npx vitest run: 5481 pruebas en verde, incluida tests/tema-tokens.test.ts; node scripts/verificar-interfaz.mjs: Interfaz verificada; el PO reviso las pantallas en el navegador",
+    "reference": "worktree:sha256:4f2ed8593034e50f91d883392f9c158761b3758b18a393589e2f00307fab134c",
+    "point_id": "POINT-001"
   }
 ]
 ```
@@ -257,13 +314,34 @@ Lo que no se cambia en este ticket: la estructura del menú y de cada vista sigu
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-14",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "ya he estado verificando y yo veo casi todo bien; podrias correr las ratificaciones y cerrar"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-14",
+    "technical_summary": "Tokens del tema sala de control en :root con su version clara, fondo con cuadricula, 9 fuentes woff2 locales servidas como bytes con font/woff2, y los ocho colores a mano reemplazados por tokens.",
+    "functional_summary": "Mission Control se ve con el estilo sala de control, en oscuro y claro, con las tipografias Chakra Petch e IBM Plex sin depender de la red.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "Solo visual en la interfaz local; sin migracion, sincronizacion ni despliegue. Se revierte con el commit del ticket."
+  }
+]
 ```
 
 ## Consumo de IA
@@ -284,6 +362,36 @@ Lo que no se cambia en este ticket: la estructura del menú y de cada vista sigu
     "source": "manual:subagente-ticket-tema-tokens",
     "confidence": "low",
     "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-14",
+    "session_reference": "4bafa011-0b4c-4a99-9312-df4519e031cc",
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. Sesión **compartida**: trabajó 6 tickets (FEATURE-WEB-TEMA-TOKENS-20261014 ×32, FEATURE-WEB-VIVO-PROCESOS-20261014 ×23, FEATURE-WEB-VIVO-AGENTES-20261014 ×18, FEATURE-WEB-MENU-GRUPOS-20261014 ×15, FEATURE-WEB-TRABAJO-PORTAFOLIO-20261014 ×13), así que su costo no se reparte y acá no se registran números. Costo completo de la sesión: no declarado por el proveedor, 1050839 tokens (sin los subagentes con ticket propio). Registralo en el ticket cuya sesión sea propia, o declaralo compartido donde corresponda. Sesión \"Rediseño visual del harness\".",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "claude:4bafa011-0b4c-4a99-9312-df4519e031cc",
+    "confidence": "high",
+    "id": "CONSUMO-002"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-14",
+    "session_reference": "4bafa011-0b4c-4a99-9312-df4519e031cc/agent-a723d2bed6b30ff32",
+    "model": "anthropic/claude-opus-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 35 intervención(es) sobre el registro, 0 con fallo. 35 de 119 mensajes tocaron el registro. Subagente de la sesión 4bafa011-0b4c-4a99-9312-df4519e031cc; su gasto no está en la madre. Duró 32 min. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 20498674 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 426769,
+    "output_tokens": 77582,
+    "total_tokens": 504351,
+    "estimated_cost_usd": null,
+    "source": "claude:4bafa011-0b4c-4a99-9312-df4519e031cc/agent-a723d2bed6b30ff32",
+    "confidence": "high",
+    "id": "CONSUMO-003"
   }
 ]
 ```
@@ -466,6 +574,159 @@ Sin publicar todavía.
     "action": "delivery-size",
     "actor": "cli",
     "details": "{\"añadidas\":680,\"borradas\":62,\"total\":742,\"tope\":600,\"pasaElTope\":true,\"via\":\"worktree\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:09:06.126Z",
+    "action": "agent-decisions-ratified",
+    "actor": "cli",
+    "details": "{\"actor\":\"juan andrade\",\"quote\":\"podrias correr las ratificaciones y cerrar\",\"source\":\"cli\",\"ratifica\":[\"D-001\",\"D-002\",\"EVENT-008\"]}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:09:09.436Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:09:10.102Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:09:10.450Z",
+    "action": "criteria-marked",
+    "actor": "cli",
+    "details": "Criterio(s) manual(es) marcado(s) por la confirmación de quien los probó (4): «C17 (R-MARCO-001): en modo oscuro a 1440 px la pantalla Tick», «C18 (R-MARCO-001): en modo claro a 1440 px la pantalla Ticke», «C19 (R-MARCO-001): al abrir Mission Control el navegador no », «C20 (R-MARCO-001): `revisar_presentacion` no avisa de colore». Palabras: «ya he estado verificando y yo veo casi todo bien; podrias correr las ratificaciones y cerrar»"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:09:10.741Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-025",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:09:11.131Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-026",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:09:11.436Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-027",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:09:11.743Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-028",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:09:12.019Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-029",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:09:12.431Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-006."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-030",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:09:12.844Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-031",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:09:13.167Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-032",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:09:13.434Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-033",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:09:13.724Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-034",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:09:13.975Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-035",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:09:14.289Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-036",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:09:14.528Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```

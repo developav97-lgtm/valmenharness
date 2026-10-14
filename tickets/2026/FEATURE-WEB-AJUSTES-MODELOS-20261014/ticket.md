@@ -4,8 +4,8 @@ id: FEATURE-WEB-AJUSTES-MODELOS-20261014
 title: Vista Modelos con perfil activo, roles agrupados y aviso de cliente
 type: FEATURE
 module: WEB
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -178,7 +178,31 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación delegada de FEATURE-WEB-AJUSTES-MODELOS-20261014",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta verificar sus criterios.",
+    "expected": "Los criterios del ticket se cumplen y sus pruebas dan el resultado esperado.",
+    "evidence": [
+      "EVIDENCE-006"
+    ],
+    "affected_files": [
+      "packages/server/web/index.html",
+      "tests/vista-modelos-ajustes.test.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -211,10 +235,33 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
   - «Cambiar de perfil» abre «Avanzado» con el foco en «Perfil del proyecto»; «Duplicar y editar» abre el editor del perfil activo.
 - Resultado local: los comandos 1-3 pasaron (EVIDENCE-001, EVIDENCE-002); las validaciones manuales se hicieron con Chrome sin pantalla y en el navegador (EVIDENCE-003 a EVIDENCE-005), sin confirmar «Volver al perfil» sobre el archivo real.
 
+- Resultado del PO: ya he estado verificando y yo veo casi todo bien; podrias correr las ratificaciones y cerrar. Las pruebas del ticket las ejecutó el agente y dieron el resultado esperado: npx vitest run: 5481 pruebas en verde; node scripts/verificar-interfaz.mjs: Interfaz verificada; tests/vista-modelos-ajustes.test.ts
+
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-14",
+    "build_reference": "commit:bf9cb463ca84842f5d8c287a7216f6e67b4db693",
+    "environment": "local: Mission Control con valmen serve, Chrome, modo oscuro y claro",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-14",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "ya he estado verificando y yo veo casi todo bien; podrias correr las ratificaciones y cerrar"
+  }
+]
 ```
 
 ## Evidencia
@@ -260,6 +307,14 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
     "description": "Recorrido en el navegador (127.0.0.1:4877/#/modelos): «Volver al perfil» en Implementación muestra solo las 4 líneas de agent-implementation que se quitarían de .valmen/routing.yaml; se pulsó Cancelar (no se confirmó: routing.yaml sin cambios). «Declarar» con Claude Code pide ?ejecutor=claude y muestra «valmen resume --cliente claude»; «Cambiar» vuelve al aviso. «Cambiar de perfil» abre Avanzado con el foco en «Perfil del proyecto»; «Duplicar y editar» abre «Nuevo perfil a partir de claude-code-completo».",
     "reference": null,
     "point_id": null
+  },
+  {
+    "id": "EVIDENCE-006",
+    "date": "2026-10-14",
+    "kind": "automated-test",
+    "description": "npx vitest run: 5481 pruebas en verde; node scripts/verificar-interfaz.mjs: Interfaz verificada; tests/vista-modelos-ajustes.test.ts",
+    "reference": "worktree:sha256:9395018fd5794283a16038f53e5d29b9ff4f9520e233a6079b650c4640babac6",
+    "point_id": "POINT-001"
   }
 ]
 ```
@@ -267,13 +322,34 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-14",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "ya he estado verificando y yo veo casi todo bien; podrias correr las ratificaciones y cerrar"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-14",
+    "technical_summary": "Vista Modelos con tarjeta del perfil activo, fases del agente, coordinacion y compuertas agrupadas con el origen de cada modelo, aviso de cliente y Volver al perfil con diferencias antes de escribir.",
+    "functional_summary": "Modelos abre con el perfil activo y dice de donde sale el modelo de cada trabajo; lo avanzado queda plegado.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "Solo visual en la interfaz local de Mission Control; sin migracion, sincronizacion ni despliegue. Se revierte con el commit del ticket."
+  }
+]
 ```
 
 ## Consumo de IA
@@ -294,6 +370,21 @@ la adivinanza. Si no hay ninguno, escribí «Ninguno» y seguí. -->
     "source": "manual:subagente de Claude Code sin agregado de tokens expuesto",
     "confidence": "low",
     "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-14",
+    "session_reference": "4bafa011-0b4c-4a99-9312-df4519e031cc/agent-a5d0e4fdb9d598f45",
+    "model": "anthropic/claude-opus-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 30 intervención(es) sobre el registro, 3 con fallo. 30 de 139 mensajes tocaron el registro. Subagente de la sesión 4bafa011-0b4c-4a99-9312-df4519e031cc; su gasto no está en la madre. Duró 489 min. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 28587842 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 568049,
+    "output_tokens": 107913,
+    "total_tokens": 675962,
+    "estimated_cost_usd": null,
+    "source": "claude:4bafa011-0b4c-4a99-9312-df4519e031cc/agent-a5d0e4fdb9d598f45",
+    "confidence": "high",
+    "id": "CONSUMO-002"
   }
 ]
 ```
@@ -494,6 +585,141 @@ Sin publicar todavía.
     "action": "delivery-size",
     "actor": "cli",
     "details": "{\"añadidas\":848,\"borradas\":18,\"total\":866,\"tope\":600,\"pasaElTope\":true,\"via\":\"worktree\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:09:58.016Z",
+    "action": "agent-decisions-ratified",
+    "actor": "cli",
+    "details": "{\"actor\":\"juan andrade\",\"quote\":\"podrias correr las ratificaciones y cerrar\",\"source\":\"cli\",\"ratifica\":[\"D-001\",\"D-002\",\"D-003\",\"D-004\",\"D-005\",\"EVENT-010\"]}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:10:00.745Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:10:01.042Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-025",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:10:01.305Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-026",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:10:01.558Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-027",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:10:01.836Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-028",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:10:02.106Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-029",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:10:02.402Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-006."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-030",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:10:02.699Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-031",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:10:02.930Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-032",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:10:03.156Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-033",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:10:03.374Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-034",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:10:03.607Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-035",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:10:03.842Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-036",
+    "date": "2026-10-14",
+    "at": "2026-10-14T15:10:04.070Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
