@@ -146,6 +146,14 @@ import { readExecutionPanel, readExecutionVisibleMessages } from "./execution-pa
 import { readSourceFreshness } from "./source-freshness.js";
 import { esSesionValida, leerAgentesDeCorrida } from "./agentes.js";
 import { leerInicio } from "./inicio.js";
+import { anotarResultadoDelResponsable, decisionesPorRatificar } from "@valmen/engine";
+import {
+  type PestanaDeTurno,
+  contarPorTurno,
+  contratoDePruebas,
+  enPestana,
+  turnoDelTicket,
+} from "./turno.js";
 import {
   approveGate,
   listGateRows,
@@ -483,6 +491,17 @@ export async function handleApi(
   ) {
     const params = query ?? new URLSearchParams();
     const filas = listTickets(paths);
+    // El turno de cada ticket (R-TRA-001): quién lo tiene y en qué paso de los ocho está. La
+    // pestaña elegida filtra antes que el resto, para que el límite cuente sobre ella.
+    const turnos = new Map(filas.map((fila) => [fila.id, turnoDelTicket(paths, fila.id)]));
+    const conTurno = (fila: (typeof filas)[number]) => ({
+      workflowStatus: fila.workflowStatus,
+      turno: turnos.get(fila.id) ?? null,
+    });
+    const pestana = params.get("turno");
+    const enLaPestana = ["activos", "persona", "agente", "cerrados"].includes(pestana ?? "")
+      ? filas.filter((fila) => enPestana(pestana as PestanaDeTurno, conTurno(fila)))
+      : filas;
     const filtros: TicketFilters = {
       ...(params.get("workflow") === null
         ? {}
@@ -519,10 +538,11 @@ export async function handleApi(
     return {
       status: 200,
       body: {
-        summary: summarize(filas),
-        tickets: filterTickets(filas, filtros).map((fila) => ({
+        summary: { ...summarize(filas), porTurno: contarPorTurno(filas.map(conTurno)) },
+        tickets: filterTickets(enLaPestana, filtros).map((fila) => ({
           ...fila,
           publicState: estadoPublicoOVacio(paths, fila.id),
+          turno: turnos.get(fila.id) ?? null,
         })),
       },
     };
@@ -1331,10 +1351,80 @@ export async function handleApi(
     if (detalle === null) {
       return { status: 404, body: { error: `No existe el ticket "${partes[2]}".` } };
     }
+    let porRatificar: string[] = [];
+    try {
+      const ubicado = findTicket(paths, detalle.id);
+      if (ubicado !== undefined) {
+        porRatificar = decisionesPorRatificar(parseTicket(ubicado.text)).map((p) => p.resumen);
+      }
+    } catch {
+      porRatificar = [];
+    }
     return {
       status: 200,
-      body: { ...detalle, publicState: estadoPublicoOVacio(paths, detalle.id) },
+      body: {
+        ...detalle,
+        publicState: estadoPublicoOVacio(paths, detalle.id),
+        // El ciclo de ocho pasos y «Te toca» (R-TRA-002): campos añadidos, nada se quita.
+        turno: turnoDelTicket(paths, detalle.id),
+        porRatificar,
+        contratoDePruebas: contratoDePruebas(detalle.sections),
+      },
     };
+  }
+
+  // POST /api/tickets/:id/pruebas-del-responsable
+  //
+  // El resultado de las pruebas del responsable desde «Te toca» (R-TRA-002). Es una acción de una
+  // persona: exige su nombre y su frase literal, anota en `## Pruebas` la línea que `in_qa` pide
+  // (`anotarResultadoDelResponsable`) y mueve el ticket con `transition`, que aplica las mismas
+  // precondiciones que el CLI. No aprueba la QA ni cierra nada.
+  if (
+    method === "POST" &&
+    partes.length === 4 &&
+    partes[0] === "api" &&
+    partes[1] === "tickets" &&
+    partes[3] === "pruebas-del-responsable"
+  ) {
+    const id = partes[2] as string;
+    const datos = (body ?? {}) as { resultado?: unknown; actor?: unknown; frase?: unknown };
+    const actor = typeof datos.actor === "string" ? datos.actor.trim() : "";
+    const frase = typeof datos.frase === "string" ? datos.frase.trim() : "";
+    if (actor === "" || frase === "") {
+      return {
+        status: 400,
+        body: { ok: false, error: "Falta tu nombre o tu frase literal: sin ellos el resultado no es auditable." },
+      };
+    }
+    if (datos.resultado !== "pasaron" && datos.resultado !== "fallo" && datos.resultado !== "omitir") {
+      return { status: 400, body: { ok: false, error: "`resultado` debe ser pasaron, fallo u omitir." } };
+    }
+    const ubicado = findTicket(paths, id);
+    if (ubicado === undefined) {
+      return { status: 404, body: { ok: false, error: `No existe el ticket "${id}".` } };
+    }
+    const estado = parseTicket(ubicado.text).fields.workflow_status;
+    if (estado !== "awaiting_user_tests") {
+      return {
+        status: 409,
+        body: { ok: false, error: `El ticket está en ${estado}: el resultado de las pruebas solo se anota en awaiting_user_tests.` },
+      };
+    }
+    try {
+      anotarResultadoDelResponsable({ paths, ticketId: id, resultado: datos.resultado, actor, frase });
+    } catch (caught) {
+      return { status: 409, body: { ok: false, error: toFailure(caught).message } };
+    }
+    try {
+      const movido = transition({ paths, ticketId: id, entity: "ticket", to: "in_qa" });
+      return { status: 200, body: { ok: true, details: movido.details } };
+    } catch (caught) {
+      // La línea ya anotada queda: es el resultado que dio la persona.
+      return {
+        status: 409,
+        body: { ok: false, error: `Resultado anotado, pero el ticket no pasó a in_qa: ${toFailure(caught).message}` },
+      };
+    }
   }
 
   // GET /api/tickets/:id/gates

@@ -786,6 +786,56 @@ export function anotarResultadoPorPolitica(request: {
   });
 }
 
+/** Lo que una persona comunica tras probar la entrega (FEATURE-WEB-TRABAJO-TICKETS-20261014). */
+export type ResultadoDelResponsable = "pasaron" | "fallo" | "omitir";
+
+/**
+ * Anota en `## Pruebas` el resultado de las pruebas del responsable: la línea que `in_qa` exige
+ * (`hasRecordedUserTestOutcome`), con la frase literal de la persona y su nombre. Solo agrega; no
+ * mueve el ticket ni aprueba nada: el paso a `in_qa` lo hace quien llama, por `transition`.
+ */
+export function anotarResultadoDelResponsable(request: {
+  readonly paths: RegistryPaths;
+  readonly ticketId: string;
+  readonly resultado: ResultadoDelResponsable;
+  readonly actor: string;
+  readonly frase: string;
+  readonly now?: (() => Date) | undefined;
+}): string {
+  const actor = request.actor.replace(/\s+/g, " ").trim();
+  const frase = request.frase.replace(/\s+/g, " ").trim();
+  if (actor === "" || frase === "") {
+    fail("El resultado de las pruebas necesita el nombre de quien probó y su frase literal.", EXIT_SCHEMA);
+  }
+  if (!["pasaron", "fallo", "omitir"].includes(request.resultado)) {
+    fail("El resultado debe ser pasaron, fallo u omitir.", EXIT_SCHEMA);
+  }
+  return conTicket(request.paths, request.ticketId, request.now, (contexto) => {
+    if (contexto.document.fields.workflow_status !== "awaiting_user_tests") {
+      fail("El resultado de las pruebas solo se anota en un ticket en awaiting_user_tests.", EXIT_INVARIANT);
+    }
+    const m = /^## Pruebas\n([\s\S]*?)(?=^## )/m.exec(contexto.document.text);
+    if (m === null) fail("El ticket no tiene la sección Pruebas.", EXIT_INVARIANT);
+    const firma = `«${frase}» (${actor}, Mission Control, ${contexto.date})`;
+    const linea =
+      request.resultado === "omitir"
+        ? `- Omisión explícita documentada del PO: ${firma}`
+        : `- Resultado del PO: ${request.resultado === "pasaron" ? "pasaron" : "falló"} — ${firma}`;
+    const cuerpo = (m[1] as string).replace(/\s+$/, "");
+    const nuevo = `## Pruebas\n${cuerpo}\n\n${linea}\n\n`;
+    const texto =
+      contexto.document.text.slice(0, m.index) +
+      nuevo +
+      contexto.document.text.slice(m.index + m[0].length);
+    return {
+      texto,
+      accion: "user-tests-result",
+      detalles: `${actor} anotó el resultado de sus pruebas: ${request.resultado}.`,
+      salida: "Resultado de las pruebas anotado",
+    };
+  });
+}
+
 // ── qa-approve-by-policy ────────────────────────────────────────────────────
 
 export interface QaApproveByPolicyRequest {
