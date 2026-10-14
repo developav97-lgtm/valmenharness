@@ -163,16 +163,14 @@ describe("R-AJU-001: Modelos abre con el perfil activo como primer bloque", () =
     expect(conClase(vista.contenido, "avanzado-modelos")[0]?.open).toBe(true);
   });
 
-  it("C4: «Cambiar de perfil» abre «Avanzado» con el foco en «Perfil del proyecto»", async () => {
+  // Cambiado a propósito por FEATURE-WEB-AJUSTES-CAMBIAR-PERFIL-20261014 (D-009, plan aprobado):
+  // antes abría «Avanzado» con el foco en «Perfil del proyecto» (D-002 de este ticket), un
+  // camino provisional «hasta que exista #/modelos/perfil».
+  it("C4: «Cambiar de perfil» lleva a la pantalla #/modelos/perfil", async () => {
     const { vista } = await pintar();
     await disparar(boton(vista.contenido, "Cambiar de perfil"), "click");
-    expect(conClase(vista.contenido, "avanzado-modelos")[0]?.open).toBe(true);
-    const etiqueta = buscarNodos(
-      vista.contenido,
-      (n) => n.tagName === "LABEL" && n._texto === "Perfil del proyecto",
-    )[0] as NodoFalso;
-    const selector = buscarNodos(etiqueta, (n) => n.tagName === "SELECT")[0];
-    expect(globalThis.document.activeElement).toBe(selector);
+    expect(globalThis.location.hash).toBe("#/modelos/perfil");
+    expect(conClase(vista.contenido, "avanzado-modelos")[0]?.open).toBe(false);
   });
 });
 

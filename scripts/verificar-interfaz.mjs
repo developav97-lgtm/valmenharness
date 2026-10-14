@@ -790,6 +790,7 @@ export const VISTAS = [
   ["estandares", "#/estandares"],
   ["configurar", "#/configurar"],
   ["modelos", "#/modelos"],
+  ["modelos-perfil", "#/modelos/perfil"],
   ["configuracion", "#/configuracion"],
   ["proyecto", "#/proyecto"],
   ["proveedores", "#/proveedores"],
