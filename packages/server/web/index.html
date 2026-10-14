@@ -2462,6 +2462,136 @@
           letter-spacing: 0.06em;
         }
       }
+      /* ── Modelos: perfil activo, aviso de cliente y roles agrupados ───── */
+      /* Lila es el modelo y ámbar lo que decidió una persona en el proyecto
+         (boceto assets/modelos.html). */
+      .cabecera-modelos { margin-bottom: 20px; }
+      .migas-modelos {
+        font-family: var(--mono); font-size: 12px; letter-spacing: 0.14em;
+        text-transform: uppercase; color: var(--acento);
+      }
+      .migas-modelos span { color: var(--tenue); }
+      .titulo-modelos {
+        font-family: var(--fuente-titulo); font-size: 32px; font-weight: 600;
+        margin: 6px 0 8px; border: 0; padding: 0;
+        text-transform: none; letter-spacing: normal; color: var(--texto);
+      }
+      .bajada-modelos { color: var(--tenue); max-width: 680px; margin: 0; }
+      .perfil-activo-modelos {
+        border: 1px solid var(--modelo); border-radius: 14px;
+        background: var(--modelo-suave); padding: 20px 24px; margin-bottom: 20px;
+      }
+      .perfil-fila { display: flex; gap: 20px; justify-content: space-between; flex-wrap: wrap; }
+      .perfil-cuerpo { min-width: 0; flex: 1 1 320px; }
+      .rotulo-perfil {
+        font-family: var(--mono); font-size: 12px; letter-spacing: 0.14em;
+        text-transform: uppercase; color: var(--modelo);
+      }
+      .perfil-id {
+        font-family: var(--fuente-titulo); font-size: 26px; font-weight: 600;
+        margin: 4px 0; overflow-wrap: anywhere;
+      }
+      .perfil-origen { font-family: var(--mono); font-size: 13px; color: var(--tenue); }
+      .perfil-desc { margin: 8px 0; }
+      .marcas-eleccion, .marcas-fase { display: flex; flex-wrap: wrap; gap: 8px; }
+      .marca-eleccion, .marca-origen, .marca-esfuerzo {
+        font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.05em;
+        padding: 3px 9px; border-radius: 999px; white-space: nowrap;
+        background: var(--panel-alto); color: var(--texto);
+      }
+      .marca-eleccion { background: var(--modelo-suave); }
+      .marca-origen::before { content: "● "; }
+      .marca-origen.aqui { background: var(--alerta-suave); color: var(--persona); }
+      .marca-origen.perfil { background: var(--modelo-suave); color: var(--modelo); }
+      .marca-origen.base { background: var(--panel-alto); color: var(--tenue); }
+      .perfil-acciones { display: flex; flex-direction: column; gap: 10px; min-width: 200px; }
+      .perfil-acciones button { min-height: 40px; }
+      .boton-perfil {
+        background: var(--modelo); color: var(--sobre-acento); border-color: var(--modelo);
+        font-weight: 600;
+      }
+      .precedencia {
+        display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+        margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--borde);
+        font-size: 13.5px; color: var(--tenue);
+      }
+      .aviso-cliente {
+        display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+        border-radius: 12px; padding: 14px 18px; margin-bottom: 24px;
+        border: 1px solid var(--borde); background: var(--panel);
+      }
+      .aviso-cliente.sin-cliente { border-color: var(--persona); background: var(--alerta-suave); }
+      .aviso-cliente .texto-aviso { flex: 1 1 320px; min-width: 0; }
+      .aviso-cliente code { font-family: var(--mono); overflow-wrap: anywhere; }
+      .aviso-cliente label { display: flex; gap: 8px; align-items: center; color: var(--tenue); }
+      .icono-aviso {
+        display: inline-grid; place-items: center; width: 22px; height: 22px;
+        border-radius: 50%; border: 2px solid var(--persona); color: var(--persona); font-weight: 700;
+      }
+      .boton-declarar {
+        background: var(--persona); color: var(--sobre-acento); border-color: var(--persona);
+        font-weight: 600;
+      }
+      .enlace-modelos {
+        background: none; border: 0; padding: 0; color: var(--acento);
+        text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+      }
+      .grupo-roles { margin-bottom: 28px; }
+      .cabecera-grupo { display: flex; flex-wrap: wrap; gap: 12px; align-items: baseline; margin-bottom: 12px; }
+      .cabecera-grupo h2 {
+        font-family: var(--fuente-titulo); font-size: 22px; margin: 0; border: 0; padding: 0;
+        text-transform: none; letter-spacing: normal; color: var(--texto);
+      }
+      .bajada-grupo { color: var(--tenue); font-size: 14px; }
+      .tarjetas-fase { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+      .tarjeta-fase {
+        display: flex; flex-direction: column; gap: 10px; min-width: 0;
+        background: var(--panel); border: 1px solid var(--borde); border-radius: 12px; padding: 16px;
+      }
+      .tarjeta-fase.cambiada { border-color: var(--persona); }
+      .cab-fase { display: flex; justify-content: space-between; align-items: baseline; }
+      .nombre-fase { font-family: var(--fuente-titulo); font-size: 18px; font-weight: 600; }
+      .numero-fase { font-family: var(--mono); font-size: 12px; color: var(--tenue); }
+      .modelo-tarjeta, .modelo-diria, .celda-modelo, .proveedor-rol {
+        font-family: var(--mono); overflow-wrap: anywhere;
+      }
+      .modelo-tarjeta { font-size: 15px; font-weight: 600; }
+      .modelo-diria { color: var(--modelo); }
+      .perfil-diria { font-size: 13.5px; color: var(--tenue); }
+      .pie-fase { margin-top: auto; }
+      .volver-perfil .diff { margin: 8px 0; }
+      .acciones-volver { display: flex; gap: 8px; flex-wrap: wrap; }
+      .tabla-roles { border: 1px solid var(--borde); border-radius: 12px; background: var(--panel); }
+      .fila-rol {
+        display: grid; gap: 14px; align-items: center; padding: 12px 16px;
+        grid-template-columns: minmax(150px, 1.1fr) minmax(200px, 1.6fr) 90px minmax(120px, 0.9fr);
+        border-bottom: 1px solid var(--borde);
+      }
+      .fila-rol:last-child { border-bottom: 0; }
+      .fila-rol.cabecera {
+        font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em;
+        text-transform: uppercase; color: var(--tenue);
+      }
+      .celda-trabajo { display: flex; flex-direction: column; gap: 2px; }
+      .detalle-trabajo { font-size: 13px; color: var(--tenue); }
+      .proveedor-rol { color: var(--tenue); }
+      .avanzado-modelos { margin-top: 8px; border-top: 1px solid var(--borde); padding-top: 12px; }
+      .avanzado-modelos > summary { cursor: pointer; color: var(--tenue); }
+      @media (max-width: 1100px) {
+        .tarjetas-fase { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      }
+      @media (max-width: 767px) {
+        .tarjetas-fase { grid-template-columns: 1fr; }
+        .perfil-activo-modelos { padding: 16px; }
+        .perfil-acciones { min-width: 0; width: 100%; }
+        .titulo-modelos { font-size: 26px; }
+        .fila-rol { grid-template-columns: 1fr; gap: 6px; }
+        .fila-rol.cabecera { display: none; }
+        .fila-rol [data-rotulo]::before {
+          content: attr(data-rotulo); display: block; font-size: 11px; color: var(--tenue);
+          text-transform: uppercase; letter-spacing: 0.06em;
+        }
+      }
       .presets {
         display: flex;
         gap: 10px;
@@ -7879,10 +8009,19 @@
        * `.valmen/routing.yaml`. Y los roles que el harness todavía no ejecuta se
        * marcan como declarados: prometer que un modelo se usa para algo que no
        * existe sería una mentira cómoda.
+       *
+       * Arriba va lo que se mira (R-AJU-001..003): el perfil activo, el aviso de
+       * cliente y los roles agrupados. Lo que se edita —perfiles, preset, modelo
+       * por rol y lo usado por fase— queda entero en «Avanzado», plegado.
        */
       async function vistaModelos() {
-        const cont = $("contenido");
-        cont.textContent = "";
+        const raiz = $("contenido");
+        raiz.textContent = "";
+        const cont = document.createElement("details");
+        cont.className = "avanzado-modelos";
+        cont.append(el("summary", "Avanzado: perfiles, preset base y archivo de configuración"));
+        // El control de cada rol en «Modelo por rol», para «Cambiar solo esta fase» (D-005).
+        const controlDeRol = new Map();
 
         const datos = await api("GET", "/api/routing");
         const guardado = datos.routing;
@@ -7905,22 +8044,15 @@
         let preset = guardado.preset === "" ? "balanced" : guardado.preset;
         let textoPrevio = guardado.text;
 
-        const nota = el("div", undefined, "nota");
-        nota.append(
-          el("strong", "Aquí solo se configuran los modelos que el harness ejecuta. "),
-          el(
-            "span",
-            "Son cuatro: el evaluador que responde las proposiciones del gate, el juez " +
-              "al que se cae cuando el evaluador no puede decidir, el que propone " +
-              "cambios de configuración en el chat, y el arquitecto que descompone una " +
-              "feature en tickets. El modelo con el que trabaja el agente —explorar, " +
-              "escribir, editar— lo elige opencode con su propia configuración: el " +
-              "harness no es un runtime de agentes y no puede imponerle el suyo.",
-          ),
-        );
-        cont.append(nota);
-        await seccionPerfiles(cont, catalogo);
+        const accionesDePerfil = await seccionPerfiles(cont, catalogo);
         await seccionModeloPorFase(cont);
+        await pintarResumenDeModelos(raiz, {
+          routing: guardado,
+          avanzado: cont,
+          perfiles: accionesDePerfil ?? null,
+          controlDeRol,
+        });
+        raiz.append(cont);
         cont.append(el("h2", "Preset"));
 
         const presets = el("div", undefined, "presets");
@@ -8035,7 +8167,9 @@
           tr.append(celdaRol);
 
           const celdaModelo = el("td");
-          celdaModelo.append(modeloSelect(rol));
+          const control = modeloSelect(rol);
+          controlDeRol.set(rol.role, control);
+          celdaModelo.append(control);
           tr.append(celdaModelo);
 
           const celdaEsfuerzo = el("td");
@@ -8487,8 +8621,10 @@
             void elegir(sel.value === "" ? null : sel.value, ejecutor);
           });
           etiqueta.append(sel);
+          if (ejecutor === undefined) selectorDelProyecto = sel;
           return etiqueta;
         };
+        let selectorDelProyecto = null;
         const elecciones = el("div", undefined, "elecciones-perfil");
         elecciones.append(selectorDeEleccion("Perfil del proyecto", seleccion.proyecto, undefined));
         for (const ejecutor of ejecutores) {
@@ -8497,6 +8633,387 @@
           );
         }
         cont.insertBefore(elecciones, salida);
+        // Lo que usa el bloque del perfil activo: sus datos, el editor («Duplicar y
+        // editar») y el selector al que lleva «Cambiar de perfil» (D-002).
+        return { datos, abrirEditor, selectorDelProyecto };
+      }
+
+      // ── Modelos: perfil activo, aviso de cliente y roles agrupados ───────
+
+      const NOMBRE_DE_CLIENTE = {
+        claude: "Claude Code",
+        codex: "Codex",
+        opencode: "OpenCode",
+        hermes: "Hermes",
+      };
+      const ESFUERZO_LEGIBLE = { auto: "auto", low: "bajo", medium: "medio", high: "alto" };
+      const CLAVE_CLIENTE_MODELOS = "valmen-cliente-modelos";
+      const FASES_DE_MODELOS = [
+        ["agent-analysis", "Análisis"],
+        ["agent-plan", "Plan"],
+        ["agent-implementation", "Implementación"],
+        ["agent-verification", "Verificación"],
+      ];
+      const ROLES_DE_COORDINACION = [
+        ["orchestrator", "Orquestador", "reparte tickets entre agentes"],
+        ["architect", "Arquitecto", "parte una feature en tickets"],
+        ["ui-specs", "Especificación de UI", "describe pantallas antes del código"],
+      ];
+      const ROLES_DE_COMPUERTAS = [
+        ["gate-evaluator", "Evaluador de compuertas"],
+        ["verifier", "Verificador"],
+        ["gate-judge", "Juez de respaldo"],
+        ["producer", "Productor"],
+        ["reviewer", "Revisor"],
+        ["escalation", "Escalada"],
+      ];
+
+      /** La marca de origen de un modelo: el proyecto gana al perfil, y el perfil al preset (D-003). */
+      function marcaDeOrigen(source) {
+        const [texto, tono] =
+          source === "proyecto"
+            ? ["cambiado aquí", "aqui"]
+            : source === "perfil"
+              ? ["del perfil", "perfil"]
+              : source === "sin-asignar"
+                ? ["sin asignar", "base"]
+                : ["preset base", "base"];
+        return el("span", texto, `marca-origen ${tono}`);
+      }
+
+      /**
+       * Lo que se mira antes de editar: el perfil activo (R-AJU-001), el aviso de cliente
+       * (R-AJU-003) y los roles agrupados con su origen (R-AJU-002). Lee lo mismo que la
+       * pantalla ya pedía; solo «Volver al perfil» escribe, y tras confirmar las diferencias.
+       */
+      async function pintarResumenDeModelos(raiz, { routing, avanzado, perfiles, controlDeRol }) {
+        const abrirAvanzado = () => {
+          avanzado.open = true;
+        };
+        const datosPerfiles = perfiles?.datos ?? null;
+        const seleccion = datosPerfiles?.seleccion ?? { proyecto: null, ejecutores: {} };
+        const activo =
+          (datosPerfiles?.perfiles ?? []).find((p) => p.id === seleccion.proyecto) ?? null;
+
+        const cabecera = el("div", undefined, "cabecera-modelos");
+        const migas = el("div", "Ajustes ", "migas-modelos");
+        migas.append(el("span", "· Modelos"));
+        cabecera.append(
+          migas,
+          el("h2", "Qué modelo hace cada trabajo", "titulo-modelos"),
+          el(
+            "p",
+            "Un perfil reparte los modelos de una vez. Si cambias uno aquí, ese trabajo deja de seguir al perfil hasta que lo devuelvas.",
+            "bajada-modelos",
+          ),
+        );
+
+        const tarjeta = el("section", undefined, "perfil-activo-modelos");
+        tarjeta.setAttribute("aria-label", "Perfil activo");
+        const cuerpo = el("div", undefined, "perfil-cuerpo");
+        cuerpo.append(el("div", "Perfil activo", "rotulo-perfil"));
+        if (activo === null) {
+          cuerpo.append(
+            el("div", "sin perfil", "perfil-id"),
+            el("div", "Ningún perfil elegido: cada modelo sale del proyecto o del preset base.", "perfil-desc"),
+          );
+        } else {
+          const marcas = el("div", undefined, "marcas-eleccion");
+          marcas.append(el("span", "elegido para el proyecto", "marca-eleccion"));
+          for (const [ejecutor, id] of Object.entries(seleccion.ejecutores ?? {})) {
+            if (id !== activo.id) continue;
+            marcas.append(
+              el("span", `elegido para ${NOMBRE_DE_CLIENTE[ejecutor] ?? ejecutor}`, "marca-eleccion"),
+            );
+          }
+          cuerpo.append(
+            el("div", activo.id, "perfil-id"),
+            el("div", activo.origen === "proyecto" ? "del proyecto" : "incorporado", "perfil-origen"),
+            el("div", activo.description, "perfil-desc"),
+            marcas,
+          );
+        }
+        const botones = el("div", undefined, "perfil-acciones");
+        const cambiar = el("button", "Cambiar de perfil", "boton-perfil");
+        cambiar.type = "button";
+        // Hasta que exista `#/modelos/perfil` (R-AJU-004), se cambia con el selector de siempre (D-002).
+        cambiar.addEventListener("click", () => {
+          abrirAvanzado();
+          perfiles?.selectorDelProyecto?.focus();
+        });
+        botones.append(cambiar);
+        if (activo !== null && perfiles?.abrirEditor) {
+          const duplicar = el("button", "Duplicar y editar");
+          duplicar.type = "button";
+          duplicar.addEventListener("click", () => {
+            abrirAvanzado();
+            perfiles.abrirEditor(activo, false);
+          });
+          botones.append(duplicar);
+        }
+        const fila = el("div", undefined, "perfil-fila");
+        fila.append(cuerpo, botones);
+        const precedencia = el("div", undefined, "precedencia");
+        precedencia.append(
+          el("span", "Cómo se decide cada modelo:"),
+          marcaDeOrigen("proyecto"),
+          el("span", "gana a", "gana"),
+          marcaDeOrigen("perfil"),
+          el("span", "gana a", "gana"),
+          marcaDeOrigen("preset"),
+        );
+        tarjeta.append(fila, precedencia);
+
+        const aviso = el("div", undefined, "aviso-cliente");
+        aviso.setAttribute("role", "status");
+        await pintarAvisoDeCliente(aviso, datosPerfiles?.ejecutores ?? [], seleccion);
+
+        const rutas = new Map((routing.roles ?? []).map((r) => [r.role, r]));
+        raiz.append(
+          cabecera,
+          tarjeta,
+          aviso,
+          grupoDelAgente(rutas, activo?.roles ?? {}, routing, abrirAvanzado, controlDeRol),
+          tablaDeRoles(
+            ["Coordinación", "reparte el trabajo y diseña antes de programar", "t-coordinacion"],
+            ROLES_DE_COORDINACION,
+            "Origen",
+            rutas,
+          ),
+          tablaDeRoles(
+            ["Compuertas y revisión", "el modelo responde, el código decide", "t-compuertas"],
+            ROLES_DE_COMPUERTAS,
+            "Proveedor",
+            rutas,
+          ),
+        );
+      }
+
+      /**
+       * El aviso de R-AJU-003. El cliente de una sesión no se guarda en ningún archivo (es
+       * `--cliente`), así que «Declarar» lo declara para esta pantalla y dice la corrección
+       * de la sesión, sin escribir nada (D-001).
+       */
+      async function pintarAvisoDeCliente(aviso, ejecutores, seleccion, elegido = null) {
+        let recordado = elegido;
+        try {
+          recordado ??= localStorage.getItem(CLAVE_CLIENTE_MODELOS);
+        } catch {
+          recordado = null;
+        }
+        let declarado = null;
+        try {
+          const fases = await api(
+            "GET",
+            recordado ? "/api/modelos/fases?ejecutor=" + encodeURIComponent(recordado) : "/api/modelos/fases",
+          );
+          declarado = fases?.ejecutor ?? null;
+        } catch (fallo) {
+          if (fallo === RESPUESTA_DE_PROYECTO_OBSOLETA) throw fallo;
+        }
+        aviso.textContent = "";
+        const repintar = () => void pintarAvisoDeCliente(aviso, ejecutores, seleccion);
+
+        if (declarado !== null) {
+          aviso.className = "aviso-cliente declarado";
+          const linea = el("div", undefined, "texto-aviso");
+          linea.append(
+            el("b", `Cliente declarado en esta pantalla: ${NOMBRE_DE_CLIENTE[declarado] ?? declarado}.`),
+            el("span", " En la sesión: "),
+            el("code", `valmen resume --cliente ${declarado}`),
+          );
+          const otro = el("button", "Cambiar", "enlace-modelos");
+          otro.type = "button";
+          otro.addEventListener("click", () => {
+            try {
+              localStorage.removeItem(CLAVE_CLIENTE_MODELOS);
+            } catch {
+              // Sin almacenamiento el aviso vuelve igual: no había nada que borrar.
+            }
+            repintar();
+          });
+          aviso.append(linea, otro);
+          return;
+        }
+
+        aviso.className = "aviso-cliente sin-cliente";
+        const icono = el("span", "!", "icono-aviso");
+        icono.setAttribute("aria-hidden", "true");
+        const texto = el("div", undefined, "texto-aviso");
+        texto.append(
+          el("b", "Las fases del agente usan el modelo de la sesión."),
+          el("span", " Falta declarar con qué cliente trabajas; sin eso, el perfil no se aplica."),
+        );
+        const etiqueta = el("label", "Cliente");
+        const selector = document.createElement("select");
+        for (const id of ejecutores) selector.append(new Option(NOMBRE_DE_CLIENTE[id] ?? id, id));
+        selector.value =
+          ejecutores.find((id) => seleccion.ejecutores?.[id]) ??
+          (ejecutores.includes("claude") ? "claude" : (ejecutores[0] ?? ""));
+        etiqueta.append(selector);
+        const declarar = el("button", "Declarar", "boton-declarar");
+        declarar.type = "button";
+        declarar.addEventListener("click", async () => {
+          if (selector.value === "") return;
+          try {
+            localStorage.setItem(CLAVE_CLIENTE_MODELOS, selector.value);
+          } catch {
+            // Sin almacenamiento se declara igual para lo que queda de la visita.
+          }
+          await pintarAvisoDeCliente(aviso, ejecutores, seleccion, selector.value);
+        });
+        aviso.append(icono, texto, etiqueta, declarar);
+      }
+
+      /** Un grupo de roles con su título y su bajada, como en el boceto. */
+      function seccionDeGrupo([titulo, bajada, id]) {
+        const seccion = el("section", undefined, "grupo-roles");
+        seccion.setAttribute("aria-labelledby", id);
+        const cabecera = el("div", undefined, "cabecera-grupo");
+        const h2 = el("h2", titulo);
+        h2.id = id;
+        cabecera.append(h2, el("span", bajada, "bajada-grupo"));
+        seccion.append(cabecera);
+        return seccion;
+      }
+
+      /**
+       * «El agente»: una tarjeta por fase. Una fase definida en el proyecto dice qué daría el
+       * perfil y ofrece volver a él; las demás llevan a su rol en «Modelo por rol» (D-005).
+       */
+      function grupoDelAgente(rutas, rolesDelPerfil, routing, abrirAvanzado, controlDeRol) {
+        const seccion = seccionDeGrupo(["El agente", "las cuatro fases de un ticket", "t-agente"]);
+        const rejilla = el("div", undefined, "tarjetas-fase");
+        FASES_DE_MODELOS.forEach(([rol, nombre], i) => {
+          const ruta = rutas.get(rol);
+          const cambiada = ruta?.source === "proyecto";
+          const tarjeta = el("article", undefined, cambiada ? "tarjeta-fase cambiada" : "tarjeta-fase");
+          const cabecera = el("div", undefined, "cab-fase");
+          cabecera.append(el("span", nombre, "nombre-fase"), el("span", String(i + 1), "numero-fase"));
+          const marcas = el("div", undefined, "marcas-fase");
+          marcas.append(
+            el("span", `esfuerzo ${ESFUERZO_LEGIBLE[ruta?.effort] ?? ruta?.effort ?? "auto"}`, "marca-esfuerzo"),
+            marcaDeOrigen(ruta?.source ?? "sin-asignar"),
+          );
+          tarjeta.append(cabecera, el("div", ruta?.model || "(sin modelo)", "modelo-tarjeta"), marcas);
+          const pie = el("div", undefined, "pie-fase");
+          const delPerfil = rolesDelPerfil[rol];
+          if (cambiada && delPerfil) {
+            const diria = el("div", undefined, "perfil-diria");
+            if (delPerfil.model === ruta.model) diria.append(el("span", "El perfil diría lo mismo"));
+            else diria.append(el("span", "El perfil diría "), el("span", delPerfil.model, "modelo-diria"));
+            const zona = el("div", undefined, "volver-perfil");
+            const volver = el("button", "Volver al perfil", "enlace-modelos");
+            volver.type = "button";
+            volver.addEventListener("click", () => void previsualizarVolver(rol, routing, zona));
+            pie.append(volver);
+            tarjeta.append(diria, pie, zona);
+          } else {
+            const solo = el("button", "Cambiar solo esta fase", "enlace-modelos");
+            solo.type = "button";
+            solo.addEventListener("click", () => {
+              abrirAvanzado();
+              controlDeRol.get(rol)?.querySelector?.("select, input")?.focus();
+            });
+            pie.append(solo);
+            tarjeta.append(pie);
+          }
+          rejilla.append(tarjeta);
+        });
+        seccion.append(rejilla);
+        return seccion;
+      }
+
+      /**
+       * «Volver al perfil»: quita la fase de `.valmen/routing.yaml`. Los roles que se escriben
+       * son los que el archivo ya declara bajo `roles:` menos esa fase (D-004), y el archivo
+       * solo se escribe al confirmar las diferencias.
+       */
+      async function previsualizarVolver(rol, routing, zona) {
+        zona.textContent = "";
+        const declarados = new Set(
+          [...String(routing.text ?? "").matchAll(/^ {2}([a-z][a-z0-9-]*):/gm)].map((m) => m[1]),
+        );
+        const roles = {};
+        for (const ruta of routing.roles ?? []) {
+          if (ruta.role === rol || !declarados.has(ruta.role)) continue;
+          roles[ruta.role] = { provider: ruta.provider, model: ruta.model, effort: ruta.effort };
+        }
+        let previa;
+        try {
+          previa = await api("POST", "/api/routing/preview", {
+            preset: routing.preset === "" ? "balanced" : routing.preset,
+            roles,
+          });
+        } catch (fallo) {
+          zona.append(el("div", fallo.message, "resultado error"));
+          return;
+        }
+        if (!previa?.routing?.ok) {
+          zona.append(el("div", previa?.routing?.error || "No se pudo preparar el cambio.", "resultado error"));
+          return;
+        }
+        const diff = el("div", undefined, "diff");
+        for (const linea of previa.routing.diff ?? []) {
+          if (linea.kind === "same") continue;
+          diff.append(el("div", `${linea.kind === "add" ? "+" : "-"} ${linea.text}`, linea.kind));
+        }
+        const confirmar = el("button", "Confirmar", "principal");
+        const cancelar = el("button", "Cancelar");
+        const resultado = el("div", undefined, "resultado");
+        cancelar.addEventListener("click", () => {
+          zona.textContent = "";
+        });
+        confirmar.addEventListener("click", async () => {
+          confirmar.disabled = true;
+          try {
+            const r = await api("PUT", "/api/routing", { text: previa.text });
+            if (r.routing?.written) {
+              await vistaModelos();
+              return;
+            }
+            resultado.className = "resultado error";
+            resultado.textContent = r.routing?.error || "No se guardó.";
+          } catch (fallo) {
+            resultado.className = "resultado error";
+            resultado.textContent = fallo.message;
+          }
+          confirmar.disabled = false;
+        });
+        const acciones = el("div", undefined, "acciones-volver");
+        acciones.append(confirmar, cancelar);
+        zona.append(el("div", "Diferencias en .valmen/routing.yaml:", "nota-volver"), diff, acciones, resultado);
+      }
+
+      /** Una tabla de roles: trabajo, modelo, esfuerzo y la columna final (origen o proveedor). */
+      function tablaDeRoles(cabeceraDeGrupo, filas, columnaFinal, rutas) {
+        const seccion = seccionDeGrupo(cabeceraDeGrupo);
+        const tabla = el("div", undefined, "tabla-roles");
+        const cabecera = el("div", undefined, "fila-rol cabecera");
+        for (const columna of ["Trabajo", "Modelo", "Esfuerzo", columnaFinal]) cabecera.append(el("span", columna));
+        tabla.append(cabecera);
+        for (const [rol, nombre, detalle] of filas) {
+          const ruta = rutas.get(rol);
+          const fila = el("div", undefined, "fila-rol");
+          const trabajo = el("div", undefined, "celda-trabajo");
+          trabajo.append(el("b", nombre, "trabajo"));
+          if (detalle) trabajo.append(el("span", detalle, "detalle-trabajo"));
+          const modelo = el("div", ruta?.model || "(sin modelo)", "celda-modelo");
+          modelo.setAttribute("data-rotulo", "Modelo");
+          const esfuerzo = el("div", ESFUERZO_LEGIBLE[ruta?.effort] ?? ruta?.effort ?? "auto", "celda-esfuerzo");
+          esfuerzo.setAttribute("data-rotulo", "Esfuerzo");
+          const final = el("div", undefined, "celda-final");
+          final.setAttribute("data-rotulo", columnaFinal);
+          final.append(
+            columnaFinal === "Origen"
+              ? marcaDeOrigen(ruta?.source ?? "sin-asignar")
+              : el("span", ruta?.provider || "(sin proveedor)", "proveedor-rol"),
+          );
+          fila.append(trabajo, modelo, esfuerzo, final);
+          tabla.append(fila);
+        }
+        seccion.append(tabla);
+        return seccion;
       }
 
       // ── Vista: configuración ──────────────────────────────────────────────
