@@ -1758,6 +1758,135 @@
         padding: 40px;
       }
 
+      /* ── Tickets y detalle: turno, avance y ciclo de ocho pasos ─────────
+         (FEATURE-WEB-TRABAJO-TICKETS-20261014, bocetos assets/tickets.html y
+         assets/ticket.html). Solo tokens: ámbar decide una persona, lila trabaja un
+         modelo, cian decide el código o ya se hizo, verde está cerrado. */
+      .vista-tickets, .vista-ticket { display: flex; flex-direction: column; gap: 20px; max-width: 1240px; min-width: 0; }
+      .tickets-cabecera { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+      .tickets-migas { font-family: var(--mono); font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--codigo); }
+      .tickets-migas .tickets-migas-actual, .tickets-migas .tickets-migas-sep { color: var(--tenue); }
+      .tickets-titulo, .ticket-titulo-detalle { margin: 6px 0 0; font-family: var(--fuente-titulo); font-weight: 600; font-size: 40px; line-height: 1.08; letter-spacing: -0.01em; color: var(--texto); text-transform: none; }
+      .ticket-titulo-detalle { font-size: 34px; margin: 0; }
+      .boton-nuevo-ticket { display: inline-flex; align-items: center; gap: 10px; height: 40px; padding: 0 18px; border-radius: 10px; border: 0; background: var(--acento); color: var(--sobre-acento); font-weight: 600; font-size: 14px; }
+      .boton-nuevo-mas { font-size: 18px; line-height: 1; }
+      .panel-nuevo-ticket { border: 1px solid var(--borde); border-radius: 12px; background: var(--panel); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+      .panel-nuevo-ticket[hidden] { display: none; }
+      .vista-ticket { margin-bottom: 16px; }
+      .panel-nuevo-texto { color: var(--tenue); font-size: 14px; }
+      .tickets-barra { display: flex; flex-wrap: wrap; gap: 12px; align-items: stretch; }
+      .tickets-pestanas { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; border: 1px solid var(--borde); border-radius: 12px; background: var(--panel); }
+      .tickets-pestana { display: inline-flex; align-items: center; gap: 8px; border: 1px solid transparent; background: transparent; color: var(--texto); font-size: 14px; padding: 8px 12px; border-radius: 8px; }
+      .tickets-pestana.elegida { border-color: var(--borde); background: var(--panel-alto); }
+      .tickets-cuenta { font-family: var(--mono); font-size: 12px; color: var(--tenue); }
+      .tickets-pestana.persona .tickets-cuenta { color: var(--persona); }
+      .tickets-buscador { flex: 1 1 260px; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 0 14px; border: 1px solid var(--borde); border-radius: 12px; background: var(--panel); }
+      .tickets-buscador input { flex: 1; min-width: 0; border: 0; background: transparent; padding: 12px 0; font-size: 14px; }
+      .icono-buscar { position: relative; flex: none; width: 10px; height: 10px; border: 2px solid var(--tenue); border-radius: 50%; }
+      .icono-buscar::after { content: ""; position: absolute; right: -5px; bottom: -4px; width: 6px; height: 2px; background: var(--tenue); transform: rotate(45deg); }
+      .mas-filtros { margin: 0; }
+      .mas-filtros-cuerpo { padding-top: 12px; min-width: 0; }
+      .mas-filtros-cuerpo .filtros { flex-wrap: wrap; }
+      .casilla-filtro, .campo-orden { display: flex; align-items: center; gap: 6px; margin: 0; }
+      .tabla-caja { overflow-x: auto; max-width: 100%; border: 1px solid var(--borde); border-radius: 14px; background: var(--panel); }
+      .tabla-tickets { min-width: 760px; }
+      .tabla-tickets th { position: static; background: transparent; font-family: var(--mono); letter-spacing: 0.12em; padding: 16px 18px; }
+      .tabla-tickets td { padding: 14px 18px; }
+      .tabla-tickets tbody tr { cursor: pointer; }
+      .tabla-tickets tbody tr:hover td { background: var(--panel-hover); }
+      .tabla-tickets tbody tr:focus-visible { outline: 2px solid var(--acento); outline-offset: -2px; }
+      .ticket-titulo { display: block; color: var(--acento); font-weight: 600; font-size: 15px; text-decoration: none; max-width: 460px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .celda-ticket .id { font-size: 12px; }
+      .ticket-marcas { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+      .marca-puntos { font-size: 11px; color: var(--alerta); }
+      .barra-avance { display: flex; gap: 3px; width: 150px; }
+      .barra-avance .segmento { flex: 1; height: 5px; border-radius: 3px; background: var(--borde); }
+      .barra-avance .segmento.hecho { background: var(--codigo); }
+      .barra-avance .segmento.actual.persona { background: var(--persona); }
+      .barra-avance .segmento.actual.agente { background: var(--modelo); }
+      .barra-avance .segmento.cerrado { background: var(--hecho); }
+      .avance-rotulo { margin-top: 6px; font-family: var(--mono); font-size: 12px; color: var(--tenue); }
+      .turno-quien { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; }
+      .turno-punto { width: 8px; height: 8px; border-radius: 50%; background: var(--tenue); }
+      .turno-quien.persona { color: var(--persona); }
+      .turno-quien.persona .turno-punto { background: var(--persona); }
+      .turno-quien.agente { color: var(--modelo); }
+      .turno-quien.agente .turno-punto { background: var(--modelo); }
+      .turno-quien.nadie .turno-punto { background: var(--hecho); }
+      .celda-turno .corrida-estado { display: block; margin-top: 4px; font-size: 11px; }
+      .celda-modulo, .celda-edad { font-family: var(--mono); font-size: 13px; white-space: nowrap; }
+      .comando-copiable, .comando-manual { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 10px 12px; border: 1px solid var(--borde); border-radius: 8px; background: var(--fondo-2); }
+      .comando-n { font-family: var(--mono); color: var(--tenue); }
+      .comando-texto { flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; font-family: var(--mono); font-size: 14px; scrollbar-width: thin; scrollbar-color: var(--borde) transparent; }
+      .comando-manual-texto { flex: 1; min-width: 0; }
+      .comando-copiar { border: 0; background: transparent; color: var(--tenue); font-family: var(--mono); font-size: 12px; padding: 0; }
+      .comando-marca { font-family: var(--mono); font-size: 12px; color: var(--tenue); }
+      .ticket-migas { font-family: var(--mono); font-size: 13px; color: var(--tenue); }
+      .ticket-migas-enlace { color: var(--acento); text-decoration: none; }
+      .cabecera-ticket { display: flex; flex-direction: column; gap: 10px; }
+      .ticket-marcas-detalle { display: flex; flex-wrap: wrap; gap: 8px; }
+      .marca-ticket { font-family: var(--mono); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 10px; border: 1px solid currentColor; border-radius: 999px; color: var(--texto); }
+      .marca-ticket.tipo { color: var(--acento); }
+      .marca-ticket.estado.persona { color: var(--persona); }
+      .ciclo-ticket { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 8px; }
+      .paso-ciclo { display: flex; flex-direction: column; gap: 4px; padding: 12px; border: 1px solid var(--borde); border-radius: 10px; background: var(--panel); }
+      .paso-ciclo.pendiente { opacity: 0.55; }
+      .paso-ciclo.actual.persona { border-color: var(--persona); background: var(--alerta-suave); }
+      .paso-ciclo.actual.agente { border-color: var(--modelo); background: var(--modelo-suave); }
+      .paso-n { font-family: var(--mono); font-size: 11px; color: var(--tenue); }
+      .paso-ciclo.actual.persona .paso-n { color: var(--persona); }
+      .paso-ciclo.actual.agente .paso-n { color: var(--modelo); }
+      .paso-nombre { font-family: var(--fuente-titulo); font-size: 17px; font-weight: 600; }
+      .paso-quien { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+      .paso-quien::before { content: "● "; }
+      .paso-quien.q-persona, .paso-quien.q-politica { color: var(--persona); }
+      .paso-quien.q-modelo { color: var(--modelo); }
+      .paso-quien.q-codigo { color: var(--codigo); }
+      .te-toca { display: flex; flex-direction: column; gap: 12px; padding: 18px 20px; border: 1px solid var(--persona); border-radius: 14px; background: var(--panel); min-width: 0; }
+      .te-toca-cabeza { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; }
+      .te-toca-titulo { margin: 0; font-family: var(--fuente-titulo); font-size: 20px; font-weight: 600; text-transform: none; letter-spacing: normal; color: var(--persona); }
+      .te-toca-bajada { color: var(--tenue); font-size: 14px; min-width: 0; overflow-wrap: anywhere; }
+      .te-toca-lista { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+      .te-toca-item { color: var(--texto); font-size: 14px; }
+      .te-toca-acciones, .formulario-acciones { display: flex; flex-wrap: wrap; gap: 8px; }
+      .boton-ok, .boton-no, .boton-neutro, .boton-confirmar { height: 40px; padding: 0 16px; border-radius: 10px; font-weight: 600; font-size: 14px; }
+      .boton-ok, .boton-confirmar { background: var(--hecho); border-color: var(--hecho); color: var(--sobre-acento); }
+      .boton-no { background: transparent; border-color: var(--error); color: var(--error); }
+      .boton-neutro { background: transparent; border-color: transparent; color: var(--tenue); }
+      .formulario-resultado { display: flex; flex-direction: column; gap: 10px; padding: 14px; border: 1px solid var(--borde); border-radius: 10px; background: var(--fondo-2); }
+      .formulario-titulo { font-weight: 600; }
+      .formulario-campo { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--tenue); }
+      .pestanas-ticket { display: flex; flex-wrap: wrap; gap: 4px 22px; border-bottom: 1px solid var(--borde); }
+      .pestana-ticket { border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; color: var(--tenue); font-size: 15px; padding: 8px 2px 10px; }
+      .pestana-ticket.elegida { color: var(--texto); border-bottom-color: var(--acento); }
+      .pestana-cuenta { margin-left: 6px; font-family: var(--mono); font-size: 12px; }
+      .pestana-cuenta.persona { color: var(--persona); }
+      .panel-ticket { min-width: 0; }
+      .resumen-rejilla { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+      .resumen-rejilla > .tarjeta-ticket { flex: 999 1 420px; min-width: 0; }
+      .resumen-lateral { flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+      .tarjeta-ticket { display: flex; flex-direction: column; gap: 12px; padding: 18px 20px; border: 1px solid var(--borde); border-radius: 14px; background: var(--panel); }
+      .tarjeta-ticket-titulo { margin: 0; font-family: var(--fuente-titulo); font-size: 20px; font-weight: 600; text-transform: none; letter-spacing: normal; color: var(--texto); }
+      .criterios-resumen { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+      .criterio-resumen { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 12px; align-items: start; }
+      .criterio-marca { color: var(--persona); }
+      .criterio-resumen.hecho .criterio-marca { color: var(--hecho); }
+      .criterio-via { font-family: var(--mono); font-size: 12px; color: var(--codigo); }
+      .criterio-via.manual, .criterio-via.dev { color: var(--persona); }
+      .compuertas-resumen { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; font-size: 14px; }
+      .compuerta-resultado { font-family: var(--mono); color: var(--tenue); }
+      .compuerta-resultado.approve, .compuerta-resultado.pass { color: var(--hecho); }
+      .compuerta-resultado.review { color: var(--persona); }
+      .compuerta-resultado.block, .compuerta-resultado.fail { color: var(--error); }
+      .resumen-estado { margin-top: 8px; }
+      @media (max-width: 767px) {
+        .tickets-titulo { font-size: 32px; }
+        .ticket-titulo-detalle { font-size: 26px; }
+        .tickets-pestanas, .tickets-buscador { flex: 1 1 100%; }
+        .tickets-pestana { padding: 8px; }
+        .boton-nuevo-ticket { width: 100%; justify-content: center; }
+      }
+
       /* ── Barra de guardado, fija mientras se edita ────────────────────── */
       /* El botón de guardar estaba al final de una tabla de trece roles, y no se
          encontraba. Una barra fija dice que hay cambios pendientes y los guarda
@@ -4343,11 +4472,12 @@
         q: "",
         workflow: "",
         type: "",
-        // Por defecto, **lo que ya se empezó**: ni lo que nunca se analizó
-        // (`intake`) ni lo cerrado. La lista de «solo abiertos» traía todos los
-        // tickets creados y sin analizar, y con un proyecto con historia los dos
-        // que están en curso quedaban enterrados. «Todos» sigue a un clic.
-        empezados: true,
+        // La pestaña de turno: Activos por defecto, con lo que espera a la persona
+        // primero (D-002 de FEATURE-WEB-TRABAJO-TICKETS-20261014). Antes la lista
+        // abría en «solo lo empezado» para no enterrar lo que estaba en curso; ese
+        // fin lo cumple ahora el orden, y la casilla sigue en «Más filtros».
+        turno: "activos",
+        empezados: false,
         open: false,
         invalid: false,
         critical: false,
@@ -4375,11 +4505,117 @@
         sentido: "desc",
       };
 
+      // ── Tickets: turno y avance (FEATURE-WEB-TRABAJO-TICKETS-20261014) ────
+      //
+      // El boceto `assets/tickets.html` responde «¿qué me toca?» antes que «¿qué hay?»: las
+      // pestañas filtran por turno, cada fila dice quién la tiene y en qué paso de los ocho va,
+      // y lo de hoy —cifras, estado, tipo, fechas, orden y reporte— sigue en «Más filtros».
+
+      /** El turno de una fila; sin el campo del servidor se deduce del estado (respuestas viejas). */
+      function turnoDe(t) {
+        if (t.turno) return t.turno;
+        const cerrado = t.workflowStatus === "closed";
+        return {
+          quien: cerrado ? "nadie" : t.publicState?.state === "needs-decision" ? "persona" : "agente",
+          paso: cerrado ? 9 : (PASO_DE_INICIO[t.workflowStatus] ?? 2),
+          rotulo: t.workflowStatus,
+          motivo: null,
+          compuerta: null,
+        };
+      }
+
+      /** La barra de ocho segmentos: hechos, el actual por quién lo tiene, o todos cerrados. */
+      function barraDeAvance(turno) {
+        const barra = el("div", undefined, "barra-avance");
+        barra.setAttribute("role", "img");
+        barra.setAttribute(
+          "aria-label",
+          turno.paso >= 9 ? "Ciclo completo" : `Paso ${turno.paso} de 8, lo tiene ${turno.quien === "persona" ? "la persona" : "el agente"}`,
+        );
+        for (let i = 1; i <= 8; i += 1) {
+          const estado =
+            turno.paso >= 9
+              ? " cerrado"
+              : i < turno.paso
+                ? " hecho"
+                : i === turno.paso
+                  ? ` actual ${turno.quien === "persona" ? "persona" : "agente"}`
+                  : "";
+          barra.append(el("span", undefined, `segmento${estado}`));
+        }
+        return barra;
+      }
+
+      /** «Tú» en ámbar, «Agente» en lila; debajo, la etiqueta del estado público de siempre. */
+      function celdaDeTurno(turno, publicState) {
+        const celda = el("td", undefined, "celda-turno");
+        const quien = el("span", undefined, `turno-quien ${turno.quien}`);
+        quien.append(
+          el("span", undefined, "turno-punto"),
+          el("span", turno.quien === "persona" ? "Tú" : turno.quien === "agente" ? "Agente" : "Cerrado"),
+        );
+        celda.append(quien, etiquetaDeEstadoPublico(publicState));
+        return celda;
+      }
+
+      /** «hoy» o «N d» desde la fecha de alta, en hora local. */
+      function edadDe(fecha) {
+        const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(fecha ?? ""));
+        if (m === null) return "—";
+        const alta = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+        const dias = Math.max(0, Math.round((hoy.getTime() - alta.getTime()) / 86400000));
+        return dias === 0 ? "hoy" : `${dias} d`;
+      }
+
+      /** Un comando con su número y «copiar»: el portapapeles puede no existir, y no rompe nada. */
+      function comandoCopiable(texto, numero) {
+        const fila = el("div", undefined, "comando-copiable");
+        if (numero !== undefined) fila.append(el("span", String(numero), "comando-n"));
+        fila.append(el("span", texto, "comando-texto"));
+        const copiar = el("button", "copiar", "comando-copiar");
+        copiar.type = "button";
+        copiar.setAttribute("aria-label", "Copiar comando");
+        copiar.addEventListener("click", async () => {
+          try {
+            await globalThis.navigator?.clipboard?.writeText(texto);
+            copiar.textContent = "copiado";
+          } catch {
+            copiar.textContent = "no se pudo copiar";
+          }
+          setTimeout(() => {
+            copiar.textContent = "copiar";
+          }, 1500);
+        });
+        fila.append(copiar);
+        return fila;
+      }
+
+      /** «Nuevo ticket»: la web no da de alta tickets; el comando del CLI, listo para copiar (D-004). */
+      function panelNuevoTicket() {
+        const panel = el("div", undefined, "panel-nuevo-ticket");
+        panel.append(
+          el("div", "Un ticket se registra desde la terminal del proyecto, y lo decide una persona:", "panel-nuevo-texto"),
+          comandoCopiable(
+            'valmen create --id <ID> --title "<título>" --type <TIPO> --module <MÓDULO> --request "<pedido>"',
+          ),
+        );
+        return panel;
+      }
+
+      /** Una opción de un desplegable como elemento: se pinta y se recorre como cualquier nodo. */
+      function opcionDeLista(etiqueta, valor) {
+        const opcion = el("option", etiqueta);
+        opcion.value = valor;
+        return opcion;
+      }
+
       async function vistaTickets() {
         const cont = $("contenido");
-        cont.textContent = "";
 
         const params = new URLSearchParams();
+        params.set("turno", filtros.turno);
         if (filtros.q !== "") params.set("q", filtros.q);
         if (filtros.workflow !== "") params.set("workflow", filtros.workflow);
         if (filtros.type !== "") params.set("type", filtros.type);
@@ -4395,20 +4631,86 @@
         if (filtros.sentido !== "desc") params.set("sentido", filtros.sentido);
 
         const datos = await api("GET", `/api/tickets?${params.toString()}`);
-        const r = datos.summary;
+        cont.textContent = "";
+        const r = datos.summary ?? {};
+        const porWorkflow = r.byWorkflow ?? {};
+        const porTurno = r.porTurno ?? {};
+        const tickets = Array.isArray(datos.tickets) ? datos.tickets : [];
 
-        // Tarjetas de resumen: es lo que responde "¿qué está pasando?" sin leer la
-        // tabla. **Y filtran**: un número que obliga a buscar sus tickets a mano es
-        // un número a medias. La que está aplicada se marca, y volver a pulsarla la
-        // quita, para que nunca haya una tarjeta de la que no se pueda salir.
+        const pagina = el("div", undefined, "vista-tickets");
+        cont.append(pagina);
+
+        // ── Cabecera: rótulo, título y «Nuevo ticket» ──
+        const cabecera = el("div", undefined, "tickets-cabecera");
+        const titulos = el("div", undefined, "tickets-titulos");
+        const migas = el("div", undefined, "tickets-migas");
+        migas.append(el("span", "Trabajo"), el("span", " · ", "tickets-migas-sep"), el("span", "Tickets", "tickets-migas-actual"));
+        titulos.append(migas, el("h1", "Tickets", "tickets-titulo"));
+        const nuevo = el("button", undefined, "boton-nuevo-ticket");
+        nuevo.type = "button";
+        nuevo.setAttribute("aria-expanded", "false");
+        nuevo.append(el("span", "+", "boton-nuevo-mas"), el("span", "Nuevo ticket"));
+        const panelNuevo = panelNuevoTicket();
+        panelNuevo.hidden = true;
+        nuevo.addEventListener("click", () => {
+          panelNuevo.hidden = !panelNuevo.hidden;
+          nuevo.setAttribute("aria-expanded", String(!panelNuevo.hidden));
+        });
+        cabecera.append(titulos, nuevo);
+        pagina.append(cabecera, panelNuevo);
+
+        // ── Pestañas por turno y buscador ──
+        const barraTurno = el("div", undefined, "tickets-barra");
+        const pestanas = el("div", undefined, "tickets-pestanas");
+        pestanas.setAttribute("role", "tablist");
+        pestanas.setAttribute("aria-label", "A quién le toca");
+        for (const [clave, nombre] of [
+          ["activos", "Activos"],
+          ["persona", "Esperan por mí"],
+          ["agente", "Con el agente"],
+          ["cerrados", "Cerrados"],
+        ]) {
+          const elegida = filtros.turno === clave;
+          const pestana = el("button", undefined, `tickets-pestana${elegida ? " elegida" : ""}${clave === "persona" ? " persona" : ""}`);
+          pestana.type = "button";
+          pestana.setAttribute("role", "tab");
+          pestana.setAttribute("aria-selected", String(elegida));
+          pestana.append(el("span", nombre), el("span", String(porTurno[clave] ?? 0), "tickets-cuenta"));
+          pestana.addEventListener("click", () => {
+            filtros.turno = clave;
+            void vistaTickets();
+          });
+          pestanas.append(pestana);
+        }
+        const buscador = el("label", undefined, "tickets-buscador");
+        const busqueda = document.createElement("input");
+        busqueda.type = "search";
+        busqueda.placeholder = "Buscar por id, título o módulo";
+        busqueda.setAttribute("aria-label", "Buscar por id, título o módulo");
+        busqueda.value = filtros.q;
+        let temporizador;
+        busqueda.addEventListener("input", () => {
+          clearTimeout(temporizador);
+          temporizador = setTimeout(() => {
+            filtros.q = busqueda.value;
+            void vistaTickets();
+          }, 250);
+        });
+        buscador.append(el("span", undefined, "icono-buscar"), busqueda);
+        barraTurno.append(pestanas, buscador);
+        pagina.append(barraTurno);
+
+        // ── Más filtros: lo que la lista hacía antes, plegado (D-005) ──
+        const mas = el("details", undefined, "mas-filtros");
+        mas.dataset.acordeon = "Más filtros";
+        mas.append(el("summary", "Más filtros"));
+        const cuerpoMas = el("div", undefined, "mas-filtros-cuerpo");
+        mas.append(cuerpoMas);
+
+        // Tarjetas de cifras: filtran, y volver a pulsar la aplicada la quita.
         const tarjetas = el("div", undefined, "tarjetas");
-
-        /** Aplica un filtro y repinta. Volver a pulsar el activo lo quita. */
         const alternar = (clave) => {
           const estaba = filtros[clave];
-          // Los filtros de conjunto son excluyentes entre sí: «en curso» y
-          // «cerrados» a la vez no devuelven nada, y ese vacío se lee como un
-          // fallo en vez de como dos filtros contradictorios.
           filtros.workflow = "";
           filtros.empezados = false;
           filtros.open = false;
@@ -4417,36 +4719,18 @@
           filtros[clave] = !estaba;
           void vistaTickets();
         };
-
         const metricas = [
-          { rotulo: "Tickets", valor: r.total, filtro: null },
+          { rotulo: "Tickets", valor: r.total ?? 0, filtro: null },
           {
-            // «En curso» es lo empezado y sin cerrar: el mismo conjunto que la
-            // lista muestra por defecto, para que el número y las filas coincidan.
             rotulo: "En curso",
-            valor: r.total - (r.byWorkflow.closed ?? 0) - (r.byWorkflow.intake ?? 0),
+            valor: (r.total ?? 0) - (porWorkflow.closed ?? 0) - (porWorkflow.intake ?? 0),
             filtro: "empezados",
           },
-          {
-            rotulo: "Cerrados",
-            valor: r.byWorkflow.closed ?? 0,
-            filtro: "workflow:closed",
-          },
-          {
-            rotulo: "Con puntos abiertos",
-            valor: r.withOpenPoints,
-            filtro: "conPuntos",
-          },
-          {
-            rotulo: "Impacto crítico",
-            valor: r.criticalImpacts,
-            filtro: "critical",
-          },
+          { rotulo: "Cerrados", valor: porWorkflow.closed ?? 0, filtro: "workflow:closed" },
+          { rotulo: "Con puntos abiertos", valor: r.withOpenPoints ?? 0, filtro: "conPuntos" },
+          { rotulo: "Impacto crítico", valor: r.criticalImpacts ?? 0, filtro: "critical" },
         ];
-        if (r.invalid > 0) {
-          metricas.push({ rotulo: "Inválidos", valor: r.invalid, filtro: "invalid" });
-        }
-
+        if ((r.invalid ?? 0) > 0) metricas.push({ rotulo: "Inválidos", valor: r.invalid, filtro: "invalid" });
         for (const metrica of metricas) {
           const aplicada =
             metrica.filtro === null
@@ -4454,18 +4738,8 @@
               : metrica.filtro.startsWith("workflow:")
                 ? filtros.workflow === metrica.filtro.slice("workflow:".length)
                 : filtros[metrica.filtro] === true;
-
-          // Una tarjeta sin filtro es un dato, no un botón: no se puede pulsar
-          // algo que no lleva a ninguna parte.
-          const tarjeta = el(
-            metrica.filtro === null ? "div" : "button",
-            undefined,
-            `tarjeta${aplicada ? " aplicada" : ""}`,
-          );
-          tarjeta.append(
-            el("div", String(metrica.valor), "valor"),
-            el("div", metrica.rotulo, "rotulo"),
-          );
+          const tarjeta = el(metrica.filtro === null ? "div" : "button", undefined, `tarjeta${aplicada ? " aplicada" : ""}`);
+          tarjeta.append(el("div", String(metrica.valor), "valor"), el("div", metrica.rotulo, "rotulo"));
           if (metrica.filtro !== null) {
             tarjeta.type = "button";
             tarjeta.setAttribute("aria-pressed", String(aplicada));
@@ -4473,8 +4747,7 @@
             if (metrica.filtro.startsWith("workflow:")) {
               const estado = metrica.filtro.slice("workflow:".length);
               tarjeta.addEventListener("click", () => {
-                const estaba = filtros.workflow === estado;
-                filtros.workflow = estaba ? "" : estado;
+                filtros.workflow = filtros.workflow === estado ? "" : estado;
                 filtros.open = false;
                 filtros.critical = false;
                 filtros.conPuntos = false;
@@ -4486,68 +4759,15 @@
           }
           tarjetas.append(tarjeta);
         }
-        cont.append(tarjetas);
+        cuerpoMas.append(tarjetas);
 
-        // Se dice qué se está viendo. Con filtros aplicados, una tabla corta sin
-        // explicación se lee como que no hay nada.
-        const aplicados = [];
-        if (filtros.open) aplicados.push("en curso");
-        if (filtros.workflow !== "") aplicados.push(filtros.workflow);
-        if (filtros.critical) aplicados.push("con impacto crítico");
-        if (filtros.conPuntos) aplicados.push("con puntos abiertos");
-        if (filtros.invalid) aplicados.push("inválidos");
-        if (filtros.type !== "") aplicados.push(filtros.type);
-        if (filtros.desde !== "" || filtros.hasta !== "") {
-          const campo = { updated: "edición", created: "alta", closedOn: "cierre" }[
-            filtros.fecha
-          ];
-          const rango = `${filtros.desde === "" ? "siempre" : filtros.desde} → ${
-            filtros.hasta === "" ? "hoy" : filtros.hasta
-          }`;
-          aplicados.push(`${campo} ${rango}`);
-        }
-        if (aplicados.length > 0) {
-          const linea = el("div", undefined, "filtros-aplicados");
-          linea.append(el("span", `Mostrando: ${aplicados.join(" · ")}`, "resultado"));
-          const limpiar = el("button", "Ver todos");
-          limpiar.addEventListener("click", () => {
-            filtros.q = "";
-            filtros.workflow = "";
-            filtros.type = "";
-            filtros.open = false;
-            filtros.invalid = false;
-            filtros.critical = false;
-            filtros.conPuntos = false;
-            filtros.desde = "";
-            filtros.hasta = "";
-            void vistaTickets();
-          });
-          linea.append(limpiar);
-          cont.append(linea);
-        }
-
-        // Filtros.
         const barra = el("div", undefined, "filtros");
-        const busqueda = document.createElement("input");
-        busqueda.type = "text";
-        busqueda.placeholder = "Buscar por id, título o módulo…";
-        busqueda.value = filtros.q;
-        busqueda.style.minWidth = "280px";
-        let temporizador;
-        busqueda.addEventListener("input", () => {
-          clearTimeout(temporizador);
-          temporizador = setTimeout(() => {
-            filtros.q = busqueda.value;
-            void vistaTickets();
-          }, 250);
-        });
-        barra.append(busqueda);
-
         const selector = (etiqueta, clave, valores, actual) => {
           const sel = document.createElement("select");
-          sel.append(new Option(etiqueta, ""));
-          for (const v of valores) sel.append(new Option(v, v));
+          sel.append(opcionDeLista(etiqueta, ""));
+          for (const v of valores) sel.append(opcionDeLista(v, v));
           sel.value = actual;
+          sel.setAttribute("aria-label", etiqueta);
           sel.addEventListener("change", () => {
             filtros[clave] = sel.value;
             void vistaTickets();
@@ -4555,21 +4775,12 @@
           return sel;
         };
         barra.append(
-          selector(
-            "Todos los estados",
-            "workflow",
-            Object.keys(r.byWorkflow).sort(),
-            filtros.workflow,
-          ),
-          selector("Todos los tipos", "type", Object.keys(r.byType).sort(), filtros.type),
+          selector("Todos los estados", "workflow", Object.keys(porWorkflow).sort(), filtros.workflow),
+          selector("Todos los tipos", "type", Object.keys(r.byType ?? {}).sort(), filtros.type),
         );
 
         const casilla = (texto, clave) => {
-          const label = el("label");
-          label.style.display = "flex";
-          label.style.alignItems = "center";
-          label.style.gap = "6px";
-          label.style.margin = "0";
+          const label = el("label", undefined, "casilla-filtro");
           const input = document.createElement("input");
           input.type = "checkbox";
           input.checked = filtros[clave];
@@ -4580,22 +4791,19 @@
           label.append(input, el("span", texto));
           return label;
         };
-        // ── Rango de fechas ──
-        //
-        // El caso que lo pide es semanal: «las incidencias que se montaron y se
-        // cerraron en esta semana». Escribir dos fechas cada vez es trabajo
-        // repetido, así que los atajos van al lado.
-        const rango = el("div", undefined, "rango-fechas");
 
+        // Rango de fechas con sus atajos: el reporte semanal es el caso que lo pide.
+        const rango = el("div", undefined, "rango-fechas");
         const campoFecha = document.createElement("select");
         for (const [valor, etiqueta] of [
           ["updated", "Última edición"],
           ["created", "Fecha de alta"],
           ["closedOn", "Fecha de cierre"],
         ]) {
-          campoFecha.append(new Option(etiqueta, valor));
+          campoFecha.append(opcionDeLista(etiqueta, valor));
         }
         campoFecha.value = filtros.fecha;
+        campoFecha.setAttribute("aria-label", "Fecha que compara el rango");
         campoFecha.title =
           "Con qué fecha se compara el rango. «Última edición» incluye lo que se " +
           "tocó en el rango aunque se cerrara antes; «fecha de cierre» cuenta lo " +
@@ -4604,7 +4812,6 @@
           filtros.fecha = campoFecha.value;
           void vistaTickets();
         });
-
         const entradaFecha = (clave, etiqueta) => {
           const caja = el("label", undefined, "campo-fecha");
           caja.append(el("span", etiqueta, "chip-rotulo"));
@@ -4618,37 +4825,29 @@
           caja.append(entrada);
           return caja;
         };
-
-        /** El rango de los atajos, en `YYYY-MM-DD` locales. */
         const ATAJOS = [
           ["Hoy", 0, 0],
           ["Ayer", 1, 1],
-          // La semana empieza el lunes: un reporte semanal que empieza en domingo
-          // parte el fin de semana, que es cuando más se despliega.
+          // La semana empieza el lunes: un reporte que empieza en domingo parte el fin de semana.
           ["Esta semana", "lunes", 0],
           ["Últimos 7 días", 6, 0],
           ["Este mes", "mes", 0],
         ];
-
-        /** Una fecha local en `YYYY-MM-DD`, sin pasar por UTC. */
         const enTexto = (fecha) => {
           const y = fecha.getFullYear();
           const m = String(fecha.getMonth() + 1).padStart(2, "0");
           const d = String(fecha.getDate()).padStart(2, "0");
           return `${y}-${m}-${d}`;
         };
-
         const atajos = el("div", undefined, "atajos-fecha");
         for (const [etiqueta, desde, hasta] of ATAJOS) {
           const boton = el("button", etiqueta);
+          boton.type = "button";
           boton.addEventListener("click", () => {
             const hoy = new Date();
             let inicio = new Date(hoy);
-            let fin = new Date(hoy);
-
+            const fin = new Date(hoy);
             if (desde === "lunes") {
-              // `getDay()` pone el domingo en 0; para la semana que empieza el
-              // lunes hay que convertirlo a 7.
               const dia = hoy.getDay() === 0 ? 7 : hoy.getDay();
               inicio.setDate(hoy.getDate() - (dia - 1));
             } else if (desde === "mes") {
@@ -4657,28 +4856,21 @@
               inicio.setDate(hoy.getDate() - Number(desde));
               fin.setDate(hoy.getDate() + Number(hasta));
             }
-
             filtros.desde = enTexto(inicio);
             filtros.hasta = enTexto(fin);
             void vistaTickets();
           });
           atajos.append(boton);
         }
-
         const limpiarFechas = el("button", "Sin rango");
+        limpiarFechas.type = "button";
         limpiarFechas.addEventListener("click", () => {
           filtros.desde = "";
           filtros.hasta = "";
           void vistaTickets();
         });
         atajos.append(limpiarFechas);
-
-        rango.append(
-          campoFecha,
-          entradaFecha("desde", "desde"),
-          entradaFecha("hasta", "hasta"),
-          atajos,
-        );
+        rango.append(campoFecha, entradaFecha("desde", "desde"), entradaFecha("hasta", "hasta"), atajos);
         barra.append(rango);
 
         barra.append(
@@ -4687,154 +4879,159 @@
           casilla("Solo inválidos", "invalid"),
         );
 
-        // El reporte es lo único del visor anterior que la pantalla no cubría, y
-        // se descarga desde aquí en vez de componerse en el navegador: el texto y
-        // el nombre del archivo los produce el servidor, así que el botón y
-        // `valmen report` dan exactamente el mismo documento.
+        // El orden de la tabla: antes se pulsaba la cabecera; ahora la cabecera es la del boceto.
+        const orden = el("label", undefined, "campo-orden");
+        orden.append(el("span", "Ordenar por", "chip-rotulo"));
+        const campoOrden = document.createElement("select");
+        for (const [valor, etiqueta] of [
+          ["updated", "Última edición"],
+          ["created", "Fecha de alta"],
+          ["closedOn", "Fecha de cierre"],
+          ["id", "Identificador"],
+          ["workflowStatus", "Estado"],
+          ["openPoints", "Puntos abiertos"],
+        ]) {
+          campoOrden.append(opcionDeLista(etiqueta, valor));
+        }
+        campoOrden.value = filtros.orden;
+        campoOrden.addEventListener("change", () => {
+          filtros.orden = campoOrden.value;
+          void vistaTickets();
+        });
+        const sentido = document.createElement("select");
+        sentido.setAttribute("aria-label", "Sentido del orden");
+        sentido.append(opcionDeLista("Descendente", "desc"), opcionDeLista("Ascendente", "asc"));
+        sentido.value = filtros.sentido;
+        sentido.addEventListener("change", () => {
+          filtros.sentido = sentido.value;
+          void vistaTickets();
+        });
+        orden.append(campoOrden, sentido);
+        barra.append(orden);
+
+        // El reporte lo compone el servidor: el botón y `valmen report` dan el mismo documento.
         const botonReporte = el("button", "Reporte de cierres");
+        botonReporte.type = "button";
         botonReporte.title =
           "Markdown de los tickets cerrados en el rango que tengas filtrado, listo " +
           "para pegar. Sin rango, los últimos 30 días.";
         botonReporte.addEventListener("click", () => void descargarReporte());
         barra.append(botonReporte);
-        cont.append(barra);
+        cuerpoMas.append(barra);
+        pagina.append(mas);
 
-        if (datos.tickets.length === 0) {
-          cont.append(el("div", "Ningún ticket coincide con los filtros.", "vacio"));
+        // Se dice qué se está viendo: con filtros, una tabla corta se lee como que no hay nada.
+        const aplicados = [];
+        if (filtros.empezados) aplicados.push("lo empezado");
+        if (filtros.open) aplicados.push("en curso");
+        if (filtros.workflow !== "") aplicados.push(filtros.workflow);
+        if (filtros.critical) aplicados.push("con impacto crítico");
+        if (filtros.conPuntos) aplicados.push("con puntos abiertos");
+        if (filtros.invalid) aplicados.push("inválidos");
+        if (filtros.type !== "") aplicados.push(filtros.type);
+        if (filtros.desde !== "" || filtros.hasta !== "") {
+          const campo = { updated: "edición", created: "alta", closedOn: "cierre" }[filtros.fecha];
+          aplicados.push(`${campo} ${filtros.desde === "" ? "siempre" : filtros.desde} → ${filtros.hasta === "" ? "hoy" : filtros.hasta}`);
+        }
+        if (aplicados.length > 0) {
+          const linea = el("div", undefined, "filtros-aplicados");
+          linea.append(el("span", `Mostrando: ${aplicados.join(" · ")}`, "resultado"));
+          const limpiar = el("button", "Ver todos");
+          limpiar.type = "button";
+          limpiar.addEventListener("click", () => {
+            filtros.q = "";
+            filtros.workflow = "";
+            filtros.type = "";
+            filtros.empezados = false;
+            filtros.open = false;
+            filtros.invalid = false;
+            filtros.critical = false;
+            filtros.conPuntos = false;
+            filtros.desde = "";
+            filtros.hasta = "";
+            void vistaTickets();
+          });
+          linea.append(limpiar);
+          pagina.append(linea);
+        }
+
+        if (tickets.length === 0) {
+          pagina.append(el("div", "Ningún ticket coincide con los filtros.", "vacio"));
           return;
         }
 
-        const tabla = el("table");
+        // En Activos, lo que espera a la persona va primero, sin cambiar el orden de lo demás (D-002).
+        const filas =
+          filtros.turno === "activos"
+            ? [
+                ...tickets.filter((t) => turnoDe(t).quien === "persona"),
+                ...tickets.filter((t) => turnoDe(t).quien !== "persona"),
+              ]
+            : tickets;
+
+        // La tabla se desplaza dentro de su caja: a 390 px la página no (R-MARCO-006).
+        const caja = el("div", undefined, "tabla-caja");
+        const tabla = el("table", undefined, "tabla-tickets");
         const thead = el("thead");
-        const filaCabecera = el("tr");
-
-        /**
-         * Una columna de la cabecera. Si tiene campo, ordena al pulsarla.
-         *
-         * Pulsar la columna que ya ordena **invierte** el sentido; pulsar otra
-         * empieza por el sentido que se espera de ese campo —lo más reciente
-         * primero en una fecha, alfabético en un texto—, porque empezar siempre
-         * por ascendente obliga a pulsar dos veces para ver lo de hoy.
-         */
-        const columnaOrdenable = (titulo, campo, ayuda) => {
-          const celda = el("th");
-          if (campo === null) {
-            celda.append(el("span", titulo));
-            return celda;
-          }
-
-          const activa = filtros.orden === campo;
-          const boton = el("button", undefined, activa ? "orden-activo" : "");
-          boton.append(el("span", titulo));
-          if (activa) {
-            boton.append(el("span", filtros.sentido === "asc" ? "↑" : "↓", "orden-flecha"));
-          }
-          boton.title = ayuda;
-          boton.addEventListener("click", () => {
-            if (filtros.orden === campo) {
-              filtros.sentido = filtros.sentido === "asc" ? "desc" : "asc";
-            } else {
-              filtros.orden = campo;
-              filtros.sentido = ["updated", "created", "closedOn", "openPoints"].includes(
-                campo,
-              )
-                ? "desc"
-                : "asc";
-            }
-            void vistaTickets();
-          });
-          celda.append(boton);
-          return celda;
-        };
-
-        filaCabecera.append(
-          columnaOrdenable("Ticket", "id", "Ordenar por identificador"),
-          columnaOrdenable("Tipo", "type", "Ordenar por tipo"),
-          // Los impactos tienen su propia columna porque son una propiedad del
-          // ticket, no del estado: colgados debajo del estado obligaban a la celda
-          // a crecer tres renglones y la tabla dejaba de leerse de un barrido.
-          el("th", "Impactos", "columna-impactos"),
-          columnaOrdenable("Estado", "workflowStatus", "Ordenar por estado"),
-          columnaOrdenable("QA", "qaStatus", "Ordenar por estado de QA"),
-          columnaOrdenable("Release", "releaseStatus", "Ordenar por estado de release"),
-          columnaOrdenable("Puntos", "openPoints", "Ordenar por puntos abiertos"),
-          columnaOrdenable("Actualizado", "updated", "Ordenar por última edición"),
-          // La fecha de cierre es la que filtra el reporte y los atajos, así que
-          // tiene que verse: sin la columna, un filtro por cierre y un filtro por
-          // edición son indistinguibles en pantalla, y esa confusión ya costó una
-          // sesión de depuración.
-          columnaOrdenable("Cerrado", "closedOn", "Ordenar por fecha de cierre"),
-          el("th", ""),
-        );
-        thead.append(filaCabecera);
+        const cabeceraTabla = el("tr");
+        for (const [titulo, clase] of [
+          ["Ticket", "col-ticket"],
+          ["Avance", "col-avance"],
+          ["Ahora lo tiene", "col-turno"],
+          ["Módulo", "col-modulo"],
+          ["Edad", "col-edad"],
+        ]) {
+          cabeceraTabla.append(el("th", titulo, clase));
+        }
+        thead.append(cabeceraTabla);
         const tbody = el("tbody");
-
-        for (const t of datos.tickets) {
-          const tr = el("tr");
-
-          const celdaId = el("td");
-          celdaId.append(el("div", t.title, "nombre"), el("div", t.id, "id"));
-          tr.append(celdaId);
-
-          const celdaTipo = el("td");
-          celdaTipo.append(el("span", `${t.type} · ${t.module}`, "etiqueta"));
-          tr.append(celdaTipo);
-
-          const celdaImpactos = el("td", undefined, "columna-impactos");
-          if (t.criticalImpacts.length === 0) {
-            celdaImpactos.append(el("span", "—", "id"));
-          } else {
-            const caja = el("div", undefined, "impactos");
-            for (const impacto of t.criticalImpacts) {
-              // La etiqueta corta es la del contrato sin el sufijo: `sync_impact`
-              // es el nombre del campo, no lo que hay que leer en una lista. El
-              // nombre completo queda en el `title`, para cuando haga falta.
-              const corto = NOMBRE_DE_IMPACTO[impacto] ?? impacto;
-              const marca = el("span", corto, "impacto");
-              marca.title = impacto;
-              caja.append(marca);
-            }
-            celdaImpactos.append(caja);
-          }
-          tr.append(celdaImpactos);
-
-          const celdaEstado = el("td");
-          celdaEstado.append(el("span", t.workflowStatus), etiquetaDeEstadoPublico(t.publicState));
-          if (t.invalid !== null) {
-            const roto = el("div");
-            roto.append(el("span", "inválido", "etiqueta roto"));
-            celdaEstado.append(roto);
-          }
-          tr.append(celdaEstado);
-
-          tr.append(el("td", t.qaStatus));
-          tr.append(el("td", t.releaseStatus));
-
-          const celdaPuntos = el("td");
-          celdaPuntos.textContent =
-            t.totalPoints === 0 ? "—" : `${t.totalPoints - t.openPoints}/${t.totalPoints}`;
-          if (t.openPoints > 0) celdaPuntos.style.color = "var(--alerta)";
-          tr.append(celdaPuntos);
-
-          tr.append(el("td", t.updated, "id"));
-
-          const celdaCierre = el("td");
-          celdaCierre.append(el("span", t.closedOn ?? "—", "id"));
-          tr.append(celdaCierre);
-
-          const celdaAcciones = el("td");
-          const ver = el("button", "Ver", "enlace");
-          ver.addEventListener("click", () => {
+        for (const t of filas) {
+          const turno = turnoDe(t);
+          const tr = el("tr", undefined, "fila-ticket");
+          tr.setAttribute("data-ticket", t.id);
+          tr.setAttribute("tabindex", "0");
+          const abrir = () => {
             location.hash = `#/ticket/${t.id}`;
+          };
+          tr.addEventListener("click", abrir);
+          tr.addEventListener("keydown", (evento) => {
+            if (evento.key === "Enter") abrir();
           });
-          celdaAcciones.append(ver);
-          tr.append(celdaAcciones);
 
+          const celdaTicket = el("td", undefined, "celda-ticket");
+          const enlace = el("a", t.title, "ticket-titulo");
+          enlace.href = `#/ticket/${t.id}`;
+          celdaTicket.append(enlace, el("div", t.id, "id"));
+          // Lo que la fila de antes decía en columnas propias, solo si hay algo que decir.
+          const marcas = el("div", undefined, "ticket-marcas");
+          for (const impacto of t.criticalImpacts ?? []) {
+            const marca = el("span", NOMBRE_DE_IMPACTO[impacto] ?? impacto, "impacto");
+            marca.title = impacto;
+            marcas.append(marca);
+          }
+          if ((t.openPoints ?? 0) > 0) marcas.append(el("span", `${t.openPoints} puntos abiertos`, "marca-puntos"));
+          if (t.invalid !== null && t.invalid !== undefined) marcas.append(el("span", "inválido", "etiqueta roto"));
+          if (marcas.children.length > 0) celdaTicket.append(marcas);
+          tr.append(celdaTicket);
+
+          const celdaAvance = el("td", undefined, "celda-avance");
+          celdaAvance.append(barraDeAvance(turno), el("div", turno.rotulo, "avance-rotulo"));
+          tr.append(celdaAvance);
+
+          tr.append(celdaDeTurno(turno, t.publicState));
+          tr.append(el("td", t.module, "celda-modulo"));
+          tr.append(
+            el(
+              "td",
+              filtros.turno === "cerrados" && t.closedOn ? `cerrado ${t.closedOn}` : edadDe(t.created),
+              "celda-edad",
+            ),
+          );
           tbody.append(tr);
         }
-
         tabla.append(thead, tbody);
-        cont.append(tabla);
+        caja.append(tabla);
+        pagina.append(caja);
       }
 
       // ── Vista: estándares ─────────────────────────────────────────────────
@@ -6330,49 +6527,403 @@
         return refrescar;
       }
 
-      /** El detalle de un ticket, con la pantalla de gates delante. */
+      // ── Detalle: ciclo de ocho pasos, «Te toca» y pestañas (FEATURE-WEB-TRABAJO-TICKETS-20261014) ──
+
+      /** La pestaña que la persona tenía abierta en este ticket: un refresco no la cambia. */
+      let pestanaDelTicket = { id: "", nombre: "Resumen" };
+
+      /** Los ocho pasos del ciclo con quién decide cada uno (boceto `assets/ticket.html`). */
+      function cicloDelTicket(turno) {
+        const PASOS = [
+          ["Pedido", "persona"],
+          ["Análisis", "modelo"],
+          ["Plan", "modelo"],
+          ["Aprobación", turno.motivo === "aprobar-plan" ? "persona" : "política"],
+          ["Desarrollo", "modelo"],
+          ["Tus pruebas", "persona"],
+          ["QA", "persona"],
+          ["Cierre", "código"],
+        ];
+        const ciclo = el("ol", undefined, "ciclo-ticket");
+        ciclo.setAttribute("aria-label", "Ciclo del ticket");
+        PASOS.forEach(([nombre, quien], i) => {
+          const n = i + 1;
+          const hecho = n < turno.paso;
+          const actual = n === turno.paso;
+          const clase = hecho
+            ? " hecho"
+            : actual
+              ? ` actual ${turno.quien === "persona" ? "persona" : "agente"}`
+              : " pendiente";
+          const paso = el("li", undefined, `paso-ciclo${clase}`);
+          if (actual) paso.setAttribute("aria-current", "step");
+          const claseQuien = { persona: "q-persona", modelo: "q-modelo", "política": "q-politica", "código": "q-codigo" }[quien];
+          paso.append(
+            el("span", hecho ? `${n} · ✓` : actual ? `${n} · ahora` : String(n), "paso-n"),
+            el("span", nombre, "paso-nombre"),
+            el("span", quien, `paso-quien ${claseQuien}`),
+          );
+          ciclo.append(paso);
+        });
+        return ciclo;
+      }
+
+      /**
+       * El formulario de una acción de la persona: su nombre y su frase literal, y nada sale sin
+       * los dos. La ruta anota el resultado y mueve el ticket a `in_qa`; no aprueba nada.
+       */
+      function formularioDeResultado(ticketId, resultado, alTerminar) {
+        const TEXTOS = {
+          pasaron: ["Pasaron las pruebas", "Tu frase literal: qué probaste y qué viste"],
+          fallo: ["Algo falló", "Qué falló, con tus palabras"],
+          omitir: ["Omitir con motivo", "Por qué se omiten las pruebas, con tus palabras"],
+        };
+        const [titulo, ayuda] = TEXTOS[resultado];
+        const caja = el("div", undefined, "formulario-resultado");
+        caja.append(el("div", titulo, "formulario-titulo"));
+        const etiquetaActor = el("label", undefined, "formulario-campo");
+        const actor = document.createElement("input");
+        actor.type = "text";
+        actor.className = "campo-actor";
+        actor.value = responsable;
+        actor.setAttribute("aria-label", "Tu nombre");
+        etiquetaActor.append(el("span", "Tu nombre"), actor);
+        const etiquetaFrase = el("label", undefined, "formulario-campo");
+        const frase = document.createElement("textarea");
+        frase.className = "campo-frase";
+        frase.rows = 2;
+        frase.setAttribute("aria-label", ayuda);
+        etiquetaFrase.append(el("span", ayuda), frase);
+        const salida = el("div", undefined, "resultado");
+        salida.setAttribute("role", "status");
+        const confirmar = el("button", "Confirmar", "boton-confirmar");
+        confirmar.type = "button";
+        const cancelar = el("button", "Cancelar", "enlace");
+        cancelar.type = "button";
+        cancelar.addEventListener("click", () => caja.remove?.() ?? (caja.hidden = true));
+        confirmar.addEventListener("click", async () => {
+          const quien = String(actor.value ?? "").trim();
+          const palabras = String(frase.value ?? "").trim();
+          if (quien === "" || palabras === "") {
+            salida.className = "resultado error";
+            salida.textContent = "Escribe tu nombre y tu frase literal: sin ellos el resultado no se registra.";
+            return;
+          }
+          confirmar.disabled = true;
+          salida.className = "resultado";
+          salida.textContent = "Registrando…";
+          try {
+            const r = await api("POST", `/api/tickets/${encodeURIComponent(ticketId)}/pruebas-del-responsable`, {
+              resultado,
+              actor: quien,
+              frase: palabras,
+            });
+            guardarResponsable(quien);
+            salida.className = "resultado ok";
+            salida.textContent = r.details ?? "Resultado registrado.";
+            await alTerminar();
+          } catch (fallo) {
+            salida.className = "resultado error";
+            salida.textContent = fallo.message;
+            confirmar.disabled = false;
+          }
+        });
+        const acciones = el("div", undefined, "formulario-acciones");
+        acciones.append(confirmar, cancelar);
+        caja.append(etiquetaActor, etiquetaFrase, acciones, salida);
+        return caja;
+      }
+
+      /** «Te toca»: solo si el turno es de la persona, con la acción concreta de su motivo. */
+      function bloqueTeToca(t, turno, irA) {
+        if (turno.quien !== "persona") return null;
+        const bloque = el("section", undefined, "te-toca");
+        bloque.setAttribute("aria-label", "Te toca");
+        const cabeza = el("div", undefined, "te-toca-cabeza");
+        const titulo = (texto, bajada) => {
+          cabeza.append(el("h2", texto, "te-toca-titulo"));
+          if (bajada) cabeza.append(el("span", bajada, "te-toca-bajada"));
+          bloque.append(cabeza);
+        };
+        const irAPestana = (nombre, rotulo = `Ir a ${nombre}`) => {
+          const boton = el("button", rotulo, "boton-neutro");
+          boton.type = "button";
+          boton.addEventListener("click", () => irA(nombre));
+          return boton;
+        };
+        const lista = el("div", undefined, "te-toca-lista");
+
+        if (turno.motivo === "pruebas") {
+          const contrato = t.contratoDePruebas ?? { comandos: [], manuales: [] };
+          titulo(
+            "Te toca: prueba la entrega",
+            [contrato.directorio, contrato.ambiente].filter((v) => v).join(" · "),
+          );
+          (contrato.comandos ?? []).forEach((c, i) => {
+            const fila = comandoCopiable(c.comando, i + 1);
+            if (c.esperado) fila.title = `Resultado esperado: ${c.esperado}`;
+            lista.append(fila);
+          });
+          (contrato.manuales ?? []).forEach((m, i) => {
+            const fila = el("div", undefined, "comando-manual");
+            fila.append(
+              el("span", String((contrato.comandos ?? []).length + i + 1), "comando-n"),
+              el("span", m, "comando-manual-texto"),
+              el("span", "manual", "comando-marca"),
+            );
+            lista.append(fila);
+          });
+          if (lista.children.length === 0) {
+            lista.append(el("div", "El ticket no trae un contrato de pruebas legible: léelo en Plan › Pruebas.", "resultado"));
+          }
+          bloque.append(lista);
+          const zonaFormulario = el("div");
+          const acciones = el("div", undefined, "te-toca-acciones");
+          for (const [resultado, rotulo, clase] of [
+            ["pasaron", "Pasaron las pruebas", "boton-ok"],
+            ["fallo", "Algo falló", "boton-no"],
+            ["omitir", "Omitir con motivo", "boton-neutro"],
+          ]) {
+            const boton = el("button", rotulo, clase);
+            boton.type = "button";
+            boton.addEventListener("click", () => {
+              zonaFormulario.textContent = "";
+              zonaFormulario.append(formularioDeResultado(t.id, resultado, () => navegar()));
+            });
+            acciones.append(boton);
+          }
+          bloque.append(acciones, zonaFormulario);
+          return bloque;
+        }
+
+        const acciones = el("div", undefined, "te-toca-acciones");
+        if (turno.motivo === "ratificar") {
+          titulo("Te toca: ratifica lo que decidió el agente", "antes de cerrar");
+          for (const resumen of t.porRatificar ?? []) lista.append(el("div", resumen, "te-toca-item"));
+          lista.append(comandoCopiable(`valmen ratify --id ${t.id} --actor <tú> --quote "<tus palabras>"`));
+          acciones.append(irAPestana("Decisiones del agente", "Ver las decisiones"));
+        } else if (turno.motivo === "qa") {
+          titulo("Te toca: haz la QA", "la QA es de una persona");
+          lista.append(
+            comandoCopiable(`valmen qa-start --id ${t.id} --environment <entorno> --build-reference <referencia>`, 1),
+            comandoCopiable(`valmen qa-close --id ${t.id} --result <resultado> --all-covered`, 2),
+          );
+        } else if (turno.motivo === "bloqueado") {
+          titulo("Te toca: desbloquea el ticket", "decide por dónde sigue");
+          lista.append(el("div", "El motivo está en la línea de fases de Resumen; el movimiento, en «Avanzar el estado».", "te-toca-item"));
+          acciones.append(irAPestana("Compuertas"));
+        } else if (turno.motivo === "cambios") {
+          titulo("Te toca: la QA pidió cambios", "decide cuándo vuelve al agente");
+          lista.append(el("div", "Los puntos abiertos están en Evidencia; muévelo a in_progress en «Avanzar el estado».", "te-toca-item"));
+          acciones.append(irAPestana("Compuertas"));
+        } else if (turno.motivo === "aprobar-plan") {
+          titulo("Te toca: aprueba el plan", "ninguna autorización vigente lo aprueba");
+          acciones.append(irAPestana("Compuertas"));
+        } else {
+          titulo(`Te toca: decide la compuerta ${turno.compuerta ?? ""}`.trim(), "el evaluador no pudo decidir");
+          acciones.append(irAPestana("Compuertas"));
+        }
+        if (lista.children.length > 0) bloque.append(lista);
+        if (acciones.children.length > 0) bloque.append(acciones);
+        return bloque;
+      }
+
+      /** Los criterios con su marca ✓/○ y cómo se verifican (test, manual o dev). */
+      function tarjetaCriterios(texto) {
+        const tarjeta = el("section", undefined, "tarjeta-ticket");
+        tarjeta.append(el("h2", "Criterios de aceptación", "tarjeta-ticket-titulo"));
+        const lineas = String(texto ?? "").split("\n");
+        const lista = el("ul", undefined, "criterios-resumen");
+        lineas.forEach((linea, i) => {
+          const m = /^\s*[-*]\s+\[([ xX])\]\s*(.*)$/.exec(linea);
+          if (m === null || (m[2] ?? "").trim() === "") return;
+          const siguiente = lineas[i + 1] ?? "";
+          // `\x3c` es «<»: un «<» seguido de «!--» literal dentro del <script> cambia cómo el
+          // navegador busca su cierre, y el módulo entero deja de ejecutarse.
+          const via = /\x3c!--\s*test:/.test(siguiente)
+            ? "test"
+            : /\x3c!--\s*verify:\s*dev/.test(siguiente)
+              ? "dev"
+              : /\x3c!--\s*verify:/.test(siguiente)
+                ? "manual"
+                : "";
+          const hecho = m[1] !== " ";
+          const item = el("li", undefined, `criterio-resumen${hecho ? " hecho" : ""}`);
+          const marca = el("span", hecho ? "✓" : "○", "criterio-marca");
+          marca.setAttribute("aria-label", hecho ? "verificado" : "pendiente");
+          item.append(marca, el("span", m[2].trim(), "criterio-texto"), el("span", via, `criterio-via ${via}`));
+          lista.append(item);
+        });
+        if (lista.children.length === 0) {
+          tarjeta.append(el("div", "El ticket no declara criterios de aceptación.", "vacio"));
+        } else {
+          tarjeta.append(lista);
+        }
+        return tarjeta;
+      }
+
+      /** Las decisiones del agente: lo que falta ratificar y cada decisión con su criterio y su fuente. */
+      function listaDeDecisionesDelAgente(t) {
+        const zona = el("div", undefined, "decisiones-agente");
+        const pendientes = t.porRatificar ?? [];
+        zona.append(el("h3", pendientes.length === 0 ? "Nada por ratificar" : `Por ratificar (${pendientes.length})`));
+        for (const resumen of pendientes) zona.append(el("div", resumen, "te-toca-item"));
+        if (pendientes.length > 0) {
+          zona.append(comandoCopiable(`valmen ratify --id ${t.id} --actor <tú> --quote "<tus palabras>"`));
+        }
+        const decisiones = (t.events ?? []).filter((e) => e.action === "agent-decision");
+        zona.append(el("h3", `Decisiones registradas (${decisiones.length})`));
+        if (decisiones.length === 0) zona.append(el("div", "El agente no registró decisiones en este ticket.", "vacio"));
+        for (const evento of decisiones) {
+          let d = {};
+          try {
+            d = JSON.parse(String(evento.details ?? "{}"));
+          } catch {
+            d = {};
+          }
+          const caja = el("div", undefined, "tarjeta-dato");
+          const cabecera = el("div", undefined, "tarjeta-dato-cabecera");
+          cabecera.append(el("span", String(d.id ?? evento.id ?? ""), "id"), el("span", String(evento.date ?? ""), "cifra"));
+          caja.append(cabecera, el("div", String(d.pregunta ?? ""), "nombre"), el("div", `Elección: ${d.eleccion ?? ""}`, "tarjeta-dato-nota"));
+          if (d.criterio) caja.append(el("div", `Criterio: ${d.criterio}`, "resultado"));
+          if (d.fuente) caja.append(el("div", `Fuente: ${d.fuente}`, "ruta"));
+          if (d.reversion) caja.append(el("div", `Cómo se revierte: ${d.reversion}`, "resultado"));
+          zona.append(caja);
+        }
+        return zona;
+      }
+
+      /** El detalle de un ticket: ciclo, «Te toca» y siete pestañas con todo lo de antes. */
       async function vistaTicket(id) {
         const cont = $("contenido");
         cont.textContent = "";
 
         const t = await api("GET", `/api/tickets/${id}`);
+        const turno = turnoDe(t);
+        if (pestanaDelTicket.id !== id) pestanaDelTicket = { id, nombre: "Resumen" };
 
-        const volver = el("a", "← Todos los tickets", "volver enlace");
+        const pagina = el("div", undefined, "vista-ticket");
+        cont.append(pagina);
+
+        const migas = el("nav", undefined, "ticket-migas");
+        migas.setAttribute("aria-label", "Ruta");
+        const volver = el("a", "Tickets", "ticket-migas-enlace");
         volver.href = "#/tickets";
-        cont.append(volver);
-
-        const PUNTOS_ABIERTOS = ["open", "analyzed", "in_progress", "awaiting_retest"];
-        const abiertos = t.points.filter((p) =>
-          PUNTOS_ABIERTOS.includes(String(p.status)),
-        ).length;
+        migas.append(volver, el("span", " › ", "ticket-migas-sep"), el("span", t.id));
+        pagina.append(migas);
 
         const cabecera = el("div", undefined, "cabecera-ticket");
-        cabecera.append(el("h2", t.title));
-        const meta = el("div", undefined, "meta");
-        meta.append(
-          el("span", t.id, "id"),
-          el("span", `${t.type} · ${t.module}`, "etiqueta"),
-          el("span", `creado ${t.created}`, "etiqueta"),
+        cabecera.append(el("h1", t.title, "ticket-titulo-detalle"));
+        const marcas = el("div", undefined, "ticket-marcas-detalle");
+        marcas.append(
+          el("span", t.type, "marca-ticket tipo"),
+          el("span", t.module, "marca-ticket"),
+          el("span", t.workflowStatus, `marca-ticket estado${turno.quien === "persona" ? " persona" : ""}`),
         );
-        if (t.invalid !== null) {
-          meta.append(el("span", "inválido", "etiqueta roto"));
+        if (t.invalid !== null && t.invalid !== undefined) marcas.append(el("span", "inválido", "etiqueta roto"));
+        cabecera.append(marcas);
+        pagina.append(cabecera);
+
+        pagina.append(cicloDelTicket(turno));
+
+        // ── Pestañas: todas se pintan; las no elegidas quedan ocultas ──
+        const NOMBRES = ["Resumen", "Análisis", "Plan", "Compuertas", "Decisiones del agente", "Evidencia", "Consumo de IA"];
+        const listaPestanas = el("div", undefined, "pestanas-ticket");
+        listaPestanas.setAttribute("role", "tablist");
+        listaPestanas.setAttribute("aria-label", "Secciones del ticket");
+        const botones = new Map();
+        const paneles = new Map();
+        const cuentas = new Map();
+        /** Lo que vive fuera del panel Resumen pero se ve con él (tira de estado y banda de fases). */
+        const delResumen = [];
+        const elegir = (nombre) => {
+          pestanaDelTicket = { id, nombre };
+          for (const [clave, boton] of botones) {
+            boton.setAttribute("aria-selected", String(clave === nombre));
+            boton.className = `pestana-ticket${clave === nombre ? " elegida" : ""}`;
+            paneles.get(clave).hidden = clave !== nombre;
+          }
+          for (const nodo of delResumen) nodo.hidden = nombre !== "Resumen";
+        };
+        for (const nombre of NOMBRES) {
+          const boton = el("button", undefined, "pestana-ticket");
+          boton.type = "button";
+          boton.setAttribute("role", "tab");
+          const cuenta = el("span", "", "pestana-cuenta");
+          boton.append(el("span", nombre, "pestana-nombre"), cuenta);
+          boton.addEventListener("click", () => elegir(nombre));
+          botones.set(nombre, boton);
+          cuentas.set(nombre, cuenta);
+          listaPestanas.append(boton);
+          const panel = el("div", undefined, "panel-ticket");
+          panel.setAttribute("role", "tabpanel");
+          panel.setAttribute("data-pestana", nombre);
+          panel.setAttribute("aria-label", nombre);
+          paneles.set(nombre, panel);
         }
-        cabecera.append(meta, el("div", t.path, "ruta"));
-        cont.append(cabecera);
 
-        // El estado primero, y visual: es lo que se viene a mirar.
-        cont.append(tiraDeEstado(t, abiertos));
+        const teToca = bloqueTeToca(t, turno, elegir);
+        if (teToca !== null) pagina.append(teToca);
+        pagina.append(listaPestanas, ...paneles.values());
+        elegir(NOMBRES.includes(pestanaDelTicket.nombre) ? pestanaDelTicket.nombre : "Resumen");
+
+        const PUNTOS_ABIERTOS = ["open", "analyzed", "in_progress", "awaiting_retest"];
+        const abiertos = t.points.filter((p) => PUNTOS_ABIERTOS.includes(String(p.status))).length;
+
+        // ── Resumen: criterios, compuertas y lo que decidió el agente; debajo, el estado de siempre ──
+        const resumen = paneles.get("Resumen");
+        const rejilla = el("div", undefined, "resumen-rejilla");
+        rejilla.append(tarjetaCriterios(t.sections["Criterios de aceptación"]));
+        const lateral = el("aside", undefined, "resumen-lateral");
+        const tarjetaCompuertas = el("section", undefined, "tarjeta-ticket");
+        tarjetaCompuertas.append(el("h2", "Compuertas", "tarjeta-ticket-titulo"));
+        const filasCompuertas = el("div", undefined, "compuertas-resumen");
+        filasCompuertas.append(el("div", "Leyendo las compuertas…", "resultado"));
+        const verRecibos = el("button", "Ver recibos →", "enlace");
+        verRecibos.type = "button";
+        verRecibos.addEventListener("click", () => elegir("Compuertas"));
+        tarjetaCompuertas.append(filasCompuertas, verRecibos);
+        const decisionesAgente = (t.events ?? []).filter((e) => e.action === "agent-decision").length;
+        const porRatificar = (t.porRatificar ?? []).length;
+        const tarjetaAgente = el("section", undefined, "tarjeta-ticket");
+        tarjetaAgente.append(
+          el("h2", "Decidió el agente", "tarjeta-ticket-titulo"),
+          el(
+            "div",
+            `${decisionesAgente} ${decisionesAgente === 1 ? "decisión" : "decisiones"}; ${porRatificar} por ratificar.` +
+              (porRatificar > 0 ? " Las ratificas antes de cerrar." : ""),
+            "resultado",
+          ),
+        );
+        if (porRatificar > 0) {
+          tarjetaAgente.append(comandoCopiable(`valmen ratify --id ${t.id} --actor <tú> --quote "<tus palabras>"`));
+        }
+        lateral.append(tarjetaCompuertas, tarjetaAgente);
+        rejilla.append(lateral);
+        resumen.append(rejilla);
+        if (porRatificar > 0) cuentas.get("Decisiones del agente").textContent = String(porRatificar);
+        cuentas.get("Decisiones del agente").className = "pestana-cuenta persona";
+
+        // La tira de estado y la banda de fases van directas en el contenido, una tras otra, como
+        // antes del rediseño: la banda se refresca sola y lo demás no debe moverse con ella. Se
+        // ven con la pestaña Resumen.
+        const tira = tiraDeEstado(t, abiertos);
+        cont.append(tira);
         pintarBandaDeFases(cont, t, id);
-
-        if (t.invalid !== null) {
+        const banda = cont.children[cont.children.length - 1];
+        delResumen.push(tira, banda);
+        elegir(pestanaDelTicket.nombre);
+        if (t.invalid !== null && t.invalid !== undefined) {
           const nota = el("div", undefined, "nota alerta");
           nota.append(el("strong", "El ticket no valida. "), el("span", t.invalid));
-          cont.append(nota);
+          resumen.append(nota);
         }
+        const meta = el("div", undefined, "meta");
+        meta.append(el("span", t.id, "id"), el("span", `creado ${t.created}`, "etiqueta"));
+        resumen.append(meta, el("div", t.path, "ruta"));
 
-        // ── Gates ──
-        cont.append(el("h2", "Gates"));
-
+        // ── Compuertas: responsable, compuertas, avanzar el estado e historial ──
+        const panelCompuertas = paneles.get("Compuertas");
         const barraResponsable = el("div", undefined, "responsable");
         const etiquetaResponsable = el("label", "Responsable de las decisiones");
         etiquetaResponsable.htmlFor = "responsable";
@@ -6382,31 +6933,19 @@
         entradaResponsable.placeholder = "Tu nombre";
         entradaResponsable.value = responsable;
         entradaResponsable.style.maxWidth = "260px";
-        entradaResponsable.addEventListener("change", () =>
-          guardarResponsable(entradaResponsable.value),
+        entradaResponsable.addEventListener("change", () => guardarResponsable(entradaResponsable.value));
+        barraResponsable.append(
+          etiquetaResponsable,
+          entradaResponsable,
+          el("span", "Se registra en el recibo junto a la decisión: aprobar sin nombre no es auditable.", "resultado"),
         );
-        const ayudaResponsable = el(
-          "span",
-          "Se registra en el recibo junto a la decisión: aprobar sin nombre no es auditable.",
-          "resultado",
-        );
-        barraResponsable.append(etiquetaResponsable, entradaResponsable, ayudaResponsable);
-        cont.append(barraResponsable);
+        panelCompuertas.append(barraResponsable);
 
-        // ── Lo que pide acción, primero ──
-        //
-        // Antes, para ver un gate pendiente había que pasar por la cabecera, el
-        // diagnóstico, el plan y la línea de tiempo: lo urgente quedaba debajo de
-        // lo informativo. Ahora el orden del documento es el orden en que se
-        // necesita.
         const acordeonGates = acordeon("Compuertas", undefined, true);
-
         const zonaGates = el("div");
         acordeonGates.cuerpo.append(zonaGates);
-
         const zonaCorrecciones = el("div");
         acordeonGates.cuerpo.append(zonaCorrecciones);
-
         const acordeonHistorial = acordeon("Historial de decisiones");
 
         const pintarCorrecciones = (correcciones) => {
@@ -6426,19 +6965,31 @@
             quien.append(
               el("span", `Rechazado por ${c.actor} · ${c.decidedAt.slice(0, 10)}`),
               c.retryExhausted
-                ? el(
-                    "span",
-                    " — el autor ya corrigió una vez y volvió a rechazarse. Decide tú: aprobar, o cambiar el plan a mano.",
-                  )
-                : el(
-                    "span",
-                    " — el motivo está en el historial del ticket, listo para corregir.",
-                  ),
+                ? el("span", " — el autor ya corrigió una vez y volvió a rechazarse. Decide tú: aprobar, o cambiar el plan a mano.")
+                : el("span", " — el motivo está en el historial del ticket, listo para corregir."),
             );
             caja.append(quien);
             if (c.reason) caja.append(el("div", c.reason, "correccion-motivo"));
             zonaCorrecciones.append(caja);
           }
+        };
+
+        /** El último resultado de cada compuerta, para la tarjeta de Resumen. */
+        const pintarResumenDeCompuertas = (decisiones) => {
+          filasCompuertas.textContent = "";
+          const ultimo = new Map();
+          for (const d of decisiones) {
+            const previo = ultimo.get(d.gate);
+            if (previo === undefined || String(d.decidedAt ?? "") >= String(previo.decidedAt ?? "")) ultimo.set(d.gate, d);
+          }
+          if (ultimo.size === 0) {
+            filasCompuertas.append(el("div", "Sin compuertas evaluadas todavía.", "resultado"));
+            return;
+          }
+          for (const d of ultimo.values()) {
+            filasCompuertas.append(el("span", d.gate, "compuerta-nombre"), el("span", d.outcome, `compuerta-resultado ${d.outcome}`));
+          }
+          cuentas.get("Compuertas").textContent = String(ultimo.size);
         };
 
         const cargarGates = async () => {
@@ -6447,7 +6998,8 @@
           acordeonHistorial.cuerpo.textContent = "";
           acordeonHistorial.cuerpo.append(tiraDeDecisiones(datos.decisions ?? []));
           pintarCorrecciones(datos.corrections ?? []);
-          for (const gate of datos.gates) {
+          pintarResumenDeCompuertas(datos.decisions ?? []);
+          for (const gate of datos.gates ?? []) {
             zonaGates.append(
               tarjetaGate({ ...gate, ticketId: id }, datos.decisions, async () => {
                 guardarResponsable(entradaResponsable.value);
@@ -6458,33 +7010,24 @@
         };
         await cargarGates();
 
-        // ── Avanzar el estado ──
-        // Los estados los calcula el servidor desde la tabla del contrato. Aquí
-        // solo se pintan: ofrecer un movimiento que la tabla no permite sería
-        // ofrecer un botón que falla.
+        // Los estados los calcula el servidor desde la tabla del contrato: aquí solo se pintan.
         const acordeonTransiciones = acordeon("Avanzar el estado", undefined, true);
         const zonaTransiciones = el("div");
         acordeonTransiciones.cuerpo.append(zonaTransiciones);
-
         const cargarTransiciones = async () => {
           const datos = await api("GET", `/api/tickets/${id}/gates`);
           zonaTransiciones.textContent = "";
-          const t = datos.transitions;
-          if (t === null) {
-            zonaTransiciones.append(
-              el("div", "Todos los movimientos de este ticket están hechos.", "resultado"),
-            );
+          const tr = datos.transitions;
+          if (tr === null || tr === undefined) {
+            zonaTransiciones.append(el("div", "Todos los movimientos de este ticket están hechos.", "resultado"));
             return;
           }
-
           const caja = el("div", undefined, "transiciones");
-
+          const salidaTransicion = el("div", undefined, "resultado");
           const fila = (etiqueta, desde, destinos, entidad, pointId) => {
             const linea = el("div", undefined, "transicion");
             linea.append(el("span", `${etiqueta}: ${desde}`, "resultado"));
-            if (destinos.length === 0) {
-              linea.append(el("span", "sin salidas", "resultado"));
-            }
+            if (destinos.length === 0) linea.append(el("span", "sin salidas", "resultado"));
             for (const destino of destinos) {
               const boton = el("button", destino);
               boton.addEventListener("click", async () => {
@@ -6501,8 +7044,7 @@
                   salidaTransicion.textContent = r.details;
                   await navegar();
                 } catch (fallo) {
-                  // Un rechazo del motor —precondición incumplida, transición
-                  // ilegal— se muestra tal cual: es la explicación.
+                  // Un rechazo del motor se muestra tal cual: es la explicación.
                   salidaTransicion.className = "resultado error";
                   salidaTransicion.textContent = fallo.message;
                   boton.disabled = false;
@@ -6512,11 +7054,9 @@
             }
             return linea;
           };
-
-          const salidaTransicion = el("div", undefined, "resultado");
-          caja.append(fila("Ticket", "→", t.ticket, "ticket"));
-          caja.append(fila("Release", "→", t.release, "release"));
-          for (const punto of t.points) {
+          caja.append(fila("Ticket", "→", tr.ticket ?? [], "ticket"));
+          caja.append(fila("Release", "→", tr.release ?? [], "release"));
+          for (const punto of tr.points ?? []) {
             if (punto.to.length === 0) continue;
             caja.append(fila(punto.id, "→", punto.to, "point", punto.id));
           }
@@ -6524,119 +7064,86 @@
           zonaTransiciones.append(caja);
         };
         await cargarTransiciones();
+        panelCompuertas.append(acordeonGates.caja, acordeonTransiciones.caja, acordeonHistorial.caja);
 
-        // ── Contenido, en acordeones ──
-        //
-        // Cada artefacto se abre cuando se necesita. El diagnóstico arranca
-        // abierto porque es lo que más se relee cuando algo va mal; el plan, la
-        // solicitud y las pruebas arrancan plegados, que es lo que devuelve la
-        // pantalla al tamaño de una lectura.
+        // ── Análisis y Plan: las secciones del ticket, con la del turno abierta ──
+        const seccion = (titulo, vacia, resumenAcordeon) => {
+          const caja = acordeonDeSeccion(titulo, resumenAcordeon, t.workflowStatus);
+          const texto = t.sections[titulo] ?? "";
+          caja.cuerpo.append(texto.trim() === "" ? el("div", vacia, "vacio") : seccionDeTicket(texto));
+          return caja.caja;
+        };
         const solicitud = acordeonDeSeccion("Solicitud original", undefined, t.workflowStatus);
-        solicitud.cuerpo.append(
-          t.request.trim() === ""
-            ? el("div", "(vacía)", "vacio")
-            : seccionDeTicket(t.request),
+        solicitud.cuerpo.append(t.request.trim() === "" ? el("div", "(vacía)", "vacio") : seccionDeTicket(t.request));
+        paneles.get("Análisis").append(
+          solicitud.caja,
+          seccion("Descripción funcional", "(vacía)"),
+          seccion("Diagnóstico", "(vacío)", t.sections["Diagnóstico"] ? "" : "vacío"),
         );
-        cont.append(solicitud.caja);
 
-        const descripcion = acordeonDeSeccion(
-          "Descripción funcional",
-          undefined,
-          t.workflowStatus,
-        );
-        descripcion.cuerpo.append(
-          (t.sections["Descripción funcional"] ?? "").trim() === ""
-            ? el("div", "(vacía)", "vacio")
-            : seccionDeTicket(t.sections["Descripción funcional"]),
-        );
-        cont.append(descripcion.caja);
-
-        const diagnostico = acordeonDeSeccion(
-          "Diagnóstico",
-          t.sections["Diagnóstico"] ? "" : "vacío",
-          t.workflowStatus,
-        );
-        diagnostico.cuerpo.append(
-          (t.sections["Diagnóstico"] ?? "").trim() === ""
-            ? el("div", "(vacío)", "vacio")
-            : seccionDeTicket(t.sections["Diagnóstico"]),
-        );
-        cont.append(diagnostico.caja);
-
-        const plan = acordeonDeSeccion("Plan", t.sections["Plan"] ? "" : "vacío", t.workflowStatus);
-        plan.cuerpo.append(
-          (t.sections["Plan"] ?? "").trim() === ""
-            ? el("div", "(vacío)", "vacio")
-            : seccionDeTicket(t.sections["Plan"]),
-        );
-        cont.append(plan.caja);
-
-        // Los criterios se cuentan y se pintan como lista: son la lista contra la
-        // que el plan se mide, y en texto plano un `- [ ]` no se distingue de una
-        // nota.
+        // Los criterios se cuentan y se pintan como lista: son la lista contra la que se mide el plan.
         const criterios = (t.sections["Criterios de aceptación"] ?? "")
           .split("\n")
           .map((linea) => /^\s*[-*]\s+\[[ xX]\]\s*(.*)$/.exec(linea))
           .filter((m) => m !== null && (m[1] ?? "").trim() !== "")
           .map((m) => m[1].trim());
-        const acordeonCriterios = acordeonDeSeccion(
-          "Criterios de aceptación",
-          `${criterios.length}`,
-          t.workflowStatus,
-        );
+        const acordeonCriterios = acordeonDeSeccion("Criterios de aceptación", `${criterios.length}`, t.workflowStatus);
         if (criterios.length === 0) {
-          acordeonCriterios.cuerpo.append(
-            el("div", "El ticket no declara criterios de aceptación.", "vacio"),
-          );
+          acordeonCriterios.cuerpo.append(el("div", "El ticket no declara criterios de aceptación.", "vacio"));
         } else {
           const lista = el("ul", undefined, "lista-criterios");
           for (const criterio of criterios) lista.append(el("li", criterio));
           acordeonCriterios.cuerpo.append(lista);
         }
-        cont.append(acordeonCriterios.caja);
-
-        const implementacion = acordeonDeSeccion("Implementación", undefined, t.workflowStatus);
-        implementacion.cuerpo.append(
-          (t.sections["Implementación"] ?? "").trim() === ""
-            ? el("div", "(vacía)", "vacio")
-            : seccionDeTicket(t.sections["Implementación"]),
+        paneles.get("Plan").append(
+          seccion("Plan", "(vacío)", t.sections["Plan"] ? "" : "vacío"),
+          acordeonCriterios.caja,
+          seccion("Implementación", "(vacía)"),
+          seccion("Pruebas", "(vacía)"),
         );
-        cont.append(implementacion.caja);
 
-        const pruebas = acordeonDeSeccion("Pruebas", undefined, t.workflowStatus);
-        pruebas.cuerpo.append(
-          (t.sections["Pruebas"] ?? "").trim() === ""
-            ? el("div", "(vacía)", "vacio")
-            : seccionDeTicket(t.sections["Pruebas"]),
+        // ── Decisiones del agente ──
+        paneles.get("Decisiones del agente").append(listaDeDecisionesDelAgente(t));
+
+        // ── Evidencia: puntos, QA, evidencia, retests, cierre, release, eventos y ejecutor ──
+        const evidencia = paneles.get("Evidencia");
+        const bloques = [
+          ["Puntos", t.points],
+          ["QA", t.qa],
+          ["Evidencia", t.evidence],
+          ["Retests", t.retests],
+          ["Cierre", t.closures],
+        ];
+        for (const [titulo, items] of bloques) {
+          const caja = acordeon(titulo, `${items.length}`);
+          const construir =
+            titulo === "QA" ? (registro) => tarjetaCicloQa(registro, items.indexOf(registro)) : tarjetaDato;
+          caja.cuerpo.append(tarjetasDe(items, construir, `Sin registros en ${titulo.toLowerCase()}.`));
+          evidencia.append(caja.caja);
+        }
+        const release = acordeon("Release");
+        release.cuerpo.append(
+          (t.sections["Release"] ?? "").trim() === "" ? el("div", "(vacía)", "vacio") : seccionDeTicket(t.sections["Release"]),
         );
-        cont.append(pruebas.caja);
-
-        // ── La maquinaria, después del contenido ──
-        //
-        // El orden del documento es el orden en que se lee un ticket: primero el
-        // artefacto del estado en que está —y ese viene abierto y marcado—, y
-        // después lo que se hace con él. Antes las compuertas y las transiciones
-        // iban arriba de todo, así que la pantalla abría con botones y dejaba el
-        // diagnóstico tres secciones más abajo.
-        cont.append(acordeonGates.caja);
-        cont.append(acordeonTransiciones.caja);
-        cont.append(acordeonHistorial.caja);
-
+        const acordeonEventos = acordeon("Eventos", `${t.events.length}`);
+        acordeonEventos.cuerpo.append(tarjetasDe(t.events.slice().reverse(), tarjetaEvento, "Sin eventos registrados."));
         const acordeonEjecucion = acordeon("Actividad del ejecutor");
         const zonaEjecucion = el("div", "Leyendo ejecuciones declaradas…", "vacio");
         acordeonEjecucion.cuerpo.append(zonaEjecucion);
-        cont.append(acordeonEjecucion.caja);
-        void pintarActividadDelEjecutor(id).then((nodo) => {
-          zonaEjecucion.textContent = "";
-          zonaEjecucion.append(nodo);
-        }).catch((fallo) => {
-          zonaEjecucion.textContent = "";
-          zonaEjecucion.append(el("div", fallo.message, "resultado"));
-        });
+        evidencia.append(release.caja, acordeonEventos.caja, acordeonEjecucion.caja);
+        void pintarActividadDelEjecutor(id)
+          .then((nodo) => {
+            zonaEjecucion.textContent = "";
+            zonaEjecucion.append(nodo);
+          })
+          .catch((fallo) => {
+            zonaEjecucion.textContent = "";
+            zonaEjecucion.append(el("div", fallo.message, "resultado"));
+          });
 
-        // ── Línea de tiempo y coste ──
-        const acordeonLinea = acordeon("Línea de tiempo y coste");
-        cont.append(acordeonLinea.caja);
+        // ── Consumo de IA: línea de tiempo y coste, y lo registrado ──
+        const consumo = paneles.get("Consumo de IA");
+        const acordeonLinea = acordeon("Línea de tiempo y coste", undefined, true);
         const zonaLinea = el("div");
         zonaLinea.append(el("div", "Leyendo la contabilidad del cliente…", "vacio"));
         acordeonLinea.cuerpo.append(zonaLinea);
@@ -6645,9 +7152,7 @@
           zonaLinea.textContent = "";
           zonaLinea.append(nodo);
         });
-
-        // Guardar el consumo vive con los datos que describe, no al final de todo:
-        // es una decisión sobre el registro, y estaba a media pantalla de su tabla.
+        // Guardar el consumo vive con los datos que describe.
         const pieConsumo = el("div", undefined, "responsable");
         const guardarConsumo = el("button", "Guardar el consumo en el ticket");
         const avisoConsumo = el("div", undefined, "resultado");
@@ -6668,49 +7173,9 @@
             guardarConsumo.disabled = false;
           }
         });
-
-        // ── Registros, como tarjetas ──
         const acordeonConsumo = acordeon("Consumo de IA", `${t.usage.length}`);
-        acordeonConsumo.cuerpo.append(
-          tarjetasDe(t.usage, tarjetaConsumo, "El consumo no se ha registrado todavía."),
-        );
-        cont.append(acordeonConsumo.caja);
-
-        const acordeonEventos = acordeon("Eventos", `${t.events.length}`);
-        acordeonEventos.cuerpo.append(
-          tarjetasDe(t.events.slice().reverse(), tarjetaEvento, "Sin eventos registrados."),
-        );
-        cont.append(acordeonEventos.caja);
-
-        // Los puntos y los ciclos de QA son registros con forma propia, y su
-        // detalle importa: van como tarjetas de datos genéricas para no inventar
-        // una forma por bloque ni dejar un JSON en pantalla.
-        const bloques = [
-          ["Puntos", t.points],
-          ["QA", t.qa],
-          ["Evidencia", t.evidence],
-          ["Retests", t.retests],
-          ["Cierre", t.closures],
-        ];
-        for (const [titulo, items] of bloques) {
-          const caja = acordeon(titulo, `${items.length}`);
-          const construir =
-            titulo === "QA"
-              ? (registro) => tarjetaCicloQa(registro, items.indexOf(registro))
-              : tarjetaDato;
-          caja.cuerpo.append(
-            tarjetasDe(items, construir, `Sin registros en ${titulo.toLowerCase()}.`),
-          );
-          cont.append(caja.caja);
-        }
-
-        const release = acordeon("Release");
-        release.cuerpo.append(
-          (t.sections["Release"] ?? "").trim() === ""
-            ? el("div", "(vacía)", "vacio")
-            : seccionDeTicket(t.sections["Release"]),
-        );
-        cont.append(release.caja);
+        acordeonConsumo.cuerpo.append(tarjetasDe(t.usage, tarjetaConsumo, "El consumo no se ha registrado todavía."));
+        consumo.append(acordeonLinea.caja, acordeonConsumo.caja);
       }
 
       /** La foto no abre conversaciones: cada sesión pide su propia página al pulsar. */
@@ -7165,6 +7630,9 @@
         filtros.open = false;
         filtros.critical = false;
         filtros.conPuntos = false;
+        filtros.empezados = false;
+        // La pestaña de turno no puede esconder el estado pedido: lo cerrado vive en «Cerrados».
+        filtros.turno = estado === "closed" ? "cerrados" : "activos";
         location.hash = "#/tickets";
         void vistaTickets();
       }
