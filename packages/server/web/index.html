@@ -730,6 +730,150 @@
       .punto.alerta {
         background: var(--alerta);
       }
+      /* ── Ajustes › Proveedores (R-AJU-005) ──────────────────────────────
+         Boceto: .valmen/features/rediseno-mission-control/assets/proveedores.html.
+         Una tarjeta por proveedor; el punto distingue configurado (lleno),
+         detectado (anillo) y sin configurar (gris). */
+      .cabecera-proveedores {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin: 8px 0 20px;
+      }
+      .cabecera-proveedores .rotulo-proveedores {
+        font-family: var(--mono);
+        font-size: 13px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--acento);
+      }
+      .cabecera-proveedores .rotulo-proveedores span {
+        color: var(--tenue);
+      }
+      .cabecera-proveedores h1 {
+        margin: 0;
+        font-weight: 600;
+        font-size: clamp(28px, 5vw, 38px);
+        line-height: 1.08;
+      }
+      .cabecera-proveedores p {
+        margin: 0;
+        color: var(--tenue);
+        font-size: 17px;
+        max-width: 70ch;
+      }
+      .leyenda-proveedores {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 18px;
+        font-size: 13.5px;
+        color: var(--tenue);
+        margin-bottom: 20px;
+      }
+      .leyenda-proveedores > span {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .leyenda-proveedores b {
+        color: var(--texto);
+      }
+      .proveedor-punto {
+        flex: none;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        box-sizing: border-box;
+      }
+      .proveedor-punto.configurado {
+        background: var(--ok);
+      }
+      .proveedor-punto.detectado {
+        border: 2px solid var(--ok);
+      }
+      .proveedor-punto.sin-configurar {
+        background: var(--tenue-deco);
+      }
+      .proveedores {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+        gap: 14px;
+      }
+      .proveedor {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        min-width: 0;
+        padding: 20px;
+        border: 1px solid var(--borde);
+        border-radius: 14px;
+        background: var(--panel);
+      }
+      .proveedor.del-perfil {
+        border-color: color-mix(in srgb, var(--modelo) 50%, transparent);
+      }
+      .proveedor-cabeza {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .proveedor-cabeza h2 {
+        flex: 1;
+        min-width: 0;
+        margin: 0;
+        font-size: 21px;
+        font-weight: 600;
+        letter-spacing: normal;
+        text-transform: none;
+        color: var(--texto);
+      }
+      .proveedor-uso {
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--tenue);
+        text-align: right;
+      }
+      .proveedor-uso.activo {
+        color: var(--modelo);
+      }
+      .proveedor-datos {
+        display: grid;
+        grid-template-columns: 110px minmax(0, 1fr);
+        gap: 6px 12px;
+        margin: 0;
+        font-size: 14px;
+      }
+      .proveedor-datos dt {
+        color: var(--tenue);
+      }
+      .proveedor-datos dd {
+        margin: 0;
+        overflow-wrap: anywhere;
+      }
+      .proveedor-datos dd.id {
+        font-size: 14px;
+        color: var(--texto);
+      }
+      .proveedor-avisos:empty {
+        display: none;
+      }
+      .proveedor .acciones {
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        margin-top: auto;
+        padding-top: 12px;
+      }
+      .proveedor .acciones button {
+        min-height: 40px;
+        padding: 0 14px;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        white-space: nowrap;
+        background: var(--fondo-2);
+      }
       .acciones {
         display: flex;
         gap: 8px;
@@ -9019,136 +9163,174 @@
 
       let proveedores = [];
       let proveedorActual = null;
+      /** La caja de resultado de cada tarjeta, por id: `guardar` escribe ahí la prueba. */
+      const salidasDeProveedor = new Map();
 
-      const origen = (p) =>
-        p.source === "environment"
-          ? "variable de entorno"
-          : p.source === "credentials-file"
-            ? "archivo de credenciales"
-            : p.source === "cli"
-              ? "token del CLI"
-              : p.source === "none" && p.configured
-                ? "no requiere"
-                : "—";
+      /**
+       * Los tres estados de R-AJU-005 (D-005). «Configurado» es una credencial que alguien
+       * puso —en el archivo, en el entorno— o un proveedor local que no la necesita;
+       * «detectado» es la sesión que la CLI ya tenía, y confundirlas hace creer que se
+       * configuró algo que nadie configuró.
+       */
+      const estadoDeProveedor = (p) =>
+        !p.configured ? "sin-configurar" : p.source === "cli" ? "detectado" : "configurado";
+
+      /** La línea «Estado» de la tarjeta: el estado y de dónde sale. Nunca la clave. */
+      function detalleDeEstado(p) {
+        const estado = estadoDeProveedor(p);
+        if (estado === "sin-configurar") return "sin configurar";
+        if (estado === "detectado") return "detectado · sesión de la CLI";
+        const caracteres = p.keyLength === null ? "" : ` · ${p.keyLength} caracteres`;
+        if (p.source === "environment") return `configurado · variable de entorno${caracteres}`;
+        if (p.source === "credentials-file") return `configurado · clave guardada${caracteres}`;
+        return "configurado · local, sin clave";
+      }
+
+      /**
+       * Cuántos trabajos del perfil activo dependen del proveedor (D-001): los roles del
+       * perfil elegido con ese `provider`. Con cero, el primer otro perfil que lo usa.
+       * Sin perfil elegido —o sin poder leerlos—, `null`.
+       */
+      function usoDelProveedor(p, datosPerfiles) {
+        const lista = datosPerfiles?.perfiles ?? [];
+        const elegido = datosPerfiles?.seleccion?.proyecto ?? null;
+        const activo = elegido === null ? undefined : lista.find((x) => x.id === elegido);
+        if (activo === undefined) return null;
+        const cuenta = (perfil) =>
+          Object.values(perfil.roles ?? {}).filter((ruta) => ruta?.provider === p.id).length;
+        const delPerfil = cuenta(activo);
+        const otro = delPerfil > 0 ? undefined : lista.find((x) => x.id !== activo.id && cuenta(x) > 0);
+        return { delPerfil, otro: otro?.id ?? null };
+      }
 
       async function vistaProveedores() {
         const cont = $("contenido");
         cont.textContent = "";
 
-        const nota = el("div", undefined, "nota");
-        nota.append(
-          el("strong", "Las claves se prueban antes de guardarse. "),
+        // El perfil no es imprescindible: si no se puede leer, los proveedores se
+        // muestran igual y la tarjeta lo dice (D-004).
+        const [datos, datosPerfiles] = await Promise.all([
+          api("GET", "/api/providers"),
+          api("GET", "/api/perfiles").catch(() => null),
+        ]);
+        proveedores = datos.providers;
+        salidasDeProveedor.clear();
+
+        const cabecera = el("div", undefined, "cabecera-proveedores");
+        const rotulo = el("div", "Ajustes ", "rotulo-proveedores");
+        rotulo.append(el("span", "· Proveedores"));
+        cabecera.append(
+          rotulo,
+          el("h1", "De dónde salen los modelos"),
           el(
-            "span",
-            "Si la conexión falla no se escribe nada, así que una clave mal pegada falla aquí y no en la mitad de un gate. Después de guardarla no se vuelve a mostrar: solo se puede reemplazar.",
+            "p",
+            "Cada proveedor dice si lo usa el perfil activo. Las claves nunca se muestran: solo si están y cuántos caracteres tienen.",
           ),
         );
-        cont.append(nota, el("h2", "Proveedores"));
 
-        const datos = await api("GET", "/api/providers");
-        proveedores = datos.providers;
-
-        const tabla = el("table");
-        const thead = el("thead");
-        const filaCabecera = el("tr");
-        for (const columna of ["Proveedor", "Autenticación", "Estado", "Origen", ""]) {
-          filaCabecera.append(el("th", columna));
+        const leyenda = el("div", undefined, "leyenda-proveedores");
+        for (const [estado, nombre, explicacion] of [
+          ["configurado", "Configurado", "guardaste la clave aquí"],
+          ["detectado", "Detectado", "la CLI ya tenía sesión"],
+          ["sin-configurar", "Sin configurar", ""],
+        ]) {
+          const item = el("span");
+          const punto = el("span", undefined, `proveedor-punto ${estado}`);
+          punto.setAttribute("aria-hidden", "true");
+          item.append(punto, el("b", nombre));
+          if (explicacion !== "") item.append(el("span", explicacion));
+          leyenda.append(item);
         }
-        thead.append(filaCabecera);
-        const tbody = el("tbody");
+        cont.append(cabecera, leyenda);
 
-        for (const p of proveedores) {
-          const tr = el("tr");
+        // Orden (D-004): lo que usa el perfil, luego lo demás con credencial, al final
+        // lo que falta configurar. Dentro de cada grupo, el orden del servidor.
+        const filas = proveedores.map((p, i) => ({ p, i, uso: usoDelProveedor(p, datosPerfiles) }));
+        const grupo = ({ p, uso }) => ((uso?.delPerfil ?? 0) > 0 ? 0 : p.configured ? 1 : 2);
+        filas.sort((a, b) => grupo(a) - grupo(b) || a.i - b.i);
 
-          const celdaNombre = el("td");
-          const punto = el("span", undefined, `punto ${p.configured ? "ok" : "no"}`);
-          celdaNombre.append(punto, el("span", p.name, "nombre"), el("div", p.id, "id"));
-          tr.append(celdaNombre);
+        const rejilla = el("div", undefined, "proveedores");
+        for (const { p, uso } of filas) {
+          const estado = estadoDeProveedor(p);
+          const lousa = (uso?.delPerfil ?? 0) > 0;
+          const tarjeta = el("article", undefined, `proveedor${lousa ? " del-perfil" : ""}`);
+          tarjeta.dataset.id = p.id;
 
-          tr.append(
+          const cabeza = el("div", undefined, "proveedor-cabeza");
+          const punto = el("span", undefined, `proveedor-punto ${estado}`);
+          punto.setAttribute("aria-hidden", "true");
+          cabeza.append(
+            punto,
+            el("h2", p.name),
             el(
-              "td",
-              p.auth === "api-key"
-                ? "API key"
-                : p.auth === "subscription"
-                  ? "suscripción"
-                  : "ninguna",
+              "span",
+              uso === null ? "sin perfil activo" : lousa ? "lo usa el perfil" : "sin uso hoy",
+              `proveedor-uso${lousa ? " activo" : ""}`,
             ),
           );
 
-          const celdaEstado = el("td");
-          // «Configurada» y «detectada» no son lo mismo, y confundirlas hace que
-          // alguien crea que hizo algo que no hizo: Codex aparece en verde
-          // porque su CLI ya tenía sesión, no porque nadie lo configurara aquí.
-          const estado = !p.configured
-            ? "sin configurar"
-            : p.source === "none"
-              ? "local"
-              : p.source === "cli"
-                ? "detectada en el CLI"
-                : `configurada${p.keyLength === null ? "" : ` · ${p.keyLength} caracteres`}`;
-          celdaEstado.append(el("div", estado));
-          if (p.legacyFieldName) {
-            celdaEstado.append(
-              el(
-                "div",
-                "campo con el nombre anterior; se normaliza al reescribir",
-                "resultado",
-              ),
-            );
-          }
+          const trabajos =
+            uso === null
+              ? "sin perfil activo"
+              : lousa
+                ? `${uso.delPerfil} del perfil activo`
+                : uso.otro !== null
+                  ? `0 · lo usa el perfil ${uso.otro}`
+                  : "0 · ningún perfil lo usa";
+          const lista = el("dl", undefined, "proveedor-datos");
+          lista.append(
+            el("dt", "Estado"),
+            el("dd", detalleDeEstado(p)),
+            el("dt", "Id"),
+            el("dd", p.id, "id"),
+            el("dt", "Trabajos"),
+            el("dd", trabajos),
+          );
+
           const salida = el("div", undefined, "resultado");
           salida.dataset.id = p.id;
-          celdaEstado.append(salida);
-          tr.append(celdaEstado);
-
-          const celdaOrigen = el("td");
-          celdaOrigen.append(el("div", origen(p), "resultado"));
-          if (p.probeable && p.probeHost) {
-            celdaOrigen.append(el("div", `se prueba contra ${p.probeHost}`, "resultado"));
+          salidasDeProveedor.set(p.id, salida);
+          const avisos = el("div", undefined, "proveedor-avisos");
+          if (p.legacyFieldName) {
+            avisos.append(
+              el("div", "campo con el nombre anterior; se normaliza al reescribir", "resultado"),
+            );
           }
-          tr.append(celdaOrigen);
+          avisos.append(salida);
 
-          const celdaAcciones = el("td");
           const acciones = el("div", undefined, "acciones");
-
-          // Un proveedor de suscripción no tiene endpoint: su credencial es el
-          // token que ya vive en el CLI. Un botón que siempre falla parece un
-          // error del usuario, así que en su lugar se dice qué usa.
+          // Un proveedor de suscripción sin endpoint no se prueba: su credencial es el
+          // token que ya vive en el CLI, y un botón que siempre falla parece un error
+          // del usuario. En su lugar se dice qué usa.
           if (p.probeable) {
-            const probar = el("button", "Probar");
-            probar.title = `Se prueba contra ${p.probeHost}`;
+            const probar = el("button", "Probar conexión");
+            if (p.probeHost) probar.title = `Se prueba contra ${p.probeHost}`;
             probar.addEventListener("click", () => void probarConexion(p, salida, probar));
             acciones.append(probar);
           } else if (p.tokenSource) {
-            salida.className = "resultado";
             salida.textContent = p.configured
               ? `Detectada en ${p.tokenSource}. No hay endpoint que probar.`
               : `No se encontró ${p.tokenSource}. Inicia sesión con el CLI de ${p.name} y vuelve a recargar.`;
           }
-
+          // La clave solo se configura donde el servidor la acepta (D-002).
           if (p.auth === "api-key") {
             const configurar = el(
               "button",
-              p.configured ? "Reemplazar" : "Configurar",
-              p.configured ? "" : "principal",
+              p.configured ? "Reemplazar clave" : "Configurar clave",
             );
             configurar.addEventListener("click", () => abrirDialogo(p));
             acciones.append(configurar);
           }
           if (p.configured && p.auth === "api-key" && p.source === "credentials-file") {
-            const borrar = el("button", "Borrar", "peligro");
+            const borrar = el("button", "Borrar clave", "peligro");
             borrar.addEventListener("click", () => void borrarClave(p, borrar));
             acciones.append(borrar);
           }
 
-          celdaAcciones.append(acciones);
-          tr.append(celdaAcciones);
-          tbody.append(tr);
+          tarjeta.append(cabeza, lista, avisos, acciones);
+          rejilla.append(tarjeta);
         }
-
-        tabla.append(thead, tbody);
-        cont.append(tabla);
+        cont.append(rejilla);
       }
 
       async function probarConexion(p, salida, boton) {
@@ -9203,7 +9385,7 @@
           cacheModelos = null;
           $("dialogo").close();
           await vistaProveedores();
-          const salida = document.querySelector(`.resultado[data-id="${id}"]`);
+          const salida = salidasDeProveedor.get(id);
           if (salida) {
             salida.className = "resultado ok";
             salida.textContent = `${r.probe.detail} · ${r.probe.latencyMs} ms`;
