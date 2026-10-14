@@ -1465,16 +1465,246 @@
         border-color: var(--alerta);
         color: var(--alerta);
       }
-      .tarjeta-estandar {
-        border: 1px solid var(--borde);
-        border-radius: 6px;
-        margin-bottom: 12px;
-        padding: 12px;
+      /* Estándares por estado (R-VIVO-004), como el boceto `assets/estandares.html`:
+         pestañas con cuenta y una fila plegable por estándar. Solo tokens: el ámbar es
+         «lo decidió una persona», el cian el id, el verde «en vigor». Prefijo `est-`. */
+      .est {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        max-width: 1240px;
       }
-      .tarjeta-estandar .nombre {
-        font-size: 15px;
+      .est-titulos {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .est-migas {
+        font-family: var(--mono);
+        font-size: 13px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--codigo);
+      }
+      .est-migas span {
+        color: var(--tenue);
+      }
+      .est-titulo {
+        margin: 0;
+        font-family: var(--fuente-titulo);
         font-weight: 600;
-        margin: 6px 0;
+        font-size: 38px;
+        line-height: 1.08;
+        text-transform: none;
+        letter-spacing: normal;
+        color: var(--texto);
+      }
+      .est-bajada {
+        margin: 0;
+        color: var(--tenue);
+        font-size: 16px;
+        max-width: 70ch;
+      }
+      .est-barra {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .est-pestanas {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        padding: 4px;
+        border-radius: 12px;
+        background: var(--fondo-2);
+        border: 1px solid var(--borde);
+      }
+      .est-pestana {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        height: 36px;
+        padding: 0 14px;
+        border: 0;
+        border-radius: 9px;
+        background: transparent;
+        color: var(--tenue);
+        font-size: 14px;
+        cursor: pointer;
+      }
+      .est-pestana.elegida {
+        background: var(--panel-alto);
+        color: var(--texto);
+        box-shadow: inset 0 0 0 1px var(--borde);
+      }
+      .est-cuenta {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--tenue);
+      }
+      .est-pestana.elegida .est-cuenta-ok {
+        color: var(--ok);
+      }
+      .est-cuenta-persona {
+        color: var(--persona);
+      }
+      .est-origen {
+        font-size: 13.5px;
+        color: var(--tenue);
+        overflow-wrap: anywhere;
+      }
+      .est-origen b {
+        color: var(--texto);
+      }
+      .est-ruta {
+        font-family: var(--mono);
+      }
+      .est-bloque .est-ruta {
+        font-size: 13px;
+        color: var(--tenue);
+      }
+      .est-lista {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        border-radius: 14px;
+        border: 1px solid var(--borde);
+        background: var(--panel);
+        overflow: hidden;
+      }
+      .est-item {
+        border-bottom: 1px solid var(--borde);
+      }
+      .est-item:last-child {
+        border-bottom: 0;
+      }
+      .est-fila {
+        box-sizing: border-box;
+        width: 100%;
+        display: grid;
+        grid-template-columns: 76px minmax(0, 1fr) 110px 22px;
+        gap: 14px;
+        align-items: center;
+        padding: 14px 18px;
+        border: 0;
+        background: transparent;
+        color: var(--texto);
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+      .est-fila:hover {
+        background: var(--panel-alto);
+      }
+      .est-id {
+        font-family: var(--mono);
+        font-size: 13px;
+        color: var(--codigo);
+      }
+      .est-nombre {
+        font-weight: 600;
+        min-width: 0;
+      }
+      .est-fecha {
+        font-family: var(--mono);
+        font-size: 12.5px;
+        color: var(--tenue);
+      }
+      .est-chevron {
+        justify-self: center;
+        width: 8px;
+        height: 8px;
+        border-right: 2px solid var(--tenue);
+        border-bottom: 2px solid var(--tenue);
+        transform: translateY(-2px) rotate(45deg);
+        transition: transform 0.15s ease;
+      }
+      .est-fila[aria-expanded="true"] .est-chevron {
+        transform: translateY(2px) rotate(225deg);
+      }
+      .est-cuerpo {
+        padding: 0 18px 18px 108px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        font-size: 14.5px;
+      }
+      .est-etiqueta {
+        font-family: var(--mono);
+        font-size: 11.5px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--tenue);
+      }
+      .est-texto {
+        color: var(--texto);
+        overflow-wrap: anywhere;
+      }
+      .est-texto p {
+        margin: 0;
+      }
+      .est-texto p + p {
+        margin-top: 6px;
+      }
+      .est-aviso {
+        font-size: 13.5px;
+        color: var(--tenue);
+      }
+      .est-cita {
+        padding: 10px 14px;
+        border-radius: 10px;
+        background: var(--alerta-suave);
+        border: 1px solid var(--persona);
+      }
+      .est-cita .est-etiqueta {
+        color: var(--persona);
+      }
+      .est-frase {
+        font-style: italic;
+        color: var(--texto);
+      }
+      .est-sin-frase {
+        color: var(--tenue);
+      }
+      .est-acciones {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+      }
+      .est-acciones .ruta,
+      .est-acciones .resultado {
+        flex-basis: 100%;
+      }
+      .est-mas > summary {
+        cursor: pointer;
+        color: var(--tenue);
+      }
+      .est-mas h3 {
+        margin: 14px 0 8px;
+        font-size: 14px;
+      }
+      .est-historial {
+        font-size: 13.5px;
+        color: var(--tenue);
+        padding: 4px 0;
+        overflow-wrap: anywhere;
+      }
+      @media (max-width: 640px) {
+        .est-fila {
+          grid-template-columns: auto minmax(0, 1fr) 22px;
+          grid-template-areas: "id fecha chevron" "nombre nombre nombre";
+          gap: 6px 12px;
+          padding: 12px 14px;
+        }
+        .est-id { grid-area: id; }
+        .est-fecha { grid-area: fecha; justify-self: end; }
+        .est-chevron { grid-area: chevron; }
+        .est-nombre { grid-area: nombre; }
+        .est-cuerpo { padding: 0 14px 14px; }
+        .est-titulo { font-size: 30px; }
       }
 
       /* El tablero de una feature: columnas por dónde está cada ticket.
@@ -1677,20 +1907,6 @@
       .feat-pie { font-size: 13.5px; color: var(--tenue); }
       .feat-detalle { margin-top: 16px; }
       .feat-detalle > summary { cursor: pointer; color: var(--tenue); margin-bottom: 12px; }
-
-      /* Lo ya decidido: se lee, pero no compite con lo que pide una acción. */
-      .tarjeta-estandar.historial {
-        border-left: 3px solid var(--borde);
-        margin: 8px 0 8px 12px;
-        opacity: 0.85;
-      }
-      /* El margen es del historial, no de todo desplegable: puesto como
-         `details > summary` global engordaba los acordeones de un ticket —los
-         dejaba en setenta píxeles de alto— y el usuario lo notó antes que yo. */
-      .historial-estandares > summary {
-        cursor: pointer;
-        margin: 14px 0 8px;
-      }
 
       /* La sección que toca mirar en el estado actual. */
       .acordeon.de-turno {
@@ -5556,90 +5772,268 @@
 
       // ── Vista: estándares ─────────────────────────────────────────────────
       //
-      // Las reglas que el proyecto ya decidió y las que están por decidir. Las dos
-      // cosas juntas a propósito: quien aprueba una propuesta necesita ver lo que
-      // ya está en vigor, o aprueba algo que ya existía con otras palabras.
+      // Reglas › Estándares por estado (FEATURE-WEB-REGLAS-ESTANDARES-20261014,
+      // boceto assets/estandares.html). Tres pestañas —en vigor, propuestos,
+      // descartados— y una fila plegable por estándar con su regla, su porqué y la
+      // frase literal de quien lo decidió. La vista no decide nada por nadie: la
+      // única escritura es la de los botones de un propuesto, que pulsa una persona,
+      // y una frase que el registro no tiene no se compone acá (D-003).
+
+      /** La pestaña que se ve; se fija al entrar a la vista (D-006). */
+      let estandaresPestana = "vigor";
+      /** La clave de la fila abierta: una a la vez, la primera al entrar (D-007). */
+      let estandaresAbierto = "";
+
+      const ESTANDARES_PESTANAS = [
+        ["vigor", "En vigor"],
+        ["propuestos", "Propuestos"],
+        ["descartados", "Descartados"],
+      ];
+      const ESTANDARES_MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+      const ESTANDARES_PROPUESTAS = ".valmen/estandares-propuestos.md";
+
+      /** «13 oct» con la primera fecha `AAAA-MM-DD` que haya, o «—» (D-008). */
+      function estandaresFecha(...fechas) {
+        const iso = fechas.find((f) => typeof f === "string" && /^\d{4}-\d{2}-\d{2}/.test(f));
+        if (iso === undefined) return "—";
+        const mes = ESTANDARES_MESES[Number(iso.slice(5, 7)) - 1] ?? "";
+        return `${iso.slice(8, 10)} ${mes}`.trim();
+      }
+
+      /**
+       * Las secciones `## <título>` de un archivo de reglas, con la forma que escribe
+       * `decideProposal`: la regla, `**Por qué:**` y `**Visto en:**`. Una sección con
+       * otra forma se toma entera como regla.
+       */
+      function estandaresSecciones(contenido) {
+        const secciones = [];
+        let actual = null;
+        for (const linea of String(contenido ?? "").split("\n")) {
+          const titulo = /^##\s+(.+)$/.exec(linea);
+          if (titulo !== null) {
+            actual = { titulo: titulo[1].trim(), lineas: [] };
+            secciones.push(actual);
+          } else if (/^#\s/.test(linea)) {
+            actual = null;
+          } else if (actual !== null) {
+            actual.lineas.push(linea);
+          }
+        }
+        return secciones.map(({ titulo, lineas }) => {
+          const partes = { regla: [], porque: [], vistoEn: [] };
+          let destino = partes.regla;
+          for (const linea of lineas) {
+            const porque = /^\*\*Por qué:\*\*\s*(.*)$/.exec(linea);
+            const visto = /^\*\*Visto en:\*\*\s*(.*)$/.exec(linea);
+            if (porque !== null) {
+              destino = partes.porque;
+              destino.push(porque[1]);
+            } else if (visto !== null) {
+              destino = partes.vistoEn;
+              destino.push(visto[1]);
+            } else {
+              destino.push(linea);
+            }
+          }
+          const unir = (lista) => lista.join("\n").trim();
+          return { titulo, regla: unir(partes.regla), porque: unir(partes.porque), vistoEn: unir(partes.vistoEn) };
+        });
+      }
+
+      /**
+       * Las filas de cada pestaña. «En vigor» cruza cada sección de los archivos de
+       * reglas —lo que lee el agente— con la propuesta aceptada del mismo título, de
+       * donde salen el id, la fecha y la frase (D-004).
+       */
+      function estandaresFilas(datos) {
+        const propuestas = Array.isArray(datos?.proposals) ? datos.proposals : [];
+        const archivos = Array.isArray(datos?.standards) ? datos.standards : [];
+        const porId = (a, b) => String(b.id).localeCompare(String(a.id));
+        const desdePropuesta = (p) => ({
+          clave: String(p.id),
+          id: String(p.id),
+          titulo: String(p.title ?? ""),
+          fecha: estandaresFecha(p.date, p.decidedOn),
+          regla: String(p.rule ?? ""),
+          porque: String(p.why ?? ""),
+          vistoEn: Array.isArray(p.tickets) ? p.tickets.join(", ") : "",
+          estado: p.state,
+          decididoEl: String(p.decidedOn ?? ""),
+          frase: String(p.instruction ?? "").trim(),
+          aviso: "",
+          propuesta: p,
+        });
+        const aceptadas = propuestas.filter((p) => p.state === "aceptado");
+        const usadas = new Set();
+        const vigor = [];
+        const sinPropuesta = [];
+        for (const archivo of archivos) {
+          for (const seccion of estandaresSecciones(archivo.content)) {
+            const p = aceptadas.find(
+              (c) => !usadas.has(c.id) && String(c.title ?? "").trim() === seccion.titulo,
+            );
+            if (p === undefined) {
+              sinPropuesta.push({
+                clave: `${archivo.path}#${seccion.titulo}`,
+                id: "—",
+                titulo: seccion.titulo,
+                fecha: "—",
+                regla: seccion.regla,
+                porque: seccion.porque,
+                vistoEn: seccion.vistoEn,
+                estado: "aceptado",
+                decididoEl: "",
+                frase: "",
+                aviso: `Sin decisión registrada en ${ESTANDARES_PROPUESTAS}.`,
+                propuesta: null,
+              });
+              continue;
+            }
+            usadas.add(p.id);
+            const fila = desdePropuesta(p);
+            vigor.push({
+              ...fila,
+              regla: seccion.regla || fila.regla,
+              porque: seccion.porque || fila.porque,
+              vistoEn: seccion.vistoEn || fila.vistoEn,
+            });
+          }
+        }
+        const rutas = archivos.map((a) => a.path).join(", ") || ".valmen/rules/";
+        for (const p of aceptadas) {
+          if (!usadas.has(p.id)) vigor.push({ ...desdePropuesta(p), aviso: `No aparece en ${rutas}.` });
+        }
+        return {
+          vigor: [...vigor.sort(porId), ...sinPropuesta],
+          propuestos: propuestas.filter((p) => p.state === "propuesto").map(desdePropuesta).sort(porId),
+          descartados: propuestas.filter((p) => p.state === "descartado").map(desdePropuesta).sort(porId),
+        };
+      }
+
+      /** Un bloque «Regla» / «Por qué» del cuerpo de una fila. */
+      function estandaresBloque(etiqueta, texto) {
+        const bloque = el("div", undefined, "est-bloque");
+        const cuerpo = el("div", undefined, "est-texto");
+        cuerpo.append(renderMarkdown(texto));
+        bloque.append(el("span", etiqueta, "est-etiqueta"), cuerpo);
+        return bloque;
+      }
+
+      /** La caja ámbar con la frase literal de quien decidió, o el aviso de que no la hay. */
+      function estandaresCita(fila) {
+        const cita = el("div", undefined, "est-cita");
+        if (fila.frase !== "") {
+          cita.append(
+            el(
+              "span",
+              fila.estado === "descartado" ? "Lo descartaste con estas palabras" : "Lo aceptaste con estas palabras",
+              "est-etiqueta",
+            ),
+            el("div", `«${fila.frase}»`, "est-frase"),
+          );
+        } else {
+          cita.append(
+            el("span", "Decisión", "est-etiqueta"),
+            el(
+              "div",
+              fila.decididoEl !== ""
+                ? `Decidido el ${estandaresFecha(fila.decididoEl)}, sin frase registrada.`
+                : "Sin fecha ni frase registradas.",
+              "est-sin-frase",
+            ),
+          );
+        }
+        return cita;
+      }
+
       async function vistaEstandares() {
         const cont = $("contenido");
-        cont.textContent = "";
         const datos = await api("GET", "/api/standards");
+        cont.textContent = "";
+        const filas = estandaresFilas(datos);
+        const archivos = Array.isArray(datos?.standards) ? datos.standards : [];
+        const propuestas = Array.isArray(datos?.proposals) ? datos.proposals : [];
+        estandaresPestana = filas.propuestos.length > 0 ? "propuestos" : "vigor";
+        estandaresAbierto = filas[estandaresPestana][0]?.clave ?? "";
 
-        cont.append(el("h2", "Estándares del proyecto"));
-        cont.append(
+        const pagina = el("div", undefined, "est");
+        const titulos = el("div", undefined, "est-titulos");
+        const migas = el("div", "Reglas ", "est-migas");
+        migas.append(el("span", "· Estándares"));
+        titulos.append(
+          migas,
+          el("h1", "Lo que este proyecto ya decidió", "est-titulo"),
           el(
-            "div",
-            "Cómo se ve y cómo se escribe lo que se construye acá. Están en el AGENTS.md " +
-              "que lee el agente, así que los tiene antes de escribir la primera línea.",
-            "resultado",
+            "p",
+            "Cada regla salió de una corrección. Ábrela para ver por qué existe y con qué palabras la aceptaste.",
+            "est-bajada",
           ),
         );
+        const barra = el("div", undefined, "est-barra");
+        const pestanas = el("div", undefined, "est-pestanas");
+        pestanas.setAttribute("role", "tablist");
+        pestanas.setAttribute("aria-label", "Estándares por estado");
+        const origen = el("div", undefined, "est-origen");
+        barra.append(pestanas, origen);
+        const zona = el("div", undefined, "est-zona");
+        pagina.append(titulos, barra, zona);
 
-        const pendientes = datos.proposals.filter((p) => p.state === "propuesto");
-        if (pendientes.length > 0) {
-          const caja = el("div", undefined, "nota alerta");
-          caja.append(
-            el("strong", `${pendientes.length} propuesta(s) esperando tu decisión. `),
-            el("span", "Una regla sin aprobar no está en vigor y el agente no la aplica."),
+        // Aceptar o descartar lo decide quien pulsa: la misma llamada de siempre,
+        // sin frase, porque la pantalla no tiene palabras que citar (D-001).
+        const decidir = async (propuesta, decision, boton, salida) => {
+          boton.disabled = true;
+          salida.className = "resultado";
+          salida.textContent = "Registrando…";
+          try {
+            const r = await api("POST", `/api/standards/${propuesta.id}/decision`, { decision });
+            salida.className = "resultado ok";
+            salida.textContent = r.details;
+            await vistaEstandares();
+          } catch (fallo) {
+            salida.className = "resultado error";
+            salida.textContent = fallo.message;
+            boton.disabled = false;
+          }
+        };
+
+        const filaDe = (fila) => {
+          const abierta = fila.clave === estandaresAbierto;
+          const item = el("li", undefined, "est-item");
+          const boton = el("button", undefined, "est-fila");
+          boton.type = "button";
+          boton.setAttribute("aria-expanded", String(abierta));
+          boton.append(
+            el("span", fila.id, "est-id"),
+            el("span", fila.titulo, "est-nombre"),
+            el("span", fila.fecha, "est-fecha"),
+            el("span", undefined, "est-chevron"),
           );
-          cont.append(caja);
-        }
+          boton.addEventListener("click", () => {
+            estandaresAbierto = abierta ? "" : fila.clave;
+            pintar();
+          });
+          item.append(boton);
+          if (!abierta) return item;
 
-        // Lo decidido no se mezcla con lo que espera decisión. Una propuesta
-        // aceptada que sigue en la lista de propuestas hace dudar de si se aplicó,
-        // y la que se descartó parece pendiente para siempre: las dos se leen en
-        // el historial, que es donde se busca «¿esto por qué no está?».
-        const porDecidir = datos.proposals.filter((p) => p.state === "propuesto");
-        const decididas = datos.proposals.filter((p) => p.state !== "propuesto");
-
-        // ── Las propuestas: solo las que esperan ──
-        if (porDecidir.length > 0) {
-          cont.append(el("h3", `Propuestas (${porDecidir.length})`));
-          for (const propuesta of porDecidir) {
-            const tarjeta = el("div", undefined, "tarjeta-estandar");
-            const cabecera = el("div", undefined, "meta");
-            cabecera.append(
-              el("span", propuesta.id, "id"),
-              el("span", propuesta.area, "etiqueta"),
-              el("span", propuesta.state, "etiqueta"),
-              el("span", propuesta.date, "id"),
-            );
-            tarjeta.append(cabecera);
-            tarjeta.append(el("div", propuesta.title, "nombre"));
-            tarjeta.append(el("div", `Regla: ${propuesta.rule}`, "resultado"));
-            if (propuesta.why !== "")
-              tarjeta.append(el("div", `Por qué: ${propuesta.why}`, "resultado"));
-            if (propuesta.tickets.length > 0) {
-              tarjeta.append(el("div", `Visto en: ${propuesta.tickets.join(", ")}`, "ruta"));
-            }
-
-            const acciones = el("div", undefined, "responsable");
+          const cuerpo = el("div", undefined, "est-cuerpo");
+          cuerpo.append(estandaresBloque("Regla", fila.regla));
+          if (fila.porque !== "") cuerpo.append(estandaresBloque("Por qué", fila.porque));
+          if (fila.vistoEn !== "") {
+            const visto = el("div", undefined, "est-bloque");
+            visto.append(el("span", "Visto en", "est-etiqueta"), el("div", fila.vistoEn, "est-texto est-ruta"));
+            cuerpo.append(visto);
+          }
+          if (fila.aviso !== "") cuerpo.append(el("div", fila.aviso, "est-aviso"));
+          if (fila.propuesta !== null && fila.estado !== "propuesto") cuerpo.append(estandaresCita(fila));
+          if (fila.estado === "propuesto") {
+            const acciones = el("div", undefined, "est-acciones");
             const aceptar = el("button", "Aceptar y poner en vigor");
+            aceptar.type = "button";
             const descartar = el("button", "Descartar", "enlace");
+            descartar.type = "button";
             const salida = el("div", undefined, "resultado");
-            const decidir = async (decision, boton) => {
-              boton.disabled = true;
-              salida.className = "resultado";
-              salida.textContent = "Registrando…";
-              try {
-                const r = await api(
-                  "POST",
-                  `/api/standards/${propuesta.id}/decision`,
-                  { decision },
-                );
-                salida.className = "resultado ok";
-                salida.textContent = r.details;
-                await vistaEstandares();
-              } catch (fallo) {
-                salida.className = "resultado error";
-                salida.textContent = fallo.message;
-                boton.disabled = false;
-              }
-            };
-            aceptar.addEventListener("click", () => void decidir("aceptado", aceptar));
-            descartar.addEventListener("click", () => void decidir("descartado", descartar));
-            // Las dos puertas, dichas donde se decide: los botones son una, y
-            // pedírselo al agente es la otra. Quien no usa la pantalla tiene que
-            // poder enterarse acá de que también se puede por la conversación.
+            aceptar.addEventListener("click", () => void decidir(fila.propuesta, "aceptado", aceptar, salida));
+            descartar.addEventListener("click", () => void decidir(fila.propuesta, "descartado", descartar, salida));
             acciones.append(
               aceptar,
               descartar,
@@ -5651,83 +6045,101 @@
               ),
               salida,
             );
-            tarjeta.append(acciones);
-            cont.append(tarjeta);
+            cuerpo.append(acciones);
           }
-        }
+          item.append(cuerpo);
+          return item;
+        };
 
-        // ── Los que están en vigor ──
-        cont.append(el("h3", "En vigor"));
-        if (datos.standards.length === 0) {
-          cont.append(
-            el(
-              "div",
-              "Todavía no hay estándares escritos. El agente los propone cuando el trabajo " +
+        const pintar = () => {
+          pestanas.textContent = "";
+          for (const [clave, nombre] of ESTANDARES_PESTANAS) {
+            const elegida = clave === estandaresPestana;
+            const cuenta = filas[clave].length;
+            const pestana = el("button", undefined, `est-pestana${elegida ? " elegida" : ""}`);
+            pestana.type = "button";
+            pestana.setAttribute("role", "tab");
+            pestana.setAttribute("aria-selected", String(elegida));
+            const claseCuenta =
+              clave === "vigor" ? " est-cuenta-ok" : clave === "propuestos" && cuenta > 0 ? " est-cuenta-persona" : "";
+            pestana.append(el("span", nombre), el("span", String(cuenta), `est-cuenta${claseCuenta}`));
+            pestana.addEventListener("click", () => {
+              estandaresPestana = clave;
+              estandaresAbierto = filas[clave][0]?.clave ?? "";
+              pintar();
+            });
+            pestanas.append(pestana);
+          }
+
+          // De dónde sale lo que se ve (D-005).
+          origen.textContent = "";
+          if (estandaresPestana === "vigor" && archivos.length > 0) {
+            for (const archivo of archivos) {
+              const linea = el("div");
+              linea.append(
+                document.createTextNode("Área: "),
+                el("b", String(archivo.area ?? "")),
+                document.createTextNode(" · "),
+                el("span", String(archivo.path ?? ""), "est-ruta"),
+              );
+              origen.append(linea);
+            }
+          } else if (estandaresPestana !== "vigor") {
+            origen.append(document.createTextNode("Archivo: "), el("span", ESTANDARES_PROPUESTAS, "est-ruta"));
+          }
+
+          zona.textContent = "";
+          const actuales = filas[estandaresPestana];
+          if (actuales.length === 0) {
+            const vacios = {
+              vigor:
+                "Todavía no hay estándares escritos. El agente los propone cuando el trabajo " +
                 "le enseña una convención que no está en ninguna parte.",
-              "vacio",
-            ),
-          );
-          return;
-        }
-
-        for (const archivo of datos.standards) {
-          const acordeonEstandar = acordeon(
-            archivo.path.split("/").pop() ?? archivo.area,
-            archivo.area,
-            true,
-          );
-          acordeonEstandar.cuerpo.append(seccionDeTicket(archivo.content));
-          cont.append(acordeonEstandar.caja);
-        }
-
-        // ── El historial: lo que ya se decidió ──
-        //
-        // Cerrado por defecto: no es lo que se viene a hacer acá, y abierto
-        // empujaría hacia abajo lo único que pide una acción. Pero está, con su
-        // fecha y sus palabras, porque «¿por qué no tenemos esta regla?» y «¿esto
-        // quién lo aprobó?» son preguntas que se hacen meses después.
-        if (decididas.length > 0) {
-          const aceptadas = decididas.filter((p) => p.state === "aceptado").length;
-          const historial = document.createElement("details");
-          historial.className = "historial-estandares";
-          historial.append(
-            el(
-              "summary",
-              `Historial — ${decididas.length} decidido(s): ${aceptadas} en vigor, ` +
-                `${decididas.length - aceptadas} descartado(s)`,
-            ),
-          );
-          for (const propuesta of decididas) {
-            const tarjeta = el("div", undefined, "tarjeta-estandar historial");
-            const cabecera = el("div", undefined, "meta");
-            cabecera.append(
-              el("span", propuesta.id, "id"),
-              el("span", propuesta.area, "etiqueta"),
-              el(
-                "span",
-                propuesta.state,
-                propuesta.state === "aceptado" ? "etiqueta aprueba" : "etiqueta",
-              ),
-              el("span", propuesta.date, "id"),
-            );
-            tarjeta.append(cabecera);
-            tarjeta.append(el("div", propuesta.title, "nombre"));
-            tarjeta.append(el("div", `Regla: ${propuesta.rule}`, "resultado"));
-            tarjeta.append(
-              el(
-                "div",
-                propuesta.decidedOn
-                  ? `Decidido el ${propuesta.decidedOn}` +
-                      (propuesta.instruction ? ` — «${propuesta.instruction}»` : "")
-                  : "Decidido",
-                "ruta",
-              ),
-            );
-            tarjeta.append(el("div", `→ ${propuesta.source.path}`, "ruta"));
-            historial.append(tarjeta);
+              propuestos: "No hay estándares propuestos esperando tu decisión.",
+              descartados: "No hay estándares descartados.",
+            };
+            zona.append(el("div", vacios[estandaresPestana], "vacio"));
+            return;
           }
-          cont.append(historial);
+          const lista = el("ul", undefined, "est-lista");
+          for (const fila of actuales) lista.append(filaDe(fila));
+          zona.append(lista);
+        };
+        pintar();
+
+        // Lo que la vista anterior mostraba y las pestañas no repiten: el archivo
+        // de reglas entero, tal como lo lee el agente, y el historial de decisiones
+        // con su fecha. Plegado: se consulta, no es lo que se viene a hacer acá.
+        const decididas = propuestas.filter((p) => p.state !== "propuesto");
+        if (archivos.length > 0 || decididas.length > 0) {
+          const mas = el("details", undefined, "est-mas");
+          mas.append(el("summary", "Más detalle"));
+          if (archivos.length > 0) {
+            mas.append(el("h3", "Archivos de reglas completos"));
+            for (const archivo of archivos) {
+              const caja = acordeon(String(archivo.path ?? "").split("/").pop() || archivo.area, archivo.area);
+              caja.cuerpo.append(seccionDeTicket(String(archivo.content ?? "")));
+              mas.append(caja.caja);
+            }
+          }
+          if (decididas.length > 0) {
+            mas.append(el("h3", "Historial de decisiones"));
+            for (const p of [...decididas].sort((a, b) => String(b.id).localeCompare(String(a.id)))) {
+              const frase = String(p.instruction ?? "").trim();
+              mas.append(
+                el(
+                  "div",
+                  `${p.id} · ${p.state} · ${p.decidedOn || "sin fecha"}` +
+                    (frase !== "" ? ` · «${frase}»` : " · sin frase") +
+                    ` — ${p.title}`,
+                  "est-historial",
+                ),
+              );
+            }
+          }
+          pagina.append(mas);
         }
+        cont.append(pagina);
       }
 
       // ── Vista: features ───────────────────────────────────────────────────
