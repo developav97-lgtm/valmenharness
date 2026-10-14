@@ -1,0 +1,141 @@
+feature: rediseno-mission-control
+generated_by:
+  provider: claude-code
+  model: claude-sonnet-5-5
+sprints:
+  - id: S1
+    goal: "Marco común entregable: tema sala de control con fuentes locales, menú por grupos con proyecto y perfil activo, acción Pedir un cambio e Inicio como pantalla de apertura."
+    tickets:
+      - id: FEATURE-WEB-TEMA-TOKENS-20261014
+        title: "Tema sala de control con tokens, fuentes locales y modo claro"
+        depends_on: []
+      - id: FEATURE-WEB-MENU-GRUPOS-20261014
+        title: "Menú por grupos con proyecto, perfil activo y Pedir un cambio"
+        depends_on:
+          - FEATURE-WEB-TEMA-TOKENS-20261014
+      - id: FEATURE-WEB-INICIO-DECISIONES-20261014
+        title: Inicio con lo que espera una decisión de la persona
+        depends_on:
+          - FEATURE-WEB-MENU-GRUPOS-20261014
+  - id: S2
+    goal: "Ajustes rediseñados: Modelos con perfil activo y roles agrupados, cambio de perfil con vista previa, Proveedores y Proyecto por bloques."
+    tickets:
+      - id: FEATURE-WEB-AJUSTES-MODELOS-20261014
+        title: "Vista Modelos con perfil activo, roles agrupados y aviso de cliente"
+        depends_on:
+          - FEATURE-WEB-MENU-GRUPOS-20261014
+      - id: FEATURE-WEB-AJUSTES-CAMBIAR-PERFIL-20261014
+        title: Cambiar de perfil con vista previa de lo que cambia
+        depends_on:
+          - FEATURE-WEB-AJUSTES-MODELOS-20261014
+      - id: FEATURE-WEB-AJUSTES-PROVEEDORES-20261014
+        title: Proveedores con estado y uso por el perfil activo
+        depends_on:
+          - FEATURE-WEB-MENU-GRUPOS-20261014
+      - id: FEATURE-WEB-AJUSTES-PROYECTO-20261014
+        title: Proyecto con bloques e interruptores y YAML en Avanzado
+        depends_on:
+          - FEATURE-WEB-MENU-GRUPOS-20261014
+  - id: S3
+    goal: "Trabajo rediseñado: Tickets y detalle con el ciclo de ocho pasos, Features con su tablero y Portafolio por tarjetas."
+    tickets:
+      - id: FEATURE-WEB-TRABAJO-TICKETS-20261014
+        title: Tickets y detalle con filtro por turno y ciclo de ocho pasos
+        depends_on:
+          - FEATURE-WEB-MENU-GRUPOS-20261014
+      - id: FEATURE-WEB-TRABAJO-FEATURES-20261014
+        title: Features con estado y tablero de recorrido y siguiente paso
+        depends_on:
+          - FEATURE-WEB-MENU-GRUPOS-20261014
+      - id: FEATURE-WEB-TRABAJO-PORTAFOLIO-20261014
+        title: Portafolio con una tarjeta por proyecto
+        depends_on:
+          - FEATURE-WEB-MENU-GRUPOS-20261014
+  - id: S4
+    goal: "En vivo y Reglas rediseñados: marco nuevo de Agentes, Procesos con detenidas primero y Estándares por estado."
+    tickets:
+      - id: FEATURE-WEB-VIVO-AGENTES-20261014
+        title: "Agentes con titular, pregunta pendiente y selector de mundo"
+        depends_on:
+          - FEATURE-WEB-MENU-GRUPOS-20261014
+      - id: FEATURE-WEB-VIVO-PROCESOS-20261014
+        title: Procesos con las corridas detenidas primero
+        depends_on:
+          - FEATURE-WEB-MENU-GRUPOS-20261014
+      - id: FEATURE-WEB-REGLAS-ESTANDARES-20261014
+        title: "Estándares separados en vigor, propuestos y descartados"
+        depends_on:
+          - FEATURE-WEB-MENU-GRUPOS-20261014
+coverage:
+  - requirement: R-MARCO-001
+    covered_by:
+      - FEATURE-WEB-TEMA-TOKENS-20261014
+  - requirement: R-MARCO-002
+    covered_by:
+      - FEATURE-WEB-MENU-GRUPOS-20261014
+  - requirement: R-MARCO-003
+    covered_by:
+      - FEATURE-WEB-MENU-GRUPOS-20261014
+  - requirement: R-MARCO-004
+    covered_by:
+      - FEATURE-WEB-MENU-GRUPOS-20261014
+  - requirement: R-MARCO-005
+    covered_by:
+      - FEATURE-WEB-INICIO-DECISIONES-20261014
+  - requirement: R-MARCO-006
+    covered_by:
+      - FEATURE-WEB-MENU-GRUPOS-20261014
+      - FEATURE-WEB-INICIO-DECISIONES-20261014
+      - FEATURE-WEB-AJUSTES-MODELOS-20261014
+      - FEATURE-WEB-AJUSTES-CAMBIAR-PERFIL-20261014
+      - FEATURE-WEB-AJUSTES-PROVEEDORES-20261014
+      - FEATURE-WEB-AJUSTES-PROYECTO-20261014
+      - FEATURE-WEB-TRABAJO-TICKETS-20261014
+      - FEATURE-WEB-TRABAJO-FEATURES-20261014
+      - FEATURE-WEB-TRABAJO-PORTAFOLIO-20261014
+      - FEATURE-WEB-VIVO-AGENTES-20261014
+      - FEATURE-WEB-VIVO-PROCESOS-20261014
+      - FEATURE-WEB-REGLAS-ESTANDARES-20261014
+  - requirement: R-AJU-001
+    covered_by:
+      - FEATURE-WEB-AJUSTES-MODELOS-20261014
+  - requirement: R-AJU-002
+    covered_by:
+      - FEATURE-WEB-AJUSTES-MODELOS-20261014
+  - requirement: R-AJU-003
+    covered_by:
+      - FEATURE-WEB-AJUSTES-MODELOS-20261014
+  - requirement: R-AJU-004
+    covered_by:
+      - FEATURE-WEB-AJUSTES-CAMBIAR-PERFIL-20261014
+  - requirement: R-AJU-005
+    covered_by:
+      - FEATURE-WEB-AJUSTES-PROVEEDORES-20261014
+  - requirement: R-AJU-006
+    covered_by:
+      - FEATURE-WEB-AJUSTES-PROYECTO-20261014
+  - requirement: R-TRA-001
+    covered_by:
+      - FEATURE-WEB-TRABAJO-TICKETS-20261014
+  - requirement: R-TRA-002
+    covered_by:
+      - FEATURE-WEB-TRABAJO-TICKETS-20261014
+  - requirement: R-TRA-003
+    covered_by:
+      - FEATURE-WEB-TRABAJO-FEATURES-20261014
+  - requirement: R-TRA-004
+    covered_by:
+      - FEATURE-WEB-TRABAJO-PORTAFOLIO-20261014
+  - requirement: R-VIVO-001
+    covered_by:
+      - FEATURE-WEB-VIVO-AGENTES-20261014
+  - requirement: R-VIVO-002
+    covered_by:
+      - FEATURE-WEB-VIVO-AGENTES-20261014
+  - requirement: R-VIVO-003
+    covered_by:
+      - FEATURE-WEB-VIVO-PROCESOS-20261014
+  - requirement: R-VIVO-004
+    covered_by:
+      - FEATURE-WEB-REGLAS-ESTANDARES-20261014
+gaps: []

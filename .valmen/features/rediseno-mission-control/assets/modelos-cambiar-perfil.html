@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cambiar de perfil · boceto Mission Control</title>
+<!-- Boceto aprobado del rediseño de Mission Control: Cambiar de perfil.
+     Exportado del lienzo https://claude.ai/artifact/8jCBtDosVaVn3kDv2PwEeb (fuente ModelosCambiar.dc.html).
+     Autónomo: se abre con doble clic o con «python3 -m http.server --directory docs/disenos». -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0;background:#0a1114}
+a{color:#4cc8e6}a:hover{color:#8fe0f2}
+.grid-bg{background:linear-gradient(rgba(120,170,185,.06) 1px,transparent 1px) 0 0/40px 40px,linear-gradient(90deg,rgba(120,170,185,.06) 1px,transparent 1px) 0 0/40px 40px,#0a1114}
+.btn{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 20px;border-radius:10px;font-size:15px;font-weight:600;font-family:"IBM Plex Sans",sans-serif;white-space:nowrap}
+.btn-l{background:#ad9ff4;color:#0a1114}
+.btn-l:hover{background:#c4b9ff}
+.btn-s{border:1px solid #2e4750;color:#e8f0f2;background:#122027}
+.mono{font-family:"IBM Plex Mono",monospace}
+.pc{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;gap:8px;padding:18px;border-radius:14px;background:#122027;min-height:150px}
+.pc:hover{background:#172a32}
+.df th,.df td{text-align:left;padding:11px 14px;border-bottom:1px solid #24383f;font-size:14.5px}
+.df thead th{font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:#9aaeb4;font-weight:500}
+.rd{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:12px;border:1px solid #24383f;background:#122027;cursor:pointer}
+.rd input{accent-color:#ad9ff4;width:18px;height:18px;margin:2px 0 0}
+</style>
+<style>
+body{margin:0;background:#0e181c}
+a{color:#4cc8e6}a:hover{color:#8fe0f2}
+.nv-it{display:flex;align-items:center;gap:10px;height:40px;padding:0 10px;border-radius:9px;text-decoration:none;font-size:14.5px;font-weight:500}
+.nv-it svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.nv-it:hover{background:#172a32;color:#e8f0f2}
+.nv-g{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#7d949b;padding:14px 10px 6px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+
+class DCLogic {
+  constructor(props) { this.props = props || {}; this.state = {}; }
+  setState(p) { this.state = { ...this.state, ...p }; this.__render(); }
+  forceUpdate() { this.__render(); }
+}
+const __WHOLE = /^\s*\{\{\s*([^}]+?)\s*\}\}\s*$/;
+function __get(scope, path) {
+  if (path === "true") return true;
+  if (path === "false") return false;
+  if (/^-?\d+(\.\d+)?$/.test(path)) return Number(path);
+  return path.split(".").reduce((o, k) => (o == null ? undefined : o[k]), scope);
+}
+function __interp(s, scope) {
+  return s.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_, p) => { const v = __get(scope, p); return v == null ? "" : String(v); });
+}
+function __proc(node, scope) {
+  const out = document.createDocumentFragment();
+  for (const n of Array.from(node.childNodes)) {
+    if (n.nodeType === 3) { out.append(document.createTextNode(__interp(n.nodeValue, scope))); continue; }
+    if (n.nodeType !== 1) continue;
+    const tag = n.tagName.toLowerCase();
+    if (tag === "template" && n.dataset.k === "for") {
+      const lista = __get(scope, n.getAttribute("list").match(__WHOLE)[1]) || [];
+      const as = n.getAttribute("as") || "item";
+      lista.forEach((it, i) => out.append(__proc(n.content, { ...scope, [as]: it, $index: i })));
+      continue;
+    }
+    if (tag === "template" && n.dataset.k === "if") {
+      if (__get(scope, n.getAttribute("value").match(__WHOLE)[1])) out.append(__proc(n.content, scope));
+      continue;
+    }
+    if (tag === "dc-import") {
+      const props = {};
+      for (const a of Array.from(n.attributes)) {
+        if (["name", "style"].includes(a.name) || a.name.startsWith("hint-")) continue;
+        const m = a.value.match(__WHOLE);
+        props[a.name.replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = m ? __get(scope, m[1]) : __interp(a.value, scope);
+      }
+      const caja = document.createElement("div");
+      caja.setAttribute("style", (n.getAttribute("style") || "") + ";display:flex;flex-direction:column;");
+      __montar(__COMPONENTES[n.getAttribute("name")], caja, props);
+      out.append(caja);
+      continue;
+    }
+    const el = document.createElementNS(n.namespaceURI, n.localName);
+    for (const a of Array.from(n.attributes)) {
+      const m = a.value.match(__WHOLE);
+      if (/^on[A-Z]/.test(a.name) || /^on[a-z]+$/.test(a.name) && m) {
+        const fn = m ? __get(scope, m[1]) : null;
+        if (typeof fn === "function") el.addEventListener(a.name.slice(2).toLowerCase(), fn);
+        continue;
+      }
+      el.setAttribute(a.name, m ? String(__get(scope, m[1]) ?? "") : __interp(a.value, scope));
+    }
+    if (tag === "input" && n.hasAttribute("checked")) el.checked = true;
+    el.append(__proc(n, scope));
+    out.append(el);
+  }
+  return out;
+}
+function __montar(def, raiz, props) {
+  const inst = new def.C(props);
+  const t = document.createElement("template");
+  t.innerHTML = def.plantilla;
+  inst.__render = () => { raiz.replaceChildren(__proc(t.content, inst.renderVals())); };
+  inst.__render();
+  if (inst.componentDidMount) inst.componentDidMount();
+  return inst;
+}
+
+const __COMPONENTES = {};
+__COMPONENTES["Nav"] = { plantilla: "\n\n<nav aria-label=\"Navegación principal\" style=\"width: 100%; min-height: 100%; box-sizing: border-box; padding: 18px 12px 16px; display: flex; flex-direction: column; gap: 2px; background: #0e181c; border-right: 1px solid #24383f; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #e8f0f2;\">\n  <div style=\"display: flex; align-items: center; gap: 10px; padding: 2px 8px 14px;\">\n    <span style=\"width: 30px; height: 30px; border-radius: 8px; background: #4cc8e6; color: #0a1114; display: grid; place-items: center; font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-size: 17px;\">V</span>\n    <span style=\"font-family: 'Chakra Petch', sans-serif; font-weight: 600; font-size: 19px; letter-spacing: -0.01em;\">Valmen<span style=\"color: #4cc8e6;\">Harness</span></span>\n  </div>\n\n  <button type=\"button\" aria-label=\"Cambiar de proyecto\" style=\"all: unset; box-sizing: border-box; cursor: pointer; display: flex; flex-direction: column; gap: 6px; padding: 12px; border: 1px solid #24383f; border-radius: 12px; background: #122027;\">\n    <span style=\"font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #7d949b;\">Proyecto</span>\n    <span style=\"display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 600; font-size: 15px;\">ValmenHarness<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\" style=\"width: 16px; height: 16px; fill: none; stroke: #9aaeb4; stroke-width: 2;\"><path d=\"M7 10l5 5 5-5\"/></svg></span>\n  </button>\n  <a href=\"modelos.html\" style=\"display: flex; align-items: center; gap: 8px; margin: 6px 0 4px; padding: 8px 12px; border-radius: 10px; background: rgba(173,159,244,.12); color: #e8f0f2; text-decoration: none; font-size: 13px;\">\n    <span style=\"width: 8px; height: 8px; border-radius: 50%; background: #ad9ff4; flex: none;\"></span>\n    <span style=\"color: #9aaeb4;\">Perfil</span>\n    <span style=\"font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; color: #ad9ff4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;\">claude-code-completo</span>\n  </a>\n\n  <div class=\"nv-g\">Hoy</div>\n  <a class=\"nv-it\" href=\"inicio.html\" style=\"{{st.inicio}}\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M4 11l8-6 8 6v8a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z\"/></svg><span style=\"flex: 1;\">Inicio</span><span aria-label=\"3 esperan tu decisión\" style=\"min-width: 22px; height: 22px; padding: 0 6px; box-sizing: border-box; border-radius: 11px; background: #f2b43f; color: #0a1114; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; display: grid; place-items: center;\">3</span></a>\n\n  <div class=\"nv-g\">Trabajo</div>\n  <a class=\"nv-it\" href=\"tickets.html\" style=\"{{st.tickets}}\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z\"/><path d=\"M14 5v14\" stroke-dasharray=\"2 2.5\"/></svg>Tickets</a>\n  <a class=\"nv-it\" href=\"#\" style=\"{{st.features}}\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><rect x=\"4\" y=\"4\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"13\" y=\"4\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"4\" y=\"13\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"13\" y=\"13\" width=\"7\" height=\"7\" rx=\"1.5\"/></svg>Features</a>\n  <a class=\"nv-it\" href=\"#\" style=\"{{st.portafolio}}\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M4 19V9M10 19V5M16 19v-7M22 19H2\"/></svg>Portafolio</a>\n\n  <div class=\"nv-g\">En vivo</div>\n  <a class=\"nv-it\" href=\"#\" style=\"{{st.agentes}}\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"8\" r=\"3.5\"/><path d=\"M5 20c1-4 4-6 7-6s6 2 7 6\"/></svg><span style=\"flex: 1;\">Agentes</span><span style=\"display: inline-flex; align-items: center; gap: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #ad9ff4;\"><span style=\"width: 7px; height: 7px; border-radius: 50%; background: #ad9ff4;\"></span>2</span></a>\n  <a class=\"nv-it\" href=\"#\" style=\"{{st.procesos}}\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M4 6h10M4 12h16M4 18h7\"/><circle cx=\"17\" cy=\"6\" r=\"2\"/><circle cx=\"14\" cy=\"18\" r=\"2\"/></svg>Procesos</a>\n\n  <div class=\"nv-g\">Reglas</div>\n  <a class=\"nv-it\" href=\"#\" style=\"{{st.estandares}}\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M6 4h9l3 3v13H6z\"/><path d=\"M9 11h6M9 15h6\"/></svg>Estándares</a>\n\n  <div class=\"nv-g\">Ajustes</div>\n  <a class=\"nv-it\" href=\"modelos.html\" style=\"{{st.modelos}}\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><rect x=\"6\" y=\"6\" width=\"12\" height=\"12\" rx=\"2\"/><path d=\"M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3\"/></svg>Modelos</a>\n  <a class=\"nv-it\" href=\"proveedores.html\" style=\"{{st.proveedores}}\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"8\" cy=\"15\" r=\"4\"/><path d=\"M11 12l8-8M16 7l2 2M14 9l2 2\"/></svg>Proveedores</a>\n  <a class=\"nv-it\" href=\"proyecto.html\" style=\"{{st.proyecto}}\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"3\"/><path d=\"M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1\"/></svg>Proyecto</a>\n\n  <div style=\"flex: 1; min-height: 24px;\"></div>\n\n  <button type=\"button\" style=\"all: unset; box-sizing: border-box; cursor: pointer; display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 12px; border-radius: 10px; border: 1px dashed #3a5560; color: #e8f0f2; font-size: 14px;\">\n    <svg viewBox=\"0 0 24 24\" aria-hidden=\"true\" style=\"width: 18px; height: 18px; fill: none; stroke: #4cc8e6; stroke-width: 1.8;\"><path d=\"M4 5h16v11H9l-5 4z\"/></svg>\n    <span style=\"flex: 1;\">Pedir un cambio</span>\n    <span style=\"font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: #7d949b;\">⌘K</span>\n  </button>\n  <div style=\"display: flex; align-items: center; gap: 8px; padding: 12px 10px 0; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #9aaeb4;\">\n    <span style=\"width: 8px; height: 8px; border-radius: 50%; background: #62d69e; box-shadow: 0 0 0 4px rgba(98,214,158,.15);\"></span>conectado · hace 3 s\n  </div>\n</nav>\n", C: (function () { 
+class Component extends DCLogic {
+  renderVals() {
+    const activa = this.props.activa ?? 'inicio';
+    const keys = ['inicio','tickets','features','portafolio','agentes','procesos','estandares','modelos','proveedores','proyecto'];
+    const st = {};
+    for (const k of keys) {
+      st[k] = k === activa
+        ? 'background: rgba(76,200,230,.14); color: #e8f0f2; box-shadow: inset 0 0 0 1px rgba(76,200,230,.45);'
+        : 'color: #9aaeb4;';
+    }
+    return { st };
+  }
+}
+
+ return Component; })() };
+__COMPONENTES["__pagina"] = { plantilla: "\n\n<div class=\"grid-bg\" style=\"display: flex; flex-wrap: wrap; min-height: 1100px; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #e8f0f2; font-size: 15px; line-height: 1.45;\">\n  <div style=\"flex: 1 1 264px; max-width: 100%; display: flex;\">\n    <dc-import name=\"Nav\" activa=\"modelos\" hint-size=\"264px,1100px\" style=\"flex: 1;\"></dc-import>\n  </div>\n\n  <main style=\"flex: 999 1 560px; min-width: 0; padding: 32px; box-sizing: border-box; display: flex; flex-direction: column; gap: 24px; max-width: 1240px;\">\n    <nav aria-label=\"Ruta\" class=\"mono\" style=\"font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: #9aaeb4;\"><a href=\"modelos.html\" style=\"text-decoration: none;\">Ajustes · Modelos</a> <span aria-hidden=\"true\">›</span> Cambiar de perfil</nav>\n    <h1 style=\"margin: 0; font-family: 'Chakra Petch', sans-serif; font-weight: 600; font-size: 36px; line-height: 1.08;\">Elige un perfil y mira qué cambia antes de aplicarlo</h1>\n\n    <div style=\"display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px;\">\n      <template data-k=\"for\" list=\"{{perfiles}}\" as=\"p\" hint-placeholder-count=\"3\">\n        <button class=\"pc\" type=\"button\" aria-pressed=\"{{p.pressed}}\" onClick=\"{{p.pick}}\" style=\"{{p.estilo}}\">\n          <span style=\"display: flex; justify-content: space-between; align-items: center; gap: 8px;\">\n            <span style=\"font-family: 'Chakra Petch', sans-serif; font-weight: 600; font-size: 20px;\">{{p.titulo}}</span>\n            <span class=\"mono\" style=\"font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: {{p.marcaColor}};\">{{p.marca}}</span>\n          </span>\n          <span class=\"mono\" style=\"font-size: 12.5px; color: #9aaeb4;\">{{p.id}}</span>\n          <span style=\"font-size: 14px; color: #c9d6da;\">{{p.desc}}</span>\n          <span style=\"margin-top: auto; display: flex; align-items: center; gap: 8px; font-size: 13px; color: #9aaeb4;\"><span style=\"width: 8px; height: 8px; border-radius: 50%; background: #62d69e;\"></span>{{p.proveedor}}</span>\n        </button>\n      </template>\n      <button class=\"pc\" type=\"button\" style=\"border: 1px dashed #3a5560; background: transparent; align-items: center; justify-content: center; text-align: center; color: #9aaeb4;\">\n        <svg viewBox=\"0 0 24 24\" aria-hidden=\"true\" style=\"width: 26px; height: 26px; fill: none; stroke: #4cc8e6; stroke-width: 2;\"><path d=\"M12 5v14M5 12h14\"/></svg>\n        <span style=\"font-weight: 600; color: #e8f0f2;\">Nuevo perfil</span>\n        <span style=\"font-size: 13.5px;\">a partir del seleccionado</span>\n      </button>\n    </div>\n\n    <template data-k=\"if\" value=\"{{hayCambio}}\" hint-placeholder-val=\"{{ true }}\">\n      <section aria-labelledby=\"t-dif\" style=\"display: flex; flex-direction: column; gap: 12px;\">\n        <h2 id=\"t-dif\" style=\"margin: 0; font-family: 'Chakra Petch', sans-serif; font-weight: 600; font-size: 22px;\">Qué cambia con <span style=\"color: #ad9ff4;\">{{elegido}}</span></h2>\n        <div style=\"border-radius: 14px; border: 1px solid #24383f; background: #122027; overflow-x: auto;\">\n          <table class=\"df\" style=\"width: 100%; border-collapse: collapse;\">\n            <thead><tr><th>Trabajo</th><th>Ahora</th><th aria-label=\"pasa a\"></th><th>Después</th></tr></thead>\n            <tbody>\n              <template data-k=\"for\" list=\"{{filas}}\" as=\"r\" hint-placeholder-count=\"7\">\n                <tr>\n                  <td style=\"font-weight: 600;\">{{r.trabajo}}</td>\n                  <td class=\"mono\" style=\"color: #9aaeb4; text-decoration: line-through; text-decoration-color: #5f767d;\">{{r.antes}}</td>\n                  <td aria-hidden=\"true\" style=\"color: #ad9ff4; width: 24px;\">→</td>\n                  <td class=\"mono\" style=\"color: #e8f0f2;\">{{r.despues}}</td>\n                </tr>\n              </template>\n            </tbody>\n          </table>\n          <div style=\"padding: 12px 14px; font-size: 13.5px; color: #9aaeb4; border-top: 1px solid #24383f;\">Las 6 compuertas y revisiones no cambian: siguen en Jev y OpenRouter.</div>\n        </div>\n        <div style=\"display: flex; gap: 12px; align-items: center; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(242,180,63,.5); background: rgba(242,180,63,.08); font-size: 14px;\">\n          <span style=\"width: 9px; height: 9px; border-radius: 50%; background: #f2b43f; flex: none;\"></span>\n          <span><b>Implementación</b> está cambiada en este proyecto y se queda como está. <button type=\"button\" style=\"all: unset; cursor: pointer; color: #4cc8e6; text-decoration: underline;\">Que también siga al perfil</button></span>\n        </div>\n      </section>\n\n      <fieldset style=\"border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px;\">\n        <legend style=\"font-family: 'Chakra Petch', sans-serif; font-weight: 600; font-size: 20px; margin-bottom: 10px;\">Dónde se aplica</legend>\n        <label class=\"rd\"><input type=\"radio\" name=\"alcance\" checked><span><b>Todo el proyecto</b> <span class=\"mono\" style=\"font-size: 11.5px; color: #ad9ff4;\">recomendado</span><br><span style=\"color: #9aaeb4; font-size: 14px;\">Cualquier cliente con el que trabajes usa este perfil.</span></span></label>\n        <label class=\"rd\"><input type=\"radio\" name=\"alcance\"><span><b>Solo cuando trabajo con un cliente</b><br><span style=\"color: #9aaeb4; font-size: 14px;\">El proyecto sigue con su perfil; este se usa solo con el cliente elegido.</span></span></label>\n      </fieldset>\n\n      <div style=\"display: flex; flex-wrap: wrap; gap: 10px; padding-top: 6px;\">\n        <button class=\"btn btn-l\" type=\"button\">Aplicar {{elegido}}</button>\n        <a class=\"btn btn-s\" href=\"modelos.html\" style=\"text-decoration: none;\">Cancelar</a>\n      </div>\n    </template>\n    <template data-k=\"if\" value=\"{{sinCambio}}\" hint-placeholder-val=\"{{ false }}\">\n      <div style=\"padding: 18px; border-radius: 12px; border: 1px solid #24383f; background: #122027; color: #9aaeb4;\">Este ya es el perfil activo. Elige otro para ver qué cambiaría.</div>\n    </template>\n  </main>\n</div>\n", C: (function () { 
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { sel: 'codex-completo' }; }
+  renderVals() {
+    const P = {
+      'claude-code-completo': { titulo: 'Claude Code completo', desc: 'Todo el trabajo del agente con Claude Code.', proveedor: 'claude-code · detectado',
+        r: ['claude-opus-5-5 · alto', 'claude-opus-5-5 · alto', 'claude-sonnet-5-5 · alto', 'claude-haiku-4-5 · auto', 'claude-sonnet-5-5 · auto', 'claude-opus-5-5 · alto', 'claude-sonnet-5-5 · medio'] },
+      'codex-completo': { titulo: 'Codex completo', desc: 'Todo el trabajo del agente con Codex.', proveedor: 'codex · detectado',
+        r: ['gpt-6-luna · medio', 'gpt-6.1-sol · alto', 'gpt-6-sol · alto', 'gpt-6-luna · medio', 'gpt-6-sol · alto', 'gpt-6.1-sol · alto', 'gpt-6-sol · medio'] },
+      'opencode-go': { titulo: 'OpenCode Go', desc: 'Todo el trabajo del agente con OpenCode Go.', proveedor: 'opencode-go · configurado',
+        r: ['glm-5.3 · medio', 'deepseek-v4-pro · alto', 'kimi-k2.7-code · alto', 'glm-5.3-flash · auto', 'kimi-k3 · medio', 'deepseek-v4-pro · alto', 'kimi-k3 · medio'] }
+    };
+    const activo = 'claude-code-completo';
+    const sel = this.state.sel;
+    const trabajos = ['Análisis', 'Plan', 'Implementación', 'Verificación', 'Orquestador', 'Arquitecto', 'Especificación de UI'];
+    const perfiles = Object.keys(P).map((id) => {
+      const on = id === sel;
+      const act = id === activo;
+      return {
+        id, titulo: P[id].titulo, desc: P[id].desc, proveedor: P[id].proveedor,
+        pressed: on ? 'true' : 'false',
+        marca: act ? 'activo' : (on ? 'seleccionado' : ''),
+        marcaColor: act ? '#ad9ff4' : '#4cc8e6',
+        estilo: on ? 'box-shadow: inset 0 0 0 2px #ad9ff4; background: rgba(173,159,244,.10);' : 'box-shadow: inset 0 0 0 1px #24383f;',
+        pick: () => this.setState({ sel: id })
+      };
+    });
+    const filas = trabajos.map((t, i) => ({ trabajo: t, antes: P[activo].r[i], despues: P[sel].r[i] }))
+      .filter((f) => f.antes !== f.despues);
+    return { perfiles, filas, elegido: sel, hayCambio: sel !== activo, sinCambio: sel === activo };
+  }
+}
+
+ return Component; })() };
+__montar(__COMPONENTES.__pagina, document.getElementById("app"), {});
+</script>
+</body>
+</html>

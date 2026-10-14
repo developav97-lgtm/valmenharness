@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ajustes del proyecto · boceto Mission Control</title>
+<!-- Boceto aprobado del rediseño de Mission Control: Ajustes › Proyecto.
+     Exportado del lienzo https://claude.ai/artifact/8jCBtDosVaVn3kDv2PwEeb (fuente Proyecto.dc.html).
+     Autónomo: se abre con doble clic o con «python3 -m http.server --directory docs/disenos». -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0;background:#0a1114}
+a{color:#4cc8e6}a:hover{color:#8fe0f2}
+.grid-bg{background:linear-gradient(rgba(120,170,185,.06) 1px,transparent 1px) 0 0/40px 40px,linear-gradient(90deg,rgba(120,170,185,.06) 1px,transparent 1px) 0 0/40px 40px,#0a1114}
+.btn{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:0 14px;border-radius:10px;font-size:14px;font-weight:600;font-family:"IBM Plex Sans",sans-serif;white-space:nowrap}
+.btn-c{background:#4cc8e6;color:#0a1114}
+.btn-s{border:1px solid #2e4750;color:#e8f0f2;background:#0e181c}
+.mono{font-family:"IBM Plex Mono",monospace}
+.card{padding:20px 22px;border-radius:14px;border:1px solid #24383f;background:#122027;display:flex;flex-direction:column;gap:12px}
+.h2{margin:0;font-family:"Chakra Petch",sans-serif;font-weight:600;font-size:21px}
+.sw{all:unset;cursor:pointer;flex:none;width:52px;height:30px;border-radius:15px;position:relative;box-sizing:border-box}
+.sw span{position:absolute;top:3px;width:24px;height:24px;border-radius:50%;background:#0a1114}
+.lk{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#f2b43f}
+.tabs{display:flex;gap:4px;padding:4px;border-radius:12px;background:#0e181c;border:1px solid #24383f;flex-wrap:wrap}
+.tab{all:unset;cursor:pointer;padding:8px 14px;border-radius:8px;font-size:14px;color:#9aaeb4}
+summary{cursor:pointer;color:#9aaeb4;font-size:14px}
+</style>
+<style>
+body{margin:0;background:#0e181c}
+a{color:#4cc8e6}a:hover{color:#8fe0f2}
+.nv-it{display:flex;align-items:center;gap:10px;height:40px;padding:0 10px;border-radius:9px;text-decoration:none;font-size:14.5px;font-weight:500}
+.nv-it svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.nv-it:hover{background:#172a32;color:#e8f0f2}
+.nv-g{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#7d949b;padding:14px 10px 6px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+
+class DCLogic {
+  constructor(props) { this.props = props || {}; this.state = {}; }
+  setState(p) { this.state = { ...this.state, ...p }; this.__render(); }
+  forceUpdate() { this.__render(); }
+}
+const __WHOLE = /^\s*\{\{\s*([^}]+?)\s*\}\}\s*$/;
+function __get(scope, path) {
+  if (path === "true") return true;
+  if (path === "false") return false;
+  if (/^-?\d+(\.\d+)?$/.test(path)) return Number(path);
+  return path.split(".").reduce((o, k) => (o == null ? undefined : o[k]), scope);
+}
+function __interp(s, scope) {
+  return s.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_, p) => { const v = __get(scope, p); return v == null ? "" : String(v); });
+}
+function __proc(node, scope) {
+  const out = document.createDocumentFragment();
+  for (const n of Array.from(node.childNodes)) {
+    if (n.nodeType === 3) { out.append(document.createTextNode(__interp(n.nodeValue, scope))); continue; }
+    if (n.nodeType !== 1) continue;
+    const tag = n.tagName.toLowerCase();
+    if (tag === "template" && n.dataset.k === "for") {
+      const lista = __get(scope, n.getAttribute("list").match(__WHOLE)[1]) || [];
+      const as = n.getAttribute("as") || "item";
+      lista.forEach((it, i) => out.append(__proc(n.content, { ...scope, [as]: it, $index: i })));
+      continue;
+    }
+    if (tag === "template" && n.dataset.k === "if") {
+      if (__get(scope, n.getAttribute("value").match(__WHOLE)[1])) out.append(__proc(n.content, scope));
+      continue;
+    }
+    if (tag === "dc-import") {
+      const props = {};
+      for (const a of Array.from(n.attributes)) {
+        if (["name", "style"].includes(a.name) || a.name.startsWith("hint-")) continue;
+        const m = a.value.match(__WHOLE);
+        props[a.name.replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = m ? __get(scope, m[1]) : __interp(a.value, scope);
+      }
+      const caja = document.createElement("div");
+      caja.setAttribute("style", (n.getAttribute("style") || "") + ";display:flex;flex-direction:column;");
+      __montar(__COMPONENTES[n.getAttribute("name")], caja, props);
+      out.append(caja);
+      continue;
+    }
+    const el = document.createElementNS(n.namespaceURI, n.localName);
+    for (const a of Array.from(n.attributes)) {
+      const m = a.value.match(__WHOLE);
+      if (/^on[A-Z]/.test(a.name) || /^on[a-z]+$/.test(a.name) && m) {
+        const fn = m ? __get(scope, m[1]) : null;
+        if (typeof fn === "function") el.addEventListener(a.name.slice(2).toLowerCase(), fn);
+        continue;
+      }
+      el.setAttribute(a.name, m ? String(__get(scope, m[1]) ?? "") : __interp(a.value, scope));
+    }
+    if (tag === "input" && n.hasAttribute("checked")) el.checked = true;
+    el.append(__proc(n, scope));
+    out.append(el);
+  }
+  return out;
+}
+function __montar(def, raiz, props) {
+  const inst = new def.C(props);
+  const t = document.createElement("template");
+  t.innerHTML = def.plantilla;
+  inst.__render = () => { raiz.replaceChildren(__proc(t.content, inst.renderVals())); };
+  inst.__render();
+  if (inst.componentDidMount) inst.componentDidMount();
+  return inst;
+}
+
+const __COMPONENTES = {};
+__COMPONENTES["Nav"] = { plantilla: "\n\n<nav aria-label=\"Navegación principal\" style=\"width: 100%; min-height: 100%; box-sizing: border-box; padding: 18px 12px 16px; display: flex; flex-direction: column; gap: 2px; background: #0e181c; border-right: 1px solid #24383f; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #e8f0f2;\">\n  <div style=\"display: flex; align-items: center; gap: 10px; padding: 2px 8px 14px;\">\n    <span style=\"width: 30px; height: 30px; border-radius: 8px; background: #4cc8e6; color: #0a1114; display: grid; place-items: center; font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-size: 17px;\">V</span>\n    <span style=\"font-family: 'Chakra Petch', sans-serif; font-weight: 600; font-size: 19px; letter-spacing: -0.01em;\">Valmen<span style=\"color: #4cc8e6;\">Harness</span></span>\n  </div>\n\n  <button type=\"button\" aria-label=\"Cambiar de proyecto\" style=\"all: unset; box-sizing: border-box; cursor: pointer; display: flex; flex-direction: column; gap: 6px; padding: 12px; border: 1px solid #24383f; border-radius: 12px; background: #122027;\">\n    <span style=\"font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #7d949b;\">Proyecto</span>\n    <span style=\"display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 600; font-size: 15px;\">ValmenHarness<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\" style=\"width: 16px; height: 16px; fill: none; stroke: #9aaeb4; stroke-width: 2;\"><path d=\"M7 10l5 5 5-5\"/></svg></span>\n  </button>\n  <a href=\"modelos.html\" style=\"display: flex; align-items: center; gap: 8px; margin: 6px 0 4px; padding: 8px 12px; border-radius: 10px; background: rgba(173,159,244,.12); color: #e8f0f2; text-decoration: none; font-size: 13px;\">\n    <span style=\"width: 8px; height: 8px; border-radius: 50%; background: #ad9ff4; flex: none;\"></span>\n    <span style=\"color: #9aaeb4;\">Perfil</span>\n    <span style=\"font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; color: #ad9ff4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;\">claude-code-completo</span>\n  </a>\n\n  <div class=\"nv-g\">Hoy</div>\n  <a class=\"nv-it\" href=\"inicio.html\" style=\"{{st.inicio}}\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M4 11l8-6 8 6v8a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z\"/></svg><span style=\"flex: 1;\">Inicio</span><span aria-label=\"3 esperan tu decisión\" style=\"min-width: 22px; height: 22px; padding: 0 6px; box-sizing: border-box; border-radius: 11px; background: #f2b43f; color: #0a1114; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; display: grid; place-items: center;\">3</span></a>\n\n  <div class=\"nv-g\">Trabajo</div>\n  <a class=\"nv-it\" href=\"tickets.html\" style=\"{{st.tickets}}\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z\"/><path d=\"M14 5v14\" stroke-dasharray=\"2 2.5\"/></svg>Tickets</a>\n  <a class=\"nv-it\" href=\"#\" style=\"{{st.features}}\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><rect x=\"4\" y=\"4\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"13\" y=\"4\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"4\" y=\"13\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"13\" y=\"13\" width=\"7\" height=\"7\" rx=\"1.5\"/></svg>Features</a>\n  <a class=\"nv-it\" href=\"#\" style=\"{{st.portafolio}}\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M4 19V9M10 19V5M16 19v-7M22 19H2\"/></svg>Portafolio</a>\n\n  <div class=\"nv-g\">En vivo</div>\n  <a class=\"nv-it\" href=\"#\" style=\"{{st.agentes}}\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"8\" r=\"3.5\"/><path d=\"M5 20c1-4 4-6 7-6s6 2 7 6\"/></svg><span style=\"flex: 1;\">Agentes</span><span style=\"display: inline-flex; align-items: center; gap: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #ad9ff4;\"><span style=\"width: 7px; height: 7px; border-radius: 50%; background: #ad9ff4;\"></span>2</span></a>\n  <a class=\"nv-it\" href=\"#\" style=\"{{st.procesos}}\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M4 6h10M4 12h16M4 18h7\"/><circle cx=\"17\" cy=\"6\" r=\"2\"/><circle cx=\"14\" cy=\"18\" r=\"2\"/></svg>Procesos</a>\n\n  <div class=\"nv-g\">Reglas</div>\n  <a class=\"nv-it\" href=\"#\" style=\"{{st.estandares}}\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M6 4h9l3 3v13H6z\"/><path d=\"M9 11h6M9 15h6\"/></svg>Estándares</a>\n\n  <div class=\"nv-g\">Ajustes</div>\n  <a class=\"nv-it\" href=\"modelos.html\" style=\"{{st.modelos}}\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><rect x=\"6\" y=\"6\" width=\"12\" height=\"12\" rx=\"2\"/><path d=\"M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3\"/></svg>Modelos</a>\n  <a class=\"nv-it\" href=\"proveedores.html\" style=\"{{st.proveedores}}\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"8\" cy=\"15\" r=\"4\"/><path d=\"M11 12l8-8M16 7l2 2M14 9l2 2\"/></svg>Proveedores</a>\n  <a class=\"nv-it\" href=\"proyecto.html\" style=\"{{st.proyecto}}\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"3\"/><path d=\"M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1\"/></svg>Proyecto</a>\n\n  <div style=\"flex: 1; min-height: 24px;\"></div>\n\n  <button type=\"button\" style=\"all: unset; box-sizing: border-box; cursor: pointer; display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 12px; border-radius: 10px; border: 1px dashed #3a5560; color: #e8f0f2; font-size: 14px;\">\n    <svg viewBox=\"0 0 24 24\" aria-hidden=\"true\" style=\"width: 18px; height: 18px; fill: none; stroke: #4cc8e6; stroke-width: 1.8;\"><path d=\"M4 5h16v11H9l-5 4z\"/></svg>\n    <span style=\"flex: 1;\">Pedir un cambio</span>\n    <span style=\"font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: #7d949b;\">⌘K</span>\n  </button>\n  <div style=\"display: flex; align-items: center; gap: 8px; padding: 12px 10px 0; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #9aaeb4;\">\n    <span style=\"width: 8px; height: 8px; border-radius: 50%; background: #62d69e; box-shadow: 0 0 0 4px rgba(98,214,158,.15);\"></span>conectado · hace 3 s\n  </div>\n</nav>\n", C: (function () { 
+class Component extends DCLogic {
+  renderVals() {
+    const activa = this.props.activa ?? 'inicio';
+    const keys = ['inicio','tickets','features','portafolio','agentes','procesos','estandares','modelos','proveedores','proyecto'];
+    const st = {};
+    for (const k of keys) {
+      st[k] = k === activa
+        ? 'background: rgba(76,200,230,.14); color: #e8f0f2; box-shadow: inset 0 0 0 1px rgba(76,200,230,.45);'
+        : 'color: #9aaeb4;';
+    }
+    return { st };
+  }
+}
+
+ return Component; })() };
+__COMPONENTES["__pagina"] = { plantilla: "\n\n<div class=\"grid-bg\" style=\"display: flex; flex-wrap: wrap; min-height: 1200px; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #e8f0f2; font-size: 15px; line-height: 1.45;\">\n  <div style=\"flex: 1 1 264px; max-width: 100%; display: flex;\">\n    <dc-import name=\"Nav\" activa=\"proyecto\" hint-size=\"264px,1200px\" style=\"flex: 1;\"></dc-import>\n  </div>\n\n  <main style=\"flex: 999 1 560px; min-width: 0; padding: 32px; box-sizing: border-box; display: flex; flex-direction: column; gap: 22px; max-width: 1240px;\">\n    <div style=\"display: flex; flex-direction: column; gap: 8px;\">\n      <div class=\"mono\" style=\"font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: #4cc8e6;\">Ajustes <span style=\"color: #9aaeb4;\">· Proyecto</span></div>\n      <h1 style=\"margin: 0; font-family: 'Chakra Petch', sans-serif; font-weight: 600; font-size: 38px; line-height: 1.08;\">Cómo trabaja el harness en ValmenHarness</h1>\n      <p style=\"margin: 0; color: #9aaeb4; font-size: 17px; max-width: 70ch;\">Antes «Configuración». Cada cambio muestra las diferencias del archivo antes de guardarse.</p>\n    </div>\n\n    <section aria-labelledby=\"t-aprob\" class=\"card\" style=\"border-color: rgba(242,180,63,.5);\">\n      <div style=\"display: flex; flex-wrap: wrap; align-items: center; gap: 16px;\">\n        <div style=\"flex: 999 1 300px; min-width: 0;\">\n          <h2 id=\"t-aprob\" class=\"h2\">Quién aprueba el análisis y el plan</h2>\n          <div style=\"color: #9aaeb4; font-size: 14.5px; margin-top: 4px;\">{{aprobTexto}}</div>\n        </div>\n        <span class=\"mono\" style=\"font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: {{aprobColor}};\">{{aprobEstado}}</span>\n        <button class=\"sw\" type=\"button\" role=\"switch\" aria-checked=\"{{aprobAria}}\" aria-label=\"Aprobación por defecto\" onClick=\"{{toggleAprob}}\" style=\"background: {{aprobColor}};\"><span style=\"{{aprobKnob}}\"></span></button>\n      </div>\n      <ul style=\"margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px;\">\n        <li style=\"padding: 12px 14px; border-radius: 10px; background: #0e181c; font-size: 14px;\"><b style=\"color: #ad9ff4;\">El agente decide</b><br><span style=\"color: #c9d6da;\">lo validable, y lo deja en el ticket con criterio, fuente y cómo revertirlo.</span></li>\n        <li style=\"padding: 12px 14px; border-radius: 10px; background: #0e181c; font-size: 14px;\"><b style=\"color: #f2b43f;\">Tú ratificas</b><br><span style=\"color: #c9d6da;\">todo junto antes de cerrar. Lo que no ratifiques vuelve como cambios pedidos.</span></li>\n        <li style=\"padding: 12px 14px; border-radius: 10px; background: #0e181c; font-size: 14px;\"><b style=\"color: #f36a5d;\">Siempre tuyo</b><br><span style=\"color: #c9d6da;\">SECURITY, riesgo alto, migraciones, despliegue, un BLOCK que persiste y lo irreversible.</span></li>\n      </ul>\n      <div class=\"lk\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\" style=\"width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2;\"><rect x=\"5\" y=\"11\" width=\"14\" height=\"9\" rx=\"2\"/><path d=\"M8 11V8a4 4 0 0 1 8 0v3\"/></svg>Crear o ampliar esta autorización lo hace una persona; el agente no puede.</div>\n    </section>\n\n    <section aria-labelledby=\"t-qa\" class=\"card\">\n      <div style=\"display: flex; flex-wrap: wrap; align-items: center; gap: 16px;\">\n        <div style=\"flex: 999 1 300px; min-width: 0;\">\n          <h2 id=\"t-qa\" class=\"h2\">QA por agente</h2>\n          <div style=\"color: #9aaeb4; font-size: 14.5px; margin-top: 4px;\">Sin autorización vigente, la QA la hace una persona. Con ella, un agente prueba en un worktree limpio y empieza en sombra.</div>\n        </div>\n        <span class=\"mono\" style=\"font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #9aaeb4;\">sin autorización</span>\n        <button class=\"btn btn-s\" type=\"button\">Crear autorización</button>\n      </div>\n    </section>\n\n    <div style=\"display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px;\">\n      <section aria-labelledby=\"t-av\" class=\"card\">\n        <h2 id=\"t-av\" class=\"h2\">Avisos</h2>\n        <div style=\"display: flex; align-items: center; gap: 12px;\">\n          <div style=\"flex: 1;\"><b>Telegram</b><div style=\"color: #9aaeb4; font-size: 13.5px;\">arranque, pruebas tuyas y compuertas en REVIEW</div></div>\n          <button class=\"sw\" type=\"button\" role=\"switch\" aria-checked=\"true\" aria-label=\"Avisos por Telegram\" style=\"background: #62d69e;\"><span style=\"left: 25px;\"></span></button>\n        </div>\n        <div style=\"display: flex; align-items: center; gap: 12px;\">\n          <div style=\"flex: 1;\"><b>Slack</b><div style=\"color: #9aaeb4; font-size: 13.5px;\">canal secundario</div></div>\n          <button class=\"sw\" type=\"button\" role=\"switch\" aria-checked=\"false\" aria-label=\"Avisos por Slack\" style=\"background: #2e4750;\"><span style=\"left: 3px; background: #9aaeb4;\"></span></button>\n        </div>\n      </section>\n\n      <section aria-labelledby=\"t-pr\" class=\"card\">\n        <h2 id=\"t-pr\" class=\"h2\">Pruebas</h2>\n        <div style=\"font-size: 13.5px; color: #9aaeb4;\">Comandos que las compuertas pueden correr</div>\n        <div style=\"display: flex; flex-wrap: wrap; gap: 8px;\">\n          <span class=\"mono\" style=\"font-size: 13px; padding: 4px 10px; border-radius: 8px; background: #0e181c; border: 1px solid #24383f;\">npx vitest run</span>\n          <span class=\"mono\" style=\"font-size: 13px; padding: 4px 10px; border-radius: 8px; background: #0e181c; border: 1px solid #24383f;\">npx tsc</span>\n          <span class=\"mono\" style=\"font-size: 13px; padding: 4px 10px; border-radius: 8px; background: #0e181c; border: 1px solid #24383f;\">node</span>\n          <button type=\"button\" style=\"all: unset; cursor: pointer; font-size: 13px; color: #4cc8e6; padding: 4px 6px;\">+ añadir</button>\n        </div>\n        <label style=\"display: flex; align-items: center; gap: 10px; font-size: 14px;\">Tiempo máximo\n          <input type=\"number\" value=\"420\" style=\"width: 90px; height: 36px; box-sizing: border-box; padding: 0 10px; border-radius: 8px; border: 1px solid #2e4750; background: #0e181c; color: #e8f0f2; font: inherit;\"> s\n        </label>\n      </section>\n    </div>\n\n    <details class=\"card\" style=\"gap: 0;\">\n      <summary>Avanzado: editar config.yaml a mano</summary>\n      <pre class=\"mono\" style=\"margin: 14px 0 0; padding: 14px; border-radius: 10px; background: #0e181c; border: 1px solid #24383f; font-size: 13px; line-height: 1.6; color: #c9d6da; overflow-x: auto;\">name: ValmenHarness\nproject-id: valmen-harness\ntickets-dir: tickets\ntest-timeout: 420\ndelivery-budget: 600</pre>\n    </details>\n  </main>\n</div>\n", C: (function () { 
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { aprob: true }; }
+  renderVals() {
+    const on = this.state.aprob;
+    return {
+      aprobAria: on ? 'true' : 'false',
+      aprobColor: on ? '#62d69e' : '#2e4750',
+      aprobEstado: on ? 'activa' : 'apagada',
+      aprobKnob: on ? 'left: 25px;' : 'left: 3px; background: #9aaeb4;',
+      aprobTexto: on
+        ? 'Aprobación por defecto: si la compuerta da APPROVE, el agente avanza sin esperarte; si da REVIEW, decide el revisor.'
+        : 'Apagada: cada análisis y cada plan esperan tu aprobación.',
+      toggleAprob: () => this.setState({ aprob: !on })
+    };
+  }
+}
+
+ return Component; })() };
+__montar(__COMPONENTES.__pagina, document.getElementById("app"), {});
+</script>
+</body>
+</html>

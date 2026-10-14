@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Menú antes y después · boceto Mission Control</title>
+<!-- Boceto aprobado del rediseño de Mission Control: Menú: antes y después.
+     Exportado del lienzo https://claude.ai/artifact/8jCBtDosVaVn3kDv2PwEeb (fuente MenuMapa.dc.html).
+     Autónomo: se abre con doble clic o con «python3 -m http.server --directory docs/disenos». -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0;background:#0a1114}
+a{color:#4cc8e6}a:hover{color:#8fe0f2}
+.mono{font-family:"IBM Plex Mono",monospace}
+.li{display:flex;align-items:center;gap:10px;height:36px;padding:0 12px;border-radius:8px;font-size:14.5px}
+.g{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#7d949b;padding:12px 12px 4px}
+.mp th,.mp td{text-align:left;vertical-align:top;padding:12px 14px;border-bottom:1px solid #24383f}
+.mp thead th{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#9aaeb4;font-weight:500;border-bottom:2px solid #24383f}
+</style>
+
+</head>
+<body>
+<div id="app"></div>
+<script>
+
+class DCLogic {
+  constructor(props) { this.props = props || {}; this.state = {}; }
+  setState(p) { this.state = { ...this.state, ...p }; this.__render(); }
+  forceUpdate() { this.__render(); }
+}
+const __WHOLE = /^\s*\{\{\s*([^}]+?)\s*\}\}\s*$/;
+function __get(scope, path) {
+  if (path === "true") return true;
+  if (path === "false") return false;
+  if (/^-?\d+(\.\d+)?$/.test(path)) return Number(path);
+  return path.split(".").reduce((o, k) => (o == null ? undefined : o[k]), scope);
+}
+function __interp(s, scope) {
+  return s.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_, p) => { const v = __get(scope, p); return v == null ? "" : String(v); });
+}
+function __proc(node, scope) {
+  const out = document.createDocumentFragment();
+  for (const n of Array.from(node.childNodes)) {
+    if (n.nodeType === 3) { out.append(document.createTextNode(__interp(n.nodeValue, scope))); continue; }
+    if (n.nodeType !== 1) continue;
+    const tag = n.tagName.toLowerCase();
+    if (tag === "template" && n.dataset.k === "for") {
+      const lista = __get(scope, n.getAttribute("list").match(__WHOLE)[1]) || [];
+      const as = n.getAttribute("as") || "item";
+      lista.forEach((it, i) => out.append(__proc(n.content, { ...scope, [as]: it, $index: i })));
+      continue;
+    }
+    if (tag === "template" && n.dataset.k === "if") {
+      if (__get(scope, n.getAttribute("value").match(__WHOLE)[1])) out.append(__proc(n.content, scope));
+      continue;
+    }
+    if (tag === "dc-import") {
+      const props = {};
+      for (const a of Array.from(n.attributes)) {
+        if (["name", "style"].includes(a.name) || a.name.startsWith("hint-")) continue;
+        const m = a.value.match(__WHOLE);
+        props[a.name.replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = m ? __get(scope, m[1]) : __interp(a.value, scope);
+      }
+      const caja = document.createElement("div");
+      caja.setAttribute("style", (n.getAttribute("style") || "") + ";display:flex;flex-direction:column;");
+      __montar(__COMPONENTES[n.getAttribute("name")], caja, props);
+      out.append(caja);
+      continue;
+    }
+    const el = document.createElementNS(n.namespaceURI, n.localName);
+    for (const a of Array.from(n.attributes)) {
+      const m = a.value.match(__WHOLE);
+      if (/^on[A-Z]/.test(a.name) || /^on[a-z]+$/.test(a.name) && m) {
+        const fn = m ? __get(scope, m[1]) : null;
+        if (typeof fn === "function") el.addEventListener(a.name.slice(2).toLowerCase(), fn);
+        continue;
+      }
+      el.setAttribute(a.name, m ? String(__get(scope, m[1]) ?? "") : __interp(a.value, scope));
+    }
+    if (tag === "input" && n.hasAttribute("checked")) el.checked = true;
+    el.append(__proc(n, scope));
+    out.append(el);
+  }
+  return out;
+}
+function __montar(def, raiz, props) {
+  const inst = new def.C(props);
+  const t = document.createElement("template");
+  t.innerHTML = def.plantilla;
+  inst.__render = () => { raiz.replaceChildren(__proc(t.content, inst.renderVals())); };
+  inst.__render();
+  if (inst.componentDidMount) inst.componentDidMount();
+  return inst;
+}
+
+const __COMPONENTES = {};
+
+__COMPONENTES["__pagina"] = { plantilla: "\n\n<div style=\"min-height: 1000px; box-sizing: border-box; padding: 48px 56px; display: flex; flex-direction: column; gap: 28px; background: #0a1114; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #e8f0f2; font-size: 15px; line-height: 1.45;\">\n  <div style=\"display: flex; flex-direction: column; gap: 8px;\">\n    <div class=\"mono\" style=\"font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: #4cc8e6;\">Menú · antes y después</div>\n    <h1 style=\"margin: 0; font-family: 'Chakra Petch', sans-serif; font-weight: 600; font-size: 38px; line-height: 1.08;\">De 10 entradas sueltas a 5 grupos que se leen solos</h1>\n    <p style=\"margin: 0; color: #9aaeb4; font-size: 17px; max-width: 70ch;\">«Configurar» y «Configuración» desaparecen como nombres: uno era un chat y el otro un editor. El chat pasa a ser una acción que está en todas partes; el editor pasa a Ajustes › Proyecto.</p>\n  </div>\n\n  <div style=\"display: flex; flex-wrap: wrap; gap: 24px; align-items: stretch;\">\n    <section aria-label=\"Menú de hoy\" style=\"flex: 1 1 260px; max-width: 320px; padding: 12px; border-radius: 14px; border: 1px solid #24383f; background: #0e181c;\">\n      <div class=\"mono\" style=\"font-size: 12px; color: #9aaeb4; padding: 4px 12px 8px;\">HOY</div>\n      <div class=\"g\">Registro</div>\n      <div class=\"li\">Tickets</div>\n      <div class=\"li\">Features</div>\n      <div class=\"li\">Portafolio</div>\n      <div class=\"li\">Agentes</div>\n      <div class=\"li\">Procesos</div>\n      <div class=\"li\">Estándares</div>\n      <div class=\"li\" style=\"background: rgba(243,106,93,.13); color: #f36a5d; font-weight: 600;\">Configurar<span class=\"mono\" style=\"margin-left: auto; font-size: 11px;\">¿cuál?</span></div>\n      <div class=\"li\">Modelos</div>\n      <div class=\"li\" style=\"background: rgba(243,106,93,.13); color: #f36a5d; font-weight: 600;\">Configuración<span class=\"mono\" style=\"margin-left: auto; font-size: 11px;\">¿cuál?</span></div>\n      <div class=\"li\">Proveedores</div>\n      <div style=\"margin-top: 14px; padding: 10px 12px; border-top: 1px solid #24383f; font-size: 13px; color: #9aaeb4;\">Proyecto: selector al pie<br>Perfil activo: no se ve</div>\n    </section>\n\n    <div aria-hidden=\"true\" style=\"flex: 0 0 auto; display: grid; place-items: center; color: #4cc8e6;\">\n      <svg viewBox=\"0 0 48 24\" style=\"width: 48px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2;\"><path d=\"M2 12h40M34 4l8 8-8 8\"/></svg>\n    </div>\n\n    <section aria-label=\"Menú propuesto\" style=\"flex: 1 1 260px; max-width: 320px; padding: 12px; border-radius: 14px; border: 1px solid rgba(76,200,230,.5); background: #0e181c;\">\n      <div class=\"mono\" style=\"font-size: 12px; color: #4cc8e6; padding: 4px 12px 8px;\">PROPUESTO</div>\n      <div style=\"margin: 0 4px 6px; padding: 10px 12px; border-radius: 10px; background: #122027; border: 1px solid #24383f; font-size: 13.5px;\">ValmenHarness ▾<div style=\"color: #ad9ff4; font-family: 'IBM Plex Mono', monospace; font-size: 12px; margin-top: 4px;\">● perfil claude-code-completo</div></div>\n      <div class=\"g\">Hoy</div>\n      <div class=\"li\" style=\"background: rgba(76,200,230,.14); font-weight: 600;\">Inicio<span class=\"mono\" style=\"margin-left: auto; font-size: 11px; color: #4cc8e6;\">nuevo</span></div>\n      <div class=\"g\">Trabajo</div>\n      <div class=\"li\">Tickets</div><div class=\"li\">Features</div><div class=\"li\">Portafolio</div>\n      <div class=\"g\">En vivo</div>\n      <div class=\"li\">Agentes</div><div class=\"li\">Procesos</div>\n      <div class=\"g\">Reglas</div>\n      <div class=\"li\">Estándares</div>\n      <div class=\"g\">Ajustes</div>\n      <div class=\"li\">Modelos</div><div class=\"li\">Proveedores</div><div class=\"li\">Proyecto</div>\n      <div style=\"margin: 12px 4px 0; padding: 10px 12px; border-radius: 10px; border: 1px dashed #3a5560; font-size: 13.5px;\">Pedir un cambio <span class=\"mono\" style=\"color: #7d949b; float: right;\">⌘K</span></div>\n    </section>\n\n    <section aria-label=\"Qué pasa con cada entrada\" style=\"flex: 999 1 480px; min-width: 0; overflow-x: auto;\">\n      <table class=\"mp\" style=\"width: 100%; border-collapse: collapse; font-size: 14.5px;\">\n        <thead><tr><th>Antes</th><th>Después</th><th>Por qué</th></tr></thead>\n        <tbody>\n          <tr><td style=\"color: #f36a5d; font-weight: 600;\">Configurar</td><td>Botón <b>Pedir un cambio</b> (⌘K), en todas las pantallas</td><td style=\"color: #9aaeb4;\">Es un chat que propone cambios, no un lugar. Su nombre chocaba con Configuración.</td></tr>\n          <tr><td style=\"color: #f36a5d; font-weight: 600;\">Configuración</td><td>Ajustes › <b>Proyecto</b></td><td style=\"color: #9aaeb4;\">Políticas con interruptores; el YAML queda en «Avanzado».</td></tr>\n          <tr><td>Modelos</td><td>Ajustes › <b>Modelos</b></td><td style=\"color: #9aaeb4;\">El perfil activo va arriba y se ve también en el menú, en todas las pantallas.</td></tr>\n          <tr><td>Proveedores</td><td>Ajustes › <b>Proveedores</b></td><td style=\"color: #9aaeb4;\">Junto a Modelos: sin clave no hay modelo.</td></tr>\n          <tr><td style=\"color: #7d949b;\">—</td><td><b>Inicio</b> <span class=\"mono\" style=\"font-size: 11.5px; color: #4cc8e6;\">nuevo</span></td><td style=\"color: #9aaeb4;\">Al abrir responde «¿qué espera de mí?»: ratificar, probar, decidir un REVIEW.</td></tr>\n          <tr><td>Selector de proyecto al pie</td><td>Arriba del menú, con el perfil debajo</td><td style=\"color: #9aaeb4;\">Saber en qué proyecto y con qué modelos estás antes de tocar nada.</td></tr>\n          <tr><td>Agentes, Procesos</td><td>Grupo <b>En vivo</b></td><td style=\"color: #9aaeb4;\">Lo que corre ahora, separado del registro.</td></tr>\n          <tr><td>Tickets, Features, Portafolio</td><td>Grupo <b>Trabajo</b></td><td style=\"color: #9aaeb4;\">Sin cambio de nombre.</td></tr>\n          <tr><td>Estándares</td><td>Grupo <b>Reglas</b></td><td style=\"color: #9aaeb4;\">Sin cambio de nombre.</td></tr>\n        </tbody>\n      </table>\n    </section>\n  </div>\n</div>\n", C: (function () { 
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+
+ return Component; })() };
+__montar(__COMPONENTES.__pagina, document.getElementById("app"), {});
+</script>
+</body>
+</html>

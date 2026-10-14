@@ -1,0 +1,257 @@
+{
+  "schema": 1,
+  "assets": [
+    {
+      "path": "assets/inicio.html",
+      "sha256": "d3d757a583838726ce919507df806b303f798e95afff83e0fb3e5b993da47e37",
+      "bytes": 29139,
+      "kind": "prototipo",
+      "description": "Boceto aprobado por el PO el 2026-10-14: Inicio (HTML autónomo, el original)",
+      "origin_url": "https://claude.ai/artifact/8jCBtDosVaVn3kDv2PwEeb",
+      "added": "2026-10-14"
+    },
+    {
+      "path": "assets/inicio.png",
+      "sha256": "6c7749d2faddac921c49116570f5228ec247ab221903a85bb83c140e4e77e67c",
+      "bytes": 213419,
+      "kind": "imagen",
+      "description": "Captura a 1440 px del boceto aprobado: Inicio",
+      "origin_url": "https://claude.ai/artifact/8jCBtDosVaVn3kDv2PwEeb",
+      "added": "2026-10-14"
+    },
+    {
+      "path": "assets/menu.html",
+      "sha256": "802d68d45244f3f980d1963da76d6404b57ab488cf4120ae295ddc6eb924d71f",
+      "bytes": 11489,
+      "kind": "prototipo",
+      "description": "Boceto aprobado por el PO el 2026-10-14: Menú lateral por grupos (HTML autónomo, el original)",
+      "origin_url": "https://claude.ai/artifact/8jCBtDosVaVn3kDv2PwEeb",
+      "added": "2026-10-14"
+    },
+    {
+      "path": "assets/menu-antes-despues.html",
+      "sha256": "b42250f67f88ba1eb372f6792b8f0b550c22a38c4c7df38242f6fb2ab33bdceb",
+      "bytes": 11046,
+      "kind": "prototipo",
+      "description": "Boceto aprobado por el PO el 2026-10-14: Menú antes y después (HTML autónomo, el original)",
+      "origin_url": "https://claude.ai/artifact/8jCBtDosVaVn3kDv2PwEeb",
+      "added": "2026-10-14"
+    },
+    {
+      "path": "assets/menu-antes-despues.png",
+      "sha256": "7191f6790a9715755de3cb3fd759e2b30649af4e664ec6151206fe782fa30ff5",
+      "bytes": 179055,
+      "kind": "imagen",
+      "description": "Captura a 1440 px del boceto aprobado: Menú antes y después",
+      "origin_url": "https://claude.ai/artifact/8jCBtDosVaVn3kDv2PwEeb",
+      "added": "2026-10-14"
+    },
+    {
+      "path": "assets/modelos.html",
+      "sha256": "a130ffc14411c9db7ca4129eaf67bcd2a56baac25764dfcfd84e0402941fa3c2",
+      "bytes": 25773,
+      "kind": "prototipo",
+      "description": "Boceto aprobado por el PO el 2026-10-14: Ajustes › Modelos (HTML autónomo, el original)",
+      "origin_url": "https://claude.ai/artifact/8jCBtDosVaVn3kDv2PwEeb",
+      "added": "2026-10-14"
+    },
+    {
+      "path": "assets/modelos.png",
+      "sha256": "3d76bb4569ec94490e8295b17c75bb8de7b4be684b90e415afbc0b4d656ad279",
+      "bytes": 254380,
+      "kind": "imagen",
+      "description": "Captura a 1440 px del boceto aprobado: Ajustes › Modelos",
+      "origin_url": "https://claude.ai/artifact/8jCBtDosVaVn3kDv2PwEeb",
+      "added": "2026-10-14"
+    },
+    {
+      "path": "assets/modelos-cambiar-perfil.html",
+      "sha256": "5ada5d25b4a07ab58aea5dde02f44f3fadc963d8f06327df33a8d5262128633d",
+      "bytes": 21473,
+      "kind": "prototipo",
+      "description": "Boceto aprobado por el PO el 2026-10-14: Cambiar de perfil con vista previa (HTML autónomo, el original)",
+      "origin_url": "https://claude.ai/artifact/8jCBtDosVaVn3kDv2PwEeb",
+      "added": "2026-10-14"
+    },
+    {
+      "path": "assets/modelos-cambiar-perfil.png",
+      "sha256": "833211798b437e0bf2f399af67696a4d93373ac7a03b33c4bf03add03f085a28",
+      "bytes": 196052,
+      "kind": "imagen",
+      "description": "Captura a 1440 px del boceto aprobado: Cambiar de perfil con vista previa",
+      "origin_url": "https://claude.ai/artifact/8jCBtDosVaVn3kDv2PwEeb",
+      "added": "2026-10-14"
+    },
+    {
+      "path": "assets/proveedores.html",
+      "sha256": "1a659bdd4b258fb9dcb771617611343afd7f49ade6e823b23299034ef5b46901",
+      "bytes": 19370,
+      "kind": "prototipo",
+      "description": "Boceto aprobado por el PO el 2026-10-14: Ajustes › Proveedores (HTML autónomo, el original)",
+      "origin_url": "https://claude.ai/artifact/8jCBtDosVaVn3kDv2PwEeb",
+      "added": "2026-10-14"
+    },
+    {
+      "path": "assets/proveedores.png",
+      "sha256": "2c412080187f89e8f0a7ca1b4e4eb3b8553a01ffc50ba6156f1b264629909676",
+      "bytes": 147575,
+      "kind": "imagen",
+      "description": "Captura a 1440 px del boceto aprobado: Ajustes › Proveedores",
+      "origin_url": "https://claude.ai/artifact/8jCBtDosVaVn3kDv2PwEeb",
+      "added": "2026-10-14"
+    },
+    {
+      "path": "assets/proyecto.html",
+      "sha256": "2bad9a01646d244a8237632c4d3a505cc821712da865c6aedb6797146ad2f543",
+      "bytes": 20745,
+      "kind": "prototipo",
+      "description": "Boceto aprobado por el PO el 2026-10-14: Ajustes › Proyecto (HTML autónomo, el original)",
+      "origin_url": "https://claude.ai/artifact/8jCBtDosVaVn3kDv2PwEeb",
+      "added": "2026-10-14"
+    },
+    {
+      "path": "assets/proyecto.png",
+      "sha256": "7b547f50f4cc59b7cf75b95e15a8268bfc1d88d024495ac9b8c83c88aead83b0",
+      "bytes": 163082,
+      "kind": "imagen",
+      "description": "Captura a 1440 px del boceto aprobado: Ajustes › Proyecto",
+      "origin_url": "https://claude.ai/artifact/8jCBtDosVaVn3kDv2PwEeb",
+      "added": "2026-10-14"
+    },
+    {
+      "path": "assets/tickets.html",
+      "sha256": "86fbeac6b5ed382d995eafe5bb2dc6890dd0dd7db1270b5e5764181d4dfd03b5",
+      "bytes": 19907,
+      "kind": "prototipo",
+      "description": "Boceto aprobado por el PO el 2026-10-14: Tickets (HTML autónomo, el original)",
+      "origin_url": "https://claude.ai/artifact/8jCBtDosVaVn3kDv2PwEeb",
+      "added": "2026-10-14"
+    },
+    {
+      "path": "assets/tickets.png",
+      "sha256": "84a1864660a07cc3bbf1ce7b88ffcbc7db843558b45be86dbdce73ed987dc572",
+      "bytes": 139078,
+      "kind": "imagen",
+      "description": "Captura a 1440 px del boceto aprobado: Tickets",
+      "origin_url": "https://claude.ai/artifact/8jCBtDosVaVn3kDv2PwEeb",
+      "added": "2026-10-14"
+    },
+    {
+      "path": "assets/ticket.html",
+      "sha256": "d7506314582b4742226bf95391756349535f1d6281aef481790a31c2fe836b78",
+      "bytes": 22239,
+      "kind": "prototipo",
+      "description": "Boceto aprobado por el PO el 2026-10-14: Detalle de ticket (HTML autónomo, el original)",
+      "origin_url": "https://claude.ai/artifact/8jCBtDosVaVn3kDv2PwEeb",
+      "added": "2026-10-14"
+    },
+    {
+      "path": "assets/ticket.png",
+      "sha256": "48c72996e2e706ada695d3a38d4651f879c891fbc8c02a28364d3d5cb878978f",
+      "bytes": 176640,
+      "kind": "imagen",
+      "description": "Captura a 1440 px del boceto aprobado: Detalle de ticket",
+      "origin_url": "https://claude.ai/artifact/8jCBtDosVaVn3kDv2PwEeb",
+      "added": "2026-10-14"
+    },
+    {
+      "path": "assets/features.html",
+      "sha256": "4870e53da503a3503a598cc602eceab52626b4b8b50fab92755abe00dff7aedf",
+      "bytes": 24590,
+      "kind": "prototipo",
+      "description": "Boceto aprobado por el PO el 2026-10-14: Features y su tablero (HTML autónomo, el original)",
+      "origin_url": "https://claude.ai/artifact/8jCBtDosVaVn3kDv2PwEeb",
+      "added": "2026-10-14"
+    },
+    {
+      "path": "assets/features.png",
+      "sha256": "8b8ee683157221be8a8f773824492d016ec2f0d27ff77329ed28c393f3857f04",
+      "bytes": 198111,
+      "kind": "imagen",
+      "description": "Captura a 1440 px del boceto aprobado: Features y su tablero",
+      "origin_url": "https://claude.ai/artifact/8jCBtDosVaVn3kDv2PwEeb",
+      "added": "2026-10-14"
+    },
+    {
+      "path": "assets/portafolio.html",
+      "sha256": "de87080f5ab954b23b3cfc46d820b1ebec78acbbd99b16245e2697f8092d8d75",
+      "bytes": 18529,
+      "kind": "prototipo",
+      "description": "Boceto aprobado por el PO el 2026-10-14: Portafolio (HTML autónomo, el original)",
+      "origin_url": "https://claude.ai/artifact/8jCBtDosVaVn3kDv2PwEeb",
+      "added": "2026-10-14"
+    },
+    {
+      "path": "assets/portafolio.png",
+      "sha256": "92f8f5d1c86f931beb89d7f7246b6e859fd015673abbe952118a47e38b31caa1",
+      "bytes": 126066,
+      "kind": "imagen",
+      "description": "Captura a 1440 px del boceto aprobado: Portafolio",
+      "origin_url": "https://claude.ai/artifact/8jCBtDosVaVn3kDv2PwEeb",
+      "added": "2026-10-14"
+    },
+    {
+      "path": "assets/agentes.html",
+      "sha256": "ac4e113abb13a3c63655148b15ddb3ca1794efbf909844b55e1d2ec335c6ac34",
+      "bytes": 20497,
+      "kind": "prototipo",
+      "description": "Boceto aprobado por el PO el 2026-10-14: Agentes en vivo (HTML autónomo, el original)",
+      "origin_url": "https://claude.ai/artifact/8jCBtDosVaVn3kDv2PwEeb",
+      "added": "2026-10-14"
+    },
+    {
+      "path": "assets/agentes.png",
+      "sha256": "ed81aa541fc2a0047daadc1f747adef597fbdae27c8c09607830a4cecbaa3f4f",
+      "bytes": 152058,
+      "kind": "imagen",
+      "description": "Captura a 1440 px del boceto aprobado: Agentes en vivo",
+      "origin_url": "https://claude.ai/artifact/8jCBtDosVaVn3kDv2PwEeb",
+      "added": "2026-10-14"
+    },
+    {
+      "path": "assets/procesos.html",
+      "sha256": "13eb0c6c0950620e1020adad21baf98d73bc15ccded57e47b6ffa7a1047bc2f9",
+      "bytes": 18562,
+      "kind": "prototipo",
+      "description": "Boceto aprobado por el PO el 2026-10-14: Procesos (HTML autónomo, el original)",
+      "origin_url": "https://claude.ai/artifact/8jCBtDosVaVn3kDv2PwEeb",
+      "added": "2026-10-14"
+    },
+    {
+      "path": "assets/procesos.png",
+      "sha256": "67b45c748199b201f44487334712bdb99c5e53ca4e1bc93c7008ac683a209472",
+      "bytes": 150720,
+      "kind": "imagen",
+      "description": "Captura a 1440 px del boceto aprobado: Procesos",
+      "origin_url": "https://claude.ai/artifact/8jCBtDosVaVn3kDv2PwEeb",
+      "added": "2026-10-14"
+    },
+    {
+      "path": "assets/estandares.html",
+      "sha256": "9fafd8d91f689901ebddf156f5b0d29de94f0abc86d611640ba1ef1e79ecf69c",
+      "bytes": 18683,
+      "kind": "prototipo",
+      "description": "Boceto aprobado por el PO el 2026-10-14: Estándares (HTML autónomo, el original)",
+      "origin_url": "https://claude.ai/artifact/8jCBtDosVaVn3kDv2PwEeb",
+      "added": "2026-10-14"
+    },
+    {
+      "path": "assets/estandares.png",
+      "sha256": "2fe538ade1e7aa80061c5385a400ae03063cef63ac99e8fd9b557689a49dd9f3",
+      "bytes": 189414,
+      "kind": "imagen",
+      "description": "Captura a 1440 px del boceto aprobado: Estándares",
+      "origin_url": "https://claude.ai/artifact/8jCBtDosVaVn3kDv2PwEeb",
+      "added": "2026-10-14"
+    },
+    {
+      "path": "assets/menu.png",
+      "sha256": "7ba35b11696de437e16069d4000b085eb416e059f2c2d93f78272c7a83a29bd6",
+      "bytes": 34590,
+      "kind": "imagen",
+      "description": "Captura del boceto aprobado: Menú lateral por grupos",
+      "origin_url": "https://claude.ai/artifact/8jCBtDosVaVn3kDv2PwEeb",
+      "added": "2026-10-14"
+    }
+  ]
+}
