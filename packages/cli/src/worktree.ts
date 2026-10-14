@@ -65,7 +65,11 @@ export const SUBCOMANDOS_DE_WORKTREE: Readonly<Record<string, Subcomando>> = Obj
               ? `Rama ${r.rama} integrada en ${r.ramaBase} por avance directo (${r.commit.slice(0, 12)}).`
               : `Rama ${r.rama} integrada en ${r.ramaBase} con merge --no-ff (${r.commit.slice(0, 12)}).`,
             `Registros unidos: ${r.registrosUnidos.length === 0 ? "ninguno" : r.registrosUnidos.join(", ")}.`,
-            `Índice de tickets: ${r.indiceRegenerado ? "regenerado" : "sin cambios"}. Recompilado.`,
+            `Índice de tickets: ${r.indiceRegenerado ? "regenerado" : "sin cambios"}. ${
+              r.recompilado
+                ? "Recompilado."
+                : "Sin recompilar: el proyecto no tiene la receta de compilación del harness (tsconfig.build.json o node_modules/@valmen en la raíz)."
+            }`,
             ...(r.entrega === null
               ? []
               : [

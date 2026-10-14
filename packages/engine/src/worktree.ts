@@ -251,6 +251,8 @@ export function crearWorktree(request: WorktreeRequest): WorktreeCreado {
 
   let worktreeCreado = false;
   let ramaCreada = false;
+  // `abortar` ya deshizo: el `catch` externo no repite lo que ya está hecho ni lo informa dos veces.
+  let abortado = false;
   const deshacer = (): string[] => {
     const problemas: string[] = [];
     if (worktreeCreado) {
@@ -262,10 +264,12 @@ export function crearWorktree(request: WorktreeRequest): WorktreeCreado {
     if (ramaCreada && !worktreeCreado) {
       const r = ejecutarGitDeWorktree(root, ["branch", "-d", rama], git);
       if (r.status !== 0) problemas.push(`no se pudo borrar la rama: ${r.stderr.trim()}`);
+      else ramaCreada = false;
     }
     if (reservada && project !== null && identity !== null) {
       try {
         releaseMachineCapacity({ home, project, identity, attemptId: INTENTO_DE_WORKTREE });
+        reservada = false;
       } catch (caught) {
         problemas.push(`no se pudo liberar el cupo: ${String(caught)}`);
       }
@@ -274,6 +278,7 @@ export function crearWorktree(request: WorktreeRequest): WorktreeCreado {
   };
   const abortar = (motivo: string): never => {
     const problemas = deshacer();
+    abortado = true;
     return fail(
       problemas.length === 0
         ? motivo
@@ -371,7 +376,7 @@ export function crearWorktree(request: WorktreeRequest): WorktreeCreado {
     });
   } catch (caught) {
     // Un fallo inesperado (no uno de `abortar`, que ya deshizo) también deja la repo como estaba.
-    if (worktreeCreado || ramaCreada || reservada) {
+    if (!abortado && (worktreeCreado || ramaCreada || reservada)) {
       const problemas = deshacer();
       if (problemas.length > 0) {
         fail(

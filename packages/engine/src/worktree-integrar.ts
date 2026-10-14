@@ -58,6 +58,8 @@ export interface WorktreeIntegrado {
   readonly commit: string;
   readonly registrosUnidos: readonly string[];
   readonly indiceRegenerado: boolean;
+  /** Si corrió la receta de compilación del harness: sin ella no se recompila nada. */
+  readonly recompilado: boolean;
   /** El tamaño de la entrega, o `null` si no se pudo medir (o no había nada que integrar). */
   readonly entrega: EntregaRegistrada | null;
   /** Lo que la integración dejó pasar sin detenerse: el tope superado, una medición fallida. */
@@ -117,6 +119,7 @@ export function integrarWorktree(request: IntegrarRequest): WorktreeIntegrado {
       commit: cabeza(),
       registrosUnidos: Object.freeze([]),
       indiceRegenerado: false,
+      recompilado: false,
       entrega: null,
       avisos: Object.freeze([]),
     });
@@ -351,6 +354,7 @@ export function integrarWorktree(request: IntegrarRequest): WorktreeIntegrado {
     commit,
     registrosUnidos: Object.freeze(registrosUnidos),
     indiceRegenerado,
+    recompilado: receta.length > 0,
     entrega,
     avisos: Object.freeze(avisos),
   });

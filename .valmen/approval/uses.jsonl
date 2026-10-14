@@ -25,3 +25,4 @@
 {"kind":"approval-quota-use","authorizationId":"POLITICA-POR-DEFECTO","ticketId":"FEATURE-WEB-VIVO-AGENTES-20261014","stage":"plan","usedAt":"2026-10-14T13:58:22.708Z"}
 {"kind":"approval-quota-use","authorizationId":"POLITICA-POR-DEFECTO","ticketId":"BUGFIX-ENGINE-WORKTREE-RAMA-BASE-20261014","stage":"plan","usedAt":"2026-10-14T15:26:18.758Z"}
 {"kind":"approval-quota-use","authorizationId":"POLITICA-POR-DEFECTO","ticketId":"BUGFIX-ENGINE-RAMA-BASE-RESTOS-20261014","stage":"plan","usedAt":"2026-10-14T19:31:36.318Z"}
+{"kind":"approval-quota-use","authorizationId":"POLITICA-POR-DEFECTO","ticketId":"BUGFIX-ENGINE-AVISOS-WORKTREE-ENGANOSOS-20261014","stage":"plan","usedAt":"2026-10-14T20:36:33.085Z"}
