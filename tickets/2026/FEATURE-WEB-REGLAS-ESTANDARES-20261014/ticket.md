@@ -207,6 +207,8 @@ Contrato de pruebas para el responsable. Directorio: `/Users/juanandrade/Desktop
 
 Resultados de esta sesión (2026-10-14), antes de traer main: los 36 archivos de prueba que ejecutan la interfaz (los de `tests/` que leen `web/index.html` o usan `scripts/verificar-interfaz.mjs`, incluido el nuevo) pasaron juntos: 604 pruebas. `node scripts/verificar-interfaz.mjs` → «Interfaz verificada.» (14 vistas). `valmen gate qa-mechanical --evaluator command` → APPROVE.
 
+Tras traer main (commit `893c890`, con `.valmen/approval/uses.jsonl` unido por `git merge-file --union` y `tickets/index.md` tomado de main): `npm run build` pasa; los 37 archivos de prueba de interfaz juntos más `tests/estandares.test.ts` suman 38 archivos y 632 pruebas, todas pasan; `node scripts/verificar-interfaz.mjs` → «Interfaz verificada.» (14 vistas). Las capturas se rehicieron sobre la rama fusionada con los mismos resultados. Servidor y Chrome quedaron cerrados.
+
 Evidencia visual con el registro real (Chrome sin pantalla por CDP, `valmen serve --port 4795` del worktree), en `tickets/2026/FEATURE-WEB-REGLAS-ESTANDARES-20261014/evidencia/`: `est-1440-oscuro.png`, `est-1440-claro.png`, `est-1440-oscuro-descartados.png`, `est-390-oscuro.png` y `est-390-claro.png`. Pestañas «En vigor 10 / Propuestos 0 / Descartados 1», las mismas cuentas del boceto. Las 10 filas en vigor cruzan con su propuesta (ningún aviso), en el orden y con las fechas del boceto (EST-011 13 oct … EST-001 27 sep). EST-011 está abierta con su frase literal. En Descartados, EST-005 aparece con «Lo descartaste con estas palabras». Al pulsar EST-010 queda `aria-expanded="true"` y EST-011 `false`. A 390 px, `scrollWidth` = `clientWidth` = 390 en oscuro y en claro.
 
 Validaciones manuales:
