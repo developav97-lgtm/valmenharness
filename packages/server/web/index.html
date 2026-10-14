@@ -523,6 +523,236 @@
           left: 0;
         }
       }
+      /* Portafolio (R-TRA-004), como el boceto `assets/portafolio.html`: una tarjeta por
+         proyecto. Solo tokens: el ámbar es «espera a la persona», el lila «trabaja un
+         modelo», el verde «responde» y el rojo «no disponible». Prefijo `port-` propio. */
+      .port {
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+        max-width: 1240px;
+      }
+      .port-cabecera {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        gap: 16px;
+      }
+      .port-titulos {
+        flex: 1 1 300px;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .port-migas {
+        font-family: var(--mono);
+        font-size: 13px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--codigo);
+      }
+      .port-migas span {
+        color: var(--tenue);
+      }
+      .port h1 {
+        margin: 0;
+        font-family: var(--fuente-titulo);
+        font-weight: 600;
+        font-size: 38px;
+        line-height: 1.08;
+      }
+      .port-bajada {
+        margin: 0;
+        color: var(--tenue);
+        font-size: 16px;
+      }
+      .port-rango-etiqueta {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 14px;
+        color: var(--tenue);
+      }
+      .port-rango {
+        height: 40px;
+        padding: 0 12px;
+        border-radius: 10px;
+        border: 1px solid var(--borde);
+        background: var(--panel);
+        color: var(--texto);
+        font: inherit;
+      }
+      .port-cifras {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+        gap: 12px;
+      }
+      .port-cifra,
+      .port-mini {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 0;
+        padding: 12px 14px;
+        border-radius: 10px;
+      }
+      .port-cifra {
+        background: var(--panel);
+        border: 1px solid var(--borde);
+      }
+      .port-cifra.persona {
+        background: var(--alerta-suave);
+        border-color: var(--persona);
+      }
+      .port-mini {
+        background: var(--barra);
+      }
+      .port-numero {
+        font-family: var(--fuente-titulo);
+        font-weight: 600;
+        font-size: 30px;
+        line-height: 1;
+        overflow-wrap: anywhere;
+      }
+      .port-mini .port-numero {
+        font-size: 26px;
+      }
+      .port-de {
+        margin-left: 0.25em;
+        font-size: 18px;
+        color: var(--tenue);
+      }
+      .port-cifra small,
+      .port-mini small {
+        font-size: 13px;
+        color: var(--tenue);
+      }
+      .port-cifra.persona small {
+        color: var(--texto);
+      }
+      .port-cifra.persona .port-numero,
+      .port-mini.persona .port-numero {
+        color: var(--persona);
+      }
+      .port-cifra.modelo .port-numero,
+      .port-mini.modelo .port-numero {
+        color: var(--modelo);
+      }
+      .port-tarjetas {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
+        gap: 16px;
+      }
+      .port-tarjeta {
+        min-width: 0;
+        padding: 20px 22px;
+        border-radius: 16px;
+        border: 1px solid var(--borde);
+        background: var(--panel);
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .port-tarjeta.port-abierta {
+        border-color: var(--acento);
+      }
+      .port-tarjeta-cabeza {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+      }
+      .port-tarjeta h2 {
+        margin: 0;
+        flex: 1;
+        min-width: 0;
+        color: var(--texto);
+        text-transform: none;
+        letter-spacing: normal;
+        font-family: var(--fuente-titulo);
+        font-weight: 600;
+        font-size: 24px;
+      }
+      .port-abierto {
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--acento);
+      }
+      .port-ruta {
+        font-family: var(--mono);
+        font-size: 12.5px;
+        color: var(--tenue);
+        overflow-wrap: anywhere;
+      }
+      .port-fuentes {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+      }
+      .port-fuente {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+        color: var(--texto);
+      }
+      .port-punto {
+        flex: none;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--ok);
+      }
+      .port-fuente.port-caida {
+        color: var(--error);
+      }
+      .port-fuente.port-caida .port-punto {
+        background: var(--error);
+      }
+      .port-fuente.port-perfil {
+        color: var(--modelo);
+      }
+      .port-fuente.port-perfil .port-punto {
+        background: var(--modelo);
+      }
+      .port-motivo {
+        font-size: 13px;
+        color: var(--error);
+      }
+      .port-tres {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+      .port-detalle {
+        font-size: 12px;
+        color: var(--tenue);
+      }
+      button.port-abrir {
+        align-self: flex-start;
+        min-height: 40px;
+        padding: 0 16px;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        background: var(--barra);
+      }
+      .port-pie {
+        margin: 0;
+        font-size: 13px;
+        color: var(--tenue-deco);
+      }
+      @media (max-width: 480px) {
+        .port h1 {
+          font-size: 30px;
+        }
+        .port-tres {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
       /* Inicio (R-MARCO-005): lo que espera una decisión de la persona, como el boceto
          `assets/inicio.html`. Solo tokens: el ámbar es «decide una persona», el lila
          «trabaja un modelo», el cian «decide el código» y el verde «hecho». */
@@ -7468,71 +7698,212 @@
         }
       }
 
+      // ── Vista: portafolio ─────────────────────────────────────────────────
+      //
+      // Una tarjeta por proyecto, como el boceto `assets/portafolio.html` (R-TRA-004).
+      // Todo ayudante lleva el prefijo `portafolio`: otras vistas del mismo archivo se
+      // editan en paralelo y dos declaraciones con el mismo nombre dejan la interfaz sin cargar.
+
+      /** Las opciones del selector «Rango»: la primera es la de por defecto, como en el boceto. */
+      const PORTAFOLIO_RANGOS = [
+        ["7dias", "Últimos 7 días"],
+        ["mes", "Este mes"],
+        ["todo", "Todo"],
+      ];
+      const PORTAFOLIO_CLAVE_RANGO = "valmen.portafolio.rango";
+
+      /** El rango elegido, recordado en este navegador; sin almacenamiento, el de por defecto. */
+      function portafolioRangoElegido() {
+        try {
+          const guardado = localStorage.getItem(PORTAFOLIO_CLAVE_RANGO);
+          if (PORTAFOLIO_RANGOS.some(([clave]) => clave === guardado)) return guardado;
+        } catch {
+          // Sin almacenamiento se usa el rango por defecto.
+        }
+        return PORTAFOLIO_RANGOS[0][0];
+      }
+
+      /** La fecha local `AAAA-MM-DD`: el «hoy» de quien mira. */
+      function portafolioDia(fecha) {
+        const dos = (n) => String(n).padStart(2, "0");
+        return `${fecha.getFullYear()}-${dos(fecha.getMonth() + 1)}-${dos(fecha.getDate())}`;
+      }
+
+      /**
+       * La query del rango. «Este mes» no lleva fechas: el mes lo decide el servidor.
+       * «Todo» empieza en 2000-01-01 porque el endpoint exige fechas válidas (D-002).
+       */
+      function portafolioFechasDe(rango, hoy = new Date()) {
+        if (rango === "mes") return "";
+        const hasta = portafolioDia(hoy);
+        if (rango === "todo") return `?desde=2000-01-01&hasta=${hasta}`;
+        const desde = new Date(hoy);
+        desde.setDate(desde.getDate() - 6);
+        return `?desde=${portafolioDia(desde)}&hasta=${hasta}`;
+      }
+
+      /** US$ con dos decimales y coma decimal, como el boceto. */
+      function portafolioDinero(usd) {
+        if (typeof usd !== "number" || !Number.isFinite(usd)) return "—";
+        return `US$ ${usd.toLocaleString("es", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      }
+
+      /** Una cifra con su rótulo; `clase` es `port-cifra` (encabezado) o `port-mini` (tarjeta). */
+      function portafolioCifra(clase, valor, rotulo, tono = "", de = "") {
+        const caja = el("div", undefined, tono === "" ? clase : `${clase} ${tono}`);
+        const numero = el("span", undefined, "port-numero");
+        numero.append(el("span", String(valor)));
+        if (de !== "") numero.append(el("span", de, "port-de"));
+        caja.append(numero, el("small", rotulo));
+        return caja;
+      }
+
+      /** La suma de un campo de las filas, o «—» si ninguna lo trae. */
+      function portafolioSuma(filas, campo) {
+        if (!filas.some((fila) => typeof fila[campo] === "number")) return "—";
+        return filas.reduce((total, fila) => total + (typeof fila[campo] === "number" ? fila[campo] : 0), 0);
+      }
+
+      /** Una fuente con su punto: verde si responde, rojo si no; `extra` cambia el tono. */
+      function portafolioFuente(rotulo, disponible, extra = "") {
+        const fuente = el("span", undefined, `port-fuente${disponible ? "" : " port-caida"}${extra === "" ? "" : ` ${extra}`}`);
+        const punto = el("i", undefined, "port-punto");
+        punto.setAttribute("aria-hidden", "true");
+        fuente.append(punto, el("span", disponible ? rotulo : `${rotulo}: no disponible`));
+        return fuente;
+      }
+
+      /** Va al Inicio del proyecto; si no es el abierto, lo elige en el menú como su selector. */
+      function portafolioAbrir(projectId, abierto) {
+        location.hash = "#/inicio";
+        if (abierto) return;
+        const selector = $("selector-proyectos");
+        if (selector !== null) selector.value = projectId;
+        seleccionarProyecto(projectId);
+      }
+
+      function portafolioTarjeta(proyecto, abierto) {
+        const tarjeta = el("article", undefined, abierto ? "port-tarjeta port-abierta" : "port-tarjeta");
+        const cabeza = el("div", undefined, "port-tarjeta-cabeza");
+        cabeza.append(el("h2", proyecto.name));
+        if (abierto) cabeza.append(el("span", "abierto ahora", "port-abierto"));
+        tarjeta.append(cabeza, el("div", `${proyecto.projectId} · ${proyecto.root}`, "port-ruta"));
+
+        const fuentes = proyecto.sources ?? {
+          machine: { available: proyecto.available, reason: proyecto.reason },
+          registry: { available: proyecto.available, reason: proyecto.reason },
+        };
+        const linea = el("div", undefined, "port-fuentes");
+        linea.append(
+          portafolioFuente("Máquina", fuentes.machine?.available === true),
+          portafolioFuente("Registro local", fuentes.registry?.available === true),
+        );
+        if (proyecto.available && proyecto.profile !== undefined) {
+          const perfil = proyecto.profile
+            ? `perfil ${proyecto.profile}`
+            : proyecto.profileError
+              ? "perfil ilegible"
+              : "sin perfil";
+          linea.append(portafolioFuente(perfil, true, "port-perfil"));
+        }
+        tarjeta.append(linea);
+        if (!proyecto.available) {
+          const motivos = new Set(
+            [proyecto.reason, fuentes.machine?.reason, fuentes.registry?.reason].filter(Boolean),
+          );
+          tarjeta.append(el("div", `No disponible: ${[...motivos].join(" · ")}`, "port-motivo"));
+        }
+        if (proyecto.profileError) tarjeta.append(el("div", proyecto.profileError, "port-motivo"));
+
+        const numero = (valor) => (typeof valor === "number" ? valor : "—");
+        const tres = el("div", undefined, "port-tres");
+        tres.append(
+          portafolioCifra("port-mini", numero(proyecto.decisionsPending), "esperan tu decisión", "persona"),
+          portafolioCifra("port-mini", numero(proyecto.agentsWorking), "agentes", "modelo"),
+          portafolioCifra("port-mini", proyecto.usage ? portafolioDinero(proyecto.usage.costUsd) : "—", "consumo"),
+        );
+        tarjeta.append(tres);
+
+        // Lo que la vista mostraba antes del rediseño, sin perderlo (D-003).
+        if (proyecto.available) {
+          const detalle = [
+            `${proyecto.gatesPending ?? 0} compuertas pendientes`,
+            `${proyecto.correctionsPending ?? 0} correcciones pendientes`,
+            `${proyecto.waiting ?? 0} corridas detenidas`,
+          ];
+          if (proyecto.usage) {
+            detalle.push(`${proyecto.usage.evaluations} evaluaciones`, `USD ${proyecto.usage.costUsd.toFixed(6)}`);
+            if (proyecto.usage.unreadable > 0) detalle.push(`${proyecto.usage.unreadable} recibos ilegibles no contados`);
+          }
+          tarjeta.append(el("div", detalle.join(" · "), "port-detalle"));
+          const boton = el("button", abierto ? "Ir al inicio del proyecto" : "Abrir este proyecto", "port-abrir");
+          boton.type = "button";
+          boton.addEventListener("click", () => portafolioAbrir(proyecto.projectId, abierto));
+          tarjeta.append(boton);
+        }
+        return tarjeta;
+      }
+
       async function vistaPortafolio() {
         const cont = $("contenido");
         cont.textContent = "Cargando portafolio…";
-        const datos = await api("GET", "/api/portafolio");
+        const rango = portafolioRangoElegido();
+        const datos = await api("GET", `/api/portafolio${portafolioFechasDe(rango)}`);
         cont.textContent = "";
-        const r = datos.summary;
-        cont.append(el("p", `Solo lectura · Consumo de compuertas del ${datos.range.desde} al ${datos.range.hasta}.`, "descripcion"));
+        const pagina = el("div", undefined, "port");
+
+        const cabecera = el("div", undefined, "port-cabecera");
+        const titulos = el("div", undefined, "port-titulos");
+        const migas = el("div", "Trabajo ", "port-migas");
+        migas.append(el("span", "· Portafolio"));
+        titulos.append(
+          migas,
+          el("h1", "Todos tus proyectos de un vistazo"),
+          el("p", "Solo lectura. Para trabajar en uno, ábrelo: el menú cambia a ese proyecto.", "port-bajada"),
+        );
+        const etiqueta = el("label", "Rango", "port-rango-etiqueta");
+        const selector = el("select", undefined, "port-rango");
+        for (const [clave, texto] of PORTAFOLIO_RANGOS) selector.append(new Option(texto, clave));
+        selector.value = rango;
+        selector.addEventListener("change", () => {
+          try {
+            localStorage.setItem(PORTAFOLIO_CLAVE_RANGO, selector.value);
+          } catch {
+            // Sin almacenamiento el rango vale solo para esta vez.
+          }
+          void vistaPortafolio();
+        });
+        etiqueta.append(selector);
+        cabecera.append(titulos, etiqueta);
+        pagina.append(cabecera);
+        cont.append(pagina);
+
         if (!datos.available) {
-          cont.append(el("div", datos.reason, "vacio"));
+          pagina.append(el("div", datos.reason, "vacio"));
           return;
         }
-        const tarjetas = el("div", undefined, "tarjetas");
-        for (const [rotulo, valor] of [
-          ["Proyectos disponibles", `${r.available} de ${r.projects}`],
-          ["Compuertas pendientes", r.gatesPending],
-          ["Corridas detenidas", r.waiting],
-          ["Consumo del rango (USD)", r.costUsd.toFixed(6)],
-        ]) {
-          const tarjeta = el("div", undefined, "tarjeta");
-          tarjeta.append(el("div", String(valor), "valor"), el("div", rotulo, "rotulo"));
-          tarjetas.append(tarjeta);
-        }
-        cont.append(tarjetas);
-        if (r.unavailable > 0) cont.append(el("p", "Totales parciales: hay proyectos no disponibles.", "resultado"));
-        if (datos.projects.length === 0) {
-          cont.append(el("div", "No hay proyectos declarados en el catálogo local.", "vacio"));
+        const r = datos.summary;
+        const filas = Array.isArray(datos.projects) ? datos.projects : [];
+        const esperan = portafolioSuma(filas, "decisionsPending");
+        const cifras = el("div", undefined, "port-cifras");
+        cifras.append(
+          portafolioCifra("port-cifra", r.available, "proyectos disponibles", "", `de ${r.projects}`),
+          portafolioCifra("port-cifra", esperan, "esperan tu decisión", typeof esperan === "number" && esperan > 0 ? "persona" : ""),
+          portafolioCifra("port-cifra", portafolioSuma(filas, "agentsWorking"), "agentes trabajando", "modelo"),
+          portafolioCifra("port-cifra", portafolioDinero(r.costUsd), "consumo del rango"),
+        );
+        pagina.append(cifras);
+        if (r.unavailable > 0) pagina.append(el("p", "Totales parciales: hay proyectos no disponibles.", "resultado port-parcial"));
+        if (filas.length === 0) {
+          pagina.append(el("div", "No hay proyectos declarados en el catálogo local.", "vacio"));
           return;
         }
-        const tabla = el("table");
-        const cabecera = el("thead");
-        const titulos = el("tr");
-        for (const texto of ["Proyecto", "Disponibilidad", "Compuertas pendientes", "Corridas detenidas", "Consumo (USD)"]) titulos.append(el("th", texto));
-        cabecera.append(titulos);
-        const cuerpo = el("tbody");
-        for (const proyecto of datos.projects) {
-          const fila = el("tr");
-          const nombre = el("td");
-          nombre.append(el("div", proyecto.name, "nombre"), el("div", proyecto.projectId, "id"), el("div", proyecto.root, "ruta"));
-          if (proyecto.current) nombre.append(el("span", "Instancia actual", "etiqueta"));
-          fila.append(nombre);
-          const estado = el("td");
-          const fuentes = proyecto.sources ?? {
-            machine: { label: "Máquina", available: proyecto.available, reason: proyecto.reason },
-            registry: { label: "Registro local", available: proyecto.available, reason: proyecto.reason },
-          };
-          for (const [tipo, fuente] of Object.entries(fuentes)) {
-            const etiqueta = tipo === "machine" ? "Máquina" : "Fuente";
-            estado.append(el("div", `${etiqueta}: ${fuente.label} · ${fuente.available ? "Disponible" : "No disponible"}`, "etiqueta"));
-            if (fuente.reason) estado.append(el("div", fuente.reason, "descripcion"));
-          }
-          if (proyecto.reason) estado.append(el("div", proyecto.reason, "descripcion"));
-          fila.append(estado);
-          const compuertas = el("td", proyecto.available ? `${proyecto.gatesPending} compuertas pendientes` : "—");
-          if (proyecto.available) compuertas.append(el("div", `${proyecto.correctionsPending} correcciones pendientes`, "descripcion"));
-          fila.append(compuertas, el("td", proyecto.available ? `${proyecto.waiting} corridas detenidas` : "—"));
-          const consumo = el("td", proyecto.usage ? `USD ${proyecto.usage.costUsd.toFixed(6)}` : "—");
-          if (proyecto.usage) {
-            consumo.append(el("div", `${proyecto.usage.evaluations} evaluaciones`, "descripcion"));
-            if (proyecto.usage.unreadable > 0) consumo.append(el("div", `${proyecto.usage.unreadable} recibos ilegibles no contados`, "resultado"));
-          }
-          fila.append(consumo);
-          cuerpo.append(fila);
+        const tarjetas = el("div", undefined, "port-tarjetas");
+        for (const proyecto of filas) {
+          const abierto = proyectoSeleccionado === "" ? proyecto.current === true : proyecto.projectId === proyectoSeleccionado;
+          tarjetas.append(portafolioTarjeta(proyecto, abierto));
         }
-        tabla.append(cabecera, cuerpo);
-        cont.append(tabla);
+        pagina.append(tarjetas, el("p", `Consumo de compuertas del ${datos.range.desde} al ${datos.range.hasta}.`, "port-pie"));
       }
 
       // Una respuesta de jornadas puede llegar después de que la persona cambió

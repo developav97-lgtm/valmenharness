@@ -662,7 +662,12 @@ export async function handleApi(
     const catalog = listAuthorizedProjects({
       bindingsFile: context.bindingsFile ?? machineBindingsPath(homedir()),
     });
-    const projects = listPortfolioRows(catalog, context.root, range);
+    const projects = listPortfolioRows(
+      catalog,
+      context.root,
+      range,
+      context.home === undefined ? {} : { home: context.home },
+    );
     return {
       status: 200,
       body: {
