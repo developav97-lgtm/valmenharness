@@ -10624,12 +10624,12 @@
        * «detectado» es la sesión que la CLI ya tenía, y confundirlas hace creer que se
        * configuró algo que nadie configuró.
        */
-      const estadoDeProveedor = (p) =>
+      const estadoDeTarjetaProveedor = (p) =>
         !p.configured ? "sin-configurar" : p.source === "cli" ? "detectado" : "configurado";
 
       /** La línea «Estado» de la tarjeta: el estado y de dónde sale. Nunca la clave. */
       function detalleDeEstado(p) {
-        const estado = estadoDeProveedor(p);
+        const estado = estadoDeTarjetaProveedor(p);
         if (estado === "sin-configurar") return "sin configurar";
         if (estado === "detectado") return "detectado · sesión de la CLI";
         const caracteres = p.keyLength === null ? "" : ` · ${p.keyLength} caracteres`;
@@ -10703,7 +10703,7 @@
 
         const rejilla = el("div", undefined, "proveedores");
         for (const { p, uso } of filas) {
-          const estado = estadoDeProveedor(p);
+          const estado = estadoDeTarjetaProveedor(p);
           const lousa = (uso?.delPerfil ?? 0) > 0;
           const tarjeta = el("article", undefined, `proveedor${lousa ? " del-perfil" : ""}`);
           tarjeta.dataset.id = p.id;
