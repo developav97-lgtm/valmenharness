@@ -29,6 +29,7 @@ import {
   type FeatureRow,
   type LocatedRequirement,
   featuresDir,
+  listFeatureAssets,
   listFeatures,
   readFeature,
   choosePaths,
@@ -48,6 +49,8 @@ export interface FeatureListRow {
   readonly hasDesign: boolean;
   readonly hasDecomposition: boolean;
   readonly hasVerify: boolean;
+  /** `true` si la feature tiene manifiesto de adjuntos (`assets/manifest.json`). */
+  readonly hasAssets: boolean;
   /** Cuántos requisitos declara la spec, si se pudo leer. */
   readonly requirements: number;
   /** Cuántos tickets declara el grafo, si hay descomposición. */
@@ -137,6 +140,15 @@ export interface FeatureDetail extends FeatureListRow {
    * pantalla ofreciendo movimientos ilegales.
    */
   readonly transitions: readonly string[];
+  /**
+   * Los adjuntos del manifiesto, para el pie del tablero («Adjuntos: 1 prototipo»).
+   * Un manifiesto ilegible deja la lista vacía: el detalle se abre igual.
+   */
+  readonly assets: readonly {
+    readonly path: string;
+    readonly kind: string;
+    readonly description: string;
+  }[];
 }
 
 /** Lee un archivo de texto, o `null` si no está. */
@@ -145,6 +157,19 @@ function leerSiExiste(...partes: string[]): string | null {
     return readFileSync(join(...partes), "utf8");
   } catch {
     return null;
+  }
+}
+
+/** Los adjuntos de una feature, o ninguno si el manifiesto no se puede leer. */
+function adjuntosDe(root: string, slug: string): FeatureDetail["assets"] {
+  try {
+    return listFeatureAssets(root, slug).map((a) => ({
+      path: a.path,
+      kind: a.kind,
+      description: a.description,
+    }));
+  } catch {
+    return [];
   }
 }
 
@@ -254,6 +279,7 @@ function toRow(
     hasDesign: fila.artifacts.hasDesign,
     hasDecomposition: fila.artifacts.hasDecomposition,
     hasVerify: fila.artifacts.hasVerify,
+    hasAssets: fila.artifacts.hasAssets,
     requirements,
     tickets,
     gaps,
@@ -400,6 +426,7 @@ export function readFeatureDetail(root: string, slug: string): FeatureDetail | n
     // De `blocked` se sale a cualquier estado no terminal, y eso incluye volver al
     // que tenía: la tabla no guarda de dónde se entró, así que se ofrecen todos.
     transitions: nextFeatureStates(leida.row.state),
+    assets: adjuntosDe(root, slug),
   };
 }
 
