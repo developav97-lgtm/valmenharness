@@ -23,6 +23,12 @@ export interface NodoFalso {
   disabled?: boolean;
   /** Los oyentes que la interfaz registró, por tipo de evento. */
   readonly _oyentes?: Record<string, ((evento: unknown) => unknown)[]>;
+  /** Los atributos que la interfaz fijó con `setAttribute`. */
+  readonly attrs?: Record<string, string>;
+  /** Si un `<dialog>` está abierto (`showModal()` lo abre, `close()` lo cierra). */
+  readonly open?: boolean;
+  /** Si la interfaz lo ocultó con la propiedad `hidden`. */
+  readonly hidden?: boolean;
 }
 
 /** Lo que devuelve ejecutar la interfaz. */
@@ -38,6 +44,8 @@ export interface ResultadoDeInterfaz {
    * de un plan.
    */
   readonly render?: (texto: string) => NodoFalso;
+  /** Un nodo por su id, también fuera de `#contenido` (el menú, el título, un panel). */
+  readonly nodo: (id: string) => NodoFalso | undefined;
 }
 
 /** Las opciones del montaje, para ejercitar otra vista con otros datos. */

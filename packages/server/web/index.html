@@ -108,7 +108,7 @@
         --fuente-titulo: "Chakra Petch", "IBM Plex Sans", system-ui, sans-serif;
         --fuente-texto: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
         --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
-        --lateral: 232px;
+        --lateral: 264px;
         --radio: 8px;
       }
       /* La preferencia de tema pertenece al sistema: no se guarda una segunda
@@ -192,18 +192,27 @@
       body.armazon.lateral-oculta {
         grid-template-columns: 0 1fr;
       }
+      /* La barra va sobre --fondo-2, como el boceto del menú. En modo claro el
+         cian, el ámbar y el verde no llegan a AA como texto sobre ese fondo
+         (4.28-4.39): aquí no se usan como texto. Las cuentas son sólidas con
+         --sobre-acento, la de agentes vivos va en lila y los rótulos en --tenue
+         (decisión D-003 de FEATURE-WEB-MENU-GRUPOS-20261014). */
       .lateral {
-        background: var(--panel);
+        background: var(--fondo-2);
+        color: var(--texto);
         border-right: 1px solid var(--borde);
         display: flex;
         flex-direction: column;
-        gap: 4px;
-        padding: 14px 10px;
+        gap: 2px;
+        padding: 16px 12px 14px;
         position: sticky;
         top: 0;
         height: 100vh;
         overflow-y: auto;
         overflow-x: hidden;
+      }
+      .lateral [hidden] {
+        display: none;
       }
       body.lateral-oculta .lateral {
         padding: 0;
@@ -215,37 +224,105 @@
       .lateral .marca {
         display: flex;
         align-items: center;
-        gap: 9px;
-        padding: 6px 8px 14px;
+        gap: 10px;
+        padding: 2px 6px 14px;
       }
       .lateral .marca .icono-marca {
-        width: 24px;
-        height: 24px;
-        border-radius: 7px;
-        background: linear-gradient(140deg, var(--acento), var(--acento-2));
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        background: var(--acento);
         display: grid;
         place-items: center;
-        color: var(--texto);
-        font-size: 13px;
+        color: var(--sobre-acento);
+        font-family: var(--fuente-titulo);
+        font-size: 16px;
         font-weight: 700;
         flex: none;
       }
       .lateral .marca .nombre {
-        font-size: 14px;
-        font-weight: 650;
+        font-family: var(--fuente-titulo);
+        font-size: 18px;
+        font-weight: 600;
         letter-spacing: -0.01em;
       }
       .lateral .marca .nombre span {
+        color: var(--acento);
+        font-weight: 600;
+      }
+      .lateral .proyecto-activo {
+        background: var(--panel);
+        color: var(--texto);
+        border: 1px solid var(--borde);
+        border-radius: 12px;
+        padding: 10px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .lateral .proyecto-activo .rotulo {
         color: var(--tenue);
-        font-weight: 500;
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        margin: 0;
+      }
+      .lateral .proyecto-activo select {
+        background: transparent;
+        color: var(--texto);
+        border: 0;
+        padding: 0;
+        font: 600 14.5px/1.4 var(--fuente-texto);
+        width: 100%;
+        cursor: pointer;
+      }
+      .lateral .proyecto-activo .ruta {
+        color: var(--tenue);
+        font-family: var(--mono);
+        font-size: 11px;
+        word-break: break-all;
+        line-height: 1.4;
+      }
+      .lateral .perfil-activo {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 6px 0 4px;
+        padding: 7px 12px;
+        border-radius: 10px;
+        background: var(--modelo-suave);
+        color: var(--tenue);
+        text-decoration: none;
+        font-size: 13px;
+        min-width: 0;
+      }
+      .lateral .perfil-activo:hover {
+        box-shadow: inset 0 0 0 1px var(--modelo);
+      }
+      .lateral .perfil-activo .punto-perfil {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--modelo);
+        flex: none;
+      }
+      .lateral .perfil-activo .id {
+        color: var(--modelo);
+        font-family: var(--mono);
+        font-size: 12.5px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
       .lateral .grupo {
         color: var(--tenue);
-        font-size: 10.5px;
-        font-weight: 600;
-        letter-spacing: 0.09em;
+        font-family: var(--mono);
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.14em;
         text-transform: uppercase;
-        padding: 12px 9px 5px;
+        padding: 14px 10px 6px;
       }
       .lateral nav {
         display: flex;
@@ -258,21 +335,22 @@
         gap: 10px;
         color: var(--tenue);
         text-decoration: none;
-        font-size: 13.5px;
-        padding: 7px 9px;
-        border-radius: var(--radio);
+        font-size: 14px;
+        font-weight: 500;
+        min-height: 38px;
+        padding: 0 10px;
+        border-radius: 9px;
         border: 0;
       }
       .lateral nav a svg {
-        width: 15px;
-        height: 15px;
+        width: 17px;
+        height: 17px;
         flex: none;
         stroke: currentColor;
         fill: none;
-        stroke-width: 1.6;
+        stroke-width: 1.8;
         stroke-linecap: round;
         stroke-linejoin: round;
-        opacity: 0.85;
       }
       .lateral nav a:hover {
         background: var(--panel-hover);
@@ -281,40 +359,93 @@
       .lateral nav a[aria-current="page"] {
         background: var(--acento-suave);
         color: var(--texto);
-        font-weight: 550;
-        box-shadow: inset 2px 0 0 var(--acento);
+        box-shadow: inset 0 0 0 1px var(--acento);
       }
       .lateral nav a[aria-current="page"] svg {
         color: var(--acento);
-        opacity: 1;
       }
+      /* La cuenta va detrás del rótulo aunque en el marcado vaya delante: el
+         rótulo cierra el enlace (`Agentes</a>`), que es lo que leen las pruebas. */
       .lateral nav a .cuenta {
+        order: 1;
         margin-left: auto;
-        background: var(--acento-suave);
-        color: var(--acento);
-        border-radius: 999px;
-        font-size: 11px;
+        min-width: 22px;
+        background: var(--acento);
+        color: var(--sobre-acento);
+        border-radius: 11px;
+        font-family: var(--mono);
+        font-size: 12px;
         font-weight: 600;
-        padding: 1px 7px;
-        line-height: 1.5;
+        padding: 1px 6px;
+        line-height: 1.6;
+        text-align: center;
       }
       .lateral nav a .cuenta.alerta {
-        background: var(--alerta-suave);
-        color: var(--alerta);
+        background: var(--alerta);
+        color: var(--sobre-acento);
+      }
+      .lateral nav a .cuenta.vivos {
+        background: transparent;
+        color: var(--modelo);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+        padding: 0;
+      }
+      .lateral nav a .cuenta.vivos[hidden] {
+        display: none;
+      }
+      .lateral nav a .cuenta.vivos::before {
+        content: "";
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--modelo);
       }
       .lateral .pie {
         margin-top: auto;
-        border-top: 1px solid var(--borde-suave);
-        padding: 12px 9px 4px;
+        padding: 20px 0 4px;
         display: flex;
         flex-direction: column;
-        gap: 6px;
+        justify-content: flex-start;
+        gap: 10px;
       }
-      .lateral .pie .rotulo {
-        font-size: 10.5px;
+      .lateral .pedir-cambio {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 44px;
+        padding: 0 12px;
+        border-radius: 10px;
+        border: 1px dashed var(--borde);
+        background: transparent;
+        color: var(--texto);
+        font: 500 14px/1.4 var(--fuente-texto);
+        cursor: pointer;
+        text-align: left;
+      }
+      .lateral .pedir-cambio:hover {
+        border-color: var(--acento);
+      }
+      .lateral .pedir-cambio svg {
+        width: 18px;
+        height: 18px;
+        fill: none;
+        stroke: var(--acento);
+        stroke-width: 1.8;
+        stroke-linejoin: round;
+        flex: none;
+      }
+      .lateral .pedir-cambio .texto {
+        flex: 1;
+      }
+      .lateral .pedir-cambio .atajo {
         color: var(--tenue);
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
+        font-family: var(--mono);
+        font-size: 11.5px;
+        background: transparent;
+        border: 0;
       }
       .visualmente-oculto {
         position: absolute;
@@ -327,27 +458,70 @@
         white-space: nowrap;
         border: 0;
       }
-      .lateral .pie .ruta {
-        font-family: var(--mono);
-        font-size: 11px;
-        color: var(--tenue);
-        word-break: break-all;
-        line-height: 1.4;
-      }
       .lateral .pie .latido {
         display: flex;
         align-items: center;
-        gap: 7px;
-        font-size: 11.5px;
+        gap: 8px;
+        padding: 0 10px;
+        font-family: var(--mono);
+        font-size: 12px;
         color: var(--tenue);
       }
       .lateral .pie .punto {
-        width: 7px;
-        height: 7px;
+        width: 8px;
+        height: 8px;
         border-radius: 50%;
         background: var(--ok);
         box-shadow: var(--halo-ok);
         flex: none;
+      }
+      /* «Pedir un cambio»: el chat de configuración como panel sobre la pantalla
+         en la que se estaba, no como una vista que la reemplaza. */
+      dialog.panel-cambio {
+        max-width: 760px;
+        max-height: calc(100vh - 48px);
+        overflow: auto;
+      }
+      .panel-cambio-cabecera {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 16px 24px 0;
+      }
+      .panel-cambio-cabecera h2 {
+        margin: 0;
+        font-size: 18px;
+      }
+      .panel-cambio-cuerpo {
+        padding: 12px 24px 20px;
+      }
+      /* En el celular la barra se apila sobre el contenido y las entradas van en
+         dos columnas, para que el menú no ocupe más de una pantalla. */
+      @media (max-width: 767px) {
+        body.armazon {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        body.armazon.lateral-oculta {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .lateral {
+          position: static;
+          height: auto;
+          border-right: 0;
+          border-bottom: 1px solid var(--borde);
+        }
+        .lateral nav {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .lateral .grupo {
+          grid-column: 1 / -1;
+        }
+        /* `body` sube la especificidad: la regla base del halo va más abajo. */
+        body .principal::before {
+          left: 0;
+        }
       }
       .principal {
         display: flex;
@@ -2614,27 +2788,43 @@
         <span class="nombre">Valmen<span>Harness</span></span>
       </div>
 
-      <div class="grupo">Registro</div>
-      <nav>
-          <a href="#/tickets" data-vista="tickets"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Tickets</a>
-          <a href="#/features" data-vista="features"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h7v7H4zM13 5h7v4h-7zM13 11h7v8h-7zM4 14h7v5H4z"/></svg>Features</a>
-          <a href="#/portafolio" data-vista="portafolio"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h7l2 2h9v13H3Z"/></svg>Portafolio</a>
-          <a href="#/agentes" data-vista="agentes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><path d="M7 4v4M12 10v4M17 16v4"/></svg>Agentes</a>
-          <a href="#/procesos" data-vista="procesos"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h9a4 4 0 0 1 0 8H9"/><path d="M8 5 5 7l3 2"/><path d="M14 17h5"/></svg>Procesos</a>
-          <a href="#/estandares" data-vista="estandares"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16"/><path d="M5 7l7-3 7 3"/><path d="M5 7v5a7 7 0 0 0 7 7 7 7 0 0 0 7-7V7"/></svg>Estándares</a>
-          <a href="#/configurar" data-vista="configurar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M4 12h2M18 12h2M12 4v2M12 18v2M6.5 6.5l1.5 1.5M16 16l1.5 1.5M17.5 6.5 16 8M8 16l-1.5 1.5"/></svg>Configurar</a>
-          <a href="#/modelos" data-vista="modelos"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 4 8l8 4 8-4-8-4z"/><path d="m4 12 8 4 8-4"/><path d="m4 16 8 4 8-4"/></svg>Modelos</a>
-          <a href="#/configuracion" data-vista="configuracion"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M5 12h14M5 18h14"/><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="8" cy="18" r="1.6"/></svg>Configuración</a>
-          <a href="#/proveedores" data-vista="proveedores"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8h10v10a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/><path d="M4 12h3M17 12h3"/></svg>Proveedores</a>
-      </nav>
-
-      <div class="pie">
-        <div class="rotulo">Proyecto</div>
-        <label class="visualmente-oculto" for="selector-proyectos">Proyecto activo</label>
-        <select id="selector-proyectos" aria-label="Proyecto activo" title="Cambiar proyecto">
+      <!-- Arriba, en qué proyecto y con qué modelos se está antes de tocar nada
+           (R-MARCO-003): el selector vivía al pie y el perfil no se veía. -->
+      <div class="proyecto-activo" id="proyecto-activo">
+        <label class="rotulo" for="selector-proyectos">Proyecto</label>
+        <select id="selector-proyectos" title="Cambiar proyecto">
           <option value="">Vista conjunta</option>
         </select>
         <div class="ruta" id="raiz">…</div>
+      </div>
+      <a class="perfil-activo" id="perfil-activo" href="#/modelos" title="Ajustes › Modelos"><span class="punto-perfil" aria-hidden="true"></span><span>Perfil</span><span class="id">…</span></a>
+
+      <nav aria-label="Navegación principal">
+        <div class="grupo">Hoy</div>
+        <a href="#/inicio" data-vista="inicio"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-6 8 6v8a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/></svg><span class="cuenta alerta" id="cuenta-inicio" hidden></span>Inicio</a>
+
+        <div class="grupo">Trabajo</div>
+        <a href="#/tickets" data-vista="tickets"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 6v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-6z"/><path d="M14 5v14" stroke-dasharray="2 2.5"/></svg><span class="cuenta alerta" id="cuenta-tickets" hidden></span>Tickets</a>
+        <a href="#/features" data-vista="features"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>Features</a>
+        <a href="#/portafolio" data-vista="portafolio"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>Portafolio</a>
+
+        <div class="grupo">En vivo</div>
+        <a href="#/agentes" data-vista="agentes"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c1-4 4-6 7-6s6 2 7 6"/></svg><span class="cuenta vivos" id="cuenta-agentes" hidden></span>Agentes</a>
+        <a href="#/procesos" data-vista="procesos"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M4 12h16M4 18h7"/><circle cx="17" cy="6" r="2"/><circle cx="14" cy="18" r="2"/></svg>Procesos</a>
+
+        <div class="grupo">Reglas</div>
+        <a href="#/estandares" data-vista="estandares"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h9l3 3v13H6z"/><path d="M9 11h6M9 15h6"/></svg><span class="cuenta alerta" id="cuenta-estandares" hidden></span>Estándares</a>
+
+        <div class="grupo">Ajustes</div>
+        <a href="#/modelos" data-vista="modelos"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/></svg>Modelos</a>
+        <a href="#/proveedores" data-vista="proveedores"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M11 12l8-8M16 7l2 2M14 9l2 2"/></svg>Proveedores</a>
+        <a href="#/proyecto" data-vista="proyecto"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>Proyecto</a>
+      </nav>
+
+      <!-- El chat de configuración es una acción, no un lugar (R-MARCO-004): se
+           abre como panel desde cualquier pantalla, también con ⌘K o Ctrl+K. -->
+      <div class="pie">
+        <button type="button" class="pedir-cambio" id="pedir-cambio-boton" aria-haspopup="dialog" aria-keyshortcuts="Meta+K Control+K"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg><span class="texto">Pedir un cambio</span><kbd class="atajo" id="pedir-cambio-atajo">⌘K</kbd></button>
         <div class="latido"><span class="punto"></span><span id="actualizado">conectando…</span></div>
       </div>
     </aside>
@@ -2654,6 +2844,16 @@
 
       <main id="contenido"></main>
     </div>
+
+    <dialog id="pedir-cambio" class="panel-cambio" aria-labelledby="pedir-cambio-titulo">
+      <div class="panel-cambio-cabecera">
+        <h2 id="pedir-cambio-titulo">Pedir un cambio</h2>
+        <button type="button" class="pliegue" id="pedir-cambio-cerrar" aria-label="Cerrar" title="Cerrar (Esc)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+      <div class="panel-cambio-cuerpo" id="pedir-cambio-cuerpo"></div>
+    </dialog>
 
     <dialog id="dialogo">
       <div class="dialogo">
@@ -2876,6 +3076,8 @@
         else localStorage.setItem("valmen.project", projectId);
         conectarEventos();
         void refrescarProyectoVisible();
+        void marcarPerfilActivo();
+        void marcarPendientes();
         if (projectId === "") location.hash = "#/portafolio";
         void navegar();
       }
@@ -6807,6 +7009,9 @@
         const tickets = Array.isArray(registro?.tickets) ? registro.tickets : [];
         const filas = (jornadas?.journeys ?? []).flatMap((j) => j.tickets ?? []);
         const vivos = agentesVivos(agentes);
+        // La vista ya leyó a los agentes: la cuenta del menú sale de aquí y no de
+        // una segunda petición (`marcarPendientes` no la pide con Agentes abierta).
+        ponerCuenta("agentes", vivos.length);
         const kpis = kpisDeCorrida({ agentes, tickets, filas });
         const ahora = Date.now();
 
@@ -7152,18 +7357,18 @@
         cont.append(tabla);
       }
 
-      // ── Vista: configurar por chat ────────────────────────────────────────
+      // ── «Pedir un cambio»: el chat de configuración ───────────────────────
 
       /**
-       * El chat de configuración.
+       * El chat de configuración, montado en `cont` (el cuerpo del panel «Pedir
+       * un cambio»). Devuelve su campo de texto, para enfocarlo al abrir.
        *
        * El modelo propone y el humano dispone: nada se escribe hasta que el
        * usuario pulsa «Aplicar», y un cambio sensible exige además escribir una
        * frase exacta. La frase no es ceremonia: un `confirm: true` es un clic, y
        * un clic no es una decisión deliberada.
        */
-      async function vistaConfigurar() {
-        const cont = $("contenido");
+      function montarChatDeConfiguracion(cont) {
         cont.textContent = "";
 
         const conversacion = el("div", undefined, "conversacion");
@@ -7186,7 +7391,8 @@
             "Nada se escribe hasta que lo apruebas. El diff lo calcula el código comparando textos, la validez la decide el parser real, y los cambios que amplían la autoridad automática del sistema piden una confirmación escrita aparte.",
           ),
         );
-        cont.append(nota, el("h2", "Configurar por chat"), conversacion);
+        // El título lo pone el panel («Pedir un cambio»).
+        cont.append(nota, conversacion);
 
         // Tres ejemplos reales: un chat vacío no dice qué se puede pedir.
         const ejemplos = el("div", undefined, "ejemplos");
@@ -7219,7 +7425,10 @@
           try {
             const r = await api("POST", "/api/chat/config/apply", { changes: cambios });
             if (r.ok) {
-              await navegar();
+              // Como antes, el chat vuelve a empezar tras aplicar; la pantalla de
+              // debajo se refresca sin moverse para mostrar lo que cambió.
+              montarChatDeConfiguracion(cont).focus();
+              void navegar({ conservarVista: true });
               return;
             }
             salida.className = "resultado error";
@@ -7380,6 +7589,52 @@
 
         entrada.addEventListener("keydown", (e) => {
           if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) void enviar.click();
+        });
+        return entrada;
+      }
+
+      /** Abre el panel sobre la pantalla actual, con el foco en el campo del chat. */
+      function abrirPedirCambio() {
+        const panel = $("pedir-cambio");
+        const cuerpo = $("pedir-cambio-cuerpo");
+        if (panel === null || cuerpo === null) return;
+        if (panel.open) return;
+        const entrada = montarChatDeConfiguracion(cuerpo);
+        panel.showModal();
+        entrada.focus();
+      }
+
+      /**
+       * El botón del pie del menú y el atajo ⌘K (Ctrl+K fuera de macOS). El
+       * atajo no se dispara escribiendo en un campo ni con otro diálogo abierto:
+       * ahí la tecla es de quien escribe. Esc lo cierra el propio `<dialog>`.
+       */
+      function montarPedirCambio() {
+        const panel = $("pedir-cambio");
+        const boton = $("pedir-cambio-boton");
+        if (panel === null || boton === null) return;
+        const mac = /Mac|iPhone|iPad/.test(globalThis.navigator?.platform ?? "");
+        const atajo = $("pedir-cambio-atajo");
+        if (atajo !== null && !mac) atajo.textContent = "Ctrl K";
+
+        boton.addEventListener("click", () => abrirPedirCambio());
+        $("pedir-cambio-cerrar")?.addEventListener("click", () => panel.close());
+        panel.addEventListener("close", () => {
+          // Cerrado el panel, `#/configurar` ya no describe la pantalla: se
+          // reemplaza sin navegar para que un refresco no lo vuelva a abrir.
+          if (location.hash === "#/configurar") globalThis.history?.replaceState(null, "", "#/tickets");
+          boton.focus();
+        });
+
+        window.addEventListener("keydown", (e) => {
+          if (String(e.key).toLowerCase() !== "k") return;
+          if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return;
+          const foco = document.activeElement;
+          if (foco && (["INPUT", "TEXTAREA", "SELECT"].includes(foco.tagName) || foco.isContentEditable))
+            return;
+          if (document.querySelector("dialog[open]") !== null) return;
+          e.preventDefault();
+          abrirPedirCambio();
         });
       }
 
@@ -9232,9 +9487,11 @@
         jornadas: "Agentes",
         corrida: "Agentes",
         estandares: "Estándares",
-        configurar: "Configurar",
+        inicio: "Inicio",
         modelos: "Modelos",
-        configuracion: "Configuración",
+        proyecto: "Proyecto",
+        // La ruta vieja del editor lleva a Ajustes › Proyecto (D-002).
+        configuracion: "Proyecto",
         proveedores: "Proveedores",
       };
 
@@ -9258,34 +9515,78 @@
        * de la persona. Son las dos cosas que se quedan quietas si nadie mira, y
        * por eso están a la vista desde cualquier pantalla.
        */
+      /**
+       * Cada entrada trae su cuenta en el marcado (`#cuenta-<vista>`), oculta
+       * mientras no haya nada que contar.
+       */
+      function ponerCuenta(vista, cuantos) {
+        const cuenta = $(`cuenta-${vista}`);
+        if (cuenta === null) return;
+        cuenta.textContent = cuantos > 0 ? String(cuantos) : "";
+        cuenta.hidden = cuantos === 0;
+      }
+
       async function marcarPendientes() {
-        const poner = (vista, cuantos, alerta) => {
-          const enlace = document.querySelector(`nav a[data-vista="${vista}"]`);
-          if (enlace === null) return;
-          const previo = enlace.querySelector(".cuenta");
-          if (previo !== null) previo.remove();
-          if (cuantos === 0) return;
-          enlace.append(el("span", String(cuantos), alerta ? "cuenta alerta" : "cuenta"));
-        };
+        const poner = ponerCuenta;
+        const ruta = location.hash.replace(/^#\//, "") || "tickets";
+        const conAgentesAbierta = esRutaDeAgentes(ruta.split("/")[0]);
+
+        // Los agentes vivos, en lila: un modelo trabajando. Solo hay corrida con
+        // un proyecto elegido, y sin ella la entrada se queda sin cuenta. Con la
+        // vista Agentes abierta la pone la propia vista, que ya los leyó.
+        const vivos =
+          proyectoSeleccionado === ""
+            ? Promise.resolve(0)
+            : conAgentesAbierta
+              ? Promise.resolve(null)
+              : api("GET", "/api/corrida/agentes")
+                  .then((r) => {
+                    const lista = Array.isArray(r) ? r : r?.agentes;
+                    return agentesVivos(Array.isArray(lista) ? lista : []).length;
+                  })
+                  .catch(() => 0);
 
         try {
-          const [estandares, tickets] = await Promise.all([
+          const [estandares, tickets, agentes] = await Promise.all([
             api("GET", "/api/standards"),
             api("GET", "/api/tickets"),
+            vivos,
           ]);
           poner(
             "estandares",
-            estandares.proposals.filter((p) => p.state === "propuesto").length,
-            true,
+            (estandares.proposals ?? []).filter((p) => p.state === "propuesto").length,
           );
           poner(
             "tickets",
             (tickets.tickets ?? []).filter((t) => t.workflowStatus === "awaiting_user_tests")
               .length,
-            true,
           );
+          if (agentes !== null) poner("agentes", agentes);
         } catch {
           // Sin números no se rompe nada: la navegación se queda sin contadores.
+        }
+      }
+
+      /**
+       * El perfil de modelos elegido para el proyecto, debajo del proyecto
+       * (R-MARCO-003): saber con qué modelos se trabaja antes de tocar nada.
+       */
+      async function marcarPerfilActivo() {
+        const linea = $("perfil-activo");
+        if (linea === null) return;
+        let elegido = null;
+        try {
+          const datos = await api("GET", "/api/perfiles");
+          elegido = datos?.seleccion?.proyecto ?? null;
+        } catch (error) {
+          if (error === RESPUESTA_DE_PROYECTO_OBSOLETA) return;
+        }
+        const punto = el("span", undefined, "punto-perfil");
+        punto.setAttribute("aria-hidden", "true");
+        if (elegido === null || elegido === "") {
+          linea.replaceChildren(punto, el("span", "sin perfil"));
+        } else {
+          linea.replaceChildren(punto, el("span", "Perfil"), el("span", elegido, "id"));
         }
       }
 
@@ -9384,11 +9685,15 @@
 
         marcarTitulo(nombre, parametro);
 
+        // Las rutas viejas marcan la entrada que las reemplazó (D-002): el editor
+        // es Ajustes › Proyecto y el chat abre un panel sobre la vista por defecto.
+        const marcada =
+          nombre === "configuracion" ? "proyecto" : nombre === "configurar" ? "tickets" : nombre;
         for (const enlace of document.querySelectorAll("nav a")) {
           // Un ticket pertenece a la vista de tickets: la pestaña sigue marcada
           // para que la navegación no parezca perderse al abrir uno.
           const activa =
-            enlace.dataset.vista === nombre ||
+            enlace.dataset.vista === marcada ||
             (esRutaDeAgentes(nombre) && enlace.dataset.vista === "agentes") ||
             (nombre === "ticket" && enlace.dataset.vista === "tickets") ||
             (nombre === "feature" && enlace.dataset.vista === "features");
@@ -9400,9 +9705,14 @@
           if (nombre === "ticket" && parametro !== undefined) await vistaTicket(parametro);
           else if (nombre === "feature" && parametro !== undefined)
             await vistaFeature(parametro);
-          else if (nombre === "configurar") await vistaConfigurar();
-          else if (nombre === "modelos") await vistaModelos();
-          else if (nombre === "configuracion") await vistaConfiguracion();
+          else if (nombre === "configurar") {
+            // `#/configurar` era la vista del chat: ahora abre el panel sobre la
+            // vista por defecto, y un enlace guardado sigue llevando al chat.
+            abrirPedirCambio();
+            await vistaTickets();
+          } else if (nombre === "modelos") await vistaModelos();
+          else if (nombre === "proyecto" || nombre === "configuracion")
+            await vistaConfiguracion();
           else if (nombre === "proveedores") await vistaProveedores();
           else if (nombre === "features") await vistaFeatures();
           else if (nombre === "procesos") await vistaProcesos();
@@ -9434,7 +9744,9 @@
 
       void refrescarProyectoVisible();
       void cargarSelectorDeProyectos();
+      void marcarPerfilActivo();
       montarPliegue();
+      montarPedirCambio();
       conectarEventos();
       void marcarPendientes();
       void navegar();

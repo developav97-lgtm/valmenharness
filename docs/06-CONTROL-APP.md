@@ -450,8 +450,9 @@ inaceptable. Tres reglas:
 
 #### 3.2bis Lo que quedó implementado, y qué falta
 
-El chat existe en la ruta `#/configurar`, contra el rol `orchestrator` del routing. La
-primera prueba real, sobre un proyecto de laboratorio:
+El chat se abre desde cualquier pantalla con «Pedir un cambio», al pie del menú, o con ⌘K
+(Ctrl+K fuera de macOS), y también con la ruta `#/configurar`; corre contra el rol
+`orchestrator` del routing. La primera prueba real, sobre un proyecto de laboratorio:
 
 > «Declara el gate de plan para este proyecto y añade un comentario arriba explicando que el
 > harness vive aquí.»

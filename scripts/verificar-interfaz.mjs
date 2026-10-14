@@ -123,9 +123,21 @@ class Nodo {
   closest() {
     return null;
   }
-  focus() {}
+  // El foco se anota en el documento, como en el navegador: una vista que enfoca
+  // un campo al abrirse se puede comprobar, y un atajo que no debe dispararse con
+  // un campo en foco lo lee de ahí.
+  focus() {
+    if (globalThis.document) globalThis.document.activeElement = this;
+  }
   reset() {}
-  close() {}
+  // Un `<dialog>` abre y cierra de verdad: «Pedir un cambio» es un panel modal, y
+  // sin `open` no se distingue un panel abierto de uno que nunca se abrió.
+  showModal() {
+    this.open = true;
+  }
+  close() {
+    this.open = false;
+  }
   remove() {}
   insertBefore(nodo) {
     this.children.push(nodo);
@@ -648,6 +660,7 @@ export async function ejecutarInterfaz(rutaHtml, opciones = {}) {
     querySelector: () => null,
     querySelectorAll: () => [],
     addEventListener: () => {},
+    activeElement: null,
     body: new Nodo("body"),
   };
 
@@ -739,6 +752,9 @@ export async function ejecutarInterfaz(rutaHtml, opciones = {}) {
     texto: textoDe(porId.get("contenido")).join(" | "),
     fallos,
     render: globalThis.RENDER_MARKDOWN,
+    // Lo que vive fuera de `#contenido` —el menú, el título, el panel «Pedir un
+    // cambio»— también se pinta, y una prueba tiene que poder leerlo por su id.
+    nodo: (id) => porId.get(id),
   };
 }
 
@@ -761,6 +777,7 @@ export const VISTAS = [
   ["configurar", "#/configurar"],
   ["modelos", "#/modelos"],
   ["configuracion", "#/configuracion"],
+  ["proyecto", "#/proyecto"],
   ["proveedores", "#/proveedores"],
   ["ticket", `#/ticket/${TICKET.id}`],
 ];
