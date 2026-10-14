@@ -1247,22 +1247,6 @@
         margin: 6px 0;
       }
 
-      .barra-progreso {
-        background: var(--panel-alto);
-        border: 1px solid var(--borde);
-        border-radius: 999px;
-        height: 6px;
-        overflow: hidden;
-        margin-bottom: 6px;
-        max-width: 220px;
-      }
-      .barra-progreso-lleno {
-        background: linear-gradient(90deg, var(--acento), var(--acento-2));
-        height: 100%;
-        border-radius: 999px;
-        transition: width 0.2s ease;
-      }
-
       /* El tablero de una feature: columnas por dónde está cada ticket.
          Se desplaza en horizontal en vez de encogerse: una columna de tarjetas
          ilegibles es peor que tener que desplazar. */
@@ -1325,6 +1309,144 @@
       .tarjeta-ticket .listo {
         color: var(--ok);
       }
+
+      /* Trabajo › Features (FEATURE-WEB-TRABAJO-FEATURES-20261014, boceto
+         assets/features.html): tarjetas arriba y el tablero de la elegida debajo.
+         Solo tokens del tema, para que el modo claro siga funcionando. */
+      .feat-cabecera {
+        display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px; margin: 8px 0 20px;
+      }
+      .feat-titulos { flex: 1 1 300px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+      .feat-rotulo {
+        font-family: var(--mono); font-size: 13px; letter-spacing: 0.14em;
+        text-transform: uppercase; color: var(--acento);
+      }
+      .feat-rotulo span { color: var(--tenue); }
+      .feat-titulos h1 {
+        margin: 0; font-weight: 600; font-size: clamp(28px, 5vw, 38px); line-height: 1.08;
+      }
+      .feat-ver-completas {
+        display: inline-flex; align-items: center; gap: 10px; font-size: 14px; color: var(--tenue);
+        cursor: pointer;
+      }
+      .interruptor.feat-interruptor[aria-checked="true"] { background: var(--acento); }
+      .feat-nueva {
+        display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 16px;
+        border-radius: 10px; border: 0; font-size: 14px; font-weight: 600;
+        background: var(--acento); color: var(--sobre-acento);
+      }
+      .feat-nueva-zona:not(:empty) { margin: -8px 0 20px; }
+      .feat-nueva-zona p { margin: 0 0 8px; color: var(--tenue); }
+      .feat-tarjetas {
+        display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
+        gap: 12px; margin-bottom: 22px;
+      }
+      .feat-tarjeta {
+        display: flex; flex-direction: column; gap: 8px; padding: 16px; border-radius: 14px;
+        background: var(--panel); color: var(--texto); text-decoration: none; min-width: 0;
+        box-shadow: inset 0 0 0 1px var(--borde);
+      }
+      .feat-tarjeta:hover { background: var(--panel-alto); color: var(--texto); }
+      .feat-tarjeta[aria-current="true"] { box-shadow: inset 0 0 0 2px var(--acento); }
+      .feat-tarjeta-arriba { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+      .feat-marca {
+        display: inline-flex; align-items: center; font-family: var(--mono); font-size: 11px;
+        letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px;
+        border: 1px solid currentColor; white-space: nowrap;
+      }
+      .feat-fecha, .feat-slug { font-family: var(--mono); font-size: 12px; color: var(--tenue); }
+      .feat-slug { overflow-wrap: anywhere; }
+      .feat-tarjeta-titulo { font-weight: 600; font-size: 15.5px; line-height: 1.3; }
+      .feat-tono-ok { color: var(--ok); }
+      .feat-tono-alerta { color: var(--alerta); }
+      .feat-tono-acento { color: var(--acento); }
+      .feat-tono-error { color: var(--error); }
+      .feat-tablero {
+        display: flex; flex-direction: column; gap: 16px; padding: 22px; border-radius: 16px;
+        border: 1px solid var(--borde); background: color-mix(in srgb, var(--panel) 60%, transparent);
+        min-width: 0;
+      }
+      .feat-tablero-cabecera { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; }
+      .feat-tablero-nombre { flex: 999 1 360px; min-width: 0; }
+      .feat-tablero h2 {
+        margin: 2px 0 0; font-size: clamp(21px, 4vw, 26px); font-weight: 600; line-height: 1.15;
+        text-transform: none; letter-spacing: 0; color: var(--texto);
+      }
+      .feat-cuenta { text-align: right; }
+      .feat-cuenta-valor {
+        font-family: var(--fuente-titulo); font-weight: 600; font-size: 34px; line-height: 1;
+      }
+      .feat-cuenta-rotulo { font-size: 13px; color: var(--tenue); }
+      .feat-recorrido {
+        list-style: none; margin: 0; padding: 0; display: grid; gap: 8px;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 120px), 1fr));
+      }
+      .feat-paso {
+        display: flex; flex-direction: column; gap: 6px; padding: 12px; border-radius: 12px;
+        border: 1px solid var(--borde); background: var(--panel); min-width: 0;
+      }
+      .feat-paso-marca { font-family: var(--mono); font-size: 11px; color: var(--tenue); }
+      .feat-paso-hecho .feat-paso-marca { color: var(--ok); }
+      .feat-paso-actual { border-color: var(--alerta); background: var(--alerta-suave); }
+      .feat-paso-actual .feat-paso-marca { color: var(--alerta); }
+      .feat-siguiente {
+        display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 14px 16px;
+        border-radius: 12px; border: 1px solid var(--borde); background: var(--acento-halo);
+      }
+      .feat-siguiente-accion {
+        border-color: color-mix(in srgb, var(--alerta) 55%, transparent);
+        background: color-mix(in srgb, var(--alerta) 8%, transparent);
+      }
+      .feat-siguiente-texto { flex: 999 1 320px; min-width: 0; }
+      .feat-siguiente-texto span { color: var(--tenue); }
+      .feat-accion {
+        min-height: 40px; padding: 0 16px; border-radius: 10px; border: 0; font-size: 14px;
+        font-weight: 600; background: var(--alerta); color: var(--sobre-acento); white-space: nowrap;
+      }
+      .feat-salida:empty { display: none; }
+      .feat-comando {
+        display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0;
+      }
+      .feat-comando code {
+        flex: 1 1 260px; min-width: 0; overflow-wrap: anywhere; font-family: var(--mono);
+        font-size: 13px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--borde);
+        background: var(--fondo); color: var(--codigo); user-select: all;
+      }
+      .feat-copiado { font-size: 13px; color: var(--tenue); }
+      .feat-sprints {
+        display: grid; gap: 14px;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+      }
+      .feat-sprint { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+      .feat-sprint-cabecera {
+        display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+      }
+      /* El `goal` real es una frase larga: se recorta a dos renglones y el texto
+         completo queda en el `title`. */
+      .feat-sprint-cabecera b {
+        font-family: var(--fuente-titulo); font-size: 17px; min-width: 0;
+        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+      }
+      .feat-sprint-cuenta { font-family: var(--mono); font-size: 12px; color: var(--tenue); white-space: nowrap; }
+      .feat-sprint-cuenta.feat-tono-ok { color: var(--ok); }
+      .feat-tk {
+        display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 10px; align-items: start;
+        padding: 10px 12px; border-radius: 10px; background: var(--fondo);
+        border: 1px solid var(--borde); font-size: 14px;
+      }
+      .feat-tk-titulo { color: var(--texto); text-decoration: none; overflow-wrap: anywhere; }
+      a.feat-tk-titulo:hover { color: var(--acento); }
+      .feat-tk-icono { font-weight: 700; text-align: center; line-height: 1.4; }
+      .feat-tk-cerrado .feat-tk-icono { color: var(--ok); }
+      .feat-tk-en-curso .feat-tk-icono { color: var(--acento); }
+      .feat-tk-listo .feat-tk-icono { color: var(--modelo); }
+      .feat-tk-espera .feat-tk-icono { color: var(--alerta); }
+      .feat-tk-bloqueado .feat-tk-icono { color: var(--error); }
+      .feat-tk-sin-crear { border-style: dashed; }
+      .feat-tk-sin-crear .feat-tk-icono, .feat-tk-sin-crear .feat-tk-titulo { color: var(--tenue-deco); }
+      .feat-pie { font-size: 13.5px; color: var(--tenue); }
+      .feat-detalle { margin-top: 16px; }
+      .feat-detalle > summary { cursor: pointer; color: var(--tenue); margin-bottom: 12px; }
 
       /* Lo ya decidido: se lee, pero no compite con lo que pide una acción. */
       .tarjeta-estandar.historial {
@@ -4785,53 +4907,283 @@
 
       // ── Vista: features ───────────────────────────────────────────────────
       //
-      // Una feature es lo que no cabe en un ticket: un módulo con varias
-      // pantallas, reportes y configuración. La vista responde tres preguntas y
-      // en ese orden: ¿en qué punto está?, ¿qué requisitos quedan sin cubrir? y
-      // ¿qué tickets la componen?
+      // Trabajo › Features con su tablero (FEATURE-WEB-TRABAJO-FEATURES-20261014,
+      // boceto assets/features.html). Lista y tablero son una sola página: las
+      // tarjetas arriba y, debajo, la feature elegida con su recorrido, el
+      // siguiente paso y los tickets por sprint. `#/features` elige la primera
+      // visible y `#/feature/<slug>` la indicada (D-003).
 
-      /** Los cuatro artefactos con su marca, en el orden en que se escriben. */
-      function marcasArtefactos(f) {
-        const caja = el("div", undefined, "artefactos");
-        const partes = [
-          ["spec", f.hasSpec],
-          ["diseño", f.hasDesign],
-          ["tickets", f.hasDecomposition],
-          ["verificar", f.hasVerify],
+      /** «Mostrar completas»: dura mientras la página esté abierta (D-007). */
+      let featuresVerCompletas = false;
+
+      /** El estado del registro, en palabras. */
+      const FEATURES_ESTADOS = {
+        draft: "borrador",
+        specified: "especificada",
+        planned: "planeada",
+        decomposed: "descompuesta",
+        in_progress: "en curso",
+        complete: "completa",
+        archived: "archivada",
+        blocked: "bloqueada",
+      };
+      const FEATURES_MESES = [
+        "ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic",
+      ];
+      /** Plurales que no salen de sumar «s» o «es». */
+      const FEATURES_PLURALES = { imagen: "imágenes" };
+
+      /** «2026-10-08» → «08 oct». */
+      function featuresFecha(iso) {
+        const partes = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso ?? ""));
+        if (partes === null) return "—";
+        return `${partes[3]} ${FEATURES_MESES[Number(partes[2]) - 1] ?? partes[2]}`;
+      }
+
+      /** Una feature completa o archivada: lo que «Mostrar completas» oculta. */
+      function featuresTerminada(f) {
+        return f.state === "complete" || f.state === "archived";
+      }
+
+      /**
+       * Los seis pasos del recorrido (D-002). El Diseño es opcional en el motor:
+       * si falta dice «opcional» y nunca es el paso actual. El actual es el primer
+       * pendiente de Spec, Grafo, Tickets y Verificación.
+       */
+      function featuresRecorrido(f) {
+        const ticketsHechos =
+          f.hasDecomposition && f.tickets > 0 && f.closedTickets === f.tickets;
+        const pasos = [
+          { nombre: "Brief", hecho: true, marca: "✓ hecho", cuenta: false },
+          { nombre: "Spec", hecho: f.hasSpec, marca: f.hasSpec ? "✓ hecho" : "falta", cuenta: true },
+          {
+            nombre: "Diseño",
+            hecho: f.hasDesign,
+            marca: f.hasDesign ? "✓ hecho" : "opcional",
+            cuenta: false,
+          },
+          {
+            nombre: "Grafo",
+            hecho: f.hasDecomposition,
+            marca: f.hasDecomposition ? "✓ hecho" : "falta",
+            cuenta: true,
+          },
+          {
+            nombre: "Tickets",
+            hecho: ticketsHechos,
+            marca: f.hasDecomposition
+              ? `${ticketsHechos ? "✓ " : ""}${f.closedTickets} de ${f.tickets}`
+              : "falta",
+            cuenta: true,
+          },
+          {
+            nombre: "Verificación",
+            hecho: f.hasVerify,
+            marca: f.hasVerify ? "✓ hecho" : "falta",
+            cuenta: true,
+          },
         ];
-        for (const [nombre, hecho] of partes) {
-          caja.append(el("span", `${hecho ? "✓" : "·"} ${nombre}`, hecho ? "hecho" : ""));
+        if (!featuresTerminada(f) && f.state !== "blocked") {
+          const actual = pasos.find((paso) => paso.cuenta && !paso.hecho);
+          if (actual !== undefined) actual.actual = true;
         }
+        return pasos;
+      }
+
+      /** La marca de la tarjeta, según el paso actual (D-001). */
+      function featuresMarca(f) {
+        if (f.invalid !== null && f.invalid !== undefined) return { texto: "inválida", tono: "error" };
+        if (f.state === "blocked") return { texto: "bloqueada", tono: "error" };
+        if (featuresTerminada(f)) return { texto: FEATURES_ESTADOS[f.state], tono: "ok" };
+        const actual = featuresRecorrido(f).find((paso) => paso.actual);
+        if (actual === undefined) return { texto: "por completar", tono: "alerta" };
+        if (actual.nombre === "Verificación") return { texto: "falta verificar", tono: "alerta" };
+        return { texto: FEATURES_ESTADOS[f.state] ?? f.state, tono: "acento" };
+      }
+
+      /** Un ticket del grafo que ya no bloquea a nadie. */
+      function featuresTicketCerrado(t) {
+        return t !== undefined && (t.state === "closed" || t.state === "qa_approved");
+      }
+
+      /** El estado de trabajo de un ticket del grafo: [clave, rótulo, glifo]. */
+      function featuresEstadoTicket(t, porId) {
+        if (!t.exists) return ["sin-crear", "sin crear", "·"];
+        if (featuresTicketCerrado(t)) return ["cerrado", "cerrado", "✓"];
+        if (t.state === "blocked") return ["bloqueado", "bloqueado", "!"];
+        if (["in_progress", "changes_requested", "awaiting_user_tests", "in_qa"].includes(t.state))
+          return ["en-curso", "en curso", "◐"];
+        if (t.dependsOn.some((id) => !featuresTicketCerrado(porId.get(id))))
+          return ["espera", "esperando a otro", "…"];
+        return ["listo", "listo para empezar", "○"];
+      }
+
+      /** Lo que falta y su acción, según el paso actual (D-002, D-005). */
+      function featuresSiguientePaso(f, tickets, porId) {
+        if (f.state === "blocked") {
+          return {
+            fuerte: "La feature está bloqueada.",
+            texto: "Sale de blocked desde Más detalle › Resumen, al volver al estado que tenía.",
+            accion: null,
+          };
+        }
+        if (featuresTerminada(f)) {
+          return {
+            fuerte: "La feature está completa.",
+            texto: f.state === "archived" ? "Está archivada." : "No le queda nada pendiente.",
+            accion: null,
+          };
+        }
+        const actual = featuresRecorrido(f).find((paso) => paso.actual);
+        if (actual === undefined) {
+          return {
+            fuerte: "La verificación está escrita.",
+            texto: "Falta marcar la feature completa.",
+            accion: {
+              tipo: "comando",
+              rotulo: "Completar la feature",
+              comando: `valmen feature advance ${f.id} --to complete`,
+            },
+          };
+        }
+        if (actual.nombre === "Spec") {
+          return {
+            fuerte: "Falta la spec.",
+            texto: `Escribe .valmen/features/${f.id}/spec/<dominio>/spec.md con requisitos en RFC 2119.`,
+            accion: null,
+          };
+        }
+        if (actual.nombre === "Grafo") {
+          return f.requirements > 0
+            ? {
+                fuerte: "Falta el grafo de tickets.",
+                texto: "Descomponer pide el grafo al modelo del rol architect: cuesta una llamada.",
+                accion: { tipo: "descomponer", rotulo: "Descomponer" },
+              }
+            : {
+                fuerte: "Falta el grafo de tickets.",
+                texto: "La spec no declara requisitos todavía: sin ellos no se puede descomponer.",
+                accion: null,
+              };
+        }
+        if (actual.nombre === "Tickets") {
+          const sinCrear = tickets.filter((t) => !t.exists).length;
+          if (sinCrear > 0) {
+            return {
+              fuerte: `${sinCrear} ticket(s) del grafo sin escribir en el registro.`,
+              texto: "Cada uno se escribe para poder trabajarlo.",
+              accion: { tipo: "materializar", rotulo: `Escribir los ${sinCrear} que faltan` },
+            };
+          }
+          const listos = tickets
+            .filter((t) => featuresEstadoTicket(t, porId)[0] === "listo")
+            .map((t) => t.id);
+          return {
+            fuerte: `${f.closedTickets} de ${f.tickets} tickets cerrados.`,
+            texto:
+              listos.length > 0
+                ? `Listos para empezar: ${listos.join(", ")}.`
+                : "Los abiertos están en curso o esperan a otro.",
+            accion: null,
+          };
+        }
+        return {
+          fuerte: "Todos los tickets están cerrados.",
+          texto: "Falta escribir la verificación de la feature para marcarla completa.",
+          accion: {
+            tipo: "comando",
+            rotulo: "Verificar la feature",
+            comando: `valmen feature verify ${f.id}`,
+          },
+        };
+      }
+
+      /** «Adjuntos: 1 prototipo, 2 imágenes.» contados por tipo (D-006). */
+      function featuresAdjuntos(adjuntos) {
+        if (adjuntos.length === 0) return "Sin adjuntos.";
+        const porTipo = new Map();
+        for (const a of adjuntos) porTipo.set(a.kind, (porTipo.get(a.kind) ?? 0) + 1);
+        const partes = [...porTipo].map(([tipo, n]) => {
+          if (n === 1) return `1 ${tipo}`;
+          const plural =
+            FEATURES_PLURALES[tipo] ?? (/[aeiou]$/.test(tipo) ? `${tipo}s` : `${tipo}es`);
+          return `${n} ${plural}`;
+        });
+        return `Adjuntos: ${partes.join(", ")}.`;
+      }
+
+      /**
+       * Un comando del CLI para copiar (D-005): el servidor no expone la acción y
+       * la pantalla no crea rutas nuevas. Sin portapapeles se puede seleccionar.
+       */
+      function featuresComando(comando) {
+        const caja = el("div", undefined, "feat-comando");
+        const codigo = el("code", comando);
+        const copiar = el("button", "Copiar", "feat-copiar");
+        copiar.type = "button";
+        const aviso = el("span", "", "feat-copiado");
+        aviso.setAttribute("aria-live", "polite");
+        copiar.addEventListener("click", async () => {
+          try {
+            await globalThis.navigator.clipboard.writeText(comando);
+            aviso.textContent = "Copiado.";
+          } catch {
+            aviso.textContent = "Selecciónalo y cópialo.";
+          }
+        });
+        caja.append(codigo, copiar, aviso);
         return caja;
       }
 
       async function vistaFeatures() {
+        await featuresPagina(null);
+      }
+
+      /** La página de Features: tarjetas y, debajo, el tablero de la elegida. */
+      async function featuresPagina(slug) {
         const cont = $("contenido");
+        const datos = await api("GET", "/api/features");
+        const visibles = datos.features.filter(
+          (f) => featuresVerCompletas || !featuresTerminada(f) || f.id === slug,
+        );
+        const elegida = slug ?? visibles[0]?.id ?? null;
+        const detalle =
+          elegida === null
+            ? null
+            : await api("GET", `/api/features/${encodeURIComponent(elegida)}`);
         cont.textContent = "";
 
-        const datos = await api("GET", "/api/features");
-        const r = datos.summary;
+        const cabecera = el("div", undefined, "feat-cabecera");
+        const titulos = el("div", undefined, "feat-titulos");
+        const rotulo = el("div", "Trabajo ", "feat-rotulo");
+        rotulo.append(el("span", "· Features"));
+        titulos.append(rotulo, el("h1", "Features"));
 
-        const tarjetas = el("div", undefined, "tarjetas");
-        // El progreso del conjunto, sumando todas las features: es la primera
-        // pregunta de una vista de conjunto y antes había que deducirla.
-        const totalTickets = datos.features.reduce((suma, f) => suma + f.tickets, 0);
-        const cerrados = datos.features.reduce((suma, f) => suma + f.closedTickets, 0);
+        const ver = el("label", "Mostrar completas", "feat-ver-completas");
+        const interruptor = el("button", undefined, "interruptor feat-interruptor");
+        interruptor.type = "button";
+        interruptor.setAttribute("role", "switch");
+        interruptor.setAttribute("aria-checked", featuresVerCompletas ? "true" : "false");
+        interruptor.setAttribute("aria-label", "Mostrar features completas");
+        interruptor.append(el("span", undefined, "perilla"));
+        interruptor.addEventListener("click", async () => {
+          featuresVerCompletas = !featuresVerCompletas;
+          await featuresPagina(slug);
+        });
+        ver.append(interruptor);
 
-        const metricas = [
-          ["Features", r.total],
-          ["Descompuestas", r.decomposed],
-          ["Con huecos", r.withGaps],
-          ["Tickets de features", totalTickets],
-          ["De esos, cerrados", cerrados],
-        ];
-        if (r.invalid > 0) metricas.push(["Inválidas", r.invalid]);
-        for (const [rotulo, valor] of metricas) {
-          const tarjeta = el("div", undefined, "tarjeta");
-          tarjeta.append(el("div", String(valor), "valor"), el("div", rotulo, "rotulo"));
-          tarjetas.append(tarjeta);
-        }
-        cont.append(tarjetas);
+        const nueva = el("button", "+ Nueva feature", "feat-nueva");
+        nueva.type = "button";
+        const zonaNueva = el("div", undefined, "feat-nueva-zona");
+        nueva.addEventListener("click", () => {
+          zonaNueva.textContent = "";
+          zonaNueva.append(
+            el("p", "Una feature nueva se crea en la terminal, desde la raíz del proyecto:"),
+            featuresComando('valmen feature new <slug> --title "<título>"'),
+          );
+        });
+        cabecera.append(titulos, ver, nueva);
+        cont.append(cabecera, zonaNueva);
 
         if (datos.features.length === 0) {
           const vacio = el("div", undefined, "vacio");
@@ -4842,94 +5194,42 @@
               "Una feature es trabajo que excede un ticket: spec, diseño y varios tickets hijos.",
               "resultado",
             ),
-            el("div", "Se crea con: valmen feature new <slug> --title <título>", "ruta"),
           );
           cont.append(vacio);
           return;
         }
-
-        const tabla = el("table");
-        const thead = el("thead");
-        const filaCabecera = el("tr");
-        for (const columna of [
-          "Feature",
-          "Estado",
-          "Artefactos",
-          "Requisitos",
-          "Progreso",
-          "Huecos",
-          "Actualizada",
-          "",
-        ]) {
-          filaCabecera.append(el("th", columna));
-        }
-        thead.append(filaCabecera);
-
-        const tbody = el("tbody");
-        for (const f of datos.features) {
-          const tr = el("tr");
-
-          const celdaNombre = el("td");
-          celdaNombre.append(el("div", f.title, "nombre"), el("div", f.id, "id"));
-          tr.append(celdaNombre);
-
-          const celdaEstado = el("td");
-          celdaEstado.append(el("span", f.state));
-          if (f.invalid !== null) {
-            const roto = el("div");
-            roto.append(el("span", "inválida", "etiqueta roto"));
-            celdaEstado.append(roto);
-          }
-          tr.append(celdaEstado);
-
-          const celdaArtefactos = el("td");
-          celdaArtefactos.append(marcasArtefactos(f));
-          tr.append(celdaArtefactos);
-
-          tr.append(el("td", f.requirements === 0 ? "—" : String(f.requirements), "id"));
-
-          // El progreso es lo que convierte la lista en una vista de conjunto:
-          // sin él se ve que una feature está «descompuesta» y la pregunta que se
-          // hace de verdad —«¿por dónde va?»— obliga a abrir los tickets uno a uno.
-          const celdaProgreso = el("td");
-          if (!f.hasDecomposition || f.tickets === 0) {
-            celdaProgreso.textContent = "—";
-          } else {
-            celdaProgreso.append(
-              barraDeProgreso(f.closedTickets, f.tickets),
-              el("div", `${f.closedTickets} de ${f.tickets} cerrados`, "resultado"),
-            );
-          }
-          tr.append(celdaProgreso);
-
-          // Los huecos van en rojo y no en «inválida»: una feature con la
-          // cobertura incompleta no está rota, está a medio descomponer, y son
-          // dos cosas distintas que hay que poder distinguir de un vistazo.
-          const celdaHuecos = el("td");
-          if (f.gaps > 0) {
-            celdaHuecos.append(el("span", `${f.gaps} sin cubrir`, "etiqueta roto"));
-          } else if (f.hasDecomposition) {
-            celdaHuecos.append(el("span", "completa", "etiqueta aprueba"));
-          } else {
-            celdaHuecos.textContent = "—";
-          }
-          tr.append(celdaHuecos);
-
-          tr.append(el("td", f.updated, "id"));
-
-          const celdaAcciones = el("td");
-          const ver = el("button", "Ver", "enlace");
-          ver.addEventListener("click", () => {
-            location.hash = `#/feature/${f.id}`;
-          });
-          celdaAcciones.append(ver);
-          tr.append(celdaAcciones);
-
-          tbody.append(tr);
+        if (visibles.length === 0) {
+          cont.append(
+            el(
+              "div",
+              "Todas las features están completas. Enciende «Mostrar completas» para verlas.",
+              "vacio",
+            ),
+          );
+          return;
         }
 
-        tabla.append(thead, tbody);
-        cont.append(tabla);
+        const rejilla = el("div", undefined, "feat-tarjetas");
+        for (const f of visibles) {
+          const tarjeta = el("a", undefined, "feat-tarjeta");
+          tarjeta.href = `#/feature/${f.id}`;
+          if (f.id === elegida) tarjeta.setAttribute("aria-current", "true");
+          const marca = featuresMarca(f);
+          const arriba = el("span", undefined, "feat-tarjeta-arriba");
+          arriba.append(
+            el("span", marca.texto, `feat-marca feat-tono-${marca.tono}`),
+            el("span", featuresFecha(f.updated), "feat-fecha"),
+          );
+          tarjeta.append(
+            arriba,
+            el("span", f.title, "feat-tarjeta-titulo"),
+            el("span", f.id, "feat-slug"),
+          );
+          rejilla.append(tarjeta);
+        }
+        cont.append(rejilla);
+
+        if (detalle !== null) cont.append(featuresTablero(detalle));
       }
 
       // ── Vista: una feature, con su grafo y su cobertura ───────────────────
@@ -5072,45 +5372,58 @@
       }
 
       async function vistaFeature(slug) {
-        const cont = $("contenido");
-        cont.textContent = "";
+        await featuresPagina(slug);
+      }
 
-        const f = await api("GET", `/api/features/${slug}`);
+      /**
+       * El tablero de la feature elegida: recorrido, siguiente paso, tickets por
+       * sprint y adjuntos; debajo, plegado, el detalle de siempre (D-004).
+       */
+      function featuresTablero(f) {
+        const caja = el("div", undefined, "feat-zona");
+        const seccion = el("section", undefined, "feat-tablero");
+        seccion.setAttribute("aria-labelledby", "feat-titulo");
+        const tickets = (f.decomposition?.sprints ?? []).flatMap((sprint) => sprint.tickets);
+        const porId = new Map(tickets.map((t) => [t.id, t]));
 
-        const volver = el("a", "← Todas las features", "volver enlace");
-        volver.href = "#/features";
-        cont.append(volver);
+        const cabecera = el("div", undefined, "feat-tablero-cabecera");
+        const nombre = el("div", undefined, "feat-tablero-nombre");
+        const titulo = el("h2", f.title);
+        titulo.id = "feat-titulo";
+        nombre.append(el("div", f.id, "feat-slug"), titulo);
+        const cuenta = el("div", undefined, "feat-cuenta");
+        cuenta.append(
+          el(
+            "div",
+            f.hasDecomposition ? `${f.closedTickets}/${f.tickets}` : "—",
+            f.hasDecomposition && f.tickets > 0 && f.closedTickets === f.tickets
+              ? "feat-cuenta-valor feat-tono-ok"
+              : "feat-cuenta-valor",
+          ),
+          el("div", "tickets cerrados", "feat-cuenta-rotulo"),
+        );
+        cabecera.append(nombre, cuenta);
+        seccion.append(cabecera);
 
-        const cabecera = el("div", undefined, "cabecera-ticket");
-        cabecera.append(el("h2", f.title));
-        const meta = el("div", undefined, "meta");
-        meta.append(el("span", f.id, "id"), el("span", f.state, "etiqueta"));
-        if (f.invalid !== null) meta.append(el("span", "inválida", "etiqueta roto"));
-        cabecera.append(meta, marcasArtefactos(f), el("div", f.path, "ruta"));
-        cont.append(cabecera);
-
-        if (f.invalid !== null) {
+        // Los avisos de siempre van antes que nada operativo: una feature que no
+        // valida, un grafo ilegible, huecos o ciclos impiden empezar a trabajar.
+        if (f.invalid !== null && f.invalid !== undefined) {
           const nota = el("div", undefined, "nota alerta");
           nota.append(el("strong", "La feature no valida. "), el("span", f.invalid));
-          cont.append(nota);
+          seccion.append(nota);
         }
-
-        // ── Huecos de cobertura ──
-        //
-        // Va antes que nada operativo a propósito: es lo que impide empezar a
-        // trabajar, y enterrarlo bajo tres tablas obliga a buscarlo.
-        const huecos = f.decomposition === null ? [] : f.decomposition.gaps;
-        if (f.decompositionError !== null) {
+        if (f.decompositionError !== null && f.decompositionError !== undefined) {
           const nota = el("div", undefined, "nota alerta");
           nota.append(
             el("strong", "El tickets.yaml no se puede leer. "),
             el("span", f.decompositionError, "resultado error"),
           );
-          cont.append(nota);
+          seccion.append(nota);
         }
+        const huecos = f.decomposition === null ? [] : f.decomposition.gaps;
         if (huecos.length > 0) {
-          const caja = el("div", undefined, "nota alerta huecos");
-          caja.append(
+          const nota = el("div", undefined, "nota alerta huecos");
+          nota.append(
             el("strong", `${huecos.length} requisito(s) sin ticket que los cubra. `),
             el(
               "span",
@@ -5119,30 +5432,131 @@
           );
           for (const hueco of huecos) {
             const fila = el("div", undefined, "fila");
-            fila.append(
-              el("span", hueco.requirement || "declarado", "id"),
-              el("span", hueco.statement),
-            );
-            caja.append(fila);
+            fila.append(el("span", hueco.requirement || "declarado", "id"), el("span", hueco.statement));
+            nota.append(fila);
           }
-          cont.append(caja);
+          seccion.append(nota);
         }
-        if (f.cycles.length > 0) {
+        if ((f.cycles ?? []).length > 0) {
           const nota = el("div", undefined, "nota alerta");
           nota.append(el("strong", "El grafo de dependencias tiene ciclos. "));
-          for (const ciclo of f.cycles) {
-            nota.append(el("div", ciclo.join(" → "), "id"));
+          for (const ciclo of f.cycles) nota.append(el("div", ciclo.join(" → "), "id"));
+          seccion.append(nota);
+        }
+
+        const recorrido = el("ol", undefined, "feat-recorrido");
+        recorrido.setAttribute("aria-label", "Recorrido de la feature");
+        for (const paso of featuresRecorrido(f)) {
+          const estado = paso.actual
+            ? "feat-paso-actual"
+            : paso.hecho
+              ? "feat-paso-hecho"
+              : "feat-paso-pendiente";
+          const item = el("li", undefined, `feat-paso ${estado}`);
+          if (paso.actual) item.setAttribute("aria-current", "step");
+          item.append(el("span", paso.marca, "feat-paso-marca"), el("b", paso.nombre));
+          recorrido.append(item);
+        }
+        seccion.append(recorrido);
+
+        const paso = featuresSiguientePaso(f, tickets, porId);
+        const franja = el(
+          "div",
+          undefined,
+          paso.accion === null ? "feat-siguiente" : "feat-siguiente feat-siguiente-accion",
+        );
+        const texto = el("div", undefined, "feat-siguiente-texto");
+        texto.append(el("b", paso.fuerte), document.createTextNode(" "), el("span", paso.texto));
+        franja.append(texto);
+        const salida = el("div", undefined, "resultado resultado-feature feat-salida");
+        if (paso.accion !== null) {
+          const boton = el("button", paso.accion.rotulo, "feat-accion");
+          boton.type = "button";
+          boton.addEventListener("click", async () => {
+            if (paso.accion.tipo === "comando") {
+              salida.textContent = "";
+              salida.className = "feat-salida";
+              salida.append(featuresComando(paso.accion.comando));
+            } else if (paso.accion.tipo === "descomponer") {
+              await descomponerFeature(f.id, boton, salida);
+            } else {
+              boton.disabled = true;
+              salida.className = "resultado resultado-feature feat-salida";
+              salida.textContent = "Creando…";
+              try {
+                const r = await api("POST", `/api/features/${f.id}/materialize`, {});
+                if (!r.ok) throw new Error(r.error);
+                await vistaFeature(f.id);
+              } catch (fallo) {
+                salida.className = "resultado error resultado-feature feat-salida";
+                salida.textContent = fallo.message;
+                boton.disabled = false;
+              }
+            }
+          });
+          franja.append(boton);
+        }
+        seccion.append(franja, salida);
+
+        const sprints = f.decomposition?.sprints ?? [];
+        if (sprints.length > 0) {
+          const rejilla = el("div", undefined, "feat-sprints");
+          for (const sprint of sprints) {
+            const columna = el("div", undefined, "feat-sprint");
+            const cerrados = sprint.tickets.filter(featuresTicketCerrado).length;
+            const cabeza = el("div", undefined, "feat-sprint-cabecera");
+            const meta = el("b", `${sprint.id} · ${sprint.goal}`);
+            meta.title = sprint.goal;
+            cabeza.append(
+              meta,
+              el(
+                "span",
+                `${cerrados}/${sprint.tickets.length}`,
+                cerrados === sprint.tickets.length ? "feat-sprint-cuenta feat-tono-ok" : "feat-sprint-cuenta",
+              ),
+            );
+            columna.append(cabeza);
+            for (const t of sprint.tickets) {
+              const [clave, rotulo, glifo] = featuresEstadoTicket(t, porId);
+              const fila = el("div", undefined, `feat-tk feat-tk-${clave}`);
+              const icono = el("span", glifo, "feat-tk-icono");
+              icono.setAttribute("role", "img");
+              icono.setAttribute("aria-label", rotulo);
+              icono.title = rotulo;
+              const nombreTk = el(t.exists ? "a" : "span", t.title || t.id, "feat-tk-titulo");
+              if (t.exists) nombreTk.href = `#/ticket/${t.id}`;
+              nombreTk.title = t.id;
+              fila.append(icono, nombreTk);
+              columna.append(fila);
+            }
+            rejilla.append(columna);
           }
-          cont.append(nota);
+          seccion.append(rejilla);
         }
 
-        // El estado de cada ticket del grafo, para saber qué está escrito ya.
-        const ticketsPorId = new Map();
-        for (const sprint of f.decomposition?.sprints ?? []) {
-          for (const t of sprint.tickets) ticketsPorId.set(t.id, t.state);
-        }
+        const pie = el("div", undefined, "feat-pie");
+        pie.append(
+          el(
+            "span",
+            "Cada ticket muestra con color si está listo para empezar, en curso, esperando a otro o cerrado. ",
+          ),
+          el("span", featuresAdjuntos(f.assets ?? [])),
+        );
+        seccion.append(pie);
+        caja.append(seccion);
 
-        // ── Pestañas ──
+        // El detalle de siempre, plegado: mover el estado, descomponer, escribir
+        // tickets y leer specs siguen aquí aunque el boceto no los muestre (D-004).
+        const masDetalle = document.createElement("details");
+        masDetalle.className = "feat-detalle";
+        masDetalle.append(el("summary", "Más detalle: estado, requisitos, grafo, brief y specs"));
+        masDetalle.append(...featuresPestanas(f));
+        caja.append(masDetalle);
+        return caja;
+      }
+
+      /** Las pestañas del detalle; «Por estado» es el tablero por columnas de antes. */
+      function featuresPestanas(f) {
         const barra = el("div", undefined, "secciones");
         const zona = el("div");
         const pestanas = [
@@ -5151,9 +5565,7 @@
           ["Grafo", () => panelGrafo(f)],
           ["Brief", () => bloqueCrudo("feature.md", f.brief, true)],
         ];
-        // El tablero va primero cuando hay grafo: es la respuesta a «¿por dónde
-        // va?», que es la pregunta con la que se entra a una feature en curso.
-        if (f.hasDecomposition) pestanas.unshift(["Tablero", () => panelTablero(f)]);
+        if (f.hasDecomposition) pestanas.unshift(["Por estado", () => panelTablero(f)]);
         if (f.design !== null)
           pestanas.push(["Diseño", () => bloqueCrudo("design.md", f.design)]);
         if (f.ticketsYaml !== null) {
@@ -5181,8 +5593,8 @@
           boton.addEventListener("click", () => pintar(indice));
           barra.append(boton);
         });
-        cont.append(barra, zona);
         pintar(0);
+        return [barra, zona];
       }
 
       /** El resumen: qué hay, quién lo generó y en qué punto está. */
@@ -5535,25 +5947,6 @@
             "nota",
           ),
         );
-        return caja;
-      }
-
-      /**
-       * La barra de progreso de una feature: cuántos de sus tickets cerraron.
-       *
-       * Faltaba, y la vista la llamaba desde que se escribió la columna de
-       * progreso: en un proyecto sin features descompuestas nadie pasaba por esa
-       * rama, y en cuanto hubo una, la pantalla entera respondió «Can't find
-       * variable: barraDeProgreso». Un `undefined` a la vista no aparece hasta
-       * que el dato existe.
-       */
-      function barraDeProgreso(cerrados, total) {
-        const caja = el("div", undefined, "barra-progreso");
-        const lleno = el("div", undefined, "barra-progreso-lleno");
-        const proporcion = total === 0 ? 0 : Math.round((cerrados / total) * 100);
-        lleno.style.width = `${proporcion}%`;
-        caja.append(lleno);
-        caja.title = `${cerrados} de ${total} cerrados`;
         return caja;
       }
 
