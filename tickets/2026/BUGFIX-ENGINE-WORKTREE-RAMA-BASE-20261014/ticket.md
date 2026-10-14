@@ -4,8 +4,8 @@ id: BUGFIX-ENGINE-WORKTREE-RAMA-BASE-20261014
 title: Worktrees y hash de QA fallan en proyectos que no trabajan sobre main
 type: BUGFIX
 module: ENGINE
-workflow_status: awaiting_user_tests
-qa_status: pending
+workflow_status: closed
+qa_status: approved
 release_status: unreleased
 user_visible: false
 sync_impact: false
@@ -132,7 +132,41 @@ Ninguno.
 ## Puntos
 
 ```json
-[]
+[
+  {
+    "id": "POINT-001",
+    "title": "Verificación delegada de BUGFIX-ENGINE-WORKTREE-RAMA-BASE-20261014",
+    "status": "closed",
+    "severity": "normal",
+    "actual": "La implementación está entregada y falta verificar sus criterios.",
+    "expected": "Los criterios del ticket se cumplen y sus pruebas dan el resultado esperado.",
+    "evidence": [
+      "EVIDENCE-001"
+    ],
+    "affected_files": [
+      "packages/adapter/src/config.ts",
+      "packages/cli/src/main.ts",
+      "packages/cli/src/worktree.ts",
+      "packages/engine/src/append.ts",
+      "packages/engine/src/index.ts",
+      "packages/engine/src/rama-base.ts",
+      "packages/engine/src/references.ts",
+      "packages/engine/src/worktree-git.ts",
+      "packages/engine/src/worktree-integrar.ts",
+      "packages/engine/src/worktree.ts",
+      "tests/referencia-registro.test.ts",
+      "tests/worktree-rama-base.test.ts"
+    ],
+    "diagnosis": null,
+    "solution": null,
+    "tests": [],
+    "qa_cycles": [
+      "QA-001"
+    ],
+    "terminal_reason": null,
+    "related_ticket": null
+  }
+]
 ```
 
 ## Implementación
@@ -164,28 +198,81 @@ Ninguno.
 - Validación funcional con datos reales: repositorio temporal `repro-dev` (scratchpad de la sesión) sobre `dev`, `main` atrasada en `fef5047` y registro en `docs/tickets/`. Antes del arreglo: create, integrate y remove → exit 3; `add-evidence --reference worktree` → exit 5 (ticket.md de `docs/tickets/` y árbol limpio). Con el arreglo y `execution.base-branch: dev`: `journey worktree create` → «desde dev en f3f4cfc17971», exit 0; `add-evidence --reference worktree` en la rama limpia y con el ticket.md modificado → exit 0; `journey worktree integrate` → «integrada en dev por avance directo (1a36fde5027d)», exit 0; `journey worktree remove` → «ya estaba integrada en dev», exit 0.
 - Para reproducirlo en otro proyecto sobre `dev`: declarar `execution:` / `  base-branch: dev` en su `.valmen/config.yaml`, commitear el ticket en `dev` y correr `valmen journey worktree create --id <ID>` desde el checkout principal en `dev`.
 
+- Resultado del PO: podrias ejecutar los comandos tu y si los resultados son los esperados y cerrarlo. Las pruebas del ticket las ejecutó el agente y dieron el resultado esperado: npm run build: exit 0; vitest worktree-rama-base y referencia-registro: 19 pasadas; bateria de worktree/QA/integracion: 12 archivos 241 pasadas; bateria conjunta: 26 archivos 513 pasadas; npx tsc --build: exit 0; suite completa: 5500 pruebas en verde; C15 leido en append.ts:528-537
+
 ## QA
 
 ```json
-[]
+[
+  {
+    "id": "QA-001",
+    "date": "2026-10-14",
+    "build_reference": "commit:cd9bc2b3d7dab6d9e610864b45e38cc4c63cbf6a",
+    "environment": "local: macOS, Node 24, git; repositorios temporales en el directorio temporal del sistema",
+    "result": "pending",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": null
+  },
+  {
+    "id": "QA-002",
+    "date": "2026-10-14",
+    "build_reference": null,
+    "environment": null,
+    "result": "approved",
+    "findings": [],
+    "correction": null,
+    "po_confirmation": "podrias ejecutar los comandos tu y si los resultados son los esperados y cerrarlo"
+  }
+]
 ```
 
 ## Evidencia
 
 ```json
-[]
+[
+  {
+    "id": "EVIDENCE-001",
+    "date": "2026-10-14",
+    "kind": "automated-test",
+    "description": "npm run build: exit 0; vitest worktree-rama-base y referencia-registro: 19 pasadas; bateria de worktree/QA/integracion: 12 archivos 241 pasadas; bateria conjunta: 26 archivos 513 pasadas; npx tsc --build: exit 0; suite completa: 5500 pruebas en verde; C15 leido en append.ts:528-537",
+    "reference": "worktree:sha256:458f97970df150e207ce31c218f1b36397811901be93e838223de90c2920994f",
+    "point_id": "POINT-001"
+  }
+]
 ```
 
 ## Retests
 
 ```json
-[]
+[
+  {
+    "id": "RETEST-001",
+    "date": "2026-10-14",
+    "point_id": "POINT-001",
+    "result": "approved",
+    "evidence": [],
+    "po_confirmation": "podrias ejecutar los comandos tu y si los resultados son los esperados y cerrarlo"
+  }
+]
 ```
 
 ## Cierre
 
 ```json
-[]
+[
+  {
+    "kind": "ticket-close",
+    "id": "CLOSE-001",
+    "date": "2026-10-14",
+    "technical_summary": "La rama base de los worktrees y del hash de QA sale de execution.base-branch en .valmen/config.yaml (readBaseBranch en el adaptador, rama-base.ts en el motor) y, si no se declara, es main; la usan worktree create, integrate y remove y la referencia de QA.",
+    "functional_summary": "Un proyecto que trabaja sobre dev puede crear, integrar y retirar worktrees y registrar evidencia de arbol declarando la clave; los proyectos sobre main no cambian.",
+    "qa_status": "approved",
+    "qa_waiver_reason": null,
+    "po_confirmation": null,
+    "release_impact": "Cambio del motor con valor por defecto main: sin migracion, sincronizacion ni despliegue; no activa la clave en ningun proyecto. Se revierte con el commit del ticket."
+  }
+]
 ```
 
 ## Consumo de IA
@@ -206,6 +293,36 @@ Ninguno.
     "source": "manual:subagente-rama-base-20261014",
     "confidence": "low",
     "id": "CONSUMO-001"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-14",
+    "session_reference": "4bafa011-0b4c-4a99-9312-df4519e031cc",
+    "model": null,
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. Sesión **compartida**: trabajó 7 tickets (FEATURE-WEB-TEMA-TOKENS-20261014 ×32, BUGFIX-ENGINE-WORKTREE-RAMA-BASE-20261014 ×24, FEATURE-WEB-VIVO-PROCESOS-20261014 ×23, FEATURE-WEB-VIVO-AGENTES-20261014 ×19, FEATURE-WEB-AJUSTES-PROYECTO-20261014 ×18), así que su costo no se reparte y acá no se registran números. Costo completo de la sesión: no declarado por el proveedor, 1673698 tokens (sin los subagentes con ticket propio). Registralo en el ticket cuya sesión sea propia, o declaralo compartido donde corresponda. Sesión \"Rediseño visual del harness\".",
+    "input_tokens": null,
+    "output_tokens": null,
+    "total_tokens": null,
+    "estimated_cost_usd": null,
+    "source": "claude:4bafa011-0b4c-4a99-9312-df4519e031cc",
+    "confidence": "high",
+    "id": "CONSUMO-002"
+  },
+  {
+    "kind": "ai-usage",
+    "date": "2026-10-14",
+    "session_reference": "4bafa011-0b4c-4a99-9312-df4519e031cc/agent-ac5aaed4f78c990d1",
+    "model": "anthropic/claude-opus-5-5",
+    "reasoning_effort": null,
+    "notes": "Agente claude-code. 26 intervención(es) sobre el registro, 0 con fallo. 26 de 112 mensajes tocaron el registro. Subagente de la sesión 4bafa011-0b4c-4a99-9312-df4519e031cc; su gasto no está en la madre. Duró 19 min. La entrada incluye la creación de caché y la salida incluye el razonamiento. Caché leída 18040341 tokens. Sesión \"Sesión de Claude Code\". Costo: suscripción; no es cero, el origen no declara un costo por token. Se registran los tokens.",
+    "input_tokens": 230846,
+    "output_tokens": 68883,
+    "total_tokens": 299729,
+    "estimated_cost_usd": null,
+    "source": "claude:4bafa011-0b4c-4a99-9312-df4519e031cc/agent-ac5aaed4f78c990d1",
+    "confidence": "high",
+    "id": "CONSUMO-003"
   }
 ]
 ```
@@ -325,6 +442,150 @@ Sin publicar todavía.
     "action": "delivery-size",
     "actor": "cli",
     "details": "{\"añadidas\":436,\"borradas\":61,\"total\":497,\"tope\":600,\"pasaElTope\":false,\"via\":\"worktree\"}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-14",
+    "at": "2026-10-14T17:24:15.694Z",
+    "action": "agent-decisions-ratified",
+    "actor": "cli",
+    "details": "{\"actor\":\"juan andrade\",\"quote\":\"podrias ejecutar los comandos tu y si los resultados son los esperados y cerrarlo\",\"source\":\"cli\",\"ratifica\":[\"D-001\",\"D-002\",\"EVENT-006\"]}"
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-014",
+    "date": "2026-10-14",
+    "at": "2026-10-14T17:24:18.391Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-002."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-015",
+    "date": "2026-10-14",
+    "at": "2026-10-14T17:24:19.279Z",
+    "action": "ai-usage-added",
+    "actor": "cli",
+    "details": "Se agregó CONSUMO-003."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-016",
+    "date": "2026-10-14",
+    "at": "2026-10-14T17:24:19.596Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: awaiting_user_tests -> in_qa."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-017",
+    "date": "2026-10-14",
+    "at": "2026-10-14T17:24:19.985Z",
+    "action": "point-added",
+    "actor": "cli",
+    "details": "Se agregó POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-018",
+    "date": "2026-10-14",
+    "at": "2026-10-14T17:24:20.449Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: open -> analyzed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-019",
+    "date": "2026-10-14",
+    "at": "2026-10-14T17:24:20.921Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: analyzed -> in_progress."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-020",
+    "date": "2026-10-14",
+    "at": "2026-10-14T17:24:21.416Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: in_progress -> awaiting_retest."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-021",
+    "date": "2026-10-14",
+    "at": "2026-10-14T17:24:22.012Z",
+    "action": "evidence-added",
+    "actor": "cli",
+    "details": "Se agregó EVIDENCE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-022",
+    "date": "2026-10-14",
+    "at": "2026-10-14T17:24:22.684Z",
+    "action": "qa-started",
+    "actor": "cli",
+    "details": "Se inició QA-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-023",
+    "date": "2026-10-14",
+    "at": "2026-10-14T17:24:23.131Z",
+    "action": "retest-added",
+    "actor": "cli",
+    "details": "Se agregó RETEST-001 para POINT-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-024",
+    "date": "2026-10-14",
+    "at": "2026-10-14T17:24:23.628Z",
+    "action": "point-transition",
+    "actor": "cli",
+    "details": "POINT-001: verified -> closed."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-025",
+    "date": "2026-10-14",
+    "at": "2026-10-14T17:24:24.032Z",
+    "action": "qa-closed",
+    "actor": "cli",
+    "details": "Se registró QA-002 con resultado approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-026",
+    "date": "2026-10-14",
+    "at": "2026-10-14T17:24:24.353Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: in_qa -> qa_approved."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-027",
+    "date": "2026-10-14",
+    "at": "2026-10-14T17:24:24.651Z",
+    "action": "close-attempted",
+    "actor": "cli",
+    "details": "Se agregó CLOSE-001."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-028",
+    "date": "2026-10-14",
+    "at": "2026-10-14T17:24:24.966Z",
+    "action": "ticket-transition",
+    "actor": "cli",
+    "details": "Workflow: qa_approved -> closed."
   }
 ]
 ```
