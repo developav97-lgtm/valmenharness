@@ -248,6 +248,19 @@ const FEATURE = {
 /** Responde cada ruta con la forma que la vista espera. */
 function respuesta(ruta) {
   if (ruta.includes("/api/health")) return { root: "/proyecto" };
+  // Inicio (R-MARCO-005): un pendiente de cada tipo, las cifras y un hecho del día.
+  if (ruta.includes("/api/inicio")) {
+    return {
+      fecha: "2026-10-14",
+      pendientes: [
+        { tipo: "ratificar", ticket: TICKET.id, titulo: TICKET.title, estado: "awaiting_user_tests", cuantas: 2 },
+        { tipo: "pruebas", ticket: TICKET.id, titulo: TICKET.title, estado: "awaiting_user_tests" },
+        { tipo: "review", ticket: TICKET.id, titulo: TICKET.title, estado: "planned", gate: "plan", receiptId: "GR-1", dudas: ["criterios_verificables"] },
+      ],
+      cifras: { esperan: 3, intake: 1, cerradosAnio: 12, anio: 2026 },
+      hechoHoy: [{ tipo: "cerrado", ticket: TICKET.id, titulo: TICKET.title }],
+    };
+  }
   if (ruta.includes("/api/authorizations/options"))
     return {
       source: "registry",
@@ -768,6 +781,7 @@ export async function ejecutarInterfaz(rutaHtml, opciones = {}) {
  * Es el mismo fallo que originó este verificador, con otra función.
  */
 export const VISTAS = [
+  ["inicio", "#/inicio"],
   ["tickets", "#/tickets"],
   ["features", "#/features"],
   ["feature", "#/feature/kardex"],

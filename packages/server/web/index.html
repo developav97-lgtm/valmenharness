@@ -523,6 +523,290 @@
           left: 0;
         }
       }
+      /* Inicio (R-MARCO-005): lo que espera una decisión de la persona, como el boceto
+         `assets/inicio.html`. Solo tokens: el ámbar es «decide una persona», el lila
+         «trabaja un modelo», el cian «decide el código» y el verde «hecho». */
+      .inicio {
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+        max-width: 1240px;
+      }
+      .inicio-cabecera {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .inicio-fecha {
+        font-family: var(--mono);
+        font-size: 13px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--codigo);
+      }
+      .inicio-fecha .inicio-proyecto {
+        color: var(--tenue);
+      }
+      .inicio h1 {
+        margin: 0;
+        font-family: var(--fuente-titulo);
+        font-weight: 600;
+        font-size: 40px;
+        line-height: 1.08;
+        letter-spacing: -0.01em;
+      }
+      .inicio-bajada {
+        margin: 0;
+        color: var(--tenue);
+        font-size: 17px;
+        max-width: 62ch;
+      }
+      .inicio-cifras {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
+      }
+      .inicio-cifra {
+        padding: 16px 18px;
+        border-radius: 14px;
+        border: 1px solid var(--borde);
+        background: var(--panel);
+      }
+      .inicio-cifra.persona {
+        border-color: var(--persona);
+        background: var(--alerta-suave);
+      }
+      .inicio-cifra-valor {
+        font-family: var(--fuente-titulo);
+        font-weight: 600;
+        font-size: 36px;
+        line-height: 1;
+      }
+      .inicio-cifra.persona .inicio-cifra-valor {
+        color: var(--persona);
+      }
+      .inicio-cifra.modelo .inicio-cifra-valor {
+        color: var(--modelo);
+      }
+      .inicio-cifra.codigo .inicio-cifra-valor {
+        color: var(--codigo);
+      }
+      .inicio-cifra.hecho .inicio-cifra-valor {
+        color: var(--hecho);
+      }
+      .inicio-cifra-rotulo {
+        margin-top: 6px;
+        font-size: 14px;
+        color: var(--tenue);
+      }
+      .inicio-cifra.persona .inicio-cifra-rotulo {
+        color: var(--texto);
+      }
+      .inicio-columnas {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 24px;
+        align-items: flex-start;
+      }
+      .inicio-decision {
+        flex: 999 1 520px;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .inicio h2 {
+        margin: 0;
+        font-family: var(--fuente-titulo);
+        font-weight: 600;
+        font-size: 22px;
+        text-transform: none;
+        letter-spacing: normal;
+        color: var(--texto);
+      }
+      .inicio-lado {
+        flex: 1 1 320px;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .inicio-tarjeta,
+      .inicio-caja {
+        padding: 18px 20px;
+        border-radius: 14px;
+        border: 1px solid var(--borde);
+        background: var(--panel);
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .inicio-caja {
+        padding: 18px;
+      }
+      .inicio-caja h2 {
+        font-size: 19px;
+      }
+      .inicio-tarjeta-cabeza,
+      .inicio-caja-cabeza {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+      }
+      .inicio-caja-cabeza {
+        justify-content: space-between;
+      }
+      .inicio-caja-cabeza a {
+        font-size: 13.5px;
+        text-decoration: none;
+        color: var(--acento);
+      }
+      .inicio-chip {
+        display: inline-flex;
+        align-items: center;
+        font-family: var(--mono);
+        font-size: 11.5px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        padding: 3px 9px;
+        border-radius: 999px;
+        border: 1px solid currentColor;
+        color: var(--persona);
+        white-space: nowrap;
+      }
+      .inicio-id {
+        font-family: var(--mono);
+        font-size: 13px;
+        color: var(--tenue);
+        overflow-wrap: anywhere;
+      }
+      .inicio-espacio {
+        flex: 1;
+      }
+      .inicio-donde {
+        font-family: var(--mono);
+        font-size: 12.5px;
+        color: var(--tenue);
+      }
+      .inicio-tarjeta-titulo {
+        font-size: 18px;
+        font-weight: 600;
+      }
+      .inicio-tarjeta-detalle {
+        color: var(--tenue);
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+      }
+      .inicio-duda {
+        font-family: var(--mono);
+        font-size: 13px;
+        color: var(--modelo);
+        background: var(--modelo-suave);
+        padding: 2px 8px;
+        border-radius: 6px;
+      }
+      .inicio-acciones {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .inicio-accion {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 40px;
+        padding: 0 16px;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+      .inicio-accion.persona {
+        background: var(--persona);
+        color: var(--sobre-acento);
+      }
+      .inicio-accion.persona:hover {
+        filter: brightness(1.08);
+      }
+      .inicio-agente {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .inicio-agente + .inicio-agente {
+        padding-top: 14px;
+        border-top: 1px solid var(--borde);
+      }
+      .inicio-agente-id,
+      .inicio-hecho-id {
+        font-family: var(--mono);
+        font-size: 12.5px;
+        color: var(--tenue);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .inicio-pasos {
+        display: flex;
+        gap: 4px;
+      }
+      .inicio-paso {
+        flex: 1;
+        height: 6px;
+        border-radius: 3px;
+        background: var(--borde);
+      }
+      .inicio-paso.hecho {
+        background: var(--codigo);
+      }
+      .inicio-paso.actual {
+        background: var(--modelo);
+      }
+      .inicio-agente-pie {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        font-size: 13.5px;
+      }
+      .inicio-agente-modelo {
+        font-family: var(--mono);
+        color: var(--modelo);
+      }
+      .inicio-hecho {
+        display: grid;
+        grid-template-columns: 18px minmax(0, 1fr);
+        gap: 10px;
+        font-size: 14px;
+      }
+      .inicio-hecho-marca {
+        font-weight: 700;
+        color: var(--hecho);
+      }
+      .inicio-hecho-marca.registrado {
+        color: var(--codigo);
+      }
+      .inicio-nada {
+        color: var(--tenue);
+        font-size: 14px;
+      }
+      /* En el celular las dos columnas se apilan y el título baja de tamaño, sin
+         desplazamiento horizontal de la página (R-MARCO-006). */
+      @media (max-width: 767px) {
+        .inicio-columnas {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .inicio h1 {
+          font-size: 30px;
+        }
+        .inicio-cifras {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
       .principal {
         display: flex;
         flex-direction: column;
@@ -3100,6 +3384,208 @@
         }
         selector.value = proyectoSeleccionado;
         selector.addEventListener("change", () => seleccionarProyecto(selector.value));
+      }
+
+      // ── Vista: inicio ─────────────────────────────────────────────────────
+
+      /**
+       * El paso del ciclo de ocho en que está un ticket, según su estado: registro,
+       * análisis, plan, aprobación, implementación, tus pruebas, QA y cierre. El paso
+       * actual es el que un agente está haciendo; `null` si el estado no es del ciclo.
+       */
+      const PASO_DE_INICIO = {
+        intake: 2,
+        analyzed: 3,
+        planned: 4,
+        approved: 5,
+        in_progress: 5,
+        changes_requested: 5,
+        awaiting_user_tests: 6,
+        in_qa: 7,
+        qa_approved: 8,
+      };
+
+      /** Lo que dice cada tarjeta de Inicio, por tipo de pendiente (D-002: la acción abre el ticket). */
+      function textosDeTarjetaDeInicio(p) {
+        if (p.tipo === "ratificar") {
+          const n = p.cuantas ?? 0;
+          return {
+            chip: "Ratificar",
+            donde: "antes de cerrar",
+            titulo: `El agente decidió ${n} ${n === 1 ? "cosa" : "cosas"} por ti en este ticket`,
+            detalle: `${p.titulo}. Revísalas en el ticket y ratifícalas juntas para poder cerrar.`,
+            accion: "Revisar y ratificar",
+          };
+        }
+        if (p.tipo === "pruebas") {
+          return {
+            chip: "Tus pruebas",
+            donde: p.estado,
+            titulo: "La implementación está lista para que la pruebes",
+            detalle: `${p.titulo}. Si no lo pruebas, el ticket no avanza.`,
+            accion: "Abrir contrato de pruebas",
+          };
+        }
+        const etapa =
+          p.gate === "plan" ? "el plan" : p.gate === "analysis" ? "el análisis" : `la compuerta ${p.gate}`;
+        return {
+          chip: "Compuerta en REVIEW",
+          donde: p.gate ?? "",
+          titulo: `El evaluador no pudo decidir ${etapa}`,
+          detalle: p.titulo,
+          accion: "Revisar la compuerta",
+        };
+      }
+
+      function tarjetaDeInicio(p) {
+        const t = textosDeTarjetaDeInicio(p);
+        const tarjeta = el("article", undefined, "inicio-tarjeta");
+        const cabeza = el("div", undefined, "inicio-tarjeta-cabeza");
+        cabeza.append(
+          el("span", t.chip, "inicio-chip"),
+          el("span", p.ticket, "inicio-id"),
+          el("span", undefined, "inicio-espacio"),
+          el("span", t.donde, "inicio-donde"),
+        );
+        const detalle = el("div", undefined, "inicio-tarjeta-detalle");
+        detalle.append(el("span", t.detalle));
+        const dudas = p.dudas ?? [];
+        if (dudas.length > 0) {
+          detalle.append(el("span", `Dudó en ${dudas.length} ${dudas.length === 1 ? "proposición" : "proposiciones"}:`));
+          for (const duda of dudas) detalle.append(el("span", duda, "inicio-duda"));
+        }
+        const accion = el("a", t.accion, "inicio-accion persona");
+        accion.setAttribute("href", `#/ticket/${encodeURIComponent(p.ticket)}`);
+        const acciones = el("div", undefined, "inicio-acciones");
+        acciones.append(accion);
+        tarjeta.append(cabeza, el("div", t.titulo, "inicio-tarjeta-titulo"), detalle, acciones);
+        return tarjeta;
+      }
+
+      function agenteDeInicio(agente) {
+        const caja = el("div", undefined, "inicio-agente");
+        caja.append(el("div", agente.ticket ?? agente.agente, "inicio-agente-id"));
+        const paso = PASO_DE_INICIO[agente.ticketEstado] ?? null;
+        const fase = fraseDeFase(agente);
+        if (paso !== null) {
+          const pasos = el("div", undefined, "inicio-pasos");
+          pasos.setAttribute("aria-label", `Paso ${paso} de 8: ${fase.texto}`);
+          for (let i = 1; i <= 8; i += 1) {
+            pasos.append(el("span", undefined, `inicio-paso${i < paso ? " hecho" : i === paso ? " actual" : ""}`));
+          }
+          caja.append(pasos);
+        }
+        const pie = el("div", undefined, "inicio-agente-pie");
+        pie.append(
+          el("span", fase.inferida ? `${fase.texto} (inferida)` : fase.texto),
+          el("span", agente.modelo ?? "modelo sin dato", "inicio-agente-modelo"),
+        );
+        caja.append(pie);
+        return caja;
+      }
+
+      /**
+       * Inicio (R-MARCO-005): la pantalla de apertura dice qué está parado por la
+       * persona. Primero lo que espera su decisión —una tarjeta por cosa, con su id y
+       * su botón ámbar—; al lado, lo que hacen los agentes ahora y lo hecho hoy.
+       */
+      async function vistaInicio() {
+        const cont = $("contenido");
+        const [inicio, agentes] = await Promise.all([
+          api("GET", "/api/inicio"),
+          proyectoSeleccionado === ""
+            ? Promise.resolve([])
+            : api("GET", "/api/corrida/agentes")
+                .then((r) => agentesVivos(Array.isArray(r) ? r : r?.agentes))
+                .catch(() => []),
+        ]);
+        cont.textContent = "";
+        const pendientes = Array.isArray(inicio?.pendientes) ? inicio.pendientes : [];
+        const hechos = Array.isArray(inicio?.hechoHoy) ? inicio.hechoHoy : [];
+        const cifras = inicio?.cifras ?? {};
+        const n = pendientes.length;
+        ponerCuenta("inicio", n);
+
+        const pagina = el("div", undefined, "inicio");
+
+        const cabecera = el("div", undefined, "inicio-cabecera");
+        const fecha = el("div", undefined, "inicio-fecha");
+        const dia = typeof inicio?.fecha === "string" ? new Date(`${inicio.fecha}T12:00:00`) : new Date();
+        const texto = dia
+          .toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" })
+          .replace(",", "");
+        fecha.append(el("span", texto.charAt(0).toUpperCase() + texto.slice(1)));
+        const proyecto = $("raiz")?.textContent ?? "";
+        if (proyecto !== "" && proyecto !== "…") fecha.append(el("span", ` · ${proyecto}`, "inicio-proyecto"));
+        cabecera.append(
+          fecha,
+          el("h1", n === 0 ? "No hay nada parado por ti" : `${n} ${n === 1 ? "cosa espera" : "cosas esperan"} tu decisión`),
+          el(
+            "p",
+            n === 0
+              ? "Lo demás lo está haciendo el agente: cuando algo necesite tu decisión, aparece aquí."
+              : "Lo demás lo está haciendo el agente. Cuando termines esta lista, no queda nada parado por ti.",
+            "inicio-bajada",
+          ),
+        );
+
+        const fila = el("div", undefined, "inicio-cifras");
+        const cifra = (valor, rotulo, tono) => {
+          const caja = el("div", undefined, `inicio-cifra ${tono}`);
+          caja.append(el("div", String(valor), "inicio-cifra-valor"), el("div", rotulo, "inicio-cifra-rotulo"));
+          return caja;
+        };
+        const intake = cifras.intake ?? 0;
+        fila.append(
+          cifra(n, n === 1 ? "espera tu decisión" : "esperan tu decisión", "persona"),
+          cifra(agentes.length, agentes.length === 1 ? "agente trabajando" : "agentes trabajando", "modelo"),
+          cifra(intake, intake === 1 ? "ticket en intake, sin empezar" : "tickets en intake, sin empezar", "codigo"),
+          cifra(cifras.cerradosAnio ?? 0, `tickets cerrados en ${cifras.anio ?? dia.getFullYear()}`, "hecho"),
+        );
+
+        const columnas = el("div", undefined, "inicio-columnas");
+        if (n > 0) {
+          const decision = el("section", undefined, "inicio-decision");
+          decision.setAttribute("aria-label", "Espera tu decisión");
+          decision.append(el("h2", "Espera tu decisión"));
+          for (const p of pendientes) decision.append(tarjetaDeInicio(p));
+          columnas.append(decision);
+        }
+
+        const lado = el("aside", undefined, "inicio-lado");
+        const ahora = el("section", undefined, "inicio-caja inicio-ahora");
+        const cabezaAhora = el("div", undefined, "inicio-caja-cabeza");
+        const verAgentes = el("a", "Ver agentes →");
+        verAgentes.setAttribute("href", "#/agentes");
+        cabezaAhora.append(el("h2", "Ahora mismo"), verAgentes);
+        ahora.append(cabezaAhora);
+        if (agentes.length === 0) ahora.append(el("div", "Ningún agente trabajando ahora.", "inicio-nada"));
+        for (const agente of agentes) ahora.append(agenteDeInicio(agente));
+
+        const hoy = el("section", undefined, "inicio-caja inicio-hoy");
+        hoy.append(el("h2", "Hecho hoy"));
+        if (hechos.length === 0) hoy.append(el("div", "Todavía nada hoy.", "inicio-nada"));
+        else {
+          const lista = el("div", undefined, "inicio-hecho");
+          // Los cinco primeros, como el boceto: una lista larga empuja «Ahora mismo» fuera de la vista.
+          for (const h of hechos.slice(0, 5)) {
+            const marca = el("span", h.tipo === "cerrado" ? "✓" : "○", `inicio-hecho-marca ${h.tipo}`);
+            marca.setAttribute("aria-hidden", "true");
+            const cuerpo = el("div");
+            cuerpo.append(
+              el("div", h.tipo === "cerrado" ? `Cerrado: ${h.titulo}` : `Registrado: ${h.titulo}`),
+              el("div", h.ticket, "inicio-hecho-id"),
+            );
+            lista.append(marca, cuerpo);
+          }
+          hoy.append(lista);
+          if (hechos.length > 5) hoy.append(el("div", `y ${hechos.length - 5} más hoy`, "inicio-nada"));
+        }
+        lado.append(ahora, hoy);
+        columnas.append(lado);
+
+        pagina.append(cabecera, fila, columnas);
+        cont.append(pagina);
       }
 
       // ── Vista: tickets ────────────────────────────────────────────────────
@@ -9528,7 +10014,7 @@
 
       async function marcarPendientes() {
         const poner = ponerCuenta;
-        const ruta = location.hash.replace(/^#\//, "") || "tickets";
+        const ruta = location.hash.replace(/^#\//, "") || "inicio";
         const conAgentesAbierta = esRutaDeAgentes(ruta.split("/")[0]);
 
         // Los agentes vivos, en lila: un modelo trabajando. Solo hay corrida con
@@ -9562,6 +10048,9 @@
               .length,
           );
           if (agentes !== null) poner("agentes", agentes);
+          // La misma cuenta que el título de Inicio (R-MARCO-005).
+          const inicio = await api("GET", "/api/inicio");
+          poner("inicio", Array.isArray(inicio?.pendientes) ? inicio.pendientes.length : 0);
         } catch {
           // Sin números no se rompe nada: la navegación se queda sin contadores.
         }
@@ -9661,7 +10150,7 @@
        * archivo, así que entran solos.
        */
       function elCambioTocaLaVista(rutas) {
-        const ruta = location.hash.replace(/^#\//, "") || "tickets";
+        const ruta = location.hash.replace(/^#\//, "") || "inicio";
         const [nombre, parametro] = ruta.split("/");
         if (nombre !== "ticket" || parametro === undefined) return true;
         if (rutas.length === 0) return true;
@@ -9671,7 +10160,7 @@
       async function navegar(opciones = {}) {
         clearTimeout(refrescoPendiente);
         bandaDeFasesActual = null;
-        const ruta = location.hash.replace(/^#\//, "") || "tickets";
+        const ruta = location.hash.replace(/^#\//, "") || "inicio";
         const [nombre, parametro] = ruta.split("/");
         clearTimeout(refrescoDeCorrida);
         if (!esRutaDeAgentes(nombre)) {
@@ -9710,7 +10199,8 @@
             // vista por defecto, y un enlace guardado sigue llevando al chat.
             abrirPedirCambio();
             await vistaTickets();
-          } else if (nombre === "modelos") await vistaModelos();
+          } else if (nombre === "inicio") await vistaInicio();
+          else if (nombre === "modelos") await vistaModelos();
           else if (nombre === "proyecto" || nombre === "configuracion")
             await vistaConfiguracion();
           else if (nombre === "proveedores") await vistaProveedores();
