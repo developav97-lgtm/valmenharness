@@ -1014,6 +1014,150 @@
       .punto.alerta {
         background: var(--alerta);
       }
+      /* ── Ajustes › Proveedores (R-AJU-005) ──────────────────────────────
+         Boceto: .valmen/features/rediseno-mission-control/assets/proveedores.html.
+         Una tarjeta por proveedor; el punto distingue configurado (lleno),
+         detectado (anillo) y sin configurar (gris). */
+      .cabecera-proveedores {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin: 8px 0 20px;
+      }
+      .cabecera-proveedores .rotulo-proveedores {
+        font-family: var(--mono);
+        font-size: 13px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--acento);
+      }
+      .cabecera-proveedores .rotulo-proveedores span {
+        color: var(--tenue);
+      }
+      .cabecera-proveedores h1 {
+        margin: 0;
+        font-weight: 600;
+        font-size: clamp(28px, 5vw, 38px);
+        line-height: 1.08;
+      }
+      .cabecera-proveedores p {
+        margin: 0;
+        color: var(--tenue);
+        font-size: 17px;
+        max-width: 70ch;
+      }
+      .leyenda-proveedores {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 18px;
+        font-size: 13.5px;
+        color: var(--tenue);
+        margin-bottom: 20px;
+      }
+      .leyenda-proveedores > span {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .leyenda-proveedores b {
+        color: var(--texto);
+      }
+      .proveedor-punto {
+        flex: none;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        box-sizing: border-box;
+      }
+      .proveedor-punto.configurado {
+        background: var(--ok);
+      }
+      .proveedor-punto.detectado {
+        border: 2px solid var(--ok);
+      }
+      .proveedor-punto.sin-configurar {
+        background: var(--tenue-deco);
+      }
+      .proveedores {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+        gap: 14px;
+      }
+      .proveedor {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        min-width: 0;
+        padding: 20px;
+        border: 1px solid var(--borde);
+        border-radius: 14px;
+        background: var(--panel);
+      }
+      .proveedor.del-perfil {
+        border-color: color-mix(in srgb, var(--modelo) 50%, transparent);
+      }
+      .proveedor-cabeza {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .proveedor-cabeza h2 {
+        flex: 1;
+        min-width: 0;
+        margin: 0;
+        font-size: 21px;
+        font-weight: 600;
+        letter-spacing: normal;
+        text-transform: none;
+        color: var(--texto);
+      }
+      .proveedor-uso {
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--tenue);
+        text-align: right;
+      }
+      .proveedor-uso.activo {
+        color: var(--modelo);
+      }
+      .proveedor-datos {
+        display: grid;
+        grid-template-columns: 110px minmax(0, 1fr);
+        gap: 6px 12px;
+        margin: 0;
+        font-size: 14px;
+      }
+      .proveedor-datos dt {
+        color: var(--tenue);
+      }
+      .proveedor-datos dd {
+        margin: 0;
+        overflow-wrap: anywhere;
+      }
+      .proveedor-datos dd.id {
+        font-size: 14px;
+        color: var(--texto);
+      }
+      .proveedor-avisos:empty {
+        display: none;
+      }
+      .proveedor .acciones {
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        margin-top: auto;
+        padding-top: 12px;
+      }
+      .proveedor .acciones button {
+        min-height: 40px;
+        padding: 0 14px;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        white-space: nowrap;
+        background: var(--fondo-2);
+      }
       .acciones {
         display: flex;
         gap: 8px;
@@ -2447,6 +2591,125 @@
         color: var(--tenue);
         margin-top: 10px;
       }
+
+      /* proyecto-ajustes:inicio */
+      /* ── Proyecto: bloques con interruptores (boceto assets/proyecto.html) ─
+         Ámbar decide una persona; verde encendido; lila el agente; rojo lo que
+         siempre es de una persona. Solo tokens del tema. */
+      .cabecera-proyecto { margin-bottom: 22px; }
+      .migas-proyecto {
+        font-family: var(--mono); font-size: 13px; letter-spacing: 0.14em;
+        text-transform: uppercase; color: var(--acento);
+      }
+      .migas-proyecto span { color: var(--tenue); }
+      .titulo-proyecto {
+        font-family: var(--fuente-titulo); font-size: 38px; font-weight: 600; line-height: 1.08;
+        margin: 8px 0; border: 0; padding: 0;
+        text-transform: none; letter-spacing: normal; color: var(--texto);
+      }
+      .bajada-proyecto { color: var(--tenue); font-size: 17px; max-width: 70ch; margin: 0; }
+      .bloque-proyecto {
+        display: flex; flex-direction: column; gap: 14px;
+        background: var(--panel); border: 1px solid var(--borde); border-radius: 14px;
+        padding: 20px 22px; margin-bottom: 22px; min-width: 0;
+      }
+      .bloque-proyecto.bloque-aprobacion { border-color: var(--persona); }
+      .bloque-proyecto h2.titulo-bloque {
+        font-family: var(--fuente-titulo); font-size: 21px; font-weight: 600;
+        margin: 0; border: 0; padding: 0;
+        text-transform: none; letter-spacing: normal; color: var(--texto);
+      }
+      .cabeza-bloque { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+      .cabeza-bloque .texto-bloque { flex: 999 1 300px; min-width: 0; }
+      .detalle-bloque { color: var(--tenue); font-size: 14.5px; margin-top: 4px; }
+      .estado-bloque {
+        font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em;
+        text-transform: uppercase; color: var(--tenue);
+      }
+      .estado-bloque.encendido { color: var(--ok); }
+      .interruptor {
+        position: relative; flex: none; width: 52px; height: 30px; padding: 0;
+        border-radius: 15px; border: 0; cursor: pointer; background: var(--borde);
+      }
+      .interruptor .perilla {
+        position: absolute; top: 3px; left: 3px; width: 24px; height: 24px;
+        border-radius: 50%; background: var(--tenue); transition: left 0.15s;
+      }
+      .interruptor[aria-checked="true"] { background: var(--ok); }
+      .interruptor[aria-checked="true"] .perilla { left: 25px; background: var(--sobre-acento); }
+      .interruptor:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+      .interruptor:disabled { cursor: not-allowed; opacity: 0.5; }
+      .proyecto-tarjetas {
+        margin: 0; padding: 0; list-style: none; display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px;
+      }
+      .proyecto-tarjetas li {
+        padding: 12px 14px; border-radius: 10px; background: var(--fondo); font-size: 14px;
+      }
+      .proyecto-tarjetas li b { display: block; }
+      .proyecto-tarjetas .decide b { color: var(--modelo); }
+      .proyecto-tarjetas .ratificas b { color: var(--persona); }
+      .proyecto-tarjetas .siempre b { color: var(--error); }
+      .candado-proyecto {
+        display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--persona);
+      }
+      .candado-proyecto .icono-candado {
+        position: relative; width: 11px; height: 8px; margin-top: 5px; flex: none;
+        border: 2px solid currentColor; border-radius: 2px;
+      }
+      .candado-proyecto .icono-candado::before {
+        content: ""; position: absolute; left: 0; top: -8px; width: 7px; height: 7px;
+        border: 2px solid currentColor; border-bottom: 0; border-radius: 5px 5px 0 0;
+      }
+      .proyecto-rejilla {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 14px; margin-bottom: 22px;
+      }
+      .proyecto-rejilla .bloque-proyecto { margin-bottom: 0; }
+      .fila-aviso { display: flex; align-items: center; gap: 12px; }
+      .fila-aviso .texto-aviso { flex: 1; min-width: 0; }
+      .fila-aviso .detalle-bloque { font-size: 13.5px; margin-top: 0; }
+      .chips-prueba { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+      .chip-prueba {
+        font-family: var(--mono); font-size: 13px; padding: 4px 10px; border-radius: 8px;
+        background: var(--fondo); border: 1px solid var(--borde); overflow-wrap: anywhere;
+      }
+      .bloque-proyecto button.anadir-prueba {
+        background: none; border: 0; padding: 4px 6px; color: var(--acento); font-size: 13px;
+      }
+      .anadir-prueba-campo { display: flex; flex-wrap: wrap; gap: 8px; }
+      .anadir-prueba-campo[hidden] { display: none; }
+      .filas-aviso, .cuerpo-pruebas { display: flex; flex-direction: column; gap: 14px; }
+      .bloque-proyecto input[type="text"],
+      .bloque-proyecto input[type="number"] {
+        height: 36px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--borde);
+        background: var(--fondo); color: var(--texto); font: inherit;
+      }
+      .tiempo-prueba { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+      .tiempo-prueba input[type="number"] { width: 90px; }
+      .nota-bloque { color: var(--tenue); font-size: 13px; }
+      .nota-bloque:empty { display: none; }
+      .bloque-proyecto .qa-revocar { display: flex; flex-wrap: wrap; gap: 8px; }
+      .bloque-proyecto .qa-mensaje.mal { color: var(--error); }
+      .bloque-qa .qa-agente { margin: 0; padding: 0; border: 0; background: none; }
+      details.avanzado-proyecto,
+      details.avanzado-autorizaciones {
+        background: var(--panel); border: 1px solid var(--borde); border-radius: 14px;
+        padding: 18px 22px; margin-bottom: 22px;
+      }
+      details.avanzado-proyecto > summary,
+      details.avanzado-autorizaciones > summary { cursor: pointer; color: var(--tenue); }
+      @media (max-width: 767px) {
+        .titulo-proyecto { font-size: 28px; }
+        .bloque-proyecto { padding: 16px; }
+        .cabeza-bloque { flex-direction: column; align-items: flex-start; }
+        .cabeza-bloque .texto-bloque { flex: none; width: 100%; }
+        .proyecto-tarjetas { grid-template-columns: 1fr; }
+        .proyecto-rejilla { grid-template-columns: 1fr; }
+        details.avanzado-proyecto .ruta,
+        .bloque-proyecto .qa-item { overflow-wrap: anywhere; }
+      }
+      /* proyecto-ajustes:fin */
 
       /* ── Configuración: editor y diferencias ──────────────────────────── */
       .editor {
@@ -10421,6 +10684,267 @@
 
       // ── Vista: configuración ──────────────────────────────────────────────
 
+      // Ajustes › Proyecto por bloques (FEATURE-WEB-AJUSTES-PROYECTO-20261014, boceto
+      // assets/proyecto.html). Los interruptores de Avisos y los controles de Pruebas no
+      // guardan: cambian el texto del editor y la persona guarda tras ver las diferencias.
+
+      /** Un interruptor accesible: `role="switch"` con su estado en `aria-checked`. */
+      function interruptorDeProyecto(etiqueta, encendido) {
+        const boton = el("button", undefined, "interruptor");
+        boton.type = "button";
+        boton.setAttribute("role", "switch");
+        boton.setAttribute("aria-checked", encendido ? "true" : "false");
+        boton.setAttribute("aria-label", etiqueta);
+        boton.append(el("span", undefined, "perilla"));
+        return boton;
+      }
+
+      /** El bloque de nivel superior de `clave:` en el texto: [inicio, fin) o `null`. */
+      function bloqueDeClave(lineas, clave) {
+        const inicio = lineas.findIndex((l) => new RegExp(`^${clave}:\\s*(#.*)?$`).test(l));
+        if (inicio < 0) return null;
+        let fin = inicio + 1;
+        while (fin < lineas.length && (lineas[fin].trim() === "" || /^\s/.test(lineas[fin]))) fin += 1;
+        while (fin > inicio + 1 && lineas[fin - 1].trim() === "") fin -= 1;
+        return [inicio, fin];
+      }
+
+      /** Con `hermes.enabled` y, si se da, `hermes.notify.gate` cambiados; el resto del texto intacto. */
+      function conClaveHermes(texto, { enabled, gate }) {
+        const lineas = texto.split("\n");
+        const rango = bloqueDeClave(lineas, "hermes");
+        if (rango === null) {
+          if (!enabled) return texto;
+          const base = texto === "" || texto.endsWith("\n") ? texto : `${texto}\n`;
+          return `${base}\nhermes:\n  enabled: true\n  notify:\n    gate: ${gate}\n`;
+        }
+        const [inicio, fin] = rango;
+        const bloque = lineas.slice(inicio + 1, fin);
+        const iEnabled = bloque.findIndex((l) => /^  enabled:/.test(l));
+        if (iEnabled >= 0) bloque[iEnabled] = `  enabled: ${enabled}`;
+        else bloque.unshift(`  enabled: ${enabled}`);
+        if (gate !== undefined) {
+          const iNotify = bloque.findIndex((l) => /^  notify:\s*(#.*)?$/.test(l));
+          if (iNotify < 0) {
+            bloque.push("  notify:", `    gate: ${gate}`);
+          } else {
+            let iGate = -1;
+            for (let j = iNotify + 1; j < bloque.length && (/^    /.test(bloque[j]) || bloque[j].trim() === ""); j += 1) {
+              if (/^    gate:/.test(bloque[j])) iGate = j;
+            }
+            if (iGate >= 0) bloque[iGate] = `    gate: ${gate}`;
+            else bloque.splice(iNotify + 1, 0, `    gate: ${gate}`);
+          }
+        }
+        return [...lineas.slice(0, inicio + 1), ...bloque, ...lineas.slice(fin)].join("\n");
+      }
+
+      /** Con `comando` al final de `test-commands` (la lista se crea si no existe). */
+      function conComandoDePrueba(texto, comando) {
+        const lineas = texto.split("\n");
+        const vacia = lineas.findIndex((l) => /^test-commands:\s*\[\]\s*$/.test(l));
+        if (vacia >= 0) lineas[vacia] = "test-commands:";
+        const rango = bloqueDeClave(lineas, "test-commands");
+        if (rango === null) {
+          const unido = lineas.join("\n");
+          const base = unido === "" || unido.endsWith("\n") ? unido : `${unido}\n`;
+          return `${base}test-commands:\n  - ${comando}\n`;
+        }
+        const [inicio, fin] = rango;
+        let ultimo = inicio;
+        for (let j = inicio + 1; j < fin; j += 1) if (/^\s*- /.test(lineas[j])) ultimo = j;
+        const sangria = ultimo > inicio ? (lineas[ultimo].match(/^\s*/)?.[0] ?? "  ") : "  ";
+        lineas.splice(ultimo + 1, 0, `${sangria}- ${comando}`);
+        return lineas.join("\n");
+      }
+
+      /** Con `test-timeout` en `segundos` (la línea se agrega si no existe). */
+      function conTiempoMaximo(texto, segundos) {
+        if (/^test-timeout:.*$/m.test(texto)) return texto.replace(/^test-timeout:.*$/m, `test-timeout: ${segundos}`);
+        const base = texto === "" || texto.endsWith("\n") ? texto : `${texto}\n`;
+        return `${base}test-timeout: ${segundos}\n`;
+      }
+
+      /**
+       * «Quién aprueba el análisis y el plan»: la aprobación por defecto con su interruptor.
+       * Apagarla pide nombre y frase literal (`conRevocacion`) antes de revocar; encender una
+       * revocada no crea nada: lleva al formulario de autorización explícita (D-002, D-003).
+       */
+      function bloqueAprobacionPorDefecto(seccion, { abrirExplicitas }) {
+        const pintarBloque = async () => {
+          seccion.textContent = "";
+          let porDefecto = null;
+          try {
+            porDefecto = (await enviar("GET", "/api/approval/authorizations"))?.porDefecto ?? null;
+          } catch {
+            porDefecto = null;
+          }
+          const sinDato = porDefecto === null || porDefecto.estado === "desconocida";
+          const activa = !sinDato && porDefecto.estado === "vigente";
+          const cabeza = el("div", undefined, "cabeza-bloque");
+          const texto = el("div", undefined, "texto-bloque");
+          const titulo = el("h2", "Quién aprueba el análisis y el plan", "titulo-bloque");
+          titulo.id = "titulo-aprobacion-proyecto";
+          seccion.setAttribute("aria-labelledby", titulo.id);
+          texto.append(
+            titulo,
+            el(
+              "div",
+              sinDato
+                ? "No se pudo leer si la aprobación por defecto está activa; el interruptor queda quieto hasta saberlo."
+                : activa
+                  ? "Aprobación por defecto: si la compuerta da APPROVE, el agente avanza sin esperarte; si da REVIEW, decide el revisor."
+                  : "Apagada: cada análisis y cada plan esperan tu aprobación.",
+              "detalle-bloque",
+            ),
+          );
+          const estado = el("span", sinDato ? "sin dato" : activa ? "activa" : "apagada", `estado-bloque${activa ? " encendido" : ""}`);
+          const interruptor = interruptorDeProyecto("Aprobación por defecto", activa);
+          interruptor.disabled = sinDato;
+          cabeza.append(texto, estado, interruptor);
+
+          const tarjetas = el("ul", undefined, "proyecto-tarjetas");
+          for (const [clase, quien, que] of [
+            ["decide", "El agente decide", "lo validable, y lo deja en el ticket con criterio, fuente y cómo revertirlo."],
+            ["ratificas", "Tú ratificas", "todo junto antes de cerrar. Lo que no ratifiques vuelve como cambios pedidos."],
+            ["siempre", "Siempre tuyo", "SECURITY, riesgo alto, migraciones, despliegue, un BLOCK que persiste y lo irreversible."],
+          ]) {
+            const tarjeta = el("li", undefined, clase);
+            tarjeta.append(el("b", quien), el("span", que));
+            tarjetas.append(tarjeta);
+          }
+          const candado = el("div", undefined, "candado-proyecto");
+          candado.append(
+            el("span", undefined, "icono-candado"),
+            el("span", "Crear o ampliar esta autorización lo hace una persona; el agente no puede."),
+          );
+          const mensaje = el("div", "", "qa-mensaje nota-bloque");
+          seccion.append(cabeza, tarjetas, candado, mensaje);
+
+          if (activa) {
+            conRevocacion(seccion, interruptor, mensaje, async (actor, frase) => {
+              await enviar("POST", "/api/approval/authorizations/revoke", {
+                id: "POLITICA-POR-DEFECTO",
+                actor,
+                quote: frase,
+              });
+              await pintarBloque();
+            });
+          } else if (!sinDato) {
+            interruptor.addEventListener("click", () => {
+              mensaje.className = "qa-mensaje nota-bloque";
+              mensaje.textContent =
+                "La aprobación por defecto revocada no vuelve sola: una persona crea una autorización nueva con su nombre y su frase literal, aquí abajo.";
+              abrirExplicitas();
+            });
+          }
+        };
+        return pintarBloque;
+      }
+
+      /** «Avisos»: un interruptor por canal según `hermes:` (D-005); pulsar prepara el cambio. */
+      function bloqueAvisos(seccion, { prepararCambio }) {
+        const cuerpo = el("div", undefined, "filas-aviso");
+        const nota = el("div", "", "nota-bloque");
+        seccion.append(
+          el("h2", "Avisos", "titulo-bloque"),
+          cuerpo,
+          el(
+            "div",
+            "Los avisos de la jornada (arranque y pruebas tuyas) salen por el gateway con --to telegram y no dependen de estos interruptores.",
+            "nota-bloque",
+          ),
+          nota,
+        );
+        const canales = [
+          { id: "telegram", nombre: "Telegram", detalle: "compuertas en REVIEW y presupuesto" },
+          { id: "slack", nombre: "Slack", detalle: "canal secundario" },
+        ];
+        return (resumen) => {
+          const avisos = resumen?.avisos ?? { enabled: false, gate: "", budget: "" };
+          cuerpo.textContent = "";
+          for (const canal of canales) {
+            const encendido =
+              avisos.enabled &&
+              [avisos.gate, avisos.budget].some((d) => String(d).split(":")[0].trim() === canal.id);
+            const fila = el("div", undefined, "fila-aviso");
+            const texto = el("div", undefined, "texto-aviso");
+            texto.append(el("b", canal.nombre), el("div", canal.detalle, "detalle-bloque"));
+            const interruptor = interruptorDeProyecto(`Avisos por ${canal.nombre}`, encendido);
+            interruptor.addEventListener("click", () =>
+              prepararCambio(
+                (actual) =>
+                  encendido ? conClaveHermes(actual, { enabled: false }) : conClaveHermes(actual, { enabled: true, gate: canal.id }),
+                nota,
+              ),
+            );
+            fila.append(texto, interruptor);
+            cuerpo.append(fila);
+          }
+        };
+      }
+
+      /** «Pruebas»: los comandos permitidos y el tiempo máximo (D-006); cambiar prepara el texto. */
+      function bloquePruebas(seccion, { prepararCambio }) {
+        const cuerpo = el("div", undefined, "cuerpo-pruebas");
+        const nota = el("div", "", "nota-bloque");
+        seccion.append(el("h2", "Pruebas", "titulo-bloque"), cuerpo, nota);
+        return (resumen) => {
+          const comandos = resumen?.testCommands ?? [];
+          cuerpo.textContent = "";
+          const chips = el("div", undefined, "chips-prueba");
+          for (const comando of comandos) chips.append(el("span", comando, "chip-prueba"));
+          const anadir = el("button", "+ añadir", "anadir-prueba");
+          anadir.type = "button";
+          chips.append(anadir);
+          const formulario = el("div", undefined, "anadir-prueba-campo");
+          formulario.hidden = true;
+          const campo = el("input");
+          campo.type = "text";
+          campo.placeholder = "npx eslint";
+          campo.setAttribute("aria-label", "Comando que se añade");
+          const confirmar = el("button", "Añadir");
+          confirmar.type = "button";
+          formulario.append(campo, confirmar);
+          anadir.addEventListener("click", () => {
+            formulario.hidden = !formulario.hidden;
+            if (!formulario.hidden) campo.focus();
+          });
+          confirmar.addEventListener("click", async () => {
+            const comando = campo.value.trim();
+            if (comando === "") {
+              nota.textContent = "Escribe el comando que se añade.";
+              return;
+            }
+            if (comandos.includes(comando)) {
+              nota.textContent = `«${comando}» ya está en la lista.`;
+              return;
+            }
+            await prepararCambio((actual) => conComandoDePrueba(actual, comando), nota);
+          });
+          const rotulo = el("label", "Tiempo máximo", "tiempo-prueba");
+          const tiempo = el("input");
+          tiempo.type = "number";
+          tiempo.min = "1";
+          tiempo.value = resumen?.testTimeout === null || resumen?.testTimeout === undefined ? "" : String(resumen.testTimeout);
+          tiempo.addEventListener("change", async () => {
+            const segundos = Number(tiempo.value);
+            if (!Number.isInteger(segundos) || segundos <= 0) {
+              nota.textContent = "El tiempo máximo es un número entero de segundos mayor que cero.";
+              return;
+            }
+            await prepararCambio((actual) => conTiempoMaximo(actual, segundos), nota);
+          });
+          rotulo.append(tiempo, el("span", "s"));
+          cuerpo.append(
+            el("div", "Comandos que las compuertas pueden correr", "detalle-bloque"),
+            chips,
+            formulario,
+            rotulo,
+          );
+        };
+      }
+
       /**
        * El editor de `.valmen/config.yaml`.
        *
@@ -10437,6 +10961,35 @@
         const datos = await api("GET", "/api/config");
         const estadoInicial = datos.config;
 
+        // Los bloques del boceto, en su orden; el editor de siempre queda en «Avanzado».
+        const cabecera = el("div", undefined, "cabecera-proyecto");
+        const migas = el("div", "Ajustes ", "migas-proyecto");
+        migas.append(el("span", "· Proyecto"));
+        cabecera.append(
+          migas,
+          el(
+            "h2",
+            `Cómo trabaja el harness en ${estadoInicial.summary?.name ?? "este proyecto"}`,
+            "titulo-proyecto",
+          ),
+          el(
+            "p",
+            "Antes «Configuración». Cada cambio muestra las diferencias del archivo antes de guardarse.",
+            "bajada-proyecto",
+          ),
+        );
+        const seccionAprobacion = el("section", undefined, "bloque-proyecto bloque-aprobacion");
+        const seccionQa = el("section", undefined, "bloque-proyecto bloque-qa");
+        const rejilla = el("div", undefined, "proyecto-rejilla");
+        const seccionAvisos = el("section", undefined, "bloque-proyecto bloque-avisos");
+        const seccionPruebas = el("section", undefined, "bloque-proyecto bloque-pruebas");
+        rejilla.append(seccionAvisos, seccionPruebas);
+        const avanzadoConfig = el("details", undefined, "avanzado-proyecto");
+        avanzadoConfig.append(el("summary", "Avanzado: editar config.yaml a mano"));
+        const avanzadoAutorizaciones = el("details", undefined, "avanzado-autorizaciones");
+        avanzadoAutorizaciones.append(el("summary", "Avanzado: autorizaciones explícitas de aprobación"));
+        cont.append(cabecera, seccionAprobacion, seccionQa, rejilla, avanzadoConfig, avanzadoAutorizaciones);
+
         const nota = el("div", undefined, "nota");
         nota.append(
           el("strong", "Se guarda solo si el harness puede leerlo. "),
@@ -10445,8 +10998,8 @@
             "El formato admite un subconjunto de YAML: escalares, listas de bloque y mapas por indentación. Si algo no encaja, se dice aquí y el archivo no se toca.",
           ),
         );
-        cont.append(nota, el("h2", "Configuración del proyecto"));
-        cont.append(el("div", estadoInicial.path, "ruta"));
+        avanzadoConfig.append(nota, el("h2", "Configuración del proyecto"));
+        avanzadoConfig.append(el("div", estadoInicial.path, "ruta"));
 
         const editor = document.createElement("textarea");
         editor.className = "editor";
@@ -10553,6 +11106,28 @@
           }
         };
 
+        // Avisos y Pruebas no guardan: preparan el texto, abren «Avanzado» con las diferencias
+        // y la persona guarda (D-005, D-006). Se declara como función para que los bloques la
+        // reciban antes de que exista `pintar`.
+        async function prepararCambioDeConfig(transformar, notaDelBloque) {
+          const nuevo = transformar(editor.value);
+          if (nuevo === editor.value) {
+            notaDelBloque.textContent = "Sin cambios: el archivo ya dice eso.";
+            return;
+          }
+          editor.value = nuevo;
+          avanzadoConfig.open = true;
+          notaDelBloque.textContent = "Cambio preparado: revisa las diferencias en «Avanzado» y guarda.";
+          try {
+            pintar(await api("POST", "/api/config/check", { text: editor.value }));
+          } catch (fallo) {
+            salida.className = "resultado error";
+            salida.textContent = fallo.message;
+          }
+        }
+        const pintarAvisos = bloqueAvisos(seccionAvisos, { prepararCambio: prepararCambioDeConfig });
+        const pintarPruebas = bloquePruebas(seccionPruebas, { prepararCambio: prepararCambioDeConfig });
+
         const pintar = (respuesta) => {
           const { config, impact } = respuesta;
 
@@ -10632,6 +11207,10 @@
           }
 
           ultimo = config;
+          if (config.summary !== null) {
+            pintarAvisos(config.summary);
+            pintarPruebas(config.summary);
+          }
           guardar.disabled = !config.ok || cambios.length === 0;
           guardar.textContent =
             cambios.length === 0 ? "Sin cambios" : "Guardar los cambios";
@@ -10708,13 +11287,15 @@
         acciones.style.marginTop = "14px";
         acciones.append(salida, regenerar, guardar);
 
-        cont.append(editor, error, el("h2", "Lo que el harness entiende"), interpretacion);
+        avanzadoConfig.append(editor, error, el("h2", "Lo que el harness entiende"), interpretacion);
         // QA por agente: quién autorizó qué, con su frase literal. Crear y revocar son
         // escrituras de una persona: llevan el token del servidor y nunca van sin frase.
+        // En el bloque «QA por agente»: estado, lista y el formulario oculto hasta «Crear autorización» (D-004).
         const qaAgente = el("div", undefined, "qa-agente");
+        const estadoQa = el("span", "sin autorización", "estado-bloque");
+        const bloqueQa = { formulario: null, responsable: null, visible: false };
         const pintarQaAgente = async () => {
           qaAgente.textContent = "";
-          qaAgente.append(el("div", "QA por agente", "titulo-politica"));
           const mensaje = el("div", "", "qa-mensaje");
           let datosQa;
           try {
@@ -10724,9 +11305,9 @@
             return;
           }
           const lista = datosQa.authorizations ?? [];
-          if (lista.length === 0) {
-            qaAgente.append(el("div", "No hay autorizaciones: la QA por agente está apagada.", "nota-politica"));
-          }
+          const vigentesQa = lista.filter((a) => a.estado === "vigente").length;
+          estadoQa.textContent = vigentesQa === 0 ? "sin autorización" : `${vigentesQa} vigente${vigentesQa === 1 ? "" : "s"}`;
+          estadoQa.className = `estado-bloque${vigentesQa === 0 ? "" : " encendido"}`;
           for (const a of lista) {
             const fila = el("div", undefined, "qa-item");
             const detalle = el(
@@ -10797,10 +11378,37 @@
               mensaje.className = "qa-mensaje mal";
             }
           });
-          qaAgente.append(fila1, fila2, crear, mensaje);
+          const formularioQa = el("div", undefined, "formulario-qa");
+          formularioQa.hidden = !bloqueQa.visible;
+          formularioQa.append(el("h3", "Autorización de QA por agente"), fila1, fila2, crear);
+          bloqueQa.formulario = formularioQa;
+          bloqueQa.responsable = actor.entrada;
+          qaAgente.append(formularioQa, mensaje);
         };
+        {
+          const cabeza = el("div", undefined, "cabeza-bloque");
+          const texto = el("div", undefined, "texto-bloque");
+          texto.append(
+            el("h2", "QA por agente", "titulo-bloque"),
+            el(
+              "div",
+              "Sin autorización vigente, la QA la hace una persona. Con ella, un agente prueba en un worktree limpio y empieza en sombra.",
+              "detalle-bloque",
+            ),
+          );
+          const crearQa = el("button", "Crear autorización");
+          crearQa.type = "button";
+          crearQa.addEventListener("click", () => {
+            bloqueQa.visible = !bloqueQa.visible;
+            if (bloqueQa.formulario !== null) bloqueQa.formulario.hidden = !bloqueQa.visible;
+            if (bloqueQa.visible) bloqueQa.responsable?.focus();
+          });
+          cabeza.append(texto, estadoQa, crearQa);
+          seccionQa.append(cabeza, qaAgente);
+        }
         pintarQaAgente();
 
+        let responsableDeAprobacion = null;
         // Aprobación automática: quién autorizó qué, con su frase literal. Crear y revocar son
         // escrituras de una persona: llevan el token del servidor y nunca van sin frase.
         const aprobacionAuto = el("div", undefined, "qa-agente");
@@ -10867,6 +11475,7 @@
           const cupo = campo("Cupo diario", "1", "number");
           const dias = campo("Vigencia en días", "30", "number");
           const actor = campo("Responsable", "");
+          responsableDeAprobacion = actor.entrada;
           const frase = campo("Frase literal de quien autoriza", "");
           const fila1 = el("div", undefined, "qa-fila");
           fila1.append(tipos.nodo, modulos.nodo, riesgo.rotulo, impactos.nodo, etapas.nodo, modo.nodo, cupo.rotulo, dias.rotulo);
@@ -10899,39 +11508,18 @@
         };
         pintarAprobacionAuto();
 
-        // Desde el 2026-10-13 el agente aprueba por defecto y la persona ratifica al cerrar: las
-        // autorizaciones explícitas ya no hacen falta y quedan plegadas en «Avanzado».
-        const porDefecto = el("div", undefined, "qa-agente");
-        porDefecto.append(el("div", "El agente aprueba y tú ratificas al cerrar", "titulo-politica"));
-        const reglasPorDefecto = el("ul");
-        for (const linea of [
-          "El análisis y el plan los aprueba el agente cuando la compuerta da APPROVE; un REVIEW lo decide el revisor, que es otro modelo.",
-          "Lo que el agente decide sin preguntarte queda en el ticket con su criterio, su fuente y cómo se revierte.",
-          "Antes de cerrar el ticket, tú lo ratificas todo de una vez (valmen ratify).",
-          "Siguen siendo tuyos: SECURITY, riesgo alto, migraciones, despliegue, un block que persiste y lo irreversible.",
-        ]) {
-          reglasPorDefecto.append(el("li", linea));
-        }
-        porDefecto.append(
-          reglasPorDefecto,
-          el(
-            "div",
-            "Para volver a aprobar tú: valmen approval-authorize revoke --id POLITICA-POR-DEFECTO --actor <tú> --reason \"<motivo>\".",
-            "nota-politica",
-          ),
-        );
-        const avanzado = el("details", undefined, "avanzado");
-        avanzado.append(
-          el("summary", "Avanzado: autorizaciones explícitas (no hacen falta con la aprobación por defecto)"),
-          el("h2", "Autorización de QA por agente"),
-          qaAgente,
-          el("h2", "Aprobación automática de planes"),
-          aprobacionAuto,
-        );
-        cont.append(el("h2", "Aprobación por defecto"), porDefecto);
-        cont.append(el("h2", "Políticas autónomas"), politicas);
-        cont.append(avanzado);
-        cont.append(el("h2", "Diferencias antes de guardar"), diff, acciones);
+        // La aprobación por defecto como bloque con interruptor (D-001 a D-003); las
+        // autorizaciones explícitas de aprobación quedan en su propio plegado (D-007).
+        const pintarAprobacionPorDefecto = bloqueAprobacionPorDefecto(seccionAprobacion, {
+          abrirExplicitas: () => {
+            avanzadoAutorizaciones.open = true;
+            responsableDeAprobacion?.focus();
+          },
+        });
+        pintarAprobacionPorDefecto();
+        avanzadoAutorizaciones.append(el("h2", "Aprobación automática de planes"), aprobacionAuto);
+        avanzadoConfig.append(el("h2", "Políticas autónomas"), politicas);
+        avanzadoConfig.append(el("h2", "Diferencias antes de guardar"), diff, acciones);
         pintar(datos);
       }
 
@@ -10939,136 +11527,174 @@
 
       let proveedores = [];
       let proveedorActual = null;
+      /** La caja de resultado de cada tarjeta, por id: `guardar` escribe ahí la prueba. */
+      const salidasDeProveedor = new Map();
 
-      const origen = (p) =>
-        p.source === "environment"
-          ? "variable de entorno"
-          : p.source === "credentials-file"
-            ? "archivo de credenciales"
-            : p.source === "cli"
-              ? "token del CLI"
-              : p.source === "none" && p.configured
-                ? "no requiere"
-                : "—";
+      /**
+       * Los tres estados de R-AJU-005 (D-005). «Configurado» es una credencial que alguien
+       * puso —en el archivo, en el entorno— o un proveedor local que no la necesita;
+       * «detectado» es la sesión que la CLI ya tenía, y confundirlas hace creer que se
+       * configuró algo que nadie configuró.
+       */
+      const estadoDeTarjetaProveedor = (p) =>
+        !p.configured ? "sin-configurar" : p.source === "cli" ? "detectado" : "configurado";
+
+      /** La línea «Estado» de la tarjeta: el estado y de dónde sale. Nunca la clave. */
+      function detalleDeEstado(p) {
+        const estado = estadoDeTarjetaProveedor(p);
+        if (estado === "sin-configurar") return "sin configurar";
+        if (estado === "detectado") return "detectado · sesión de la CLI";
+        const caracteres = p.keyLength === null ? "" : ` · ${p.keyLength} caracteres`;
+        if (p.source === "environment") return `configurado · variable de entorno${caracteres}`;
+        if (p.source === "credentials-file") return `configurado · clave guardada${caracteres}`;
+        return "configurado · local, sin clave";
+      }
+
+      /**
+       * Cuántos trabajos del perfil activo dependen del proveedor (D-001): los roles del
+       * perfil elegido con ese `provider`. Con cero, el primer otro perfil que lo usa.
+       * Sin perfil elegido —o sin poder leerlos—, `null`.
+       */
+      function usoDelProveedor(p, datosPerfiles) {
+        const lista = datosPerfiles?.perfiles ?? [];
+        const elegido = datosPerfiles?.seleccion?.proyecto ?? null;
+        const activo = elegido === null ? undefined : lista.find((x) => x.id === elegido);
+        if (activo === undefined) return null;
+        const cuenta = (perfil) =>
+          Object.values(perfil.roles ?? {}).filter((ruta) => ruta?.provider === p.id).length;
+        const delPerfil = cuenta(activo);
+        const otro = delPerfil > 0 ? undefined : lista.find((x) => x.id !== activo.id && cuenta(x) > 0);
+        return { delPerfil, otro: otro?.id ?? null };
+      }
 
       async function vistaProveedores() {
         const cont = $("contenido");
         cont.textContent = "";
 
-        const nota = el("div", undefined, "nota");
-        nota.append(
-          el("strong", "Las claves se prueban antes de guardarse. "),
+        // El perfil no es imprescindible: si no se puede leer, los proveedores se
+        // muestran igual y la tarjeta lo dice (D-004).
+        const [datos, datosPerfiles] = await Promise.all([
+          api("GET", "/api/providers"),
+          api("GET", "/api/perfiles").catch(() => null),
+        ]);
+        proveedores = datos.providers;
+        salidasDeProveedor.clear();
+
+        const cabecera = el("div", undefined, "cabecera-proveedores");
+        const rotulo = el("div", "Ajustes ", "rotulo-proveedores");
+        rotulo.append(el("span", "· Proveedores"));
+        cabecera.append(
+          rotulo,
+          el("h1", "De dónde salen los modelos"),
           el(
-            "span",
-            "Si la conexión falla no se escribe nada, así que una clave mal pegada falla aquí y no en la mitad de un gate. Después de guardarla no se vuelve a mostrar: solo se puede reemplazar.",
+            "p",
+            "Cada proveedor dice si lo usa el perfil activo. Las claves nunca se muestran: solo si están y cuántos caracteres tienen.",
           ),
         );
-        cont.append(nota, el("h2", "Proveedores"));
 
-        const datos = await api("GET", "/api/providers");
-        proveedores = datos.providers;
-
-        const tabla = el("table");
-        const thead = el("thead");
-        const filaCabecera = el("tr");
-        for (const columna of ["Proveedor", "Autenticación", "Estado", "Origen", ""]) {
-          filaCabecera.append(el("th", columna));
+        const leyenda = el("div", undefined, "leyenda-proveedores");
+        for (const [estado, nombre, explicacion] of [
+          ["configurado", "Configurado", "guardaste la clave aquí"],
+          ["detectado", "Detectado", "la CLI ya tenía sesión"],
+          ["sin-configurar", "Sin configurar", ""],
+        ]) {
+          const item = el("span");
+          const punto = el("span", undefined, `proveedor-punto ${estado}`);
+          punto.setAttribute("aria-hidden", "true");
+          item.append(punto, el("b", nombre));
+          if (explicacion !== "") item.append(el("span", explicacion));
+          leyenda.append(item);
         }
-        thead.append(filaCabecera);
-        const tbody = el("tbody");
+        cont.append(cabecera, leyenda);
 
-        for (const p of proveedores) {
-          const tr = el("tr");
+        // Orden (D-004): lo que usa el perfil, luego lo demás con credencial, al final
+        // lo que falta configurar. Dentro de cada grupo, el orden del servidor.
+        const filas = proveedores.map((p, i) => ({ p, i, uso: usoDelProveedor(p, datosPerfiles) }));
+        const grupo = ({ p, uso }) => ((uso?.delPerfil ?? 0) > 0 ? 0 : p.configured ? 1 : 2);
+        filas.sort((a, b) => grupo(a) - grupo(b) || a.i - b.i);
 
-          const celdaNombre = el("td");
-          const punto = el("span", undefined, `punto ${p.configured ? "ok" : "no"}`);
-          celdaNombre.append(punto, el("span", p.name, "nombre"), el("div", p.id, "id"));
-          tr.append(celdaNombre);
+        const rejilla = el("div", undefined, "proveedores");
+        for (const { p, uso } of filas) {
+          const estado = estadoDeTarjetaProveedor(p);
+          const lousa = (uso?.delPerfil ?? 0) > 0;
+          const tarjeta = el("article", undefined, `proveedor${lousa ? " del-perfil" : ""}`);
+          tarjeta.dataset.id = p.id;
 
-          tr.append(
+          const cabeza = el("div", undefined, "proveedor-cabeza");
+          const punto = el("span", undefined, `proveedor-punto ${estado}`);
+          punto.setAttribute("aria-hidden", "true");
+          cabeza.append(
+            punto,
+            el("h2", p.name),
             el(
-              "td",
-              p.auth === "api-key"
-                ? "API key"
-                : p.auth === "subscription"
-                  ? "suscripción"
-                  : "ninguna",
+              "span",
+              uso === null ? "sin perfil activo" : lousa ? "lo usa el perfil" : "sin uso hoy",
+              `proveedor-uso${lousa ? " activo" : ""}`,
             ),
           );
 
-          const celdaEstado = el("td");
-          // «Configurada» y «detectada» no son lo mismo, y confundirlas hace que
-          // alguien crea que hizo algo que no hizo: Codex aparece en verde
-          // porque su CLI ya tenía sesión, no porque nadie lo configurara aquí.
-          const estado = !p.configured
-            ? "sin configurar"
-            : p.source === "none"
-              ? "local"
-              : p.source === "cli"
-                ? "detectada en el CLI"
-                : `configurada${p.keyLength === null ? "" : ` · ${p.keyLength} caracteres`}`;
-          celdaEstado.append(el("div", estado));
-          if (p.legacyFieldName) {
-            celdaEstado.append(
-              el(
-                "div",
-                "campo con el nombre anterior; se normaliza al reescribir",
-                "resultado",
-              ),
-            );
-          }
+          const trabajos =
+            uso === null
+              ? "sin perfil activo"
+              : lousa
+                ? `${uso.delPerfil} del perfil activo`
+                : uso.otro !== null
+                  ? `0 · lo usa el perfil ${uso.otro}`
+                  : "0 · ningún perfil lo usa";
+          const lista = el("dl", undefined, "proveedor-datos");
+          lista.append(
+            el("dt", "Estado"),
+            el("dd", detalleDeEstado(p)),
+            el("dt", "Id"),
+            el("dd", p.id, "id"),
+            el("dt", "Trabajos"),
+            el("dd", trabajos),
+          );
+
           const salida = el("div", undefined, "resultado");
           salida.dataset.id = p.id;
-          celdaEstado.append(salida);
-          tr.append(celdaEstado);
-
-          const celdaOrigen = el("td");
-          celdaOrigen.append(el("div", origen(p), "resultado"));
-          if (p.probeable && p.probeHost) {
-            celdaOrigen.append(el("div", `se prueba contra ${p.probeHost}`, "resultado"));
+          salidasDeProveedor.set(p.id, salida);
+          const avisos = el("div", undefined, "proveedor-avisos");
+          if (p.legacyFieldName) {
+            avisos.append(
+              el("div", "campo con el nombre anterior; se normaliza al reescribir", "resultado"),
+            );
           }
-          tr.append(celdaOrigen);
+          avisos.append(salida);
 
-          const celdaAcciones = el("td");
           const acciones = el("div", undefined, "acciones");
-
-          // Un proveedor de suscripción no tiene endpoint: su credencial es el
-          // token que ya vive en el CLI. Un botón que siempre falla parece un
-          // error del usuario, así que en su lugar se dice qué usa.
+          // Un proveedor de suscripción sin endpoint no se prueba: su credencial es el
+          // token que ya vive en el CLI, y un botón que siempre falla parece un error
+          // del usuario. En su lugar se dice qué usa.
           if (p.probeable) {
-            const probar = el("button", "Probar");
-            probar.title = `Se prueba contra ${p.probeHost}`;
+            const probar = el("button", "Probar conexión");
+            if (p.probeHost) probar.title = `Se prueba contra ${p.probeHost}`;
             probar.addEventListener("click", () => void probarConexion(p, salida, probar));
             acciones.append(probar);
           } else if (p.tokenSource) {
-            salida.className = "resultado";
             salida.textContent = p.configured
               ? `Detectada en ${p.tokenSource}. No hay endpoint que probar.`
               : `No se encontró ${p.tokenSource}. Inicia sesión con el CLI de ${p.name} y vuelve a recargar.`;
           }
-
+          // La clave solo se configura donde el servidor la acepta (D-002).
           if (p.auth === "api-key") {
             const configurar = el(
               "button",
-              p.configured ? "Reemplazar" : "Configurar",
-              p.configured ? "" : "principal",
+              p.configured ? "Reemplazar clave" : "Configurar clave",
             );
             configurar.addEventListener("click", () => abrirDialogo(p));
             acciones.append(configurar);
           }
           if (p.configured && p.auth === "api-key" && p.source === "credentials-file") {
-            const borrar = el("button", "Borrar", "peligro");
+            const borrar = el("button", "Borrar clave", "peligro");
             borrar.addEventListener("click", () => void borrarClave(p, borrar));
             acciones.append(borrar);
           }
 
-          celdaAcciones.append(acciones);
-          tr.append(celdaAcciones);
-          tbody.append(tr);
+          tarjeta.append(cabeza, lista, avisos, acciones);
+          rejilla.append(tarjeta);
         }
-
-        tabla.append(thead, tbody);
-        cont.append(tabla);
+        cont.append(rejilla);
       }
 
       async function probarConexion(p, salida, boton) {
@@ -11123,7 +11749,7 @@
           cacheModelos = null;
           $("dialogo").close();
           await vistaProveedores();
-          const salida = document.querySelector(`.resultado[data-id="${id}"]`);
+          const salida = salidasDeProveedor.get(id);
           if (salida) {
             salida.className = "resultado ok";
             salida.textContent = `${r.probe.detail} · ${r.probe.latencyMs} ms`;

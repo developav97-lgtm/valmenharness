@@ -6,7 +6,13 @@
  * son las del motor y no se repiten aquí. El token de escritura lo exige el despacho del servidor
  * antes de llegar a este módulo; esta capa agrega la frase literal, que nunca puede ir vacía.
  */
+import { existsSync, readFileSync } from "node:fs";
+
 import {
+  POLITICA_POR_DEFECTO,
+  POLITICA_POR_DEFECTO_ID,
+  approvalAuthorizationsPath,
+  autorizacionQueRespalda,
   crearAutorizacionDeAprobacion,
   leerAutorizacionesDeAprobacion,
   revocarAutorizacionDeAprobacion,
@@ -27,14 +33,40 @@ const lista = (v: unknown): string[] =>
         .map((x) => x.trim())
         .filter((x) => x !== "");
 
-/** Las autorizaciones con su estado. Solo lee. */
+/** El estado de la aprobación por defecto, que no vive en el registro (FEATURE-WEB-AJUSTES-PROYECTO, D-001). */
+export interface EstadoPorDefecto {
+  readonly id: string;
+  readonly estado: "vigente" | "revocada" | "vencida" | "futura" | "desconocida";
+  readonly revocacion: unknown;
+}
+
+function estadoPorDefecto(root: string, ahora: Date): EstadoPorDefecto {
+  const a = autorizacionQueRespalda(root, POLITICA_POR_DEFECTO_ID, POLITICA_POR_DEFECTO.hash, ahora);
+  if (a !== undefined) {
+    return { id: POLITICA_POR_DEFECTO_ID, estado: a.estado, revocacion: a.revocacion };
+  }
+  // Solo pasa si el registro trae una entrada con el mismo id y otro contenido: se dice
+  // «revocada» si hay una revocación de ese id, y si no, que no se sabe.
+  const ruta = approvalAuthorizationsPath(root);
+  const revocada =
+    existsSync(ruta) &&
+    readFileSync(ruta, "utf8")
+      .split("\n")
+      .some((l) => l.includes('"approval-authorization-revoked"') && l.includes(`"${POLITICA_POR_DEFECTO_ID}"`));
+  return { id: POLITICA_POR_DEFECTO_ID, estado: revocada ? "revocada" : "desconocida", revocacion: null };
+}
+
+/** Las autorizaciones con su estado y el de la aprobación por defecto. Solo lee. */
 export function listarAutorizacionesDeAprobacion(
   root: string,
   ahora: Date = new Date(),
 ): RespuestaAprobacion {
   return {
     status: 200,
-    body: { authorizations: leerAutorizacionesDeAprobacion(root, ahora) },
+    body: {
+      authorizations: leerAutorizacionesDeAprobacion(root, ahora),
+      porDefecto: estadoPorDefecto(root, ahora),
+    },
   };
 }
 

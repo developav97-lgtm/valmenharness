@@ -52,6 +52,40 @@ export interface ConfigSummary {
   readonly adopted: boolean;
   /** Lo que el harness entendió de cada política autónoma, con el error exacto si no se entiende. */
   readonly policies: readonly PoliticaResumida[];
+  /** Los prefijos de `test-commands`: lo que las compuertas pueden correr. */
+  readonly testCommands: readonly string[];
+  /** `test-timeout` en segundos, o `null` si no está o no es un número. */
+  readonly testTimeout: number | null;
+  /** Lo que `hermes:` declara para los avisos: encendido y destino de compuertas y presupuesto. */
+  readonly avisos: { readonly enabled: boolean; readonly gate: string; readonly budget: string };
+}
+
+/** Un submapa sin lanzar: el resumen no se cae por una sección con otra forma. */
+function submapa(config: ConfigMap, clave: string): ConfigMap {
+  const valor = config[clave];
+  return valor === undefined || typeof valor === "string" || Array.isArray(valor) ? {} : valor;
+}
+
+/** Lo de `hermes:` que la vista Proyecto muestra como avisos, sin `readHermesConfig` (lanza con `token-hours` inválido). */
+function resumirAvisos(config: ConfigMap): ConfigSummary["avisos"] {
+  const hermes = submapa(config, "hermes");
+  const notify = submapa(hermes, "notify");
+  const texto = (mapa: ConfigMap, clave: string): string => {
+    const v = mapa[clave];
+    return typeof v === "string" ? v : "";
+  };
+  return {
+    enabled: texto(hermes, "enabled") === "true",
+    gate: texto(notify, "gate"),
+    budget: texto(notify, "budget"),
+  };
+}
+
+function resumirTiempo(config: ConfigMap): number | null {
+  const v = config["test-timeout"];
+  if (typeof v !== "string" || v.trim() === "") return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
 }
 
 /** El estado de la configuración, tras leerla o tras analizar un texto. */
@@ -89,6 +123,9 @@ function summarize(config: ConfigMap, root: string, adopted: boolean): ConfigSum
     keys: Object.keys(config),
     adopted,
     policies: resumirPoliticas(config),
+    testCommands: Array.isArray(config["test-commands"]) ? readList(config, "test-commands", []) : [],
+    testTimeout: resumirTiempo(config),
+    avisos: resumirAvisos(config),
   };
 }
 
