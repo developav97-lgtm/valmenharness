@@ -16,5 +16,8 @@
 {"kind":"approval-quota-use","authorizationId":"POLITICA-POR-DEFECTO","ticketId":"FEATURE-WEB-INICIO-DECISIONES-20261014","stage":"plan","usedAt":"2026-10-14T06:31:22.198Z"}
 {"kind":"approval-quota-use","authorizationId":"POLITICA-POR-DEFECTO","ticketId":"FEATURE-WEB-AJUSTES-PROYECTO-20261014","stage":"plan","usedAt":"2026-10-14T07:17:11.665Z"}
 {"kind":"approval-quota-use","authorizationId":"POLITICA-POR-DEFECTO","ticketId":"FEATURE-WEB-AJUSTES-CAMBIAR-PERFIL-20261014","stage":"plan","usedAt":"2026-10-14T07:15:50.608Z"}
+{"kind":"approval-quota-use","authorizationId":"POLITICA-POR-DEFECTO","ticketId":"FEATURE-WEB-TRABAJO-PORTAFOLIO-20261014","stage":"plan","usedAt":"2026-10-14T13:53:25.427Z"}
+{"kind":"approval-quota-use","authorizationId":"POLITICA-POR-DEFECTO","ticketId":"FEATURE-WEB-TRABAJO-FEATURES-20261014","stage":"analysis","usedAt":"2026-10-14T13:47:17.816Z"}
+{"kind":"approval-quota-use","authorizationId":"POLITICA-POR-DEFECTO","ticketId":"FEATURE-WEB-TRABAJO-FEATURES-20261014","stage":"plan","usedAt":"2026-10-14T13:49:18.357Z"}
 {"kind":"approval-quota-use","authorizationId":"POLITICA-POR-DEFECTO","ticketId":"FEATURE-WEB-TRABAJO-TICKETS-20261014","stage":"plan","usedAt":"2026-10-14T07:54:59.994Z"}
 {"kind":"approval-quota-use","authorizationId":"POLITICA-POR-DEFECTO","ticketId":"FEATURE-WEB-VIVO-AGENTES-20261014","stage":"plan","usedAt":"2026-10-14T13:58:22.708Z"}

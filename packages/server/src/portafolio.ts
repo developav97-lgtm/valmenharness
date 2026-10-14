@@ -1,16 +1,19 @@
 /** Proyección de solo lectura del catálogo local para Mission Control. */
 import { basename, resolve } from "node:path";
-import { readString } from "@valmen/adapter";
+import { readSeleccionDePerfil, readString } from "@valmen/adapter";
 import {
   currentReceipts,
   readAllReceipts,
   usageReport,
   waitingRuns,
+  type AuthorizedProject,
   type AuthorizedProjectCatalog,
   type UsageReport,
 } from "@valmen/engine";
+import { leerAgentesDeCorrida, type AgenteDeCorrida } from "./agentes.js";
 import { readConfig } from "./config.js";
 import { pendingCorrections } from "./gates.js";
+import { leerInicio } from "./inicio.js";
 
 export interface PortfolioRow {
   readonly projectId: string;
@@ -36,6 +39,28 @@ export interface PortfolioRow {
   readonly correctionsPending: number | null;
   readonly waiting: number | null;
   readonly usage: UsageReport | null;
+  /** Lo que espera una decisión de la persona: la misma cuenta que Inicio. */
+  readonly decisionsPending: number | null;
+  /** Subagentes vivos (trabajando o esperando) de la sesión de Claude Code de la raíz. */
+  readonly agentsWorking: number | null;
+  /** El perfil de modelos elegido para el proyecto; `null` sin elección o ilegible. */
+  readonly profile: string | null;
+  readonly profileError: string | null;
+}
+
+/** De dónde se leen las sesiones de Claude Code y con qué reloj. */
+export interface PortfolioOptions {
+  readonly home?: string;
+  readonly ahora?: number;
+}
+
+/** El mismo filtro que `agentesVivos` de la interfaz: no la principal, y vivo. */
+export function portfolioLiveAgents(agentes: readonly AgenteDeCorrida[]): number {
+  return agentes.filter(
+    (agente) =>
+      agente.principal !== true &&
+      (agente.estado === "trabajando" || agente.estado === "esperando"),
+  ).length;
 }
 
 /** Mes calendario local; el consumo compara fechas inclusivas, igual que el CLI. */
@@ -57,6 +82,7 @@ export function listPortfolioRows(
   catalog: AuthorizedProjectCatalog,
   currentRoot: string,
   range: { readonly desde?: string; readonly hasta?: string } = {},
+  options: PortfolioOptions = {},
 ): PortfolioRow[] {
   const dates = portfolioRange(range);
   return catalog.projects.map((project): PortfolioRow => {
@@ -79,6 +105,10 @@ export function listPortfolioRows(
       correctionsPending: null,
       waiting: null,
       usage: null,
+      decisionsPending: null,
+      agentsWorking: null,
+      profile: null,
+      profileError: null,
     };
     if (!project.available) return unavailable;
     try {
@@ -109,6 +139,8 @@ export function listPortfolioRows(
         ),
         waiting: waitingRuns(project.root).length,
         usage: usageReport(project.paths, dates),
+        decisionsPending: leerInicio(project.paths).pendientes.length,
+        ...portfolioExtras(project, options),
       };
     } catch {
       return {
@@ -125,6 +157,42 @@ export function listPortfolioRows(
       };
     }
   });
+}
+
+/**
+ * Agentes y perfil: cada uno en su propio `try`, porque una sesión o un `profiles.yaml`
+ * ilegibles no hacen caer el registro del proyecto.
+ */
+function portfolioExtras(
+  project: AuthorizedProject,
+  options: PortfolioOptions,
+): Pick<PortfolioRow, "agentsWorking" | "profile" | "profileError"> {
+  let agentsWorking: number | null = null;
+  try {
+    agentsWorking = portfolioLiveAgents(
+      leerAgentesDeCorrida(project.root, {
+        ...(options.home === undefined ? {} : { home: options.home }),
+        ...(options.ahora === undefined ? {} : { ahora: options.ahora }),
+        paths: project.paths,
+        project,
+      }),
+    );
+  } catch {
+    agentsWorking = null;
+  }
+  try {
+    return {
+      agentsWorking,
+      profile: readSeleccionDePerfil(project.root).proyecto,
+      profileError: null,
+    };
+  } catch (caught) {
+    return {
+      agentsWorking,
+      profile: null,
+      profileError: caught instanceof Error ? caught.message : String(caught),
+    };
+  }
 }
 
 /** Los totales cubren solo proyectos disponibles; los ausentes se declaran aparte. */
